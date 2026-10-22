@@ -9,6 +9,8 @@
  *
  * Kept free of Astro globals so vitest can import it directly.
  */
+import { keyPointsMarkdown } from "../data/canada-key-points";
+import { serversMarkdown } from "./canada-clock-change";
 import { dateFaults } from "../data/date-faults";
 import { libraryStack } from "../data/library-stack";
 import {
@@ -352,6 +354,8 @@ export function renderMdxComponents(body: string): string {
   // The home page's two argument cards hold real prose — the `Date` faults and the library
   // stack — so they render rather than drop. They were invisible to the old nine-name gate.
   out = replaceElements(out, "WhyDateBug", renderWhyDateBug);
+  // Key points first, then the servers card and what the library does; the live parts have no text.
+  out = replaceElements(out, "CanadaClockChange", () => keyPointsMarkdown() + serversMarkdown());
   out = replaceElements(out, "WhyDateAlternatives", renderWhyDateAlternatives);
 
   // Decorative or interactive, with no prose of their own: a globe, a scroll animation, and the
@@ -368,6 +372,7 @@ export function renderMdxComponents(body: string): string {
     "PlaygroundForm",
     "HeroGlobe",
     "ScrollReveal",
+    "CanadaProbeScript",
     "IntervalVisualizer",
     "DstInspector",
     "ConverterBench",

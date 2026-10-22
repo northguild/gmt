@@ -264,7 +264,11 @@ describe("every browser gate", () => {
 
   it("finds the gates that load a page of the site", () => {
     expect(gates.map(({ file }) => file).sort()).toEqual([
+      "canada-clock-still.mjs",
+      "canada-layout-check.mjs",
+      "canada-stored-still.mjs",
       "contrast-measure.mjs",
+      "data-credits-check.mjs",
       "globe-smoke.mjs",
       "grow-measure.mjs",
       "readout-still.mjs",

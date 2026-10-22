@@ -461,7 +461,9 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("/fonts/michroma-latin-400-normal.woff2") format("woff2");
+  /* The site's base (`SITE_BASE`, "/gmt") is written out: the dev server does not add it to a
+     CSS url(), so a bare "/fonts/..." is a 404 there. The build leaves this path as written. */
+  src: url("/gmt/fonts/michroma-latin-400-normal.woff2") format("woff2");
 }
 
 /* ---- Light mode overrides ---- */

@@ -117,6 +117,10 @@ import {
   mountStoredTimeAudit,
   renderStoredTimeAuditTemplate,
 } from "./stored-time-audit-mount";
+import {
+  mountCanadaClockChangeWidget,
+  renderCanadaClockChangeWidgetTemplate,
+} from "./canada-clock-change-mount";
 
 installJsdomShims();
 
@@ -260,6 +264,11 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "stored time audit",
     () => renderStoredTimeAuditTemplate(),
     mountStoredTimeAudit as MountFn<never>,
+  ],
+  [
+    "canada clock-change checker",
+    () => renderCanadaClockChangeWidgetTemplate("canada"),
+    mountCanadaClockChangeWidget as MountFn<never>,
   ],
 ];
 

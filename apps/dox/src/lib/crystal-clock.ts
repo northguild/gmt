@@ -91,6 +91,9 @@ const TICK_MAJOR_LENGTH = 6;
 const HOUR_HAND_LENGTH = DIAL_RADIUS * 0.45;
 const MINUTE_HAND_LENGTH = DIAL_RADIUS * 0.8;
 
+/** The optional second hand reaches the tick ring; its weight is set in the stylesheet. */
+const SECOND_HAND_LENGTH = DIAL_RADIUS * 0.88;
+
 const CAP_RADIUS = 2.2;
 
 function polar(radius: number, deg: number): [number, number] {
@@ -156,6 +159,9 @@ export interface CrystalClockOptions {
   hour: number;
   /** 0–59. */
   minute: number;
+  /** 0–59. When set, a second hand is drawn. It never enters the accessible name, so a face that
+   *  ticks every second does not announce every second. */
+  second?: number;
   /** The accessible name's subject, e.g. "Entry clock". */
   label: string;
   /** Appended to `label` (comma-joined) for the accessible name, e.g.
@@ -292,6 +298,24 @@ function ticksMarkup(): string {
   return parts.join("");
 }
 
+/** The accessible name: the label, its sublabel and the highlight's words. Never the seconds. */
+function crystalClockName(opts: CrystalClockOptions): string {
+  const { label, sublabel, highlight } = opts;
+  return [
+    sublabel ? `${label}, ${sublabel}` : label,
+    highlightMarkupAndLabel(highlight).label,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(". ");
+}
+
+/** The second hand points straight up and is turned by a CSS transform, so a stylesheet can make
+ *  it sweep or step (`prefers-reduced-motion`) without the markup changing. */
+function secondHandMarkup(second: number): string {
+  const [x2, y2] = polar(SECOND_HAND_LENGTH, 0);
+  return `<line x1="${CENTER_X}" y1="${CENTER_Y}" x2="${fmt(x2)}" y2="${fmt(y2)}" class="gmt-crystal-clock-hand gmt-crystal-clock-hand--second" data-turn="${second * 6}" style="transform:rotate(${second * 6}deg)" />`;
+}
+
 /**
  * Render a crystal clock as an `<svg>` string: a hairline dodecagon outline
  * around a dial — 12 hour ticks (heavier at 12/3/6/9), a slim hour hand, a
@@ -324,12 +348,12 @@ export function renderCrystalClock(opts: CrystalClockOptions): string {
     size,
     glowable = true,
     highlight,
+    second,
   } = opts;
   const { hourDeg, minuteDeg } = handAngles(hour, minute);
   const hourHand = polar(HOUR_HAND_LENGTH, hourDeg);
   const minuteHand = polar(MINUTE_HAND_LENGTH, minuteDeg);
-  const { markup: highlightMarkup, label: highlightLabel } =
-    highlightMarkupAndLabel(highlight);
+  const { markup: highlightMarkup } = highlightMarkupAndLabel(highlight);
 
   const uid = escapeAttr(id);
   const clipId = `gmt-crystal-clip-${uid}`;
@@ -337,12 +361,7 @@ export function renderCrystalClock(opts: CrystalClockOptions): string {
   const sheenId = `gmt-crystal-sheen-${uid}`;
   const shadowId = `gmt-crystal-shadow-${uid}`;
 
-  const accessibleName = [
-    sublabel ? `${label}, ${sublabel}` : label,
-    highlightLabel,
-  ]
-    .filter((part): part is string => Boolean(part))
-    .join(". ");
+  const accessibleName = crystalClockName(opts);
   const sizeAttr =
     size !== undefined ? ` width="${fmt(size)}" height="${fmt(size)}"` : "";
   // Wrapped in a toggle button, the svg is purely decorative — the button
@@ -411,6 +430,7 @@ export function renderCrystalClock(opts: CrystalClockOptions): string {
       minuteHand,
       "gmt-crystal-clock-hand gmt-crystal-clock-hand--minute",
     ) +
+    (second === undefined ? "" : secondHandMarkup(second)) +
     `</g>` +
     svgLine(
       [CENTER_X - DIAL_RADIUS * 0.7, CENTER_Y - DIAL_RADIUS * 0.7],
@@ -461,4 +481,52 @@ export function bindClockGlow(root: HTMLElement, signal: AbortSignal): void {
     },
     { signal },
   );
+}
+
+/**
+ * Draws `opts` into `host`: the whole face the first time, then only the hands and the accessible
+ * name, in place, so a tick neither replaces the face (which would drop focus and reset the night
+ * light) nor moves a box. The second hand turns forward only: its angle accumulates, so 59 to 0
+ * does not spin back across the dial.
+ */
+export function updateCrystalClock(
+  host: HTMLElement,
+  opts: CrystalClockOptions,
+): void {
+  const svg = host.querySelector<SVGElement>("svg.gmt-crystal-clock");
+  if (svg === null) {
+    host.innerHTML = renderCrystalClock(opts);
+    return;
+  }
+  const { hourDeg, minuteDeg } = handAngles(opts.hour, opts.minute);
+  const aim = (kind: string, deg: number, length: number) => {
+    const hand = svg.querySelector(`.gmt-crystal-clock-hand--${kind}`);
+    if (hand === null) return;
+    const [x2, y2] = polar(length, deg);
+    hand.setAttribute("x2", fmt(x2));
+    hand.setAttribute("y2", fmt(y2));
+  };
+  aim("hour", hourDeg, HOUR_HAND_LENGTH);
+  aim("minute", minuteDeg, MINUTE_HAND_LENGTH);
+  const second = svg.querySelector<SVGElement>(
+    ".gmt-crystal-clock-hand--second",
+  );
+  if (second !== null && opts.second !== undefined) {
+    const previous = Number(second.dataset.turn ?? 0);
+    const target = opts.second * 6;
+    const forward = (((target - previous) % 360) + 360) % 360;
+    const next = previous + forward;
+    if (forward !== 0) {
+      second.dataset.turn = String(next);
+      second.style.transform = `rotate(${next}deg)`;
+    }
+  }
+  const name = crystalClockName(opts);
+  const named =
+    host.querySelector(".gmt-crystal-clock-toggle") ??
+    (svg.hasAttribute("aria-label") ? svg : null);
+  const full = named === svg ? name : `${name}. Light up the face.`;
+  if (named !== null && named.getAttribute("aria-label") !== full) {
+    named.setAttribute("aria-label", full);
+  }
 }

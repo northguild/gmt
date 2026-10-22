@@ -79,12 +79,19 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `tsconfig.base.json` (whose `composite`, `emitDeclarationOnly` and `customConditions`
   are wrong for an app), and declares `engines.node >=22.12.0` — Astro 7's floor.
 - **Toolchain traps.**
-  - Where `fnm` is installed, run `eval "$(fnm env)" && fnm use`. `fnm use` alone is a
-    silent no-op in a non-interactive shell. Without `fnm`, the Node on `PATH` must match
-    `.nvmrc`.
+  - `pnpm` runs scripts and `pnpm exec` on the Node that `devEngines.runtime` pins (26.11 or
+    newer), whatever Node is on `PATH`. Only a bare `node` outside pnpm needs care: it follows
+    the pin only when pnpm installed the global Node (`pnpm runtime set node 26 -g`).
+    Otherwise use `pnpm exec node`, or on an `fnm` machine run
+    `eval "$(fnm env)" && fnm use` first (`fnm use` alone is a silent no-op in a
+    non-interactive shell). `.node-version` still says `26` for tools that read it.
+  - CI matrix jobs must keep running on the matrix Node: they install with `--no-runtime` and
+    set `pnpm_config_verify_deps_before_run=false`. Without both, a later `pnpm run` reinstalls
+    with the runtime and quietly switches the job to the pinned Node.
   - Starlight's `@astrojs/markdown-remark` peer is optional; don't declare it. `satteri` is
     pinned through `packageExtensions` in `pnpm-workspace.yaml`.
-  - pnpm 10 does not run `pre`/`post` scripts, so steps are chained with `&&`.
+  - pnpm runs `pre`/`post` scripts (checked on 10.32.1 and 12.15.0: `predev` runs before
+    `dev`). Steps that must stay together are still chained with `&&`.
   - `oxlint.config.js` is never loaded, so lint runs from the app. `.oxfmtrc.json`'s
     overrides are an allow-list that includes `apps/**`.
   - `workerd` needs `allowBuilds`.
@@ -808,6 +815,115 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     cell per second at equal widths. An inserted second is a stretched `:60` cell the clock tape
     skips and the elapsed tape fills, so the ends misalign by exactly the seconds inserted; a long
     span keeps the seconds at each end, a slashed break and every inserted second.
+  - **Canada 2026 clock-change checker** (`/check/canada-2026-clock-change/`, core): lives under `check/`,
+    not `tools/`, so `build-tool-index.ts` and `build-industry-sidebars.ts` read both
+    directories (each tool carries its `directory`, links use `/${directory}/${slug}/`) and
+    `industry-tags.test.ts` scans `check/`. A probe table (five zones at `PROBE_INSTANT`, the
+    2026e column from `PROBE_ZONES`, the browser column from `Intl` at `PROBE_EPOCH_MS`, the Worker
+    column from `GET /gmt/api/canada-clock-change`), the 2026 and 2027 transitions, five
+    crystal clocks, and a hidden map section for the Canada map. Every offset and transition is
+    computed by the Worker at request time; the page holds only the cited 2026e facts. A 429
+    shows the retry delay and a failed fetch shows "The Dox Worker did not answer."; the cells
+    stay `NO SIGNAL`. The clocks tick on one `setTimeout` per minute, update the hands in place and
+    switch offset at the zone's next change. `PROBE_EPOCH_MS` is a number so no native date is
+    built. Tests never assert a 2026e offset: Node here carries tz 2026c, and the 2026e match is
+    checked only by `deploy-smoke.mjs` on the deployed Worker.
+    - **The Canada map** (`lib/canada-map.ts`, plain DOM). One shape per zone from
+      `timezone-boundaries-canada.json` in EPSG:3347's parameters (Lambert conformal conic,
+      parallels 49 and 77, central meridian 91.866667 W, origin 63.390675 N; IOGP registry, also
+      Statistics Canada's), fitted by `fitExtent` to an 800x640 `viewBox` with a 16 px inset; the SVG
+      scales with its box. Every zone is in one of three dated classes from the Worker's `kind`:
+      `stopped-2026` (series 1 colour with a diagonal hatch), `changes-2027` (series 3 colour,
+      solid), `none-2026-2027` (neutral surface with dots). Colour sits on marks only; the pattern
+      and the words carry the class. A zone with no Worker row is neutral and listed as "no data
+      from the Dox Worker".
+    - **The list comes first.** `canada-zones.json` renders one `<button data-tz-id>` per zone on
+      the server (id, class words, offset), with a roving tab stop: arrow keys, Home and End move,
+      Enter or Space pins, `aria-pressed` marks the pinned zone. Shapes are `role="button"` with
+      `tabindex="-1"`, so Tab never walks them; hover and focus on either mirror to the other.
+      Pinning writes `?zone=<id>` with `replaceState` and reads it back on load.
+    - **The pin panel has one size.** Clock, offset, last and next change (`none in 2025 or 2026`
+      style when `null`) and, for a `stopped-2026` probe zone, the tzdb release; every row reserves
+      its height, so pinning another zone moves nothing.
+    - **Row of three.** From 57 rem of section width the map, the zone list and the clocks sit in one
+      row (`1.6fr 1fr 1fr`; `tableOfContents: false` on the page widens the stack). In that range
+      the pin panel holds three lines for the zone name and the long values and four for the class,
+      so it is one box for every zone (`canada-clock-still.mjs` pins all 23); the zone button
+      stacks id, offset and class, and the clock card lets its offset drop under the time.
+    - **Probe script.** `CanadaProbeScript.astro`, last in the page, runs `probeInlineSource()`
+      once the table is parsed, so the verdict and the Yours column are final before first paint.
+      `stored-results` and the zone-kind label reserve their height so the late fill moves nothing.
+      The page lists it in `mdx-jsx.ts`'s dropped components.
+    - **Narrow fallback.** Below 520 px of section width (`@container gmt-canada-map`) the map and
+      legend are hidden, the boundary file is not fetched, and the panel moves under the pressed
+      button. The file is fetched once, when the map nears the viewport.
+    - **In the chat** (`mountCanadaClockChangeWidget`). The rail mounts the same markup with
+      the same markup with ids namespaced by `idPrefix`; the map's data-credits button takes
+      `<idPrefix>-data-credits` (below). The rail is narrow, so the zone list is the map and there
+      is no credits button. The mount
+      awaits the library (a failed load rejects with `WidgetLoadError`), starts the Worker fetch
+      without awaiting it, pins `zone` once the answer is drawn (an id not on the map leaves the
+      widget unpinned), reads and writes no `?zone=` on the chat's URL, and ends every timer on
+      destroy. On the page, `?w=canadaclock&wa=…` pins the same zone through `seedFromLocation`.
+    - **Did your saved events move?** (section 5 of the same markup, so page and chat share
+      it). It opens with one lead sentence and a three-step worked example (booked before the
+      change, new rule, result) derived from the Vancouver `PROBE_ZONES` fact
+      (`lib/canada-saved-example.ts`: 09:00, -08:00, -07:00, shown 10:00), so it cannot drift from
+      the data. Below it, a script-driven `<form>` of real controls: an editor-style
+      `<textarea name="lines">` (sticky beside the results from 72 rem), `<select name="zone">`
+      over `STORED_ZONES`, Check, Reset example, and a native segmented All / Only moved toggle. The
+      form `POST`s `FormData` to the same endpoint; the Worker reads each field with
+      `typeof value === "string"` (a `File` counts as `""`, never `String()`), answers `400` for a
+      zone outside `STORED_ZONES` or a body that is not a form or ends early, `413` for a body over
+      65,536 bytes (read as a stream; `content-length` is not trusted), and `429` from the same
+      `canada:` bucket GET uses. HEAD answers as GET with no body; a `405` carries
+      `Allow: GET, HEAD, POST`. `capStoredInput` (`lib/canada-stored-times.ts`, imports only
+      constants, so the Worker shares it) cuts text over `STORED_MAX_BYTES` UTF-8 bytes at the last
+      line break at or before that byte, makes `\r\n` and `\r` into `\n` first, splits, skips blank
+      lines (their numbers still count) and keeps `STORED_MAX_LINES` (50: measured at about
+      0.15 ms a line on workerd against a 10 ms CPU budget); `truncated` is true only when a
+      dropped part holds a non-blank character. `completeStoredLine` adds a zone only from what the
+      reader typed or picked: a `[` leaves the line as written, `<time> <Zone>` becomes
+      `<time>[<Zone>]`, one token takes the picked zone, anything else is `null` (shown as
+      `NO SIGNAL`). Each row is `classifyStoredZoned` on the Worker's tz data; an empty `lines`
+      answers `rows: []`.
+      - **Rows** reuse the audit's pure helpers, loaded with a dynamic import on the first answer
+        (the page carries no polyfill until then). A row has a badge (ok = cyan, moved = purple,
+        can't check yet = muted; amber stays sentinel-only), the full saved value (it wraps) and
+        the fix: a copyable keep-local value, plus the old-instant alternative. The summary reads
+        "N checked · M moved", or "1 checked · none moved · 3 can't be checked yet". A table
+        above 48 rem of container width, bordered cards below it. No result sentence says "now".
+      - **A Worker with old tz data cannot judge the four zones.** The page also reads the zones
+        answer and `staleZoneIds` (`lib/canada-map.ts`) lists the `STOPPED_ZONES` members that
+        do not come back as `stopped-2026`. Rows in those zones show "Can't check yet" and
+        "Try again after the update." in muted text; the one alert sentence
+        (`staleCheckText`, muted, no box) appears once, in the summary. Rendering waits until the
+        stale zones and the audit module are both known.
+      - **Held layout.** The status line and the narrow summary reserve their height, so an
+        answer moves nothing above it. `scripts/canada-stored-still.mjs` measures the form against
+        a build, in document coordinates, after the section's handlers attach, and presses
+        Option+Tab in WebKit. `scripts/canada-layout-check.mjs` measures the map row.
+      - **One term: "saved events".** Key points check 3 defines it (appointments, bookings and
+        shifts the app saved) and every link to `#canada-stored-title` uses the heading's words
+        (`canada-help-card.test.ts` asserts it). `Saved with an offset` and `Saved as UTC only` say
+        how an event was saved.
+      - **Function names in the page text** only in key-points step 3 (`classifyStoredZoned`,
+        `convertPlainDateTimeToZoned`) and the How gmt helps card, each linked to its reference
+        page. The stored section links nowhere to the audit; the Related list names it.
+    - **The How gmt helps card** (`HELP` in `data/canada-key-points.ts`, drawn by `helpCardHtml`).
+      Shaped like the home page's fault cards: a lede, a Verified strip (the tests run on the
+      newest release of each supported Node, the hosted server is checked daily) with an absolute
+      link to `oh-canada.test.ts`, which `withBase` leaves alone, then one case card per kind of
+      saved event (tag, `input -> output`, one line of why) and a button-styled link to the
+      checker. It uses cyan tokens (amber stays the sentinel's) and `align-self: start`, so it
+      does not stretch to the taller list beside it. `canada-help-card.test.ts` runs its claims
+      against the real library using values no tzdb release changes.
+    - **The Upgrade to at least card** (`data/canada-runtime-minimums.ts`) ends with `MINIMUMS_NOTE`,
+      one plain line (a `<p class="gmt-canada-minimums-note">` after the footer, and the last line of
+      `minimumsMarkdown`): gmt uses the time-zone rules of the device it runs on, and a device
+      without the October 2026 update gets the four zones wrong from 1 November 2026. It names no
+      function. Every sentence on the page reads true before and after 1 November 2026: no "will",
+      no "right now", no relative months.
   - **Stored Time Audit** (`/tools/stored-time-audit/`, `storedaudit`, core): a textarea of
     stored zoned strings (12 lines of 80 characters), a fixed table with one row per line (kind
     badge, readings as nowrap tokens) and a two-lane strip for the selected line, the zone's
@@ -1208,6 +1324,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   fallback. `src/lib/globe.ts` is the Dox layer on top — zones, clocks, selection and the
   tooltip — and keeps `initGlobe(host, clockPanel)`, so the hero, `/tools/zoned-earth/` and
   the `/dox` rail all mount it unchanged.
+  - **The control stack.** `renderGlobeTemplate` (`src/lib/globe-mount.ts`, shared by
+    `Globe.astro` and the rail) draws one `role="group"` named "Globe controls" in the stage's
+    bottom-right corner: `+`, `−`, `⊙` and the data-credits info button, in that tab order, all
+    native `<button>`s of one size and one look (`.gmt-globe-zoom button`). Every globe draws the
+    boundaries and the imagery, so every globe carries the button; there is no option to drop it.
+    Its popover id is `<idPrefix>-data-credits`, unique per mount. See *Data credits* below.
   - **The split.** `globe/` knows nothing about time: it draws a planet, takes markers,
     regions and arcs, and asks the caller for the instant to light it by. That line is what
     lets the same engine carry route arcs or a coloured region set without a fork.
@@ -1284,9 +1406,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       Public domain in the US, as a work of the US Government (17 U.S.C. § 105). NASA's
       media guidelines ask that NASA be acknowledged as the source — a request, not a
       condition of use — and rule out its insignia and any implied endorsement; the script
-      records all three. The credit is one quiet line at the foot of `why-gmt.mdx` — "Earth
-      imagery: NASA Earth Observatory (Blue Marble Next Generation)." — off the homepage,
-      with no logo. July, because the
+      records all three. The credit is the `EARTH_IMAGERY` row of the data-credits panel
+      (below) on the pages that draw the imagery — "NASA Earth Observatory (Blue Marble Next
+      Generation)." — with no logo. July, because the
       northern hemisphere, where most plotted zones are, is free of snow then. One static
       file — no tile service, no runtime dependency on anyone else's server.
     - **Loading.** `webgpu/imagery.ts` fetches it once the WebGPU renderer has started and
@@ -1527,6 +1649,75 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     the slider to 0. The link then carries that concrete time (so a link reproduces what the reader
     sees), as it does after a jump.
 
+- **Boundary data (`CORE-88`).** Three public files hold time-zone shapes, all from
+  timezone-boundary-builder (tbb) and all derived from OpenStreetMap: `timezone-boundaries.json`
+  (the 10 CI zones, 0.02°, 3 decimals), `timezone-boundaries-globe.json` (every zone, 0.2°) and
+  `timezone-boundaries-canada.json` (Canada, 0.02°, 3 decimals).
+  - **One pinned release.** Every `prepare-*-boundaries.py` reads `releases/download/<TBB_TAG>/`
+    (today `2026e`), never `releases/latest`, so each file names the release it came from.
+    `TBB_TAG` in `src/lib/data-credits.ts` is the same tag; `scripts/boundary-data.test.ts` holds
+    the files to it.
+  - **The Canada set is `zone.tab`, not `zone1970.tab`.** Rows whose country column is exactly
+    `CA` in the pinned tzdb (23 today). `zone1970.tab` lists `America/Toronto` (CA,BS),
+    `Panama`, `Puerto_Rico` and `Phoenix`, whose shapes cover other countries, and tbb has no
+    country outline to clip with. The comprehensive set gives each Canadian locality its own
+    Canada-only feature. The script exits non-zero if a selected id has no feature.
+    `src/lib/canada-zones.json` (`{ tzdb, zones }`, sorted) is generated with it, so the map's
+    zone list is never typed.
+  - **The ODbL notice is in the file.** The files are derived databases offered to the public
+    (ODbL 1.0 §4.2–4.4), so each carries `source`, `attribution`, `license: "ODbL-1.0"` and
+    `licenseUrl` as GeoJSON foreign members (RFC 7946 §6.1). The wording follows tbb's README
+    § Licenses at the pinned tag ("The outputted data is licensed under the … ODbL").
+  - **Budget.** The Canada file stays under 400 KB; 0.02° gives about 98 KB compact and 184 KB
+    after `oxfmt`, which the repo's format check requires of these files. The scripts run
+    by hand (`uv run --with shapely python scripts/prepare-*-boundaries.py`), then
+    `pnpm exec oxfmt --write` on the output.
+- **Data credits (`CORE-88`).** The credit sits on the drawing it credits: an info button that
+  opens a small popup, one row per source, label left, credit right. Nothing else on the page
+  names the sources, and no page carries a footer button or frontmatter list.
+  - **One renderer.** `renderDataCreditsHtml(credits, { id, placement })` in
+    `src/lib/data-credits.ts` returns the native `<button popovertarget>` and its `popover`
+    panel, so the Astro shells and the plain-DOM mounts (the chat) render the same markup. `id` is
+    unique per mount. Placements are `stack` and `corner`.
+  - **Globe: the fourth button of the stack** (`stack`). `+`, `−`, `⊙`, `ⓘ` in one group named
+    "Globe controls"; the stack's own rule (`.gmt-globe-zoom button`, `gmt-globe.css`) sizes and
+    colours the button, so it matches its siblings in size, bevel, hover and focus fill, and tab
+    order, and it fades in with them. Credits: boundaries and Earth imagery, on `/`,
+    `/tools/zoned-earth/` and the chat's `globe` widget alike.
+  - **Maps with no button stack: a glass square in the corner** (`corner`). The same 2rem square
+    as the stack's buttons (`--gmt-surface-2` fill, `--gmt-border` edge, bevel), bottom-right of
+    the drawing, where the land and the zone dots do not reach. Credits: boundaries only.
+    `TimezoneMap.astro` (`/why-gmt/`) renders it in its HTML, in `.gmt-credited-frame` beside the
+    chart host (which the chart code empties); the Canada map (`canada-map.ts`) adds it to
+    `.gmt-canada-map` when it draws the shapes, so a section narrower than 520 px, where no map is
+    drawn and no file is fetched, has no credit. The chat's `canadaclock` widget follows the same
+    rule; the map frame's `data-credits-id` carries its `idPrefix`-based id.
+  - **`aria-expanded` is kept by script.** WebKit's accessibility tree does not report a
+    `popovertarget` button as expanded when its panel is open (a bare button and popover show it
+    too), so the button carries `aria-expanded="false"` and `watchDataCredits()` (one capturing
+    `toggle` listener on the document, called by `mountGlobe`, `canada-map.ts` and
+    `TimezoneMap.astro`) sets it from the panel's `newState`.
+  - **Closed by default, native `popover`.** Escape, an outside click and focus return come free
+    and need no script. The popup is anchored to its button (`position-anchor: auto`, the
+    popover's implicit anchor; Chromium resolves `anchor()` only with it set): a stack's opens
+    beside the stack, to its left, bottom edges aligned; a corner button's opens above it. Both sit
+    12 px inside the viewport, shrinking to the room there is (a left inset and `justify-self: end`),
+    never over the buttons, and flip to the other side of the anchor when they would leave the
+    viewport. Without anchor positioning the panel pins to the viewport's bottom edge.
+  - **Colour.** The glyph is `--gmt-ice` on `--gmt-surface-2`, the stack's own pair, with
+    `--gmt-void` on `--gmt-cyan-ink` for hover, focus and open. `data-credits.test.ts` recomputes
+    both pairs from the tokens in each theme (WCAG 2.2 SC 1.4.11 asks 3:1). Forced colours: system
+    button colours and a `Highlight` focus outline (`gmt-a11y.css`).
+  - **Gates.** `scripts/data-credits-built.test.ts` asserts what the HTML holds: the globe's
+    button last in its stack on `/` and `/tools/zoned-earth/`, the map's on `/why-gmt/`, none on
+    the Canada page (drawn by the client), and none anywhere else.
+    `scripts/data-credits-check.mjs` asserts the rest on a served build at 1280 and 375 px, in
+    Chromium and WebKit: Tab reaches the button inside its group (WebKit presses Option+Tab,
+    because Safari on macOS leaves buttons out of plain Tab for every site), Enter opens it with
+    the accessible expanded state true, Escape closes it and returns focus, the panel is inside the viewport and covers no control
+    button, and the button covers no text, no other focusable element and no drawn shape; at 375
+    px the Canada page has no button.
+
 ## Tier 5 · Scenarios and pitfalls
 
 `DOX-A4b`–`A4d`
@@ -1611,7 +1802,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 | Step | Failure |
 | --- | --- |
 | Method | `405` |
-| Burst limiter — per isolate, 20/60 s; blunts casual abuse, not a determined attacker | `429` + `Retry-After` |
+| Burst limiter — key `chat:<clientId>`, per isolate, 20/60 s; blunts casual abuse, not a determined attacker | `429` + `Retry-After` |
 | JSON body | `400` |
 | Envelope (zod) + `safeValidateUIMessages` with the real tool set; roles `user`/`assistant` only | `400` |
 | Sanitise invisible characters, **then** apply length and conversation caps | `400` |
@@ -1620,6 +1811,23 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 | Retrieve → assemble prompt | mapped error, never a raw upstream payload |
 | Open the stream, then in-request failover, writing transient `data-status` progress per brain | pool spent, or every brain busy → transient `data-refusal` |
 | Write the retrieval trace part, then merge `toUIMessageStream` (`sendReasoning: false`, `onError` on both layers) | mapped error text, never a raw upstream payload |
+
+- **The rate limiter takes a policy.** `checkRateLimit(key, now, { max, windowSeconds })`
+  (`worker/rate-limit.ts`) keeps one bucket per key in a module-scope `Map`, so it is per
+  isolate: blunt protection, not a global limit. Chat passes `chat:<clientId>` with
+  `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_SECONDS`; the Canada checker passes
+  `canada:<clientId>` with `CANADA_RATE_LIMIT` (20 per 60 s, `src/lib/canada-clock-change.ts`).
+  The prefixes keep the two counts apart.
+- **`GET /gmt/api/canada-clock-change`** (`worker/canada-clock-change.ts`) computes the
+  probe offsets, the 2026-2027 transitions and one row per Canadian zone at request time on
+  workerd, from the library only. Every answer is `cache-control: no-store`, because a cached
+  answer would hide the live tz data the page exists to show. Other methods answer `405` with
+  `allow: GET`; over the limit it answers `429` + `retry-after` and `{ error, retryable: true }`.
+  The year scans and the `now`-free probe and transition tables are memoised per isolate (tz
+  data cannot change inside one): a GET otherwise costs ~80 scans, too much CPU for a Free-plan
+  request. `last` and `next` search the UTC years Y-1..Y+1, because the library groups by the
+  zone's local year.
+  `deploy-smoke.mjs` checks the five probe offsets against tzdb 2026e on the deployed Worker.
 
 - **The stream opens before a brain is chosen.** Measured 2026-09-24: two busy brains
   took 2.8 s of a 6.7 s answer, and the reader saw nothing but "Searching corpus…". Now
@@ -1755,9 +1963,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     them.
   - `showStoredTimeAudit({ values, line? })` (CORE-83): the stored strings exactly as the
     reader gave them, one per line, and the 1-based line to draw.
-- **Count:** 30 tools — the globe, the 28 teaching tools and the Zone Planner — and 30
-  `CHAT_STARTERS`, one card each: 8 core, 11 transport, 8 intermodal and 3 GNSS (the Leap
-  Second Timeline, Elapsed vs. Clock Difference and Stored Time Audit are core). `ENABLED_TOOL_NAMES` and
+  - `showCanadaClockChange({ zone? })` (CORE-88): one id from `canada-zones.json` to pin on the
+    map; the Worker's `execute` and the registry's `validate` refuse any other id. The widget
+    kind is `canadaclock`, its permalink `/check/canada-2026-clock-change/?w=canadaclock&wa={"zone":…}`.
+- **Count:** 31 tools — the globe, the 29 teaching tools and the Zone Planner — and 31
+  `CHAT_STARTERS`, one card each: 9 core, 11 transport, 8 intermodal and 3 GNSS (the Leap
+  Second Timeline, Elapsed vs. Clock Difference, Stored Time Audit and the Canada clock-change
+  checker are core). `ENABLED_TOOL_NAMES` and
   `CHAT_STARTERS` hold the numbers; re-derive them from there.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
@@ -1965,6 +2177,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   mkdir -p "$SP/after" && rsync -a --exclude node_modules --exclude dist --exclude .git \
     --exclude .astro --exclude .visual --exclude .wrangler "$W"/ "$SP/after"/
   # In each tree (the branch's library may be rsynced from "$W/packages/gmt/dist" instead):
+  # (The base tree may predate the Node pin, so keep the fnm prefix for it.)
   cd "$SP/<tree>" && eval "$(fnm env)" && fnm use && pnpm install --frozen-lockfile \
     && pnpm --filter @northguild/gmt build \
     && DOX_VITE_CACHE_DIR="$SP/vite-<tree>" pnpm --filter @gmt/dox build
@@ -1985,6 +2198,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `dev-all.mjs` only ever stops its own children. If another `astro dev` holds this
   project's lock (per project, not per port) it exits instead of replacing it — stop that
   one with `astro dev stop` first. A taken Worker port needs `DOX_WORKER_PORT`.
+  Astro proxies `/gmt/api/…` to the Worker (`src/lib/dev-worker-proxy.ts`, port from
+  `DOX_WORKER_PORT`, default 8787). The proxy key is `^/api`, not `/gmt/api`: Astro's dev base
+  middleware strips `/gmt` before Vite's proxy runs, so a `/gmt/api` key never matched and every
+  API call got Astro's 404 page. `rewrite` puts the base back, as the Worker expects the full
+  path. `dev-worker-proxy.test.ts` starts the real `astro dev` CLI (`--ignore-lock`, clean
+  env) against a stub Worker; Astro reordering its middleware fails it.
 - **Local chat:** `pnpm dev:chat` (build, then `wrangler dev`), or `npx wrangler dev --port
   8799` with `dist/` already built. `.dev.vars` holds `NORTHGUILD_GMT_GEMINI_API_KEY` and
   `DOX_DEV_KEY` (`.dev.vars.example`).

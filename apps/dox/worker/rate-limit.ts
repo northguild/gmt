@@ -1,11 +1,12 @@
-import {
-  RATE_LIMIT_MAX,
-  RATE_LIMIT_WINDOW_SECONDS,
-} from "../src/lib/chat-constants";
-
 interface RateLimitEntry {
   count: number;
   resetAt: number;
+}
+
+/** How many requests one key may make, and the length of the window that counts them. */
+export interface RateLimitPolicy {
+  max: number;
+  windowSeconds: number;
 }
 
 export interface RateLimitResult {
@@ -34,19 +35,27 @@ function sweepExpired(now: number): void {
   }
 }
 
-export function checkRateLimit(clientId: string, now: number): RateLimitResult {
+/**
+ * `key` names the bucket, so two callers sharing a client never share a count: chat passes
+ * `chat:<clientId>`, the Canada checker `canada:<clientId>`.
+ */
+export function checkRateLimit(
+  key: string,
+  now: number,
+  policy: RateLimitPolicy,
+): RateLimitResult {
   sweepExpired(now);
 
-  const existing = buckets.get(clientId);
+  const existing = buckets.get(key);
   if (!existing || existing.resetAt <= now) {
-    buckets.set(clientId, {
+    buckets.set(key, {
       count: 1,
-      resetAt: now + RATE_LIMIT_WINDOW_SECONDS * 1000,
+      resetAt: now + policy.windowSeconds * 1000,
     });
     return { allowed: true };
   }
 
-  if (existing.count >= RATE_LIMIT_MAX) {
+  if (existing.count >= policy.max) {
     return {
       allowed: false,
       retryAfterSeconds: Math.ceil((existing.resetAt - now) / 1000),

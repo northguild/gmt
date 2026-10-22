@@ -74,9 +74,11 @@ import type { GnssRolloverCheckerArgs } from "~/lib/gnss-rollover-checker-mount"
 import type { LeapSecondTimelineArgs } from "~/lib/leap-second-timeline-mount";
 import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
+import type { CanadaClockChangeArgs } from "~/lib/canada-clock-change-mount";
 import {
   showBillingDeadlinesInput,
   showBlDateStampInput,
+  showCanadaClockChangeInput,
   showConnectionCheckerInput,
   showConverterBenchInput,
   showCrossingClockInput,
@@ -846,6 +848,37 @@ const storedAuditEntry = defineWidget<StoredTimeAuditArgs>({
     })),
 });
 
+const canadaClockEntry = defineWidget<CanadaClockChangeArgs>({
+  title: "Canada 2026 clock-change checker",
+  kind: "canadaclock",
+  parse: (input) => {
+    const result = showCanadaClockChangeInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* The mount pins the zone once the Worker has answered, so the template paints the same
+     everywhere. The credits button is in the frame's corner: the map draws third-party shapes. */
+  load: () =>
+    import("~/lib/canada-clock-change-mount").then((m) => ({
+      renderTemplate: (idPrefix) =>
+        m.renderCanadaClockChangeWidgetTemplate(idPrefix),
+      mount: m.mountCanadaClockChangeWidget,
+    })),
+  /* A zone outside the checker's own list would open unpinned, so refuse it with the reason.
+     The list is a JSON import kept out of the chat's first download. */
+  validate: async ({ zone }) => {
+    if (zone === undefined) return null;
+    const { default: list } = await import("~/lib/canada-zones.json");
+    return list.zones.includes(zone)
+      ? null
+      : `${zone} isn't one of the zones the checker lists.`;
+  },
+});
+
 const plannerEntry = defineWidget<ZonePlannerArgs>({
   title: "Zone planner",
   kind: "planner",
@@ -922,6 +955,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showLeapSecondTimeline: leapLineEntry,
   showElapsedVsClock: elapsedEntry,
   showStoredTimeAudit: storedAuditEntry,
+  showCanadaClockChange: canadaClockEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

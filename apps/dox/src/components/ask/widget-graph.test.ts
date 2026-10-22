@@ -171,6 +171,11 @@ describe("the chat island's static import graph", () => {
       "lib/elapsed-vs-clock.ts",
       "lib/stored-time-audit.ts",
       "lib/stored-time-lib.ts",
+      "lib/canada-clock-change.ts",
+      "lib/canada-clock-change-mount.ts",
+      "lib/canada-map.ts",
+      "lib/canada-stored-times.ts",
+      "lib/data-credits.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });
