@@ -154,6 +154,10 @@ const PAGES = [
     path: "tools/moving-feasts",
     widget: "gmt-moving-feasts gmt-widget",
   },
+  {
+    path: "check/canada-2026-clock-change",
+    widget: "gmt-canada gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

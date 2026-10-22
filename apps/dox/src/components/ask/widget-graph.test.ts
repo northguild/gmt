@@ -177,6 +177,11 @@ describe("the chat island's static import graph", () => {
       "lib/holiday-rule-builder.ts",
       "lib/observance-comparator.ts",
       "lib/moving-feasts.ts",
+      "lib/canada-clock-change.ts",
+      "lib/canada-clock-change-mount.ts",
+      "lib/canada-map.ts",
+      "lib/canada-stored-times.ts",
+      "lib/data-credits.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });

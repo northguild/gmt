@@ -705,6 +705,17 @@ export const showMovingFeastsInput = z.object({
 });
 
 /**
+ * Canada 2026 clock-change checker: optionally one zone to pin on its map.
+ *
+ * The id is checked against the checker's own list (`canada-zones.json`) in the Worker's
+ * `execute` and the registry's `validate`, not here: a zone outside the list is a call to
+ * refuse with a reason, not a malformed one.
+ */
+export const showCanadaClockChangeInput = z.object({
+  zone: zoneSchema.optional(),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -751,7 +762,8 @@ export type DoxToolName =
   | "showStoredTimeAudit"
   | "showHolidayRuleBuilder"
   | "showObservanceComparator"
-  | "showMovingFeasts";
+  | "showMovingFeasts"
+  | "showCanadaClockChange";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -787,6 +799,7 @@ export const DOX_TOOL_INPUTS = {
   showHolidayRuleBuilder: showHolidayRuleBuilderInput,
   showObservanceComparator: showObservanceComparatorInput,
   showMovingFeasts: showMovingFeastsInput,
+  showCanadaClockChange: showCanadaClockChangeInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1027,6 +1040,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks when Easter falls, how far apart the two Easters are, or which date the third Monday or last Sunday of a month is",
     args: "year; offsets (days from Easter, only ones the reader named); month, weekday (1 Monday to 7 Sunday) and n (1 to 5, -1 to -5 or last) for a weekday of a month. Pass only rules, dates and policies the reader gave. Never supply a place's holidays or its observance policy from memory.",
   },
+  {
+    name: "showCanadaClockChange",
+    purpose:
+      "Check whether a device or server has current time zone data for the clock changes that apply from 2026: a table of four zones' correct offsets beside the reader's browser, a check-mark or cross verdict for the reader's browser with what to do, a command to test the reader's own servers, a card on how gmt finds and repairs saved events, the 2026 and 2027 clock changes, live clocks, a map of the zones with the last and next change for each, and a Did your saved events move? form, pre-filled with an example and run on load, that reads up to 50 pasted saved events and says which are out of date and what to do about each.",
+    when: "Call when the reader asks whether their runtime, server or browser still applies an old clock change, whether its time zone data is current, or what a zone's next clock change is",
+    args: "zone: optional, one IANA id from the checker's list to pin on the map (never a province or a place name).",
+  },
 ];
 
 /**
@@ -1167,6 +1187,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[32].purpose,
     inputSchema: showMovingFeastsInput,
   }),
+  showCanadaClockChange: tool({
+    description: DOX_TOOL_DOCS[33].purpose,
+    inputSchema: showCanadaClockChangeInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1223,6 +1247,7 @@ export const ENABLED_TOOL_NAMES = [
   "showHolidayRuleBuilder",
   "showObservanceComparator",
   "showMovingFeasts",
+  "showCanadaClockChange",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

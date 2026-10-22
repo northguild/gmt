@@ -9,7 +9,7 @@ which generates `Blocked by`, only for Dox work that belongs to no realm story. 
 tools of a realm story (`TRAN-*`, `INT-*`, `CORE-*` and the rest) add no row here: that story's
 row in [../domination/tracker.md](../domination/tracker.md) tracks them, and what they shipped is
 in [built.md](built.md). Work on the site after Tier 6, such as its domain, the shipped corpus and
-the hosted server, is a Core story in that tracker (`CORE-86` … `CORE-88`), not a row here.
+the Canada 2026 clock-change checker, is a Core story in that tracker (`CORE-86` … `CORE-88`), not a row here.
 `/plan-story` has it written as a library spec, by `dox-architect` for `apps/dox` work and by
 `architect` for the package, with no tool shortlist; `/pipeline` says who builds it.
 

@@ -186,6 +186,30 @@
     border: 1px solid CanvasText;
   }
 
+  /* Data credits (CORE-88): the info button is one of the globe's control buttons, so it takes
+     the same system colours; the focus ring is an outline because the fill change drops. The
+     panel is plainly bordered. */
+  .gmt-data-credits-button {
+    color: ButtonText;
+    background: ButtonFace;
+    border-color: ButtonText;
+  }
+
+  .gmt-globe-zoom button:focus-visible,
+  .gmt-data-credits-button:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .gmt-data-credits-panel {
+    color: CanvasText;
+    border: 1px solid CanvasText;
+  }
+
+  .gmt-data-credits-panel a {
+    color: LinkText;
+  }
+
   :focus-visible {
     outline: 2px solid Highlight;
   }
@@ -1604,5 +1628,60 @@
   .gmt-obs-addrow .gmt-button:disabled {
     border-style: dashed;
     color: GrayText;
+  }
+}
+
+/* ==========================================================================
+ * Canada 2026 clock-change checker, forced-colors (CORE-88)
+ *
+ * The class of a zone is a pattern as well as a colour, and forced-colors
+ * repaints the pattern pieces as one flat Canvas. Repaint each in system
+ * colours so the three classes stay apart: hatch, solid, dots.
+ * ========================================================================== */
+
+@media (forced-colors: active) {
+  .gmt-canada .gmt-canada-swatch,
+  .gmt-canada .gmt-canada-pat-a,
+  .gmt-canada .gmt-canada-pat-line,
+  .gmt-canada .gmt-canada-pat-n,
+  .gmt-canada .gmt-canada-pat-dot,
+  .gmt-canada .gmt-canada-shape[data-kind="changes-2027"] {
+    forced-color-adjust: none;
+  }
+
+  .gmt-canada .gmt-canada-swatch {
+    border-color: CanvasText;
+    background-color: Canvas;
+  }
+
+  .gmt-canada .gmt-canada-swatch[data-kind="stopped-2026"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      CanvasText 0 1.5px,
+      transparent 1.5px 5px
+    );
+  }
+
+  .gmt-canada .gmt-canada-swatch[data-kind="changes-2027"] {
+    background: CanvasText;
+  }
+
+  .gmt-canada .gmt-canada-swatch[data-kind="none-2026-2027"] {
+    background-image: radial-gradient(CanvasText 1.2px, transparent 1.6px);
+    background-size: 5px 5px;
+  }
+
+  .gmt-canada .gmt-canada-pat-a,
+  .gmt-canada .gmt-canada-pat-n {
+    fill: Canvas;
+  }
+
+  .gmt-canada .gmt-canada-pat-line {
+    stroke: CanvasText;
+  }
+
+  .gmt-canada .gmt-canada-pat-dot,
+  .gmt-canada .gmt-canada-shape[data-kind="changes-2027"] {
+    fill: CanvasText;
   }
 }

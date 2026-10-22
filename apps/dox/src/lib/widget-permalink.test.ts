@@ -31,42 +31,45 @@ describe("widget permalinks", () => {
     expect(handoffHref(null)).toBeNull();
   });
 
-  /* A permalink kind may be registered before its page is built. List it here
-     until the page exists; a page listed here must still be absent, so the entry
-     cannot outlive its page. */
-  const PAGES_NOT_YET_BUILT: ReadonlySet<WidgetKind> = new Set<WidgetKind>();
-
-  it("targets /tools pages that actually exist", () => {
+  it("targets /tools and /check pages that actually exist", () => {
     /* The same rule as a citation: a link Dox produces must resolve. These are
        not in `route-manifest.ts` — that generator only covers `/reference` — so
        the check is against the real content files, globbed at build time the
        same way `guide-sources.ts` reads the guides. */
-    const files = import.meta.glob("../content/docs/tools/*.mdx", {
+    const files = import.meta.glob("../content/docs/{tools,check}/*.mdx", {
       eager: true,
       query: "?raw",
       import: "default",
     });
-    const slugs = new Set(
+    const pages = new Set(
       Object.keys(files).map((f) =>
-        f
-          .split("/")
-          .pop()
-          ?.replace(/\.mdx$/, ""),
+        f.replace("../content/docs", "").replace(/\.mdx$/, "/"),
       ),
     );
 
     for (const kind of Object.keys(WIDGET_PAGE_PATHS) as WidgetKind[]) {
-      const path = WIDGET_PAGE_PATHS[kind];
-      expect(path.startsWith("/tools/"), path).toBe(true);
-      const slug = path.replace("/tools/", "").replace(/\/$/, "");
-      if (PAGES_NOT_YET_BUILT.has(kind)) {
-        expect(slugs.has(slug), `${path} exists: drop it from the set`).toBe(
-          false,
-        );
-        continue;
-      }
-      expect(slugs.has(slug), `no content file for ${path}`).toBe(true);
+      // One entry (the Canada checker) is written through `withBase`; compare its route.
+      const path = WIDGET_PAGE_PATHS[kind].replace(/^\/gmt(?=\/)/, "");
+      expect(/^\/(tools|check)\//.test(path), path).toBe(true);
+      expect(pages.has(path), `no content file for ${path}`).toBe(true);
     }
+  });
+
+  it("carries the Canada checker's pinned zone through a link and keeps only a short string", () => {
+    const url = encodeWidgetPermalink("canadaclock", {
+      zone: "America/Winnipeg",
+    });
+    expect(url.startsWith("/gmt/check/canada-2026-clock-change/?w=canadaclock&")).toBe(
+      true,
+    );
+    const search = url.slice(url.indexOf("?"));
+    expect(seedFromLocation("canadaclock", search)).toEqual({
+      zone: "America/Winnipeg",
+    });
+    const long = encodeWidgetPermalink("canadaclock", { zone: "A".repeat(65) });
+    expect(seedFromLocation("canadaclock", long.slice(long.indexOf("?")))).toEqual(
+      {},
+    );
   });
 
   it("needs no anchor, because the widget is the whole page", () => {

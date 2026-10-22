@@ -13,7 +13,7 @@ simplifies hard — the globe renders at a few hundred CSS pixels and spins, so
 small enough to fetch lazily after the globe is already interactive.
 
 Steps:
-  1. Download the latest `timezones.geojson.zip` release from
+  1. Download `timezones.geojson.zip` from the pinned TBB_TAG release of
      https://github.com/evansiroky/timezone-boundary-builder
   2. Simplify every polygon with shapely at SIMPLIFY_TOLERANCE_DEG,
      preserving topology.
@@ -23,6 +23,10 @@ Steps:
 The globe maps IANA ids to these `tzid` values verbatim, except `UTC` -> `Etc/UTC`
 (the dataset uses the latter). Zones with no boundary polygon simply get no
 demarcation outline; the globe still plots and clocks them.
+
+The repo's formatter checks the output, so finish with
+`pnpm exec oxfmt --write apps/dox/public/timezone-boundaries*.json apps/dox/src/lib/canada-zones.json`
+(the files roughly double when pretty-printed; re-check the Canada file is still under budget).
 
 Requires: `uv run --with shapely python scripts/prepare-globe-boundaries.py`
 (or any venv with shapely installed). tzdb / the boundary builder release
@@ -42,10 +46,23 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 OUTPUT_PATH = REPO_ROOT / "apps/dox/public/timezone-boundaries-globe.json"
 
+# Pinned release, shared with prepare-canada-boundaries.py. Every boundary file names the
+# release it came from.
+TBB_TAG = "2026e"
+
 RELEASE_URL = (
-    "https://github.com/evansiroky/timezone-boundary-builder/releases/latest/"
-    "download/timezones.geojson.zip"
+    "https://github.com/evansiroky/timezone-boundary-builder/releases/download/"
+    f"{TBB_TAG}/timezones.geojson.zip"
 )
+
+# The ODbL notice (ODbL 1.0 §4.2-4.4), as GeoJSON foreign members (RFC 7946 §6.1). Wording
+# follows the timezone-boundary-builder README § Licenses at tag TBB_TAG.
+NOTICE = {
+    "source": f"timezone-boundary-builder {TBB_TAG}, timezones.geojson.zip",
+    "attribution": "© OpenStreetMap contributors, timezone-boundary-builder",
+    "license": "ODbL-1.0",
+    "licenseUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
+}
 
 SIMPLIFY_TOLERANCE_DEG = 0.2
 
@@ -118,9 +135,9 @@ def main() -> int:
         )
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    out = {"type": "FeatureCollection", "features": features}
+    out = {"type": "FeatureCollection", **NOTICE, "features": features}
     with open(OUTPUT_PATH, "w") as f:
-        json.dump(out, f, separators=(",", ":"))
+        json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
     print(
         f"Wrote {OUTPUT_PATH} — {len(features)} zones, "
         f"{os.path.getsize(OUTPUT_PATH)} bytes"

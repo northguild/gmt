@@ -3,13 +3,13 @@ name: gmt-timezone
 description: >
   Timezone-aware operations — zoned now, zoned formatting, plain↔zoned↔UTC↔Unix
   conversion, DST disambiguation, toOffsetInstant, classifyLocal/resolveLocal,
-  classifyStoredZoned (why a stored offset+zone string no longer resolves),
-  real boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix), hours in a
-  local day, floorToZone/bucketRange, calendar-annotated strings, operating
-  hours (OperatingSchedule, recurringWindows, operatingIntervals, isOpenAt,
+  classifyStoredZoned (why a stored offset+zone string no longer resolves), real
+  boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix), hours in a local
+  day, floorToZone/bucketRange, calendar-annotated strings, operating hours
+  (OperatingSchedule, recurringWindows, operatingIntervals, isOpenAt,
   nextOpenAt, nextCloseAt, operatingTimeBetween, addOperatingTime), and daylight
-  time (isInDaylightSaving, hasDaylightSaving). Transport legs, intermodal
-  free time and EDI timestamps are in gmt-transport and gmt-intermodal.
+  time (isInDaylightSaving, hasDaylightSaving). Transport legs, intermodal free
+  time and EDI timestamps are in gmt-transport and gmt-intermodal.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/*.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/concepts/dst-disambiguation.md'

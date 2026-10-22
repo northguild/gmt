@@ -40,7 +40,7 @@
  *   node scripts/grow-measure.mjs --base http://127.0.0.1:4351/gmt --out <dir>
  *     [--browsers chromium,webkit] [--widths 1440,390] [--reduce] [--video]
  *     [--css "<extra css>"] [--only <slug,...>] [--reduce-ref <results.json>]
- *     [--frames]
+ *     [--frames] [--init <script.js>]   (a script every page runs before its own: a mock, say)
  *
  * Without `--reduce` the script first runs each combination under reduced
  * motion to get the reference final height (or reads `--reduce-ref`, a
@@ -266,6 +266,16 @@ const PAGES = [
     drag: '[data-role="year-slider"]',
   },
   {
+    // A checker under /check/, not /tools/: the answer fills the tables in place.
+    slug: "canada-clock-change",
+    path: "/check/canada-2026-clock-change/",
+    root: ".gmt-canada",
+    preset: null,
+    click: '[data-role="recheck"]',
+    presetNote: "no preset; clicks Check again",
+    drag: null,
+  },
+  {
     slug: "zone-planner",
     root: ".gmt-scrubber-block",
     preset: null,
@@ -281,7 +291,7 @@ const PAGES = [
     noGrowth: true,
     presetNote: "no input; load pass only",
   },
-].map((p) => ({ ...p, path: `/tools/${p.slug}/` }));
+].map((p) => ({ ...p, path: p.path ?? `/tools/${p.slug}/` }));
 
 function parseArgs(argv) {
   const o = {
@@ -309,6 +319,7 @@ function parseArgs(argv) {
     else if (a === "--only") o.only = next().split(",");
     else if (a === "--reduce-ref") o.reduceRef = next();
     else if (a === "--frames") o.frames = true;
+    else if (a === "--init") o.init = next();
     else {
       console.error(`Unknown argument: ${a}`);
       process.exit(2);
@@ -316,7 +327,7 @@ function parseArgs(argv) {
   }
   if (!o.base || !o.out) {
     console.error(
-      "Usage: node scripts/grow-measure.mjs --base <url> --out <dir> [--browsers chromium,webkit] [--widths 1440,390] [--reduce] [--video] [--css <css>] [--only <slug,...>] [--reduce-ref <results.json>] [--frames]",
+      "Usage: node scripts/grow-measure.mjs --base <url> --out <dir> [--browsers chromium,webkit] [--widths 1440,390] [--reduce] [--video] [--css <css>] [--only <slug,...>] [--reduce-ref <results.json>] [--frames] [--init <script.js>]",
     );
     process.exit(2);
   }
@@ -646,6 +657,7 @@ async function runOneUnguarded(
   /* After the route above: Playwright asks the newest route first, and that one
      continues every request it does not rewrite. */
   await blockOffSite(context, o.base);
+  if (o.init) await context.addInitScript({ path: o.init });
   const page = await context.newPage();
   await context.addInitScript(samplerInit, {
     rootSelector: def.root,

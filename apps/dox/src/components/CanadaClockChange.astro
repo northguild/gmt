@@ -1,0 +1,31 @@
+---
+/**
+ * The Canada 2026 clock-change checker (CORE-88): a probe of the tz data, the 2026 and 2027 clock
+ * changes, and five live clocks, all drawn from the Dox Worker's one answer.
+ *
+ * **The markup and the wiring both live in `lib/canada-clock-change-mount.ts`.** The server
+ * renders every table with its known rows, so the page does not grow once the answer arrives.
+ * The map section is in the markup, hidden, for `lib/canada-map.ts` to fill and show.
+ */
+import { renderCanadaClockChangeTemplate } from "../lib/canada-clock-change-mount";
+
+const html = renderCanadaClockChangeTemplate({ keyPoints: true });
+---
+
+<div data-tools-fullbleed set:html={html} />
+
+<script>
+  import { mountCanadaClockChange } from "../lib/canada-clock-change-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    document.querySelectorAll<HTMLElement>(".gmt-canada").forEach((el) => {
+      // A link from the chat (`?w=canadaclock&wa=...`) arrives with its zone pinned.
+      const { zone } = seedFromLocation("canadaclock");
+      mountCanadaClockChange(el, new AbortController().signal, {
+        pinZone: typeof zone === "string" ? zone : undefined,
+      }).catch((error) => showUnavailable(el, error));
+    });
+  }
+</script>

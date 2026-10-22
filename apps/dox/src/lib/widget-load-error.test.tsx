@@ -129,6 +129,10 @@ import {
   mountMovingFeasts,
   renderMovingFeastsTemplate,
 } from "./moving-feasts-mount";
+import {
+  mountCanadaClockChangeWidget,
+  renderCanadaClockChangeWidgetTemplate,
+} from "./canada-clock-change-mount";
 
 installJsdomShims();
 
@@ -287,6 +291,11 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "moving feasts",
     () => renderMovingFeastsTemplate(),
     mountMovingFeasts as MountFn<never>,
+  ],
+  [
+    "canada clock-change checker",
+    () => renderCanadaClockChangeWidgetTemplate("canada"),
+    mountCanadaClockChangeWidget as MountFn<never>,
   ],
 ];
 

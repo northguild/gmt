@@ -45,6 +45,7 @@ import {
   ENABLED_TOOL_NAMES,
   showBillingDeadlinesInput,
   showBlDateStampInput,
+  showCanadaClockChangeInput,
   showConnectionCheckerInput,
   showConverterBenchInput,
   showCrossingClockInput,
@@ -77,6 +78,7 @@ import {
   showTimetableReaderInput,
   showZonePlannerInput,
 } from "../src/lib/dox-tools";
+import canadaZones from "../src/lib/canada-zones.json";
 
 const docFor = (name: string) =>
   DOX_TOOL_DOCS.find((d) => d.name === name)?.purpose ?? name;
@@ -479,6 +481,18 @@ export function buildWorkerTools(
       description: docFor("showMovingFeasts"),
       inputSchema: showMovingFeastsInput,
       execute: () => accept("moving-feasts"),
+    }),
+    showCanadaClockChange: tool({
+      description: docFor("showCanadaClockChange"),
+      inputSchema: showCanadaClockChangeInput,
+      // The checker pins only the zones in its own list; anything else would open unpinned.
+      execute: ({ zone }) =>
+        zone === undefined || canadaZones.zones.includes(zone)
+          ? accept("canada-clock-change")
+          : reject(
+              "canada-clock-change",
+              `"${zone}" is not one of the zones the checker lists. Call it again without a zone, or say so plainly.`,
+            ),
     }),
   };
 

@@ -30,7 +30,13 @@ const DOCS_DIR = path.resolve(import.meta.dirname, "..", "content", "docs");
 
 /** The sections whose pages carry a tag. An index page lists other pages and
  *  carries none. */
-const TAGGED_SECTIONS = ["tools", "scenarios", "guides", "mistakes"];
+const TAGGED_SECTIONS = [
+  "tools",
+  "check",
+  "scenarios",
+  "guides",
+  "mistakes",
+];
 
 /** Every namespace and `namespace/module` that exports a function, from the generated corpus. */
 const functions = corpus.filter((entry) => entry.kind === "function");
