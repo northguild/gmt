@@ -1,4 +1,6 @@
 ---
+import { renderDataCreditsHtml, TZ_BOUNDARIES } from "../lib/data-credits";
+
 interface Props {
   title?: string;
   caption?: string;
@@ -23,15 +25,22 @@ const { title, caption } = Astro.props;
       </linearGradient>
     </defs>
   </svg>
-  <div id="tz-map-host" class="gmt-chart gmt-glass"></div>
+  {/* The map draws the time-zone boundaries, so its credit sits in the drawing's corner. */}
+  <div class="gmt-credited-frame">
+    <div id="tz-map-host" class="gmt-chart gmt-glass"></div>
+    <Fragment set:html={renderDataCreditsHtml([TZ_BOUNDARIES], { id: "tz-map-data-credits", placement: "corner" })} />
+  </div>
   <div id="tz-clock-panel" class="gmt-clock-panel"></div>
   {caption && <p class="gmt-chart-caption">{caption}</p>}
 </div>
 
 <script>
+  import { watchDataCredits } from "../lib/data-credits";
   import { initTimezoneMap } from "../lib/timezone-map";
   import { TIMEZONES } from "../lib/timezones";
   import { showUnavailable } from "../lib/widget-mount";
+
+  watchDataCredits();
 
   const host = document.getElementById("tz-map-host");
   const clockPanel = document.getElementById("tz-clock-panel");

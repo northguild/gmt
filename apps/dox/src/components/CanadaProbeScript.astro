@@ -1,0 +1,11 @@
+---
+/**
+ * The pre-paint fill of the Canada page's "Your browser" card (CORE-88). It sits at the end of the
+ * page text, so the browser has parsed the whole page when it runs and no paint shows the page cut
+ * off; the card is filled before the first paint of the verdict. `canada-clock-change-mount.ts`
+ * explains what it does.
+ */
+import { probeInlineSource } from "../lib/canada-clock-change-mount";
+---
+
+<script is:inline set:html={probeInlineSource()} />

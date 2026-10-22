@@ -32,6 +32,14 @@ permissions:
   # wrangler-action to create Pages deployment records; this deploys a plain Worker
   # and never passes gitHubToken, so contents: read alone is sufficient.
 
+# The jobs name their Node with actions/setup-node, and that is the Node they must run.
+# package.json pins a Node through devEngines.runtime for local work. In CI, every
+# `pnpm install` passes --no-runtime so pnpm does not download that pin, and
+# verifyDepsBeforeRun is off so a later `pnpm run` or `pnpm exec` does not quietly run an
+# install without the flag and put the pinned Node ahead of the job's Node.
+env:
+  pnpm_config_verify_deps_before_run: "false"
+
 jobs:
   deploy:
     name: Build & deploy apps/dox
@@ -45,20 +53,19 @@ jobs:
           # Full history and every tag, so the build can read release tags.
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          check-latest: true
           cache: pnpm
 
       - name: Approve pnpm build scripts
         run: pnpm approve-builds --all
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-runtime
 
       # The build's generate step refreshes the /upstream/ tracker from GitHub
       # (scripts/upstream.mjs refresh). It is best-effort: without a token or on a

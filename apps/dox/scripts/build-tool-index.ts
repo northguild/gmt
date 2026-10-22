@@ -2,7 +2,7 @@
 /**
  * Generate the tools index page.
  *
- * Scans src/content/docs/tools/ for .mdx files (excluding index.mdx), reads
+ * Scans src/content/docs/tools/ and src/content/docs/check/ for .mdx files (excluding index.mdx), reads
  * each page's title, description and industries from its frontmatter, and
  * writes a generated index.mdx that lists every tool under its industry.
  *
@@ -22,9 +22,12 @@ import { INDUSTRY_TAG_IDS, industryTag } from "../src/lib/industry-tags";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const toolsDir = resolve(appRoot, "src", "content", "docs", "tools");
+const checkDir = resolve(appRoot, "src", "content", "docs", "check");
 const indexPath = resolve(toolsDir, "index.mdx");
 
 interface Tool {
+  /** The docs directory the page lives in: `tools`, or `check` for a checker. */
+  directory: string;
   slug: string;
   title: string;
   description: string;
@@ -34,8 +37,8 @@ interface Tool {
 const unquote = (value: string): string =>
   value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value;
 
-function readTool(file: string): Tool {
-  const source = readFileSync(resolve(toolsDir, file), "utf8");
+function readTool(directory: string, dir: string, file: string): Tool {
+  const source = readFileSync(resolve(dir, file), "utf8");
   const frontmatter = source.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
   const field = (name: string): string =>
     frontmatter.match(new RegExp(`^${name}:\\s*(.*)$`, "m"))?.[1]?.trim() ?? "";
@@ -49,6 +52,7 @@ function readTool(file: string): Tool {
     throw new Error(`[tools] ${file} has no \`industries\` in its frontmatter`);
   }
   return {
+    directory,
     slug,
     title: unquote(field("title")) || slug,
     description: unquote(field("description")),
@@ -56,9 +60,15 @@ function readTool(file: string): Tool {
   };
 }
 
-const tools = readdirSync(toolsDir)
-  .filter((file) => file.endsWith(".mdx") && file !== "index.mdx")
-  .map(readTool)
+const tools = [
+  { directory: "tools", dir: toolsDir },
+  { directory: "check", dir: checkDir },
+]
+  .flatMap(({ directory, dir }) =>
+    readdirSync(dir)
+      .filter((file) => file.endsWith(".mdx") && file !== "index.mdx")
+      .map((file) => readTool(directory, dir, file)),
+  )
   .sort((a, b) => a.title.localeCompare(b.title, "en"));
 
 const sections = INDUSTRY_TAG_IDS.flatMap((id) => {
@@ -68,7 +78,8 @@ const sections = INDUSTRY_TAG_IDS.flatMap((id) => {
   const guide = industry.guide ? ` [Read the guide](${industry.guide}).` : "";
   const list = members
     .map(
-      (tool) => `- [${tool.title}](/tools/${tool.slug}/): ${tool.description}`,
+      (tool) =>
+        `- [${tool.title}](/${tool.directory}/${tool.slug}/): ${tool.description}`,
     )
     .join("\n");
   return [

@@ -45,6 +45,14 @@ concurrency:
 permissions:
   contents: read
 
+# The jobs name their Node with actions/setup-node, and that is the Node they must run.
+# package.json pins a Node through devEngines.runtime for local work. In CI, every
+# `pnpm install` passes --no-runtime so pnpm does not download that pin, and
+# verifyDepsBeforeRun is off so a later `pnpm run` or `pnpm exec` does not quietly run an
+# install without the flag and put the pinned Node ahead of the job's Node.
+env:
+  pnpm_config_verify_deps_before_run: "false"
+
 jobs:
   oracle:
     name: Native Temporal oracle
@@ -53,20 +61,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          check-latest: true
           cache: pnpm
 
       - name: Approve pnpm build scripts
         run: pnpm approve-builds --all
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-runtime
 
       - name: Install Playwright Chromium
         run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium
@@ -100,20 +107,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v4
         with:
           node-version: 26
+          check-latest: true
           cache: pnpm
 
       - name: Approve pnpm build scripts
         run: pnpm approve-builds --all
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-runtime
 
       - name: Install Playwright ${{ matrix.leg }}
         if: matrix.leg != 'node'
@@ -172,6 +178,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          check-latest: true
 
       - uses: actions/download-artifact@v4
         continue-on-error: true # no artifact = no verdicts = a could-not-run issue

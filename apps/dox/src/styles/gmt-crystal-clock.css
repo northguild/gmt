@@ -99,6 +99,16 @@
   stroke-width: 1.25;
 }
 
+.gmt-crystal-clock-hand--second {
+  stroke-width: 0.75;
+  transform-box: view-box;
+  transform-origin: 50px 50px;
+  /* The hand sweeps; a reader who asks for less motion gets one step a second (below). */
+  transition:
+    transform 1s linear,
+    stroke 150ms ease;
+}
+
 .gmt-crystal-clock-cap {
   fill: var(--gmt-cyan-ink);
   transition: fill 150ms ease;
@@ -253,6 +263,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .gmt-crystal-clock-hand--second {
+    transition: none;
+  }
+
   .gmt-crystal-clock-hand,
   .gmt-crystal-clock-cap,
   .gmt-crystal-clock-glow {

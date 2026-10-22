@@ -792,6 +792,12 @@ export const CHAT_STARTERS: readonly {
         "2016-12-01T09:00:00+02:00[Europe/Istanbul]\n2016-12-01T09:00:00+03:00[Europe/Istanbul]",
     },
   },
+  {
+    text: "Does my runtime still apply the old 2026 clock change for America/Winnipeg?",
+    widget: "showCanadaClockChange",
+    area: "core",
+    args: { zone: "America/Winnipeg" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

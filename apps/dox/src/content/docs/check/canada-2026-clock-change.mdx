@@ -1,0 +1,21 @@
+---
+title: Canada 2026 clock-change checker
+description: Check whether a runtime has the time zone data for Canada's 2026 clock change, see the clock changes in 2026 and 2027, and watch five live clocks.
+industries: [core]
+tableOfContents: false
+---
+
+import CanadaClockChange from "../../../components/CanadaClockChange.astro";
+import CanadaProbeScript from "../../../components/CanadaProbeScript.astro";
+
+On 1 November 2026, `British Columbia`, `Alberta`, the `Northwest Territories` and `Manitoba` do not turn their clocks back, and anything with old time zone data shows them an hour off.
+
+<CanadaClockChange />
+
+## Related
+
+- [Stored Time Audit](/tools/stored-time-audit/): check the times you saved before a change.
+- [`getDstTransitions`](/reference/zoned/get/getDstTransitions/): the clock changes of a zone in a year.
+- [`getTimeZoneOffset`](/reference/zoned/get/getTimeZoneOffset/): the offset of a zone at an instant.
+
+<CanadaProbeScript />

@@ -7,15 +7,19 @@ upstream `timezone-boundary-builder` dataset is updated and you want to
 refresh `apps/dox/public/timezone-boundaries.json`.
 
 Steps:
-  1. Download the latest `timezones.geojson.zip` release from
+  1. Download `timezones.geojson.zip` from the pinned TBB_TAG release of
      https://github.com/evansiroky/timezone-boundary-builder
   2. Extract `combined.json` and filter to the 10 timezones the gmt
      test suite covers (see TIMEZONES below).
   3. Map `UTC` -> `Etc/UTC` (the boundary dataset uses the latter).
   4. Douglas-Peucker-simplify each polygon with shapely at 0.02 deg
-     (~2.2 km at the equator) to keep the asset small.
+     (~2.2 km at the equator) and round coordinates to 3 decimals, to keep the asset small.
   5. Write the filtered FeatureCollection to
      `apps/dox/public/timezone-boundaries.json`.
+
+The repo's formatter checks the output, so finish with
+`pnpm exec oxfmt --write apps/dox/public/timezone-boundaries*.json apps/dox/src/lib/canada-zones.json`
+(the files roughly double when pretty-printed; re-check the Canada file is still under budget).
 
 Requires: `uv run --with shapely python scripts/prepare-timezone-boundaries.py`
 (or any venv with shapely installed).
@@ -36,10 +40,23 @@ OUTPUT_PATH = (
     REPO_ROOT / "apps/dox/public/timezone-boundaries.json"
 )
 
+# Pinned release, shared with prepare-canada-boundaries.py. Every boundary file names the
+# release it came from.
+TBB_TAG = "2026e"
+
 RELEASE_URL = (
-    "https://github.com/evansiroky/timezone-boundary-builder/releases/latest/"
-    "download/timezones.geojson.zip"
+    "https://github.com/evansiroky/timezone-boundary-builder/releases/download/"
+    f"{TBB_TAG}/timezones.geojson.zip"
 )
+
+# The ODbL notice (ODbL 1.0 §4.2-4.4), as GeoJSON foreign members (RFC 7946 §6.1). Wording
+# follows the timezone-boundary-builder README § Licenses at tag TBB_TAG.
+NOTICE = {
+    "source": f"timezone-boundary-builder {TBB_TAG}, timezones.geojson.zip",
+    "attribution": "© OpenStreetMap contributors, timezone-boundary-builder",
+    "license": "ODbL-1.0",
+    "licenseUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
+}
 
 # IANA IDs in apps/dox/src/lib/timezones.ts mapped to the tzid values used
 # in the boundary dataset (UTC -> Etc/UTC, the rest match verbatim).
@@ -58,6 +75,7 @@ TIMEZONES = {
 WANTED = set(TIMEZONES.values())
 
 SIMPLIFY_TOLERANCE_DEG = 0.02
+COORD_DECIMALS = 3
 
 
 def download_combined() -> dict:
@@ -72,6 +90,15 @@ def download_combined() -> dict:
 
 def filter_features(data: dict) -> list[dict]:
     return [f for f in data["features"] if f["properties"].get("tzid") in WANTED]
+
+
+def round_coords(node):
+    """Round every coordinate to COORD_DECIMALS (about 110 m), as the committed file always was."""
+    if isinstance(node, (list, tuple)):
+        if node and isinstance(node[0], (int, float)):
+            return [round(c, COORD_DECIMALS) for c in node]
+        return [round_coords(n) for n in node]
+    return node
 
 
 def simplify(geom: dict) -> dict | None:
@@ -93,7 +120,9 @@ def simplify(geom: dict) -> dict | None:
     s = s.simplify(SIMPLIFY_TOLERANCE_DEG, preserve_topology=True)
     if s.is_empty:
         return None
-    return mapping(s)
+    out = mapping(s)
+    out["coordinates"] = round_coords(out["coordinates"])
+    return out
 
 
 def main() -> int:
@@ -115,9 +144,9 @@ def main() -> int:
         print(f"WARNING: missing timezones in dataset: {sorted(missing)}", file=sys.stderr)
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    out = {"type": "FeatureCollection", "features": features}
+    out = {"type": "FeatureCollection", **NOTICE, "features": features}
     with open(OUTPUT_PATH, "w") as f:
-        json.dump(out, f, separators=(",", ":"))
+        json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
     print(f"Wrote {OUTPUT_PATH} ({os.path.getsize(OUTPUT_PATH)} bytes)")
     return 0
 

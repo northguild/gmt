@@ -4,7 +4,7 @@
 
 ## Gap
 
-The docs site lives on a `workers.dev` hostname that no README, skill or package field should name for long: every link into it becomes a redirect the day the domain goes live. A later Worker needs `northguild.dev/api/*` and `northguild.dev/mcp/*`, and nothing reserves them today. The home page carries a duplicated `<title>`, `robots.txt` carries no content signals, and the repo has no `FUNDING.yml`.
+The docs site lives on a `workers.dev` hostname that no README, skill or package field should name for long: every link into it becomes a redirect the day the domain goes live. The home page carries a duplicated `<title>`, `robots.txt` carries no content signals, and the repo has no `FUNDING.yml`.
 
 ## Scope
 
@@ -14,7 +14,7 @@ The docs site lives on a `workers.dev` hostname that no README, skill or package
 - **A guard for the bug class.** A test over the built `dist/` fails on any root-absolute URL without `/gmt/` in HTML, CSS, the `.md` twins, `llms*.txt` and `_redirects`.
 - **Every link and text** that names the `workers.dev` host moves to `https://northguild.dev/gmt`: both READMEs, `CONTRIBUTING.md`, the package `homepage`, the eight skills that name the host and the skill spec, the agent prompt, the install and skills pages, the stats and API-surface scripts, and the test origin constants. Old CHANGELOG entries stay.
 - **Small fixes in the same PR:** the duplicated home `<title>` (D9). `robots.txt` lives in the landing repo (D7); `.github/FUNDING.yml` waits for a Sponsors listing (D11).
-- **Reserved paths.** `northguild.dev/api/*` and `northguild.dev/mcp/*` serve nothing from the landing page but its 404; a separate Worker in its own repo takes them as Routes later. `CORE-88` links that Worker once it is live.
+- **No reserved paths.** `northguild.dev/api*` and `/mcp*` reach no Worker; the landing page answers them with its 404.
 - **The landing repo** (`northguild/northguild.dev`): a CSS-only `@northguild/theme` package carrying Dox's tokens, primitives and font, and an Astro landing page with a product card per repo. Dark only, full-border cards, WCAG AA on `--gmt-void`, phone width with no horizontal scroll.
 
 ## Design notes

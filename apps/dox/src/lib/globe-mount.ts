@@ -8,6 +8,12 @@
  * Everything is container-scoped, never `document`-scoped, so two globes can live
  * in one document — one on the page and one in the rail.
  */
+import {
+  EARTH_IMAGERY,
+  renderDataCreditsHtml,
+  TZ_BOUNDARIES,
+  watchDataCredits,
+} from "./data-credits";
 import { escapeHtml } from "./widget-ui";
 import {
   onceDestroy,
@@ -85,10 +91,16 @@ export function renderGlobeTemplate({
        Scoped to the stage, not `.gmt-globe`: the root's own `<h2>` heading
        and `<p>` caption *should* keep Starlight's content styling. */
     `<div class="gmt-globe-stage gmt-glass not-content" id="${stageId}" data-role="stage">` +
-    `<div class="gmt-globe-zoom" role="group" aria-label="Zoom the globe">` +
+    `<div class="gmt-globe-zoom" role="group" aria-label="Globe controls">` +
     `<button type="button" data-globe-zoom="in" aria-label="Zoom in">+</button>` +
     `<button type="button" data-globe-zoom="out" aria-label="Zoom out">−</button>` +
     `<button type="button" data-globe-zoom="reset" aria-label="Reset zoom">⊙</button>` +
+    /* The fourth button of the stack. The globe always draws both data sets, so it always
+       carries the credit; `idPrefix` keeps the popover id unique per mount. */
+    renderDataCreditsHtml([TZ_BOUNDARIES, EARTH_IMAGERY], {
+      id: `${idPrefix}-data-credits`,
+      placement: "stack",
+    }) +
     `</div>` +
     `</div>` +
     `</div>` +
@@ -124,6 +136,7 @@ export function renderGlobeTemplate({
 }
 
 export const mountGlobe: MountFn<GlobeArgs> = async (root, args, signal) => {
+  watchDataCredits();
   const stage = root.querySelector<HTMLElement>('[data-role="stage"]');
   const clockPanel = root.querySelector<HTMLElement>('[data-role="clocks"]');
   if (!stage || !clockPanel) return onceDestroy(() => {});

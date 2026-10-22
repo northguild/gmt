@@ -590,6 +590,17 @@ export const showStoredTimeAuditInput = z.object({
 });
 
 /**
+ * Canada 2026 clock-change checker: optionally one zone to pin on its map.
+ *
+ * The id is checked against the checker's own list (`canada-zones.json`) in the Worker's
+ * `execute` and the registry's `validate`, not here: a zone outside the list is a call to
+ * refuse with a reason, not a malformed one.
+ */
+export const showCanadaClockChangeInput = z.object({
+  zone: zoneSchema.optional(),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -633,7 +644,8 @@ export type DoxToolName =
   | "showGnssRolloverChecker"
   | "showLeapSecondTimeline"
   | "showElapsedVsClock"
-  | "showStoredTimeAudit";
+  | "showStoredTimeAudit"
+  | "showCanadaClockChange";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -666,6 +678,7 @@ export const DOX_TOOL_INPUTS = {
   showLeapSecondTimeline: showLeapSecondTimelineInput,
   showElapsedVsClock: showElapsedVsClockInput,
   showStoredTimeAudit: showStoredTimeAuditInput,
+  showCanadaClockChange: showCanadaClockChangeInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -885,6 +898,13 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader asks why a stored zoned time no longer parses or resolves, whether a stored offset still matches its zone, what happens to stored future events after a time zone rule change, or how Temporal's `offset` option reads such a string",
     args: "values: the reader's strings exactly as given, one per line, each with an offset or `Z` and a bracketed zone; never invent or correct one. line: optional, which line to draw",
   },
+  {
+    name: "showCanadaClockChange",
+    purpose:
+      "Check whether a device or server has current time zone data for the clock changes that apply from 2026: a table of four zones' correct offsets beside the reader's browser, a check-mark or cross verdict for the reader's browser with what to do, a command to test the reader's own servers, a card on how gmt finds and repairs saved times, the 2026 and 2027 clock changes, live clocks, a map of the zones with the last and next change for each, and a Check saved times form, pre-filled with an example and run on load, that reads up to 50 pasted saved times and says which are out of date and what to do about each.",
+    when: "Call when the reader asks whether their runtime, server or browser still applies an old clock change, whether its time zone data is current, or what a zone's next clock change is",
+    args: "zone: optional, one IANA id from the checker's list to pin on the map (never a province or a place name).",
+  },
 ];
 
 /**
@@ -1013,6 +1033,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[29].purpose,
     inputSchema: showStoredTimeAuditInput,
   }),
+  showCanadaClockChange: tool({
+    description: DOX_TOOL_DOCS[30].purpose,
+    inputSchema: showCanadaClockChangeInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1066,6 +1090,7 @@ export const ENABLED_TOOL_NAMES = [
   "showLeapSecondTimeline",
   "showElapsedVsClock",
   "showStoredTimeAudit",
+  "showCanadaClockChange",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];
