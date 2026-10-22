@@ -11,5 +11,6 @@ export {
   isNudgeWindowCompatNeeded,
   isSecondsOffsetMatchCompatNeeded,
   isTransitionSearchCompatNeeded,
+  isZIgnoreExactCompatNeeded,
 } from "./capabilities";
 export { calendarFieldsOf } from "./calendarFields";

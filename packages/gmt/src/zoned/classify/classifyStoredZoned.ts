@@ -4,6 +4,7 @@ import {
   isoStringBody,
   isWithinIsoDaysRange,
   TIME_ZONE_ANNOTATION,
+  UTC_OFFSET_WITH_SECONDS,
   writtenOffset,
   zonedDateTimeFrom,
 } from "../../internal";
@@ -41,7 +42,8 @@ const timeZoneAnnotation = new RegExp(`^${TIME_ZONE_ANNOTATION}`);
  *   (`Africa/Monrovia`, `-00:45` for `-00:44:30`). An offset written with seconds must match
  *   exactly.
  * - Each reading is a `Temporal.Instant#toString` string ending in `Z`, and each offset is
- *   `±HH:MM[:SS]`.
+ *   `±HH:MM[:SS]`. `storedOffset` keeps the seconds as written, so `-00:45:00` stays
+ *   `-00:45:00`; `zoneOffset` drops a zero seconds part.
  * - The result depends on the host's tzdb: the same string can be `valid` on one host and
  *   `offsetMismatch` on another. On Node, `process.versions.tz` names the release. Browsers
  *   expose no equivalent.
@@ -50,17 +52,17 @@ const timeZoneAnnotation = new RegExp(`^${TIME_ZONE_ANNOTATION}`);
  *   so it can be an `offsetMismatch`.
  * - Returns null for a string with no offset, no zone annotation, a bracketed offset in place
  *   of an IANA zone, an unknown zone, an offset finer than a second, a calendar other than
- *   `iso8601`, second 60, basic format, a reading outside the instant range, or any
- *   non-string input.
+ *   `iso8601`, second 60, basic format, a reading outside the instant range, a local date of
+ *   `-271821-04-19` (which Temporal's `prefer` and `reject` refuse), or any non-string input.
  *
  * @param value RFC 9557 string with a UTC offset and a bracketed IANA time zone
  * @returns the classification with every reading as a `Z` instant string, or `null` for any
  *   other input
  *
  * @example classifyStoredZoned("2016-12-01T09:00:00+02:00[Europe/Istanbul]") // { kind: "offsetMismatch", storedOffset: "+02:00", zoneOffset: "+03:00", atStoredOffset: "2016-12-01T07:00:00Z", atZoneOffset: "2016-12-01T06:00:00Z" }
- * @example classifyStoredZoned("2026-03-08T02:30:00-03:00[America/Los_Angeles]") // { kind: "nonexistent", earlier: "2026-03-08T09:30:00Z", later: "2026-03-08T10:30:00Z", atStoredOffset: "2026-03-08T05:30:00Z" }
- * @example classifyStoredZoned("2026-11-01T01:30:00-08:00[America/Los_Angeles]") // { kind: "validInOverlap", instant: "2026-11-01T09:30:00Z", earlier: "2026-11-01T08:30:00Z", later: "2026-11-01T09:30:00Z", atStoredOffset: "2026-11-01T09:30:00Z" }
- * @example classifyStoredZoned("2026-03-08T02:30:00[America/Los_Angeles]") // null
+ * @example classifyStoredZoned("2026-03-29T01:30:00+00:00[Europe/London]") // { kind: "nonexistent", earlier: "2026-03-29T00:30:00Z", later: "2026-03-29T01:30:00Z", atStoredOffset: "2026-03-29T01:30:00Z" }
+ * @example classifyStoredZoned("2026-10-25T01:30:00+01:00[Europe/London]") // { kind: "validInOverlap", instant: "2026-10-25T00:30:00Z", earlier: "2026-10-25T00:30:00Z", later: "2026-10-25T01:30:00Z", atStoredOffset: "2026-10-25T00:30:00Z" }
+ * @example classifyStoredZoned("2026-03-29T01:30:00[Europe/London]") // null
  */
 export function classifyStoredZoned(
   value: string,
@@ -98,6 +100,22 @@ function classifyExact(value: string): StoredZonedClassification | null {
   return { kind: "valid", instant, atStoredOffset: instant };
 }
 
+/**
+ * The offset as written: `writtenOffset` drops a seconds part of zero, so `-00:45:00` is put back
+ * when the body wrote seconds. Without it a caller could not tell `-00:45:00` (which must match
+ * the zone exactly) from `-00:45` (which may match `-00:44:30`).
+ */
+function withWrittenSeconds(
+  offset: string | null,
+  body: string,
+): string | null {
+  return offset !== null &&
+    offset.length === 6 &&
+    UTC_OFFSET_WITH_SECONDS.test(body)
+    ? `${offset}:00`
+    : offset;
+}
+
 /** What the stored offset says, or null when it cannot be trusted. */
 function readStored(
   value: string,
@@ -108,12 +126,14 @@ function readStored(
   wall: Temporal.PlainDateTime;
 } | null {
   const use = zonedDateTimeFrom(value, { offset: "use" }).toInstant();
-  const storedOffset = writtenOffset(use, body);
+  const storedOffset = withWrittenSeconds(writtenOffset(use, body), body);
   const wall = Temporal.PlainDateTime.from(body);
 
-  // Temporal refuses a local date outside CheckISODaysRange only under `prefer` and `reject`
-  // (§6.5.1 step 7); `use` and `ignore` accept it, so neither read above throws. The stored
-  // offset cannot be trusted there, so the string is not a valid stored time.
+  // Temporal's `prefer` and `reject` refuse a local date outside CheckISODaysRange (§6.5.1
+  // step 7), so the stored offset cannot be checked and the string is not a valid stored time.
+  // `use` accepts that date. TC39's `ignore` accepts it too, but polyfill 0.5.1 throws there, so
+  // the `ignore` read in `classifyShaped` can throw first; `classifyStoredZoned` catches that and
+  // returns the same null.
   return storedOffset === null || !isWithinIsoDaysRange(wall)
     ? null
     : { use, storedOffset, wall };

@@ -576,7 +576,13 @@ export const showElapsedVsClockInput = z.object({
  * permalink args.
  */
 export const showStoredTimeAuditInput = z.object({
-  values: z.string().min(1).max(1000),
+  values: z
+    .string()
+    .min(1)
+    .max(1000)
+    // Not trimmed: the args are passed exactly as given. A blank list is
+    // refused so the card opens on the reader's empty box, not a preset.
+    .refine((s) => s.trim() !== "", { message: "Send at least one line." }),
   line: z
     .string()
     .regex(/^(?:[1-9]|1[0-2])$/)

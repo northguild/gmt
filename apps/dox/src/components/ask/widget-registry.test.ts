@@ -52,6 +52,19 @@ describe("resolveWidget", () => {
     }
   });
 
+  it("refuses a whitespace-only stored-time list and keeps a padded one as given", () => {
+    for (const values of [" ", "\n", " \t\n "]) {
+      expect(resolveWidget("showStoredTimeAudit", { values }).ok, values).toBe(
+        false,
+      );
+    }
+    const padded = "  2026-03-29T01:30:00+02:00[Europe/London]\n";
+    const result = resolveWidget("showStoredTimeAudit", { values: padded });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.args).toEqual({ values: padded });
+  });
+
   it("refuses input that does not fit the schema", () => {
     expect(resolveWidget("showGlobe", {}).ok).toBe(false);
     expect(resolveWidget("showGlobe", { zone: 42 }).ok).toBe(false);

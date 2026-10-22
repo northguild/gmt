@@ -258,6 +258,44 @@ describe("the default selected line", () => {
     expect(selectedLine(root)).toBe("5");
   });
 
+  it("goes back to the first line that is not valid when the reader changes the text", async () => {
+    const { root } = await mount();
+    choose(root, "istanbul-2016");
+    expect(selectedLine(root)).toBe("5");
+    // Eight new lines: seven valid, then one an hour off. The old 5 is in
+    // range, but it names a valid line of the new text.
+    const valid = "2026-07-08T00:14:07+01:00[Europe/London]";
+    const off = "2026-07-08T00:14:07+00:00[Europe/London]";
+    await paste(root, [...Array(7).fill(valid), off].join("\n"));
+    expect(selectedLine(root)).toBe("8");
+    expect(q(root, "lane-clock").textContent).not.toBe("");
+  });
+
+  it("does not keep the old number across a cleared box", async () => {
+    const { root } = await mount();
+    choose(root, "istanbul-2016");
+    await paste(root, "");
+    expect(selectedLine(root)).toBeUndefined();
+    const off = "2026-07-08T00:14:07+00:00[Europe/London]";
+    await paste(root, [off, off].join("\n"));
+    expect(selectedLine(root)).toBe("1");
+  });
+
+  it("keeps the line the reader clicked, a preset's line and a permalink's line", async () => {
+    const { root } = await mount();
+    choose(root, "istanbul-2016");
+    select(root, 2);
+    expect(selectedLine(root)).toBe("2");
+    choose(root, "sao-paulo-2019");
+    expect(selectedLine(root)).toBe("5");
+
+    const seeded = await mount({
+      values: AUDIT_PRESETS[0]!.lines.join("\n"),
+      line: "3",
+    });
+    expect(selectedLine(seeded.root)).toBe("3");
+  });
+
   it("is the first line that is neither valid nor not-a-time for pasted text", async () => {
     const { root } = await mount({
       values:
@@ -278,6 +316,28 @@ describe("the default selected line", () => {
     });
     expect(selectedLine(root)).toBe("3");
     expect(q(root, "call-audit").textContent).toContain("2016-03-27T03:30:00");
+  });
+});
+
+describe("the line radios", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("name each radio for its row and keep the bare number visible", async () => {
+    const { root } = await mount();
+    const radios = [
+      ...root.querySelectorAll<HTMLInputElement>(
+        'tbody input[type="radio"][data-role="line"]',
+      ),
+    ];
+    expect(radios.length).toBeGreaterThan(0);
+    radios.forEach((r, i) => {
+      expect(r.getAttribute("aria-label")).toBe(`Draw line ${i + 1}`);
+      expect(
+        r.closest("label")!.querySelector(".gmt-chip-toggle-face")!.textContent,
+      ).toBe(String(i + 1));
+    });
   });
 });
 
@@ -304,6 +364,15 @@ describe("the sentinel", () => {
     expect(
       q(root, "audit-output").classList.contains("gmt-playground-sentinel"),
     ).toBe(true);
+  });
+
+  it("announces through the one output, not a live region per row", async () => {
+    const { root } = await mount();
+    choose(root, "not-stored-times");
+    expect(
+      root.querySelectorAll("tbody [role='status'], tbody [aria-live]"),
+    ).toHaveLength(0);
+    expect(q(root, "audit-output").tagName).toBe("OUTPUT");
   });
 
   it("can select a line that is not a stored time, without a throw", async () => {

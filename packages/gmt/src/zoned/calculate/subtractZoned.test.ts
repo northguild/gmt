@@ -464,3 +464,28 @@ describe("subtractZoned with an option that is an object", () => {
     });
   });
 });
+
+describe("subtractZoned with a calendar-annotated Z value at an end of the instant range", () => {
+  // A `Z` value is an exact instant under every `offset` option (ToTemporalZonedDateTime sets
+  // offsetBehaviour ~exact~), so both values are in range. Reading the wall clock in the zone
+  // instead would put Tokyo (+09:18:59) before the minimum and São Paulo (-03:00) past the maximum.
+  // Nothing positive can be subtracted from the minimum, so the Tokyo row subtracts -1 day.
+  it("subtracts -1 day from -271821-04-20T00:00:00Z[Asia/Tokyo][u-ca=iso8601]", () => {
+    expect(
+      subtractZoned("-271821-04-20T00:00:00Z[Asia/Tokyo][u-ca=iso8601]", {
+        days: -1,
+      }),
+    ).toBe("-271821-04-21T09:18:59+09:19[Asia/Tokyo]");
+  });
+
+  it("subtracts one day from +275760-09-13T00:00:00Z[America/Sao_Paulo][u-ca=iso8601]", () => {
+    expect(
+      subtractZoned(
+        "+275760-09-13T00:00:00Z[America/Sao_Paulo][u-ca=iso8601]",
+        {
+          days: 1,
+        },
+      ),
+    ).toBe("+275760-09-11T21:00:00-03:00[America/Sao_Paulo]");
+  });
+});

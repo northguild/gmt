@@ -195,6 +195,18 @@ const WORKAROUNDS = [
     ],
   },
   {
+    defects: ["D15"],
+    title:
+      "D15 — `Z` string read by wall clock under offset: \"ignore\" instead of as an exact instant (zonedWallClock.ts defect 6)",
+    trigger:
+      "a js-temporal release (and Node floor) whose ToTemporalZonedDateTime keeps a Z string's own instant under offset: \"ignore\", as InterpretISODateTimeOffset requires. Native V8 (Node 24.21 with --harmony-temporal) shares the defect; not filed upstream yet, and js-temporal main c55b211 and tc39 main e8cc03f both still have it (bug doc § O). The expected value is the specification's",
+    steps: [
+      "Delete zExactOptions and its call in zonedDateTimeFrom (internal/zonedWallClock.ts, with defect 6 in that file's header note), isZIgnoreExactCompatNeeded in capabilities.ts and its export in index.ts, and the D15 repros.",
+      "Keep the Z rows in zonedWallClock.test.ts, calendarValueOfZoned.test.ts and the all-16-cells row in classifyStoredZoned.test.ts: their values are the specification's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 15.`,
+    ],
+  },
+  {
     defects: ["D9"],
     title:
       "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",

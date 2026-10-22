@@ -835,9 +835,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     - **Definition of done, "nothing moves" (the bounding-box test).** jsdom has no layout, so
       the owner accepted a jsdom structural test plus the browser measurement taken in
       verification.
-    - **Known gate noise.** `visual:diff` fails on `zoned-earth` and `zone-planner` because of
-      the new sidebar entry and live clocks that are not masked, and the `tools-index-*` size
-      changes because of the new card. The new page has no baseline until the first snapshot.
+    - **Gate and live clocks.** `visual:diff` masks every element that reads "now" on the
+      Zoned Earth and Zone Planner pages (`LIVE_CLOCK_SELECTORS`: the clock list rows, the
+      planner's reference field, dials, times, dates, offsets, DST badges, readout and marks),
+      and hides the planner's dials in the capture, because the "Your time zone" dial is
+      drawn above the mask. The `tools-index-*` snapshots change when a tool card is added,
+      and a new page has no baseline until the first snapshot.
 
   The decoder links to the converter and the checker, the converter to the decoder and the
   timeline, the checker to the decoder, and the timeline and the elapsed tool to each other and

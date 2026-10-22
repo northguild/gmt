@@ -17,8 +17,10 @@
 export type StoredZonedClassification =
   | {
       /**
-       * The offset is one the zone has at that local time, and the local time occurs once.
-       * `instant` is what `reject`, `prefer` and `ignore` give.
+       * The string names one instant. Either it ends in `Z`, which Temporal reads as exact
+       * whatever the zone's wall clock does, or its offset matches the zone's offset at that
+       * local time (to the minute, or exactly when written with seconds) and the local time
+       * occurs once. `instant` is what `reject`, `prefer` and `ignore` give.
        */
       kind: "valid";
       /** The instant the string names. */
@@ -47,7 +49,7 @@ export type StoredZonedClassification =
        * and `prefer` give `atZoneOffset`.
        */
       kind: "offsetMismatch";
-      /** The offset written in the string. */
+      /** The offset as written in the string, `±HH:MM` or `±HH:MM:SS`. Seconds are kept when written. */
       storedOffset: string;
       /** The offset the zone has at that local time. */
       zoneOffset: string;
@@ -71,9 +73,10 @@ export type StoredZonedClassification =
     }
   | {
       /**
-       * The local time falls in a gap, so there is no occurrence to match. `earlier` and `later`
-       * are the wall time shifted back or forward by the size of the gap, as `disambiguation`
-       * names them.
+       * The local time falls in a gap, so there is no occurrence to match. `reject` refuses it,
+       * and `ignore` and `prefer` give `earlier` or `later` by `disambiguation`. `earlier` and
+       * `later` are the wall time shifted back or forward by the size of the gap, as
+       * `disambiguation` names them.
        */
       kind: "nonexistent";
       /** The reading `disambiguation: "earlier"` gives. */

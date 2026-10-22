@@ -105,7 +105,10 @@
 
 .gmt-stored-time-audit .gmt-stored-row[data-selected] td {
   background: color(from var(--gmt-series-1) srgb r g b / 0.08);
-  border-block-end: 2px solid var(--gmt-series-1);
+  /* The border stays 1px, as on every row, so selecting never moves the rows
+     below. The second pixel of the rule is drawn inside the cell. */
+  border-block-end-color: var(--gmt-series-1);
+  box-shadow: inset 0 -1px 0 var(--gmt-series-1);
 }
 
 .gmt-stored-time-audit .gmt-stored-row[data-selected] td:first-child {
@@ -266,7 +269,12 @@
 
   .gmt-stored-time-audit .gmt-stored-table tr {
     padding-block: var(--gmt-space-2);
-    border-block-end: 1px solid var(--gmt-hairline);
+    /* Every row has the same 1px frame; the selected one only recolours it,
+       so selecting never changes a row's box. */
+    border: 1px solid transparent;
+    border-block-end-color: var(--gmt-hairline);
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
   }
 
   .gmt-stored-time-audit .gmt-stored-table td {
@@ -287,9 +295,7 @@
   }
 
   .gmt-stored-time-audit .gmt-stored-row[data-selected] {
-    border: 1px solid var(--gmt-series-1);
-    border-radius: var(--gmt-radius-sm);
-    corner-shape: bevel;
+    border-color: var(--gmt-series-1);
     background: color(from var(--gmt-series-1) srgb r g b / 0.08);
   }
 

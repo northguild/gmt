@@ -396,14 +396,17 @@ export function chipToggleHtml(o: {
   checked?: boolean;
   name?: string;
   switch?: boolean;
+  /** The input's accessible name where the visible label alone has no context, such as a bare row number. The visible label should stay inside it. */
+  ariaLabel?: string;
 }): string {
   const name = o.name ? ` name="${escapeAttr(o.name)}"` : "";
+  const aria = o.ariaLabel ? ` aria-label="${escapeAttr(o.ariaLabel)}"` : "";
   const checked = o.checked ? " checked" : "";
   const track = o.switch ? '<span class="gmt-chip-toggle-track"></span>' : "";
   const cls = o.switch
     ? "gmt-chip-toggle gmt-chip-toggle--switch"
     : "gmt-chip-toggle";
-  return `<label class="${cls}"><input type="${o.type}"${name} data-role="${escapeAttr(o.role)}" value="${escapeAttr(o.value)}"${checked}><span class="gmt-chip-toggle-face">${track}${escapeHtml(o.label)}</span></label>`;
+  return `<label class="${cls}"><input type="${o.type}"${name}${aria} data-role="${escapeAttr(o.role)}" value="${escapeAttr(o.value)}"${checked}><span class="gmt-chip-toggle-face">${track}${escapeHtml(o.label)}</span></label>`;
 }
 
 /** One link to another tool: its `data-role` and its text. */

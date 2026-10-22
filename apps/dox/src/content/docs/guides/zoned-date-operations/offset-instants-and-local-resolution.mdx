@@ -179,10 +179,10 @@ classifyStoredZoned("2016-12-01T09:00:00+02:00[Europe/Istanbul]");
 // { kind: "offsetMismatch", storedOffset: "+02:00", zoneOffset: "+03:00",
 //   atStoredOffset: "2016-12-01T07:00:00Z", atZoneOffset: "2016-12-01T06:00:00Z" }
 
-// A time in the hour a clock change skipped.
-classifyStoredZoned("2026-03-08T02:30:00-03:00[America/Los_Angeles]");
-// { kind: "nonexistent", earlier: "2026-03-08T09:30:00Z",
-//   later: "2026-03-08T10:30:00Z", atStoredOffset: "2026-03-08T05:30:00Z" }
+// A time in the hour a clock change skipped (London, 2026-03-29).
+classifyStoredZoned("2026-03-29T01:30:00+02:00[Europe/London]");
+// { kind: "nonexistent", earlier: "2026-03-29T00:30:00Z",
+//   later: "2026-03-29T01:30:00Z", atStoredOffset: "2026-03-28T23:30:00Z" }
 
 // A string with no offset is not a stored zoned time.
 classifyStoredZoned("2016-12-01T09:00:00[Europe/Istanbul]"); // null

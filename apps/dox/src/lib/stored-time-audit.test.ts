@@ -234,8 +234,16 @@ describe("lineSentence and kindLabel", () => {
     expect(sentence("2015-11-08T03:30:00+03:00[Europe/Istanbul]")).toMatch(
       /^This wall time happens twice, and the stored offset picks the one at /,
     );
-    expect(sentence("2016-12-01T09:00:00+03:00[Europe/Istanbul]")).toMatch(
-      /^The zone has the stored offset/,
+    expect(sentence("2016-12-01T09:00:00+03:00[Europe/Istanbul]")).toBe(
+      "The string names one instant: 2016-12-01T06:00:00Z.",
+    );
+    // A Z string is exact even where the zone's offset is not +00:00.
+    expect(sentence("2022-07-08T00:14:07Z[Europe/London]")).toBe(
+      "The string names one instant: 2022-07-08T00:14:07Z.",
+    );
+    // A minute-rounded match: the stored offset read as written is half a minute off.
+    expect(sentence("1960-01-01T00:20:00-00:45[Africa/Monrovia]")).toBe(
+      "The string names one instant: 1960-01-01T01:04:30Z. The stored offset is the zone's rounded to the minute, so read as written it gives 1960-01-01T01:05:00Z.",
     );
     expect(sentence("not a time")).toBe(NOT_STORED_TEXT);
   });

@@ -244,6 +244,15 @@ describe("repros", () => {
     );
   });
 
+  // D15: ToTemporalZonedDateTime sets offsetBehaviour ~exact~ for a UTC designator and
+  // InterpretISODateTimeOffset applies "ignore" only to ~option~, so the Z string's own instant
+  // survives offset: "ignore" (2022-07-08T00:14:07Z is the string's instant).
+  it("D15 zIgnoreIsExact expects the string's own instant", () => {
+    expect(findRepro("D15", "iso8601", "zIgnoreIsExact")?.expected).toBe(
+      "2022-07-08T00:14:07Z",
+    );
+  });
+
   // D9: 1,200 months from M03 day 5. Persian: 12 months in every year (Intl era/monthCode proposal
   // §4.1.4 Table 3), so 100 years. Hebrew: the Dershowitz–Reingold count floor((235y − 234) / 19)
   // lands on 5881 ordinal 3, a common year.
@@ -315,6 +324,7 @@ describe("reproPasses", () => {
     ${"D13"}     | ${"iso8601"}       | ${"skip.hoursInDayNoronha"}   | ${"-8881"}
     ${"D13"}     | ${"iso8601"}       | ${"stall.nextRiga"}           | ${"ERR RangeError: more than 20000 offset reads"}
     ${"D14"}     | ${"iso8601"}       | ${"dayRoundClamp"}            | ${"2010-03-05T00:00:00+11:00[Antarctica/Casey]"}
+    ${"D15"}     | ${"iso8601"}       | ${"zIgnoreIsExact"}           | ${"2022-07-07T23:14:07Z"}
     ${"D9"}      | ${"persian"}       | ${"addMonths"}                | ${"1328 Intl reads for 1200 months"}
     ${"D9"}      | ${"hebrew"}        | ${"untilMonths"}              | ${"1518 Intl reads for 1200 months"}
   `(
@@ -359,7 +369,7 @@ describe("isCalendarArithmeticCompatNeeded", () => {
 });
 
 describe("repro split", () => {
-  // DefectId (D1-D8, D10-D14) is the type the shipped probes can ask about; the canary-only
+  // DefectId (D1-D8, D10-D15) is the type the shipped probes can ask about; the canary-only
   // groups are ZonedDefectId (zoned.*) and BoundedWorkDefectId (D9).
   const probeDefects = new Set([
     "D1",
@@ -375,6 +385,7 @@ describe("repro split", () => {
     "D12",
     "D13",
     "D14",
+    "D15",
   ]);
 
   it("holds every probe-defect repro of the full table in probeRepros", () => {

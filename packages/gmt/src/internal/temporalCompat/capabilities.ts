@@ -117,6 +117,18 @@ export function isDayRoundClampCompatNeeded(): boolean {
   return isDefectPresent("D14", "iso8601");
 }
 
+/**
+ * True when this runtime applies `offset: "ignore"` to a `Z` string (defect D15).
+ *
+ * TC39 `ToTemporalZonedDateTime` reads a `Z` string as an exact instant under every `offset`
+ * option; `InterpretISODateTimeOffset` applies `ignore` only to an offset written as an option. A
+ * runtime that ignores the `Z` and reads the wall clock in the zone returns a different instant
+ * whenever the zone's offset is not zero.
+ */
+export function isZIgnoreExactCompatNeeded(): boolean {
+  return isDefectPresent("D15", "iso8601");
+}
+
 /** Defects that make the runtime's calendar arithmetic or reads differ from the spec. */
 const ARITHMETIC_DEFECTS: readonly DefectId[] = [
   "D1",

@@ -104,6 +104,23 @@ describe("worker tool execute", () => {
     }
   });
 
+  it("rejects a whitespace-only stored-time list in the tool's own schema", () => {
+    const schema = (
+      tools.showStoredTimeAudit as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+    for (const values of [" ", "\n", " \t\n "]) {
+      expect(schema.safeParse({ values }).success, values).toBe(false);
+    }
+    const padded = " 2026-03-29T01:30:00+02:00[Europe/London] ";
+    const ok = schema.safeParse({ values: padded });
+    expect(ok.success).toBe(true);
+    expect(ok.data).toEqual({ values: padded });
+  });
+
   it("does no I/O and no model call — execute is synchronous work only", () => {
     // The premise of "costs no extra latency and no extra quota". If a tool
     // ever needs to await something, that claim has to be re-argued.

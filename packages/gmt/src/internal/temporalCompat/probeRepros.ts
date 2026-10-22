@@ -3,7 +3,7 @@ import { Temporal } from "../temporal";
 /*
  * Upstream repros for each `@js-temporal/polyfill` calendar defect GMT works around, with the
  * spec-correct answer. This file holds the repros the shipped capability probes read (D1-D8 and
- * D10-D14); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
+ * D10-D15); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
  * polyfill, through `../temporal` (no other GMT module), so a canary script can load its compiled
  * copy straight from `dist`.
  *
@@ -26,7 +26,8 @@ export type DefectId =
   | "D11"
   | "D12"
   | "D13"
-  | "D14";
+  | "D14"
+  | "D15";
 
 export interface ProbeRepro {
   defect: DefectId;
@@ -254,13 +255,15 @@ const d1ArithmeticRepros: ProbeRepro[] = [
       ["indian", "P2M12D"],
       ["ethioaa", "P2M14D"],
     ] as const
-  ).map(([calendar, expected]): ProbeRepro => ({
-    defect: "D1",
-    calendar,
-    name: "untilNearMax",
-    expected,
-    run: () => monthsUntil(calendar, "+275760-07-01", MAX_ISO),
-  })),
+  ).map(
+    ([calendar, expected]): ProbeRepro => ({
+      defect: "D1",
+      calendar,
+      name: "untilNearMax",
+      expected,
+      run: () => monthsUntil(calendar, "+275760-07-01", MAX_ISO),
+    }),
+  ),
   {
     defect: "D1",
     calendar: "buddhist",
@@ -308,13 +311,15 @@ const d6Repros: ProbeRepro[] = [
       ["islamic-tbla", "2023-06-18", "2023-07-17", "P29D"],
       ["islamic-umalqura", "2023-07-18", "2023-08-16", "P29D"],
     ] as const
-  ).map(([calendar, from, to, expected]): ProbeRepro => ({
-    defect: "D6",
-    calendar,
-    name: "monthEnd",
-    expected,
-    run: () => monthsUntil(calendar, from, to),
-  })),
+  ).map(
+    ([calendar, from, to, expected]): ProbeRepro => ({
+      defect: "D6",
+      calendar,
+      name: "monthEnd",
+      expected,
+      run: () => monthsUntil(calendar, from, to),
+    }),
+  ),
   ...(
     [
       ["hebrew", 5783, "M07", 30, "M08", 29, "P29D"],
@@ -666,6 +671,31 @@ const d14Repros: readonly ProbeRepro[] = [
   },
 ];
 
+/**
+ * D15 (`internal/zonedWallClock.ts` defect 6): `ToTemporalZonedDateTime` reads a `Z` string as an
+ * exact instant under every `offset` option. It sets `offsetBehaviour` to ~exact~ for a UTC
+ * designator, and `InterpretISODateTimeOffset` applies `ignore` only when `offsetBehaviour` is
+ * ~option~ (step 3: "If offsetBehaviour is ~wall~, or offsetBehaviour is ~option~ and offsetOption
+ * is ~ignore~"). The polyfill applies `ignore` first and reads the wall clock in the zone: London
+ * is on +01:00 in July, so `2022-07-08T00:14:07Z[Europe/London]` gives `2022-07-07T23:14:07Z`.
+ * Expected value: the string's own instant (spec text above); Node 24.21's native Temporal
+ * shares the polyfill's answer, so it is not an oracle here.
+ */
+const d15Repros: readonly ProbeRepro[] = [
+  {
+    defect: "D15",
+    calendar: "iso8601",
+    name: "zIgnoreIsExact",
+    expected: "2022-07-08T00:14:07Z",
+    run: () =>
+      Temporal.ZonedDateTime.from("2022-07-08T00:14:07Z[Europe/London]", {
+        offset: "ignore",
+      })
+        .toInstant()
+        .toString(),
+  },
+];
+
 /** The shipped-probe groups, each in the order the full table places it. */
 export const probeReproGroups = {
   d1: d1Repros,
@@ -675,6 +705,7 @@ export const probeReproGroups = {
   d12: d12Repros,
   d13: d13Repros,
   d14: d14Repros,
+  d15: d15Repros,
   d6: d6Repros,
   d7: [d7Repro, d7LeapMonthEndRepro],
   /** D2-D5 and D8: single-read repros. */
@@ -710,16 +741,18 @@ export const probeReproGroups = {
         ["1872-12-31", "ce|1872"],
         ["0000-12-31", "bce|1"],
       ] as const
-    ).map(([iso, expected]): ProbeRepro => ({
-      defect: "D8",
-      calendar: "japanese",
-      name: iso,
-      expected,
-      run: () => {
-        const date = Temporal.PlainDate.from(iso).withCalendar("japanese");
-        return `${date.era}|${date.eraYear}`;
-      },
-    })),
+    ).map(
+      ([iso, expected]): ProbeRepro => ({
+        defect: "D8",
+        calendar: "japanese",
+        name: iso,
+        expected,
+        run: () => {
+          const date = Temporal.PlainDate.from(iso).withCalendar("japanese");
+          return `${date.era}|${date.eraYear}`;
+        },
+      }),
+    ),
   ],
 } as const satisfies Record<string, readonly ProbeRepro[]>;
 

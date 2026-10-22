@@ -13,11 +13,11 @@ classifyStoredZoned("2016-12-01T09:00:00+02:00[Europe/Istanbul]");
 // { kind: "offsetMismatch", storedOffset: "+02:00", zoneOffset: "+03:00",
 //   atStoredOffset: "2016-12-01T07:00:00Z", atZoneOffset: "2016-12-01T06:00:00Z" }
 
-classifyStoredZoned("2026-03-08T02:30:00-03:00[America/Los_Angeles]");
-// { kind: "nonexistent", earlier: "2026-03-08T09:30:00Z",
-//   later: "2026-03-08T10:30:00Z", atStoredOffset: "2026-03-08T05:30:00Z" }
+classifyStoredZoned("2026-03-29T01:30:00+00:00[Europe/London]");
+// { kind: "nonexistent", earlier: "2026-03-29T00:30:00Z",
+//   later: "2026-03-29T01:30:00Z", atStoredOffset: "2026-03-29T01:30:00Z" }
 
-classifyStoredZoned("2026-03-08T02:30:00[America/Los_Angeles]"); // null (no offset)
+classifyStoredZoned("2026-03-29T01:30:00[Europe/London]"); // null (no offset)
 ```
 
 The result has one of five kinds: `valid`, `validInOverlap`, `offsetMismatch`, `ambiguous` and `nonexistent`. Every kind carries `atStoredOffset`, the instant that Temporal's `offset: "use"` gives. From the returned fields you can reproduce each of Temporal's four `offset` options. The function returns `null` for a string that lacks an offset or a zone, names an unknown zone, or uses a calendar other than `iso8601`.

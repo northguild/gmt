@@ -189,7 +189,11 @@ export {
   zonedUnitStart,
 } from "./zonedBucket";
 export { countZonedLocalDates } from "./zonedLocalDates";
-export { isWithinIsoDaysRange, zonedDateTimeFrom } from "./zonedWallClock";
+export {
+  isWithinIsoDaysRange,
+  UTC_OFFSET_WITH_SECONDS,
+  zonedDateTimeFrom,
+} from "./zonedWallClock";
 export { wallClockAtOffset } from "./wallClockAtOffset";
 export {
   durationCompare,

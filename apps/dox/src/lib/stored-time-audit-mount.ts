@@ -316,11 +316,11 @@ function rowHtml(
 ): string {
   const kind =
     line.result === null
-      ? `<span class="gmt-stored-nosignal" role="status">${LINE_NO_SIGNAL}</span>`
+      ? `<span class="gmt-stored-nosignal">${LINE_NO_SIGNAL}</span>`
       : `<span class="gmt-stored-badge" data-kind="${line.result.kind}">${escapeHtml(kindLabel(line.result.kind))}</span>`;
   return (
     `<tr class="gmt-stored-row" data-line="${n}"${selected ? " data-selected" : ""}>` +
-    `<td data-label="Line">${chipToggleHtml({ type: "radio", role: "line", value: String(n), label: String(n), checked: selected, name: group })}</td>` +
+    `<td data-label="Line">${chipToggleHtml({ type: "radio", role: "line", value: String(n), label: String(n), ariaLabel: `Draw line ${n}`, checked: selected, name: group })}</td>` +
     `<td data-label="Stored"><code class="gmt-stored-value">${storedHtml(line.value)}</code></td>` +
     `<td data-label="Kind">${kind}</td>` +
     `<td data-label="Readings">${readingsHtml(line)}</td>` +
@@ -680,6 +680,9 @@ function setupWidget(root: HTMLElement, lib: StoredTimeLib): Controller {
     if (pending) unframe(pending);
     pending = frame(() => {
       pending = 0;
+      // New text is a new list: the old line number names nothing in it, so
+      // render picks the first line that is not valid.
+      selected = null;
       syncPreset();
       render();
     });

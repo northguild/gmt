@@ -1428,14 +1428,27 @@
   }
 
   .gmt-stored-time-audit .gmt-stored-row[data-selected] td {
-    background: Canvas;
-    border-block-end: 3px solid Highlight;
+    /* The border keeps its 1px, so selecting never moves a row. The rule is
+       3px: the border plus a 2px band painted inside the cell. */
+    forced-color-adjust: none;
+    color: CanvasText;
+    background: Canvas linear-gradient(Highlight, Highlight) no-repeat bottom /
+      100% 2px;
+    border-block-end-color: Highlight;
   }
 
   @container gmt-stored-table (max-width: 46rem) {
     .gmt-stored-time-audit .gmt-stored-row[data-selected] {
-      border: 2px solid Highlight;
+      border-color: Highlight;
+      /* An outline takes no room, where a thicker border would. */
+      outline: 1px solid Highlight;
+      outline-offset: -2px;
       background: Canvas;
+    }
+
+    .gmt-stored-time-audit .gmt-stored-row[data-selected] td {
+      background: none;
+      border-block-end-color: transparent;
     }
   }
 }

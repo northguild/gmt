@@ -95,6 +95,54 @@ describe("zonedDateTimeFrom", () => {
     );
   });
 
+  describe("a Z string is an exact instant under every offset option (temporalCompat D15)", () => {
+    // ToTemporalZonedDateTime sets offsetBehaviour to ~exact~ for a `Z` or `z` designator, and
+    // InterpretISODateTimeOffset applies "ignore" only when offsetBehaviour is ~option~, so the
+    // string's own instant is kept under "ignore" as under "use", "prefer" and "reject".
+    // London is on +01:00 in July and repeats 01:00-02:00 local on 2026-10-25 (01:00Z falls back).
+    const offsets = ["ignore", "use", "prefer", "reject"] as const;
+
+    it.each`
+      value                                    | expected
+      ${"2022-07-08T00:14:07Z[Europe/London]"} | ${"2022-07-08T01:14:07+01:00[Europe/London]"}
+      ${"2022-07-08T00:14:07z[Europe/London]"} | ${"2022-07-08T01:14:07+01:00[Europe/London]"}
+      ${"2026-10-25T00:30:00Z[Europe/London]"} | ${"2026-10-25T01:30:00+01:00[Europe/London]"}
+      ${"2026-10-25T01:30:00Z[Europe/London]"} | ${"2026-10-25T01:30:00+00:00[Europe/London]"}
+      ${"2022-07-08T00:14:07Z[+05:00]"}        | ${"2022-07-08T05:14:07+05:00[+05:00]"}
+      ${"2022-07-08T00:14:07Z[Asia/Kolkata]"}  | ${"2022-07-08T05:44:07+05:30[Asia/Kolkata]"}
+    `(
+      "reads $value as $expected under every offset option",
+      ({ value, expected }) => {
+        for (const offset of offsets) {
+          expect(zonedDateTimeFrom(value, { offset }).toString(), offset).toBe(
+            expected,
+          );
+        }
+      },
+    );
+
+    it.each`
+      value                                           | expected
+      ${"+275760-09-13T00:00:00Z[America/Sao_Paulo]"} | ${"+275760-09-12T21:00:00-03:00[America/Sao_Paulo]"}
+      ${"-271821-04-20T00:00:00Z[Asia/Kolkata]"}      | ${"-271821-04-20T05:53:28+05:53[Asia/Kolkata]"}
+    `(
+      "reads $value at a range limit as $expected under offset=ignore",
+      ({ value, expected }) => {
+        expect(zonedDateTimeFrom(value, { offset: "ignore" }).toString()).toBe(
+          expected,
+        );
+      },
+    );
+
+    it("still reads a numeric offset by wall clock under offset=ignore", () => {
+      expect(
+        zonedDateTimeFrom("2022-07-08T00:14:07+05:00[Europe/London]", {
+          offset: "ignore",
+        }).toString(),
+      ).toBe("2022-07-08T00:14:07+01:00[Europe/London]");
+    });
+  });
+
   describe("strings without an offset at the maximum instant", () => {
     it.each`
       value                                           | expected                                              | reason

@@ -205,7 +205,9 @@ export function lineSentence(line: AuditLine): string {
   if (r === null) return NOT_STORED_TEXT;
   switch (r.kind) {
     case "valid":
-      return `The zone has the stored offset at this time, so the string names ${r.instant}.`;
+      return r.atStoredOffset === r.instant
+        ? `The string names one instant: ${r.instant}.`
+        : `The string names one instant: ${r.instant}. The stored offset is the zone's rounded to the minute, so read as written it gives ${r.atStoredOffset}.`;
     case "validInOverlap":
       return `This wall time happens twice, and the stored offset picks the one at ${r.instant}.`;
     case "offsetMismatch":
@@ -532,7 +534,7 @@ export const AUDIT_PRESETS: readonly AuditPreset[] = [
     id: "kept-offset",
     label: "A kept offset in a gap",
     description:
-      "In a gap the stored offset places the time in neither reading, except where it equals the offset after the change, as in Lord Howe's 30-minute gap.",
+      "In a gap the stored offset places the time in neither reading, except where it equals one of the two offsets around the change, as in Lord Howe's 30-minute gap.",
     lines: [
       "2024-10-06T02:15:00+10:30[Australia/Lord_Howe]",
       "2024-09-29T03:15:00+12:45[Pacific/Chatham]",

@@ -1,4 +1,3 @@
-import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
 import { formatUtcOffset } from "../../internal/utcOffsetString";
 import { Temporal } from "../../internal/temporal";
 import { localNoonBattleCases, sameInstantBattleCases } from "../../test";
@@ -306,11 +305,28 @@ const subMinute: Row[] = [
   // Written with seconds, so it matches exactly and `-00:45:00` is not the zone's `-00:44:30`.
   offsetMismatch(
     "1960-01-01T00:20:00-00:45:00[Africa/Monrovia]",
-    "-00:45",
+    "-00:45:00",
     "-00:44:30",
     "1960-01-01T01:05:00Z",
     "1960-01-01T01:04:30Z",
   ),
+  // storedOffset keeps the seconds as written: `:00` stays, and a nonzero seconds part is exact.
+  offsetMismatch(
+    "1960-01-01T00:20:00-00:44:31[Africa/Monrovia]",
+    "-00:44:31",
+    "-00:44:30",
+    "1960-01-01T01:04:31Z",
+    "1960-01-01T01:04:30Z",
+  ),
+  offsetMismatch(
+    "2022-07-08T00:14:07+00:00:00[Europe/London]",
+    "+00:00:00",
+    "+01:00",
+    "2022-07-08T00:14:07Z",
+    "2022-07-07T23:14:07Z",
+  ),
+  // Written with seconds and equal to the zone's offset: valid, and no storedOffset to report.
+  valid("2022-07-08T00:14:07+01:00:00[Europe/London]", "2022-07-07T23:14:07Z"),
   // The first pass wins for a minute-rounded offset.
   validInOverlap(
     "1952-10-15T23:59:59-11:20[Pacific/Niue]",
@@ -504,29 +520,81 @@ describe("classifyStoredZoned", () => {
       return byDisambiguation[disambiguation];
     }
 
+    // The polyfill's own answer, except in the two places 0.5.1 departs from the spec. There the
+    // answer is the spec's, built from polyfill parts the defect does not touch.
+    function temporalAnswer(
+      input: string,
+      offset: (typeof offsets)[number],
+      disambiguation: (typeof disambiguations)[number],
+    ): string | typeof refused {
+      try {
+        if (offset === "ignore" && endsInZ.test(input)) {
+          return zIsExact(input);
+        }
+        const seconds = writtenWithSeconds.exec(input);
+        if (seconds !== null && (offset === "prefer" || offset === "reject")) {
+          return matchExactly(input, seconds, offset, disambiguation);
+        }
+        return Temporal.ZonedDateTime.from(input, { offset, disambiguation })
+          .toInstant()
+          .toString();
+      } catch {
+        return refused;
+      }
+    }
+
+    // D15: a `Z` body is exact whatever `offset` says (TC39 §6.5.1 steps 3–4).
+    const endsInZ = /[Zz]\[/;
+    function zIsExact(input: string): string {
+      return Temporal.Instant.from(
+        input.slice(0, input.indexOf("[")),
+      ).toString();
+    }
+
+    // D12: an offset written with seconds must match the zone exactly (TC39 §6.5.1 steps 7–12).
+    const writtenWithSeconds = /([+-])(\d{2}):(\d{2}):(\d{2})\[/;
+    function matchExactly(
+      input: string,
+      [, sign, hours, minutes, seconds]: RegExpExecArray,
+      offset: "prefer" | "reject",
+      disambiguation: (typeof disambiguations)[number],
+    ): string | typeof refused {
+      const offsetNanoseconds =
+        (sign === "-" ? -1 : 1) *
+        (Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds)) *
+        1e9;
+      const timeZone = input.slice(input.indexOf("[") + 1, input.indexOf("]"));
+      const wallClock = Temporal.PlainDateTime.from(input);
+      if (Temporal.PlainDate.compare(wallClock, "-271821-04-20") < 0) {
+        return refused;
+      }
+      // The possible instants are the two readings that keep the wall clock; a gap has none.
+      const candidates = (["earlier", "later"] as const)
+        .map((d) => wallClock.toZonedDateTime(timeZone, { disambiguation: d }))
+        .filter((candidate) => candidate.toPlainDateTime().equals(wallClock));
+      const match = candidates.find(
+        (candidate) => candidate.offsetNanoseconds === offsetNanoseconds,
+      );
+      if (match !== undefined) {
+        return match.toInstant().toString();
+      }
+      if (offset === "reject") {
+        return refused;
+      }
+      return wallClock
+        .toZonedDateTime(timeZone, { disambiguation })
+        .toInstant()
+        .toString();
+    }
+
     for (const { input, expected } of allRows) {
       it(`${input} gives Temporal's answer for all 16 offset and disambiguation pairs`, () => {
-        // TC39 §6.5.1 reads a `Z` string as exact under every `offset` value, but polyfill
-        // 0.5.1 applies `ignore` first and reads the wall clock in the zone (owner decision,
-        // 2026-10-21: this one cell is skipped; the function reads `Z` as exact, as the specification does).
-        const isZ = /Z\[/i.test(input);
         for (const offset of offsets) {
-          if (isZ && offset === "ignore") {
-            continue;
-          }
           for (const disambiguation of disambiguations) {
-            let actual: string | typeof refused;
-            try {
-              actual = zonedDateTimeFrom(input, { offset, disambiguation })
-                .toInstant()
-                .toString();
-            } catch {
-              actual = refused;
-            }
             expect(
-              actual,
+              expectedFor(expected, offset, disambiguation),
               `${input} offset ${offset} disambiguation ${disambiguation}`,
-            ).toBe(expectedFor(expected, offset, disambiguation));
+            ).toBe(temporalAnswer(input, offset, disambiguation));
           }
         }
       });

@@ -25055,15 +25055,15 @@
         "result": "{ kind: \"offsetMismatch\", storedOffset: \"+02:00\", zoneOffset: \"+03:00\", atStoredOffset: \"2016-12-01T07:00:00Z\", atZoneOffset: \"2016-12-01T06:00:00Z\" }"
       },
       {
-        "call": "classifyStoredZoned(\"2026-03-08T02:30:00-03:00[America/Los_Angeles]\")",
-        "result": "{ kind: \"nonexistent\", earlier: \"2026-03-08T09:30:00Z\", later: \"2026-03-08T10:30:00Z\", atStoredOffset: \"2026-03-08T05:30:00Z\" }"
+        "call": "classifyStoredZoned(\"2026-03-29T01:30:00+00:00[Europe/London]\")",
+        "result": "{ kind: \"nonexistent\", earlier: \"2026-03-29T00:30:00Z\", later: \"2026-03-29T01:30:00Z\", atStoredOffset: \"2026-03-29T01:30:00Z\" }"
       },
       {
-        "call": "classifyStoredZoned(\"2026-11-01T01:30:00-08:00[America/Los_Angeles]\")",
-        "result": "{ kind: \"validInOverlap\", instant: \"2026-11-01T09:30:00Z\", earlier: \"2026-11-01T08:30:00Z\", later: \"2026-11-01T09:30:00Z\", atStoredOffset: \"2026-11-01T09:30:00Z\" }"
+        "call": "classifyStoredZoned(\"2026-10-25T01:30:00+01:00[Europe/London]\")",
+        "result": "{ kind: \"validInOverlap\", instant: \"2026-10-25T00:30:00Z\", earlier: \"2026-10-25T00:30:00Z\", later: \"2026-10-25T01:30:00Z\", atStoredOffset: \"2026-10-25T00:30:00Z\" }"
       },
       {
-        "call": "classifyStoredZoned(\"2026-03-08T02:30:00[America/Los_Angeles]\")",
+        "call": "classifyStoredZoned(\"2026-03-29T01:30:00[Europe/London]\")",
         "result": "null"
       }
     ]
