@@ -117,6 +117,10 @@ import {
   mountStoredTimeAudit,
   renderStoredTimeAuditTemplate,
 } from "./stored-time-audit-mount";
+import {
+  mountDurationParserBench,
+  renderDurationParserBenchTemplate,
+} from "./duration-parser-bench-mount";
 
 installJsdomShims();
 
@@ -260,6 +264,11 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "stored time audit",
     () => renderStoredTimeAuditTemplate(),
     mountStoredTimeAudit as MountFn<never>,
+  ],
+  [
+    "duration parser bench",
+    () => renderDurationParserBenchTemplate(),
+    mountDurationParserBench as MountFn<never>,
   ],
 ];
 

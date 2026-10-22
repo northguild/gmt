@@ -138,6 +138,7 @@ const PAGES = [
     path: "/tools/elapsed-vs-clock-difference/",
   },
   { slug: "tool-stored-time-audit", path: "/tools/stored-time-audit/" },
+  { slug: "tool-duration-parser-bench", path: "/tools/duration-parser-bench/" },
   /* The industry pages the new tools are linked from, and the reference index. */
   { slug: "industries", path: "/industries/" },
   { slug: "industries-maritime", path: "/industries/maritime/" },

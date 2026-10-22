@@ -62,6 +62,7 @@ import {
   showLeapSecondTimelineInput,
   showSatelliteClockConverterInput,
   showStoredTimeAuditInput,
+  showDurationParserBenchInput,
   showX12TimeReaderInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -461,6 +462,11 @@ export function buildWorkerTools(
       description: docFor("showStoredTimeAudit"),
       inputSchema: showStoredTimeAuditInput,
       execute: () => accept("stored-time-audit"),
+    }),
+    showDurationParserBench: tool({
+      description: docFor("showDurationParserBench"),
+      inputSchema: showDurationParserBenchInput,
+      execute: () => accept("duration-parser-bench"),
     }),
   };
 

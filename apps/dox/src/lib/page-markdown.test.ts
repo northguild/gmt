@@ -61,6 +61,21 @@ describe("prefixMarkdownLinks", () => {
   });
 });
 
+describe("stripMdx fences", () => {
+  it("leaves a fenced block indented under a bullet unchanged", () => {
+    const md = [
+      "- Reads this:",
+      "",
+      "  ```ts",
+      '  import { x } from "y";',
+      "  { space }",
+      "  ```",
+      "",
+    ].join("\n");
+    expect(stripMdx(md, { values: { space: "SPACE" } })).toBe(md);
+  });
+});
+
 describe("stripMdx link prefixing", () => {
   it("emits every root-absolute link under /gmt/", () => {
     const body = [

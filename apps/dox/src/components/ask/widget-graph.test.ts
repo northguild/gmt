@@ -171,6 +171,8 @@ describe("the chat island's static import graph", () => {
       "lib/elapsed-vs-clock.ts",
       "lib/stored-time-audit.ts",
       "lib/stored-time-lib.ts",
+      "lib/duration-parser-bench.ts",
+      "lib/duration-bench-lib.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });

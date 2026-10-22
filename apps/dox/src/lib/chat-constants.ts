@@ -792,6 +792,12 @@ export const CHAT_STARTERS: readonly {
         "2016-12-01T09:00:00+02:00[Europe/Istanbul]\n2016-12-01T09:00:00+03:00[Europe/Istanbul]",
     },
   },
+  {
+    text: "In a config file, is `1m` a minute or a month?",
+    widget: "showDurationParserBench",
+    area: "core",
+    args: { text: "1m" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

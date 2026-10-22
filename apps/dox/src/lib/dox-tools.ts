@@ -590,6 +590,16 @@ export const showStoredTimeAuditInput = z.object({
 });
 
 /**
+ * Duration Parser Bench: the reader's duration string exactly as given (never
+ * trimmed or corrected: a leading space is a case the bench shows). The chat
+ * args are the permalink args.
+ */
+export const showDurationParserBenchInput = z.object({
+  text: z.string().min(1).max(64),
+  locale: z.string().min(2).max(35).optional(),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -633,7 +643,8 @@ export type DoxToolName =
   | "showGnssRolloverChecker"
   | "showLeapSecondTimeline"
   | "showElapsedVsClock"
-  | "showStoredTimeAudit";
+  | "showStoredTimeAudit"
+  | "showDurationParserBench";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -666,6 +677,7 @@ export const DOX_TOOL_INPUTS = {
   showLeapSecondTimeline: showLeapSecondTimelineInput,
   showElapsedVsClock: showElapsedVsClockInput,
   showStoredTimeAudit: showStoredTimeAuditInput,
+  showDurationParserBench: showDurationParserBenchInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -885,6 +897,13 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader asks why a stored zoned time no longer parses or resolves, whether a stored offset still matches its zone, what happens to stored future events after a time zone rule change, or how Temporal's `offset` option reads such a string",
     args: "values: the reader's strings exactly as given, one per line, each with an offset or `Z` and a bracketed zone; never invent or correct one. line: optional, which line to draw",
   },
+  {
+    name: "showDurationParserBench",
+    purpose:
+      "Read a duration string people write (`2h 30m`, `1.5h`, `3 days`) under GMT's published grammar, and show the ISO 8601 duration, the compact form, the locale words, and why `1m` is a minute and `P1M` a month.",
+    when: "the reader asks what a duration string such as `30s`, `1m`, `7d` or `1.5h` means, whether `m` is a minute or a month, how to parse a timeout or config duration, or why `3 days` of laytime is not 72 hours.",
+    args: "text: the reader's string exactly as given, never corrected; locale: only when the reader names one.",
+  },
 ];
 
 /**
@@ -1013,6 +1032,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[29].purpose,
     inputSchema: showStoredTimeAuditInput,
   }),
+  showDurationParserBench: tool({
+    description: DOX_TOOL_DOCS[30].purpose,
+    inputSchema: showDurationParserBenchInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1066,6 +1089,7 @@ export const ENABLED_TOOL_NAMES = [
   "showLeapSecondTimeline",
   "showElapsedVsClock",
   "showStoredTimeAudit",
+  "showDurationParserBench",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

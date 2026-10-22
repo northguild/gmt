@@ -64,7 +64,8 @@ export type WidgetKind =
   | "rollover"
   | "leapline"
   | "elapsed"
-  | "storedaudit";
+  | "storedaudit"
+  | "durationbench";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -111,6 +112,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   leapline: "/tools/leap-second-timeline/",
   elapsed: "/tools/elapsed-vs-clock-difference/",
   storedaudit: "/tools/stored-time-audit/",
+  durationbench: "/tools/duration-parser-bench/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */

@@ -33,6 +33,56 @@ parseDuration("PT1.5S", { smallestUnit: "second", roundingMode: "trunc" });
 // "PT1S"
 ```
 
+## Read a duration people write
+
+`parseDuration` reads ISO 8601 only. A timeout in a config file or a charter party is written
+`2h 30m`, `1.5h` or `3 days`. `parseHumanDuration` reads that form under a grammar the library
+publishes, and returns the same ISO 8601 string, or `""` for anything outside the grammar. The
+grammar is on the [`parseHumanDuration`](/reference/duration/parse/parseHumanDuration) page.
+
+```ts
+import { parseDuration, parseHumanDuration } from "@northguild/gmt/duration/parse";
+
+parseHumanDuration("2h 30m"); // "PT2H30M"
+parseHumanDuration("1.5h"); // "PT1H30M"
+parseHumanDuration("3 days"); // "P3D"
+parseHumanDuration("PT2H30M"); // "" — ISO 8601 is not in this grammar
+```
+
+No string is valid in both forms, so a caller that takes either one chains the parsers:
+
+```ts
+const read = (s: string) => parseDuration(s) || parseHumanDuration(s);
+
+read("2h 30m"); // "PT2H30M"
+read("P1M"); // "P1M"
+read("nonsense"); // ""
+```
+
+**A letter is a minute or a month by its form.** In the human grammar `m` and `M` are a minute and
+`mo` is a month. ISO 8601 puts the minute after the `T` and the month before it, so `P1M` is a month.
+The human parser refuses `P1M`:
+
+```ts
+parseHumanDuration("1m"); // "PT1M"
+parseHumanDuration("1mo"); // "P1M"
+parseHumanDuration("P1M"); // ""
+parseDuration("P1M"); // "P1M"
+```
+
+**Nothing is balanced.** `formatHumanDuration` writes the units it was given, so `PT90M` is `90m`.
+Run `normalizeDuration` first to carry the minutes into hours:
+
+```ts
+import { formatHumanDuration } from "@northguild/gmt/duration/format";
+import { normalizeDuration } from "@northguild/gmt/duration/normalize";
+
+formatHumanDuration("PT90M"); // "90m"
+formatHumanDuration(normalizeDuration("PT90M", { largestUnit: "hour" })); // "1h 30m"
+```
+
+The [Duration Parser Bench](/tools/duration-parser-bench/) runs both parsers on a string you type.
+
 ## Round a duration's output precision
 
 ```typescript

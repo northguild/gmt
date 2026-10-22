@@ -76,6 +76,7 @@ The property's own JSDoc is the single source for what an option or member means
 - **Use `@defaultValue`, never `@default`.** One tag keeps the source consistent.
 - **Members of a returned type take no `@defaultValue`.** For an optional member, the description says when it is absent.
 - **`@param options` describes the object in one phrase.** It does not list option names, types or defaults. The tag name matches the parameter name exactly (`@param optionsArg` for a parameter named `optionsArg`).
+- **A behaviour bullet may hold a fenced block.** Write it as `text` or `ts`; the docs generator copies it verbatim and fails the build on any other language. Use `text` for a notation Shiki has no grammar for (EBNF) and name the notation in the bullet.
 - **A bullet that explains only one option moves to that property.** Behaviour bullets describe the function as a whole.
 - **Every public type has a description** in a `/** */` block above its declaration. A `//` line comment is not read.
 

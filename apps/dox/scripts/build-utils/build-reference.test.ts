@@ -444,6 +444,179 @@ ${body}`,
 // Options: which parameters expand, and what a row holds
 // ---------------------------------------------------------------------------
 
+describe("behaviorItems", () => {
+  const FENCE = "```";
+  // The grammar block of `parseHumanDuration`, as TypeScript hands it over: the ` * ` margin is
+  // gone and the fence keeps its two-space indent under the bullet.
+  const ebnf = [
+    "human duration = [ sign ], pair, { separator, pair } ;",
+    'sign           = "+" | "-" ;',
+    "separator      = { space }-",
+    '               | ",", { space }',
+    '               | [ "," ], { space }-, "and", { space }-',
+    '               | ;                                   (* empty: "2h30m" *)',
+    "unit           = (* one spelling from the table below *) ;",
+  ];
+  const table = [
+    "| Rank | Unit | Spellings |",
+    "| ---- | ---- | --------- |",
+    "| 1    | year | `y` `yr`  |",
+  ];
+  const raw = [
+    "Parse a human duration.",
+    "",
+    "- Reads this grammar, in ISO/IEC 14977 EBNF:",
+    "",
+    `  ${FENCE}text`,
+    ...ebnf.map((l) => `  ${l}`),
+    `  ${FENCE}`,
+    "",
+    ...table.map((l) => `  ${l}`),
+    '- Invalid input returns "".',
+  ].join("\n");
+
+  it("keeps an indented fence verbatim, minus the fence's own indent", () => {
+    const items = BR.behaviorItems(raw);
+    expect(items).toHaveLength(2);
+    expect(items[0].split("\n")).toEqual([
+      "Reads this grammar, in ISO/IEC 14977 EBNF:",
+      `${FENCE}text`,
+      ...ebnf,
+      FENCE,
+      ...table,
+    ]);
+    expect(items[1]).toBe('Invalid input returns "".');
+  });
+
+  it("does not take the `|` lines inside a fence for table rows", () => {
+    const [item] = BR.behaviorItems(raw);
+    const lines = item.split("\n");
+    // The prose line is not joined to the fence, and the table after it is its own run.
+    expect(lines[0]).toBe("Reads this grammar, in ISO/IEC 14977 EBNF:");
+    expect(lines.slice(lines.indexOf(FENCE) + 1)).toEqual(table);
+  });
+
+  it("keeps a blank line inside a fence as an empty string", () => {
+    const [item] = BR.behaviorItems(
+      [
+        "S.",
+        "",
+        "- A:",
+        "",
+        `  ${FENCE}text`,
+        "  a",
+        "",
+        "    b",
+        `  ${FENCE}`,
+      ].join("\n"),
+    );
+    expect(item.split("\n")).toEqual([
+      "A:",
+      `${FENCE}text`,
+      "a",
+      "",
+      "  b",
+      FENCE,
+    ]);
+  });
+
+  it("keeps a `- ` line inside a fence as block text, not a new bullet", () => {
+    const items = BR.behaviorItems(
+      [
+        "S.",
+        "",
+        "- A:",
+        `  ${FENCE}text`,
+        "  - not a bullet",
+        `  ${FENCE}`,
+      ].join("\n"),
+    );
+    expect(items).toHaveLength(1);
+    expect(items[0].split("\n")).toContain("- not a bullet");
+  });
+
+  it("keeps a fence at column 0 after a bullet in that bullet", () => {
+    const items = BR.behaviorItems(
+      ["S.", "", "- A:", `${FENCE}ts`, "f(1);", FENCE, "- B."].join("\n"),
+    );
+    expect(items).toEqual([`A:\n${FENCE}ts\nf(1);\n${FENCE}`, "B."]);
+  });
+
+  it("makes a fence directly after the summary an item of its own, and ends the summary there", () => {
+    const text = [
+      "Summary line",
+      `${FENCE}text`,
+      "a = b ;",
+      FENCE,
+      "- After.",
+    ].join("\n");
+    expect(BR.summaryParagraph(text)).toBe("Summary line");
+    expect(BR.behaviorItems(text)).toEqual([
+      `${FENCE}text\na = b ;\n${FENCE}`,
+      "After.",
+    ]);
+  });
+
+  it("starts an item at a fence that follows a blank line after the summary", () => {
+    const text = ["Summary.", "", `${FENCE}text`, "a ;", FENCE].join("\n");
+    expect(BR.summaryParagraph(text)).toBe("Summary.");
+    expect(BR.behaviorItems(text)).toEqual([`${FENCE}text\na ;\n${FENCE}`]);
+  });
+
+  it("refuses a fence in a language Shiki cannot highlight, naming it", () => {
+    const text = [
+      "S.",
+      "",
+      "- A:",
+      `  ${FENCE}ebnf`,
+      "  a = b ;",
+      `  ${FENCE}`,
+    ].join("\n");
+    expect(() => BR.behaviorItems(text)).toThrow(/ebnf/);
+  });
+
+  it("refuses a fence with no language", () => {
+    const text = [
+      "S.",
+      "",
+      "- A:",
+      `  ${FENCE}`,
+      "  a = b ;",
+      `  ${FENCE}`,
+    ].join("\n");
+    expect(() => BR.behaviorItems(text)).toThrow(/language/);
+  });
+
+  it("refuses a fence that is never closed", () => {
+    const text = ["S.", "", "- A:", `  ${FENCE}text`, "  a = b ;"].join("\n");
+    expect(() => BR.behaviorItems(text)).toThrow(/unclosed/);
+  });
+
+  it("gives the items it always gave when there is no fence", () => {
+    expect(
+      BR.behaviorItems(
+        [
+          "S.",
+          "",
+          "- One:",
+          "  | A | B |",
+          "  | - | - |",
+          "  | 1 | 2 |",
+          "  and more",
+          "  prose.",
+        ].join("\n"),
+      ),
+    ).toEqual(["One:\n| A | B |\n| - | - |\n| 1 | 2 |\nand more prose."]);
+    expect(
+      BR.behaviorItems(
+        ["S.", "", "| A | B |", "| - | - |", "| 1 | 2 |", "- After."].join(
+          "\n",
+        ),
+      ),
+    ).toEqual(["| A | B |\n| - | - |\n| 1 | 2 |", "After."]);
+  });
+});
+
 describe("options blocks", () => {
   const PROPERTY = `
       /** How to resolve an out-of-range day. */
