@@ -1,15 +1,14 @@
 ---
 name: gmt-transport
 description: >
-  Transport timing for legs, cut-offs and punctuality — transitTime,
-  etaAtZone, dwellTime, crossingTime, scheduleDelivery (exact legs, local
-  calendar days dwelt, missed connections), cutoffAt, cutoffSchedule,
-  isPastCutoff, timeToCutoff, scheduleDeviation, classifyPunctuality,
-  punctualityRate, bestAvailable, estimateDrift over PLN/EST/REQ/ACT timestamp
-  classes, and nextDeparture, all in @northguild/gmt/transport. Every
-  tolerance, connect time and cut-off offset is the caller's. Reads the docs
-  site (llms.txt) and the installed package's JSDoc; a routing pointer, not an
-  API dump.
+  Transport timing for legs, cut-offs and punctuality — transitTime, etaAtZone,
+  dwellTime, crossingTime, scheduleDelivery (exact legs, local calendar days
+  dwelt, missed connections), cutoffAt, cutoffSchedule, isPastCutoff,
+  timeToCutoff, scheduleDeviation, classifyPunctuality, punctualityRate,
+  bestAvailable, estimateDrift over PLN/EST/REQ/ACT timestamp classes, and
+  nextDeparture, all in @northguild/gmt/transport. Every tolerance, connect time
+  and cut-off offset is the caller's. Reads the docs site (llms.txt) and the
+  installed package's JSDoc; a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/transport-legs-and-dwell.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/transport-multi-leg-scheduling.mdx'

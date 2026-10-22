@@ -102,15 +102,15 @@ with the `Position` type, ahead of the remaining realms.
 | 18  | CORE-78 | Core       | `isValidUtcTimestamp`: a UTC timestamp<br>in the plain RFC 3339 spelling            | —                       | #307  | 1.19.0  | Done        |
 | 19  | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`,<br>and the intermodal tools (#304)                | —                       | #195  | 1.19.0  | Done        |
 | 20  | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —                       | #283  | 1.19.0  | Done        |
-| 21  | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —                       | #197  | —       | Done        |
-| 22  | SPA-48  | Space      | Leap second table and queries                                                       | —                       | #229  | —       | Done        |
-| 23  | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —                       | #319  | —       | Done        |
-| 24  | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | —       | Done        |
-| 25  | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                       | #317  | —       | Done        |
-| 26  | CORE-87 | Core       | The reference corpus exported for<br>another repo                                   | —                       | #328  | —       | Done        |
-| 27  | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                       | #322  | —       | Done        |
-| 28  | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | —       | Done        |
-| 29  | CORE-88 | Core       | The Canada 2026 clock-change checker in Dox                                         | —                       | #329  | Cut     | Done        |
+| 21  | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —                       | #197  | 1.20.0  | Done        |
+| 22  | SPA-48  | Space      | Leap second table and queries                                                       | —                       | #229  | 1.20.0  | Done        |
+| 23  | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —                       | #319  | 1.20.0  | Done        |
+| 24  | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | 1.20.0  | Done        |
+| 25  | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                       | #317  | 1.20.0  | Done        |
+| 26  | CORE-87 | Core       | The reference corpus exported for<br>another repo                                   | —                       | #328  | 1.20.0  | Done        |
+| 27  | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                       | #322  | 1.20.0  | Done        |
+| 28  | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | 1.20.0  | Done        |
+| 29  | CORE-88 | Core       | The Canada 2026 clock-change checker in Dox                                         | —                       | #329  | 1.20.0  | Done        |
 | 30  | CORE-89 | Core       | The Morocco 2026 clock-change checker in Dox                                        | —                       | #340  | —       | Not started |
 | 31  | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                       | #258  | —       | Not started |
 | 32  | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                       | #256  | —       | Not started |

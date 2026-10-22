@@ -6,9 +6,9 @@ description: >
   deadlines (billingTimeline), bill of lading dates and multimodalETA
   (bolTimestamp), and EDI and event timestamps: UN/EDIFACT DTM, X12 date, time
   and time code readers and writers (parseEdifact*, parseX12*,
-  parseX12DateAndTime, x12TimeCodeOffset), EPCIS events (parseEpcisEvent).
-  Every tariff term is the caller's. Reads the docs site (llms.txt) and the
-  installed package's JSDoc; a routing pointer.
+  parseX12DateAndTime, x12TimeCodeOffset), EPCIS events (parseEpcisEvent). Every
+  tariff term is the caller's. Reads the docs site (llms.txt) and the installed
+  package's JSDoc; a routing pointer.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/intermodal-bill-of-lading-and-eta.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/intermodal-billing-deadlines.mdx'
