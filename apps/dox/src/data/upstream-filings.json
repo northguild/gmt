@@ -1,5 +1,5 @@
 {
-  "checked": "2026-10-21T17:49:32.898960177Z",
+  "checked": "2026-10-21T21:57:29.571836156Z",
   "filings": [
     {
       "repo": "js-temporal/temporal-polyfill",
@@ -300,7 +300,7 @@
       "closes": [],
       "dependsOn": [],
       "gmtGuard": null,
-      "gmtNote": "GMT follows the spec text here, as Chromium and the polyfill do, so there is no workaround to retire. If the spec drops the check, GMT's zoned readers drop it too.",
+      "gmtNote": "GMT follows the spec text here, as Chromium and the polyfill do, so there is no workaround to retire. Its zoned readers (isValidZonedDateTime, toOffsetInstant, classifyStoredZoned and the rest) refuse a string whose local date is -271821-04-19. If the spec drops the check, they drop it too.",
       "state": "open",
       "draft": false,
       "reviewDecision": null,

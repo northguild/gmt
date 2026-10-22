@@ -26,6 +26,22 @@ describe("calendarSystemOfZonedValue", () => {
     expect(calendarSystemOfZonedValue(value)).toBe(expected);
   });
 
+  // The read ignores the offset, but a `Z` string is an exact instant under every `offset` option
+  // (ToTemporalZonedDateTime sets offsetBehaviour ~exact~; InterpretISODateTimeOffset applies
+  // "ignore" only to ~option~), so these maximum and minimum instants are in range. Read by the
+  // wall clock in the zone they would fall outside it (Sao Paulo is -03:00, Kolkata +05:53:28 at
+  // the minimum).
+  it.each`
+    value
+    ${"+275760-09-13T00:00:00Z[America/Sao_Paulo][u-ca=hebrew]"}
+    ${"-271821-04-20T00:00:00Z[Asia/Kolkata][u-ca=hebrew]"}
+  `(
+    "reads the calendar of $value, a Z string at a range limit",
+    ({ value }) => {
+      expect(calendarSystemOfZonedValue(value)).toBe("hebrew");
+    },
+  );
+
   // Unlike `calendarSystemOfDateValue`, which reports "iso8601" for ANY non-match, the zoned
   // version fails closed on a non-matching string that still carries an annotation — calling it
   // "iso8601" would hand back an ISO answer for a string that visibly asked for something else.

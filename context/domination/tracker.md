@@ -111,7 +111,7 @@ with the first cut after that.
 | 25 | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                       | #317  | —       | Done        |
 | 26 | CORE-87 | Core       | The reference corpus exported for<br>another repo                                   | —                       | #328  | —       | Done        |
 | 27 | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                       | #322  | —       | Done        |
-| 28 | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | —       | Not started |
+| 28 | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | —       | Done        |
 | 29 | CORE-88 | Core       | The hosted server linked from the<br>READMEs and the docs                           | —                       | #329  | —       | Waiting     |
 | 30 | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                       | #258  | —       | Not started |
 | 31 | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                       | #256  | —       | Not started |

@@ -169,6 +169,8 @@ describe("the chat island's static import graph", () => {
       "lib/gnss-rollover-checker.ts",
       "lib/leap-second-timeline.ts",
       "lib/elapsed-vs-clock.ts",
+      "lib/stored-time-audit.ts",
+      "lib/stored-time-lib.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });

@@ -808,6 +808,39 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     cell per second at equal widths. An inserted second is a stretched `:60` cell the clock tape
     skips and the elapsed tape fills, so the ends misalign by exactly the seconds inserted; a long
     span keeps the seconds at each end, a slashed break and every inserted second.
+  - **Stored Time Audit** (`/tools/stored-time-audit/`, `storedaudit`, core): a textarea of
+    stored zoned strings (12 lines of 80 characters), a fixed table with one row per line (kind
+    badge, readings as nowrap tokens) and a two-lane strip for the selected line, the zone's
+    clock over the exact timeline. A gap or an overlap draws a **day strip** (one
+    `getDstTransitions` call, the band from `getTickerWindow`); an offset mismatch draws a
+    **since strip**, the last clock change at or before `atZoneOffset`, looked up in the wall
+    year and then the year before (at most two calls, so a Sao Paulo line stored in January
+    2020 finds the 2019 change). A valid or unreadable line draws no strip and says why in a held
+    reason slot. `classifyLocal` is not called: the DST Inspector's local-day grid fits only a
+    gap or an overlap, so a mismatch has its own strip. A host note says the answer depends on
+    the runtime's tzdb. Results are drawn at mount only; the `values` permalink key is exempt
+    from the 64-character cap (`LONG_STRING_KEYS`, 1000).
+    - **Readings wrap only at set points.** A reading breaks directly after a `T` that precedes
+      a digit, or before the `.` of a fraction. Each segment is a nowrap `.gmt-stored-seg` span,
+      joined by `<wbr>`. The 33-character worst-case reading cannot fit whole beside the Line and
+      Kind columns, so a token as a whole is not nowrap, and it can also break between its name
+      and its value.
+    - **The table needs a box of at least 736 px.** The `@container gmt-stored-table` breakpoint
+      is 46rem (mirrored in `gmt-a11y.css`); a narrower box gets the labelled stacked layout.
+    - **The Line column's width is set with a doubled class**, which out-ranks
+      `gmt-content.css`'s `th:first-child { width: 1% }`.
+    - **The reason slot reserves its box**, so selecting another line never moves section 3.
+    - **In the stacked layout the selected-row `td` has `background: none`.** The row already
+      carries the tint, so there is no double tint and the 7:1 contrast holds.
+    - **Definition of done, "nothing moves" (the bounding-box test).** jsdom has no layout, so
+      the owner accepted a jsdom structural test plus the browser measurement taken in
+      verification.
+    - **Gate and live clocks.** `visual:diff` masks every element that reads "now" on the
+      Zoned Earth and Zone Planner pages (`LIVE_CLOCK_SELECTORS`: the clock list rows, the
+      planner's reference field, dials, times, dates, offsets, DST badges, readout and marks),
+      and hides the planner's dials in the capture, because the "Your time zone" dial is
+      drawn above the mask. The `tools-index-*` snapshots change when a tool card is added,
+      and a new page has no baseline until the first snapshot.
 
   The decoder links to the converter and the checker, the converter to the decoder and the
   timeline, the checker to the decoder, and the timeline and the elapsed tool to each other and
@@ -1040,7 +1073,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `/tools/x12-time-reader/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
   `/tools/epcis-event-reader/`, `/tools/journey-split/`, `/tools/gnss-week-decoder/`,
   `/tools/satellite-clock-converter/`, `/tools/gnss-rollover-checker/`,
-  `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, plus the Tier 4
+  `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`, plus the Tier 4
   `/tools/zoned-earth/` and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package. The
   Zone Planner's is `/tools/zone-planner/?w=planner&wa={"time":…,"zone1":…,"zone2":…}`: a UTC
@@ -1114,7 +1147,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   pointer sweep takes 48 steps of 30 minutes, so it always enters the shaded hour. The pass/fail decisions live in
   `scripts/gate-checks.mjs`, unit-tested in `gate-checks.test.ts`. A tool with no drag handle,
   such as the DTM Decoder, the X12 Time Reader, the Demurrage Clock, the EPCIS Event Reader, the
-  Journey Split and Billing Deadlines, is not in `readout-still`. Its definition of done measures
+  Journey Split, Billing Deadlines and the Stored Time Audit, is not in `readout-still`. Its definition of done measures
   the same boxes across every preset instead: each plate keeps its size, and a held region keeps
   its height. A result region may grow from one preset to the next through `.gmt-grow`, which
   `grow:measure` gates: the reason aside under a sentinel, a second lane for a second zone, or a
@@ -1720,9 +1753,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `showLeapSecondTimeline({ date?, check?, from?, to? })` (MAR-16): at least one field.
   - `showElapsedVsClock({ start, end })` (MAR-16): both instants exactly as the reader gave
     them.
-- **Count:** 29 tools — the globe, the 27 teaching tools and the Zone Planner — and 29
-  `CHAT_STARTERS`, one card each: 7 core, 11 transport, 8 intermodal and 3 GNSS (the Leap
-  Second Timeline and Elapsed vs. Clock Difference are core). `ENABLED_TOOL_NAMES` and
+  - `showStoredTimeAudit({ values, line? })` (CORE-83): the stored strings exactly as the
+    reader gave them, one per line, and the 1-based line to draw.
+- **Count:** 30 tools — the globe, the 28 teaching tools and the Zone Planner — and 30
+  `CHAT_STARTERS`, one card each: 8 core, 11 transport, 8 intermodal and 3 GNSS (the Leap
+  Second Timeline, Elapsed vs. Clock Difference and Stored Time Audit are core). `ENABLED_TOOL_NAMES` and
   `CHAT_STARTERS` hold the numbers; re-derive them from there.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card

@@ -138,6 +138,10 @@ const PAGES = [
     path: "tools/elapsed-vs-clock-difference",
     widget: "gmt-elapsed-vs-clock gmt-widget",
   },
+  {
+    path: "tools/stored-time-audit",
+    widget: "gmt-stored-time-audit gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

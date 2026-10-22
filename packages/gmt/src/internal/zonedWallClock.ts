@@ -8,6 +8,7 @@ import {
 import {
   isSecondsOffsetMatchCompatNeeded,
   isTransitionSearchCompatNeeded,
+  isZIgnoreExactCompatNeeded,
 } from "./temporalCompat";
 import { optionOrDefault } from "./optionOrDefault";
 
@@ -80,6 +81,16 @@ import { optionOrDefault } from "./optionOrDefault";
  *    in no release) fixes the zones it lists and stalls instead in Africa/El_Aaiun, April 1976,
  *    whose 17-day window holds three offsets.
  *
+ * 6. **A `Z` string under `offset: "ignore"`** (`ToTemporalZonedDateTime`; temporalCompat D15).
+ *    TC39 sets `offsetBehaviour` to ~exact~ for a UTC designator, and `InterpretISODateTimeOffset`
+ *    applies `ignore` only when `offsetBehaviour` is ~option~, so `2022-07-08T00:14:07Z[Europe/London]`
+ *    is `2022-07-08T00:14:07Z` under every `offset` value. Polyfill 0.5.1 and native V8 (Node 24.21) apply
+ *    `ignore` first and read the wall clock in the zone (`2022-07-07T23:14:07Z`). Like defect 4 the
+ *    wrong answer looks valid, and near a range limit it can throw for an instant the spec accepts.
+ *    While the D15 probe fails, `zExactOptions` reads a string with a UTC designator with
+ *    `offset: "use"`, which is the exact reading. Not filed upstream yet. js-temporal `main` (`c55b211`)
+ *    and tc39/proposal-temporal `main` (`e8cc03f`) still have it.
+ *
  * Every GMT wall clock → instant conversion goes through this file. Each helper calls the
  * polyfill first and returns its answer whenever it has one; only when the polyfill throws (or
  * returns a transition-less `null`) for a named, non-UTC zone near the range limits does it
@@ -93,7 +104,9 @@ import { optionOrDefault } from "./optionOrDefault";
  * `min.*` probes still fail with it); for defect 2, an upstream fix that does not exist yet (see
  * `context/domination/js-temporal-polyfill-bugs.md` § B); for defect 3, a release containing
  * js-temporal/temporal-polyfill#372 (the `zoned.E` canary group; bugs document § E); for
- * defect 4, a release containing 23d1275 (the `D12` probe; bugs document § I); for defect 5, a
+ * defect 4, a release containing 23d1275 (the `D12` probe; bugs document § I); for defect 6, a
+ * release whose `ToTemporalZonedDateTime` keeps a `Z` string exact under `ignore` (the `D15`
+ * probe; bugs document § O); for defect 5, a
  * release on which every `D13` probe passes, Africa/El_Aaiun included (a79c6a1 alone is not; bugs
  * document § K).
  * `pnpm compat` reports when every probe of a group passes.
@@ -163,7 +176,9 @@ const UTC_REFERENCE = new Temporal.ZonedDateTime(0n, "UTC");
 const TIME_SEPARATOR = /^[^[]*[Tt ]/;
 const UTC_OFFSET = /^[^[]*[Tt ][^[]*[+\-−]/;
 /** RFC 9557 offset with a seconds field — TC39 `ToTemporalZonedDateTime` then matches exactly. */
-const UTC_OFFSET_WITH_SECONDS = /^[^[]*[Tt ][^[+\-−]*[+\-−]\d{2}:?\d{2}:?\d{2}/;
+export const UTC_OFFSET_WITH_SECONDS = /^[^[]*[Tt ][^[+\-−]*[+\-−]\d{2}:?\d{2}:?\d{2}/;
+/** A UTC designator (`Z` or `z`) ends the date-time before the bracketed annotations. */
+const UTC_DESIGNATOR = /^[^[]*[Zz]\[/;
 
 // ---------------------------------------------------------------------------------------------
 // TC39 abstract operations, rebuilt from operations the polyfill gets right at the limits
@@ -173,6 +188,17 @@ function epochDays(date: Temporal.PlainDate): number {
   return UNIX_EPOCH_DATE.until(date.withCalendar("iso8601"), {
     largestUnit: "day",
   }).days;
+}
+
+/**
+ * True when the date part of a wall clock is inside the TC39 `CheckISODaysRange` limit, which
+ * Temporal applies to the local date (not only the instant) under `prefer` and `reject`.
+ *
+ * @example isWithinIsoDaysRange(Temporal.PlainDateTime.from("-271821-04-20T00:00:00")) // true
+ * @example isWithinIsoDaysRange(Temporal.PlainDateTime.from("-271821-04-19T23:59:00")) // false
+ */
+export function isWithinIsoDaysRange(wall: Temporal.PlainDateTime): boolean {
+  return Math.abs(epochDays(wall.toPlainDate())) <= MAX_ISO_EPOCH_DAYS;
 }
 
 /** True for a date within `EDGE_WINDOW_DAYS` of either TC39 date limit. */
@@ -798,21 +824,42 @@ function matchSecondsOffsetExactly(
 }
 
 /**
+ * The options to read `item` with: `offset: "use"` in place of `"ignore"` for a string with a UTC
+ * designator (defect 6, temporalCompat D15). TC39 reads `Z` as an exact instant under every
+ * `offset` value, and `"use"` is that reading. Dormant unless the D15 probe fails.
+ */
+function zExactOptions(
+  item: string,
+  options: ZonedFromOptions | undefined,
+): ZonedFromOptions | undefined {
+  return options?.offset === "ignore" &&
+    UTC_DESIGNATOR.test(item) &&
+    isZIgnoreExactCompatNeeded()
+    ? { ...options, offset: "use" }
+    : options;
+}
+
+/**
  * `Temporal.ZonedDateTime.from`, correct across the whole representable range.
  *
  * Returns the polyfill's result whenever it has one. When the polyfill throws for a named zone
  * within a month of either range limit, the TC39 result is recomputed (see the note at the top
  * of this file); every other failure re-throws the polyfill's own error. A string whose offset
- * is written with seconds is matched exactly, as TC39 requires (`matchSecondsOffsetExactly`).
+ * is written with seconds is matched exactly, as TC39 requires (`matchSecondsOffsetExactly`), and
+ * a string with a `Z` designator is an exact instant under every `offset` option (`zExactOptions`).
  *
  * @param item RFC 9557 zoned string or ZonedDateTime-like property bag
- * @param options Temporal `disambiguation` / `offset` / `overflow`
+ * @param callerOptions Temporal `disambiguation` / `offset` / `overflow`
  * @returns the resolved Temporal.ZonedDateTime; throws where TC39 Temporal throws
  */
 export function zonedDateTimeFrom(
   item: string | Temporal.ZonedDateTimeLike,
-  options?: ZonedFromOptions,
+  callerOptions?: ZonedFromOptions,
 ): Temporal.ZonedDateTime {
+  const options =
+    typeof item === "string"
+      ? zExactOptions(item, callerOptions)
+      : callerOptions;
   const dateOnly =
     typeof item === "string"
       ? dateOnlyBeforeTransitionSearch(item, options)

@@ -306,6 +306,15 @@ and leap-second tools list their roots in the same sheets. All of them read as o
 - **An accent edge is a bottom edge.** Hero plates (`.gmt-punct-hero[data-series]`) and the
   Ruler's result cards paint their series colour as a 3px bar at `left bottom / 100% 3px`. No
   card carries a left-only accent (visual-design.md § Corners, borders, focus).
+- **A two-lane strip with a reserved height** (Stored Time Audit): the zone's clock over the
+  exact timeline, each lane a fixed `rem` tall with four tier rows, so a gap, an overlap, a
+  since strip and no strip are the same box. Chips hang from their point by `data-anchor`
+  (`start`, `mid`, `end`) so none leaves the lane. The legend always holds five items and hides
+  an unused one with `visibility: hidden`.
+- **The slashed-edge badge is "the rule changed".** An `offsetMismatch` badge carries the
+  slashed break (`linear-gradient(115deg …)` in `--gmt-ice-dim`), the same mark the exact lane
+  uses for time not drawn. A skipped hour is gold, dashed and hatched; a repeated hour is a
+  purple double edge. Never one colour alone.
 - **Hero plates hold still while a handle moves.** `.gmt-punct-heroes` is
   `justify-content: space-between`; each plate is `flex: 0 0 auto` with a reserved value and
   sub-line width (measured across each handle's whole range on every preset), `tabular-nums`

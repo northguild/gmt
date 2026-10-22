@@ -63,7 +63,8 @@ export type WidgetKind =
   | "satclock"
   | "rollover"
   | "leapline"
-  | "elapsed";
+  | "elapsed"
+  | "storedaudit";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -109,6 +110,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   rollover: "/tools/gnss-rollover-checker/",
   leapline: "/tools/leap-second-timeline/",
   elapsed: "/tools/elapsed-vs-clock-difference/",
+  storedaudit: "/tools/stored-time-audit/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */
@@ -159,6 +161,12 @@ export function decodeWidgetPermalink(
 }
 
 /**
+ * Keys whose value is a list of lines, so 64 characters would drop all but one
+ * short line. Each bound is the chat schema's own (`showStoredTimeAuditInput`).
+ */
+const LONG_STRING_KEYS: Readonly<Record<string, number>> = { values: 1000 };
+
+/**
  * Read this page's own permalink, if it carries one for `kind`.
  *
  * Called from each widget's page bootstrap, so a link copied out of the chat —
@@ -193,8 +201,10 @@ export function seedFromLocation(
   for (const [key, value] of Object.entries(args as Record<string, unknown>)) {
     // Strings are capped rather than pattern-matched: the widgets already fall
     // back to a default for anything they cannot use, and a length bound is
-    // what stops a hostile link bloating the page.
-    if (typeof value === "string" && value.length > 0 && value.length <= 64) {
+    // what stops a hostile link bloating the page. A key that carries a list
+    // of lines has its own, larger bound (`LONG_STRING_KEYS`).
+    const cap = LONG_STRING_KEYS[key] ?? 64;
+    if (typeof value === "string" && value.length > 0 && value.length <= cap) {
       out[key] = value;
     } else if (
       typeof value === "number" &&

@@ -102,6 +102,14 @@
       "state": "still-needed"
     },
     {
+      "defects": ["D15"],
+      "title": "D15 — `Z` string read by wall clock under offset: \"ignore\" instead of as an exact instant (zonedWallClock.ts defect 6)",
+      "trigger": "a js-temporal release (and Node floor) whose ToTemporalZonedDateTime keeps a Z string's own instant under offset: \"ignore\", as InterpretISODateTimeOffset requires. Native V8 (Node 24.21 with --harmony-temporal) shares the defect; not filed upstream yet, and js-temporal main c55b211 and tc39 main e8cc03f both still have it (bug doc § O). The expected value is the specification's",
+      "probes": 1,
+      "failing": 1,
+      "state": "still-needed"
+    },
+    {
       "defects": ["D9"],
       "title": "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
       "trigger": "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",

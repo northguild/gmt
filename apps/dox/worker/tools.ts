@@ -61,6 +61,7 @@ import {
   showGnssWeekDecoderInput,
   showLeapSecondTimelineInput,
   showSatelliteClockConverterInput,
+  showStoredTimeAuditInput,
   showX12TimeReaderInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -455,6 +456,11 @@ export function buildWorkerTools(
       description: docFor("showElapsedVsClock"),
       inputSchema: showElapsedVsClockInput,
       execute: () => accept("elapsed-vs-clock"),
+    }),
+    showStoredTimeAudit: tool({
+      description: docFor("showStoredTimeAudit"),
+      inputSchema: showStoredTimeAuditInput,
+      execute: () => accept("stored-time-audit"),
     }),
   };
 

@@ -73,6 +73,7 @@ import type { SatelliteClockConverterArgs } from "~/lib/satellite-clock-converte
 import type { GnssRolloverCheckerArgs } from "~/lib/gnss-rollover-checker-mount";
 import type { LeapSecondTimelineArgs } from "~/lib/leap-second-timeline-mount";
 import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
+import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
 import {
   showBillingDeadlinesInput,
   showBlDateStampInput,
@@ -93,6 +94,7 @@ import {
   showGnssWeekDecoderInput,
   showLeapSecondTimelineInput,
   showSatelliteClockConverterInput,
+  showStoredTimeAuditInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -823,6 +825,27 @@ const elapsedEntry = defineWidget<ElapsedVsClockArgs>({
     })),
 });
 
+const storedAuditEntry = defineWidget<StoredTimeAuditArgs>({
+  title: "Stored time audit",
+  kind: "storedaudit",
+  parse: (input) => {
+    const result = showStoredTimeAuditInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: both arguments are control values. There is deliberately no `validate`: a line the library does not read is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
+  load: () =>
+    import("~/lib/stored-time-audit-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderStoredTimeAuditTemplate(args),
+      mount: m.mountStoredTimeAudit,
+    })),
+});
+
 const plannerEntry = defineWidget<ZonePlannerArgs>({
   title: "Zone planner",
   kind: "planner",
@@ -898,6 +921,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showGnssRolloverChecker: rolloverEntry,
   showLeapSecondTimeline: leapLineEntry,
   showElapsedVsClock: elapsedEntry,
+  showStoredTimeAudit: storedAuditEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

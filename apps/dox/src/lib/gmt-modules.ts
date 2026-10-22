@@ -83,6 +83,7 @@ export const GMT_MODULES: Record<
   // --- zoned ---
   "zoned/calculate": () => import("@northguild/gmt/zoned/calculate"),
   "zoned/chop": () => import("@northguild/gmt/zoned/chop"),
+  "zoned/classify": () => import("@northguild/gmt/zoned/classify"),
   "zoned/compare": () => import("@northguild/gmt/zoned/compare"),
   "zoned/convert": () => import("@northguild/gmt/zoned/convert"),
   "zoned/format": () => import("@northguild/gmt/zoned/format"),

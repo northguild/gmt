@@ -548,3 +548,24 @@ describe("addZoned with an option that is an object", () => {
     });
   });
 });
+
+describe("addZoned with a calendar-annotated Z value at an end of the instant range", () => {
+  // A `Z` value is an exact instant under every `offset` option (ToTemporalZonedDateTime sets
+  // offsetBehaviour ~exact~), so both values are in range. Reading the wall clock in the zone
+  // instead would put São Paulo (-03:00) past the maximum and Tokyo (+09:18:59) before the minimum.
+  it("adds one minute to +275760-09-12T23:00:00Z[America/Sao_Paulo][u-ca=hebrew]", () => {
+    expect(
+      addZoned("+275760-09-12T23:00:00Z[America/Sao_Paulo][u-ca=hebrew]", {
+        minutes: 1,
+      }),
+    ).toBe("+275760-09-12T20:01:00-03:00[America/Sao_Paulo][u-ca=hebrew]");
+  });
+
+  it("adds one day to -271821-04-20T00:00:00Z[Asia/Tokyo][u-ca=iso8601]", () => {
+    expect(
+      addZoned("-271821-04-20T00:00:00Z[Asia/Tokyo][u-ca=iso8601]", {
+        days: 1,
+      }),
+    ).toBe("-271821-04-21T09:18:59+09:19[Asia/Tokyo]");
+  });
+});

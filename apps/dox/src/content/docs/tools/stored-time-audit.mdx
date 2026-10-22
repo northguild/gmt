@@ -1,0 +1,68 @@
+---
+title: Stored Time Audit
+description: Paste zoned times you stored earlier and see which ones the zone's current rules still read as written, and which now name a different instant or none.
+industries: [core]
+---
+
+import StoredTimeAudit from "../../../components/StoredTimeAudit.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="stored zoned times">
+
+<Fragment slot="keypoint">
+
+A zoned time you stored last year can mean something else today. When a country changes its rules, a time written with the old offset may no longer match the zone, or may fall in an hour that no longer exists.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A stored zoned time carries three parts: a local date and time, a UTC offset and a zone name. They agree only while the zone's rules do not change. Governments change them often: Turkey stayed on +03:00 in 2016, Morocco moved to +01:00 in 2018 and Brazil dropped daylight saving time in 2019. A time stored before the change keeps the old offset, and the zone now says something else.
+
+Paste one stored time per line, or pick a preset. The table gives each line a kind and the readings it still has. Choose a line and the strip below draws the rule that matters: a skipped or repeated hour for a clock change that day, or the offset the zone has held since a change for an offset that no longer matches. Under it are the exact calls and the answer as the library returns it.
+
+</Fragment>
+
+<StoredTimeAudit fullbleed />
+
+<Fragment slot="after">
+
+**The five kinds.** [`classifyStoredZoned`](/reference/zoned/classify/classifyStoredZoned/) reads the three parts against the zone's rules and returns one of five kinds.
+
+- `valid`: the string names one instant. Either it ends in `Z`, which is exact whatever the zone's offset, or its offset matches the zone's offset at that time (to the minute, or exactly when written with seconds). `atStoredOffset` differs from `instant` only when a minute-rounded offset matched, as in Monrovia's -00:44:30.
+- `validInOverlap`: the time falls in a repeated hour and the stored offset picks one of the two readings.
+- `offsetMismatch`: the stored offset is not the zone's offset at that time. The result holds both instants, `atStoredOffset` and `atZoneOffset`.
+- `ambiguous`: the time falls in a repeated hour and the offset is neither reading, so there are two possible instants.
+- `nonexistent`: the time falls in a skipped hour. The result holds the `earlier` and `later` instants around it, and `atStoredOffset`.
+
+**Choosing a reading.** The function does not decide which instant you meant. It gives you every reading, and the one you take depends on what the stored offset was for.
+
+| Kind | What you have | Take |
+| --- | --- | --- |
+| `valid` | one instant | the instant |
+| `validInOverlap` | one instant, in a repeated hour | the instant |
+| `offsetMismatch` | two instants | `atStoredOffset` if the offset was recorded at the event, `atZoneOffset` if the wall time was |
+| `ambiguous` | two instants | `earlier` or `later`, by your own rule |
+| `nonexistent` | two instants and one at the stored offset | `atStoredOffset` if the offset was recorded, else `earlier` or `later` |
+
+**The answer depends on the host.** The zone's rules come from the time zone database that the runtime carries. A browser does not say which release it has, so the same line can read differently on another device or server. A runtime built before a rule change reads a time by the old rules. Istanbul is one: a device whose database predates 2016g still reads `2016-12-01T09:00:00+02:00[Europe/Istanbul]` as `valid`, where current data finds an `offsetMismatch`. On Node, `process.versions.tz` names the release, so keep it with the data you audit.
+
+```ts
+classifyStoredZoned("2016-12-01T09:00:00+02:00[Europe/Istanbul]");
+// { kind: "offsetMismatch", storedOffset: "+02:00", zoneOffset: "+03:00",
+//   atStoredOffset: "2016-12-01T07:00:00Z", atZoneOffset: "2016-12-01T06:00:00Z" }
+classifyStoredZoned("2026-03-29T01:30:00+02:00[Europe/London]");
+// { kind: "nonexistent", earlier: "2026-03-29T00:30:00Z",
+//   later: "2026-03-29T01:30:00Z", atStoredOffset: "2026-03-28T23:30:00Z" }
+classifyStoredZoned("not a time"); // null
+```
+
+A string that is not a stored zoned time, such as a time with no offset or a zone that does not exist, returns `null`, and the tool shows `NO SIGNAL` with the reason. That is different from a line that is `valid`, which is a real answer.
+
+**Worth trying:** [Istanbul, stored before 2016](/tools/stored-time-audit/?w=storedaudit&wa=%7B%22values%22%3A%222015-11-08T03%3A30%3A00%2B03%3A00%5BEurope%2FIstanbul%5D%5Cn2015-11-08T03%3A30%3A00%2B01%3A00%5BEurope%2FIstanbul%5D%5Cn2016-03-27T03%3A30%3A00%2B03%3A00%5BEurope%2FIstanbul%5D%5Cn2016-10-30T03%3A30%3A00%2B02%3A00%5BEurope%2FIstanbul%5D%5Cn2016-12-01T09%3A00%3A00%2B02%3A00%5BEurope%2FIstanbul%5D%5Cn2016-12-01T09%3A00%3A00%2B03%3A00%5BEurope%2FIstanbul%5D%22%2C%22line%22%3A%225%22%7D) — a winter time at +02:00 is an hour off. [Casablanca, stored before 2018](/tools/stored-time-audit/?w=storedaudit&wa=%7B%22values%22%3A%222018-06-17T02%3A30%3A00%2B00%3A00%5BAfrica%2FCasablanca%5D%5Cn2018-10-28T02%3A30%3A00%2B00%3A00%5BAfrica%2FCasablanca%5D%5Cn2018-12-01T09%3A00%3A00%2B00%3A00%5BAfrica%2FCasablanca%5D%5Cn2018-12-01T09%3A00%3A00%2B01%3A00%5BAfrica%2FCasablanca%5D%5Cn2019-05-05T02%3A30%3A00%2B00%3A00%5BAfrica%2FCasablanca%5D%5Cn2019-05-05T02%3A30%3A00%2B02%3A00%5BAfrica%2FCasablanca%5D%22%2C%22line%22%3A%223%22%7D) — the same, for +00:00. [Sao Paulo, stored before 2019](/tools/stored-time-audit/?w=storedaudit&wa=%7B%22values%22%3A%222018-11-04T00%3A30%3A00-03%3A00%5BAmerica%2FSao_Paulo%5D%5Cn2019-02-16T23%3A30%3A00-03%3A00%5BAmerica%2FSao_Paulo%5D%5Cn2019-02-16T23%3A30%3A00-04%3A00%5BAmerica%2FSao_Paulo%5D%5Cn2019-11-03T00%3A30%3A00-03%3A00%5BAmerica%2FSao_Paulo%5D%5Cn2020-01-15T12%3A00%3A00-02%3A00%5BAmerica%2FSao_Paulo%5D%22%2C%22line%22%3A%225%22%7D) — a summer time at -02:00 in January 2020. [A kept offset in a gap](/tools/stored-time-audit/?w=storedaudit&wa=%7B%22values%22%3A%222024-10-06T02%3A15%3A00%2B10%3A30%5BAustralia%2FLord_Howe%5D%5Cn2024-09-29T03%3A15%3A00%2B12%3A45%5BPacific%2FChatham%5D%5Cn2026-03-08T02%3A30%3A00-03%3A00%5BAmerica%2FLos_Angeles%5D%5Cn2026-11-01T01%3A30%3A00-03%3A00%5BAmerica%2FLos_Angeles%5D%5Cn2026-11-01T01%3A30%3A00-08%3A00%5BAmerica%2FLos_Angeles%5D%5Cn2026-11-01T01%3A30%3A00-07%3A00%5BAmerica%2FLos_Angeles%5D%22%2C%22line%22%3A%223%22%7D) — the Los Angeles hour that never happened. [A repeated hour](/tools/stored-time-audit/?w=storedaudit&wa=%7B%22values%22%3A%222024-10-06T02%3A15%3A00%2B10%3A30%5BAustralia%2FLord_Howe%5D%5Cn2024-09-29T03%3A15%3A00%2B12%3A45%5BPacific%2FChatham%5D%5Cn2026-03-08T02%3A30%3A00-03%3A00%5BAmerica%2FLos_Angeles%5D%5Cn2026-11-01T01%3A30%3A00-03%3A00%5BAmerica%2FLos_Angeles%5D%5Cn2026-11-01T01%3A30%3A00-08%3A00%5BAmerica%2FLos_Angeles%5D%5Cn2026-11-01T01%3A30%3A00-07%3A00%5BAmerica%2FLos_Angeles%5D%22%2C%22line%22%3A%224%22%7D) — two readings and an offset that picks neither. [Z, -00:00 and +00:00](/tools/stored-time-audit/?w=storedaudit&wa=%7B%22values%22%3A%222022-07-08T00%3A14%3A07Z%5BEurope%2FLondon%5D%5Cn2022-07-08T00%3A14%3A07-00%3A00%5BEurope%2FLondon%5D%5Cn2022-07-08T00%3A14%3A07%2B00%3A00%5B!Europe%2FLondon%5D%5Cn1960-01-01T00%3A20%3A00-00%3A45%5BAfrica%2FMonrovia%5D%5Cn1960-01-01T00%3A20%3A00-00%3A44%3A30%5BAfrica%2FMonrovia%5D%22%2C%22line%22%3A%222%22%7D) — which offsets London can have in July. [Not stored times](/tools/stored-time-audit/?w=storedaudit&wa=%7B%22values%22%3A%222026-03-08T02%3A30%3A00%5BAmerica%2FLos_Angeles%5D%5Cn2026-03-08T02%3A30%3A00-08%3A00%5Cn2026-03-08T02%3A30%3A00-08%3A00%5B-08%3A00%5D%5Cn2026-03-08T02%3A30%3A00-08%3A00%5BMars%2FBase%5D%5Cn20260308T023000-0800%5BAmerica%2FLos_Angeles%5D%5Cn2026-03-08T02%3A30%3A00-08%3A00%5BAmerica%2FLos_Angeles%5D%5Bu-ca%3Dhebrew%5D%22%2C%22line%22%3A%221%22%7D) — `NO SIGNAL` on every line.
+
+**Reference:** [`classifyStoredZoned`](/reference/zoned/classify/classifyStoredZoned/) and [`getDstTransitions`](/reference/zoned/get/getDstTransitions/). The guide is [Read a stored zoned time after a rule change](/guides/zoned-date-operations/offset-instants-and-local-resolution/#read-a-stored-zoned-time-after-a-rule-change).
+
+</Fragment>
+
+</ToolLayout>

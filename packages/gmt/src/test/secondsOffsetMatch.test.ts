@@ -5,6 +5,7 @@ import { zonedDateTimeFrom } from "../internal/zonedWallClock";
 import { toOffsetInstant } from "../instant/convert/toOffsetInstant";
 import { nextDeparture } from "../transport/calculate/nextDeparture";
 import { transitTime } from "../transport/calculate/transitTime";
+import { classifyStoredZoned } from "../zoned/classify/classifyStoredZoned";
 import { isValidZonedDateTime } from "../zoned/validate/isValidZonedDateTime";
 
 /**
@@ -103,6 +104,26 @@ describe("a zoned offset written with seconds matches exactly (D12)", () => {
         normalizeDuration("P45D", { largestUnit: "month", relativeTo }),
       ).toBe(normalized);
       expect(compareDurations("P1M", "P30D", { relativeTo })).toBe(comparison);
+    },
+  );
+
+  // classifyStoredZoned: a rounded `HH:MM:SS` offset is a mismatch, and `HH:MM` still matches.
+  it.each`
+    value                                              | kind                | atStoredOffset
+    ${"1970-01-01T12:00:00-00:44:30[Africa/Monrovia]"} | ${"valid"}          | ${"1970-01-01T12:44:30Z"}
+    ${"1970-01-01T12:00:00-00:45[Africa/Monrovia]"}    | ${"valid"}          | ${"1970-01-01T12:45:00Z"}
+    ${"1970-01-01T12:00:00-00:45:00[Africa/Monrovia]"} | ${"offsetMismatch"} | ${"1970-01-01T12:45:00Z"}
+    ${"1970-01-01T12:00:00-00:44:40[Africa/Monrovia]"} | ${"offsetMismatch"} | ${"1970-01-01T12:44:40Z"}
+    ${"1952-10-15T23:59:59-11:20[Pacific/Niue]"}       | ${"validInOverlap"} | ${"1952-10-16T11:19:59Z"}
+    ${"1952-10-15T23:59:59-11:20:00[Pacific/Niue]"}    | ${"validInOverlap"} | ${"1952-10-16T11:19:59Z"}
+    ${"1952-10-15T23:59:59-11:19:50[Pacific/Niue]"}    | ${"ambiguous"}      | ${"1952-10-16T11:19:49Z"}
+  `(
+    "classifyStoredZoned calls $value $kind, with $atStoredOffset at the stored offset",
+    ({ value, kind, atStoredOffset }) => {
+      expect(classifyStoredZoned(value)).toMatchObject({
+        kind,
+        atStoredOffset,
+      });
     },
   );
 });

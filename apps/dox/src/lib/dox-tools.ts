@@ -571,6 +571,25 @@ export const showElapsedVsClockInput = z.object({
 });
 
 /**
+ * Stored Time Audit: the reader's stored RFC 9557 strings, one per line,
+ * exactly as given (`line` picks which one to draw). The chat args are the
+ * permalink args.
+ */
+export const showStoredTimeAuditInput = z.object({
+  values: z
+    .string()
+    .min(1)
+    .max(1000)
+    // Not trimmed: the args are passed exactly as given. A blank list is
+    // refused so the card opens on the reader's empty box, not a preset.
+    .refine((s) => s.trim() !== "", { message: "Send at least one line." }),
+  line: z
+    .string()
+    .regex(/^(?:[1-9]|1[0-2])$/)
+    .optional(),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -613,7 +632,8 @@ export type DoxToolName =
   | "showSatelliteClockConverter"
   | "showGnssRolloverChecker"
   | "showLeapSecondTimeline"
-  | "showElapsedVsClock";
+  | "showElapsedVsClock"
+  | "showStoredTimeAudit";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -645,6 +665,7 @@ export const DOX_TOOL_INPUTS = {
   showGnssRolloverChecker: showGnssRolloverCheckerInput,
   showLeapSecondTimeline: showLeapSecondTimelineInput,
   showElapsedVsClock: showElapsedVsClockInput,
+  showStoredTimeAudit: showStoredTimeAuditInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -857,6 +878,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks how many seconds really passed between two UTC times, why a duration across a leap second is a second short, or how to measure elapsed time across 23:59:60",
     args: "start and end: both instants exactly as the reader gave them",
   },
+  {
+    name: "showStoredTimeAudit",
+    purpose:
+      "Check stored RFC 9557 strings that carry both an offset and a zone, show whether each still names one instant under this browser's time zone rules, and every reading it allows when it does not",
+    when: "Call when the reader asks why a stored zoned time no longer parses or resolves, whether a stored offset still matches its zone, what happens to stored future events after a time zone rule change, or how Temporal's `offset` option reads such a string",
+    args: "values: the reader's strings exactly as given, one per line, each with an offset or `Z` and a bracketed zone; never invent or correct one. line: optional, which line to draw",
+  },
 ];
 
 /**
@@ -981,6 +1009,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[28].purpose,
     inputSchema: showElapsedVsClockInput,
   }),
+  showStoredTimeAudit: tool({
+    description: DOX_TOOL_DOCS[29].purpose,
+    inputSchema: showStoredTimeAuditInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1033,6 +1065,7 @@ export const ENABLED_TOOL_NAMES = [
   "showGnssRolloverChecker",
   "showLeapSecondTimeline",
   "showElapsedVsClock",
+  "showStoredTimeAudit",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

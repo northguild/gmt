@@ -10,8 +10,9 @@ tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) 
 > manageable. #373 (release) is open and answered: one release once the rebase has caught up. #361
 > merged 2026-09-21. The six tc39 issues (#3327–#3332) are open with no maintainer reply.
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
-> 17 workarounds, 16 still needed and 1 guard (D10). The newest are § I (D12), fixed on `main` with nothing
-> to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; and § N (D14), which arrives with the catch-up. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
+> 18 workarounds, 17 still needed and 1 guard (D10). The newest are § I (D12), fixed on `main` with nothing
+> to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
+> and § O (D15), not filed yet and not fixed on either `main`. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
 > contradictions" before changing any GMT trigger.
 
@@ -36,7 +37,7 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 
 `D8` is part-way: `2bb6ba1` fixes two of its three probes, and the third needs tc39 `977d11e0` and
 `993e6322`, which are not on `main`. `D1`, `D9`, `zoned.B`, `zoned.D` and `zoned.E` have no fix on
-`main`.
+`main`. Neither has `D15`, on js-temporal `main` or tc39 `main` (§ O).
 
 To check, without cloning anything:
 
@@ -171,6 +172,7 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 | L   | A one-character annotation key (`[a=bc]`, `[x=y]`) is refused by V8's native Temporal | **Nothing to file**: fixed upstream by unicode-org/icu4x#8623 (merged 2026-10-20), waiting for an `ixdtf` release and a V8 roll | **Not filed** (report: unicode-org/icu4x#8620, closed by #8623) | Yes: Node 26.10.0 (V8 14.6.202.34-node.34) and Chromium 153.0.8010.12 throw `RangeError: Temporal error: Invalid annotation key character.`; the polyfill accepts | None: GMT already follows the spec text | None |
 | M   | `[u-ca=islamic]` is accepted by V8's native Temporal and read as `islamic-civil` | **Nothing to file**: open upstream as boa-dev/temporal#529 | **Not filed** (report: boa-dev/temporal#529, open) | Yes: Node 26.10.0 and Chromium 153.0.8010.12 return `islamic-civil`; the polyfill throws `RangeError` | None: GMT already follows the spec text | None |
 | N   | `ZonedDateTime.prototype.round` to `day` when a date starts twice (V8 throws, the polyfill answers the next day) | **Nothing to file**: the reference polyfill fix `59a51ea9d4` is in proposal-temporal, and js-temporal pulls proposal-temporal commits in order, so the port arrives with that catch-up and its one release (#373) | Not filed: nothing to file | Yes: polyfill 0.5.1 (Node 24.21.0) answers `2010-11-07T00:00:00-03:00`; Node 26.10.0 throws; Chromium 153 and tc39/ecma262#3966 answer `2010-11-06T00:00:00-03:00` | `D14`: `roundZonedDateTime` day branch in `internal/zonedWallClockOperations.ts` and its probe | The first js-temporal release containing `59a51ea9d4` |
+| O   | A `Z` string is read by wall clock under `offset: "ignore"`, not as an exact instant | **Not filed yet.** Needs a report to tc39 (the reference polyfill has it too), then js-temporal and V8; tc39 #3331 and #3332 do not cover it. Not fixed on js-temporal `main` `c55b211` or tc39 `main` `e8cc03f` | Not filed upstream yet | Yes: polyfill 0.5.1 and native V8 in Node 24.21.0 (`--harmony-temporal`) both give `2022-07-07T23:14:07Z` for `2022-07-08T00:14:07Z[Europe/London]` with `offset: "ignore"`; the spec gives `2022-07-08T00:14:07Z` | `D15`: `zExactOptions` in `internal/zonedWallClock.ts` and its probe | A release that keeps a `Z` string exact under `ignore`, in the polyfill and in the Node floor's V8 |
 
 ## Filed
 
@@ -2035,3 +2037,45 @@ Fixed in `roundZoned` and `roundUnix` as **D14**: while the probe fails GMT appl
 the rows in `roundZoned.test.ts` and `roundUnix.test.ts` hold test262's values. The workaround retires on the
 first js-temporal release containing the port. No tag in the native-suite lists: GMT answers correctly on
 every runtime.
+
+## O. A `Z` string is read by wall clock under `offset: "ignore"`
+
+### Title
+
+ToTemporalZonedDateTime: keep a `Z` string's own instant when `offset` is `"ignore"`
+
+### Status
+
+**Not filed upstream yet.** The owner files every item. Found in review of PR #338 (CORE-83,
+`classifyStoredZoned`). Neither tc39/proposal-temporal#3331 (J) nor #3332 (K) covers it. Confirmed on polyfill
+0.5.1 and on native V8 (Node 24.21.0, `--harmony-temporal`). Not fixed on js-temporal `main` (`c55b211`,
+2026-09-22) or tc39/proposal-temporal `main` (`e8cc03f`, 2026-07-27): both `InterpretISODateTimeOffset`s test
+`offsetBehaviour === 'wall' || offsetOpt === 'ignore'`, which drops the spec's "`offsetBehaviour` is ~option~" condition
+(`spec/zoneddatetime.html`, read 2026-10-22). GMT works around it as temporalCompat **D15** (`internal/zonedWallClock.ts` `zExactOptions`, probe
+`isZIgnoreExactCompatNeeded`).
+
+### What goes wrong
+
+`ToTemporalZonedDateTime` sets `offsetBehaviour` to ~exact~ when the string has a UTC designator (`Z` or `z`).
+`InterpretISODateTimeOffset` step 3 applies `ignore` only when `offsetBehaviour` is ~wall~, or ~option~ with
+`offsetOption` `ignore`; step 4 takes the written instant when `offsetBehaviour` is ~exact~. So a `Z` string is
+the string's own instant under every `offset` value. Polyfill 0.5.1 and V8 apply `ignore` first and read the
+wall clock in the zone.
+
+### Repro (Node 24.21.0)
+
+| Call | polyfill 0.5.1 and native V8 | Expected (spec) |
+| ---- | ---------------------------- | --------------- |
+| `Temporal.ZonedDateTime.from("2022-07-08T00:14:07Z[Europe/London]", { offset: "ignore" }).toInstant().toString()` | `2022-07-07T23:14:07Z` | `2022-07-08T00:14:07Z` |
+| the same string with `offset: "use"` | `2022-07-08T00:14:07Z` | `2022-07-08T00:14:07Z` |
+
+Near a range limit the wall-clock reading can also throw for an instant the spec accepts:
+`+275760-09-13T00:00:00Z[America/Sao_Paulo]` with `ignore` (wall clock `00:00`, instant `03:00Z`, past the maximum).
+
+### GMT
+
+`zonedDateTimeFrom` reads a string with a `Z` or `z` designator with `offset: "use"` in place of `"ignore"`
+while the `D15` probe fails. That is the exact reading, so removal changes no answer. It covers every caller:
+`classifyStoredZoned` (its all-16-cells test now runs the `Z` rows) and `calendarSystemOfZonedValue`, which
+read with `ignore`. No public function takes a caller-chosen `offset` for a string it parses with
+`zonedDateTimeFrom` (`setZoned`, `cycleZoned` and the others parse their input with the default options).

@@ -137,6 +137,7 @@ const PAGES = [
     slug: "tool-elapsed-vs-clock-difference",
     path: "/tools/elapsed-vs-clock-difference/",
   },
+  { slug: "tool-stored-time-audit", path: "/tools/stored-time-audit/" },
   /* The industry pages the new tools are linked from, and the reference index. */
   { slug: "industries", path: "/industries/" },
   { slug: "industries-maritime", path: "/industries/maritime/" },
@@ -185,10 +186,42 @@ const LIVE_CLOCK_SELECTORS = [
   ".gmt-clock-time",
   ".gmt-clock-date",
   ".gmt-clock-shift",
+  /* The row that holds all three. The masks follow each text's own box, whose
+     width changes with the text ("Today" against "Tomorrow", "9:05" against
+     "10:05"), so the edges of the smaller boxes differ between captures; this
+     one is a fixed width. */
+  ".gmt-clock-row2",
+  /* A zone's DST badge and offset are read at "now", so a clock change between
+     two captures moves them. */
+  ".gmt-clock-dst",
+  ".gmt-clock-offset",
   ".gmt-globe-tooltip-time",
   ".gmt-globe-tooltip-date",
   ".gmt-globe-stage canvas",
+  /* The Zone Planner opens on now rounded forward to five minutes, and
+     everything it draws is a function of that reference time: the datetime
+     field, each pinned clock (dial, time, date, offset, DST badge, crossed
+     switch), the readout, the jump status and the clock-change marks on the
+     slider track, which sit at an offset from the reference time. */
+  '.gmt-scrubber [data-role="anchor"]',
+  ".gmt-scrubber-clock-face",
+  /* The dial draws past its container on a narrow screen, so its own box is
+     masked too. */
+  ".gmt-scrubber-clock-face svg",
+  ".gmt-scrubber-clock-time",
+  ".gmt-scrubber-clock-date",
+  ".gmt-scrubber-clock-offset",
+  ".gmt-scrubber-dst",
+  ".gmt-scrubber-switch",
+  ".gmt-scrubber-readout",
+  ".gmt-scrubber-jump-status",
+  ".gmt-scrubber-marks",
 ];
+
+/* The planner's own dial (the "Your time zone" one in particular) is drawn above
+   Playwright's mask overlay, so its hands show through and move with the clock.
+   Hidden in the capture as well as masked; `visibility` keeps its box. */
+const LIVE_CLOCK_HIDE_CSS = ".gmt-scrubber-clock-face { visibility: hidden; }";
 
 // Confirms both that something is listening on PORT and that it's actually serving
 // THIS worktree's build, not a stray daemon left running by another worktree or an
@@ -392,6 +425,7 @@ async function shoot(page, outDir, fileName, clockMasks, options = {}) {
   await page.screenshot({
     path: path.join(outDir, fileName),
     mask: clockMasks,
+    style: LIVE_CLOCK_HIDE_CSS,
     ...options,
   });
   console.log(`  captured ${fileName}`);

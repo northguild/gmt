@@ -220,6 +220,7 @@ const WHAT_BREAKS: Readonly<Record<string, string>> = {
   D12: "Zoned strings whose offset is written with seconds, in a zone whose offset was not a whole number of minutes",
   D13: "Finding a zone's clock changes, and the start or length of a day, where two changes fall less than 14 days apart",
   D14: "Rounding a zoned time to the day on a date that starts twice, because the clocks went back across midnight",
+  D15: "Zoned strings that end in Z, read with the offset option set to ignore, where the time was taken as local clock time rather than UTC",
   "zoned.A":
     "Zoned times within a day of the earliest or latest instant Temporal supports",
   "zoned.B":

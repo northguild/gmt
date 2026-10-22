@@ -494,7 +494,8 @@
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
-      .gmt-elapsed-vs-clock
+      .gmt-elapsed-vs-clock,
+      .gmt-stored-time-audit
     )
     :is(
       .gmt-cutoff-chip,
@@ -523,7 +524,8 @@
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
-      .gmt-elapsed-vs-clock
+      .gmt-elapsed-vs-clock,
+      .gmt-stored-time-audit
     )
     :is(.gmt-cutoff-chip, .gmt-cutoff-stack-day-label) {
     forced-color-adjust: auto;
@@ -551,7 +553,8 @@
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
-      .gmt-elapsed-vs-clock
+      .gmt-elapsed-vs-clock,
+      .gmt-stored-time-audit
     )
     .gmt-cutoff-stack-day,
   div.gmt-cutoff-stack-day:nth-of-type(even) {
@@ -574,7 +577,8 @@
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
-      .gmt-elapsed-vs-clock
+      .gmt-elapsed-vs-clock,
+      .gmt-stored-time-audit
     )
     .gmt-cutoff-mark {
     forced-color-adjust: none;
@@ -599,7 +603,8 @@
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
-      .gmt-elapsed-vs-clock
+      .gmt-elapsed-vs-clock,
+      .gmt-stored-time-audit
     )
     .gmt-cutoff-mark--hollow {
     background: Canvas;
@@ -623,7 +628,8 @@
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
-      .gmt-elapsed-vs-clock
+      .gmt-elapsed-vs-clock,
+      .gmt-stored-time-audit
     )
     .gmt-cutoff-gate {
     forced-color-adjust: none;
@@ -647,7 +653,8 @@
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
-      .gmt-elapsed-vs-clock
+      .gmt-elapsed-vs-clock,
+      .gmt-stored-time-audit
     )
     .gmt-cutoff-gate::before {
     background: Highlight;
@@ -673,7 +680,8 @@
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
-      .gmt-elapsed-vs-clock
+      .gmt-elapsed-vs-clock,
+      .gmt-stored-time-audit
     )
     .gmt-cutoff-closed {
     forced-color-adjust: none;
@@ -698,7 +706,8 @@
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
-      .gmt-elapsed-vs-clock
+      .gmt-elapsed-vs-clock,
+      .gmt-stored-time-audit
     )
     .gmt-cutoff-series-swatch {
     forced-color-adjust: none;
@@ -742,7 +751,8 @@
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
-      .gmt-elapsed-vs-clock
+      .gmt-elapsed-vs-clock,
+      .gmt-stored-time-audit
     )
     .gmt-cutoff-axis-tick::before {
     forced-color-adjust: none;
@@ -1346,5 +1356,99 @@
   .gmt-gnss-table th,
   .gmt-gnss-table td {
     border-bottom-color: CanvasText;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Stored Time Audit, forced-colors (CORE-83). The lanes, bands, gates, marks,
+ * badges and the selected-line frame are drawn with background and tinted
+ * borders that forced-colors replaces. Repaint each in system colours, keeping
+ * the shape that carries the meaning: dashed for a skipped hour, double for a
+ * repeated one, a slashed edge for a changed rule.
+ * --------------------------------------------------------------------------- */
+@media (forced-colors: active) {
+  .gmt-stored-time-audit .gmt-stored-badge,
+  .gmt-stored-time-audit .gmt-stored-nosignal,
+  .gmt-stored-time-audit .gmt-stored-daytrack,
+  .gmt-stored-time-audit .gmt-stored-band {
+    forced-color-adjust: none;
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+
+  .gmt-stored-time-audit .gmt-stored-nosignal {
+    border-color: Mark;
+    color: MarkText;
+    background: Mark;
+  }
+
+  .gmt-stored-time-audit .gmt-stored-badge[data-kind="nonexistent"],
+  .gmt-stored-time-audit .gmt-stored-band[data-kind="gap"] {
+    border-style: dashed;
+  }
+
+  .gmt-stored-time-audit .gmt-stored-badge[data-kind="ambiguous"],
+  .gmt-stored-time-audit .gmt-stored-band[data-kind="overlap"] {
+    border: 3px double CanvasText;
+  }
+
+  .gmt-stored-time-audit .gmt-stored-badge[data-kind="offsetMismatch"] {
+    background-image: linear-gradient(
+      115deg,
+      transparent 38%,
+      CanvasText 38% 44%,
+      transparent 44% 56%,
+      CanvasText 56% 62%,
+      transparent 62%
+    );
+  }
+
+  .gmt-stored-time-audit .gmt-stored-pin,
+  .gmt-stored-time-audit .gmt-stored-gate,
+  .gmt-stored-time-audit .gmt-stored-markline,
+  .gmt-stored-time-audit .gmt-stored-baseline,
+  .gmt-stored-time-audit .gmt-stored-tick,
+  .gmt-stored-time-audit .gmt-stored-swatch[data-swatch="gate"] {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .gmt-stored-time-audit .gmt-stored-break {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    background-image: linear-gradient(
+      115deg,
+      transparent 38%,
+      CanvasText 38% 44%,
+      transparent 44% 56%,
+      CanvasText 56% 62%,
+      transparent 62%
+    );
+  }
+
+  .gmt-stored-time-audit .gmt-stored-row[data-selected] td {
+    /* The border keeps its 1px, so selecting never moves a row. The rule is
+       3px: the border plus a 2px band painted inside the cell. */
+    forced-color-adjust: none;
+    color: CanvasText;
+    background: Canvas linear-gradient(Highlight, Highlight) no-repeat bottom /
+      100% 2px;
+    border-block-end-color: Highlight;
+  }
+
+  @container gmt-stored-table (max-width: 46rem) {
+    .gmt-stored-time-audit .gmt-stored-row[data-selected] {
+      border-color: Highlight;
+      /* An outline takes no room, where a thicker border would. */
+      outline: 1px solid Highlight;
+      outline-offset: -2px;
+      background: Canvas;
+    }
+
+    .gmt-stored-time-audit .gmt-stored-row[data-selected] td {
+      background: none;
+      border-block-end-color: transparent;
+    }
   }
 }

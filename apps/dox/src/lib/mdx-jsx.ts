@@ -397,6 +397,7 @@ export function renderMdxComponents(body: string): string {
     "GnssRolloverChecker",
     "LeapSecondTimeline",
     "ElapsedVsClock",
+    "StoredTimeAudit",
   ]) {
     out = replaceElements(out, dropped, (props) =>
       props.caption ? `\n${props.caption}\n` : "",

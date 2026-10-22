@@ -32,6 +32,7 @@ export * from "./relative-time-unit";
 export * from "./relative-unit";
 export * from "./roll-convention";
 export * from "./rounding-options";
+export * from "./stored-zoned-classification";
 export * from "./time-cycle-field";
 export * from "./time-duration-unit";
 export * from "./time-unit";

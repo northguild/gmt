@@ -3,6 +3,7 @@ name: gmt-timezone
 description: >
   Timezone-aware operations — zoned now, zoned formatting, plain↔zoned↔UTC↔Unix
   conversion, DST disambiguation, toOffsetInstant, classifyLocal/resolveLocal,
+  classifyStoredZoned (why a stored offset+zone string no longer resolves),
   real boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix), hours in a
   local day, floorToZone/bucketRange, calendar-annotated strings, operating
   hours (OperatingSchedule, recurringWindows, operatingIntervals, isOpenAt,
@@ -18,6 +19,7 @@ sources:
   - 'northguild/gmt:packages/gmt/src/zoned/compare/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/zoned/classify/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/calculate/addZoned.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/calculate/startOfZoned.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/calculate/roundZoned.ts'
@@ -106,6 +108,15 @@ converting between time zones, or doing arithmetic that must respect DST.
    EDIFACT DTM and DICOM exchange. Its `±HH:MM[:SS]` offset is a valid `timeZone`
    for `resolveLocal` and every function whose result has no zone in it. One
    that returns a zoned string or formats with `Intl` takes none with seconds.
+   **A stored string can stop agreeing with its zone.**
+   `classifyStoredZoned("2016-12-01T09:00:00+02:00[Europe/Istanbul]")` returns
+   `kind: "offsetMismatch"` with `storedOffset`, `zoneOffset` and the instant each
+   reading gives. The other kinds are `valid`, `validInOverlap`, `ambiguous` and
+   `nonexistent`; every one carries `atStoredOffset`, and it returns `null` for a
+   string without both an offset and a zone. It picks no reading: your policy
+   chooses among those returned. The answer follows the host's time zone rules, so
+   the same string can differ between hosts. Import it from
+   `@northguild/gmt/zoned/classify`.
 7. **Bucket in the zone, not in UTC.** `floorToZone(instant, unit, zone)` and
    `bucketRange(start, end, unit, zone)` floor on the zone's own calendar
    boundaries. Flooring a UTC instant to a UTC day and calling it a local day is
@@ -251,7 +262,8 @@ converting between time zones, or doing arithmetic that must respect DST.
   `getTimeZoneOffset`, `parseTimeZoneFromZoned`
 - **Offset-preserving instants**: `toOffsetInstant`, `fromOffsetInstant`,
   `isValidUtcOffset` (the pair's `±HH:MM[:SS]` offset; not `Z`, not `+0530`)
-- **Local-time resolution**: `classifyLocal`, `resolveLocal`
+- **Local-time resolution**: `classifyLocal`, `resolveLocal`,
+  `classifyStoredZoned`
 - **Zone-aware buckets**: `floorToZone`, `bucketRange`,
   `isValidZoneBucketUnit`
 - **Operating hours**: `recurringWindows`, `operatingIntervals`, `isOpenAt`,
