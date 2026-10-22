@@ -126,6 +126,9 @@ const COUNT_WORDS = [
 
 // ---------------------------------------------------------------- sources of truth
 
+/** Vitest's own entry point, run on the current Node. */
+const VITEST_BIN = resolve(import.meta.dirname, "..", "node_modules", "vitest", "vitest.mjs");
+
 /**
  * The library's own suite — the subject of every published figure.
  *
@@ -141,9 +144,11 @@ const SUITE = {
 
 /** Collect (never run) the suite. Returns { tests, files }. */
 function collect(suite) {
-  const args = ["vitest", "list", "--json"];
+  // Vitest's own bin on this Node, not `npx`: npm checks `devEngines.runtime` and refuses to run
+  // on the older Node versions CI tests on purpose.
+  const args = [VITEST_BIN, "list", "--json"];
   if (suite.config) args.push("--config", suite.config);
-  const raw = execFileSync("npx", args, {
+  const raw = execFileSync(process.execPath, args, {
     cwd: suite.cwd,
     encoding: "utf8",
     maxBuffer: 512 * 1024 * 1024,

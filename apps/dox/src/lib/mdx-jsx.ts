@@ -372,6 +372,7 @@ export function renderMdxComponents(body: string): string {
     "PlaygroundForm",
     "HeroGlobe",
     "ScrollReveal",
+    "CanadaProbeScript",
     "IntervalVisualizer",
     "DstInspector",
     "ConverterBench",
