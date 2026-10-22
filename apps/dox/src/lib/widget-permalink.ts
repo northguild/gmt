@@ -65,6 +65,7 @@ export type WidgetKind =
   | "leapline"
   | "elapsed"
   | "storedaudit"
+  | "canadaclock"
   | "durationbench";
 
 /**
@@ -112,6 +113,11 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   leapline: "/tools/leap-second-timeline/",
   elapsed: "/tools/elapsed-vs-clock-difference/",
   storedaudit: "/tools/stored-time-audit/",
+  // `/check` is a directory with no index page of its own, so the built-site guard reads a bare
+  // "/check/…" string in the bundle as a request for a public file. The literal sits inside
+  // `withBase`, the call the guard accepts; `encodeWidgetPermalink` applies `withBase` again, which
+  // leaves a path already under the base alone.
+  canadaclock: withBase("/check/canada-2026-clock-change/"),
   durationbench: "/tools/duration-parser-bench/",
 };
 

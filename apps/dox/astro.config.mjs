@@ -15,6 +15,7 @@ import rehypeBaseLinks from "./src/lib/rehype-base-links.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
 import { copyRedirects } from "./src/lib/copy-redirects.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
+import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
 import { SITE_BASE, SITE_ORIGIN, withBase } from "./src/lib/site.ts";
 
 // `site` + `base` make every Starlight link, the canonical tag, the sitemap
@@ -71,19 +72,10 @@ export default defineConfig({
   },
   vite: {
     server: {
-      // DOX-C3a (#139): `/api/chat` lives in the Cloudflare Worker, which
-      // `astro dev` doesn't run — it only serves the static site, so the chat
-      // 404s here. Proxying that one route to a local `wrangler dev` gives a
-      // single URL with both: hot reload for the UI *and* a real backend.
-      // Everything else is still served by Astro, so this changes nothing for
-      // any other page. `pnpm dev` starts both; see package.json. The Worker
-      // receives the full /gmt/api/… path and strips the base itself.
-      proxy: {
-        [`${SITE_BASE}/api`]: {
-          target: "http://localhost:8787",
-          changeOrigin: true,
-        },
-      },
+      // `/gmt/api/…` lives in the Cloudflare Worker, which `astro dev` doesn't run.
+      // Proxy it to a local `wrangler dev` (`pnpm dev` starts both, on
+      // DOX_WORKER_PORT). Why the key is not `/gmt/api`: src/lib/dev-worker-proxy.ts.
+      proxy: devWorkerProxy(process.env.DOX_WORKER_PORT),
     },
     plugins: [tailwindcss()],
     // One dependency cache per dev server. Two `astro dev` processes sharing
@@ -231,7 +223,8 @@ export default defineConfig({
           })();`,
         },
       ],
-      /* Every group starts collapsed. Starlight still opens any group that
+      /* Every group starts collapsed except Checks, the last group, which
+         lists the checks for recent tz rule changes. Starlight still opens any group that
          contains the current page (SidebarSublist: open when an entry is
          current or the group is not collapsed), so a page opens only its own
          ancestors. */
@@ -269,6 +262,11 @@ export default defineConfig({
           collapsed: true,
           items: mistakesSidebar,
         },
+        {
+          label: "Checks",
+          collapsed: false,
+          items: [{ autogenerate: { directory: "check" } }],
+        },
       ],
       components: {
         Head: "./src/components/Head.astro",
@@ -293,6 +291,7 @@ export default defineConfig({
         "./src/styles/gmt-form-controls.css", // shared label/input/select styles
         "./src/styles/gmt-widget.css", // shared teaching-widget chrome (card/section/codeframe/output)
         "./src/styles/gmt-crystal-clock.css", // shared analog crystal clock face (TRAN-9)
+        "./src/styles/canada-clock-change.css", // Canada clock-change checker (CORE-88)
         "./src/styles/gmt-dst-inspector.css", // DST Transition Inspector widget (DOX-B2b)
         "./src/styles/gmt-interval-visualizer.css", // Interval Algebra Visualizer widget (DOX-B2c)
         "./src/styles/gmt-billing-deadlines.css", // Billing Deadlines widget (INT-58)
@@ -331,6 +330,7 @@ export default defineConfig({
         "./src/styles/gmt-map.css", // timezone map layout
         "./src/styles/gmt-globe.css", // DOX-E1a interactive globe
         "./src/styles/gmt-scrubber.css", // DOX-E1b multi-zone time scrubber
+        "./src/styles/gmt-data-credits.css", // data-credits corner icon + popup (CORE-88)
         "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides
         "./src/styles/gmt-reveal.css", // shared scroll-into-view stagger utility
         "./src/styles/dox.css", // live component layout

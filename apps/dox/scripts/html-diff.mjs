@@ -143,6 +143,10 @@ const PAGES = [
     widget: "gmt-stored-time-audit gmt-widget",
   },
   {
+    path: "check/canada-2026-clock-change",
+    widget: "gmt-canada gmt-widget",
+  },
+  {
     path: "tools/duration-parser-bench",
     widget: "gmt-duration-parser-bench gmt-widget",
   },

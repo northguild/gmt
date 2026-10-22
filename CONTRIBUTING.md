@@ -1,24 +1,30 @@
 # Contributing
 
-Node.js 24.x (recommended for development; see `.nvmrc`)
-pnpm (recommended package manager). Use Corepack or Volta to manage pnpm locally.
+pnpm 12 is the only tool you install. It downloads the pinned pnpm version and the pinned Node.js for you.
 
 This guide covers local development, quality checks, and publishing for workspace packages.
 
 ## Prerequisites
 
-- Node.js 24.x (see `.nvmrc`)
-- pnpm (use Corepack or Volta)
+- pnpm 12 or newer. Install it any way you like, for example `npm i -g pnpm@12`. You need no Corepack, fnm, nvm or Volta.
 - npm account with publish access to the `@northguild` org (for publishing)
 - [uv](https://docs.astral.sh/uv/) (only needed to run Python-backed agent skill scripts under `.agents/skills/`)
 
 ## Local Setup
 
 ```bash
-# Activate Corepack and install workspace deps
-corepack enable
-corepack prepare pnpm@10.32.1 --activate
+# Install workspace deps. The first run downloads the pnpm version in
+# `packageManager` and the Node.js version in `devEngines.runtime`.
 pnpm install --frozen-lockfile
+
+# Check which Node.js pnpm runs: the pinned version, 26.11 or newer. Node 26.11 is the
+# first 26.x with the 2026e time zone data the Canada rules need.
+pnpm exec node -v
+
+# A bare `node` follows the pin inside this repo only when pnpm manages your global Node
+# (`pnpm runtime set node 26 -g`). Otherwise it is the Node on your PATH, so run
+# scripts through `pnpm exec node` or `pnpm run`.
+node -v
 
 # Only needed for Python-backed agent skill scripts under .agents/skills/
 uv sync --extra dev

@@ -118,6 +118,10 @@ import {
   renderStoredTimeAuditTemplate,
 } from "./stored-time-audit-mount";
 import {
+  mountCanadaClockChangeWidget,
+  renderCanadaClockChangeWidgetTemplate,
+} from "./canada-clock-change-mount";
+import {
   mountDurationParserBench,
   renderDurationParserBenchTemplate,
 } from "./duration-parser-bench-mount";
@@ -264,6 +268,11 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "stored time audit",
     () => renderStoredTimeAuditTemplate(),
     mountStoredTimeAudit as MountFn<never>,
+  ],
+  [
+    "canada clock-change checker",
+    () => renderCanadaClockChangeWidgetTemplate("canada"),
+    mountCanadaClockChangeWidget as MountFn<never>,
   ],
   [
     "duration parser bench",

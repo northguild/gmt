@@ -104,6 +104,20 @@ describe("worker tool execute", () => {
     }
   });
 
+  it("accepts the Canada checker with no zone or a listed one, and refuses any other", async () => {
+    expect(await run("showCanadaClockChange", {})).toEqual({
+      ok: true,
+      widget: "canada-clock-change",
+    });
+    expect(
+      await run("showCanadaClockChange", { zone: "America/Winnipeg" }),
+    ).toEqual({ ok: true, widget: "canada-clock-change" });
+    const refused = await run("showCanadaClockChange", {
+      zone: "Europe/London",
+    });
+    expect(refused).toMatchObject({ ok: false, widget: "canada-clock-change" });
+  });
+
   it("rejects a whitespace-only stored-time list in the tool's own schema", () => {
     const schema = (
       tools.showStoredTimeAudit as unknown as {

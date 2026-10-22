@@ -34,7 +34,7 @@ correctness lives in build output, rendered pages, keyboard paths and live behav
 
 ## Always-on gates
 
-Prefix commands with `eval "$(fnm env)" && fnm use &&` (Astro 7 needs Node `>=22.12.0`).
+`pnpm` commands run on the Node that `devEngines.runtime` pins. Prefix a bare `node` command with `eval "$(fnm env)" && fnm use &&` (Astro 7 needs Node `>=22.12.0`).
 
 - `pnpm run validate` is green across the monorepo, including the CI timezone matrix (10 zones × Node 22/24/26 — the `gmt-matrix` job in `.github/workflows/ci.yml`).
   Check the task list, not only the exit code.

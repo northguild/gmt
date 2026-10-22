@@ -175,6 +175,18 @@ export const KNOWN_HOST_FAILURES = [
     file: /\/formatDateRange\.test\.ts$/,
     test: /locale 'ko-KR' with options \{ dateStyle: 'long' \}/,
   },
+  {
+    // Evidence: at 2026-11-15T17:00Z, Chromium 153.0.8010.12 under Playwright 1.63.0 gives
+    // America/Vancouver -08:00 and America/Winnipeg -06:00 (tz data before 2026b), and Chromium
+    // 156.0.8078.4 under Playwright 1.64.1 gives Vancouver -07:00 but Winnipeg -06:00 (before
+    // 2026e). Node 26.12.1 (tz 2026e) gives -07:00 and -05:00. The group goes stale once a
+    // Playwright Chromium carries 2026e.
+    id: "chromium-canada-2026-tz-data",
+    legs: ["chromium"],
+    reason:
+      "Chromium's time zone data predates tzdb 2026e, so some of the Canadian zones that stopped changing their clocks in 2026 still turn back on 2026-11-01.",
+    file: /\/oh-canada\.test\.ts$/,
+  },
 ];
 
 /** The pseudo test name a file that failed to load counts as. */

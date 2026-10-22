@@ -793,6 +793,12 @@ export const CHAT_STARTERS: readonly {
     },
   },
   {
+    text: "Does my runtime still apply the old 2026 clock change for America/Winnipeg?",
+    widget: "showCanadaClockChange",
+    area: "core",
+    args: { zone: "America/Winnipeg" },
+  },
+  {
     text: "In a config file, is `1m` a minute or a month?",
     widget: "showDurationParserBench",
     area: "core",

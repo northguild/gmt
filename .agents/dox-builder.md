@@ -18,21 +18,25 @@ the spec names before you start, and nothing else.
 
 ## First: the toolchain will bite you
 
-**This machine runs `fnm`, not `nvm`.** The shell is frequently on Node v20, and
-`astro@7.2.7` requires `>=22.12.0`. Shell state does not persist between tool calls, so a
-version switch in one call is gone by the next.
+**`pnpm` brings its own Node.** The root `package.json` pins Node through `devEngines.runtime`,
+so `pnpm run`, `pnpm exec` and every script run on that Node (26.11 or newer) whatever is on
+`PATH`. A bare `node` outside pnpm is the exception. It uses the Node on `PATH`, and this
+machine runs `fnm`, not `nvm`. The shell is frequently on Node v20, and `astro@7.2.7`
+requires `>=22.12.0`. Shell state does not persist between tool calls, so a version switch
+in one call is gone by the next.
 
 **`fnm use` alone does not work in a non-interactive shell.** It prints
 "Using Node v24.19.0" and exits 0 while leaving `node` on v20 — a silent no-op that looks
-like a success. You must `eval` fnm's env first. **Prefix every shell command that touches
-Node with this exact incantation, in the same compound command:**
+like a success. You must `eval` fnm's env first. **Prefix every shell command that runs a
+bare `node` with this exact incantation, in the same compound command (it is harmless in front
+of a `pnpm` command, and needed for a tree older than the Node pin):**
 
 ```bash
 eval "$(fnm env)" && fnm use && pnpm install
 eval "$(fnm env)" && fnm use && pnpm run docs:build
 ```
 
-A bare `pnpm install` in a later call silently reverts to v20 and then fails at the first
+A bare `node script.mjs` in a later call silently reverts to v20 and then fails at the first
 `astro` invocation — pointing at the wrong cause and costing you a debugging cycle.
 
 Use **`pnpm`** for all install and registry commands. Never `npm install` or `yarn`.
@@ -124,9 +128,11 @@ These bind every change.
   `packages/*/package.json`: shebang, block comment stating purpose and how to run it,
   `fileURLToPath`-derived root, `readFileSync` + `JSON.parse`, hard-fail with a clear
   message on missing data. Follow its shape rather than inventing a new one.
-- `.github/workflows/ci.yml` is the precedent for any new workflow: `pnpm/action-setup@v4`
-  pinned to `10.32.1`, `actions/setup-node@v4` with `cache: pnpm`, `pnpm install
-  --frozen-lockfile`, `pnpm run validate` for the build.
+- `.github/workflows/ci.yml` is the precedent for any new workflow: `pnpm/action-setup@v6`
+  (no `version`: it reads `packageManager`), `actions/setup-node@v4` with `cache: pnpm`,
+  `pnpm install --frozen-lockfile --no-runtime`, and the workflow-level
+  `pnpm_config_verify_deps_before_run: "false"`, so the job runs the Node it names and not the
+  `devEngines.runtime` pin. `pnpm run validate` is the build.
 - Formatting is `oxfmt` (`.oxfmtrc.json`); linting is `oxlint`. Note both use
   allow-list-shaped config — a new top-level directory is invisible to them until it is
   explicitly added.

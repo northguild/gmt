@@ -296,8 +296,9 @@ function repad(lines, headerLine, rows) {
     .split("|")
     .slice(1, -1)
     .map((c) => c.trim());
+  // At least 3, as Markdown formatters write a separator cell, so a sync never re-pads every row.
   const widths = header.map((h, c) =>
-    Math.max([...h].length, ...rows.map((r) => [...(r.cells[c] ?? "")].length)),
+    Math.max(3, [...h].length, ...rows.map((r) => [...(r.cells[c] ?? "")].length)),
   );
   const pad = (s, w) => s + " ".repeat(Math.max(0, w - [...s].length));
   const row = (cells) =>

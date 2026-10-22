@@ -590,6 +590,17 @@ export const showStoredTimeAuditInput = z.object({
 });
 
 /**
+ * Canada 2026 clock-change checker: optionally one zone to pin on its map.
+ *
+ * The id is checked against the checker's own list (`canada-zones.json`) in the Worker's
+ * `execute` and the registry's `validate`, not here: a zone outside the list is a call to
+ * refuse with a reason, not a malformed one.
+ */
+export const showCanadaClockChangeInput = z.object({
+  zone: zoneSchema.optional(),
+});
+
+/**
  * Duration Parser Bench: the reader's duration string exactly as given (never
  * trimmed or corrected: a leading space is a case the bench shows). The chat
  * args are the permalink args.
@@ -644,6 +655,7 @@ export type DoxToolName =
   | "showLeapSecondTimeline"
   | "showElapsedVsClock"
   | "showStoredTimeAudit"
+  | "showCanadaClockChange"
   | "showDurationParserBench";
 
 export const DOX_TOOL_INPUTS = {
@@ -677,6 +689,7 @@ export const DOX_TOOL_INPUTS = {
   showLeapSecondTimeline: showLeapSecondTimelineInput,
   showElapsedVsClock: showElapsedVsClockInput,
   showStoredTimeAudit: showStoredTimeAuditInput,
+  showCanadaClockChange: showCanadaClockChangeInput,
   showDurationParserBench: showDurationParserBenchInput,
 } as const;
 
@@ -898,6 +911,13 @@ export const DOX_TOOL_DOCS: {
     args: "values: the reader's strings exactly as given, one per line, each with an offset or `Z` and a bracketed zone; never invent or correct one. line: optional, which line to draw",
   },
   {
+    name: "showCanadaClockChange",
+    purpose:
+      "Check whether a device or server has current time zone data for the clock changes that apply from 2026: a table of four zones' correct offsets beside the reader's browser, a check-mark or cross verdict for the reader's browser with what to do, a command to test the reader's own servers, a card on how gmt finds and repairs saved events, the 2026 and 2027 clock changes, live clocks, a map of the zones with the last and next change for each, and a Did your saved events move? form, pre-filled with an example and run on load, that reads up to 50 pasted saved events and says which are out of date and what to do about each.",
+    when: "Call when the reader asks whether their runtime, server or browser still applies an old clock change, whether its time zone data is current, or what a zone's next clock change is",
+    args: "zone: optional, one IANA id from the checker's list to pin on the map (never a province or a place name).",
+  },
+  {
     name: "showDurationParserBench",
     purpose:
       "Read a duration string people write (`2h 30m`, `1.5h`, `3 days`) under GMT's published grammar, and show the ISO 8601 duration, the compact form, the locale words, and why `1m` is a minute and `P1M` a month.",
@@ -1032,8 +1052,12 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[29].purpose,
     inputSchema: showStoredTimeAuditInput,
   }),
-  showDurationParserBench: tool({
+  showCanadaClockChange: tool({
     description: DOX_TOOL_DOCS[30].purpose,
+    inputSchema: showCanadaClockChangeInput,
+  }),
+  showDurationParserBench: tool({
+    description: DOX_TOOL_DOCS[31].purpose,
     inputSchema: showDurationParserBenchInput,
   }),
 } as const;
@@ -1089,6 +1113,7 @@ export const ENABLED_TOOL_NAMES = [
   "showLeapSecondTimeline",
   "showElapsedVsClock",
   "showStoredTimeAudit",
+  "showCanadaClockChange",
   "showDurationParserBench",
 ] as const satisfies readonly DoxToolName[];
 
