@@ -87,6 +87,8 @@ import {
 
 const YEARS = [2026, 2027] as const;
 const NO_SIGNAL = `<span class="gmt-playground-sentinel">NO SIGNAL</span>`;
+const STORED_UNCHECKED_TEXT =
+  "This browser’s time zone data could not be checked, so no line can be judged yet. Press Check again under Your browser.";
 const LEGEND = [
   ["stopped-2026", mapKindLabel("stopped-2026")],
   ["changes-2027", mapKindLabel("changes-2027")],
@@ -680,6 +682,11 @@ interface StoredHandle {
    * no advice. Until it is called, no answer is drawn.
    */
   setStaleZones(zones: readonly string[]): void;
+  /**
+   * Says the browser check failed before any stale-zone list arrived. The section then says so
+   * instead of waiting; a later `setStaleZones` draws the answer as usual.
+   */
+  browserUnchecked(): void;
   /** Settles when the first check, the one that runs on load, has drawn. */
   ready: Promise<void>;
 }
@@ -711,10 +718,17 @@ function mountStoredTimes(
   let staleZones: ReadonlySet<string> | null = null;
   let last: StoredCheck | null = null;
   let audit: AuditModule | null = null;
+  let browserFailed = false;
   const handle: StoredHandle = {
     ready: Promise.resolve(),
+    browserUnchecked() {
+      if (staleZones !== null) return;
+      browserFailed = true;
+      draw();
+    },
     setStaleZones(ids) {
       staleZones = new Set(ids);
+      browserFailed = false;
       if (stale) {
         stale.hidden = ids.length === 0;
         stale.textContent =
@@ -756,7 +770,14 @@ function mountStoredTimes(
 
   /** Draws the last answer. Waits for the stale-zone list, so no line is ever judged on data known to be old. */
   function draw(): void {
-    if (last === null || staleZones === null || audit === null) return;
+    if (last === null || audit === null) return;
+    if (staleZones === null) {
+      if (!browserFailed) return;
+      results!.innerHTML = `<p class="gmt-widget-hint">${STORED_UNCHECKED_TEXT}</p>`;
+      if (truncated) truncated.textContent = "";
+      if (summary) summary.textContent = "Not judged yet.";
+      return;
+    }
     const result = last;
     results!.innerHTML =
       result.rows.length === 0
@@ -820,7 +841,12 @@ function mountStoredTimes(
     { signal },
   );
 
+  // Each run takes a number; an answer that lands after a newer run started is dropped, so the
+  // rows always match the text in the box and only the newest run clears `busy`.
+  let runs = 0;
+
   async function run(): Promise<void> {
+    const mine = ++runs;
     busy = true;
     check?.setAttribute("aria-busy", "true");
     if (status) status.textContent = "Checking…";
@@ -828,11 +854,12 @@ function mountStoredTimes(
     body.set("lines", lines!.value);
     body.set("zone", zone!.value);
     const answer = await askStored(fetchFn, body, signal);
+    if (mine !== runs) return;
     let message = "";
     if (answer.kind === "ok") {
       try {
         audit = await loadAuditWords();
-        if (signal.aborted) return;
+        if (signal.aborted || mine !== runs) return;
         last = answer.check;
         draw();
       } catch {
@@ -1182,14 +1209,16 @@ export async function mountCanadaClockChange(
         if (options.pinZone !== undefined) map.pin(options.pinZone);
       }
     } else if (answer.kind === "rate-limited") {
+      stored?.browserUnchecked();
       if (status) {
         status.textContent =
           answer.seconds === null
             ? "Too many checks. Try again shortly."
             : `Try again in ${answer.seconds} s`;
       }
-    } else if (status) {
-      status.textContent = "The check could not finish.";
+    } else {
+      stored?.browserUnchecked();
+      if (status) status.textContent = "The check could not finish.";
     }
   }
 

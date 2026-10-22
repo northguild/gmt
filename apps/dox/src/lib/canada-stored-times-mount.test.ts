@@ -33,7 +33,12 @@ type Posted = { lines: string; zone: string };
 
 /** `stale` names zones the mocked checking data has wrong: they come back as ones that still change. */
 function fakeFetch(
-  options: { post?: (body: Posted) => Response; stale?: string[] } = {},
+  options: {
+    post?: (body: Posted) => Response | Promise<Response>;
+    /** Answers the browser check's GET instead of the mocked check, when it returns a response. */
+    get?: () => Response | undefined;
+    stale?: string[];
+  } = {},
 ): {
   fetch: typeof fetch;
   posts: Posted[];
@@ -52,6 +57,8 @@ function fakeFetch(
         Response.json(computeStoredCheck(body.lines, body.zone))
       );
     }
+    const failed = options.get?.();
+    if (failed) return failed;
     const check = computeCanadaCheck(NOW);
     const stale = new Set(options.stale ?? []);
     const fresh = new Set(["America/Vancouver", "America/Edmonton", "America/Inuvik", "America/Winnipeg"]);
@@ -242,6 +249,53 @@ describe("the stored-times section", () => {
     q<HTMLButtonElement>("stored-example").click();
     expect(q<HTMLTextAreaElement>("stored-lines").value).toBe(STORED_EXAMPLE);
     await vi.waitFor(() => expect(posts).toHaveLength(2));
+    controller.abort();
+  });
+
+  it("says the lines can't be judged when the browser check fails, then draws them once it answers", async () => {
+    let getFails = true;
+    const { fetch } = fakeFetch({
+      get: () => (getFails ? new Response("no", { status: 503 }) : undefined),
+    });
+    const { q, root, controller } = await mounted(fetch);
+    expect(text(q("stored-summary"))).toBe("Not judged yet.");
+    expect(text(q("stored-results"))).toBe(
+      "This browser\u2019s time zone data could not be checked, so no line can be judged yet. Press Check again under Your browser.",
+    );
+    expect(rowsOf(root)).toHaveLength(0);
+    // Check and Reset example get the same message rather than "Checking…".
+    await submit(q, STORED_PRESET);
+    expect(text(q("stored-summary"))).toBe("Not judged yet.");
+    getFails = false;
+    q<HTMLButtonElement>("recheck").click();
+    await vi.waitFor(() => expect(rowsOf(root).length).toBeGreaterThan(0));
+    expect(text(q("stored-summary"))).not.toBe("Not judged yet.");
+    controller.abort();
+  });
+
+  it("drops an older answer that lands after Reset example's", async () => {
+    let release: (() => void) | null = null;
+    const { fetch } = fakeFetch({
+      post: (body) => {
+        const answer = Response.json(computeStoredCheck(body.lines, body.zone));
+        if (body.lines === STORED_EXAMPLE) return answer;
+        return new Promise<Response>((resolve) => {
+          release = () => resolve(answer);
+        });
+      },
+    });
+    const { q, root, controller } = await mounted(fetch);
+    q<HTMLTextAreaElement>("stored-lines").value = "2026-07-01T12:00:00-04:00[America/Toronto]";
+    q<HTMLButtonElement>("stored-check").click();
+    await vi.waitFor(() => expect(release).not.toBeNull());
+    q<HTMLButtonElement>("stored-example").click();
+    await vi.waitFor(() => expect(q("stored-check").getAttribute("aria-busy")).toBeNull());
+    expect(rowsOf(root)).toHaveLength(4);
+    release!();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(q<HTMLTextAreaElement>("stored-lines").value).toBe(STORED_EXAMPLE);
+    expect(rowsOf(root)).toHaveLength(4);
+    expect(q("stored-check").getAttribute("aria-busy")).toBeNull();
     controller.abort();
   });
 

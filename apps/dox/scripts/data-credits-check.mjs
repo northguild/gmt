@@ -239,11 +239,6 @@ for (const name of browsers) {
       }
       const res = await page.goto(base + target.path, { waitUntil: "load" });
       if (!res || res.status() !== 200) {
-        // A build without the Canada page is only a failure for the other pages.
-        if (target.path.includes("canada-clock-change")) {
-          await context.close();
-          continue;
-        }
         fail(`${label}: HTTP ${res?.status()}`);
         await context.close();
         continue;
