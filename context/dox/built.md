@@ -96,8 +96,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     overrides are an allow-list that includes `apps/**`.
   - `workerd` needs `allowBuilds`.
 - **Deploy.** Worker `gmt-dox` serves `https://northguild.dev/gmt/`, via
-  `cloudflare/wrangler-action`, with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as
-  repo secrets. The Worker serves `dist/` through the `ASSETS` binding
+  `pnpm exec wrangler deploy` (the lockfile's Wrangler), with `CLOUDFLARE_API_TOKEN` and
+  `CLOUDFLARE_ACCOUNT_ID` as repo secrets. The Worker serves `dist/` through the `ASSETS` binding
   (`not_found_handling: "404-page"`).
   - **Route.** `northguild.dev/gmt*` is one pattern, because route matching includes the
     query string and a bare `northguild.dev/gmt` would miss `/gmt?a=1`. `workers_dev: true`
