@@ -2690,7 +2690,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   Re-run the `rsync` and the site build of `$SP/after` after any change. Firefox does not
   launch on the author's machine; record it as blocked and do not bypass the sandbox.
 - **Local dev:** `pnpm dox:dev` (site + chat Worker) or `pnpm dox:dev:site` (site only), both at `http://localhost:4321/gmt/`.
-  A warm start is ~10 s: the gmt build is incremental (`build:dev`), every `generate` step
+  A warm start is ~10 s: the gmt dev build (`build:dev`) rebuilds `dist/` in place in ~5 s, every `generate` step
   skips when its inputs are unchanged, and `upstream refresh` makes no network calls
   while its live file is under 6 h old (`UPSTREAM_REFRESH=force`). No site build is
   needed — the Worker reads `/gmt/retrieval-chunks.json` from `astro dev` through

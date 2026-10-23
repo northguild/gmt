@@ -3,9 +3,10 @@
  *
  * The reference pages are generated from gmt's JSDoc, and the live playgrounds import gmt's
  * built `dist/`, so a gmt edit used to need a dev-server restart to show up. This watches the
- * gmt source and, once a burst of saves settles, runs the incremental gmt build and the
- * reference steps. Both write only what changed, so Astro's own watcher reloads just the
- * touched pages. A new export (a new route, a new sidebar entry) still needs a restart.
+ * gmt source and, once a burst of saves settles, runs the gmt dev build and the reference
+ * steps. The dev build rebuilds all of `dist/` in place in about 5 s and keeps the folder
+ * present while it runs; the reference steps write only what changed. A new export (a new
+ * route, a new sidebar entry) still needs a restart.
  */
 import type { AstroIntegration } from "astro";
 import { spawn } from "node:child_process";
