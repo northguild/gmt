@@ -1,7 +1,4 @@
-import {
-  arrowNanoseconds,
-  instantStringFromEpochNanoseconds,
-} from "../../internal";
+import { arrowNanoseconds, wallClockString } from "../../internal";
 import type { ArrowTimeUnit } from "./fromArrowTimestamp";
 
 /**
@@ -12,8 +9,9 @@ import type { ArrowTimeUnit } from "./fromArrowTimestamp";
  *   the count is read "as if" UTC and that an empty zone is not UTC. The result has no
  *   offset or zone, so it never becomes an instant by accident. For a column with a timezone
  *   use `fromArrowTimestamp`.
- * - `value` must be an `int64`; wall times use the same range as instants
- *   (`-271821-04-20T00:00:00` to `+275760-09-13T00:00:00`).
+ * - `value` must be an `int64`. Wall times run from `-271821-04-19T00:00:00.000000001` to
+ *   `+275760-09-13T23:59:59.999999999`, Temporal's `PlainDateTime` range, a day past each end
+ *   of the instant range. `-271821-04-19T00:00:00` itself is outside it, so its count returns "".
  * - Exact: nothing is rounded.
  * - Returns "" on invalid input.
  *
@@ -25,7 +23,8 @@ import type { ArrowTimeUnit } from "./fromArrowTimestamp";
  * @example fromArrowLocalTimestamp(1704067200123n, "milliseconds") // "2024-01-01T00:00:00.123"
  * @example fromArrowLocalTimestamp(-1n, "nanosecond") // "1969-12-31T23:59:59.999999999"
  * @example fromArrowLocalTimestamp(9223372036854775807n, "nanosecond") // "2262-04-11T23:47:16.854775807"
- * @example fromArrowLocalTimestamp(8640000000001n, "second") // "" — past the supported range
+ * @example fromArrowLocalTimestamp(8640000086399n, "second") // "+275760-09-13T23:59:59" — the last whole second
+ * @example fromArrowLocalTimestamp(8640000086400n, "second") // "" — past the supported range
  * @example fromArrowLocalTimestamp(0, "second") // "" — number, not bigint
  * @example fromArrowLocalTimestamp(0n, "s") // "" — not an Arrow unit
  */
@@ -33,9 +32,5 @@ export function fromArrowLocalTimestamp(
   value: bigint,
   unit: ArrowTimeUnit,
 ): string {
-  // The instant string read as if UTC is the wall time: drop the final `Z`.
-  return instantStringFromEpochNanoseconds(arrowNanoseconds(value, unit)).slice(
-    0,
-    -1,
-  );
+  return wallClockString(arrowNanoseconds(value, unit));
 }

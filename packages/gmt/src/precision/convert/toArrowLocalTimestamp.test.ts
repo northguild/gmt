@@ -26,6 +26,17 @@ describe("toArrowLocalTimestamp", () => {
     ${"2024-01-01T00:00:00[u-ca=iso8601][u-ca=japanese]"} | ${"second"}       | ${1_704_067_200n}
     ${"2262-04-11T23:47:16.854775807"}                    | ${"nanosecond"}   | ${9_223_372_036_854_775_807n}
     ${"1677-09-21T00:12:43.145224192"}                    | ${"nanosecond"}   | ${-(2n ** 63n)}
+    ${"-271821-04-19T00:00:01"}                           | ${"second"}       | ${-8_640_000_086_399n}
+    ${"-271821-04-19T00:00:00.001"}                       | ${"millisecond"}  | ${-8_640_000_086_399_999n}
+    ${"-271821-04-19T00:00:00.000001"}                    | ${"microsecond"}  | ${-8_640_000_086_399_999_999n}
+    ${"+275760-09-13T23:59:59"}                           | ${"second"}       | ${8_640_000_086_399n}
+    ${"+275760-09-13T23:59:59.999"}                       | ${"millisecond"}  | ${8_640_000_086_399_999n}
+    ${"+275760-09-13T23:59:59.999999"}                    | ${"microsecond"}  | ${8_640_000_086_399_999_999n}
+    ${"+275760-09-13T23:59:59.999999999"}                 | ${"microsecond"}  | ${8_640_000_086_399_999_999n}
+    ${"+275760-09-13T12:00:00"}                           | ${"second"}       | ${8_640_000_043_200n}
+    ${"-271821-04-19T23:59:59.999999999"}                 | ${"second"}       | ${-8_640_000_000_001n}
+    ${"+275760-09-13T00:00:00.000000001"}                 | ${"second"}       | ${8_640_000_000_000n}
+    ${"-271821-04-19T00:00:00.000000001"}                 | ${"second"}       | ${-8_640_000_086_400n}
   `("returns $expected for $dateTime $unit", ({ dateTime, unit, expected }) => {
     expect(toArrowLocalTimestamp(dateTime, unit)).toBe(expected);
   });
@@ -35,8 +46,13 @@ describe("toArrowLocalTimestamp", () => {
     ${"2262-04-11T23:47:16.854775808"}                    | ${"nanosecond"}
     ${"1677-09-21T00:12:43.145224191"}                    | ${"nanosecond"}
     ${"+010000-01-01T00:00:00"}                           | ${"nanosecond"}
-    ${"+275760-09-13T00:00:00.000000001"}                 | ${"second"}
-    ${"-271821-04-19T23:59:59.999999999"}                 | ${"second"}
+    ${"+275760-09-14T00:00:00"}                           | ${"second"}
+    ${"+275760-09-14T00:00:00"}                           | ${"millisecond"}
+    ${"+275760-09-14T00:00:00"}                           | ${"microsecond"}
+    ${"-271821-04-19T00:00:00"}                           | ${"second"}
+    ${"-271821-04-19T00:00:00"}                           | ${"millisecond"}
+    ${"-271821-04-19T00:00:00"}                           | ${"microsecond"}
+    ${"+275760-09-13T23:59:59.999999999"}                 | ${"nanosecond"}
     ${"2024-01-01T00:00:00Z"}                             | ${"millisecond"}
     ${"2024-01-01T00:00:00+01:00"}                        | ${"second"}
     ${"2024-01-01T09:00:00+09:00[Asia/Tokyo]"}            | ${"second"}
@@ -68,9 +84,26 @@ describe("toArrowLocalTimestamp", () => {
     ${"1969-12-31T23:59:59.999999999"} | ${"nanosecond"}
     ${"+275760-09-13T00:00:00"}        | ${"second"}
     ${"1677-09-21T00:12:43.145224192"} | ${"nanosecond"}
+    ${"-271821-04-19T00:00:01"}        | ${"second"}
+    ${"-271821-04-19T00:00:00.001"}    | ${"millisecond"}
+    ${"-271821-04-19T00:00:00.000001"} | ${"microsecond"}
+    ${"+275760-09-13T23:59:59"}        | ${"second"}
+    ${"+275760-09-13T23:59:59.999"}    | ${"millisecond"}
+    ${"+275760-09-13T23:59:59.999999"} | ${"microsecond"}
+    ${"+275760-09-13T12:00:00"}        | ${"second"}
   `("round-trips $dateTime $unit", ({ dateTime, unit }) => {
     expect(
       fromArrowLocalTimestamp(toArrowLocalTimestamp(dateTime, unit), unit),
     ).toBe(dateTime);
+  });
+
+  it("floors a wall time before the first whole second to a count no PlainDateTime holds", () => {
+    const count = toArrowLocalTimestamp(
+      "-271821-04-19T00:00:00.000000001",
+      "second",
+    );
+
+    expect(count).toBe(-8_640_000_086_400n);
+    expect(fromArrowLocalTimestamp(count, "second")).toBe("");
   });
 });

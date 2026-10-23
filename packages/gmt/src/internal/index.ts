@@ -28,6 +28,7 @@ export {
   arrowNanoseconds,
   fitsInt64,
   wallClockNanoseconds,
+  wallClockString,
 } from "./arrowTimestamp";
 export { prefixMilliseconds, UNIX_MS_48_END } from "./prefixMilliseconds";
 export { instantStringFromEpochNanoseconds } from "./instantStringFromEpochNanoseconds";

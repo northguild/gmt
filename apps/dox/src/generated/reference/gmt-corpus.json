@@ -13535,7 +13535,11 @@
         "result": "\"2262-04-11T23:47:16.854775807\""
       },
       {
-        "call": "fromArrowLocalTimestamp(8640000000001n, \"second\")",
+        "call": "fromArrowLocalTimestamp(8640000086399n, \"second\")",
+        "result": "\"+275760-09-13T23:59:59\" — the last whole second"
+      },
+      {
+        "call": "fromArrowLocalTimestamp(8640000086400n, \"second\")",
         "result": "\"\" — past the supported range"
       },
       {
@@ -14070,8 +14074,12 @@
         "result": "0n — past int64"
       },
       {
-        "call": "toArrowLocalTimestamp(\"+275760-09-13T00:00:00.000000001\", \"second\")",
-        "result": "0n — past the supported range"
+        "call": "toArrowLocalTimestamp(\"+275760-09-13T23:59:59\", \"second\")",
+        "result": "8640000086399n — the last whole second"
+      },
+      {
+        "call": "toArrowLocalTimestamp(\"+275760-09-14T00:00:00\", \"second\")",
+        "result": "0n — not a valid date-time"
       },
       {
         "call": "toArrowLocalTimestamp(\"2024-01-01T00:00:00Z\", \"millisecond\")",
