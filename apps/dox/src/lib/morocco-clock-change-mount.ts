@@ -16,7 +16,6 @@
  * known rows and the page does not grow once the answer arrives.
  */
 import { minimumsCardHtml } from "../data/clock-change-minimums";
-import { KEY_POINTS_HEADING, partsHtml } from "../data/clock-change-text";
 import { MOROCCO_HELP, MOROCCO_KEY_POINTS } from "../data/morocco-key-points";
 import { MOROCCO_MINIMUMS } from "../data/morocco-runtime-minimums";
 import { clocksHtml, mountClocks } from "./clock-change-clocks";
@@ -39,6 +38,7 @@ import { mountStoredTimes, storedSectionHtml } from "./clock-change-stored";
 import type { StoredHandle } from "./clock-change-stored";
 import {
   MOROCCO_CHANGES,
+  MOROCCO_STOP_YEAR,
   MOROCCO_STOPPED,
   MOROCCO_VERDICT,
   MOROCCO_ZONES,
@@ -57,17 +57,20 @@ import type {
 import { MOROCCO_MAP } from "./morocco-map";
 import zoneIds from "./morocco-region-zones.json";
 import { MOROCCO_STORED } from "./morocco-saved-example";
-import { bindClockGlow } from "./crystal-clock";
-import { GMT_MODULES } from "./gmt-modules";
-import { withBase } from "./site";
 import {
-  INERT_HANDLE,
-  WidgetLoadError,
-  onceDestroy,
-  showUnavailable,
-  type MountFn,
-} from "./widget-mount";
-import { escapeAttr, escapeHtml, wireCopyButtons } from "./widget-ui";
+  ask,
+  clockChangeWidget,
+  keyPointsHtml,
+  loadClockLib,
+  transitionGroupHtml,
+  wallText,
+  wireCopy,
+  yearsOf,
+} from "./clock-change-mount";
+import type { ClockChangeChatArgs, ClockLib } from "./clock-change-mount";
+import { bindClockGlow } from "./crystal-clock";
+import { showUnavailable } from "./widget-mount";
+import { escapeAttr, escapeHtml } from "./widget-ui";
 import {
   mountZoneMap,
   renderPinPanelHtml,
@@ -75,65 +78,18 @@ import {
   zoneListItemHtml,
 } from "./zone-map";
 
-const YEARS = [2026, 2027] as const;
+const YEARS = yearsOf(MOROCCO_STOP_YEAR);
 const LEGEND = [
-  ["stopped-2026", mapKindLabel("stopped-2026")],
-  ["changes-2027", mapKindLabel("changes-2027")],
-  ["none-2026-2027", mapKindLabel("none-2026-2027")],
+  ["stopped", mapKindLabel("stopped")],
+  ["changes-after", mapKindLabel("changes-after")],
+  ["none", mapKindLabel("none")],
 ] as const;
 const CITIES = MOROCCO_ZONES.map((zone) => cityOf(zone));
 const CLOCKS_NOTICE = `The server behind this page has old rules for ${placesHtml(CITIES)}, so these clocks show them an hour ahead for most of the year.`;
 
 // ---------------------------------------------------------------------------
-// The library
-// ---------------------------------------------------------------------------
-
-interface MoroccoLib {
-  convertUtcToPlainDateTime(
-    value: string,
-    options: { timeZone: string },
-  ): string;
-  getUtcNow(): string;
-  isBeforeUtc(value1: string, value2: string): boolean;
-}
-
-function pick<T>(module: Record<string, unknown>, name: string): T {
-  if (typeof module[name] !== "function") {
-    throw new Error(`The library module has no ${name}.`);
-  }
-  return module[name] as T;
-}
-
-export async function loadMoroccoLib(): Promise<MoroccoLib> {
-  try {
-    const [convert, get, compare] = await Promise.all([
-      GMT_MODULES["utc/convert"]!(),
-      GMT_MODULES["utc/get"]!(),
-      GMT_MODULES["utc/compare"]!(),
-    ]);
-    return {
-      convertUtcToPlainDateTime: pick(convert, "convertUtcToPlainDateTime"),
-      getUtcNow: pick(get, "getUtcNow"),
-      isBeforeUtc: pick(compare, "isBeforeUtc"),
-    };
-  } catch (cause) {
-    throw new WidgetLoadError(cause);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Template
 // ---------------------------------------------------------------------------
-
-function transitionGroupHtml(zone: string): string {
-  return (
-    `<li class="gmt-morocco-group" data-zone="${escapeAttr(zone)}">` +
-    `<h5 class="gmt-morocco-group-title"><code>${escapeHtml(zone)}</code></h5>` +
-    `<ul class="gmt-morocco-changes" data-role="changes">` +
-    YEARS.map((year) => `<li data-year="${year}">${NO_SIGNAL}</li>`).join("") +
-    `</ul></li>`
-  );
-}
 
 /**
  * One row for each stated change and zone. Everything but the server's answer is known when the
@@ -171,10 +127,10 @@ export function renderMoroccoClockChangeTemplate({
   const pickId = `${idPrefix}-pick-title`;
   return (
     `<div class="gmt-morocco gmt-widget not-content">` +
-    `<div class="gmt-morocco-stack">` +
+    `<div class="gmt-clockcheck-stack">` +
     // Row 1: the Key points on the left, the reader's own browser on the right.
-    `<div class="gmt-morocco-row gmt-morocco-row--top">` +
-    (keyPoints ? keyPointsHtml(idPrefix) : "") +
+    `<div class="gmt-clockcheck-row gmt-clockcheck-row--top">` +
+    (keyPoints ? keyPointsHtml(idPrefix, MOROCCO_KEY_POINTS) : "") +
     browserCardHtml(moroccoProbe(idPrefix), MOROCCO_VERDICT) +
     `</div>` +
     // Row 2: the map, the zone list, the pin panel and the live clocks.
@@ -193,25 +149,25 @@ export function renderMoroccoClockChangeTemplate({
     `</ul>` +
     `</div>` +
     `</div>` +
-    `<section class="gmt-widget-section gmt-morocco-pickcard" aria-labelledby="${pickId}">` +
+    `<section class="gmt-widget-section gmt-clockcheck-pickcard" aria-labelledby="${pickId}">` +
     `<h4 id="${pickId}">Pick a zone</h4>` +
     `<p class="gmt-widget-hint">Each zone is in one class. Press a zone, on the map or in the list, to pin its clock and its last and next change.</p>` +
-    `<div class="gmt-morocco-pick">` +
+    `<div class="gmt-clockcheck-pick">` +
     `<div class="gmt-zonemap-zone-frame"><div class="gmt-zonemap-zone-scroll" data-role="zone-scroll" role="region" aria-label="Morocco and neighbouring time zones, scrollable list" tabindex="0">` +
     `<ul class="gmt-zonemap-zone-list" data-role="zone-list" aria-label="Zones">${zoneIds.zones.map(zoneListItemHtml).join("")}</ul>` +
     `</div></div>` +
     `</div>` +
     `</section>` +
     `<div class="gmt-zonemap-pin" data-role="pin">${renderPinPanelHtml()}</div>` +
-    `<section class="gmt-widget-section gmt-morocco-nowsec" aria-labelledby="${clocksId}">` +
+    `<section class="gmt-widget-section gmt-clockcheck-nowsec" aria-labelledby="${clocksId}">` +
     `<h4 id="${clocksId}">Live clocks</h4>` +
-    `<p class="gmt-morocco-now-notice" data-role="clocks-notice" hidden>${CLOCKS_NOTICE}</p>` +
+    `<p class="gmt-clockcheck-now-notice" data-role="clocks-notice" hidden>${CLOCKS_NOTICE}</p>` +
     clocksHtml(MOROCCO_ZONES, MOROCCO_STOPPED) +
-    `<p class="gmt-widget-hint gmt-morocco-now-hint">Your time, and the time in each zone.</p>` +
+    `<p class="gmt-widget-hint gmt-clockcheck-now-hint">Your time, and the time in each zone.</p>` +
     `</section>` +
     `</div>` +
     // Row 3: the reader's servers beside the minimum releases. Both are info cards.
-    `<div class="gmt-morocco-row">` +
+    `<div class="gmt-clockcheck-row">` +
     serversCardHtml({
       idPrefix,
       command: NODE_PROBE_COMMAND,
@@ -221,7 +177,7 @@ export function renderMoroccoClockChangeTemplate({
     minimumsCardHtml(idPrefix, MOROCCO_MINIMUMS) +
     `</div>` +
     // Row 4: the clock changes your data gets wrong, beside what the library does about them.
-    `<div class="gmt-morocco-row">` +
+    `<div class="gmt-clockcheck-row">` +
     `<section class="gmt-widget-section" aria-labelledby="${changesId}">` +
     `<h4 id="${changesId}">Clock changes your data gets wrong</h4>` +
     `<p class="gmt-widget-hint">Each row is a clock change that the old data and the new data disagree about. Times are the clock as it read just before the change.</p>` +
@@ -234,35 +190,12 @@ export function renderMoroccoClockChangeTemplate({
     // Row 5: the clock changes of 2026 and 2027, full width.
     `<section class="gmt-widget-section" aria-labelledby="${transitionsId}">` +
     `<h4 id="${transitionsId}">Clock changes in 2026 and 2027</h4>` +
-    `<ul class="gmt-morocco-groups" data-role="transitions">${MOROCCO_ZONES.map(transitionGroupHtml).join("")}</ul>` +
+    `<ul class="gmt-clockcheck-groups" data-role="transitions">${MOROCCO_ZONES.map((zone) => transitionGroupHtml(zone, YEARS)).join("")}</ul>` +
     `</section>` +
     // Row 6: the saved events, the form on the left and the answers on the right.
     storedSectionHtml({ ...MOROCCO_STORED, idPrefix }) +
     `</div>` +
     `</div>`
-  );
-}
-
-/** The Key points: three cards. */
-function keyPointsHtml(idPrefix: string): string {
-  return (
-    `<section class="gmt-keypoints" aria-labelledby="${idPrefix}-keypoints-title">` +
-    `<h2 id="${idPrefix}-keypoints-title">${escapeHtml(KEY_POINTS_HEADING)}</h2>` +
-    `<div class="gmt-keypoints-grid">` +
-    MOROCCO_KEY_POINTS.map(
-      (card) =>
-        `<div class="gmt-keypoints-card"${card.id ? ` id="${escapeAttr(card.id)}"` : ""}>` +
-        `<h3>${escapeHtml(card.heading)}</h3>` +
-        card.blocks
-          .map((block) =>
-            block.kind === "p"
-              ? `<p>${partsHtml(block.parts)}</p>`
-              : `<ol>${block.items.map((item) => `<li>${partsHtml(item)}</li>`).join("")}</ol>`,
-          )
-          .join("") +
-        `</div>`,
-    ).join("") +
-    `</div></section>`
   );
 }
 
@@ -282,47 +215,16 @@ export interface MoroccoMountOptions {
   history?: Pick<History, "replaceState">;
 }
 
-type Answer =
-  | { kind: "ok"; check: MoroccoCheck }
-  | { kind: "rate-limited"; seconds: number | null }
-  | { kind: "failed" };
-
-async function ask(
-  fetchFn: typeof fetch,
-  signal: AbortSignal,
-): Promise<Answer> {
-  try {
-    const response = await fetchFn(withBase("/api/morocco-clock-change"), {
-      signal,
-    });
-    if (response.status === 429) {
-      const seconds = Number(response.headers.get("retry-after"));
-      return {
-        kind: "rate-limited",
-        seconds: Number.isFinite(seconds) && seconds > 0 ? seconds : null,
-      };
-    }
-    if (!response.ok) return { kind: "failed" };
-    return { kind: "ok", check: (await response.json()) as MoroccoCheck };
-  } catch {
-    return { kind: "failed" };
-  }
-}
-
-function wallText(wall: string): string {
-  return wall.replace("T", " ").slice(0, 16);
-}
-
 function changeRowHtml(
   change: MoroccoTransitionRow["changes"][number],
   wall: string,
 ): string {
   if (wall === "") return `<li>${NO_SIGNAL}</li>`;
   return (
-    `<li class="gmt-morocco-change">` +
-    `<span class="gmt-morocco-when">${escapeHtml(wallText(wall))}</span>` +
-    `<span class="gmt-morocco-shift">${escapeHtml(signedOffset(change.offsetBefore))} → ${escapeHtml(signedOffset(change.offsetAfter))}</span>` +
-    `<span class="gmt-morocco-utc">${escapeHtml(change.instant)}</span></li>`
+    `<li class="gmt-clockcheck-change">` +
+    `<span class="gmt-clockcheck-change-when">${escapeHtml(wallText(wall))}</span>` +
+    `<span class="gmt-clockcheck-change-shift">${escapeHtml(signedOffset(change.offsetBefore))} → ${escapeHtml(signedOffset(change.offsetAfter))}</span>` +
+    `<span class="gmt-clockcheck-change-utc">${escapeHtml(change.instant)}</span></li>`
   );
 }
 
@@ -344,9 +246,9 @@ export async function mountMoroccoClockChange(
   // The browser column needs no library and no answer: fill it first.
   fillBrowserCard(root, moroccoProbe(idPrefix), MOROCCO_VERDICT);
 
-  let lib: MoroccoLib;
+  let lib: ClockLib;
   try {
-    lib = await loadMoroccoLib();
+    lib = await loadClockLib();
   } catch (error) {
     showUnavailable(root, error);
     return;
@@ -363,15 +265,7 @@ export async function mountMoroccoClockChange(
   let stored: StoredHandle | undefined;
 
   // --- the copy button announces -------------------------------------------
-  wireCopyButtons(root);
-  const copyStatus = q<HTMLElement>('[data-role="copy-status"]');
-  q<HTMLElement>('[data-role="copy-node-probe"]')?.addEventListener(
-    "click",
-    () => {
-      if (copyStatus) copyStatus.textContent = "Copied";
-    },
-    { signal },
-  );
+  wireCopy(root, signal);
   bindClockGlow(root, signal);
 
   // --- the changes your data gets wrong -------------------------------------
@@ -388,7 +282,7 @@ export async function mountMoroccoClockChange(
   function drawTransitions(answer: MoroccoCheck): void {
     for (const zone of MOROCCO_ZONES) {
       const list = q<HTMLElement>(
-        `.gmt-morocco-group[data-zone="${zone}"] [data-role="changes"]`,
+        `.gmt-clockcheck-group[data-zone="${zone}"] [data-role="changes"]`,
       );
       if (!list) continue;
       list.innerHTML = YEARS.map((year) => {
@@ -397,7 +291,7 @@ export async function mountMoroccoClockChange(
         );
         const changes = row?.changes ?? [];
         return changes.length === 0
-          ? `<li class="gmt-morocco-none">No clock change in ${year}</li>`
+          ? `<li class="gmt-clockcheck-change-none">No clock change in ${year}</li>`
           : changes
               .map((change) =>
                 changeRowHtml(
@@ -427,7 +321,11 @@ export async function mountMoroccoClockChange(
     busy = true;
     recheck?.setAttribute("aria-busy", "true");
     if (status) status.textContent = "";
-    const answer = await ask(fetchFn, signal);
+    const answer = await ask<MoroccoCheck>(
+      "/api/morocco-clock-change",
+      fetchFn,
+      signal,
+    );
     busy = false;
     recheck?.removeAttribute("aria-busy");
     if (signal.aborted) return;
@@ -488,14 +386,6 @@ export async function mountMoroccoClockChange(
 // The chat widget
 // ---------------------------------------------------------------------------
 
-export interface MoroccoClockChangeArgs {
-  /** One zone id from `morocco-region-zones.json` to pin on the map. */
-  zone?: string;
-}
-
-const NO_LOCATION: Pick<Location, "href"> = { href: "https://dox.invalid/" };
-const NO_HISTORY: Pick<History, "replaceState"> = { replaceState: () => {} };
-
 /** The chat's markup: the page's sections, with ids namespaced by `idPrefix`. */
 export function renderMoroccoClockChangeWidgetTemplate(
   idPrefix: string,
@@ -503,40 +393,9 @@ export function renderMoroccoClockChangeWidgetTemplate(
   return renderMoroccoClockChangeTemplate({ idPrefix });
 }
 
-/**
- * Mounts the checker in the chat rail. The rail is narrow, so the map's container query shows
- * the zone list; the list pins the same zone. The widget fetches the Worker's endpoint like the
- * page does and computes nothing itself. `?zone=` on the chat's URL is neither read nor written.
- *
- * The library load is awaited so a failed load rejects with `WidgetLoadError`, which the host
- * turns into its retry state. The answer is not awaited: the handle returns at once, and the
- * widget's own status line carries a slow or failed Worker.
- */
-export const mountMoroccoClockChangeWidget: MountFn<
-  MoroccoClockChangeArgs
-> = async (root, args, signal) => {
-  await loadMoroccoLib();
-  if (signal.aborted) return INERT_HANDLE;
-  const controller = new AbortController();
-  const stop = () => controller.abort();
-  signal.addEventListener("abort", stop, { once: true });
-  mountMoroccoClockChange(root, controller.signal, {
-    pinZone: args.zone,
-    location: NO_LOCATION,
-    history: NO_HISTORY,
-  }).catch((error) => {
-    if (!controller.signal.aborted) showUnavailable(root, error);
-  });
-  return onceDestroy(
-    () => {
-      signal.removeEventListener("abort", stop);
-      controller.abort();
-    },
-    () => {
-      const zone = root.querySelector<HTMLElement>(
-        '.gmt-zonemap-zone-btn[aria-pressed="true"]',
-      )?.dataset.tzId;
-      return zone ? { zone } : null;
-    },
-  );
-};
+/** Mounts the checker in the chat rail; the wrapper is shared (`clock-change-mount.ts`). */
+export type MoroccoClockChangeArgs = ClockChangeChatArgs;
+
+export const mountMoroccoClockChangeWidget = clockChangeWidget(
+  mountMoroccoClockChange,
+);

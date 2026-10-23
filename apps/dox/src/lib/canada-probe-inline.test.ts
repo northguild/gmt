@@ -44,9 +44,9 @@ function stubOffsets(
   vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: Wrapped });
 }
 
-const fresh = Object.fromEntries(TABLE_ZONES.map((f) => [f.zone, f.tzdb2026e]));
+const fresh = Object.fromEntries(TABLE_ZONES.map((f) => [f.zone, f.offset]));
 const stale = Object.fromEntries(
-  TABLE_ZONES.map((f) => [f.zone, shift(f.tzdb2026e)]),
+  TABLE_ZONES.map((f) => [f.zone, shift(f.offset)]),
 );
 function shift(offset: string): string {
   const hours = Number(offset.slice(1, 3)) + 1;
@@ -170,7 +170,7 @@ describe("the inline probe and the module agree", () => {
     expect(source).toContain("1793620800000");
     for (const fact of TABLE_ZONES) {
       expect(source).toContain(fact.zone);
-      expect(source).toContain(fact.tzdb2026e);
+      expect(source).toContain(fact.offset);
     }
     expect(source).not.toContain("</script");
   });

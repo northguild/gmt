@@ -50,7 +50,7 @@ const ZONES: MapZone[] = [
       offsetAfter: "-05:00",
     },
     next: null,
-    kind: "stopped-2026",
+    kind: "stopped",
   },
   {
     zone: "America/Toronto",
@@ -61,14 +61,14 @@ const ZONES: MapZone[] = [
       offsetBefore: "-04:00",
       offsetAfter: "-05:00",
     },
-    kind: "changes-2027",
+    kind: "changes-after",
   },
   {
     zone: "America/Regina",
     offset: "-06:00",
     last: null,
     next: null,
-    kind: "none-2026-2027",
+    kind: "none",
   },
 ];
 
@@ -148,18 +148,16 @@ describe("the text", () => {
 
   it("colours the four stopped zones from the page's own facts, whatever the server says", () => {
     const old: MapZone = { ...ZONES[1]!, zone: "America/Vancouver" };
-    expect(displayKind(CANADA_MAP, "America/Vancouver", old)).toBe(
-      "stopped-2026",
-    );
+    expect(displayKind(CANADA_MAP, "America/Vancouver", old)).toBe("stopped");
     expect(displayKind(CANADA_MAP, "America/Vancouver", undefined)).toBe(
-      "stopped-2026",
+      "stopped",
     );
     expect(displayKind(CANADA_MAP, "America/Toronto", ZONES[1])).toBe(
-      "changes-2027",
+      "changes-after",
     );
     expect(isDataStale(STOPPED_ZONES, [old])).toBe(true);
     expect(
-      isDataStale(STOPPED_ZONES, [{ ...old, kind: "stopped-2026" }, ZONES[1]!]),
+      isDataStale(STOPPED_ZONES, [{ ...old, kind: "stopped" }, ZONES[1]!]),
     ).toBe(false);
     const rows = new Map([
       [old.zone, old],
@@ -177,7 +175,7 @@ describe("the text", () => {
         ],
         rows,
       ),
-    ).toEqual({ "stopped-2026": 2, "changes-2027": 1, "none-2026-2027": 1 });
+    ).toEqual({ stopped: 2, "changes-after": 1, none: 1 });
   });
 
   it("gives a release only to a stopped zone in the probe", () => {

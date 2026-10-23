@@ -82,7 +82,7 @@ const FIXTURE = {
       offset,
       last: null,
       next: null,
-      kind: "stopped-2026",
+      kind: "stopped",
     })),
     {
       zone: "America/Toronto",
@@ -93,7 +93,7 @@ const FIXTURE = {
         offsetBefore: "-04:00",
         offsetAfter: "-05:00",
       },
-      kind: "changes-2027",
+      kind: "changes-after",
     },
   ],
 };
@@ -101,7 +101,7 @@ const FIXTURE = {
 const ALL_ZONES = JSON.parse(
   readFileSync(new URL(`../src/lib/${ZONES_FILE}`, import.meta.url), "utf8"),
 ).zones;
-const KINDS = ["stopped-2026", "changes-2027", "none-2026-2027", "none"];
+const KINDS = ["stopped", "changes-after", "none", "no-data"];
 /* A row for every zone. Odd rows carry both a last and a next change, the widest texts. */
 const FULL_FIXTURE = {
   now: NOW,

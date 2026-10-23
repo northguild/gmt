@@ -23,7 +23,7 @@ describe("the checker's facts", () => {
     ]);
     expect(PROBE_INSTANT).toBe("2026-11-02T12:00:00Z");
     expect(
-      Object.fromEntries(PROBE_ZONES.map((f) => [f.zone, f.tzdb2026e])),
+      Object.fromEntries(PROBE_ZONES.map((f) => [f.zone, f.offset])),
     ).toEqual({
       "America/Vancouver": "-07:00",
       "America/Edmonton": "-06:00",

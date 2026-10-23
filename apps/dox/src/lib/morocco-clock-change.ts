@@ -12,7 +12,7 @@ import {
   cityOf,
   nodeProbeCommand,
 } from "./clock-change-common";
-import type { Change } from "./clock-change-common";
+import type { Change, ProbeFact } from "./clock-change-common";
 import { helpMarkdown } from "./clock-change-help";
 import type {
   ProbeConfig,
@@ -31,14 +31,17 @@ export const MOROCCO_ZONES = ["Africa/Casablanca", "Africa/El_Aaiun"] as const;
 /** The tzdb release that recorded the change for both zones. */
 export const MOROCCO_RELEASE = "2026c";
 
+/** The year the two zones stop changing their clocks in. The year after is read too. */
+export const MOROCCO_STOP_YEAR = 2026;
+
 /** The zones the map draws in its first class. */
 export const MOROCCO_STOPPED: ReadonlySet<string> = new Set(MOROCCO_ZONES);
 
 /** The class word for a zone's `kind`: a dated phrase, so it stays true after 2027. */
 export const MOROCCO_KIND_LABELS: Readonly<Record<MapZone["kind"], string>> = {
-  "stopped-2026": "Stops changing clocks in 2026",
-  "changes-2027": "Still changes clocks",
-  "none-2026-2027": "Never changes clocks",
+  stopped: "Stops changing clocks in 2026",
+  "changes-after": "Still changes clocks",
+  none: "Never changes clocks",
 };
 
 /**
@@ -52,7 +55,20 @@ export const MOROCCO_PROBE: readonly ProbeInstant[] = [
 ];
 
 /** The offset both zones have at both probe instants in tzdb 2026c and later. */
-export const MOROCCO_EXPECTED = "+00:00";
+export const MOROCCO_FACTS: readonly ProbeFact[] = MOROCCO_ZONES.map(
+  (zone) => ({
+    zone,
+    offset: "+00:00",
+    release: MOROCCO_RELEASE,
+  }),
+);
+
+/** The offset a zone has in tzdb 2026c and later. */
+export function expectedOffset(zone: string): string {
+  const fact = MOROCCO_FACTS.find((item) => item.zone === zone);
+  if (fact === undefined) throw new Error(`No reference fact for ${zone}.`);
+  return fact.offset;
+}
 
 /** A clock change the page states, and the tzdb release that recorded it. */
 export interface StatedChange {
@@ -114,7 +130,7 @@ export interface MoroccoChangeRow extends StatedChange {
 
 export interface MoroccoTransitionRow {
   zone: string;
-  year: 2026 | 2027;
+  year: number;
   changes: Change[];
 }
 
@@ -133,7 +149,10 @@ const VERDICT_INSTANT = MOROCCO_PROBE.find((item) => item.role === "verdict")!;
 export function moroccoProbe(idPrefix: string): ProbeConfig {
   return {
     idPrefix,
-    zones: MOROCCO_ZONES.map((zone) => ({ zone, expected: MOROCCO_EXPECTED })),
+    zones: MOROCCO_FACTS.map((fact) => ({
+      zone: fact.zone,
+      expected: fact.offset,
+    })),
     instants: MOROCCO_PROBE,
   };
 }
@@ -168,7 +187,7 @@ export const NODE_PROBE_COMMAND = nodeProbeCommand(
 
 /** What the command prints on a runtime with the new data: `[city, offset]` per zone. */
 export function expectedProbeOutput(): [string, string][] {
-  return MOROCCO_ZONES.map((zone) => [cityOf(zone), MOROCCO_EXPECTED]);
+  return MOROCCO_FACTS.map((fact) => [cityOf(fact.zone), fact.offset]);
 }
 
 /**

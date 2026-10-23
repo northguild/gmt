@@ -1,7 +1,7 @@
 import { convertZonedToUnix } from "@northguild/gmt/zoned/convert";
 import {
   MOROCCO_CHANGES,
-  MOROCCO_EXPECTED,
+  MOROCCO_FACTS,
   MOROCCO_PROBE,
   MOROCCO_STORED_ZONES,
   MOROCCO_ZONES,
@@ -30,7 +30,10 @@ describe("Morocco checker facts", () => {
     const blind = at(MOROCCO_PROBE[1]!.iso);
     expect(blind).toBeGreaterThan(at("2027-02-07T02:00:00Z"));
     expect(blind).toBeLessThan(at("2027-03-14T02:00:00Z"));
-    expect(MOROCCO_EXPECTED).toBe("+00:00");
+    expect(MOROCCO_FACTS.map((fact) => fact.offset)).toEqual([
+      "+00:00",
+      "+00:00",
+    ]);
   });
 
   it("states three changes, each ending at the offset it starts the next one from", () => {

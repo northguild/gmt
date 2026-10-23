@@ -16,6 +16,7 @@
  */
 import type { CanadaCheck, TransitionRow } from "./canada-clock-change";
 import {
+  CANADA_STOP_YEAR,
   CANADA_VERDICT,
   CLOCK_ZONES,
   NODE_PROBE_COMMAND,
@@ -32,7 +33,6 @@ import { CANADA_MINIMUMS } from "../data/canada-runtime-minimums";
 import { minimumsCardHtml } from "../data/clock-change-minimums";
 import { CANADA_STORED } from "./canada-saved-example";
 import { HELP, KEY_POINTS } from "../data/canada-key-points";
-import { KEY_POINTS_HEADING, partsHtml } from "../data/clock-change-text";
 import {
   NO_SIGNAL,
   SERVERS_LINE,
@@ -50,17 +50,20 @@ import {
 } from "./clock-change-probe";
 import { mountStoredTimes, storedSectionHtml } from "./clock-change-stored";
 import type { StoredHandle } from "./clock-change-stored";
-import { bindClockGlow } from "./crystal-clock";
-import { GMT_MODULES } from "./gmt-modules";
-import { withBase } from "./site";
 import {
-  INERT_HANDLE,
-  WidgetLoadError,
-  onceDestroy,
-  showUnavailable,
-  type MountFn,
-} from "./widget-mount";
-import { escapeAttr, escapeHtml, wireCopyButtons } from "./widget-ui";
+  ask,
+  clockChangeWidget,
+  keyPointsHtml,
+  loadClockLib,
+  transitionGroupHtml,
+  wallText,
+  wireCopy,
+  yearsOf,
+} from "./clock-change-mount";
+import type { ClockChangeChatArgs, ClockLib } from "./clock-change-mount";
+import { bindClockGlow } from "./crystal-clock";
+import { showUnavailable } from "./widget-mount";
+import { escapeHtml } from "./widget-ui";
 import {
   mountZoneMap,
   renderPinPanelHtml,
@@ -68,65 +71,18 @@ import {
   zoneListItemHtml,
 } from "./zone-map";
 
-const YEARS = [2026, 2027] as const;
+const YEARS = yearsOf(CANADA_STOP_YEAR);
 const LEGEND = [
-  ["stopped-2026", mapKindLabel("stopped-2026")],
-  ["changes-2027", mapKindLabel("changes-2027")],
-  ["none-2026-2027", mapKindLabel("none-2026-2027")],
+  ["stopped", mapKindLabel("stopped")],
+  ["changes-after", mapKindLabel("changes-after")],
+  ["none", mapKindLabel("none")],
 ] as const;
 const TABLE_CITIES = TABLE_ZONES.map((fact) => cityOf(fact.zone));
 const CLOCKS_NOTICE = `This browser has old rules for ${placesHtml(TABLE_CITIES)}. From 1 November 2026 these clocks show them an hour off.`;
 
 // ---------------------------------------------------------------------------
-// The library
-// ---------------------------------------------------------------------------
-
-interface CanadaLib {
-  convertUtcToPlainDateTime(
-    value: string,
-    options: { timeZone: string },
-  ): string;
-  getUtcNow(): string;
-  isBeforeUtc(value1: string, value2: string): boolean;
-}
-
-function pick<T>(module: Record<string, unknown>, name: string): T {
-  if (typeof module[name] !== "function") {
-    throw new Error(`The library module has no ${name}.`);
-  }
-  return module[name] as T;
-}
-
-export async function loadCanadaLib(): Promise<CanadaLib> {
-  try {
-    const [convert, get, compare] = await Promise.all([
-      GMT_MODULES["utc/convert"]!(),
-      GMT_MODULES["utc/get"]!(),
-      GMT_MODULES["utc/compare"]!(),
-    ]);
-    return {
-      convertUtcToPlainDateTime: pick(convert, "convertUtcToPlainDateTime"),
-      getUtcNow: pick(get, "getUtcNow"),
-      isBeforeUtc: pick(compare, "isBeforeUtc"),
-    };
-  } catch (cause) {
-    throw new WidgetLoadError(cause);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Template
 // ---------------------------------------------------------------------------
-
-function transitionGroupHtml(zone: string): string {
-  return (
-    `<li class="gmt-canada-group" data-zone="${escapeAttr(zone)}">` +
-    `<h5 class="gmt-canada-group-title"><code>${escapeHtml(zone)}</code></h5>` +
-    `<ul class="gmt-canada-changes" data-role="changes">` +
-    YEARS.map((year) => `<li data-year="${year}">${NO_SIGNAL}</li>`).join("") +
-    `</ul></li>`
-  );
-}
 
 export interface CanadaTemplateOptions {
   /** Namespaces the heading ids, so the chat's copy cannot collide with a page's. */
@@ -145,10 +101,10 @@ export function renderCanadaClockChangeTemplate({
   const pickId = `${idPrefix}-pick-title`;
   return (
     `<div class="gmt-canada gmt-widget not-content">` +
-    `<div class="gmt-canada-stack">` +
+    `<div class="gmt-clockcheck-stack">` +
     // Row 1: the Key points on the left, the reader's own browser on the right.
-    `<div class="gmt-canada-row gmt-canada-row--top">` +
-    (keyPoints ? keyPointsHtml(idPrefix) : "") +
+    `<div class="gmt-clockcheck-row gmt-clockcheck-row--top">` +
+    (keyPoints ? keyPointsHtml(idPrefix, KEY_POINTS) : "") +
     browserCardHtml(canadaProbe(idPrefix), CANADA_VERDICT) +
     `</div>` +
     // Row 2: the map, the zone list, the pin panel and the live clocks.
@@ -167,25 +123,25 @@ export function renderCanadaClockChangeTemplate({
     `</ul>` +
     `</div>` +
     `</div>` +
-    `<section class="gmt-widget-section gmt-canada-pickcard" aria-labelledby="${pickId}">` +
+    `<section class="gmt-widget-section gmt-clockcheck-pickcard" aria-labelledby="${pickId}">` +
     `<h4 id="${pickId}">Pick a zone</h4>` +
     `<p class="gmt-widget-hint">Each zone is in one class. Press a zone, on the map or in the list, to pin its clock and its last and next change.</p>` +
-    `<div class="gmt-canada-pick">` +
+    `<div class="gmt-clockcheck-pick">` +
     `<div class="gmt-zonemap-zone-frame"><div class="gmt-zonemap-zone-scroll" data-role="zone-scroll" role="region" aria-label="Canada time zones, scrollable list" tabindex="0">` +
     `<ul class="gmt-zonemap-zone-list" data-role="zone-list" aria-label="Zones">${zoneIds.zones.map(zoneListItemHtml).join("")}</ul>` +
     `</div></div>` +
     `</div>` +
     `</section>` +
     `<div class="gmt-zonemap-pin" data-role="pin">${renderPinPanelHtml()}</div>` +
-    `<section class="gmt-widget-section gmt-canada-nowsec" aria-labelledby="${clocksId}">` +
+    `<section class="gmt-widget-section gmt-clockcheck-nowsec" aria-labelledby="${clocksId}">` +
     `<h4 id="${clocksId}">Live clocks</h4>` +
-    `<p class="gmt-canada-now-notice" data-role="clocks-notice" hidden>${CLOCKS_NOTICE}</p>` +
+    `<p class="gmt-clockcheck-now-notice" data-role="clocks-notice" hidden>${CLOCKS_NOTICE}</p>` +
     clocksHtml(CLOCK_ZONES, STOPPED_ZONES) +
-    `<p class="gmt-widget-hint gmt-canada-now-hint">Your time, and the time in each zone.</p>` +
+    `<p class="gmt-widget-hint gmt-clockcheck-now-hint">Your time, and the time in each zone.</p>` +
     `</section>` +
     `</div>` +
     // Row 3: the reader's servers beside the minimum releases. Both are info cards.
-    `<div class="gmt-canada-row">` +
+    `<div class="gmt-clockcheck-row">` +
     serversCardHtml({
       idPrefix,
       command: NODE_PROBE_COMMAND,
@@ -195,11 +151,11 @@ export function renderCanadaClockChangeTemplate({
     minimumsCardHtml(idPrefix, CANADA_MINIMUMS) +
     `</div>` +
     // Row 4: the clock changes beside what the library does about them.
-    `<div class="gmt-canada-row">` +
+    `<div class="gmt-clockcheck-row">` +
     `<section class="gmt-widget-section" aria-labelledby="${changesId}">` +
     `<h4 id="${changesId}">Clock changes in 2026 and 2027</h4>` +
     `<p class="gmt-widget-hint">tzdb also records an abbreviation change on 2026-11-01 for the four zones that stop changing their clocks, with no change of UTC offset, so it is not listed. Times are the clock as it read just before the change.</p>` +
-    `<ul class="gmt-canada-groups" data-role="transitions">${TRANSITION_ZONES.map(transitionGroupHtml).join("")}</ul>` +
+    `<ul class="gmt-clockcheck-groups" data-role="transitions">${TRANSITION_ZONES.map((zone) => transitionGroupHtml(zone, YEARS)).join("")}</ul>` +
     `</section>` +
     helpCardHtml(idPrefix, HELP) +
     `</div>` +
@@ -207,29 +163,6 @@ export function renderCanadaClockChangeTemplate({
     storedSectionHtml({ ...CANADA_STORED, idPrefix }) +
     `</div>` +
     `</div>`
-  );
-}
-
-/** The Key points: two cards, one for everyone and one for developers. */
-function keyPointsHtml(idPrefix: string): string {
-  return (
-    `<section class="gmt-keypoints" aria-labelledby="${idPrefix}-keypoints-title">` +
-    `<h2 id="${idPrefix}-keypoints-title">${escapeHtml(KEY_POINTS_HEADING)}</h2>` +
-    `<div class="gmt-keypoints-grid">` +
-    KEY_POINTS.map(
-      (card) =>
-        `<div class="gmt-keypoints-card"${card.id ? ` id="${escapeAttr(card.id)}"` : ""}>` +
-        `<h3>${escapeHtml(card.heading)}</h3>` +
-        card.blocks
-          .map((block) =>
-            block.kind === "p"
-              ? `<p>${partsHtml(block.parts)}</p>`
-              : `<ol>${block.items.map((item) => `<li>${partsHtml(item)}</li>`).join("")}</ol>`,
-          )
-          .join("") +
-        `</div>`,
-    ).join("") +
-    `</div></section>`
   );
 }
 
@@ -249,44 +182,13 @@ export interface CanadaMountOptions {
   history?: Pick<History, "replaceState">;
 }
 
-type Answer =
-  | { kind: "ok"; check: CanadaCheck }
-  | { kind: "rate-limited"; seconds: number | null }
-  | { kind: "failed" };
-
-async function ask(
-  fetchFn: typeof fetch,
-  signal: AbortSignal,
-): Promise<Answer> {
-  try {
-    const response = await fetchFn(withBase("/api/canada-clock-change"), {
-      signal,
-    });
-    if (response.status === 429) {
-      const seconds = Number(response.headers.get("retry-after"));
-      return {
-        kind: "rate-limited",
-        seconds: Number.isFinite(seconds) && seconds > 0 ? seconds : null,
-      };
-    }
-    if (!response.ok) return { kind: "failed" };
-    return { kind: "ok", check: (await response.json()) as CanadaCheck };
-  } catch {
-    return { kind: "failed" };
-  }
-}
-
-function wallText(wallBefore: string): string {
-  return wallBefore.replace("T", " ").slice(0, 16);
-}
-
 function changeRowHtml(row: TransitionRow): string {
   if (row.wallBefore === "") return `<li>${NO_SIGNAL}</li>`;
   return (
-    `<li class="gmt-canada-change">` +
-    `<span class="gmt-canada-when">${escapeHtml(wallText(row.wallBefore))}</span>` +
-    `<span class="gmt-canada-shift">${escapeHtml(row.offsetBefore)} → ${escapeHtml(row.offsetAfter)}</span>` +
-    `<span class="gmt-canada-utc">${escapeHtml(row.instant)}</span></li>`
+    `<li class="gmt-clockcheck-change">` +
+    `<span class="gmt-clockcheck-change-when">${escapeHtml(wallText(row.wallBefore))}</span>` +
+    `<span class="gmt-clockcheck-change-shift">${escapeHtml(row.offsetBefore)} → ${escapeHtml(row.offsetAfter)}</span>` +
+    `<span class="gmt-clockcheck-change-utc">${escapeHtml(row.instant)}</span></li>`
   );
 }
 
@@ -308,9 +210,9 @@ export async function mountCanadaClockChange(
   // The browser column needs no library and no answer: fill it first.
   fillBrowserCard(root, canadaProbe(idPrefix), CANADA_VERDICT);
 
-  let lib: CanadaLib;
+  let lib: ClockLib;
   try {
-    lib = await loadCanadaLib();
+    lib = await loadClockLib();
   } catch (error) {
     showUnavailable(root, error);
     return;
@@ -327,22 +229,14 @@ export async function mountCanadaClockChange(
   let stored: StoredHandle | undefined;
 
   // --- the copy button announces -------------------------------------------
-  wireCopyButtons(root);
-  const copyStatus = q<HTMLElement>('[data-role="copy-status"]');
-  q<HTMLElement>('[data-role="copy-node-probe"]')?.addEventListener(
-    "click",
-    () => {
-      if (copyStatus) copyStatus.textContent = "Copied";
-    },
-    { signal },
-  );
+  wireCopy(root, signal);
   bindClockGlow(root, signal);
 
   // --- the transitions -----------------------------------------------------
   function drawTransitions(answer: CanadaCheck): void {
     for (const zone of TRANSITION_ZONES) {
       const list = q<HTMLElement>(
-        `.gmt-canada-group[data-zone="${zone}"] [data-role="changes"]`,
+        `.gmt-clockcheck-group[data-zone="${zone}"] [data-role="changes"]`,
       );
       if (!list) continue;
       list.innerHTML = YEARS.map((year) => {
@@ -350,7 +244,7 @@ export async function mountCanadaClockChange(
           (row) => row.zone === zone && row.year === year,
         );
         return rows.length === 0
-          ? `<li class="gmt-canada-none">No clock change in ${year}</li>`
+          ? `<li class="gmt-clockcheck-change-none">No clock change in ${year}</li>`
           : rows.map(changeRowHtml).join("");
       }).join("");
     }
@@ -371,7 +265,11 @@ export async function mountCanadaClockChange(
     busy = true;
     recheck?.setAttribute("aria-busy", "true");
     if (status) status.textContent = "";
-    const answer = await ask(fetchFn, signal);
+    const answer = await ask<CanadaCheck>(
+      "/api/canada-clock-change",
+      fetchFn,
+      signal,
+    );
     busy = false;
     recheck?.removeAttribute("aria-busy");
     if (signal.aborted) return;
@@ -431,14 +329,6 @@ export async function mountCanadaClockChange(
 // The chat widget
 // ---------------------------------------------------------------------------
 
-export interface CanadaClockChangeArgs {
-  /** One zone id from `canada-zones.json` to pin on the map. */
-  zone?: string;
-}
-
-const NO_LOCATION: Pick<Location, "href"> = { href: "https://dox.invalid/" };
-const NO_HISTORY: Pick<History, "replaceState"> = { replaceState: () => {} };
-
 /** The chat's markup: the page's sections, with ids namespaced by `idPrefix`. */
 export function renderCanadaClockChangeWidgetTemplate(
   idPrefix: string,
@@ -446,40 +336,9 @@ export function renderCanadaClockChangeWidgetTemplate(
   return renderCanadaClockChangeTemplate({ idPrefix });
 }
 
-/**
- * Mounts the checker in the chat rail. The rail is narrow, so the map's container query shows
- * the zone list; the list pins the same zone. The widget fetches the Worker's endpoint like the
- * page does and computes nothing itself. `?zone=` on the chat's URL is neither read nor written.
- *
- * The library load is awaited so a failed load rejects with `WidgetLoadError`, which the host
- * turns into its retry state. The answer is not awaited: the handle returns at once, and the
- * widget's own status line carries a slow or failed Worker.
- */
-export const mountCanadaClockChangeWidget: MountFn<
-  CanadaClockChangeArgs
-> = async (root, args, signal) => {
-  await loadCanadaLib();
-  if (signal.aborted) return INERT_HANDLE;
-  const controller = new AbortController();
-  const stop = () => controller.abort();
-  signal.addEventListener("abort", stop, { once: true });
-  mountCanadaClockChange(root, controller.signal, {
-    pinZone: args.zone,
-    location: NO_LOCATION,
-    history: NO_HISTORY,
-  }).catch((error) => {
-    if (!controller.signal.aborted) showUnavailable(root, error);
-  });
-  return onceDestroy(
-    () => {
-      signal.removeEventListener("abort", stop);
-      controller.abort();
-    },
-    () => {
-      const zone = root.querySelector<HTMLElement>(
-        '.gmt-zonemap-zone-btn[aria-pressed="true"]',
-      )?.dataset.tzId;
-      return zone ? { zone } : null;
-    },
-  );
-};
+/** Mounts the checker in the chat rail; the wrapper is shared (`clock-change-mount.ts`). */
+export type CanadaClockChangeArgs = ClockChangeChatArgs;
+
+export const mountCanadaClockChangeWidget = clockChangeWidget(
+  mountCanadaClockChange,
+);

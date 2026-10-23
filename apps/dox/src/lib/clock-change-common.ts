@@ -88,3 +88,12 @@ export function nodeProbeCommand(
 ): string {
   return `node -e 'for (const z of ${JSON.stringify(zones)}) console.log(z.split("/").pop().replace("_", " "), new Intl.DateTimeFormat("en", { timeZone: z, timeZoneName: "longOffset" }).format(${epochMs}).replace(/.*GMT/, "") || "+00:00")'`;
 }
+
+/** A zone whose rule changed in a tzdb release, and the offset that release gives it. */
+export interface ProbeFact {
+  zone: string;
+  /** The offset the reference release gives `zone` at the verdict instant. */
+  offset: string;
+  /** The first tzdb release that carries the change. */
+  release: string;
+}

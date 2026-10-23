@@ -1,14 +1,16 @@
 /*
  * The shared parts of the dated clock-change checkers (CORE-89): the "Your browser" card, the
  * servers and help cards, the live clocks, the saved-events section and the zone map with its
- * list and pin panel. Classes are `gmt-clockcheck-*` and `gmt-zonemap-*`; the page that mounts
- * them (`canada-clock-change.css`, and the next checker's own sheet) owns its stack, rows and
- * words. Shared chrome (sections, hints, code frame, NO SIGNAL) is gmt-widget.css. Tokens only:
+ * list and pin panel, and the page they sit on: the stack, its rows, the Key points, the servers
+ * card and the clock-change lists. Classes are `gmt-clockcheck-*` and `gmt-zonemap-*`; a checker's
+ * own sheet (`morocco-clock-change.css`) holds only the rules that belong to that checker alone.
+ * Shared chrome (sections, hints, code frame, NO SIGNAL) is gmt-widget.css. Tokens only:
  * amber stays the sentinel's.
  *
  * Nothing here may move while a clock ticks or an answer arrives. Every readout reserves its
  * width, uses tabular figures and does not wrap; the clock tracks are fixed. The page's stack
- * sets `container: gmt-clockcheck / inline-size`, which the container queries here read.
+ * (`.gmt-clockcheck-stack`) sets `container: gmt-clockcheck / inline-size`, which the named
+ * container queries here read.
  */
 
 /* Visually hidden text: the copy button's announcement, the pin panel's labels and announcement. */
@@ -47,31 +49,73 @@
 }
 
 /* The offset headers and their notes ("tzdb 2026e", "2 Nov 2026") stay on one line wherever the
-   checker has room. In a narrow checker (a phone, the chat rail) the notes wrap, so the two offset
-   columns are as narrow as their values and the table never scrolls sideways. */
-@container gmt-clockcheck (max-width: 30rem) {
+   card that holds the table has room, and wrap in a narrower card. The query reads the card
+   (`.gmt-widget-section` is an inline-size container), not the checker: in a row of two the card
+   is far narrower than the checker. 24rem is what Canada's table needs with its notes on one line
+   (366px, measured); a region with a longer note sets its own query in its own sheet. */
+@container (max-width: 24rem) {
   .gmt-clockcheck-table thead th:nth-child(n + 2) {
     white-space: normal;
   }
 }
 
-/* On a phone the card is about 20rem wide, and WebKit sizes the two offset columns to their nowrap
-   values plus padding, which is wider than the card: take the padding in so the table fits. */
-@media (max-width: 30rem) {
-  .gmt-clockcheck-table :is(th, td):nth-child(n + 2) {
-    padding-inline: var(--gmt-space-2);
-  }
-}
-
 .gmt-clockcheck-table :is(th, td) {
-  padding-inline: var(--gmt-space-2);
-}
-
-.gmt-clockcheck-table :is(th, td) {
-  padding: var(--gmt-space-2) var(--gmt-space-3);
+  padding: var(--gmt-space-2);
   border-bottom: 1px solid var(--gmt-border);
   text-align: left;
   font-size: 0.8125rem;
+}
+
+/* In a card narrower than 21rem (the chat rail, a phone) the table cannot hold its three columns:
+   the natural table is 313px at its narrowest (measured in Chromium and WebKit, Morocco's longer
+   place name), so the card stacks each row instead of squeezing it. A row is a two-column grid: the
+   place and its zone id across the full width, the correct and the browser's offsets side by side
+   under it; the header row is the same two columns. No word breaks, no sideways scroll. The
+   markup carries explicit ARIA roles (`table`, `rowgroup`, `row`, `columnheader`, `rowheader`,
+   `cell`), because `display: block` and `grid` make a browser drop the native table semantics. The
+   "Place" column head stays for assistive technology and is hidden from sight: each place names
+   itself. The query reads the card (`.gmt-widget-section` is an inline-size container). */
+@container (max-width: 21rem) {
+  .sl-markdown-content .gmt-clockcheck-table,
+  .gmt-clockcheck-table :is(thead, tbody) {
+    display: block;
+  }
+
+  .gmt-clockcheck-table tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-bottom: 1px solid var(--gmt-border);
+  }
+
+  .gmt-clockcheck-table thead tr {
+    border-bottom: 2px solid var(--gmt-border-strong);
+  }
+
+  .sl-markdown-content .gmt-clockcheck-table :is(th, td) {
+    display: block;
+    width: auto;
+    min-width: 0;
+    padding: var(--gmt-space-1) var(--gmt-space-2);
+    border-bottom: 0;
+    white-space: normal;
+  }
+
+  .gmt-clockcheck-table tbody th[scope="row"] {
+    grid-column: 1 / -1;
+    padding-block-end: 0;
+  }
+
+  .gmt-clockcheck-table thead th:first-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 .gmt-clockcheck-table thead th {
@@ -594,14 +638,12 @@
     grid-row: 1;
   }
 
-  .gmt-canada-pickcard,
-  .gmt-morocco-pickcard {
+  .gmt-clockcheck-pickcard {
     grid-column: 2;
     grid-row: 1;
   }
 
-  .gmt-canada-nowsec,
-  .gmt-morocco-nowsec {
+  .gmt-clockcheck-nowsec {
     grid-column: 3;
     grid-row: 1;
   }
@@ -688,8 +730,16 @@
   font-size: inherit;
 }
 
+/* A flex line, not an inline one: on a shared baseline the 20px time and the 13px offset made the
+   line taller than the "NO SIGNAL" line before them, and the page below moved when the answer
+   came. As flex items each keeps its own box, and the line holds the 28px of the line before. */
 .gmt-clockcheck-clock-time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   align-self: start;
+  column-gap: 0.5ch;
+  min-block-size: 1.75rem;
   font-family: var(--gmt-font-mono);
   font-variant-numeric: tabular-nums;
   /* In a narrow column the offset drops under the time, whole; the time never splits. */
@@ -719,8 +769,10 @@
   box-shadow: 0 0 0 1px var(--gmt-spring);
 }
 
+/* The time's box is the "NO SIGNAL" line's 28px; at the inherited 1.75 the 20px time was 35px. */
 .gmt-clockcheck-clock-hm {
   font-size: 1.25rem;
+  line-height: 1.75rem;
   letter-spacing: 0.04em;
   color: var(--gmt-cyan-bright);
 }
@@ -728,6 +780,33 @@
 .gmt-clockcheck-clock-off {
   font-size: 0.8125rem;
   color: var(--gmt-ice-dim);
+}
+
+/* In a card under 16rem (the zone card and the clocks beside the map, where the row is narrowest)
+   the time and its offset no longer fit beside the face on one line, so the offset dropped under
+   the time and the row grew from two lines to three: 61px to 82px a clock, five clocks, and the
+   map card beside them stretched with 109px of empty space under its legend. A smaller face, a
+   tighter gap and one step down on the time and the offset keep the two lines down to a 15rem card,
+   the narrowest the row allows. The query reads the card (`.gmt-widget-section`). */
+@container (max-width: 16rem) {
+  .gmt-clockcheck-clock {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    column-gap: var(--gmt-space-2);
+    padding-inline: var(--gmt-space-2);
+  }
+
+  .gmt-clockcheck-face {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .gmt-clockcheck-clock-hm {
+    font-size: 1.125rem;
+  }
+
+  .gmt-clockcheck-clock-off {
+    font-size: 0.75rem;
+  }
 }
 
 .gmt-clockcheck-clock-time .gmt-playground-sentinel {
@@ -772,14 +851,14 @@
     var(--zonemap-sea);
 }
 
-.gmt-zonemap-swatch[data-kind="stopped-2026"] {
+.gmt-zonemap-swatch[data-kind="stopped"] {
   border-color: var(--zonemap-stopped-edge);
   background:
     linear-gradient(var(--zonemap-stopped-fill), var(--zonemap-stopped-fill)),
     var(--zonemap-sea);
 }
 
-.gmt-zonemap-swatch[data-kind="changes-2027"] {
+.gmt-zonemap-swatch[data-kind="changes-after"] {
   border-color: var(--zonemap-changes-edge);
   background:
     linear-gradient(var(--zonemap-changes-fill), var(--zonemap-changes-fill)),
@@ -935,12 +1014,12 @@
   transition: fill 0.15s;
 }
 
-.gmt-zonemap-shape[data-kind="changes-2027"] {
+.gmt-zonemap-shape[data-kind="changes-after"] {
   fill: var(--zonemap-changes-fill);
   stroke: var(--zonemap-changes-edge);
 }
 
-.gmt-zonemap-shape[data-kind="stopped-2026"] {
+.gmt-zonemap-shape[data-kind="stopped"] {
   fill: var(--zonemap-stopped-fill);
   stroke: var(--zonemap-stopped-edge);
   stroke-width: 1.5;
@@ -996,11 +1075,11 @@
   outline: none;
 }
 
-.gmt-zonemap-marker[data-kind="changes-2027"] {
+.gmt-zonemap-marker[data-kind="changes-after"] {
   stroke: var(--zonemap-changes-edge);
 }
 
-.gmt-zonemap-marker[data-kind="stopped-2026"] {
+.gmt-zonemap-marker[data-kind="stopped"] {
   stroke: var(--zonemap-stopped-edge);
 }
 
@@ -1959,5 +2038,298 @@
   .gmt-zonemap-land {
     fill: Canvas;
     stroke: GrayText;
+  }
+}
+
+/* ==========================================================================
+ * The checker page: the stack, its rows, the Key points, the servers card, the zone card and the
+ * clock-change lists. Every checker's markup carries these classes (CORE-89); a rule that belongs
+ * to one checker alone is in that checker's sheet.
+ * ========================================================================== */
+
+/* The stack is the query container for the whole page. One column below 48rem; above it each row
+   is two columns. Cards in a row stretch to one height and start at the top; prose in a card stops
+   at 70ch. Rows and cards are separated by the site's spacing tokens. */
+.gmt-clockcheck-stack {
+  container: gmt-clockcheck / inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+}
+
+.gmt-clockcheck-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--gmt-space-4);
+}
+
+.gmt-clockcheck-row > *,
+.gmt-clockcheck-stack > .gmt-widget-section {
+  min-width: 0;
+  margin: 0;
+}
+
+.gmt-clockcheck-stack :is(.gmt-widget-hint, p) {
+  max-inline-size: 70ch;
+}
+
+@container gmt-clockcheck (min-width: 48rem) {
+  .gmt-clockcheck-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The browser card holds a table, so it gets 4/9 of the row rather than 2/5. */
+  .gmt-clockcheck-row--top {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+  }
+}
+
+/* --- Key points ------------------------------------------------------------ */
+
+/* Cards stacked, left of the browser card. The panel style of the other cards: a full 1px
+   border and the site's bevel. `margin: 0` beats the flow spacing Starlight puts between siblings. */
+.gmt-keypoints {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  margin: 0;
+}
+
+.gmt-keypoints h2 {
+  margin: 0 0 var(--gmt-space-2);
+  font-size: 1rem;
+}
+
+.gmt-keypoints-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--gmt-space-3);
+}
+
+.gmt-keypoints .gmt-keypoints-grid > .gmt-keypoints-card {
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.gmt-keypoints-card > h3 {
+  margin: 0 0 var(--gmt-space-2);
+  font-size: 0.875rem;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-keypoints-card p,
+.gmt-keypoints-card ol,
+.gmt-keypoints-card ul {
+  margin: 0 0 var(--gmt-space-2);
+}
+
+.gmt-keypoints-card ol,
+.gmt-keypoints-card ul {
+  padding-inline-start: 1.25rem;
+}
+
+.gmt-keypoints-card li {
+  margin: 0 0 var(--gmt-space-1);
+}
+
+.gmt-keypoints-card > :last-child {
+  margin-bottom: 0;
+}
+
+.gmt-keypoints-card code {
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}
+
+.gmt-keypoints-card a {
+  color: var(--gmt-cyan-bright);
+  text-underline-offset: 0.15em;
+}
+
+/* The notice above the clocks: a full border and a tinted fill, no one-sided accent. */
+.gmt-clockcheck-now-notice {
+  margin: 0 0 var(--gmt-space-2);
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* The servers card: an info alert paired with the verdict. A full cyan border, the site's bevel
+   and a faint cyan wash; the icon sits beside the text. */
+.gmt-clockcheck-servers {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-cyan-ink);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: color(from var(--gmt-cyan) srgb r g b / 0.07);
+}
+
+.gmt-clockcheck-servers h4 {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-clockcheck-servers p {
+  font-size: 0.8125rem;
+}
+
+/* --- Clock changes -------------------------------------------------------- */
+
+.gmt-clockcheck-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Two years of rows, up to two changes each with their UTC lines, held before the answer arrives. */
+.gmt-clockcheck-group {
+  min-height: 16.25rem;
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-clockcheck-group-title {
+  margin: 0 0 var(--gmt-space-2);
+  font-size: 0.8125rem;
+}
+
+.gmt-clockcheck-changes {
+  display: grid;
+  /* One column that may be narrower than its widest line: a group in a 300px page is 1px short of
+     a change's natural width, and the lines wrap at their spaces instead of widening the page. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-clockcheck-changes > li {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.gmt-clockcheck-change {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--gmt-space-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-clockcheck-change-when {
+  white-space: nowrap;
+}
+
+.gmt-clockcheck-change-shift {
+  text-align: right;
+}
+
+.gmt-clockcheck-change-utc {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-clockcheck-change-none {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-clockcheck-changes .gmt-playground-sentinel {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-shadow: none;
+}
+
+.gmt-zonemap-stage h4,
+.gmt-clockcheck-pickcard h4,
+.gmt-clockcheck-nowsec h4 {
+  margin: 0 0 var(--gmt-space-2);
+}
+
+.gmt-clockcheck-pickcard {
+  margin: 0;
+}
+
+/* --- Clocks --------------------------------------------------------------- */
+
+.gmt-clockcheck-nowsec {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.gmt-clockcheck-now-hint {
+  margin-top: var(--gmt-space-2);
+}
+
+/* --- The zone list and the pin panel -------------------------------------- */
+
+/* The list is one column; a scroll box holds it. */
+.gmt-clockcheck-pick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+}
+
+/* From 62rem the zone card is a column of the row: the list takes whatever height the row leaves,
+   laid over its frame so its content adds nothing to the row's height. */
+@container gmt-clockcheck (min-width: 62rem) {
+  .gmt-clockcheck-pickcard {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gmt-clockcheck-pick {
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
+
+@container gmt-clockcheck (max-width: 519.98px) {
+  /* Until a zone is pinned the panel has no place under any button, so it is not drawn at all:
+     the first paint is already the narrow layout and nothing shrinks when the script runs. */
+  .gmt-zonemap-mapsec > .gmt-zonemap-pin {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .gmt-clockcheck-help {
+    border-color: CanvasText;
+  }
+  .gmt-clockcheck-step,
+  .gmt-clockcheck-stored-head,
+  .gmt-clockcheck-badge,
+  .gmt-keypoints-card,
+  .gmt-clockcheck-browser,
+  .gmt-clockcheck-now-notice,
+  .gmt-clockcheck-group {
+    border-color: CanvasText;
   }
 }

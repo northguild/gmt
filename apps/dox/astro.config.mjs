@@ -292,7 +292,6 @@ export default defineConfig({
         "./src/styles/gmt-widget.css", // shared teaching-widget chrome (card/section/codeframe/output)
         "./src/styles/gmt-crystal-clock.css", // shared analog crystal clock face (TRAN-9)
         "./src/styles/clock-change.css", // shared parts of the clock-change checkers (CORE-89)
-        "./src/styles/canada-clock-change.css", // Canada clock-change checker (CORE-88)
         "./src/styles/morocco-clock-change.css", // Morocco clock-change checker (CORE-89)
         "./src/styles/gmt-dst-inspector.css", // DST Transition Inspector widget (DOX-B2b)
         "./src/styles/gmt-interval-visualizer.css", // Interval Algebra Visualizer widget (DOX-B2c)

@@ -1,50 +1,18 @@
 /*
- * The Morocco 2026 clock-change checker (CORE-89): the page's stack and rows, the clock changes
- * your data gets wrong, the 2026 and 2027 clock changes and the pick card. The parts it shares with
- * the other checkers (the browser card, the map, the clocks, the saved events, the Key points, the
- * servers, minimums and help cards) are `clock-change.css` and `canada-clock-change.css`. Tokens
- * only: amber stays the sentinel's.
+ * The Morocco 2026 clock-change checker (CORE-89): the rules that belong to Morocco alone, the
+ * clock changes your data gets wrong and its longer header note. The page's stack, rows, Key
+ * points, cards, lists and map are `clock-change.css`. Tokens only: amber stays the sentinel's.
  *
  * Nothing here may move while an answer arrives: every row of the wrong-changes list is complete
- * but its last cell, which holds the height of its one line; the transition groups hold the height
- * of their longest case before the answer comes.
+ * but its last cell, which holds the height of its one line.
  */
 
-/* The stack is the query container for the whole page. One column below 48rem; above it each row
-   is two columns. Cards in a row stretch to one height and start at the top; prose in a card stops
-   at 70ch. */
-.gmt-morocco-stack {
-  container: gmt-clockcheck / inline-size;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--gmt-space-4);
-}
-
-.gmt-morocco-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: stretch;
-  gap: var(--gmt-space-4);
-}
-
-.gmt-morocco-row > *,
-.gmt-morocco-stack > .gmt-widget-section {
-  min-width: 0;
-  margin: 0;
-}
-
-.gmt-morocco-stack :is(.gmt-widget-hint, p) {
-  max-inline-size: 70ch;
-}
-
-@container gmt-clockcheck (min-width: 48rem) {
-  .gmt-morocco-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  /* The browser card holds a table, so it gets 4/9 of the row rather than 2/5. */
-  .gmt-morocco-row--top {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+/* Morocco's "tzdb 2026c or later" note is longer than Canada's: with the notes on one line the
+   probe table needs 416px (measured), so they wrap in a card narrower than 26.5rem. The query reads
+   the card that holds the table, as the shared rule in `clock-change.css` does. */
+@container (max-width: 26.5rem) {
+  .gmt-morocco .gmt-clockcheck-table thead th:nth-child(n + 2) {
+    white-space: normal;
   }
 }
 
@@ -121,149 +89,8 @@
   text-shadow: none;
 }
 
-/* --- Clock changes in 2026 and 2027 --------------------------------------- */
-
-.gmt-morocco-groups {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
-  gap: var(--gmt-space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Two years of rows, up to two changes each with their UTC lines, held before the answer arrives. */
-.gmt-morocco-group {
-  min-height: 16.25rem;
-  margin: 0;
-  padding: var(--gmt-space-3);
-  border: 1px solid var(--gmt-border-strong);
-  border-radius: var(--gmt-radius-md);
-  corner-shape: bevel;
-  background: var(--gmt-fill-subtle);
-}
-
-.gmt-morocco-group-title {
-  margin: 0 0 var(--gmt-space-2);
-  font-size: 0.8125rem;
-}
-
-.gmt-morocco-changes {
-  display: grid;
-  gap: var(--gmt-space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.gmt-morocco-changes > li {
-  margin: 0;
-  font-size: 0.8125rem;
-}
-
-.gmt-morocco-change {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: var(--gmt-space-3);
-  font-variant-numeric: tabular-nums;
-}
-
-.gmt-morocco-when,
-.gmt-morocco-shift {
-  white-space: nowrap;
-}
-
-.gmt-morocco-shift {
-  text-align: right;
-}
-
-.gmt-morocco-utc {
-  grid-column: 1 / -1;
-  font-size: 0.75rem;
-  color: var(--gmt-ice-dim);
-  white-space: nowrap;
-}
-
-.gmt-morocco-none {
-  color: var(--gmt-ice-dim);
-}
-
-.gmt-morocco-changes .gmt-playground-sentinel {
-  padding: 0;
-  border: 0;
-  background: none;
-  text-shadow: none;
-}
-
-/* --- Map section ---------------------------------------------------------- */
-
-.gmt-morocco-pickcard {
-  margin: 0;
-}
-
-.gmt-morocco-pickcard h4 {
-  margin: 0 0 var(--gmt-space-2);
-}
-
-.gmt-morocco-nowsec {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-}
-
-.gmt-morocco-nowsec h4 {
-  margin: 0 0 var(--gmt-space-2);
-}
-
-.gmt-morocco-now-hint {
-  margin-top: var(--gmt-space-2);
-}
-
-.gmt-morocco-now-notice {
-  margin: 0 0 var(--gmt-space-2);
-  padding: var(--gmt-space-3);
-  border: 1px solid var(--gmt-border-strong);
-  border-radius: var(--gmt-radius-md);
-  corner-shape: bevel;
-  background: var(--gmt-surface);
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-/* The list is one column; a scroll box holds it. */
-.gmt-morocco-pick {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--gmt-space-3);
-}
-
-/* From 62rem the zone card is a column of the row: the list takes whatever height the row leaves,
-   laid over its frame so its content adds nothing to the row's height. */
-@container gmt-clockcheck (min-width: 62rem) {
-  .gmt-morocco-pickcard {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .gmt-morocco-pick {
-    flex: 1 1 auto;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
-  }
-}
-
-@container gmt-clockcheck (max-width: 519.98px) {
-  /* Until a zone is pinned the panel has no place under any button, so it is not drawn at all:
-     the first paint is already the narrow layout and nothing shrinks when the script runs. */
-  .gmt-zonemap-mapsec > .gmt-zonemap-pin {
-    display: none;
-  }
-}
-
 @media (forced-colors: active) {
-  .gmt-morocco-wrong-row,
-  .gmt-morocco-group,
-  .gmt-morocco-now-notice {
+  .gmt-morocco-wrong-row {
     border-color: CanvasText;
   }
 }

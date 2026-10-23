@@ -1,10 +1,10 @@
 import { convertUtcToPlainDateTime } from "@northguild/gmt/utc/convert";
 import { getUtcNow } from "@northguild/gmt/utc/get";
-import { getTimeZoneOffset } from "@northguild/gmt/zoned/get";
 import canadaZones from "../src/lib/canada-zones.json";
 import {
+  CANADA_PROBE_INSTANTS,
   CANADA_RATE_LIMIT,
-  PROBE_INSTANT,
+  CANADA_STOP_YEAR,
   PROBE_ZONES,
   STORED_ZONES,
   TRANSITION_ZONES,
@@ -15,37 +15,36 @@ import {
 import {
   handleClockChangeCheck,
   mapZone,
-  transitionsFor,
+  probeRows,
+  transitionRows,
 } from "./clock-change-shared";
 import type { CheckEndpoint } from "./clock-change-shared";
 
-const TRANSITION_YEARS = [2026, 2027] as const;
+const TRANSITION_YEARS = [CANADA_STOP_YEAR, CANADA_STOP_YEAR + 1] as const;
 
 let fixed: Pick<CanadaCheck, "probe" | "transitions"> | undefined;
 
 /** The `now`-free part: built on first use, then reused for the life of the isolate. */
 function fixedTables(): Pick<CanadaCheck, "probe" | "transitions"> {
   if (fixed) return fixed;
-  const probe: ProbeRow[] = PROBE_ZONES.map(({ zone }) => ({
-    zone,
-    offset: getTimeZoneOffset(zone, PROBE_INSTANT),
-  }));
+  const probe: ProbeRow[] = probeRows(
+    { instants: CANADA_PROBE_INSTANTS },
+    PROBE_ZONES.map(({ zone }) => zone),
+  ).map(({ zone, offset }) => ({ zone, offset }));
 
-  const transitions: TransitionRow[] = [];
-  for (const zone of TRANSITION_ZONES) {
-    for (const year of TRANSITION_YEARS) {
-      for (const change of transitionsFor(zone, year)) {
-        transitions.push({
-          zone,
-          year,
-          ...change,
-          wallBefore: convertUtcToPlainDateTime(change.instant, {
-            timeZone: change.offsetBefore,
-          }),
-        });
-      }
-    }
-  }
+  const transitions: TransitionRow[] = transitionRows(
+    TRANSITION_YEARS,
+    TRANSITION_ZONES,
+  ).flatMap(({ zone, year, changes }) =>
+    changes.map((change) => ({
+      zone,
+      year,
+      ...change,
+      wallBefore: convertUtcToPlainDateTime(change.instant, {
+        timeZone: change.offsetBefore,
+      }),
+    })),
+  );
   fixed = { probe, transitions };
   return fixed;
 }
@@ -55,12 +54,15 @@ export function computeCanadaCheck(now: string): CanadaCheck {
   return {
     now,
     ...fixedTables(),
-    zones: canadaZones.zones.map((zone) => mapZone(zone, now)),
+    zones: canadaZones.zones.map((zone) =>
+      mapZone(zone, now, CANADA_STOP_YEAR),
+    ),
   };
 }
 
 const CANADA_ENDPOINT: CheckEndpoint = {
   prefix: "canada",
+  stopYear: CANADA_STOP_YEAR,
   policy: CANADA_RATE_LIMIT,
   storedZones: STORED_ZONES,
   compute: computeCanadaCheck,

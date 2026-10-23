@@ -70,8 +70,8 @@ function fakeFetch(
         ? {
             ...zone,
             kind: stale.has(zone.zone)
-              ? ("changes-2027" as const)
-              : ("stopped-2026" as const),
+              ? ("changes-after" as const)
+              : ("stopped" as const),
           }
         : zone,
     );

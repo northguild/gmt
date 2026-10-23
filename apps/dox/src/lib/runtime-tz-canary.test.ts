@@ -1,11 +1,7 @@
 import { getTimeZoneOffset } from "@northguild/gmt/zoned/get";
 import { describe, expect, it } from "vitest";
 import { PROBE_INSTANT, PROBE_ZONES } from "./canada-clock-change";
-import {
-  MOROCCO_EXPECTED,
-  MOROCCO_PROBE,
-  MOROCCO_ZONES,
-} from "./morocco-clock-change";
+import { MOROCCO_FACTS, MOROCCO_PROBE } from "./morocco-clock-change";
 
 /**
  * A canary for the machine running the tests. The page states what tzdb 2026e gives for each
@@ -19,8 +15,8 @@ describe("the runtime's time zone data", () => {
       const actual = getTimeZoneOffset(fact.zone, PROBE_INSTANT);
       expect(
         actual,
-        `Node ${process.version} (tz ${process.versions.tz}) gives ${fact.zone} ${actual} at ${PROBE_INSTANT}; the reference (2026e) is ${fact.tzdb2026e}. Update Node.`,
-      ).toBe(fact.tzdb2026e);
+        `Node ${process.version} (tz ${process.versions.tz}) gives ${fact.zone} ${actual} at ${PROBE_INSTANT}; the reference (2026e) is ${fact.offset}. Update Node.`,
+      ).toBe(fact.offset);
     },
   );
 });
@@ -32,14 +28,14 @@ describe("the runtime's time zone data", () => {
  */
 describe("the runtime's time zone data for Morocco", () => {
   const verdict = MOROCCO_PROBE.find((item) => item.role === "verdict")!;
-  it.each(MOROCCO_ZONES.map((zone) => [zone, MOROCCO_EXPECTED] as const))(
+  it.each(MOROCCO_FACTS.map((fact) => [fact.zone, fact.offset] as const))(
     "%s is %s at the verdict instant",
-    (zone) => {
+    (zone, offset) => {
       const actual = getTimeZoneOffset(zone, verdict.iso);
       expect(
         actual,
-        `Node ${process.version} (tz ${process.versions.tz}) gives ${zone} ${actual} at ${verdict.iso}; tzdb 2026c or later gives ${MOROCCO_EXPECTED}. Update Node.`,
-      ).toBe(MOROCCO_EXPECTED);
+        `Node ${process.version} (tz ${process.versions.tz}) gives ${zone} ${actual} at ${verdict.iso}; tzdb 2026c or later gives ${offset}. Update Node.`,
+      ).toBe(offset);
     },
   );
 });

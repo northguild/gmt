@@ -96,7 +96,7 @@ describe("GET /gmt/api/morocco-clock-change", () => {
       const a = getDstTransitions(zone.zone, 2026).length;
       const b = getDstTransitions(zone.zone, 2027).length;
       expect(zone.kind).toBe(
-        b > 0 ? "changes-2027" : a > 0 ? "stopped-2026" : "none-2026-2027",
+        b > 0 ? "changes-after" : a > 0 ? "stopped" : "none",
       );
       expect(zone.offset).toBe(getTimeZoneOffset(zone.zone, NOW));
     }

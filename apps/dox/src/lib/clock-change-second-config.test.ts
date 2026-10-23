@@ -142,9 +142,9 @@ const MAP: ZoneMapConfig = {
   },
   stopped: new Set(["Africa/Casablanca"]),
   kindLabels: {
-    "stopped-2026": "Stops",
-    "changes-2027": "Changes",
-    "none-2026-2027": "Never",
+    stopped: "Stops",
+    "changes-after": "Changes",
+    none: "Never",
   },
   releaseOf: (id) => (id === "Africa/Casablanca" ? "9z" : null),
   releaseRange: "9a to 9z",
@@ -167,21 +167,19 @@ describe("zone-map with a second config", () => {
       displayKind(
         MAP,
         "Africa/Casablanca",
-        ROW("Africa/Casablanca", "changes-2027"),
+        ROW("Africa/Casablanca", "changes-after"),
       ),
-    ).toBe("stopped-2026");
+    ).toBe("stopped");
     expect(classWords(MAP, "Africa/Casablanca", undefined)).toBe("Stops");
     expect(releaseWords(MAP, "Africa/Casablanca")).toBe("tzdb 9z");
     expect(releaseWords(MAP, "Africa/El_Aaiun")).toContain("9a to 9z");
-    const rows = new Map([
-      ["Africa/El_Aaiun", ROW("Africa/El_Aaiun", "none-2026-2027")],
-    ]);
+    const rows = new Map([["Africa/El_Aaiun", ROW("Africa/El_Aaiun", "none")]]);
     expect(
       classCounts(MAP, ["Africa/Casablanca", "Africa/El_Aaiun"], rows),
     ).toEqual({
-      "stopped-2026": 1,
-      "changes-2027": 0,
-      "none-2026-2027": 1,
+      stopped: 1,
+      "changes-after": 0,
+      none: 1,
     });
   });
 

@@ -13,8 +13,13 @@ import {
   cityOf,
   nodeProbeCommand,
 } from "./clock-change-common";
+import type { ProbeFact } from "./clock-change-common";
 import { helpMarkdown } from "./clock-change-help";
-import type { ProbeConfig, VerdictText } from "./clock-change-probe";
+import type {
+  ProbeConfig,
+  ProbeInstant,
+  VerdictText,
+} from "./clock-change-probe";
 import type { MapZone } from "./zone-map";
 
 /** The instant every probe row is read at: a Monday noon UTC, after all five changes took effect. */
@@ -27,14 +32,13 @@ export const PROBE_INSTANT = "2026-11-02T12:00:00Z";
  */
 export const PROBE_EPOCH_MS = 1793620800000;
 
-/** A zone whose rule changed in one of the 2026 tzdb releases. */
-export interface ProbeFact {
-  zone: string;
-  /** The offset the tzdb 2026e release gives `zone` at `PROBE_INSTANT`. */
-  tzdb2026e: string;
-  /** The first tzdb release that carries the change. */
-  release: "2026b" | "2026c" | "2026d" | "2026e";
-}
+/** The year the Canadian zones stop changing their clocks in. The year after is read too. */
+export const CANADA_STOP_YEAR = 2026;
+
+/** The one instant the probe rows are read at. */
+export const CANADA_PROBE_INSTANTS: readonly ProbeInstant[] = [
+  { iso: PROBE_INSTANT, epochMs: PROBE_EPOCH_MS, role: "verdict" },
+];
 
 /**
  * Source: IANA tzdb `NEWS`, releases 2026b-2026e
@@ -42,11 +46,11 @@ export interface ProbeFact {
  * Morocco to +00 (2026c), NT west to -06 (2026d), MB to -05 (2026e).
  */
 export const PROBE_ZONES: readonly ProbeFact[] = [
-  { zone: "America/Vancouver", tzdb2026e: "-07:00", release: "2026b" },
-  { zone: "America/Edmonton", tzdb2026e: "-06:00", release: "2026c" },
-  { zone: "Africa/Casablanca", tzdb2026e: "+00:00", release: "2026c" },
-  { zone: "America/Inuvik", tzdb2026e: "-06:00", release: "2026d" },
-  { zone: "America/Winnipeg", tzdb2026e: "-05:00", release: "2026e" },
+  { zone: "America/Vancouver", offset: "-07:00", release: "2026b" },
+  { zone: "America/Edmonton", offset: "-06:00", release: "2026c" },
+  { zone: "Africa/Casablanca", offset: "+00:00", release: "2026c" },
+  { zone: "America/Inuvik", offset: "-06:00", release: "2026d" },
+  { zone: "America/Winnipeg", offset: "-05:00", release: "2026e" },
 ];
 
 /**
@@ -113,7 +117,7 @@ export interface ProbeRow {
 
 export interface TransitionRow {
   zone: string;
-  year: 2026 | 2027;
+  year: number;
   instant: string;
   offsetBefore: string;
   offsetAfter: string;
@@ -143,11 +147,9 @@ export function canadaProbe(idPrefix: string): ProbeConfig {
     idPrefix,
     zones: TABLE_ZONES.map((fact) => ({
       zone: fact.zone,
-      expected: fact.tzdb2026e,
+      expected: fact.offset,
     })),
-    instants: [
-      { iso: PROBE_INSTANT, epochMs: PROBE_EPOCH_MS, role: "verdict" },
-    ],
+    instants: CANADA_PROBE_INSTANTS,
   };
 }
 
@@ -169,9 +171,9 @@ export const CANADA_VERDICT: VerdictText = {
 
 /** The class word for a zone's `kind`: a dated phrase, so it stays true after 2027. */
 export const KIND_LABELS: Readonly<Record<MapZone["kind"], string>> = {
-  "stopped-2026": "Stops changing clocks in 2026",
-  "changes-2027": "Still changes clocks",
-  "none-2026-2027": "Never changes clocks",
+  stopped: "Stops changing clocks in 2026",
+  "changes-after": "Still changes clocks",
+  none: "Never changes clocks",
 };
 
 export function mapKindLabel(kind: MapZone["kind"]): string {
@@ -180,7 +182,7 @@ export function mapKindLabel(kind: MapZone["kind"]): string {
 
 /** What the command prints on a runtime with the new data: `[city, offset]` per table zone. */
 export function expectedProbeOutput(): [string, string][] {
-  return TABLE_ZONES.map((fact) => [cityOf(fact.zone), fact.tzdb2026e]);
+  return TABLE_ZONES.map((fact) => [cityOf(fact.zone), fact.offset]);
 }
 
 /** The card as Markdown for the `.md` twin and the llms files, command included. */

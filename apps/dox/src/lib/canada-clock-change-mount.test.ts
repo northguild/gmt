@@ -46,7 +46,7 @@ function citedProbe(check: CanadaCheck): CanadaCheck {
     ...check,
     probe: PROBE_ZONES.map((fact) => ({
       zone: fact.zone,
-      offset: fact.tzdb2026e,
+      offset: fact.offset,
     })),
   };
 }
@@ -71,7 +71,7 @@ describe("the template", () => {
       root.querySelectorAll(".gmt-clockcheck-table tbody tr"),
     ).toHaveLength(4);
     expect(root.querySelector('[data-zone="Africa/Casablanca"]')).toBeNull();
-    expect(root.querySelectorAll(".gmt-canada-group")).toHaveLength(
+    expect(root.querySelectorAll(".gmt-clockcheck-group")).toHaveLength(
       TRANSITION_ZONES.length,
     );
     expect(root.querySelectorAll(".gmt-clockcheck-clock")).toHaveLength(
@@ -201,14 +201,14 @@ describe("the mount", () => {
     const stale = host();
     const c1 = new AbortController();
     const check = await workerAnswer();
-    const stopped = (kind: "stopped-2026" | "changes-2027") => ({
+    const stopped = (kind: "stopped" | "changes-after") => ({
       ...check,
       zones: check.zones.map((z) =>
         TABLE_ZONES.some((f) => f.zone === z.zone) ? { ...z, kind } : z,
       ),
     });
     await mountCanadaClockChange(stale, c1.signal, {
-      fetch: fetching(stopped("changes-2027")),
+      fetch: fetching(stopped("changes-after")),
       now,
     });
     expect(
@@ -221,7 +221,7 @@ describe("the mount", () => {
     const fresh = host();
     const c2 = new AbortController();
     await mountCanadaClockChange(fresh, c2.signal, {
-      fetch: fetching(stopped("stopped-2026")),
+      fetch: fetching(stopped("stopped")),
       now,
     });
     expect(
@@ -240,22 +240,22 @@ describe("the mount", () => {
     });
     for (const zone of TRANSITION_ZONES) {
       const group = root.querySelector(
-        `.gmt-canada-group[data-zone="${zone}"]`,
+        `.gmt-clockcheck-group[data-zone="${zone}"]`,
       )!;
       for (const year of [2026, 2027] as const) {
         const rows = check.transitions.filter(
           (r) => r.zone === zone && r.year === year,
         );
-        const none = [...group.querySelectorAll(".gmt-canada-none")].filter(
-          (el) => text(el).endsWith(String(year)),
-        );
+        const none = [
+          ...group.querySelectorAll(".gmt-clockcheck-change-none"),
+        ].filter((el) => text(el).endsWith(String(year)));
         if (rows.length === 0) {
           expect(none.map(text)).toEqual([`No clock change in ${year}`]);
         } else {
           expect(none).toHaveLength(0);
         }
       }
-      expect(group.querySelectorAll(".gmt-canada-change")).toHaveLength(
+      expect(group.querySelectorAll(".gmt-clockcheck-change")).toHaveLength(
         check.transitions.filter((r) => r.zone === zone).length,
       );
     }

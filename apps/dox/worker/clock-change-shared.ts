@@ -11,6 +11,7 @@ import {
   getTimeZoneOffset,
 } from "@northguild/gmt/zoned/get";
 import type { Change } from "../src/lib/clock-change-common";
+import type { ProbeInstant } from "../src/lib/clock-change-probe";
 import {
   capStoredInput,
   completeStoredLine,
@@ -58,14 +59,18 @@ export function transitionsFor(zone: string, year: number): Change[] {
   return list;
 }
 
-/** One zone's row: its offset now, its last and next change, and its class. */
-export function mapZone(zone: string, now: string): MapZone {
+/**
+ * One zone's row: its offset now, its last and next change, and its class. The class is read
+ * from the year the checker's story is about (`stopYear`) and the year after: a change after it
+ * is `changes-after`, a change in it alone is `stopped`, neither is `none`.
+ */
+export function mapZone(zone: string, now: string, stopYear: number): MapZone {
   // The UTC year of `now`, from the string the library returned — not from `Date`.
   const year = Number(now.slice(0, 4));
 
-  let kind: MapZone["kind"] = "none-2026-2027";
-  if (transitionsFor(zone, 2027).length > 0) kind = "changes-2027";
-  else if (transitionsFor(zone, 2026).length > 0) kind = "stopped-2026";
+  let kind: MapZone["kind"] = "none";
+  if (transitionsFor(zone, stopYear + 1).length > 0) kind = "changes-after";
+  else if (transitionsFor(zone, stopYear).length > 0) kind = "stopped";
 
   // `getDstTransitions` groups by the zone's LOCAL year, so a change within ~14 h of local New
   // Year can sit outside the UTC year's own list. Three years, in order, cover it; the pick is
@@ -88,6 +93,49 @@ export function mapZone(zone: string, now: string): MapZone {
  * longer than this is read no further and answers 413.
  */
 const MAX_BODY_BYTES = 65_536;
+
+/** One zone read at one probe instant. */
+export interface ProbeOffset {
+  zone: string;
+  instant: string;
+  role: ProbeInstant["role"];
+  offset: string;
+}
+
+/**
+ * The offset of each zone at each probe instant, zone by zone and instant by instant, read with
+ * this runtime's tz data. A checker's own rows are built from these.
+ */
+export function probeRows(
+  probe: { readonly instants: readonly ProbeInstant[] },
+  zones: readonly string[],
+): ProbeOffset[] {
+  return zones.flatMap((zone) =>
+    probe.instants.map(({ iso, role }) => ({
+      zone,
+      instant: iso,
+      role,
+      offset: getTimeZoneOffset(zone, iso),
+    })),
+  );
+}
+
+/** One zone's clock changes in one year. */
+export interface ZoneYearChanges {
+  zone: string;
+  year: number;
+  changes: Change[];
+}
+
+/** The clock changes of each zone in each year, zone by zone and year by year. */
+export function transitionRows(
+  years: readonly number[],
+  zones: readonly string[],
+): ZoneYearChanges[] {
+  return zones.flatMap((zone) =>
+    years.map((year) => ({ zone, year, changes: transitionsFor(zone, year) })),
+  );
+}
 
 /** A form field as a string. Anything else (a `File`) counts as `""`; nothing is coerced. */
 export function field(form: FormData, name: string): string {
@@ -180,6 +228,8 @@ export interface CheckEndpoint {
   /** The rate-limit bucket prefix: `canada` is the bucket `canada:<clientId>`. */
   prefix: string;
   policy: RatePolicy;
+  /** The year the checker is about: its zones stop changing clocks in it. The year after is read too. */
+  stopYear: number;
   /** The POST zone allowlist. */
   storedZones: readonly string[];
   /** The GET body, computed on this runtime's tz data. */

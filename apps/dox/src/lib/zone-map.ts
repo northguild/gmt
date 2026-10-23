@@ -80,7 +80,7 @@ export interface MapZone {
   offset: string;
   last: Change | null;
   next: Change | null;
-  kind: "stopped-2026" | "changes-2027" | "none-2026-2027";
+  kind: "stopped" | "changes-after" | "none";
 }
 
 export type ZoneRow = MapZone;
@@ -151,15 +151,15 @@ export function offsetAt(
  * The class a zone is drawn in. The zones that stop changing their clocks come from the page's
  * own facts (`config.stopped`), so the map looks the same whatever runtime serves it. Every other
  * zone keeps the class its row carries: no other zone changed in the releases the page names, so
- * every runtime agrees on them. No row is "none".
+ * every runtime agrees on them. No row is "no-data".
  */
 export function displayKind(
   config: ZoneMapConfig,
   id: string,
   zone: MapZone | undefined,
 ): string {
-  if (config.stopped.has(id)) return "stopped-2026";
-  return zone?.kind ?? "none";
+  if (config.stopped.has(id)) return "stopped";
+  return zone?.kind ?? "no-data";
 }
 
 /** The class words of a zone, or "no data" when the server sent no row. */
@@ -169,7 +169,7 @@ export function classWords(
   zone: MapZone | undefined,
 ): string {
   const kind = displayKind(config, id, zone);
-  return kind === "none"
+  return kind === "no-data"
     ? "no data"
     : config.kindLabels[kind as MapZone["kind"]];
 }
@@ -183,7 +183,7 @@ export function isDataStale(
   zones: readonly MapZone[],
 ): boolean {
   return zones.some(
-    (zone) => stopped.has(zone.zone) && zone.kind !== "stopped-2026",
+    (zone) => stopped.has(zone.zone) && zone.kind !== "stopped",
   );
 }
 
@@ -196,7 +196,7 @@ export function staleZoneIds(
   zones: readonly MapZone[],
 ): string[] {
   return zones
-    .filter((zone) => stopped.has(zone.zone) && zone.kind !== "stopped-2026")
+    .filter((zone) => stopped.has(zone.zone) && zone.kind !== "stopped")
     .map((zone) => zone.zone);
 }
 
@@ -206,7 +206,7 @@ export function classCounts(
   ids: readonly string[],
   rows: ReadonlyMap<string, MapZone>,
 ): Record<MapZone["kind"], number> {
-  const counts = { "stopped-2026": 0, "changes-2027": 0, "none-2026-2027": 0 };
+  const counts = { stopped: 0, "changes-after": 0, none: 0 };
   for (const id of ids) {
     const kind = displayKind(config, id, rows.get(id));
     if (kind in counts) counts[kind as MapZone["kind"]] += 1;
@@ -1014,7 +1014,7 @@ export function zoneListItemHtml(zone: string): string {
   return (
     `<li class="gmt-zonemap-zone"><button type="button" class="gmt-zonemap-zone-btn" data-tz-id="${id}" aria-pressed="false">` +
     `<span class="gmt-zonemap-zone-id"><code>${escapeHtml(zone)}</code></span>` +
-    `<span class="gmt-zonemap-zone-kind"><span class="gmt-zonemap-swatch gmt-theme-dark" data-role="swatch" data-kind="none" aria-hidden="true"></span><span data-role="kind">no answer yet</span></span>` +
+    `<span class="gmt-zonemap-zone-kind"><span class="gmt-zonemap-swatch gmt-theme-dark" data-role="swatch" data-kind="no-data" aria-hidden="true"></span><span data-role="kind">no answer yet</span></span>` +
     `<span class="gmt-zonemap-zone-offset" data-role="offset">${NO_SIGNAL}</span>` +
     `</button></li>`
   );

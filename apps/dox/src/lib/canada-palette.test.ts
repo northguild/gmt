@@ -11,11 +11,12 @@ import { renderCanadaClockChangeTemplate } from "./canada-clock-change-mount";
 /**
  * The map's class strokes against the map background (WCAG 1.4.11, 3:1). The map and its swatches
  * are `gmt-theme-dark` islands, so the dark theme's token values apply in both themes. Values are
- * read from the stylesheet, so a change to either is measured.
+ * read from `clock-change.css`, the sheet both dated checkers share, so a change to either is
+ * measured.
  */
 const styles = resolve(__dirname, "../styles");
 const tokens = readFileSync(resolve(styles, "gmt-tokens.css"), "utf8");
-const canada = readFileSync(resolve(styles, "clock-change.css"), "utf8");
+const shared = readFileSync(resolve(styles, "clock-change.css"), "utf8");
 
 type Rgb = [number, number, number];
 const darkBlock = tokens.slice(
@@ -29,7 +30,7 @@ const token = (name: string): Rgb => {
   return [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as Rgb;
 };
 const alpha = (name: string): number => {
-  const m = new RegExp(`--zonemap-${name}:\\s*([0-9.]+);`).exec(canada);
+  const m = new RegExp(`--zonemap-${name}:\\s*([0-9.]+);`).exec(shared);
   if (!m) throw new Error(`no ${name}`);
   return Number(m[1]);
 };

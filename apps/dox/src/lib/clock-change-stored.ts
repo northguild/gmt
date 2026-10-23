@@ -43,6 +43,127 @@ export interface SavedExample {
   saved: string;
 }
 
+/** What a region states once about its worked example: the zone, its offset now, and the old one. */
+export interface SavedFact {
+  zone: string;
+  /** The offset the place has now: the reference fact, `+HH:mm`. */
+  offset: string;
+  /** Minutes the offset an app saved before the change differs from `offset` by: `-60` or `60`. */
+  savedShiftMinutes: number;
+}
+
+/** A `SavedExample` with the zone it is for, the value that keeps the local time, and the date it shows on. */
+export interface SavedExampleValues extends SavedExample {
+  zone: string;
+  /** The value that keeps the local time. */
+  fixed: string;
+  /** The date the saved value shows on now, `YYYY-MM-DD`: the next date when the shift wraps past midnight. */
+  shownDate: string;
+}
+
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+const DAY_MINUTES = 24 * 60;
+
+const isLeap = (year: number): boolean =>
+  (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+
+function monthLength(year: number, month: number): number {
+  if (month === 2) return isLeap(year) ? 29 : 28;
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
+/** `YYYY-MM-DD` moved by `days` (-1, 0 or 1 here), in the calendar and nothing else. */
+function addDays(date: string, days: number): string {
+  let [year, month, day] = date.split("-").map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  day += days;
+  if (day < 1) {
+    month -= 1;
+    if (month < 1) {
+      month = 12;
+      year -= 1;
+    }
+    day = monthLength(year, month);
+  } else if (day > monthLength(year, month)) {
+    day = 1;
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+  const pad = (n: number, width: number) => String(n).padStart(width, "0");
+  return `${pad(year, 4)}-${pad(month, 2)}-${pad(day, 2)}`;
+}
+
+function offsetMinutes(offset: string): number {
+  return (
+    (offset.startsWith("-") ? -1 : 1) *
+    (Number(offset.slice(1, 3)) * 60 + Number(offset.slice(4, 6)))
+  );
+}
+
+function offsetText(minutes: number): string {
+  const abs = Math.abs(minutes);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${minutes < 0 ? "-" : "+"}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+}
+
+/**
+ * The worked example of the saved-times section, from a region's one fact and one wall time
+ * (`YYYY-MM-DDTHH:mm:ss`). The saved offset is the fact's offset moved by `savedShiftMinutes`;
+ * the time the saved value shows now is the wall time moved the other way, wrapped into the day
+ * (23:30 shifted an hour reads `00:30` on the next date, never `24:30`). The page states no tz
+ * data of its own.
+ */
+export function savedExample(
+  fact: SavedFact,
+  wall: string,
+): SavedExampleValues {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const wallMinutes =
+    Number(wall.slice(11, 13)) * 60 + Number(wall.slice(14, 16));
+  const savedMinutes = offsetMinutes(fact.offset) + fact.savedShiftMinutes;
+  const shown = wallMinutes - fact.savedShiftMinutes;
+  const dayShift = Math.floor(shown / DAY_MINUTES);
+  const shownOfDay = shown - dayShift * DAY_MINUTES;
+  const [, month, day] = wall.slice(0, 10).split("-").map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  const shownDate = addDays(wall.slice(0, 10), dayShift);
+  const savedOffset = offsetText(savedMinutes);
+  return {
+    zone: fact.zone,
+    city: cityOf(fact.zone),
+    wallHm: `${pad(Math.floor(wallMinutes / 60))}:${pad(wallMinutes % 60)}`,
+    dateText: `${day} ${MONTHS[month - 1]}`,
+    savedOffset,
+    newOffset: fact.offset,
+    shownHm: `${pad(Math.floor(shownOfDay / 60))}:${pad(shownOfDay % 60)}`,
+    shownDate,
+    saved: `${wall}${savedOffset}[${fact.zone}]`,
+    fixed: `${wall}${fact.offset}[${fact.zone}]`,
+  };
+}
+
 export interface StoredConfig {
   /** Namespaces the title and the textarea ids. */
   idPrefix: string;

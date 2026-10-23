@@ -183,6 +183,7 @@ describe("the chat island's static import graph", () => {
       "lib/clock-change-clocks.ts",
       "lib/clock-change-common.ts",
       "lib/clock-change-help.ts",
+      "lib/clock-change-mount.ts",
       "lib/clock-change-probe.ts",
       "lib/clock-change-stored.ts",
       "lib/clock-change-stored-lines.ts",
