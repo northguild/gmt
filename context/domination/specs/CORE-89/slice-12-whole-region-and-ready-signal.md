@@ -52,6 +52,12 @@ script that measures too soon reads `NO SIGNAL`.
   unknown path.
 - `blockOffSite` (`gate-checks.mjs`) routes every request through a function matcher. Route only
   off-site URLs (a URL pattern or glob), so same-site chunks are not intercepted.
+- An error answer must not move the page either. At 375 px the status line ("The check could not
+  finish.") wraps under the Check again button and the browser card grows 35 px (both checkers).
+  Reserve the status line's room in `.gmt-clockcheck-actions` and in the saved-times controls from
+  the start, so the card is the same height before the answer, after it and after an error. Check
+  with the GET answered 200, 503 and 429, held until a snapshot is taken, at 1440, 1024 and 375 px:
+  no card above or below moves. Add an error-answer row to `canada-stored-still.mjs`.
 - Run each script 20 times in a row under load (two other builds running) with no failure, and
   record the count in the slice's hand-back.
 

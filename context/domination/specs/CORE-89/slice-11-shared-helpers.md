@@ -8,15 +8,22 @@ slice 9, except where a bullet below says otherwise.
 
 ## The table in the chat rail
 
-- `clock-change.css` narrows the probe table's cell padding with `@media (max-width: 30rem)`.
-  The chat rail is 300 or 360 px wide on a wide screen, so the query never fires there and the
-  table (about 297 px at full padding) overflows about 266 px of room.
-- Replace the media query with a container query on the widget's own container:
-  `@container <the checker's container name> (max-width: 21rem) { .<table> :is(th, td) {
-  padding-inline: var(--gmt-space-1); } }`, placed after the base cell rule (same specificity).
-  Declare the container on the checker root if it is not declared yet.
-- Check: the widget at 300 and 360 px in the chat rail, and the page at 375 px, in Chromium and
-  WebKit, with no sideways scroll (`scrollWidth <= clientWidth` on the page and the table).
+- The probe table's cells have `--gmt-space-2` padding on every side, and the header notes wrap
+  by a container query on the card that holds the table (`.gmt-widget-section`), not the checker:
+  24rem in `clock-change.css`, 26.5rem for Morocco's longer note in `morocco-clock-change.css`.
+  Keep both; the shared CSS move in this slice keeps Morocco's query in Morocco's sheet.
+- Even with the notes wrapped, the table is wider than a narrow card: 305 px (Morocco) and 296 px
+  (Canada) in a 289 px card at 375 px, and the page scrolls sideways at 320 px. Two words set the
+  floor: the zone id (`Africa/Casablanca`, about 115 px, with no break point) and the "Correct"
+  header (71 px).
+  - Let the zone id break after its `/` (a `<wbr>` after each `/` in the markup
+    `clock-change-probe.ts` writes, never `overflow-wrap: anywhere`).
+  - In a card narrower than 21rem, narrow the cells' inline padding to `--gmt-space-1`
+    (`@container (max-width: 21rem)`, after the base cell rule).
+- Check: the widget at 300 and 360 px in the chat rail, and the page at 320, 375, 1280, 1366 and
+  1440 px, in Chromium and WebKit. At each, the table is no wider than its card's content box,
+  and nothing scrolls sideways (`scrollWidth <= clientWidth` on the page and the table). Add the
+  table-in-card check to `canada-layout-check.mjs`, so a longer note in a later region fails it.
 
 ## Shared helpers
 
