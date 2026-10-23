@@ -148,6 +148,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --no-runtime
 
+      # Any advisory in the lockfile fails the job, at pnpm's default audit level. The katex
+      # override in pnpm-workspace.yaml is what keeps this at zero today; it goes dormant
+      # once nothing asks for katex below 0.18.2.
+      - name: No known vulnerabilities in dependencies
+        run: pnpm audit
+
       # `validate` runs these, but only on pushes to main — by which point a drifting
       # tracker, a carried bug or a missing changeset has already merged. These are the
       # parts of it that are cheap enough to also gate every PR.
@@ -281,7 +287,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: packages/gmt/dist
-          key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/package.json') }}
+          key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json') }}
 
       - name: Build, lint, typecheck
         run: |
@@ -356,7 +362,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: packages/gmt/dist
-          key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/package.json') }}
+          key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json') }}
 
       - name: Build @northguild/gmt
         if: steps.check-non-gmt.outputs.run_tests == 'true' && steps.cache-gmt-dist.outputs.cache-hit != 'true'
