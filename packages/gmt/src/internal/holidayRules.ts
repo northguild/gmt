@@ -33,7 +33,11 @@ import {
   type ResolvedObservancePolicy,
 } from "./observance";
 import { Temporal } from "./temporal";
-import { calendarDateFromMonthCode, calendarFieldsOf } from "./temporalCompat";
+import {
+  calendarDateFromMonthCode,
+  calendarFieldsOf,
+  longestDayOfMonthCode,
+} from "./temporalCompat";
 
 /** Temporal's ISO year range (TC39 ISODateWithinLimits): -271821-04-19 to +275760-09-13. */
 const MIN_YEAR = -271_821;
@@ -140,9 +144,14 @@ function parseCalendarFixed(
   if (
     canonical === null ||
     typeof monthCode !== "string" ||
-    !isMonthCodeOf(canonical, monthCode) ||
-    !isIntegerIn(day, 1, 31)
+    !isMonthCodeOf(canonical, monthCode)
   ) {
+    return null;
+  }
+
+  // A day the month never has (Hebrew M01 day 31) is no holiday in any year, so the rule is invalid.
+  const calendarId = computationCalendarId(canonical);
+  if (!isIntegerIn(day, 1, longestDayOfMonthCode(calendarId, monthCode))) {
     return null;
   }
 
@@ -152,7 +161,7 @@ function parseCalendarFixed(
     ? null
     : {
         kind: "calendarFixed",
-        calendarId: computationCalendarId(canonical),
+        calendarId,
         monthCode,
         day,
         policy,

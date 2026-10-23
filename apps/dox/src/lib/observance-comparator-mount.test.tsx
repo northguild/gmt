@@ -223,6 +223,55 @@ describe("the controls", () => {
     expect(realRows(root).length).toBe(0);
   });
 
+  it("names a column added from the preset until the reader changes it", async () => {
+    const { root } = await mount({ column1: "mon-mon" });
+    const note = q(root, "column-note");
+    expect(note.hidden).toBe(false);
+    expect(text(note)).toBe(
+      "Column 2 was added from the preset: a comparison needs at least 2 policies.",
+    );
+    const second = root.querySelector<HTMLSelectElement>(
+      '[data-column="1"] [data-field="col-preset"]',
+    )!;
+    second.value = "fri-mon";
+    fire(second, "change");
+    expect(q(root, "column-note").hidden).toBe(true);
+    expect(text(q(root, "column-note"))).toBe("");
+  });
+
+  it("drops the note with the column it names", async () => {
+    const { root } = await mount({ column1: "mon-mon" });
+    const add = root.querySelector<HTMLButtonElement>(
+      '[data-action="add-column"]',
+    )!;
+    const removeFirst = () =>
+      click(
+        root.querySelector<HTMLButtonElement>(
+          '[data-column="0"] [data-action="remove-column"]',
+        )!,
+      );
+    click(add);
+    click(add);
+    expect(text(q(root, "column-note"))).toBe(
+      "Column 2 was added from the preset: a comparison needs at least 2 policies.",
+    );
+    // The reader's own column goes, so the preset's moves up to column 1.
+    removeFirst();
+    expect(text(q(root, "column-note"))).toBe(
+      "Column 1 was added from the preset: a comparison needs at least 2 policies.",
+    );
+    removeFirst();
+    expect(q(root, "column-note").hidden).toBe(true);
+  });
+
+  it("has no note when the reader gave every column", async () => {
+    for (const args of [{}, { column1: "mon-mon", column2: "none" }]) {
+      const { root } = await mount(args);
+      expect(q(root, "column-note").hidden).toBe(true);
+      document.body.innerHTML = "";
+    }
+  });
+
   it("picking a cell moves the selection and the plates follow", async () => {
     const { root } = await mount();
     click(cell(root, 2026, 2));

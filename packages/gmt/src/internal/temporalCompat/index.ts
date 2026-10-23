@@ -4,7 +4,10 @@ export {
   calendarDateAdd,
   calendarDateUntil,
 } from "./calendarDateArithmetic";
-export { calendarDateFromMonthCode } from "./calendarDateFromMonthCode";
+export {
+  calendarDateFromMonthCode,
+  longestDayOfMonthCode,
+} from "./calendarDateFromMonthCode";
 export { calendarDateFromFields } from "./calendarDateFromFields";
 export {
   isCalendarArithmeticCompatNeeded,

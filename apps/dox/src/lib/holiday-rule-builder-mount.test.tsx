@@ -361,4 +361,60 @@ describe("the year", () => {
     expect(q<HTMLInputElement>(root, "year").value).toBe("2022");
     expect(months()).toBe(before);
   });
+
+  it("an invalid year leaves nothing of the last one on screen", async () => {
+    const { root } = await mount();
+    const year = q<HTMLInputElement>(root, "year");
+    const months = () =>
+      root.querySelectorAll(
+        "[data-role='grid'] [data-month], [data-role='grid'] table",
+      ).length;
+    const before = months();
+    expect(ghosts(root)).not.toEqual([]);
+    for (const typed of ["", "1899", "2101", "2021.5"]) {
+      year.value = typed;
+      fire(year, "input");
+      expect(year.getAttribute("aria-invalid")).toBe("true");
+      for (const row of rows(root)) {
+        const result = row.querySelector<HTMLElement>(
+          '[data-role="row-result"]',
+        )!;
+        expect(result.textContent).toContain(NO_SIGNAL_TEXT);
+        expect(result.className).toContain("gmt-playground-sentinel");
+        // The Comparator needs no year: the link stays, without one.
+        const link = row.querySelector('[data-role="link-compare"]')!;
+        const href = link.getAttribute("href")!;
+        const seeded = seedFromLocation(
+          "observance",
+          new URL(href, "https://example.test").search,
+        );
+        expect(seeded).not.toHaveProperty("year");
+      }
+      for (const hero of ["hero-closed", "hero-moved"]) {
+        expect(q(root, hero).hasAttribute("data-empty")).toBe(true);
+      }
+      expect(closed(root)).toEqual([]);
+      expect(ghosts(root)).toEqual([]);
+      expect(months()).toBe(before);
+      expect(q(root, "year-note").textContent).toContain(NO_SIGNAL_TEXT);
+      expect(q(root, "year-note").textContent).toContain("1900 to 2100");
+      expect(q(root, "year-sentence").textContent).toBe(
+        "No calendar: the year is not a whole number from 1900 to 2100.",
+      );
+      expect(q(root, "call-calendar").textContent).toBe("");
+      expect(q(root, "calendar-output").textContent).toBe(NO_SIGNAL_TEXT);
+      expect(q(root, "rule-calls").textContent).toBe("");
+      expect(q(root, "link-ledger").hasAttribute("href")).toBe(false);
+      expect(q(root, "handoff-hint").textContent).toBe(
+        "There is no calendar to send: the year is not valid.",
+      );
+    }
+    year.value = "2021";
+    fire(year, "input");
+    expect(year.hasAttribute("aria-invalid")).toBe(false);
+    expect(ghosts(root)).toEqual(["2021-12-25", "2021-12-26"]);
+    expect(q(root, "calendar-output").textContent).toContain("2021-12-27");
+    expect(q(root, "call-calendar").textContent).toContain("2021");
+    expect(q(root, "link-ledger").hasAttribute("href")).toBe(true);
+  });
 });

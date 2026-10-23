@@ -11,13 +11,14 @@ import {
   columnOf,
   matchPreset,
   permalinkOf,
+  presetColumnsNote,
   presetState,
   readArgs,
   selectedColumn,
   selectedYear,
   yearSpan,
 } from "./observance-comparator";
-import { seedFromLocation } from "./widget-permalink";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 
 const preset = (id: string) => COMPARATOR_PRESETS.find((p) => p.id === id)!;
 const modelOf = (id: string) => compare(lib, presetState(preset(id)));
@@ -186,10 +187,28 @@ describe("the permalink", () => {
     expect(link["holiday1"]).toBe("-");
     expect(readArgs(link as never).holidays).toEqual(state.holidays);
   });
-  it("tops up a single column from the preset", () => {
+  it("tops up a single column from the preset, and says which", () => {
     const state = readArgs({ column1: "mon-mon" });
-    expect(state.columns.length).toBeGreaterThanOrEqual(2);
-    expect(state.columns[0]).toBe("mon-mon");
+    expect(state.columns).toEqual(["mon-mon", "none"]);
+    expect(state.presetColumns).toEqual([1]);
+    expect(presetColumnsNote(state)).toBe(
+      "Column 2 was added from the preset: a comparison needs at least 2 policies.",
+    );
+  });
+  it("skips a preset column the reader already gave", () => {
+    const state = readArgs({ policies: [{}] } as never);
+    expect(state.columns).toEqual(["none", "fri-mon"]);
+    expect(state.presetColumns).toEqual([1]);
+  });
+  it("names no preset column when the reader gave them all", () => {
+    for (const state of [
+      readArgs({ column1: "mon-mon", column2: "none" }),
+      readArgs({}),
+      presetState(preset("adjacent")),
+    ]) {
+      expect(state.presetColumns).toEqual([]);
+      expect(presetColumnsNote(state)).toBe("");
+    }
   });
   it("reads the chat forms", () => {
     const state = readArgs({
@@ -221,6 +240,37 @@ describe("the hand-offs", () => {
     expect(builder.weekend).toEqual(state.weekend);
     expect(builder.zone).toBe("UTC");
     expect(String(builder.year)).toBe("2021");
+  });
+
+  it("no weekend survives its own link and both hand-offs", () => {
+    const state = { ...presetState(preset("adjacent")), weekend: [] };
+    const url = encodeWidgetPermalink("observance", permalinkOf(state));
+    const own = seedFromLocation("observance", url.slice(url.indexOf("?")));
+    expect(readArgs(own as never).weekend).toEqual([]);
+
+    const m = compare(lib, state);
+    const toBuilder = builderHandoffHref(
+      state,
+      m.columns[columnIndex(m, "next-working")],
+      2021,
+    )!;
+    const builder = seedFromLocation(
+      "holidays",
+      toBuilder.slice(toBuilder.indexOf("?")),
+    );
+    expect(readBuilderArgs(builder as never).weekend).toEqual([]);
+
+    const toComparator = compareHandoffHref(
+      lib,
+      { month: "12", day: "26", policy: "" },
+      [],
+      2021,
+    )!;
+    const comparator = seedFromLocation(
+      "observance",
+      toComparator.slice(toComparator.indexOf("?")),
+    );
+    expect(readArgs(comparator as never).weekend).toEqual([]);
   });
 
   it("the Builder link is off for a NO SIGNAL column", () => {

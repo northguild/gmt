@@ -102,6 +102,19 @@ describe("widget permalinks", () => {
     expect(decodeWidgetPermalink("")).toBeNull();
   });
 
+  it("keeps an empty weekend or offsets list and drops any other empty string", () => {
+    const url = encodeWidgetPermalink("holidays", {
+      weekend: "",
+      offsets: "",
+      zone: "",
+      rules: "",
+    });
+    expect(seedFromLocation("holidays", url.slice(url.indexOf("?")))).toEqual({
+      weekend: "",
+      offsets: "",
+    });
+  });
+
   it("rejects an unknown widget kind", () => {
     expect(decodeWidgetPermalink('?w=evil&wa={"a":1}')).toBeNull();
   });
@@ -184,16 +197,17 @@ describe("widget permalinks", () => {
   });
 
   it("keeps the longest rule list the chat schema accepts", () => {
-    const longest = Array.from({ length: 12 }, (_, i) => ({
+    // Every character a separator, so each is escaped to two.
+    const longest = Array.from({ length: 12 }, () => ({
       kind: "dates" as const,
-      name: String(i).padStart(64, "x"),
-      dates: Array.from({ length: 60 }, () => "9".repeat(64)),
+      name: ";".repeat(64),
+      dates: Array.from({ length: 60 }, () => ",".repeat(64)),
     }));
     expect(
       showHolidayRuleBuilderInput.safeParse({ rules: longest }).success,
     ).toBe(true);
     const rules = formatRuleLines(longest);
-    expect(rules.length).toBe(47_603);
+    expect(rules.length).toBe(94_451);
     const url = encodeWidgetPermalink("holidays", { rules });
     expect(seedFromLocation("holidays", url.slice(url.indexOf("?")))).toEqual({
       rules,

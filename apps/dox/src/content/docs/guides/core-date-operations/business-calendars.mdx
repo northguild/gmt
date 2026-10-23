@@ -131,6 +131,7 @@ has one of five kinds:
 
 - `fixed`: a month and a day in the ISO calendar.
 - `calendarFixed`: a month code and a day in another calendar, such as `M01` in the Hebrew calendar.
+  The day must be one the month has in some year. A year whose month is shorter has no date.
 - `nthWeekday`: the first to fifth or last weekday of a month.
 - `easterRelative`: a number of days before or after Easter, by the Gregorian or the Julian method.
 - `dates`: a list of dates you give, for a day that no rule produces.

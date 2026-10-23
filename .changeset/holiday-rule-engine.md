@@ -11,7 +11,7 @@ Six functions and three types:
 - `observedDate(isoDate, policy, calendar?)` moves a date that falls on a day off. `ObservancePolicy` is keyed by ISO weekday, and each shift is `"nextWorkingDay"`, `{ next: weekday }` or `{ previous: weekday }`. There is no default policy.
 - `holidayDates(rule, year, options?)` returns the dates of one `HolidayRule`. A rule is `fixed`, `calendarFixed` (such as 1 Shawwal in an Islamic calendar), `nthWeekday`, `easterRelative` or `dates`.
 - `buildBusinessCalendar(spec)` expands rules over a year range into the `BusinessCalendar` that `isBusinessDay` and `addBusinessDays` already take.
-- `isValidHolidayRule(rule)` is a type guard. It tells a rule that is wrong from a year in which the rule has no date.
+- `isValidHolidayRule(rule)` is a type guard. It tells a rule that is wrong from a year in which the rule has no date. A `calendarFixed` day must be one its month has in some year, so Hebrew `M01` day 31 is not a rule. GMT reads each month's longest length from the calendar and keeps no table.
 
 ```typescript
 import { buildBusinessCalendar, easterSunday, nthWeekdayOfMonth, observedDate } from "@northguild/gmt/calendar/rules";

@@ -10,7 +10,6 @@ import type {
 } from "@northguild/gmt";
 import {
   MAX_RULES,
-  cleanRuleName,
   formatPolicyText,
   formatRuleLine,
   formatRuleLines,
@@ -202,11 +201,42 @@ describe("rule lines", () => {
     expect(formatRuleLine(rule)).toBe("A;f;01-01");
   });
 
-  it("strips separators from a name", () => {
-    expect(cleanRuleName("  A;B,\nC ")).toBe("ABC");
+  it("keeps `;`, `,`, `\\` and a line break in a name, calendar, month code or date", () => {
+    const escaped: HolidayRule[] = [
+      { name: "A;B,C", kind: "fixed", month: 1, day: 1 },
+      { name: "Ends in \\", kind: "nthWeekday", month: 1, weekday: 1, n: 1 },
+      { name: "Two\nlines\r\n", kind: "easterRelative", offsetDays: 0 },
+      {
+        name: "\\;",
+        kind: "calendarFixed",
+        calendar: "he;brew" as CalendarSystem,
+        monthCode: "M0,1",
+        day: 1,
+      },
+      { name: "Dates", kind: "dates", dates: ["2026-01-01;x", "a,b", "c\\,"] },
+    ];
+    const trimmed = escaped.map((rule) => ({
+      ...rule,
+      name: rule.name.trim(),
+    }));
+    for (const [i, rule] of escaped.entries()) {
+      const line = formatRuleLine(rule);
+      expect(line, line).not.toMatch(/[\r\n]/);
+      expect(parseRuleLine(line), line).toEqual(trimmed[i]);
+    }
+    expect(formatRuleLine(escaped[0]!)).toBe("A\\;B\\,C;f;01-01");
+    expect(formatRuleLine(escaped[4]!)).toBe(
+      "Dates;d;2026-01-01\\;x,a\\,b,c\\\\\\,",
+    );
+    expect(parseRuleLines(formatRuleLines(escaped))).toEqual(trimmed);
+  });
+
+  it("reads a hand-written escape, and trims a name", () => {
+    expect(parseRuleLine("A\\;B \\x;f;01-01")!.name).toBe("A;B x");
+    expect(parseRuleLine("A\\\\;f;01-01")!.name).toBe("A\\");
     expect(
-      formatRuleLine({ name: "A;B,C", kind: "fixed", month: 1, day: 1 }),
-    ).toBe("ABC;f;01-01");
+      formatRuleLine({ name: "  A ", kind: "fixed", month: 1, day: 1 }),
+    ).toBe("A;f;01-01");
   });
 
   it("rejects a line it cannot read", () => {

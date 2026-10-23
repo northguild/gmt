@@ -218,6 +218,8 @@ function offsetsOfArg(value: unknown): number[] | null {
       ? value.split(/[\s,]+/).filter((s) => s !== "")
       : null;
   if (items === null) return null;
+  // An empty list is the reader's choice of no offsets, not a missing value.
+  if (items.length === 0) return [];
   const known = new Set(FEAST_OFFSETS.map((o) => o.offset));
   const picked = new Set(
     items.map(Number).filter((n) => Number.isInteger(n) && known.has(n)),
@@ -237,7 +239,7 @@ function ordinalOfArg(value: unknown): string | null {
  * Seed arguments as controls. Typed values (the chat) and their text forms (a
  * permalink) both land here; anything unusable falls back to the first
  * preset's value for that control. An offset the page does not offer is
- * dropped.
+ * dropped. An empty `offsets` list toggles every offset off.
  */
 export function readArgs(args: MovingFeastsArgs): FeastsState {
   const named = FEAST_PRESETS.find((p) => p.id === args.preset);

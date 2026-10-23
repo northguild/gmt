@@ -23,6 +23,7 @@ import {
   BUILDER_PRESETS,
   CUSTOM_PRESET_ID,
   HANDOFF_NO_CALENDAR,
+  HANDOFF_NO_YEAR,
   HANDOFF_TOO_LONG,
   INVALID_REASON,
   KIND_LABELS,
@@ -79,6 +80,7 @@ import { compareHandoffHref } from "./observance-comparator";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   chipToggleHtml,
+  clearCallLine,
   escapeAttr,
   escapeHtml,
   labelTextHtml,
@@ -98,6 +100,9 @@ export const FOLD_WIDTH = 480;
 const HINT_ORDER =
   "Swap the two rows: the order decides which day each holiday lands on.";
 const YEAR_NOTE_NULL = `${NO_SIGNAL_TEXT}: the calendar cannot be built until every rule is valid.`;
+const YEAR_RANGE = `the year is not a whole number from ${YEAR_MIN} to ${YEAR_MAX}`;
+const YEAR_NOTE_INVALID = `${NO_SIGNAL_TEXT}: ${YEAR_RANGE}.`;
+const ROW_NO_YEAR = `${NO_SIGNAL_TEXT}: there is no year to place it in.`;
 
 // Neutral filler as wide as the longest zone id, so the sizer names no place.
 const SIZER_ZONE = "Xxxxxxx/Xxxxxxxxx/Xxxxxxxxxxxxxx";
@@ -281,9 +286,9 @@ function rowsHtml(state: BuilderState, uid: string, folded: boolean): string {
 }
 
 function plates(
-  year: number,
+  year: number | null,
   closed: number | null,
-  moved: number,
+  moved: number | null,
   weekend: readonly number[],
 ): PlateSpec[] {
   return [
@@ -291,13 +296,13 @@ function plates(
       role: "hero-closed",
       caption: "Closed days",
       value: closed === null ? null : String(closed),
-      lines: [`holidays in ${year}`],
+      lines: [year === null ? "" : `holidays in ${year}`],
       series: 1,
     },
     {
       role: "hero-moved",
       caption: "Moved",
-      value: String(moved),
+      value: moved === null ? null : String(moved),
       lines: ["observed on another day"],
       series: 2,
     },
@@ -556,6 +561,7 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
     const year = yearOf(state);
     if (year === null) {
       yearEl.setAttribute("aria-invalid", "true");
+      drawNoYear();
       return;
     }
     yearEl.removeAttribute("aria-invalid");
@@ -571,6 +577,51 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
     drawRows(rules, attribution, year);
     drawYear(attribution, year);
     drawCall(rules, attribution, year);
+  }
+
+  /** An invalid year: every readout of the year goes to NO SIGNAL or empty, so
+   *  none goes on showing the last valid year's answer as this one's. The grid
+   *  keeps its frame, unmarked, and a row's compare link, which needs no year,
+   *  stays. */
+  function drawNoYear(): void {
+    rulesEl.querySelectorAll<HTMLElement>("[data-row]").forEach((li, i) => {
+      drawResult(li.querySelector('[data-role="row-result"]'), {
+        state: "sentinel",
+        text: ROW_NO_YEAR,
+      });
+      const source = state.rows[i];
+      const link = li.querySelector<HTMLElement>('[data-role="link-compare"]');
+      if (link && source) {
+        setToolLink(link, compareHandoffHref(lib, source, state.weekend, null));
+      }
+    });
+    const heroes = q("heroes");
+    if (heroes) {
+      heroes.innerHTML = plates(null, null, null, state.weekend)
+        .map(plateHtml)
+        .join("");
+    }
+    const grid = q("grid");
+    if (grid) {
+      grid.innerHTML = monthGridHtml({
+        year: lastYear,
+        months: { from: 1, to: 12 },
+        marks: {},
+        weekend: state.weekend,
+      });
+    }
+    const note = q("year-note");
+    if (note) renderWidgetOutput(note, YEAR_NOTE_INVALID, "sentinel");
+    const sentence = q("year-sentence");
+    if (sentence) sentence.textContent = `No calendar: ${YEAR_RANGE}.`;
+    clearCallLine(q("call-calendar"));
+    const out = q("calendar-output");
+    if (out) renderWidgetOutput(out, NO_SIGNAL_TEXT, "sentinel");
+    const calls = q("rule-calls");
+    if (calls) calls.textContent = "";
+    setToolLink(q("link-ledger"), null);
+    const hint = q("handoff-hint");
+    if (hint) hint.textContent = HANDOFF_NO_YEAR;
   }
 
   function drawRows(

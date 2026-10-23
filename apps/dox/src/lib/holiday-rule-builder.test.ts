@@ -31,7 +31,9 @@ import {
   weekendNames,
   yearOf,
 } from "./holiday-rule-builder";
+import { readArgs as readLedgerArgs } from "./free-time-ledger";
 import { attributeRules } from "./holiday-widgets";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { lib } from "~/test/holiday-lib";
 
 const YEAR_LOW = 1900;
@@ -164,6 +166,31 @@ describe("arguments and permalink", () => {
     expect(back.weekend).toEqual(state.weekend);
     expect(back.zone).toBe(state.zone);
     expect(back.year).toBe(state.year);
+  });
+
+  it("keeps no weekend through its link and the Ledger's", () => {
+    const state = { ...presetState(preset("chain")), weekend: [] };
+    const url = encodeWidgetPermalink("holidays", permalinkOf(state));
+    const seeded = seedFromLocation("holidays", url.slice(url.indexOf("?")));
+    expect(readArgs(seeded as never).weekend).toEqual([]);
+
+    const { href } = ledgerHandoff({ holidays: ["2026-05-01"] }, "UTC", []);
+    const ledger = seedFromLocation(
+      "freetime",
+      href!.slice(href!.indexOf("?")),
+    );
+    expect(readLedgerArgs(ledger as never).weekend).toEqual([]);
+  });
+
+  it("keeps `;`, `,` and `\\` in a name through its link", () => {
+    const state = presetState(preset("chain"));
+    state.rows = [
+      { ...blankRow(), name: "Day; after, the \\ day", month: "12", day: "26" },
+      { ...blankRow("dates"), name: "A,B;C", dates: "2026-03-20, 2026-04-02" },
+    ];
+    const url = encodeWidgetPermalink("holidays", permalinkOf(state));
+    const seeded = seedFromLocation("holidays", url.slice(url.indexOf("?")));
+    expect(readArgs(seeded as never).rows).toEqual(state.rows);
   });
 
   it("keeps a half-filled row in its link", () => {

@@ -31,7 +31,7 @@ import {
   yearOfDate,
   yearTaken,
 } from "./moving-feasts";
-import { seedFromLocation } from "./widget-permalink";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 
 const preset = (id: string) => FEAST_PRESETS.find((p) => p.id === id)!;
 
@@ -172,6 +172,14 @@ describe("arguments and the permalink", () => {
 
   it("drops an offset the page does not offer", () => {
     expect(readArgs({ offsets: "99" }).offsets).toEqual(readArgs({}).offsets);
+  });
+
+  it("keeps no offsets through the link", () => {
+    expect(readArgs({ offsets: [] }).offsets).toEqual([]);
+    const state = { ...presetState(FEAST_PRESETS[0]!), offsets: [] };
+    const url = encodeWidgetPermalink("feasts", permalinkOf(state));
+    const seeded = seedFromLocation("feasts", url.slice(url.indexOf("?")));
+    expect(readArgs(seeded as never)).toEqual(state);
   });
 
   // The chat schema keeps its own copy of the offsets: it may import only `ai` and `zod`.

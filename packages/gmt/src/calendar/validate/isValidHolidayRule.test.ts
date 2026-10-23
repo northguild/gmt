@@ -3,6 +3,28 @@ import { isValidHolidayRule } from "./isValidHolidayRule";
 // oxlint-disable-next-line @northguild/gmt-oxlint/no-new-date -- unsupported-type fixture
 const makeDate = () => new Date(0); // date-ban: a Date as a non-rule input
 
+/** Month code → its longest length, `M01` first, for a calendar of `days.length` months. */
+const lengths = (days: number[]): Record<string, number> =>
+  Object.fromEntries(
+    days.map((n, i) => [`M${String(i + 1).padStart(2, "0")}`, n]),
+  );
+
+const GREGORIAN_LONGEST = lengths([
+  31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+]);
+const HEBREW_LONGEST = {
+  ...lengths([30, 30, 30, 29, 30, 29, 30, 29, 30, 29, 30, 29]),
+  M05L: 30,
+};
+const ISLAMIC_LONGEST = lengths([
+  30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 30,
+]);
+const UMALQURA_LONGEST = lengths(Array<number>(12).fill(30));
+const PERSIAN_LONGEST = lengths([
+  31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 30,
+]);
+const ETHIOPIC_LONGEST = lengths([...Array<number>(12).fill(30), 6]);
+
 describe("isValidHolidayRule", () => {
   it.each`
     rule                                                                                    | expected | why
@@ -111,40 +133,71 @@ describe("isValidHolidayRule", () => {
     ).toBe(expected);
   });
 
+  // The longest each month code can be, from the calendar definitions (Reingold & Dershowitz,
+  // Calendrical Calculations), never from the library: a day up to it is valid, the day after is not.
   it.each`
-    calendar
-    ${"iso8601"}
-    ${"gregory"}
-    ${"hebrew"}
-    ${"islamic-civil"}
-    ${"islamic-tbla"}
-    ${"islamic-umalqura"}
-    ${"islamicc"}
-    ${"Islamic-Civil"}
-    ${"japanese"}
-    ${"buddhist"}
-    ${"roc"}
-    ${"persian"}
-    ${"indian"}
-    ${"ethiopic"}
-    ${"ethioaa"}
-    ${"ethiopic-amete-alem"}
-    ${"coptic"}
-  `("calendarFixed $calendar accepts M01 to M12 and day 31", ({ calendar }) => {
-    for (let month = 1; month <= 12; month++) {
-      const monthCode = `M${String(month).padStart(2, "0")}`;
+    calendar                 | longest
+    ${"iso8601"}             | ${GREGORIAN_LONGEST}
+    ${"gregory"}             | ${GREGORIAN_LONGEST}
+    ${"japanese"}            | ${GREGORIAN_LONGEST}
+    ${"buddhist"}            | ${GREGORIAN_LONGEST}
+    ${"roc"}                 | ${GREGORIAN_LONGEST}
+    ${"hebrew"}              | ${HEBREW_LONGEST}
+    ${"islamic-civil"}       | ${ISLAMIC_LONGEST}
+    ${"islamic-tbla"}        | ${ISLAMIC_LONGEST}
+    ${"islamicc"}            | ${ISLAMIC_LONGEST}
+    ${"Islamic-Civil"}       | ${ISLAMIC_LONGEST}
+    ${"islamic-umalqura"}    | ${UMALQURA_LONGEST}
+    ${"persian"}             | ${PERSIAN_LONGEST}
+    ${"indian"}              | ${PERSIAN_LONGEST}
+    ${"ethiopic"}            | ${ETHIOPIC_LONGEST}
+    ${"ethioaa"}             | ${ETHIOPIC_LONGEST}
+    ${"ethiopic-amete-alem"} | ${ETHIOPIC_LONGEST}
+    ${"coptic"}              | ${ETHIOPIC_LONGEST}
+  `(
+    "calendarFixed $calendar accepts each month's longest day and not the day after",
+    ({ calendar, longest }) => {
+      for (const [monthCode, day] of Object.entries<number>(longest)) {
+        const rule = { name: "x", kind: "calendarFixed", calendar, monthCode };
 
+        expect(isValidHolidayRule({ ...rule, day })).toBe(true);
+        expect(isValidHolidayRule({ ...rule, day: day + 1 })).toBe(false);
+      }
+    },
+  );
+
+  it.each`
+    calendar              | monthCode | day   | expected | why
+    ${"hebrew"}           | ${"M01"}  | ${31} | ${false} | ${"Tishri has 30 days"}
+    ${"hebrew"}           | ${"M02"}  | ${30} | ${true}  | ${"Heshvan has 30 days in a complete year"}
+    ${"hebrew"}           | ${"M05L"} | ${30} | ${true}  | ${"Adar I has 30 days"}
+    ${"hebrew"}           | ${"M06"}  | ${30} | ${false} | ${"Adar and Adar II have 29 days"}
+    ${"ethiopic"}         | ${"M13"}  | ${6}  | ${true}  | ${"Pagume has 6 days in a leap year"}
+    ${"ethiopic"}         | ${"M13"}  | ${7}  | ${false} | ${"Pagume never has 7 days"}
+    ${"coptic"}           | ${"M13"}  | ${7}  | ${false} | ${"Nasie never has 7 days"}
+    ${"islamic-civil"}    | ${"M02"}  | ${30} | ${false} | ${"Safar has 29 days"}
+    ${"islamic-civil"}    | ${"M12"}  | ${30} | ${true}  | ${"Dhu al-Hijjah has 30 days in a leap year"}
+    ${"islamic-umalqura"} | ${"M02"}  | ${30} | ${true}  | ${"any Umm al-Qura month can have 30 days"}
+    ${"persian"}          | ${"M06"}  | ${31} | ${true}  | ${"Shahrivar has 31 days"}
+    ${"persian"}          | ${"M07"}  | ${31} | ${false} | ${"Mehr has 30 days"}
+    ${"indian"}           | ${"M01"}  | ${31} | ${true}  | ${"Chaitra has 31 days in a leap year"}
+    ${"indian"}           | ${"M07"}  | ${31} | ${false} | ${"Ashvina has 30 days"}
+    ${"gregory"}          | ${"M02"}  | ${29} | ${true}  | ${"February has 29 days in a leap year"}
+    ${"gregory"}          | ${"M02"}  | ${30} | ${false} | ${"no year has 30 February"}
+  `(
+    "calendarFixed $calendar $monthCode day $day: $expected, $why",
+    ({ calendar, monthCode, day, expected }) => {
       expect(
         isValidHolidayRule({
           name: "x",
           kind: "calendarFixed",
           calendar,
           monthCode,
-          day: 31,
+          day,
         }),
-      ).toBe(true);
-    }
-  });
+      ).toBe(expected);
+    },
+  );
 
   it.each`
     calendar                 | monthCode    | expected
@@ -205,8 +258,9 @@ describe("isValidHolidayRule", () => {
   it.each`
     calendar      | day          | expected
     ${"hebrew"}   | ${1}         | ${true}
-    ${"hebrew"}   | ${31}        | ${true}
+    ${"hebrew"}   | ${30}        | ${true}
     ${"hebrew"}   | ${0}         | ${false}
+    ${"hebrew"}   | ${31}        | ${false}
     ${"hebrew"}   | ${32}        | ${false}
     ${"hebrew"}   | ${-1}        | ${false}
     ${"hebrew"}   | ${1.5}       | ${false}

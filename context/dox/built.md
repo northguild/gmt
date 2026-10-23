@@ -800,8 +800,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `holiday-lib.ts`: the loader (`calendar/rules`, `calendar/validate`, `plain/compare`),
     throwing `WidgetLoadError`. Moving Feasts' `feasts-lib.ts` extends it with `plain/calculate`.
   - `holiday-codec.ts`: a policy as tokens (`6<5`, `7>1`, `7w`) and a rule as one `;` line, both
-    ways. It only reads text; whether a rule means anything is the library's call. It imports
-    types only, so it stays out of the heavy-module list.
+    ways. In a name, calendar, month code or date, a `\` escapes `;`, `,` and itself, and `\n` is
+    a line break, so a name keeps every character. It only reads text; whether a rule means
+    anything is the library's call. It imports types only, so it stays out of the heavy-module
+    list.
   - `holiday-widgets.ts`: `attributeRules(lib, spec, year)`, the month grid, week rows, legend and
     the seven-select policy editor. `buildBusinessCalendar` returns closed dates but not which rule
     closed each or where it moved from, so `attributeRules` calls the library on the rules before
@@ -817,13 +819,17 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     days it closes; plates count the year, twelve month grids draw it and the printed
     `buildBusinessCalendar` call is the library's answer. A new row has no observance policy and
     a blank policy is left out of the call. Rows redraw only when the list changes shape, so
-    focus and IME composition stay in a field. It hands the calendar to the Free Time Ledger
+    focus and IME composition stay in a field. A year outside 1900 to 2100 turns the rows, plates,
+    year note, call and output to NO SIGNAL or empty and leaves the grid unmarked, so nothing of
+    the last valid year stays on screen. It hands the calendar to the Free Time Ledger
     (`basis: "working"`) and a `fixed` row to the Comparator.
   - **Observance Comparator** (`/tools/observance-comparator/`, `observance`): one to three
     month-day holidays, a span of years, a weekend and two to four policy columns make a matrix of
     years by policies, each cell the day `observedDate` gives. A row where columns disagree says
     so in words and by a hatch. Picking a cell shows that year's weeks, one lane per column. A
-    column links to the Builder as `fixed` rules carrying its policy.
+    column links to the Builder as `fixed` rules carrying its policy. Given one policy (a link or
+    the chat), `readArgs` adds a column from the preset and lists it in `presetColumns`; a note
+    under the columns names it until the reader changes or removes it.
   - **Moving Feasts** (`/tools/moving-feasts/`, `feasts`): a year slider (the reader's year
     plus or minus 100) and typed year move the Gregorian and Julian Easter Sundays across February
     to June, the distance between them and the toggled offsets from each, labelled with offset
@@ -1331,9 +1337,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `rules` (one `;` line per rule, joined), `weekend`, `zone` and `year`; the Comparator's
   numbered `holiday1`… and `column1`…, `from`, `to`, `weekend` and `year`; Moving Feasts' `year`,
   `offsets`, `computus`, `month`, `weekday` and `ordinal`. `rules` (the Builder) and `holidays` (the
-  Ledger link the Builder sends) are in `LONG_STRING_KEYS` at 1000 characters, with a regression
-  test, because a year's calendar runs past 64 characters and the link would otherwise drop the
-  holidays silently.
+  Ledger link the Builder sends) are in `LONG_STRING_KEYS`, each with a regression test, because a
+  year's calendar runs past 64 characters and the link would otherwise drop the holidays silently.
+  `holidays` is capped at 1000 characters. `rules` is capped at 95,000, the longest list the chat
+  schema accepts once every name and date is escaped. An empty `weekend` or `offsets` is kept as no
+  weekend or no offsets (`EMPTY_LIST_KEYS`), not dropped.
 - **`escapeAttr` on every template interpolation.** Values come from a model or from a URL
   someone else wrote, and a hand-written template string escapes nothing.
 - **Interval visualizer:** the timeline is a `TimelineScale` value. Presets use the fixed

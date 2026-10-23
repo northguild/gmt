@@ -63,6 +63,7 @@ import {
   latestObserved,
   matchPreset,
   permalinkOf,
+  presetColumnsNote,
   presetState,
   readArgs,
   selectedColumn,
@@ -388,6 +389,7 @@ export function renderObservanceComparatorTemplate(
     : presetState(COMPARATOR_PRESETS[0]!);
   const presetId = matchPreset(state);
   const preset = COMPARATOR_PRESETS.find((p) => p.id === presetId);
+  const presetNote = presetColumnsNote(state);
   const weekendBoxes = [1, 2, 3, 4, 5, 6, 7]
     .map((d) =>
       chipToggleHtml({
@@ -446,6 +448,7 @@ export function renderObservanceComparatorTemplate(
     `<ol class="gmt-obs-list" data-role="columns">${columnsHtml(state, uid, false)}</ol>` +
     `<div class="gmt-obs-addrow"><button type="button" class="gmt-button gmt-button--pad" data-action="add-column"${state.columns.length >= MAX_COLUMNS ? " disabled" : ""}>Add column</button>` +
     `<span class="gmt-widget-hint" data-role="column-count">${state.columns.length} of ${MAX_COLUMNS} columns</span></div>` +
+    `<p class="gmt-widget-hint" data-role="column-note"${presetNote === "" ? " hidden" : ""}>${escapeHtml(presetNote)}</p>` +
     `</div>` +
     `</div>` +
     // 2. The matrix
@@ -586,6 +589,9 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
     )!.disabled = state.columns.length >= MAX_COLUMNS;
     q("column-count")!.textContent =
       `${state.columns.length} of ${MAX_COLUMNS} columns`;
+    const note = q("column-note")!;
+    note.textContent = presetColumnsNote(state);
+    note.hidden = note.textContent === "";
     if (focus) {
       const li = columnsEl.querySelector<HTMLElement>(
         `[data-column="${Math.min(focus.column, state.columns.length - 1)}"]`,
@@ -798,6 +804,7 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
       const value = (el as HTMLSelectElement).value;
       if (j < 0) return;
       state.columns[j] = value === CUSTOM_OPTION ? CUSTOM_PREFIX : value;
+      state.presetColumns = state.presetColumns.filter((i) => i !== j);
       state.column = -1;
       renderColumns({ column: j, sel: '[data-field="col-preset"]' });
       recompute();
@@ -854,6 +861,9 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
         const j = indexOf(button, "data-column");
         if (j < 0 || state.columns.length <= MIN_COLUMNS) break;
         state.columns.splice(j, 1);
+        state.presetColumns = state.presetColumns
+          .filter((i) => i !== j)
+          .map((i) => (i > j ? i - 1 : i));
         state.column = -1;
         renderColumns({ column: j, sel: '[data-field="col-preset"]' });
         recompute();

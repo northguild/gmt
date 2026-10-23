@@ -25,7 +25,6 @@ import {
 } from "./holiday-codec";
 import type { HolidayLib } from "./holiday-lib";
 import {
-  DEFAULT_WEEKEND,
   YEAR_MAX,
   YEAR_MIN,
   literal,
@@ -167,6 +166,10 @@ export interface ComparatorState {
   year: string;
   /** The selected column; `-1` picks the first column that moves anything. */
   column: number;
+  /** The columns, by index, that `readArgs` added from the preset because the
+   *  args gave fewer than `MIN_COLUMNS`. The widget names them until the
+   *  reader changes one. */
+  presetColumns: number[];
 }
 
 export function presetState(preset: ComparatorPreset): ComparatorState {
@@ -181,6 +184,7 @@ export function presetState(preset: ComparatorPreset): ComparatorState {
     columns: [...preset.columns],
     year: "",
     column: -1,
+    presetColumns: [],
   };
 }
 
@@ -352,7 +356,7 @@ function wholeNumber(value: number | string | undefined): string | null {
  * permalink) both land here; anything missing falls back to the named preset's
  * (or the first preset's) value for that control, never to a guess about the
  * reader's policy. A single column is topped up from the preset's columns so
- * the matrix has the two it needs.
+ * the matrix has the two it needs, and `presetColumns` says which were added.
  */
 export function readArgs(args: ObservanceComparatorArgs): ComparatorState {
   const base = COMPARATOR_PRESETS[0]!;
@@ -360,10 +364,13 @@ export function readArgs(args: ObservanceComparatorArgs): ComparatorState {
   const fallback = presetState(named ?? base);
   const holidays = holidaysOfArgs(args);
   let columns = columnsOfArgs(args);
+  const presetColumns: number[] = [];
   if (columns !== null && columns.length < MIN_COLUMNS) {
     for (const id of fallback.columns) {
       if (columns.length >= MIN_COLUMNS) break;
-      if (!columns.includes(id)) columns.push(id);
+      if (columns.includes(id)) continue;
+      presetColumns.push(columns.length);
+      columns.push(id);
     }
   }
   columns = columns ?? fallback.columns;
@@ -387,7 +394,20 @@ export function readArgs(args: ObservanceComparatorArgs): ComparatorState {
     columns,
     year: wholeNumber(args.year) ?? "",
     column: -1,
+    presetColumns,
   };
+}
+
+/** Which columns came from the preset, and why, for the widget to say: `""`
+ *  when the reader gave every column. */
+export function presetColumnsNote(state: ComparatorState): string {
+  const added = state.presetColumns.map((i) => i + 1);
+  if (added.length === 0) return "";
+  const which =
+    added.length === 1
+      ? `Column ${added[0]} was`
+      : `Columns ${added.join(" and ")} were`;
+  return `${which} added from the preset: a comparison needs at least ${MIN_COLUMNS} policies.`;
 }
 
 /** The preset the controls match, or `""` for none. */
@@ -887,7 +907,7 @@ export function compareHandoffHref(
     holiday1: `${pad2(String(month))}-${pad2(String(day))}`,
     from: String(first),
     to: String(Math.min(first + MAX_YEARS - 1, YEAR_MAX)),
-    weekend: (weekend.length > 0 ? weekend : DEFAULT_WEEKEND).join(","),
+    weekend: weekend.join(","),
   };
   if (year !== null) payload["year"] = String(year);
   const parsed = parsePolicyText(row.policy);

@@ -1,4 +1,7 @@
-import { calendarDateFromMonthCode } from "./calendarDateFromMonthCode";
+import {
+  calendarDateFromMonthCode,
+  longestDayOfMonthCode,
+} from "./calendarDateFromMonthCode";
 
 // Expected dates are the astronomical or arithmetic calendar events (1 Shawwal = Eid al-Fitr,
 // 15 Nisan = first day of Passover, Nowruz, the 6th of Pagume in an Ethiopian leap year), checked
@@ -88,4 +91,61 @@ describe("calendarDateFromMonthCode", () => {
       ).toThrow(RangeError);
     },
   );
+});
+
+const TWELVE = [
+  "M01",
+  "M02",
+  "M03",
+  "M04",
+  "M05",
+  "M06",
+  "M07",
+  "M08",
+  "M09",
+  "M10",
+  "M11",
+  "M12",
+];
+const HEBREW = [...TWELVE.slice(0, 5), "M05L", ...TWELVE.slice(5)];
+
+// Expected lengths are the calendar definitions (Reingold & Dershowitz, Calendrical Calculations),
+// never the function: a Hebrew complete year's 30-day Heshvan and Kislev, Islamic civil month 12 of
+// 30 days in a leap year, any Umm al-Qura month of 30, a Persian or Indian leap year's Esfand or
+// Chaitra, and Pagume of 6 days in an Ethiopian leap year.
+describe("longestDayOfMonthCode", () => {
+  it.each`
+    calendar              | monthCodes            | expected
+    ${"iso8601"}          | ${TWELVE}             | ${[31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]}
+    ${"gregory"}          | ${TWELVE}             | ${[31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]}
+    ${"japanese"}         | ${TWELVE}             | ${[31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]}
+    ${"buddhist"}         | ${TWELVE}             | ${[31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]}
+    ${"roc"}              | ${TWELVE}             | ${[31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]}
+    ${"hebrew"}           | ${HEBREW}             | ${[30, 30, 30, 29, 30, 30, 29, 30, 29, 30, 29, 30, 29]}
+    ${"islamic-civil"}    | ${TWELVE}             | ${[30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 30]}
+    ${"islamic-tbla"}     | ${TWELVE}             | ${[30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 30]}
+    ${"islamic-umalqura"} | ${TWELVE}             | ${[30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]}
+    ${"persian"}          | ${TWELVE}             | ${[31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 30]}
+    ${"indian"}           | ${TWELVE}             | ${[31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 30]}
+    ${"ethioaa"}          | ${[...TWELVE, "M13"]} | ${[30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 6]}
+  `(
+    "$calendar months are at most $expected days",
+    ({ calendar, monthCodes, expected }) => {
+      expect(
+        monthCodes.map((monthCode: string) =>
+          longestDayOfMonthCode(calendar, monthCode),
+        ),
+      ).toEqual(expected);
+    },
+  );
+
+  it.each`
+    calendar           | monthCode | why
+    ${"iso8601"}       | ${"M13"}  | ${"iso8601 has 12 months"}
+    ${"gregory"}       | ${"M05L"} | ${"only Hebrew has a leap month code"}
+    ${"islamic-civil"} | ${"M13"}  | ${"an Islamic year has 12 months"}
+    ${"hebrew"}        | ${"M13"}  | ${"a Hebrew leap year adds M05L, not M13"}
+  `("$calendar $monthCode is 0: $why", ({ calendar, monthCode }) => {
+    expect(longestDayOfMonthCode(calendar, monthCode)).toBe(0);
+  });
 });

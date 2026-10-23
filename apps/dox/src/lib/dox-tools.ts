@@ -1053,7 +1053,7 @@ export const DOX_TOOL_DOCS: {
     purpose:
       "Compare observance policies side by side: where each of one to three holidays is observed, year by year, under up to four policies the reader gave.",
     when: "the reader asks how a holiday moves when it falls on a weekend, or where two policies disagree on the same date",
-    args: "holidays (month and day), years (from and to), weekend (ISO weekdays), policies (the reader's own, as weekday to shift), year (the row to open). Pass only rules, dates and policies the reader gave. Never supply a place's holidays or its observance policy from memory. Policies are the reader's; never name a place's policy.",
+    args: "holidays (month and day), years (from and to), weekend (ISO weekdays), policies (the reader's own, as weekday to shift; a comparison needs two, so given one the widget adds a column from its preset and says so, and you say the added column is not the reader's), year (the row to open). Pass only rules, dates and policies the reader gave. Never supply a place's holidays or its observance policy from memory. Policies are the reader's; never name a place's policy.",
   },
   {
     name: "showMovingFeasts",

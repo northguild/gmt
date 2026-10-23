@@ -307,7 +307,8 @@ operations.
     `nthWeekdayOfMonth` and `easterSunday` return `""` for bad input or a
     missing occurrence (a fifth Friday in a four-Friday month), `holidayDates`
     returns `[]` and `buildBusinessCalendar` returns `null`; use
-    `isValidHolidayRule` to tell a bad rule from a year with no occurrence.
+    `isValidHolidayRule` to tell a bad rule from a year with no occurrence (a
+    `calendarFixed` day its month never has, such as Hebrew `M01` day 31, is bad).
     A `nextWorkingDay` shift walks past the weekend, every holiday that does
     not walk and the walks of the rules above it; the days that close do not
     depend on the rule order. A date a year lacks (29 February) is skipped, never

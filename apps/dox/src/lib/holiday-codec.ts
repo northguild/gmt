@@ -81,10 +81,41 @@ export function formatPolicyText(policy: ObservancePolicy): string {
 // Rule lines
 // ---------------------------------------------------------------------------
 
-/** A name as the line carries it: no `;`, newline or comma (those are the
- *  line's and the date list's separators), and no outer space. */
-export function cleanRuleName(name: string): string {
-  return name.replace(/[;,\r\n]/g, "").trim();
+const ESCAPES: Readonly<Record<string, string>> = {
+  "\\": "\\\\",
+  ";": "\\;",
+  ",": "\\,",
+  "\n": "\\n",
+  "\r": "\\r",
+};
+
+/** Text as a line's field: `\`, `;` and `,` (the escape and the two
+ *  separators) take a `\` before them, and a line break is `\n` or `\r`. */
+function escapeField(text: string): string {
+  return text.replace(/[\\;,\r\n]/g, (char) => ESCAPES[char]!);
+}
+
+/** A field as text: the inverse of `escapeField`. A `\` before any other
+ *  character keeps that character, and a `\` at the end is kept. */
+function unescapeField(field: string): string {
+  return field.replace(/\\([\s\S])/g, (_, char: string) =>
+    char === "n" ? "\n" : char === "r" ? "\r" : char,
+  );
+}
+
+/** `text` cut at each `separator` that no `\` escapes, the escapes kept. */
+function splitUnescaped(text: string, separator: string): string[] {
+  const parts: string[] = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "\\") i++;
+    else if (text[i] === separator) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts;
 }
 
 const INTEGER = /^-?\d+$/;
@@ -137,15 +168,17 @@ const pad2 = (n: number) => (Number.isNaN(n) ? "" : String(n).padStart(2, "0"));
  * - `name;e;offset[;j]` is `easterRelative` (`j` means the Julian computus);
  * - `name;d;date,date,…` is `dates`.
  *
- * A blank policy is left out of the rule, never filled in. A blank number is
- * `NaN` and a blank calendar or month code `""`. `null` for a line it cannot
- * read. Validity is the library's to decide.
+ * In the name, a calendar, a month code or a date, `\;`, `\,` and `\\` are a
+ * `;`, `,` and `\`, and `\n` and `\r` a line break (`escapeField`). A blank
+ * policy is left out of the rule, never filled in. A blank number is `NaN` and
+ * a blank calendar or month code `""`. `null` for a line it cannot read.
+ * Validity is the library's to decide.
  */
 export function parseRuleLine(line: string): HolidayRule | null {
-  const parts = line.split(";").map((part) => part.trim());
-  const name = parts[0];
+  const parts = splitUnescaped(line, ";").map((part) => part.trim());
   const kind = parts[1];
-  if (name === undefined || kind === undefined) return null;
+  if (kind === undefined) return null;
+  const name = unescapeField(parts[0]!);
   const rest = parts.slice(2);
   switch (kind) {
     case "f": {
@@ -165,8 +198,8 @@ export function parseRuleLine(line: string): HolidayRule | null {
       return {
         name,
         kind: "calendarFixed",
-        calendar: rest[0] as CalendarSystem,
-        monthCode: rest[1]!,
+        calendar: unescapeField(rest[0]!) as CalendarSystem,
+        monthCode: unescapeField(rest[1]!),
         day,
         ...observed,
       };
@@ -197,10 +230,10 @@ export function parseRuleLine(line: string): HolidayRule | null {
     }
     case "d": {
       if (rest.length !== 1) return null;
-      const dates = rest[0]!
-        .split(",")
+      const dates = splitUnescaped(rest[0]!, ",")
         .map((date) => date.trim())
-        .filter((date) => date !== "");
+        .filter((date) => date !== "")
+        .map(unescapeField);
       return { name, kind: "dates", dates };
     }
     default:
@@ -208,11 +241,12 @@ export function parseRuleLine(line: string): HolidayRule | null {
   }
 }
 
-/** A rule as one line. The inverse of `parseRuleLine` for any rule the editor
- *  makes: `parseRuleLine(formatRuleLine(rule))` equals the rule, except that an
- *  empty policy and a gregorian `computus` come back left out. */
+/** A rule as one line, each text field escaped (`escapeField`). The inverse of
+ *  `parseRuleLine`: `parseRuleLine(formatRuleLine(rule))` equals the rule,
+ *  except that space around a text field, an empty date, an empty policy and
+ *  a gregorian `computus` come back left out. */
 export function formatRuleLine(rule: HolidayRule): string {
-  const name = cleanRuleName(rule.name);
+  const name = escapeField(rule.name.trim());
   const policy = (observed: ObservancePolicy | undefined): string[] => {
     const text = observed === undefined ? "" : formatPolicyText(observed);
     return text === "" ? [] : [text];
@@ -229,8 +263,8 @@ export function formatRuleLine(rule: HolidayRule): string {
       return [
         name,
         "c",
-        rule.calendar,
-        rule.monthCode,
+        escapeField(rule.calendar),
+        escapeField(rule.monthCode),
         numberText(rule.day),
         ...policy(rule.observed),
       ].join(";");
@@ -250,7 +284,7 @@ export function formatRuleLine(rule: HolidayRule): string {
         ...(rule.computus === "julian" ? ["j"] : []),
       ].join(";");
     case "dates":
-      return [name, "d", rule.dates.join(",")].join(";");
+      return [name, "d", rule.dates.map(escapeField).join(",")].join(";");
   }
 }
 

@@ -70,7 +70,11 @@ export type HolidayRule = {
       calendar: CalendarSystem;
       /** Month code: `"M01"` to `"M12"`, plus `"M13"` (coptic, ethiopic, ethioaa) and `"M05L"` (hebrew). */
       monthCode: string;
-      /** Day of the month, 1 to 31; a month that lacks the day skips that year. */
+      /**
+       * Day of the month, from 1 to the most days the month has in any year: 30 for Hebrew `M01`,
+       * 29 for Islamic civil `M02`, 6 for `M13`. A year whose month is shorter has no date, as
+       * Heshvan 30 in a Hebrew year of 354 days.
+       */
       day: number;
       /**
        * Where the holiday is observed when it falls on a weekday the policy shifts.

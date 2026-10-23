@@ -495,7 +495,7 @@ function rowsOfArg(rules: unknown): RowState[] | null {
  * Seed arguments as controls. Typed values (the chat) and their text forms (a
  * permalink) both land here; anything unusable falls back to the first
  * preset's value for that control, never to a guess about the reader's rules.
- * A missing weekend means `[6, 7]`.
+ * A missing weekend means `[6, 7]`; an empty one means no weekend.
  */
 export function readArgs(args: HolidayRuleBuilderArgs): BuilderState {
   const base = BUILDER_PRESETS[0]!;
@@ -848,6 +848,8 @@ export type Handoff = { href: string } | { href: null; hint: string };
 export const HANDOFF_NO_CALENDAR =
   "There is no calendar to send: fix the rows marked NO SIGNAL first.";
 export const HANDOFF_TOO_LONG = "The calendar is too long to send in a link.";
+export const HANDOFF_NO_YEAR =
+  "There is no calendar to send: the year is not valid.";
 
 /**
  * The link to the Free Time Ledger: the weekend, the closed dates, the zone and
