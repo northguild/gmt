@@ -8,7 +8,6 @@ import { KEY_POINTS_HEADING, partsHtml } from "../data/clock-change-text";
 import type { KeyCard } from "../data/clock-change-text";
 import { NO_SIGNAL } from "./clock-change-common";
 import { GMT_MODULES } from "./gmt-modules";
-import { withBase } from "./site";
 import {
   INERT_HANDLE,
   WidgetLoadError,
@@ -62,14 +61,17 @@ export type Answer<T> =
   | { kind: "rate-limited"; seconds: number | null }
   | { kind: "failed" };
 
-/** One GET of a region's endpoint, as a value: a 429 and a failure are answers, not throws. */
+/**
+ * One GET of a region's endpoint, as a value: a 429 and a failure are answers, not throws. `url`
+ * is the full site path, already through `withBase`, so the dist guard sees the base at the call.
+ */
 export async function ask<T>(
-  endpoint: string,
+  url: string,
   fetchFn: typeof fetch,
   signal: AbortSignal,
 ): Promise<Answer<T>> {
   try {
-    const response = await fetchFn(withBase(endpoint), { signal });
+    const response = await fetchFn(url, { signal });
     if (response.status === 429) {
       const seconds = Number(response.headers.get("retry-after"));
       return {

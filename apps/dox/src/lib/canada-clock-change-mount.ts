@@ -61,6 +61,7 @@ import {
   yearsOf,
 } from "./clock-change-mount";
 import type { ClockChangeChatArgs, ClockLib } from "./clock-change-mount";
+import { withBase } from "./site";
 import { bindClockGlow } from "./crystal-clock";
 import { showUnavailable } from "./widget-mount";
 import { escapeHtml } from "./widget-ui";
@@ -266,7 +267,7 @@ export async function mountCanadaClockChange(
     recheck?.setAttribute("aria-busy", "true");
     if (status) status.textContent = "";
     const answer = await ask<CanadaCheck>(
-      "/api/canada-clock-change",
+      withBase("/api/canada-clock-change"),
       fetchFn,
       signal,
     );

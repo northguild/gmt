@@ -68,6 +68,7 @@ import {
   yearsOf,
 } from "./clock-change-mount";
 import type { ClockChangeChatArgs, ClockLib } from "./clock-change-mount";
+import { withBase } from "./site";
 import { bindClockGlow } from "./crystal-clock";
 import { showUnavailable } from "./widget-mount";
 import { escapeAttr, escapeHtml } from "./widget-ui";
@@ -322,7 +323,7 @@ export async function mountMoroccoClockChange(
     recheck?.setAttribute("aria-busy", "true");
     if (status) status.textContent = "";
     const answer = await ask<MoroccoCheck>(
-      "/api/morocco-clock-change",
+      withBase("/api/morocco-clock-change"),
       fetchFn,
       signal,
     );
