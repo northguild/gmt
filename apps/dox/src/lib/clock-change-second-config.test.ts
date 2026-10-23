@@ -3,6 +3,8 @@
  * the shared parts is that nothing in them knows which checker uses them, so a made-up checker
  * with the id prefix `x` must produce markup with no trace of Canada.
  */
+import { plainText } from "./clock-change-tense";
+import { moroccoTense } from "./clock-change-tense.fixture";
 import { describe, expect, it } from "vitest";
 import { clocksHtml } from "./clock-change-clocks";
 import { helpCardHtml, helpMarkdown, helpText } from "./clock-change-help";
@@ -32,8 +34,8 @@ const NOT_CANADA = /canada/i;
 const PROBE: ProbeConfig = {
   idPrefix: "x",
   zones: [
-    { zone: "Africa/Casablanca", expected: "+01:00" },
-    { zone: "Africa/El_Aaiun", expected: "+01:00" },
+    { zone: "Africa/Casablanca", expected: { verdict: "+01:00" } },
+    { zone: "Africa/El_Aaiun", expected: { verdict: "+01:00" } },
   ],
   instants: [
     { iso: "2026-06-01T12:00:00Z", epochMs: 1780315200000, role: "verdict" },
@@ -59,6 +61,45 @@ describe("clock-change-probe with a second config", () => {
     expect(html).toContain("Casablanca");
     expect(html).not.toMatch(NOT_CANADA);
     expect(verdictHtml(["Casablanca"], TEXT)).not.toMatch(NOT_CANADA);
+  });
+
+  it("gives the verdict row and the blind row each its own instant's correct offset", () => {
+    // A made-up region whose blind instant is in summer time and whose verdict instant is not.
+    const config: ProbeConfig = {
+      idPrefix: "x",
+      zones: [
+        {
+          zone: "Europe/Lisbon",
+          expected: { verdict: "+00:00", blind: "+01:00" },
+        },
+      ],
+      instants: [
+        {
+          iso: "2026-12-01T12:00:00Z",
+          epochMs: 1796126400000,
+          role: "verdict",
+        },
+        { iso: "2026-07-01T12:00:00Z", epochMs: 1782907200000, role: "blind" },
+      ],
+    };
+    const html = browserCardHtml(config, { ...TEXT, blindNote: "Shown only." });
+    const cell = (row: string): string =>
+      new RegExp(
+        `<tr role="row" ${row}[^>]*>.*?data-label="Correct" class="gmt-clockcheck-num">([^<]*)</td>`,
+      ).exec(html)![1]!;
+    expect(cell('data-zone="Europe/Lisbon"')).toBe("+00:00");
+    expect(cell('data-blind-zone="Europe/Lisbon"')).toBe("+01:00");
+  });
+
+  it("refuses a blind instant that has no expected offset", () => {
+    const config: ProbeConfig = {
+      ...PROBE,
+      instants: [
+        ...PROBE.instants,
+        { iso: "2026-07-01T12:00:00Z", epochMs: 1782907200000, role: "blind" },
+      ],
+    };
+    expect(() => browserCardHtml(config, TEXT)).toThrow(/no expected offset/);
   });
 
   it("builds the inline script for that card", () => {
@@ -141,16 +182,16 @@ const MAP: ZoneMapConfig = {
     throw new Error("not drawn here");
   },
   stopped: new Set(["Africa/Casablanca"]),
-  kindLabels: {
-    stopped: "Stops",
-    "changes-after": "Changes",
-    none: "Never",
-  },
+  classText: (kind) =>
+    plainText(
+      { stopped: "Stops", "changes-after": "Changes", none: "Never" }[kind],
+    ),
   releaseOf: (id) => (id === "Africa/Casablanca" ? "9z" : null),
   releaseRange: "9a to 9z",
   mapLabel: "Map of x.",
   labelled: [],
   anchors: {},
+  creditsCorner: "corner",
 };
 
 const ROW = (zone: string, kind: MapZone["kind"]): MapZone => ({
@@ -170,7 +211,9 @@ describe("zone-map with a second config", () => {
         ROW("Africa/Casablanca", "changes-after"),
       ),
     ).toBe("stopped");
-    expect(classWords(MAP, "Africa/Casablanca", undefined)).toBe("Stops");
+    expect(classWords(MAP, "Africa/Casablanca", undefined, moroccoTense)).toBe(
+      "Stops",
+    );
     expect(releaseWords(MAP, "Africa/Casablanca")).toBe("tzdb 9z");
     expect(releaseWords(MAP, "Africa/El_Aaiun")).toContain("9a to 9z");
     const rows = new Map([["Africa/El_Aaiun", ROW("Africa/El_Aaiun", "none")]]);

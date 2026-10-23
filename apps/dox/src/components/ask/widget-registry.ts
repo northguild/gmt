@@ -939,12 +939,16 @@ const canadaClockEntry = defineWidget<CanadaClockChangeArgs>({
   },
   /* The mount pins the zone once the Worker has answered, so the template paints the same
      everywhere. The credits button is in the frame's corner: the map draws third-party shapes. */
-  load: () =>
-    import("~/lib/canada-clock-change-mount").then((m) => ({
+  load: async () => {
+    const m = await import("~/lib/canada-clock-change-mount");
+    // The legend and the zone list state the change in the true tense, so the library loads first.
+    const tense = await m.loadCanadaTense();
+    return {
       renderTemplate: (idPrefix) =>
-        m.renderCanadaClockChangeWidgetTemplate(idPrefix),
+        m.renderCanadaClockChangeWidgetTemplate(idPrefix, tense),
       mount: m.mountCanadaClockChangeWidget,
-    })),
+    };
+  },
   /* A zone outside the checker's own list would open unpinned, so refuse it with the reason.
      The list is a JSON import kept out of the chat's first download. */
   validate: async ({ zone }) => {
@@ -1033,12 +1037,16 @@ const moroccoClockEntry = defineWidget<MoroccoClockChangeArgs>({
   },
   /* The mount pins the zone once the Worker has answered, so the template paints the same
      everywhere. The credits button is in the frame's corner: the map draws third-party shapes. */
-  load: () =>
-    import("~/lib/morocco-clock-change-mount").then((m) => ({
+  load: async () => {
+    const m = await import("~/lib/morocco-clock-change-mount");
+    // The legend and the zone list state the change's date and time, so the library loads first.
+    const tense = await m.loadMoroccoTense();
+    return {
       renderTemplate: (idPrefix) =>
-        m.renderMoroccoClockChangeWidgetTemplate(idPrefix),
+        m.renderMoroccoClockChangeWidgetTemplate(idPrefix, tense),
       mount: m.mountMoroccoClockChangeWidget,
-    })),
+    };
+  },
   /* A zone outside the checker's own list would open unpinned, so refuse it with the reason.
      The list is a JSON import kept out of the chat's first download. */
   validate: async ({ zone }) => {

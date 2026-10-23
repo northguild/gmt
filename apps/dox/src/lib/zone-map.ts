@@ -13,7 +13,7 @@
  * so a pointer reaches them and the Tab key does not walk 23 of them.
  *
  * **Below 520 px of section width the map is not drawn and its file is not fetched.** The list
- * stays, and the pin panel opens under the pressed button. The data-credits button belongs to the
+ * stays, and the pin panel opens below it, scrolled into view when a reader pins. The data-credits button belongs to the
  * drawing, so it is added when the map is drawn and a narrow section has none.
  */
 import { geoPath } from "d3-geo";
@@ -24,12 +24,15 @@ import { updateCrystalClock } from "./crystal-clock";
 import {
   renderDataCreditsHtml,
   COASTLINES,
+  type DataCreditsPlacement,
   TZ_BOUNDARIES,
   watchDataCredits,
 } from "./data-credits";
 import { spokenOffset } from "./crossing-clock";
 import { enter } from "./enter";
-import { escapeAttr, escapeHtml } from "./widget-ui";
+import { escapeAttr, escapeHtml, zoneIdHtml } from "./widget-ui";
+import { plainText, tensedHtml, tensedPlain } from "./clock-change-tense";
+import type { Tensed, TenseView } from "./clock-change-tense";
 import {
   LABEL_HEIGHT_PX,
   cityOf,
@@ -101,8 +104,15 @@ export interface ZoneMapConfig {
   ) => GeoProjection;
   /** The zones the page states as the first class, from its own facts and never from a runtime's data. */
   stopped: ReadonlySet<string>;
-  /** The words of each class. */
-  kindLabels: Readonly<Record<MapZone["kind"], string>>;
+  /**
+   * The words of each class in both tenses. `id` is the zone the words are for, or `null` for the
+   * legend. The tense view says which form is true now and writes the dates.
+   */
+  classText: (
+    kind: MapZone["kind"],
+    id: string | null,
+    view: TenseView,
+  ) => Tensed;
   /** The release that recorded the change of a stopped zone, for the "Recorded in" line. */
   releaseOf: (id: string) => string | null;
   /** The releases the "no change recorded" line names: `2026b to 2026e`. */
@@ -130,6 +140,8 @@ export interface ZoneMapConfig {
    * farthest from the edge.
    */
   anchors: Readonly<Record<string, readonly [lon: number, lat: number]>>;
+  /** The corner the credits button sits in: one the region's land leaves empty. */
+  creditsCorner: Extract<DataCreditsPlacement, "corner" | "corner-start">;
 }
 
 // ---------------------------------------------------------------------------
@@ -162,16 +174,27 @@ export function displayKind(
   return zone?.kind ?? "no-data";
 }
 
-/** The class words of a zone, or "no data" when the server sent no row. */
+/** The class words of a zone in both tenses, or "no data" when the server sent no row. */
+export function classPhraseOf(
+  config: ZoneMapConfig,
+  id: string,
+  zone: MapZone | undefined,
+  view: TenseView,
+): Tensed {
+  const kind = displayKind(config, id, zone);
+  return kind === "no-data"
+    ? plainText("no data")
+    : config.classText(kind as MapZone["kind"], id, view);
+}
+
+/** The class words of a zone in the form that is true now. */
 export function classWords(
   config: ZoneMapConfig,
   id: string,
   zone: MapZone | undefined,
+  view: TenseView,
 ): string {
-  const kind = displayKind(config, id, zone);
-  return kind === "no-data"
-    ? "no data"
-    : config.kindLabels[kind as MapZone["kind"]];
+  return tensedPlain(classPhraseOf(config, id, zone, view), view);
 }
 
 /**
@@ -279,6 +302,8 @@ export function renderPinPanelHtml(): string {
 // ---------------------------------------------------------------------------
 
 export interface ZoneMapDeps {
+  /** Which tense is true now, and the dates in words. Read again at each redraw. */
+  tense: () => TenseView;
   /** The response's `now`: the year of the empty-change sentences. */
   responseNow: string;
   /** The client's now as a UTC instant. */
@@ -298,6 +323,8 @@ export interface ZoneMapDeps {
 }
 
 export interface ZoneMapHandle {
+  /** Redraws the words that hold a tense in text (labels, the announcement) after a moment passed. */
+  retense(): void;
   /** Pins `id`; false when it is not in the list. */
   pin(id: string): boolean;
   /** The pinned zone id, or null. */
@@ -347,9 +374,6 @@ export function mountZoneMap(
   const ready = new Promise<void>((resolve) => {
     resolveReady = resolve;
   });
-  const panelHome = panel?.parentElement ?? null;
-  // The panel returns to the same place among its siblings, not to the end of them.
-  const panelNext = panel?.nextElementSibling ?? null;
 
   // --- the list ------------------------------------------------------------
   for (const button of buttons) {
@@ -357,7 +381,12 @@ export function mountZoneMap(
     const zone = rows.get(id);
     const kind = q<HTMLElement>('[data-role="kind"]', button);
     const offset = q<HTMLElement>('[data-role="offset"]', button);
-    if (kind) kind.textContent = classWords(config, id, zone);
+    if (kind) {
+      kind.innerHTML = tensedHtml(
+        classPhraseOf(config, id, zone, deps.tense()),
+        deps.tense(),
+      );
+    }
     if (offset) {
       if (zone && zone.offset !== "") offset.textContent = zone.offset;
       else offset.innerHTML = NO_SIGNAL;
@@ -370,10 +399,11 @@ export function mountZoneMap(
   // The legend's counts, from the zones the list holds.
   const counts = classCounts(config, [...byId.keys()], rows);
   for (const [kind, count] of Object.entries(counts)) {
-    const el = q<HTMLElement>(
+    // One copy per form of a two-form legend phrase.
+    for (const el of root.querySelectorAll<HTMLElement>(
       `[data-role="legend-count"][data-kind="${kind}"]`,
-    );
-    if (el) el.textContent = String(count);
+    ))
+      el.textContent = String(count);
   }
   // One line above the live clocks when the server's data is older than tzdb 2026e.
   const notice = q<HTMLElement>('[data-role="clocks-notice"]');
@@ -386,7 +416,7 @@ export function mountZoneMap(
 
   /**
    * Scrolls the list's own box, never the page, until `el` is in view. An element taller than the
-   * box (a button with the narrow panel under it) lines its top edge up with the box's.
+   * box lines its top edge up with the box's.
    */
   function reveal(el: HTMLElement | null | undefined): void {
     if (!scroller || !el) return;
@@ -481,7 +511,7 @@ export function mountZoneMap(
       announce.textContent =
         pinnedId === null
           ? ""
-          : `Pinned ${pinnedId}. ${classWords(config, pinnedId, rows.get(pinnedId))}.`;
+          : `Pinned ${pinnedId}. ${classWords(config, pinnedId, rows.get(pinnedId), deps.tense())}.`;
     }
     const rest = [
       "pin-time",
@@ -498,11 +528,15 @@ export function mountZoneMap(
       if (clock) clock.innerHTML = "";
       return;
     }
-    set("pin-zone", pinnedId);
+    const zoneEl = field("pin-zone");
+    if (zoneEl) zoneEl.innerHTML = zoneIdHtml(pinnedId);
     if (classEl) {
       classEl.innerHTML =
         `<span class="gmt-zonemap-swatch gmt-theme-dark" data-kind="${displayKind(config, pinnedId, zone)}" aria-hidden="true"></span>` +
-        escapeHtml(classWords(config, pinnedId, zone));
+        tensedHtml(
+          classPhraseOf(config, pinnedId, zone, deps.tense()),
+          deps.tense(),
+        );
     }
     if (!zone) {
       for (const role of rest) set(role, EMPTY);
@@ -561,19 +595,13 @@ export function mountZoneMap(
   }
   signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
 
-  /** Narrow: the panel sits under the pressed button. Wide: it returns to its fixed place. */
+  /**
+   * The panel stays in its own place, below the list's box, at every width: inside the box it
+   * would be taller than the box and scroll with the list. Narrow, the style sheet hides it until
+   * a zone is pinned (`data-pinned`); the section has no map to fill that space.
+   */
   function placePanel(): void {
-    if (!panel || !panelHome) return;
-    const narrow = measure() < NARROW_PX;
-    const button = pinnedId === null ? undefined : byId.get(pinnedId);
-    if (narrow && button?.parentElement) {
-      button.parentElement.append(panel);
-      panel.hidden = false;
-    } else {
-      if (panel.parentElement !== panelHome)
-        panelHome.insertBefore(panel, panelNext);
-      panel.hidden = narrow && pinnedId === null;
-    }
+    if (panel) panel.dataset.pinned = String(pinnedId !== null);
   }
 
   function writeUrl(id: string): void {
@@ -605,7 +633,11 @@ export function mountZoneMap(
     placePanel();
     tick();
     const button = byId.get(id);
-    reveal(measure() < NARROW_PX ? button?.parentElement : button);
+    reveal(button);
+    // Narrow, the panel opens below the list, which may be off screen: bring it into view when the
+    // reader pins (not when the page loads on a `?zone=` link).
+    if (write && measure() < NARROW_PX)
+      panel?.scrollIntoView?.({ block: "nearest" });
     if (write) writeUrl(id);
     return true;
   }
@@ -674,7 +706,10 @@ export function mountZoneMap(
       ring.setAttribute("role", "button");
       ring.setAttribute("tabindex", "-1");
       ring.setAttribute("aria-pressed", "false");
-      ring.setAttribute("aria-label", `${id}, ${classWords(config, id, zone)}`);
+      ring.setAttribute(
+        "aria-label",
+        `${id}, ${classWords(config, id, zone, deps.tense())}`,
+      );
       svg.append(ring);
       made.set(id, ring);
     }
@@ -778,7 +813,7 @@ export function mountZoneMap(
       shape.setAttribute("aria-pressed", "false");
       shape.setAttribute(
         "aria-label",
-        `${id}, ${classWords(config, id, zone)}`,
+        `${id}, ${classWords(config, id, zone, deps.tense())}`,
       );
       next.set(id, shape);
       if (config.stopped.has(id)) stopped.push(shape);
@@ -849,7 +884,7 @@ export function mountZoneMap(
       "beforeend",
       renderDataCreditsHtml([TZ_BOUNDARIES, COASTLINES], {
         id: frame.dataset.creditsId ?? `${config.idPrefix}-data-credits`,
-        placement: "corner",
+        placement: config.creditsCorner,
       }),
     );
     if (pinnedId !== null) pin(pinnedId, false);
@@ -935,7 +970,24 @@ export function mountZoneMap(
   }
   arm();
 
-  return { pin: (id) => pin(id), pinned: () => pinnedId, ready };
+  /** Rewrites the words that hold a tense as text: the shapes' and rings' labels, the announcement. */
+  function retense(): void {
+    const view = deps.tense();
+    for (const group of [shapes, rings]) {
+      for (const [id, el] of group) {
+        el.setAttribute(
+          "aria-label",
+          `${id}, ${classWords(config, id, rows.get(id), view)}`,
+        );
+      }
+    }
+    const announce = field("pin-announce");
+    if (announce && pinnedId !== null) {
+      announce.textContent = `Pinned ${pinnedId}. ${classWords(config, pinnedId, rows.get(pinnedId), view)}.`;
+    }
+  }
+
+  return { pin: (id) => pin(id), pinned: () => pinnedId, ready, retense };
 }
 
 /**
@@ -1013,7 +1065,7 @@ export function zoneListItemHtml(zone: string): string {
   const id = escapeAttr(zone);
   return (
     `<li class="gmt-zonemap-zone"><button type="button" class="gmt-zonemap-zone-btn" data-tz-id="${id}" aria-pressed="false">` +
-    `<span class="gmt-zonemap-zone-id"><code>${escapeHtml(zone)}</code></span>` +
+    `<span class="gmt-zonemap-zone-id"><code>${zoneIdHtml(zone)}</code></span>` +
     `<span class="gmt-zonemap-zone-kind"><span class="gmt-zonemap-swatch gmt-theme-dark" data-role="swatch" data-kind="no-data" aria-hidden="true"></span><span data-role="kind">no answer yet</span></span>` +
     `<span class="gmt-zonemap-zone-offset" data-role="offset">${NO_SIGNAL}</span>` +
     `</button></li>`

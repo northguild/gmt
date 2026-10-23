@@ -13,21 +13,24 @@
  *     never letterboxes),
  *   - no card of the map row (map, zone card, clocks) has more than 48 px between its last text
  *     or drawing and its bottom edge, and
+ *   - every probe table fits the card that holds it, with no sideways scroll, and no cell of it
+ *     is wider than its own box (a word never breaks out of a stacked row; run it at 300 too),
  *   - no two place labels overlap, none crosses the frame, and a label's real box is no wider than
  *     the box the code reserved for it.
  *
  * Serve a build statically first (never `astro preview`, never the owner's dev server):
  *   pnpm exec astro build --outDir /tmp/dist-x/gmt
- *   python3 -m http.server 4351 --bind 127.0.0.1 --directory /tmp/dist-x
+ *   node scripts/lib/static-server.mjs /tmp/dist-x 4351
  *
  * Usage:
  *   node scripts/canada-layout-check.mjs --base http://127.0.0.1:4351/gmt [--widths 1440,1024]
  *     [--path <page>]   the checker page; Canada by default, or /check/morocco-2026-clock-change/
  *     [--fixture <file>]  a Worker answer (.json) served for the page's GET, so results arrive
  *     [--shots <dir>]   also writes a dark and a light screenshot of the stack per width
+ *     [--engine webkit]  run in WebKit instead of Chromium (its 20px scrollbar narrows the page)
  */
 
-import { chromium } from "@playwright/test";
+import { chromium, webkit } from "@playwright/test";
 import { mkdirSync, readFileSync } from "node:fs";
 import { blockOffSite } from "./gate-checks.mjs";
 
@@ -37,7 +40,8 @@ const arg = (name, fallback) => {
   return i === -1 ? fallback : (args[i + 1] ?? fallback);
 };
 const BASE = arg("base", "http://127.0.0.1:4351/gmt").replace(/\/$/, "");
-const WIDTHS = arg("widths", "1440,1024").split(",").map(Number);
+const WIDTHS = arg("widths", "1440,1024,300").split(",").map(Number);
+const ENGINE = arg("engine", "chromium") === "webkit" ? webkit : chromium;
 const SHOTS = arg("shots", "");
 const PATH = arg("path", "/check/canada-2026-clock-change/");
 /* `canada` or `morocco`: the page's class and ids are named after its checker. */
@@ -53,8 +57,8 @@ const CARDS = {
   keypoints: ".gmt-keypoints",
   browser: ".gmt-clockcheck-browser",
   map: ".gmt-zonemap-stage",
-  pick: `.gmt-${WORD}-pickcard`,
-  clocks: `.gmt-${WORD}-nowsec`,
+  pick: `.gmt-clockcheck-pickcard`,
+  clocks: `.gmt-clockcheck-nowsec`,
   servers: ".gmt-clockcheck-servers",
   minimums: ".gmt-clockcheck-minimums",
   changes: `section[aria-labelledby=${WORD}-changes-title]`,
@@ -69,7 +73,7 @@ const ASPECT_TOLERANCE = 0.02;
 const failures = [];
 const fail = (message) => failures.push(message);
 
-const browser = await chromium.launch();
+const browser = await ENGINE.launch();
 for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
   for (const width of WIDTHS) {
     const context = await browser.newContext({
@@ -102,7 +106,7 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
       .catch(() => {});
     await page.waitForTimeout(500);
     const data = await page.evaluate(
-      ({ cards, word }) => {
+      ({ cards }) => {
         const rect = (selector) => {
           const el = document.querySelector(selector);
           if (!el || el.offsetParent === null) return null;
@@ -114,7 +118,7 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
             bottom: b.bottom + scrollY,
           };
         };
-        const stack = rect(`.gmt-${word}-stack`);
+        const stack = rect(".gmt-clockcheck-stack");
         /* Where a card's content ends: the lowest text or drawing that its overflow boxes do not clip. */
         const contentBottom = (card) => {
           let lowest = -Infinity;
@@ -193,7 +197,31 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
               reserved: parseFloat(l.style.getPropertyValue("--lw")),
             };
           });
+        /* Each probe table against the card that holds it: it must fit, with nothing clipped. */
+        const tables = [...document.querySelectorAll(".gmt-clockcheck-table")]
+          .filter((t) => t.offsetParent !== null)
+          .map((t) => {
+            const card = t.closest(".gmt-widget-section") ?? t.parentElement;
+            const c = card.getBoundingClientRect();
+            const cs = getComputedStyle(card);
+            const b = t.getBoundingClientRect();
+            /* The card's content box: inside its border and padding. */
+            const inset = (border, pad) =>
+              parseFloat(cs[border]) + parseFloat(cs[pad]);
+            return {
+              card: card.className,
+              left: b.left - (c.left + inset("borderLeftWidth", "paddingLeft")),
+              right:
+                c.right - inset("borderRightWidth", "paddingRight") - b.right,
+              scroll: t.scrollWidth - t.clientWidth,
+              /* A cell whose content is wider than its box: a word that did not wrap. */
+              wide: [...t.querySelectorAll("th, td")].filter(
+                (cell) => cell.scrollWidth - cell.clientWidth > 1,
+              ).length,
+            };
+          });
         return {
+          tables,
           stack,
           aspect:
             frame && view
@@ -221,7 +249,7 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
           ),
         };
       },
-      { cards: CARDS, word: WORD },
+      { cards: CARDS },
     );
     const tag = `${width}px ${theme}`;
     if (data.hscroll) fail(`${tag}: the page scrolls sideways`);
@@ -241,6 +269,14 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
         const down = a.top < b.bottom - 1 && b.top < a.bottom - 1;
         if (across && down) fail(`${tag}: ${an} overlaps ${bn}`);
       }
+    }
+    for (const t of data.tables) {
+      if (t.wide > 0)
+        fail(`${tag}: ${t.wide} probe table cell(s) hold more than their box`);
+      if (t.left < -1 || t.right < -1 || t.scroll > 1)
+        fail(
+          `${tag}: a probe table does not fit its card (${t.left.toFixed(1)} px in on the left, ${t.right.toFixed(1)} px on the right, ${t.scroll} px of scroll)`,
+        );
     }
     if (data.aspect) {
       const want = 800 / data.aspect.viewHeight;
@@ -315,7 +351,7 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
     if (SHOTS) {
       mkdirSync(SHOTS, { recursive: true });
       await page
-        .locator(`.gmt-${WORD}-stack`)
+        .locator(`.gmt-clockcheck-stack`)
         .screenshot({ path: `${SHOTS}/${theme}-${width}.png` });
     }
     console.log(`${tag}: ${present.length} cards checked`);

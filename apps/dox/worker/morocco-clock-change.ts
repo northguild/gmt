@@ -19,14 +19,14 @@ import {
 } from "./clock-change-shared";
 import type { CheckEndpoint } from "./clock-change-shared";
 
-const TRANSITION_YEARS = [MOROCCO_STOP_YEAR, MOROCCO_STOP_YEAR + 1] as const;
-
 type Fixed = Pick<MoroccoCheck, "probe" | "changes" | "transitions">;
-let fixed: Fixed | undefined;
+const fixedByYear = new Map<number, Fixed>();
 
 /** The `now`-free part: built on first use, then reused for the life of the isolate. */
-function fixedTables(): Fixed {
-  if (fixed) return fixed;
+function fixedTables(stopYear: number): Fixed {
+  const cached = fixedByYear.get(stopYear);
+  if (cached) return cached;
+  const years = [stopYear, stopYear + 1] as const;
   const probe: MoroccoCheck["probe"] = probeRows(
     { instants: MOROCCO_PROBE },
     MOROCCO_ZONES,
@@ -42,28 +42,30 @@ function fixedTables(): Fixed {
     MOROCCO_CHANGES.map((change) => ({
       zone,
       ...change,
-      present: TRANSITION_YEARS.some((year) =>
+      present: years.some((year) =>
         transitionsFor(zone, year).some(({ instant }) => instant === change.at),
       ),
     })),
   );
 
   const transitions: MoroccoCheck["transitions"] = transitionRows(
-    TRANSITION_YEARS,
+    years,
     MOROCCO_ZONES,
   );
-  fixed = { probe, changes, transitions };
-  return fixed;
+  const built = { probe, changes, transitions };
+  fixedByYear.set(stopYear, built);
+  return built;
 }
 
 /** Every value the checker shows, computed on this runtime's tz data. */
-export function computeMoroccoCheck(now: string): MoroccoCheck {
+export function computeMoroccoCheck(
+  now: string,
+  stopYear: number,
+): MoroccoCheck {
   return {
     now,
-    ...fixedTables(),
-    zones: moroccoZones.zones.map((zone) =>
-      mapZone(zone, now, MOROCCO_STOP_YEAR),
-    ),
+    ...fixedTables(stopYear),
+    zones: moroccoZones.zones.map((zone) => mapZone(zone, now, stopYear)),
   };
 }
 

@@ -73,8 +73,10 @@ function renderPart(part: DataCredit["parts"][number]): string {
 }
 
 /** `stack`: the button is one of a control stack and takes the stack's button styling.
- *  `corner`: a glass square in the corner of a drawing. */
-export type DataCreditsPlacement = "stack" | "corner";
+ *  `corner`: a glass square in the drawing's bottom-end corner; the popup opens above it.
+ *  `corner-start`: the same square in the top-start corner, for a drawing whose land fills the
+ *  bottom-end one; the popup opens below it. */
+export type DataCreditsPlacement = "stack" | "corner" | "corner-start";
 
 /**
  * The info button and its popover, as one string. `""` for an empty list, so a drawing with

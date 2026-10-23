@@ -7,9 +7,14 @@
  * **The markup and the wiring both live in `lib/morocco-clock-change-mount.ts`.** The server
  * renders every table with its known rows, so the page does not grow once the answer arrives.
  */
-import { renderMoroccoClockChangeTemplate } from "../lib/morocco-clock-change-mount";
+import {
+  loadMoroccoTense,
+  renderMoroccoClockChangeTemplate,
+} from "../lib/morocco-clock-change-mount";
 
-const html = renderMoroccoClockChangeTemplate({ keyPoints: true });
+// The change is past: its date and time are written once, by the library, at build time.
+const tense = await loadMoroccoTense();
+const html = renderMoroccoClockChangeTemplate({ keyPoints: true, tense });
 ---
 
 <div data-tools-fullbleed set:html={html} />

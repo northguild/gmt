@@ -4,6 +4,7 @@
  * The Canada 2026 clock-change checker as a chat widget (CORE-88): the credits id of the map,
  * the pinned zone, the permalink state, and a URL the chat keeps for itself.
  */
+import { canadaTense } from "./clock-change-tense.fixture";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { handleCanadaClockChange } from "../../worker/canada-clock-change";
@@ -31,7 +32,10 @@ async function workerAnswer(): Promise<CanadaCheck> {
 }
 
 function widgetRoot(): HTMLElement {
-  document.body.innerHTML = renderCanadaClockChangeWidgetTemplate("rail-1");
+  document.body.innerHTML = renderCanadaClockChangeWidgetTemplate(
+    "rail-1",
+    canadaTense,
+  );
   return document.querySelector<HTMLElement>(".gmt-canada")!;
 }
 
@@ -50,7 +54,9 @@ describe("the chat template", () => {
   });
 
   it("renders no credits button in the markup: the map adds its own when it is drawn", () => {
-    document.body.innerHTML = renderCanadaClockChangeTemplate();
+    document.body.innerHTML = renderCanadaClockChangeTemplate({
+      tense: canadaTense,
+    });
     expect(document.querySelector(".gmt-data-credits-button")).toBeNull();
     expect(
       document

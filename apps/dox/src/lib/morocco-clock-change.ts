@@ -19,6 +19,8 @@ import type {
   ProbeInstant,
   VerdictText,
 } from "./clock-change-probe";
+import { REGION_KEY, classPhrase } from "./clock-change-tense";
+import type { Moment, Tensed, TenseView } from "./clock-change-tense";
 import type { MapZone } from "./zone-map";
 
 /**
@@ -37,12 +39,36 @@ export const MOROCCO_STOP_YEAR = 2026;
 /** The zones the map draws in its first class. */
 export const MOROCCO_STOPPED: ReadonlySet<string> = new Set(MOROCCO_ZONES);
 
-/** The class word for a zone's `kind`: a dated phrase, so it stays true after 2027. */
-export const MOROCCO_KIND_LABELS: Readonly<Record<MapZone["kind"], string>> = {
-  stopped: "Stops changing clocks in 2026",
-  "changes-after": "Still changes clocks",
-  none: "Never changes clocks",
+/**
+ * The moment both zones stop changing their clocks: 2026-09-20 at 02:00 local time (+01:00), as a
+ * UTC instant. The words of the date and time are the library's (`momentWords`); a test pins the
+ * instant to the library.
+ */
+export const MOROCCO_STOP_MOMENT: Moment = {
+  at: "2026-09-20T01:00:00Z",
+  from: "+01:00",
 };
+
+/** Every moment the page's phrases state: each zone's, and the region's. Only the words are read from it. */
+export const MOROCCO_MOMENTS: Readonly<Record<string, Moment>> = {
+  ...Object.fromEntries(
+    MOROCCO_ZONES.map((zone) => [zone, MOROCCO_STOP_MOMENT]),
+  ),
+  [REGION_KEY]: MOROCCO_STOP_MOMENT,
+};
+
+/**
+ * The class words of a zone's `kind`. The change is past, so the phrase has the one past form; it
+ * is dated, so it stays true after 2027. Both zones change at one instant, so the legend carries
+ * local time and UTC.
+ */
+export function moroccoClassText(
+  kind: MapZone["kind"],
+  id: string | null,
+  view: TenseView,
+): Tensed {
+  return classPhrase(kind, id, view, true, true);
+}
 
 /**
  * The two instants every Moroccan zone is read at. The first decides the verdict (the same
@@ -151,7 +177,7 @@ export function moroccoProbe(idPrefix: string): ProbeConfig {
     idPrefix,
     zones: MOROCCO_FACTS.map((fact) => ({
       zone: fact.zone,
-      expected: fact.offset,
+      expected: { verdict: fact.offset, blind: fact.offset },
     })),
     instants: MOROCCO_PROBE,
   };
@@ -208,11 +234,6 @@ export const MOROCCO_PRESET: string = [
   "2026-10-25T01:30:00+00:00[Europe/Lisbon]",
 ].join("\n");
 
-/** The class word for a zone's `kind`, kept under the name the map uses. */
-export function mapKindLabel(kind: MapZone["kind"]): string {
-  return MOROCCO_KIND_LABELS[kind];
-}
-
 /** A stated change's local wall time just before it, from its UTC instant and its `from` offset. */
 export function localBefore(change: StatedChange): string {
   const match = /^([+-])(\d{2}):(\d{2})$/.exec(change.from);
@@ -237,9 +258,19 @@ export function recordedByText(change: StatedChange): string {
     : "Added in tzdb 2026c; older data does not have it";
 }
 
-/** The sentence that says whether the answering server's data has a stated change. */
-export function presentText(present: boolean): string {
-  return present ? "This server still has it" : "This server does not have it";
+/**
+ * The sentence that says whether the answering server's data has a stated change. "Still" fits only
+ * a change tzdb 2026b recorded and 2026c removed: a server that has it is holding on to old data. A
+ * change 2026c added is simply there on an up-to-date server. Absent reads the same for both: a
+ * 2026b change is gone (right), a 2026c change is missing (the server's data is older).
+ */
+export function presentText(
+  change: StatedChange & { present: boolean },
+): string {
+  if (!change.present) return "This server does not have it";
+  return change.recordedBy === "2026b"
+    ? "This server still has it"
+    : "This server has it";
 }
 
 /** The card as Markdown for the `.md` twin and the llms files, command included. */

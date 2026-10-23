@@ -4,12 +4,13 @@
  * "Did your saved events move?" in the checker's mount. The Worker's answer is built by the real
  * Worker code in this test runtime, so every row is the library's own reading here.
  */
+import { canadaTense } from "./clock-change-tense.fixture";
 import { getUtcNow } from "@northguild/gmt/utc/get";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { computeCanadaCheck } from "../../worker/canada-clock-change";
 import { computeStoredCheck } from "../../worker/clock-change-shared";
 import { classifyStoredZoned } from "@northguild/gmt/zoned/classify";
-import { STORED_PRESET } from "./canada-clock-change";
+import { CANADA_STOP_YEAR, STORED_PRESET } from "./canada-clock-change";
 import {
   storedFix,
   storedVerdict,
@@ -56,7 +57,7 @@ function fakeFetch(
     }
     const failed = options.get?.();
     if (failed) return failed;
-    const check = computeCanadaCheck(NOW);
+    const check = computeCanadaCheck(NOW, CANADA_STOP_YEAR);
     const stale = new Set(options.stale ?? []);
     const fresh = new Set([
       "America/Vancouver",
@@ -81,7 +82,9 @@ function fakeFetch(
 }
 
 async function mounted(fetchFn: typeof fetch) {
-  document.body.innerHTML = renderCanadaClockChangeTemplate();
+  document.body.innerHTML = renderCanadaClockChangeTemplate({
+    tense: canadaTense,
+  });
   const root = document.querySelector<HTMLElement>(".gmt-canada")!;
   const controller = new AbortController();
   await mountCanadaClockChange(root, controller.signal, {
@@ -151,7 +154,9 @@ describe("the saved-times example", () => {
 
 describe("the stored-times section", () => {
   it("is server-rendered with its purpose, three steps, labelled form and compact controls", () => {
-    document.body.innerHTML = renderCanadaClockChangeTemplate();
+    document.body.innerHTML = renderCanadaClockChangeTemplate({
+      tense: canadaTense,
+    });
     const section = document.querySelector(".gmt-clockcheck-stored")!;
     expect(text(section.querySelector("h4"))).toBe(
       "Did your saved events move?",
@@ -475,6 +480,57 @@ describe("the stored-times section", () => {
     const { q, controller } = await mounted(fetch);
     await submit(q, STORED_PRESET);
     expect(text(q("stored-status"))).toBe("Try again in 42 s");
+    controller.abort();
+  });
+
+  it("announces Checking\u2026 in the status line while the request runs, then the answer", async () => {
+    let release!: () => void;
+    const held = new Promise<void>((done) => (release = done));
+    let seen = 0;
+    const { fetch } = fakeFetch({
+      post: async (body) => {
+        // The first run is the prefilled example; hold the one the reader presses.
+        if (seen++ > 0) await held;
+        return Response.json(computeStoredCheck(body.lines, body.zone));
+      },
+    });
+    const { q, controller } = await mounted(fetch);
+    q<HTMLTextAreaElement>("stored-lines").value = STORED_PRESET;
+    q<HTMLButtonElement>("stored-check").click();
+    await vi.waitFor(() =>
+      expect(text(q("stored-status"))).toBe("Checking\u2026"),
+    );
+    expect(q("stored-status").getAttribute("role")).toBe("status");
+    release();
+    await vi.waitFor(() =>
+      expect(q("stored-check").getAttribute("aria-busy")).toBeNull(),
+    );
+    expect(text(q("stored-status"))).toBe("");
+    controller.abort();
+  });
+
+  it("replaces Checking\u2026 with the error text when the check fails", async () => {
+    let release!: () => void;
+    const held = new Promise<void>((done) => (release = done));
+    let seen = 0;
+    const { fetch } = fakeFetch({
+      post: async () => {
+        if (seen++ > 0) await held;
+        return seen > 1
+          ? new Response("no", { status: 500 })
+          : Response.json(computeStoredCheck(STORED_PRESET, "America/Toronto"));
+      },
+    });
+    const { q, controller } = await mounted(fetch);
+    q<HTMLTextAreaElement>("stored-lines").value = STORED_PRESET;
+    q<HTMLButtonElement>("stored-check").click();
+    await vi.waitFor(() =>
+      expect(text(q("stored-status"))).toBe("Checking\u2026"),
+    );
+    release();
+    await vi.waitFor(() =>
+      expect(text(q("stored-status"))).toBe("The check could not finish."),
+    );
     controller.abort();
   });
 

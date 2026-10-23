@@ -8,77 +8,90 @@
 
 import type { HelpCard, KeyCard } from "./clock-change-text";
 
-export const MOROCCO_KEY_POINTS: KeyCard[] = [
-  {
-    heading: "What tzdb records",
-    blocks: [
-      {
-        kind: "p",
-        parts: [
-          "tzdb 2026c, the time zone database, records that ",
-          { code: "Africa/Casablanca" },
-          " and ",
-          { code: "Africa/El_Aaiun" },
-          " (Morocco and Western Sahara) stop changing their clocks. Since 20 September 2026 at 02:00 local time they stay on UTC+00 all year.",
-        ],
-      },
-      {
-        kind: "p",
-        parts: [
-          "Phones, computers and apps learn about changes like this from time zone updates.",
-        ],
-      },
-    ],
-  },
-  {
-    heading: "What old data does",
-    blocks: [
-      {
-        kind: "p",
-        parts: [
-          "Data from tzdb 2026b or earlier puts both places an hour ahead (+01:00) for most of the year, and back on +00:00 only in the weeks of Ramadan (7 February to 14 March 2027 in that data). So it is right for a few weeks and an hour wrong for the rest of the year.",
-        ],
-      },
-      {
-        kind: "p",
-        parts: [
-          "This page checks your browser at two moments. A red ✗ below means its time zone data is out of date.",
-        ],
-      },
-    ],
-  },
-  {
-    id: "morocco-developers",
-    heading: "What to do",
-    blocks: [
-      {
-        kind: "ol",
-        items: [
-          [
-            "Your servers: run ",
-            { link: "Test your own servers", href: "#morocco-servers-title" },
-            " below the map on every server, container and CI image. If it prints a different offset, update the runtime or the OS tzdata package and rebuild your images.",
+/** The change in words for text that runs no code: true on any day. */
+const CHANGE_DATED = "20 September 2026 at 02:00";
+
+/**
+ * The Key points, in the past tense: the change has happened. `when` is its date and time in
+ * words, written by the library (`momentWords`); `MOROCCO_KEY_POINTS` below has it typed, for text
+ * that runs no code.
+ */
+export function moroccoKeyPoints(when: string): KeyCard[] {
+  return [
+    {
+      heading: "What tzdb records",
+      blocks: [
+        {
+          kind: "p",
+          parts: [
+            "tzdb 2026c, the time zone database, records that ",
+            { code: "Africa/Casablanca" },
+            " and ",
+            { code: "Africa/El_Aaiun" },
+            ` (Morocco and Western Sahara) stopped changing their clocks. Since ${when} local time they stay on UTC+00 all year.`,
           ],
-          [
-            "Your users’ browsers: you can’t update them, and some lag behind for weeks. If your web page works out times in these two places in the browser, work them out on your updated server and send the result instead.",
+        },
+        {
+          kind: "p",
+          parts: [
+            "Phones, computers and apps learn about changes like this from time zone updates.",
           ],
-          [
-            "Your saved events: appointments, bookings and shifts your app saved before you updated may be an hour off. Find them with ",
-            {
-              link: "Did your saved events move?",
-              href: "#morocco-stored-title",
-            },
-            " below, or ",
-            { code: "classifyStoredZoned" },
-            " in your code. To fix one, keep its local time and place and convert them again with ",
-            { code: "convertPlainDateTimeToZoned" },
-            ".",
+        },
+      ],
+    },
+    {
+      heading: "What old data does",
+      blocks: [
+        {
+          kind: "p",
+          parts: [
+            "Data from tzdb 2026b or earlier puts both places an hour ahead (+01:00) for most of the year, and back on +00:00 only in the weeks of Ramadan (7 February to 14 March 2027 in that data). So it is right for a few weeks and an hour wrong for the rest of the year.",
           ],
-        ],
-      },
-    ],
-  },
-];
+        },
+        {
+          kind: "p",
+          parts: [
+            "This page checks your browser at two moments. A red ✗ below means its time zone data is out of date.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "morocco-developers",
+      heading: "What to do",
+      blocks: [
+        {
+          kind: "ol",
+          items: [
+            [
+              "Your servers: run ",
+              { link: "Test your own servers", href: "#morocco-servers-title" },
+              " below the map on every server, container and CI image. If it prints a different offset, update the runtime or the OS tzdata package and rebuild your images.",
+            ],
+            [
+              "Your users’ browsers: you can’t update them, and some lag behind for weeks. If your web page works out times in these two places in the browser, work them out on your updated server and send the result instead.",
+            ],
+            [
+              "Your saved events: appointments, bookings and shifts your app saved before you updated may be an hour off. Find them with ",
+              {
+                link: "Did your saved events move?",
+                href: "#morocco-stored-title",
+              },
+              " below, or ",
+              { code: "classifyStoredZoned" },
+              " in your code. To fix one, keep its local time and place and convert them again with ",
+              { code: "convertPlainDateTimeToZoned" },
+              ".",
+            ],
+          ],
+        },
+      ],
+    },
+  ];
+}
+
+/** The Key points as text that runs no code states them: the dated wording, true on any day. */
+export const MOROCCO_KEY_POINTS: KeyCard[] = moroccoKeyPoints(CHANGE_DATED);
 
 /**
  * The "How gmt helps" card: a lede, a verified line with a link to the tests, one case card per

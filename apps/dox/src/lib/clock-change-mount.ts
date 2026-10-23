@@ -4,9 +4,17 @@
  * chat widget wrapper. `canada-clock-change-mount.ts` and `morocco-clock-change-mount.ts` are the
  * regions' templates, words and wiring; each calls these.
  */
-import { KEY_POINTS_HEADING, partsHtml } from "../data/clock-change-text";
-import type { KeyCard } from "../data/clock-change-text";
+import {
+  KEY_POINTS_HEADING,
+  partsHtml,
+  partsInForm,
+  tenseKeyOf,
+} from "../data/clock-change-text";
+import type { KeyCard, KeyPart } from "../data/clock-change-text";
 import { NO_SIGNAL } from "./clock-change-common";
+import { slotHtml, tenseView } from "./clock-change-tense";
+import type { Moment, TenseLib, TenseView } from "./clock-change-tense";
+import type { MapZone, ZoneMapConfig } from "./zone-map";
 import { GMT_MODULES } from "./gmt-modules";
 import {
   INERT_HANDLE,
@@ -15,19 +23,20 @@ import {
   showUnavailable,
   type MountFn,
 } from "./widget-mount";
-import { escapeAttr, escapeHtml, wireCopyButtons } from "./widget-ui";
+import {
+  escapeAttr,
+  escapeHtml,
+  wireCopyButtons,
+  zoneIdHtml,
+} from "./widget-ui";
 
 /** The two years a checker lists: the year its zones stop changing clocks, and the year after. */
 export function yearsOf(stopYear: number): readonly [number, number] {
   return [stopYear, stopYear + 1];
 }
 
-/** The three library functions a checker's page calls. */
-export interface ClockLib {
-  convertUtcToPlainDateTime(
-    value: string,
-    options: { timeZone: string },
-  ): string;
+/** The library functions a checker's page calls: its clock, its comparisons and its dates in words. */
+export interface ClockLib extends TenseLib {
   getUtcNow(): string;
   isBeforeUtc(value1: string, value2: string): boolean;
 }
@@ -41,19 +50,71 @@ function pick<T>(module: Record<string, unknown>, name: string): T {
 
 export async function loadClockLib(): Promise<ClockLib> {
   try {
-    const [convert, get, compare] = await Promise.all([
-      GMT_MODULES["utc/convert"]!(),
-      GMT_MODULES["utc/get"]!(),
-      GMT_MODULES["utc/compare"]!(),
-    ]);
+    const [convert, get, compare, unixCompare, zonedFormat, utcFormat] =
+      await Promise.all([
+        GMT_MODULES["utc/convert"]!(),
+        GMT_MODULES["utc/get"]!(),
+        GMT_MODULES["utc/compare"]!(),
+        GMT_MODULES["unix/compare"]!(),
+        GMT_MODULES["zoned/format"]!(),
+        GMT_MODULES["utc/format"]!(),
+      ]);
     return {
       convertUtcToPlainDateTime: pick(convert, "convertUtcToPlainDateTime"),
+      convertUtcToUnix: pick(convert, "convertUtcToUnix"),
       getUtcNow: pick(get, "getUtcNow"),
       isBeforeUtc: pick(compare, "isBeforeUtc"),
+      isBeforeUnix: pick(unixCompare, "isBeforeUnix"),
+      formatZonedDateTime: pick(zonedFormat, "formatZonedDateTime"),
+      formatUtc: pick(utcFormat, "formatUtc"),
     };
   } catch (cause) {
     throw new WidgetLoadError(cause);
   }
+}
+
+/**
+ * Loads the library and reads the tense of a region's moments at `now`, the library's clock when
+ * omitted. The page's
+ * server render and the chat's load both call it, so the markup they build says what is true now.
+ */
+export async function loadTenseView(
+  moments: Readonly<Record<string, Moment>>,
+  now?: string,
+): Promise<TenseView> {
+  const lib = await loadClockLib();
+  return tenseView(lib, moments, now ?? lib.getUtcNow());
+}
+
+/** The map's legend: a swatch, the class in the true tense, and the count the map fills in. */
+export function legendHtml(
+  classText: ZoneMapConfig["classText"],
+  view: TenseView,
+): string {
+  return (
+    [
+      "stopped",
+      "changes-after",
+      "none",
+    ] as const satisfies readonly MapZone["kind"][]
+  )
+    .map((kind) => {
+      const count = `(<span data-role="legend-count" data-kind="${kind}">&ndash;</span>)`;
+      const phrase = classText(kind, null, view);
+      // The count sits inside each form of a two-form phrase, so it flows after the last word
+      // (a slot is one atomic box, which would drop a count outside it onto its own line).
+      const text =
+        phrase.key === null || phrase.before === phrase.after
+          ? `${escapeHtml(phrase.before)} ${count}`
+          : slotHtml(
+              phrase.key,
+              `${escapeHtml(phrase.before)} ${count}`,
+              `${escapeHtml(phrase.after)} ${count}`,
+              view.tenseOf(phrase.key),
+            );
+      return `<li><span class="gmt-zonemap-swatch gmt-theme-dark" data-kind="${kind}" aria-hidden="true"></span><span>${text}</span></li>`;
+    })
+    .join("");
 }
 
 export type Answer<T> =
@@ -98,7 +159,7 @@ export function transitionGroupHtml(
 ): string {
   return (
     `<li class="gmt-clockcheck-group" data-zone="${escapeAttr(zone)}">` +
-    `<h5 class="gmt-clockcheck-group-title"><code>${escapeHtml(zone)}</code></h5>` +
+    `<h5 class="gmt-clockcheck-group-title"><code>${zoneIdHtml(zone)}</code></h5>` +
     `<ul class="gmt-clockcheck-changes" data-role="changes">` +
     years.map((year) => `<li data-year="${year}">${NO_SIGNAL}</li>`).join("") +
     `</ul></li>`
@@ -109,7 +170,21 @@ export function transitionGroupHtml(
 export function keyPointsHtml(
   idPrefix: string,
   cards: readonly KeyCard[],
+  view: TenseView,
 ): string {
+  // A run with a tensed part is written whole in both forms, so a sentence keeps its flow.
+  const runHtml = (parts: KeyPart[]): string => {
+    const key = tenseKeyOf(parts);
+    return key === null
+      ? partsHtml(parts)
+      : slotHtml(
+          key,
+          partsHtml(partsInForm(parts, "before")),
+          partsHtml(partsInForm(parts, "after")),
+          view.tenseOf(key),
+          true,
+        );
+  };
   return (
     `<section class="gmt-keypoints" aria-labelledby="${idPrefix}-keypoints-title">` +
     `<h2 id="${idPrefix}-keypoints-title">${escapeHtml(KEY_POINTS_HEADING)}</h2>` +
@@ -122,8 +197,8 @@ export function keyPointsHtml(
           card.blocks
             .map((block) =>
               block.kind === "p"
-                ? `<p>${partsHtml(block.parts)}</p>`
-                : `<ol>${block.items.map((item) => `<li>${partsHtml(item)}</li>`).join("")}</ol>`,
+                ? `<p>${runHtml(block.parts)}</p>`
+                : `<ol>${block.items.map((item) => `<li>${runHtml(item)}</li>`).join("")}</ol>`,
             )
             .join("") +
           `</div>`,

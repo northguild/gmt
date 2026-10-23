@@ -20,6 +20,8 @@ import type {
   ProbeInstant,
   VerdictText,
 } from "./clock-change-probe";
+import { REGION_KEY, classPhrase } from "./clock-change-tense";
+import type { Moment, Tensed, TenseView } from "./clock-change-tense";
 import type { MapZone } from "./zone-map";
 
 /** The instant every probe row is read at: a Monday noon UTC, after all five changes took effect. */
@@ -147,7 +149,7 @@ export function canadaProbe(idPrefix: string): ProbeConfig {
     idPrefix,
     zones: TABLE_ZONES.map((fact) => ({
       zone: fact.zone,
-      expected: fact.offset,
+      expected: { verdict: fact.offset },
     })),
     instants: CANADA_PROBE_INSTANTS,
   };
@@ -169,15 +171,31 @@ export const CANADA_VERDICT: VerdictText = {
   unknown: "Your browser cannot read these zones.",
 };
 
-/** The class word for a zone's `kind`: a dated phrase, so it stays true after 2027. */
-export const KIND_LABELS: Readonly<Record<MapZone["kind"], string>> = {
-  stopped: "Stops changing clocks in 2026",
-  "changes-after": "Still changes clocks",
-  none: "Never changes clocks",
+/**
+ * The moment each stopped zone does not turn its clocks back: 1 November 2026 at 02:00 local time,
+ * as a UTC instant and the offset in force just before. The words of the date and time are the
+ * library's (`momentWords`); only the instants are stated here, and a test pins each to the
+ * library. The region's moment is the latest of the four, so the region's sentences flip when
+ * the last zone has passed.
+ */
+export const CANADA_MOMENTS: Readonly<Record<string, Moment>> = {
+  "America/Vancouver": { at: "2026-11-01T09:00:00Z", from: "-07:00" },
+  "America/Edmonton": { at: "2026-11-01T08:00:00Z", from: "-06:00" },
+  "America/Inuvik": { at: "2026-11-01T08:00:00Z", from: "-06:00" },
+  "America/Winnipeg": { at: "2026-11-01T07:00:00Z", from: "-05:00" },
+  [REGION_KEY]: { at: "2026-11-01T09:00:00Z", from: "-07:00" },
 };
 
-export function mapKindLabel(kind: MapZone["kind"]): string {
-  return KIND_LABELS[kind];
+/**
+ * The class words of a zone's `kind` in both forms. A dated phrase, so it stays true after 2027;
+ * the four zones change at four instants, so the legend carries local time only.
+ */
+export function canadaClassText(
+  kind: MapZone["kind"],
+  id: string | null,
+  view: TenseView,
+): Tensed {
+  return classPhrase(kind, id, view, false);
 }
 
 /** What the command prints on a runtime with the new data: `[city, offset]` per table zone. */

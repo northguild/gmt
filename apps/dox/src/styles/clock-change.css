@@ -577,7 +577,7 @@
    map keeps its height and the two cards 15rem each, with the gaps) all three share one row of
    one height: the map's frame is `--gmt-zonemap-row` tall at its drawing's own aspect, so its column
    is as wide as the drawing needs and the sea never letterboxes, and the cards take the rest equally.
-   Below 520px the map is not drawn, and the panel opens under the pressed button. Nothing scrolls
+   Below 520px the map is not drawn, and the panel opens below the list, outside its scroll box. Nothing scrolls
    sideways. */
 .gmt-zonemap-mapsec {
   display: grid;
@@ -1212,10 +1212,16 @@
   min-width: 0;
 }
 
+/* One segment of a zone id: never breaks inside, hyphen included. */
+.gmt-zoneseg {
+  white-space: nowrap;
+}
+
 .gmt-zonemap-zone-id code {
-  /* The id gives way to the offset in a narrow column: it breaks inside the name, never over it. */
+  /* The id gives way to the offset in a narrow column, and breaks only at the `<wbr>` after each
+     `/`, never inside a segment. */
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 .gmt-zonemap-zone-kind {
@@ -1304,6 +1310,8 @@
 }
 
 .gmt-zonemap-pin-title dd[data-role="pin-zone"] {
+  /* Breaks only at the `<wbr>` after a `/`. */
+  overflow-wrap: normal;
   min-block-size: 2.8em;
   font-family: var(--gmt-font-mono);
   font-size: 0.875rem;
@@ -1678,19 +1686,20 @@
   min-width: 0;
   /* The prefilled example is checked on load: hold the room its rows fill when the browser's data is
      current (table, then cards, then narrow cards), so the page below does not jump when the answer
-     arrives. */
-  min-block-size: 27rem;
+     arrives. The template sets --stored-rows to the example's line count. The base is what four
+     rows fill (Canada's example); each row beyond four adds one row's height at that layout. */
+  min-block-size: calc(27rem + (var(--stored-rows, 4) - 4) * 4.75rem);
 }
 
 @container gmt-clockcheck (max-width: 47.99rem) {
   .gmt-clockcheck-stored-results {
-    min-block-size: 40.5rem;
+    min-block-size: calc(40.5rem + (var(--stored-rows, 4) - 4) * 8.75rem);
   }
 }
 
 @container gmt-clockcheck (max-width: 30rem) {
   .gmt-clockcheck-stored-results {
-    min-block-size: 47rem;
+    min-block-size: calc(48rem + (var(--stored-rows, 4) - 4) * 11.2rem);
   }
 }
 
@@ -2312,9 +2321,10 @@
 }
 
 @container gmt-clockcheck (max-width: 519.98px) {
-  /* Until a zone is pinned the panel has no place under any button, so it is not drawn at all:
-     the first paint is already the narrow layout and nothing shrinks when the script runs. */
-  .gmt-zonemap-mapsec > .gmt-zonemap-pin {
+  /* Until a zone is pinned there is no map to give the panel's space a purpose, so it is not drawn
+     at all: the first paint is already the narrow layout and nothing shrinks when the script
+     runs. The script sets \`data-pinned\` on the first pin. */
+  .gmt-zonemap-mapsec > .gmt-zonemap-pin:not([data-pinned="true"]) {
     display: none;
   }
 }
@@ -2332,4 +2342,30 @@
   .gmt-clockcheck-group {
     border-color: CanvasText;
   }
+}
+
+/* The status line under Check again has its own row from the start, whatever the width. Beside the
+   button it wrapped under it at 375 px once a message arrived, and the card grew a line. One
+   line of room is held, so an error or a rate-limit message moves nothing. */
+.gmt-clockcheck-actions > .gmt-clockcheck-status {
+  flex: 1 1 100%;
+  min-block-size: 1.5em;
+  line-height: 1.5;
+}
+
+/* A phrase about a dated change has two forms, before and after. Both sit in one grid cell, so
+   the box is the longer form's and nothing moves when the tense flips. The form that is not true
+   now is hidden and carries aria-hidden, so it is out of the accessibility tree too. */
+.gmt-tense {
+  display: inline-grid;
+  vertical-align: top;
+}
+.gmt-tense--block {
+  display: grid;
+}
+.gmt-tense > [data-form] {
+  grid-area: 1 / 1;
+}
+.gmt-tense > [data-form][aria-hidden="true"] {
+  visibility: hidden;
 }

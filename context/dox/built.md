@@ -961,9 +961,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       parallels 49 and 77, central meridian 91.866667 W, origin 63.390675 N; IOGP registry, also
       Statistics Canada's), fitted by `fitExtent` to an 800x640 `viewBox` with a 16 px inset; the SVG
       scales with its box. Every zone is in one of three dated classes from the Worker's `kind`:
-      `stopped-2026` (series 1 colour with a diagonal hatch), `changes-2027` (series 3 colour,
-      solid), `none-2026-2027` (neutral surface with dots). Colour sits on marks only; the pattern
-      and the words carry the class. A zone with no Worker row is neutral and listed as "no data
+      `stopped` (series 1 colour with a diagonal hatch), `changes-after` (series 3 colour,
+      solid), `none` (neutral surface with dots); the words keep the year, from the region's `stopYear`. Colour sits on marks only; the pattern
+      and the words carry the class. A zone with no Worker row has the display kind `no-data`, is neutral and is listed as "no data
       from the Dox Worker".
     - **The list comes first.** `canada-zones.json` renders one `<button data-tz-id>` per zone on
       the server (id, class words, offset), with a roving tab stop: arrow keys, Home and End move,
@@ -971,7 +971,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       `tabindex="-1"`, so Tab never walks them; hover and focus on either mirror to the other.
       Pinning writes `?zone=<id>` with `replaceState` and reads it back on load.
     - **The pin panel has one size.** Clock, offset, last and next change (`none in 2025 or 2026`
-      style when `null`) and, for a `stopped-2026` probe zone, the tzdb release; every row reserves
+      style when `null`) and, for a `stopped` probe zone, the tzdb release; every row reserves
       its height, so pinning another zone moves nothing.
     - **Row of three.** From 57 rem of section width the map, the zone list and the clocks sit in one
       row (`1.6fr 1fr 1fr`; `tableOfContents: false` on the page widens the stack). In that range
@@ -983,8 +983,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       `stored-results` and the zone-kind label reserve their height so the late fill moves nothing.
       The page lists it in `mdx-jsx.ts`'s dropped components.
     - **Narrow fallback.** Below 520 px of section width (`@container gmt-zonemap-map`) the map and
-      legend are hidden, the boundary file is not fetched, and the panel moves under the pressed
-      button. The file is fetched once, when the map nears the viewport.
+      legend are hidden, the boundary file is not fetched, and the panel stays below the list, outside its
+      scroll box, and scrolls into view when a reader pins.
+      Zone ids go through `zoneIdHtml` (`widget-ui.ts`): a `<wbr>` after each `/`, each segment
+      `nowrap` (`.gmt-zoneseg`, so `Blanc-Sablon` never splits at its hyphen), and no
+      `overflow-wrap: anywhere` on an id. A two-form legend phrase carries its count inside each
+      form (`legendHtml`), so the count flows after the last word; `zone-map.ts` sets every copy. The file is fetched once, when the map nears the viewport.
     - **In the chat** (`mountCanadaClockChangeWidget`). The rail mounts the same markup with
       the same markup with ids namespaced by `idPrefix`; the map's data-credits button takes
       `<idPrefix>-data-credits` (below). The rail is narrow, so the zone list is the map and there
@@ -1024,14 +1028,45 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         above 48 rem of container width, bordered cards below it. No result sentence says "now".
       - **A Worker with old tz data cannot judge the four zones.** The page also reads the zones
         answer and `staleZoneIds` (`lib/zone-map.ts`) lists the `STOPPED_ZONES` members that
-        do not come back as `stopped-2026`. Rows in those zones show "Can't check yet" and
+        do not come back as `stopped`. Rows in those zones show "Can't check yet" and
         "Try again after the update." in muted text; the one alert sentence
         (`staleCheckText`, muted, no box) appears once, in the summary. Rendering waits until the
         stale zones and the audit module are both known.
       - **Held layout.** The status line and the narrow summary reserve their height, so an
         answer moves nothing above it. `scripts/canada-stored-still.mjs` measures the form against
-        a build, in document coordinates, after the section's handlers attach, and presses
-        Option+Tab in WebKit. `scripts/canada-layout-check.mjs` measures the map row.
+        a build, in document coordinates, and presses Option+Tab in WebKit.
+        `scripts/canada-layout-check.mjs` measures the map row.
+      - **The ready signal (both checkers).** The mount sets `root.dataset.state = "ready"` right
+        after the first `clocks.tick()` that has the Worker's answer, and `"error"` where it
+        shows the 429 or failure line (`showUnavailable` still sets `"unavailable"`). The
+        browser gates wait for it and read no readout text: `canada-clock-still.mjs` and
+        `canada-stored-still.mjs` keep the fake clock paused before `goto`, then
+        `waitForState` (`scripts/lib/clock-check-harness.mjs`) waits in real time for 60 s and
+        fails with the state it saw. The harness stubs the Worker by method (GET fixture, the
+        saved-times fixture for POST) and takes the region from a table keyed by page path that
+        throws on an unknown path. `blockOffSite` routes by a URL pattern (every `http(s)` URL
+        outside the base's origin), so a same-site chunk is never intercepted. Serve a build with
+        `scripts/lib/static-server.mjs` (`node scripts/lib/static-server.mjs <root> <port>`, a
+        listen backlog of 1024): `python3 -m http.server` (backlog of 5) dropped a module request
+        in one of eight runs under load (`ERR_SOCKET_NOT_CONNECTED`), and the page then never
+        reached `ready`.
+      - **The saved-times results reserve follows the example's row count.** The template sets
+        `--stored-rows` on `.gmt-clockcheck-stored-results` (`presetRows`, the preset's non-empty
+        lines). The reserve is a base for four rows plus a per-row step, one pair per container
+        tier: 27rem + 4.75rem a row (table), 40.5rem + 8.75rem (cards), 48rem + 11.2rem (narrow
+        cards; WebKit lays the narrow cards out about 15 px taller than Chromium). Canada's four
+        rows keep their old reserve; Morocco's eight fit at 1440, 1024 and 375 in both engines.
+        A reader who types more lines grows the page only after their own press.
+      - **The status line says "Checking…" while a request runs** (`role="status"`, in the
+        row held for it), and holds the answer or error text after. A screen reader hears it; the
+        spinner on the button is CSS and `aria-busy` alone is not announced.
+      - **The status line has its own row.** `.gmt-clockcheck-actions > .gmt-clockcheck-status`
+        takes the full row under Check again (`flex: 1 1 100%`, one line reserved), at every
+        width. Beside the button it wrapped under it at 375 px once a message arrived and the
+        card grew 35 px. `canada-stored-still.mjs` holds the GET until it has recorded every
+        card, answers it 200, 503 and 429 at 1440, 1024 and 375 px, and fails if any card or the
+        page height changed (the saved-times answer echoes a row for each line the page sent,
+        so the table is as tall as the page's own example makes it).
       - **One term: "saved events".** Key points check 3 defines it (appointments, bookings and
         shifts the app saved) and every link to `#canada-stored-title` uses the heading's words
         (`canada-help-card.test.ts` asserts it). `Saved with an offset` and `Saved as UTC only` say
@@ -1064,6 +1099,46 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `gmt-clockcheck-*` (probe, clocks, servers, help, stored) and `gmt-zonemap-*` (map, pin panel,
     list); a checker keeps `gmt-<name>-*` only for its own layout. The shared sheet is
     `styles/clock-change.css` (tokens `--zonemap-*`); a checker's sheet holds only its own rules.
+    Canada has no sheet of its own (`canada-clock-change.css` is gone); Morocco's holds the
+    `gmt-morocco-wrong*` rules and its 26.5rem header-note query. Card-level classes (stack, row,
+    key points, servers, groups, changes, pick card, clocks) are `gmt-clockcheck-*`; only the root
+    `gmt-canada` / `gmt-morocco` stays per region.
+    - **Years live once.** Each region states a `stopYear` (`CANADA_STOP_YEAR`,
+      `MOROCCO_STOP_YEAR`); the years of the 2026 and 2027 groups come from `yearsOf(stopYear)`
+      (`clock-change-mount.ts`). A map zone's `kind` is `"stopped" | "changes-after" | "none"`
+      (`displayKind` adds `"no-data"` for a zone without a row; `classText(kind, id, view)` gives the visible
+      words). The Worker's `mapZone(zone, now, stopYear)` reads `CheckEndpoint.stopYear`.
+    - `lib/clock-change-mount.ts`: the one shared mount module: `loadClockLib`, `ask`,
+      `keyPointsHtml`, `transitionGroupHtml`, `wireCopy` and `clockChangeWidget(mountPage)` (the
+      chat wrapper). Listed as heavy in `widget-graph.test.ts`. Both region mounts are configs over it.
+    - `clock-change-common.ts` `ProbeFact {zone, offset, release}`: Canada's former `tzdb2026e`
+      and Morocco's `MOROCCO_EXPECTED` are the one field `offset`
+      (`MOROCCO_FACTS`, `expectedOffset(zone)`); the runtime canary reads it.
+    - `savedExample(fact, wall)` (`clock-change-stored.ts`): the saved-events example's
+      offset text and shown date, wrapping past midnight with plain calendar arithmetic (no
+      native `Date`, see `date-ban.test.ts`). Both `*-saved-example.ts` files call it.
+    - `worker/clock-change-shared.ts` `probeRows` and `transitionRows` build the two JSON lists
+      both Workers return; `worker/clock-change-shared.test.ts` runs a demo endpoint through 405,
+      HEAD, 413, 429, 400 and 200.
+    - **The table in a narrow card.** The zone id carries a `<wbr>` after each `/`. In a card under
+      21rem (`@container (max-width: 21rem)` in `clock-change.css`; the natural table is 313 px at
+      its narrowest) the probe table **stacks**: each row is a two-column grid with the place and
+      zone id across the full width and the two offsets side by side under it, the header row is
+      the same two columns and the "Place" head is visually hidden. No word breaks and nothing
+      scrolls sideways at 300 px. `display` on table elements drops the native semantics, so
+      `clock-change-probe.ts` writes explicit `role`s (`table`, `rowgroup`, `row`,
+      `columnheader`, `rowheader`, `cell`) in the markup at every width; do not remove them.
+      `canada-layout-check.mjs` (`--engine webkit` too) fails a probe table wider than its card's
+      content box, or a cell that holds more than its own box.
+    - **The live clocks in a narrow card.** The clocks card is 260 px wide at a 1366 px viewport
+      (checker 1018 px, map column 466 px). Below 16rem (`@container (max-width: 16rem)` in
+      `clock-change.css`) the face, the time and the offset shrink so the offset stays beside the
+      time. Without that the offset dropped under the time, five clocks grew by about 21 px each
+      and the map card beside them stretched with 109 px empty. `canada-layout-check.mjs` fails
+      "map card leaves N px empty"; run it across 1300 to 1440 px when the clocks change.
+    - **The changes list wraps.** `.gmt-clockcheck-changes` is `grid-template-columns:
+      minmax(0, 1fr)`, and only `.gmt-clockcheck-change-when` keeps `white-space: nowrap`; the
+      shift and UTC text wrap. At a 300 px page the nowrap text was 1 px wider than its card.
     - `lib/clock-change-common.ts`: `Change`, offset and wall-time helpers, `changeText`, the
       NO SIGNAL / tick / cross marks and `nodeProbeCommand`. One place for the words and checks
       the Worker and the page must agree on.
@@ -1076,31 +1151,50 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     - `lib/clock-change-stored-lines.ts`: the pure line rules the Worker and the page share
       (`capStoredInput`, `completeStoredLine`, the badge and fix text). `STORED_MAX_LINES = 25;`
       stays its own statement, because `deploy-smoke.mjs` reads it with a regex.
+    - **The tense of a dated checker's words** (`lib/clock-change-tense.ts`). A region states each
+      change as a `Moment {at, from}` (UTC instant, offset in force just before) and never types a
+      date, a time or a verb tense by hand: `momentWords` writes them with `formatZonedDateTime` and
+      `formatUtc`; `changeTense(lib, nowMs, atMs)` asks `isBeforeUnix` and takes the library as a
+      parameter (the module stays pure for the Worker). The wording is
+      "Stopped changing clocks on 20 September 2026 at 02:00 local time (01:00 UTC)".
+      - **Morocco is past tense only.** Its change has happened, so `moroccoClassText` and
+        `moroccoKeyPoints(when)` give one past form (`classPhrase(..., past = true)`); there is no
+        `changeTense` call, two-form cell or timer in the Morocco mount. It reads the words once from
+        `tenseView(lib, MOROCCO_MOMENTS, now)`.
+      - **Canada is conditional until 1 November 2026.** `CANADA_MOMENTS` holds one moment per zone and
+        `REGION_KEY` (the latest, Vancouver's). Each tensed phrase is written in both forms in one
+        grid cell (`slotHtml`, `.gmt-tense`, the inactive form `aria-hidden` and `visibility:hidden`,
+        so the box never moves); `bindTense` sets the forms and one timer for the nearest moment still
+        ahead, and `onChange` calls `map.retense()`. Key-point paragraphs with a tensed part are
+        written whole in both forms (`KeyPart {tense, before, after, dated}`; `dated` is the wording
+        for text that runs no code). A new region with a future change reuses all of this.
+      - The page and the chat read the words with `loadXTense()` (async, `loadTenseView`), so the
+        server render and the chat's `renderTemplate` state what is true now.
     - `lib/clock-change-stored.ts`: `StoredConfig {idPrefix, endpoint, zones, preset, example}`,
       `storedSectionHtml`, `mountStoredTimes`. The endpoint goes through `withBase`.
     - `lib/clock-change-help.ts` and `data/clock-change-text.ts`: the Key points and How gmt helps
       cards as data (`KeyCard`, `HelpCard`) with one renderer each for HTML, text and Markdown.
     - `lib/zone-map.ts`: `ZoneMapConfig {idPrefix, height, boundariesUrl, projection, stopped,
-      kindLabels, releaseOf, releaseRange, mapLabel, markerMinPx?, markers?}` and
-      `mountZoneMap(root, zones, signal, deps, config)`. It finds its parts by `data-role`, never
+      classText, releaseOf, releaseRange, mapLabel, markerMinPx?, markers?}` and
+      `mountZoneMap(root, zones, signal, deps, config)`, which returns `retense()` for the words that follow a clock (`deps.tense`). It finds its parts by `data-role`, never
       by class, so a checker may restyle them. A map taller or shorter than 640 sets
-      `--zonemap-map-height` on its `data-role="map"` frame in the markup, so the box is reserved
-      before the drawing arrives. `markerMinPx` and `markers` draw a ring on a zone whose largest
+      `--zonemap-map-height` on the `.gmt-zonemap-mapsec` in the markup, so the box and the row's
+      height are reserved before the drawing arrives. `markerMinPx` and `markers` draw a ring on a zone whose largest
       drawn part is smaller than the threshold (see the Morocco map below).
     - `worker/clock-change-shared.ts`: `CheckEndpoint {prefix, policy, storedZones, compute}` and
       `handleClockChangeCheck`, which holds the method order, `HEAD`, `POST`, the caps and the
       `Allow: GET, HEAD, POST` answer. The rate-limit bucket is `<prefix>:<clientId>`.
     - `scripts/prepare-region-boundaries.py --region <name>`: one `REGIONS` row per region
-      (zone.tab country code, `frame`, `land_frame`, `min_area`, `tolerance` and the two files
-      written); `oxfmt` formats the output.
+      (zone.tab country codes or `"frame"`, `frame`, `land_frame`, `box`, `min_area`, `tolerance`
+      and the two files written); `oxfmt` formats the output.
     - **Coastlines.** The map draws Natural Earth land, not timezone-boundary-builder's shapes as
       they come, and the land around the zones.
       - **Zones are cut back to Natural Earth `ne_10m_land`** (`NE_TAG`, public domain), because
         tbb includes each zone's territorial sea: the Canaries and the Arctic islands draw as
         blobs and Hudson Bay fills in.
       - **One `{"land": "other"}` feature, written first,** holds the land inside `land_frame`
-        that no zone covers (Mali, France, the United States, Greenland), because land outside
-        the list reads as sea. It is the difference, never all the land, so no coastline is
+        that no zone covers (the United States and Greenland on Canada's map; none inside Morocco's
+        box, see its zone rule below), because land outside the list reads as sea. It is the difference, never all the land, so no coastline is
         stored twice (Canada's file goes over 400 KB otherwise). `zone-map.ts` draws it first as
         one `aria-hidden`, `pointer-events: none` path (`gmt-zonemap-land`); it is not a zone, so
         every walk over the features goes through `isZoneFeature`, and `canadaProjection` fits to
@@ -1116,16 +1210,55 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         step lighter,** from the existing tokens (`--zonemap-land*`); every class stroke keeps 3:1
         against it (`canada-palette.test.ts`). Both maps' credits list "Coastlines" after "Time
         zone boundaries" (`COASTLINES` in `data-credits.ts`).
+    - **Place labels** (`lib/zone-map-labels.ts`, "Place labels" in `clock-change.css`). Labels are
+      HTML over the drawing (`div.gmt-zonemap-labels`, `aria-hidden`, `pointer-events: none`), not
+      SVG text, so the type stays 12px at every frame width and the sea halo is a `text-shadow`
+      (3px at 85% of the sea, 4.5:1 or better in both themes; forced colours draw CanvasText on a
+      Canvas halo).
+      - The zones with a live clock (`labelled`) keep a label; every other zone shows one while
+        hovered, focused or pinned, one passing label at a time, a pinned one stays.
+      - A label is the city (display face, `_` as a space) over the offset (mono, tabular, from
+        `offsetAt`, or the NO SIGNAL mark). It sits at a stated `[lon, lat]` in `anchors`, inside
+        the land, and a zone with no anchor takes its largest part's pole of inaccessibility.
+      - Each label reserves its width and height, so showing or hiding one moves nothing.
+      - A new anchor needs `zone-map.test.ts` (no overlap, none past the frame, from a 400px frame
+        up) and `canada-layout-check.mjs` (the real boxes) to stay green. Reason: a label that
+        covers a neighbour or a coast teaches the wrong zone.
+    - **The map row** is one row of three (map, zone list, live clocks) from 62rem of the
+      checker's own width (a container query, so the chat rail stacks too), with the pin panel as
+      a full-width strip under it; below that the cards stack in that order and the stacked map
+      stops at 70vh.
+      - The row's height is `--gmt-zonemap-row`, a registered `<length>`, `clamp(max(22rem, a 400px
+        frame), 32cqw, 28rem)`, and the frame keeps the drawing's own aspect (800 by the
+        `--zonemap-map-height`). The map's column is the frame plus the stage's padding and
+        border. The cards are `inline-size` containers, so a `max-content` column would collapse.
+      - Reason: the map's width must not set the row's height (a tall Morocco map made a 1000px
+        row), and a frame that drifts from the drawing's aspect letterboxes the sea.
+      - `canada-layout-check.mjs` holds the arrangement, the aspect within 2%, and at most 48px of
+        empty space under any card's content.
     - Crystal-clock ids are `<idPrefix>-<zone>`, and each mount takes the prefix its template
       was rendered with, so the page and a chat widget share none.
   - **Morocco map** (`lib/morocco-map.ts`, `morocco-region-zones.json`,
     `public/timezone-boundaries-morocco.json`; a config over the shared map, no map code of its
     own):
-    - **Zones:** every tzdb 2026e `zone.tab` row for `MA`, `EH`, `DZ`, `MR`, `ES`, `PT` or `GI`
-      whose timezone-boundary-builder 2026e shape meets the frame: ten zones (`Atlantic/Azores` is
-      a `PT` row that lies west of the frame). The two land neighbours and the three territories
-      across the Strait give the reader the contrast. `zone.tab`, not `zone1970.tab`, because
+    - **Zones: every zone whose shape meets the box, so no land in the box is left without a
+      zone** (a bordered patch with no zone reads as a lost region; Mali was one). The region row
+      says `"countries": "frame"`: the script takes every tzdb 2026e `zone.tab` row, whatever its
+      country, whose timezone-boundary-builder 2026e shape meets `land_frame`, then drops each
+      zone with no land inside the drawn box and names it in its output (`Africa/Niamey` and
+      `Africa/Tunis` lie outside the box). That leaves fifteen zones: the ten of Morocco, Western
+      Sahara, Algeria, Mauritania, Spain, Portugal and Gibraltar, plus `Africa/Bamako`,
+      `Europe/Andorra`, `Europe/Monaco`, `Europe/Paris` and `Europe/Rome`. Canada's map keeps its
+      country rule: land outside Canada reads as abroad. `zone.tab`, not `zone1970.tab`, because
       `zone1970.tab` folds Mauritania into `Africa/Abidjan`, a shape that covers twelve countries.
+      The row's `box` states the projection that draws the box (the same parallels, central meridian
+      and origin as `moroccoProjection`); the script rebuilds the box outline from it.
+      `boundary-data.test.ts` checks that no pixel of the drawn box lies on the land feature and
+      that every zone has land inside the box, using the real projection.
+    - **Classes of the new zones** come from the Worker as for any other: Mali never changes
+      clocks, France, Andorra, Monaco and Italy change in both years like Spain. Nothing types a
+      year. The new zones get a passing label (hover, focus, pin) at their pole of
+      inaccessibility; `zone-map.test.ts` checks every zone's label point lies inside its land.
     - **Frame:** 19 W to 5 E, 20.5 N to 44.5 N, so the Canary Islands, Madeira, Iberia, Morocco
       and Western Sahara fit. The script clips the land and the shapes to the row's `land_frame`
       (the box's bounds, see Coastlines above); the drawing's `clipExtent` cuts them at the box.
@@ -2167,7 +2300,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Deploy smoke for Morocco.** `deploy-smoke.mjs` runs against the deployed Worker, which carries
   tz 2026e, and never against `wrangler dev`: the workerd that `wrangler dev` runs locally
   (1.20260825.1) carries tz data older than 2026c, so a local Morocco Worker answers as old data.
-  The rows make five calls to the `morocco:` bucket per run: the probe (all four offsets
+  The rows make four calls to the `morocco:` bucket per run (the PUT answers 405 before the
+  bucket counts it): the probe (all four offsets
   `+00:00`; no `recordedBy: "2026b"` change `present`; every `"2026c"` change `present`), HEAD
   (`no-store`, empty body), PUT (`405`, `Allow: GET, HEAD, POST`), a report-only stored-times
   POST that prints each line's kind, and a POST of `STORED_MAX_LINES` lines that must answer 200

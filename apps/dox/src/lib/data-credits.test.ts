@@ -84,6 +84,11 @@ describe("renderDataCreditsHtml", () => {
     });
     expect(corner.match(/data-placement="corner"/g)).toHaveLength(2);
     expect(corner).toContain('popovertarget="tz-map-data-credits"');
+    const start = renderDataCreditsHtml([TZ_BOUNDARIES], {
+      id: "morocco-data-credits",
+      placement: "corner-start",
+    });
+    expect(start.match(/data-placement="corner-start"/g)).toHaveLength(2);
     expect(html.match(/data-placement="stack"/g)).toHaveLength(2);
   });
 

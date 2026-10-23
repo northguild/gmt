@@ -5,6 +5,8 @@ import {
   MOROCCO_PROBE,
   MOROCCO_STORED_ZONES,
   MOROCCO_ZONES,
+  moroccoProbe,
+  presentText,
 } from "./morocco-clock-change";
 
 /* Epoch milliseconds of a UTC instant, through gmt: this repo bans `Date.parse`, tests included. */
@@ -49,5 +51,36 @@ describe("Morocco checker facts", () => {
 
   it("offers the two Moroccan zones in the picker", () => {
     expect(MOROCCO_STORED_ZONES).toEqual(MOROCCO_ZONES);
+  });
+
+  it("gives each probe zone the right offset for each of its two instants", () => {
+    for (const fact of moroccoProbe("m").zones) {
+      expect(fact.expected).toEqual({ verdict: "+00:00", blind: "+00:00" });
+    }
+  });
+});
+
+describe("presentText", () => {
+  const at = "2026-09-20T00:00:00Z";
+  const change = (recordedBy: "2026b" | "2026c", present: boolean) => ({
+    at,
+    from: "+00:00",
+    to: "+01:00",
+    recordedBy,
+    present,
+  });
+
+  it("says a 2026b change is still held, and a 2026c one is simply there", () => {
+    expect(presentText(change("2026b", true))).toBe("This server still has it");
+    expect(presentText(change("2026c", true))).toBe("This server has it");
+  });
+
+  it("says a change is not held, for a removed 2026b one and a missing 2026c one", () => {
+    expect(presentText(change("2026b", false))).toBe(
+      "This server does not have it",
+    );
+    expect(presentText(change("2026c", false))).toBe(
+      "This server does not have it",
+    );
   });
 });

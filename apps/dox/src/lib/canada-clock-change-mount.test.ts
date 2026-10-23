@@ -5,6 +5,7 @@
  * The Worker's answer is built by the real Worker handler in this test runtime, so no 2026e
  * offset is asserted as something the runtime computed (a test runtime can carry older tz data).
  */
+import { canadaTense } from "./clock-change-tense.fixture";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { getUtcNow } from "@northguild/gmt/utc/get";
 import { installJsdomShims } from "~/test/jsdom-shims";
@@ -58,7 +59,9 @@ function fetching(body: CanadaCheck): typeof fetch {
 }
 
 function host(): HTMLElement {
-  document.body.innerHTML = renderCanadaClockChangeTemplate();
+  document.body.innerHTML = renderCanadaClockChangeTemplate({
+    tense: canadaTense,
+  });
   return document.querySelector<HTMLElement>(".gmt-canada")!;
 }
 
@@ -310,7 +313,8 @@ describe("the mount", () => {
       fetch: fetching(await workerAnswer()),
       now,
     });
-    expect(vi.getTimerCount()).toBe(1);
+    // The probe's clock timer, and the tense timer for the change 9 days ahead.
+    expect(vi.getTimerCount()).toBe(2);
     controller.abort();
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -337,6 +341,31 @@ describe("the mount", () => {
         ),
       ),
     ).not.toBe("");
+    controller.abort();
+  });
+
+  it("announces Checking\u2026 in the status line while the check runs, then clears it", async () => {
+    const root = host();
+    const controller = new AbortController();
+    const answer = await workerAnswer();
+    let release!: () => void;
+    const held = new Promise<void>((done) => (release = done));
+    let gets = 0;
+    const fetchFn = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      if (init?.method === "POST") return Response.json({ rows: [], zone: "" });
+      gets += 1;
+      if (gets > 1) await held;
+      return Response.json(citedProbe(answer));
+    });
+    await mountCanadaClockChange(root, controller.signal, {
+      fetch: fetchFn as unknown as typeof fetch,
+      now,
+    });
+    const status = root.querySelector('[data-role="status"]');
+    root.querySelector<HTMLButtonElement>('[data-role="recheck"]')!.click();
+    await vi.waitFor(() => expect(text(status)).toBe("Checking\u2026"));
+    release();
+    await vi.waitFor(() => expect(text(status)).toBe(""));
     controller.abort();
   });
 

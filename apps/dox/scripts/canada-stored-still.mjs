@@ -5,23 +5,38 @@
  * The form must not move or resize when an answer arrives, and the page must not scroll sideways
  * at 375 px. jsdom has no layout, so this runs in a browser against the built site.
  *
- * It loads `/check/canada-2026-clock-change/` at 1280 and 375 px with the Worker's two answers stubbed
+ * It loads `/check/canada-2026-clock-change/` at 1440, 1024 and 375 px with the Worker's two answers stubbed
  * (the GET probe and a POST that returns one row of every kind and a null), records the rect of
  * the section's heading, steps, textarea, Check and Reset example buttons and the summary bar before
  * and after pressing Check from the keyboard, and again after "Only moved" is on. Every rect, in
  * document coordinates, must be unchanged (a scroll the harness causes is not a layout shift).
  * WebKit presses Option+Tab: Safari on macOS leaves buttons out of the plain Tab order. It also checks the result rows are in the page and "Only moved" hides the rest.
  *
+ * The page says when it is ready (`data-state="ready"` on its root; `error` where it shows its
+ * error state), and the script waits for that in real time, 60 s, instead of guessing.
+ *
+ * The error-answer row loads the page with the GET held, records the rect of every card, lets
+ * the answer through as 200, 503 and 429 in turn, and asserts no card, above or below, moved or
+ * resized, and the page height held. A 429 and a 503 must end in `data-state="error"`.
+ *
  * Serve a build statically first (never `astro preview`, never the owner's dev server):
  *   pnpm exec astro build --outDir /tmp/dist-x/gmt
- *   python3 -m http.server 4351 --bind 127.0.0.1 --directory /tmp/dist-x
+ *   node scripts/lib/static-server.mjs /tmp/dist-x 4351
  *
  * Usage:
  *   node scripts/canada-stored-still.mjs --base http://127.0.0.1:4351/gmt [--browsers chromium,webkit]
  */
 
+import { readFileSync } from "node:fs";
 import { chromium, webkit } from "@playwright/test";
 import { blockOffSite } from "./gate-checks.mjs";
+import {
+  ROOT_SELECTOR,
+  canadaGetFixture,
+  regionOf,
+  routeWorker,
+  waitForState,
+} from "./lib/clock-check-harness.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -30,60 +45,22 @@ const arg = (name, fallback) => {
 };
 const BASE = arg("base", "http://127.0.0.1:4351/gmt").replace(/\/$/, "");
 const BROWSERS = arg("browsers", "chromium").split(",");
-const WIDTHS = [1280, 375];
+const WIDTHS = [1440, 1024, 375];
 const PATH = arg("path", "/check/canada-2026-clock-change/");
-/* The page's Worker route follows its checker: Canada by default, Morocco for its own path. */
-const ROUTE = `**/api/${PATH.includes("morocco") ? "morocco" : "canada"}-clock-change`;
+/* The page's Worker route, zone and saved-times answer come from its path; an unknown path throws. */
+const REGION = regionOf(PATH);
 
 /* Another checker's page needs its own GET answer: a Worker answer saved to a file (`--fixture`). */
 const FIXTURE_FILE = arg("fixture", "");
+if (REGION.name !== "canada" && FIXTURE_FILE === "") {
+  console.error(
+    "canada-stored-still: --path other than Canada needs --fixture <Worker answer .json>",
+  );
+  process.exit(2);
+}
 const GET_FIXTURE = FIXTURE_FILE
-  ? JSON.parse((await import("node:fs")).readFileSync(FIXTURE_FILE, "utf8"))
-  : {
-      now: "2026-10-22T12:00:00Z",
-      probe: [],
-      transitions: [],
-      zones: [],
-    };
-const ROW = (line, input, result) => ({ line, input, value: input, result });
-const POST_FIXTURE = {
-  zone: PATH.includes("morocco") ? "Africa/Casablanca" : "America/Vancouver",
-  truncated: true,
-  rows: [
-    ROW(1, "2026-07-01T12:00:00-04:00[America/Toronto]", {
-      kind: "valid",
-      instant: "2026-07-01T16:00:00Z",
-      atStoredOffset: "2026-07-01T16:00:00Z",
-    }),
-    ROW(2, "2026-11-01T01:30:00-04:00[America/Toronto]", {
-      kind: "validInOverlap",
-      instant: "2026-11-01T05:30:00Z",
-      earlier: "2026-11-01T05:30:00Z",
-      later: "2026-11-01T06:30:00Z",
-      atStoredOffset: "2026-11-01T05:30:00Z",
-    }),
-    ROW(3, "2026-07-01T12:00:00-05:00[America/Toronto]", {
-      kind: "offsetMismatch",
-      storedOffset: "-05:00",
-      zoneOffset: "-04:00",
-      atStoredOffset: "2026-07-01T17:00:00Z",
-      atZoneOffset: "2026-07-01T16:00:00Z",
-    }),
-    ROW(4, "2026-11-01T01:30:00-06:00[America/Toronto]", {
-      kind: "ambiguous",
-      earlier: "2026-11-01T05:30:00Z",
-      later: "2026-11-01T06:30:00Z",
-      atStoredOffset: "2026-11-01T07:30:00Z",
-    }),
-    ROW(5, "2027-03-14T02:30:00-05:00[America/Toronto]", {
-      kind: "nonexistent",
-      earlier: "2027-03-14T06:30:00Z",
-      later: "2027-03-14T07:30:00Z",
-      atStoredOffset: "2027-03-14T07:30:00Z",
-    }),
-    { line: 6, input: "not a stored time", value: null, result: null },
-  ],
-};
+  ? JSON.parse(readFileSync(FIXTURE_FILE, "utf8"))
+  : canadaGetFixture("2026-10-22T12:00:00Z");
 
 const failures = [];
 const fail = (message) => failures.push(message);
@@ -120,27 +97,115 @@ function same(label, before, after) {
   }
 }
 
+/** Page-absolute rects of every card on the page, in order, and the page's own height. */
+async function cardRects(page) {
+  return page.evaluate((rootSelector) => {
+    const root = document.querySelector(rootSelector);
+    const cards = [
+      ...root.querySelectorAll(
+        "section.gmt-widget-section, .gmt-keypoints-card, .gmt-zonemap-pin, .gmt-zonemap-map-block, .gmt-clockcheck-clock",
+      ),
+    ];
+    return {
+      height: document.documentElement.scrollHeight,
+      cards: cards.map((card, index) => {
+        const r = card.getBoundingClientRect();
+        const name =
+          card.querySelector("h2, h3, h4")?.textContent?.trim() ||
+          card.dataset.zone ||
+          card.className;
+        return {
+          key: `${index} ${name}`,
+          rect: [r.x + scrollX, r.y + scrollY, r.width, r.height].map(
+            (n) => Math.round(n * 100) / 100,
+          ),
+        };
+      }),
+    };
+  }, ROOT_SELECTOR);
+}
+
+/** The GET held until a snapshot is taken, then answered with `status`: nothing may move. */
+async function errorAnswerStill(browser, name, width, status) {
+  const label = `${name} ${width}px, GET ${status}`;
+  const failuresBefore = failures.length;
+  const context = await browser.newContext({
+    viewport: { width, height: 900 },
+  });
+  await blockOffSite(context, BASE);
+  const page = await context.newPage();
+  try {
+    const held = await routeWorker(page, REGION, {
+      getFixture: GET_FIXTURE,
+      getStatus: status,
+      hold: true,
+      post: "echo",
+    });
+    const response = await page.goto(`${BASE}${PATH}`, {
+      waitUntil: "domcontentloaded",
+    });
+    if (!response || response.status() !== 200) {
+      fail(`${label}: the page answered HTTP ${response?.status()}, not 200`);
+      return;
+    }
+    await page.waitForSelector(ROOT_SELECTOR);
+    // The library and the module chunks load while the GET is held; wait for the page to be idle
+    // first so the "before" is the finished layout, not one that is still filling in.
+    await page.waitForLoadState("load");
+    await page.waitForTimeout(1000);
+    const before = await cardRects(page);
+    held.release();
+    const state = await waitForState(page, ["ready", "error"]);
+    const wanted = status === 200 ? "ready" : "error";
+    if (state !== wanted) {
+      fail(`${label}: data-state is "${state}", not "${wanted}"`);
+    }
+    await page.waitForTimeout(500);
+    const after = await cardRects(page);
+    if (before.cards.length === 0) fail(`${label}: no cards on the page`);
+    if (after.height !== before.height) {
+      fail(
+        `${label}: the page height changed ${before.height} -> ${after.height}`,
+      );
+    }
+    if (after.cards.length !== before.cards.length) {
+      fail(
+        `${label}: ${before.cards.length} cards before, ${after.cards.length} after`,
+      );
+      return;
+    }
+    before.cards.forEach((card, i) => {
+      if (JSON.stringify(card.rect) !== JSON.stringify(after.cards[i].rect)) {
+        fail(
+          `${label}: ${card.key} moved ${card.rect} -> ${after.cards[i].rect}`,
+        );
+      }
+    });
+    if (failures.length === failuresBefore) {
+      console.log(
+        `${label}: ${before.cards.length} cards and the page height held still`,
+      );
+    }
+  } catch (error) {
+    fail(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    await context.close();
+  }
+}
+
 for (const name of BROWSERS) {
   const launcher = name === "webkit" ? webkit : chromium;
   const browser = await launcher.launch();
   try {
     for (const width of WIDTHS) {
       const label = `${name} ${width}px`;
+      const failuresBefore = failures.length;
       const context = await browser.newContext({
         viewport: { width, height: 900 },
       });
       await blockOffSite(context, BASE);
       const page = await context.newPage();
-      await page.route(ROUTE, (route) =>
-        route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          headers: { "cache-control": "no-store" },
-          body: JSON.stringify(
-            route.request().method() === "POST" ? POST_FIXTURE : GET_FIXTURE,
-          ),
-        }),
-      );
+      await routeWorker(page, REGION, { getFixture: GET_FIXTURE });
       try {
         const response = await page.goto(`${BASE}${PATH}`, {
           waitUntil: "domcontentloaded",
@@ -151,25 +216,16 @@ for (const name of BROWSERS) {
           );
           continue;
         }
-        await page.waitForSelector(".gmt-clockcheck-stored");
-        // The section's handlers attach when the page's script runs, after the server-sent markup is
-        // already on screen; a press before that is a native form submit (a reload). The Example
-        // button is the probe: it only fills the textarea once its handler is bound, so press it
-        // until it does. Nothing in the markup says "ready", and the status line is empty from the start.
-        let bound = false;
-        for (let attempt = 0; attempt < 40 && !bound; attempt += 1) {
-          await page.click('[data-role="stored-example"]');
-          bound = await page.evaluate(
-            () =>
-              document.querySelector('[data-role="stored-lines"]')?.value !==
-              "",
-          );
-          if (!bound) await page.waitForTimeout(250);
-        }
-        if (!bound)
+        // The section's handlers attach when the page's script runs, after the server-sent markup
+        // is already on screen; a press before that is a native form submit (a reload). The mount
+        // binds them before it asks the Worker, so `data-state="ready"` means they are bound.
+        await waitForState(page, ["ready"]);
+        await page.click('[data-role="stored-example"]');
+        if ((await page.inputValue('[data-role="stored-lines"]')) === "") {
           throw new Error(
-            "the stored-times handlers never attached (Example filled nothing)",
+            "the page is ready but the stored-times handlers are not bound (Example filled nothing)",
           );
+        }
         const before = await snapshot(page);
 
         // Keyboard only: Tab from the textarea (past the formats disclosure) to Check, then Enter.
@@ -202,13 +258,18 @@ for (const name of BROWSERS) {
             `${label}: horizontal page scroll (${scroll.scroll} > ${scroll.client})`,
           );
         }
-        console.log(`${label}: form held still, ${rows} rows`);
+        if (failures.length === failuresBefore) {
+          console.log(`${label}: form held still, ${rows} rows`);
+        }
       } catch (error) {
         fail(
           `${label}: ${error instanceof Error ? error.message : String(error)}`,
         );
       } finally {
         await context.close();
+      }
+      for (const status of [200, 503, 429]) {
+        await errorAnswerStill(browser, name, width, status);
       }
     }
   } finally {

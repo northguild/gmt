@@ -1,4 +1,4 @@
-import { handleClockChangeCheck } from "./clock-change-shared";
+import { handleClockChangeCheck, mapZone } from "./clock-change-shared";
 import type { CheckEndpoint } from "./clock-change-shared";
 import { resetRateLimitState } from "./rate-limit";
 
@@ -127,5 +127,29 @@ describe("handleClockChangeCheck with a made-up endpoint", () => {
       truncated: false,
       rows: [],
     });
+  });
+});
+
+describe("the endpoint's stopYear", () => {
+  beforeEach(() => resetRateLimitState());
+
+  // Lisbon changes its clocks every year, so its class depends only on the year it is read from.
+  const kindFor = async (stopYear: number): Promise<string> => {
+    const endpoint: CheckEndpoint = {
+      ...DEMO,
+      stopYear,
+      compute: (now, year) => mapZone("Europe/Lisbon", now, year),
+    };
+    const response = await handleClockChangeCheck(
+      new Request(URL, { headers: { "cf-connecting-ip": "3.3.3.3" } }),
+      endpoint,
+      () => NOW,
+    );
+    return ((await response.json()) as { kind: string }).kind;
+  };
+
+  it("reaches mapZone, so changing the setting changes the zone's class", async () => {
+    expect(await kindFor(2030)).toBe("changes-after");
+    expect(await kindFor(1900)).toBe("none");
   });
 });

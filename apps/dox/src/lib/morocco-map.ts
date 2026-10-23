@@ -7,7 +7,7 @@
 import { geoConicConformal } from "d3-geo";
 import type { GeoProjection } from "d3-geo";
 import {
-  MOROCCO_KIND_LABELS,
+  moroccoClassText,
   MOROCCO_ZONES,
   MOROCCO_RELEASE,
   MOROCCO_STOPPED,
@@ -121,7 +121,7 @@ export const MOROCCO_MAP: ZoneMapConfig = {
   boundariesUrl: withBase("/timezone-boundaries-morocco.json"),
   projection: moroccoProjection,
   stopped: MOROCCO_STOPPED,
-  kindLabels: MOROCCO_KIND_LABELS,
+  classText: moroccoClassText,
   releaseOf,
   releaseRange: "2026c to 2026e",
   mapLabel:
@@ -130,4 +130,6 @@ export const MOROCCO_MAP: ZoneMapConfig = {
   markers: MAP_MARKERS,
   labelled: MOROCCO_ZONES,
   anchors: MOROCCO_ANCHORS,
+  // Algeria fills the drawing's bottom-end corner; the top-start corner is open Atlantic.
+  creditsCorner: "corner-start",
 };

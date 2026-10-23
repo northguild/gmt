@@ -6,6 +6,7 @@
  * and did nothing; nothing tested the path, so nothing noticed. Here each
  * library-backed mount meets a `GMT_MODULES` whose every import rejects.
  */
+import { canadaTense, moroccoTense } from "./clock-change-tense.fixture";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { GMT_MODULES } from "./gmt-modules";
 import {
@@ -310,12 +311,12 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "canada clock-change checker",
-    () => renderCanadaClockChangeWidgetTemplate("canada"),
+    () => renderCanadaClockChangeWidgetTemplate("canada", canadaTense),
     mountCanadaClockChangeWidget as MountFn<never>,
   ],
   [
     "morocco clock-change checker",
-    () => renderMoroccoClockChangeWidgetTemplate("morocco"),
+    () => renderMoroccoClockChangeWidgetTemplate("morocco", moroccoTense),
     mountMoroccoClockChangeWidget as MountFn<never>,
   ],
   [

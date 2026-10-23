@@ -3,6 +3,7 @@
  * tzdb release changes: a 2024 New York value with the wrong offset, so the card cannot drift from
  * what the functions do.
  */
+import { canadaTense } from "./clock-change-tense.fixture";
 import { describe, expect, it } from "vitest";
 import { addZoned } from "@northguild/gmt/zoned/calculate";
 import { classifyStoredZoned } from "@northguild/gmt/zoned/classify";
@@ -71,7 +72,7 @@ describe("the How gmt helps card", () => {
   });
 
   it("links each function name to its reference page and the saved-times link to the section", () => {
-    const html = renderCanadaClockChangeTemplate();
+    const html = renderCanadaClockChangeTemplate({ tense: canadaTense });
     const card = html.slice(
       html.indexOf('class="gmt-clockcheck-help"'),
       html.indexOf("</section>", html.indexOf('class="gmt-clockcheck-help"')),
@@ -95,7 +96,7 @@ describe("the How gmt helps card", () => {
   });
 
   it("draws the two saved-time cases as cards with input, output and why", () => {
-    const html = renderCanadaClockChangeTemplate();
+    const html = renderCanadaClockChangeTemplate({ tense: canadaTense });
     expect(html).toContain(
       '<span class="gmt-clockcheck-help-tag">Saved with an offset</span>',
     );
@@ -113,7 +114,10 @@ describe("the How gmt helps card", () => {
   });
 
   it("words every link to the saved-events section with the heading's own text", () => {
-    const html = renderCanadaClockChangeTemplate({ keyPoints: true });
+    const html = renderCanadaClockChangeTemplate({
+      tense: canadaTense,
+      keyPoints: true,
+    });
     const heading = html.match(
       /<h4 id="canada-stored-title">([^<]*)<\/h4>/,
     )?.[1];

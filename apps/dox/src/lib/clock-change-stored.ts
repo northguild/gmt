@@ -200,6 +200,12 @@ function storedStepsHtml(ex: SavedExample): string {
   );
 }
 
+/** How many rows the prefilled example's answer holds: its non-empty lines, up to the line limit. */
+export function presetRows(preset: string): number {
+  const lines = preset.split(/\r?\n/).filter((line) => line.trim() !== "");
+  return Math.min(lines.length, STORED_MAX_LINES);
+}
+
 export function storedSectionHtml(config: StoredConfig): string {
   const titleId = `${config.idPrefix}-stored-title`;
   return (
@@ -239,7 +245,7 @@ export function storedSectionHtml(config: StoredConfig): string {
     `<p class="gmt-clockcheck-alert" data-role="stored-stale" role="note" hidden></p>` +
     `</div>` +
     `<p class="gmt-clockcheck-status" data-role="stored-truncated"></p>` +
-    `<div class="gmt-clockcheck-stored-results" data-role="stored-results">` +
+    `<div class="gmt-clockcheck-stored-results" data-role="stored-results" style="--stored-rows:${presetRows(config.preset)}">` +
     `<p class="gmt-widget-hint">Checking&hellip;</p></div>` +
     `</div>` +
     `</div>` +
@@ -569,7 +575,7 @@ export function mountStoredTimes(
     const mine = ++runs;
     busy = true;
     check?.setAttribute("aria-busy", "true");
-    if (status) status.textContent = "";
+    if (status) status.textContent = "Checking\u2026";
     const body = new FormData();
     body.set("lines", lines!.value);
     body.set("zone", zone!.value);

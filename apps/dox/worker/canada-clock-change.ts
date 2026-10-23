@@ -20,20 +20,21 @@ import {
 } from "./clock-change-shared";
 import type { CheckEndpoint } from "./clock-change-shared";
 
-const TRANSITION_YEARS = [CANADA_STOP_YEAR, CANADA_STOP_YEAR + 1] as const;
-
-let fixed: Pick<CanadaCheck, "probe" | "transitions"> | undefined;
+type Fixed = Pick<CanadaCheck, "probe" | "transitions">;
+const fixedByYear = new Map<number, Fixed>();
 
 /** The `now`-free part: built on first use, then reused for the life of the isolate. */
-function fixedTables(): Pick<CanadaCheck, "probe" | "transitions"> {
-  if (fixed) return fixed;
+function fixedTables(stopYear: number): Fixed {
+  const cached = fixedByYear.get(stopYear);
+  if (cached) return cached;
+  const years = [stopYear, stopYear + 1] as const;
   const probe: ProbeRow[] = probeRows(
     { instants: CANADA_PROBE_INSTANTS },
     PROBE_ZONES.map(({ zone }) => zone),
   ).map(({ zone, offset }) => ({ zone, offset }));
 
   const transitions: TransitionRow[] = transitionRows(
-    TRANSITION_YEARS,
+    years,
     TRANSITION_ZONES,
   ).flatMap(({ zone, year, changes }) =>
     changes.map((change) => ({
@@ -45,18 +46,17 @@ function fixedTables(): Pick<CanadaCheck, "probe" | "transitions"> {
       }),
     })),
   );
-  fixed = { probe, transitions };
-  return fixed;
+  const built = { probe, transitions };
+  fixedByYear.set(stopYear, built);
+  return built;
 }
 
 /** Every value the checker shows, computed on this runtime's tz data. */
-export function computeCanadaCheck(now: string): CanadaCheck {
+export function computeCanadaCheck(now: string, stopYear: number): CanadaCheck {
   return {
     now,
-    ...fixedTables(),
-    zones: canadaZones.zones.map((zone) =>
-      mapZone(zone, now, CANADA_STOP_YEAR),
-    ),
+    ...fixedTables(stopYear),
+    zones: canadaZones.zones.map((zone) => mapZone(zone, now, stopYear)),
   };
 }
 

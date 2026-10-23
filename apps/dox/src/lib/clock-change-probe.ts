@@ -16,7 +16,7 @@ import {
   signedOffset,
 } from "./clock-change-common";
 import { codeFrameHtml } from "./code-frame";
-import { escapeAttr, escapeHtml } from "./widget-ui";
+import { escapeAttr, escapeHtml, zoneIdHtml } from "./widget-ui";
 
 /** One instant a browser is asked about. `verdict` decides the verdict; `blind` is shown only. */
 export interface ProbeInstant {
@@ -25,10 +25,32 @@ export interface ProbeInstant {
   role: "verdict" | "blind";
 }
 
-/** A zone the browser column fills, with the offset it must give at the verdict instant. */
+/**
+ * The offset a zone must give, per instant role. `verdict` is the offset at the verdict instant;
+ * `blind` is the offset at the blind instant and is needed only when the probe has one.
+ */
+export interface ExpectedOffsets {
+  verdict: string;
+  blind?: string;
+}
+
+/** A zone the browser column fills, with the offset it must give at each of the probe's instants. */
 export interface ProbeZone {
   zone: string;
-  expected: string;
+  expected: ExpectedOffsets;
+}
+
+/** The offset a zone must give at an instant of this role. A blind instant with none stated is a config error. */
+export function expectedAt(
+  fact: ProbeZone,
+  role: ProbeInstant["role"],
+): string {
+  const offset = fact.expected[role];
+  if (offset === undefined)
+    throw new Error(
+      `${fact.zone} has no expected offset for the ${role} instant.`,
+    );
+  return offset;
 }
 
 export interface ProbeConfig {
@@ -144,10 +166,10 @@ export function unreadableHtml(text: VerdictText): string {
 function probeRowHtml(fact: ProbeZone, when?: string): string {
   const zone = escapeAttr(fact.zone);
   return (
-    `<tr data-zone="${zone}" data-state="stopped">` +
-    `<th scope="row" data-label="Place"><span class="gmt-clockcheck-city">${escapeHtml(cityOf(fact.zone))}</span><code class="gmt-clockcheck-zoneid">${escapeHtml(fact.zone)}</code>${when === undefined ? "" : `<small class="gmt-clockcheck-when">${escapeHtml(when)}</small>`}</th>` +
-    `<td data-label="Correct" class="gmt-clockcheck-num">${escapeHtml(signedOffset(fact.expected))}</td>` +
-    `<td data-label="Yours" class="gmt-clockcheck-num" data-role="browser">${NO_SIGNAL}</td>` +
+    `<tr role="row" data-zone="${zone}" data-state="stopped">` +
+    `<th role="rowheader" scope="row" data-label="Place"><span class="gmt-clockcheck-city">${escapeHtml(cityOf(fact.zone))}</span><code class="gmt-clockcheck-zoneid">${zoneIdHtml(fact.zone)}</code>${when === undefined ? "" : `<small class="gmt-clockcheck-when">${escapeHtml(when)}</small>`}</th>` +
+    `<td role="cell" data-label="Correct" class="gmt-clockcheck-num">${escapeHtml(signedOffset(fact.expected.verdict))}</td>` +
+    `<td role="cell" data-label="Yours" class="gmt-clockcheck-num" data-role="browser">${NO_SIGNAL}</td>` +
     `</tr>`
   );
 }
@@ -163,10 +185,10 @@ function blindRowHtml(
   expected: string,
 ): string {
   return (
-    `<tr data-blind-zone="${escapeAttr(fact.zone)}" data-state="stopped">` +
-    `<th scope="row" data-label="Place"><span class="gmt-clockcheck-city">${escapeHtml(cityOf(fact.zone))}</span><code class="gmt-clockcheck-zoneid">${escapeHtml(fact.zone)}</code><small class="gmt-clockcheck-when">${escapeHtml(dateLabel(instant.iso))}</small></th>` +
-    `<td data-label="Correct" class="gmt-clockcheck-num">${escapeHtml(signedOffset(expected))}</td>` +
-    `<td data-label="Yours" class="gmt-clockcheck-num" data-role="browser-blind">${NO_SIGNAL}</td>` +
+    `<tr role="row" data-blind-zone="${escapeAttr(fact.zone)}" data-state="stopped">` +
+    `<th role="rowheader" scope="row" data-label="Place"><span class="gmt-clockcheck-city">${escapeHtml(cityOf(fact.zone))}</span><code class="gmt-clockcheck-zoneid">${zoneIdHtml(fact.zone)}</code><small class="gmt-clockcheck-when">${escapeHtml(dateLabel(instant.iso))}</small></th>` +
+    `<td role="cell" data-label="Correct" class="gmt-clockcheck-num">${escapeHtml(signedOffset(expected))}</td>` +
+    `<td role="cell" data-label="Yours" class="gmt-clockcheck-num" data-role="browser-blind">${NO_SIGNAL}</td>` +
     `</tr>`
   );
 }
@@ -197,7 +219,9 @@ function tableRowsHtml(config: ProbeConfig): string {
     config.zones.map((f) => probeRowHtml(f, dateLabel(verdict.iso))).join("") +
     blind
       .flatMap((instant) =>
-        config.zones.map((f) => blindRowHtml(f, instant, f.expected)),
+        config.zones.map((f) =>
+          blindRowHtml(f, instant, expectedAt(f, "blind")),
+        ),
       )
       .join("")
   );
@@ -216,10 +240,10 @@ export function browserCardHtml(
     `<section class="gmt-widget-section gmt-clockcheck-browser" id="${escapeAttr(config.idPrefix)}-browser" aria-labelledby="${titleId}">` +
     `<h4 id="${titleId}">${escapeHtml(text.title)}</h4>` +
     verdictShellHtml(config, text) +
-    `<table class="gmt-clockcheck-table">` +
-    `<thead><tr><th scope="col">Place</th><th scope="col">Correct<small class="gmt-clockcheck-th-note">${escapeHtml(text.correctNote)}</small></th>` +
-    `<th scope="col">Yours<small class="gmt-clockcheck-th-note">${escapeHtml(text.yoursNote)}</small></th></tr></thead>` +
-    `<tbody>${tableRowsHtml(config)}</tbody></table>` +
+    `<table class="gmt-clockcheck-table" role="table">` +
+    `<thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Place</th><th role="columnheader" scope="col">Correct<small class="gmt-clockcheck-th-note">${escapeHtml(text.correctNote)}</small></th>` +
+    `<th role="columnheader" scope="col">Yours<small class="gmt-clockcheck-th-note">${escapeHtml(text.yoursNote)}</small></th></tr></thead>` +
+    `<tbody role="rowgroup">${tableRowsHtml(config)}</tbody></table>` +
     (blindInstants(config).length > 0 && text.blindNote
       ? `<p class="gmt-clockcheck-blind-note">${escapeHtml(text.blindNote)}</p>`
       : "") +
@@ -279,7 +303,7 @@ export function probeInlineSource(config: ProbeConfig): string {
     zones: config.zones.map((fact) => ({
       zone: fact.zone,
       city: cityOf(fact.zone),
-      expected: fact.expected,
+      expected: fact.expected.verdict,
     })),
     ok: MARK_OK,
     bad: MARK_BAD,
@@ -362,7 +386,8 @@ export function fillBrowserCard(
     const reading = readBrowserOffset(fact.zone, epochMs);
     readings.set(fact.zone, reading);
     if (reading.kind === "offset") {
-      if (reading.offset !== fact.expected) wrong.push(cityOf(fact.zone));
+      if (reading.offset !== fact.expected.verdict)
+        wrong.push(cityOf(fact.zone));
     } else {
       unread += 1;
     }
@@ -387,7 +412,7 @@ export function fillBrowserCard(
     if (!cell) continue;
     cell.innerHTML =
       reading.kind === "offset"
-        ? `${reading.offset === fact.expected ? MARK_OK : MARK_BAD} ${escapeHtml(signedOffset(reading.offset))}`
+        ? `${reading.offset === fact.expected.verdict ? MARK_OK : MARK_BAD} ${escapeHtml(signedOffset(reading.offset))}`
         : NO_SIGNAL;
   }
   for (const [zone, reading] of blindReadings) {

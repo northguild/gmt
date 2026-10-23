@@ -34,7 +34,7 @@
  * Serve a build statically first (never `astro preview`, never the owner's dev
  * server), for example:
  *   pnpm exec astro build --outDir /tmp/dist-x/gmt
- *   python3 -m http.server 4351 --bind 127.0.0.1 --directory /tmp/dist-x
+ *   node scripts/lib/static-server.mjs /tmp/dist-x 4351
  *
  * Usage:
  *   node scripts/grow-measure.mjs --base http://127.0.0.1:4351/gmt --out <dir>

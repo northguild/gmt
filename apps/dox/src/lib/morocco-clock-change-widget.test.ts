@@ -4,6 +4,7 @@
  * The Morocco 2026 clock-change checker as a chat widget (CORE-89): the credits id of the map,
  * the pinned zone, the permalink state, and a URL the chat keeps for itself.
  */
+import { moroccoTense } from "./clock-change-tense.fixture";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { handleMoroccoClockChange } from "../../worker/morocco-clock-change";
@@ -31,7 +32,10 @@ async function workerAnswer(): Promise<MoroccoCheck> {
 }
 
 function widgetRoot(): HTMLElement {
-  document.body.innerHTML = renderMoroccoClockChangeWidgetTemplate("rail-1");
+  document.body.innerHTML = renderMoroccoClockChangeWidgetTemplate(
+    "rail-1",
+    moroccoTense,
+  );
   return document.querySelector<HTMLElement>(".gmt-morocco")!;
 }
 
@@ -50,7 +54,9 @@ describe("the chat template", () => {
   });
 
   it("renders no credits button in the markup: the map adds its own when it is drawn", () => {
-    document.body.innerHTML = renderMoroccoClockChangeTemplate();
+    document.body.innerHTML = renderMoroccoClockChangeTemplate({
+      tense: moroccoTense,
+    });
     expect(document.querySelector(".gmt-data-credits-button")).toBeNull();
     expect(
       document

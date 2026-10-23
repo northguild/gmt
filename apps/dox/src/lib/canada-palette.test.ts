@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { canadaTense } from "./clock-change-tense.fixture";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { PROBE_ZONES, serversMarkdown } from "./canada-clock-change";
@@ -101,7 +102,10 @@ describe("the servers card and the key points on the text surfaces", () => {
     expect(md).toContain("`Vancouver` -07:00");
   });
   it("puts the cards in reading order: key points, browser, map, clocks, servers, minimums, changes, help, saved events", () => {
-    const html = renderCanadaClockChangeTemplate({ keyPoints: true });
+    const html = renderCanadaClockChangeTemplate({
+      tense: canadaTense,
+      keyPoints: true,
+    });
     expect(html.match(/id="canada-servers-title"/g)).toHaveLength(1);
     const order = [
       "canada-keypoints-title",
@@ -123,9 +127,9 @@ describe("the servers card and the key points on the text surfaces", () => {
     expect(html).toContain('data-role="copy-status" role="status"');
   });
   it("leaves the key points out of the chat copy", () => {
-    expect(renderCanadaClockChangeTemplate()).not.toContain(
-      "canada-keypoints-title",
-    );
+    expect(
+      renderCanadaClockChangeTemplate({ tense: canadaTense }),
+    ).not.toContain("canada-keypoints-title");
   });
   it("names the places as code chips", () => {
     const md = keyPointsMarkdown(KEY_POINTS);
@@ -179,7 +183,10 @@ describe("the Upgrade to at least card", () => {
     expect(md).not.toMatch(/not fixed|Windows \(|statute/i);
   });
   it("ends with one plain note about the device, and the page names no stale-browser function", () => {
-    const html = renderCanadaClockChangeTemplate({ keyPoints: true });
+    const html = renderCanadaClockChangeTemplate({
+      tense: canadaTense,
+      keyPoints: true,
+    });
     expect(html).toContain(
       "gmt uses the time-zone rules of the device it runs on.",
     );

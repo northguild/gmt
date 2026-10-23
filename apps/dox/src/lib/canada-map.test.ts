@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { canadaTense } from "./clock-change-tense.fixture";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -74,6 +75,7 @@ const ZONES: MapZone[] = [
 
 function deps(over: Partial<ZoneMapDeps> = {}): ZoneMapDeps {
   return {
+    tense: () => canadaTense,
     responseNow: NOW,
     now: () => NOW,
     wall: (at, offset) => convertUtcToPlainDateTime(at, { timeZone: offset }),
@@ -92,7 +94,9 @@ function deps(over: Partial<ZoneMapDeps> = {}): ZoneMapDeps {
 }
 
 function host(): HTMLElement {
-  document.body.innerHTML = renderCanadaClockChangeTemplate();
+  document.body.innerHTML = renderCanadaClockChangeTemplate({
+    tense: canadaTense,
+  });
   return document.querySelector<HTMLElement>(".gmt-canada")!;
 }
 
@@ -132,18 +136,20 @@ describe("the text", () => {
   });
 
   it("names the class, or no data for a zone with no row", () => {
-    expect(classWords(CANADA_MAP, "America/Winnipeg", ZONES[0])).toBe(
-      "Stops changing clocks in 2026",
+    expect(
+      classWords(CANADA_MAP, "America/Winnipeg", ZONES[0], canadaTense),
+    ).toBe(
+      "Stops changing clocks on 1 November 2026 at 02:00 local time (07:00 UTC)",
     );
-    expect(classWords(CANADA_MAP, "America/Toronto", ZONES[1])).toBe(
-      "Still changes clocks",
-    );
-    expect(classWords(CANADA_MAP, "America/Regina", ZONES[2])).toBe(
-      "Never changes clocks",
-    );
-    expect(classWords(CANADA_MAP, "America/Halifax", undefined)).toBe(
-      "no data",
-    );
+    expect(
+      classWords(CANADA_MAP, "America/Toronto", ZONES[1], canadaTense),
+    ).toBe("Still changes clocks");
+    expect(
+      classWords(CANADA_MAP, "America/Regina", ZONES[2], canadaTense),
+    ).toBe("Never changes clocks");
+    expect(
+      classWords(CANADA_MAP, "America/Halifax", undefined, canadaTense),
+    ).toBe("no data");
   });
 
   it("colours the four stopped zones from the page's own facts, whatever the server says", () => {
@@ -218,7 +224,7 @@ describe("the classes on the shapes", () => {
         displayKind(CANADA_MAP, id, row),
       );
       expect(shape.getAttribute("aria-label")).toBe(
-        `${id}, ${classWords(CANADA_MAP, id, row)}`,
+        `${id}, ${classWords(CANADA_MAP, id, row, canadaTense)}`,
       );
       expect(shape.getAttribute("tabindex")).toBe("-1");
       expect(shape.getAttribute("role")).toBe("button");
@@ -501,13 +507,14 @@ describe("narrow screens", () => {
     expect(root.querySelector("svg.gmt-zonemap-svg")).toBeNull();
     expect(root.querySelector(".gmt-data-credits-button")).toBeNull();
     expect(d.fetch).not.toHaveBeenCalled();
-    // The list still pins, and the panel opens under the pressed button.
-    btn(root, "America/Toronto").click();
+    // The list still pins, and the panel opens in its own place below the list's scroll box.
     const panel = root.querySelector<HTMLElement>('[data-role="pin"]')!;
-    expect(panel.parentElement).toBe(
-      btn(root, "America/Toronto").parentElement,
-    );
-    expect(panel.hidden).toBe(false);
+    expect(panel.dataset.pinned).toBe("false");
+    btn(root, "America/Toronto").click();
+    expect(
+      root.querySelector('[data-role="zone-scroll"]')?.contains(panel),
+    ).toBe(false);
+    expect(panel.dataset.pinned).toBe("true");
   });
 });
 

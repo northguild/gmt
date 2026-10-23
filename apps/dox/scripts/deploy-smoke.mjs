@@ -423,7 +423,11 @@ async function buildRows() {
           const { probe, changes } = parsed;
           if (!Array.isArray(probe) || probe.length !== 4)
             return "expected 4 probe rows";
+          // The page states three changes (2026c's, and the two 2026b Ramadan ones it removed) for
+          // each of the two zones; the same counts as the probe's, so an empty list cannot pass.
           if (!Array.isArray(changes)) return "no changes array";
+          if (changes.length !== 6)
+            return `expected 6 changes (3 stated changes x 2 zones), got ${changes.length}`;
           const bad = probe.filter((r) => r.offset !== "+00:00");
           if (bad.length)
             return `probe differs from tzdb 2026c: ${bad.map((r) => `${r.zone} at ${r.instant} wanted +00:00, got ${r.offset}`).join("; ")}`;

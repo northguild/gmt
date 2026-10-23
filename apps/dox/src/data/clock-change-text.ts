@@ -8,9 +8,18 @@
  * component tag into `.md`, `llms-full.txt` and the retrieval chunks (see `mdx-jsx.ts`).
  */
 
-/** A run of text: plain, code, or a link to an anchor on the same page. */
+/**
+ * A run of text: plain, code, or a link to an anchor on the same page.
+ *
+ * A `tense` part is a stretch of text about a change that has a date. The page shows `before` or
+ * `after`, whichever is true now (`tense` names the moment that decides, a key of the region's
+ * moments): `keyPointsHtml` writes the whole paragraph in both forms. Every function here writes
+ * `dated`, a wording that is true on any day, for the text that runs no code (the `.md` twin, the
+ * llms files, a test).
+ */
 export type KeyPart =
   | string
+  | { tense: string; before: string; after: string; dated: string }
   | { code: string }
   | { strong: string }
   /** A function name, in a code chip, linked to its reference page. */
@@ -49,6 +58,24 @@ export interface HelpCard {
   cta: { lead: string; link: string; href: string };
 }
 
+/** The key of the moment that decides a run of parts, or `null` when no part in it has a tense. */
+export function tenseKeyOf(parts: KeyPart[]): string | null {
+  for (const part of parts) {
+    if (typeof part !== "string" && "tense" in part) return part.tense;
+  }
+  return null;
+}
+
+/** The parts with every `tense` part written out in one form, so the run reads as one sentence. */
+export function partsInForm(
+  parts: KeyPart[],
+  form: "before" | "after",
+): KeyPart[] {
+  return parts.map((part) =>
+    typeof part !== "string" && "tense" in part ? part[form] : part,
+  );
+}
+
 const escapeText = (text: string) =>
   text
     .replace(/&/g, "&amp;")
@@ -65,13 +92,15 @@ export function partsHtml(
     .map((part) =>
       typeof part === "string"
         ? escapeText(part)
-        : "code" in part
-          ? `<code>${escapeText(part.code)}</code>`
-          : "strong" in part
-            ? `<strong>${escapeText(part.strong)}</strong>`
-            : "fn" in part
-              ? `<a class="gmt-clockcheck-help-fn" href="${escapeText(resolveHref(part.href))}"><code>${escapeText(part.fn)}</code></a>`
-              : `<a href="${escapeText(resolveHref(part.href))}">${escapeText(part.link)}</a>`,
+        : "tense" in part
+          ? escapeText(part.dated)
+          : "code" in part
+            ? `<code>${escapeText(part.code)}</code>`
+            : "strong" in part
+              ? `<strong>${escapeText(part.strong)}</strong>`
+              : "fn" in part
+                ? `<a class="gmt-clockcheck-help-fn" href="${escapeText(resolveHref(part.href))}"><code>${escapeText(part.fn)}</code></a>`
+                : `<a href="${escapeText(resolveHref(part.href))}">${escapeText(part.link)}</a>`,
     )
     .join("");
 }
@@ -82,13 +111,15 @@ export function partsText(parts: KeyPart[]): string {
     .map((part) =>
       typeof part === "string"
         ? part
-        : "code" in part
-          ? part.code
-          : "strong" in part
-            ? part.strong
-            : "fn" in part
-              ? part.fn
-              : part.link,
+        : "tense" in part
+          ? part.dated
+          : "code" in part
+            ? part.code
+            : "strong" in part
+              ? part.strong
+              : "fn" in part
+                ? part.fn
+                : part.link,
     )
     .join("");
 }
@@ -99,13 +130,15 @@ export function partsMarkdown(parts: KeyPart[]): string {
     .map((part) =>
       typeof part === "string"
         ? part
-        : "code" in part
-          ? `\`${part.code}\``
-          : "strong" in part
-            ? `**${part.strong}**`
-            : "fn" in part
-              ? `[\`${part.fn}\`](${part.href})`
-              : `[${part.link}](${part.href})`,
+        : "tense" in part
+          ? part.dated
+          : "code" in part
+            ? `\`${part.code}\``
+            : "strong" in part
+              ? `**${part.strong}**`
+              : "fn" in part
+                ? `[\`${part.fn}\`](${part.href})`
+                : `[${part.link}](${part.href})`,
     )
     .join("");
 }

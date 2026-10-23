@@ -232,8 +232,8 @@ export interface CheckEndpoint {
   stopYear: number;
   /** The POST zone allowlist. */
   storedZones: readonly string[];
-  /** The GET body, computed on this runtime's tz data. */
-  compute: (now: string) => unknown;
+  /** The GET body, computed on this runtime's tz data. The handler passes `stopYear` along. */
+  compute: (now: string, stopYear: number) => unknown;
 }
 
 async function handleStoredTimes(
@@ -297,7 +297,7 @@ export async function handleClockChangeCheck(
   }
 
   const blocked = rateLimited(request, endpoint.prefix, endpoint.policy);
-  const answer = blocked ?? json(endpoint.compute(now()));
+  const answer = blocked ?? json(endpoint.compute(now(), endpoint.stopYear));
   // HEAD (RFC 9110 9.1): the GET answer's status and headers, no body; the same bucket.
   if (request.method === "HEAD") {
     return new Response(null, {

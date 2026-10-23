@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { moroccoTense } from "./clock-change-tense.fixture";
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { geoPath } from "d3-geo";
@@ -50,6 +51,7 @@ const ZONES: MapZone[] = IDS.map((zone) => ({
 
 function deps(over: Partial<ZoneMapDeps> = {}): ZoneMapDeps {
   return {
+    tense: () => moroccoTense,
     responseNow: NOW,
     now: () => NOW,
     wall: (at, offset) => convertUtcToPlainDateTime(at, { timeZone: offset }),
@@ -185,8 +187,10 @@ describe("the config", () => {
     expect(displayKind(MOROCCO_MAP, "Europe/Lisbon", undefined)).toBe(
       "no-data",
     );
-    expect(classWords(MOROCCO_MAP, "Africa/El_Aaiun", undefined)).toBe(
-      "Stops changing clocks in 2026",
+    expect(
+      classWords(MOROCCO_MAP, "Africa/El_Aaiun", undefined, moroccoTense),
+    ).toBe(
+      "Stopped changing clocks on 20 September 2026 at 02:00 local time (01:00 UTC)",
     );
     expect(releaseOf("Africa/El_Aaiun")).toBe("2026c");
     expect(releaseOf("Europe/Madrid")).toBeNull();
@@ -240,6 +244,7 @@ describe("the small-shape rings", () => {
           MOROCCO_MAP,
           ring.dataset.tzId!,
           ZONES.find((z) => z.zone === ring.dataset.tzId),
+          moroccoTense,
         )}`,
       );
     }
@@ -331,6 +336,8 @@ describe("a narrow section", () => {
       root.querySelector(
         '[data-role="zone-list"] [data-tz-id="Africa/Casablanca"] [data-role="kind"]',
       )?.textContent,
-    ).toBe("Stops changing clocks in 2026");
+    ).toBe(
+      "Stopped changing clocks on 20 September 2026 at 02:00 local time (01:00 UTC)",
+    );
   });
 });

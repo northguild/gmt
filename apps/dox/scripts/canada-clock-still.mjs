@@ -16,12 +16,18 @@
  *
  * It then pins each of the 23 zones in turn (a fixture row for every zone, the longest texts in
  * the mix) and asserts the pin panel's, the map's and the stored-times form's rects do not change,
- * and that no value cell in the panel is under 4ch wide. At 375 px it asserts the panel sits under
- * the pressed button instead (the map is not drawn there).
+ * and that no value cell in the panel is under 4ch wide. At 375 px it asserts the panel opens below
+ * the zone list's box instead (the map is not drawn there).
+ *
+ * The page says when it is ready: the mount sets `data-state="ready"` on its root right after the
+ * first clock tick that has the Worker's answer. The script installs the fake clock and pauses it
+ * before `goto`, then waits for that state in real time (60 s, failing with the state it saw). It
+ * never polls readout text or moves the fake time to help the page along. The Worker is stubbed
+ * by method (`lib/clock-check-harness.mjs`).
  *
  * Serve a build statically first (never `astro preview`, never the owner's dev server):
  *   pnpm exec astro build --outDir /tmp/dist-x/gmt
- *   python3 -m http.server 4351 --bind 127.0.0.1 --directory /tmp/dist-x
+ *   node scripts/lib/static-server.mjs /tmp/dist-x 4351
  *
  * Usage:
  *   node scripts/canada-clock-still.mjs --base http://127.0.0.1:4351/gmt [--browsers chromium,webkit]
@@ -30,6 +36,12 @@
 import { readFileSync } from "node:fs";
 import { chromium, webkit } from "@playwright/test";
 import { blockOffSite } from "./gate-checks.mjs";
+import {
+  canadaGetFixture,
+  regionOf,
+  routeWorker,
+  waitForState,
+} from "./lib/clock-check-harness.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -39,17 +51,13 @@ const arg = (name, fallback) => {
 const BASE = arg("base", "http://127.0.0.1:4351/gmt").replace(/\/$/, "");
 const BROWSERS = arg("browsers", "chromium").split(",");
 const WIDTHS = [1280, 375];
-/* Real time a page may take to load the library and receive the answer, on a busy machine. */
-const READY_MS = 30_000;
 const PATH = arg("path", "/check/canada-2026-clock-change/");
 /* Canada is the default page. Another checker's page brings its own zone list, clock count and
    Worker route; its fixture is a Worker answer saved to a file (`--fixture`). */
-const IS_CANADA = PATH === "/check/canada-2026-clock-change/";
-const ROUTE = `**/api/${IS_CANADA ? "canada" : "morocco"}-clock-change`;
-const ZONES_FILE = IS_CANADA
-  ? "canada-zones.json"
-  : "morocco-region-zones.json";
-const CLOCK_COUNT = IS_CANADA ? 5 : 2;
+const REGION = regionOf(PATH);
+const IS_CANADA = REGION.name === "canada";
+const ZONES_FILE = REGION.zonesFile;
+const CLOCK_COUNT = REGION.clockCount;
 const FIXTURE_FILE = arg("fixture", "");
 if (!IS_CANADA && FIXTURE_FILE === "") {
   console.error(
@@ -63,45 +71,17 @@ if (!IS_CANADA && FIXTURE_FILE === "") {
 const FAKE_NOW_MS = 1793512710000;
 const NOW = "2026-11-01T05:58:30Z";
 
-const ZONE_OFFSETS = {
-  "America/Vancouver": "-07:00",
-  "America/Edmonton": "-06:00",
-  "America/Inuvik": "-06:00",
-  "America/Winnipeg": "-05:00",
-};
-const FIXTURE = {
-  now: NOW,
-  probe: Object.entries(ZONE_OFFSETS).map(([zone, offset]) => ({
-    zone,
-    offset,
-  })),
-  transitions: [],
-  zones: [
-    ...Object.entries(ZONE_OFFSETS).map(([zone, offset]) => ({
-      zone,
-      offset,
-      last: null,
-      next: null,
-      kind: "stopped",
-    })),
-    {
-      zone: "America/Toronto",
-      offset: "-04:00",
-      last: null,
-      next: {
-        instant: "2026-11-01T06:00:00Z",
-        offsetBefore: "-04:00",
-        offsetAfter: "-05:00",
-      },
-      kind: "changes-after",
-    },
-  ],
-};
+const FIXTURE = canadaGetFixture(NOW);
 
 const ALL_ZONES = JSON.parse(
   readFileSync(new URL(`../src/lib/${ZONES_FILE}`, import.meta.url), "utf8"),
 ).zones;
-const KINDS = ["stopped", "changes-after", "none", "no-data"];
+/* Only the four zones the page states a change moment for can be "stopped"; any other zone with
+   that kind makes the mount throw, so the rest cycle through the other kinds. */
+const STOPPED = new Set(
+  FIXTURE.zones.filter((z) => z.kind === "stopped").map((z) => z.zone),
+);
+const KINDS = ["changes-after", "none", "no-data"];
 /* A row for every zone. Odd rows carry both a last and a next change, the widest texts. */
 const FULL_FIXTURE = {
   now: NOW,
@@ -126,7 +106,7 @@ const FULL_FIXTURE = {
             offsetBefore: "-04:00",
             offsetAfter: "-05:00",
           },
-    kind: KINDS[i % KINDS.length],
+    kind: STOPPED.has(zone) ? "stopped" : KINDS[i % KINDS.length],
   })),
 };
 
@@ -204,8 +184,25 @@ async function pinRects(page) {
       map: box(".gmt-zonemap-map"),
       form: box(".gmt-clockcheck-stored-form"),
       cells,
-      underButton:
-        panel.previousElementSibling?.matches("button[data-tz-id]") ?? false,
+      // The panel opens below the zone list's box (never inside it, where it would scroll with it).
+      belowList: (() => {
+        // The box that clips the list (its nearest scrolling ancestor), or the list itself.
+        const list = document.querySelector('[data-role="zone-list"]');
+        let box = list;
+        for (let e = list.parentElement; e; e = e.parentElement) {
+          if (getComputedStyle(e).overflowY !== "visible") {
+            box = e;
+            break;
+          }
+        }
+        const p = panel.getBoundingClientRect();
+        return (
+          panel.dataset.pinned === "true" &&
+          p.height > 0 &&
+          !box.contains(panel) &&
+          p.top >= box.getBoundingClientRect().bottom - 1
+        );
+      })(),
       mapShown:
         getComputedStyle(document.querySelector(".gmt-zonemap-map")).display !==
         "none",
@@ -245,8 +242,8 @@ async function checkPinPanel(page, label, width) {
     await pinned(ALL_ZONES[0]);
     const r = await pinRects(page);
     if (r.mapShown) fail(`${label}: the map is drawn at 375px`);
-    if (!r.underButton)
-      fail(`${label}: the pin panel is not under the pressed button`);
+    if (!r.belowList)
+      fail(`${label}: the pin panel is not open below the zone list`);
     return;
   }
   // The page finishes mounting its widgets after the list appears; the baseline is the layout once
@@ -299,14 +296,7 @@ for (const name of BROWSERS) {
       });
       await blockOffSite(context, BASE);
       const page = await context.newPage();
-      await page.route(ROUTE, (route) =>
-        route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          headers: { "cache-control": "no-store" },
-          body: JSON.stringify(RUN_FIXTURE),
-        }),
-      );
+      await routeWorker(page, REGION, { getFixture: RUN_FIXTURE });
       // Install a second early and pause at the start time: the fake time then moves only when this
       // script advances it, so a slow library load or a slow answer cannot eat into the 90 s before
       // Toronto's change.
@@ -322,27 +312,9 @@ for (const name of BROWSERS) {
           );
           continue;
         }
-        await page.waitForSelector(".gmt-clockcheck-clock");
-        // Let the library load and the stubbed fetch resolve. The wait ends when every readout shows
-        // a time, or fails after READY_MS of real time: it never falls through to measure a page
-        // that has not finished loading. The fake clock moves 100 ms a round for the first rounds
-        // (a page timer may need it) and then stands still.
-        const readyBy = performance.now() + READY_MS;
-        let ready = false;
-        for (let round = 0; !ready; round++) {
-          const rows = await snapshot(page);
-          ready =
-            rows.length === CLOCK_COUNT &&
-            rows.every((r) => /\d\d:\d\d [+-]\d\d:\d\d/.test(r.text));
-          if (ready) break;
-          if (performance.now() > readyBy) {
-            throw new Error(
-              `the readouts still showed no time after ${READY_MS / 1000} s: ${rows.map((r) => r.text).join(" | ")}`,
-            );
-          }
-          if (round < 40) await page.clock.runFor(100);
-          await page.waitForTimeout(50);
-        }
+        // The mount sets `data-state="ready"` right after the first clock tick that has the answer.
+        // The wait is in real time and fails with the state it saw; the fake clock stays paused.
+        await waitForState(page, ["ready"]);
         const start = await snapshot(page);
         const toronto = (rows) =>
           rows.find((r) => r.zone === "America/Toronto")?.text ?? "";
@@ -401,16 +373,10 @@ for (const name of BROWSERS) {
       });
       await blockOffSite(pinContext, BASE);
       const pinPage = await pinContext.newPage();
-      await pinPage.route(ROUTE, (route) =>
-        route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          headers: { "cache-control": "no-store" },
-          body: JSON.stringify(RUN_FULL_FIXTURE),
-        }),
-      );
+      await routeWorker(pinPage, REGION, { getFixture: RUN_FULL_FIXTURE });
       try {
         await pinPage.goto(`${BASE}${PATH}`, { waitUntil: "load" });
+        await waitForState(pinPage, ["ready"]);
         await checkPinPanel(pinPage, `${label} pin panel`, width);
       } catch (error) {
         fail(

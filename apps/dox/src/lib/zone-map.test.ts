@@ -3,6 +3,8 @@
  * The place labels of the zone map, for both checkers' configs at frame widths 400, 600 and 800:
  * which labels show, where they sit, what they say, and that the drawing under them is unchanged.
  */
+import type { TenseView } from "./clock-change-tense";
+import { canadaTense, moroccoTense } from "./clock-change-tense.fixture";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { geoContains } from "d3-geo";
@@ -47,15 +49,17 @@ const CASES = [
     name: "Canada",
     config: CANADA_MAP,
     boundaries: load("timezone-boundaries-canada.json"),
-    template: () => renderCanadaClockChangeTemplate(),
+    template: () => renderCanadaClockChangeTemplate({ tense: canadaTense }),
     rootClass: ".gmt-canada",
+    tense: canadaTense,
   },
   {
     name: "Morocco",
     config: MOROCCO_MAP,
     boundaries: load("timezone-boundaries-morocco.json"),
-    template: () => renderMoroccoClockChangeTemplate(),
+    template: () => renderMoroccoClockChangeTemplate({ tense: moroccoTense }),
     rootClass: ".gmt-morocco",
+    tense: moroccoTense,
   },
 ] as const;
 
@@ -74,8 +78,9 @@ function rowsFor(boundaries: BoundaryCollection, without: string[] = []) {
     .filter((row) => !without.includes(row.zone));
 }
 
-function deps(boundaries: BoundaryCollection): ZoneMapDeps {
+function deps(boundaries: BoundaryCollection, tense: TenseView): ZoneMapDeps {
   return {
+    tense: () => tense,
     responseNow: NOW,
     now: () => NOW,
     wall: (at, offset) => convertUtcToPlainDateTime(at, { timeZone: offset }),
@@ -99,7 +104,7 @@ async function mount(c: Case, rows: MapZone[]) {
     root,
     rows,
     new AbortController().signal,
-    deps(c.boundaries),
+    deps(c.boundaries, c.tense),
     c.config,
   );
   await handle.ready;

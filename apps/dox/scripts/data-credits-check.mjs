@@ -9,7 +9,9 @@
  *   - `/why-gmt/`: a glass square in the time-zone map's corner;
  *   - `/check/canada-2026-clock-change/`: a glass square in the Canada map's corner, added by the client
  *     when the map is drawn (the Worker is stubbed). Below 520 px of section width the map is not
- *     drawn, so the 375 px run asserts there is no button at all.
+ *     drawn, so the 375 px run asserts there is no button at all;
+ *   - `/check/morocco-2026-clock-change/`: the same square in the Morocco map's top-start corner
+ *     (`corner-start`), since Algeria fills the bottom-end one. The same 375 px rule holds.
  *
  * WebKit presses Option+Tab where Chromium presses Tab: Safari on macOS leaves buttons out of the
  * plain Tab order for every site, so plain Tab there tests a browser setting, not this page.
@@ -26,7 +28,7 @@
  *
  * Serve a build statically first (never `astro preview`, never the owner's dev server), for example:
  *   pnpm exec astro build --outDir /tmp/dist-x/gmt
- *   python3 -m http.server 4351 --bind 127.0.0.1 --directory /tmp/dist-x
+ *   node scripts/lib/static-server.mjs /tmp/dist-x 4351
  *
  * Usage: node scripts/data-credits-check.mjs --base http://127.0.0.1:4351/gmt [--browsers chromium,webkit] [--shots DIR]
  * `--shots` saves a screenshot of each drawing with its panel open. Exits non-zero on any failure.

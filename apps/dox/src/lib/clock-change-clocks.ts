@@ -13,7 +13,7 @@ import {
 import type { Change } from "./clock-change-common";
 import { spokenOffset } from "./crossing-clock";
 import { updateCrystalClock } from "./crystal-clock";
-import { escapeAttr, escapeHtml } from "./widget-ui";
+import { escapeAttr, escapeHtml, zoneIdHtml } from "./widget-ui";
 
 /** A zone's row, as much of it as a clock needs. `MapZone` fits. */
 export interface ClockZone {
@@ -35,7 +35,7 @@ function clockHtml(zone: string, stopped: ReadonlySet<string>): string {
   return (
     `<li class="gmt-clockcheck-clock" data-zone="${escapeAttr(zone)}" data-state="${stopped.has(zone) ? "stopped" : "changes"}">` +
     `<div class="gmt-clockcheck-face" data-role="clock"></div>` +
-    `<p class="gmt-clockcheck-clock-zone"><code>${escapeHtml(zone)}</code></p>` +
+    `<p class="gmt-clockcheck-clock-zone"><code>${zoneIdHtml(zone)}</code></p>` +
     `<p class="gmt-clockcheck-clock-time" data-role="clock-time">${NO_SIGNAL}</p>` +
     `</li>`
   );

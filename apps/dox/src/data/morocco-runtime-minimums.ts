@@ -201,7 +201,7 @@ const MOROCCO_ROWS: RuntimeMinimum[] = [
       { code: "KB5124012" },
       " · Windows 10 21H2 and 22H2: ",
       { code: "KB5122878" },
-      " · Windows 10 1809: ",
+      " · Windows 10 1809 and Server 2019: ",
       { code: "KB5122876" },
       " · Server 2022: ",
       { code: "KB5122882" },

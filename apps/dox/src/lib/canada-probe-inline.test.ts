@@ -5,6 +5,7 @@
  * runs while the page is parsed so the card is final before first paint; the module then takes
  * over and must leave an unchanged card alone.
  */
+import { canadaTense } from "./clock-change-tense.fixture";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { TABLE_ZONES, canadaProbe } from "./canada-clock-change";
@@ -58,7 +59,9 @@ const partly = {
 };
 
 function render(): { root: HTMLElement; card: HTMLElement } {
-  document.body.innerHTML = renderCanadaClockChangeTemplate();
+  document.body.innerHTML = renderCanadaClockChangeTemplate({
+    tense: canadaTense,
+  });
   const root = document.querySelector<HTMLElement>(".gmt-canada")!;
   return {
     root,
@@ -87,7 +90,9 @@ const snapshot = (card: HTMLElement) => ({
 
 /** What the module alone draws for the same browser, on markup the script never touched. */
 async function moduleOnly(): Promise<ReturnType<typeof snapshot>> {
-  document.body.innerHTML = renderCanadaClockChangeTemplate();
+  document.body.innerHTML = renderCanadaClockChangeTemplate({
+    tense: canadaTense,
+  });
   const root = document.querySelector<HTMLElement>(".gmt-canada")!;
   const ac = new AbortController();
   void mountCanadaClockChange(root, ac.signal, {

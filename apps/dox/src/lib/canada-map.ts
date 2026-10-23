@@ -7,7 +7,7 @@ import { geoConicConformal } from "d3-geo";
 import type { GeoProjection } from "d3-geo";
 import {
   CLOCK_ZONES,
-  KIND_LABELS,
+  canadaClassText,
   PROBE_ZONES,
   STOPPED_ZONES,
 } from "./canada-clock-change";
@@ -81,10 +81,12 @@ export const CANADA_MAP: ZoneMapConfig = {
   boundariesUrl: withBase("/timezone-boundaries-canada.json"),
   projection: canadaProjection,
   stopped: STOPPED_ZONES,
-  kindLabels: KIND_LABELS,
+  classText: canadaClassText,
   releaseOf,
   releaseRange: "2026b to 2026e",
   mapLabel: "Map of Canada's time zones. The zone list holds the same zones.",
   labelled: CLOCK_ZONES,
   anchors: CANADA_ANCHORS,
+  // The drawing's bottom-end corner is open sea.
+  creditsCorner: "corner",
 };
