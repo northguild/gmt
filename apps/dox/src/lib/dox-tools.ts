@@ -736,6 +736,14 @@ export const showDurationParserBenchInput = z.object({
 });
 
 /**
+ * Morocco 2026 clock-change checker: optionally one zone to pin on its map. Checked against the
+ * checker's own list (`morocco-region-zones.json`) in the Worker and the registry, like Canada's.
+ */
+export const showMoroccoClockChangeInput = z.object({
+  zone: zoneSchema.optional(),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -784,7 +792,8 @@ export type DoxToolName =
   | "showObservanceComparator"
   | "showMovingFeasts"
   | "showCanadaClockChange"
-  | "showDurationParserBench";
+  | "showDurationParserBench"
+  | "showMoroccoClockChange";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -822,6 +831,7 @@ export const DOX_TOOL_INPUTS = {
   showMovingFeasts: showMovingFeastsInput,
   showCanadaClockChange: showCanadaClockChangeInput,
   showDurationParserBench: showDurationParserBenchInput,
+  showMoroccoClockChange: showMoroccoClockChangeInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1076,6 +1086,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks what a duration string such as `30s`, `1m`, `7d` or `1.5h` means, whether `m` is a minute or a month, how to parse a timeout or config duration, or why writing laytime as `3 days` is not always 72 hours",
     args: "text: the reader's string exactly as given, never corrected; locale: only when the reader names one.",
   },
+  {
+    name: "showMoroccoClockChange",
+    purpose:
+      "Check whether a device or server has time zone data 2026c or later, which keeps Morocco and Western Sahara on UTC+00 all year from 20 September 2026: a table of the two zones' correct offsets beside the reader's browser at two moments, a check-mark or cross verdict with what to do, a command to test the reader's own servers, the minimum release of each runtime, the clock changes old and new data disagree about, a card on how gmt finds and repairs saved events, the 2026 and 2027 clock changes, two live clocks, a map of the zones with the last and next change for each, and a Did your saved events move? form, pre-filled with an example and run on load, that reads up to 50 pasted saved events and says which are out of date and what to do about each.",
+    when: "Call when the reader asks whether their runtime, server or browser still shows Morocco, Casablanca, El Aaiun or Western Sahara an hour ahead, whether its time zone data has the 2026 Morocco change, or what a Moroccan zone's clock change is",
+    args: "zone: optional, one IANA id from the checker's map list to pin (never a country or a place name)",
+  },
 ];
 
 /**
@@ -1224,6 +1241,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[34].purpose,
     inputSchema: showDurationParserBenchInput,
   }),
+  showMoroccoClockChange: tool({
+    description: DOX_TOOL_DOCS[35].purpose,
+    inputSchema: showMoroccoClockChangeInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1282,6 +1303,7 @@ export const ENABLED_TOOL_NAMES = [
   "showMovingFeasts",
   "showCanadaClockChange",
   "showDurationParserBench",
+  "showMoroccoClockChange",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

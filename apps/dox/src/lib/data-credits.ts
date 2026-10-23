@@ -20,6 +20,9 @@ export interface DataCredit {
 /** The timezone-boundary-builder release the boundary files come from (see `built.md` § Boundary data). */
 export const TBB_TAG = "2026e";
 
+/** The Natural Earth release the coastlines come from (see `built.md` § Boundary data). */
+export const NE_TAG = "v5.1.2";
+
 export const TZ_BOUNDARIES: DataCredit = {
   label: "Time zone boundaries",
   parts: [
@@ -35,6 +38,22 @@ export const TZ_BOUNDARIES: DataCredit = {
     },
     " (",
     { text: "ODbL", href: "https://opendatacommons.org/licenses/odbl/1-0/" },
+    ").",
+  ],
+};
+
+export const COASTLINES: DataCredit = {
+  label: "Coastlines",
+  parts: [
+    {
+      text: "Natural Earth",
+      href: "https://www.naturalearthdata.com/",
+    },
+    " (public domain, ",
+    {
+      text: NE_TAG,
+      href: `https://github.com/nvkelso/natural-earth-vector/releases/tag/${NE_TAG}`,
+    },
     ").",
   ],
 };
@@ -98,10 +117,15 @@ export function watchDataCredits(): void {
     "toggle",
     (event) => {
       const panel = event.target;
-      if (!(panel instanceof HTMLElement) || !panel.classList.contains("gmt-data-credits-panel"))
+      if (
+        !(panel instanceof HTMLElement) ||
+        !panel.classList.contains("gmt-data-credits-panel")
+      )
         return;
       const open = (event as ToggleEvent).newState === "open";
-      for (const button of document.querySelectorAll(`[popovertarget="${CSS.escape(panel.id)}"]`))
+      for (const button of document.querySelectorAll(
+        `[popovertarget="${CSS.escape(panel.id)}"]`,
+      ))
         button.setAttribute("aria-expanded", String(open));
     },
     true,

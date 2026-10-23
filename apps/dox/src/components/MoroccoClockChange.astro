@@ -1,0 +1,31 @@
+---
+/**
+ * The Morocco 2026 clock-change checker (CORE-89): a probe of the tz data at two moments, the
+ * clock changes your data gets wrong, the 2026 and 2027 clock changes, and two live clocks, all
+ * drawn from the Dox Worker's one answer.
+ *
+ * **The markup and the wiring both live in `lib/morocco-clock-change-mount.ts`.** The server
+ * renders every table with its known rows, so the page does not grow once the answer arrives.
+ */
+import { renderMoroccoClockChangeTemplate } from "../lib/morocco-clock-change-mount";
+
+const html = renderMoroccoClockChangeTemplate({ keyPoints: true });
+---
+
+<div data-tools-fullbleed set:html={html} />
+
+<script>
+  import { mountMoroccoClockChange } from "../lib/morocco-clock-change-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    document.querySelectorAll<HTMLElement>(".gmt-morocco").forEach((el) => {
+      // A link from the chat (`?w=moroccoclock&wa=...`) arrives with its zone pinned.
+      const { zone } = seedFromLocation("moroccoclock");
+      mountMoroccoClockChange(el, new AbortController().signal, {
+        pinZone: typeof zone === "string" ? zone : undefined,
+      }).catch((error) => showUnavailable(el, error));
+    });
+  }
+</script>

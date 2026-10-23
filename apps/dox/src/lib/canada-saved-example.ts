@@ -5,7 +5,10 @@
  * own: the new offset is the fact, the old offset is that fact less the hour the clocks used to
  * turn back, and the time the old value now shows is the old instant read at the new offset.
  */
-import { PROBE_ZONES, cityOf } from "./canada-clock-change";
+import { PROBE_ZONES, STORED_ZONES } from "./canada-clock-change";
+import { withBase } from "./site";
+import { cityOf } from "./clock-change-common";
+import type { StoredConfig } from "./clock-change-stored";
 
 const ZONE = "America/Vancouver";
 const WALL = "2026-11-15T09:00:00";
@@ -30,6 +33,8 @@ export const SAVED_EXAMPLE = {
   city: cityOf(ZONE),
   /** `09:00`, the local time the meeting was booked for. */
   wallHm: hmOf(wallMinutes),
+  /** The date as the step says it. */
+  dateText: "15 Nov",
   /** The offset that applied when it was saved. */
   savedOffset: offsetOf(savedMinutes),
   /** The offset the place has now: the reference fact. */
@@ -40,4 +45,20 @@ export const SAVED_EXAMPLE = {
   saved: `${WALL}${offsetOf(savedMinutes)}[${ZONE}]`,
   /** The value that keeps 9:00 local. */
   fixed: `${WALL}${fact.tzdb2026e}[${ZONE}]`,
+};
+
+/** What the textarea holds on load and after "Reset example": one moved, three that are fine or moved by a different zone. */
+export const STORED_EXAMPLE = [
+  "2026-11-15T09:00:00-08:00[America/Vancouver]",
+  "2026-11-15T09:00:00-07:00[America/Vancouver]",
+  "2026-11-15T09:00:00-05:00[America/Toronto]",
+  "2026-12-01T18:00:00-06:00[America/Winnipeg]",
+].join("\n");
+
+/** The saved-events section's settings for Canada; the page and the chat add their `idPrefix`. */
+export const CANADA_STORED: Omit<StoredConfig, "idPrefix"> = {
+  endpoint: withBase("/api/canada-clock-change"),
+  zones: STORED_ZONES,
+  preset: STORED_EXAMPLE,
+  example: SAVED_EXAMPLE,
 };

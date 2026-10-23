@@ -15,11 +15,13 @@
  *
  * Usage:
  *   node scripts/canada-layout-check.mjs --base http://127.0.0.1:4351/gmt [--widths 1440,1024]
+ *     [--path <page>]   the checker page; Canada by default, or /check/morocco-2026-clock-change/
+ *     [--fixture <file>]  a Worker answer (.json) served for the page's GET, so results arrive
  *     [--shots <dir>]   also writes a dark and a light screenshot of the stack per width
  */
 
 import { chromium } from "@playwright/test";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { blockOffSite } from "./gate-checks.mjs";
 
 const args = process.argv.slice(2);
@@ -30,19 +32,24 @@ const arg = (name, fallback) => {
 const BASE = arg("base", "http://127.0.0.1:4351/gmt").replace(/\/$/, "");
 const WIDTHS = arg("widths", "1440,1024").split(",").map(Number);
 const SHOTS = arg("shots", "");
-const PATH = "/check/canada-2026-clock-change/";
+const PATH = arg("path", "/check/canada-2026-clock-change/");
+/* `canada` or `morocco`: the page's class and ids are named after its checker. */
+const WORD = PATH.includes("morocco") ? "morocco" : "canada";
+/* Optional: a Worker answer saved to a file, served for the page's GET so results arrive. */
+const FIXTURE_FILE = arg("fixture", "");
+const FIXTURE = FIXTURE_FILE ? readFileSync(FIXTURE_FILE, "utf8") : null;
 
 const CARDS = {
   keypoints: ".gmt-keypoints",
-  browser: ".gmt-canada-browser",
-  map: ".gmt-canada-stage",
-  pick: ".gmt-canada-pickcard",
-  clocks: ".gmt-canada-clocksec",
-  servers: ".gmt-canada-servers",
-  minimums: ".gmt-canada-minimums",
-  changes: "section[aria-labelledby=canada-changes-title]",
-  help: ".gmt-canada-help",
-  stored: ".gmt-canada-stored",
+  browser: ".gmt-clockcheck-browser",
+  map: ".gmt-zonemap-stage",
+  pick: `.gmt-${WORD}-pickcard`,
+  clocks: `.gmt-${WORD}-nowsec`,
+  servers: ".gmt-clockcheck-servers",
+  minimums: ".gmt-clockcheck-minimums",
+  changes: `section[aria-labelledby=${WORD}-changes-title]`,
+  help: ".gmt-clockcheck-help",
+  stored: ".gmt-clockcheck-stored",
 };
 
 const failures = [];
@@ -62,28 +69,50 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
         localStorage.setItem("starlight-theme", t);
       } catch {}
     }, theme);
+    if (FIXTURE !== null) {
+      await page.route(`**/api/${WORD}-clock-change`, (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          headers: { "cache-control": "no-store" },
+          body: FIXTURE,
+        }),
+      );
+    }
     await page.goto(`${BASE}${PATH}`, { waitUntil: "load" });
     await page.waitForTimeout(3000);
-    const data = await page.evaluate((cards) => {
-      const rect = (selector) => {
-        const el = document.querySelector(selector);
-        if (!el || el.offsetParent === null) return null;
-        const b = el.getBoundingClientRect();
-        return { left: b.left, right: b.right, top: b.top + scrollY, bottom: b.bottom + scrollY };
-      };
-      const stack = rect(".gmt-canada-stack");
-      return {
-        stack,
-        hscroll: document.documentElement.scrollWidth > innerWidth,
-        rects: Object.fromEntries(Object.entries(cards).map(([k, s]) => [k, rect(s)])),
-      };
-    }, CARDS);
+    const data = await page.evaluate(
+      ({ cards, word }) => {
+        const rect = (selector) => {
+          const el = document.querySelector(selector);
+          if (!el || el.offsetParent === null) return null;
+          const b = el.getBoundingClientRect();
+          return {
+            left: b.left,
+            right: b.right,
+            top: b.top + scrollY,
+            bottom: b.bottom + scrollY,
+          };
+        };
+        const stack = rect(`.gmt-${word}-stack`);
+        return {
+          stack,
+          hscroll: document.documentElement.scrollWidth > innerWidth,
+          rects: Object.fromEntries(
+            Object.entries(cards).map(([k, s]) => [k, rect(s)]),
+          ),
+        };
+      },
+      { cards: CARDS, word: WORD },
+    );
     const tag = `${width}px ${theme}`;
     if (data.hscroll) fail(`${tag}: the page scrolls sideways`);
     const present = Object.entries(data.rects).filter(([, r]) => r);
     for (const [name, r] of present) {
       if (r.left < data.stack.left - 1 || r.right > data.stack.right + 1) {
-        fail(`${tag}: ${name} reaches past the stack (${r.left}..${r.right} in ${data.stack.left}..${data.stack.right})`);
+        fail(
+          `${tag}: ${name} reaches past the stack (${r.left}..${r.right} in ${data.stack.left}..${data.stack.right})`,
+        );
       }
     }
     for (let i = 0; i < present.length; i += 1) {
@@ -98,13 +127,17 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
     const { map, pick, clocks } = data.rects;
     if (map && pick && clocks) {
       const pairUp = clocks.top < pick.bottom - 1;
-      if (pairUp && Math.abs(pick.top - clocks.top) > 1) fail(`${tag}: the zone card and the clocks do not share a top`);
+      if (pairUp && Math.abs(pick.top - clocks.top) > 1)
+        fail(`${tag}: the zone card and the clocks do not share a top`);
       const threeUp = Math.abs(map.top - pick.top) <= 1;
-      if (!threeUp && !(map.bottom <= pick.top + 1)) fail(`${tag}: the map is not above the zone card`);
+      if (!threeUp && !(map.bottom <= pick.top + 1))
+        fail(`${tag}: the map is not above the zone card`);
     }
     if (SHOTS) {
       mkdirSync(SHOTS, { recursive: true });
-      await page.locator(".gmt-canada-stack").screenshot({ path: `${SHOTS}/${theme}-${width}.png` });
+      await page
+        .locator(`.gmt-${WORD}-stack`)
+        .screenshot({ path: `${SHOTS}/${theme}-${width}.png` });
     }
     console.log(`${tag}: ${present.length} cards checked`);
     await context.close();

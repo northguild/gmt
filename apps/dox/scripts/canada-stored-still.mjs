@@ -31,17 +31,23 @@ const arg = (name, fallback) => {
 const BASE = arg("base", "http://127.0.0.1:4351/gmt").replace(/\/$/, "");
 const BROWSERS = arg("browsers", "chromium").split(",");
 const WIDTHS = [1280, 375];
-const PATH = "/check/canada-2026-clock-change/";
+const PATH = arg("path", "/check/canada-2026-clock-change/");
+/* The page's Worker route follows its checker: Canada by default, Morocco for its own path. */
+const ROUTE = `**/api/${PATH.includes("morocco") ? "morocco" : "canada"}-clock-change`;
 
-const GET_FIXTURE = {
-  now: "2026-10-22T12:00:00Z",
-  probe: [],
-  transitions: [],
-  zones: [],
-};
+/* Another checker's page needs its own GET answer: a Worker answer saved to a file (`--fixture`). */
+const FIXTURE_FILE = arg("fixture", "");
+const GET_FIXTURE = FIXTURE_FILE
+  ? JSON.parse((await import("node:fs")).readFileSync(FIXTURE_FILE, "utf8"))
+  : {
+      now: "2026-10-22T12:00:00Z",
+      probe: [],
+      transitions: [],
+      zones: [],
+    };
 const ROW = (line, input, result) => ({ line, input, value: input, result });
 const POST_FIXTURE = {
-  zone: "America/Vancouver",
+  zone: PATH.includes("morocco") ? "Africa/Casablanca" : "America/Vancouver",
   truncated: true,
   rows: [
     ROW(1, "2026-07-01T12:00:00-04:00[America/Toronto]", {
@@ -92,16 +98,16 @@ async function snapshot(page) {
         (n) => Math.round(n * 100) / 100,
       );
     };
-    const section = document.querySelector(".gmt-canada-stored");
+    const section = document.querySelector(".gmt-clockcheck-stored");
     const pick = (selector) => box(section.querySelector(selector));
     return {
       heading: pick("h4"),
       textarea: pick("textarea"),
-      steps: pick(".gmt-canada-steps"),
+      steps: pick(".gmt-clockcheck-steps"),
       check: pick('[data-role="stored-check"]'),
       example: pick('[data-role="stored-example"]'),
-      head: pick(".gmt-canada-stored-head"),
-      toggle: pick(".gmt-canada-seg"),
+      head: pick(".gmt-clockcheck-stored-head"),
+      toggle: pick(".gmt-clockcheck-seg"),
     };
   });
 }
@@ -125,7 +131,7 @@ for (const name of BROWSERS) {
       });
       await blockOffSite(context, BASE);
       const page = await context.newPage();
-      await page.route("**/api/canada-clock-change", (route) =>
+      await page.route(ROUTE, (route) =>
         route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -145,7 +151,7 @@ for (const name of BROWSERS) {
           );
           continue;
         }
-        await page.waitForSelector(".gmt-canada-stored");
+        await page.waitForSelector(".gmt-clockcheck-stored");
         // The section's handlers attach when the page's script runs, after the server-sent markup is
         // already on screen; a press before that is a native form submit (a reload). The Example
         // button is the probe: it only fills the textarea once its handler is bound, so press it
@@ -154,11 +160,16 @@ for (const name of BROWSERS) {
         for (let attempt = 0; attempt < 40 && !bound; attempt += 1) {
           await page.click('[data-role="stored-example"]');
           bound = await page.evaluate(
-            () => document.querySelector('[data-role="stored-lines"]')?.value !== "",
+            () =>
+              document.querySelector('[data-role="stored-lines"]')?.value !==
+              "",
           );
           if (!bound) await page.waitForTimeout(250);
         }
-        if (!bound) throw new Error("the stored-times handlers never attached (Example filled nothing)");
+        if (!bound)
+          throw new Error(
+            "the stored-times handlers never attached (Example filled nothing)",
+          );
         const before = await snapshot(page);
 
         // Keyboard only: Tab from the textarea (past the formats disclosure) to Check, then Enter.
@@ -167,16 +178,16 @@ for (const name of BROWSERS) {
           await page.keyboard.press(name === "webkit" ? "Alt+Tab" : "Tab");
         }
         await page.keyboard.press("Enter");
-        await page.waitForSelector(".gmt-canada-stored-table tbody tr");
+        await page.waitForSelector(".gmt-clockcheck-stored-table tbody tr");
         const rows = await page
-          .locator(".gmt-canada-stored-table tbody tr")
+          .locator(".gmt-clockcheck-stored-table tbody tr")
           .count();
         if (rows !== 6) fail(`${label}: expected 6 result rows, saw ${rows}`);
         same(`${label} after the answer`, before, await snapshot(page));
 
         await page.click('[data-role="stored-show-moved"]');
         const shown = await page
-          .locator(".gmt-canada-stored-table tbody tr:visible")
+          .locator(".gmt-clockcheck-stored-table tbody tr:visible")
           .count();
         if (shown !== 3)
           fail(`${label}: "Only moved" should leave 3 rows, saw ${shown}`);

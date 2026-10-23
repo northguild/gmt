@@ -148,8 +148,15 @@ const PAGES = [
     slug: "guide-business-calendars",
     path: "/guides/core-date-operations/business-calendars/",
   },
-  { slug: "check-canada-2026-clock-change", path: "/check/canada-2026-clock-change/" },
+  {
+    slug: "check-canada-2026-clock-change",
+    path: "/check/canada-2026-clock-change/",
+  },
   { slug: "tool-duration-parser-bench", path: "/tools/duration-parser-bench/" },
+  {
+    slug: "check-morocco-2026-clock-change",
+    path: "/check/morocco-2026-clock-change/",
+  },
   /* The industry pages the new tools are linked from, and the reference index. */
   { slug: "industries", path: "/industries/" },
   { slug: "industries-maritime", path: "/industries/maritime/" },

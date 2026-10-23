@@ -40,7 +40,7 @@ OUTPUT_PATH = (
     REPO_ROOT / "apps/dox/public/timezone-boundaries.json"
 )
 
-# Pinned release, shared with prepare-canada-boundaries.py. Every boundary file names the
+# Pinned release, shared with prepare-region-boundaries.py. Every boundary file names the
 # release it came from.
 TBB_TAG = "2026e"
 

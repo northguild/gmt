@@ -17,8 +17,8 @@ import {
   STORED_MAX_BYTES,
   STORED_MAX_LINES,
   type StoredCheck,
-} from "../src/lib/canada-clock-change";
-import { STORED_PRESET } from "../src/lib/canada-stored-times";
+} from "../src/lib/clock-change-stored-lines";
+import { STORED_PRESET } from "../src/lib/canada-clock-change";
 import { handleCanadaClockChange } from "./canada-clock-change";
 import { resetRateLimitState } from "./rate-limit";
 import { checkRateLimit } from "./rate-limit";

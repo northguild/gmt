@@ -1,14 +1,9 @@
-import { classifyStoredZoned } from "@northguild/gmt/zoned/classify";
 import {
   STORED_MAX_BYTES,
   STORED_MAX_LINES,
-  STORED_ZONES,
-} from "./canada-clock-change";
-import {
-  STORED_PRESET,
   capStoredInput,
   completeStoredLine,
-} from "./canada-stored-times";
+} from "./clock-change-stored-lines";
 
 describe("capStoredInput", () => {
   const lines = (n: number) =>
@@ -157,17 +152,5 @@ describe("completeStoredLine", () => {
     expect(completeStoredLine("a b[c", zone)).toBe("a b[c");
     expect(completeStoredLine("   ", zone)).toBeNull();
     expect(completeStoredLine("", zone)).toBeNull();
-  });
-});
-
-describe("STORED_PRESET", () => {
-  it("is eight literal lines, each with its own zone, all in the picker", () => {
-    const rows = STORED_PRESET.split("\n");
-    expect(rows).toHaveLength(8);
-    for (const row of rows) {
-      const zone = /\[([^\]]+)\]$/.exec(row)?.[1];
-      expect(STORED_ZONES).toContain(zone);
-      expect(classifyStoredZoned(row)).not.toBeNull();
-    }
   });
 });

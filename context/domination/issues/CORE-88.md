@@ -61,6 +61,7 @@ In 2026 British Columbia, Alberta, the Northwest Territories and Manitoba stop c
 - The zone list comes from tzdb 2026e `zone.tab` rows whose country is `CA` (23), not `zone1970.tab`, whose Canadian rows include zones that span other countries. The comprehensive timezone-boundary-builder set gives each of these its own Canada-only shape.
 - The zone list is the keyboard path and the single tab stop; shapes are `tabindex="-1"` buttons. Below 520 px the map is not drawn and the list stays.
 - Classes are words and patterns (hatch, solid, dots), never colour alone.
+- The coastline is Natural Earth `ne_10m_land` (`v5.1.2`, public domain). Each zone is cut back to the land, so the Arctic islands stay separate and Hudson Bay stays open. The land no zone covers (the United States, Greenland) is one `land` feature, written first and drawn under the zones. The land frame covers the whole drawn box, so no land edge ends inside it. The credits list "Coastlines" after "Time zone boundaries".
 
 **Boundary data and credits**
 

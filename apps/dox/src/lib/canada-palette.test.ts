@@ -2,26 +2,26 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { PROBE_ZONES, serversMarkdown } from "./canada-clock-change";
-import {
-  MINIMUMS_INTRO,
-  MINIMUMS_NOTE,
-  RUNTIME_MINIMUMS,
-  minimumsMarkdown,
-} from "../data/canada-runtime-minimums";
-import { keyPointsMarkdown, KEY_POINTS } from "../data/canada-key-points";
+import { CANADA_MINIMUMS } from "../data/canada-runtime-minimums";
+import { minimumsMarkdown } from "../data/clock-change-minimums";
+import { KEY_POINTS } from "../data/canada-key-points";
+import { keyPointsMarkdown } from "../data/clock-change-text";
 import { renderCanadaClockChangeTemplate } from "./canada-clock-change-mount";
 
 /**
  * The map's class strokes against the map background (WCAG 1.4.11, 3:1). The map and its swatches
  * are `gmt-theme-dark` islands, so the dark theme's token values apply in both themes. Values are
- * read from the two stylesheets, so a change to either is measured.
+ * read from the stylesheet, so a change to either is measured.
  */
 const styles = resolve(__dirname, "../styles");
 const tokens = readFileSync(resolve(styles, "gmt-tokens.css"), "utf8");
-const canada = readFileSync(resolve(styles, "canada-clock-change.css"), "utf8");
+const canada = readFileSync(resolve(styles, "clock-change.css"), "utf8");
 
 type Rgb = [number, number, number];
-const darkBlock = tokens.slice(tokens.indexOf(".gmt-theme-dark {"), tokens.indexOf('[data-theme="light"] {'));
+const darkBlock = tokens.slice(
+  tokens.indexOf(".gmt-theme-dark {"),
+  tokens.indexOf('[data-theme="light"] {'),
+);
 const token = (name: string): Rgb => {
   const m = new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`).exec(darkBlock);
   if (!m) throw new Error(`no ${name}`);
@@ -29,7 +29,7 @@ const token = (name: string): Rgb => {
   return [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as Rgb;
 };
 const alpha = (name: string): number => {
-  const m = new RegExp(`--canada-${name}:\\s*([0-9.]+);`).exec(canada);
+  const m = new RegExp(`--zonemap-${name}:\\s*([0-9.]+);`).exec(canada);
   if (!m) throw new Error(`no ${name}`);
   return Number(m[1]);
 };
@@ -48,15 +48,43 @@ const mix = (a: Rgb, b: Rgb, t: number): Rgb =>
   a.map((v, i) => v * t + b[i]! * (1 - t)) as Rgb;
 
 describe("the map's class strokes", () => {
-  const sea = mix(token("--gmt-cyan"), token("--gmt-globe-casing"), alpha("sea-cyan"));
+  const sea = mix(
+    token("--gmt-cyan"),
+    token("--gmt-globe-casing"),
+    alpha("sea-cyan"),
+  );
   const cases: [string, Rgb][] = [
-    ["never changes: cyan", mix(token("--gmt-cyan"), sea, alpha("none-edge-a"))],
-    ["still changes: gold (the dark -ink is an alias of it)", mix(token("--gmt-dst-gold"), sea, alpha("changes-edge-a"))],
+    [
+      "never changes: cyan",
+      mix(token("--gmt-cyan"), sea, alpha("none-edge-a")),
+    ],
+    [
+      "still changes: gold (the dark -ink is an alias of it)",
+      mix(token("--gmt-dst-gold"), sea, alpha("changes-edge-a")),
+    ],
     ["stops in 2026: purple ink", token("--gmt-dst-purple-ink")],
     ["selected: green", token("--gmt-globe-selected")],
   ];
   it.each(cases)("%s holds 3:1 against the map background", (_name, stroke) => {
     expect(ratio(stroke, sea)).toBeGreaterThanOrEqual(3);
+  });
+  it.each(cases)(
+    "%s also holds 3:1 against the land around the zones",
+    (_name, stroke) => {
+      const land = mix(
+        token("--gmt-cyan"),
+        token("--gmt-globe-casing"),
+        alpha("land-cyan"),
+      );
+      expect(ratio(stroke, land)).toBeGreaterThanOrEqual(3);
+    },
+  );
+  it("the land is a step above the sea and below the never-changes fill", () => {
+    const sea = alpha("sea-cyan");
+    // The never-changes fill lies over the sea: its cyan share is the alpha plus what shows through.
+    const none = alpha("none-fill-a") + sea * (1 - alpha("none-fill-a"));
+    expect(alpha("land-cyan")).toBeGreaterThan(sea);
+    expect(alpha("land-cyan")).toBeLessThan(none);
   });
   it("the stopped class is the strongest fill", () => {
     expect(alpha("stopped-fill-a")).toBeGreaterThan(alpha("changes-fill-a"));
@@ -87,16 +115,25 @@ describe("the servers card and the key points on the text surfaces", () => {
     ].map((id) => html.indexOf(`id="${id}"`));
     expect(order.every((at) => at >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(html).toContain("Once your runtime is updated, every gmt zoned function gives the right time for these places.");
+    expect(html).toContain(
+      "Once your runtime is updated, every gmt zoned function gives the right time for these places.",
+    );
     expect(html).toContain('/reference/zoned/classify/classifyStoredZoned/"');
     expect(html).toContain('data-role="copy-status" role="status"');
   });
   it("leaves the key points out of the chat copy", () => {
-    expect(renderCanadaClockChangeTemplate()).not.toContain("canada-keypoints-title");
+    expect(renderCanadaClockChangeTemplate()).not.toContain(
+      "canada-keypoints-title",
+    );
   });
   it("names the places as code chips", () => {
-    const md = keyPointsMarkdown();
-    for (const place of ["British Columbia", "Alberta", "Northwest Territories", "Manitoba"]) {
+    const md = keyPointsMarkdown(KEY_POINTS);
+    for (const place of [
+      "British Columbia",
+      "Alberta",
+      "Northwest Territories",
+      "Manitoba",
+    ]) {
       expect(md).toContain(`\`${place}\``);
     }
     expect(KEY_POINTS).toHaveLength(2);
@@ -108,28 +145,32 @@ describe("the servers card and the key points on the text surfaces", () => {
 
 describe("the Upgrade to at least card", () => {
   it("gives every row an https source, except the one that says to restart", () => {
-    for (const row of RUNTIME_MINIMUMS) {
+    for (const row of CANADA_MINIMUMS.rows) {
       if (row.name === "Mac and iPhone") {
         expect(row.sources).toEqual([]);
         continue;
       }
       expect(row.sources.length, row.name).toBeGreaterThan(0);
       for (const source of row.sources) {
-        expect(source.href, `${row.name}: ${source.label}`).toMatch(/^https:\/\/[^\s]+$/);
+        expect(source.href, `${row.name}: ${source.label}`).toMatch(
+          /^https:\/\/[^\s]+$/,
+        );
       }
     }
   });
   it("names the same tz data release the probe facts end on", () => {
     const releases = PROBE_ZONES.map((fact) => fact.release).sort();
     expect(releases.at(-1)).toBe("2026e");
-    expect(MINIMUMS_INTRO).toContain("2026e");
-    const linux = RUNTIME_MINIMUMS.filter((row) => /Alpine|Ubuntu|Fedora/.test(row.name));
+    expect(CANADA_MINIMUMS.intro).toContain("2026e");
+    const linux = CANADA_MINIMUMS.rows.filter((row) =>
+      /Alpine|Ubuntu|Fedora/.test(row.name),
+    );
     for (const row of linux) {
       expect(JSON.stringify(row.parts), row.name).toContain("2026e");
     }
   });
   it("reaches the markdown twin with its sources, and carries no date or not-fixed row", () => {
-    const md = minimumsMarkdown();
+    const md = minimumsMarkdown(CANADA_MINIMUMS);
     expect(md).toContain("## Upgrade to at least");
     expect(md).toContain("`26.11.0`");
     expect(md).toContain("https://chromiumdash.appspot.com/releases");
@@ -138,9 +179,13 @@ describe("the Upgrade to at least card", () => {
   });
   it("ends with one plain note about the device, and the page names no stale-browser function", () => {
     const html = renderCanadaClockChangeTemplate({ keyPoints: true });
-    expect(html).toContain("gmt uses the time-zone rules of the device it runs on.");
-    expect(MINIMUMS_NOTE).not.toMatch(/classifyStoredZoned|offsetMismatch|resolveLocal|convertUtcToZoned/);
-    expect(minimumsMarkdown()).toContain(MINIMUMS_NOTE);
+    expect(html).toContain(
+      "gmt uses the time-zone rules of the device it runs on.",
+    );
+    expect(CANADA_MINIMUMS.note).not.toMatch(
+      /classifyStoredZoned|offsetMismatch|resolveLocal|convertUtcToZoned/,
+    );
+    expect(minimumsMarkdown(CANADA_MINIMUMS)).toContain(CANADA_MINIMUMS.note);
     expect(html).not.toContain("Your users\u2019 browsers may be out of date");
     expect(html).not.toContain("convertUtcToZoned");
     expect(html).not.toContain("offsetMismatch");

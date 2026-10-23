@@ -35,7 +35,11 @@ import { mkdirSync } from "node:fs";
 import { chromium, webkit } from "@playwright/test";
 import { blockOffSite } from "./gate-checks.mjs";
 
-const GLOBE = { stack: true, frame: ".gmt-globe-stage", id: "globe-data-credits" };
+const GLOBE = {
+  stack: true,
+  frame: ".gmt-globe-stage",
+  id: "globe-data-credits",
+};
 const TARGETS = [
   { path: "/", slug: "home-globe", ...GLOBE },
   { path: "/tools/zoned-earth/", slug: "zoned-earth", ...GLOBE },
@@ -50,12 +54,31 @@ const TARGETS = [
   {
     path: "/check/canada-2026-clock-change/",
     slug: "canada-map",
-    frame: ".gmt-canada-map",
+    frame: ".gmt-zonemap-map",
     id: "canada-data-credits",
-    drawn: ".gmt-canada-shape",
+    drawn: ".gmt-zonemap-shape",
+    labels: ["Time zone boundaries", "Coastlines"],
     // Drawn by the client from a width of 520 px of section; narrower, there is no map to credit.
     absentBelow: 520,
     stubWorker: true,
+  },
+  {
+    path: "/check/morocco-2026-clock-change/",
+    slug: "morocco-map",
+    frame: ".gmt-morocco .gmt-zonemap-map",
+    id: "morocco-data-credits",
+    drawn: ".gmt-morocco .gmt-zonemap-shape",
+    labels: ["Time zone boundaries", "Coastlines"],
+    absentBelow: 520,
+    stubWorker: true,
+    api: "morocco",
+    stub: {
+      now: "2026-10-25T12:00:00Z",
+      probe: [],
+      changes: [],
+      transitions: [],
+      zones: [],
+    },
   },
 ];
 const VIEWPORTS = [
@@ -169,10 +192,16 @@ async function accessibleExpanded(page, button, engine) {
     const { nodes } = await session.send("Accessibility.getFullAXTree");
     await session.detach();
     const node = nodes.find(
-      (n) => !n.ignored && n.role?.value === "button" && n.name?.value === "Data credits",
+      (n) =>
+        !n.ignored &&
+        n.role?.value === "button" &&
+        n.name?.value === "Data credits",
     );
     const prop = node?.properties?.find((p) => p.name === "expanded");
-    return { snapshot: JSON.stringify(node?.properties ?? null), expanded: prop?.value?.value === true };
+    return {
+      snapshot: JSON.stringify(node?.properties ?? null),
+      expanded: prop?.value?.value === true,
+    };
   }
   const snapshot = await button.ariaSnapshot();
   return { snapshot, expanded: /\[expanded\]/.test(snapshot) };
@@ -183,7 +212,8 @@ function geometry({ id, stack }) {
   const button = document.querySelector(`[popovertarget="${id}"]`);
   const panel = document.getElementById(id);
   const group = button.closest(".gmt-globe-zoom");
-  const controls = stack && group ? [...group.querySelectorAll("button")] : [button];
+  const controls =
+    stack && group ? [...group.querySelectorAll("button")] : [button];
   return {
     panel: panel.getBoundingClientRect().toJSON(),
     button: button.getBoundingClientRect().toJSON(),
@@ -192,13 +222,19 @@ function geometry({ id, stack }) {
     h: innerHeight,
     groupLabel: group?.getAttribute("aria-label") ?? null,
     groupRole: group?.getAttribute("role") ?? null,
-    order: group ? [...group.querySelectorAll("button")].map((b) => b.getAttribute("aria-label")) : [],
+    order: group
+      ? [...group.querySelectorAll("button")].map((b) =>
+          b.getAttribute("aria-label"),
+        )
+      : [],
   };
 }
 
 /** Runs in the page: the drawn shapes (paths, circles) whose painted area lies under the button. */
 function paintedUnder({ id, drawn }) {
-  const b = document.querySelector(`[popovertarget="${id}"]`).getBoundingClientRect();
+  const b = document
+    .querySelector(`[popovertarget="${id}"]`)
+    .getBoundingClientRect();
   const hits = new Set();
   for (const el of document.querySelectorAll(drawn)) {
     if (el.closest("[popover]") || !el.ownerSVGElement) continue;
@@ -207,9 +243,13 @@ function paintedUnder({ id, drawn }) {
     const inv = ctm.inverse();
     for (let i = 0; i <= 8; i += 1) {
       for (let j = 0; j <= 8; j += 1) {
-        const pt = new DOMPoint(b.left + (b.width * i) / 8, b.top + (b.height * j) / 8).matrixTransform(inv);
+        const pt = new DOMPoint(
+          b.left + (b.width * i) / 8,
+          b.top + (b.height * j) / 8,
+        ).matrixTransform(inv);
         const fill = getComputedStyle(el).fill;
-        if (el.isPointInFill?.(pt) && fill !== "none") hits.add(el.getAttribute("data-tz-id") ?? el.localName);
+        if (el.isPointInFill?.(pt) && fill !== "none")
+          hits.add(el.getAttribute("data-tz-id") ?? el.localName);
       }
     }
   }
@@ -228,13 +268,15 @@ for (const name of browsers) {
       await blockOffSite(context, base);
       const page = await context.newPage();
       if (target.stubWorker) {
-        await page.route("**/api/canada-clock-change", (route) =>
-          route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            headers: { "cache-control": "no-store" },
-            body: JSON.stringify(STUB),
-          }),
+        await page.route(
+          `**/api/${target.api ?? "canada"}-clock-change`,
+          (route) =>
+            route.fulfill({
+              status: 200,
+              contentType: "application/json",
+              headers: { "cache-control": "no-store" },
+              body: JSON.stringify(target.stub ?? STUB),
+            }),
         );
       }
       const res = await page.goto(base + target.path, { waitUntil: "load" });
@@ -246,22 +288,32 @@ for (const name of browsers) {
       const button = page.locator(`[popovertarget="${target.id}"]`);
       if (target.stubWorker) {
         // The map is drawn lazily, when it nears the viewport, and only from 520 px of section.
-        await page.locator(".gmt-canada-mapsec").scrollIntoViewIfNeeded();
+        await page.locator(".gmt-zonemap-mapsec").scrollIntoViewIfNeeded();
         await page.waitForTimeout(2000);
         const width = await page.evaluate(
-          () => document.querySelector(".gmt-canada-mapsec").getBoundingClientRect().width,
+          () =>
+            document
+              .querySelector(".gmt-zonemap-mapsec")
+              .getBoundingClientRect().width,
         );
         const found = await button.count();
         if (width < target.absentBelow) {
           if (found !== 0)
-            fail(`${label}: the map is not drawn at ${width}px of section, yet a credits button exists`);
-          else console.log(`checked ${label}: no map, no button (${Math.round(width)}px)`);
+            fail(
+              `${label}: the map is not drawn at ${width}px of section, yet a credits button exists`,
+            );
+          else
+            console.log(
+              `checked ${label}: no map, no button (${Math.round(width)}px)`,
+            );
           await context.close();
           continue;
         }
       }
       if ((await button.count()) !== 1) {
-        fail(`${label}: expected one data-credits button, found ${await button.count()}`);
+        fail(
+          `${label}: expected one data-credits button, found ${await button.count()}`,
+        );
         await context.close();
         continue;
       }
@@ -288,7 +340,10 @@ for (const name of browsers) {
       if (target.drawn) {
         await button.scrollIntoViewIfNeeded();
         const under = await page.evaluate(paintedUnder, target);
-        if (under.length) fail(`${label}: the button covers the drawing at ${under.join(", ")}`);
+        if (under.length)
+          fail(
+            `${label}: the button covers the drawing at ${under.join(", ")}`,
+          );
       }
 
       // Keyboard path.
@@ -301,7 +356,10 @@ for (const name of browsers) {
           (id) => document.activeElement?.getAttribute("popovertarget") === id,
           target.id,
         );
-        if (!reached) fail(`${label}: Tab from Zoom in does not reach the button in three presses`);
+        if (!reached)
+          fail(
+            `${label}: Tab from Zoom in does not reach the button in three presses`,
+          );
       } else {
         // Tab reachability: tab forward until the button is focused (bounded).
         await page.evaluate(() => document.activeElement?.blur());
@@ -309,7 +367,8 @@ for (const name of browsers) {
         for (let i = 0; i < 600 && !reached; i += 1) {
           await page.keyboard.press(TAB(name));
           reached = await page.evaluate(
-            (id) => document.activeElement?.getAttribute("popovertarget") === id,
+            (id) =>
+              document.activeElement?.getAttribute("popovertarget") === id,
             target.id,
           );
         }
@@ -318,32 +377,67 @@ for (const name of browsers) {
       await page.keyboard.press("Enter");
       // A native `popovertarget` button exposes its expanded state in the accessibility tree
       // (HTML-AAM), not as a DOM attribute, so read it there.
-      const { snapshot, expanded } = await accessibleExpanded(page, button, name);
+      const { snapshot, expanded } = await accessibleExpanded(
+        page,
+        button,
+        name,
+      );
       const shown = await page.evaluate(
         (id) => document.getElementById(id)?.matches(":popover-open"),
         target.id,
       );
       if (!shown) fail(`${label}: Enter did not open the panel`);
+      if (target.labels) {
+        const listed = await page.evaluate(
+          (id) =>
+            [...document.querySelectorAll(`#${id} dt`)].map(
+              (n) => n.textContent,
+            ),
+          target.id,
+        );
+        if (listed.join("|") !== target.labels.join("|"))
+          fail(
+            `${label}: the credits list ${listed.join(", ")}, not ${target.labels.join(", ")}`,
+          );
+      }
       if (!expanded)
-        fail(`${label}: the accessibility tree does not show the button as expanded: ${snapshot}`);
+        fail(
+          `${label}: the accessibility tree does not show the button as expanded: ${snapshot}`,
+        );
 
       await page.waitForTimeout(500); // the stack's fade-in and the panel's own transition settle
       const g = await page.evaluate(geometry, target);
       if (target.stack) {
         if (g.groupLabel !== "Globe controls" || g.groupRole !== "group")
-          fail(`${label}: the control stack is not a group named "Globe controls" (${g.groupRole}, ${g.groupLabel})`);
+          fail(
+            `${label}: the control stack is not a group named "Globe controls" (${g.groupRole}, ${g.groupLabel})`,
+          );
         if (g.order.join("|") !== "Zoom in|Zoom out|Reset zoom|Data credits")
           fail(`${label}: the stack's order is ${g.order.join(", ")}`);
         if (g.panel.right > g.button.left + 0.5)
-          fail(`${label}: the open panel is not beside the stack ${JSON.stringify(g.panel)}`);
-      } else if (g.panel.bottom > g.button.top + 1 && g.panel.top < g.button.bottom - 1) {
+          fail(
+            `${label}: the open panel is not beside the stack ${JSON.stringify(g.panel)}`,
+          );
+      } else if (
+        g.panel.bottom > g.button.top + 1 &&
+        g.panel.top < g.button.bottom - 1
+      ) {
         fail(`${label}: the open panel covers the button`);
       }
-      if (g.panel.left < 0 || g.panel.right > g.w || g.panel.top < 0 || g.panel.bottom > g.h)
-        fail(`${label}: the open panel leaves the viewport ${JSON.stringify(g.panel)}`);
+      if (
+        g.panel.left < 0 ||
+        g.panel.right > g.w ||
+        g.panel.top < 0 ||
+        g.panel.bottom > g.h
+      )
+        fail(
+          `${label}: the open panel leaves the viewport ${JSON.stringify(g.panel)}`,
+        );
       for (const c of g.controls)
         if (intersects(g.panel, c))
-          fail(`${label}: the open panel covers a control button ${JSON.stringify(c)}`);
+          fail(
+            `${label}: the open panel covers a control button ${JSON.stringify(c)}`,
+          );
       const faded = await page.evaluate((id) => {
         for (let e = document.getElementById(id); e; e = e.parentElement)
           if (Number(getComputedStyle(e).opacity) < 0.99) return true;
@@ -358,26 +452,32 @@ for (const name of browsers) {
         const box = await frame.boundingBox();
         if (box) {
           const pad = 8;
-          await page.screenshot({
-            path: `${shots}/${target.slug}-${viewport.width}-${suffix}.png`,
-            clip: {
-              x: Math.max(0, box.x - pad),
-              y: Math.max(0, box.y - pad),
-              width: Math.min(viewport.width, box.width + 2 * pad),
-              height: box.height + 2 * pad,
-            },
-          }).catch(() => {});
+          await page
+            .screenshot({
+              path: `${shots}/${target.slug}-${viewport.width}-${suffix}.png`,
+              clip: {
+                x: Math.max(0, box.x - pad),
+                y: Math.max(0, box.y - pad),
+                width: Math.min(viewport.width, box.width + 2 * pad),
+                height: box.height + 2 * pad,
+              },
+            })
+            .catch(() => {});
         }
       };
       await shoot("open");
 
       await page.keyboard.press("Escape");
-      const closed = await page.evaluate((id) => ({
-        shown: document.getElementById(id)?.matches(":popover-open"),
-        back: document.activeElement?.getAttribute("popovertarget"),
-      }), target.id);
+      const closed = await page.evaluate(
+        (id) => ({
+          shown: document.getElementById(id)?.matches(":popover-open"),
+          back: document.activeElement?.getAttribute("popovertarget"),
+        }),
+        target.id,
+      );
       if (closed.shown) fail(`${label}: Escape did not close the panel`);
-      if (closed.back !== target.id) fail(`${label}: focus did not return to the button`);
+      if (closed.back !== target.id)
+        fail(`${label}: focus did not return to the button`);
       await frame.hover();
       await page.waitForTimeout(400);
       await shoot("closed");

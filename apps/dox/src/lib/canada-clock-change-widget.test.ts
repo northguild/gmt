@@ -79,8 +79,9 @@ describe("the chat mount", () => {
   });
 
   const pressed = (root: HTMLElement) =>
-    root.querySelector<HTMLElement>('.gmt-canada-zone-btn[aria-pressed="true"]')
-      ?.dataset.tzId ?? null;
+    root.querySelector<HTMLElement>(
+      '.gmt-zonemap-zone-btn[aria-pressed="true"]',
+    )?.dataset.tzId ?? null;
 
   it("pins the zone it was given in the list, and says so in its permalink state", async () => {
     const root = widgetRoot();
@@ -105,9 +106,9 @@ describe("the chat mount", () => {
       controller.signal,
     );
     await vi.waitFor(() =>
-      expect(root.querySelector('[data-role="legend-count"]')?.textContent).not.toBe(
-        "\u2013",
-      ),
+      expect(
+        root.querySelector('[data-role="legend-count"]')?.textContent,
+      ).not.toBe("\u2013"),
     );
     expect(pressed(root)).toBeNull();
     expect(handle.getPermalinkState?.()).toBeNull();
@@ -132,7 +133,11 @@ describe("the chat mount", () => {
     const root = widgetRoot();
     const controller = new AbortController();
     controller.abort();
-    const handle = await mountCanadaClockChangeWidget(root, {}, controller.signal);
+    const handle = await mountCanadaClockChangeWidget(
+      root,
+      {},
+      controller.signal,
+    );
     expect(handle.getPermalinkState?.()).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });

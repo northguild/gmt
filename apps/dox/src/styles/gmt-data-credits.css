@@ -9,14 +9,14 @@
  *   stack    the fourth button of the globe's control stack (+, −, ⊙, ⓘ). The stack's own rule
  *            (`.gmt-globe-zoom button`, gmt-globe.css) sizes and colours it, so it matches its
  *            siblings in size, shape, focus ring and tab order, and it fades in with them.
- *   corner   a drawing with no button stack (the time-zone map, the Canada map): a glass square in
+ *   corner   a drawing with no button stack (the time-zone map, the clock-change zone map): a glass square in
  *            the drawing's corner, styled like the stack's buttons. Its frame is the positioning
  *            context.
  */
 
 /* The frame a corner button sits on. */
 .gmt-credited-frame,
-.gmt-canada-map {
+.gmt-zonemap-map {
   position: relative;
 }
 

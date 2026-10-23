@@ -6,27 +6,30 @@ import { isBeforeUtc } from "@northguild/gmt/utc/compare";
 import { convertUtcToPlainDateTime } from "@northguild/gmt/utc/convert";
 import {
   MAP_HEIGHT,
-  MAP_WIDTH,
+  CANADA_MAP,
   canadaProjection,
+  releaseOf,
+} from "./canada-map";
+import {
+  MAP_WIDTH,
   classCounts,
   classWords,
   displayKind,
   isDataStale,
   lastText,
-  mountCanadaMap,
+  mountZoneMap,
   nextText,
   offsetAt,
   offsetWords,
-  releaseOf,
   releaseWords,
   type BoundaryCollection,
-  type CanadaMapDeps,
-} from "./canada-map";
-import {
-  renderCanadaClockChangeTemplate,
-  msToNextSecond,
-} from "./canada-clock-change-mount";
-import type { MapZone } from "./canada-clock-change";
+  isZoneFeature,
+  type MapZone,
+  type ZoneMapDeps,
+} from "./zone-map";
+import { renderCanadaClockChangeTemplate } from "./canada-clock-change-mount";
+import { STOPPED_ZONES } from "./canada-clock-change";
+import { msToNextSecond } from "./clock-change-common";
 
 const NOW = "2026-10-22T12:00:00Z";
 const boundaries = JSON.parse(
@@ -69,7 +72,7 @@ const ZONES: MapZone[] = [
   },
 ];
 
-function deps(over: Partial<CanadaMapDeps> = {}): CanadaMapDeps {
+function deps(over: Partial<ZoneMapDeps> = {}): ZoneMapDeps {
   return {
     responseNow: NOW,
     now: () => NOW,
@@ -80,7 +83,9 @@ function deps(over: Partial<CanadaMapDeps> = {}): CanadaMapDeps {
       Response.json(boundaries),
     ) as unknown as typeof fetch,
     measure: () => 900,
-    location: { href: "https://example.test/gmt/check/canada-2026-clock-change/" },
+    location: {
+      href: "https://example.test/gmt/check/canada-2026-clock-change/",
+    },
     history: { replaceState: vi.fn() },
     ...over,
   };
@@ -127,24 +132,51 @@ describe("the text", () => {
   });
 
   it("names the class, or no data for a zone with no row", () => {
-    expect(classWords("America/Winnipeg", ZONES[0])).toBe(
+    expect(classWords(CANADA_MAP, "America/Winnipeg", ZONES[0])).toBe(
       "Stops changing clocks in 2026",
     );
-    expect(classWords("America/Toronto", ZONES[1])).toBe("Still changes clocks");
-    expect(classWords("America/Regina", ZONES[2])).toBe("Never changes clocks");
-    expect(classWords("America/Halifax", undefined)).toBe("no data");
+    expect(classWords(CANADA_MAP, "America/Toronto", ZONES[1])).toBe(
+      "Still changes clocks",
+    );
+    expect(classWords(CANADA_MAP, "America/Regina", ZONES[2])).toBe(
+      "Never changes clocks",
+    );
+    expect(classWords(CANADA_MAP, "America/Halifax", undefined)).toBe(
+      "no data",
+    );
   });
 
   it("colours the four stopped zones from the page's own facts, whatever the server says", () => {
     const old: MapZone = { ...ZONES[1]!, zone: "America/Vancouver" };
-    expect(displayKind("America/Vancouver", old)).toBe("stopped-2026");
-    expect(displayKind("America/Vancouver", undefined)).toBe("stopped-2026");
-    expect(displayKind("America/Toronto", ZONES[1])).toBe("changes-2027");
-    expect(isDataStale([old])).toBe(true);
-    expect(isDataStale([{ ...old, kind: "stopped-2026" }, ZONES[1]!])).toBe(false);
-    const rows = new Map([[old.zone, old], ["America/Toronto", ZONES[1]!], ["America/Regina", ZONES[2]!]]);
+    expect(displayKind(CANADA_MAP, "America/Vancouver", old)).toBe(
+      "stopped-2026",
+    );
+    expect(displayKind(CANADA_MAP, "America/Vancouver", undefined)).toBe(
+      "stopped-2026",
+    );
+    expect(displayKind(CANADA_MAP, "America/Toronto", ZONES[1])).toBe(
+      "changes-2027",
+    );
+    expect(isDataStale(STOPPED_ZONES, [old])).toBe(true);
     expect(
-      classCounts(["America/Vancouver", "America/Toronto", "America/Regina", "America/Edmonton"], rows),
+      isDataStale(STOPPED_ZONES, [{ ...old, kind: "stopped-2026" }, ZONES[1]!]),
+    ).toBe(false);
+    const rows = new Map([
+      [old.zone, old],
+      ["America/Toronto", ZONES[1]!],
+      ["America/Regina", ZONES[2]!],
+    ]);
+    expect(
+      classCounts(
+        CANADA_MAP,
+        [
+          "America/Vancouver",
+          "America/Toronto",
+          "America/Regina",
+          "America/Edmonton",
+        ],
+        rows,
+      ),
     ).toEqual({ "stopped-2026": 2, "changes-2027": 1, "none-2026-2027": 1 });
   });
 
@@ -167,23 +199,28 @@ describe("the text", () => {
 describe("the classes on the shapes", () => {
   it("gives every shape exactly one class, and a zone with no row the neutral one", async () => {
     const root = host();
-    const handle = mountCanadaMap(
+    const handle = mountZoneMap(
       root,
       ZONES,
       new AbortController().signal,
       deps(),
+      CANADA_MAP,
     );
     await handle.ready;
     const shapes = root.querySelectorAll<SVGPathElement>(
-      "path.gmt-canada-shape",
+      "path.gmt-zonemap-shape",
     );
-    expect(shapes).toHaveLength(boundaries.features.length);
+    expect(shapes).toHaveLength(
+      boundaries.features.filter(isZoneFeature).length,
+    );
     for (const shape of shapes) {
       const id = shape.dataset.tzId!;
       const row = ZONES.find((z) => z.zone === id);
-      expect(shape.getAttribute("data-kind")).toBe(displayKind(id, row));
+      expect(shape.getAttribute("data-kind")).toBe(
+        displayKind(CANADA_MAP, id, row),
+      );
       expect(shape.getAttribute("aria-label")).toBe(
-        `${id}, ${classWords(id, row)}`,
+        `${id}, ${classWords(CANADA_MAP, id, row)}`,
       );
       expect(shape.getAttribute("tabindex")).toBe("-1");
       expect(shape.getAttribute("role")).toBe("button");
@@ -194,14 +231,41 @@ describe("the classes on the shapes", () => {
   });
 });
 
-describe("pinning", () => {
-  it("pins from the list by Enter on a focused button, and a shape click pins the same zone", async () => {
+describe("the land around the zones", () => {
+  it("is one aria-hidden path drawn before every zone, and never a zone", async () => {
     const root = host();
-    const handle = mountCanadaMap(
+    const listed = root.querySelectorAll(".gmt-zonemap-zone").length;
+    const handle = mountZoneMap(
       root,
       ZONES,
       new AbortController().signal,
       deps(),
+      CANADA_MAP,
+    );
+    await handle.ready;
+    const svg = root.querySelector("svg.gmt-zonemap-svg")!;
+    const land = svg.querySelectorAll("path.gmt-zonemap-land");
+    expect(land).toHaveLength(1);
+    expect(svg.firstElementChild).toBe(land[0]);
+    expect(land[0]!.getAttribute("aria-hidden")).toBe("true");
+    for (const attr of ["role", "tabindex", "data-tz-id", "data-kind"])
+      expect(land[0]!.hasAttribute(attr)).toBe(false);
+    // The zone list, and what a click on the land pins, are unchanged.
+    expect(root.querySelectorAll(".gmt-zonemap-zone")).toHaveLength(listed);
+    land[0]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(handle.pinned()).toBeNull();
+  });
+});
+
+describe("pinning", () => {
+  it("pins from the list by Enter on a focused button, and a shape click pins the same zone", async () => {
+    const root = host();
+    const handle = mountZoneMap(
+      root,
+      ZONES,
+      new AbortController().signal,
+      deps(),
+      CANADA_MAP,
     );
     await handle.ready;
     btn(root, "America/Toronto").click();
@@ -232,11 +296,12 @@ describe("pinning", () => {
 
   it("moves along the list with the arrow keys, Home and End, on one tab stop", async () => {
     const root = host();
-    const handle = mountCanadaMap(
+    const handle = mountZoneMap(
       root,
       ZONES,
       new AbortController().signal,
       deps(),
+      CANADA_MAP,
     );
     await handle.ready;
     const buttons = [
@@ -264,7 +329,13 @@ describe("pinning", () => {
   it("writes ?zone= and reads it back on load", async () => {
     const root = host();
     const d = deps();
-    const handle = mountCanadaMap(root, ZONES, new AbortController().signal, d);
+    const handle = mountZoneMap(
+      root,
+      ZONES,
+      new AbortController().signal,
+      d,
+      CANADA_MAP,
+    );
     await handle.ready;
     handle.pin("America/Regina");
     expect(d.history!.replaceState).toHaveBeenCalledWith(
@@ -274,31 +345,34 @@ describe("pinning", () => {
     );
 
     const again = host();
-    const pinned = mountCanadaMap(
+    const pinned = mountZoneMap(
       again,
       ZONES,
       new AbortController().signal,
       deps({
         location: { href: "https://example.test/x/?zone=America/Winnipeg" },
       }),
+      CANADA_MAP,
     );
     expect(pinned.pinned()).toBe("America/Winnipeg");
-    const ignored = mountCanadaMap(
+    const ignored = mountZoneMap(
       host(),
       ZONES,
       new AbortController().signal,
       deps({ location: { href: "https://example.test/x/?zone=Nowhere/Land" } }),
+      CANADA_MAP,
     );
     expect(ignored.pinned()).toBeNull();
   });
 
   it("shows the null texts and the release on the panel", async () => {
     const root = host();
-    const handle = mountCanadaMap(
+    const handle = mountZoneMap(
       root,
       ZONES,
       new AbortController().signal,
       deps(),
+      CANADA_MAP,
     );
     await handle.ready;
     handle.pin("America/Toronto");
@@ -319,11 +393,12 @@ describe("pinning", () => {
 
   it("keeps the panel, list and map in place: the same boxes, three pins in a row", async () => {
     const root = host();
-    const handle = mountCanadaMap(
+    const handle = mountZoneMap(
       root,
       ZONES,
       new AbortController().signal,
       deps(),
+      CANADA_MAP,
     );
     await handle.ready;
     const rects = () =>
@@ -348,11 +423,12 @@ describe("pinning", () => {
 describe("the data credits", () => {
   it("puts one boundaries button in the map's corner when the map is drawn", async () => {
     const root = host();
-    const handle = mountCanadaMap(
+    const handle = mountZoneMap(
       root,
       ZONES,
       new AbortController().signal,
       deps(),
+      CANADA_MAP,
     );
     await handle.ready;
     const frame = root.querySelector<HTMLElement>('[data-role="map"]')!;
@@ -370,13 +446,61 @@ describe("the data credits", () => {
   });
 });
 
+describe("the entrance", () => {
+  it("plays the site's arrival gesture on the drawing, inside a stage that keeps its box", async () => {
+    const root = host();
+    const handle = mountZoneMap(
+      root,
+      ZONES,
+      new AbortController().signal,
+      deps(),
+      CANADA_MAP,
+    );
+    expect(root.querySelector("svg.gmt-zonemap-svg")).toBeNull();
+    await handle.ready;
+    const svg = root.querySelector<SVGSVGElement>("svg.gmt-zonemap-svg")!;
+    // enter() adds the class at once, or the settled mark under reduced motion.
+    expect(
+      svg.classList.contains("gmt-enter") || svg.hasAttribute("data-entered"),
+    ).toBe(true);
+    expect(svg.parentElement?.dataset.role).toBe("map");
+  });
+
+  it("settles on the drawing with data-entered once the timer fires", async () => {
+    vi.useFakeTimers();
+    try {
+      const root = host();
+      const handle = mountZoneMap(
+        root,
+        ZONES,
+        new AbortController().signal,
+        deps(),
+        CANADA_MAP,
+      );
+      await handle.ready;
+      const svg = root.querySelector<SVGSVGElement>("svg.gmt-zonemap-svg")!;
+      vi.advanceTimersByTime(2000);
+      expect(svg.hasAttribute("data-entered")).toBe(true);
+      expect(svg.classList.contains("gmt-enter")).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("narrow screens", () => {
   it("draws no SVG and never fetches the boundary file at 375 px", async () => {
     const root = host();
     const d = deps({ measure: () => 375 });
-    const handle = mountCanadaMap(root, ZONES, new AbortController().signal, d);
+    const handle = mountZoneMap(
+      root,
+      ZONES,
+      new AbortController().signal,
+      d,
+      CANADA_MAP,
+    );
     await handle.ready;
-    expect(root.querySelector("svg.gmt-canada-svg")).toBeNull();
+    expect(root.querySelector("svg.gmt-zonemap-svg")).toBeNull();
     expect(root.querySelector(".gmt-data-credits-button")).toBeNull();
     expect(d.fetch).not.toHaveBeenCalled();
     // The list still pins, and the panel opens under the pressed button.
@@ -392,18 +516,21 @@ describe("narrow screens", () => {
 describe("the pin panel's words and the scroll box", () => {
   it("never leaves Recorded in blank, and separates the offset from the time", () => {
     const [stopped, changes] = [ZONES[0]!, ZONES[1]!];
-    expect(releaseWords(stopped.zone)).toMatch(/^tzdb 2026/);
-    expect(releaseWords(changes.zone)).toContain("no change recorded");
+    expect(releaseWords(CANADA_MAP, stopped.zone)).toMatch(/^tzdb 2026/);
+    expect(releaseWords(CANADA_MAP, changes.zone)).toContain(
+      "no change recorded",
+    );
     expect(offsetWords("-07:00")).toBe("UTC-07:00");
   });
 
   it("fills the labelled rows, with dashes before a zone is pinned", async () => {
     const root = host();
-    const handle = mountCanadaMap(
+    const handle = mountZoneMap(
       root,
       ZONES,
       new AbortController().signal,
       deps(),
+      CANADA_MAP,
     );
     await handle.ready;
     for (const role of ["pin-time", "pin-offset", "pin-release"]) {
@@ -430,16 +557,17 @@ describe("the pin panel's words and the scroll box", () => {
 
   it("draws a hover ring and a pin ring over the shapes", async () => {
     const root = host();
-    const handle = mountCanadaMap(
+    const handle = mountZoneMap(
       root,
       ZONES,
       new AbortController().signal,
       deps(),
+      CANADA_MAP,
     );
     await handle.ready;
-    expect(root.querySelectorAll(".gmt-canada-ring").length).toBe(2);
+    expect(root.querySelectorAll(".gmt-zonemap-ring").length).toBe(2);
     handle.pin("America/Winnipeg");
-    const ring = root.querySelector<SVGElement>(".gmt-canada-ring--pin")!;
+    const ring = root.querySelector<SVGElement>(".gmt-zonemap-ring--pin")!;
     expect(ring.getAttribute("visibility")).not.toBe("hidden");
   });
 });

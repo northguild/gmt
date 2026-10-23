@@ -74,6 +74,25 @@ describe("widget permalinks", () => {
     ).toEqual({});
   });
 
+  it("carries the Morocco checker's pinned zone through a link and keeps only a short string", () => {
+    const url = encodeWidgetPermalink("moroccoclock", {
+      zone: "Africa/El_Aaiun",
+    });
+    expect(
+      url.startsWith("/gmt/check/morocco-2026-clock-change/?w=moroccoclock&"),
+    ).toBe(true);
+    const search = url.slice(url.indexOf("?"));
+    expect(seedFromLocation("moroccoclock", search)).toEqual({
+      zone: "Africa/El_Aaiun",
+    });
+    const long = encodeWidgetPermalink("moroccoclock", {
+      zone: "A".repeat(65),
+    });
+    expect(
+      seedFromLocation("moroccoclock", long.slice(long.indexOf("?"))),
+    ).toEqual({});
+  });
+
   it("needs no anchor, because the widget is the whole page", () => {
     // The reference-page targets these replaced each needed a heading anchor to
     // land anywhere useful.

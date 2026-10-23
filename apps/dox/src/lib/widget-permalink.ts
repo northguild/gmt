@@ -68,8 +68,9 @@ export type WidgetKind =
   | "holidays"
   | "observance"
   | "feasts"
+  | "durationbench"
   | "canadaclock"
-  | "durationbench";
+  | "moroccoclock";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -119,12 +120,13 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   holidays: "/tools/holiday-rule-builder/",
   observance: "/tools/observance-comparator/",
   feasts: "/tools/moving-feasts/",
+  durationbench: "/tools/duration-parser-bench/",
   // `/check` is a directory with no index page of its own, so the built-site guard reads a bare
   // "/check/…" string in the bundle as a request for a public file. The literal sits inside
   // `withBase`, the call the guard accepts; `encodeWidgetPermalink` applies `withBase` again, which
   // leaves a path already under the base alone.
   canadaclock: withBase("/check/canada-2026-clock-change/"),
-  durationbench: "/tools/duration-parser-bench/",
+  moroccoclock: withBase("/check/morocco-2026-clock-change/"),
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */

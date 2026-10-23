@@ -1,16 +1,43 @@
 /**
- * The stored-times check of the Canada 2026 clock-change checker (CORE-88): the caps on what the
- * Dox Worker reads, and how a line gets its zone. Pure, and imports only constants, so the Worker and the
- * page share it. The Worker classifies; nothing here knows a zone's rules.
+ * The stored-times check of a dated tz-change checker: the caps on what the Dox Worker reads, and
+ * how a line gets its zone. Pure, and imports only constants, so the Worker and the page share it.
+ * The Worker classifies; nothing here knows a zone's rules.
  *
  * Completing a zone uses only what the reader typed or picked: the site guesses none.
  */
-import {
-  STORED_MAX_BYTES,
-  STORED_MAX_LINES,
-  cityOf,
-  signedOffset,
-} from "./canada-clock-change";
+import type { StoredZonedClassification } from "@northguild/gmt";
+import { cityOf, signedOffset } from "./clock-change-common";
+
+/**
+ * The most lines a POST classifies. The Worker runs the polyfill on workerd and is budgeted for
+ * the Workers Free limit of 10 ms CPU per request (over it is Error 1102). Measured under
+ * `wrangler dev` from the client, distinct Toronto lines, warm, median of 12 posts, minus a
+ * 1-line baseline of about 2 ms: 25 lines 3.8 ms, 50 lines 7.0 to 7.4 ms, 60 lines 8.3 ms, 100 lines 14.0 ms,
+ * 200 lines 29.4 ms: about 0.15 ms a line. 50 is the largest that stays near 7 ms; with the
+ * baseline that is about 9.4 ms of wall time, which overstates CPU time. Re-measure before
+ * raising it; the deploy smoke posts this many lines and checks every one was read.
+ */
+export const STORED_MAX_LINES = 50;
+export const STORED_MAX_BYTES = 20_000;
+
+/** One posted line, classified with the server's time zone data. */
+export interface StoredRow {
+  /** 1-based line number in the input. */
+  line: number;
+  /** The line as posted. */
+  input: string;
+  /** The string classified, after the zone is completed; `null` when no form completes it. */
+  value: string | null;
+  result: StoredZonedClassification | null;
+}
+
+/** The `POST` answer. */
+export interface StoredCheck {
+  zone: string;
+  /** True when the input was over `STORED_MAX_LINES` lines or `STORED_MAX_BYTES` bytes. */
+  truncated: boolean;
+  rows: StoredRow[];
+}
 
 export interface StoredInputLine {
   /** 1-based line number in the input, blank lines counted. */
@@ -111,22 +138,6 @@ export function completeStoredLine(line: string, zone: string): string | null {
   return null;
 }
 
-/**
- * The example lines. The first five are Toronto lines that give one of each kind on any tz
- * data; the last three are Canadian lines whose kind changed in 2026. The labels here never
- * claim a kind: the Worker's answer is what shows.
- */
-export const STORED_PRESET: string = [
-  "2026-07-01T12:00:00-04:00[America/Toronto]",
-  "2026-11-01T01:30:00-04:00[America/Toronto]",
-  "2026-07-01T12:00:00-05:00[America/Toronto]",
-  "2026-11-01T01:30:00-06:00[America/Toronto]",
-  "2027-03-14T02:30:00-05:00[America/Toronto]",
-  "2026-11-15T09:00:00-08:00[America/Vancouver]",
-  "2027-03-14T02:30:00-07:00[America/Edmonton]",
-  "2026-11-01T01:30:00-05:00[America/Winnipeg]",
-].join("\n");
-
 /** One checked line in plain words: still correct, or moved and by how much. */
 export interface StoredVerdict {
   ok: boolean;
@@ -135,12 +146,16 @@ export interface StoredVerdict {
 }
 
 /** `HH:MM` and the day shift of a UTC instant (`...THH:mm...Z`) read at a `±hh:mm` offset. */
-function localOf(instant: string, offset: string): { hm: string; days: number } | null {
+function localOf(
+  instant: string,
+  offset: string,
+): { hm: string; days: number } | null {
   const hours = Number(instant.slice(11, 13));
   const minutes = Number(instant.slice(14, 16));
   const offHours = Number(offset.slice(1, 3));
   const offMinutes = Number(offset.slice(4, 6));
-  if (![hours, minutes, offHours, offMinutes].every(Number.isFinite)) return null;
+  if (![hours, minutes, offHours, offMinutes].every(Number.isFinite))
+    return null;
   const sign = offset.startsWith("-") ? -1 : 1;
   const total = hours * 60 + minutes + sign * (offHours * 60 + offMinutes);
   const days = Math.floor(total / 1440);
@@ -168,8 +183,17 @@ export function storedVerdict(result: {
         result.atStoredOffset !== undefined && result.zoneOffset !== undefined
           ? localOf(result.atStoredOffset, result.zoneOffset)
           : null;
-      if (local === null) return { ok: false, words: "Moved: the saved offset is no longer the zone's" };
-      const day = local.days === 0 ? "" : local.days > 0 ? " the next day" : " the day before";
+      if (local === null)
+        return {
+          ok: false,
+          words: "Moved: the saved offset is no longer the zone's",
+        };
+      const day =
+        local.days === 0
+          ? ""
+          : local.days > 0
+            ? " the next day"
+            : " the day before";
       return { ok: false, words: `Moved: shows ${local.hm} local${day}` };
     }
     case "ambiguous":
@@ -192,7 +216,9 @@ export interface StoredAdvice {
 }
 
 /** The `{ hm, city }` a saved string names: `2026-11-15T09:00:00-08:00[America/Vancouver]`. */
-function savedPlace(value: string | null): { time: string; city: string } | null {
+function savedPlace(
+  value: string | null,
+): { time: string; city: string } | null {
   if (value === null) return null;
   const match = /T(\d{2}):(\d{2})[^[]*\[([^\]]+)\]/.exec(value);
   if (match === null) return null;
@@ -298,10 +324,16 @@ export function storedZoneOf(value: string | null): string | null {
  * The line shown for a saved time the check cannot judge: the data doing the check is older than
  * the change for this place, so any verdict it gave would be backwards.
  */
-export function staleCheckText(zone: string | null, places?: readonly string[]): string {
+export function staleCheckText(
+  zone: string | null,
+  places?: readonly string[],
+): string {
   const where =
     places !== undefined && places.length > 1
-      ? new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(places)
+      ? new Intl.ListFormat("en", {
+          style: "long",
+          type: "conjunction",
+        }).format(places)
       : zone === null
         ? "this place"
         : cityOf(zone);
@@ -315,8 +347,10 @@ export function storedBadge(
   result: AdviceResult | null,
   stale: boolean,
 ): { tone: BadgeTone; label: string; mark: string } {
-  if (result === null) return { tone: "none", label: "Not a saved event", mark: "" };
-  if (stale) return { tone: "unknown", label: "Can\u2019t check yet", mark: "" };
+  if (result === null)
+    return { tone: "none", label: "Not a saved event", mark: "" };
+  if (stale)
+    return { tone: "unknown", label: "Can\u2019t check yet", mark: "" };
   switch (result.kind) {
     case "valid":
     case "validInOverlap":
@@ -328,8 +362,7 @@ export function storedBadge(
         return { tone: "bad", label: "Shows the wrong time", mark: "\u2717" };
       }
       const minutes = Math.abs(offsetMinutes(zone) - offsetMinutes(stored));
-      const words =
-        minutes % 60 === 0 ? `${minutes / 60} h` : `${minutes} min`;
+      const words = minutes % 60 === 0 ? `${minutes / 60} h` : `${minutes} min`;
       return { tone: "bad", label: `Shows ${words} off`, mark: "\u2717" };
     }
     case "ambiguous":
@@ -352,18 +385,29 @@ export function storedFix(
   value: string | null,
   result: AdviceResult | null,
 ): { keepLocal: string; localHm: string; oldLocal: string | null } | null {
-  if (value === null || result === null || result.kind !== "offsetMismatch") return null;
+  if (value === null || result === null || result.kind !== "offsetMismatch")
+    return null;
   if (result.zoneOffset === undefined) return null;
   const keepLocal = value.replace(/[+-]\d{2}:\d{2}(?=\[)/, result.zoneOffset);
   if (keepLocal === value) return null;
   const old =
-    result.atStoredOffset === undefined ? null : localOf(result.atStoredOffset, result.zoneOffset);
-  const day = old === null || old.days === 0 ? "" : old.days > 0 ? " the next day" : " the day before";
+    result.atStoredOffset === undefined
+      ? null
+      : localOf(result.atStoredOffset, result.zoneOffset);
+  const day =
+    old === null || old.days === 0
+      ? ""
+      : old.days > 0
+        ? " the next day"
+        : " the day before";
   const place = savedPlace(value);
   return {
     keepLocal,
     localHm: place?.time ?? "the local time",
-    oldLocal: old === null ? null : `${Number(old.hm.slice(0, 2))}:${old.hm.slice(3)}${day}`,
+    oldLocal:
+      old === null
+        ? null
+        : `${Number(old.hm.slice(0, 2))}:${old.hm.slice(3)}${day}`,
   };
 }
 

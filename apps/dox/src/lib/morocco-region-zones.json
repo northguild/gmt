@@ -1,0 +1,57 @@
+{
+  "tzdb": "2026e",
+  "zones": [
+    "Africa/Algiers",
+    "Africa/Casablanca",
+    "Africa/Ceuta",
+    "Africa/El_Aaiun",
+    "Africa/Nouakchott",
+    "Atlantic/Canary",
+    "Atlantic/Madeira",
+    "Europe/Gibraltar",
+    "Europe/Lisbon",
+    "Europe/Madrid"
+  ],
+  "coords": {
+    "Africa/Algiers": [
+      3.05,
+      36.783
+    ],
+    "Africa/Casablanca": [
+      -7.583,
+      33.65
+    ],
+    "Africa/Ceuta": [
+      -5.317,
+      35.883
+    ],
+    "Africa/El_Aaiun": [
+      -13.2,
+      27.15
+    ],
+    "Africa/Nouakchott": [
+      -15.95,
+      18.1
+    ],
+    "Atlantic/Canary": [
+      -15.4,
+      28.1
+    ],
+    "Atlantic/Madeira": [
+      -16.9,
+      32.633
+    ],
+    "Europe/Gibraltar": [
+      -5.35,
+      36.133
+    ],
+    "Europe/Lisbon": [
+      -9.133,
+      38.717
+    ],
+    "Europe/Madrid": [
+      -3.683,
+      40.4
+    ]
+  }
+}

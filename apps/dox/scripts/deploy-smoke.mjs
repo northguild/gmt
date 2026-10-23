@@ -310,7 +310,7 @@ async function buildRows() {
   // Report only. A kind is a reading of the Worker's tz data, which a later tzdb can change
   // again, so this row prints the kinds and fails only on the status or the body's shape. The
   // 2026e expectation is checked by hand against the deployed Worker. The three lines are
-  // STORED_PRESET's Canadian lines (src/lib/canada-stored-times.ts).
+  // STORED_PRESET's Canadian lines (src/lib/canada-clock-change.ts).
   add({
     label: "canada-clock-change stored times (report only)",
     method: "POST",
@@ -357,7 +357,7 @@ async function buildRows() {
   const storedMax = Number(
     /STORED_MAX_LINES = (\d+);/.exec(
       readFileSync(
-        new URL("../src/lib/canada-clock-change.ts", import.meta.url),
+        new URL("../src/lib/clock-change-stored-lines.ts", import.meta.url),
         "utf8",
       ),
     )?.[1],
