@@ -1,0 +1,64 @@
+---
+title: Holiday Rule Builder
+description: Write holidays as rules, set the weekend and the observance shift, and see which days a business calendar closes and which holiday moved to close them.
+industries: [core]
+---
+
+import HolidayRuleBuilder from "../../../components/HolidayRuleBuilder.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="Holiday rules into a business calendar">
+
+<Fragment slot="keypoint">
+
+Holidays are rules. The observance shift decides which day closes, and calendars disagree on it.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A holiday list is a set of dates, but a holiday is a rule: "1 January", "the second Monday of October", "two days before Easter" or a date in another calendar. The rule gives the date. A second rule, the observance shift, says what happens when that date falls on a day the business is already closed.
+
+Pick a preset or write your own rules. Each row gives a rule a name, a kind and its fields. A `fixed` or `calendarFixed` rule can also carry a shift, one choice per weekday. Under the rows the year is drawn on twelve months. A holiday that moved leaves a ghost on its own date and a closed day on the date it moved to, and both carry the rule's number. The last section prints the exact call and the calendar the library returns.
+
+</Fragment>
+
+<HolidayRuleBuilder fullbleed />
+
+<Fragment slot="after">
+
+**The rule.** A [`HolidayRule`](/reference/types/HolidayRule/) has one of five kinds, and [`holidayDates`](/reference/calendar/rules/holidayDates/) turns it into the dates it falls on in a year.
+
+- `fixed`: a month and a day in the ISO calendar.
+- `calendarFixed`: a month code and a day in another calendar, such as `M01` in the Hebrew or Islamic calendar.
+- `nthWeekday`: the first, second, third, fourth, fifth or last weekday of a month.
+- `easterRelative`: a number of days before or after Easter, by the Gregorian or the Julian computus.
+- `dates`: a list of dates you give, for a day that no rule produces.
+
+[`buildBusinessCalendar`](/reference/calendar/rules/buildBusinessCalendar/) takes the rules, a weekend and a zone, and returns a [`BusinessCalendar`](/reference/types/BusinessCalendar/) that lists every closed date in the years you ask for.
+
+**A moved holiday closes one day.** A `fixed` or `calendarFixed` rule can carry an `observed` policy that maps a weekday to a shift: `{ previous: 5 }` moves to the Friday before, `{ next: 1 }` moves to the Monday after, and `"nextWorkingDay"` moves to the first day the calendar is open. The holiday is not closed twice. The calendar closes the observed date, and the date it started on is only a ghost in the grid. A shift can cross a year: 1 January 2028 falls on a Saturday, so with `6<5` the closed day is 31 December 2027 and it shows in the 2027 grid.
+
+**Order decides which holiday takes which day, not which days close.** The shift `nextWorkingDay` moves to the first day that is open. The library places every holiday that does not walk first, then walks each rule's holidays in list order, past those days and the walks of the rules above it. In the opening preset, 25 and 26 December 2021 fall on a weekend and each moves to the next working day. The first moves to Monday 27 December, and the second finds that day closed and moves to Tuesday 28 December. Swap the rows and the same two days close, but each holiday lands on the other one. A `dates` rule for 27 December closes that day wherever it sits, so the shift of 26 December passes it and lands on 28 December. Use the arrows on each row to try it.
+
+**When there is no result.** A rule the library calls invalid, such as month 13 or a day that month does not have, shows `NO SIGNAL` with what to check. The row stays, the calendar is `null`, and the hand-off to the Free Time Ledger is off until every row is valid. That is different from a rule with no date in the year, such as a fifth Friday in a month that has four. That is a real answer, and the row says "No date" in plain text. A year outside 1900 to 2100 is `NO SIGNAL` too: every row and the calendar say so, and the grid is left unmarked rather than showing the last year.
+
+```ts
+const rules = [
+  { name: "A", kind: "fixed", month: 12, day: 26, observed: { 7: "nextWorkingDay" } },
+  { name: "B", kind: "dates", dates: ["2021-12-27"] },
+];
+buildBusinessCalendar({ timeZone: "Europe/London", weekend: [6, 7], rules, years: { from: 2021, to: 2021 } });
+// { weekend: [6, 7], holidays: ["2021-12-27", "2021-12-28"], timeZone: "Europe/London" }
+buildBusinessCalendar({ timeZone: "Europe/London", weekend: [6, 7], rules: [rules[1], rules[0]], years: { from: 2021, to: 2021 } });
+// { weekend: [6, 7], holidays: ["2021-12-27", "2021-12-28"], timeZone: "Europe/London" } — the same days in either order
+buildBusinessCalendar({ timeZone: "Europe/London", weekend: [6, 7], rules: [{ name: "x", kind: "fixed", month: 13, day: 1 }], years: { from: 2021, to: 2021 } }); // null
+```
+
+**Worth trying:** [Dates first, then the shifted day](/tools/holiday-rule-builder/?w=holidays&wa=%7B%22rules%22%3A%22B%3Bd%3B2021-12-27%5CnA%3Bf%3B12-26%3B7w%22%2C%22weekend%22%3A%226%2C7%22%2C%22zone%22%3A%22Europe%2FLondon%22%2C%22year%22%3A%222021%22%7D) — two closed days. Press the up arrow on row 2 and the same two stay closed. [Shifted day first](/tools/holiday-rule-builder/?w=holidays&wa=%7B%22rules%22%3A%22A%3Bf%3B12-26%3B7w%5CnB%3Bd%3B2021-12-27%22%2C%22weekend%22%3A%226%2C7%22%2C%22zone%22%3A%22Europe%2FLondon%22%2C%22year%22%3A%222021%22%7D) — the same two rules in the other order, and the same two days. [A Saturday shifted back, across a year](/tools/holiday-rule-builder/?w=holidays&wa=%7B%22rules%22%3A%22New%20Year%3Bf%3B01-01%3B6%3C5%22%2C%22weekend%22%3A%226%2C7%22%2C%22zone%22%3A%22Australia%2FSydney%22%2C%22year%22%3A%222027%22%7D) — the closed day for 1 January 2028 is in the 2027 grid. Or open the `midweek` preset and remove row 1 to see the ghost appear.
+
+**Reference:** [`buildBusinessCalendar`](/reference/calendar/rules/buildBusinessCalendar/), [`holidayDates`](/reference/calendar/rules/holidayDates/), [`observedDate`](/reference/calendar/rules/observedDate/), [`easterSunday`](/reference/calendar/rules/easterSunday/), [`nthWeekdayOfMonth`](/reference/calendar/rules/nthWeekdayOfMonth/) and [`isValidHolidayRule`](/reference/calendar/validate/isValidHolidayRule/). The guide is [Business calendars and roll conventions](/guides/core-date-operations/business-calendars/).
+
+</Fragment>
+
+</ToolLayout>

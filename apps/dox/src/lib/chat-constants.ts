@@ -793,6 +793,61 @@ export const CHAT_STARTERS: readonly {
     },
   },
   {
+    text: "Two holidays fall on a weekend and both move to the next working day. Show me where they land in 2021.",
+    widget: "showHolidayRuleBuilder",
+    area: "core",
+    // The `chain` preset: 25 and 26 December, each moved to the next working
+    // day, in a week that closes Saturday and Sunday.
+    args: {
+      rules: [
+        {
+          name: "25 Dec",
+          kind: "fixed",
+          month: 12,
+          day: 25,
+          observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" },
+        },
+        {
+          name: "26 Dec",
+          kind: "fixed",
+          month: 12,
+          day: 26,
+          observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" },
+        },
+      ],
+      weekend: [6, 7],
+      year: 2021,
+      zone: "Europe/London",
+    },
+  },
+  {
+    text: "Where is 25 December observed under different weekend policies?",
+    widget: "showObservanceComparator",
+    area: "core",
+    // The `adjacent` preset, columns included: they are the example's own
+    // policies, not a place's.
+    args: {
+      holidays: [
+        { month: 12, day: 25 },
+        { month: 12, day: 26 },
+      ],
+      years: { from: 2020, to: 2031 },
+      weekend: [6, 7],
+      policies: [
+        {},
+        { 6: { previous: 5 }, 7: { next: 1 } },
+        { 6: { next: 1 }, 7: { next: 1 } },
+        { 6: "nextWorkingDay", 7: "nextWorkingDay" },
+      ],
+    },
+  },
+  {
+    text: "How far apart are the Gregorian and Julian Easters in 2024?",
+    widget: "showMovingFeasts",
+    area: "core",
+    args: { year: 2024 },
+  },
+  {
     text: "Does my runtime still apply the old 2026 clock change for America/Winnipeg?",
     widget: "showCanadaClockChange",
     area: "core",

@@ -12,6 +12,7 @@
  * `client-graph.test.ts`.
  */
 import { tool } from "ai";
+import type { IsoWeekday } from "@northguild/gmt";
 import { z } from "zod";
 import {
   GNSS_DECODER_MODES,
@@ -589,6 +590,130 @@ export const showStoredTimeAuditInput = z.object({
     .optional(),
 });
 
+/** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
+const isoWeekdaySchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(7) as unknown as z.ZodType<IsoWeekday>;
+
+/** Where a holiday on one weekday is observed. */
+const observanceShiftSchema = z.union([
+  z.literal("nextWorkingDay"),
+  z.object({ next: isoWeekdaySchema }),
+  z.object({ previous: isoWeekdaySchema }),
+]);
+
+/** An observance policy: ISO weekday keys, each with a shift. A weekday left
+ * out moves nothing. */
+const observancePolicySchema = z.object({
+  1: observanceShiftSchema.optional(),
+  2: observanceShiftSchema.optional(),
+  3: observanceShiftSchema.optional(),
+  4: observanceShiftSchema.optional(),
+  5: observanceShiftSchema.optional(),
+  6: observanceShiftSchema.optional(),
+  7: observanceShiftSchema.optional(),
+});
+
+/** One `HolidayRule`, as the library types it. */
+const holidayRuleSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("fixed"),
+    name: z.string().max(64),
+    month: z.number().int().min(1).max(12),
+    day: z.number().int().min(1).max(31),
+    observed: observancePolicySchema.optional(),
+  }),
+  z.object({
+    kind: z.literal("calendarFixed"),
+    name: z.string().max(64),
+    calendar: z.string().min(1).max(32),
+    monthCode: z.string().regex(/^M\d{2}L?$/),
+    day: z.number().int().min(1).max(31),
+    observed: observancePolicySchema.optional(),
+  }),
+  z.object({
+    kind: z.literal("nthWeekday"),
+    name: z.string().max(64),
+    month: z.number().int().min(1).max(12),
+    weekday: isoWeekdaySchema,
+    n: z.union([z.number().int().min(-5).max(5), z.literal("last")]),
+  }),
+  z.object({
+    kind: z.literal("easterRelative"),
+    name: z.string().max(64),
+    offsetDays: z.number().int().min(-400).max(400),
+    computus: z.enum(["gregorian", "julian"]).optional(),
+  }),
+  z.object({
+    kind: z.literal("dates"),
+    name: z.string().max(64),
+    dates: z.array(plainDateSchema).max(60),
+  }),
+]);
+
+/**
+ * The Holiday Rule Builder: the rules, the weekend, a year and a zone, exactly
+ * as the reader gave them. The rules are never invented. A rule list is cut at
+ * the widget's own row limit. The chat args are the permalink args.
+ */
+export const showHolidayRuleBuilderInput = z.object({
+  rules: z.array(holidayRuleSchema).min(1).max(12).optional(),
+  weekend: z.array(isoWeekdaySchema).max(7).optional(),
+  year: z.number().int().min(1900).max(2100).optional(),
+  zone: zoneSchema.optional(),
+});
+
+/**
+ * The Observance Comparator: one to three holidays as month and day, the years
+ * to compare and the weekend, with up to four policies the reader gave.
+ */
+export const showObservanceComparatorInput = z.object({
+  holidays: z
+    .array(
+      z.object({
+        month: z.number().int().min(1).max(12),
+        day: z.number().int().min(1).max(31),
+      }),
+    )
+    .min(1)
+    .max(3)
+    .optional(),
+  years: z
+    .object({
+      from: z.number().int().min(1900).max(2100),
+      to: z.number().int().min(1900).max(2100),
+    })
+    .optional(),
+  weekend: z.array(isoWeekdaySchema).max(7).optional(),
+  policies: z.array(observancePolicySchema).min(1).max(4).optional(),
+  year: z.number().int().min(1900).max(2100).optional(),
+});
+
+/** The Easter offsets Moving Feasts has a row for (`FEAST_OFFSETS`). */
+const FEAST_OFFSET_DAYS: readonly number[] = [-46, -2, 0, 1, 39, 49, 50];
+
+/**
+ * Moving Feasts: a year, with the Easter offsets and the weekday-in-month rule
+ * the reader named. Each is optional; the widget fills the rest with its first
+ * example. An offset the widget has no row for is refused here, so the model
+ * hears why rather than the widget showing its defaults.
+ */
+export const showMovingFeastsInput = z.object({
+  year: z.number().int().min(1900).max(2100).optional(),
+  offsets: z
+    .array(z.number().int())
+    .max(7)
+    .refine((list) => list.every((n) => FEAST_OFFSET_DAYS.includes(n)), {
+      message: `Each offset is one of ${FEAST_OFFSET_DAYS.join(", ")}.`,
+    })
+    .optional(),
+  month: z.number().int().min(1).max(12).optional(),
+  weekday: isoWeekdaySchema.optional(),
+  n: z.union([z.number().int().min(-5).max(5), z.literal("last")]).optional(),
+});
+
 /**
  * Canada 2026 clock-change checker: optionally one zone to pin on its map.
  *
@@ -655,6 +780,9 @@ export type DoxToolName =
   | "showLeapSecondTimeline"
   | "showElapsedVsClock"
   | "showStoredTimeAudit"
+  | "showHolidayRuleBuilder"
+  | "showObservanceComparator"
+  | "showMovingFeasts"
   | "showCanadaClockChange"
   | "showDurationParserBench";
 
@@ -689,6 +817,9 @@ export const DOX_TOOL_INPUTS = {
   showLeapSecondTimeline: showLeapSecondTimelineInput,
   showElapsedVsClock: showElapsedVsClockInput,
   showStoredTimeAudit: showStoredTimeAuditInput,
+  showHolidayRuleBuilder: showHolidayRuleBuilderInput,
+  showObservanceComparator: showObservanceComparatorInput,
+  showMovingFeasts: showMovingFeastsInput,
   showCanadaClockChange: showCanadaClockChangeInput,
   showDurationParserBench: showDurationParserBenchInput,
 } as const;
@@ -911,6 +1042,27 @@ export const DOX_TOOL_DOCS: {
     args: "values: the reader's strings exactly as given, one per line, each with an offset or `Z` and a bracketed zone; never invent or correct one. line: optional, which line to draw",
   },
   {
+    name: "showHolidayRuleBuilder",
+    purpose:
+      "Build a holiday calendar from rules (fixed dates, dates in another calendar, a weekday of a month, days from Easter, listed dates), and show which rule closed which day of a year, with the day a rule is moved from and to.",
+    when: "the reader asks how a set of holiday rules becomes closed days, where a holiday lands when it falls on a weekend, or how the order of rules changes the result",
+    args: "rules (the reader's rules exactly as given, each with a name and a kind; leave an observance out unless the reader gave one), weekend (ISO weekdays, 1 Monday to 7 Sunday), year, zone. Pass only rules, dates and policies the reader gave. Never supply a place's holidays or its observance policy from memory. A rule moved by its policy closes only its observed day. To close both days, list the rule twice, once with no policy.",
+  },
+  {
+    name: "showObservanceComparator",
+    purpose:
+      "Compare observance policies side by side: where each of one to three holidays is observed, year by year, under up to four policies the reader gave.",
+    when: "the reader asks how a holiday moves when it falls on a weekend, or where two policies disagree on the same date",
+    args: "holidays (month and day), years (from and to), weekend (ISO weekdays), policies (the reader's own, as weekday to shift; a comparison needs two, so given one the widget adds a column from its preset and says so, and you say the added column is not the reader's), year (the row to open). Pass only rules, dates and policies the reader gave. Never supply a place's holidays or its observance policy from memory. Policies are the reader's; never name a place's policy.",
+  },
+  {
+    name: "showMovingFeasts",
+    purpose:
+      "Show Easter Sunday by the Gregorian and the Julian computus in a year, the days around it, and the n-th weekday of a month.",
+    when: "the reader asks when Easter falls, how far apart the two Easters are, or which date the third Monday or last Sunday of a month is",
+    args: "year; offsets (days from Easter, only ones the reader named, each one of -46, -2, 0, 1, 39, 49 and 50; for any other, say so instead of calling); month, weekday (1 Monday to 7 Sunday) and n (1 to 5, -1 to -5 or last) for a weekday of a month. Pass only rules, dates and policies the reader gave. Never supply a place's holidays or its observance policy from memory.",
+  },
+  {
     name: "showCanadaClockChange",
     purpose:
       "Check whether a device or server has current time zone data for the clock changes that apply from 2026: a table of four zones' correct offsets beside the reader's browser, a check-mark or cross verdict for the reader's browser with what to do, a command to test the reader's own servers, a card on how gmt finds and repairs saved events, the 2026 and 2027 clock changes, live clocks, a map of the zones with the last and next change for each, and a Did your saved events move? form, pre-filled with an example and run on load, that reads up to 50 pasted saved events and says which are out of date and what to do about each.",
@@ -1052,12 +1204,24 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[29].purpose,
     inputSchema: showStoredTimeAuditInput,
   }),
-  showCanadaClockChange: tool({
+  showHolidayRuleBuilder: tool({
     description: DOX_TOOL_DOCS[30].purpose,
+    inputSchema: showHolidayRuleBuilderInput,
+  }),
+  showObservanceComparator: tool({
+    description: DOX_TOOL_DOCS[31].purpose,
+    inputSchema: showObservanceComparatorInput,
+  }),
+  showMovingFeasts: tool({
+    description: DOX_TOOL_DOCS[32].purpose,
+    inputSchema: showMovingFeastsInput,
+  }),
+  showCanadaClockChange: tool({
+    description: DOX_TOOL_DOCS[33].purpose,
     inputSchema: showCanadaClockChangeInput,
   }),
   showDurationParserBench: tool({
-    description: DOX_TOOL_DOCS[31].purpose,
+    description: DOX_TOOL_DOCS[34].purpose,
     inputSchema: showDurationParserBenchInput,
   }),
 } as const;
@@ -1113,6 +1277,9 @@ export const ENABLED_TOOL_NAMES = [
   "showLeapSecondTimeline",
   "showElapsedVsClock",
   "showStoredTimeAudit",
+  "showHolidayRuleBuilder",
+  "showObservanceComparator",
+  "showMovingFeasts",
   "showCanadaClockChange",
   "showDurationParserBench",
 ] as const satisfies readonly DoxToolName[];

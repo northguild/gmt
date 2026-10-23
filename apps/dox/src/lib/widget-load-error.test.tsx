@@ -118,6 +118,18 @@ import {
   renderStoredTimeAuditTemplate,
 } from "./stored-time-audit-mount";
 import {
+  mountHolidayRuleBuilder,
+  renderHolidayRuleBuilderTemplate,
+} from "./holiday-rule-builder-mount";
+import {
+  mountObservanceComparator,
+  renderObservanceComparatorTemplate,
+} from "./observance-comparator-mount";
+import {
+  mountMovingFeasts,
+  renderMovingFeastsTemplate,
+} from "./moving-feasts-mount";
+import {
   mountCanadaClockChangeWidget,
   renderCanadaClockChangeWidgetTemplate,
 } from "./canada-clock-change-mount";
@@ -268,6 +280,21 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "stored time audit",
     () => renderStoredTimeAuditTemplate(),
     mountStoredTimeAudit as MountFn<never>,
+  ],
+  [
+    "holiday rule builder",
+    () => renderHolidayRuleBuilderTemplate(),
+    mountHolidayRuleBuilder as MountFn<never>,
+  ],
+  [
+    "observance comparator",
+    () => renderObservanceComparatorTemplate(),
+    mountObservanceComparator as MountFn<never>,
+  ],
+  [
+    "moving feasts",
+    () => renderMovingFeastsTemplate(),
+    mountMovingFeasts as MountFn<never>,
   ],
   [
     "canada clock-change checker",

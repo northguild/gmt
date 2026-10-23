@@ -88,6 +88,10 @@ const PAGES = [
     path: "/reference/zoned/convert/convertZonedToZoned/",
   },
   { id: "reference-dst", path: "/reference/zoned/get/getDstTransitions/" },
+  {
+    id: "guide-business-calendars",
+    path: "/guides/core-date-operations/business-calendars/",
+  },
   { id: "tools-index", path: "/tools/" },
   { id: "industries-maritime", path: "/industries/maritime/" },
   { id: "dox-chat", path: "/dox/" },

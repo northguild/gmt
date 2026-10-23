@@ -44,7 +44,7 @@ export const DEFAULT_BUSINESS_CALENDAR: ResolvedBusinessCalendar = {
   closures: new Int32Array(0),
 };
 
-function parseWeekend(weekend: unknown): Set<number> | null {
+export function parseWeekend(weekend: unknown): Set<number> | null {
   if (!Array.isArray(weekend)) {
     return null;
   }
@@ -79,7 +79,7 @@ export function clearHolidayMemo(): void {
 }
 
 /** The epoch day of an ISO holiday string, or `null` when it is not one. */
-function holidayEpochDay(holiday: unknown): number | null {
+export function holidayEpochDay(holiday: unknown): number | null {
   if (typeof holiday !== "string") {
     return null;
   }
@@ -161,11 +161,20 @@ export function parseBusinessCalendar(
     return null;
   }
 
-  const closures = holidayDates.filter(
-    (day) => !weekendDays.has(isoWeekdayOf(day)),
-  );
+  return resolveParts(weekendDays, holidayDates);
+}
 
-  return { weekend: weekendDays, holidays: holidayDates, closures };
+/**
+ * Join a parsed weekend and a sorted, repeat-free holiday list into the lookups every walk
+ * needs, filtering out the holidays that fall on a weekend day.
+ */
+export function resolveParts(
+  weekend: Set<number>,
+  holidays: Int32Array,
+): ResolvedBusinessCalendar {
+  const closures = holidays.filter((day) => !weekend.has(isoWeekdayOf(day)));
+
+  return { weekend, holidays, closures };
 }
 
 /**
@@ -338,6 +347,20 @@ export function businessDateFrom(
   return distance === null
     ? null
     : dateAt(date, start, start + direction * distance);
+}
+
+/**
+ * First business day strictly after `epochDay`: the epoch-day form of `stepBusinessDates` with
+ * a count of 1, so no `PlainDate` is built. Returns `null` when the walk exceeds
+ * `MAX_BUSINESS_DAY_STEPS`; throws a `RangeError` when it passes a Temporal range limit.
+ */
+export function nextBusinessEpochDay(
+  epochDay: number,
+  calendar: ResolvedBusinessCalendar,
+): number | null {
+  const distance = distanceToNthBusinessDay(epochDay, 1, 1, 1, calendar);
+
+  return distance === null ? null : epochDay + distance;
 }
 
 /**

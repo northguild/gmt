@@ -113,8 +113,8 @@ with the `Position` type, ahead of the remaining realms.
 | 29  | CORE-88 | Core       | The Canada 2026 clock-change checker in Dox                                         | —                       | #329  | 1.20.0  | Done        |
 | 30  | CORE-89 | Core       | The Morocco 2026 clock-change checker in Dox                                        | —                       | #340  | —       | Not started |
 | 31  | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                       | #258  | —       | Not started |
-| 32  | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                       | #256  | —       | Not started |
-| 33  | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | CORE-54                 | #324  | —       | Not started |
+| 32  | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                       | #256  | —       | Done        |
+| 33  | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | —                       | #324  | —       | Not started |
 | 34  | CORE-85 | Core       | Human duration strings:<br>`parseHumanDuration`, `formatHumanDuration`              | —                       | #325  | —       | Done        |
 | 35  | CORE-79 | Core       | `Position` input type                                                               | —                       | #314  | Cut     | Not started |
 | 36  | MAR-17  | Maritime   | AIS `secondOfUTC` reconstruction +<br>`navTimestamp`                                | —                       | #198  | —       | Not started |
@@ -122,7 +122,7 @@ with the `Position` type, ahead of the remaining realms.
 | 38  | MAR-19  | Maritime   | Laytime, laycan, NOR, BIMCO 2013<br>definitions, laytime statement                  | —                       | #200  | —       | Not started |
 | 39  | MAR-59  | Maritime   | IEC 61162-1 (NMEA 0183) time and date<br>fields (RMC, ZDA, GGA)                     | —                       | #261  | Cut     | Not started |
 | 40  | AV-25   | Aviation   | `flightLeg` + `dayOffset` +<br>`blockTime` + `airTime` +<br>`oooiTimes`             | —                       | #206  | —       | Not started |
-| 41  | AV-26   | Aviation   | IATA seasons + SSIM dates,<br>variations, days of operation + MCT                   | CORE-54, AV-25          | #207  | —       | Not started |
+| 41  | AV-26   | Aviation   | IATA seasons + SSIM dates,<br>variations, days of operation + MCT                   | AV-25                   | #207  | —       | Not started |
 | 42  | AV-27   | Aviation   | Crew FDP table lookup, acclimatisation,<br>recurring local windows                  | AV-25                   | #208  | —       | Not started |
 | 43  | AV-28   | Aviation   | NOTAM validity and D) schedules,<br>METAR/TAF times, curfews, CTOT slots            | —                       | #209  | —       | Not started |
 | 44  | AV-64   | Aviation   | AIRAC cycles and publication<br>deadlines                                           | —                       | #266  | Cut     | Not started |
@@ -147,9 +147,9 @@ with the `Position` type, ahead of the remaining realms.
 | 63  | FIN-41  | Finance    | Exchange and payment-system calendar<br>data (opt-in subpath)                       | FIN-40                  | #222  | —       | Not started |
 | 64  | FIN-42  | Finance    | Day count conventions (FpML codes,<br>ISDA rules)                                   | —                       | #223  | —       | Not started |
 | 65  | FIN-43  | Finance    | Settlement and FX value dates                                                       | —                       | #224  | —       | Not started |
-| 66  | FIN-44  | Finance    | Tenors, IMM dates and CDS roll dates                                                | CORE-54, FIN-43         | #225  | —       | Not started |
+| 66  | FIN-44  | Finance    | Tenors, IMM dates and CDS roll dates                                                | FIN-43                  | #225  | —       | Not started |
 | 67  | FIN-45  | Finance    | Continuous / crypto market schedules                                                | —                       | #226  | Cut     | Not started |
-| 68  | FIN-71  | Finance    | Calculation period schedules (FpML<br>`CalculationPeriodDates`)                     | CORE-54, FIN-44         | #273  | —       | Not started |
+| 68  | FIN-71  | Finance    | Calculation period schedules (FpML<br>`CalculationPeriodDates`)                     | FIN-44                  | #273  | —       | Not started |
 | 69  | FIN-72  | Finance    | RFR compounding conventions:<br>lookback, shift, lockout, payment<br>delay          | FIN-42, FIN-71          | #274  | —       | Not started |
 | 70  | FIN-73  | Finance    | FIX and SWIFT MT timestamps;<br>precision checks                                    | —                       | #275  | Cut     | Not started |
 | 71  | SPA-46  | Space      | TAI64 / TAI64N / TAI64NA labels                                                     | —                       | #227  | —       | Not started |

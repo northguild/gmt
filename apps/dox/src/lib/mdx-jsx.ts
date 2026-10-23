@@ -403,6 +403,9 @@ export function renderMdxComponents(body: string): string {
     "LeapSecondTimeline",
     "ElapsedVsClock",
     "StoredTimeAudit",
+    "HolidayRuleBuilder",
+    "ObservanceComparator",
+    "MovingFeasts",
     "DurationParserBench",
   ]) {
     out = replaceElements(out, dropped, (props) =>

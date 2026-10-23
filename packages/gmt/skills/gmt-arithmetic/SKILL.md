@@ -11,10 +11,11 @@ description: >
   *Utc / *Zoned / *Unix functions on the same rule, business calendars
   (BusinessCalendar, RollConvention, isBusinessDay, addBusinessDays,
   subtractBusinessDays, businessDaysBetween, nextBusinessDay,
-  previousBusinessDay, rollDate, mergeCalendars), overflow "constrain" month-end
+  previousBusinessDay, rollDate, mergeCalendars), holiday rules (HolidayRule,
+  ObservancePolicy, holidayDates, nthWeekdayOfMonth, easterSunday,
+  observedDate, buildBusinessCalendar), overflow "constrain" month-end
   clamping, splitIntervalByUnit* anchor stepping, maxPieces limits,
-  intervalCount* matching bucketRange, RFC 9557 calendar strings,
-  correct-at-the-edges guarantees at the limits.
+  RFC 9557 calendar strings, correct-at-the-edges guarantees.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/plain-arithmetic.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/durations.mdx'
@@ -35,6 +36,9 @@ sources:
   - 'northguild/gmt:packages/gmt/src/calendar/business/index.ts'
   - 'northguild/gmt:packages/gmt/src/types/business-calendar.ts'
   - 'northguild/gmt:packages/gmt/src/types/roll-convention.ts'
+  - 'northguild/gmt:packages/gmt/src/calendar/rules/index.ts'
+  - 'northguild/gmt:packages/gmt/src/types/holiday-rule.ts'
+  - 'northguild/gmt:packages/gmt/src/types/observance-policy.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
@@ -274,7 +278,43 @@ operations.
     formatHumanDuration("PT90M"); // "90m"
     ```
 
-14. **Read the docs site.** This skill is a routing pointer. For full option
+14. **Holidays are rules; GMT expands them but ships none.**
+    `@northguild/gmt/calendar/rules` turns rules into dates and into the
+    `BusinessCalendar` above. A `HolidayRule` has a `name` and one `kind`:
+    `fixed` (month, day), `calendarFixed` (a `CalendarSystem`, a month code and
+    a day), `nthWeekday` (month, ISO weekday, ordinal `1..5`, `-1..-5` or
+    `"last"`), `easterRelative` (`offsetDays`, optional `computus`) or `dates`.
+    A `fixed` or `calendarFixed` rule may carry `observed`, an `ObservancePolicy`
+    keyed by ISO weekday. There is no default policy, and a moved holiday closes
+    only its observed date.
+
+    ```typescript
+    nthWeekdayOfMonth(2026, 3, 7, "last"); // "2026-03-29"
+    easterSunday(2024, { computus: "julian" }); // "2024-05-05"
+    observedDate("2027-12-25", { 6: { previous: 5 }, 7: { next: 1 } }); // "2027-12-24"
+    holidayDates({ name: "Good Friday", kind: "easterRelative", offsetDays: -2 }, 2024); // ["2024-03-29"]
+    buildBusinessCalendar({
+      timeZone: "UTC",
+      weekend: [6, 7],
+      rules: [
+        { name: "Christmas", kind: "fixed", month: 12, day: 25, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } },
+        { name: "Second day", kind: "fixed", month: 12, day: 26, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } },
+      ],
+      years: { from: 2021, to: 2021 },
+    }); // { weekend: [6, 7], holidays: ["2021-12-27", "2021-12-28"], timeZone: "UTC" }
+    ```
+
+    `nthWeekdayOfMonth` and `easterSunday` return `""` for bad input or a
+    missing occurrence (a fifth Friday in a four-Friday month), `holidayDates`
+    returns `[]` and `buildBusinessCalendar` returns `null`; use
+    `isValidHolidayRule` to tell a bad rule from a year with no occurrence (a
+    `calendarFixed` day its month never has, such as Hebrew `M01` day 31, is bad).
+    A `nextWorkingDay` shift walks past the weekend, every holiday that does
+    not walk and the walks of the rules above it; the days that close do not
+    depend on the rule order. A date a year lacks (29 February) is skipped, never
+    clamped. Pass only rules and dates the user gave; never supply a place's
+    holidays from memory.
+15. **Read the docs site.** This skill is a routing pointer. For full option
     shapes, locale matrices, and code examples, read these:
     - `https://northguild.dev/gmt/llms.txt` is the map of every docs page.
     - Each page has a `.md` twin that holds its text, for example
@@ -289,6 +329,10 @@ operations.
 - **Business calendars**: `isBusinessDay`, `businessDaysBetween`,
   `nextBusinessDay`, `previousBusinessDay`, `rollDate`, `mergeCalendars`,
   `isValidBusinessCalendar`, `isValidRollConvention`
+- **Holiday rules** (`calendar/rules`): `nthWeekdayOfMonth`, `easterSunday`,
+  `observedDate`, `holidayDates`, `buildBusinessCalendar`,
+  `isValidHolidayRule`, types `HolidayRule`, `ObservancePolicy`,
+  `ObservanceShift`
 - **Diffs**: `diffDate`, `diffDateTime`, `diffTime` (+ `diffZoned`,
   `diffUnix`, `diffUtc` in their namespaces)
 - **Spans (raw numbers)**: `spanMs`, `spanNs`, `spanWallClock`, `isValidSpan`
