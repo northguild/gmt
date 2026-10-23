@@ -212,8 +212,13 @@ jobs:
       # and bumps versions instead of adding a new one — that's the point of it, per
       # PUBLISHING.md step 3. `changeset status` can't tell the difference and fails any
       # such PR, so detect it here instead of gating on it.
+      # A Renovate PR that changes only dependencies that never ship (devDependencies, or any
+      # dependency of a private package such as apps/dox) releases nothing, so it needs no changeset.
+      # Any other package change on a Renovate branch still does; a person adds it to the PR.
       - name: A changeset covers every changed package
         if: github.event_name == 'pull_request'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           git fetch --no-tags origin "${{ github.base_ref }}"
           BASE="origin/${{ github.base_ref }}"
@@ -221,6 +226,8 @@ jobs:
           VERSION_BUMPED=$(git diff "$BASE"...HEAD -- '**/package.json' | grep -c '^+.*"version":' || true)
           if [ "$DELETED_CHANGESETS" -gt 0 ] && [ "$VERSION_BUMPED" -gt 0 ]; then
             echo "Release PR: changesets were consumed by changeset:version — skipping."
+          elif [[ "$HEAD_REF" == renovate/* ]] && node scripts/unshipped-deps.mjs "$BASE"; then
+            echo "Renovate PR: only dependencies that never ship change — skipping."
           else
             pnpm exec changeset status --since="$BASE"
           fi
