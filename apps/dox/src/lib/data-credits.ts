@@ -20,6 +20,9 @@ export interface DataCredit {
 /** The timezone-boundary-builder release the boundary files come from (see `built.md` § Boundary data). */
 export const TBB_TAG = "2026e";
 
+/** The Natural Earth release the coastlines come from (see `built.md` § Boundary data). */
+export const NE_TAG = "v5.1.2";
+
 export const TZ_BOUNDARIES: DataCredit = {
   label: "Time zone boundaries",
   parts: [
@@ -39,6 +42,22 @@ export const TZ_BOUNDARIES: DataCredit = {
   ],
 };
 
+export const COASTLINES: DataCredit = {
+  label: "Coastlines",
+  parts: [
+    {
+      text: "Natural Earth",
+      href: "https://www.naturalearthdata.com/",
+    },
+    " (public domain, ",
+    {
+      text: NE_TAG,
+      href: `https://github.com/nvkelso/natural-earth-vector/releases/tag/${NE_TAG}`,
+    },
+    ").",
+  ],
+};
+
 export const EARTH_IMAGERY: DataCredit = {
   label: "Earth imagery",
   parts: ["NASA Earth Observatory (Blue Marble Next Generation)."],
@@ -54,8 +73,10 @@ function renderPart(part: DataCredit["parts"][number]): string {
 }
 
 /** `stack`: the button is one of a control stack and takes the stack's button styling.
- *  `corner`: a glass square in the corner of a drawing. */
-export type DataCreditsPlacement = "stack" | "corner";
+ *  `corner`: a glass square in the drawing's bottom-end corner; the popup opens above it.
+ *  `corner-start`: the same square in the top-start corner, for a drawing whose land fills the
+ *  bottom-end one; the popup opens below it. */
+export type DataCreditsPlacement = "stack" | "corner" | "corner-start";
 
 /**
  * The info button and its popover, as one string. `""` for an empty list, so a drawing with
@@ -98,10 +119,15 @@ export function watchDataCredits(): void {
     "toggle",
     (event) => {
       const panel = event.target;
-      if (!(panel instanceof HTMLElement) || !panel.classList.contains("gmt-data-credits-panel"))
+      if (
+        !(panel instanceof HTMLElement) ||
+        !panel.classList.contains("gmt-data-credits-panel")
+      )
         return;
       const open = (event as ToggleEvent).newState === "open";
-      for (const button of document.querySelectorAll(`[popovertarget="${CSS.escape(panel.id)}"]`))
+      for (const button of document.querySelectorAll(
+        `[popovertarget="${CSS.escape(panel.id)}"]`,
+      ))
         button.setAttribute("aria-expanded", String(open));
     },
     true,

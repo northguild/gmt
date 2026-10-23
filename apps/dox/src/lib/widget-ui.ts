@@ -75,6 +75,17 @@ export function escapeHtml(s: string): string {
 }
 
 /**
+ * A zone id as HTML with a break opportunity after each `/` and nowhere else. Each segment is
+ * `nowrap` (`.gmt-zoneseg`), because a browser also breaks after a hyphen (`Blanc-Sablon`).
+ */
+export function zoneIdHtml(zone: string): string {
+  return zone
+    .split("/")
+    .map((segment) => `<span class="gmt-zoneseg">${escapeHtml(segment)}</span>`)
+    .join("/<wbr>");
+}
+
+/**
  * Escape a value for interpolation into an HTML **attribute**.
  *
  * `escapeHtml` above is not enough here: it leaves `"` and `'` alone, which is

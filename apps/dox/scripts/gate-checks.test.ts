@@ -211,13 +211,13 @@ describe("blockOffSite", () => {
   /** A stand-in for a Playwright page or context: it records the one route. */
   const fakeTarget = () => {
     const routes: {
-      matches: (url: URL) => boolean;
+      matches: RegExp;
       handler: (route: { fulfill: (answer: unknown) => void }) => void;
     }[] = [];
     return {
       routes,
       route: async (
-        matches: (url: URL) => boolean,
+        matches: RegExp,
         handler: (route: { fulfill: (answer: unknown) => void }) => void,
       ) => {
         routes.push({ matches, handler });
@@ -230,10 +230,21 @@ describe("blockOffSite", () => {
     await blockOffSite(target, "http://127.0.0.1:4381");
     expect(target.routes).toHaveLength(1);
     const [{ matches }] = target.routes;
-    expect(matches(new URL("https://cloudflareinsights.com/cdn-cgi/rum"))).toBe(
-      true,
-    );
-    expect(matches(new URL("http://127.0.0.1:4381/tools/"))).toBe(false);
+    // A pattern, not a function, so the browser's driver leaves same-site requests alone.
+    expect(matches).toBeInstanceOf(RegExp);
+    const routed = (url: string) => matches.test(url);
+    expect(routed("https://cloudflareinsights.com/cdn-cgi/rum")).toBe(true);
+    expect(routed("http://127.0.0.1:4381/tools/")).toBe(false);
+    expect(routed("http://127.0.0.1:4381")).toBe(false);
+    expect(routed("http://127.0.0.1:4381/_astro/a.js?v=1#x")).toBe(false);
+    // Another port, host or scheme is another origin, as `isOffSite` says.
+    expect(routed("http://127.0.0.1:43811/")).toBe(true);
+    expect(routed("http://127.0.0.1:4382/")).toBe(true);
+    expect(routed("http://localhost:4381/")).toBe(true);
+    expect(routed("https://127.0.0.1:4381/")).toBe(true);
+    // No request, no route.
+    expect(routed("data:text/plain,hello")).toBe(false);
+    expect(routed("blob:http://127.0.0.1:4381/1f0c")).toBe(false);
   });
 
   it("answers an off-site request with an empty script, and never lets it leave", async () => {

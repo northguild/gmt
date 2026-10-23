@@ -30,7 +30,7 @@ const NAV = {
   accept: "text/html",
 };
 
-/** One request, no redirect following. Resolves to `{ status, location, type, body }`. */
+/** One request, no redirect following. Resolves to `{ status, location, type, headers, body }`. */
 function send(method, url, { headers = {}, body } = {}) {
   return new Promise((resolve, reject) => {
     const req = request(
@@ -55,6 +55,7 @@ function send(method, url, { headers = {}, body } = {}) {
               ? new URL(res.headers.location, url).href
               : undefined,
             type: res.headers["content-type"] ?? "",
+            headers: res.headers,
             body: Buffer.concat(chunks).toString("utf8"),
           }),
         );
@@ -310,7 +311,7 @@ async function buildRows() {
   // Report only. A kind is a reading of the Worker's tz data, which a later tzdb can change
   // again, so this row prints the kinds and fails only on the status or the body's shape. The
   // 2026e expectation is checked by hand against the deployed Worker. The three lines are
-  // STORED_PRESET's Canadian lines (src/lib/canada-stored-times.ts).
+  // STORED_PRESET's Canadian lines (src/lib/canada-clock-change.ts).
   add({
     label: "canada-clock-change stored times (report only)",
     method: "POST",
@@ -357,7 +358,7 @@ async function buildRows() {
   const storedMax = Number(
     /STORED_MAX_LINES = (\d+);/.exec(
       readFileSync(
-        new URL("../src/lib/canada-clock-change.ts", import.meta.url),
+        new URL("../src/lib/clock-change-stored-lines.ts", import.meta.url),
         "utf8",
       ),
     )?.[1],
@@ -399,6 +400,175 @@ async function buildRows() {
     ],
   });
   add({ label: "23 GET", url: `${ND}/gmt/api/chat`, steps: [{ status: 405 }] });
+  // The Morocco rows make four calls to the `morocco:` bucket per run (the probe GET, the HEAD and the two
+  // stored-times POSTs), under its 20 a minute. The PUT answers 405 before the bucket counts it.
+  // The two expected values are the tzdb 2026c offsets (Morocco on permanent +00 from
+  // 2026-09-20), repeated here because this script cannot import TypeScript. When a later tzdb
+  // changes Morocco again this row fails on purpose: the fix is a page update, not a retry.
+  const MOROCCO_API = `${ND}/gmt/api/morocco-clock-change`;
+  add({
+    label: "morocco-clock-change probe",
+    url: MOROCCO_API,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          let parsed;
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            return "body is not JSON";
+          }
+          const { probe, changes } = parsed;
+          if (!Array.isArray(probe) || probe.length !== 4)
+            return "expected 4 probe rows";
+          // The page states three changes (2026c's, and the two 2026b Ramadan ones it removed) for
+          // each of the two zones; the same counts as the probe's, so an empty list cannot pass.
+          if (!Array.isArray(changes)) return "no changes array";
+          if (changes.length !== 6)
+            return `expected 6 changes (3 stated changes x 2 zones), got ${changes.length}`;
+          const bad = probe.filter((r) => r.offset !== "+00:00");
+          if (bad.length)
+            return `probe differs from tzdb 2026c: ${bad.map((r) => `${r.zone} at ${r.instant} wanted +00:00, got ${r.offset}`).join("; ")}`;
+          const stale = changes.filter(
+            (c) => c.recordedBy === "2026b" && c.present !== false,
+          );
+          if (stale.length)
+            return `a change tzdb 2026c removed is still present: ${stale.map((c) => `${c.zone} ${c.at}`).join("; ")}`;
+          const missing = changes.filter(
+            (c) => c.recordedBy === "2026c" && c.present !== true,
+          );
+          if (missing.length)
+            return `a change tzdb 2026c added is missing: ${missing.map((c) => `${c.zone} ${c.at}`).join("; ")}`;
+          return undefined;
+        },
+      },
+    ],
+  });
+  add({
+    label: "morocco-clock-change HEAD",
+    method: "HEAD",
+    url: MOROCCO_API,
+    steps: [
+      {
+        status: 200,
+        check: ({ headers, body }) => {
+          if (headers["cache-control"] !== "no-store")
+            return `cache-control is ${headers["cache-control"]}, not no-store`;
+          return body === "" ? undefined : "HEAD body is not empty";
+        },
+      },
+    ],
+  });
+  add({
+    label: "morocco-clock-change PUT",
+    method: "PUT",
+    body: "",
+    url: MOROCCO_API,
+    steps: [
+      {
+        status: 405,
+        check: ({ headers }) =>
+          headers.allow === "GET, HEAD, POST"
+            ? undefined
+            : `allow is ${headers.allow}, not GET, HEAD, POST`,
+      },
+    ],
+  });
+  // Report only, for the same reason as the Canada row. The three lines are Moroccan lines from
+  // the checker's examples (src/lib/morocco-clock-change.ts).
+  add({
+    label: "morocco-clock-change stored times (report only)",
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      zone: "Africa/Casablanca",
+      lines: [
+        "2026-11-16T09:00:00+01:00[Africa/Casablanca]",
+        "2027-03-14T02:30:00+00:00",
+        "2027-06-01T09:00:00+00:00 Africa/El_Aaiun",
+      ].join("\n"),
+    }).toString(),
+    url: MOROCCO_API,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          let rows;
+          try {
+            rows = JSON.parse(body).rows;
+          } catch {
+            return "body is not JSON";
+          }
+          if (!Array.isArray(rows) || rows.length !== 3)
+            return "expected 3 rows";
+          console.log(
+            `   stored times: ${rows.map((r) => `${r.line} ${r.result?.kind ?? "null"}`).join(", ")}`,
+          );
+          return undefined;
+        },
+      },
+    ],
+  });
+  add({
+    label: `morocco-clock-change stored times (${storedMax} lines)`,
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      zone: "Africa/Casablanca",
+      lines: Array.from(
+        { length: storedMax },
+        (_, i) =>
+          `2026-${String((i % 12) + 1).padStart(2, "0")}-${String((i % 27) + 1).padStart(2, "0")}T12:00:00+01:00[Africa/Casablanca]`,
+      ).join("\n"),
+    }).toString(),
+    url: MOROCCO_API,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          let parsed;
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            return "body is not JSON";
+          }
+          const { rows, truncated } = parsed;
+          if (truncated !== false) return "truncated is not false";
+          return rows?.length === storedMax
+            ? undefined
+            : `${rows?.length} rows, not ${storedMax}`;
+        },
+      },
+    ],
+  });
+  add({
+    label: "morocco-clock-change page",
+    url: `${ND}/gmt/check/morocco-2026-clock-change/`,
+    steps: [{ status: 200, type: "text/html" }],
+  });
+  add({
+    label: "morocco boundary file",
+    url: `${ND}/gmt/timezone-boundaries-morocco.json`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          try {
+            return JSON.parse(body).license === "ODbL-1.0"
+              ? undefined
+              : "license is not ODbL-1.0";
+          } catch {
+            return "body is not JSON";
+          }
+        },
+      },
+    ],
+  });
   add({
     label: "25",
     url: `${ND}/gmtx`,

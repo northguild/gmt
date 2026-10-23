@@ -938,6 +938,14 @@ export const showColumnTimestampBridgeInput = z
   });
 
 /**
+ * Morocco 2026 clock-change checker: optionally one zone to pin on its map. Checked against the
+ * checker's own list (`morocco-region-zones.json`) in the Worker and the registry, like Canada's.
+ */
+export const showMoroccoClockChangeInput = z.object({
+  zone: zoneSchema.optional(),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -988,7 +996,8 @@ export type DoxToolName =
   | "showCanadaClockChange"
   | "showDurationParserBench"
   | "showIdTimestampDecoder"
-  | "showColumnTimestampBridge";
+  | "showColumnTimestampBridge"
+  | "showMoroccoClockChange";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -1028,6 +1037,7 @@ export const DOX_TOOL_INPUTS = {
   showDurationParserBench: showDurationParserBenchInput,
   showIdTimestampDecoder: showIdTimestampDecoderInput,
   showColumnTimestampBridge: showColumnTimestampBridgeInput,
+  showMoroccoClockChange: showMoroccoClockChangeInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1271,7 +1281,7 @@ export const DOX_TOOL_DOCS: {
   {
     name: "showCanadaClockChange",
     purpose:
-      "Check whether a device or server has current time zone data for the clock changes that apply from 2026: a table of four zones' correct offsets beside the reader's browser, a check-mark or cross verdict for the reader's browser with what to do, a command to test the reader's own servers, a card on how gmt finds and repairs saved events, the 2026 and 2027 clock changes, live clocks, a map of the zones with the last and next change for each, and a Did your saved events move? form, pre-filled with an example and run on load, that reads up to 50 pasted saved events and says which are out of date and what to do about each.",
+      "Check whether a device or server has current time zone data for the clock changes that apply from 2026: a table of four zones' correct offsets beside the reader's browser, a check-mark or cross verdict for the reader's browser with what to do, a command to test the reader's own servers, a card on how gmt finds and repairs saved events, the 2026 and 2027 clock changes, live clocks, a map of the zones with the last and next change for each, and a Did your saved events move? form, pre-filled with an example and run on load, that reads up to 25 pasted saved events and says which are out of date and what to do about each.",
     when: "Call when the reader asks whether their runtime, server or browser still applies an old clock change, whether its time zone data is current, or what a zone's next clock change is",
     args: "zone: optional, one IANA id from the checker's list to pin on the map (never a province or a place name).",
   },
@@ -1295,6 +1305,13 @@ export const DOX_TOOL_DOCS: {
       "Show one instant as a Parquet INT96, an Arrow int64 timestamp and a protobuf Timestamp, and decode stored values back.",
     when: "Call when the reader asks how to convert a timestamp to or from Parquet INT96, Arrow or protobuf, why an Arrow timestamp is off by hours, why protobuf nanos are positive before 1970, or how a protobuf Duration differs.",
     args: "mode (encode | decode; optional, taken from the fields). Encode needs value (an ISO instant or a zoneless wall time); decode needs at least one stored value: julianDay and nanosOfDay (or bytes, 24 hex digits; int96Form record | bytes is optional), int64, seconds and nanos, or durSeconds and durNanos. Never send both value and a stored value. Also unit (second | millisecond | microsecond | nanosecond), zone (the Arrow column's IANA id; leave out for a zoneless column) and duration (ISO, optional). Send values exactly as the reader gave them.",
+  },
+  {
+    name: "showMoroccoClockChange",
+    purpose:
+      "Check whether a device or server has time zone data 2026c or later, which keeps Morocco and Western Sahara on UTC+00 all year from 20 September 2026: a table of the two zones' correct offsets beside the reader's browser at two moments, a check-mark or cross verdict with what to do, a command to test the reader's own servers, the minimum release of each runtime, the clock changes old and new data disagree about, a card on how gmt finds and repairs saved events, the 2026 and 2027 clock changes, two live clocks, a map of the zones with the last and next change for each, and a Did your saved events move? form, pre-filled with an example and run on load, that reads up to 25 pasted saved events and says which are out of date and what to do about each.",
+    when: "Call when the reader asks whether their runtime, server or browser still shows Morocco, Casablanca, El Aaiun or Western Sahara an hour ahead, whether its time zone data has the 2026 Morocco change, or what a Moroccan zone's clock change is",
+    args: "zone: optional, one IANA id from the checker's map list to pin (never a country or a place name)",
   },
 ];
 
@@ -1452,6 +1469,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[36].purpose,
     inputSchema: showColumnTimestampBridgeInput,
   }),
+  showMoroccoClockChange: tool({
+    description: DOX_TOOL_DOCS[37].purpose,
+    inputSchema: showMoroccoClockChangeInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1512,6 +1533,7 @@ export const ENABLED_TOOL_NAMES = [
   "showDurationParserBench",
   "showIdTimestampDecoder",
   "showColumnTimestampBridge",
+  "showMoroccoClockChange",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

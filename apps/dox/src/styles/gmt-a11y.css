@@ -1632,7 +1632,7 @@
 }
 
 /* ==========================================================================
- * Canada 2026 clock-change checker, forced-colors (CORE-88)
+ * Clock-change checkers, forced-colors (CORE-88, CORE-89)
  *
  * The class of a zone is a pattern as well as a colour, and forced-colors
  * repaints the pattern pieces as one flat Canvas. Repaint each in system
@@ -1640,21 +1640,21 @@
  * ========================================================================== */
 
 @media (forced-colors: active) {
-  .gmt-canada .gmt-canada-swatch,
-  .gmt-canada .gmt-canada-pat-a,
-  .gmt-canada .gmt-canada-pat-line,
-  .gmt-canada .gmt-canada-pat-n,
-  .gmt-canada .gmt-canada-pat-dot,
-  .gmt-canada .gmt-canada-shape[data-kind="changes-2027"] {
+  .gmt-widget .gmt-zonemap-swatch,
+  .gmt-widget .gmt-zonemap-pat-a,
+  .gmt-widget .gmt-zonemap-pat-line,
+  .gmt-widget .gmt-zonemap-pat-n,
+  .gmt-widget .gmt-zonemap-pat-dot,
+  .gmt-widget .gmt-zonemap-shape[data-kind="changes-after"] {
     forced-color-adjust: none;
   }
 
-  .gmt-canada .gmt-canada-swatch {
+  .gmt-widget .gmt-zonemap-swatch {
     border-color: CanvasText;
     background-color: Canvas;
   }
 
-  .gmt-canada .gmt-canada-swatch[data-kind="stopped-2026"] {
+  .gmt-widget .gmt-zonemap-swatch[data-kind="stopped"] {
     background-image: repeating-linear-gradient(
       45deg,
       CanvasText 0 1.5px,
@@ -1662,26 +1662,26 @@
     );
   }
 
-  .gmt-canada .gmt-canada-swatch[data-kind="changes-2027"] {
+  .gmt-widget .gmt-zonemap-swatch[data-kind="changes-after"] {
     background: CanvasText;
   }
 
-  .gmt-canada .gmt-canada-swatch[data-kind="none-2026-2027"] {
+  .gmt-widget .gmt-zonemap-swatch[data-kind="none"] {
     background-image: radial-gradient(CanvasText 1.2px, transparent 1.6px);
     background-size: 5px 5px;
   }
 
-  .gmt-canada .gmt-canada-pat-a,
-  .gmt-canada .gmt-canada-pat-n {
+  .gmt-widget .gmt-zonemap-pat-a,
+  .gmt-widget .gmt-zonemap-pat-n {
     fill: Canvas;
   }
 
-  .gmt-canada .gmt-canada-pat-line {
+  .gmt-widget .gmt-zonemap-pat-line {
     stroke: CanvasText;
   }
 
-  .gmt-canada .gmt-canada-pat-dot,
-  .gmt-canada .gmt-canada-shape[data-kind="changes-2027"] {
+  .gmt-widget .gmt-zonemap-pat-dot,
+  .gmt-widget .gmt-zonemap-shape[data-kind="changes-after"] {
     fill: CanvasText;
   }
 }

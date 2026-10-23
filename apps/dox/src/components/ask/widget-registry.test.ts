@@ -96,6 +96,25 @@ describe("resolveWidget", () => {
     expect(await result.entry.validate?.(result.args)).toBeNull();
   });
 
+  describe("showMoroccoClockChange", () => {
+    const validate = async (input: unknown) => {
+      const result = resolveWidget("showMoroccoClockChange", input);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return "unreachable";
+      return result.entry.validate?.(result.args);
+    };
+
+    it("passes no zone and a zone on the checker's list", async () => {
+      expect(await validate({})).toBeNull();
+      expect(await validate({ zone: "Europe/Madrid" })).toBeNull();
+    });
+
+    it("rejects a real zone that is not on the checker's list, with a reason", async () => {
+      const problem = await validate({ zone: "America/Toronto" });
+      expect(problem).toContain("America/Toronto");
+    });
+  });
+
   describe("showZonePlanner", () => {
     const validate = async (input: unknown) => {
       const result = resolveWidget("showZonePlanner", input);

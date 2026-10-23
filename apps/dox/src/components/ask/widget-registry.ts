@@ -81,10 +81,12 @@ import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount
 import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
 import type { CanadaClockChangeArgs } from "~/lib/canada-clock-change-mount";
 import type { DurationParserBenchArgs } from "~/lib/duration-parser-bench-mount";
+import type { MoroccoClockChangeArgs } from "~/lib/morocco-clock-change-mount";
 import {
   showBillingDeadlinesInput,
   showBlDateStampInput,
   showCanadaClockChangeInput,
+  showMoroccoClockChangeInput,
   showConnectionCheckerInput,
   showConverterBenchInput,
   showCrossingClockInput,
@@ -937,12 +939,16 @@ const canadaClockEntry = defineWidget<CanadaClockChangeArgs>({
   },
   /* The mount pins the zone once the Worker has answered, so the template paints the same
      everywhere. The credits button is in the frame's corner: the map draws third-party shapes. */
-  load: () =>
-    import("~/lib/canada-clock-change-mount").then((m) => ({
+  load: async () => {
+    const m = await import("~/lib/canada-clock-change-mount");
+    // The legend and the zone list state the change in the true tense, so the library loads first.
+    const tense = await m.loadCanadaTense();
+    return {
       renderTemplate: (idPrefix) =>
-        m.renderCanadaClockChangeWidgetTemplate(idPrefix),
+        m.renderCanadaClockChangeWidgetTemplate(idPrefix, tense),
       mount: m.mountCanadaClockChangeWidget,
-    })),
+    };
+  },
   /* A zone outside the checker's own list would open unpinned, so refuse it with the reason.
      The list is a JSON import kept out of the chat's first download. */
   validate: async ({ zone }) => {
@@ -1015,6 +1021,41 @@ const columnBridgeEntry = defineWidget<ColumnTimestampBridgeArgs>({
         m.renderColumnTimestampBridgeTemplate(args),
       mount: m.mountColumnTimestampBridge,
     })),
+});
+
+const moroccoClockEntry = defineWidget<MoroccoClockChangeArgs>({
+  title: "Morocco 2026 clock-change checker",
+  kind: "moroccoclock",
+  parse: (input) => {
+    const result = showMoroccoClockChangeInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* The mount pins the zone once the Worker has answered, so the template paints the same
+     everywhere. The credits button is in the frame's corner: the map draws third-party shapes. */
+  load: async () => {
+    const m = await import("~/lib/morocco-clock-change-mount");
+    // The legend and the zone list state the change's date and time, so the library loads first.
+    const tense = await m.loadMoroccoTense();
+    return {
+      renderTemplate: (idPrefix) =>
+        m.renderMoroccoClockChangeWidgetTemplate(idPrefix, tense),
+      mount: m.mountMoroccoClockChangeWidget,
+    };
+  },
+  /* A zone outside the checker's own list would open unpinned, so refuse it with the reason.
+     The list is a JSON import kept out of the chat's first download. */
+  validate: async ({ zone }) => {
+    if (zone === undefined) return null;
+    const { default: list } = await import("~/lib/morocco-region-zones.json");
+    return list.zones.includes(zone)
+      ? null
+      : `${zone} isn't one of the zones the checker lists.`;
+  },
 });
 
 const plannerEntry = defineWidget<ZonePlannerArgs>({
@@ -1100,6 +1141,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showDurationParserBench: durationBenchEntry,
   showIdTimestampDecoder: idDecoderEntry,
   showColumnTimestampBridge: columnBridgeEntry,
+  showMoroccoClockChange: moroccoClockEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */
