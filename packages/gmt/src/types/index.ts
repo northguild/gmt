@@ -1,6 +1,7 @@
 export * from "./business-calendar";
 export * from "./calendar-options";
 export * from "./calendar-system";
+export * from "./cron";
 export * from "./date-cycle-field";
 export * from "./date-duration-unit";
 export * from "./date-time-cycle-field";
@@ -26,6 +27,7 @@ export * from "./observance-policy";
 export * from "./offset";
 export * from "./operating-schedule";
 export * from "./overflow";
+export * from "./recurrence";
 export * from "./relative-date-time-unit";
 export * from "./relative-date-unit";
 export * from "./relative-rounding-method";

@@ -2344,8 +2344,8 @@
     ]
   },
   {
-    "url": "/reference/instant/convert/classifyLocal#localtimeclassification",
-    "page": "/reference/instant/convert/classifyLocal",
+    "url": "/reference/types/LocalTimeClassification",
+    "page": "/reference/types/LocalTimeClassification",
     "name": "LocalTimeClassification",
     "namespace": "instant",
     "module": "convert",
@@ -2353,8 +2353,7 @@
     "signature": "",
     "description": "What a zoneless wall time turns out to be once a zone is attached to it.",
     "sourcePath": "packages/gmt/src/instant/convert/classifyLocal.ts",
-    "examples": [],
-    "inlineOn": "classifyLocal"
+    "examples": []
   },
   {
     "url": "/reference/instant/convert/classifyLocal",
@@ -15281,6 +15280,142 @@
     ]
   },
   {
+    "url": "/reference/recurrence/calculate/cronRuns",
+    "page": "/reference/recurrence/calculate/cronRuns",
+    "name": "cronRuns",
+    "namespace": "recurrence",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "cronRuns(expression: CronExpression, timeZone: string, window: OccurrenceWindow, policy: CronTransitionPolicy): CronRun[]",
+    "description": "The runs of a five-field cron schedule inside a window, in a time zone.",
+    "sourcePath": "packages/gmt/src/recurrence/calculate/cronRuns.ts",
+    "examples": [
+      {
+        "call": "cronRuns({ minute: { values: [30], star: false }, hour: { values: [2], star: false }, dayOfMonth: { values: [10], star: false }, month: { values: [3], star: false }, dayOfWeek: { values: [1, 2, 3, 4, 5, 6, 7], star: true } }, \"America/New_York\", { start: \"2024-03-10T00:00:00Z\", end: \"2024-03-11T00:00:00Z\" }, \"daemonCatchUp\")",
+        "result": "[{ local: \"2024-03-10T02:30:00\", instant: \"2024-03-10T07:00:00Z\", classification: \"nonexistent\" }]"
+      },
+      {
+        "call": "cronRuns(parseCronExpression(\"30 2 * * *\"), \"America/New_York\", { start: \"2024-03-09T00:00:00Z\", end: \"2024-03-12T00:00:00Z\" }, \"crontabMatch\").map((run) => run.instant)",
+        "result": "[\"2024-03-09T07:30:00Z\", \"2024-03-11T06:30:00Z\"] (no 02:30 on March 10)"
+      },
+      {
+        "call": "cronRuns(parseCronExpression(\"30 1 * * *\"), \"America/New_York\", { start: \"2024-11-03T00:00:00Z\", end: \"2024-11-04T00:00:00Z\" }, \"crontabMatch\").map((run) => run.instant)",
+        "result": "[\"2024-11-03T05:30:00Z\", \"2024-11-03T06:30:00Z\"] (01:30 repeats)"
+      },
+      {
+        "call": "cronRuns(parseCronExpression(\"0 0 29 2 *\"), \"UTC\", { after: \"2025-01-01T00:00:00Z\", count: 2 }, \"crontabMatch\").map((run) => run.local)",
+        "result": "[\"2028-02-29T00:00:00\", \"2032-02-29T00:00:00\"]"
+      },
+      {
+        "call": "cronRuns(parseCronExpression(\"0 0 * * *\"), \"UTC\", { after: \"2024-01-01T00:00:00Z\", count: 1 }, undefined)",
+        "result": "[] (a policy is required)"
+      },
+      {
+        "call": "cronRuns(parseCronExpression(\"0 0 30 2 *\"), \"UTC\", { after: \"2024-01-01T00:00:00Z\", count: 1 }, \"crontabMatch\")",
+        "result": "[] (February 30 never comes)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/recurrence/calculate/expandRecurrence",
+    "page": "/reference/recurrence/calculate/expandRecurrence",
+    "name": "expandRecurrence",
+    "namespace": "recurrence",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "expandRecurrence(rule: RecurrenceRule, start: string, timeZone: string, window: OccurrenceWindow, options?: ExpandRecurrenceOptions): RecurrenceOccurrence[]",
+    "description": "Expand a recurrence rule into its occurrences inside a window, in a time zone.",
+    "sourcePath": "packages/gmt/src/recurrence/calculate/expandRecurrence.ts",
+    "examples": [
+      {
+        "call": "expandRecurrence({ frequency: \"daily\", interval: 1, firstDayOfWeek: 1, count: 2 }, \"2024-03-09T02:30:00\", \"America/New_York\", { start: \"2024-03-10T00:00:00Z\", end: \"2024-03-11T00:00:00Z\" })",
+        "result": "[{ local: \"2024-03-10T02:30:00\", instant: \"2024-03-10T07:30:00Z\", classification: \"nonexistent\", earlier: \"2024-03-10T06:30:00Z\", later: \"2024-03-10T07:30:00Z\" }]"
+      },
+      {
+        "call": "expandRecurrence(parseRecurrenceRule(\"FREQ=DAILY;COUNT=2\"), \"2024-03-09T02:30:00\", \"America/New_York\", { start: \"2024-01-01T00:00:00Z\", end: \"2025-01-01T00:00:00Z\" }).map((row) => row.instant)",
+        "result": "[\"2024-03-09T07:30:00Z\", \"2024-03-10T07:30:00Z\"]"
+      },
+      {
+        "call": "expandRecurrence(parseRecurrenceRule(\"FREQ=DAILY\"), \"2024-01-01T09:00:00\", \"UTC\", { after: \"2024-01-01T09:00:00Z\", count: 1 }).map((row) => row.local)",
+        "result": "[\"2024-01-02T09:00:00\"]"
+      },
+      {
+        "call": "expandRecurrence(parseRecurrenceRule(\"FREQ=DAILY;COUNT=2\"), \"2024-11-02T01:30:00\", \"America/New_York\", { after: \"2024-01-01T00:00:00Z\", count: 5 }, { disambiguation: \"reject\" })",
+        "result": "[] (01:30 repeats on November 3)"
+      },
+      {
+        "call": "expandRecurrence(parseRecurrenceRule(\"FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30\"), \"2024-01-01T09:00:00\", \"UTC\", { after: \"2024-01-01T00:00:00Z\", count: 1 })",
+        "result": "[]"
+      }
+    ]
+  },
+  {
+    "url": "/reference/recurrence/parse/parseCronExpression",
+    "page": "/reference/recurrence/parse/parseCronExpression",
+    "name": "parseCronExpression",
+    "namespace": "recurrence",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseCronExpression(value: string): CronExpression | null",
+    "description": "Read the time-and-date fields of a crontab line, or one nickname, into a `CronExpression`.",
+    "sourcePath": "packages/gmt/src/recurrence/parse/parseCronExpression.ts",
+    "examples": [
+      {
+        "call": "parseCronExpression(\"0 9-17 * * mon-fri\")?.dayOfWeek",
+        "result": "{ values: [1, 2, 3, 4, 5], star: false }"
+      },
+      {
+        "call": "parseCronExpression(\"@daily\")?.minute",
+        "result": "{ values: [0], star: false }"
+      },
+      {
+        "call": "parseCronExpression(\"0 0 30 2 *\")?.dayOfMonth",
+        "result": "{ values: [30], star: false }"
+      },
+      {
+        "call": "parseCronExpression(\"0 0 * * * *\")",
+        "result": "null (a sixth field)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/recurrence/parse/parseRecurrenceRule",
+    "page": "/reference/recurrence/parse/parseRecurrenceRule",
+    "name": "parseRecurrenceRule",
+    "namespace": "recurrence",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseRecurrenceRule(value: string): RecurrenceRule | null",
+    "description": "Parse an RFC 5545 §3.3.10 RECUR value (`FREQ=MONTHLY;BYDAY=-1FR`) into a {@link RecurrenceRule}.",
+    "sourcePath": "packages/gmt/src/recurrence/parse/parseRecurrenceRule.ts",
+    "examples": [
+      {
+        "call": "parseRecurrenceRule(\"FREQ=MONTHLY;BYDAY=-1FR\")",
+        "result": "{ frequency: \"monthly\", interval: 1, firstDayOfWeek: 1, byDay: [{ day: 5, nthOfPeriod: -1 }] }"
+      },
+      {
+        "call": "parseRecurrenceRule(\"count=10;freq=daily\")",
+        "result": "{ frequency: \"daily\", interval: 1, firstDayOfWeek: 1, count: 10 }"
+      },
+      {
+        "call": "parseRecurrenceRule(\"FREQ=WEEKLY;UNTIL=19971224T000000Z;WKST=SU;BYDAY=TU,TH\")",
+        "result": "{ frequency: \"weekly\", interval: 1, firstDayOfWeek: 7, until: \"1997-12-24T00:00:00Z\", byDay: [{ day: 2 }, { day: 4 }] }"
+      },
+      {
+        "call": "parseRecurrenceRule(\"FREQ=DAILY;COUNT=5;UNTIL=20240101\")",
+        "result": "null (COUNT and UNTIL together)"
+      },
+      {
+        "call": "parseRecurrenceRule(\"RRULE:FREQ=DAILY\")",
+        "result": "null (value only, no prefix)"
+      },
+      {
+        "call": "parseRecurrenceRule(\"FREQ=DAILY;UNTIL=19970630T235960Z\")",
+        "result": "null (second 60)"
+      }
+    ]
+  },
+  {
     "url": "/reference/regex/calendar-date/calendarDate",
     "page": "/reference/regex/calendar-date/calendarDate",
     "name": "calendarDate",
@@ -17211,7 +17346,7 @@
     "namespace": "transport",
     "module": "calculate",
     "kind": "function",
-    "signature": "nextDeparture(after: string, timetable: Headway | readonly string[], options?: NextDepartureOptions): string",
+    "signature": "nextDeparture(after: string, timetable: readonly string[] | Headway, options?: NextDepartureOptions): string",
     "description": "Find the next departure a connection can make: the first scheduled departure at or after `after` plus the minimum connection time.",
     "sourcePath": "packages/gmt/src/transport/calculate/nextDeparture.ts",
     "examples": [
@@ -17856,6 +17991,102 @@
     "description": "A calendar GMT's calendar functions support, named by its canonical calendar id: the CLDR `common/bcp47/calendar.xml` type that Temporal's `CanonicalizeCalendar` returns, and that RFC 9557's `[u-ca=<id>]` annotation carries.",
     "sourcePath": "packages/gmt/src/types/calendar-system.ts",
     "examples": []
+  },
+  {
+    "url": "/reference/types/CronField",
+    "page": "/reference/types/CronField",
+    "name": "CronField",
+    "namespace": "types",
+    "module": "cron",
+    "kind": "type",
+    "signature": "",
+    "description": "One field of a parsed five-field crontab schedule.",
+    "sourcePath": "packages/gmt/src/types/cron.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "values",
+        "description": "The values the field matches, strictly ascending."
+      },
+      {
+        "name": "star",
+        "description": "True when the field was written `*` or `*\\/n`, or set by a nickname (as cronie `entry.c` records `*_STAR`; cronie has no month flag, so month follows the nickname's `*`)."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/CronExpression",
+    "page": "/reference/types/CronExpression",
+    "name": "CronExpression",
+    "namespace": "types",
+    "module": "cron",
+    "kind": "type",
+    "signature": "",
+    "description": "A parsed five-field crontab schedule (minute, hour, day of month, month, day of week).",
+    "sourcePath": "packages/gmt/src/types/cron.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "minute",
+        "description": "Minutes, 0 to 59."
+      },
+      {
+        "name": "hour",
+        "description": "Hours, 0 to 23."
+      },
+      {
+        "name": "dayOfMonth",
+        "description": "Days of the month, 1 to 31."
+      },
+      {
+        "name": "month",
+        "description": "Months, 1 to 12."
+      },
+      {
+        "name": "dayOfWeek",
+        "description": "`IsoWeekday` values 1 to 7 (Monday 1, Sunday 7); cron's `0` and `7` both read as 7."
+      }
+    ]
+  },
+  {
+    "url": "/reference/recurrence/calculate/cronRuns#crontransitionpolicy",
+    "page": "/reference/recurrence/calculate/cronRuns",
+    "name": "CronTransitionPolicy",
+    "namespace": "types",
+    "module": "cron",
+    "kind": "type",
+    "signature": "",
+    "description": "How `cronRuns` treats a scheduled wall time that a zone transition skips or repeats: `\"crontabMatch\"` matches the schedule against each real wall time; `\"daemonCatchUp\"` runs a skipped job once after the gap, as a cron daemon does.",
+    "sourcePath": "packages/gmt/src/types/cron.ts",
+    "examples": [],
+    "inlineOn": "cronRuns"
+  },
+  {
+    "url": "/reference/recurrence/calculate/cronRuns#cronrun",
+    "page": "/reference/recurrence/calculate/cronRuns",
+    "name": "CronRun",
+    "namespace": "types",
+    "module": "cron",
+    "kind": "type",
+    "signature": "",
+    "description": "One run of a cron schedule in a zone.",
+    "sourcePath": "packages/gmt/src/types/cron.ts",
+    "examples": [],
+    "inlineOn": "cronRuns",
+    "members": [
+      {
+        "name": "local",
+        "description": "The wall time the schedule named, `YYYY-MM-DDTHH:mm:ss`."
+      },
+      {
+        "name": "instant",
+        "description": "The instant the run happens, `…Z`."
+      },
+      {
+        "name": "classification",
+        "description": "What `local` is in the zone."
+      }
+    ]
   },
   {
     "url": "/reference/types/DateCycleField",
@@ -19939,6 +20170,184 @@
     "description": "What to do when a date or time field is out of range, as Temporal's `overflow` option (`Temporal.PlainDate.prototype.add(item, { overflow })`). `\"constrain\"` clamps the field to the nearest valid value, so January 31 plus one month is the last day of February; `\"reject\"` refuses the value.",
     "sourcePath": "packages/gmt/src/types/overflow.ts",
     "examples": []
+  },
+  {
+    "url": "/reference/types/RecurrenceFrequency",
+    "page": "/reference/types/RecurrenceFrequency",
+    "name": "RecurrenceFrequency",
+    "namespace": "types",
+    "module": "recurrence",
+    "kind": "type",
+    "signature": "",
+    "description": "How often an RFC 5545 §3.3.10 rule repeats (`FREQ`).",
+    "sourcePath": "packages/gmt/src/types/recurrence.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/RecurrenceDay",
+    "page": "/reference/types/RecurrenceDay",
+    "name": "RecurrenceDay",
+    "namespace": "types",
+    "module": "recurrence",
+    "kind": "type",
+    "signature": "",
+    "description": "One `BYDAY` entry: a weekday, optionally the nth such weekday of the period.",
+    "sourcePath": "packages/gmt/src/types/recurrence.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "day",
+        "description": "The weekday, 1 (Monday) to 7 (Sunday)."
+      },
+      {
+        "name": "nthOfPeriod",
+        "description": "A signed ordinal, 1 to 53 or -53 to -1. Absent for \"every\". Valid only with `monthly` or `yearly`, and not with `yearly` plus `byWeekNo`."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/RecurrenceRule",
+    "page": "/reference/types/RecurrenceRule",
+    "name": "RecurrenceRule",
+    "namespace": "types",
+    "module": "recurrence",
+    "kind": "type",
+    "signature": "",
+    "description": "A parsed RFC 5545 §3.3.10 recurrence rule. Member names follow the RFC 8984 §4.3.3 object.",
+    "sourcePath": "packages/gmt/src/types/recurrence.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "frequency",
+        "description": "`FREQ`."
+      },
+      {
+        "name": "interval",
+        "description": "`INTERVAL`, a positive integer."
+      },
+      {
+        "name": "firstDayOfWeek",
+        "description": "`WKST` as an `IsoWeekday`."
+      },
+      {
+        "name": "until",
+        "description": "`UNTIL`, rebuilt from the RFC text in Temporal's ISO form, one of three: a UTC date-time (`\"1997-12-24T00:00:00Z\"`), a floating date-time (`\"1997-12-24T00:00:00\"`) or a date (`\"1997-12-24\"`). `expandRecurrence` accepts only the first form, per RFC 5545 §3.3.10."
+      },
+      {
+        "name": "count",
+        "description": "`COUNT`, the number of occurrences."
+      },
+      {
+        "name": "bySecond",
+        "description": "`BYSECOND`, 0 to 60."
+      },
+      {
+        "name": "byMinute",
+        "description": "`BYMINUTE`, 0 to 59."
+      },
+      {
+        "name": "byHour",
+        "description": "`BYHOUR`, 0 to 23."
+      },
+      {
+        "name": "byDay",
+        "description": "`BYDAY`."
+      },
+      {
+        "name": "byMonthDay",
+        "description": "`BYMONTHDAY`, 1 to 31 or -31 to -1."
+      },
+      {
+        "name": "byYearDay",
+        "description": "`BYYEARDAY`, 1 to 366 or -366 to -1."
+      },
+      {
+        "name": "byWeekNo",
+        "description": "`BYWEEKNO`, 1 to 53 or -53 to -1."
+      },
+      {
+        "name": "byMonth",
+        "description": "`BYMONTH`, 1 to 12."
+      },
+      {
+        "name": "bySetPosition",
+        "description": "`BYSETPOS`, 1 to 366 or -366 to -1."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/OccurrenceWindow",
+    "page": "/reference/types/OccurrenceWindow",
+    "name": "OccurrenceWindow",
+    "namespace": "types",
+    "module": "recurrence",
+    "kind": "type",
+    "signature": "",
+    "description": "Which occurrences to expand: every one inside an interval, or the first `count` after an instant.",
+    "sourcePath": "packages/gmt/src/types/recurrence.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/recurrence/calculate/expandRecurrence#expandrecurrenceoptions",
+    "page": "/reference/recurrence/calculate/expandRecurrence",
+    "name": "ExpandRecurrenceOptions",
+    "namespace": "types",
+    "module": "recurrence",
+    "kind": "type",
+    "signature": "",
+    "description": "Options for `expandRecurrence`.",
+    "sourcePath": "packages/gmt/src/types/recurrence.ts",
+    "examples": [],
+    "inlineOn": "expandRecurrence",
+    "members": [
+      {
+        "name": "rdate",
+        "description": "Extra occurrences (`RDATE`), as ISO date-times."
+      },
+      {
+        "name": "exdate",
+        "description": "Occurrences to remove (`EXDATE`), as ISO date-times."
+      },
+      {
+        "name": "disambiguation",
+        "description": "Which instant a wall time in a gap or overlap takes."
+      }
+    ]
+  },
+  {
+    "url": "/reference/recurrence/calculate/expandRecurrence#recurrenceoccurrence",
+    "page": "/reference/recurrence/calculate/expandRecurrence",
+    "name": "RecurrenceOccurrence",
+    "namespace": "types",
+    "module": "recurrence",
+    "kind": "type",
+    "signature": "",
+    "description": "One occurrence of a rule in a zone.",
+    "sourcePath": "packages/gmt/src/types/recurrence.ts",
+    "examples": [],
+    "inlineOn": "expandRecurrence",
+    "members": [
+      {
+        "name": "local",
+        "description": "The wall time the rule named, `YYYY-MM-DDTHH:mm:ss`."
+      },
+      {
+        "name": "instant",
+        "description": "The instant chosen, `…Z`."
+      },
+      {
+        "name": "classification",
+        "description": "What `local` is in the zone. It always equals `classifyLocal(local, timeZone)`."
+      },
+      {
+        "name": "earlier",
+        "description": "The instant `\"earlier\"` gives. Equals `instant` when `local` is unique."
+      },
+      {
+        "name": "later",
+        "description": "The instant `\"later\"` gives. Equals `instant` when `local` is unique."
+      }
+    ]
   },
   {
     "url": "/reference/plain/format/formatRelativeDateTime#relativedatetimeunit",

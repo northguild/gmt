@@ -182,6 +182,10 @@ const PAGES = [
     path: "tools/column-timestamp-bridge",
     widget: "gmt-column-timestamp-bridge gmt-widget",
   },
+  {
+    path: "tools/cron-in-a-zone",
+    widget: "gmt-cron-zone gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

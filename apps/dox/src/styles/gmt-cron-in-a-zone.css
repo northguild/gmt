@@ -1,0 +1,466 @@
+/*
+ * Cron in a Zone widget (CronInAZone.astro, CORE-84).
+ *
+ * Card/section/controls/output chrome comes from gmt-widget.css and
+ * gmt-form-controls.css; the chart surface, the chips and the clock-change pair
+ * come from gmt-cutoff-widgets.css. This sheet only adds what is specific to the
+ * tool: the parsed-field rows, the two lanes with their marks, and the fixed
+ * tables. Tokens only. Amber (`--gmt-signal-*`) is the sentinel state and
+ * nothing else. No element has a coloured left edge as its only accent.
+ *
+ * Every slot is laid out in every state and hidden with `[data-off]`, so a
+ * value that changes never moves a box.
+ */
+
+.gmt-cron-zone {
+  container: gmt-cron / inline-size;
+  --gmt-cron-gutter: 3rem;
+}
+
+.gmt-cron-zone [data-off] {
+  visibility: hidden;
+}
+
+.gmt-cron-zone .gmt-cutoff-axis-tick[hidden] {
+  display: none;
+}
+
+.gmt-cron-zone .gmt-cron-line {
+  font-family: var(--gmt-font-mono);
+}
+
+/* ---------------------------------------------------------------------------
+ * Section 1: the parsed fields
+ * --------------------------------------------------------------------------- */
+
+.gmt-cron-zone .gmt-cron-parsed {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.gmt-cron-zone .gmt-cron-parsed > * {
+  grid-area: 1 / 1;
+  min-inline-size: 0;
+}
+
+.gmt-cron-zone .gmt-cron-fields {
+  display: grid;
+  margin: 0;
+  align-content: start;
+}
+
+.gmt-cron-zone .gmt-cron-field {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  padding-block: var(--gmt-space-1);
+  border-block-end: 1px solid var(--gmt-hairline-faint);
+}
+
+.gmt-cron-zone .gmt-cron-field dt {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-cron-zone .gmt-cron-field dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.gmt-cron-zone .gmt-cron-values {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  /* A field's text can run to every value; the row holds one line of it. */
+  min-block-size: 1.3em;
+}
+
+.gmt-cron-zone .gmt-cron-star {
+  min-inline-size: 5ch;
+  justify-content: center;
+}
+
+.gmt-cron-zone .gmt-cron-nosignal {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  margin: 0;
+}
+
+.gmt-cron-zone .gmt-cron-nosignal-pill {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.gmt-cron-zone .gmt-cron-nosignal-note {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+/* ---------------------------------------------------------------------------
+ * Section 2: the night
+ * --------------------------------------------------------------------------- */
+
+.gmt-cron-zone .gmt-cron-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2) var(--gmt-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-cron-zone .gmt-cron-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+}
+
+.gmt-cron-zone .gmt-cron-swatch {
+  position: relative;
+  display: inline-block;
+  inline-size: 1.2rem;
+  block-size: 1rem;
+  flex: none;
+}
+
+.gmt-cron-zone .gmt-cron-swatch .gmt-cron-stem {
+  inset-inline-start: 50%;
+}
+
+.gmt-cron-zone .gmt-cron-plot {
+  position: relative;
+  padding-inline-start: var(--gmt-cron-gutter);
+  padding-inline-end: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.gmt-cron-zone .gmt-cron-chiprow {
+  display: flex;
+  justify-content: center;
+  block-size: 1.9rem;
+  align-items: center;
+}
+
+.gmt-cron-zone .gmt-cron-chip {
+  max-inline-size: 100%;
+}
+
+.gmt-cron-zone .gmt-cron-axis-row {
+  position: relative;
+  block-size: 1.2rem;
+}
+
+.gmt-cron-zone .gmt-cron-axis-cap {
+  position: absolute;
+  inset-inline-start: calc(-1 * var(--gmt-cron-gutter));
+  inline-size: var(--gmt-cron-gutter);
+  top: 0;
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-cron-zone .gmt-cron-axis {
+  position: relative;
+  block-size: 100%;
+}
+
+.gmt-cron-zone .gmt-cron-tick {
+  transform: translateX(-50%);
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-cron-zone .gmt-cron-tick--first {
+  transform: none;
+}
+
+.gmt-cron-zone .gmt-cron-tick--last {
+  transform: translateX(-100%);
+}
+
+.gmt-cron-zone .gmt-cron-lanes {
+  position: relative;
+  display: grid;
+  gap: var(--gmt-space-3);
+  margin-block-start: var(--gmt-space-2);
+}
+
+.gmt-cron-zone .gmt-cron-lane {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+}
+
+.gmt-cron-zone .gmt-cron-lane-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--gmt-space-3);
+}
+
+.gmt-cron-zone .gmt-cron-lane-name {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.gmt-cron-zone .gmt-cron-lane-name code {
+  justify-self: start;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-cron-zone .gmt-cron-lane-line {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+/* Paired with the name at the opposite edge; holds the width of its longest text. */
+.gmt-cron-zone .gmt-cron-plate {
+  display: inline-flex;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  min-inline-size: 25ch;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+.gmt-cron-zone .gmt-cron-track {
+  position: relative;
+  block-size: 3rem;
+  border-block-end: 1px solid var(--gmt-hairline);
+  background: color(from var(--gmt-void) srgb r g b / 0.25);
+}
+
+.gmt-cron-zone .gmt-cron-marks {
+  position: absolute;
+  inset: 0;
+}
+
+/* One vertical rule at the change, on each lane. */
+.gmt-cron-zone .gmt-cron-rule {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 50%;
+  inline-size: 2px;
+  transform: translateX(-1px);
+  background: var(--gmt-ice);
+}
+
+.gmt-cron-zone .gmt-cron-mark {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 0;
+}
+
+.gmt-cron-zone .gmt-cron-stem {
+  position: absolute;
+  inset-block: 6px;
+  inset-inline-start: 0;
+  box-sizing: border-box;
+  transform: translateX(-50%);
+}
+
+.gmt-cron-zone .gmt-cron-mark--unique .gmt-cron-stem {
+  inline-size: 3px;
+  background: var(--gmt-series-1);
+}
+
+.gmt-cron-zone .gmt-cron-mark--nonexistent .gmt-cron-stem {
+  inline-size: 9px;
+  border-inline: 2px dashed var(--gmt-dst-gold-ink);
+  background: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.6) 0,
+    color(from var(--gmt-dst-gold) srgb r g b / 0.6) 2px,
+    transparent 2px,
+    transparent 5px
+  );
+}
+
+.gmt-cron-zone .gmt-cron-mark--ambiguous .gmt-cron-stem {
+  inline-size: 8px;
+  border-inline: 2px solid var(--gmt-dst-purple-ink);
+}
+
+.gmt-cron-zone .gmt-cron-count {
+  position: absolute;
+  top: 0;
+  inset-inline-start: 8px;
+  padding: 0 var(--gmt-space-1);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+.gmt-cron-zone .gmt-cron-sentence {
+  margin: 0;
+  font-size: var(--gmt-text-sm);
+}
+
+/* ---------------------------------------------------------------------------
+ * Held lines: the live text and the longest text it can show share one cell.
+ * --------------------------------------------------------------------------- */
+
+.gmt-cron-zone .gmt-ledger-hold > p {
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Fixed tables (touched runs and next runs)
+ * --------------------------------------------------------------------------- */
+
+.gmt-cron-zone .gmt-cron-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+  align-items: start;
+}
+
+@container gmt-cron (min-width: 40rem) {
+  .gmt-cron-zone .gmt-cron-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.gmt-cron-zone .gmt-cron-table-box {
+  min-inline-size: 0;
+}
+
+.gmt-cron-zone .gmt-cron-table {
+  display: table;
+  table-layout: fixed;
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-cron-zone .gmt-cron-table caption {
+  padding: 0 0 var(--gmt-space-2);
+  text-align: start;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-cron-zone .gmt-cron-table th {
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  text-align: start;
+  font-weight: 500;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  border-block-end: 1px solid var(--gmt-hairline);
+}
+
+/* The site's `th:first-child, td:first-child` rule (gmt-content.css) sets
+   `width: 1%; white-space: nowrap`; the doubled class out-ranks it. */
+.gmt-cron-zone .gmt-cron-table.gmt-cron-table :is(th, td):first-child {
+  width: 32%;
+  white-space: normal;
+}
+
+.gmt-cron-zone .gmt-cron-table th:nth-child(2) {
+  width: 32%;
+}
+
+.gmt-cron-zone .gmt-cron-table td {
+  padding: var(--gmt-space-2);
+  vertical-align: top;
+  border-block-end: 1px solid var(--gmt-hairline-faint);
+  overflow-wrap: anywhere;
+}
+
+.gmt-cron-zone .gmt-cron-table .gmt-cutoff-chip {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.gmt-cron-zone .gmt-cron-only {
+  display: block;
+  margin-block-start: var(--gmt-space-1);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+/* A run the other rule does not give: hatched, and it says so in words. */
+.gmt-cron-zone .gmt-cron-table tr[data-only] > td {
+  background: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-ice-dim) srgb r g b / 0.16) 0,
+    color(from var(--gmt-ice-dim) srgb r g b / 0.16) 2px,
+    transparent 2px,
+    transparent 7px
+  );
+}
+
+.gmt-cron-zone .gmt-cron-note-row > td {
+  border-block-end: 0;
+}
+
+.gmt-cron-zone .gmt-cron-note {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+/* ---------------------------------------------------------------------------
+ * Section 4: the calls
+ * --------------------------------------------------------------------------- */
+
+.gmt-cron-zone .gmt-cron-calls .gmt-codeframe-pre {
+  overflow-x: auto;
+  max-inline-size: 100%;
+}
+
+@container gmt-cron (max-width: 30rem) {
+  .gmt-cron-zone .gmt-cron-lane-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gmt-cron-zone .gmt-cron-plate {
+    justify-self: start;
+    justify-content: flex-start;
+  }
+
+  .gmt-cron-zone .gmt-cron-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}

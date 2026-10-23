@@ -168,6 +168,37 @@ describe("worker tool execute", () => {
     expect(ok.data).toEqual({ values: padded });
   });
 
+  describe("showCronInAZone refusals", () => {
+    const input = { line: "30 1 * * *", zone: "Europe/London", year: 2024 };
+
+    it("accepts a line the grammar would refuse, because that is the widget's NO SIGNAL", async () => {
+      expect(
+        (await run("showCronInAZone", { ...input, line: "@reboot" })).ok,
+      ).toBe(true);
+      expect((await run("showCronInAZone", input)).ok).toBe(true);
+    });
+
+    it("refuses a zone this runtime does not know", async () => {
+      const r = await run("showCronInAZone", {
+        ...input,
+        zone: "Mars/Olympus",
+      });
+      expect(r).toMatchObject({ ok: false, widget: "cron-in-a-zone" });
+      expect(r.note).toContain("Mars/Olympus");
+    });
+
+    it("refuses a contradictory input: no year, a bad change, a long after", async () => {
+      for (const bad of [
+        { line: input.line, zone: input.zone },
+        { ...input, change: "21" },
+        { ...input, after: "x".repeat(65) },
+      ]) {
+        const r = await run("showCronInAZone", bad);
+        expect(r).toMatchObject({ ok: false, widget: "cron-in-a-zone" });
+      }
+    });
+  });
+
   describe("showColumnTimestampBridge refusals", () => {
     const refused = async (input: Record<string, unknown>, words: RegExp) => {
       const r = await run("showColumnTimestampBridge", input);

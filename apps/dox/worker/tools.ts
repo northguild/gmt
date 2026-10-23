@@ -65,6 +65,7 @@ import {
   showSatelliteClockConverterInput,
   showIdTimestampDecoderInput,
   showColumnTimestampBridgeInput,
+  showCronInAZoneInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
   showObservanceComparatorInput,
@@ -82,6 +83,7 @@ import {
   showTimetableReaderInput,
   showZonePlannerInput,
   columnBridgeProblems,
+  cronZoneProblems,
   idDecoderProblems,
 } from "../src/lib/dox-tools";
 import canadaZones from "../src/lib/canada-zones.json";
@@ -563,6 +565,27 @@ export function buildWorkerTools(
               "morocco-clock-change",
               `"${zone}" is not one of the zones the checker lists. Call it again without a zone, or say so plainly.`,
             ),
+    }),
+    // The problems check comes first, so a missing year is named before a zone is
+    // looked up. The cron grammar is never checked: a line the library refuses is
+    // the widget's NO SIGNAL to show, not a failed call.
+    showCronInAZone: tool({
+      description: docFor("showCronInAZone"),
+      inputSchema: showCronInAZoneInput,
+      execute: (input) => {
+        const v = input as Record<string, unknown>;
+        const problems = cronZoneProblems(v);
+        if (problems.length > 0) {
+          return reject("cron-in-a-zone", problems.join(" "));
+        }
+        const unknown = unknownZones([v["zone"] as string]);
+        return unknown.length > 0
+          ? reject(
+              "cron-in-a-zone",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("cron-in-a-zone");
+      },
     }),
   };
 

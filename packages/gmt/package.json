@@ -183,6 +183,15 @@
       "precision/validate": [
         "./dist/precision/validate/index.d.ts"
       ],
+      "recurrence": [
+        "./dist/recurrence/index.d.ts"
+      ],
+      "recurrence/calculate": [
+        "./dist/recurrence/calculate/index.d.ts"
+      ],
+      "recurrence/parse": [
+        "./dist/recurrence/parse/index.d.ts"
+      ],
       "regex": [
         "./dist/regex/index.d.ts"
       ],
@@ -514,6 +523,18 @@
     "./precision/validate": {
       "types": "./dist/precision/validate/index.d.ts",
       "default": "./dist/precision/validate/index.js"
+    },
+    "./recurrence": {
+      "types": "./dist/recurrence/index.d.ts",
+      "default": "./dist/recurrence/index.js"
+    },
+    "./recurrence/calculate": {
+      "types": "./dist/recurrence/calculate/index.d.ts",
+      "default": "./dist/recurrence/calculate/index.js"
+    },
+    "./recurrence/parse": {
+      "types": "./dist/recurrence/parse/index.d.ts",
+      "default": "./dist/recurrence/parse/index.js"
     },
     "./regex": {
       "types": "./dist/regex/index.d.ts",

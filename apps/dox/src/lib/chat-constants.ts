@@ -881,6 +881,17 @@ export const CHAT_STARTERS: readonly {
     area: "core",
     args: { zone: "Africa/Casablanca" },
   },
+  {
+    text: "When does a `30 1 * * *` cron job run on the night the clocks change in Europe/London?",
+    widget: "showCronInAZone",
+    area: "core",
+    args: {
+      line: "30 1 * * *",
+      zone: "Europe/London",
+      year: 2024,
+      change: "1",
+    },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

@@ -179,6 +179,12 @@ const INSTANT_TEXT = CODE_TEXT + ", .gmt-gnss-nb, .gmt-punct-hero-value > span";
  *  is still measured. */
 const HOLIDAY_DRAWN = ".gmt-holiday-grid, .gmt-ledger-hold > :first-child";
 
+/** What moves inside the cron lanes by design: the marks drawn at their
+ *  instants, the axis labels, and a hold's live wrapper. The lanes' own boxes
+ *  are still measured. */
+const CRON_DRAWN =
+  ".gmt-cron-marks, .gmt-cron-mark, .gmt-cron-axis, .gmt-ledger-hold > :first-child";
+
 const TOOLS = [
   {
     slug: "departure-board",
@@ -427,6 +433,20 @@ const TOOLS = [
     scope: "widget",
     drawn: HOLIDAY_DRAWN,
     riders: RANGE_CHIP,
+    textBoxes: CODE_TEXT,
+  },
+  {
+    slug: "cron-in-a-zone",
+    root: ".gmt-cron-zone",
+    presets: ["london-spring", "sydney-every-five"],
+    // The year field, stepped three times each way. Every row, plate and tick
+    // is laid out in every state and hidden with `data-off`, so no year changes
+    // a box; the marks and the axis labels move inside their fixed lanes.
+    controls: [{ sel: '[data-role="year"]', step: 3 }],
+    track: null,
+    frame: ".gmt-cron-frame",
+    scope: "widget",
+    drawn: CRON_DRAWN,
     textBoxes: CODE_TEXT,
   },
 ];

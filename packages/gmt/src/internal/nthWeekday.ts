@@ -32,10 +32,54 @@ export function ordinalNumber(n: WeekdayOrdinal): number {
 }
 
 /**
+ * Epoch day of the `n`-th ISO `weekday` in the closed day range `[first, last]` (epoch days):
+ * `n > 0` counts from `first`, `n < 0` from `last`. `null` when that occurrence lies outside the
+ * range. The range may reach past Temporal's date range and the count includes those days: a
+ * recurrence period counts its whole span before it drops the dates a PlainDate cannot hold.
+ * `n` is a nonzero integer. Closed form: the offset to the first (or last) matching weekday plus
+ * `7 x (|n| - 1)`, no loop.
+ */
+export function nthWeekdayWithin(
+  first: number,
+  last: number,
+  weekday: number,
+  n: number,
+): number | null {
+  const day =
+    n > 0
+      ? first +
+        ((weekday - isoWeekdayOf(first) + ISO_WEEKDAYS) % ISO_WEEKDAYS) +
+        ISO_WEEKDAYS * (n - 1)
+      : last -
+        ((isoWeekdayOf(last) - weekday + ISO_WEEKDAYS) % ISO_WEEKDAYS) -
+        ISO_WEEKDAYS * (-n - 1);
+
+  // A NaN from an overflowed year fails both comparisons, so it gives `null` too.
+  return day >= first && day <= last ? day : null;
+}
+
+/**
+ * Epoch day of the `n`-th ISO `weekday` in the closed day range `[first, last]` (epoch days), or
+ * `null` when that occurrence lies outside the range or outside Temporal's date range. See
+ * {@link nthWeekdayWithin} for the count.
+ */
+export function nthWeekdayInRange(
+  first: number,
+  last: number,
+  weekday: number,
+  n: number,
+): number | null {
+  const day = nthWeekdayWithin(first, last, weekday, n);
+
+  return day !== null && day >= MIN_EPOCH_DAY && day <= MAX_EPOCH_DAY
+    ? day
+    : null;
+}
+
+/**
  * Epoch day of the `n`-th ISO weekday of an ISO month, or `null` when that occurrence does not
  * exist or lies outside Temporal's date range. `n` is an already-checked integer in
- * `-5..-1` or `1..5`. Closed form: counts from the month's first day (`n > 0`) or last day
- * (`n < 0`) in steps of 7 days, no loop.
+ * `-5..-1` or `1..5`. Counts from the month's first day (`n > 0`) or last day (`n < 0`).
  */
 export function nthWeekdayEpochDay(
   year: number,
@@ -43,31 +87,8 @@ export function nthWeekdayEpochDay(
   weekday: number,
   n: number,
 ): number | null {
-  const first = epochDayOf(year, month, 1);
   const next =
     month === 12 ? epochDayOf(year + 1, 1, 1) : epochDayOf(year, month + 1, 1);
-  let day: number;
 
-  if (n > 0) {
-    day =
-      first +
-      ((weekday - isoWeekdayOf(first) + ISO_WEEKDAYS) % ISO_WEEKDAYS) +
-      ISO_WEEKDAYS * (n - 1);
-  } else {
-    const last = next - 1;
-    day =
-      last -
-      ((isoWeekdayOf(last) - weekday + ISO_WEEKDAYS) % ISO_WEEKDAYS) -
-      ISO_WEEKDAYS * (-n - 1);
-  }
-
-  // Written as a negated conjunction so a NaN from an overflowed year fails it too.
-  if (!(day >= MIN_EPOCH_DAY && day <= MAX_EPOCH_DAY)) {
-    return null;
-  }
-  if (day < first || day >= next) {
-    return null;
-  }
-
-  return day;
+  return nthWeekdayInRange(epochDayOf(year, month, 1), next - 1, weekday, n);
 }

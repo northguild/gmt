@@ -946,6 +946,90 @@ export const showMoroccoClockChangeInput = z.object({
 });
 
 /**
+ * What is wrong with a Cron in a Zone call, as sentences; empty when it is sound.
+ * The schema and the Worker both ask, so a direct call is held to the same rules.
+ * The cron grammar is never checked here: a line the library refuses is the
+ * widget's NO SIGNAL to show, not a failed tool call.
+ */
+export function cronZoneProblems(v: Record<string, unknown>): string[] {
+  const out: string[] = [];
+  const line = v["line"];
+  if (typeof line !== "string" || line === "" || line.length > 64) {
+    out.push(
+      "line is the cron line exactly as the reader wrote it, 1 to 64 characters.",
+    );
+  }
+  const zone = v["zone"];
+  if (typeof zone !== "string" || zone === "" || zone.length > 64) {
+    out.push("zone is an IANA time zone id.");
+  }
+  const year = v["year"];
+  if (typeof year !== "number" || !Number.isInteger(year)) {
+    out.push("year is required: a whole year, such as 2024.");
+  }
+  const change = v["change"];
+  if (
+    change !== undefined &&
+    !(typeof change === "string" && /^(?:[1-9]|1\d|20)$/.test(change))
+  ) {
+    out.push('change is a digit string from "1" to "20".');
+  }
+  const after = v["after"];
+  if (after !== undefined && (typeof after !== "string" || after.length > 64)) {
+    out.push("after is an instant of up to 64 characters.");
+  }
+  return out;
+}
+
+/**
+ * Cron in a Zone: a cron line, a zone, a year and which of that year's clock
+ * changes to draw. Every key is the permalink key. The widget judges the line,
+ * the zone and the instant itself, so the schema checks shape only.
+ */
+export const showCronInAZoneInput = z
+  .object({
+    line: z
+      .string()
+      .min(1)
+      .max(64)
+      .describe(
+        "The five-field cron line exactly as the reader wrote it, never corrected.",
+      ),
+    zone: z
+      .string()
+      .min(1)
+      .max(64)
+      .describe(
+        "An IANA time zone id. Send one only when the reader named the zone.",
+      ),
+    year: z
+      .number()
+      .int()
+      .describe(
+        "The year whose clock changes to draw. Required, with no default.",
+      ),
+    change: z
+      .string()
+      .regex(/^(?:[1-9]|1\d|20)$/)
+      .optional()
+      .describe(
+        'Which of the year\'s clock changes, in time order: "1" is the first, "2" the second. Default "1".',
+      ),
+    after: z
+      .string()
+      .max(64)
+      .optional()
+      .describe(
+        "Optional: an instant. The two next-run lists start strictly after it.",
+      ),
+  })
+  .superRefine((v, ctx) => {
+    for (const message of cronZoneProblems(v)) {
+      ctx.addIssue({ code: "custom", message });
+    }
+  });
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -997,7 +1081,8 @@ export type DoxToolName =
   | "showDurationParserBench"
   | "showIdTimestampDecoder"
   | "showColumnTimestampBridge"
-  | "showMoroccoClockChange";
+  | "showMoroccoClockChange"
+  | "showCronInAZone";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -1038,6 +1123,7 @@ export const DOX_TOOL_INPUTS = {
   showIdTimestampDecoder: showIdTimestampDecoderInput,
   showColumnTimestampBridge: showColumnTimestampBridgeInput,
   showMoroccoClockChange: showMoroccoClockChangeInput,
+  showCronInAZone: showCronInAZoneInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1313,6 +1399,13 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader asks whether their runtime, server or browser still shows Morocco, Casablanca, El Aaiun or Western Sahara an hour ahead, whether its time zone data has the 2026 Morocco change, or what a Moroccan zone's clock change is",
     args: "zone: optional, one IANA id from the checker's map list to pin (never a country or a place name)",
   },
+  {
+    name: "showCronInAZone",
+    purpose:
+      "Show one cron line on the night a zone's clocks change, under both documented rules side by side: what crontab(5) matches and what a running cron daemon does, with the next twelve runs under each.",
+    when: "Call when the reader asks whether a cron job runs, runs twice or is skipped when the clocks change, what happens to a `30 2 * * *` job in spring, or how a Kubernetes CronJob or GitHub Actions schedule behaves across a clock change.",
+    args: 'line: the cron line exactly as the reader wrote it, never corrected; zone: an IANA id, only when the reader named it; year: required, a whole year; change: the year\'s first ("1") or second ("2") clock change in time order; after: optional instant for the lists. The tool shows both rules and there is no default to pick.',
+  },
 ];
 
 /**
@@ -1473,6 +1566,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[37].purpose,
     inputSchema: showMoroccoClockChangeInput,
   }),
+  showCronInAZone: tool({
+    description: DOX_TOOL_DOCS[38].purpose,
+    inputSchema: showCronInAZoneInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1534,6 +1631,7 @@ export const ENABLED_TOOL_NAMES = [
   "showIdTimestampDecoder",
   "showColumnTimestampBridge",
   "showMoroccoClockChange",
+  "showCronInAZone",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

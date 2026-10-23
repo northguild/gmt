@@ -10,7 +10,7 @@ library:
 generated_from:
   domain_map: 'skills/_artifacts/domain_map.yaml'
   skill_spec: 'skills/_artifacts/skill_spec.md'
-generated_at: '2026-10-22'
+generated_at: '2026-10-23'
 
 skills:
   # Consumer-facing core skills
@@ -84,7 +84,7 @@ skills:
     domain: zoned-date-operations
     path: 'skills/gmt-timezone/SKILL.md'
     package: 'packages/gmt'
-    description: Timezone-aware operations — get zoned now, format zoned datetimes/ranges, convert between plain/zoned/UTC/Unix, DST disambiguation control, the instant-plus-offset pair (toOffsetInstant/fromOffsetInstant), local-time classification/resolution (classifyLocal/resolveLocal), why a stored offset-plus-zone string no longer resolves (classifyStoredZoned, from zoned/classify), real zone unit boundaries always (startOfZoned/endOfZoned/startOfUnix/endOfUnix, which take no disambiguation/offset options), hours in a local day (getHoursInZonedDay), zone-aware boundary flooring and bucketing (floorToZone/bucketRange) rather than roundZoned truncation, calendar-annotated zoned strings, zoned values exact at the range limits (Australia/Sydney at the maximum, an offset-less Etc/GMT+12 wall clock at the minimum), operating hours recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime (weekly local windows with midnight wrap, holidays and overrides resolved in the schedule's zone, open-time elapsed and SLA deadlines), and daylight time read from the zone's clock changes by GMT's own rule (isInDaylightSaving for a zoned value, hasDaylightSaving(timeZone, { at }) for a zone at a reference instant); transport legs, intermodal free time and EDI timestamps are in gmt-transport and gmt-intermodal
+    description: Timezone-aware operations — get zoned now, format zoned datetimes/ranges, convert between plain/zoned/UTC/Unix, DST disambiguation control, the instant-plus-offset pair (toOffsetInstant/fromOffsetInstant), local-time classification/resolution (classifyLocal/resolveLocal), why a stored offset-plus-zone string no longer resolves (classifyStoredZoned, from zoned/classify), real zone unit boundaries always (startOfZoned/endOfZoned/startOfUnix/endOfUnix, which take no disambiguation/offset options), hours in a local day (getHoursInZonedDay), zone-aware boundary flooring and bucketing (floorToZone/bucketRange) rather than roundZoned truncation, calendar-annotated zoned strings, zoned values exact at the range limits (Australia/Sydney at the maximum, an offset-less Etc/GMT+12 wall clock at the minimum), operating hours recurringWindows/operatingIntervals/isOpenAt/nextOpenAt/nextCloseAt/operatingTimeBetween/addOperatingTime (weekly local windows with midnight wrap, holidays and overrides resolved in the schedule's zone, open-time elapsed and SLA deadlines), recurrence rules and cron lines in a zone (parseRecurrenceRule/expandRecurrence for RFC 5545 RRULE with RDATE/EXDATE, parseCronExpression/cronRuns with a required crontabMatch or daemonCatchUp policy, every row classified unique/nonexistent/ambiguous), and daylight time read from the zone's clock changes by GMT's own rule (isInDaylightSaving for a zoned value, hasDaylightSaving(timeZone, { at }) for a zone at a reference instant); transport legs, intermodal free time and EDI timestamps are in gmt-transport and gmt-intermodal
     sources:
       - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/*.mdx'
       - 'northguild/gmt:apps/dox/src/content/docs/guides/concepts/dst-disambiguation.md'
@@ -109,6 +109,11 @@ skills:
       - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
       - 'northguild/gmt:packages/gmt/src/calendar/hours/index.ts'
       - 'northguild/gmt:packages/gmt/src/types/operating-schedule.ts'
+      - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/recurrence-and-cron.mdx'
+      - 'northguild/gmt:packages/gmt/src/recurrence/parse/index.ts'
+      - 'northguild/gmt:packages/gmt/src/recurrence/calculate/index.ts'
+      - 'northguild/gmt:packages/gmt/src/types/recurrence.ts'
+      - 'northguild/gmt:packages/gmt/src/types/cron.ts'
 
   # Consumer-facing composition skills
   - name: GMT Integration

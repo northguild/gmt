@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 65250,
-  "files": 869,
-  "executions": 1957500,
+  "tests": 66620,
+  "files": 879,
+  "executions": 1998600,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 687,
+  "functions": 691,
   "patterns": 27,
   "byNamespace": [
     {
@@ -95,6 +95,10 @@
     {
       "namespace": "instant",
       "count": 5
+    },
+    {
+      "namespace": "recurrence",
+      "count": 4
     },
     {
       "namespace": "span",
