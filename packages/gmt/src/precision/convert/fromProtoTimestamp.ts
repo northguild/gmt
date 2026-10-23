@@ -3,8 +3,8 @@ import {
   PROTO_TIMESTAMP_MAX_SECONDS,
   PROTO_TIMESTAMP_MIN_SECONDS,
   readProtoRecord,
+  instantStringFromEpochNanoseconds,
 } from "../../internal";
-import { fromNanoseconds } from "./fromNanoseconds";
 import type { ProtoTimestamp } from "./toProtoTimestamp";
 
 /**
@@ -52,5 +52,7 @@ export function fromProtoTimestamp(
     return "";
   }
 
-  return fromNanoseconds(seconds * NANOSECONDS_PER_SECOND + BigInt(nanos));
+  return instantStringFromEpochNanoseconds(
+    seconds * NANOSECONDS_PER_SECOND + BigInt(nanos),
+  );
 }

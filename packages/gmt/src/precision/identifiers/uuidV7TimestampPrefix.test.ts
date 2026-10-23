@@ -12,6 +12,8 @@ describe("uuidV7TimestampPrefix", () => {
     ${"2024-01-01T09:00:00+09:00"}             | ${"018cc251-f400"} | ${"offset input"}
     ${"+010889-08-02T05:31:50.655Z"}           | ${"ffffffff-ffff"} | ${"2^48 - 1 ms"}
     ${"1970-01-01T00:00:00.001Z"}              | ${"00000000-0001"} | ${"one millisecond"}
+    ${"1970-01-01T00:00:00.0009999Z"}          | ${"00000000-0000"} | ${"sub-ms digits floor at the epoch"}
+    ${"+010889-08-02T05:31:50.6559999Z"}       | ${"ffffffff-ffff"} | ${"sub-ms digits floor at the 48-bit max"}
     ${"1970-02-19T17:02:47.296Z"}              | ${"00010000-0000"} | ${"2^32 ms = 0x000100000000"}
     ${"1970-02-19T17:02:47.295Z"}              | ${"0000ffff-ffff"} | ${"2^32 - 1 ms"}
   `("returns $expected for $input ($reason)", ({ input, expected }) => {
@@ -19,15 +21,20 @@ describe("uuidV7TimestampPrefix", () => {
   });
 
   it.each`
-    input                             | reason
-    ${"+010889-08-02T05:31:50.656Z"}  | ${"past 2^48 - 1 ms"}
-    ${"1969-12-31T23:59:59.999Z"}     | ${"before the Unix epoch"}
-    ${"1969-12-31T23:59:59.9999999Z"} | ${"sub-ms before the epoch still negative"}
-    ${"2024-01-01T00:00:00"}          | ${"no offset"}
-    ${"invalid"}                      | ${"not a date"}
-    ${""}                             | ${"empty"}
-    ${42}                             | ${"number"}
-    ${undefined}                      | ${"undefined"}
+    input                                 | reason
+    ${"+010889-08-02T05:31:50.656Z"}      | ${"2^48 ms: 12 hex digits cannot hold it"}
+    ${"+010889-08-02T05:31:50.6569999Z"}  | ${"sub-ms digits floor to 2^48 ms"}
+    ${"+010889-08-02T05:31:50.657Z"}      | ${"one millisecond past 2^48 ms"}
+    ${"+010889-08-02T14:31:50.656+09:00"} | ${"2^48 ms, expressed with an offset"}
+    ${"1970-01-01T00:00:00+01:00"}        | ${"an hour before the epoch, expressed with an offset"}
+    ${"-000001-01-01T00:00:00Z"}          | ${"far before the epoch"}
+    ${"1969-12-31T23:59:59.999Z"}         | ${"before the Unix epoch"}
+    ${"1969-12-31T23:59:59.9999999Z"}     | ${"sub-ms before the epoch still negative"}
+    ${"2024-01-01T00:00:00"}              | ${"no offset"}
+    ${"invalid"}                          | ${"not a date"}
+    ${""}                                 | ${"empty"}
+    ${42}                                 | ${"number"}
+    ${undefined}                          | ${"undefined"}
   `("returns an empty string for $input ($reason)", ({ input }) => {
     expect(uuidV7TimestampPrefix(input)).toBe("");
   });
@@ -42,12 +49,17 @@ describe("uuidV7TimestampPrefix", () => {
     "round-trips $input through fromUuidTimestamp as $floored",
     ({ input, floored }) => {
       const prefix = uuidV7TimestampPrefix(input);
-      expect(fromUuidTimestamp(prefix + "-7000-8000-000000000000")).toEqual({
-        instant: floored,
-        version: 7,
-      });
+      expect(fromUuidTimestamp(prefix + "-7000-8000-000000000000")).toBe(
+        floored,
+      );
     },
   );
+
+  it("sorts the largest v7 UUID below the Max UUID, the inclusive upper bound for an end at 2^48 ms", () => {
+    const largest = `${uuidV7TimestampPrefix("+010889-08-02T05:31:50.655Z")}-7fff-bfff-ffffffffffff`;
+
+    expect(largest <= "ffffffff-ffff-ffff-ffff-ffffffffffff").toBe(true);
+  });
 
   it("orders prefixes like instants", () => {
     const a = uuidV7TimestampPrefix("2024-01-01T00:00:00.001Z");

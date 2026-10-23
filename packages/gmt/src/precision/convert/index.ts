@@ -1,3 +1,4 @@
+export * from "./fromArrowLocalTimestamp";
 export * from "./fromArrowTimestamp";
 export * from "./fromDotNetTicks";
 export * from "./fromExcelSerial";
@@ -8,6 +9,7 @@ export * from "./fromParquetInt96";
 export * from "./fromPgMicroseconds";
 export * from "./fromProtoDuration";
 export * from "./fromProtoTimestamp";
+export * from "./toArrowLocalTimestamp";
 export * from "./toArrowTimestamp";
 export * from "./toDotNetTicks";
 export * from "./toExcelSerial";

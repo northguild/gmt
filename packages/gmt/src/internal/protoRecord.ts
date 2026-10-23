@@ -1,5 +1,3 @@
-import { isObject } from "./isObject";
-
 /**
  * Read a protobuf `{ seconds, nanos }` record from a caller's value.
  *
@@ -25,10 +23,6 @@ export function readProtoRecord(
   let nanos: unknown;
 
   try {
-    if (!isObject(value)) {
-      return null;
-    }
-
     ({ seconds: rawSeconds, nanos } = value as {
       seconds?: unknown;
       nanos?: unknown;
@@ -37,17 +31,15 @@ export function readProtoRecord(
     return null;
   }
 
-  if (typeof nanos !== "number" || !Number.isInteger(nanos)) {
+  if (!Number.isInteger(nanos)) {
     return null;
   }
 
-  if (typeof rawSeconds === "bigint") {
-    return { seconds: rawSeconds, nanos };
+  if (Number.isSafeInteger(rawSeconds)) {
+    rawSeconds = BigInt(rawSeconds as number);
   }
 
-  if (typeof rawSeconds === "number" && Number.isSafeInteger(rawSeconds)) {
-    return { seconds: BigInt(rawSeconds), nanos };
-  }
-
-  return null;
+  return typeof rawSeconds === "bigint"
+    ? { seconds: rawSeconds, nanos: nanos as number }
+    : null;
 }

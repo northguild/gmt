@@ -118,12 +118,9 @@ const CALL_FRAME_SIZER = FORMATS.map((f) =>
     : `${f.fn}(${callArgs([LONGEST_ID])[1]})`,
 ).join("\n");
 
-const WIDEST_UUID_RESULT = { instant: WIDEST_INSTANT, version: 1 } as const;
-
-const OUTPUT_SIZER = [
-  formatValue(WIDEST_UUID_RESULT),
-  ...[1, 2, 3, 4].map(() => formatValue(WIDEST_INSTANT)),
-].join("\n");
+const OUTPUT_SIZER = [1, 2, 3, 4, 5]
+  .map(() => formatValue(WIDEST_INSTANT))
+  .join("\n");
 
 /** Every word the hero's reason slot can show. */
 const REASON_TEXTS = [EMPTY_ID_TEXT, NONE_READ_TEXT, MANY_READ_TEXT];
@@ -164,18 +161,12 @@ function returnedHtml(result: RowResult): string {
     return `<code class="gmt-iddecode-literal">${escapeHtml(result.literal)}</code>`;
   }
   const instant = instantPiecesHtml(result.instant);
-  return result.version === undefined
-    ? `<code class="gmt-iddecode-literal">"${instant}"</code>`
-    : `<code class="gmt-iddecode-literal">{ instant: "${instant}", version: ${result.version} }</code>`;
+  return `<code class="gmt-iddecode-literal">"${instant}"</code>`;
 }
 
 /** Every Returned cell can show one of these, so each reserves the tallest. */
 const RETURNED_SIZERS = [
-  returnedHtml({
-    kind: "read",
-    instant: WIDEST_INSTANT,
-    version: 1,
-  }),
+  returnedHtml({ kind: "read", instant: WIDEST_INSTANT }),
   returnedHtml({ kind: "not-called", why: NO_LAYOUT_TEXT }),
   returnedHtml({ kind: "not-called", why: BAD_LAYOUT_TEXT }),
 ];
@@ -225,7 +216,13 @@ function heroHtml(): string {
     holdHtml(
       `<span class="gmt-punct-hero-value" data-role="hero-value" data-off></span>` +
         `<span class="gmt-iddecode-pill" data-role="hero-pill" data-off>${NO_SIGNAL_PILL}</span>`,
-      [sizerHtml("span", "gmt-punct-hero-value", instantPiecesHtml(WIDEST_INSTANT))],
+      [
+        sizerHtml(
+          "span",
+          "gmt-punct-hero-value",
+          instantPiecesHtml(WIDEST_INSTANT),
+        ),
+      ],
       "gmt-ledger-hold",
     ) +
     `<span class="gmt-punct-hero-sub"><span class="gmt-iddecode-chip" data-role="hero-version" data-off>${versionChip(7)}</span></span>` +

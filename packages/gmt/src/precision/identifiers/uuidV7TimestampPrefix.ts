@@ -1,10 +1,4 @@
-import {
-  MAX_UNIX_MS_48,
-  NANOSECONDS_PER_MILLISECOND,
-  floorDivide,
-  parseInstantNanoseconds,
-} from "../../internal";
-
+import { UNIX_MS_48_END, prefixMilliseconds } from "../../internal";
 /**
  * The first 13 characters of every version 7 UUID minted in the same millisecond as an
  * instant, for range scans over stored UUID text (RFC 9562 §5.7, §6.11).
@@ -19,7 +13,10 @@ import {
  * - Accepts any instant string GMT accepts, a zoned one included.
  * - Not a generator: the result is not a UUID.
  * - Returns "" on invalid input, an instant before 1970-01-01, or one past 2^48 − 1 ms
- *   (`+010889-08-02T05:31:50.655Z`).
+ *   (`+010889-08-02T05:31:50.655Z`). 12 hex digits cannot hold 2^48, so a range that ends at
+ *   or past 2^48 ms has no exclusive end bound here: leave the upper bound off, or use the Max
+ *   UUID `ffffffff-ffff-ffff-ffff-ffffffffffff` as an inclusive upper bound (`uuid <= max`).
+ *   Every v7 UUID sorts below or equal to it, as text and as bytes.
  *
  * @param isoString ISO 8601 instant string (with `Z`, an offset or a zone)
  * @returns 13-character lower-case hyphenated prefix, or "" on invalid input
@@ -36,13 +33,8 @@ import {
  * @example uuidV7TimestampPrefix("invalid") // ""
  */
 export function uuidV7TimestampPrefix(isoString: string): string {
-  const nanoseconds = parseInstantNanoseconds(isoString);
-  if (nanoseconds === null) {
-    return "";
-  }
-
-  const milliseconds = floorDivide(nanoseconds, NANOSECONDS_PER_MILLISECOND);
-  if (milliseconds < 0n || milliseconds > MAX_UNIX_MS_48) {
+  const milliseconds = prefixMilliseconds(isoString);
+  if (milliseconds === null || milliseconds === UNIX_MS_48_END) {
     return "";
   }
 

@@ -48,23 +48,25 @@ describe("fromSnowflake", () => {
   );
 
   it.each`
-    id                        | reason
-    ${2n ** 64n}              | ${"2^64 as bigint"}
-    ${-1n}                    | ${"negative bigint"}
-    ${"18446744073709551616"} | ${"2^64 as string"}
-    ${"-1"}                   | ${"signed string"}
-    ${"+1"}                   | ${"plus sign"}
-    ${" 1"}                   | ${"leading space"}
-    ${"1\n"}                  | ${"trailing newline"}
-    ${"1e3"}                  | ${"exponent"}
-    ${"0x10"}                 | ${"hex"}
-    ${""}                     | ${"empty"}
+    id                              | reason
+    ${2n ** 64n}                    | ${"2^64 as bigint"}
+    ${-1n}                          | ${"negative bigint"}
+    ${"18446744073709551616"}       | ${"2^64 as string"}
+    ${"184467440737095516150"}      | ${"21 digits"}
+    ${"000000000000000000001"}      | ${"21 digits with leading zeros: the cap is on length"}
+    ${"-1"}                         | ${"signed string"}
+    ${"+1"}                         | ${"plus sign"}
+    ${" 1"}                         | ${"leading space"}
+    ${"1\n"}                        | ${"trailing newline"}
+    ${"1e3"}                        | ${"exponent"}
+    ${"0x10"}                       | ${"hex"}
+    ${""}                           | ${"empty"}
     ${Number("175928847299117063")} | ${"number: ids above 2^53 lose digits"}
-    ${1}                      | ${"small number is still rejected"}
-    ${null}                   | ${"null"}
-    ${undefined}              | ${"undefined"}
-    ${{}}                     | ${"object"}
-    ${true}                   | ${"boolean"}
+    ${1}                            | ${"small number is still rejected"}
+    ${null}                         | ${"null"}
+    ${undefined}                    | ${"undefined"}
+    ${{}}                           | ${"object"}
+    ${true}                         | ${"boolean"}
   `(
     "returns an empty string for an id that is not a uint64 ($reason)",
     ({ id }) => {
@@ -82,6 +84,17 @@ describe("fromSnowflake", () => {
     ${{ ...D, shift: -1 }}                             | ${"negative shift"}
     ${{ ...D, shift: 22.5 }}                           | ${"non-integer shift"}
     ${{ ...D, shift: "22" }}                           | ${"string shift"}
+    ${{ ...D, shift: 22n }}                            | ${"bigint shift"}
+    ${{ ...T, shift: 22n }}                            | ${"bigint shift with timestampBits"}
+    ${{ ...T, shift: Symbol("22") }}                   | ${"symbol shift with timestampBits"}
+    ${{
+  ...T,
+  shift: {
+    valueOf: () => {
+      throw new Error("valueOf");
+    },
+  },
+}} | ${"shift whose valueOf throws"}
     ${{ ...D, timestampBits: 43 }}                     | ${"timestampBits above 64 - shift"}
     ${{ ...D, timestampBits: 0 }}                      | ${"timestampBits 0"}
     ${{ ...D, timestampBits: 41.5 }}                   | ${"non-integer timestampBits"}

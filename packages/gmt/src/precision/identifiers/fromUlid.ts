@@ -1,9 +1,10 @@
 import {
+  CROCKFORD_ALPHABET,
   NANOSECONDS_PER_MILLISECOND,
-  crockfordValue,
+  digitsValue,
+  instantStringFromEpochNanoseconds,
   ulidText,
 } from "../../internal";
-import { fromNanoseconds } from "../convert/fromNanoseconds";
 
 /**
  * Read the instant a ULID carries (ulid/spec README, § Components and § Canonical String
@@ -15,8 +16,9 @@ import { fromNanoseconds } from "../convert/fromNanoseconds";
  * - The first character must be `0`-`7`: `7ZZZZZZZZZZZZZZZZZZZZZZZZZ` is the largest valid ULID
  *   and anything larger "should be rejected" (§ Overflow Errors when Parsing Base32 Strings).
  * - Strict alphabet: `I`, `L`, `O` and `U` are rejected, not read as `1`, `1` and `0` the way
- *   Crockford's own decoder folds them. GMT rule: the spec lists the alphabet and says nothing
- *   of folding, and a decoder that folds reads a mistyped ID as a different instant.
+ *   Crockford's own decoder folds them. ULID spec README § Encoding: the alphabet "excludes the
+ *   letters I, L, O, and U to avoid confusion and abuse". A ULID never contains them, so
+ *   reading them as `1`, `1` and `0` would turn a mistyped ID into a different instant.
  * - Millisecond precision: the result never has more than three fraction digits.
  * - The time is the generator's clock; ULIDs from different machines order only as well as
  *   their clocks agree.
@@ -41,6 +43,11 @@ export function fromUlid(ulid: string): string {
     return "";
   }
 
-  const milliseconds = crockfordValue(ulid.slice(0, 10));
-  return fromNanoseconds(milliseconds * NANOSECONDS_PER_MILLISECOND);
+  const milliseconds = digitsValue(
+    ulid.slice(0, 10).toUpperCase(),
+    CROCKFORD_ALPHABET,
+  );
+  return instantStringFromEpochNanoseconds(
+    milliseconds * NANOSECONDS_PER_MILLISECOND,
+  );
 }

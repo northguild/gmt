@@ -13,29 +13,33 @@ describe("fromProtoDuration", () => {
   });
 
   it.each`
-    seconds           | nanos         | expected                      | reason
-    ${-1n}            | ${-500000000} | ${"-PT1.5S"}                  | ${"both negative"}
-    ${5401n}          | ${500000000}  | ${"PT1H30M1.5S"}              | ${"3600 + 1800 + 1 s"}
-    ${5401}           | ${500000000}  | ${"PT1H30M1.5S"}              | ${"number seconds"}
-    ${86400n}         | ${0}          | ${"PT24H"}                    | ${"hours are the largest unit, no day"}
-    ${0n}             | ${0}          | ${"PT0S"}                     | ${"zero"}
-    ${0n}             | ${-1}         | ${"-PT0.000000001S"}          | ${"minus one nanosecond"}
-    ${0n}             | ${1}          | ${"PT0.000000001S"}           | ${"one nanosecond"}
-    ${0n}             | ${999999999}  | ${"PT0.999999999S"}           | ${"largest nanos"}
-    ${1n}             | ${0}          | ${"PT1S"}                     | ${"one second"}
-    ${60n}            | ${1}          | ${"PT1M0.000000001S"}         | ${"minute and a nanosecond"}
-    ${315576000000n}  | ${999999999}  | ${"PT87660000H0.999999999S"}  | ${"max seconds with max nanos is valid (Durations.MAX_VALUE)"}
-    ${-315576000000n} | ${-999999999} | ${"-PT87660000H0.999999999S"} | ${"min seconds with min nanos is valid"}
-    ${-3600n}         | ${0}          | ${"-PT1H"}                    | ${"minus one hour"}
-    ${315576000000n}  | ${0}          | ${"PT87660000H"}              | ${"maximum"}
-    ${-315576000000n} | ${0}          | ${"-PT87660000H"}             | ${"minimum"}
-    ${-5401}          | ${-500000000} | ${"-PT1H30M1.5S"}             | ${"negative number seconds"}
-    ${90000n}         | ${0}          | ${"PT25H"}                    | ${"25 h stays hours, never a day"}
-    ${3661n}          | ${0}          | ${"PT1H1M1S"}                 | ${"hours, minutes, seconds"}
-    ${0n}             | ${1500000}    | ${"PT0.0015S"}                | ${"milliseconds and microseconds"}
-    ${59n}            | ${999999999}  | ${"PT59.999999999S"}          | ${"just under a minute"}
-    ${-60n}           | ${-1}         | ${"-PT1M0.000000001S"}        | ${"negative minute and a nanosecond"}
-    ${5401}           | ${0}          | ${"PT1H30M1S"}                | ${"number seconds, zero nanos"}
+    seconds           | nanos         | expected                         | reason
+    ${-1n}            | ${-500000000} | ${"-PT1.5S"}                     | ${"both negative"}
+    ${5401n}          | ${500000000}  | ${"PT1H30M1.5S"}                 | ${"3600 + 1800 + 1 s"}
+    ${5401}           | ${500000000}  | ${"PT1H30M1.5S"}                 | ${"number seconds"}
+    ${86400n}         | ${0}          | ${"PT24H"}                       | ${"hours are the largest unit, no day"}
+    ${0n}             | ${0}          | ${"PT0S"}                        | ${"zero"}
+    ${0n}             | ${-1}         | ${"-PT0.000000001S"}             | ${"minus one nanosecond"}
+    ${0n}             | ${1}          | ${"PT0.000000001S"}              | ${"one nanosecond"}
+    ${0n}             | ${999999999}  | ${"PT0.999999999S"}              | ${"largest nanos"}
+    ${1n}             | ${0}          | ${"PT1S"}                        | ${"one second"}
+    ${60n}            | ${1}          | ${"PT1M0.000000001S"}            | ${"minute and a nanosecond"}
+    ${315576000000n}  | ${999999999}  | ${"PT87660000H0.999999999S"}     | ${"max seconds with max nanos is valid (Durations.MAX_VALUE)"}
+    ${-315576000000n} | ${-999999999} | ${"-PT87660000H0.999999999S"}    | ${"min seconds with min nanos is valid"}
+    ${-3600n}         | ${0}          | ${"-PT1H"}                       | ${"minus one hour"}
+    ${0n}             | ${-999999999} | ${"-PT0.999999999S"}             | ${"smallest nanos"}
+    ${315576000000}   | ${0}          | ${"PT87660000H"}                 | ${"number seconds at the maximum"}
+    ${-315576000000}  | ${-999999999} | ${"-PT87660000H0.999999999S"}    | ${"number seconds at the minimum with min nanos"}
+    ${315575999999n}  | ${999999999}  | ${"PT87659999H59M59.999999999S"} | ${"one second below the maximum, max nanos"}
+    ${315576000000n}  | ${0}          | ${"PT87660000H"}                 | ${"maximum"}
+    ${-315576000000n} | ${0}          | ${"-PT87660000H"}                | ${"minimum"}
+    ${-5401}          | ${-500000000} | ${"-PT1H30M1.5S"}                | ${"negative number seconds"}
+    ${90000n}         | ${0}          | ${"PT25H"}                       | ${"25 h stays hours, never a day"}
+    ${3661n}          | ${0}          | ${"PT1H1M1S"}                    | ${"hours, minutes, seconds"}
+    ${0n}             | ${1500000}    | ${"PT0.0015S"}                   | ${"milliseconds and microseconds"}
+    ${59n}            | ${999999999}  | ${"PT59.999999999S"}             | ${"just under a minute"}
+    ${-60n}           | ${-1}         | ${"-PT1M0.000000001S"}           | ${"negative minute and a nanosecond"}
+    ${5401}           | ${0}          | ${"PT1H30M1S"}                   | ${"number seconds, zero nanos"}
   `(
     "returns $expected for $seconds s + $nanos ns ($reason)",
     ({ seconds, nanos, expected }) => {
@@ -61,6 +65,15 @@ describe("fromProtoDuration", () => {
     ${315576000001}             | ${0}                        | ${"number seconds above the maximum"}
     ${2n ** 70n}                | ${0}                        | ${"bigint far beyond int64"}
     ${-315576000000n}           | ${1}                        | ${"sign rule at the minimum seconds"}
+    ${315576000000n}            | ${-1}                       | ${"sign rule at the maximum seconds"}
+    ${315576000000n}            | ${-999999999}               | ${"sign rule: maximum seconds with minimum nanos"}
+    ${-315576000000n}           | ${999999999}                | ${"sign rule: minimum seconds with maximum nanos"}
+    ${5401}                     | ${-500000000}               | ${"sign rule with number seconds"}
+    ${315576000000n}            | ${1000000000}               | ${"maximum seconds, nanos one past 999999999"}
+    ${-315576000000n}           | ${-1000000000}              | ${"minimum seconds, nanos one below -999999999"}
+    ${315576000001n}            | ${999999999}                | ${"seconds one past the maximum, max nanos"}
+    ${-315576000001n}           | ${-999999999}               | ${"seconds one below the minimum, min nanos"}
+    ${-315576000001}            | ${0}                        | ${"number seconds one below the minimum"}
     ${0n}                       | ${1n}                       | ${"bigint nanos"}
     ${315576000001n}            | ${0}                        | ${"above the maximum"}
     ${-315576000001n}           | ${0}                        | ${"below the minimum"}

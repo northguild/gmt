@@ -1,15 +1,6 @@
-import {
-  NANOSECONDS_PER_MICROSECOND,
-  NANOSECONDS_PER_MILLISECOND,
-  NANOSECONDS_PER_SECOND,
-  PROTO_DURATION_MAX_SECONDS,
-  readProtoRecord,
-} from "../../internal";
+import { PROTO_DURATION_MAX_SECONDS, readProtoRecord } from "../../internal";
 import { Temporal } from "../../internal/temporal";
 import type { ProtoDuration } from "./toProtoDuration";
-
-const NANOSECONDS_PER_MINUTE = 60n * NANOSECONDS_PER_SECOND;
-const NANOSECONDS_PER_HOUR = 60n * NANOSECONDS_PER_MINUTE;
 
 /**
  * Convert a protobuf `google.protobuf.Duration` record back to an ISO 8601 duration string.
@@ -52,40 +43,21 @@ export function fromProtoDuration(
     nanos < -999_999_999 ||
     nanos > 999_999_999 ||
     seconds < -PROTO_DURATION_MAX_SECONDS ||
-    seconds > PROTO_DURATION_MAX_SECONDS ||
-    // duration.proto: a non-zero nanos "must be of the same sign as the seconds field".
-    (seconds !== 0n && nanos !== 0 && seconds < 0n !== nanos < 0)
+    seconds > PROTO_DURATION_MAX_SECONDS
   ) {
     return "";
   }
 
-  const total = seconds * NANOSECONDS_PER_SECOND + BigInt(nanos);
-  const negative = total < 0n;
-  const magnitude = negative ? -total : total;
-  const sign = negative ? -1 : 1;
-
   try {
+    // duration.proto: a non-zero nanos "must be of the same sign as the seconds field";
+    // `Temporal.Duration.from` rejects mixed signs (Temporal spec IsValidDuration), so it throws.
+    // Balance into hours (never days: PT24H, not P1D); `round` keeps the sign and is exact.
     return Temporal.Duration.from({
-      hours: sign * Number(magnitude / NANOSECONDS_PER_HOUR),
-      minutes:
-        sign *
-        Number((magnitude % NANOSECONDS_PER_HOUR) / NANOSECONDS_PER_MINUTE),
-      seconds:
-        sign *
-        Number((magnitude % NANOSECONDS_PER_MINUTE) / NANOSECONDS_PER_SECOND),
-      milliseconds:
-        sign *
-        Number(
-          (magnitude % NANOSECONDS_PER_SECOND) / NANOSECONDS_PER_MILLISECOND,
-        ),
-      microseconds:
-        sign *
-        Number(
-          (magnitude % NANOSECONDS_PER_MILLISECOND) /
-            NANOSECONDS_PER_MICROSECOND,
-        ),
-      nanoseconds: sign * Number(magnitude % NANOSECONDS_PER_MICROSECOND),
-    }).toString();
+      seconds: Number(seconds),
+      nanoseconds: nanos,
+    })
+      .round({ largestUnit: "hours" })
+      .toString();
   } catch {
     return "";
   }

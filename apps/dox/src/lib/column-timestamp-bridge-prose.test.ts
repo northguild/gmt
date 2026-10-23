@@ -30,10 +30,13 @@ describe("the call table", async () => {
         julianDay: 2440588,
         nanosOfDay: 86400000000000n,
       }),
-      toArrowTimestamp: lib.toArrowTimestamp(bad, { unit: "second" }),
-      fromArrowTimestamp: lib.fromArrowTimestamp(0n, {
-        unit: "bogus" as never,
-      }),
+      toArrowTimestamp: lib.toArrowTimestamp(bad, "second"),
+      toArrowLocalTimestamp: lib.toArrowLocalTimestamp(bad, "second"),
+      fromArrowTimestamp: lib.fromArrowTimestamp(0n, "bogus" as never),
+      fromArrowLocalTimestamp: lib.fromArrowLocalTimestamp(
+        0n,
+        "bogus" as never,
+      ),
       toProtoTimestamp: lib.toProtoTimestamp(bad),
       fromProtoTimestamp: lib.fromProtoTimestamp({ seconds: 0n, nanos: -1 }),
       toProtoDuration: lib.toProtoDuration(bad),

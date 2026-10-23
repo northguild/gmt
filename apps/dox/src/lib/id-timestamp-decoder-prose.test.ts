@@ -20,7 +20,7 @@ const row = (label: string) => {
 
 describe("the epoch table", async () => {
   const lib = await loadIdentifierLib();
-  const uuid = (id: string) => lib.fromUuidTimestamp(id)?.instant;
+  const uuid = (id: string) => lib.fromUuidTimestamp(id);
 
   it("UUID v1 and v6", () => {
     const cells = row("UUID v1 and v6");

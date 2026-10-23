@@ -29,6 +29,7 @@ import {
   NO_DECODE_TEXT,
   NO_DURATION_TEXT,
   NO_VALUE_TEXT,
+  REASON_INT64,
   REASON_ZONED,
   REASON_ZONELESS,
   UNITS,
@@ -48,6 +49,7 @@ import {
   type Hero,
   type Reading,
   type ReadBack,
+  unknownZoneText,
 } from "./column-timestamp-bridge";
 import { loadColumnBridgeLib, type ColumnBridgeLib } from "./column-bridge-lib";
 import {
@@ -91,10 +93,18 @@ const CONVERTERS = [
   "fromParquetInt96",
   "toArrowTimestamp",
   "fromArrowTimestamp",
+  "toArrowLocalTimestamp",
+  "fromArrowLocalTimestamp",
   "toProtoTimestamp",
   "fromProtoTimestamp",
   "toProtoDuration",
   "fromProtoDuration",
+] as const;
+
+/** Each nanosecond int64 guard's reference page. */
+const GUARDS = [
+  "isValidInt64NanosecondInstant",
+  "isValidInt64NanosecondDateTime",
 ] as const;
 
 /** The links under the calls: the sibling tool and each function's page. */
@@ -113,6 +123,11 @@ export const BRIDGE_LINKS = [
     role: `link-ref-${fn}`,
     text: `${fn} reference`,
     href: `/reference/precision/convert/${fn}/`,
+  })),
+  ...GUARDS.map((fn) => ({
+    role: `link-ref-${fn}`,
+    text: `${fn} reference`,
+    href: `/reference/precision/validate/${fn}/`,
   })),
 ] as const;
 
@@ -133,6 +148,8 @@ const MESSAGE_TEXTS = [
   BAD_HEX_TEXT,
   REASON_ZONED,
   REASON_ZONELESS,
+  REASON_INT64,
+  unknownZoneText(LONGEST_VALUE),
 ];
 
 /** The validator line a card prints: the call and what it returned. */
@@ -148,23 +165,16 @@ const VALIDATOR_SIZER = validatorHtml({
 
 /** A read-back as the card prints it: the Arrow record, or the bare string. */
 function readBackHtml(back: ReadBack): string {
-  const pieces = instantPiecesHtml(back.text);
-  if (back.kind === "instant") return `{ instant: "${pieces}" }`;
-  if (back.kind === "local") return `{ local: "${pieces}", zoneless: true }`;
-  return pieces;
+  return instantPiecesHtml(back.text);
 }
 
 function zonelessReadHtml(text: string): string {
-  return `{ local: "${instantPiecesHtml(text)}", zoneless: true }`;
+  return instantPiecesHtml(text);
 }
 
-const READBACK_SIZERS = [
-  readBackHtml({ kind: "text", text: WIDEST_READBACK }),
-  readBackHtml({ kind: "instant", text: WIDEST_READBACK }),
-  readBackHtml({ kind: "local", text: WIDEST_READBACK }),
-];
+const READBACK_SIZERS = [readBackHtml({ kind: "text", text: WIDEST_READBACK })];
 
-/** The longest call set: 13 lines, every one with the longest value. */
+/** The longest call set: 15 lines, every one with the longest value. */
 const CALL_FRAME_SIZER = [
   ["isValidInstant", [LONGEST_VALUE]],
   ["toNanoseconds", [LONGEST_VALUE]],
@@ -172,21 +182,11 @@ const CALL_FRAME_SIZER = [
   ["toParquetInt96", [LONGEST_VALUE]],
   ["fromParquetInt96", [{ julianDay: -97559412, nanosOfDay: 86399999999999n }]],
   ["isValidDateTime", [LONGEST_VALUE]],
-  [
-    "toArrowTimestamp",
-    [
-      LONGEST_VALUE,
-      { unit: "nanosecond", timeZone: "America/Argentina/Buenos_Aires" },
-    ],
-  ],
-  [
-    "fromArrowTimestamp",
-    [
-      -9223372036854775808n,
-      { unit: "nanosecond", timeZone: "America/Argentina/Buenos_Aires" },
-    ],
-  ],
-  ["fromArrowTimestamp", [-9223372036854775808n, { unit: "nanosecond" }]],
+  ["isValidTimeZone", [LONGEST_VALUE]],
+  ["isValidInt64NanosecondInstant", [LONGEST_VALUE]],
+  ["toArrowTimestamp", [LONGEST_VALUE, "nanosecond"]],
+  ["fromArrowTimestamp", [-9223372036854775808n, "nanosecond"]],
+  ["fromArrowLocalTimestamp", [-9223372036854775808n, "nanosecond"]],
   ["toProtoTimestamp", [LONGEST_VALUE]],
   [
     "fromProtoTimestamp",
@@ -201,10 +201,9 @@ const CALL_FRAME_SIZER = [
   .map(([fn, args]) => `${fn as string}(${callArgs(args as unknown[])[1]})`)
   .join("\n");
 
-const OUTPUT_SIZER = Array.from(
-  { length: 13 },
-  () => `{ local: "${WIDEST_READBACK}", zoneless: true }`,
-).join("\n");
+const OUTPUT_SIZER = Array.from({ length: 15 }, () => WIDEST_READBACK).join(
+  "\n",
+);
 
 // ---------------------------------------------------------------------------
 // Template

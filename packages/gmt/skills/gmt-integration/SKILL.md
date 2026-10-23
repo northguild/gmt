@@ -13,23 +13,23 @@ description: >
   details, and the lint-package READMEs for lint setup; this skill is a routing
   pointer, not an API dump.
 sources:
-  - 'northguild/gmt:apps/dox/src/content/docs/install.mdx'
-  - 'northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integration.mdx'
-  - 'northguild/gmt:apps/dox/src/content/docs/guides/integration/linting.mdx'
-  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/nanosecond-precision.mdx'
-  - 'northguild/gmt:apps/dox/src/content/docs/guides/conversion/foreign-epoch-bridges.mdx'
-  - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
-  - 'northguild/gmt:packages/gmt/src/precision/convert/index.ts'
-  - 'northguild/gmt:packages/gmt/src/precision/identifiers/index.ts'
-  - 'northguild/gmt:apps/dox/src/content/docs/guides/conversion/time-ordered-identifiers.mdx'
-  - 'northguild/gmt:packages/gmt/src/precision/format/index.ts'
-  - 'northguild/gmt:packages/gmt/src/precision/calculate/index.ts'
-  - 'northguild/gmt:packages/gmt/src/precision/validate/index.ts'
-  - 'northguild/gmt:packages/gmt/src/timescale/index.ts'
+  - "northguild/gmt:apps/dox/src/content/docs/install.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integration.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/integration/linting.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/nanosecond-precision.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/conversion/foreign-epoch-bridges.mdx"
+  - "northguild/gmt:packages/gmt/src/zoned/validate/index.ts"
+  - "northguild/gmt:packages/gmt/src/precision/convert/index.ts"
+  - "northguild/gmt:packages/gmt/src/precision/identifiers/index.ts"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/conversion/time-ordered-identifiers.mdx"
+  - "northguild/gmt:packages/gmt/src/precision/format/index.ts"
+  - "northguild/gmt:packages/gmt/src/precision/calculate/index.ts"
+  - "northguild/gmt:packages/gmt/src/precision/validate/index.ts"
+  - "northguild/gmt:packages/gmt/src/timescale/index.ts"
 metadata:
   type: composition
-  library: '@northguild/gmt'
-  library_version: '1.20.0'
+  library: "@northguild/gmt"
+  library_version: "1.20.0"
 ---
 
 # GMT Integration
@@ -83,9 +83,12 @@ which lint package to install for Date-ban enforcement.
    `toDotNetTicks` / `fromDotNetTicks`, `toExcelSerial` / `fromExcelSerial`,
    `toPgMicroseconds` / `fromPgMicroseconds`, and the data-platform bridges
    `toParquetInt96` / `fromParquetInt96`, `toArrowTimestamp` / `fromArrowTimestamp`,
-   `toProtoTimestamp` / `fromProtoTimestamp`, `toProtoDuration` / `fromProtoDuration`.
-   An Arrow column without a timezone is wall-clock time, so `fromArrowTimestamp`
-   returns `{ local, zoneless: true }` and not an instant. Two traps they exist to close: an NTP
+   `toArrowLocalTimestamp` / `fromArrowLocalTimestamp`, `toProtoTimestamp` /
+   `fromProtoTimestamp`, `toProtoDuration` / `fromProtoDuration`. An Arrow column
+   without a timezone is wall-clock time, so read it with `fromArrowLocalTimestamp`,
+   which returns a plain date-time and not an instant. An `int64` of nanoseconds ends
+   in 1677 and 2262, so check with `isValidInt64NanosecondInstant` or
+   `isValidInt64NanosecondDateTime` before trusting a nanosecond `0n`. Two traps they exist to close: an NTP
    timestamp's seconds field wraps every ~136 years and carries no era, so
    `fromNtpTimestamp` needs the era passed in; and Excel's serial 60 is the phantom
    1900-02-29, a date that never existed, so it returns `""` rather than a neighbouring
@@ -124,7 +127,7 @@ which lint package to install for Date-ban enforcement.
 7. **Lint packages are toolchain-specific, not mutually exclusive.** Recommend
    only the one matching the project's existing linter; do not force all three.
 8. **Read an ID's time with `precision/identifiers`.** `fromUuidTimestamp` (UUID v1,
-   v6 and v7; any other version returns `null`), `fromUlid`, `fromObjectId`,
+   v6 and v7; any other version returns `""`), `fromUlid`, `fromObjectId`,
    `fromKsuid` and `fromSnowflake`. A Snowflake needs its layout passed explicitly,
    `fromSnowflake(id, { epochMs, shift })`, because the same ID read with another
    system's epoch gives a plausible wrong date. Never pass a 64-bit ID as a
@@ -143,12 +146,12 @@ which lint package to install for Date-ban enforcement.
 
 ## Lint package selection
 
-| Current lint stack | Recommend |
-| --- | --- |
-| ESLint | `@northguild/gmt-eslint` |
-| Biome | `@northguild/gmt-biome` |
-| Oxlint | `@northguild/gmt-oxlint` |
-| No linter yet | Add one of the above; install `@northguild/gmt` first |
+| Current lint stack | Recommend                                             |
+| ------------------ | ----------------------------------------------------- |
+| ESLint             | `@northguild/gmt-eslint`                              |
+| Biome              | `@northguild/gmt-biome`                               |
+| Oxlint             | `@northguild/gmt-oxlint`                              |
+| No linter yet      | Add one of the above; install `@northguild/gmt` first |
 
 These can be used individually or together. If the project has a lint package
 but no `@northguild/gmt`, suggest adding gmt to support safe Date-to-Temporal

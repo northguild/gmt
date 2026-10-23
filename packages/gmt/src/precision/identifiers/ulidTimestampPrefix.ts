@@ -1,10 +1,4 @@
-import {
-  MAX_UNIX_MS_48,
-  NANOSECONDS_PER_MILLISECOND,
-  crockfordDigits,
-  floorDivide,
-  parseInstantNanoseconds,
-} from "../../internal";
+import { crockfordDigits, prefixMilliseconds } from "../../internal";
 
 /**
  * The first 10 characters of every ULID minted in the same millisecond as an instant, for range
@@ -19,8 +13,11 @@ import {
  * - Sub-millisecond digits floor: the prefix names the millisecond the instant falls in.
  * - Accepts any instant string GMT accepts, a zoned one included.
  * - Not a generator: the result is 10 characters, not a ULID.
- * - Returns "" on invalid input, an instant before 1970-01-01, or one past 2^48 − 1 ms
- *   (`+010889-08-02T05:31:50.655Z`): the spec's overflow rule applies to encoding too.
+ * - The instant that floors to exactly 2^48 ms (`+010889-08-02T05:31:50.656Z`) gives
+ *   `"8000000000"`, the exclusive end bound that no ULID carries (the largest ULID prefix is
+ *   `7ZZZZZZZZZ`), so a range can end at the last millisecond of the 48-bit field.
+ * - Returns "" on invalid input, an instant before 1970-01-01, or one past 2^48 ms: the
+ *   spec's overflow rule applies to encoding too.
  *
  * @param isoString ISO 8601 instant string (with `Z`, an offset or a zone)
  * @returns 10-character upper-case Crockford prefix, or "" on invalid input
@@ -32,21 +29,14 @@ import {
  * @example ulidTimestampPrefix("2024-01-01T00:00:00.0009Z") // "01HK153X00" — floors to the millisecond
  * @example ulidTimestampPrefix("2024-01-01T09:00:00+09:00[Asia/Tokyo]") // "01HK153X00"
  * @example ulidTimestampPrefix("+010889-08-02T05:31:50.655Z") // "7ZZZZZZZZZ" — the largest
- * @example ulidTimestampPrefix("+010889-08-02T05:31:50.656Z") // "" — past 48 bits
+ * @example ulidTimestampPrefix("+010889-08-02T05:31:50.656Z") // "8000000000" — 2^48 ms, the exclusive end no ULID carries
+ * @example ulidTimestampPrefix("+010889-08-02T05:31:50.657Z") // "" — past the exclusive end
  * @example ulidTimestampPrefix("1969-12-31T23:59:59.999Z") // "" — before the Unix epoch
  * @example ulidTimestampPrefix("2024-01-01T00:00:00") // "" — no offset
  * @example ulidTimestampPrefix("invalid") // ""
  */
 export function ulidTimestampPrefix(isoString: string): string {
-  const nanoseconds = parseInstantNanoseconds(isoString);
-  if (nanoseconds === null) {
-    return "";
-  }
+  const milliseconds = prefixMilliseconds(isoString);
 
-  const milliseconds = floorDivide(nanoseconds, NANOSECONDS_PER_MILLISECOND);
-  if (milliseconds < 0n || milliseconds > MAX_UNIX_MS_48) {
-    return "";
-  }
-
-  return crockfordDigits(milliseconds, 10);
+  return milliseconds === null ? "" : crockfordDigits(milliseconds, 10);
 }

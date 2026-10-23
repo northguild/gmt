@@ -51,7 +51,7 @@ const RECORDED: Record<string, { hero: string; rows: Record<string, string> }> =
     "uuid-v7": {
       hero: "one",
       rows: {
-        fromUuidTimestamp: '{ instant: "2022-02-22T19:22:22Z", version: 7 }',
+        fromUuidTimestamp: '"2022-02-22T19:22:22Z"',
         fromUlid: '""',
         fromObjectId: '""',
         fromKsuid: '""',
@@ -61,33 +61,33 @@ const RECORDED: Record<string, { hero: string; rows: Record<string, string> }> =
     "uuid-v1": {
       hero: "one",
       rows: {
-        fromUuidTimestamp: '{ instant: "2022-02-22T19:22:22Z", version: 1 }',
+        fromUuidTimestamp: '"2022-02-22T19:22:22Z"',
       },
     },
     "uuid-v6": {
       hero: "one",
       rows: {
-        fromUuidTimestamp: '{ instant: "2022-02-22T19:22:22Z", version: 6 }',
+        fromUuidTimestamp: '"2022-02-22T19:22:22Z"',
       },
     },
     "uuid-v4": {
       hero: "none",
-      rows: { fromUuidTimestamp: "null", fromUlid: '""' },
+      rows: { fromUuidTimestamp: '""', fromUlid: '""' },
     },
     "uuid-urn": {
       hero: "none",
-      rows: { fromUuidTimestamp: "null", fromKsuid: '""' },
+      rows: { fromUuidTimestamp: '""', fromKsuid: '""' },
     },
     ulid: {
       hero: "one",
       rows: {
         fromUlid: '"2016-07-30T23:54:10.259Z"',
-        fromUuidTimestamp: "null",
+        fromUuidTimestamp: '""',
       },
     },
     "ulid-letter-i": {
       hero: "none",
-      rows: { fromUlid: '""', fromUuidTimestamp: "null" },
+      rows: { fromUlid: '""', fromUuidTimestamp: '""' },
     },
     objectid: { hero: "one", rows: { fromObjectId: '"2024-01-12T08:14:08Z"' } },
     "objectid-2038": {

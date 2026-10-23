@@ -13508,6 +13508,47 @@
     ]
   },
   {
+    "url": "/reference/precision/convert/fromArrowLocalTimestamp",
+    "page": "/reference/precision/convert/fromArrowLocalTimestamp",
+    "name": "fromArrowLocalTimestamp",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromArrowLocalTimestamp(value: bigint, unit: ArrowTimeUnit): string",
+    "description": "Convert the `int64` of an Apache Arrow `Timestamp` column that has no timezone to a wall-clock date-time string.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromArrowLocalTimestamp.ts",
+    "examples": [
+      {
+        "call": "fromArrowLocalTimestamp(0n, \"second\")",
+        "result": "\"1970-01-01T00:00:00\""
+      },
+      {
+        "call": "fromArrowLocalTimestamp(1704067200123n, \"milliseconds\")",
+        "result": "\"2024-01-01T00:00:00.123\""
+      },
+      {
+        "call": "fromArrowLocalTimestamp(-1n, \"nanosecond\")",
+        "result": "\"1969-12-31T23:59:59.999999999\""
+      },
+      {
+        "call": "fromArrowLocalTimestamp(9223372036854775807n, \"nanosecond\")",
+        "result": "\"2262-04-11T23:47:16.854775807\""
+      },
+      {
+        "call": "fromArrowLocalTimestamp(8640000000001n, \"second\")",
+        "result": "\"\" — past the supported range"
+      },
+      {
+        "call": "fromArrowLocalTimestamp(0, \"second\")",
+        "result": "\"\" — number, not bigint"
+      },
+      {
+        "call": "fromArrowLocalTimestamp(0n, \"s\")",
+        "result": "\"\" — not an Arrow unit"
+      }
+    ]
+  },
+  {
     "url": "/reference/types/ArrowTimeUnit",
     "page": "/reference/types/ArrowTimeUnit",
     "name": "ArrowTimeUnit",
@@ -13520,94 +13561,47 @@
     "examples": []
   },
   {
-    "url": "/reference/types/ArrowTimestampOptions",
-    "page": "/reference/types/ArrowTimestampOptions",
-    "name": "ArrowTimestampOptions",
-    "namespace": "precision",
-    "module": "convert",
-    "kind": "type",
-    "signature": "",
-    "description": "Describes the Arrow `Timestamp` column a value is read from or written to.",
-    "sourcePath": "packages/gmt/src/precision/convert/fromArrowTimestamp.ts",
-    "examples": [],
-    "members": [
-      {
-        "name": "unit",
-        "description": "The column's `TimeUnit`: how many of which unit the `int64` counts since 1970-01-01."
-      },
-      {
-        "name": "timeZone",
-        "description": "The column's timezone, an Olson name or a `+HH:MM` offset. Set, the column holds UTC instants and the zone only says how to display them; omitted, `undefined` or `\"\"`, the column holds zoneless wall-clock times (Arrow `Schema.fbs`: an empty zone is not UTC)."
-      }
-    ]
-  },
-  {
-    "url": "/reference/precision/convert/fromArrowTimestamp#arrowtimestampvalue",
-    "page": "/reference/precision/convert/fromArrowTimestamp",
-    "name": "ArrowTimestampValue",
-    "namespace": "precision",
-    "module": "convert",
-    "kind": "type",
-    "signature": "",
-    "description": "What `fromArrowTimestamp` returns: an instant for a zoned column, a wall time for a zoneless one.",
-    "sourcePath": "packages/gmt/src/precision/convert/fromArrowTimestamp.ts",
-    "examples": [],
-    "inlineOn": "fromArrowTimestamp"
-  },
-  {
     "url": "/reference/precision/convert/fromArrowTimestamp",
     "page": "/reference/precision/convert/fromArrowTimestamp",
     "name": "fromArrowTimestamp",
     "namespace": "precision",
     "module": "convert",
     "kind": "function",
-    "signature": "fromArrowTimestamp(value: bigint, options: ArrowTimestampOptions): ArrowTimestampValue | null",
-    "description": "Convert an Apache Arrow `Timestamp` `int64` back to an ISO 8601 string.",
+    "signature": "fromArrowTimestamp(value: bigint, unit: ArrowTimeUnit): string",
+    "description": "Convert the `int64` of an Apache Arrow `Timestamp` column that has a timezone to a UTC instant string.",
     "sourcePath": "packages/gmt/src/precision/convert/fromArrowTimestamp.ts",
     "examples": [
       {
-        "call": "fromArrowTimestamp(0n, { unit: \"second\" })",
-        "result": "{ local: \"1970-01-01T00:00:00\", zoneless: true }"
+        "call": "fromArrowTimestamp(0n, \"second\")",
+        "result": "\"1970-01-01T00:00:00Z\""
       },
       {
-        "call": "fromArrowTimestamp(0n, { unit: \"second\", timeZone: \"UTC\" })",
-        "result": "{ instant: \"1970-01-01T00:00:00Z\" }"
+        "call": "fromArrowTimestamp(1704067200000n, \"milliseconds\")",
+        "result": "\"2024-01-01T00:00:00Z\""
       },
       {
-        "call": "fromArrowTimestamp(0n, { unit: \"second\", timeZone: \"Europe/Paris\" })",
-        "result": "{ instant: \"1970-01-01T00:00:00Z\" }"
+        "call": "fromArrowTimestamp(1704067200123456789n, \"nanosecond\")",
+        "result": "\"2024-01-01T00:00:00.123456789Z\""
       },
       {
-        "call": "fromArrowTimestamp(0n, { unit: \"second\", timeZone: \"\" })",
-        "result": "{ local: \"1970-01-01T00:00:00\", zoneless: true }"
+        "call": "fromArrowTimestamp(-1n, \"nanosecond\")",
+        "result": "\"1969-12-31T23:59:59.999999999Z\""
       },
       {
-        "call": "fromArrowTimestamp(1704067200000n, { unit: \"milliseconds\" })",
-        "result": "{ local: \"2024-01-01T00:00:00\", zoneless: true }"
+        "call": "fromArrowTimestamp(9223372036854775807n, \"nanosecond\")",
+        "result": "\"2262-04-11T23:47:16.854775807Z\""
       },
       {
-        "call": "fromArrowTimestamp(1704067200123456789n, { unit: \"nanosecond\", timeZone: \"America/New_York\" })",
-        "result": "{ instant: \"2024-01-01T00:00:00.123456789Z\" }"
+        "call": "fromArrowTimestamp(8640000000001n, \"second\")",
+        "result": "\"\" — past the instant range"
       },
       {
-        "call": "fromArrowTimestamp(-1n, { unit: \"nanosecond\" })",
-        "result": "{ local: \"1969-12-31T23:59:59.999999999\", zoneless: true }"
+        "call": "fromArrowTimestamp(0, \"second\")",
+        "result": "\"\" — number, not bigint"
       },
       {
-        "call": "fromArrowTimestamp(9223372036854775807n, { unit: \"nanosecond\", timeZone: \"UTC\" })",
-        "result": "{ instant: \"2262-04-11T23:47:16.854775807Z\" }"
-      },
-      {
-        "call": "fromArrowTimestamp(8640000000001n, { unit: \"second\", timeZone: \"UTC\" })",
-        "result": "null — past the instant range"
-      },
-      {
-        "call": "fromArrowTimestamp(0, { unit: \"second\" })",
-        "result": "null — number, not bigint"
-      },
-      {
-        "call": "fromArrowTimestamp(0n, { unit: \"s\" })",
-        "result": "null — not an Arrow unit"
+        "call": "fromArrowTimestamp(0n, \"s\")",
+        "result": "\"\" — not an Arrow unit"
       }
     ]
   },
@@ -14045,54 +14039,91 @@
     ]
   },
   {
+    "url": "/reference/precision/convert/toArrowLocalTimestamp",
+    "page": "/reference/precision/convert/toArrowLocalTimestamp",
+    "name": "toArrowLocalTimestamp",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toArrowLocalTimestamp(dateTime: string, unit: ArrowTimeUnit): bigint",
+    "description": "Convert an ISO 8601 plain date-time to the `int64` of an Apache Arrow `Timestamp` column that has no timezone.",
+    "sourcePath": "packages/gmt/src/precision/convert/toArrowLocalTimestamp.ts",
+    "examples": [
+      {
+        "call": "toArrowLocalTimestamp(\"2024-01-01T00:00:00\", \"millisecond\")",
+        "result": "1704067200000n"
+      },
+      {
+        "call": "toArrowLocalTimestamp(\"2024-01-01T00:00:00[Asia/Tokyo]\", \"second\")",
+        "result": "1704067200n — annotation ignored"
+      },
+      {
+        "call": "toArrowLocalTimestamp(\"1969-12-31T23:59:59.999999999\", \"second\")",
+        "result": "-1n — toward negative infinity"
+      },
+      {
+        "call": "toArrowLocalTimestamp(\"2262-04-11T23:47:16.854775807\", \"nanosecond\")",
+        "result": "9223372036854775807n"
+      },
+      {
+        "call": "toArrowLocalTimestamp(\"2262-04-11T23:47:16.854775808\", \"nanosecond\")",
+        "result": "0n — past int64"
+      },
+      {
+        "call": "toArrowLocalTimestamp(\"+275760-09-13T00:00:00.000000001\", \"second\")",
+        "result": "0n — past the supported range"
+      },
+      {
+        "call": "toArrowLocalTimestamp(\"2024-01-01T00:00:00Z\", \"millisecond\")",
+        "result": "0n — an instant, not a wall time"
+      },
+      {
+        "call": "toArrowLocalTimestamp(\"2024-01-01T00:00:00\", \"ms\")",
+        "result": "0n — not an Arrow unit"
+      }
+    ]
+  },
+  {
     "url": "/reference/precision/convert/toArrowTimestamp",
     "page": "/reference/precision/convert/toArrowTimestamp",
     "name": "toArrowTimestamp",
     "namespace": "precision",
     "module": "convert",
     "kind": "function",
-    "signature": "toArrowTimestamp(isoString: string, options: ArrowTimestampOptions): bigint",
-    "description": "Convert an ISO 8601 string to an Apache Arrow `Timestamp` `int64`.",
+    "signature": "toArrowTimestamp(isoString: string, unit: ArrowTimeUnit): bigint",
+    "description": "Convert an ISO 8601 instant string to the `int64` of an Apache Arrow `Timestamp` column that has a timezone.",
     "sourcePath": "packages/gmt/src/precision/convert/toArrowTimestamp.ts",
     "examples": [
       {
-        "call": "toArrowTimestamp(\"2024-01-01T00:00:00Z\", { unit: \"millisecond\", timeZone: \"UTC\" })",
+        "call": "toArrowTimestamp(\"2024-01-01T00:00:00Z\", \"millisecond\")",
         "result": "1704067200000n"
       },
       {
-        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\", { unit: \"second\", timeZone: \"Asia/Tokyo\" })",
+        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\", \"second\")",
         "result": "1704067200n"
       },
       {
-        "call": "toArrowTimestamp(\"2024-01-01T00:00:00\", { unit: \"millisecond\" })",
-        "result": "1704067200000n"
-      },
-      {
-        "call": "toArrowTimestamp(\"2024-01-01T00:00:00.123456789Z\", { unit: \"microsecond\", timeZone: \"UTC\" })",
+        "call": "toArrowTimestamp(\"2024-01-01T00:00:00.123456789Z\", \"microsecond\")",
         "result": "1704067200123456n — floors"
       },
       {
-        "call": "toArrowTimestamp(\"1969-12-31T23:59:59.9999999Z\", { unit: \"microsecond\", timeZone: \"UTC\" })",
+        "call": "toArrowTimestamp(\"1969-12-31T23:59:59.9999999Z\", \"microsecond\")",
         "result": "-1n — toward negative infinity"
       },
       {
-        "call": "toArrowTimestamp(\"2262-04-11T23:47:16.854775807Z\", { unit: \"nanosecond\", timeZone: \"UTC\" })",
+        "call": "toArrowTimestamp(\"2262-04-11T23:47:16.854775807Z\", \"nanosecond\")",
         "result": "9223372036854775807n"
       },
       {
-        "call": "toArrowTimestamp(\"2262-04-11T23:47:16.854775808Z\", { unit: \"nanosecond\", timeZone: \"UTC\" })",
+        "call": "toArrowTimestamp(\"2262-04-11T23:47:16.854775808Z\", \"nanosecond\")",
         "result": "0n — past int64"
       },
       {
-        "call": "toArrowTimestamp(\"2024-01-01T00:00:00Z\", { unit: \"millisecond\" })",
-        "result": "0n — an instant into a zoneless column"
+        "call": "toArrowTimestamp(\"2024-01-01T00:00:00\", \"millisecond\")",
+        "result": "0n — a wall time, not an instant"
       },
       {
-        "call": "toArrowTimestamp(\"2024-01-01T00:00:00\", { unit: \"millisecond\", timeZone: \"UTC\" })",
-        "result": "0n — a wall time into a zoned column"
-      },
-      {
-        "call": "toArrowTimestamp(\"2024-01-01T00:00:00Z\", { unit: \"ms\", timeZone: \"UTC\" })",
+        "call": "toArrowTimestamp(\"2024-01-01T00:00:00Z\", \"ms\")",
         "result": "0n — not an Arrow unit"
       }
     ]
@@ -14843,49 +14874,49 @@
     "namespace": "precision",
     "module": "identifiers",
     "kind": "function",
-    "signature": "fromUuidTimestamp(uuid: string): { instant: string; version: 1 | 6 | 7; } | null",
+    "signature": "fromUuidTimestamp(uuid: string): string",
     "description": "Read the instant a version 1, 6 or 7 UUID carries (RFC 9562 §5.1, §5.6, §5.7).",
     "sourcePath": "packages/gmt/src/precision/identifiers/fromUuidTimestamp.ts",
     "examples": [
       {
         "call": "fromUuidTimestamp(\"C232AB00-9414-11EC-B3C8-9F6BDECED846\")",
-        "result": "{ instant: \"2022-02-22T19:22:22Z\", version: 1 } — RFC 9562 A.1"
+        "result": "\"2022-02-22T19:22:22Z\" — RFC 9562 A.1"
       },
       {
         "call": "fromUuidTimestamp(\"1EC9414C-232A-6B00-B3C8-9F6BDECED846\")",
-        "result": "{ instant: \"2022-02-22T19:22:22Z\", version: 6 } — A.5, the same instant"
+        "result": "\"2022-02-22T19:22:22Z\" — A.5, the same instant"
       },
       {
         "call": "fromUuidTimestamp(\"017F22E2-79B0-7CC3-98C4-DC0C0C07398F\")",
-        "result": "{ instant: \"2022-02-22T19:22:22Z\", version: 7 } — A.6"
+        "result": "\"2022-02-22T19:22:22Z\" — A.6"
       },
       {
         "call": "fromUuidTimestamp(\"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\")",
-        "result": "{ instant: \"1997-02-03T17:43:12.216875Z\", version: 1 } — 100 ns kept"
+        "result": "\"1997-02-03T17:43:12.216875Z\" — 100 ns kept"
       },
       {
         "call": "fromUuidTimestamp(\"c232ab00-9414-11ec-b3c8-9f6bdeced846\")",
-        "result": "{ instant: \"2022-02-22T19:22:22Z\", version: 1 } — lower case"
+        "result": "\"2022-02-22T19:22:22Z\" — lower case"
       },
       {
         "call": "fromUuidTimestamp(\"00000000-0000-1000-8000-000000000000\")",
-        "result": "{ instant: \"1582-10-15T00:00:00Z\", version: 1 } — the v1 epoch"
+        "result": "\"1582-10-15T00:00:00Z\" — the v1 epoch"
       },
       {
         "call": "fromUuidTimestamp(\"ffffffff-ffff-7fff-bfff-ffffffffffff\")",
-        "result": "{ instant: \"+010889-08-02T05:31:50.655Z\", version: 7 } — 48-bit maximum"
+        "result": "\"+010889-08-02T05:31:50.655Z\" — 48-bit maximum"
       },
       {
         "call": "fromUuidTimestamp(\"919108f7-52d1-4320-9bac-f847db4148a8\")",
-        "result": "null — v4 carries no timestamp"
+        "result": "\"\" — v4 carries no timestamp"
       },
       {
         "call": "fromUuidTimestamp(\"urn:uuid:c232ab00-9414-11ec-b3c8-9f6bdeced846\")",
-        "result": "null — strip the prefix first"
+        "result": "\"\" — strip the prefix first"
       },
       {
         "call": "fromUuidTimestamp(\"017f22e2-79b0-7cc3-c8c4-dc0c0c07398f\")",
-        "result": "null — Microsoft variant"
+        "result": "\"\" — Microsoft variant"
       }
     ]
   },
@@ -14930,7 +14961,11 @@
       },
       {
         "call": "ulidTimestampPrefix(\"+010889-08-02T05:31:50.656Z\")",
-        "result": "\"\" — past 48 bits"
+        "result": "\"8000000000\" — 2^48 ms, the exclusive end no ULID carries"
+      },
+      {
+        "call": "ulidTimestampPrefix(\"+010889-08-02T05:31:50.657Z\")",
+        "result": "\"\" — past the exclusive end"
       },
       {
         "call": "ulidTimestampPrefix(\"1969-12-31T23:59:59.999Z\")",
@@ -15082,6 +15117,80 @@
       {
         "call": "isValidInstant(\"invalid\")",
         "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/validate/isValidInt64NanosecondDateTime",
+    "page": "/reference/precision/validate/isValidInt64NanosecondDateTime",
+    "name": "isValidInt64NanosecondDateTime",
+    "namespace": "precision",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidInt64NanosecondDateTime(dateTime: string): boolean",
+    "description": "Validate whether a string is a plain date-time whose epoch-nanosecond count, read as if it were UTC (Arrow's rule for a zoneless timestamp), fits an `int64`: the check to run before `toArrowLocalTimestamp(dateTime, \"nanosecond\")`.",
+    "sourcePath": "packages/gmt/src/precision/validate/isValidInt64NanosecondDateTime.ts",
+    "examples": [
+      {
+        "call": "isValidInt64NanosecondDateTime(\"2024-01-01T00:00:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidInt64NanosecondDateTime(\"1677-09-21T00:12:43.145224192\")",
+        "result": "true — the first nanosecond"
+      },
+      {
+        "call": "isValidInt64NanosecondDateTime(\"2262-04-11T23:47:16.854775807\")",
+        "result": "true — the last nanosecond"
+      },
+      {
+        "call": "isValidInt64NanosecondDateTime(\"2262-04-11T23:47:16.854775808\")",
+        "result": "false — one past"
+      },
+      {
+        "call": "isValidInt64NanosecondDateTime(\"+010000-01-01T00:00:00\")",
+        "result": "false — a valid date-time, too far"
+      },
+      {
+        "call": "isValidInt64NanosecondDateTime(\"2024-01-01T00:00:00Z\")",
+        "result": "false — an instant"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/validate/isValidInt64NanosecondInstant",
+    "page": "/reference/precision/validate/isValidInt64NanosecondInstant",
+    "name": "isValidInt64NanosecondInstant",
+    "namespace": "precision",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidInt64NanosecondInstant(isoString: string): boolean",
+    "description": "Validate whether a string is an instant whose epoch-nanosecond count fits an `int64`: the check to run before `toArrowTimestamp(isoString, \"nanosecond\")`.",
+    "sourcePath": "packages/gmt/src/precision/validate/isValidInt64NanosecondInstant.ts",
+    "examples": [
+      {
+        "call": "isValidInt64NanosecondInstant(\"2024-01-01T00:00:00Z\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidInt64NanosecondInstant(\"1677-09-21T00:12:43.145224192Z\")",
+        "result": "true — the first nanosecond"
+      },
+      {
+        "call": "isValidInt64NanosecondInstant(\"2262-04-11T23:47:16.854775807Z\")",
+        "result": "true — the last nanosecond"
+      },
+      {
+        "call": "isValidInt64NanosecondInstant(\"2262-04-11T23:47:16.854775808Z\")",
+        "result": "false — one past"
+      },
+      {
+        "call": "isValidInt64NanosecondInstant(\"+010000-01-01T00:00:00Z\")",
+        "result": "false — a valid instant, too far"
+      },
+      {
+        "call": "isValidInt64NanosecondInstant(\"2024-01-01T00:00:00\")",
+        "result": "false — no offset"
       }
     ]
   },

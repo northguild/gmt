@@ -33,8 +33,10 @@ Give one instant and see what each format stores and what it reads back as. Or s
 | --- | --- | --- |
 | [`toParquetInt96`](/reference/precision/convert/toParquetInt96/) | `julianDay` and `nanosOfDay`; day 2440588 is 1970-01-01, and `nanosOfDay` runs from 0 to 86399999999999 | `null` |
 | [`fromParquetInt96`](/reference/precision/convert/fromParquetInt96/) | an instant string | `""` |
-| [`toArrowTimestamp`](/reference/precision/convert/toArrowTimestamp/) | one `int64` count in the unit | `0n` |
-| [`fromArrowTimestamp`](/reference/precision/convert/fromArrowTimestamp/) | `{ instant }`, or `{ local, zoneless: true }` | `null` |
+| [`toArrowTimestamp`](/reference/precision/convert/toArrowTimestamp/) | one `int64` count in the unit, for a column with a timezone | `0n` |
+| [`fromArrowTimestamp`](/reference/precision/convert/fromArrowTimestamp/) | an instant string, for a column with a timezone | `""` |
+| [`toArrowLocalTimestamp`](/reference/precision/convert/toArrowLocalTimestamp/) | one `int64` count in the unit, for a column with no timezone | `0n` |
+| [`fromArrowLocalTimestamp`](/reference/precision/convert/fromArrowLocalTimestamp/) | a wall-time string with no offset, for a column with no timezone | `""` |
 | [`toProtoTimestamp`](/reference/precision/convert/toProtoTimestamp/) | `seconds` from -62135596800 to 253402300799, and `nanos` from 0 to 999999999 | `null` |
 | [`fromProtoTimestamp`](/reference/precision/convert/fromProtoTimestamp/) | an instant string | `""` |
 | [`toProtoDuration`](/reference/precision/convert/toProtoDuration/) | `seconds` and `nanos` with the same sign | `null` |
@@ -42,11 +44,11 @@ Give one instant and see what each format stores and what it reads back as. Or s
 | [`toNanoseconds`](/reference/precision/convert/toNanoseconds/) | nanoseconds since the Unix epoch, as a `bigint` | `0n` |
 | [`fromNanoseconds`](/reference/precision/convert/fromNanoseconds/) | an instant string | `""` |
 
-`0n` is also a real answer: it is the epoch itself, so a count of zero is never a failure. `NO SIGNAL` means one thing: the call returned its sentinel, the value in the last column above. The `isValidInstant` and `isValidDateTime` line on a card is a separate reading of the same input. The two can disagree: a Timestamp can be a valid instant and still be out of the protobuf range, and some decoders (a full-day INT96 record, a sign mismatch) have no validator at all.
+`0n` is also a real answer: it is the epoch itself, so a count of zero is never a failure. In a nanosecond column an `int64` holds only a narrow range of years, and a value outside it also gives `0n`, so the tool asks [`isValidInt64NanosecondInstant`](/reference/precision/validate/isValidInt64NanosecondInstant/) (or [`isValidInt64NanosecondDateTime`](/reference/precision/validate/isValidInt64NanosecondDateTime/) for a column with no timezone) first and says when the value is out of range. `NO SIGNAL` means one thing: the call returned its sentinel, the value in the last column above. The `isValidInstant` and `isValidDateTime` line on a card is a separate reading of the same input. The two can disagree: a Timestamp can be a valid instant and still be out of the protobuf range, and some decoders (a full-day INT96 record, a sign mismatch) have no validator at all.
 
 **Parquet INT96 is deprecated and records no zone.** The pair is read as UTC, because the file does not say otherwise. A writer that stored local time gives a reader nothing to detect it with.
 
-**An Arrow timestamp with no timezone is a wall time.** Arrow's `Schema.fbs` says a timestamp with an unset timezone is not an instant: it is the local time of an unnamed place. With a zone, `fromArrowTimestamp` reads an instant. Without one it reads a wall time and marks it zoneless. Give an instant to a zoneless column and `toArrowTimestamp` returns `0n`, so the tool checks first and says why.
+**An Arrow timestamp with no timezone is a wall time.** Arrow's `Schema.fbs` says a timestamp with an unset timezone is not an instant: it is the local time of an unnamed place. A column with a zone is read with `fromArrowTimestamp`, which returns an instant. A column without one is read with `fromArrowLocalTimestamp`, which returns a wall time with no offset, so it never passes for an instant. Give an instant to `toArrowLocalTimestamp` and it returns `0n`, so the tool checks first and says why. The zone you type only picks the column's kind. If it is not a time zone this browser knows, the Arrow card says so.
 
 **A protobuf Timestamp counts nanos forward.** `nanos` is never negative, so a time before 1970 has a negative `seconds` and a positive `nanos`. A Duration is different: its `seconds` and `nanos` share a sign. A time outside the range in the table comes back as a sentinel.
 

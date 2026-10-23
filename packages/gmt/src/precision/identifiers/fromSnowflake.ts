@@ -1,12 +1,8 @@
 import {
-  isObject,
   NANOSECONDS_PER_MILLISECOND,
   unsignedDecimalText,
+  instantStringFromEpochNanoseconds,
 } from "../../internal";
-import { fromNanoseconds } from "../convert/fromNanoseconds";
-
-/** The largest unsigned 64-bit value, the width of every Snowflake id. */
-const MAX_UINT64 = 2n ** 64n - 1n;
 
 /**
  * Where the timestamp sits in a Snowflake id. A Snowflake is a layout, not a standard: each
@@ -56,61 +52,44 @@ export function fromSnowflake(
   id: bigint | string,
   layout: SnowflakeLayout,
 ): string {
-  let value: bigint;
+  // Anything that is neither a bigint nor a decimal string reads as -1n, which is not a uint64.
+  const value =
+    typeof id === "bigint"
+      ? id
+      : typeof id === "string" && unsignedDecimalText.test(id)
+        ? BigInt(id)
+        : -1n;
 
-  if (typeof id === "bigint") {
-    value = id;
-  } else if (typeof id === "string" && unsignedDecimalText.test(id)) {
-    value = BigInt(id);
-  } else {
+  if (BigInt.asUintN(64, value) !== value) {
     return "";
   }
 
-  if (value < 0n || value > MAX_UINT64) {
-    return "";
-  }
+  let epochMs: number;
+  let shift = 0;
+  let timestampBits: number;
 
-  let epochMs: unknown;
-  let shift: unknown;
-  let timestampBits: unknown;
-
-  // Reading a hostile layout (a throwing getter, a Proxy trap, a revoked Proxy) can throw.
+  // Reading a hostile layout (null, a throwing getter, a Proxy trap, a revoked Proxy) can throw,
+  // and so can `&` on a bigint, a symbol or an object whose `valueOf` throws.
   try {
-    if (!isObject(layout)) {
+    ({ epochMs, shift, timestampBits = 64 - shift } = layout);
+
+    // `Number.isInteger` and `Number.isSafeInteger` are false for anything that is not a number.
+    if (
+      !Number.isSafeInteger(epochMs) ||
+      (shift & 63) !== shift || // an integer in 0..63; `&` makes any other type or fraction unequal
+      !Number.isInteger(timestampBits) ||
+      timestampBits < 1 ||
+      timestampBits > 64 - shift
+    ) {
       return "";
     }
-
-    ({ epochMs, shift, timestampBits } = layout);
   } catch {
     return "";
   }
 
-  if (
-    typeof epochMs !== "number" ||
-    !Number.isSafeInteger(epochMs) ||
-    typeof shift !== "number" ||
-    !Number.isInteger(shift) ||
-    shift < 0 ||
-    shift > 63
-  ) {
-    return "";
-  }
+  const ticks = (value >> BigInt(shift)) & ((1n << BigInt(timestampBits)) - 1n);
 
-  const maxBits = 64 - shift;
-  const bits = timestampBits === undefined ? maxBits : timestampBits;
-
-  if (
-    typeof bits !== "number" ||
-    !Number.isInteger(bits) ||
-    bits < 1 ||
-    bits > maxBits
-  ) {
-    return "";
-  }
-
-  const ticks = (value >> BigInt(shift)) & ((1n << BigInt(bits)) - 1n);
-
-  return fromNanoseconds(
+  return instantStringFromEpochNanoseconds(
     (ticks + BigInt(epochMs)) * NANOSECONDS_PER_MILLISECOND,
   );
 }

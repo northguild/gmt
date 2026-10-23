@@ -1,14 +1,11 @@
 import {
-  isObject,
   JULIAN_DAY_OF_UNIX_EPOCH,
   NANOSECONDS_PER_DAY,
+  instantStringFromEpochNanoseconds,
 } from "../../internal";
-import { fromNanoseconds } from "./fromNanoseconds";
 import type { ParquetInt96 } from "./toParquetInt96";
 
 const BYTE_LENGTH = 12;
-const MIN_INT32 = -(2 ** 31);
-const MAX_INT32 = 2 ** 31 - 1;
 
 /**
  * Convert a Parquet `INT96` timestamp back to an ISO 8601 instant string.
@@ -18,8 +15,8 @@ const MAX_INT32 = 2 ** 31 - 1;
  * - Accepts the 12 stored bytes (a `Uint8Array` or Node `Buffer`: `nanosOfDay` as a
  *   little-endian `int64`, then `julianDay` as a little-endian `int32`) or the
  *   `{ julianDay, nanosOfDay }` record most readers expose. Any other length of bytes is invalid.
- * - `julianDay` is the Julian Day Number of the UTC date (2440588 is 1970-01-01) and must be a
- *   signed 32-bit integer. `nanosOfDay` counts from that date's midnight, not noon, and must be
+ * - `julianDay` is the Julian Day Number of the UTC date (2440588 is 1970-01-01) and must be an
+ *   integer inside the instant range (far inside a signed 32-bit integer). `nanosOfDay` counts from that date's midnight, not noon, and must be
  *   a `bigint` in `[0n, 86_400_000_000_000n)`. parquet-format states no range; GMT rejects
  *   a full day or more so one instant has one spelling.
  * - **No zone is recorded.** The value is always read as a UTC instant, as the Arrow and Spark
@@ -57,20 +54,15 @@ export function fromParquetInt96(value: ParquetInt96 | Uint8Array): string {
 
       nanosOfDay = view.getBigInt64(0, true);
       julianDay = view.getInt32(8, true);
-    } else if (isObject(value)) {
-      ({ nanosOfDay, julianDay } = value);
     } else {
-      return "";
+      ({ nanosOfDay, julianDay } = value);
     }
   } catch {
     return "";
   }
 
   if (
-    typeof julianDay !== "number" ||
     !Number.isInteger(julianDay) ||
-    julianDay < MIN_INT32 ||
-    julianDay > MAX_INT32 ||
     typeof nanosOfDay !== "bigint" ||
     nanosOfDay < 0n ||
     nanosOfDay >= NANOSECONDS_PER_DAY
@@ -78,8 +70,8 @@ export function fromParquetInt96(value: ParquetInt96 | Uint8Array): string {
     return "";
   }
 
-  return fromNanoseconds(
-    (BigInt(julianDay) - BigInt(JULIAN_DAY_OF_UNIX_EPOCH)) *
+  return instantStringFromEpochNanoseconds(
+    BigInt((julianDay as number) - JULIAN_DAY_OF_UNIX_EPOCH) *
       NANOSECONDS_PER_DAY +
       nanosOfDay,
   );

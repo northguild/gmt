@@ -878,7 +878,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **ID Timestamp Decoder** (`/tools/id-timestamp-decoder/`, `iddecode`, core): one pasted
     identifier goes, exactly as typed, to all five decoders (`fromUuidTimestamp`, `fromUlid`,
     `fromObjectId`, `fromKsuid`, `fromSnowflake`). A hero names the format that read it and its
-    instant (a UUID adds its `version` as a chip), and a fixed table shows every call and what it
+    instant (a UUID adds its `version` as a chip, read from the id's own 15th character because `fromUuidTimestamp` returns the bare instant string, or `""`), and a fixed table shows every call and what it
     returned. A Snowflake is called only when the reader gives an epoch and a shift; with no
     layout its row says "Give an epoch and a shift: a Snowflake has no default layout." and makes no call,
     because the library has no default epoch to offer. `NO SIGNAL` shows only when all five
@@ -886,11 +886,17 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     fills the fields, and typing switches the select to "Your values". Epoch, precision and last
     instant are static prose on the page, held to the library by `id-timestamp-decoder-prose.test.ts`,
     so no widget module holds an epoch, a unit factor or an ID grammar.
+    - **A blank id survives a link.** `permalinkOf` always writes `id` for a custom state, and
+      `EMPTY_KEYS_BY_KIND` in `widget-permalink.ts` lets `iddecode` keep an empty `id` through
+      the drop-empty-string rule, so a link made from a cleared field opens cleared, not on the
+      default preset. Other tools' permalink behaviour is unchanged.
+    - **The id limit is 96 characters** (`ID_MAX_CHARS`, the schema `id.max(96)`, and `KIND_STRING_CAPS`
+      for `iddecode` and `colbridge` in `widget-permalink.ts`), so a longest-format id round trips.
     - **Snowflake presets are labelled by their literal values**, never a vendor name, because
       the library ships no layout constants.
     - **Nothing moves as the reader types.** The hero's value, pill and chip are laid out in every
       state and hidden with `[data-off] { visibility: hidden }`; each call and returned cell is a
-      hold sized by the 64-character Snowflake call and the widest UUID record. The table is
+      hold sized by the 64-character Snowflake call and the widest instant. The table is
       fixed-layout, with a doubled class on the first column (as the Stored Time Audit) and a
       labelled stacked layout below `46rem`.
     - **`instantPiecesHtml` (`widget-ui.ts`)** is the text-to-pieces half of `wrapInstantsAtT`,
@@ -906,14 +912,27 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     Duration pair) and reads each filled fieldset with one call. `isValidInstant` (or
     `isValidDateTime` for a zoneless Arrow column) runs first, and the converters run only when
     it is true, so an instant into a zoneless column is a card with the sentinel `0n` and the
-    reason, never a silent `0`. A zoneless Arrow read is marked with an ice chip and the
-    library's `zoneless: true`, never amber; a zoned Arrow card also shows the same int64 read
-    under a zoneless schema. The hero's pill shows only when the input is not an instant and
+    reason, never a silent `0`. A typed zone is checked first with `isValidTimeZone`; an unknown
+    one gives the Arrow card the other tools' sentence ("X is not a time zone this browser
+    knows.") rather than a blank. For the nanosecond unit the card also asks
+    `isValidInt64NanosecondInstant` / `isValidInt64NanosecondDateTime`, so a value past int64 is a
+    sentinel `0n` card with the int64 reason, never a 1970 read-back. Arrow has two pairs:
+    `toArrowTimestamp` / `fromArrowTimestamp` (a zone: UTC `Z` string) and
+    `toArrowLocalTimestamp` / `fromArrowLocalTimestamp` (no zone: a wall time). Every read-back is a bare
+    string, `""` on failure. A zoneless Arrow read is marked with an ice chip, never amber; a
+    zoned Arrow card also shows the same int64 read under a zoneless schema. The hero's pill shows only when the input is not an instant and
     no card read it. A card that returned `0n`, `null` or `""` is a sentinel with its literal; a
-    legitimate `0n` (the `past-proto-range` preset's Arrow card) is a value.
+    legitimate `0n` (the epoch in seconds) is a value; the `past-proto-range` preset's Arrow card is a sentinel (year 10000 is past int64 nanoseconds).
     - **Files:** `column-timestamp-bridge.ts` (pure reading), `-presets.ts` (the only module
       with a library-fact literal), `-mount.ts`, `column-bridge-lib.ts` (loader, three modules)
       and `ColumnTimestampBridge.astro`. `BRIDGE_LINKS` is the counterpart of the Decoder's `ID_LINKS`; neither imports the other.
+    - **`readArgs` infers, the schema refuses.** Stored keys with no `mode`, no `value` and no
+      preset open decode; `bytes` with no `int96Form` and no preset reads as the bytes form.
+      `int96Form` is an enum (`record` or `bytes`). `columnBridgeProblems` in `dox-tools.ts`
+      is shared by the zod schema (`superRefine`) and the Worker `execute`, which also checks
+      the zone with `unknownZones`: Worker tests call `execute` directly, so a rule only in
+      the schema would never run there. A contradiction is refused, never dropped.
+    - **`VALUE_MAX_CHARS` is 96**, with the `short` schema limit and the link cap.
     - **Hold-still:** every card slot, the hero and the ladder rows are laid out in every state
       and hidden with `[data-off]`; the hold grids are `minmax(0, 1fr)`; cards are two by two
       above `40rem` of container and one column below. `renderValue` prints a bigint as `5n`

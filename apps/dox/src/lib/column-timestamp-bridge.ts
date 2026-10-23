@@ -18,8 +18,6 @@
  */
 import { runCall, type EdiCall } from "./edi-widgets";
 import type {
-  ArrowTimestampOptions,
-  ArrowTimestampValue,
   ColumnBridgeLib,
   ParquetInt96,
   ProtoDuration,
@@ -85,6 +83,8 @@ export const NOT_INSTANT_TEXT = "Not an instant, so there is no exact value.";
 export const REASON_ZONELESS =
   "A zoneless column takes a wall time with no offset.";
 export const REASON_ZONED = "A column with a zone takes an instant.";
+export const REASON_INT64 =
+  "An int64 of nanoseconds cannot hold this value, so the converter returned 0n, which is also the epoch.";
 export const ZONELESS_CHIP = "zoneless: a wall time, not an instant";
 
 /** The widest read-back any card can show, 33 characters. It sizes every value cell. */
@@ -98,8 +98,13 @@ export const WIDEST_STORED = [
   "nanos: -2147483648",
   "bytes: 00000000000000008c3d2500",
 ] as const;
-/** The longest value the text field takes. */
-export const VALUE_MAX_CHARS = 64;
+/** The longest value the text field takes (a zoned value can run to about 70). */
+export const VALUE_MAX_CHARS = 96;
+
+/** The sentence for a typed zone this browser does not know. */
+export function unknownZoneText(zone: string): string {
+  return `${zone} is not a time zone this browser knows.`;
+}
 
 export type CardId = "int96" | "arrow" | "timestamp" | "duration";
 
@@ -112,7 +117,7 @@ export const CARDS: readonly { id: CardId; title: string }[] = [
 
 export interface ReadBack {
   /** `local` is a zoneless Arrow read: a wall time, not an instant. */
-  kind: "text" | "instant" | "local";
+  kind: "text" | "local";
   text: string;
 }
 
@@ -185,6 +190,18 @@ const STATE_KEYS = [
 
 const BLANK = stateOf({});
 
+/** The keys only decode mode reads. */
+const STORED_KEYS = [
+  "julianDay",
+  "nanosOfDay",
+  "bytes",
+  "int64",
+  "seconds",
+  "nanos",
+  "durSeconds",
+  "durNanos",
+] as const satisfies readonly (keyof BridgeState)[];
+
 /** The preset whose controls match `state` exactly, or `custom`. */
 export function matchPreset(state: BridgeState): string {
   return (
@@ -211,6 +228,8 @@ export function isSeeded(args: ColumnTimestampBridgeArgs | undefined): boolean {
 export function readArgs(args: ColumnTimestampBridgeArgs): BridgeState {
   const named = BRIDGE_PRESETS.find((p) => p.id === args.preset);
   const state: BridgeState = named ? presetState(named) : { ...BLANK };
+  const typed = (key: keyof BridgeState) =>
+    typeof args[key] === "string" && args[key] !== "";
   for (const key of STATE_KEYS) {
     const v = args[key];
     if (typeof v !== "string" || v === "") continue;
@@ -223,6 +242,16 @@ export function readArgs(args: ColumnTimestampBridgeArgs): BridgeState {
     } else {
       state[key] = v;
     }
+  }
+  // A call that leaves out `mode` or `int96Form` still says which it means: a
+  // stored value (with no `value`) opens decode, and typed `bytes` selects the bytes form. A
+  // `mode` or `int96Form` that is named wins, so a contradiction is the
+  // caller's to make (the chat schema refuses it).
+  if (!typed("mode") && !named && !typed("value") && STORED_KEYS.some(typed)) {
+    state.mode = "decode";
+  }
+  if (!typed("int96Form") && !named && typed("bytes")) {
+    state.int96Form = "bytes";
   }
   return state;
 }
@@ -268,13 +297,6 @@ export function bytesOf(text: string): Uint8Array | null {
   );
 }
 
-/** The Arrow options the controls give. A blank zone leaves `timeZone` out. */
-export function arrowOptions(state: BridgeState): ArrowTimestampOptions {
-  return state.zone === ""
-    ? { unit: state.unit }
-    : { unit: state.unit, timeZone: state.zone };
-}
-
 // ---------------------------------------------------------------------------
 // Cards
 // ---------------------------------------------------------------------------
@@ -306,10 +328,48 @@ const protoLines = (p: ProtoTimestamp | ProtoDuration) => [
   `nanos: ${p.nanos}`,
 ];
 
-function arrowReadBack(value: ArrowTimestampValue): ReadBack {
-  return "instant" in value
-    ? { kind: "instant", text: value.instant }
-    : { kind: "local", text: value.local };
+/**
+ * The words for a typed zone this browser does not know: the card holds the
+ * `isValidTimeZone` call that said so, and no Arrow call is made.
+ */
+function badZoneCard(lib: ColumnBridgeLib, zone: string, calls: EdiCall[]) {
+  const check = runCall(lib, "isValidTimeZone", zone);
+  calls.push(check);
+  return check.result === true
+    ? null
+    : card("arrow", {
+        status: "sentinel",
+        literal: "false",
+        validator: check,
+        reason: unknownZoneText(zone),
+        calls: [check],
+      });
+}
+
+/** An Arrow read-back string: a value is read, `""` is the sentinel. */
+function arrowStringCard(
+  stored: string[],
+  back: EdiCall,
+  calls: EdiCall[],
+  local: boolean,
+  extra: Partial<CardRead> = {},
+): CardRead {
+  const text = back.result as string;
+  return text === ""
+    ? card("arrow", {
+        status: "sentinel",
+        literal: '""',
+        stored,
+        calls,
+        ...extra,
+      })
+    : card("arrow", {
+        status: "read",
+        stored,
+        readBack: { kind: local ? "local" : "text", text },
+        calls,
+        ...extra,
+      });
 }
 
 /** A card for a read-back string: a value is read, `""` is the sentinel. */
@@ -409,50 +469,65 @@ export function readEncode(lib: ColumnBridgeLib, state: BridgeState): Reading {
   if (!has) {
     arrow = idle("arrow", NO_VALUE_TEXT);
   } else {
-    const options = arrowOptions(state);
     const zoned = state.zone !== "";
-    const validator = zoned
-      ? heroCall!
-      : push(runCall(lib, "isValidDateTime", value));
-    const own: EdiCall[] = [validator];
-    const v = push(runCall(lib, "toArrowTimestamp", value, options));
-    own.push(v);
-    if (validator.result === false) {
-      arrow = card("arrow", {
-        status: "sentinel",
-        literal: `${v.result as bigint}n`,
-        validator,
-        reason: zoned ? REASON_ZONED : REASON_ZONELESS,
-        calls: own,
-      });
+    const nano = state.unit === "nanosecond";
+    const badZone = zoned ? badZoneCard(lib, state.zone, calls) : null;
+    if (badZone !== null) {
+      arrow = badZone;
     } else {
-      const back = push(runCall(lib, "fromArrowTimestamp", v.result, options));
-      own.push(back);
-      let zonelessRead: string | null = null;
-      if (zoned) {
-        const plain = push(
-          runCall(lib, "fromArrowTimestamp", v.result, { unit: state.unit }),
-        );
-        own.push(plain);
-        const r = plain.result as ArrowTimestampValue | null;
-        zonelessRead = r !== null && "local" in r ? r.local : null;
+      const own: EdiCall[] = [];
+      const validator = zoned
+        ? heroCall!
+        : push(runCall(lib, "isValidDateTime", value));
+      own.push(validator);
+      // A nanosecond `0n` is also the epoch, so the int64 guard runs first.
+      const guard =
+        nano && validator.result === true
+          ? push(
+              runCall(
+                lib,
+                zoned
+                  ? "isValidInt64NanosecondInstant"
+                  : "isValidInt64NanosecondDateTime",
+                value,
+              ),
+            )
+          : null;
+      if (guard !== null) own.push(guard);
+      const refused = validator.result === false ? validator : guard;
+      const toFn = zoned ? "toArrowTimestamp" : "toArrowLocalTimestamp";
+      const v = push(runCall(lib, toFn, value, state.unit));
+      own.push(v);
+      if (refused !== null && refused.result === false) {
+        arrow = card("arrow", {
+          status: "sentinel",
+          literal: `${v.result as bigint}n`,
+          validator: refused,
+          reason:
+            refused === guard
+              ? REASON_INT64
+              : zoned
+                ? REASON_ZONED
+                : REASON_ZONELESS,
+          calls: own,
+        });
+      } else {
+        const fromFn = zoned ? "fromArrowTimestamp" : "fromArrowLocalTimestamp";
+        const back = push(runCall(lib, fromFn, v.result, state.unit));
+        own.push(back);
+        let zonelessRead: string | null = null;
+        if (zoned) {
+          const plain = push(
+            runCall(lib, "fromArrowLocalTimestamp", v.result, state.unit),
+          );
+          own.push(plain);
+          zonelessRead = plain.result === "" ? null : (plain.result as string);
+        }
+        arrow = arrowStringCard([`${v.result as bigint}n`], back, own, !zoned, {
+          zonelessRead,
+          validator: guard ?? validator,
+        });
       }
-      arrow =
-        back.result === null
-          ? card("arrow", {
-              status: "sentinel",
-              literal: "null",
-              validator,
-              calls: own,
-            })
-          : card("arrow", {
-              status: "read",
-              stored: [`${v.result as bigint}n`],
-              readBack: arrowReadBack(back.result as ArrowTimestampValue),
-              zonelessRead,
-              validator,
-              calls: own,
-            });
     }
   }
 
@@ -579,26 +654,24 @@ export function readDecode(lib: ColumnBridgeLib, state: BridgeState): Reading {
     arrow = idle("arrow", NO_DECODE_TEXT);
   } else {
     const int64 = bigintOf(state.int64);
+    const zoned = state.zone !== "";
     if (int64 === null) {
       arrow = idle("arrow", BAD_NUMBER_TEXT);
     } else {
-      const back = push(
-        runCall(lib, "fromArrowTimestamp", int64, arrowOptions(state)),
-      );
-      arrow =
-        back.result === null
-          ? card("arrow", {
-              status: "sentinel",
-              literal: "null",
-              stored: [`${int64}n`],
-              calls: [back],
-            })
-          : card("arrow", {
-              status: "read",
-              stored: [`${int64}n`],
-              readBack: arrowReadBack(back.result as ArrowTimestampValue),
-              calls: [back],
-            });
+      const badZone = zoned ? badZoneCard(lib, state.zone, calls) : null;
+      if (badZone !== null) {
+        arrow = badZone;
+      } else {
+        const back = push(
+          runCall(
+            lib,
+            zoned ? "fromArrowTimestamp" : "fromArrowLocalTimestamp",
+            int64,
+            state.unit,
+          ),
+        );
+        arrow = arrowStringCard([`${int64}n`], back, [back], !zoned);
+      }
     }
   }
 

@@ -23,7 +23,7 @@ import {
 } from "@northguild/gmt/precision/identifiers";
 
 fromUuidTimestamp("017F22E2-79B0-7CC3-98C4-DC0C0C07398F");
-// { instant: "2022-02-22T19:22:22Z", version: 7 }
+// "2022-02-22T19:22:22Z"
 
 fromUlid("01ARZ3NDEKTSV4RRFFQ69G5FAV");
 // "2016-07-30T23:54:10.259Z"
@@ -47,15 +47,15 @@ fromKsuid("0ujtsYcgvSTl8PAuAdqWYSMnLOv");
 | KSUID | 2014-05-13T16:53:20Z | 1 s | 2150-06-19T23:21:35Z |
 
 A UUID v1 and the v6 made from it hold the same instant. UUID v4, and the name-based v3 and v5,
-carry no time at all, so `fromUuidTimestamp` returns `null` for them:
+carry no time at all, so `fromUuidTimestamp` returns `""` for them:
 
 ```typescript
 fromUuidTimestamp("919108f7-52d1-4320-9bac-f847db4148a8");
-// null — version 4 is random
+// "" — version 4 is random
 ```
 
 The functions read the hyphenated UUID form in either case. Braces, `urn:uuid:` and bare hex
-are rejected with `null`, so strip them first. A UUID v7 also has a few bits after the
+are rejected with `""`, so strip them first. A UUID v7 also has a few bits after the
 millisecond that some generators use for a finer fraction. Nothing in the UUID says whether
 they do, so `fromUuidTimestamp` does not read them.
 

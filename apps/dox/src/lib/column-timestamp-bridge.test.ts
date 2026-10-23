@@ -1,5 +1,4 @@
 import {
-  arrowOptions,
   bigintOf,
   bytesOf,
   matchPreset,
@@ -9,6 +8,7 @@ import {
   readArgs,
   readBridge,
 } from "./column-timestamp-bridge";
+import { showColumnTimestampBridgeInput } from "./dox-tools";
 import type { ColumnBridgeLib } from "./column-bridge-lib";
 import { BRIDGE_PRESETS, stateOf } from "./column-timestamp-bridge-presets";
 
@@ -37,13 +37,62 @@ describe("grammar", () => {
     expect(bytesOf("zz0102030405060708090a0b")).toBeNull();
   });
 
-  it("leaves timeZone out when the zone is blank", () => {
-    expect(arrowOptions(stateOf({ unit: "second" }))).not.toHaveProperty(
-      "timeZone",
+  it("uses the instant pair for a zone and the wall-time pair without one", () => {
+    const zoned = readBridge(
+      nullLib(),
+      stateOf({ value: "2024-03-10T09:00:00Z", zone: "UTC", unit: "second" }),
     );
+    const plain = readBridge(
+      nullLib(),
+      stateOf({ value: "2024-03-10T09:00:00", unit: "second" }),
+    );
+    const names = (r: ReturnType<typeof readBridge>) =>
+      r.calls.map((c) => c.fn);
+    expect(names(zoned)).toContain("toArrowTimestamp");
+    expect(names(zoned)).not.toContain("toArrowLocalTimestamp");
+    expect(names(plain)).toContain("toArrowLocalTimestamp");
+    expect(names(plain)).not.toContain("toArrowTimestamp");
+  });
+});
+
+describe("readArgs inference", () => {
+  it("opens decode when a stored value comes without a mode", () => {
+    expect(readArgs({ int64: "-1" }).mode).toBe("decode");
+    expect(readArgs({ julianDay: "2440588", nanosOfDay: "0" }).mode).toBe(
+      "decode",
+    );
+  });
+
+  it("keeps encode when a value is given with no stored value", () => {
+    expect(readArgs({ value: "2024-01-01T00:00:00Z" }).mode).toBe("encode");
+  });
+
+  it("reads bytes as the bytes form without int96Form", () => {
+    const s = readArgs({ bytes: "00".repeat(12) });
+    expect(s.mode).toBe("decode");
+    expect(s.int96Form).toBe("bytes");
+  });
+
+  it("refuses an int96Form outside the enum", () => {
     expect(
-      arrowOptions(stateOf({ unit: "second", zone: "UTC" })),
-    ).toHaveProperty("timeZone", "UTC");
+      showColumnTimestampBridgeInput.safeParse({
+        bytes: "00".repeat(12),
+        int96Form: "xyz",
+      }).success,
+    ).toBe(false);
+    expect(
+      showColumnTimestampBridgeInput.safeParse({
+        bytes: "00".repeat(12),
+        int96Form: "bytes",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("refuses a contradiction instead of dropping a field", () => {
+    expect(
+      showColumnTimestampBridgeInput.safeParse({ mode: "encode", int64: "0" })
+        .success,
+    ).toBe(false);
   });
 });
 
@@ -73,7 +122,12 @@ function nullLib(): ColumnBridgeLib {
     toParquetInt96: sentinel(null),
     fromParquetInt96: sentinel(""),
     toArrowTimestamp: sentinel(0n),
-    fromArrowTimestamp: sentinel(null),
+    fromArrowTimestamp: sentinel(""),
+    toArrowLocalTimestamp: sentinel(0n),
+    fromArrowLocalTimestamp: sentinel(""),
+    isValidInt64NanosecondInstant: sentinel(true),
+    isValidInt64NanosecondDateTime: sentinel(true),
+    isValidTimeZone: sentinel(true),
     toProtoTimestamp: sentinel(null),
     fromProtoTimestamp: sentinel(""),
     toProtoDuration: sentinel(null),

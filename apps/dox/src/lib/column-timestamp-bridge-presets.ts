@@ -108,7 +108,7 @@ export const BRIDGE_PRESETS: readonly BridgePreset[] = [
     id: "past-proto-range",
     label: "A year past what protobuf allows",
     description:
-      "Year 10000 is outside the range of a protobuf Timestamp. A month is not a duration it can hold either.",
+      "Year 10000 is outside the range of a protobuf Timestamp, and past what a 64-bit nanosecond count holds. A month is not a duration protobuf can hold either.",
     state: stateOf({
       value: "+010000-01-01T00:00:00Z",
       unit: "nanosecond",

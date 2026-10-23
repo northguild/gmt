@@ -14,17 +14,17 @@ const value = 1710061200000n; // the column has no timezone
 
 new Date(Number(value)).toISOString();
 // "2024-03-10T09:00:00.000Z" — claims 09:00 UTC, but the stores meant 09:00 in Tokyo`}
-  explanation={`Arrow's schema says a timestamp column with no timezone holds wall-clock time of an unknown zone, and that it must not be read as UTC. The number is only right as an instant when the column names a zone. \`fromArrowTimestamp\` follows the column: with a \`timeZone\` it returns \`{ instant }\`, and without one it returns \`{ local, zoneless: true }\`, a wall time that cannot be mistaken for an instant. A script that needs an instant must add the zone the stores used.`}
-  gmtCode={`import { fromArrowTimestamp } from "@northguild/gmt/precision/convert";
+  explanation={`Arrow's schema says a timestamp column with no timezone holds wall-clock time of an unknown zone, and that it must not be read as UTC. The number is only right as an instant when the column names a zone. GMT has one function per kind of column: \`fromArrowTimestamp\` for a column with a \`timeZone\` returns an instant, and \`fromArrowLocalTimestamp\` for one without returns a wall time with no offset, which cannot be mistaken for an instant. A script that needs an instant must add the zone the stores used.`}
+  gmtCode={`import { fromArrowLocalTimestamp, fromArrowTimestamp } from "@northguild/gmt/precision/convert";
 
-fromArrowTimestamp(1710061200000n, { unit: "millisecond" });
-// { local: "2024-03-10T09:00:00", zoneless: true }
-fromArrowTimestamp(1710061200000n, { unit: "millisecond", timeZone: "UTC" });
-// { instant: "2024-03-10T09:00:00Z" }`}
-  fixedSpecId="fromArrowTimestamp"
+fromArrowLocalTimestamp(1710061200000n, "millisecond");
+// "2024-03-10T09:00:00"
+fromArrowTimestamp(1710061200000n, "millisecond");
+// "2024-03-10T09:00:00Z"`}
+  fixedSpecId="fromArrowLocalTimestamp"
 />
 
 The widget reads a seconds column with no timezone. It starts at `0n`, which is
-`{ local: "1970-01-01T00:00:00", zoneless: true }`. Enter `1710061200` and it shows
-`{ local: "2024-03-10T09:00:00", zoneless: true }`: a wall time, never an instant. A column
-with a `timeZone` would return `{ instant }` instead, always written in UTC. The rules are in [Foreign Epoch Bridges](/guides/conversion/foreign-epoch-bridges/).
+`"1970-01-01T00:00:00"`. Enter `1710061200` and it shows
+`"2024-03-10T09:00:00"`: a wall time, never an instant. A column
+with a `timeZone` would use `fromArrowTimestamp` instead, which returns an instant always written in UTC. The rules are in [Foreign Epoch Bridges](/guides/conversion/foreign-epoch-bridges/).

@@ -89,13 +89,7 @@ const RECORDED: Record<string, Recorded> = {
         "2024-01-01T00:00:00Z",
         "",
       ],
-      arrow: [
-        "read",
-        "1704067200n",
-        "",
-        '{ instant: "2024-01-01T00:00:00Z" }',
-        "",
-      ],
+      arrow: ["read", "1704067200n", "", "2024-01-01T00:00:00Z", ""],
       timestamp: [
         "read",
         "seconds: 1704067200n",
@@ -132,7 +126,7 @@ const RECORDED: Record<string, Recorded> = {
         "read",
         "1704067200123456n",
         "",
-        '{ instant: "2024-01-01T00:00:00.123456Z" }',
+        "2024-01-01T00:00:00.123456Z",
         "",
       ],
       timestamp: [
@@ -161,13 +155,7 @@ const RECORDED: Record<string, Recorded> = {
         "1969-12-31T23:59:59.9999999Z",
         "",
       ],
-      arrow: [
-        "read",
-        "-1n",
-        "",
-        '{ instant: "1969-12-31T23:59:59.999999Z" }',
-        "",
-      ],
+      arrow: ["read", "-1n", "", "1969-12-31T23:59:59.999999Z", ""],
       timestamp: [
         "read",
         "seconds: -1n",
@@ -183,13 +171,7 @@ const RECORDED: Record<string, Recorded> = {
     ladder: ["", "", "2024-01-01T00:00:00", ""],
     cards: {
       int96: ["sentinel", "", "", "", "null"],
-      arrow: [
-        "read",
-        "1704067200000n",
-        "",
-        '{ local: "2024-01-01T00:00:00", zoneless: true }',
-        "",
-      ],
+      arrow: ["read", "1704067200000n", "", "2024-01-01T00:00:00", ""],
       timestamp: ["sentinel", "", "", "", "null"],
       duration: ["idle", "", "", "", ""],
     },
@@ -241,7 +223,7 @@ const RECORDED: Record<string, Recorded> = {
         "read",
         "9223372036854775807n",
         "",
-        '{ instant: "2262-04-11T23:47:16.854775807Z" }',
+        "2262-04-11T23:47:16.854775807Z",
         "",
       ],
       timestamp: [
@@ -256,12 +238,7 @@ const RECORDED: Record<string, Recorded> = {
   },
   "past-proto-range": {
     hero: ["instant", "+010000-01-01T00:00:00Z"],
-    ladder: [
-      "+010000-01-01T00:00:00Z",
-      "+010000-01-01T00:00:00Z",
-      "1970-01-01T00:00:00Z",
-      "",
-    ],
+    ladder: ["+010000-01-01T00:00:00Z", "+010000-01-01T00:00:00Z", "", ""],
     cards: {
       int96: [
         "read",
@@ -270,7 +247,7 @@ const RECORDED: Record<string, Recorded> = {
         "+010000-01-01T00:00:00Z",
         "",
       ],
-      arrow: ["read", "0n", "", '{ instant: "1970-01-01T00:00:00Z" }', ""],
+      arrow: ["sentinel", "", "", "", "0n"],
       timestamp: ["sentinel", "", "", "", "null"],
       duration: ["sentinel", "", "", "", "null"],
     },
@@ -328,13 +305,7 @@ const RECORDED: Record<string, Recorded> = {
     ladder: ["", "", "", ""],
     cards: {
       int96: ["idle", "", "", "", ""],
-      arrow: [
-        "read",
-        "-1n",
-        "",
-        '{ local: "1969-12-31T23:59:59.999999999", zoneless: true }',
-        "",
-      ],
+      arrow: ["read", "-1n", "", "1969-12-31T23:59:59.999999999", ""],
       timestamp: ["idle", "", "", "", ""],
       duration: ["idle", "", "", "", ""],
     },
@@ -415,8 +386,34 @@ describe("behaviour", () => {
   it("shows a legitimate zero as a value, not a lost signal", async () => {
     const { root } = await mount({ preset: "past-proto-range" });
     const arrow = card(root, "arrow");
+    // A nanosecond count past int64 is out of range, not the 1970 epoch.
+    expect(arrow.dataset["state"]).toBe("sentinel");
+    expect(slot(arrow, "readback")).toBe("");
+    expect(slot(arrow, "literal")).toBe("0n");
+  });
+
+  it("keeps a legitimate zero as a value", async () => {
+    const { root } = await mount({
+      value: "1970-01-01T00:00:00Z",
+      unit: "second",
+      zone: "UTC",
+    });
+    const arrow = card(root, "arrow");
     expect(arrow.dataset["state"]).toBe("read");
     expect(slot(arrow, "stored-1")).toBe("0n");
+  });
+
+  it("names an unknown zone in the other tools' words", async () => {
+    const { root } = await mount({
+      value: "2024-01-01T00:00:00Z",
+      unit: "second",
+      zone: "Mars/Olympus",
+    });
+    const arrow = card(root, "arrow");
+    expect(arrow.dataset["state"]).toBe("sentinel");
+    expect(arrow.textContent).toContain(
+      "Mars/Olympus is not a time zone this browser knows.",
+    );
   });
 
   it("fills the inputs from a preset and switches to Your values on typing", async () => {

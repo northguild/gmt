@@ -1,5 +1,9 @@
-import { NANOSECONDS_PER_SECOND, hexValue, objectIdText } from "../../internal";
-import { fromNanoseconds } from "../convert/fromNanoseconds";
+import {
+  NANOSECONDS_PER_SECOND,
+  hexValue,
+  objectIdText,
+  instantStringFromEpochNanoseconds,
+} from "../../internal";
 
 /**
  * Read the creation second a MongoDB ObjectId carries (mongodb/specifications
@@ -38,5 +42,5 @@ export function fromObjectId(objectId: string): string {
   }
 
   const seconds = hexValue(objectId.slice(0, 8));
-  return fromNanoseconds(seconds * NANOSECONDS_PER_SECOND);
+  return instantStringFromEpochNanoseconds(seconds * NANOSECONDS_PER_SECOND);
 }

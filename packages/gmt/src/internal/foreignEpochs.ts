@@ -19,7 +19,7 @@
  * | KSUID | 2014-05-13T16:53:20Z | 1 s | 32 bits unsigned, `ksuid.go` |
  * | Julian Day | -004713-11-24 (proleptic Gregorian) | 1 day | Julian Day 0; Unix epoch is JD 2 440 587.5 |
  * | Arrow int64 | 1970-01-01 | s/ms/µs/ns | signed 64 bits, `Schema.fbs` |
- * | protobuf Timestamp | 1970-01-01 | 1 s | 0001-01-01 to 9999-12-31T23:59:59Z, `timestamp.proto` |
+ * | protobuf Timestamp | 1970-01-01 | 1 ns | 0001-01-01 to 9999-12-31T23:59:59Z, `timestamp.proto` |
  *
  * Sources: [FILETIME epoch](https://devblogs.microsoft.com/oldnewthing/20090306-00/?p=18913),
  * [NTP eras](https://www.eecis.udel.edu/~mills/y2k.html),
@@ -192,9 +192,6 @@ export const MIN_PG_MICROSECONDS = -211_813_488_000_000_000n;
  */
 export const GREGORIAN_EPOCH_OFFSET_TICKS = 122_192_928_000_000_000n;
 
-/** Largest 48-bit Unix millisecond count, 2^48 − 1 (RFC 9562 §5.7; ULID spec § Specification). */
-export const MAX_UNIX_MS_48 = 281_474_976_710_655n;
-
 /** The KSUID epoch, 2014-05-13T16:53:20Z, in Unix seconds (`epochStamp` in `ksuid.go`). */
 export const KSUID_EPOCH_SECONDS = 1_400_000_000n;
 
@@ -203,12 +200,6 @@ export const KSUID_EPOCH_SECONDS = 1_400_000_000n;
  * (proleptic Gregorian: Temporal's ISO calendar).
  */
 export const JULIAN_DAY_OF_UNIX_EPOCH = 2_440_588;
-
-/** Smallest Arrow `int64` timestamp value, −2^63 (`Schema.fbs`). */
-export const MIN_INT64 = -9_223_372_036_854_775_808n;
-
-/** Largest Arrow `int64` timestamp value, 2^63 − 1 (`Schema.fbs`). */
-export const MAX_INT64 = 9_223_372_036_854_775_807n;
 
 /** Smallest protobuf `Timestamp` seconds: 0001-01-01T00:00:00Z (`timestamp.proto`). */
 export const PROTO_TIMESTAMP_MIN_SECONDS = -62_135_596_800n;

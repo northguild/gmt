@@ -735,13 +735,38 @@ export const showDurationParserBenchInput = z.object({
   locale: z.string().min(2).max(35).optional(),
 });
 
+/** What is wrong with an ID Timestamp Decoder call; empty when it is sound. */
+export function idDecoderProblems(v: unknown): string[] {
+  const a = (v ?? {}) as Record<string, unknown>;
+  const out: string[] = [];
+  const id = a["id"];
+  if (typeof id !== "string" || id === "")
+    out.push("id must be text, not blank.");
+  else if (id.length > 96) out.push("id is at most 96 characters.");
+  const layout: [string, RegExp][] = [
+    ["epochMs", /^-?\d{1,16}$/],
+    ["shift", /^\d{1,2}$/],
+    ["timestampBits", /^\d{1,2}$/],
+  ];
+  for (const [key, grammar] of layout) {
+    const value = a[key];
+    if (
+      value !== undefined &&
+      (typeof value !== "string" || !grammar.test(value))
+    ) {
+      out.push(`${key} must be a whole number as text.`);
+    }
+  }
+  return out;
+}
+
 /**
  * ID Timestamp Decoder: an identifier exactly as the reader gave it (never
  * trimmed or re-cased: the decoders judge the strict form), and the Snowflake
  * layout only when the reader gave one. The chat args are the permalink args.
  */
 export const showIdTimestampDecoderInput = z.object({
-  id: z.string().min(1).max(64),
+  id: z.string().min(1).max(96),
   epochMs: z
     .string()
     .regex(/^-?\d{1,16}$/)
@@ -756,6 +781,100 @@ export const showIdTimestampDecoderInput = z.object({
     .optional(),
 });
 
+const BRIDGE_UNITS = ["second", "millisecond", "microsecond", "nanosecond"];
+const BRIDGE_INT96_FORMS = ["record", "bytes"];
+
+/**
+ * The same grammars the widget reads a field with (`column-timestamp-bridge.ts`),
+ * so a field the widget would answer "Type a whole number" to is refused here
+ * with a reason the model can act on, not shown as a silent blank.
+ */
+const BRIDGE_FIELD_GRAMMAR: Readonly<Record<string, [RegExp, string]>> = {
+  julianDay: [/^-?\d{1,11}$/, "a whole number of up to 11 digits"],
+  nanos: [/^-?\d{1,11}$/, "a whole number of up to 11 digits"],
+  durNanos: [/^-?\d{1,11}$/, "a whole number of up to 11 digits"],
+  nanosOfDay: [/^-?\d{1,20}$/, "a whole number of up to 20 digits"],
+  int64: [/^-?\d{1,20}$/, "a whole number of up to 20 digits"],
+  seconds: [/^-?\d{1,20}$/, "a whole number of up to 20 digits"],
+  durSeconds: [/^-?\d{1,20}$/, "a whole number of up to 20 digits"],
+  bytes: [/^[0-9a-fA-F]{24}$/, "24 hex digits"],
+};
+
+/**
+ * What is wrong with a Column Timestamp Bridge call, as sentences; empty when
+ * it is sound. The schema and the Worker both ask, so a direct call is held to
+ * the same rules. Contradictions are refused rather than guessed at: a field
+ * the mode or form does not read would be dropped without a word. The widget
+ * still judges every range itself.
+ */
+export function columnBridgeProblems(v: Record<string, unknown>): string[] {
+  const text = (k: string) =>
+    typeof v[k] === "string" ? (v[k] as string) : "";
+  const given = (k: string) => text(k) !== "";
+  const storedKeys = [
+    "julianDay",
+    "nanosOfDay",
+    "bytes",
+    "int64",
+    "seconds",
+    "nanos",
+    "durSeconds",
+    "durNanos",
+  ];
+  const stored = storedKeys.some(given);
+  const out: string[] = [];
+  if (!given("value") && !stored) {
+    out.push("Send a value, or a stored value to decode.");
+  }
+  if (v["value"] !== undefined && typeof v["value"] !== "string") {
+    out.push("value must be text.");
+  }
+  if (
+    v["mode"] !== undefined &&
+    v["mode"] !== "encode" &&
+    v["mode"] !== "decode"
+  ) {
+    out.push("mode is encode or decode.");
+  }
+  if (v["unit"] !== undefined && !BRIDGE_UNITS.includes(v["unit"] as string)) {
+    out.push(`unit is one of ${BRIDGE_UNITS.join(", ")}.`);
+  }
+  if (
+    v["int96Form"] !== undefined &&
+    !BRIDGE_INT96_FORMS.includes(v["int96Form"] as string)
+  ) {
+    out.push("int96Form is record or bytes.");
+  }
+  for (const key of storedKeys) {
+    const [grammar, words] = BRIDGE_FIELD_GRAMMAR[key]!;
+    if (given(key) && !grammar.test(text(key))) {
+      out.push(`${key} must be ${words}.`);
+    }
+  }
+  if (v["mode"] === "encode" && stored) {
+    out.push("Stored values need mode decode. Leave mode out or send decode.");
+  }
+  if (v["mode"] === "decode" && given("value")) {
+    out.push("value is for encode mode. Decode reads the stored-value fields.");
+  }
+  if (v["mode"] === undefined && given("value") && stored) {
+    out.push("value (encode) and stored values (decode) disagree: send mode.");
+  }
+  if (v["int96Form"] === "record" && given("bytes")) {
+    out.push("bytes needs int96Form bytes. Leave int96Form out or send bytes.");
+  }
+  const record = given("julianDay") || given("nanosOfDay");
+  if (v["int96Form"] === "bytes" && record) {
+    out.push("julianDay and nanosOfDay need int96Form record.");
+  }
+  if (given("bytes") && record) {
+    out.push(
+      "Send the INT96 as bytes or as julianDay and nanosOfDay, not both.",
+    );
+  }
+  return out;
+}
+
 /**
  * Column Timestamp Bridge: an instant (or a wall time) exactly as the reader gave
  * it, the Arrow column's unit and timezone, and an ISO duration. Or stored
@@ -763,14 +882,14 @@ export const showIdTimestampDecoderInput = z.object({
  * shared link say the same thing. The widget judges every value itself, so the
  * schema checks length and shape only.
  */
-const short = z.string().max(64).optional();
+const short = z.string().max(96).optional();
 export const showColumnTimestampBridgeInput = z
   .object({
     mode: z
       .enum(["encode", "decode"])
       .optional()
       .describe(
-        "encode (default): convert one instant, which needs value. decode: read stored values, which needs at least one stored-value field.",
+        "encode (default when value is given): convert one instant, which needs value. decode: read stored values, which needs at least one stored-value field. Optional: stored values alone select decode.",
       ),
     value: short.describe(
       "Required in encode mode: an ISO instant, or a zoneless wall time to show an Arrow column with no timezone. Exactly as the reader gave it.",
@@ -785,9 +904,12 @@ export const showColumnTimestampBridgeInput = z
     duration: short.describe(
       "Optional in encode mode: an ISO 8601 duration to show as a protobuf Duration.",
     ),
-    int96Form: short.describe(
-      "Decode mode: record (julianDay and nanosOfDay) or bytes (the 12 stored bytes).",
-    ),
+    int96Form: z
+      .enum(["record", "bytes"])
+      .optional()
+      .describe(
+        "Decode mode: record (julianDay and nanosOfDay) or bytes (the 12 stored bytes). Optional: bytes alone selects bytes.",
+      ),
     julianDay: short.describe(
       "Decode mode, INT96 record: the whole-number Julian day.",
     ),
@@ -809,21 +931,11 @@ export const showColumnTimestampBridgeInput = z
       "Decode mode: a protobuf Duration's nanos, signed like its seconds.",
     ),
   })
-  .refine(
-    (v) =>
-      [
-        v.value,
-        v.julianDay,
-        v.nanosOfDay,
-        v.bytes,
-        v.int64,
-        v.seconds,
-        v.nanos,
-        v.durSeconds,
-        v.durNanos,
-      ].some((f) => f !== undefined && f !== ""),
-    { message: "Send a value, or a stored value to decode." },
-  );
+  .superRefine((v, ctx) => {
+    for (const message of columnBridgeProblems(v)) {
+      ctx.addIssue({ code: "custom", message });
+    }
+  });
 
 /**
  * What a tool returns to the model.
@@ -1182,7 +1294,7 @@ export const DOX_TOOL_DOCS: {
     purpose:
       "Show one instant as a Parquet INT96, an Arrow int64 timestamp and a protobuf Timestamp, and decode stored values back.",
     when: "Call when the reader asks how to convert a timestamp to or from Parquet INT96, Arrow or protobuf, why an Arrow timestamp is off by hours, why protobuf nanos are positive before 1970, or how a protobuf Duration differs.",
-    args: "mode (encode | decode). Encode needs value (an ISO instant or a zoneless wall time); decode needs at least one stored value: julianDay and nanosOfDay (or bytes, 24 hex digits, with int96Form bytes), int64, seconds and nanos, or durSeconds and durNanos. Also unit (second | millisecond | microsecond | nanosecond), zone (the Arrow column's IANA id; leave out for a zoneless column) and duration (ISO, optional). Send values exactly as the reader gave them.",
+    args: "mode (encode | decode; optional, taken from the fields). Encode needs value (an ISO instant or a zoneless wall time); decode needs at least one stored value: julianDay and nanosOfDay (or bytes, 24 hex digits; int96Form record | bytes is optional), int64, seconds and nanos, or durSeconds and durNanos. Never send both value and a stored value. Also unit (second | millisecond | microsecond | nanosecond), zone (the Arrow column's IANA id; leave out for a zoneless column) and duration (ISO, optional). Send values exactly as the reader gave them.",
   },
 ];
 

@@ -1,5 +1,8 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidEpochNanoseconds } from "../../internal";
+import {
+  instantStringFromEpochNanoseconds,
+  isValidEpochNanoseconds,
+} from "../../internal";
 import { isValidTimeZone } from "../../zoned/validate";
 
 /**
@@ -40,24 +43,23 @@ export function fromNanoseconds(
   nanoseconds: bigint,
   timeZone?: string,
 ): string {
-  if (!isValidEpochNanoseconds(nanoseconds)) {
-    return "";
+  // An explicit `undefined` is the same as omitting the argument (TC39 optional parameters).
+  if (timeZone === undefined) {
+    return instantStringFromEpochNanoseconds(nanoseconds);
   }
 
-  // An explicit `undefined` is the same as omitting the argument (TC39 optional parameters).
   if (
-    timeZone !== undefined &&
-    (typeof timeZone !== "string" || !isValidTimeZone(timeZone))
+    !isValidEpochNanoseconds(nanoseconds) ||
+    typeof timeZone !== "string" ||
+    !isValidTimeZone(timeZone)
   ) {
     return "";
   }
 
   try {
-    const instant = Temporal.Instant.fromEpochNanoseconds(nanoseconds);
-
-    return typeof timeZone === "string"
-      ? instant.toZonedDateTimeISO(timeZone).toString()
-      : instant.toString();
+    return Temporal.Instant.fromEpochNanoseconds(nanoseconds)
+      .toZonedDateTimeISO(timeZone)
+      .toString();
   } catch {
     return "";
   }

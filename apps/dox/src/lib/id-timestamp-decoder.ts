@@ -17,7 +17,7 @@ import type { IdentifierLib, SnowflakeLayout } from "./identifier-lib";
 export const CUSTOM_PRESET_ID = "custom";
 
 /** The longest identifier the input takes. */
-export const ID_MAX_CHARS = 64;
+export const ID_MAX_CHARS = 96;
 
 /**
  * The widest instant any decoder can return, 28 characters. It sizes a value
@@ -238,7 +238,9 @@ const KEYS = ["preset", "id", "epochMs", "shift", "timestampBits"] as const;
 export function isSeeded(args: IdTimestampDecoderArgs | undefined): boolean {
   return (
     args !== undefined &&
-    KEYS.some((k) => typeof args[k] === "string" && args[k] !== "")
+    // A blank `id` is a seed: a link made from a cleared field opens blank.
+    (typeof args.id === "string" ||
+      KEYS.some((k) => typeof args[k] === "string" && args[k] !== ""))
   );
 }
 
@@ -251,20 +253,22 @@ export function readArgs(args: IdTimestampDecoderArgs): IdDecoderState {
   const state = presetState(named ?? DEFAULT_PRESET);
   for (const key of ["id", "epochMs", "shift", "timestampBits"] as const) {
     const v = args[key];
-    if (typeof v === "string" && v !== "") state[key] = v;
+    // `id` may be blank: a cleared field must come back blank from its link.
+    if (typeof v === "string" && (v !== "" || key === "id")) state[key] = v;
   }
   return state;
 }
 
 /**
  * The permalink keys for `state`: `preset` alone when it is exactly a preset,
- * else the keys that hold text. Every value is a string.
+ * else `id` (even blank) and the layout keys that hold text. Every value is a string.
  */
 export function permalinkOf(state: IdDecoderState): Record<string, string> {
   const preset = matchPreset(state);
   if (preset !== CUSTOM_PRESET_ID) return { preset };
-  const out: Record<string, string> = {};
-  for (const key of ["id", "epochMs", "shift", "timestampBits"] as const) {
+  // `id` is always written, even blank, so the link does not fall back to the default.
+  const out: Record<string, string> = { id: state.id };
+  for (const key of ["epochMs", "shift", "timestampBits"] as const) {
     if (state[key] !== "") out[key] = state[key];
   }
   return out;
@@ -316,14 +320,6 @@ function resultOf(value: unknown): RowResult {
       ? { kind: "sentinel", literal: '""' }
       : { kind: "read", instant: value };
   }
-  const record = value as { instant?: unknown; version?: unknown };
-  if (typeof record.instant === "string" && record.instant !== "") {
-    return {
-      kind: "read",
-      instant: record.instant,
-      version: record.version as 1 | 6 | 7,
-    };
-  }
   return { kind: "sentinel", literal: "null" };
 }
 
@@ -352,7 +348,17 @@ export function readIds(lib: IdentifierLib, state: IdDecoderState): IdRow[] {
       continue;
     }
     const call = runCall(lib, fn, state.id);
-    rows.push({ format, fn, call, result: resultOf(call.result) });
+    const result = resultOf(call.result);
+    // The UUID decoder returns the instant alone; the version is `uuid.charAt(14)`.
+    rows.push({
+      format,
+      fn,
+      call,
+      result:
+        fn === "fromUuidTimestamp" && result.kind === "read"
+          ? { ...result, version: Number(state.id.charAt(14)) as 1 | 6 | 7 }
+          : result,
+    });
   }
   return rows;
 }

@@ -10,9 +10,13 @@
  * Not in `regex/`: that namespace holds date-time grammars, and these validate identifiers.
  */
 
-/** RFC 9562 §4 ABNF: 8-4-4-4-12 hex digits, hyphens required, no braces, no `urn:uuid:`. */
-export const uuidText =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/**
+ * A UUID that carries a timestamp. RFC 9562 §4 ABNF: 8-4-4-4-12 hex digits, hyphens required,
+ * no braces, no `urn:uuid:`. The version digit (§4.2) is 1, 6 or 7, and the variant digit
+ * (§4.1) is 8, 9, a or b: bits `10xx`.
+ */
+export const timeUuidText =
+  /^[\da-f]{8}-[\da-f]{4}-[167][\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i;
 
 /** MongoDB ObjectId: 12 bytes in hex string form, 24 digits. */
 export const objectIdText = /^[0-9a-f]{24}$/i;
@@ -27,45 +31,37 @@ export const ulidText = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i;
 /** KSUID `base62.go`: 27 base62 characters. Case-sensitive, so no `i` flag. */
 export const ksuidText = /^[0-9A-Za-z]{27}$/;
 
-/** Discord: snowflakes are sent as decimal strings; up to 20 digits covers 2^64 − 1. */
+/** An unsigned decimal string of up to 20 digits: 2^64 − 1 has 20 digits. */
 export const unsignedDecimalText = /^\d{1,20}$/;
 
 /** Crockford base32 alphabet (ULID spec § Encoding): no `I L O U`. */
-const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+export const CROCKFORD_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 /** KSUID `base62.go` alphabet: `0-9A-Za-z`, spelled out in full. */
-const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+export const BASE62_ALPHABET =
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 /** Read hex digits as an integer. The caller has matched a grammar first. */
 export function hexValue(digits: string): bigint {
   return BigInt("0x" + digits);
 }
 
-/** Read Crockford base32 digits (either case) as an integer, most significant first. */
-export function crockfordValue(digits: string): bigint {
-  let value = 0n;
-  for (const character of digits.toUpperCase()) {
-    value = value * 32n + BigInt(CROCKFORD.indexOf(character));
-  }
-  return value;
+/**
+ * Read `digits` as an integer in the base `alphabet.length`, most significant first. The
+ * caller has matched a grammar first and upper-cases Crockford digits it reads from either case.
+ */
+export function digitsValue(digits: string, alphabet: string): bigint {
+  return [...digits].reduce(
+    (value, digit) =>
+      value * BigInt(alphabet.length) + BigInt(alphabet.indexOf(digit)),
+    0n,
+  );
 }
 
 /** Write an integer as `length` upper-case Crockford base32 digits, most significant first. */
 export function crockfordDigits(value: bigint, length: number): string {
-  let digits = "";
-  let rest = value;
-  for (let index = 0; index < length; index++) {
-    digits = CROCKFORD.charAt(Number(rest % 32n)) + digits;
-    rest /= 32n;
-  }
-  return digits;
-}
-
-/** Read base62 digits (case-sensitive) as an integer, most significant first. */
-export function base62Value(digits: string): bigint {
-  let value = 0n;
-  for (const character of digits) {
-    value = value * 62n + BigInt(BASE62.indexOf(character));
-  }
-  return value;
+  return value
+    .toString(32)
+    .padStart(length, "0")
+    .replace(/./g, (digit) => CROCKFORD_ALPHABET.charAt(parseInt(digit, 32)));
 }

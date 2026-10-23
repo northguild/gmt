@@ -46,13 +46,13 @@ Paste an identifier, or pick a preset. All five decoders run on it, exactly as t
 
 ```ts
 fromUuidTimestamp("017f22e2-79b0-7cc3-98c4-dc0c0c07398f");
-// { instant: "2022-02-22T19:22:22Z", version: 7 }
-fromUuidTimestamp("919108f7-52d1-4320-9bac-f847db4148a8"); // null (version 4)
+// "2022-02-22T19:22:22Z" (the version is the 15th character, here 7)
+fromUuidTimestamp("919108f7-52d1-4320-9bac-f847db4148a8"); // "" (version 4)
 fromUlid("01ARZ3NDEKTSV4RRFFQ69G5FAV"); // "2016-07-30T23:54:10.259Z"
 fromSnowflake("1050118621198921728", { epochMs: 1288834974657, shift: 22 });
 ```
 
-Every decoder returns a sentinel for text it cannot read: `null` from the UUID decoder and `""` from the others. The tool shows `NO SIGNAL` only when all five did. That is different from a format that read the text.
+Every decoder returns the sentinel `""` for text it cannot read. The tool shows `NO SIGNAL` only when all five did. That is different from a format that read the text.
 
 </Fragment>
 

@@ -75,13 +75,13 @@ convertDateToCalendar("2024-10-03[u-ca=roc]", "iso8601"); // "2024-10-03"`}
 <Mistake
   severity="high"
   title="Reading a time out of a UUID v4"
-  description="A version 4 UUID is random and holds no time. Code that slices the first hex digits and treats them as a timestamp gets a number that looks real and means nothing. fromUuidTimestamp returns null for v4, and for every other version that carries no timestamp."
+  description="A version 4 UUID is random and holds no time. Code that slices the first hex digits and treats them as a timestamp gets a number that looks real and means nothing. fromUuidTimestamp returns an empty string for v4, and for every other version that carries no timestamp."
   wrongCode={`const ms = parseInt("919108f7-52d1-4320-9bac-f847db4148a8".replace(/-/g, "").slice(0, 12), 16);
 new Date(ms).toISOString(); // "7041-11-06T22:31:51.761Z" — a date from random bits`}
   rightCode={`import { fromUuidTimestamp } from "@northguild/gmt/precision/identifiers";
 
-fromUuidTimestamp("919108f7-52d1-4320-9bac-f847db4148a8"); // null — version 4 is random
-fromUuidTimestamp("017f22e2-79b0-7cc3-98c4-dc0c0c07398f"); // { instant: "2022-02-22T19:22:22Z", version: 7 }`}
+fromUuidTimestamp("919108f7-52d1-4320-9bac-f847db4148a8"); // "" — version 4 is random
+fromUuidTimestamp("017f22e2-79b0-7cc3-98c4-dc0c0c07398f"); // "2022-02-22T19:22:22Z"`}
 />
 
 <Mistake

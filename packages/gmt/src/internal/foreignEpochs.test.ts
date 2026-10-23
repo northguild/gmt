@@ -11,9 +11,6 @@ import {
   JULIAN_DAY_OF_UNIX_EPOCH,
   KSUID_EPOCH_SECONDS,
   MAX_DOT_NET_TICKS,
-  MAX_INT64,
-  MAX_UNIX_MS_48,
-  MIN_INT64,
   PROTO_DURATION_MAX_SECONDS,
   PROTO_TIMESTAMP_MAX_SECONDS,
   PROTO_TIMESTAMP_MIN_SECONDS,
@@ -156,11 +153,6 @@ describe("foreignEpochs", () => {
     expect(GREGORIAN_EPOCH_OFFSET_TICKS).toBe(0x01b21dd213814000n);
   });
 
-  it("holds 48 bits of Unix milliseconds (RFC 9562 §5.7, ULID)", () => {
-    expect(MAX_UNIX_MS_48).toBe(2n ** 48n - 1n);
-    expect(MAX_UNIX_MS_48).toBe(281_474_976_710_655n);
-  });
-
   it("starts the KSUID epoch at 2014-05-13T16:53:20Z", () => {
     expect(KSUID_EPOCH_SECONDS).toBe(
       Temporal.Instant.from("2014-05-13T16:53:20Z").epochNanoseconds /
@@ -172,11 +164,6 @@ describe("foreignEpochs", () => {
     expect(BigInt(JULIAN_DAY_OF_UNIX_EPOCH)).toBe(
       daysBetween("-004713-11-24", "1970-01-01"),
     );
-  });
-
-  it("spans the signed 64-bit integer range", () => {
-    expect(MIN_INT64).toBe(-(2n ** 63n));
-    expect(MAX_INT64).toBe(2n ** 63n - 1n);
   });
 
   it("bounds a protobuf Timestamp at 0001-01-01 and 9999-12-31T23:59:59", () => {

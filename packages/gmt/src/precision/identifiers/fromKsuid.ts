@@ -1,13 +1,11 @@
 import {
   KSUID_EPOCH_SECONDS,
   NANOSECONDS_PER_SECOND,
-  base62Value,
+  BASE62_ALPHABET,
+  digitsValue,
+  instantStringFromEpochNanoseconds,
   ksuidText,
 } from "../../internal";
-import { fromNanoseconds } from "../convert/fromNanoseconds";
-
-/** The largest 20-byte value, 2^160 - 1 (`maxStringEncoded` in `ksuid.go`). */
-const MAX_KSUID = 2n ** 160n - 1n;
 
 /**
  * Read the instant a KSUID carries (segmentio/ksuid, `ksuid.go` and `base62.go`).
@@ -41,11 +39,12 @@ export function fromKsuid(ksuid: string): string {
     return "";
   }
 
-  const value = base62Value(ksuid);
-  if (value > MAX_KSUID) {
+  const value = digitsValue(ksuid, BASE62_ALPHABET);
+  // Above 2^160 - 1 (`maxStringEncoded` in `ksuid.go`) is not a 20-byte value.
+  if (BigInt.asUintN(160, value) !== value) {
     return "";
   }
 
   const seconds = (value >> 128n) + KSUID_EPOCH_SECONDS;
-  return fromNanoseconds(seconds * NANOSECONDS_PER_SECOND);
+  return instantStringFromEpochNanoseconds(seconds * NANOSECONDS_PER_SECOND);
 }

@@ -17,15 +17,9 @@ import { WidgetLoadError } from "./widget-mount";
 
 export type { SnowflakeLayout };
 
-/** What `fromUuidTimestamp` returns for a time-ordered UUID. */
-export interface UuidTimestamp {
-  instant: string;
-  version: 1 | 6 | 7;
-}
-
 /** The functions the tool calls, as the library declares them. */
 export interface IdentifierLib {
-  fromUuidTimestamp(uuid: string): UuidTimestamp | null;
+  fromUuidTimestamp(uuid: string): string;
   fromUlid(ulid: string): string;
   fromObjectId(objectId: string): string;
   fromKsuid(ksuid: string): string;

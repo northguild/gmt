@@ -18,7 +18,7 @@ import {
 
 function fakeLib(): IdentifierLib {
   return {
-    fromUuidTimestamp: vi.fn(() => null),
+    fromUuidTimestamp: vi.fn(() => ""),
     fromUlid: vi.fn(() => ""),
     fromObjectId: vi.fn(() => ""),
     fromKsuid: vi.fn(() => ""),
@@ -95,11 +95,8 @@ describe("heroOf", () => {
 
   it("is one, with a version, for a UUID read", () => {
     const lib = fakeLib();
-    mocks(lib)["fromUuidTimestamp"]!.mockReturnValue({
-      instant: "2022-02-22T19:22:22Z",
-      version: 7,
-    });
-    const s = state();
+    mocks(lib)["fromUuidTimestamp"]!.mockReturnValue("2022-02-22T19:22:22Z");
+    const s = state({ id: "017f22e2-79b0-7cc3-98c4-dc0c0c07398f" });
     expect(heroOf(readIds(lib, s), s)).toEqual({
       kind: "one",
       format: "UUID",
@@ -143,5 +140,15 @@ describe("presets and permalinks", () => {
   it("treats an empty args object as unseeded", () => {
     expect(isSeeded({})).toBe(false);
     expect(isSeeded({ id: "a" })).toBe(true);
+    expect(isSeeded({ id: "" })).toBe(true);
+  });
+});
+
+describe("a blank id in a link", () => {
+  it("comes back blank, not as the default preset", () => {
+    const blank = state({ id: "" });
+    const link = permalinkOf(blank);
+    expect(link["id"]).toBe("");
+    expect(readArgs(link).id).toBe("");
   });
 });

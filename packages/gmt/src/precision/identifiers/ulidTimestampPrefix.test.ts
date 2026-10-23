@@ -13,6 +13,9 @@ describe("ulidTimestampPrefix", () => {
     ${"2024-01-01T09:00:00+09:00"}             | ${"01HK153X00"} | ${"offset input"}
     ${"+010889-08-02T05:31:50.655Z"}           | ${"7ZZZZZZZZZ"} | ${"2^48 - 1 ms"}
     ${"+010889-08-02T05:31:50.6559999Z"}       | ${"7ZZZZZZZZZ"} | ${"sub-ms digits floor at the 48-bit max"}
+    ${"+010889-08-02T05:31:50.656Z"}           | ${"8000000000"} | ${"2^48 ms: the exclusive end no ULID carries"}
+    ${"+010889-08-02T05:31:50.656999999Z"}     | ${"8000000000"} | ${"sub-ms digits floor to the exclusive end"}
+    ${"+010889-08-02T14:31:50.656+09:00"}      | ${"8000000000"} | ${"the exclusive end, expressed with an offset"}
     ${"1970-01-01T00:00:00.0009999Z"}          | ${"0000000000"} | ${"sub-ms digits floor at the epoch"}
     ${"1970-01-01T00:00:00.001Z"}              | ${"0000000001"} | ${"one millisecond"}
     ${"1970-01-01T00:00:00.032Z"}              | ${"0000000010"} | ${"32 ms carries into the next digit"}
@@ -25,12 +28,12 @@ describe("ulidTimestampPrefix", () => {
 
   it.each`
     input                                 | reason
-    ${"+010889-08-02T05:31:50.656Z"}      | ${"past 2^48 - 1 ms"}
+    ${"+010889-08-02T05:31:50.657Z"}      | ${"past the exclusive end 2^48 ms"}
     ${"1969-12-31T23:59:59.999Z"}         | ${"before the Unix epoch"}
     ${"1969-12-31T23:59:59.9999999Z"}     | ${"-0.0001 ms floors to -1 ms, not truncated to 0"}
     ${"1970-01-01T00:00:00+01:00"}        | ${"zoned/offset input an hour before the epoch"}
     ${"-000001-01-01T00:00:00Z"}          | ${"far before the epoch"}
-    ${"+010889-08-02T14:31:50.656+09:00"} | ${"past 48 bits, expressed with an offset"}
+    ${"+010889-08-02T14:31:50.657+09:00"} | ${"past the exclusive end, expressed with an offset"}
     ${"2024-01-01T00:00:00"}              | ${"no offset"}
     ${"invalid"}                          | ${"not a date"}
     ${""}                                 | ${"empty"}

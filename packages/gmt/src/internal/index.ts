@@ -23,7 +23,14 @@ export {
   fiscalYearOf,
   gregorianCycleShift,
 } from "./fiscalCalendar";
-export { resolveArrowTimestampOptions } from "./arrowTimestampOptions";
+export {
+  arrowCount,
+  arrowNanoseconds,
+  fitsInt64,
+  wallClockNanoseconds,
+} from "./arrowTimestamp";
+export { prefixMilliseconds, UNIX_MS_48_END } from "./prefixMilliseconds";
+export { instantStringFromEpochNanoseconds } from "./instantStringFromEpochNanoseconds";
 export { floorDivide } from "./floorDivide";
 export {
   DOT_NET_TICKS_EPOCH_OFFSET,
@@ -40,14 +47,11 @@ export {
   MAX_EXCEL_1900_SERIAL_EXCLUSIVE,
   MAX_EXCEL_1904_SERIAL_EXCLUSIVE,
   MAX_FILE_TIME,
-  MAX_INT64,
-  MAX_UNIX_MS_48,
   MILLISECONDS_PER_DAY,
   MIN_DOT_NET_TICKS,
   MIN_EXCEL_1900_SERIAL,
   MIN_EXCEL_1904_SERIAL,
   MIN_FILE_TIME,
-  MIN_INT64,
   MIN_PG_MICROSECONDS,
   NANOSECONDS_PER_DAY,
   NANOSECONDS_PER_DAY_NUMBER,
@@ -64,15 +68,16 @@ export {
   PROTO_TIMESTAMP_MIN_SECONDS,
 } from "./foreignEpochs";
 export {
-  base62Value,
+  BASE62_ALPHABET,
+  CROCKFORD_ALPHABET,
   crockfordDigits,
-  crockfordValue,
+  digitsValue,
   hexValue,
   ksuidText,
   objectIdText,
   ulidText,
   unsignedDecimalText,
-  uuidText,
+  timeUuidText,
 } from "./identifierText";
 export {
   isValidEpochNanoseconds,
