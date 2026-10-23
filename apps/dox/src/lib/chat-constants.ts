@@ -875,6 +875,12 @@ export const CHAT_STARTERS: readonly {
       zone: "Asia/Tokyo",
     },
   },
+  {
+    text: "Does my runtime still show Africa/Casablanca an hour ahead after 20 September 2026?",
+    widget: "showMoroccoClockChange",
+    area: "core",
+    args: { zone: "Africa/Casablanca" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

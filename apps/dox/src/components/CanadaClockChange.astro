@@ -7,9 +7,14 @@
  * renders every table with its known rows, so the page does not grow once the answer arrives.
  * The map section is in the markup, hidden, for `lib/canada-map.ts` to fill and show.
  */
-import { renderCanadaClockChangeTemplate } from "../lib/canada-clock-change-mount";
+import {
+  loadCanadaTense,
+  renderCanadaClockChangeTemplate,
+} from "../lib/canada-clock-change-mount";
 
-const html = renderCanadaClockChangeTemplate({ keyPoints: true });
+// Both tenses of every dated phrase are in the markup; the page flips to the true one at once.
+const tense = await loadCanadaTense();
+const html = renderCanadaClockChangeTemplate({ keyPoints: true, tense });
 ---
 
 <div data-tools-fullbleed set:html={html} />

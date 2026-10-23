@@ -215,15 +215,13 @@ export function attributeRules(
       if (pair.observed !== "") placed.push(pair.observed);
     }
   });
-  const rows = rules.map(
-    (rule, i): RuleAttribution => ({
-      valid: lib.isValidHolidayRule(rule),
-      pairs: allPairs[i]!.filter(
-        ({ unshifted, observed }) =>
-          yearOf(unshifted) === year || yearOf(observed) === year,
-      ),
-    }),
-  );
+  const rows = rules.map((rule, i): RuleAttribution => ({
+    valid: lib.isValidHolidayRule(rule),
+    pairs: allPairs[i]!.filter(
+      ({ unshifted, observed }) =>
+        yearOf(unshifted) === year || yearOf(observed) === year,
+    ),
+  }));
   return { full, rows };
 }
 

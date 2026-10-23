@@ -3,8 +3,9 @@
  *
  * The Canada 2026 clock-change checker end to end: template, mount, fetch, render, tick.
  * The Worker's answer is built by the real Worker handler in this test runtime, so no 2026e
- * offset is asserted as something the runtime computed (Node here carries tz 2026c).
+ * offset is asserted as something the runtime computed (a test runtime can carry older tz data).
  */
+import { canadaTense } from "./clock-change-tense.fixture";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { getUtcNow } from "@northguild/gmt/utc/get";
 import { installJsdomShims } from "~/test/jsdom-shims";
@@ -19,11 +20,11 @@ import {
 } from "./canada-clock-change";
 import {
   mountCanadaClockChange,
-  msToNextSecond,
-  placesHtml,
-  verdictHtml,
   renderCanadaClockChangeTemplate,
 } from "./canada-clock-change-mount";
+import { msToNextSecond } from "./clock-change-common";
+import { placesHtml, verdictHtml } from "./clock-change-probe";
+import { CANADA_VERDICT } from "./canada-clock-change";
 
 installJsdomShims();
 
@@ -46,7 +47,7 @@ function citedProbe(check: CanadaCheck): CanadaCheck {
     ...check,
     probe: PROBE_ZONES.map((fact) => ({
       zone: fact.zone,
-      offset: fact.tzdb2026e,
+      offset: fact.offset,
     })),
   };
 }
@@ -58,7 +59,9 @@ function fetching(body: CanadaCheck): typeof fetch {
 }
 
 function host(): HTMLElement {
-  document.body.innerHTML = renderCanadaClockChangeTemplate();
+  document.body.innerHTML = renderCanadaClockChangeTemplate({
+    tense: canadaTense,
+  });
   return document.querySelector<HTMLElement>(".gmt-canada")!;
 }
 
@@ -67,20 +70,25 @@ const text = (el: Element | null) => el?.textContent?.trim() ?? "";
 describe("the template", () => {
   it("server-renders the known rows, groups and clocks", () => {
     const root = host();
-    expect(root.querySelectorAll(".gmt-canada-table tbody tr")).toHaveLength(4);
+    expect(
+      root.querySelectorAll(".gmt-clockcheck-table tbody tr"),
+    ).toHaveLength(4);
     expect(root.querySelector('[data-zone="Africa/Casablanca"]')).toBeNull();
-    expect(root.querySelectorAll(".gmt-canada-group")).toHaveLength(
+    expect(root.querySelectorAll(".gmt-clockcheck-group")).toHaveLength(
       TRANSITION_ZONES.length,
     );
-    expect(root.querySelectorAll(".gmt-canada-clock")).toHaveLength(
+    expect(root.querySelectorAll(".gmt-clockcheck-clock")).toHaveLength(
       CLOCK_ZONES.length,
     );
     expect(
-      root.querySelector('tr[data-zone="America/Vancouver"] [data-role="browser"]')
-        ?.innerHTML,
+      root.querySelector(
+        'tr[data-zone="America/Vancouver"] [data-role="browser"]',
+      )?.innerHTML,
     ).toContain("NO SIGNAL");
     expect(root.querySelector('[data-role="verdict"]')).not.toBeNull();
-    expect(root.querySelector('[data-role="clocks-notice"]')?.hasAttribute("hidden")).toBe(true);
+    expect(
+      root.querySelector('[data-role="clocks-notice"]')?.hasAttribute("hidden"),
+    ).toBe(true);
     expect(root.querySelector('[data-role="map-notice"]')).toBeNull();
     expect(root.querySelector('[data-role="legend-stale"]')).toBeNull();
   });
@@ -90,12 +98,12 @@ describe("the template", () => {
     const cell = root.querySelector(
       'tr[data-zone="America/Vancouver"] th[scope="row"]',
     )!;
-    expect(text(cell.querySelector(".gmt-canada-city"))).toBe("Vancouver");
-    expect(text(cell.querySelector(".gmt-canada-zoneid"))).toBe(
+    expect(text(cell.querySelector(".gmt-clockcheck-city"))).toBe("Vancouver");
+    expect(text(cell.querySelector(".gmt-clockcheck-zoneid"))).toBe(
       "America/Vancouver",
     );
     expect(
-      [...root.querySelectorAll(".gmt-canada-table thead th")].map((th) =>
+      [...root.querySelectorAll(".gmt-clockcheck-table thead th")].map((th) =>
         (th.firstChild?.textContent ?? "").trim(),
       ),
     ).toEqual(["Place", "Correct", "Yours"]);
@@ -135,14 +143,14 @@ describe("msToNextSecond", () => {
 
 describe("the words", () => {
   it("words the verdict by naming the places that are wrong", () => {
-    expect(verdictHtml([])).toContain(
+    expect(verdictHtml([], CANADA_VERDICT)).toContain(
       "Your browser has the new rules for all four places.",
     );
-    expect(verdictHtml([])).toContain("\u2713");
-    const bad = verdictHtml(["Inuvik", "Winnipeg"]);
+    expect(verdictHtml([], CANADA_VERDICT)).toContain("\u2713");
+    const bad = verdictHtml(["Inuvik", "Winnipeg"], CANADA_VERDICT);
     expect(bad).toContain("\u2717");
     expect(bad).toContain(
-      "Your browser has old time zone data for <span data-role=\"wrong-places\"><code>Inuvik</code> and <code>Winnipeg</code></span>. From 1 November 2026 it shows their time an hour wrong.",
+      'Your browser has old time zone data for <span data-role="wrong-places"><code>Inuvik</code> and <code>Winnipeg</code></span>. From 1 November 2026 it shows their time an hour wrong.',
     );
     expect(bad).toContain(
       "update your browser. If it is already up to date, its maker has not shipped the fix yet. Check again after the next update.",
@@ -196,14 +204,14 @@ describe("the mount", () => {
     const stale = host();
     const c1 = new AbortController();
     const check = await workerAnswer();
-    const stopped = (kind: "stopped-2026" | "changes-2027") => ({
+    const stopped = (kind: "stopped" | "changes-after") => ({
       ...check,
       zones: check.zones.map((z) =>
         TABLE_ZONES.some((f) => f.zone === z.zone) ? { ...z, kind } : z,
       ),
     });
     await mountCanadaClockChange(stale, c1.signal, {
-      fetch: fetching(stopped("changes-2027")),
+      fetch: fetching(stopped("changes-after")),
       now,
     });
     expect(
@@ -216,7 +224,7 @@ describe("the mount", () => {
     const fresh = host();
     const c2 = new AbortController();
     await mountCanadaClockChange(fresh, c2.signal, {
-      fetch: fetching(stopped("stopped-2026")),
+      fetch: fetching(stopped("stopped")),
       now,
     });
     expect(
@@ -235,22 +243,22 @@ describe("the mount", () => {
     });
     for (const zone of TRANSITION_ZONES) {
       const group = root.querySelector(
-        `.gmt-canada-group[data-zone="${zone}"]`,
+        `.gmt-clockcheck-group[data-zone="${zone}"]`,
       )!;
       for (const year of [2026, 2027] as const) {
         const rows = check.transitions.filter(
           (r) => r.zone === zone && r.year === year,
         );
-        const none = [...group.querySelectorAll(".gmt-canada-none")].filter(
-          (el) => text(el).endsWith(String(year)),
-        );
+        const none = [
+          ...group.querySelectorAll(".gmt-clockcheck-change-none"),
+        ].filter((el) => text(el).endsWith(String(year)));
         if (rows.length === 0) {
           expect(none.map(text)).toEqual([`No clock change in ${year}`]);
         } else {
           expect(none).toHaveLength(0);
         }
       }
-      expect(group.querySelectorAll(".gmt-canada-change")).toHaveLength(
+      expect(group.querySelectorAll(".gmt-clockcheck-change")).toHaveLength(
         check.transitions.filter((r) => r.zone === zone).length,
       );
     }
@@ -279,10 +287,10 @@ describe("the mount", () => {
       now,
     });
     expect(
-      root.querySelectorAll(".gmt-canada-clock svg.gmt-crystal-clock"),
+      root.querySelectorAll(".gmt-clockcheck-clock svg.gmt-crystal-clock"),
     ).toHaveLength(5);
     const item = root.querySelector(
-      '.gmt-canada-clock[data-zone="America/Vancouver"]',
+      '.gmt-clockcheck-clock[data-zone="America/Vancouver"]',
     )!;
     const readout = () => text(item.querySelector('[data-role="clock-time"]'));
     const face = item.querySelector("svg.gmt-crystal-clock");
@@ -305,7 +313,8 @@ describe("the mount", () => {
       fetch: fetching(await workerAnswer()),
       now,
     });
-    expect(vi.getTimerCount()).toBe(1);
+    // The probe's clock timer, and the tense timer for the change 9 days ahead.
+    expect(vi.getTimerCount()).toBe(2);
     controller.abort();
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -327,9 +336,36 @@ describe("the mount", () => {
     );
     expect(
       text(
-        root.querySelector('tr[data-zone="America/Vancouver"] [data-role="browser"]'),
+        root.querySelector(
+          'tr[data-zone="America/Vancouver"] [data-role="browser"]',
+        ),
       ),
     ).not.toBe("");
+    controller.abort();
+  });
+
+  it("announces Checking\u2026 in the status line while the check runs, then clears it", async () => {
+    const root = host();
+    const controller = new AbortController();
+    const answer = await workerAnswer();
+    let release!: () => void;
+    const held = new Promise<void>((done) => (release = done));
+    let gets = 0;
+    const fetchFn = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      if (init?.method === "POST") return Response.json({ rows: [], zone: "" });
+      gets += 1;
+      if (gets > 1) await held;
+      return Response.json(citedProbe(answer));
+    });
+    await mountCanadaClockChange(root, controller.signal, {
+      fetch: fetchFn as unknown as typeof fetch,
+      now,
+    });
+    const status = root.querySelector('[data-role="status"]');
+    root.querySelector<HTMLButtonElement>('[data-role="recheck"]')!.click();
+    await vi.waitFor(() => expect(text(status)).toBe("Checking\u2026"));
+    release();
+    await vi.waitFor(() => expect(text(status)).toBe(""));
     controller.abort();
   });
 

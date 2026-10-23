@@ -4,7 +4,7 @@
 
 ## Gap
 
-Since 2026-09-20, Morocco and Western Sahara stay on UTC+00 all year and no longer change their clocks for Ramadan; tzdb 2026c records it. A runtime with older tz data shows `Africa/Casablanca` and `Africa/El_Aaiun` at `+01:00` outside Ramadan and `+00:00` during it, so it is an hour ahead for most of the year and right for a few weeks, which hides the fault. Measured: Chromium 153.0.8010.12 gives `+01:00` at 2026-10-22T12:00Z and 2027-06-01T12:00Z; Chromium 156.0.8078.4, WebKit 26.6 and Node 26.12.1 (tz 2026e) give `+00:00`. The Canada checker shows Casablanca as one probe row only.
+Since 2026-09-20, Morocco and Western Sahara stay on UTC+00 all year and no longer change their clocks for Ramadan; tzdb 2026c records it. A runtime with older tz data shows `Africa/Casablanca` and `Africa/El_Aaiun` at `+01:00` outside Ramadan and `+00:00` during it, so it is an hour ahead for most of the year and right for a few weeks, which hides the fault. Measured: Chromium 153.0.8010.12 gives `+01:00` at 2026-10-22T12:00Z and 2027-06-01T12:00Z; Chromium 156.0.8078.4, WebKit 26.6 and Node 26.12.1 (tz 2026e) give `+00:00`. The Canada checker leaves Casablanca out of its table; only its API answers that zone.
 
 ## Scope
 
@@ -25,3 +25,48 @@ Since 2026-09-20, Morocco and Western Sahara stay on UTC+00 all year and no long
 - The Canada page renders and behaves as before on the shared parts.
 - The checker works keyboard-only and at 375 px.
 - `pnpm run validate` stays green.
+
+## Decisions
+
+**Endpoint** (`apps/dox/worker/morocco-clock-change.ts`, routed from `routeApi`)
+
+- `GET /gmt/api/morocco-clock-change` answers `200 application/json` with `cache-control: no-store`: `now`, `probe` (two zones at two instants), `changes`, `transitions` (2026 and 2027) and one `zones` row per id in `morocco-region-zones.json`. HEAD, `405` with `Allow: GET, HEAD, POST`, `413` and `429` are the Canada endpoint's, because both are configs on `handleClockChangeCheck`.
+- Rate limit: `morocco:<clientId>`, 20 calls in 60 seconds, a bucket of its own so one page cannot spend the other's.
+- The stored-times cap is 25 lines and 20,000 bytes for both checkers (see [CORE-88](./CORE-88.md#decisions)).
+
+**Instants and the verdict**
+
+- The verdict comes from `2026-11-02T12:00:00Z`: tzdb 2026c gives `+00:00`, older data `+01:00`. The second instant, `2027-02-22T12:00:00Z`, sits in the old data's Ramadan weeks and gives `+00:00` on both, so it explains why a check made in those weeks cannot tell. Both are fixed on purpose: the page is about one dated change recorded by one named release.
+
+**Stated changes**
+
+- The page states three changes per zone: the 2026c stop (`2026-09-20T01:00:00Z`, `+01:00` to `+00:00`) and the two 2027 changes tzdb 2026b records under `Rule Morocco` (`2027-02-07T02:00:00Z`, `2027-03-14T02:00:00Z`). `recordedBy` names the release. The Worker marks each `present` from its own `getDstTransitions`; the page never computes the old rule. The page names only tzdb releases.
+
+**Map, boundary data and credits**
+
+- The map is a config over the shared zone map: ten zones from tzdb 2026e `zone.tab` rows for `MA`, `EH`, `DZ`, `MR`, `ES`, `PT` and `GI`, a Lambert conformal conic fitted to the frame, and the Natural Earth coastline. Boundary data comes from `prepare-region-boundaries.py --region morocco` and carries `ODbL-1.0` and its attribution.
+
+**The Upgrade to at least card**
+
+- Each row names a primary source (release notes, the commit with the first release tag that holds the data, or the package page). The release must carry tz 2026c or later. A line with no such release is left out.
+
+**Tests and checks**
+
+- `packages/gmt/src/test/oh-morocco.test.ts` fails on tz data older than 2026c. The weekly run lists the Chromium that predates 2026c in `KNOWN_HOST_FAILURES`.
+- The deployed Worker has tz 2026e. The workerd that `wrangler dev` runs locally (1.20260825.1) carries older data than 2026c, so `deploy-smoke.mjs` runs only against the deployed Worker.
+
+**Shared parts**
+
+- The probe, clocks, servers card, help card, saved-events check, zone map and boundary script are neutral modules that take a config (`clock-change-*.ts`, `zone-map.ts`, `clock-change-minimums.ts`, `worker/clock-change-shared.ts`, `scripts/prepare-region-boundaries.py --region`). Canada and Morocco are each a config over them, with an `idPrefix`, a root class, a rate-limit bucket of their own and their own stated facts. A third region (CORE-90) needs its own config, text and data files, and no new shared code.
+
+**Tense**
+
+- Dates and times in the words come from the library (`formatZonedDateTime`, `formatUtc`); the verb tense comes from `changeTense` in `lib/clock-change-tense.ts`. Morocco's change has happened, so its wording is past tense only, with no two-form cell and no timer. Canada keeps a before form and an after form until [CORE-91](./CORE-91.md) removes the before form.
+
+**Release**
+
+- No release: the work is a Dox page, and in `packages/gmt` only the test file `oh-morocco.test.ts` is new. The changeset is empty.
+
+**Registration**
+
+- A chat starter, the `moroccoclock` widget, the `showMoroccoClockChange` Worker tool and the permalink kind, in every list of `context/dox/built.md`.

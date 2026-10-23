@@ -23,6 +23,7 @@ describe("devWorkerProxy", () => {
     const re = new RegExp(key);
     expect(re.test("/api/brains")).toBe(true);
     expect(re.test("/api/canada-clock-change?x=1")).toBe(true);
+    expect(re.test("/api/morocco-clock-change?x=1")).toBe(true);
     expect(re.test("/api")).toBe(true);
     expect(re.test("/apiary")).toBe(false);
     expect(re.test("/gmt/api/brains")).toBe(false);

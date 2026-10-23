@@ -177,12 +177,15 @@ export function isOffSite(url, base) {
  * failure.
  *
  * The rule is "not the base's origin", never a list of hosts, so a tag added
- * later cannot bring the fault back. Only off-site requests are routed; a
- * same-site request is never intercepted.
+ * later cannot bring the fault back. Only off-site requests are routed (by a URL
+ * pattern, which `isOffSite` agrees with); a same-site request is never intercepted.
  */
 export async function blockOffSite(target, base) {
+  // A URL pattern, not a function: Playwright's server matches a pattern itself, so a same-site
+  // request (the module chunks, the library) never waits for this script to be asked about it.
+  const origin = new URL(base).origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await target.route(
-    (url) => isOffSite(url, base),
+    new RegExp(`^(?!${origin}(?:[/?#]|$))https?://`),
     (route) =>
       route.fulfill({ status: 200, contentType: "text/javascript", body: "" }),
   );

@@ -4,6 +4,7 @@
  * The Canada 2026 clock-change checker as a chat widget (CORE-88): the credits id of the map,
  * the pinned zone, the permalink state, and a URL the chat keeps for itself.
  */
+import { canadaTense } from "./clock-change-tense.fixture";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { handleCanadaClockChange } from "../../worker/canada-clock-change";
@@ -31,7 +32,10 @@ async function workerAnswer(): Promise<CanadaCheck> {
 }
 
 function widgetRoot(): HTMLElement {
-  document.body.innerHTML = renderCanadaClockChangeWidgetTemplate("rail-1");
+  document.body.innerHTML = renderCanadaClockChangeWidgetTemplate(
+    "rail-1",
+    canadaTense,
+  );
   return document.querySelector<HTMLElement>(".gmt-canada")!;
 }
 
@@ -50,7 +54,9 @@ describe("the chat template", () => {
   });
 
   it("renders no credits button in the markup: the map adds its own when it is drawn", () => {
-    document.body.innerHTML = renderCanadaClockChangeTemplate();
+    document.body.innerHTML = renderCanadaClockChangeTemplate({
+      tense: canadaTense,
+    });
     expect(document.querySelector(".gmt-data-credits-button")).toBeNull();
     expect(
       document
@@ -79,8 +85,9 @@ describe("the chat mount", () => {
   });
 
   const pressed = (root: HTMLElement) =>
-    root.querySelector<HTMLElement>('.gmt-canada-zone-btn[aria-pressed="true"]')
-      ?.dataset.tzId ?? null;
+    root.querySelector<HTMLElement>(
+      '.gmt-zonemap-zone-btn[aria-pressed="true"]',
+    )?.dataset.tzId ?? null;
 
   it("pins the zone it was given in the list, and says so in its permalink state", async () => {
     const root = widgetRoot();
@@ -105,9 +112,9 @@ describe("the chat mount", () => {
       controller.signal,
     );
     await vi.waitFor(() =>
-      expect(root.querySelector('[data-role="legend-count"]')?.textContent).not.toBe(
-        "\u2013",
-      ),
+      expect(
+        root.querySelector('[data-role="legend-count"]')?.textContent,
+      ).not.toBe("\u2013"),
     );
     expect(pressed(root)).toBeNull();
     expect(handle.getPermalinkState?.()).toBeNull();
@@ -132,7 +139,11 @@ describe("the chat mount", () => {
     const root = widgetRoot();
     const controller = new AbortController();
     controller.abort();
-    const handle = await mountCanadaClockChangeWidget(root, {}, controller.signal);
+    const handle = await mountCanadaClockChangeWidget(
+      root,
+      {},
+      controller.signal,
+    );
     expect(handle.getPermalinkState?.()).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });

@@ -111,7 +111,7 @@ with the `Position` type, ahead of the remaining realms.
 | 27  | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                      | #322  | 1.20.0  | Done        |
 | 28  | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                      | #323  | 1.20.0  | Done        |
 | 29  | CORE-88 | Core       | The Canada 2026 clock-change checker in Dox                                         | —                      | #329  | 1.20.0  | Done        |
-| 30  | CORE-89 | Core       | The Morocco 2026 clock-change checker in Dox                                        | —                      | #340  | —       | Not started |
+| 30  | CORE-89 | Core       | The Morocco 2026 clock-change checker in Dox                                        | —                      | #340  | —       | Done        |
 | 31  | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                      | #258  | —       | Done        |
 | 32  | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                      | #256  | —       | Done        |
 | 33  | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | —                      | #324  | —       | Not started |
@@ -161,7 +161,8 @@ with the `Position` type, ahead of the remaining realms.
 | 77  | SPA-52  | Space      | CCSDS time codes (ASCII A/B, CUC,<br>CDS)                                           | —                      | #233  | —       | Not started |
 | 78  | SPA-53  | Space      | Mars solar time (MSD, AMT, LMST)                                                    | SPA-47, SPA-49, SPA-74 | #234  | —       | Not started |
 | 79  | SPA-75  | Space      | Solar events: sunrise, sunset,<br>twilight, solar position                          | SPA-47, SPA-49         | #277  | Cut     | Not started |
-| 80  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | CORE-89                | #341  | —       | Waiting     |
+| 80  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | —                      | #341  | —       | Waiting     |
+| 81  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | —                      | #353  | —       | Waiting     |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm
@@ -198,6 +199,8 @@ adds the Canada 2026 clock-change checker to Dox; it follows `CORE-83`, whose `c
 cron, whose ordinal `BYDAY` is `CORE-54`'s first use) and `CORE-85` (human durations) are the
 second release. Every realm after them can draw on all eight. `CORE-90`, a United States checker,
 waits at the end of the table until permanent daylight time is law and a tzdb release models it.
+`CORE-91` waits until 1 November 2026 has passed, then leaves only the past tense on the Canada
+checker.
 
 **Demurrage comes straight after `TRAN-8`.** `INT-12` is the first consumer of
 `dwellTime.calendarDays`, and `INT-58` adds the billing deadline chain, every window a caller

@@ -17,8 +17,8 @@ import {
   STORED_MAX_BYTES,
   STORED_MAX_LINES,
   type StoredCheck,
-} from "../src/lib/canada-clock-change";
-import { STORED_PRESET } from "../src/lib/canada-stored-times";
+} from "../src/lib/clock-change-stored-lines";
+import { STORED_PRESET } from "../src/lib/canada-clock-change";
 import { handleCanadaClockChange } from "./canada-clock-change";
 import { resetRateLimitState } from "./rate-limit";
 import { checkRateLimit } from "./rate-limit";
@@ -113,8 +113,7 @@ describe("GET /gmt/api/canada-clock-change", () => {
     for (const zone of zones) {
       const a = getDstTransitions(zone.zone, 2026).length;
       const b = getDstTransitions(zone.zone, 2027).length;
-      const kind =
-        b > 0 ? "changes-2027" : a > 0 ? "stopped-2026" : "none-2026-2027";
+      const kind = b > 0 ? "changes-after" : a > 0 ? "stopped" : "none";
       expect(zone.kind).toBe(kind);
       expect(zone.offset).toBe(getTimeZoneOffset(zone.zone, NOW));
     }
@@ -173,7 +172,7 @@ describe("GET /gmt/api/canada-clock-change", () => {
     const regina = (await check()).zones.find(
       (z) => z.zone === "America/Regina",
     );
-    expect(regina?.kind).toBe("none-2026-2027");
+    expect(regina?.kind).toBe("none");
     expect(regina?.last).toBeNull();
     expect(regina?.next).toBeNull();
   });

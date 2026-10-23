@@ -1,14 +1,10 @@
-import { classifyStoredZoned } from "@northguild/gmt/zoned/classify";
 import {
   STORED_MAX_BYTES,
   STORED_MAX_LINES,
-  STORED_ZONES,
-} from "./canada-clock-change";
-import {
-  STORED_PRESET,
   capStoredInput,
   completeStoredLine,
-} from "./canada-stored-times";
+} from "./clock-change-stored-lines";
+import { DOX_TOOL_DOCS } from "./dox-tools";
 
 describe("capStoredInput", () => {
   const lines = (n: number) =>
@@ -160,14 +156,17 @@ describe("completeStoredLine", () => {
   });
 });
 
-describe("STORED_PRESET", () => {
-  it("is eight literal lines, each with its own zone, all in the picker", () => {
-    const rows = STORED_PRESET.split("\n");
-    expect(rows).toHaveLength(8);
-    for (const row of rows) {
-      const zone = /\[([^\]]+)\]$/.exec(row)?.[1];
-      expect(STORED_ZONES).toContain(zone);
-      expect(classifyStoredZoned(row)).not.toBeNull();
-    }
-  });
+describe("the chat's description of the saved-events form", () => {
+  // The chat tells the model how many lines a checker reads; a stale number promises more than
+  // the Worker reads.
+  it.each(["showCanadaClockChange", "showMoroccoClockChange"])(
+    "%s states the shared line cap",
+    (name) => {
+      const purpose = DOX_TOOL_DOCS.find((doc) => doc.name === name)!.purpose;
+      expect(purpose).toContain(
+        `reads up to ${STORED_MAX_LINES} pasted saved events`,
+      );
+      expect(purpose.match(/up to (\d+) pasted/g)).toHaveLength(1);
+    },
+  );
 });

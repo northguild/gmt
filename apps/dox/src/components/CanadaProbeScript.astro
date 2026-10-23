@@ -5,7 +5,8 @@
  * off; the card is filled before the first paint of the verdict. `canada-clock-change-mount.ts`
  * explains what it does.
  */
-import { probeInlineSource } from "../lib/canada-clock-change-mount";
+import { canadaProbe } from "../lib/canada-clock-change";
+import { probeInlineSource } from "../lib/clock-change-probe";
 ---
 
-<script is:inline set:html={probeInlineSource()} />
+<script is:inline set:html={probeInlineSource(canadaProbe("canada"))} />

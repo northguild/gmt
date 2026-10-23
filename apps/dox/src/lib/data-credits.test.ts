@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  COASTLINES,
   EARTH_IMAGERY,
+  NE_TAG,
   renderDataCreditsHtml,
   TBB_TAG,
   TZ_BOUNDARIES,
@@ -10,6 +12,32 @@ import {
 } from "./data-credits";
 
 const STACK = { id: "globe-data-credits", placement: "stack" } as const;
+
+describe("the coastline credit", () => {
+  const html = renderDataCreditsHtml([TZ_BOUNDARIES, COASTLINES], {
+    id: "canada-data-credits",
+    placement: "corner",
+  });
+
+  it("is listed after the time zone boundaries, naming Natural Earth as public domain", () => {
+    expect(html.indexOf("<dt>Time zone boundaries</dt>")).toBeLessThan(
+      html.indexOf("<dt>Coastlines</dt>"),
+    );
+    expect(html.replace(/<[^>]+>/g, "")).toContain(
+      `Natural Earth (public domain, ${NE_TAG}).`,
+    );
+  });
+
+  it("links Natural Earth and the pinned tag", () => {
+    expect(html).toContain(
+      '<a href="https://www.naturalearthdata.com/" rel="noopener">Natural Earth</a>',
+    );
+    expect(html).toContain(
+      `<a href="https://github.com/nvkelso/natural-earth-vector/releases/tag/${NE_TAG}" rel="noopener">${NE_TAG}</a>`,
+    );
+    expect(NE_TAG).toBe("v5.1.2");
+  });
+});
 
 describe("renderDataCreditsHtml", () => {
   const html = renderDataCreditsHtml([TZ_BOUNDARIES, EARTH_IMAGERY], STACK);
@@ -56,6 +84,11 @@ describe("renderDataCreditsHtml", () => {
     });
     expect(corner.match(/data-placement="corner"/g)).toHaveLength(2);
     expect(corner).toContain('popovertarget="tz-map-data-credits"');
+    const start = renderDataCreditsHtml([TZ_BOUNDARIES], {
+      id: "morocco-data-credits",
+      placement: "corner-start",
+    });
+    expect(start.match(/data-placement="corner-start"/g)).toHaveLength(2);
     expect(html.match(/data-placement="stack"/g)).toHaveLength(2);
   });
 
@@ -123,14 +156,23 @@ describe("the button colour", () => {
     ["dark", dark],
     ["light", light],
   ] as const)("is at least 3:1 at rest on the %s theme", (_theme, scope) => {
-    expect(ratio(token(scope, "ice"), token(scope, "surface-2"))).toBeGreaterThanOrEqual(3);
+    expect(
+      ratio(token(scope, "ice"), token(scope, "surface-2")),
+    ).toBeGreaterThanOrEqual(3);
   });
 
   it.each([
     ["dark", dark],
     ["light", light],
-  ] as const)("is at least 3:1 when hovered or open on the %s theme", (_theme, scope) => {
-    expect(css).toMatch(/:has\(\+ :popover-open\) \{[^}]*color: var\(--gmt-void\);[^}]*background: var\(--gmt-cyan-ink\);/);
-    expect(ratio(token(scope, "void"), token(scope, "cyan-ink"))).toBeGreaterThanOrEqual(3);
-  });
+  ] as const)(
+    "is at least 3:1 when hovered or open on the %s theme",
+    (_theme, scope) => {
+      expect(css).toMatch(
+        /:has\(\+ :popover-open\) \{[^}]*color: var\(--gmt-void\);[^}]*background: var\(--gmt-cyan-ink\);/,
+      );
+      expect(
+        ratio(token(scope, "void"), token(scope, "cyan-ink")),
+      ).toBeGreaterThanOrEqual(3);
+    },
+  );
 });

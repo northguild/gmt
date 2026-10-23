@@ -9,14 +9,16 @@
  *   stack    the fourth button of the globe's control stack (+, −, ⊙, ⓘ). The stack's own rule
  *            (`.gmt-globe-zoom button`, gmt-globe.css) sizes and colours it, so it matches its
  *            siblings in size, shape, focus ring and tab order, and it fades in with them.
- *   corner   a drawing with no button stack (the time-zone map, the Canada map): a glass square in
- *            the drawing's corner, styled like the stack's buttons. Its frame is the positioning
- *            context.
+ *   corner   a drawing with no button stack (the time-zone map, the clock-change zone map): a glass square in
+ *            the drawing's bottom-end corner, styled like the stack's buttons. Its frame is the
+ *            positioning context.
+ *   corner-start  the same square in the top-start corner, for a drawing whose land fills the
+ *            bottom-end one (the Morocco zone map).
  */
 
 /* The frame a corner button sits on. */
 .gmt-credited-frame,
-.gmt-canada-map {
+.gmt-zonemap-map {
   position: relative;
 }
 
@@ -50,19 +52,28 @@
   outline: none;
 }
 
-.gmt-data-credits-button[data-placement="corner"] {
+.gmt-data-credits-button[data-placement="corner"],
+.gmt-data-credits-button[data-placement="corner-start"] {
   position: absolute;
-  inset-inline-end: var(--gmt-space-2);
-  inset-block-end: var(--gmt-space-2);
   z-index: 3;
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
 }
 
+.gmt-data-credits-button[data-placement="corner"] {
+  inset-inline-end: var(--gmt-space-2);
+  inset-block-end: var(--gmt-space-2);
+}
+
+.gmt-data-credits-button[data-placement="corner-start"] {
+  inset-inline-start: var(--gmt-space-2);
+  inset-block-start: var(--gmt-space-2);
+}
+
 /* The popup is top-layer, so nothing clips it. It opens beside the stack (to the left of its
-   button) or above the corner button, never over either, and stays 12px inside the viewport:
-   the left inset and `justify-self: end` shrink it to the room there is. */
+   button), above the corner button or below the corner-start one, never over any, and stays
+   12px inside the viewport: the far inset and `justify-self` shrink it to the room there is. */
 .gmt-data-credits-panel[popover] {
   position: fixed;
   inset: auto;
@@ -95,6 +106,14 @@
     inset-inline-end: anchor(right);
     inset-block-end: anchor(top);
     margin-block-end: var(--gmt-space-2);
+  }
+
+  .gmt-data-credits-panel[popover][data-placement="corner-start"] {
+    inset-inline-start: anchor(left);
+    inset-inline-end: 12px;
+    justify-self: start;
+    inset-block-start: anchor(bottom);
+    margin-block-start: var(--gmt-space-2);
   }
 }
 
