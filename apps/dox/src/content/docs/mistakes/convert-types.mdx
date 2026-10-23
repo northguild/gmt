@@ -72,6 +72,40 @@ convertDateToCalendar("2024-10-03", "roc"); // "2024-10-03[u-ca=roc]"
 convertDateToCalendar("2024-10-03[u-ca=roc]", "iso8601"); // "2024-10-03"`}
 />
 
+<Mistake
+  severity="high"
+  title="Reading a time out of a UUID v4"
+  description="A version 4 UUID is random and holds no time. Code that slices the first hex digits and treats them as a timestamp gets a number that looks real and means nothing. fromUuidTimestamp returns an empty string for v4, and for every other version that carries no timestamp."
+  wrongCode={`const ms = parseInt("919108f7-52d1-4320-9bac-f847db4148a8".replace(/-/g, "").slice(0, 12), 16);
+new Date(ms).toISOString(); // "7041-11-06T22:31:51.761Z" — a date from random bits`}
+  rightCode={`import { fromUuidTimestamp } from "@northguild/gmt/precision/identifiers";
+
+fromUuidTimestamp("919108f7-52d1-4320-9bac-f847db4148a8"); // "" — version 4 is random
+fromUuidTimestamp("017f22e2-79b0-7cc3-98c4-dc0c0c07398f"); // "2022-02-22T19:22:22Z"`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Lower-casing a KSUID"
+  description="UUIDs and ULIDs ignore case, so normalising every ID to lower case looks harmless. A KSUID is base62, where a and A are different digits, so lower-casing writes a different KSUID that names a different second."
+  wrongCode={`const normalised = "0ujtsYcgvSTl8PAuAdqWYSMnLOv".toLowerCase(); // "0ujtsycgvstl8pauadqwysmnlov" — another KSUID`}
+  rightCode={`import { fromKsuid } from "@northguild/gmt/precision/identifiers";
+
+fromKsuid("0ujtsYcgvSTl8PAuAdqWYSMnLOv"); // "2017-10-10T04:00:47Z"
+fromKsuid("0ujtsycgvstl8pauadqwysmnlov"); // "2017-10-10T04:00:51Z" — a different ID, four seconds later`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Writing negative nanos into a protobuf Timestamp"
+  description="A Timestamp's nanos count forward from its seconds, so an instant before 1970 has negative seconds and non-negative nanos. { seconds: 0n, nanos: -1 } is invalid. toProtoTimestamp writes the valid form, and fromProtoTimestamp returns an empty string for the invalid one."
+  wrongCode={`const ts = { seconds: 0n, nanos: -1 }; // one nanosecond before 1970 — invalid`}
+  rightCode={`import { toProtoTimestamp, fromProtoTimestamp } from "@northguild/gmt/precision/convert";
+
+toProtoTimestamp("1969-12-31T23:59:59.999999999Z"); // { seconds: -1n, nanos: 999999999 }
+fromProtoTimestamp({ seconds: 0n, nanos: -1 }); // ""`}
+/>
+
 ## See also
 
 - [Conversion guide](/guides/conversion/)
@@ -80,3 +114,5 @@ convertDateToCalendar("2024-10-03[u-ca=roc]", "iso8601"); // "2024-10-03"`}
 - [`convertDateToCalendar` reference](/reference/plain/convert/convertDateToCalendar)
 - [`convertZonedToCalendar` reference](/reference/zoned/convert/convertZonedToCalendar)
 - [`getUnixNow` reference](/reference/unix/get/getUnixNow)
+- [Time-Ordered Identifiers](/guides/conversion/time-ordered-identifiers/)
+- [Foreign Epoch Bridges](/guides/conversion/foreign-epoch-bridges/)

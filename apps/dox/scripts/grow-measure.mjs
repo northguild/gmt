@@ -283,6 +283,18 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "id-timestamp-decoder",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
+  },
+  {
+    slug: "column-timestamp-bridge",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
+  },
+  {
     slug: "zone-planner",
     root: ".gmt-scrubber-block",
     preset: null,

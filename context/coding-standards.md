@@ -136,6 +136,18 @@ The same three rules extend to `parseHumanDuration` (`packages/gmt/src/duration/
 
 This prohibition stands for every other function in the library.
 
+### Scoped exception: identifier grammars in `precision/identifiers/` (CORE-56)
+
+UUIDs, ULIDs, ObjectIds, KSUIDs and Snowflakes carry a timestamp as digits in a fixed alphabet: hex (RFC 9562 §4, MongoDB ObjectId), Crockford base32 (ULID) or base62 (KSUID), or unsigned decimal (Snowflake). No `Temporal.*.from` reads any of them. The grammars are fixed:
+
+1. One regex per grammar, in `internal/identifierText.ts`, with its digit decoder beside it. A public function matches the whole input against its grammar before decoding; no slicing of an unmatched string.
+2. The decoded integer is converted to epoch nanoseconds in bigint and always handed to `Temporal.Instant.fromEpochNanoseconds` (through `internal/instantStringFromEpochNanoseconds.ts`), which rejects anything outside the instant range.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+Slicing a matched grammar by fixed offsets (`uuid.slice(0, 8)`) is allowed under rule 1: the offsets come from the standard's layout table, never from searching the string.
+
+This prohibition stands for every other function in the library.
+
 ### Calendar-annotated strings are RFC 9557 (E1, E7)
 
 A calendar string is the RFC 9557 form Temporal writes: the ISO 8601 date (or zoned datetime),

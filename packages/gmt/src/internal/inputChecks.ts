@@ -2,7 +2,7 @@ import { Temporal } from "./temporal";
 import { isoStringBody } from "./isoStringBody";
 import { isRememberedZone, rememberZone } from "./validatedZones";
 import { hasSecond60 } from "../plain/validate/hasSecond60";
-import { plainDate, plainTime, timeZoneLike } from "../regex";
+import { plainDate, plainDateTime, plainTime, timeZoneLike } from "../regex";
 import type { RollConvention } from "../types";
 
 /** The cores of the `isValid*` functions, so a public function never calls another. */
@@ -88,6 +88,29 @@ export function isDateString(value: string): boolean {
     return Temporal.PlainDate.from(value).calendarId === "iso8601";
   } catch {
     return false;
+  }
+}
+
+/**
+ * The check behind `isValidDateTime`: the ISO calendar `PlainDateTime` a plain ISO 8601
+ * date-time string names, or `null`.
+ *
+ * @param value the candidate string
+ * @returns the `PlainDateTime` Temporal reads when it has the strict shape and the ISO calendar, else `null`
+ *
+ * @example plainDateTimeOf("2024-02-29T12:00")?.day // 29
+ * @example plainDateTimeOf("2024-02-29T23:59:60") // null
+ */
+export function plainDateTimeOf(value: string): Temporal.PlainDateTime | null {
+  const body = isoStringBody(value);
+  if (hasSecond60(body) || !plainDateTime.test(body)) {
+    return null;
+  }
+  try {
+    const dateTime = Temporal.PlainDateTime.from(value);
+    return dateTime.calendarId === "iso8601" ? dateTime : null;
+  } catch {
+    return null;
   }
 }
 

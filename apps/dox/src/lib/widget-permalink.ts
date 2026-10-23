@@ -69,7 +69,9 @@ export type WidgetKind =
   | "observance"
   | "feasts"
   | "canadaclock"
-  | "durationbench";
+  | "durationbench"
+  | "iddecode"
+  | "colbridge";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -125,6 +127,8 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   // leaves a path already under the base alone.
   canadaclock: withBase("/check/canada-2026-clock-change/"),
   durationbench: "/tools/duration-parser-bench/",
+  iddecode: "/tools/id-timestamp-decoder/",
+  colbridge: "/tools/column-timestamp-bridge/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */
@@ -202,6 +206,24 @@ const LONG_STRING_KEYS: Readonly<Record<string, number>> = {
 const EMPTY_LIST_KEYS: ReadonlySet<string> = new Set(["weekend", "offsets"]);
 
 /**
+ * The string bound for the two CORE-56 tools, in place of the default 64: a
+ * zoned value runs to about 70 characters, so their fields and links take 96.
+ * Other tools keep 64.
+ */
+const KIND_STRING_CAPS: Readonly<Partial<Record<WidgetKind, number>>> = {
+  iddecode: 96,
+  colbridge: 96,
+};
+
+/**
+ * Keys whose empty string is a real answer for one tool: the ID Timestamp
+ * Decoder's blank identifier must come back blank, not as the default UUID.
+ */
+const EMPTY_KEYS_BY_KIND: Readonly<
+  Partial<Record<WidgetKind, ReadonlySet<string>>>
+> = { iddecode: new Set(["id"]) };
+
+/**
  * Read this page's own permalink, if it carries one for `kind`.
  *
  * Called from each widget's page bootstrap, so a link copied out of the chat —
@@ -238,8 +260,9 @@ export function seedFromLocation(
     // back to a default for anything they cannot use, and a length bound is
     // what stops a hostile link bloating the page. A key that carries a list
     // of lines has its own, larger bound (`LONG_STRING_KEYS`).
-    const cap = LONG_STRING_KEYS[key] ?? 64;
-    const least = EMPTY_LIST_KEYS.has(key) ? 0 : 1;
+    const cap = LONG_STRING_KEYS[key] ?? KIND_STRING_CAPS[kind] ?? 64;
+    const least =
+      EMPTY_LIST_KEYS.has(key) || EMPTY_KEYS_BY_KIND[kind]?.has(key) ? 0 : 1;
     if (
       typeof value === "string" &&
       value.length >= least &&

@@ -117,7 +117,7 @@ skills:
     domain: integration
     path: 'skills/gmt-integration/SKILL.md'
     package: 'packages/gmt'
-    description: Application integration patterns — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI), and lint package selection; GNSS time is in gmt-gnss
+    description: Application integration patterns — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID, Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI), and lint package selection; GNSS time is in gmt-gnss
     sources:
       - 'northguild/gmt:apps/dox/src/content/docs/install.mdx'
       - 'northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integration.mdx'
@@ -126,6 +126,7 @@ skills:
       - 'northguild/gmt:apps/dox/src/content/docs/guides/conversion/foreign-epoch-bridges.mdx'
       - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
       - 'northguild/gmt:packages/gmt/src/precision/convert/index.ts'
+      - 'northguild/gmt:packages/gmt/src/precision/identifiers/index.ts'
       - 'northguild/gmt:packages/gmt/src/precision/format/index.ts'
       - 'northguild/gmt:packages/gmt/src/precision/calculate/index.ts'
       - 'northguild/gmt:packages/gmt/src/precision/validate/index.ts'
