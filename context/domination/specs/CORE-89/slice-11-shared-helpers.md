@@ -13,15 +13,22 @@ slice 9, except where a bullet below says otherwise.
   24rem in `clock-change.css`, 26.5rem for Morocco's longer note in `morocco-clock-change.css`.
   Keep both; the shared CSS move in this slice keeps Morocco's query in Morocco's sheet.
 - Even with the notes wrapped, the table is wider than a narrow card: 305 px (Morocco) and 296 px
-  (Canada) in a 289 px card at 375 px, and the page scrolls sideways at 320 px. Two words set the
-  floor: the zone id (`Africa/Casablanca`, about 115 px, with no break point) and the "Correct"
-  header (71 px).
-  - Let the zone id break after its `/` (a `<wbr>` after each `/` in the markup
-    `clock-change-probe.ts` writes, never `overflow-wrap: anywhere`).
-  - In a card narrower than 21rem, narrow the cells' inline padding to `--gmt-space-1`
-    (`@container (max-width: 21rem)`, after the base cell rule).
-- Check: the widget at 300 and 360 px in the chat rail, and the page at 320, 375, 1280, 1366 and
-  1440 px, in Chromium and WebKit. At each, the table is no wider than its card's content box,
+  (Canada) in a 289 px card at 375 px, and the page scrolls sideways at 320 px. Its natural width
+  at its narrowest is 313 px (WebKit, Morocco): the zone id and the "Correct" header set the
+  floor, and a word never breaks to fit. So in a card narrower than 21rem
+  (`@container (max-width: 21rem)`, after the base cell rule) the table **stacks**: each body row
+  is a two-column grid, the place and its zone id across the full width and the correct and the
+  browser's offsets side by side under it; the header row is the same two columns ("Correct" and
+  "Yours" with their notes), and the "Place" head is hidden from sight but kept for assistive
+  technology.
+  - Changing `display` on table elements drops their table semantics in Chromium and WebKit, so
+    the markup `clock-change-probe.ts` writes carries explicit roles: `table`, `rowgroup`, `row`,
+    `columnheader`, `rowheader`, `cell`. They are always there, wide or narrow.
+  - The zone id still carries a `<wbr>` after each `/` (never `overflow-wrap: anywhere`).
+  - Above 21rem nothing changes: the html-diff of the wide markup differs only by the roles.
+- Check: the widget in a card at the chat rail's minimum width (22rem, with the rail's padding),
+  and the page at 300, 320, 360, 375, 1280, 1366 and 1440 px, in Chromium and WebKit (whose
+  headless build takes 20 px of scrollbar). At each, the table is no wider than its card's content box,
   and nothing scrolls sideways (`scrollWidth <= clientWidth` on the page and the table). Add the
   table-in-card check to `canada-layout-check.mjs`, so a longer note in a later region fails it.
 

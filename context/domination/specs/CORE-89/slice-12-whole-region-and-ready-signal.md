@@ -68,21 +68,43 @@ change was on 20 September 2026 at 02:00 local time, so its page is already wron
 do not turn their clocks back on 1 November 2026, so its page goes wrong that day. Every sentence
 about the change must read true on the day it is read.
 
+- **Morocco is past tense only.** Its change has happened, so its text has one form ("Stopped
+  changing clocks on …"), with no tense check and no two-form cell. The date and time are still
+  written by the library. The bullets below on tense checks, both forms and the crossing apply
+  to Canada only.
+- **Canada's two forms are temporary.** `CORE-91` removes the before-form, the tense check and
+  the two-form cell after 1 November 2026, so keep them easy to delete: Canada's before-forms in
+  one place, and a hand-back list of every line, rule and test that removal deletes.
+
 - **The instant.** Each stopped zone states the instant its change takes effect, once, with its
   facts: Morocco's two zones `2026-09-20T01:00:00Z` (the 2026c `Zone` line); Canada's the moment
   its old data turned the clocks back on 1 November 2026 at 02:00 local time (Vancouver 09:00Z,
   Edmonton and Inuvik 08:00Z, Winnipeg 07:00Z). A test pins each instant with the library. A
   region's sentences flip at its latest zone instant.
-- **One helper.** `changeTense(nowMs, atMs)` in the shared module returns `"before"` or `"after"`
-  (at the instant is `"after"`). Each region's text gives both forms of every tensed phrase; no
-  shared file holds region words.
-- **Live text** (in the page and the chat widget): the map legend and kind labels ("Stops changing
-  clocks on 1 November 2026" / "Stopped changing clocks on 1 November 2026"; Morocco "… on 20
-  September 2026"; the date is the zone's local date), the key points of both regions, Canada's
-  browser-card note ("the four zones that stop changing their clocks"), and any other text the
-  mounts write about the change. "Still changes clocks" and "Never changes clocks" stay as they
-  are. The server renders the form for the build time; the mount sets the form for the page's
-  clock (the clocks' own time source) on load, and again on the tick that crosses the instant.
+- **gmt decides the tense.** `changeTense(nowMs, atMs)` in the shared module returns `"before"`
+  or `"after"` (at the instant is `"after"`) by calling the library's `isBeforeUnix`; no
+  hand-written comparison. Each region's text gives both forms of every tensed phrase; no shared
+  file holds region words.
+- **gmt writes the date and time.** Every tensed phrase states the exact date and time of the
+  change, written by the library: the local clock reading just before the change with
+  `formatZonedDateTime` at the zone's `from` offset (Morocco 02:00 at +01:00, which became 01:00;
+  Canada 02:00 at each zone's summer offset), and the UTC time with `formatUtc`. One fixed locale
+  and format for every page and the chat (day month year, 24-hour: "20 September 2026 at 02:00").
+  Store only the instant and the `from` offset; never type the formatted words.
+  - Map legend, Morocco: "Stopped changing clocks on 20 September 2026 at 02:00 local time
+    (01:00 UTC)". Canada, before: "Stops changing clocks on 1 November 2026 at 02:00 local time";
+    after: "Stopped changing clocks on …". A class whose zones share one instant gets the UTC time
+    too; Canada's four differ, so its legend gives local time only.
+  - Per-zone text (the zone list entry, the pinned panel, the clock row): local and UTC, from that
+    zone's own instant ("… at 02:00 local time (09:00 UTC)" for Vancouver).
+- **Live text** (in the page and the chat widget): the map legend and kind labels, the zone list
+  and pinned panel, the key points of both regions ("stop changing their clocks. On 1 November
+  2026 they do not turn them back" / "stopped … did not turn them back"; "turns the clock back …
+  anyway" / "turned …"), Canada's browser-card note ("the four zones that stop changing their
+  clocks"), and any other text the mounts write about the change. "Still changes clocks" and
+  "Never changes clocks" stay as they are. The server renders the form for the build time; the
+  mount sets the form for the page's clock (the clocks' own time source) on load, and again on
+  the tick that crosses the instant.
 - **Nothing moves when the tense flips.** Render both forms in one grid cell, the inactive one
   `visibility: hidden` and `aria-hidden="true"`, so the box is always the longer form's.
 - **Text that runs no code** (each page's opening sentence, `description`, the chat tool
