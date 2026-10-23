@@ -448,7 +448,7 @@ export function mountStoredTimes(
     const mine = ++runs;
     busy = true;
     check?.setAttribute("aria-busy", "true");
-    if (status) status.textContent = "Checking…";
+    if (status) status.textContent = "";
     const body = new FormData();
     body.set("lines", lines!.value);
     body.set("zone", zone!.value);

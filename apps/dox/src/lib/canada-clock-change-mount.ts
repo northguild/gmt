@@ -151,8 +151,7 @@ export function renderCanadaClockChangeTemplate({
     (keyPoints ? keyPointsHtml(idPrefix) : "") +
     browserCardHtml(canadaProbe(idPrefix), CANADA_VERDICT) +
     `</div>` +
-    // Row 2: the map, the zone list with its pin panel, and the live clocks. The map is the taller card; the list
-    //   takes the height it leaves.
+    // Row 2: the map, the zone list, the pin panel and the live clocks.
     `<div class="gmt-zonemap-mapsec" data-role="map-section">` +
     `<div class="gmt-widget-section gmt-zonemap-stage">` +
     `<div class="gmt-zonemap-map-block" role="group" aria-labelledby="${mapId}">` +
@@ -175,9 +174,9 @@ export function renderCanadaClockChangeTemplate({
     `<div class="gmt-zonemap-zone-frame"><div class="gmt-zonemap-zone-scroll" data-role="zone-scroll" role="region" aria-label="Canada time zones, scrollable list" tabindex="0">` +
     `<ul class="gmt-zonemap-zone-list" data-role="zone-list" aria-label="Zones">${zoneIds.zones.map(zoneListItemHtml).join("")}</ul>` +
     `</div></div>` +
-    `<div class="gmt-zonemap-pin" data-role="pin">${renderPinPanelHtml()}</div>` +
     `</div>` +
     `</section>` +
+    `<div class="gmt-zonemap-pin" data-role="pin">${renderPinPanelHtml()}</div>` +
     `<section class="gmt-widget-section gmt-canada-nowsec" aria-labelledby="${clocksId}">` +
     `<h4 id="${clocksId}">Live clocks</h4>` +
     `<p class="gmt-canada-now-notice" data-role="clocks-notice" hidden>${CLOCKS_NOTICE}</p>` +
@@ -371,7 +370,7 @@ export async function mountCanadaClockChange(
     if (busy) return;
     busy = true;
     recheck?.setAttribute("aria-busy", "true");
-    if (status) status.textContent = "Checking…";
+    if (status) status.textContent = "";
     const answer = await ask(fetchFn, signal);
     busy = false;
     recheck?.removeAttribute("aria-busy");

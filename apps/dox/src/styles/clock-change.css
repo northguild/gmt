@@ -46,9 +46,13 @@
   white-space: nowrap;
 }
 
-/* The header notes may wrap, so the two offset columns are as narrow as their values. */
-.gmt-clockcheck-table thead th:nth-child(n + 2) {
-  white-space: normal;
+/* The offset headers and their notes ("tzdb 2026e", "2 Nov 2026") stay on one line wherever the
+   checker has room. In a narrow checker (a phone, the chat rail) the notes wrap, so the two offset
+   columns are as narrow as their values and the table never scrolls sideways. */
+@container gmt-clockcheck (max-width: 30rem) {
+  .gmt-clockcheck-table thead th:nth-child(n + 2) {
+    white-space: normal;
+  }
 }
 
 /* On a phone the card is about 20rem wide, and WebKit sizes the two offset columns to their nowrap
@@ -399,6 +403,60 @@
   gap: var(--gmt-space-3);
 }
 
+/* A check in flight: the button keeps its size and its label (its accessible name), and a ring
+   spins inside it where the label was. No text appears beside it, so nothing moves. */
+.gmt-clockcheck-actions .gmt-button,
+.gmt-clockcheck-stored-controls .gmt-button {
+  position: relative;
+}
+
+.gmt-clockcheck-actions .gmt-button[aria-busy="true"],
+.gmt-clockcheck-stored-controls .gmt-button[aria-busy="true"] {
+  color: transparent;
+  cursor: progress;
+}
+
+.gmt-clockcheck-actions .gmt-button[aria-busy="true"]::after,
+.gmt-clockcheck-stored-controls .gmt-button[aria-busy="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  margin: auto;
+  border-radius: 50%;
+  /* A comet: a fading arc with a bright head, cut to a 2px ring. */
+  background: conic-gradient(transparent 0 10%, var(--gmt-cyan-ink));
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2px),
+    #000 calc(100% - 2px)
+  );
+  animation: gmt-clockcheck-spin 0.8s linear infinite;
+}
+
+@keyframes gmt-clockcheck-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* Still: the ring stays, without the turn. */
+@media (prefers-reduced-motion: reduce) {
+  .gmt-clockcheck-actions .gmt-button[aria-busy="true"]::after,
+  .gmt-clockcheck-stored-controls .gmt-button[aria-busy="true"]::after {
+    animation: none;
+  }
+}
+
+/* Forced colours paint the label back and drop the ring's gradient: keep the label, hide the ring. */
+@media (forced-colors: active) {
+  .gmt-clockcheck-actions .gmt-button[aria-busy="true"]::after,
+  .gmt-clockcheck-stored-controls .gmt-button[aria-busy="true"]::after {
+    display: none;
+  }
+}
+
 /* One line stays reserved, so a message arriving does not move what is below it. */
 .gmt-clockcheck-status {
   min-height: 1.4em;
@@ -470,10 +528,13 @@
   --clockcheck-changes-chip: var(--gmt-dst-gold-ink);
 }
 
-/* Row 2: the map, the zone card and the live clocks. Below 48rem they stack in that order. From
-   48rem the map takes the whole row and the zone card and the clocks sit two-up under it. From 57rem
-   (the narrowest width where the map keeps 400px and the two cards 240px each, with the gaps) all three share one row, the map in the widest column. Below 520px the map is not drawn, and the
-   panel opens under the pressed button. Nothing scrolls sideways. */
+/* Row 2: the map, the zone card and the live clocks. Below 62rem they stack in that order, the map
+   full width but never taller than 70% of the viewport. From 62rem (the narrowest width where the
+   map keeps its height and the two cards 15rem each, with the gaps) all three share one row of
+   one height: the map's frame is `--gmt-zonemap-row` tall at its drawing's own aspect, so its column
+   is as wide as the drawing needs and the sea never letterboxes, and the cards take the rest equally.
+   Below 520px the map is not drawn, and the panel opens under the pressed button. Nothing scrolls
+   sideways. */
 .gmt-zonemap-mapsec {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -497,35 +558,64 @@
   border-color: var(--gmt-border-strong);
 }
 
-@container gmt-clockcheck (min-width: 48rem) {
-  .gmt-zonemap-mapsec {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .gmt-zonemap-stage {
-    grid-column: 1 / -1;
-  }
+/* Registered, so the row's height is worked out once on the map section, against the checker's
+   width. Unregistered, `cqw` would be read on the map against the nearest container, the stage.
+   The initial value must not depend on a font size (`rem` voids the rule); the row rule always
+   sets it. */
+@property --gmt-zonemap-row {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
 }
 
-/* One row of three: the map's column is the widest. The zone card and the clocks are the taller
-   cards; the map frame grows to the row's height, so no card has empty space under its content. */
-@container gmt-clockcheck (min-width: 57rem) {
+@container gmt-clockcheck (min-width: 62rem) {
   .gmt-zonemap-mapsec {
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
+    /* The row's height: a share of the checker's width, never under 22rem and never over 28rem, and
+       never so short that the frame falls under 400px wide (the labels need that much). Container
+       units, so the chat rail takes the same rule. */
+    --gmt-zonemap-row: clamp(
+      max(22rem, calc(400px * var(--zonemap-map-height, 640) / 800)),
+      32cqw,
+      28rem
+    );
+    /* The map's column is the frame's width plus the stage's padding and border. Each card is an
+       inline-size container, so `max-content` would read the stage as empty and collapse it. */
+    grid-template-columns:
+      calc(
+        var(--gmt-zonemap-row) * 800 / var(--zonemap-map-height, 640) + 2 *
+          var(--gmt-space-3) + 2px
+      )
+      minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
   }
 
   .gmt-zonemap-stage {
-    grid-column: auto;
+    grid-column: 1;
+    grid-row: 1;
   }
 
-  .gmt-zonemap-map-block {
-    display: flex;
-    flex-direction: column;
-    block-size: 100%;
+  .gmt-canada-pickcard,
+  .gmt-morocco-pickcard {
+    grid-column: 2;
+    grid-row: 1;
   }
 
-  .gmt-zonemap-map-block .gmt-zonemap-map {
-    flex: 1 1 auto;
+  .gmt-canada-nowsec,
+  .gmt-morocco-nowsec {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .gmt-zonemap-mapsec > .gmt-zonemap-pin {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .gmt-zonemap-mapsec .gmt-zonemap-map {
+    inline-size: calc(
+      var(--gmt-zonemap-row) * 800 / var(--zonemap-map-height, 640)
+    );
+    margin-inline: 0;
   }
 }
 
@@ -538,7 +628,7 @@
 }
 
 /* Beside the zone card the clocks share the row's height equally, so there is no empty space. */
-@container gmt-clockcheck (min-width: 48rem) {
+@container gmt-clockcheck (min-width: 62rem) {
   .gmt-clockcheck-clocks {
     flex: 1 1 auto;
     grid-auto-rows: minmax(3.75rem, 1fr);
@@ -704,6 +794,9 @@
   /* The drawing's box is 800 by the config's height; a checker whose map is not 640 tall sets
      `--zonemap-map-height` on the map's frame in its markup, so the box is reserved before it draws. */
   aspect-ratio: 800 / var(--zonemap-map-height, 640);
+  /* Stacked: the frame takes the width, but a tall drawing stops at 70% of the viewport's height. */
+  inline-size: min(100%, calc(70vh * 800 / var(--zonemap-map-height, 640)));
+  margin-inline: auto;
   overflow: hidden;
 }
 
@@ -721,6 +814,114 @@
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
   pointer-events: none;
+}
+
+/* --- Place labels ---------------------------------------------------------- */
+
+/* The map is a dark island (`gmt-theme-dark`), so these colours are the same in both themes. The
+   layer lies over the drawing and takes no pointer, so a label never steals a click from a shape or
+   a ring. A label's type is a fixed 11.5 and 12px at every frame width; only its position scales,
+   as a share of the frame. */
+.gmt-zonemap-labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.gmt-zonemap-label {
+  --zonemap-halo: color-mix(in srgb, var(--zonemap-sea) 85%, transparent);
+  position: absolute;
+  /* The anchor is the label's centre; the box is pushed back inside the frame, so a label never
+     crosses its edge. `--lw` and `--lh` are the label's reserved size in px (zone-map-labels.ts). */
+  left: clamp(calc(var(--lw) / 2), var(--ax), calc(100% - var(--lw) / 2));
+  top: clamp(calc(var(--lh) / 2), var(--ay), calc(100% - var(--lh) / 2));
+  inline-size: var(--lw);
+  block-size: var(--lh);
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  /* A passing label lies over a permanent one if they meet. */
+  z-index: 1;
+  text-shadow:
+    3px 0 0 var(--zonemap-halo),
+    2.77px 1.15px 0 var(--zonemap-halo),
+    2.12px 2.12px 0 var(--zonemap-halo),
+    1.15px 2.77px 0 var(--zonemap-halo),
+    0 3px 0 var(--zonemap-halo),
+    -1.15px 2.77px 0 var(--zonemap-halo),
+    -2.12px 2.12px 0 var(--zonemap-halo),
+    -2.77px 1.15px 0 var(--zonemap-halo),
+    -3px 0 0 var(--zonemap-halo),
+    -2.77px -1.15px 0 var(--zonemap-halo),
+    -2.12px -2.12px 0 var(--zonemap-halo),
+    -1.15px -2.77px 0 var(--zonemap-halo),
+    -0 -3px 0 var(--zonemap-halo),
+    1.15px -2.77px 0 var(--zonemap-halo),
+    2.12px -2.12px 0 var(--zonemap-halo),
+    2.77px -1.15px 0 var(--zonemap-halo),
+    1.66px 0.69px 0 var(--zonemap-halo),
+    0.69px 1.66px 0 var(--zonemap-halo),
+    -0.69px 1.66px 0 var(--zonemap-halo),
+    -1.66px 0.69px 0 var(--zonemap-halo),
+    -1.66px -0.69px 0 var(--zonemap-halo),
+    -0.69px -1.66px 0 var(--zonemap-halo),
+    0.69px -1.66px 0 var(--zonemap-halo),
+    1.66px -0.69px 0 var(--zonemap-halo);
+}
+
+.gmt-zonemap-label[hidden] {
+  display: none;
+}
+
+.gmt-zonemap-label.is-passing {
+  z-index: 2;
+}
+
+.gmt-zonemap-label-city {
+  font-family: var(--gmt-font-display);
+  font-size: 12px;
+  line-height: 15px;
+  text-transform: uppercase;
+  color: var(--gmt-ice);
+}
+
+/* The offset line holds six characters at least, tabular, so a new offset never moves the city. */
+.gmt-zonemap-label-offset {
+  min-inline-size: 6ch;
+  font-family: var(--gmt-font-mono);
+  font-size: 12px;
+  line-height: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--gmt-cyan-bright);
+}
+
+/* The NO SIGNAL mark without its chip: the halo carries it. */
+.gmt-zonemap-label .gmt-playground-sentinel {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  line-height: 15px;
+  text-shadow: inherit;
+}
+
+@media (forced-colors: active) {
+  /* The halo is a text-shadow, which forced colours drop; opting out keeps it, in the system pair. */
+  .gmt-zonemap-label {
+    --zonemap-halo: Canvas;
+    forced-color-adjust: none;
+  }
+  .gmt-zonemap-label-city,
+  .gmt-zonemap-label-offset,
+  .gmt-zonemap-label .gmt-playground-sentinel {
+    color: CanvasText;
+  }
 }
 
 .gmt-zonemap-shape {
@@ -819,16 +1020,9 @@
   stroke-dasharray: 6 3;
 }
 
-@container gmt-clockcheck (min-width: 520px) {
-  .gmt-zonemap-zone-scroll {
-    contain: size;
-  }
-}
-
-/* From 48rem the zone card is the narrow column beside the map: the list sits over the panel and
-   takes whatever height the map card leaves (never under 14rem). The scroll box is laid over its
-   frame, so its content adds nothing to the row's height. */
-@container gmt-clockcheck (min-width: 48rem) {
+/* From 62rem the zone card is a column of the row: the list takes whatever height the row leaves.
+   The scroll box is laid over its frame, so its content adds nothing to the row's height. */
+@container gmt-clockcheck (min-width: 62rem) {
   .gmt-zonemap-zone-frame {
     position: relative;
   }
@@ -856,14 +1050,14 @@
 .gmt-zonemap-zone-scroll {
   scroll-padding: 6px;
   min-height: 0;
-  max-block-size: min(60vh, 28rem);
+  max-block-size: min(60vh, 24rem);
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
 
-@container gmt-clockcheck (min-width: 520px) {
+@container gmt-clockcheck (min-width: 62rem) {
   .gmt-zonemap-zone-scroll {
     max-block-size: none;
   }
@@ -1093,16 +1287,23 @@
   min-height: 2.8em;
 }
 
-/* In the narrow columns of the row of three the long values wrap to a third line (the zone name, the
-   class, the last and next change, the data source), so the panel holds three lines for them and stays one
+/* From 40rem the panel runs across the checker: the clock, the zone and its class on the left, the
+   five readouts in three columns on the right. The long values hold three lines, so the panel is one
    box for every zone. */
-@container gmt-clockcheck (min-width: 57rem) and (max-width: 80rem) {
-  .gmt-zonemap-pin-title dd[data-role="pin-zone"] {
-    min-block-size: 4.2em;
+@container gmt-clockcheck (min-width: 40rem) {
+  .gmt-zonemap-pin {
+    grid-template-columns: minmax(14rem, 5fr) minmax(0, 8fr);
+    align-items: start;
   }
 
-  .gmt-zonemap-pin-title dd[data-role="pin-class"] {
-    min-block-size: 5.6em;
+  .gmt-zonemap-pin-rows {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding-block-start: 0;
+    border-block-start: 0;
+  }
+
+  .gmt-zonemap-pin-row--wide {
+    grid-column: auto;
   }
 
   .gmt-zonemap-pin-row--wide dd {
@@ -1740,7 +1941,14 @@
   color: var(--gmt-ice-dim);
 }
 
-/* The line under the table that says why the blind rows are never judged. */
+/* The line under the table that says why the blind rows are never judged. It takes the table's
+   width (not the prose measure), and where it must wrap its lines are balanced, so no word is left
+   alone on the last line. */
+.gmt-clockcheck-browser p.gmt-clockcheck-blind-note {
+  max-width: none;
+  text-wrap: balance;
+}
+
 .gmt-clockcheck-blind-note {
   margin: var(--gmt-space-2) 0 0;
   font-size: 0.8125rem;

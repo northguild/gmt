@@ -149,6 +149,8 @@ const MAP: ZoneMapConfig = {
   releaseOf: (id) => (id === "Africa/Casablanca" ? "9z" : null),
   releaseRange: "9a to 9z",
   mapLabel: "Map of x.",
+  labelled: [],
+  anchors: {},
 };
 
 const ROW = (zone: string, kind: MapZone["kind"]): MapZone => ({

@@ -5,9 +5,16 @@
  * jsdom has no layout, so this runs in a browser against the built site. At each width it reads
  * the rect of every card and checks that
  *   - no two cards overlap,
- *   - the three cards of row 2 (map, zone card, clocks) share one top within 1 px wherever they
- *     sit side by side, and stack in that order below it,
- *   - no card reaches past the stack's edge, and the page does not scroll sideways.
+ *   - the three cards of row 2 (map, zone card, clocks) sit in one row, left to right, sharing a
+ *     top and a bottom within 1 px and no taller than ROW_MAX, or stacked in that order,
+ *   - no card reaches past the stack's edge, and the page does not scroll sideways,
+ *   - the map's frame has the drawing's own aspect (800 by the viewBox's height) within 2%, at
+ *     every width it is drawn (the box is reserved before the drawing arrives, and the sea
+ *     never letterboxes),
+ *   - no card of the map row (map, zone card, clocks) has more than 48 px between its last text
+ *     or drawing and its bottom edge, and
+ *   - no two place labels overlap, none crosses the frame, and a label's real box is no wider than
+ *     the box the code reserved for it.
  *
  * Serve a build statically first (never `astro preview`, never the owner's dev server):
  *   pnpm exec astro build --outDir /tmp/dist-x/gmt
@@ -39,6 +46,9 @@ const WORD = PATH.includes("morocco") ? "morocco" : "canada";
 const FIXTURE_FILE = arg("fixture", "");
 const FIXTURE = FIXTURE_FILE ? readFileSync(FIXTURE_FILE, "utf8") : null;
 
+/* The row's tallest card: the map's 28rem frame plus its heading, legend and padding. */
+const ROW_MAX = 640;
+
 const CARDS = {
   keypoints: ".gmt-keypoints",
   browser: ".gmt-clockcheck-browser",
@@ -51,6 +61,10 @@ const CARDS = {
   help: ".gmt-clockcheck-help",
   stored: ".gmt-clockcheck-stored",
 };
+
+/* The most empty space a card of the map row may leave under its content, in px. */
+const EMPTY_MAX = 48;
+const ASPECT_TOLERANCE = 0.02;
 
 const failures = [];
 const fail = (message) => failures.push(message);
@@ -81,6 +95,12 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
     }
     await page.goto(`${BASE}${PATH}`, { waitUntil: "load" });
     await page.waitForTimeout(3000);
+    /* The map draws when it scrolls into view; the check needs its frame, labels and card heights. */
+    await page.locator(".gmt-zonemap-mapsec").scrollIntoViewIfNeeded();
+    await page
+      .waitForSelector(".gmt-zonemap-svg", { timeout: 15000 })
+      .catch(() => {});
+    await page.waitForTimeout(500);
     const data = await page.evaluate(
       ({ cards, word }) => {
         const rect = (selector) => {
@@ -95,8 +115,106 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
           };
         };
         const stack = rect(`.gmt-${word}-stack`);
+        /* Where a card's content ends: the lowest text or drawing that its overflow boxes do not clip. */
+        const contentBottom = (card) => {
+          let lowest = -Infinity;
+          const clipBottom = (el) => {
+            let bottom = Infinity;
+            for (
+              let p = el.parentElement;
+              p && p !== card;
+              p = p.parentElement
+            ) {
+              const cs = getComputedStyle(p);
+              if (cs.overflowY !== "visible")
+                bottom = Math.min(bottom, p.getBoundingClientRect().bottom);
+            }
+            return bottom;
+          };
+          const consider = (el) => {
+            const cs = getComputedStyle(el);
+            if (cs.display === "none" || cs.visibility === "hidden") return;
+            const b = el.getBoundingClientRect();
+            if (b.width <= 0 || b.height <= 0) return;
+            lowest = Math.max(lowest, Math.min(b.bottom, clipBottom(el)));
+          };
+          const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+          for (let n; (n = walker.nextNode());) {
+            if (!n.textContent.trim() || !n.parentElement) continue;
+            const range = document.createRange();
+            range.selectNodeContents(n);
+            const rects = [...range.getClientRects()].filter(
+              (r) => r.height > 0,
+            );
+            const el = n.parentElement;
+            const cs = getComputedStyle(el);
+            if (cs.display === "none" || cs.visibility === "hidden") continue;
+            if (rects.length === 0) continue;
+            const bottom = Math.max(...rects.map((r) => r.bottom));
+            lowest = Math.max(lowest, Math.min(bottom, clipBottom(el)));
+          }
+          /* The drawing, and the pin panel: a bordered box that holds its size for every zone, so
+             what it reserves inside is not empty card space. */
+          for (const el of card.querySelectorAll(
+            "svg.gmt-zonemap-svg, .gmt-zonemap-pin",
+          ))
+            consider(el);
+          return lowest;
+        };
+        const emptyUnder = (selector) => {
+          const el = document.querySelector(selector);
+          if (!el || el.offsetParent === null) return null;
+          const pad = parseFloat(getComputedStyle(el).paddingBottom) || 0;
+          return el.getBoundingClientRect().bottom - pad - contentBottom(el);
+        };
+        const mapFrame = document.querySelector(".gmt-zonemap-map");
+        const svg = mapFrame?.querySelector("svg.gmt-zonemap-svg");
+        const frame =
+          mapFrame && mapFrame.offsetParent !== null
+            ? mapFrame.getBoundingClientRect()
+            : null;
+        const view = svg?.getAttribute("viewBox")?.split(" ").map(Number);
+        const labels = [...document.querySelectorAll(".gmt-zonemap-label")]
+          .filter((l) => !l.hidden && l.offsetParent !== null)
+          .map((l) => {
+            const b = l.getBoundingClientRect();
+            const lines = [...l.children].map((c) => {
+              const r = document.createRange();
+              r.selectNodeContents(c);
+              return r.getBoundingClientRect().width;
+            });
+            return {
+              id: l.dataset.labelFor,
+              left: b.left,
+              right: b.right,
+              top: b.top,
+              bottom: b.bottom,
+              text: Math.max(0, ...lines),
+              reserved: parseFloat(l.style.getPropertyValue("--lw")),
+            };
+          });
         return {
           stack,
+          aspect:
+            frame && view
+              ? {
+                  width: frame.width,
+                  height: frame.height,
+                  viewHeight: view[3],
+                }
+              : null,
+          frame: frame
+            ? {
+                left: frame.left,
+                right: frame.right,
+                top: frame.top,
+                bottom: frame.bottom,
+              }
+            : null,
+          labels,
+          empty: Object.fromEntries(
+            Object.entries(cards).map(([k, s]) => [k, emptyUnder(s)]),
+          ),
           hscroll: document.documentElement.scrollWidth > innerWidth,
           rects: Object.fromEntries(
             Object.entries(cards).map(([k, s]) => [k, rect(s)]),
@@ -124,14 +242,75 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
         if (across && down) fail(`${tag}: ${an} overlaps ${bn}`);
       }
     }
+    if (data.aspect) {
+      const want = 800 / data.aspect.viewHeight;
+      const got = data.aspect.width / data.aspect.height;
+      if (Math.abs(got / want - 1) > ASPECT_TOLERANCE)
+        fail(
+          `${tag}: the map frame is ${data.aspect.width.toFixed(1)} by ${data.aspect.height.toFixed(1)} (${got.toFixed(3)}), the drawing 800 by ${data.aspect.viewHeight} (${want.toFixed(3)})`,
+        );
+    }
+    for (const name of ["map", "pick", "clocks"]) {
+      const empty = data.empty[name];
+      if (empty !== null && empty > EMPTY_MAX)
+        fail(
+          `${tag}: the ${name} card leaves ${empty.toFixed(0)} px empty under its content (at most ${EMPTY_MAX})`,
+        );
+    }
+    for (let i = 0; i < data.labels.length; i += 1) {
+      const a = data.labels[i];
+      if (
+        data.frame &&
+        (a.left < data.frame.left - 1 ||
+          a.right > data.frame.right + 1 ||
+          a.top < data.frame.top - 1 ||
+          a.bottom > data.frame.bottom + 1)
+      )
+        fail(`${tag}: the ${a.id} label crosses the frame`);
+      if (a.text > a.reserved + 0.5)
+        fail(
+          `${tag}: the ${a.id} label's text is ${a.text.toFixed(1)} px wide, more than the ${a.reserved} px reserved`,
+        );
+      for (let j = i + 1; j < data.labels.length; j += 1) {
+        const b = data.labels[j];
+        if (
+          a.left < b.right &&
+          b.left < a.right &&
+          a.top < b.bottom &&
+          b.top < a.bottom
+        )
+          fail(`${tag}: the ${a.id} label overlaps the ${b.id} label`);
+      }
+    }
     const { map, pick, clocks } = data.rects;
     if (map && pick && clocks) {
-      const pairUp = clocks.top < pick.bottom - 1;
-      if (pairUp && Math.abs(pick.top - clocks.top) > 1)
-        fail(`${tag}: the zone card and the clocks do not share a top`);
-      const threeUp = Math.abs(map.top - pick.top) <= 1;
-      if (!threeUp && !(map.bottom <= pick.top + 1))
-        fail(`${tag}: the map is not above the zone card`);
+      const row = Math.abs(map.top - pick.top) <= 1;
+      if (row) {
+        /* One row: map, zone card, clocks, left to right, one top, one bottom, no taller than 28rem
+           plus the card's heading and legend. */
+        if (!(map.right <= pick.left + 1 && pick.right <= clocks.left + 1))
+          fail(
+            `${tag}: the map, the zone card and the clocks are not in one row, left to right`,
+          );
+        if (
+          Math.abs(pick.top - clocks.top) > 1 ||
+          Math.abs(pick.bottom - clocks.bottom) > 1 ||
+          Math.abs(map.bottom - pick.bottom) > 1
+        )
+          fail(
+            `${tag}: the three cards of the row do not share a top and a bottom`,
+          );
+        if (pick.width < 240 - 1 || clocks.width < 240 - 1)
+          fail(`${tag}: a card of the row is under 15rem wide`);
+        if (map.height > ROW_MAX)
+          fail(
+            `${tag}: the row is ${map.height.toFixed(0)} px tall, more than ${ROW_MAX}`,
+          );
+      } else {
+        /* Stacked: map, then the zone card, then the clocks, each full width. */
+        if (!(map.bottom <= pick.top + 1 && pick.bottom <= clocks.top + 1))
+          fail(`${tag}: the cards are not stacked map, zone card, clocks`);
+      }
     }
     if (SHOTS) {
       mkdirSync(SHOTS, { recursive: true });

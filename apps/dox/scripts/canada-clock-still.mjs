@@ -39,6 +39,8 @@ const arg = (name, fallback) => {
 const BASE = arg("base", "http://127.0.0.1:4351/gmt").replace(/\/$/, "");
 const BROWSERS = arg("browsers", "chromium").split(",");
 const WIDTHS = [1280, 375];
+/* Real time a page may take to load the library and receive the answer, on a busy machine. */
+const READY_MS = 30_000;
 const PATH = arg("path", "/check/canada-2026-clock-change/");
 /* Canada is the default page. Another checker's page brings its own zone list, clock count and
    Worker route; its fixture is a Worker answer saved to a file (`--fixture`). */
@@ -305,7 +307,11 @@ for (const name of BROWSERS) {
           body: JSON.stringify(RUN_FIXTURE),
         }),
       );
-      await page.clock.install({ time: FAKE_NOW_MS });
+      // Install a second early and pause at the start time: the fake time then moves only when this
+      // script advances it, so a slow library load or a slow answer cannot eat into the 90 s before
+      // Toronto's change.
+      await page.clock.install({ time: FAKE_NOW_MS - 1000 });
+      await page.clock.pauseAt(FAKE_NOW_MS);
       try {
         const response = await page.goto(`${BASE}${PATH}`, {
           waitUntil: "domcontentloaded",
@@ -317,15 +323,24 @@ for (const name of BROWSERS) {
           continue;
         }
         await page.waitForSelector(".gmt-clockcheck-clock");
-        // Let the library load and the stubbed fetch resolve on the fake clock.
-        for (let i = 0; i < 40; i++) {
+        // Let the library load and the stubbed fetch resolve. The wait ends when every readout shows
+        // a time, or fails after READY_MS of real time: it never falls through to measure a page
+        // that has not finished loading. The fake clock moves 100 ms a round for the first rounds
+        // (a page timer may need it) and then stands still.
+        const readyBy = performance.now() + READY_MS;
+        let ready = false;
+        for (let round = 0; !ready; round++) {
           const rows = await snapshot(page);
-          if (
+          ready =
             rows.length === CLOCK_COUNT &&
-            rows.every((r) => /\d\d:\d\d [+-]\d\d:\d\d/.test(r.text))
-          )
-            break;
-          await page.clock.runFor(100);
+            rows.every((r) => /\d\d:\d\d [+-]\d\d:\d\d/.test(r.text));
+          if (ready) break;
+          if (performance.now() > readyBy) {
+            throw new Error(
+              `the readouts still showed no time after ${READY_MS / 1000} s: ${rows.map((r) => r.text).join(" | ")}`,
+            );
+          }
+          if (round < 40) await page.clock.runFor(100);
           await page.waitForTimeout(50);
         }
         const start = await snapshot(page);

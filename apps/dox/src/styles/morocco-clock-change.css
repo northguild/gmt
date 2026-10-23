@@ -230,24 +230,16 @@
   font-weight: 600;
 }
 
-/* The list and the panel sit side by side from 520px. The panel keeps one size, and the list is a
-   scroll box exactly as tall as it. */
+/* The list is one column; a scroll box holds it. */
 .gmt-morocco-pick {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--gmt-space-3);
 }
 
-@container gmt-clockcheck (min-width: 520px) {
-  .gmt-morocco-pick {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: stretch;
-  }
-}
-
-/* From 48rem the zone card is the narrow column beside the map: the list sits over the panel and
-   takes whatever height the map card leaves (never under 14rem). */
-@container gmt-clockcheck (min-width: 48rem) {
+/* From 62rem the zone card is a column of the row: the list takes whatever height the row leaves,
+   laid over its frame so its content adds nothing to the row's height. */
+@container gmt-clockcheck (min-width: 62rem) {
   .gmt-morocco-pickcard {
     display: flex;
     flex-direction: column;
@@ -256,14 +248,14 @@
   .gmt-morocco-pick {
     flex: 1 1 auto;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(14rem, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr);
   }
 }
 
 @container gmt-clockcheck (max-width: 519.98px) {
   /* Until a zone is pinned the panel has no place under any button, so it is not drawn at all:
      the first paint is already the narrow layout and nothing shrinks when the script runs. */
-  .gmt-morocco-pick > .gmt-zonemap-pin {
+  .gmt-zonemap-mapsec > .gmt-zonemap-pin {
     display: none;
   }
 }

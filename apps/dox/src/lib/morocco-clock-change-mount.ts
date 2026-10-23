@@ -177,14 +177,14 @@ export function renderMoroccoClockChangeTemplate({
     (keyPoints ? keyPointsHtml(idPrefix) : "") +
     browserCardHtml(moroccoProbe(idPrefix), MOROCCO_VERDICT) +
     `</div>` +
-    // Row 2: the map, the zone list with its pin panel, and the two live clocks.
-    `<div class="gmt-zonemap-mapsec" data-role="map-section">` +
+    // Row 2: the map, the zone list, the pin panel and the live clocks.
+    `<div class="gmt-zonemap-mapsec" data-role="map-section" style="--zonemap-map-height:${MOROCCO_MAP.height}">` +
     `<div class="gmt-widget-section gmt-zonemap-stage">` +
     `<div class="gmt-zonemap-map-block" role="group" aria-labelledby="${mapId}">` +
     `<h4 id="${mapId}">Zones on the map</h4>` +
     // The map draws the sheet's boundaries; `zone-map.ts` puts the credits button in its corner
     // when it draws, under this id.
-    `<div class="gmt-zonemap-map gmt-theme-dark" data-role="map" style="--zonemap-map-height:${MOROCCO_MAP.height}" data-credits-id="${idPrefix}-data-credits"></div>` +
+    `<div class="gmt-zonemap-map gmt-theme-dark" data-role="map" data-credits-id="${idPrefix}-data-credits"></div>` +
     `<ul class="gmt-zonemap-legend" aria-label="Map classes">` +
     LEGEND.map(
       ([kind, label]) =>
@@ -200,9 +200,9 @@ export function renderMoroccoClockChangeTemplate({
     `<div class="gmt-zonemap-zone-frame"><div class="gmt-zonemap-zone-scroll" data-role="zone-scroll" role="region" aria-label="Morocco and neighbouring time zones, scrollable list" tabindex="0">` +
     `<ul class="gmt-zonemap-zone-list" data-role="zone-list" aria-label="Zones">${zoneIds.zones.map(zoneListItemHtml).join("")}</ul>` +
     `</div></div>` +
-    `<div class="gmt-zonemap-pin" data-role="pin">${renderPinPanelHtml()}</div>` +
     `</div>` +
     `</section>` +
+    `<div class="gmt-zonemap-pin" data-role="pin">${renderPinPanelHtml()}</div>` +
     `<section class="gmt-widget-section gmt-morocco-nowsec" aria-labelledby="${clocksId}">` +
     `<h4 id="${clocksId}">Live clocks</h4>` +
     `<p class="gmt-morocco-now-notice" data-role="clocks-notice" hidden>${CLOCKS_NOTICE}</p>` +
@@ -426,7 +426,7 @@ export async function mountMoroccoClockChange(
     if (busy) return;
     busy = true;
     recheck?.setAttribute("aria-busy", "true");
-    if (status) status.textContent = "Checking…";
+    if (status) status.textContent = "";
     const answer = await ask(fetchFn, signal);
     busy = false;
     recheck?.removeAttribute("aria-busy");

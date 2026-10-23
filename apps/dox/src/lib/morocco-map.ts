@@ -8,6 +8,7 @@ import { geoConicConformal } from "d3-geo";
 import type { GeoProjection } from "d3-geo";
 import {
   MOROCCO_KIND_LABELS,
+  MOROCCO_ZONES,
   MOROCCO_RELEASE,
   MOROCCO_STOPPED,
 } from "./morocco-clock-change";
@@ -98,6 +99,17 @@ export const MAP_MARKERS: Readonly<Record<string, readonly [number, number]>> =
     }),
   );
 
+/**
+ * Where the two permanent labels sit, `[lon, lat]`, each inside its zone's land: Casablanca in
+ * Morocco's interior, El Aaiun in the north of Western Sahara's drawn part, away from the coast.
+ */
+export const MOROCCO_ANCHORS: Readonly<
+  Record<string, readonly [number, number]>
+> = {
+  "Africa/Casablanca": [-6.5, 32],
+  "Africa/El_Aaiun": [-13.5, 25],
+};
+
 /** The tzdb release that recorded the change, for a zone that stops changing in 2026. */
 export function releaseOf(id: string): string | null {
   return MOROCCO_STOPPED.has(id) ? MOROCCO_RELEASE : null;
@@ -116,4 +128,6 @@ export const MOROCCO_MAP: ZoneMapConfig = {
     "Map of the time zones of Morocco and its neighbours. The zone list holds the same zones.",
   markerMinPx: 12,
   markers: MAP_MARKERS,
+  labelled: MOROCCO_ZONES,
+  anchors: MOROCCO_ANCHORS,
 };

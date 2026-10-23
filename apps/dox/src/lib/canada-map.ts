@@ -5,7 +5,12 @@
  */
 import { geoConicConformal } from "d3-geo";
 import type { GeoProjection } from "d3-geo";
-import { KIND_LABELS, PROBE_ZONES, STOPPED_ZONES } from "./canada-clock-change";
+import {
+  CLOCK_ZONES,
+  KIND_LABELS,
+  PROBE_ZONES,
+  STOPPED_ZONES,
+} from "./canada-clock-change";
 import { withBase } from "./site";
 import { MAP_WIDTH, zonesOnly } from "./zone-map";
 import type { BoundaryCollection, ZoneMapConfig } from "./zone-map";
@@ -48,6 +53,23 @@ export function canadaProjection(
   return projection;
 }
 
+/**
+ * Where the five permanent labels sit, `[lon, lat]`, each inside its zone's land. Stated rather
+ * than computed so the labels stay apart down to a 400 px frame (`zone-map.test.ts` checks it):
+ * Vancouver in the south of British Columbia; Edmonton in the zone's north (the Northwest
+ * Territories), Winnipeg in northern Manitoba and Inuvik in the far north, so the three western
+ * labels sit in three bands; Toronto in the east of Ontario, away from Winnipeg's.
+ */
+export const CANADA_ANCHORS: Readonly<
+  Record<string, readonly [number, number]>
+> = {
+  "America/Vancouver": [-122.8, 50.2],
+  "America/Edmonton": [-114.5, 63.5],
+  "America/Inuvik": [-126.3, 66.7],
+  "America/Winnipeg": [-98.5, 59.5],
+  "America/Toronto": [-78, 51.5],
+};
+
 /** The tzdb release that recorded the change, for a zone that stops changing in 2026. */
 export function releaseOf(id: string): string | null {
   return PROBE_ZONES.find((fact) => fact.zone === id)?.release ?? null;
@@ -63,4 +85,6 @@ export const CANADA_MAP: ZoneMapConfig = {
   releaseOf,
   releaseRange: "2026b to 2026e",
   mapLabel: "Map of Canada's time zones. The zone list holds the same zones.",
+  labelled: CLOCK_ZONES,
+  anchors: CANADA_ANCHORS,
 };

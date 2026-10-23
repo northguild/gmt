@@ -30,6 +30,12 @@ import {
 import { spokenOffset } from "./crossing-clock";
 import { enter } from "./enter";
 import { escapeAttr, escapeHtml } from "./widget-ui";
+import {
+  LABEL_HEIGHT_PX,
+  cityOf,
+  labelSize,
+  poleOfInaccessibility,
+} from "./zone-map-labels";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 /** The drawing's own coordinate box; the SVG scales to its container with `viewBox`. */
@@ -111,6 +117,19 @@ export interface ZoneMapConfig {
   markerMinPx?: number;
   /** The `zone.tab` coordinate of each zone that may get a ring, `[lon, lat]`. */
   markers?: Readonly<Record<string, readonly [lon: number, lat: number]>>;
+  /**
+   * The zones that carry a permanent place label: the ones with a live clock beside the map, taken
+   * from the clocks' own zone list. Every other zone shows its label while it is hovered, focused
+   * or pinned.
+   */
+  labelled: readonly string[];
+  /**
+   * Where each permanent label sits, `[lon, lat]`, chosen inside the zone's land. Stated, not
+   * computed: a centroid can fall outside a concave shape, and a computed point could land two
+   * labels on top of each other. A zone with no anchor takes the point of its largest part that is
+   * farthest from the edge.
+   */
+  anchors: Readonly<Record<string, readonly [lon: number, lat: number]>>;
 }
 
 // ---------------------------------------------------------------------------
@@ -317,12 +336,20 @@ export function mountZoneMap(
   let rings = new Map<string, SVGCircleElement>();
   let drawn = false;
   let fetching = false;
+  // The place labels: an overlay on the drawing, one element per zone shown so far.
+  let hoverId: string | null = null;
+  let labelLayer: HTMLElement | undefined;
+  let labelAnchor: (id: string) => readonly [number, number] | null = () =>
+    null;
+  const labels = new Map<string, HTMLElement>();
   let observer: IntersectionObserver | undefined;
   let resolveReady: () => void = () => {};
   const ready = new Promise<void>((resolve) => {
     resolveReady = resolve;
   });
   const panelHome = panel?.parentElement ?? null;
+  // The panel returns to the same place among its siblings, not to the end of them.
+  const panelNext = panel?.nextElementSibling ?? null;
 
   // --- the list ------------------------------------------------------------
   for (const button of buttons) {
@@ -413,6 +440,8 @@ export function mountZoneMap(
 
   // --- hover and focus mirror between the list and the shapes ---------------
   function mirror(id: string | null): void {
+    hoverId = id;
+    refreshLabels();
     for (const [key, shape] of shapes)
       shape.classList.toggle("is-active", key === id);
     for (const [key, marker] of rings)
@@ -541,7 +570,8 @@ export function mountZoneMap(
       button.parentElement.append(panel);
       panel.hidden = false;
     } else {
-      if (panel.parentElement !== panelHome) panelHome.append(panel);
+      if (panel.parentElement !== panelHome)
+        panelHome.insertBefore(panel, panelNext);
       panel.hidden = narrow && pinnedId === null;
     }
   }
@@ -570,6 +600,7 @@ export function mountZoneMap(
       marker.classList.toggle("is-pinned", key === id);
     }
     drawRing(pinRing, id);
+    refreshLabels();
     drawPanel();
     placePanel();
     tick();
@@ -650,6 +681,60 @@ export function mountZoneMap(
     return made;
   }
 
+  // --- the labels ------------------------------------------------------------
+  /**
+   * One label: the city, and under it the offset the zone list shows (`offsetAt` at the response's
+   * own `now`, so the map and the list never disagree), or the list's NO SIGNAL mark. The text is
+   * `aria-hidden`: each shape already has its `aria-label`.
+   */
+  function makeLabel(id: string, at: readonly [number, number]): HTMLElement {
+    const zone = rows.get(id);
+    const offset = zone ? offsetAt(zone, deps.responseNow, deps.isBefore) : "";
+    const city = cityOf(id);
+    const size = labelSize(city, offset === "" ? null : offset);
+    const label = document.createElement("div");
+    label.className = "gmt-zonemap-label";
+    label.dataset.labelFor = id;
+    label.setAttribute("aria-hidden", "true");
+    label.style.setProperty(
+      "--ax",
+      `${((at[0] / MAP_WIDTH) * 100).toFixed(2)}%`,
+    );
+    label.style.setProperty(
+      "--ay",
+      `${((at[1] / config.height) * 100).toFixed(2)}%`,
+    );
+    label.style.setProperty("--lw", `${size.width}px`);
+    label.style.setProperty("--lh", `${LABEL_HEIGHT_PX}px`);
+    label.innerHTML =
+      `<span class="gmt-zonemap-label-city">${escapeHtml(city)}</span>` +
+      `<span class="gmt-zonemap-label-offset">${offset === "" ? NO_SIGNAL : escapeHtml(offset)}</span>`;
+    return label;
+  }
+
+  /** Shows the permanent labels, the hovered or focused zone's, and the pinned zone's. */
+  function refreshLabels(): void {
+    if (!labelLayer) return;
+    const permanent = new Set(config.labelled);
+    const want = new Set(permanent);
+    if (hoverId !== null) want.add(hoverId);
+    if (pinnedId !== null) want.add(pinnedId);
+    for (const id of want) {
+      if (!shapes.has(id)) continue;
+      let label = labels.get(id);
+      if (!label) {
+        const at = labelAnchor(id);
+        if (!at) continue;
+        label = makeLabel(id, at);
+        labels.set(id, label);
+        labelLayer.append(label);
+      }
+      label.hidden = false;
+      label.classList.toggle("is-passing", !permanent.has(id));
+    }
+    for (const [id, label] of labels) if (!want.has(id)) label.hidden = true;
+  }
+
   // --- the shapes ----------------------------------------------------------
   function drawShapes(boundaries: BoundaryCollection): void {
     if (!frame || drawn) return;
@@ -726,6 +811,38 @@ export function mountZoneMap(
       { signal },
     );
     frame.append(svg);
+    // The labels sit over the drawing in their own layer, so they take no pointer and move nothing.
+    labelLayer = document.createElement("div");
+    labelLayer.className = "gmt-zonemap-labels";
+    labelLayer.setAttribute("aria-hidden", "true");
+    frame.append(labelLayer);
+    const features = new Map(
+      boundaries.features
+        .filter(isZoneFeature)
+        .map((f) => [f.properties.tzid, f]),
+    );
+    const poles = new Map<string, readonly [number, number] | null>();
+    labelAnchor = (id) => {
+      const stated = config.anchors[id];
+      if (stated) {
+        const point = projection([stated[0], stated[1]]);
+        if (point) return point;
+      }
+      if (!poles.has(id)) {
+        const feature = features.get(id);
+        poles.set(
+          id,
+          feature
+            ? poleOfInaccessibility(
+                largestProjectedPart(feature, projection, config.height),
+                { width: MAP_WIDTH, height: config.height },
+              )
+            : null,
+        );
+      }
+      return poles.get(id) ?? null;
+    };
+    refreshLabels();
     // The boundaries are the one third-party datum the map draws; the button sits on the drawing.
     watchDataCredits();
     frame.insertAdjacentHTML(
@@ -849,6 +966,46 @@ export function largestPartPx(feature: BoundaryFeature, path: GeoPath): number {
     }
   }
   return largest;
+}
+
+/**
+ * The rings of the feature's largest part (the polygon whose projected box takes the most of the
+ * drawing's box), projected to drawing px. Empty when nothing of it lies in the box.
+ */
+export function largestProjectedPart(
+  feature: BoundaryFeature,
+  projection: GeoProjection,
+  height: number,
+): [number, number][][] {
+  const { type, coordinates } = feature.geometry;
+  const polygons =
+    type === "MultiPolygon"
+      ? (coordinates as [number, number][][][])
+      : type === "Polygon"
+        ? [coordinates as [number, number][][]]
+        : [];
+  let best: [number, number][][] = [];
+  let bestArea = 0;
+  for (const rings of polygons) {
+    const projected = rings.map((ring) =>
+      ring
+        .map((point) => projection(point))
+        .filter((point): point is [number, number] => point !== null),
+    );
+    const outer = projected[0] ?? [];
+    if (outer.length < 3) continue;
+    const xs = outer.map((point) => point[0]);
+    const ys = outer.map((point) => point[1]);
+    const width =
+      Math.min(Math.max(...xs), MAP_WIDTH) - Math.max(Math.min(...xs), 0);
+    const tall =
+      Math.min(Math.max(...ys), height) - Math.max(Math.min(...ys), 0);
+    if (width > 0 && tall > 0 && width * tall > bestArea) {
+      bestArea = width * tall;
+      best = projected;
+    }
+  }
+  return best;
 }
 
 /** One list item, server-rendered from the checker's zone list. */
