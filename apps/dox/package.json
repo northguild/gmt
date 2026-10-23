@@ -33,8 +33,8 @@
   "dependencies": {
     "@ai-sdk/google": "^4.0.66",
     "@ai-sdk/react": "4.0.98",
-    "@astrojs/react": "6.0.5",
-    "@astrojs/starlight": "0.41.9",
+    "@astrojs/react": "6.0.6",
+    "@astrojs/starlight": "0.41.11",
     "@js-temporal/polyfill": "^0.5.1",
     "@northguild/gmt": "workspace:*",
     "@radix-ui/react-use-controllable-state": "^1.2.6",
@@ -47,7 +47,7 @@
     "@tanstack/store": "^0.11.1",
     "@tanstack/virtual-core": "^3.17.8",
     "ai": "^7.0.95",
-    "astro": "7.2.7",
+    "astro": "7.4.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "2.1.1",
     "cmdk": "^1.1.1",
@@ -93,7 +93,7 @@
     "tailwindcss": "4.3.3",
     "tsx": "^4.23.0",
     "typescript": "5.9.3",
-    "wrangler": "4.126.0"
+    "wrangler": "4.151.3"
   },
   "engines": {
     "node": ">=22.16.0"
