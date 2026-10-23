@@ -4,6 +4,7 @@ import {
   capStoredInput,
   completeStoredLine,
 } from "./clock-change-stored-lines";
+import { DOX_TOOL_DOCS } from "./dox-tools";
 
 describe("capStoredInput", () => {
   const lines = (n: number) =>
@@ -153,4 +154,19 @@ describe("completeStoredLine", () => {
     expect(completeStoredLine("   ", zone)).toBeNull();
     expect(completeStoredLine("", zone)).toBeNull();
   });
+});
+
+describe("the chat's description of the saved-events form", () => {
+  // The chat tells the model how many lines a checker reads; a stale number promises more than
+  // the Worker reads.
+  it.each(["showCanadaClockChange", "showMoroccoClockChange"])(
+    "%s states the shared line cap",
+    (name) => {
+      const purpose = DOX_TOOL_DOCS.find((doc) => doc.name === name)!.purpose;
+      expect(purpose).toContain(
+        `reads up to ${STORED_MAX_LINES} pasted saved events`,
+      );
+      expect(purpose.match(/up to (\d+) pasted/g)).toHaveLength(1);
+    },
+  );
 });

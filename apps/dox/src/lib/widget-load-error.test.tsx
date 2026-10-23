@@ -134,6 +134,10 @@ import {
   renderCanadaClockChangeWidgetTemplate,
 } from "./canada-clock-change-mount";
 import {
+  mountMoroccoClockChangeWidget,
+  renderMoroccoClockChangeWidgetTemplate,
+} from "./morocco-clock-change-mount";
+import {
   mountDurationParserBench,
   renderDurationParserBenchTemplate,
 } from "./duration-parser-bench-mount";
@@ -300,6 +304,11 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "canada clock-change checker",
     () => renderCanadaClockChangeWidgetTemplate("canada"),
     mountCanadaClockChangeWidget as MountFn<never>,
+  ],
+  [
+    "morocco clock-change checker",
+    () => renderMoroccoClockChangeWidgetTemplate("morocco"),
+    mountMoroccoClockChangeWidget as MountFn<never>,
   ],
   [
     "duration parser bench",

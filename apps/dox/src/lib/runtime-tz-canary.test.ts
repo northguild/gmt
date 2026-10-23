@@ -32,7 +32,7 @@ describe("the runtime's time zone data", () => {
  */
 describe("the runtime's time zone data for Morocco", () => {
   const verdict = MOROCCO_PROBE.find((item) => item.role === "verdict")!;
-  it.each(MOROCCO_ZONES.map((zone) => [zone] as const))(
+  it.each(MOROCCO_ZONES.map((zone) => [zone, MOROCCO_EXPECTED] as const))(
     "%s is %s at the verdict instant",
     (zone) => {
       const actual = getTimeZoneOffset(zone, verdict.iso);

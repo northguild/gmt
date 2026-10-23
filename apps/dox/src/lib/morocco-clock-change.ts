@@ -75,14 +75,14 @@ export const MOROCCO_CHANGES: readonly StatedChange[] = [
     to: "+00:00",
     recordedBy: "2026c",
   },
-  // 2026b `Rule Morocco 2027 only - Feb 7 3:00 0 -` (Ramadan begins), removed in 2026c.
+  // 2026b `Rule Morocco 2027 only - Feb 7 3:00 -1:00 -` (Ramadan begins), removed in 2026c.
   {
     at: "2027-02-07T02:00:00Z",
     from: "+01:00",
     to: "+00:00",
     recordedBy: "2026b",
   },
-  // 2026b `Rule Morocco 2027 only - Mar 14 2:00 -1:00 -` (Ramadan ends), removed in 2026c.
+  // 2026b `Rule Morocco 2027 only - Mar 14 2:00 0 -` (Ramadan ends), removed in 2026c.
   {
     at: "2027-03-14T02:00:00Z",
     from: "+00:00",
