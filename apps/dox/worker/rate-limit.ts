@@ -37,7 +37,8 @@ function sweepExpired(now: number): void {
 
 /**
  * `key` names the bucket, so two callers sharing a client never share a count: chat passes
- * `chat:<clientId>`, the Canada checker `canada:<clientId>`.
+ * `chat:<clientId>`, the Canada checker `canada:<clientId>`, the Morocco checker
+ * `morocco:<clientId>`.
  */
 export function checkRateLimit(
   key: string,

@@ -133,6 +133,22 @@ describe("worker tool execute", () => {
     expect(refused).toMatchObject({ ok: false, widget: "canada-clock-change" });
   });
 
+  it("accepts the Morocco checker with no zone or one of its two, and its schema refuses any other", async () => {
+    expect(await run("showMoroccoClockChange", {})).toEqual({
+      ok: true,
+      widget: "morocco-clock-change",
+    });
+    expect(
+      await run("showMoroccoClockChange", { zone: "Africa/El_Aaiun" }),
+    ).toEqual({ ok: true, widget: "morocco-clock-change" });
+    const schema = (
+      tools.showMoroccoClockChange as unknown as {
+        inputSchema: { safeParse: (v: unknown) => { success: boolean } };
+      }
+    ).inputSchema;
+    expect(schema.safeParse({ zone: "Europe/London" }).success).toBe(false);
+  });
+
   it("rejects a whitespace-only stored-time list in the tool's own schema", () => {
     const schema = (
       tools.showStoredTimeAudit as unknown as {

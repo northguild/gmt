@@ -271,6 +271,7 @@ describe("every browser gate", () => {
       "data-credits-check.mjs",
       "globe-smoke.mjs",
       "grow-measure.mjs",
+      "morocco-still.mjs",
       "readout-still.mjs",
       "visual-snapshot.mjs",
     ]);

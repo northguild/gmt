@@ -187,6 +187,17 @@ export const KNOWN_HOST_FAILURES = [
       "Chromium's time zone data predates tzdb 2026e, so some of the Canadian zones that stopped changing their clocks in 2026 still turn back on 2026-11-01.",
     file: /\/oh-canada\.test\.ts$/,
   },
+  {
+    // Evidence: at 2026-10-22T12:00Z and 2027-06-01T12:00Z, Chromium 153.0.8010.12 under Playwright
+    // 1.63.0 gives Africa/Casablanca and Africa/El_Aaiun +01:00 (tz data before 2026c). Chromium
+    // 156.0.8078.4 under Playwright 1.64.1, WebKit 26.6 and Node 26.12.1 (tz 2026e) give +00:00.
+    // The group goes stale once a Playwright Chromium carries 2026c.
+    id: "chromium-morocco-2026-tz-data",
+    legs: ["chromium"],
+    reason:
+      "Chromium's time zone data predates tzdb 2026c, so Africa/Casablanca and Africa/El_Aaiun still change their clocks for Ramadan and are an hour ahead the rest of the year.",
+    file: /\/morocco-2026\.test\.ts$/,
+  },
 ];
 
 /** The pseudo test name a file that failed to load counts as. */

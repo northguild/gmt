@@ -78,7 +78,9 @@ describe("the checker's facts", () => {
       "2026e",
     ]);
     expect(PROBE_INSTANT).toBe("2026-11-02T12:00:00Z");
-    expect(Object.fromEntries(PROBE_ZONES.map((f) => [f.zone, f.tzdb2026e]))).toEqual({
+    expect(
+      Object.fromEntries(PROBE_ZONES.map((f) => [f.zone, f.offset])),
+    ).toEqual({
       "America/Vancouver": "-07:00",
       "America/Edmonton": "-06:00",
       "Africa/Casablanca": "+00:00",
@@ -88,9 +90,9 @@ describe("the checker's facts", () => {
   });
 
   it("adds only America/Toronto to the probe zones for the transitions", () => {
-    expect(TRANSITION_ZONES.filter((z) => !PROBE_ZONES.some((f) => f.zone === z))).toEqual([
-      "America/Toronto",
-    ]);
+    expect(
+      TRANSITION_ZONES.filter((z) => !PROBE_ZONES.some((f) => f.zone === z)),
+    ).toEqual(["America/Toronto"]);
   });
 
   it("uses the same five zones for the clocks and the stored-times picker", () => {

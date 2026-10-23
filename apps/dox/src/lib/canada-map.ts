@@ -16,10 +16,20 @@
  */
 import { geoConicConformal, geoPath } from "d3-geo";
 import type { GeoProjection } from "d3-geo";
-import { PROBE_ZONES, STOPPED_ZONES, changeText, mapKindLabel, wallHms } from "./canada-clock-change";
+import {
+  PROBE_ZONES,
+  STOPPED_ZONES,
+  changeText,
+  mapKindLabel,
+  wallHms,
+} from "./canada-clock-change";
 import type { MapZone } from "./canada-clock-change";
 import { updateCrystalClock } from "./crystal-clock";
-import { renderDataCreditsHtml, TZ_BOUNDARIES, watchDataCredits } from "./data-credits";
+import {
+  renderDataCreditsHtml,
+  TZ_BOUNDARIES,
+  watchDataCredits,
+} from "./data-credits";
 import { spokenOffset } from "./crossing-clock";
 import { withBase } from "./site";
 import { escapeAttr, escapeHtml } from "./widget-ui";
@@ -111,7 +121,9 @@ export function classWords(id: string, zone: MapZone | undefined): string {
  * clocks still comes back as one that changes. The page uses it for one line above the clocks.
  */
 export function isDataStale(zones: readonly MapZone[]): boolean {
-  return zones.some((zone) => STOPPED_ZONES.has(zone.zone) && zone.kind !== "stopped-2026");
+  return zones.some(
+    (zone) => STOPPED_ZONES.has(zone.zone) && zone.kind !== "stopped-2026",
+  );
 }
 
 /**
@@ -120,7 +132,9 @@ export function isDataStale(zones: readonly MapZone[]): boolean {
  */
 export function staleZoneIds(zones: readonly MapZone[]): string[] {
   return zones
-    .filter((zone) => STOPPED_ZONES.has(zone.zone) && zone.kind !== "stopped-2026")
+    .filter(
+      (zone) => STOPPED_ZONES.has(zone.zone) && zone.kind !== "stopped-2026",
+    )
     .map((zone) => zone.zone);
 }
 
@@ -181,11 +195,11 @@ export function renderPinPanelHtml(): string {
   const row = (role: string, label: string, text = EMPTY, extra = "") =>
     `<div class="gmt-canada-pin-row${extra}"><dt>${label}</dt><dd data-role="${role}">${text}</dd></div>`;
   const title = (role: string, label: string, text: string) =>
-    `<div class="gmt-canada-pin-titlerow"><dt class="gmt-canada-sr">${label}</dt><dd data-role="${role}">${text}</dd></div>`;
+    `<div class="gmt-canada-pin-titlerow"><dt class="gmt-check-sr">${label}</dt><dd data-role="${role}">${text}</dd></div>`;
   return (
     // The one announcement: the pinned zone and its class, said when a zone is pinned. The ticking
     // time below is plain text outside any live region.
-    `<p class="gmt-canada-sr" data-role="pin-announce" role="status"></p>` +
+    `<p class="gmt-check-sr" data-role="pin-announce" role="status"></p>` +
     `<div class="gmt-canada-pin-head">` +
     `<div class="gmt-canada-pin-clock" data-role="pin-clock" aria-hidden="true"></div>` +
     `<dl class="gmt-canada-pin-title">` +
@@ -288,7 +302,9 @@ export function mountCanadaMap(
   // The legend's counts, from the zones the list holds.
   const counts = classCounts([...byId.keys()], rows);
   for (const [kind, count] of Object.entries(counts)) {
-    const el = q<HTMLElement>(`[data-role="legend-count"][data-kind="${kind}"]`);
+    const el = q<HTMLElement>(
+      `[data-role="legend-count"][data-kind="${kind}"]`,
+    );
     if (el) el.textContent = String(count);
   }
   // One line above the live clocks when the server's data is older than tzdb 2026e.
@@ -395,7 +411,13 @@ export function mountCanadaMap(
           ? ""
           : `Pinned ${pinnedId}. ${classWords(pinnedId, rows.get(pinnedId))}.`;
     }
-    const rest = ["pin-time", "pin-offset", "pin-last", "pin-next", "pin-release"];
+    const rest = [
+      "pin-time",
+      "pin-offset",
+      "pin-last",
+      "pin-next",
+      "pin-release",
+    ];
     const classEl = field("pin-class");
     if (pinnedId === null) {
       set("pin-zone", PIN_PLACEHOLDER);
@@ -618,9 +640,12 @@ export function mountCanadaMap(
     if (drawn || fetching || signal.aborted || measure() < NARROW_PX) return;
     fetching = true;
     try {
-      const response = await (deps.fetch ?? fetch)(withBase("/timezone-boundaries-canada.json"), {
-        signal,
-      });
+      const response = await (deps.fetch ?? fetch)(
+        withBase("/timezone-boundaries-canada.json"),
+        {
+          signal,
+        },
+      );
       if (!response.ok) return;
       const boundaries = (await response.json()) as BoundaryCollection;
       if (!signal.aborted && measure() >= NARROW_PX) drawShapes(boundaries);

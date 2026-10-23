@@ -46,6 +46,7 @@ import {
   showBillingDeadlinesInput,
   showBlDateStampInput,
   showCanadaClockChangeInput,
+  showMoroccoClockChangeInput,
   showConnectionCheckerInput,
   showConverterBenchInput,
   showCrossingClockInput,
@@ -509,6 +510,12 @@ export function buildWorkerTools(
       description: docFor("showDurationParserBench"),
       inputSchema: showDurationParserBenchInput,
       execute: () => accept("duration-parser-bench"),
+    }),
+    showMoroccoClockChange: tool({
+      description: docFor("showMoroccoClockChange"),
+      inputSchema: showMoroccoClockChangeInput,
+      // The schema is a two-value enum, so every call that reaches here names a zone the checker has.
+      execute: () => accept("morocco-clock-change"),
     }),
   };
 

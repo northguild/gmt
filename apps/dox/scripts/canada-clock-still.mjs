@@ -10,7 +10,7 @@
  *   - the Worker answer stubbed (a fixed fixture, no network) and
  *   - a fake clock (`page.clock`) set 90 s before America/Toronto leaves daylight time, so one
  *     advance crosses a minute and the next crosses Toronto's `next.instant` (-04:00 to -05:00).
- * It records every `.gmt-canada-clock` card's and `[data-role="clock-time"]` readout's rect, then
+ * It records every `.gmt-check-clock` card's and `[data-role="clock-time"]` readout's rect, then
  * advances 60 s twice and asserts the rects are unchanged, the readouts did change, and Toronto's
  * readout moved from -04:00 to -05:00. At 375 px it also asserts no horizontal page scroll.
  *
@@ -54,7 +54,10 @@ const ZONE_OFFSETS = {
 };
 const FIXTURE = {
   now: NOW,
-  probe: Object.entries(ZONE_OFFSETS).map(([zone, offset]) => ({ zone, offset })),
+  probe: Object.entries(ZONE_OFFSETS).map(([zone, offset]) => ({
+    zone,
+    offset,
+  })),
   transitions: [],
   zones: [
     ...Object.entries(ZONE_OFFSETS).map(([zone, offset]) => ({
@@ -79,7 +82,10 @@ const FIXTURE = {
 };
 
 const ALL_ZONES = JSON.parse(
-  readFileSync(new URL("../src/lib/canada-zones.json", import.meta.url), "utf8"),
+  readFileSync(
+    new URL("../src/lib/canada-zones.json", import.meta.url),
+    "utf8",
+  ),
 ).zones;
 const KINDS = ["stopped-2026", "changes-2027", "none-2026-2027", "none"];
 /* A row for every zone. Odd rows carry both a last and a next change, the widest texts. */
@@ -93,11 +99,19 @@ const FULL_FIXTURE = {
     last:
       i % 2 === 0
         ? null
-        : { instant: "2026-03-08T07:00:00Z", offsetBefore: "-05:00", offsetAfter: "-04:00" },
+        : {
+            instant: "2026-03-08T07:00:00Z",
+            offsetBefore: "-05:00",
+            offsetAfter: "-04:00",
+          },
     next:
       i % 3 === 0
         ? null
-        : { instant: "2027-11-07T06:00:00Z", offsetBefore: "-04:00", offsetAfter: "-05:00" },
+        : {
+            instant: "2027-11-07T06:00:00Z",
+            offsetBefore: "-04:00",
+            offsetAfter: "-05:00",
+          },
     kind: KINDS[i % KINDS.length],
   })),
 };
@@ -109,9 +123,11 @@ async function snapshot(page) {
   return page.evaluate(() => {
     const box = (el) => {
       const r = el.getBoundingClientRect();
-      return [r.x, r.y, r.width, r.height].map((n) => Math.round(n * 100) / 100);
+      return [r.x, r.y, r.width, r.height].map(
+        (n) => Math.round(n * 100) / 100,
+      );
     };
-    return [...document.querySelectorAll(".gmt-canada-clock")].map((card) => ({
+    return [...document.querySelectorAll(".gmt-check-clock")].map((card) => ({
       zone: card.dataset.zone,
       card: box(card),
       readout: box(card.querySelector('[data-role="clock-time"]')),
@@ -122,7 +138,9 @@ async function snapshot(page) {
 
 function sameRects(label, before, after) {
   if (before.length !== 5 || after.length !== 5) {
-    fail(`${label}: expected 5 clock cards, saw ${before.length} then ${after.length}`);
+    fail(
+      `${label}: expected 5 clock cards, saw ${before.length} then ${after.length}`,
+    );
     return;
   }
   before.forEach((b, i) => {
@@ -143,24 +161,34 @@ async function pinRects(page) {
       const el = document.querySelector(sel);
       if (!el) return null;
       const r = el.getBoundingClientRect();
-      return [r.x + scrollX, r.y + scrollY, r.width, r.height].map((n) => Math.round(n * 100) / 100);
+      return [r.x + scrollX, r.y + scrollY, r.width, r.height].map(
+        (n) => Math.round(n * 100) / 100,
+      );
     };
     const panel = document.querySelector(".gmt-canada-pin");
     const cells = [...panel.querySelectorAll("dd[data-role]")].map((cell) => {
       const probe = document.createElement("span");
-      probe.style.cssText = "display:block;width:4ch;height:0;visibility:hidden";
+      probe.style.cssText =
+        "display:block;width:4ch;height:0;visibility:hidden";
       cell.append(probe);
       const four = probe.getBoundingClientRect().width;
       probe.remove();
-      return { role: cell.dataset.role, width: cell.getBoundingClientRect().width, four };
+      return {
+        role: cell.dataset.role,
+        width: cell.getBoundingClientRect().width,
+        four,
+      };
     });
     return {
       panel: box(".gmt-canada-pin"),
       map: box(".gmt-canada-map"),
-      form: box(".gmt-canada-stored-form"),
+      form: box(".gmt-check-stored-form"),
       cells,
-      underButton: panel.previousElementSibling?.matches("button[data-tz-id]") ?? false,
-      mapShown: getComputedStyle(document.querySelector(".gmt-canada-map")).display !== "none",
+      underButton:
+        panel.previousElementSibling?.matches("button[data-tz-id]") ?? false,
+      mapShown:
+        getComputedStyle(document.querySelector(".gmt-canada-map")).display !==
+        "none",
     };
   });
 }
@@ -178,11 +206,16 @@ async function checkPinPanel(page, label, width) {
       const ok = await page
         .waitForFunction(
           (zone) =>
-            document.querySelector('[data-role="pin-zone"]')?.textContent?.trim() === zone,
+            document
+              .querySelector('[data-role="pin-zone"]')
+              ?.textContent?.trim() === zone,
           id,
           { timeout: 1500 },
         )
-        .then(() => true, () => false);
+        .then(
+          () => true,
+          () => false,
+        );
       if (ok) return;
     }
     throw new Error(`pinning ${id} never showed in the panel`);
@@ -191,7 +224,8 @@ async function checkPinPanel(page, label, width) {
     await pinned(ALL_ZONES[0]);
     const r = await pinRects(page);
     if (r.mapShown) fail(`${label}: the map is drawn at 375px`);
-    if (!r.underButton) fail(`${label}: the pin panel is not under the pressed button`);
+    if (!r.underButton)
+      fail(`${label}: the pin panel is not under the pressed button`);
     return;
   }
   // The page finishes mounting its widgets after the list appears; the baseline is the layout once
@@ -215,16 +249,22 @@ async function checkPinPanel(page, label, width) {
         break;
       }
       if (JSON.stringify(before[key]) !== JSON.stringify(r[key])) {
-        fail(`${label}: pinning ${id} moved the ${key} ${before[key]} -> ${r[key]}`);
+        fail(
+          `${label}: pinning ${id} moved the ${key} ${before[key]} -> ${r[key]}`,
+        );
       }
     }
     for (const cell of r.cells) {
       if (cell.width < cell.four) {
-        fail(`${label}: pinning ${id}: ${cell.role} is ${cell.width}px wide, under 4ch (${cell.four}px)`);
+        fail(
+          `${label}: pinning ${id}: ${cell.role} is ${cell.width}px wide, under 4ch (${cell.four}px)`,
+        );
       }
     }
   }
-  console.log(`${label}: pinned ${ALL_ZONES.length} zones, panel, map and form held still`);
+  console.log(
+    `${label}: pinned ${ALL_ZONES.length} zones, panel, map and form held still`,
+  );
 }
 
 for (const name of BROWSERS) {
@@ -233,7 +273,9 @@ for (const name of BROWSERS) {
   try {
     for (const width of WIDTHS) {
       const label = `${name} ${width}px`;
-      const context = await browser.newContext({ viewport: { width, height: 900 } });
+      const context = await browser.newContext({
+        viewport: { width, height: 900 },
+      });
       await blockOffSite(context, BASE);
       const page = await context.newPage();
       await page.route("**/api/canada-clock-change", (route) =>
@@ -246,31 +288,47 @@ for (const name of BROWSERS) {
       );
       await page.clock.install({ time: FAKE_NOW_MS });
       try {
-        const response = await page.goto(`${BASE}${PATH}`, { waitUntil: "domcontentloaded" });
+        const response = await page.goto(`${BASE}${PATH}`, {
+          waitUntil: "domcontentloaded",
+        });
         if (!response || response.status() !== 200) {
-          fail(`${label}: the page answered HTTP ${response?.status()}, not 200 (wrong --base?)`);
+          fail(
+            `${label}: the page answered HTTP ${response?.status()}, not 200 (wrong --base?)`,
+          );
           continue;
         }
-        await page.waitForSelector(".gmt-canada-clock");
+        await page.waitForSelector(".gmt-check-clock");
         // Let the library load and the stubbed fetch resolve on the fake clock.
         for (let i = 0; i < 40; i++) {
           const rows = await snapshot(page);
-          if (rows.length === 5 && rows.every((r) => /\d\d:\d\d [+-]\d\d:\d\d/.test(r.text))) break;
+          if (
+            rows.length === 5 &&
+            rows.every((r) => /\d\d:\d\d [+-]\d\d:\d\d/.test(r.text))
+          )
+            break;
           await page.clock.runFor(100);
           await page.waitForTimeout(50);
         }
         const start = await snapshot(page);
-        const toronto = (rows) => rows.find((r) => r.zone === "America/Toronto")?.text ?? "";
+        const toronto = (rows) =>
+          rows.find((r) => r.zone === "America/Toronto")?.text ?? "";
         if (!toronto(start).endsWith("-04:00")) {
-          fail(`${label}: Toronto should start at -04:00, read "${toronto(start)}"`);
+          fail(
+            `${label}: Toronto should start at -04:00, read "${toronto(start)}"`,
+          );
         }
 
         await page.clock.runFor(60_000);
         await page.waitForTimeout(100);
         const minute = await snapshot(page);
         sameRects(`${label} after one minute`, start, minute);
-        if (JSON.stringify(minute.map((r) => r.text)) === JSON.stringify(start.map((r) => r.text))) {
-          fail(`${label}: no readout changed after a minute (the clocks did not tick)`);
+        if (
+          JSON.stringify(minute.map((r) => r.text)) ===
+          JSON.stringify(start.map((r) => r.text))
+        ) {
+          fail(
+            `${label}: no readout changed after a minute (the clocks did not tick)`,
+          );
         }
 
         await page.clock.runFor(60_000);
@@ -278,7 +336,9 @@ for (const name of BROWSERS) {
         const crossed = await snapshot(page);
         sameRects(`${label} across Toronto's change`, start, crossed);
         if (!toronto(crossed).endsWith("-05:00")) {
-          fail(`${label}: Toronto should read -05:00 after its change, read "${toronto(crossed)}"`);
+          fail(
+            `${label}: Toronto should read -05:00 after its change, read "${toronto(crossed)}"`,
+          );
         }
 
         if (width === 375) {
@@ -287,18 +347,24 @@ for (const name of BROWSERS) {
             client: document.documentElement.clientWidth,
           }));
           if (scroll.scroll > scroll.client) {
-            fail(`${label}: horizontal page scroll (${scroll.scroll} > ${scroll.client})`);
+            fail(
+              `${label}: horizontal page scroll (${scroll.scroll} > ${scroll.client})`,
+            );
           }
         }
         console.log(`${label}: ${start.length} clocks measured`);
       } catch (error) {
-        fail(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+        fail(
+          `${label}: ${error instanceof Error ? error.message : String(error)}`,
+        );
       } finally {
         await context.close();
       }
 
       // The pin panel, against a fixture with a row for every zone and the real clock.
-      const pinContext = await browser.newContext({ viewport: { width, height: 900 } });
+      const pinContext = await browser.newContext({
+        viewport: { width, height: 900 },
+      });
       await blockOffSite(pinContext, BASE);
       const pinPage = await pinContext.newPage();
       await pinPage.route("**/api/canada-clock-change", (route) =>
@@ -313,7 +379,9 @@ for (const name of BROWSERS) {
         await pinPage.goto(`${BASE}${PATH}`, { waitUntil: "load" });
         await checkPinPanel(pinPage, `${label} pin panel`, width);
       } catch (error) {
-        fail(`${label} pin panel: ${error instanceof Error ? error.message : String(error)}`);
+        fail(
+          `${label} pin panel: ${error instanceof Error ? error.message : String(error)}`,
+        );
       } finally {
         await pinContext.close();
       }

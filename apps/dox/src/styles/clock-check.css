@@ -1,0 +1,1254 @@
+/*
+ * The clock-change checkers' shared sheet: the probe table, the verdict, the info cards, the
+ * clock changes, the live clocks and the saved-times check. Shared chrome (sections, hints, code
+ * frame, NO SIGNAL) is gmt-widget.css; a checker's own sheet adds only what is specific to it
+ * (its map). Tokens only: amber stays the sentinel's.
+ *
+ * Nothing here may move while a clock ticks or an answer arrives. Every readout reserves its
+ * width, uses tabular figures and does not wrap; the clock tracks are fixed; the transition
+ * groups hold the height of their longest case before the answer comes.
+ */
+/* The stack is the query container for the whole page. One column below 48rem; above it each row
+   is two columns. Cards in a row stretch to one height and start at the top; prose in a card stops
+   at 70ch. Rows and cards are separated by the site's spacing tokens. */
+.gmt-check-stack {
+  container: gmt-check / inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+}
+
+.gmt-check-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--gmt-space-4);
+}
+
+.gmt-check-row > *,
+.gmt-check-stack > .gmt-widget-section {
+  min-width: 0;
+  margin: 0;
+}
+
+.gmt-check-stack :is(.gmt-widget-hint, p) {
+  max-inline-size: 70ch;
+}
+
+@container gmt-check (min-width: 48rem) {
+  .gmt-check-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The browser card holds a table, so it gets 4/9 of the row rather than 2/5. */
+  .gmt-check-row--top {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+  }
+} /* --- Key points ------------------------------------------------------------ */ /* Two cards stacked, left of the browser card. The panel style of the other cards: a full 1px
+   border and the site's bevel. `margin: 0` beats the flow spacing Starlight puts between siblings. */
+.gmt-keypoints {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  margin: 0;
+}
+
+.gmt-keypoints h2 {
+  margin: 0 0 var(--gmt-space-2);
+  font-size: 1rem;
+}
+
+.gmt-keypoints-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--gmt-space-3);
+}
+
+.gmt-keypoints .gmt-keypoints-grid > .gmt-keypoints-card {
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.gmt-keypoints-card > h3 {
+  margin: 0 0 var(--gmt-space-2);
+  font-size: 0.875rem;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-keypoints-card p,
+.gmt-keypoints-card ol,
+.gmt-keypoints-card ul {
+  margin: 0 0 var(--gmt-space-2);
+}
+
+.gmt-keypoints-card ol,
+.gmt-keypoints-card ul {
+  padding-inline-start: 1.25rem;
+}
+
+.gmt-keypoints-card li {
+  margin: 0 0 var(--gmt-space-1);
+}
+
+.gmt-keypoints-card > :last-child {
+  margin-bottom: 0;
+}
+
+.gmt-keypoints-card code {
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}
+
+.gmt-keypoints-card a {
+  color: var(--gmt-cyan-bright);
+  text-underline-offset: 0.15em;
+} /* A visually hidden live region: the copy button's announcement. */
+.gmt-check-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.gmt-check-subhead {
+  margin: var(--gmt-space-2) 0 0;
+  font-size: 0.875rem;
+  color: var(--gmt-ice);
+} /* --- Probe table ---------------------------------------------------------- */
+
+.sl-markdown-content .gmt-check-table {
+  display: table;
+  table-layout: auto;
+  width: 100%;
+  overflow: visible;
+  border-collapse: collapse;
+} /* Starlight gives a table's first column `width: 1%`; here it takes what the others leave. */
+.sl-markdown-content .gmt-check-table :is(th, td):first-child {
+  width: auto;
+  white-space: normal;
+} /* Place takes what the two short offset columns leave; the card can be as narrow as 18rem. */
+.gmt-check-table :is(th, td):nth-child(n + 2) {
+  width: 1%;
+  white-space: nowrap;
+} /* The header notes may wrap, so the two offset columns are as narrow as their values. */
+.gmt-check-table thead th:nth-child(n + 2) {
+  white-space: normal;
+}
+
+.gmt-check-table :is(th, td) {
+  padding-inline: var(--gmt-space-2);
+}
+
+.gmt-check-table :is(th, td) {
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border-bottom: 1px solid var(--gmt-border);
+  text-align: left;
+  font-size: 0.8125rem;
+}
+
+/* A card under 21rem wide (a 375px phone whose scrollbar takes 20px): the three columns cannot
+   shrink below their text, and their side padding alone made the table wider than the page.
+   Tighter side padding fits every engine; wider cards keep the roomy padding. */
+@container gmt-check (max-width: 21rem) {
+  .gmt-check-table :is(th, td) {
+    padding-inline: var(--gmt-space-1);
+  }
+}
+
+.gmt-check-table thead th {
+  vertical-align: bottom;
+  /* The full text tier: Starlight tints a thead, and the muted tier measures under 7:1 on it. */
+  color: var(--gmt-ice);
+  font-weight: 600;
+  border-bottom: 2px solid var(--gmt-border-strong);
+}
+
+.gmt-check-table code:not(.gmt-check-zoneid) {
+  white-space: nowrap;
+}
+
+.gmt-check-num {
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+} /* The verdict and the notice: a full border and a tinted fill, no one-sided accent. The mark is a
+   glyph, so the verdict never rests on colour. */
+.gmt-check-clocks-notice {
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-size: 0.9375rem;
+  font-weight: 600;
+} /* The verdict is the top of the "Your browser" card; the card's border carries the state. */
+.gmt-check-verdict {
+  display: grid;
+  gap: var(--gmt-space-2);
+  margin: 0 0 var(--gmt-space-3);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.gmt-check-browser {
+  display: flex;
+  flex-direction: column;
+}
+
+.gmt-check-browser > .gmt-check-actions {
+  margin-block-start: auto;
+  padding-block-start: var(--gmt-space-3);
+}
+
+.gmt-check-browser:has(.gmt-check-verdict[data-state="ok"]) {
+  border-color: var(--check-ok);
+}
+
+.gmt-check-browser:has(.gmt-check-verdict[data-state="bad"]) {
+  border-color: var(--check-bad);
+}
+
+.gmt-check-verdict p {
+  margin: 0;
+} /* Every variant is in the markup; the state shows one. The inline script sets the state before
+   first paint, so nothing below the verdict moves when the answer arrives. */
+.gmt-check-variant {
+  display: grid;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-check-verdict:not([data-state="ok"]) > [data-variant="ok"],
+.gmt-check-verdict:not([data-state="bad"]) > [data-variant="bad"],
+.gmt-check-verdict:not([data-state="unreadable"]) > [data-variant="unreadable"],
+.gmt-check-verdict:not([data-state="pending"]) > [data-variant="pending"] {
+  display: none;
+}
+
+.gmt-check-verdict-more {
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.gmt-check-verdict-more a {
+  color: var(--gmt-cyan-bright);
+}
+
+.gmt-check-clocks-notice {
+  margin-bottom: var(--gmt-space-2);
+  font-size: 0.8125rem;
+} /* The servers card: an info alert paired with the verdict. A full cyan border, the site's bevel
+   and a faint cyan wash; the icon sits beside the text. */
+.gmt-check-servers,
+.gmt-check-minimums {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-cyan-ink);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: color(from var(--gmt-cyan) srgb r g b / 0.07);
+}
+
+.gmt-check-info-icon {
+  flex: none;
+  margin-block-start: 0.1rem;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-check-servers-body {
+  display: grid;
+  align-content: start;
+  gap: var(--gmt-space-2);
+  min-width: 0;
+}
+
+.gmt-check-servers-body > * {
+  margin: 0;
+}
+
+.gmt-check-servers h4,
+.gmt-check-minimums h4 {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-check-servers p,
+.gmt-check-minimums p {
+  font-size: 0.8125rem;
+} /* The command scrolls inside its own block; the page never widens. */
+.gmt-check-servers .gmt-codeframe {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gmt-check-servers .gmt-codeframe-pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.gmt-check-servers-expected {
+  color: var(--gmt-ice-dim);
+} /* "Upgrade to at least": the servers card's look; one row to a line. */
+.gmt-check-minimums-list {
+  display: grid;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+.gmt-check-minimums-list code {
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}
+
+.gmt-check-minimums-src {
+  display: block;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-minimums a {
+  color: var(--gmt-cyan-bright);
+  text-underline-offset: 0.15em;
+} /* "How gmt helps": the panel style of the other cards, with the home page's fault cards inside it:
+   a tag, `input -> output`, one line of why. Amber stays the sentinel's. The card keeps its own height, so it does not stretch
+   to the taller list beside it. Full borders only. */
+.gmt-check-help {
+  align-self: start;
+  display: grid;
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.gmt-check-help > * {
+  min-width: 0;
+  margin: 0;
+}
+
+.gmt-check-help h4 {
+  font-size: 0.9375rem;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-check-help p {
+  margin: 0;
+}
+
+.gmt-check-help-lede {
+  max-width: 68ch;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-help-verified {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-check-help-badge {
+  flex: none;
+  padding: 0.1em 0.6em;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--gmt-cyan-ink);
+  white-space: nowrap;
+}
+
+.gmt-check-help-verified > span:last-child {
+  flex: 1 1 14rem;
+}
+
+.gmt-check-help-cases {
+  display: grid;
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-check-help-case {
+  display: grid;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-check-help-case::before {
+  display: none;
+}
+
+.gmt-check-help-tag {
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-check-help-io {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-check-help code {
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}
+
+.gmt-check-help-case code {
+  background: var(--gmt-surface-2);
+}
+
+.gmt-check-help-arrow {
+  font-weight: 700;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-check-help-out {
+  font-weight: 600;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-check-help-note {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-help-why {
+  color: var(--gmt-ice);
+}
+
+.gmt-check-help-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-2) var(--gmt-space-3);
+}
+
+.gmt-check-help a {
+  color: var(--gmt-cyan-bright);
+  text-underline-offset: 0.15em;
+} /* A link, drawn as the page's button: a full border and the bevel. */
+.gmt-check-help a.gmt-check-help-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-2) var(--gmt-space-4);
+  border: 1px solid var(--gmt-cyan);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill);
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-check-help a.gmt-check-help-btn:is(:hover, :focus-visible) {
+  background: var(--gmt-surface-2);
+}
+
+.gmt-check-mark {
+  display: inline-block;
+  min-inline-size: 1.1em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.gmt-check-mark--ok {
+  color: var(--check-ok);
+}
+
+.gmt-check-mark--bad {
+  color: var(--check-bad);
+}
+
+.gmt-check-city {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+} /* A small round purple dot marks a row that stops changing its clocks. */
+.gmt-check-table tr[data-state="stopped"] .gmt-check-city::before {
+  content: "";
+  display: inline-block;
+  box-sizing: border-box;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  margin-inline-end: var(--gmt-space-2);
+  border: 1px solid var(--check-stopped-chip);
+  border-radius: 50%;
+  background: color(from var(--check-stopped-chip) srgb r g b / 0.45);
+}
+
+.gmt-check-zoneid {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-probe-line {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.gmt-check-th-note {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.gmt-check-table .gmt-playground-sentinel {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+.gmt-check-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-3);
+} /* One line stays reserved, so a message arriving does not move what is below it. */
+.gmt-check-status {
+  min-height: 1.4em;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--gmt-ice-dim);
+} /* --- Clock changes -------------------------------------------------------- */
+
+.gmt-check-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+} /* Two years of rows, up to two changes each with their UTC lines, held before the answer arrives. */
+.gmt-check-group {
+  min-height: 16.25rem;
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-check-group-title {
+  margin: 0 0 var(--gmt-space-2);
+  font-size: 0.8125rem;
+}
+
+.gmt-check-changes {
+  display: grid;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-check-changes > li {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.gmt-check-change {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--gmt-space-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-check-when,
+.gmt-check-shift {
+  white-space: nowrap;
+}
+
+.gmt-check-shift {
+  text-align: right;
+}
+
+.gmt-check-utc {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-check-none {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-changes .gmt-playground-sentinel {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-shadow: none;
+}
+
+.gmt-check {
+  --check-ok: var(--gmt-spring-ink);
+  --check-bad: var(--gmt-danger);
+  /* Outside the map the same three states take a full-border chip in the same hues, written for
+     the surface they sit on (the -ink variants flip with the theme). */
+  --check-stopped-chip: var(--gmt-dst-purple-ink);
+  --check-changes-chip: var(--gmt-dst-gold-ink);
+} /* --- Clocks --------------------------------------------------------------- */
+
+.gmt-check-clocksec {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+} /* Beside the zone card the clocks share the row's height equally, so there is no empty space. */
+@container gmt-check (min-width: 48rem) {
+  .gmt-check-clocks {
+    flex: 1 1 auto;
+    grid-auto-rows: minmax(3.75rem, 1fr);
+  }
+}
+
+.gmt-check-clocksec h4 {
+  margin: 0 0 var(--gmt-space-2);
+} /* Five rows of fixed height: the face, the zone and the readout. Every box is sized before any
+   hand is drawn and every readout holds its width, so a tick moves nothing. */
+.gmt-check-clocks {
+  display: grid;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-check-clock {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: center;
+  align-items: center;
+  column-gap: var(--gmt-space-3);
+  min-block-size: 3.75rem;
+  margin: 0;
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+} /* The face's box is square before any hand is drawn. */
+.gmt-check-face {
+  grid-row: 1 / span 2;
+  width: 3rem;
+  height: 3rem;
+}
+
+.gmt-check-clock p {
+  margin: 0;
+  min-width: 0;
+}
+
+.gmt-check-clock-zone {
+  font-size: 0.75rem;
+  color: var(--gmt-ice-dim);
+  align-self: end;
+}
+
+.gmt-check-clock-zone code {
+  white-space: nowrap;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+.gmt-check-clock-time {
+  align-self: start;
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  /* In a narrow column the offset drops under the time, whole; the time never splits. */
+  white-space: normal;
+}
+
+.gmt-check-clock-hm,
+.gmt-check-clock-off {
+  display: inline-block;
+  white-space: nowrap;
+} /* A zone that stops changing its clocks takes a full purple border; one that still changes takes
+   gold. A chip all round, never an edge on one side. */
+.gmt-check-clock[data-state="stopped"] {
+  border-color: var(--check-stopped-chip);
+}
+
+.gmt-check-clock[data-state="changes"] {
+  border-color: var(--check-changes-chip);
+} /* The clock of the zone picked in the list: the list's own selected look, a full green border. */
+.gmt-check-clock[data-picked="true"] {
+  border-color: var(--gmt-spring);
+  background: var(--gmt-fill);
+  box-shadow: 0 0 0 1px var(--gmt-spring);
+}
+
+.gmt-check-clock-hm {
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+  color: var(--gmt-cyan-bright);
+}
+
+.gmt-check-clock-off {
+  font-size: 0.8125rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-clock-time .gmt-playground-sentinel {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-shadow: none;
+}
+
+.gmt-check-clocks-hint {
+  margin-top: var(--gmt-space-2);
+} /* --- Did your saved events move? ------------------------------------ */ /* Title, one line of purpose and a three-step example run across the top. Under them the form and
+   the answers sit side by side from 72rem, stacked below. Kinds are words and pills, never a
+   one-sided accent; amber stays the sentinel's. */
+.gmt-check-stored {
+  display: grid;
+  gap: var(--gmt-space-3);
+  margin: 0;
+}
+
+.gmt-check-stored > h4,
+.gmt-check-stored > p {
+  margin: 0;
+}
+
+.gmt-check-stored-lead {
+  max-inline-size: 60ch;
+  font-style: normal;
+} /* The three steps: one row on wide screens, stacked on narrow. Full borders and card surfaces. */
+.gmt-check-steps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-check-step {
+  display: grid;
+  align-content: start;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-size: 0.875rem;
+}
+
+.gmt-check-step--rule {
+  border-color: color-mix(in srgb, var(--gmt-dst-purple-ink) 55%, transparent);
+}
+
+.gmt-check-step--now {
+  border-color: color-mix(in srgb, var(--gmt-dst-gold-ink) 55%, transparent);
+}
+
+.gmt-check-step-head {
+  color: var(--gmt-ice-dim);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gmt-check-step code {
+  white-space: nowrap;
+}
+
+@container gmt-check (min-width: 48rem) {
+  .gmt-check-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.gmt-check-stored-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+  align-items: start;
+} /* The form is a sticky column beside the answers only where there is room for both. */
+@container gmt-check (min-width: 72rem) {
+  .gmt-check-stored-body {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+  .gmt-check-stored-form {
+    position: sticky;
+    inset-block-start: var(--gmt-space-4);
+  }
+}
+
+.gmt-check-stored-form,
+.gmt-check-stored-out {
+  display: grid;
+  align-content: start;
+  gap: var(--gmt-space-2);
+  min-width: 0;
+}
+
+.gmt-check-stored-form > *,
+.gmt-check-stored-out > * {
+  margin: 0;
+}
+
+.gmt-check-stored-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--gmt-ice);
+} /* An editor: mono values, about eight lines, a strong focus ring. */
+.gmt-check-stored-lines {
+  inline-size: 100%;
+  box-sizing: border-box;
+  min-block-size: 11rem;
+  padding: var(--gmt-space-3);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  background: var(--gmt-surface);
+  white-space: pre;
+  overflow-x: auto;
+  resize: vertical;
+}
+
+.gmt-check-stored-lines:focus-visible {
+  outline: 2px solid var(--gmt-cyan-bright);
+  outline-offset: 2px;
+}
+
+.gmt-check-stored-help {
+  font-size: 0.8125rem;
+  font-style: normal;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-stored-help code {
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}
+
+.gmt-check-formats {
+  font-size: 0.8125rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-formats summary {
+  cursor: pointer;
+}
+
+.gmt-check-formats p {
+  margin: var(--gmt-space-2) 0 0;
+}
+
+.gmt-check-stored-zone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  font-size: 0.8125rem;
+}
+
+.gmt-check-stored-zone[hidden] {
+  display: none;
+}
+
+.gmt-check-stored-zone .gmt-select {
+  inline-size: auto;
+  min-inline-size: 12rem;
+  max-inline-size: 100%;
+}
+
+.gmt-check-stored-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-check-stored-controls .gmt-button {
+  min-block-size: 2.5rem;
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+}
+
+.gmt-check-btn--primary {
+  background: var(--gmt-fill-strong);
+  color: var(--gmt-cyan-ink);
+  border: 1px solid var(--gmt-border-strong);
+  font-weight: 600;
+}
+
+.gmt-check-btn--primary:hover:not(:disabled) {
+  background: var(--gmt-fill-deep);
+  border-color: var(--gmt-cyan);
+}
+
+.gmt-check-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--gmt-hairline-faint);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-btn--ghost:hover {
+  border-color: var(--gmt-border-strong);
+  color: var(--gmt-ice);
+} /* Summary bar: the count, the toggle and the alert. Fixed layout so nothing moves when it fills. */
+.gmt-check-stored-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmt-space-2) var(--gmt-space-3);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+}
+
+.gmt-check-stored-summary {
+  min-inline-size: 0;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-check-seg {
+  display: inline-flex;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  overflow: hidden;
+}
+
+.gmt-check-seg-btn {
+  appearance: none;
+  min-block-size: 2.25rem;
+  padding: 0 var(--gmt-space-3);
+  border: 0;
+  background: transparent;
+  color: var(--gmt-ice-dim);
+  font: inherit;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.gmt-check-seg-btn[aria-pressed="true"] {
+  background: var(--gmt-fill-strong);
+  color: var(--gmt-cyan-ink);
+  font-weight: 600;
+}
+
+.gmt-check-seg-btn:focus-visible {
+  outline: 2px solid var(--gmt-cyan-bright);
+  outline-offset: -2px;
+} /* The stale-data notice: one muted line under the headline, said once for the whole table. */
+.gmt-check-alert {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-alert[hidden] {
+  display: none;
+}
+
+.gmt-check-stored-results {
+  min-width: 0;
+  /* The prefilled example is checked on load: hold the room its rows fill when the browser's data is
+     current (table, then cards, then narrow cards), so the page below does not jump when the answer
+     arrives. */
+  min-block-size: 27rem;
+}
+
+@container gmt-check (max-width: 47.99rem) {
+  .gmt-check-stored-results {
+    min-block-size: 40.5rem;
+  }
+}
+
+@container gmt-check (max-width: 30rem) {
+  .gmt-check-stored-results {
+    min-block-size: 47rem;
+  }
+} /* The status and truncated lines keep their height empty or full, so an answer moves nothing. */
+.gmt-check-stored-form .gmt-check-status,
+.gmt-check-stored-out .gmt-check-status {
+  min-block-size: 1.5em;
+  line-height: 1.5;
+} /* Narrow: the summary holds two lines and the toggle sits under it, whatever the answer says. */
+@container gmt-check (max-width: 47.99rem) {
+  .gmt-check-stored-summary {
+    flex: 1 1 100%;
+    min-block-size: 3em;
+  }
+} /* One compact row per saved time: pill | value | what to do. */
+.sl-markdown-content .gmt-check-stored-table {
+  display: table;
+  table-layout: auto;
+  width: 100%;
+  margin: 0;
+  overflow: visible;
+  border-collapse: separate;
+  border-spacing: 0 var(--gmt-space-1);
+}
+
+.gmt-check-stored-table tr[hidden] {
+  display: none;
+}
+
+.sl-markdown-content .gmt-check-stored-table thead,
+.sl-markdown-content .gmt-check-stored-table thead th {
+  background: none;
+}
+
+.gmt-check-stored-table thead th {
+  padding: 0 var(--gmt-space-3);
+  border: 0;
+  color: var(--gmt-ice-dim);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sl-markdown-content .gmt-check-stored-table td {
+  width: auto;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 0;
+  border-block: 1px solid var(--gmt-border);
+  background: var(--gmt-surface);
+  vertical-align: middle;
+  font-size: 0.8125rem;
+}
+
+.sl-markdown-content .gmt-check-stored-table td:first-child {
+  width: 1%;
+  white-space: nowrap;
+  border-inline-start: 1px solid var(--gmt-border);
+  border-start-start-radius: var(--gmt-radius-md);
+  border-end-start-radius: var(--gmt-radius-md);
+}
+
+.sl-markdown-content .gmt-check-stored-table td:last-child {
+  border-inline-end: 1px solid var(--gmt-border);
+  border-start-end-radius: var(--gmt-radius-md);
+  border-end-end-radius: var(--gmt-radius-md);
+}
+
+.gmt-check-stored-input {
+  max-inline-size: 22rem;
+} /* The whole value, wrapped: the zone at its end says which place the line is in. */
+.gmt-check-stored-input code {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  font-size: 0.75rem;
+}
+
+.gmt-check-stored-table .gmt-playground-sentinel {
+  white-space: nowrap;
+}
+
+.gmt-check-stored-says p {
+  margin: 0;
+}
+
+.gmt-check-stored-says p + p,
+.gmt-check-stored-says details {
+  margin-block-start: var(--gmt-space-1);
+}
+
+.gmt-check-fix {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-check-fix code {
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}
+
+.gmt-check-copy {
+  min-block-size: 1.75rem;
+  padding: 0 var(--gmt-space-2);
+  font-size: 0.75rem;
+}
+
+.gmt-check-alt {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  padding: 0.125rem var(--gmt-space-2);
+  border: 1px solid var(--gmt-border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gmt-check-badge[data-tone="ok"] {
+  border-color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-check-badge[data-tone="bad"] {
+  border-color: var(--gmt-dst-purple-ink);
+  color: var(--gmt-dst-purple-ink);
+}
+
+.gmt-check-badge[data-tone="unknown"] {
+  border-color: var(--gmt-hairline-faint);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-check-readings summary {
+  cursor: pointer;
+  color: var(--gmt-ice-dim);
+  font-size: 0.75rem;
+}
+
+.gmt-check-readings dl {
+  display: grid;
+  gap: var(--gmt-space-1);
+  margin: var(--gmt-space-2) 0 0;
+}
+
+.gmt-check-readings dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-check-readings dt,
+.gmt-check-readings dd {
+  margin: 0;
+}
+
+.gmt-check-readings dd {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+} /* Narrow: each row is a small card, the header row is hidden but kept for screen readers. */
+@container gmt-check (max-width: 47.99rem) {
+  .gmt-check-stored-table thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .gmt-check-stored-table,
+  .gmt-check-stored-table tbody {
+    display: block;
+  }
+
+  .gmt-check-stored-table tr {
+    display: grid;
+    gap: var(--gmt-space-1);
+    margin-block-end: var(--gmt-space-2);
+    padding: var(--gmt-space-2) var(--gmt-space-3);
+    border: 1px solid var(--gmt-border);
+    border-radius: var(--gmt-radius-md);
+    corner-shape: bevel;
+    background: var(--gmt-surface);
+  }
+
+  .gmt-check-stored-table tr[hidden] {
+    display: none;
+  }
+
+  .sl-markdown-content .gmt-check-stored-table td,
+  .sl-markdown-content .gmt-check-stored-table td:first-child,
+  .sl-markdown-content .gmt-check-stored-table td:last-child {
+    display: block;
+    width: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  .gmt-check-stored-input {
+    max-inline-size: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .gmt-check-clock[data-picked="true"] {
+    border-color: Highlight;
+    box-shadow: 0 0 0 1px Highlight;
+  }
+  .gmt-check-minimums,
+  .gmt-check-help {
+    border-color: CanvasText;
+  }
+  .gmt-check-step,
+  .gmt-check-stored-head,
+  .gmt-check-badge,
+  .gmt-keypoints-card,
+  .gmt-check-browser,
+  .gmt-check-clocks-notice {
+    border-color: CanvasText;
+  }
+}

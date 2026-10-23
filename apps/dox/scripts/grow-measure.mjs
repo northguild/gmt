@@ -283,6 +283,15 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "morocco-clock-change",
+    path: "/check/morocco-2026-clock-change/",
+    root: ".gmt-morocco",
+    preset: null,
+    click: '[data-role="recheck"]',
+    presetNote: "no preset; clicks Check again",
+    drag: null,
+  },
+  {
     slug: "zone-planner",
     root: ".gmt-scrubber-block",
     preset: null,

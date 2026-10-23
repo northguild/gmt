@@ -10,27 +10,28 @@
  * British Columbia, Alberta, the Northwest Territories and Manitoba do not turn back on 2026-11-01.
  */
 
-/** A run of text: plain, code, or a link to an anchor on the same page. */
-export type KeyPart =
-  | string
-  | { code: string }
-  | { strong: string }
-  /** A function name, in a code chip, linked to its reference page. */
-  | { fn: string; href: string }
-  | { link: string; href: string };
+import {
+  helpMarkdown as helpMarkdownOf,
+  helpText as helpTextOf,
+  keyPointsMarkdown as keyPointsMarkdownOf,
+  type HelpCard,
+  type KeyCard,
+} from "../lib/clock-check/key-points";
 
-export type KeyBlock =
-  | { kind: "p"; parts: KeyPart[] }
-  | { kind: "ol"; items: KeyPart[][] };
-
-export interface KeyCard {
-  /** An anchor for the card, when other text links to it. */
-  id?: string;
-  heading: string;
-  blocks: KeyBlock[];
-}
-
-export const KEY_POINTS_HEADING = "Key points";
+// The shapes and renderers are shared by every clock-change checker; this module keeps Canada's
+// words and re-exports the rest so what imported them from here still can.
+export {
+  HELP_HEADING,
+  KEY_POINTS_HEADING,
+  partsHtml,
+  partsMarkdown,
+  partsText,
+  type HelpCard,
+  type HelpCase,
+  type KeyBlock,
+  type KeyCard,
+  type KeyPart,
+} from "../lib/clock-check/key-points";
 
 export const KEY_POINTS: KeyCard[] = [
   {
@@ -80,7 +81,10 @@ export const KEY_POINTS: KeyCard[] = [
           ],
           [
             "Your saved events: appointments, bookings and shifts your app saved before you updated may be an hour off in these places. Find them with ",
-            { link: "Did your saved events move?", href: "#canada-stored-title" },
+            {
+              link: "Did your saved events move?",
+              href: "#canada-stored-title",
+            },
             " below, or ",
             { code: "classifyStoredZoned" },
             " in your code. To fix one, keep its local time and place and convert them again with ",
@@ -93,34 +97,10 @@ export const KEY_POINTS: KeyCard[] = [
   },
 ];
 
-/**
- * The "How gmt helps" card: a lede, a verified line with a link to the tests, one case card per
- * kind of saved event that can be wrong, and a call to the checker. Shaped like the home page's
- * fault cards (`date-faults.ts`): a tag, `input → output`, then one line of why.
- */
-export const HELP_HEADING = "How gmt helps";
 const CLASSIFY_HREF = "/reference/zoned/classify/classifyStoredZoned/";
 const CONVERT_HREF = "/reference/zoned/convert/convertPlainDateTimeToZoned/";
 const TESTS_HREF =
   "https://github.com/northguild/gmt/blob/main/packages/gmt/src/test/oh-canada.test.ts";
-
-export interface HelpCase {
-  tag: string;
-  input: string;
-  output: string;
-  /** Said beside the output, such as "an hour late". */
-  outputNote?: string;
-  why: KeyPart[];
-}
-
-export interface HelpCard {
-  lede: KeyPart[];
-  verified: KeyPart[];
-  intro: string;
-  cases: HelpCase[];
-  /** The call to action: a sentence, then a link styled as a button. */
-  cta: { lead: string; link: string; href: string };
-}
 
 export const HELP: HelpCard = {
   lede: [
@@ -168,106 +148,11 @@ export const HELP: HelpCard = {
   },
 };
 
-const escapeText = (text: string) =>
-  text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-
-/** The parts as HTML: code as chips, links as anchors (`href` goes through `resolveHref`). */
-export function partsHtml(
-  parts: KeyPart[],
-  resolveHref: (href: string) => string = (href) => href,
-): string {
-  return parts
-    .map((part) =>
-      typeof part === "string"
-        ? escapeText(part)
-        : "code" in part
-          ? `<code>${escapeText(part.code)}</code>`
-          : "strong" in part
-            ? `<strong>${escapeText(part.strong)}</strong>`
-            : "fn" in part
-              ? `<a class="gmt-canada-help-fn" href="${escapeText(resolveHref(part.href))}"><code>${escapeText(part.fn)}</code></a>`
-              : `<a href="${escapeText(resolveHref(part.href))}">${escapeText(part.link)}</a>`,
-    )
-    .join("");
-}
-
 /** The help card as Markdown, for the `.md` twin and the llms files. */
-export function helpMarkdown(): string {
-  const lines = ["", `## ${HELP_HEADING}`, "", partsMarkdown(HELP.lede), "", partsMarkdown(HELP.verified), "", HELP.intro, ""];
-  for (const item of HELP.cases) {
-    lines.push(`### ${item.tag}`, "");
-    lines.push(`\`${item.input}\` \u2192 \`${item.output}\`${item.outputNote ? ` (${item.outputNote})` : ""}`, "");
-    lines.push(partsMarkdown(item.why), "");
-  }
-  lines.push(`${HELP.cta.lead} [${HELP.cta.link}](${HELP.cta.href})`, "");
-  return lines.join("\n");
-}
+export const helpMarkdown = (): string => helpMarkdownOf(HELP);
 
 /** The whole help card as plain text, for a test to search. */
-export function helpText(): string {
-  return [
-    HELP_HEADING,
-    partsText(HELP.lede),
-    partsText(HELP.verified),
-    HELP.intro,
-    ...HELP.cases.flatMap((c) => [c.tag, c.input, c.output, c.outputNote ?? "", partsText(c.why)]),
-    `${HELP.cta.lead} ${HELP.cta.link}`,
-  ].join("\n");
-}
-
-/** The parts as plain text (what a screen-reader-free surface such as a test compares). */
-export function partsText(parts: KeyPart[]): string {
-  return parts
-    .map((part) =>
-      typeof part === "string"
-        ? part
-        : "code" in part
-          ? part.code
-          : "strong" in part
-            ? part.strong
-            : "fn" in part
-              ? part.fn
-              : part.link,
-    )
-    .join("");
-}
-
-/** The parts as Markdown: code in backticks, links as `[text](#anchor)`. */
-export function partsMarkdown(parts: KeyPart[]): string {
-  return parts
-    .map((part) =>
-      typeof part === "string"
-        ? part
-        : "code" in part
-          ? `\`${part.code}\``
-          : "strong" in part
-            ? `**${part.strong}**`
-            : "fn" in part
-              ? `[\`${part.fn}\`](${part.href})`
-              : `[${part.link}](${part.href})`,
-    )
-    .join("");
-}
+export const helpText = (): string => helpTextOf(HELP);
 
 /** The whole section as Markdown, for the `.md` twin and the llms files. */
-export function keyPointsMarkdown(): string {
-  const lines: string[] = ["", `## ${KEY_POINTS_HEADING}`, ""];
-  for (const card of KEY_POINTS) {
-    lines.push(`### ${card.heading}`, "");
-    for (const block of card.blocks) {
-      if (block.kind === "p") {
-        lines.push(partsMarkdown(block.parts), "");
-      } else {
-        block.items.forEach((item, i) => {
-          lines.push(`${i + 1}. ${partsMarkdown(item)}`);
-        });
-        lines.push("");
-      }
-    }
-  }
-  return lines.join("\n");
-}
+export const keyPointsMarkdown = (): string => keyPointsMarkdownOf(KEY_POINTS);

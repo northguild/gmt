@@ -1,6 +1,7 @@
 import { getTimeZoneOffset } from "@northguild/gmt/zoned/get";
 import { describe, expect, it } from "vitest";
 import { PROBE_INSTANT, PROBE_ZONES } from "./canada-clock-change";
+import { MOROCCO_FACTS, MOROCCO_PROBE } from "./morocco-clock-change";
 
 /**
  * A canary for the machine running the tests. The page states what tzdb 2026e gives for each
@@ -14,8 +15,21 @@ describe("the runtime's time zone data", () => {
       const actual = getTimeZoneOffset(fact.zone, PROBE_INSTANT);
       expect(
         actual,
-        `Node ${process.version} (tz ${process.versions.tz}) gives ${fact.zone} ${actual} at ${PROBE_INSTANT}; the reference (2026e) is ${fact.tzdb2026e}. Update Node.`,
-      ).toBe(fact.tzdb2026e);
+        `Node ${process.version} (tz ${process.versions.tz}) gives ${fact.zone} ${actual} at ${PROBE_INSTANT}; the reference (2026e) is ${fact.offset}. Update Node.`,
+      ).toBe(fact.offset);
+    },
+  );
+});
+
+describe("the runtime's time zone data (Morocco)", () => {
+  it.each(MOROCCO_PROBE.map((fact) => [fact.zone, fact] as const))(
+    "%s matches the tzdb 2026c reference",
+    (_zone, fact) => {
+      const actual = getTimeZoneOffset(fact.zone, MOROCCO_FACTS.probeInstant);
+      expect(
+        actual,
+        `Node ${process.version} (tz ${process.versions.tz}) gives ${fact.zone} ${actual} at ${MOROCCO_FACTS.probeInstant}; the reference (${fact.release}) is ${fact.offset}. Update Node.`,
+      ).toBe(fact.offset);
     },
   );
 });

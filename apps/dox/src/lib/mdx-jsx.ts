@@ -11,6 +11,10 @@
  */
 import { keyPointsMarkdown } from "../data/canada-key-points";
 import { serversMarkdown } from "./canada-clock-change";
+import {
+  moroccoKeyPointsMarkdown,
+  moroccoServersMarkdown,
+} from "./morocco-clock-change-mount";
 import { dateFaults } from "../data/date-faults";
 import { libraryStack } from "../data/library-stack";
 import {
@@ -355,7 +359,16 @@ export function renderMdxComponents(body: string): string {
   // stack — so they render rather than drop. They were invisible to the old nine-name gate.
   out = replaceElements(out, "WhyDateBug", renderWhyDateBug);
   // Key points first, then the servers card and what the library does; the live parts have no text.
-  out = replaceElements(out, "CanadaClockChange", () => keyPointsMarkdown() + serversMarkdown());
+  out = replaceElements(
+    out,
+    "CanadaClockChange",
+    () => keyPointsMarkdown() + serversMarkdown(),
+  );
+  out = replaceElements(
+    out,
+    "MoroccoClockChange",
+    () => moroccoKeyPointsMarkdown() + moroccoServersMarkdown(),
+  );
   out = replaceElements(out, "WhyDateAlternatives", renderWhyDateAlternatives);
 
   // Decorative or interactive, with no prose of their own: a globe, a scroll animation, and the
@@ -373,6 +386,7 @@ export function renderMdxComponents(body: string): string {
     "HeroGlobe",
     "ScrollReveal",
     "CanadaProbeScript",
+    "MoroccoProbeScript",
     "IntervalVisualizer",
     "DstInspector",
     "ConverterBench",

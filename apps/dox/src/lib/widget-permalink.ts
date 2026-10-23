@@ -69,7 +69,8 @@ export type WidgetKind =
   | "observance"
   | "feasts"
   | "canadaclock"
-  | "durationbench";
+  | "durationbench"
+  | "moroccoclock";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -125,6 +126,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   // leaves a path already under the base alone.
   canadaclock: withBase("/check/canada-2026-clock-change/"),
   durationbench: "/tools/duration-parser-bench/",
+  moroccoclock: withBase("/check/morocco-2026-clock-change/"),
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */

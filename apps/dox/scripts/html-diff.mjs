@@ -156,7 +156,11 @@ const PAGES = [
   },
   {
     path: "check/canada-2026-clock-change",
-    widget: "gmt-canada gmt-widget",
+    widget: "gmt-check gmt-canada gmt-widget",
+  },
+  {
+    path: "check/morocco-2026-clock-change",
+    widget: "gmt-check gmt-morocco gmt-widget",
   },
   {
     path: "tools/duration-parser-bench",

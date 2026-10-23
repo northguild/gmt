@@ -1,0 +1,23 @@
+---
+title: Morocco 2026 clock-change checker
+description: Check whether a runtime has the time zone data for Morocco's 2026 clock change, see the clock changes in 2026 and 2027, and watch two live clocks.
+industries: [core]
+tableOfContents: false
+---
+
+import MoroccoClockChange from "../../../components/MoroccoClockChange.astro";
+import MoroccoProbeScript from "../../../components/MoroccoProbeScript.astro";
+
+From 20 September 2026, `Casablanca` and `El Aaiún` stay on UTC+00:00, and anything with old time zone data shows them an hour wrong.
+
+<MoroccoClockChange />
+
+## Related
+
+- [Canada 2026 clock-change checker](/check/canada-2026-clock-change/): the same check for Canada's 1 November change.
+- [Stored Time Audit](/tools/stored-time-audit/): check events you saved before a change.
+- [`classifyStoredZoned`](/reference/zoned/classify/classifyStoredZoned/): why a stored zoned time no longer resolves.
+- [`getDstTransitions`](/reference/zoned/get/getDstTransitions/): the clock changes of a zone in a year.
+- [`getTimeZoneOffset`](/reference/zoned/get/getTimeZoneOffset/): the offset of a zone at an instant.
+
+<MoroccoProbeScript />

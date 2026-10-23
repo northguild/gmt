@@ -1,0 +1,10 @@
+---
+/**
+ * The pre-paint fill of the Morocco page's "Your browser" card (CORE-89). It sits at the end of the
+ * page text, so the browser has parsed the whole page when it runs and no paint shows the page cut
+ * off. `clock-check/template.ts` explains what it does.
+ */
+import { probeInlineSource } from "../lib/morocco-clock-change-mount";
+---
+
+<script is:inline set:html={probeInlineSource()} />

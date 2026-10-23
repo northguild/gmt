@@ -736,6 +736,17 @@ export const showDurationParserBenchInput = z.object({
 });
 
 /**
+ * Morocco 2026 clock-change checker: optionally one of its two zones for the saved-events form.
+ *
+ * The ids are written out here, not imported from `morocco-clock-change.ts`: this module is in the
+ * chat island's static graph, which must stay free of the checker's facts and builders
+ * (`widget-graph.test.ts`). `morocco-clock-change-mount.test.ts` pins the two lists together.
+ */
+export const showMoroccoClockChangeInput = z.object({
+  zone: z.enum(["Africa/Casablanca", "Africa/El_Aaiun"]).optional(),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -784,7 +795,8 @@ export type DoxToolName =
   | "showObservanceComparator"
   | "showMovingFeasts"
   | "showCanadaClockChange"
-  | "showDurationParserBench";
+  | "showDurationParserBench"
+  | "showMoroccoClockChange";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -822,6 +834,7 @@ export const DOX_TOOL_INPUTS = {
   showMovingFeasts: showMovingFeastsInput,
   showCanadaClockChange: showCanadaClockChangeInput,
   showDurationParserBench: showDurationParserBenchInput,
+  showMoroccoClockChange: showMoroccoClockChangeInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1076,6 +1089,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks what a duration string such as `30s`, `1m`, `7d` or `1.5h` means, whether `m` is a minute or a month, how to parse a timeout or config duration, or why writing laytime as `3 days` is not always 72 hours",
     args: "text: the reader's string exactly as given, never corrected; locale: only when the reader names one.",
   },
+  {
+    name: "showMoroccoClockChange",
+    purpose:
+      "Check whether a device or server has current time zone data for Morocco's 2026 clock change (tzdb 2026c), when Casablanca and El Aaiun stay on UTC+00:00 from 20 September 2026: a table of the two zones' correct offsets beside the reader's browser, a check-mark or cross verdict for the reader's browser with what to do, a command to test the reader's own servers, the minimum runtime releases, a card on how gmt finds and repairs saved events, the 2026 and 2027 clock changes and the two Ramadan changes that old data still makes, live clocks, and a Did your saved events move? form, pre-filled with an example and run on load, that reads up to 50 pasted saved events and says which are out of date and what to do about each.",
+    when: "Call when the reader asks about Morocco's, Casablanca's or Western Sahara's clock change or Ramadan time, whether their runtime, server or browser has the 2026c time zone data, or whether saved events in Africa/Casablanca or Africa/El_Aaiun are now an hour off",
+    args: "zone: optional, Africa/Casablanca or Africa/El_Aaiun, the zone the saved-events form completes a line with (never a city or country name).",
+  },
 ];
 
 /**
@@ -1224,6 +1244,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[34].purpose,
     inputSchema: showDurationParserBenchInput,
   }),
+  showMoroccoClockChange: tool({
+    description: DOX_TOOL_DOCS[35].purpose,
+    inputSchema: showMoroccoClockChangeInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1282,6 +1306,7 @@ export const ENABLED_TOOL_NAMES = [
   "showMovingFeasts",
   "showCanadaClockChange",
   "showDurationParserBench",
+  "showMoroccoClockChange",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

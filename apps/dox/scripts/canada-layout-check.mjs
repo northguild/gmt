@@ -34,15 +34,15 @@ const PATH = "/check/canada-2026-clock-change/";
 
 const CARDS = {
   keypoints: ".gmt-keypoints",
-  browser: ".gmt-canada-browser",
+  browser: ".gmt-check-browser",
   map: ".gmt-canada-stage",
   pick: ".gmt-canada-pickcard",
-  clocks: ".gmt-canada-clocksec",
-  servers: ".gmt-canada-servers",
-  minimums: ".gmt-canada-minimums",
+  clocks: ".gmt-check-clocksec",
+  servers: ".gmt-check-servers",
+  minimums: ".gmt-check-minimums",
   changes: "section[aria-labelledby=canada-changes-title]",
-  help: ".gmt-canada-help",
-  stored: ".gmt-canada-stored",
+  help: ".gmt-check-help",
+  stored: ".gmt-check-stored",
 };
 
 const failures = [];
@@ -69,13 +69,20 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
         const el = document.querySelector(selector);
         if (!el || el.offsetParent === null) return null;
         const b = el.getBoundingClientRect();
-        return { left: b.left, right: b.right, top: b.top + scrollY, bottom: b.bottom + scrollY };
+        return {
+          left: b.left,
+          right: b.right,
+          top: b.top + scrollY,
+          bottom: b.bottom + scrollY,
+        };
       };
-      const stack = rect(".gmt-canada-stack");
+      const stack = rect(".gmt-check-stack");
       return {
         stack,
         hscroll: document.documentElement.scrollWidth > innerWidth,
-        rects: Object.fromEntries(Object.entries(cards).map(([k, s]) => [k, rect(s)])),
+        rects: Object.fromEntries(
+          Object.entries(cards).map(([k, s]) => [k, rect(s)]),
+        ),
       };
     }, CARDS);
     const tag = `${width}px ${theme}`;
@@ -83,7 +90,9 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
     const present = Object.entries(data.rects).filter(([, r]) => r);
     for (const [name, r] of present) {
       if (r.left < data.stack.left - 1 || r.right > data.stack.right + 1) {
-        fail(`${tag}: ${name} reaches past the stack (${r.left}..${r.right} in ${data.stack.left}..${data.stack.right})`);
+        fail(
+          `${tag}: ${name} reaches past the stack (${r.left}..${r.right} in ${data.stack.left}..${data.stack.right})`,
+        );
       }
     }
     for (let i = 0; i < present.length; i += 1) {
@@ -98,13 +107,17 @@ for (const theme of SHOTS ? ["dark", "light"] : ["dark"]) {
     const { map, pick, clocks } = data.rects;
     if (map && pick && clocks) {
       const pairUp = clocks.top < pick.bottom - 1;
-      if (pairUp && Math.abs(pick.top - clocks.top) > 1) fail(`${tag}: the zone card and the clocks do not share a top`);
+      if (pairUp && Math.abs(pick.top - clocks.top) > 1)
+        fail(`${tag}: the zone card and the clocks do not share a top`);
       const threeUp = Math.abs(map.top - pick.top) <= 1;
-      if (!threeUp && !(map.bottom <= pick.top + 1)) fail(`${tag}: the map is not above the zone card`);
+      if (!threeUp && !(map.bottom <= pick.top + 1))
+        fail(`${tag}: the map is not above the zone card`);
     }
     if (SHOTS) {
       mkdirSync(SHOTS, { recursive: true });
-      await page.locator(".gmt-canada-stack").screenshot({ path: `${SHOTS}/${theme}-${width}.png` });
+      await page
+        .locator(".gmt-check-stack")
+        .screenshot({ path: `${SHOTS}/${theme}-${width}.png` });
     }
     console.log(`${tag}: ${present.length} cards checked`);
     await context.close();

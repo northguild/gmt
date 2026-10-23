@@ -398,6 +398,76 @@ async function buildRows() {
       },
     ],
   });
+  // The tzdb 2026c offsets at MOROCCO_FACTS.probeInstant (MOROCCO_PROBE in
+  // src/lib/morocco-clock-change.ts; this script cannot import TypeScript, so the two literals
+  // are repeated here). When a later tzdb changes these zones again this row fails on purpose:
+  // the fix is a page update, not a retry.
+  add({
+    label: "morocco-clock-change probe",
+    url: `${ND}/gmt/api/morocco-clock-change`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          const expected = {
+            "Africa/Casablanca": "+00:00",
+            "Africa/El_Aaiun": "+00:00",
+          };
+          let probe;
+          try {
+            probe = JSON.parse(body).probe;
+          } catch {
+            return "body is not JSON";
+          }
+          if (!Array.isArray(probe)) return "no probe array";
+          const got = Object.fromEntries(probe.map((r) => [r.zone, r.offset]));
+          const bad = Object.entries(expected).filter(
+            ([zone, offset]) => got[zone] !== offset,
+          );
+          return bad.length
+            ? `probe differs from tzdb 2026c: ${bad.map(([z, o]) => `${z} wanted ${o}, got ${got[z]}`).join("; ")}`
+            : undefined;
+        },
+      },
+    ],
+  });
+  // Report only, like Canada's: prints the kinds, fails only on the status or the body's shape.
+  // The three lines are the first three of MOROCCO_STORED_PRESET (src/lib/morocco-clock-change.ts).
+  add({
+    label: "morocco-clock-change stored times (report only)",
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      zone: "Africa/Casablanca",
+      lines: [
+        "2027-06-01T09:00:00+01:00[Africa/Casablanca]",
+        "2026-11-15T09:00:00+01:00[Africa/El_Aaiun]",
+        "2027-06-01T09:00:00+00:00[Africa/Casablanca]",
+      ].join("\n"),
+    }).toString(),
+    url: `${ND}/gmt/api/morocco-clock-change`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          let rows;
+          try {
+            rows = JSON.parse(body).rows;
+          } catch {
+            return "body is not JSON";
+          }
+          if (!Array.isArray(rows) || rows.length !== 3)
+            return "expected 3 rows";
+          console.log(
+            `   stored times: ${rows.map((r) => `${r.line} ${r.result?.kind ?? "null"}`).join(", ")}`,
+          );
+          return undefined;
+        },
+      },
+    ],
+  });
   add({ label: "23 GET", url: `${ND}/gmt/api/chat`, steps: [{ status: 405 }] });
   add({
     label: "25",

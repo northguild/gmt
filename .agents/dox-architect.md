@@ -75,8 +75,8 @@ chooses; the main session then resumes you with the choice and you write the spe
 ## Process — per task
 
 1. **Re-verify against the live repo.** Read the files the task touches, run the commands,
-   query the registry (`npm view <pkg> version peerDependencies engines --json`). This
-   machine uses `fnm`: `eval "$(fnm env)" && fnm use`. Record every contradiction with the
+   query the registry (`npm view <pkg> version peerDependencies engines --json`). There
+   is no `fnm` here: `pnpm exec node` gives the pinned Node (26.12.1 at the time of writing). Record every contradiction with the
    docs so `context/dox/` gets corrected rather than drifting.
 2. **Write the execution spec** for `dox-builder`: exact files to create and modify, the
    constraints and traps from `built.md` that apply, and a definition of done. Keep the spec to

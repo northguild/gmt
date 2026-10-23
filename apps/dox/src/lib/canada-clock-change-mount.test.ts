@@ -46,7 +46,7 @@ function citedProbe(check: CanadaCheck): CanadaCheck {
     ...check,
     probe: PROBE_ZONES.map((fact) => ({
       zone: fact.zone,
-      offset: fact.tzdb2026e,
+      offset: fact.offset,
     })),
   };
 }
@@ -67,20 +67,23 @@ const text = (el: Element | null) => el?.textContent?.trim() ?? "";
 describe("the template", () => {
   it("server-renders the known rows, groups and clocks", () => {
     const root = host();
-    expect(root.querySelectorAll(".gmt-canada-table tbody tr")).toHaveLength(4);
+    expect(root.querySelectorAll(".gmt-check-table tbody tr")).toHaveLength(4);
     expect(root.querySelector('[data-zone="Africa/Casablanca"]')).toBeNull();
-    expect(root.querySelectorAll(".gmt-canada-group")).toHaveLength(
+    expect(root.querySelectorAll(".gmt-check-group")).toHaveLength(
       TRANSITION_ZONES.length,
     );
-    expect(root.querySelectorAll(".gmt-canada-clock")).toHaveLength(
+    expect(root.querySelectorAll(".gmt-check-clock")).toHaveLength(
       CLOCK_ZONES.length,
     );
     expect(
-      root.querySelector('tr[data-zone="America/Vancouver"] [data-role="browser"]')
-        ?.innerHTML,
+      root.querySelector(
+        'tr[data-zone="America/Vancouver"] [data-role="browser"]',
+      )?.innerHTML,
     ).toContain("NO SIGNAL");
     expect(root.querySelector('[data-role="verdict"]')).not.toBeNull();
-    expect(root.querySelector('[data-role="clocks-notice"]')?.hasAttribute("hidden")).toBe(true);
+    expect(
+      root.querySelector('[data-role="clocks-notice"]')?.hasAttribute("hidden"),
+    ).toBe(true);
     expect(root.querySelector('[data-role="map-notice"]')).toBeNull();
     expect(root.querySelector('[data-role="legend-stale"]')).toBeNull();
   });
@@ -90,12 +93,12 @@ describe("the template", () => {
     const cell = root.querySelector(
       'tr[data-zone="America/Vancouver"] th[scope="row"]',
     )!;
-    expect(text(cell.querySelector(".gmt-canada-city"))).toBe("Vancouver");
-    expect(text(cell.querySelector(".gmt-canada-zoneid"))).toBe(
+    expect(text(cell.querySelector(".gmt-check-city"))).toBe("Vancouver");
+    expect(text(cell.querySelector(".gmt-check-zoneid"))).toBe(
       "America/Vancouver",
     );
     expect(
-      [...root.querySelectorAll(".gmt-canada-table thead th")].map((th) =>
+      [...root.querySelectorAll(".gmt-check-table thead th")].map((th) =>
         (th.firstChild?.textContent ?? "").trim(),
       ),
     ).toEqual(["Place", "Correct", "Yours"]);
@@ -142,7 +145,7 @@ describe("the words", () => {
     const bad = verdictHtml(["Inuvik", "Winnipeg"]);
     expect(bad).toContain("\u2717");
     expect(bad).toContain(
-      "Your browser has old time zone data for <span data-role=\"wrong-places\"><code>Inuvik</code> and <code>Winnipeg</code></span>. From 1 November 2026 it shows their time an hour wrong.",
+      'Your browser has old time zone data for <span data-role="wrong-places"><code>Inuvik</code> and <code>Winnipeg</code></span>. From 1 November 2026 it shows their time an hour wrong.',
     );
     expect(bad).toContain(
       "update your browser. If it is already up to date, its maker has not shipped the fix yet. Check again after the next update.",
@@ -235,13 +238,13 @@ describe("the mount", () => {
     });
     for (const zone of TRANSITION_ZONES) {
       const group = root.querySelector(
-        `.gmt-canada-group[data-zone="${zone}"]`,
+        `.gmt-check-group[data-zone="${zone}"]`,
       )!;
       for (const year of [2026, 2027] as const) {
         const rows = check.transitions.filter(
           (r) => r.zone === zone && r.year === year,
         );
-        const none = [...group.querySelectorAll(".gmt-canada-none")].filter(
+        const none = [...group.querySelectorAll(".gmt-check-none")].filter(
           (el) => text(el).endsWith(String(year)),
         );
         if (rows.length === 0) {
@@ -250,7 +253,7 @@ describe("the mount", () => {
           expect(none).toHaveLength(0);
         }
       }
-      expect(group.querySelectorAll(".gmt-canada-change")).toHaveLength(
+      expect(group.querySelectorAll(".gmt-check-change")).toHaveLength(
         check.transitions.filter((r) => r.zone === zone).length,
       );
     }
@@ -279,10 +282,10 @@ describe("the mount", () => {
       now,
     });
     expect(
-      root.querySelectorAll(".gmt-canada-clock svg.gmt-crystal-clock"),
+      root.querySelectorAll(".gmt-check-clock svg.gmt-crystal-clock"),
     ).toHaveLength(5);
     const item = root.querySelector(
-      '.gmt-canada-clock[data-zone="America/Vancouver"]',
+      '.gmt-check-clock[data-zone="America/Vancouver"]',
     )!;
     const readout = () => text(item.querySelector('[data-role="clock-time"]'));
     const face = item.querySelector("svg.gmt-crystal-clock");
@@ -327,7 +330,9 @@ describe("the mount", () => {
     );
     expect(
       text(
-        root.querySelector('tr[data-zone="America/Vancouver"] [data-role="browser"]'),
+        root.querySelector(
+          'tr[data-zone="America/Vancouver"] [data-role="browser"]',
+        ),
       ),
     ).not.toBe("");
     controller.abort();

@@ -1,0 +1,32 @@
+/*
+ * The Morocco 2026 clock-change checker (CORE-89): the two changes that old time zone data still
+ * makes and tzdb 2026c does not. Everything the checkers share is in clock-check.css, which loads
+ * first. There is no map. Tokens only.
+ */
+.gmt-morocco-nolonger {
+  margin-top: var(--gmt-space-3);
+}
+
+.gmt-morocco-nolonger-title {
+  margin: 0 0 var(--gmt-space-1);
+  font-size: 0.875rem;
+}
+
+.gmt-morocco-nolonger .gmt-check-groups {
+  margin-top: var(--gmt-space-2);
+}
+
+/* Two zones' lists of two changes each: a full bevelled border, not a stripe. */
+.gmt-morocco-nl-zone {
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.gmt-morocco-nl-zone .gmt-check-when {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

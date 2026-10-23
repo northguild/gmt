@@ -291,7 +291,9 @@ export default defineConfig({
         "./src/styles/gmt-form-controls.css", // shared label/input/select styles
         "./src/styles/gmt-widget.css", // shared teaching-widget chrome (card/section/codeframe/output)
         "./src/styles/gmt-crystal-clock.css", // shared analog crystal clock face (TRAN-9)
-        "./src/styles/canada-clock-change.css", // Canada clock-change checker (CORE-88)
+        "./src/styles/clock-check.css", // the clock-change checkers' shared parts (CORE-89)
+        "./src/styles/canada-clock-change.css", // Canada clock-change checker: the map (CORE-88)
+        "./src/styles/morocco-clock-change.css", // Morocco clock-change checker: the changes that no longer happen (CORE-89)
         "./src/styles/gmt-dst-inspector.css", // DST Transition Inspector widget (DOX-B2b)
         "./src/styles/gmt-interval-visualizer.css", // Interval Algebra Visualizer widget (DOX-B2c)
         "./src/styles/gmt-billing-deadlines.css", // Billing Deadlines widget (INT-58)

@@ -97,7 +97,14 @@ const PAGES = [
   { id: "dox-chat", path: "/dox/" },
   { id: "dox-chat+timetable", path: "/dox/", open: "showTimetableReader" },
   { id: "dox-chat+x12", path: "/dox/", open: "showX12TimeReader" },
-  { id: "check:canada-2026-clock-change", path: "/check/canada-2026-clock-change/" },
+  {
+    id: "check:canada-2026-clock-change",
+    path: "/check/canada-2026-clock-change/",
+  },
+  {
+    id: "check:morocco-2026-clock-change",
+    path: "/check/morocco-2026-clock-change/",
+  },
   ...toolSlugs.map((slug) => ({
     id: `tool:${slug}`,
     path: `/tools/${slug}/`,

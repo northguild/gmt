@@ -137,6 +137,10 @@ import {
   mountDurationParserBench,
   renderDurationParserBenchTemplate,
 } from "./duration-parser-bench-mount";
+import {
+  mountMoroccoClockChangeWidget,
+  renderMoroccoClockChangeWidgetTemplate,
+} from "./morocco-clock-change-mount";
 
 installJsdomShims();
 
@@ -305,6 +309,11 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "duration parser bench",
     () => renderDurationParserBenchTemplate(),
     mountDurationParserBench as MountFn<never>,
+  ],
+  [
+    "morocco clock-change checker",
+    () => renderMoroccoClockChangeWidgetTemplate("morocco"),
+    mountMoroccoClockChangeWidget as MountFn<never>,
   ],
 ];
 

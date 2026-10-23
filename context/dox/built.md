@@ -942,7 +942,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       zone outside `STORED_ZONES` or a body that is not a form or ends early, `413` for a body over
       65,536 bytes (read as a stream; `content-length` is not trusted), and `429` from the same
       `canada:` bucket GET uses. HEAD answers as GET with no body; a `405` carries
-      `Allow: GET, HEAD, POST`. `capStoredInput` (`lib/canada-stored-times.ts`, imports only
+      `Allow: GET, HEAD, POST`. `capStoredInput` (`lib/clock-check/stored-times.ts`, imports only
       constants, so the Worker shares it) cuts text over `STORED_MAX_BYTES` UTF-8 bytes at the last
       line break at or before that byte, makes `\r\n` and `\r` into `\n` first, splits, skips blank
       lines (their numbers still count) and keeps `STORED_MAX_LINES` (50: measured at about
@@ -989,6 +989,50 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       without the October 2026 update gets the four zones wrong from 1 November 2026. It names no
       function. Every sentence on the page reads true before and after 1 November 2026: no "will",
       no "right now", no relative months.
+  - **Shared checker parts** (`src/lib/clock-check/`, `worker/clock-check.ts`,
+    `src/styles/clock-check.css`): every clock-change checker is a `CheckPage` (`template.ts`: its
+    `facts`, `idPrefix`, probe table, `probeLabel`, `copy`, key points, help card, minimums, saved
+    preset and example, transition zones and a `staleZones(answer)` rule) fed to shared builders.
+    `facts.ts` holds `ClockCheckFacts` (`id`, probe instant and rows, transition years, clock and
+    stored zones; there is no `api` field, `apiUrl(facts)` derives `withBase("/api/<id>-clock-change")`),
+    the answer shapes and the stored-times limits; `template.ts` the pure markup (shell, browser
+    card, servers, minimums, help, changes, clocks, saved events); `mount.ts` the page wiring
+    (browser column, transitions, clocks, `mountStoredTimes`, the fetch); `key-points.ts`,
+    `minimums.ts`, `saved-example.ts` and `stored-times.ts` their data shapes and pure logic. Both
+    sides import only `facts.ts`, `stored-times.ts` and constants; a template never reaches the
+    Worker bundle (`worker/clock-check.ts` owns the probe and transition tables, `zoneNow`, the
+    stored-times check and `clockCheckHandler`: method, size, rate-limit and zone rules). A checker
+    adds a page object, its data files, a mount that composes the shared pieces and a Worker module
+    of a few lines; no new builder. **Class rule:** shared markup carries `gmt-check-*` classes
+    (and `data-role`s) styled in `clock-check.css`; a checker's own sheet holds only what is
+    specific to it, under `gmt-<id>-*` (Canada's map, Morocco's no-longer list). The root is
+    `gmt-check gmt-<id> gmt-widget`. A server-rendered control that the first mount would reveal
+    (the saved-events zone picker) is rendered shown when the preset needs it
+    (`needsZonePicker(page.storedPreset)`), so the load does not grow the page.
+  - **Morocco 2026 clock-change checker** (`/check/morocco-2026-clock-change/`, core,
+    CORE-89): the Canada page's twin for tzdb 2026c, which keeps `Africa/Casablanca` and
+    `Africa/El_Aaiun` on +00:00 from 20 September 2026. `GET|HEAD|POST /gmt/api/morocco-clock-change`
+    (`worker/morocco-clock-change.ts`) answers `{ now, probe, transitions, zones }` for the two zones at
+    request time; the facts are `MOROCCO_FACTS` (`lib/morocco-clock-change.ts`, probe instant
+    2027-06-01T12:00Z, where 2026c gives +00:00 and older data +01:00). Four rows: Key points
+    beside the browser card; the servers command beside the minimum releases; the help card beside
+    the clock changes; then two live clocks and the saved-events section. The changes card
+    ends with a "No longer happen" list, `NO_LONGER`, the two changes older data still makes in
+    2027 (7 Feb 02:00Z, +01:00 to +00:00; 14 Mar 02:00Z, back), each with its wall time read by the
+    library once it loads (a past-release fact the Worker cannot compute, since it runs current data).
+    **`staleZones`**: the zones whose probe row's offset differs from the fact, so a Worker or
+    browser on old data marks both zones "Can't check yet" and the saved-events check judges nothing
+    on data known to be old. **No map**: there is no boundary data to credit, so there is no
+    data-credits button, no map section and no `@container` fallback. The servers card's command
+    prints `Casablanca +00:00` and `El Aaiun +00:00` under `pnpm exec node` (Node 26.12.1); the
+    minimums card keeps only rows with a primary source (Node, OpenJDK, Python `tzdata`/`pytz`,
+    Ubuntu, Alpine, Fedora, RHEL, Amazon Linux 2023), never a version inferred from a date. The
+    saved-events preset ends with one zoneless line, completed with the picked zone, so the picker
+    is visible on load. Guards: `morocco-still.mjs` (clock cards and readouts hold still across a
+    minute and across +01:00 to +00:00, and the key points, browser card, transitions table, clock cards and form buttons hold still when a long stored-times answer replaces the preset's, 1280 and 375 px, Chromium and WebKit), `grow-measure.mjs`
+    (`morocco-clock-change`), `contrast-measure.mjs`, `html-diff.mjs` and `visual-snapshot.mjs`
+    rows. In the chat, `mountMoroccoClockChangeWidget` mounts the same markup under `idPrefix` and
+    its permalink state is `{zone}` (kind `moroccoclock`, `?w=moroccoclock&wa=…`).
   - **Stored Time Audit** (`/tools/stored-time-audit/`, `storedaudit`, core): a textarea of
     stored zoned strings (12 lines of 80 characters), a fixed table with one row per line (kind
     badge, readings as nowrap tokens) and a two-lane strip for the selected line, the zone's
@@ -1938,18 +1982,24 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   (`worker/rate-limit.ts`) keeps one bucket per key in a module-scope `Map`, so it is per
   isolate: blunt protection, not a global limit. Chat passes `chat:<clientId>` with
   `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_SECONDS`; the Canada checker passes
-  `canada:<clientId>` with `CANADA_RATE_LIMIT` (20 per 60 s, `src/lib/canada-clock-change.ts`).
-  The prefixes keep the two counts apart.
+  `canada:<clientId>` with `CANADA_RATE_LIMIT` (20 per 60 s, `src/lib/canada-clock-change.ts`) and
+  the Morocco checker `morocco:<clientId>` with `MOROCCO_RATE_LIMIT` (the shared
+  `CHECK_RATE_LIMIT`, `src/lib/clock-check/facts.ts`). The prefixes keep the counts apart.
 - **`GET /gmt/api/canada-clock-change`** (`worker/canada-clock-change.ts`) computes the
   probe offsets, the 2026-2027 transitions and one row per Canadian zone at request time on
   workerd, from the library only. Every answer is `cache-control: no-store`, because a cached
   answer would hide the live tz data the page exists to show. Other methods answer `405` with
-  `allow: GET`; over the limit it answers `429` + `retry-after` and `{ error, retryable: true }`.
+  `Allow: GET, HEAD, POST` (the shared handler, `clockCheckHandler`, answers the same for every
+  checker); over the limit it answers `429` + `retry-after` and `{ error, retryable: true }`.
   The year scans and the `now`-free probe and transition tables are memoised per isolate (tz
   data cannot change inside one): a GET otherwise costs ~80 scans, too much CPU for a Free-plan
   request. `last` and `next` search the UTC years Y-1..Y+1, because the library groups by the
   zone's local year.
   `deploy-smoke.mjs` checks the five probe offsets against tzdb 2026e on the deployed Worker.
+- **`GET|HEAD|POST /gmt/api/morocco-clock-change`** (`worker/morocco-clock-change.ts`) is the same
+  handler for the two Morocco zones (`MOROCCO_ZONES`), rate limited under `morocco:`. Its probe is
+  tzdb 2026c's: `deploy-smoke.mjs` checks both offsets are +00:00 on the deployed Worker, while a
+  local `wrangler dev` may run older data and answer +01:00 (the page then shows the stale state).
 
 - **The stream opens before a brain is chosen.** Measured 2026-09-24: two busy brains
   took 2.8 s of a 6.7 s answer, and the reader saw nothing but "Searching corpus…". Now
@@ -2102,10 +2152,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `showDurationParserBench({ text, locale? })` (CORE-85): the reader's duration string
     exactly as given (never trimmed or corrected, at most 64 characters), and a locale only
     when the reader names one.
+  - `showMoroccoClockChange({ zone? })` (CORE-89): `Africa/Casablanca` or `Africa/El_Aaiun` to
+    pre-select for the saved-events form's zone. The input schema is a literal enum, because
+    importing `MOROCCO_ZONES` would put `facts.ts` into the chat island (`widget-graph.test.ts`
+    forbids it); a test asserts the enum equals `MOROCCO_ZONES`. The widget kind is `moroccoclock`,
+    its permalink `/check/morocco-2026-clock-change/?w=moroccoclock&wa={"zone":…}`.
 - **Count:** `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers, one starter card per tool;
   re-derive them from there, and never write a literal in a test or a page. The Leap Second
-  Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada clock-change checker, the
-  Duration Parser Bench and the three holiday tools are core.
+  Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada and Morocco clock-change
+  checkers, the Duration Parser Bench and the three holiday tools are core.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.
