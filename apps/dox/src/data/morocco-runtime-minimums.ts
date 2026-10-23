@@ -44,6 +44,10 @@ const MOROCCO_ROWS: RuntimeMinimum[] = [
       { label: "26.6.0", href: `${NODE_CHANGELOG}/CHANGELOG_V26.md#26.6.0` },
       { label: "24.20.0", href: `${NODE_CHANGELOG}/CHANGELOG_V24.md#24.20.0` },
       { label: "22.23.3", href: `${NODE_CHANGELOG}/CHANGELOG_V22.md#22.23.3` },
+      {
+        label: "tz 2026c pull request nodejs/node#64588",
+        href: "https://github.com/nodejs/node/pull/64588",
+      },
     ],
   },
   {

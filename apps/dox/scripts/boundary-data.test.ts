@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { geoContains } from "d3-geo";
+import { geoContains, geoPath } from "d3-geo";
 import { describe, expect, it } from "vitest";
 import { NE_TAG, TBB_TAG } from "../src/lib/data-credits";
 import { CANADA_MAP } from "../src/lib/canada-map";
@@ -129,7 +129,8 @@ describe.each([
     seaPoints: {
       "the Atlantic between Tenerife and Gran Canaria": [-16.1, 28.1],
     },
-    landPoints: { Mali: [-3, 22], France: [2, 44] },
+    // Every piece of land in the drawn box has a zone, so none is left for the land feature.
+    landPoints: {},
   },
 ])("the land in public/$name", ({ name, seaPoints, landPoints }) => {
   const data = load(name);
@@ -219,5 +220,58 @@ describe.each([
       check(MAP_WIDTH, t);
     }
     expect(outside).toEqual([]);
+  });
+});
+
+/**
+ * The map draws a zone for every piece of land in its box: no point of the box lies on land that
+ * belongs to no zone, and every zone in the file has land inside the box.
+ */
+describe.each([
+  {
+    label: "Morocco",
+    config: MOROCCO_MAP,
+    file: "timezone-boundaries-morocco.json",
+  },
+])("the land in the drawn box of the $label map", ({ config, file }) => {
+  const data = load(file);
+  const projection = config.projection(
+    data as unknown as BoundaryCollection,
+    MAP_WIDTH,
+    config.height,
+  );
+  const asFeature = (f: (typeof data.features)[number]) =>
+    f as unknown as Parameters<typeof geoContains>[0];
+
+  it("has no land without a zone: no pixel of the box lies on the land feature", () => {
+    const land = asFeature(data.features[0]!);
+    const bare: string[] = [];
+    for (let x = 0; x <= MAP_WIDTH; x += 4)
+      for (let y = 0; y <= config.height; y += 4) {
+        const at = projection.invert?.([x, y]);
+        if (at && geoContains(land, at)) bare.push(`${x},${y}`);
+      }
+    expect(bare).toEqual([]);
+  });
+
+  it.each([
+    ["Tunisia", [8.5, 34]],
+    ["northern Niger", [8, 20.5]],
+  ] as const)(
+    "does not store %s, whose zone lies outside the box",
+    (_label, point) => {
+      for (const f of data.features)
+        expect(geoContains(asFeature(f), [...point])).toBe(false);
+    },
+  );
+
+  it("gives every zone land inside the box", () => {
+    const path = geoPath(projection);
+    // A shape wholly outside the clip extent has no bounds.
+    const empty = data.features
+      .slice(1)
+      .filter((f) => Number.isNaN(path.bounds(asFeature(f))[0]![0]))
+      .map((f) => f.properties.tzid);
+    expect(empty).toEqual([]);
   });
 });

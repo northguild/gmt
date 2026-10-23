@@ -69,7 +69,7 @@ function rowsFor(boundaries: BoundaryCollection, without: string[] = []) {
       offset: i % 2 === 0 ? "-05:00" : "+01:00",
       last: null,
       next: null,
-      kind: "none-2026-2027",
+      kind: "none",
     }))
     .filter((row) => !without.includes(row.zone));
 }
@@ -196,6 +196,35 @@ describe.each(CASES)("the labels on the $name map", (c) => {
           anchor![1],
         ]),
         `${id}'s anchor is outside its zone`,
+      ).toBe(true);
+    }
+  });
+
+  it("puts every zone's passing label inside that zone's land", async () => {
+    const { root, handle } = await mount(c, rows);
+    const projection = c.config.projection(
+      c.boundaries,
+      MAP_WIDTH,
+      c.config.height,
+    );
+    const features = new Map(
+      c.boundaries.features
+        .filter(isZoneFeature)
+        .map((f) => [f.properties.tzid, f]),
+    );
+    for (const id of zoneIds) {
+      handle.pin(id);
+      const label = labelOf(root, id)!;
+      const at = projection.invert!([
+        percent(label, "--ax") * MAP_WIDTH,
+        percent(label, "--ay") * c.config.height,
+      ])!;
+      expect(
+        geoContains(
+          features.get(id) as unknown as Parameters<typeof geoContains>[0],
+          at,
+        ),
+        `${id}'s label is outside its land`,
       ).toBe(true);
     }
   });

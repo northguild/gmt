@@ -45,7 +45,7 @@ const ZONES: MapZone[] = IDS.map((zone) => ({
   offset: "+00:00",
   last: null,
   next: null,
-  kind: "none-2026-2027" as const,
+  kind: "none" as const,
 }));
 
 function deps(over: Partial<ZoneMapDeps> = {}): ZoneMapDeps {
@@ -87,7 +87,10 @@ describe("the boundary file", () => {
       .map((f) => f.properties.tzid);
     expect([...tzids].sort()).toEqual([...IDS].sort());
     expect(new Set(tzids).size).toBe(tzids.length);
-    expect(IDS).toHaveLength(10);
+    expect(IDS).toEqual([...IDS].sort());
+    // The land beside Morocco that the box shows has a zone of its own (Mali, France).
+    expect(IDS).toContain("Africa/Bamako");
+    expect(IDS).toContain("Europe/Paris");
     expect(regionZones.tzdb).toBe("2026e");
   });
 
@@ -172,16 +175,16 @@ describe("the config", () => {
     const old: MapZone = {
       ...ZONES[0]!,
       zone: "Africa/Casablanca",
-      kind: "changes-2027",
+      kind: "changes-after",
     };
     expect([...MOROCCO_MAP.stopped].sort()).toEqual([
       "Africa/Casablanca",
       "Africa/El_Aaiun",
     ]);
-    expect(displayKind(MOROCCO_MAP, "Africa/Casablanca", old)).toBe(
-      "stopped-2026",
+    expect(displayKind(MOROCCO_MAP, "Africa/Casablanca", old)).toBe("stopped");
+    expect(displayKind(MOROCCO_MAP, "Europe/Lisbon", undefined)).toBe(
+      "no-data",
     );
-    expect(displayKind(MOROCCO_MAP, "Europe/Lisbon", undefined)).toBe("none");
     expect(classWords(MOROCCO_MAP, "Africa/El_Aaiun", undefined)).toBe(
       "Stops changing clocks in 2026",
     );
@@ -288,7 +291,7 @@ describe("the small-shape rings", () => {
     }
   });
 
-  it("draws the shapes of the ten zones and the credits button in Morocco's own id", async () => {
+  it("draws the shapes of every zone in the file and the credits button in Morocco's own id", async () => {
     const root = host();
     const handle = mountZoneMap(
       root,

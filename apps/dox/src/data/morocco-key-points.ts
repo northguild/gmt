@@ -19,7 +19,7 @@ export const MOROCCO_KEY_POINTS: KeyCard[] = [
           { code: "Africa/Casablanca" },
           " and ",
           { code: "Africa/El_Aaiun" },
-          " (Morocco and Western Sahara) stop changing their clocks. Since 20 September 2026 at 02:00 they stay on UTC+00 all year.",
+          " (Morocco and Western Sahara) stop changing their clocks. Since 20 September 2026 at 02:00 local time they stay on UTC+00 all year.",
         ],
       },
       {

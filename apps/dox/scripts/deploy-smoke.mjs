@@ -400,7 +400,8 @@ async function buildRows() {
     ],
   });
   add({ label: "23 GET", url: `${ND}/gmt/api/chat`, steps: [{ status: 405 }] });
-  // The Morocco rows make five calls to the `morocco:` bucket per run, under its 20 a minute.
+  // The Morocco rows make four calls to the `morocco:` bucket per run (the probe GET, the HEAD and the two
+  // stored-times POSTs), under its 20 a minute. The PUT answers 405 before the bucket counts it.
   // The two expected values are the tzdb 2026c offsets (Morocco on permanent +00 from
   // 2026-09-20), repeated here because this script cannot import TypeScript. When a later tzdb
   // changes Morocco again this row fails on purpose: the fix is a page update, not a retry.

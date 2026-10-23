@@ -8,8 +8,8 @@ This script is NOT part of the dox build pipeline. Run it manually when the pinn
     uv run --with shapely python apps/dox/scripts/prepare-region-boundaries.py --region canada
     uv run --with shapely python apps/dox/scripts/prepare-region-boundaries.py --region morocco
 
-`--region` names a row of REGIONS: the zone.tab country codes, an optional map frame, the
-simplify tolerance, the size budget, whether the zones file carries each zone's zone.tab
+`--region` names a row of REGIONS: the zone.tab country codes (or `"frame"`), an optional map
+frame, the simplify tolerance, the size budget, whether the zones file carries each zone's zone.tab
 coordinate, and the two files it writes. Adding a region is adding a row.
 
 Steps:
@@ -24,7 +24,13 @@ Steps:
      (The Canada reasoning; `zone1970.tab` is wrong for any region for the same reason.
      Morocco: it folds Mauritania into Africa/Abidjan, a shape that covers twelve countries.)
      A region with a frame also drops every zone whose shape does not meet the frame
-     (Atlantic/Azores is a PT row that lies west of the Morocco frame).
+     (a PT row such as Atlantic/Azores that lies outside it).
+     A region whose countries are `"frame"` takes every zone.tab row, whatever its country, whose
+     shape meets `land_frame`: the map then shows a zone for every piece of land in its box (Mali,
+     France, Italy), never a bordered patch with none. `land_frame` is wider than the box, so a
+     zone can meet it and still have no land inside the drawn box (Niger and Tunisia lie outside
+     the Morocco box). The region's `box` row states the projection that draws the box, and the
+     script drops every zone with no land inside it and names each one it drops.
   3. Download `ne_10m_land.geojson` from Natural Earth at the pinned NE_TAG
      (https://github.com/nvkelso/natural-earth-vector, public domain). The tbb shapes include
      each zone's territorial sea, which draws the Canaries and the Arctic islands as blobs and
@@ -63,6 +69,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import math
 import json
 import os
 import sys
@@ -74,7 +81,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
-# One row per region: the `zone.tab` country code and the two files the region writes.
+# One row per region: the `zone.tab` country codes (or "frame", every row whose shape meets
+# `land_frame`) and the two files the region writes.
 # `frame` is (west, south, east, north) in degrees, or None: it only drops the zones whose shape
 # misses it. `land_frame` (same order) clips the land and the zones and must cover the drawn box.
 # `min_area` is in square degrees.
@@ -84,6 +92,7 @@ REGIONS = {
         "frame": None,
         # The longitude/latitude bounds of the drawn box (800 by 640, fitted to the zones), rounded out.
         "land_frame": (-177, 34, -5, 85),
+        "box": None,
         "min_area": 0.02,
         "tolerance": 0.08,
         "budget": 400 * 1024,  # compact bytes; oxfmt roughly doubles it, so re-check the formatted file
@@ -92,12 +101,23 @@ REGIONS = {
         "zones": REPO_ROOT / "apps/dox/src/lib/canada-zones.json",
     },
     "morocco": {
-        # Morocco, Western Sahara, their land neighbours, and the three territories across the Strait.
-        "countries": ["MA", "EH", "DZ", "MR", "ES", "PT", "GI"],
-        "frame": (-19, 20.5, 5, 44.5),
+        # Every zone whose shape meets the drawn box, so no land in the box is left without a zone.
+        "countries": "frame",
+        "frame": None,
         # The longitude/latitude bounds of the drawn box, rounded out. The box is the frame
         # (-19, 20.5, 5, 44.5) projected, so in the conic its sides lie 3.7 degrees outside it.
         "land_frame": (-23, 19, 9, 45.5),
+        # The drawn box: the frame (west, south, east, north) fitted to an 800 by 860 drawing in a
+        # Lambert conformal conic (`moroccoProjection` in `morocco-map.ts`, the same numbers: standard
+        # parallels, central meridian, latitude of origin). `morocco-map.test.ts` checks that every
+        # zone has land inside the box that code draws.
+        "box": {
+            "frame": (-19, 20.5, 5, 44.5),
+            "parallels": (24.5, 40.5),
+            "central_meridian": -7,
+            "origin_lat": 32.5,
+            "size": (800, 860),
+        },
         "min_area": 0,
         "tolerance": 0.005,
         "budget": 300 * 1024,  # the formatted file must stay under 400 KB (409600 bytes)
@@ -172,7 +192,7 @@ def parse_iso6709(text: str) -> tuple[float, float]:
     return (round(one(lon_text, 3), COORD_DECIMALS), round(one(lat_text, 2), COORD_DECIMALS))
 
 
-def region_zone_rows(countries: list[str]) -> dict[str, tuple[float, float]]:
+def region_zone_rows(countries: list[str] | str) -> dict[str, tuple[float, float]]:
     print(f"Downloading {TZDATA_URL} ...")
     with urllib.request.urlopen(TZDATA_URL) as resp:
         data = resp.read()
@@ -186,9 +206,68 @@ def region_zone_rows(countries: list[str]) -> dict[str, tuple[float, float]]:
         if not line or line.startswith("#"):
             continue
         cols = line.split("\t")
-        if cols[0] in countries:
+        if countries == "frame" or cols[0] in countries:
             rows[cols[2]] = parse_iso6709(cols[1])
     return rows
+
+
+def drawn_box(spec: dict):
+    """The geographic outline (a shapely polygon) of the drawn box: the frame fitted into the
+    drawing's size in a spherical Lambert conformal conic, as d3's `geoConicConformal` does, then
+    the drawing's rectangle taken back to longitude and latitude."""
+    from shapely.geometry import Polygon
+
+    west, south, east, north = spec["frame"]
+    y0, y1 = (math.radians(p) for p in spec["parallels"])
+    lam0 = math.radians(spec["central_meridian"])
+    n = math.log(math.cos(y0) / math.cos(y1)) / math.log(
+        math.tan((math.pi / 2 + y1) / 2) / math.tan((math.pi / 2 + y0) / 2)
+    )
+    f = math.cos(y0) * math.tan(math.pi / 4 + y0 / 2) ** n / n
+
+    def forward(lon: float, lat: float) -> tuple[float, float]:
+        r = f / math.tan((math.pi / 2 + math.radians(lat)) / 2) ** n
+        a = n * (math.radians(lon) - lam0)
+        return (r * math.sin(a), f - r * math.cos(a))  # y up
+
+    def inverse(x: float, y: float) -> tuple[float, float]:
+        r = math.copysign(math.hypot(x, f - y), n)
+        a = math.atan2(x, abs(f - y)) * (1 if f - y > 0 else -1)
+        return (
+            math.degrees(a / n + lam0),
+            math.degrees(2 * math.atan((f / r) ** (1 / n)) - math.pi / 2),
+        )
+
+    # The frame's edges, sampled every half degree, as the TypeScript fit does.
+    edge = []
+    k = 0
+    while west + 0.5 * k <= east:
+        edge += [forward(west + 0.5 * k, south), forward(west + 0.5 * k, north)]
+        k += 1
+    k = 0
+    while south + 0.5 * k <= north:
+        edge += [forward(west, south + 0.5 * k), forward(east, south + 0.5 * k)]
+        k += 1
+    xs, ys = [p[0] for p in edge], [p[1] for p in edge]
+    width, height = spec["size"]
+    scale = min(width / (max(xs) - min(xs)), height / (max(ys) - min(ys)))
+    cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+    half_w, half_h = width / scale / 2, height / scale / 2
+    steps = 200
+    ring = []
+    for i in range(steps):  # west, north, east, south sides
+        t = i / steps
+        ring.append(inverse(cx - half_w + 2 * half_w * t, cy + half_h))
+    for i in range(steps):
+        t = i / steps
+        ring.append(inverse(cx + half_w, cy + half_h - 2 * half_h * t))
+    for i in range(steps):
+        t = i / steps
+        ring.append(inverse(cx + half_w - 2 * half_w * t, cy - half_h))
+    for i in range(steps):
+        t = i / steps
+        ring.append(inverse(cx - half_w, cy - half_h + 2 * half_h * t))
+    return Polygon(ring)
 
 
 def polygons(geom) -> list:
@@ -251,7 +330,8 @@ def main() -> int:
 
     rows = region_zone_rows(region["countries"])
     ids = sorted(rows)
-    print(f"zone.tab {TZDB}: {len(ids)} rows with country {','.join(region['countries'])}")
+    named = region["countries"] if region["countries"] == "frame" else ",".join(region["countries"])
+    print(f"zone.tab {TZDB}: {len(ids)} rows" + ("" if named == "frame" else f" with country {named}"))
     tolerance: float = region["tolerance"]
     budget: int = region["budget"]
     frame = region["frame"]
@@ -271,12 +351,19 @@ def main() -> int:
     if missing:
         print(f"ERROR: no feature for {missing}", file=sys.stderr)
         return 1
-    if frame is not None:
+    if region["countries"] == "frame":
+        land_box = box(*land_frame)
+        outside = [z for z in ids if not shape(by_tzid[z]["geometry"]).intersects(land_box)]
+        print(f"Zones whose shape meets the land frame {land_frame}: {len(ids) - len(outside)} of {len(ids)} rows")
+        ids = [z for z in ids if z not in outside]
+    elif frame is not None:
         frame_box = box(*frame)
         outside = [z for z in ids if not shape(by_tzid[z]["geometry"]).intersects(frame_box)]
         if outside:
             print(f"Dropped (shape does not meet the frame): {outside}")
         ids = [z for z in ids if z not in outside]
+
+    box_outline = drawn_box(region["box"]) if region["box"] else None
 
     land_data = load_json(args.land_file) if args.land_file else download_land()
     land = prepare(
@@ -299,15 +386,26 @@ def main() -> int:
     features = [
         {"type": "Feature", "properties": {"land": "other"}, "geometry": other_geom}
     ]
-    for tzid in ids:
+    dropped = []
+    for tzid in list(ids):
         geom = finish(zone_shapes[tzid], min_area)
+        if geom is not None and box_outline is not None:
+            # A zone whose land lies wholly outside the drawn box has nothing to draw.
+            if zone_shapes[tzid].intersection(box_outline).area <= 0:
+                geom = None
         if geom is None:
-            print(f"ERROR: {tzid} is empty after clipping to the land", file=sys.stderr)
-            return 1
+            if region["countries"] != "frame":
+                print(f"ERROR: {tzid} is empty after clipping to the land", file=sys.stderr)
+                return 1
+            dropped.append(tzid)
+            ids.remove(tzid)
+            continue
         features.append(
             {"type": "Feature", "properties": {"tzid": tzid}, "geometry": geom}
         )
 
+    if dropped:
+        print(f"Dropped (no land left inside the drawn box after clipping): {dropped}")
     out = {"type": "FeatureCollection", **NOTICE, "features": features}
     boundaries_path.parent.mkdir(parents=True, exist_ok=True)
     with open(boundaries_path, "w") as f:
