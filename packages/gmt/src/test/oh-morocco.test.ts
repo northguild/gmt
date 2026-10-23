@@ -5,6 +5,7 @@ import { getHoursInZonedDay } from "../zoned/calculate/getHoursInZonedDay";
 import { classifyStoredZoned } from "../zoned/classify/classifyStoredZoned";
 import { isInDaylightSaving } from "../zoned/compare/isInDaylightSaving";
 import { convertPlainDateTimeToZoned } from "../zoned/convert/convertPlainDateTimeToZoned";
+import { convertZonedToUtc } from "../zoned/convert/convertZonedToUtc";
 import { getDstTransitions } from "../zoned/get/getDstTransitions";
 import { getTimeZoneOffset } from "../zoned/get/getTimeZoneOffset";
 import { hasDaylightSaving } from "../zoned/validate/hasDaylightSaving";
@@ -295,13 +296,64 @@ describe("times saved before the runtime was updated", () => {
     });
   });
 
+  // Old data: the value is valid, so both return an instant (2026-11-16T08:00:00Z, a day later).
+  it.each`
+    zone
+    ${"Africa/Casablanca"}
+    ${"Africa/El_Aaiun"}
+  `(
+    "convertZonedToUtc and addZoned refuse 09:00+01:00 in $zone with '' (old data: an instant)",
+    ({ zone }) => {
+      const saved = `2026-11-16T09:00:00+01:00[${zone}]`;
+      expect(convertZonedToUtc(saved), stale).toBe("");
+      expect(addZoned(saved, { days: 1 }), stale).toBe("");
+    },
+  );
+
+  // The fix keeps 09:00 local: read the local time again and place it with the zone's offset now.
+  // Old data places 09:00 at +01:00, 08:00Z.
+  it.each`
+    zone
+    ${"Africa/Casablanca"}
+    ${"Africa/El_Aaiun"}
+  `(
+    "the fix for 09:00+01:00 in $zone gives 09:00:00Z (old data: 08:00:00Z)",
+    ({ zone }) => {
+      const fixed = convertPlainDateTimeToZoned("2026-11-16T09:00:00", zone);
+      expect(fixed, stale).toBe(`2026-11-16T09:00:00.000+00:00[${zone}]`);
+      expect(convertZonedToUtc(fixed), stale).toBe("2026-11-16T09:00:00Z");
+    },
+  );
+
+  // 01:30 on 2026-09-20 happens twice; a value saved at +00:00 is the second. Old data has no
+  // repeated hour, so +00:00 is the wrong offset there.
+  it.each`
+    zone
+    ${"Africa/Casablanca"}
+    ${"Africa/El_Aaiun"}
+  `(
+    "classifyStoredZoned gives validInOverlap for 2026-09-20T01:30:00+00:00 in $zone (old data: offsetMismatch)",
+    ({ zone }) => {
+      expect(
+        classifyStoredZoned(`2026-09-20T01:30:00+00:00[${zone}]`),
+        stale,
+      ).toEqual({
+        kind: "validInOverlap",
+        instant: "2026-09-20T01:30:00Z",
+        earlier: "2026-09-20T00:30:00Z",
+        later: "2026-09-20T01:30:00Z",
+        atStoredOffset: "2026-09-20T01:30:00Z",
+      });
+    },
+  );
+
   // Old data: 02:30 on 2027-03-14 is in the gap, so the stored value is not valid.
   it.each`
     zone
     ${"Africa/Casablanca"}
     ${"Africa/El_Aaiun"}
   `(
-    "classifyStoredZoned('2027-03-14T02:30:00+00:00[$zone]') is valid (old data: not valid)",
+    "classifyStoredZoned gives valid for 2027-03-14T02:30:00+00:00 in $zone (old data: not valid)",
     ({ zone }) => {
       expect(
         classifyStoredZoned(`2027-03-14T02:30:00+00:00[${zone}]`)?.kind,
