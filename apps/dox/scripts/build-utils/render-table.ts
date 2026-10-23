@@ -179,31 +179,55 @@ function mdTableRow(row: string): string {
 }
 
 /**
- * One list item of a function's behaviour notes. An item is a line of prose, or prose and the
- * rows of a table separated by newlines (see `behaviorItems`). The table is emitted as a
- * table, set off by blank lines and indented under the bullet it belongs to, instead of being
- * run into the sentence. An item that opens with a table has no sentence to hang it from, so
- * it stands as a block of its own with no bullet.
+ * One list item of a function's behaviour notes. An item is a line of prose, or prose, the
+ * rows of a table and fenced blocks, separated by newlines (see `behaviorItems`). A table is
+ * emitted as a table, set off by blank lines and indented under the bullet it belongs to,
+ * instead of being run into the sentence. A fenced block is set off the same way and copied
+ * verbatim, never escaped: MDX reads it as code, and a blank line inside it stays empty so no
+ * trailing space is written. A block gets no wrapper, because Expressive Code frames it and
+ * scrolls it on a phone. An item that opens with a table or a block has no sentence to hang it
+ * from, so it stands as a block of its own with no bullet.
  */
 export function mdListItem(item: string): string {
   const isRow = (line: string) => line.startsWith("|");
+  const isFence = (line: string) => line.startsWith("```");
   const lines = item.split("\n");
-  const bullet = !isRow(lines[0]);
+  const bullet = !isRow(lines[0]) && !isFence(lines[0]);
   const indent = bullet ? "  " : "";
   const out: string[] = [];
   let afterRow = false;
+  // Whether the previous line was the closing fence of a block.
+  let afterBlock = false;
+  let fenced = false;
   for (const [i, line] of lines.entries()) {
+    if (fenced) {
+      out.push(line === "" ? "" : `${indent}${line}`);
+      if (isFence(line)) {
+        fenced = false;
+        afterBlock = true;
+      }
+      continue;
+    }
+    const open = isFence(line);
     const row = isRow(line);
     // The author's table sits in the wrapper the generated tables use, so a cell too wide for
     // a phone scrolls instead of being squeezed into a column a letter wide.
     if (afterRow && !row) out.push("", `${indent}</div>`);
-    if (i > 0 && row !== afterRow) out.push("");
+    if (i > 0 && (open || row !== afterRow || afterBlock)) out.push("");
+    if (open) {
+      out.push(`${indent}${line}`);
+      fenced = true;
+      afterRow = false;
+      afterBlock = false;
+      continue;
+    }
     if (row && !afterRow) {
       out.push(`${indent}<div class="gmt-ref-table" data-kind="notes">`, "");
     }
     if (row) out.push(`${indent}${mdTableRow(line)}`);
     else out.push(i === 0 ? `- ${mdText(line)}` : `${indent}${mdText(line)}`);
     afterRow = row;
+    afterBlock = false;
   }
   if (afterRow) out.push("", `${indent}</div>`);
   return out.join("\n");

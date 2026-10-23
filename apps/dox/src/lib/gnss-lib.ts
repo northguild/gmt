@@ -16,6 +16,7 @@
  * longer exports, becomes a `WidgetLoadError` rather than a dead control.
  */
 import { GMT_MODULES } from "./gmt-modules";
+import { pickFunctions } from "./gmt-pick";
 import { WidgetLoadError } from "./widget-mount";
 import type {
   GnssSystem,
@@ -94,18 +95,6 @@ const UTC_CALCULATE_NAMES = [
 const UTC_COMPARE_NAMES = ["areUtcEqual"] as const;
 const INSTANT_CONVERT_NAMES = ["toOffsetInstant"] as const;
 
-/** Reads each name from a module, and fails loudly on a name it lacks. */
-function pick(module: Record<string, unknown>, names: readonly string[]) {
-  return Object.fromEntries(
-    names.map((name) => {
-      if (typeof module[name] !== "function") {
-        throw new Error(`The library module has no ${name}.`);
-      }
-      return [name, module[name]];
-    }),
-  );
-}
-
 export async function loadGnssLib(): Promise<GnssLib> {
   try {
     const [
@@ -130,15 +119,15 @@ export async function loadGnssLib(): Promise<GnssLib> {
       GMT_MODULES["instant/convert"](),
     ]);
     return {
-      ...pick(convert, CONVERT_NAMES),
-      ...pick(timescaleCalculate, TIMESCALE_CALCULATE_NAMES),
-      ...pick(timescaleConvert, TIMESCALE_CONVERT_NAMES),
-      ...pick(timescaleValidate, TIMESCALE_VALIDATE_NAMES),
-      ...pick(plainValidate, PLAIN_VALIDATE_NAMES),
-      ...pick(precisionValidate, PRECISION_VALIDATE_NAMES),
-      ...pick(utcCalculate, UTC_CALCULATE_NAMES),
-      ...pick(utcCompare, UTC_COMPARE_NAMES),
-      ...pick(instantConvert, INSTANT_CONVERT_NAMES),
+      ...pickFunctions(convert, CONVERT_NAMES),
+      ...pickFunctions(timescaleCalculate, TIMESCALE_CALCULATE_NAMES),
+      ...pickFunctions(timescaleConvert, TIMESCALE_CONVERT_NAMES),
+      ...pickFunctions(timescaleValidate, TIMESCALE_VALIDATE_NAMES),
+      ...pickFunctions(plainValidate, PLAIN_VALIDATE_NAMES),
+      ...pickFunctions(precisionValidate, PRECISION_VALIDATE_NAMES),
+      ...pickFunctions(utcCalculate, UTC_CALCULATE_NAMES),
+      ...pickFunctions(utcCompare, UTC_COMPARE_NAMES),
+      ...pickFunctions(instantConvert, INSTANT_CONVERT_NAMES),
     } as unknown as GnssLib;
   } catch (cause) {
     // Loud, not inert: the host decides what to show (see `WidgetLoadError`).

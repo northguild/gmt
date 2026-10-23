@@ -1,0 +1,473 @@
+/*
+ * The holiday family's shared recipes: the Holiday Rule Builder, the
+ * Observance Comparator and Moving Feasts. Registered after
+ * gmt-ledger-widgets.css, with the tool sheets after it.
+ *
+ * This sheet reuses and does not copy the result plates (`.gmt-punct-heroes`,
+ * `.gmt-punct-hero`; gmt-punctuality-widgets.css), which are unscoped, and the
+ * chip look of `.gmt-punct-chip`. It adds what no sheet has: the frame, the
+ * month grid and its five marks, the week strip, the legend and the policy
+ * editor.
+ *
+ * Rules for the sheet, as for every chart:
+ * - Text sits on an opaque `--gmt-surface` plate (a chip). A day number takes
+ *   the primary ink on its cell.
+ * - A series colour (`--series`) goes on a mark, an edge or a swatch, never on
+ *   text.
+ * - A mark is a pattern and a word, never a colour alone. Closed, moved and
+ *   picked are never a verdict colour. Amber is the sentinel's alone and
+ *   nothing here uses it.
+ * - A card, a rule row or a result block has a full bevelled border, or an
+ *   accent on its bottom edge. Never a coloured left edge alone.
+ * - Nothing animates or transitions. No `backdrop-filter` and no `clip-path`.
+ * - Narrow rules are `@container` queries by name, because the /dox rail is
+ *   narrow on a wide viewport.
+ *
+ * Tokens only; no colour literal. One-off gradient stops are written as
+ * `color(from var(--token) srgb r g b / a)`.
+ */
+
+/* ---------------------------------------------------------------------------
+ * The frame: the family's chart surface. A named container, so the narrow rules
+ * read its width and not the card's.
+ * --------------------------------------------------------------------------- */
+
+.gmt-holiday-frame {
+  container: gmt-holiday-frame / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-top-color: var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background:
+    radial-gradient(
+      120% 100% at 0% 0%,
+      color(from var(--gmt-cyan) srgb r g b / 0.08),
+      transparent 65%
+    ),
+    var(--gmt-glass-tint);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  overflow-x: clip;
+}
+
+/* The series mapping, for a pick's pattern and a swatch. */
+.gmt-holiday-frame [data-series="1"] {
+  --series: var(--gmt-series-1);
+}
+.gmt-holiday-frame [data-series="2"] {
+  --series: var(--gmt-series-2);
+}
+.gmt-holiday-frame [data-series="3"] {
+  --series: var(--gmt-series-3);
+}
+.gmt-holiday-frame [data-series="4"] {
+  --series: var(--gmt-series-4);
+}
+
+/* A rule row or a result block: a full bevelled border with a tinted fill, and
+   an accent on its bottom edge when it needs one. */
+.gmt-holiday-card {
+  box-sizing: border-box;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-bottom: 2px solid var(--series, var(--gmt-border-strong));
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+/* Text a drawing reads out and never shows. */
+.gmt-holiday-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  list-style: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * The month grid: one, two, three or four months to a row, by the grid's own
+ * width. Every month draws six week rows, so a year change never changes its
+ * height.
+ * --------------------------------------------------------------------------- */
+
+.gmt-holiday-grid {
+  container: gmt-holiday-grid / inline-size;
+  position: relative;
+  min-width: 0;
+}
+
+.gmt-holiday-months {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+}
+
+@container gmt-holiday-grid (min-width: 30rem) {
+  .gmt-holiday-months {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container gmt-holiday-grid (min-width: 46rem) {
+  .gmt-holiday-months {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container gmt-holiday-grid (min-width: 62rem) {
+  .gmt-holiday-months {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.gmt-holiday-month {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gmt-holiday-month-name {
+  margin: 0 0 var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-wide);
+  color: var(--gmt-ice);
+}
+
+.gmt-holiday-weekdays,
+.gmt-holiday-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.gmt-holiday-wd {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  text-align: center;
+  color: var(--gmt-ice-dim);
+}
+
+/* Three letters by default, one under a narrow grid. */
+.gmt-holiday-wd-short {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * A cell. The day number sits at its top; chips sit at its bottom on opaque
+ * plates. The cell keeps one height, whatever it carries.
+ * --------------------------------------------------------------------------- */
+
+.gmt-holiday-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  box-sizing: border-box;
+  min-width: 0;
+  /* Room for the day and three rows of chips (two rule numbers and an arrow
+     chip wrap on a narrow cell), so a marked cell is never taller than a bare
+     one and a year change never changes a week row's height. */
+  min-height: calc(
+    1.2 * var(--gmt-text-xs) + 3 * (1.3 * var(--gmt-text-xs) + 2px) + 2px +
+      6px + 4px
+  );
+  padding: 2px;
+  border: 1px solid var(--gmt-hairline-faint);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-fill-subtle);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-holiday-cell[data-blank] {
+  border-color: transparent;
+  background: none;
+}
+
+.gmt-holiday-day {
+  white-space: nowrap;
+}
+
+.gmt-holiday-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gmt-holiday-chip {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 0 3px;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+/* The family hatch: 45 degrees, 2px on and 6px off. */
+.gmt-holiday-cell[data-weekend],
+.gmt-holiday-swatch[data-kind="weekend"] {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-ice-dim) srgb r g b / 0.35) 0,
+    color(from var(--gmt-ice-dim) srgb r g b / 0.35) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+}
+
+/* closed: a filled cell. */
+.gmt-holiday-cell[data-kinds~="closed"],
+.gmt-holiday-swatch[data-kind="closed"] {
+  background-color: color(from var(--gmt-cyan) srgb r g b / 0.34);
+  border-color: var(--gmt-cyan);
+}
+
+/* moved-from: a ghost. A dashed outline and the date struck through; the
+   cell is not closed. */
+.gmt-holiday-cell[data-kinds~="moved-from"],
+.gmt-holiday-swatch[data-kind="moved-from"] {
+  border: 1px dashed var(--gmt-ice);
+  background-color: transparent;
+}
+
+.gmt-holiday-cell[data-kinds~="moved-from"] .gmt-holiday-day {
+  text-decoration: line-through;
+}
+
+/* moved-to: a closed cell with an arrow chip; the swatch carries a bottom
+   edge for the chip. */
+.gmt-holiday-swatch[data-kind="moved-to"] {
+  background-color: color(from var(--gmt-cyan) srgb r g b / 0.34);
+  border: 1px solid var(--gmt-cyan);
+  border-bottom: 4px double var(--gmt-ice);
+}
+
+.gmt-holiday-chip--from {
+  border-style: dashed;
+}
+
+/* pick: a ring, and a series pattern: solid for series 1, hatched for 2, a
+   crosshatch for 3 and dots for 4. */
+.gmt-holiday-cell[data-kinds~="pick"],
+.gmt-holiday-swatch[data-kind="pick"] {
+  --series: var(--gmt-series-1);
+  outline: 2px solid var(--series);
+  outline-offset: -2px;
+}
+
+.gmt-holiday-cell[data-series="1"][data-kinds~="pick"] {
+  background-color: color(from var(--series) srgb r g b / 0.4);
+}
+
+.gmt-holiday-cell[data-series="2"][data-kinds~="pick"] {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color(from var(--series) srgb r g b / 0.6) 0,
+    color(from var(--series) srgb r g b / 0.6) 3px,
+    transparent 3px,
+    transparent 7px
+  );
+}
+
+.gmt-holiday-cell[data-series="3"][data-kinds~="pick"] {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      color(from var(--series) srgb r g b / 0.5) 0,
+      color(from var(--series) srgb r g b / 0.5) 2px,
+      transparent 2px,
+      transparent 7px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      color(from var(--series) srgb r g b / 0.5) 0,
+      color(from var(--series) srgb r g b / 0.5) 2px,
+      transparent 2px,
+      transparent 7px
+    );
+}
+
+.gmt-holiday-cell[data-series="4"][data-kinds~="pick"] {
+  background-image: radial-gradient(
+    circle at 50% 50%,
+    color(from var(--series) srgb r g b / 0.7) 0,
+    color(from var(--series) srgb r g b / 0.7) 2px,
+    transparent 2px
+  );
+  background-size: 8px 8px;
+}
+
+.gmt-holiday-swatch[data-kind="pick"] {
+  background-color: color(from var(--series) srgb r g b / 0.4);
+}
+
+/* Today is ringed by an underline, which no mark uses. */
+.gmt-holiday-cell[data-today] .gmt-holiday-day {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* A day outside a week strip's range. */
+.gmt-holiday-cell[data-outside] {
+  opacity: 0.55;
+}
+
+/* ---------------------------------------------------------------------------
+ * The week strip: whole ISO weeks under one weekday header.
+ * --------------------------------------------------------------------------- */
+
+.gmt-holiday-strip {
+  container: gmt-holiday-grid / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  min-width: 0;
+}
+
+.gmt-holiday-strip > .gmt-holiday-months {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+ * A month with no marks says so in one line in the one-column layout. The
+ * month still draws its weekday header and six week rows, and the line is
+ * reserved in every month (hidden unless the month is empty), so no month ever
+ * changes height with the marks, and a year or a handle never moves the page.
+ * --------------------------------------------------------------------------- */
+
+.gmt-holiday-month-empty {
+  display: none;
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+@container gmt-holiday-grid (max-width: 29.99rem) {
+  .gmt-holiday-month > .gmt-holiday-month-empty {
+    display: block;
+    visibility: hidden;
+  }
+
+  .gmt-holiday-month[data-empty="true"] > .gmt-holiday-month-empty {
+    visibility: visible;
+  }
+}
+
+/* Under 390px a month drops its weekday header to single letters. */
+@container gmt-holiday-grid (max-width: 24rem) {
+  .gmt-holiday-wd-long {
+    display: none;
+  }
+
+  .gmt-holiday-wd-short {
+    display: inline;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The legend: a swatch in each kind's pattern and its word.
+ * --------------------------------------------------------------------------- */
+
+ul.gmt-holiday-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+ul.gmt-holiday-legend > li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 2px var(--gmt-space-2);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+ul.gmt-holiday-legend > li::before {
+  content: none;
+}
+
+.gmt-holiday-swatch {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: 2px;
+  background-color: var(--gmt-fill-subtle);
+}
+
+/* ---------------------------------------------------------------------------
+ * The policy editor: seven native selects in a native details. At 30rem and up
+ * the controls are open and the summary is a plain line; under it the mount
+ * closes the details and the summary is the control.
+ * --------------------------------------------------------------------------- */
+
+.gmt-holiday-policy {
+  min-width: 0;
+}
+
+.gmt-holiday-policy-summary {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+  cursor: pointer;
+}
+
+.gmt-holiday-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--gmt-space-2);
+  padding-block-start: var(--gmt-space-2);
+}
+
+.gmt-holiday-policy-day .gmt-select {
+  min-width: 0;
+  width: 100%;
+}
+
+@container gmt-holiday-frame (min-width: 30rem) {
+  .gmt-holiday-policy[open] > .gmt-holiday-policy-summary {
+    display: none;
+  }
+}
+
+/* The quiet text tier does not reach 7:1 on the card's tinted fill; text that
+   sits on a card uses the main ink. */
+.gmt-holiday-card .gmt-label-text {
+  color: var(--gmt-ice);
+}

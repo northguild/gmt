@@ -8,7 +8,6 @@ import {
 import {
   cellHtml,
   compareTables,
-  inlineCodeHtml,
   notesHtml,
   PROSE_TABLES,
   differsTable,
@@ -150,15 +149,6 @@ describe("the /compare tables", () => {
 });
 
 describe("inline code in strings that come from the data", () => {
-  it("sets each backtick span in <code> and escapes everything else", () => {
-    expect(inlineCodeHtml("runs `npm test` on <Node> & more")).toBe(
-      "runs <code>npm test</code> on &lt;Node&gt; &amp; more",
-    );
-    expect(inlineCodeHtml('`a < b` and "quoted"')).toBe(
-      "<code>a &lt; b</code> and &quot;quoted&quot;",
-    );
-  });
-
   it("leaves no backtick in the page's notes, and keeps them in the Markdown", () => {
     for (const html of notesHtml()) expect(html).not.toContain("`");
     expect(notesHtml().join("")).toContain("<code>dst-off</code>");

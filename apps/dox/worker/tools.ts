@@ -63,6 +63,10 @@ import {
   showLeapSecondTimelineInput,
   showSatelliteClockConverterInput,
   showStoredTimeAuditInput,
+  showHolidayRuleBuilderInput,
+  showObservanceComparatorInput,
+  showMovingFeastsInput,
+  showDurationParserBenchInput,
   showX12TimeReaderInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -464,6 +468,31 @@ export function buildWorkerTools(
       inputSchema: showStoredTimeAuditInput,
       execute: () => accept("stored-time-audit"),
     }),
+    // A rule the library does not read is a row's own NO SIGNAL, with its reason, so
+    // only the zone is refused here, as the registry's `validate` does.
+    showHolidayRuleBuilder: tool({
+      description: docFor("showHolidayRuleBuilder"),
+      inputSchema: showHolidayRuleBuilderInput,
+      execute: ({ zone }) => {
+        const unknown = unknownZones(zone ? [zone] : []);
+        return unknown.length > 0
+          ? reject(
+              "holiday-rule-builder",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("holiday-rule-builder");
+      },
+    }),
+    showObservanceComparator: tool({
+      description: docFor("showObservanceComparator"),
+      inputSchema: showObservanceComparatorInput,
+      execute: () => accept("observance-comparator"),
+    }),
+    showMovingFeasts: tool({
+      description: docFor("showMovingFeasts"),
+      inputSchema: showMovingFeastsInput,
+      execute: () => accept("moving-feasts"),
+    }),
     showCanadaClockChange: tool({
       description: docFor("showCanadaClockChange"),
       inputSchema: showCanadaClockChangeInput,
@@ -475,6 +504,11 @@ export function buildWorkerTools(
               "canada-clock-change",
               `"${zone}" is not one of the zones the checker lists. Call it again without a zone, or say so plainly.`,
             ),
+    }),
+    showDurationParserBench: tool({
+      description: docFor("showDurationParserBench"),
+      inputSchema: showDurationParserBenchInput,
+      execute: () => accept("duration-parser-bench"),
     }),
   };
 

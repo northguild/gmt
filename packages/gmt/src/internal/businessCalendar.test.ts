@@ -1,3 +1,4 @@
+import { epochDayOf, MAX_EPOCH_DAY } from "./epochDay";
 import { Temporal } from "./temporal";
 import { battleTestTimeZones } from "../test";
 import {
@@ -6,6 +7,7 @@ import {
   DEFAULT_BUSINESS_CALENDAR,
   isBusinessDate,
   MAX_BUSINESS_DAY_STEPS,
+  nextBusinessEpochDay,
   parseBusinessCalendar,
   parseHolidays,
   resolveBusinessCalendar,
@@ -585,5 +587,69 @@ describe("walks at the cap and the limits", () => {
         resolved({ weekend: [6, 7], holidays: run, timeZone: "UTC" }),
       )?.toString(),
     ).toBe("2024-08-12");
+  });
+});
+
+describe("nextBusinessEpochDay", () => {
+  // July 2024: 4 Thu, 5 Fri, 6 Sat, 7 Sun, 8 Mon, 9 Tue.
+  const jul = (day: number) => epochDayOf(2024, 7, day);
+  const sat = (holidays: string[], weekend = [6, 7]) =>
+    resolved({ weekend, holidays, timeZone: "UTC" });
+
+  it.each`
+    start     | weekend               | holidays                        | expected   | why
+    ${jul(5)} | ${[6, 7]}             | ${[]}                           | ${jul(8)}  | ${"Friday over the weekend"}
+    ${jul(3)} | ${[6, 7]}             | ${[]}                           | ${jul(4)}  | ${"strictly after: an open day itself is not returned"}
+    ${jul(5)} | ${[6, 7]}             | ${["2024-07-08"]}               | ${jul(9)}  | ${"Monday closed by a holiday"}
+    ${jul(5)} | ${[6, 7]}             | ${["2024-07-08", "2024-07-09"]} | ${jul(10)} | ${"two chained holidays"}
+    ${jul(4)} | ${[5, 6]}             | ${[]}                           | ${jul(7)}  | ${"Friday-Saturday weekend, Sunday open"}
+    ${jul(6)} | ${[1, 2, 3, 4, 5, 6]} | ${[]}                           | ${jul(7)}  | ${"six-day weekend, Sunday open"}
+    ${jul(7)} | ${[1, 2, 3, 4, 5, 6]} | ${[]}                           | ${jul(14)} | ${"six-day weekend, next Sunday"}
+  `(
+    "$start gives $expected: $why",
+    ({ start, weekend, holidays, expected }) => {
+      expect(nextBusinessEpochDay(start, sat(holidays, weekend))).toBe(
+        expected,
+      );
+    },
+  );
+
+  it("agrees with a one-day stepBusinessDates", () => {
+    const calendar = sat(["2024-07-08"]);
+
+    expect(nextBusinessEpochDay(jul(5), calendar)).toBe(epochDayOf(2024, 7, 9));
+    expect(
+      stepBusinessDates(date("2024-07-05"), 1, 1, calendar)?.toString(),
+    ).toBe("2024-07-09");
+  });
+
+  it("returns null when the walk runs past the step bound", () => {
+    // 2024-06-29 is a Saturday; every Sunday within the bound is closed (see the cap walk below).
+    const sundays = Array.from({ length: 28_572 }, (_, index) =>
+      date("2024-06-30")
+        .add({ days: 7 * index })
+        .toString(),
+    );
+
+    expect(
+      nextBusinessEpochDay(
+        epochDayOf(2024, 6, 29),
+        sat(sundays, [1, 2, 3, 4, 5, 6]),
+      ),
+    ).toBeNull();
+  });
+
+  it("returns the maximum when it is the first open day", () => {
+    expect(nextBusinessEpochDay(MAX_EPOCH_DAY - 1, sat([], []))).toBe(
+      MAX_EPOCH_DAY,
+    );
+  });
+
+  it.each`
+    start                | why
+    ${MAX_EPOCH_DAY}     | ${"from the maximum"}
+    ${MAX_EPOCH_DAY - 1} | ${"the only later day is a closed Saturday"}
+  `("throws RangeError past the Temporal range: $why", ({ start }) => {
+    expect(() => nextBusinessEpochDay(start, sat([]))).toThrow(RangeError);
   });
 });

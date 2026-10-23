@@ -13,7 +13,7 @@ The most-used parser on npm, `ms` at 670.1M weekly downloads (2026-09-28 to 2026
 ## Scope
 
 - `packages/gmt/src/duration/parse/parseHumanDuration.ts`:
-  - `parseHumanDuration(text: string): string` — an ISO 8601 duration string, or the sentinel. Each unit is kept as written: `3 days` is `P3D`, never `PT72H`. Milliseconds are the exception: ISO 8601 has no millisecond designator, so `500ms` is `PT0.5S` and `1s 500ms` is `PT1.5S`.
+  - `parseHumanDuration(text: string): string` — an ISO 8601 duration string, or the sentinel. Each unit is kept as written: `3 days` is `P3D`, never `PT72H`. Two things change the units: a fraction spreads into smaller units (`1.5h` is `PT1H30M`), and a zero unit drops (`2h 0m` is `PT2H`). Milliseconds are the exception: ISO 8601 has no millisecond designator, so `500ms` is `PT0.5S` and `1s 500ms` is `PT1.5S`.
 - `packages/gmt/src/duration/format/formatHumanDuration.ts`:
   - `formatHumanDuration(duration: string): string` — the compact form, largest unit first, zero units omitted: `PT2H30M` is `2h 30m`. A fraction of a second prints on seconds, never as `ms`: `PT1.5S` is `1.5s` and `PT1.0005S` is `1.0005s`.
 - The grammar, published on the function page in EBNF:
@@ -25,7 +25,7 @@ Not in scope: clock forms such as `1:30:00`, locale words, and locale-aware outp
 
 ## Tool
 
-**Duration Parser Bench.** Type a duration string and see the ISO duration, the compact form and the locale rendering; the `1m`, `1mo` and `P1M` rows show which unit each one is and why. Calls `parseHumanDuration`, `formatHumanDuration`, `formatDuration`. Teaches: a duration string without a grammar is a guess.
+**Duration Parser Bench.** Type a duration string and see the ISO duration, the compact form and the locale rendering; the `1m`, `1mo` and `P1M` rows show which unit each one is and why. Calls `parseHumanDuration`, `formatHumanDuration`, `parseDuration`, `formatDuration`, `getDurationUnit` and `totalDuration`. The last two draw the unit cells and the laytime hours. Teaches: a duration string without a grammar is a guess.
 
 ## Design notes
 
@@ -37,9 +37,12 @@ Not in scope: clock forms such as `1:30:00`, locale words, and locale-aware outp
 
 ## What gmt provides (do not re-implement)
 
-- `parseDuration` and `normalizeDuration` (`duration/`) — ISO 8601 validation of the result
+- `parseDuration` (`duration/parse/`) — the ISO 8601 reader the tool shows beside the human one, and the oracle of the round trip. Neither new function calls it.
 - `formatDuration` (`duration/format/`) — locale rendering for the tool
-- `getDurationSign` (`duration/calculate/`) — the sign for formatting
+- `getDurationUnit` (`duration/calculate/`) and `totalDuration` — the tool's unit cells and laytime hours
+- `exactSeconds` (`internal/exactSeconds.ts`) — seconds plus sub-second fields in BigInt nanoseconds, moved out of `formatDuration.ts` so `formatHumanDuration` shares it
+
+`Temporal.Duration.from` does the ISO reading inside both functions. `normalizeDuration` and `getDurationSign` are not used: `normalizeDuration` balances units, which the story forbids, and the formatter reads `duration.sign`.
 
 ## Verification
 
@@ -52,3 +55,36 @@ Not in scope: clock forms such as `1:30:00`, locale words, and locale-aware outp
 - The round trip over every accepted row.
 - Full matrix: CI's 10 zones × Node 22, 24 and 26.
 - `pnpm run validate` stays green.
+
+## Decisions
+
+Settled while building the story (2026-10-22). The JSDoc of `parseHumanDuration` holds the grammar; these are the rules behind it.
+
+The tests, the fixture and the code comments cite the grammar's rules by these labels:
+
+- **G1** A unit is the longest spelling that matches, and no ASCII letter may follow it (`1mo` is a month, `1mx` returns `""`).
+- **G2** Ranks strictly increase left to right: each unit at most once, largest first.
+- **G3** A fraction only on hours, minutes or seconds, and only on the last pair.
+- **G4** One sign covers the whole duration and sits directly before the first digit.
+- **G5** Milliseconds fold into seconds in BigInt, written with up to three fraction digits.
+- **G6** The result is `Temporal.Duration.from(iso).toString()`: zero units drop, a fraction spreads, `-0s` is `PT0S`, and anything past Temporal's limits returns `""`.
+- **G7** Unit spellings and `and` are ASCII case-insensitive (the `i` flag, never `u` or `v`).
+- **G8** `M` is a minute, `MO` a month and `MS` a millisecond.
+- **G9** A space is U+0020 only.
+
+- **The grammar is GMT's own.** No standard defines these strings, so the grammar is written once, in ISO/IEC 14977 EBNF, in `parseHumanDuration`'s JSDoc. `internal/humanDuration.ts` holds the one unit table (`HUMAN_DURATION_UNITS`), the pair and separator regexes, and `humanDurationToIso`; both functions take their spellings and symbols from the table. The scoped exception in `context/coding-standards.md` lets this one parser read text by regex.
+- **The output is an ISO 8601 duration as Temporal writes it.** The matched digits are rebuilt as an ISO string and handed whole to `Temporal.Duration.from`, which applies the fraction, the sign and the limits. Never a property bag: a bag takes no fraction, and a Number loses digits past 2^53.
+- **`m` is a minute, `mo` a month, `ms` a millisecond.** The longest spelling that matches wins, and no ASCII letter may follow it (`1mx` returns `""`). Unit spellings and the word `and` are ASCII case-insensitive: the regexes carry the `i` flag and never `u` or `v`, so `ſ` and the Kelvin sign do not match.
+- **Each unit once, largest first.** `2h 3h` and `30m 2h` return `""`, so a typo is never summed.
+- **Fractions follow Temporal.** Only hours, minutes and seconds, only on the last pair, at most 9 digits, a digit on both sides of `.`. A decimal comma is refused: `,` is a list separator, and `1,500ms` reads 1500 in some locales and 1.5 in others.
+- **Milliseconds fold into seconds in BigInt** and take no fraction. A cost guard refuses a count too long to pass Temporal's limits before any BigInt arithmetic.
+- **One sign covers the whole duration.** `+` or `-` (U+002D) directly before the first digit. U+2212 and `- 2h` return `""`.
+- **A space is U+0020 only.** A run of them is fine between pairs and between a number and its unit. A leading or trailing space, a tab, a newline or U+00A0 returns `""`, so the caller trims first. The compact form is `2h`, never `2 h`.
+- **Separators:** spaces, a comma, `and`, or none (`2h30m`).
+- **No string is valid in both grammars**, so a caller that takes either form chains `parseDuration(s) || parseHumanDuration(s)`. The parser returns `""` for any ISO string.
+- **Both functions return `""`** for a non-string, input outside the grammar, or a duration past Temporal's limits. They take no options and no locale.
+- **`formatHumanDuration` does not balance.** `PT90M` is `90m`. A sub-second part prints on seconds with every digit (`PT1.5S` is `1.5s`) and `ms` is never written. A negative duration has one leading `-`, and a zero duration is `0s`. To carry, run `normalizeDuration("PT90M", { largestUnit: "hour" })` first, which gives `PT1H30M` and formats as `1h 30m`. Temporal spreads a fraction before formatting: `PT1.5H` is `1h 30m`.
+- **The round trip holds for every valid ISO 8601 duration:** `parseHumanDuration(formatHumanDuration(d))` equals `parseDuration(d)`. The tests iterate the shared fixture `src/test/humanDurationRows.ts` and the ISO rows.
+- **Neither function calls another public function** (the loop-cost rule): the parser calls `Temporal.Duration.from`, and the formatter reads `duration.sign`.
+- **Bundle budget.** The `root` budget in `scripts/bundle-size.budgets.json` went from 505900 to 511400 B by hand. Root measures 506305 B, and the new budget is that size times 1.01, rounded up to the next 100.
+- **Tool.** The Duration Parser Bench is built in Dox; its choices are in `context/dox/built.md`.

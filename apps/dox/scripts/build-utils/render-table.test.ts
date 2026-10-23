@@ -373,6 +373,84 @@ describe("mdListItem", () => {
   });
 });
 
+describe("mdListItem with a fenced block", () => {
+  const FENCE = "```";
+
+  it("indents a block under its bullet, verbatim, between blank lines", () => {
+    const item = [
+      "Reads this grammar:",
+      `${FENCE}text`,
+      "a = { b } | c < d ;",
+      "",
+      "      | e ;",
+      FENCE,
+      "and then stops.",
+    ].join("\n");
+    expect(mdListItem(item).split("\n")).toEqual([
+      "- Reads this grammar:",
+      "",
+      `  ${FENCE}text`,
+      "  a = { b } | c < d ;",
+      "",
+      "        | e ;",
+      `  ${FENCE}`,
+      "",
+      "  and then stops.",
+    ]);
+  });
+
+  it("opens the table wrapper after a block, without closing anything early", () => {
+    const item = [
+      "Grammar:",
+      `${FENCE}text`,
+      "a = b ;",
+      FENCE,
+      "| A | B |",
+      "| --- | --- |",
+      "| 1 | 2 |",
+    ].join("\n");
+    expect(mdListItem(item).split("\n")).toEqual([
+      "- Grammar:",
+      "",
+      `  ${FENCE}text`,
+      "  a = b ;",
+      `  ${FENCE}`,
+      "",
+      '  <div class="gmt-ref-table" data-kind="notes">',
+      "",
+      "  | A | B |",
+      "  | --- | --- |",
+      "  | 1 | 2 |",
+      "",
+      "  </div>",
+    ]);
+  });
+
+  it("closes the table wrapper before a block that follows a table", () => {
+    const item = ["| A |", "| - |", `${FENCE}text`, "x", FENCE].join("\n");
+    expect(mdListItem(item).split("\n")).toEqual([
+      '<div class="gmt-ref-table" data-kind="notes">',
+      "",
+      "| A |",
+      "| - |",
+      "",
+      "</div>",
+      "",
+      `${FENCE}text`,
+      "x",
+      FENCE,
+    ]);
+  });
+
+  it("gives an item that opens with a block no bullet and no indent", () => {
+    expect(
+      mdListItem([`${FENCE}text`, "a = b ;", FENCE, "After."].join("\n")).split(
+        "\n",
+      ),
+    ).toEqual([`${FENCE}text`, "a = b ;", FENCE, "", "After."]);
+  });
+});
+
 describe("refTable", () => {
   it("wraps a table in the element the stylesheet hooks on, with blank lines for MDX", () => {
     const table = renderMembersTable([row({ name: "a" })], ctx);

@@ -1,0 +1,42 @@
+---
+title: Moving Feasts
+description: Slide a year and watch Gregorian and Julian Easter, and the days counted from them, move, then find the nth weekday of a month.
+industries: [core]
+---
+
+import MovingFeasts from "../../../components/MovingFeasts.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="Dates that move every year">
+
+<Fragment slot="keypoint">
+
+A rule stays the same and its date moves. Two computuses give two Easters most years.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+Some holidays are written as a count of days from Easter Sunday, and some as "the third Monday of a month". The rule never changes; the date it gives does. Easter has two computuses, the Gregorian and the Julian, and they give the same Sunday in some years and different ones in most.
+
+Drag the year, or type one. The first two plates are the two Easter Sundays and the third says how far apart they fall. Toggle the days from Easter you want and the grid marks each one: the Gregorian series solid and the Julian series hatched. The second section finds the nth weekday of a month, and puts the numbers each such weekday answers to on the day.
+
+</Fragment>
+
+<MovingFeasts fullbleed />
+
+<Fragment slot="after">
+
+**Easter is the anchor.** Each toggle is an `easterRelative` rule run through [`holidayDates`](/reference/calendar/rules/holidayDates/) for the year. The Easter Sundays come from [`easterSunday`](/reference/calendar/rules/easterSunday/), and the distance between them from [`diffDate`](/reference/plain/calculate/diffDate/).
+
+**Counting from the end.** An ordinal can be 1 to 5, or -1 to -5 counting back from the end of the month, or `last`. A month has at most five of a weekday, and some have only four, so a fifth Friday does not always exist. When it does not, the library returns an empty string and the plate says `NO SIGNAL`, with the reason held in place.
+
+**When there is no result.** A year the library cannot place gives `NO SIGNAL` on both plates and an empty grid. A month with no fifth of a weekday is a different case: the answer is "no such date".
+
+**Worth trying:** [2025](/tools/moving-feasts/?w=feasts&wa=%7B%22year%22%3A%222025%22%7D) — both computuses give the same day. [2024](/tools/moving-feasts/?w=feasts&wa=%7B%22year%22%3A%222024%22%7D) — they are 35 days apart. [The fifth Friday](/tools/moving-feasts/?w=feasts&wa=%7B%22preset%22%3A%22fifth-friday%22%7D) — February 2026 has no fifth Friday; switch the month to January to find 30 January.
+
+**Reference:** [`easterSunday`](/reference/calendar/rules/easterSunday/), [`holidayDates`](/reference/calendar/rules/holidayDates/), [`nthWeekdayOfMonth`](/reference/calendar/rules/nthWeekdayOfMonth/), [`diffDate`](/reference/plain/calculate/diffDate/) and [`areDatesEqual`](/reference/plain/compare/areDatesEqual/).
+
+</Fragment>
+
+</ToolLayout>

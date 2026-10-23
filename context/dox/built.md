@@ -63,6 +63,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   surface). Every text label inside a chart sits on an opaque plate (a chip or header strip on
   `--gmt-surface`, text in `--gmt-ice` or `--gmt-ice-dim`), never on a gradient, hatch, glow or
   line. Glow is a shadow on a mark, never on text, and there is no `backdrop-filter` inside a chart.
+- **A holiday tool draws which rule closed which day with library calls on rule prefixes
+  (`attributeRules`), and takes closed days only from the full calendar.** The library returns the
+  closed dates but not the rule behind each; calling it on the rules before each one gives the
+  rule's own dates without a shift computed on the site. This binds every later tool that draws a
+  built calendar.
 - **Helpers follow the zero-bug house rules.** No catch-all helper: split by kind with narrow
   unions and return one shape. No constant that ages: no fixed year window, century pivot, era
   count or "current era"; a preset's dates carry their year, and the eras to draw come from the
@@ -180,6 +185,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       so they match what Starlight emits. The generator stops if a rendered page's headings
       differ from the list the anchors were computed from.
     - Every type link goes through `typeUrl` in `build-utils/reference-urls.ts`.
+  - **A behaviour bullet may hold a fenced `text` or `ts` block**, which the generator
+    copies verbatim (`behaviorItems`, `mdListItem`, `stripMdx`'s `outsideFences` for the text
+    twins); any other language, none, or an unclosed fence fails the build. Shiki has no
+    grammar for most notations (EBNF among them), and Expressive Code falls back to `txt`
+    with only a log line, so a typo would pass unseen. The block never reaches the corpus,
+    the export or the chat's retrieval chunks, which take only the summary, signature and
+    examples.
+    TypeScript keeps a fence's indentation under a bullet, so `outsideFences`
+    (`page-markdown.ts`) matches an indented fence too; otherwise the text twins would rewrite
+    the block as prose. `context/jsdoc-standards.md` states the rule for authors.
   - **`## Options` expands a parameter's properties** when its declared type is an inline
     literal or an intersection, or a named public object type on a parameter whose declared
     name contains `options` or is `props`. A data parameter such as
@@ -780,6 +795,56 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `ledger-lib.ts` loads the B/L Date Stamp's and the Demurrage Clock's functions. The Journey
   Split's loader extends `transport-lib.ts` and the EPCIS Event Reader's extends `edi-lib.ts`, so
   no tool loads a module it does not use. Billing Deadlines holds its three deadlines in plates.
+- **The holiday family** (CORE-54): three Core tools that draw `@northguild/gmt/calendar/rules`.
+  Shared modules, none computing a date:
+  - `holiday-lib.ts`: the loader (`calendar/rules`, `calendar/validate`, `plain/compare`),
+    throwing `WidgetLoadError`. Moving Feasts' `feasts-lib.ts` extends it with `plain/calculate`.
+  - `holiday-codec.ts`: a policy as tokens (`6<5`, `7>1`, `7w`) and a rule as one `;` line, both
+    ways. In a name, calendar, month code or date, a `\` escapes `;`, `,` and itself, and `\n` is
+    a line break, so a name keeps every character. It only reads text; whether a rule means
+    anything is the library's call. It imports types only, so it stays out of the heavy-module
+    list.
+  - `holiday-widgets.ts`: `attributeRules(lib, spec, year)`, the month grid, week rows, legend and
+    the seven-select policy editor. `buildBusinessCalendar` returns closed dates but not which rule
+    closed each or where it moved from, so `attributeRules` calls the library on the rules before
+    each one, over `year - 1 .. year + 1` as the library expands, and returns per-rule rows plus
+    the full calendar. Closed days come from the full calendar alone.
+  - A grid cell carries five mark kinds, each a word and a pattern, never a colour alone: closed,
+    weekend, moved-from (a ghost), moved-to and pick. A month always draws six week rows, and a
+    cell reserves three chip rows, so a year change never resizes the grid.
+  - `gmt-holiday-widgets.css` holds the family frame (`.gmt-holiday-frame`), grid, marks and
+    policy editor; each tool has its own sheet. No string names a country, a statute or a body.
+  - **Holiday Rule Builder** (`/tools/holiday-rule-builder/`, `holidays`): an ordered list of up to
+    `MAX_RULES` (12) rule rows of the five kinds, a weekend, a zone and a year. A row shows the
+    days it closes; plates count the year, twelve month grids draw it and the printed
+    `buildBusinessCalendar` call is the library's answer. A new row has no observance policy and
+    a blank policy is left out of the call. Rows redraw only when the list changes shape, so
+    focus and IME composition stay in a field. A year outside 1900 to 2100 turns the rows, plates,
+    year note, call and output to NO SIGNAL or empty and leaves the grid unmarked, so nothing of
+    the last valid year stays on screen. It hands the calendar to the Free Time Ledger
+    (`basis: "working"`) and a `fixed` row to the Comparator.
+  - **Observance Comparator** (`/tools/observance-comparator/`, `observance`): one to three
+    month-day holidays, a span of years, a weekend and two to four policy columns make a matrix of
+    years by policies, each cell the day `observedDate` gives. A row where columns disagree says
+    so in words and by a hatch. Picking a cell shows that year's weeks, one lane per column. A
+    column links to the Builder as `fixed` rules carrying its policy. Given one policy (a link or
+    the chat), `readArgs` adds a column from the preset and lists it in `presetColumns`; a note
+    under the columns names it until the reader changes or removes it.
+  - **Moving Feasts** (`/tools/moving-feasts/`, `feasts`): a year slider (the reader's year
+    plus or minus 100) and typed year move the Gregorian and Julian Easter Sundays across February
+    to June, the distance between them and the toggled offsets from each, labelled with offset
+    and name ("Easter −2 (Good Friday)"). A second section gives `nthWeekdayOfMonth` for a month,
+    weekday and ordinal, with every occurrence carrying the ordinals it answers to. An ordinal
+    with no such day draws NO SIGNAL; a legitimately empty result is never drawn as one.
+  - **Holiday family layout rules.** A month grid never collapses: it always draws six week rows
+    and an empty month keeps its reserved line. The Comparator's cells are two lines and the table
+    stacks under 34rem. The rule and holiday lists carry `data-grow="slot"`. The Builder's call
+    frame reserves its worst case through `ruleCallSizerText` and `pairBound`, and Moving Feasts
+    holds its nth-note and call frame with sizers, so no readout resizes.
+  - **Links and notes.** The Builder's compare link appears only for a valid `fixed` rule
+    (`compareHandoffHref` asks the library). The Comparator's `holiday-note` says which seeded
+    holidays are not dates. The Comparator's permalink adds a `year` key and repeatable custom
+    columns.
 - **The GNSS and leap-second family** (MAR-16): three GNSS tools and two Core ones. Each pure
   module takes a loaded library (`GnssLib` from `gnss-lib.ts`, or `TimescaleLib` from
   `timescale-lib.ts`, both throwing `WidgetLoadError`) and draws its results; the site holds no
@@ -957,6 +1022,49 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       and hides the planner's dials in the capture, because the "Your time zone" dial is
       drawn above the mask. The `tools-index-*` snapshots change when a tool card is added,
       and a new page has no baseline until the first snapshot.
+  - **Duration Parser Bench** (`/tools/duration-parser-bench/`, `durationbench`, core): a text
+    input (`maxlength` 64, never trimmed, so a leading space is a refusal the reader sees), a
+    locale select and eight Try buttons. Section 2 reads the typed string with `parseDuration`
+    then `parseHumanDuration` and shows which one accepted it, the ISO result, ten unit cells
+    (`getDurationUnit`, years to nanoseconds; lit when non-zero), `formatHumanDuration`, the
+    round trip back through `parseHumanDuration`, `formatDuration` in the chosen locale, and
+    every call with its return in a call frame. Section 3 holds two fixed tables drawn at mount:
+    seven spellings of a minute, a month and a millisecond (including `P1M`, which the human
+    parser refuses), and a laytime table (`3 days` and `72h` from two Rotterdam start times).
+    A widget draws the library's results and computes none, so `benchView` only calls `lib`.
+    - **Table B's hours come from `totalDuration`** with a zoned `relativeTo`, never from a
+      number written in the widget. `P3D` is 71 and 73 hours, `PT72H` is 72 and 72; the test
+      asserts what the library returns. The note cites BIMCO Laytime Definitions 2013, no. 8
+      (a laytime day is 24 consecutive hours).
+    - **Layout is fixed.** Both tables are `table-layout: fixed` with a doubled-class override
+      of `gmt-content.css`'s `th:first-child { width: 1% }`; below 46rem (`@container
+      gmt-dbench-table`, mirrored in `gmt-a11y.css`) each row stacks into a labelled block. A
+      locale change re-draws only the `formatDuration` cells of table A, and typing re-draws
+      section 2 only. The ten-cell strip picks its
+      columns from the container, not the viewport (`@container gmt-dbench`: 10 from 60rem, 5 by
+      default, 3 to 30rem, 2 to 20rem), so every value keeps room for 10 tabular digits
+      (`min-inline-size: 10ch`) and nothing is clipped or ellipsised; a `title` tooltip is no
+      help on touch. Labels wrap rather than truncate. Below 46rem the stacked table's
+      `<caption>` is `display: block` at full width with `--gmt-space-3` padding, because a
+      bare caption shrinks to fit, wraps word by word, and has its first letter clipped by the
+      table's bevelled corner.
+    - **Sentinel versus a plain answer.** A string neither parser reads shows
+      `⟨ NO SIGNAL — invalid input ⟩` and a static refusal line. In a string one parser reads,
+      the other parser's `""` is a plain answer (`""`), as in the Stored Time Audit's call frame.
+      Table cells whose call returned `""` (such as `parseDuration` on `1m`) show `⟨ NO SIGNAL ⟩`
+      because that is what the library said.
+    - **The bench makes six calls** (`parseHumanDuration`, `formatHumanDuration`,
+      `parseDuration`, `formatDuration`, `getDurationUnit` and `totalDuration`), not only the
+      three the story first named. The pure module and the loader are in the `heavy` list of
+      `widget-graph.test.ts`. No drag handle, so it is not in `readout-still`'s `TOOLS`.
+    - **The bench links the `parseHumanDuration` page, not a grammar anchor.** That page has no
+      heading for the grammar: the EBNF and the unit table are bullets of the behaviour list
+      under "Signature", and the page's headings are Signature, Parameters, Returns, Examples
+      and Source. So there is no anchor to link, and the bench copies no grammar and points at
+      the page.
+    - **The EBNF is a `text` fence** (decision: Shiki has no EBNF grammar, and an unknown
+      language would render as plain text with only a log line). The bullet's prose names the
+      notation, "ISO/IEC 14977 EBNF", so the reader knows what the block is.
 
   The decoder links to the converter and the checker, the converter to the decoder and the
   timeline, the checker to the decoder, and the timeline and the elapsed tool to each other and
@@ -1179,6 +1287,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   budget (40 px a frame in total, however late the frame) keep every step under the 48 px gate,
   where a CSS transition would double its step on a dropped frame, and the markup is wrapped at runtime so a reader without JS sees the server
   render. Section 1, the controls, is never wrapped, so popovers and focus rings do not clip.
+  A list inside section 1 whose row count follows a preset (the Holiday Rule Builder's rules,
+  the Observance Comparator's holidays) therefore carries `data-grow="slot"` itself, or
+  grow-measure sees the whole list arrive in one frame.
   Rules: [reference/design-system.md § Smooth growth](reference/design-system.md#smooth-growth).
 - **Tool pages:** `/tools/dst-inspector/`, `/tools/interval-visualizer/`,
   `/tools/converter-bench/`, `/tools/dwell-ledger/`, `/tools/free-time-ledger/`,
@@ -1189,7 +1300,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `/tools/x12-time-reader/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
   `/tools/epcis-event-reader/`, `/tools/journey-split/`, `/tools/gnss-week-decoder/`,
   `/tools/satellite-clock-converter/`, `/tools/gnss-rollover-checker/`,
-  `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`, plus the Tier 4
+  `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`,
+  `/tools/holiday-rule-builder/`, `/tools/observance-comparator/`, `/tools/moving-feasts/`,
+  `/tools/duration-parser-bench/`, plus the Tier 4
   `/tools/zoned-earth/` and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package. The
   Zone Planner's is `/tools/zone-planner/?w=planner&wa={"time":…,"zone1":…,"zone2":…}`: a UTC
@@ -1220,6 +1333,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `encodeURIComponent` leaves raw. The content-permalink test matches a link with
     `/\?w=([a-z]+)&wa=([^)"'\s]+)/` (`widget-permalink.test.ts`), so a raw `'` ends the match
     early and the test reads a cut-off link; a raw `+` in a query string decodes as a space.
+  The three holiday tools use a preset form (`{ preset }` plus every scalar): the Builder's
+  `rules` (one `;` line per rule, joined), `weekend`, `zone` and `year`; the Comparator's
+  numbered `holiday1`… and `column1`…, `from`, `to`, `weekend` and `year`; Moving Feasts' `year`,
+  `offsets`, `computus`, `month`, `weekday` and `ordinal`. `rules` (the Builder) and `holidays` (the
+  Ledger link the Builder sends) are in `LONG_STRING_KEYS`, each with a regression test, because a
+  year's calendar runs past 64 characters and the link would otherwise drop the holidays silently.
+  `holidays` is capped at 1000 characters. `rules` is capped at 95,000, the longest list the chat
+  schema accepts once every name and date is escaped. An empty `weekend` or `offsets` is kept as no
+  weekend or no offsets (`EMPTY_LIST_KEYS`), not dropped.
 - **`escapeAttr` on every template interpolation.** Values come from a model or from a URL
   someone else wrote, and a hand-written template string escapes nothing.
 - **Interval visualizer:** the timeline is a `TimelineScale` value. Presets use the fixed
@@ -1963,14 +2085,27 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     them.
   - `showStoredTimeAudit({ values, line? })` (CORE-83): the stored strings exactly as the
     reader gave them, one per line, and the 1-based line to draw.
+  - `showHolidayRuleBuilder({ rules?, weekend, year, zone })` (CORE-54): one to twelve rules of
+    the five kinds, each with an optional observance policy. A rule moved by its policy closes
+    only its observed day; to close both days, list the rule twice, once with no policy. Pass only
+    rules, dates and policies the reader gave; never supply a place's holidays or its observance
+    policy from memory.
+  - `showObservanceComparator({ holidays, years, weekend, policies, year })` (CORE-54): one to
+    three month-day holidays and one to four policies, all the reader's; never name a place's
+    policy. The same "never from memory" rule applies.
+  - `showMovingFeasts({ year, offsets?, month?, weekday?, n? })` (CORE-54): the reader's year and,
+    where asked, the Easter offsets and the month, weekday and ordinal; nothing is chosen from a
+    place's calendar.
   - `showCanadaClockChange({ zone? })` (CORE-88): one id from `canada-zones.json` to pin on the
     map; the Worker's `execute` and the registry's `validate` refuse any other id. The widget
     kind is `canadaclock`, its permalink `/check/canada-2026-clock-change/?w=canadaclock&wa={"zone":…}`.
-- **Count:** 31 tools — the globe, the 29 teaching tools and the Zone Planner — and 31
-  `CHAT_STARTERS`, one card each: 9 core, 11 transport, 8 intermodal and 3 GNSS (the Leap
-  Second Timeline, Elapsed vs. Clock Difference, Stored Time Audit and the Canada clock-change
-  checker are core). `ENABLED_TOOL_NAMES` and
-  `CHAT_STARTERS` hold the numbers; re-derive them from there.
+  - `showDurationParserBench({ text, locale? })` (CORE-85): the reader's duration string
+    exactly as given (never trimmed or corrected, at most 64 characters), and a locale only
+    when the reader names one.
+- **Count:** `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers, one starter card per tool;
+  re-derive them from there, and never write a literal in a test or a page. The Leap Second
+  Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada clock-change checker, the
+  Duration Parser Bench and the three holiday tools are core.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.

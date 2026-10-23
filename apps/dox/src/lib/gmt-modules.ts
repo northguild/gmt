@@ -50,6 +50,7 @@ export const GMT_MODULES: Record<
   "calendar/business": () => import("@northguild/gmt/calendar/business"),
   "calendar/calculate": () => import("@northguild/gmt/calendar/calculate"),
   "calendar/hours": () => import("@northguild/gmt/calendar/hours"),
+  "calendar/rules": () => import("@northguild/gmt/calendar/rules"),
   "calendar/validate": () => import("@northguild/gmt/calendar/validate"),
 
   // --- interval ---

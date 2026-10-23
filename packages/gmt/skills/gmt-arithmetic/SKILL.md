@@ -2,18 +2,20 @@
 name: gmt-arithmetic
 description: >
   Date arithmetic — add/subtract duration objects, diff values, clamp/closest,
-  ISO 8601 duration strings, elapsed-versus-wall-clock spans, business-day
-  arithmetic and interval range math. Covers the half-open [start, end) interval
+  ISO 8601 duration strings, human duration strings such as "2h 30m"
+  (parseHumanDuration, formatHumanDuration), elapsed-versus-wall-clock spans,
+  business-day arithmetic and interval range math. Covers the half-open [start, end) interval
   algebra over instants (intervalsOverlap, intervalContains, intersectIntervals,
   clampInterval, mergeIntervals, subtractIntervals, splitIntervalAt,
   sumIntervals, isValidInterval, Interval) and the positional interval*Date /
   *Utc / *Zoned / *Unix functions on the same rule, business calendars
   (BusinessCalendar, RollConvention, isBusinessDay, addBusinessDays,
   subtractBusinessDays, businessDaysBetween, nextBusinessDay,
-  previousBusinessDay, rollDate, mergeCalendars), overflow "constrain" month-end
+  previousBusinessDay, rollDate, mergeCalendars), holiday rules (HolidayRule,
+  ObservancePolicy, holidayDates, nthWeekdayOfMonth, easterSunday,
+  observedDate, buildBusinessCalendar), overflow "constrain" month-end
   clamping, splitIntervalByUnit* anchor stepping, maxPieces limits,
-  intervalCount* matching bucketRange, RFC 9557 calendar strings,
-  correct-at-the-edges guarantees at the limits.
+  RFC 9557 calendar strings, correct-at-the-edges guarantees.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/plain-arithmetic.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/durations.mdx'
@@ -34,6 +36,9 @@ sources:
   - 'northguild/gmt:packages/gmt/src/calendar/business/index.ts'
   - 'northguild/gmt:packages/gmt/src/types/business-calendar.ts'
   - 'northguild/gmt:packages/gmt/src/types/roll-convention.ts'
+  - 'northguild/gmt:packages/gmt/src/calendar/rules/index.ts'
+  - 'northguild/gmt:packages/gmt/src/types/holiday-rule.ts'
+  - 'northguild/gmt:packages/gmt/src/types/observance-policy.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
@@ -43,8 +48,9 @@ metadata:
 # GMT Arithmetic
 
 Use this skill when the task involves adding, subtracting, diffing, clamping,
-or doing range math over date/time values — including ISO 8601 duration strings
-and full interval set operations.
+or doing range math over date/time values — including ISO 8601 duration strings,
+the human strings people type (`2h 30m`, `3 days`) and full interval set
+operations.
 
 ## When to load
 
@@ -247,7 +253,68 @@ and full interval set operations.
     survives only if it is a working day in every input, and returns `null` for an
     empty list. Narrow inputs with `isValidBusinessCalendar` /
     `isValidRollConvention`.
-13. **Read the docs site.** This skill is a routing pointer. For full option
+13. **A duration people type is not an ISO duration — use `parseHumanDuration`.**
+    `parseDuration("2h 30m")` returns `""`, and `parseHumanDuration("PT2H")`
+    returns `""`: no string is valid in both. To accept either, write
+    `parseDuration(text) || parseHumanDuration(text)`.
+    - `m` is a minute and `mo` a month, so `1m` is `PT1M` and `1mo` is `P1M`.
+      Unit names ignore case, so `1M` is a minute too.
+    - Units are kept as written, never balanced: `3 days` is `P3D`, not
+      `PT72H`. A fraction spreads (`1.5h` is `PT1H30M`) and zero units drop.
+    - Each unit once, largest first (`2h 3h` and `30m 2h` return `""`). A
+      fraction only on hours, minutes or seconds, and only on the last unit
+      (`1.5h 30m` returns `""`). `ms` joins the seconds: `1s 500ms` is
+      `PT1.5S`.
+    - Only U+0020 separates units, and the string is not trimmed: `" 2h"`
+      returns `""`. Trim first.
+    - `formatHumanDuration("PT2H30M")` is `"2h 30m"`; it does not balance
+      (`PT90M` is `90m`) and takes no locale. For a locale's words use
+      `formatDuration`.
+
+    ```ts
+    parseHumanDuration("2h 30m"); // "PT2H30M"
+    parseHumanDuration("1s 500ms"); // "PT1.5S"
+    parseHumanDuration("1.5h 30m"); // ""
+    formatHumanDuration("PT90M"); // "90m"
+    ```
+
+14. **Holidays are rules; GMT expands them but ships none.**
+    `@northguild/gmt/calendar/rules` turns rules into dates and into the
+    `BusinessCalendar` above. A `HolidayRule` has a `name` and one `kind`:
+    `fixed` (month, day), `calendarFixed` (a `CalendarSystem`, a month code and
+    a day), `nthWeekday` (month, ISO weekday, ordinal `1..5`, `-1..-5` or
+    `"last"`), `easterRelative` (`offsetDays`, optional `computus`) or `dates`.
+    A `fixed` or `calendarFixed` rule may carry `observed`, an `ObservancePolicy`
+    keyed by ISO weekday. There is no default policy, and a moved holiday closes
+    only its observed date.
+
+    ```typescript
+    nthWeekdayOfMonth(2026, 3, 7, "last"); // "2026-03-29"
+    easterSunday(2024, { computus: "julian" }); // "2024-05-05"
+    observedDate("2027-12-25", { 6: { previous: 5 }, 7: { next: 1 } }); // "2027-12-24"
+    holidayDates({ name: "Good Friday", kind: "easterRelative", offsetDays: -2 }, 2024); // ["2024-03-29"]
+    buildBusinessCalendar({
+      timeZone: "UTC",
+      weekend: [6, 7],
+      rules: [
+        { name: "Christmas", kind: "fixed", month: 12, day: 25, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } },
+        { name: "Second day", kind: "fixed", month: 12, day: 26, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } },
+      ],
+      years: { from: 2021, to: 2021 },
+    }); // { weekend: [6, 7], holidays: ["2021-12-27", "2021-12-28"], timeZone: "UTC" }
+    ```
+
+    `nthWeekdayOfMonth` and `easterSunday` return `""` for bad input or a
+    missing occurrence (a fifth Friday in a four-Friday month), `holidayDates`
+    returns `[]` and `buildBusinessCalendar` returns `null`; use
+    `isValidHolidayRule` to tell a bad rule from a year with no occurrence (a
+    `calendarFixed` day its month never has, such as Hebrew `M01` day 31, is bad).
+    A `nextWorkingDay` shift walks past the weekend, every holiday that does
+    not walk and the walks of the rules above it; the days that close do not
+    depend on the rule order. A date a year lacks (29 February) is skipped, never
+    clamped. Pass only rules and dates the user gave; never supply a place's
+    holidays from memory.
+15. **Read the docs site.** This skill is a routing pointer. For full option
     shapes, locale matrices, and code examples, read these:
     - `https://northguild.dev/gmt/llms.txt` is the map of every docs page.
     - Each page has a `.md` twin that holds its text, for example
@@ -262,6 +329,10 @@ and full interval set operations.
 - **Business calendars**: `isBusinessDay`, `businessDaysBetween`,
   `nextBusinessDay`, `previousBusinessDay`, `rollDate`, `mergeCalendars`,
   `isValidBusinessCalendar`, `isValidRollConvention`
+- **Holiday rules** (`calendar/rules`): `nthWeekdayOfMonth`, `easterSunday`,
+  `observedDate`, `holidayDates`, `buildBusinessCalendar`,
+  `isValidHolidayRule`, types `HolidayRule`, `ObservancePolicy`,
+  `ObservanceShift`
 - **Diffs**: `diffDate`, `diffDateTime`, `diffTime` (+ `diffZoned`,
   `diffUnix`, `diffUtc` in their namespaces)
 - **Spans (raw numbers)**: `spanMs`, `spanNs`, `spanWallClock`, `isValidSpan`
@@ -272,6 +343,8 @@ and full interval set operations.
   `subtractDuration`, `normalizeDuration`, `totalDuration`, `formatDuration`,
   `negateDuration`, `absDuration`, `compareDurations`, `getDurationUnit`,
   `getDurationSign`
+- **Human durations (`2h 30m`)**: `parseHumanDuration` (to an ISO 8601
+  string), `formatHumanDuration` (from one)
 - **Unit objects (`{ unit: number }`)**: `durationFromUnits` (object to
   duration string), `totalUnits` (object to one total), type
   `ExactDurationUnit`
@@ -294,7 +367,7 @@ and full interval set operations.
 - `zoned/*` — IANA-timezone-aware (see `gmt-timezone` skill for disambiguation)
 - `unix/*` — epoch seconds/milliseconds
 - `utc/*` — UTC instants (`"2024-03-15T14:30:45Z"`)
-- `duration/*` — ISO 8601 duration strings
+- `duration/*` — ISO 8601 duration strings, and the human form (`2h 30m`)
 - `span/*` — elapsed and wall-clock spans as raw numbers
 - `interval/*` — half-open interval algebra over instant strings
 - `workforce/*` — see the `gmt-workforce` skill

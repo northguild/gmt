@@ -1,0 +1,43 @@
+---
+/**
+ * Moving Feasts widget (CORE-54).
+ *
+ * A year slider that moves the Gregorian and Julian Easter and the days counted
+ * from them, and the nth weekday of a month with its ordinals.
+ *
+ * **The markup and the wiring both live in `lib/moving-feasts-mount.ts`**, so
+ * the chat rail mounts the same widget this page server-renders.
+ */
+import { renderMovingFeastsTemplate } from "../lib/moving-feasts-mount";
+
+/** `fullbleed` lets the page use the whole main pane (see ObservanceComparator). */
+interface Props {
+  fullbleed?: boolean;
+}
+
+const { fullbleed = false } = Astro.props;
+const html = renderMovingFeastsTemplate();
+---
+
+{
+  fullbleed ? (
+    <div data-tools-fullbleed set:html={html} />
+  ) : (
+    <Fragment set:html={html} />
+  )
+}
+
+<script>
+  import { mountMovingFeasts } from "../lib/moving-feasts-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("feasts");
+    document.querySelectorAll<HTMLElement>(".gmt-moving-feasts").forEach((el) => {
+      mountMovingFeasts(el, seed, new AbortController().signal).catch((error) =>
+        showUnavailable(el, error),
+      );
+    });
+  }
+</script>

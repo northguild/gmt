@@ -171,11 +171,19 @@ describe("the chat island's static import graph", () => {
       "lib/elapsed-vs-clock.ts",
       "lib/stored-time-audit.ts",
       "lib/stored-time-lib.ts",
+      "lib/holiday-widgets.ts",
+      "lib/holiday-lib.ts",
+      "lib/feasts-lib.ts",
+      "lib/holiday-rule-builder.ts",
+      "lib/observance-comparator.ts",
+      "lib/moving-feasts.ts",
       "lib/canada-clock-change.ts",
       "lib/canada-clock-change-mount.ts",
       "lib/canada-map.ts",
       "lib/canada-stored-times.ts",
       "lib/data-credits.ts",
+      "lib/duration-parser-bench.ts",
+      "lib/duration-bench-lib.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });
