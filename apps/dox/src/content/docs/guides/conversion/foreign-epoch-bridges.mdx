@@ -1,6 +1,6 @@
 ---
 title: Foreign Epoch Bridges
-description: Convert between instants and the epochs of NTP, Windows FILETIME, .NET ticks, Excel serials and PostgreSQL, with the era, leap-year and range rules each one brings.
+description: Convert between instants and the epochs of NTP, Windows FILETIME, .NET ticks, Excel serials, PostgreSQL, Parquet INT96, Arrow timestamps and protobuf, with the era, leap-year, zone and range rules each one brings.
 sidebar:
   order: 2
 industries: [core]
@@ -9,12 +9,16 @@ industries: [core]
 Other systems do not count from 1970. NTP counts from 1900 and rolls over in 2036. Windows
 `FILETIME` counts 100-nanosecond intervals from 1601. .NET ticks count the same interval
 from year 1. Excel uses a day serial with a deliberate 1900 leap-year bug. PostgreSQL stores
-microseconds from 2000-01-01.
+microseconds from 2000-01-01. Parquet's deprecated `INT96` is a Julian day plus nanoseconds
+of the day, an Arrow column is an `int64` in a unit the column names, and protobuf's
+`Timestamp` and `Duration` are a `seconds` and `nanos` pair.
 
 Every integration re-derives these constants, usually wrongly. The `precision/` namespace
 has a pair of functions for each: `toNtpTimestamp` and `fromNtpTimestamp`, `toFileTime` and
 `fromFileTime`, `toDotNetTicks` and `fromDotNetTicks`, `toExcelSerial` and
-`fromExcelSerial`, and `toPgMicroseconds` and `fromPgMicroseconds`. For plain Unix and
+`fromExcelSerial`, `toPgMicroseconds` and `fromPgMicroseconds`, `toParquetInt96` and
+`fromParquetInt96`, `toArrowTimestamp` and `fromArrowTimestamp`, `toProtoTimestamp` and
+`fromProtoTimestamp`, and `toProtoDuration` and `fromProtoDuration`. For plain Unix and
 nanosecond conversion, see [Nanosecond Precision](/guides/core-date-operations/nanosecond-precision/)
 and [Converting Between Types](../converting-types/).
 
@@ -30,6 +34,14 @@ import {
   fromExcelSerial,
   toPgMicroseconds,
   fromPgMicroseconds,
+  toParquetInt96,
+  fromParquetInt96,
+  toArrowTimestamp,
+  fromArrowTimestamp,
+  toProtoTimestamp,
+  fromProtoTimestamp,
+  toProtoDuration,
+  fromProtoDuration,
 } from "@northguild/gmt";
 
 toFileTime("1970-01-01T00:00:00Z");
@@ -87,6 +99,59 @@ toExcelSerial("2024-03-10T12:00:00Z", { system: "1904" });
 // 43899.5 — the legacy Mac system, exactly 1462 days lower
 ```
 
+## Data-platform timestamps
+
+Parquet, Arrow and protobuf each store a time in a shape that is easy to misread.
+
+Parquet's `INT96` is deprecated. It is a Julian day and the nanoseconds into that day, and it
+records no zone. [`fromParquetInt96`](/reference/precision/convert/fromParquetInt96) always reads it
+as UTC, which is what the Arrow and Spark readers do. A file written by Impala holds local
+wall-clock time instead, and nothing in the file says so.
+
+```typescript
+toParquetInt96("2024-03-10T12:34:56.789Z");
+// { julianDay: 2460380, nanosOfDay: 45296789000000n }
+
+fromParquetInt96({ julianDay: 2440588, nanosOfDay: 0n });
+// "1970-01-01T00:00:00Z"
+```
+
+An Arrow `Timestamp` column without a timezone holds wall-clock time of an unknown zone, and
+Arrow's schema says it must not be read as UTC. So
+[`fromArrowTimestamp`](/reference/precision/convert/fromArrowTimestamp) returns an instant only
+when the column has a `timeZone`, and `{ local, zoneless: true }` when it has none:
+
+```typescript
+fromArrowTimestamp(1710061200000n, { unit: "millisecond" });
+// { local: "2024-03-10T09:00:00", zoneless: true }
+
+fromArrowTimestamp(1710061200000n, { unit: "millisecond", timeZone: "Asia/Tokyo" });
+// { instant: "2024-03-10T09:00:00Z" }
+
+toArrowTimestamp("2024-03-10T09:00:00", { unit: "millisecond" });
+// 1710061200000n
+```
+
+The column's `timeZone` only says the values are instants. The instant is always written in UTC,
+whatever zone the column names.
+
+A protobuf `Timestamp` counts `nanos` forward, also when `seconds` is negative, so half a
+second before 1970 is `{ seconds: -1n, nanos: 500000000 }`. A `Duration` is the opposite: its
+`nanos` take the sign of its `seconds`, so `-1.5` seconds is `{ seconds: -1n, nanos: -500000000 }`.
+`Duration.seconds` and `nanos` are bounded separately: `seconds` from −315 576 000 000 to
++315 576 000 000 and `nanos` from −999 999 999 to +999 999 999, so `PT315576000000.000000001S` is a valid `Duration`.
+
+```typescript
+toProtoTimestamp("1969-12-31T23:59:59.5Z");
+// { seconds: -1n, nanos: 500000000 }
+
+toProtoDuration("-PT1.5S");
+// { seconds: -1n, nanos: -500000000 }
+
+toProtoDuration("PT315576000000.000000001S");
+// { seconds: 315576000000n, nanos: 1 }
+```
+
 ## What each bridge accepts
 
 Each bridge accepts only what its target format can actually hold. It returns the
@@ -107,6 +172,15 @@ infinity, so a round trip is exact to that unit:
 NTP is the exception in the other direction. Its 2^-32 s unit is finer than a nanosecond,
 so `fromNtpTimestamp` rounds to the nearest nanosecond and the round trip is exact.
 
+The data-platform pairs follow the same rule:
+
+- `toParquetInt96` and `fromParquetInt96` hold nanoseconds, so nothing is rounded. `fromParquetInt96` returns `""` for a `nanosOfDay` of a full day or more.
+- `toArrowTimestamp` floors below the column's unit and returns `0n` when the string is the wrong kind for the column: an instant for a zoneless column, or a wall time for a zoned one.
+- `fromArrowTimestamp` returns `null` when the value is past the instant range.
+- `toProtoTimestamp` returns `null` outside 0001-01-01 to 9999-12-31, and for a leap second.
+- `toProtoDuration` returns `null` for years, months and weeks, which have no fixed length. A day is exactly 24 hours.
+- `fromProtoTimestamp` and `fromProtoDuration` return `""` for a missing member or a `nanos` the type does not allow, such as `{ seconds: 0n, nanos: -1 }` for a `Timestamp`.
+
 ## See also
 
 - [Nanosecond Precision](/guides/core-date-operations/nanosecond-precision/): the `bigint` instant these bridges are built on
@@ -121,3 +195,12 @@ so `fromNtpTimestamp` rounds to the nearest nanosecond and the round trip is exa
 - [`fromExcelSerial` reference](/reference/precision/convert/fromExcelSerial)
 - [`toPgMicroseconds` reference](/reference/precision/convert/toPgMicroseconds)
 - [`fromPgMicroseconds` reference](/reference/precision/convert/fromPgMicroseconds)
+- [`toParquetInt96` reference](/reference/precision/convert/toParquetInt96)
+- [`fromParquetInt96` reference](/reference/precision/convert/fromParquetInt96)
+- [`toArrowTimestamp` reference](/reference/precision/convert/toArrowTimestamp)
+- [`fromArrowTimestamp` reference](/reference/precision/convert/fromArrowTimestamp)
+- [`toProtoTimestamp` reference](/reference/precision/convert/toProtoTimestamp)
+- [`fromProtoTimestamp` reference](/reference/precision/convert/fromProtoTimestamp)
+- [`toProtoDuration` reference](/reference/precision/convert/toProtoDuration)
+- [`fromProtoDuration` reference](/reference/precision/convert/fromProtoDuration)
+- [Time-Ordered Identifiers](../time-ordered-identifiers/): the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID

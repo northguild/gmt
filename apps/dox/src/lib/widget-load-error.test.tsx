@@ -117,6 +117,14 @@ import {
   mountStoredTimeAudit,
   renderStoredTimeAuditTemplate,
 } from "./stored-time-audit-mount";
+import {
+  mountIdTimestampDecoder,
+  renderIdTimestampDecoderTemplate,
+} from "./id-timestamp-decoder-mount";
+import {
+  mountColumnTimestampBridge,
+  renderColumnTimestampBridgeTemplate,
+} from "./column-timestamp-bridge-mount";
 
 installJsdomShims();
 
@@ -260,6 +268,16 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "stored time audit",
     () => renderStoredTimeAuditTemplate(),
     mountStoredTimeAudit as MountFn<never>,
+  ],
+  [
+    "id timestamp decoder",
+    () => renderIdTimestampDecoderTemplate(),
+    mountIdTimestampDecoder as MountFn<never>,
+  ],
+  [
+    "column timestamp bridge",
+    () => renderColumnTimestampBridgeTemplate(),
+    mountColumnTimestampBridge as MountFn<never>,
   ],
 ];
 

@@ -1,0 +1,31 @@
+---
+title: "A Protobuf Timestamp Before 1970"
+description: Splitting a negative millisecond count with truncation writes a negative nanos field, which protobuf rejects.
+industries: [core]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Protobuf Timestamp Before 1970"
+  description="A service sends the instant half a second before the epoch, -500 ms, as a protobuf Timestamp. The code splits the milliseconds into seconds and nanos. What does it write?"
+  naiveCode={`// The naive approach: truncate toward zero, keep the remainder
+const ms = -500;
+
+({ seconds: Math.trunc(ms / 1000), nanos: (ms % 1000) * 1e6 });
+// { seconds: -0, nanos: -500000000 } — nanos must be in [0, 999999999]`}
+  explanation={`In a protobuf \`Timestamp\`, \`nanos\` is never negative: it counts forward from \`seconds\`, also for instants before 1970. Half a second before the epoch is one second back and 500 million nanoseconds forward. Truncation toward zero and the \`%\` remainder both keep the sign of the input, so they write the form protobuf rejects. \`toProtoTimestamp\` floors the seconds and keeps the nanos non-negative. A \`Duration\` is different: its \`nanos\` take the sign of its \`seconds\`.`}
+  gmtCode={`import { toProtoTimestamp, fromProtoTimestamp } from "@northguild/gmt/precision/convert";
+
+toProtoTimestamp("1969-12-31T23:59:59.5Z");
+// { seconds: -1n, nanos: 500000000 }
+fromProtoTimestamp({ seconds: -1n, nanos: 500000000 });
+// "1969-12-31T23:59:59.5Z"
+fromProtoTimestamp({ seconds: 0n, nanos: -500000000 });
+// "" — negative nanos are invalid`}
+  fixedSpecId="toProtoTimestamp"
+/>
+
+The widget starts at 1970-01-01T00:00:00Z, which is `{ seconds: 0n, nanos: 0 }`. Move it one
+nanosecond earlier and you get `{ seconds: -1n, nanos: 999999999 }`: `seconds` drops and `nanos`
+stays positive. The rules are in [Foreign Epoch Bridges](/guides/conversion/foreign-epoch-bridges/).

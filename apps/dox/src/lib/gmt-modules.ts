@@ -31,6 +31,7 @@ export const GMT_MODULES: Record<
   "precision/calculate": () => import("@northguild/gmt/precision/calculate"),
   "precision/convert": () => import("@northguild/gmt/precision/convert"),
   "precision/format": () => import("@northguild/gmt/precision/format"),
+  "precision/identifiers": () => import("@northguild/gmt/precision/identifiers"),
   "precision/parse": () => import("@northguild/gmt/precision/parse"),
   "precision/validate": () => import("@northguild/gmt/precision/validate"),
 

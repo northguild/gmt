@@ -142,6 +142,14 @@ const PAGES = [
     path: "tools/stored-time-audit",
     widget: "gmt-stored-time-audit gmt-widget",
   },
+  {
+    path: "tools/id-timestamp-decoder",
+    widget: "gmt-id-timestamp-decoder gmt-widget",
+  },
+  {
+    path: "tools/column-timestamp-bridge",
+    widget: "gmt-column-timestamp-bridge gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

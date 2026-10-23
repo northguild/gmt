@@ -73,6 +73,8 @@ import type { SatelliteClockConverterArgs } from "~/lib/satellite-clock-converte
 import type { GnssRolloverCheckerArgs } from "~/lib/gnss-rollover-checker-mount";
 import type { LeapSecondTimelineArgs } from "~/lib/leap-second-timeline-mount";
 import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
+import type { IdTimestampDecoderArgs } from "~/lib/id-timestamp-decoder-mount";
+import type { ColumnTimestampBridgeArgs } from "~/lib/column-timestamp-bridge-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
 import {
   showBillingDeadlinesInput,
@@ -95,6 +97,8 @@ import {
   showLeapSecondTimelineInput,
   showSatelliteClockConverterInput,
   showStoredTimeAuditInput,
+  showIdTimestampDecoderInput,
+  showColumnTimestampBridgeInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -846,6 +850,48 @@ const storedAuditEntry = defineWidget<StoredTimeAuditArgs>({
     })),
 });
 
+const idDecoderEntry = defineWidget<IdTimestampDecoderArgs>({
+  title: "ID timestamp decoder",
+  kind: "iddecode",
+  parse: (input) => {
+    const result = showIdTimestampDecoderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: an identifier no decoder reads is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
+  load: () =>
+    import("~/lib/id-timestamp-decoder-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderIdTimestampDecoderTemplate(args),
+      mount: m.mountIdTimestampDecoder,
+    })),
+});
+
+const columnBridgeEntry = defineWidget<ColumnTimestampBridgeArgs>({
+  title: "Column timestamp bridge",
+  kind: "colbridge",
+  parse: (input) => {
+    const result = showColumnTimestampBridgeInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a value no converter can store is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
+  load: () =>
+    import("~/lib/column-timestamp-bridge-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderColumnTimestampBridgeTemplate(args),
+      mount: m.mountColumnTimestampBridge,
+    })),
+});
+
 const plannerEntry = defineWidget<ZonePlannerArgs>({
   title: "Zone planner",
   kind: "planner",
@@ -922,6 +968,8 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showLeapSecondTimeline: leapLineEntry,
   showElapsedVsClock: elapsedEntry,
   showStoredTimeAudit: storedAuditEntry,
+  showIdTimestampDecoder: idDecoderEntry,
+  showColumnTimestampBridge: columnBridgeEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

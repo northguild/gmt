@@ -792,6 +792,22 @@ export const CHAT_STARTERS: readonly {
         "2016-12-01T09:00:00+02:00[Europe/Istanbul]\n2016-12-01T09:00:00+03:00[Europe/Istanbul]",
     },
   },
+  {
+    text: "When was the UUID 017f22e2-79b0-7cc3-98c4-dc0c0c07398f created?",
+    widget: "showIdTimestampDecoder",
+    area: "core",
+    args: { id: "017f22e2-79b0-7cc3-98c4-dc0c0c07398f" },
+  },
+  {
+    text: "How is 2024-01-01T09:00:00+09:00[Asia/Tokyo] stored in Parquet, Arrow and protobuf?",
+    widget: "showColumnTimestampBridge",
+    area: "core",
+    args: {
+      value: "2024-01-01T09:00:00+09:00[Asia/Tokyo]",
+      unit: "second",
+      zone: "Asia/Tokyo",
+    },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

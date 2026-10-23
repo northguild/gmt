@@ -61,6 +61,8 @@ import {
   showGnssWeekDecoderInput,
   showLeapSecondTimelineInput,
   showSatelliteClockConverterInput,
+  showIdTimestampDecoderInput,
+  showColumnTimestampBridgeInput,
   showStoredTimeAuditInput,
   showX12TimeReaderInput,
   showDstInspectorInput,
@@ -461,6 +463,16 @@ export function buildWorkerTools(
       description: docFor("showStoredTimeAudit"),
       inputSchema: showStoredTimeAuditInput,
       execute: () => accept("stored-time-audit"),
+    }),
+    showIdTimestampDecoder: tool({
+      description: docFor("showIdTimestampDecoder"),
+      inputSchema: showIdTimestampDecoderInput,
+      execute: () => accept("id-timestamp-decoder"),
+    }),
+    showColumnTimestampBridge: tool({
+      description: docFor("showColumnTimestampBridge"),
+      inputSchema: showColumnTimestampBridgeInput,
+      execute: () => accept("column-timestamp-bridge"),
     }),
   };
 

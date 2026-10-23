@@ -1,0 +1,59 @@
+---
+title: Column Timestamp Bridge
+description: Give one instant, or paste stored values, and see what a Parquet INT96, an Arrow column and a protobuf Timestamp hold, and what each reads back as.
+industries: [core]
+---
+
+import ColumnTimestampBridge from "../../../components/ColumnTimestampBridge.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="timestamps in Parquet, Arrow and protobuf">
+
+<Fragment slot="keypoint">
+
+An Arrow column with no timezone holds wall times. Read it as UTC and every value is off by the writer's offset.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+Columnar and wire formats store a time as numbers, and each format chooses different ones. Parquet INT96 stores a Julian day and the nanoseconds into that day. An Arrow timestamp stores one `int64`, a count of a chosen unit from 1970-01-01T00:00:00. A protobuf Timestamp stores whole seconds from the same date and a separate `nanos`. Some of them drop digits or the zone on the way in.
+
+Give one instant and see what each format stores and what it reads back as. Or switch to decoding, paste the stored values, and see the instant they mean. Every call and what it returned is printed below the cards.
+
+</Fragment>
+
+<ColumnTimestampBridge fullbleed />
+
+<Fragment slot="after">
+
+**What each call stores, and what it returns for input it cannot hold.** A call that cannot hold its input returns a sentinel, and the sentinel is not the same for every call.
+
+| Call | Stores or returns | Sentinel |
+| --- | --- | --- |
+| [`toParquetInt96`](/reference/precision/convert/toParquetInt96/) | `julianDay` and `nanosOfDay`; day 2440588 is 1970-01-01, and `nanosOfDay` runs from 0 to 86399999999999 | `null` |
+| [`fromParquetInt96`](/reference/precision/convert/fromParquetInt96/) | an instant string | `""` |
+| [`toArrowTimestamp`](/reference/precision/convert/toArrowTimestamp/) | one `int64` count in the unit | `0n` |
+| [`fromArrowTimestamp`](/reference/precision/convert/fromArrowTimestamp/) | `{ instant }`, or `{ local, zoneless: true }` | `null` |
+| [`toProtoTimestamp`](/reference/precision/convert/toProtoTimestamp/) | `seconds` from -62135596800 to 253402300799, and `nanos` from 0 to 999999999 | `null` |
+| [`fromProtoTimestamp`](/reference/precision/convert/fromProtoTimestamp/) | an instant string | `""` |
+| [`toProtoDuration`](/reference/precision/convert/toProtoDuration/) | `seconds` and `nanos` with the same sign | `null` |
+| [`fromProtoDuration`](/reference/precision/convert/fromProtoDuration/) | an ISO 8601 duration string | `""` |
+| [`toNanoseconds`](/reference/precision/convert/toNanoseconds/) | nanoseconds since the Unix epoch, as a `bigint` | `0n` |
+| [`fromNanoseconds`](/reference/precision/convert/fromNanoseconds/) | an instant string | `""` |
+
+`0n` is also a real answer: it is the epoch itself, so a count of zero is never a failure. `NO SIGNAL` means one thing: the call returned its sentinel, the value in the last column above. The `isValidInstant` and `isValidDateTime` line on a card is a separate reading of the same input. The two can disagree: a Timestamp can be a valid instant and still be out of the protobuf range, and some decoders (a full-day INT96 record, a sign mismatch) have no validator at all.
+
+**Parquet INT96 is deprecated and records no zone.** The pair is read as UTC, because the file does not say otherwise. A writer that stored local time gives a reader nothing to detect it with.
+
+**An Arrow timestamp with no timezone is a wall time.** Arrow's `Schema.fbs` says a timestamp with an unset timezone is not an instant: it is the local time of an unnamed place. With a zone, `fromArrowTimestamp` reads an instant. Without one it reads a wall time and marks it zoneless. Give an instant to a zoneless column and `toArrowTimestamp` returns `0n`, so the tool checks first and says why.
+
+**A protobuf Timestamp counts nanos forward.** `nanos` is never negative, so a time before 1970 has a negative `seconds` and a positive `nanos`. A Duration is different: its `seconds` and `nanos` share a sign. A time outside the range in the table comes back as a sentinel.
+
+**A plain integer column is a count in one unit.** A Parquet `TIMESTAMP` logical type stores an integer in milliseconds, microseconds or nanoseconds, and `fromNanoseconds` reads nanoseconds. A unit coarser than the instant keeps only the digits it has, so the read-back is shorter.
+
+**The precision ladder** lists the read-back of each form left-aligned, one under another. It does not count digits for you: a form that kept fewer fractional digits is a shorter line.
+
+</Fragment>
+
+</ToolLayout>

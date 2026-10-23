@@ -23,6 +23,7 @@ export {
   fiscalYearOf,
   gregorianCycleShift,
 } from "./fiscalCalendar";
+export { resolveArrowTimestampOptions } from "./arrowTimestampOptions";
 export { floorDivide } from "./floorDivide";
 export {
   DOT_NET_TICKS_EPOCH_OFFSET,
@@ -32,15 +33,21 @@ export {
   EXCEL_1904_EPOCH_NANOSECONDS,
   EXCEL_PHANTOM_SERIAL,
   FILE_TIME_EPOCH_OFFSET_TICKS,
+  GREGORIAN_EPOCH_OFFSET_TICKS,
+  JULIAN_DAY_OF_UNIX_EPOCH,
+  KSUID_EPOCH_SECONDS,
   MAX_DOT_NET_TICKS,
   MAX_EXCEL_1900_SERIAL_EXCLUSIVE,
   MAX_EXCEL_1904_SERIAL_EXCLUSIVE,
   MAX_FILE_TIME,
+  MAX_INT64,
+  MAX_UNIX_MS_48,
   MILLISECONDS_PER_DAY,
   MIN_DOT_NET_TICKS,
   MIN_EXCEL_1900_SERIAL,
   MIN_EXCEL_1904_SERIAL,
   MIN_FILE_TIME,
+  MIN_INT64,
   MIN_PG_MICROSECONDS,
   NANOSECONDS_PER_DAY,
   NANOSECONDS_PER_DAY_NUMBER,
@@ -52,7 +59,21 @@ export {
   NTP_ERA_UNITS,
   NTP_UNITS_PER_SECOND,
   PG_EPOCH_OFFSET_MICROSECONDS,
+  PROTO_DURATION_MAX_SECONDS,
+  PROTO_TIMESTAMP_MAX_SECONDS,
+  PROTO_TIMESTAMP_MIN_SECONDS,
 } from "./foreignEpochs";
+export {
+  base62Value,
+  crockfordDigits,
+  crockfordValue,
+  hexValue,
+  ksuidText,
+  objectIdText,
+  ulidText,
+  unsignedDecimalText,
+  uuidText,
+} from "./identifierText";
 export {
   isValidEpochNanoseconds,
   MAX_EPOCH_NANOSECOND_DIGITS,
@@ -142,6 +163,7 @@ export { getLocaleWeekYearBounds } from "./getLocaleWeekYearBounds";
 export { getLocaleWeekendDays } from "./getLocaleWeekendDays";
 export { getUnitSpan } from "./intervalCountHelpers";
 export { isObject, isOptionsArgument } from "./isObject";
+export { readProtoRecord } from "./protoRecord";
 export { isValidAmount } from "./isValidAmount";
 export { joinDateTimeConnector } from "./joinDateTimeConnector";
 export {

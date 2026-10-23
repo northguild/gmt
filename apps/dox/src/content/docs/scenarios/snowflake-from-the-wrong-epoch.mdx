@@ -1,0 +1,33 @@
+---
+title: "A Snowflake Read With the Wrong Epoch"
+description: A Discord message ID is decoded with Twitter's epoch, and the date is four years early with no error.
+industries: [core]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Snowflake Read With the Wrong Epoch"
+  description="A support tool shows when a Discord message was sent by decoding its ID. The code was copied from a Twitter script. What date does it show for Discord's documented example, message 175928847299117063?"
+  naiveCode={`// The naive approach: Twitter's epoch for every Snowflake
+const TWITTER_EPOCH = 1288834974657n;
+
+const id = 175928847299117063n;
+new Date(Number((id >> 22n) + TWITTER_EPOCH)).toISOString();
+// "2012-03-03T13:01:20.453Z" — Discord documents 2016-04-30T11:18:25.796Z`}
+  explanation={`A Snowflake is a number of milliseconds since an epoch the service chose, shifted left past the worker and sequence bits. Twitter counts from 1288834974657 and Discord from 1420070400000, so the same bits name dates more than four years apart, and both are valid dates. Nothing in the ID says which service made it. \`fromSnowflake\` takes the layout as an argument, so the epoch is written next to the code that decodes the ID, and it reads the ID as a string or a \`bigint\` because a \`number\` would lose its low digits.`}
+  gmtCode={`import { fromSnowflake } from "@northguild/gmt/precision/identifiers";
+
+const discord = { epochMs: 1420070400000, shift: 22 };
+
+fromSnowflake("175928847299117063", discord);
+// "2016-04-30T11:18:25.796Z"
+fromSnowflake("175928847299117063", { epochMs: 1288834974657, shift: 22 });
+// "2012-03-03T13:01:20.453Z" — Twitter's epoch gives the naive answer
+fromSnowflake(175928847299117063, discord);
+// "" — a number has already lost digits`}
+  fixedSpecId="fromSnowflake"
+/>
+
+The widget starts with Discord's example ID and layout, and both fields are editable. Change `epochMs` in `layout` to `1288834974657` and the date jumps to 2012. Set `shift` to `12` and the year becomes 3376, because the sequence and worker bits are read as time. Set it to `0` and the result is empty, since the number is past the range of an instant. A wrong epoch or a wrong shift can both return a valid date, so only the layout can tell you which one is right. The rules are in
+[Time-Ordered Identifiers](/guides/conversion/time-ordered-identifiers/).

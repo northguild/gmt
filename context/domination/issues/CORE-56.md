@@ -68,3 +68,34 @@ The same code then writes those records to Parquet, Arrow, or a protobuf API, ea
 - `fromArrowTimestamp(0n, { unit: 's' })` returns the zoneless form `'1970-01-01T00:00:00'`; with `timeZone: 'UTC'` it returns the instant
 - `toProtoTimestamp('1969-12-31T23:59:59.5Z')` returns `{ seconds: -1n, nanos: 500000000 }`; `toProtoDuration('-PT1.5S')` returns `{ seconds: -1n, nanos: -500000000 }`
 - `pnpm run validate` stays green
+
+## Corrections
+
+The brief above was corrected during planning and build. What ships:
+
+- Every `string | null` return in the brief is `string` with the sentinel `""`. `toArrowTimestamp` returns `0n` and not `null`, as every `bigint` precision converter does.
+- Arrow units are Temporal's names (`"second"`, `"millisecond"`, `"microsecond"`, `"nanosecond"`, singular or plural), not `'s' | 'ms' | 'us' | 'ns'`.
+- `uuidV7TimestampPrefix` returns the 13-character lower-case hyphenated prefix (`"018cc251-f400"`), not 12 bare hex digits.
+- `SnowflakeLayout` is `{ epochMs, shift, timestampBits? }`, and the layout has no default.
+- A protobuf `Duration` bounds `seconds` and `nanos` separately, so `"PT315576000000.000000001S"` gives `{ seconds: 315576000000n, nanos: 1 }`, not `null` (Java's `Durations.MAX_VALUE` is 315 576 000 000 s + 999 999 999 ns).
+- `fromProtoTimestamp` and `fromProtoDuration` also accept `seconds` as a safe-integer `number`. Outputs are always `bigint`.
+- `ArrowTimestampValue` (the `fromArrowTimestamp` result union) is exported.
+- `internal/protoRecord.ts` holds the `{ seconds, nanos }` reader the two `from*Proto*` functions share.
+- `ArrowTimeUnit` and `ArrowTimestampOptions` are declared in `precision/convert/fromArrowTimestamp.ts`. `internal/arrowTimestampOptions.ts` imports them with `import type`, so the reference generator gives them pages and there is no import cycle.
+- The ID Timestamp Decoder, given a Snowflake with no layout, says "Give an epoch and a shift: a Snowflake has no default layout." The first wording, "No layout given", read wrongly once an epoch was typed.
+
+## Decisions
+
+- **Decoding only.** The library reads the instant an ID carries and produces two prefixes for range scans (`uuidV7TimestampPrefix`, `ulidTimestampPrefix`). It generates no UUID, ULID, ObjectId, Snowflake or KSUID, uses no randomness and ships no vendor layout presets.
+- **Out of scope:** UUID v2 and the versions with no timestamp (v3, v4, v5, v8, which return `null`), lower bounds from an instant for Snowflake and ObjectId, Sonyflake's 10 ms tick, KSUID and ObjectId prefixes, and the Parquet `TIMESTAMP` logical type (a plain int64: `fromNanoseconds`).
+- **Strict input.** `fromUuidTimestamp` reads only the 8-4-4-4-12 form, in any case. A URN, braces, bare hex or whitespace gives `null`. A ULID has no Crockford folding, so `I`, `L`, `O` and `U` give `""`. A KSUID character outside `0-9A-Za-z` is rejected.
+- **UUID v7 is read to the millisecond.** The sub-millisecond `rand_a` bits are optional and undetectable (RFC 9562 §6.2), so they are never read as time. The v7 prefix is the 13-character lower-case hyphenated form.
+- **Snowflake layout is a required argument.** A `bigint` or a string is accepted and a `number` is not.
+- **`fromParquetInt96` always reads UTC.** There is no wall-clock option. `nanosOfDay` must be in [0, 86 400 x 10^9).
+- **Arrow without a timezone is not an instant.** `fromArrowTimestamp` returns `{ local, zoneless: true }` for it.
+- **Protobuf:** `seconds` input is a `bigint` or a safe-integer `number`. `Timestamp.nanos` counts forward for negative seconds. `Duration.nanos` takes the sign of `seconds`. A day is 24 h, and a year, month or week gives `null`. `fromProtoDuration` writes hours as its largest unit.
+- **Rounding.** Sub-unit digits floor toward negative infinity, one uniform grid either side of the epoch (the `toFileTime` precedent).
+- **Sentinels** are `""`, `null` and `0n` per [coding-standards § API Contract](../../coding-standards.md#api-contract).
+- **Reference pins.** The Arrow `Timestamp` rule rests on `apache/arrow` `format/Schema.fbs` at commit `e2524aa088cd6a391b40635245d757542e2b2810`, the last commit to change that file when the story closed. Other sources: RFC 9562 with errata 7955 and 8288, ulid/spec @ d0c7170, mongodb/specifications @ 0a7a8b5, twitter-archive/snowflake @ b3f6a3c, discord-api-docs @ 11df0a2, segmentio/ksuid @ d337249, protocolbuffers/protobuf @ a19cce4, and apache/parquet-format.
+- **Dox tools.** The ID Timestamp Decoder and the Column Timestamp Bridge are two standalone tools. Epoch and precision are static prose on the Decoder's page, and no widget module holds an epoch table. Snowflake presets are labelled by their literal values and never by a vendor name. The Dox decisions are in [context/dox/built.md](../../dox/built.md).
+

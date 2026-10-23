@@ -312,7 +312,7 @@ skills:
   - name: GMT Integration
     slug: gmt-integration
     domain: integration
-    description: Integrate gmt with application frameworks — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI), and lint package selection (ESLint, Biome, Oxlint). GNSS time is in gmt-gnss
+    description: Integrate gmt with application frameworks — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID, Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI), and lint package selection (ESLint, Biome, Oxlint). GNSS time is in gmt-gnss
     type: composition
     packages:
       - '@northguild/gmt'
@@ -336,6 +336,8 @@ skills:
       - Truncate nanoseconds to a storage engine's precision
       - Tell a 0n sentinel apart from 0n the epoch with precision/validate
       - Convert between ISO 8601 and a foreign epoch (NTP, FILETIME, .NET ticks, Excel, PostgreSQL)
+      - Read the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID
+      - Bridge Parquet INT96, Arrow and protobuf timestamps
       - Read TAI − UTC at an instant, count the leap seconds between two instants, and find the next one from the closed IERS table
       - Tell a real inserted leap second from a well-formed second 60 (isLeapSecond, not hasSecond60)
       - Convert between UTC and a TAI time-scale string, a listed leap second included

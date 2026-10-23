@@ -590,6 +590,96 @@ export const showStoredTimeAuditInput = z.object({
 });
 
 /**
+ * ID Timestamp Decoder: an identifier exactly as the reader gave it (never
+ * trimmed or re-cased: the decoders judge the strict form), and the Snowflake
+ * layout only when the reader gave one. The chat args are the permalink args.
+ */
+export const showIdTimestampDecoderInput = z.object({
+  id: z.string().min(1).max(64),
+  epochMs: z
+    .string()
+    .regex(/^-?\d{1,16}$/)
+    .optional(),
+  shift: z
+    .string()
+    .regex(/^\d{1,2}$/)
+    .optional(),
+  timestampBits: z
+    .string()
+    .regex(/^\d{1,2}$/)
+    .optional(),
+});
+
+/**
+ * Column Timestamp Bridge: an instant (or a wall time) exactly as the reader gave
+ * it, the Arrow column's unit and timezone, and an ISO duration. Or stored
+ * values to read back. Every key is the permalink key, so a chat call and a
+ * shared link say the same thing. The widget judges every value itself, so the
+ * schema checks length and shape only.
+ */
+const short = z.string().max(64).optional();
+export const showColumnTimestampBridgeInput = z
+  .object({
+    mode: z
+      .enum(["encode", "decode"])
+      .optional()
+      .describe(
+        "encode (default): convert one instant, which needs value. decode: read stored values, which needs at least one stored-value field.",
+      ),
+    value: short.describe(
+      "Required in encode mode: an ISO instant, or a zoneless wall time to show an Arrow column with no timezone. Exactly as the reader gave it.",
+    ),
+    unit: z
+      .enum(["second", "millisecond", "microsecond", "nanosecond"])
+      .optional()
+      .describe("The Arrow column's unit (default second)."),
+    zone: short.describe(
+      "The Arrow column's IANA timezone. Leave out for a zoneless column; send only when the reader named one.",
+    ),
+    duration: short.describe(
+      "Optional in encode mode: an ISO 8601 duration to show as a protobuf Duration.",
+    ),
+    int96Form: short.describe(
+      "Decode mode: record (julianDay and nanosOfDay) or bytes (the 12 stored bytes).",
+    ),
+    julianDay: short.describe(
+      "Decode mode, INT96 record: the whole-number Julian day.",
+    ),
+    nanosOfDay: short.describe(
+      "Decode mode, INT96 record: the whole-number nanoseconds into that day.",
+    ),
+    bytes: short.describe(
+      "Decode mode, INT96 bytes: 24 hex digits, the 12 stored bytes in file order.",
+    ),
+    int64: short.describe(
+      "Decode mode: an Arrow int64 count in the unit, a whole number.",
+    ),
+    seconds: short.describe("Decode mode: a protobuf Timestamp's seconds."),
+    nanos: short.describe(
+      "Decode mode: a protobuf Timestamp's nanos, 0 to 999999999.",
+    ),
+    durSeconds: short.describe("Decode mode: a protobuf Duration's seconds."),
+    durNanos: short.describe(
+      "Decode mode: a protobuf Duration's nanos, signed like its seconds.",
+    ),
+  })
+  .refine(
+    (v) =>
+      [
+        v.value,
+        v.julianDay,
+        v.nanosOfDay,
+        v.bytes,
+        v.int64,
+        v.seconds,
+        v.nanos,
+        v.durSeconds,
+        v.durNanos,
+      ].some((f) => f !== undefined && f !== ""),
+    { message: "Send a value, or a stored value to decode." },
+  );
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -633,7 +723,9 @@ export type DoxToolName =
   | "showGnssRolloverChecker"
   | "showLeapSecondTimeline"
   | "showElapsedVsClock"
-  | "showStoredTimeAudit";
+  | "showStoredTimeAudit"
+  | "showIdTimestampDecoder"
+  | "showColumnTimestampBridge";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -666,6 +758,8 @@ export const DOX_TOOL_INPUTS = {
   showLeapSecondTimeline: showLeapSecondTimelineInput,
   showElapsedVsClock: showElapsedVsClockInput,
   showStoredTimeAudit: showStoredTimeAuditInput,
+  showIdTimestampDecoder: showIdTimestampDecoderInput,
+  showColumnTimestampBridge: showColumnTimestampBridgeInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -885,6 +979,20 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader asks why a stored zoned time no longer parses or resolves, whether a stored offset still matches its zone, what happens to stored future events after a time zone rule change, or how Temporal's `offset` option reads such a string",
     args: "values: the reader's strings exactly as given, one per line, each with an offset or `Z` and a bracketed zone; never invent or correct one. line: optional, which line to draw",
   },
+  {
+    name: "showIdTimestampDecoder",
+    purpose:
+      "Read the creation time inside a UUID (v1, v6, v7), ULID, ObjectId, KSUID or Snowflake ID.",
+    when: "Call when the reader asks when an ID was created, what time a UUIDv7 or ULID holds, why two Snowflake IDs decode to different dates, or which epoch an ID format counts from.",
+    args: "id: exactly as the reader gave it, never corrected or reformatted. epochMs, shift, timestampBits: only the values the reader gave for a Snowflake layout; never supply a service's layout from memory.",
+  },
+  {
+    name: "showColumnTimestampBridge",
+    purpose:
+      "Show one instant as a Parquet INT96, an Arrow int64 timestamp and a protobuf Timestamp, and decode stored values back.",
+    when: "Call when the reader asks how to convert a timestamp to or from Parquet INT96, Arrow or protobuf, why an Arrow timestamp is off by hours, why protobuf nanos are positive before 1970, or how a protobuf Duration differs.",
+    args: "mode (encode | decode). Encode needs value (an ISO instant or a zoneless wall time); decode needs at least one stored value: julianDay and nanosOfDay (or bytes, 24 hex digits, with int96Form bytes), int64, seconds and nanos, or durSeconds and durNanos. Also unit (second | millisecond | microsecond | nanosecond), zone (the Arrow column's IANA id; leave out for a zoneless column) and duration (ISO, optional). Send values exactly as the reader gave them.",
+  },
 ];
 
 /**
@@ -1013,6 +1121,14 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[29].purpose,
     inputSchema: showStoredTimeAuditInput,
   }),
+  showIdTimestampDecoder: tool({
+    description: DOX_TOOL_DOCS[30].purpose,
+    inputSchema: showIdTimestampDecoderInput,
+  }),
+  showColumnTimestampBridge: tool({
+    description: DOX_TOOL_DOCS[31].purpose,
+    inputSchema: showColumnTimestampBridgeInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1066,6 +1182,8 @@ export const ENABLED_TOOL_NAMES = [
   "showLeapSecondTimeline",
   "showElapsedVsClock",
   "showStoredTimeAudit",
+  "showIdTimestampDecoder",
+  "showColumnTimestampBridge",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

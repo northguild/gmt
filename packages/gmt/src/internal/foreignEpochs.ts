@@ -14,6 +14,12 @@
  * | Excel 1900 | 1899-12-30 | 1 day | serial 1 (1900-01-01) to 2958465 (9999-12-31); 60 is the phantom 1900-02-29 |
  * | Excel 1904 | 1904-01-01 | 1 day | serial 0 (1904-01-01) to 2957003 (9999-12-31) |
  * | PostgreSQL | 2000-01-01 | 1 µs | `MIN_TIMESTAMP` (4713 BC) up; capped above by `Temporal.Instant`, not by int64 |
+ * | UUIDv1/v6 | 1582-10-15 (proleptic Gregorian) | 100 ns | 60 bits, RFC 9562 §5.1 |
+ * | UUIDv7 / ULID | 1970-01-01 | 1 ms | 48 bits, RFC 9562 §5.7 / ULID spec |
+ * | KSUID | 2014-05-13T16:53:20Z | 1 s | 32 bits unsigned, `ksuid.go` |
+ * | Julian Day | -004713-11-24 (proleptic Gregorian) | 1 day | Julian Day 0; Unix epoch is JD 2 440 587.5 |
+ * | Arrow int64 | 1970-01-01 | s/ms/µs/ns | signed 64 bits, `Schema.fbs` |
+ * | protobuf Timestamp | 1970-01-01 | 1 s | 0001-01-01 to 9999-12-31T23:59:59Z, `timestamp.proto` |
  *
  * Sources: [FILETIME epoch](https://devblogs.microsoft.com/oldnewthing/20090306-00/?p=18913),
  * [NTP eras](https://www.eecis.udel.edu/~mills/y2k.html),
@@ -177,3 +183,38 @@ export const PG_EPOCH_OFFSET_MICROSECONDS = 946_684_800_000_000n;
  * binds first and a second constant would be unreachable.
  */
 export const MIN_PG_MICROSECONDS = -211_813_488_000_000_000n;
+
+// --- Time-ordered identifiers and data-platform epochs (CORE-56) ----------
+
+/**
+ * 100-nanosecond ticks from 1582-10-15 (the UUIDv1/v6 epoch, proleptic Gregorian) to
+ * 1970-01-01: 141 427 days. RFC 9562 Appendix A gives 0x01B21DD213814000.
+ */
+export const GREGORIAN_EPOCH_OFFSET_TICKS = 122_192_928_000_000_000n;
+
+/** Largest 48-bit Unix millisecond count, 2^48 − 1 (RFC 9562 §5.7; ULID spec § Specification). */
+export const MAX_UNIX_MS_48 = 281_474_976_710_655n;
+
+/** The KSUID epoch, 2014-05-13T16:53:20Z, in Unix seconds (`epochStamp` in `ksuid.go`). */
+export const KSUID_EPOCH_SECONDS = 1_400_000_000n;
+
+/**
+ * Julian Day Number of the civil (UTC) date 1970-01-01, counting the date -004713-11-24 as 0
+ * (proleptic Gregorian: Temporal's ISO calendar).
+ */
+export const JULIAN_DAY_OF_UNIX_EPOCH = 2_440_588;
+
+/** Smallest Arrow `int64` timestamp value, −2^63 (`Schema.fbs`). */
+export const MIN_INT64 = -9_223_372_036_854_775_808n;
+
+/** Largest Arrow `int64` timestamp value, 2^63 − 1 (`Schema.fbs`). */
+export const MAX_INT64 = 9_223_372_036_854_775_807n;
+
+/** Smallest protobuf `Timestamp` seconds: 0001-01-01T00:00:00Z (`timestamp.proto`). */
+export const PROTO_TIMESTAMP_MIN_SECONDS = -62_135_596_800n;
+
+/** Largest protobuf `Timestamp` seconds: 9999-12-31T23:59:59Z (`timestamp.proto`). */
+export const PROTO_TIMESTAMP_MAX_SECONDS = 253_402_300_799n;
+
+/** Largest protobuf `Duration` magnitude in seconds: ±10 000 years (`duration.proto`). */
+export const PROTO_DURATION_MAX_SECONDS = 315_576_000_000n;

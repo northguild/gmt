@@ -13212,6 +13212,110 @@
     ]
   },
   {
+    "url": "/reference/types/ArrowTimeUnit",
+    "page": "/reference/types/ArrowTimeUnit",
+    "name": "ArrowTimeUnit",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "type",
+    "signature": "",
+    "description": "The unit of an Apache Arrow `Timestamp` column: Temporal's unit names, singular or plural, matching Arrow's `TimeUnit` (`SECOND`, `MILLISECOND`, `MICROSECOND`, `NANOSECOND`).",
+    "sourcePath": "packages/gmt/src/precision/convert/fromArrowTimestamp.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/ArrowTimestampOptions",
+    "page": "/reference/types/ArrowTimestampOptions",
+    "name": "ArrowTimestampOptions",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "type",
+    "signature": "",
+    "description": "Describes the Arrow `Timestamp` column a value is read from or written to.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromArrowTimestamp.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "unit",
+        "description": "The column's `TimeUnit`: how many of which unit the `int64` counts since 1970-01-01."
+      },
+      {
+        "name": "timeZone",
+        "description": "The column's timezone, an Olson name or a `+HH:MM` offset. Set, the column holds UTC instants and the zone only says how to display them; omitted, `undefined` or `\"\"`, the column holds zoneless wall-clock times (Arrow `Schema.fbs`: an empty zone is not UTC)."
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/fromArrowTimestamp#arrowtimestampvalue",
+    "page": "/reference/precision/convert/fromArrowTimestamp",
+    "name": "ArrowTimestampValue",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "type",
+    "signature": "",
+    "description": "What `fromArrowTimestamp` returns: an instant for a zoned column, a wall time for a zoneless one.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromArrowTimestamp.ts",
+    "examples": [],
+    "inlineOn": "fromArrowTimestamp"
+  },
+  {
+    "url": "/reference/precision/convert/fromArrowTimestamp",
+    "page": "/reference/precision/convert/fromArrowTimestamp",
+    "name": "fromArrowTimestamp",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromArrowTimestamp(value: bigint, options: ArrowTimestampOptions): ArrowTimestampValue | null",
+    "description": "Convert an Apache Arrow `Timestamp` `int64` back to an ISO 8601 string.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromArrowTimestamp.ts",
+    "examples": [
+      {
+        "call": "fromArrowTimestamp(0n, { unit: \"second\" })",
+        "result": "{ local: \"1970-01-01T00:00:00\", zoneless: true }"
+      },
+      {
+        "call": "fromArrowTimestamp(0n, { unit: \"second\", timeZone: \"UTC\" })",
+        "result": "{ instant: \"1970-01-01T00:00:00Z\" }"
+      },
+      {
+        "call": "fromArrowTimestamp(0n, { unit: \"second\", timeZone: \"Europe/Paris\" })",
+        "result": "{ instant: \"1970-01-01T00:00:00Z\" }"
+      },
+      {
+        "call": "fromArrowTimestamp(0n, { unit: \"second\", timeZone: \"\" })",
+        "result": "{ local: \"1970-01-01T00:00:00\", zoneless: true }"
+      },
+      {
+        "call": "fromArrowTimestamp(1704067200000n, { unit: \"milliseconds\" })",
+        "result": "{ local: \"2024-01-01T00:00:00\", zoneless: true }"
+      },
+      {
+        "call": "fromArrowTimestamp(1704067200123456789n, { unit: \"nanosecond\", timeZone: \"America/New_York\" })",
+        "result": "{ instant: \"2024-01-01T00:00:00.123456789Z\" }"
+      },
+      {
+        "call": "fromArrowTimestamp(-1n, { unit: \"nanosecond\" })",
+        "result": "{ local: \"1969-12-31T23:59:59.999999999\", zoneless: true }"
+      },
+      {
+        "call": "fromArrowTimestamp(9223372036854775807n, { unit: \"nanosecond\", timeZone: \"UTC\" })",
+        "result": "{ instant: \"2262-04-11T23:47:16.854775807Z\" }"
+      },
+      {
+        "call": "fromArrowTimestamp(8640000000001n, { unit: \"second\", timeZone: \"UTC\" })",
+        "result": "null — past the instant range"
+      },
+      {
+        "call": "fromArrowTimestamp(0, { unit: \"second\" })",
+        "result": "null — number, not bigint"
+      },
+      {
+        "call": "fromArrowTimestamp(0n, { unit: \"s\" })",
+        "result": "null — not an Arrow unit"
+      }
+    ]
+  },
+  {
     "url": "/reference/precision/convert/fromDotNetTicks",
     "page": "/reference/precision/convert/fromDotNetTicks",
     "name": "fromDotNetTicks",
@@ -13449,6 +13553,59 @@
     ]
   },
   {
+    "url": "/reference/precision/convert/fromParquetInt96",
+    "page": "/reference/precision/convert/fromParquetInt96",
+    "name": "fromParquetInt96",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromParquetInt96(value: ParquetInt96 | Uint8Array<ArrayBufferLike>): string",
+    "description": "Convert a Parquet `INT96` timestamp back to an ISO 8601 instant string.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromParquetInt96.ts",
+    "examples": [
+      {
+        "call": "fromParquetInt96({ julianDay: 2440588, nanosOfDay: 0n })",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromParquetInt96({ julianDay: 2440588, nanosOfDay: 1n })",
+        "result": "\"1970-01-01T00:00:00.000000001Z\""
+      },
+      {
+        "call": "fromParquetInt96({ julianDay: 2440587, nanosOfDay: 86399999999999n })",
+        "result": "\"1969-12-31T23:59:59.999999999Z\""
+      },
+      {
+        "call": "fromParquetInt96({ julianDay: 2460380, nanosOfDay: 45296789000000n })",
+        "result": "\"2024-03-10T12:34:56.789Z\""
+      },
+      {
+        "call": "fromParquetInt96({ julianDay: 0, nanosOfDay: 0n })",
+        "result": "\"-004713-11-24T00:00:00Z\" — Julian Day 0"
+      },
+      {
+        "call": "fromParquetInt96(new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0x8c, 0x3d, 0x25, 0x00]))",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromParquetInt96({ julianDay: 102440588, nanosOfDay: 1n })",
+        "result": "\"\" — past the instant range"
+      },
+      {
+        "call": "fromParquetInt96({ julianDay: 2440588, nanosOfDay: 86400000000000n })",
+        "result": "\"\" — a full day of nanoseconds"
+      },
+      {
+        "call": "fromParquetInt96({ julianDay: 2440588, nanosOfDay: 0 })",
+        "result": "\"\" — number, not bigint"
+      },
+      {
+        "call": "fromParquetInt96(new Uint8Array(11))",
+        "result": "\"\" — not 12 bytes"
+      }
+    ]
+  },
+  {
     "url": "/reference/precision/convert/fromPgMicroseconds",
     "page": "/reference/precision/convert/fromPgMicroseconds",
     "name": "fromPgMicroseconds",
@@ -13486,6 +13643,161 @@
       {
         "call": "fromPgMicroseconds(763387200123456)",
         "result": "\"\" — number, not bigint"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/fromProtoDuration",
+    "page": "/reference/precision/convert/fromProtoDuration",
+    "name": "fromProtoDuration",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromProtoDuration(value: ProtoDuration | { seconds: number; nanos: number; }): string",
+    "description": "Convert a protobuf `google.protobuf.Duration` record back to an ISO 8601 duration string.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromProtoDuration.ts",
+    "examples": [
+      {
+        "call": "fromProtoDuration({ seconds: 5401n, nanos: 500000000 })",
+        "result": "\"PT1H30M1.5S\""
+      },
+      {
+        "call": "fromProtoDuration({ seconds: -1n, nanos: -500000000 })",
+        "result": "\"-PT1.5S\""
+      },
+      {
+        "call": "fromProtoDuration({ seconds: 5401, nanos: 500000000 })",
+        "result": "\"PT1H30M1.5S\" — number seconds"
+      },
+      {
+        "call": "fromProtoDuration({ seconds: 86400n, nanos: 0 })",
+        "result": "\"PT24H\" — no day unit"
+      },
+      {
+        "call": "fromProtoDuration({ seconds: 0n, nanos: -1 })",
+        "result": "\"-PT0.000000001S\""
+      },
+      {
+        "call": "fromProtoDuration({ seconds: 0n, nanos: 0 })",
+        "result": "\"PT0S\""
+      },
+      {
+        "call": "fromProtoDuration({ seconds: 315576000000n, nanos: 0 })",
+        "result": "\"PT87660000H\""
+      },
+      {
+        "call": "fromProtoDuration({ seconds: 1n, nanos: -1 })",
+        "result": "\"\" — signs differ"
+      },
+      {
+        "call": "fromProtoDuration({ seconds: 315576000001n, nanos: 0 })",
+        "result": "\"\" — past the protobuf range"
+      },
+      {
+        "call": "fromProtoDuration({ seconds: 1n })",
+        "result": "\"\" — missing nanos"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/fromProtoTimestamp",
+    "page": "/reference/precision/convert/fromProtoTimestamp",
+    "name": "fromProtoTimestamp",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromProtoTimestamp(value: ProtoTimestamp | { seconds: number; nanos: number; }): string",
+    "description": "Convert a protobuf `google.protobuf.Timestamp` record back to an ISO 8601 instant string.",
+    "sourcePath": "packages/gmt/src/precision/convert/fromProtoTimestamp.ts",
+    "examples": [
+      {
+        "call": "fromProtoTimestamp({ seconds: 0n, nanos: 0 })",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromProtoTimestamp({ seconds: -1n, nanos: 500000000 })",
+        "result": "\"1969-12-31T23:59:59.5Z\""
+      },
+      {
+        "call": "fromProtoTimestamp({ seconds: 1710074096n, nanos: 789000000 })",
+        "result": "\"2024-03-10T12:34:56.789Z\""
+      },
+      {
+        "call": "fromProtoTimestamp({ seconds: 1710074096, nanos: 789000000 })",
+        "result": "\"2024-03-10T12:34:56.789Z\" — number seconds"
+      },
+      {
+        "call": "fromProtoTimestamp({ seconds: -62135596800n, nanos: 0 })",
+        "result": "\"0001-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromProtoTimestamp({ seconds: 253402300799n, nanos: 999999999 })",
+        "result": "\"9999-12-31T23:59:59.999999999Z\""
+      },
+      {
+        "call": "fromProtoTimestamp({ seconds: 253402300800n, nanos: 0 })",
+        "result": "\"\" — past the protobuf range"
+      },
+      {
+        "call": "fromProtoTimestamp({ seconds: 0n, nanos: -1 })",
+        "result": "\"\" — negative nanos; write { seconds: -1n, nanos: 999999999 }"
+      },
+      {
+        "call": "fromProtoTimestamp({ seconds: 0n })",
+        "result": "\"\" — missing nanos"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/toArrowTimestamp",
+    "page": "/reference/precision/convert/toArrowTimestamp",
+    "name": "toArrowTimestamp",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toArrowTimestamp(isoString: string, options: ArrowTimestampOptions): bigint",
+    "description": "Convert an ISO 8601 string to an Apache Arrow `Timestamp` `int64`.",
+    "sourcePath": "packages/gmt/src/precision/convert/toArrowTimestamp.ts",
+    "examples": [
+      {
+        "call": "toArrowTimestamp(\"2024-01-01T00:00:00Z\", { unit: \"millisecond\", timeZone: \"UTC\" })",
+        "result": "1704067200000n"
+      },
+      {
+        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\", { unit: \"second\", timeZone: \"Asia/Tokyo\" })",
+        "result": "1704067200n"
+      },
+      {
+        "call": "toArrowTimestamp(\"2024-01-01T00:00:00\", { unit: \"millisecond\" })",
+        "result": "1704067200000n"
+      },
+      {
+        "call": "toArrowTimestamp(\"2024-01-01T00:00:00.123456789Z\", { unit: \"microsecond\", timeZone: \"UTC\" })",
+        "result": "1704067200123456n — floors"
+      },
+      {
+        "call": "toArrowTimestamp(\"1969-12-31T23:59:59.9999999Z\", { unit: \"microsecond\", timeZone: \"UTC\" })",
+        "result": "-1n — toward negative infinity"
+      },
+      {
+        "call": "toArrowTimestamp(\"2262-04-11T23:47:16.854775807Z\", { unit: \"nanosecond\", timeZone: \"UTC\" })",
+        "result": "9223372036854775807n"
+      },
+      {
+        "call": "toArrowTimestamp(\"2262-04-11T23:47:16.854775808Z\", { unit: \"nanosecond\", timeZone: \"UTC\" })",
+        "result": "0n — past int64"
+      },
+      {
+        "call": "toArrowTimestamp(\"2024-01-01T00:00:00Z\", { unit: \"millisecond\" })",
+        "result": "0n — an instant into a zoneless column"
+      },
+      {
+        "call": "toArrowTimestamp(\"2024-01-01T00:00:00\", { unit: \"millisecond\", timeZone: \"UTC\" })",
+        "result": "0n — a wall time into a zoned column"
+      },
+      {
+        "call": "toArrowTimestamp(\"2024-01-01T00:00:00Z\", { unit: \"ms\", timeZone: \"UTC\" })",
+        "result": "0n — not an Arrow unit"
       }
     ]
   },
@@ -13731,6 +14043,69 @@
     ]
   },
   {
+    "url": "/reference/types/ParquetInt96",
+    "page": "/reference/types/ParquetInt96",
+    "name": "ParquetInt96",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "type",
+    "signature": "",
+    "description": "A Parquet `INT96` timestamp as most readers expose it: a Julian Day Number and the nanoseconds into that day.",
+    "sourcePath": "packages/gmt/src/precision/convert/toParquetInt96.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "julianDay",
+        "description": "Julian Day Number of the UTC date, a signed 32-bit integer (2440588 is 1970-01-01)."
+      },
+      {
+        "name": "nanosOfDay",
+        "description": "Nanoseconds since that date's midnight UTC, in `[0n, 86_400_000_000_000n)`."
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/toParquetInt96",
+    "page": "/reference/precision/convert/toParquetInt96",
+    "name": "toParquetInt96",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toParquetInt96(isoString: string): ParquetInt96 | null",
+    "description": "Convert an ISO 8601 instant string to a Parquet `INT96` timestamp record.",
+    "sourcePath": "packages/gmt/src/precision/convert/toParquetInt96.ts",
+    "examples": [
+      {
+        "call": "toParquetInt96(\"1970-01-01T00:00:00Z\")",
+        "result": "{ julianDay: 2440588, nanosOfDay: 0n }"
+      },
+      {
+        "call": "toParquetInt96(\"1969-12-31T23:59:59.999999999Z\")",
+        "result": "{ julianDay: 2440587, nanosOfDay: 86399999999999n }"
+      },
+      {
+        "call": "toParquetInt96(\"2024-03-10T12:34:56.789Z\")",
+        "result": "{ julianDay: 2460380, nanosOfDay: 45296789000000n }"
+      },
+      {
+        "call": "toParquetInt96(\"2024-03-10T13:34:56.789+01:00[Europe/Paris]\")",
+        "result": "{ julianDay: 2460380, nanosOfDay: 45296789000000n }"
+      },
+      {
+        "call": "toParquetInt96(\"-004713-11-24T00:00:00Z\")",
+        "result": "{ julianDay: 0, nanosOfDay: 0n } — Julian Day 0"
+      },
+      {
+        "call": "toParquetInt96(\"2024-03-10T12:34:56\")",
+        "result": "null — no offset designator"
+      },
+      {
+        "call": "toParquetInt96(\"invalid\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
     "url": "/reference/precision/convert/toPgMicroseconds",
     "page": "/reference/precision/convert/toPgMicroseconds",
     "name": "toPgMicroseconds",
@@ -13772,6 +14147,156 @@
     ]
   },
   {
+    "url": "/reference/types/ProtoDuration",
+    "page": "/reference/types/ProtoDuration",
+    "name": "ProtoDuration",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "type",
+    "signature": "",
+    "description": "A protobuf `google.protobuf.Duration` as protobuf libraries expose it.",
+    "sourcePath": "packages/gmt/src/precision/convert/toProtoDuration.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "seconds",
+        "description": "Whole seconds (an `int64`), in `[-315576000000n, 315576000000n]` (about ±10,000 years)."
+      },
+      {
+        "name": "nanos",
+        "description": "Nanoseconds, an integer in `[-999999999, 999999999]`. When `seconds` is not zero, `nanos` is zero or has the same sign as `seconds`."
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/toProtoDuration",
+    "page": "/reference/precision/convert/toProtoDuration",
+    "name": "toProtoDuration",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toProtoDuration(isoDuration: string): ProtoDuration | null",
+    "description": "Convert an ISO 8601 duration string to a protobuf `google.protobuf.Duration` record.",
+    "sourcePath": "packages/gmt/src/precision/convert/toProtoDuration.ts",
+    "examples": [
+      {
+        "call": "toProtoDuration(\"PT1H30M1.5S\")",
+        "result": "{ seconds: 5401n, nanos: 500000000 }"
+      },
+      {
+        "call": "toProtoDuration(\"-PT1.5S\")",
+        "result": "{ seconds: -1n, nanos: -500000000 } — nanos take seconds' sign"
+      },
+      {
+        "call": "toProtoDuration(\"-PT0.5S\")",
+        "result": "{ seconds: 0n, nanos: -500000000 }"
+      },
+      {
+        "call": "toProtoDuration(\"P1D\")",
+        "result": "{ seconds: 86400n, nanos: 0 } — a day is 24 hours"
+      },
+      {
+        "call": "toProtoDuration(\"PT0S\")",
+        "result": "{ seconds: 0n, nanos: 0 }"
+      },
+      {
+        "call": "toProtoDuration(\"PT315576000000S\")",
+        "result": "{ seconds: 315576000000n, nanos: 0 }"
+      },
+      {
+        "call": "toProtoDuration(\"PT315576000000.000000001S\")",
+        "result": "{ seconds: 315576000000n, nanos: 1 } — seconds and nanos are bounded separately"
+      },
+      {
+        "call": "toProtoDuration(\"PT315576000001S\")",
+        "result": "null — seconds past the protobuf range"
+      },
+      {
+        "call": "toProtoDuration(\"P1M\")",
+        "result": "null — a month has no fixed length"
+      },
+      {
+        "call": "toProtoDuration(\"invalid\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/ProtoTimestamp",
+    "page": "/reference/types/ProtoTimestamp",
+    "name": "ProtoTimestamp",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "type",
+    "signature": "",
+    "description": "A protobuf `google.protobuf.Timestamp` as protobuf libraries expose it.",
+    "sourcePath": "packages/gmt/src/precision/convert/toProtoTimestamp.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "seconds",
+        "description": "Whole seconds since 1970-01-01T00:00:00Z (an `int64`), in `[-62135596800n, 253402300799n]`: 0001-01-01T00:00:00Z to 9999-12-31T23:59:59Z."
+      },
+      {
+        "name": "nanos",
+        "description": "Nanoseconds of the second, an integer in `[0, 999999999]`. It counts forward in time even when `seconds` is negative."
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/convert/toProtoTimestamp",
+    "page": "/reference/precision/convert/toProtoTimestamp",
+    "name": "toProtoTimestamp",
+    "namespace": "precision",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toProtoTimestamp(isoString: string): ProtoTimestamp | null",
+    "description": "Convert an ISO 8601 instant string to a protobuf `google.protobuf.Timestamp` record.",
+    "sourcePath": "packages/gmt/src/precision/convert/toProtoTimestamp.ts",
+    "examples": [
+      {
+        "call": "toProtoTimestamp(\"1970-01-01T00:00:00Z\")",
+        "result": "{ seconds: 0n, nanos: 0 }"
+      },
+      {
+        "call": "toProtoTimestamp(\"1969-12-31T23:59:59.5Z\")",
+        "result": "{ seconds: -1n, nanos: 500000000 } — nanos count forward"
+      },
+      {
+        "call": "toProtoTimestamp(\"2024-03-10T12:34:56.789Z\")",
+        "result": "{ seconds: 1710074096n, nanos: 789000000 }"
+      },
+      {
+        "call": "toProtoTimestamp(\"2024-03-10T13:34:56.789+01:00[Europe/Paris]\")",
+        "result": "{ seconds: 1710074096n, nanos: 789000000 }"
+      },
+      {
+        "call": "toProtoTimestamp(\"0001-01-01T00:00:00Z\")",
+        "result": "{ seconds: -62135596800n, nanos: 0 }"
+      },
+      {
+        "call": "toProtoTimestamp(\"9999-12-31T23:59:59.999999999Z\")",
+        "result": "{ seconds: 253402300799n, nanos: 999999999 }"
+      },
+      {
+        "call": "toProtoTimestamp(\"+010000-01-01T00:00:00Z\")",
+        "result": "null — past the protobuf range"
+      },
+      {
+        "call": "toProtoTimestamp(\"2016-12-31T23:59:60Z\")",
+        "result": "null — leap second"
+      },
+      {
+        "call": "toProtoTimestamp(\"2024-03-10T12:34:56\")",
+        "result": "null — no offset designator"
+      },
+      {
+        "call": "toProtoTimestamp(\"invalid\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
     "url": "/reference/precision/format/formatNanoseconds",
     "page": "/reference/precision/format/formatNanoseconds",
     "name": "formatNanoseconds",
@@ -13801,6 +14326,380 @@
       {
         "call": "formatNanoseconds(8640000000000000000001n)",
         "result": "\"\" — outside the instant range"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/identifiers/fromKsuid",
+    "page": "/reference/precision/identifiers/fromKsuid",
+    "name": "fromKsuid",
+    "namespace": "precision",
+    "module": "identifiers",
+    "kind": "function",
+    "signature": "fromKsuid(ksuid: string): string",
+    "description": "Read the instant a KSUID carries (segmentio/ksuid, `ksuid.go` and `base62.go`).",
+    "sourcePath": "packages/gmt/src/precision/identifiers/fromKsuid.ts",
+    "examples": [
+      {
+        "call": "fromKsuid(\"0ujtsYcgvSTl8PAuAdqWYSMnLOv\")",
+        "result": "\"2017-10-10T04:00:47Z\" — the README inspect example"
+      },
+      {
+        "call": "fromKsuid(\"0ujzPyRiIAffKhBux4PvQdDqMHY\")",
+        "result": "\"2017-10-10T04:46:20Z\""
+      },
+      {
+        "call": "fromKsuid(\"000000000000000000000000000\")",
+        "result": "\"2014-05-13T16:53:20Z\" — the KSUID epoch, not 1970"
+      },
+      {
+        "call": "fromKsuid(\"aWgEPTl1tmebfsQzFP4bxwgy80V\")",
+        "result": "\"2150-06-19T23:21:35Z\" — the largest valid KSUID"
+      },
+      {
+        "call": "fromKsuid(\"0UJTSYCGVSTL8PAUADQWYSMNLOV\")",
+        "result": "\"2016-03-09T02:31:53Z\" — upper case is a different KSUID"
+      },
+      {
+        "call": "fromKsuid(\"0ujtsycgvstl8pauadqwysmnlov\")",
+        "result": "\"2017-10-10T04:00:51Z\" — lower case is another one"
+      },
+      {
+        "call": "fromKsuid(\"aWgEPTl1tmebfsQzFP4bxwgy80W\")",
+        "result": "\"\" — one above the maximum"
+      },
+      {
+        "call": "fromKsuid(\"0ujtsYcgvSTl8PAuAdqWYSMnLO\")",
+        "result": "\"\" — 26 characters"
+      },
+      {
+        "call": "fromKsuid(\"0ujtsYcgvSTl8PAuAdqWYSMnLO-\")",
+        "result": "\"\" — not base62"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/identifiers/fromObjectId",
+    "page": "/reference/precision/identifiers/fromObjectId",
+    "name": "fromObjectId",
+    "namespace": "precision",
+    "module": "identifiers",
+    "kind": "function",
+    "signature": "fromObjectId(objectId: string): string",
+    "description": "Read the creation second a MongoDB ObjectId carries (mongodb/specifications `bson-objectid/objectid.md`, § Specification and § Timestamp Field).",
+    "sourcePath": "packages/gmt/src/precision/identifiers/fromObjectId.ts",
+    "examples": [
+      {
+        "call": "fromObjectId(\"65a0f4d0c3b1a2e4f5d6c7b8\")",
+        "result": "\"2024-01-12T08:14:08Z\""
+      },
+      {
+        "call": "fromObjectId(\"000000000000000000000000\")",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromObjectId(\"7fffffff0000000000000000\")",
+        "result": "\"2038-01-19T03:14:07Z\""
+      },
+      {
+        "call": "fromObjectId(\"800000000000000000000000\")",
+        "result": "\"2038-01-19T03:14:08Z\" — unsigned, not 1901"
+      },
+      {
+        "call": "fromObjectId(\"FFFFFFFF0000000000000000\")",
+        "result": "\"2106-02-07T06:28:15Z\" — upper case"
+      },
+      {
+        "call": "fromObjectId(\"65a0f4d0c3b1a2e4f5d6c7b\")",
+        "result": "\"\" — 23 characters"
+      },
+      {
+        "call": "fromObjectId(\"65a0f4d0c3b1a2e4f5d6c7bg\")",
+        "result": "\"\" — not hex"
+      },
+      {
+        "call": "fromObjectId('ObjectId(\"65a0f4d0c3b1a2e4f5d6c7b8\")')",
+        "result": "\"\" — shell form"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/identifiers/fromSnowflake#snowflakelayout",
+    "page": "/reference/precision/identifiers/fromSnowflake",
+    "name": "SnowflakeLayout",
+    "namespace": "precision",
+    "module": "identifiers",
+    "kind": "type",
+    "signature": "",
+    "description": "Where the timestamp sits in a Snowflake id. A Snowflake is a layout, not a standard: each service picks its own epoch and bit split, so the caller passes the layout and GMT bundles no vendor presets.",
+    "sourcePath": "packages/gmt/src/precision/identifiers/fromSnowflake.ts",
+    "examples": [],
+    "inlineOn": "fromSnowflake",
+    "members": [
+      {
+        "name": "epochMs",
+        "description": "Unix milliseconds of the layout's epoch. A safe integer; negative is allowed."
+      },
+      {
+        "name": "shift",
+        "description": "Number of bits below the timestamp field (22 for Twitter and Discord). An integer in `[0, 63]`. Required."
+      },
+      {
+        "name": "timestampBits",
+        "description": "Width of the timestamp field in bits. An integer in `[1, 64 - shift]`."
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/identifiers/fromSnowflake",
+    "page": "/reference/precision/identifiers/fromSnowflake",
+    "name": "fromSnowflake",
+    "namespace": "precision",
+    "module": "identifiers",
+    "kind": "function",
+    "signature": "fromSnowflake(id: string | bigint, layout: SnowflakeLayout): string",
+    "description": "Read the instant a Snowflake id carries, using a layout the caller supplies.",
+    "sourcePath": "packages/gmt/src/precision/identifiers/fromSnowflake.ts",
+    "examples": [
+      {
+        "call": "fromSnowflake(\"175928847299117063\", { epochMs: 1420070400000, shift: 22 })",
+        "result": "\"2016-04-30T11:18:25.796Z\" — Discord layout"
+      },
+      {
+        "call": "fromSnowflake(\"1050118621198921728\", { epochMs: 1288834974657, shift: 22, timestampBits: 41 })",
+        "result": "\"2018-10-10T20:19:24.211Z\" — Twitter layout"
+      },
+      {
+        "call": "fromSnowflake(\"1050118621198921728\", { epochMs: 1420070400000, shift: 22 })",
+        "result": "\"2022-12-07T18:36:29.554Z\" — same id, other epoch: a different instant"
+      },
+      {
+        "call": "fromSnowflake(1704067200000n, { epochMs: 0, shift: 0 })",
+        "result": "\"2024-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromSnowflake(175928847299117063, { epochMs: 1420070400000, shift: 22 })",
+        "result": "\"\" — number, not bigint or string"
+      },
+      {
+        "call": "fromSnowflake(\"1\", { epochMs: 1420070400000 })",
+        "result": "\"\" — shift missing"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/identifiers/fromUlid",
+    "page": "/reference/precision/identifiers/fromUlid",
+    "name": "fromUlid",
+    "namespace": "precision",
+    "module": "identifiers",
+    "kind": "function",
+    "signature": "fromUlid(ulid: string): string",
+    "description": "Read the instant a ULID carries (ulid/spec README, § Components and § Canonical String Representation).",
+    "sourcePath": "packages/gmt/src/precision/identifiers/fromUlid.ts",
+    "examples": [
+      {
+        "call": "fromUlid(\"01ARZ3NDEKTSV4RRFFQ69G5FAV\")",
+        "result": "\"2016-07-30T23:54:10.259Z\" — the spec README example"
+      },
+      {
+        "call": "fromUlid(\"01HK153X000000000000000000\")",
+        "result": "\"2024-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromUlid(\"01hk153x000000000000000000\")",
+        "result": "\"2024-01-01T00:00:00Z\" — lower case"
+      },
+      {
+        "call": "fromUlid(\"01FWHE4YDG0000000000000000\")",
+        "result": "\"2022-02-22T19:22:22Z\" — same millisecond as RFC 9562 A.6"
+      },
+      {
+        "call": "fromUlid(\"00000000000000000000000000\")",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromUlid(\"7ZZZZZZZZZZZZZZZZZZZZZZZZZ\")",
+        "result": "\"+010889-08-02T05:31:50.655Z\" — the largest valid ULID"
+      },
+      {
+        "call": "fromUlid(\"80000000000000000000000000\")",
+        "result": "\"\" — overflow"
+      },
+      {
+        "call": "fromUlid(\"01HK153X00000000000000000I\")",
+        "result": "\"\" — I is not in the alphabet"
+      },
+      {
+        "call": "fromUlid(\"01HK153X00000000000000000\")",
+        "result": "\"\" — 25 characters"
+      },
+      {
+        "call": "fromUlid(\" 01HK153X000000000000000000\")",
+        "result": "\"\" — no trimming"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/identifiers/fromUuidTimestamp",
+    "page": "/reference/precision/identifiers/fromUuidTimestamp",
+    "name": "fromUuidTimestamp",
+    "namespace": "precision",
+    "module": "identifiers",
+    "kind": "function",
+    "signature": "fromUuidTimestamp(uuid: string): { instant: string; version: 1 | 6 | 7; } | null",
+    "description": "Read the instant a version 1, 6 or 7 UUID carries (RFC 9562 §5.1, §5.6, §5.7).",
+    "sourcePath": "packages/gmt/src/precision/identifiers/fromUuidTimestamp.ts",
+    "examples": [
+      {
+        "call": "fromUuidTimestamp(\"C232AB00-9414-11EC-B3C8-9F6BDECED846\")",
+        "result": "{ instant: \"2022-02-22T19:22:22Z\", version: 1 } — RFC 9562 A.1"
+      },
+      {
+        "call": "fromUuidTimestamp(\"1EC9414C-232A-6B00-B3C8-9F6BDECED846\")",
+        "result": "{ instant: \"2022-02-22T19:22:22Z\", version: 6 } — A.5, the same instant"
+      },
+      {
+        "call": "fromUuidTimestamp(\"017F22E2-79B0-7CC3-98C4-DC0C0C07398F\")",
+        "result": "{ instant: \"2022-02-22T19:22:22Z\", version: 7 } — A.6"
+      },
+      {
+        "call": "fromUuidTimestamp(\"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\")",
+        "result": "{ instant: \"1997-02-03T17:43:12.216875Z\", version: 1 } — 100 ns kept"
+      },
+      {
+        "call": "fromUuidTimestamp(\"c232ab00-9414-11ec-b3c8-9f6bdeced846\")",
+        "result": "{ instant: \"2022-02-22T19:22:22Z\", version: 1 } — lower case"
+      },
+      {
+        "call": "fromUuidTimestamp(\"00000000-0000-1000-8000-000000000000\")",
+        "result": "{ instant: \"1582-10-15T00:00:00Z\", version: 1 } — the v1 epoch"
+      },
+      {
+        "call": "fromUuidTimestamp(\"ffffffff-ffff-7fff-bfff-ffffffffffff\")",
+        "result": "{ instant: \"+010889-08-02T05:31:50.655Z\", version: 7 } — 48-bit maximum"
+      },
+      {
+        "call": "fromUuidTimestamp(\"919108f7-52d1-4320-9bac-f847db4148a8\")",
+        "result": "null — v4 carries no timestamp"
+      },
+      {
+        "call": "fromUuidTimestamp(\"urn:uuid:c232ab00-9414-11ec-b3c8-9f6bdeced846\")",
+        "result": "null — strip the prefix first"
+      },
+      {
+        "call": "fromUuidTimestamp(\"017f22e2-79b0-7cc3-c8c4-dc0c0c07398f\")",
+        "result": "null — Microsoft variant"
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/identifiers/ulidTimestampPrefix",
+    "page": "/reference/precision/identifiers/ulidTimestampPrefix",
+    "name": "ulidTimestampPrefix",
+    "namespace": "precision",
+    "module": "identifiers",
+    "kind": "function",
+    "signature": "ulidTimestampPrefix(isoString: string): string",
+    "description": "The first 10 characters of every ULID minted in the same millisecond as an instant, for range scans over stored ULID text (ulid/spec README, § Components and § Encoding).",
+    "sourcePath": "packages/gmt/src/precision/identifiers/ulidTimestampPrefix.ts",
+    "examples": [
+      {
+        "call": "ulidTimestampPrefix(\"2024-01-01T00:00:00Z\")",
+        "result": "\"01HK153X00\""
+      },
+      {
+        "call": "ulidTimestampPrefix(\"2016-07-30T23:54:10.259Z\")",
+        "result": "\"01ARZ3NDEK\" — the spec README example"
+      },
+      {
+        "call": "ulidTimestampPrefix(\"2022-02-22T19:22:22Z\")",
+        "result": "\"01FWHE4YDG\""
+      },
+      {
+        "call": "ulidTimestampPrefix(\"1970-01-01T00:00:00Z\")",
+        "result": "\"0000000000\""
+      },
+      {
+        "call": "ulidTimestampPrefix(\"2024-01-01T00:00:00.0009Z\")",
+        "result": "\"01HK153X00\" — floors to the millisecond"
+      },
+      {
+        "call": "ulidTimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "result": "\"01HK153X00\""
+      },
+      {
+        "call": "ulidTimestampPrefix(\"+010889-08-02T05:31:50.655Z\")",
+        "result": "\"7ZZZZZZZZZ\" — the largest"
+      },
+      {
+        "call": "ulidTimestampPrefix(\"+010889-08-02T05:31:50.656Z\")",
+        "result": "\"\" — past 48 bits"
+      },
+      {
+        "call": "ulidTimestampPrefix(\"1969-12-31T23:59:59.999Z\")",
+        "result": "\"\" — before the Unix epoch"
+      },
+      {
+        "call": "ulidTimestampPrefix(\"2024-01-01T00:00:00\")",
+        "result": "\"\" — no offset"
+      },
+      {
+        "call": "ulidTimestampPrefix(\"invalid\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/precision/identifiers/uuidV7TimestampPrefix",
+    "page": "/reference/precision/identifiers/uuidV7TimestampPrefix",
+    "name": "uuidV7TimestampPrefix",
+    "namespace": "precision",
+    "module": "identifiers",
+    "kind": "function",
+    "signature": "uuidV7TimestampPrefix(isoString: string): string",
+    "description": "The first 13 characters of every version 7 UUID minted in the same millisecond as an instant, for range scans over stored UUID text (RFC 9562 §5.7, §6.11).",
+    "sourcePath": "packages/gmt/src/precision/identifiers/uuidV7TimestampPrefix.ts",
+    "examples": [
+      {
+        "call": "uuidV7TimestampPrefix(\"2024-01-01T00:00:00Z\")",
+        "result": "\"018cc251-f400\""
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"2022-02-22T19:22:22Z\")",
+        "result": "\"017f22e2-79b0\" — the prefix of RFC 9562 A.6"
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"1970-01-01T00:00:00Z\")",
+        "result": "\"00000000-0000\""
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"2024-01-01T00:00:00.0009Z\")",
+        "result": "\"018cc251-f400\" — floors to the millisecond"
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "result": "\"018cc251-f400\""
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"+010889-08-02T05:31:50.655Z\")",
+        "result": "\"ffffffff-ffff\" — the largest"
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"+010889-08-02T05:31:50.656Z\")",
+        "result": "\"\" — past 48 bits"
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"1969-12-31T23:59:59.999Z\")",
+        "result": "\"\" — before the Unix epoch"
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"2024-01-01T00:00:00\")",
+        "result": "\"\" — no offset"
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"invalid\")",
+        "result": "\"\""
       }
     ]
   },

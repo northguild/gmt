@@ -803,6 +803,49 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **Leap Second Timeline** (`/tools/leap-second-timeline/`): a staircase of TAI - UTC, a riser
     per inserted second, a hatched run from `CONTINUOUS_UTC_FROM`, the date as a cursor, the
     counted span as a band, and a checked `23:59:60` as a lit riser or a struck-through ghost.
+  - **ID Timestamp Decoder** (`/tools/id-timestamp-decoder/`, `iddecode`, core): one pasted
+    identifier goes, exactly as typed, to all five decoders (`fromUuidTimestamp`, `fromUlid`,
+    `fromObjectId`, `fromKsuid`, `fromSnowflake`). A hero names the format that read it and its
+    instant (a UUID adds its `version` as a chip), and a fixed table shows every call and what it
+    returned. A Snowflake is called only when the reader gives an epoch and a shift; with no
+    layout its row says "Give an epoch and a shift: a Snowflake has no default layout." and makes no call,
+    because the library has no default epoch to offer. `NO SIGNAL` shows only when all five
+    returned a sentinel; a text that two decoders read is "N of 5", not a verdict. A preset
+    fills the fields, and typing switches the select to "Your values". Epoch, precision and last
+    instant are static prose on the page, held to the library by `id-timestamp-decoder-prose.test.ts`,
+    so no widget module holds an epoch, a unit factor or an ID grammar.
+    - **Snowflake presets are labelled by their literal values**, never a vendor name, because
+      the library ships no layout constants.
+    - **Nothing moves as the reader types.** The hero's value, pill and chip are laid out in every
+      state and hidden with `[data-off] { visibility: hidden }`; each call and returned cell is a
+      hold sized by the 64-character Snowflake call and the widest UUID record. The table is
+      fixed-layout, with a doubled class on the first column (as the Stored Time Audit) and a
+      labelled stacked layout below `46rem`.
+    - **`instantPiecesHtml` (`widget-ui.ts`)** is the text-to-pieces half of `wrapInstantsAtT`,
+      so a returned instant breaks only after a `T` or before a fraction.
+    - **The loader is `identifier-lib.ts`**, the pattern of `stored-time-lib.ts`; the Column
+      Timestamp Bridge follows it (`column-bridge-lib.ts`) and has its own `BRIDGE_LINKS`, whose
+      first link is back to this tool, as `ID_LINKS`' first link is to the Bridge.
+  - **Column Timestamp Bridge** (`/tools/column-timestamp-bridge/`, `colbridge`, core): two
+    modes. Encode takes one instant (or a zoneless wall time), an Arrow unit and an optional
+    zone, and shows four format cards (Parquet INT96, Arrow int64, protobuf Timestamp, protobuf
+    Duration) under an exact-instant hero and a four-row precision ladder. Decode takes the
+    stored values (INT96 as a record or as 24 hex digits, an Arrow int64, a Timestamp pair, a
+    Duration pair) and reads each filled fieldset with one call. `isValidInstant` (or
+    `isValidDateTime` for a zoneless Arrow column) runs first, and the converters run only when
+    it is true, so an instant into a zoneless column is a card with the sentinel `0n` and the
+    reason, never a silent `0`. A zoneless Arrow read is marked with an ice chip and the
+    library's `zoneless: true`, never amber; a zoned Arrow card also shows the same int64 read
+    under a zoneless schema. The hero's pill shows only when the input is not an instant and
+    no card read it. A card that returned `0n`, `null` or `""` is a sentinel with its literal; a
+    legitimate `0n` (the `past-proto-range` preset's Arrow card) is a value.
+    - **Files:** `column-timestamp-bridge.ts` (pure reading), `-presets.ts` (the only module
+      with a library-fact literal), `-mount.ts`, `column-bridge-lib.ts` (loader, three modules)
+      and `ColumnTimestampBridge.astro`. `BRIDGE_LINKS` is the counterpart of the Decoder's `ID_LINKS`; neither imports the other.
+    - **Hold-still:** every card slot, the hero and the ladder rows are laid out in every state
+      and hidden with `[data-off]`; the hold grids are `minmax(0, 1fr)`; cards are two by two
+      above `40rem` of container and one column below. `renderValue` prints a bigint as `5n`
+      and a `Uint8Array` as `new Uint8Array([...])`.
   - **Elapsed vs. Clock Difference** (`/tools/elapsed-vs-clock-difference/`): a sum of three
     plates (clock difference + leap seconds = seconds that passed) over two vernier rulers, one
     cell per second at equal widths. An inserted second is a stretched `:60` cell the clock tape
@@ -1073,7 +1116,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `/tools/x12-time-reader/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
   `/tools/epcis-event-reader/`, `/tools/journey-split/`, `/tools/gnss-week-decoder/`,
   `/tools/satellite-clock-converter/`, `/tools/gnss-rollover-checker/`,
-  `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`, plus the Tier 4
+  `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`, `/tools/id-timestamp-decoder/`, `/tools/column-timestamp-bridge/`, plus the Tier 4
   `/tools/zoned-earth/` and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package. The
   Zone Planner's is `/tools/zone-planner/?w=planner&wa={"time":…,"zone1":…,"zone2":…}`: a UTC
@@ -1097,7 +1140,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   (`mode`, `counter`, `system`, `week`, `timeOfWeekSeconds`, `rolloverEra` or
   `rolloverNotBefore`, `utc`), `satclock` (`value`), `rollover` (`counter`,
   `firmwareNotBefore` or `firmwareEra`, `date`), `leapline` (`date`, `check`, `from`, `to`) and
-  `elapsed` (`start`, `end`), all strings, each passed as the reader gave it. The decoder and
+  `elapsed` (`start`, `end`), `colbridge` (`mode`, `value`, `unit`, `zone`, `duration`, `int96Form`, `julianDay`, `nanosOfDay`, `bytes`, `int64`, `seconds`, `nanos`, `durSeconds`, `durNanos`, or `preset` alone) and `iddecode` (`id`, `epochMs`, `shift`, `timestampBits`, or
+  `preset` alone while the state matches a preset), all strings, each passed as the reader gave it. The decoder and
   the checker write `{ preset }` alone while the state still matches a preset.
   - **Trap: build a permalink written into a page with `encodeWidgetPermalink`, never
     `encodeURIComponent` and never by hand.** A `DTM` segment ends in `'`, which
@@ -1147,7 +1191,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   pointer sweep takes 48 steps of 30 minutes, so it always enters the shaded hour. The pass/fail decisions live in
   `scripts/gate-checks.mjs`, unit-tested in `gate-checks.test.ts`. A tool with no drag handle,
   such as the DTM Decoder, the X12 Time Reader, the Demurrage Clock, the EPCIS Event Reader, the
-  Journey Split, Billing Deadlines and the Stored Time Audit, is not in `readout-still`. Its definition of done measures
+  Journey Split, Billing Deadlines, the Stored Time Audit, the ID Timestamp Decoder and the Column Timestamp Bridge, is not in `readout-still`. Its definition of done measures
   the same boxes across every preset instead: each plate keeps its size, and a held region keeps
   its height. A result region may grow from one preset to the next through `.gmt-grow`, which
   `grow:measure` gates: the reason aside under a sentinel, a second lane for a second zone, or a
@@ -1755,9 +1799,14 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     them.
   - `showStoredTimeAudit({ values, line? })` (CORE-83): the stored strings exactly as the
     reader gave them, one per line, and the 1-based line to draw.
-- **Count:** 30 tools — the globe, the 28 teaching tools and the Zone Planner — and 30
-  `CHAT_STARTERS`, one card each: 8 core, 11 transport, 8 intermodal and 3 GNSS (the Leap
-  Second Timeline, Elapsed vs. Clock Difference and Stored Time Audit are core). `ENABLED_TOOL_NAMES` and
+  - `showIdTimestampDecoder({ id, epochMs?, shift?, timestampBits? })` (CORE-56): `id` exactly
+    as the reader gave it, never trimmed or corrected; the layout fields only when the reader
+    gave a Snowflake layout.
+  - `showColumnTimestampBridge({ mode?, value?, unit?, zone?, duration?, int96Form?, julianDay?, nanosOfDay?, bytes?, int64?, seconds?, nanos?, durSeconds?, durNanos? })`
+    (CORE-56): needs a `value` or a decode field; each string exactly as the reader gave it.
+- **Count:** 32 tools — the globe, the 30 teaching tools and the Zone Planner — and 32
+  `CHAT_STARTERS`, one card each: 10 core, 11 transport, 8 intermodal and 3 GNSS (the Leap
+  Second Timeline, Elapsed vs. Clock Difference, Stored Time Audit, ID Timestamp Decoder and Column Timestamp Bridge are core). `ENABLED_TOOL_NAMES` and
   `CHAT_STARTERS` hold the numbers; re-derive them from there.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card

@@ -171,6 +171,9 @@
       "precision/format": [
         "./dist/precision/format/index.d.ts"
       ],
+      "precision/identifiers": [
+        "./dist/precision/identifiers/index.d.ts"
+      ],
       "precision/parse": [
         "./dist/precision/parse/index.d.ts"
       ],
@@ -492,6 +495,10 @@
     "./precision/format": {
       "types": "./dist/precision/format/index.d.ts",
       "default": "./dist/precision/format/index.js"
+    },
+    "./precision/identifiers": {
+      "types": "./dist/precision/identifiers/index.d.ts",
+      "default": "./dist/precision/identifiers/index.js"
     },
     "./precision/parse": {
       "types": "./dist/precision/parse/index.d.ts",

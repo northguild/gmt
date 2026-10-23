@@ -1,0 +1,30 @@
+---
+title: "A Zoneless Arrow Column Read as UTC"
+description: A timestamp column with no timezone holds wall-clock time, and reading it as UTC invents an instant.
+industries: [core]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Zoneless Arrow Column Read as UTC"
+  description="A warehouse export has an Arrow timestamp column in milliseconds with no timezone, written from Tokyo store clocks. A script turns the first value into an ISO string. Which instant does it claim?"
+  naiveCode={`// The naive approach: every int64 timestamp is a Unix instant
+const value = 1710061200000n; // the column has no timezone
+
+new Date(Number(value)).toISOString();
+// "2024-03-10T09:00:00.000Z" — claims 09:00 UTC, but the stores meant 09:00 in Tokyo`}
+  explanation={`Arrow's schema says a timestamp column with no timezone holds wall-clock time of an unknown zone, and that it must not be read as UTC. The number is only right as an instant when the column names a zone. \`fromArrowTimestamp\` follows the column: with a \`timeZone\` it returns \`{ instant }\`, and without one it returns \`{ local, zoneless: true }\`, a wall time that cannot be mistaken for an instant. A script that needs an instant must add the zone the stores used.`}
+  gmtCode={`import { fromArrowTimestamp } from "@northguild/gmt/precision/convert";
+
+fromArrowTimestamp(1710061200000n, { unit: "millisecond" });
+// { local: "2024-03-10T09:00:00", zoneless: true }
+fromArrowTimestamp(1710061200000n, { unit: "millisecond", timeZone: "UTC" });
+// { instant: "2024-03-10T09:00:00Z" }`}
+  fixedSpecId="fromArrowTimestamp"
+/>
+
+The widget reads a seconds column with no timezone. It starts at `0n`, which is
+`{ local: "1970-01-01T00:00:00", zoneless: true }`. Enter `1710061200` and it shows
+`{ local: "2024-03-10T09:00:00", zoneless: true }`: a wall time, never an instant. A column
+with a `timeZone` would return `{ instant }` instead, always written in UTC. The rules are in [Foreign Epoch Bridges](/guides/conversion/foreign-epoch-bridges/).

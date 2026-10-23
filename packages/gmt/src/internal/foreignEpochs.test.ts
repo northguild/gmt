@@ -7,7 +7,16 @@ import {
   EXCEL_1904_EPOCH_NANOSECONDS,
   EXCEL_SYSTEM_DAY_DELTA,
   FILE_TIME_EPOCH_OFFSET_TICKS,
+  GREGORIAN_EPOCH_OFFSET_TICKS,
+  JULIAN_DAY_OF_UNIX_EPOCH,
+  KSUID_EPOCH_SECONDS,
   MAX_DOT_NET_TICKS,
+  MAX_INT64,
+  MAX_UNIX_MS_48,
+  MIN_INT64,
+  PROTO_DURATION_MAX_SECONDS,
+  PROTO_TIMESTAMP_MAX_SECONDS,
+  PROTO_TIMESTAMP_MIN_SECONDS,
   MAX_EXCEL_1900_SERIAL_EXCLUSIVE,
   MAX_EXCEL_1904_SERIAL_EXCLUSIVE,
   MAX_FILE_TIME,
@@ -135,5 +144,56 @@ describe("foreignEpochs", () => {
     expect(
       MAX_EXCEL_1900_SERIAL_EXCLUSIVE - MAX_EXCEL_1904_SERIAL_EXCLUSIVE,
     ).toBe(EXCEL_SYSTEM_DAY_DELTA);
+  });
+
+  it("puts the Gregorian epoch 141 427 days of 100 ns ticks before the Unix epoch", () => {
+    // RFC 9562 Appendix A: UUIDv1 counts from 1582-10-15, proleptic Gregorian.
+    expect(GREGORIAN_EPOCH_OFFSET_TICKS).toBe(
+      daysBetween("1582-10-15", "1970-01-01") * TICKS_PER_DAY,
+    );
+    expect(daysBetween("1582-10-15", "1970-01-01")).toBe(141_427n);
+    // RFC 9562 Appendix A prints the same offset as hex.
+    expect(GREGORIAN_EPOCH_OFFSET_TICKS).toBe(0x01b21dd213814000n);
+  });
+
+  it("holds 48 bits of Unix milliseconds (RFC 9562 §5.7, ULID)", () => {
+    expect(MAX_UNIX_MS_48).toBe(2n ** 48n - 1n);
+    expect(MAX_UNIX_MS_48).toBe(281_474_976_710_655n);
+  });
+
+  it("starts the KSUID epoch at 2014-05-13T16:53:20Z", () => {
+    expect(KSUID_EPOCH_SECONDS).toBe(
+      Temporal.Instant.from("2014-05-13T16:53:20Z").epochNanoseconds /
+        1_000_000_000n,
+    );
+  });
+
+  it("puts the Unix epoch at Julian Day 2 440 588 from Julian Day 0", () => {
+    expect(BigInt(JULIAN_DAY_OF_UNIX_EPOCH)).toBe(
+      daysBetween("-004713-11-24", "1970-01-01"),
+    );
+  });
+
+  it("spans the signed 64-bit integer range", () => {
+    expect(MIN_INT64).toBe(-(2n ** 63n));
+    expect(MAX_INT64).toBe(2n ** 63n - 1n);
+  });
+
+  it("bounds a protobuf Timestamp at 0001-01-01 and 9999-12-31T23:59:59", () => {
+    expect(PROTO_TIMESTAMP_MIN_SECONDS).toBe(
+      Temporal.Instant.from("0001-01-01T00:00:00Z").epochNanoseconds /
+        1_000_000_000n,
+    );
+    expect(PROTO_TIMESTAMP_MAX_SECONDS).toBe(
+      Temporal.Instant.from("9999-12-31T23:59:59Z").epochNanoseconds /
+        1_000_000_000n,
+    );
+  });
+
+  it("bounds a protobuf Duration at 10 000 years of 365.25 days", () => {
+    // duration.proto: ±315,576,000,000 s = 10 000 * 365.25 * 24 * 3600.
+    expect(PROTO_DURATION_MAX_SECONDS).toBe(
+      (10_000n * 36_525n * SECONDS_PER_DAY) / 100n,
+    );
   });
 });
