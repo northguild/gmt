@@ -3,7 +3,7 @@
  *
  * The Canada 2026 clock-change checker end to end: template, mount, fetch, render, tick.
  * The Worker's answer is built by the real Worker handler in this test runtime, so no 2026e
- * offset is asserted as something the runtime computed (Node here carries tz 2026c).
+ * offset is asserted as something the runtime computed (a test runtime can carry older tz data).
  */
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { getUtcNow } from "@northguild/gmt/utc/get";

@@ -234,14 +234,14 @@ describe("POST /gmt/api/morocco-clock-change", () => {
     expect((await handleMoroccoClockChange(request, {})).status).toBe(400);
   });
 
-  it("keeps 50 rows of 51 lines and says it truncated", async () => {
+  it("keeps the cap of rows from one line more and says it truncated", async () => {
     const lines = Array.from({ length: STORED_MAX_LINES + 1 }, () => "x").join(
       "\n",
     );
     const body = (await (
       await post({ lines, zone: "Africa/Casablanca" })
     ).json()) as StoredCheck;
-    expect(body.rows).toHaveLength(50);
+    expect(body.rows).toHaveLength(STORED_MAX_LINES);
     expect(body.truncated).toBe(true);
   });
 

@@ -13,11 +13,12 @@ import { cityOf, signedOffset } from "./clock-change-common";
  * the Workers Free limit of 10 ms CPU per request (over it is Error 1102). Measured under
  * `wrangler dev` from the client, distinct Toronto lines, warm, median of 12 posts, minus a
  * 1-line baseline of about 2 ms: 25 lines 3.8 ms, 50 lines 7.0 to 7.4 ms, 60 lines 8.3 ms, 100 lines 14.0 ms,
- * 200 lines 29.4 ms: about 0.15 ms a line. 50 is the largest that stays near 7 ms; with the
- * baseline that is about 9.4 ms of wall time, which overstates CPU time. Re-measure before
- * raising it; the deploy smoke posts this many lines and checks every one was read.
+ * 200 lines 29.4 ms: about 0.15 ms a line. A cold isolate classifying 50 lines measured 24 ms of
+ * CPU on workerd, and 50 lines warm took 8 to 10 ms. 25 lines take 4 to 5 ms warm, which stays
+ * under the limit. Re-measure before raising it; the deploy smoke posts this many lines and
+ * checks every one was read.
  */
-export const STORED_MAX_LINES = 50;
+export const STORED_MAX_LINES = 25;
 export const STORED_MAX_BYTES = 20_000;
 
 /** One posted line, classified with the server's time zone data. */
