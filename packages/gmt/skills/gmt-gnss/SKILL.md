@@ -2,12 +2,11 @@
 name: gmt-gnss
 description: >
   GNSS time in @northguild/gmt/gnss — the six RINEX GNSS time scales as peers
-  (GPS, GAL, BDT, QZS, GLO, IRN: utcToGnss, gnssToUtc), broadcast weeks by
-  named counter (GnssWeekCounter) with a required rolloverEra (integer,
-  "rolling" or { notBefore }) for gnssWeekToUtc/utcToGnssWeek, and continuous
-  RINEX navigation weeks (rinexWeekToUtc, utcToRinexWeek). Reads the docs site
-  (llms.txt) and the installed package's JSDoc; a routing pointer, not an API
-  dump.
+  (GPS, GAL, BDT, QZS, GLO, IRN: utcToGnss, gnssToUtc), broadcast weeks by named
+  counter (GnssWeekCounter) with a required rolloverEra (integer, "rolling" or {
+  notBefore }) for gnssWeekToUtc/utcToGnssWeek, and continuous RINEX navigation
+  weeks (rinexWeekToUtc, utcToRinexWeek). Reads the docs site (llms.txt) and the
+  installed package's JSDoc; a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/gnss-system-time-and-week-rollover.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/maritime-gnss-time-and-week-rollover.mdx'

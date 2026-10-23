@@ -421,14 +421,24 @@ function jsDocSymbol(
 /** A row of a Markdown table written in a doc comment. */
 const isTableLine = (line: string) => line.startsWith("|");
 
+/** A line that opens or closes a fenced code block, at any indentation. */
+const isFenceLine = (line: string) => line.trimStart().startsWith("```");
+
 /** True for a line that cannot be part of the summary paragraph. */
 const endsSummary = (line: string) =>
-  !line || line.startsWith("- ") || isTableLine(line);
+  !line || line.startsWith("- ") || isTableLine(line) || isFenceLine(line);
+
+/**
+ * The languages a fence in a doc comment may name. Shiki has no grammar for most notations
+ * (EBNF among them), and Expressive Code falls back to plain text with only a log line, so a
+ * typo would pass unseen. Anything else fails the build.
+ */
+const FENCE_LANGS = new Set(["text", "ts"]);
 
 /**
  * The opening paragraph of a doc comment, joined onto one line: every line up to the first
- * blank line, `- ` bullet or table row. JSDoc wraps a summary over several source lines, so
- * the first line alone would cut the sentence short.
+ * blank line, `- ` bullet, table row or fenced block. JSDoc wraps a summary over several
+ * source lines, so the first line alone would cut the sentence short.
  */
 export function summaryParagraph(raw: string): string {
   const paragraph: string[] = [];
@@ -455,21 +465,57 @@ function jsDocSummary(checker: ts.TypeChecker, node: ts.Node): string {
  *
  * A Markdown table is kept as a table: each of its rows stays on a line of its own inside the
  * item it belongs to (`mdListItem` renders it), so an item is one line of prose, or prose and
- * table rows separated by newlines. Text before the first bullet (a second paragraph, or a
- * table directly under the summary) is an item too.
+ * table rows separated by newlines. Text before the first bullet (a second paragraph, a table
+ * or a fenced block directly under the summary) is an item too.
+ *
+ * A fenced block is kept verbatim, from its opening fence line to its closing one: the fence's
+ * own indentation is removed from every line, blank lines stay as empty lines, and no line is
+ * trimmed, joined to another or read as a bullet or table row. Blank lines therefore occur
+ * only inside a block, and `mdListItem` finds the block by tracking the fence. The fence names
+ * `text` or `ts` (`FENCE_LANGS`); another language, none, or a fence never closed throws.
  */
 export function behaviorItems(raw: string): string[] {
-  const lines = raw.split("\n").map((l) => l.trim());
+  const lines = raw.split("\n");
   let i = 0;
-  while (i < lines.length && !endsSummary(lines[i])) i++;
+  while (i < lines.length && !endsSummary(lines[i].trim())) i++;
 
   const items: string[][] = [];
   let cur: string[] | undefined;
   // Whether the last line of `cur` is prose a wrapped line continues.
   let inProse = false;
+  // The indent of the fence being read, or undefined outside one.
+  let fenceIndent: string | undefined;
   for (; i < lines.length; i++) {
-    const l = lines[i];
+    const line = lines[i];
+    if (fenceIndent !== undefined) {
+      cur!.push(
+        line.startsWith(fenceIndent)
+          ? line.slice(fenceIndent.length)
+          : line.trimStart(),
+      );
+      if (isFenceLine(line)) fenceIndent = undefined;
+      continue;
+    }
+    const l = line.trim();
     if (!l) continue;
+    if (isFenceLine(l)) {
+      const lang = l.slice(3).trim();
+      if (!FENCE_LANGS.has(lang)) {
+        throw new Error(
+          lang
+            ? `fenced block in a doc comment names language "${lang}"; only ${[...FENCE_LANGS].join(" and ")} are allowed`
+            : `fenced block in a doc comment names no language; use ${[...FENCE_LANGS].join(" or ")}`,
+        );
+      }
+      if (!cur) {
+        cur = [];
+        items.push(cur);
+      }
+      fenceIndent = line.slice(0, line.length - line.trimStart().length);
+      cur.push(l);
+      inProse = false;
+      continue;
+    }
     if (l.startsWith("- ")) {
       cur = [l.slice(2)];
       items.push(cur);
@@ -490,6 +536,9 @@ export function behaviorItems(raw: string): string[] {
       cur.push(l);
       inProse = true;
     }
+  }
+  if (fenceIndent !== undefined) {
+    throw new Error("unclosed fenced block in a doc comment");
   }
   return items.map((item) => item.join("\n"));
 }

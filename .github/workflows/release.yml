@@ -39,7 +39,7 @@ on:
   workflow_dispatch:
     inputs:
       announce:
-        description: Post only the Discord announcement for these already-published tags, space-separated (e.g. @northguild/gmt@1.19.0). Publishes nothing. Leave empty to publish.
+        description: Post only the Discord announcement for these already-published tags, space-separated (e.g. @northguild/gmt@1.20.0). Publishes nothing. Leave empty to publish.
         type: string
         default: ""
 
@@ -50,6 +50,14 @@ concurrency:
   cancel-in-progress: false
 
 permissions: {}
+
+# The jobs name their Node with actions/setup-node, and that is the Node they must run.
+# package.json pins a Node through devEngines.runtime for local work. In CI, every
+# `pnpm install` passes --no-runtime so pnpm does not download that pin, and
+# verifyDepsBeforeRun is off so a later `pnpm run` or `pnpm exec` does not quietly run an
+# install without the flag and put the pinned Node ahead of the job's Node.
+env:
+  pnpm_config_verify_deps_before_run: "false"
 
 jobs:
   mode:
@@ -70,17 +78,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          check-latest: true
           cache: pnpm
 
       - run: pnpm approve-builds --all
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --no-runtime
 
       - uses: changesets/action/select-mode@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         id: select
@@ -187,13 +194,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          check-latest: true
           registry-url: "https://registry.npmjs.org"
           # Deliberately no `cache: pnpm` here, unlike every other job. npm's
           # release guidance is to never restore a dependency cache in a build
@@ -206,7 +212,7 @@ jobs:
         run: npm install -g npm@latest
 
       - run: pnpm approve-builds --all
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --no-runtime
 
       # Last gate before the tarballs become irreversible. ci.yml already ran
       # the full Node x timezone matrix on this commit; this re-runs the

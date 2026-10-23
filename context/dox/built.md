@@ -63,6 +63,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   surface). Every text label inside a chart sits on an opaque plate (a chip or header strip on
   `--gmt-surface`, text in `--gmt-ice` or `--gmt-ice-dim`), never on a gradient, hatch, glow or
   line. Glow is a shadow on a mark, never on text, and there is no `backdrop-filter` inside a chart.
+- **A holiday tool draws which rule closed which day with library calls on rule prefixes
+  (`attributeRules`), and takes closed days only from the full calendar.** The library returns the
+  closed dates but not the rule behind each; calling it on the rules before each one gives the
+  rule's own dates without a shift computed on the site. This binds every later tool that draws a
+  built calendar.
 - **Helpers follow the zero-bug house rules.** No catch-all helper: split by kind with narrow
   unions and return one shape. No constant that ages: no fixed year window, century pivot, era
   count or "current era"; a preset's dates carry their year, and the eras to draw come from the
@@ -79,18 +84,25 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `tsconfig.base.json` (whose `composite`, `emitDeclarationOnly` and `customConditions`
   are wrong for an app), and declares `engines.node >=22.12.0` — Astro 7's floor.
 - **Toolchain traps.**
-  - Where `fnm` is installed, run `eval "$(fnm env)" && fnm use`. `fnm use` alone is a
-    silent no-op in a non-interactive shell. Without `fnm`, the Node on `PATH` must match
-    `.nvmrc`.
+  - `pnpm` runs scripts and `pnpm exec` on the Node that `devEngines.runtime` pins (26.11 or
+    newer), whatever Node is on `PATH`. Only a bare `node` outside pnpm needs care: it follows
+    the pin only when pnpm installed the global Node (`pnpm runtime set node 26 -g`).
+    Otherwise use `pnpm exec node`, or on an `fnm` machine run
+    `eval "$(fnm env)" && fnm use` first (`fnm use` alone is a silent no-op in a
+    non-interactive shell). `.node-version` still says `26` for tools that read it.
+  - CI matrix jobs must keep running on the matrix Node: they install with `--no-runtime` and
+    set `pnpm_config_verify_deps_before_run=false`. Without both, a later `pnpm run` reinstalls
+    with the runtime and quietly switches the job to the pinned Node.
   - Starlight's `@astrojs/markdown-remark` peer is optional; don't declare it. `satteri` is
     pinned through `packageExtensions` in `pnpm-workspace.yaml`.
-  - pnpm 10 does not run `pre`/`post` scripts, so steps are chained with `&&`.
+  - pnpm runs `pre`/`post` scripts (checked on 10.32.1 and 12.15.0: `predev` runs before
+    `dev`). Steps that must stay together are still chained with `&&`.
   - `oxlint.config.js` is never loaded, so lint runs from the app. `.oxfmtrc.json`'s
     overrides are an allow-list that includes `apps/**`.
   - `workerd` needs `allowBuilds`.
 - **Deploy.** Worker `gmt-dox` serves `https://northguild.dev/gmt/`, via
-  `cloudflare/wrangler-action`, with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as
-  repo secrets. The Worker serves `dist/` through the `ASSETS` binding
+  `pnpm exec wrangler deploy` (the lockfile's Wrangler), with `CLOUDFLARE_API_TOKEN` and
+  `CLOUDFLARE_ACCOUNT_ID` as repo secrets. The Worker serves `dist/` through the `ASSETS` binding
   (`not_found_handling: "404-page"`).
   - **Route.** `northguild.dev/gmt*` is one pattern, because route matching includes the
     query string and a bare `northguild.dev/gmt` would miss `/gmt?a=1`. `workers_dev: true`
@@ -173,6 +185,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       so they match what Starlight emits. The generator stops if a rendered page's headings
       differ from the list the anchors were computed from.
     - Every type link goes through `typeUrl` in `build-utils/reference-urls.ts`.
+  - **A behaviour bullet may hold a fenced `text` or `ts` block**, which the generator
+    copies verbatim (`behaviorItems`, `mdListItem`, `stripMdx`'s `outsideFences` for the text
+    twins); any other language, none, or an unclosed fence fails the build. Shiki has no
+    grammar for most notations (EBNF among them), and Expressive Code falls back to `txt`
+    with only a log line, so a typo would pass unseen. The block never reaches the corpus,
+    the export or the chat's retrieval chunks, which take only the summary, signature and
+    examples.
+    TypeScript keeps a fence's indentation under a bullet, so `outsideFences`
+    (`page-markdown.ts`) matches an indented fence too; otherwise the text twins would rewrite
+    the block as prose. `context/jsdoc-standards.md` states the rule for authors.
   - **`## Options` expands a parameter's properties** when its declared type is an inline
     literal or an intersection, or a named public object type on a parameter whose declared
     name contains `options` or is `props`. A data parameter such as
@@ -773,6 +795,56 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `ledger-lib.ts` loads the B/L Date Stamp's and the Demurrage Clock's functions. The Journey
   Split's loader extends `transport-lib.ts` and the EPCIS Event Reader's extends `edi-lib.ts`, so
   no tool loads a module it does not use. Billing Deadlines holds its three deadlines in plates.
+- **The holiday family** (CORE-54): three Core tools that draw `@northguild/gmt/calendar/rules`.
+  Shared modules, none computing a date:
+  - `holiday-lib.ts`: the loader (`calendar/rules`, `calendar/validate`, `plain/compare`),
+    throwing `WidgetLoadError`. Moving Feasts' `feasts-lib.ts` extends it with `plain/calculate`.
+  - `holiday-codec.ts`: a policy as tokens (`6<5`, `7>1`, `7w`) and a rule as one `;` line, both
+    ways. In a name, calendar, month code or date, a `\` escapes `;`, `,` and itself, and `\n` is
+    a line break, so a name keeps every character. It only reads text; whether a rule means
+    anything is the library's call. It imports types only, so it stays out of the heavy-module
+    list.
+  - `holiday-widgets.ts`: `attributeRules(lib, spec, year)`, the month grid, week rows, legend and
+    the seven-select policy editor. `buildBusinessCalendar` returns closed dates but not which rule
+    closed each or where it moved from, so `attributeRules` calls the library on the rules before
+    each one, over `year - 1 .. year + 1` as the library expands, and returns per-rule rows plus
+    the full calendar. Closed days come from the full calendar alone.
+  - A grid cell carries five mark kinds, each a word and a pattern, never a colour alone: closed,
+    weekend, moved-from (a ghost), moved-to and pick. A month always draws six week rows, and a
+    cell reserves three chip rows, so a year change never resizes the grid.
+  - `gmt-holiday-widgets.css` holds the family frame (`.gmt-holiday-frame`), grid, marks and
+    policy editor; each tool has its own sheet. No string names a country, a statute or a body.
+  - **Holiday Rule Builder** (`/tools/holiday-rule-builder/`, `holidays`): an ordered list of up to
+    `MAX_RULES` (12) rule rows of the five kinds, a weekend, a zone and a year. A row shows the
+    days it closes; plates count the year, twelve month grids draw it and the printed
+    `buildBusinessCalendar` call is the library's answer. A new row has no observance policy and
+    a blank policy is left out of the call. Rows redraw only when the list changes shape, so
+    focus and IME composition stay in a field. A year outside 1900 to 2100 turns the rows, plates,
+    year note, call and output to NO SIGNAL or empty and leaves the grid unmarked, so nothing of
+    the last valid year stays on screen. It hands the calendar to the Free Time Ledger
+    (`basis: "working"`) and a `fixed` row to the Comparator.
+  - **Observance Comparator** (`/tools/observance-comparator/`, `observance`): one to three
+    month-day holidays, a span of years, a weekend and two to four policy columns make a matrix of
+    years by policies, each cell the day `observedDate` gives. A row where columns disagree says
+    so in words and by a hatch. Picking a cell shows that year's weeks, one lane per column. A
+    column links to the Builder as `fixed` rules carrying its policy. Given one policy (a link or
+    the chat), `readArgs` adds a column from the preset and lists it in `presetColumns`; a note
+    under the columns names it until the reader changes or removes it.
+  - **Moving Feasts** (`/tools/moving-feasts/`, `feasts`): a year slider (the reader's year
+    plus or minus 100) and typed year move the Gregorian and Julian Easter Sundays across February
+    to June, the distance between them and the toggled offsets from each, labelled with offset
+    and name ("Easter −2 (Good Friday)"). A second section gives `nthWeekdayOfMonth` for a month,
+    weekday and ordinal, with every occurrence carrying the ordinals it answers to. An ordinal
+    with no such day draws NO SIGNAL; a legitimately empty result is never drawn as one.
+  - **Holiday family layout rules.** A month grid never collapses: it always draws six week rows
+    and an empty month keeps its reserved line. The Comparator's cells are two lines and the table
+    stacks under 34rem. The rule and holiday lists carry `data-grow="slot"`. The Builder's call
+    frame reserves its worst case through `ruleCallSizerText` and `pairBound`, and Moving Feasts
+    holds its nth-note and call frame with sizers, so no readout resizes.
+  - **Links and notes.** The Builder's compare link appears only for a valid `fixed` rule
+    (`compareHandoffHref` asks the library). The Comparator's `holiday-note` says which seeded
+    holidays are not dates. The Comparator's permalink adds a `year` key and repeatable custom
+    columns.
 - **The GNSS and leap-second family** (MAR-16): three GNSS tools and two Core ones. Each pure
   module takes a loaded library (`GnssLib` from `gnss-lib.ts`, or `TimescaleLib` from
   `timescale-lib.ts`, both throwing `WidgetLoadError`) and draws its results; the site holds no
@@ -851,6 +923,115 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     cell per second at equal widths. An inserted second is a stretched `:60` cell the clock tape
     skips and the elapsed tape fills, so the ends misalign by exactly the seconds inserted; a long
     span keeps the seconds at each end, a slashed break and every inserted second.
+  - **Canada 2026 clock-change checker** (`/check/canada-2026-clock-change/`, core): lives under `check/`,
+    not `tools/`, so `build-tool-index.ts` and `build-industry-sidebars.ts` read both
+    directories (each tool carries its `directory`, links use `/${directory}/${slug}/`) and
+    `industry-tags.test.ts` scans `check/`. A probe table (five zones at `PROBE_INSTANT`, the
+    2026e column from `PROBE_ZONES`, the browser column from `Intl` at `PROBE_EPOCH_MS`, the Worker
+    column from `GET /gmt/api/canada-clock-change`), the 2026 and 2027 transitions, five
+    crystal clocks, and a hidden map section for the Canada map. Every offset and transition is
+    computed by the Worker at request time; the page holds only the cited 2026e facts. A 429
+    shows the retry delay and a failed fetch shows "The Dox Worker did not answer."; the cells
+    stay `NO SIGNAL`. The clocks tick on one `setTimeout` per minute, update the hands in place and
+    switch offset at the zone's next change. `PROBE_EPOCH_MS` is a number so no native date is
+    built. Tests never assert a 2026e offset: Node here carries tz 2026c, and the 2026e match is
+    checked only by `deploy-smoke.mjs` on the deployed Worker.
+    - **The Canada map** (`lib/canada-map.ts`, plain DOM). One shape per zone from
+      `timezone-boundaries-canada.json` in EPSG:3347's parameters (Lambert conformal conic,
+      parallels 49 and 77, central meridian 91.866667 W, origin 63.390675 N; IOGP registry, also
+      Statistics Canada's), fitted by `fitExtent` to an 800x640 `viewBox` with a 16 px inset; the SVG
+      scales with its box. Every zone is in one of three dated classes from the Worker's `kind`:
+      `stopped-2026` (series 1 colour with a diagonal hatch), `changes-2027` (series 3 colour,
+      solid), `none-2026-2027` (neutral surface with dots). Colour sits on marks only; the pattern
+      and the words carry the class. A zone with no Worker row is neutral and listed as "no data
+      from the Dox Worker".
+    - **The list comes first.** `canada-zones.json` renders one `<button data-tz-id>` per zone on
+      the server (id, class words, offset), with a roving tab stop: arrow keys, Home and End move,
+      Enter or Space pins, `aria-pressed` marks the pinned zone. Shapes are `role="button"` with
+      `tabindex="-1"`, so Tab never walks them; hover and focus on either mirror to the other.
+      Pinning writes `?zone=<id>` with `replaceState` and reads it back on load.
+    - **The pin panel has one size.** Clock, offset, last and next change (`none in 2025 or 2026`
+      style when `null`) and, for a `stopped-2026` probe zone, the tzdb release; every row reserves
+      its height, so pinning another zone moves nothing.
+    - **Row of three.** From 57 rem of section width the map, the zone list and the clocks sit in one
+      row (`1.6fr 1fr 1fr`; `tableOfContents: false` on the page widens the stack). In that range
+      the pin panel holds three lines for the zone name and the long values and four for the class,
+      so it is one box for every zone (`canada-clock-still.mjs` pins all 23); the zone button
+      stacks id, offset and class, and the clock card lets its offset drop under the time.
+    - **Probe script.** `CanadaProbeScript.astro`, last in the page, runs `probeInlineSource()`
+      once the table is parsed, so the verdict and the Yours column are final before first paint.
+      `stored-results` and the zone-kind label reserve their height so the late fill moves nothing.
+      The page lists it in `mdx-jsx.ts`'s dropped components.
+    - **Narrow fallback.** Below 520 px of section width (`@container gmt-canada-map`) the map and
+      legend are hidden, the boundary file is not fetched, and the panel moves under the pressed
+      button. The file is fetched once, when the map nears the viewport.
+    - **In the chat** (`mountCanadaClockChangeWidget`). The rail mounts the same markup with
+      the same markup with ids namespaced by `idPrefix`; the map's data-credits button takes
+      `<idPrefix>-data-credits` (below). The rail is narrow, so the zone list is the map and there
+      is no credits button. The mount
+      awaits the library (a failed load rejects with `WidgetLoadError`), starts the Worker fetch
+      without awaiting it, pins `zone` once the answer is drawn (an id not on the map leaves the
+      widget unpinned), reads and writes no `?zone=` on the chat's URL, and ends every timer on
+      destroy. On the page, `?w=canadaclock&wa=…` pins the same zone through `seedFromLocation`.
+    - **Did your saved events move?** (section 5 of the same markup, so page and chat share
+      it). It opens with one lead sentence and a three-step worked example (booked before the
+      change, new rule, result) derived from the Vancouver `PROBE_ZONES` fact
+      (`lib/canada-saved-example.ts`: 09:00, -08:00, -07:00, shown 10:00), so it cannot drift from
+      the data. Below it, a script-driven `<form>` of real controls: an editor-style
+      `<textarea name="lines">` (sticky beside the results from 72 rem), `<select name="zone">`
+      over `STORED_ZONES`, Check, Reset example, and a native segmented All / Only moved toggle. The
+      form `POST`s `FormData` to the same endpoint; the Worker reads each field with
+      `typeof value === "string"` (a `File` counts as `""`, never `String()`), answers `400` for a
+      zone outside `STORED_ZONES` or a body that is not a form or ends early, `413` for a body over
+      65,536 bytes (read as a stream; `content-length` is not trusted), and `429` from the same
+      `canada:` bucket GET uses. HEAD answers as GET with no body; a `405` carries
+      `Allow: GET, HEAD, POST`. `capStoredInput` (`lib/canada-stored-times.ts`, imports only
+      constants, so the Worker shares it) cuts text over `STORED_MAX_BYTES` UTF-8 bytes at the last
+      line break at or before that byte, makes `\r\n` and `\r` into `\n` first, splits, skips blank
+      lines (their numbers still count) and keeps `STORED_MAX_LINES` (50: measured at about
+      0.15 ms a line on workerd against a 10 ms CPU budget); `truncated` is true only when a
+      dropped part holds a non-blank character. `completeStoredLine` adds a zone only from what the
+      reader typed or picked: a `[` leaves the line as written, `<time> <Zone>` becomes
+      `<time>[<Zone>]`, one token takes the picked zone, anything else is `null` (shown as
+      `NO SIGNAL`). Each row is `classifyStoredZoned` on the Worker's tz data; an empty `lines`
+      answers `rows: []`.
+      - **Rows** reuse the audit's pure helpers, loaded with a dynamic import on the first answer
+        (the page carries no polyfill until then). A row has a badge (ok = cyan, moved = purple,
+        can't check yet = muted; amber stays sentinel-only), the full saved value (it wraps) and
+        the fix: a copyable keep-local value, plus the old-instant alternative. The summary reads
+        "N checked · M moved", or "1 checked · none moved · 3 can't be checked yet". A table
+        above 48 rem of container width, bordered cards below it. No result sentence says "now".
+      - **A Worker with old tz data cannot judge the four zones.** The page also reads the zones
+        answer and `staleZoneIds` (`lib/canada-map.ts`) lists the `STOPPED_ZONES` members that
+        do not come back as `stopped-2026`. Rows in those zones show "Can't check yet" and
+        "Try again after the update." in muted text; the one alert sentence
+        (`staleCheckText`, muted, no box) appears once, in the summary. Rendering waits until the
+        stale zones and the audit module are both known.
+      - **Held layout.** The status line and the narrow summary reserve their height, so an
+        answer moves nothing above it. `scripts/canada-stored-still.mjs` measures the form against
+        a build, in document coordinates, after the section's handlers attach, and presses
+        Option+Tab in WebKit. `scripts/canada-layout-check.mjs` measures the map row.
+      - **One term: "saved events".** Key points check 3 defines it (appointments, bookings and
+        shifts the app saved) and every link to `#canada-stored-title` uses the heading's words
+        (`canada-help-card.test.ts` asserts it). `Saved with an offset` and `Saved as UTC only` say
+        how an event was saved.
+      - **Function names in the page text** only in key-points step 3 (`classifyStoredZoned`,
+        `convertPlainDateTimeToZoned`) and the How gmt helps card, each linked to its reference
+        page. The stored section links nowhere to the audit; the Related list names it.
+    - **The How gmt helps card** (`HELP` in `data/canada-key-points.ts`, drawn by `helpCardHtml`).
+      Shaped like the home page's fault cards: a lede, a Verified strip (the tests run on the
+      newest release of each supported Node, the hosted server is checked daily) with an absolute
+      link to `oh-canada.test.ts`, which `withBase` leaves alone, then one case card per kind of
+      saved event (tag, `input -> output`, one line of why) and a button-styled link to the
+      checker. It uses cyan tokens (amber stays the sentinel's) and `align-self: start`, so it
+      does not stretch to the taller list beside it. `canada-help-card.test.ts` runs its claims
+      against the real library using values no tzdb release changes.
+    - **The Upgrade to at least card** (`data/canada-runtime-minimums.ts`) ends with `MINIMUMS_NOTE`,
+      one plain line (a `<p class="gmt-canada-minimums-note">` after the footer, and the last line of
+      `minimumsMarkdown`): gmt uses the time-zone rules of the device it runs on, and a device
+      without the October 2026 update gets the four zones wrong from 1 November 2026. It names no
+      function. Every sentence on the page reads true before and after 1 November 2026: no "will",
+      no "right now", no relative months.
   - **Stored Time Audit** (`/tools/stored-time-audit/`, `storedaudit`, core): a textarea of
     stored zoned strings (12 lines of 80 characters), a fixed table with one row per line (kind
     badge, readings as nowrap tokens) and a two-lane strip for the selected line, the zone's
@@ -884,6 +1065,49 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       and hides the planner's dials in the capture, because the "Your time zone" dial is
       drawn above the mask. The `tools-index-*` snapshots change when a tool card is added,
       and a new page has no baseline until the first snapshot.
+  - **Duration Parser Bench** (`/tools/duration-parser-bench/`, `durationbench`, core): a text
+    input (`maxlength` 64, never trimmed, so a leading space is a refusal the reader sees), a
+    locale select and eight Try buttons. Section 2 reads the typed string with `parseDuration`
+    then `parseHumanDuration` and shows which one accepted it, the ISO result, ten unit cells
+    (`getDurationUnit`, years to nanoseconds; lit when non-zero), `formatHumanDuration`, the
+    round trip back through `parseHumanDuration`, `formatDuration` in the chosen locale, and
+    every call with its return in a call frame. Section 3 holds two fixed tables drawn at mount:
+    seven spellings of a minute, a month and a millisecond (including `P1M`, which the human
+    parser refuses), and a laytime table (`3 days` and `72h` from two Rotterdam start times).
+    A widget draws the library's results and computes none, so `benchView` only calls `lib`.
+    - **Table B's hours come from `totalDuration`** with a zoned `relativeTo`, never from a
+      number written in the widget. `P3D` is 71 and 73 hours, `PT72H` is 72 and 72; the test
+      asserts what the library returns. The note cites BIMCO Laytime Definitions 2013, no. 8
+      (a laytime day is 24 consecutive hours).
+    - **Layout is fixed.** Both tables are `table-layout: fixed` with a doubled-class override
+      of `gmt-content.css`'s `th:first-child { width: 1% }`; below 46rem (`@container
+      gmt-dbench-table`, mirrored in `gmt-a11y.css`) each row stacks into a labelled block. A
+      locale change re-draws only the `formatDuration` cells of table A, and typing re-draws
+      section 2 only. The ten-cell strip picks its
+      columns from the container, not the viewport (`@container gmt-dbench`: 10 from 60rem, 5 by
+      default, 3 to 30rem, 2 to 20rem), so every value keeps room for 10 tabular digits
+      (`min-inline-size: 10ch`) and nothing is clipped or ellipsised; a `title` tooltip is no
+      help on touch. Labels wrap rather than truncate. Below 46rem the stacked table's
+      `<caption>` is `display: block` at full width with `--gmt-space-3` padding, because a
+      bare caption shrinks to fit, wraps word by word, and has its first letter clipped by the
+      table's bevelled corner.
+    - **Sentinel versus a plain answer.** A string neither parser reads shows
+      `⟨ NO SIGNAL — invalid input ⟩` and a static refusal line. In a string one parser reads,
+      the other parser's `""` is a plain answer (`""`), as in the Stored Time Audit's call frame.
+      Table cells whose call returned `""` (such as `parseDuration` on `1m`) show `⟨ NO SIGNAL ⟩`
+      because that is what the library said.
+    - **The bench makes six calls** (`parseHumanDuration`, `formatHumanDuration`,
+      `parseDuration`, `formatDuration`, `getDurationUnit` and `totalDuration`), not only the
+      three the story first named. The pure module and the loader are in the `heavy` list of
+      `widget-graph.test.ts`. No drag handle, so it is not in `readout-still`'s `TOOLS`.
+    - **The bench links the `parseHumanDuration` page, not a grammar anchor.** That page has no
+      heading for the grammar: the EBNF and the unit table are bullets of the behaviour list
+      under "Signature", and the page's headings are Signature, Parameters, Returns, Examples
+      and Source. So there is no anchor to link, and the bench copies no grammar and points at
+      the page.
+    - **The EBNF is a `text` fence** (decision: Shiki has no EBNF grammar, and an unknown
+      language would render as plain text with only a log line). The bullet's prose names the
+      notation, "ISO/IEC 14977 EBNF", so the reader knows what the block is.
 
   The decoder links to the converter and the checker, the converter to the decoder and the
   timeline, the checker to the decoder, and the timeline and the elapsed tool to each other and
@@ -1106,6 +1330,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   budget (40 px a frame in total, however late the frame) keep every step under the 48 px gate,
   where a CSS transition would double its step on a dropped frame, and the markup is wrapped at runtime so a reader without JS sees the server
   render. Section 1, the controls, is never wrapped, so popovers and focus rings do not clip.
+  A list inside section 1 whose row count follows a preset (the Holiday Rule Builder's rules,
+  the Observance Comparator's holidays) therefore carries `data-grow="slot"` itself, or
+  grow-measure sees the whole list arrive in one frame.
   Rules: [reference/design-system.md § Smooth growth](reference/design-system.md#smooth-growth).
 - **Tool pages:** `/tools/dst-inspector/`, `/tools/interval-visualizer/`,
   `/tools/converter-bench/`, `/tools/dwell-ledger/`, `/tools/free-time-ledger/`,
@@ -1116,7 +1343,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `/tools/x12-time-reader/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
   `/tools/epcis-event-reader/`, `/tools/journey-split/`, `/tools/gnss-week-decoder/`,
   `/tools/satellite-clock-converter/`, `/tools/gnss-rollover-checker/`,
-  `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`, `/tools/id-timestamp-decoder/`, `/tools/column-timestamp-bridge/`, plus the Tier 4
+  `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`,
+  `/tools/holiday-rule-builder/`, `/tools/observance-comparator/`, `/tools/moving-feasts/`,
+  `/tools/duration-parser-bench/`, `/tools/id-timestamp-decoder/`, `/tools/column-timestamp-bridge/`, plus the Tier 4
   `/tools/zoned-earth/` and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package. The
   Zone Planner's is `/tools/zone-planner/?w=planner&wa={"time":…,"zone1":…,"zone2":…}`: a UTC
@@ -1148,6 +1377,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `encodeURIComponent` leaves raw. The content-permalink test matches a link with
     `/\?w=([a-z]+)&wa=([^)"'\s]+)/` (`widget-permalink.test.ts`), so a raw `'` ends the match
     early and the test reads a cut-off link; a raw `+` in a query string decodes as a space.
+  The three holiday tools use a preset form (`{ preset }` plus every scalar): the Builder's
+  `rules` (one `;` line per rule, joined), `weekend`, `zone` and `year`; the Comparator's
+  numbered `holiday1`… and `column1`…, `from`, `to`, `weekend` and `year`; Moving Feasts' `year`,
+  `offsets`, `computus`, `month`, `weekday` and `ordinal`. `rules` (the Builder) and `holidays` (the
+  Ledger link the Builder sends) are in `LONG_STRING_KEYS`, each with a regression test, because a
+  year's calendar runs past 64 characters and the link would otherwise drop the holidays silently.
+  `holidays` is capped at 1000 characters. `rules` is capped at 95,000, the longest list the chat
+  schema accepts once every name and date is escaped. An empty `weekend` or `offsets` is kept as no
+  weekend or no offsets (`EMPTY_LIST_KEYS`), not dropped.
 - **`escapeAttr` on every template interpolation.** Values come from a model or from a URL
   someone else wrote, and a hand-written template string escapes nothing.
 - **Interval visualizer:** the timeline is a `TimelineScale` value. Presets use the fixed
@@ -1252,6 +1490,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   fallback. `src/lib/globe.ts` is the Dox layer on top — zones, clocks, selection and the
   tooltip — and keeps `initGlobe(host, clockPanel)`, so the hero, `/tools/zoned-earth/` and
   the `/dox` rail all mount it unchanged.
+  - **The control stack.** `renderGlobeTemplate` (`src/lib/globe-mount.ts`, shared by
+    `Globe.astro` and the rail) draws one `role="group"` named "Globe controls" in the stage's
+    bottom-right corner: `+`, `−`, `⊙` and the data-credits info button, in that tab order, all
+    native `<button>`s of one size and one look (`.gmt-globe-zoom button`). Every globe draws the
+    boundaries and the imagery, so every globe carries the button; there is no option to drop it.
+    Its popover id is `<idPrefix>-data-credits`, unique per mount. See *Data credits* below.
   - **The split.** `globe/` knows nothing about time: it draws a planet, takes markers,
     regions and arcs, and asks the caller for the instant to light it by. That line is what
     lets the same engine carry route arcs or a coloured region set without a fork.
@@ -1328,9 +1572,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       Public domain in the US, as a work of the US Government (17 U.S.C. § 105). NASA's
       media guidelines ask that NASA be acknowledged as the source — a request, not a
       condition of use — and rule out its insignia and any implied endorsement; the script
-      records all three. The credit is one quiet line at the foot of `why-gmt.mdx` — "Earth
-      imagery: NASA Earth Observatory (Blue Marble Next Generation)." — off the homepage,
-      with no logo. July, because the
+      records all three. The credit is the `EARTH_IMAGERY` row of the data-credits panel
+      (below) on the pages that draw the imagery — "NASA Earth Observatory (Blue Marble Next
+      Generation)." — with no logo. July, because the
       northern hemisphere, where most plotted zones are, is free of snow then. One static
       file — no tile service, no runtime dependency on anyone else's server.
     - **Loading.** `webgpu/imagery.ts` fetches it once the WebGPU renderer has started and
@@ -1571,6 +1815,75 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     the slider to 0. The link then carries that concrete time (so a link reproduces what the reader
     sees), as it does after a jump.
 
+- **Boundary data (`CORE-88`).** Three public files hold time-zone shapes, all from
+  timezone-boundary-builder (tbb) and all derived from OpenStreetMap: `timezone-boundaries.json`
+  (the 10 CI zones, 0.02°, 3 decimals), `timezone-boundaries-globe.json` (every zone, 0.2°) and
+  `timezone-boundaries-canada.json` (Canada, 0.02°, 3 decimals).
+  - **One pinned release.** Every `prepare-*-boundaries.py` reads `releases/download/<TBB_TAG>/`
+    (today `2026e`), never `releases/latest`, so each file names the release it came from.
+    `TBB_TAG` in `src/lib/data-credits.ts` is the same tag; `scripts/boundary-data.test.ts` holds
+    the files to it.
+  - **The Canada set is `zone.tab`, not `zone1970.tab`.** Rows whose country column is exactly
+    `CA` in the pinned tzdb (23 today). `zone1970.tab` lists `America/Toronto` (CA,BS),
+    `Panama`, `Puerto_Rico` and `Phoenix`, whose shapes cover other countries, and tbb has no
+    country outline to clip with. The comprehensive set gives each Canadian locality its own
+    Canada-only feature. The script exits non-zero if a selected id has no feature.
+    `src/lib/canada-zones.json` (`{ tzdb, zones }`, sorted) is generated with it, so the map's
+    zone list is never typed.
+  - **The ODbL notice is in the file.** The files are derived databases offered to the public
+    (ODbL 1.0 §4.2–4.4), so each carries `source`, `attribution`, `license: "ODbL-1.0"` and
+    `licenseUrl` as GeoJSON foreign members (RFC 7946 §6.1). The wording follows tbb's README
+    § Licenses at the pinned tag ("The outputted data is licensed under the … ODbL").
+  - **Budget.** The Canada file stays under 400 KB; 0.02° gives about 98 KB compact and 184 KB
+    after `oxfmt`, which the repo's format check requires of these files. The scripts run
+    by hand (`uv run --with shapely python scripts/prepare-*-boundaries.py`), then
+    `pnpm exec oxfmt --write` on the output.
+- **Data credits (`CORE-88`).** The credit sits on the drawing it credits: an info button that
+  opens a small popup, one row per source, label left, credit right. Nothing else on the page
+  names the sources, and no page carries a footer button or frontmatter list.
+  - **One renderer.** `renderDataCreditsHtml(credits, { id, placement })` in
+    `src/lib/data-credits.ts` returns the native `<button popovertarget>` and its `popover`
+    panel, so the Astro shells and the plain-DOM mounts (the chat) render the same markup. `id` is
+    unique per mount. Placements are `stack` and `corner`.
+  - **Globe: the fourth button of the stack** (`stack`). `+`, `−`, `⊙`, `ⓘ` in one group named
+    "Globe controls"; the stack's own rule (`.gmt-globe-zoom button`, `gmt-globe.css`) sizes and
+    colours the button, so it matches its siblings in size, bevel, hover and focus fill, and tab
+    order, and it fades in with them. Credits: boundaries and Earth imagery, on `/`,
+    `/tools/zoned-earth/` and the chat's `globe` widget alike.
+  - **Maps with no button stack: a glass square in the corner** (`corner`). The same 2rem square
+    as the stack's buttons (`--gmt-surface-2` fill, `--gmt-border` edge, bevel), bottom-right of
+    the drawing, where the land and the zone dots do not reach. Credits: boundaries only.
+    `TimezoneMap.astro` (`/why-gmt/`) renders it in its HTML, in `.gmt-credited-frame` beside the
+    chart host (which the chart code empties); the Canada map (`canada-map.ts`) adds it to
+    `.gmt-canada-map` when it draws the shapes, so a section narrower than 520 px, where no map is
+    drawn and no file is fetched, has no credit. The chat's `canadaclock` widget follows the same
+    rule; the map frame's `data-credits-id` carries its `idPrefix`-based id.
+  - **`aria-expanded` is kept by script.** WebKit's accessibility tree does not report a
+    `popovertarget` button as expanded when its panel is open (a bare button and popover show it
+    too), so the button carries `aria-expanded="false"` and `watchDataCredits()` (one capturing
+    `toggle` listener on the document, called by `mountGlobe`, `canada-map.ts` and
+    `TimezoneMap.astro`) sets it from the panel's `newState`.
+  - **Closed by default, native `popover`.** Escape, an outside click and focus return come free
+    and need no script. The popup is anchored to its button (`position-anchor: auto`, the
+    popover's implicit anchor; Chromium resolves `anchor()` only with it set): a stack's opens
+    beside the stack, to its left, bottom edges aligned; a corner button's opens above it. Both sit
+    12 px inside the viewport, shrinking to the room there is (a left inset and `justify-self: end`),
+    never over the buttons, and flip to the other side of the anchor when they would leave the
+    viewport. Without anchor positioning the panel pins to the viewport's bottom edge.
+  - **Colour.** The glyph is `--gmt-ice` on `--gmt-surface-2`, the stack's own pair, with
+    `--gmt-void` on `--gmt-cyan-ink` for hover, focus and open. `data-credits.test.ts` recomputes
+    both pairs from the tokens in each theme (WCAG 2.2 SC 1.4.11 asks 3:1). Forced colours: system
+    button colours and a `Highlight` focus outline (`gmt-a11y.css`).
+  - **Gates.** `scripts/data-credits-built.test.ts` asserts what the HTML holds: the globe's
+    button last in its stack on `/` and `/tools/zoned-earth/`, the map's on `/why-gmt/`, none on
+    the Canada page (drawn by the client), and none anywhere else.
+    `scripts/data-credits-check.mjs` asserts the rest on a served build at 1280 and 375 px, in
+    Chromium and WebKit: Tab reaches the button inside its group (WebKit presses Option+Tab,
+    because Safari on macOS leaves buttons out of plain Tab for every site), Enter opens it with
+    the accessible expanded state true, Escape closes it and returns focus, the panel is inside the viewport and covers no control
+    button, and the button covers no text, no other focusable element and no drawn shape; at 375
+    px the Canada page has no button.
+
 ## Tier 5 · Scenarios and pitfalls
 
 `DOX-A4b`–`A4d`
@@ -1655,7 +1968,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 | Step | Failure |
 | --- | --- |
 | Method | `405` |
-| Burst limiter — per isolate, 20/60 s; blunts casual abuse, not a determined attacker | `429` + `Retry-After` |
+| Burst limiter — key `chat:<clientId>`, per isolate, 20/60 s; blunts casual abuse, not a determined attacker | `429` + `Retry-After` |
 | JSON body | `400` |
 | Envelope (zod) + `safeValidateUIMessages` with the real tool set; roles `user`/`assistant` only | `400` |
 | Sanitise invisible characters, **then** apply length and conversation caps | `400` |
@@ -1664,6 +1977,23 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 | Retrieve → assemble prompt | mapped error, never a raw upstream payload |
 | Open the stream, then in-request failover, writing transient `data-status` progress per brain | pool spent, or every brain busy → transient `data-refusal` |
 | Write the retrieval trace part, then merge `toUIMessageStream` (`sendReasoning: false`, `onError` on both layers) | mapped error text, never a raw upstream payload |
+
+- **The rate limiter takes a policy.** `checkRateLimit(key, now, { max, windowSeconds })`
+  (`worker/rate-limit.ts`) keeps one bucket per key in a module-scope `Map`, so it is per
+  isolate: blunt protection, not a global limit. Chat passes `chat:<clientId>` with
+  `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_SECONDS`; the Canada checker passes
+  `canada:<clientId>` with `CANADA_RATE_LIMIT` (20 per 60 s, `src/lib/canada-clock-change.ts`).
+  The prefixes keep the two counts apart.
+- **`GET /gmt/api/canada-clock-change`** (`worker/canada-clock-change.ts`) computes the
+  probe offsets, the 2026-2027 transitions and one row per Canadian zone at request time on
+  workerd, from the library only. Every answer is `cache-control: no-store`, because a cached
+  answer would hide the live tz data the page exists to show. Other methods answer `405` with
+  `allow: GET`; over the limit it answers `429` + `retry-after` and `{ error, retryable: true }`.
+  The year scans and the `now`-free probe and transition tables are memoised per isolate (tz
+  data cannot change inside one): a GET otherwise costs ~80 scans, too much CPU for a Free-plan
+  request. `last` and `next` search the UTC years Y-1..Y+1, because the library groups by the
+  zone's local year.
+  `deploy-smoke.mjs` checks the five probe offsets against tzdb 2026e on the deployed Worker.
 
 - **The stream opens before a brain is chosen.** Measured 2026-09-24: two busy brains
   took 2.8 s of a 6.7 s answer, and the reader saw nothing but "Searching corpus…". Now
@@ -1799,15 +2129,33 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     them.
   - `showStoredTimeAudit({ values, line? })` (CORE-83): the stored strings exactly as the
     reader gave them, one per line, and the 1-based line to draw.
+  - `showHolidayRuleBuilder({ rules?, weekend, year, zone })` (CORE-54): one to twelve rules of
+    the five kinds, each with an optional observance policy. A rule moved by its policy closes
+    only its observed day; to close both days, list the rule twice, once with no policy. Pass only
+    rules, dates and policies the reader gave; never supply a place's holidays or its observance
+    policy from memory.
+  - `showObservanceComparator({ holidays, years, weekend, policies, year })` (CORE-54): one to
+    three month-day holidays and one to four policies, all the reader's; never name a place's
+    policy. The same "never from memory" rule applies.
+  - `showMovingFeasts({ year, offsets?, month?, weekday?, n? })` (CORE-54): the reader's year and,
+    where asked, the Easter offsets and the month, weekday and ordinal; nothing is chosen from a
+    place's calendar.
+  - `showCanadaClockChange({ zone? })` (CORE-88): one id from `canada-zones.json` to pin on the
+    map; the Worker's `execute` and the registry's `validate` refuse any other id. The widget
+    kind is `canadaclock`, its permalink `/check/canada-2026-clock-change/?w=canadaclock&wa={"zone":…}`.
+  - `showDurationParserBench({ text, locale? })` (CORE-85): the reader's duration string
+    exactly as given (never trimmed or corrected, at most 64 characters), and a locale only
+    when the reader names one.
   - `showIdTimestampDecoder({ id, epochMs?, shift?, timestampBits? })` (CORE-56): `id` exactly
     as the reader gave it, never trimmed or corrected; the layout fields only when the reader
     gave a Snowflake layout.
   - `showColumnTimestampBridge({ mode?, value?, unit?, zone?, duration?, int96Form?, julianDay?, nanosOfDay?, bytes?, int64?, seconds?, nanos?, durSeconds?, durNanos? })`
     (CORE-56): needs a `value` or a decode field; each string exactly as the reader gave it.
-- **Count:** 32 tools — the globe, the 30 teaching tools and the Zone Planner — and 32
-  `CHAT_STARTERS`, one card each: 10 core, 11 transport, 8 intermodal and 3 GNSS (the Leap
-  Second Timeline, Elapsed vs. Clock Difference, Stored Time Audit, ID Timestamp Decoder and Column Timestamp Bridge are core). `ENABLED_TOOL_NAMES` and
-  `CHAT_STARTERS` hold the numbers; re-derive them from there.
+- **Count:** `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers, one starter card per tool;
+  re-derive them from there, and never write a literal in a test or a page. The Leap Second
+  Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada clock-change checker, the
+  Duration Parser Bench, the three holiday tools, the ID Timestamp Decoder and the Column Timestamp
+  Bridge are core.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.
@@ -2014,6 +2362,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   mkdir -p "$SP/after" && rsync -a --exclude node_modules --exclude dist --exclude .git \
     --exclude .astro --exclude .visual --exclude .wrangler "$W"/ "$SP/after"/
   # In each tree (the branch's library may be rsynced from "$W/packages/gmt/dist" instead):
+  # (The base tree may predate the Node pin, so keep the fnm prefix for it.)
   cd "$SP/<tree>" && eval "$(fnm env)" && fnm use && pnpm install --frozen-lockfile \
     && pnpm --filter @northguild/gmt build \
     && DOX_VITE_CACHE_DIR="$SP/vite-<tree>" pnpm --filter @gmt/dox build
@@ -2034,6 +2383,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `dev-all.mjs` only ever stops its own children. If another `astro dev` holds this
   project's lock (per project, not per port) it exits instead of replacing it — stop that
   one with `astro dev stop` first. A taken Worker port needs `DOX_WORKER_PORT`.
+  Astro proxies `/gmt/api/…` to the Worker (`src/lib/dev-worker-proxy.ts`, port from
+  `DOX_WORKER_PORT`, default 8787). The proxy key is `^/api`, not `/gmt/api`: Astro's dev base
+  middleware strips `/gmt` before Vite's proxy runs, so a `/gmt/api` key never matched and every
+  API call got Astro's 404 page. `rewrite` puts the base back, as the Worker expects the full
+  path. `dev-worker-proxy.test.ts` starts the real `astro dev` CLI (`--ignore-lock`, clean
+  env) against a stub Worker; Astro reordering its middleware fails it.
 - **Local chat:** `pnpm dev:chat` (build, then `wrangler dev`), or `npx wrangler dev --port
   8799` with `dist/` already built. `.dev.vars` holds `NORTHGUILD_GMT_GEMINI_API_KEY` and
   `DOX_DEV_KEY` (`.dev.vars.example`).

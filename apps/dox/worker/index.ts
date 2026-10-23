@@ -17,6 +17,7 @@ import {
 } from "../src/lib/site";
 import { chooseBrain, remainingFor } from "./brains";
 import { getUnixNowMs } from "./clock";
+import { handleCanadaClockChange } from "./canada-clock-change";
 import { createChatHandler } from "./chat-handler";
 import { CORE_RULES_CONTENT } from "./core-rules";
 import {
@@ -203,7 +204,7 @@ async function handleBrains(request: Request, env: Env): Promise<Response> {
 }
 
 /**
- * The two API routes, by base-less path. `undefined` for any other path, so the
+ * The API routes, by base-less path. `undefined` for any other path, so the
  * caller decides what happens next.
  */
 async function routeApi(
@@ -219,6 +220,11 @@ async function routeApi(
       );
     }
     return handleBrains(request, env);
+  }
+
+  // Any method: the handler answers 405 itself (POST joins GET with the stored-times check).
+  if (path === "/api/canada-clock-change") {
+    return handleCanadaClockChange(request, env);
   }
 
   if (path !== "/api/chat") return undefined;

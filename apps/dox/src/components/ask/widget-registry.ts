@@ -76,9 +76,15 @@ import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import type { IdTimestampDecoderArgs } from "~/lib/id-timestamp-decoder-mount";
 import type { ColumnTimestampBridgeArgs } from "~/lib/column-timestamp-bridge-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
+import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
+import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
+import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
+import type { CanadaClockChangeArgs } from "~/lib/canada-clock-change-mount";
+import type { DurationParserBenchArgs } from "~/lib/duration-parser-bench-mount";
 import {
   showBillingDeadlinesInput,
   showBlDateStampInput,
+  showCanadaClockChangeInput,
   showConnectionCheckerInput,
   showConverterBenchInput,
   showCrossingClockInput,
@@ -97,6 +103,10 @@ import {
   showLeapSecondTimelineInput,
   showSatelliteClockConverterInput,
   showStoredTimeAuditInput,
+  showHolidayRuleBuilderInput,
+  showObservanceComparatorInput,
+  showMovingFeastsInput,
+  showDurationParserBenchInput,
   showIdTimestampDecoderInput,
   showColumnTimestampBridgeInput,
   showDwellLedgerInput,
@@ -850,6 +860,121 @@ const storedAuditEntry = defineWidget<StoredTimeAuditArgs>({
     })),
 });
 
+const holidayBuilderEntry = defineWidget<HolidayRuleBuilderArgs>({
+  title: "Holiday rule builder",
+  kind: "holidays",
+  parse: (input) => {
+    const result = showHolidayRuleBuilderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control value. A rule the library does not read is a row's own NO SIGNAL, with its reason, so only the zone is checked here. */
+  validate: ({ zone }) => (zone ? checkZones([zone]) : Promise.resolve(null)),
+  load: () =>
+    import("~/lib/holiday-rule-builder-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderHolidayRuleBuilderTemplate(args),
+      mount: m.mountHolidayRuleBuilder,
+    })),
+});
+
+const observanceEntry = defineWidget<ObservanceComparatorArgs>({
+  title: "Observance comparator",
+  kind: "observance",
+  parse: (input) => {
+    const result = showObservanceComparatorInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control value, and a policy the library does not read is a column's own NO SIGNAL. There is deliberately no `validate`. */
+  load: () =>
+    import("~/lib/observance-comparator-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderObservanceComparatorTemplate(args),
+      mount: m.mountObservanceComparator,
+    })),
+});
+
+const movingFeastsEntry = defineWidget<MovingFeastsArgs>({
+  title: "Moving feasts",
+  kind: "feasts",
+  parse: (input) => {
+    const result = showMovingFeastsInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a month with no such weekday is this widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/moving-feasts-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderMovingFeastsTemplate(args),
+      mount: m.mountMovingFeasts,
+    })),
+});
+
+const canadaClockEntry = defineWidget<CanadaClockChangeArgs>({
+  title: "Canada 2026 clock-change checker",
+  kind: "canadaclock",
+  parse: (input) => {
+    const result = showCanadaClockChangeInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* The mount pins the zone once the Worker has answered, so the template paints the same
+     everywhere. The credits button is in the frame's corner: the map draws third-party shapes. */
+  load: () =>
+    import("~/lib/canada-clock-change-mount").then((m) => ({
+      renderTemplate: (idPrefix) =>
+        m.renderCanadaClockChangeWidgetTemplate(idPrefix),
+      mount: m.mountCanadaClockChangeWidget,
+    })),
+  /* A zone outside the checker's own list would open unpinned, so refuse it with the reason.
+     The list is a JSON import kept out of the chat's first download. */
+  validate: async ({ zone }) => {
+    if (zone === undefined) return null;
+    const { default: list } = await import("~/lib/canada-zones.json");
+    return list.zones.includes(zone)
+      ? null
+      : `${zone} isn't one of the zones the checker lists.`;
+  },
+});
+
+const durationBenchEntry = defineWidget<DurationParserBenchArgs>({
+  title: "Duration parser bench",
+  kind: "durationbench",
+  parse: (input) => {
+    const result = showDurationParserBenchInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: both arguments are control values. There is deliberately no `validate`: a string the grammar refuses is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
+  load: () =>
+    import("~/lib/duration-parser-bench-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderDurationParserBenchTemplate(args),
+      mount: m.mountDurationParserBench,
+    })),
+});
+
 const idDecoderEntry = defineWidget<IdTimestampDecoderArgs>({
   title: "ID timestamp decoder",
   kind: "iddecode",
@@ -968,6 +1093,11 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showLeapSecondTimeline: leapLineEntry,
   showElapsedVsClock: elapsedEntry,
   showStoredTimeAudit: storedAuditEntry,
+  showHolidayRuleBuilder: holidayBuilderEntry,
+  showObservanceComparator: observanceEntry,
+  showMovingFeasts: movingFeastsEntry,
+  showCanadaClockChange: canadaClockEntry,
+  showDurationParserBench: durationBenchEntry,
   showIdTimestampDecoder: idDecoderEntry,
   showColumnTimestampBridge: columnBridgeEntry,
 };

@@ -16,6 +16,14 @@ permissions:
   actions: read
   contents: read
 
+# The jobs name their Node with actions/setup-node, and that is the Node they must run.
+# package.json pins a Node through devEngines.runtime for local work. In CI, every
+# `pnpm install` passes --no-runtime so pnpm does not download that pin, and
+# verifyDepsBeforeRun is off so a later `pnpm run` or `pnpm exec` does not quietly run an
+# install without the flag and put the pinned Node ahead of the job's Node.
+env:
+  pnpm_config_verify_deps_before_run: "false"
+
 jobs:
   determine-affected:
     name: Determine affected packages
@@ -126,20 +134,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          check-latest: true
           cache: pnpm
 
       - name: Approve pnpm build scripts
         run: pnpm approve-builds --all
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-runtime
 
       # `validate` runs these, but only on pushes to main — by which point a drifting
       # tracker, a carried bug or a missing changeset has already merged. These are the
@@ -232,20 +239,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          check-latest: true
           cache: pnpm
+
+      - name: Node and tzdata this job runs
+        run: node -p "process.version+' tz '+process.versions.tz"
 
       - name: Approve pnpm build scripts
         run: pnpm approve-builds --all
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      # The matrix names a Node, and pnpm must run that one, not the Node that
+      # devEngines.runtime pins for local work. This fails the job if they differ.
+      - name: pnpm runs the matrix Node
+        env:
+          WANT: ${{ matrix.node-version }}
+        run: |
+          echo "pnpm exec node: v$(pnpm exec node -p process.versions.node), tz $(pnpm exec node -p process.versions.tz)"
+          test "$(pnpm exec node -p 'process.versions.node.split(".")[0]')" = "$WANT"
 
       - name: Clean stale build artifacts
         run: find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
@@ -291,16 +309,19 @@ jobs:
         if: steps.check-non-gmt.outputs.run_tests == 'false'
         run: echo "Skipping tests - no non-GMT package changes detected"
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         if: steps.check-non-gmt.outputs.run_tests == 'true'
-        with:
-          version: 10.32.1
 
       - uses: actions/setup-node@v4
         if: steps.check-non-gmt.outputs.run_tests == 'true'
         with:
           node-version: ${{ matrix.node-version }}
+          check-latest: true
           cache: pnpm
+
+      - name: Node and tzdata this job runs
+        if: steps.check-non-gmt.outputs.run_tests == 'true'
+        run: node -p "process.version+' tz '+process.versions.tz"
 
       - name: Approve pnpm build scripts
         if: steps.check-non-gmt.outputs.run_tests == 'true'
@@ -308,7 +329,17 @@ jobs:
 
       - name: Install dependencies
         if: steps.check-non-gmt.outputs.run_tests == 'true'
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      # The matrix names a Node, and pnpm must run that one, not the Node that
+      # devEngines.runtime pins for local work. This fails the job if they differ.
+      - name: pnpm runs the matrix Node
+        if: steps.check-non-gmt.outputs.run_tests == 'true'
+        env:
+          WANT: ${{ matrix.node-version }}
+        run: |
+          echo "pnpm exec node: v$(pnpm exec node -p process.versions.node), tz $(pnpm exec node -p process.versions.tz)"
+          test "$(pnpm exec node -p 'process.versions.node.split(".")[0]')" = "$WANT"
 
       # Restores the dist built (and cached) by build-lint for this same
       # node version/gmt-source hash, so we skip rebuilding it here.
@@ -392,16 +423,19 @@ jobs:
         if: steps.check-gmt.outputs.gmt_changed == 'false'
         run: echo "Skipping GMT TZ tests - no gmt package changes detected"
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         if: steps.check-gmt.outputs.gmt_changed == 'true'
-        with:
-          version: 10.32.1
 
       - uses: actions/setup-node@v4
         if: steps.check-gmt.outputs.gmt_changed == 'true'
         with:
           node-version: ${{ matrix.node-version }}
+          check-latest: true
           cache: pnpm
+
+      - name: Node and tzdata this job runs
+        if: steps.check-gmt.outputs.gmt_changed == 'true'
+        run: node -p "process.version+' tz '+process.versions.tz"
 
       - name: Approve pnpm build scripts
         if: steps.check-gmt.outputs.gmt_changed == 'true'
@@ -409,7 +443,17 @@ jobs:
 
       - name: Install dependencies
         if: steps.check-gmt.outputs.gmt_changed == 'true'
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      # The matrix names a Node, and pnpm must run that one, not the Node that
+      # devEngines.runtime pins for local work. This fails the job if they differ.
+      - name: pnpm runs the matrix Node
+        if: steps.check-gmt.outputs.gmt_changed == 'true'
+        env:
+          WANT: ${{ matrix.node-version }}
+        run: |
+          echo "pnpm exec node: v$(pnpm exec node -p process.versions.node), tz $(pnpm exec node -p process.versions.tz)"
+          test "$(pnpm exec node -p 'process.versions.node.split(".")[0]')" = "$WANT"
 
       - name: Run GMT tests
         if: steps.check-gmt.outputs.gmt_changed == 'true'

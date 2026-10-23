@@ -2,7 +2,7 @@
 /**
  * Live redirect and routing checks for Dox after a deploy: the live rows of the redirect matrix
  * (context/domination/issues/CORE-86.md, Decisions D3 to D5). Run by
- * .github/workflows/deploy-dox.yml after `wrangler-action`; run it by hand with
+ * .github/workflows/deploy-dox.yml after `wrangler deploy`; run it by hand with
  *
  *     node apps/dox/scripts/deploy-smoke.mjs
  *
@@ -16,6 +16,7 @@
  * The whole set is retried up to 6 times, 10 s apart, for route propagation. The exit code
  * is 1 with a table of failures when the last attempt still fails. It does not roll back.
  */
+import { readFileSync } from "node:fs";
 import { request } from "node:https";
 
 const ND = "https://northguild.dev";
@@ -269,12 +270,133 @@ async function buildRows() {
     url: `${ND}/gmt/api/brains`,
     steps: [{ status: 200, type: "json" }],
   });
+  // The tzdb 2026e offsets at PROBE_INSTANT (PROBE_ZONES in src/lib/canada-clock-change.ts;
+  // this script cannot import TypeScript, so the five literals are repeated here). When a later
+  // tzdb changes one of these zones again this row fails on purpose: the fix is a page update,
+  // not a retry.
+  add({
+    label: "canada-clock-change probe",
+    url: `${ND}/gmt/api/canada-clock-change`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          const expected = {
+            "America/Vancouver": "-07:00",
+            "America/Edmonton": "-06:00",
+            "Africa/Casablanca": "+00:00",
+            "America/Inuvik": "-06:00",
+            "America/Winnipeg": "-05:00",
+          };
+          let probe;
+          try {
+            probe = JSON.parse(body).probe;
+          } catch {
+            return "body is not JSON";
+          }
+          if (!Array.isArray(probe)) return "no probe array";
+          const got = Object.fromEntries(probe.map((r) => [r.zone, r.offset]));
+          const bad = Object.entries(expected).filter(
+            ([zone, offset]) => got[zone] !== offset,
+          );
+          return bad.length
+            ? `probe differs from tzdb 2026e: ${bad.map(([z, o]) => `${z} wanted ${o}, got ${got[z]}`).join("; ")}`
+            : undefined;
+        },
+      },
+    ],
+  });
+  // Report only. A kind is a reading of the Worker's tz data, which a later tzdb can change
+  // again, so this row prints the kinds and fails only on the status or the body's shape. The
+  // 2026e expectation is checked by hand against the deployed Worker. The three lines are
+  // STORED_PRESET's Canadian lines (src/lib/canada-stored-times.ts).
+  add({
+    label: "canada-clock-change stored times (report only)",
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      zone: "America/Vancouver",
+      lines: [
+        "2026-11-15T09:00:00-08:00[America/Vancouver]",
+        "2027-03-14T02:30:00-07:00[America/Edmonton]",
+        "2026-11-01T01:30:00-05:00[America/Winnipeg]",
+      ].join("\n"),
+    }).toString(),
+    url: `${ND}/gmt/api/canada-clock-change`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          let rows;
+          try {
+            rows = JSON.parse(body).rows;
+          } catch {
+            return "body is not JSON";
+          }
+          if (!Array.isArray(rows) || rows.length !== 3)
+            return "expected 3 rows";
+          console.log(
+            `   stored times: ${rows.map((r) => `${r.line} ${r.result?.kind ?? "null"}`).join(", ")}`,
+          );
+          return undefined;
+        },
+      },
+    ],
+  });
   add({
     label: "23 POST",
     method: "POST",
     body: "",
     url: `${ND}/gmt/api/chat`,
     steps: [{ status: 400 }],
+  });
+  // The cap is read from its source so this row follows it: a Worker over its CPU budget answers
+  // Error 1102, so a full-size POST must still answer 200.
+  const storedMax = Number(
+    /STORED_MAX_LINES = (\d+);/.exec(
+      readFileSync(
+        new URL("../src/lib/canada-clock-change.ts", import.meta.url),
+        "utf8",
+      ),
+    )?.[1],
+  );
+  if (!Number.isInteger(storedMax))
+    throw new Error("STORED_MAX_LINES not found");
+  add({
+    label: `canada-clock-change stored times (${storedMax} lines)`,
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      zone: "America/Toronto",
+      lines: Array.from(
+        { length: storedMax },
+        (_, i) =>
+          `2026-${String((i % 12) + 1).padStart(2, "0")}-${String((i % 27) + 1).padStart(2, "0")}T12:00:00-05:00[America/Toronto]`,
+      ).join("\n"),
+    }).toString(),
+    url: `${ND}/gmt/api/canada-clock-change`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        // Every line read, or the CPU guard tests fewer lines than the cap.
+        check: ({ body }) => {
+          let parsed;
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            return "body is not JSON";
+          }
+          const { rows, truncated } = parsed;
+          if (truncated !== false) return "truncated is not false";
+          return rows?.length === storedMax
+            ? undefined
+            : `${rows?.length} rows, not ${storedMax}`;
+        },
+      },
+    ],
   });
   add({ label: "23 GET", url: `${ND}/gmt/api/chat`, steps: [{ status: 405 }] });
   add({

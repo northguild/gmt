@@ -65,6 +65,11 @@ function activeOwnedModel(calendarId: string): ArithmeticModel | undefined {
     : undefined;
 }
 
+/** The arithmetic model `calendarId` is computed with: the owned one where active, else the read-backed one. */
+export function arithmeticModelFor(calendarId: string): ArithmeticModel {
+  return activeOwnedModel(calendarId) ?? readArithmeticModel(calendarId);
+}
+
 function reachesCorrectedRange(calendarId: string, years: number[]): boolean {
   return hasReadCorrection(
     calendarId,

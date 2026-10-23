@@ -15,6 +15,7 @@
  * longer exports, becomes a `WidgetLoadError` rather than a dead control.
  */
 import { GMT_MODULES } from "./gmt-modules";
+import { pickFunctions } from "./gmt-pick";
 import { WidgetLoadError } from "./widget-mount";
 
 /** The functions the two leap-second tools call, as the library declares them. */
@@ -44,18 +45,6 @@ const UTC_CALCULATE_NAMES = ["addUtc", "startOfUtc"] as const;
 const PLAIN_VALIDATE_NAMES = ["hasSecond60"] as const;
 const PRECISION_VALIDATE_NAMES = ["isValidInstant"] as const;
 
-/** Reads each name from a module, and fails loudly on a name it lacks. */
-function pick(module: Record<string, unknown>, names: readonly string[]) {
-  return Object.fromEntries(
-    names.map((name) => {
-      if (typeof module[name] !== "function") {
-        throw new Error(`The library module has no ${name}.`);
-      }
-      return [name, module[name]];
-    }),
-  );
-}
-
 export async function loadTimescaleLib(): Promise<TimescaleLib> {
   try {
     const [
@@ -76,13 +65,13 @@ export async function loadTimescaleLib(): Promise<TimescaleLib> {
       GMT_MODULES["precision/validate"](),
     ]);
     return {
-      ...pick(calculate, CALCULATE_NAMES),
-      ...pick(convert, CONVERT_NAMES),
-      ...pick(validate, VALIDATE_NAMES),
-      ...pick(spanCalculate, SPAN_NAMES),
-      ...pick(utcCalculate, UTC_CALCULATE_NAMES),
-      ...pick(plainValidate, PLAIN_VALIDATE_NAMES),
-      ...pick(precisionValidate, PRECISION_VALIDATE_NAMES),
+      ...pickFunctions(calculate, CALCULATE_NAMES),
+      ...pickFunctions(convert, CONVERT_NAMES),
+      ...pickFunctions(validate, VALIDATE_NAMES),
+      ...pickFunctions(spanCalculate, SPAN_NAMES),
+      ...pickFunctions(utcCalculate, UTC_CALCULATE_NAMES),
+      ...pickFunctions(plainValidate, PLAIN_VALIDATE_NAMES),
+      ...pickFunctions(precisionValidate, PRECISION_VALIDATE_NAMES),
     } as unknown as TimescaleLib;
   } catch (cause) {
     // Loud, not inert: the host decides what to show (see `WidgetLoadError`).

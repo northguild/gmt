@@ -164,6 +164,14 @@ describe("the built site keeps the /gmt base", () => {
       );
     });
     expect(publicNames).toContain("pagefind");
+    // The three boundary files are public assets; the Canada one is read by the clock-change map.
+    expect(publicNames).toEqual(
+      expect.arrayContaining([
+        "timezone-boundaries.json",
+        "timezone-boundaries-globe.json",
+        "timezone-boundaries-canada.json",
+      ]),
+    );
     const js = walk(resolve(pages, "_astro"), (n) => n.endsWith(".js"));
     expect(js.length).toBeGreaterThan(0);
     const texts = Object.fromEntries(

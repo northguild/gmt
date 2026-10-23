@@ -12,7 +12,8 @@ Decisions: `context/domination/issues/CORE-6.md` § Decisions. Owner choices:
 ## Rules
 
 1. **Import surface.** `index.ts` is the only import surface. Call sites use `calendarDateFromFields`,
-   `calendarFieldsOf`, `calendarDateAdd`, `calendarDateUntil`, `isCalendarArithmeticCompatNeeded`,
+   `calendarDateFromMonthCode`, `longestDayOfMonthCode`, `calendarFieldsOf`, `calendarDateAdd`,
+   `calendarDateUntil`, `isCalendarArithmeticCompatNeeded`,
    `isNudgeWindowCompatNeeded`, `isSecondsOffsetMatchCompatNeeded`,
    `isTransitionSearchCompatNeeded`, `isDayRoundClampCompatNeeded` and `isZIgnoreExactCompatNeeded`, never the files behind them.
 2. **Dormant unless needed.** Each defect has a repro in `probeRepros.ts` (or, for the canary-only
@@ -75,6 +76,21 @@ live in `nonIsoArithmetic.ts`, over an integer model:
   a mean month length measured from Temporal's own reads, accepted only within a third of a month of
   a whole count.
 - `hebrewArithmeticModel` and `indianArithmeticModel` answer from the owned arithmetic.
+
+Month code + day → ISO (`calendarDateFromMonthCode`, CORE-54): the date of a month code and day in a
+calendar year, `null` when that year lacks the month (hebrew `M05L`) or the month lacks the day, and
+for a date beyond a range limit in the calendar year that limit cuts; a `RangeError` when the
+calendar cannot be read or the whole calendar year is out of range. It adds no workaround of
+its own: it runs `monthOrdinal`, `daysInMonth` and `toDate` of `arithmeticModelFor(calendarId)` (the
+owned Hebrew or Indian model where its read correction is active, else `readArithmeticModel`), so it
+is correct exactly where those are and needs no probe. Used by `internal/holidayRules.ts`.
+
+Longest month length (`longestDayOfMonthCode`, CORE-54): the most days a month code has in any year
+of a calendar, `0` when the calendar has no such month. It reads `daysInMonth` of the same model
+over the 33 calendar years from the one holding 2000-01-01: the Persian cycle, the longest leap
+cycle, and a complete Hebrew year both fall inside, and the span is far from the range limits the
+polyfill misreads. GMT keeps no month-length table. The result is kept per calendar and month code.
+`internal/holidayRules.ts` uses it to refuse a `calendarFixed` day the month never has.
 
 Whole operations (CORE-6 slices S5–S7). A wrong calendar `until` (D6) is returned, not thrown, so
 code that owns a TC39 algorithm for a whole operation checks `isCalendarArithmeticCompatNeeded(id)`

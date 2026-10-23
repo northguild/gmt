@@ -45,6 +45,7 @@ import {
   ENABLED_TOOL_NAMES,
   showBillingDeadlinesInput,
   showBlDateStampInput,
+  showCanadaClockChangeInput,
   showConnectionCheckerInput,
   showConverterBenchInput,
   showCrossingClockInput,
@@ -64,6 +65,10 @@ import {
   showIdTimestampDecoderInput,
   showColumnTimestampBridgeInput,
   showStoredTimeAuditInput,
+  showHolidayRuleBuilderInput,
+  showObservanceComparatorInput,
+  showMovingFeastsInput,
+  showDurationParserBenchInput,
   showX12TimeReaderInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -76,6 +81,7 @@ import {
   showTimetableReaderInput,
   showZonePlannerInput,
 } from "../src/lib/dox-tools";
+import canadaZones from "../src/lib/canada-zones.json";
 
 const docFor = (name: string) =>
   DOX_TOOL_DOCS.find((d) => d.name === name)?.purpose ?? name;
@@ -463,6 +469,48 @@ export function buildWorkerTools(
       description: docFor("showStoredTimeAudit"),
       inputSchema: showStoredTimeAuditInput,
       execute: () => accept("stored-time-audit"),
+    }),
+    // A rule the library does not read is a row's own NO SIGNAL, with its reason, so
+    // only the zone is refused here, as the registry's `validate` does.
+    showHolidayRuleBuilder: tool({
+      description: docFor("showHolidayRuleBuilder"),
+      inputSchema: showHolidayRuleBuilderInput,
+      execute: ({ zone }) => {
+        const unknown = unknownZones(zone ? [zone] : []);
+        return unknown.length > 0
+          ? reject(
+              "holiday-rule-builder",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("holiday-rule-builder");
+      },
+    }),
+    showObservanceComparator: tool({
+      description: docFor("showObservanceComparator"),
+      inputSchema: showObservanceComparatorInput,
+      execute: () => accept("observance-comparator"),
+    }),
+    showMovingFeasts: tool({
+      description: docFor("showMovingFeasts"),
+      inputSchema: showMovingFeastsInput,
+      execute: () => accept("moving-feasts"),
+    }),
+    showCanadaClockChange: tool({
+      description: docFor("showCanadaClockChange"),
+      inputSchema: showCanadaClockChangeInput,
+      // The checker pins only the zones in its own list; anything else would open unpinned.
+      execute: ({ zone }) =>
+        zone === undefined || canadaZones.zones.includes(zone)
+          ? accept("canada-clock-change")
+          : reject(
+              "canada-clock-change",
+              `"${zone}" is not one of the zones the checker lists. Call it again without a zone, or say so plainly.`,
+            ),
+    }),
+    showDurationParserBench: tool({
+      description: docFor("showDurationParserBench"),
+      inputSchema: showDurationParserBenchInput,
+      execute: () => accept("duration-parser-bench"),
     }),
     showIdTimestampDecoder: tool({
       description: docFor("showIdTimestampDecoder"),

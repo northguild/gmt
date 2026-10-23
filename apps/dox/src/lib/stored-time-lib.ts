@@ -13,6 +13,7 @@
  */
 import type { StoredZonedClassification } from "@northguild/gmt";
 import { GMT_MODULES } from "./gmt-modules";
+import { pickFunctions } from "./gmt-pick";
 import { WidgetLoadError } from "./widget-mount";
 
 /** One clock change, as `getDstTransitions` returns it. */
@@ -28,18 +29,6 @@ export interface StoredTimeLib {
   getDstTransitions(timeZone: string, year: number): StoredTimeTransition[];
 }
 
-/** Reads each name from a module, and fails loudly on a name it lacks. */
-function pick(module: Record<string, unknown>, names: readonly string[]) {
-  return Object.fromEntries(
-    names.map((name) => {
-      if (typeof module[name] !== "function") {
-        throw new Error(`The library module has no ${name}.`);
-      }
-      return [name, module[name]];
-    }),
-  );
-}
-
 export async function loadStoredTimeLib(): Promise<StoredTimeLib> {
   try {
     const [classify, get] = await Promise.all([
@@ -47,8 +36,8 @@ export async function loadStoredTimeLib(): Promise<StoredTimeLib> {
       GMT_MODULES["zoned/get"](),
     ]);
     return {
-      ...pick(classify, ["classifyStoredZoned"]),
-      ...pick(get, ["getDstTransitions"]),
+      ...pickFunctions(classify, ["classifyStoredZoned"]),
+      ...pickFunctions(get, ["getDstTransitions"]),
     } as unknown as StoredTimeLib;
   } catch (cause) {
     // Loud, not inert: the host decides what to show (see `WidgetLoadError`).

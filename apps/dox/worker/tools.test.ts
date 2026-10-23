@@ -90,6 +90,21 @@ describe("worker tool execute", () => {
     expect(rejected.note).toContain("Fake/Zone");
   });
 
+  it("validates the Holiday Rule Builder's zone", async () => {
+    expect(await run("showHolidayRuleBuilder", {})).toEqual({
+      ok: true,
+      widget: "holiday-rule-builder",
+    });
+    expect(
+      await run("showHolidayRuleBuilder", { zone: "Europe/Oslo" }),
+    ).toEqual({ ok: true, widget: "holiday-rule-builder" });
+    const rejected = await run("showHolidayRuleBuilder", {
+      zone: "Fake/Zone",
+    });
+    expect(rejected.ok).toBe(false);
+    expect(rejected.note).toContain("Fake/Zone");
+  });
+
   it("accepts a B/L date stamp for a zone the library cannot read, and for an offset", async () => {
     // Other zone tools reject an unknown zone. This one does not: a place the
     // library does not read is the widget's own NO SIGNAL, with its reason.
@@ -102,6 +117,20 @@ describe("worker tool execute", () => {
       });
       expect(result, timeZone).toEqual({ ok: true, widget: "bl-date-stamp" });
     }
+  });
+
+  it("accepts the Canada checker with no zone or a listed one, and refuses any other", async () => {
+    expect(await run("showCanadaClockChange", {})).toEqual({
+      ok: true,
+      widget: "canada-clock-change",
+    });
+    expect(
+      await run("showCanadaClockChange", { zone: "America/Winnipeg" }),
+    ).toEqual({ ok: true, widget: "canada-clock-change" });
+    const refused = await run("showCanadaClockChange", {
+      zone: "Europe/London",
+    });
+    expect(refused).toMatchObject({ ok: false, widget: "canada-clock-change" });
   });
 
   it("rejects a whitespace-only stored-time list in the tool's own schema", () => {

@@ -1,3 +1,5 @@
+import { showHolidayRuleBuilderInput } from "./dox-tools";
+import { formatRuleLines } from "./holiday-codec";
 import {
   decodeWidgetPermalink,
   encodeWidgetPermalink,
@@ -31,31 +33,45 @@ describe("widget permalinks", () => {
     expect(handoffHref(null)).toBeNull();
   });
 
-  it("targets /tools pages that actually exist", () => {
+  it("targets /tools and /check pages that actually exist", () => {
     /* The same rule as a citation: a link Dox produces must resolve. These are
        not in `route-manifest.ts` — that generator only covers `/reference` — so
        the check is against the real content files, globbed at build time the
        same way `guide-sources.ts` reads the guides. */
-    const files = import.meta.glob("../content/docs/tools/*.mdx", {
+    const files = import.meta.glob("../content/docs/{tools,check}/*.mdx", {
       eager: true,
       query: "?raw",
       import: "default",
     });
-    const slugs = new Set(
+    const pages = new Set(
       Object.keys(files).map((f) =>
-        f
-          .split("/")
-          .pop()
-          ?.replace(/\.mdx$/, ""),
+        f.replace("../content/docs", "").replace(/\.mdx$/, "/"),
       ),
     );
 
     for (const kind of Object.keys(WIDGET_PAGE_PATHS) as WidgetKind[]) {
-      const path = WIDGET_PAGE_PATHS[kind];
-      expect(path.startsWith("/tools/"), path).toBe(true);
-      const slug = path.replace("/tools/", "").replace(/\/$/, "");
-      expect(slugs.has(slug), `no content file for ${path}`).toBe(true);
+      // One entry (the Canada checker) is written through `withBase`; compare its route.
+      const path = WIDGET_PAGE_PATHS[kind].replace(/^\/gmt(?=\/)/, "");
+      expect(/^\/(tools|check)\//.test(path), path).toBe(true);
+      expect(pages.has(path), `no content file for ${path}`).toBe(true);
     }
+  });
+
+  it("carries the Canada checker's pinned zone through a link and keeps only a short string", () => {
+    const url = encodeWidgetPermalink("canadaclock", {
+      zone: "America/Winnipeg",
+    });
+    expect(
+      url.startsWith("/gmt/check/canada-2026-clock-change/?w=canadaclock&"),
+    ).toBe(true);
+    const search = url.slice(url.indexOf("?"));
+    expect(seedFromLocation("canadaclock", search)).toEqual({
+      zone: "America/Winnipeg",
+    });
+    const long = encodeWidgetPermalink("canadaclock", { zone: "A".repeat(65) });
+    expect(
+      seedFromLocation("canadaclock", long.slice(long.indexOf("?"))),
+    ).toEqual({});
   });
 
   it("needs no anchor, because the widget is the whole page", () => {
@@ -84,6 +100,19 @@ describe("widget permalinks", () => {
     expect(decodeWidgetPermalink("?w=globe&wa=%7Bnot-json")).toBeNull();
     expect(decodeWidgetPermalink("?w=globe")).toBeNull();
     expect(decodeWidgetPermalink("")).toBeNull();
+  });
+
+  it("keeps an empty weekend or offsets list and drops any other empty string", () => {
+    const url = encodeWidgetPermalink("holidays", {
+      weekend: "",
+      offsets: "",
+      zone: "",
+      rules: "",
+    });
+    expect(seedFromLocation("holidays", url.slice(url.indexOf("?")))).toEqual({
+      weekend: "",
+      offsets: "",
+    });
   });
 
   it("rejects an unknown widget kind", () => {
@@ -136,5 +165,61 @@ describe("widget permalinks", () => {
     const url = encodeWidgetPermalink("storedaudit", { values, line: "5" });
     const seeded = seedFromLocation("storedaudit", url.slice(url.indexOf("?")));
     expect(seeded).toEqual({ values, line: "5" });
+  });
+
+  it("registers the three holiday tools at their own pages", () => {
+    expect(WIDGET_PAGE_PATHS.holidays).toBe("/tools/holiday-rule-builder/");
+    expect(WIDGET_PAGE_PATHS.observance).toBe("/tools/observance-comparator/");
+    expect(WIDGET_PAGE_PATHS.feasts).toBe("/tools/moving-feasts/");
+  });
+
+  it("keeps a 30-date calendar in `holidays` and a 12-line `rules` past the 64-character cap", () => {
+    const holidays = Array.from(
+      { length: 30 },
+      (_, i) =>
+        `2026-${String(1 + (i % 12)).padStart(2, "0")}-${String(1 + i).padStart(2, "0")}`,
+    ).join(",");
+    expect(holidays.length).toBeGreaterThan(64);
+    const rules = Array.from(
+      { length: 12 },
+      (_, i) => `Day ${i + 1};f;01-${String(i + 1).padStart(2, "0")}`,
+    ).join("\n");
+    expect(rules.length).toBeGreaterThan(64);
+    for (const kind of ["freetime", "cutoffstack", "holidays"] as const) {
+      const url = encodeWidgetPermalink(kind, { holidays });
+      const seeded = seedFromLocation(kind, url.slice(url.indexOf("?")));
+      expect(seeded, kind).toEqual({ holidays });
+    }
+    const url = encodeWidgetPermalink("holidays", { rules });
+    expect(seedFromLocation("holidays", url.slice(url.indexOf("?")))).toEqual({
+      rules,
+    });
+  });
+
+  it("keeps the longest rule list the chat schema accepts", () => {
+    // Every character a separator, so each is escaped to two.
+    const longest = Array.from({ length: 12 }, () => ({
+      kind: "dates" as const,
+      name: ";".repeat(64),
+      dates: Array.from({ length: 60 }, () => ",".repeat(64)),
+    }));
+    expect(
+      showHolidayRuleBuilderInput.safeParse({ rules: longest }).success,
+    ).toBe(true);
+    const rules = formatRuleLines(longest);
+    expect(rules.length).toBe(94_451);
+    const url = encodeWidgetPermalink("holidays", { rules });
+    expect(seedFromLocation("holidays", url.slice(url.indexOf("?")))).toEqual({
+      rules,
+    });
+  });
+
+  it("still drops a `holidays` value over its own cap", () => {
+    const holidays = "2026-01-01,".repeat(100);
+    expect(holidays.length).toBeGreaterThan(1000);
+    const url = encodeWidgetPermalink("freetime", { holidays });
+    expect(seedFromLocation("freetime", url.slice(url.indexOf("?")))).toEqual(
+      {},
+    );
   });
 });

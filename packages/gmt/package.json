@@ -1,6 +1,6 @@
 {
   "name": "@northguild/gmt",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "description": "Temporal-based date and time utilities with timezone support and polyfill integration",
   "keywords": [
     "date",
@@ -56,6 +56,9 @@
       ],
       "calendar/hours": [
         "./dist/calendar/hours/index.d.ts"
+      ],
+      "calendar/rules": [
+        "./dist/calendar/rules/index.d.ts"
       ],
       "calendar/validate": [
         "./dist/calendar/validate/index.d.ts"
@@ -343,6 +346,10 @@
     "./calendar/hours": {
       "types": "./dist/calendar/hours/index.d.ts",
       "default": "./dist/calendar/hours/index.js"
+    },
+    "./calendar/rules": {
+      "types": "./dist/calendar/rules/index.d.ts",
+      "default": "./dist/calendar/rules/index.js"
     },
     "./calendar/validate": {
       "types": "./dist/calendar/validate/index.d.ts",

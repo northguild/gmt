@@ -782,6 +782,155 @@
     ]
   },
   {
+    "url": "/reference/calendar/rules/buildBusinessCalendar",
+    "page": "/reference/calendar/rules/buildBusinessCalendar",
+    "name": "buildBusinessCalendar",
+    "namespace": "calendar",
+    "module": "rules",
+    "kind": "function",
+    "signature": "buildBusinessCalendar(spec: BusinessCalendarSpec): BusinessCalendar | null",
+    "description": "Expand holiday rules into a `BusinessCalendar` for a range of years.",
+    "sourcePath": "packages/gmt/src/calendar/rules/buildBusinessCalendar.ts",
+    "examples": [
+      {
+        "call": "buildBusinessCalendar({ timeZone: \"Europe/Berlin\", weekend: [6, 7], years: { from: 2026, to: 2026 }, rules: [{ name: \"New year\", kind: \"fixed\", month: 1, day: 1 }, { name: \"Two days before Easter\", kind: \"easterRelative\", offsetDays: -2 }, { name: \"Day after Easter\", kind: \"easterRelative\", offsetDays: 1 }, { name: \"Spring day\", kind: \"fixed\", month: 5, day: 1 }, { name: \"Winter day\", kind: \"fixed\", month: 12, day: 25 }, { name: \"Day after winter day\", kind: \"fixed\", month: 12, day: 26 }] })",
+        "result": "{ weekend: [6, 7], holidays: [\"2026-01-01\", \"2026-04-03\", \"2026-04-06\", \"2026-05-01\", \"2026-12-25\", \"2026-12-26\"], timeZone: \"Europe/Berlin\" } — six fixed and Easter-relative closing days"
+      },
+      {
+        "call": "buildBusinessCalendar({ timeZone: \"UTC\", weekend: [6, 7], years: { from: 2021, to: 2021 }, rules: [{ name: \"a\", kind: \"fixed\", month: 12, day: 25, observed: { 6: \"nextWorkingDay\", 7: \"nextWorkingDay\" } }, { name: \"b\", kind: \"fixed\", month: 12, day: 26, observed: { 6: \"nextWorkingDay\", 7: \"nextWorkingDay\" } }] })?.holidays",
+        "result": "[\"2021-12-27\", \"2021-12-28\"] — the second shift passes the first, in either order"
+      },
+      {
+        "call": "buildBusinessCalendar({ timeZone: \"UTC\", weekend: [6, 7], rules: [], years: { from: 2027, to: 2026 } })",
+        "result": "null — from is after to"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/rules/easterSunday",
+    "page": "/reference/calendar/rules/easterSunday",
+    "name": "easterSunday",
+    "namespace": "calendar",
+    "module": "rules",
+    "kind": "function",
+    "signature": "easterSunday(year: number, options?: { computus?: EasterComputus; }): string",
+    "description": "Easter Sunday of a year as an ISO date, by the Gregorian computus unless the Julian one is asked for.",
+    "sourcePath": "packages/gmt/src/calendar/rules/easterSunday.ts",
+    "examples": [
+      {
+        "call": "easterSunday(2024)",
+        "result": "\"2024-03-31\""
+      },
+      {
+        "call": "easterSunday(2024, { computus: \"julian\" })",
+        "result": "\"2024-05-05\""
+      },
+      {
+        "call": "easterSunday(2025, { computus: \"julian\" })",
+        "result": "\"2025-04-20\" — the two computus coincide"
+      },
+      {
+        "call": "easterSunday(2024.5)",
+        "result": "\"\""
+      },
+      {
+        "call": "easterSunday(2024, { computus: \"lunar\" })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/rules/holidayDates",
+    "page": "/reference/calendar/rules/holidayDates",
+    "name": "holidayDates",
+    "namespace": "calendar",
+    "module": "rules",
+    "kind": "function",
+    "signature": "holidayDates(rule: HolidayRule, year: number, options?: HolidayDatesOptions): string[]",
+    "description": "Every date a holiday rule produces in an ISO year, as sorted ISO PlainDate strings.",
+    "sourcePath": "packages/gmt/src/calendar/rules/holidayDates.ts",
+    "examples": [
+      {
+        "call": "holidayDates({ name: \"Closing day\", kind: \"easterRelative\", offsetDays: -2 }, 2024)",
+        "result": "[\"2024-03-29\"] — Easter − 2"
+      },
+      {
+        "call": "holidayDates({ name: \"Third Monday\", kind: \"nthWeekday\", month: 1, weekday: 1, n: 3 }, 2026)",
+        "result": "[\"2026-01-19\"]"
+      },
+      {
+        "call": "holidayDates({ name: \"1 Shawwal 1447\", kind: \"calendarFixed\", calendar: \"islamic-umalqura\", monthCode: \"M10\", day: 1 }, 2026)",
+        "result": "[\"2026-03-20\"] — 1 Shawwal 1447 in islamic-umalqura"
+      },
+      {
+        "call": "holidayDates({ name: \"New year\", kind: \"fixed\", month: 1, day: 1, observed: { 6: { previous: 5 } } }, 2028)",
+        "result": "[\"2027-12-31\"] — Saturday moves to the Friday before, in the previous year"
+      },
+      {
+        "call": "holidayDates({ name: \"Leap day\", kind: \"fixed\", month: 2, day: 29 }, 2026)",
+        "result": "[] — 2026 has no 29 February"
+      },
+      {
+        "call": "holidayDates({ name: \"Bad\", kind: \"fixed\", month: 13, day: 1 }, 2026)",
+        "result": "[] — invalid rule"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/rules/nthWeekdayOfMonth",
+    "page": "/reference/calendar/rules/nthWeekdayOfMonth",
+    "name": "nthWeekdayOfMonth",
+    "namespace": "calendar",
+    "module": "rules",
+    "kind": "function",
+    "signature": "nthWeekdayOfMonth(year: number, month: number, weekday: number, n: WeekdayOrdinal): string",
+    "description": "The `n`-th `weekday` of a month, counted from the start (`1` to `5`) or from the end (`-1` to `-5`; `\"last\"` is `-1`), as RFC 5545 §3.3.10 counts a `BYDAY` ordinal in a monthly rule.",
+    "sourcePath": "packages/gmt/src/calendar/rules/nthWeekdayOfMonth.ts",
+    "examples": [
+      {
+        "call": "nthWeekdayOfMonth(2026, 3, 7, \"last\")",
+        "result": "\"2026-03-29\" — the last Sunday of March"
+      },
+      {
+        "call": "nthWeekdayOfMonth(2026, 1, 1, 3)",
+        "result": "\"2026-01-19\" — the third Monday of January"
+      },
+      {
+        "call": "nthWeekdayOfMonth(2026, 2, 5, 5)",
+        "result": "\"\" — February 2026 has only four Fridays"
+      },
+      {
+        "call": "nthWeekdayOfMonth(2026, 13, 1, 1)",
+        "result": "\"\" — invalid month"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/rules/observedDate",
+    "page": "/reference/calendar/rules/observedDate",
+    "name": "observedDate",
+    "namespace": "calendar",
+    "module": "rules",
+    "kind": "function",
+    "signature": "observedDate(isoDate: string, policy: Partial<Record<IsoWeekday, ObservanceShift>>, calendar?: BusinessCalendar): string",
+    "description": "Where a holiday is observed under a policy. The policy is required and has no default: every default would make some other calendar wrong.",
+    "sourcePath": "packages/gmt/src/calendar/rules/observedDate.ts",
+    "examples": [
+      {
+        "call": "observedDate(\"2027-12-25\", { 6: { previous: 5 }, 7: { next: 1 } })",
+        "result": "\"2027-12-24\" — a Saturday moves to the Friday before"
+      },
+      {
+        "call": "observedDate(\"2021-12-26\", { 7: \"nextWorkingDay\" }, { weekend: [6, 7], holidays: [\"2021-12-27\"], timeZone: \"UTC\" })",
+        "result": "\"2021-12-28\" — Monday 27 is already closed"
+      },
+      {
+        "call": "observedDate(\"2027-12-25\", { 6: \"nextWorkingDay\" })",
+        "result": "\"\" — no calendar for nextWorkingDay"
+      }
+    ]
+  },
+  {
     "url": "/reference/calendar/validate/isValidBusinessCalendar",
     "page": "/reference/calendar/validate/isValidBusinessCalendar",
     "name": "isValidBusinessCalendar",
@@ -966,6 +1115,47 @@
       },
       {
         "call": "isValidFiscalYearLabel(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/validate/isValidHolidayRule",
+    "page": "/reference/calendar/validate/isValidHolidayRule",
+    "name": "isValidHolidayRule",
+    "namespace": "calendar",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidHolidayRule(rule: unknown): rule is HolidayRule",
+    "description": "Return true when `rule` is a `HolidayRule` that `holidayDates` and `buildBusinessCalendar` accept. It answers \"is this a rule\", which `holidayDates` cannot: that returns `[]` both for an invalid rule and for a year with no occurrence.",
+    "sourcePath": "packages/gmt/src/calendar/validate/isValidHolidayRule.ts",
+    "examples": [
+      {
+        "call": "isValidHolidayRule({ name: \"Closing day\", kind: \"fixed\", month: 12, day: 25 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidHolidayRule({ name: \"Easter − 2\", kind: \"easterRelative\", offsetDays: -2 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidHolidayRule({ name: \"No dates yet\", kind: \"dates\", dates: [] })",
+        "result": "true — an empty list is a rule"
+      },
+      {
+        "call": "isValidHolidayRule({ name: \"Bad\", kind: \"fixed\", month: 2, day: 30 })",
+        "result": "false — no year has 30 February"
+      },
+      {
+        "call": "isValidHolidayRule({ name: \"Bad\", kind: \"calendarFixed\", calendar: \"hebrew\", monthCode: \"M01\", day: 31 })",
+        "result": "false — Tishri has 30 days"
+      },
+      {
+        "call": "isValidHolidayRule({ name: \"Bad\", kind: \"calendarFixed\", calendar: \"chinese\", monthCode: \"M01\", day: 1 })",
+        "result": "false — chinese is not supported"
+      },
+      {
+        "call": "isValidHolidayRule(null)",
         "result": "false"
       }
     ]
@@ -1639,6 +1829,55 @@
     ]
   },
   {
+    "url": "/reference/duration/format/formatHumanDuration",
+    "page": "/reference/duration/format/formatHumanDuration",
+    "name": "formatHumanDuration",
+    "namespace": "duration",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatHumanDuration(duration: string): string",
+    "description": "Write an ISO 8601 duration in the compact form `parseHumanDuration` reads, such as `2h 30m`.",
+    "sourcePath": "packages/gmt/src/duration/format/formatHumanDuration.ts",
+    "examples": [
+      {
+        "call": "formatHumanDuration(\"PT2H30M\")",
+        "result": "\"2h 30m\""
+      },
+      {
+        "call": "formatHumanDuration(\"P1Y2M\")",
+        "result": "\"1y 2mo\""
+      },
+      {
+        "call": "formatHumanDuration(\"PT1M\")",
+        "result": "\"1m\""
+      },
+      {
+        "call": "formatHumanDuration(\"PT90M\")",
+        "result": "\"90m\""
+      },
+      {
+        "call": "formatHumanDuration(\"PT1.5S\")",
+        "result": "\"1.5s\""
+      },
+      {
+        "call": "formatHumanDuration(\"PT1.0005S\")",
+        "result": "\"1.0005s\""
+      },
+      {
+        "call": "formatHumanDuration(\"-PT2H30M\")",
+        "result": "\"-2h 30m\""
+      },
+      {
+        "call": "formatHumanDuration(\"PT0S\")",
+        "result": "\"0s\""
+      },
+      {
+        "call": "formatHumanDuration(\"2h 30m\")",
+        "result": "\"\" (not ISO 8601)"
+      }
+    ]
+  },
+  {
     "url": "/reference/duration/normalize/normalizeDuration",
     "page": "/reference/duration/normalize/normalizeDuration",
     "name": "normalizeDuration",
@@ -1728,6 +1967,63 @@
       },
       {
         "call": "parseDuration(\"invalid\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/duration/parse/parseHumanDuration",
+    "page": "/reference/duration/parse/parseHumanDuration",
+    "name": "parseHumanDuration",
+    "namespace": "duration",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseHumanDuration(text: string): string",
+    "description": "Read a duration written the way people write it, such as `2h 30m`, `1.5h` or `3 days`, into an ISO 8601 duration string.",
+    "sourcePath": "packages/gmt/src/duration/parse/parseHumanDuration.ts",
+    "examples": [
+      {
+        "call": "parseHumanDuration(\"2h 30m\")",
+        "result": "\"PT2H30M\""
+      },
+      {
+        "call": "parseHumanDuration(\"3 days\")",
+        "result": "\"P3D\""
+      },
+      {
+        "call": "parseHumanDuration(\"1.5h\")",
+        "result": "\"PT1H30M\""
+      },
+      {
+        "call": "parseHumanDuration(\"1s 500ms\")",
+        "result": "\"PT1.5S\""
+      },
+      {
+        "call": "parseHumanDuration(\"1m\")",
+        "result": "\"PT1M\" (a minute)"
+      },
+      {
+        "call": "parseHumanDuration(\"1mo\")",
+        "result": "\"P1M\" (a month)"
+      },
+      {
+        "call": "parseHumanDuration(\"-2h 30m\")",
+        "result": "\"-PT2H30M\""
+      },
+      {
+        "call": "parseHumanDuration(\"2h, and 30m\")",
+        "result": "\"PT2H30M\""
+      },
+      {
+        "call": "parseHumanDuration(\"1.5h 30m\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseHumanDuration(\"30m 2h\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseHumanDuration(\"P1M\")",
         "result": "\"\""
       }
     ]
@@ -19255,6 +19551,110 @@
     ]
   },
   {
+    "url": "/reference/types/WeekdayOrdinal",
+    "page": "/reference/types/WeekdayOrdinal",
+    "name": "WeekdayOrdinal",
+    "namespace": "types",
+    "module": "holiday-rule",
+    "kind": "type",
+    "signature": "",
+    "description": "Which occurrence of a weekday in a month to pick.",
+    "sourcePath": "packages/gmt/src/types/holiday-rule.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/EasterComputus",
+    "page": "/reference/types/EasterComputus",
+    "name": "EasterComputus",
+    "namespace": "types",
+    "module": "holiday-rule",
+    "kind": "type",
+    "signature": "",
+    "description": "Which Easter computus to apply: \"gregorian\" (the Gregorian method) or \"julian\" (the Julian calendar's method, with its date converted to ISO). Either way the result is an ISO date.",
+    "sourcePath": "packages/gmt/src/types/holiday-rule.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/HolidayRule",
+    "page": "/reference/types/HolidayRule",
+    "name": "HolidayRule",
+    "namespace": "types",
+    "module": "holiday-rule",
+    "kind": "type",
+    "signature": "",
+    "description": "A holiday written as a rule, not a list of dates. `name` is a label for the caller: it is never read, returned or checked beyond being a string. Properties a kind does not define are ignored.",
+    "sourcePath": "packages/gmt/src/types/holiday-rule.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "name",
+        "description": "A label for the caller; never read into a result. Any string, including `\"\"`."
+      },
+      {
+        "name": "kind",
+        "description": "Discriminant: a fixed month and day in the ISO calendar. Discriminant: a month code and day in another calendar. Discriminant: the n-th weekday of an ISO month. Discriminant: a fixed number of days from Easter Sunday. Discriminant: an explicit list of dates."
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/rules/buildBusinessCalendar#businesscalendarspec",
+    "page": "/reference/calendar/rules/buildBusinessCalendar",
+    "name": "BusinessCalendarSpec",
+    "namespace": "types",
+    "module": "holiday-rule",
+    "kind": "type",
+    "signature": "",
+    "description": "The input of `buildBusinessCalendar`: a weekend, a list of holiday rules and the years to expand them over.",
+    "sourcePath": "packages/gmt/src/types/holiday-rule.ts",
+    "examples": [],
+    "inlineOn": "buildBusinessCalendar",
+    "members": [
+      {
+        "name": "timeZone",
+        "description": "IANA time zone the calendar describes, as in `BusinessCalendar`."
+      },
+      {
+        "name": "weekend",
+        "description": "ISO weekdays that are closed every week, 1 (Monday) to 7 (Sunday)."
+      },
+      {
+        "name": "rules",
+        "description": "The holiday rules. Their order decides only which `nextWorkingDay` holiday takes which day."
+      },
+      {
+        "name": "years",
+        "description": "Inclusive range of ISO years to expand, at most 400 years."
+      },
+      {
+        "name": "years.from",
+        "description": "First ISO year to expand."
+      },
+      {
+        "name": "years.to",
+        "description": "Last ISO year to expand; at most 399 years after `from`."
+      }
+    ]
+  },
+  {
+    "url": "/reference/calendar/rules/holidayDates#holidaydatesoptions",
+    "page": "/reference/calendar/rules/holidayDates",
+    "name": "HolidayDatesOptions",
+    "namespace": "types",
+    "module": "holiday-rule",
+    "kind": "type",
+    "signature": "",
+    "description": "Options of `holidayDates`.",
+    "sourcePath": "packages/gmt/src/types/holiday-rule.ts",
+    "examples": [],
+    "inlineOn": "holidayDates",
+    "members": [
+      {
+        "name": "calendar",
+        "description": "Open and closed days, needed by a rule whose policy shifts to `\"nextWorkingDay\"`. It is validated even when the rule never uses it."
+      }
+    ]
+  },
+  {
     "url": "/reference/types/Interval",
     "page": "/reference/types/Interval",
     "name": "Interval",
@@ -19288,6 +19688,30 @@
     "sourcePath": "packages/gmt/src/types/now-unit.ts",
     "examples": [],
     "inlineOn": "getNowUnit"
+  },
+  {
+    "url": "/reference/types/ObservanceShift",
+    "page": "/reference/types/ObservanceShift",
+    "name": "ObservanceShift",
+    "namespace": "types",
+    "module": "observance-policy",
+    "kind": "type",
+    "signature": "",
+    "description": "Where a holiday that falls on one weekday is observed instead.",
+    "sourcePath": "packages/gmt/src/types/observance-policy.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/ObservancePolicy",
+    "page": "/reference/types/ObservancePolicy",
+    "name": "ObservancePolicy",
+    "namespace": "types",
+    "module": "observance-policy",
+    "kind": "type",
+    "signature": "",
+    "description": "Per ISO weekday of the holiday (1 Monday to 7 Sunday), the shift to apply. A weekday with no entry is not shifted, and `{}` shifts nothing. There is no default policy.",
+    "sourcePath": "packages/gmt/src/types/observance-policy.ts",
+    "examples": []
   },
   {
     "url": "/reference/types/Offset",

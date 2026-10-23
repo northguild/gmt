@@ -42,6 +42,8 @@ import {
 } from "./usage";
 import {
   BRAINS,
+  RATE_LIMIT_MAX,
+  RATE_LIMIT_WINDOW_SECONDS,
   VISITOR_DAILY_MAX,
   type Brain,
 } from "../src/lib/chat-constants";
@@ -141,7 +143,10 @@ export function createChatHandler(deps: ChatHandlerDeps) {
   return async function handleChat(request: Request): Promise<Response> {
     const watch = new Stopwatch();
     const clientId = clientIdFromRequest(request);
-    const rateLimitResult = checkRateLimit(clientId, now());
+    const rateLimitResult = checkRateLimit(`chat:${clientId}`, now(), {
+      max: RATE_LIMIT_MAX,
+      windowSeconds: RATE_LIMIT_WINDOW_SECONDS,
+    });
     if (!rateLimitResult.allowed) {
       return Response.json(
         { error: "Too many requests. Please slow down.", retryable: true },

@@ -138,6 +138,18 @@ const PAGES = [
     path: "/tools/elapsed-vs-clock-difference/",
   },
   { slug: "tool-stored-time-audit", path: "/tools/stored-time-audit/" },
+  { slug: "tool-holiday-rule-builder", path: "/tools/holiday-rule-builder/" },
+  {
+    slug: "tool-observance-comparator",
+    path: "/tools/observance-comparator/",
+  },
+  { slug: "tool-moving-feasts", path: "/tools/moving-feasts/" },
+  {
+    slug: "guide-business-calendars",
+    path: "/guides/core-date-operations/business-calendars/",
+  },
+  { slug: "check-canada-2026-clock-change", path: "/check/canada-2026-clock-change/" },
+  { slug: "tool-duration-parser-bench", path: "/tools/duration-parser-bench/" },
   { slug: "tool-id-timestamp-decoder", path: "/tools/id-timestamp-decoder/" },
   {
     slug: "tool-column-timestamp-bridge",
