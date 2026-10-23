@@ -274,11 +274,45 @@ html.is-scrolling ::-webkit-scrollbar-thumb {
   border-color: var(--gmt-scrollbar-thumb-hover);
 }
 
+/* The square where a vertical and a horizontal bar meet, and a resizable box's grip. Once the
+   bars above are styled, a browser paints both plain white unless they are styled too. The grip
+   keeps two diagonal strokes so it still reads as a handle. */
+::-webkit-scrollbar-corner {
+  background: var(--gmt-scrollbar-track);
+}
+
+::-webkit-resizer {
+  background:
+    linear-gradient(
+      135deg,
+      transparent 0 52%,
+      var(--gmt-border-strong) 52% 58%,
+      transparent 58% 70%,
+      var(--gmt-border-strong) 70% 76%,
+      transparent 76%
+    ),
+    var(--gmt-scrollbar-track);
+}
+
 /* Light mode — swap the hard-coded dark-teal wash for the light-mode cyan so
    the track/thumb read as the same restrained cool tint, not flat grey. A dark
    island keeps the dark scrollbar above; the exclusion adds no specificity. */
-[data-theme="light"] :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-track {
+[data-theme="light"] :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-track,
+[data-theme="light"] :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-corner {
   background: var(--gmt-hairline-faint);
+}
+
+[data-theme="light"] :not(:where(.gmt-theme-dark *))::-webkit-resizer {
+  background:
+    linear-gradient(
+      135deg,
+      transparent 0 52%,
+      var(--gmt-border-strong) 52% 58%,
+      transparent 58% 70%,
+      var(--gmt-border-strong) 70% 76%,
+      transparent 76%
+    ),
+    var(--gmt-hairline-faint);
 }
 
 [data-theme="light"] :not(:where(.gmt-theme-dark *))::-webkit-scrollbar-thumb {
