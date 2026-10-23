@@ -875,6 +875,68 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **Leap Second Timeline** (`/tools/leap-second-timeline/`): a staircase of TAI - UTC, a riser
     per inserted second, a hatched run from `CONTINUOUS_UTC_FROM`, the date as a cursor, the
     counted span as a band, and a checked `23:59:60` as a lit riser or a struck-through ghost.
+  - **ID Timestamp Decoder** (`/tools/id-timestamp-decoder/`, `iddecode`, core): one pasted
+    identifier goes, exactly as typed, to all five decoders (`fromUuidTimestamp`, `fromUlid`,
+    `fromObjectId`, `fromKsuid`, `fromSnowflake`). A hero names the format that read it and its
+    instant (a UUID adds its `version` as a chip, read from the id's own 15th character because `fromUuidTimestamp` returns the bare instant string, or `""`), and a fixed table shows every call and what it
+    returned. A Snowflake is called only when the reader gives an epoch and a shift; with no
+    layout its row says "Give an epoch and a shift: a Snowflake has no default layout." and makes no call,
+    because the library has no default epoch to offer. `NO SIGNAL` shows only when all five
+    returned a sentinel; a text that two decoders read is "N of 5", not a verdict. A preset
+    fills the fields, and typing switches the select to "Your values". Epoch, precision and last
+    instant are static prose on the page, held to the library by `id-timestamp-decoder-prose.test.ts`,
+    so no widget module holds an epoch, a unit factor or an ID grammar.
+    - **A blank id survives a link.** `permalinkOf` always writes `id` for a custom state, and
+      `EMPTY_KEYS_BY_KIND` in `widget-permalink.ts` lets `iddecode` keep an empty `id` through
+      the drop-empty-string rule, so a link made from a cleared field opens cleared, not on the
+      default preset. Other tools' permalink behaviour is unchanged.
+    - **The id limit is 96 characters** (`ID_MAX_CHARS`, the schema `id.max(96)`, and `KIND_STRING_CAPS`
+      for `iddecode` and `colbridge` in `widget-permalink.ts`), so a longest-format id round trips.
+    - **Snowflake presets are labelled by their literal values**, never a vendor name, because
+      the library ships no layout constants.
+    - **Nothing moves as the reader types.** The hero's value, pill and chip are laid out in every
+      state and hidden with `[data-off] { visibility: hidden }`; each call and returned cell is a
+      hold sized by the 64-character Snowflake call and the widest instant. The table is
+      fixed-layout, with a doubled class on the first column (as the Stored Time Audit) and a
+      labelled stacked layout below `46rem`.
+    - **`instantPiecesHtml` (`widget-ui.ts`)** is the text-to-pieces half of `wrapInstantsAtT`,
+      so a returned instant breaks only after a `T` or before a fraction.
+    - **The loader is `identifier-lib.ts`**, the pattern of `stored-time-lib.ts`; the Column
+      Timestamp Bridge follows it (`column-bridge-lib.ts`) and has its own `BRIDGE_LINKS`, whose
+      first link is back to this tool, as `ID_LINKS`' first link is to the Bridge.
+  - **Column Timestamp Bridge** (`/tools/column-timestamp-bridge/`, `colbridge`, core): two
+    modes. Encode takes one instant (or a zoneless wall time), an Arrow unit and an optional
+    zone, and shows four format cards (Parquet INT96, Arrow int64, protobuf Timestamp, protobuf
+    Duration) under an exact-instant hero and a four-row precision ladder. Decode takes the
+    stored values (INT96 as a record or as 24 hex digits, an Arrow int64, a Timestamp pair, a
+    Duration pair) and reads each filled fieldset with one call. `isValidInstant` (or
+    `isValidDateTime` for a zoneless Arrow column) runs first, and the converters run only when
+    it is true, so an instant into a zoneless column is a card with the sentinel `0n` and the
+    reason, never a silent `0`. A typed zone is checked first with `isValidTimeZone`; an unknown
+    one gives the Arrow card the other tools' sentence ("X is not a time zone this browser
+    knows.") rather than a blank. For the nanosecond unit the card also asks
+    `isValidInt64NanosecondInstant` / `isValidInt64NanosecondDateTime`, so a value past int64 is a
+    sentinel `0n` card with the int64 reason, never a 1970 read-back. Arrow has two pairs:
+    `toArrowTimestamp` / `fromArrowTimestamp` (a zone: UTC `Z` string) and
+    `toArrowLocalTimestamp` / `fromArrowLocalTimestamp` (no zone: a wall time). Every read-back is a bare
+    string, `""` on failure. A zoneless Arrow read is marked with an ice chip, never amber; a
+    zoned Arrow card also shows the same int64 read under a zoneless schema. The hero's pill shows only when the input is not an instant and
+    no card read it. A card that returned `0n`, `null` or `""` is a sentinel with its literal; a
+    legitimate `0n` (the epoch in seconds) is a value; the `past-proto-range` preset's Arrow card is a sentinel (year 10000 is past int64 nanoseconds).
+    - **Files:** `column-timestamp-bridge.ts` (pure reading), `-presets.ts` (the only module
+      with a library-fact literal), `-mount.ts`, `column-bridge-lib.ts` (loader, three modules)
+      and `ColumnTimestampBridge.astro`. `BRIDGE_LINKS` is the counterpart of the Decoder's `ID_LINKS`; neither imports the other.
+    - **`readArgs` infers, the schema refuses.** Stored keys with no `mode`, no `value` and no
+      preset open decode; `bytes` with no `int96Form` and no preset reads as the bytes form.
+      `int96Form` is an enum (`record` or `bytes`). `columnBridgeProblems` in `dox-tools.ts`
+      is shared by the zod schema (`superRefine`) and the Worker `execute`, which also checks
+      the zone with `unknownZones`: Worker tests call `execute` directly, so a rule only in
+      the schema would never run there. A contradiction is refused, never dropped.
+    - **`VALUE_MAX_CHARS` is 96**, with the `short` schema limit and the link cap.
+    - **Hold-still:** every card slot, the hero and the ladder rows are laid out in every state
+      and hidden with `[data-off]`; the hold grids are `minmax(0, 1fr)`; cards are two by two
+      above `40rem` of container and one column below. `renderValue` prints a bigint as `5n`
+      and a `Uint8Array` as `new Uint8Array([...])`.
   - **Elapsed vs. Clock Difference** (`/tools/elapsed-vs-clock-difference/`): a sum of three
     plates (clock difference + leap seconds = seconds that passed) over two vernier rulers, one
     cell per second at equal widths. An inserted second is a stretched `:60` cell the clock tape
@@ -1442,7 +1504,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `/tools/satellite-clock-converter/`, `/tools/gnss-rollover-checker/`,
   `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`,
   `/tools/holiday-rule-builder/`, `/tools/observance-comparator/`, `/tools/moving-feasts/`,
-  `/tools/duration-parser-bench/`, plus the Tier 4
+  `/tools/duration-parser-bench/`, `/tools/id-timestamp-decoder/`, `/tools/column-timestamp-bridge/`, plus the Tier 4
   `/tools/zoned-earth/` and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package. The
   Zone Planner's is `/tools/zone-planner/?w=planner&wa={"time":…,"zone1":…,"zone2":…}`: a UTC
@@ -1466,7 +1528,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   (`mode`, `counter`, `system`, `week`, `timeOfWeekSeconds`, `rolloverEra` or
   `rolloverNotBefore`, `utc`), `satclock` (`value`), `rollover` (`counter`,
   `firmwareNotBefore` or `firmwareEra`, `date`), `leapline` (`date`, `check`, `from`, `to`) and
-  `elapsed` (`start`, `end`), all strings, each passed as the reader gave it. The decoder and
+  `elapsed` (`start`, `end`), `colbridge` (`mode`, `value`, `unit`, `zone`, `duration`, `int96Form`, `julianDay`, `nanosOfDay`, `bytes`, `int64`, `seconds`, `nanos`, `durSeconds`, `durNanos`, or `preset` alone) and `iddecode` (`id`, `epochMs`, `shift`, `timestampBits`, or
+  `preset` alone while the state matches a preset), all strings, each passed as the reader gave it. The decoder and
   the checker write `{ preset }` alone while the state still matches a preset.
   - **Trap: build a permalink written into a page with `encodeWidgetPermalink`, never
     `encodeURIComponent` and never by hand.** A `DTM` segment ends in `'`, which
@@ -1525,7 +1588,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   pointer sweep takes 48 steps of 30 minutes, so it always enters the shaded hour. The pass/fail decisions live in
   `scripts/gate-checks.mjs`, unit-tested in `gate-checks.test.ts`. A tool with no drag handle,
   such as the DTM Decoder, the X12 Time Reader, the Demurrage Clock, the EPCIS Event Reader, the
-  Journey Split, Billing Deadlines and the Stored Time Audit, is not in `readout-still`. Its definition of done measures
+  Journey Split, Billing Deadlines, the Stored Time Audit, the ID Timestamp Decoder and the Column Timestamp Bridge, is not in `readout-still`. Its definition of done measures
   the same boxes across every preset instead: each plate keeps its size, and a held region keeps
   its height. A result region may grow from one preset to the next through `.gmt-grow`, which
   `grow:measure` gates: the reason aside under a sentinel, a second lane for a second zone, or a
@@ -2264,6 +2327,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `showDurationParserBench({ text, locale? })` (CORE-85): the reader's duration string
     exactly as given (never trimmed or corrected, at most 64 characters), and a locale only
     when the reader names one.
+  - `showIdTimestampDecoder({ id, epochMs?, shift?, timestampBits? })` (CORE-56): `id` exactly
+    as the reader gave it, never trimmed or corrected; the layout fields only when the reader
+    gave a Snowflake layout.
+  - `showColumnTimestampBridge({ mode?, value?, unit?, zone?, duration?, int96Form?, julianDay?, nanosOfDay?, bytes?, int64?, seconds?, nanos?, durSeconds?, durNanos? })`
+    (CORE-56): needs a `value` or a decode field; each string exactly as the reader gave it.
   - `showMoroccoClockChange({ zone? })` (CORE-89): one id from `morocco-region-zones.json` to pin
     on the map; the Worker's `execute` (`accept("morocco-clock-change")`) and the registry's
     `validate` refuse any other id. The widget kind is `moroccoclock`, its permalink
@@ -2271,7 +2339,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Count:** `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers, one starter card per tool;
   re-derive them from there, and never write a literal in a test or a page. The Leap Second
   Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada and Morocco clock-change
-  checkers, the Duration Parser Bench and the three holiday tools are core.
+  checkers, the Duration Parser Bench, the three holiday tools, the ID Timestamp Decoder and the
+  Column Timestamp Bridge are core.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.

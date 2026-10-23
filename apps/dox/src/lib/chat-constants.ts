@@ -860,6 +860,22 @@ export const CHAT_STARTERS: readonly {
     args: { text: "1m" },
   },
   {
+    text: "When was the UUID 017f22e2-79b0-7cc3-98c4-dc0c0c07398f created?",
+    widget: "showIdTimestampDecoder",
+    area: "core",
+    args: { id: "017f22e2-79b0-7cc3-98c4-dc0c0c07398f" },
+  },
+  {
+    text: "How is 2024-01-01T09:00:00+09:00[Asia/Tokyo] stored in Parquet, Arrow and protobuf?",
+    widget: "showColumnTimestampBridge",
+    area: "core",
+    args: {
+      value: "2024-01-01T09:00:00+09:00[Asia/Tokyo]",
+      unit: "second",
+      zone: "Asia/Tokyo",
+    },
+  },
+  {
     text: "Does my runtime still show Africa/Casablanca an hour ahead after 20 September 2026?",
     widget: "showMoroccoClockChange",
     area: "core",

@@ -1,0 +1,155 @@
+---
+title: Time-Ordered Identifiers
+description: Read the instant inside a UUID, ULID, MongoDB ObjectId, Snowflake or KSUID, and build the prefixes that bound a range scan, with the epoch, precision and range of each.
+sidebar:
+  order: 3
+industries: [core]
+---
+
+Many identifiers start with a timestamp, so they sort by creation. The timestamp is still in
+there after the ID has travelled through a log line or a database key. Reading it needs the
+right epoch, the right bit positions and the right text rules, and a mistake in any of them
+gives a plausible wrong date, not an error.
+
+The `precision/identifiers` subpath decodes them. It reads only: GMT does not generate IDs.
+
+```typescript
+import {
+  fromUuidTimestamp,
+  fromUlid,
+  fromObjectId,
+  fromSnowflake,
+  fromKsuid,
+} from "@northguild/gmt/precision/identifiers";
+
+fromUuidTimestamp("017F22E2-79B0-7CC3-98C4-DC0C0C07398F");
+// "2022-02-22T19:22:22Z"
+
+fromUlid("01ARZ3NDEKTSV4RRFFQ69G5FAV");
+// "2016-07-30T23:54:10.259Z"
+
+fromObjectId("65a0f4d0c3b1a2e4f5d6c7b8");
+// "2024-01-12T08:14:08Z"
+
+fromKsuid("0ujtsYcgvSTl8PAuAdqWYSMnLOv");
+// "2017-10-10T04:00:47Z"
+```
+
+## Which IDs carry a time
+
+| ID | Epoch | Precision | Last instant it can hold |
+| --- | --- | --- | --- |
+| UUID v1 and v6 | 1582-10-15T00:00:00Z | 100 ns | 5236-03-31T21:21:00.6846975Z |
+| UUID v7 | 1970-01-01T00:00:00Z | 1 ms | +010889-08-02T05:31:50.655Z |
+| ULID | 1970-01-01T00:00:00Z | 1 ms | +010889-08-02T05:31:50.655Z |
+| MongoDB ObjectId | 1970-01-01T00:00:00Z | 1 s | 2106-02-07T06:28:15Z |
+| Snowflake (layout you supply) | the layout's `epochMs` | 1 ms | with a 41-bit field on Twitter's layout, 2080-07-10T17:30:30.208Z |
+| KSUID | 2014-05-13T16:53:20Z | 1 s | 2150-06-19T23:21:35Z |
+
+A UUID v1 and the v6 made from it hold the same instant. UUID v4, and the name-based v3 and v5,
+carry no time at all, so `fromUuidTimestamp` returns `""` for them:
+
+```typescript
+fromUuidTimestamp("919108f7-52d1-4320-9bac-f847db4148a8");
+// "" — version 4 is random
+```
+
+The functions read the hyphenated UUID form in either case. Braces, `urn:uuid:` and bare hex
+are rejected with `""`, so strip them first. A UUID v7 also has a few bits after the
+millisecond that some generators use for a finer fraction. Nothing in the UUID says whether
+they do, so `fromUuidTimestamp` does not read them.
+
+A ULID is read strictly. The letters `I`, `L`, `O` and `U` are not in its alphabet, and a first
+character above `7` overflows the 48-bit field, so each returns `""`.
+
+A KSUID is case-sensitive. Its base62 alphabet has both `a` and `A`, as different digits.
+
+## The time is the generator's clock
+
+An ID's time is when the program that made it read its clock. That is not the time the row was
+inserted, and two machines whose clocks disagree make IDs that order only as well as the clocks
+agree. RFC 9562 §6.1 says "Implementations MAY alter the actual timestamp." Its examples are
+correcting an inaccurate clock, handling leap seconds, and dividing microseconds by 1024
+instead of 1000. The specification also "makes no requirement or guarantee about how close the
+clock value needs to be to the actual time."
+
+Treat the decoded instant as evidence of roughly when an ID was minted. Do not use it for an
+audit trail. RFC 9562 §6.12 advises treating UUIDs as opaque unless an application needs
+something like the timestamp, and reading it is that exception. A UUID v1 has one more caveat:
+its generator may have used local time where no UTC was available, and the UUID cannot say.
+
+## Range scans with prefixes
+
+A UUID v7 and a ULID both put the timestamp first, in an encoding whose text order is time
+order. So the text from `uuidV7TimestampPrefix` or `ulidTimestampPrefix` bounds every ID minted
+in `[start, end)`. RFC 9562 §6.11 says UUID v6 and v7 sort as opaque bytes, and hex text in one
+case sorts as those bytes. Crockford's alphabet is in ASCII order, so ULID text sorts the same
+way.
+
+```typescript
+import {
+  uuidV7TimestampPrefix,
+  ulidTimestampPrefix,
+} from "@northguild/gmt/precision/identifiers";
+
+uuidV7TimestampPrefix("2024-01-01T00:00:00Z");
+// "018cc251-f400"
+uuidV7TimestampPrefix("2024-02-01T00:00:00Z");
+// "018d61f7-1800"
+
+ulidTimestampPrefix("2024-01-01T00:00:00Z");
+// "01HK153X00"
+ulidTimestampPrefix("2024-02-01T00:00:00Z");
+// "01HNGZE600"
+```
+
+January 2024 is then `id >= "018cc251-f400" AND id < "018d61f7-1800"` for UUID v7, and `id >=
+"01HK153X00" AND id < "01HNGZE600"` for ULID. The prefixes are not IDs: the UUID prefix is 13
+characters and the ULID prefix is 10.
+
+Mind the case. The UUID prefix is lower case. If your column stores upper-case UUID text, the
+bounds must be upper case too, or the comparison sorts wrongly. The ULID prefix is upper case,
+as in the ULID specification, so lower-case it for lower-case storage. A native `uuid` column
+compares bytes, so pad the prefix with `-0000-0000-000000000000` to make a full UUID. A
+sub-millisecond input is floored to its millisecond, and an instant before 1970 or past the
+48-bit limit returns `""`.
+
+## Snowflakes need their layout
+
+A Snowflake is not a standard. Each service picks its own epoch and bit split, so GMT ships no
+presets and you pass the layout as an object. Discord documents its epoch as 1420070400000 with
+a shift of 22. Twitter's 2010 generator used the epoch 1288834974657, the same shift, and a
+41-bit time field.
+
+```typescript
+import { fromSnowflake } from "@northguild/gmt/precision/identifiers";
+
+const discord = { epochMs: 1420070400000, shift: 22 };
+const twitter = { epochMs: 1288834974657, shift: 22, timestampBits: 41 };
+
+fromSnowflake("175928847299117063", discord);
+// "2016-04-30T11:18:25.796Z"
+
+fromSnowflake("1050118621198921728", twitter);
+// "2018-10-10T20:19:24.211Z"
+
+fromSnowflake("1050118621198921728", discord);
+// "2022-12-07T18:36:29.554Z" — a different instant, and no error
+```
+
+The same ID under the wrong layout gives a valid date years away, so keep the layout next to
+the ID's source. Pass IDs as a string or a `bigint`. A `number` returns `""`, because an ID
+above 2^53 loses its low digits as a `number`, and that is why Discord's API sends them as
+strings.
+
+## See also
+
+- [Foreign Epoch Bridges](../foreign-epoch-bridges/): the same decoding for NTP, FILETIME, Parquet, Arrow and protobuf
+- [Nanosecond Precision](/guides/core-date-operations/nanosecond-precision/): the `bigint` instant underneath
+- [`fromUuidTimestamp` reference](/reference/precision/identifiers/fromUuidTimestamp)
+- [`uuidV7TimestampPrefix` reference](/reference/precision/identifiers/uuidV7TimestampPrefix)
+- [`fromUlid` reference](/reference/precision/identifiers/fromUlid)
+- [`ulidTimestampPrefix` reference](/reference/precision/identifiers/ulidTimestampPrefix)
+- [`fromObjectId` reference](/reference/precision/identifiers/fromObjectId)
+- [`fromSnowflake` reference](/reference/precision/identifiers/fromSnowflake)
+- [`fromKsuid` reference](/reference/precision/identifiers/fromKsuid)

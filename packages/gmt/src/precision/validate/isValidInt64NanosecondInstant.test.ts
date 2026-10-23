@@ -1,0 +1,31 @@
+import { isValidInt64NanosecondInstant } from "./isValidInt64NanosecondInstant";
+
+describe("isValidInt64NanosecondInstant", () => {
+  it.each`
+    value                                      | expected
+    ${"1677-09-21T00:12:43.145224192Z"}        | ${true}
+    ${"1677-09-21T00:12:43.145224191Z"}        | ${false}
+    ${"2262-04-11T23:47:16.854775807Z"}        | ${true}
+    ${"2262-04-11T23:47:16.854775808Z"}        | ${false}
+    ${"1970-01-01T00:00:00Z"}                  | ${true}
+    ${"2024-01-01T09:00:00+09:00[Asia/Tokyo]"} | ${true}
+    ${"+010000-01-01T00:00:00Z"}               | ${false}
+    ${"-271821-04-20T00:00:00Z"}               | ${false}
+    ${"2262-04-12T08:47:16.854775807+09:00"}   | ${true}
+    ${"2262-04-12T08:47:16.854775808+09:00"}   | ${false}
+    ${"2024-01-01T00:00:00"}                   | ${false}
+    ${"2024-01-01T00:00:00[Asia/Tokyo]"}       | ${false}
+    ${"1677-09-21T00:12:43.145224192"}         | ${false}
+    ${"+275760-09-13T00:00:00Z"}               | ${false}
+    ${"1677-09-21T09:12:43.145224192+09:00"}   | ${true}
+    ${"1677-09-21T09:12:43.145224191+09:00"}   | ${false}
+    ${"2016-12-31T23:59:60Z"}                  | ${false}
+    ${"invalid"}                               | ${false}
+    ${""}                                      | ${false}
+    ${42}                                      | ${false}
+    ${null}                                    | ${false}
+    ${undefined}                               | ${false}
+  `("returns $expected for $value", ({ value, expected }) => {
+    expect(isValidInt64NanosecondInstant(value)).toBe(expected);
+  });
+});

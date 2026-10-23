@@ -63,6 +63,8 @@ import {
   showGnssWeekDecoderInput,
   showLeapSecondTimelineInput,
   showSatelliteClockConverterInput,
+  showIdTimestampDecoderInput,
+  showColumnTimestampBridgeInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
   showObservanceComparatorInput,
@@ -79,6 +81,8 @@ import {
   showPunctualityBoardInput,
   showTimetableReaderInput,
   showZonePlannerInput,
+  columnBridgeProblems,
+  idDecoderProblems,
 } from "../src/lib/dox-tools";
 import canadaZones from "../src/lib/canada-zones.json";
 import moroccoZones from "../src/lib/morocco-region-zones.json";
@@ -511,6 +515,42 @@ export function buildWorkerTools(
       description: docFor("showDurationParserBench"),
       inputSchema: showDurationParserBenchInput,
       execute: () => accept("duration-parser-bench"),
+    }),
+    // An identifier no decoder reads is the widget's own NO SIGNAL, so only the
+    // shape of the call is checked: a non-blank identifier and a Snowflake layout
+    // of whole numbers.
+    showIdTimestampDecoder: tool({
+      description: docFor("showIdTimestampDecoder"),
+      inputSchema: showIdTimestampDecoderInput,
+      execute: (input) => {
+        const problems = idDecoderProblems(input);
+        return problems.length > 0
+          ? reject("id-timestamp-decoder", problems.join(" "))
+          : accept("id-timestamp-decoder");
+      },
+    }),
+    // Zones are checked like every zone tool. A value no converter can store is a
+    // card's own NO SIGNAL, but a zone, a unit, a form or a stored field the
+    // widget cannot read would be dropped silently, so those are refused here.
+    showColumnTimestampBridge: tool({
+      description: docFor("showColumnTimestampBridge"),
+      inputSchema: showColumnTimestampBridgeInput,
+      execute: (input) => {
+        const zone = (input as { zone?: unknown }).zone;
+        const unknown = unknownZones(
+          typeof zone === "string" && zone !== "" ? [zone] : [],
+        );
+        if (unknown.length > 0) {
+          return reject(
+            "column-timestamp-bridge",
+            `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+          );
+        }
+        const problems = columnBridgeProblems(input as Record<string, unknown>);
+        return problems.length > 0
+          ? reject("column-timestamp-bridge", problems.join(" "))
+          : accept("column-timestamp-bridge");
+      },
     }),
     showMoroccoClockChange: tool({
       description: docFor("showMoroccoClockChange"),

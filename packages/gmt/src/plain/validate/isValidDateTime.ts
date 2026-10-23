@@ -1,7 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isoStringBody } from "../../internal/isoStringBody";
-import { plainDateTime } from "../../regex";
-import { hasSecond60 } from "./hasSecond60";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return true when `value` is a valid PlainDateTime string.
@@ -25,19 +22,5 @@ import { hasSecond60 } from "./hasSecond60";
  * @example isValidDateTime("2024-02-29T23:59:60") // false (leap second)
  */
 export function isValidDateTime(value: string): boolean {
-  const body = isoStringBody(value);
-
-  if (hasSecond60(body)) {
-    return false;
-  }
-
-  if (!plainDateTime.test(body)) {
-    return false;
-  }
-
-  try {
-    return Temporal.PlainDateTime.from(value).calendarId === "iso8601";
-  } catch {
-    return false;
-  }
+  return plainDateTimeOf(value) !== null;
 }

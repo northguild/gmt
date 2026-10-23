@@ -328,6 +328,8 @@ export default defineConfig({
         "./src/styles/gmt-elapsed-vs-clock.css", // Elapsed vs. Clock Difference widget (MAR-16)
         "./src/styles/gmt-stored-time-audit.css", // Stored Time Audit widget (CORE-83)
         "./src/styles/gmt-duration-parser-bench.css", // Duration Parser Bench widget (CORE-85)
+        "./src/styles/gmt-id-timestamp-decoder.css", // ID Timestamp Decoder widget (CORE-56)
+        "./src/styles/gmt-column-timestamp-bridge.css", // Column Timestamp Bridge widget (CORE-56)
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles

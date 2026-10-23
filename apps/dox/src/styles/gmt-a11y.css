@@ -1721,3 +1721,106 @@
     border-color: CanvasText;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * ID Timestamp Decoder, forced-colors (CORE-56). The hero's bottom bar is a
+ * background and the signal-lost pill is a tinted fill; the row that read is a
+ * tint with an inset edge. Repaint each in system colours, keeping the shape
+ * that carries the meaning: a full border on the plate, a Mark pill for NO
+ * SIGNAL, and a Highlight bottom edge on the row that read.
+ * --------------------------------------------------------------------------- */
+@media (forced-colors: active) {
+  .gmt-id-timestamp-decoder .gmt-iddecode-hero {
+    forced-color-adjust: none;
+    color: CanvasText;
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-id-timestamp-decoder
+    .gmt-iddecode-hero:is([data-state="one"], [data-state="many"]) {
+    background:
+      linear-gradient(CanvasText, CanvasText) left bottom / 100% 3px no-repeat,
+      Canvas;
+  }
+
+  .gmt-id-timestamp-decoder .gmt-iddecode-chip {
+    border-color: CanvasText;
+  }
+
+  .gmt-id-timestamp-decoder .gmt-iddecode-pill {
+    forced-color-adjust: none;
+    border-color: Mark;
+    color: MarkText;
+    background: Mark;
+  }
+
+  .gmt-id-timestamp-decoder .gmt-iddecode-row[data-state="read"] td {
+    /* The border keeps its 1px, so reading never moves a row. The rule is 3px:
+       the border plus a 2px band painted inside the cell. */
+    forced-color-adjust: none;
+    color: CanvasText;
+    background: Canvas linear-gradient(Highlight, Highlight) no-repeat bottom /
+      100% 2px;
+    border-block-end-color: Highlight;
+    box-shadow: none;
+  }
+
+  @container gmt-iddecode-table (max-width: 46rem) {
+    .gmt-id-timestamp-decoder .gmt-iddecode-row[data-state="read"] {
+      border-color: Highlight;
+      /* An outline takes no room, where a thicker border would. */
+      outline: 1px solid Highlight;
+      outline-offset: -2px;
+      background: Canvas;
+    }
+
+    .gmt-id-timestamp-decoder .gmt-iddecode-row[data-state="read"] td {
+      background: none;
+      border-block-end-color: transparent;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Column Timestamp Bridge, forced-colors (CORE-56). The hero's bottom bar is a
+ * background, the cards' bottom edges are a border colour and the signal-lost
+ * pill is a tinted fill. Repaint each in system colours, keeping the shape that
+ * carries the meaning: a full border on every plate, a Mark pill for NO SIGNAL.
+ * --------------------------------------------------------------------------- */
+@media (forced-colors: active) {
+  .gmt-column-timestamp-bridge .gmt-colbridge-hero {
+    forced-color-adjust: none;
+    color: CanvasText;
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-column-timestamp-bridge .gmt-colbridge-hero[data-state="instant"] {
+    background:
+      linear-gradient(CanvasText, CanvasText) left bottom / 100% 3px no-repeat,
+      Canvas;
+  }
+
+  .gmt-column-timestamp-bridge .gmt-colbridge-card,
+  .gmt-column-timestamp-bridge .gmt-colbridge-ladder {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-column-timestamp-bridge .gmt-colbridge-card-head {
+    background: Canvas;
+    border-block-end-color: CanvasText;
+  }
+
+  .gmt-column-timestamp-bridge .gmt-colbridge-chip {
+    border-color: CanvasText;
+  }
+
+  .gmt-column-timestamp-bridge .gmt-colbridge-pill {
+    forced-color-adjust: none;
+    border-color: Mark;
+    color: MarkText;
+    background: Mark;
+  }
+}

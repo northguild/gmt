@@ -358,6 +358,11 @@ function renderValue(value: unknown, str: (s: string) => string): string {
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }
+  // A bigint is printed with its `n`, as the JSDoc prints one.
+  if (typeof value === "bigint") return `${value}n`;
+  if (value instanceof Uint8Array) {
+    return `new Uint8Array([${[...value].join(", ")}])`;
+  }
   if (Array.isArray(value)) {
     return `[${value.map((v) => renderValue(v, str)).join(", ")}]`;
   }

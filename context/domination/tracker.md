@@ -112,7 +112,7 @@ with the `Position` type, ahead of the remaining realms.
 | 28  | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | 1.20.0  | Done        |
 | 29  | CORE-88 | Core       | The Canada 2026 clock-change checker in Dox                                         | —                       | #329  | 1.20.0  | Done        |
 | 30  | CORE-89 | Core       | The Morocco 2026 clock-change checker in Dox                                        | —                       | #340  | —       | Not started |
-| 31  | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                       | #258  | —       | Not started |
+| 31  | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                       | #258  | —       | Done        |
 | 32  | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                       | #256  | —       | Done        |
 | 33  | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | —                       | #324  | —       | Not started |
 | 34  | CORE-85 | Core       | Human duration strings:<br>`parseHumanDuration`, `formatHumanDuration`              | —                       | #325  | —       | Done        |
