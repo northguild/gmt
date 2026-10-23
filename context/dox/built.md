@@ -973,11 +973,6 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     - **The pin panel has one size.** Clock, offset, last and next change (`none in 2025 or 2026`
       style when `null`) and, for a `stopped` probe zone, the tzdb release; every row reserves
       its height, so pinning another zone moves nothing.
-    - **Row of three.** From 57 rem of section width the map, the zone list and the clocks sit in one
-      row (`1.6fr 1fr 1fr`; `tableOfContents: false` on the page widens the stack). In that range
-      the pin panel holds three lines for the zone name and the long values and four for the class,
-      so it is one box for every zone (`canada-clock-still.mjs` pins all 23); the zone button
-      stacks id, offset and class, and the clock card lets its offset drop under the time.
     - **Probe script.** `CanadaProbeScript.astro`, last in the page, runs `probeInlineSource(canadaProbe("canada"))`
       once the table is parsed, so the verdict and the Yours column are final before first paint.
       `stored-results` and the zone-kind label reserve their height so the late fill moves nothing.
@@ -1039,10 +1034,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       - **The ready signal (both checkers).** The mount sets `root.dataset.state = "ready"` right
         after the first `clocks.tick()` that has the Worker's answer, and `"error"` where it
         shows the 429 or failure line (`showUnavailable` still sets `"unavailable"`). The
-        browser gates wait for it and read no readout text: `canada-clock-still.mjs` and
-        `canada-stored-still.mjs` keep the fake clock paused before `goto`, then
-        `waitForState` (`scripts/lib/clock-check-harness.mjs`) waits in real time for 60 s and
-        fails with the state it saw. The harness stubs the Worker by method (GET fixture, the
+        browser gates wait for it and read no readout text. `canada-clock-still.mjs` keeps its
+        fake clock paused before `goto`; `canada-stored-still.mjs` runs on the real clock. Both
+        call `waitForState` (`scripts/lib/clock-check-harness.mjs`), which waits in real time for
+        60 s and fails with the state it saw. The harness stubs the Worker by method (GET fixture, the
         saved-times fixture for POST) and takes the region from a table keyed by page path that
         throws on an unknown path. `blockOffSite` routes by a URL pattern (every `http(s)` URL
         outside the base's origin), so a same-site chunk is never intercepted. Serve a build with
@@ -1228,6 +1223,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       checker's own width (a container query, so the chat rail stacks too), with the pin panel as
       a full-width strip under it; below that the cards stack in that order and the stacked map
       stops at 70vh.
+      - The pin panel is one size for every zone: `canada-clock-still.mjs` pins all 23 against a
+        fixture with the longest texts and checks nothing moves.
       - The row's height is `--gmt-zonemap-row`, a registered `<length>`, `clamp(max(22rem, a 400px
         frame), 32cqw, 28rem)`, and the frame keeps the drawing's own aspect (800 by the
         `--zonemap-map-height`). The map's column is the frame plus the stage's padding and

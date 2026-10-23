@@ -104,13 +104,19 @@ export interface CanadaTemplateOptions {
 export const loadCanadaTense = (): Promise<TenseView> =>
   loadTenseView(CANADA_MOMENTS);
 
-/** The hint's clause about the four zones, in both tenses. */
-function zonesClauseHtml(view: TenseView): string {
+/**
+ * The hint under "Clock changes", written whole in both tenses. A tensed clause mid-sentence would
+ * be one box that cannot break across lines, so the sentence is one block slot, like a Key point.
+ */
+function changesHintHtml(view: TenseView): string {
+  const hint = (zones: string): string =>
+    `tzdb also records an abbreviation change on 2026-11-01 for ${zones}, with no change of UTC offset, so it is not listed. Times are the clock as it read just before the change.`;
   return slotHtml(
     REGION_KEY,
-    "the four zones that will stop changing their clocks",
-    "the four zones that stopped changing their clocks",
+    hint("the four zones that will stop changing their clocks"),
+    hint("the four zones that stopped changing their clocks"),
     view.tenseOf(REGION_KEY),
+    true,
   );
 }
 
@@ -177,7 +183,7 @@ export function renderCanadaClockChangeTemplate({
     `<div class="gmt-clockcheck-row">` +
     `<section class="gmt-widget-section" aria-labelledby="${changesId}">` +
     `<h4 id="${changesId}">Clock changes in 2026 and 2027</h4>` +
-    `<p class="gmt-widget-hint">tzdb also records an abbreviation change on 2026-11-01 for ${zonesClauseHtml(tense)}, with no change of UTC offset, so it is not listed. Times are the clock as it read just before the change.</p>` +
+    `<p class="gmt-widget-hint">${changesHintHtml(tense)}</p>` +
     `<ul class="gmt-clockcheck-groups" data-role="transitions">${TRANSITION_ZONES.map((zone) => transitionGroupHtml(zone, YEARS)).join("")}</ul>` +
     `</section>` +
     helpCardHtml(idPrefix, HELP) +

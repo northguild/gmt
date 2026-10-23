@@ -9,7 +9,7 @@
 ## Scope
 
 - **Past tense only,** on the page and in the chat widget ("Stopped changing clocks on 1 November 2026 at 02:00 local time"). The library still writes the date and time.
-- **Remove** Canada's future-tense forms, its call to the shared tense check, and its two-form cell. The list of lines, rules and tests to delete is in `context/dox/built.md` under the Canada checker.
+- **Remove** Canada's future-tense forms, its call to the shared tense check, and its two-form cell. The list of lines, rules and tests to delete is under [What the cleanup deletes](#what-the-cleanup-deletes) below.
 - **Shared parts:** keep the shared tense check and its CSS rule only if another checker uses them. Otherwise delete them.
 - **Tests:** delete the tests and browser checks for before the date, and the check that the wording switches. Keep one check that the past tense shows.
 - **Text that runs no code:** the page's opening sentence, its description and the chat tool description, in the past tense.
@@ -20,7 +20,7 @@ Paths are under `apps/dox/src`. Search each name again before deleting; a later 
 
 - `CANADA_MOMENTS`: defined in `lib/canada-clock-change.ts`, read in `lib/canada-clock-change-mount.ts`, `lib/clock-change-tense.fixture.ts` and `lib/clock-change-tense.test.ts`. Keep one past-tense fixture for the Canada tests.
 - The `bindTense` block: the call in `lib/canada-clock-change-mount.ts` and the function in `lib/clock-change-tense.ts`, with the tense timer and `onChange: () => map?.retense()`. Keep `changeTense`, `momentWords` and `tenseView` only if Morocco still reads them (it does).
-- `zonesClauseHtml`: `lib/canada-clock-change-mount.ts`, and the one hint line that calls it.
+- `changesHintHtml`: `lib/canada-clock-change-mount.ts`. Its "Clock changes" hint keeps the past-tense sentence as plain text.
 - The `KeyPart` tense variant (`{ tense, before, after, dated }`), `tenseKeyOf` and `partsInForm`: `data/clock-change-text.ts`, used by `lib/clock-change-mount.ts` (`runHtml`). `KeyPart` itself stays, without the tense variant.
 - `retense()`: the `ZoneMap` member and its function in `lib/zone-map.ts` (also its `deps.tense` hook).
 - The `.gmt-tense` rules in `styles/clock-change.css` (`.gmt-tense`, `.gmt-tense--block`, `[data-form]`), and `slotHtml` in `lib/clock-change-tense.ts` that writes the cell.
