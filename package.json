@@ -57,15 +57,15 @@
     "@northguild/gmt-oxlint": "workspace:*",
     "@tanstack/intent": "^0.4.0",
     "@types/node": "^22.13.10",
-    "@vitest/browser-playwright": "4.1.4",
+    "@vitest/browser-playwright": "4.1.12",
     "esbuild": "^0.28.2",
     "fallow": "^3.17.0",
-    "oxfmt": "^0.63.0",
+    "oxfmt": "^0.67.0",
     "oxlint": "^1.78.0",
     "playwright": "1.63.0",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.0.0",
-    "vitest": "4.1.4"
+    "vitest": "4.1.12"
   },
   "engines": {
     "node": ">=22.16.0 <25 || >=26 <27"

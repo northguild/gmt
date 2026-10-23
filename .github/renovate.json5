@@ -1,0 +1,62 @@
+// Renovate (the Mend Renovate GitHub App) keeps dependencies current and raises security fixes.
+// Dependabot can't: it supports pnpm 7 to 10, and this repo runs pnpm 12.
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:recommended",
+    // One weekly PR for every minor and patch update. Majors get a PR each.
+    "group:allNonMajor",
+    "schedule:weekly",
+    ":maintainLockFilesWeekly",
+  ],
+  dependencyDashboard: true,
+  automerge: false,
+  // pnpm refuses any release younger than its own minimumReleaseAge (1 day by default), so a
+  // younger proposal would fail at install. Renovate adds a 30-minute buffer on top.
+  minimumReleaseAge: "1 day",
+  // Security fixes skip the weekly schedule and get a PR at once, but still wait out pnpm's age.
+  vulnerabilityAlerts: {
+    minimumReleaseAge: "1 day",
+  },
+  packageRules: [
+    {
+      groupName: "Astro",
+      matchPackageNames: ["astro", "@astrojs/**"],
+    },
+    {
+      groupName: "Vitest",
+      matchPackageNames: ["vitest", "@vitest/**"],
+    },
+    {
+      groupName: "Playwright",
+      matchPackageNames: ["playwright", "@playwright/**"],
+    },
+    {
+      groupName: "wrangler",
+      matchPackageNames: ["wrangler"],
+    },
+    // These change what a published package ships, so the PR needs a changeset, which a
+    // person adds. Kept apart so the weekly group passes CI on its own.
+    {
+      groupName: "published package dependencies",
+      matchFileNames: [
+        "packages/gmt/package.json",
+        "packages/gmt-biome/package.json",
+        "packages/gmt-eslint/package.json",
+        "packages/gmt-oxlint/package.json",
+      ],
+      matchDepTypes: ["dependencies", "peerDependencies", "optionalDependencies"],
+    },
+    // The supported Node versions are a product decision, made by hand.
+    {
+      matchDepTypes: ["engines"],
+      enabled: false,
+    },
+    // @types/node follows the oldest supported Node, so its major moves with `engines`.
+    {
+      matchPackageNames: ["@types/node"],
+      matchUpdateTypes: ["major"],
+      enabled: false,
+    },
+  ],
+}
