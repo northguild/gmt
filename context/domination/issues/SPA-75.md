@@ -71,3 +71,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 - The same location evaluated for the same UTC day under two zones on opposite sides of the date line returns events for different local dates, asserted to show the zone parameter matters
 - Latitude outside ±90 or longitude outside ±180 returns the sentinel
 - `pnpm run validate` stays green
+
+## From CORE-79
+
+See CORE-79 "Notes for consumer stories" in [CORE-79.md](CORE-79.md#notes-for-consumer-stories) for what this story must do with `Position` and `readPosition`.

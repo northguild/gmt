@@ -67,3 +67,7 @@ GMT can represent IANA zones. It cannot represent a captain-declared offset, a z
 - `parseDtg('271630Z JUN 03', { yearWindow: 2000 })` returns 2003-06-27T16:30:00Z with `letter: 'Z'`; `parseDtg('271630R JUN 03', { yearWindow: 2000 })` returns 21:30Z; `parseDtg('271630Z JUN 03')` returns the sentinel; `parseDtg('271630Z JUN 2003')` needs no window; `parseDtg('271630Z', { referenceInstant })` picks the nearest month; without a reference the short form returns the sentinel
 - `formatDtg(parseDtg(x).instant)` round-trips the long form
 - `pnpm run validate` stays green
+
+## From CORE-79
+
+See CORE-79 "Notes for consumer stories" in [CORE-79.md](CORE-79.md#notes-for-consumer-stories) for what this story must do with `Position` and `readPosition`.
