@@ -276,6 +276,13 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "duration-parser-bench",
+    root: ".gmt-widget",
+    preset: '[data-role="locale"]',
+    presetNote: "no preset; changes the locale",
+    drag: null,
+  },
+  {
     slug: "zone-planner",
     root: ".gmt-scrubber-block",
     preset: null,

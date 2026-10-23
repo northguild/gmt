@@ -126,6 +126,16 @@ The UTC side reads a second-60 instant (`"2016-12-31T23:59:60Z"`) without manual
 
 This prohibition stands for every other function in the library.
 
+### Scoped exception: human duration strings (CORE-85)
+
+The same three rules extend to `parseHumanDuration` (`packages/gmt/src/duration/parse/`). A human duration string (`"2h 30m"`, `"3 days"`) is not ISO 8601, and no `Temporal.*.from` reads one. The grammar is GMT's own, fixed, and stated in full in the function's JSDoc:
+
+1. One unit table and two sticky regexes, the pair and the separator, in `internal/humanDuration.ts`, beside two stateless helpers for the sign and for trailing zeros; every spelling comes from the table. Not in `regex/`: no standards body publishes the grammar.
+2. The matched digits are rebuilt as an ISO 8601 duration string and handed whole to `Temporal.Duration.from(string)`, which applies the fraction, the sign and the limits. Never a property bag: a bag takes no fraction, and a Number loses digits past 2^53. Milliseconds are added to seconds in BigInt.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+This prohibition stands for every other function in the library.
+
 ### Calendar-annotated strings are RFC 9557 (E1, E7)
 
 A calendar string is the RFC 9557 form Temporal writes: the ISO 8601 date (or zoned datetime),

@@ -158,6 +158,10 @@ const PAGES = [
     path: "check/canada-2026-clock-change",
     widget: "gmt-canada gmt-widget",
   },
+  {
+    path: "tools/duration-parser-bench",
+    widget: "gmt-duration-parser-bench gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

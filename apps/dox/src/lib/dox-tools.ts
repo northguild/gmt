@@ -716,6 +716,16 @@ export const showCanadaClockChangeInput = z.object({
 });
 
 /**
+ * Duration Parser Bench: the reader's duration string exactly as given (never
+ * trimmed or corrected: a leading space is a case the bench shows). The chat
+ * args are the permalink args.
+ */
+export const showDurationParserBenchInput = z.object({
+  text: z.string().min(1).max(64),
+  locale: z.string().min(2).max(35).optional(),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -763,7 +773,8 @@ export type DoxToolName =
   | "showHolidayRuleBuilder"
   | "showObservanceComparator"
   | "showMovingFeasts"
-  | "showCanadaClockChange";
+  | "showCanadaClockChange"
+  | "showDurationParserBench";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -800,6 +811,7 @@ export const DOX_TOOL_INPUTS = {
   showObservanceComparator: showObservanceComparatorInput,
   showMovingFeasts: showMovingFeastsInput,
   showCanadaClockChange: showCanadaClockChangeInput,
+  showDurationParserBench: showDurationParserBenchInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1047,6 +1059,13 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader asks whether their runtime, server or browser still applies an old clock change, whether its time zone data is current, or what a zone's next clock change is",
     args: "zone: optional, one IANA id from the checker's list to pin on the map (never a province or a place name).",
   },
+  {
+    name: "showDurationParserBench",
+    purpose:
+      "Read a duration string people write (`2h 30m`, `1.5h`, `3 days`) under GMT's published grammar, and show the ISO 8601 duration, the compact form, the locale words, and why `1m` is a minute and `P1M` a month.",
+    when: "the reader asks what a duration string such as `30s`, `1m`, `7d` or `1.5h` means, whether `m` is a minute or a month, how to parse a timeout or config duration, or why writing laytime as `3 days` is not always 72 hours",
+    args: "text: the reader's string exactly as given, never corrected; locale: only when the reader names one.",
+  },
 ];
 
 /**
@@ -1191,6 +1210,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[33].purpose,
     inputSchema: showCanadaClockChangeInput,
   }),
+  showDurationParserBench: tool({
+    description: DOX_TOOL_DOCS[34].purpose,
+    inputSchema: showDurationParserBenchInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1248,6 +1271,7 @@ export const ENABLED_TOOL_NAMES = [
   "showObservanceComparator",
   "showMovingFeasts",
   "showCanadaClockChange",
+  "showDurationParserBench",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

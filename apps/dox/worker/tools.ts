@@ -66,6 +66,7 @@ import {
   showHolidayRuleBuilderInput,
   showObservanceComparatorInput,
   showMovingFeastsInput,
+  showDurationParserBenchInput,
   showX12TimeReaderInput,
   showDstInspectorInput,
   showDwellLedgerInput,
@@ -493,6 +494,11 @@ export function buildWorkerTools(
               "canada-clock-change",
               `"${zone}" is not one of the zones the checker lists. Call it again without a zone, or say so plainly.`,
             ),
+    }),
+    showDurationParserBench: tool({
+      description: docFor("showDurationParserBench"),
+      inputSchema: showDurationParserBenchInput,
+      execute: () => accept("duration-parser-bench"),
     }),
   };
 

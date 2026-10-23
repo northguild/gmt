@@ -133,6 +133,10 @@ import {
   mountCanadaClockChangeWidget,
   renderCanadaClockChangeWidgetTemplate,
 } from "./canada-clock-change-mount";
+import {
+  mountDurationParserBench,
+  renderDurationParserBenchTemplate,
+} from "./duration-parser-bench-mount";
 
 installJsdomShims();
 
@@ -296,6 +300,11 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "canada clock-change checker",
     () => renderCanadaClockChangeWidgetTemplate("canada"),
     mountCanadaClockChangeWidget as MountFn<never>,
+  ],
+  [
+    "duration parser bench",
+    () => renderDurationParserBenchTemplate(),
+    mountDurationParserBench as MountFn<never>,
   ],
 ];
 

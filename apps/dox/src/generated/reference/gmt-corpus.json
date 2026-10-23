@@ -1825,6 +1825,55 @@
     ]
   },
   {
+    "url": "/reference/duration/format/formatHumanDuration",
+    "page": "/reference/duration/format/formatHumanDuration",
+    "name": "formatHumanDuration",
+    "namespace": "duration",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatHumanDuration(duration: string): string",
+    "description": "Write an ISO 8601 duration in the compact form `parseHumanDuration` reads, such as `2h 30m`.",
+    "sourcePath": "packages/gmt/src/duration/format/formatHumanDuration.ts",
+    "examples": [
+      {
+        "call": "formatHumanDuration(\"PT2H30M\")",
+        "result": "\"2h 30m\""
+      },
+      {
+        "call": "formatHumanDuration(\"P1Y2M\")",
+        "result": "\"1y 2mo\""
+      },
+      {
+        "call": "formatHumanDuration(\"PT1M\")",
+        "result": "\"1m\""
+      },
+      {
+        "call": "formatHumanDuration(\"PT90M\")",
+        "result": "\"90m\""
+      },
+      {
+        "call": "formatHumanDuration(\"PT1.5S\")",
+        "result": "\"1.5s\""
+      },
+      {
+        "call": "formatHumanDuration(\"PT1.0005S\")",
+        "result": "\"1.0005s\""
+      },
+      {
+        "call": "formatHumanDuration(\"-PT2H30M\")",
+        "result": "\"-2h 30m\""
+      },
+      {
+        "call": "formatHumanDuration(\"PT0S\")",
+        "result": "\"0s\""
+      },
+      {
+        "call": "formatHumanDuration(\"2h 30m\")",
+        "result": "\"\" (not ISO 8601)"
+      }
+    ]
+  },
+  {
     "url": "/reference/duration/normalize/normalizeDuration",
     "page": "/reference/duration/normalize/normalizeDuration",
     "name": "normalizeDuration",
@@ -1914,6 +1963,63 @@
       },
       {
         "call": "parseDuration(\"invalid\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/duration/parse/parseHumanDuration",
+    "page": "/reference/duration/parse/parseHumanDuration",
+    "name": "parseHumanDuration",
+    "namespace": "duration",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseHumanDuration(text: string): string",
+    "description": "Read a duration written the way people write it, such as `2h 30m`, `1.5h` or `3 days`, into an ISO 8601 duration string.",
+    "sourcePath": "packages/gmt/src/duration/parse/parseHumanDuration.ts",
+    "examples": [
+      {
+        "call": "parseHumanDuration(\"2h 30m\")",
+        "result": "\"PT2H30M\""
+      },
+      {
+        "call": "parseHumanDuration(\"3 days\")",
+        "result": "\"P3D\""
+      },
+      {
+        "call": "parseHumanDuration(\"1.5h\")",
+        "result": "\"PT1H30M\""
+      },
+      {
+        "call": "parseHumanDuration(\"1s 500ms\")",
+        "result": "\"PT1.5S\""
+      },
+      {
+        "call": "parseHumanDuration(\"1m\")",
+        "result": "\"PT1M\" (a minute)"
+      },
+      {
+        "call": "parseHumanDuration(\"1mo\")",
+        "result": "\"P1M\" (a month)"
+      },
+      {
+        "call": "parseHumanDuration(\"-2h 30m\")",
+        "result": "\"-PT2H30M\""
+      },
+      {
+        "call": "parseHumanDuration(\"2h, and 30m\")",
+        "result": "\"PT2H30M\""
+      },
+      {
+        "call": "parseHumanDuration(\"1.5h 30m\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseHumanDuration(\"30m 2h\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseHumanDuration(\"P1M\")",
         "result": "\"\""
       }
     ]

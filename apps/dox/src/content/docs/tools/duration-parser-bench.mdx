@@ -1,0 +1,49 @@
+---
+title: Duration Parser Bench
+description: Type a duration the way people write it and see which parser reads it, the ISO 8601 result, the compact form and the locale words, with a table for 1m against 1mo and P1M, and one for a laytime day against 24 hours.
+industries: [core]
+---
+
+import DurationParserBench from "../../../components/DurationParserBench.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="duration strings">
+
+<Fragment slot="keypoint">
+
+`1m` is a minute here and `P1M` is a month in ISO 8601. A duration string with no written grammar is a guess.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+People write durations as `2h 30m`, `1.5h` or `3 days`. [`parseHumanDuration`](/reference/duration/parse/parseHumanDuration/) reads that form under a grammar the library publishes: numbers with units, largest first, each unit once, separated by plain spaces. It returns an ISO 8601 duration string, or `""` for anything outside the grammar. A caller that takes either form chains the two parsers: `parseDuration(s) || parseHumanDuration(s)`.
+
+Type a string, or press one of the Try buttons. Section 2 says which parser read it, shows the ten duration fields from years to nanoseconds, then the compact form, the round trip back through the parser and the words in the locale you choose. Under it are the exact calls and what each returned. Section 3 is two fixed tables. The first reads seven spellings of a minute, a month and a millisecond. The second reads `3 days` and `72h` from two Rotterdam start times, one each side of a clock change. Every value comes from a library call.
+
+</Fragment>
+
+<DurationParserBench fullbleed />
+
+<Fragment slot="after">
+
+**The grammar.** The full grammar, the unit table and the rules for fractions and spaces are on the [`parseHumanDuration`](/reference/duration/parse/parseHumanDuration/) page, which states them once. This tool does not repeat them.
+
+**Reading the tables.** `m` and `M` are a minute, `mo` is a month and `ms` is a millisecond. ISO 8601 writes a month as `P1M` and a minute as `PT1M`, so the same letter means different things on either side of the `T`. A day is a calendar day: `3 days` is `P3D`, and across a clock change the library totals it as 71 or 73 hours. `72h` is `PT72H` and is 72 hours in every zone. A charter party that says 72 consecutive hours wants the second.
+
+**Nothing is balanced.** `formatHumanDuration` writes the units it was given. `PT90M` becomes `90m`, not `1h 30m`. To carry minutes into hours, run [`normalizeDuration`](/reference/duration/normalize/normalizeDuration/) first.
+
+**Worth trying:**
+
+- [`1m` or `1mo`?](/tools/duration-parser-bench/?w=durationbench&wa=%7B%22text%22%3A%221m%22%7D) — a minute; `1mo` is the month.
+- [`P1M`](/tools/duration-parser-bench/?w=durationbench&wa=%7B%22text%22%3A%22P1M%22%7D) — ISO 8601's month, which the human parser refuses and `parseDuration` reads.
+- [`1.5h 30m`](/tools/duration-parser-bench/?w=durationbench&wa=%7B%22text%22%3A%221.5h+30m%22%7D) — a fraction only on the last unit, so `NO SIGNAL`.
+- [`2h 3h`](/tools/duration-parser-bench/?w=durationbench&wa=%7B%22text%22%3A%222h+3h%22%7D) — a unit twice is refused, not summed.
+- [`PT90M`](/tools/duration-parser-bench/?w=durationbench&wa=%7B%22text%22%3A%22PT90M%22%7D) — ISO 8601, read by `parseDuration`, compact form `90m`.
+- [`3 days`](/tools/duration-parser-bench/?w=durationbench&wa=%7B%22text%22%3A%223+days%22%7D) — three calendar days, `P3D`.
+
+**Reference:** [`parseHumanDuration`](/reference/duration/parse/parseHumanDuration/), [`formatHumanDuration`](/reference/duration/format/formatHumanDuration/), [`parseDuration`](/reference/duration/parse/parseDuration/), [`formatDuration`](/reference/duration/format/formatDuration/), [`getDurationUnit`](/reference/duration/calculate/getDurationUnit/) and [`totalDuration`](/reference/duration/calculate/totalDuration/). The guide is [Read a duration people write](/guides/core-date-operations/durations/#read-a-duration-people-write).
+
+</Fragment>
+
+</ToolLayout>

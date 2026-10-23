@@ -131,7 +131,7 @@ skills:
   - name: GMT Arithmetic
     slug: gmt-arithmetic
     domain: arithmetic
-    description: Add or subtract time from dates; add*/subtract* accept an optional overflow option (addTime/subtractTime take none), diff* accept optional rounding options, isBusinessDay/addBusinessDays/subtractBusinessDays/businessDaysBetween/nextBusinessDay/previousBusinessDay/rollDate/mergeCalendars do business-day arithmetic against a BusinessCalendar of weekend days and holidays with the six RollConvention values, ISO 8601 duration strings (totalDuration for a total in one unit), holiday rules expanded from HolidayRule values (nthWeekdayOfMonth/easterSunday/observedDate/holidayDates/buildBusinessCalendar/isValidHolidayRule, ObservancePolicy), unit-object amounts totalled or written as a duration string (totalUnits/durationFromUnits), spanMs/spanNs/spanWallClock for elapsed-versus-wall-clock spans, half-open interval algebra over instants (intersectIntervals/clampInterval/mergeIntervals/subtractIntervals/splitIntervalAt/sumIntervals), the positional interval range math on the same half-open rule
+    description: Add or subtract time from dates; add*/subtract* accept an optional overflow option (addTime/subtractTime take none), diff* accept optional rounding options, isBusinessDay/addBusinessDays/subtractBusinessDays/businessDaysBetween/nextBusinessDay/previousBusinessDay/rollDate/mergeCalendars do business-day arithmetic against a BusinessCalendar of weekend days and holidays with the six RollConvention values, ISO 8601 duration strings (totalDuration for a total in one unit), human duration strings such as 2h 30m (parseHumanDuration/formatHumanDuration, where m is a minute and mo a month), holiday rules expanded from HolidayRule values (nthWeekdayOfMonth/easterSunday/observedDate/holidayDates/buildBusinessCalendar/isValidHolidayRule, ObservancePolicy), unit-object amounts totalled or written as a duration string (totalUnits/durationFromUnits), spanMs/spanNs/spanWallClock for elapsed-versus-wall-clock spans, half-open interval algebra over instants (intersectIntervals/clampInterval/mergeIntervals/subtractIntervals/splitIntervalAt/sumIntervals), the positional interval range math on the same half-open rule
     type: core
     packages:
       - '@northguild/gmt'
@@ -175,6 +175,8 @@ skills:
       - subtractDuration
       - normalizeDuration
       - formatDuration
+      - parseHumanDuration
+      - formatHumanDuration
       - totalDuration
       - totalUnits
       - durationFromUnits
@@ -219,6 +221,7 @@ skills:
       - Merge two jurisdictions' calendars into the working days they share
       - Clamp a date to a range, find nearest candidate
       - Parse, validate, combine, normalize ISO 8601 durations
+      - Read a duration people type (2h 30m, 3 days, 1.5h) into an ISO 8601 duration, and write one back in that compact form (parseHumanDuration, formatHumanDuration)
       - Total an amount into one unit, from a duration string (totalDuration) or a unit object (totalUnits)
       - Write a unit object as an ISO 8601 duration string (durationFromUnits)
       - Diff-to-duration bridge (return ISO duration string)

@@ -185,6 +185,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       so they match what Starlight emits. The generator stops if a rendered page's headings
       differ from the list the anchors were computed from.
     - Every type link goes through `typeUrl` in `build-utils/reference-urls.ts`.
+  - **A behaviour bullet may hold a fenced `text` or `ts` block**, which the generator
+    copies verbatim (`behaviorItems`, `mdListItem`, `stripMdx`'s `outsideFences` for the text
+    twins); any other language, none, or an unclosed fence fails the build. Shiki has no
+    grammar for most notations (EBNF among them), and Expressive Code falls back to `txt`
+    with only a log line, so a typo would pass unseen. The block never reaches the corpus,
+    the export or the chat's retrieval chunks, which take only the summary, signature and
+    examples.
+    TypeScript keeps a fence's indentation under a bullet, so `outsideFences`
+    (`page-markdown.ts`) matches an indented fence too; otherwise the text twins would rewrite
+    the block as prose. `context/jsdoc-standards.md` states the rule for authors.
   - **`## Options` expands a parameter's properties** when its declared type is an inline
     literal or an intersection, or a named public object type on a parameter whose declared
     name contains `options` or is `props`. A data parameter such as
@@ -1006,6 +1016,49 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       and hides the planner's dials in the capture, because the "Your time zone" dial is
       drawn above the mask. The `tools-index-*` snapshots change when a tool card is added,
       and a new page has no baseline until the first snapshot.
+  - **Duration Parser Bench** (`/tools/duration-parser-bench/`, `durationbench`, core): a text
+    input (`maxlength` 64, never trimmed, so a leading space is a refusal the reader sees), a
+    locale select and eight Try buttons. Section 2 reads the typed string with `parseDuration`
+    then `parseHumanDuration` and shows which one accepted it, the ISO result, ten unit cells
+    (`getDurationUnit`, years to nanoseconds; lit when non-zero), `formatHumanDuration`, the
+    round trip back through `parseHumanDuration`, `formatDuration` in the chosen locale, and
+    every call with its return in a call frame. Section 3 holds two fixed tables drawn at mount:
+    seven spellings of a minute, a month and a millisecond (including `P1M`, which the human
+    parser refuses), and a laytime table (`3 days` and `72h` from two Rotterdam start times).
+    A widget draws the library's results and computes none, so `benchView` only calls `lib`.
+    - **Table B's hours come from `totalDuration`** with a zoned `relativeTo`, never from a
+      number written in the widget. `P3D` is 71 and 73 hours, `PT72H` is 72 and 72; the test
+      asserts what the library returns. The note cites BIMCO Laytime Definitions 2013, no. 8
+      (a laytime day is 24 consecutive hours).
+    - **Layout is fixed.** Both tables are `table-layout: fixed` with a doubled-class override
+      of `gmt-content.css`'s `th:first-child { width: 1% }`; below 46rem (`@container
+      gmt-dbench-table`, mirrored in `gmt-a11y.css`) each row stacks into a labelled block. A
+      locale change re-draws only the `formatDuration` cells of table A, and typing re-draws
+      section 2 only. The ten-cell strip picks its
+      columns from the container, not the viewport (`@container gmt-dbench`: 10 from 60rem, 5 by
+      default, 3 to 30rem, 2 to 20rem), so every value keeps room for 10 tabular digits
+      (`min-inline-size: 10ch`) and nothing is clipped or ellipsised; a `title` tooltip is no
+      help on touch. Labels wrap rather than truncate. Below 46rem the stacked table's
+      `<caption>` is `display: block` at full width with `--gmt-space-3` padding, because a
+      bare caption shrinks to fit, wraps word by word, and has its first letter clipped by the
+      table's bevelled corner.
+    - **Sentinel versus a plain answer.** A string neither parser reads shows
+      `⟨ NO SIGNAL — invalid input ⟩` and a static refusal line. In a string one parser reads,
+      the other parser's `""` is a plain answer (`""`), as in the Stored Time Audit's call frame.
+      Table cells whose call returned `""` (such as `parseDuration` on `1m`) show `⟨ NO SIGNAL ⟩`
+      because that is what the library said.
+    - **The bench makes six calls** (`parseHumanDuration`, `formatHumanDuration`,
+      `parseDuration`, `formatDuration`, `getDurationUnit` and `totalDuration`), not only the
+      three the story first named. The pure module and the loader are in the `heavy` list of
+      `widget-graph.test.ts`. No drag handle, so it is not in `readout-still`'s `TOOLS`.
+    - **The bench links the `parseHumanDuration` page, not a grammar anchor.** That page has no
+      heading for the grammar: the EBNF and the unit table are bullets of the behaviour list
+      under "Signature", and the page's headings are Signature, Parameters, Returns, Examples
+      and Source. So there is no anchor to link, and the bench copies no grammar and points at
+      the page.
+    - **The EBNF is a `text` fence** (decision: Shiki has no EBNF grammar, and an unknown
+      language would render as plain text with only a log line). The bullet's prose names the
+      notation, "ISO/IEC 14977 EBNF", so the reader knows what the block is.
 
   The decoder links to the converter and the checker, the converter to the decoder and the
   timeline, the checker to the decoder, and the timeline and the elapsed tool to each other and
@@ -1242,7 +1295,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `/tools/epcis-event-reader/`, `/tools/journey-split/`, `/tools/gnss-week-decoder/`,
   `/tools/satellite-clock-converter/`, `/tools/gnss-rollover-checker/`,
   `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`,
-  `/tools/holiday-rule-builder/`, `/tools/observance-comparator/`, `/tools/moving-feasts/`, plus the Tier 4
+  `/tools/holiday-rule-builder/`, `/tools/observance-comparator/`, `/tools/moving-feasts/`,
+  `/tools/duration-parser-bench/`, plus the Tier 4
   `/tools/zoned-earth/` and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package. The
   Zone Planner's is `/tools/zone-planner/?w=planner&wa={"time":…,"zone1":…,"zone2":…}`: a UTC
@@ -2037,10 +2091,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `showCanadaClockChange({ zone? })` (CORE-88): one id from `canada-zones.json` to pin on the
     map; the Worker's `execute` and the registry's `validate` refuse any other id. The widget
     kind is `canadaclock`, its permalink `/check/canada-2026-clock-change/?w=canadaclock&wa={"zone":…}`.
+  - `showDurationParserBench({ text, locale? })` (CORE-85): the reader's duration string
+    exactly as given (never trimmed or corrected, at most 64 characters), and a locale only
+    when the reader names one.
 - **Count:** `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers, one starter card per tool;
   re-derive them from there, and never write a literal in a test or a page. The Leap Second
-  Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada clock-change checker and
-  the three holiday tools are core.
+  Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada clock-change checker, the
+  Duration Parser Bench and the three holiday tools are core.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.
