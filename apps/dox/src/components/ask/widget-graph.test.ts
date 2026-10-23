@@ -176,6 +176,8 @@ describe("the chat island's static import graph", () => {
       "lib/canada-map.ts",
       "lib/canada-stored-times.ts",
       "lib/data-credits.ts",
+      "lib/duration-parser-bench.ts",
+      "lib/duration-bench-lib.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });

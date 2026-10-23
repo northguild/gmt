@@ -1531,3 +1531,39 @@
     fill: CanvasText;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Duration Parser Bench, forced-colors (CORE-85). The parser badge, the lit
+ * unit cells and the sentinel are drawn with background and tinted borders that
+ * forced-colors replaces. Repaint each in system colours: a lit cell gets a
+ * heavier border, the sentinel is Mark.
+ * --------------------------------------------------------------------------- */
+@media (forced-colors: active) {
+  .gmt-duration-bench .gmt-dbench-badge,
+  .gmt-duration-bench .gmt-dbench-cell,
+  .gmt-duration-bench .gmt-dbench-nosignal {
+    forced-color-adjust: none;
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+
+  .gmt-duration-bench
+    .gmt-dbench-badge:is([data-parser="iso"], [data-parser="human"]),
+  .gmt-duration-bench .gmt-dbench-cell[data-lit] {
+    border-color: Highlight;
+    outline: 1px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .gmt-duration-bench .gmt-dbench-nosignal {
+    border-color: Mark;
+    color: MarkText;
+    background: Mark;
+  }
+
+  .gmt-duration-bench .gmt-dbench-table tr {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+}

@@ -50,6 +50,13 @@ describe("prefixMarkdownLinks", () => {
     expect(prefixMarkdownLinks(md)).toBe(md);
   });
 
+  it("keeps rewriting after a closed fence when an unclosed one follows", () => {
+    const md = "```md\n[a](/x)\n```\n\n```\n[b](/y)\n";
+    expect(prefixMarkdownLinks(md)).toBe(
+      "```md\n[a](/x)\n```\n\n```\n[b](/gmt/y)\n",
+    );
+  });
+
   it("leaves an inline code span unchanged", () => {
     const md = "write `[a](/x)` then [b](/y)";
     expect(prefixMarkdownLinks(md)).toBe("write `[a](/x)` then [b](/gmt/y)");
@@ -58,6 +65,21 @@ describe("prefixMarkdownLinks", () => {
   it("leaves external, protocol-relative and hash links unchanged", () => {
     const md = "[a](https://x.dev/) [b](//cdn/x) [c](#h) [d](mailto:a@b)";
     expect(prefixMarkdownLinks(md)).toBe(md);
+  });
+});
+
+describe("stripMdx fences", () => {
+  it("leaves a fenced block indented under a bullet unchanged", () => {
+    const md = [
+      "- Reads this:",
+      "",
+      "  ```ts",
+      '  import { x } from "y";',
+      "  { space }",
+      "  ```",
+      "",
+    ].join("\n");
+    expect(stripMdx(md, { values: { space: "SPACE" } })).toBe(md);
   });
 });
 

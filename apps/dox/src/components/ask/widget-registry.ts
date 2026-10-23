@@ -75,6 +75,7 @@ import type { LeapSecondTimelineArgs } from "~/lib/leap-second-timeline-mount";
 import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
 import type { CanadaClockChangeArgs } from "~/lib/canada-clock-change-mount";
+import type { DurationParserBenchArgs } from "~/lib/duration-parser-bench-mount";
 import {
   showBillingDeadlinesInput,
   showBlDateStampInput,
@@ -97,6 +98,7 @@ import {
   showLeapSecondTimelineInput,
   showSatelliteClockConverterInput,
   showStoredTimeAuditInput,
+  showDurationParserBenchInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -879,6 +881,27 @@ const canadaClockEntry = defineWidget<CanadaClockChangeArgs>({
   },
 });
 
+const durationBenchEntry = defineWidget<DurationParserBenchArgs>({
+  title: "Duration parser bench",
+  kind: "durationbench",
+  parse: (input) => {
+    const result = showDurationParserBenchInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: both arguments are control values. There is deliberately no `validate`: a string the grammar refuses is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
+  load: () =>
+    import("~/lib/duration-parser-bench-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderDurationParserBenchTemplate(args),
+      mount: m.mountDurationParserBench,
+    })),
+});
+
 const plannerEntry = defineWidget<ZonePlannerArgs>({
   title: "Zone planner",
   kind: "planner",
@@ -956,6 +979,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showElapsedVsClock: elapsedEntry,
   showStoredTimeAudit: storedAuditEntry,
   showCanadaClockChange: canadaClockEntry,
+  showDurationParserBench: durationBenchEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */
