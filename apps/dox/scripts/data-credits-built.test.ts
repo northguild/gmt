@@ -14,15 +14,22 @@ const TRIGGER = /popovertarget="[a-z0-9-]*data-credits"/g;
 /** Page (relative to `dist/gmt/`) → the panel ids it holds and the labels each lists. */
 const EXPECTED: Record<string, { id: string; labels: string[] }[]> = {
   "index.html": [
-    { id: "globe-data-credits", labels: ["Time zone boundaries", "Earth imagery"] },
+    {
+      id: "globe-data-credits",
+      labels: ["Time zone boundaries", "Earth imagery"],
+    },
   ],
   "tools/zoned-earth/index.html": [
-    { id: "globe-data-credits", labels: ["Time zone boundaries", "Earth imagery"] },
+    {
+      id: "globe-data-credits",
+      labels: ["Time zone boundaries", "Earth imagery"],
+    },
   ],
   "why-gmt/index.html": [
     { id: "tz-map-data-credits", labels: ["Time zone boundaries"] },
   ],
   "check/canada-2026-clock-change/index.html": [],
+  "check/morocco-2026-clock-change/index.html": [],
 };
 
 function walk(dir: string): string[] {
@@ -69,12 +76,20 @@ describe("the built site's data credits", () => {
     const root = distDirOrSkip();
     if (root === null) return;
     const html = readFileSync(resolve(root, "gmt", "index.html"), "utf8");
-    const stack = html.match(/<div class="gmt-globe-zoom"[^>]*>[\s\S]*?<\/dl><\/div>/)?.[0] ?? "";
+    const stack =
+      html.match(
+        /<div class="gmt-globe-zoom"[^>]*>[\s\S]*?<\/dl><\/div>/,
+      )?.[0] ?? "";
     expect(stack).toContain('aria-label="Globe controls"');
-    const buttons = [...stack.matchAll(/<button [^>]*aria-label="([^"]+)"/g)].map(
-      (m) => m[1],
-    );
-    expect(buttons).toEqual(["Zoom in", "Zoom out", "Reset zoom", "Data credits"]);
+    const buttons = [
+      ...stack.matchAll(/<button [^>]*aria-label="([^"]+)"/g),
+    ].map((m) => m[1]);
+    expect(buttons).toEqual([
+      "Zoom in",
+      "Zoom out",
+      "Reset zoom",
+      "Data credits",
+    ]);
   });
 
   it("no other page has one, and the old page placement is gone", () => {

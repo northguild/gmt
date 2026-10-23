@@ -4,9 +4,25 @@
  * time; nothing here holds a computed offset, because the runtime's time zone data is what the page
  * exists to show.
  */
-import type { StoredZonedClassification } from "@northguild/gmt";
-import { minimumsMarkdown } from "../data/canada-runtime-minimums";
-import { helpMarkdown } from "../data/canada-key-points";
+import { CANADA_MINIMUMS } from "../data/canada-runtime-minimums";
+import { minimumsMarkdown } from "../data/clock-change-minimums";
+import { HELP } from "../data/canada-key-points";
+import {
+  SERVERS_LINE,
+  SERVERS_TITLE,
+  cityOf,
+  nodeProbeCommand,
+} from "./clock-change-common";
+import type { ProbeFact } from "./clock-change-common";
+import { helpMarkdown } from "./clock-change-help";
+import type {
+  ProbeConfig,
+  ProbeInstant,
+  VerdictText,
+} from "./clock-change-probe";
+import { REGION_KEY, classPhrase } from "./clock-change-tense";
+import type { Moment, Tensed, TenseView } from "./clock-change-tense";
+import type { MapZone } from "./zone-map";
 
 /** The instant every probe row is read at: a Monday noon UTC, after all five changes took effect. */
 export const PROBE_INSTANT = "2026-11-02T12:00:00Z";
@@ -18,14 +34,13 @@ export const PROBE_INSTANT = "2026-11-02T12:00:00Z";
  */
 export const PROBE_EPOCH_MS = 1793620800000;
 
-/** A zone whose rule changed in one of the 2026 tzdb releases. */
-export interface ProbeFact {
-  zone: string;
-  /** The offset the tzdb 2026e release gives `zone` at `PROBE_INSTANT`. */
-  tzdb2026e: string;
-  /** The first tzdb release that carries the change. */
-  release: "2026b" | "2026c" | "2026d" | "2026e";
-}
+/** The year the Canadian zones stop changing their clocks in. The year after is read too. */
+export const CANADA_STOP_YEAR = 2026;
+
+/** The one instant the probe rows are read at. */
+export const CANADA_PROBE_INSTANTS: readonly ProbeInstant[] = [
+  { iso: PROBE_INSTANT, epochMs: PROBE_EPOCH_MS, role: "verdict" },
+];
 
 /**
  * Source: IANA tzdb `NEWS`, releases 2026b-2026e
@@ -33,11 +48,11 @@ export interface ProbeFact {
  * Morocco to +00 (2026c), NT west to -06 (2026d), MB to -05 (2026e).
  */
 export const PROBE_ZONES: readonly ProbeFact[] = [
-  { zone: "America/Vancouver", tzdb2026e: "-07:00", release: "2026b" },
-  { zone: "America/Edmonton", tzdb2026e: "-06:00", release: "2026c" },
-  { zone: "Africa/Casablanca", tzdb2026e: "+00:00", release: "2026c" },
-  { zone: "America/Inuvik", tzdb2026e: "-06:00", release: "2026d" },
-  { zone: "America/Winnipeg", tzdb2026e: "-05:00", release: "2026e" },
+  { zone: "America/Vancouver", offset: "-07:00", release: "2026b" },
+  { zone: "America/Edmonton", offset: "-06:00", release: "2026c" },
+  { zone: "Africa/Casablanca", offset: "+00:00", release: "2026c" },
+  { zone: "America/Inuvik", offset: "-06:00", release: "2026d" },
+  { zone: "America/Winnipeg", offset: "-05:00", release: "2026e" },
 ];
 
 /**
@@ -63,15 +78,6 @@ export const TRANSITION_ZONES: readonly string[] = [
   "America/Toronto",
 ];
 
-/** `America/Los_Angeles` as `Los Angeles`: the place name of a zone id. */
-export function cityOf(zone: string): string {
-  return (zone.split("/").at(-1) ?? zone).replace(/_/g, " ");
-}
-
-/** An offset for display: the minus sign is U+2212, so it reads as a minus and not a hyphen. */
-export function signedOffset(offset: string): string {
-  return offset.replace("-", "\u2212");
-}
 /** The five zones the clocks show. */
 export const CLOCK_ZONES: readonly string[] = [
   "America/Vancouver",
@@ -85,16 +91,20 @@ export const CLOCK_ZONES: readonly string[] = [
 export const STORED_ZONES: readonly string[] = CLOCK_ZONES;
 
 /**
- * The most lines a POST classifies. The Worker runs the polyfill on workerd and is budgeted for
- * the Workers Free limit of 10 ms CPU per request (over it is Error 1102). Measured under
- * `wrangler dev` from the client, distinct Toronto lines, warm, median of 12 posts, minus a
- * 1-line baseline of about 2 ms: 25 lines 3.8 ms, 50 lines 7.0 to 7.4 ms, 60 lines 8.3 ms, 100 lines 14.0 ms,
- * 200 lines 29.4 ms: about 0.15 ms a line. 50 is the largest that stays near 7 ms; with the
- * baseline that is about 9.4 ms of wall time, which overstates CPU time. Re-measure before
- * raising it; the deploy smoke posts this many lines and checks every one was read.
+ * The example lines. The first five are Toronto lines that give one of each kind on any tz
+ * data; the last three are Canadian lines whose kind changed in 2026. The labels here never
+ * claim a kind: the Worker's answer is what shows.
  */
-export const STORED_MAX_LINES = 50;
-export const STORED_MAX_BYTES = 20_000;
+export const STORED_PRESET: string = [
+  "2026-07-01T12:00:00-04:00[America/Toronto]",
+  "2026-11-01T01:30:00-04:00[America/Toronto]",
+  "2026-07-01T12:00:00-05:00[America/Toronto]",
+  "2026-11-01T01:30:00-06:00[America/Toronto]",
+  "2027-03-14T02:30:00-05:00[America/Toronto]",
+  "2026-11-15T09:00:00-08:00[America/Vancouver]",
+  "2027-03-14T02:30:00-07:00[America/Edmonton]",
+  "2026-11-01T01:30:00-05:00[America/Winnipeg]",
+].join("\n");
 
 /**
  * The checker's own rate-limit policy, shared by GET and POST. Per isolate, like the chat
@@ -109,25 +119,11 @@ export interface ProbeRow {
 
 export interface TransitionRow {
   zone: string;
-  year: 2026 | 2027;
+  year: number;
   instant: string;
   offsetBefore: string;
   offsetAfter: string;
   wallBefore: string;
-}
-
-export interface Change {
-  instant: string;
-  offsetBefore: string;
-  offsetAfter: string;
-}
-
-export interface MapZone {
-  zone: string;
-  offset: string;
-  last: Change | null;
-  next: Change | null;
-  kind: "stopped-2026" | "changes-2027" | "none-2026-2027";
 }
 
 export interface CanadaCheck {
@@ -137,84 +133,74 @@ export interface CanadaCheck {
   zones: MapZone[];
 }
 
-/** One posted line, classified with the server's time zone data. */
-export interface StoredRow {
-  /** 1-based line number in the input. */
-  line: number;
-  /** The line as posted. */
-  input: string;
-  /** The string classified, after the zone is completed; `null` when no form completes it. */
-  value: string | null;
-  result: StoredZonedClassification | null;
-}
-
-/** The `POST` answer. */
-export interface StoredCheck {
-  zone: string;
-  /** True when the input was over `STORED_MAX_LINES` lines or `STORED_MAX_BYTES` bytes. */
-  truncated: boolean;
-  rows: StoredRow[];
-}
-
 /**
  * The one-line Node probe the page offers for the reader's own runtime. It prints each
  * city's UTC offset at `PROBE_INSTANT`; the output matches the page's "Correct" column when the
  * runtime carries tzdb 2026e data. `GMT` alone (UTC) is read as `+00:00`.
  */
-export const NODE_PROBE_COMMAND = `node -e 'for (const z of ${JSON.stringify(TABLE_ZONES.map((fact) => fact.zone))}) console.log(z.split("/").pop().replace("_", " "), new Intl.DateTimeFormat("en", { timeZone: z, timeZoneName: "longOffset" }).format(${PROBE_EPOCH_MS}).replace(/.*GMT/, "") || "+00:00")'`;
+export const NODE_PROBE_COMMAND = nodeProbeCommand(
+  TABLE_ZONES.map((fact) => fact.zone),
+  PROBE_EPOCH_MS,
+);
 
-const KIND_LABELS: Record<MapZone["kind"], string> = {
-  "stopped-2026": "Stops changing clocks in 2026",
-  "changes-2027": "Still changes clocks",
-  "none-2026-2027": "Never changes clocks",
+/** The "Your browser" card's rows and instant: the table zones read at `PROBE_INSTANT`. */
+export function canadaProbe(idPrefix: string): ProbeConfig {
+  return {
+    idPrefix,
+    zones: TABLE_ZONES.map((fact) => ({
+      zone: fact.zone,
+      expected: { verdict: fact.offset },
+    })),
+    instants: CANADA_PROBE_INSTANTS,
+  };
+}
+
+/** The "Your browser" card's words. The HTML fields are written here, never by a reader. */
+export const CANADA_VERDICT: VerdictText = {
+  title: "Your browser",
+  correctNote: "tzdb 2026e",
+  yoursNote: "2 Nov 2026",
+  checking: "Checking your browser&hellip;",
+  right: "Your browser has the new rules for all four places.",
+  wrongBefore: "Your browser has old time zone data for ",
+  wrongAfter: ". From 1 November 2026 it shows their time an hour wrong.",
+  more: [
+    "<strong>For you:</strong> update your browser. If it is already up to date, its maker has not shipped the fix yet. Check again after the next update.",
+    '<strong>For developers:</strong> your users&rsquo; browsers can be the same. See step 2 under <a href="#canada-developers">For developers</a>.',
+  ],
+  unknown: "Your browser cannot read these zones.",
 };
 
-/** The class word for a zone's `kind`: a dated phrase, so it stays true after 2027. */
-export function mapKindLabel(kind: MapZone["kind"]): string {
-  return KIND_LABELS[kind];
-}
+/**
+ * The moment each stopped zone does not turn its clocks back: 1 November 2026 at 02:00 local time,
+ * as a UTC instant and the offset in force just before. The words of the date and time are the
+ * library's (`momentWords`); only the instants are stated here, and a test pins each to the
+ * library. The region's moment is the latest of the four, so the region's sentences flip when
+ * the last zone has passed.
+ */
+export const CANADA_MOMENTS: Readonly<Record<string, Moment>> = {
+  "America/Vancouver": { at: "2026-11-01T09:00:00Z", from: "-07:00" },
+  "America/Edmonton": { at: "2026-11-01T08:00:00Z", from: "-06:00" },
+  "America/Inuvik": { at: "2026-11-01T08:00:00Z", from: "-06:00" },
+  "America/Winnipeg": { at: "2026-11-01T07:00:00Z", from: "-05:00" },
+  [REGION_KEY]: { at: "2026-11-01T09:00:00Z", from: "-07:00" },
+};
 
 /**
- * One clock change as a line of text, or "none in <emptyYears>" for `null`
- * (`emptyYears` such as `"2026 or 2027"`). The instant is UTC, to the minute.
+ * The class words of a zone's `kind` in both forms. A dated phrase, so it stays true after 2027;
+ * the four zones change at four instants, so the legend carries local time only.
  */
-export function changeText(change: Change | null, emptyYears: string): string {
-  if (change === null) return `none in ${emptyYears}`;
-  const { instant, offsetBefore, offsetAfter } = change;
-  return `${instant.slice(0, 10)} ${instant.slice(11, 16)} UTC, ${offsetBefore} → ${offsetAfter}`;
+export function canadaClassText(
+  kind: MapZone["kind"],
+  id: string | null,
+  view: TenseView,
+): Tensed {
+  return classPhrase(kind, id, view, false);
 }
-
-/**
- * `Intl.DateTimeFormat` `longOffset` text as a stored offset: `"GMT-07:00"` is `"-07:00"`,
- * `"GMT+05:30"` is `"+05:30"`, and a bare `"GMT"` is `"+00:00"`. Text that is not a `longOffset`
- * returns `""`, so the caller shows the browser column as unknown rather than guessing.
- */
-export function offsetFromIntl(longOffset: string): string {
-  if (longOffset === "GMT") return "+00:00";
-  const match = /^GMT([+\-−])(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(longOffset);
-  if (match === null) return "";
-  const [, sign, hours, minutes, seconds] = match;
-  const base = `${sign === "+" ? "+" : "-"}${hours}:${minutes}`;
-  return seconds === undefined ? base : `${base}:${seconds}`;
-}
-
-/**
- * The `HH:MM:SS` of a plain date-time (`YYYY-MM-DDTHH:mm[:ss[.f]]`). A string with no seconds
- * field reads `:00`.
- */
-export function wallHms(wall: string): string {
-  const seconds = wall[16] === ":" ? wall.slice(17, 19) : "";
-  return `${wall.slice(11, 16)}:${/^\d\d$/.test(seconds) ? seconds : "00"}`;
-}
-
-/** The "Test your own servers" card's words: one source for the page, the `.md` twin and the llms files. */
-export const SERVERS_TITLE = "Test your own servers";
-export const SERVERS_LINE =
-  "Run this wherever your code runs (servers, containers, CI). It must print the Correct offsets below. If it doesn't, update the runtime or the OS tzdata package and rebuild images.";
 
 /** What the command prints on a runtime with the new data: `[city, offset]` per table zone. */
 export function expectedProbeOutput(): [string, string][] {
-  return TABLE_ZONES.map((fact) => [cityOf(fact.zone), fact.tzdb2026e]);
+  return TABLE_ZONES.map((fact) => [cityOf(fact.zone), fact.offset]);
 }
 
 /** The card as Markdown for the `.md` twin and the llms files, command included. */
@@ -232,7 +218,7 @@ export function serversMarkdown(): string {
     `Expected: ${expectedProbeOutput()
       .map(([city, offset]) => `\`${city}\` ${offset}`)
       .join(" \u00b7 ")}`,
-    minimumsMarkdown(),
-    helpMarkdown(),
+    minimumsMarkdown(CANADA_MINIMUMS),
+    helpMarkdown(HELP),
   ].join("\n");
 }

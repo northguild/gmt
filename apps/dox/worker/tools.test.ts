@@ -133,6 +133,24 @@ describe("worker tool execute", () => {
     expect(refused).toMatchObject({ ok: false, widget: "canada-clock-change" });
   });
 
+  it("accepts the Morocco checker with no zone or a listed one, and refuses any other", async () => {
+    expect(await run("showMoroccoClockChange", {})).toEqual({
+      ok: true,
+      widget: "morocco-clock-change",
+    });
+    expect(
+      await run("showMoroccoClockChange", { zone: "Europe/Madrid" }),
+    ).toEqual({ ok: true, widget: "morocco-clock-change" });
+    const refused = await run("showMoroccoClockChange", {
+      zone: "America/Toronto",
+    });
+    expect(refused).toMatchObject({
+      ok: false,
+      widget: "morocco-clock-change",
+    });
+    expect(refused).toHaveProperty("note");
+  });
+
   it("rejects a whitespace-only stored-time list in the tool's own schema", () => {
     const schema = (
       tools.showStoredTimeAudit as unknown as {

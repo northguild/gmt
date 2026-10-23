@@ -14,6 +14,14 @@
  *   node scripts/html-diff.mjs capture <dir>   # save the widget pages
  *   node scripts/html-diff.mjs compare <dir>   # compare dist/gmt/ against them
  *
+ * A change that renames classes on purpose compares against the old baseline with
+ * HTML_DIFF_RENAME, a comma-separated list of `from:to` pairs. Each is applied to the new
+ * markup before it is normalised: every `from` becomes `to` (an empty `to` deletes it). The
+ * markup is then compared as if it still carried the old names, so only a change nobody
+ * named shows as a difference:
+ *
+ *   HTML_DIFF_RENAME="gmt-clockcheck-:gmt-canada-" node scripts/html-diff.mjs compare <dir>
+ *
  * Two verdicts, deliberately distinct:
  *
  *   ✗  the WIDGET's own markup changed — the failure this gate exists for.
@@ -159,6 +167,10 @@ const PAGES = [
     widget: "gmt-canada gmt-widget",
   },
   {
+    path: "check/morocco-2026-clock-change",
+    widget: "gmt-morocco gmt-widget",
+  },
+  {
     path: "tools/duration-parser-bench",
     widget: "gmt-duration-parser-bench gmt-widget",
   },
@@ -233,6 +245,19 @@ function firstDivergence(before, after) {
   ].join("\n");
 }
 
+/** The `from:to` pairs of HTML_DIFF_RENAME, in order. */
+const RENAMES = (process.env.HTML_DIFF_RENAME ?? "")
+  .split(",")
+  .filter((pair) => pair.length > 0)
+  .map((pair) => {
+    const at = pair.indexOf(":");
+    return at < 0 ? [pair, ""] : [pair.slice(0, at), pair.slice(at + 1)];
+  });
+
+function renamed(html) {
+  return RENAMES.reduce((out, [from, to]) => out.split(from).join(to), html);
+}
+
 const [mode, dir] = process.argv.slice(2);
 if (!mode || !dir) {
   console.error("usage: html-diff.mjs <capture|compare> <dir>");
@@ -263,7 +288,9 @@ for (const p of PAGES) {
     continue;
   }
   const beforeRaw = readFileSync(path.join(dir, slug(p.path)), "utf8");
-  const afterRaw = readFileSync(`dist/gmt/${p.path}/index.html`, "utf8");
+  const afterRaw = renamed(
+    readFileSync(`dist/gmt/${p.path}/index.html`, "utf8"),
+  );
 
   const beforeWidget = widgetSubtree(beforeRaw, p.widget);
   const afterWidget = widgetSubtree(afterRaw, p.widget);

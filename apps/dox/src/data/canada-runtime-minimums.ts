@@ -7,42 +7,23 @@
  * because Inuvik is unconfirmed there.
  *
  * Here rather than in the mount so the text surfaces (`.md`, `llms-full.txt`, retrieval chunks)
- * render the same words as the page.
+ * render the same words as the page. The types and the renderers are shared:
+ * `clock-change-minimums.ts`.
  */
 
-const escapeHtml = (text: string) =>
-  text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-const escapeAttr = escapeHtml;
+import type { MinimumsText, RuntimeMinimum } from "./clock-change-minimums";
 
-/** One run of text in a row: plain, or a version in a code chip. */
-export type MinimumPart = string | { code: string };
-
-/** A source link; the text says which release or page it is. */
-export interface MinimumSource {
-  label: string;
-  href: string;
-}
-
-export interface RuntimeMinimum {
-  name: string;
-  parts: MinimumPart[];
-  sources: MinimumSource[];
-}
-
-export const MINIMUMS_HEADING = "Upgrade to at least";
-export const MINIMUMS_INTRO =
+const MINIMUMS_HEADING = "Upgrade to at least";
+const MINIMUMS_INTRO =
   "These releases carry tz data 2026e, the first with all four changes. Older releases get some of these places wrong from 1 November 2026.";
-export const MINIMUMS_FOOTER =
+const MINIMUMS_FOOTER =
   "Anything else (Firefox, Safari, Deno, Go, databases, Docker images): run the command in Test your own servers. It shows what that runtime really does.";
 /** The note under the card: why the device matters, with no function names. */
-export const MINIMUMS_NOTE =
+const MINIMUMS_NOTE =
   "gmt uses the time-zone rules of the device it runs on. A device without the October 2026 time zone update gets these four zones wrong from 1 November 2026, so do the time maths on your server when it has to be right.";
 
-const NODE_CHANGELOG = "https://github.com/nodejs/node/blob/main/doc/changelogs";
+const NODE_CHANGELOG =
+  "https://github.com/nodejs/node/blob/main/doc/changelogs";
 
 export const RUNTIME_MINIMUMS: RuntimeMinimum[] = [
   {
@@ -67,12 +48,28 @@ export const RUNTIME_MINIMUMS: RuntimeMinimum[] = [
       { code: "156.0.8078.35" },
       ". Extended Stable 152 does not have it.",
     ],
-    sources: [{ label: "Chromium releases", href: "https://chromiumdash.appspot.com/releases" }],
+    sources: [
+      {
+        label: "Chromium releases",
+        href: "https://chromiumdash.appspot.com/releases",
+      },
+    ],
   },
   {
     name: "OpenJDK",
-    parts: [{ code: "25.0.5" }, " · ", { code: "21.0.13" }, " · ", { code: "17.0.21" }],
-    sources: [{ label: "OpenJDK 25 updates", href: "https://github.com/openjdk/jdk25u" }],
+    parts: [
+      { code: "25.0.5" },
+      " · ",
+      { code: "21.0.13" },
+      " · ",
+      { code: "17.0.21" },
+    ],
+    sources: [
+      {
+        label: "OpenJDK 25 updates",
+        href: "https://github.com/openjdk/jdk25u",
+      },
+    ],
   },
   {
     name: "Python",
@@ -86,29 +83,49 @@ export const RUNTIME_MINIMUMS: RuntimeMinimum[] = [
       { code: "2026.5" },
     ],
     sources: [
-      { label: "tzdata 2026.5", href: "https://pypi.org/project/tzdata/2026.5/" },
+      {
+        label: "tzdata 2026.5",
+        href: "https://pypi.org/project/tzdata/2026.5/",
+      },
       { label: "pytz 2026.5", href: "https://pypi.org/project/pytz/2026.5/" },
     ],
   },
   {
     name: "Ubuntu 26.04, 24.04, 22.04",
     parts: [{ code: "2026e-0ubuntu0.*" }],
-    sources: [{ label: "Launchpad", href: "https://launchpad.net/ubuntu/+source/tzdata" }],
+    sources: [
+      {
+        label: "Launchpad",
+        href: "https://launchpad.net/ubuntu/+source/tzdata",
+      },
+    ],
   },
   {
     name: "Alpine 3.21 and later",
     parts: [{ code: "2026e-r0" }],
-    sources: [{ label: "Alpine packages", href: "https://pkgs.alpinelinux.org/packages?name=tzdata" }],
+    sources: [
+      {
+        label: "Alpine packages",
+        href: "https://pkgs.alpinelinux.org/packages?name=tzdata",
+      },
+    ],
   },
   {
     name: "RHEL 8 to 10",
     parts: [{ code: "RHBA-2026:77613" }],
-    sources: [{ label: "Red Hat", href: "https://access.redhat.com/articles/1187353" }],
+    sources: [
+      { label: "Red Hat", href: "https://access.redhat.com/articles/1187353" },
+    ],
   },
   {
     name: "Fedora",
     parts: [{ code: "tzdata-2026e-1" }],
-    sources: [{ label: "Bodhi", href: "https://bodhi.fedoraproject.org/updates/?packages=tzdata" }],
+    sources: [
+      {
+        label: "Bodhi",
+        href: "https://bodhi.fedoraproject.org/updates/?packages=tzdata",
+      },
+    ],
   },
   {
     name: "Amazon Linux 2023",
@@ -129,38 +146,10 @@ export const RUNTIME_MINIMUMS: RuntimeMinimum[] = [
   },
 ];
 
-const partsHtml = (parts: MinimumPart[]) =>
-  parts
-    .map((p) => (typeof p === "string" ? escapeHtml(p) : `<code>${escapeHtml(p.code)}</code>`))
-    .join("");
-
-/** The rows as list items: name, the versions, then a link to each source. */
-export function minimumsItemsHtml(): string {
-  return RUNTIME_MINIMUMS.map((row) => {
-    const links = row.sources
-      .map(
-        (s) =>
-          `<a href="${escapeAttr(s.href)}" rel="noopener noreferrer">${escapeHtml(s.label)}</a>`,
-      )
-      .join(", ");
-    return (
-      `<li><strong>${escapeHtml(row.name)}</strong> ${partsHtml(row.parts)}` +
-      (links ? ` <span class="gmt-canada-minimums-src">Source: ${links}</span>` : "") +
-      `</li>`
-    );
-  }).join("");
-}
-
-/** The card as Markdown for the `.md` twin and the llms files. */
-export function minimumsMarkdown(): string {
-  const lines = ["", `## ${MINIMUMS_HEADING}`, "", MINIMUMS_INTRO, ""];
-  for (const row of RUNTIME_MINIMUMS) {
-    const text = row.parts
-      .map((p) => (typeof p === "string" ? p : `\`${p.code}\``))
-      .join("");
-    const links = row.sources.map((s) => `[${s.label}](${s.href})`).join(", ");
-    lines.push(`- **${row.name}**: ${text}${links ? ` Source: ${links}` : ""}`);
-  }
-  lines.push("", MINIMUMS_FOOTER, "", MINIMUMS_NOTE, "");
-  return lines.join("\n");
-}
+export const CANADA_MINIMUMS: MinimumsText = {
+  heading: MINIMUMS_HEADING,
+  intro: MINIMUMS_INTRO,
+  footer: MINIMUMS_FOOTER,
+  note: MINIMUMS_NOTE,
+  rows: RUNTIME_MINIMUMS,
+};

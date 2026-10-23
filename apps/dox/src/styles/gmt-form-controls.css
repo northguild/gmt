@@ -53,6 +53,28 @@
     1;
 }
 
+/* A textarea's bars sit inside its bevelled border, so the corners they share with it are cut
+   to match: the vertical bar's top end, the horizontal bar's bottom start, and the grip or
+   corner square at the bottom end (the bars stop short of it). Scrollbar parts take `border-radius` here; `corner-shape`
+   turns it into the bevel where a browser applies it to them. */
+textarea.gmt-input::-webkit-scrollbar-track:vertical,
+textarea.gmt-input::-webkit-scrollbar-thumb:vertical {
+  border-start-end-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+textarea.gmt-input::-webkit-scrollbar-track:horizontal,
+textarea.gmt-input::-webkit-scrollbar-thumb:horizontal {
+  border-end-start-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+textarea.gmt-input::-webkit-scrollbar-corner,
+textarea.gmt-input::-webkit-resizer {
+  border-end-end-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
 .gmt-input[type="number"] {
   min-width: 70px;
 }

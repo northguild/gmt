@@ -33,6 +33,14 @@
  * It also measures the dashed border of every disabled field against its
  * surface (3:1, the non-text bar).
  *
+ * The place labels of the zone maps (`.gmt-zonemap-label`) are measured on the
+ * same footing, against their own bar of 4.5:1: the text colour over the pixels
+ * the halo leaves behind the glyphs. The halo is a text-shadow, so the
+ * hidden-glyph pass keeps it for labels and drops it everywhere else.
+ * `--canada-fixture` and `--morocco-fixture` serve a Worker answer (a .json
+ * file) to a check page, so its labels show an offset; without one the labels
+ * carry the NO SIGNAL mark. Both states belong in a run.
+ *
  * Usage (serve a built `dist` first; `astro preview` or any static server):
  *
  *   pnpm run contrast:measure -- --base http://127.0.0.1:4381/gmt
@@ -43,7 +51,7 @@
  * 3:1, or the run measured nothing.
  */
 import { chromium } from "@playwright/test";
-import { readdirSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PNG } from "pngjs";
@@ -63,6 +71,10 @@ const THEME = opt("theme", "");
 const JSON_OUT = opt("json", "");
 const WIDTH = Number(opt("width", "1440"));
 const FLOOR = 7;
+const FIXTURES = {
+  canada: opt("canada-fixture", ""),
+  morocco: opt("morocco-fixture", ""),
+};
 const BORDER_FLOOR = 3;
 const VERBOSE = flag("verbose");
 
@@ -97,7 +109,14 @@ const PAGES = [
   { id: "dox-chat", path: "/dox/" },
   { id: "dox-chat+timetable", path: "/dox/", open: "showTimetableReader" },
   { id: "dox-chat+x12", path: "/dox/", open: "showX12TimeReader" },
-  { id: "check:canada-2026-clock-change", path: "/check/canada-2026-clock-change/" },
+  {
+    id: "check:canada-2026-clock-change",
+    path: "/check/canada-2026-clock-change/",
+  },
+  {
+    id: "check:morocco-2026-clock-change",
+    path: "/check/morocco-2026-clock-change/",
+  },
   ...toolSlugs.map((slug) => ({
     id: `tool:${slug}`,
     path: `/tools/${slug}/`,
@@ -250,6 +269,7 @@ function collect() {
       size: parseFloat(getComputedStyle(e).fontSize),
       chrome: isChrome(e),
       disabled: !!extra.disabled,
+      floor: extra.floor,
       rects: clipped,
     });
   };
@@ -282,6 +302,26 @@ function collect() {
       (x) => x.width > 1 && x.height > 1,
     );
     add(e, svg ? "svg" : "text", rgba(fill), rects, { text: n.textContent });
+  }
+  // The place labels: ice, cyan or the amber mark, on the sea halo. Their bar is 4.5:1.
+  const labelWalker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+  );
+  for (let n; (n = labelWalker.nextNode());) {
+    if (!n.textContent.trim()) continue;
+    const e = n.parentElement;
+    if (!e || !e.closest(".gmt-zonemap-label") || hiddenChain(e) || tiny(e))
+      continue;
+    const r = document.createRange();
+    r.selectNodeContents(n);
+    const rects = [...r.getClientRects()].filter(
+      (x) => x.width > 1 && x.height > 1,
+    );
+    add(e, "label", rgba(getComputedStyle(e).color), rects, {
+      text: n.textContent,
+      floor: 4.5,
+    });
   }
   for (const e of document.querySelectorAll("input, select, textarea")) {
     if (
@@ -349,7 +389,8 @@ function collect() {
   };
 }
 
-const HIDE_TEXT = `*, *::before, *::after { -webkit-text-fill-color: transparent !important; text-shadow: none !important; text-decoration: none !important; caret-color: transparent !important; -webkit-text-stroke: 0 !important; }
+const HIDE_TEXT = `*, *::before, *::after { -webkit-text-fill-color: transparent !important; text-decoration: none !important; caret-color: transparent !important; -webkit-text-stroke: 0 !important; }
+*:not(.gmt-zonemap-label, .gmt-zonemap-label *), *::before, *::after { text-shadow: none !important; }
 svg text, svg tspan { fill: transparent !important; stroke: none !important; }
 ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; }`;
 
@@ -359,6 +400,7 @@ async function setup(page, theme, p) {
       localStorage.setItem("starlight-theme", t);
     } catch {}
   }, theme);
+  await serveFixture(page, p);
   const res = await page.goto(BASE + p.path, { waitUntil: "networkidle" });
   if (!res || res.status() !== 200)
     throw new Error(`${p.path} answered ${res?.status()}`);
@@ -366,7 +408,36 @@ async function setup(page, theme, p) {
     (t) => document.documentElement.setAttribute("data-theme", t),
     theme,
   );
+  await drawMap(page);
   await page.waitForTimeout(500);
+}
+
+/** A check page may be given a Worker answer, so its labels show an offset. */
+async function serveFixture(page, p) {
+  const word = p.id.includes("morocco") ? "morocco" : "canada";
+  const file = p.id.startsWith("check:") ? FIXTURES[word] : "";
+  if (!file) return;
+  const body = readFileSync(file, "utf8");
+  await page.route(`**/api/${word}-clock-change`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "cache-control": "no-store" },
+      body,
+    }),
+  );
+}
+
+/** The zone map draws when it scrolls into view: bring it there, wait for it, and go back to the top. */
+async function drawMap(page) {
+  const section = page.locator(".gmt-zonemap-mapsec");
+  if ((await section.count()) === 0) return;
+  await section.scrollIntoViewIfNeeded();
+  await page
+    .waitForSelector(".gmt-zonemap-svg", { timeout: 20000 })
+    .catch(() => {});
+  await page.waitForTimeout(800);
+  await page.evaluate(() => window.scrollTo(0, 0));
 }
 
 /** States to measure for a page: the default, plus every preset and a sentinel pass for tools. */
@@ -527,6 +598,7 @@ async function measureState(page, rows, ctx) {
       text: it.text ?? "",
       size: it.size,
       disabled: it.disabled,
+      floor: it.floor ?? FLOOR,
       ratio: r.ink === 99 ? r.box : r.ink,
       box: r.box,
       bg: r.inkBg ? hex(r.inkBg) : r.boxBg ? hex(r.boxBg) : "",
@@ -640,6 +712,7 @@ for (const p of PAGES) {
             (t) => document.documentElement.setAttribute("data-theme", t),
             theme,
           );
+          await drawMap(page);
           await page.waitForTimeout(400);
         }
         await applyState(page, st);
@@ -705,10 +778,10 @@ for (const theme of themes) {
 const tg = group(text);
 const boxFails = new Set(
   text
-    .filter((r) => r.box !== undefined && r.box < FLOOR - 0.005)
+    .filter((r) => r.box !== undefined && r.box < r.floor - 0.005)
     .map((r) => `${r.theme} | ${r.kind} | ${r.surface}`),
 );
-const fails = tg.filter((g) => g.ratio < FLOOR - 0.005);
+const fails = tg.filter((g) => g.ratio < g.floor - 0.005);
 console.log(
   `\n${boxFails.size} kind/surface groups are also under ${FLOOR}:1 over the whole glyph box (listed with --verbose).`,
 );

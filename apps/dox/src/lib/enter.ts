@@ -33,7 +33,10 @@ function reducedMotion(): boolean {
  * has entered, does nothing. At rest the element carries `data-entered` and
  * neither the class nor the pending attribute, so it is back to its own styles.
  */
-export function enter(el: HTMLElement, options: EnterOptions = {}): void {
+export function enter(
+  el: HTMLElement | SVGElement,
+  options: EnterOptions = {},
+): void {
   if (el.hasAttribute("data-entered") || el.classList.contains("gmt-enter")) {
     return;
   }
@@ -51,8 +54,13 @@ export function enter(el: HTMLElement, options: EnterOptions = {}): void {
     el.setAttribute("data-entered", "");
     onEntered?.();
   };
-  const onEnd = (event: AnimationEvent) => {
-    if (event.target === el && event.animationName === "gmt-enter") finish();
+  // Typed as Event: the element may be an SVG, whose overload lists no animation events.
+  const onEnd = (event: Event) => {
+    if (
+      event.target === el &&
+      (event as AnimationEvent).animationName === "gmt-enter"
+    )
+      finish();
   };
 
   el.removeAttribute("data-enter");

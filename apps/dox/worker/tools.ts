@@ -46,6 +46,7 @@ import {
   showBillingDeadlinesInput,
   showBlDateStampInput,
   showCanadaClockChangeInput,
+  showMoroccoClockChangeInput,
   showConnectionCheckerInput,
   showConverterBenchInput,
   showCrossingClockInput,
@@ -84,6 +85,7 @@ import {
   idDecoderProblems,
 } from "../src/lib/dox-tools";
 import canadaZones from "../src/lib/canada-zones.json";
+import moroccoZones from "../src/lib/morocco-region-zones.json";
 
 const docFor = (name: string) =>
   DOX_TOOL_DOCS.find((d) => d.name === name)?.purpose ?? name;
@@ -549,6 +551,18 @@ export function buildWorkerTools(
           ? reject("column-timestamp-bridge", problems.join(" "))
           : accept("column-timestamp-bridge");
       },
+    }),
+    showMoroccoClockChange: tool({
+      description: docFor("showMoroccoClockChange"),
+      inputSchema: showMoroccoClockChangeInput,
+      // The checker pins only the zones in its own list; anything else would open unpinned.
+      execute: ({ zone }) =>
+        zone === undefined || moroccoZones.zones.includes(zone)
+          ? accept("morocco-clock-change")
+          : reject(
+              "morocco-clock-change",
+              `"${zone}" is not one of the zones the checker lists. Call it again without a zone, or say so plainly.`,
+            ),
     }),
   };
 
