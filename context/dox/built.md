@@ -2212,6 +2212,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - The CLI rewrites imports from `components.json`, so the repo keeps its `~/` alias and
     has no `@/`.
   - Streamdown renders replies. Code blocks keep copy and drop download.
+  - The maths plugin needs KaTeX's stylesheet; `message.tsx` imports `katex/dist/katex.min.css`
+    so it loads with the island only. Without it formulas render twice and `\sqrt` svgs overflow.
 - **Tailwind v4** exists only in the island. See [reference/design-system.md](reference/design-system.md).
 - **Worker (`apps/dox/worker/`):** `POST /gmt/api/chat`, `GET /gmt/api/brains`; everything else goes
   to `ASSETS`.

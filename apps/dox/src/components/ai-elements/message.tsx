@@ -26,6 +26,10 @@ import {
   useState,
 } from "react";
 import { Streamdown } from "streamdown";
+// Streamdown's maths plugin leaves the KaTeX stylesheet to the app. Without it every
+// formula shows twice (HTML and MathML copies) and `\sqrt` svgs stretch across the page.
+// Imported here so it ships in the chat island's chunk, not on docs pages.
+import "katex/dist/katex.min.css";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
