@@ -42,10 +42,12 @@ whose shapes its anchors and tests use.
 - **Rule:** at every width where the map is drawn, the frame's aspect ratio is the drawing's own
   (800 / the config's height), within 2%. The cards beside it no longer stretch it.
 - **No empty card space instead.** The reason for the stretch was that no card has empty space
-  under its content. Keep that: arrange the row so no card in it has more than 48 px of empty
-  space under its content. For example, a wide map (Canada) takes the full row with the zone card
-  and the clocks in the row below, and a tall map (Morocco, 800 × 860) keeps the row of three. The
-  choice comes from the config's height, not from the region's name.
+  under its content. Keep that: no card in the row has more than 48 px of empty space under it.
+- **One row of three, bounded (owner's request).** Map, zone card and live clocks share one row
+  wherever three columns fit, for both maps. The row's height is bounded (about 28rem at 1440 px)
+  and the map's width follows from that height and the drawing's aspect, so a map is never
+  "massive". Where three columns do not fit (a container query on the checker, so the chat rail
+  stacks too), they stack: map, zone card, clocks, with the map capped at about 70vh.
 - No horizontal scroll at any width, and the map's box is still reserved before it draws (no
   layout shift when the boundaries arrive; the `enter()` gesture is unchanged).
 

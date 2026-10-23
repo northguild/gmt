@@ -946,8 +946,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       `Allow: GET, HEAD, POST`. `capStoredInput` (`lib/clock-change-stored-lines.ts`, imports only
       constants, so the Worker shares it) cuts text over `STORED_MAX_BYTES` UTF-8 bytes at the last
       line break at or before that byte, makes `\r\n` and `\r` into `\n` first, splits, skips blank
-      lines (their numbers still count) and keeps `STORED_MAX_LINES` (50: measured at about
-      0.15 ms a line on workerd against a 10 ms CPU budget); `truncated` is true only when a
+      lines (their numbers still count) and keeps `STORED_MAX_LINES` (25: 50 lines of
+      `classifyStoredZoned` took 8 to 10 ms of CPU warm and 24 ms on a cold isolate on workerd,
+      against the 10 ms of the Workers Free plan; 25 lines take 4 to 5 ms warm); `truncated` is true only when a
       dropped part holds a non-blank character. `completeStoredLine` adds a zone only from what the
       reader typed or picked: a `[` leaves the line as written, `<time> <Zone>` becomes
       `<time>[<Zone>]`, one token takes the picked zone, anything else is `null` (shown as
@@ -1011,7 +1012,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     - `lib/clock-change-clocks.ts`: `clocksHtml(zones, stopped)`, `mountClocks`. One `setTimeout`
       per second; the zone's next change switches the offset.
     - `lib/clock-change-stored-lines.ts`: the pure line rules the Worker and the page share
-      (`capStoredInput`, `completeStoredLine`, the badge and fix text). `STORED_MAX_LINES = 50;`
+      (`capStoredInput`, `completeStoredLine`, the badge and fix text). `STORED_MAX_LINES = 25;`
       stays its own statement, because `deploy-smoke.mjs` reads it with a regex.
     - `lib/clock-change-stored.ts`: `StoredConfig {idPrefix, endpoint, zones, preset, example}`,
       `storedSectionHtml`, `mountStoredTimes`. The endpoint goes through `withBase`.
@@ -2100,6 +2101,17 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `getDstTransitions`), `transitions` (2026 and 2027) and one `zones` row per id in
   `morocco-region-zones.json`. The `now`-free tables are memoised per isolate. Its POST zone
   allowlist is `Africa/Casablanca` and `Africa/El_Aaiun`.
+- **Deploy smoke for Morocco.** `deploy-smoke.mjs` runs against the deployed Worker, which carries
+  tz 2026e, and never against `wrangler dev`: the workerd that `wrangler dev` runs locally
+  (1.20260825.1) carries tz data older than 2026c, so a local Morocco Worker answers as old data.
+  The rows make five calls to the `morocco:` bucket per run: the probe (all four offsets
+  `+00:00`; no `recordedBy: "2026b"` change `present`; every `"2026c"` change `present`), HEAD
+  (`no-store`, empty body), PUT (`405`, `Allow: GET, HEAD, POST`), a report-only stored-times
+  POST that prints each line's kind, and a POST of `STORED_MAX_LINES` lines that must answer 200
+  with `truncated: false` (Error 1102 is a failure). Two more rows fetch the page and the
+  boundary file (`license` `ODbL-1.0`). The expected offsets are literals in the row, cited to
+  tzdb 2026c; when a later tzdb changes Morocco again the row fails on purpose and the page needs
+  updating.
 
 - **The stream opens before a brain is chosen.** Measured 2026-09-24: two busy brains
   took 2.8 s of a 6.7 s answer, and the reader saw nothing but "Searching corpus…". Now

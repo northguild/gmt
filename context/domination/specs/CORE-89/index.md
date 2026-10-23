@@ -132,10 +132,11 @@ The interfaces of the shared parts are in [slice 1](./slice-1-shared-parts.md#in
 | 8 | [The "Upgrade to at least" card: research, then shared card and Morocco rows](./slice-8-minimums.md) | 1 |
 | 9 | [Map labels, and the map fitted to its box (owner's request)](./slice-9-map-labels.md) | 10 |
 | 10 | [Real coastlines and the land around the zones (owner's request)](./slice-10-real-coastlines.md) | 4 |
+| 11 | [One copy of each helper, and the table in the chat rail](./slice-11-shared-helpers.md) | 9 |
+| 12 | [Every zone in Morocco's box, and a ready signal for the browser checks](./slice-12-whole-region-and-ready-signal.md) | 11 |
 
-Slices 1 and 5 can run in parallel; slice 8's research can start at once. Slice 3 comes before slice 2, because it makes the zone file
-that the Worker reads. There is no gmt source change. The owner's `pnpm dox:dev` reads
-`packages/gmt/dist`: warn him before `pnpm run validate`, the only rebuild, at the end.
+Slice 3 makes the zone file the Worker reads. The owner's `pnpm dox:dev` reads `packages/gmt/dist`:
+warn him before `pnpm run validate`, the only rebuild, at the end.
 
 ## Corrections to context
 
@@ -144,7 +145,6 @@ that the Worker reads. There is no gmt source change. The owner's `pnpm dox:dev`
   the runtime instead of the release.
 - The CORE-89 issue says the Canada checker "shows Casablanca as one probe row". It does not:
   `TABLE_ZONES` leaves it out, and only the API answers it. Fix that line in the slice 7 close-out.
-- `built.md` (Tier 6, the endpoint) says other methods answer `405` with `allow: GET`. The code
-  answers `Allow: GET, HEAD, POST`, as CORE-88's decisions say. Fix the line.
+- `built.md` (Tier 6) says other methods answer `405` with `allow: GET`; it is `Allow: GET, HEAD, POST`.
 - Outside this story: the weekly run's Firefox leg has 11 untagged native failures and 25 untagged
   host failures (run 39655037352). Report it; this story does not fix it.
