@@ -55,6 +55,18 @@ Since 2026-09-20, Morocco and Western Sahara stay on UTC+00 all year and no long
 - `packages/gmt/src/test/oh-morocco.test.ts` fails on tz data older than 2026c. The weekly run lists the Chromium that predates 2026c in `KNOWN_HOST_FAILURES`.
 - The deployed Worker has tz 2026e. The workerd that `wrangler dev` runs locally (1.20260825.1) carries older data than 2026c, so `deploy-smoke.mjs` runs only against the deployed Worker.
 
+**Shared parts**
+
+- The probe, clocks, servers card, help card, saved-events check, zone map and boundary script are neutral modules that take a config (`clock-change-*.ts`, `zone-map.ts`, `clock-change-minimums.ts`, `worker/clock-change-shared.ts`, `scripts/prepare-region-boundaries.py --region`). Canada and Morocco are each a config over them, with an `idPrefix`, a root class, a rate-limit bucket of their own and their own stated facts. A third region (CORE-90) needs its own config, text and data files, and no new shared code.
+
+**Tense**
+
+- Dates and times in the words come from the library (`formatZonedDateTime`, `formatUtc`); the verb tense comes from `changeTense` in `lib/clock-change-tense.ts`. Morocco's change has happened, so its wording is past tense only, with no two-form cell and no timer. Canada keeps a before form and an after form until [CORE-91](./CORE-91.md) removes the before form.
+
+**Release**
+
+- No release: the work is a Dox page, and in `packages/gmt` only the test file `oh-morocco.test.ts` is new. The changeset is empty.
+
 **Registration**
 
 - A chat starter, the `moroccoclock` widget, the `showMoroccoClockChange` Worker tool and the permalink kind, in every list of `context/dox/built.md`.
