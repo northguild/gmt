@@ -35,7 +35,7 @@ on Node 26.12.1 (tz 2026e):
 
 - **The two stopped zones are drawn from stated facts.** The map takes them from the page's
   2026c facts (`ZoneMapConfig.stopped`), not from the runtime, as Canada's map does. A Worker
-  with old data returns them as `changes-2027`. The shared `isDataStale` then shows its one line
+  with old data returns them as `changes-after`. The shared `isDataStale` then shows its one line
   above the clocks, and the saved-events check marks those zones "can't check yet".
 - **Every other zone keeps the class its row carries.** No tzdb release from 2026c to 2026e
   changes them, so every runtime agrees on them.

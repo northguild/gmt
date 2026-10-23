@@ -61,6 +61,43 @@ script that measures too soon reads `NO SIGNAL`.
 - Run each script 20 times in a row under load (two other builds running) with no failure, and
   record the count in the slice's hand-back.
 
+## The tense follows the date (owner's request)
+
+Both checkers word the change as still to come ("Stops changing clocks in 2026"). Morocco's last
+change was on 20 September 2026 at 02:00 local time, so its page is already wrong; Canada's zones
+do not turn their clocks back on 1 November 2026, so its page goes wrong that day. Every sentence
+about the change must read true on the day it is read.
+
+- **The instant.** Each stopped zone states the instant its change takes effect, once, with its
+  facts: Morocco's two zones `2026-09-20T01:00:00Z` (the 2026c `Zone` line); Canada's the moment
+  its old data turned the clocks back on 1 November 2026 at 02:00 local time (Vancouver 09:00Z,
+  Edmonton and Inuvik 08:00Z, Winnipeg 07:00Z). A test pins each instant with the library. A
+  region's sentences flip at its latest zone instant.
+- **One helper.** `changeTense(nowMs, atMs)` in the shared module returns `"before"` or `"after"`
+  (at the instant is `"after"`). Each region's text gives both forms of every tensed phrase; no
+  shared file holds region words.
+- **Live text** (in the page and the chat widget): the map legend and kind labels ("Stops changing
+  clocks on 1 November 2026" / "Stopped changing clocks on 1 November 2026"; Morocco "… on 20
+  September 2026"; the date is the zone's local date), the key points of both regions, Canada's
+  browser-card note ("the four zones that stop changing their clocks"), and any other text the
+  mounts write about the change. "Still changes clocks" and "Never changes clocks" stay as they
+  are. The server renders the form for the build time; the mount sets the form for the page's
+  clock (the clocks' own time source) on load, and again on the tick that crosses the instant.
+- **Nothing moves when the tense flips.** Render both forms in one grid cell, the inactive one
+  `visibility: hidden` and `aria-hidden="true"`, so the box is always the longer form's.
+- **Text that runs no code** (each page's opening sentence, `description`, the chat tool
+  descriptions in `worker/tools.ts`'s docs, and every text surface built from them) uses dated
+  wording true on any day: "From 1 November 2026, … stay on −07:00 all year"; "Since 20
+  September 2026 at 02:00 local time, …".
+- **Tests.** `changeTense` at the instant −1 ms, at it, and +1 ms. Each mount, both regions, with
+  the clock before and after its instant: every tensed phrase shows the right form and only that
+  form is in the accessibility tree. A guard test that no checker string outside the region
+  text files contains "Stops changing" or "Stopped changing".
+- **Browser check.** Each page with a fake clock a day before and a day after its instant
+  (Canada 2026-10-31 and 2026-11-02, Morocco 2026-09-19 and 2026-10-23), light and dark, at 1440
+  and 375 px: element screenshots of the key points and the map legend. Then hold the clock 2 s
+  before the instant and let it cross: the text flips and no card moves.
+
 ## Small fixes
 
 - `deploy-smoke.mjs:403` says "five calls to the `morocco:` bucket". The PUT gets 405 before the

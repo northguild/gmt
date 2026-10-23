@@ -95,7 +95,7 @@ interface MoroccoCheck {
 `ZoneRow` keeps Canada's shape (`zone`, `offset`, `last`, `next`, `kind`) and moves to the
 shared module in slice 1. The page takes stale zones from the shared `staleZoneIds(stopped, zones)`:
 a zone in the stated stopped set (the two Moroccan zones) whose row does not come back as
-`stopped-2026`. The saved-events check then reads "can't check yet" for that zone, as Canada's does.
+`stopped`. The saved-events check then reads "can't check yet" for that zone, as Canada's does.
 
 The interfaces of the shared parts are in [slice 1](./slice-1-shared-parts.md#interfaces).
 
