@@ -137,6 +137,14 @@ import {
   mountDurationParserBench,
   renderDurationParserBenchTemplate,
 } from "./duration-parser-bench-mount";
+import {
+  mountIdTimestampDecoder,
+  renderIdTimestampDecoderTemplate,
+} from "./id-timestamp-decoder-mount";
+import {
+  mountColumnTimestampBridge,
+  renderColumnTimestampBridgeTemplate,
+} from "./column-timestamp-bridge-mount";
 
 installJsdomShims();
 
@@ -305,6 +313,16 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "duration parser bench",
     () => renderDurationParserBenchTemplate(),
     mountDurationParserBench as MountFn<never>,
+  ],
+  [
+    "id timestamp decoder",
+    () => renderIdTimestampDecoderTemplate(),
+    mountIdTimestampDecoder as MountFn<never>,
+  ],
+  [
+    "column timestamp bridge",
+    () => renderColumnTimestampBridgeTemplate(),
+    mountColumnTimestampBridge as MountFn<never>,
   ],
 ];
 

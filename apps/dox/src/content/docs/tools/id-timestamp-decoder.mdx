@@ -1,0 +1,59 @@
+---
+title: ID Timestamp Decoder
+description: Paste a UUID, ULID, ObjectId, KSUID or Snowflake ID and see the creation time inside it, the format that reads it and the call that reads it.
+industries: [core]
+---
+
+import IdTimestampDecoder from "../../../components/IdTimestampDecoder.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="timestamps inside identifiers">
+
+<Fragment slot="keypoint">
+
+An ID that sorts by time carries that time. Read it, and know which epoch it counts from.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+Many identifiers hold the moment they were made. Each format counts from its own epoch, at its own precision, and the same digits read under another epoch give another instant. Nothing in an ID says which epoch is right.
+
+Paste an identifier, or pick a preset. All five decoders run on it, exactly as typed, and the one that reads it gives the instant. The table shows every call and what it returned. A Snowflake reads only under a layout you give it: its epoch and its shift have no default, because the ID does not say which system made it.
+
+</Fragment>
+
+<IdTimestampDecoder fullbleed />
+
+<Fragment slot="after">
+
+**Epochs and precision.** Each decoder reads one format. [`fromUuidTimestamp`](/reference/precision/identifiers/fromUuidTimestamp/), [`fromUlid`](/reference/precision/identifiers/fromUlid/), [`fromObjectId`](/reference/precision/identifiers/fromObjectId/) and [`fromKsuid`](/reference/precision/identifiers/fromKsuid/) carry their epoch and precision inside the library. [`fromSnowflake`](/reference/precision/identifiers/fromSnowflake/) takes them from you.
+
+| Format | Epoch | Precision | Last instant | Source |
+| --- | --- | --- | --- | --- |
+| UUID v1 and v6 | `1582-10-15T00:00:00Z` | 100 ns | `5236-03-31T21:21:00.6846975Z` | RFC 9562 §5.1, §5.6, §6.1 with erratum 8288 |
+| UUID v7 | `1970-01-01T00:00:00Z` | 1 ms; `rand_a` not read | `+010889-08-02T05:31:50.655Z` | RFC 9562 §5.7 |
+| ULID | `1970-01-01T00:00:00Z` | 1 ms | the same as v7 | the ULID spec |
+| ObjectId | `1970-01-01T00:00:00Z` | 1 s, read unsigned | `2106-02-07T06:28:15Z` | BSON ObjectId spec |
+| KSUID | `2014-05-13T16:53:20Z` | 1 s, case-sensitive | `2150-06-19T23:21:35Z` | the KSUID reference implementation |
+| Snowflake | the caller's `epochMs` | 1 ms | depends on the layout | the caller's layout |
+
+**The input must be in its strict form.** A decoder reads a string in the form its format defines and returns its sentinel for anything else: a `urn:uuid:` prefix, braces, surrounding whitespace, or a letter folded into another (an `I` or `L` read as `1`, an `O` as `0`, a `U` dropped). The tool passes your text on untouched for the same reason. A decoder that guesses reads the wrong instant without telling you, and lower-casing a KSUID turns it into a different KSUID. Compare the two KSUID presets: the same letters in a different case are a different ID, and read as a different second.
+
+**A version 1 timestamp may be local time.** RFC 9562 §5.1 allows a generator with no UTC clock to write its local time into a version 1 UUID. The library reads the 60 bits as UTC, because the UUID does not say otherwise, so an ID from such a generator reads hours off. A version 7 UUID has no such case: its 48 bits are Unix milliseconds.
+
+**A Snowflake has two published layouts in the presets.** Under epoch `1420070400000` ms and shift `22`, the first Snowflake preset reads as 2016. The second has epoch `1288834974657` ms, shift `22` and a 41-bit timestamp. Its digits read under the first epoch give an instant four years later: the same ID, a different time. Pass `timestampBits` to have the library check that the timestamp fits the field.
+
+```ts
+fromUuidTimestamp("017f22e2-79b0-7cc3-98c4-dc0c0c07398f");
+// "2022-02-22T19:22:22Z" (the version is the 15th character, here 7)
+fromUuidTimestamp("919108f7-52d1-4320-9bac-f847db4148a8"); // "" (version 4)
+fromUlid("01ARZ3NDEKTSV4RRFFQ69G5FAV"); // "2016-07-30T23:54:10.259Z"
+fromSnowflake("1050118621198921728", { epochMs: 1288834974657, shift: 22 });
+```
+
+Every decoder returns the sentinel `""` for text it cannot read. The tool shows `NO SIGNAL` only when all five did. That is different from a format that read the text.
+
+</Fragment>
+
+</ToolLayout>

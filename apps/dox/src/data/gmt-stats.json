@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 64106,
-  "files": 847,
-  "executions": 1923180,
+  "tests": 65107,
+  "files": 867,
+  "executions": 1953210,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 668,
+  "functions": 687,
   "patterns": 27,
   "byNamespace": [
     {
@@ -61,12 +61,12 @@
       "count": 55
     },
     {
-      "namespace": "calendar",
-      "count": 31
+      "namespace": "precision",
+      "count": 37
     },
     {
-      "namespace": "precision",
-      "count": 18
+      "namespace": "calendar",
+      "count": 31
     },
     {
       "namespace": "duration",

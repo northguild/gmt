@@ -1,0 +1,69 @@
+import { fromArrowTimestamp } from "./fromArrowTimestamp";
+import { toArrowTimestamp } from "./toArrowTimestamp";
+
+describe("toArrowTimestamp", () => {
+  it.each`
+    iso                                        | unit              | expected
+    ${"2024-01-01T00:00:00Z"}                  | ${"millisecond"}  | ${1_704_067_200_000n}
+    ${"2024-01-01T09:00:00+09:00[Asia/Tokyo]"} | ${"second"}       | ${1_704_067_200n}
+    ${"2024-01-01T00:00:00.123456789Z"}        | ${"nanoseconds"}  | ${1_704_067_200_123_456_789n}
+    ${"2024-01-01T00:00:00.123456789Z"}        | ${"microsecond"}  | ${1_704_067_200_123_456n}
+    ${"2024-01-01T00:00:00Z"}                  | ${"seconds"}      | ${1_704_067_200n}
+    ${"2024-01-01T00:00:00.123456789Z"}        | ${"milliseconds"} | ${1_704_067_200_123n}
+    ${"2024-01-01T00:00:00.123456789Z"}        | ${"microseconds"} | ${1_704_067_200_123_456n}
+    ${"2024-01-01T00:00:00.999999999Z"}        | ${"second"}       | ${1_704_067_200n}
+    ${"1969-12-31T23:59:59.9999999Z"}          | ${"microsecond"}  | ${-1n}
+    ${"1969-12-31T23:59:59.5Z"}                | ${"second"}       | ${-1n}
+    ${"1969-12-31T23:59:59.9996Z"}             | ${"millisecond"}  | ${-1n}
+    ${"1970-01-01T00:00:00Z"}                  | ${"second"}       | ${0n}
+    ${"2024-01-01T00:00:00.123456789Z"}        | ${"nanosecond"}   | ${1_704_067_200_123_456_789n}
+    ${"1969-12-31T23:59:59.000000001Z"}        | ${"millisecond"}  | ${-1_000n}
+    ${"1969-12-31T00:00:00.000000001Z"}        | ${"seconds"}      | ${-86_400n}
+    ${"1969-12-31T23:59:59.999999999Z"}        | ${"nanosecond"}   | ${-1n}
+    ${"+275760-09-13T00:00:00Z"}               | ${"second"}       | ${8_640_000_000_000n}
+    ${"-271821-04-20T00:00:00Z"}               | ${"second"}       | ${-8_640_000_000_000n}
+    ${"2262-04-11T23:47:16.854775807Z"}        | ${"nanosecond"}   | ${9_223_372_036_854_775_807n}
+    ${"1677-09-21T00:12:43.145224192Z"}        | ${"nanosecond"}   | ${-(2n ** 63n)}
+  `("returns $expected for $iso $unit", ({ iso, unit, expected }) => {
+    expect(toArrowTimestamp(iso, unit)).toBe(expected);
+  });
+
+  it.each`
+    iso                                    | unit
+    ${"2262-04-11T23:47:16.854775808Z"}    | ${"nanosecond"}
+    ${"1677-09-21T00:12:43.145224191Z"}    | ${"nanosecond"}
+    ${"+010000-01-01T00:00:00Z"}           | ${"nanosecond"}
+    ${"+275760-09-13T00:00:00.000000001Z"} | ${"second"}
+    ${"-271821-04-19T23:59:59.999999999Z"} | ${"second"}
+    ${"2024-01-01T00:00:00"}               | ${"millisecond"}
+    ${"2024-01-01T00:00:00[Asia/Tokyo]"}   | ${"second"}
+    ${"2024-01-01T00:00:00Z"}              | ${"ms"}
+    ${"2024-01-01T00:00:00Z"}              | ${"Second"}
+    ${"2024-01-01T00:00:00Z"}              | ${"SECOND"}
+    ${"2024-01-01T00:00:00Z"}              | ${"secondss"}
+    ${"2024-01-01T00:00:00.123456789"}     | ${"nanosecond"}
+    ${"2024-01-01T00:00:00Z"}              | ${"toString"}
+    ${"2024-01-01T00:00:00Z"}              | ${undefined}
+    ${"2024-01-01T00:00:00Z[!foo=bar]"}    | ${"second"}
+    ${null}                                | ${"second"}
+    ${undefined}                           | ${"second"}
+    ${"2024-01-01"}                        | ${"second"}
+    ${"2016-12-31T23:59:60Z"}              | ${"second"}
+    ${"invalid"}                           | ${"second"}
+    ${""}                                  | ${"second"}
+    ${42}                                  | ${"second"}
+  `("returns 0n for $iso $unit", ({ iso, unit }) => {
+    expect(toArrowTimestamp(iso, unit)).toBe(0n);
+  });
+
+  it.each`
+    iso                                 | unit
+    ${"2024-01-01T00:00:00Z"}           | ${"second"}
+    ${"2024-01-01T00:00:00.123Z"}       | ${"milliseconds"}
+    ${"1969-12-31T23:59:59.999999Z"}    | ${"microsecond"}
+    ${"1677-09-21T00:12:43.145224192Z"} | ${"nanosecond"}
+    ${"2262-04-11T23:47:16.854775807Z"} | ${"nanosecond"}
+  `("round-trips $iso $unit", ({ iso, unit }) => {
+    expect(fromArrowTimestamp(toArrowTimestamp(iso, unit), unit)).toBe(iso);
+  });
+});

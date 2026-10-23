@@ -3,7 +3,9 @@ name: gmt-integration
 description: >
   Application integration patterns — stable cache keys, router/query params,
   table-sort keys, nanosecond timestamps across JSON and storage boundaries,
-  foreign epoch bridges (NTP, FILETIME, .NET ticks, Excel, PostgreSQL), TAI and
+  foreign epoch bridges (NTP, FILETIME, .NET ticks, Excel, PostgreSQL), the
+  timestamps inside UUID, ULID, ObjectId, Snowflake and KSUID identifiers,
+  Parquet INT96, Arrow and protobuf timestamps, TAI and
   the closed IERS leap-second table (taiMinusUtc, leapSecondsBetween,
   nextLeapSecond, isLeapSecond, toTAI, fromTAI), and lint package selection
   (ESLint, Biome, Oxlint). GNSS time is in gmt-gnss. Reads the docs site
@@ -11,21 +13,23 @@ description: >
   details, and the lint-package READMEs for lint setup; this skill is a routing
   pointer, not an API dump.
 sources:
-  - 'northguild/gmt:apps/dox/src/content/docs/install.mdx'
-  - 'northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integration.mdx'
-  - 'northguild/gmt:apps/dox/src/content/docs/guides/integration/linting.mdx'
-  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/nanosecond-precision.mdx'
-  - 'northguild/gmt:apps/dox/src/content/docs/guides/conversion/foreign-epoch-bridges.mdx'
-  - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
-  - 'northguild/gmt:packages/gmt/src/precision/convert/index.ts'
-  - 'northguild/gmt:packages/gmt/src/precision/format/index.ts'
-  - 'northguild/gmt:packages/gmt/src/precision/calculate/index.ts'
-  - 'northguild/gmt:packages/gmt/src/precision/validate/index.ts'
-  - 'northguild/gmt:packages/gmt/src/timescale/index.ts'
+  - "northguild/gmt:apps/dox/src/content/docs/install.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integration.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/integration/linting.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/nanosecond-precision.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/conversion/foreign-epoch-bridges.mdx"
+  - "northguild/gmt:packages/gmt/src/zoned/validate/index.ts"
+  - "northguild/gmt:packages/gmt/src/precision/convert/index.ts"
+  - "northguild/gmt:packages/gmt/src/precision/identifiers/index.ts"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/conversion/time-ordered-identifiers.mdx"
+  - "northguild/gmt:packages/gmt/src/precision/format/index.ts"
+  - "northguild/gmt:packages/gmt/src/precision/calculate/index.ts"
+  - "northguild/gmt:packages/gmt/src/precision/validate/index.ts"
+  - "northguild/gmt:packages/gmt/src/timescale/index.ts"
 metadata:
   type: composition
-  library: '@northguild/gmt'
-  library_version: '1.20.0'
+  library: "@northguild/gmt"
+  library_version: "1.20.0"
 ---
 
 # GMT Integration
@@ -40,6 +44,8 @@ which lint package to install for Date-ban enforcement.
 - The user is moving nanosecond timestamps across a JSON wire or into a database.
 - The user is reading or writing another system's epoch — NTP, Windows `FILETIME`,
   .NET ticks, an Excel day serial, or PostgreSQL's internal microseconds.
+- The user wants the time inside a UUID, ULID, MongoDB ObjectId, Snowflake or
+  KSUID, or writes Parquet `INT96`, Arrow or protobuf timestamps.
 - The user needs TAI, TAI − UTC on a date, or whether a `23:59:60` was a real
   leap second.
 - The user is picking an ESLint, Biome, or Oxlint plugin to ban `Date` APIs.
@@ -75,7 +81,14 @@ which lint package to install for Date-ban enforcement.
 5. **Never hand-roll another system's epoch constant.** `precision/convert/` carries
    the bridges: `toNtpTimestamp` / `fromNtpTimestamp`, `toFileTime` / `fromFileTime`,
    `toDotNetTicks` / `fromDotNetTicks`, `toExcelSerial` / `fromExcelSerial`,
-   `toPgMicroseconds` / `fromPgMicroseconds`. Two traps they exist to close: an NTP
+   `toPgMicroseconds` / `fromPgMicroseconds`, and the data-platform bridges
+   `toParquetInt96` / `fromParquetInt96`, `toArrowTimestamp` / `fromArrowTimestamp`,
+   `toArrowLocalTimestamp` / `fromArrowLocalTimestamp`, `toProtoTimestamp` /
+   `fromProtoTimestamp`, `toProtoDuration` / `fromProtoDuration`. An Arrow column
+   without a timezone is wall-clock time, so read it with `fromArrowLocalTimestamp`,
+   which returns a plain date-time and not an instant. An `int64` of nanoseconds ends
+   in 1677 and 2262, so check with `isValidInt64NanosecondInstant` or
+   `isValidInt64NanosecondDateTime` before trusting a nanosecond `0n`. Two traps they exist to close: an NTP
    timestamp's seconds field wraps every ~136 years and carries no era, so
    `fromNtpTimestamp` needs the era passed in; and Excel's serial 60 is the phantom
    1900-02-29, a date that never existed, so it returns `""` rather than a neighbouring
@@ -113,7 +126,15 @@ which lint package to install for Date-ban enforcement.
      around an insertion. GMT cannot detect smearing.
 7. **Lint packages are toolchain-specific, not mutually exclusive.** Recommend
    only the one matching the project's existing linter; do not force all three.
-8. **Read the docs site and the lint README.** This skill is a routing pointer.
+8. **Read an ID's time with `precision/identifiers`.** `fromUuidTimestamp` (UUID v1,
+   v6 and v7; any other version returns `""`), `fromUlid`, `fromObjectId`,
+   `fromKsuid` and `fromSnowflake`. A Snowflake needs its layout passed explicitly,
+   `fromSnowflake(id, { epochMs, shift })`, because the same ID read with another
+   system's epoch gives a plausible wrong date. Never pass a 64-bit ID as a
+   `number`; use a `bigint` or a string. `uuidV7TimestampPrefix` and
+   `ulidTimestampPrefix` give the prefix a range scan starts from. GMT decodes IDs
+   and generates none.
+9. **Read the docs site and the lint README.** This skill is a routing pointer.
    For full integration guidance, read these:
    - `https://northguild.dev/gmt/llms.txt` is the map of every docs page.
    - Each page has a `.md` twin that holds its text, for example
@@ -125,12 +146,12 @@ which lint package to install for Date-ban enforcement.
 
 ## Lint package selection
 
-| Current lint stack | Recommend |
-| --- | --- |
-| ESLint | `@northguild/gmt-eslint` |
-| Biome | `@northguild/gmt-biome` |
-| Oxlint | `@northguild/gmt-oxlint` |
-| No linter yet | Add one of the above; install `@northguild/gmt` first |
+| Current lint stack | Recommend                                             |
+| ------------------ | ----------------------------------------------------- |
+| ESLint             | `@northguild/gmt-eslint`                              |
+| Biome              | `@northguild/gmt-biome`                               |
+| Oxlint             | `@northguild/gmt-oxlint`                              |
+| No linter yet      | Add one of the above; install `@northguild/gmt` first |
 
 These can be used individually or together. If the project has a lint package
 but no `@northguild/gmt`, suggest adding gmt to support safe Date-to-Temporal
@@ -151,6 +172,9 @@ the pattern.
 - **Foreign epochs at the boundary**: convert on the way in and on the way out with
   the `precision/convert/` bridges, and keep ISO strings or `bigint` nanoseconds
   everywhere in between — never carry another system's serial through your own code.
+- **Identifiers and data-platform columns**: decode the time out of an ID with
+  `precision/identifiers`, and bridge Parquet `INT96`, Arrow and protobuf values
+  with the `precision/convert/` bridges.
 - **Atomic time at the boundary**: convert a TAI label to a UTC instant on the
   way in (`fromTAI`), and back on the way out. GNSS time scales and weeks are in
   the `gmt-gnss` skill.
@@ -160,6 +184,10 @@ the pattern.
 - **Leap seconds and TAI** (`@northguild/gmt/timescale`): `taiMinusUtc`,
   `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `toTAI`, `fromTAI`
 
+- **Identifiers** (`@northguild/gmt/precision/identifiers`): `fromUuidTimestamp`,
+  `uuidV7TimestampPrefix`, `fromUlid`, `ulidTimestampPrefix`, `fromObjectId`,
+  `fromSnowflake`, `fromKsuid`
+
 ## References
 
 - [Docs map for agents (llms.txt)](https://northguild.dev/gmt/llms.txt)
@@ -167,6 +195,7 @@ the pattern.
 - [App integration guide](https://northguild.dev/gmt/guides/integration/app-integration/)
 - [Nanosecond precision guide](https://northguild.dev/gmt/guides/core-date-operations/nanosecond-precision/)
 - [Foreign epoch bridges guide](https://northguild.dev/gmt/guides/conversion/foreign-epoch-bridges/)
+- [Time-ordered identifiers guide](https://northguild.dev/gmt/guides/conversion/time-ordered-identifiers/)
 - [timescale reference](https://northguild.dev/gmt/reference/timescale/)
 - [Lint Package Selection guide](/guides/integration/linting/)
 - [Core Rules](/core-rules/)

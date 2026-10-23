@@ -184,6 +184,10 @@ describe("the chat island's static import graph", () => {
       "lib/data-credits.ts",
       "lib/duration-parser-bench.ts",
       "lib/duration-bench-lib.ts",
+      "lib/id-timestamp-decoder.ts",
+      "lib/identifier-lib.ts",
+      "lib/column-timestamp-bridge.ts",
+      "lib/column-bridge-lib.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });

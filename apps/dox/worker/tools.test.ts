@@ -150,6 +150,101 @@ describe("worker tool execute", () => {
     expect(ok.data).toEqual({ values: padded });
   });
 
+  describe("showColumnTimestampBridge refusals", () => {
+    const refused = async (input: Record<string, unknown>, words: RegExp) => {
+      const r = await run("showColumnTimestampBridge", input);
+      expect(r.ok).toBe(false);
+      expect(r.note).toMatch(words);
+    };
+
+    it("accepts an encode call and a stored-value call", async () => {
+      expect(
+        (
+          await run("showColumnTimestampBridge", {
+            value: "2024-01-01T00:00:00Z",
+          })
+        ).ok,
+      ).toBe(true);
+      expect(
+        (
+          await run("showColumnTimestampBridge", {
+            int64: "-1",
+            unit: "second",
+          })
+        ).ok,
+      ).toBe(true);
+    });
+
+    it("refuses a zone this runtime does not know", async () => {
+      await refused(
+        { value: "2024-01-01T00:00:00Z", zone: "Mars/Olympus" },
+        /Mars\/Olympus/,
+      );
+    });
+
+    it("refuses a unit that is not one of the four", async () => {
+      await refused({ value: "2024-01-01T00:00:00Z", unit: "decade" }, /unit/);
+    });
+
+    it("refuses an int96Form that is not record or bytes", async () => {
+      await refused({ bytes: "00".repeat(12), int96Form: "xyz" }, /int96Form/);
+    });
+
+    it("refuses a stored value that is not the right shape", async () => {
+      await refused({ int64: "1.5" }, /int64/);
+    });
+
+    it("refuses a call with neither a value nor a stored value", async () => {
+      await refused({ unit: "second" }, /Send a value/);
+    });
+
+    it("refuses mode encode with a stored value", async () => {
+      await refused({ mode: "encode", int64: "0" }, /mode decode/);
+    });
+
+    it("refuses mode decode with a value", async () => {
+      await refused(
+        { mode: "decode", value: "2024-01-01T00:00:00Z", int64: "0" },
+        /encode mode/,
+      );
+    });
+
+    it("refuses bytes with int96Form record", async () => {
+      await refused(
+        { bytes: "00".repeat(12), int96Form: "record" },
+        /int96Form bytes/,
+      );
+    });
+  });
+
+  describe("showIdTimestampDecoder refusals", () => {
+    it("accepts a real id", async () => {
+      expect(
+        (
+          await run("showIdTimestampDecoder", {
+            id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+          })
+        ).ok,
+      ).toBe(true);
+    });
+
+    it("refuses a blank id", async () => {
+      expect((await run("showIdTimestampDecoder", { id: "" })).ok).toBe(false);
+    });
+
+    it("refuses an id over 96 characters", async () => {
+      const r = await run("showIdTimestampDecoder", { id: "a".repeat(97) });
+      expect(r.ok).toBe(false);
+      expect(r.note).toMatch(/96/);
+    });
+
+    it("refuses a Snowflake layout that is not a whole number", async () => {
+      const r = await run("showIdTimestampDecoder", { id: "1", shift: "x" });
+      expect(r.ok).toBe(false);
+      expect(r.note).toMatch(/shift/);
+    });
+  });
+
   it("does no I/O and no model call — execute is synchronous work only", () => {
     // The premise of "costs no extra latency and no extra quota". If a tool
     // ever needs to await something, that claim has to be re-argued.

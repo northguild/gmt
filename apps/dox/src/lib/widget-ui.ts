@@ -48,16 +48,25 @@ export const ICON_STROKE =
 export function wrapInstantsAtT(root: ParentNode): void {
   for (const el of root.querySelectorAll(".gmt-punct-hero-value")) {
     if (el.children.length > 0) continue;
-    const text = el.textContent ?? "";
-    const m = /^(\d{4}-\d{2}-\d{2})(T[^.]*?)(?:(\.\d+)(.*))?$/.exec(text);
-    const [date, time, fraction, zone, attr] = m
-      ? [m[1]!, m[2]!, m[3] ?? "", m[4] ?? "", ""]
-      : [text, "", "", "", " data-word"];
-    const piece = (s: string) =>
-      `<span class="gmt-gnss-nb"${attr}>${escapeHtml(s)}</span>`;
-    // The value is a flex box, so the pieces share one inline wrapper.
-    el.innerHTML = `<span>${piece(date)}<wbr>${piece(time)}<wbr>${piece(fraction)}<wbr>${piece(zone)}</span>`;
+    el.innerHTML = instantPiecesHtml(el.textContent ?? "");
   }
+}
+
+/**
+ * The pieces `wrapInstantsAtT` writes for one text, as markup: the date, the
+ * time, the fraction and the zone as `nowrap` spans joined by `<wbr>`, or the
+ * text whole as a `data-word` piece when it is not an instant. A table cell
+ * that holds an instant uses it to break where the hero breaks.
+ */
+export function instantPiecesHtml(text: string): string {
+  const m = /^(\d{4}-\d{2}-\d{2})(T[^.]*?)(?:(\.\d+)(.*))?$/.exec(text);
+  const [date, time, fraction, zone, attr] = m
+    ? [m[1]!, m[2]!, m[3] ?? "", m[4] ?? "", ""]
+    : [text, "", "", "", " data-word"];
+  const piece = (s: string) =>
+    `<span class="gmt-gnss-nb"${attr}>${escapeHtml(s)}</span>`;
+  // The value is a flex box, so the pieces share one inline wrapper.
+  return `<span>${piece(date)}<wbr>${piece(time)}<wbr>${piece(fraction)}<wbr>${piece(zone)}</span>`;
 }
 
 /** Escape text for safe use inside innerHTML. */

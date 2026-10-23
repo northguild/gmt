@@ -115,6 +115,31 @@ describe("widget permalinks", () => {
     });
   });
 
+  it("brings a blank id back blank, and still drops other tools' empty strings", () => {
+    const url = encodeWidgetPermalink("iddecode", { id: "", epochMs: "" });
+    expect(seedFromLocation("iddecode", url.slice(url.indexOf("?")))).toEqual({
+      id: "",
+    });
+    const other = encodeWidgetPermalink("globe", { zone: "" });
+    expect(seedFromLocation("globe", other.slice(other.indexOf("?")))).toEqual(
+      {},
+    );
+  });
+
+  it("keeps a 96-character id and value, and drops 97", () => {
+    for (const [kind, key] of [
+      ["iddecode", "id"],
+      ["colbridge", "value"],
+    ] as const) {
+      const at = encodeWidgetPermalink(kind, { [key]: "a".repeat(96) });
+      expect(seedFromLocation(kind, at.slice(at.indexOf("?")))).toEqual({
+        [key]: "a".repeat(96),
+      });
+      const over = encodeWidgetPermalink(kind, { [key]: "a".repeat(97) });
+      expect(seedFromLocation(kind, over.slice(over.indexOf("?")))).toEqual({});
+    }
+  });
+
   it("rejects an unknown widget kind", () => {
     expect(decodeWidgetPermalink('?w=evil&wa={"a":1}')).toBeNull();
   });
