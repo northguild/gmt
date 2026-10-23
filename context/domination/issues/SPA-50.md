@@ -88,3 +88,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 - Sidereal time computed from UTC rather than UT1 differs measurably, asserted to document why UT1 is required
 - Invalid longitude returns the sentinel
 - `pnpm run validate` stays green
+
+## From CORE-79
+
+See CORE-79 "Notes for consumer stories" in [CORE-79.md](CORE-79.md#notes-for-consumer-stories) for what this story must do with `Position` and `readPosition`.

@@ -80,89 +80,89 @@ with the `Position` type, ahead of the remaining realms.
 
 ## Stories
 
-| #   | Story   | Realm      | Deliverable                                                                         | Blocked by              | Issue | Release | Status      |
-| --- | ------- | ---------- | ----------------------------------------------------------------------------------- | ----------------------- | ----- | ------- | ----------- |
-| 1   | CORE-1  | Core       | `toNanoseconds` + `fromNanoseconds`<br>+ JSON bridge + truncation                   | —                       | #182  | 1.16.0  | Done        |
-| 2   | CORE-2  | Core       | `spanMs` + `spanNs` +<br>`spanWallClock`                                            | —                       | #183  | 1.16.0  | Done        |
-| 3   | CORE-3  | Core       | NTP / FILETIME / .NET ticks / Excel<br>/ Postgres epoch bridges                     | —                       | #184  | 1.16.0  | Done        |
-| 4   | CORE-4  | Core       | `toOffsetInstant` + `resolveLocal` +<br>`classifyLocal`                             | —                       | #185  | 1.16.0  | Done        |
-| 5   | CORE-5  | Core       | ISO week + ordinal + fiscal periods<br>+ `floorToZone` + `bucketRange`              | —                       | #186  | 1.16.0  | Done        |
-| 6   | CORE-6  | Core       | Interval algebra: intersect, clamp,<br>subtract, merge, split, sum                  | —                       | #187  | 1.16.0  | Done        |
-| 7   | CORE-7  | Core       | Business calendars,<br>`mergeCalendars`, roll conventions                           | —                       | #188  | 1.16.0  | Done        |
-| 8   | CORE-8  | Core       | Full-API standards review with<br>`gmt-reviewer` (pre-1.16.0)                       | —                       | #251  | 1.16.0  | Done        |
-| 9   | TRAN-8  | Transport  | `transitTime` + `etaAtZone` +<br>`dwellTime`                                        | —                       | #189  | 1.17.0  | Done        |
-| 10  | INT-12  | Intermodal | `freeTimeExpiry` + `chargeableDays`<br>+ `demurrageClock`                           | —                       | #193  | 1.17.0  | Done        |
-| 11  | INT-58  | Intermodal | `billingTimeline`: invoice, dispute and<br>resolution deadlines                     | —                       | #260  | 1.17.0  | Done        |
-| 12  | CORE-55 | Core       | Operating hours and recurring<br>windows, open-time SLA arithmetic                  | —                       | #257  | 1.18.0  | Done        |
-| 13  | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                                 | —                       | #190  | 1.18.0  | Done        |
-| 14  | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff` + `timeToCutoff`                  | —                       | #191  | 1.18.0  | Done        |
-| 15  | TRAN-57 | Transport  | Schedule deviation, punctuality,<br>PLN/EST/REQ/ACT, `nextDeparture`                | —                       | #259  | 1.18.0  | Done        |
-| 16  | CORE-77 | Core       | Daylight time read from clock changes:<br>`isInDaylightSaving`, `hasDaylightSaving` | —                       | #294  | 1.18.0  | Done        |
-| 17  | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                         | —                       | #196  | 1.19.0  | Done        |
-| 18  | CORE-78 | Core       | `isValidUtcTimestamp`: a UTC timestamp<br>in the plain RFC 3339 spelling            | —                       | #307  | 1.19.0  | Done        |
-| 19  | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`,<br>and the intermodal tools (#304)                | —                       | #195  | 1.19.0  | Done        |
-| 20  | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —                       | #283  | 1.19.0  | Done        |
-| 21  | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —                       | #197  | 1.20.0  | Done        |
-| 22  | SPA-48  | Space      | Leap second table and queries                                                       | —                       | #229  | 1.20.0  | Done        |
-| 23  | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —                       | #319  | 1.20.0  | Done        |
-| 24  | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                       | #316  | 1.20.0  | Done        |
-| 25  | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                       | #317  | 1.20.0  | Done        |
-| 26  | CORE-87 | Core       | The reference corpus exported for<br>another repo                                   | —                       | #328  | 1.20.0  | Done        |
-| 27  | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                       | #322  | 1.20.0  | Done        |
-| 28  | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                       | #323  | 1.20.0  | Done        |
-| 29  | CORE-88 | Core       | The Canada 2026 clock-change checker in Dox                                         | —                       | #329  | 1.20.0  | Done        |
-| 30  | CORE-89 | Core       | The Morocco 2026 clock-change checker in Dox                                        | —                       | #340  | —       | Done        |
-| 31  | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                       | #258  | —       | Done        |
-| 32  | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                       | #256  | —       | Done        |
-| 33  | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | —                       | #324  | —       | Not started |
-| 34  | CORE-85 | Core       | Human duration strings:<br>`parseHumanDuration`, `formatHumanDuration`              | —                       | #325  | —       | Done        |
-| 35  | CORE-79 | Core       | `Position` input type                                                               | —                       | #314  | Cut     | Not started |
-| 36  | MAR-17  | Maritime   | AIS `secondOfUTC` reconstruction +<br>`navTimestamp`                                | —                       | #198  | —       | Not started |
-| 37  | MAR-18  | Maritime   | Ship's time, clock changes, zone<br>descriptions, DTG, date line<br>crossing        | CORE-79                 | #199  | —       | Not started |
-| 38  | MAR-19  | Maritime   | Laytime, laycan, NOR, BIMCO 2013<br>definitions, laytime statement                  | —                       | #200  | —       | Not started |
-| 39  | MAR-59  | Maritime   | IEC 61162-1 (NMEA 0183) time and date<br>fields (RMC, ZDA, GGA)                     | —                       | #261  | Cut     | Not started |
-| 40  | AV-25   | Aviation   | `flightLeg` + `dayOffset` +<br>`blockTime` + `airTime` +<br>`oooiTimes`             | —                       | #206  | —       | Not started |
-| 41  | AV-26   | Aviation   | IATA seasons + SSIM dates,<br>variations, days of operation + MCT                   | AV-25                   | #207  | —       | Not started |
-| 42  | AV-27   | Aviation   | Crew FDP table lookup, acclimatisation,<br>recurring local windows                  | AV-25                   | #208  | —       | Not started |
-| 43  | AV-28   | Aviation   | NOTAM validity and D) schedules,<br>METAR/TAF times, curfews, CTOT slots            | —                       | #209  | —       | Not started |
-| 44  | AV-64   | Aviation   | AIRAC cycles and publication<br>deadlines                                           | —                       | #266  | Cut     | Not started |
-| 45  | RAI-22  | Rail       | `railLeg` + `crossBorderSchedule` +<br>operating bitmasks                           | AV-26                   | #203  | —       | Not started |
-| 46  | RAI-23  | Rail       | `stationDwell` + `blockingTime` +<br>`shuntingWindow`                               | —                       | #204  | —       | Not started |
-| 47  | RAI-24  | Rail       | GTFS service day, times beyond<br>24:00:00                                          | —                       | #205  | Cut     | Not started |
-| 48  | IOT-29  | IoT        | Monotonic readings                                                                  | —                       | #210  | —       | Not started |
-| 49  | IOT-30  | IoT        | `clockOffset` +<br>`uncertaintyInterval` + `clockDrift`<br>+ `detectClockStep`      | IOT-29                  | #211  | —       | Not started |
-| 50  | IOT-31  | IoT        | PTP / TAI device time,<br>`currentUtcOffset`                                        | —                       | #212  | —       | Not started |
-| 51  | IOT-32  | IoT        | `observedAt` vs `receivedAt`,<br>watermarks, late arrival, event<br>windows         | IOT-30                  | #213  | —       | Not started |
-| 52  | IOT-66  | IoT        | Hybrid logical clocks and<br>uncertainty-interval ordering                          | IOT-30                  | #268  | Cut     | Not started |
-| 53  | HLTH-33 | Healthcare | HL7 v2.x DTM, TS, DT, TM;<br>offset-absent handling                                 | —                       | #214  | —       | Not started |
-| 54  | HLTH-34 | Healthcare | FHIR `date` / `dateTime` / `instant`<br>precision                                   | —                       | #215  | —       | Not started |
-| 55  | HLTH-35 | Healthcare | Partial-date range semantics and<br>comparison (FHIRPath, CQL)                      | HLTH-34                 | #216  | —       | Not started |
-| 56  | HLTH-36 | Healthcare | Clinical, neonatal, gestational,<br>postmenstrual and corrected age; EDD            | HLTH-35                 | #217  | —       | Not started |
-| 57  | HLTH-37 | Healthcare | DICOM `DA` / `TM` / `DT`                                                            | —                       | #218  | —       | Not started |
-| 58  | HLTH-38 | Healthcare | Medication administration windows<br>across DST; `Timing.repeat`                    | —                       | #219  | —       | Not started |
-| 59  | HLTH-39 | Healthcare | De-identification date shifting                                                     | HLTH-36                 | #220  | Cut     | Not started |
-| 60  | HLTH-67 | Healthcare | Immunization dose validity: minimum<br>age/interval, grace window                   | HLTH-36                 | #269  | —       | Not started |
-| 61  | HLTH-68 | Healthcare | Pharmacy adherence: PDC, MPR, days'<br>supply, refill-too-soon                      | HLTH-35                 | #270  | Cut     | Not started |
-| 62  | FIN-40  | Finance    | Market sessions, lunch breaks, half<br>days, trade date                             | —                       | #221  | —       | Not started |
-| 63  | FIN-41  | Finance    | Exchange and payment-system calendar<br>data (opt-in subpath)                       | FIN-40                  | #222  | —       | Not started |
-| 64  | FIN-42  | Finance    | Day count conventions (FpML codes,<br>ISDA rules)                                   | —                       | #223  | —       | Not started |
-| 65  | FIN-43  | Finance    | Settlement and FX value dates                                                       | —                       | #224  | —       | Not started |
-| 66  | FIN-44  | Finance    | Tenors, IMM dates and CDS roll dates                                                | FIN-43                  | #225  | —       | Not started |
-| 67  | FIN-45  | Finance    | Continuous / crypto market schedules                                                | —                       | #226  | Cut     | Not started |
-| 68  | FIN-71  | Finance    | Calculation period schedules (FpML<br>`CalculationPeriodDates`)                     | FIN-44                  | #273  | —       | Not started |
-| 69  | FIN-72  | Finance    | RFR compounding conventions:<br>lookback, shift, lockout, payment<br>delay          | FIN-42, FIN-71          | #274  | —       | Not started |
-| 70  | FIN-73  | Finance    | FIX and SWIFT MT timestamps;<br>precision checks                                    | —                       | #275  | Cut     | Not started |
-| 71  | SPA-46  | Space      | TAI64 / TAI64N / TAI64NA labels                                                     | —                       | #227  | —       | Not started |
-| 72  | SPA-47  | Space      | `toTT` + `toTCG`                                                                    | —                       | #228  | —       | Not started |
-| 73  | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                                  | SPA-47                  | #230  | —       | Not started |
-| 74  | SPA-74  | Space      | `toTDB` + `tdbMinusTt` + `toTCB`                                                    | SPA-47, SPA-49          | #276  | Cut     | Not started |
-| 75  | SPA-50  | Space      | UT1 / DUT1, ΔT polynomials and<br>sidereal time                                     | CORE-79, SPA-47, SPA-49 | #231  | —       | Not started |
-| 76  | SPA-51  | Space      | Mission clocks, TLE epochs,<br>SCLK/SCET, light time                                | (SPA-52)                | #232  | —       | Not started |
-| 77  | SPA-52  | Space      | CCSDS time codes (ASCII A/B, CUC,<br>CDS)                                           | —                       | #233  | —       | Not started |
-| 78  | SPA-53  | Space      | Mars solar time (MSD, AMT, LMST)                                                    | SPA-47, SPA-49, SPA-74  | #234  | —       | Not started |
-| 79  | SPA-75  | Space      | Solar events: sunrise, sunset,<br>twilight, solar position                          | CORE-79, SPA-47, SPA-49 | #277  | Cut     | Not started |
-| 80  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | —                       | #341  | —       | Waiting     |
-| 81  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | —                       | #353  | —       | Waiting     |
+| #   | Story   | Realm      | Deliverable                                                                         | Blocked by             | Issue | Release | Status      |
+| --- | ------- | ---------- | ----------------------------------------------------------------------------------- | ---------------------- | ----- | ------- | ----------- |
+| 1   | CORE-1  | Core       | `toNanoseconds` + `fromNanoseconds`<br>+ JSON bridge + truncation                   | —                      | #182  | 1.16.0  | Done        |
+| 2   | CORE-2  | Core       | `spanMs` + `spanNs` +<br>`spanWallClock`                                            | —                      | #183  | 1.16.0  | Done        |
+| 3   | CORE-3  | Core       | NTP / FILETIME / .NET ticks / Excel<br>/ Postgres epoch bridges                     | —                      | #184  | 1.16.0  | Done        |
+| 4   | CORE-4  | Core       | `toOffsetInstant` + `resolveLocal` +<br>`classifyLocal`                             | —                      | #185  | 1.16.0  | Done        |
+| 5   | CORE-5  | Core       | ISO week + ordinal + fiscal periods<br>+ `floorToZone` + `bucketRange`              | —                      | #186  | 1.16.0  | Done        |
+| 6   | CORE-6  | Core       | Interval algebra: intersect, clamp,<br>subtract, merge, split, sum                  | —                      | #187  | 1.16.0  | Done        |
+| 7   | CORE-7  | Core       | Business calendars,<br>`mergeCalendars`, roll conventions                           | —                      | #188  | 1.16.0  | Done        |
+| 8   | CORE-8  | Core       | Full-API standards review with<br>`gmt-reviewer` (pre-1.16.0)                       | —                      | #251  | 1.16.0  | Done        |
+| 9   | TRAN-8  | Transport  | `transitTime` + `etaAtZone` +<br>`dwellTime`                                        | —                      | #189  | 1.17.0  | Done        |
+| 10  | INT-12  | Intermodal | `freeTimeExpiry` + `chargeableDays`<br>+ `demurrageClock`                           | —                      | #193  | 1.17.0  | Done        |
+| 11  | INT-58  | Intermodal | `billingTimeline`: invoice, dispute and<br>resolution deadlines                     | —                      | #260  | 1.17.0  | Done        |
+| 12  | CORE-55 | Core       | Operating hours and recurring<br>windows, open-time SLA arithmetic                  | —                      | #257  | 1.18.0  | Done        |
+| 13  | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                                 | —                      | #190  | 1.18.0  | Done        |
+| 14  | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff` + `timeToCutoff`                  | —                      | #191  | 1.18.0  | Done        |
+| 15  | TRAN-57 | Transport  | Schedule deviation, punctuality,<br>PLN/EST/REQ/ACT, `nextDeparture`                | —                      | #259  | 1.18.0  | Done        |
+| 16  | CORE-77 | Core       | Daylight time read from clock changes:<br>`isInDaylightSaving`, `hasDaylightSaving` | —                      | #294  | 1.18.0  | Done        |
+| 17  | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                         | —                      | #196  | 1.19.0  | Done        |
+| 18  | CORE-78 | Core       | `isValidUtcTimestamp`: a UTC timestamp<br>in the plain RFC 3339 spelling            | —                      | #307  | 1.19.0  | Done        |
+| 19  | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`,<br>and the intermodal tools (#304)                | —                      | #195  | 1.19.0  | Done        |
+| 20  | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —                      | #283  | 1.19.0  | Done        |
+| 21  | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —                      | #197  | 1.20.0  | Done        |
+| 22  | SPA-48  | Space      | Leap second table and queries                                                       | —                      | #229  | 1.20.0  | Done        |
+| 23  | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —                      | #319  | 1.20.0  | Done        |
+| 24  | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                      | #316  | 1.20.0  | Done        |
+| 25  | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                      | #317  | 1.20.0  | Done        |
+| 26  | CORE-87 | Core       | The reference corpus exported for<br>another repo                                   | —                      | #328  | 1.20.0  | Done        |
+| 27  | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                      | #322  | 1.20.0  | Done        |
+| 28  | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                      | #323  | 1.20.0  | Done        |
+| 29  | CORE-88 | Core       | The Canada 2026 clock-change checker in Dox                                         | —                      | #329  | 1.20.0  | Done        |
+| 30  | CORE-89 | Core       | The Morocco 2026 clock-change checker in Dox                                        | —                      | #340  | —       | Done        |
+| 31  | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                      | #258  | —       | Done        |
+| 32  | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                      | #256  | —       | Done        |
+| 33  | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | —                      | #324  | —       | Not started |
+| 34  | CORE-85 | Core       | Human duration strings:<br>`parseHumanDuration`, `formatHumanDuration`              | —                      | #325  | —       | Done        |
+| 35  | CORE-79 | Core       | `Position` input type                                                               | —                      | #314  | Cut     | Done        |
+| 36  | MAR-17  | Maritime   | AIS `secondOfUTC` reconstruction +<br>`navTimestamp`                                | —                      | #198  | —       | Not started |
+| 37  | MAR-18  | Maritime   | Ship's time, clock changes, zone<br>descriptions, DTG, date line<br>crossing        | —                      | #199  | —       | Not started |
+| 38  | MAR-19  | Maritime   | Laytime, laycan, NOR, BIMCO 2013<br>definitions, laytime statement                  | —                      | #200  | —       | Not started |
+| 39  | MAR-59  | Maritime   | IEC 61162-1 (NMEA 0183) time and date<br>fields (RMC, ZDA, GGA)                     | —                      | #261  | Cut     | Not started |
+| 40  | AV-25   | Aviation   | `flightLeg` + `dayOffset` +<br>`blockTime` + `airTime` +<br>`oooiTimes`             | —                      | #206  | —       | Not started |
+| 41  | AV-26   | Aviation   | IATA seasons + SSIM dates,<br>variations, days of operation + MCT                   | AV-25                  | #207  | —       | Not started |
+| 42  | AV-27   | Aviation   | Crew FDP table lookup, acclimatisation,<br>recurring local windows                  | AV-25                  | #208  | —       | Not started |
+| 43  | AV-28   | Aviation   | NOTAM validity and D) schedules,<br>METAR/TAF times, curfews, CTOT slots            | —                      | #209  | —       | Not started |
+| 44  | AV-64   | Aviation   | AIRAC cycles and publication<br>deadlines                                           | —                      | #266  | Cut     | Not started |
+| 45  | RAI-22  | Rail       | `railLeg` + `crossBorderSchedule` +<br>operating bitmasks                           | AV-26                  | #203  | —       | Not started |
+| 46  | RAI-23  | Rail       | `stationDwell` + `blockingTime` +<br>`shuntingWindow`                               | —                      | #204  | —       | Not started |
+| 47  | RAI-24  | Rail       | GTFS service day, times beyond<br>24:00:00                                          | —                      | #205  | Cut     | Not started |
+| 48  | IOT-29  | IoT        | Monotonic readings                                                                  | —                      | #210  | —       | Not started |
+| 49  | IOT-30  | IoT        | `clockOffset` +<br>`uncertaintyInterval` + `clockDrift`<br>+ `detectClockStep`      | IOT-29                 | #211  | —       | Not started |
+| 50  | IOT-31  | IoT        | PTP / TAI device time,<br>`currentUtcOffset`                                        | —                      | #212  | —       | Not started |
+| 51  | IOT-32  | IoT        | `observedAt` vs `receivedAt`,<br>watermarks, late arrival, event<br>windows         | IOT-30                 | #213  | —       | Not started |
+| 52  | IOT-66  | IoT        | Hybrid logical clocks and<br>uncertainty-interval ordering                          | IOT-30                 | #268  | Cut     | Not started |
+| 53  | HLTH-33 | Healthcare | HL7 v2.x DTM, TS, DT, TM;<br>offset-absent handling                                 | —                      | #214  | —       | Not started |
+| 54  | HLTH-34 | Healthcare | FHIR `date` / `dateTime` / `instant`<br>precision                                   | —                      | #215  | —       | Not started |
+| 55  | HLTH-35 | Healthcare | Partial-date range semantics and<br>comparison (FHIRPath, CQL)                      | HLTH-34                | #216  | —       | Not started |
+| 56  | HLTH-36 | Healthcare | Clinical, neonatal, gestational,<br>postmenstrual and corrected age; EDD            | HLTH-35                | #217  | —       | Not started |
+| 57  | HLTH-37 | Healthcare | DICOM `DA` / `TM` / `DT`                                                            | —                      | #218  | —       | Not started |
+| 58  | HLTH-38 | Healthcare | Medication administration windows<br>across DST; `Timing.repeat`                    | —                      | #219  | —       | Not started |
+| 59  | HLTH-39 | Healthcare | De-identification date shifting                                                     | HLTH-36                | #220  | Cut     | Not started |
+| 60  | HLTH-67 | Healthcare | Immunization dose validity: minimum<br>age/interval, grace window                   | HLTH-36                | #269  | —       | Not started |
+| 61  | HLTH-68 | Healthcare | Pharmacy adherence: PDC, MPR, days'<br>supply, refill-too-soon                      | HLTH-35                | #270  | Cut     | Not started |
+| 62  | FIN-40  | Finance    | Market sessions, lunch breaks, half<br>days, trade date                             | —                      | #221  | —       | Not started |
+| 63  | FIN-41  | Finance    | Exchange and payment-system calendar<br>data (opt-in subpath)                       | FIN-40                 | #222  | —       | Not started |
+| 64  | FIN-42  | Finance    | Day count conventions (FpML codes,<br>ISDA rules)                                   | —                      | #223  | —       | Not started |
+| 65  | FIN-43  | Finance    | Settlement and FX value dates                                                       | —                      | #224  | —       | Not started |
+| 66  | FIN-44  | Finance    | Tenors, IMM dates and CDS roll dates                                                | FIN-43                 | #225  | —       | Not started |
+| 67  | FIN-45  | Finance    | Continuous / crypto market schedules                                                | —                      | #226  | Cut     | Not started |
+| 68  | FIN-71  | Finance    | Calculation period schedules (FpML<br>`CalculationPeriodDates`)                     | FIN-44                 | #273  | —       | Not started |
+| 69  | FIN-72  | Finance    | RFR compounding conventions:<br>lookback, shift, lockout, payment<br>delay          | FIN-42, FIN-71         | #274  | —       | Not started |
+| 70  | FIN-73  | Finance    | FIX and SWIFT MT timestamps;<br>precision checks                                    | —                      | #275  | Cut     | Not started |
+| 71  | SPA-46  | Space      | TAI64 / TAI64N / TAI64NA labels                                                     | —                      | #227  | —       | Not started |
+| 72  | SPA-47  | Space      | `toTT` + `toTCG`                                                                    | —                      | #228  | —       | Not started |
+| 73  | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                                  | SPA-47                 | #230  | —       | Not started |
+| 74  | SPA-74  | Space      | `toTDB` + `tdbMinusTt` + `toTCB`                                                    | SPA-47, SPA-49         | #276  | Cut     | Not started |
+| 75  | SPA-50  | Space      | UT1 / DUT1, ΔT polynomials and<br>sidereal time                                     | SPA-47, SPA-49         | #231  | —       | Not started |
+| 76  | SPA-51  | Space      | Mission clocks, TLE epochs,<br>SCLK/SCET, light time                                | (SPA-52)               | #232  | —       | Not started |
+| 77  | SPA-52  | Space      | CCSDS time codes (ASCII A/B, CUC,<br>CDS)                                           | —                      | #233  | —       | Not started |
+| 78  | SPA-53  | Space      | Mars solar time (MSD, AMT, LMST)                                                    | SPA-47, SPA-49, SPA-74 | #234  | —       | Not started |
+| 79  | SPA-75  | Space      | Solar events: sunrise, sunset,<br>twilight, solar position                          | SPA-47, SPA-49         | #277  | Cut     | Not started |
+| 80  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | —                      | #341  | —       | Waiting     |
+| 81  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | —                      | #353  | —       | Waiting     |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm
