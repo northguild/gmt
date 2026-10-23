@@ -122,14 +122,32 @@ describe("order", () => {
   const B = { name: "B", kind: "dates", dates: ["2021-12-27"] };
   const seed = { rules: [B, A], year: 2021, timeZone: "Europe/London" };
 
-  it("changes the result when a row moves up", async () => {
+  it("keeps the closed days when a row moves up", async () => {
     const { root } = await mount(seed);
     const christmas = () =>
       closed(root).filter((d) => d >= "2021-12-20" && d <= "2021-12-31");
     expect(christmas()).toEqual(["2021-12-27", "2021-12-28"]);
     click(buttonOf(rows(root)[1]!, "up"));
-    expect(christmas()).toEqual(["2021-12-27"]);
-    expect(q(root, "calendar-output").textContent).toContain('["2021-12-27"]');
+    expect(christmas()).toEqual(["2021-12-27", "2021-12-28"]);
+    expect(q(root, "calendar-output").textContent).toContain(
+      '["2021-12-27", "2021-12-28"]',
+    );
+  });
+
+  it("swaps which holiday walks to which day when a row moves up", async () => {
+    const { root } = await mount({ preset: "chain" });
+    const from = (date: string) =>
+      root.querySelector(`[data-date="${date}"] .gmt-holiday-chip--from`)
+        ?.textContent;
+    expect([from("2021-12-27"), from("2021-12-28")]).toEqual([
+      "↩ Sat",
+      "↩ Sun",
+    ]);
+    click(buttonOf(rows(root)[1]!, "up"));
+    expect([from("2021-12-27"), from("2021-12-28")]).toEqual([
+      "↩ Sun",
+      "↩ Sat",
+    ]);
   });
 
   it("keeps focus on the button of the row that moved", async () => {

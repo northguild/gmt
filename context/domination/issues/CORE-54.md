@@ -35,7 +35,7 @@ The observance shift is where implementations diverge. One policy moves a Saturd
 - **Lunar and lunisolar holidays are calendar dates, read through CLDR.** `calendarFixed` names a CLDR calendar (Unicode CLDR, as Temporal implements it) and a month code and day in it — 1 Shawwal (`M10`, day 1) for Eid al-Fitr, 15 Nisan for Passover — and returns the ISO date of each occurrence in the requested ISO year (zero, one or two). The date is the calendar's computed date: where a community fixes the day by observation (an Islamic month sighted locally), the caller passes that date as a `dates` rule; GMT does not predict sightings. A holiday whose calendar CLDR does not define (the Hindu lunisolar calendar that dates Diwali) is a `dates` rule supplied by the caller. So, for now, is the Lunar New Year: `calendar` is GMT's `CalendarSystem`, which excludes `chinese` and `dangi` because `@js-temporal/polyfill` 0.5.1 throws reading them ("Unexpected leap month suffix", js-temporal #360, recorded in [js-temporal-polyfill-bugs.md](../js-temporal-polyfill-bugs.md); fixed only in the unreleased PR #361). When GMT adds those calendars, `calendarFixed` accepts them with no change here.
 - **Easter is a formula with two calendars.** The Gregorian computus (Meeus ch. 8, Oudin's algorithm) and the Julian computus give different Sundays most years; some markets and public calendars key on the Julian one. The function is exact for every year in Temporal's range and needs no table.
 - **`nthWeekdayOfMonth` is the primitive FIN-44, FIN-45 and AV-26 already re-derive**; after this story they call it. The existing `plain/` helpers `getWeekOfMonth`, `nextWeekday` and `previousWeekday` are the building blocks, not replacements.
-- Expanding a `nextWorkingDay` observance is order-dependent (Christmas and Boxing Day both shifting in 2021), so `buildBusinessCalendar` expands rules in list order and passes the calendar-so-far to each shift. Documented.
+- Expanding a `nextWorkingDay` observance depends on the other holidays (Christmas and Boxing Day both shifting in 2021), so `buildBusinessCalendar` places every holiday that does not walk first, then walks each rule's `nextWorkingDay` occurrences in list order past those days and the walks of the rules before it. The days that close do not depend on the order; it decides only which holiday takes which day. Documented.
 
 ## What gmt provides (do not re-implement)
 
@@ -72,8 +72,10 @@ The observance shift is where implementations diverge. One policy moves a Saturd
   close both, list the rule twice, once without `observed`.
 - **`holidayDates(rule, Y)` returns the occurrences whose unshifted date lies in ISO year Y**,
   as their observed dates, even when a move crosses into another year. One year meaning for every
-  rule kind; a rule yields 0, 1 or 2 dates. `buildBusinessCalendar` collects the window.
-- **Rules expand in list order**, each shift seeing the calendar built so far. A year span is
+  rule kind; a rule yields 0, 1 or 2 dates, a `dates` rule each of its dates in the year. `buildBusinessCalendar` collects the window.
+- **The days that close do not depend on rule order.** Holidays that do not walk are placed
+  first, then each rule's `nextWorkingDay` occurrences walk past them and the walks of the rules
+  before it; the order decides only which holiday takes which day. A year span is
   capped at 400 years, and a `nextWorkingDay` shift of more than 31 days fails the build.
 - **A date a year lacks is skipped, never clamped** (29 February, `M05L` in a common Hebrew year,
   day 30 of a 29-day month). `chinese` and `dangi` are not accepted calendars.

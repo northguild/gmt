@@ -691,14 +691,24 @@ export const showObservanceComparatorInput = z.object({
   year: z.number().int().min(1900).max(2100).optional(),
 });
 
+/** The Easter offsets Moving Feasts has a row for (`FEAST_OFFSETS`). */
+const FEAST_OFFSET_DAYS: readonly number[] = [-46, -2, 0, 1, 39, 49, 50];
+
 /**
  * Moving Feasts: a year, with the Easter offsets and the weekday-in-month rule
  * the reader named. Each is optional; the widget fills the rest with its first
- * example.
+ * example. An offset the widget has no row for is refused here, so the model
+ * hears why rather than the widget showing its defaults.
  */
 export const showMovingFeastsInput = z.object({
   year: z.number().int().min(1900).max(2100).optional(),
-  offsets: z.array(z.number().int().min(-400).max(400)).max(12).optional(),
+  offsets: z
+    .array(z.number().int())
+    .max(7)
+    .refine((list) => list.every((n) => FEAST_OFFSET_DAYS.includes(n)), {
+      message: `Each offset is one of ${FEAST_OFFSET_DAYS.join(", ")}.`,
+    })
+    .optional(),
   month: z.number().int().min(1).max(12).optional(),
   weekday: isoWeekdaySchema.optional(),
   n: z.union([z.number().int().min(-5).max(5), z.literal("last")]).optional(),
@@ -1050,7 +1060,7 @@ export const DOX_TOOL_DOCS: {
     purpose:
       "Show Easter Sunday by the Gregorian and the Julian computus in a year, the days around it, and the n-th weekday of a month.",
     when: "the reader asks when Easter falls, how far apart the two Easters are, or which date the third Monday or last Sunday of a month is",
-    args: "year; offsets (days from Easter, only ones the reader named); month, weekday (1 Monday to 7 Sunday) and n (1 to 5, -1 to -5 or last) for a weekday of a month. Pass only rules, dates and policies the reader gave. Never supply a place's holidays or its observance policy from memory.",
+    args: "year; offsets (days from Easter, only ones the reader named, each one of -46, -2, 0, 1, 39, 49 and 50; for any other, say so instead of calling); month, weekday (1 Monday to 7 Sunday) and n (1 to 5, -1 to -5 or last) for a weekday of a month. Pass only rules, dates and policies the reader gave. Never supply a place's holidays or its observance policy from memory.",
   },
   {
     name: "showCanadaClockChange",

@@ -28,8 +28,9 @@ function isYear(value: unknown): value is number {
 /**
  * Expand holiday rules into a `BusinessCalendar` for a range of years.
  *
- * - Rules expand in list order. Each `nextWorkingDay` shift sees the weekend and the holidays
- *   of the rules before it, so the order of the list can change the result.
+ * - Every holiday that does not walk is placed first. Then each rule's `nextWorkingDay` shifts
+ *   walk, in list order, past the weekend, those holidays and the walks of the rules before it.
+ *   The days that close do not depend on the order; it decides only which holiday takes which day.
  * - A moved holiday closes only its observed day. To close both, list the rule twice, once
  *   without `observed`.
  * - A holiday observed on a day outside `years` is not in the result; a holiday from the year
@@ -44,7 +45,7 @@ function isYear(value: unknown): value is number {
  * @returns the calendar, or `null` when any part of `spec` is invalid, the range exceeds 400 years, a `nextWorkingDay` shift moves a holiday more than 31 days (the check also covers the years just outside `years`: `years: { from: 2027, to: 2027 }` gives `null` for a 45-day shift in March 2026), or a shift inside `years` leaves Temporal's range
  *
  * @example buildBusinessCalendar({ timeZone: "Europe/Berlin", weekend: [6, 7], years: { from: 2026, to: 2026 }, rules: [{ name: "New year", kind: "fixed", month: 1, day: 1 }, { name: "Two days before Easter", kind: "easterRelative", offsetDays: -2 }, { name: "Day after Easter", kind: "easterRelative", offsetDays: 1 }, { name: "Spring day", kind: "fixed", month: 5, day: 1 }, { name: "Winter day", kind: "fixed", month: 12, day: 25 }, { name: "Day after winter day", kind: "fixed", month: 12, day: 26 }] }) // { weekend: [6, 7], holidays: ["2026-01-01", "2026-04-03", "2026-04-06", "2026-05-01", "2026-12-25", "2026-12-26"], timeZone: "Europe/Berlin" } — six fixed and Easter-relative closing days
- * @example buildBusinessCalendar({ timeZone: "UTC", weekend: [6, 7], years: { from: 2021, to: 2021 }, rules: [{ name: "a", kind: "fixed", month: 12, day: 25, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } }, { name: "b", kind: "fixed", month: 12, day: 26, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } }] })?.holidays // ["2021-12-27", "2021-12-28"] — the second shift sees the first
+ * @example buildBusinessCalendar({ timeZone: "UTC", weekend: [6, 7], years: { from: 2021, to: 2021 }, rules: [{ name: "a", kind: "fixed", month: 12, day: 25, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } }, { name: "b", kind: "fixed", month: 12, day: 26, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } }] })?.holidays // ["2021-12-27", "2021-12-28"] — the second shift passes the first, in either order
  * @example buildBusinessCalendar({ timeZone: "UTC", weekend: [6, 7], rules: [], years: { from: 2027, to: 2026 } }) // null — from is after to
  */
 export function buildBusinessCalendar(

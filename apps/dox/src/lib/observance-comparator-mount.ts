@@ -95,13 +95,14 @@ const AGREE = "policies agree";
 const DISAGREE = "policies disagree";
 const NOTHING = "nothing to compare";
 
+// Three holidays that each walk: two lines apiece, the longest the calls print.
 const CALL_SIZER =
-  'const calendarSoFar = buildBusinessCalendar({ timeZone: "UTC", weekend: [6, 7], rules: [{ name: "25 Dec", kind: "fixed", month: 12, day: 25, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } }], years: { from: 2020, to: 2022 } });\n' +
-  'observedDate("2021-12-26", { 6: "nextWorkingDay", 7: "nextWorkingDay" }, calendarSoFar); // "2021-12-28"\n' +
-  'const calendarSoFar = buildBusinessCalendar({ timeZone: "UTC", weekend: [6, 7], rules: [{ name: "25 Dec", kind: "fixed", month: 12, day: 25, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } }], years: { from: 2020, to: 2022 } });\n' +
-  'observedDate("2021-12-26", { 6: "nextWorkingDay", 7: "nextWorkingDay" }, calendarSoFar); // "2021-12-28"\n' +
-  'const calendarSoFar = buildBusinessCalendar({ timeZone: "UTC", weekend: [6, 7], rules: [{ name: "25 Dec", kind: "fixed", month: 12, day: 25, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } }], years: { from: 2020, to: 2022 } });\n' +
-  'observedDate("2021-12-26", { 6: "nextWorkingDay", 7: "nextWorkingDay" }, calendarSoFar); // "2021-12-28"';
+  '// calendar: "UTC", weekend [6, 7], every holiday that does not walk\n' +
+  'observedDate("2021-12-26", { 6: "nextWorkingDay", 7: "nextWorkingDay" }, calendar); // "2021-12-28"\n' +
+  '// calendar: "UTC", weekend [6, 7], every holiday that does not walk, and the walks of holidays 1 to 1\n' +
+  'observedDate("2021-12-26", { 6: "nextWorkingDay", 7: "nextWorkingDay" }, calendar); // "2021-12-28"\n' +
+  '// calendar: "UTC", weekend [6, 7], every holiday that does not walk, and the walks of holidays 1 to 2\n' +
+  'observedDate("2021-12-26", { 6: "nextWorkingDay", 7: "nextWorkingDay" }, calendar); // "2021-12-28"';
 
 const SPAN_NOTES = [
   NO_YEARS_REASON,

@@ -2,7 +2,7 @@
  * The Holiday Rule Builder's pure module against the real library. Expected
  * dates are the library spec's; counts are derived, never literal.
  */
-import { MAX_RULES } from "./holiday-codec";
+import { MAX_RULES, parseRuleLine } from "./holiday-codec";
 import {
   BUILDER_PRESETS,
   CUSTOM_PRESET_ID,
@@ -166,6 +166,20 @@ describe("arguments and permalink", () => {
     expect(back.year).toBe(state.year);
   });
 
+  it("keeps a half-filled row in its link", () => {
+    const state = presetState(preset("chain"));
+    state.rows = [
+      blankRow(),
+      { ...blankRow(), name: "May Day", month: "5" },
+      { ...blankRow("calendarFixed"), day: "1" },
+      blankRow("nthWeekday"),
+      blankRow("easterRelative"),
+      blankRow("dates"),
+    ];
+    const back = readArgs(permalinkOf(state) as never);
+    expect(back.rows).toEqual(state.rows);
+  });
+
   it("leaves the preset out for a custom state", () => {
     const state = presetState(preset("chain"));
     state.rows.pop();
@@ -308,6 +322,40 @@ describe("hand-off to the Free Time Ledger", () => {
       zone: "Europe/London",
       basis: "working",
     });
+  });
+});
+
+describe("the folded calls", () => {
+  const callsOf = (lines: string[], year: number): string => {
+    const rules = lines.map((line) => parseRuleLine(line)!);
+    const att = attributeRules(
+      lib,
+      { timeZone: "UTC", weekend: [6, 7], rules },
+      year,
+    );
+    return ruleCallLines(
+      rules,
+      att.rows.map((r) => r.pairs),
+      year,
+    ).join("\n");
+  };
+
+  it("print a walk with its calendar, after the dates no rule walks to", () => {
+    const text = callsOf(["A;f;12-26;7w", "B;d;2021-12-27"], 2021);
+    expect(text).toContain(
+      'observedDate("2021-12-26", { 7: "nextWorkingDay" }, calendar) // "2021-12-28"',
+    );
+    expect(text).toContain(
+      "// calendar: the weekend and every holiday that does not walk",
+    );
+  });
+
+  it("print a shift that does not walk without the walks or a calendar", () => {
+    const text = callsOf(["Year start;f;01-01;6<5 7w"], 2027);
+    expect(text).toContain(
+      'observedDate("2027-01-01", { 6: { previous: 5 } }) // "2027-01-01"',
+    );
+    expect(text).not.toContain("calendar");
   });
 });
 

@@ -176,6 +176,16 @@ describe("the permalink", () => {
     expect(back.weekend).toEqual(state.weekend);
     expect(back.year).toBe("2026");
   });
+  it("keeps a half-filled holiday in its link, not as 00-00", () => {
+    const state = presetState(preset("fri-sat"));
+    state.holidays = [
+      { month: "", day: "" },
+      { month: "12", day: "" },
+    ];
+    const link = permalinkOf(state);
+    expect(link["holiday1"]).toBe("-");
+    expect(readArgs(link as never).holidays).toEqual(state.holidays);
+  });
   it("tops up a single column from the preset", () => {
     const state = readArgs({ column1: "mon-mon" });
     expect(state.columns.length).toBeGreaterThanOrEqual(2);

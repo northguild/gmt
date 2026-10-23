@@ -3,6 +3,7 @@
  * the library's expected values read through a parsed rule line.
  */
 import type {
+  CalendarSystem,
   HolidayRule,
   IsoWeekday,
   ObservancePolicy,
@@ -218,7 +219,6 @@ describe("rule lines", () => {
       "A;f;01-01;6<",
       "A;f;01-01;6<5;extra",
       "A;c;hebrew;M07",
-      "A;c;;M07;15",
       "A;c;hebrew;M07;x",
       "A;n;3;3",
       "A;n;3;8;3",
@@ -235,6 +235,29 @@ describe("rule lines", () => {
     ]) {
       expect(parseRuleLine(line), line).toBeNull();
     }
+  });
+
+  it("keeps a half-filled row: a blank number is NaN, a blank calendar or month code empty", () => {
+    const blanks: HolidayRule[] = [
+      { name: "", kind: "fixed", month: Number.NaN, day: Number.NaN },
+      { name: "A", kind: "fixed", month: 5, day: Number.NaN },
+      {
+        name: "A",
+        kind: "calendarFixed",
+        calendar: "" as CalendarSystem,
+        monthCode: "",
+        day: Number.NaN,
+      },
+      { name: "A", kind: "nthWeekday", month: Number.NaN, weekday: 1, n: 1 },
+      { name: "A", kind: "easterRelative", offsetDays: Number.NaN },
+    ];
+    for (const rule of blanks) {
+      const line = formatRuleLine(rule);
+      expect(line).not.toContain("NaN");
+      expect(parseRuleLine(line), line).toEqual(rule);
+      expect(lib.isValidHolidayRule(parseRuleLine(line)), line).toBe(false);
+    }
+    expect(formatRuleLine(blanks[1]!)).toBe("A;f;05-");
   });
 
   it("does not judge validity: the library does", () => {

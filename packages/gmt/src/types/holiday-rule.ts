@@ -118,7 +118,7 @@ export type BusinessCalendarSpec = {
   timeZone: string;
   /** ISO weekdays that are closed every week, 1 (Monday) to 7 (Sunday). */
   weekend: number[];
-  /** Rules expanded in list order; each shift sees the calendar built so far. */
+  /** The holiday rules. Their order decides only which `nextWorkingDay` holiday takes which day. */
   rules: HolidayRule[];
   /** Inclusive range of ISO years to expand, at most 400 years. */
   years: {

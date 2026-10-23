@@ -181,10 +181,14 @@ export function decodeWidgetPermalink(
  */
 const LONG_STRING_KEYS: Readonly<Record<string, number>> = {
   values: 1000,
-  // A rule per line (the Holiday Rule Builder), and a calendar's dates (the
-  // Free Time Ledger and the Cut-off Stack read `holidays` too: a year of
-  // closures runs past 64 characters, six dates).
-  rules: 1000,
+  // A rule per line (the Holiday Rule Builder). The bound is the longest list
+  // `showHolidayRuleBuilderInput` accepts, so no list the chat sends is dropped
+  // from its own link: 12 `dates` rules, each a 64-character name, `;d;`, 60
+  // dates of up to 64 characters and 59 commas, is 12 × 3,966 characters and
+  // 11 newlines, 47,603. Twelve rules of 60 real dates are about 9,000.
+  rules: 48_000,
+  // A calendar's dates (the Free Time Ledger and the Cut-off Stack read
+  // `holidays` too: a year of closures runs past 64 characters, six dates).
   holidays: 1000,
 };
 

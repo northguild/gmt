@@ -90,6 +90,21 @@ describe("worker tool execute", () => {
     expect(rejected.note).toContain("Fake/Zone");
   });
 
+  it("validates the Holiday Rule Builder's zone", async () => {
+    expect(await run("showHolidayRuleBuilder", {})).toEqual({
+      ok: true,
+      widget: "holiday-rule-builder",
+    });
+    expect(
+      await run("showHolidayRuleBuilder", { zone: "Europe/Oslo" }),
+    ).toEqual({ ok: true, widget: "holiday-rule-builder" });
+    const rejected = await run("showHolidayRuleBuilder", {
+      zone: "Fake/Zone",
+    });
+    expect(rejected.ok).toBe(false);
+    expect(rejected.note).toContain("Fake/Zone");
+  });
+
   it("accepts a B/L date stamp for a zone the library cannot read, and for an offset", async () => {
     // Other zone tools reject an unknown zone. This one does not: a place the
     // library does not read is the widget's own NO SIGNAL, with its reason.

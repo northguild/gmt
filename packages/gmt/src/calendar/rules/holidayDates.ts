@@ -21,8 +21,9 @@ const MAX_YEAR = 275_760;
  * - **Year meaning.** The result holds each occurrence whose *unshifted* date lies in ISO `year`,
  *   at its observed date: the occurrence itself when the rule's policy does not move it, otherwise
  *   the date it moves to, which replaces it, even when the move crosses into another year.
- *   `fixed` 1 January observed `{ 6: { previous: 5 } }` gives `["2027-12-31"]` for 2028. A rule
- *   gives 0, 1 or 2 dates.
+ *   `fixed` 1 January observed `{ 6: { previous: 5 } }` gives `["2027-12-31"]` for 2028. A `fixed`,
+ *   `nthWeekday` or `easterRelative` rule gives 0 or 1 dates, a `calendarFixed` rule 0, 1 or 2,
+ *   and a `dates` rule each of its dates in the year.
  * - A moved holiday is returned only on its observed date. To close both the date and its
  *   observed date, list the rule twice: once without `observed`, once with it.
  *   Collecting the closures that fall in a window of years is `buildBusinessCalendar`'s job.

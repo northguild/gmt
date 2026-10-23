@@ -468,10 +468,20 @@ export function buildWorkerTools(
       inputSchema: showStoredTimeAuditInput,
       execute: () => accept("stored-time-audit"),
     }),
+    // A rule the library does not read is a row's own NO SIGNAL, with its reason, so
+    // only the zone is refused here, as the registry's `validate` does.
     showHolidayRuleBuilder: tool({
       description: docFor("showHolidayRuleBuilder"),
       inputSchema: showHolidayRuleBuilderInput,
-      execute: () => accept("holiday-rule-builder"),
+      execute: ({ zone }) => {
+        const unknown = unknownZones(zone ? [zone] : []);
+        return unknown.length > 0
+          ? reject(
+              "holiday-rule-builder",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("holiday-rule-builder");
+      },
     }),
     showObservanceComparator: tool({
       description: docFor("showObservanceComparator"),

@@ -4,8 +4,8 @@
  * The reader picks one to three month-day holidays, a span of years, a weekend
  * and two to four policy columns. One cell is one holiday in one year under one
  * policy. Every observed date comes from the library: `attributeRules` in
- * `holiday-widgets.ts` calls `holidayDates` and `observedDate` with the
- * calendar so far, exactly as the Builder does. This module holds the state,
+ * `holiday-widgets.ts` calls `holidayDates` and `observedDate` in the library's
+ * two passes, exactly as the Builder does. This module holds the state,
  * the presets, the seed arguments, the model the matrix is drawn from, the
  * printed call and the two hand-offs between the Builder and the Comparator.
  *
@@ -39,6 +39,7 @@ import {
   monthName,
   policySummary,
   weekdayShort,
+  withoutWalks,
   type Attribution,
   type CellMark,
 } from "./holiday-widgets";
@@ -309,7 +310,8 @@ export function isSeeded(args: ObservanceComparatorArgs): boolean {
   return Object.values(args).some((v) => v !== undefined && v !== "");
 }
 
-const MONTH_DAY = /^(\d{1,2})-(\d{1,2})$/;
+// Either side may be blank: a half-filled holiday keeps its row in a link.
+const MONTH_DAY = /^(\d*)-(\d*)$/;
 
 function holidaysOfArgs(args: ObservanceComparatorArgs): HolidayState[] | null {
   if (Array.isArray(args.holidays)) {
@@ -405,7 +407,9 @@ export function matchPreset(state: ComparatorState): string {
   return hit ? hit.id : "";
 }
 
-const pad2 = (text: string): string => text.padStart(2, "0");
+/** Two digits, and a blank left blank rather than written as `00`. */
+const pad2 = (text: string): string =>
+  text === "" ? "" : text.padStart(2, "0");
 
 /** The permalink payload: `preset` first when the state matches one. */
 export function permalinkOf(state: ComparatorState): Record<string, unknown> {
@@ -770,9 +774,9 @@ export function laneMarks(
 // ---------------------------------------------------------------------------
 
 /**
- * The calls behind one cell column: for each holiday, the calendar built from
- * the holidays before it and the `observedDate` call that ran with it. The
- * results are what the matrix shows, taken from the model.
+ * The calls behind one cell column: for each holiday, the `observedDate` call
+ * that placed it, with the calendar it read when it walked to the next working
+ * day. The results are what the matrix shows, taken from the model.
  */
 export function callLines(
   model: ComparatorModel,
@@ -797,10 +801,6 @@ export function callLines(
       lines.push(`// ${holiday.name}: no date in ${row.year}.`);
       return;
     }
-    const so = rules.slice(0, i);
-    const spec =
-      `{ timeZone: ${literal(COMPARATOR_ZONE)}, weekend: ${literal(model.weekend)}, ` +
-      `rules: ${literal(so)}, years: { from: ${row.year - 1}, to: ${row.year + 1} } }`;
     const rule = rules[i]!;
     if (!("observed" in rule) || rule.observed === undefined) {
       lines.push(
@@ -808,10 +808,21 @@ export function callLines(
       );
       return;
     }
-    lines.push(
-      `const calendarSoFar = buildBusinessCalendar(${spec});`,
-      `observedDate(${literal(cell.unshifted)}, ${literal(rule.observed)}, calendarSoFar); // ${literal(cell.observed)}`,
-    );
+    const walks =
+      row.attributions[column]?.rows[i]?.pairs.find(
+        (p) => p.unshifted === cell.unshifted,
+      )?.walks === true;
+    if (walks) {
+      lines.push(
+        `// calendar: ${literal(COMPARATOR_ZONE)}, weekend ${literal(model.weekend)}, ` +
+          `every holiday that does not walk${i === 0 ? "" : `, and the walks of holidays 1 to ${i}`}`,
+        `observedDate(${literal(cell.unshifted)}, ${literal(rule.observed)}, calendar); // ${literal(cell.observed)}`,
+      );
+    } else {
+      lines.push(
+        `observedDate(${literal(cell.unshifted)}, ${literal(withoutWalks(rule.observed))}); // ${literal(cell.observed)}`,
+      );
+    }
   });
   return lines;
 }

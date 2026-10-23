@@ -120,6 +120,30 @@ describe("holidayDates", () => {
     },
   );
 
+  // A calendar year cut by a range limit has dates on both sides of it. The polyfill misreads
+  // several calendars this far out, so these dates come from Reingold & Dershowitz's arithmetic
+  // (Islamic civil and tabular, Ethiopic, Hebrew) and ICU's 33-year Persian rule.
+  it.each`
+    rule                                                                                 | year       | expected             | why
+    ${{ kind: "calendarFixed", calendar: "islamic-civil", monthCode: "M01", day: 1 }}    | ${-271820} | ${["-271820-01-20"]} | ${"the year before is cut by the first date"}
+    ${{ kind: "calendarFixed", calendar: "islamic-civil", monthCode: "M01", day: 1 }}    | ${-271821} | ${[]}                | ${"1 Muharram is -271821-01-30, before the first date"}
+    ${{ kind: "calendarFixed", calendar: "islamic-umalqura", monthCode: "M01", day: 1 }} | ${-271820} | ${["-271820-01-20"]} | ${"outside its table Umm al-Qura is the civil calendar"}
+    ${{ kind: "calendarFixed", calendar: "islamic-tbla", monthCode: "M01", day: 1 }}     | ${-271820} | ${["-271820-01-19"]} | ${"the tabular epoch is a day before the civil one"}
+    ${{ kind: "calendarFixed", calendar: "persian", monthCode: "M01", day: 1 }}          | ${-271820} | ${["-271820-04-10"]} | ${"the year before is cut by the first date"}
+    ${{ kind: "calendarFixed", calendar: "persian", monthCode: "M01", day: 1 }}          | ${-271821} | ${[]}                | ${"Nowruz is -271821-04-11, before the first date"}
+    ${{ kind: "calendarFixed", calendar: "persian", monthCode: "M01", day: 9 }}          | ${-271821} | ${["-271821-04-19"]} | ${"9 Farvardin is the first date"}
+    ${{ kind: "calendarFixed", calendar: "ethiopic", monthCode: "M01", day: 1 }}         | ${-271820} | ${["-271820-01-27"]} | ${"the year before is cut by the first date"}
+    ${{ kind: "calendarFixed", calendar: "ethiopic", monthCode: "M01", day: 1 }}         | ${-271821} | ${[]}                | ${"1 Meskerem is -271821-01-27, before the first date"}
+    ${{ kind: "calendarFixed", calendar: "hebrew", monthCode: "M09", day: 15 }}          | ${275759}  | ${["+275759-08-31"]} | ${"the year after is cut by the last date"}
+    ${{ kind: "calendarFixed", calendar: "hebrew", monthCode: "M09", day: 15 }}          | ${275760}  | ${[]}                | ${"15 Sivan is +275760-09-17, after the last date"}
+    ${{ kind: "calendarFixed", calendar: "hebrew", monthCode: "M09", day: 11 }}          | ${275760}  | ${["+275760-09-13"]} | ${"11 Sivan is the last date"}
+  `(
+    "range edge: $rule in year $year gives $expected: $why",
+    ({ rule, year, expected }) => {
+      expect(holidayDates({ name: "x", ...rule }, year)).toEqual(expected);
+    },
+  );
+
   it("returns [] for a shift that leaves Temporal's range", () => {
     expect(
       holidayDates(
@@ -618,27 +642,64 @@ describe("holidayDates", () => {
   r.revoke();
   return r.proxy;
 }}
-    ${"a proxy whose get throws"} | ${() => new Proxy({}, { get() {
+    ${"a proxy whose get throws"} | ${() =>
+  new Proxy(
+    {},
+    {
+      get() {
         throw new Error("boom");
-      } })}
-    ${"a proxy whose has throws"} | ${() => new Proxy({}, { has() {
+      },
+    },
+  )}
+    ${"a proxy whose has throws"} | ${() =>
+  new Proxy(
+    {},
+    {
+      has() {
         throw new Error("boom");
-      }, get: () => "fixed" })}
-    ${"a throwing kind getter"} | ${() => ({ name: "x", get kind(): string {
+      },
+      get: () => "fixed",
+    },
+  )}
+    ${"a throwing kind getter"} | ${() => ({
+  name: "x",
+  get kind(): string {
     throw new Error("boom");
-  } })}
-    ${"a throwing name getter"} | ${() => ({ get name(): string {
+  },
+})}
+    ${"a throwing name getter"} | ${() => ({
+  get name(): string {
     throw new Error("boom");
-  }, kind: "fixed", month: 1, day: 1 })}
-    ${"a throwing dates getter"} | ${() => ({ name: "x", kind: "dates", get dates(): string[] {
+  },
+  kind: "fixed",
+  month: 1,
+  day: 1,
+})}
+    ${"a throwing dates getter"} | ${() => ({
+  name: "x",
+  kind: "dates",
+  get dates(): string[] {
     throw new Error("boom");
-  } })}
-    ${"a throwing observed getter"} | ${() => ({ name: "x", kind: "fixed", month: 1, day: 1, get observed(): never {
+  },
+})}
+    ${"a throwing observed getter"} | ${() => ({
+  name: "x",
+  kind: "fixed",
+  month: 1,
+  day: 1,
+  get observed(): never {
     throw new Error("boom");
-  } })}
-    ${"a dates array proxy that throws"} | ${() => ({ name: "x", kind: "dates", dates: new Proxy(["2026-03-20"], { get() {
+  },
+})}
+    ${"a dates array proxy that throws"} | ${() => ({
+  name: "x",
+  kind: "dates",
+  dates: new Proxy(["2026-03-20"], {
+    get() {
       throw new Error("boom");
-    } }) })}
+    },
+  }),
+})}
   `("returns [] for $why", ({ make }) => {
     expect(holidayDates(make(), 2026)).toEqual([]);
   });

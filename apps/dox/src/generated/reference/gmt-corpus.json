@@ -798,7 +798,7 @@
       },
       {
         "call": "buildBusinessCalendar({ timeZone: \"UTC\", weekend: [6, 7], years: { from: 2021, to: 2021 }, rules: [{ name: \"a\", kind: \"fixed\", month: 12, day: 25, observed: { 6: \"nextWorkingDay\", 7: \"nextWorkingDay\" } }, { name: \"b\", kind: \"fixed\", month: 12, day: 26, observed: { 6: \"nextWorkingDay\", 7: \"nextWorkingDay\" } }] })?.holidays",
-        "result": "[\"2021-12-27\", \"2021-12-28\"] — the second shift sees the first"
+        "result": "[\"2021-12-27\", \"2021-12-28\"] — the second shift passes the first, in either order"
       },
       {
         "call": "buildBusinessCalendar({ timeZone: \"UTC\", weekend: [6, 7], rules: [], years: { from: 2027, to: 2026 } })",
@@ -18716,7 +18716,7 @@
       },
       {
         "name": "rules",
-        "description": "Rules expanded in list order; each shift sees the calendar built so far."
+        "description": "The holiday rules. Their order decides only which `nextWorkingDay` holiday takes which day."
       },
       {
         "name": "years",

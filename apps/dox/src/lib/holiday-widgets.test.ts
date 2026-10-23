@@ -94,6 +94,11 @@ const CASES: Case[] = [
     year: 2026,
     rules: [rule("Bad;f;13-01"), rule("Good;f;03-09")],
   },
+  {
+    name: "a weekday that walks, then a rule that closes the next day",
+    year: 2026,
+    rules: [rule("A;f;03-10;2w"), rule("B;f;03-11")],
+  },
 ];
 
 describe("attributeRules", () => {
@@ -109,14 +114,26 @@ describe("attributeRules", () => {
     },
   );
 
-  it("gives the index's order results", () => {
+  it("gives the same days in either order", () => {
     const [ab, ba] = [CASES[2]!, CASES[3]!];
     expect(attributeRules(lib, spec(ab.rules), 2021).full!.holidays).toEqual([
       "2021-12-27",
+      "2021-12-28",
     ]);
     expect(attributeRules(lib, spec(ba.rules), 2021).full!.holidays).toEqual([
       "2021-12-27",
       "2021-12-28",
+    ]);
+  });
+
+  it("walks past a later rule's day, as the library does", () => {
+    const { rows } = attributeRules(lib, spec(CASES[2]!.rules), 2021);
+    expect(rows[0]!.pairs).toEqual([
+      { unshifted: "2021-12-26", observed: "2021-12-28", walks: true },
+    ]);
+    const weekday = attributeRules(lib, spec(CASES[7]!.rules), 2026);
+    expect(weekday.rows[0]!.pairs).toEqual([
+      { unshifted: "2026-03-10", observed: "2026-03-12", walks: true },
     ]);
   });
 
@@ -127,18 +144,18 @@ describe("attributeRules", () => {
       2027,
     );
     expect(rows[0]!.pairs).toEqual([
-      { unshifted: "2027-01-01", observed: "2027-01-01" },
-      { unshifted: "2028-01-01", observed: "2027-12-31" },
+      { unshifted: "2027-01-01", observed: "2027-01-01", walks: false },
+      { unshifted: "2028-01-01", observed: "2027-12-31", walks: false },
     ]);
   });
 
   it("shows Christmas moved by the chain: both ghosts, both targets", () => {
     const { rows } = attributeRules(lib, spec(CASES[1]!.rules), 2021);
     expect(rows[0]!.pairs).toEqual([
-      { unshifted: "2021-12-25", observed: "2021-12-27" },
+      { unshifted: "2021-12-25", observed: "2021-12-27", walks: true },
     ]);
     expect(rows[1]!.pairs).toEqual([
-      { unshifted: "2021-12-26", observed: "2021-12-28" },
+      { unshifted: "2021-12-26", observed: "2021-12-28", walks: true },
     ]);
   });
 
@@ -161,7 +178,7 @@ describe("attributeRules", () => {
     expect(rows[0]).toEqual({ valid: false, pairs: [] });
     expect(rows[1]!.valid).toBe(true);
     expect(rows[1]!.pairs).toEqual([
-      { unshifted: "2026-03-09", observed: "2026-03-09" },
+      { unshifted: "2026-03-09", observed: "2026-03-09", walks: false },
     ]);
   });
 
@@ -186,7 +203,9 @@ describe("attributeRules", () => {
       },
       2026,
     );
-    expect(rows[0]!.pairs).toEqual([{ unshifted: "2026-03-09", observed: "" }]);
+    expect(rows[0]!.pairs).toEqual([
+      { unshifted: "2026-03-09", observed: "", walks: true },
+    ]);
   });
 });
 

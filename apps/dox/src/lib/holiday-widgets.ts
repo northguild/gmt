@@ -14,9 +14,10 @@
  *
  * A widget draws the library's results and computes none of them. The
  * polyfill is imported for drawing only: which column a date sits in, the
- * length of a month, the weekday a chip names. Choosing the year of a returned
- * string compares its year field, which is drawing too. No shift, no Easter and
- * no closure is worked out here.
+ * length of a month, the weekday a chip names, and so which weekday's entry of
+ * a policy an occurrence reads. Choosing the year of a returned string compares
+ * its year field, which is drawing too. No shift, no Easter and no closure is
+ * worked out here.
  *
  * GMT tracks no law, and the UI names no body: no string here names a country,
  * a statute or an operator.
@@ -92,6 +93,9 @@ export interface RulePair {
   /** Where the rule's policy observes it. The same date when nothing shifts
    *  it, and `""` when the library could not place it (NO SIGNAL). */
   observed: string;
+  /** The policy walks this occurrence to the next working day, so its
+   *  `observedDate` call read a calendar (`walksOn`). */
+  walks: boolean;
 }
 
 export interface RuleAttribution {
@@ -120,17 +124,47 @@ function withoutObserved(rule: HolidayRule): HolidayRule {
   return plain;
 }
 
+/** A rule's policy, or `undefined` when it has none. */
+function policyOf(rule: HolidayRule): ObservancePolicy | undefined {
+  return "observed" in rule ? rule.observed : undefined;
+}
+
+/** Whether a policy walks a date to the next working day: the entry for the
+ *  date's weekday is `"nextWorkingDay"`. */
+export function walksOn(policy: ObservancePolicy, date: string): boolean {
+  return (
+    typeof policy === "object" &&
+    policy !== null &&
+    policy[weekdayOfDate(date)] === "nextWorkingDay"
+  );
+}
+
+/** A policy without its `"nextWorkingDay"` entries: the shifts that read no
+ *  calendar. A value that is not an object is left for the library to judge. */
+export function withoutWalks(policy: ObservancePolicy): ObservancePolicy {
+  if (typeof policy !== "object" || policy === null) return policy;
+  return Object.fromEntries(
+    Object.entries(policy).filter(([, shift]) => shift !== "nextWorkingDay"),
+  );
+}
+
 /**
  * Per rule, each occurrence's unshifted date and its observed date, plus the
  * full calendar. `buildBusinessCalendar` returns the closed dates but not which
- * rule closed each one, or where it moved from; this gets both by calling the
- * library on the rules before each one, and never shifts a date itself.
+ * rule closed each one, or where it moved from. This gets both from
+ * `observedDate`, in the library's two passes, and never shifts a date itself:
  *
- * The year before and after are read as well, the way the library expands
- * `from - 1 .. to + 1`: with `6<5`, 1 Jan 2028 falls on a Saturday and is
- * observed on `2027-12-31`, which belongs to 2027's grid. The prefix calendar
- * spans the same three years, so a `nextWorkingDay` walk from a late-December
- * date sees the closings of the next January.
+ * 1. Every occurrence that does not walk to the next working day is placed
+ *    with the policy's other entries, which read no calendar.
+ * 2. Rule by rule, in list order, the occurrences that walk are placed on one
+ *    calendar per rule: the weekend, every date placed in step 1, and the walks
+ *    of the rules before it.
+ *
+ * Two years before and one after are read as well, as the library reads them:
+ * with `6<5`, 1 Jan 2028 falls on a Saturday and is observed on `2027-12-31`,
+ * which belongs to 2027's grid, and a walk from a late-December date sees the
+ * closings of the next January. Twelve rules (`MAX_RULES`) can chain their
+ * walks across two year ends.
  *
  * `full` is the only authority on which days are closed. Marks come from it
  * (`marksFromAttribution`), never from `rows`.
@@ -147,29 +181,49 @@ export function attributeRules(
     rules,
     years: { from: year, to: year },
   });
-  const rows = rules.map((rule, i): RuleAttribution => {
-    const valid = lib.isValidHolidayRule(rule);
-    const prefix = lib.buildBusinessCalendar({
-      timeZone,
-      weekend,
-      rules: rules.slice(0, i),
-      years: { from: year - 1, to: year + 1 },
-    });
+  const placed: string[] = [];
+  const allPairs = rules.map((rule): RulePair[] => {
+    const policy = policyOf(rule);
     const plain = withoutObserved(rule);
     const pairs: RulePair[] = [];
-    for (let y = year - 1; y <= year + 1; y++) {
+    for (let y = year - 2; y <= year + 1; y++) {
       for (const unshifted of lib.holidayDates(plain, y)) {
+        const walks = policy !== undefined && walksOn(policy, unshifted);
         const observed =
-          "observed" in rule && rule.observed !== undefined
-            ? lib.observedDate(unshifted, rule.observed, prefix ?? undefined)
-            : unshifted;
-        if (yearOf(unshifted) === year || yearOf(observed) === year) {
-          pairs.push({ unshifted, observed });
-        }
+          policy === undefined
+            ? unshifted
+            : walks
+              ? ""
+              : lib.observedDate(unshifted, withoutWalks(policy));
+        if (!walks && observed !== "") placed.push(observed);
+        pairs.push({ unshifted, observed, walks });
       }
     }
-    return { valid, pairs };
+    return pairs;
   });
+  rules.forEach((rule, i) => {
+    const policy = policyOf(rule);
+    const walking = allPairs[i]!.filter((pair) => pair.walks);
+    if (policy === undefined || walking.length === 0) return;
+    const calendar: BusinessCalendar = {
+      timeZone,
+      weekend,
+      holidays: [...placed],
+    };
+    for (const pair of walking) {
+      pair.observed = lib.observedDate(pair.unshifted, policy, calendar);
+      if (pair.observed !== "") placed.push(pair.observed);
+    }
+  });
+  const rows = rules.map(
+    (rule, i): RuleAttribution => ({
+      valid: lib.isValidHolidayRule(rule),
+      pairs: allPairs[i]!.filter(
+        ({ unshifted, observed }) =>
+          yearOf(unshifted) === year || yearOf(observed) === year,
+      ),
+    }),
+  );
   return { full, rows };
 }
 

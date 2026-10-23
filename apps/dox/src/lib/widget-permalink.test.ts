@@ -1,3 +1,5 @@
+import { showHolidayRuleBuilderInput } from "./dox-tools";
+import { formatRuleLines } from "./holiday-codec";
 import {
   decodeWidgetPermalink,
   encodeWidgetPermalink,
@@ -59,17 +61,17 @@ describe("widget permalinks", () => {
     const url = encodeWidgetPermalink("canadaclock", {
       zone: "America/Winnipeg",
     });
-    expect(url.startsWith("/gmt/check/canada-2026-clock-change/?w=canadaclock&")).toBe(
-      true,
-    );
+    expect(
+      url.startsWith("/gmt/check/canada-2026-clock-change/?w=canadaclock&"),
+    ).toBe(true);
     const search = url.slice(url.indexOf("?"));
     expect(seedFromLocation("canadaclock", search)).toEqual({
       zone: "America/Winnipeg",
     });
     const long = encodeWidgetPermalink("canadaclock", { zone: "A".repeat(65) });
-    expect(seedFromLocation("canadaclock", long.slice(long.indexOf("?")))).toEqual(
-      {},
-    );
+    expect(
+      seedFromLocation("canadaclock", long.slice(long.indexOf("?"))),
+    ).toEqual({});
   });
 
   it("needs no anchor, because the widget is the whole page", () => {
@@ -175,6 +177,23 @@ describe("widget permalinks", () => {
       const seeded = seedFromLocation(kind, url.slice(url.indexOf("?")));
       expect(seeded, kind).toEqual({ holidays });
     }
+    const url = encodeWidgetPermalink("holidays", { rules });
+    expect(seedFromLocation("holidays", url.slice(url.indexOf("?")))).toEqual({
+      rules,
+    });
+  });
+
+  it("keeps the longest rule list the chat schema accepts", () => {
+    const longest = Array.from({ length: 12 }, (_, i) => ({
+      kind: "dates" as const,
+      name: String(i).padStart(64, "x"),
+      dates: Array.from({ length: 60 }, () => "9".repeat(64)),
+    }));
+    expect(
+      showHolidayRuleBuilderInput.safeParse({ rules: longest }).success,
+    ).toBe(true);
+    const rules = formatRuleLines(longest);
+    expect(rules.length).toBe(47_603);
     const url = encodeWidgetPermalink("holidays", { rules });
     expect(seedFromLocation("holidays", url.slice(url.indexOf("?")))).toEqual({
       rules,

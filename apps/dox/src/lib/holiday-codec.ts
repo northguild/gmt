@@ -9,7 +9,8 @@
  * the field's error then. A shift onto its own weekday, a month 13 or a date
  * that does not exist all parse, and the library judges them (`observedDate`
  * gives `""`, `isValidHolidayRule` gives `false`), which is what the widget
- * draws.
+ * draws. So does a half-filled row: a blank number is written as an empty
+ * field and read back as `NaN`, a blank calendar or month code as `""`.
  *
  * No gmt import (types only) and no DOM.
  */
@@ -87,7 +88,7 @@ export function cleanRuleName(name: string): string {
 }
 
 const INTEGER = /^-?\d+$/;
-const MONTH_DAY = /^(\d{1,2})-(\d{1,2})$/;
+const MONTH_DAY = /^(\d*)-(\d*)$/;
 const ORDINALS: readonly string[] = [
   "1",
   "2",
@@ -106,6 +107,12 @@ function integer(text: string): number | null {
   return INTEGER.test(text) ? Number(text) : null;
 }
 
+/** A number field: an integer, or `NaN` for a blank one (a row with nothing
+ *  typed in it gives `NaN`). `null` for anything else. */
+function numberField(text: string): number | null {
+  return text === "" ? Number.NaN : integer(text);
+}
+
 /** The `observed` of a line's last field: left out for a blank policy. */
 function observedField(
   text: string | undefined,
@@ -115,7 +122,10 @@ function observedField(
   return policy === null ? null : { observed: policy };
 }
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
+/** A number as its field: `""` for `NaN`, so a half-filled row keeps its
+ *  place in a link. */
+const numberText = (n: number) => (Number.isNaN(n) ? "" : String(n));
+const pad2 = (n: number) => (Number.isNaN(n) ? "" : String(n).padStart(2, "0"));
 
 /**
  * One rule line to a rule: `name;kind;fields…[;policy]`.
@@ -127,8 +137,9 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
  * - `name;e;offset[;j]` is `easterRelative` (`j` means the Julian computus);
  * - `name;d;date,date,…` is `dates`.
  *
- * A blank policy is left out of the rule, never filled in. `null` for a line
- * it cannot read. Validity is the library's to decide.
+ * A blank policy is left out of the rule, never filled in. A blank number is
+ * `NaN` and a blank calendar or month code `""`. `null` for a line it cannot
+ * read. Validity is the library's to decide.
  */
 export function parseRuleLine(line: string): HolidayRule | null {
   const parts = line.split(";").map((part) => part.trim());
@@ -140,22 +151,17 @@ export function parseRuleLine(line: string): HolidayRule | null {
     case "f": {
       if (rest.length < 1 || rest.length > 2) return null;
       const md = MONTH_DAY.exec(rest[0]!);
+      const month = md === null ? null : numberField(md[1]!);
+      const day = md === null ? null : numberField(md[2]!);
       const observed = observedField(rest[1]);
-      if (md === null || observed === null) return null;
-      return {
-        name,
-        kind: "fixed",
-        month: Number(md[1]),
-        day: Number(md[2]),
-        ...observed,
-      };
+      if (month === null || day === null || observed === null) return null;
+      return { name, kind: "fixed", month, day, ...observed };
     }
     case "c": {
       if (rest.length < 3 || rest.length > 4) return null;
-      const day = integer(rest[2]!);
+      const day = numberField(rest[2]!);
       const observed = observedField(rest[3]);
-      if (rest[0] === "" || rest[1] === "" || day === null || observed === null)
-        return null;
+      if (day === null || observed === null) return null;
       return {
         name,
         kind: "calendarFixed",
@@ -167,7 +173,7 @@ export function parseRuleLine(line: string): HolidayRule | null {
     }
     case "n": {
       if (rest.length !== 3) return null;
-      const month = integer(rest[0]!);
+      const month = numberField(rest[0]!);
       const weekday = rest[1]!;
       const ordinal = rest[2]!;
       if (month === null || !/^[1-7]$/.test(weekday)) return null;
@@ -182,7 +188,7 @@ export function parseRuleLine(line: string): HolidayRule | null {
     }
     case "e": {
       if (rest.length < 1 || rest.length > 2) return null;
-      const offsetDays = integer(rest[0]!);
+      const offsetDays = numberField(rest[0]!);
       if (offsetDays === null) return null;
       if (rest.length === 1)
         return { name, kind: "easterRelative", offsetDays };
@@ -225,14 +231,14 @@ export function formatRuleLine(rule: HolidayRule): string {
         "c",
         rule.calendar,
         rule.monthCode,
-        String(rule.day),
+        numberText(rule.day),
         ...policy(rule.observed),
       ].join(";");
     case "nthWeekday":
       return [
         name,
         "n",
-        String(rule.month),
+        numberText(rule.month),
         String(rule.weekday),
         String(rule.n),
       ].join(";");
@@ -240,7 +246,7 @@ export function formatRuleLine(rule: HolidayRule): string {
       return [
         name,
         "e",
-        String(rule.offsetDays),
+        numberText(rule.offsetDays),
         ...(rule.computus === "julian" ? ["j"] : []),
       ].join(";");
     case "dates":

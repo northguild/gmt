@@ -1,5 +1,6 @@
 import { unexpectedCapitalised } from "~/test/no-proper-names";
 import { feastsLib as lib } from "~/test/holiday-lib";
+import { showMovingFeastsInput } from "./dox-tools";
 import { readArgs as readBuilderArgs } from "./holiday-rule-builder";
 import {
   CUSTOM_PRESET_ID,
@@ -171,6 +172,20 @@ describe("arguments and the permalink", () => {
 
   it("drops an offset the page does not offer", () => {
     expect(readArgs({ offsets: "99" }).offsets).toEqual(readArgs({}).offsets);
+  });
+
+  // The chat schema keeps its own copy of the offsets: it may import only `ai` and `zod`.
+  it("lets the chat send exactly the offsets the page offers", () => {
+    const offered = FEAST_OFFSETS.map((o) => o.offset);
+    expect(showMovingFeastsInput.safeParse({ offsets: offered }).success).toBe(
+      true,
+    );
+    for (const offset of [7, -1, 400]) {
+      expect(
+        showMovingFeastsInput.safeParse({ offsets: [0, offset] }).success,
+        String(offset),
+      ).toBe(false);
+    }
   });
 });
 

@@ -102,6 +102,38 @@ describe("buildHolidayEpochDays", () => {
     },
   );
 
+  // Every order of four rules that move onto each other's days, over 30 years of weekdays.
+  it("gives the same days whatever the order of the rules", () => {
+    const nextWorking = { 6: "nextWorkingDay", 7: "nextWorkingDay" };
+    const rules = [
+      { name: "a", kind: "fixed", month: 12, day: 25, observed: nextWorking },
+      { name: "b", kind: "fixed", month: 12, day: 26, observed: nextWorking },
+      {
+        name: "c",
+        kind: "fixed",
+        month: 12,
+        day: 27,
+        observed: { 6: { next: 1 }, 7: { next: 1 } },
+      },
+      { name: "d", kind: "fixed", month: 12, day: 28 },
+    ].map(resolve);
+    const orders = (list: ResolvedHolidayRule[]): ResolvedHolidayRule[][] =>
+      list.length <= 1
+        ? [list]
+        : list.flatMap((rule, index) =>
+            orders(list.filter((_, other) => other !== index)).map((rest) => [
+              rule,
+              ...rest,
+            ]),
+          );
+    const results = orders(rules).map((order) =>
+      Array.from(buildHolidayEpochDays(order, WEEKEND, 2000, 2029)!),
+    );
+
+    expect(results).toHaveLength(24);
+    expect(new Set(results.map(String)).size).toBe(1);
+  });
+
   it("returns an empty array for no rules", () => {
     expect(buildHolidayEpochDays([], WEEKEND, 2026, 2026)).toEqual(
       new Int32Array(0),

@@ -308,8 +308,9 @@ operations.
     missing occurrence (a fifth Friday in a four-Friday month), `holidayDates`
     returns `[]` and `buildBusinessCalendar` returns `null`; use
     `isValidHolidayRule` to tell a bad rule from a year with no occurrence.
-    Rules expand in list order, and each `nextWorkingDay` shift sees the
-    calendar built so far. A date a year lacks (29 February) is skipped, never
+    A `nextWorkingDay` shift walks past the weekend, every holiday that does
+    not walk and the walks of the rules above it; the days that close do not
+    depend on the rule order. A date a year lacks (29 February) is skipped, never
     clamped. Pass only rules and dates the user gave; never supply a place's
     holidays from memory.
 15. **Read the docs site.** This skill is a routing pointer. For full option

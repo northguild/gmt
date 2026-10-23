@@ -286,12 +286,11 @@ function easterRelativeDays(
   return days;
 }
 
-/** Epoch days of a calendar-fixed date whose ISO date lies in `[first, last]`; `clipped` windows tolerate an unreadable edge year. */
+/** Epoch days of a calendar-fixed date whose ISO date lies in `[first, last]`. */
 function calendarFixedDays(
   rule: Extract<ResolvedHolidayRule, { kind: "calendarFixed" }>,
   first: number,
   last: number,
-  clipped: boolean,
 ): number[] {
   const yearOf = (day: number): number =>
     calendarFieldsOf(
@@ -310,28 +309,14 @@ function calendarFixedDays(
   const days: number[] = [];
 
   for (let calendarYear = firstYear; calendarYear <= lastYear; calendarYear++) {
-    let date: Temporal.PlainDate | null;
-
-    try {
-      date = calendarDateFromMonthCode(
-        rule.calendarId,
-        calendarYear,
-        rule.monthCode,
-        rule.day,
-      );
-    } catch (error) {
-      // Only a window cut by a Temporal limit has an edge calendar year whose date can lie wholly
-      // outside the range (a Hebrew Tishrei 1 before the minimum); in-range dates never throw.
-      if (
-        clipped &&
-        error instanceof RangeError &&
-        (calendarYear === firstYear || calendarYear === lastYear)
-      ) {
-        continue;
-      }
-      throw error;
-    }
-
+    // Every year here holds a date of the window, so none lies wholly outside Temporal's range: a
+    // date beyond a limit is null, never a throw.
+    const date = calendarDateFromMonthCode(
+      rule.calendarId,
+      calendarYear,
+      rule.monthCode,
+      rule.day,
+    );
     const day = date === null ? NaN : epochDayOfDate(date);
 
     if (day >= first && day <= last) {
@@ -390,7 +375,6 @@ function occurrences(
   year: number,
   first: number,
   last: number,
-  clipped: boolean,
 ): number[] {
   switch (rule.kind) {
     case "fixed":
@@ -400,10 +384,79 @@ function occurrences(
     case "easterRelative":
       return easterRelativeDays(rule, year, first, last);
     case "calendarFixed":
-      return calendarFixedDays(rule, first, last, clipped);
+      return calendarFixedDays(rule, first, last);
     case "dates":
       return listedDays(rule.days, first, last);
   }
+}
+
+/** The occurrences of a rule whose unshifted date lies in ISO `year` (an integer in -271821..275760), ascending. */
+function occurrencesInYear(rule: ResolvedHolidayRule, year: number): number[] {
+  const yearFirst = epochDayOf(year, 1, 1);
+  const yearLast = epochDayOf(year, 12, 31);
+  const first = Math.max(yearFirst, MIN_EPOCH_DAY);
+  const last = Math.min(yearLast, MAX_EPOCH_DAY);
+
+  return occurrences(rule, year, first, last);
+}
+
+/** The policy of a rule that can move its occurrences, or `null` for a rule that never moves. */
+function policyOf(rule: ResolvedHolidayRule): Observed {
+  return rule.kind === "fixed" || rule.kind === "calendarFixed"
+    ? rule.policy
+    : null;
+}
+
+/** True when `policy` walks an occurrence on `day` to the next working day. */
+function walksOn(policy: ResolvedObservancePolicy, day: number): boolean {
+  return policy[isoWeekdayOf(day)] === "nextWorkingDay";
+}
+
+/**
+ * The observed day of each of `days`, occurrences under `policy`, or `null` when a shift fails
+ * (no calendar for `nextWorkingDay`, out of range, or longer than `maxShiftDays`). Throws a
+ * `RangeError` when a walk leaves Temporal's range.
+ *
+ * With `skipOutOfRange` a day whose observed day leaves Temporal's range is dropped instead of
+ * failing the call (a walk that passes the limit counts the same way). A caller sets it for a
+ * margin year, whose days can never fall inside the window it is building.
+ */
+function observedDays(
+  days: readonly number[],
+  policy: ResolvedObservancePolicy,
+  calendar: ResolvedBusinessCalendar | null,
+  maxShiftDays: number,
+  skipOutOfRange: boolean,
+): number[] | null {
+  const observed: number[] = [];
+
+  for (const day of days) {
+    let moved: number | null;
+
+    try {
+      moved = observedEpochDay(day, policy, calendar);
+    } catch (error) {
+      if (skipOutOfRange && error instanceof RangeError) {
+        continue;
+      }
+
+      throw error;
+    }
+
+    // `{ next }` and `{ previous }` fail only by leaving the range; a `nextWorkingDay` walk that
+    // fails inside it (no calendar, too many steps) fails in every year.
+    if (moved === null && skipOutOfRange && !walksOn(policy, day)) {
+      continue;
+    }
+
+    if (moved === null || !(Math.abs(moved - day) <= maxShiftDays)) {
+      return null;
+    }
+
+    observed.push(moved);
+  }
+
+  return observed;
 }
 
 /**
@@ -411,11 +464,8 @@ function occurrences(
  * occurrence itself when its policy does not move it), sorted, without repeats. Returns `null`
  * when a shift fails (no calendar for `nextWorkingDay`, out of range, or longer than
  * `maxShiftDays`). Throws a `RangeError` when a calendar cannot be read or a walk leaves
- * Temporal's range. `year` is an integer in -271821..275760, as every caller checks.
- *
- * With `skipOutOfRange` an occurrence whose observed day leaves Temporal's range is dropped
- * instead of failing the call (a walk that passes the limit counts the same way). A caller sets it
- * for a margin year, whose days can never fall inside the window it is building.
+ * Temporal's range. `year` outside -271821..275760 gives `[]`. `skipOutOfRange` is as in
+ * `observedDays`.
  */
 export function holidayEpochDays(
   rule: ResolvedHolidayRule,
@@ -428,58 +478,24 @@ export function holidayEpochDays(
     return [];
   }
 
-  const yearFirst = epochDayOf(year, 1, 1);
-  const yearLast = epochDayOf(year, 12, 31);
-  const first = Math.max(yearFirst, MIN_EPOCH_DAY);
-  const last = Math.min(yearLast, MAX_EPOCH_DAY);
-  const found = occurrences(
-    rule,
-    year,
-    first,
-    last,
-    first !== yearFirst || last !== yearLast,
-  );
+  const found = occurrencesInYear(rule, year);
+  const policy = policyOf(rule);
 
-  if (
-    (rule.kind !== "fixed" && rule.kind !== "calendarFixed") ||
-    rule.policy === null
-  ) {
+  if (policy === null) {
     return found;
   }
 
-  const observed: number[] = [];
+  const observed = observedDays(
+    found,
+    policy,
+    calendar,
+    maxShiftDays,
+    skipOutOfRange,
+  );
 
-  for (const day of found) {
-    let moved: number | null;
-
-    try {
-      moved = observedEpochDay(day, rule.policy, calendar);
-    } catch (error) {
-      if (skipOutOfRange && error instanceof RangeError) {
-        continue;
-      }
-
-      throw error;
-    }
-
-    // `{ next }` and `{ previous }` fail only by leaving the range; a `nextWorkingDay` walk that
-    // fails inside it (no calendar, too many steps) fails in every year.
-    if (
-      moved === null &&
-      skipOutOfRange &&
-      rule.policy[isoWeekdayOf(day)] !== "nextWorkingDay"
-    ) {
-      continue;
-    }
-
-    if (moved === null || !(Math.abs(moved - day) <= maxShiftDays)) {
-      return null;
-    }
-
-    observed.push(moved);
-  }
-
-  return Array.from(sortedUnique(Int32Array.from(observed)));
+  return observed === null
+    ? null
+    : Array.from(sortedUnique(Int32Array.from(observed)));
 }
 
 /**
@@ -490,24 +506,43 @@ const MAX_SHIFT_DAYS = 31;
 /** The fewest days in a year, so the margin bound below holds whichever years it spans. */
 const DAYS_PER_YEAR = 365;
 
+/** One expanded year's `nextWorkingDay` occurrences of a rule, waiting for the calendar. */
+type PendingWalks = { days: number[]; margin: boolean };
+
+/** A rule's policy and its pending walks, year by year. */
+type WalkingRule = { policy: ResolvedObservancePolicy; years: PendingWalks[] };
+
 /**
  * Epoch days of every holiday the rules produce in years `from`..`to` (integers in
- * -271821..275760, `from <= to`, as the caller checks), sorted without repeats. Rules expand in
- * list order and each `nextWorkingDay` shift sees `weekend` plus every holiday the earlier rules
- * produced; only the result is clipped to the window and to Temporal's range. Returns `null`
- * when a shift fails or exceeds `MAX_SHIFT_DAYS` (in any expanded year) or a shift inside the
- * window leaves Temporal's range. Throws a `RangeError` when a calendar cannot be read.
+ * -271821..275760, `from <= to`, as the caller checks), sorted without repeats; only the result
+ * is clipped to the window and to Temporal's range. Returns `null` when a shift fails or exceeds
+ * `MAX_SHIFT_DAYS` (in any expanded year) or a shift inside the window leaves Temporal's range.
+ * Throws a `RangeError` when a calendar cannot be read.
+ *
+ * Two passes, so the order of `rules` never changes which days are closed:
+ *
+ * 1. Every occurrence that does not walk is placed: unmoved, or moved by `{ next }` or
+ *    `{ previous }`, which never read the calendar.
+ * 2. The `nextWorkingDay` occurrences walk, rule by rule, each to the first day after it that is
+ *    neither a weekend day nor a holiday placed so far. A walk never lands on another holiday.
+ *
+ * The days pass 2 closes are those of linear probing, which do not depend on the order of the
+ * walks (Knuth, *TAOCP* vol. 3, §6.4). Only which walk takes which day does, and so the length
+ * of each shift: rules walk in list order, which a shift over 31 days can expose only through a
+ * run of 31 closed days. A rule's own occurrences are at least 353 days apart, so its walks never
+ * meet and one calendar per walking rule serves all its years.
  *
  * Margin. Years `to + 1` are expanded after the window: walks only move forward, and
  * `previous`/`next` shifts never read the calendar. Before the window `M` years are expanded,
  * `M = max(1, ceil(31 * (K + 1) / 365))` with `K` the rules that read the calendar. Each such
- * rule can push a changed day at most 31 days later, so a change that starts in year
+ * rule walks once, against the days placed before it, so it can push a changed day at most 31
+ * days later, once; a change that starts in year
  * `from - M - 1` (never expanded) moves at most 31 * (K + 1) days, which stays before `from`
  * while `31 * (K + 1) <= 365 * M`. `M` is 1 for ten rules or fewer. In a margin year an observed
  * day outside Temporal's range is dropped, since it could never fall in the window.
  *
- * Loop bound: rules x at most 400 + M + 1 years, plus one rebuild of the calendar per rule that
- * uses `nextWorkingDay` (and only when holidays were added since the last).
+ * Loop bound: rules x at most 400 + M + 1 years, plus one calendar per rule that uses
+ * `nextWorkingDay`.
  */
 export function buildHolidayEpochDays(
   rules: readonly ResolvedHolidayRule[],
@@ -524,40 +559,72 @@ export function buildHolidayEpochDays(
   );
   const firstYear = Math.max(from - margin, MIN_YEAR);
   const lastYear = Math.min(to + 1, MAX_YEAR);
-  const accumulated: number[] = [];
-  let resolved: ResolvedBusinessCalendar | null = null;
-  let dirty = true;
+  const placed: number[] = [];
+  const walking: WalkingRule[] = [];
 
   for (const rule of rules) {
-    if (dirty && ruleNeedsCalendar(rule)) {
-      resolved = resolveParts(
-        weekend,
-        sortedUnique(Int32Array.from(accumulated)),
-      );
-      dirty = false;
-    }
+    const policy = policyOf(rule);
+    const pending: PendingWalks[] = [];
 
     for (let year = firstYear; year <= lastYear; year++) {
-      const days = holidayEpochDays(
-        rule,
-        year,
-        resolved,
+      const found = occurrencesInYear(rule, year);
+      const inMargin = year < from || year > to;
+
+      if (policy === null) {
+        placed.push(...found);
+        continue;
+      }
+
+      const moved = observedDays(
+        found.filter((day) => !walksOn(policy, day)),
+        policy,
+        null,
         MAX_SHIFT_DAYS,
-        year < from || year > to,
+        inMargin,
       );
 
-      if (days === null) {
+      if (moved === null) {
         return null;
       }
 
-      for (const day of days) {
-        accumulated.push(day);
-        dirty = true;
+      placed.push(...moved);
+
+      const walks = found.filter((day) => walksOn(policy, day));
+
+      if (walks.length > 0) {
+        pending.push({ days: walks, margin: inMargin });
       }
+    }
+
+    if (policy !== null && pending.length > 0) {
+      walking.push({ policy, years: pending });
     }
   }
 
-  const all = sortedUnique(Int32Array.from(accumulated));
+  for (const { policy, years } of walking) {
+    const calendar = resolveParts(
+      weekend,
+      sortedUnique(Int32Array.from(placed)),
+    );
+
+    for (const { days, margin: inMargin } of years) {
+      const walked = observedDays(
+        days,
+        policy,
+        calendar,
+        MAX_SHIFT_DAYS,
+        inMargin,
+      );
+
+      if (walked === null) {
+        return null;
+      }
+
+      placed.push(...walked);
+    }
+  }
+
+  const all = sortedUnique(Int32Array.from(placed));
 
   return all.subarray(
     lowerBound(all, windowFirst),

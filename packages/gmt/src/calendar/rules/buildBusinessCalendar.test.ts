@@ -156,7 +156,8 @@ describe("buildBusinessCalendar", () => {
     });
   });
 
-  describe("list order and the calendar so far", () => {
+  // 2022-12-25 is a Sunday and 2022-12-26 a Monday; 2021-12-27 is a Monday.
+  describe("rule order does not change the result", () => {
     const christmas: HolidayRule[] = [
       { name: "a", kind: "fixed", month: 12, day: 25, observed: NEXT_WORKING },
       { name: "b", kind: "fixed", month: 12, day: 26, observed: NEXT_WORKING },
@@ -173,14 +174,26 @@ describe("buildBusinessCalendar", () => {
       kind: "dates",
       dates: ["2021-12-27"],
     };
+    const sunday26ToMonday: HolidayRule = {
+      name: "C",
+      kind: "fixed",
+      month: 12,
+      day: 26,
+      observed: { 7: { next: 1 } },
+    };
 
     it.each`
-      label                                  | rules                   | expected
-      ${"Saturday 25 and Sunday 26, 2021"}   | ${christmas}            | ${["2021-12-27", "2021-12-28"]}
-      ${"shift first, then the closing day"} | ${[sunday26, monday27]} | ${["2021-12-27"]}
-      ${"closing day first, then the shift"} | ${[monday27, sunday26]} | ${["2021-12-27", "2021-12-28"]}
-    `("$label gives $expected", ({ rules, expected }) => {
-      expect(buildBusinessCalendar(spec(rules, 2021, 2021))?.holidays).toEqual(
+      label                                      | rules                               | year    | expected
+      ${"Saturday 25 and Sunday 26, 2021"}       | ${christmas}                        | ${2021} | ${["2021-12-27", "2021-12-28"]}
+      ${"Sunday 26 and Saturday 25, 2021"}       | ${[christmas[1], christmas[0]]}     | ${2021} | ${["2021-12-27", "2021-12-28"]}
+      ${"Sunday 25 and Monday 26, 2022"}         | ${christmas}                        | ${2022} | ${["2022-12-26", "2022-12-27"]}
+      ${"Monday 26 and Sunday 25, 2022"}         | ${[christmas[1], christmas[0]]}     | ${2022} | ${["2022-12-26", "2022-12-27"]}
+      ${"shift first, then the closing day"}     | ${[sunday26, monday27]}             | ${2021} | ${["2021-12-27", "2021-12-28"]}
+      ${"closing day first, then the shift"}     | ${[monday27, sunday26]}             | ${2021} | ${["2021-12-27", "2021-12-28"]}
+      ${"walk first, then a next-Monday move"}   | ${[christmas[0], sunday26ToMonday]} | ${2021} | ${["2021-12-27", "2021-12-28"]}
+      ${"next-Monday move first, then the walk"} | ${[sunday26ToMonday, christmas[0]]} | ${2021} | ${["2021-12-27", "2021-12-28"]}
+    `("$label gives $expected", ({ rules, year, expected }) => {
+      expect(buildBusinessCalendar(spec(rules, year, year))?.holidays).toEqual(
         expected,
       );
     });
@@ -545,13 +558,15 @@ describe("buildBusinessCalendar", () => {
       return [
         { name: "closed", kind: "dates", dates: closed },
         { name: "last", kind: "fixed", month: 12, day: 31, observed: ALL_DAYS },
-        ...origins.slice(0, -1).map((origin, index): HolidayRule => ({
-          name: `walk ${index}`,
-          kind: "fixed",
-          month: origin.month,
-          day: origin.day,
-          observed: ALL_DAYS,
-        })),
+        ...origins.slice(0, -1).map(
+          (origin, index): HolidayRule => ({
+            name: `walk ${index}`,
+            kind: "fixed",
+            month: origin.month,
+            day: origin.day,
+            observed: ALL_DAYS,
+          }),
+        ),
       ];
     }
 
@@ -579,13 +594,15 @@ describe("buildBusinessCalendar", () => {
     it("gives 2027 the same holidays from a one-year and a longer window (10 calendar rules)", () => {
       const rules: HolidayRule[] = [
         { name: "closed", kind: "dates", dates: ["2026-12-28", "2026-12-29"] },
-        ...[20, 21, 22, 23, 24, 25, 26, 27, 28, 29].map((day): HolidayRule => ({
-          name: `walk ${day}`,
-          kind: "fixed",
-          month: 12,
-          day,
-          observed: ALL_DAYS,
-        })),
+        ...[20, 21, 22, 23, 24, 25, 26, 27, 28, 29].map(
+          (day): HolidayRule => ({
+            name: `walk ${day}`,
+            kind: "fixed",
+            month: 12,
+            day,
+            observed: ALL_DAYS,
+          }),
+        ),
       ];
       const wide = inYear(rules, 2020, 2027, "2027");
 
@@ -623,6 +640,31 @@ describe("buildBusinessCalendar", () => {
             spec([{ name: "x", ...rule } as HolidayRule], year, year),
           ),
         ).toBeNull();
+      },
+    );
+
+    // The margin years reach a calendar year a limit cuts, which keeps its dates inside the range.
+    // The dates are `holidayDates`' range-edge rows, from Reingold & Dershowitz's arithmetic.
+    it.each`
+      calendar           | monthCode | day   | year       | expected
+      ${"islamic-civil"} | ${"M01"}  | ${1}  | ${-271820} | ${["-271820-01-20"]}
+      ${"persian"}       | ${"M01"}  | ${1}  | ${-271820} | ${["-271820-04-10"]}
+      ${"ethiopic"}      | ${"M01"}  | ${1}  | ${-271820} | ${["-271820-01-27"]}
+      ${"hebrew"}        | ${"M09"}  | ${15} | ${275759}  | ${["+275759-08-31"]}
+    `(
+      "calendarFixed $calendar $monthCode day $day in $year gives $expected",
+      ({ calendar, monthCode, day, year, expected }) => {
+        const rule: HolidayRule = {
+          name: "x",
+          kind: "calendarFixed",
+          calendar,
+          monthCode,
+          day,
+        };
+
+        expect(
+          buildBusinessCalendar(spec([rule], year, year))?.holidays,
+        ).toEqual(expected);
       },
     );
 

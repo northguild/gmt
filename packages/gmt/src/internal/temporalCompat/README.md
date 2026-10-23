@@ -77,8 +77,9 @@ live in `nonIsoArithmetic.ts`, over an integer model:
 - `hebrewArithmeticModel` and `indianArithmeticModel` answer from the owned arithmetic.
 
 Month code + day → ISO (`calendarDateFromMonthCode`, CORE-54): the date of a month code and day in a
-calendar year, `null` when that year lacks the month (hebrew `M05L`) or the month lacks the day, a
-`RangeError` when the calendar cannot be read or the date is out of range. It adds no workaround of
+calendar year, `null` when that year lacks the month (hebrew `M05L`) or the month lacks the day, and
+for a date beyond a range limit in the calendar year that limit cuts; a `RangeError` when the
+calendar cannot be read or the whole calendar year is out of range. It adds no workaround of
 its own: it runs `monthOrdinal`, `daysInMonth` and `toDate` of `arithmeticModelFor(calendarId)` (the
 owned Hebrew or Indian model where its read correction is active, else `readArithmeticModel`), so it
 is correct exactly where those are and needs no probe. Used by `internal/holidayRules.ts`.

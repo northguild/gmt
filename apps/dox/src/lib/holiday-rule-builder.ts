@@ -27,7 +27,12 @@ import {
   parseRuleLines,
 } from "./holiday-codec";
 import type { HolidayLib } from "./holiday-lib";
-import { monthName, weekdayShort, type RulePair } from "./holiday-widgets";
+import {
+  monthName,
+  weekdayShort,
+  withoutWalks,
+  type RulePair,
+} from "./holiday-widgets";
 import { encodeWidgetPermalink } from "./widget-permalink";
 
 export type RuleKind = HolidayRule["kind"];
@@ -177,7 +182,9 @@ export function rowOfRule(rule: HolidayRule): RowState | null {
   if (typeof rule !== "object" || rule === null) return null;
   const base = blankRow();
   const name = typeof rule.name === "string" ? rule.name : "";
-  const text = (v: unknown) => (v === undefined || v === null ? "" : String(v));
+  // A blank field is `NaN` in the rule (`ruleOfRow`), and blank again here.
+  const text = (v: unknown) =>
+    v === undefined || v === null || Number.isNaN(v) ? "" : String(v);
   const policy = (observed: ObservancePolicy | undefined) =>
     observed === undefined ? "" : formatPolicyText(observed);
   switch (rule.kind) {
@@ -263,7 +270,7 @@ export const BUILDER_PRESETS: readonly BuilderPreset[] = [
     id: "chain",
     label: "Two adjacent holidays, next working day",
     description:
-      "Two holidays on 25 and 26 December 2021, a Saturday and a Sunday, each moved to the next working day. The first takes Monday and the second takes Tuesday, because the calendar so far already closes Monday.",
+      "Two holidays on 25 and 26 December 2021, a Saturday and a Sunday, each moved to the next working day. The first walks to Monday and the second to Tuesday, because each walk passes the days the rules above it closed.",
     year: 2021,
     weekend: [6, 7],
     zone: "Europe/London",
@@ -722,16 +729,19 @@ export function ruleCallLines(
       `${i + 1}. holidayDates(${literal(plain)}, ${year}) // ${literal(dates)}`,
     ];
     if ("observed" in rule && rule.observed !== undefined) {
-      // A rule's shift sees the calendar the rules before it build.
-      const sofar = i === 0 ? "" : `, calendarBefore`;
+      // A shift that walks reads a calendar; every other shift reads none.
       for (const p of pairs) {
         lines.push(
-          `   observedDate(${literal(p.unshifted)}, ${literal(rule.observed)}${sofar}) // ${literal(p.observed)}`,
+          p.walks
+            ? `   observedDate(${literal(p.unshifted)}, ${literal(rule.observed)}, calendar) // ${literal(p.observed)}`
+            : `   observedDate(${literal(p.unshifted)}, ${literal(withoutWalks(rule.observed))}) // ${literal(p.observed)}`,
         );
       }
-      if (i > 0) {
+      if (pairs.some((p) => p.walks)) {
         lines.push(
-          `   // calendarBefore: buildBusinessCalendar over rules 1 to ${i}`,
+          i === 0
+            ? `   // calendar: the weekend and every holiday that does not walk`
+            : `   // calendar: the weekend, every holiday that does not walk, and the walks of rules 1 to ${i}`,
         );
       }
     }
@@ -742,7 +752,7 @@ export function ruleCallLines(
 /**
  * The most occurrences a rule can put in `pairs` for one ISO year, from the
  * rule's own shape and the library's documented behaviour (`holidayDates`:
- * "a rule gives 0, 1 or 2 dates"):
+ * "a `calendarFixed` rule 0, 1 or 2"):
  * - `fixed`, `nthWeekday`, `easterRelative`: one date a year;
  * - `calendarFixed`: two (a lunar calendar's day can fall twice in a year);
  * - `dates`: as many as the rule lists.
@@ -776,14 +786,22 @@ export function ruleCallSizerText(rules: readonly HolidayRule[]): string {
   const outside = `${year + 1}-12-31`;
   const pairs = rules.map((rule) => {
     const { inYear, across } = pairBound(rule);
+    // A pair that walks prints the longer call and the calendar's line.
+    const walks =
+      "observed" in rule &&
+      typeof rule.observed === "object" &&
+      rule.observed !== null &&
+      Object.values(rule.observed).includes("nextWorkingDay");
     return [
       ...Array.from({ length: inYear }, () => ({
         unshifted: inside,
         observed: inside,
+        walks,
       })),
       ...Array.from({ length: across }, () => ({
         unshifted: outside,
         observed: inside,
+        walks,
       })),
     ];
   });

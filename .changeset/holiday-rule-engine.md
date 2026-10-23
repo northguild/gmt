@@ -31,6 +31,6 @@ buildBusinessCalendar({
 }); // { weekend: [6, 7], holidays: ["2021-12-27", "2021-12-28"], timeZone: "UTC" }
 ```
 
-Rules expand in list order, and each `"nextWorkingDay"` shift sees the calendar built so far. A moved holiday closes only the date it moved to; list the rule twice, once without `observed`, to close both. A date a year lacks, such as 29 February, is skipped and never clamped. Bad input gives `""` (the date functions), `[]` (`holidayDates`) or `null` (`buildBusinessCalendar`).
+A `"nextWorkingDay"` shift walks past the weekend, every holiday that does not walk and the walks of the rules above it. The days that close do not depend on the rule order; the order decides only which holiday takes which day. A moved holiday closes only the date it moved to; list the rule twice, once without `observed`, to close both. A date a year lacks, such as 29 February, is skipped and never clamped. Bad input gives `""` (the date functions), `[]` (`holidayDates`) or `null` (`buildBusinessCalendar`).
 
 The docs add the Holiday Rule Builder, Observance Comparator and Moving Feasts tools, and a section in the business calendars guide.

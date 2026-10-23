@@ -140,9 +140,11 @@ names where the holiday moves, to a given weekday before or after, or to the nex
 day. **Observance has no default.** A rule with no policy closes its own date, and the
 library never fills one in for you.
 
-Rules apply in list order, and each shift sees the calendar built so far. Two holidays on
-a Saturday and a Sunday, each moved to the next working day, close Monday and then
-Tuesday, because the second one finds Monday already closed.
+A `"nextWorkingDay"` shift walks past every closed day: the weekend, every holiday that
+does not walk, and the walks of the rules above it. Two holidays on a Saturday and a
+Sunday, each moved to the next working day, close Monday and then Tuesday, because the
+second one finds Monday already closed. The order of the rules decides only which holiday
+takes which day; the days that close are the same in any order.
 
 ```typescript
 import { buildBusinessCalendar } from "@northguild/gmt";
@@ -158,7 +160,7 @@ buildBusinessCalendar({
     { name: "b", kind: "fixed", month: 12, day: 26, observed: nextWorking },
   ],
 })?.holidays;
-// ["2021-12-27", "2021-12-28"] — the second shift sees the first
+// ["2021-12-27", "2021-12-28"] — the second shift passes the first, in either order
 ```
 
 **A moved holiday closes one day.** The calendar closes the observed date, not the date the
