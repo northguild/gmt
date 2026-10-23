@@ -2212,6 +2212,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - The CLI rewrites imports from `components.json`, so the repo keeps its `~/` alias and
     has no `@/`.
   - Streamdown renders replies. Code blocks keep copy and drop download.
+  - The maths plugin needs KaTeX's stylesheet; `message.tsx` imports `katex/dist/katex.min.css`
+    so it loads with the island only. Without it formulas render twice and `\sqrt` svgs overflow.
 - **Tailwind v4** exists only in the island. See [reference/design-system.md](reference/design-system.md).
 - **Worker (`apps/dox/worker/`):** `POST /gmt/api/chat`, `GET /gmt/api/brains`; everything else goes
   to `ASSETS`.
@@ -2690,7 +2692,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   Re-run the `rsync` and the site build of `$SP/after` after any change. Firefox does not
   launch on the author's machine; record it as blocked and do not bypass the sandbox.
 - **Local dev:** `pnpm dox:dev` (site + chat Worker) or `pnpm dox:dev:site` (site only), both at `http://localhost:4321/gmt/`.
-  A warm start is ~10 s: the gmt build is incremental (`build:dev`), every `generate` step
+  A warm start is ~10 s: the gmt dev build (`build:dev`) rebuilds `dist/` in place in ~5 s, every `generate` step
   skips when its inputs are unchanged, and `upstream refresh` makes no network calls
   while its live file is under 6 h old (`UPSTREAM_REFRESH=force`). No site build is
   needed — the Worker reads `/gmt/retrieval-chunks.json` from `astro dev` through

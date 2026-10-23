@@ -18,3 +18,10 @@ packageExtensions:
   '@astrojs/mdx':
     dependencies:
       satteri: '^0.10.3'
+overrides:
+  # GHSA-238p-pmpm-9mq7 is fixed in katex 0.18.2, but `mermaid` 11, `@streamdown/math`,
+  # `rehype-katex` and `micromark-extension-math` still ask for `^0.16`. The selector matches
+  # only versions below the fix, so the override goes dormant on its own once upstream moves.
+  # Delete it once `pnpm why katex` shows nothing asking for a version below 0.18.2 (see
+  # vercel/streamdown#655).
+  'katex@<0.18.2': 0.18.2
