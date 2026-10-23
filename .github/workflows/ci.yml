@@ -287,7 +287,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: packages/gmt/dist
-          key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json') }}
+          key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json', 'pnpm-lock.yaml') }}
 
       - name: Build, lint, typecheck
         run: |
@@ -362,7 +362,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: packages/gmt/dist
-          key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json') }}
+          key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json', 'pnpm-lock.yaml') }}
 
       - name: Build @northguild/gmt
         if: steps.check-non-gmt.outputs.run_tests == 'true' && steps.cache-gmt-dist.outputs.cache-hit != 'true'
