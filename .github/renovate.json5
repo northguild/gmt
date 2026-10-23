@@ -4,7 +4,7 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
     "config:recommended",
-    // One weekly PR for every minor and patch update. Majors get a PR each.
+    // One weekly PR for minor and patch updates outside the groups below. Majors get a PR each.
     "group:allNonMajor",
     "schedule:weekly",
     ":maintainLockFilesWeekly",
@@ -18,27 +18,35 @@
   vulnerabilityAlerts: {
     minimumReleaseAge: "1 day",
   },
+  // `group:allNonMajor` sets `groupSlug: "all-minor-patch"`, and Renovate names a group's branch
+  // after its slug. Each group below sets its own slug, or its minor and patch updates would land
+  // on the weekly branch.
   packageRules: [
     {
       groupName: "Astro",
+      groupSlug: "astro",
       matchPackageNames: ["astro", "@astrojs/**"],
     },
     {
       groupName: "Vitest",
+      groupSlug: "vitest",
       matchPackageNames: ["vitest", "@vitest/**"],
     },
     {
       groupName: "Playwright",
+      groupSlug: "playwright",
       matchPackageNames: ["playwright", "@playwright/**"],
     },
     {
       groupName: "wrangler",
+      groupSlug: "wrangler",
       matchPackageNames: ["wrangler"],
     },
     // These change what a published package ships, so the PR needs a changeset, which a
     // person adds. Kept apart so the weekly group passes CI on its own.
     {
       groupName: "published package dependencies",
+      groupSlug: "published-deps",
       matchFileNames: [
         "packages/gmt/package.json",
         "packages/gmt-biome/package.json",
