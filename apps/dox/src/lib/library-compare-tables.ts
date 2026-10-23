@@ -16,6 +16,7 @@ import {
   gmtLibraryComparison,
   type LibraryComparison,
 } from "../data/library-comparison";
+import { escapeHtml, inlineCodeHtml } from "./inline-code-html";
 
 /** One table cell: plain text, optionally set in code or linked. */
 export interface Cell {
@@ -36,30 +37,6 @@ export type CompareTableId = "overview" | "measured" | "differs" | "covers";
 
 /** Tables whose first column is a sentence, not a short name, so it must wrap. */
 export const PROSE_TABLES: readonly CompareTableId[] = ["covers", "differs"];
-
-const escapeHtml = (text: string): string =>
-  text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
-/**
- * A string that marks inline code with backticks, as HTML: each `` `span` `` becomes
- * `<code>`, and everything else is escaped. The text surfaces keep the backticks, which are
- * Markdown there.
- */
-export function inlineCodeHtml(text: string): string {
-  return text
-    .split(/(`[^`]*`)/)
-    .map((part) =>
-      part.length > 1 && part.startsWith("`") && part.endsWith("`")
-        ? `<code>${escapeHtml(part.slice(1, -1))}</code>`
-        : escapeHtml(part),
-    )
-    .join("");
-}
 
 /** One table cell as HTML. */
 export function cellHtml(cell: Cell): string {

@@ -248,17 +248,17 @@ export interface MinuteOrMonthSeed {
   note: string;
 }
 
-/** The seven rows, in order. Each note cites its rule from the grammar's JSDoc. */
+/** The seven rows, in order. */
 export const MINUTE_OR_MONTH_ROWS: readonly MinuteOrMonthSeed[] = [
   {
     written: "1m",
     unit: "minute",
-    note: "`m` is a minute (G8).",
+    note: "`m` is a minute.",
   },
   {
     written: "1M",
     unit: "minute",
-    note: "`M` is a minute too: spellings ignore case (G8).",
+    note: "`M` is a minute too: spellings ignore case.",
   },
   {
     written: "1min",
@@ -268,7 +268,7 @@ export const MINUTE_OR_MONTH_ROWS: readonly MinuteOrMonthSeed[] = [
   {
     written: "1mo",
     unit: "month",
-    note: "`mo` is the only month spelling.",
+    note: "`mo` is the short spelling of a month; `m` is a minute.",
   },
   {
     written: "1 month",
@@ -278,7 +278,7 @@ export const MINUTE_OR_MONTH_ROWS: readonly MinuteOrMonthSeed[] = [
   {
     written: "500ms",
     unit: "millisecond",
-    note: "`ms` is a millisecond; it joins the seconds when written out (G5).",
+    note: "`ms` is a millisecond; it joins the seconds when written out.",
   },
   {
     written: "P1M",

@@ -17,6 +17,7 @@
 import { codeFrameHtml } from "./code-frame";
 import { CONVERTER_LOCALES } from "./curated-timezones";
 import { renderCallResults, renderCalls } from "./edi-render";
+import { inlineCodeHtml } from "./inline-code-html";
 import { callSizer, holdHtml, outputSizer } from "./edi-picture";
 import { loadDurationBenchLib } from "./duration-bench-lib";
 import type { DurationBenchLib } from "./duration-bench-lib";
@@ -59,16 +60,6 @@ export const RESULT_NO_SIGNAL = "⟨ NO SIGNAL — invalid input ⟩";
 export const NOT_CALLED_TEXT = "not called";
 export const SAME_DURATION_TEXT = "returns the same duration";
 export const DIFFERENT_DURATION_TEXT = "returns a different duration";
-
-/** Text with `backtick` spans as `<code>`, everything else escaped. */
-function codeText(text: string): string {
-  return text
-    .split("`")
-    .map((part, i) =>
-      i % 2 === 1 ? `<code>${escapeHtml(part)}</code>` : escapeHtml(part),
-    )
-    .join("");
-}
 
 /** A cell's sentinel, which is amber and bracketed, never a blank. */
 const signalLost = (): string =>
@@ -189,7 +180,7 @@ function tableBHtml(): string {
     `</tr></thead>` +
     `<tbody data-role="rows-laytime"></tbody>` +
     `</table></div>` +
-    `<p class="gmt-widget-hint gmt-dbench-laytime-note"><a href="${escapeAttr(BIMCO_URL)}" rel="noopener">${escapeHtml(LAYTIME_NOTE.link)}</a>${codeText(LAYTIME_NOTE.rest)}</p>`
+    `<p class="gmt-widget-hint gmt-dbench-laytime-note"><a href="${escapeAttr(BIMCO_URL)}" rel="noopener">${escapeHtml(LAYTIME_NOTE.link)}</a>${inlineCodeHtml(LAYTIME_NOTE.rest)}</p>`
   );
 }
 
@@ -327,7 +318,7 @@ function minuteRowsHtml(lib: DurationBenchLib, locale: string): string {
     .map(
       (r, i) =>
         `<tr class="gmt-dbench-row" data-row="${i}">` +
-        `<td data-label="Written"><code class="gmt-dbench-written">${escapeHtml(r.written)}</code><p class="gmt-dbench-rownote">${codeText(r.note)}</p></td>` +
+        `<td data-label="Written"><code class="gmt-dbench-written">${escapeHtml(r.written)}</code><p class="gmt-dbench-rownote">${inlineCodeHtml(r.note)}</p></td>` +
         `<td data-label="parseHumanDuration">${resultHtml(r.human)}</td>` +
         `<td data-label="parseDuration">${resultHtml(r.iso)}</td>` +
         `<td data-label="Unit">${r.unitFound === null ? signalLost() : escapeHtml(r.unitFound)}</td>` +
@@ -381,7 +372,12 @@ function drawWords(
 // Wiring
 // ---------------------------------------------------------------------------
 
-function setupWidget(root: HTMLElement, lib: DurationBenchLib) {
+/** Wire the widget and draw it once, with `initial` applied first when given. */
+function setupWidget(
+  root: HTMLElement,
+  lib: DurationBenchLib,
+  initial?: BenchState,
+) {
   const text = root.querySelector<HTMLInputElement>('[data-role="text"]')!;
   const locale = root.querySelector<HTMLSelectElement>('[data-role="locale"]')!;
 
@@ -431,9 +427,10 @@ function setupWidget(root: HTMLElement, lib: DurationBenchLib) {
   });
   wireCopyButtons(root);
 
+  if (initial) apply(initial);
   drawTables();
   render();
-  return { readState, apply, render, drawTables };
+  return { readState };
 }
 
 export const mountDurationParserBench: MountFn<
@@ -448,12 +445,8 @@ export const mountDurationParserBench: MountFn<
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  const widget = setupWidget(root, lib);
-  if (args.text !== undefined || args.locale !== undefined) {
-    widget.apply(readArgs(args));
-    widget.drawTables();
-    widget.render();
-  }
+  const seeded = args.text !== undefined || args.locale !== undefined;
+  const widget = setupWidget(root, lib, seeded ? readArgs(args) : undefined);
 
   return onceDestroy(
     () => {},

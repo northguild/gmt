@@ -12,6 +12,7 @@
  * longer exports, becomes a `WidgetLoadError` rather than a dead control.
  */
 import { GMT_MODULES } from "./gmt-modules";
+import { pickFunctions } from "./gmt-pick";
 import { WidgetLoadError } from "./widget-mount";
 
 /** The functions the bench calls, as the library declares them. */
@@ -28,18 +29,6 @@ export interface DurationBenchLib {
   ): number | null;
 }
 
-/** Reads each name from a module, and fails loudly on a name it lacks. */
-function pick(module: Record<string, unknown>, names: readonly string[]) {
-  return Object.fromEntries(
-    names.map((name) => {
-      if (typeof module[name] !== "function") {
-        throw new Error(`The library module has no ${name}.`);
-      }
-      return [name, module[name]];
-    }),
-  );
-}
-
 export async function loadDurationBenchLib(): Promise<DurationBenchLib> {
   try {
     const [parse, format, calculate] = await Promise.all([
@@ -48,9 +37,9 @@ export async function loadDurationBenchLib(): Promise<DurationBenchLib> {
       GMT_MODULES["duration/calculate"](),
     ]);
     return {
-      ...pick(parse, ["parseHumanDuration", "parseDuration"]),
-      ...pick(format, ["formatHumanDuration", "formatDuration"]),
-      ...pick(calculate, ["getDurationUnit", "totalDuration"]),
+      ...pickFunctions(parse, ["parseHumanDuration", "parseDuration"]),
+      ...pickFunctions(format, ["formatHumanDuration", "formatDuration"]),
+      ...pickFunctions(calculate, ["getDurationUnit", "totalDuration"]),
     } as unknown as DurationBenchLib;
   } catch (cause) {
     // Loud, not inert: the host decides what to show (see `WidgetLoadError`).

@@ -50,6 +50,13 @@ describe("prefixMarkdownLinks", () => {
     expect(prefixMarkdownLinks(md)).toBe(md);
   });
 
+  it("keeps rewriting after a closed fence when an unclosed one follows", () => {
+    const md = "```md\n[a](/x)\n```\n\n```\n[b](/y)\n";
+    expect(prefixMarkdownLinks(md)).toBe(
+      "```md\n[a](/x)\n```\n\n```\n[b](/gmt/y)\n",
+    );
+  });
+
   it("leaves an inline code span unchanged", () => {
     const md = "write `[a](/x)` then [b](/y)";
     expect(prefixMarkdownLinks(md)).toBe("write `[a](/x)` then [b](/gmt/y)");

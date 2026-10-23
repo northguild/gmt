@@ -76,16 +76,29 @@ export const HUMAN_DURATION_UNITS: readonly HumanDurationUnit[] = [
   },
 ];
 
+/** Every spelling in the table, longest first so `ms` beats `m` (G1), escaped and joined with `|`. */
+const HUMAN_DURATION_SPELLINGS: string = HUMAN_DURATION_UNITS.flatMap(
+  (unit) => unit.spellings,
+)
+  .sort((a, b) =>
+    a.length !== b.length ? b.length - a.length : a < b ? -1 : 1,
+  )
+  .map((spelling) => spelling.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  .join("|");
+
 /**
  * One `number unit` pair. Groups: 1 integer digits, 2 fraction digits (1 to 9), 3 unit spelling.
- * Spellings are the table's, longest first so `ms` beats `m` (G1); no ASCII letter may follow the
- * unit. Flags `i` and `y` only: no `u` or `v`, so the unit letters and the `[a-z]` look-ahead stay
- * ASCII-only (under `iu` they would match U+017F and U+212A) (G7). `\d` is ASCII either way.
+ * The spellings are built from `HUMAN_DURATION_UNITS` when the module loads; no ASCII letter may
+ * follow the unit. Flags `i` and `y` only: no `u` or `v`, so the unit letters and the `[a-z]`
+ * look-ahead stay ASCII-only (under `iu` they would match U+017F and U+212A) (G7). `\d` is ASCII
+ * either way.
  *
  * Sticky and shared: every caller must set `lastIndex` before `exec` or `test`.
  */
-export const HUMAN_DURATION_PAIR: RegExp =
-  /(\d+)(?:\.(\d{1,9}))? *(milliseconds|millisecond|minutes|seconds|minute|months|second|hours|month|weeks|years|days|hour|mins|secs|week|year|day|hrs|min|sec|wks|yrs|hr|mo|ms|wk|yr|d|h|m|s|w|y)(?![a-z])/iy;
+export const HUMAN_DURATION_PAIR: RegExp = new RegExp(
+  `(\\d+)(?:\\.(\\d{1,9}))? *(${HUMAN_DURATION_SPELLINGS})(?![a-z])`,
+  "iy",
+);
 
 /** The separator between pairs, tried in this order; no match is the empty separator. */
 const HUMAN_DURATION_SEPARATOR: RegExp = /,? +and +| +|, */iy;

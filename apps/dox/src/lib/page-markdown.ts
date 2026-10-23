@@ -63,9 +63,7 @@ function outsideFences(
 ): string {
   return body
     .split(/(^[ \t]*```[\s\S]*?^[ \t]*```)/m)
-    .map((part) =>
-      part.trimStart().startsWith("```") ? part : transform(part),
-    )
+    .map((part, i) => (i % 2 === 1 ? part : transform(part)))
     .join("");
 }
 
