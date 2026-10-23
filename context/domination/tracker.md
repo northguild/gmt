@@ -162,6 +162,7 @@ with the `Position` type, ahead of the remaining realms.
 | 78  | SPA-53  | Space      | Mars solar time (MSD, AMT, LMST)                                                    | SPA-47, SPA-49, SPA-74  | #234  | —       | Not started |
 | 79  | SPA-75  | Space      | Solar events: sunrise, sunset,<br>twilight, solar position                          | CORE-79, SPA-47, SPA-49 | #277  | Cut     | Not started |
 | 80  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | CORE-89                 | #341  | —       | Waiting     |
+| 81  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | CORE-89                 | #353  | —       | Waiting     |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm
@@ -198,6 +199,8 @@ adds the Canada 2026 clock-change checker to Dox; it follows `CORE-83`, whose `c
 cron, whose ordinal `BYDAY` is `CORE-54`'s first use) and `CORE-85` (human durations) are the
 second release. Every realm after them can draw on all eight. `CORE-90`, a United States checker,
 waits at the end of the table until permanent daylight time is law and a tzdb release models it.
+`CORE-91` waits until 1 November 2026 has passed, then leaves only the past tense on the Canada
+checker.
 
 **Demurrage comes straight after `TRAN-8`.** `INT-12` is the first consumer of
 `dwellTime.calendarDays`, and `INT-58` adds the billing deadline chain, every window a caller
