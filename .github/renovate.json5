@@ -1,5 +1,6 @@
 // Renovate (the Mend Renovate GitHub App) keeps dependencies current and raises security fixes.
-// Dependabot can't: it supports pnpm 7 to 10, and this repo runs pnpm 12.
+// Use it instead of Dependabot version updates: running both opens two PRs for every bump. It reads GitHub's
+// vulnerability alerts for the security fixes, so keep those alerts on.
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
