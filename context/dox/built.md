@@ -84,12 +84,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `tsconfig.base.json` (whose `composite`, `emitDeclarationOnly` and `customConditions`
   are wrong for an app), and declares `engines.node >=22.12.0` — Astro 7's floor.
 - **Toolchain traps.**
-  - `pnpm` runs scripts and `pnpm exec` on the Node that `devEngines.runtime` pins (26.11 or
+  - `pnpm` runs scripts and `pnpm exec` on the Node that `devEngines.runtime` pins (26.12.1 or
     newer), whatever Node is on `PATH`. Only a bare `node` outside pnpm needs care: it follows
     the pin only when pnpm installed the global Node (`pnpm runtime set node 26 -g`).
     Otherwise use `pnpm exec node`, or on an `fnm` machine run
     `eval "$(fnm env)" && fnm use` first (`fnm use` alone is a silent no-op in a
-    non-interactive shell). `.node-version` still says `26` for tools that read it.
+    non-interactive shell). `.node-version` names `26.12.1` for tools that read it.
   - CI matrix jobs must keep running on the matrix Node: they install with `--no-runtime` and
     set `pnpm_config_verify_deps_before_run=false`. Without both, a later `pnpm run` reinstalls
     with the runtime and quietly switches the job to the pinned Node.

@@ -43,7 +43,7 @@ jobs:
     name: Build & deploy apps/dox
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The commit Release ran on, not whatever main is now; the schedule and
           # manual runs have no workflow_run, so they take main's head.
@@ -51,16 +51,15 @@ jobs:
           # Full history and every tag, so the build can read release tags.
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v6
+      # Pinned to a commit SHA, not the moving `v6` tag: this job holds
+      # CLOUDFLARE_API_TOKEN. Bump the pin deliberately, checking the diff.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           check-latest: true
           cache: pnpm
-
-      - name: Approve pnpm build scripts
-        run: pnpm approve-builds --all
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --no-runtime

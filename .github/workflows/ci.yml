@@ -35,7 +35,7 @@ jobs:
       dox_changed: ${{ steps.detect.outputs.dox_changed }}
       base: ${{ steps.detect.outputs.base }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -86,7 +86,7 @@ jobs:
     name: No machine trailers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -130,20 +130,17 @@ jobs:
     needs: determine-affected
     if: needs.determine-affected.outputs.any_changed == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           check-latest: true
           cache: pnpm
-
-      - name: Approve pnpm build scripts
-        run: pnpm approve-builds --all
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --no-runtime
@@ -248,13 +245,13 @@ jobs:
       matrix:
         node-version: [22, 24, 26]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
           check-latest: true
@@ -262,9 +259,6 @@ jobs:
 
       - name: Node and tzdata this job runs
         run: node -p "process.version+' tz '+process.versions.tz"
-
-      - name: Approve pnpm build scripts
-        run: pnpm approve-builds --all
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --no-runtime
@@ -284,7 +278,7 @@ jobs:
       # Lets the `tests` job (which needs a built @northguild/gmt to resolve
       # its dist-only exports) reuse this build instead of rebuilding gmt itself.
       - name: Cache @northguild/gmt dist
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: packages/gmt/dist
           key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json', 'pnpm-lock.yaml') }}
@@ -305,7 +299,7 @@ jobs:
         node-version: [22, 24, 26]
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -325,7 +319,7 @@ jobs:
       - uses: pnpm/action-setup@v6
         if: steps.check-non-gmt.outputs.run_tests == 'true'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.check-non-gmt.outputs.run_tests == 'true'
         with:
           node-version: ${{ matrix.node-version }}
@@ -335,10 +329,6 @@ jobs:
       - name: Node and tzdata this job runs
         if: steps.check-non-gmt.outputs.run_tests == 'true'
         run: node -p "process.version+' tz '+process.versions.tz"
-
-      - name: Approve pnpm build scripts
-        if: steps.check-non-gmt.outputs.run_tests == 'true'
-        run: pnpm approve-builds --all
 
       - name: Install dependencies
         if: steps.check-non-gmt.outputs.run_tests == 'true'
@@ -359,7 +349,7 @@ jobs:
       - name: Cache @northguild/gmt dist
         id: cache-gmt-dist
         if: steps.check-non-gmt.outputs.run_tests == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: packages/gmt/dist
           key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json', 'pnpm-lock.yaml') }}
@@ -388,7 +378,7 @@ jobs:
             find "$base" -maxdepth 2 -type d -name 'coverage' -exec cp -r {} artifact/ \; || true
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: steps.check-non-gmt.outputs.run_tests == 'true' && always()
         with:
           name: test-artifacts-${{ matrix.node-version }}
@@ -419,7 +409,7 @@ jobs:
     env:
       TZ: ${{ matrix.timezone }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -439,7 +429,7 @@ jobs:
       - uses: pnpm/action-setup@v6
         if: steps.check-gmt.outputs.gmt_changed == 'true'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.check-gmt.outputs.gmt_changed == 'true'
         with:
           node-version: ${{ matrix.node-version }}
@@ -449,10 +439,6 @@ jobs:
       - name: Node and tzdata this job runs
         if: steps.check-gmt.outputs.gmt_changed == 'true'
         run: node -p "process.version+' tz '+process.versions.tz"
-
-      - name: Approve pnpm build scripts
-        if: steps.check-gmt.outputs.gmt_changed == 'true'
-        run: pnpm approve-builds --all
 
       - name: Install dependencies
         if: steps.check-gmt.outputs.gmt_changed == 'true'
@@ -480,7 +466,7 @@ jobs:
           if [ -f packages/gmt/vitest-junit.xml ]; then cp packages/gmt/vitest-junit.xml artifact/ || true; fi
           if [ -d packages/gmt/coverage ]; then cp -r packages/gmt/coverage artifact/ || true; fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: steps.check-gmt.outputs.gmt_changed == 'true' && always()
         with:
           name: gmt-artifacts-${{ matrix.node-version }}-${{ matrix.timezone }}

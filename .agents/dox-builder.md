@@ -129,7 +129,7 @@ These bind every change.
   `fileURLToPath`-derived root, `readFileSync` + `JSON.parse`, hard-fail with a clear
   message on missing data. Follow its shape rather than inventing a new one.
 - `.github/workflows/ci.yml` is the precedent for any new workflow: `pnpm/action-setup@v6`
-  (no `version`: it reads `packageManager`), `actions/setup-node@v4` with `cache: pnpm`,
+  (no `version`: it reads `packageManager`), `actions/setup-node@v7` with `cache: pnpm`,
   `pnpm install --frozen-lockfile --no-runtime`, and the workflow-level
   `pnpm_config_verify_deps_before_run: "false"`, so the job runs the Node it names and not the
   `devEngines.runtime` pin. `pnpm run validate` is the build.
