@@ -110,6 +110,23 @@
       "state": "still-needed"
     },
     {
+      "defects": ["D16"],
+      "title": "D16 — formatRange drops O and long zone-name widths (ICU-20548)",
+      "trigger": "an ICU release that fixes ICU-20548 is bundled by GMT's engines.node floor (>=22.16.0) and every D16 repro passes; browsers are confirmed by the native suite",
+      "probes": 6,
+      "failing": 4,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D17"],
+      "title": "D17 — formatRange writes AM/PM for a flexible dayPeriod next to a timeZoneName (SpiderMonkey)",
+      "trigger": "the native suite shows Firefox passing every D17 repro (the range's dayPeriod parts equal the two single formats')",
+      "probes": 1,
+      "failing": 0,
+      "state": "out-of-scope",
+      "engines": ["firefox"]
+    },
+    {
       "defects": ["D9"],
       "title": "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
       "trigger": "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",

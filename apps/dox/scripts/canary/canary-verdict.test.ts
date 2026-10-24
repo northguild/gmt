@@ -29,7 +29,7 @@ const guard = {
 
 interface GroupInput {
   defects: string[];
-  state: "still-needed" | "removable" | "guard";
+  state: "still-needed" | "removable" | "guard" | "out-of-scope";
   guardLapsed?: boolean;
   withGuard?: boolean;
   probes?: number;
@@ -85,7 +85,27 @@ describe("compatCheckVerdict", () => {
       stillNeeded: 1,
       removable: 1,
       guard: 1,
+      outOfScope: 0,
     });
+  });
+
+  it("counts an engine-scoped group on another engine as out of scope, never removable", () => {
+    const scoped = group({ defects: ["D17"], state: "out-of-scope" });
+    scoped.workaround = { ...scoped.workaround, engines: ["firefox"] } as never;
+    const out = compatCheckVerdict({
+      runtime,
+      groups: [scoped],
+      snapshotCurrent: true,
+    });
+    expect(out.counts).toEqual({
+      workarounds: 1,
+      stillNeeded: 0,
+      removable: 0,
+      guard: 0,
+      outOfScope: 1,
+    });
+    expect(out.workarounds[0].state).toBe("out-of-scope");
+    expect(out.workarounds[0].engines).toEqual(["firefox"]);
   });
 
   it("joins a group's defects with + for its id, in script order", () => {

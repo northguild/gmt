@@ -11,7 +11,7 @@ tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) 
 > merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply; #3331 (J) is
 > closed as answered (the check is intended, see § J).
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
-> 18 workarounds, 17 still needed and 1 guard (D10). The newest are § I (D12), fixed on `main` with nothing
+> 20 workarounds, 18 still needed, 1 guard (D10) and 1 out of scope (D17, a Firefox-only defect, § Q; a Node run cannot judge it). The newest are § I (D12), fixed on `main` with nothing
 > to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
 > and § O (D15), not filed yet and not fixed on either `main`. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
@@ -29,6 +29,8 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D2`: buddhist dates before 1582 | js-temporal `2bb6ba1` | Nothing |
 | `D3`: Hebrew leap years for negative years | js-temporal `57d7734` (PR #361; `86a89df` on its branch) | `D4`. The two share one group and one code path, and leave together |
 | `D4`: Hebrew years 0 and earlier, one day off | ICU `5267bb5778` (unicode-org/icu, ICU-23007). Not a polyfill fix | An ICU4C release with that commit, and a Node release that bundles it as GMT's `engines.node` floor |
+| `D16`: `formatRange` cuts long zone names to short and drops offset names (V8, JSC; ICU-20548) | Not a polyfill fix. ICU-20548 is open | An ICU release that keeps `long`, `longGeneric`, `shortOffset` and `longOffset` in range output, in every engine GMT supports. `pnpm compat` decides: the `D16` probes must all pass on every supported engine |
+| `D17`: Firefox `formatRange` prints AM/PM for a day period with a zone name (§ Q) | Not a polyfill fix. A SpiderMonkey bug, not filed; draft for the owner | A Firefox release whose native-suite leg passes every `D17` repro |
 | `D5`: Indian calendar before ISO year 1 | js-temporal `8de299a` (PR #361; `b6c9844` on its branch) | Nothing |
 | `D6`: non-ISO `until` re-constrains the day | js-temporal `10aeb98` | `D7`. With `10aeb98` and `1c64f14` alone one Hebrew `until` by years is still wrong (Corrections, item 3) |
 | `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b), which is not on `main`. The `D7.leapMonthEnd` probe fails until it is |
@@ -2096,3 +2098,68 @@ while the `D15` probe fails. That is the exact reading, so removal changes no an
 `classifyStoredZoned` (its all-16-cells test now runs the `Z` rows) and `calendarSystemOfZonedValue`, which
 read with `ignore`. No public function takes a caller-chosen `offset` for a string it parses with
 `zonedDateTimeFrom` (`setZoned`, `cycleZoned` and the others parse their input with the default options).
+
+## P. SpiderMonkey accepts a zoned string whose local date is −271821-04-19 (Firefox only, engine)
+
+### Status
+
+**Open upstream** as https://bugzilla.mozilla.org/show_bug.cgi?id=1998020 ("Temporal: ZonedDateTime with
+out-of-range date should be rejected", NEW since 2025-11-03). A known departure from the spec, tracked as a bug (Mozilla's `jstests.list` says "Unclear if minimum limit is correct"), not a
+polyfill defect: `@js-temporal/polyfill` 0.5.1, Node 26 and Chromium 153 throw `RangeError`, as the spec and
+test262 require. Nothing to file. GMT makes no change: it follows the spec (see [J](#j-zoneddatetimeprototypetostring-writes-a-string-zoneddatetimefrom-refuses-tc39-only-spec)).
+
+### What goes wrong
+
+The `prefer` and `reject` branch of `InterpretISODateTimeOffset` runs `CheckISODaysRange` on the local
+date, which refuses −271821-04-19. SpiderMonkey runs `ISODateTimeWithinLimits` instead
+(`js/src/builtin/temporal/ZonedDateTime.cpp`), which accepts that date. So `from` (with `offset` set to
+`reject` or `prefer`), `round` and `with` return a `ZonedDateTime` the spec refuses. Mozilla skips eight test262 files in `js/src/tests/jstests.list`:
+`built-ins/Temporal/ZonedDateTime/{compare,from,equals,since,until}/argument-string-limits.js` and
+`built-ins/Temporal/Duration/{compare,total,round}/relativeto-string-limits.js`, with a
+comment that points at tc39/proposal-temporal#3014. The champions kept the check there (see J).
+
+### Repro (SpiderMonkey 155.0; the polyfill, Node 26 and Chromium 153 throw `RangeError`)
+
+`MIN` is `-8640000000000000000000n`, the first instant.
+
+| Call | SpiderMonkey 155.0 | Expected (spec) |
+| ---- | ------------------ | --------------- |
+| `Temporal.ZonedDateTime.from("-271821-04-19T23:00-01:00[-01:00]", { offset: "reject" })` | `-271821-04-19T23:00:00-01:00[-01:00]` | `RangeError` |
+| `Temporal.ZonedDateTime.from("-271821-04-19T23:59:00-00:01[Europe/London]")` | accepted | `RangeError` |
+| `new Temporal.ZonedDateTime(MIN + 400_000_000n, "-00:45").round("second")` | `-271821-04-19T23:15:00-00:45[-00:45]` | `RangeError` |
+| `new Temporal.ZonedDateTime(MIN, "-00:45").with({ millisecond: 0 })` | accepted | `RangeError` |
+
+### Effect on GMT
+
+None in the library. Eleven tests pin the `RangeError` or the sentinel it produces
+(`zonedDateTimeFrom` ×3, `minuteRoundedOffsets` ×2, `storedOffsetValues` ×2, `convertZonedToCalendar` ×4);
+the native-suite runner tags them to this section on the Firefox leg. When Firefox changes the check the
+tags go stale and the runner reports it.
+
+## Q. Firefox `formatRange` prints AM/PM for a day period when a zone name is set (Firefox only, engine)
+
+### Status
+
+**Not filed.** Draft for the owner. SpiderMonkey / Firefox 155.0 only; Node 22, 24 and 26 and the other engines in the matrix print the flexible day period in a range, as a single format does. GMT repairs it as `D17` (a lazy probe, dormant on every engine that passes), scoped to Firefox (`engines: ["firefox"]` in `scripts/temporal-compat.mjs`, so a Node run reports it as out of scope, never removable). It removes the repair when the native suite shows Firefox passing every `D17` repro.
+
+### What goes wrong
+
+With `dayPeriod` and `timeZoneName` both set, and neither `hourCycle` nor `hour12`, `Intl.DateTimeFormat.prototype.formatRange` prints each endpoint with AM/PM instead of the flexible day period. The parts come back as `startRange` and `endRange` only; there is no shared `dayPeriod` part.
+
+This is not a width rule: UTS #35 (Matching Skeletons) treats the day period letters a, b and B as close matches, so the skeleton does not demand the flexible form. The argument is a contradiction between two requests that resolve alike. ECMA-402 §11.5.8 (`FormatDateTimeRange`) picks the range pattern by the resolved `[[HourCycle]]` only (and builds each part with §11.5.4 `FormatDateTimePattern` over that pattern's fields). en-US resolves to `h12` whether `hourCycle: "h12"` is given or omitted. Yet with it given, Firefox prints the flexible period, and with it omitted, AM/PM. Identical resolved options give two different range outputs. GMT's own contract adds that a range keeps the fields the caller asked for.
+
+### Repro (en-US, `America/New_York`, 2024-02-29 10:00 to 12:00 local, `{ hour: "numeric", dayPeriod: "short", timeZoneName: "shortOffset" }`)
+
+| Call | Firefox 155.0 | Expected (Node 26) |
+| ---- | ------------- | ------------------ |
+| `formatRange(start, end)` | `10 AM GMT-5 – 12 PM GMT-5` | `10 in the morning GMT-5 – 12 noon GMT-5` |
+| `format(start)` / `format(end)` | `10 in the morning GMT-5` / `12 noon GMT-5` | same |
+| `formatRange` with `hourCycle: "h12"` added | flexible periods | same |
+
+It also happens with `timeZoneName` `short` and `long`, and with `minute` set. It does not happen with no `timeZoneName`, or with `hourCycle: "h12"` or `hour12: true`.
+
+Probe: `new Intl.DateTimeFormat("en", { hour: "numeric", dayPeriod: "short", timeZone: "+01:00", timeZoneName: "short" })`, comparing the `dayPeriod` parts of `formatRangeToParts(32_400_000, 39_600_000)` with those of `formatToParts` on each endpoint. Firefox: range `["AM","PM"]`, single `["in the morning","noon"]`.
+
+### Effect on GMT
+
+`formatZonedRange` rebuilds the range from the endpoint parts and writes each endpoint's single-format day period (the `dayPeriod` entry of `repairRangeParts`, `internal/repairRangeParts.ts`). Output is byte-identical when the probe passes. `internal/repairRangeParts.test.ts` runs the merge on the parts Firefox returns (each row fails when the merge is reverted), and the `formatZonedRange` rows run unmocked, so they exercise the real repair on the Firefox leg.

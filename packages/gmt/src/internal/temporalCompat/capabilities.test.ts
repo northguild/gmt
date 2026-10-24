@@ -2,6 +2,8 @@ import {
   anyReproFails,
   isCalendarArithmeticCompatNeeded,
   isDefectPresent,
+  isRangeDayPeriodCompatNeeded,
+  isRangeZoneNameCompatNeeded,
   reproPasses,
   runRepro,
 } from "./capabilities";
@@ -369,7 +371,7 @@ describe("isCalendarArithmeticCompatNeeded", () => {
 });
 
 describe("repro split", () => {
-  // DefectId (D1-D8, D10-D15) is the type the shipped probes can ask about; the canary-only
+  // DefectId (D1-D8, D10-D17) is the type the shipped probes can ask about; the canary-only
   // groups are ZonedDefectId (zoned.*) and BoundedWorkDefectId (D9).
   const probeDefects = new Set([
     "D1",
@@ -386,6 +388,8 @@ describe("repro split", () => {
     "D13",
     "D14",
     "D15",
+    "D16",
+    "D17",
   ]);
 
   it("holds every probe-defect repro of the full table in probeRepros", () => {
@@ -403,5 +407,80 @@ describe("repro split", () => {
     );
 
     expect(canaryOnly).toEqual([]);
+  });
+});
+
+// D16: UTS #35 (Matching Skeletons) expects the skeleton and pattern fields to be adjusted in
+// parallel, so a range keeps the requested zone name width. The probe compares the engine's range zone part with its own single format, so it owns no
+// CLDR string; ICU-20548 is the reason V8 and JSC fail it for every style but short.
+describe("D16 range zone name probe", () => {
+  const styles = [
+    "short",
+    "long",
+    "shortGeneric",
+    "longGeneric",
+    "shortOffset",
+    "longOffset",
+  ] as const;
+
+  it.each(styles.map((style) => ({ style })))(
+    "has a range.$style repro that returns same or names both parts",
+    ({ style }) => {
+      const repro = findRepro("D16", "iso8601", `range.${style}`);
+      expect(repro?.expected).toBe("same");
+      expect(runRepro(repro!)).toMatch(/^same$|^range .* vs single /);
+    },
+  );
+
+  it("returns same for range.short on every host", () => {
+    expect(runRepro(findRepro("D16", "iso8601", "range.short")!)).toBe("same");
+  });
+
+  it("reports false for a style it has no repro for", () => {
+    expect(isRangeZoneNameCompatNeeded("not-a-style")).toBe(false);
+  });
+
+  it("answers the same on a second call without running the repro again", () => {
+    const spy = vi.spyOn(Intl.DateTimeFormat.prototype, "formatRangeToParts");
+    try {
+      const first = isRangeZoneNameCompatNeeded("longOffset");
+      const runs = spy.mock.calls.length;
+      expect(isRangeZoneNameCompatNeeded("longOffset")).toBe(first);
+      expect(spy.mock.calls.length).toBe(runs);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+// D17: ECMA-402 §11.5.8 picks the range pattern by the resolved [[HourCycle]] only, so a range
+// with and without an explicit h12 cannot differ in the day period it prints; the flexible day
+// periods of a range ("in the morning", "noon") are expected to equal the two single formats'.
+// Firefox 155 prints AM and PM in the range when the hour cycle is omitted.
+describe("D17 range day period probe", () => {
+  it("expects the range's day period parts to equal the single formats'", () => {
+    expect(findRepro("D17", "iso8601", "range.dayPeriod")?.expected).toBe(
+      "same",
+    );
+  });
+
+  it("returns same or names both sides", () => {
+    expect(runRepro(findRepro("D17", "iso8601", "range.dayPeriod")!)).toMatch(
+      /^same$|^range .* vs single /,
+    );
+  });
+
+  it("reads the recorded Firefox 155 output as the defect", () => {
+    const repro = findRepro("D17", "iso8601", "range.dayPeriod")!;
+    expect(
+      reproPasses(
+        repro,
+        'range ["AM","PM"] vs single ["in the morning","noon"]',
+      ),
+    ).toBe(false);
+  });
+
+  it("answers the same on a second call", () => {
+    expect(isRangeDayPeriodCompatNeeded()).toBe(isRangeDayPeriodCompatNeeded());
   });
 });

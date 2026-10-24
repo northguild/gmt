@@ -34,11 +34,13 @@ describe("toParquetInt96", () => {
     view.setBigInt64(0, nanosOfDay, true);
     view.setInt32(8, julianDay, true);
 
-    const expected = Buffer.alloc(12);
-    expected.writeBigInt64LE(45_296_789_000_000n, 0);
-    expected.writeInt32LE(2_460_380, 8);
+    // 12:34:56.789 is 45_296_789_000_000 ns (0x29327b048f40); 2024-03-10 is Julian day
+    // 2_460_380 (0x258adc). Little-endian: int64 nanos, then int32 day.
+    const expected = new Uint8Array([
+      0x40, 0x8f, 0x04, 0x7b, 0x32, 0x29, 0x00, 0x00, 0xdc, 0x8a, 0x25, 0x00,
+    ]);
 
-    expect(Buffer.from(view.buffer)).toStrictEqual(expected);
+    expect(new Uint8Array(view.buffer)).toStrictEqual(expected);
   });
 
   it.each`
@@ -58,11 +60,9 @@ describe("toParquetInt96", () => {
     reason                               | value
     ${"proxy that throws on every trap"} | ${hostileProxy()}
     ${"revoked proxy"}                   | ${revokedProxy()}
-    ${"throwing getter"} | ${{
-  get length() {
+    ${"throwing getter"} | ${{ get length() {
     throw new Error("hostile getter");
-  },
-}}
+  } }}
   `("returns null without throwing for $reason", ({ value }) => {
     expect(toParquetInt96(value)).toBeNull();
   });

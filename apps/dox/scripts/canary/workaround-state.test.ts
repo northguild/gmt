@@ -102,6 +102,21 @@ describe("workaroundState", () => {
     },
   );
 
+  it.each`
+    group                                              | engine       | state             | branch
+    ${{ probes: 1, failing: 0, engines: ["firefox"] }} | ${"v8"}      | ${"out-of-scope"} | ${"all pass on an engine outside the scope"}
+    ${{ probes: 1, failing: 0, engines: ["firefox"] }} | ${undefined} | ${"out-of-scope"} | ${"the default engine is v8"}
+    ${{ probes: 1, failing: 0, engines: ["firefox"] }} | ${"firefox"} | ${"removable"}    | ${"all pass on an engine in the scope"}
+    ${{ probes: 1, failing: 1, engines: ["firefox"] }} | ${"v8"}      | ${"still-needed"} | ${"a failing probe is evidence on any engine"}
+    ${{ probes: 0, failing: 0, engines: ["firefox"] }} | ${"v8"}      | ${"still-needed"} | ${"no probes cannot be judged"}
+    ${{ probes: 1, failing: 0 }}                       | ${"v8"}      | ${"removable"}    | ${"no engine scope"}
+  `("$branch: engine $engine is $state", ({ group, engine, state }) => {
+    expect(workaroundState(group, "0.5.1", engine)).toEqual({
+      state,
+      guardLapsed: false,
+    });
+  });
+
   it("throws when a guarded group's installed version cannot be compared", () => {
     expect(() =>
       workaroundState({ probes: 2, failing: 0, guard }, "unknown"),
