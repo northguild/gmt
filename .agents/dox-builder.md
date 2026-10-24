@@ -19,7 +19,7 @@ the spec names before you start, and nothing else.
 ## First: the toolchain will bite you
 
 **`pnpm` brings its own Node.** The root `package.json` pins Node through `devEngines.runtime`,
-so `pnpm run`, `pnpm exec` and every script run on that Node (26.11 or newer) whatever is on
+so `pnpm run`, `pnpm exec` and every script run on that Node (26.12.1 or newer) whatever is on
 `PATH`. A bare `node` outside pnpm is the exception. It uses the Node on `PATH`, and this
 machine runs `fnm`, not `nvm`. The shell is frequently on Node v20, and `astro@7.2.7`
 requires `>=22.12.0`. Shell state does not persist between tool calls, so a version switch
