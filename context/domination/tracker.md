@@ -114,7 +114,7 @@ with the `Position` type, ahead of the remaining realms.
 | 30  | CORE-89 | Core       | The Morocco 2026 clock-change checker in Dox                                        | —                      | #340  | —       | Done        |
 | 31  | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —                      | #258  | —       | Done        |
 | 32  | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —                      | #256  | —       | Done        |
-| 33  | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | —                      | #324  | —       | Not started |
+| 33  | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | —                      | #324  | —       | Done        |
 | 34  | CORE-85 | Core       | Human duration strings:<br>`parseHumanDuration`, `formatHumanDuration`              | —                      | #325  | —       | Done        |
 | 35  | CORE-79 | Core       | `Position` input type                                                               | —                      | #314  | Cut     | Done        |
 | 36  | MAR-17  | Maritime   | AIS `secondOfUTC` reconstruction +<br>`navTimestamp`                                | —                      | #198  | —       | Not started |

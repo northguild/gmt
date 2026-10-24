@@ -84,12 +84,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `tsconfig.base.json` (whose `composite`, `emitDeclarationOnly` and `customConditions`
   are wrong for an app), and declares `engines.node >=22.12.0` — Astro 7's floor.
 - **Toolchain traps.**
-  - `pnpm` runs scripts and `pnpm exec` on the Node that `devEngines.runtime` pins (26.11 or
+  - `pnpm` runs scripts and `pnpm exec` on the Node that `devEngines.runtime` pins (26.12.1 or
     newer), whatever Node is on `PATH`. Only a bare `node` outside pnpm needs care: it follows
     the pin only when pnpm installed the global Node (`pnpm runtime set node 26 -g`).
     Otherwise use `pnpm exec node`, or on an `fnm` machine run
     `eval "$(fnm env)" && fnm use` first (`fnm use` alone is a silent no-op in a
-    non-interactive shell). `.node-version` still says `26` for tools that read it.
+    non-interactive shell). `.node-version` names `26.12.1` for tools that read it.
   - CI matrix jobs must keep running on the matrix Node: they install with `--no-runtime` and
     set `pnpm_config_verify_deps_before_run=false`. Without both, a later `pnpm run` reinstalls
     with the runtime and quietly switches the job to the pinned Node.
@@ -395,7 +395,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `business-calendars`, `operating-hours`, `nanosecond-precision`, `spans`,
     `leap-seconds-and-tai`.
   - `zoned-date-operations/`: `zoned-operations`, `calendar-boundaries`,
-    `offset-instants-and-local-resolution`.
+    `offset-instants-and-local-resolution`, `recurrence-and-cron`.
   - `conversion/`: `converting-types`, `foreign-epoch-bridges`.
   - `intervals/`: `interval-basics`, `containment-and-overlap`, `set-operations`,
     `splitting-and-counting`.
@@ -1436,6 +1436,34 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     group after "Start here", and each namespace index under `/reference/` keeps a one-line
     pointer. `space` is never an industry, area, kind or namespace name, because a planned spatial
     expansion takes the word.
+- **Cron in a Zone** (CORE-84, `/tools/cron-in-a-zone/`, `cronzone`): a Core tool that draws
+  `@northguild/gmt/recurrence`. The reader types a five-field cron line and picks a zone, a year
+  and one of that year's clock changes.
+  - **What it draws.** The night of the chosen change: two lanes, `crontabMatch` and
+    `daemonCatchUp`, on one exact-time axis, the change as a rule with its offset chip, a mark per
+    run (runs that share an instant stack as one mark) and, per lane, up to 8 rows of runs at a
+    skipped or repeated wall time. A sentence says whether the two policies agree that night.
+    Below: the parsed fields, the next 12 runs under each policy joined by instant (never by
+    index), and every call printed.
+  - **Calls.** `isValidTimeZone`, `parseCronExpression`, `getDstTransitions(zone, year)`, then
+    `cronRuns` once per policy for the night window and once per policy for
+    `{ after, count: 12 }`, through `cron-lib.ts` (heavy, throws `WidgetLoadError`). `after`
+    defaults to the night window's start, or to 1 January of the year when the zone has no
+    change. `cron-in-a-zone.ts` computes no run: it arranges what comes back and places ticks and
+    marks with the polyfill.
+  - **Hold-still.** Every slot (field rows, plates, the 8 touched rows, the 12 list rows, the NO
+    SIGNAL pill) is laid out in every state and hidden with `data-off`. Plates use tabular
+    numerals and a reserved width; the lanes and the axis band have fixed heights.
+    `readout-still.mjs` steps the year on `london-spring` and `sydney-every-five`.
+  - **The night window is `[T − 3 h, T + 3 h)`** around the change, built with the polyfill and
+    printed in the call: every gap the daemon catches up (under 3 h, as cron.c does) falls inside
+    it, and a `*/5` line draws at most 72 marks per lane.
+  - **`[]` from `cronRuns` after a valid parse reads "No runs", never NO SIGNAL**: the call runs
+    only once the line, the zone and the window are valid, so an empty list is the answer
+    (`0 0 30 2 *`), not a refusal.
+  - **A change is named by `change`, a 1-based ordinal digit string into that year's
+    `getDstTransitions` list, plus a required `year`**, because `seedFromLocation` keeps only
+    strings and years. An ordinal past the list opens on change 1, and a note says so.
 - **A new tool is registered in lists no single test covers.** The pieces are in
   [docs-site.md § Purpose-built widgets](../domination/docs-site.md#purpose-built-widgets). The
   chat side is guarded: a missing schema or `ENABLED_TOOL_NAMES` entry in `src/lib/dox-tools.ts`,
@@ -1634,7 +1662,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `/tools/satellite-clock-converter/`, `/tools/gnss-rollover-checker/`,
   `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`,
   `/tools/holiday-rule-builder/`, `/tools/observance-comparator/`, `/tools/moving-feasts/`,
-  `/tools/duration-parser-bench/`, `/tools/id-timestamp-decoder/`, `/tools/column-timestamp-bridge/`, plus the Tier 4
+  `/tools/duration-parser-bench/`, `/tools/id-timestamp-decoder/`, `/tools/column-timestamp-bridge/`,
+  `/tools/cron-in-a-zone/`, plus the Tier 4
   `/tools/zoned-earth/` and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package. The
   Zone Planner's is `/tools/zone-planner/?w=planner&wa={"time":…,"zone1":…,"zone2":…}`: a UTC

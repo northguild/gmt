@@ -201,6 +201,8 @@ describe("the chat island's static import graph", () => {
       "lib/identifier-lib.ts",
       "lib/column-timestamp-bridge.ts",
       "lib/column-bridge-lib.ts",
+      "lib/cron-in-a-zone.ts",
+      "lib/cron-lib.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });

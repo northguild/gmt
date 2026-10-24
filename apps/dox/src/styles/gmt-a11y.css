@@ -519,7 +519,8 @@
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
       .gmt-elapsed-vs-clock,
-      .gmt-stored-time-audit
+      .gmt-stored-time-audit,
+      .gmt-cron-zone
     )
     :is(
       .gmt-cutoff-chip,
@@ -549,7 +550,8 @@
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
       .gmt-elapsed-vs-clock,
-      .gmt-stored-time-audit
+      .gmt-stored-time-audit,
+      .gmt-cron-zone
     )
     :is(.gmt-cutoff-chip, .gmt-cutoff-stack-day-label) {
     forced-color-adjust: auto;
@@ -1818,6 +1820,67 @@
   }
 
   .gmt-column-timestamp-bridge .gmt-colbridge-pill {
+    forced-color-adjust: none;
+    border-color: Mark;
+    color: MarkText;
+    background: Mark;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Cron in a Zone, forced-colors (CORE-84). Marks, the change rule, the lanes
+ * and the frame are backgrounds and border colours, which forced colours
+ * would flatten. Repaint each in system colours with an edge, and keep the
+ * kind in the shape (solid, dashed, double) as well as in the legend's words.
+ * --------------------------------------------------------------------------- */
+@media (forced-colors: active) {
+  .gmt-cron-zone .gmt-cron-frame,
+  .gmt-cron-zone .gmt-cron-track {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-cron-zone .gmt-cron-rule {
+    forced-color-adjust: none;
+    background: CanvasText;
+    border-inline: 1px solid CanvasText;
+  }
+
+  .gmt-cron-zone .gmt-cron-stem {
+    forced-color-adjust: none;
+    border: 2px solid CanvasText;
+    background: Canvas;
+  }
+
+  .gmt-cron-zone .gmt-cron-mark--unique .gmt-cron-stem {
+    border-style: solid;
+    background: CanvasText;
+  }
+
+  .gmt-cron-zone .gmt-cron-mark--nonexistent .gmt-cron-stem {
+    border-style: dashed;
+  }
+
+  .gmt-cron-zone .gmt-cron-mark--ambiguous .gmt-cron-stem {
+    border-style: double;
+    border-width: 4px;
+  }
+
+  .gmt-cron-zone .gmt-cron-chip,
+  .gmt-cron-zone .gmt-cron-plate,
+  .gmt-cron-zone .gmt-cron-count {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .gmt-cron-zone .gmt-cron-table tr[data-only] > td {
+    background: Canvas;
+    border-block-end: 2px dashed CanvasText;
+  }
+
+  .gmt-cron-zone .gmt-cron-nosignal-pill {
     forced-color-adjust: none;
     border-color: Mark;
     color: MarkText;

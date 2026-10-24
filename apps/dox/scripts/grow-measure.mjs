@@ -304,6 +304,12 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "cron-in-a-zone",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: null,
+  },
+  {
     slug: "zone-planner",
     root: ".gmt-scrubber-block",
     preset: null,

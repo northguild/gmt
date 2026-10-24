@@ -1,0 +1,56 @@
+---
+title: Cron in a Zone
+description: Type a cron line, a zone and a year and see the runs on the night the clocks change under both documented rules, then the next twelve runs under each.
+industries: [core]
+---
+
+import CronInAZone from "../../../components/CronInAZone.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="cron schedules">
+
+<Fragment slot="keypoint">
+
+A cron line has no daylight-saving rule until someone states one. GMT makes you choose.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A cron line says `30 1 * * *`, and a clock that skips 01:30 or shows it twice does not say what happens. [`cronRuns`](/reference/recurrence/calculate/cronRuns/) takes a policy for that night and has no default: `"crontabMatch"` or `"daemonCatchUp"`.
+
+Type a line, pick a zone and a year, or press one of the Try choices. Section 1 shows the five fields the line parsed into. Section 2 draws the six hours around one clock change, one lane for each rule, with a mark at every run. Section 3 lists the next twelve runs under each rule and flags a run that only one rule gives. Section 4 prints every call made and what it returned. Every value on the page is a library result.
+
+</Fragment>
+
+<CronInAZone fullbleed />
+
+<Fragment slot="after">
+
+**Two documented rules.** POSIX (ISO/IEC/IEEE 9945) defines the five fields and says nothing about time zones. The crontab(5) page of cronie gives the matching rule: the schedule is compared with each wall time, so a skipped time never matches and a repeated time matches twice. The cron(8) page of cronie, and Debian's, gives the daemon rule: for a gap under 3 hours or an overlap of 3 hours or less, a job with a fixed time runs once, soon after the change. It applies only to a job with no `*` in the minute or hour field.
+
+**Why `*/5` and `30 2` differ on the same night.** In Sydney the clocks jump from 02:00 to 03:00. `*/5 * * * *` has a `*` in its fields, so the daemon rule does not apply and both lanes are the same. `30 2 * * *` is a fixed time that falls inside the gap, so the two lanes differ.
+
+**The day rule.** When both day fields are restricted, a day that matches either one runs: `0 0 1,15 * 1` runs on the 1st, the 15th and every Monday. A `*` or `*/n` counts as not restricted, and the month always has to match. POSIX words the rule so that a restricted month also counts as a reason to take either; no shipped cron does that, and neither does GMT. See [which days a cron line runs on](/guides/zoned-date-operations/recurrence-and-cron/#which-days-a-cron-line-runs-on).
+
+**Weekday numbers.** `dayOfWeek` is stored as ISO weekday numbers, 1 for Monday to 7 for Sunday. Cron's `0` and `7` both read as `7`, so `0 0 * * 0` shows `7`.
+
+**The choice is still yours.** Kubernetes and GitHub Actions take a zone for a schedule, and neither tells you which rule applies on the night the clocks change. Pick the policy your scheduler follows and say so in the call. The guide is [two rules for the night the clocks change](/guides/zoned-date-operations/recurrence-and-cron/#two-rules-for-the-night-the-clocks-change).
+
+**Worth trying:**
+
+- [`30 1 * * *`, London, the spring night](/tools/cron-in-a-zone/?w=cronzone&wa=%7B%22line%22%3A%2230%201%20%2A%20%2A%20%2A%22%2C%22zone%22%3A%22Europe%2FLondon%22%2C%22year%22%3A2024%2C%22change%22%3A%221%22%7D) — a skipped time: `crontabMatch` never runs it, `daemonCatchUp` runs it at the change.
+- [`30 1 * * *`, London, the autumn night](/tools/cron-in-a-zone/?w=cronzone&wa=%7B%22line%22%3A%2230%201%20%2A%20%2A%20%2A%22%2C%22zone%22%3A%22Europe%2FLondon%22%2C%22year%22%3A2024%2C%22change%22%3A%222%22%7D) — a repeated time: `crontabMatch` runs twice, `daemonCatchUp` once.
+- [`*/5 * * * *`, Sydney](/tools/cron-in-a-zone/?w=cronzone&wa=%7B%22line%22%3A%22%2A%2F5%20%2A%20%2A%20%2A%20%2A%22%2C%22zone%22%3A%22Australia%2FSydney%22%2C%22year%22%3A2024%2C%22change%22%3A%222%22%7D) — a wildcard job: both rules give the same runs.
+- [`30 2 * * *`, Sydney](/tools/cron-in-a-zone/?w=cronzone&wa=%7B%22line%22%3A%2230%202%20%2A%20%2A%20%2A%22%2C%22zone%22%3A%22Australia%2FSydney%22%2C%22year%22%3A2024%2C%22change%22%3A%222%22%7D) — the same night, a fixed time that falls in the gap.
+- [`0 0 * * *`, São Paulo, 2018](/tools/cron-in-a-zone/?w=cronzone&wa=%7B%22line%22%3A%220%200%20%2A%20%2A%20%2A%22%2C%22zone%22%3A%22America%2FSao_Paulo%22%2C%22year%22%3A2018%2C%22change%22%3A%222%22%7D) — midnight skipped by the clocks.
+- [`30 1 * * *`, Casey, 2020](/tools/cron-in-a-zone/?w=cronzone&wa=%7B%22line%22%3A%2230%201%20%2A%20%2A%20%2A%22%2C%22zone%22%3A%22Antarctica%2FCasey%22%2C%22year%22%3A2020%2C%22change%22%3A%222%22%7D) — a gap of exactly 3 hours, which the daemon rule leaves alone.
+- [`30 22 * * *`, Casey, 2021](/tools/cron-in-a-zone/?w=cronzone&wa=%7B%22line%22%3A%2230%2022%20%2A%20%2A%20%2A%22%2C%22zone%22%3A%22Antarctica%2FCasey%22%2C%22year%22%3A2021%2C%22change%22%3A%221%22%7D) — an overlap of exactly 3 hours.
+- [`0 0 1,15 * 1`, London](/tools/cron-in-a-zone/?w=cronzone&wa=%7B%22line%22%3A%220%200%201%2C15%20%2A%201%22%2C%22zone%22%3A%22Europe%2FLondon%22%2C%22year%22%3A2024%2C%22change%22%3A%221%22%2C%22after%22%3A%222023-12-31T23%3A00%3A00Z%22%7D) — the 1st, the 15th and every Monday.
+- [`0 0 30 2 *`, Tokyo](/tools/cron-in-a-zone/?w=cronzone&wa=%7B%22line%22%3A%220%200%2030%202%20%2A%22%2C%22zone%22%3A%22Asia%2FTokyo%22%2C%22year%22%3A2024%2C%22change%22%3A%221%22%7D) — a line that parses and never runs: `No runs`, not `NO SIGNAL`.
+
+**Reference:** [`parseCronExpression`](/reference/recurrence/parse/parseCronExpression/), [`cronRuns`](/reference/recurrence/calculate/cronRuns/) and [`getDstTransitions`](/reference/zoned/get/getDstTransitions/). The grammar lives on the `parseCronExpression` page, not here.
+
+</Fragment>
+
+</ToolLayout>

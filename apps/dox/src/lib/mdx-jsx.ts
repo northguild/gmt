@@ -423,6 +423,7 @@ export function renderMdxComponents(body: string): string {
     "DurationParserBench",
     "IdTimestampDecoder",
     "ColumnTimestampBridge",
+    "CronInAZone",
   ]) {
     out = replaceElements(out, dropped, (props) =>
       props.caption ? `\n${props.caption}\n` : "",
