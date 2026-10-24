@@ -21,8 +21,11 @@
 
 const L_ANCHOR = "l-a-one-character-annotation-key-is-refused";
 const M_ANCHOR = "m-u-caislamic-is-accepted-instead-of-refused";
+const P_ANCHOR =
+  "p-spidermonkey-accepts-a-zoned-string-whose-local-date-is-271821-04-19-firefox-only-engine";
 const ICU4X_8620 = "https://github.com/unicode-org/icu4x/issues/8620";
 const BOA_529 = "https://github.com/boa-dev/temporal/issues/529";
+const BUGZILLA_1998020 = "https://bugzilla.mozilla.org/show_bug.cgi?id=1998020";
 
 /**
  * One test that fails natively and passes on the polyfill, for a known defect. `file` is
@@ -34,7 +37,9 @@ const BOA_529 = "https://github.com/boa-dev/temporal/issues/529";
  * The 13 tests that fail on Node 26 and Chromium 153 (V8 on `temporal_rs`) and pass on the
  * polyfill. Ten are L (`ixdtf` rejects a one-character annotation key, fixed in unicode-org/icu4x#8623,
  * not yet in an `ixdtf` release or a V8 roll); three are M (`temporal_rs` reads `islamic` as a
- * calendar, boa-dev/temporal#529). Evidence: the records. Firefox is not listed: it has not run yet.
+ * calendar, boa-dev/temporal#529). The 11 tests that fail on Firefox 155 (SpiderMonkey) and pass on the
+ * polyfill are P: SpiderMonkey accepts a zoned string whose local date is -271821-04-19, where the
+ * spec refuses it (Bugzilla 1998020). Evidence: the records.
  * Goose Bay day rounding is not here: it was a GMT defect and is fixed (temporalCompat D14).
  *
  * @type {ReadonlyArray<{ file: string, test: string, legs: Leg[], defect: string, upstream: string | null }>}
@@ -131,6 +136,83 @@ export const KNOWN_NATIVE_FAILURES = [
     defect: M_ANCHOR,
     upstream: BOA_529,
   },
+  {
+    file: "src/internal/zonedWallClock.test.ts",
+    test: "zonedDateTimeFrom the minimum instant throws for '-271821-04-19T20:00:00-04:56:02[Ameri…' with offset='reject' (CheckISODaysRange rejects -271821-04-19)",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/internal/zonedWallClock.test.ts",
+    test: "zonedDateTimeFrom the minimum instant throws for '-271821-04-19T20:00:00-04:56:02[Ameri…' with offset='prefer' (CheckISODaysRange rejects -271821-04-19)",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/internal/zonedWallClock.test.ts",
+    test: "zonedDateTimeFrom the minimum instant throws for '-271821-04-19T19:03:58-04:56[America/…' with offset='reject' (CheckISODaysRange rejects -271821-04-19)",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/test/minuteRoundedOffsets.test.ts",
+    test: "instant readers read a zoned string written at the range limits zoned reads refuse '-271821-04-19T23:59:00-00:01[Europe/L…', whose local date is before the ISO date range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/test/minuteRoundedOffsets.test.ts",
+    test: "instant readers read a zoned string written at the range limits zoned reads refuse '-271821-04-19T19:04:13-04:56[America/…', whose local date is before the ISO date range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/test/storedOffsetValues.test.ts",
+    test: "the limit of arithmetic at a stored offset with seconds 'roundUnix' returns its sentinel at the first instant at -00:44:30 and at -00:45 alike",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/test/storedOffsetValues.test.ts",
+    test: "the limit of arithmetic at a stored offset with seconds 'setUnix' returns its sentinel at the first instant at -00:44:30 and at -00:45 alike",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/zoned/convert/convertZonedToCalendar.test.ts",
+    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting '-271821-04-19T12:00:00-12:00[Etc/GMT+…' to 'hebrew': its offset makes TC39 check the local date against the day range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/zoned/convert/convertZonedToCalendar.test.ts",
+    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting '-271821-04-19T12:00:00-12:00[Etc/GMT+…' to 'iso8601': its offset makes TC39 check the local date against the day range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/zoned/convert/convertZonedToCalendar.test.ts",
+    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting '-271821-04-19T19:03:58-04:56:02[Ameri…' to 'hebrew': its offset makes TC39 check the local date against the day range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/zoned/convert/convertZonedToCalendar.test.ts",
+    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting '-271821-04-19T19:03:58-04:56:02[Ameri…' to 'iso8601': its offset makes TC39 check the local date against the day range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
 ];
 /**
  * A group of tests that fail on both engines in a runtime, for one stated reason. `id` is
@@ -153,14 +235,18 @@ export const KNOWN_HOST_FAILURES = [
     test: /\bis-IS\b/,
   },
   {
-    // Evidence, same browser: for America/New_York with `timeZoneName: "shortGeneric"`, es-ES gives
-    // "hora de New York" (expected "hora de Nueva York"), ko-KR "New York 시간", ru-RU "New York", and
-    // ja-JP, zh-CN, ar-SA, he-IL, pt-PT the same English city. `timeZoneName: "short"` and
-    // `longGeneric` are localised. Only the localised exemplar city name is missing.
-    id: "chromium-zone-city-names",
-    legs: ["chromium"],
+    // Evidence, Chromium 153.0.8010.12 under Playwright: for America/New_York with
+    // `timeZoneName: "shortGeneric"`, es-ES gives "hora de New York" (expected "hora de Nueva York"),
+    // ko-KR "New York 시간", ru-RU "New York", and ja-JP, zh-CN, ar-SA, he-IL, pt-PT the same English
+    // city. `timeZoneName: "short"` and `longGeneric` are localised. Only the localised exemplar city
+    // name is missing. Firefox 155.0 (Playwright 1.63.0) gives the same strings byte for byte:
+    // es-ES "hora de New York", pt-PT "Hora de New York", zh-CN "New York时间", ja-JP "New York時間",
+    // ko-KR "New York 시간", ar-SA "توقيت New York", he-IL "שעון New York", ru-RU "New York".
+    // Node 26.12.1 (ICU 78.3, CLDR 48.0) and WebKit 26.6 localise the city.
+    id: "browser-zone-city-names",
+    legs: ["chromium", "firefox"],
     reason:
-      "Chromium has no localised exemplar city names for time zones, so a generic zone name shows the English city (New York) in every locale.",
+      "Chromium and Firefox ship no localised exemplar city names for time zones, so a generic zone name shows the English city (New York) in every locale.",
     file: /\/formatTimeZoneName\.test\.ts$/,
     test: /season-independent styles \(shortGeneric\/longGeneric\) returns the same name in January and July for /,
   },
@@ -179,24 +265,27 @@ export const KNOWN_HOST_FAILURES = [
     // Evidence: at 2026-11-15T17:00Z, Chromium 153.0.8010.12 under Playwright 1.63.0 gives
     // America/Vancouver -08:00 and America/Winnipeg -06:00 (tz data before 2026b), and Chromium
     // 156.0.8078.4 under Playwright 1.64.1 gives Vancouver -07:00 but Winnipeg -06:00 (before
-    // 2026e). Node 26.12.1 (tz 2026e) gives -07:00 and -05:00. The group goes stale once a
-    // Playwright Chromium carries 2026e.
-    id: "chromium-canada-2026-tz-data",
-    legs: ["chromium"],
+    // 2026e). Firefox 155.0 under Playwright 1.63.0 fails the same 17 rows of this file: at
+    // 2026-11-01T08:00Z it gives America/Edmonton -07:00 (Edmonton changed in 2026c, so its data
+    // predates 2026c), and at 2026-11-01T07:00Z America/Winnipeg -06:00 (before 2026e). Node 26.12.1 (tz 2026e) gives -07:00 and -05:00. The
+    // group goes stale once a Playwright Chromium and a Firefox both carry 2026e.
+    id: "browser-canada-2026-tz-data",
+    legs: ["chromium", "firefox"],
     reason:
-      "Chromium's time zone data predates tzdb 2026e, so some of the Canadian zones that stopped changing their clocks in 2026 still turn back on 2026-11-01.",
+      "Chromium's and Firefox's time zone data predates tzdb 2026e, so some of the Canadian zones that stopped changing their clocks in 2026 still turn back on 2026-11-01.",
     file: /\/oh-canada\.test\.ts$/,
   },
   {
     // Evidence: under Playwright 1.63.0, Chromium 153.0.8010.12 gives Africa/Casablanca and
     // Africa/El_Aaiun +01:00 at 2026-09-20T01:00Z, 2026-11-02T12:00Z and 2027-06-01T12:00Z, and
     // +00:00 at 2027-02-22T12:00Z (tz data before 2026c). Chromium 156.0.8078.4 under Playwright
-    // 1.64.1, WebKit 26.6 and Node 26.12.1 (tz 2026e) give +00:00 at all four. The group goes
-    // stale once a Playwright Chromium carries 2026c.
-    id: "chromium-morocco-2026-tz-data",
-    legs: ["chromium"],
+    // 1.64.1, WebKit 26.6 and Node 26.12.1 (tz 2026e) give +00:00 at all four. Firefox 155.0 under
+    // Playwright 1.63.0 fails the same 44 rows of this file: it gives Africa/Casablanca +01:00 at
+    // 2026-09-20T01:00Z, where tz data from 2026c gives +00:00. The group goes stale once a Playwright Chromium and a Firefox both carry 2026c.
+    id: "browser-morocco-2026-tz-data",
+    legs: ["chromium", "firefox"],
     reason:
-      "Chromium's time zone data predates tzdb 2026c, so Morocco and Western Sahara still read +01:00 outside the old Ramadan weeks.",
+      "Chromium's and Firefox's time zone data predates tzdb 2026c, so Morocco and Western Sahara still read +01:00 outside the old Ramadan weeks.",
     file: /\/oh-morocco\.test\.ts$/,
   },
 ];
