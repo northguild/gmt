@@ -113,9 +113,9 @@ describe("holidayEpochDays easterRelative candidate search", () => {
           const got = holidayEpochDays(rule, year, null);
           const want = brute(offsetDays, year, easters);
 
-          if (got.join() !== want.join()) {
+          if (JSON.stringify(got) !== JSON.stringify(want)) {
             mismatches.push(
-              `year ${year}, offset ${offsetDays}: got [${got.join()}], want [${want.join()}]`,
+              `year ${year}, offset ${offsetDays}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`,
             );
           }
         }
