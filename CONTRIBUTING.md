@@ -17,7 +17,7 @@ This guide covers local development, quality checks, and publishing for workspac
 # `packageManager` and the Node.js version in `devEngines.runtime`.
 pnpm install --frozen-lockfile
 
-# Check which Node.js pnpm runs: the pinned version, 26.11 or newer. Node 26.11 is the
+# Check which Node.js pnpm runs: the pinned version, 26.12.1 or newer. Node 26.11 is the
 # first 26.x with the 2026e time zone data the Canada rules need.
 pnpm exec node -v
 

@@ -59,18 +59,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           check-latest: true
           cache: pnpm
-
-      - name: Approve pnpm build scripts
-        run: pnpm approve-builds --all
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --no-runtime
@@ -89,7 +86,7 @@ jobs:
         id: oracle
         run: pnpm compat:oracle
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: temporal-oracle-${{ github.run_id }}
@@ -105,18 +102,15 @@ jobs:
       matrix:
         leg: [node, chromium, firefox]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 26
           check-latest: true
           cache: pnpm
-
-      - name: Approve pnpm build scripts
-        run: pnpm approve-builds --all
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --no-runtime
@@ -140,7 +134,7 @@ jobs:
 
       # The verdict goes in the artifact the report job downloads; the full pass reports
       # (tens of MB) go in a separate one, kept only for reading a failure by hand.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: native-suite-${{ matrix.leg }}-${{ github.run_id }}
@@ -149,7 +143,7 @@ jobs:
             !artifacts/native-suite-*.vitest.json
           if-no-files-found: warn
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: native-suite-${{ matrix.leg }}-reports
@@ -171,16 +165,16 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           check-latest: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true # no artifact = no verdicts = a could-not-run issue
         with:
           pattern: "*-${{ github.run_id }}"
