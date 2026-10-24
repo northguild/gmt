@@ -108,7 +108,7 @@ with the `Position` type, ahead of the remaining realms.
 | 24  | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —                      | #316  | 1.20.0  | Done        |
 | 25  | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —                      | #317  | 1.20.0  | Done        |
 | 26  | CORE-87 | Core       | The reference corpus exported for<br>another repo                                   | —                      | #328  | 1.20.0  | Done        |
-| 27  | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, weekly          | —                      | #322  | 1.20.0  | Done        |
+| 27  | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, WebKit, weekly  | —                      | #322  | 1.20.0  | Done        |
 | 28  | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —                      | #323  | 1.20.0  | Done        |
 | 29  | CORE-88 | Core       | The Canada 2026 clock-change checker in Dox                                         | —                      | #329  | 1.20.0  | Done        |
 | 30  | CORE-89 | Core       | The Morocco 2026 clock-change checker in Dox                                        | —                      | #340  | —       | Done        |
@@ -270,7 +270,7 @@ Highest commercial value and the thinnest coverage in the original plan.
   at `northguild.dev`, and the reference corpus exported for another repo.
   Neither adds a function. After them, a later story's URLs in code go through `withBase` and
   the dist guard, and its corpus entries land in the exported file; content links stay base-less.
-- **CORE-82, CORE-83** — the suite on native `Temporal` in Node 26, Chromium and Firefox, weekly;
+- **CORE-82, CORE-83** — the suite on native `Temporal` in Node 26, Chromium, Firefox and WebKit, weekly;
   and why a stored zoned time no longer resolves.
 - **CORE-88** — the Canada 2026 clock-change checker in Dox, with live clocks and a map of Canada's
   zones, computed by the Dox Worker.

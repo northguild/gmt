@@ -3,9 +3,11 @@ import {
   DRY_RUN_LABEL,
   WORKFLOW_SOURCES,
   applyForce,
+  compatStates,
   findings,
   marker,
   planIssueActions,
+  removableEverywhere,
 } from "../../../../scripts/lib/canary-issues.mjs";
 
 /**
@@ -19,7 +21,7 @@ const ORACLE_CONTEXT = { workflow: "temporal-oracle", runUrl: RUN } as const;
 const LEAP_CONTEXT = { workflow: "leap-seconds", runUrl: RUN } as const;
 const RUNTIME = { polyfill: "0.5.1", node: "v24.11.0", icu: "77.1" };
 
-type State = "still-needed" | "removable" | "guard";
+type State = "still-needed" | "removable" | "guard" | "out-of-scope";
 
 const workaround = (
   id: string,
@@ -43,22 +45,66 @@ const GUARD = {
   reason: "no probe can tell a pre-fix polyfill from a fixed one",
 };
 
-const check = (
-  workarounds: ReturnType<typeof workaround>[],
-  current = true,
-) => ({
+type Workaround = ReturnType<typeof workaround>;
+
+const countsOf = (workarounds: Workaround[]) => ({
+  workarounds: workarounds.length,
+  stillNeeded: workarounds.filter((w) => w.state === "still-needed").length,
+  removable: workarounds.filter((w) => w.state === "removable").length,
+  guard: workarounds.filter((w) => w.state === "guard").length,
+  outOfScope: workarounds.filter((w) => w.state === "out-of-scope").length,
+});
+
+/** The Node check: the probes on V8, plus whether the committed snapshot is current. */
+const check = (workarounds: Workaround[], current = true) => ({
   source: "temporal-compat-check" as const,
   status: "ran" as const,
+  engineId: "v8",
   runtime: RUNTIME,
-  counts: {
-    workarounds: workarounds.length,
-    stillNeeded: workarounds.filter((w) => w.state === "still-needed").length,
-    removable: workarounds.filter((w) => w.state === "removable").length,
-    guard: workarounds.filter((w) => w.state === "guard").length,
-  },
+  counts: countsOf(workarounds),
   snapshot: { path: "apps/dox/src/data/temporal-compat.json", current },
   workarounds,
 });
+
+const BROWSER_LEGS = ["chromium", "firefox", "webkit"] as const;
+type BrowserLeg = (typeof BROWSER_LEGS)[number];
+const BROWSER_ENGINE_IDS: Record<BrowserLeg, string> = {
+  chromium: "v8",
+  firefox: "firefox",
+  webkit: "webkit",
+};
+const BROWSER_ENGINES: Record<BrowserLeg, string> = {
+  chromium: "Chromium 153.0.8010.12",
+  firefox: "Firefox 155.0",
+  webkit: "WebKit 26.6",
+};
+
+/** The same probes run in one browser of the native suite: no snapshot, the browser's engine. */
+const browserCompat = (leg: BrowserLeg, workarounds: Workaround[]) => ({
+  source: `temporal-compat-${leg}` as const,
+  status: "ran" as const,
+  leg,
+  engine: BROWSER_ENGINES[leg],
+  engineId: BROWSER_ENGINE_IDS[leg],
+  runtime: { polyfill: "0.5.1", node: "v24.11.0", playwright: "1.63.0" },
+  counts: countsOf(workarounds),
+  workarounds,
+});
+
+/** Every compat source, Node and the three browsers, reporting the same rows. */
+const everywhere = (workarounds: Workaround[], current = true) => ({
+  "temporal-compat-check": check(workarounds, current),
+  ...Object.fromEntries(
+    BROWSER_LEGS.map((leg) => [
+      `temporal-compat-${leg}`,
+      browserCompat(leg, workarounds),
+    ]),
+  ),
+});
+
+/** The four engines' names in the order the compat sources run, as the bodies list them. */
+const EVERY_ENGINE =
+  "Node v24.11.0, Chromium 153.0.8010.12, Firefox 155.0, WebKit 26.6";
 
 const mismatchRow = (n: number, over: Record<string, unknown> = {}) => ({
   scan: "grid",
@@ -193,14 +239,32 @@ const cleanNative = () =>
     NATIVE_LEGS.map((leg) => [`native-suite-${leg}`, native(leg)]),
   );
 
-/** `verdicts` with four clean native legs added when it names no native leg at all. */
+/**
+ * `verdicts` with four clean native legs added when it names no native leg at all, and with the
+ * three browser compat verdicts mirroring the Node check's rows when it names no browser compat
+ * source: a fixture that gives the check alone means "the same everywhere".
+ */
 const withNative = (verdicts: unknown) => {
   const given = verdicts as Record<string, unknown>;
-  return (
-    Object.keys(given).some((k) => k.startsWith("native-suite-"))
-      ? given
-      : { ...given, ...cleanNative() }
-  ) as never;
+  const legs = Object.keys(given).some((k) => k.startsWith("native-suite-"))
+    ? {}
+    : cleanNative();
+  const checkVerdict = given["temporal-compat-check"] as
+    | ReturnType<typeof check>
+    | null
+    | undefined;
+  const browsers =
+    Object.keys(given).some(
+      (k) => k.startsWith("temporal-compat-") && k !== "temporal-compat-check",
+    ) || checkVerdict?.status !== "ran"
+      ? {}
+      : Object.fromEntries(
+          BROWSER_LEGS.map((leg) => [
+            `temporal-compat-${leg}`,
+            browserCompat(leg, checkVerdict.workarounds),
+          ]),
+        );
+  return { ...browsers, ...given, ...legs } as never;
 };
 
 const issue = (number: number, body: string, labels = [CANARY_LABEL]) => ({
@@ -247,6 +311,9 @@ describe("constants and marker", () => {
     expect(WORKFLOW_SOURCES).toEqual({
       "temporal-oracle": [
         "temporal-compat-check",
+        "temporal-compat-chromium",
+        "temporal-compat-firefox",
+        "temporal-compat-webkit",
         "temporal-oracle",
         "native-suite-node",
         "native-suite-chromium",
@@ -344,12 +411,26 @@ describe("removable body", () => {
     return action.body;
   };
 
-  it("states the probes, runtime and trigger", () => {
+  it("states the polyfill, the engines in scope, the trigger and the scope", () => {
     expect(body()).toContain(
-      "Every probe for **D2** returns the spec value on @js-temporal/polyfill 0.5.1 (Node v24.11.0, ICU 77.1), so the workaround can go.",
+      `Every probe for **D2** returns the spec value on @js-temporal/polyfill 0.5.1 on every engine in its scope (${EVERY_ENGINE}), so the workaround can go.`,
     );
     expect(body()).toContain("**Trigger:** trigger for D2");
-    expect(body()).toContain("**Probes:** 2 of 2 pass.");
+    expect(body()).toContain("**Scope:** every engine.");
+    expect(body()).not.toContain("**Probes:**");
+  });
+
+  it("the Engines table has one row per compat source, in source order, with its state and probes", () => {
+    expect(body()).toContain(
+      "### Engines\n\n" +
+        "| Source | Engine | State | Probes |\n" +
+        "| --- | --- | --- | --- |\n" +
+        "| temporal-compat-check | Node v24.11.0 | removable | 2 of 2 pass |\n" +
+        "| temporal-compat-chromium | Chromium 153.0.8010.12 | removable | 2 of 2 pass |\n" +
+        "| temporal-compat-firefox | Firefox 155.0 | removable | 2 of 2 pass |\n" +
+        "| temporal-compat-webkit | WebKit 26.6 | removable | 2 of 2 pass |\n\n" +
+        "### Removal steps",
+    );
   });
 
   it("14: a lapsed guard adds the Guard lapsed paragraph", () => {
@@ -429,7 +510,7 @@ describe("removable body", () => {
     const [action] = plan(removableD2(), [issue(41, `${D2_MARKER}\nbody`)]);
     expect(action.kind).toBe("comment");
     expect(action.body).toBe(
-      "Still removable on this run (@js-temporal/polyfill 0.5.1, Node v24.11.0, ICU 77.1).\n\n" +
+      `Still removable on this run on every engine in its scope (${EVERY_ENGINE}; @js-temporal/polyfill 0.5.1).\n\n` +
         "pnpm compat:snapshot is due in the removal PR: once the group's repros are deleted, run it and commit apps/dox/src/data/temporal-compat.json; validate (snapshot --check) fails until you do.\n\n" +
         `Run: ${RUN}`,
     );
@@ -467,6 +548,149 @@ describe("removable body", () => {
     expect(plan(verdicts).map((a) => a.key)).toEqual([
       "temporal-compat/removable/D8",
       "temporal-compat/removable/D2",
+    ]);
+  });
+});
+
+describe("removable on every engine in scope", () => {
+  const d2 = (state: State) => workaround("D2", state);
+  const d17 = (state: State) =>
+    workaround("D17", state, { engines: ["firefox"] });
+
+  it("removable on the Node check but still needed in Firefox: no finding, and the state says which engine blocks", () => {
+    const verdicts = {
+      ...everywhere([d2("removable")]),
+      "temporal-compat-firefox": browserCompat("firefox", [d2("still-needed")]),
+      "temporal-oracle": oracle(),
+    };
+    expect(plan(verdicts)).toEqual([]);
+    const [state] = compatStates(verdicts as never);
+    expect(state.everywhere).toBe(false);
+    expect(
+      state.engines.map((e) => [e.source, e.inScope, e.row?.state]),
+    ).toEqual([
+      ["temporal-compat-check", true, "removable"],
+      ["temporal-compat-chromium", true, "removable"],
+      ["temporal-compat-firefox", true, "still-needed"],
+      ["temporal-compat-webkit", true, "removable"],
+    ]);
+  });
+
+  it("a browser verdict missing blocks the group and is a could-not-run finding, never a removable one", () => {
+    const verdicts = {
+      ...everywhere([d2("removable")]),
+      "temporal-compat-webkit": null,
+      "temporal-oracle": oracle(),
+    };
+    expect(plan(verdicts).map((a) => a.key)).toEqual([
+      "temporal-oracle/could-not-run",
+    ]);
+    expect(removableEverywhere(verdicts as never)).toEqual([]);
+  });
+
+  it("a verdict that does not know the group blocks it", () => {
+    const verdicts = {
+      ...everywhere([d2("removable")]),
+      "temporal-compat-webkit": browserCompat("webkit", [
+        workaround("D1", "still-needed"),
+      ]),
+      "temporal-oracle": oracle(),
+    };
+    expect(plan(verdicts)).toEqual([]);
+    const [state] = compatStates(verdicts as never);
+    expect(state.engines[3]).toMatchObject({
+      source: "temporal-compat-webkit",
+      row: null,
+      message: "this run's verdict has no such workaround",
+    });
+  });
+
+  it("a Firefox-only group removable in Firefox and out of scope elsewhere opens, naming Firefox alone", () => {
+    const verdicts = {
+      ...everywhere([d17("out-of-scope")]),
+      "temporal-compat-firefox": browserCompat("firefox", [d17("removable")]),
+      "temporal-oracle": oracle(),
+    };
+    const [action] = plan(verdicts);
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.key).toBe("temporal-compat/removable/D17");
+    expect(action.body).toContain(
+      "Every probe for **D17** returns the spec value on @js-temporal/polyfill 0.5.1 on every engine in its scope (Firefox 155.0), so the workaround can go.",
+    );
+    expect(action.body).toContain(
+      "**Scope:** only firefox: the defect is in that engine's own Intl, so the other rows are out of scope and count for nothing.",
+    );
+    expect(action.body).toContain(
+      "| temporal-compat-check | Node v24.11.0 | out of scope | 2 of 2 pass |\n" +
+        "| temporal-compat-chromium | Chromium 153.0.8010.12 | out of scope | 2 of 2 pass |\n" +
+        "| temporal-compat-firefox | Firefox 155.0 | removable | 2 of 2 pass |\n" +
+        "| temporal-compat-webkit | WebKit 26.6 | out of scope | 2 of 2 pass |",
+    );
+    const [, comment] = [
+      action,
+      plan(verdicts, [issue(7, `${action.body.split("\n")[0]}\nbody`)])[0],
+    ];
+    expect(comment.body).toContain(
+      "Still removable on this run on every engine in its scope (Firefox 155.0; @js-temporal/polyfill 0.5.1).",
+    );
+  });
+
+  it("a Firefox-only group still needed in Firefox stays closed however the others read", () => {
+    const verdicts = {
+      ...everywhere([d17("out-of-scope")]),
+      "temporal-compat-firefox": browserCompat("firefox", [
+        d17("still-needed"),
+      ]),
+      "temporal-oracle": oracle(),
+    };
+    expect(plan(verdicts)).toEqual([]);
+  });
+
+  it("a Firefox-only group with the Node check missing still opens, and the snapshot sentence says the check did not run", () => {
+    const verdicts = {
+      ...everywhere([d17("out-of-scope")]),
+      "temporal-compat-check": null,
+      "temporal-compat-firefox": browserCompat("firefox", [d17("removable")]),
+      "temporal-oracle": oracle(),
+    };
+    const actions = plan(verdicts);
+    expect(actions.map((a) => a.key)).toEqual([
+      "temporal-compat/removable/D17",
+      "temporal-oracle/could-not-run",
+    ]);
+    expect(actions[0].body).toContain(
+      "### Snapshot\n\npnpm compat:snapshot is due in the removal PR: the Node check did not run this time, so whether the committed apps/dox/src/data/temporal-compat.json is current is unknown. Once the group's repros are deleted, run it and commit the file; validate (snapshot --check) fails until you do.",
+    );
+    expect(actions[0].body).toContain(
+      "| temporal-compat-check | — | no verdict (no verdict file: an earlier step or job failed) | — |",
+    );
+  });
+
+  it("an every-engine group with the Node check missing is blocked: Node is in its scope", () => {
+    const verdicts = {
+      ...everywhere([d2("removable")]),
+      "temporal-compat-check": null,
+      "temporal-oracle": oracle(),
+    };
+    expect(plan(verdicts).map((a) => a.key)).toEqual([
+      "temporal-oracle/could-not-run",
+    ]);
+  });
+
+  it("compatStates lists every group any source knows, in first-seen order, with the polyfill of the first source that ran", () => {
+    const verdicts = {
+      "temporal-compat-check": null,
+      "temporal-compat-chromium": browserCompat("chromium", [
+        d2("still-needed"),
+        workaround("D8", "removable"),
+      ]),
+      "temporal-compat-firefox": browserCompat("firefox", [d2("removable")]),
+      "temporal-compat-webkit": null,
+    };
+    const states = compatStates(verdicts as never);
+    expect(states.map((s) => [s.id, s.polyfill, s.everywhere])).toEqual([
+      ["D2", "0.5.1", false],
+      ["D8", "0.5.1", false],
     ]);
   });
 });
@@ -638,7 +862,11 @@ describe("could not run", () => {
     const [action] = actions;
     if (action.kind !== "open") throw new Error("expected open");
     expect(action.body).toContain(
-      "- **temporal-compat-check**: packages/gmt/dist is missing: run pnpm build first\n- **temporal-oracle**: no Temporal\n",
+      "- **temporal-compat-check**: packages/gmt/dist is missing: run pnpm build first\n" +
+        "- **temporal-compat-chromium**: no verdict file: an earlier step or job failed\n" +
+        "- **temporal-compat-firefox**: no verdict file: an earlier step or job failed\n" +
+        "- **temporal-compat-webkit**: no verdict file: an earlier step or job failed\n" +
+        "- **temporal-oracle**: no Temporal\n",
     );
   });
 
@@ -778,9 +1006,38 @@ describe("applyForce and forced findings", () => {
       "**Dry run.** Forced by a manual dispatch (--force-removable=D2); nothing here is a real finding. Close this issue once checked.",
     );
     expect(action.body).toContain(
-      "Forced removable for a dry run. Real state on this run: still needed (2 of 2 probes fail).",
+      "Forced removable for a dry run. Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0; still needed (2 of 2 probes fail) on Chromium 153.0.8010.12; still needed (2 of 2 probes fail) on Firefox 155.0; still needed (2 of 2 probes fail) on WebKit 26.6.",
     );
-    expect(action.body).toContain("**Probes:** 0 of 2 pass.");
+    expect(action.body).toContain(
+      "| temporal-compat-check | Node v24.11.0 | still needed (2 of 2 probes fail) | 0 of 2 pass |",
+    );
+    expect(action.body).not.toContain("**Probes:**");
+  });
+
+  it("17c: a forced group whose engines disagree states each engine's real state", () => {
+    const { verdicts } = applyForce(
+      {
+        ...everywhere([workaround("D2", "removable")]),
+        "temporal-compat-check": check([workaround("D2", "still-needed")]),
+        "temporal-compat-firefox": couldNotRun(
+          "temporal-compat-firefox",
+          "the compat page failed in firefox: boom",
+        ),
+        "temporal-oracle": oracle(),
+      } as never,
+      { removable: "D2" },
+    );
+    const actions = forcedOpen(verdicts);
+    expect(actions.map((a) => a.key)).toEqual([
+      "dry-run/temporal-compat/removable/D2",
+      "temporal-oracle/could-not-run",
+    ]);
+    expect(actions[0].body).toContain(
+      "Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0; removable on Chromium 153.0.8010.12; no verdict (the compat page failed in firefox: boom) on temporal-compat-firefox; removable on WebKit 26.6.",
+    );
+    expect(actions[0].body).toContain(
+      "| temporal-compat-firefox | — | no verdict (the compat page failed in firefox: boom) | — |",
+    );
   });
 
   it("17b: a forced guard group states guard as its real state", () => {
@@ -794,7 +1051,9 @@ describe("applyForce and forced findings", () => {
       { removable: "D10" },
     );
     const [action] = forcedOpen(verdicts);
-    expect(action.body).toContain("Real state on this run: guard.");
+    expect(action.body).toContain(
+      "Real state on this run: guard on Node v24.11.0; guard on Chromium 153.0.8010.12; guard on Firefox 155.0; guard on WebKit 26.6.",
+    );
   });
 
   it("18: an open dry-run issue #60 gets the comment", () => {
@@ -811,7 +1070,7 @@ describe("applyForce and forced findings", () => {
     expect(actions).toHaveLength(1);
     expect(actions[0]).toMatchObject({ kind: "comment", issue: 60 });
     expect(actions[0].body).toContain(
-      "Forced removable for a dry run. Real state on this run: still needed (2 of 2 probes fail).",
+      "Forced removable for a dry run. Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0;",
     );
   });
 
@@ -1111,7 +1370,7 @@ describe("applyForce and forced findings", () => {
 describe("findings", () => {
   it("orders removable, mismatch, native, then could-not-run", () => {
     const verdicts = {
-      "temporal-compat-check": check([workaround("D2", "removable")]),
+      ...everywhere([workaround("D2", "removable")]),
       "temporal-oracle": oracle(1),
       "native-suite-node": native("node", {
         untagged: 1,
@@ -1154,10 +1413,10 @@ const FAILURE_KEY = "native-suite/untagged-failure";
 const HOST_KEY = "native-suite/untagged-host-failure";
 const STALE_KEY = "native-suite/stale-tag";
 
-/** An oracle-clean verdict set with the given native legs (the others clean). */
+/** An oracle-clean verdict set, every compat source clean, with the given native legs (the others clean). */
 const withLegs = (legs: Partial<Record<string, unknown>>) =>
   ({
-    "temporal-compat-check": cleanCheck(),
+    ...everywhere(cleanCheck().workarounds),
     "temporal-oracle": oracle(),
     ...cleanNative(),
     ...Object.fromEntries(
@@ -1169,7 +1428,7 @@ const only = (verdicts: unknown, key: string) =>
   findings(verdicts as never, ORACLE_CONTEXT).filter((f) => f.key === key);
 
 describe("native suite findings", () => {
-  it("all three legs ran with nothing untagged and nothing stale: no native finding", () => {
+  it("all four legs ran with nothing untagged and nothing stale: no native finding", () => {
     expect(plan(withLegs({}))).toEqual([]);
   });
 
@@ -1462,7 +1721,7 @@ describe("native suite findings", () => {
     ${FAILURE_KEY}
     ${HOST_KEY}
   `(
-    "body size: 3 legs of 50 rows with 300-character messages stay under 65,536 for $key",
+    "body size: 4 legs of 50 rows with 300-character messages stay under 65,536 for $key, every leg cut to the same count",
     ({ key }) => {
       const message = "m".repeat(300);
       const options =
@@ -1474,10 +1733,18 @@ describe("native suite findings", () => {
           node: native("node", options),
           chromium: native("chromium", options),
           firefox: native("firefox", options),
+          webkit: native("webkit", options),
         }),
         key,
       );
-      expect(finding.body.match(/m{300}/g)).toHaveLength(150);
+      const shown = finding.body.match(/m{300}/g)?.length ?? 0;
+      expect(shown).toBeGreaterThan(0);
+      expect(shown).toBeLessThan(200);
+      expect(shown % 4).toBe(0);
+      const perLeg = shown / 4;
+      for (const engine of Object.values(ENGINES)) {
+        expect(finding.body).toContain(`### ${engine} (first ${perLeg} of 60)`);
+      }
       expect(finding.body.length).toBeLessThan(65_536);
       expect(finding.comment.length).toBeLessThan(65_536);
     },
@@ -1488,7 +1755,7 @@ describe("native suite findings", () => {
     ${FAILURE_KEY}
     ${HOST_KEY}
   `(
-    "body size: 3 legs of 60 rows with 365-character names and 300-character messages stay under 65,536 for $key",
+    "body size: 4 legs of 60 rows with 365-character names and 300-character messages stay under 65,536 for $key",
     ({ key }) => {
       const longName = (
         leg: (typeof NATIVE_LEGS)[number],
@@ -1516,6 +1783,7 @@ describe("native suite findings", () => {
           node: longName("node", options),
           chromium: longName("chromium", options),
           firefox: longName("firefox", options),
+          webkit: longName("webkit", options),
         }),
         key,
       );
@@ -1525,6 +1793,7 @@ describe("native suite findings", () => {
         /### Node v26.10.0[^\n]* \(first \d+ of 60\)/,
       );
       expect(finding.body).toMatch(/### Firefox 155.0 \(first \d+ of 60\)/);
+      expect(finding.body).toMatch(/### WebKit 26.6 \(first \d+ of 60\)/);
     },
   );
 

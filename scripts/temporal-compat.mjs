@@ -30,7 +30,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join, relative } from "node:path";
+import { join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { readDates, scanBody } from "./temporal-compat/scan-body.js";
 import { formatJson } from "./lib/format-json.mjs";
@@ -233,7 +233,7 @@ function printGroupVerdict({
   }
   if (state === "out-of-scope") {
     console.log(
-      `  => OUT OF SCOPE: all ${results.length} probes return the spec value, but this defect is ${workaround.engines.join(" and ")} only and this run is on ${ENGINE}. Passing here does not make the workaround removable; the native suite on ${workaround.engines.join(" and ")} decides. Keep the workaround; no removal steps.`,
+      `  => OUT OF SCOPE: all ${results.length} probes return the spec value, but this defect is ${workaround.engines.join(" and ")} only and this run is on ${ENGINE}. Passing here does not make the workaround removable; the weekly run's compat check in ${workaround.engines.join(" and ")} (its temporal-compat-<leg> verdict) decides. Keep the workaround; no removal steps.`,
     );
     return;
   }
