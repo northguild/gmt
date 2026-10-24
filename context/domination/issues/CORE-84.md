@@ -76,10 +76,11 @@ Not in scope: iCalendar files, `VTIMEZONE`, alarms, `EXRULE` (deprecated by RFC 
 ### Decisions made during the build
 
 - **`"reject"` (F3):** the call returns `[]` when `start`, or a wall-time `RDATE` or `EXDATE`, is non-unique, or when a returned row was read from a non-unique wall time. Generated rows outside the window do not count, and instant entries never refuse.
-- **End bound:** the interval form stops its walk at `floorDay(end) + 3` days. A Temporal offset is under 24 h, so a gap is under 48 h and 3 days is exact.
+- **End bound:** the interval form stops its walk at `floorDay(end) + 1` days, and the walk starts a day before the window. A Temporal offset is under 24 h, so a wall time is less than a day from the instant it names, whichever offset a gap or a fold resolves it with.
+- **`COUNT` far from DTSTART:** the occurrences before the window are counted, not walked (`countMomentsBefore` in `internal/recurrenceExpansion.ts`). A daily or sub-daily rule reads one 400-year cycle of days and counts its steps along it; a yearly to weekly rule sums one block of the periods it visits and multiplies, since its periods repeat every `cycle / gcd(cycle, INTERVAL)` steps for `cycle` periods in 400 years. The count costs at most about 400,000 units, wherever the window is.
 - **Range:** rows past Temporal's range are dropped, not a reason for `[]`.
 - **Closed-form resolution:** wall-time placement near a transition uses a closed form with a self-proving isolation check, and falls back to `classifyWall` when isolation cannot be shown (`internal/localResolution.ts`). It was checked differentially against `classifyWall`: 12,652,706 moments, 0 mismatches.
-- **Bundle size:** the root budget in `scripts/bundle-size.budgets.json` was raised from 521,169 to 547,763 (+26.6 KB, +5.1%).
+- **Bundle size:** the root budget in `scripts/bundle-size.budgets.json` was raised from 521,169 to 556,200 (+35.0 KB, +6.7%).
 - **Playground:** the first `@example` of `expandRecurrence`, `cronRuns` and `parseCronExpression` uses literals, because the playground template cannot model nested calls.
 - **`RRULE` grammar:** all 14 parts in any order, each once, no whitespace and no `RRULE:` prefix; `EXRULE`, `RSCALE`, `SKIP` and `X-` names return `null`. Lists are sets, deduplicated and ascending. `COUNT` of 0 is invalid.
 - **Implicit parts** are filled from `DTSTART` as RFC 8984 section 4.3.3.1 extra rule 3 lists them. `WKST` matters only for `WEEKLY` with `INTERVAL` above 1 and for `BYWEEKNO`; the week number was checked against `Temporal.PlainDate#weekOfYear`.

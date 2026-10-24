@@ -9,6 +9,7 @@ import {
 } from "./epochDay";
 import {
   RECURRENCE_WORK_CAP,
+  countMomentsBefore,
   expandLocalMoments,
   weekYearWeek,
   type ExpansionStatus,
@@ -595,6 +596,94 @@ describe("expandLocalMoments fast-forward", () => {
 
     expect(disagreements).toEqual([]);
     expect(compared).toBeGreaterThan(150);
+  });
+
+  /**
+   * How many moments after DTSTART a walk from DTSTART visits before the first moment after DTSTART
+   * that a walk from `floor` visits. `undefined` when the walk from `floor` finds none, or when the
+   * walk from DTSTART spends `budget` first.
+   */
+  function skippedByWalking(
+    r: RecurrenceRule,
+    start: LocalMoment,
+    floor: number,
+    budget = RECURRENCE_WORK_CAP,
+  ): number | undefined {
+    let target: LocalMoment | undefined;
+    let visits = 0;
+
+    // Both walks visit DTSTART first.
+    expandLocalMoments(r, start, floor, (m) => {
+      visits++;
+      if (visits === 2) target = m;
+      return visits === 1;
+    });
+    if (target === undefined) return undefined;
+    const { day, second } = target;
+    let earlier = 0;
+    const status = expandLocalMoments(
+      r,
+      start,
+      start.day,
+      (m) => {
+        const before = m.day < day || (m.day === day && m.second < second);
+        if (before) earlier++;
+        return before;
+      },
+      budget,
+    );
+
+    return status === "stopped" ? earlier - 1 : undefined;
+  }
+
+  it("countMomentsBefore counts what a walk from DTSTART visits before the floor, for 100 seeded rules", () => {
+    const random = seeded(324);
+    const disagreements: string[] = [];
+    let compared = 0;
+
+    for (let row = 0; row < 100; row++) {
+      const r = randomRule(random);
+      const start = {
+        day: epochDayOf(
+          2000 + Math.floor(random() * 20),
+          1 + Math.floor(random() * 12),
+          1 + Math.floor(random() * 28),
+        ),
+        second: Math.floor(random() * 86_400),
+      };
+      const floor = start.day + Math.floor(random() * 4000);
+      const walked = skippedByWalking(r, start, floor, 30_000);
+
+      if (walked === undefined) continue;
+      compared++;
+      if (countMomentsBefore(r, start, floor)?.count !== walked) {
+        disagreements.push(JSON.stringify(r));
+      }
+    }
+
+    expect({ disagreements, compared: compared > 60 }).toEqual({
+      disagreements: [],
+      compared: true,
+    });
+  });
+
+  // A floor 400 years or more from DTSTART: a daily or sub-daily count reads one 400-year cycle and
+  // counts along it, a yearly to weekly one sums whole runs of periods.
+  it.each`
+    case                            | parts                                                                                                         | start
+    ${"DAILY, every 3rd leap day"}  | ${{ frequency: "daily", interval: 3, byMonth: [2], byMonthDay: [29] }}                                        | ${"2000-02-29T09:00"}
+    ${"HOURLY, every 5th hour"}     | ${{ frequency: "hourly", interval: 5, byMonth: [2], byMonthDay: [29], byHour: [1, 2, 3, 22] }}                | ${"2000-02-29T00:00"}
+    ${"SECONDLY, every 86,401st"}   | ${{ frequency: "secondly", interval: 86_401, byMonth: [2], byMonthDay: [29] }}                                | ${"2000-02-28T23:59:59"}
+    ${"WEEKLY, the last in a week"} | ${{ frequency: "weekly", interval: 3, byMonth: [2], byDay: [{ day: MO }, { day: TH }], bySetPosition: [-1] }} | ${"2001-02-01T08:00"}
+    ${"MONTHLY, Friday the 13th"}   | ${{ frequency: "monthly", interval: 6, byMonthDay: [13], byDay: [{ day: FR }] }}                              | ${"2001-01-13T08:00"}
+    ${"YEARLY, the second of two"}  | ${{ frequency: "yearly", interval: 4, byMonth: [2], byMonthDay: [29], byHour: [1, 2], bySetPosition: [2] }}   | ${"2000-02-29T01:30"}
+  `("countMomentsBefore over 900 years, $case", ({ parts, start }) => {
+    const from = moment(start);
+    const floor = epochDayOf(2900, 3, 1);
+
+    expect(countMomentsBefore(rule(parts), from, floor)?.count).toBe(
+      skippedByWalking(rule(parts), from, floor),
+    );
   });
 });
 

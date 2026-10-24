@@ -462,6 +462,46 @@ function emit(
 /** Sub-daily periods per day, and seconds per period. */
 const SUB_DAILY_UNIT = { hourly: 3600, minutely: 60, secondly: 1 } as const;
 
+/** Steps per day of a daily or sub-daily rule: 1 for `DAILY`, 24, 1,440 or 86,400 below it. */
+function stepsPerDay(rule: PreparedRule): number {
+  return rule.frequency === "daily"
+    ? 1
+    : SECONDS_PER_DAY /
+        SUB_DAILY_UNIT[rule.frequency as keyof typeof SUB_DAILY_UNIT];
+}
+
+/**
+ * Where a walk starts: `origin`, the index of the period or sub-daily step that holds DTSTART, and
+ * `first`, the first aligned one (`origin + k x interval`) that does not end before `fromDay`.
+ * A daily rule's step and period are the same day.
+ */
+function walkStart(
+  rule: PreparedRule,
+  start: LocalMoment,
+  fromDay: number,
+): { origin: number; first: number } {
+  if (!(rule.frequency in SUB_DAILY_UNIT)) {
+    const origin = periodIndexOfDay(rule, start.day);
+
+    return {
+      origin,
+      first: alignedAtLeast(
+        origin,
+        rule.interval,
+        periodIndexOfDay(rule, fromDay),
+      ),
+    };
+  }
+  const perDay = stepsPerDay(rule);
+  const origin =
+    start.day * perDay + Math.floor(start.second / (SECONDS_PER_DAY / perDay));
+
+  return {
+    origin,
+    first: alignedAtLeast(origin, rule.interval, fromDay * perDay),
+  };
+}
+
 /** Emits the minutes and seconds of one hourly period that starts at second `base` of `day`. */
 function emitHour(
   run: Run,
@@ -805,9 +845,9 @@ function hasTimeFilter(rule: PreparedRule): boolean {
 
   return Boolean(
     hours ||
-      (frequency !== "hourly" && minutes) ||
-      (frequency === "secondly" && seconds) ||
-      picksNothing(rule),
+    (frequency !== "hourly" && minutes) ||
+    (frequency === "secondly" && seconds) ||
+    picksNothing(rule),
   );
 }
 
@@ -870,9 +910,7 @@ function stepOfNextDay(
   rule: PreparedRule,
   origin: number,
 ): number | ExpansionStatus {
-  const perDay =
-    SECONDS_PER_DAY /
-    SUB_DAILY_UNIT[rule.frequency as keyof typeof SUB_DAILY_UNIT];
+  const perDay = stepsPerDay(rule);
   const next = days.nextFrom(day + 1);
 
   if (next === undefined) {
@@ -928,10 +966,8 @@ function expandSubDaily(
   fromDay: number,
 ): ExpansionStatus {
   const { interval } = rule;
-  const unit = SUB_DAILY_UNIT[rule.frequency as keyof typeof SUB_DAILY_UNIT];
-  const perDay = SECONDS_PER_DAY / unit;
-  const origin = run.start.day * perDay + Math.floor(run.start.second / unit);
-  const first = alignedAtLeast(origin, interval, fromDay * perDay);
+  const perDay = stepsPerDay(rule);
+  const { origin, first } = walkStart(rule, run.start, fromDay);
   const hits = subDailyHits(rule, run, perDay, origin);
 
   if (hits === "capped") {
@@ -1003,12 +1039,7 @@ function expandPeriods(
 ): ExpansionStatus {
   const times = timesOfDay(rule);
   const { interval } = rule;
-  const origin = periodIndexOfDay(rule, run.start.day);
-  const first = alignedAtLeast(
-    origin,
-    interval,
-    periodIndexOfDay(rule, fromDay),
-  );
+  const { origin, first } = walkStart(rule, run.start, fromDay);
   // Nothing picked in this many periods from `first` means nothing ever will (see stepsToRepeat).
   const repeatAfter = stepsToRepeat(
     interval,
@@ -1068,6 +1099,312 @@ function emitPeriod(
   return status ?? (lastDay >= run.lastDay() ? "end" : undefined);
 }
 
+/** Charges `units` at once; false, with the budget spent, when it cannot cover them. */
+function spend(run: Run, units: number): boolean {
+  if (run.spent + units > run.budget) {
+    run.spent = run.budget;
+    return false;
+  }
+  run.spent += units;
+
+  return true;
+}
+
+/** How many of a period's `size` candidates, from index `from` on, `setPositions` picks (all of them with none). */
+function picksFrom(
+  setPositions: readonly number[] | undefined,
+  size: number,
+  from: number,
+): number {
+  if (setPositions === undefined) {
+    return Math.max(size - from, 0);
+  }
+  const picks = setIndices(setPositions, size);
+
+  return picks.length - firstAtLeast(picks, from);
+}
+
+/** Seconds from the start of a daily or sub-daily step to each of its candidates, ascending. */
+function stepOffsets(rule: PreparedRule): number[] {
+  const { minutes = [], seconds = [] } = rule;
+
+  switch (rule.frequency) {
+    case "hourly":
+      return minutes.flatMap((m) => seconds.map((s) => m * 60 + s));
+    case "minutely":
+      return seconds;
+    case "secondly":
+      return [0];
+    default:
+      return timesOfDay(rule);
+  }
+}
+
+/**
+ * Counts passing days along a progression with stride `stride`: the returned `(x, q)` is how many
+ * of `x, x + stride, ..., x + (q - 1) x stride` pass, in O(1). The filter repeats every
+ * `CYCLE_DAYS`, so a day answers as its residue does, and the residues a progression visits go round
+ * an orbit of `CYCLE_DAYS / g` of them, `g = gcd(CYCLE_DAYS, stride)`: `q` terms are whole orbits
+ * and a run of one, read from running counts. Building it costs one unit per day of a cycle, and
+ * fills the day cache; `undefined` when the budget ran out.
+ */
+function progressionCounter(
+  run: Run,
+  days: DayCache,
+  stride: number,
+): ((x: number, q: number) => number) | undefined {
+  const step = stride % CYCLE_DAYS;
+  const orbits = gcd(CYCLE_DAYS, step);
+  const length = CYCLE_DAYS / orbits;
+  const passing = days.between(run.start.day, run.start.day + CYCLE_DAYS - 1);
+
+  if (passing === undefined || !spend(run, CYCLE_DAYS)) {
+    return undefined;
+  }
+  const passes = new Uint8Array(CYCLE_DAYS);
+  for (const day of passing) {
+    passes[mod(day, CYCLE_DAYS)] = 1;
+  }
+  // Orbit `o` holds the residues `o mod orbits`; its running counts start at `o x (length + 1)`.
+  const position = new Int32Array(CYCLE_DAYS);
+  const sums = new Int32Array(CYCLE_DAYS + orbits);
+  for (let o = 0; o < orbits; o++) {
+    const base = o * (length + 1);
+    let residue = o;
+    for (let i = 0; i < length; i++) {
+      position[residue] = i;
+      sums[base + i + 1] = sums[base + i] + passes[residue];
+      residue = (residue + step) % CYCLE_DAYS;
+    }
+  }
+
+  return (x, q) => {
+    const residue = mod(x, CYCLE_DAYS);
+    const base = (residue % orbits) * (length + 1);
+    const at = position[residue];
+    const whole = Math.floor(q / length);
+    const end = at + q - whole * length;
+    const orbit = sums[base + length];
+    const rest =
+      end <= length
+        ? sums[base + end] - sums[base + at]
+        : orbit - sums[base + at] + sums[base + end - length];
+
+    return whole * orbit + rest;
+  };
+}
+
+/**
+ * Hit steps `k < steps` (see `subDailyHits`; every step of a `DAILY` rule) whose day passes. A
+ * `steps` span shorter than a cycle reads its passing days, one unit each. A longer one sums, per
+ * hit `h < K`, the passing days of `h, h + K, h + 2K, ...`: those are days `D(h) + b x m`, with
+ * `m = K x interval / perDay`, a progression `progressionCounter` counts at once.
+ */
+function passingHits(
+  rule: PreparedRule,
+  run: Run,
+  days: DayCache,
+  filtered: boolean,
+  origin: number,
+  steps: number,
+  hits: readonly number[] | undefined,
+): number | undefined {
+  const { interval } = rule;
+  const perDay = stepsPerDay(rule);
+  const cycle = perDay / gcd(perDay, interval % perDay);
+  const hitsBelow = (k: number): number =>
+    hits === undefined
+      ? k
+      : Math.floor(k / cycle) * hits.length + firstAtLeast(hits, k % cycle);
+
+  if (!filtered) {
+    return hitsBelow(steps);
+  }
+  const lastDay = Math.floor((origin + (steps - 1) * interval) / perDay);
+  if (lastDay - run.start.day < CYCLE_DAYS) {
+    const passing = days.between(run.start.day, lastDay);
+    if (passing === undefined || !spend(run, passing.length)) {
+      return undefined;
+    }
+    const stepAt = (day: number): number =>
+      Math.min(
+        steps,
+        Math.max(0, Math.ceil((day * perDay - origin) / interval)),
+      );
+
+    return passing.reduce(
+      (total, day) =>
+        total + hitsBelow(stepAt(day + 1)) - hitsBelow(stepAt(day)),
+      0,
+    );
+  }
+  const counter = progressionCounter(
+    run,
+    days,
+    interval / gcd(perDay, interval),
+  );
+  if (counter === undefined) {
+    return undefined;
+  }
+  const below = Math.min(steps, cycle);
+  const count = hits === undefined ? below : firstAtLeast(hits, below);
+  let total = 0;
+
+  // At most `K` (86,400) hits, each charged.
+  for (let i = 0; i < count; i++) {
+    if (!spend(run, 1)) {
+      return undefined;
+    }
+    const h = hits === undefined ? i : hits[i];
+
+    total += counter(
+      Math.floor((origin + h * interval) / perDay),
+      Math.floor((steps - 1 - h) / cycle) + 1,
+    );
+  }
+
+  return total;
+}
+
+/** Daily and sub-daily: the candidates after DTSTART in the first `steps` aligned steps. */
+function countSteps(
+  rule: PreparedRule,
+  run: Run,
+  days: DayCache,
+  filtered: boolean,
+  origin: number,
+  steps: number,
+): number | undefined {
+  const perDay = stepsPerDay(rule);
+  const hits =
+    rule.frequency === "daily"
+      ? undefined
+      : subDailyHits(rule, run, perDay, origin);
+
+  if (hits === "capped") {
+    return undefined;
+  }
+  const total = passingHits(rule, run, days, filtered, origin, steps, hits);
+  // Step 0 holds DTSTART: its candidates at or before DTSTART are not visited.
+  const startCounts =
+    hits === undefined || hits[0] === 0 ? days.has(run.start.day) : false;
+  if (total === undefined || startCounts === undefined) {
+    return undefined;
+  }
+  const offsets = stepOffsets(rule);
+  const perStep = picksFrom(rule.setPositions, offsets.length, 0);
+  const base = (origin - run.start.day * perDay) * (SECONDS_PER_DAY / perDay);
+  const atOrBefore = firstAtLeast(offsets, run.start.second - base + 1);
+
+  return (
+    total * perStep -
+    (startCounts
+      ? perStep - picksFrom(rule.setPositions, offsets.length, atOrBefore)
+      : 0)
+  );
+}
+
+/**
+ * Yearly to weekly: the candidates after DTSTART in the first `steps` aligned periods. Period
+ * `origin + j x interval` looks as period `j mod B` does, `B = cycle / gcd(cycle, interval)` for
+ * the periods in a 400-year cycle, so at most `B` periods (4,800 months, 20,871 weeks) are read.
+ */
+function countPeriods(
+  rule: PreparedRule,
+  run: Run,
+  days: DayCache,
+  origin: number,
+  steps: number,
+): number | undefined {
+  const times = timesOfDay(rule);
+  const { interval, setPositions } = rule;
+  const cycle = CYCLE_PERIODS[rule.frequency as keyof typeof CYCLE_PERIODS];
+  const block = cycle / gcd(cycle, interval % cycle);
+  const whole = Math.floor(steps / block);
+  const rest = steps - whole * block;
+  let sum = 0;
+  let partial = 0;
+  let notVisited = 0;
+
+  for (let j = 0; j < Math.min(steps, block); j++) {
+    if (!spend(run, 1)) {
+      return undefined;
+    }
+    const passing = days.between(...periodDays(rule, origin + j * interval));
+    if (passing === undefined) {
+      return undefined;
+    }
+    const size = passing.length * times.length;
+
+    if (j === rest) {
+      partial = sum;
+    }
+    sum += picksFrom(setPositions, size, 0);
+    if (j === 0) {
+      // DTSTART's period: its candidates at or before DTSTART are not visited.
+      const i = firstAtLeast(passing, run.start.day);
+      const atOrBefore =
+        i * times.length +
+        (passing[i] === run.start.day
+          ? firstAtLeast(times, run.start.second + 1)
+          : 0);
+      notVisited = sum - picksFrom(setPositions, size, atOrBefore);
+    }
+  }
+
+  return (steps <= block ? sum : whole * sum + partial) - notVisited;
+}
+
+/**
+ * How many candidates an expansion from DTSTART visits, after `start` itself, before the first
+ * one an expansion from `fromDay` visits: the ones in the aligned periods or steps the
+ * fast-forward skips. `COUNT` counts from DTSTART, so a `COUNT` rule needs this to expand from
+ * `fromDay`. From the first visit on, both expansions visit the same candidates.
+ *
+ * Its cost does not follow the distance. A daily or sub-daily step's time of day repeats every
+ * `K` steps, at most 86,400, and the day filter every 400 years: the count reads the `K` steps once,
+ * then the passing days in the span, or, for a span of 400 years or more, every day of one cycle.
+ * Yearly to weekly periods repeat once the 400-year cycle and the interval line up, after at most
+ * 20,871 periods, which it reads once. So the whole is bounded by a few hundred thousand units.
+ *
+ * @returns the count and the units spent, or `undefined` when `budget` ran out.
+ *
+ * @example
+ * const rule = { frequency: "daily", interval: 1, firstDayOfWeek: 1 } as const;
+ * countMomentsBefore(rule, { day: 0, second: 0 }, 1_000_000); // { count: 999999, spent: 0 }
+ */
+export function countMomentsBefore(
+  rule: RecurrenceRule,
+  start: LocalMoment,
+  fromDay: number,
+  budget: number = RECURRENCE_WORK_CAP,
+): { count: number; spent: number } | undefined {
+  const prepared = prepare(rule, start);
+  const { origin, first } = walkStart(prepared, start, fromDay);
+  const steps = Math.round((first - origin) / prepared.interval);
+
+  if (steps === 0) {
+    return { count: 0, spent: 0 };
+  }
+  const run: Run = {
+    spent: 0,
+    budget,
+    lastDay: () => MAX_EPOCH_DAY,
+    start,
+    visit: () => true,
+    setPositions: prepared.setPositions,
+    picked: false,
+  };
+  const passes = dayFilter(prepared);
+  const days = createDayCache(run, passes, prepared.byMonth);
+  const count =
+    prepared.frequency in CYCLE_PERIODS && prepared.frequency !== "daily"
+      ? countPeriods(prepared, run, days, origin, steps)
+      : countSteps(prepared, run, days, passes !== undefined, origin, steps);
+
+  return count === undefined ? undefined : { count, spent: run.spent };
+}
+
 /**
  * Expands a recurrence rule over local wall times (RFC 8984 §4.3.3.1, RFC 5545 §3.3.10) and
  * calls `visit` with each candidate in strictly ascending order. No zone is involved: the caller
@@ -1076,8 +1413,9 @@ function emitPeriod(
  * `rule` has already passed `checkRecurrenceRule`. `start` is DTSTART's wall time and is visited
  * first, always, even when it does not match the rule (RFC 8984 §4.3.3.1 extra rule 1). Every
  * later visit is a candidate strictly after `start`. `fromDay` is a fast-forward floor: periods
- * that end before it are skipped in closed form, so with no `COUNT` the cost depends on the
- * window, not on the distance from DTSTART. The first period visited may still yield moments
+ * that end before it are skipped in closed form, so the cost depends on the window, not on the
+ * distance from DTSTART; a caller that applies `COUNT` counts the skipped moments with
+ * {@link countMomentsBefore}. The first period visited may still yield moments
  * before `fromDay`; the caller filters them. Pass `start.day` to expand from DTSTART.
  *
  * Complexity: `O(P + Y + F + R)` for the periods visited (skip jumps included), the years looked

@@ -22,6 +22,7 @@ import {
 import { optionOrDefault } from "../../internal/optionOrDefault";
 import {
   RECURRENCE_WORK_CAP,
+  countMomentsBefore,
   expandLocalMoments,
   type LocalMoment,
 } from "../../internal/recurrenceExpansion";
@@ -39,10 +40,10 @@ const NANOSECONDS_PER_SECOND = 1_000_000_000n;
 const SECONDS_PER_DAY = 86_400n;
 const DAY = SECONDS_PER_DAY * NANOSECONDS_PER_SECOND;
 /**
- * A moment read as UTC is within a day of the instant it names (Temporal keeps an offset under
- * 24 hours), so three days of slack never drops a row and never keeps a loop running.
+ * A moment read as UTC is less than a day from the instant it names (Temporal keeps an offset under
+ * 24 hours), so a day of slack never drops a row and never keeps a loop running.
  */
-const SLACK = 3n * DAY;
+const SLACK = DAY;
 const MAX_ROWS = 10_000;
 const POLICIES = ["compatible", "earlier", "later", "reject"];
 
@@ -405,10 +406,15 @@ function collectGenerated(call: Call, collector: Collector): boolean {
   const { rule, start, window } = call;
   const resolve = createLocalResolver(call.frame);
   const skipBefore = lowerBound(window) - SLACK;
-  const fromDay =
-    rule.count !== undefined
-      ? start.day
-      : Math.max(start.day, floorDay(lowerBound(window)) - 3);
+  const fromDay = Math.max(start.day, floorDay(skipBefore));
+  // COUNT counts from DTSTART: the occurrences the fast-forward skips are counted, not walked.
+  const skipped =
+    rule.count === undefined
+      ? { count: 0, spent: 0 }
+      : countMomentsBefore(rule, start, fromDay);
+  if (skipped === undefined) {
+    return false;
+  }
   let visited = 0;
   // The expansion ends once a period starts past the collector's limit, so a rule with no later
   // occurrence stops as "end" (DTSTART kept) instead of at the work cap. The count form has a limit
@@ -427,9 +433,11 @@ function collectGenerated(call: Call, collector: Collector): boolean {
       const first = visited === 0;
       visited += 1;
       const local = localNanoseconds(moment);
+      // DTSTART is occurrence 1, and every later visit follows the skipped ones.
+      const ordinal = first ? 1 : visited + skipped.count;
 
       if (
-        (rule.count !== undefined && visited > rule.count) ||
+        (rule.count !== undefined && ordinal > rule.count) ||
         isSpent(call, collector, local, first)
       ) {
         return false;
@@ -441,7 +449,7 @@ function collectGenerated(call: Call, collector: Collector): boolean {
 
       return true;
     },
-    RECURRENCE_WORK_CAP,
+    RECURRENCE_WORK_CAP - skipped.spent,
     lastDay,
   );
 
@@ -694,15 +702,14 @@ function readCall(
  * `INTERVAL` costs one scan of at most 86,400 steps to learn which times of day its steps can
  * land on, then one unit per row and per passing day. So `FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0`
  * fills a window of 10,000 rows, and a sub-daily rule that never matches again gives DTSTART alone.
- * `[]` also comes back when the work budget of 2,000,000 units runs out. A `COUNT` rule counts its
- * occurrences from DTSTART, about two units each, so a window that opens about 1,000,000
- * occurrences after DTSTART (740,000 for `SECONDLY`) gets `[]`: `FREQ=DAILY;COUNT=2000000` from
- * 2024-01-01 gives nothing after 4761-11-20.
+ * `[]` also comes back when the work budget of 2,000,000 units runs out.
  *
  * Complexity: O(W + K log K) for W the work the expansion spends, bounded by 2,000,000 units, and
  * K the rows kept, at most 10,000. A rule that matches rarely pays one unit for each year it
  * crosses, not one for each day, after at most 146,097 units to learn the 400-year calendar.
- * With no `COUNT` the cost follows the window, not the distance from DTSTART.
+ * The cost follows the window, not the distance from DTSTART: a `COUNT` rule counts the
+ * occurrences before the window instead of walking them, in at most about 400,000 units, so
+ * `FREQ=DAILY;COUNT=2000000` from 2024-01-01 runs to its last occurrence, on 7499-10-24.
  *
  * @param rule a recurrence rule, from `parseRecurrenceRule`
  * @param start DTSTART, an ISO date-time without offset or sub-second part

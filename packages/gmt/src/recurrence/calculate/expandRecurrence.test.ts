@@ -899,6 +899,66 @@ describe("expandRecurrence, the 10,000-row cap and the work cap", () => {
   });
 });
 
+describe("expandRecurrence, a COUNT rule finds its occurrences however far the window is from DTSTART", () => {
+  // Rule: RFC 5545 §3.3.10. DTSTART is the first occurrence and counts toward COUNT. With no BY
+  // part every step is an occurrence, so occurrence n is DTSTART plus n - 1 steps. The oracle
+  // counts the steps to the window with Temporal, not with the code under test.
+  const from = Temporal.PlainDateTime.from("2024-01-01T00:00:00");
+
+  function stepsTo(instant: string, unit: "seconds" | "days"): number {
+    const local = Temporal.Instant.from(instant)
+      .toZonedDateTimeISO("UTC")
+      .toPlainDateTime();
+
+    return from.until(local, { largestUnit: unit })[unit];
+  }
+
+  function expected(
+    unit: "seconds" | "days",
+    total: number,
+    window: { after?: string; count?: number; start?: string; end?: string },
+  ): RecurrenceOccurrence[] {
+    // A count window starts after the step at `after`; an interval holds [start, end).
+    const firstOrdinal =
+      window.after === undefined
+        ? stepsTo(window.start ?? "", unit) + 1
+        : stepsTo(window.after, unit) + 2;
+    const lastOrdinal = Math.min(
+      total,
+      window.after === undefined
+        ? stepsTo(window.end ?? "", unit)
+        : firstOrdinal + (window.count ?? 0) - 1,
+    );
+
+    return Array.from(
+      { length: Math.max(0, lastOrdinal - firstOrdinal + 1) },
+      (_, index) => {
+        const local = from.add({ [unit]: firstOrdinal + index - 1 }).toString();
+
+        return unique(local, `${local}Z`);
+      },
+    );
+  }
+
+  // 900,000 seconds after DTSTART is 2024-01-11T10:00:00, and occurrence 5,000,000 is
+  // 2024-02-27T20:53:19. Occurrence 1,013,914 of the daily rule is 4800-01-01, and occurrence
+  // 2,000,000 is 7499-10-24.
+  it.each`
+    case                                 | text                             | unit         | total        | window
+    ${"900,000 seconds in, a count"}     | ${"FREQ=SECONDLY;COUNT=5000000"} | ${"seconds"} | ${5_000_000} | ${{ after: "2024-01-11T10:00:00Z", count: 3 }}
+    ${"900,000 seconds in, an interval"} | ${"FREQ=SECONDLY;COUNT=5000000"} | ${"seconds"} | ${5_000_000} | ${{ start: "2024-01-11T10:00:00Z", end: "2024-01-11T10:00:03Z" }}
+    ${"the last second, a count"}        | ${"FREQ=SECONDLY;COUNT=5000000"} | ${"seconds"} | ${5_000_000} | ${{ after: "2024-02-27T20:53:18Z", count: 3 }}
+    ${"after 4800, a count"}             | ${"FREQ=DAILY;COUNT=2000000"}    | ${"days"}    | ${2_000_000} | ${{ after: "4800-01-01T00:00:00Z", count: 3 }}
+    ${"after 4800, an interval"}         | ${"FREQ=DAILY;COUNT=2000000"}    | ${"days"}    | ${2_000_000} | ${{ start: "4800-01-01T00:00:00Z", end: "4800-01-04T00:00:00Z" }}
+    ${"the last day, an interval"}       | ${"FREQ=DAILY;COUNT=2000000"}    | ${"days"}    | ${2_000_000} | ${{ start: "7499-10-23T00:00:00Z", end: "7499-10-26T00:00:00Z" }}
+    ${"past the last day, a count"}      | ${"FREQ=DAILY;COUNT=2000000"}    | ${"days"}    | ${2_000_000} | ${{ after: "7499-10-24T00:00:00Z", count: 3 }}
+  `("$text, $case", ({ text, unit, total, window }) => {
+    expect(
+      expandRecurrence(rule(text), from.toString(), "UTC", window),
+    ).toEqual(expected(unit, total, window));
+  });
+});
+
 describe("expandRecurrence, RDATE and EXDATE at a transition in America/New_York", () => {
   // RFC 5545 §3.8.5.1: the set is RRULE plus RDATE minus EXDATE, and EXDATE wins. An entry with Z or an
   // offset is an exact instant (§3.3.5 FORM #2); one without is a wall time in the zone (FORM #3),
