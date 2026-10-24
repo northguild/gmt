@@ -235,12 +235,58 @@ const FILE_FAILED_MESSAGE =
 
 /**
  * A failure message up to its stack, so an issue shows the assertion and not the paths of the
- * machine that ran it. A frame is `    at ...` (V8) or `name@url:line:column` (Firefox, Safari).
+ * machine that ran it. A frame is `    at ...` (V8) or `name@url:line:column` (Firefox, Safari);
+ * a Firefox stack carries no message line, so its first frame can start the text.
  * @param {string} message
  */
 function withoutStack(message) {
-  return message.split(/\n\s+at |\n[^\n@]*@\S+:\d+:\d+/)[0].trim();
+  return message.split(/\n\s+at |(?:^|\n)[^\s@]*@\S+:\d+:\d+/)[0].trim();
 }
+
+/**
+ * A Vitest JSON report with the captured messages put back where a failed test's stack has none.
+ * Firefox's `failureMessages[0]` is the stack alone; the reporter's `{ file, fullName, message }`
+ * records (`native-suite-reporter.mjs`) carry the `Name: message` line. A record that already
+ * starts with its message is left as it was.
+ * @param {any} report
+ * @param {ReadonlyArray<{ file: string, fullName: string, message: string }>} messages
+ * @returns {any}
+ */
+export function withFailureMessages(report, messages) {
+  const byTest = new Map(
+    messages.map((m) => [`${m.file}\0${m.fullName}`, m.message]),
+  );
+  return {
+    ...report,
+    testResults: (report?.testResults ?? []).map(
+      (/** @type {any} */ suite) => ({
+        ...suite,
+        assertionResults: (suite.assertionResults ?? []).map(
+          (/** @type {any} */ r) => {
+            const message = byTest.get(`${suite.name}\0${r.fullName}`);
+            const first = String((r.failureMessages ?? [])[0] ?? "");
+            if (
+              r.status !== "failed" ||
+              message === undefined ||
+              first.startsWith(message)
+            )
+              return r;
+            return {
+              ...r,
+              failureMessages: [
+                `${message}\n${first}`,
+                ...(r.failureMessages ?? []).slice(1),
+              ],
+            };
+          },
+        ),
+      }),
+    ),
+  };
+}
+
+/** What a failed test shows when its report holds a stack and no message. */
+const STACK_ONLY_MESSAGE = "(the report holds a stack and no message)";
 
 /**
  * @typedef {{ file: string, test: string, n: number, passed: number, skipped: number,
@@ -292,6 +338,16 @@ function testStatus(status) {
 }
 
 /**
+ * The message of a failed test: Vitest's first failure message without its stack. A stack-only
+ * entry (Firefox) leaves nothing, which reads as the stated placeholder; a passing test has none.
+ * @param {any} r  the assertion result
+ */
+function failureText(r) {
+  const text = withoutStack(String((r.failureMessages ?? [])[0] ?? ""));
+  return text === "" && r.status === "failed" ? STACK_ONLY_MESSAGE : text;
+}
+
+/**
  * Adds one test of a suite. Vitest skips the tests a failed hook leaves unrun: a failure, not a
  * skip.
  * @param {AddTest} add
@@ -307,12 +363,7 @@ function addAssertion(add, file, fileFailed, message, r) {
     add(file, test, "skipped", `${HOOK_SKIPPED}${detail}`, "", true);
     return;
   }
-  add(
-    file,
-    test,
-    testStatus(r.status),
-    withoutStack(String((r.failureMessages ?? [])[0] ?? "")),
-  );
+  add(file, test, testStatus(r.status), failureText(r));
 }
 
 /**

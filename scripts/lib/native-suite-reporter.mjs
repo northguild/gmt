@@ -4,16 +4,55 @@
  * `NATIVE_SUITE_ERRORS` as `[{ name, message }]`, so the runner can tell a clean run from one
  * Vitest failed for a reason no test reports. Node built-ins only; it runs in Vitest's own process,
  * browser mode included.
+ *
+ * It also writes the message of every failed test to `NATIVE_SUITE_MESSAGES` as
+ * `[{ file, fullName, message }]`. The JSON reporter builds `failureMessages` from `error.stack`,
+ * and SpiderMonkey's stack has no `Name: message` line (V8's has), so on Firefox the assertion text
+ * is missing from that report. `TestCase.result().errors[]` keeps `name` and `message` apart from
+ * the stack on every engine.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
+/**
+ * The JSON reporter's `fullName`: the suite titles above a test and its own, joined by a space.
+ * @param {any} test
+ */
+function fullNameOf(test) {
+  const names = [String(test.name)];
+  for (let p = test.parent; p?.type === "suite"; p = p.parent) {
+    names.unshift(String(p.name));
+  }
+  return names.join(" ");
+}
+
+/** @param {ReadonlyArray<any>} testModules */
+function writeMessages(testModules) {
+  const path = process.env.NATIVE_SUITE_MESSAGES;
+  if (!path) return;
+  const out = [];
+  for (const module of testModules) {
+    for (const test of module.children.allTests("failed")) {
+      const error = test.result()?.errors?.[0];
+      if (!error || !error.message) continue;
+      out.push({
+        file: String(module.moduleId),
+        fullName: fullNameOf(test),
+        message: `${error.name ?? "Error"}: ${error.message}`,
+      });
+    }
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, JSON.stringify(out));
+}
+
 export default class NativeSuiteErrors {
   /**
-   * @param {unknown} _testModules
+   * @param {ReadonlyArray<any>} testModules
    * @param {ReadonlyArray<{ name?: string, message?: string }>} unhandledErrors
    */
-  onTestRunEnd(_testModules, unhandledErrors) {
+  onTestRunEnd(testModules, unhandledErrors) {
+    writeMessages(testModules);
     const path = process.env.NATIVE_SUITE_ERRORS;
     if (!path) return;
     mkdirSync(dirname(path), { recursive: true });

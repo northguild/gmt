@@ -19,10 +19,12 @@ import {
   shimProblems,
   shimSource,
 } from "../../../../scripts/native-suite.mjs";
+import NativeSuiteReporter from "../../../../scripts/lib/native-suite-reporter.mjs";
 import {
   classify,
   KNOWN_HOST_FAILURES,
   KNOWN_NATIVE_FAILURES,
+  withFailureMessages,
 } from "../../../../scripts/lib/native-suite-tags.mjs";
 
 /**
@@ -678,6 +680,160 @@ describe("classify, reports that hide a failure", () => {
       "AssertionError: expected 1 to be 2",
       "AssertionError: expected 1 to be 2",
     ]);
+  });
+});
+
+describe("classify, a Firefox stack with no message line", () => {
+  const passing = report(suite(FILE, [["a", "passed"]]));
+  // Shape copied from the first Firefox 155.0 run (northguild/gmt run 39655011688): Vitest's
+  // `failureMessages[0]` is the engine's stack alone, and the stack starts with a frame.
+  const firefoxStackOnly =
+    "@http://localhost:63315/home/runner/work/gmt/gmt/packages/gmt/src/internal/zonedWallClock.test.ts?import&browserv=1792609139415:104:55\n" +
+    "createTaskCollector/taskFn.each/</</<@http://localhost:63315/node_modules/.pnpm/@vitest+runner@4.1.4/node_modules/@vitest/runner/dist/chunk-artifact.js?v=184fa290:2027:67\n" +
+    "runTest/</</<@http://localhost:63315/node_modules/.pnpm/@vitest+runner@4.1.4/node_modules/@vitest/runner/dist/chunk-artifact.js?v=184fa290:2955:64\n";
+
+  it("a stack that starts with a frame leaves no frame in the message", () => {
+    const r = classify(
+      report(
+        rawSuite(FILE, "passed", "", [["ff", "failed", firefoxStackOnly]]),
+      ),
+      passing,
+      "firefox",
+      [],
+      [],
+    );
+    const message = r.untagged[0]?.message ?? "";
+    expect(message).not.toMatch(/@http|localhost|:\d+:\d+/);
+    expect(message).toBe("(the report holds a stack and no message)");
+  });
+
+  it("a stack that starts with a named frame leaves no frame in the message", () => {
+    const named = `expectDateTimeEqual@http://localhost:63315/src/test/icuVariants.ts?v=1:12:9\n${firefoxStackOnly}`;
+    const r = classify(
+      report(rawSuite(FILE, "passed", "", [["ff", "failed", named]])),
+      passing,
+      "firefox",
+      [],
+      [],
+    );
+    expect(r.untagged[0]?.message).toBe(
+      "(the report holds a stack and no message)",
+    );
+  });
+
+  it("an assertion text that contains an @ is kept", () => {
+    const r = classify(
+      report(
+        rawSuite(FILE, "passed", "", [
+          [
+            "at",
+            "failed",
+            "AssertionError: expected a@b:1:2 to equal c\nfn@http://x/y.js:3:4",
+          ],
+        ]),
+      ),
+      passing,
+      "firefox",
+      [],
+      [],
+    );
+    expect(r.untagged[0]?.message).toBe(
+      "AssertionError: expected a@b:1:2 to equal c",
+    );
+  });
+});
+
+describe("failure messages captured by the reporter", () => {
+  const ABS = `/work/gmt/packages/gmt/${FILE}`;
+  // A SpiderMonkey failure as Vitest's JSON reporter writes it: the stack alone.
+  const stackOnly =
+    "@http://localhost:63315/work/gmt/packages/gmt/src/x.test.ts?import&browserv=1:104:55\nrunTest@http://localhost:63315/runner.js?v=1:2955:13\n";
+
+  it("the reporter writes name and message of each failed test, with the suites above it", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ns-rep-"));
+    const path = join(dir, "m.json");
+    const failed = {
+      name: "throws for x",
+      parent: {
+        type: "suite",
+        name: "zonedDateTimeFrom",
+        parent: { type: "module" },
+      },
+      result: () => ({
+        state: "failed",
+        errors: [
+          {
+            name: "AssertionError",
+            message: "expected [Function] to throw an error",
+            stack: stackOnly,
+          },
+        ],
+      }),
+    };
+    const passed = {
+      name: "ok",
+      parent: { type: "module" },
+      result: () => ({ state: "passed" }),
+    };
+    process.env.NATIVE_SUITE_MESSAGES = path;
+    try {
+      new NativeSuiteReporter().onTestRunEnd(
+        [{ moduleId: ABS, children: { allTests: () => [failed, passed] } }],
+        [],
+      );
+    } finally {
+      delete process.env.NATIVE_SUITE_MESSAGES;
+    }
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual([
+      {
+        file: ABS,
+        fullName: "zonedDateTimeFrom throws for x",
+        message: "AssertionError: expected [Function] to throw an error",
+      },
+    ]);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("a stack-only Firefox record shows the assertion text once the messages are merged in", () => {
+    const raw = report(
+      rawSuite(FILE, "passed", "", [
+        ["zonedDateTimeFrom throws for x", "failed", stackOnly],
+      ]),
+    );
+    const merged = withFailureMessages(raw, [
+      {
+        file: ABS,
+        fullName: "zonedDateTimeFrom throws for x",
+        message: "AssertionError: expected [Function] to throw an error",
+      },
+    ]);
+    const r = classify(
+      merged,
+      report(suite(FILE, [["zonedDateTimeFrom throws for x", "passed"]])),
+      "firefox",
+      [],
+      [],
+    );
+    expect(r.untagged[0]?.message).toBe(
+      "AssertionError: expected [Function] to throw an error",
+    );
+  });
+
+  it("a record with a message already, or with no captured message, is left as it was", () => {
+    const raw = report(
+      rawSuite(FILE, "passed", "", [
+        ["a", "failed", "AssertionError: kept\n    at f (x.js:1:1)"],
+        ["b", "failed", stackOnly],
+      ]),
+    );
+    const merged = withFailureMessages(raw, [
+      { file: ABS, fullName: "a", message: "AssertionError: kept" },
+    ]);
+    const msgs = merged.testResults[0]!.assertionResults.map(
+      (a: any) => a.failureMessages[0],
+    );
+    expect(msgs[0]).toBe("AssertionError: kept\n    at f (x.js:1:1)");
+    expect(msgs[1]).toBe(stackOnly);
   });
 });
 
