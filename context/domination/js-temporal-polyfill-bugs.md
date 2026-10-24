@@ -11,7 +11,7 @@ tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) 
 > merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply; #3331 (J) is
 > closed as answered (the check is intended, see § J).
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
-> 20 workarounds, 18 still needed, 1 guard (D10) and 1 out of scope (D17, a Firefox-only defect, § Q; a Node run cannot judge it). The newest are § I (D12), fixed on `main` with nothing
+> 20 workarounds, 18 still needed, 1 guard (D10) and 1 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; a Node run cannot judge it). The newest are § I (D12), fixed on `main` with nothing
 > to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
 > and § O (D15), not filed yet and not fixed on either `main`. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
@@ -30,7 +30,7 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D3`: Hebrew leap years for negative years | js-temporal `57d7734` (PR #361; `86a89df` on its branch) | `D4`. The two share one group and one code path, and leave together |
 | `D4`: Hebrew years 0 and earlier, one day off | ICU `5267bb5778` (unicode-org/icu, ICU-23007). Not a polyfill fix | An ICU4C release with that commit, and a Node release that bundles it as GMT's `engines.node` floor |
 | `D16`: `formatRange` cuts long zone names to short and drops offset names (V8, JSC; ICU-20548) | Not a polyfill fix. ICU-20548 is open | An ICU release that keeps `long`, `longGeneric`, `shortOffset` and `longOffset` in range output, in every engine GMT supports. `pnpm compat` decides: the `D16` probes must all pass on every supported engine |
-| `D17`: Firefox `formatRange` prints AM/PM for a day period with a zone name (§ Q) | Not a polyfill fix. A SpiderMonkey bug, not filed; draft for the owner | A Firefox release whose native-suite leg passes every `D17` repro |
+| `D17`: Firefox `formatRange` prints AM/PM for a day period with a zone name (§ Q) | Not a polyfill fix. A SpiderMonkey bug, open as [Bugzilla 2085525](https://bugzilla.mozilla.org/show_bug.cgi?id=2085525) | A Firefox release whose native-suite leg passes every `D17` repro |
 | `D5`: Indian calendar before ISO year 1 | js-temporal `8de299a` (PR #361; `b6c9844` on its branch) | Nothing |
 | `D6`: non-ISO `until` re-constrains the day | js-temporal `10aeb98` | `D7`. With `10aeb98` and `1c64f14` alone one Hebrew `until` by years is still wrong (Corrections, item 3) |
 | `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b), which is not on `main`. The `D7.leapMonthEnd` probe fails until it is |
@@ -2140,7 +2140,7 @@ tags go stale and the runner reports it.
 
 ### Status
 
-**Not filed.** Draft for the owner. SpiderMonkey / Firefox 155.0 only; Node 22, 24 and 26 and the other engines in the matrix print the flexible day period in a range, as a single format does. GMT repairs it as `D17` (a lazy probe, dormant on every engine that passes), scoped to Firefox (`engines: ["firefox"]` in `scripts/temporal-compat.mjs`, so a Node run reports it as out of scope, never removable). It removes the repair when the native suite shows Firefox passing every `D17` repro.
+**Open upstream** as https://bugzilla.mozilla.org/show_bug.cgi?id=2085525 ("Intl.DateTimeFormat formatRange prints AM/PM instead of the dayPeriod when timeZoneName is set", UNCONFIRMED since 2026-10-24; reproduced in Firefox 155.0 and 158.0.1). SpiderMonkey only; Node 22, 24 and 26 and the other engines in the matrix print the flexible day period in a range, as a single format does. GMT repairs it as `D17` (a lazy probe, dormant on every engine that passes), scoped to Firefox (`engines: ["firefox"]` in `scripts/temporal-compat.mjs`, so a Node run reports it as out of scope, never removable). It removes the repair when the native suite shows Firefox passing every `D17` repro.
 
 ### What goes wrong
 
