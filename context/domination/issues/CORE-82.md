@@ -15,12 +15,12 @@ Nothing checks that today. Every test runs on the polyfill. The weekly oracle (`
 1. **Node leg.** A Vitest configuration that points CORE-80's Temporal seam at `globalThis.Temporal` and runs the whole `packages/gmt` suite on Node 26.
 2. **Browser legs.** The same suite in Chromium, Firefox and WebKit through Vitest browser mode with the Playwright provider, on each browser's own `Temporal`, one matrix leg each. The oracle job already installs Playwright's Chromium; these legs add Firefox and WebKit. Each browser leg first runs the `pnpm compat` probes in that browser (`scripts/lib/native-suite-compat.mjs`) and writes a `temporal-compat-<leg>` verdict, so a workaround scoped to one engine (D17, Firefox) is reported removable by that engine alone.
 3. **Weekly job.** A job in `temporal-oracle.yml`, on the weekly schedule and on `workflow_dispatch`, never on pull requests. It writes a verdict file under `artifacts/` in CORE-81's shape (`{ source, status: "ran" | "could-not-run", … }`).
-4. **New canary sources, one per leg.** CORE-81's reporter knows only its own three sources, so this story adds `native-suite-node`, `native-suite-chromium` and `native-suite-firefox`:
+4. **New canary sources, one per leg.** CORE-81's reporter knows only its own three sources, so this story adds `native-suite-node`, `native-suite-chromium`, `native-suite-firefox` and `native-suite-webkit`:
    - its verdict builder and file in `scripts/lib/canary-verdict.mjs`;
    - the source in the `temporal-oracle` entry of `WORKFLOW_SOURCES`, so a leg that writes no verdict is listed in the workflow's could-not-run issue;
    - a finding builder in `scripts/lib/canary-issues.mjs`, with its marker key;
    - a `force_*` dispatch input for the dry run, read only through `env:` like the existing ones.
-5. **Upstream page.** The Dox upstream page names the three runtimes the suite runs on and links to the workflow's runs; each run's job summary names the engine versions. No new page and no new data file: a divergence reaches an issue, not the page.
+5. **Upstream page.** The Dox upstream page names the four runtimes the suite runs on and links to the workflow's runs; each run's job summary names the engine versions. No new page and no new data file: a divergence reaches an issue, not the page.
 6. **Triage.** A divergence is one of three things, and each is closed in the story that finds it: a GMT defect, fixed; a polyfill defect, recorded in [js-temporal-polyfill-bugs.md](../js-temporal-polyfill-bugs.md) with its upstream link; an engine defect, recorded the same way with the engine's bug link. No test is skipped to make a leg green.
 
 ## Tool
@@ -49,7 +49,7 @@ None. The story adds no public function. The existing upstream page names the ru
 - A `workflow_dispatch` run is green on Node 26, Chromium, Firefox and WebKit, and its job summary names each engine version.
 - A dry run with one forced failure opens one `[dry run]` issue through CORE-81's path; a second dry run comments on it.
 - A runtime that cannot start writes `could-not-run`, which files CORE-81's could-not-run issue.
-- The upstream page names the three runtimes and links to the workflow's runs.
+- The upstream page names the four runtimes and links to the workflow's runs.
 - `pnpm run validate` stays green and takes no longer than before.
 
 ## Decisions
