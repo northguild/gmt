@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 
 import { workaroundState } from "../../../../scripts/lib/workaround-state.mjs";
+import { WORKAROUNDS } from "../../../../scripts/lib/workarounds.mjs";
 import {
   COMPAT_STATES,
   compatGroups,
@@ -28,17 +29,7 @@ import {
  */
 describe("temporal compat snapshot", () => {
   it("has a row for every workaround group in the canary script", () => {
-    const script = readFileSync(
-      resolve(import.meta.dirname, "../../../../scripts/temporal-compat.mjs"),
-      "utf8",
-    );
-    const declared = [...script.matchAll(/^\s*defects: \[([^\]]+)\],$/gm)].map(
-      (m) =>
-        m[1]
-          .split(",")
-          .map((id) => id.trim().replace(/^["']|["']$/g, ""))
-          .join(" + "),
-    );
+    const declared = WORKAROUNDS.map((w) => w.defects.join(" + "));
 
     expect(declared.length).toBeGreaterThan(0);
     expect(compatGroups.map(groupLabel).sort()).toEqual(declared.sort());
@@ -322,22 +313,9 @@ describe("temporal compat snapshot", () => {
   });
 
   describe("guards", () => {
-    const script = readFileSync(
-      resolve(import.meta.dirname, "../../../../scripts/temporal-compat.mjs"),
-      "utf8",
+    const declared = WORKAROUNDS.filter((w) => w.guard !== undefined).map(
+      (w) => ({ label: w.defects.join(" + "), through: w.guard!.through }),
     );
-    // The WORKAROUNDS block, cut at each `defects:` line: one chunk per group.
-    const start = script.indexOf("const WORKAROUNDS = [");
-    const block = script.slice(start, script.indexOf("\n];", start));
-    const chunks = block.split(/^\s*defects: /m).slice(1);
-    const declared = chunks
-      .map((chunk) => ({
-        label: [.../^\[([^\]]+)\]/.exec(chunk)![1].matchAll(/"([^"]+)"/g)]
-          .map((m) => m[1])
-          .join(" + "),
-        through: /guard: \{[\s\S]*?through: "([^"]+)"/.exec(chunk)?.[1],
-      }))
-      .filter((g) => g.through !== undefined);
 
     it("carries a guard on exactly the rows whose script entry declares one, with the same through", () => {
       const recorded = compatGroups

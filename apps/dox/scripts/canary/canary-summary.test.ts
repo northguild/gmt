@@ -42,14 +42,63 @@ const check = (
 ) => ({
   source: "temporal-compat-check",
   status: "ran",
+  engineId: "v8",
   runtime: RUNTIME,
-  counts: { workarounds: 16, ...counts },
+  counts: { workarounds: 16, outOfScope: 0, ...counts },
   snapshot: { path: "apps/dox/src/data/temporal-compat.json", current },
   workarounds,
 });
 
 const cleanCheck = () =>
   check([guardWorkaround], { stillNeeded: 15, removable: 0, guard: 1 });
+
+const BROWSER_ENGINE_IDS: Record<string, string> = {
+  chromium: "v8",
+  firefox: "firefox",
+  webkit: "webkit",
+};
+
+/** The compat check's verdict in one browser: the same probes, no snapshot. */
+const compat = (
+  leg: string,
+  workarounds: unknown[],
+  counts: Record<string, number>,
+) => ({
+  source: `temporal-compat-${leg}`,
+  status: "ran",
+  leg,
+  engine: ENGINES[leg],
+  engineId: BROWSER_ENGINE_IDS[leg],
+  runtime: { polyfill: "0.5.1", node: "v26.10.0", playwright: "1.63.0" },
+  counts: { workarounds: 16, outOfScope: 0, ...counts },
+  workarounds,
+});
+
+const cleanCompat = () =>
+  Object.fromEntries(
+    ["chromium", "firefox", "webkit"].map((leg) => [
+      `temporal-compat-${leg}`,
+      compat(leg, [guardWorkaround], {
+        stillNeeded: 15,
+        removable: 0,
+        guard: 1,
+      }),
+    ]),
+  );
+
+/** Every compat source, Node and the three browsers, with the same workaround rows. */
+const compatEverywhere = (
+  workarounds: unknown[],
+  counts: Record<string, number>,
+) => ({
+  "temporal-compat-check": check(workarounds, counts),
+  ...Object.fromEntries(
+    ["chromium", "firefox", "webkit"].map((leg) => [
+      `temporal-compat-${leg}`,
+      compat(leg, workarounds, counts),
+    ]),
+  ),
+});
 
 const oracle = (untagged = 0) => ({
   source: "temporal-oracle",
@@ -84,6 +133,7 @@ const ENGINES: Record<string, string> = {
   node: "Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c",
   chromium: "Chromium 153.0.8010.12",
   firefox: "Firefox 155.0",
+  webkit: "WebKit 26.6",
 };
 
 const native = (leg: string, over: Record<string, unknown> = {}) => ({
@@ -116,10 +166,12 @@ const cleanNative = () => ({
   "native-suite-node": native("node"),
   "native-suite-chromium": native("chromium"),
   "native-suite-firefox": native("firefox"),
+  "native-suite-webkit": native("webkit"),
 });
 
 const clean = () => ({
   "temporal-compat-check": cleanCheck(),
+  ...cleanCompat(),
   "temporal-oracle": oracle(),
   ...cleanNative(),
 });
@@ -134,6 +186,13 @@ const CLEAN_SUMMARY = [
   "| Still needed | 15 |",
   "| Removable | 0 |",
   "| Guard | 1 (D10, through @js-temporal/polyfill 0.5.1) |",
+  "",
+  "| Compat source | Engine | Still needed | Removable | Guard | Out of scope |",
+  "| --- | --- | --- | --- | --- | --- |",
+  "| temporal-compat-check | Node v24.11.0 (v8) | 15 | 0 | 1 | 0 |",
+  "| temporal-compat-chromium | Chromium 153.0.8010.12 (v8) | 15 | 0 | 1 | 0 |",
+  "| temporal-compat-firefox | Firefox 155.0 (firefox) | 15 | 0 | 1 | 0 |",
+  "| temporal-compat-webkit | WebKit 26.6 (webkit) | 15 | 0 | 1 | 0 |",
   "",
   "| Oracle | Count |",
   "| --- | --- |",
@@ -151,6 +210,7 @@ const CLEAN_SUMMARY = [
   "| node | Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
   "| chromium | Chromium 153.0.8010.12 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
   "| firefox | Firefox 155.0 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
+  "| webkit | WebKit 26.6 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
   "",
   "**Issues:** No issues filed.",
   "",
@@ -243,9 +303,9 @@ describe("summaryMarkdown: temporal-oracle", () => {
     expect(text.split("\n")).toContain("**Dry run:** --force-native-failure");
   });
 
-  it("two removable groups list their ids in script order", () => {
+  it("two groups removable on every engine list their ids in script order", () => {
     const verdicts = {
-      "temporal-compat-check": check(
+      ...compatEverywhere(
         [
           removableWorkaround("D2"),
           guardWorkaround,
@@ -257,9 +317,135 @@ describe("summaryMarkdown: temporal-oracle", () => {
       "temporal-oracle": oracle(),
     };
     const text = oracleSummary(verdicts);
-    expect(text.split("\n")).toContain("Removable: D2, D8");
+    expect(text.split("\n")).toContain(
+      "Removable on every engine in scope: D2, D8",
+    );
+    expect(text).not.toContain("Removable on some engines only");
     expect(text).toContain("| Removable | 2 |");
     expect(text).toContain("| Still needed | 13 |");
+    expect(text).toContain("| temporal-compat-webkit | WebKit 26.6 (webkit) | 13 | 2 | 1 | 0 |");
+  });
+
+  it("a group removable on the Node check alone is removable on some engines only, and names each engine's state", () => {
+    const verdicts = {
+      "temporal-compat-check": check([removableWorkaround("D2")], {
+        stillNeeded: 15,
+        removable: 1,
+        guard: 0,
+      }),
+      "temporal-compat-chromium": compat(
+        "chromium",
+        [{ ...removableWorkaround("D2"), state: "still-needed", failing: 2 }],
+        { stillNeeded: 16, removable: 0, guard: 0 },
+      ),
+      "temporal-compat-firefox": {
+        source: "temporal-compat-firefox",
+        status: "could-not-run",
+        message: "the compat page failed in firefox: boom",
+      },
+      "temporal-oracle": oracle(),
+    };
+    const lines = oracleSummary(verdicts).split("\n");
+    expect(lines).not.toContain("Removable on every engine in scope: D2");
+    expect(lines).toContain(
+      "Removable on some engines only: D2 (Node v24.11.0: removable; Chromium 153.0.8010.12: still needed, 2 of 2 probes fail; temporal-compat-firefox: no verdict; temporal-compat-webkit: no verdict)",
+    );
+    expect(lines).toContain(
+      "| temporal-compat-firefox | could not run — the compat page failed in firefox: boom | — | — | — | — |",
+    );
+    expect(lines).toContain(
+      "| temporal-compat-webkit | could not run — no verdict file: an earlier step or job failed | — | — | — | — |",
+    );
+  });
+
+  it("a Firefox-only group removable on Firefox and out of scope elsewhere is removable on every engine in scope", () => {
+    const d17 = { ...removableWorkaround("D17"), engines: ["firefox"] };
+    const elsewhere = { ...d17, state: "out-of-scope" };
+    const verdicts = {
+      "temporal-compat-check": check([elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        guard: 0,
+        outOfScope: 1,
+      }),
+      "temporal-compat-chromium": compat("chromium", [elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        guard: 0,
+        outOfScope: 1,
+      }),
+      "temporal-compat-firefox": compat("firefox", [d17], {
+        stillNeeded: 15,
+        removable: 1,
+        guard: 0,
+      }),
+      "temporal-compat-webkit": compat("webkit", [elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        guard: 0,
+        outOfScope: 1,
+      }),
+      "temporal-oracle": oracle(),
+    };
+    const lines = oracleSummary(verdicts).split("\n");
+    expect(lines).toContain("Removable on every engine in scope: D17");
+    expect(lines).toContain(
+      "| temporal-compat-check | Node v24.11.0 (v8) | 15 | 0 | 0 | 1 |",
+    );
+    expect(lines).toContain(
+      "| temporal-compat-firefox | Firefox 155.0 (firefox) | 15 | 1 | 0 | 0 |",
+    );
+  });
+
+  it("a Firefox-only group removable on Firefox but failing on WebKit is removable on some engines only", () => {
+    const d17 = { ...removableWorkaround("D17"), engines: ["firefox"] };
+    const elsewhere = { ...d17, state: "out-of-scope" };
+    const failing = { ...d17, state: "still-needed", failing: 2 };
+    const verdicts = {
+      "temporal-compat-check": check([elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        guard: 0,
+        outOfScope: 1,
+      }),
+      "temporal-compat-chromium": compat("chromium", [elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        guard: 0,
+        outOfScope: 1,
+      }),
+      "temporal-compat-firefox": compat("firefox", [d17], {
+        stillNeeded: 15,
+        removable: 1,
+        guard: 0,
+      }),
+      "temporal-compat-webkit": compat("webkit", [failing], {
+        stillNeeded: 16,
+        removable: 0,
+        guard: 0,
+      }),
+      "temporal-oracle": oracle(),
+    };
+    const lines = oracleSummary(verdicts).split("\n");
+    expect(lines).not.toContain("Removable on every engine in scope: D17");
+    expect(lines).toContain(
+      "Removable on some engines only: D17 (Firefox 155.0: removable; WebKit 26.6: still needed, 2 of 2 probes fail)",
+    );
+  });
+
+  it("a Firefox-only group with no Firefox verdict is not removable anywhere, and is not listed as removable on some engines", () => {
+    const d17 = { ...removableWorkaround("D17"), engines: ["firefox"] };
+    const elsewhere = { ...d17, state: "out-of-scope" };
+    const text = oracleSummary({
+      "temporal-compat-check": check([elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        guard: 0,
+        outOfScope: 1,
+      }),
+      "temporal-oracle": oracle(),
+    });
+    expect(text).not.toContain("Removable on");
   });
 
   it("no guard: the Guard row is 0 with no parenthesis", () => {

@@ -338,17 +338,38 @@ describe("main", () => {
     failing: state === "still-needed" ? 2 : 0,
     steps: [`Delete the ${id} repros`],
   });
+  const compatCounts = (workarounds: ReturnType<typeof workaround>[]) => ({
+    workarounds: workarounds.length,
+    stillNeeded: workarounds.filter((w) => w.state === "still-needed").length,
+    removable: workarounds.filter((w) => w.state === "removable").length,
+    guard: 0,
+    outOfScope: 0,
+  });
   const checkVerdict = (workarounds = [workaround("D2", "still-needed")]) => ({
     source: "temporal-compat-check",
     status: "ran",
+    engineId: "v8",
     runtime: RUNTIME,
-    counts: {
-      workarounds: workarounds.length,
-      stillNeeded: workarounds.filter((w) => w.state === "still-needed").length,
-      removable: workarounds.filter((w) => w.state === "removable").length,
-      guard: 0,
-    },
+    counts: compatCounts(workarounds),
     snapshot: { path: "apps/dox/src/data/temporal-compat.json", current: true },
+    workarounds,
+  });
+  const BROWSER_ENGINE_IDS: Record<string, string> = {
+    chromium: "v8",
+    firefox: "firefox",
+    webkit: "webkit",
+  };
+  const browserCompatVerdict = (
+    leg: string,
+    workarounds = [workaround("D2", "still-needed")],
+  ) => ({
+    source: `temporal-compat-${leg}`,
+    status: "ran",
+    leg,
+    engine: `${leg} 1.0`,
+    engineId: BROWSER_ENGINE_IDS[leg],
+    runtime: { polyfill: "0.5.1", node: "v24.11.0", playwright: "1.63.0" },
+    counts: compatCounts(workarounds),
     workarounds,
   });
   const oracleVerdict = () => ({
@@ -409,12 +430,19 @@ describe("main", () => {
     ...over,
   });
   const writeNativeFiles = () => {
-    for (const leg of ["node", "chromium", "firefox"]) {
+    for (const leg of ["node", "chromium", "firefox", "webkit"]) {
       write(`native-suite-${leg}.json`, nativeVerdict(leg));
+    }
+  };
+  /** The three browsers' compat verdicts, the same rows as the Node check. */
+  const writeCompatFiles = (workarounds?: ReturnType<typeof workaround>[]) => {
+    for (const leg of ["chromium", "firefox", "webkit"]) {
+      write(`temporal-compat-${leg}.json`, browserCompatVerdict(leg, workarounds));
     }
   };
   const writeOracleFiles = (workarounds?: ReturnType<typeof workaround>[]) => {
     write("temporal-compat-check.json", checkVerdict(workarounds));
+    writeCompatFiles(workarounds);
     write("temporal-oracle-verdict.json", oracleVerdict());
     writeNativeFiles();
   };

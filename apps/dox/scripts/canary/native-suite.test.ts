@@ -19,7 +19,9 @@ import {
   shimProblems,
   shimSource,
 } from "../../../../scripts/native-suite.mjs";
+import { browserCompatVerdict } from "../../../../scripts/lib/canary-verdict.mjs";
 import NativeSuiteReporter from "../../../../scripts/lib/native-suite-reporter.mjs";
+import { ENGINE_IDS } from "../../../../scripts/lib/workarounds.mjs";
 import {
   classify,
   KNOWN_HOST_FAILURES,
@@ -34,7 +36,7 @@ import {
  * divergence, native fail + control fail is a host failure.
  */
 
-type Leg = "node" | "chromium" | "firefox";
+type Leg = "node" | "chromium" | "firefox" | "webkit";
 type Row = {
   file: string;
   test: string;
@@ -837,6 +839,66 @@ describe("failure messages captured by the reporter", () => {
   });
 });
 
+describe("unhandled errors captured by the reporter", () => {
+  const write = (errors: unknown[]) => {
+    const dir = mkdtempSync(join(tmpdir(), "ns-err-"));
+    const path = join(dir, "e.json");
+    process.env.NATIVE_SUITE_ERRORS = path;
+    try {
+      new NativeSuiteReporter().onTestRunEnd([], errors as never);
+    } finally {
+      delete process.env.NATIVE_SUITE_ERRORS;
+    }
+    const out = JSON.parse(readFileSync(path, "utf8"));
+    rmSync(dir, { recursive: true, force: true });
+    return out;
+  };
+
+  it("writes each error with its cause chain, outermost first, as `Name: message` lines", () => {
+    expect(
+      write([
+        {
+          name: "Error",
+          message: "Failed to run the test /work/gmt/packages/gmt/src/x.test.ts.",
+          cause: {
+            name: "Error",
+            message: "page.evaluate: Target closed",
+            cause: {
+              name: "TargetClosedError",
+              message: "Target page, context or browser has been closed",
+            },
+          },
+        },
+        { name: "TypeError", message: "x is not a function" },
+      ]),
+    ).toEqual([
+      {
+        name: "Error",
+        message: "Failed to run the test /work/gmt/packages/gmt/src/x.test.ts.",
+        causes: [
+          "Error: page.evaluate: Target closed",
+          "TargetClosedError: Target page, context or browser has been closed",
+        ],
+      },
+      { name: "TypeError", message: "x is not a function", causes: [] },
+    ]);
+  });
+
+  it("a cause that is not an error, and a cause that loops back, end the chain", () => {
+    const loop: { name: string; message: string; cause?: unknown } = {
+      name: "Error",
+      message: "outer",
+    };
+    loop.cause = { name: "Error", message: "inner", cause: loop };
+    expect(
+      write([{ name: "Error", message: "m", cause: "a string" }, loop]),
+    ).toEqual([
+      { name: "Error", message: "m", causes: ["a string"] },
+      { name: "Error", message: "outer", causes: ["Error: inner"] },
+    ]);
+  });
+});
+
 describe("classify, unhandled errors", () => {
   const ok = report(suite(FILE, [["a", "passed"]]));
   const boom = { name: "Error", message: "boom\n    at /Users/me/x.ts:1:2" };
@@ -913,6 +975,38 @@ type Spec = {
   controlErrors?: { name: string; message: string }[] | null;
 };
 const ENGINE = "Node v26.10.0 · V8 14.6 · ICU 78.3 · tz 2026c";
+const BROWSER_ENGINES: Record<string, string> = {
+  chromium: "Chromium 153.0.8010.12",
+  firefox: "Firefox 155.0",
+  webkit: "WebKit 26.6",
+};
+const COMPAT_RUNTIME = { polyfill: "0.5.1", node: "v26.10.0", playwright: "1.63.0" };
+/** The stubbed compat check's verdict for a browser leg: one group, still needed. */
+function compatVerdict(leg: string) {
+  return browserCompatVerdict({
+    leg: leg as "chromium" | "firefox" | "webkit",
+    engine: BROWSER_ENGINES[leg],
+    engineId: ENGINE_IDS[leg as keyof typeof ENGINE_IDS],
+    runtime: COMPAT_RUNTIME,
+    groups: [
+      {
+        workaround: {
+          defects: ["D1"],
+          title: "D1 — one",
+          trigger: "t",
+          steps: ["s"],
+        },
+        results: [{}, {}],
+        passing: 1,
+        state: "still-needed",
+        guardLapsed: false,
+      },
+    ],
+  });
+}
+/** What the runner prints for the stubbed compat check on `leg`. */
+const compatLine = (leg: string) =>
+  `1 workarounds on @js-temporal/polyfill 0.5.1 in ${BROWSER_ENGINES[leg]}: 1 still needed, 0 removable, 0 guard, 0 out of scope on ${ENGINE_IDS[leg as keyof typeof ENGINE_IDS]}\n`;
 
 function setup() {
   const root = mkdtempSync(join(tmpdir(), "native-suite-"));
@@ -924,6 +1018,7 @@ function setup() {
     stderr: (t: string) => (err += t),
     deps: {
       preflight: async () => ({ engine: ENGINE, playwright: null }),
+      compatCheck: async (leg: string) => compatVerdict(leg),
       runPass: (leg: string, pass: "control" | "native", r: string) => {
         if (spec === null) return 0;
         const body = pass === "native" ? spec.native : spec.control;
@@ -964,6 +1059,15 @@ function setup() {
       ),
     hasVerdict: (leg: string) =>
       existsSync(join(root, `artifacts/native-suite-${leg}.json`)),
+    compat: (leg: string) =>
+      JSON.parse(
+        readFileSync(
+          join(root, `artifacts/temporal-compat-${leg}.json`),
+          "utf8",
+        ),
+      ),
+    hasCompat: (leg: string) =>
+      existsSync(join(root, `artifacts/temporal-compat-${leg}.json`)),
     done: () => rmSync(root, { recursive: true, force: true }),
   };
 }
@@ -1097,6 +1201,162 @@ describe("native-suite command", () => {
       }
     },
   );
+
+  describe("a pass Vitest stopped before every file ran", () => {
+    /** A file Vitest never started: passed, no tests, the run's start as both of its times. */
+    const unstarted = (file: string, startTime = 1700000000000) => ({
+      name: `/work/gmt/packages/gmt/${file}`,
+      status: "passed",
+      message: "",
+      startTime,
+      endTime: startTime,
+      assertionResults: [],
+    });
+    const complete = report(
+      suite(FILE, [["a", "passed"]]),
+      suite(OTHER, [["b", "passed"]]),
+    );
+    const stopped = report(suite(FILE, [["a", "passed"]]), unstarted(OTHER));
+    const poolError = {
+      name: "Error",
+      message: `Failed to run the test /work/gmt/packages/gmt/${OTHER}.`,
+      causes: ["Error: page.evaluate: Target closed"],
+    };
+
+    /**
+     * A `runPass` that writes, per pass, the bodies given in order and the last one after that,
+     * and counts its calls.
+     */
+    const scripted = (
+      plan: Record<
+        "control" | "native",
+        { body: unknown; errors?: unknown[] }[]
+      >,
+    ) => {
+      const calls = { control: 0, native: 0 };
+      const runPass = (leg: string, pass: "control" | "native", r: string) => {
+        const steps = plan[pass];
+        const step = steps[Math.min(calls[pass], steps.length - 1)];
+        calls[pass] += 1;
+        mkdirSync(join(r, "artifacts"), { recursive: true });
+        writeFileSync(
+          join(r, `artifacts/native-suite-${leg}.${pass}.vitest.json`),
+          JSON.stringify(step.body),
+        );
+        writeFileSync(
+          join(r, `artifacts/native-suite-${leg}.${pass}.errors.json`),
+          JSON.stringify(step.errors ?? []),
+        );
+        return 0;
+      };
+      return { calls, runPass };
+    };
+
+    it("is run again, and the second, complete run is the one judged", async () => {
+      const s = setup();
+      const { calls, runPass } = scripted({
+        control: [{ body: complete }],
+        native: [{ body: stopped, errors: [poolError] }, { body: complete }],
+      });
+      try {
+        const code = await main(["chromium"], s.io(null, { runPass }));
+        expect(code).toBe(0);
+        expect(calls).toEqual({ control: 1, native: 2 });
+        expect(s.verdict("chromium")).toMatchObject({
+          status: "ran",
+          counts: { files: 2, tests: 2, passed: 2, untagged: 0 },
+        });
+        expect(s.err()).toBe(
+          `native-suite: the native pass stopped after 1 of 2 files (Vitest said: Error: Failed to run the test /work/gmt/packages/gmt/${OTHER}.; caused by Error: page.evaluate: Target closed); running it again\n`,
+        );
+      } finally {
+        s.done();
+      }
+    });
+
+    it("on both tries is could-not-run, naming the pass, how far it got and Vitest's error with its cause", async () => {
+      const s = setup();
+      const { calls, runPass } = scripted({
+        control: [{ body: stopped, errors: [poolError] }],
+        native: [{ body: complete }],
+      });
+      try {
+        const code = await main(["chromium"], s.io(null, { runPass }));
+        expect(code).toBe(2);
+        expect(calls).toEqual({ control: 2, native: 0 });
+        expect(s.verdict("chromium")).toEqual({
+          source: "native-suite-chromium",
+          status: "could-not-run",
+          message: `the control pass stopped after 1 of 2 files (Vitest said: Error: Failed to run the test /work/gmt/packages/gmt/${OTHER}.; caused by Error: page.evaluate: Target closed), on both tries`,
+        });
+      } finally {
+        s.done();
+      }
+    });
+
+    it("with no error recorded says so", async () => {
+      const s = setup();
+      const { runPass } = scripted({
+        control: [{ body: complete }],
+        native: [{ body: stopped }],
+      });
+      try {
+        const code = await main(["chromium"], s.io(null, { runPass }));
+        expect(code).toBe(2);
+        expect(s.verdict("chromium").message).toBe(
+          "the native pass stopped after 1 of 2 files (with no error reported), on both tries",
+        );
+      } finally {
+        s.done();
+      }
+    });
+
+    it("never reports a tag on a file it did not reach as stale: the leg is could-not-run instead", async () => {
+      const s = setup();
+      const { runPass } = scripted({
+        control: [{ body: complete }],
+        native: [{ body: stopped, errors: [poolError] }],
+      });
+      try {
+        const code = await main(
+          ["chromium"],
+          s.io(null, {
+            runPass,
+            divergenceRows: [
+              row({ file: OTHER, test: "b", legs: ["chromium"] }),
+            ],
+          }),
+        );
+        expect(code).toBe(2);
+        const v = s.verdict("chromium");
+        expect(v.status).toBe("could-not-run");
+        expect(v).not.toHaveProperty("staleTags");
+      } finally {
+        s.done();
+      }
+    });
+
+    it("a file that ran and has no test in it is not a stopped pass: Vitest fails such a file", async () => {
+      const s = setup();
+      const failedEmpty = loadFailure(OTHER, "No test suite found in file");
+      try {
+        const code = await main(
+          ["node"],
+          s.io({
+            native: report(suite(FILE, [["a", "passed"]]), failedEmpty),
+            control: report(suite(FILE, [["a", "passed"]]), failedEmpty),
+          }),
+        );
+        expect(code).toBe(1);
+        expect(s.verdict("node")).toMatchObject({
+          status: "ran",
+          counts: { hostUntagged: 1 },
+        });
+      } finally {
+        s.done();
+      }
+    });
+  });
 
   it("a pass that runs past its time limit is could-not-run, naming the pass", async () => {
     const root = mkdtempSync(join(tmpdir(), "native-suite-timeout-"));
@@ -1359,7 +1619,7 @@ describe("native-suite command", () => {
         const code = await main(argv, s.io(null));
         expect(code).toBe(2);
         expect(s.err()).toContain(
-          "Usage: node scripts/native-suite.mjs <node|chromium|firefox>",
+          "Usage: node scripts/native-suite.mjs <node|chromium|firefox|webkit>",
         );
         expect(existsSync(join(s.root, "artifacts"))).toBe(false);
       } finally {
@@ -1367,6 +1627,123 @@ describe("native-suite command", () => {
       }
     },
   );
+});
+
+describe("native-suite command: the compat check in a browser", () => {
+  const ok = report(suite(FILE, [["a", "passed"]]));
+
+  it("runs the compat check on a browser leg, saves its verdict and prints its line first", async () => {
+    const s = setup();
+    try {
+      const code = await main(["webkit"], s.io({ native: ok, control: ok }));
+      expect(code).toBe(0);
+      expect(s.compat("webkit")).toEqual(compatVerdict("webkit"));
+      expect(s.out().startsWith(compatLine("webkit"))).toBe(true);
+      expect(s.out()).toContain(`${ENGINE}\n1 tests in 1 files`);
+    } finally {
+      s.done();
+    }
+  });
+
+  it("never runs it on the node leg", async () => {
+    const s = setup();
+    try {
+      const calls: string[] = [];
+      const code = await main(
+        ["node"],
+        s.io(
+          { native: ok, control: ok },
+          {
+            compatCheck: async (leg: string) => {
+              calls.push(leg);
+              return compatVerdict("chromium");
+            },
+          },
+        ),
+      );
+      expect(code).toBe(0);
+      expect(calls).toEqual([]);
+      expect(s.hasCompat("node")).toBe(false);
+      expect(s.out()).not.toContain("workarounds");
+    } finally {
+      s.done();
+    }
+  });
+
+  it("a check that cannot run leaves a could-not-run verdict, the suite still runs, and the leg exits 2", async () => {
+    const s = setup();
+    try {
+      const code = await main(
+        ["firefox"],
+        s.io(
+          { native: ok, control: ok },
+          {
+            compatCheck: async () => {
+              throw new Error("packages/gmt/dist is missing: run pnpm build first");
+            },
+          },
+        ),
+      );
+      expect(code).toBe(2);
+      expect(s.compat("firefox")).toEqual({
+        source: "temporal-compat-firefox",
+        status: "could-not-run",
+        message: "packages/gmt/dist is missing: run pnpm build first",
+      });
+      expect(s.err()).toContain(
+        "native-suite: the firefox compat check could not run: packages/gmt/dist is missing: run pnpm build first\n",
+      );
+      expect(s.verdict("firefox")).toMatchObject({
+        status: "ran",
+        counts: { tests: 1, untagged: 0 },
+      });
+    } finally {
+      s.done();
+    }
+  });
+
+  it("an untagged failure still exits 1 when the check ran", async () => {
+    const s = setup();
+    try {
+      const failing = suite(FILE, [["a", "failed"]]);
+      const code = await main(
+        ["chromium"],
+        s.io({ native: report(failing), control: ok }),
+      );
+      expect(code).toBe(1);
+      expect(s.compat("chromium").status).toBe("ran");
+    } finally {
+      s.done();
+    }
+  });
+
+  it("summary prints no verdict, then the could-not-run message, for the compat source", async () => {
+    const s = setup();
+    try {
+      expect(await main(["summary", "webkit"], s.io(null))).toBe(0);
+      expect(s.out()).toBe(
+        "native-suite-webkit: no verdict\ntemporal-compat-webkit: no verdict\n",
+      );
+      await main(
+        ["webkit"],
+        s.io(
+          { native: ok, control: ok },
+          {
+            compatCheck: async () => {
+              throw new Error("no browser");
+            },
+          },
+        ),
+      );
+      const before = s.out().length;
+      expect(await main(["summary", "webkit"], s.io(null))).toBe(0);
+      expect(s.out().slice(before)).toBe(
+        `${ENGINE}\n1 tests in 1 files: 1 passed, 0 tagged, 0 untagged, 0 host tagged, 0 host untagged, 0 stale tags\ntemporal-compat-webkit: could not run — no browser\n`,
+      );
+    } finally {
+      s.done();
+    }
+  });
 });
 
 describe("native-suite summary", () => {
@@ -1388,7 +1765,7 @@ describe("native-suite summary", () => {
       const code = await main(["summary", "chromium"], s.io(null));
       expect(code).toBe(0);
       expect(s.out().slice(before)).toBe(
-        `${ENGINE}\n2 tests in 1 files: 1 passed, 0 tagged, 0 untagged, 1 host tagged, 0 host untagged, 0 stale tags\n`,
+        `${ENGINE}\n2 tests in 1 files: 1 passed, 0 tagged, 0 untagged, 1 host tagged, 0 host untagged, 0 stale tags\n${compatLine("chromium")}`,
       );
     } finally {
       s.done();
@@ -1409,7 +1786,7 @@ describe("native-suite summary", () => {
       const before = s.out().length;
       expect(await main(["summary", "firefox"], s.io(null))).toBe(0);
       expect(s.out().slice(before)).toBe(
-        "native-suite-firefox: could not run — no browser\n",
+        `native-suite-firefox: could not run — no browser\n${compatLine("firefox")}`,
       );
     } finally {
       s.done();

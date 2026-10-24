@@ -4,7 +4,7 @@ import { defineConfig, mergeConfig, type Plugin } from "vitest/config";
 import { REPO_FILES, repoFile, sourceTree } from "./src/test/sourceTree.ts";
 import base from "./vitest.config.ts";
 
-// The same suite in Chromium and Firefox. By default the polyfill's specifier resolves to the
+// The same suite in Chromium, Firefox and WebKit. By default the polyfill's specifier resolves to the
 // native-Temporal shim, so each browser runs on its own engine. `GMT_TEMPORAL=polyfill` removes
 // that alias: the control pass of the native-suite runner, which shows which failures belong to
 // the browser (its locale data, its time zone data) and not to its Temporal.
@@ -83,7 +83,11 @@ export default mergeConfig(
         headless: true,
         provider: playwright(),
         screenshotFailures: false,
-        instances: [{ browser: "chromium" }, { browser: "firefox" }],
+        instances: [
+          { browser: "chromium" },
+          { browser: "firefox" },
+          { browser: "webkit" },
+        ],
       },
     },
   }),

@@ -11,11 +11,15 @@ import { formatJson } from "./format-json.mjs";
 /** Where each source's verdict goes, relative to the repo root. Written on every run. */
 export const VERDICT_FILES = {
   "temporal-compat-check": "artifacts/temporal-compat-check.json",
+  "temporal-compat-chromium": "artifacts/temporal-compat-chromium.json",
+  "temporal-compat-firefox": "artifacts/temporal-compat-firefox.json",
+  "temporal-compat-webkit": "artifacts/temporal-compat-webkit.json",
   "temporal-oracle": "artifacts/temporal-oracle-verdict.json",
   "leap-seconds": "artifacts/leap-seconds.json",
   "native-suite-node": "artifacts/native-suite-node.json",
   "native-suite-chromium": "artifacts/native-suite-chromium.json",
   "native-suite-firefox": "artifacts/native-suite-firefox.json",
+  "native-suite-webkit": "artifacts/native-suite-webkit.json",
 };
 
 /**
@@ -28,45 +32,87 @@ export const UNTAGGED_ROWS_IN_VERDICT = 50;
 const SNAPSHOT_PATH = "apps/dox/src/data/temporal-compat.json";
 
 /**
- * The `check` verdict: one entry per workaround group, in script order.
+ * @typedef {{ workaround: { defects: string[], title: string, trigger: string, steps: string[],
+ *     engines?: string[], guard?: { package: string, through: string, reason: string } },
+ *   results: unknown[], passing: number,
+ *   state: "still-needed" | "removable" | "guard" | "out-of-scope", guardLapsed: boolean }} CompatGroup
+ */
+
+/**
+ * How many groups are in each state.
+ * @param {CompatGroup[]} groups
+ */
+function compatCounts(groups) {
+  const inState = (state) => groups.filter((g) => g.state === state).length;
+  return {
+    workarounds: groups.length,
+    stillNeeded: inState("still-needed"),
+    removable: inState("removable"),
+    guard: inState("guard"),
+    outOfScope: inState("out-of-scope"),
+  };
+}
+
+/**
+ * One verdict row per workaround group, in script order.
+ * @param {CompatGroup[]} groups
+ */
+function compatRows(groups) {
+  return groups.map(({ workaround, results, passing, state, guardLapsed }) => ({
+    id: workaround.defects.join("+"),
+    defects: workaround.defects,
+    title: workaround.title,
+    trigger: workaround.trigger,
+    state,
+    probes: results.length,
+    failing: results.length - passing,
+    ...(workaround.engines ? { engines: workaround.engines } : {}),
+    ...(workaround.guard
+      ? { guard: { ...workaround.guard, lapsed: guardLapsed } }
+      : {}),
+    steps: workaround.steps,
+  }));
+}
+
+/**
+ * The `check` verdict: the probes on Node, whose engine is V8 (`engineId`, the name a group's
+ * `engines` uses).
  *
  * @param {{ runtime: { polyfill: string, node: string, icu: string | null },
- *           groups: Array<{ workaround: { defects: string[], title: string, trigger: string,
- *             steps: string[], guard?: { package: string, through: string, reason: string } },
- *             results: unknown[], passing: number,
- *             state: "still-needed" | "removable" | "guard" | "out-of-scope", guardLapsed: boolean }>,
- *           snapshotCurrent: boolean }} input
+ *           groups: CompatGroup[], snapshotCurrent: boolean }} input
  */
 export function compatCheckVerdict({ runtime, groups, snapshotCurrent }) {
-  const inState = (state) => groups.filter((g) => g.state === state).length;
   return {
     source: "temporal-compat-check",
     status: "ran",
+    engineId: "v8",
     runtime,
-    counts: {
-      workarounds: groups.length,
-      stillNeeded: inState("still-needed"),
-      removable: inState("removable"),
-      guard: inState("guard"),
-      outOfScope: inState("out-of-scope"),
-    },
+    counts: compatCounts(groups),
     snapshot: { path: SNAPSHOT_PATH, current: snapshotCurrent },
-    workarounds: groups.map(
-      ({ workaround, results, passing, state, guardLapsed }) => ({
-        id: workaround.defects.join("+"),
-        defects: workaround.defects,
-        title: workaround.title,
-        trigger: workaround.trigger,
-        state,
-        probes: results.length,
-        failing: results.length - passing,
-        ...(workaround.engines ? { engines: workaround.engines } : {}),
-        ...(workaround.guard
-          ? { guard: { ...workaround.guard, lapsed: guardLapsed } }
-          : {}),
-        steps: workaround.steps,
-      }),
-    ),
+    workarounds: compatRows(groups),
+  };
+}
+
+/**
+ * The `temporal-compat-<leg>` verdict: the same probes run in one browser of the native suite
+ * (`scripts/lib/native-suite-compat.mjs`), against the polyfill GMT ships. No snapshot: the
+ * committed one is Node's.
+ *
+ * @param {{ leg: "chromium" | "firefox" | "webkit", engine: string,
+ *           engineId: "v8" | "firefox" | "webkit",
+ *           runtime: { polyfill: string, node: string, playwright: string },
+ *           groups: CompatGroup[] }} input
+ */
+export function browserCompatVerdict({ leg, engine, engineId, runtime, groups }) {
+  return {
+    source: `temporal-compat-${leg}`,
+    status: "ran",
+    leg,
+    engine,
+    engineId,
+    runtime,
+    counts: compatCounts(groups),
+    workarounds: compatRows(groups),
   };
 }
 
@@ -121,7 +167,7 @@ const MESSAGE_CHARS_IN_VERDICT = 300;
  * `classify`; the verdict keeps the first 50 of each, with each message cut to 300 characters, and
  * says when it cut. The counts stay the full numbers. Raw Vitest reports stay in `artifacts/`.
  *
- * @param {{ leg: "node" | "chromium" | "firefox", engine: string,
+ * @param {{ leg: "node" | "chromium" | "firefox" | "webkit", engine: string,
  *           runtime: { node: string, vitest: string, playwright: string | null },
  *           counts: { files: number, tests: number, passed: number, tagged: number,
  *                     untagged: number, hostTagged: number, hostUntagged: number,

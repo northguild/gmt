@@ -1,6 +1,6 @@
 # CORE-82 — Core: The suite runs on native Temporal
 
-**Scope:** Run GMT's existing test suite every week on the `Temporal` that ships in Node 26, Chromium and Firefox, not only on `@js-temporal/polyfill`, and report a divergence through the weekly canary's issues. Adds no function and changes no output.
+**Scope:** Run GMT's existing test suite every week on the `Temporal` that ships in Node 26, Chromium, Firefox and WebKit, not only on `@js-temporal/polyfill`, and report a divergence through the weekly canary's issues. Adds no function and changes no output.
 
 ## Gap
 
@@ -13,7 +13,7 @@ Nothing checks that today. Every test runs on the polyfill. The weekly oracle (`
 ## Scope
 
 1. **Node leg.** A Vitest configuration that points CORE-80's Temporal seam at `globalThis.Temporal` and runs the whole `packages/gmt` suite on Node 26.
-2. **Browser leg.** The same suite in Chromium and Firefox through Vitest browser mode with the Playwright provider, on each browser's own `Temporal`. The oracle job already installs Playwright's Chromium; this leg adds Firefox.
+2. **Browser legs.** The same suite in Chromium, Firefox and WebKit through Vitest browser mode with the Playwright provider, on each browser's own `Temporal`, one matrix leg each. The oracle job already installs Playwright's Chromium; these legs add Firefox and WebKit. Each browser leg first runs the `pnpm compat` probes in that browser (`scripts/lib/native-suite-compat.mjs`) and writes a `temporal-compat-<leg>` verdict, so a workaround scoped to one engine (D17, Firefox) is reported removable by that engine alone.
 3. **Weekly job.** A job in `temporal-oracle.yml`, on the weekly schedule and on `workflow_dispatch`, never on pull requests. It writes a verdict file under `artifacts/` in CORE-81's shape (`{ source, status: "ran" | "could-not-run", … }`).
 4. **New canary sources, one per leg.** CORE-81's reporter knows only its own three sources, so this story adds `native-suite-node`, `native-suite-chromium` and `native-suite-firefox`:
    - its verdict builder and file in `scripts/lib/canary-verdict.mjs`;
@@ -39,14 +39,14 @@ None. The story adds no public function. The existing upstream page names the ru
 
 - CORE-80 — the single internal module every `Temporal` import goes through
 - CORE-81 — the verdict files, the reporter (`scripts/canary-report.mjs`, `scripts/lib/canary-issues.mjs`, `scripts/lib/canary-verdict.mjs`) and the `report` job in `temporal-oracle.yml`
-- `scripts/lib/native-suite-tags.mjs` — exports `KNOWN_NATIVE_FAILURES` (24 rows: 10 for record L, icu4x#8620; 3 for record M, boa-dev/temporal#529; 11 for record P, Bugzilla 1998020, Firefox only) and `KNOWN_HOST_FAILURES` (the `is-IS` group; the `browser-zone-city-names`, `browser-canada-2026-tz-data` and `browser-morocco-2026-tz-data` groups for Chromium and Firefox; and `firefox-range-day-period`, the strict `D17` probe row whose going stale is the D17 removal trigger)
+- `scripts/lib/native-suite-tags.mjs` — exports `KNOWN_NATIVE_FAILURES` (24 rows: 10 for record L, icu4x#8620; 3 for record M, boa-dev/temporal#529; 11 for record P, Bugzilla 1998020, Firefox only) and `KNOWN_HOST_FAILURES` (the `is-IS` group; and the `browser-zone-city-names`, `browser-canada-2026-tz-data` and `browser-morocco-2026-tz-data` groups for the browser legs)
 - `scripts/native-suite.mjs <leg>` — a two-pass control/native runner with the `shimProblems` preflight
 - `packages/gmt/src/test/nativeTemporal.ts` — the test-clock shim: the host's `Temporal` with `Now` derived from `Date.now()`
 - `artifacts/native-suite-<leg>.json` — the verdict, source `native-suite-<leg>`, in the canary framework (CORE-81's reporter)
 
 ## Verification
 
-- A `workflow_dispatch` run is green on Node 26, Chromium and Firefox, and its job summary names each engine version.
+- A `workflow_dispatch` run is green on Node 26, Chromium, Firefox and WebKit, and its job summary names each engine version.
 - A dry run with one forced failure opens one `[dry run]` issue through CORE-81's path; a second dry run comments on it.
 - A runtime that cannot start writes `could-not-run`, which files CORE-81's could-not-run issue.
 - The upstream page names the three runtimes and links to the workflow's runs.

@@ -12,9 +12,12 @@ name: Temporal oracle
 # tally or exit code.
 #
 # The native-suite job runs the whole packages/gmt suite on native Temporal in Node 26,
-# Chromium and Firefox, one matrix leg each. A failing leg means an untagged failure of either
+# Chromium, Firefox and WebKit, one matrix leg each. A failing leg means an untagged failure of either
 # kind: a divergence (fails natively, passes on the polyfill in the same runtime) or a host
 # failure (fails on both) that no host group covers. The report job files it as an issue.
+# Each browser leg first runs the workaround probes of temporal-compat.mjs in that browser and
+# writes a temporal-compat-<leg> verdict, so a workaround is called removable only when every
+# engine in its scope agrees.
 
 on:
   workflow_dispatch:
@@ -100,7 +103,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        leg: [node, chromium, firefox]
+        leg: [node, chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@v7
 
@@ -121,6 +124,10 @@ jobs:
           LEG: ${{ matrix.leg }}
         run: pnpm --filter @gmt/dox exec playwright install --with-deps "$LEG"
 
+      - name: Build
+        if: matrix.leg != 'node'
+        run: pnpm --filter @northguild/gmt build
+
       - name: Native suite
         env:
           LEG: ${{ matrix.leg }}
@@ -140,6 +147,7 @@ jobs:
           name: native-suite-${{ matrix.leg }}-${{ github.run_id }}
           path: |
             artifacts/native-suite-*.json
+            artifacts/temporal-compat-*.json
             !artifacts/native-suite-*.vitest.json
           if-no-files-found: warn
 

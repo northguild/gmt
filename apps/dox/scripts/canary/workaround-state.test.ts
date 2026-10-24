@@ -1,10 +1,8 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import {
   compareVersions,
   workaroundState,
 } from "../../../../scripts/lib/workaround-state.mjs";
+import { WORKAROUNDS } from "../../../../scripts/lib/workarounds.mjs";
 
 /**
  * The state of a workaround group on the installed polyfill (CORE-81).
@@ -137,27 +135,17 @@ describe("workaroundState", () => {
   });
 });
 
-describe("the guards declared in scripts/temporal-compat.mjs", () => {
-  const script = readFileSync(
-    resolve(import.meta.dirname, "../../../../scripts/temporal-compat.mjs"),
-    "utf8",
-  );
-  const block = script.slice(
-    script.indexOf("const WORKAROUNDS = ["),
-    script.indexOf("\n];", script.indexOf("const WORKAROUNDS = [")),
-  );
-  const entries = block.split(/^\s*defects: /m).slice(1);
-
+describe("the guards declared in scripts/lib/workarounds.mjs", () => {
   it("declares a guard on D10 and on no other group", () => {
-    const guarded = entries
-      .filter((entry) => /^\s*guard: \{/m.test(entry))
-      .map((entry) => /^\[([^\]]+)\]/.exec(entry)?.[1]);
-    expect(guarded).toEqual(['"D10"']);
+    const guarded = WORKAROUNDS.filter((w) => w.guard).map((w) => w.defects);
+    expect(guarded).toEqual([["D10"]]);
   });
 
   it("holds D10's guard through @js-temporal/polyfill 0.5.1", () => {
-    const d10 = entries.find((entry) => entry.startsWith('["D10"]'))!;
-    expect(d10).toMatch(/package: "@js-temporal\/polyfill",/);
-    expect(d10).toMatch(/through: "0\.5\.1",/);
+    const d10 = WORKAROUNDS.find((w) => w.defects.join() === "D10")!;
+    expect(d10.guard).toMatchObject({
+      package: "@js-temporal/polyfill",
+      through: "0.5.1",
+    });
   });
 });
