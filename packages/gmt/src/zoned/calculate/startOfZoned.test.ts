@@ -388,11 +388,7 @@ describe("startOfZoned beside a daylight period 7 days long", () => {
     ${"2000-10-08T12:00:00-02:00[America/Recife]"}    | ${"day"}   | ${"2000-10-08T01:00:00-02:00[America/Recife]"}
     ${"2000-10-12T12:00:00-03:00[America/Boa_Vista]"} | ${"week"}  | ${"2000-10-09T00:00:00-03:00[America/Boa_Vista]"}
     ${"2000-10-20T12:00:00-04:00[America/Boa_Vista]"} | ${"month"} | ${"2000-10-01T00:00:00-04:00[America/Boa_Vista]"}
-  `(
-    "starts the $unit of $value at $expected",
-    ({ value, unit, expected }) => {
-      expect(startOfZoned(value, unit)).toBe(expected);
-    },
-    10_000,
-  );
+  `("starts the $unit of $value at $expected", ({ value, unit, expected }) => {
+    expect(startOfZoned(value, unit)).toBe(expected);
+  });
 });

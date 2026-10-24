@@ -133,7 +133,6 @@ describe("nextOpenAt", () => {
 
     // From Saturday 2024-06-15, the 10,000th local date is 2051-11-01. A search answers anywhere
     // on it, and nowhere on the date after, even at its first instant.
-    // Worst CI run 3 s for a 30-year horizon; the timeout is three times that and more.
     it.each`
       date            | windows                             | expected
       ${"2051-11-01"} | ${nineToFive}                       | ${"2051-11-01T09:00:00Z"}
@@ -150,7 +149,6 @@ describe("nextOpenAt", () => {
           ),
         ).toBe(expected);
       },
-      30_000,
     );
 
     it("returns the sentinel for a schedule that never opens", () => {

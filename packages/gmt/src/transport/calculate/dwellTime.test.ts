@@ -253,16 +253,12 @@ describe("dwellTime", () => {
     zone
     ${"Asia/Tokyo"}
     ${"+09:00"}
-  `(
-    "counts 1460970 calendar days from 2000 to 6000 in $zone",
-    ({ zone }) => {
-      expect(
-        dwellTime("1999-12-31T15:00:00Z", "5999-12-31T15:00:00Z", zone)
-          ?.calendarDays,
-      ).toBe(1460970);
-    },
-    10_000,
-  );
+  `("counts 1460970 calendar days from 2000 to 6000 in $zone", ({ zone }) => {
+    expect(
+      dwellTime("1999-12-31T15:00:00Z", "5999-12-31T15:00:00Z", zone)
+        ?.calendarDays,
+    ).toBe(1460970);
+  });
 });
 
 describe("dwellTime across America/Goose_Bay's repeated date", () => {
