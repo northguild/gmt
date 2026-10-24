@@ -138,9 +138,9 @@ const rangeZoneNameCache = new Map<string, boolean>();
  * parallel", so the range pattern chosen for a `timeZoneName: "long"` skeleton keeps a long zone
  * name; ECMA-402 §11.5.8 builds each range part with FormatDateTimePattern over the range
  * pattern's own fields, so it prints what that pattern holds. ICU-20548 makes `DateIntervalFormat`
- * cut `long` and `longGeneric` to short names and drop `shortOffset` and `longOffset`. The probe runs once per style, on the first call for it. A style with no repro
- * (an unknown one) is not affected, and is not cached, so a caller passing arbitrary text cannot
- * grow the cache.
+ * cut `long` and `longGeneric` to short names and drop `shortOffset` and `longOffset`. The probe
+ * runs once per style, on the first call for it. A style with no repro (an unknown one) is not
+ * affected, and is not cached, so a caller passing arbitrary text cannot grow the cache.
  */
 export function isRangeZoneNameCompatNeeded(style: string): boolean {
   const cached = rangeZoneNameCache.get(style);
