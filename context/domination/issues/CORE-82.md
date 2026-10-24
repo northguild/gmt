@@ -67,7 +67,7 @@ Stated as current rules. Where each rule is enforced is named beside it.
 
 - A known native failure is tagged, never skipped. The test still runs on every leg; a tag classifies its failure for the reporter, names its defect record and becomes a `stale-tag` finding once the test no longer fails that way. `TAGGED_MISMATCHES` keys oracle rows and cannot tag a test, so the story keeps its own lists.
 - A control pass on the polyfill in the same runtime separates a host failure (fails on both engines) from an engine divergence (fails only natively). A host failure is tagged by group, with an evidenced reason and a file or test pattern, never one tag per row.
-- Green means no untagged failure of either kind. The finding keys are `native-suite/untagged-failure` (labels `canary`, `bug`), `native-suite/untagged-host-failure` and `native-suite/stale-tag` (label `canary`).
+- Green means no untagged failure of either kind. The finding keys are `native-suite/untagged-failure` (labels `canary`, `temporal-compat`), `native-suite/untagged-host-failure` and `native-suite/stale-tag` (label `canary`).
 - Each leg is its own verdict source, so a leg that cannot start is named in CORE-81's could-not-run issue. Dispatch input `force_native_failure` drives the dry run and reaches the shell only through `env:`.
 
 **Triage**

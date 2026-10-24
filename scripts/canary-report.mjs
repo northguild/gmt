@@ -26,7 +26,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { couldNotRunVerdict, VERDICT_FILES } from "./lib/canary-verdict.mjs";
 import {
   CANARY_LABEL,
+  COMPAT_LABEL,
   DRY_RUN_LABEL,
+  ISSUE_TYPE,
   WORKFLOW_SOURCES,
   applyForce,
   planIssueActions,
@@ -62,8 +64,11 @@ const LABEL_SPECS = {
       "Opened by a forced dry run of a canary workflow; close once checked",
     color: "c5def5",
   },
-  // GitHub's default `bug` label, created only if a repository has none.
-  bug: { description: "Something isn't working", color: "d73a4a" },
+  [COMPAT_LABEL]: {
+    description:
+      "GMT, a native Temporal engine and runtime data disagree; found by a canary",
+    color: "5319e7",
+  },
 };
 
 /**
@@ -121,7 +126,7 @@ export function parseArgs(argv) {
 
 /**
  * Creates each label in `needed` that the repository lacks. No `--force`: an existing label,
- * `bug` included, is never edited.
+ * `temporal-compat` included, is never edited.
  * @param {Gh} gh
  * @param {string[]} needed
  */
@@ -189,6 +194,8 @@ export function runActions(gh, actions) {
           "create",
           "--title",
           action.title,
+          "--type",
+          ISSUE_TYPE,
           ...action.labels.flatMap((label) => ["--label", label]),
           "--body-file",
           "-",
