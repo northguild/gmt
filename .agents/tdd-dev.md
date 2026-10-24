@@ -70,7 +70,7 @@ unstaged and report it ready; the user decides when it is committed.
 - Follow [§ Loop cost](../context/coding-standards.md#loop-cost) for every loop you write.
 - In the handoff, name what bounds each loop, and give the bench rows and the `pnpm size --files` delta it asks for.
 - An optimisation that changes any output is a defect, not a trade-off.
-- Tests follow [test cost](../context/testing-standards/references/index.md#test-cost): under 1 s each locally, no timeout added to get past CI.
+- Tests follow [test cost](../context/testing-standards/references/index.md#test-cost): under 0.3 s each locally, and a slower test makes its work smaller before it gets a timeout.
 
 ## Duplication discipline
 

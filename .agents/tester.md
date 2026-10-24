@@ -33,7 +33,7 @@ and [§ Git — Only on an Explicit Instruction](../AGENTS.md#git--only-on-an-ex
 - Pre-built mocks from `packages/gmt/src/test/mocks`
 - Day-period word variance for ko-KR/ja-JP/zh-CN/zh-TW — `expectDateTimeEqual`, never normalize production code for tests
 - Edge-case taxonomy ([testing standards](../context/testing-standards/references/index.md#edge-case-taxonomy))
-- [Test cost](../context/testing-standards/references/index.md#test-cost): every row you add or keep runs under 1 s locally; a slower row gets a cheaper oracle, not a timeout
+- [Test cost](../context/testing-standards/references/index.md#test-cost): every row you add or keep runs under 0.3 s locally; a slower row gets a cheaper oracle before it gets a timeout
 
 **Test output:** keep it small. From `packages/gmt`, run `npx vitest run <file> --reporter=dot 2>&1 | tail -n 40`; switch one file to `--reporter=verbose` only when you need the failing names. Never paste a full suite log into your report. Read files in excerpts (`offset`/`limit`, `grep -n`); a spec arrives as an index plus your slice — read only those.
 
