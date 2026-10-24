@@ -47,6 +47,16 @@ describe("snapshotRow", () => {
     expect("guard" in row).toBe(false);
   });
 
+  it("is out of scope on V8 for an engine-scoped group, and records its engines", () => {
+    const scoped = { ...plain, engines: ["firefox"] };
+    const row = snapshotRow(scoped, { probes: 1, failing: 0 }, "0.5.1");
+    expect(row.state).toBe("out-of-scope");
+    expect(row.engines).toEqual(["firefox"]);
+    expect(
+      snapshotRow(scoped, { probes: 1, failing: 0 }, "0.5.1", "firefox").state,
+    ).toBe("removable");
+  });
+
   it("is still needed when the group has no probes", () => {
     expect(snapshotRow(plain, { probes: 0, failing: 0 }, "0.5.1").state).toBe(
       "still-needed",

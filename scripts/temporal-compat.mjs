@@ -49,6 +49,8 @@ import {
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const GMT_DIR = join(ROOT, "packages/gmt");
 const DIST = join(GMT_DIR, "dist");
+/** The engine this script's probes run on: Node is V8. A workaround's `engines` scope is checked against it. */
+const ENGINE = "v8";
 const COMPAT_README = "packages/gmt/src/internal/temporalCompat/README.md";
 /** The committed canary snapshot the docs site reads, written by `snapshot`. */
 const SNAPSHOT = "apps/dox/src/data/temporal-compat.json";
@@ -197,13 +199,38 @@ const WORKAROUNDS = [
   {
     defects: ["D15"],
     title:
-      "D15 — `Z` string read by wall clock under offset: \"ignore\" instead of as an exact instant (zonedWallClock.ts defect 6)",
+      'D15 — `Z` string read by wall clock under offset: "ignore" instead of as an exact instant (zonedWallClock.ts defect 6)',
     trigger:
       "a js-temporal release (and Node floor) whose ToTemporalZonedDateTime keeps a Z string's own instant under offset: \"ignore\", as InterpretISODateTimeOffset requires. Native V8 (Node 24.21 with --harmony-temporal) shares the defect; not filed upstream yet, and js-temporal main c55b211 and tc39 main e8cc03f both still have it (bug doc § O). The expected value is the specification's",
     steps: [
       "Delete zExactOptions and its call in zonedDateTimeFrom (internal/zonedWallClock.ts, with defect 6 in that file's header note), isZIgnoreExactCompatNeeded in capabilities.ts and its export in index.ts, and the D15 repros.",
       "Keep the Z rows in zonedWallClock.test.ts, calendarValueOfZoned.test.ts and the all-16-cells row in classifyStoredZoned.test.ts: their values are the specification's and hold either way.",
       `Full wording: ${COMPAT_README} § Removal steps 15.`,
+    ],
+  },
+  {
+    defects: ["D16"],
+    title: "D16 — formatRange drops O and long zone-name widths (ICU-20548)",
+    trigger:
+      "an ICU release that fixes ICU-20548 is bundled by GMT's engines.node floor (>=22.16.0) and every D16 repro passes, so this check reports D16 removable; then the D16 repros are run by hand in the Chromium and Firefox the native suite uses and in Safari, because the suite's D16 rows accept either answer and cannot report a browser",
+    steps: [
+      "Delete the zoneNames branch of rangeWithRepairedParts and its gate in zoned/format/formatZonedRange.ts, isRangeZoneNameCompatNeeded in capabilities.ts and its export in index.ts, and the D16 repros.",
+      "Keep every formatZonedRange row: their values are the field formats and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 16.`,
+    ],
+  },
+  {
+    defects: ["D17"],
+    // SpiderMonkey only: on any other engine the probes pass because the defect is not there.
+    engines: ["firefox"],
+    title:
+      "D17 — formatRange writes AM/PM for a flexible dayPeriod next to a timeZoneName (SpiderMonkey)",
+    trigger:
+      "the weekly temporal-oracle run files a native-suite/stale-tag finding for the firefox-range-day-period host group (scripts/lib/native-suite-tags.mjs): its test expects the D17 repro to return same, which only SpiderMonkey fails, so the group goes stale on the Firefox leg once Bugzilla 2085525 ships; this check cannot report D17, it runs on Node where D17 is out of scope",
+    steps: [
+      "Delete the dayPeriods branch of rangeWithRepairedParts and its gate in zoned/format/formatZonedRange.ts, isRangeDayPeriodCompatNeeded in capabilities.ts and its export in index.ts, and the D17 repros.",
+      "Keep every formatZonedRange row and the D17 rows of internal/repairRangeParts.test.ts: the values are the requested forms and hold either way. Delete repairRangeParts only with the last of D16 and D17.",
+      `Full wording: ${COMPAT_README} § Removal steps 17.`,
     ],
   },
   {
@@ -384,16 +411,22 @@ function reportedUnknownRepros(unknown) {
   return true;
 }
 
+/** A passing probe's label in a group whose state does not make it removable. */
+const PASSING_PROBE_LABEL = {
+  guard: "GUARD",
+  "out-of-scope": "OUT OF SCOPE",
+};
+
 /**
  * One probe's line: what it is, and whether it still returns the wrong value. A passing probe in a
- * group whose state is `guard` says GUARD, because it passes by design rather than by a fix.
+ * group whose state is `guard` says GUARD, because it passes by design rather than by a fix, and
+ * one in an `out-of-scope` group says OUT OF SCOPE, because this engine never had the defect.
  */
 function probeLine({ repro, output, passes }, state) {
   const calendar = repro.calendar === "iso8601" ? "" : ` ${repro.calendar}`;
   const label = `${repro.defect}.${repro.name}${calendar}`.padEnd(42);
-  const passed = state === "guard" ? "GUARD" : "REMOVABLE";
   return passes
-    ? `  ${label} ${passed} (returns spec value)`
+    ? `  ${label} ${PASSING_PROBE_LABEL[state] ?? "REMOVABLE"} (returns spec value)`
     : `  ${label} STILL NEEDED (${truncate(output, 90)})`;
 }
 
@@ -442,6 +475,12 @@ function printGroupVerdict({
     );
     return;
   }
+  if (state === "out-of-scope") {
+    console.log(
+      `  => OUT OF SCOPE: all ${results.length} probes return the spec value, but this defect is ${workaround.engines.join(" and ")} only and this run is on ${ENGINE}. Passing here does not make the workaround removable; the native suite on ${workaround.engines.join(" and ")} decides. Keep the workaround; no removal steps.`,
+    );
+    return;
+  }
   if (state === "removable") {
     console.log(
       `  => REMOVABLE: all ${results.length} probes return the spec value. Steps:`,
@@ -477,7 +516,7 @@ const calendarWorkaroundsDone = (removable) =>
     w.defects.some((defect) => CALENDAR_DEFECTS.includes(defect)),
   ).every((w) => removable.includes(w));
 
-function printRemovalSummary(removable, guarded, stillNeeded) {
+function printRemovalSummary(removable, guarded, stillNeeded, outOfScope = []) {
   if (calendarWorkaroundsDone(removable)) {
     console.log(
       `D1–D7 are all removable: also delete nonIsoArithmetic.ts, readArithmeticModel.ts and the whole-operation seams (${COMPAT_README} § Removal steps 6).`,
@@ -488,10 +527,21 @@ function printRemovalSummary(removable, guarded, stillNeeded) {
       "Every workaround is removable (temporalCompat README, Removal steps): inline or keep temporalCompat/index.ts as a facade, delete temporalCompat/ and these check groups, keep `oracle`, bump the dependency floor, and add a changeset note (drops workarounds; no behaviour change).",
     );
   }
-  const guardIds = guarded.map((workaround) => workaround.defects.join("+"));
   console.log(
-    `${removable.length} of ${WORKAROUNDS.length} workarounds removable on this runtime (${stillNeeded} still needed, ${guarded.length} guard${guardIds.length > 0 ? `: ${guardIds.join(", ")}` : ""}).`,
+    `${removable.length} of ${WORKAROUNDS.length} workarounds removable on this runtime (${stillNeeded} still needed, ${guarded.length} guard${keptGroupsDetail(guarded, outOfScope)}).`,
   );
+}
+
+/** The summary's guard ids, then how many groups are out of scope on this engine and which. */
+function keptGroupsDetail(guarded, outOfScope) {
+  const ids = (workarounds) =>
+    workarounds.map((workaround) => workaround.defects.join("+")).join(", ");
+  const guards = guarded.length > 0 ? `: ${ids(guarded)}` : "";
+  const scoped =
+    outOfScope.length > 0
+      ? `, ${outOfScope.length} out of scope on ${ENGINE}: ${ids(outOfScope)}`
+      : "";
+  return guards + scoped;
 }
 
 /** Adds each group's state on the installed runtime; the one place `check` decides it. */
@@ -504,8 +554,10 @@ function withStates(groups) {
         probes: group.results.length,
         failing: group.results.length - group.passing,
         guard: group.workaround.guard,
+        engines: group.workaround.engines,
       },
       installed,
+      ENGINE,
     ),
   }));
 }
@@ -537,6 +589,7 @@ async function check(args) {
     removable,
     inState("guard"),
     inState("still-needed").length,
+    inState("out-of-scope"),
   );
 
   saveCompatVerdict(
@@ -1193,6 +1246,7 @@ function snapshotText(groups) {
         // `failing` is how many probes still return the wrong value on the installed polyfill.
         { probes: results.length, failing: results.length - passing },
         installed,
+        ENGINE,
       ),
     ),
   });
@@ -1246,11 +1300,13 @@ function snapshotCountLine(rows) {
   const count = (state) => rows.filter((row) => row.state === state).length;
   const removable = count("removable");
   const guard = count("guard");
+  const outOfScope = count("out-of-scope");
   return [
     `compat snapshot: ${rows.length} group(s) recorded`,
     `${count("still-needed")} still needed`,
     ...(removable > 0 ? [`${removable} removable`] : []),
     ...(guard > 0 ? [`${guard} guard`] : []),
+    ...(outOfScope > 0 ? [`${outOfScope} out of scope`] : []),
   ].join(", ");
 }
 

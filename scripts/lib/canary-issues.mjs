@@ -13,6 +13,10 @@
 export const CANARY_LABEL = "canary";
 /** Extra label on an issue a manual dispatch forced. */
 export const DRY_RUN_LABEL = "canary-dry-run";
+/** Extra label on a finding where GMT, a native Temporal engine and runtime data disagree. */
+export const COMPAT_LABEL = "temporal-compat";
+/** GitHub issue type every canary issue is created with. */
+export const ISSUE_TYPE = "Task";
 /** The verdict sources each workflow reads, in the order its could-not-run message lists them. */
 export const WORKFLOW_SOURCES = {
   "temporal-oracle": [
@@ -459,7 +463,7 @@ function mismatchFinding(oracle, isForced, runUrl) {
   const real = {
     key: "temporal-oracle/untagged-mismatch",
     title: "Oracle: GMT differs from native Temporal on untagged rows",
-    labels: [CANARY_LABEL, "bug"],
+    labels: [CANARY_LABEL, COMPAT_LABEL],
     body,
     comment,
   };
@@ -566,7 +570,7 @@ function nativeFailureFinding(ranLegs, isForced, runUrl) {
   const real = {
     key: "native-suite/untagged-failure",
     title: `Native Temporal: GMT tests fail on ${legs.map(legLabel).join(", ")}`,
-    labels: [CANARY_LABEL, "bug"],
+    labels: [CANARY_LABEL, COMPAT_LABEL],
     body: withRun(paragraphs.join("\n\n"), runUrl),
     comment: withRun(sections.join("\n\n"), runUrl),
   };

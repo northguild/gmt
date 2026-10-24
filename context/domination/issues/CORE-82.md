@@ -39,7 +39,7 @@ None. The story adds no public function. The existing upstream page names the ru
 
 - CORE-80 — the single internal module every `Temporal` import goes through
 - CORE-81 — the verdict files, the reporter (`scripts/canary-report.mjs`, `scripts/lib/canary-issues.mjs`, `scripts/lib/canary-verdict.mjs`) and the `report` job in `temporal-oracle.yml`
-- `scripts/lib/native-suite-tags.mjs` — exports `KNOWN_NATIVE_FAILURES` (13 rows: 10 for record L, icu4x#8620; 3 for record M, boa-dev/temporal#529; legs `node` and `chromium`) and `KNOWN_HOST_FAILURES` (3 Chromium-only groups)
+- `scripts/lib/native-suite-tags.mjs` — exports `KNOWN_NATIVE_FAILURES` (24 rows: 10 for record L, icu4x#8620; 3 for record M, boa-dev/temporal#529; 11 for record P, Bugzilla 1998020, Firefox only) and `KNOWN_HOST_FAILURES` (the `is-IS` group; the `browser-zone-city-names`, `browser-canada-2026-tz-data` and `browser-morocco-2026-tz-data` groups for Chromium and Firefox; and `firefox-range-day-period`, the strict `D17` probe row whose going stale is the D17 removal trigger)
 - `scripts/native-suite.mjs <leg>` — a two-pass control/native runner with the `shimProblems` preflight
 - `packages/gmt/src/test/nativeTemporal.ts` — the test-clock shim: the host's `Temporal` with `Now` derived from `Date.now()`
 - `artifacts/native-suite-<leg>.json` — the verdict, source `native-suite-<leg>`, in the canary framework (CORE-81's reporter)
@@ -67,7 +67,7 @@ Stated as current rules. Where each rule is enforced is named beside it.
 
 - A known native failure is tagged, never skipped. The test still runs on every leg; a tag classifies its failure for the reporter, names its defect record and becomes a `stale-tag` finding once the test no longer fails that way. `TAGGED_MISMATCHES` keys oracle rows and cannot tag a test, so the story keeps its own lists.
 - A control pass on the polyfill in the same runtime separates a host failure (fails on both engines) from an engine divergence (fails only natively). A host failure is tagged by group, with an evidenced reason and a file or test pattern, never one tag per row.
-- Green means no untagged failure of either kind. The finding keys are `native-suite/untagged-failure` (labels `canary`, `bug`), `native-suite/untagged-host-failure` and `native-suite/stale-tag` (label `canary`).
+- Green means no untagged failure of either kind. The finding keys are `native-suite/untagged-failure` (labels `canary`, `temporal-compat`), `native-suite/untagged-host-failure` and `native-suite/stale-tag` (label `canary`).
 - Each leg is its own verdict source, so a leg that cannot start is named in CORE-81's could-not-run issue. Dispatch input `force_native_failure` drives the dry run and reaches the shell only through `env:`.
 
 **Triage**
@@ -75,7 +75,7 @@ Stated as current rules. Where each rule is enforced is named beside it.
 - Ten tests fail natively on Node 26 and Chromium 153 because a one-character annotation key such as `[a=bc]` is refused: record L in [js-temporal-polyfill-bugs.md](../js-temporal-polyfill-bugs.md), icu4x#8620 (fixed in icu4x#8623, not yet in an `ixdtf` release or a V8 roll). The spec allows it: `AKeyLeadingChar`, RFC 9557 section 4.1.
 - Three tests fail because `[u-ca=islamic]` is accepted: record M, boa-dev/temporal#529. `islamic` is not a Temporal calendar (Intl Era and Month Code proposal, CreateDateTimeFormat step 9; test262 `intl402/Temporal/PlainDate/from/islamic.js`).
 - Record N covers the day-rounding defect below. Records K, L and M were not used for this story because K was already taken.
-- Firefox has no tags yet. Its triage waits for the first CI run, because Firefox 155 would not launch on the owner's macOS here. Each Firefox failure gets the same three questions in order: does it also fail on the polyfill in Firefox (host group), does the spec disagree with GMT (fix it now), otherwise an engine defect (record it).
+- Each Firefox failure gets three questions in order: does it also fail on the polyfill in Firefox (host group), does the spec disagree with GMT (fix it now), otherwise an engine defect (record it). Firefox 155 gave 11 engine rows (record P) and the shared browser host groups, and the one GMT fix, `formatZonedRange` (D16, D17).
 
 **GMT defects found**
 

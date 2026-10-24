@@ -40,7 +40,8 @@ const { badge, count } = stateLine(group);
     <span
       class:list={[
         "gmt-defects-badge",
-        group.state === "still-needed" && "gmt-defects-badge--ok",
+        (group.state === "still-needed" || group.state === "out-of-scope") &&
+          "gmt-defects-badge--ok",
         group.state === "guard" && "gmt-defects-badge--guard",
       ]}
     >

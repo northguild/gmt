@@ -13,6 +13,8 @@ export {
   isCalendarArithmeticCompatNeeded,
   isDayRoundClampCompatNeeded,
   isNudgeWindowCompatNeeded,
+  isRangeDayPeriodCompatNeeded,
+  isRangeZoneNameCompatNeeded,
   isSecondsOffsetMatchCompatNeeded,
   isTransitionSearchCompatNeeded,
   isZIgnoreExactCompatNeeded,
