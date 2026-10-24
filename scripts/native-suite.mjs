@@ -28,10 +28,13 @@
  * up on a run when a page is lost ("Failed to run the test <file>."), and its JSON reporter then
  * writes every file it never started as passed with no tests, so a report alone looks complete.
  *
+ * A browser pass runs as `BROWSER_SHARDS` Vitest runs (`--shard`), each in a fresh browser, and
+ * the reports they leave are merged into the one report the pass is judged on.
+ *
  * Node built-ins and Vitest only, and no `Date`.
  */
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire, stripTypeScriptTypes } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -41,7 +44,10 @@ import {
   saveVerdict,
   VERDICT_FILES,
 } from "./lib/canary-verdict.mjs";
-import { BROWSER_LABELS, runBrowserCompat } from "./lib/native-suite-compat.mjs";
+import {
+  BROWSER_LABELS,
+  runBrowserCompat,
+} from "./lib/native-suite-compat.mjs";
 import {
   classify,
   KNOWN_HOST_FAILURES,
@@ -55,39 +61,69 @@ const USAGE =
   "Usage: node scripts/native-suite.mjs <node|chromium|firefox|webkit>\n" +
   "       node scripts/native-suite.mjs summary <node|chromium|firefox|webkit>";
 const SHOWN = 20;
-/** One Vitest pass may run this long (the job allows 45 minutes for both passes and the setup). */
+/**
+ * One pass may run this long, all of its shards together (the job allows 45 minutes for both
+ * passes and the setup).
+ */
 const PASS_TIMEOUT_MS = 18 * 60 * 1000;
 /** A fixture check that starts a child process may run this long. */
 const CHILD_TIMEOUT_MS = 60 * 1000;
+/**
+ * How many Vitest runs a browser pass is split into, each in a fresh browser. In Vitest's browser
+ * mode every test file runs in its own iframe, and what the browser fetched for a file stays held
+ * until the browser exits: on Chromium as deleted-but-open files under the temp directory
+ * (Playwright starts it with `--disable-dev-shm-usage`; vitest-dev/vitest#9437), on WebKit in
+ * memory. Over the whole suite that outgrows a GitHub runner: the Chromium page died at 325 to 361
+ * of 880 files on three runs in a row, and the WebKit leg took the runner down. A shard of about
+ * 110 files stays well under that on every engine. Node runs in one shard: no browser, nothing to
+ * hold. Set it back to 1 once Vitest recycles the browser during a run.
+ */
+const BROWSER_SHARDS = 8;
 const NO_NATIVE_MESSAGE = "native Temporal is not available on this runtime";
 const SHIM_PATH = "packages/gmt/src/test/nativeTemporal.ts";
 
 /**
  * @typedef {"node" | "chromium" | "firefox" | "webkit"} Leg
  * @typedef {"control" | "native"} Pass
+ * @typedef {{ index: number, count: number }} Shard  one of a pass's Vitest runs, 1-based
  * @typedef {{ engine: string, playwright: string | null }} Engine
  * @typedef {ReturnType<typeof import("./lib/canary-verdict.mjs").browserCompatVerdict>} CompatVerdict
  * @typedef {{
  *   preflight: (leg: Leg, root: string) => Promise<Engine>,
  *   compatCheck: (leg: Exclude<Leg, "node">, root: string) => Promise<CompatVerdict>,
- *   runPass: (leg: Leg, pass: Pass, root: string) => number | void,
+ *   runPass: (leg: Leg, pass: Pass, root: string, shard: Shard, timeoutMs: number) => number | void,
+ *   shards: (leg: Leg) => number,
  *   runtime: () => { node: string, vitest: string },
  *   divergenceRows: typeof KNOWN_NATIVE_FAILURES,
  *   hostGroups: typeof KNOWN_HOST_FAILURES,
  * }} Deps
  */
 
-/** @param {Leg} leg @param {Pass} pass */
-const reportPath = (leg, pass) =>
-  `artifacts/native-suite-${leg}.${pass}.vitest.json`;
+/** The one shard of a pass that is not split. */
+const WHOLE = { index: 1, count: 1 };
 
-/** @param {Leg} leg @param {Pass} pass */
-const errorsPath = (leg, pass) =>
-  `artifacts/native-suite-${leg}.${pass}.errors.json`;
+/** @param {Leg} leg */
+const shardsFor = (leg) => (leg === "node" ? 1 : BROWSER_SHARDS);
 
-/** @param {Leg} leg @param {Pass} pass */
-const messagesPath = (leg, pass) =>
-  `artifacts/native-suite-${leg}.${pass}.messages.json`;
+/** `.2of8` in a shard's file names; nothing for a pass that is not split. */
+const shardSuffix = (/** @type {Shard} */ shard) =>
+  shard.count === 1 ? "" : `.${shard.index}of${shard.count}`;
+
+/** ` in shard 2 of 8` in a message; nothing for a pass that is not split. */
+const shardLabel = (/** @type {Shard} */ shard) =>
+  shard.count === 1 ? "" : ` in shard ${shard.index} of ${shard.count}`;
+
+/** @param {Leg} leg @param {Pass} pass @param {Shard} [shard] */
+const reportPath = (leg, pass, shard = WHOLE) =>
+  `artifacts/native-suite-${leg}.${pass}${shardSuffix(shard)}.vitest.json`;
+
+/** @param {Leg} leg @param {Pass} pass @param {Shard} [shard] */
+const errorsPath = (leg, pass, shard = WHOLE) =>
+  `artifacts/native-suite-${leg}.${pass}${shardSuffix(shard)}.errors.json`;
+
+/** @param {Leg} leg @param {Pass} pass @param {Shard} [shard] */
+const messagesPath = (leg, pass, shard = WHOLE) =>
+  `artifacts/native-suite-${leg}.${pass}${shardSuffix(shard)}.messages.json`;
 
 /** @param {unknown} error */
 const messageOf = (error) =>
@@ -454,10 +490,17 @@ function preflight(leg, root) {
  * @param {Leg} leg
  * @param {Pass} pass
  * @param {string} root
- * @param {number} [timeoutMs]
+ * @param {Shard} [shard]  which of the pass's runs this is; `--shard` goes to Vitest when it is split
+ * @param {number} [timeoutMs]  what is left of the pass's time
  * @returns {number}
  */
-export function runPass(leg, pass, root, timeoutMs = PASS_TIMEOUT_MS) {
+export function runPass(
+  leg,
+  pass,
+  root,
+  shard = WHOLE,
+  timeoutMs = PASS_TIMEOUT_MS,
+) {
   const require = createRequire(import.meta.url);
   // `vitest/vitest.mjs` is not an exported subpath: find the bin through package.json.
   const pkgPath = require.resolve("vitest/package.json");
@@ -471,11 +514,13 @@ export function runPass(leg, pass, root, timeoutMs = PASS_TIMEOUT_MS) {
     : pass === "native"
       ? "packages/gmt/vitest.native.config.ts"
       : "packages/gmt/vitest.config.ts";
-  const out = reportPath(leg, pass);
+  const out = reportPath(leg, pass, shard);
   rmSync(join(root, out), { force: true });
-  rmSync(join(root, errorsPath(leg, pass)), { force: true });
-  rmSync(join(root, messagesPath(leg, pass)), { force: true });
+  rmSync(join(root, errorsPath(leg, pass, shard)), { force: true });
+  rmSync(join(root, messagesPath(leg, pass, shard)), { force: true });
   mkdirSync(join(root, "artifacts"), { recursive: true });
+  const limit = `the ${pass} pass ran past its ${Math.round(PASS_TIMEOUT_MS / 60000)}-minute limit${shardLabel(shard)}`;
+  if (timeoutMs <= 0) throw new Error(limit);
   const result = spawnSync(
     process.execPath,
     [
@@ -484,6 +529,7 @@ export function runPass(leg, pass, root, timeoutMs = PASS_TIMEOUT_MS) {
       "--config",
       config,
       ...(browser ? ["--project", leg] : []),
+      ...(shard.count > 1 ? [`--shard=${shard.index}/${shard.count}`] : []),
       "--reporter=json",
       `--reporter=${fileURLToPath(new URL("./lib/native-suite-reporter.mjs", import.meta.url))}`,
       `--outputFile.json=${out}`,
@@ -492,8 +538,8 @@ export function runPass(leg, pass, root, timeoutMs = PASS_TIMEOUT_MS) {
       cwd: root,
       env: {
         ...process.env,
-        NATIVE_SUITE_ERRORS: join(root, errorsPath(leg, pass)),
-        NATIVE_SUITE_MESSAGES: join(root, messagesPath(leg, pass)),
+        NATIVE_SUITE_ERRORS: join(root, errorsPath(leg, pass, shard)),
+        NATIVE_SUITE_MESSAGES: join(root, messagesPath(leg, pass, shard)),
         ...(browser && pass === "control" ? { GMT_TEMPORAL: "polyfill" } : {}),
       },
       stdio: ["ignore", "ignore", "inherit"],
@@ -505,12 +551,14 @@ export function runPass(leg, pass, root, timeoutMs = PASS_TIMEOUT_MS) {
     const timedOut = /** @type {any} */ (result.error).code === "ETIMEDOUT";
     throw new Error(
       timedOut
-        ? `the ${pass} pass timed out after ${Math.round(timeoutMs / 60000)} minutes`
-        : `the ${pass} pass could not start: ${result.error.message}`,
+        ? limit
+        : `the ${pass} pass could not start${shardLabel(shard)}: ${result.error.message}`,
     );
   }
   if (result.status === null) {
-    throw new Error(`the ${pass} pass was killed by ${result.signal}`);
+    throw new Error(
+      `the ${pass} pass was killed by ${result.signal}${shardLabel(shard)}`,
+    );
   }
   return result.status;
 }
@@ -521,6 +569,7 @@ const realDeps = {
   compatCheck: (leg, root) =>
     runBrowserCompat(leg, root, { playwright: () => import("playwright") }),
   runPass,
+  shards: shardsFor,
   runtime: () => ({
     node: process.versions.node,
     vitest: JSON.parse(
@@ -538,15 +587,16 @@ const realDeps = {
  * @param {string} root
  * @param {Leg} leg
  * @param {Pass} pass
+ * @param {Shard} [shard]
  */
-function readReport(root, leg, pass) {
-  const path = join(root, reportPath(leg, pass));
+function readReport(root, leg, pass, shard = WHOLE) {
+  const path = join(root, reportPath(leg, pass, shard));
   let text;
   try {
     text = readFileSync(path, "utf8");
   } catch {
     throw new Error(
-      `the ${pass} pass left no Vitest report (${reportPath(leg, pass)})`,
+      `the ${pass} pass left no Vitest report${shardLabel(shard)} (${reportPath(leg, pass, shard)})`,
     );
   }
   try {
@@ -561,9 +611,46 @@ function readReport(root, leg, pass) {
     return parsed;
   } catch (error) {
     throw new Error(
-      `the ${pass} pass left an unreadable Vitest report (${reportPath(leg, pass)}): ${messageOf(error)}`,
+      `the ${pass} pass left an unreadable Vitest report${shardLabel(shard)} (${reportPath(leg, pass, shard)}): ${messageOf(error)}`,
     );
   }
+}
+
+/** The counts the JSON reporter puts at the top of a report; a merge adds them up. */
+const REPORT_COUNTS = [
+  "numTotalTestSuites",
+  "numPassedTestSuites",
+  "numFailedTestSuites",
+  "numPendingTestSuites",
+  "numTotalTests",
+  "numPassedTests",
+  "numFailedTests",
+  "numPendingTests",
+  "numTodoTests",
+];
+
+/**
+ * One Vitest JSON report from the reports of a pass's shards, in shard order: the counts added
+ * up, `success` only when every shard succeeded, the earliest `startTime`, and every file. The
+ * first shard's other fields (its snapshot summary) stand for all; nothing reads them.
+ * @param {any[]} reports
+ * @returns {any}
+ */
+export function mergeReports(reports) {
+  if (reports.length === 0) throw new Error("no shard reports to merge");
+  /** @param {string} key */
+  const sum = (key) =>
+    reports.reduce((n, r) => n + (Number.isFinite(r[key]) ? r[key] : 0), 0);
+  const starts = reports
+    .map((r) => r.startTime)
+    .filter((t) => Number.isFinite(t));
+  return {
+    ...reports[0],
+    ...Object.fromEntries(REPORT_COUNTS.map((key) => [key, sum(key)])),
+    startTime: starts.length === 0 ? reports[0].startTime : Math.min(...starts),
+    success: reports.every((r) => r.success === true),
+    testResults: reports.flatMap((r) => r.testResults),
+  };
 }
 
 /**
@@ -634,17 +721,18 @@ const errorLine = (e) =>
  * @param {string} root
  * @param {Leg} leg
  * @param {Pass} pass
+ * @param {Shard} [shard]
  * @returns {{ name: string, message: string, causes?: string[] }[]}
  */
-function readErrors(root, leg, pass) {
-  const path = errorsPath(leg, pass);
+function readErrors(root, leg, pass, shard = WHOLE) {
+  const path = errorsPath(leg, pass, shard);
   try {
     const parsed = JSON.parse(readFileSync(join(root, path), "utf8"));
     if (!Array.isArray(parsed)) throw new Error("not a list");
     return parsed;
   } catch (error) {
     throw new Error(
-      `the ${pass} pass left no readable errors file (${path}), so its unhandled errors are unknown: ${messageOf(error)}`,
+      `the ${pass} pass left no readable errors file${shardLabel(shard)} (${path}), so its unhandled errors are unknown: ${messageOf(error)}`,
     );
   }
 }
@@ -654,12 +742,13 @@ function readErrors(root, leg, pass) {
  * @param {string} root
  * @param {Leg} leg
  * @param {Pass} pass
+ * @param {Shard} [shard]
  * @returns {{ file: string, fullName: string, message: string }[]}
  */
-function readMessages(root, leg, pass) {
+function readMessages(root, leg, pass, shard = WHOLE) {
   try {
     const parsed = JSON.parse(
-      readFileSync(join(root, messagesPath(leg, pass)), "utf8"),
+      readFileSync(join(root, messagesPath(leg, pass, shard)), "utf8"),
     );
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -756,21 +845,53 @@ function compatLine(compat) {
  */
 
 /**
- * Runs one pass and reads what it left.
+ * Runs one pass, shard by shard within the pass's time, and reads what it left. A split pass is
+ * judged on the merged report, written where an unsplit pass writes its own.
  * @param {Leg} leg
  * @param {Pass} pass
  * @param {string} root
  * @param {Deps} d
+ * @param {(text: string) => void} stderr
  * @returns {PassRun}
  */
-function runOnce(leg, pass, root, d) {
-  const exit = d.runPass(leg, pass, root) ?? 0;
-  const report = withFailureMessages(
-    readReport(root, leg, pass),
-    readMessages(root, leg, pass),
-  );
-  const errors = readErrors(root, leg, pass);
-  return { exit, report, errors, unfinished: unfinishedFiles(report) };
+function runOnce(leg, pass, root, d, stderr) {
+  const count = d.shards(leg);
+  const started = performance.now();
+  let exit = 0;
+  const reports = [];
+  const messages = [];
+  const errors = [];
+  for (let index = 1; index <= count; index += 1) {
+    const shard = { index, count };
+    // One line per shard, so the job log says which shard a trace or a lost browser belongs to.
+    if (count > 1)
+      stderr(`native-suite: ${pass} pass, shard ${index} of ${count}\n`);
+    // Whole milliseconds: `spawnSync` refuses a fractional timeout.
+    const left = Math.floor(PASS_TIMEOUT_MS - (performance.now() - started));
+    const status = d.runPass(leg, pass, root, shard, left) ?? 0;
+    if (exit === 0) exit = status;
+    reports.push(readReport(root, leg, pass, shard));
+    messages.push(...readMessages(root, leg, pass, shard));
+    errors.push(...readErrors(root, leg, pass, shard));
+  }
+  const report = count === 1 ? reports[0] : mergeReports(reports);
+  if (count > 1) {
+    // The pass is judged, uploaded and summarised as one report; the shards' files go.
+    writeFileSync(join(root, reportPath(leg, pass)), JSON.stringify(report));
+    writeFileSync(join(root, errorsPath(leg, pass)), JSON.stringify(errors));
+    writeFileSync(
+      join(root, messagesPath(leg, pass)),
+      JSON.stringify(messages),
+    );
+    for (let index = 1; index <= count; index += 1) {
+      const shard = { index, count };
+      for (const path of [reportPath, errorsPath, messagesPath]) {
+        rmSync(join(root, path(leg, pass, shard)), { force: true });
+      }
+    }
+  }
+  const judged = withFailureMessages(report, messages);
+  return { exit, report: judged, errors, unfinished: unfinishedFiles(judged) };
 }
 
 /**
@@ -800,10 +921,10 @@ function stoppedEarly(pass, run) {
  * @returns {PassRun}
  */
 function runPassAgainIfStopped(leg, pass, root, d, stderr) {
-  const first = runOnce(leg, pass, root, d);
+  const first = runOnce(leg, pass, root, d, stderr);
   if (first.unfinished.length === 0) return first;
   stderr(`native-suite: ${stoppedEarly(pass, first)}; running it again\n`);
-  const second = runOnce(leg, pass, root, d);
+  const second = runOnce(leg, pass, root, d, stderr);
   if (second.unfinished.length === 0) return second;
   throw new Error(`${stoppedEarly(pass, second)}, on both tries`);
 }
@@ -906,8 +1027,14 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
       stdout(`${compatLine(compat)}\n`);
     } catch (error) {
       const message = messageOf(error);
-      saveVerdict(root, couldNotRunVerdict(compatSource, message), "native-suite");
-      stderr(`native-suite: the ${leg} compat check could not run: ${message}\n`);
+      saveVerdict(
+        root,
+        couldNotRunVerdict(compatSource, message),
+        "native-suite",
+      );
+      stderr(
+        `native-suite: the ${leg} compat check could not run: ${message}\n`,
+      );
       compatFailed = true;
     }
   }
