@@ -17,7 +17,7 @@
  * these lists are separate. A defect behind both names the same `defect` anchor in both.
  */
 
-/** @typedef {"node" | "chromium" | "firefox"} Leg */
+/** @typedef {"node" | "chromium" | "firefox" | "webkit"} Leg */
 
 const L_ANCHOR = "l-a-one-character-annotation-key-is-refused";
 const M_ANCHOR = "m-u-caislamic-is-accepted-instead-of-refused";

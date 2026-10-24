@@ -1,9 +1,11 @@
 /**
  * A Vitest reporter for the native-suite runner. The JSON reporter leaves out the errors a test
  * run did not catch (an unhandled rejection, say); this one writes them to the file named by
- * `NATIVE_SUITE_ERRORS` as `[{ name, message }]`, so the runner can tell a clean run from one
- * Vitest failed for a reason no test reports. Node built-ins only; it runs in Vitest's own process,
- * browser mode included.
+ * `NATIVE_SUITE_ERRORS` as `[{ name, message, causes }]`, so the runner can tell a clean run from
+ * one Vitest failed for a reason no test reports. `causes` is the error's `cause` chain, outermost
+ * first, each one `Name: message`: the browser pool's "Failed to run the test <file>." wraps the
+ * real reason (the page went away, say) in its cause, and without it the record says nothing.
+ * Node built-ins only; it runs in Vitest's own process, browser mode included.
  *
  * It also writes the message of every failed test to `NATIVE_SUITE_MESSAGES` as
  * `[{ file, fullName, message }]`. The JSON reporter builds `failureMessages` from `error.stack`,
@@ -46,10 +48,45 @@ function writeMessages(testModules) {
   writeFileSync(path, JSON.stringify(out));
 }
 
+/** How deep a cause chain is followed; a self-referencing cause stops it earlier. */
+const CAUSE_DEPTH = 8;
+
+/** @param {{ name?: string, message?: string }} e */
+const lineOf = (e) => `${String(e.name ?? "Error")}: ${String(e.message ?? "")}`;
+
+/**
+ * The `cause` chain under an error, outermost first, one line each.
+ * @param {{ cause?: unknown }} error
+ * @returns {string[]}
+ */
+function causesOf(error) {
+  const out = [];
+  const seen = new Set([error]);
+  let cause = error.cause;
+  while (
+    out.length < CAUSE_DEPTH &&
+    cause !== undefined &&
+    cause !== null &&
+    !seen.has(cause)
+  ) {
+    seen.add(cause);
+    if (typeof cause !== "object") {
+      out.push(String(cause));
+      break;
+    }
+    const c = /** @type {{ name?: string, message?: string, cause?: unknown }} */ (
+      cause
+    );
+    out.push(lineOf(c));
+    cause = c.cause;
+  }
+  return out;
+}
+
 export default class NativeSuiteErrors {
   /**
    * @param {ReadonlyArray<any>} testModules
-   * @param {ReadonlyArray<{ name?: string, message?: string }>} unhandledErrors
+   * @param {ReadonlyArray<{ name?: string, message?: string, cause?: unknown }>} unhandledErrors
    */
   onTestRunEnd(testModules, unhandledErrors) {
     writeMessages(testModules);
@@ -62,6 +99,7 @@ export default class NativeSuiteErrors {
         unhandledErrors.map((e) => ({
           name: String(e.name ?? "Error"),
           message: String(e.message ?? ""),
+          causes: causesOf(e),
         })),
       ),
     );

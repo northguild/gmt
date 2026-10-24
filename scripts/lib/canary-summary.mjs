@@ -7,11 +7,13 @@
  * the verdict holds them, with no locale grouping, so the summary matches the log digit for digit.
  */
 
+import { COMPAT_SOURCES, compatStates } from "./canary-issues.mjs";
+
 const CHECK = "temporal-compat-check";
 const ORACLE = "temporal-oracle";
 const LEAP = "leap-seconds";
 
-const NATIVE_LEGS = ["node", "chromium", "firefox"];
+const NATIVE_LEGS = ["node", "chromium", "firefox", "webkit"];
 
 const NO_VERDICT = "no verdict file: an earlier step or job failed";
 
@@ -88,23 +90,89 @@ function workaroundBlocks(check) {
 }
 
 /**
- * The lines under the oracle table: which groups are removable and whether the committed snapshot
- * is current. Separate paragraphs, because two consecutive lines would render as one.
- * @param {any} check
+ * The same groups on each engine: the Node check and one browser per native-suite leg. A source
+ * that did not run keeps its row, so a missing engine is seen and not mistaken for a clean one.
+ * @param {Record<string, Verdict | null | undefined>} verdicts
  * @returns {string[]}
  */
-function checkNotes(check) {
+function compatEngineBlocks(verdicts) {
+  const rows = COMPAT_SOURCES.map((source) => {
+    const found = sourceOf(verdicts, source);
+    if (!("ran" in found)) {
+      return [source, `could not run — ${oneLine(found.message)}`, "—", "—", "—", "—"];
+    }
+    const v = found.ran;
+    const engine = source === CHECK ? `Node ${v.runtime.node}` : v.engine;
+    const c = v.counts;
+    return [
+      source,
+      `${engine} (${v.engineId})`,
+      String(c.stillNeeded),
+      String(c.removable),
+      String(c.guard),
+      String(c.outOfScope),
+    ];
+  });
+  return [
+    [
+      "| Compat source | Engine | Still needed | Removable | Guard | Out of scope |",
+      "| --- | --- | --- | --- | --- | --- |",
+      ...rows.map((r) => `| ${r.join(" | ")} |`),
+    ].join("\n"),
+  ];
+}
+
+/** @param {import("./canary-issues.mjs").EngineState} e */
+function engineNote(e) {
+  const state = e.row
+    ? e.row.state === "still-needed"
+      ? `still needed, ${e.row.failing} of ${e.row.probes} probes fail`
+      : e.row.state.replace(/-/g, " ")
+    : "no verdict";
+  return `${e.engine ?? e.source}: ${state}`;
+}
+
+/**
+ * The lines under the oracle table: which groups are removable on every engine in their scope,
+ * which only on some, and whether the committed snapshot is current. Separate paragraphs,
+ * because two consecutive lines would render as one.
+ * @param {Record<string, Verdict | null | undefined>} verdicts
+ * @returns {string[]}
+ */
+function checkNotes(verdicts) {
   /** @type {string[]} */
   const blocks = [];
-  const removable = check.workarounds
-    .filter((/** @type {any} */ w) => w.state === "removable")
-    .map((/** @type {any} */ w) => w.id);
-  if (removable.length > 0) blocks.push(`Removable: ${removable.join(", ")}`);
-  blocks.push(
-    check.snapshot.current
-      ? "Snapshot: current"
-      : "Snapshot: stale: run pnpm compat:snapshot",
+  const states = compatStates(/** @type {any} */ (verdicts));
+  const everywhere = states.filter((s) => s.everywhere).map((s) => s.id);
+  if (everywhere.length > 0) {
+    blocks.push(`Removable on every engine in scope: ${everywhere.join(", ")}`);
+  }
+  const partly = states.filter(
+    (s) =>
+      !s.everywhere &&
+      s.engines.some((e) => e.inScope && e.row?.state === "removable"),
   );
+  if (partly.length > 0) {
+    blocks.push(
+      `Removable on some engines only: ${partly
+        .map(
+          (s) =>
+            `${s.id} (${s.engines
+              .filter((e) => e.inScope)
+              .map(engineNote)
+              .join("; ")})`,
+        )
+        .join(", ")}`,
+    );
+  }
+  const check = sourceOf(verdicts, CHECK);
+  if ("ran" in check) {
+    blocks.push(
+      check.ran.snapshot.current
+        ? "Snapshot: current"
+        : "Snapshot: stale: run pnpm compat:snapshot",
+    );
+  }
   return blocks;
 }
 
@@ -293,11 +361,10 @@ export function summaryMarkdown(
     if (runtime) blocks.push(runtime);
     blocks.push(
       ...blocksFor(verdicts, CHECK, "Workarounds", workaroundBlocks),
+      ...compatEngineBlocks(verdicts),
       ...blocksFor(verdicts, ORACLE, "Oracle", oracleBlocks),
     );
-    const check = sourceOf(verdicts, CHECK);
-    if ("ran" in check) blocks.push(...checkNotes(check.ran));
-    blocks.push(...nativeBlocks(verdicts));
+    blocks.push(...checkNotes(verdicts), ...nativeBlocks(verdicts));
   } else {
     blocks.push("## Leap-second canary");
     const found = sourceOf(verdicts, LEAP);

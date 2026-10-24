@@ -2,8 +2,8 @@
 /**
  * Runs the whole packages/gmt suite on a native Temporal engine and sorts what fails.
  *
- *   node scripts/native-suite.mjs <node|chromium|firefox>
- *   node scripts/native-suite.mjs summary <node|chromium|firefox>
+ *   node scripts/native-suite.mjs <node|chromium|firefox|webkit>
+ *   node scripts/native-suite.mjs summary <node|chromium|firefox|webkit>
  *
  * A leg runs the suite twice on the same host: once on @js-temporal/polyfill (the control) and
  * once on the native engine. A test that fails natively and passes on the control is a
@@ -11,10 +11,22 @@
  * in scripts/lib/native-suite-tags.mjs. The verdict goes to artifacts/native-suite-<leg>.json for
  * the canary reporter, the raw Vitest reports beside it.
  *
+ * A browser leg first runs the compat check in that browser (scripts/lib/native-suite-compat.mjs):
+ * the probes `temporal-compat.mjs check` runs on Node, on the browser's own engine, against the
+ * polyfill GMT ships. Its verdict goes to artifacts/temporal-compat-<leg>.json. A workaround for
+ * one engine's defect (D17 on Firefox, say) can only be judged there, so the reporter calls a
+ * group removable when every engine in its scope says so.
+ *
  * Exit 0 when nothing is untagged (stale tags never fail the job), 1 when a divergence or host
  * failure has no tag, 2 when the leg could not run (wrong Node, browser missing, a pass left no
- * report) or the argument is unknown. `summary <leg>` prints the verdict file's engine line and
- * counts for the job summary and always exits 0.
+ * report, a pass that stopped before every file ran on both tries), when a browser's compat
+ * check could not run (the suite still runs and its verdict is still written), or when the
+ * argument is unknown. `summary <leg>` prints the verdict files' engine line and counts for the job
+ * summary and always exits 0.
+ *
+ * A pass that stops early is run once more before the leg gives up. Vitest's browser pool gives
+ * up on a run when a page is lost ("Failed to run the test <file>."), and its JSON reporter then
+ * writes every file it never started as passed with no tests, so a report alone looks complete.
  *
  * Node built-ins and Vitest only, and no `Date`.
  */
@@ -29,6 +41,7 @@ import {
   saveVerdict,
   VERDICT_FILES,
 } from "./lib/canary-verdict.mjs";
+import { BROWSER_LABELS, runBrowserCompat } from "./lib/native-suite-compat.mjs";
 import {
   classify,
   KNOWN_HOST_FAILURES,
@@ -37,10 +50,10 @@ import {
 } from "./lib/native-suite-tags.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const LEGS = ["node", "chromium", "firefox"];
+const LEGS = ["node", "chromium", "firefox", "webkit"];
 const USAGE =
-  "Usage: node scripts/native-suite.mjs <node|chromium|firefox>\n" +
-  "       node scripts/native-suite.mjs summary <node|chromium|firefox>";
+  "Usage: node scripts/native-suite.mjs <node|chromium|firefox|webkit>\n" +
+  "       node scripts/native-suite.mjs summary <node|chromium|firefox|webkit>";
 const SHOWN = 20;
 /** One Vitest pass may run this long (the job allows 45 minutes for both passes and the setup). */
 const PASS_TIMEOUT_MS = 18 * 60 * 1000;
@@ -50,11 +63,13 @@ const NO_NATIVE_MESSAGE = "native Temporal is not available on this runtime";
 const SHIM_PATH = "packages/gmt/src/test/nativeTemporal.ts";
 
 /**
- * @typedef {"node" | "chromium" | "firefox"} Leg
+ * @typedef {"node" | "chromium" | "firefox" | "webkit"} Leg
  * @typedef {"control" | "native"} Pass
  * @typedef {{ engine: string, playwright: string | null }} Engine
+ * @typedef {ReturnType<typeof import("./lib/canary-verdict.mjs").browserCompatVerdict>} CompatVerdict
  * @typedef {{
  *   preflight: (leg: Leg, root: string) => Promise<Engine>,
+ *   compatCheck: (leg: Exclude<Leg, "node">, root: string) => Promise<CompatVerdict>,
  *   runPass: (leg: Leg, pass: Pass, root: string) => number | void,
  *   runtime: () => { node: string, vitest: string },
  *   divergenceRows: typeof KNOWN_NATIVE_FAILURES,
@@ -377,7 +392,7 @@ async function bareProblems(context, load) {
 }
 
 /**
- * @param {"chromium" | "firefox"} leg
+ * @param {Exclude<Leg, "node">} leg
  * @param {string} root
  * @returns {Promise<Engine>}
  */
@@ -411,8 +426,10 @@ async function browserPreflight(leg, root) {
       ...(await pageProblems(context, load, zone)),
       ...(await bareProblems(context, load)),
     ]);
-    const label = leg === "chromium" ? "Chromium" : "Firefox";
-    return { engine: `${label} ${browser.version()}`, playwright: version };
+    return {
+      engine: `${BROWSER_LABELS[leg]} ${browser.version()}`,
+      playwright: version,
+    };
   } finally {
     await browser.close();
   }
@@ -501,6 +518,8 @@ export function runPass(leg, pass, root, timeoutMs = PASS_TIMEOUT_MS) {
 /** @type {Deps} */
 const realDeps = {
   preflight,
+  compatCheck: (leg, root) =>
+    runBrowserCompat(leg, root, { playwright: () => import("playwright") }),
   runPass,
   runtime: () => ({
     node: process.versions.node,
@@ -586,11 +605,36 @@ function incompleteRun(control, native, controlExit, controlErrors) {
 }
 
 /**
+ * The files of a report that Vitest never started. The JSON reporter writes a file the run
+ * stopped short of as passed, with no tests and the run's own start as both of its times; a file
+ * that ran with no test in it is failed, and a file whose tests were all skipped lists them.
+ * @param {any} report
+ * @returns {string[]}
+ */
+function unfinishedFiles(report) {
+  return report.testResults
+    .filter(
+      (/** @type {any} */ f) =>
+        (f.assertionResults?.length ?? 0) === 0 &&
+        f.status !== "failed" &&
+        f.startTime === f.endTime,
+    )
+    .map((/** @type {any} */ f) => String(f.name ?? ""));
+}
+
+/** @param {{ name: string, message: string, causes?: string[] }} e */
+const errorLine = (e) =>
+  [
+    `${e.name}: ${e.message}`,
+    ...(e.causes ?? []).map((c) => `caused by ${c}`),
+  ].join("; ");
+
+/**
  * The unhandled errors the reporter wrote for a pass.
  * @param {string} root
  * @param {Leg} leg
  * @param {Pass} pass
- * @returns {{ name: string, message: string }[]}
+ * @returns {{ name: string, message: string, causes?: string[] }[]}
  */
 function readErrors(root, leg, pass) {
   const path = errorsPath(leg, pass);
@@ -645,9 +689,41 @@ function listFailures(title, rows, total) {
  */
 function summary(leg, root, stdout) {
   const source = `native-suite-${leg}`;
-  let verdict;
+  const verdict = readVerdict(root, source);
+  if (verdict === null) {
+    stdout(`${source}: no verdict\n`);
+  } else if (verdict.status !== "ran") {
+    stdout(`${source}: could not run — ${verdict.message}\n`);
+  } else {
+    const c = verdict.counts;
+    stdout(
+      `${verdict.engine}\n` +
+        `${c.tests} tests in ${c.files} files: ${c.passed} passed, ${c.tagged} tagged, ` +
+        `${c.untagged} untagged, ${c.hostTagged} host tagged, ${c.hostUntagged} host untagged, ` +
+        `${c.staleTags} stale tags\n`,
+    );
+  }
+  if (leg === "node") return;
+  const compatSource = `temporal-compat-${leg}`;
+  const compat = readVerdict(root, compatSource);
+  if (compat === null) {
+    stdout(`${compatSource}: no verdict\n`);
+  } else if (compat.status !== "ran") {
+    stdout(`${compatSource}: could not run — ${compat.message}\n`);
+  } else {
+    stdout(`${compatLine(compat)}\n`);
+  }
+}
+
+/**
+ * The verdict a source wrote under `root`, or null when there is none or it cannot be read.
+ * @param {string} root
+ * @param {string} source
+ * @returns {any}
+ */
+function readVerdict(root, source) {
   try {
-    verdict = JSON.parse(
+    return JSON.parse(
       readFileSync(
         join(
           root,
@@ -657,20 +733,79 @@ function summary(leg, root, stdout) {
       ),
     );
   } catch {
-    stdout(`${source}: no verdict\n`);
-    return;
+    return null;
   }
-  if (verdict.status !== "ran") {
-    stdout(`${source}: could not run — ${verdict.message}\n`);
-    return;
-  }
-  const c = verdict.counts;
-  stdout(
-    `${verdict.engine}\n` +
-      `${c.tests} tests in ${c.files} files: ${c.passed} passed, ${c.tagged} tagged, ` +
-      `${c.untagged} untagged, ${c.hostTagged} host tagged, ${c.hostUntagged} host untagged, ` +
-      `${c.staleTags} stale tags\n`,
+}
+
+/**
+ * The compat check's counts on this browser, as the report and the summary print them.
+ * @param {CompatVerdict} compat
+ */
+function compatLine(compat) {
+  const c = compat.counts;
+  return (
+    `${c.workarounds} workarounds on @js-temporal/polyfill ${compat.runtime.polyfill} in ` +
+    `${compat.engine}: ${c.stillNeeded} still needed, ${c.removable} removable, ${c.guard} guard, ` +
+    `${c.outOfScope} out of scope on ${compat.engineId}`
   );
+}
+
+/**
+ * @typedef {{ exit: number, report: any, errors: ReturnType<typeof readErrors>,
+ *             unfinished: string[] }} PassRun
+ */
+
+/**
+ * Runs one pass and reads what it left.
+ * @param {Leg} leg
+ * @param {Pass} pass
+ * @param {string} root
+ * @param {Deps} d
+ * @returns {PassRun}
+ */
+function runOnce(leg, pass, root, d) {
+  const exit = d.runPass(leg, pass, root) ?? 0;
+  const report = withFailureMessages(
+    readReport(root, leg, pass),
+    readMessages(root, leg, pass),
+  );
+  const errors = readErrors(root, leg, pass);
+  return { exit, report, errors, unfinished: unfinishedFiles(report) };
+}
+
+/**
+ * One sentence on a pass that stopped early: how far it got and what Vitest said, cause included.
+ * @param {Pass} pass
+ * @param {PassRun} run
+ */
+function stoppedEarly(pass, run) {
+  const total = run.report.testResults.length;
+  const why =
+    run.errors.length === 0
+      ? "with no error reported"
+      : `Vitest said: ${run.errors.map(errorLine).join(" | ")}`;
+  return `the ${pass} pass stopped after ${total - run.unfinished.length} of ${total} files (${why})`;
+}
+
+/**
+ * Runs a pass, and once more when Vitest stopped before every file ran. A pass that stops on both
+ * tries is one the leg could not run, and the error Vitest gave is the reason. The verdict never
+ * sees a stopped pass: its never-run files would read as passing, which hides a divergence and
+ * reports every tag on such a file as stale.
+ * @param {Leg} leg
+ * @param {Pass} pass
+ * @param {string} root
+ * @param {Deps} d
+ * @param {(text: string) => void} stderr
+ * @returns {PassRun}
+ */
+function runPassAgainIfStopped(leg, pass, root, d, stderr) {
+  const first = runOnce(leg, pass, root, d);
+  if (first.unfinished.length === 0) return first;
+  stderr(`native-suite: ${stoppedEarly(pass, first)}; running it again\n`);
+  const second = runOnce(leg, pass, root, d);
+  if (second.unfinished.length === 0) return second;
+  throw new Error(`${stoppedEarly(pass, second)}, on both tries`);
 }
 
 /**
@@ -678,33 +813,26 @@ function summary(leg, root, stdout) {
  * @param {Leg} leg
  * @param {string} root
  * @param {Deps} d
+ * @param {(text: string) => void} stderr
  */
-function runPasses(leg, root, d) {
-  const controlExit = d.runPass(leg, "control", root) ?? 0;
-  const nativeExit = d.runPass(leg, "native", root) ?? 0;
-  const control = withMessages(
-    readReport(root, leg, "control"),
-    readMessages(root, leg, "control"),
-  );
-  const native = withMessages(
-    readReport(root, leg, "native"),
-    readMessages(root, leg, "native"),
-  );
-  const controlErrors = readErrors(root, leg, "control");
-  const nativeErrors = readErrors(root, leg, "native");
+function runPasses(leg, root, d, stderr) {
+  const control = runPassAgainIfStopped(leg, "control", root, d, stderr);
+  const native = runPassAgainIfStopped(leg, "native", root, d, stderr);
   const problem = incompleteRun(
-    control,
-    native,
-    controlExit,
-    controlErrors.length,
+    control.report,
+    native.report,
+    control.exit,
+    control.errors.length,
   );
   if (problem) throw new Error(problem);
-  return { control, native, nativeExit, controlErrors, nativeErrors };
+  return {
+    control: control.report,
+    native: native.report,
+    nativeExit: native.exit,
+    controlErrors: control.errors,
+    nativeErrors: native.errors,
+  };
 }
-
-/** @param {any} report @param {{ file: string, fullName: string, message: string }[]} messages */
-const withMessages = (report, messages) =>
-  report === null ? null : withFailureMessages(report, messages);
 
 /**
  * The text printed after a run: the engine line, the counts and the first failures.
@@ -767,13 +895,30 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
     return 2;
   };
 
+  // The compat check comes first and on its own: it needs the browser and the built dist, not
+  // the suite, and a check that cannot run must not stop the suite (nor the other way round).
+  let compatFailed = false;
+  if (leg !== "node") {
+    const compatSource = `temporal-compat-${leg}`;
+    try {
+      const compat = await d.compatCheck(leg, root);
+      saveVerdict(root, compat, "native-suite");
+      stdout(`${compatLine(compat)}\n`);
+    } catch (error) {
+      const message = messageOf(error);
+      saveVerdict(root, couldNotRunVerdict(compatSource, message), "native-suite");
+      stderr(`native-suite: the ${leg} compat check could not run: ${message}\n`);
+      compatFailed = true;
+    }
+  }
+
   /** @type {Engine} */
   let engine;
   /** @type {ReturnType<typeof runPasses>} */
   let passes;
   try {
     engine = await d.preflight(leg, root);
-    passes = runPasses(leg, root, d);
+    passes = runPasses(leg, root, d, stderr);
   } catch (error) {
     return couldNotRun(error);
   }
@@ -813,6 +958,7 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
     "native-suite",
   );
   stdout(reportText(engine, result));
+  if (compatFailed) return 2;
   return result.counts.untagged > 0 || result.counts.hostUntagged > 0 ? 1 : 0;
 }
 

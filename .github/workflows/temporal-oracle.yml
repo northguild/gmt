@@ -12,7 +12,7 @@ name: Temporal oracle
 # tally or exit code.
 #
 # The native-suite job runs the whole packages/gmt suite on native Temporal in Node 26,
-# Chromium and Firefox, one matrix leg each. A failing leg means an untagged failure of either
+# Chromium, Firefox and WebKit, one matrix leg each. A failing leg means an untagged failure of either
 # kind: a divergence (fails natively, passes on the polyfill in the same runtime) or a host
 # failure (fails on both) that no host group covers. The report job files it as an issue.
 
@@ -103,7 +103,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        leg: [node, chromium, firefox]
+        leg: [node, chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@v4
 

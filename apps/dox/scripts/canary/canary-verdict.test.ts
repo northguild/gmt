@@ -6,6 +6,7 @@ import { formatJson } from "../../../../scripts/lib/format-json.mjs";
 import {
   UNTAGGED_ROWS_IN_VERDICT,
   VERDICT_FILES,
+  browserCompatVerdict,
   compatCheckVerdict,
   couldNotRunVerdict,
   nativeSuiteVerdict,
@@ -73,9 +74,10 @@ describe("compatCheckVerdict", () => {
     snapshotCurrent: true,
   });
 
-  it("names its source and says it ran", () => {
+  it("names its source, says it ran, and names Node's engine as V8", () => {
     expect(verdict.source).toBe("temporal-compat-check");
     expect(verdict.status).toBe("ran");
+    expect(verdict.engineId).toBe("v8");
     expect(verdict.runtime).toEqual(runtime);
   });
 
@@ -178,6 +180,40 @@ describe("compatCheckVerdict", () => {
       });
     },
   );
+});
+
+describe("browserCompatVerdict", () => {
+  const groups = [
+    group({ defects: ["D1"], state: "still-needed", probes: 3, failing: 2 }),
+    group({ defects: ["D3", "D4"], state: "removable" }),
+    group({ defects: ["D10"], state: "guard", withGuard: true }),
+  ];
+  const browserRuntime = { polyfill: "0.5.1", node: "v26.10.0", playwright: "1.63.0" };
+  const verdict = browserCompatVerdict({
+    leg: "firefox",
+    engine: "Firefox 155.0",
+    engineId: "firefox",
+    runtime: browserRuntime,
+    groups,
+  });
+
+  it("names its source after the leg, its engine, and carries no snapshot", () => {
+    expect(verdict).toMatchObject({
+      source: "temporal-compat-firefox",
+      status: "ran",
+      leg: "firefox",
+      engine: "Firefox 155.0",
+      engineId: "firefox",
+      runtime: browserRuntime,
+    });
+    expect("snapshot" in verdict).toBe(false);
+  });
+
+  it("counts and lists the groups exactly as the check verdict does", () => {
+    const check = compatCheckVerdict({ runtime, groups, snapshotCurrent: true });
+    expect(verdict.counts).toEqual(check.counts);
+    expect(verdict.workarounds).toEqual(check.workarounds);
+  });
 });
 
 describe("oracleVerdict", () => {
@@ -441,11 +477,15 @@ describe("VERDICT_FILES", () => {
   it("names one fixed file per source", () => {
     expect(VERDICT_FILES).toEqual({
       "temporal-compat-check": "artifacts/temporal-compat-check.json",
+      "temporal-compat-chromium": "artifacts/temporal-compat-chromium.json",
+      "temporal-compat-firefox": "artifacts/temporal-compat-firefox.json",
+      "temporal-compat-webkit": "artifacts/temporal-compat-webkit.json",
       "temporal-oracle": "artifacts/temporal-oracle-verdict.json",
       "leap-seconds": "artifacts/leap-seconds.json",
       "native-suite-node": "artifacts/native-suite-node.json",
       "native-suite-chromium": "artifacts/native-suite-chromium.json",
       "native-suite-firefox": "artifacts/native-suite-firefox.json",
+      "native-suite-webkit": "artifacts/native-suite-webkit.json",
     });
   });
 });

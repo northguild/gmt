@@ -7,7 +7,10 @@
  * naming the finding's key. An open `canary` issue with that marker gets a comment; otherwise a new
  * issue opens. A finding keyed by what is wrong, not by the run, is what stops a weekly run from
  * opening a second issue for a problem that is still there.
+ *
+ * Imports one constant (`ENGINE_IDS`) and nothing that reads or writes.
  */
+import { ENGINE_IDS } from "./workarounds.mjs";
 
 /** Label every canary issue carries. */
 export const CANARY_LABEL = "canary";
@@ -21,10 +24,14 @@ export const ISSUE_TYPE = "Task";
 export const WORKFLOW_SOURCES = {
   "temporal-oracle": [
     "temporal-compat-check",
+    "temporal-compat-chromium",
+    "temporal-compat-firefox",
+    "temporal-compat-webkit",
     "temporal-oracle",
     "native-suite-node",
     "native-suite-chromium",
     "native-suite-firefox",
+    "native-suite-webkit",
   ],
   "leap-seconds": ["leap-seconds"],
 };
@@ -38,10 +45,29 @@ export const WORKFLOW_SOURCES = {
 const UNTAGGED_GROUPS_IN_BODY = 50;
 
 const CHECK = "temporal-compat-check";
+/** @param {string} leg */
+const COMPAT = (leg) => `temporal-compat-${leg}`;
+/**
+ * Every source that judges the workaround groups, the Node check first, then one browser per
+ * native-suite leg. A group is removable when every source in its scope says so.
+ */
+export const COMPAT_SOURCES = [
+  CHECK,
+  COMPAT("chromium"),
+  COMPAT("firefox"),
+  COMPAT("webkit"),
+];
+/** The engine a compat source runs on, with or without its verdict. */
+const SOURCE_ENGINE = {
+  [CHECK]: ENGINE_IDS.node,
+  [COMPAT("chromium")]: ENGINE_IDS.chromium,
+  [COMPAT("firefox")]: ENGINE_IDS.firefox,
+  [COMPAT("webkit")]: ENGINE_IDS.webkit,
+};
 const ORACLE = "temporal-oracle";
 const LEAP = "leap-seconds";
 /** The native-suite legs, in the order their findings and summary rows list them. */
-const NATIVE_LEGS = ["node", "chromium", "firefox"];
+const NATIVE_LEGS = ["node", "chromium", "firefox", "webkit"];
 /** @param {string} leg */
 const NATIVE = (leg) => `native-suite-${leg}`;
 
@@ -76,15 +102,22 @@ const FORCED_ROW = {
  * @typedef {{ package: string, through: string, reason: string, lapsed: boolean }} Guard
  * @typedef {{
  *   id: string, defects: string[], title: string, trigger: string,
- *   state: "still-needed" | "removable" | "guard",
- *   probes: number, failing: number, guard?: Guard, steps: string[],
+ *   state: "still-needed" | "removable" | "guard" | "out-of-scope",
+ *   probes: number, failing: number, engines?: string[], guard?: Guard, steps: string[],
  * }} Workaround
+ * @typedef {{ workarounds: number, stillNeeded: number, removable: number, guard: number,
+ *   outOfScope: number }} CompatCounts
  * @typedef {{
- *   source: "temporal-compat-check", status: "ran", runtime: Runtime,
- *   counts: { workarounds: number, stillNeeded: number, removable: number, guard: number },
- *   snapshot: { path: string, current: boolean }, workarounds: Workaround[],
- *   forced?: { removable: string },
+ *   source: "temporal-compat-check", status: "ran", engineId: "v8", runtime: Runtime,
+ *   counts: CompatCounts, snapshot: { path: string, current: boolean },
+ *   workarounds: Workaround[], forced?: { removable: string },
  * }} CompatCheckVerdict
+ * @typedef {{
+ *   source: string, status: "ran", leg: "chromium" | "firefox" | "webkit", engine: string,
+ *   engineId: "v8" | "firefox" | "webkit",
+ *   runtime: { polyfill: string, node: string, playwright: string },
+ *   counts: CompatCounts, workarounds: Workaround[],
+ * }} BrowserCompatVerdict
  * @typedef {{
  *   scan: string, calendar: string, op: string, row: number, iso: string,
  *   input: string, native: string, expected: string, gmt: string,
@@ -105,7 +138,7 @@ const FORCED_ROW = {
  * @typedef {{ source: string, status: "could-not-run", message: string }} CouldNotRunVerdict
  * @typedef {{ file: string, test: string, message: string }} NativeFailure
  * @typedef {{
- *   source: string, status: "ran", leg: "node" | "chromium" | "firefox", engine: string,
+ *   source: string, status: "ran", leg: "node" | "chromium" | "firefox" | "webkit", engine: string,
  *   runtime: { node: string, vitest: string, playwright: string | null },
  *   counts: { files: number, tests: number, passed: number, skipped: number, tagged: number, untagged: number,
  *             hostTagged: number, hostUntagged: number, staleTags: number },
@@ -117,8 +150,8 @@ const FORCED_ROW = {
  *     | { kind: "host", group: string, reason: string })[],
  *   forced?: { nativeFailure: true },
  * }} NativeSuiteVerdict
- * @typedef {CompatCheckVerdict | OracleVerdict | LeapSecondsVerdict | NativeSuiteVerdict
- *   | CouldNotRunVerdict} Verdict
+ * @typedef {CompatCheckVerdict | BrowserCompatVerdict | OracleVerdict | LeapSecondsVerdict
+ *   | NativeSuiteVerdict | CouldNotRunVerdict} Verdict
  * @typedef {{ removable?: string, mismatch?: boolean, nativeFailure?: boolean,
  *   leapDifference?: boolean }} Force
  * @typedef {{ workflow: "temporal-oracle" | "leap-seconds", runUrl: string }} Context
@@ -327,41 +360,162 @@ function summaryOf(w) {
   return dash === -1 ? w.title : w.title.slice(dash + 1).trim();
 }
 
-/** @param {Workaround} w */
-function realStateText(w) {
-  if (w.state === "still-needed") {
-    return `still needed (${w.failing} of ${w.probes} probes fail)`;
-  }
-  return w.state;
+/**
+ * How a compat source names its engine: the Node check by Node's version (its engine is V8, like
+ * Chromium's), a browser by the name and version Playwright reports.
+ * @param {CompatCheckVerdict | BrowserCompatVerdict} verdict
+ */
+function compatEngineLabel(verdict) {
+  return verdict.source === CHECK
+    ? `Node ${verdict.runtime.node}`
+    : /** @type {BrowserCompatVerdict} */ (verdict).engine;
 }
 
-/** @param {CompatCheckVerdict} check */
+/**
+ * @typedef {{ source: string, engineId: string, inScope: boolean, engine: string | null,
+ *   row: Workaround | null, message: string | null }} EngineState
+ *   one compat source's view of a group: `row` null when the source has no verdict for it,
+ *   with `message` saying why
+ * @typedef {{ id: string, workaround: Workaround, polyfill: string, engines: EngineState[],
+ *   everywhere: boolean }} CompatState
+ */
+
+/**
+ * Each workaround group's state on every compat source, in script order. A group with `engines`
+ * is in scope only on those engines; `everywhere` is true when every in-scope source ran and
+ * reports the group removable. A source in scope with no verdict, or whose verdict does not know
+ * the group, blocks: a group is never called removable on evidence from only part of its scope.
+ * @param {Record<string, Verdict | null>} verdicts
+ * @returns {CompatState[]}
+ */
+export function compatStates(verdicts) {
+  const sources = COMPAT_SOURCES.map((source) => {
+    const verdict = verdictOf(verdicts, source);
+    return {
+      source,
+      ran:
+        verdict?.status === "ran"
+          ? /** @type {CompatCheckVerdict | BrowserCompatVerdict} */ (verdict)
+          : null,
+      message:
+        verdict === null
+          ? NO_VERDICT
+          : verdict.status === "could-not-run"
+            ? /** @type {CouldNotRunVerdict} */ (verdict).message
+            : null,
+    };
+  });
+  /** @type {Map<string, { workaround: Workaround, polyfill: string }>} */
+  const groups = new Map();
+  for (const { ran } of sources) {
+    if (!ran) continue;
+    for (const workaround of ran.workarounds) {
+      if (!groups.has(workaround.id)) {
+        groups.set(workaround.id, { workaround, polyfill: ran.runtime.polyfill });
+      }
+    }
+  }
+  return [...groups].map(([id, { workaround, polyfill }]) => {
+    const engines = sources.map(({ source, ran, message }) => {
+      const engineId = SOURCE_ENGINE[source];
+      const inScope = !workaround.engines || workaround.engines.includes(engineId);
+      const row = ran?.workarounds.find((w) => w.id === id) ?? null;
+      return {
+        source,
+        engineId,
+        inScope,
+        engine: ran ? compatEngineLabel(ran) : null,
+        row,
+        message: ran
+          ? row
+            ? null
+            : "this run's verdict has no such workaround"
+          : message,
+      };
+    });
+    const inScope = engines.filter((e) => e.inScope);
+    return {
+      id,
+      workaround,
+      polyfill,
+      engines,
+      everywhere:
+        inScope.length > 0 &&
+        inScope.every((e) => e.row?.state === "removable"),
+    };
+  });
+}
+
+/**
+ * The groups every compat source in their scope reports removable, in script order.
+ * @param {Record<string, Verdict | null>} verdicts
+ * @returns {CompatState[]}
+ */
+export function removableEverywhere(verdicts) {
+  return compatStates(verdicts).filter((state) => state.everywhere);
+}
+
+/** @param {EngineState} e */
+function engineStateText(e) {
+  if (!e.row) return `no verdict (${e.message})`;
+  if (e.row.state === "still-needed") {
+    return `still needed (${e.row.failing} of ${e.row.probes} probes fail)`;
+  }
+  return e.row.state.replace(/-/g, " ");
+}
+
+/** @param {EngineState} e */
+function engineProbesText(e) {
+  return e.row ? `${e.row.probes - e.row.failing} of ${e.row.probes} pass` : "—";
+}
+
+/** @param {CompatCheckVerdict | null} check  the Node check, when it ran */
 function snapshotSentence(check) {
+  if (check === null) {
+    return "pnpm compat:snapshot is due in the removal PR: the Node check did not run this time, so whether the committed apps/dox/src/data/temporal-compat.json is current is unknown. Once the group's repros are deleted, run it and commit the file; validate (snapshot --check) fails until you do.";
+  }
   return check.snapshot.current
     ? "pnpm compat:snapshot is due in the removal PR: once the group's repros are deleted, run it and commit apps/dox/src/data/temporal-compat.json; validate (snapshot --check) fails until you do."
     : "pnpm compat:snapshot is due now: the committed apps/dox/src/data/temporal-compat.json no longer matches this run's probes. Run it again in the removal PR after deleting the repros.";
 }
 
 /**
- * @param {CompatCheckVerdict} check
- * @param {Workaround} w
+ * @param {CompatState} state
+ * @param {CompatCheckVerdict | null} check  the Node check, when it ran
  * @param {boolean} isForced
  * @param {string} runUrl
  * @returns {Finding}
  */
-function removableFinding(check, w, isForced, runUrl) {
-  const rt = check.runtime;
+function removableFinding(state, check, isForced, runUrl) {
+  const { id, workaround: w, polyfill, engines } = state;
+  const inScope = engines.filter((e) => e.inScope);
+  const scopeLabels = inScope.map((e) => e.engine ?? e.source).join(", ");
   const opening = isForced
-    ? `Forced removable for a dry run. Real state on this run: ${realStateText(w)}.`
-    : `Every probe for **${w.id}** returns the spec value on @js-temporal/polyfill ${rt.polyfill} (Node ${rt.node}, ICU ${rt.icu}), so the workaround can go.`;
+    ? `Forced removable for a dry run. Real state on this run: ${inScope
+        .map((e) => `${engineStateText(e)} on ${e.engine ?? e.source}`)
+        .join("; ")}.`
+    : `Every probe for **${id}** returns the spec value on @js-temporal/polyfill ${polyfill} on every engine in its scope (${scopeLabels}), so the workaround can go.`;
+  const scope = w.engines
+    ? `only ${w.engines.join(", ")}: the defect is in that engine's own Intl, so the other rows are out of scope and count for nothing`
+    : "every engine";
   const paragraphs = [
     opening,
     `**Trigger:** ${w.trigger}`,
-    `**Probes:** ${w.probes - w.failing} of ${w.probes} pass.`,
+    `**Scope:** ${scope}.`,
+    `### Engines\n\n${table(
+      ["Source", "Engine", "State", "Probes"],
+      engines.map((e) => [
+        cell(e.source),
+        cell(e.engine ?? "—"),
+        cell(engineStateText(e)),
+        cell(engineProbesText(e)),
+      ]),
+    )}`,
   ];
-  if (w.guard?.lapsed) {
+  const lapsed = inScope.find((e) => e.row?.guard?.lapsed)?.row?.guard;
+  if (lapsed) {
     paragraphs.push(
-      `**Guard lapsed:** it held through ${w.guard.package} ${w.guard.through} (${w.guard.reason.replace(/\.$/, "")}). Before removing, confirm the installed release is the trigger; if it is not, raise guard.through to it and close this issue.`,
+      `**Guard lapsed:** it held through ${lapsed.package} ${lapsed.through} (${lapsed.reason.replace(/\.$/, "")}). Before removing, confirm the installed release is the trigger; if it is not, raise guard.through to it and close this issue.`,
     );
   }
   const steps = [...w.steps, FLOOR_STEP];
@@ -372,17 +526,17 @@ function removableFinding(check, w, isForced, runUrl) {
   );
   const comment = isForced
     ? `${opening}\n\n${snapshotSentence(check)}`
-    : `Still removable on this run (@js-temporal/polyfill ${rt.polyfill}, Node ${rt.node}, ICU ${rt.icu}).\n\n${snapshotSentence(check)}`;
+    : `Still removable on this run on every engine in its scope (${scopeLabels}; @js-temporal/polyfill ${polyfill}).\n\n${snapshotSentence(check)}`;
   /** @type {Finding} */
   const real = {
-    key: `temporal-compat/removable/${w.id}`,
-    title: `Remove workaround ${w.id}: ${summaryOf(w)}`,
+    key: `temporal-compat/removable/${id}`,
+    title: `Remove workaround ${id}: ${summaryOf(w)}`,
     labels: [CANARY_LABEL],
     body: withRun(paragraphs.join("\n\n"), runUrl),
     comment: withRun(comment, runUrl),
   };
   if (!isForced) return real;
-  return dryRun(real, `--force-removable=${w.id}`, paragraphs, runUrl);
+  return dryRun(real, `--force-removable=${id}`, paragraphs, runUrl);
 }
 
 /**
@@ -726,21 +880,24 @@ function couldNotRunFinding(workflow, failed, runUrl) {
 }
 
 /**
+ * One finding per group removable on every engine in its scope, plus the forced one (the Node
+ * check's `forced`), which shows the real per-engine states.
  * @param {Record<string, Verdict | null>} verdicts
  * @param {string} runUrl
  * @returns {Finding[]}
  */
-function compatCheckFindings(verdicts, runUrl) {
+function compatFindings(verdicts, runUrl) {
   const check = /** @type {CompatCheckVerdict | CouldNotRunVerdict | null} */ (
     verdictOf(verdicts, CHECK)
   );
-  if (check?.status !== "ran") return [];
-  const out = check.workarounds
-    .filter((w) => w.state === "removable")
-    .map((w) => removableFinding(check, w, false, runUrl));
-  if (check.forced) {
-    const w = check.workarounds.find((x) => x.id === check.forced?.removable);
-    if (w) out.push(removableFinding(check, w, true, runUrl));
+  const checkRan = check?.status === "ran" ? check : null;
+  const states = compatStates(verdicts);
+  const out = states
+    .filter((state) => state.everywhere)
+    .map((state) => removableFinding(state, checkRan, false, runUrl));
+  if (checkRan?.forced) {
+    const state = states.find((x) => x.id === checkRan.forced?.removable);
+    if (state) out.push(removableFinding(state, checkRan, true, runUrl));
   }
   return out;
 }
@@ -835,8 +992,8 @@ function failedSources(verdicts, sources) {
 }
 
 /**
- * Findings in order: removable (script order), mismatch, native (untagged failure, host failure,
- * stale tag), leap, could-not-run. A forced finding
+ * Findings in order: removable on every engine in scope (script order), mismatch, native
+ * (untagged failure, host failure, stale tag), leap, could-not-run. A forced finding
  * follows the real one of its kind.
  * @param {Record<string, Verdict | null>} verdicts  after `applyForce`
  * @param {Context} context
@@ -847,7 +1004,7 @@ export function findings(verdicts, context) {
   const sources = WORKFLOW_SOURCES[workflow];
   /** @type {[string, (v: Record<string, Verdict | null>, url: string) => Finding[]][]} */
   const perSource = [
-    [CHECK, compatCheckFindings],
+    [CHECK, compatFindings],
     [ORACLE, oracleFindings],
     [NATIVE("node"), nativeSuiteFindings],
     [LEAP, leapSecondsFindings],

@@ -124,11 +124,12 @@ const cleanCheck = () =>
     workaround("D10", "guard", { guard: { ...GUARD, lapsed: false } }),
   ]);
 
-const NATIVE_LEGS = ["node", "chromium", "firefox"] as const;
+const NATIVE_LEGS = ["node", "chromium", "firefox", "webkit"] as const;
 const ENGINES = {
   node: "Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c",
   chromium: "Chromium 153.0.8010.12",
   firefox: "Firefox 155.0",
+  webkit: "WebKit 26.6",
 };
 
 interface NativeOptions {
@@ -186,13 +187,13 @@ const native = (
   staleTags,
 });
 
-/** The three legs, all clean. */
+/** The four legs, all clean. */
 const cleanNative = () =>
   Object.fromEntries(
     NATIVE_LEGS.map((leg) => [`native-suite-${leg}`, native(leg)]),
   );
 
-/** `verdicts` with three clean native legs added when it names no native leg at all. */
+/** `verdicts` with four clean native legs added when it names no native leg at all. */
 const withNative = (verdicts: unknown) => {
   const given = verdicts as Record<string, unknown>;
   return (
@@ -250,6 +251,7 @@ describe("constants and marker", () => {
         "native-suite-node",
         "native-suite-chromium",
         "native-suite-firefox",
+        "native-suite-webkit",
       ],
       "leap-seconds": ["leap-seconds"],
     });

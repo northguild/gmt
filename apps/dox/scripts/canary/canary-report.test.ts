@@ -409,7 +409,7 @@ describe("main", () => {
     ...over,
   });
   const writeNativeFiles = () => {
-    for (const leg of ["node", "chromium", "firefox"]) {
+    for (const leg of ["node", "chromium", "firefox", "webkit"]) {
       write(`native-suite-${leg}.json`, nativeVerdict(leg));
     }
   };
