@@ -114,11 +114,17 @@ export const groupsStillNeeded: number = compatGroups.filter(
   (g) => g.state === "still-needed",
 ).length;
 
+/** The engine ids the script scopes a workaround to, each as the page prints it. */
+const ENGINE_LABELS: Readonly<Record<string, string>> = {
+  firefox: "Firefox",
+  webkit: "WebKit",
+  chromium: "Chromium",
+  node: "Node",
+};
+
 /** A lowercase engine id as the page prints it. */
-const engineLabel = (engine: string): string =>
-  engine === "firefox"
-    ? "Firefox"
-    : engine.charAt(0).toUpperCase() + engine.slice(1);
+export const engineLabel = (engine: string): string =>
+  ENGINE_LABELS[engine] ?? engine.charAt(0).toUpperCase() + engine.slice(1);
 
 /**
  * The badge text and the count line a row shows, chosen by `state` alone. The Astro row and the
@@ -253,6 +259,7 @@ const WHAT_BREAKS: Readonly<Record<string, string>> = {
   D15: "Zoned strings that end in Z, read with the offset option set to ignore, where the time was taken as local clock time rather than UTC",
   D16: "Time ranges that name the time zone in a long or offset form, such as Eastern Standard Time or GMT-5, which Chrome, Node and Safari cut to a short name or drop",
   D17: "Time ranges that show a flexible day period and a time zone, such as 10 in the morning GMT-5, which Firefox writes as 10 AM",
+  D18: "Islamic calendar dates before the Hijra (622 CE), which Safari reads as positive years in a second era, so a count of months across them never finished",
   "zoned.A":
     "Zoned times within a day of the earliest or latest instant Temporal supports",
   "zoned.B":

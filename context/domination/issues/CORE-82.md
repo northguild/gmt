@@ -76,6 +76,7 @@ Stated as current rules. Where each rule is enforced is named beside it.
 - Three tests fail because `[u-ca=islamic]` is accepted: record M, boa-dev/temporal#529. `islamic` is not a Temporal calendar (Intl Era and Month Code proposal, CreateDateTimeFormat step 9; test262 `intl402/Temporal/PlainDate/from/islamic.js`).
 - Record N covers the day-rounding defect below. Records K, L and M were not used for this story because K was already taken.
 - Each Firefox failure gets three questions in order: does it also fail on the polyfill in Firefox (host group), does the spec disagree with GMT (fix it now), otherwise an engine defect (record it). Firefox 155 gave 11 engine rows (record P) and the shared browser host groups, and the one GMT fix, `formatZonedRange` (D16, D17).
+- WebKit's control pass (the polyfill in WebKit) hung on `diffDateAsDuration` over the Islamic minimum date: WebKit prints a date before the Hijra as a positive year in a second era and polyfill 0.5.1 reads the year as printed, so a month count across the epoch never finished (record R). GMT corrects the read and answers such years itself as temporalCompat workaround D18, scoped to WebKit like D17; a patch changeset ships it.
 
 **GMT defects found**
 

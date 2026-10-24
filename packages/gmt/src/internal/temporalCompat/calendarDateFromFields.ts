@@ -1,5 +1,10 @@
 import { Temporal } from "../temporal";
-import { calendarFieldsOf, hasReadCorrection } from "./calendarFields";
+import {
+  calendarFieldsOf,
+  hasReadCorrection,
+  polyfillCannotReturn,
+  polyfillMisreadsIslamicEra,
+} from "./calendarFields";
 import { isDefectPresent } from "./capabilities";
 import { type FieldKey, isoForFields } from "./fieldSearch";
 
@@ -54,7 +59,8 @@ function needsFieldSearch(calendarId: string, year: number): boolean {
   return (
     hasReadCorrection(calendarId, year) ||
     (isDefectPresent("D1", calendarId) && isNearEdgeYear(calendarId, year)) ||
-    isDefectPresent("D10", calendarId)
+    isDefectPresent("D10", calendarId) ||
+    polyfillMisreadsIslamicEra(calendarId)
   );
 }
 
@@ -121,6 +127,9 @@ function rejectPreProposalEra(
  *   skips a 5- or 6-day month 13 (ethioaa, and so coptic and ethiopic) in far years. While its
  *   probe fails, every year searches. Any throw other than a `RangeError` also searches, whatever
  *   the probes say.
+ * - **D18:** in WebKit the polyfill's conversion of an Islamic year <= 1 does not return or lands
+ *   in the mirror year, so for such a year the search answers without asking it
+ *   (`polyfillCannotReturn`); any other Islamic year that does not read back searches too.
  *
  * Era input is never searched: only "japanese" uses eras here, and it has no D1 window.
  *
@@ -133,6 +142,10 @@ export function calendarDateFromFields(
   overflow: "reject",
 ): Temporal.PlainDate {
   rejectPreProposalEra(calendarId, fields);
+  if (!("era" in fields) && polyfillCannotReturn(calendarId, fields.year)) {
+    // D18: the polyfill's conversion for this year does not return, so it is never tried.
+    return searchedDate(calendarId, fields);
+  }
 
   let polyfillError: unknown;
   try {
@@ -160,6 +173,14 @@ export function calendarDateFromFields(
     );
   }
 
+  return searchedDate(calendarId, fields);
+}
+
+/** The field search's answer for `fields`, calendared; throws RangeError when no in-range date has them. */
+function searchedDate(
+  calendarId: string,
+  fields: FieldKey,
+): Temporal.PlainDate {
   const iso = isoForFields(calendarId, fields);
   if (iso === null) {
     throw new RangeError(

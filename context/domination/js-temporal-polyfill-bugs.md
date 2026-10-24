@@ -274,6 +274,10 @@ only filings worth making now are in tc39.
     not retire `D13`. See § K.
 11. **N (D14).** Nothing to file: the fix is proposal-temporal `59a51ea9d4`, which js-temporal's
     in-order catch-up has not reached yet. It arrives with that catch-up and the release in #373.
+12. **R (D18): to file on js-temporal/temporal-polyfill**, from the draft. The Islamic helpers'
+    era-less read is a polyfill defect on its own terms, and `main`'s era declarations may not cover
+    WebKit's spelling; WebKit's own era output follows CLDR, so there is nothing to file at WebKit.
+    See § R.
 
 ## Upstream issues these fixes close
 
@@ -2163,3 +2167,37 @@ Probe: `new Intl.DateTimeFormat("en", { hour: "numeric", dayPeriod: "short", tim
 ### Effect on GMT
 
 `formatZonedRange` rebuilds the range from the endpoint parts and writes each endpoint's single-format day period (the `dayPeriod` entry of `repairRangeParts`, `internal/repairRangeParts.ts`). Output is byte-identical when the probe passes. `internal/repairRangeParts.test.ts` runs the merge on the parts Firefox returns (each row fails when the merge is reverted), and the `formatZonedRange` rows run unmocked, so they exercise the real repair on the Firefox leg.
+
+## R. Islamic calendars read dates before the Hijra as positive years in WebKit (polyfill and engine)
+
+### Status
+
+**Not filed.** Draft in the session scratchpad (`draft-upstream-polyfill-islamic-era.md`); the owner files it on js-temporal/temporal-polyfill. Reproduced with polyfill 0.5.1 in Playwright WebKit 26.6 (JavaScriptCore, macOS); V8 (Node 26, Chromium 153) and SpiderMonkey (Firefox 155) are right. GMT corrects it as `D18` (a lazy probe, dormant on every engine that passes), scoped to WebKit (`engines: ["webkit"]` in `scripts/lib/workarounds.mjs`, so the Node, Chromium and Firefox checks report it as out of scope, never removable). The removal signal is the weekly run's compat check in WebKit (`temporal-compat-webkit`): once every `D18` repro returns the spec value there, the run files the removal issue. js-temporal `main` declares the Islamic eras (`ah`, `bh`); whether its era parser accepts WebKit's `Before Hijra` spelling is untested, so a release may or may not retire D18 on its own.
+
+### What goes wrong
+
+WebKit's `Intl.DateTimeFormat` prints an `islamic-civil`, `islamic-tbla` or `islamic-umalqura` date before the Hijra as a positive year with the era `Before Hijra`, where V8 and SpiderMonkey print a negative year in the one era. `lib/calendar.ts` `IslamicBaseHelper` has no era (`hasEra = false`), takes the year part as printed and ignores the era part. Three consequences in WebKit:
+
+- A read of such a date gives the mirror year: ISO `0621-01-01` is year 2 instead of -1, `-271821-04-19` is 280805 instead of -280804. Month, month code and day are right.
+- Fields → ISO for a year <= 0 never returns: the polyfill steps its estimate until the printed year matches, and no date prints a year <= 0.
+- Fields → ISO for year 1 lands in year 0 (which prints as 1) or never returns, so `add` and `until` whose intermediate year is 1 give a date a year early or hang. The epoch day itself (ISO `0622-07-19`, 1 Muharram of year 1 in `islamic-civil`) prints as year `0`, era `Before Hijra`, in WebKit; the day after prints as year `1`, era `AH`. `Temporal.PlainDate.from("0623-11-01[u-ca=islamic-civil]").add({ years: -1 })` is `0621-11-23` (V8: `0622-11-12`); `from({ year: 1, month: 1, day: 1, calendar: "islamic-civil" })` does not return.
+
+The Intl era/monthCode proposal numbers the years through the epoch: `bh` era year n is year 1 - n, and Temporal's `year` is that number in every engine.
+
+### Repro (polyfill 0.5.1, Playwright WebKit 26.6; expected values Node 26.12.1 native Temporal)
+
+| Call | WebKit | Expected |
+| ---- | ------ | -------- |
+| `PlainDate.from("0621-01-01").withCalendar("islamic-civil").year` | `2` | `-1` |
+| `PlainDate.from("0500-01-01").withCalendar("islamic-civil").year` | `127` | `-126` |
+| `PlainDate.from("-271820-01-19[u-ca=islamic-civil]").year` | `280805` | `-280804` |
+| `PlainDate.from("0622-07-19").withCalendar("islamic-civil").year` | `0` | `1` |
+| `PlainDate.from({ year: 1, month: 5, day: 1, calendar: "islamic-civil" })` | `0621-11-25` | `0622-11-14` |
+| `PlainDate.from({ year: 1, month: 1, day: 1, calendar: "islamic-civil" })` | does not return | `0622-07-19` |
+| `PlainDate.from("-271821-04-19[u-ca=islamic-civil]").until("-271820-01-19[u-ca=islamic-civil]", { largestUnit: "months" })` | does not return | `P9M9D` |
+
+`islamic-tbla` and `islamic-umalqura` behave the same (days differ by the calendar's own rule). The engine side: `new Intl.DateTimeFormat("en-u-ca-islamic-civil", { era: "short", year: "numeric", month: "numeric", day: "numeric", timeZone: "UTC" }).formatToParts(...)` for ISO `0621-01-01` gives era `Before Hijra`, year `2` in WebKit and era `AH`, year `-1` in V8.
+
+### Effect on GMT
+
+Before D18 the WebKit control pass of the native suite (the polyfill in WebKit) hung on row 82 of `plain/calculate/diffDateAsDuration.edges.test.ts` and ate the runner's memory. `calendarFields.ts` now corrects the year when `islamicEra.ts` says the date's era part is not a modern date's (two outputs of the same formatter, so GMT owns no era name or epoch), `calendarDateFromFields.ts` never asks the polyfill for an Islamic year <= 1 and searches when any other Islamic year's answer does not read back, and `calendarDateArithmetic.ts` runs the spec loops over the read-backed model, with `fixedMonthArithmetic.ts` for the month steps, whenever an operation comes within 2 years of such a year. Output is byte-identical on every engine that passes the probe.
