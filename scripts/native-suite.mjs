@@ -33,6 +33,7 @@ import {
   classify,
   KNOWN_HOST_FAILURES,
   KNOWN_NATIVE_FAILURES,
+  withFailureMessages,
 } from "./lib/native-suite-tags.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -68,6 +69,10 @@ const reportPath = (leg, pass) =>
 /** @param {Leg} leg @param {Pass} pass */
 const errorsPath = (leg, pass) =>
   `artifacts/native-suite-${leg}.${pass}.errors.json`;
+
+/** @param {Leg} leg @param {Pass} pass */
+const messagesPath = (leg, pass) =>
+  `artifacts/native-suite-${leg}.${pass}.messages.json`;
 
 /** @param {unknown} error */
 const messageOf = (error) =>
@@ -452,6 +457,7 @@ export function runPass(leg, pass, root, timeoutMs = PASS_TIMEOUT_MS) {
   const out = reportPath(leg, pass);
   rmSync(join(root, out), { force: true });
   rmSync(join(root, errorsPath(leg, pass)), { force: true });
+  rmSync(join(root, messagesPath(leg, pass)), { force: true });
   mkdirSync(join(root, "artifacts"), { recursive: true });
   const result = spawnSync(
     process.execPath,
@@ -470,6 +476,7 @@ export function runPass(leg, pass, root, timeoutMs = PASS_TIMEOUT_MS) {
       env: {
         ...process.env,
         NATIVE_SUITE_ERRORS: join(root, errorsPath(leg, pass)),
+        NATIVE_SUITE_MESSAGES: join(root, messagesPath(leg, pass)),
         ...(browser && pass === "control" ? { GMT_TEMPORAL: "polyfill" } : {}),
       },
       stdio: ["ignore", "ignore", "inherit"],
@@ -598,6 +605,24 @@ function readErrors(root, leg, pass) {
   }
 }
 
+/**
+ * The failure messages the reporter captured for a pass; none when it wrote no file.
+ * @param {string} root
+ * @param {Leg} leg
+ * @param {Pass} pass
+ * @returns {{ file: string, fullName: string, message: string }[]}
+ */
+function readMessages(root, leg, pass) {
+  try {
+    const parsed = JSON.parse(
+      readFileSync(join(root, messagesPath(leg, pass)), "utf8"),
+    );
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 /** @param {string} title @param {{ file: string, test: string, message: string }[]} rows @param {number} total */
 function listFailures(title, rows, total) {
   if (total === 0) return [];
@@ -657,8 +682,14 @@ function summary(leg, root, stdout) {
 function runPasses(leg, root, d) {
   const controlExit = d.runPass(leg, "control", root) ?? 0;
   const nativeExit = d.runPass(leg, "native", root) ?? 0;
-  const control = readReport(root, leg, "control");
-  const native = readReport(root, leg, "native");
+  const control = withMessages(
+    readReport(root, leg, "control"),
+    readMessages(root, leg, "control"),
+  );
+  const native = withMessages(
+    readReport(root, leg, "native"),
+    readMessages(root, leg, "native"),
+  );
   const controlErrors = readErrors(root, leg, "control");
   const nativeErrors = readErrors(root, leg, "native");
   const problem = incompleteRun(
@@ -670,6 +701,10 @@ function runPasses(leg, root, d) {
   if (problem) throw new Error(problem);
   return { control, native, nativeExit, controlErrors, nativeErrors };
 }
+
+/** @param {any} report @param {{ file: string, fullName: string, message: string }[]} messages */
+const withMessages = (report, messages) =>
+  report === null ? null : withFailureMessages(report, messages);
 
 /**
  * The text printed after a run: the engine line, the counts and the first failures.

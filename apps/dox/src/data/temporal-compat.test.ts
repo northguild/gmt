@@ -142,6 +142,17 @@ describe("temporal compat snapshot", () => {
       );
     });
 
+    it("keeps an out-of-scope row with its engines", () => {
+      const scoped = { ...row, state: "out-of-scope", engines: ["firefox"] };
+      expect(toCompatGroup(scoped)).toEqual(scoped);
+    });
+
+    it("throws on an out-of-scope row with no engines", () => {
+      expect(() => toCompatGroup({ ...row, state: "out-of-scope" })).toThrow(
+        /group X1 has state "out-of-scope" but no engines/,
+      );
+    });
+
     it("throws on a guard row with no guard", () => {
       expect(() => toCompatGroup({ ...row, state: "guard" })).toThrow(
         /group X1 has state "guard" but no complete guard/,
@@ -170,13 +181,15 @@ describe("temporal compat snapshot", () => {
       probes: 4,
       failing: state === "still-needed" ? 3 : 0,
       state,
+      ...(state === "out-of-scope" ? { engines: ["firefox"] } : {}),
     });
 
     it.each`
-      state             | badge                | count
-      ${"still-needed"} | ${"✓ Yes"}           | ${"3 of 4 checks fail"}
-      ${"removable"}    | ${"No"}              | ${"4 of 4 checks pass"}
-      ${"guard"}        | ${"Kept on purpose"} | ${"4 of 4 checks pass"}
+      state             | badge                  | count
+      ${"still-needed"} | ${"✓ Yes"}             | ${"3 of 4 checks fail"}
+      ${"removable"}    | ${"No"}                | ${"4 of 4 checks pass"}
+      ${"guard"}        | ${"Kept on purpose"}   | ${"4 of 4 checks pass"}
+      ${"out-of-scope"} | ${"✓ Yes, on Firefox"} | ${"4 of 4 checks pass on Node, which does not have this defect"}
     `(
       "gives $state the badge '$badge' and '$count'",
       ({ state, badge, count }) => {

@@ -37,10 +37,11 @@ this page was built. When the polyfill fixes a bug, the row changes on its own.
 <UpstreamDefects />
 
 **Still needed?** shows what GMT's own tests for that bug returned against the polyfill version it
-depends on. A dash under **What we sent** means we had nothing to send: either someone had already
-fixed the bug, or it cannot reach anyone using GMT. **Kept on purpose** means every check passes, but
-only because the polyfill version GMT depends on cannot show that bug yet. GMT keeps its fix until
-someone has checked a newer release.
+depends on. A dash under **What we sent** means we had nothing to send to the polyfill: someone had
+already fixed the bug, it cannot reach anyone using GMT, or the bug is in a browser's or Node's own
+date formatting. Those reports are listed under [Native engines](#native-engines). **Kept on
+purpose** means every check passes, but only because the polyfill version GMT depends on cannot show
+that bug yet. GMT keeps its fix until someone has checked a newer release.
 
 ## How a fix reaches you
 
@@ -96,8 +97,14 @@ already fixed:
   accept the calendar `islamic`, which the standard says to reject.
 - Node 26 throws when it rounds to the day on a date that starts twice, such as 6 November 2010
   in `America/Goose_Bay`. Chromium 153 already has the fix, so a later Node will have it too.
+- [`ICU-20548`](https://unicode-org.atlassian.net/browse/ICU-20548): Node, Chromium and Safari
+  shorten a long zone name in a time range, and drop an offset name such as `GMT-5`.
+- [Bugzilla 1998020](https://bugzilla.mozilla.org/show_bug.cgi?id=1998020): Firefox accepts a
+  zoned date on 19 April −271821, just outside the range the standard allows.
+- [Bugzilla 2085525](https://bugzilla.mozilla.org/show_bug.cgi?id=2085525): Firefox prints AM and
+  PM in a time range that asks for a day period such as "in the morning", when a zone name is shown.
 
-GMT gives the standard's answer in all three cases.
+GMT gives the standard's answer in every case.
 
 ## What kind of bugs are these?
 

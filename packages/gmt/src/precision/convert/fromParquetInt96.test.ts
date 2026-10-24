@@ -6,6 +6,14 @@ const DAY_MINUS_1 = 86_399_999_999_999n;
 // 2440588 = 0x253d8c, little-endian 8c 3d 25 00 (hand-built, parquet-format INT96 layout)
 const EPOCH_DAY_BYTES = [0x8c, 0x3d, 0x25, 0x00];
 
+/** The 12 stored bytes: int64 nanos of day, then int32 Julian day, both little-endian. */
+function littleEndianBytes(nanosOfDay: bigint, day: number): Uint8Array {
+  const view = new DataView(new ArrayBuffer(12));
+  view.setBigInt64(0, nanosOfDay, true);
+  view.setInt32(8, day, true);
+  return new Uint8Array(view.buffer);
+}
+
 describe("fromParquetInt96", () => {
   it.each`
     julianDay    | nanosOfDay             | expected                            | reason
@@ -71,11 +79,9 @@ describe("fromParquetInt96", () => {
     ${-97559412} | ${0n}                  | ${"-271821-04-20T00:00:00Z"}
     ${102440588} | ${0n}                  | ${"+275760-09-13T00:00:00Z"}
   `(
-    "reads bytes written with writeBigInt64LE/writeInt32LE for day $day + $nanosOfDay ns",
+    "reads bytes laid out as a little-endian int64 then int32 for day $day + $nanosOfDay ns",
     ({ day, nanosOfDay, expected }) => {
-      const bytes = Buffer.alloc(12);
-      bytes.writeBigInt64LE(nanosOfDay, 0);
-      bytes.writeInt32LE(day, 8);
+      const bytes = littleEndianBytes(nanosOfDay, day);
 
       expect(fromParquetInt96(bytes)).toBe(expected);
     },
@@ -88,9 +94,7 @@ describe("fromParquetInt96", () => {
     ${0n}                         | ${-(2 ** 31)}  | ${"day int32 minimum, before the instant range"}
     ${0n}                         | ${102440589}   | ${"day one past the last instant"}
   `('returns "" for bytes with $reason', ({ nanosOfDay, day }) => {
-    const bytes = Buffer.alloc(12);
-    bytes.writeBigInt64LE(nanosOfDay, 0);
-    bytes.writeInt32LE(day, 8);
+    const bytes = littleEndianBytes(nanosOfDay, day);
 
     expect(fromParquetInt96(bytes)).toBe("");
   });
@@ -104,10 +108,12 @@ describe("fromParquetInt96", () => {
     );
   });
 
-  it("reads a Node Buffer", () => {
+  it("reads a Uint8Array subclass, the shape of a Node Buffer", () => {
+    class ByteView extends Uint8Array {}
+
     expect(
       fromParquetInt96(
-        Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, ...EPOCH_DAY_BYTES]),
+        ByteView.from([0, 0, 0, 0, 0, 0, 0, 0, ...EPOCH_DAY_BYTES]),
       ),
     ).toBe("1970-01-01T00:00:00Z");
   });
@@ -141,18 +147,12 @@ describe("fromParquetInt96", () => {
     value             | reason
     ${hostileProxy()} | ${"proxy that throws on every trap"}
     ${revokedProxy()} | ${"revoked proxy (getPrototypeOf trap)"}
-    ${{
-  get julianDay() {
+    ${{ get julianDay() {
     throw new Error("hostile getter");
-  },
-  nanosOfDay: 0n,
-}} | ${"throwing julianDay getter"}
-    ${{
-  julianDay: 2440588,
-  get nanosOfDay() {
+  }, nanosOfDay: 0n }} | ${"throwing julianDay getter"}
+    ${{ julianDay: 2440588, get nanosOfDay() {
     throw new Error("hostile getter");
-  },
-}} | ${"throwing nanosOfDay getter"}
+  } }} | ${"throwing nanosOfDay getter"}
   `('returns "" without throwing for $reason', ({ value }) => {
     expect(fromParquetInt96(value)).toBe("");
   });

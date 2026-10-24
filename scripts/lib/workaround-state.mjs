@@ -82,17 +82,25 @@ export function compareVersions(a, b) {
 
 /**
  * A workaround group's state on the installed runtime.
- * @param {{ probes: number, failing: number,
+ * A group that names `engines` is a defect only those engines have (for example Firefox's
+ * SpiderMonkey). Its probes passing on any other engine proves nothing about the defect, so on
+ * such a runtime it is `out-of-scope`: never removable, never counted removable. A failing probe
+ * still wins, because a failure is evidence on any engine.
+ * @param {{ probes: number, failing: number, engines?: readonly string[],
  *           guard?: { package: string, through: string, reason: string } }} group
  * @param {string} installed  the installed version of `group.guard.package`
- * @returns {{ state: "still-needed" | "removable" | "guard", guardLapsed: boolean }}
+ * @param {string} [engine]  the JavaScript engine this run is on: "v8" for Node (the default)
+ * @returns {{ state: "still-needed" | "removable" | "guard" | "out-of-scope", guardLapsed: boolean }}
  * @throws {Error} when the group has a guard, every probe passes and `installed` cannot be
  *   compared with `guard.through`: a guard that cannot be decided is never reported as removable,
  *   nor silently as a guard.
  */
-export function workaroundState(group, installed) {
+export function workaroundState(group, installed, engine = "v8") {
   if (group.probes === 0 || group.failing > 0) {
     return { state: "still-needed", guardLapsed: false };
+  }
+  if (group.engines && !group.engines.includes(engine)) {
+    return { state: "out-of-scope", guardLapsed: false };
   }
   if (!group.guard) return { state: "removable", guardLapsed: false };
 
@@ -111,20 +119,23 @@ export function workaroundState(group, installed) {
  * One snapshot row: a workaround group, its probe counts and its state on the installed runtime.
  * Lives beside `workaroundState` because `temporal-compat.mjs` runs its command on import, so a
  * test cannot import it; this keeps the row testable without the CLI.
- * @param {{ defects: string[], title: string, trigger: string,
+ * @param {{ defects: string[], title: string, trigger: string, engines?: string[],
  *           guard?: { package: string, through: string, reason: string } }} workaround
  * @param {{ probes: number, failing: number }} counts
  * @param {string} installed  the installed version of the guard's package
+ * @param {string} [engine]  the engine this run is on (see `workaroundState`)
  * @returns {{ defects: string[], title: string, trigger: string, probes: number, failing: number,
- *             state: "still-needed" | "removable" | "guard",
+ *             state: "still-needed" | "removable" | "guard" | "out-of-scope",
+ *             engines?: string[],
  *             guard?: { package: string, through: string, reason: string } }}
  * @throws {Error} when the workaround has a guard, every probe passes, and `installed` cannot be
  *   compared with `guard.through` (see `workaroundState`)
  */
-export function snapshotRow(workaround, counts, installed) {
+export function snapshotRow(workaround, counts, installed, engine = "v8") {
   const { state } = workaroundState(
-    { ...counts, guard: workaround.guard },
+    { ...counts, guard: workaround.guard, engines: workaround.engines },
     installed,
+    engine,
   );
   return {
     defects: workaround.defects,
@@ -133,6 +144,7 @@ export function snapshotRow(workaround, counts, installed) {
     probes: counts.probes,
     failing: counts.failing,
     state,
+    ...(workaround.engines ? { engines: [...workaround.engines] } : {}),
     ...(workaround.guard
       ? {
           guard: {

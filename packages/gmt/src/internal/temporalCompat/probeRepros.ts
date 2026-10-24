@@ -3,7 +3,7 @@ import { Temporal } from "../temporal";
 /*
  * Upstream repros for each `@js-temporal/polyfill` calendar defect GMT works around, with the
  * spec-correct answer. This file holds the repros the shipped capability probes read (D1-D8 and
- * D10-D15); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
+ * D10-D17); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
  * polyfill, through `../temporal` (no other GMT module), so a canary script can load its compiled
  * copy straight from `dist`.
  *
@@ -27,7 +27,9 @@ export type DefectId =
   | "D12"
   | "D13"
   | "D14"
-  | "D15";
+  | "D15"
+  | "D16"
+  | "D17";
 
 export interface ProbeRepro {
   defect: DefectId;
@@ -255,15 +257,13 @@ const d1ArithmeticRepros: ProbeRepro[] = [
       ["indian", "P2M12D"],
       ["ethioaa", "P2M14D"],
     ] as const
-  ).map(
-    ([calendar, expected]): ProbeRepro => ({
-      defect: "D1",
-      calendar,
-      name: "untilNearMax",
-      expected,
-      run: () => monthsUntil(calendar, "+275760-07-01", MAX_ISO),
-    }),
-  ),
+  ).map(([calendar, expected]): ProbeRepro => ({
+    defect: "D1",
+    calendar,
+    name: "untilNearMax",
+    expected,
+    run: () => monthsUntil(calendar, "+275760-07-01", MAX_ISO),
+  })),
   {
     defect: "D1",
     calendar: "buddhist",
@@ -311,15 +311,13 @@ const d6Repros: ProbeRepro[] = [
       ["islamic-tbla", "2023-06-18", "2023-07-17", "P29D"],
       ["islamic-umalqura", "2023-07-18", "2023-08-16", "P29D"],
     ] as const
-  ).map(
-    ([calendar, from, to, expected]): ProbeRepro => ({
-      defect: "D6",
-      calendar,
-      name: "monthEnd",
-      expected,
-      run: () => monthsUntil(calendar, from, to),
-    }),
-  ),
+  ).map(([calendar, from, to, expected]): ProbeRepro => ({
+    defect: "D6",
+    calendar,
+    name: "monthEnd",
+    expected,
+    run: () => monthsUntil(calendar, from, to),
+  })),
   ...(
     [
       ["hebrew", 5783, "M07", 30, "M08", 29, "P29D"],
@@ -696,6 +694,85 @@ const d15Repros: readonly ProbeRepro[] = [
   },
 ];
 
+/**
+ * D16 (`zoned/format/formatZonedRange.ts`): ICU-20548. `DateIntervalFormat` skeletons lose the
+ * `timeZoneName` width: V8 and JSC print `long` and `longGeneric` as short names and drop
+ * `shortOffset` and `longOffset`, in a range only. UTS #35 (Matching Skeletons) expects "fields in
+ * the skeleton and pattern ... to be adjusted in parallel", so the range pattern for a skeleton
+ * keeps the requested zone name width, and the range's zone part equals the single format's. The
+ * repro compares the two for one style, so it owns no CLDR string; the zone and the
+ * locale do not matter, the defect is in skeleton handling. `+01:00` is a fixed offset, so both
+ * instants carry the same zone name.
+ */
+const D16_STYLES = [
+  "short",
+  "long",
+  "shortGeneric",
+  "longGeneric",
+  "shortOffset",
+  "longOffset",
+] as const;
+
+const d16Repros: readonly ProbeRepro[] = D16_STYLES.map(
+  (style): ProbeRepro => ({
+    defect: "D16",
+    calendar: "iso8601",
+    name: `range.${style}`,
+    expected: "same",
+    run: () => {
+      const format = new Intl.DateTimeFormat("en", {
+        hour: "numeric",
+        minute: "numeric",
+        timeZone: "+01:00",
+        timeZoneName: style,
+      } as Intl.DateTimeFormatOptions);
+      const zonePart = (parts: Intl.DateTimeFormatPart[]) =>
+        JSON.stringify(
+          parts.find((part) => part.type === "timeZoneName")?.value ?? null,
+        );
+      const range = zonePart(format.formatRangeToParts(0, 3_600_000));
+      const single = zonePart(format.formatToParts(0));
+      return range === single ? "same" : `range ${range} vs single ${single}`;
+    },
+  }),
+);
+
+/**
+ * D17 (`zoned/format/formatZonedRange.ts`): SpiderMonkey (Firefox 155) `formatRange` writes the
+ * AM/PM day period where `dayPeriod` asks for a flexible one, when `timeZoneName` is also set and
+ * neither `hourCycle` nor `hour12` is. ECMA-402 §11.5.8 picks the range pattern by the resolved
+ * [[HourCycle]] only, and en-US resolves to h12 with or without an explicit `hourCycle: "h12"`,
+ * yet the explicit one prints the flexible period and the omitted one AM/PM, so identical resolved
+ * options give two range outputs. The repro compares the range's day period parts with those of
+ * the two single formats, so it owns no CLDR string. The instants are 10:00 and 12:00 in `+01:00`.
+ */
+const d17Repros: readonly ProbeRepro[] = [
+  {
+    defect: "D17",
+    calendar: "iso8601",
+    name: "range.dayPeriod",
+    expected: "same",
+    run: () => {
+      const format = new Intl.DateTimeFormat("en", {
+        hour: "numeric",
+        dayPeriod: "short",
+        timeZone: "+01:00",
+        timeZoneName: "short",
+      });
+      const dayPeriods = (parts: Intl.DateTimeFormatPart[]) =>
+        parts.filter((part) => part.type === "dayPeriod").map((p) => p.value);
+      const range = JSON.stringify(
+        dayPeriods(format.formatRangeToParts(32_400_000, 39_600_000)),
+      );
+      const single = JSON.stringify([
+        ...dayPeriods(format.formatToParts(32_400_000)),
+        ...dayPeriods(format.formatToParts(39_600_000)),
+      ]);
+      return range === single ? "same" : `range ${range} vs single ${single}`;
+    },
+  },
+];
+
 /** The shipped-probe groups, each in the order the full table places it. */
 export const probeReproGroups = {
   d1: d1Repros,
@@ -706,6 +783,8 @@ export const probeReproGroups = {
   d13: d13Repros,
   d14: d14Repros,
   d15: d15Repros,
+  d16: d16Repros,
+  d17: d17Repros,
   d6: d6Repros,
   d7: [d7Repro, d7LeapMonthEndRepro],
   /** D2-D5 and D8: single-read repros. */
@@ -741,18 +820,16 @@ export const probeReproGroups = {
         ["1872-12-31", "ce|1872"],
         ["0000-12-31", "bce|1"],
       ] as const
-    ).map(
-      ([iso, expected]): ProbeRepro => ({
-        defect: "D8",
-        calendar: "japanese",
-        name: iso,
-        expected,
-        run: () => {
-          const date = Temporal.PlainDate.from(iso).withCalendar("japanese");
-          return `${date.era}|${date.eraYear}`;
-        },
-      }),
-    ),
+    ).map(([iso, expected]): ProbeRepro => ({
+      defect: "D8",
+      calendar: "japanese",
+      name: iso,
+      expected,
+      run: () => {
+        const date = Temporal.PlainDate.from(iso).withCalendar("japanese");
+        return `${date.era}|${date.eraYear}`;
+      },
+    })),
   ],
 } as const satisfies Record<string, readonly ProbeRepro[]>;
 

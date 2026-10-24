@@ -304,7 +304,7 @@ describe("planIssueActions: open, comment, no-op", () => {
 
   it("6: opens when the issue lacks the canary label", () => {
     const actions = plan(removableD2(), [
-      issue(41, `${D2_MARKER}\nbody`, ["bug"]),
+      issue(41, `${D2_MARKER}\nbody`, ["temporal-compat"]),
     ]);
     expect(actions.map((a) => a.kind)).toEqual(["open"]);
   });
@@ -480,10 +480,10 @@ describe("untagged mismatch", () => {
     "temporal-oracle": o,
   });
 
-  it("9: untagged 3 opens one bug issue with a 3-row rows table", () => {
+  it("9: untagged 3 opens one temporal-compat issue with a 3-row rows table", () => {
     const action = open(withOracle(oracle(3)));
     expect(action.key).toBe("temporal-oracle/untagged-mismatch");
-    expect(action.labels).toEqual(["canary", "bug"]);
+    expect(action.labels).toEqual(["canary", "temporal-compat"]);
     expect(action.title).toBe(
       "Oracle: GMT differs from native Temporal on untagged rows",
     );
@@ -950,7 +950,7 @@ describe("applyForce and forced findings", () => {
     ).toEqual([]);
   });
 
-  it("22: forcing a mismatch on a clean oracle opens one dry-run bug with the synthetic row", () => {
+  it("22: forcing a mismatch on a clean oracle opens one dry-run temporal-compat issue with the synthetic row", () => {
     const original = {
       "temporal-compat-check": cleanCheck(),
       "temporal-oracle": oracle(),
@@ -968,7 +968,11 @@ describe("applyForce and forced findings", () => {
     expect(action.title).toBe(
       "[dry run] Oracle: GMT differs from native Temporal on untagged rows",
     );
-    expect(action.labels).toEqual(["canary", "bug", "canary-dry-run"]);
+    expect(action.labels).toEqual([
+      "canary",
+      "temporal-compat",
+      "canary-dry-run",
+    ]);
     expect(action.body.split("\n")[1]).toBe(
       "**Dry run.** Forced by a manual dispatch (--force-mismatch); nothing here is a real finding. Close this issue once checked.",
     );
@@ -1178,7 +1182,7 @@ describe("native suite findings", () => {
     expect(action.title).toBe(
       "Native Temporal: GMT tests fail on Chromium 153",
     );
-    expect(action.labels).toEqual(["canary", "bug"]);
+    expect(action.labels).toEqual(["canary", "temporal-compat"]);
     expect(action.body.split("\n")[0]).toBe(
       `<!-- gmt-canary key="${FAILURE_KEY}" -->`,
     );
@@ -1284,7 +1288,11 @@ describe("native suite findings", () => {
     expect(finding.title).toBe(
       "[dry run] Native Temporal: GMT tests fail on Node 26",
     );
-    expect(finding.labels).toEqual(["canary", "bug", "canary-dry-run"]);
+    expect(finding.labels).toEqual([
+      "canary",
+      "temporal-compat",
+      "canary-dry-run",
+    ]);
     expect(finding.body).toContain(
       "**Dry run.** Forced by a manual dispatch (--force-native-failure); nothing here is a real finding. Close this issue once checked.",
     );

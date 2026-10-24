@@ -43,11 +43,11 @@ describe("<UpstreamDefects /> as Markdown", () => {
     }
   });
 
-  it("shows '✓ Yes' on exactly the still-needed rows and 'No' on exactly the removable ones", () => {
+  it("shows '✓ Yes' on exactly the still-needed and out-of-scope rows and 'No' on exactly the removable ones", () => {
     const count = (state: string) =>
       compatGroups.filter((g) => g.state === state).length;
     expect(rows.filter((r) => r.includes("✓ Yes"))).toHaveLength(
-      count("still-needed"),
+      count("still-needed") + count("out-of-scope"),
     );
     expect(rows.filter((r) => stateCell(r).startsWith("No"))).toHaveLength(
       count("removable"),
@@ -61,6 +61,7 @@ describe("<UpstreamDefects /> as Markdown", () => {
         "still-needed": "✓ Yes",
         removable: "No",
         guard: "Kept on purpose",
+        "out-of-scope": "✓ Yes, on Firefox",
       }[group.state];
       expect(cell.startsWith(`${expected} — `), groupLabel(group)).toBe(true);
     });

@@ -34,7 +34,7 @@ const SNAPSHOT_PATH = "apps/dox/src/data/temporal-compat.json";
  *           groups: Array<{ workaround: { defects: string[], title: string, trigger: string,
  *             steps: string[], guard?: { package: string, through: string, reason: string } },
  *             results: unknown[], passing: number,
- *             state: "still-needed" | "removable" | "guard", guardLapsed: boolean }>,
+ *             state: "still-needed" | "removable" | "guard" | "out-of-scope", guardLapsed: boolean }>,
  *           snapshotCurrent: boolean }} input
  */
 export function compatCheckVerdict({ runtime, groups, snapshotCurrent }) {
@@ -48,6 +48,7 @@ export function compatCheckVerdict({ runtime, groups, snapshotCurrent }) {
       stillNeeded: inState("still-needed"),
       removable: inState("removable"),
       guard: inState("guard"),
+      outOfScope: inState("out-of-scope"),
     },
     snapshot: { path: SNAPSHOT_PATH, current: snapshotCurrent },
     workarounds: groups.map(
@@ -59,6 +60,7 @@ export function compatCheckVerdict({ runtime, groups, snapshotCurrent }) {
         state,
         probes: results.length,
         failing: results.length - passing,
+        ...(workaround.engines ? { engines: workaround.engines } : {}),
         ...(workaround.guard
           ? { guard: { ...workaround.guard, lapsed: guardLapsed } }
           : {}),

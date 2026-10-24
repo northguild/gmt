@@ -129,6 +129,50 @@ export function isZIgnoreExactCompatNeeded(): boolean {
   return isDefectPresent("D15", "iso8601");
 }
 
+const rangeZoneNameCache = new Map<string, boolean>();
+
+/**
+ * True when this runtime's `formatRange` changes the `timeZoneName` width of a range (defect D16).
+ *
+ * UTS #35 (Matching Skeletons) expects "fields in the skeleton and pattern ... to be adjusted in
+ * parallel", so the range pattern chosen for a `timeZoneName: "long"` skeleton keeps a long zone
+ * name; ECMA-402 §11.5.8 builds each range part with FormatDateTimePattern over the range
+ * pattern's own fields, so it prints what that pattern holds. ICU-20548 makes `DateIntervalFormat`
+ * cut `long` and `longGeneric` to short names and drop `shortOffset` and `longOffset`. The probe
+ * runs once per style, on the first call for it. A style with no repro (an unknown one) is not
+ * affected, and is not cached, so a caller passing arbitrary text cannot grow the cache.
+ */
+export function isRangeZoneNameCompatNeeded(style: string): boolean {
+  const cached = rangeZoneNameCache.get(style);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const name = `range.${style}`;
+  const candidates = probeRepros.filter(
+    (repro) => repro.defect === "D16" && repro.name === name,
+  );
+  if (candidates.length === 0) {
+    return false;
+  }
+  const present = anyReproFails(candidates, "D16", "iso8601");
+  rangeZoneNameCache.set(style, present);
+  return present;
+}
+
+/**
+ * True when this runtime's `formatRange` writes the AM/PM day period where `dayPeriod` asks for a
+ * flexible one, with a `timeZoneName` set (defect D17).
+ *
+ * Not a width rule (UTS #35 treats a, b and B as close matches). ECMA-402 §11.5.8 picks the range
+ * pattern by the resolved [[HourCycle]] only: en-US resolves to h12 whether `hourCycle: "h12"` is
+ * given or omitted, yet SpiderMonkey (Firefox 155) prints the flexible period for the first and
+ * AM/PM for the second. Identical resolved options give two range outputs, and GMT's contract is
+ * that a range keeps the fields the caller asked for.
+ */
+export function isRangeDayPeriodCompatNeeded(): boolean {
+  return isDefectPresent("D17", "iso8601");
+}
+
 /** Defects that make the runtime's calendar arithmetic or reads differ from the spec. */
 const ARITHMETIC_DEFECTS: readonly DefectId[] = [
   "D1",
