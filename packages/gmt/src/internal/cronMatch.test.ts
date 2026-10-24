@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { epochDayOf, isoDateString, MAX_EPOCH_DAY } from "./epochDay";
 import type { CronExpression, CronField } from "../types/cron";
 import { parseCronExpression } from "../recurrence/parse/parseCronExpression";
-import { cronDayMatches, nextCronDay } from "./cronMatch";
+import { cronDayMatches, nextCronDay, scanCronDays } from "./cronMatch";
 
 function cron(text: string): CronExpression {
   const parsed = parseCronExpression(text);
@@ -145,5 +145,38 @@ describe("nextCronDay", () => {
   it("returns null once the scan passes the last epoch day", () => {
     expect(nextCronDay(cron("0 0 * * *"), MAX_EPOCH_DAY + 1)).toBeNull();
     expect(nextCronDay(cron("0 0 * * *"), MAX_EPOCH_DAY)).toBe(MAX_EPOCH_DAY);
+  });
+});
+
+describe("scanCronDays", () => {
+  // Steps are the loop iterations taken: one per day tested, one per jump over unlisted months.
+  it.each`
+    expression      | from            | last            | expected        | steps
+    ${"0 0 * * *"}  | ${[2024, 5, 5]} | ${undefined}    | ${"2024-05-05"} | ${1}
+    ${"0 0 * * *"}  | ${[2024, 5, 5]} | ${[2024, 5, 4]} | ${null}         | ${0}
+    ${"0 0 5 * *"}  | ${[2024, 5, 1]} | ${undefined}    | ${"2024-05-05"} | ${5}
+    ${"0 0 1 6 *"}  | ${[2024, 1, 1]} | ${undefined}    | ${"2024-06-01"} | ${2}
+    ${"0 0 29 2 *"} | ${[2024, 3, 1]} | ${undefined}    | ${"2028-02-29"} | ${117}
+  `(
+    "$expression from $from through $last finds $expected in $steps steps",
+    ({ expression, from, last, expected, steps }) => {
+      const found = scanCronDays(
+        cron(expression),
+        day(...(from as [number, number, number])),
+        last === undefined
+          ? undefined
+          : day(...(last as [number, number, number])),
+      );
+      expect(found.day === null ? null : isoDateString(found.day)).toBe(
+        expected,
+      );
+      expect(found.steps).toBe(steps);
+    },
+  );
+
+  it("takes few steps for an expression that never matches, far under 146,097", () => {
+    const found = scanCronDays(cron("0 0 30 2 *"), 0);
+    expect(found.day).toBeNull();
+    expect(found.steps).toBeLessThan(15_000);
   });
 });

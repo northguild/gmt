@@ -1456,3 +1456,96 @@ describe("expandRecurrence, reject also refuses a DTSTART that is skipped or rep
     },
   );
 });
+
+describe("expandRecurrence, a count window keeps DTSTART when no later occurrence exists", () => {
+  // RFC 5545 §3.8.5.3: DTSTART is the first occurrence. The window form already returns it.
+  it.each`
+    rule                                             | start                    | instant
+    ${"FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30"}          | ${"2024-01-01T09:00:00"} | ${"2024-01-01T09:00:00Z"}
+    ${"FREQ=YEARLY;COUNT=1;BYMONTH=4;BYMONTHDAY=31"} | ${"2024-01-01T09:00:00"} | ${"2024-01-01T09:00:00Z"}
+    ${"FREQ=YEARLY;BYMONTH=4;BYMONTHDAY=31"}         | ${"2024-01-01T09:00:00"} | ${"2024-01-01T09:00:00Z"}
+    ${"FREQ=SECONDLY;BYMONTH=2;BYMONTHDAY=30"}       | ${"2024-01-01T09:00:00"} | ${"2024-01-01T09:00:00Z"}
+    ${"FREQ=SECONDLY;COUNT=1"}                       | ${"2024-01-01T09:00:00"} | ${"2024-01-01T09:00:00Z"}
+  `(
+    "$rule from $start with count 1 gives $instant",
+    ({ rule: text, start, instant }) => {
+      expect(
+        expandRecurrence(rule(text), start, "UTC", {
+          after: "2024-01-01T00:00:00Z",
+          count: 1,
+        }).map((row) => row.instant),
+      ).toEqual([instant]);
+    },
+  );
+
+  it.each`
+    rule
+    ${"FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=30"}
+    ${"FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30"}
+    ${"FREQ=SECONDLY;BYMONTH=2;BYMONTHDAY=30"}
+  `(
+    "$rule never reaches a count of 5, so the budget ends it with []",
+    ({ rule: text }) => {
+      expect(
+        expandRecurrence(rule(text), "2024-01-01T09:00:00", "UTC", {
+          after: "2024-01-01T00:00:00Z",
+          count: 5,
+        }),
+      ).toEqual([]);
+    },
+  );
+});
+
+describe("expandRecurrence, a bracketed annotation on DTSTART, RDATE or EXDATE returns []", () => {
+  const daily = rule("FREQ=DAILY;COUNT=1");
+  const window = { start: "2024-06-01T00:00:00Z", end: "2024-07-01T00:00:00Z" };
+
+  it.each`
+    option      | entry
+    ${"rdate"}  | ${"2024-06-05T12:00:00[Europe/Paris]"}
+    ${"rdate"}  | ${"2024-06-05T12:00:00[!Europe/Paris]"}
+    ${"rdate"}  | ${"2024-06-05T12:00:00[u-ca=hebrew]"}
+    ${"rdate"}  | ${"2024-06-05T12:00:00[foo=bar]"}
+    ${"rdate"}  | ${"2024-06-05T12:00:00+02:00[America/New_York]"}
+    ${"rdate"}  | ${"2024-06-05T12:00:00Z[UTC]"}
+    ${"exdate"} | ${"2024-06-05T12:00:00[Europe/Paris]"}
+    ${"exdate"} | ${"2024-06-05T12:00:00[!Europe/Paris]"}
+    ${"exdate"} | ${"2024-06-05T12:00:00[u-ca=hebrew]"}
+    ${"exdate"} | ${"2024-06-05T12:00:00[foo=bar]"}
+    ${"exdate"} | ${"2024-06-05T12:00:00+02:00[America/New_York]"}
+  `("$option entry $entry", ({ option, entry }) => {
+    expect(
+      expandRecurrence(daily, "2024-06-01T12:00:00", NY, window, {
+        [option]: [entry],
+      }),
+    ).toEqual([]);
+  });
+
+  it.each`
+    start
+    ${"2024-06-01T12:00:00[Europe/Paris]"}
+    ${"2024-06-01T12:00:00[u-ca=hebrew]"}
+    ${"2024-06-01T12:00:00[foo=bar]"}
+  `("start $start", ({ start }) => {
+    expect(expandRecurrence(daily, start, NY, window)).toEqual([]);
+  });
+});
+
+describe("expandRecurrence, a sparse rule finds every occurrence inside a count of 1 to 10,000", () => {
+  it.each`
+    rule                                     | start                    | count
+    ${"FREQ=YEARLY"}                         | ${"2024-02-28T00:00:00"} | ${6000}
+    ${"FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29"} | ${"2024-02-29T00:00:00"} | ${1400}
+    ${"FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29"} | ${"2024-02-29T00:00:00"} | ${10_000}
+  `(
+    "$rule from $start with count $count gives $count rows",
+    ({ rule: text, start, count }) => {
+      expect(
+        expandRecurrence(rule(text), start, "UTC", {
+          after: "2024-01-01T00:00:00Z",
+          count,
+        }),
+      ).toHaveLength(count);
+    },
+  );
+});

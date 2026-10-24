@@ -9,7 +9,7 @@
  *    a bug that only shows up on a reader's second question.
  */
 import { convertToModelMessages, type UIMessage } from "ai";
-import { DOX_TOOL_NAMES } from "../src/lib/dox-tools";
+import { DOX_TOOL_NAMES, showCronInAZoneInput } from "../src/lib/dox-tools";
 import { buildWorkerTools } from "./tools";
 
 /* Every defined tool, not only the offered ones: a pending tool's `execute` is
@@ -176,6 +176,30 @@ describe("worker tool execute", () => {
         (await run("showCronInAZone", { ...input, line: "@reboot" })).ok,
       ).toBe(true);
       expect((await run("showCronInAZone", input)).ok).toBe(true);
+    });
+
+    it("accepts a call with no zone, and looks nothing up", async () => {
+      const r = await run("showCronInAZone", {
+        line: input.line,
+        year: input.year,
+      });
+      expect(r).toMatchObject({ ok: true, widget: "cron-in-a-zone" });
+    });
+
+    it("refuses a year outside 1900 to 2100, in the schema and in execute", async () => {
+      for (const year of [1899, 2101]) {
+        const bad = { ...input, year };
+        expect(showCronInAZoneInput.safeParse(bad).success).toBe(false);
+        expect(await run("showCronInAZone", bad)).toMatchObject({
+          ok: false,
+          widget: "cron-in-a-zone",
+        });
+      }
+      expect(showCronInAZoneInput.safeParse(input).success).toBe(true);
+      expect(
+        showCronInAZoneInput.safeParse({ line: input.line, year: 2024 })
+          .success,
+      ).toBe(true);
     });
 
     it("refuses a zone this runtime does not know", async () => {

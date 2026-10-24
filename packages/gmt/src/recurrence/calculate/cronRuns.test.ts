@@ -531,18 +531,6 @@ describe("cronRuns, windows", () => {
     ).toHaveLength(10_000);
   });
 
-  it("returns [] when the work cap is spent before the count is found", () => {
-    // 10,000 leap days are about 40,000 years away, far past 2,000,000 scanned days.
-    expect(
-      cronRuns(
-        cron("0 0 29 2 *"),
-        "UTC",
-        { after: "2024-01-01T00:00:00Z", count: 10_000 },
-        "crontabMatch",
-      ),
-    ).toEqual([]);
-  });
-
   it("places every run of a fixed offset zone at local minus the offset", () => {
     const runs = cronRuns(
       cron("0 9 * * *"),
@@ -742,6 +730,38 @@ describe("cronRuns, invalid input", () => {
   });
 });
 
+const TWO_DAYS = 2n * 86_400n * 1_000_000_000n;
+
+/** Whether an instant is within two days of a zone transition found around the window. */
+function nearTransition(
+  zone: string,
+  window: { start: string; end: string },
+): (instant: string) => boolean {
+  const end = Temporal.Instant.from(window.end).epochNanoseconds + TWO_DAYS;
+  const edges: bigint[] = [];
+  let at: Temporal.ZonedDateTime | null = Temporal.Instant.fromEpochNanoseconds(
+    Temporal.Instant.from(window.start).epochNanoseconds - TWO_DAYS,
+  )
+    .toZonedDateTimeISO(zone)
+    .getTimeZoneTransition("next");
+
+  for (
+    ;
+    at !== null && at.epochNanoseconds < end;
+    at = at.getTimeZoneTransition("next")
+  ) {
+    edges.push(at.epochNanoseconds);
+  }
+
+  return (instant) => {
+    const ns = Temporal.Instant.from(instant).epochNanoseconds;
+
+    return edges.some(
+      (edge) => (ns > edge ? ns - edge : edge - ns) <= TWO_DAYS,
+    );
+  };
+}
+
 // A seeded generator, so a failure names its inputs and reruns identically.
 function seeded(seed: number): () => number {
   let state = seed;
@@ -936,20 +956,87 @@ describe("cronRuns, differential check against Temporal and invariants across th
         300,
       );
 
-      for (const [index, run] of runs.entries()) {
-        expect(
-          run.classification,
-          `${text} ${zone} ${policy} ${run.local}`,
-        ).toBe(classifyLocal(run.local, zone));
-
-        if (index > 0) {
-          const before = runs[index - 1]!;
-          expect(
+      // classifyLocal is the oracle, and it is dear: ask it only within two days of a transition,
+      // where a wall time can be skipped or repeated. Elsewhere the reading is "unique".
+      const near = nearTransition(zone, year);
+      const wrong = runs.filter((run, index) => {
+        const expected = near(run.instant)
+          ? classifyLocal(run.local, zone)
+          : "unique";
+        const before = runs[index - 1];
+        const outOfOrder =
+          before !== undefined &&
+          !(
             before.instant < run.instant ||
-              (before.instant === run.instant && before.local <= run.local),
-          ).toBe(true);
-        }
-      }
+            (before.instant === run.instant && before.local <= run.local)
+          );
+
+        return run.classification !== expected || outOfOrder;
+      });
+
+      expect(wrong, `${text} in ${zone} under ${policy}`).toEqual([]);
     }
   });
+});
+
+describe("cronRuns, a sparse schedule finds every run inside a count of 1 to 10,000", () => {
+  it.each`
+    expression      | count
+    ${"0 0 29 2 *"} | ${1400}
+    ${"0 0 29 2 *"} | ${10000}
+    ${"@yearly"}    | ${6000}
+    ${"@yearly"}    | ${10000}
+  `(
+    "$expression with count $count gives $count runs, each later than the last",
+    ({ expression, count }) => {
+      const runs = cronRuns(
+        cron(expression),
+        "UTC",
+        { after: "2025-01-01T00:00:00Z", count },
+        "crontabMatch",
+      );
+
+      expect(runs).toHaveLength(count);
+      // Years past 9999 are written with a sign and six digits, so compare as times, not strings.
+      expect(
+        runs.every(
+          (run, i) =>
+            i === 0 ||
+            Temporal.Instant.compare(runs[i - 1]!.instant, run.instant) < 0,
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it("the 1,400th 0 0 29 2 * run after 2025-01-01 is in 7796", () => {
+    // Gregorian leap years (ISO 8601-1:2019): every 4th year except centuries not divisible by 400.
+    // Counting them from 2025 with a plain loop, the 1,400th is 7796.
+    const runs = cronRuns(
+      cron("0 0 29 2 *"),
+      "UTC",
+      { after: "2025-01-01T00:00:00Z", count: 1400 },
+      "crontabMatch",
+    );
+
+    expect(runs.at(-1)?.local).toBe("7796-02-29T00:00:00");
+  });
+
+  it.each`
+    expression
+    ${"0 0 30 2 *"}
+    ${"0 0 31 4 *"}
+    ${"0 0 31 2 *"}
+  `(
+    "$expression never matches, so a count of 3 ends quickly with []",
+    ({ expression }) => {
+      expect(
+        cronRuns(
+          cron(expression),
+          "UTC",
+          { after: "2025-01-01T00:00:00Z", count: 3 },
+          "crontabMatch",
+        ),
+      ).toEqual([]);
+    },
+  );
 });

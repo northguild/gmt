@@ -960,12 +960,22 @@ export function cronZoneProblems(v: Record<string, unknown>): string[] {
     );
   }
   const zone = v["zone"];
-  if (typeof zone !== "string" || zone === "" || zone.length > 64) {
-    out.push("zone is an IANA time zone id.");
+  if (
+    zone !== undefined &&
+    (typeof zone !== "string" || zone === "" || zone.length > 64)
+  ) {
+    out.push(
+      "zone is an IANA time zone id, sent only when the reader named it.",
+    );
   }
   const year = v["year"];
-  if (typeof year !== "number" || !Number.isInteger(year)) {
-    out.push("year is required: a whole year, such as 2024.");
+  if (
+    typeof year !== "number" ||
+    !Number.isInteger(year) ||
+    year < 1900 ||
+    year > 2100
+  ) {
+    out.push("year is required: a whole year from 1900 to 2100, such as 2024.");
   }
   const change = v["change"];
   if (
@@ -999,12 +1009,15 @@ export const showCronInAZoneInput = z
       .string()
       .min(1)
       .max(64)
+      .optional()
       .describe(
-        "An IANA time zone id. Send one only when the reader named the zone.",
+        "An IANA time zone id. Send one only when the reader named the zone; the widget starts on Europe/London otherwise.",
       ),
     year: z
       .number()
       .int()
+      .min(1900)
+      .max(2100)
       .describe(
         "The year whose clock changes to draw. Required, with no default.",
       ),
@@ -1404,7 +1417,7 @@ export const DOX_TOOL_DOCS: {
     purpose:
       "Show one cron line on the night a zone's clocks change, under both documented rules side by side: what crontab(5) matches and what a running cron daemon does, with the next twelve runs under each.",
     when: "Call when the reader asks whether a cron job runs, runs twice or is skipped when the clocks change, what happens to a `30 2 * * *` job in spring, or how a Kubernetes CronJob or GitHub Actions schedule behaves across a clock change.",
-    args: 'line: the cron line exactly as the reader wrote it, never corrected; zone: an IANA id, only when the reader named it; year: required, a whole year; change: the year\'s first ("1") or second ("2") clock change in time order; after: optional instant for the lists. The tool shows both rules and there is no default to pick.',
+    args: 'line: the cron line exactly as the reader wrote it, never corrected; zone: an IANA id, only when the reader named it; year: required, a whole year from 1900 to 2100; change: the year\'s first ("1") or second ("2") clock change in time order; after: optional instant for the lists. The tool shows both rules and there is no default to pick.',
   },
 ];
 

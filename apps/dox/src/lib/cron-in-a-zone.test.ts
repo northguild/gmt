@@ -207,3 +207,11 @@ describe("marksOf and joinLists", () => {
     expect(x.map((r) => r.only)).toEqual([null, null]);
   });
 });
+
+describe("readArgs without a zone", () => {
+  it("falls back to London, and the permalink says so", () => {
+    const state = readArgs({ line: "30 1 * * *", year: 2024 });
+    expect(state.zone).toBe("Europe/London");
+    expect(permalinkOf(state)).toMatchObject({ zone: "Europe/London" });
+  });
+});

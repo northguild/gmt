@@ -44,13 +44,64 @@ export function cronDayMatches(e: CronExpression, epochDay: number): boolean {
 }
 
 /**
- * The first day, from `fromDay` through `lastDay`, that an expression matches.
+ * The first day, from `fromDay` through `lastDay`, that an expression matches, and the steps the
+ * scan took.
  *
  * Loop bound: each step either tests one day or, outside the month field's values, jumps to the
  * first day of the next listed month, so the loop takes at most one step per day of the range
  * and never more than 146,097 (one Gregorian cycle, also a whole number of weeks, so a scan of
  * that many days without a match proves there is none). The range ends at `lastDay` and at
- * `MAX_EPOCH_DAY`, the last supported day.
+ * `MAX_EPOCH_DAY`, the last supported day. A jump over unlisted months is one step, so `steps` is
+ * the work done, not the distance covered.
+ *
+ * @param e a checked cron expression
+ * @param fromDay the first epoch day to look at
+ * @param lastDay the last epoch day to look at, or omitted for the end of one Gregorian cycle
+ * @returns `day` the epoch day, or null when there is no match in that range: no match in 146,097
+ * days, none through `lastDay`, or the scan passed the last supported epoch day; and `steps`, the
+ * loop steps taken
+ *
+ * @example scanCronDays(parseCronExpression("0 0 1 6 *"), 19_723) // { day: 19_875, steps: 2 } (2024-06-01: one jump, one test)
+ */
+export function scanCronDays(
+  e: CronExpression,
+  fromDay: number,
+  lastDay: number = Number.POSITIVE_INFINITY,
+): { day: number | null; steps: number } {
+  const last = Math.min(
+    fromDay + GREGORIAN_CYCLE_DAYS - 1,
+    MAX_EPOCH_DAY,
+    lastDay,
+  );
+  let steps = 0;
+
+  for (let day = fromDay; day <= last; day += 1) {
+    steps += 1;
+    const [year, month] = isoFieldsOf(day);
+
+    if (!e.month.values.includes(month)) {
+      // Jump to the first day of the next listed month (the next year when none is left in this one).
+      const next = e.month.values.find((value) => value > month);
+
+      day =
+        (next === undefined
+          ? epochDayOf(year + 1, e.month.values[0]!, 1)
+          : epochDayOf(year, next, 1)) - 1;
+      continue;
+    }
+
+    if (cronDayMatches(e, day)) {
+      return { day, steps };
+    }
+  }
+
+  return { day: null, steps };
+}
+
+/**
+ * The first day, from `fromDay` through `lastDay`, that an expression matches.
+ *
+ * Loop bound: that of {@link scanCronDays}, at most 146,097 steps.
  *
  * @param e a checked cron expression
  * @param fromDay the first epoch day to look at
@@ -66,30 +117,5 @@ export function nextCronDay(
   fromDay: number,
   lastDay: number = Number.POSITIVE_INFINITY,
 ): number | null {
-  const last = Math.min(
-    fromDay + GREGORIAN_CYCLE_DAYS - 1,
-    MAX_EPOCH_DAY,
-    lastDay,
-  );
-
-  for (let day = fromDay; day <= last; day += 1) {
-    const [year, month] = isoFieldsOf(day);
-
-    if (!e.month.values.includes(month)) {
-      // Jump to the first day of the next listed month (the next year when none is left in this one).
-      const next = e.month.values.find((value) => value > month);
-
-      day =
-        (next === undefined
-          ? epochDayOf(year + 1, e.month.values[0]!, 1)
-          : epochDayOf(year, next, 1)) - 1;
-      continue;
-    }
-
-    if (cronDayMatches(e, day)) {
-      return day;
-    }
-  }
-
-  return null;
+  return scanCronDays(e, fromDay, lastDay).day;
 }

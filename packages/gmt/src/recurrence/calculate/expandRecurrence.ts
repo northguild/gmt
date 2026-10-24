@@ -1,4 +1,8 @@
-import { epochDayOf, isoDateString } from "../../internal/epochDay";
+import {
+  MAX_EPOCH_DAY,
+  epochDayOf,
+  isoDateString,
+} from "../../internal/epochDay";
 import { plainDateTimeOf } from "../../internal/inputChecks";
 import { parseInstantNanoseconds } from "../../internal/instantNanoseconds";
 import { instantStringFromEpochNanoseconds } from "../../internal/instantStringFromEpochNanoseconds";
@@ -78,9 +82,17 @@ function localString(moment: LocalMoment): string {
   return `${isoDateString(moment.day)}T${part(Math.floor(second / 3600))}:${part(Math.floor((second % 3600) / 60))}:${part(second % 60)}`;
 }
 
-/** DTSTART or a wall-time list entry: a whole-second ISO date-time with no offset. */
+/**
+ * Whether the text carries a bracketed annotation (RFC 9557). The zone an annotation names would
+ * have to override `timeZone`, and a call has one zone, so DTSTART and every entry are read bare.
+ */
+function isAnnotated(value: string): boolean {
+  return value.includes("[");
+}
+
+/** DTSTART or a wall-time list entry: a whole-second ISO date-time with no offset or annotation. */
 function readWall(value: unknown): LocalMoment | null {
-  if (typeof value !== "string") {
+  if (typeof value !== "string" || isAnnotated(value)) {
     return null;
   }
 
@@ -105,7 +117,10 @@ function readEntry(value: unknown, frame: ZoneFrame): Entry | null {
     return { moment, local: localString(moment), instant: null };
   }
 
-  const instant = parseInstantNanoseconds(value as string);
+  const instant =
+    typeof value === "string" && !isAnnotated(value)
+      ? parseInstantNanoseconds(value)
+      : null;
 
   if (instant === null || instant % NANOSECONDS_PER_SECOND !== 0n) {
     return null;
@@ -395,12 +410,14 @@ function collectGenerated(call: Call, collector: Collector): boolean {
       ? start.day
       : Math.max(start.day, floorDay(lowerBound(window)) - 3);
   let visited = 0;
-  // The interval form stops at the window's end plus the visitor's 3-day margin, so a rule that
-  // never matches ends as "end" (DTSTART kept) instead of at the work cap. The count form has no end.
-  const lastDay =
-    window.kind === "interval"
-      ? floorDay(window.end) + Number(SLACK / DAY)
-      : undefined;
+  // The expansion ends once a period starts past the collector's limit, so a rule with no later
+  // occurrence stops as "end" (DTSTART kept) instead of at the work cap. The count form has a limit
+  // only once it holds `count` distinct instants.
+  const lastDay = (): number => {
+    const limit = collector.limit();
+
+    return limit === null ? MAX_EPOCH_DAY : floorDay(limit);
+  };
 
   const status = expandLocalMoments(
     rule,
@@ -655,7 +672,8 @@ function readCall(
  *   instant, an entry without one is a wall time in `timeZone`. A wall-time `exdate` names the
  *   instant that wall time takes under `disambiguation`, as a wall-time `rdate` does, and removes
  *   the occurrence at that instant. An `rdate` or `exdate` that is a date, a period or has
- *   fractional seconds returns `[]`.
+ *   fractional seconds returns `[]`, and so does a `start`, `rdate` or `exdate` with a bracketed
+ *   annotation (`[Europe/Paris]`), which would name a second zone.
  * - A skipped or repeated wall time takes the instant `disambiguation` names: `"compatible"`
  *   (default; the earlier of a repeat, the later of a skip), `"earlier"`, `"later"`, or `"reject"`,
  *   which runs the call as `"compatible"` and then returns `[]` when `start`, a wall-time `rdate`
@@ -668,8 +686,13 @@ function readCall(
  *   occurrences after an instant (1 to 10,000).
  * - `timeZone` is a time zone identifier or a fixed offset (`+05:30`, `-00:44:30`).
  *
- * Returns `[]` for an invalid argument, a rule that finds no occurrence in its work budget (such
- * as February 30), and a result of more than 10,000 rows.
+ * Returns `[]` for an invalid argument, a `{ after, count }` call that does not find `count`
+ * occurrences in its work budget (a rule with fewer than `count` occurrences, such as February 30
+ * with a count above 1), and a result of more than 10,000 rows. With a count of 1, a rule whose
+ * only occurrence is DTSTART returns DTSTART, as the interval form does. A rule that matches
+ * rarely, such as one day a year, spends little per match; a rule that must scan many days for
+ * each match (`BYYEARDAY`, `BYWEEKNO` or `BYDAY` with no `BYMONTH`) can run out of budget at a
+ * large count.
  *
  * Complexity: O(W + K log K) for W the work the expansion spends, bounded by 2,000,000 units, and
  * K the rows kept, at most 10,000. With no `COUNT` the cost follows the window, not the distance
@@ -686,7 +709,8 @@ function readCall(
  * @example expandRecurrence(parseRecurrenceRule("FREQ=DAILY;COUNT=2"), "2024-03-09T02:30:00", "America/New_York", { start: "2024-01-01T00:00:00Z", end: "2025-01-01T00:00:00Z" }).map((row) => row.instant) // ["2024-03-09T07:30:00Z", "2024-03-10T07:30:00Z"]
  * @example expandRecurrence(parseRecurrenceRule("FREQ=DAILY"), "2024-01-01T09:00:00", "UTC", { after: "2024-01-01T09:00:00Z", count: 1 }).map((row) => row.local) // ["2024-01-02T09:00:00"]
  * @example expandRecurrence(parseRecurrenceRule("FREQ=DAILY;COUNT=2"), "2024-11-02T01:30:00", "America/New_York", { after: "2024-01-01T00:00:00Z", count: 5 }, { disambiguation: "reject" }) // [] (01:30 repeats on November 3)
- * @example expandRecurrence(parseRecurrenceRule("FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30"), "2024-01-01T09:00:00", "UTC", { after: "2024-01-01T00:00:00Z", count: 1 }) // []
+ * @example expandRecurrence(parseRecurrenceRule("FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30"), "2024-01-01T09:00:00", "UTC", { after: "2024-01-01T00:00:00Z", count: 1 }).map((row) => row.instant) // ["2024-01-01T09:00:00Z"] (DTSTART is the only occurrence)
+ * @example expandRecurrence(parseRecurrenceRule("FREQ=DAILY;COUNT=1"), "2024-06-01T12:00:00", "America/New_York", { after: "2024-01-01T00:00:00Z", count: 5 }, { rdate: ["2024-06-05T12:00:00[Europe/Paris]"] }) // [] (an annotation is not read)
  */
 export function expandRecurrence(
   rule: RecurrenceRule,

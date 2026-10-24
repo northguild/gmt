@@ -338,6 +338,7 @@ export function renderCronInAZoneTemplate(args: CronInAZoneArgs = {}): string {
       zoneErrorText("z".repeat(CRON_MAX_TEXT)),
       afterErrorText("x".repeat(CRON_MAX_TEXT)),
     ]) +
+    `<p class="gmt-cron-sr" data-role="live" aria-live="polite"></p>` +
     fieldsHtml() +
     `</div>` +
     // 2. The night of the change
@@ -426,6 +427,33 @@ function drawProblem(q: Q, view: CronView): void {
     " ";
 }
 
+/** One mount counter, so two widgets on a page never share a hint id. */
+let hintCount = 0;
+
+/**
+ * The words a reader should hear when the answer changes: the problem, the
+ * no-signal state or no-change note, and the sentence about the night. The
+ * visible hints are plain paragraphs and announce nothing themselves.
+ */
+function liveText(view: CronView): string {
+  const parts = [
+    view.zoneError ?? view.yearError ?? view.afterError ?? view.changeNote,
+    view.parsed && view.expr === null
+      ? `${NO_SIGNAL_TEXT.replace(/[⟨⟩]/g, "").trim()}. ${NO_SIGNAL_NOTE}`
+      : null,
+    view.noChangeNote,
+    view.night?.sentence ?? null,
+  ];
+  return parts.filter((p): p is string => Boolean(p && p.trim())).join(" ");
+}
+
+function drawLive(q: Q, view: CronView): void {
+  const el = q("live");
+  if (!el) return;
+  const text = liveText(view);
+  if (el.textContent !== text) el.textContent = text;
+}
+
 function drawFields(q: Q, view: CronView): void {
   setOff(q("fields"), view.fields === null);
   setOff(q("nosignal"), !(view.parsed && view.expr === null));
@@ -479,11 +507,14 @@ function drawAxes(root: HTMLElement, view: CronView): void {
   }
 }
 
+/** Past this share of the axis a mark's ×N label sits left of its stem. */
+const COUNT_FLIP_PCT = 90;
+
 function marksHtml(marks: readonly Mark[]): string {
   return marks
     .map(
       (m) =>
-        `<span class="gmt-cron-mark gmt-cron-mark--${m.classification}" style="left:${m.pct}%" data-kind="${m.classification}">` +
+        `<span class="gmt-cron-mark gmt-cron-mark--${m.classification}" style="left:${m.pct}%" data-kind="${m.classification}"${m.pct > COUNT_FLIP_PCT ? " data-end" : ""}>` +
         `<span class="gmt-cron-stem"></span>` +
         (m.count > 1 ? `<span class="gmt-cron-count">×${m.count}</span>` : "") +
         `</span>`,
@@ -617,6 +648,15 @@ function setupWidget(root: HTMLElement, lib: CronLib, initial: CronState) {
   const change = q<HTMLSelectElement>("change")!;
   let changeAsked = initial.change;
 
+  /* The problem hint, tied to the three inputs that can cause it. */
+  const hint = q("problem");
+  if (hint) {
+    hint.id = `gmt-cron-problem-${++hintCount}`;
+    for (const el of [line, year, zone]) {
+      el.setAttribute("aria-describedby", hint.id);
+    }
+  }
+
   const readState = (): CronState => ({
     line: line.value,
     zone: zone.value,
@@ -638,6 +678,7 @@ function setupWidget(root: HTMLElement, lib: CronLib, initial: CronState) {
     const view = cronView(lib, state);
     preset.value = presetIdOf(state);
     drawProblem(q, view);
+    drawLive(q, view);
     drawFields(q, view);
     drawChange(q, view, state);
     drawNight(root, q, view);

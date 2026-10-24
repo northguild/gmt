@@ -519,7 +519,8 @@
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
       .gmt-elapsed-vs-clock,
-      .gmt-stored-time-audit
+      .gmt-stored-time-audit,
+      .gmt-cron-zone
     )
     :is(
       .gmt-cutoff-chip,
@@ -549,7 +550,8 @@
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
       .gmt-elapsed-vs-clock,
-      .gmt-stored-time-audit
+      .gmt-stored-time-audit,
+      .gmt-cron-zone
     )
     :is(.gmt-cutoff-chip, .gmt-cutoff-stack-day-label) {
     forced-color-adjust: auto;

@@ -90,4 +90,4 @@ Not in scope: iCalendar files, `VTIMEZONE`, alarms, `EXRULE` (deprecated by RFC 
 
 ### Dox (Cron in a Zone, recurrence guide)
 
-The tool's conventions are recorded in [built.md](../../dox/built.md). The story also names a Recurrence Expander tool. At planning (2026-10-23) the owner chose Cron in a Zone alone, so no Expander page ships with this story.
+The tool's conventions are recorded in [built.md](../../dox/built.md). No Recurrence Expander page ships with this story.

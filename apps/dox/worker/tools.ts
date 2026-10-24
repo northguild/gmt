@@ -578,7 +578,8 @@ export function buildWorkerTools(
         if (problems.length > 0) {
           return reject("cron-in-a-zone", problems.join(" "));
         }
-        const unknown = unknownZones([v["zone"] as string]);
+        const zone = v["zone"];
+        const unknown = typeof zone === "string" ? unknownZones([zone]) : [];
         return unknown.length > 0
           ? reject(
               "cron-in-a-zone",

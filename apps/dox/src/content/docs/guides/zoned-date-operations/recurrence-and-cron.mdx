@@ -17,7 +17,7 @@ The functions are [`parseRecurrenceRule`](/reference/recurrence/parse/parseRecur
 `parseRecurrenceRule` turns RRULE text into a `RecurrenceRule`, or returns `null` when the text is not a rule it accepts. The members follow RFC 8984 §4.3.3. Weekdays are ISO numbers, 1 for Monday to 7 for Sunday.
 
 ```typescript
-import { parseCronExpression, parseRecurrenceRule } from "@northguild/gmt/recurrence/parse";
+import { parseRecurrenceRule } from "@northguild/gmt/recurrence/parse";
 
 parseRecurrenceRule("FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6");
 // {
@@ -40,8 +40,8 @@ parseRecurrenceRule("FREQ=DAILY;UNTIL=20240601T000000Z;COUNT=3");
 **DTSTART is always the first occurrence, and it counts toward `COUNT`, even when it does not match the rule**, as RFC 5545 §3.3.10 and RFC 8984 §4.3.3.1 say. rrule.js and python-dateutil leave an unmatched DTSTART out, so they give a different list for the same text.
 
 ```typescript
-import { parseCronExpression, parseRecurrenceRule } from "@northguild/gmt/recurrence/parse";
-import { cronRuns, expandRecurrence } from "@northguild/gmt/recurrence/calculate";
+import { parseRecurrenceRule } from "@northguild/gmt/recurrence/parse";
+import { expandRecurrence } from "@northguild/gmt/recurrence/calculate";
 
 // DTSTART is Wednesday 3 January, and the rule says Mondays.
 const rule = parseRecurrenceRule("FREQ=WEEKLY;BYDAY=MO;COUNT=3");

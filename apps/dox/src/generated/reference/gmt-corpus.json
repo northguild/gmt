@@ -15344,8 +15344,12 @@
         "result": "[] (01:30 repeats on November 3)"
       },
       {
-        "call": "expandRecurrence(parseRecurrenceRule(\"FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30\"), \"2024-01-01T09:00:00\", \"UTC\", { after: \"2024-01-01T00:00:00Z\", count: 1 })",
-        "result": "[]"
+        "call": "expandRecurrence(parseRecurrenceRule(\"FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30\"), \"2024-01-01T09:00:00\", \"UTC\", { after: \"2024-01-01T00:00:00Z\", count: 1 }).map((row) => row.instant)",
+        "result": "[\"2024-01-01T09:00:00Z\"] (DTSTART is the only occurrence)"
+      },
+      {
+        "call": "expandRecurrence(parseRecurrenceRule(\"FREQ=DAILY;COUNT=1\"), \"2024-06-01T12:00:00\", \"America/New_York\", { after: \"2024-01-01T00:00:00Z\", count: 5 }, { rdate: [\"2024-06-05T12:00:00[Europe/Paris]\"] })",
+        "result": "[] (an annotation is not read)"
       }
     ]
   },

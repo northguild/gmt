@@ -1,5 +1,5 @@
 import { checkCronExpression } from "../../internal/cronText";
-import { nextCronDay } from "../../internal/cronMatch";
+import { scanCronDays } from "../../internal/cronMatch";
 import { isoDateString, MIN_EPOCH_DAY } from "../../internal/epochDay";
 import { instantStringFromEpochNanoseconds } from "../../internal/instantStringFromEpochNanoseconds";
 import {
@@ -279,9 +279,9 @@ function placeDay(
  * Every loop step is bounded: the day scan by one Gregorian cycle (146,097 days) per match and by
  * the limit (the window's end plus three days, or the `count`-th nearest run plus three days),
  * the times by `hour.values × minute.values` (at most 1,440) per matching day, and the whole
- * walk by `RECURRENCE_WORK_CAP` work units (one per day scanned and one per wall time of each
- * matching day, whether or not it can reach the window), the row cap, and the window's end plus
- * three days.
+ * walk by `RECURRENCE_WORK_CAP` work units (one per scan step, which is a day tested or a jump over
+ * the months the schedule skips, and one per wall time of each matching day, whether or not it
+ * can reach the window), the row cap, and the window's end plus three days.
  */
 function collect(call: Call): Row[] | null {
   const resolve = createLocalResolver(call.frame);
@@ -295,7 +295,7 @@ function collect(call: Call): Row[] | null {
   while (!collector.over()) {
     const limit = collector.limit();
     // A day whose midnight, read as UTC, is past the limit cannot matter: stop the scan there.
-    const next = nextCronDay(
+    const { day: next, steps } = scanCronDays(
       call.expression,
       day,
       limit === null ? undefined : floorDay(limit),
@@ -305,7 +305,8 @@ function collect(call: Call): Row[] | null {
       break;
     }
 
-    work += next - day + 1 + times.length;
+    // A jump over months the schedule skips is one step, not one per day it covers.
+    work += steps + times.length;
 
     if (work > RECURRENCE_WORK_CAP) {
       return null;
@@ -358,13 +359,17 @@ function runOf(row: Row): CronRun | null {
  * - `timeZone` is a time zone identifier or a fixed offset (`+05:30`).
  *
  * Returns `[]` for an invalid argument (including a missing or unknown `policy`), a schedule that
- * never matches (such as February 30), and a result of more than 10,000 runs. A run whose instant
- * is past Temporal's range (after +275760-09-13T00:00:00Z) is past the end of the schedule: it is
- * left out and the runs before it are returned.
+ * never matches (such as February 30), a walk that needs more than 2,000,000 work units, and a
+ * result of more than 10,000 runs. The work is one unit per step of the day scan (a day tested, or
+ * a jump over the months the schedule skips) and one per wall time of each matching day, so a
+ * sparse schedule such as `0 0 29 2 *` or `@yearly` stays inside the budget for any `count` up to
+ * 10,000. A run whose instant is past Temporal's range (after +275760-09-13T00:00:00Z) is past the
+ * end of the schedule: it is left out and the runs before it are returned.
  *
  * Complexity: O(S + R + K) for S the days scanned (the window's days, or at most 146,097 for an
- * expression that never matches), R the runs and K the zone transitions near them. The walk spends
- * at most 2,000,000 work units and returns `[]` if it needs more.
+ * expression that never matches, with a jump over unlisted months counting as one), R the runs
+ * and K the zone transitions near them. The walk spends at most 2,000,000 work units and returns
+ * `[]` if it needs more.
  *
  * @param expression a cron schedule, from `parseCronExpression`
  * @param timeZone an IANA time zone or fixed offset

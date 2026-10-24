@@ -5,11 +5,7 @@
  * mount, every preset's values, the refusals and the permalink.
  */
 import { installJsdomShims } from "~/test/jsdom-shims";
-import {
-  CRON_PRESETS,
-  cronView,
-  stateOfPreset,
-} from "./cron-in-a-zone";
+import { CRON_PRESETS, cronView, stateOfPreset } from "./cron-in-a-zone";
 import {
   mountCronInAZone,
   renderCronInAZoneTemplate,
@@ -254,6 +250,47 @@ describe("when the library does not load", () => {
       expect(root.textContent).toMatch(/./);
     } finally {
       Object.assign(GMT_MODULES, originals);
+    }
+  });
+});
+
+describe("assistive technology", () => {
+  it("has one polite live region that carries the sentence", async () => {
+    const { root } = await mount();
+    const live = root.querySelectorAll('[aria-live="polite"]');
+    expect(live).toHaveLength(1);
+    expect(live[0]).toBe(q(root, "live"));
+    expect(q(root, "live").textContent).toContain(
+      q(root, "sentence").textContent!.trim(),
+    );
+  });
+
+  it("carries a problem and the no-signal state", async () => {
+    const bad = await mount({ zone: "Mars/Olympus" });
+    expect(q(bad.root, "live").textContent).toContain("Mars/Olympus");
+    const { root } = await mount();
+    type(root, "line", "@reboot");
+    expect(q(root, "live").textContent).toMatch(/NO SIGNAL/);
+  });
+
+  it("points the line, year and zone at the problem hint", async () => {
+    const { root } = await mount();
+    const id = q(root, "problem").id;
+    expect(id).not.toBe("");
+    for (const role of ["line", "year", "zone"]) {
+      expect(q(root, role).getAttribute("aria-describedby")).toBe(id);
+    }
+  });
+
+  it("flips the x-N label left of a mark past 90% of the axis", async () => {
+    // 04:50 London is 03:50Z on the spring night: 98% of a 22:00Z to 04:00Z axis.
+    const { root } = await mount({ line: "50 4 * * *" });
+    const marks = [...root.querySelectorAll<HTMLElement>(".gmt-cron-mark")];
+    expect(marks.some((m) => parseFloat(m.style.left) > 90)).toBe(true);
+    for (const mark of marks) {
+      expect(mark.hasAttribute("data-end")).toBe(
+        parseFloat(mark.style.left) > 90,
+      );
     }
   });
 });

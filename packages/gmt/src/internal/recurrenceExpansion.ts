@@ -374,8 +374,8 @@ function setIndices(positions: readonly number[], size: number): number[] {
 type Run = {
   spent: number;
   budget: number;
-  /** The last epoch day a pick may fall on; never above `MAX_EPOCH_DAY`. */
-  lastDay: number;
+  /** The last epoch day a pick may fall on, read afresh each time; never above `MAX_EPOCH_DAY`. */
+  lastDay: () => number;
   start: LocalMoment;
   visit: (moment: LocalMoment) => boolean;
   setPositions: readonly number[] | undefined;
@@ -416,7 +416,7 @@ function emit(
     const second = timeAt(index % timeCount);
 
     // Picks ascend, so once one is past `lastDay` the rest are too.
-    if (day > run.lastDay) {
+    if (day > run.lastDay()) {
       return "end";
     }
 
@@ -576,7 +576,7 @@ function expandSubDaily(
     run.spent++;
 
     const day = Math.floor(index / perDay);
-    if (day > run.lastDay) {
+    if (day > run.lastDay()) {
       return "end";
     }
     const dayPasses = passesOnDay(day);
@@ -618,13 +618,16 @@ function timesOfDay(rule: PreparedRule): number[] {
 
 /**
  * The days of `[first, last]` that pass the day filter, ascending; each day evaluated costs one
- * unit. `undefined` when the budget ran out first.
+ * unit. With `BYMONTH`, a month outside it costs one unit as a whole and its days are not
+ * evaluated, so a yearly rule for one month does not pay for the other eleven. `undefined` when
+ * the budget ran out first.
  */
 function passingDays(
   run: Run,
   first: number,
   last: number,
   passes: (day: number) => boolean,
+  byMonth: ReadonlySet<number> | undefined,
 ): number[] | undefined {
   const days: number[] = [];
 
@@ -633,6 +636,16 @@ function passingDays(
       return undefined;
     }
     run.spent++;
+
+    if (byMonth !== undefined) {
+      const [year, month] = isoFieldsOf(day);
+
+      if (!byMonth.has(month)) {
+        // Jump to the month's last day; the loop step then lands on the next month's first.
+        day = epochDayOf(year, month, daysInMonthOf(year, month));
+        continue;
+      }
+    }
     if (passes(day)) {
       days.push(day);
     }
@@ -663,13 +676,13 @@ function expandPeriods(
     run.spent++;
 
     const [first, last] = periodDays(rule, index);
-    if (first > run.lastDay) {
+    if (first > run.lastDay()) {
       return "end";
     }
 
     // The whole period is evaluated, past `lastDay` too: BYSETPOS counts positions
     // over the full period (RFC 5545 §3.3.10, RFC 8984 §4.3.3.1 step 3), and emit drops the rest.
-    const days = passingDays(run, first, last, passes);
+    const days = passingDays(run, first, last, passes, rule.byMonth);
     if (days === undefined) {
       return "capped";
     }
@@ -684,7 +697,7 @@ function expandPeriods(
     if (status !== undefined) {
       return status;
     }
-    if (last >= run.lastDay) {
+    if (last >= run.lastDay()) {
       return "end";
     }
     index += rule.interval;
@@ -709,8 +722,9 @@ function expandPeriods(
  * ends as `"capped"` rather than looping.
  *
  * `lastDay` (epoch day, default and ceiling `MAX_EPOCH_DAY`) ends the expansion: no pick after it
- * is visited. The period holding `lastDay` is still evaluated in full, so a rule that never
- * matches ends as `"end"` once the periods pass `lastDay`, not as `"capped"`.
+ * is visited. It may be a function, read at every period, so `visit` can bring the end forward
+ * once it has what it needs. The period holding `lastDay` is still evaluated in full, so a rule
+ * that never matches ends as `"end"` once the periods pass `lastDay`, not as `"capped"`.
  *
  * @returns `"stopped"` when `visit` returned `false`, `"capped"` when the budget ran out,
  * `"end"` when a pick fell after `lastDay`.
@@ -727,7 +741,7 @@ export function expandLocalMoments(
   fromDay: number,
   visit: (moment: LocalMoment) => boolean,
   budget: number = RECURRENCE_WORK_CAP,
-  lastDay: number = MAX_EPOCH_DAY,
+  lastDay: number | (() => number) = MAX_EPOCH_DAY,
 ): ExpansionStatus {
   if (!visit(start)) {
     return "stopped";
@@ -737,7 +751,11 @@ export function expandLocalMoments(
   const run: Run = {
     spent: 0,
     budget,
-    lastDay: Math.min(lastDay, MAX_EPOCH_DAY),
+    lastDay: () =>
+      Math.min(
+        typeof lastDay === "function" ? lastDay() : lastDay,
+        MAX_EPOCH_DAY,
+      ),
     start,
     visit,
     setPositions: prepared.setPositions,
