@@ -2201,3 +2201,62 @@ The Intl era/monthCode proposal numbers the years through the epoch: `bh` era ye
 ### Effect on GMT
 
 Before D18 the WebKit control pass of the native suite (the polyfill in WebKit) hung on row 82 of `plain/calculate/diffDateAsDuration.edges.test.ts` and ate the runner's memory. `calendarFields.ts` now corrects the year when `islamicEra.ts` says the date's era part is not a modern date's (two outputs of the same formatter, so GMT owns no era name or epoch), `calendarDateFromFields.ts` never asks the polyfill for an Islamic year <= 1 and searches when any other Islamic year's answer does not read back, and `calendarDateArithmetic.ts` runs the spec loops over the read-backed model, with `fixedMonthArithmetic.ts` for the month steps, whenever an operation comes within 2 years of such a year. Output is byte-identical on every engine that passes the probe.
+
+## S. WebKit adds a year to the 30th of Dhu al-Hijjah before the Hijra as 13 months (WebKit only, engine)
+
+### Status
+
+**Not filed.** Draft in the session scratchpad (`draft-webkit-islamic-add-year.md`); the owner files it on bugs.webkit.org. Reproduced on WebKit 26.6's own `Temporal` (JavaScriptCore; Playwright's Linux build and the Mac build agree). The polyfill in the same WebKit, V8 (Node 26.12.1, Chromium 153) and SpiderMonkey (Firefox 155) give the spec value. Six rows of the native suite fail on it and are tagged with this anchor in `scripts/lib/native-suite-tags.mjs` (WebKit leg only).
+
+### What goes wrong
+
+In `islamic-civil`, `islamic-tbla` and `islamic-umalqura`, adding `{ years: 1 }` or `{ months: 12 }` to the 30th of Dhu al-Hijjah (`M12` day 30) of a year before the Hijra (year 0 and earlier) lands on the 30th of Muharram two years on: 13 months instead of 12. The target month has 29 days, so the spec constrains the day to 29 (`CalendarDateAdd`, `overflow: "constrain"`); WebKit instead carries the day into the next year. The same add from year -1, from any year after the Hijra, or from day 29 is right. `until` with `largestUnit: "years"` across such a date is a month short.
+
+### Repro (WebKit 26.6 native `Temporal`; expected values Node 26.12.1 native `Temporal`, which the polyfill in WebKit also gives)
+
+| Call | WebKit | Expected |
+| ---- | ------ | -------- |
+| `PlainDate.from("0600-03-25").withCalendar("islamic-civil").add({ years: 1 })` (year -23, M12 day 30) | `0601-04-13` (year -21, M01 day 30) | `0601-03-14[u-ca=islamic-civil]` |
+| `PlainDate.from("0100-07-25").withCalendar("islamic-civil").add({ years: 1 })` (year -538, M12 day 30) | `0101-08-13` | `0101-07-14[u-ca=islamic-civil]` |
+| `PlainDate.from("-010000-07-17").withCalendar("islamic-civil").add({ years: 1 })` (year -10948, M12 day 30) | `-009999-08-05` | `-009999-07-06[u-ca=islamic-civil]` |
+| `PlainDate.from("-271820-01-19[u-ca=islamic-civil]").add({ years: 1 })` (year -280804, M12 day 30) | `-271819-02-06` | `-271819-01-07[u-ca=islamic-civil]` |
+| `PlainDate.from("-271820-01-19[u-ca=islamic-civil]").add({ months: 12 })` | `-271819-02-06` | `-271819-01-07[u-ca=islamic-civil]` |
+| `PlainDate.from("-271820-01-19[u-ca=islamic-civil]").until("-271819-06-27[u-ca=islamic-civil]", { largestUnit: "years" })` | `P1Y4M23D` | `P1Y5M23D` |
+| `PlainDate.from("0621-07-29").withCalendar("islamic-civil").add({ years: 1 })` (year -1, M12 day 30) | `0622-07-18` | `0622-07-18` |
+| `PlainDate.from("2024-07-07").withCalendar("islamic-civil").add({ years: 1 })` (year 1445, M12 day 30) | `2025-06-26` | `2025-06-26` |
+| `PlainDate.from("-271820-01-18[u-ca=islamic-civil]").add({ years: 1 })` (year -280804, M12 day 29) | `-271819-01-07` | `-271819-01-07` |
+
+`islamic-tbla` (`-271820-01-18` is its M12 day 30; WebKit adds to `-271819-02-05`, expected `-271819-01-06`) and `islamic-umalqura` (as `islamic-civil` at these dates) behave the same.
+
+### Effect on GMT
+
+Only GMT run on WebKit's own `Temporal` sees it: `addDate`, `diffDateAsDuration` and every function built on them return the engine's answer for such a date, and the D18 probe passes there (WebKit reads the year right; it is the add that is wrong), so D18's own arithmetic does not engage. GMT on the polyfill, in WebKit or anywhere else, is right. The six native-suite rows (`plain/calculate/addDate.edges.test.ts` and `plain/calculate/diffDateAsDuration.edges.test.ts`, the `xscan islamic-* min` rows) are tagged; the tag goes stale, with a finding, once WebKit adds the year right.
+
+## T. WebKit throws adding a year to the last day of Chaitra in far-past Indian years (WebKit only, engine)
+
+### Status
+
+**Not filed.** Draft in the session scratchpad (`draft-webkit-indian-add-year.md`); the owner files it on bugs.webkit.org. Reproduced on WebKit 26.6's own `Temporal` (JavaScriptCore; Playwright's Linux build and the Mac build agree). The polyfill in the same WebKit, V8 (Node 26.12.1, Chromium 153) and SpiderMonkey (Firefox 155) give the spec value. One row of the native suite fails on it and is tagged with this anchor in `scripts/lib/native-suite-tags.mjs` (WebKit leg only).
+
+### What goes wrong
+
+In the `indian` calendar, `add({ years: n })` and `add({ months: 12 })` from the last day of Chaitra (`M01` day 30, or day 31 in a leap year) throw `RangeError: Result of calendar date addition is outside representable range` for every probed ISO year from -4800 back to the range minimum, while the same add from ISO -4700 and later returns the constrained date. Chaitra's last day is 20 April in ISO terms, so each row below uses that day. Any other day of the year adds correctly at every probed year, `with({ year })` works at the same dates, and `until` with `largestUnit: "years"` across such a date throws the same error while `"months"` and `"days"` return.
+
+### Repro (WebKit 26.6 native `Temporal`; expected values Node 26.12.1 native `Temporal`, which the polyfill in WebKit also gives)
+
+| Call | WebKit | Expected |
+| ---- | ------ | -------- |
+| `PlainDate.from("-004800-04-20[u-ca=indian]").add({ years: 1 })` (year -4878, M01 day 31) | throws `RangeError` | `-004799-04-20[u-ca=indian]` |
+| `PlainDate.from("-004700-04-20[u-ca=indian]").add({ years: 1 })` (year -4778, M01 day 30) | `-004699-04-20` | `-004699-04-20[u-ca=indian]` |
+| `PlainDate.from("-009924-04-20[u-ca=indian]").add({ years: 1 })` (year -10002, M01 day 31) | throws `RangeError` | `-009923-04-20[u-ca=indian]` |
+| `PlainDate.from("-009924-04-19[u-ca=indian]").add({ years: 1 })` (year -10002, M01 day 30) | throws `RangeError` | `-009923-04-20[u-ca=indian]` |
+| `PlainDate.from("-009922-04-21[u-ca=indian]").add({ years: 1 })` (year -10000, M02 day 1) | `-009921-04-21` | `-009921-04-21[u-ca=indian]` |
+| `PlainDate.from("-009924-04-20[u-ca=indian]").with({ year: -10001 })` | `-009923-04-20` | `-009923-04-20` |
+| `PlainDate.from("-271821-04-20[u-ca=indian]").until("-271819-06-27[u-ca=indian]", { largestUnit: "years" })` | throws `RangeError` | `P2Y2M7D` |
+| `PlainDate.from("-271821-04-20[u-ca=indian]").until("-271819-06-27[u-ca=indian]", { largestUnit: "months" })` | `P26M7D` | `P26M7D` |
+
+The other calendars (`persian`, `hebrew`, `coptic`, `ethiopic`, `buddhist`, `japanese`, `roc`, `gregory`, `chinese`, `dangi`, the three `islamic-*`) add a year at ISO -271000 without error.
+
+### Effect on GMT
+
+Only GMT run on WebKit's own `Temporal` sees it: `diffDateAsDuration` returns the sentinel `""` where the engine throws. GMT on the polyfill is right. The one native-suite row (`plain/calculate/diffDateAsDuration.edges.test.ts`, the `xscan indian min` row) is tagged; the tag goes stale, with a finding, once WebKit returns the date.
