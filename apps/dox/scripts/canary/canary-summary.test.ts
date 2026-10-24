@@ -397,6 +397,42 @@ describe("summaryMarkdown: temporal-oracle", () => {
     );
   });
 
+  it("a Firefox-only group removable on Firefox but failing on WebKit is removable on some engines only", () => {
+    const d17 = { ...removableWorkaround("D17"), engines: ["firefox"] };
+    const elsewhere = { ...d17, state: "out-of-scope" };
+    const failing = { ...d17, state: "still-needed", failing: 2 };
+    const verdicts = {
+      "temporal-compat-check": check([elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        guard: 0,
+        outOfScope: 1,
+      }),
+      "temporal-compat-chromium": compat("chromium", [elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        guard: 0,
+        outOfScope: 1,
+      }),
+      "temporal-compat-firefox": compat("firefox", [d17], {
+        stillNeeded: 15,
+        removable: 1,
+        guard: 0,
+      }),
+      "temporal-compat-webkit": compat("webkit", [failing], {
+        stillNeeded: 16,
+        removable: 0,
+        guard: 0,
+      }),
+      "temporal-oracle": oracle(),
+    };
+    const lines = oracleSummary(verdicts).split("\n");
+    expect(lines).not.toContain("Removable on every engine in scope: D17");
+    expect(lines).toContain(
+      "Removable on some engines only: D17 (Firefox 155.0: removable; WebKit 26.6: still needed, 2 of 2 probes fail)",
+    );
+  });
+
   it("a Firefox-only group with no Firefox verdict is not removable anywhere, and is not listed as removable on some engines", () => {
     const d17 = { ...removableWorkaround("D17"), engines: ["firefox"] };
     const elsewhere = { ...d17, state: "out-of-scope" };

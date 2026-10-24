@@ -134,8 +134,9 @@ function engineNote(e) {
 
 /**
  * The lines under the oracle table: which groups are removable on every engine in their scope,
- * which only on some, and whether the committed snapshot is current. Separate paragraphs,
- * because two consecutive lines would render as one.
+ * which only on some, and whether the committed snapshot is current. A partly removable group
+ * names its in-scope engines, plus any engine outside its scope whose failing probe blocks it.
+ * Separate paragraphs, because two consecutive lines would render as one.
  * @param {Record<string, Verdict | null | undefined>} verdicts
  * @returns {string[]}
  */
@@ -158,7 +159,7 @@ function checkNotes(verdicts) {
         .map(
           (s) =>
             `${s.id} (${s.engines
-              .filter((e) => e.inScope)
+              .filter((e) => e.inScope || e.row?.state === "still-needed")
               .map(engineNote)
               .join("; ")})`,
         )

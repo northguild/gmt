@@ -635,6 +635,26 @@ describe("removable on every engine in scope", () => {
     );
   });
 
+  it("a Firefox-only group removable in Firefox but failing in WebKit stays closed: a failing probe counts on any engine", () => {
+    const verdicts = {
+      ...everywhere([d17("out-of-scope")]),
+      "temporal-compat-firefox": browserCompat("firefox", [d17("removable")]),
+      "temporal-compat-webkit": browserCompat("webkit", [d17("still-needed")]),
+      "temporal-oracle": oracle(),
+    };
+    expect(plan(verdicts)).toEqual([]);
+    const [state] = compatStates(verdicts as never);
+    expect(state.everywhere).toBe(false);
+    expect(
+      state.engines.map((e) => [e.source, e.inScope, e.row?.state]),
+    ).toEqual([
+      ["temporal-compat-check", false, "out-of-scope"],
+      ["temporal-compat-chromium", false, "out-of-scope"],
+      ["temporal-compat-firefox", true, "removable"],
+      ["temporal-compat-webkit", false, "still-needed"],
+    ]);
+  });
+
   it("a Firefox-only group still needed in Firefox stays closed however the others read", () => {
     const verdicts = {
       ...everywhere([d17("out-of-scope")]),

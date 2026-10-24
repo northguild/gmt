@@ -89,16 +89,17 @@ describe("compatFile", () => {
     );
   });
 
-  it.each([
-    ["/", "the page itself"],
-    ["/dist/", "the dist folder"],
-    ["/dist/internal/temporalCompat/repros.js.map", "a source map"],
-    ["/dist/package.json", "a file that is not .js"],
-    ["/dist/../package.json", "a path that leaves dist"],
-    ["/dist/..%2Fpackage.js", "an encoded step out of dist"],
-    ["/other.js", "a .js file outside dist"],
-    ["/repo/packages/gmt/dist/index.js", "an absolute path to dist"],
-  ])("refuses %s (%s)", (pathname) => {
+  it.each`
+    pathname                                          | what
+    ${"/"}                                            | ${"the page itself"}
+    ${"/dist/"}                                       | ${"the dist folder"}
+    ${"/dist/internal/temporalCompat/repros.js.map"}  | ${"a source map"}
+    ${"/dist/package.json"}                           | ${"a file that is not .js"}
+    ${"/dist/../package.json"}                        | ${"a path that leaves dist"}
+    ${"/dist/..%2Fpackage.js"}                        | ${"an encoded step out of dist"}
+    ${"/other.js"}                                    | ${"a .js file outside dist"}
+    ${"/repo/packages/gmt/dist/index.js"}             | ${"an absolute path to dist"}
+  `("refuses $pathname ($what)", ({ pathname }: { pathname: string }) => {
     expect(compatFile(pathname, PATHS)).toBeNull();
   });
 });

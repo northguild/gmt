@@ -383,8 +383,10 @@ function compatEngineLabel(verdict) {
 /**
  * Each workaround group's state on every compat source, in script order. A group with `engines`
  * is in scope only on those engines; `everywhere` is true when every in-scope source ran and
- * reports the group removable. A source in scope with no verdict, or whose verdict does not know
- * the group, blocks: a group is never called removable on evidence from only part of its scope.
+ * reports the group removable, and no source at all reports it still needed. A source in scope
+ * with no verdict, or whose verdict does not know the group, blocks: a group is never called
+ * removable on evidence from only part of its scope. A failing probe blocks from any engine,
+ * in scope or not, the rule `workaroundState` applies: a failure is evidence wherever it happens.
  * @param {Record<string, Verdict | null>} verdicts
  * @returns {CompatState[]}
  */
@@ -441,7 +443,8 @@ export function compatStates(verdicts) {
       engines,
       everywhere:
         inScope.length > 0 &&
-        inScope.every((e) => e.row?.state === "removable"),
+        inScope.every((e) => e.row?.state === "removable") &&
+        engines.every((e) => e.row?.state !== "still-needed"),
     };
   });
 }

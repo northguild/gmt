@@ -130,6 +130,10 @@ jobs:
           LEG: ${{ matrix.leg }}
         run: pnpm --filter @gmt/dox exec playwright install --with-deps "$LEG"
 
+      - name: Build
+        if: matrix.leg != 'node'
+        run: pnpm --filter @northguild/gmt build
+
       - name: Native suite
         env:
           LEG: ${{ matrix.leg }}
