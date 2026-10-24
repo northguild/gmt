@@ -121,7 +121,13 @@ describe("holidayEpochDays easterRelative candidate search", () => {
         }
       }
 
-      expect(mismatches).toEqual([]);
+      expect({
+        count: mismatches.length,
+        first: mismatches.slice(0, 20),
+      }).toEqual({
+        count: 0,
+        first: [],
+      });
     },
   );
 });
