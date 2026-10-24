@@ -79,7 +79,7 @@ Not in scope: iCalendar files, `VTIMEZONE`, alarms, `EXRULE` (deprecated by RFC 
 - **End bound:** the interval form stops its walk at `floorDay(end) + 3` days. A Temporal offset is under 24 h, so a gap is under 48 h and 3 days is exact.
 - **Range:** rows past Temporal's range are dropped, not a reason for `[]`.
 - **Closed-form resolution:** wall-time placement near a transition uses a closed form with a self-proving isolation check, and falls back to `classifyWall` when isolation cannot be shown (`internal/localResolution.ts`). It was checked differentially against `classifyWall`: 12,652,706 moments, 0 mismatches.
-- **Bundle size:** the root budget in `scripts/bundle-size.budgets.json` was raised from 519,246 to 543,158 (+23.9 KB, +4.6%).
+- **Bundle size:** the root budget in `scripts/bundle-size.budgets.json` was raised from 521,169 to 547,763 (+26.6 KB, +5.1%).
 - **Playground:** the first `@example` of `expandRecurrence`, `cronRuns` and `parseCronExpression` uses literals, because the playground template cannot model nested calls.
 - **`RRULE` grammar:** all 14 parts in any order, each once, no whitespace and no `RRULE:` prefix; `EXRULE`, `RSCALE`, `SKIP` and `X-` names return `null`. Lists are sets, deduplicated and ascending. `COUNT` of 0 is invalid.
 - **Implicit parts** are filled from `DTSTART` as RFC 8984 section 4.3.3.1 extra rule 3 lists them. `WKST` matters only for `WEEKLY` with `INTERVAL` above 1 and for `BYWEEKNO`; the week number was checked against `Temporal.PlainDate#weekOfYear`.

@@ -690,10 +690,14 @@ function readCall(
  * `{ after, count }` call for a rule with fewer than `count` occurrences returns the ones it has,
  * as a `COUNT`-limited rule does: `FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30` gives DTSTART alone. A
  * rule from `YEARLY` to `DAILY` finds up to `count` occurrences however rarely it matches, as far
- * as Temporal's date range reaches. One case can still return `[]` because the work budget of
- * 2,000,000 units runs out: an `HOURLY`, `MINUTELY` or `SECONDLY` rule with an `INTERVAL` above 1
- * whose steps rarely or never meet its `BY*` parts, when proving that takes more than about
- * 500,000 steps.
+ * as Temporal's date range reaches. An `HOURLY`, `MINUTELY` or `SECONDLY` rule with a large
+ * `INTERVAL` costs one scan of at most 86,400 steps to learn which times of day its steps can
+ * land on, then one unit per row and per passing day. So `FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0`
+ * fills a window of 10,000 rows, and a sub-daily rule that never matches again gives DTSTART alone.
+ * `[]` also comes back when the work budget of 2,000,000 units runs out. A `COUNT` rule counts its
+ * occurrences from DTSTART, about two units each, so a window that opens about 1,000,000
+ * occurrences after DTSTART (740,000 for `SECONDLY`) gets `[]`: `FREQ=DAILY;COUNT=2000000` from
+ * 2024-01-01 gives nothing after 4761-11-20.
  *
  * Complexity: O(W + K log K) for W the work the expansion spends, bounded by 2,000,000 units, and
  * K the rows kept, at most 10,000. A rule that matches rarely pays one unit for each year it

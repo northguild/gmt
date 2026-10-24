@@ -722,16 +722,27 @@ describe("expandLocalMoments ends, rather than caps, a rule that cannot match ag
   // - Feb 30: filling 400 years costs 11 skipped months + 29 days a year, about 16,000 units;
   // - every 7th day from a Tuesday on Mondays: fill 146,097 + 20,871 periods x 3 units, about 210,000;
   // - every 4th year from 2025 on day 366: fill 146,097 + 100 periods x 6 units, about 147,000;
-  // - every 24th hour at hour 5 from hour 3: 146,097 days x 2 units + 146,097 to fill, about 440,000.
+  // - every 24th hour at hour 5 from hour 3: the hour of day never changes, so 1 step is scanned
+  //   for a hit and none is found: 1 unit;
+  // - every 2nd second at second 1: the 43,200 steps before the second of the day repeats are
+  //   scanned for a hit and none is found: 43,200 units;
+  // - every 60th minute at minute 30 from minute 0: 24 steps scanned, none is a hit: 24 units;
+  // - hourly with BYSETPOS 2 over a one-candidate period, or hourly or minutely whose only second
+  //   is 60: no period can hold a pick, so nothing is scanned: 1 unit.
   it.each`
-    description                                         | rule                                                               | start                 | budget
-    ${"daily Feb 30"}                                   | ${rule({ frequency: "daily", byMonth: [2], byMonthDay: [30] })}    | ${"2024-01-01T09:00"} | ${20_000}
-    ${"secondly Feb 30"}                                | ${rule({ frequency: "secondly", byMonth: [2], byMonthDay: [30] })} | ${"2024-01-01T09:00"} | ${20_000}
-    ${"yearly Apr 31"}                                  | ${rule({ frequency: "yearly", byMonth: [4], byMonthDay: [31] })}   | ${"2024-01-01T09:00"} | ${20_000}
-    ${"daily /7 on Mondays, started on a Tuesday"}      | ${rule({ frequency: "daily", interval: 7, byDay: [{ day: MO }] })} | ${"2024-01-02T09:00"} | ${250_000}
-    ${"yearly /4 on day 366, started in a common year"} | ${rule({ frequency: "yearly", interval: 4, byYearDay: [366] })}    | ${"2025-06-01T09:00"} | ${200_000}
-    ${"hourly /24 at hour 5, started at hour 3"}        | ${rule({ frequency: "hourly", interval: 24, byHour: [5] })}        | ${"2024-01-01T03:00"} | ${500_000}
-    ${"daily with only second 60 (no second to pick)"}  | ${rule({ frequency: "daily", bySecond: [60] })}                    | ${"2024-01-01T09:00"} | ${500_000}
+    description                                         | rule                                                                                       | start                 | budget
+    ${"daily Feb 30"}                                   | ${rule({ frequency: "daily", byMonth: [2], byMonthDay: [30] })}                            | ${"2024-01-01T09:00"} | ${20_000}
+    ${"secondly Feb 30"}                                | ${rule({ frequency: "secondly", byMonth: [2], byMonthDay: [30] })}                         | ${"2024-01-01T09:00"} | ${20_000}
+    ${"yearly Apr 31"}                                  | ${rule({ frequency: "yearly", byMonth: [4], byMonthDay: [31] })}                           | ${"2024-01-01T09:00"} | ${20_000}
+    ${"daily /7 on Mondays, started on a Tuesday"}      | ${rule({ frequency: "daily", interval: 7, byDay: [{ day: MO }] })}                         | ${"2024-01-02T09:00"} | ${250_000}
+    ${"yearly /4 on day 366, started in a common year"} | ${rule({ frequency: "yearly", interval: 4, byYearDay: [366] })}                            | ${"2025-06-01T09:00"} | ${200_000}
+    ${"hourly /24 at hour 5, started at hour 3"}        | ${rule({ frequency: "hourly", interval: 24, byHour: [5] })}                                | ${"2024-01-01T03:00"} | ${10}
+    ${"daily with only second 60 (no second to pick)"}  | ${rule({ frequency: "daily", bySecond: [60] })}                                            | ${"2024-01-01T09:00"} | ${500_000}
+    ${"secondly /2 at second 1, started on second 0"}   | ${rule({ frequency: "secondly", interval: 2, byHour: [0], byMinute: [0], bySecond: [1] })} | ${"2024-01-01T00:00"} | ${43_200}
+    ${"minutely /60 at minute 30, started on minute 0"} | ${rule({ frequency: "minutely", interval: 60, byMinute: [30] })}                           | ${"2024-01-01T00:00"} | ${24}
+    ${"hourly /1 with a BYSETPOS that picks nothing"}   | ${rule({ frequency: "hourly", byMinute: [0], bySetPosition: [2] })}                        | ${"2024-01-01T00:00"} | ${1}
+    ${"hourly with only second 60 (no second to pick)"} | ${rule({ frequency: "hourly", bySecond: [60] })}                                           | ${"2024-01-01T00:00"} | ${1}
+    ${"minutely with only second 60"}                   | ${rule({ frequency: "minutely", bySecond: [60] })}                                         | ${"2024-01-01T00:00"} | ${1}
   `(
     "$description visits only the start and ends",
     ({ rule: r, start, budget }) => {
@@ -858,4 +869,112 @@ describe("expandLocalMoments day cache, the day filter repeats every 400 years",
       }).toEqual({ year, days: [mondays[19], sundays.at(-1)].sort() });
     }
   });
+});
+
+describe("expandLocalMoments sub-daily walk, against a step-by-step walk", () => {
+  const PER_DAY = { hourly: 24, minutely: 1440, secondly: 86_400 } as const;
+
+  /** ISO weekday (Monday 1) of an epoch day: day 0, 1970-01-01, was a Thursday. */
+  const weekdayOfDay = (day: number): number => ((((day + 3) % 7) + 7) % 7) + 1;
+
+  /**
+   * Every candidate of a sub-daily rule on `[start.day, lastDay]`, by visiting each aligned step
+   * one at a time and applying the filters and BYSETPOS to plain integers; DTSTART comes first.
+   */
+  function stepByStep(
+    r: RecurrenceRule,
+    start: LocalMoment,
+    lastDay: number,
+  ): string[] {
+    const perDay = PER_DAY[r.frequency as keyof typeof PER_DAY];
+    const unit = 86_400 / perDay;
+    const origin = start.day * perDay + Math.floor(start.second / unit);
+    const within = (value: number, list: readonly number[] | undefined) =>
+      list === undefined || list.includes(value);
+    const minutes = r.byMinute ?? [Math.floor((start.second % 3600) / 60)];
+    const seconds = (r.bySecond ?? [start.second % 60]).filter((s) => s < 60);
+    const out = [text(start)];
+
+    for (let index = origin; ; index += r.interval) {
+      const day = Math.floor(index / perDay);
+      if (day > lastDay) return out;
+      const base = (index - day * perDay) * unit;
+      const hour = Math.floor(base / 3600);
+      const minute = Math.floor((base % 3600) / 60);
+      const dayPasses =
+        !r.byDay || r.byDay.some((d) => d.day === weekdayOfDay(day));
+      const passes =
+        dayPasses &&
+        within(hour, r.byHour) &&
+        (r.frequency === "hourly" || within(minute, r.byMinute)) &&
+        (r.frequency !== "secondly" || within(base % 60, r.bySecond));
+      if (!passes) continue;
+
+      const period: number[] =
+        r.frequency === "hourly"
+          ? minutes.flatMap((m) => seconds.map((s) => base + m * 60 + s))
+          : r.frequency === "minutely"
+            ? seconds.map((s) => base + s)
+            : [base];
+      const picked = r.bySetPosition
+        ? r.bySetPosition
+            .map((k) => (k > 0 ? period[k - 1] : period[period.length + k]))
+            .filter((second) => second !== undefined)
+            .sort((a, b) => a - b)
+        : period;
+
+      for (const second of picked) {
+        const moment = { day, second };
+        if (day > start.day || second > start.second) out.push(text(moment));
+      }
+    }
+  }
+
+  const MO_TH = [{ day: MO }, { day: TH }];
+
+  // Intervals that divide the day (24, 1440), that share a factor with it (90, 1000) and that do
+  // not (7, 25, 59), each with the time parts, BYSETPOS and day filter that make steps rarely hit.
+  it.each`
+    description                                       | parts                                                                                                                                              | start                    | days
+    ${"minutely /7 at 03:00"}                         | ${{ frequency: "minutely", interval: 7, byHour: [3], byMinute: [0] }}                                                                              | ${"2024-01-01T03:00"}    | ${70}
+    ${"minutely /7 at 03:00, Mondays and Thursdays"}  | ${{ frequency: "minutely", interval: 7, byHour: [3], byMinute: [0], byDay: MO_TH }}                                                                | ${"2024-01-01T03:00"}    | ${70}
+    ${"minutely /90 at hours 0,6 seconds 0,30"}       | ${{ frequency: "minutely", interval: 90, byHour: [0, 6], bySecond: [0, 30] }}                                                                      | ${"2024-01-01T00:00:15"} | ${21}
+    ${"minutely /1440 at minute 5 (a whole day)"}     | ${{ frequency: "minutely", interval: 1440, byMinute: [5] }}                                                                                        | ${"2024-01-01T00:05"}    | ${14}
+    ${"minutely /1441 BYSETPOS -1"}                   | ${{ frequency: "minutely", interval: 1441, byHour: [1, 2], bySecond: [10, 20, 30], bySetPosition: [-1] }}                                          | ${"2024-01-01T01:01:10"} | ${60}
+    ${"minutely /3 BYSETPOS 4 picks nothing"}         | ${{ frequency: "minutely", interval: 3, byMinute: [0, 3], bySecond: [0, 1, 2], bySetPosition: [4] }}                                               | ${"2024-01-01T00:00"}    | ${5}
+    ${"secondly /59 at midnight"}                     | ${{ frequency: "secondly", interval: 59, byHour: [0], byMinute: [0], bySecond: [0] }}                                                              | ${"2024-01-01T00:00"}    | ${240}
+    ${"secondly /59 at midnight, Mondays"}            | ${{ frequency: "secondly", interval: 59, byHour: [0], byMinute: [0], bySecond: [0], byDay: [{ day: MO }] }}                                        | ${"2024-01-01T00:00"}    | ${240}
+    ${"secondly /90 at minutes 0,30 second 0"}        | ${{ frequency: "secondly", interval: 90, byMinute: [0, 30], bySecond: [0] }}                                                                       | ${"2024-01-01T00:00"}    | ${6}
+    ${"secondly /1000 in hours 1 and 2"}              | ${{ frequency: "secondly", interval: 1000, byHour: [1, 2], byMinute: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] }} | ${"2024-01-01T01:00:40"} | ${12}
+    ${"secondly /7, Tuesdays and Fridays"}            | ${{ frequency: "secondly", interval: 7, byHour: [12], byMinute: [30], byDay: [{ day: TU }, { day: FR }] }}                                         | ${"2024-01-02T12:30:00"} | ${14}
+    ${"secondly /3 BYSETPOS 2 picks nothing"}         | ${{ frequency: "secondly", interval: 3, byHour: [0], bySetPosition: [2] }}                                                                         | ${"2024-01-01T00:00"}    | ${2}
+    ${"hourly /25 at hour 9"}                         | ${{ frequency: "hourly", interval: 25, byHour: [9] }}                                                                                              | ${"2024-01-01T09:00"}    | ${150}
+    ${"hourly /25 at hour 9, Wednesdays"}             | ${{ frequency: "hourly", interval: 25, byHour: [9], byDay: [{ day: WE }] }}                                                                        | ${"2024-01-03T09:00"}    | ${400}
+    ${"hourly /24 at hour 5, started at hour 3"}      | ${{ frequency: "hourly", interval: 24, byHour: [5] }}                                                                                              | ${"2024-01-01T03:00"}    | ${30}
+    ${"hourly /5 minutes 10,40 second 5 BYSETPOS -1"} | ${{ frequency: "hourly", interval: 5, byMinute: [10, 40], bySecond: [5], bySetPosition: [-1] }}                                                    | ${"2024-01-01T02:10:05"} | ${14}
+    ${"hourly /1000 BYSETPOS 1,2 over three minutes"} | ${{ frequency: "hourly", interval: 1000, byHour: [16], byMinute: [0, 20, 40], bySetPosition: [1, 2] }}                                             | ${"2024-01-01T16:00"}    | ${120}
+  `(
+    "$description from $start matches a step-by-step walk of $days days",
+    ({ parts, start, days }) => {
+      const r = rule(parts);
+      const from = moment(start);
+      const lastDay = from.day + days;
+      const moments: string[] = [];
+
+      expandLocalMoments(
+        r,
+        from,
+        from.day,
+        (m) => {
+          moments.push(text(m));
+
+          return true;
+        },
+        RECURRENCE_WORK_CAP,
+        lastDay,
+      );
+
+      expect(moments).toEqual(stepByStep(r, from, lastDay));
+    },
+  );
 });

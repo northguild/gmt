@@ -462,32 +462,6 @@ function emit(
 /** Sub-daily periods per day, and seconds per period. */
 const SUB_DAILY_UNIT = { hourly: 3600, minutely: 60, secondly: 1 } as const;
 
-/**
- * For a sub-daily period whose hour or minute is excluded, the first period index worth trying
- * instead (the next hour, or for `secondly` the next minute); `undefined` when nothing is excluded.
- */
-function subDailySkipTarget(
-  rule: PreparedRule,
-  day: number,
-  second: number,
-): number | undefined {
-  const { frequency, hours, minutes } = rule;
-  const perDay =
-    SECONDS_PER_DAY /
-    SUB_DAILY_UNIT[rule.frequency as keyof typeof SUB_DAILY_UNIT];
-  const hour = Math.floor(second / 3600);
-
-  if (frequency !== "hourly" && hours && !hours.includes(hour)) {
-    return day * perDay + (hour + 1) * (perDay / 24);
-  }
-  const minute = Math.floor((second % 3600) / 60);
-  if (frequency === "secondly" && minutes && !minutes.includes(minute)) {
-    return day * perDay + hour * 3600 + (minute + 1) * 60;
-  }
-
-  return undefined;
-}
-
 /** Emits the minutes and seconds of one hourly period that starts at second `base` of `day`. */
 function emitHour(
   run: Run,
@@ -765,34 +739,6 @@ function createDayCache(
   };
 }
 
-/**
- * After a sub-daily step on `day` at second `base`: the step to try next when this one is skipped
- * (an excluded day, hour or minute), a status when the walk ends, or `undefined` to emit the step.
- */
-function subDailySkip(
-  rule: PreparedRule,
-  run: Run,
-  days: DayCache,
-  day: number,
-  base: number,
-  dayPasses: boolean,
-): number | ExpansionStatus | undefined {
-  if (dayPasses) {
-    return subDailySkipTarget(rule, day, base);
-  }
-  // The next passing day, whose first aligned step is the next to try.
-  const next = days.nextFrom(day + 1);
-  if (next === undefined) {
-    return "capped";
-  }
-
-  return next > run.lastDay()
-    ? "end"
-    : next *
-        (SECONDS_PER_DAY /
-          SUB_DAILY_UNIT[rule.frequency as keyof typeof SUB_DAILY_UNIT]);
-}
-
 /** True when `steps` steps have gone by with nothing picked, the point of no return (see `stepsToRepeat`). */
 function repeated(run: Run, steps: number, repeatAfter: number): boolean {
   return !run.picked && steps >= repeatAfter;
@@ -817,36 +763,164 @@ function dayMemo(days: DayCache): (day: number) => boolean | undefined {
   };
 }
 
+/** Whether the sub-daily period that starts at second `base` of its day passes the rule's time parts. */
+function timesPass(rule: PreparedRule, base: number): boolean {
+  const { frequency, hours, minutes, seconds } = rule;
+
+  return (
+    (!hours || hours.includes(Math.floor(base / 3600))) &&
+    (frequency === "hourly" ||
+      !minutes ||
+      minutes.includes(Math.floor((base % 3600) / 60))) &&
+    (frequency !== "secondly" || !seconds || seconds.includes(base % 60))
+  );
+}
+
+/** How many candidates one sub-daily period holds, the `size` that `bySetPosition` counts over. */
+function subDailyPeriodSize(rule: PreparedRule): number {
+  if (rule.frequency === "hourly") {
+    return (rule.minutes?.length ?? 0) * (rule.seconds?.length ?? 0);
+  }
+
+  return rule.frequency === "minutely" ? (rule.seconds?.length ?? 0) : 1;
+}
+
 /**
- * One sub-daily step at `index` on a day that does (or does not) pass: the index of the next step
- * to try, or the status that ends the walk. A skipped step jumps; any other is emitted.
+ * True when a sub-daily period can hold no pick: it has no candidate (an `HOURLY` or `MINUTELY`
+ * rule whose only `BYSECOND` is 60), or `bySetPosition` picks none. Every period holds the same number.
  */
-function subDailyStep(
+function picksNothing(rule: PreparedRule): boolean {
+  const size = subDailyPeriodSize(rule);
+
+  return (
+    size === 0 ||
+    (rule.setPositions !== undefined &&
+      setIndices(rule.setPositions, size).length === 0)
+  );
+}
+
+/** True when the rule has a time part, or a `bySetPosition`, that some sub-daily period can fail. */
+function hasTimeFilter(rule: PreparedRule): boolean {
+  const { frequency, hours, minutes, seconds } = rule;
+
+  return Boolean(
+    hours ||
+      (frequency !== "hourly" && minutes) ||
+      (frequency === "secondly" && seconds) ||
+      picksNothing(rule),
+  );
+}
+
+/**
+ * The aligned steps `k` in `[0, K)` whose period can ever hold a pick, ascending, where
+ * `K = perDay / gcd(perDay, interval)` is how many steps go by before the period within the day
+ * repeats. `undefined` when no step is ruled out by its time (so every step is a hit), `"capped"`
+ * when the budget ran out. The day is not looked at: only the time of day, which depends on
+ * `k mod K` alone.
+ */
+function subDailyHits(
+  rule: PreparedRule,
+  run: Run,
+  perDay: number,
+  origin: number,
+): number[] | "capped" | undefined {
+  if (!hasTimeFilter(rule)) {
+    return undefined;
+  }
+  if (picksNothing(rule)) {
+    return [];
+  }
+  const unit = SECONDS_PER_DAY / perDay;
+  const step = rule.interval % perDay;
+  const cycle = perDay / gcd(perDay, step);
+  const hits: number[] = [];
+  let period = mod(origin, perDay);
+
+  // At most 86,400 steps, each charged.
+  for (let k = 0; k < cycle; k++) {
+    if (run.spent >= run.budget) {
+      return "capped";
+    }
+    run.spent++;
+
+    if (timesPass(rule, period * unit)) {
+      hits.push(k);
+    }
+    period = (period + step) % perDay;
+  }
+
+  return hits;
+}
+
+/** The first hit step at or after `k`: `hits` repeat every `cycle` steps, so it may be in a later block. */
+function nextHit(hits: readonly number[], cycle: number, k: number): number {
+  const block = Math.floor(k / cycle);
+  const i = firstAtLeast(hits, k - block * cycle);
+
+  return i < hits.length
+    ? block * cycle + hits[i]
+    : (block + 1) * cycle + hits[0];
+}
+
+/** After a hit on a failing `day`: the first aligned step on the next passing day, or the status that ends the walk. */
+function stepOfNextDay(
+  run: Run,
+  days: DayCache,
+  day: number,
+  rule: PreparedRule,
+  origin: number,
+): number | ExpansionStatus {
+  const perDay =
+    SECONDS_PER_DAY /
+    SUB_DAILY_UNIT[rule.frequency as keyof typeof SUB_DAILY_UNIT];
+  const next = days.nextFrom(day + 1);
+
+  if (next === undefined) {
+    return "capped";
+  }
+
+  return next > run.lastDay()
+    ? "end"
+    : Math.ceil((next * perDay - origin) / rule.interval);
+}
+
+/**
+ * One pass of the sub-daily walk at aligned step `k`, a hit: the step to try next (`k + 1` after
+ * emitting it, or the first step of the next passing day when its day fails), or the status that
+ * ends the walk.
+ */
+function subDailyPass(
   rule: PreparedRule,
   run: Run,
   days: DayCache,
-  index: number,
-  dayPasses: boolean,
+  passesOnDay: (day: number) => boolean | undefined,
+  origin: number,
+  k: number,
 ): number | ExpansionStatus {
   const unit = SUB_DAILY_UNIT[rule.frequency as keyof typeof SUB_DAILY_UNIT];
   const perDay = SECONDS_PER_DAY / unit;
+  const index = origin + k * rule.interval;
   const day = Math.floor(index / perDay);
-  const base = (index - day * perDay) * unit;
-  const skip = subDailySkip(rule, run, days, day, base, dayPasses);
 
-  if (typeof skip === "string") {
-    return skip;
+  if (day > run.lastDay()) {
+    return "end";
   }
-  if (skip !== undefined) {
-    const origin = run.start.day * perDay + Math.floor(run.start.second / unit);
-
-    return alignedAtLeast(origin, rule.interval, skip);
+  const dayPasses = passesOnDay(day);
+  if (dayPasses === undefined) {
+    return "capped";
+  }
+  if (!dayPasses) {
+    return stepOfNextDay(run, days, day, rule, origin);
   }
 
-  return emitSubDaily(run, rule, day, base) ?? index + rule.interval;
+  return emitSubDaily(run, rule, day, (index - day * perDay) * unit) ?? k + 1;
 }
 
-/** Hourly, minutely and secondly: one period per unit, skipping to the next candidate day or hour. */
+/**
+ * Hourly, minutely and secondly: aligned step `k` is period `origin + k x interval`. The walk goes
+ * from hit to hit (see `subDailyHits`) and from passing day to passing day, so its cost follows the
+ * hits and the days passed, not the steps in between.
+ */
 function expandSubDaily(
   rule: PreparedRule,
   run: Run,
@@ -858,10 +932,19 @@ function expandSubDaily(
   const perDay = SECONDS_PER_DAY / unit;
   const origin = run.start.day * perDay + Math.floor(run.start.second / unit);
   const first = alignedAtLeast(origin, interval, fromDay * perDay);
+  const hits = subDailyHits(rule, run, perDay, origin);
+
+  if (hits === "capped") {
+    return "capped";
+  }
+  if (hits?.length === 0) {
+    return "end";
+  }
+  const cycle = perDay / gcd(perDay, interval % perDay);
   // Nothing picked in this many steps from `first` means nothing ever will (see stepsToRepeat).
   const repeatAfter = stepsToRepeat(interval, perDay * CYCLE_DAYS);
   const passesOnDay = dayMemo(days);
-  let index = first;
+  let k = Math.round((first - origin) / interval);
 
   // Each pass spends one unit, so the budget bounds the loop; `repeatAfter` ends a walk with no
   // pick after at most `repeatAfter / interval` passes, and `lastDay` ends it at the last date.
@@ -871,21 +954,19 @@ function expandSubDaily(
     }
     run.spent++;
 
-    const day = Math.floor(index / perDay);
-    if (day > run.lastDay()) {
-      return "end";
-    }
-    const dayPasses = passesOnDay(day);
-    if (dayPasses === undefined) {
-      return "capped";
-    }
-
-    const next = subDailyStep(rule, run, days, index, dayPasses);
+    const next = subDailyPass(
+      rule,
+      run,
+      days,
+      passesOnDay,
+      origin,
+      hits ? nextHit(hits, cycle, k) : k,
+    );
     if (typeof next === "string") {
       return next;
     }
-    index = next;
-    if (repeated(run, index - first, repeatAfter)) {
+    k = next;
+    if (repeated(run, origin + k * interval - first, repeatAfter)) {
       return "end";
     }
   }
@@ -1011,8 +1092,15 @@ function emitPeriod(
  * first one ends as `"end"`, because the filter and the alignment have both repeated. So a rule
  * that never matches again, such as February 30, or an interval that never lines up, such as every
  * 7th day on Mondays from a Tuesday, ends as `"end"` and not `"capped"`. `"capped"` is left for a
- * budget too small for that, and for a sub-daily interval whose proof needs more steps than that (at most
- * `perDay x 146,097 / gcd(perDay x 146,097, interval)` of them).
+ * budget too small for that.
+ *
+ * The sub-daily walk (`HOURLY`, `MINUTELY`, `SECONDLY`) does not visit every aligned step. The time
+ * of day of step `k` repeats every `K = perDay / gcd(perDay, interval)` steps (at most 86,400), so
+ * with a `BYHOUR`, `BYMINUTE`, `BYSECOND` or `BYSETPOS` the `K` steps are scanned once, one unit
+ * each, for the ones that can ever hit. The walk then goes from hit to hit, and a hit on a failing
+ * day jumps to the next passing day. Its cost is `O(K + H + D)` for the scan, the hits visited and
+ * the passing days jumped to, however large the interval or however rarely the steps hit. No hit at
+ * all in `K` steps ends as `"end"` after that one scan.
  *
  * `lastDay` (epoch day, default and ceiling `MAX_EPOCH_DAY`) ends the expansion: no pick after it
  * is visited. It may be a function, read at every period, so `visit` can bring the end forward

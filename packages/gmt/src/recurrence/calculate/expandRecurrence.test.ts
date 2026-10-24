@@ -1708,3 +1708,81 @@ describe("expandRecurrence, a count window finds every occurrence of a rule that
     },
   );
 });
+
+describe("expandRecurrence, a sub-daily rule whose steps rarely meet its BY parts finds every occurrence", () => {
+  const dateText = (date: Temporal.PlainDate, time: string): string =>
+    `${date.toString()}T${time}`;
+
+  /** The first `count` dates of `start + step x j` days (j = 0, 1, ...) that pass `passes`, by walking them one by one. */
+  function stepDates(
+    start: string,
+    step: number,
+    count: number,
+    passes: (date: Temporal.PlainDate) => boolean,
+  ): Temporal.PlainDate[] {
+    const dates: Temporal.PlainDate[] = [];
+    let date = Temporal.PlainDate.from(start);
+
+    while (dates.length < count) {
+      if (passes(date)) dates.push(date);
+      date = date.add({ days: step });
+    }
+
+    return dates;
+  }
+
+  const always = (): boolean => true;
+  const inFebruary = (date: Temporal.PlainDate): boolean => date.month === 2;
+  const leapDay = (date: Temporal.PlainDate): boolean =>
+    date.month === 2 && date.day === 29;
+
+  // - 7 minutes x 1,440 = 7 days: 03:00 comes round every 7th day;
+  // - 86,400 mod 59 = 24 and gcd(24, 59) = 1: midnight comes round every 59th day;
+  // - 25 hours = a day and an hour: hour 9 comes round every 24th step, 25 days on.
+  it.each`
+    rule                                                          | start           | step  | passes        | time          | count
+    ${"FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0"}             | ${"2024-01-01"} | ${7}  | ${always}     | ${"03:00:00"} | ${10_000}
+    ${"FREQ=SECONDLY;INTERVAL=59;BYHOUR=0;BYMINUTE=0;BYSECOND=0"} | ${"2024-01-01"} | ${59} | ${always}     | ${"00:00:00"} | ${10_000}
+    ${"FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0;BYDAY=MO"}    | ${"2024-01-01"} | ${7}  | ${always}     | ${"03:00:00"} | ${10_000}
+    ${"FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0;BYMONTH=2"}   | ${"2024-02-05"} | ${7}  | ${inFebruary} | ${"03:00:00"} | ${1000}
+    ${"FREQ=HOURLY;INTERVAL=25;BYHOUR=9;BYMONTH=2;BYMONTHDAY=29"} | ${"2024-02-29"} | ${25} | ${leapDay}    | ${"09:00:00"} | ${20}
+  `(
+    "$rule from $start gives $count rows on every matching date",
+    ({ rule: text, start, step, passes, time, count }) => {
+      const dates = stepDates(start, step, count, passes);
+      const rows = expandRecurrence(rule(text), `${start}T${time}`, "UTC", {
+        after: "2020-01-01T00:00:00Z",
+        count,
+      });
+
+      expect({
+        length: rows.length,
+        first: rows[0]?.local,
+        last: rows.at(-1)?.local,
+      }).toEqual({
+        length: count,
+        first: dateText(dates[0], time),
+        last: dateText(dates[count - 1], time),
+      });
+    },
+  );
+
+  // Nothing after DTSTART matches. Every step of the first rule is an even second and it wants
+  // second 1; the second only ever lands on minute 0; the third lands on 03:00 every seven days,
+  // always a Monday; the last two want only second 60, which the expansion drops.
+  it.each`
+    rule                                                         | start
+    ${"FREQ=SECONDLY;INTERVAL=2;BYHOUR=0;BYMINUTE=0;BYSECOND=1"} | ${"2024-01-01T00:00:00"}
+    ${"FREQ=MINUTELY;INTERVAL=60;BYMINUTE=30"}                   | ${"2024-01-01T00:00:00"}
+    ${"FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0;BYDAY=TU"}   | ${"2024-01-01T03:00:00"}
+    ${"FREQ=HOURLY;BYSECOND=60"}                                 | ${"2024-01-01T00:00:00"}
+    ${"FREQ=MINUTELY;BYSECOND=60"}                               | ${"2024-01-01T00:00:00"}
+  `("$rule from $start gives DTSTART alone", ({ rule: text, start }) => {
+    const rows = expandRecurrence(rule(text), start, "UTC", {
+      after: "2020-01-01T00:00:00Z",
+      count: 5,
+    });
+
+    expect(rows.map((row) => row.local)).toEqual([start]);
+  });
+});
