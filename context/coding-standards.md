@@ -148,6 +148,16 @@ Slicing a matched grammar by fixed offsets (`uuid.slice(0, 8)`) is allowed under
 
 This prohibition stands for every other function in the library.
 
+### Scoped exception: recurrence and cron grammars in `internal/` (CORE-84)
+
+An RFC 5545 §3.3.10 RECUR value (`FREQ=MONTHLY;BYDAY=-1FR`) and a five-field crontab schedule (`*/5 9-17 * * mon-fri`) are not ISO 8601, and no `Temporal.*.from` reads either. Both grammars are fixed and published (the RFC's ABNF; POSIX `crontab` with cronie crontab(5) extensions):
+
+1. One tokenizer per grammar: `internal/recurrenceRuleText.ts` splits on `;`, `=` and `,`, and `internal/cronText.ts` splits on blanks, `,`, `-` and `/`. Each token is matched whole against an anchored `^…$` regex or a fixed name table. The modules live in `internal/`, outside `regex/`, because they are grammars, not single patterns.
+2. Numbers are read from digit runs (the signed RRULE parts, `BYMONTHDAY`, `BYYEARDAY`, `BYWEEKNO`, `BYSETPOS` and the `BYDAY` ordinal, also take a leading `+` or `-`) and range-checked against the clause's stated bounds. A date or date-time (`UNTIL`) is rebuilt as an ISO 8601 string and handed whole to `Temporal.PlainDate.from`, `Temporal.PlainDateTime.from` or `Temporal.Instant.from`. An `UNTIL` with second 60 is rejected, as everywhere outside `timescale/` and `gnss/`.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+This prohibition stands for every other function in the library.
+
 ### Calendar-annotated strings are RFC 9557 (E1, E7)
 
 A calendar string is the RFC 9557 form Temporal writes: the ISO 8601 date (or zoned datetime),

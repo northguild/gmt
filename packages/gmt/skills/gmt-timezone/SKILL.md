@@ -7,8 +7,10 @@ description: >
   boundaries (startOfZoned/endOfZoned/startOfUnix/endOfUnix), hours in a local
   day, floorToZone/bucketRange, calendar-annotated strings, operating hours
   (OperatingSchedule, recurringWindows, operatingIntervals, isOpenAt,
-  nextOpenAt, nextCloseAt, operatingTimeBetween, addOperatingTime), and daylight
-  time (isInDaylightSaving, hasDaylightSaving). Transport legs, intermodal free
+  nextOpenAt, nextCloseAt, operatingTimeBetween, addOperatingTime), recurrence
+  rules and cron lines in a zone (parseRecurrenceRule, expandRecurrence,
+  parseCronExpression, cronRuns), and daylight time (isInDaylightSaving,
+  hasDaylightSaving). Transport legs, intermodal free
   time and EDI timestamps are in gmt-transport and gmt-intermodal.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/*.mdx'
@@ -34,6 +36,11 @@ sources:
   - 'northguild/gmt:packages/gmt/src/calendar/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/calendar/hours/index.ts'
   - 'northguild/gmt:packages/gmt/src/types/operating-schedule.ts'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/recurrence-and-cron.mdx'
+  - 'northguild/gmt:packages/gmt/src/recurrence/parse/index.ts'
+  - 'northguild/gmt:packages/gmt/src/recurrence/calculate/index.ts'
+  - 'northguild/gmt:packages/gmt/src/types/recurrence.ts'
+  - 'northguild/gmt:packages/gmt/src/types/cron.ts'
 metadata:
   type: core
   library: '@northguild/gmt'
@@ -61,6 +68,9 @@ converting between time zones, or doing arithmetic that must respect DST.
   instant, when it next opens or closes, how many working hours passed between
   two instants, or when an SLA measured in open hours falls due — or is
   expanding a recurring local window such as a night curfew.
+- The user has an iCalendar `RRULE` or a cron line (`30 2 * * *`) and needs the
+  instants it produces in an IANA zone, including the ones a daylight-saving
+  change touches.
 
 ## Core rules
 
@@ -237,7 +247,49 @@ converting between time zones, or doing arithmetic that must respect DST.
     read the runtime's time zone data, so an answer can change when that data
     does. The JSDoc of `isInDaylightSaving` lists what the rule reads as
     standard time.
-18. **Read the docs site.** This skill is a routing pointer. The map of the
+18. **A recurrence rule or cron line in a zone is local, so a transition
+    touches it, and every row says how.** `parseRecurrenceRule(value)` reads
+    an RFC 5545 RECUR value (the text after `RRULE:`) and
+    `parseCronExpression(value)` reads five crontab fields or a nickname; both
+    return `null` for anything else (no seconds field, no `@reboot`, no `L`,
+    `W`, `#` or `?`, no `EXRULE`). `expandRecurrence(rule, start, timeZone,
+    window, options?)` and `cronRuns(expression, timeZone, window, policy)`
+    return rows in `instant` order, or `[]` for bad input. The window is
+    `{ start, end }` (half-open) or `{ after, count }` (1 to 10,000). Every
+    row carries `classification` (`"unique"`, `"nonexistent"`, `"ambiguous"`).
+
+    ```typescript
+    const rule = parseRecurrenceRule("FREQ=DAILY;COUNT=3"); // { frequency: "daily", interval: 1, firstDayOfWeek: 1, count: 3 }
+    expandRecurrence(rule, "2024-03-09T02:30:00", "America/New_York", { after: "2024-03-08T00:00:00Z", count: 3 })
+      .map((row) => [row.local, row.instant, row.classification]);
+    // [["2024-03-09T02:30:00", "2024-03-09T07:30:00Z", "unique"],
+    //  ["2024-03-10T02:30:00", "2024-03-10T07:30:00Z", "nonexistent"], // 02:30 does not exist: RFC 5545 section 3.3.5
+    //  ["2024-03-11T02:30:00", "2024-03-11T06:30:00Z", "unique"]]
+    ```
+
+    - `expandRecurrence` takes `disambiguation` (`"compatible"` default,
+      `"earlier"`, `"later"`, `"reject"`) and `rdate`/`exdate` lists. `"reject"`
+      returns `[]` when a start, a wall-time RDATE or EXDATE, or a returned row
+      is non-unique. `DTSTART` is always the first occurrence. `UNTIL` must be
+      UTC (`...Z`), with a capital `T` and `Z`.
+    - `cronRuns` has no default `policy`: pass `"crontabMatch"` (a time that
+      does not exist never runs; a repeated time runs twice) or
+      `"daemonCatchUp"` (a fixed-time job in a gap shorter than 3 hours runs at
+      the change; one in an overlap up to 3 hours runs once). A missing or
+      other policy returns `[]`.
+
+    ```typescript
+    cronRuns(parseCronExpression("30 2 * * *"), "America/New_York",
+      { start: "2024-03-09T00:00:00Z", end: "2024-03-12T00:00:00Z" }, "daemonCatchUp")
+      .map((run) => run.instant); // ["2024-03-09T07:30:00Z", "2024-03-10T07:00:00Z", "2024-03-11T06:30:00Z"]
+    ```
+
+    - When day of month and day of week are both restricted (neither is `*`
+      or `*/n`), a day matching either runs; otherwise both must match.
+      `dayOfWeek` is stored as ISO 1 to 7 (cron `0` and `7` are 7).
+    - A rule that never matches (`FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30`) or a
+      window over 10,000 rows returns `[]`.
+19. **Read the docs site.** This skill is a routing pointer. The map of the
     docs is `https://northguild.dev/gmt/llms.txt`, and each page
     has a `.md` twin that holds its text. The JSDoc ships in the installed
     package: `node_modules/@northguild/gmt/dist/**/*.d.ts`.
@@ -268,8 +320,11 @@ converting between time zones, or doing arithmetic that must respect DST.
   `isValidZoneBucketUnit`
 - **Operating hours**: `recurringWindows`, `operatingIntervals`, `isOpenAt`,
   `nextOpenAt`, `nextCloseAt`, `operatingTimeBetween`, `addOperatingTime`
+- **Recurrence and cron**: `parseRecurrenceRule`, `expandRecurrence`,
+  `parseCronExpression`, `cronRuns`
 
 ## References
 
 - [Zoned operations guide](https://northguild.dev/gmt/guides/zoned-date-operations/zoned-operations/)
+- [Recurrence and cron guide](https://northguild.dev/gmt/guides/zoned-date-operations/recurrence-and-cron/)
 - [DST Disambiguation guide](https://northguild.dev/gmt/guides/concepts/dst-disambiguation/)

@@ -40,10 +40,11 @@ Not in scope: iCalendar files, `VTIMEZONE`, alarms, `EXRULE` (deprecated by RFC 
 
 ## What gmt provides (do not re-implement)
 
-- CORE-54 — `nthWeekdayOfMonth`, for `BYDAY` with an ordinal
-- `classifyLocal` and `resolveLocal` (`instant/convert/`) — wall time to instant with a stated disambiguation
+- CORE-54 — `nthWeekdayEpochDay` (`internal/nthWeekday`), the ordinal-weekday formula. This story split it into `nthWeekdayInRange` and `nthWeekdayWithin`, and `nthWeekdayEpochDay` now delegates; the engine calls `nthWeekdayWithin` for `BYDAY` with an ordinal
+- `classifyWall` (`internal/earlierOccurrence`) — wall time to its readings under TC39 disambiguation; `internal/localResolution` falls back to it
+- `epochDayOf`, `isoFieldsOf`, `isoDateString` and `isoWeekdayOf` (`internal/epochDay`) — epoch-day and weekday arithmetic for `BYWEEKNO`, `BYDAY` and the cron day rule
+- `zoneFrame` (`internal/zoneFrame`) and `nextTransitionAfter` (`internal/zonedTransitionSearch`) — the zone and its offset changes
 - `Disambiguation` (`types/disambiguation.ts`)
-- `getIsoWeekDate` and the `plain/` weekday helpers — `BYWEEKNO` and weekday arithmetic
 
 ## Verification
 
@@ -56,3 +57,39 @@ Not in scope: iCalendar files, `VTIMEZONE`, alarms, `EXRULE` (deprecated by RFC 
 - Sentinel rows: a seconds field, `@reboot`, `L`, `W`, `#`, `?`, `UNTIL` with `COUNT`, `EXRULE`.
 - Full matrix: CI's 10 zones × Node 22, 24 and 26.
 - `pnpm run validate` stays green.
+
+## Decisions
+
+### Owner decisions
+
+- **`"reject"` returns `[]` for the whole call**, as `recurringWindows` and `operatingIntervals` do.
+- **Cron has two policies and no default:** `"crontabMatch"` and `"daemonCatchUp"`.
+- **`UNTIL`:** a DATE or floating `UNTIL` gives `[]` from `expandRecurrence`, since a zoned `DTSTART` needs a UTC one (RFC 5545 section 3.3.10). Second 60 returns `null` (only `timescale/` and `gnss/` read 60). Only a capital `T` and `Z` are read.
+- **`COUNT` counts before duplicates collapse.** Equal instants collapse to the first row in local order.
+- **`DTSTART` is always the first occurrence**, even when the rule does not match it. The guide notes that rrule.js and dateutil drop an unmatched one.
+- **Caps:** 10,000 rows and 2,000,000 steps; exhaustion returns `[]`.
+- **Ordinal `BYDAY` in `YEARLY` with `BYMONTH` is month-scoped** (RFC 5545 Note 2).
+- **Cron grammar:** the day rule follows crontab(5) and cronie (both day fields restricted: either matches; month always ANDed). `*` is allowed only as a whole field (`*`, `*/n`). Nicknames are lower case only. A value or step takes any digit count. `dayOfWeek` is stored as `IsoWeekday` 1 to 7 (cron `0` and `7` are 7).
+- **`daemonCatchUp` follows cronie `cron.c` at exactly 3 h:** a 3 h gap is not caught up, and a 3 h overlap is still not re-run. It applies to fixed-time jobs only (no `*` in the minute or hour field, not `@hourly`). It leaves out catch-up of wildcard jobs after jumps of 5 minutes or less, and `CRON_TZ`.
+- **POSIX's wording is not followed** where a restricted month would also OR the day fields; no shipped cron does.
+
+### Decisions made during the build
+
+- **`"reject"` (F3):** the call returns `[]` when `start`, or a wall-time `RDATE` or `EXDATE`, is non-unique, or when a returned row was read from a non-unique wall time. Generated rows outside the window do not count, and instant entries never refuse.
+- **End bound:** the interval form stops its walk at `floorDay(end) + 1` days, and the walk starts a day before the window. A Temporal offset is under 24 h, so a wall time is less than a day from the instant it names, whichever offset a gap or a fold resolves it with.
+- **`COUNT` far from DTSTART:** the occurrences before the window are counted, not walked (`countMomentsBefore` in `internal/recurrenceExpansion.ts`). A daily or sub-daily rule reads one 400-year cycle of days and counts its steps along it; a yearly to weekly rule sums one block of the periods it visits and multiplies, since its periods repeat every `cycle / gcd(cycle, INTERVAL)` steps for `cycle` periods in 400 years. The count costs at most about 400,000 units, wherever the window is.
+- **Range:** rows past Temporal's range are dropped, not a reason for `[]`.
+- **Closed-form resolution:** wall-time placement near a transition uses a closed form with a self-proving isolation check, and falls back to `classifyWall` when isolation cannot be shown (`internal/localResolution.ts`). It was checked differentially against `classifyWall`: 12,652,706 moments, 0 mismatches.
+- **Cursor jumps:** the resolver's cursor walks a zone's offset changes forward, but a moment more than eight days past a change it has not yet read starts the cursor again six days before the moment. Starting again costs what reading one change does, so a sparse rule whose rows are thousands of years apart costs a few lookups per row instead of two per year between them (`FREQ=HOURLY;INTERVAL=86401;BYMONTH=9,11;BYMONTHDAY=16;BYHOUR=0` in New York went from 65 s to 7 ms).
+- **Bundle size:** the root budget in `scripts/bundle-size.budgets.json` was raised from 521,169 to 556,200 (+35.0 KB, +6.7%).
+- **Playground:** the first `@example` of `expandRecurrence`, `cronRuns` and `parseCronExpression` uses literals, because the playground template cannot model nested calls.
+- **`RRULE` grammar:** all 14 parts in any order, each once, no whitespace and no `RRULE:` prefix; `EXRULE`, `RSCALE`, `SKIP` and `X-` names return `null`. Lists are sets, deduplicated and ascending. `COUNT` of 0 is invalid.
+- **Implicit parts** are filled from `DTSTART` as RFC 8984 section 4.3.3.1 extra rule 3 lists them. `WKST` matters only for `WEEKLY` with `INTERVAL` above 1 and for `BYWEEKNO`; the week number was checked against `Temporal.PlainDate#weekOfYear`.
+- **Seconds:** second 60 is dropped from generated times, since Temporal has no leap second.
+- **`RDATE` and `EXDATE`:** an instant entry is tried first, then a wall time resolved by the call's policy; a DATE or PERIOD form returns `[]`. `RDATE` is not counted by `COUNT` or bounded by `UNTIL`. `EXDATE` wins and removes the row at the instant it names.
+- **Cron runs:** a day pattern repeats every 146,097 days (400 x 365 + 97, divisible by 7), so a scan of that length without a match proves the expression never matches. Equal instants are not collapsed (each run is an execution). The grammar tokenizers are a scoped exception in `context/coding-standards.md`.
+- **RFC examples:** every example in RFC 5545 section 3.8.5.3 is a test. The HOURLY example uses `UNTIL=19970902T210000Z` (Erratum 3883); Errata 5872, 5920 and 6212 were rejected, so those examples stand.
+
+### Dox (Cron in a Zone, recurrence guide)
+
+The tool's conventions are recorded in [built.md](../../dox/built.md). No Recurrence Expander page ships with this story.

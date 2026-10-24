@@ -72,7 +72,8 @@ export type WidgetKind =
   | "durationbench"
   | "iddecode"
   | "colbridge"
-  | "moroccoclock";
+  | "moroccoclock"
+  | "cronzone";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -131,6 +132,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   iddecode: "/tools/id-timestamp-decoder/",
   colbridge: "/tools/column-timestamp-bridge/",
   moroccoclock: withBase("/check/morocco-2026-clock-change/"),
+  cronzone: "/tools/cron-in-a-zone/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */
