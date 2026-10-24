@@ -337,6 +337,48 @@ describe("createLocalResolver, order and reuse", () => {
     }
   });
 
+  it("jumps tens of thousands of years without walking each transition between", () => {
+    // New York changes its offset twice a year, so walking from 2025 to +162933 would pass about
+    // 320,000 changes. The expected readings come from Temporal, not from the cursor.
+    const zone = "America/New_York";
+    const resolve = resolver(zone);
+    const march = Temporal.ZonedDateTime.from(
+      "+100000-03-01T00:00:00[America/New_York]",
+    ).getTimeZoneTransition("next")!;
+    const gap = march.toPlainDateTime().with({ hour: 2, minute: 30 });
+    const read = (
+      local: Temporal.PlainDateTime,
+      disambiguation: "earlier" | "later",
+    ) => local.toZonedDateTime(zone, { disambiguation }).epochNanoseconds;
+
+    const unique = (text: string) => {
+      const at = read(Temporal.PlainDateTime.from(text), "earlier");
+
+      return { kind: "unique", earlier: at, later: at, transition: null };
+    };
+
+    expect(
+      [
+        "2025-01-18T19:30:59",
+        "+045127-11-16T00:01:59",
+        "+095514-09-16T00:01:59",
+        gap.toString(),
+        "+162933-09-16T00:01:59",
+      ].map((local) => resolve(moment(local))),
+    ).toEqual([
+      unique("2025-01-18T19:30:59"),
+      unique("+045127-11-16T00:01:59"),
+      unique("+095514-09-16T00:01:59"),
+      {
+        kind: "nonexistent",
+        earlier: read(gap, "earlier"),
+        later: read(gap, "later"),
+        transition: march.epochNanoseconds,
+      },
+      unique("+162933-09-16T00:01:59"),
+    ]);
+  });
+
   it("two resolvers do not share a cursor", () => {
     const a = resolver("America/New_York");
     const b = resolver("Europe/Berlin");

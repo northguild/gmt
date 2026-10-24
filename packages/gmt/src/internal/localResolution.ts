@@ -109,6 +109,8 @@ function plainDateTimeOf(moment: LocalMoment): Temporal.PlainDateTime {
  *
  * Meant for moments in ascending order, as the expansion visits them: a cursor walks the zone's
  * offset changes forward, so the cost is one offset lookup per change rather than per moment.
+ * A moment more than eight days past the next change starts the cursor again near it, so a moment
+ * costs a few lookups however many changes lie between it and the one before.
  * A moment that is not within two days of a change is placed with plain arithmetic; one that is
  * goes to `classifyWall` (TC39 disambiguation). A moment before the cursor starts it again, so
  * order costs speed, never correctness.
@@ -263,6 +265,13 @@ function createCursor(timeZone: string): {
       }
 
       while (next !== null && local > next + NEAR) {
+        // Passing a change not yet read costs the two lookups that starting again does, so a moment
+        // well past it starts the cursor near the moment instead of walking every change between.
+        if (local > next + SEED_LEAD + NEAR && ahead?.of !== next) {
+          seed(local - SEED_LEAD);
+          continue;
+        }
+
         const passed = lookAhead(next);
 
         previous = next;
