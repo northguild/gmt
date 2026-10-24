@@ -1,5 +1,5 @@
 {
-  "checked": "2026-10-21T21:57:29.571836156Z",
+  "checked": "2026-10-24T05:49:34.209962175Z",
   "filings": [
     {
       "repo": "js-temporal/temporal-polyfill",
@@ -300,15 +300,16 @@
       "closes": [],
       "dependsOn": [],
       "gmtGuard": null,
-      "gmtNote": "GMT follows the spec text here, as Chromium and the polyfill do, so there is no workaround to retire. Its zoned readers (isValidZonedDateTime, toOffsetInstant, classifyStoredZoned and the rest) refuse a string whose local date is -271821-04-19. If the spec drops the check, they drop it too.",
-      "state": "open",
+      "gmtNote": "GMT follows the spec text here, as Chromium, Node and the polyfill do, so there is no workaround to retire. Its zoned readers (isValidZonedDateTime, toOffsetInstant, classifyStoredZoned and the rest) refuse a string whose local date is -271821-04-19. If the spec drops the check, they drop it too.",
+      "outcome": "Closed as answered: the check is intended. The Temporal champions had already said so on #3014, and it can go once tc39/ecma262#3464 lands.",
+      "state": "closed",
       "draft": false,
       "reviewDecision": null,
-      "comments": 0,
+      "comments": 1,
       "maintainerComments": 0,
       "createdAt": "2026-10-21",
-      "updatedAt": "2026-10-21",
-      "closedAt": null,
+      "updatedAt": "2026-10-24",
+      "closedAt": "2026-10-24",
       "mergedAt": null
     },
     {

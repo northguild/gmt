@@ -8,7 +8,8 @@ tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) 
 > maintainer's own PR #361. The newest are tc39 #3331 (J) and #3332 (K), both 2026-10-21. **All six js-temporal PRs
 > (#367–#372) are closed unmerged and none was rejected** — each was routed to `tc39/proposal-temporal` first, so the polyfill's rebase stays
 > manageable. #373 (release) is open and answered: one release once the rebase has caught up. #361
-> merged 2026-09-21. The six tc39 issues (#3327–#3332) are open with no maintainer reply.
+> merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply; #3331 (J) is
+> closed as answered (the check is intended, see § J).
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
 > 18 workarounds, 17 still needed and 1 guard (D10). The newest are § I (D12), fixed on `main` with nothing
 > to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
@@ -182,9 +183,11 @@ agent on the owner's instruction. There is also a fourteenth entry on the `/upst
 state is what retires GMT's `D11`. "Filed" is `createdAt`, UTC. "js" is js-temporal/temporal-polyfill,
 "tc39" is tc39/proposal-temporal.
 
-**Status as of 2026-10-21** (`gh pr view` / `gh issue view`, comments included). Nothing has moved
-since 2026-09-21: all six js PRs closed, #373 open, #361 merged, and the four older tc39 issues open
-with our own cross-link as the only comment. tc39 #3331 and #3332, filed 2026-10-21, have no comments.
+**Status as of 2026-10-24** (`gh pr view` / `gh issue view`, comments included). Nothing has moved
+since 2026-09-21 except tc39 #3331: all six js PRs closed, #373 open, #361 merged, and the four older
+tc39 issues open with our own cross-link as the only comment. tc39 #3332, filed 2026-10-21, has no
+comments. tc39 #3331 closed as answered on 2026-10-24, with our comment linking the champions' answer
+on #3014.
 
 - **All six js PRs (#367–#372) are closed, unmerged — and none was rejected.** ptomato closed #367,
   #368 and #369 with "I'd prefer to keep the commits ported in order — otherwise the rebases become
@@ -194,8 +197,10 @@ with our own cross-link as the only comment. tc39 #3331 and #3332, filed 2026-10
   caught up to the current state of the spec."
 - **#361 merged on 2026-09-21**, which lands `50d66d2` (D11) on the polyfill's `main` along with D3,
   D5, D7 and the ICU 78 calendar fixes. Nothing is released yet, so no GMT workaround retires.
-- **The six tc39 issues (#3327–#3332) are open with no maintainer reply** (checked 2026-10-21); the
+- **Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply** (checked 2026-10-24); the
   only comments are our own cross-links.
+- **tc39 #3331 is closed as answered** (2026-10-24): the champions had already said on #3014 that
+  the check is intended until tc39/ecma262#3464 lands (§ J).
 
 | Repository | #    | Kind  | Title                                                                                                         | Carries                                                                       | Pairs with                                                         | Depends on | Closes                                                                                  | Filed      |
 | ---------- | ---- | ----- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------- | --------------------------------------------------------------------------------------- | ---------- |
@@ -258,9 +263,9 @@ only filings worth making now are in tc39.
    coptic `ERA0` change fixes the round trip before the coptic epoch, and #361 has now merged.
 7. **A release (#373) is the one remaining ask of ours that is open**, and the maintainers have
    already answered it: after the rebase. Nothing to add — re-asking would not help.
-8. **J: filed as tc39 #3331 (2026-10-21).** A question about the spec text, so it went to
-   tc39/proposal-temporal only. The polyfill and Chromium agree with the spec, and there is no patch
-   to offer. See § J.
+8. **J: tc39 #3331, closed as answered.** A question about the spec text, so it went to
+   tc39/proposal-temporal only. The check is intended until tc39/ecma262#3464 lands; the polyfill,
+   Chromium and Node agree with the spec, and there is no patch to offer. See § J.
 9. **I (D12).** Nothing to file: fixed on js-temporal `main` by `23d1275`, and the release is #373.
 10. **K (D13): filed as tc39 #3332 (2026-10-21).** The stall that `a79c6a1` leaves for
     `Africa/El_Aaiun` in 1976. The issue proposes a 16-day window for that zone. `a79c6a1` alone does
@@ -1764,11 +1769,19 @@ ZonedDateTime.from rejects ZonedDateTime.prototype.toString's output when the lo
 
 ### Status
 
-**Filed as tc39/proposal-temporal#3331 (2026-10-21).** It is a spec question, not a polyfill defect:
-`@js-temporal/polyfill` 0.5.1 and Chromium 153.0.8010.12's native Temporal both do what the spec says. GMT has no workaround
+**Filed as tc39/proposal-temporal#3331 (2026-10-21); closed as answered (2026-10-24).** The check
+is intended: the champions answered the same question on tc39/proposal-temporal#3014, and the
+closing comment links their answers. It is a spec decision, not a polyfill defect:
+`@js-temporal/polyfill` 0.5.1, Chromium 153.0.8010.12 and Node 26.12.1 native Temporal all do what the spec says. GMT has no workaround
 and wants none. A workaround computes the spec's answer, and here the spec's answer is the
 `RangeError`. The ECMA-262 Temporal PR (tc39/ecma262#3966) has the same step, as
 `ValidateISODaysRange`.
+
+**What would change it:** tc39/ecma262#3464, which widens the time value range that ECMA-262's
+Date operations accept. Once it lands, `CheckISODaysRange` can be replaced with
+`ISODateTimeWithinLimits`, the check SpiderMonkey already runs (§ P). No one needs to watch for
+it: when an engine stops throwing, the native-suite canary fails the "zoned reads refuse" rows on
+that leg and opens an issue.
 
 ### What goes wrong
 
@@ -1826,6 +1839,10 @@ branch already allows. If it is meant, the round-trip gap is by design and worth
   the rest read `-271821-04-19T23:59:00-00:01[Europe/London]` as −271821-04-20T00:00:15Z.
 - Stated in [coding-standards § Calendar & zone semantics, rule 9](../coding-standards.md#9-an-instant-string-is-read-as-the-zoned-string-it-may-be)
   and pinned in `packages/gmt/src/test/minuteRoundedOffsets.test.ts`.
+- The champions' answer is that the throw is intended until ecma262 `MakeDay` is fixed
+  (tc39/ecma262#1087): `MakeDay` differs between engines, and `CheckISODaysRange` keeps
+  `from(zdt.toString())` from returning different results in each (tc39/proposal-temporal#3014,
+  comment of 2026-01-23). SpiderMonkey is the engine that does not follow it (§ P).
 - If tc39 changes the step, GMT's zoned reads follow: remove the `checkISODaysRange` call in
   `interpretISODateTimeOffset`, and flip the two "zoned reads refuse" rows in that test file.
 
