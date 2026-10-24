@@ -257,15 +257,9 @@ describe("intervalOverlappingDaysZoned over thousands of years with no clock cha
     start                                      | end
     ${"2000-01-01T00:00:00+09:00[Asia/Tokyo]"} | ${"6000-01-01T00:00:00+09:00[Asia/Tokyo]"}
     ${"2000-01-01T00:00:00+09:00[+09:00]"}     | ${"6000-01-01T00:00:00+09:00[+09:00]"}
-  `(
-    "counts 1460970 days from $start to $end",
-    ({ start, end }) => {
-      expect(intervalOverlappingDaysZoned(start, end, start, end)).toBe(
-        1460970,
-      );
-    },
-    10_000,
-  );
+  `("counts 1460970 days from $start to $end", ({ start, end }) => {
+    expect(intervalOverlappingDaysZoned(start, end, start, end)).toBe(1460970);
+  });
 });
 
 describe("intervalOverlappingDaysZoned over Pacific/Apia's deleted day", () => {

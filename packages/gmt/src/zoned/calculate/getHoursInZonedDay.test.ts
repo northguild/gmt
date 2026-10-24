@@ -256,7 +256,6 @@ describe("getHoursInZonedDay across the 1844 date-line crossings (zoned.E)", () 
     ({ value, expected }) => {
       expect(getHoursInZonedDay(value)).toBe(expected);
     },
-    10_000,
   );
 });
 

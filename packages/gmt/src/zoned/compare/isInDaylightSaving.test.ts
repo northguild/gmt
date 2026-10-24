@@ -303,7 +303,6 @@ describe("isInDaylightSaving", () => {
     ({ value, expected }) => {
       expect(isInDaylightSaving(value)).toBe(expected);
     },
-    10_000,
   );
 
   // Three offsets inside 14 days, where the polyfill's own search never returns.
@@ -326,7 +325,6 @@ describe("isInDaylightSaving", () => {
     ({ value, expected }) => {
       expect(isInDaylightSaving(value)).toBe(expected);
     },
-    10_000,
   );
 
   it.each`
