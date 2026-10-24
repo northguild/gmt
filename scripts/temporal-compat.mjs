@@ -212,7 +212,7 @@ const WORKAROUNDS = [
     defects: ["D16"],
     title: "D16 — formatRange drops O and long zone-name widths (ICU-20548)",
     trigger:
-      "an ICU release that fixes ICU-20548 is bundled by GMT's engines.node floor (>=22.16.0) and every D16 repro passes; browsers are confirmed by the native suite",
+      "an ICU release that fixes ICU-20548 is bundled by GMT's engines.node floor (>=22.16.0) and every D16 repro passes, so this check reports D16 removable; then the D16 repros are run by hand in the Chromium and Firefox the native suite uses and in Safari, because the suite's D16 rows accept either answer and cannot report a browser",
     steps: [
       "Delete the zoneNames branch of rangeWithRepairedParts and its gate in zoned/format/formatZonedRange.ts, isRangeZoneNameCompatNeeded in capabilities.ts and its export in index.ts, and the D16 repros.",
       "Keep every formatZonedRange row: their values are the field formats and hold either way.",
@@ -226,7 +226,7 @@ const WORKAROUNDS = [
     title:
       "D17 — formatRange writes AM/PM for a flexible dayPeriod next to a timeZoneName (SpiderMonkey)",
     trigger:
-      "the native suite shows Firefox passing every D17 repro (the range's dayPeriod parts equal the two single formats')",
+      "the weekly temporal-oracle run files a native-suite/stale-tag finding for the firefox-range-day-period host group (scripts/lib/native-suite-tags.mjs): its test expects the D17 repro to return same, which only SpiderMonkey fails, so the group goes stale on the Firefox leg once Bugzilla 2085525 ships; this check cannot report D17, it runs on Node where D17 is out of scope",
     steps: [
       "Delete the dayPeriods branch of rangeWithRepairedParts and its gate in zoned/format/formatZonedRange.ts, isRangeDayPeriodCompatNeeded in capabilities.ts and its export in index.ts, and the D17 repros.",
       "Keep every formatZonedRange row and the D17 rows of internal/repairRangeParts.test.ts: the values are the requested forms and hold either way. Delete repairRangeParts only with the last of D16 and D17.",

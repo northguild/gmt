@@ -470,6 +470,15 @@ describe("D17 range day period probe", () => {
     );
   });
 
+  // Only SpiderMonkey fails this one. The native suite's Firefox leg tags it to the
+  // `firefox-range-day-period` host group; once Firefox fixes Bugzilla 2085525 the group goes
+  // stale and the weekly run files it, which is the signal to take the D17 repair out.
+  it("returns same for range.dayPeriod on every host", () => {
+    expect(runRepro(findRepro("D17", "iso8601", "range.dayPeriod")!)).toBe(
+      "same",
+    );
+  });
+
   it("reads the recorded Firefox 155 output as the defect", () => {
     const repro = findRepro("D17", "iso8601", "range.dayPeriod")!;
     expect(

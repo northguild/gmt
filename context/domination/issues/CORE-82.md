@@ -39,7 +39,7 @@ None. The story adds no public function. The existing upstream page names the ru
 
 - CORE-80 — the single internal module every `Temporal` import goes through
 - CORE-81 — the verdict files, the reporter (`scripts/canary-report.mjs`, `scripts/lib/canary-issues.mjs`, `scripts/lib/canary-verdict.mjs`) and the `report` job in `temporal-oracle.yml`
-- `scripts/lib/native-suite-tags.mjs` — exports `KNOWN_NATIVE_FAILURES` (24 rows: 10 for record L, icu4x#8620; 3 for record M, boa-dev/temporal#529; 11 for record P, Bugzilla 1998020, Firefox only) and `KNOWN_HOST_FAILURES` (the `is-IS` group, and the `browser-zone-city-names`, `browser-canada-2026-tz-data` and `browser-morocco-2026-tz-data` groups for Chromium and Firefox)
+- `scripts/lib/native-suite-tags.mjs` — exports `KNOWN_NATIVE_FAILURES` (24 rows: 10 for record L, icu4x#8620; 3 for record M, boa-dev/temporal#529; 11 for record P, Bugzilla 1998020, Firefox only) and `KNOWN_HOST_FAILURES` (the `is-IS` group; the `browser-zone-city-names`, `browser-canada-2026-tz-data` and `browser-morocco-2026-tz-data` groups for Chromium and Firefox; and `firefox-range-day-period`, the strict `D17` probe row whose going stale is the D17 removal trigger)
 - `scripts/native-suite.mjs <leg>` — a two-pass control/native runner with the `shimProblems` preflight
 - `packages/gmt/src/test/nativeTemporal.ts` — the test-clock shim: the host's `Temporal` with `Now` derived from `Date.now()`
 - `artifacts/native-suite-<leg>.json` — the verdict, source `native-suite-<leg>`, in the canary framework (CORE-81's reporter)

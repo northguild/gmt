@@ -26,6 +26,7 @@ const P_ANCHOR =
 const ICU4X_8620 = "https://github.com/unicode-org/icu4x/issues/8620";
 const BOA_529 = "https://github.com/boa-dev/temporal/issues/529";
 const BUGZILLA_1998020 = "https://bugzilla.mozilla.org/show_bug.cgi?id=1998020";
+const BUGZILLA_2085525 = "https://bugzilla.mozilla.org/show_bug.cgi?id=2085525";
 
 /**
  * One test that fails natively and passes on the polyfill, for a known defect. `file` is
@@ -287,6 +288,23 @@ export const KNOWN_HOST_FAILURES = [
     reason:
       "Chromium's and Firefox's time zone data predates tzdb 2026c, so Morocco and Western Sahara still read +01:00 outside the old Ramadan weeks.",
     file: /\/oh-morocco\.test\.ts$/,
+  },
+  {
+    // Evidence, Firefox 155.0 under Playwright 1.63.0: `new Intl.DateTimeFormat("en", { hour: "numeric",
+    // dayPeriod: "short", timeZone: "+01:00", timeZoneName: "short" }).formatRangeToParts(32_400_000,
+    // 39_600_000)` has the dayPeriod parts ["AM", "PM"], where `formatToParts` of each instant gives
+    // "in the morning" and "noon". Node 26.12.1, Chromium 153.0.8010.12 and WebKit 26.6 give the
+    // same parts in the range and the singles. Filed as Bugzilla 2085525; temporalCompat repairs it
+    // as D17 (engine record Q). The repro is plain `Intl`, so the polyfill control fails the test
+    // too, and the probe test it fails is the strict one: the lenient D17 rows and every
+    // `formatZonedRange` row pass either way, because the repair writes the right text. The group
+    // goes stale once a Playwright Firefox prints the flexible day period in a range: that stale-tag
+    // finding is the D17 removal trigger in `scripts/temporal-compat.mjs`.
+    id: "firefox-range-day-period",
+    legs: ["firefox"],
+    reason: `Firefox's formatRange prints AM and PM where a flexible day period is asked for next to a zone name (${BUGZILLA_2085525}), so the D17 probe names both sides instead of returning same.`,
+    file: /\/temporalCompat\/capabilities\.test\.ts$/,
+    test: /^D17 range day period probe returns same for range\.dayPeriod on every host$/,
   },
 ];
 
