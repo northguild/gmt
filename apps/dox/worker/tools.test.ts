@@ -9,7 +9,7 @@
  *    a bug that only shows up on a reader's second question.
  */
 import { convertToModelMessages, type UIMessage } from "ai";
-import { DOX_TOOL_NAMES } from "../src/lib/dox-tools";
+import { DOX_TOOL_NAMES, showCronInAZoneInput } from "../src/lib/dox-tools";
 import { buildWorkerTools } from "./tools";
 
 /* Every defined tool, not only the offered ones: a pending tool's `execute` is
@@ -166,6 +166,61 @@ describe("worker tool execute", () => {
     const ok = schema.safeParse({ values: padded });
     expect(ok.success).toBe(true);
     expect(ok.data).toEqual({ values: padded });
+  });
+
+  describe("showCronInAZone refusals", () => {
+    const input = { line: "30 1 * * *", zone: "Europe/London", year: 2024 };
+
+    it("accepts a line the grammar would refuse, because that is the widget's NO SIGNAL", async () => {
+      expect(
+        (await run("showCronInAZone", { ...input, line: "@reboot" })).ok,
+      ).toBe(true);
+      expect((await run("showCronInAZone", input)).ok).toBe(true);
+    });
+
+    it("accepts a call with no zone, and looks nothing up", async () => {
+      const r = await run("showCronInAZone", {
+        line: input.line,
+        year: input.year,
+      });
+      expect(r).toMatchObject({ ok: true, widget: "cron-in-a-zone" });
+    });
+
+    it("refuses a year outside 1900 to 2100, in the schema and in execute", async () => {
+      for (const year of [1899, 2101]) {
+        const bad = { ...input, year };
+        expect(showCronInAZoneInput.safeParse(bad).success).toBe(false);
+        expect(await run("showCronInAZone", bad)).toMatchObject({
+          ok: false,
+          widget: "cron-in-a-zone",
+        });
+      }
+      expect(showCronInAZoneInput.safeParse(input).success).toBe(true);
+      expect(
+        showCronInAZoneInput.safeParse({ line: input.line, year: 2024 })
+          .success,
+      ).toBe(true);
+    });
+
+    it("refuses a zone this runtime does not know", async () => {
+      const r = await run("showCronInAZone", {
+        ...input,
+        zone: "Mars/Olympus",
+      });
+      expect(r).toMatchObject({ ok: false, widget: "cron-in-a-zone" });
+      expect(r.note).toContain("Mars/Olympus");
+    });
+
+    it("refuses a contradictory input: no year, a bad change, a long after", async () => {
+      for (const bad of [
+        { line: input.line, zone: input.zone },
+        { ...input, change: "21" },
+        { ...input, after: "x".repeat(65) },
+      ]) {
+        const r = await run("showCronInAZone", bad);
+        expect(r).toMatchObject({ ok: false, widget: "cron-in-a-zone" });
+      }
+    });
   });
 
   describe("showColumnTimestampBridge refusals", () => {

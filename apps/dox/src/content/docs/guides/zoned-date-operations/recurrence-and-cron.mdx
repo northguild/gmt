@@ -1,0 +1,304 @@
+---
+title: Recurrence Rules and Cron Lines in a Zone
+description: Expand an RFC 5545 RRULE and run a cron line in a time zone, with a stated rule for the night the clocks change.
+sidebar:
+  order: 4
+industries: [core]
+---
+
+Two grammars name repeating times: an RFC 5545 `RRULE` and a cron line. Neither says what happens when the wall clock skips or repeats an hour. A daily job at 01:30 has no run to give on the night 01:30 does not exist, and two to give on the night it happens twice. GMT does not guess. You state the rule, and the call returns the rows that rule gives.
+
+This guide uses `Europe/London` and `Australia/Sydney`, because their clock changes fall in opposite seasons. The idea behind it is [DST disambiguation](/guides/concepts/dst-disambiguation/). The sibling guide on [offset-preserving instants](../offset-instants-and-local-resolution/) resolves a single wall time the same way.
+
+The functions are [`parseRecurrenceRule`](/reference/recurrence/parse/parseRecurrenceRule), [`expandRecurrence`](/reference/recurrence/calculate/expandRecurrence), [`parseCronExpression`](/reference/recurrence/parse/parseCronExpression) and [`cronRuns`](/reference/recurrence/calculate/cronRuns). Every result below was printed by running the call.
+
+## Parse a recurrence rule
+
+`parseRecurrenceRule` turns RRULE text into a `RecurrenceRule`, or returns `null` when the text is not a rule it accepts. The members follow RFC 8984 §4.3.3. Weekdays are ISO numbers, 1 for Monday to 7 for Sunday.
+
+```typescript
+import { parseRecurrenceRule } from "@northguild/gmt/recurrence/parse";
+
+parseRecurrenceRule("FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6");
+// {
+//   frequency: "weekly",
+//   interval: 1,
+//   firstDayOfWeek: 1,
+//   count: 6,
+//   byDay: [{ day: 1 }, { day: 3 }],
+// }
+
+// GMT rejects UNTIL together with COUNT.
+parseRecurrenceRule("FREQ=DAILY;UNTIL=20240601T000000Z;COUNT=3");
+// null
+```
+
+## Expand it in a zone
+
+`expandRecurrence(rule, start, timeZone, window)` lists the occurrences. `start` is DTSTART as a wall time in the zone, with no offset. The window is either a half-open interval `{ start, end }` (`start` included, `end` not), or `{ after, count }`, the first `count` rows strictly after an instant.
+
+**DTSTART is always the first occurrence, and it counts toward `COUNT`, even when it does not match the rule**, as RFC 5545 §3.3.10 and RFC 8984 §4.3.3.1 say. rrule.js and python-dateutil leave an unmatched DTSTART out, so they give a different list for the same text.
+
+```typescript
+import { parseRecurrenceRule } from "@northguild/gmt/recurrence/parse";
+import { expandRecurrence } from "@northguild/gmt/recurrence/calculate";
+
+// DTSTART is Wednesday 3 January, and the rule says Mondays.
+const rule = parseRecurrenceRule("FREQ=WEEKLY;BYDAY=MO;COUNT=3");
+
+expandRecurrence(rule, "2024-01-03T09:00:00", "Europe/London", {
+  start: "2024-01-01T00:00:00Z",
+  end: "2024-03-01T00:00:00Z",
+}).map((row) => row.local);
+// ["2024-01-03T09:00:00", "2024-01-08T09:00:00", "2024-01-15T09:00:00"]
+
+// The other window: the first rows strictly after an instant.
+expandRecurrence(rule, "2024-01-03T09:00:00", "Europe/London", {
+  after: "2024-01-03T09:00:00Z",
+  count: 2,
+}).map((row) => row.local);
+// ["2024-01-08T09:00:00", "2024-01-15T09:00:00"]
+```
+
+## When the rule lands in a clock change
+
+The `disambiguation` option says where a skipped or repeated wall time goes: `"compatible"` (the default), `"earlier"`, `"later"` or `"reject"`. Each row carries its `classification` (`unique`, `ambiguous` or `nonexistent`) and both candidate instants, `earlier` and `later`. `"compatible"` is the rule in RFC 5545 §3.3.5: a repeated time takes its first occurrence, and a skipped time takes the offset from before the gap. Erratum 4271 (Verified) applies that rule to recurrence instances.
+
+**`"reject"` returns `[]` for the whole call** when any row is ambiguous or nonexistent. It does not drop that one row.
+
+Here is one daily 01:30 rule in `Europe/London`, over the night of each change. In spring the 01:30 row is `nonexistent`: `"earlier"` gives 00:30Z, `"compatible"` and `"later"` give 01:30Z. In autumn it is `ambiguous`: `"compatible"` and `"earlier"` give 00:30Z, `"later"` gives 01:30Z.
+
+```typescript
+const daily = parseRecurrenceRule("FREQ=DAILY");
+const spring = { start: "2024-03-31T00:00:00Z", end: "2024-04-01T00:00:00Z" };
+const autumn = { start: "2024-10-27T00:00:00Z", end: "2024-10-28T00:00:00Z" };
+
+// Spring: 01:30 on 31 March does not exist in London (01:00 jumps to 02:00).
+// expandRecurrence(daily, "2024-03-30T01:30:00", "Europe/London", spring, { disambiguation: "compatible" })
+// [
+//   { local: "2024-03-31T01:30:00", instant: "2024-03-31T01:30:00Z", classification: "nonexistent", earlier: "2024-03-31T00:30:00Z", later: "2024-03-31T01:30:00Z" },
+// ]
+// expandRecurrence(daily, "2024-03-30T01:30:00", "Europe/London", spring, { disambiguation: "earlier" })
+// [
+//   { local: "2024-03-31T01:30:00", instant: "2024-03-31T00:30:00Z", classification: "nonexistent", earlier: "2024-03-31T00:30:00Z", later: "2024-03-31T01:30:00Z" },
+// ]
+// expandRecurrence(daily, "2024-03-30T01:30:00", "Europe/London", spring, { disambiguation: "later" })
+// [
+//   { local: "2024-03-31T01:30:00", instant: "2024-03-31T01:30:00Z", classification: "nonexistent", earlier: "2024-03-31T00:30:00Z", later: "2024-03-31T01:30:00Z" },
+// ]
+// expandRecurrence(daily, "2024-03-30T01:30:00", "Europe/London", spring, { disambiguation: "reject" })
+// []
+
+// Autumn: 01:30 on 27 October happens twice.
+// expandRecurrence(daily, "2024-10-26T01:30:00", "Europe/London", autumn, { disambiguation: "compatible" })
+// [
+//   { local: "2024-10-27T01:30:00", instant: "2024-10-27T00:30:00Z", classification: "ambiguous", earlier: "2024-10-27T00:30:00Z", later: "2024-10-27T01:30:00Z" },
+// ]
+// expandRecurrence(daily, "2024-10-26T01:30:00", "Europe/London", autumn, { disambiguation: "earlier" })
+// [
+//   { local: "2024-10-27T01:30:00", instant: "2024-10-27T00:30:00Z", classification: "ambiguous", earlier: "2024-10-27T00:30:00Z", later: "2024-10-27T01:30:00Z" },
+// ]
+// expandRecurrence(daily, "2024-10-26T01:30:00", "Europe/London", autumn, { disambiguation: "later" })
+// [
+//   { local: "2024-10-27T01:30:00", instant: "2024-10-27T01:30:00Z", classification: "ambiguous", earlier: "2024-10-27T00:30:00Z", later: "2024-10-27T01:30:00Z" },
+// ]
+// expandRecurrence(daily, "2024-10-26T01:30:00", "Europe/London", autumn, { disambiguation: "reject" })
+// []
+```
+
+Sydney changes in the opposite seasons. Its clocks skip 02:00 to 03:00 in October, so there a 02:30 rule meets the skipped hour.
+
+```typescript
+expandRecurrence(daily, "2024-10-05T02:30:00", "Australia/Sydney", {
+  start: "2024-10-05T00:00:00Z",
+  end: "2024-10-07T00:00:00Z",
+}).map(({ local, instant, classification }) => ({ local, instant, classification }));
+// [
+//   { local: "2024-10-06T02:30:00", instant: "2024-10-05T16:30:00Z", classification: "nonexistent" },
+//   { local: "2024-10-07T02:30:00", instant: "2024-10-06T15:30:00Z", classification: "unique" },
+// ]
+```
+
+## UNTIL, COUNT, RDATE and EXDATE
+
+**`UNTIL` must be UTC (`…Z`)** when the rule is expanded in a zone. RFC 5545 §3.3.10 says that when DTSTART has a time zone, UNTIL "MUST be specified as a date with UTC time". A DATE or floating `UNTIL` returns `[]`, even though the rule text parses.
+
+```typescript
+const window = { start: "2024-01-01T00:00:00Z", end: "2024-02-01T00:00:00Z" };
+
+expandRecurrence(parseRecurrenceRule("FREQ=DAILY;UNTIL=20240103T090000Z"), "2024-01-01T09:00:00", "Europe/London", window).map((row) => row.local);
+// ["2024-01-01T09:00:00", "2024-01-02T09:00:00", "2024-01-03T09:00:00"]
+
+// A DATE UNTIL parses, and so does a floating one. Neither can be expanded in a zone.
+expandRecurrence(parseRecurrenceRule("FREQ=DAILY;UNTIL=20240103"), "2024-01-01T09:00:00", "Europe/London", window);
+// []
+expandRecurrence(parseRecurrenceRule("FREQ=DAILY;UNTIL=20240103T090000"), "2024-01-01T09:00:00", "Europe/London", window);
+// []
+```
+
+**`COUNT` counts occurrences before duplicates collapse.** `FREQ=HOURLY;COUNT=4` from 00:30 asks for four wall times: 00:30, 01:30, 02:30 and 03:30. In London on 31 March, 01:30 does not exist and resolves to 01:30Z, which is also 02:30 on the new clock. Two wall times, one instant, one row. Four were counted, so three come back.
+
+```typescript
+const hourly = expandRecurrence(parseRecurrenceRule("FREQ=HOURLY;COUNT=4"), "2024-03-31T00:30:00", "Europe/London", {
+  start: "2024-03-30T00:00:00Z",
+  end: "2024-04-02T00:00:00Z",
+});
+hourly.length;
+// 3
+hourly.map((row) => [row.local, row.instant]);
+// [
+//   ["2024-03-31T00:30:00", "2024-03-31T00:30:00Z"],
+//   ["2024-03-31T01:30:00", "2024-03-31T01:30:00Z"],
+//   ["2024-03-31T03:30:00", "2024-03-31T02:30:00Z"],
+// ]
+```
+
+`rdate` adds rows that `COUNT` does not count and `UNTIL` does not bound. `exdate` wins over both the rule and `rdate` (RFC 5545 §3.8.5.3), so an excluded date stays out even when it was also added.
+
+```typescript
+expandRecurrence(parseRecurrenceRule("FREQ=DAILY;COUNT=3"), "2024-01-01T09:00:00", "Europe/London", window, {
+  rdate: ["2024-01-10T09:00:00", "2024-01-11T09:00:00"],
+  exdate: ["2024-01-02T09:00:00", "2024-01-11T09:00:00"],
+}).map((row) => row.local);
+// ["2024-01-01T09:00:00", "2024-01-03T09:00:00", "2024-01-10T09:00:00"]
+```
+
+## Parse a cron line
+
+`parseCronExpression` returns a `CronExpression` or `null`. The base is POSIX (ISO/IEC/IEEE 9945) with five fields. cronie's crontab(5) adds `/step`, three-letter names, `7` for Sunday and the `@` nicknames. Nicknames are lower case only, so `@DAILY` is `null`. `*` is allowed only as a whole field (`*` or `*/n`), so `1,*/5` is `null`.
+
+Debian's crontab(5) allows no ranges or lists of names, so `mon-fri` is not valid there. GMT accepts the wider cronie form.
+
+**`dayOfWeek` holds ISO weekday numbers, 1 to 7.** Cron's `0` and `7` both mean Sunday and both become `7`. This is the weekday numbering used across gmt.
+
+```typescript
+import { parseCronExpression } from "@northguild/gmt/recurrence/parse";
+
+parseCronExpression("0 9 * * 0").dayOfWeek;
+// { values: [7], star: false }
+parseCronExpression("0 9 * * mon-fri").dayOfWeek;
+// { values: [1, 2, 3, 4, 5], star: false }
+parseCronExpression("@daily").hour;
+// { values: [0], star: false }
+
+parseCronExpression("@DAILY");
+// null
+parseCronExpression("1,*/5 * * * *");
+// null
+```
+
+## Which days a cron line runs on
+
+The month always has to match. Day of month and day of week are ORed only when **both** are restricted, and a field written `*/n` counts as `*`: its `star` flag is true, so it does not restrict. cronie's crontab(5) NOTES give `30 4 1,15 * 5`, which runs on the 1st, the 15th and every Friday.
+
+POSIX words the rule differently, and also counts a restricted month as a reason to OR. No shipped cron does that, and neither does GMT.
+
+```typescript
+import { parseCronExpression } from "@northguild/gmt/recurrence/parse";
+import { cronRuns } from "@northguild/gmt/recurrence/calculate";
+
+const window = { after: "2023-12-31T23:00:00Z", count: 8 };
+
+// Both day fields are restricted, so a day matches if it is the 1st, the 15th, or a Monday.
+cronRuns(parseCronExpression("0 0 1,15 * 1"), "Europe/London", window, "crontabMatch").map((run) => run.local);
+// ["2024-01-01T00:00:00", "2024-01-08T00:00:00", "2024-01-15T00:00:00", "2024-01-22T00:00:00", …] — 8 in all
+
+// */2 counts as *, so the day fields are ANDed: Mondays that fall on an odd date.
+parseCronExpression("0 0 */2 * 1").dayOfMonth.star;
+// true
+cronRuns(parseCronExpression("0 0 */2 * 1"), "Europe/London", window, "crontabMatch").map((run) => run.local);
+// ["2024-01-01T00:00:00", "2024-01-15T00:00:00", "2024-01-29T00:00:00", "2024-02-05T00:00:00", …] — 8 in all
+
+// A restricted month does not turn the AND into an OR: Mondays in June, nothing else.
+cronRuns(parseCronExpression("0 0 * 6 1"), "Europe/London", { after: "2024-05-31T23:00:00Z", count: 6 }, "crontabMatch").map((run) => run.local);
+// ["2024-06-03T00:00:00", "2024-06-10T00:00:00", "2024-06-17T00:00:00", "2024-06-24T00:00:00", …] — 6 in all
+```
+
+## Two rules for the night the clocks change
+
+`cronRuns(expression, timeZone, window, policy)` needs a policy. There is no default.
+
+- `"crontabMatch"` matches wall times. A skipped time never runs, and a repeated time runs twice.
+- `"daemonCatchUp"` follows what cron daemons do for fixed-time jobs (cronie's cron(8) and Debian's cron(8) describe it). A skipped time runs once at the transition, and its `local` stays the scheduled time. A repeated time runs once, at the earlier instant.
+
+The daemon rule applies **only to fixed-time jobs**, where neither the minute nor the hour field starts with `*`. It also applies only to a gap under 3 hours, or an overlap of at most 3 hours. A gap of exactly 3 hours is a clock jump, and nothing is caught up. Everything else behaves exactly like `"crontabMatch"`.
+
+```typescript
+const job = parseCronExpression("30 1 * * *");
+const spring = { start: "2024-03-31T00:00:00Z", end: "2024-03-31T03:00:00Z" };
+const autumn = { start: "2024-10-27T00:00:00Z", end: "2024-10-27T03:00:00Z" };
+
+// Spring, 31 March 2024: 01:30 does not exist in London.
+// cronRuns(job, "Europe/London", spring, "crontabMatch")
+// []
+// cronRuns(job, "Europe/London", spring, "daemonCatchUp")
+// [
+//   { local: "2024-03-31T01:30:00", instant: "2024-03-31T01:00:00Z", classification: "nonexistent" },
+// ]
+
+// Autumn, 27 October 2024: 01:30 happens twice.
+// cronRuns(job, "Europe/London", autumn, "crontabMatch")
+// [
+//   { local: "2024-10-27T01:30:00", instant: "2024-10-27T00:30:00Z", classification: "ambiguous" },
+//   { local: "2024-10-27T01:30:00", instant: "2024-10-27T01:30:00Z", classification: "ambiguous" },
+// ]
+// cronRuns(job, "Europe/London", autumn, "daemonCatchUp")
+// [
+//   { local: "2024-10-27T01:30:00", instant: "2024-10-27T00:30:00Z", classification: "ambiguous" },
+// ]
+```
+
+A job with `*` in the minute field is not a fixed-time job, so both policies give the same rows:
+
+```typescript
+const every5 = parseCronExpression("*/5 * * * *");
+const night = { start: "2024-10-05T15:00:00Z", end: "2024-10-05T17:00:00Z" };
+// Sydney, 6 October 2024: 02:00 jumps to 03:00 inside this window.
+cronRuns(every5, "Australia/Sydney", night, "crontabMatch").length;
+// 24
+cronRuns(every5, "Australia/Sydney", night, "daemonCatchUp").length;
+// 24
+```
+
+The 3-hour limits are real. `Antarctica/Casey` had a gap of exactly 3 hours in 2020 and an overlap of exactly 3 hours in 2021.
+
+```typescript
+// Casey, 2020: the gap is exactly 3 hours. Nothing is caught up.
+cronRuns(parseCronExpression("30 1 * * *"), "Antarctica/Casey", { start: "2020-10-03T13:00:00Z", end: "2020-10-03T19:00:00Z" }, "daemonCatchUp");
+// []
+
+// Casey, 13 March 2021: the overlap is exactly 3 hours. The daemon runs the job once.
+const nightly = parseCronExpression("30 22 * * *");
+const overlap = { start: "2021-03-13T10:00:00Z", end: "2021-03-13T16:00:00Z" };
+// cronRuns(nightly, "Antarctica/Casey", overlap, "crontabMatch")
+// [
+//   { local: "2021-03-13T22:30:00", instant: "2021-03-13T11:30:00Z", classification: "ambiguous" },
+//   { local: "2021-03-13T22:30:00", instant: "2021-03-13T14:30:00Z", classification: "ambiguous" },
+// ]
+// cronRuns(nightly, "Antarctica/Casey", overlap, "daemonCatchUp")
+// [
+//   { local: "2021-03-13T22:30:00", instant: "2021-03-13T11:30:00Z", classification: "ambiguous" },
+// ]
+```
+
+[Cron in a Zone](/tools/cron-in-a-zone/) runs any line on the night of a clock change, under both policies, side by side.
+
+## Limits
+
+A call that would return more than 10,000 rows, or spend more than 2,000,000 steps of work, returns `[]`. A window `count` must be from 1 to 10,000.
+
+```typescript
+// Eight days of every minute is 11,520 rows, over the 10,000 limit.
+cronRuns(parseCronExpression("* * * * *"), "Europe/London", { start: "2024-01-01T00:00:00Z", end: "2024-01-09T00:00:00Z" }, "crontabMatch");
+// []
+
+// A line that never matches also gives [], for the opposite reason.
+cronRuns(parseCronExpression("0 0 30 2 *"), "Europe/London", { start: "2024-01-01T00:00:00Z", end: "2025-01-01T00:00:00Z" }, "crontabMatch");
+// []
+
+// A count over 10,000 is refused too.
+cronRuns(parseCronExpression("* * * * *"), "Europe/London", { after: "2024-01-01T00:00:00Z", count: 10001 }, "crontabMatch");
+// []
+```
+
+An empty array does not say which of these happened. To read more rows than one call can give, page with `{ after, count }` and pass the last instant you received as `after`.

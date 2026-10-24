@@ -75,6 +75,7 @@ import type { LeapSecondTimelineArgs } from "~/lib/leap-second-timeline-mount";
 import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import type { IdTimestampDecoderArgs } from "~/lib/id-timestamp-decoder-mount";
 import type { ColumnTimestampBridgeArgs } from "~/lib/column-timestamp-bridge-mount";
+import type { CronInAZoneArgs } from "~/lib/cron-in-a-zone-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
@@ -111,6 +112,7 @@ import {
   showDurationParserBenchInput,
   showIdTimestampDecoderInput,
   showColumnTimestampBridgeInput,
+  showCronInAZoneInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -1058,6 +1060,26 @@ const moroccoClockEntry = defineWidget<MoroccoClockChangeArgs>({
   },
 });
 
+const cronZoneEntry = defineWidget<CronInAZoneArgs>({
+  title: "Cron in a zone",
+  kind: "cronzone",
+  parse: (input) => {
+    const result = showCronInAZoneInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a line the library refuses is this widget's own NO SIGNAL, and a zone it does not know gets its own sentence, so refusing either here would hide the lesson. */
+  load: () =>
+    import("~/lib/cron-in-a-zone-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) => m.renderCronInAZoneTemplate(args),
+      mount: m.mountCronInAZone,
+    })),
+});
+
 const plannerEntry = defineWidget<ZonePlannerArgs>({
   title: "Zone planner",
   kind: "planner",
@@ -1142,6 +1164,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showIdTimestampDecoder: idDecoderEntry,
   showColumnTimestampBridge: columnBridgeEntry,
   showMoroccoClockChange: moroccoClockEntry,
+  showCronInAZone: cronZoneEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

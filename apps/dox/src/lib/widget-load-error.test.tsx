@@ -147,6 +147,10 @@ import {
   renderIdTimestampDecoderTemplate,
 } from "./id-timestamp-decoder-mount";
 import {
+  mountCronInAZone,
+  renderCronInAZoneTemplate,
+} from "./cron-in-a-zone-mount";
+import {
   mountColumnTimestampBridge,
   renderColumnTimestampBridgeTemplate,
 } from "./column-timestamp-bridge-mount";
@@ -333,6 +337,11 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "column timestamp bridge",
     () => renderColumnTimestampBridgeTemplate(),
     mountColumnTimestampBridge as MountFn<never>,
+  ],
+  [
+    "cron in a zone",
+    () => renderCronInAZoneTemplate(),
+    mountCronInAZone as MountFn<never>,
   ],
 ];
 

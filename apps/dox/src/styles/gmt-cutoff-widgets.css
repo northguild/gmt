@@ -61,6 +61,7 @@
   .gmt-ledger-frame,
   .gmt-gnss-frame,
   .gmt-stored-time-frame,
+  .gmt-cron-frame,
   .gmt-cutoff-stack-timeline,
   .gmt-cutoff-ruler-overview,
   .gmt-cutoff-ruler-closeup,
@@ -120,7 +121,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   [data-series="1"] {
   --series: var(--gmt-series-1);
@@ -144,7 +146,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   [data-series="2"] {
   --series: var(--gmt-series-2);
@@ -168,7 +171,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   [data-series="3"] {
   --series: var(--gmt-series-3);
@@ -192,7 +196,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   [data-series="4"] {
   --series: var(--gmt-series-4);
@@ -219,7 +224,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-series-swatch {
   display: inline-block;
@@ -255,7 +261,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-chip {
   display: inline-flex;
@@ -293,7 +300,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-chip[hidden] {
   display: none;
@@ -317,7 +325,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-chip--dim {
   color: var(--gmt-ice-dim);
@@ -340,7 +349,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-icon {
   flex: none;
@@ -369,7 +379,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-mark {
   display: inline-block;
@@ -403,7 +414,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-mark--hollow {
   border: 2px dashed var(--series, var(--gmt-ice));
@@ -432,7 +444,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-gate {
   position: absolute;
@@ -461,7 +474,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-gate::before {
   content: "";
@@ -500,7 +514,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-closed {
   background:
@@ -558,7 +573,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-axis-tick {
   padding-top: 9px;
@@ -582,7 +598,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-axis-tick::before {
   content: "";
@@ -612,7 +629,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-axis-tick--day {
   color: var(--gmt-ice);
@@ -636,7 +654,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   .gmt-cutoff-axis-tick--day::before {
   width: 2px;
@@ -661,7 +680,8 @@
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
     .gmt-elapsed-vs-clock,
-    .gmt-stored-time-audit
+    .gmt-stored-time-audit,
+    .gmt-cron-zone
   )
   :is(.gmt-cutoff-countdown-ticks, .gmt-cutoff-ruler-ticks, .gmt-punct-ticks) {
   height: 1.9rem;
@@ -673,7 +693,7 @@
  * surface base under its wash, and is named in words.
  * --------------------------------------------------------------------------- */
 
-:is(.gmt-cutoff-stack, .gmt-cutoff-ruler, .gmt-cutoff-countdown)
+:is(.gmt-cutoff-stack, .gmt-cutoff-ruler, .gmt-cutoff-countdown, .gmt-cron-zone)
   .gmt-cutoff-dst--overlap {
   border-color: color(from var(--gmt-dst-purple) srgb r g b / 0.4);
   background:
@@ -685,7 +705,7 @@
   color: var(--gmt-dst-purple-ink);
 }
 
-:is(.gmt-cutoff-stack, .gmt-cutoff-ruler, .gmt-cutoff-countdown)
+:is(.gmt-cutoff-stack, .gmt-cutoff-ruler, .gmt-cutoff-countdown, .gmt-cron-zone)
   .gmt-cutoff-dst--gap {
   border-color: color(from var(--gmt-dst-gold) srgb r g b / 0.4);
   background:
@@ -932,6 +952,7 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
 .gmt-punct-frame,
 .gmt-gnss-frame,
 .gmt-stored-time-frame,
+.gmt-cron-frame,
 .gmt-cutoff-mark,
 .gmt-cutoff-chip,
 .gmt-cutoff-gate,
