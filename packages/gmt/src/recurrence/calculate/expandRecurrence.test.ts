@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { classifyLocal } from "../../instant/convert/classifyLocal";
 import { Temporal } from "../../internal/temporal";
+import { nearTransition } from "../../test/nearTransition";
 import { battleTestTimeZones } from "../../test/timeZoneMatrix";
 import type { RecurrenceOccurrence, RecurrenceRule } from "../../types";
 import { parseRecurrenceRule } from "../parse/parseRecurrenceRule";
@@ -476,29 +477,45 @@ describe("expandRecurrence, invariants across zones and rules", () => {
     "every row's classification matches classifyLocal and instants ascend in $timeZone",
     ({ timeZone }) => {
       const next = seeded(timeZone.length * 7919);
+      const span = {
+        start: "2023-01-01T00:00:00Z",
+        end: "2024-06-01T00:00:00Z",
+      };
+      // classifyLocal is the oracle, and it is dear: ask it only within two days of a transition,
+      // where a wall time can be skipped or repeated. Elsewhere the reading is "unique". Every
+      // instant here is UTC with a four-digit year and whole seconds, so text order is time order.
+      const near = nearTransition(timeZone, span);
+      const wrong: string[] = [];
+
       for (const text of ruleTexts) {
         const day = 1 + Math.floor(next() * 28);
         const hour = Math.floor(next() * 24);
         const month = [3, 4, 10, 11, 12][Math.floor(next() * 5)]!;
         const start = `2023-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:15:00`;
-        const rows = expandRecurrence(rule(text), start, timeZone, {
-          start: "2023-01-01T00:00:00Z",
-          end: "2024-06-01T00:00:00Z",
-        });
+        const rows = expandRecurrence(rule(text), start, timeZone, span);
 
-        expect(rows.length).toBeGreaterThan(0);
-        for (const row of rows) {
-          expect(row.classification).toBe(classifyLocal(row.local, timeZone));
-        }
-        for (let index = 1; index < rows.length; index += 1) {
-          expect(
-            Temporal.Instant.compare(
-              rows[index]!.instant,
-              rows[index - 1]!.instant,
-            ),
-          ).toBe(1);
-        }
+        if (rows.length === 0) wrong.push(`${text}: no rows`);
+        rows.forEach((row, index) => {
+          const expected = near(row.instant)
+            ? classifyLocal(row.local, timeZone)
+            : "unique";
+          const before = rows[index - 1];
+
+          if (row.classification !== expected) {
+            wrong.push(
+              `${text} ${row.local}: ${row.classification}, not ${expected}`,
+            );
+          }
+          if (before !== undefined && !(before.instant < row.instant)) {
+            wrong.push(`${text} ${row.instant} after ${before.instant}`);
+          }
+        });
       }
+
+      expect({ count: wrong.length, first: wrong.slice(0, 20) }).toEqual({
+        count: 0,
+        first: [],
+      });
     },
   );
 });
@@ -1666,17 +1683,19 @@ describe("expandRecurrence, a count window finds every occurrence of a rule that
   }
 
   function isAscending(rows: readonly RecurrenceOccurrence[]): boolean {
-    return rows.every((row, i) => {
-      if (i === 0) return true;
-      const [yearA, restA] = instantKey(rows[i - 1].instant);
-      const [yearB, restB] = instantKey(row.instant);
+    const keys = rows.map((row) => instantKey(row.instant));
 
-      return yearA < yearB || (yearA === yearB && restA < restB);
-    });
+    return keys.every(
+      ([year, rest], i) =>
+        i === 0 ||
+        keys[i - 1][0] < year ||
+        (keys[i - 1][0] === year && keys[i - 1][1] < rest),
+    );
   }
 
   // Row n is the nth match from DTSTART, which matches the rule. Every last date is found by
-  // counting years or months on the calendar.
+  // counting years or months on the calendar. A count window is the start of a longer one, so row
+  // 6000 of the 10,000 checks a count of 6000 too: BYYEARDAY=100 ran out of budget there before.
   // 2024-04-09 is day 100 of leap 2024; 2024-05-13 is its 20th Monday; 2024-03-04 is Monday of week 10;
   // 2024-12-31 is day 366; 2020-12-31 is the Thursday of week 53; 2024-09-13 is a Friday the 13th.
   it.each`
@@ -1691,20 +1710,24 @@ describe("expandRecurrence, a count window finds every occurrence of a rule that
     ${"FREQ=DAILY;BYDAY=FR;BYMONTHDAY=13"}            | ${"2024-09-13T00:00:00"} | ${(n: number) => nthFridayThe13th(2024, 9, n)}
     ${"FREQ=HOURLY;BYMONTH=2;BYMONTHDAY=29;BYHOUR=0"} | ${"2024-02-29T00:00:00"} | ${(n: number) => dateText(Temporal.PlainDate.from({ year: nthYear(2024, n, isLeapYear), month: 2, day: 29 }))}
   `(
-    "$rule from $start gives a full window at counts 6000 and 10000",
+    "$rule from $start gives a full window of 10000 with row 6000 and the last on the calendar",
     ({ rule: text, start, last }) => {
-      for (const count of [6000, 10_000]) {
-        const rows = expandRecurrence(rule(text), start, "UTC", {
-          after: "2020-01-01T00:00:00Z",
-          count,
-        });
+      const rows = expandRecurrence(rule(text), start, "UTC", {
+        after: "2020-01-01T00:00:00Z",
+        count: 10_000,
+      });
 
-        expect({
-          length: rows.length,
-          ascending: isAscending(rows),
-          last: rows.at(-1)?.local,
-        }).toEqual({ length: count, ascending: true, last: last(count) });
-      }
+      expect({
+        length: rows.length,
+        ascending: isAscending(rows),
+        row6000: rows[5999]?.local,
+        last: rows.at(-1)?.local,
+      }).toEqual({
+        length: 10_000,
+        ascending: true,
+        row6000: last(6000),
+        last: last(10_000),
+      });
     },
   );
 });

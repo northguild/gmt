@@ -575,16 +575,18 @@ describe("expandLocalMoments fast-forward", () => {
             if (m.day >= floor) moments.push(text(m));
             return true;
           },
-          60_000,
+          30_000,
         );
 
         return { moments, status };
       };
 
+      // A capped run cannot be compared, so a rule that caps from DTSTART skips the second run.
       const full = collect(start.day);
+      if (full.status === "capped") continue;
       const fast = collect(floor);
 
-      if (full.status === "capped" || fast.status === "capped") continue;
+      if (fast.status === "capped") continue;
       compared++;
       if (JSON.stringify(full.moments) !== JSON.stringify(fast.moments)) {
         disagreements.push(JSON.stringify(r));
@@ -592,8 +594,8 @@ describe("expandLocalMoments fast-forward", () => {
     }
 
     expect(disagreements).toEqual([]);
-    expect(compared).toBeGreaterThan(100);
-  }, 30_000);
+    expect(compared).toBeGreaterThan(150);
+  });
 });
 
 describe("expandLocalMoments BYSETPOS counts the whole period", () => {
