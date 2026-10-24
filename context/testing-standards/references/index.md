@@ -75,6 +75,15 @@ If an existing fixture's fixed date doesn't fit the case under test (e.g. testin
 - **When you find a bug, widen the search.** Fix the whole class (every function with the same cause), not just the instance that surfaced.
 - **Enforced:** `node scripts/test-markers.mjs check` runs in `pnpm run validate` and fails on any marker or known-defect note. [AGENTS.md Core Rule 12](../../../AGENTS.md#core-rules-quick-reference) states the rule, and `finalizer` refuses to close a story that carries one.
 
+## Test Cost
+
+**Keep each test under 1 s on a dev machine.** CI legs run up to 4× slower than a laptop, and the default timeout is 5 s. A test that takes 1.2 s locally has taken 4.9 s on CI and timed out on others. Run the file with `--reporter=verbose` and read the time on each row before handing it off.
+
+- **Call an expensive oracle only where the answer can differ.** A sweep over a year of rows needs `classifyLocal` or a Temporal resolution only near a zone transition. Elsewhere every wall time is unique, and the row can be checked against that directly. Find the transitions with Temporal's `getTimeZoneTransition`, never with GMT.
+- **Assert once per case, not once per row.** Collect the rows that are wrong and `expect` that list to equal `[]`. The failure then shows every bad row, and thousands of `expect` calls are gone.
+- **Prefer fewer, sharper rows to more random ones.** Seeded rounds earn their cost only when each one covers a case no other row does.
+- **Raise a timeout only when the work cannot shrink**, such as a sweep over every zone the runtime knows. Put the reason in a comment beside the timeout. A timeout added to get past CI is a finding.
+
 ## Never Pass a Path to `vitest list --json`
 
 `npx vitest list --json <file>` does **not** list that file's tests: Vitest 4 treats the argument as the JSON **output** path and overwrites the file with the entire suite listing. It destroyed two test files during CORE-6.

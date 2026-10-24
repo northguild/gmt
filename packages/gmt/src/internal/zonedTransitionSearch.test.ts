@@ -52,7 +52,6 @@ describe("zonedNextTransition (temporalCompat D13)", () => {
         instantOf(zonedNextTransition(at(from, "America/Boa_Vista"))),
       ).toBe(expected);
     },
-    10_000,
   );
 
   // Three offsets inside 14 days, where the polyfill's own search never returns.
@@ -71,7 +70,6 @@ describe("zonedNextTransition (temporalCompat D13)", () => {
     ({ timeZone, from, expected }) => {
       expect(instantOf(zonedNextTransition(at(from, timeZone)))).toBe(expected);
     },
-    10_000,
   );
 
   it.each`
@@ -85,7 +83,6 @@ describe("zonedNextTransition (temporalCompat D13)", () => {
     ({ timeZone, from, expected }) => {
       expect(instantOf(zonedNextTransition(at(from, timeZone)))).toBe(expected);
     },
-    10_000,
   );
 
   it.each`
@@ -129,7 +126,6 @@ describe("a limited search and the no-further-change horizon (temporalCompat D13
         instantOf(zonedNextTransition(at(from, timeZone), epochOf(until))),
       ).toBe(expected);
     },
-    10_000,
   );
 
   it.each`
@@ -147,7 +143,6 @@ describe("a limited search and the no-further-change horizon (temporalCompat D13
         instantOf(zonedPreviousTransition(at(from, timeZone), epochOf(since))),
       ).toBe(expected);
     },
-    10_000,
   );
 });
 
@@ -199,7 +194,6 @@ describe("zonedPreviousTransition (temporalCompat D13)", () => {
         expected,
       );
     },
-    10_000,
   );
 
   it.each`
@@ -658,7 +652,6 @@ describe("the transition memo at its edges", () => {
           expect(() => nextTransitionAfter("UTC", from)).toThrow(RangeError);
         });
       },
-      30_000,
     );
 
     it.each`
@@ -684,7 +677,6 @@ describe("the transition memo at its edges", () => {
           );
         });
       },
-      30_000,
     );
     it("throws after 1950 without reading an offset when two remembered searches reach past the bound", async () => {
       setNow("5000-01-01T00:00:00Z");
@@ -700,7 +692,7 @@ describe("the transition memo at its edges", () => {
         expect(() => nextTransitionAfter("UTC", from)).toThrow(RangeError);
         expect(reads).not.toHaveBeenCalled();
       });
-    }, 30_000);
+    });
 
     it("throws before 5001 without reading an offset when two remembered searches reach past the bound", async () => {
       setNow("5000-01-01T00:00:00Z");
@@ -720,7 +712,7 @@ describe("the transition memo at its edges", () => {
         expect(() => previousTransitionBefore("UTC", from)).toThrow(RangeError);
         expect(reads).not.toHaveBeenCalled();
       });
-    }, 30_000);
+    });
   });
 
   it("gives the same answer after its zone is evicted and searched again", () => {
@@ -841,7 +833,7 @@ describe("the transition memo at its edges", () => {
       } finally {
         reads.mockImplementation(actual.offsetAt);
       }
-    }, 120_000);
+    });
   });
 
   it.each`
