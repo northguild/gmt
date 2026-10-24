@@ -516,6 +516,7 @@ describe("D18 Islamic era probe", () => {
 
   // WebKit prints the epoch day itself (1 Muharram of year 1) as year 0 in the earlier era, so a
   // read of it is corrected to 1 - 0. The day before it is the last day of year 0 on every engine.
+  // Only the four shared fields are compared: a native engine also reads `era` and `eraYear`.
   it.each`
     calendar              | epochDay        | dayBefore
     ${"islamic-civil"}    | ${"0622-07-19"} | ${"0622-07-18"}
@@ -526,10 +527,10 @@ describe("D18 Islamic era probe", () => {
     ({ calendar, epochDay, dayBefore }) => {
       expect(
         calendarFieldsOf(Temporal.PlainDate.from(epochDay), calendar),
-      ).toEqual({ year: 1, month: 1, monthCode: "M01", day: 1 });
+      ).toMatchObject({ year: 1, month: 1, monthCode: "M01", day: 1 });
       expect(
         calendarFieldsOf(Temporal.PlainDate.from(dayBefore), calendar),
-      ).toEqual({ year: 0, month: 12, monthCode: "M12", day: 29 });
+      ).toMatchObject({ year: 0, month: 12, monthCode: "M12", day: 29 });
     },
   );
 
