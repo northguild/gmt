@@ -25,3 +25,9 @@ overrides:
   # Delete it once `pnpm why katex` shows nothing asking for a version below 0.18.2 (see
   # vercel/streamdown#655).
   'katex@<0.18.2': 0.18.2
+  # GHSA advisories against undici below 7.30.1 (two denial-of-service bugs and a Subresource
+  # Integrity bypass). `miniflare`, through `wrangler` 4.151 and 4.152, pins undici to exactly
+  # 7.29.1. The selector matches only versions below the fix, so the override goes dormant on its
+  # own once miniflare moves. Delete it once `pnpm why undici` shows nothing asking for a 7.x
+  # below 7.30.1.
+  'undici@>=7.0.0 <7.30.1': 7.30.1
