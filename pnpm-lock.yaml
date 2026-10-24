@@ -164,6 +164,7 @@ settings:
 
 overrides:
   katex@<0.18.2: 0.18.2
+  undici@>=7.0.0 <7.30.1: 7.30.1
 
 packageExtensionsChecksum: sha256-W2kHxYAxs4XXmUR9kxd942GIXDfPxe3eoDlKc1+pH10=
 
@@ -190,8 +191,8 @@ importers:
         specifier: ^0.28.2
         version: 0.28.2
       fallow:
-        specifier: ^3.17.0
-        version: 3.17.0
+        specifier: ^3.35.0
+        version: 3.35.0
       node:
         specifier: runtime:^26.11.0
         version: runtime:26.12.1
@@ -215,10 +216,10 @@ importers:
     dependencies:
       '@ai-sdk/google':
         specifier: ^4.0.66
-        version: 4.0.66(zod@4.5.4)
+        version: 4.0.66(zod@4.6.7)
       '@ai-sdk/react':
         specifier: 4.0.98
-        version: 4.0.98(react@19.3.0)(zod@4.5.4)
+        version: 4.0.98(react@19.3.0)(zod@4.6.7)
       '@astrojs/react':
         specifier: 6.0.6
         version: 6.0.6(@types/node@22.19.17)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(esbuild@0.28.2)(jiti@2.7.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@10.2.2)(tsx@4.23.12)(yaml@2.9.0)
@@ -260,7 +261,7 @@ importers:
         version: 3.17.8
       ai:
         specifier: ^7.0.95
-        version: 7.0.95(zod@4.5.4)
+        version: 7.0.95(zod@4.6.7)
       astro:
         specifier: 7.4.2
         version: 7.4.2(@types/node@22.19.17)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0)
@@ -329,13 +330,13 @@ importers:
         version: 1.1.6(react@19.3.0)
       workers-ai-provider:
         specifier: ^4.0.0
-        version: 4.0.0(@ai-sdk/google@4.0.66(zod@4.5.4))(@ai-sdk/provider@4.0.12)(ai@7.0.95(zod@4.5.4))
+        version: 4.0.0(@ai-sdk/google@4.0.66(zod@4.6.7))(@ai-sdk/provider@4.0.12)(ai@7.0.95(zod@4.6.7))
       world-atlas:
         specifier: ^2.0.2
         version: 2.0.2
       zod:
-        specifier: ^4.5.4
-        version: 4.5.4
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@ai-sdk/provider':
         specifier: ^4.0.12
@@ -1510,43 +1511,43 @@ packages:
   '@expressive-code/plugin-text-markers@0.44.1':
     resolution: {integrity: sha512-B3BsJoJ8CFMlcIX9f+X9tcI3C4zPDO601+YuLi9GheSTNro7ZfqSjLptMQKBHOWZvxnAtY5zvIX7iO/qtBhNBg==}
 
-  '@fallow-cli/darwin-arm64@3.17.0':
-    resolution: {integrity: sha512-u9O4aQaTSdaZaa4MAVEZEiwOx6QQzChymyQPrxV6KvDcVbcl0oYSekJKdvN4gEqUY8ClMze9gWS1tbn/W3N4dQ==}
+  '@fallow-cli/darwin-arm64@3.35.0':
+    resolution: {integrity: sha512-8WJjjyQzX3DPD995516todTtFfagGTS0r9ACzNCqLBOcV/6ftnOxdGuNwwH3yz4g2ZKPrPDK0ml/NbJeUhN72g==}
     cpu: [arm64]
     os: [darwin]
 
-  '@fallow-cli/darwin-x64@3.17.0':
-    resolution: {integrity: sha512-l3tZJovnCa8j+im4qTl4GVSfrx4gisJYeHDwb5TbcdTGaWYz42gHriAaz5MhOR8S24q3xRegX8QrI8PA4XXU4g==}
+  '@fallow-cli/darwin-x64@3.35.0':
+    resolution: {integrity: sha512-Bkr69eim2UwmzzPWyyzD5lREBnnuBcAMLVxU8gIsTArGg3ab9wiNujqVi8KkhnuTDuyBL4HQ5sxumMNA1VfSgA==}
     cpu: [x64]
     os: [darwin]
 
-  '@fallow-cli/linux-arm64-gnu@3.17.0':
-    resolution: {integrity: sha512-IAjS6qR4tHcRo1y5lzYT6mktN/ATPyPNrJ6yjwTORwwQV1YfMO58A5zGBfJlPBY+lUmaMZ9w37ftvH9a2AS4dQ==}
+  '@fallow-cli/linux-arm64-gnu@3.35.0':
+    resolution: {integrity: sha512-+B8lTPg0z8G5HaM+nSNQjxtLtW66ZVu9EOTrOzLn04YghjmZas1uxul+IkWBAFIOYhXFBvbtafMuETuKCaBUAg==}
     cpu: [arm64]
     os: [linux]
 
-  '@fallow-cli/linux-arm64-musl@3.17.0':
-    resolution: {integrity: sha512-Oe1dvk5Wt5Bmnxfc6HufJTaFY9SEwDVrZpnSdVQlv+nvz7DzrTK1r91cR3Ip477ANSLa9XD/MHPMpfqqo0dlZg==}
+  '@fallow-cli/linux-arm64-musl@3.35.0':
+    resolution: {integrity: sha512-aGk3tS+AMqiClIq2BgU/QCDHxAokUXtyDAmiAIRW05nWi6ghT/Kmyn85CMgAJA56DypYFz7Zujx/F5JYJ70yIA==}
     cpu: [arm64]
     os: [linux]
 
-  '@fallow-cli/linux-x64-gnu@3.17.0':
-    resolution: {integrity: sha512-XgLU2a51zuky7gifjVDHuiJGToAReDsVCDcyDF84TQz/h3bqO0iRkpDL8dh7+HODku84+EffpK5ZHY19n6Ij0w==}
+  '@fallow-cli/linux-x64-gnu@3.35.0':
+    resolution: {integrity: sha512-oUm4F8IvlP26IxLbIi51D40ewOr+4skkJXcU3XzjTOTEffLOXtrqbgCpdy8JLYqgIUAtFWeMzEbw4EU+rKA59Q==}
     cpu: [x64]
     os: [linux]
 
-  '@fallow-cli/linux-x64-musl@3.17.0':
-    resolution: {integrity: sha512-GnDZx2kbLKKdYAp05NSKv6CZHgzEKvhRd0btCKFMMpUEhdzmr4uh2Qb4UzKDBg/q2r1EhkzN4b/qC+tbFCmtwA==}
+  '@fallow-cli/linux-x64-musl@3.35.0':
+    resolution: {integrity: sha512-6oyAyp2QbICW/xhCxSxvyfCWJDoVKGmPblFsfCb/h+11VSI/D1HyP8C8kWGS/rkMDgmJUlrUC8L0MVnfphbRLA==}
     cpu: [x64]
     os: [linux]
 
-  '@fallow-cli/win32-arm64-msvc@3.17.0':
-    resolution: {integrity: sha512-u9n5WzPuKuC1PKegKQknWtngAUJ2szQaRXsbY54s7UMqeFNyC+W04LV5D+sEZywU7L0kzL+Kck9LxFLXBQcgvA==}
+  '@fallow-cli/win32-arm64-msvc@3.35.0':
+    resolution: {integrity: sha512-ZMI/4/jn2GVtc9bF+ltvRmz2n53tP0eU59uKQrAfLWd92bEUKNEtuQgqHyuc/mmZKpouXsl+pWvN7UWRwGc9MA==}
     cpu: [arm64]
     os: [win32]
 
-  '@fallow-cli/win32-x64-msvc@3.17.0':
-    resolution: {integrity: sha512-/OcyxHuCKabzQ9hKIjM/CFJ9fr30n0Mw5MK6nzi5rn26mbYUgh073UZq4FONOpPJ/FqHtC726rxpgBtR4qS+gg==}
+  '@fallow-cli/win32-x64-msvc@3.35.0':
+    resolution: {integrity: sha512-oFK9jkBtg/b2+WiL3FBWHRDdDGcfIkPm9hVMTpDWr4OZ2vRCJUXOkGoOTc5N9j4RY9zleY5408TncJC4/xOe0w==}
     cpu: [x64]
     os: [win32]
 
@@ -4755,13 +4756,13 @@ packages:
   extend@3.0.2:
     resolution: {integrity: sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==}
 
-  fallow-type-aware@3.17.0:
-    resolution: {integrity: sha512-DFtZUK5oqP56tSsrBWPzjrTIwPPxwlBV8QoSaGghMru347Nqj8ZBY6u9HFa/TIPcxvFU/zIZMRF8xS/XAWQTzg==}
+  fallow-type-aware@3.35.0:
+    resolution: {integrity: sha512-NEZglAwuDDHsemMRySSxFrD36zYXerg+TVSfZofVj5PjcYpDPyS6T02CZZyWm0RWjuT6NKF1n8AIm0fFy7BykA==}
     engines: {node: '>=20'}
     hasBin: true
 
-  fallow@3.17.0:
-    resolution: {integrity: sha512-tbLuvsPq3I2CzpoF/9MgSQ7hWzOqlj3avFUAmCr1J9OERE6z714SlDmA38NVvNy/zuK/70utXB3/b33xC9z29g==}
+  fallow@3.35.0:
+    resolution: {integrity: sha512-LrP5DXpnsHyRMAv68eMV4BMmxfKCw60mYUMhsUZh3PafJtT+2JKNWfpQ0vJ0FrxBjIsTMUVXqFA+ytCQjLXN3Q==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -6676,8 +6677,8 @@ packages:
   undici-types@7.18.2:
     resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
-  undici@7.29.1:
-    resolution: {integrity: sha512-RYONW2MeafgYlkVOKYKkA/Ag7BmXqgIWCa8t1m0JcxrQg9pI9lEqRhAOruOBCbAohOa/gkCF+iPi9hrgvTzu6Q==}
+  undici@7.30.1:
+    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
     engines: {node: '>=20.18.1'}
 
   undici@8.12.3:
@@ -7212,9 +7213,6 @@ packages:
     resolution: {integrity: sha512-XrBh9ZiQK5mJVRxZBAvD6LwRyAYrK3MFtH3+onyuxFL5hFD44EC3QOmIC1FjTj6H2MMwq46/NAI+NZxLZPZgxg==}
     engines: {node: '>=14.18.0'}
 
-  zod@4.5.4:
-    resolution: {integrity: sha512-sC95tT5iHHH9gtpj6A81kh+NEaRAUFN+qlUPDUbRfOMvNf5QCBqsb3WgvnpVtK5Y+4UfA6KqufotuTvMGiTlsA==}
-
   zod@4.6.7:
     resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
@@ -7223,44 +7221,44 @@ packages:
 
 snapshots:
 
-  '@ai-sdk/gateway@4.0.76(zod@4.5.4)':
+  '@ai-sdk/gateway@4.0.76(zod@4.6.7)':
     dependencies:
       '@ai-sdk/provider': 4.0.11
-      '@ai-sdk/provider-utils': 5.0.37(zod@4.5.4)
+      '@ai-sdk/provider-utils': 5.0.37(zod@4.6.7)
       '@vercel/oidc': 3.2.0
-      zod: 4.5.4
+      zod: 4.6.7
 
-  '@ai-sdk/google@4.0.66(zod@4.5.4)':
+  '@ai-sdk/google@4.0.66(zod@4.6.7)':
     dependencies:
       '@ai-sdk/provider': 4.0.12
-      '@ai-sdk/provider-utils': 5.0.38(zod@4.5.4)
-      zod: 4.5.4
+      '@ai-sdk/provider-utils': 5.0.38(zod@4.6.7)
+      zod: 4.6.7
 
-  '@ai-sdk/mcp@2.0.46(zod@4.5.4)':
+  '@ai-sdk/mcp@2.0.46(zod@4.6.7)':
     dependencies:
       '@ai-sdk/provider': 4.0.11
-      '@ai-sdk/provider-utils': 5.0.37(zod@4.5.4)
+      '@ai-sdk/provider-utils': 5.0.37(zod@4.6.7)
       cross-spawn: 7.0.6
       pkce-challenge: 5.0.1
-      zod: 4.5.4
+      zod: 4.6.7
 
-  '@ai-sdk/provider-utils@5.0.37(zod@4.5.4)':
+  '@ai-sdk/provider-utils@5.0.37(zod@4.6.7)':
     dependencies:
       '@ai-sdk/provider': 4.0.11
       '@standard-schema/spec': 1.1.0
       '@workflow/serde': 4.1.0
       eventsource-parser: 3.1.1
-      undici: 7.29.1
-      zod: 4.5.4
+      undici: 7.30.1
+      zod: 4.6.7
 
-  '@ai-sdk/provider-utils@5.0.38(zod@4.5.4)':
+  '@ai-sdk/provider-utils@5.0.38(zod@4.6.7)':
     dependencies:
       '@ai-sdk/provider': 4.0.12
       '@standard-schema/spec': 1.1.0
       '@workflow/serde': 4.1.0
       eventsource-parser: 3.1.1
-      undici: 7.29.1
-      zod: 4.5.4
+      undici: 7.30.1
+      zod: 4.6.7
 
   '@ai-sdk/provider@4.0.11':
     dependencies:
@@ -7270,12 +7268,12 @@ snapshots:
     dependencies:
       json-schema: 0.4.0
 
-  '@ai-sdk/react@4.0.98(react@19.3.0)(zod@4.5.4)':
+  '@ai-sdk/react@4.0.98(react@19.3.0)(zod@4.6.7)':
     dependencies:
-      '@ai-sdk/mcp': 2.0.46(zod@4.5.4)
+      '@ai-sdk/mcp': 2.0.46(zod@4.6.7)
       '@ai-sdk/provider': 4.0.11
-      '@ai-sdk/provider-utils': 5.0.37(zod@4.5.4)
-      ai: 7.0.95(zod@4.5.4)
+      '@ai-sdk/provider-utils': 5.0.37(zod@4.6.7)
+      ai: 7.0.95(zod@4.6.7)
       react: 19.3.0
       swr: 2.5.1(react@19.3.0)
       throttleit: 2.1.0
@@ -7521,7 +7519,7 @@ snapshots:
     dependencies:
       sitemap: 9.0.1
       stream-replace-string: 2.0.0
-      zod: 4.5.4
+      zod: 4.6.7
 
   '@astrojs/starlight@0.41.11(astro@7.4.2(@types/node@22.19.17)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))(supports-color@10.2.2)(typescript@5.9.3)':
     dependencies:
@@ -8260,28 +8258,28 @@ snapshots:
     dependencies:
       '@expressive-code/core': 0.44.3
 
-  '@fallow-cli/darwin-arm64@3.17.0':
+  '@fallow-cli/darwin-arm64@3.35.0':
     optional: true
 
-  '@fallow-cli/darwin-x64@3.17.0':
+  '@fallow-cli/darwin-x64@3.35.0':
     optional: true
 
-  '@fallow-cli/linux-arm64-gnu@3.17.0':
+  '@fallow-cli/linux-arm64-gnu@3.35.0':
     optional: true
 
-  '@fallow-cli/linux-arm64-musl@3.17.0':
+  '@fallow-cli/linux-arm64-musl@3.35.0':
     optional: true
 
-  '@fallow-cli/linux-x64-gnu@3.17.0':
+  '@fallow-cli/linux-x64-gnu@3.35.0':
     optional: true
 
-  '@fallow-cli/linux-x64-musl@3.17.0':
+  '@fallow-cli/linux-x64-musl@3.35.0':
     optional: true
 
-  '@fallow-cli/win32-arm64-msvc@3.17.0':
+  '@fallow-cli/win32-arm64-msvc@3.35.0':
     optional: true
 
-  '@fallow-cli/win32-x64-msvc@3.17.0':
+  '@fallow-cli/win32-x64-msvc@3.35.0':
     optional: true
 
   '@floating-ui/core@1.8.0':
@@ -10451,12 +10449,12 @@ snapshots:
 
   acorn@8.16.0: {}
 
-  ai@7.0.95(zod@4.5.4):
+  ai@7.0.95(zod@4.6.7):
     dependencies:
-      '@ai-sdk/gateway': 4.0.76(zod@4.5.4)
+      '@ai-sdk/gateway': 4.0.76(zod@4.6.7)
       '@ai-sdk/provider': 4.0.11
-      '@ai-sdk/provider-utils': 5.0.37(zod@4.5.4)
-      zod: 4.5.4
+      '@ai-sdk/provider-utils': 5.0.37(zod@4.6.7)
+      zod: 4.6.7
 
   ajv-draft-04@1.0.0(ajv@8.20.0):
     optionalDependencies:
@@ -11316,24 +11314,24 @@ snapshots:
 
   extend@3.0.2: {}
 
-  fallow-type-aware@3.17.0:
+  fallow-type-aware@3.35.0:
     dependencies:
       typescript: 7.0.2
     optional: true
 
-  fallow@3.17.0:
+  fallow@3.35.0:
     dependencies:
       detect-libc: 2.1.2
     optionalDependencies:
-      '@fallow-cli/darwin-arm64': 3.17.0
-      '@fallow-cli/darwin-x64': 3.17.0
-      '@fallow-cli/linux-arm64-gnu': 3.17.0
-      '@fallow-cli/linux-arm64-musl': 3.17.0
-      '@fallow-cli/linux-x64-gnu': 3.17.0
-      '@fallow-cli/linux-x64-musl': 3.17.0
-      '@fallow-cli/win32-arm64-msvc': 3.17.0
-      '@fallow-cli/win32-x64-msvc': 3.17.0
-      fallow-type-aware: 3.17.0
+      '@fallow-cli/darwin-arm64': 3.35.0
+      '@fallow-cli/darwin-x64': 3.35.0
+      '@fallow-cli/linux-arm64-gnu': 3.35.0
+      '@fallow-cli/linux-arm64-musl': 3.35.0
+      '@fallow-cli/linux-x64-gnu': 3.35.0
+      '@fallow-cli/linux-x64-musl': 3.35.0
+      '@fallow-cli/win32-arm64-msvc': 3.35.0
+      '@fallow-cli/win32-x64-msvc': 3.35.0
+      fallow-type-aware: 3.35.0
 
   fast-deep-equal@3.1.3: {}
 
@@ -12550,7 +12548,7 @@ snapshots:
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       sharp: 0.35.5(@types/node@22.19.17)
-      undici: 7.29.1
+      undici: 7.30.1
       workerd: 1.20261019.1
       ws: 8.21.0
       youch: 4.1.0-beta.10
@@ -13732,7 +13730,7 @@ snapshots:
 
   undici-types@7.18.2: {}
 
-  undici@7.29.1: {}
+  undici@7.30.1: {}
 
   undici@8.12.3: {}
 
@@ -14071,12 +14069,12 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20261019.1
       '@cloudflare/workerd-windows-64': 1.20261019.1
 
-  workers-ai-provider@4.0.0(@ai-sdk/google@4.0.66(zod@4.5.4))(@ai-sdk/provider@4.0.12)(ai@7.0.95(zod@4.5.4)):
+  workers-ai-provider@4.0.0(@ai-sdk/google@4.0.66(zod@4.6.7))(@ai-sdk/provider@4.0.12)(ai@7.0.95(zod@4.6.7)):
     dependencies:
       '@ai-sdk/provider': 4.0.12
-      ai: 7.0.95(zod@4.5.4)
+      ai: 7.0.95(zod@4.6.7)
     optionalDependencies:
-      '@ai-sdk/google': 4.0.66(zod@4.5.4)
+      '@ai-sdk/google': 4.0.66(zod@4.6.7)
 
   world-atlas@2.0.2: {}
 
@@ -14193,8 +14191,6 @@ snapshots:
     dependencies:
       '@yuku-toolchain/types': 0.19.0
       yuku-core: 0.19.0
-
-  zod@4.5.4: {}
 
   zod@4.6.7: {}
 

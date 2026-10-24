@@ -21,8 +21,12 @@
 
 const L_ANCHOR = "l-a-one-character-annotation-key-is-refused";
 const M_ANCHOR = "m-u-caislamic-is-accepted-instead-of-refused";
+const P_ANCHOR =
+  "p-spidermonkey-accepts-a-zoned-string-whose-local-date-is-271821-04-19-firefox-only-engine";
 const ICU4X_8620 = "https://github.com/unicode-org/icu4x/issues/8620";
 const BOA_529 = "https://github.com/boa-dev/temporal/issues/529";
+const BUGZILLA_1998020 = "https://bugzilla.mozilla.org/show_bug.cgi?id=1998020";
+const BUGZILLA_2085525 = "https://bugzilla.mozilla.org/show_bug.cgi?id=2085525";
 
 /**
  * One test that fails natively and passes on the polyfill, for a known defect. `file` is
@@ -34,7 +38,9 @@ const BOA_529 = "https://github.com/boa-dev/temporal/issues/529";
  * The 13 tests that fail on Node 26 and Chromium 153 (V8 on `temporal_rs`) and pass on the
  * polyfill. Ten are L (`ixdtf` rejects a one-character annotation key, fixed in unicode-org/icu4x#8623,
  * not yet in an `ixdtf` release or a V8 roll); three are M (`temporal_rs` reads `islamic` as a
- * calendar, boa-dev/temporal#529). Evidence: the records. Firefox is not listed: it has not run yet.
+ * calendar, boa-dev/temporal#529). The 11 tests that fail on Firefox 155 (SpiderMonkey) and pass on the
+ * polyfill are P: SpiderMonkey accepts a zoned string whose local date is -271821-04-19, where the
+ * spec refuses it (Bugzilla 1998020). Evidence: the records.
  * Goose Bay day rounding is not here: it was a GMT defect and is fixed (temporalCompat D14).
  *
  * @type {ReadonlyArray<{ file: string, test: string, legs: Leg[], defect: string, upstream: string | null }>}
@@ -131,6 +137,83 @@ export const KNOWN_NATIVE_FAILURES = [
     defect: M_ANCHOR,
     upstream: BOA_529,
   },
+  {
+    file: "src/internal/zonedWallClock.test.ts",
+    test: "zonedDateTimeFrom the minimum instant throws for '-271821-04-19T20:00:00-04:56:02[Ameri…' with offset='reject' (CheckISODaysRange rejects -271821-04-19)",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/internal/zonedWallClock.test.ts",
+    test: "zonedDateTimeFrom the minimum instant throws for '-271821-04-19T20:00:00-04:56:02[Ameri…' with offset='prefer' (CheckISODaysRange rejects -271821-04-19)",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/internal/zonedWallClock.test.ts",
+    test: "zonedDateTimeFrom the minimum instant throws for '-271821-04-19T19:03:58-04:56[America/…' with offset='reject' (CheckISODaysRange rejects -271821-04-19)",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/test/minuteRoundedOffsets.test.ts",
+    test: "instant readers read a zoned string written at the range limits zoned reads refuse '-271821-04-19T23:59:00-00:01[Europe/L…', whose local date is before the ISO date range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/test/minuteRoundedOffsets.test.ts",
+    test: "instant readers read a zoned string written at the range limits zoned reads refuse '-271821-04-19T19:04:13-04:56[America/…', whose local date is before the ISO date range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/test/storedOffsetValues.test.ts",
+    test: "the limit of arithmetic at a stored offset with seconds 'roundUnix' returns its sentinel at the first instant at -00:44:30 and at -00:45 alike",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/test/storedOffsetValues.test.ts",
+    test: "the limit of arithmetic at a stored offset with seconds 'setUnix' returns its sentinel at the first instant at -00:44:30 and at -00:45 alike",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/zoned/convert/convertZonedToCalendar.test.ts",
+    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting '-271821-04-19T12:00:00-12:00[Etc/GMT+…' to 'hebrew': its offset makes TC39 check the local date against the day range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/zoned/convert/convertZonedToCalendar.test.ts",
+    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting '-271821-04-19T12:00:00-12:00[Etc/GMT+…' to 'iso8601': its offset makes TC39 check the local date against the day range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/zoned/convert/convertZonedToCalendar.test.ts",
+    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting '-271821-04-19T19:03:58-04:56:02[Ameri…' to 'hebrew': its offset makes TC39 check the local date against the day range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/zoned/convert/convertZonedToCalendar.test.ts",
+    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting '-271821-04-19T19:03:58-04:56:02[Ameri…' to 'iso8601': its offset makes TC39 check the local date against the day range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
 ];
 /**
  * A group of tests that fail on both engines in a runtime, for one stated reason. `id` is
@@ -153,14 +236,18 @@ export const KNOWN_HOST_FAILURES = [
     test: /\bis-IS\b/,
   },
   {
-    // Evidence, same browser: for America/New_York with `timeZoneName: "shortGeneric"`, es-ES gives
-    // "hora de New York" (expected "hora de Nueva York"), ko-KR "New York 시간", ru-RU "New York", and
-    // ja-JP, zh-CN, ar-SA, he-IL, pt-PT the same English city. `timeZoneName: "short"` and
-    // `longGeneric` are localised. Only the localised exemplar city name is missing.
-    id: "chromium-zone-city-names",
-    legs: ["chromium"],
+    // Evidence, Chromium 153.0.8010.12 under Playwright: for America/New_York with
+    // `timeZoneName: "shortGeneric"`, es-ES gives "hora de New York" (expected "hora de Nueva York"),
+    // ko-KR "New York 시간", ru-RU "New York", and ja-JP, zh-CN, ar-SA, he-IL, pt-PT the same English
+    // city. `timeZoneName: "short"` and `longGeneric` are localised. Only the localised exemplar city
+    // name is missing. Firefox 155.0 (Playwright 1.63.0) gives the same strings byte for byte:
+    // es-ES "hora de New York", pt-PT "Hora de New York", zh-CN "New York时间", ja-JP "New York時間",
+    // ko-KR "New York 시간", ar-SA "توقيت New York", he-IL "שעון New York", ru-RU "New York".
+    // Node 26.12.1 (ICU 78.3, CLDR 48.0) and WebKit 26.6 localise the city.
+    id: "browser-zone-city-names",
+    legs: ["chromium", "firefox"],
     reason:
-      "Chromium has no localised exemplar city names for time zones, so a generic zone name shows the English city (New York) in every locale.",
+      "Chromium and Firefox ship no localised exemplar city names for time zones, so a generic zone name shows the English city (New York) in every locale.",
     file: /\/formatTimeZoneName\.test\.ts$/,
     test: /season-independent styles \(shortGeneric\/longGeneric\) returns the same name in January and July for /,
   },
@@ -179,25 +266,45 @@ export const KNOWN_HOST_FAILURES = [
     // Evidence: at 2026-11-15T17:00Z, Chromium 153.0.8010.12 under Playwright 1.63.0 gives
     // America/Vancouver -08:00 and America/Winnipeg -06:00 (tz data before 2026b), and Chromium
     // 156.0.8078.4 under Playwright 1.64.1 gives Vancouver -07:00 but Winnipeg -06:00 (before
-    // 2026e). Node 26.12.1 (tz 2026e) gives -07:00 and -05:00. The group goes stale once a
-    // Playwright Chromium carries 2026e.
-    id: "chromium-canada-2026-tz-data",
-    legs: ["chromium"],
+    // 2026e). Firefox 155.0 under Playwright 1.63.0 fails the same 17 rows of this file: at
+    // 2026-11-01T08:00Z it gives America/Edmonton -07:00 (Edmonton changed in 2026c, so its data
+    // predates 2026c), and at 2026-11-01T07:00Z America/Winnipeg -06:00 (before 2026e). Node 26.12.1 (tz 2026e) gives -07:00 and -05:00. The
+    // group goes stale once a Playwright Chromium and a Firefox both carry 2026e.
+    id: "browser-canada-2026-tz-data",
+    legs: ["chromium", "firefox"],
     reason:
-      "Chromium's time zone data predates tzdb 2026e, so some of the Canadian zones that stopped changing their clocks in 2026 still turn back on 2026-11-01.",
+      "Chromium's and Firefox's time zone data predates tzdb 2026e, so some of the Canadian zones that stopped changing their clocks in 2026 still turn back on 2026-11-01.",
     file: /\/oh-canada\.test\.ts$/,
   },
   {
     // Evidence: under Playwright 1.63.0, Chromium 153.0.8010.12 gives Africa/Casablanca and
     // Africa/El_Aaiun +01:00 at 2026-09-20T01:00Z, 2026-11-02T12:00Z and 2027-06-01T12:00Z, and
     // +00:00 at 2027-02-22T12:00Z (tz data before 2026c). Chromium 156.0.8078.4 under Playwright
-    // 1.64.1, WebKit 26.6 and Node 26.12.1 (tz 2026e) give +00:00 at all four. The group goes
-    // stale once a Playwright Chromium carries 2026c.
-    id: "chromium-morocco-2026-tz-data",
-    legs: ["chromium"],
+    // 1.64.1, WebKit 26.6 and Node 26.12.1 (tz 2026e) give +00:00 at all four. Firefox 155.0 under
+    // Playwright 1.63.0 fails the same 44 rows of this file: it gives Africa/Casablanca +01:00 at
+    // 2026-09-20T01:00Z, where tz data from 2026c gives +00:00. The group goes stale once a Playwright Chromium and a Firefox both carry 2026c.
+    id: "browser-morocco-2026-tz-data",
+    legs: ["chromium", "firefox"],
     reason:
-      "Chromium's time zone data predates tzdb 2026c, so Morocco and Western Sahara still read +01:00 outside the old Ramadan weeks.",
+      "Chromium's and Firefox's time zone data predates tzdb 2026c, so Morocco and Western Sahara still read +01:00 outside the old Ramadan weeks.",
     file: /\/oh-morocco\.test\.ts$/,
+  },
+  {
+    // Evidence, Firefox 155.0 under Playwright 1.63.0: `new Intl.DateTimeFormat("en", { hour: "numeric",
+    // dayPeriod: "short", timeZone: "+01:00", timeZoneName: "short" }).formatRangeToParts(32_400_000,
+    // 39_600_000)` has the dayPeriod parts ["AM", "PM"], where `formatToParts` of each instant gives
+    // "in the morning" and "noon". Node 26.12.1, Chromium 153.0.8010.12 and WebKit 26.6 give the
+    // same parts in the range and the singles. Filed as Bugzilla 2085525; temporalCompat repairs it
+    // as D17 (engine record Q). The repro is plain `Intl`, so the polyfill control fails the test
+    // too, and the probe test it fails is the strict one: the lenient D17 rows and every
+    // `formatZonedRange` row pass either way, because the repair writes the right text. The group
+    // goes stale once a Playwright Firefox prints the flexible day period in a range: that stale-tag
+    // finding is the D17 removal trigger in `scripts/temporal-compat.mjs`.
+    id: "firefox-range-day-period",
+    legs: ["firefox"],
+    reason: `Firefox's formatRange prints AM and PM where a flexible day period is asked for next to a zone name (${BUGZILLA_2085525}), so the D17 probe names both sides instead of returning same.`,
+    file: /\/temporalCompat\/capabilities\.test\.ts$/,
+    test: /^D17 range day period probe returns same for range\.dayPeriod on every host$/,
   },
 ];
 
@@ -235,12 +342,58 @@ const FILE_FAILED_MESSAGE =
 
 /**
  * A failure message up to its stack, so an issue shows the assertion and not the paths of the
- * machine that ran it. A frame is `    at ...` (V8) or `name@url:line:column` (Firefox, Safari).
+ * machine that ran it. A frame is `    at ...` (V8) or `name@url:line:column` (Firefox, Safari);
+ * a Firefox stack carries no message line, so its first frame can start the text.
  * @param {string} message
  */
 function withoutStack(message) {
-  return message.split(/\n\s+at |\n[^\n@]*@\S+:\d+:\d+/)[0].trim();
+  return message.split(/\n\s+at |(?:^|\n)[^\s@]*@\S+:\d+:\d+/)[0].trim();
 }
+
+/**
+ * A Vitest JSON report with the captured messages put back where a failed test's stack has none.
+ * Firefox's `failureMessages[0]` is the stack alone; the reporter's `{ file, fullName, message }`
+ * records (`native-suite-reporter.mjs`) carry the `Name: message` line. A record that already
+ * starts with its message is left as it was.
+ * @param {any} report
+ * @param {ReadonlyArray<{ file: string, fullName: string, message: string }>} messages
+ * @returns {any}
+ */
+export function withFailureMessages(report, messages) {
+  const byTest = new Map(
+    messages.map((m) => [`${m.file}\0${m.fullName}`, m.message]),
+  );
+  return {
+    ...report,
+    testResults: (report?.testResults ?? []).map(
+      (/** @type {any} */ suite) => ({
+        ...suite,
+        assertionResults: (suite.assertionResults ?? []).map(
+          (/** @type {any} */ r) => {
+            const message = byTest.get(`${suite.name}\0${r.fullName}`);
+            const first = String((r.failureMessages ?? [])[0] ?? "");
+            if (
+              r.status !== "failed" ||
+              message === undefined ||
+              first.startsWith(message)
+            )
+              return r;
+            return {
+              ...r,
+              failureMessages: [
+                `${message}\n${first}`,
+                ...(r.failureMessages ?? []).slice(1),
+              ],
+            };
+          },
+        ),
+      }),
+    ),
+  };
+}
+
+/** What a failed test shows when its report holds a stack and no message. */
+const STACK_ONLY_MESSAGE = "(the report holds a stack and no message)";
 
 /**
  * @typedef {{ file: string, test: string, n: number, passed: number, skipped: number,
@@ -292,6 +445,16 @@ function testStatus(status) {
 }
 
 /**
+ * The message of a failed test: Vitest's first failure message without its stack. A stack-only
+ * entry (Firefox) leaves nothing, which reads as the stated placeholder; a passing test has none.
+ * @param {any} r  the assertion result
+ */
+function failureText(r) {
+  const text = withoutStack(String((r.failureMessages ?? [])[0] ?? ""));
+  return text === "" && r.status === "failed" ? STACK_ONLY_MESSAGE : text;
+}
+
+/**
  * Adds one test of a suite. Vitest skips the tests a failed hook leaves unrun: a failure, not a
  * skip.
  * @param {AddTest} add
@@ -307,12 +470,7 @@ function addAssertion(add, file, fileFailed, message, r) {
     add(file, test, "skipped", `${HOOK_SKIPPED}${detail}`, "", true);
     return;
   }
-  add(
-    file,
-    test,
-    testStatus(r.status),
-    withoutStack(String((r.failureMessages ?? [])[0] ?? "")),
-  );
+  add(file, test, testStatus(r.status), failureText(r));
 }
 
 /**

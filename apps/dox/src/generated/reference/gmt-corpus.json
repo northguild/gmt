@@ -27422,6 +27422,10 @@
         "result": "\"10:00-12:00 GMT\" — the pre-1.16.0 text"
       },
       {
+        "call": "formatZonedRange(\"2024-02-29T10:00:00-05:00[America/New_York]\", \"2024-02-29T12:00:00-05:00[America/New_York]\", \"en-US\", { hour: \"numeric\", minute: \"numeric\", timeZoneName: \"long\" })",
+        "result": "\"10:00 AM - 12:00 PM Eastern Standard Time\""
+      },
+      {
         "call": "formatZonedRange(\"invalid\", \"2024-02-29T14:00:00.000+00:00[UTC]\", \"fr-FR\")",
         "result": "\"\" (invalid input)"
       },

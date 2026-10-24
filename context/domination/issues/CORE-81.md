@@ -18,7 +18,7 @@ In build order. Each part leaves `pnpm run validate` green on its own.
 2. **JSON result.** `check` and `oracle` write their verdicts to `artifacts/` as JSON next to the existing oracle output: per workaround its state and trigger, and per oracle run the untagged mismatches. `scripts/leap-seconds.mjs check` writes its differences the same way.
 3. **Issue step.** A script run by a final workflow step (`if: ${{ !cancelled() }}`, `issues: write`) turns the JSON into issues:
    - one issue per workaround that becomes removable, with its trigger and removal steps;
-   - one `bug` issue for any untagged oracle mismatch, listing the rows;
+   - one `temporal-compat` issue for any untagged oracle mismatch, listing the rows;
    - one issue for a leap-second table difference, with the IERS header line;
    - a comment on the matching open issue instead of a duplicate, matched by a label and a hidden marker carrying the finding key, on every run while the finding persists;
    - nothing when there is no finding.
@@ -42,7 +42,7 @@ In build order. Each part leaves `pnpm run validate` green on its own.
 
 - A manual `workflow_dispatch` run on today's polyfill reports D10 as `GUARD` and opens no issue.
 - A dry run with one workaround forced removable opens exactly one issue. A second run comments on it instead of opening another.
-- A forced oracle mismatch opens one `bug` issue. A forced leap-second difference opens one issue.
+- A forced oracle mismatch opens one `temporal-compat` issue. A forced leap-second difference opens one issue.
 - The decision script's tests cover open, comment and no-op.
 - `pnpm run validate` stays green.
 
@@ -67,7 +67,7 @@ Current rules for the canary reporting, with the reason for each.
   equality keeps `D1` from matching `D10`, and real keys from matching `dry-run/` ones. With
   several matches the oldest gets the comment, so the choice is deterministic. A finding whose
   issue a person closed opens a new one. Keys: `temporal-compat/removable/<ids joined by +>`,
-  `temporal-oracle/untagged-mismatch` (also labelled `bug`), `leap-seconds/table-difference`,
+  `temporal-oracle/untagged-mismatch` (also labelled `temporal-compat`), `leap-seconds/table-difference`,
   `<workflow>/could-not-run`.
 - **A finding that persists gets a comment on every run.** An open finding is pending work, and the
   weekly comment is its reminder. Deduplicating by content would also make a second dry run do

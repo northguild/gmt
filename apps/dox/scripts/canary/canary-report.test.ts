@@ -41,9 +41,9 @@ describe("ensureLabels", () => {
   const labelList = (...names: string[]) =>
     JSON.stringify(names.map((name) => ({ name })));
 
-  it("creates a missing canary label and leaves an existing bug label alone", () => {
-    const { gh, calls } = fakeGh(() => labelList("bug"));
-    ensureLabels(gh, ["canary", "bug"]);
+  it("creates a missing canary label and leaves an existing temporal-compat label alone", () => {
+    const { gh, calls } = fakeGh(() => labelList("temporal-compat"));
+    ensureLabels(gh, ["canary", "temporal-compat"]);
     expect(calls.map((c) => c.args)).toEqual([
       ["label", "list", "--json", "name", "--limit", "1000"],
       [
@@ -60,7 +60,7 @@ describe("ensureLabels", () => {
   });
 
   it("creates the dry-run label with its own description and colour", () => {
-    const { gh, calls } = fakeGh(() => labelList("canary", "bug"));
+    const { gh, calls } = fakeGh(() => labelList("canary", "temporal-compat"));
     ensureLabels(gh, ["canary", "canary-dry-run"]);
     expect(calls.map((c) => c.args)).toEqual([
       ["label", "list", "--json", "name", "--limit", "1000"],
@@ -77,18 +77,18 @@ describe("ensureLabels", () => {
   });
 
   it("makes only the list call when every label exists", () => {
-    const { gh, calls } = fakeGh(() => labelList("canary", "bug"));
-    ensureLabels(gh, ["canary", "bug"]);
+    const { gh, calls } = fakeGh(() => labelList("canary", "temporal-compat"));
+    ensureLabels(gh, ["canary", "temporal-compat"]);
     expect(calls.map((c) => c.args)).toEqual([
       ["label", "list", "--json", "name", "--limit", "1000"],
     ]);
   });
 
   it.each`
-    existingName | needed
-    ${"Canary"}  | ${"canary"}
-    ${"BUG"}     | ${"bug"}
-    ${"canary"}  | ${"CANARY"}
+    existingName         | needed
+    ${"Canary"}          | ${"canary"}
+    ${"TEMPORAL-COMPAT"} | ${"temporal-compat"}
+    ${"canary"}          | ${"CANARY"}
   `(
     "an existing $existingName label counts as $needed (GitHub names ignore case): no create call",
     ({ existingName, needed }: { existingName: string; needed: string }) => {
@@ -100,17 +100,17 @@ describe("ensureLabels", () => {
     },
   );
 
-  it("creates a missing bug label with GitHub's default colour", () => {
+  it("creates a missing temporal-compat label with its description and colour", () => {
     const { gh, calls } = fakeGh(() => labelList("canary"));
-    ensureLabels(gh, ["canary", "bug"]);
+    ensureLabels(gh, ["canary", "temporal-compat"]);
     expect(calls[1].args).toEqual([
       "label",
       "create",
-      "bug",
+      "temporal-compat",
       "--description",
-      "Something isn't working",
+      "GMT, a native Temporal engine and runtime data disagree; found by a canary",
       "--color",
-      "d73a4a",
+      "5319e7",
     ]);
   });
 });
@@ -143,7 +143,7 @@ describe("runActions", () => {
     kind: "open",
     key: "k",
     title: "T",
-    labels: ["canary", "bug"],
+    labels: ["canary", "temporal-compat"],
     body: "BODY",
   };
   const comment: Action = {
@@ -165,10 +165,12 @@ describe("runActions", () => {
           "create",
           "--title",
           "T",
+          "--type",
+          "Task",
           "--label",
           "canary",
           "--label",
-          "bug",
+          "temporal-compat",
           "--body-file",
           "-",
         ],
@@ -486,7 +488,7 @@ describe("main", () => {
     expect(actions[0]).toMatchObject({
       kind: "open",
       key: "dry-run/native-suite/untagged-failure",
-      labels: ["canary", "bug", "canary-dry-run"],
+      labels: ["canary", "temporal-compat", "canary-dry-run"],
     });
   });
 

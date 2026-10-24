@@ -7,8 +7,8 @@ name: Temporal oracle
 # row that the script's tag list does not explain — a GMT bug to fix.
 #
 # A final job (CORE-81) files issues from the verdicts the oracle job wrote: one per removable
-# workaround, one `bug` for untagged mismatches, and one when the canary could not run. The
-# dispatch inputs are dry runs: they file a clearly marked [dry run] issue and change no probe,
+# workaround, one `temporal-compat` issue for untagged mismatches, and one when the canary could not run.
+# The dispatch inputs are dry runs: they file a clearly marked [dry run] issue and change no probe,
 # tally or exit code.
 #
 # The native-suite job runs the whole packages/gmt suite on native Temporal in Node 26,
@@ -25,12 +25,12 @@ on:
         required: false
         default: ""
       force_mismatch:
-        description: "Dry run: file a [dry run] bug issue for one synthetic untagged mismatch"
+        description: "Dry run: file a [dry run] issue for one synthetic untagged mismatch"
         type: boolean
         required: false
         default: false
       force_native_failure:
-        description: "Dry run: file a [dry run] bug issue for one synthetic native-suite failure"
+        description: "Dry run: file a [dry run] issue for one synthetic native-suite failure"
         type: boolean
         required: false
         default: false
