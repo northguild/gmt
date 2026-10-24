@@ -18,8 +18,27 @@ export type LocalMoment = { day: number; second: number };
  */
 export type ExpansionStatus = "stopped" | "capped" | "end";
 
-/** Work units one expansion may spend: periods visited, days evaluated and moments considered. */
+/**
+ * Work units one expansion may spend: periods visited, years looked up, days evaluated while a
+ * year of the day cache fills, and moments considered.
+ */
 export const RECURRENCE_WORK_CAP = 2_000_000;
+
+/**
+ * The proleptic Gregorian calendar repeats exactly every 400 years: 146,097 days (a whole 20,871
+ * weeks), 4,800 months. The day filter reads only the calendar (month, month length, leap year,
+ * day of year, ISO week of a year, weekday), so a day and the day 146,097 later give the same
+ * answer. The day cache and the "nothing more can come" end rely on it.
+ */
+const CYCLE_YEARS = 400;
+const CYCLE_DAYS = 146_097;
+/** Periods in one cycle, by frequency, yearly to daily. */
+const CYCLE_PERIODS = {
+  yearly: CYCLE_YEARS,
+  monthly: 4800,
+  weekly: 20_871,
+  daily: CYCLE_DAYS,
+} as const;
 
 const SECONDS_PER_DAY = 86_400;
 const DAYS_PER_WEEK = 7;
@@ -295,9 +314,13 @@ function dayParts(rule: PreparedRule): DayPart[] {
   return parts;
 }
 
-/** The day filter of step 2: true when every present day part matches `day`. */
-function dayFilter(rule: PreparedRule): (day: number) => boolean {
+/** The day filter of step 2: true when every present day part matches `day`; `undefined` with no part. */
+function dayFilter(rule: PreparedRule): ((day: number) => boolean) | undefined {
   const parts = dayParts(rule);
+
+  if (parts.length === 0) {
+    return undefined;
+  }
 
   return (day) => {
     const [year, month, dom] = isoFieldsOf(day);
@@ -379,7 +402,14 @@ type Run = {
   start: LocalMoment;
   visit: (moment: LocalMoment) => boolean;
   setPositions: readonly number[] | undefined;
+  /** True once any period or sub-daily step has had a pick to consider (kept, dropped or past `lastDay`). */
+  picked: boolean;
 };
+
+/** Records that a period or step had `count` picks to consider. */
+function markPicked(run: Run, count: number): void {
+  run.picked = run.picked || count > 0;
+}
 
 /** True when the candidate is DTSTART or earlier (step 4): DTSTART was visited already. */
 function notAfterStart(run: Run, day: number, second: number): boolean {
@@ -405,6 +435,7 @@ function emit(
     : undefined;
   const count = picks ? picks.length : size;
 
+  markPicked(run, count);
   for (let n = 0; n < count; n++) {
     if (run.spent >= run.budget) {
       return "capped";
@@ -529,78 +560,6 @@ function emitSubDaily(
       );
 }
 
-/**
- * The day filter for the sub-daily walk: it charges one unit and evaluates a day once, then
- * remembers the answer while the walk stays on that day. `undefined` when the budget ran out.
- */
-function chargedDayFilter(
-  run: Run,
-  passes: (day: number) => boolean,
-): (day: number) => boolean | undefined {
-  let checkedDay = Number.NaN;
-  let dayPasses = false;
-
-  return (day) => {
-    if (day === checkedDay) {
-      return dayPasses;
-    }
-    if (run.spent >= run.budget) {
-      return undefined;
-    }
-    run.spent++;
-    checkedDay = day;
-    dayPasses = passes(day);
-
-    return dayPasses;
-  };
-}
-
-/** Hourly, minutely and secondly: one period per unit, skipping to the next candidate day or hour. */
-function expandSubDaily(
-  rule: PreparedRule,
-  run: Run,
-  passes: (day: number) => boolean,
-  fromDay: number,
-): ExpansionStatus {
-  const { interval } = rule;
-  const unit = SUB_DAILY_UNIT[rule.frequency as keyof typeof SUB_DAILY_UNIT];
-  const perDay = SECONDS_PER_DAY / unit;
-  const origin = run.start.day * perDay + Math.floor(run.start.second / unit);
-  let index = alignedAtLeast(origin, interval, fromDay * perDay);
-  const passesOnDay = chargedDayFilter(run, passes);
-
-  for (;;) {
-    if (run.spent >= run.budget) {
-      return "capped";
-    }
-    run.spent++;
-
-    const day = Math.floor(index / perDay);
-    if (day > run.lastDay()) {
-      return "end";
-    }
-    const dayPasses = passesOnDay(day);
-    if (dayPasses === undefined) {
-      return "capped";
-    }
-
-    const base = (index - day * perDay) * unit;
-    const skipTo = dayPasses
-      ? subDailySkipTarget(rule, day, base)
-      : (day + 1) * perDay;
-    if (skipTo !== undefined) {
-      index = alignedAtLeast(origin, interval, skipTo);
-      continue;
-    }
-
-    const status = emitSubDaily(run, rule, day, base);
-    if (status !== undefined) {
-      return status;
-    }
-    index += interval;
-  }
-}
-
 /** `byHour x byMinute x bySecond` as seconds of the day, ascending (step 2, daily and coarser). */
 function timesOfDay(rule: PreparedRule): number[] {
   const times: number[] = [];
@@ -616,92 +575,416 @@ function timesOfDay(rule: PreparedRule): number[] {
   return times;
 }
 
+/** Index of the first entry of the ascending `values` that is at least `target`: O(log n). */
+function firstAtLeast(values: readonly number[], target: number): number {
+  let low = 0;
+  let high = values.length;
+
+  while (low < high) {
+    const middle = (low + high) >> 1;
+
+    if (values[middle] < target) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+
+  return low;
+}
+
+function gcd(a: number, b: number): number {
+  return b === 0 ? a : gcd(b, a % b);
+}
+
 /**
- * The days of `[first, last]` that pass the day filter, ascending; each day evaluated costs one
- * unit. With `BYMONTH`, a month outside it costs one unit as a whole and its days are not
- * evaluated, so a yearly rule for one month does not pay for the other eleven. `undefined` when
- * the budget ran out first.
+ * Steps after which a walk that has picked nothing never will: the least common multiple of the
+ * interval and `cycle` (the number of steps in 400 years). The filter repeats every `cycle` steps
+ * and the aligned steps repeat every `interval`, so after `lcm` steps every combination has been
+ * seen. `Infinity` when it is not a safe integer: the work budget ends such a walk.
  */
-function passingDays(
+function stepsToRepeat(interval: number, cycle: number): number {
+  const span = (interval / gcd(interval, cycle)) * cycle;
+
+  return Number.isSafeInteger(span) ? span : Number.POSITIVE_INFINITY;
+}
+
+/** The passing days of the rule, found a year at a time and cached. */
+type DayCache = {
+  /** Passing days in `[first, last]`, ascending; `undefined` when the budget ran out. */
+  between: (first: number, last: number) => number[] | undefined;
+  /** Whether `day` passes; `undefined` when the budget ran out. */
+  has: (day: number) => boolean | undefined;
+  /**
+   * First passing day at or after `day`; `Infinity` when none comes in 400 years (so none ever),
+   * a day past `lastDay` as soon as the search reaches one; `undefined` when the budget ran out.
+   */
+  nextFrom: (day: number) => number | undefined;
+};
+
+/**
+ * The passing days of `year` as offsets from 1 January, one unit per day evaluated and one for a
+ * whole month outside `byMonth`; `undefined` when the budget ran out.
+ */
+function fillYear(
   run: Run,
-  first: number,
-  last: number,
   passes: (day: number) => boolean,
   byMonth: ReadonlySet<number> | undefined,
+  year: number,
 ): number[] | undefined {
-  const days: number[] = [];
+  const offsets: number[] = [];
+  const [jan1, dec31] = scopeDays(year, 0);
 
-  for (let day = first; day <= last; day++) {
+  // At most 366 days, each charged, or a month at a time: bounded by the budget.
+  for (let day = jan1; day <= dec31; day++) {
     if (run.spent >= run.budget) {
       return undefined;
     }
     run.spent++;
 
-    if (byMonth !== undefined) {
-      const [year, month] = isoFieldsOf(day);
-
-      if (!byMonth.has(month)) {
-        // Jump to the month's last day; the loop step then lands on the next month's first.
-        day = epochDayOf(year, month, daysInMonthOf(year, month));
-        continue;
-      }
-    }
-    if (passes(day)) {
-      days.push(day);
+    const [, month] = isoFieldsOf(day);
+    if (byMonth !== undefined && !byMonth.has(month)) {
+      // Jump to the month's last day; the loop step then lands on the next month's first.
+      day = scopeDays(year, month)[1];
+    } else if (passes(day)) {
+      offsets.push(day - jan1);
     }
   }
 
-  return days;
+  return offsets;
 }
 
-/** Yearly to daily: one period per step, its passing days times the rule's times of day. */
-function expandPeriods(
+/**
+ * The day cache. `passes` is the day filter and `byMonth` the rule's months, if any.
+ *
+ * A year's passing days are kept as offsets from 1 January, under `year mod 400` (see
+ * `CYCLE_DAYS`: a year and the one 400 years on have the same offsets). Filling an entry costs one
+ * unit per day evaluated, and with `BYMONTH` one unit for a whole month outside it, so a whole call
+ * fills at most 146,097 units. Every lookup then costs one unit per year it touches, whatever the
+ * year holds: a rule that matches one day a year pays one unit a year, not 365.
+ * A rule with no day part passes every day and skips the cache.
+ */
+function createDayCache(
+  run: Run,
+  passes: ((day: number) => boolean) | undefined,
+  byMonth: ReadonlySet<number> | undefined,
+): DayCache {
+  const years = new Map<number, number[]>();
+
+  /** Passing days of `year` as offsets from 1 January, filling the entry if it is new. */
+  function offsetsOf(year: number): number[] | undefined {
+    if (run.spent >= run.budget) {
+      return undefined;
+    }
+    run.spent++;
+
+    const key = mod(year, CYCLE_YEARS);
+    const known = years.get(key);
+    if (known !== undefined || passes === undefined) {
+      return known ?? [];
+    }
+
+    const offsets = fillYear(run, passes, byMonth, year);
+    if (offsets === undefined) {
+      return undefined;
+    }
+    years.set(key, offsets);
+
+    return offsets;
+  }
+
+  return {
+    between(first, last) {
+      if (passes === undefined) {
+        return Array.from(
+          { length: Math.max(last - first + 1, 0) },
+          (_, i) => first + i,
+        );
+      }
+      const days: number[] = [];
+
+      // One iteration per year the span touches, each charged.
+      for (let year = isoFieldsOf(first)[0]; ; year++) {
+        const [jan1, dec31] = scopeDays(year, 0);
+        if (jan1 > last) {
+          return days;
+        }
+        const offsets = offsetsOf(year);
+        if (offsets === undefined) {
+          return undefined;
+        }
+        // Bounded by the passing days of the year, at most 366.
+        for (
+          let i = firstAtLeast(offsets, first - jan1);
+          i < offsets.length && jan1 + offsets[i] <= Math.min(last, dec31);
+          i++
+        ) {
+          days.push(jan1 + offsets[i]);
+        }
+      }
+    },
+    has(day) {
+      if (passes === undefined) {
+        return true;
+      }
+      const [year] = isoFieldsOf(day);
+      const offsets = offsetsOf(year);
+
+      if (offsets === undefined) {
+        return undefined;
+      }
+      const offset = day - scopeDays(year, 0)[0];
+
+      return offsets[firstAtLeast(offsets, offset)] === offset;
+    },
+    nextFrom(day) {
+      if (passes === undefined) {
+        return day;
+      }
+      const [first] = isoFieldsOf(day);
+
+      // At most 401 years, each charged: they cover the 146,097 days from `day`, after which
+      // the filter repeats.
+      for (let year = first; year <= first + CYCLE_YEARS; year++) {
+        const [jan1] = scopeDays(year, 0);
+        if (jan1 > run.lastDay()) {
+          return jan1;
+        }
+        const offsets = offsetsOf(year);
+        if (offsets === undefined) {
+          return undefined;
+        }
+        const i = firstAtLeast(offsets, day - jan1);
+        if (i < offsets.length) {
+          return jan1 + offsets[i];
+        }
+      }
+
+      return Number.POSITIVE_INFINITY;
+    },
+  };
+}
+
+/**
+ * After a sub-daily step on `day` at second `base`: the step to try next when this one is skipped
+ * (an excluded day, hour or minute), a status when the walk ends, or `undefined` to emit the step.
+ */
+function subDailySkip(
   rule: PreparedRule,
   run: Run,
-  passes: (day: number) => boolean,
+  days: DayCache,
+  day: number,
+  base: number,
+  dayPasses: boolean,
+): number | ExpansionStatus | undefined {
+  if (dayPasses) {
+    return subDailySkipTarget(rule, day, base);
+  }
+  // The next passing day, whose first aligned step is the next to try.
+  const next = days.nextFrom(day + 1);
+  if (next === undefined) {
+    return "capped";
+  }
+
+  return next > run.lastDay()
+    ? "end"
+    : next *
+        (SECONDS_PER_DAY /
+          SUB_DAILY_UNIT[rule.frequency as keyof typeof SUB_DAILY_UNIT]);
+}
+
+/** True when `steps` steps have gone by with nothing picked, the point of no return (see `stepsToRepeat`). */
+function repeated(run: Run, steps: number, repeatAfter: number): boolean {
+  return !run.picked && steps >= repeatAfter;
+}
+
+/** `days.has` for the sub-daily walk, remembering the answer while the walk stays on one day. */
+function dayMemo(days: DayCache): (day: number) => boolean | undefined {
+  let checkedDay = Number.NaN;
+  let dayPasses = false;
+
+  return (day) => {
+    if (day !== checkedDay) {
+      const answer = days.has(day);
+      if (answer === undefined) {
+        return undefined;
+      }
+      checkedDay = day;
+      dayPasses = answer;
+    }
+
+    return dayPasses;
+  };
+}
+
+/**
+ * One sub-daily step at `index` on a day that does (or does not) pass: the index of the next step
+ * to try, or the status that ends the walk. A skipped step jumps; any other is emitted.
+ */
+function subDailyStep(
+  rule: PreparedRule,
+  run: Run,
+  days: DayCache,
+  index: number,
+  dayPasses: boolean,
+): number | ExpansionStatus {
+  const unit = SUB_DAILY_UNIT[rule.frequency as keyof typeof SUB_DAILY_UNIT];
+  const perDay = SECONDS_PER_DAY / unit;
+  const day = Math.floor(index / perDay);
+  const base = (index - day * perDay) * unit;
+  const skip = subDailySkip(rule, run, days, day, base, dayPasses);
+
+  if (typeof skip === "string") {
+    return skip;
+  }
+  if (skip !== undefined) {
+    const origin = run.start.day * perDay + Math.floor(run.start.second / unit);
+
+    return alignedAtLeast(origin, rule.interval, skip);
+  }
+
+  return emitSubDaily(run, rule, day, base) ?? index + rule.interval;
+}
+
+/** Hourly, minutely and secondly: one period per unit, skipping to the next candidate day or hour. */
+function expandSubDaily(
+  rule: PreparedRule,
+  run: Run,
+  days: DayCache,
   fromDay: number,
 ): ExpansionStatus {
-  const times = timesOfDay(rule);
-  const origin = periodIndexOfDay(rule, run.start.day);
-  let index = alignedAtLeast(
-    origin,
-    rule.interval,
-    periodIndexOfDay(rule, fromDay),
-  );
+  const { interval } = rule;
+  const unit = SUB_DAILY_UNIT[rule.frequency as keyof typeof SUB_DAILY_UNIT];
+  const perDay = SECONDS_PER_DAY / unit;
+  const origin = run.start.day * perDay + Math.floor(run.start.second / unit);
+  const first = alignedAtLeast(origin, interval, fromDay * perDay);
+  // Nothing picked in this many steps from `first` means nothing ever will (see stepsToRepeat).
+  const repeatAfter = stepsToRepeat(interval, perDay * CYCLE_DAYS);
+  const passesOnDay = dayMemo(days);
+  let index = first;
 
+  // Each pass spends one unit, so the budget bounds the loop; `repeatAfter` ends a walk with no
+  // pick after at most `repeatAfter / interval` passes, and `lastDay` ends it at the last date.
   for (;;) {
     if (run.spent >= run.budget) {
       return "capped";
     }
     run.spent++;
 
-    const [first, last] = periodDays(rule, index);
-    if (first > run.lastDay()) {
+    const day = Math.floor(index / perDay);
+    if (day > run.lastDay()) {
+      return "end";
+    }
+    const dayPasses = passesOnDay(day);
+    if (dayPasses === undefined) {
+      return "capped";
+    }
+
+    const next = subDailyStep(rule, run, days, index, dayPasses);
+    if (typeof next === "string") {
+      return next;
+    }
+    index = next;
+    if (repeated(run, index - first, repeatAfter)) {
+      return "end";
+    }
+  }
+}
+
+/** Where an empty period sends the walk: the next aligned period index, or how it ends. */
+function jumpPastEmpty(
+  rule: PreparedRule,
+  run: Run,
+  days: DayCache,
+  origin: number,
+  lastDay: number,
+): number | ExpansionStatus {
+  if (lastDay >= run.lastDay()) {
+    return "end";
+  }
+  // The aligned period at or after the next passing day: the periods between hold none.
+  const day = days.nextFrom(lastDay + 1);
+  if (day === undefined) {
+    return "capped";
+  }
+
+  return day > run.lastDay()
+    ? "end"
+    : alignedAtLeast(origin, rule.interval, periodIndexOfDay(rule, day));
+}
+
+/** Yearly to daily: one period per step, its passing days times the rule's times of day. */
+function expandPeriods(
+  rule: PreparedRule,
+  run: Run,
+  days: DayCache,
+  fromDay: number,
+): ExpansionStatus {
+  const times = timesOfDay(rule);
+  const { interval } = rule;
+  const origin = periodIndexOfDay(rule, run.start.day);
+  const first = alignedAtLeast(
+    origin,
+    interval,
+    periodIndexOfDay(rule, fromDay),
+  );
+  // Nothing picked in this many periods from `first` means nothing ever will (see stepsToRepeat).
+  const repeatAfter = stepsToRepeat(
+    interval,
+    CYCLE_PERIODS[rule.frequency as keyof typeof CYCLE_PERIODS],
+  );
+  let index = first;
+
+  // Each pass spends one unit, so the budget bounds the loop; `repeatAfter` ends a walk with no
+  // pick after at most `repeatAfter / interval` passes, and `lastDay` ends it at the last date.
+  for (;;) {
+    if (run.spent >= run.budget) {
+      return "capped";
+    }
+    run.spent++;
+
+    const [firstDay, lastDay] = periodDays(rule, index);
+    if (firstDay > run.lastDay()) {
       return "end";
     }
 
     // The whole period is evaluated, past `lastDay` too: BYSETPOS counts positions
     // over the full period (RFC 5545 §3.3.10, RFC 8984 §4.3.3.1 step 3), and emit drops the rest.
-    const days = passingDays(run, first, last, passes, rule.byMonth);
-    if (days === undefined) {
+    const passing = days.between(firstDay, lastDay);
+    if (passing === undefined) {
       return "capped";
     }
 
-    const status = emit(
-      run,
-      days.length,
-      times.length,
-      (i) => days[i],
-      (i) => times[i],
-    );
-    if (status !== undefined) {
-      return status;
+    const next =
+      passing.length === 0
+        ? jumpPastEmpty(rule, run, days, origin, lastDay)
+        : (emitPeriod(run, passing, times, lastDay) ?? index + interval);
+    if (typeof next === "string") {
+      return next;
     }
-    if (last >= run.lastDay()) {
+    index = next;
+    if (repeated(run, index - first, repeatAfter)) {
       return "end";
     }
-    index += rule.interval;
   }
+}
+
+/** Emits one period's candidates; a status when the expansion ends in or at the end of it. */
+function emitPeriod(
+  run: Run,
+  passing: readonly number[],
+  times: readonly number[],
+  lastDay: number,
+): ExpansionStatus | undefined {
+  const status = emit(
+    run,
+    passing.length,
+    times.length,
+    (i) => passing[i],
+    (i) => times[i],
+  );
+
+  return status ?? (lastDay >= run.lastDay() ? "end" : undefined);
 }
 
 /**
@@ -716,10 +999,20 @@ function expandPeriods(
  * window, not on the distance from DTSTART. The first period visited may still yield moments
  * before `fromDay`; the caller filters them. Pass `start.day` to expand from DTSTART.
  *
- * Complexity: `O(P + D + R)` for the periods visited (skip jumps included), the days evaluated
- * (at most 366 per period) and the moments considered. Their sum is bounded by `budget`
- * (default {@link RECURRENCE_WORK_CAP}), so a rule that never matches, such as February 30,
- * ends as `"capped"` rather than looping.
+ * Complexity: `O(P + Y + F + R)` for the periods visited (skip jumps included), the years looked
+ * up (one unit each, whatever the year holds), the days evaluated while the day cache fills and
+ * the moments considered. The day filter repeats every 400 years (146,097 days), so each year of
+ * the cycle is evaluated once, at one unit a day (a month outside `BYMONTH` is one unit): `F` is
+ * at most 146,097 for the whole call. A day or period that fails the filter jumps to the next
+ * passing day, found in at most 400 years' lookups; none in 400 years means none ever. The sum is
+ * bounded by `budget` (default {@link RECURRENCE_WORK_CAP}).
+ *
+ * A walk that has had nothing to pick after `lcm(interval, periods in 400 years)` steps from its
+ * first one ends as `"end"`, because the filter and the alignment have both repeated. So a rule
+ * that never matches again, such as February 30, or an interval that never lines up, such as every
+ * 7th day on Mondays from a Tuesday, ends as `"end"` and not `"capped"`. `"capped"` is left for a
+ * budget too small for that, and for a sub-daily interval whose proof needs more steps than that (at most
+ * `perDay x 146,097 / gcd(perDay x 146,097, interval)` of them).
  *
  * `lastDay` (epoch day, default and ceiling `MAX_EPOCH_DAY`) ends the expansion: no pick after it
  * is visited. It may be a function, read at every period, so `visit` can bring the end forward
@@ -759,10 +1052,11 @@ export function expandLocalMoments(
     start,
     visit,
     setPositions: prepared.setPositions,
+    picked: false,
   };
-  const passes = dayFilter(prepared);
+  const days = createDayCache(run, dayFilter(prepared), prepared.byMonth);
 
   return prepared.frequency in SUB_DAILY_UNIT
-    ? expandSubDaily(prepared, run, passes, fromDay)
-    : expandPeriods(prepared, run, passes, fromDay);
+    ? expandSubDaily(prepared, run, days, fromDay)
+    : expandPeriods(prepared, run, days, fromDay);
 }

@@ -1478,20 +1478,22 @@ describe("expandRecurrence, a count window keeps DTSTART when no later occurrenc
     },
   );
 
+  // A rule with fewer than `count` occurrences returns the ones it has, as `FREQ=DAILY;COUNT=2`
+  // does with a count of 5. These rules have none after DTSTART, so DTSTART alone comes back.
   it.each`
-    rule
-    ${"FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=30"}
-    ${"FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30"}
-    ${"FREQ=SECONDLY;BYMONTH=2;BYMONTHDAY=30"}
+    rule                                       | start                    | after
+    ${"FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=30"}   | ${"2024-01-01T09:00:00"} | ${"2024-01-01T00:00:00Z"}
+    ${"FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30"}    | ${"2024-01-01T09:00:00"} | ${"2024-01-01T00:00:00Z"}
+    ${"FREQ=SECONDLY;BYMONTH=2;BYMONTHDAY=30"} | ${"2024-01-01T09:00:00"} | ${"2024-01-01T00:00:00Z"}
+    ${"FREQ=DAILY;INTERVAL=7;BYDAY=MO"}        | ${"2024-01-02T09:00:00"} | ${"2024-01-01T00:00:00Z"}
   `(
-    "$rule never reaches a count of 5, so the budget ends it with []",
-    ({ rule: text }) => {
+    "$rule from $start never matches after DTSTART, so a count of 5 gives DTSTART alone",
+    ({ rule: text, start, after }) => {
       expect(
-        expandRecurrence(rule(text), "2024-01-01T09:00:00", "UTC", {
-          after: "2024-01-01T00:00:00Z",
-          count: 5,
-        }),
-      ).toEqual([]);
+        expandRecurrence(rule(text), start, "UTC", { after, count: 5 }).map(
+          (row) => row.local,
+        ),
+      ).toEqual([start]);
     },
   );
 });
@@ -1532,20 +1534,177 @@ describe("expandRecurrence, a bracketed annotation on DTSTART, RDATE or EXDATE r
 });
 
 describe("expandRecurrence, a sparse rule finds every occurrence inside a count of 1 to 10,000", () => {
+  /** Row `n` of a rule on Feb 29 from 2024, by counting leap years one at a time. */
+  function nthLeapDay(n: number): string {
+    let found = 0;
+
+    for (let year = 2024; ; year++) {
+      if (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) {
+        found++;
+      }
+      if (found === n) {
+        return `${Temporal.PlainDate.from({ year, month: 2, day: 29 }).toString()}T00:00:00`;
+      }
+    }
+  }
+
+  // FREQ=YEARLY from 2024-02-28 has one row a year, so row 6000 is in 2024 + 5999 = 8023.
   it.each`
-    rule                                     | start                    | count
-    ${"FREQ=YEARLY"}                         | ${"2024-02-28T00:00:00"} | ${6000}
-    ${"FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29"} | ${"2024-02-29T00:00:00"} | ${1400}
-    ${"FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29"} | ${"2024-02-29T00:00:00"} | ${10_000}
+    rule                                     | start                    | count     | last
+    ${"FREQ=YEARLY"}                         | ${"2024-02-28T00:00:00"} | ${6000}   | ${"8023-02-28T00:00:00"}
+    ${"FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29"} | ${"2024-02-29T00:00:00"} | ${1400}   | ${nthLeapDay(1400)}
+    ${"FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29"} | ${"2024-02-29T00:00:00"} | ${10_000} | ${nthLeapDay(10_000)}
   `(
-    "$rule from $start with count $count gives $count rows",
-    ({ rule: text, start, count }) => {
-      expect(
-        expandRecurrence(rule(text), start, "UTC", {
-          after: "2024-01-01T00:00:00Z",
+    "$rule from $start with count $count gives $count rows ending on $last",
+    ({ rule: text, start, count, last }) => {
+      const rows = expandRecurrence(rule(text), start, "UTC", {
+        after: "2024-01-01T00:00:00Z",
+        count,
+      });
+
+      expect({ length: rows.length, last: rows.at(-1)?.local }).toEqual({
+        length: count,
+        last,
+      });
+    },
+  );
+});
+
+describe("expandRecurrence, a count window finds every occurrence of a rule that matches a few days a year or fewer", () => {
+  const isLeapYear = (year: number): boolean =>
+    year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  /** Sunday is 0. Sakamoto's method: plain arithmetic on the calendar, never the code under test. */
+  const weekdayOf = (year: number, month: number, day: number): number => {
+    const offsets = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
+    const y = month < 3 ? year - 1 : year;
+
+    return (
+      (y +
+        Math.floor(y / 4) -
+        Math.floor(y / 100) +
+        Math.floor(y / 400) +
+        offsets[month - 1] +
+        day) %
+      7
+    );
+  };
+  const dateText = (date: Temporal.PlainDate): string =>
+    `${date.toString()}T00:00:00`;
+
+  /** The year of the `n`th year from `from` on that passes `matches`. */
+  function nthYear(
+    from: number,
+    n: number,
+    matches: (year: number) => boolean,
+  ): number {
+    let found = 0;
+
+    for (let year = from; ; year++) {
+      if (matches(year) && ++found === n) {
+        return year;
+      }
+    }
+  }
+
+  /** The `n`th month from `year`-`month` on whose 13th is a Friday. */
+  function nthFridayThe13th(year: number, month: number, n: number): string {
+    let found = 0;
+
+    for (;;) {
+      if (weekdayOf(year, month, 13) === 5 && ++found === n) {
+        return dateText(Temporal.PlainDate.from({ year, month, day: 13 }));
+      }
+      month++;
+      if (month === 13) {
+        month = 1;
+        year++;
+      }
+    }
+  }
+
+  /** ISO 8601: 53 weeks when January 1 is a Thursday, or a Wednesday in a leap year. */
+  const hasWeek53 = (year: number): boolean =>
+    weekdayOf(year, 1, 1) === 4 ||
+    (isLeapYear(year) && weekdayOf(year, 1, 1) === 3);
+
+  function nth20thMonday(year: number): string {
+    let date = Temporal.PlainDate.from({ year, month: 1, day: 1 });
+    let mondays = 0;
+
+    while (date.dayOfWeek !== 1 || ++mondays < 20) {
+      date = date.add({ days: 1 });
+    }
+
+    return dateText(date);
+  }
+
+  function weekTenMonday(year: number): string {
+    const jan4 = Temporal.PlainDate.from({ year, month: 1, day: 4 });
+    const monday = jan4
+      .subtract({ days: jan4.dayOfWeek - 1 })
+      .add({ weeks: 9 });
+
+    expect([monday.weekOfYear, monday.yearOfWeek]).toEqual([10, year]);
+
+    return dateText(monday);
+  }
+
+  function week53Thursday(year: number): string {
+    const dec28 = Temporal.PlainDate.from({ year, month: 12, day: 28 });
+    const thursday = dec28.add({ days: 4 - dec28.dayOfWeek });
+
+    expect([thursday.weekOfYear, thursday.yearOfWeek]).toEqual([53, year]);
+
+    return dateText(thursday);
+  }
+
+  /** ISO instants compare as text only within four-digit years; compare the year first. */
+  function instantKey(instant: string): [number, string] {
+    const [, year, rest] = /^([+-]\d{6}|\d{4})(-.*)$/.exec(instant) ?? [];
+
+    return [Number(year), rest];
+  }
+
+  function isAscending(rows: readonly RecurrenceOccurrence[]): boolean {
+    return rows.every((row, i) => {
+      if (i === 0) return true;
+      const [yearA, restA] = instantKey(rows[i - 1].instant);
+      const [yearB, restB] = instantKey(row.instant);
+
+      return yearA < yearB || (yearA === yearB && restA < restB);
+    });
+  }
+
+  // Row n is the nth match from DTSTART, which matches the rule. Every last date is found by
+  // counting years or months on the calendar.
+  // 2024-04-09 is day 100 of leap 2024; 2024-05-13 is its 20th Monday; 2024-03-04 is Monday of week 10;
+  // 2024-12-31 is day 366; 2020-12-31 is the Thursday of week 53; 2024-09-13 is a Friday the 13th.
+  it.each`
+    rule                                              | start                    | last
+    ${"FREQ=YEARLY;BYYEARDAY=100"}                    | ${"2024-04-09T00:00:00"} | ${(n: number) => dateText(Temporal.PlainDate.from({ year: 2024 + n - 1, month: 1, day: 1 }).add({ days: 99 }))}
+    ${"FREQ=YEARLY;BYDAY=20MO"}                       | ${"2024-05-13T00:00:00"} | ${(n: number) => nth20thMonday(2024 + n - 1)}
+    ${"FREQ=YEARLY;BYWEEKNO=10;BYDAY=MO"}             | ${"2024-03-04T00:00:00"} | ${(n: number) => weekTenMonday(2024 + n - 1)}
+    ${"FREQ=YEARLY;BYYEARDAY=366"}                    | ${"2024-12-31T00:00:00"} | ${(n: number) => dateText(Temporal.PlainDate.from({ year: nthYear(2024, n, isLeapYear), month: 12, day: 31 }))}
+    ${"FREQ=YEARLY;BYWEEKNO=53;BYDAY=TH"}             | ${"2020-12-31T00:00:00"} | ${(n: number) => week53Thursday(nthYear(2020, n, hasWeek53))}
+    ${"FREQ=MONTHLY;BYDAY=FR;BYMONTHDAY=13"}          | ${"2024-09-13T00:00:00"} | ${(n: number) => nthFridayThe13th(2024, 9, n)}
+    ${"FREQ=DAILY;BYMONTH=2;BYMONTHDAY=29"}           | ${"2024-02-29T00:00:00"} | ${(n: number) => dateText(Temporal.PlainDate.from({ year: nthYear(2024, n, isLeapYear), month: 2, day: 29 }))}
+    ${"FREQ=DAILY;BYDAY=FR;BYMONTHDAY=13"}            | ${"2024-09-13T00:00:00"} | ${(n: number) => nthFridayThe13th(2024, 9, n)}
+    ${"FREQ=HOURLY;BYMONTH=2;BYMONTHDAY=29;BYHOUR=0"} | ${"2024-02-29T00:00:00"} | ${(n: number) => dateText(Temporal.PlainDate.from({ year: nthYear(2024, n, isLeapYear), month: 2, day: 29 }))}
+  `(
+    "$rule from $start gives a full window at counts 6000 and 10000",
+    ({ rule: text, start, last }) => {
+      for (const count of [6000, 10_000]) {
+        const rows = expandRecurrence(rule(text), start, "UTC", {
+          after: "2020-01-01T00:00:00Z",
           count,
-        }),
-      ).toHaveLength(count);
+        });
+
+        expect({
+          length: rows.length,
+          ascending: isAscending(rows),
+          last: rows.at(-1)?.local,
+        }).toEqual({ length: count, ascending: true, last: last(count) });
+      }
     },
   );
 });

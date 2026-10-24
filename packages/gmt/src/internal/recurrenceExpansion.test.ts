@@ -308,13 +308,13 @@ describe("expandLocalMoments contract", () => {
     });
   });
 
-  it("the default budget is the 2,000,000 work cap and a never-matching rule ends in it", () => {
+  it("the default budget is the 2,000,000 work cap, and a never-matching rule ends well inside it", () => {
     const r = rule({ frequency: "daily", byMonth: [2], byMonthDay: [30] });
 
     expect(RECURRENCE_WORK_CAP).toBe(2_000_000);
     expect(
       expandLocalMoments(r, moment("2024-01-01T09:00"), 0, () => true),
-    ).toBe("capped");
+    ).toBe("end");
   });
 
   it("returns end when the next period passes the last Temporal date", () => {
@@ -712,5 +712,150 @@ describe("expandLocalMoments budget", () => {
       status,
       calls: calls === null ? CountingList.calls <= budget : CountingList.calls,
     }).toEqual({ status: "capped", calls: calls === null ? true : calls });
+  });
+});
+
+describe("expandLocalMoments ends, rather than caps, a rule that cannot match again", () => {
+  // The day filter and the interval alignment both repeat every 400 years (146,097 days, 4,800
+  // months, 20,871 weeks), so a walk that finds nothing in that long ends for good. Each budget
+  // is the proven bound for its case, rounded up:
+  // - Feb 30: filling 400 years costs 11 skipped months + 29 days a year, about 16,000 units;
+  // - every 7th day from a Tuesday on Mondays: fill 146,097 + 20,871 periods x 3 units, about 210,000;
+  // - every 4th year from 2025 on day 366: fill 146,097 + 100 periods x 6 units, about 147,000;
+  // - every 24th hour at hour 5 from hour 3: 146,097 days x 2 units + 146,097 to fill, about 440,000.
+  it.each`
+    description                                         | rule                                                               | start                 | budget
+    ${"daily Feb 30"}                                   | ${rule({ frequency: "daily", byMonth: [2], byMonthDay: [30] })}    | ${"2024-01-01T09:00"} | ${20_000}
+    ${"secondly Feb 30"}                                | ${rule({ frequency: "secondly", byMonth: [2], byMonthDay: [30] })} | ${"2024-01-01T09:00"} | ${20_000}
+    ${"yearly Apr 31"}                                  | ${rule({ frequency: "yearly", byMonth: [4], byMonthDay: [31] })}   | ${"2024-01-01T09:00"} | ${20_000}
+    ${"daily /7 on Mondays, started on a Tuesday"}      | ${rule({ frequency: "daily", interval: 7, byDay: [{ day: MO }] })} | ${"2024-01-02T09:00"} | ${250_000}
+    ${"yearly /4 on day 366, started in a common year"} | ${rule({ frequency: "yearly", interval: 4, byYearDay: [366] })}    | ${"2025-06-01T09:00"} | ${200_000}
+    ${"hourly /24 at hour 5, started at hour 3"}        | ${rule({ frequency: "hourly", interval: 24, byHour: [5] })}        | ${"2024-01-01T03:00"} | ${500_000}
+    ${"daily with only second 60 (no second to pick)"}  | ${rule({ frequency: "daily", bySecond: [60] })}                    | ${"2024-01-01T09:00"} | ${500_000}
+  `(
+    "$description visits only the start and ends",
+    ({ rule: r, start, budget }) => {
+      const seen: string[] = [];
+      const status = expandLocalMoments(
+        r,
+        moment(start),
+        moment(start).day,
+        (m) => {
+          seen.push(text(m));
+
+          return true;
+        },
+        budget,
+      );
+
+      expect({ status, seen }).toEqual({ status: "end", seen: [start] });
+    },
+  );
+});
+
+describe("expandLocalMoments day cache, the day filter repeats every 400 years", () => {
+  /** Days in `[from, to]` the day filter lets through, by asking the calendar one day at a time. */
+  function bruteForce(
+    from: string,
+    to: string,
+    passes: (date: Temporal.PlainDate) => boolean,
+  ): string[] {
+    const days: string[] = [];
+    let date = Temporal.PlainDate.from(from);
+    const end = Temporal.PlainDate.from(to);
+
+    for (
+      ;
+      Temporal.PlainDate.compare(date, end) <= 0;
+      date = date.add({ days: 1 })
+    ) {
+      if (passes(date)) {
+        days.push(date.toString());
+      }
+    }
+
+    return days;
+  }
+
+  /** One walk from 1999 to 2501: every year after 2399 reuses what a year 400 years earlier filled. */
+  function walk(r: RecurrenceRule): string[] {
+    const days: string[] = [];
+    const start = moment("1999-01-01T00:00");
+
+    expandLocalMoments(
+      r,
+      start,
+      start.day,
+      (m) => {
+        days.push(isoDateString(m.day));
+
+        return true;
+      },
+      RECURRENCE_WORK_CAP,
+      epochDayOf(2501, 12, 31),
+    );
+
+    return days;
+  }
+
+  // Windows across the 1999/2000/2001, 2020/2021 (week 53) and 2099/2100/2101 year ends, and the
+  // same years 400 years on, which are served from the cache.
+  const windows = [
+    ["1999-12-01", "2001-01-31"],
+    ["2399-12-01", "2401-01-31"],
+    ["2020-12-01", "2021-01-31"],
+    ["2420-12-01", "2421-01-31"],
+    ["2099-12-01", "2101-01-31"],
+    ["2499-12-01", "2501-01-31"],
+  ];
+
+  it.each`
+    description                                    | rule                                                                                         | passes
+    ${"weeks 1, 52 and 53 on Monday and Thursday"} | ${rule({ frequency: "daily", byWeekNo: [1, 52, 53], byDay: [{ day: MO }, { day: TH }] })}    | ${(d: Temporal.PlainDate) => [1, 52, 53].includes(d.weekOfYear as number) && [1, 4].includes(d.dayOfWeek)}
+    ${"Feb 29 or the last day of Feb or Dec"}      | ${rule({ frequency: "daily", byMonth: [2, 12], byMonthDay: [29, -1], byYearDay: [60, -1] })} | ${(d: Temporal.PlainDate) => [2, 12].includes(d.month) && (d.day === 29 || d.day === d.daysInMonth) && (d.dayOfYear === 60 || d.dayOfYear === d.daysInYear)}
+  `(
+    "$description matches a brute-force day loop in every window",
+    ({ rule: r, passes }) => {
+      const found = walk(r);
+
+      for (const [from, to] of windows) {
+        expect({
+          window: `${from}..${to}`,
+          days: found.filter((day) => day >= from && day <= to),
+        }).toEqual({
+          window: `${from}..${to}`,
+          days: bruteForce(from, to, passes),
+        });
+      }
+    },
+  );
+
+  it("an ordinal BYDAY scoped to the year matches a brute-force loop in years 400 years apart", () => {
+    const r = rule({
+      frequency: "yearly",
+      byDay: [
+        { day: MO, nthOfPeriod: 20 },
+        { day: SU, nthOfPeriod: -1 },
+      ],
+    });
+    const found = walk(r);
+
+    for (const year of [2000, 2400, 2100, 2500]) {
+      const mondays = bruteForce(
+        `${year}-01-01`,
+        `${year}-12-31`,
+        (d) => d.dayOfWeek === 1,
+      );
+      const sundays = bruteForce(
+        `${year}-01-01`,
+        `${year}-12-31`,
+        (d) => d.dayOfWeek === 7,
+      );
+
+      expect({
+        year,
+        days: found.filter((day) => day.startsWith(`${year}-`)),
+      }).toEqual({ year, days: [mondays[19], sundays.at(-1)].sort() });
+    }
   });
 });

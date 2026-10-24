@@ -686,17 +686,19 @@ function readCall(
  *   occurrences after an instant (1 to 10,000).
  * - `timeZone` is a time zone identifier or a fixed offset (`+05:30`, `-00:44:30`).
  *
- * Returns `[]` for an invalid argument, a `{ after, count }` call that does not find `count`
- * occurrences in its work budget (a rule with fewer than `count` occurrences, such as February 30
- * with a count above 1), and a result of more than 10,000 rows. With a count of 1, a rule whose
- * only occurrence is DTSTART returns DTSTART, as the interval form does. A rule that matches
- * rarely, such as one day a year, spends little per match; a rule that must scan many days for
- * each match (`BYYEARDAY`, `BYWEEKNO` or `BYDAY` with no `BYMONTH`) can run out of budget at a
- * large count.
+ * Returns `[]` for an invalid argument and for a result of more than 10,000 rows. A
+ * `{ after, count }` call for a rule with fewer than `count` occurrences returns the ones it has,
+ * as a `COUNT`-limited rule does: `FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30` gives DTSTART alone. A
+ * rule from `YEARLY` to `DAILY` finds up to `count` occurrences however rarely it matches, as far
+ * as Temporal's date range reaches. One case can still return `[]` because the work budget of
+ * 2,000,000 units runs out: an `HOURLY`, `MINUTELY` or `SECONDLY` rule with an `INTERVAL` above 1
+ * whose steps rarely or never meet its `BY*` parts, when proving that takes more than about
+ * 500,000 steps.
  *
  * Complexity: O(W + K log K) for W the work the expansion spends, bounded by 2,000,000 units, and
- * K the rows kept, at most 10,000. With no `COUNT` the cost follows the window, not the distance
- * from DTSTART.
+ * K the rows kept, at most 10,000. A rule that matches rarely pays one unit for each year it
+ * crosses, not one for each day, after at most 146,097 units to learn the 400-year calendar.
+ * With no `COUNT` the cost follows the window, not the distance from DTSTART.
  *
  * @param rule a recurrence rule, from `parseRecurrenceRule`
  * @param start DTSTART, an ISO date-time without offset or sub-second part
