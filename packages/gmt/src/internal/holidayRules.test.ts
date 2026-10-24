@@ -43,17 +43,31 @@ describe("parseHolidayRule", () => {
 describe("holidayEpochDays easterRelative candidate search", () => {
   // Brute force: every Easter of years Y-12..Y+12 plus the offset (a Julian date drifts from ISO by up to
   // about 2,000 days at years +-270000, so the spec's Y-3..Y+3 would miss some), kept when it lies in year Y.
+  // Each row reuses one Easter per computus year, so the brute force stays cheap across 801 offsets.
+  function easterTable(
+    years: [number, number],
+    computus: "gregorian" | "julian",
+  ): Map<number, number | null> {
+    const table = new Map<number, number | null>();
+
+    for (let c = years[0] - 12; c <= years[1] + 12; c++) {
+      table.set(c, easterEpochDay(c, computus));
+    }
+
+    return table;
+  }
+
   function brute(
     offsetDays: number,
     year: number,
-    computus: "gregorian" | "julian",
+    easters: Map<number, number | null>,
   ): number[] {
     const first = epochDayOf(year, 1, 1);
     const last = epochDayOf(year, 12, 31);
     const found: number[] = [];
 
     for (let c = year - 12; c <= year + 12; c++) {
-      const easter = easterEpochDay(c, computus);
+      const easter = easters.get(c) ?? null;
 
       if (easter === null) {
         continue;
@@ -85,6 +99,9 @@ describe("holidayEpochDays easterRelative candidate search", () => {
   `(
     "finds exactly the brute-force dates for $computus, years $years, offsets -400..400",
     ({ computus, years }) => {
+      const easters = easterTable(years, computus);
+      const mismatches: string[] = [];
+
       for (let year = years[0]; year <= years[1]; year++) {
         for (let offsetDays = -400; offsetDays <= 400; offsetDays++) {
           const rule = resolve({
@@ -93,12 +110,24 @@ describe("holidayEpochDays easterRelative candidate search", () => {
             offsetDays,
             computus,
           });
+          const got = holidayEpochDays(rule, year, null);
+          const want = brute(offsetDays, year, easters);
 
-          expect(holidayEpochDays(rule, year, null)).toEqual(
-            brute(offsetDays, year, computus),
-          );
+          if (JSON.stringify(got) !== JSON.stringify(want)) {
+            mismatches.push(
+              `year ${year}, offset ${offsetDays}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`,
+            );
+          }
         }
       }
+
+      expect({
+        count: mismatches.length,
+        first: mismatches.slice(0, 20),
+      }).toEqual({
+        count: 0,
+        first: [],
+      });
     },
   );
 });

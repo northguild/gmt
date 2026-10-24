@@ -269,6 +269,5 @@ describe("getDstTransitions across the 1844 date-line crossings (zoned.E)", () =
         ),
       );
     },
-    10_000,
   );
 });

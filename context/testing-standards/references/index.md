@@ -75,6 +75,19 @@ If an existing fixture's fixed date doesn't fit the case under test (e.g. testin
 - **When you find a bug, widen the search.** Fix the whole class (every function with the same cause), not just the instance that surfaced.
 - **Enforced:** `node scripts/test-markers.mjs check` runs in `pnpm run validate` and fails on any marker or known-defect note. [AGENTS.md Core Rule 12](../../../AGENTS.md#core-rules-quick-reference) states the rule, and `finalizer` refuses to close a story that carries one.
 
+## Test Cost
+
+**Keep each test under 0.3 s on a dev machine.** CI legs run up to 5× slower than a laptop, and the default timeout is 5 s, so a 1 s test lands on the timeout. A test that takes 1.2 s locally has taken 4.9 s on CI and timed out on others. Run the file with `--reporter=verbose` and read the time on each row before handing it off.
+
+- **Under 0.3 s:** no timeout. It stays under 1.5 s on CI.
+- **0.3 s to 1 s:** a timeout is allowed. Its comment gives the worst CI time, or the load, that needs it.
+- **Over 1 s:** only when the work cannot shrink, such as a sweep over every zone the runtime knows. Its comment says why.
+
+- **Call an expensive oracle only where the answer can differ.** A sweep over a year of rows needs `classifyLocal` or a Temporal resolution only near a zone transition. Elsewhere every wall time is unique, and the row can be checked against that directly. Find the transitions with Temporal's `getTimeZoneTransition`, never with GMT.
+- **Assert once per case, not once per row.** Collect the rows that are wrong and `expect` the count and the first 20 of them to equal `{ count: 0, first: [] }`. Thousands of `expect` calls are gone, and a failure shows how many rows broke and enough of them to see why. Never print the whole list: when every row of a large sweep breaks, it runs to megabytes and buries the cause.
+- **Prefer fewer, sharper rows to more random ones.** Seeded rounds earn their cost only when each one covers a case no other row does.
+- **Make the work smaller before you raise a timeout.** A timeout on a test under 0.3 s, or one without its comment, is a finding.
+
 ## Never Pass a Path to `vitest list --json`
 
 `npx vitest list --json <file>` does **not** list that file's tests: Vitest 4 treats the argument as the JSON **output** path and overwrites the file with the entire suite listing. It destroyed two test files during CORE-6.

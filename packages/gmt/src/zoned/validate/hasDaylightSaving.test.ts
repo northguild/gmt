@@ -179,7 +179,6 @@ describe("hasDaylightSaving", () => {
     ({ at, timeZone, expected }) => {
       expect(hasDaylightSaving(timeZone, { at })).toBe(expected);
     },
-    10_000,
   );
 
   // Three offsets inside 14 days, where the polyfill's own search never returns.
@@ -199,7 +198,6 @@ describe("hasDaylightSaving", () => {
     ({ at, timeZone, expected }) => {
       expect(hasDaylightSaving(timeZone, { at })).toBe(expected);
     },
-    10_000,
   );
 
   it.each`
