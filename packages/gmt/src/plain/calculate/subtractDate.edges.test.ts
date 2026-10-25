@@ -287,7 +287,7 @@ describe("subtractDate next to the range limits (CORE-6 §4.4)", () => {
     ${"-271820-06-12"}                        | ${{ months: 1 }} | ${"-271820-05-12"}                        | ${"xscan gregory min[420]"}
     ${"-271820-06-12"}                        | ${{ years: 1 }}  | ${"-271821-06-12"}                        | ${"xscan gregory min[420]"}
   `(
-    "subtracts $units from $value as $expected ($source)",
+    "subtracts $units from $value as '$expected' ($source)",
     ({ value, units, expected }) => {
       expect(subtractDate(value, units)).toBe(expected);
     },

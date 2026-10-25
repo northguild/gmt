@@ -25,7 +25,7 @@ describe("zonelessCalendarDate", () => {
     ${"2024-06"}                                     | ${"a year-month"}
     ${"invalid"}                                     | ${"an unparseable string"}
     ${""}                                            | ${"an empty string"}
-  `("returns null for $value ($description)", ({ value }) => {
+  `("returns null for '$value' ($description)", ({ value }) => {
     expect(zonelessCalendarDate(value)).toBeNull();
   });
 

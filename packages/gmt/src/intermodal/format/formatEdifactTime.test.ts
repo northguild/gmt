@@ -52,7 +52,7 @@ describe("formatEdifactTime", () => {
       ${"23:59:60"}            | ${"a leap second"}
       ${"14"}                  | ${"an hour alone"}
       ${""}                    | ${"an empty value"}
-    `("returns '' for $value ($reads)", ({ value }) => {
+    `("returns '' for '$value' ($reads)", ({ value }) => {
       expect(formatEdifactTime(value, "401")).toBe("");
       expect(formatEdifactTime(value, "402")).toBe("");
     });

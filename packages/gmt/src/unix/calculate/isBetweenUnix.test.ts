@@ -35,7 +35,7 @@ describe("isBetweenUnix", () => {
     ${1704067200} | ${1704067200} | ${1709155200} | ${false}       | ${false}     | ${false}
     ${1706659200} | ${1704067200} | ${1709155200} | ${false}       | ${false}     | ${true}
   `(
-    "supports inclusive options for value $value between $start and $end",
+    "supports inclusive options for value $value between $start and $end with inclusiveStart $inclusiveStart and inclusiveEnd $inclusiveEnd",
     ({ value, start, end, inclusiveStart, inclusiveEnd, expected }) => {
       expect(
         isBetweenUnix(value, start, end, {
@@ -79,13 +79,13 @@ describe("isBetweenUnix with an unrecognised epochUnit", () => {
   // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
-    epochUnit
-    ${"nanoseconds"}
-    ${"SECONDS"}
-    ${"ms"}
-    ${""}
-    ${1000}
-  `("returns false for epochUnit $epochUnit", ({ epochUnit }) => {
+    epochUnit        | epochUnitLabel
+    ${"nanoseconds"} | ${"'nanoseconds'"}
+    ${"SECONDS"}     | ${"'SECONDS'"}
+    ${"ms"}          | ${"'ms'"}
+    ${""}            | ${"''"}
+    ${1000}          | ${"1000"}
+  `("returns false for epochUnit $epochUnitLabel", ({ epochUnit }) => {
     expect(
       isBetweenUnix(1_706_659_200, 1_706_659_200, 1_706_659_200, {
         epochUnit: epochUnit as never,

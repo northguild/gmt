@@ -244,7 +244,7 @@ describe("stepBusinessDates", () => {
     ${"2024-07-06"} | ${1}      | ${0}  | ${"2024-07-06"}
     ${"2024-07-06"} | ${-1}     | ${0}  | ${"2024-07-06"}
   `(
-    "returns $value unchanged for a count of $count",
+    "returns $value unchanged for a count of $count in direction $direction",
     ({ value, direction, count, expected }) => {
       expect(
         stepBusinessDates(

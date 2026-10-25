@@ -59,23 +59,23 @@ describe("parseUnixEpochValue", () => {
     ${"١٢"}               | ${"non-ASCII (Arabic-Indic) digits"}
     ${"Infinity"}         | ${"the string Infinity"}
     ${12n}                | ${"a bigint"}
-  `("returns null for $value ($description)", ({ value }) => {
+  `("returns null for $description", ({ value }) => {
     expect(parseUnixEpochValue(value)).toBeNull();
   });
 });
 
 describe("parseUnixEpochInterval", () => {
   it.each`
-    start  | end        | expected                 | description
-    ${0}   | ${10}      | ${{ start: 0, end: 10 }} | ${"an ascending interval"}
-    ${5}   | ${5}       | ${{ start: 5, end: 5 }}  | ${"a zero-length interval"}
-    ${"0"} | ${"10"}    | ${{ start: 0, end: 10 }} | ${"numeric strings"}
-    ${10}  | ${0}       | ${null}                  | ${"a reversed interval"}
-    ${0}   | ${1.5}     | ${null}                  | ${"a fractional end"}
-    ${""}  | ${1}       | ${null}                  | ${"an empty-string start"}
-    ${0}   | ${2 ** 53} | ${null}                  | ${"an unsafe end"}
+    start  | end        | expected                 | description                 | startLabel
+    ${0}   | ${10}      | ${{ start: 0, end: 10 }} | ${"an ascending interval"}  | ${"0"}
+    ${5}   | ${5}       | ${{ start: 5, end: 5 }}  | ${"a zero-length interval"} | ${"5"}
+    ${"0"} | ${"10"}    | ${{ start: 0, end: 10 }} | ${"numeric strings"}        | ${"'0'"}
+    ${10}  | ${0}       | ${null}                  | ${"a reversed interval"}    | ${"10"}
+    ${0}   | ${1.5}     | ${null}                  | ${"a fractional end"}       | ${"0"}
+    ${""}  | ${1}       | ${null}                  | ${"an empty-string start"}  | ${"''"}
+    ${0}   | ${2 ** 53} | ${null}                  | ${"an unsafe end"}          | ${"0"}
   `(
-    "returns $expected for [$start, $end] ($description)",
+    "returns $expected for [$startLabel, $end] ($description)",
     ({ start, end, expected }) => {
       expect(parseUnixEpochInterval(start, end)).toEqual(expected);
     },
@@ -84,14 +84,14 @@ describe("parseUnixEpochInterval", () => {
 
 describe("parseUnixEpochIntervalPair", () => {
   it.each`
-    aStart | aEnd   | bStart | bEnd    | expected                                          | description
-    ${0}   | ${10}  | ${"5"} | ${"20"} | ${[{ start: 0, end: 10 }, { start: 5, end: 20 }]} | ${"two valid intervals"}
-    ${0}   | ${10}  | ${20}  | ${5}    | ${null}                                           | ${"B reversed"}
-    ${10}  | ${0}   | ${5}   | ${20}   | ${null}                                           | ${"A reversed"}
-    ${0}   | ${1.5} | ${5}   | ${20}   | ${null}                                           | ${"A with a fractional end"}
-    ${0}   | ${10}  | ${""}  | ${20}   | ${null}                                           | ${"B with an empty-string start"}
+    aStart | aEnd   | bStart | bEnd    | expected                                          | description                       | bStartLabel
+    ${0}   | ${10}  | ${"5"} | ${"20"} | ${[{ start: 0, end: 10 }, { start: 5, end: 20 }]} | ${"two valid intervals"}          | ${"'5'"}
+    ${0}   | ${10}  | ${20}  | ${5}    | ${null}                                           | ${"B reversed"}                   | ${"20"}
+    ${10}  | ${0}   | ${5}   | ${20}   | ${null}                                           | ${"A reversed"}                   | ${"5"}
+    ${0}   | ${1.5} | ${5}   | ${20}   | ${null}                                           | ${"A with a fractional end"}      | ${"5"}
+    ${0}   | ${10}  | ${""}  | ${20}   | ${null}                                           | ${"B with an empty-string start"} | ${"''"}
   `(
-    "returns $expected for A=[$aStart, $aEnd] and B=[$bStart, $bEnd] ($description)",
+    "returns $expected for A=[$aStart, $aEnd] and B=[$bStartLabel, $bEnd] ($description)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(parseUnixEpochIntervalPair(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,
@@ -121,18 +121,18 @@ describe("parseUnixEpochIntervalList", () => {
 describe("resolveUnixEpochUnit", () => {
   // Temporal §13.17 GetTemporalUnitValuedOption: singular and plural names are the same unit.
   it.each`
-    unit              | expected
-    ${undefined}      | ${"milliseconds"}
-    ${"milliseconds"} | ${"milliseconds"}
-    ${"millisecond"}  | ${"milliseconds"}
-    ${"seconds"}      | ${"seconds"}
-    ${"second"}       | ${"seconds"}
-    ${"nanoseconds"}  | ${null}
-    ${"Seconds"}      | ${null}
-    ${""}             | ${null}
-    ${null}           | ${null}
-    ${1000}           | ${null}
-  `("returns $expected for epochUnit $unit", ({ unit, expected }) => {
+    unit              | expected          | label
+    ${undefined}      | ${"milliseconds"} | ${"undefined"}
+    ${"milliseconds"} | ${"milliseconds"} | ${"'milliseconds'"}
+    ${"millisecond"}  | ${"milliseconds"} | ${"'millisecond'"}
+    ${"seconds"}      | ${"seconds"}      | ${"'seconds'"}
+    ${"second"}       | ${"seconds"}      | ${"'second'"}
+    ${"nanoseconds"}  | ${null}           | ${"'nanoseconds'"}
+    ${"Seconds"}      | ${null}           | ${"'Seconds'"}
+    ${""}             | ${null}           | ${"''"}
+    ${null}           | ${null}           | ${"null"}
+    ${1000}           | ${null}           | ${"1000"}
+  `("returns $expected for epochUnit $label", ({ unit, expected }) => {
     expect(resolveUnixEpochUnit(unit)).toBe(expected);
   });
 });

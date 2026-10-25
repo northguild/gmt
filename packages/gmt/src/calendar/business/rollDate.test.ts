@@ -116,17 +116,17 @@ describe("rollDate", () => {
   );
 
   it.each`
-    convention              | description
-    ${"Following"}          | ${"wrong case"}
-    ${"modified_following"} | ${"snake case"}
-    ${"nearest"}            | ${"a convention GMT does not implement"}
-    ${""}                   | ${"an empty string"}
-    ${null}                 | ${"null"}
-    ${undefined}            | ${"undefined"}
-    ${1}                    | ${"a number"}
-    ${{}}                   | ${"an object"}
+    convention              | description                              | label
+    ${"Following"}          | ${"wrong case"}                          | ${"'Following'"}
+    ${"modified_following"} | ${"snake case"}                          | ${"'modified_following'"}
+    ${"nearest"}            | ${"a convention GMT does not implement"} | ${"'nearest'"}
+    ${""}                   | ${"an empty string"}                     | ${"''"}
+    ${null}                 | ${"null"}                                | ${"null"}
+    ${undefined}            | ${"undefined"}                           | ${"undefined"}
+    ${1}                    | ${"a number"}                            | ${"1"}
+    ${{}}                   | ${"an object"}                           | ${"{}"}
   `(
-    "returns an empty string for the $description convention $convention",
+    "returns an empty string for the $description convention $label",
     ({ convention }) => {
       expect(rollDate("2024-05-31", convention as never, mayEndsClosed)).toBe(
         "",
@@ -135,16 +135,16 @@ describe("rollDate", () => {
   );
 
   it.each`
-    value                    | description
-    ${"invalid"}             | ${"an unparseable date"}
-    ${"2024-02-30"}          | ${"a date that does not exist"}
-    ${"2024-05-31T00:00:00"} | ${"a datetime"}
-    ${""}                    | ${"an empty string"}
-    ${" 2024-05-31 "}        | ${"padded whitespace"}
-    ${null}                  | ${"null"}
-    ${undefined}             | ${"undefined"}
-    ${12}                    | ${"a number"}
-  `("returns an empty string for $description $value", ({ value }) => {
+    value                    | description                     | label
+    ${"invalid"}             | ${"an unparseable date"}        | ${"'invalid'"}
+    ${"2024-02-30"}          | ${"a date that does not exist"} | ${"'2024-02-30'"}
+    ${"2024-05-31T00:00:00"} | ${"a datetime"}                 | ${"'2024-05-31T00:00:00'"}
+    ${""}                    | ${"an empty string"}            | ${"''"}
+    ${" 2024-05-31 "}        | ${"padded whitespace"}          | ${"' 2024-05-31 '"}
+    ${null}                  | ${"null"}                       | ${"null"}
+    ${undefined}             | ${"undefined"}                  | ${"undefined"}
+    ${12}                    | ${"a number"}                   | ${"12"}
+  `("returns an empty string for $description $label", ({ value }) => {
     expect(rollDate(value as never, "following", mayEndsClosed)).toBe("");
   });
 

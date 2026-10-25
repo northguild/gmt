@@ -107,18 +107,18 @@ describe("isGnssSystem", () => {
   });
 
   it.each`
-    value          | why
-    ${"gps"}       | ${"lower case"}
-    ${"BDS"}       | ${"the constellation, not a time token"}
-    ${"GLONASS"}   | ${"not a RINEX token"}
-    ${"NAVIC"}     | ${"not a RINEX token"}
-    ${"TAI"}       | ${"not a satellite system"}
-    ${""}          | ${"empty"}
-    ${"toString"}  | ${"an inherited property name"}
-    ${"__proto__"} | ${"the prototype accessor"}
-    ${null}        | ${"null"}
-    ${1}           | ${"a number"}
-  `("rejects $value ($why)", ({ value }) => {
+    value          | why                                      | label
+    ${"gps"}       | ${"lower case"}                          | ${"'gps'"}
+    ${"BDS"}       | ${"the constellation, not a time token"} | ${"'BDS'"}
+    ${"GLONASS"}   | ${"not a RINEX token"}                   | ${"'GLONASS'"}
+    ${"NAVIC"}     | ${"not a RINEX token"}                   | ${"'NAVIC'"}
+    ${"TAI"}       | ${"not a satellite system"}              | ${"'TAI'"}
+    ${""}          | ${"empty"}                               | ${"''"}
+    ${"toString"}  | ${"an inherited property name"}          | ${"'toString'"}
+    ${"__proto__"} | ${"the prototype accessor"}              | ${"'__proto__'"}
+    ${null}        | ${"null"}                                | ${"null"}
+    ${1}           | ${"a number"}                            | ${"1"}
+  `("rejects $label ($why)", ({ value }) => {
     expect(isGnssSystem(value)).toBe(false);
   });
 });

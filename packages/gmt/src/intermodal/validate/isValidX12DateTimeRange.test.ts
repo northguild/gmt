@@ -16,7 +16,7 @@ describe("isValidX12DateTimeRange", () => {
     ${"RDT"} | ${"20240615-202406201600"}         | ${false} | ${"a date and a date-time"}
     ${"RDT"} | ${""}                              | ${false} | ${"an empty value"}
   `(
-    "returns $expected for $value under $code ($reads), as parseX12DateTimeRange reads it",
+    "returns $expected for '$value' under $code ($reads), as parseX12DateTimeRange reads it",
     ({ code, value, expected }) => {
       expect(isValidX12DateTimeRange(value, code)).toBe(expected);
       expect(parseX12DateTimeRange(value, code) !== null).toBe(expected);

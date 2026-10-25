@@ -19,21 +19,18 @@ describe("setTime", () => {
   );
 
   it.each`
-    invalidTime
-    ${"24:00:00"}
-    ${"not-a-time"}
-    ${"23:60:00"}
-    ${""}
-    ${true}
-    ${null}
-    ${undefined}
-    ${"2024-03-10"}
-  `(
-    "returns an empty string for an invalid time $invalidTime",
-    ({ invalidTime }) => {
-      expect(setTime(invalidTime, { hour: 9 })).toBe("");
-    },
-  );
+    invalidTime     | label
+    ${"24:00:00"}   | ${"'24:00:00'"}
+    ${"not-a-time"} | ${"'not-a-time'"}
+    ${"23:60:00"}   | ${"'23:60:00'"}
+    ${""}           | ${"''"}
+    ${true}         | ${"true"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
+    ${"2024-03-10"} | ${"'2024-03-10'"}
+  `("returns an empty string for an invalid time $label", ({ invalidTime }) => {
+    expect(setTime(invalidTime, { hour: 9 })).toBe("");
+  });
 
   // overflow has a real effect here, unlike addTime's arithmetic wraparound
   it.each`
@@ -44,7 +41,7 @@ describe("setTime", () => {
     ${"12:00:00"} | ${{ minute: 90 }} | ${undefined}   | ${"12:59:00"}
     ${"12:00:00"} | ${{ minute: 90 }} | ${"reject"}    | ${""}
   `(
-    "returns $expected for $value with fields $fields and overflow $overflow",
+    "returns '$expected' for $value with fields $fields and overflow $overflow",
     ({ value, fields, overflow, expected }) => {
       expect(
         setTime(

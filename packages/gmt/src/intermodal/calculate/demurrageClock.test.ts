@@ -133,10 +133,10 @@ describe("demurrageClock", () => {
     ${[discharged, gatedOut]}                                                          | ${"demurrage"} | ${{ direction: null }}                              | ${"null direction"}
     ${[discharged, gatedOut]}                                                          | ${"demurrage"} | ${{ direction: "import", startEvent: "available" }} | ${"no availability event"}
     ${[discharged]}                                                                    | ${"demurrage"} | ${IMPORT}                                           | ${"still in the terminal: no gate-out"}
-    ${[discharged, available]}                                                         | ${"storage"}   | ${IMPORT}                                           | ${"no gate-out"}
+    ${[discharged, available]}                                                         | ${"storage"}   | ${IMPORT}                                           | ${"the storage scope, with no gate-out"}
     ${[discharged, gatedOut]}                                                          | ${"detention"} | ${IMPORT}                                           | ${"no empty return"}
     ${[discharged, gatedOut]}                                                          | ${"combined"}  | ${IMPORT}                                           | ${"combined clock with no empty return"}
-    ${[emptyReturned]}                                                                 | ${"detention"} | ${IMPORT}                                           | ${"no gate-out"}
+    ${[emptyReturned]}                                                                 | ${"detention"} | ${IMPORT}                                           | ${"an empty return alone, with no gate-out"}
     ${imported}                                                                        | ${"demurrage"} | ${EXPORT}                                           | ${"an import list read as an export"}
     ${[emptyReleased, gatedIn]}                                                        | ${"demurrage"} | ${EXPORT}                                           | ${"not loaded yet"}
     ${[gatedIn, loaded]}                                                               | ${"detention"} | ${EXPORT}                                           | ${"no empty pick-up"}

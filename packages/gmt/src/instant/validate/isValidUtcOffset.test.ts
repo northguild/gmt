@@ -45,7 +45,7 @@ describe("isValidUtcOffset", () => {
     ${"America/New_York"}          | ${false} | ${"a zone name"}
     ${""}                          | ${false} | ${"empty"}
   `(
-    "returns $expected for $value ($reason), as the pattern does; fromOffsetInstant agrees",
+    "returns $expected for '$value' ($reason), as the pattern does; fromOffsetInstant agrees",
     ({ value, expected }: { value: string; expected: boolean }) => {
       const pair = { instant: "2024-07-15T16:00:00Z", offset: value };
 

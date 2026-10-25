@@ -56,7 +56,7 @@ describe("formatX12DateRange", () => {
       ${"09:00"}                 | ${"17:00"}            | ${"times: RTM, a range of times, is not written"}
       ${"2024-06-15"}            | ${""}                 | ${"an empty end"}
       ${""}                      | ${"2024-06-20"}       | ${"an empty start"}
-    `("returns '' for $start to $end ($reads)", ({ start, end }) => {
+    `("returns '' for '$start' to '$end' ($reads)", ({ start, end }) => {
       expect(formatX12DateRange(start, end, "RD8")).toBe("");
       expect(formatX12DateRange(start, end, "RD")).toBe("");
     });

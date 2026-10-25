@@ -172,31 +172,28 @@ describe("splitIntervalByUnitUnix", () => {
   );
 
   it.each`
-    start         | end          | unit         | amount
-    ${NaN}        | ${86400000}  | ${"hour"}    | ${1}
-    ${Infinity}   | ${86400000}  | ${"hour"}    | ${1}
-    ${-Infinity}  | ${86400000}  | ${"hour"}    | ${1}
-    ${0}          | ${NaN}       | ${"hour"}    | ${1}
-    ${0}          | ${Infinity}  | ${"hour"}    | ${1}
-    ${0}          | ${-Infinity} | ${"hour"}    | ${1}
-    ${86400000}   | ${0}         | ${"hour"}    | ${1}
-    ${0}          | ${86400000}  | ${"invalid"} | ${1}
-    ${0}          | ${86400000}  | ${""}        | ${1}
-    ${0}          | ${86400000}  | ${"hour"}    | ${0}
-    ${0}          | ${86400000}  | ${"hour"}    | ${-1}
-    ${0}          | ${86400000}  | ${"hour"}    | ${1.5}
-    ${""}         | ${86400000}  | ${"hour"}    | ${1}
-    ${0}          | ${""}        | ${"hour"}    | ${1}
-    ${"0"}        | ${"1.5"}     | ${"hour"}    | ${1}
-    ${0}          | ${2 ** 53}   | ${"hour"}    | ${1}
-    ${"   "}      | ${86400000}  | ${"hour"}    | ${1}
-    ${-(2 ** 53)} | ${0}         | ${"hour"}    | ${1}
-  `(
-    "returns [] for invalid $start, $end, $unit, or $amount",
-    ({ start, end, unit, amount }) => {
-      expect(splitIntervalByUnitUnix(start, end, unit, amount)).toEqual([]);
-    },
-  );
+    start         | end          | unit         | amount | label
+    ${NaN}        | ${86400000}  | ${"hour"}    | ${1}   | ${"NaN to 86400000 by 1 'hour'"}
+    ${Infinity}   | ${86400000}  | ${"hour"}    | ${1}   | ${"Infinity to 86400000 by 1 'hour'"}
+    ${-Infinity}  | ${86400000}  | ${"hour"}    | ${1}   | ${"-Infinity to 86400000 by 1 'hour'"}
+    ${0}          | ${NaN}       | ${"hour"}    | ${1}   | ${"0 to NaN by 1 'hour'"}
+    ${0}          | ${Infinity}  | ${"hour"}    | ${1}   | ${"0 to Infinity by 1 'hour'"}
+    ${0}          | ${-Infinity} | ${"hour"}    | ${1}   | ${"0 to -Infinity by 1 'hour'"}
+    ${86400000}   | ${0}         | ${"hour"}    | ${1}   | ${"86400000 to 0 by 1 'hour'"}
+    ${0}          | ${86400000}  | ${"invalid"} | ${1}   | ${"0 to 86400000 by 1 'invalid'"}
+    ${0}          | ${86400000}  | ${""}        | ${1}   | ${"0 to 86400000 by 1 ''"}
+    ${0}          | ${86400000}  | ${"hour"}    | ${0}   | ${"0 to 86400000 by 0 'hour'"}
+    ${0}          | ${86400000}  | ${"hour"}    | ${-1}  | ${"0 to 86400000 by -1 'hour'"}
+    ${0}          | ${86400000}  | ${"hour"}    | ${1.5} | ${"0 to 86400000 by 1.5 'hour'"}
+    ${""}         | ${86400000}  | ${"hour"}    | ${1}   | ${"'' to 86400000 by 1 'hour'"}
+    ${0}          | ${""}        | ${"hour"}    | ${1}   | ${"0 to '' by 1 'hour'"}
+    ${"0"}        | ${"1.5"}     | ${"hour"}    | ${1}   | ${"'0' to '1.5' by 1 'hour'"}
+    ${0}          | ${2 ** 53}   | ${"hour"}    | ${1}   | ${"0 to 2 ** 53 by 1 'hour'"}
+    ${"   "}      | ${86400000}  | ${"hour"}    | ${1}   | ${"'   ' to 86400000 by 1 'hour'"}
+    ${-(2 ** 53)} | ${0}         | ${"hour"}    | ${1}   | ${"-(2 ** 53) to 0 by 1 'hour'"}
+  `("returns [] for invalid input $label", ({ start, end, unit, amount }) => {
+    expect(splitIntervalByUnitUnix(start, end, unit, amount)).toEqual([]);
+  });
 
   it.each`
     start        | end          | unit         | amount

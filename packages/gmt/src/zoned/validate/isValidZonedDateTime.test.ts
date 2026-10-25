@@ -133,14 +133,14 @@ describe("isValidZonedDateTime", () => {
   // Temporal.ZonedDateTime.from reads the first `u-ca` annotation (proposal-temporal
   // `ParseISODateTime`), so `[u-ca=iso8601]` names the ISO calendar and is accepted.
   it.each`
-    value
-    ${"2024-02-10T12:00:00-05:00[America/New_York][u-ca=hebrew]"}
-    ${"2024-02-10T12:00:00+00:00[UTC][u-ca=hebrew]"}
-    ${"2024-02-10T12:00:00-05:00[America/New_York][u-ca=islamic-civil]"}
-    ${"2024-02-10T12:00:00-05:00[America/New_York][!u-ca=hebrew]"}
-    ${"2024-02-10T12:00:00-05:00[!America/New_York][!u-ca=hebrew]"}
+    value                                                                | label
+    ${"2024-02-10T12:00:00-05:00[America/New_York][u-ca=hebrew]"}        | ${"hebrew in America/New_York"}
+    ${"2024-02-10T12:00:00+00:00[UTC][u-ca=hebrew]"}                     | ${"hebrew in UTC"}
+    ${"2024-02-10T12:00:00-05:00[America/New_York][u-ca=islamic-civil]"} | ${"islamic-civil in America/New_York"}
+    ${"2024-02-10T12:00:00-05:00[America/New_York][!u-ca=hebrew]"}       | ${"critical hebrew in America/New_York"}
+    ${"2024-02-10T12:00:00-05:00[!America/New_York][!u-ca=hebrew]"}      | ${"critical hebrew in critical America/New_York"}
   `(
-    "returns false for a zoned datetime with a calendar annotation: $value",
+    "returns false for a zoned datetime with a calendar annotation: $label",
     ({ value }: { value: string }) => {
       expect(isValidZonedDateTime(value)).toBe(false);
     },

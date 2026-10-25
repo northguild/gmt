@@ -56,7 +56,7 @@ describe("intervalContainsTime", () => {
     ${"17:00:00"} | ${"09:00:00"} | ${"12:00:00"} | ${"13:00:00"} | ${false}
     ${"12:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${"11:00:00"} | ${false}
   `(
-    "returns $expected for reversed outer interval",
+    "returns $expected for reversed outer interval $intervalStart to $intervalEnd with $pointOrStart to $pointEnd",
     ({ intervalStart, intervalEnd, pointOrStart, pointEnd, expected }) => {
       expect(
         intervalContainsTime(
@@ -74,7 +74,7 @@ describe("intervalContainsTime", () => {
     ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${"11:00:00"} | ${false}
     ${"09:00:00"} | ${"17:00:00"} | ${"13:00:00"} | ${"12:00:00"} | ${false}
   `(
-    "returns $expected for reversed inner interval",
+    "returns $expected for reversed inner interval $intervalStart to $intervalEnd with $innerStart to $innerEnd",
     ({ intervalStart, intervalEnd, innerStart, innerEnd, expected }) => {
       expect(
         intervalContainsTime(intervalStart, intervalEnd, innerStart, innerEnd),
@@ -95,7 +95,7 @@ describe("intervalContainsTime", () => {
     ${"12:00:00"} | ${"12:00:00"} | ${"25:00:00"}
     ${"12:00:00"} | ${"12:00:00"} | ${"23:59:60"}
   `(
-    "returns false for malformed time: $intervalStart, $intervalEnd, $pointOrStart",
+    "returns false for malformed time: '$intervalStart', '$intervalEnd', '$pointOrStart'",
     ({ intervalStart, intervalEnd, pointOrStart }) => {
       expect(
         intervalContainsTime(
@@ -134,7 +134,7 @@ describe("intervalContainsTime", () => {
     ${"12:00:00"} | ${"12:00:00"} | ${null}       | ${"13:00:00"}
     ${"12:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${null}
   `(
-    "returns false for non-string 4-arg input",
+    "returns false for non-string 4-arg input $intervalStart to $intervalEnd with $innerStart to $innerEnd",
     ({ intervalStart, intervalEnd, innerStart, innerEnd }) => {
       expect(
         intervalContainsTime(

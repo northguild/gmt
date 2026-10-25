@@ -112,12 +112,12 @@ describe("isZonedThisUnit", () => {
   });
 
   it.each`
-    value
-    ${""}
-    ${null}
-    ${undefined}
-    ${"not-a-zoned-datetime"}
-  `("returns false for invalid value $value", ({ value }) => {
+    value                     | label
+    ${""}                     | ${"''"}
+    ${null}                   | ${"null"}
+    ${undefined}              | ${"undefined"}
+    ${"not-a-zoned-datetime"} | ${"'not-a-zoned-datetime'"}
+  `("returns false for invalid value $label", ({ value }) => {
     expect(isZonedThisUnit(value as never, "day")).toBe(false);
   });
 

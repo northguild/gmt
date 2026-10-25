@@ -114,12 +114,12 @@ describe("formatUnix", () => {
 
     // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
     it.each`
-      timeZone
-      ${"Invalid/Zone"}
-      ${"America/New_Yrok"}
-      ${""}
-      ${null}
-    `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
+      timeZone              | timeZoneLabel
+      ${"Invalid/Zone"}     | ${"'Invalid/Zone'"}
+      ${"America/New_Yrok"} | ${"'America/New_Yrok'"}
+      ${""}                 | ${"''"}
+      ${null}               | ${"null"}
+    `("returns '' for invalid timeZone $timeZoneLabel", ({ timeZone }) => {
       expect(
         formatUnix(REF_MS, MustTestLocales.enUS, {
           dateStyle: "long",
@@ -211,17 +211,17 @@ describe("formatUnix", () => {
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {
     it.each`
-      value
-      ${"not-a-number"}
-      ${"12.5ms"}
-      ${""}
-      ${null}
-      ${undefined}
-      ${NaN}
-      ${Infinity}
-      ${-Infinity}
-      ${true}
-    `("returns '' for $value", ({ value }) => {
+      value             | valueLabel
+      ${"not-a-number"} | ${"'not-a-number'"}
+      ${"12.5ms"}       | ${"'12.5ms'"}
+      ${""}             | ${"''"}
+      ${null}           | ${"null"}
+      ${undefined}      | ${"undefined"}
+      ${NaN}            | ${"NaN"}
+      ${Infinity}       | ${"Infinity"}
+      ${-Infinity}      | ${"-Infinity"}
+      ${true}           | ${"true"}
+    `("returns '' for $valueLabel", ({ value }) => {
       expect(
         formatUnix(value as never, MustTestLocales.enUS, { timeZone: "UTC" }),
       ).toBe("");
@@ -264,7 +264,7 @@ describe("formatUnix with a locale list", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"17 mars 2024"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatUnix(1710685845000, locale as string[], { dateStyle: "long" }),
     ).toBe(expected);

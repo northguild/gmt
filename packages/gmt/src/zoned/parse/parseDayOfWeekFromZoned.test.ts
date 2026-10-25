@@ -15,7 +15,7 @@ describe("parseDayOfWeekFromZoned", () => {
     value
     ${"invalid"}
     ${""}
-  `("returns null for invalid value $value", ({ value }) => {
+  `("returns null for invalid value '$value'", ({ value }) => {
     expect(parseDayOfWeekFromZoned(value)).toBeNull();
   });
 

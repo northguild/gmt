@@ -279,7 +279,7 @@ describe("addDate next to the range limits (CORE-6 §4.4)", () => {
     ${"-271820-06-12"}                        | ${{ months: 1 }} | ${"-271820-07-12"}                        | ${"xscan gregory min[420]"}
     ${"-271820-06-12"}                        | ${{ years: 1 }}  | ${"-271819-06-12"}                        | ${"xscan gregory min[420]"}
   `(
-    "adds $units to $value as $expected ($source)",
+    "adds $units to $value as '$expected' ($source)",
     ({ value, units, expected }) => {
       expect(addDate(value, units)).toBe(expected);
     },

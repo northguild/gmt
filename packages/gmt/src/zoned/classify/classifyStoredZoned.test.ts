@@ -395,7 +395,6 @@ const rangeEdge: Row[] = [
   valid("+275760-09-13T00:00:00+00:00[UTC]", "+275760-09-13T00:00:00Z"),
   valid("+275760-09-12T23:59:00+00:00[UTC]", "+275760-09-12T23:59:00Z"),
   valid("-271821-04-20T00:00:00+00:00[UTC]", "-271821-04-20T00:00:00Z"),
-  valid("-271821-04-20T00:00:00Z[UTC]", "-271821-04-20T00:00:00Z"),
   // `Z` is exact (Temporal §6.5.2) and §6.5.1 step 4 checks the range of the UTC date only, so
   // `Z[zone]` is valid at both limits, though the zone's wall clock falls outside the range.
   ...[
@@ -450,27 +449,27 @@ describe("classifyStoredZoned", () => {
   }
 
   it.each`
-    input                                                            | why
-    ${"2026-03-08T02:30:00[America/Los_Angeles]"}                    | ${"no offset"}
-    ${"2026-03-08T02:30:00-08:00"}                                   | ${"no zone annotation"}
-    ${"2026-03-08T02:30:00-08:00[-08:00]"}                           | ${"a bracketed offset, not an IANA zone"}
-    ${"2026-03-08T02:30:00-08:00[Mars/Base]"}                        | ${"unknown zone"}
-    ${"20260308T023000-0800[America/Los_Angeles]"}                   | ${"basic format"}
-    ${"2026-03-08T02:30:00-08:00:00.5[America/Los_Angeles]"}         | ${"an offset finer than a second"}
-    ${"2026-03-08T02:30:00-08:00[America/Los_Angeles][u-ca=hebrew]"} | ${"a calendar other than iso8601"}
-    ${"2016-12-31T23:59:60+03:00[Europe/Istanbul]"}                  | ${"second 60"}
-    ${"+275760-09-13T00:00:00-00:01[UTC]"}                           | ${"the stored reading is past the end of the instant range"}
-    ${"-271821-04-19T23:59:00-00:01[Europe/London]"}                 | ${"a local date a zoned read refuses"}
-    ${"-271821-04-19T20:00:00-04:00[America/New_York]"}              | ${"a refused local date, west of Greenwich"}
-    ${"-271821-04-19T23:59:00Z[America/New_York]"}                   | ${"a refused local date with Z"}
-    ${"-271821-04-20T00:00:00+00:01[Europe/London]"}                 | ${"the stored reading is before the start of the instant range"}
-    ${"2022-07-08T00:14:07+01:00[Europe/London][!foo=bar]"}          | ${"an unknown critical annotation"}
-    ${"2023-02-29T10:00:00+00:00[Europe/London]"}                    | ${"a date that does not exist"}
-    ${""}                                                            | ${"empty string"}
-    ${"not a date"}                                                  | ${"not a date"}
-    ${null}                                                          | ${"null"}
-    ${42}                                                            | ${"a number"}
-  `("returns null for $input ($why)", ({ input }) => {
+    input                                                            | why                                                              | label
+    ${"2026-03-08T02:30:00[America/Los_Angeles]"}                    | ${"no offset"}                                                   | ${"'2026-03-08T02:30:00[America/Los_Angeles]'"}
+    ${"2026-03-08T02:30:00-08:00"}                                   | ${"no zone annotation"}                                          | ${"'2026-03-08T02:30:00-08:00'"}
+    ${"2026-03-08T02:30:00-08:00[-08:00]"}                           | ${"a bracketed offset, not an IANA zone"}                        | ${"'2026-03-08T02:30:00-08:00[-08:00]'"}
+    ${"2026-03-08T02:30:00-08:00[Mars/Base]"}                        | ${"unknown zone"}                                                | ${"'2026-03-08T02:30:00-08:00[Mars/Base]'"}
+    ${"20260308T023000-0800[America/Los_Angeles]"}                   | ${"basic format"}                                                | ${"'20260308T023000-0800[America/Los_Angeles]'"}
+    ${"2026-03-08T02:30:00-08:00:00.5[America/Los_Angeles]"}         | ${"an offset finer than a second"}                               | ${"'2026-03-08T02:30:00-08:00:00.5[America/Los_Angeles]'"}
+    ${"2026-03-08T02:30:00-08:00[America/Los_Angeles][u-ca=hebrew]"} | ${"a calendar other than iso8601"}                               | ${"'2026-03-08T02:30:00-08:00[America/Los_Angeles][u-ca=hebrew]'"}
+    ${"2016-12-31T23:59:60+03:00[Europe/Istanbul]"}                  | ${"second 60"}                                                   | ${"'2016-12-31T23:59:60+03:00[Europe/Istanbul]'"}
+    ${"+275760-09-13T00:00:00-00:01[UTC]"}                           | ${"the stored reading is past the end of the instant range"}     | ${"'+275760-09-13T00:00:00-00:01[UTC]'"}
+    ${"-271821-04-19T23:59:00-00:01[Europe/London]"}                 | ${"a local date a zoned read refuses"}                           | ${"'-271821-04-19T23:59:00-00:01[Europe/London]'"}
+    ${"-271821-04-19T20:00:00-04:00[America/New_York]"}              | ${"a refused local date, west of Greenwich"}                     | ${"'-271821-04-19T20:00:00-04:00[America/New_York]'"}
+    ${"-271821-04-19T23:59:00Z[America/New_York]"}                   | ${"a refused local date with Z"}                                 | ${"'-271821-04-19T23:59:00Z[America/New_York]'"}
+    ${"-271821-04-20T00:00:00+00:01[Europe/London]"}                 | ${"the stored reading is before the start of the instant range"} | ${"'-271821-04-20T00:00:00+00:01[Europe/London]'"}
+    ${"2022-07-08T00:14:07+01:00[Europe/London][!foo=bar]"}          | ${"an unknown critical annotation"}                              | ${"'2022-07-08T00:14:07+01:00[Europe/London][!foo=bar]'"}
+    ${"2023-02-29T10:00:00+00:00[Europe/London]"}                    | ${"a date that does not exist"}                                  | ${"'2023-02-29T10:00:00+00:00[Europe/London]'"}
+    ${""}                                                            | ${"empty string"}                                                | ${"''"}
+    ${"not a date"}                                                  | ${"not a date"}                                                  | ${"'not a date'"}
+    ${null}                                                          | ${"null"}                                                        | ${"null"}
+    ${42}                                                            | ${"a number"}                                                    | ${"42"}
+  `("returns null for $label ($why)", ({ input }) => {
     expect(classifyStoredZoned(input as never)).toBeNull();
   });
 
@@ -612,10 +611,14 @@ describe("classifyStoredZoned", () => {
       });
     }
 
-    for (const { timeZone, value } of [
-      ...sameInstantBattleCases,
-      ...localNoonBattleCases,
-    ]) {
+    // One test per stored string: a zone's same-instant and local-noon cases can be one string.
+    const offsetCases = new Map(
+      [...sameInstantBattleCases, ...localNoonBattleCases].map((c) => [
+        c.value,
+        c,
+      ]),
+    );
+    for (const { timeZone, value } of offsetCases.values()) {
       it(`${timeZone}: ${value} with one hour added to the offset is an offsetMismatch`, () => {
         const zoned = Temporal.ZonedDateTime.from(value);
         const storedOffset = formatUtcOffset(

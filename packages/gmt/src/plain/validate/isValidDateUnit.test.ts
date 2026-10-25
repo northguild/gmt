@@ -12,16 +12,16 @@ describe("isValidDateUnit", () => {
   });
 
   it.each`
-    invalidUnit
-    ${"not-a-unit"}
-    ${""}
-    ${1}
-    ${0}
-    ${true}
-    ${false}
-    ${null}
-    ${undefined}
-  `("returns false for invalid date unit: $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit     | label
+    ${"not-a-unit"} | ${"'not-a-unit'"}
+    ${""}           | ${"''"}
+    ${1}            | ${"1"}
+    ${0}            | ${"0"}
+    ${true}         | ${"true"}
+    ${false}        | ${"false"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
+  `("returns false for invalid date unit: $label", ({ invalidUnit }) => {
     expect(isValidDateUnit(invalidUnit)).toBe(false);
   });
 });

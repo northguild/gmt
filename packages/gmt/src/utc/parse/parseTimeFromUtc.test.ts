@@ -39,18 +39,15 @@ describe("parseTimeFromUtc", () => {
   );
 
   it.each`
-    invalidValue
-    ${"2024-02-29T14:30:45.123-04:00"}
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns empty string for invalid value $invalidValue",
-    ({ invalidValue }) => {
-      expect(parseTimeFromUtc(invalidValue as never)).toBe("");
-    },
-  );
+    invalidValue                       | label
+    ${"2024-02-29T14:30:45.123-04:00"} | ${"'2024-02-29T14:30:45.123-04:00'"}
+    ${"invalid"}                       | ${"'invalid'"}
+    ${""}                              | ${"''"}
+    ${null}                            | ${"null"}
+    ${undefined}                       | ${"undefined"}
+  `("returns empty string for invalid value $label", ({ invalidValue }) => {
+    expect(parseTimeFromUtc(invalidValue as never)).toBe("");
+  });
 
   it("returns empty string on failure", () => {
     mockTemporalInstantFromThrow();

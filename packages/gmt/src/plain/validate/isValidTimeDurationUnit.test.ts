@@ -14,17 +14,17 @@ describe("isValidTimeDurationUnit", () => {
   });
 
   it.each`
-    invalidUnit
-    ${"not-a-unit"}
-    ${""}
-    ${1}
-    ${0}
-    ${true}
-    ${false}
-    ${null}
-    ${undefined}
+    invalidUnit     | label
+    ${"not-a-unit"} | ${"'not-a-unit'"}
+    ${""}           | ${"''"}
+    ${1}            | ${"1"}
+    ${0}            | ${"0"}
+    ${true}         | ${"true"}
+    ${false}        | ${"false"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
   `(
-    "returns false for invalid time duration unit: $invalidUnit",
+    "returns false for invalid time duration unit: $label",
     ({ invalidUnit }) => {
       expect(isValidTimeDurationUnit(invalidUnit)).toBe(false);
     },

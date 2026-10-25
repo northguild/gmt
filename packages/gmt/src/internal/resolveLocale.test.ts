@@ -32,16 +32,16 @@ describe("resolveLocale", () => {
 
   // A malformed tag anywhere in the list is a RangeError in ECMA-402, so the whole argument is invalid.
   it.each`
-    locales
-    ${""}
-    ${"not a locale!!"}
-    ${["fr-FR", "not a locale!!"]}
-    ${["fr-FR", 42]}
-    ${42}
-    ${null}
-    ${{}}
-    ${true}
-  `("returns null for invalid locales $locales", ({ locales }) => {
+    locales                        | label
+    ${""}                          | ${"''"}
+    ${"not a locale!!"}            | ${"'not a locale!!'"}
+    ${["fr-FR", "not a locale!!"]} | ${"['fr-FR', 'not a locale!!']"}
+    ${["fr-FR", 42]}               | ${"['fr-FR', 42]"}
+    ${42}                          | ${"42"}
+    ${null}                        | ${"null"}
+    ${{}}                          | ${"{}"}
+    ${true}                        | ${"true"}
+  `("returns null for invalid locales $label", ({ locales }) => {
     expect(resolveLocale(locales)).toBeNull();
   });
 });

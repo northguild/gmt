@@ -16,7 +16,7 @@ describe("isValidFiscalExtraWeek", () => {
     ${"middle"}      | ${"no peer puts the week in a middle period"}
     ${"lastPeriod "} | ${"trailing whitespace"}
     ${""}            | ${"empty string"}
-  `("returns false for the string $extraWeek ($reason)", ({ extraWeek }) => {
+  `("returns false for the string '$extraWeek' ($reason)", ({ extraWeek }) => {
     expect(isValidFiscalExtraWeek(extraWeek)).toBe(false);
   });
 

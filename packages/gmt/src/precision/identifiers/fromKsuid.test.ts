@@ -18,20 +18,20 @@ describe("fromKsuid", () => {
   });
 
   it.each`
-    ksuid                              | reason
-    ${"aWgEPTl1tmebfsQzFP4bxwgy80W"}   | ${"one above the maximum"}
-    ${"zzzzzzzzzzzzzzzzzzzzzzzzzzz"}   | ${"above the maximum"}
-    ${"0ujtsYcgvSTl8PAuAdqWYSMnLO"}    | ${"26 characters"}
-    ${"0ujtsYcgvSTl8PAuAdqWYSMnLOv0"}  | ${"28 characters"}
-    ${"0ujtsYcgvSTl8PAuAdqWYSMnLO-"}   | ${"outside the alphabet"}
-    ${" 0ujtsYcgvSTl8PAuAdqWYSMnLOv"}  | ${"leading space"}
-    ${"0ujtsYcgvSTl8PAuAdqWYSMnLOv\n"} | ${"trailing newline"}
-    ${""}                              | ${"empty"}
-    ${42}                              | ${"number"}
-    ${null}                            | ${"null"}
-    ${undefined}                       | ${"undefined"}
-    ${{}}                              | ${"object"}
-  `("returns an empty string for $ksuid ($reason)", ({ ksuid }) => {
+    ksuid                              | reason                     | label
+    ${"aWgEPTl1tmebfsQzFP4bxwgy80W"}   | ${"one above the maximum"} | ${"'aWgEPTl1tmebfsQzFP4bxwgy80W'"}
+    ${"zzzzzzzzzzzzzzzzzzzzzzzzzzz"}   | ${"above the maximum"}     | ${"'zzzzzzzzzzzzzzzzzzzzzzzzzzz'"}
+    ${"0ujtsYcgvSTl8PAuAdqWYSMnLO"}    | ${"26 characters"}         | ${"'0ujtsYcgvSTl8PAuAdqWYSMnLO'"}
+    ${"0ujtsYcgvSTl8PAuAdqWYSMnLOv0"}  | ${"28 characters"}         | ${"'0ujtsYcgvSTl8PAuAdqWYSMnLOv0'"}
+    ${"0ujtsYcgvSTl8PAuAdqWYSMnLO-"}   | ${"outside the alphabet"}  | ${"'0ujtsYcgvSTl8PAuAdqWYSMnLO-'"}
+    ${" 0ujtsYcgvSTl8PAuAdqWYSMnLOv"}  | ${"leading space"}         | ${"' 0ujtsYcgvSTl8PAuAdqWYSMnLOv'"}
+    ${"0ujtsYcgvSTl8PAuAdqWYSMnLOv\n"} | ${"trailing newline"}      | ${"'0ujtsYcgvSTl8PAuAdqWYSMnLOv\\n'"}
+    ${""}                              | ${"empty"}                 | ${"''"}
+    ${42}                              | ${"number"}                | ${"42"}
+    ${null}                            | ${"null"}                  | ${"null"}
+    ${undefined}                       | ${"undefined"}             | ${"undefined"}
+    ${{}}                              | ${"object"}                | ${"{}"}
+  `("returns an empty string for $label ($reason)", ({ ksuid }) => {
     expect(fromKsuid(ksuid)).toBe("");
   });
 

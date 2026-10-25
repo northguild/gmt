@@ -48,7 +48,7 @@ describe("parseEdifactDatePeriod", () => {
       ${"202406152024062"}      | ${"one digit short"}
       ${"20240615202406200"}    | ${"one digit long"}
       ${""}                     | ${"an empty value"}
-    `("returns null for $value ($reads)", ({ value }) => {
+    `("returns null for '$value' ($reads)", ({ value }) => {
       expect(parseEdifactDatePeriod(value, "718")).toBeNull();
     });
   });
@@ -92,7 +92,7 @@ describe("parseEdifactDatePeriod", () => {
       ${"2023022920240620"} | ${"29 February 2023 in the start"}
       ${"2024061520240631"} | ${"31 June in the end"}
       ${"2024131520240620"} | ${"month 13 in the start"}
-    `("returns null for $value ($reads)", ({ value }) => {
+    `("returns null for '$value' ($reads)", ({ value }) => {
       expect(parseEdifactDatePeriod(value, "718")).toBeNull();
     });
   });

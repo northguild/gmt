@@ -34,7 +34,7 @@ describe("nthWeekdayOfMonth", () => {
     ${10_000}   | ${1}  | ${6}    | ${1}      | ${"+010000-01-01"} | ${"year above 9999 uses the signed six-digit form"}
     ${10_000}   | ${12} | ${3}    | ${-1}     | ${"+010000-12-27"} | ${"December of year 10000, from the end"}
   `(
-    "($year, $month, $weekday, $n) gives $expected: $why",
+    "($year, $month, $weekday, $n) gives '$expected': $why",
     ({ year, month, weekday, n, expected }) => {
       expect(nthWeekdayOfMonth(year, month, weekday, n)).toBe(expected);
     },

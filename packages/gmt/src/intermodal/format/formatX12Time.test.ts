@@ -60,7 +60,7 @@ describe("formatX12Time", () => {
       ${"23:59:60"}            | ${"a leap second"}
       ${"09:00/17:00"}         | ${"a range of times"}
       ${""}                    | ${"an empty value"}
-    `("returns '' for $value ($reads)", ({ value }) => {
+    `("returns '' for '$value' ($reads)", ({ value }) => {
       expect(formatX12Time(value, "TM")).toBe("");
       expect(formatX12Time(value, "TS")).toBe("");
     });

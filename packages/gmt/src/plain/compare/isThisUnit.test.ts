@@ -98,12 +98,12 @@ describe("isThisUnit", () => {
   });
 
   it.each`
-    value
-    ${""}
-    ${null}
-    ${undefined}
-    ${"not-a-date"}
-  `("returns false for invalid value $value", ({ value }) => {
+    value           | label
+    ${""}           | ${"''"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
+    ${"not-a-date"} | ${"'not-a-date'"}
+  `("returns false for invalid value $label", ({ value }) => {
     expect(isThisUnit(value as never, "month")).toBe(false);
   });
 

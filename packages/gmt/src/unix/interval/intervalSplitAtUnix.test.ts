@@ -91,12 +91,9 @@ describe("intervalSplitAtUnix", () => {
     ${0}   | ${2 ** 53} | ${[50000]}     | ${"an unsafe end"}
     ${""}  | ${100000}  | ${[50000]}     | ${"an empty-string start"}
     ${"0"} | ${"1.5"}   | ${[1]}         | ${"a fractional numeric-string end"}
-  `(
-    "returns [] for [$start, $end] split at $points ($description)",
-    ({ start, end, points }) => {
-      expect(intervalSplitAtUnix(start, end, points)).toEqual([]);
-    },
-  );
+  `("returns [] for $description", ({ start, end, points }) => {
+    expect(intervalSplitAtUnix(start, end, points)).toEqual([]);
+  });
 });
 
 // A point on `start` or `end` is dropped, and no point lies strictly inside a zero-length

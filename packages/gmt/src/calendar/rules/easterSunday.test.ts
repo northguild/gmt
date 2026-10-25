@@ -60,7 +60,7 @@ describe("easterSunday at the range edges", () => {
     ${275755}  | ${"julian"}    | ${""}
     ${33808}   | ${"julian"}    | ${"+033809-01-01"}
   `(
-    "returns $expected for year $year at the range edge, computus $computus",
+    "returns '$expected' for year $year at the range edge, computus $computus",
     ({ year, computus, expected }) => {
       expect(easterSunday(year, { computus })).toBe(expected);
     },

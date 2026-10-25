@@ -56,7 +56,7 @@ describe("parseEdifactTime", () => {
       ${"401"} | ${" 1430"}     | ${"a leading space"}
       ${"402"} | ${"143045+02"} | ${"404's value: a time with a zone is not read"}
       ${"401"} | ${""}          | ${"an empty value"}
-    `("returns '' for $code $value ($reads)", ({ code, value }) => {
+    `("returns '' for $code '$value' ($reads)", ({ code, value }) => {
       expect(parseEdifactTime(value, code)).toBe("");
     });
   });

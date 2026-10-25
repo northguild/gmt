@@ -80,7 +80,7 @@ describe("splitIntervalByUnitTime", () => {
     ${"12:00:00"} | ${"14:00:00"} | ${"hour"}    | ${1.5}
     ${"12:00:00"} | ${"14:00:00"} | ${"days"}    | ${1}
   `(
-    "returns [] for invalid $start, $end, $unit, or $amount",
+    "returns [] for invalid '$start', '$end', '$unit', or $amount",
     ({ start, end, unit, amount }) => {
       expect(splitIntervalByUnitTime(start, end, unit, amount)).toEqual([]);
     },

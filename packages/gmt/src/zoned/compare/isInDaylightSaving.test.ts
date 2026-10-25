@@ -25,7 +25,7 @@ describe("isInDaylightSaving", () => {
     ${"Europe/Berlin"}   | ${"2024-03-31T01:59:00+01:00[Europe/Berlin]"}   | ${false}       | ${"2024-03-31T03:00:00+02:00[Europe/Berlin]"}   | ${true}
     ${"Europe/Berlin"}   | ${"2024-10-27T02:59:00+02:00[Europe/Berlin]"}   | ${true}        | ${"2024-10-27T02:00:00+01:00[Europe/Berlin]"}   | ${false}
   `(
-    "resolves both sides of $timeZone's DST transition",
+    "resolves both sides of $timeZone's DST transition from $before",
     ({ before, beforeExpected, after, afterExpected }) => {
       expect(isInDaylightSaving(before)).toBe(beforeExpected);
       expect(isInDaylightSaving(after)).toBe(afterExpected);
@@ -328,18 +328,15 @@ describe("isInDaylightSaving", () => {
   );
 
   it.each`
-    invalidValue
-    ${"2024-02-29T14:30:45.123-04:00"}
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns false for invalid zoned datetime $invalidValue",
-    ({ invalidValue }) => {
-      expect(isInDaylightSaving(invalidValue as never)).toBe(false);
-    },
-  );
+    invalidValue                       | label
+    ${"2024-02-29T14:30:45.123-04:00"} | ${"'2024-02-29T14:30:45.123-04:00'"}
+    ${"invalid"}                       | ${"'invalid'"}
+    ${""}                              | ${"''"}
+    ${null}                            | ${"null"}
+    ${undefined}                       | ${"undefined"}
+  `("returns false for invalid zoned datetime $label", ({ invalidValue }) => {
+    expect(isInDaylightSaving(invalidValue as never)).toBe(false);
+  });
 
   for (const timeZone of battleTestTimeZones) {
     it(`never throws for battle-test timeZone ${timeZone}`, () => {

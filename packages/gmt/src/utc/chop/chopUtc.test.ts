@@ -19,17 +19,17 @@ describe("chopUtc", () => {
   );
 
   it.each`
-    invalidValue
-    ${"2024-02-29T12:30:45"}
-    ${"2024-02-29"}
-    ${"2024-02-29T00:00:00z"}
-    ${NaN}
-    ${null}
-    ${undefined}
-    ${true}
-    ${false}
-    ${""}
-  `("returns empty string for $invalidValue", ({ invalidValue }) => {
+    invalidValue              | label
+    ${"2024-02-29T12:30:45"}  | ${"'2024-02-29T12:30:45'"}
+    ${"2024-02-29"}           | ${"'2024-02-29'"}
+    ${"2024-02-29T00:00:00z"} | ${"'2024-02-29T00:00:00z'"}
+    ${NaN}                    | ${"NaN"}
+    ${null}                   | ${"null"}
+    ${undefined}              | ${"undefined"}
+    ${true}                   | ${"true"}
+    ${false}                  | ${"false"}
+    ${""}                     | ${"''"}
+  `("returns empty string for $label", ({ invalidValue }) => {
     expect(chopUtc(invalidValue)).toBe("");
   });
 

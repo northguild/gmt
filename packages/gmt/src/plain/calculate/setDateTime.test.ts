@@ -34,17 +34,17 @@ describe("setDateTime", () => {
   });
 
   it.each`
-    invalidDateTime
-    ${"2024-02-30T12:00:00"}
-    ${"not-a-datetime"}
-    ${"2024-02-29T24:00:00"}
-    ${""}
-    ${true}
-    ${null}
-    ${undefined}
-    ${"2024-03-10"}
+    invalidDateTime          | label
+    ${"2024-02-30T12:00:00"} | ${"'2024-02-30T12:00:00'"}
+    ${"not-a-datetime"}      | ${"'not-a-datetime'"}
+    ${"2024-02-29T24:00:00"} | ${"'2024-02-29T24:00:00'"}
+    ${""}                    | ${"''"}
+    ${true}                  | ${"true"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+    ${"2024-03-10"}          | ${"'2024-03-10'"}
   `(
-    "returns an empty string for an invalid datetime $invalidDateTime",
+    "returns an empty string for an invalid datetime $label",
     ({ invalidDateTime }) => {
       expect(setDateTime(invalidDateTime, { year: 2025 })).toBe("");
     },
@@ -59,7 +59,7 @@ describe("setDateTime", () => {
     ${"2023-01-31T12:00:00"} | ${{ month: 2 }} | ${"reject"}    | ${""}
     ${"2024-01-15T12:00:00"} | ${{ month: 2 }} | ${"reject"}    | ${"2024-02-15T12:00:00"}
   `(
-    "returns $expected for $value with fields $fields and overflow $overflow",
+    "returns '$expected' for $value with fields $fields and overflow $overflow",
     ({ value, fields, overflow, expected }) => {
       expect(
         setDateTime(

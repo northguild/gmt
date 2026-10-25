@@ -18,7 +18,7 @@ describe("isValidDateTimeInterval", () => {
     ${"2024-01-01T10:00:00"} | ${"2024-01-01T10:00:00"}     | ${true}
     ${"2024-01-01T10:00:00"} | ${"2024-01-01T10:00:00.000"} | ${true}
   `(
-    "returns $expected for equal datetimes $start",
+    "returns $expected for equal datetimes $start and $end",
     ({ start, end, expected }) => {
       expect(isValidDateTimeInterval(start, end)).toBe(expected);
     },
@@ -45,9 +45,12 @@ describe("isValidDateTimeInterval", () => {
     ${"2024-01-01T10:00:00"} | ${"2024-13-01T10:00:00"}
     ${"invalid"}             | ${"invalid"}
     ${""}                    | ${""}
-  `("returns false for malformed datetime: $start, $end", ({ start, end }) => {
-    expect(isValidDateTimeInterval(start, end)).toBe(false);
-  });
+  `(
+    "returns false for malformed datetime: '$start', '$end'",
+    ({ start, end }) => {
+      expect(isValidDateTimeInterval(start, end)).toBe(false);
+    },
+  );
 
   it.each`
     start                    | end                      | expected

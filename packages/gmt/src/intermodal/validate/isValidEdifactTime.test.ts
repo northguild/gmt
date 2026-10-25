@@ -17,7 +17,7 @@ describe("isValidEdifactTime", () => {
     ${"401"} | ${"14:30"}  | ${false} | ${"a colon"}
     ${"401"} | ${""}       | ${false} | ${"an empty value"}
   `(
-    "returns $expected for $value under $code ($reads), as parseEdifactTime reads it",
+    "returns $expected for '$value' under $code ($reads), as parseEdifactTime reads it",
     ({ code, value, expected }) => {
       expect(isValidEdifactTime(value, code)).toBe(expected);
       expect(parseEdifactTime(value, code) !== "").toBe(expected);

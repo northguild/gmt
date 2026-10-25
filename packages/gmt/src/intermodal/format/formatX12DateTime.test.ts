@@ -50,7 +50,7 @@ describe("formatX12DateTime", () => {
       ${"2024-06-15T23:59:60"}       | ${"a leap second"}
       ${"+010000-01-01T00:00"}       | ${"year 10000: CCYY is four digits"}
       ${""}                          | ${"an empty value"}
-    `("returns '' for $value ($reads)", ({ value }) => {
+    `("returns '' for '$value' ($reads)", ({ value }) => {
       expect(formatX12DateTime(value, "DT")).toBe("");
       expect(formatX12DateTime(value, "RTS")).toBe("");
     });

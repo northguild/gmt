@@ -53,16 +53,16 @@ describe("startOfTime", () => {
   );
 
   it.each`
-    invalidUnit
-    ${"invalid-unit"}
-    ${"minutez"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${12}
-    ${true}
-    ${false}
-  `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit       | label
+    ${"invalid-unit"} | ${"'invalid-unit'"}
+    ${"minutez"}      | ${"'minutez'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
+    ${12}             | ${"12"}
+    ${true}           | ${"true"}
+    ${false}          | ${"false"}
+  `("returns empty string for invalid unit $label", ({ invalidUnit }) => {
     expect(startOfTime("12:34:56", invalidUnit as never)).toBe("");
   });
 

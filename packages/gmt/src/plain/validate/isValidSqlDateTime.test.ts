@@ -53,7 +53,7 @@ describe("isValidSqlDateTime", () => {
     ${"2024-04-31 00:00:00.5"}          | ${false} | ${true}  | ${"April has 30 days"}
     ${"2024-02-31 00:00:00."}           | ${false} | ${true}  | ${"February has no 31st"}
   `(
-    "returns $expected for $value ($reason); the pattern alone says $pattern; parseSqlDateTime agrees",
+    "returns $expected for '$value' ($reason); the pattern alone says $pattern; parseSqlDateTime agrees",
     ({
       value,
       expected,

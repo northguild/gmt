@@ -35,7 +35,7 @@ describe("exactDurationNanoseconds", () => {
     ${"2 hours"}             | ${"not a duration"}
     ${""}                    | ${"empty"}
     ${"PT9007199254740992S"} | ${"past Temporal's duration limit: 2^53 seconds"}
-  `("returns null for $duration ($why)", ({ duration }) => {
+  `("returns null for '$duration' ($why)", ({ duration }) => {
     expect(exactDurationNanoseconds(duration)).toBeNull();
   });
 
@@ -69,13 +69,13 @@ describe("nonNegativeExactDurationNanoseconds", () => {
   });
 
   it.each`
-    duration             | why
-    ${"-PT15M"}          | ${"a negative duration"}
-    ${"-PT0.000000001S"} | ${"one nanosecond below zero"}
-    ${"P1W"}             | ${"a calendar unit"}
-    ${"15 minutes"}      | ${"not a duration"}
-    ${null}              | ${"a non-string"}
-  `("returns null for $duration ($why)", ({ duration }) => {
+    duration             | label                  | why
+    ${"-PT15M"}          | ${"'-PT15M'"}          | ${"a negative duration"}
+    ${"-PT0.000000001S"} | ${"'-PT0.000000001S'"} | ${"one nanosecond below zero"}
+    ${"P1W"}             | ${"'P1W'"}             | ${"a calendar unit"}
+    ${"15 minutes"}      | ${"'15 minutes'"}      | ${"not a duration"}
+    ${null}              | ${"null"}              | ${"a non-string"}
+  `("returns null for $label ($why)", ({ duration }) => {
     expect(nonNegativeExactDurationNanoseconds(duration)).toBeNull();
   });
 });

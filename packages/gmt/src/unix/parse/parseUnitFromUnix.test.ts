@@ -112,7 +112,7 @@ describe("parseUnitFromUnix with a blank epoch string", () => {
     ${"microsecond"} | ${" \n\t "}
     ${"nanosecond"}  | ${""}
     ${"nanosecond"}  | ${" \n\t "}
-  `('returns "" for $unit from blank string $value', ({ unit, value }) => {
+  `("returns '' for $unit from blank string '$value'", ({ unit, value }) => {
     expect(parseUnitFromUnix(value, unit, { timeZone: "UTC" })).toBe("");
   });
 });
@@ -158,7 +158,7 @@ describe("parseUnitFromUnix unit names", () => {
     ${"nanoseconds"}  | ${"000"}
     ${"dayOfWeeks"}   | ${""}
     ${"quarters"}     | ${""}
-  `("returns $expected for unit $unit", ({ unit, expected }) => {
+  `("returns '$expected' for unit $unit", ({ unit, expected }) => {
     expect(
       parseUnitFromUnix(1709217045123, unit as never, { timeZone: "UTC" }),
     ).toBe(expected);
@@ -170,21 +170,21 @@ describe("parseUnitFromUnix unit names", () => {
 // 1710504000000 is 2024-03-15T12:00:00Z.
 describe("parseUnitFromUnix with an invalid weekStartsOn", () => {
   it.each`
-    unit      | weekStartsOn
-    ${"week"} | ${"tuesday"}
-    ${"week"} | ${"Monday"}
-    ${"week"} | ${""}
-    ${"week"} | ${null}
-    ${"week"} | ${1}
-    ${"week"} | ${true}
-    ${"hour"} | ${"tuesday"}
-    ${"hour"} | ${"Monday"}
-    ${"hour"} | ${""}
-    ${"hour"} | ${null}
-    ${"hour"} | ${1}
-    ${"hour"} | ${true}
+    unit      | weekStartsOn | label
+    ${"week"} | ${"tuesday"} | ${"'tuesday'"}
+    ${"week"} | ${"Monday"}  | ${"'Monday'"}
+    ${"week"} | ${""}        | ${"''"}
+    ${"week"} | ${null}      | ${"null"}
+    ${"week"} | ${1}         | ${"1"}
+    ${"week"} | ${true}      | ${"true"}
+    ${"hour"} | ${"tuesday"} | ${"'tuesday'"}
+    ${"hour"} | ${"Monday"}  | ${"'Monday'"}
+    ${"hour"} | ${""}        | ${"''"}
+    ${"hour"} | ${null}      | ${"null"}
+    ${"hour"} | ${1}         | ${"1"}
+    ${"hour"} | ${true}      | ${"true"}
   `(
-    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    "returns an empty string for unit $unit with invalid weekStartsOn $label",
     ({ unit, weekStartsOn }) => {
       expect(
         parseUnitFromUnix(1710504000000, unit, {

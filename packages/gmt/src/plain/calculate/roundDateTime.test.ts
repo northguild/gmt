@@ -178,7 +178,7 @@ describe("roundDateTime", () => {
     ${"2024-05-15T12:00:00"} | ${"day"}   | ${"bogus"}
     ${"2024-05-15T12:00:00"} | ${"hour"}  | ${"round"}
   `(
-    "returns empty string for $value with unknown roundingMode $roundingMode on $unit",
+    "returns empty string for $value with unknown roundingMode '$roundingMode' on $unit",
     ({ value, unit, roundingMode }) => {
       expect(roundDateTime(value, { smallestUnit: unit, roundingMode })).toBe(
         "",
@@ -234,17 +234,17 @@ describe("roundDateTime", () => {
   );
 
   it.each`
-    invalidUnit
-    ${"invalid-unit"}
-    ${"hourss"}
-    ${"Days"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${12}
-    ${true}
-    ${false}
-  `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit       | label
+    ${"invalid-unit"} | ${"'invalid-unit'"}
+    ${"hourss"}       | ${"'hourss'"}
+    ${"Days"}         | ${"'Days'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
+    ${12}             | ${"12"}
+    ${true}           | ${"true"}
+    ${false}          | ${"false"}
+  `("returns empty string for invalid unit $label", ({ invalidUnit }) => {
     expect(
       roundDateTime("2024-06-15T12:34:56", {
         smallestUnit: invalidUnit as never,
@@ -270,7 +270,7 @@ describe("roundDateTime", () => {
     ${"-271821-04-19T12:00:00"} | ${"week"}  | ${"halfExpand"} | ${""}
     ${"-271821-04-19T12:00:00"} | ${"year"}  | ${"ceil"}       | ${"-271820-01-01T00:00:00"}
   `(
-    "returns $expected for the first-day value $value rounded to $unit with roundingMode $roundingMode",
+    "returns '$expected' for the first-day value $value rounded to $unit with roundingMode $roundingMode",
     ({ value, unit, roundingMode, expected }) => {
       expect(roundDateTime(value, { smallestUnit: unit, roundingMode })).toBe(
         expected,
@@ -295,7 +295,7 @@ describe("roundDateTime", () => {
     ${"+275760-09-13T23:59:59.999999999"} | ${"week"}  | ${"trunc"}      | ${"+275760-09-08T00:00:00"}
     ${"+275760-09-13T23:59:59.999999999"} | ${"week"}  | ${"halfExpand"} | ${""}
   `(
-    "returns $expected for the last-year value $value rounded to $unit with roundingMode $roundingMode",
+    "returns '$expected' for the last-year value $value rounded to $unit with roundingMode $roundingMode",
     ({ value, unit, roundingMode, expected }) => {
       expect(roundDateTime(value, { smallestUnit: unit, roundingMode })).toBe(
         expected,

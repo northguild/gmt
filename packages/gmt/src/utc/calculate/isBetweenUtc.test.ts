@@ -38,14 +38,14 @@ describe("isBetweenUtc", () => {
   );
 
   it.each`
-    value         | start         | end
-    ${"invalid"}  | ${earlyInput} | ${lateInput}
-    ${earlyInput} | ${"invalid"}  | ${lateInput}
-    ${earlyInput} | ${earlyInput} | ${"invalid"}
-    ${""}         | ${earlyInput} | ${lateInput}
-    ${null}       | ${earlyInput} | ${lateInput}
+    value         | start         | end          | label
+    ${"invalid"}  | ${earlyInput} | ${lateInput} | ${"'invalid'"}
+    ${earlyInput} | ${"invalid"}  | ${lateInput} | ${"earlyInput"}
+    ${earlyInput} | ${earlyInput} | ${"invalid"} | ${"earlyInput"}
+    ${""}         | ${earlyInput} | ${lateInput} | ${"''"}
+    ${null}       | ${earlyInput} | ${lateInput} | ${"null"}
   `(
-    "returns false for invalid inputs: $value | $start | $end",
+    "returns false for invalid inputs: $label | $start | $end",
     ({ value, start, end }) => {
       expect(isBetweenUtc(value as never, start as never, end as never)).toBe(
         false,

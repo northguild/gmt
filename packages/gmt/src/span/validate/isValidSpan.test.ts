@@ -44,7 +44,7 @@ describe("isValidSpan", () => {
     ${""}                                      | ${"2024-03-10T12:00:00Z"}                  | ${"empty string"}
     ${"2024-03-10 12:00:00Z"}                  | ${"2024-03-10T13:00:00Z"}                  | ${"space separator (strict extended shape)"}
     ${"2024-03-10T12:00:00Z"}                  | ${"20240310T130000Z"}                      | ${"basic format (strict extended shape)"}
-  `("returns false for $start to $end ($reason)", ({ start, end }) => {
+  `("returns false for '$start' to $end ($reason)", ({ start, end }) => {
     expect(isValidSpan(start, end)).toBe(false);
   });
 

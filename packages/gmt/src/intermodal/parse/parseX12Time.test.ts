@@ -75,7 +75,7 @@ describe("parseX12Time", () => {
       ${"1430ET"}     | ${"a time code is its own element: read it with x12TimeCodeZone"}
       ${"0900-1700"}  | ${"an RTM range of times is not read"}
       ${""}           | ${"an empty value"}
-    `("returns '' for $value ($reads)", ({ value }) => {
+    `("returns '' for '$value' ($reads)", ({ value }) => {
       expect(parseX12Time(value)).toBe("");
     });
   });
@@ -127,7 +127,7 @@ describe("parseX12Time", () => {
       ${"TS"} | ${"143060"} | ${"second 60: GMT rejects a leap second"}
       ${"TM"} | ${"14:30"}  | ${"a colon"}
       ${"TM"} | ${""}       | ${"an empty value"}
-    `("returns '' for $value under $format ($reads)", ({ format, value }) => {
+    `("returns '' for '$value' under $format ($reads)", ({ format, value }) => {
       expect(parseX12Time(value, format)).toBe("");
     });
 

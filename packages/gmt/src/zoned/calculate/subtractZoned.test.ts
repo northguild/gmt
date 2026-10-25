@@ -86,14 +86,14 @@ describe("subtractZoned", () => {
   );
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-02-29T14:30:00"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidValue             | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-02-29T14:30:00"} | ${"'2024-02-29T14:30:00'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
   `(
-    "returns an empty string for invalid zoned datetime $invalidValue",
+    "returns an empty string for invalid zoned datetime $label",
     ({ invalidValue }) => {
       expect(subtractZoned(invalidValue as never, { hours: 1 } as never)).toBe(
         "",
@@ -119,21 +119,18 @@ describe("subtractZoned", () => {
   );
 
   it.each`
-    invalidUnit
-    ${"timeZone"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns an empty string for invalid unit $invalidUnit",
-    ({ invalidUnit }) => {
-      expect(
-        subtractZoned("2024-02-29T14:30:00+00:00[UTC]", {
-          [String(invalidUnit)]: 1,
-        } as never),
-      ).toBe("");
-    },
-  );
+    invalidUnit   | label
+    ${"timeZone"} | ${"'timeZone'"}
+    ${""}         | ${"''"}
+    ${null}       | ${"null"}
+    ${undefined}  | ${"undefined"}
+  `("returns an empty string for invalid unit $label", ({ invalidUnit }) => {
+    expect(
+      subtractZoned("2024-02-29T14:30:00+00:00[UTC]", {
+        [String(invalidUnit)]: 1,
+      } as never),
+    ).toBe("");
+  });
 
   for (const { timeZone, value } of localNoonBattleCases) {
     it(`preserves battle-test timeZone ${timeZone} when subtracting`, () => {
@@ -161,7 +158,7 @@ describe("subtractZoned", () => {
     ${"2024-04-08T01:45:00+10:30[Australia/Lord_Howe]"} | ${"later"}      | ${"2024-04-07T01:45:00+10:30[Australia/Lord_Howe]"}
     ${"2024-04-08T01:45:00+10:30[Australia/Lord_Howe]"} | ${"reject"}     | ${""}
   `(
-    "resolves fall-back overlap for $value - 1 day with disambiguation $disambiguation to $expected",
+    "resolves fall-back overlap for $value - 1 day with disambiguation $disambiguation to '$expected'",
     ({ value, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -182,7 +179,7 @@ describe("subtractZoned", () => {
     ${"2024-03-11T02:40:00-04:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"later"}     | ${"2024-03-10T03:30:00-04:00[America/New_York]"}
     ${"2024-03-11T02:40:00-04:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"reject"}    | ${""}
   `(
-    "subtracts the time portion of $units from $value in exact time with disambiguation $disambiguation, returns $expected",
+    "subtracts the time portion of $units from $value in exact time with disambiguation $disambiguation, returns '$expected'",
     ({ value, units, disambiguation, expected }) => {
       expect(subtractZoned(value, units, { disambiguation })).toBe(expected);
     },
@@ -214,7 +211,7 @@ describe("subtractZoned", () => {
     ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"later"}      | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}
     ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"reject"}     | ${""}
   `(
-    "resolves the spring-forward gap for $value - 1 day with disambiguation $disambiguation to $expected",
+    "resolves the spring-forward gap for $value - 1 day with disambiguation $disambiguation to '$expected'",
     ({ value, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -264,7 +261,7 @@ describe("subtractZoned", () => {
     ${"2024-03-31T12:00:00-04:00[America/New_York]"} | ${{ months: -1 }} | ${"constrain"} | ${"2024-04-30T12:00:00-04:00[America/New_York]"}
     ${"2024-03-31T12:00:00-04:00[America/New_York]"} | ${{ months: -1 }} | ${"reject"}    | ${""}
   `(
-    "returns $expected for $value - $units with overflow $overflow",
+    "returns '$expected' for $value - $units with overflow $overflow",
     ({ value, units, overflow, expected }) => {
       expect(
         subtractZoned(

@@ -70,12 +70,9 @@ describe("isValidUnixInterval", () => {
     ${" 0"}       | ${"1"}     | ${"a padded string is not an epoch"}
     ${"+0"}       | ${"1"}     | ${"a plus sign is not an epoch"}
     ${"0"}        | ${"0x10"}  | ${"a hex string is not an epoch"}
-  `(
-    "returns false for a non-safe-integer epoch: $start, $end ($reason)",
-    ({ start, end }) => {
-      expect(isValidUnixInterval(start, end)).toBe(false);
-    },
-  );
+  `("returns false for a non-safe-integer epoch: $reason", ({ start, end }) => {
+    expect(isValidUnixInterval(start, end)).toBe(false);
+  });
 
   it.each`
     start                       | end                        | reason

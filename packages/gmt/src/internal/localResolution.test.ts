@@ -27,23 +27,23 @@ function resolver(zone: string) {
 
 describe("readOccurrenceWindow", () => {
   it.each`
-    window                                                            | expected
-    ${{ start: "2024-01-01T00:00:00Z", end: "2024-01-02T00:00:00Z" }} | ${{ kind: "interval", start: 1704067200000000000n, end: 1704153600000000000n }}
-    ${{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T00:00:00Z" }} | ${{ kind: "interval", start: 1704067200000000000n, end: 1704067200000000000n }}
-    ${{ after: "2024-01-01T00:00:00Z", count: 1 }}                    | ${{ kind: "after", after: 1704067200000000000n, count: 1 }}
-    ${{ after: "2024-01-01T00:00:00Z", count: 10_000 }}               | ${{ kind: "after", after: 1704067200000000000n, count: 10_000 }}
-    ${{ start: "2024-01-02T00:00:00Z", end: "2024-01-01T00:00:00Z" }} | ${null}
-    ${{ after: "2024-01-01T00:00:00Z", count: 0 }}                    | ${null}
-    ${{ after: "2024-01-01T00:00:00Z", count: 10_001 }}               | ${null}
-    ${{ after: "2024-01-01T00:00:00Z", count: 2.5 }}                  | ${null}
-    ${{ after: "2024-01-01T00:00:00Z" }}                              | ${null}
-    ${{ after: "2024-01-01T00:00:00", count: 1 }}                     | ${null}
-    ${{ after: 5, count: 1 }}                                         | ${null}
-    ${{ start: "x", end: "y" }}                                       | ${null}
-    ${null}                                                           | ${null}
-    ${"2024-01-01T00:00:00Z"}                                         | ${null}
-    ${undefined}                                                      | ${null}
-  `("$window reads as $expected", ({ window, expected }) => {
+    window                                                            | expected                                                                        | label
+    ${{ start: "2024-01-01T00:00:00Z", end: "2024-01-02T00:00:00Z" }} | ${{ kind: "interval", start: 1704067200000000000n, end: 1704153600000000000n }} | ${"a one-day interval"}
+    ${{ start: "2024-01-01T00:00:00Z", end: "2024-01-01T00:00:00Z" }} | ${{ kind: "interval", start: 1704067200000000000n, end: 1704067200000000000n }} | ${"an empty interval"}
+    ${{ after: "2024-01-01T00:00:00Z", count: 1 }}                    | ${{ kind: "after", after: 1704067200000000000n, count: 1 }}                     | ${"an after window, count 1"}
+    ${{ after: "2024-01-01T00:00:00Z", count: 10_000 }}               | ${{ kind: "after", after: 1704067200000000000n, count: 10_000 }}                | ${"an after window, count 10,000"}
+    ${{ start: "2024-01-02T00:00:00Z", end: "2024-01-01T00:00:00Z" }} | ${null}                                                                         | ${"an end before the start"}
+    ${{ after: "2024-01-01T00:00:00Z", count: 0 }}                    | ${null}                                                                         | ${"count 0"}
+    ${{ after: "2024-01-01T00:00:00Z", count: 10_001 }}               | ${null}                                                                         | ${"count 10,001"}
+    ${{ after: "2024-01-01T00:00:00Z", count: 2.5 }}                  | ${null}                                                                         | ${"count 2.5"}
+    ${{ after: "2024-01-01T00:00:00Z" }}                              | ${null}                                                                         | ${"no count"}
+    ${{ after: "2024-01-01T00:00:00", count: 1 }}                     | ${null}                                                                         | ${"an after with no zone designator"}
+    ${{ after: 5, count: 1 }}                                         | ${null}                                                                         | ${"an after that is a number"}
+    ${{ start: "x", end: "y" }}                                       | ${null}                                                                         | ${"a start and end that are not instants"}
+    ${null}                                                           | ${null}                                                                         | ${"null"}
+    ${"2024-01-01T00:00:00Z"}                                         | ${null}                                                                         | ${"a bare string"}
+    ${undefined}                                                      | ${null}                                                                         | ${"undefined"}
+  `("$label reads as $expected", ({ window, expected }) => {
     expect(readOccurrenceWindow(window)).toEqual(expected);
   });
 });
@@ -118,12 +118,15 @@ describe("createLocalResolver, fixed rows worked out from tz offsets", () => {
 describe("createLocalResolver equals classifyWall", () => {
   // The oracle is classifyWall (TC39 disambiguation), as the slice specifies. Every 30 minutes within
   // thirty hours of each transition in 2010-2030, and a 3989-minute grid (prime, so it meets every time of day) between.
+  // A Set, because the battle-test list already holds some of these zones.
   const zones = [
-    ...battleTestTimeZones,
-    "Australia/Lord_Howe",
-    "Pacific/Chatham",
-    "Pacific/Apia",
-    "Antarctica/Casey",
+    ...new Set([
+      ...battleTestTimeZones,
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Antarctica/Casey",
+    ]),
   ];
   const MINUTE = 60_000_000_000n;
   const FROM = nanoseconds("2010-01-01T00:00:00Z");
@@ -189,26 +192,26 @@ describe("createLocalResolver equals classifyWall", () => {
 
 describe("readOccurrenceWindow, more windows", () => {
   it.each`
-    window                                                                 | expected
-    ${{ after: "2024-01-01T02:00:00+02:00", count: 3 }}                    | ${{ kind: "after", after: 1704067200000000000n, count: 3 }}
-    ${{ after: "2024-01-01T00:00:00.5Z", count: 3 }}                       | ${{ kind: "after", after: 1704067200500000000n, count: 3 }}
-    ${{ after: "2024-01-01T00:00:00Z", count: 9_999 }}                     | ${{ kind: "after", after: 1704067200000000000n, count: 9_999 }}
-    ${{ after: "2024-01-01T00:00:00Z", count: 3, start: "x" }}             | ${{ kind: "after", after: 1704067200000000000n, count: 3 }}
-    ${{ start: "2024-01-01T02:00:00+02:00", end: "2024-01-01T00:00:01Z" }} | ${{ kind: "interval", start: 1704067200000000000n, end: 1704067201000000000n }}
-    ${{ start: "1969-12-31T23:59:59Z", end: "1970-01-01T00:00:00Z" }}      | ${{ kind: "interval", start: -1000000000n, end: 0n }}
-    ${{ after: "2024-01-01T00:00:00Z", count: "2" }}                       | ${null}
-    ${{ after: "2024-01-01T00:00:00Z", count: Number.NaN }}                | ${null}
-    ${{ after: "2024-01-01T00:00:00Z", count: Number.POSITIVE_INFINITY }}  | ${null}
-    ${{ after: "2024-01-01T00:00:00Z", count: -1 }}                        | ${null}
-    ${{ after: "2024-01-01T00:00:00Z", count: null }}                      | ${null}
-    ${{ after: undefined, count: 1 }}                                      | ${null}
-    ${{ after: null, count: 1 }}                                           | ${null}
-    ${{ start: "2024-01-01T00:00:00Z" }}                                   | ${null}
-    ${{ end: "2024-01-01T00:00:00Z" }}                                     | ${null}
-    ${{}}                                                                  | ${null}
-    ${5}                                                                   | ${null}
-    ${true}                                                                | ${null}
-  `("$window reads as $expected", ({ window, expected }) => {
+    window                                                                 | expected                                                                        | label
+    ${{ after: "2024-01-01T02:00:00+02:00", count: 3 }}                    | ${{ kind: "after", after: 1704067200000000000n, count: 3 }}                     | ${"an after with a +02:00 offset"}
+    ${{ after: "2024-01-01T00:00:00.5Z", count: 3 }}                       | ${{ kind: "after", after: 1704067200500000000n, count: 3 }}                     | ${"an after with a fraction"}
+    ${{ after: "2024-01-01T00:00:00Z", count: 9_999 }}                     | ${{ kind: "after", after: 1704067200000000000n, count: 9_999 }}                 | ${"count 9,999"}
+    ${{ after: "2024-01-01T00:00:00Z", count: 3, start: "x" }}             | ${{ kind: "after", after: 1704067200000000000n, count: 3 }}                     | ${"an after with a stray start"}
+    ${{ start: "2024-01-01T02:00:00+02:00", end: "2024-01-01T00:00:01Z" }} | ${{ kind: "interval", start: 1704067200000000000n, end: 1704067201000000000n }} | ${"an interval with a +02:00 start"}
+    ${{ start: "1969-12-31T23:59:59Z", end: "1970-01-01T00:00:00Z" }}      | ${{ kind: "interval", start: -1000000000n, end: 0n }}                           | ${"an interval across 1970"}
+    ${{ after: "2024-01-01T00:00:00Z", count: "2" }}                       | ${null}                                                                         | ${"count as the string 2"}
+    ${{ after: "2024-01-01T00:00:00Z", count: Number.NaN }}                | ${null}                                                                         | ${"count NaN"}
+    ${{ after: "2024-01-01T00:00:00Z", count: Number.POSITIVE_INFINITY }}  | ${null}                                                                         | ${"count Infinity"}
+    ${{ after: "2024-01-01T00:00:00Z", count: -1 }}                        | ${null}                                                                         | ${"count -1"}
+    ${{ after: "2024-01-01T00:00:00Z", count: null }}                      | ${null}                                                                         | ${"count null"}
+    ${{ after: undefined, count: 1 }}                                      | ${null}                                                                         | ${"after undefined"}
+    ${{ after: null, count: 1 }}                                           | ${null}                                                                         | ${"after null"}
+    ${{ start: "2024-01-01T00:00:00Z" }}                                   | ${null}                                                                         | ${"a start alone"}
+    ${{ end: "2024-01-01T00:00:00Z" }}                                     | ${null}                                                                         | ${"an end alone"}
+    ${{}}                                                                  | ${null}                                                                         | ${"an empty object"}
+    ${5}                                                                   | ${null}                                                                         | ${"the number 5"}
+    ${true}                                                                | ${null}                                                                         | ${"true"}
+  `("$label reads as $expected", ({ window, expected }) => {
     expect(readOccurrenceWindow(window)).toEqual(expected);
   });
 });
@@ -420,13 +423,16 @@ describe("createLocalResolver against the offsets Temporal reports", () => {
   // An oracle that does not use classifyWall or any GMT function: a wall time W (read as UTC) can
   // be an instant `W - offset` only when the zone's offset at that instant is `offset`. The offsets
   // in force a day either side of W are the only candidates (no two offsets differ by a day).
+  // A Set, because the battle-test list already holds some of these zones.
   const zones = [
-    ...battleTestTimeZones,
-    "Australia/Lord_Howe",
-    "Pacific/Chatham",
-    "Pacific/Apia",
-    "Antarctica/Casey",
-    "America/Santiago",
+    ...new Set([
+      ...battleTestTimeZones,
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Antarctica/Casey",
+      "America/Santiago",
+    ]),
   ];
   const DAY = 86_400_000_000_000n;
 

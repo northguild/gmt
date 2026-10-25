@@ -134,7 +134,7 @@ describe("formatEdifactOffsetDateTime", () => {
       ${"1800-01-01T00:00:00Z[Europe/Amsterdam]"}   | ${"a bracketed zone on local mean time: its offset has seconds, which no mask holds"}
       ${"2024-06-15T14:30:00+24:00"}                | ${"offset hour 24"}
       ${""}                                         | ${"an empty value"}
-    `("returns '' for $value ($reads)", ({ value }) => {
+    `("returns '' for '$value' ($reads)", ({ value }) => {
       for (const code of ["205", "208", "303", "304"] as const) {
         expect(formatEdifactOffsetDateTime(value, code), code).toBe("");
       }

@@ -73,25 +73,25 @@ describe("getZonedNowUnit", () => {
   );
 
   it.each`
-    invalidTimeZone
-    ${""}
-    ${"invalid"}
-    ${null}
-    ${undefined}
+    invalidTimeZone | label
+    ${""}           | ${"''"}
+    ${"invalid"}    | ${"'invalid'"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
   `(
-    "returns empty string for invalid timeZone $invalidTimeZone",
+    "returns empty string for invalid timeZone $label",
     ({ invalidTimeZone }) => {
       expect(getZonedNowUnit(invalidTimeZone as never, "year")).toBe("");
     },
   );
 
   it.each`
-    invalidUnit
-    ${""}
-    ${null}
-    ${undefined}
-    ${"invalid"}
-  `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit  | label
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${"invalid"} | ${"'invalid'"}
+  `("returns empty string for invalid unit $label", ({ invalidUnit }) => {
     expect(getZonedNowUnit("UTC", invalidUnit as never)).toBe("");
   });
 

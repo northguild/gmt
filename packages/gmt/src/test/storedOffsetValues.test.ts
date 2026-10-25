@@ -1245,7 +1245,7 @@ describe("the limit of arithmetic at a stored offset with seconds", () => {
     ${30_000}     | ${"-00:00:30"} | ${true}  | ${"-271821-04-20T00:00:35Z"}
     ${0}          | ${"+00:44:30"} | ${true}  | ${"-271821-04-20T00:00:05Z"}
   `(
-    "isOpenAt returns $open and addOperatingTime $fiveSecondsLater, $after ms after the first instant at $timeZone",
+    "isOpenAt returns $open and addOperatingTime '$fiveSecondsLater', $after ms after the first instant at $timeZone",
     ({ after, timeZone, open, fiveSecondsLater }) => {
       const instant = at(FIRST_INSTANT_MS + after);
 

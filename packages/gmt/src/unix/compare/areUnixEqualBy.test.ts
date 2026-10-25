@@ -143,21 +143,21 @@ describe("areUnixEqualBy across zone transitions", () => {
 // 1710504000000 is 2024-03-15T12:00:00Z.
 describe("areUnixEqualBy with an invalid weekStartsOn", () => {
   it.each`
-    unit      | weekStartsOn
-    ${"week"} | ${"tuesday"}
-    ${"week"} | ${"Monday"}
-    ${"week"} | ${""}
-    ${"week"} | ${null}
-    ${"week"} | ${1}
-    ${"week"} | ${true}
-    ${"day"}  | ${"tuesday"}
-    ${"day"}  | ${"Monday"}
-    ${"day"}  | ${""}
-    ${"day"}  | ${null}
-    ${"day"}  | ${1}
-    ${"day"}  | ${true}
+    unit      | weekStartsOn | weekStartsOnLabel
+    ${"week"} | ${"tuesday"} | ${"'tuesday'"}
+    ${"week"} | ${"Monday"}  | ${"'Monday'"}
+    ${"week"} | ${""}        | ${"''"}
+    ${"week"} | ${null}      | ${"null"}
+    ${"week"} | ${1}         | ${"1"}
+    ${"week"} | ${true}      | ${"true"}
+    ${"day"}  | ${"tuesday"} | ${"'tuesday'"}
+    ${"day"}  | ${"Monday"}  | ${"'Monday'"}
+    ${"day"}  | ${""}        | ${"''"}
+    ${"day"}  | ${null}      | ${"null"}
+    ${"day"}  | ${1}         | ${"1"}
+    ${"day"}  | ${true}      | ${"true"}
   `(
-    "returns false for unit $unit with invalid weekStartsOn $weekStartsOn",
+    "returns false for unit $unit with invalid weekStartsOn $weekStartsOnLabel",
     ({ unit, weekStartsOn }) => {
       expect(
         areUnixEqualBy(1710504000000, 1710504000000, unit, {

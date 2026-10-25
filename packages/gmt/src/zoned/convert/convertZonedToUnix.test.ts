@@ -72,18 +72,15 @@ describe("convertZonedToUnix", () => {
   });
 
   it.each`
-    invalidValue
-    ${"not-a-zoned-datetime"}
-    ${"2024-02-29T09:00:00+00:00"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns null for invalid zoned datetime $invalidValue",
-    ({ invalidValue }) => {
-      expect(convertZonedToUnix(invalidValue as never)).toBeNull();
-    },
-  );
+    invalidValue                   | label
+    ${"not-a-zoned-datetime"}      | ${"'not-a-zoned-datetime'"}
+    ${"2024-02-29T09:00:00+00:00"} | ${"'2024-02-29T09:00:00+00:00'"}
+    ${""}                          | ${"''"}
+    ${null}                        | ${"null"}
+    ${undefined}                   | ${"undefined"}
+  `("returns null for invalid zoned datetime $label", ({ invalidValue }) => {
+    expect(convertZonedToUnix(invalidValue as never)).toBeNull();
+  });
 
   // 2024-02-29T10:00:00.5+01:00 is 09:00:00.5Z: 1709197200500 ms, second 1709197200 (floor).
   it.each`
@@ -113,11 +110,11 @@ describe("convertZonedToUnix", () => {
   });
 
   it.each`
-    invalidUnit
-    ${"minutes"}
-    ${""}
-    ${null}
-  `("returns null for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit  | label
+    ${"minutes"} | ${"'minutes'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+  `("returns null for invalid unit $label", ({ invalidUnit }) => {
     expect(
       convertZonedToUnix("2024-02-29T09:00:00+00:00[UTC]", {
         epochUnit: invalidUnit as never,

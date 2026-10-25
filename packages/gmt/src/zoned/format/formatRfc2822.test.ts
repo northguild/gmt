@@ -29,7 +29,7 @@ describe("formatRfc2822", () => {
     ${""}
     ${"2024-03-15T14:30:00"}
     ${"2024-02-30T14:30:00+00:00[UTC]"}
-  `("returns '' for invalid input $value", ({ value }: { value: string }) => {
+  `("returns '' for invalid input '$value'", ({ value }: { value: string }) => {
     expect(formatRfc2822(value)).toBe("");
   });
 

@@ -182,19 +182,19 @@ describe("isBusinessDay", () => {
   );
 
   it.each`
-    value
-    ${"invalid-date"}
-    ${"2024-02-30"}
-    ${"2024-02-29T00:00:00"}
-    ${""}
-    ${"   "}
-    ${" 2024-02-05 "}
-    ${null}
-    ${undefined}
-    ${12}
-    ${true}
-    ${false}
-  `("returns false for invalid value $value", ({ value }) => {
+    value                    | label
+    ${"invalid-date"}        | ${"'invalid-date'"}
+    ${"2024-02-30"}          | ${"'2024-02-30'"}
+    ${"2024-02-29T00:00:00"} | ${"'2024-02-29T00:00:00'"}
+    ${""}                    | ${"''"}
+    ${"   "}                 | ${"'   '"}
+    ${" 2024-02-05 "}        | ${"' 2024-02-05 '"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+    ${12}                    | ${"12"}
+    ${true}                  | ${"true"}
+    ${false}                 | ${"false"}
+  `("returns false for invalid value $label", ({ value }) => {
     expect(isBusinessDay(value)).toBe(false);
   });
 

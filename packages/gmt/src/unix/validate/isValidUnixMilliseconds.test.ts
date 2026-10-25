@@ -30,7 +30,7 @@ describe("isValidUnixMilliseconds", () => {
     ${null}                   | ${"null"}
     ${undefined}              | ${"undefined"}
     ${true}                   | ${"a boolean"}
-  `("returns false for $value ($reason)", ({ value }) => {
+  `("returns false for $reason", ({ value }) => {
     expect(isValidUnixMilliseconds(value as never)).toBe(false);
   });
 });

@@ -24,53 +24,53 @@ const throwingGetter = {
 
 describe("isValidEpcisEvent", () => {
   it.each`
-    eventTime                            | eventTimeZoneOffset | expected | reads
-    ${"2024-06-15T14:30:00Z"}            | ${"-05:00"}         | ${true}  | ${"a Z instant and a negative offset"}
-    ${"2024-06-15T14:30:00Z"}            | ${"+02:00"}         | ${true}  | ${"a positive offset"}
-    ${"2024-06-15T14:30:00Z"}            | ${"+00:00"}         | ${true}  | ${"an event at UTC"}
-    ${"2024-06-15T14:30:00Z"}            | ${"-00:00"}         | ${true}  | ${"-00:00: the GS1 pattern admits it"}
-    ${"2024-06-15T14:30:00Z"}            | ${"+14:00"}         | ${true}  | ${"the eastern end of the pattern"}
-    ${"2024-06-15T14:30:00Z"}            | ${"-14:00"}         | ${true}  | ${"the western end: the sign is independent of 14:00"}
-    ${"2024-06-15T14:30:00Z"}            | ${"+13:59"}         | ${true}  | ${"the last minute before 14:00"}
-    ${"2024-06-15T14:30:00Z"}            | ${"-13:59"}         | ${true}  | ${"the last minute before 14:00, west"}
-    ${"2024-06-15T14:30:00Z"}            | ${"+05:45"}         | ${true}  | ${"a quarter-hour offset"}
-    ${"2024-06-15T14:30:00-14:00"}       | ${"+14:00"}         | ${true}  | ${"the two ends of the range in the two fields"}
-    ${"2024-06-15T14:30:00.1Z"}          | ${"-05:00"}         | ${true}  | ${"a one-digit fraction"}
-    ${"2024-06-15T10:00:00+02:00"}       | ${"+02:00"}         | ${true}  | ${"an eventTime with an offset"}
-    ${"2024-06-15T10:00:00+02:00"}       | ${"-05:00"}         | ${true}  | ${"two offsets that differ: they are independent"}
-    ${"2024-06-15T14:30:00.123456789Z"}  | ${"-05:00"}         | ${true}  | ${"a nine-digit fraction"}
-    ${"2024-02-29T23:59:59Z"}            | ${"-05:00"}         | ${true}  | ${"the leap day"}
-    ${"0000-01-01T00:00:00Z"}            | ${"-05:00"}         | ${true}  | ${"the first four-digit year"}
-    ${"9999-12-31T23:59:59Z"}            | ${"+14:00"}         | ${true}  | ${"the last four-digit year"}
-    ${"2024-06-15T14:30:00Z"}            | ${undefined}        | ${false} | ${"eventTimeZoneOffset is missing"}
-    ${"2024-06-15T14:30:00Z"}            | ${"Z"}              | ${false} | ${"Z in the offset field"}
-    ${"2024-06-15T14:30:00Z"}            | ${"+0200"}          | ${false} | ${"an offset without a colon"}
-    ${"2024-06-15T14:30:00Z"}            | ${"+02"}            | ${false} | ${"an hours-only offset"}
-    ${"2024-06-15T14:30:00Z"}            | ${"+14:01"}         | ${false} | ${"an offset past 14:00"}
-    ${"2024-06-15T14:30:00Z"}            | ${"-14:01"}         | ${false} | ${"an offset past 14:00, west"}
-    ${"2024-06-15T14:30:00Z"}            | ${"-14:30"}         | ${false} | ${"an offset past 14:00, west"}
-    ${"2024-06-15T14:30:00Z"}            | ${"+15:00"}         | ${false} | ${"hour 15"}
-    ${"2024-06-15T14:30:00Z"}            | ${"+05:30:00"}      | ${false} | ${"an offset with seconds"}
-    ${"2024-06-15T14:30:00Z"}            | ${""}               | ${false} | ${"an empty offset"}
-    ${"2024-06-15T14:30:00Z"}            | ${null}             | ${false} | ${"a null offset"}
-    ${"2024-06-15T14:30:00Z"}            | ${-300}             | ${false} | ${"a number of minutes"}
-    ${undefined}                         | ${"-05:00"}         | ${false} | ${"eventTime is missing"}
-    ${"2024-06-15 14:30:00Z"}            | ${"-05:00"}         | ${false} | ${"a space separator"}
-    ${"2024-06-15t14:30:00Z"}            | ${"-05:00"}         | ${false} | ${"lower-case t"}
-    ${"2024-06-15T14:30:00z"}            | ${"-05:00"}         | ${false} | ${"lower-case z"}
-    ${"2024-06-15T14:30Z"}               | ${"-05:00"}         | ${false} | ${"no seconds"}
-    ${"2024-06-15T14:30:00"}             | ${"-05:00"}         | ${false} | ${"no Z and no offset in eventTime"}
-    ${"2024-06-15T14:30:00+15:00"}       | ${"-05:00"}         | ${false} | ${"an eventTime offset past 14:00"}
-    ${"2024-06-15T14:30:00+14:01"}       | ${"-05:00"}         | ${false} | ${"an eventTime offset one minute past 14:00"}
-    ${"2016-12-31T23:59:60Z"}            | ${"-05:00"}         | ${false} | ${"a leap second"}
-    ${"2024-06-15T14:30:00Z[UTC]"}       | ${"-05:00"}         | ${false} | ${"a bracketed zone"}
-    ${"2024-02-30T14:30:00Z"}            | ${"-05:00"}         | ${false} | ${"30 February: the pattern matches, the day does not exist"}
-    ${"2023-02-29T14:30:00Z"}            | ${"-05:00"}         | ${false} | ${"29 February in a common year"}
-    ${"2024-06-15T14:30:00.1234567891Z"} | ${"-05:00"}         | ${false} | ${"a ten-digit fraction: finer than a nanosecond (GMT rule)"}
-    ${1718461800000}                     | ${"-05:00"}         | ${false} | ${"epoch milliseconds"}
-    ${null}                              | ${"-05:00"}         | ${false} | ${"a null eventTime"}
+    eventTime                            | eventTimeZoneOffset | expected | reads                                                         | label
+    ${"2024-06-15T14:30:00Z"}            | ${"-05:00"}         | ${true}  | ${"a Z instant and a negative offset"}                        | ${"'-05:00'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+02:00"}         | ${true}  | ${"a positive offset"}                                        | ${"'+02:00'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+00:00"}         | ${true}  | ${"an event at UTC"}                                          | ${"'+00:00'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"-00:00"}         | ${true}  | ${"-00:00: the GS1 pattern admits it"}                        | ${"'-00:00'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+14:00"}         | ${true}  | ${"the eastern end of the pattern"}                           | ${"'+14:00'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"-14:00"}         | ${true}  | ${"the western end: the sign is independent of 14:00"}        | ${"'-14:00'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+13:59"}         | ${true}  | ${"the last minute before 14:00"}                             | ${"'+13:59'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"-13:59"}         | ${true}  | ${"the last minute before 14:00, west"}                       | ${"'-13:59'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+05:45"}         | ${true}  | ${"a quarter-hour offset"}                                    | ${"'+05:45'"}
+    ${"2024-06-15T14:30:00-14:00"}       | ${"+14:00"}         | ${true}  | ${"the two ends of the range in the two fields"}              | ${"'+14:00'"}
+    ${"2024-06-15T14:30:00.1Z"}          | ${"-05:00"}         | ${true}  | ${"a one-digit fraction"}                                     | ${"'-05:00'"}
+    ${"2024-06-15T10:00:00+02:00"}       | ${"+02:00"}         | ${true}  | ${"an eventTime with an offset"}                              | ${"'+02:00'"}
+    ${"2024-06-15T10:00:00+02:00"}       | ${"-05:00"}         | ${true}  | ${"two offsets that differ: they are independent"}            | ${"'-05:00'"}
+    ${"2024-06-15T14:30:00.123456789Z"}  | ${"-05:00"}         | ${true}  | ${"a nine-digit fraction"}                                    | ${"'-05:00'"}
+    ${"2024-02-29T23:59:59Z"}            | ${"-05:00"}         | ${true}  | ${"the leap day"}                                             | ${"'-05:00'"}
+    ${"0000-01-01T00:00:00Z"}            | ${"-05:00"}         | ${true}  | ${"the first four-digit year"}                                | ${"'-05:00'"}
+    ${"9999-12-31T23:59:59Z"}            | ${"+14:00"}         | ${true}  | ${"the last four-digit year"}                                 | ${"'+14:00'"}
+    ${"2024-06-15T14:30:00Z"}            | ${undefined}        | ${false} | ${"eventTimeZoneOffset is missing"}                           | ${"undefined"}
+    ${"2024-06-15T14:30:00Z"}            | ${"Z"}              | ${false} | ${"Z in the offset field"}                                    | ${"'Z'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+0200"}          | ${false} | ${"an offset without a colon"}                                | ${"'+0200'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+02"}            | ${false} | ${"an hours-only offset"}                                     | ${"'+02'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+14:01"}         | ${false} | ${"an offset past 14:00"}                                     | ${"'+14:01'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"-14:01"}         | ${false} | ${"an offset past 14:00, west"}                               | ${"'-14:01'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"-14:30"}         | ${false} | ${"an offset past 14:00, west"}                               | ${"'-14:30'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+15:00"}         | ${false} | ${"hour 15"}                                                  | ${"'+15:00'"}
+    ${"2024-06-15T14:30:00Z"}            | ${"+05:30:00"}      | ${false} | ${"an offset with seconds"}                                   | ${"'+05:30:00'"}
+    ${"2024-06-15T14:30:00Z"}            | ${""}               | ${false} | ${"an empty offset"}                                          | ${"''"}
+    ${"2024-06-15T14:30:00Z"}            | ${null}             | ${false} | ${"a null offset"}                                            | ${"null"}
+    ${"2024-06-15T14:30:00Z"}            | ${-300}             | ${false} | ${"a number of minutes"}                                      | ${"-300"}
+    ${undefined}                         | ${"-05:00"}         | ${false} | ${"eventTime is missing"}                                     | ${"'-05:00'"}
+    ${"2024-06-15 14:30:00Z"}            | ${"-05:00"}         | ${false} | ${"a space separator"}                                        | ${"'-05:00'"}
+    ${"2024-06-15t14:30:00Z"}            | ${"-05:00"}         | ${false} | ${"lower-case t"}                                             | ${"'-05:00'"}
+    ${"2024-06-15T14:30:00z"}            | ${"-05:00"}         | ${false} | ${"lower-case z"}                                             | ${"'-05:00'"}
+    ${"2024-06-15T14:30Z"}               | ${"-05:00"}         | ${false} | ${"no seconds"}                                               | ${"'-05:00'"}
+    ${"2024-06-15T14:30:00"}             | ${"-05:00"}         | ${false} | ${"no Z and no offset in eventTime"}                          | ${"'-05:00'"}
+    ${"2024-06-15T14:30:00+15:00"}       | ${"-05:00"}         | ${false} | ${"an eventTime offset past 14:00"}                           | ${"'-05:00'"}
+    ${"2024-06-15T14:30:00+14:01"}       | ${"-05:00"}         | ${false} | ${"an eventTime offset one minute past 14:00"}                | ${"'-05:00'"}
+    ${"2016-12-31T23:59:60Z"}            | ${"-05:00"}         | ${false} | ${"a leap second"}                                            | ${"'-05:00'"}
+    ${"2024-06-15T14:30:00Z[UTC]"}       | ${"-05:00"}         | ${false} | ${"a bracketed zone"}                                         | ${"'-05:00'"}
+    ${"2024-02-30T14:30:00Z"}            | ${"-05:00"}         | ${false} | ${"30 February: the pattern matches, the day does not exist"} | ${"'-05:00'"}
+    ${"2023-02-29T14:30:00Z"}            | ${"-05:00"}         | ${false} | ${"29 February in a common year"}                             | ${"'-05:00'"}
+    ${"2024-06-15T14:30:00.1234567891Z"} | ${"-05:00"}         | ${false} | ${"a ten-digit fraction: finer than a nanosecond (GMT rule)"} | ${"'-05:00'"}
+    ${1718461800000}                     | ${"-05:00"}         | ${false} | ${"epoch milliseconds"}                                       | ${"'-05:00'"}
+    ${null}                              | ${"-05:00"}         | ${false} | ${"a null eventTime"}                                         | ${"'-05:00'"}
   `(
-    "returns $expected for eventTime $eventTime and eventTimeZoneOffset $eventTimeZoneOffset ($reads), as parseEpcisEvent does",
+    "returns $expected for eventTime $eventTime and eventTimeZoneOffset $label ($reads), as parseEpcisEvent does",
     ({ eventTime, eventTimeZoneOffset, expected }) => {
       const event = { eventTime, eventTimeZoneOffset };
 

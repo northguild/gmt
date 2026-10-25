@@ -63,20 +63,20 @@ describe("formatRelativeTime", () => {
 
   // en-US
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 minutes ago"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"in 30 minutes"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 min. ago"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30m ago"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"in 30m"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 seconds ago"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"in 45 seconds"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 hours ago"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"in 2 hours"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 seconds ago"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 minutes ago"}
+    value         | options                                                                           | expected             | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 minutes ago"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"in 30 minutes"}   | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 min. ago"}     | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30m ago"}         | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"in 30m"}          | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 seconds ago"}  | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"in 45 seconds"}   | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 hours ago"}     | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"in 2 hours"}      | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 seconds ago"}  | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 minutes ago"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for en-US with $options as $expected",
+    "formats $value for en-US with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.enUS, options)).toBe(
         expected,
@@ -86,20 +86,20 @@ describe("formatRelativeTime", () => {
 
   // en-GB
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 minutes ago"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"in 30 minutes"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 min ago"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 min ago"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"in 30 min"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 seconds ago"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"in 45 seconds"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 hours ago"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"in 2 hours"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 seconds ago"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 minutes ago"}
+    value         | options                                                                           | expected             | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 minutes ago"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"in 30 minutes"}   | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 min ago"}      | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 min ago"}      | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"in 30 min"}       | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 seconds ago"}  | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"in 45 seconds"}   | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 hours ago"}     | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"in 2 hours"}      | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 seconds ago"}  | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 minutes ago"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for en-GB with $options as $expected",
+    "formats $value for en-GB with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.enGB, options)).toBe(
         expected,
@@ -109,20 +109,20 @@ describe("formatRelativeTime", () => {
 
   // de-DE
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"vor 30 Minuten"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"in 30 Minuten"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"vor 30 Min."}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"vor 30 m"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"in 30 m"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"vor 45 Sekunden"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"in 45 Sekunden"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"vor 2 Stunden"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"in 2 Stunden"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"vor 90 Sekunden"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"vor 120 Minuten"}
+    value         | options                                                                           | expected             | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"vor 30 Minuten"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"in 30 Minuten"}   | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"vor 30 Min."}     | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"vor 30 m"}        | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"in 30 m"}         | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"vor 45 Sekunden"} | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"in 45 Sekunden"}  | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"vor 2 Stunden"}   | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"in 2 Stunden"}    | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"vor 90 Sekunden"} | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"vor 120 Minuten"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for de-DE with $options as $expected",
+    "formats $value for de-DE with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.deDE, options)).toBe(
         expected,
@@ -132,20 +132,20 @@ describe("formatRelativeTime", () => {
 
   // fr-FR
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"il y a 30 minutes"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"dans 30 minutes"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"il y a 30 min"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"-30 min"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"+30 min"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"il y a 45 secondes"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"dans 45 secondes"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"il y a 2 heures"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"dans 2 heures"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"il y a 90 secondes"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"il y a 120 minutes"}
+    value         | options                                                                           | expected                | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"il y a 30 minutes"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"dans 30 minutes"}    | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"il y a 30 min"}      | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"-30 min"}            | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"+30 min"}            | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"il y a 45 secondes"} | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"dans 45 secondes"}   | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"il y a 2 heures"}    | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"dans 2 heures"}      | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"il y a 90 secondes"} | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"il y a 120 minutes"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for fr-FR with $options as $expected",
+    "formats $value for fr-FR with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.frFR, options)).toBe(
         expected,
@@ -155,20 +155,20 @@ describe("formatRelativeTime", () => {
 
   // es-ES
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"hace 30 minutos"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"dentro de 30 minutos"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"hace 30 min"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"hace 30 min"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"dentro de 30 min"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"hace 45 segundos"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"dentro de 45 segundos"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"hace 2 horas"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"dentro de 2 horas"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"hace 90 segundos"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"hace 120 minutos"}
+    value         | options                                                                           | expected                   | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"hace 30 minutos"}       | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"dentro de 30 minutos"}  | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"hace 30 min"}           | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"hace 30 min"}           | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"dentro de 30 min"}      | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"hace 45 segundos"}      | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"dentro de 45 segundos"} | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"hace 2 horas"}          | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"dentro de 2 horas"}     | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"hace 90 segundos"}      | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"hace 120 minutos"}      | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for es-ES with $options as $expected",
+    "formats $value for es-ES with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.esES, options)).toBe(
         expected,
@@ -178,20 +178,20 @@ describe("formatRelativeTime", () => {
 
   // it-IT
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 minuti fa"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"tra 30 minuti"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 min fa"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 min fa"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"tra 30 min"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 secondi fa"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"tra 45 secondi"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 ore fa"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"tra 2 ore"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 secondi fa"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 minuti fa"}
+    value         | options                                                                           | expected            | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 minuti fa"}   | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"tra 30 minuti"}  | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 min fa"}      | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 min fa"}      | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"tra 30 min"}     | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 secondi fa"}  | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"tra 45 secondi"} | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 ore fa"}       | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"tra 2 ore"}      | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 secondi fa"}  | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 minuti fa"}  | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for it-IT with $options as $expected",
+    "formats $value for it-IT with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.itIT, options)).toBe(
         expected,
@@ -201,20 +201,20 @@ describe("formatRelativeTime", () => {
 
   // pt-PT
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"há 30 minutos"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"dentro de 30 minutos"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"há 30 min"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"-30 min"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"+30 min"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"há 45 segundos"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"dentro de 45 segundos"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"há 2 horas"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"dentro de 2 horas"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"há 90 segundos"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"há 120 minutos"}
+    value         | options                                                                           | expected                   | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"há 30 minutos"}         | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"dentro de 30 minutos"}  | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"há 30 min"}             | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"-30 min"}               | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"+30 min"}               | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"há 45 segundos"}        | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"dentro de 45 segundos"} | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"há 2 horas"}            | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"dentro de 2 horas"}     | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"há 90 segundos"}        | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"há 120 minutos"}        | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for pt-PT with $options as $expected",
+    "formats $value for pt-PT with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.ptPT, options)).toBe(
         expected,
@@ -224,20 +224,20 @@ describe("formatRelativeTime", () => {
 
   // sv-SE
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"för 30 minuter sedan"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"om 30 minuter"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"för 30 min sen"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"- 30 min"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"+30 min"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"för 45 sekunder sedan"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"om 45 sekunder"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"för 2 timmar sedan"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"om 2 timmar"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"för 90 sekunder sedan"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"för 120 minuter sedan"}
+    value         | options                                                                           | expected                   | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"för 30 minuter sedan"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"om 30 minuter"}         | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"för 30 min sen"}        | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"- 30 min"}              | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"+30 min"}               | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"för 45 sekunder sedan"} | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"om 45 sekunder"}        | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"för 2 timmar sedan"}    | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"om 2 timmar"}           | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"för 90 sekunder sedan"} | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"för 120 minuter sedan"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for sv-SE with $options as $expected",
+    "formats $value for sv-SE with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.svSE, options)).toBe(
         expected,
@@ -247,20 +247,20 @@ describe("formatRelativeTime", () => {
 
   // is-IS
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"fyrir 30 mínútum"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"eftir 30 mínútur"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"fyrir 30 mín."}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"-30 mín."}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"+30 mín."}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"fyrir 45 sekúndum"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"eftir 45 sekúndur"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"fyrir 2 klukkustundum"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"eftir 2 klukkustundir"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"fyrir 90 sekúndum"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"fyrir 120 mínútum"}
+    value         | options                                                                           | expected                   | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"fyrir 30 mínútum"}      | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"eftir 30 mínútur"}      | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"fyrir 30 mín."}         | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"-30 mín."}              | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"+30 mín."}              | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"fyrir 45 sekúndum"}     | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"eftir 45 sekúndur"}     | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"fyrir 2 klukkustundum"} | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"eftir 2 klukkustundir"} | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"fyrir 90 sekúndum"}     | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"fyrir 120 mínútum"}     | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for is-IS with $options as $expected",
+    "formats $value for is-IS with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.isIS, options)).toBe(
         expected,
@@ -270,20 +270,20 @@ describe("formatRelativeTime", () => {
 
   // zh-CN
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30分钟前"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"30分钟后"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30分钟前"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30分钟前"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30分钟后"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45秒钟前"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"45秒钟后"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2小时前"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"2小时后"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90秒钟前"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120分钟前"}
+    value         | options                                                                           | expected       | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30分钟前"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"30分钟后"}  | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30分钟前"}  | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30分钟前"}  | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30分钟后"}  | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45秒钟前"}  | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"45秒钟后"}  | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2小时前"}   | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"2小时后"}   | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90秒钟前"}  | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120分钟前"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for zh-CN with $options as $expected",
+    "formats $value for zh-CN with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.zhCN, options)).toBe(
         expected,
@@ -293,20 +293,20 @@ describe("formatRelativeTime", () => {
 
   // zh-TW
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 分鐘前"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"30 分鐘後"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 分鐘前"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 分鐘前"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 分鐘後"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 秒前"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"45 秒後"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 小時前"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"2 小時後"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 秒前"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 分鐘前"}
+    value         | options                                                                           | expected        | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 分鐘前"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"30 分鐘後"}  | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 分鐘前"}  | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 分鐘前"}  | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 分鐘後"}  | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 秒前"}    | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"45 秒後"}    | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 小時前"}   | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"2 小時後"}   | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 秒前"}    | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 分鐘前"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for zh-TW with $options as $expected",
+    "formats $value for zh-TW with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.zhTW, options)).toBe(
         expected,
@@ -316,20 +316,20 @@ describe("formatRelativeTime", () => {
 
   // ja-JP
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 分前"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"30 分後"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 分前"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30分前"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30分後"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 秒前"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"45 秒後"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 時間前"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"2 時間後"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 秒前"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 分前"}
+    value         | options                                                                           | expected      | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 分前"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"30 分後"}  | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 分前"}  | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30分前"}   | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30分後"}   | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 秒前"}  | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"45 秒後"}  | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 時間前"} | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"2 時間後"} | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 秒前"}  | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 分前"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for ja-JP with $options as $expected",
+    "formats $value for ja-JP with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.jaJP, options)).toBe(
         expected,
@@ -339,20 +339,20 @@ describe("formatRelativeTime", () => {
 
   // ko-KR
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30분 전"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"30분 후"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30분 전"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30분 전"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30분 후"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45초 전"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"45초 후"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2시간 전"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"2시간 후"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90초 전"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120분 전"}
+    value         | options                                                                           | expected      | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30분 전"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"30분 후"}  | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30분 전"}  | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30분 전"}  | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30분 후"}  | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45초 전"}  | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"45초 후"}  | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2시간 전"} | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"2시간 후"} | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90초 전"}  | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120분 전"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for ko-KR with $options as $expected",
+    "formats $value for ko-KR with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.koKR, options)).toBe(
         expected,
@@ -362,20 +362,20 @@ describe("formatRelativeTime", () => {
 
   // ar-SA
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"قبل ٣٠ دقيقة"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"خلال ٣٠ دقيقة"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"قبل ٣٠ دقيقة"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"قبل ٣٠ دقيقة"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"خلال ٣٠ دقيقة"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"قبل ٤٥ ثانية"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"خلال ٤٥ ثانية"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"قبل ساعتين"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"خلال ساعتين"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"قبل ٩٠ ثانية"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"قبل ١٢٠ دقيقة"}
+    value         | options                                                                           | expected           | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"قبل ٣٠ دقيقة"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"خلال ٣٠ دقيقة"}  | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"قبل ٣٠ دقيقة"}  | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"قبل ٣٠ دقيقة"}  | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"خلال ٣٠ دقيقة"}  | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"قبل ٤٥ ثانية"}  | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"خلال ٤٥ ثانية"}  | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"قبل ساعتين"}    | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"خلال ساعتين"}    | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"قبل ٩٠ ثانية"}  | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"قبل ١٢٠ دقيقة"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for ar-SA with $options as $expected",
+    "formats $value for ar-SA with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.arSA, options)).toBe(
         expected,
@@ -385,18 +385,18 @@ describe("formatRelativeTime", () => {
 
   // he-IL
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"לפני 30 דקות"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"בעוד 30 דקות"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"לפני 30 דק׳"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"לפני 30 דק׳"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"בעוד 30 דק׳"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"לפני 45 שניות"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"בעוד 45 שניות"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"לפני 90 שניות"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"לפני 120 דקות"}
+    value         | options                                                                           | expected           | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"לפני 30 דקות"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"בעוד 30 דקות"}  | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"לפני 30 דק׳"}   | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"לפני 30 דק׳"}   | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"בעוד 30 דק׳"}   | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"לפני 45 שניות"} | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"בעוד 45 שניות"} | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"לפני 90 שניות"} | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"לפני 120 דקות"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for he-IL with $options as $expected",
+    "formats $value for he-IL with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.heIL, options)).toBe(
         expected,
@@ -423,20 +423,20 @@ describe("formatRelativeTime", () => {
 
   // ru-RU
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 минут назад"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"через 30 минут"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 мин. назад"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"-30 мин"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"+30 мин"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 секунд назад"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"через 45 секунд"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 часа назад"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"через 2 часа"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 секунд назад"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 минут назад"}
+    value         | options                                                                           | expected             | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 минут назад"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"через 30 минут"}  | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 мин. назад"}   | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"-30 мин"}         | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"+30 мин"}         | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 секунд назад"} | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"через 45 секунд"} | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 часа назад"}    | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"через 2 часа"}    | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 секунд назад"} | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 минут назад"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for ru-RU with $options as $expected",
+    "formats $value for ru-RU with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.ruRU, options)).toBe(
         expected,
@@ -446,20 +446,20 @@ describe("formatRelativeTime", () => {
 
   // tr-TR
   it.each`
-    value         | options                                                                           | expected
-    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 dakika önce"}
-    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"30 dakika sonra"}
-    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 dk. önce"}
-    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 dk. önce"}
-    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 dk. sonra"}
-    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 saniye önce"}
-    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"45 saniye sonra"}
-    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 saat önce"}
-    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"2 saat sonra"}
-    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 saniye önce"}
-    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 dakika önce"}
+    value         | options                                                                           | expected             | label
+    ${"11:30:00"} | ${{ reference: REF }}                                                             | ${"30 dakika önce"}  | ${"default options"}
+    ${"12:30:00"} | ${{ reference: REF }}                                                             | ${"30 dakika sonra"} | ${"default options"}
+    ${"11:30:00"} | ${{ reference: REF, style: "short" as const }}                                    | ${"30 dk. önce"}     | ${"style short"}
+    ${"11:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 dk. önce"}     | ${"style narrow"}
+    ${"12:30:00"} | ${{ reference: REF, style: "narrow" as const }}                                   | ${"30 dk. sonra"}    | ${"style narrow"}
+    ${"11:59:15"} | ${{ reference: REF }}                                                             | ${"45 saniye önce"}  | ${"default options"}
+    ${"12:00:45"} | ${{ reference: REF }}                                                             | ${"45 saniye sonra"} | ${"default options"}
+    ${"10:00:00"} | ${{ reference: REF }}                                                             | ${"2 saat önce"}     | ${"default options"}
+    ${"14:00:00"} | ${{ reference: REF }}                                                             | ${"2 saat sonra"}    | ${"default options"}
+    ${"11:58:30"} | ${{ reference: REF, largestUnit: "second" as const, numeric: "always" as const }} | ${"90 saniye önce"}  | ${"largestUnit second, numeric always"}
+    ${"10:00:00"} | ${{ reference: REF, largestUnit: "minute" as const, numeric: "always" as const }} | ${"120 dakika önce"} | ${"largestUnit minute, numeric always"}
   `(
-    "formats $value for tr-TR with $options as $expected",
+    "formats $value for tr-TR with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeTime(value, MustTestLocales.trTR, options)).toBe(
         expected,
@@ -611,20 +611,20 @@ describe("formatRelativeTime", () => {
     // returns the sentinel (Core Rule 3), including the name of another Math function, an
     // inherited Object.prototype key, another letter case and null.
     it.each`
-      roundingMethod
-      ${"nonsense"}
-      ${"abs"}
-      ${"trunc"}
-      ${"sign"}
-      ${"random"}
-      ${"constructor"}
-      ${"hasOwnProperty"}
-      ${"toString"}
-      ${"ROUND"}
-      ${""}
-      ${null}
+      roundingMethod      | label
+      ${"nonsense"}       | ${"'nonsense'"}
+      ${"abs"}            | ${"'abs'"}
+      ${"trunc"}          | ${"'trunc'"}
+      ${"sign"}           | ${"'sign'"}
+      ${"random"}         | ${"'random'"}
+      ${"constructor"}    | ${"'constructor'"}
+      ${"hasOwnProperty"} | ${"'hasOwnProperty'"}
+      ${"toString"}       | ${"'toString'"}
+      ${"ROUND"}          | ${"'ROUND'"}
+      ${""}               | ${"''"}
+      ${null}             | ${"null"}
     `(
-      "returns '' for the invalid roundingMethod $roundingMethod",
+      "returns '' for the invalid roundingMethod $label",
       ({ roundingMethod }) => {
         expect(
           formatRelativeTime("09:42:00", MustTestLocales.enUS, {
@@ -660,18 +660,18 @@ describe("formatRelativeTime", () => {
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {
     it.each`
-      value
-      ${""}
-      ${"not-a-time"}
-      ${"25:00:00"}
-      ${"12:60:00"}
-      ${"2024-03-15"}
-      ${"2024-03-15T12:00:00"}
-      ${null}
-      ${undefined}
-      ${42}
-      ${true}
-    `("returns '' for invalid value $value", ({ value }) => {
+      value                    | label
+      ${""}                    | ${"''"}
+      ${"not-a-time"}          | ${"'not-a-time'"}
+      ${"25:00:00"}            | ${"'25:00:00'"}
+      ${"12:60:00"}            | ${"'12:60:00'"}
+      ${"2024-03-15"}          | ${"'2024-03-15'"}
+      ${"2024-03-15T12:00:00"} | ${"'2024-03-15T12:00:00'"}
+      ${null}                  | ${"null"}
+      ${undefined}             | ${"undefined"}
+      ${42}                    | ${"42"}
+      ${true}                  | ${"true"}
+    `("returns '' for invalid value $label", ({ value }) => {
       expect(formatRelativeTime(value as never, MustTestLocales.enUS)).toBe("");
     });
 
@@ -716,7 +716,7 @@ describe("formatRelativeTime", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"il y a 2 heures"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatRelativeTime("10:00:00", locale, { reference: "12:00:00" }),
     ).toBe(expected);
@@ -785,30 +785,30 @@ describe("formatRelativeTime largestUnit", () => {
 
   it.each`
     label                           | largestUnit                   | why
-    ${"day"}                        | ${"day"}                      | ${"a date unit; a time has none"}
-    ${"days"}                       | ${"days"}                     | ${"a date unit; a time has none"}
-    ${"week"}                       | ${"week"}                     | ${"a date unit; a time has none"}
-    ${"weeks"}                      | ${"weeks"}                    | ${"a date unit; a time has none"}
-    ${"month"}                      | ${"month"}                    | ${"a date unit; a time has none"}
-    ${"months"}                     | ${"months"}                   | ${"a date unit; a time has none"}
-    ${"year"}                       | ${"year"}                     | ${"a date unit; a time has none"}
-    ${"years"}                      | ${"years"}                    | ${"a date unit; a time has none"}
-    ${"quarter"}                    | ${"quarter"}                  | ${"not a unit of the function"}
-    ${"quarters"}                   | ${"quarters"}                 | ${"not a unit of the function"}
-    ${"millisecond"}                | ${"millisecond"}              | ${"not a unit of the function"}
-    ${"nanoseconds"}                | ${"nanoseconds"}              | ${"not a unit of the function"}
-    ${"auto"}                       | ${"auto"}                     | ${"not a unit of the function"}
-    ${"HOUR"}                       | ${"HOUR"}                     | ${"unit names are lower case"}
-    ${"Hours"}                      | ${"Hours"}                    | ${"unit names are lower case"}
-    ${""}                           | ${""}                         | ${"an empty string"}
-    ${"x"}                          | ${"x"}                        | ${"not a unit"}
+    ${"'day'"}                      | ${"day"}                      | ${"a date unit; a time has none"}
+    ${"'days'"}                     | ${"days"}                     | ${"a date unit; a time has none"}
+    ${"'week'"}                     | ${"week"}                     | ${"a date unit; a time has none"}
+    ${"'weeks'"}                    | ${"weeks"}                    | ${"a date unit; a time has none"}
+    ${"'month'"}                    | ${"month"}                    | ${"a date unit; a time has none"}
+    ${"'months'"}                   | ${"months"}                   | ${"a date unit; a time has none"}
+    ${"'year'"}                     | ${"year"}                     | ${"a date unit; a time has none"}
+    ${"'years'"}                    | ${"years"}                    | ${"a date unit; a time has none"}
+    ${"'quarter'"}                  | ${"quarter"}                  | ${"not a unit of the function"}
+    ${"'quarters'"}                 | ${"quarters"}                 | ${"not a unit of the function"}
+    ${"'millisecond'"}              | ${"millisecond"}              | ${"not a unit of the function"}
+    ${"'nanoseconds'"}              | ${"nanoseconds"}              | ${"not a unit of the function"}
+    ${"'auto'"}                     | ${"auto"}                     | ${"not a unit of the function"}
+    ${"'HOUR'"}                     | ${"HOUR"}                     | ${"unit names are lower case"}
+    ${"'Hours'"}                    | ${"Hours"}                    | ${"unit names are lower case"}
+    ${"''"}                         | ${""}                         | ${"an empty string"}
+    ${"'x'"}                        | ${"x"}                        | ${"not a unit"}
     ${"null"}                       | ${null}                       | ${"null is a value, not an omission"}
     ${"1"}                          | ${1}                          | ${"a number"}
     ${"true"}                       | ${true}                       | ${"a boolean"}
-    ${'["hour"]'}                   | ${["hour"]}                   | ${"an array, not a string"}
-    ${'{ toString: () => "hour" }'} | ${{ toString: () => "hour" }} | ${"an object, not a string"}
+    ${"['hour']"}                   | ${["hour"]}                   | ${"an array, not a string"}
+    ${"{ toString: () => 'hour' }"} | ${{ toString: () => "hour" }} | ${"an object, not a string"}
   `(
-    'returns "" for largestUnit $label outside the listed units ($why)',
+    "returns '' for largestUnit $label outside the listed units ($why)",
     ({ largestUnit }) => {
       expect(
         formatRelativeTime("10:00:00", MustTestLocales.enUS, {

@@ -26,12 +26,12 @@ describe("convertUnixToUtc", () => {
   );
 
   it.each`
-    invalidUnit
-    ${"minutes"}
-    ${""}
-    ${null}
+    invalidUnit  | invalidUnitLabel
+    ${"minutes"} | ${"'minutes'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
   `(
-    "returns an empty string for invalid unit $invalidUnit",
+    "returns an empty string for invalid unit $invalidUnitLabel",
     ({ invalidUnit }) => {
       expect(convertUnixToUtc(0, { epochUnit: invalidUnit as never })).toBe("");
     },

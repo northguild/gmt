@@ -69,7 +69,7 @@ describe("intervalUnionTime", () => {
     ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${""}
     ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${"25:00:00"}
   `(
-    "returns null for malformed time: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for malformed time: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalUnionTime(aStart, aEnd, bStart, bEnd)).toBeNull();
     },

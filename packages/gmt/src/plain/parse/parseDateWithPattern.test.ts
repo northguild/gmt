@@ -17,7 +17,7 @@ describe("parseDateWithPattern", () => {
       ${"3/5/2024"}   | ${"M/d/yyyy"}   | ${"2024-03-05"}
       ${"3/15/2024"}  | ${"M/d/yyyy"}   | ${"2024-03-15"}
     `(
-      "parses $value against $pattern to $expected",
+      "parses $value against $pattern to '$expected'",
       ({ value, pattern, expected }) => {
         expect(parseDateWithPattern(value, pattern)).toBe(expected);
       },
@@ -595,7 +595,7 @@ describe("parseDateWithPattern", () => {
     ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${""}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
   `(
-    "returns $expected for a French month name with locale list $locale",
+    "returns '$expected' for a French month name with locale list $locale",
     ({ locale, expected }) => {
       expect(parseDateWithPattern("19 mai 2024", "d MMMM yyyy", locale)).toBe(
         expected,

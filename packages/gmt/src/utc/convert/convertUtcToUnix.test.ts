@@ -12,25 +12,22 @@ describe("convertUtcToUnix", () => {
   });
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-02-29T14:30:45"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns null for invalid UTC datetime $invalidValue",
-    ({ invalidValue }) => {
-      expect(convertUtcToUnix(invalidValue as never)).toBeNull();
-    },
-  );
+    invalidValue             | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-02-29T14:30:45"} | ${"'2024-02-29T14:30:45'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+  `("returns null for invalid UTC datetime $label", ({ invalidValue }) => {
+    expect(convertUtcToUnix(invalidValue as never)).toBeNull();
+  });
 
   it.each`
-    invalidUnit
-    ${"minutes"}
-    ${""}
-    ${null}
-  `("returns null for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit  | label
+    ${"minutes"} | ${"'minutes'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+  `("returns null for invalid unit $label", ({ invalidUnit }) => {
     expect(
       convertUtcToUnix("2024-02-29T14:30:45Z", {
         epochUnit: invalidUnit as never,

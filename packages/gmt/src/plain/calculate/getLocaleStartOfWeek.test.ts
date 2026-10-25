@@ -78,12 +78,12 @@ describe("getLocaleStartOfWeek", () => {
   });
 
   it.each`
-    locale
-    ${"not-a-locale-!!"}
-    ${""}
-    ${null}
-    ${undefined}
-  `('returns "" for invalid locale $locale', ({ locale }) => {
+    locale               | label
+    ${"not-a-locale-!!"} | ${"'not-a-locale-!!'"}
+    ${""}                | ${"''"}
+    ${null}              | ${"null"}
+    ${undefined}         | ${"undefined"}
+  `('returns "" for invalid locale $label', ({ locale }) => {
     expect(getLocaleStartOfWeek("2024-02-29", locale)).toBe("");
   });
 
@@ -113,7 +113,7 @@ describe("getLocaleStartOfWeek", () => {
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"2024-05-13"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
   `(
-    "returns $expected for 2024-05-15 with locale list $locale",
+    "returns '$expected' for 2024-05-15 with locale list $locale",
     ({ locale, expected }) => {
       expect(getLocaleStartOfWeek("2024-05-15", locale)).toBe(expected);
     },

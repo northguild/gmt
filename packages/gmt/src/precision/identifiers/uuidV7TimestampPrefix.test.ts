@@ -21,21 +21,21 @@ describe("uuidV7TimestampPrefix", () => {
   });
 
   it.each`
-    input                                 | reason
-    ${"+010889-08-02T05:31:50.656Z"}      | ${"2^48 ms: 12 hex digits cannot hold it"}
-    ${"+010889-08-02T05:31:50.6569999Z"}  | ${"sub-ms digits floor to 2^48 ms"}
-    ${"+010889-08-02T05:31:50.657Z"}      | ${"one millisecond past 2^48 ms"}
-    ${"+010889-08-02T14:31:50.656+09:00"} | ${"2^48 ms, expressed with an offset"}
-    ${"1970-01-01T00:00:00+01:00"}        | ${"an hour before the epoch, expressed with an offset"}
-    ${"-000001-01-01T00:00:00Z"}          | ${"far before the epoch"}
-    ${"1969-12-31T23:59:59.999Z"}         | ${"before the Unix epoch"}
-    ${"1969-12-31T23:59:59.9999999Z"}     | ${"sub-ms before the epoch still negative"}
-    ${"2024-01-01T00:00:00"}              | ${"no offset"}
-    ${"invalid"}                          | ${"not a date"}
-    ${""}                                 | ${"empty"}
-    ${42}                                 | ${"number"}
-    ${undefined}                          | ${"undefined"}
-  `("returns an empty string for $input ($reason)", ({ input }) => {
+    input                                 | reason                                                  | label
+    ${"+010889-08-02T05:31:50.656Z"}      | ${"2^48 ms: 12 hex digits cannot hold it"}              | ${"'+010889-08-02T05:31:50.656Z'"}
+    ${"+010889-08-02T05:31:50.6569999Z"}  | ${"sub-ms digits floor to 2^48 ms"}                     | ${"'+010889-08-02T05:31:50.6569999Z'"}
+    ${"+010889-08-02T05:31:50.657Z"}      | ${"one millisecond past 2^48 ms"}                       | ${"'+010889-08-02T05:31:50.657Z'"}
+    ${"+010889-08-02T14:31:50.656+09:00"} | ${"2^48 ms, expressed with an offset"}                  | ${"'+010889-08-02T14:31:50.656+09:00'"}
+    ${"1970-01-01T00:00:00+01:00"}        | ${"an hour before the epoch, expressed with an offset"} | ${"'1970-01-01T00:00:00+01:00'"}
+    ${"-000001-01-01T00:00:00Z"}          | ${"far before the epoch"}                               | ${"'-000001-01-01T00:00:00Z'"}
+    ${"1969-12-31T23:59:59.999Z"}         | ${"before the Unix epoch"}                              | ${"'1969-12-31T23:59:59.999Z'"}
+    ${"1969-12-31T23:59:59.9999999Z"}     | ${"sub-ms before the epoch still negative"}             | ${"'1969-12-31T23:59:59.9999999Z'"}
+    ${"2024-01-01T00:00:00"}              | ${"no offset"}                                          | ${"'2024-01-01T00:00:00'"}
+    ${"invalid"}                          | ${"not a date"}                                         | ${"'invalid'"}
+    ${""}                                 | ${"empty"}                                              | ${"''"}
+    ${42}                                 | ${"number"}                                             | ${"42"}
+    ${undefined}                          | ${"undefined"}                                          | ${"undefined"}
+  `("returns an empty string for $label ($reason)", ({ input }) => {
     expect(uuidV7TimestampPrefix(input)).toBe("");
   });
 

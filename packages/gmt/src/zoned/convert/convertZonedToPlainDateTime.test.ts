@@ -17,13 +17,13 @@ describe("convertZonedToPlainDateTime", () => {
   });
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${"2024-02-29T14:30:45"}
-  `("returns empty string for invalid $invalidValue", ({ invalidValue }) => {
+    invalidValue             | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+    ${"2024-02-29T14:30:45"} | ${"'2024-02-29T14:30:45'"}
+  `("returns empty string for invalid $label", ({ invalidValue }) => {
     expect(convertZonedToPlainDateTime(invalidValue as never)).toBe("");
   });
 

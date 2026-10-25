@@ -56,7 +56,7 @@ describe("parseX12DateTime", () => {
       ${"DT"}  | ${"1506241430"}       | ${"DDMMYYHHMM: a two-digit year is not read"}
       ${"DT"}  | ${"202406151430ET"}   | ${"a time code is its own element"}
       ${"DT"}  | ${""}                 | ${"an empty value"}
-    `("returns '' for $code $value ($reads)", ({ code, value }) => {
+    `("returns '' for $code '$value' ($reads)", ({ code, value }) => {
       expect(parseX12DateTime(value, code)).toBe("");
     });
   });

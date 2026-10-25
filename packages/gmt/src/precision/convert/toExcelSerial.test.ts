@@ -131,14 +131,14 @@ describe("toExcelSerial", () => {
   );
 
   it.each`
-    system    | reason
-    ${"1899"} | ${"not a date system Excel has"}
-    ${1900}   | ${"number, not the string literal"}
-    ${1904}   | ${"number, not the string literal"}
-    ${""}     | ${"empty string"}
-    ${true}   | ${"boolean"}
-    ${null}   | ${"explicitly null, a value to validate rather than an omission"}
-  `("returns null when system $system is invalid ($reason)", ({ system }) => {
+    system    | reason                                                            | label
+    ${"1899"} | ${"not a date system Excel has"}                                  | ${"'1899'"}
+    ${1900}   | ${"number, not the string literal"}                               | ${"1900"}
+    ${1904}   | ${"number, not the string literal"}                               | ${"1904"}
+    ${""}     | ${"empty string"}                                                 | ${"''"}
+    ${true}   | ${"boolean"}                                                      | ${"true"}
+    ${null}   | ${"explicitly null, a value to validate rather than an omission"} | ${"null"}
+  `("returns null when system $label is invalid ($reason)", ({ system }) => {
     expect(
       toExcelSerial("2024-03-10T12:00:00Z", {
         system: system as unknown as "1900",
@@ -167,7 +167,7 @@ describe("toExcelSerial", () => {
     ${"2016-12-31 23:59:60Z"} | ${"leap second, space separator"}
     ${"invalid"}              | ${"unparseable"}
     ${""}                     | ${"empty string"}
-  `("returns null when $value is invalid ($reason)", ({ value }) => {
+  `("returns null when '$value' is invalid ($reason)", ({ value }) => {
     expect(toExcelSerial(value)).toBeNull();
   });
 

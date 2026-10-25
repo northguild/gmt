@@ -53,7 +53,7 @@ describe("regex/time", () => {
     ${""}           | ${false}
     ${"1234567890"} | ${false}
   `(
-    "millisecond pattern matches $value as $expected",
+    "millisecond pattern matches '$value' as $expected",
     ({ value, expected }: { value: string; expected: boolean }) => {
       expect(millisecond.test(value)).toBe(expected);
     },
@@ -66,7 +66,7 @@ describe("regex/time", () => {
     ${""}           | ${false}
     ${"1234567890"} | ${false}
   `(
-    "fractionalSecond pattern matches $value as $expected",
+    "fractionalSecond pattern matches '$value' as $expected",
     ({ value, expected }: { value: string; expected: boolean }) => {
       expect(fractionalSecond.test(value)).toBe(expected);
     },

@@ -65,7 +65,7 @@ describe("isValidUtcRange", () => {
     ${"invalid"}              | ${"invalid"}
     ${""}                     | ${""}
   `(
-    "returns false for malformed UTC: $value1, $value2",
+    "returns false for malformed UTC: '$value1', '$value2'",
     ({ value1, value2 }) => {
       expect(isValidUtcRange({ value1, value2 })).toBe(false);
     },

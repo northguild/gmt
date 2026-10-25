@@ -384,7 +384,7 @@ describe("formatX12TimeElement", () => {
       ${"HHMM"}                             | ${"a mask given as the value"}
       ${"__proto__"}                        | ${"an inherited property name"}
       ${""}                                 | ${"an empty value"}
-    `("returns '' for $value under every form ($reads)", ({ value }) => {
+    `("returns '' for '$value' under every form ($reads)", ({ value }) => {
       for (const form of FORMS) {
         expect(formatX12TimeElement(value, form), form).toBe("");
       }

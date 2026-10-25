@@ -28,7 +28,7 @@ describe("intervalXorDate", () => {
     ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-04-01"} | ${"2024-12-31"} | ${[]}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-15"} | ${"2024-06-10"} | ${[]}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalXorDate(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },
@@ -47,7 +47,7 @@ describe("intervalXorDate", () => {
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${""}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${"2024-13-01"}
   `(
-    "returns [] for malformed date: $aStart, $aEnd, $bStart, $bEnd",
+    "returns [] for malformed date: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalXorDate(aStart, aEnd, bStart, bEnd)).toEqual([]);
     },
@@ -59,9 +59,12 @@ describe("intervalXorDate", () => {
     ${"2024-01-01"} | ${undefined}    | ${"2024-04-01"} | ${"2024-12-31"}
     ${"2024-01-01"} | ${"2024-06-30"} | ${null}         | ${"2024-12-31"}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${undefined}
-  `("returns [] for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalXorDate(aStart, aEnd, bStart, bEnd)).toEqual([]);
-  });
+  `(
+    "returns [] for non-string input: A=$aStart to $aEnd, B=$bStart to $bEnd",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalXorDate(aStart, aEnd, bStart, bEnd)).toEqual([]);
+    },
+  );
   // E5 (issue #78): same shared-calendar-or-reject rule as intervalUnionDate. Golden
   // verified directly against @js-temporal/polyfill.
   it("computes the symmetric difference in the shared calendar when all four arguments carry the same tag", () => {

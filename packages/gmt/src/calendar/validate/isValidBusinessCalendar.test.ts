@@ -59,7 +59,7 @@ describe("isValidBusinessCalendar", () => {
     ${[NaN]}      | ${"NaN"}
     ${[Infinity]} | ${"Infinity"}
     ${["6"]}      | ${"a numeric string"}
-    ${[null]}     | ${"null"}
+    ${[null]}     | ${"an array holding null"}
     ${"6,7"}      | ${"a string, not an array"}
     ${undefined}  | ${"absent"}
     ${null}       | ${"null"}
@@ -78,7 +78,7 @@ describe("isValidBusinessCalendar", () => {
     ${["2024/07/04"]}          | ${"a non-ISO separator"}
     ${[" 2024-07-04 "]}        | ${"padded whitespace"}
     ${[""]}                    | ${"an empty string"}
-    ${[null]}                  | ${"null"}
+    ${[null]}                  | ${"a null entry"}
     ${[20240704]}              | ${"a number"}
     ${"2024-07-04"}            | ${"a string, not an array"}
     ${undefined}               | ${"absent"}

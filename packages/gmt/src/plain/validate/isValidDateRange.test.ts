@@ -25,7 +25,7 @@ describe("isValidDateRange", () => {
     ${"invalid-date"} | ${"invalid-date"}
     ${""}             | ${""}
   `(
-    "returns false for malformed date: $value1, $value2",
+    "returns false for malformed date: '$value1', '$value2'",
     ({ value1, value2 }) => {
       expect(isValidDateRange({ value1, value2 })).toBe(false);
     },

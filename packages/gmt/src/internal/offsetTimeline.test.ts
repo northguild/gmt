@@ -227,10 +227,10 @@ describe("offsetTimeline", () => {
     back     | shift  | why
     ${1098n} | ${-1n} | ${"a nanosecond before the first search ends at the change"}
     ${1098n} | ${0n}  | ${"the first search ends at the change"}
-    ${1098n} | ${1n}  | ${"a nanosecond after"}
+    ${1098n} | ${1n}  | ${"a nanosecond after the first search ends at the change"}
     ${2196n} | ${-1n} | ${"a nanosecond before the second search ends at the change"}
     ${2196n} | ${0n}  | ${"the second search ends at the change"}
-    ${2196n} | ${1n}  | ${"a nanosecond after"}
+    ${2196n} | ${1n}  | ${"a nanosecond after the second search ends at the change"}
   `(
     "keeps a change that falls on the end of a three-year search ($why)",
     ({ back, shift }) => {

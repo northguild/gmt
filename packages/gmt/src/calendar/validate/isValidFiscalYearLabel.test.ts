@@ -17,7 +17,7 @@ describe("isValidFiscalYearLabel", () => {
     ${"StartYear"}  | ${"wrong case"}
     ${"endYear "}   | ${"trailing whitespace"}
     ${""}           | ${"empty string"}
-  `("returns false for the string $yearLabel ($reason)", ({ yearLabel }) => {
+  `("returns false for the string '$yearLabel' ($reason)", ({ yearLabel }) => {
     expect(isValidFiscalYearLabel(yearLabel)).toBe(false);
   });
 

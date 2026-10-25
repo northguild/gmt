@@ -70,22 +70,22 @@ describe("cycleTime", () => {
     ${"day"}
     ${"invalid"}
     ${""}
-  `("returns an empty string for an invalid field $field", ({ field }) => {
+  `("returns an empty string for an invalid field '$field'", ({ field }) => {
     expect(cycleTime("09:30:00", field, 1)).toBe("");
   });
 
   it.each`
-    invalidValue
-    ${"not-a-time"}
-    ${"25:00:00"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-    ${"2024-02-29T12:00:00"}
+    invalidValue             | label
+    ${"not-a-time"}          | ${"'not-a-time'"}
+    ${"25:00:00"}            | ${"'25:00:00'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+    ${123}                   | ${"123"}
+    ${true}                  | ${"true"}
+    ${"2024-02-29T12:00:00"} | ${"'2024-02-29T12:00:00'"}
   `(
-    "returns an empty string for an invalid value $invalidValue",
+    "returns an empty string for an invalid value $label",
     ({ invalidValue }) => {
       expect(cycleTime(invalidValue, "hour", 1)).toBe("");
     },
@@ -93,18 +93,18 @@ describe("cycleTime", () => {
 
   // `amount` must be a finite number (isValidAmount); anything else is invalid input, never 0.
   it.each`
-    amount
-    ${null}
-    ${undefined}
-    ${""}
-    ${"1"}
-    ${[]}
-    ${{}}
-    ${true}
-    ${Number.NaN}
-    ${Number.POSITIVE_INFINITY}
+    amount                      | label
+    ${null}                     | ${"null"}
+    ${undefined}                | ${"undefined"}
+    ${""}                       | ${"''"}
+    ${"1"}                      | ${"'1'"}
+    ${[]}                       | ${"[]"}
+    ${{}}                       | ${"{}"}
+    ${true}                     | ${"true"}
+    ${Number.NaN}               | ${"NaN"}
+    ${Number.POSITIVE_INFINITY} | ${"Number.POSITIVE_INFINITY"}
   `(
-    "returns an empty string for a non-finite-number amount $amount",
+    "returns an empty string for a non-finite-number amount $label",
     ({ amount }) => {
       expect(cycleTime("09:30:00", "hour", amount)).toBe("");
     },

@@ -31,7 +31,7 @@ describe("parseSqlDateTime", () => {
     ${"0000-01-01 00:00:00"}
     ${"+002024-03-15 14:30:00"}
     ${"-000001-01-01 00:00:00"}
-  `("returns '' for invalid input $value", ({ value }: { value: string }) => {
+  `("returns '' for invalid input '$value'", ({ value }: { value: string }) => {
     expect(parseSqlDateTime(value)).toBe("");
   });
 

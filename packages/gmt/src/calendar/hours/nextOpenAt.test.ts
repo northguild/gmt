@@ -139,7 +139,7 @@ describe("nextOpenAt", () => {
       ${"2051-11-01"} | ${[{ from: "23:00", to: "23:30" }]} | ${"2051-11-01T23:00:00Z"}
       ${"2051-11-02"} | ${[{ from: "00:00", to: "01:00" }]} | ${""}
     `(
-      "returns $expected for an opening on $date under a 30-year horizon",
+      "returns '$expected' for an opening on $date under a 30-year horizon",
       ({ date, windows, expected }) => {
         expect(
           nextOpenAt(
@@ -179,7 +179,7 @@ describe("nextOpenAt", () => {
       ${"2024-03-10T00:00:00Z"} | ${"reject"}     | ${""}
       ${"2024-03-10T08:00:00Z"} | ${"reject"}     | ${"2024-03-10T16:00:00Z"}
     `(
-      "returns $expected from $from under $disambiguation",
+      "returns '$expected' from $from under $disambiguation",
       ({ from, disambiguation, expected }) => {
         expect(nextOpenAt(from, schedule, { disambiguation })).toBe(expected);
       },

@@ -136,13 +136,13 @@ describe("resolveDurationRelativeTo requires GMT's strict extended shape for eve
   // `ToRelativeTemporalObject` matches it. Each spelling names midnight on 3 October 2024 in New
   // York, which is at -04:00 in October: 04:00:00Z.
   it.each`
-    value
-    ${"2024-10-03T00:00:00-04:00[America/New_York]"}
-    ${"2024-10-03T00:00[America/New_York]"}
-    ${"2024-10-03T04:00:00Z[America/New_York]"}
-    ${"2024-10-03T00:00:00-04:00[America/New_York][foo=bar]"}
+    value                                                     | label
+    ${"2024-10-03T00:00:00-04:00[America/New_York]"}          | ${"an offset and a zone"}
+    ${"2024-10-03T00:00[America/New_York]"}                   | ${"no seconds and no offset"}
+    ${"2024-10-03T04:00:00Z[America/New_York]"}               | ${"a Z designator and a zone"}
+    ${"2024-10-03T00:00:00-04:00[America/New_York][foo=bar]"} | ${"an offset, a zone and an unknown annotation"}
   `(
-    "reads the strict extended zoned $value as the ZonedDateTime it names",
+    "reads the strict extended zoned $label as the ZonedDateTime it names",
     ({ value }) => {
       const resolved = resolveDurationRelativeTo(value);
       expect(resolved).toBeInstanceOf(Temporal.ZonedDateTime);

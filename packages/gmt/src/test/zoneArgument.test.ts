@@ -28,6 +28,7 @@ import {
   zoneArgumentCalls,
   zoneIdentifierCalls,
   zoneLabel,
+  zoneLiteral,
   type ZoneReach,
 } from "./zoneArgumentCalls";
 
@@ -234,7 +235,12 @@ describe("the call table", () => {
 describe("every input that worked before returns what it returned before", () => {
   const zones = [...battleTestTimeZones, ...baselineOnlyZones];
   const rows = ZONELESS_RESULT_FUNCTIONS.flatMap((name) =>
-    zones.map((zone) => ({ name, zone, label: zoneLabel(zone) })),
+    zones.map((zone) => ({
+      name,
+      zone,
+      label: zoneLabel(zone),
+      literal: zoneLiteral(zone),
+    })),
   );
 
   it("was recorded at the instant the calls run at, for every function and zone", () => {
@@ -247,7 +253,7 @@ describe("every input that worked before returns what it returned before", () =>
   });
 
   it.each(rows)(
-    "$name returns the recorded result for $label",
+    "$name returns the recorded result for $literal",
     ({ name, zone, label }) => {
       pinClock(BASELINE_AT);
       const call = zoneArgumentCalls(gmt, BASELINE_AT)[name];
@@ -467,7 +473,12 @@ describe("the accepted set is what isValidTimeZone or isValidUtcOffset accepts",
   const rows = ZONELESS_RESULT_FUNCTIONS.filter(
     (name) => !table[name].sentinelIsAnswer,
   ).flatMap((name) =>
-    candidates.map((zone) => ({ name, zone, label: zoneLabel(zone) })),
+    candidates.map((zone) => ({
+      name,
+      zone,
+      label: zoneLabel(zone),
+      literal: zoneLiteral(zone),
+    })),
   );
 
   it("covers every function whose result can show it", () => {
@@ -477,7 +488,7 @@ describe("the accepted set is what isValidTimeZone or isValidUtcOffset accepts",
   });
 
   it.each(rows)(
-    "$name returns its sentinel for $label exactly when neither validator accepts it",
+    "$name returns its sentinel for $literal exactly when neither validator accepts it",
     ({ name, zone }) => {
       pinClock(BASELINE_AT);
       const call = zoneArgumentCalls(gmt, BASELINE_AT)[name];

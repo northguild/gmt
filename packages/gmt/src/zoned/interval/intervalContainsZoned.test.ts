@@ -85,7 +85,7 @@ describe("intervalContainsZoned", () => {
     ${"2024-12-31T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-15T12:00:00+00:00[UTC]"} | ${"2024-07-15T12:00:00+00:00[UTC]"} | ${false}
     ${"2024-06-15T12:00:00+00:00[UTC]"} | ${"2024-06-15T12:00:00+00:00[UTC]"} | ${"2024-06-15T12:00:00+00:00[UTC]"} | ${"2024-06-10T12:00:00+00:00[UTC]"} | ${false}
   `(
-    "returns $expected for reversed outer interval",
+    "returns $expected for reversed outer interval $intervalStart to $intervalEnd with point $pointOrStart (inner end $pointEnd)",
     ({ intervalStart, intervalEnd, pointOrStart, pointEnd, expected }) => {
       expect(
         intervalContainsZoned(
@@ -103,7 +103,7 @@ describe("intervalContainsZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-15T12:00:00+00:00[UTC]"} | ${"2024-06-15T12:00:00+00:00[UTC]"} | ${"2024-06-10T12:00:00+00:00[UTC]"} | ${false}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-15T12:00:00+00:00[UTC]"} | ${"2024-07-01T12:00:00+00:00[UTC]"} | ${"2024-06-15T12:00:00+00:00[UTC]"} | ${false}
   `(
-    "returns $expected for reversed inner interval",
+    "returns $expected for reversed inner interval $innerStart to $innerEnd inside $intervalStart to $intervalEnd",
     ({ intervalStart, intervalEnd, innerStart, innerEnd, expected }) => {
       expect(
         intervalContainsZoned(intervalStart, intervalEnd, innerStart, innerEnd),
@@ -125,7 +125,7 @@ describe("intervalContainsZoned", () => {
     ${"2024-12-31T23:59:60+00:00[UTC]"} | ${"2025-01-01T00:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:59+00:00[UTC]"}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:60+00:00[UTC]"} | ${"2024-06-15T12:00:00+00:00[UTC]"}
   `(
-    "returns false for malformed zoned: $intervalStart, $intervalEnd, $pointOrStart",
+    "returns false for malformed zoned: '$intervalStart', '$intervalEnd', '$pointOrStart'",
     ({ intervalStart, intervalEnd, pointOrStart }) => {
       expect(
         intervalContainsZoned(
@@ -164,7 +164,7 @@ describe("intervalContainsZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:59+00:00[UTC]"} | ${null}                             | ${"2024-07-15T12:00:00+00:00[UTC]"}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:59+00:00[UTC]"} | ${"2024-06-15T12:00:00+00:00[UTC]"} | ${null}
   `(
-    "returns false for non-string 4-arg input",
+    "returns false for non-string 4-arg input: $intervalStart, $intervalEnd, $innerStart, $innerEnd",
     ({ intervalStart, intervalEnd, innerStart, innerEnd }) => {
       expect(
         intervalContainsZoned(

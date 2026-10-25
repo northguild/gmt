@@ -489,18 +489,15 @@ describe("formatZonedDateTime", () => {
 
   // Invalid input
   it.each`
-    invalidValue
-    ${"not a zoned datetime"}
-    ${"2024-02-03T14:30:45"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns empty string for invalid input $invalidValue",
-    ({ invalidValue }) => {
-      expect(formatZonedDateTime(invalidValue)).toBe("");
-    },
-  );
+    invalidValue              | label
+    ${"not a zoned datetime"} | ${"'not a zoned datetime'"}
+    ${"2024-02-03T14:30:45"}  | ${"'2024-02-03T14:30:45'"}
+    ${""}                     | ${"''"}
+    ${null}                   | ${"null"}
+    ${undefined}              | ${"undefined"}
+  `("returns empty string for invalid input $label", ({ invalidValue }) => {
+    expect(formatZonedDateTime(invalidValue)).toBe("");
+  });
 
   // Battle tests for DST coverage
   for (const { timeZone, value } of sameInstantBattleCases) {
@@ -529,7 +526,7 @@ describe("formatZonedDateTime", () => {
     ${"en-US"}               | ${{ era: "long" }}                    | ${"2/3/2024 Anno Domini, 2:30:45 PM EST"} | ${"era alone gets the zoned defaults"}
     ${"en-US"}               | ${{ timeZone: "Asia/Tokyo" }}         | ${""}                                     | ${"a timeZone option is a TypeError"}
   `(
-    "formats 2024-02-03T14:30:45-05:00[America/New_York] in $locale with $options to $expected ($reason)",
+    "formats 2024-02-03T14:30:45-05:00[America/New_York] in $locale with $options to '$expected' ($reason)",
     ({ locale, options, expected }) => {
       expect(
         formatZonedDateTime(
@@ -548,7 +545,7 @@ describe("formatZonedDateTime", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"03/02/2024 14:30"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatZonedDateTime("2024-02-03T14:30:45+01:00[Europe/Paris]", locale, {
         dateStyle: "short",
@@ -568,7 +565,7 @@ describe("formatZonedDateTime with primitive options", () => {
     ${null}   | ${""}
     ${"long"} | ${"2/3/2024, 2:30:00 PM EST"}
     ${1}      | ${"2/3/2024, 2:30:00 PM EST"}
-  `("returns $expected for options $options", ({ options, expected }) => {
+  `("returns '$expected' for options $options", ({ options, expected }) => {
     expect(
       formatZonedDateTime(
         "2024-02-03T14:30:00-05:00[America/New_York]",

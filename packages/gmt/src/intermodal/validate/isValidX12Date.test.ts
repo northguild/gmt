@@ -17,7 +17,7 @@ describe("isValidX12Date", () => {
     ${"D8"} | ${"2024-06-15"} | ${false} | ${"an ISO 8601 date"}
     ${"D8"} | ${""}           | ${false} | ${"an empty value"}
   `(
-    "returns $expected for $value under $code ($reads), as parseX12Date reads it",
+    "returns $expected for '$value' under $code ($reads), as parseX12Date reads it",
     ({ code, value, expected }) => {
       expect(isValidX12Date(value, code)).toBe(expected);
       expect(parseX12Date(value, code) !== "").toBe(expected);

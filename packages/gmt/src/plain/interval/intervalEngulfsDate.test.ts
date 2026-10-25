@@ -38,7 +38,7 @@ describe("intervalEngulfsDate", () => {
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-01"} | ${"2024-12-31"} | ${false}
     ${"2024-07-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"} | ${false}
   `(
-    "returns $expected when B is not inside A",
+    "returns $expected when B is not inside A: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalEngulfsDate(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -49,7 +49,7 @@ describe("intervalEngulfsDate", () => {
     ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-04-01"} | ${"2024-12-31"} | ${false}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-15"} | ${"2024-06-10"} | ${false}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalEngulfsDate(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -68,7 +68,7 @@ describe("intervalEngulfsDate", () => {
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${""}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${"2024-13-01"}
   `(
-    "returns false for malformed date: $aStart, $aEnd, $bStart, $bEnd",
+    "returns false for malformed date: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalEngulfsDate(aStart, aEnd, bStart, bEnd)).toBe(false);
     },
@@ -80,9 +80,12 @@ describe("intervalEngulfsDate", () => {
     ${"2024-01-01"} | ${undefined}    | ${"2024-04-01"} | ${"2024-12-31"}
     ${"2024-01-01"} | ${"2024-06-30"} | ${null}         | ${"2024-12-31"}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${undefined}
-  `("returns false for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalEngulfsDate(aStart, aEnd, bStart, bEnd)).toBe(false);
-  });
+  `(
+    "returns false for non-string input: A=$aStart to $aEnd, B=$bStart to $bEnd",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalEngulfsDate(aStart, aEnd, bStart, bEnd)).toBe(false);
+    },
+  );
   // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings; mixed calendars are
   // accepted. Golden verified directly against @js-temporal/polyfill.
   it("accepts mixed calendars since engulfment is an ordering check, not a value", () => {

@@ -187,7 +187,7 @@ describe("operatingTimeBetween", () => {
       ${"2024-03-10T05:00:00Z"} | ${"2024-03-11T04:00:00Z"} | ${"reject"}    | ${""}
       ${"2024-03-10T08:00:00Z"} | ${"2024-03-11T04:00:00Z"} | ${"reject"}    | ${"PT1H"}
     `(
-      "is $expected from $start under $disambiguation",
+      "is '$expected' from $start under $disambiguation",
       ({ start, end, disambiguation, expected }) => {
         expect(operatingTimeBetween(start, end, gap, { disambiguation })).toBe(
           expected,
@@ -250,7 +250,7 @@ describe("operatingTimeBetween across a skipped local midnight", () => {
     ${"2024-04-25T20:00:00Z"} | ${"2024-04-25T21:45:00Z"} | ${"reject"}    | ${""}
     ${"2024-04-25T20:00:00Z"} | ${"2024-04-25T21:30:00Z"} | ${"reject"}    | ${"PT1H30M"}
   `(
-    "is $expected from $start to $end under $disambiguation",
+    "is '$expected' from $start to $end under $disambiguation",
     ({ start, end, disambiguation, expected }) => {
       expect(operatingTimeBetween(start, end, cairo, { disambiguation })).toBe(
         expected,
@@ -400,7 +400,7 @@ describe("operatingTimeBetween across a year of clock changes", () => {
     ${"+05:45:30"}           | ${"01:30"} | ${"02:30"} | ${""}           | ${"2024-01-01T00:00:00Z"} | ${"2025-01-01T00:00:00Z"} | ${"later"}      | ${"PT366H"}
     ${"+05:45:30"}           | ${"01:30"} | ${"02:30"} | ${""}           | ${"2024-01-01T00:00:00Z"} | ${"2025-01-01T00:00:00Z"} | ${"reject"}     | ${"PT366H"}
   `(
-    "$timeZone $from–$to around $change from $start to $end, $disambiguation, is $expected",
+    "$timeZone $from–$to around '$change' from $start to $end, $disambiguation, is '$expected'",
     ({ timeZone, from, to, change, start, end, disambiguation, expected }) => {
       const window = [{ from, to }];
       const schedule: OperatingSchedule = {

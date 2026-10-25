@@ -52,7 +52,7 @@ describe("formatEdifactDateTime", () => {
       ${"+010000-01-01T00:00"}       | ${"year 10000: CCYY is four digits"}
       ${"-000001-12-31T23:59"}       | ${"a year before 0000"}
       ${""}                          | ${"an empty value"}
-    `("returns '' for $value ($reads)", ({ value }) => {
+    `("returns '' for '$value' ($reads)", ({ value }) => {
       expect(formatEdifactDateTime(value, "203")).toBe("");
       expect(formatEdifactDateTime(value, "204")).toBe("");
     });

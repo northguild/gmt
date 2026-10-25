@@ -203,7 +203,7 @@ describe("getQuarter", () => {
     ${"invalid"}                                     | ${"an unparseable string"}
     ${""}                                            | ${"an empty string"}
     ${"2024-02-30"}                                  | ${"a date that does not exist"}
-  `("returns null when $value is $description", ({ value }) => {
+  `("returns null when '$value' is $description", ({ value }) => {
     expect(getQuarter(value)).toBeNull();
   });
 

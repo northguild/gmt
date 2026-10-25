@@ -42,7 +42,7 @@ describe("intervalsOverlapDateTime", () => {
     ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-04-01T00:00:00"} | ${"2024-13-01T10:00:00"}
     ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-04-01T00:00:00"} | ${"2024-12-31T23:59:60"}
   `(
-    "returns false for malformed datetime: $aStart, $aEnd, $bStart, $bEnd",
+    "returns false for malformed datetime: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalsOverlapDateTime(aStart, aEnd, bStart, bEnd)).toBe(false);
     },

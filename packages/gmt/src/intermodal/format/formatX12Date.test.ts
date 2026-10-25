@@ -48,7 +48,7 @@ describe("formatX12Date", () => {
       ${"+010000-01-01"}             | ${"year 10000: CCYY is four digits"}
       ${"-000001-12-31"}             | ${"a year before 0000"}
       ${""}                          | ${"an empty value"}
-    `("returns '' for $value ($reads)", ({ value }) => {
+    `("returns '' for '$value' ($reads)", ({ value }) => {
       expect(formatX12Date(value, "D8")).toBe("");
       expect(formatX12Date(value, "DB")).toBe("");
     });

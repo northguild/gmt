@@ -125,26 +125,26 @@ describe("intervalCountUnix", () => {
   });
 
   it.each`
-    start             | end         | unit
-    ${NaN}            | ${86400000} | ${"hour"}
-    ${Infinity}       | ${86400000} | ${"hour"}
-    ${-Infinity}      | ${86400000} | ${"hour"}
-    ${1.5}            | ${86400000} | ${"hour"}
-    ${0}              | ${NaN}      | ${"hour"}
-    ${0}              | ${Infinity} | ${"hour"}
-    ${0}              | ${1.5}      | ${"hour"}
-    ${"not-a-number"} | ${86400000} | ${"hour"}
-    ${86400000}       | ${0}        | ${"hour"}
-    ${0}              | ${86400000} | ${"invalid"}
-    ${0}              | ${86400000} | ${""}
-    ${0}              | ${86400000} | ${"quarter"}
-    ${""}             | ${86400000} | ${"hour"}
-    ${0}              | ${""}       | ${"hour"}
-    ${0}              | ${2 ** 53}  | ${"hour"}
-    ${"   "}          | ${86400000} | ${"hour"}
-    ${-(2 ** 53)}     | ${0}        | ${"hour"}
+    start             | end         | unit         | endLabel      | startLabel          | unitLabel
+    ${NaN}            | ${86400000} | ${"hour"}    | ${"86400000"} | ${"NaN"}            | ${"'hour'"}
+    ${Infinity}       | ${86400000} | ${"hour"}    | ${"86400000"} | ${"Infinity"}       | ${"'hour'"}
+    ${-Infinity}      | ${86400000} | ${"hour"}    | ${"86400000"} | ${"-Infinity"}      | ${"'hour'"}
+    ${1.5}            | ${86400000} | ${"hour"}    | ${"86400000"} | ${"1.5"}            | ${"'hour'"}
+    ${0}              | ${NaN}      | ${"hour"}    | ${"NaN"}      | ${"0"}              | ${"'hour'"}
+    ${0}              | ${Infinity} | ${"hour"}    | ${"Infinity"} | ${"0"}              | ${"'hour'"}
+    ${0}              | ${1.5}      | ${"hour"}    | ${"1.5"}      | ${"0"}              | ${"'hour'"}
+    ${"not-a-number"} | ${86400000} | ${"hour"}    | ${"86400000"} | ${"'not-a-number'"} | ${"'hour'"}
+    ${86400000}       | ${0}        | ${"hour"}    | ${"0"}        | ${"86400000"}       | ${"'hour'"}
+    ${0}              | ${86400000} | ${"invalid"} | ${"86400000"} | ${"0"}              | ${"'invalid'"}
+    ${0}              | ${86400000} | ${""}        | ${"86400000"} | ${"0"}              | ${"''"}
+    ${0}              | ${86400000} | ${"quarter"} | ${"86400000"} | ${"0"}              | ${"'quarter'"}
+    ${""}             | ${86400000} | ${"hour"}    | ${"86400000"} | ${"''"}             | ${"'hour'"}
+    ${0}              | ${""}       | ${"hour"}    | ${"''"}       | ${"0"}              | ${"'hour'"}
+    ${0}              | ${2 ** 53}  | ${"hour"}    | ${"2 ** 53"}  | ${"0"}              | ${"'hour'"}
+    ${"   "}          | ${86400000} | ${"hour"}    | ${"86400000"} | ${"'   '"}          | ${"'hour'"}
+    ${-(2 ** 53)}     | ${0}        | ${"hour"}    | ${"0"}        | ${"-(2 ** 53)"}     | ${"'hour'"}
   `(
-    "returns null for invalid $start, $end, or $unit",
+    "returns null for invalid $startLabel, $endLabel, or $unitLabel",
     ({ start, end, unit }) => {
       expect(intervalCountUnix(start, end, unit)).toBeNull();
     },

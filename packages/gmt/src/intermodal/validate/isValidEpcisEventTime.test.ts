@@ -54,7 +54,7 @@ describe("isValidEpcisEventTime", () => {
     ${"2024-06-15T14:30:00.1234567891Z"} | ${false} | ${true}  | ${"a ten-digit fraction: finer than a nanosecond (GMT rule)"}
     ${"2024-06-15T14:30:00.1234567890Z"} | ${false} | ${true}  | ${"ten digits ending in zero: still refused"}
   `(
-    "returns $expected for $value ($reason); the pattern alone says $pattern; isValidEpcisEvent and parseEpcisEvent agree",
+    "returns $expected for '$value' ($reason); the pattern alone says $pattern; isValidEpcisEvent and parseEpcisEvent agree",
     ({
       value,
       expected,

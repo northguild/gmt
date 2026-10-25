@@ -54,7 +54,7 @@ describe("intervalContainsUtc", () => {
     ${"2024-12-31T23:59:59Z"} | ${"2024-01-01T00:00:00Z"} | ${"2024-06-15T12:00:00Z"} | ${"2024-07-15T12:00:00Z"} | ${false}
     ${"2024-06-15T12:00:00Z"} | ${"2024-06-15T12:00:00Z"} | ${"2024-06-15T12:00:00Z"} | ${"2024-06-10T12:00:00Z"} | ${false}
   `(
-    "returns $expected for reversed outer interval",
+    "returns $expected for reversed outer interval $intervalStart to $intervalEnd with $pointOrStart to $pointEnd",
     ({ intervalStart, intervalEnd, pointOrStart, pointEnd, expected }) => {
       expect(
         intervalContainsUtc(intervalStart, intervalEnd, pointOrStart, pointEnd),
@@ -67,7 +67,7 @@ describe("intervalContainsUtc", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-15T12:00:00Z"} | ${"2024-06-15T12:00:00Z"} | ${"2024-06-10T12:00:00Z"} | ${false}
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-15T12:00:00Z"} | ${"2024-07-01T12:00:00Z"} | ${"2024-06-15T12:00:00Z"} | ${false}
   `(
-    "returns $expected for reversed inner interval",
+    "returns $expected for reversed inner interval $innerStart to $innerEnd inside $intervalStart to $intervalEnd",
     ({ intervalStart, intervalEnd, innerStart, innerEnd, expected }) => {
       expect(
         intervalContainsUtc(intervalStart, intervalEnd, innerStart, innerEnd),
@@ -88,7 +88,7 @@ describe("intervalContainsUtc", () => {
     ${"2024-01-01T10:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${"not-a-utc"}
     ${"2024-01-01T10:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${"2024-12-31T23:59:60Z"}
   `(
-    "returns false for malformed utc: $intervalStart, $intervalEnd, $pointOrStart",
+    "returns false for malformed utc: '$intervalStart', '$intervalEnd', '$pointOrStart'",
     ({ intervalStart, intervalEnd, pointOrStart }) => {
       expect(
         intervalContainsUtc(
@@ -127,7 +127,7 @@ describe("intervalContainsUtc", () => {
     ${"2024-01-01T10:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${null}                   | ${"2024-07-15T12:00:00Z"}
     ${"2024-01-01T10:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${"2024-06-15T12:00:00Z"} | ${null}
   `(
-    "returns false for non-string 4-arg input",
+    "returns false for non-string 4-arg input $intervalStart, $intervalEnd, $innerStart, $innerEnd",
     ({ intervalStart, intervalEnd, innerStart, innerEnd }) => {
       expect(
         intervalContainsUtc(

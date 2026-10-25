@@ -106,7 +106,7 @@ describe("isValidCalendarDate", () => {
     ${"2024-10-03T14:30+01:00[u-ca=hebrew]"}                      | ${"UTC offset, which isValidDateTime rejects"}
     ${"2024-10-03T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"UTC offset before the time zone annotation"}
   `(
-    "returns false for invalid calendar date: $value ($reason)",
+    "returns false for invalid calendar date: '$value' ($reason)",
     ({ value }: { value: string }) => {
       expect(isValidCalendarDate(value)).toBe(false);
     },

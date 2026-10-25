@@ -22,7 +22,7 @@ describe("addUnix", () => {
     ${1709164800}    | ${{ days: 1 }} | ${{ epochUnit: "seconds" }}      | ${1709251200}
     ${0}             | ${{ days: 1 }} | ${{ epochUnit: "seconds" }}      | ${86400}
   `(
-    "returns $expected for $value with $units",
+    "returns $expected for $value with $units and options $options",
     ({ value, units, options, expected }) => {
       expect(addUnix(value, units, options)).toBe(expected);
     },
@@ -35,9 +35,12 @@ describe("addUnix", () => {
     ${null}          | ${{ days: 1 }}        | ${undefined}
     ${1709164800000} | ${{ invalidUnit: 1 }} | ${undefined}
     ${1709164800000} | ${{ days: "1" }}      | ${undefined}
-  `("returns null for invalid input", ({ value, units, options }) => {
-    expect(addUnix(value as never, units as never, options)).toBeNull();
-  });
+  `(
+    "returns null for value $value with units $units and options $options",
+    ({ value, units, options }) => {
+      expect(addUnix(value as never, units as never, options)).toBeNull();
+    },
+  );
 
   it.each`
     value            | units             | options                                                    | expected
@@ -78,13 +81,13 @@ describe("addUnix with an unrecognised epochUnit", () => {
   // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
-    epochUnit
-    ${"nanoseconds"}
-    ${"SECONDS"}
-    ${"ms"}
-    ${""}
-    ${1000}
-  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    epochUnit        | epochUnitLabel
+    ${"nanoseconds"} | ${"'nanoseconds'"}
+    ${"SECONDS"}     | ${"'SECONDS'"}
+    ${"ms"}          | ${"'ms'"}
+    ${""}            | ${"''"}
+    ${1000}          | ${"1000"}
+  `("returns null for epochUnit $epochUnitLabel", ({ epochUnit }) => {
     expect(
       addUnix(
         1_706_659_200,

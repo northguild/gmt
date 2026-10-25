@@ -83,7 +83,7 @@ describe("isValidEdifactDtmFormat", () => {
     ${""}            | ${"an empty string"}
     ${"D8"}          | ${"an X12 1250 code"}
     ${"constructor"} | ${"an inherited property name"}
-  `("returns false for the near-miss $code ($reads)", ({ code }) => {
+  `("returns false for the near-miss '$code' ($reads)", ({ code }) => {
     expect(isValidEdifactDtmFormat(code)).toBe(false);
   });
 

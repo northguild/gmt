@@ -129,7 +129,7 @@ export const KNOWN_NATIVE_FAILURES = [
   },
   {
     file: "src/zoned/validate/isValidCalendarZonedDateTime.test.ts",
-    test: "isValidCalendarZonedDateTime returns false for the unsupported calendar id in 2024-01-10T12:00:00+00:00[UTC][u-ca=isl… (not in the proposal's calendar table)",
+    test: "isValidCalendarZonedDateTime returns false for the unsupported calendar id islamic in 2024-01-10T12:00:00+00:00[UTC][u-ca=isl… (not in the proposal's calendar table)",
     legs: ["node", "chromium"],
     defect: M_ANCHOR,
     upstream: BOA_529,
@@ -263,21 +263,21 @@ export const KNOWN_NATIVE_FAILURES = [
   },
   {
     file: "src/plain/calculate/addDate.edges.test.ts",
-    test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-19[u-ca=islamic-civil] as -271819-01-07[u-ca=islamic-civil] (xscan islamic-civil min[275])",
+    test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-19[u-ca=islamic-civil] as '-271819-01-07[u-ca=islamic-civil]' (xscan islamic-civil min[275])",
     legs: ["webkit"],
     defect: S_ANCHOR,
     upstream: null,
   },
   {
     file: "src/plain/calculate/addDate.edges.test.ts",
-    test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-18[u-ca=islamic-tbla] as -271819-01-06[u-ca=islamic-tbla] (xscan islamic-tbla min[274])",
+    test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-18[u-ca=islamic-tbla] as '-271819-01-06[u-ca=islamic-tbla]' (xscan islamic-tbla min[274])",
     legs: ["webkit"],
     defect: S_ANCHOR,
     upstream: null,
   },
   {
     file: "src/plain/calculate/addDate.edges.test.ts",
-    test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-19[u-ca=islamic-umalqura] as -271819-01-07[u-ca=islamic-umalqura] (xscan islamic-umalqura min[275])",
+    test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-19[u-ca=islamic-umalqura] as '-271819-01-07[u-ca=islamic-umalqura]' (xscan islamic-umalqura min[275])",
     legs: ["webkit"],
     defect: S_ANCHOR,
     upstream: null,

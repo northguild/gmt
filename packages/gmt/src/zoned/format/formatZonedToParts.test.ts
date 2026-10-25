@@ -257,16 +257,16 @@ describe("formatZonedToParts", () => {
 
   describe("invalid input", () => {
     it.each`
-      value
-      ${"not-a-zoned-datetime"}
-      ${"2024-02-03T14:30:45-05:00"}
-      ${"2024-13-01T00:00:00-05:00[America/New_York]"}
-      ${""}
-      ${null}
-      ${undefined}
-      ${false}
-      ${[]}
-    `("returns [] for invalid input: $value", ({ value }) => {
+      value                                            | label
+      ${"not-a-zoned-datetime"}                        | ${"'not-a-zoned-datetime'"}
+      ${"2024-02-03T14:30:45-05:00"}                   | ${"'2024-02-03T14:30:45-05:00'"}
+      ${"2024-13-01T00:00:00-05:00[America/New_York]"} | ${"'2024-13-01T00:00:00-05:00[America/New_York]'"}
+      ${""}                                            | ${"''"}
+      ${null}                                          | ${"null"}
+      ${undefined}                                     | ${"undefined"}
+      ${false}                                         | ${"false"}
+      ${[]}                                            | ${"[]"}
+    `("returns [] for invalid input: $label", ({ value }) => {
       expect(formatZonedToParts(value as never)).toEqual([]);
     });
   });
@@ -279,7 +279,7 @@ describe("formatZonedToParts", () => {
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"3 févr. 2024, 14:30"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
   `(
-    "returns $expected (parts joined) for locale list $locale",
+    "returns '$expected' (parts joined) for locale list $locale",
     ({ locale, expected }) => {
       const actual = formatZonedToParts(
         "2024-02-03T14:30:45+01:00[Europe/Paris]",
@@ -305,7 +305,7 @@ describe("formatZonedToParts with primitive options", () => {
     ${null}   | ${""}
     ${"long"} | ${"2/3/2024, 2:30:00 PM EST"}
     ${1}      | ${"2/3/2024, 2:30:00 PM EST"}
-  `("returns $expected for options $options", ({ options, expected }) => {
+  `("returns '$expected' for options $options", ({ options, expected }) => {
     expectDateTimeEqual(
       formatZonedToParts(
         "2024-02-03T14:30:00-05:00[America/New_York]",

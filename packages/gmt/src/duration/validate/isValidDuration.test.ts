@@ -95,7 +95,7 @@ describe("isValidDuration", () => {
     ${""}               | ${false}
     ${"not a duration"} | ${false}
   `(
-    "returns $expected for malformed duration $value",
+    "returns $expected for malformed duration '$value'",
     ({ value, expected }) => {
       expect(isValidDuration(value)).toBe(expected);
     },

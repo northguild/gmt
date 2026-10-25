@@ -156,7 +156,7 @@ describe("an Object argument that is a function is read as the object it is", ()
     ${Object.assign(() => undefined, { offset: "P1D" })}         | ${""}
     ${Object.assign(function docCutoff() {}, { offset: "P1D" })} | ${"docCutoff"}
   `(
-    "cutoffSchedule reads a function entry's own name, $name",
+    "cutoffSchedule reads a function entry's own name, '$name'",
     ({ entry, name }) => {
       expect(
         cutoffSchedule("2024-06-14T22:00:00Z", [entry], { timeZone: "UTC" }),

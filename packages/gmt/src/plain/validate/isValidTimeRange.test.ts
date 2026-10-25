@@ -53,7 +53,7 @@ describe("isValidTimeRange", () => {
     ${"invalid"}  | ${"invalid"}
     ${""}         | ${""}
   `(
-    "returns false for malformed time: $value1, $value2",
+    "returns false for malformed time: '$value1', '$value2'",
     ({ value1, value2 }) => {
       expect(isValidTimeRange({ value1, value2 })).toBe(false);
     },

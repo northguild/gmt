@@ -47,7 +47,7 @@ describe("cycleZoned", () => {
     ${"2024-01-31T09:00:00-06:00[America/Chicago]"} | ${"month"} | ${1}   | ${undefined} | ${"2024-02-29T09:00:00-06:00[America/Chicago]"}
     ${"2024-01-31T09:00:00-06:00[America/Chicago]"} | ${"month"} | ${1}   | ${"reject"}  | ${""}
   `(
-    "returns $expected for $value cycling $field by $amount with overflow $overflow",
+    "returns '$expected' for $value cycling $field by $amount with overflow $overflow",
     ({ value, field, amount, overflow, expected }) => {
       expect(cycleZoned(value, field, amount, { overflow })).toBe(expected);
     },
@@ -76,24 +76,24 @@ describe("cycleZoned", () => {
     ${"week"}
     ${"invalid"}
     ${""}
-  `("returns an empty string for an invalid field $field", ({ field }) => {
+  `("returns an empty string for an invalid field '$field'", ({ field }) => {
     expect(
       cycleZoned("2024-06-15T09:30:00-05:00[America/Chicago]", field, 1),
     ).toBe("");
   });
 
   it.each`
-    invalidValue
-    ${"invalid-zoned-datetime"}
-    ${"2024-02-30T12:00:00-05:00[America/New_York]"}
-    ${"2024-03-10T12:00:00"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${12}
-    ${true}
+    invalidValue                                     | label
+    ${"invalid-zoned-datetime"}                      | ${"'invalid-zoned-datetime'"}
+    ${"2024-02-30T12:00:00-05:00[America/New_York]"} | ${"'2024-02-30T12:00:00-05:00[America/New_York]'"}
+    ${"2024-03-10T12:00:00"}                         | ${"'2024-03-10T12:00:00'"}
+    ${""}                                            | ${"''"}
+    ${null}                                          | ${"null"}
+    ${undefined}                                     | ${"undefined"}
+    ${12}                                            | ${"12"}
+    ${true}                                          | ${"true"}
   `(
-    "returns an empty string for an invalid value $invalidValue",
+    "returns an empty string for an invalid value $label",
     ({ invalidValue }) => {
       expect(cycleZoned(invalidValue, "hour", 1)).toBe("");
     },
@@ -124,7 +124,7 @@ describe("cycleZoned", () => {
     ${"Europe/Berlin"}   | ${"2024-10-27T01:30:00+02:00[Europe/Berlin]"}   | ${"ignore"}  | ${""}
     ${"Europe/Berlin"}   | ${"2024-10-27T01:30:00+02:00[Europe/Berlin]"}   | ${"prefer"}  | ${"2024-10-27T02:30:00+02:00[Europe/Berlin]"}
   `(
-    "with disambiguation reject and offset $offset, returns $expected cycling hour +1 into the fall-back overlap in $timeZone",
+    "with disambiguation reject and offset $offset, returns '$expected' cycling hour +1 into the fall-back overlap in $timeZone",
     ({ value, offset, expected }) => {
       const optionsArg =
         offset === undefined
@@ -148,7 +148,7 @@ describe("cycleZoned", () => {
     ${"Europe/Berlin"}   | ${"2024-03-31T01:30:00+01:00[Europe/Berlin]"}   | ${"later"}      | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
     ${"Europe/Berlin"}   | ${"2024-03-31T01:30:00+01:00[Europe/Berlin]"}   | ${"reject"}     | ${""}
   `(
-    "resolves spring-forward gap for $value cycling hour +1 with disambiguation $disambiguation to $expected",
+    "resolves spring-forward gap for $value cycling hour +1 with disambiguation $disambiguation to '$expected'",
     ({ value, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -183,7 +183,7 @@ describe("cycleZoned", () => {
     ${"Europe/Berlin"}   | ${"2024-10-27T01:30:00+02:00[Europe/Berlin]"}   | ${"ignore"}  | ${"later"}      | ${"2024-10-27T02:30:00+01:00[Europe/Berlin]"}
     ${"Europe/Berlin"}   | ${"2024-10-27T01:30:00+02:00[Europe/Berlin]"}   | ${"ignore"}  | ${"reject"}     | ${""}
   `(
-    "resolves fall-back overlap for $value cycling hour +1 with offset $offset and disambiguation $disambiguation to $expected",
+    "resolves fall-back overlap for $value cycling hour +1 with offset $offset and disambiguation $disambiguation to '$expected'",
     ({ value, offset, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined && offset === undefined
@@ -195,18 +195,18 @@ describe("cycleZoned", () => {
 
   // `amount` must be a finite number (isValidAmount); anything else is invalid input, never 0.
   it.each`
-    amount
-    ${null}
-    ${undefined}
-    ${""}
-    ${"1"}
-    ${[]}
-    ${{}}
-    ${true}
-    ${Number.NaN}
-    ${Number.POSITIVE_INFINITY}
+    amount                      | label
+    ${null}                     | ${"null"}
+    ${undefined}                | ${"undefined"}
+    ${""}                       | ${"''"}
+    ${"1"}                      | ${"'1'"}
+    ${[]}                       | ${"[]"}
+    ${{}}                       | ${"{}"}
+    ${true}                     | ${"true"}
+    ${Number.NaN}               | ${"Number.NaN"}
+    ${Number.POSITIVE_INFINITY} | ${"Number.POSITIVE_INFINITY"}
   `(
-    "returns an empty string for a non-finite-number amount $amount",
+    "returns an empty string for a non-finite-number amount $label",
     ({ amount }) => {
       expect(
         cycleZoned(

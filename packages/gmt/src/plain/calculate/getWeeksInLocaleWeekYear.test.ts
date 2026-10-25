@@ -137,12 +137,12 @@ describe("getWeeksInLocaleWeekYear", () => {
   });
 
   it.each`
-    locale
-    ${"not-a-locale-!!"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns null for invalid locale $locale", ({ locale }) => {
+    locale               | label
+    ${"not-a-locale-!!"} | ${"'not-a-locale-!!'"}
+    ${""}                | ${"''"}
+    ${null}              | ${"null"}
+    ${undefined}         | ${"undefined"}
+  `("returns null for invalid locale $label", ({ locale }) => {
     expect(getWeeksInLocaleWeekYear("2024-06-15", locale)).toBeNull();
   });
 

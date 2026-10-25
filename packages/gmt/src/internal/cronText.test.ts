@@ -385,7 +385,7 @@ describe("readCronExpression: outside the grammar", () => {
     ${"@constructor"}          | ${"inherited object key"}
     ${"@__proto__"}            | ${"prototype key"}
     ${"@toString"}             | ${"inherited method name"}
-  `("returns null for $why: $text", ({ text }) => {
+  `("returns null for $why: '$text'", ({ text }) => {
     expect(readCronExpression(text)).toBeNull();
   });
 });

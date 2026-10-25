@@ -89,13 +89,13 @@ describe("convertPlainDateTimeToZoned", () => {
   );
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidValue | label
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
   `(
-    "returns an empty string for invalid datetime $invalidValue",
+    "returns an empty string for invalid datetime $label",
     ({ invalidValue }) => {
       expect(convertPlainDateTimeToZoned(invalidValue as never, "UTC")).toBe(
         "",
@@ -104,13 +104,13 @@ describe("convertPlainDateTimeToZoned", () => {
   );
 
   it.each`
-    invalidTimeZone
-    ${"Mars/Olympus"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidTimeZone   | label
+    ${"Mars/Olympus"} | ${"'Mars/Olympus'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
   `(
-    "returns an empty string for invalid timeZone $invalidTimeZone",
+    "returns an empty string for invalid timeZone $label",
     ({ invalidTimeZone }) => {
       expect(
         convertPlainDateTimeToZoned(
@@ -146,7 +146,7 @@ describe("convertPlainDateTimeToZoned", () => {
     ${"2024-03-31T02:30:00"} | ${"Europe/Berlin"}    | ${"later"}      | ${"2024-03-31T03:30:00.000+02:00[Europe/Berlin]"}
     ${"2024-03-31T02:30:00"} | ${"Europe/Berlin"}    | ${"reject"}     | ${""}
   `(
-    "resolves spring-forward gap $value in $timeZone with disambiguation $disambiguation to $expected",
+    "resolves spring-forward gap $value in $timeZone with disambiguation $disambiguation to '$expected'",
     ({ value, timeZone, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -170,7 +170,7 @@ describe("convertPlainDateTimeToZoned", () => {
     ${"2024-10-27T02:30:00"} | ${"Europe/Berlin"}    | ${"later"}      | ${"2024-10-27T02:30:00.000+01:00[Europe/Berlin]"}
     ${"2024-10-27T02:30:00"} | ${"Europe/Berlin"}    | ${"reject"}     | ${""}
   `(
-    "resolves fall-back overlap $value in $timeZone with disambiguation $disambiguation to $expected",
+    "resolves fall-back overlap $value in $timeZone with disambiguation $disambiguation to '$expected'",
     ({ value, timeZone, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -203,7 +203,7 @@ describe("convertPlainDateTimeToZoned at the range limits", () => {
     ${"+275760-09-13T10:00:00.001"} | ${"Australia/Sydney"}   | ${""}
     ${"-271821-04-19T20:00:00"}     | ${"America/New_York"}   | ${"-271821-04-19T20:00:00.000-04:56[America/New_York]"}
   `(
-    "converts $value in $timeZone to $expected",
+    "converts $value in $timeZone to '$expected'",
     ({ value, timeZone, expected }) => {
       expect(convertPlainDateTimeToZoned(value, timeZone)).toBe(expected);
     },
@@ -234,7 +234,7 @@ describe("convertPlainDateTimeToZoned at the range limits", () => {
     ${"-0800"}  | ${"2024-02-29T14:30:45.000-08:00[-08:00]"}
     ${"+24:00"} | ${""}
   `(
-    "converts 2024-02-29T14:30:45 into the offset zone $timeZone → $expected",
+    "converts 2024-02-29T14:30:45 into the offset zone $timeZone → '$expected'",
     ({ timeZone, expected }) => {
       expect(convertPlainDateTimeToZoned("2024-02-29T14:30:45", timeZone)).toBe(
         expected,

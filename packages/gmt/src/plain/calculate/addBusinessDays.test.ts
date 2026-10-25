@@ -182,19 +182,19 @@ describe("addBusinessDays", () => {
   );
 
   it.each`
-    nonStringInput
-    ${"invalid-date"}
-    ${"2024-02-30"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${"2024-13-01"}
-    ${"2024-00-01"}
-    ${"not-a-date"}
-    ${"2024/03/15"}
-    ${"15-03-2024"}
+    nonStringInput    | label
+    ${"invalid-date"} | ${"'invalid-date'"}
+    ${"2024-02-30"}   | ${"'2024-02-30'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
+    ${"2024-13-01"}   | ${"'2024-13-01'"}
+    ${"2024-00-01"}   | ${"'2024-00-01'"}
+    ${"not-a-date"}   | ${"'not-a-date'"}
+    ${"2024/03/15"}   | ${"'2024/03/15'"}
+    ${"15-03-2024"}   | ${"'15-03-2024'"}
   `(
-    "returns an empty string for non-string input $nonStringInput",
+    "returns an empty string for non-string input $label",
     ({ nonStringInput }) => {
       expect(addBusinessDays(nonStringInput as never, 1)).toBe("");
     },
@@ -264,7 +264,7 @@ describe("addBusinessDays", () => {
     ${"2024-03-15[u-ca=iso8601]"} | ${1}   | ${"2024-03-18"}
     ${"2024-03-15[!foo=bar]"}     | ${1}   | ${""}
   `(
-    "reads the annotations of $value as Temporal does (amount $amount) → $expected",
+    "reads the annotations of $value as Temporal does (amount $amount) → '$expected'",
     ({ value, amount, expected }) => {
       expect(addBusinessDays(value, amount)).toBe(expected);
     },
@@ -316,7 +316,7 @@ describe("addBusinessDays at the Temporal range limit", () => {
     ${"+275760-09-05"} | ${10}  | ${""}
     ${"+275760-09-05"} | ${5}   | ${"+275760-09-12"}
   `(
-    "returns $expected for $value + $amount business days",
+    "returns '$expected' for $value + $amount business days",
     ({ value, amount, expected }) => {
       expect(addBusinessDays(value, amount)).toBe(expected);
     },

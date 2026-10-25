@@ -51,7 +51,7 @@ describe("getOrdinalDate", () => {
     ${""}                    | ${"an empty string"}
     ${"2023-02-29"}          | ${"a leap day in a common year"}
     ${"2024-12-31T23:59:60"} | ${"a leap second"}
-  `("returns null when $value is $description", ({ value }) => {
+  `("returns null when '$value' is $description", ({ value }) => {
     expect(getOrdinalDate(value)).toBeNull();
   });
 

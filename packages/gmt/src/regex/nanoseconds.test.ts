@@ -20,7 +20,7 @@ describe("regex/nanosecondDecimal", () => {
     ${"1 "}                  | ${false}
     ${"-"}                   | ${false}
     ${""}                    | ${false}
-  `("matches $value as $expected", ({ value, expected }) => {
+  `("matches '$value' as $expected", ({ value, expected }) => {
     expect(nanosecondDecimal.test(value)).toBe(expected);
   });
 

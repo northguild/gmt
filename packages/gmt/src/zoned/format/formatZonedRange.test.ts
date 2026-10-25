@@ -13,23 +13,23 @@ describe("formatZonedRange", () => {
 
   // en-US
   it.each`
-    from                                             | to                                               | locale     | options                                                                 | expected
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dateStyle: "long", timeStyle: "long" }}                             | ${"February 29, 2024, 10:00:00 AM EST – 12:00:00 PM EST"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dateStyle: "long", timeStyle: "short" }}                            | ${"February 29, 2024, 10:00 AM – 12:00 PM"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dateStyle: "short", timeStyle: "short" }}                           | ${"2/29/24, 10:00 AM – 12:00 PM"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "short" }}        | ${"10:00 AM – 12:00 PM EST"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "long" }}         | ${"10:00 AM – 12:00 PM Eastern Standard Time"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortGeneric" }} | ${"10:00 AM – 12:00 PM ET"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "longGeneric" }}  | ${"10:00 AM – 12:00 PM Eastern Time"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }}  | ${"10:00 AM – 12:00 PM GMT-5"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "longOffset" }}   | ${"10:00 AM – 12:00 PM GMT-05:00"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dayPeriod: "narrow" }}                                              | ${"in the morning"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dayPeriod: "short" }}                                               | ${"in the morning"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dayPeriod: "long" }}                                                | ${"in the morning"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ formatMatcher: "basic" }}                                           | ${"2/29/2024, 10:00:00 AM – 12:00:00 PM"}
-    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ formatMatcher: "best fit" }}                                        | ${"2/29/2024, 10:00:00 AM – 12:00:00 PM"}
+    from                                             | to                                               | locale     | options                                                                 | expected                                                  | label
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dateStyle: "long", timeStyle: "long" }}                             | ${"February 29, 2024, 10:00:00 AM EST – 12:00:00 PM EST"} | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dateStyle: "long", timeStyle: "short" }}                            | ${"February 29, 2024, 10:00 AM – 12:00 PM"}               | ${"dateStyle long, timeStyle short"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dateStyle: "short", timeStyle: "short" }}                           | ${"2/29/24, 10:00 AM – 12:00 PM"}                         | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "short" }}        | ${"10:00 AM – 12:00 PM EST"}                              | ${"timeZoneName short"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "long" }}         | ${"10:00 AM – 12:00 PM Eastern Standard Time"}            | ${"timeZoneName long"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortGeneric" }} | ${"10:00 AM – 12:00 PM ET"}                               | ${"timeZoneName shortGeneric"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "longGeneric" }}  | ${"10:00 AM – 12:00 PM Eastern Time"}                     | ${"timeZoneName longGeneric"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }}  | ${"10:00 AM – 12:00 PM GMT-5"}                            | ${"timeZoneName shortOffset"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "longOffset" }}   | ${"10:00 AM – 12:00 PM GMT-05:00"}                        | ${"timeZoneName longOffset"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dayPeriod: "narrow" }}                                              | ${"in the morning"}                                       | ${"dayPeriod narrow"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dayPeriod: "short" }}                                               | ${"in the morning"}                                       | ${"dayPeriod short"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ dayPeriod: "long" }}                                                | ${"in the morning"}                                       | ${"dayPeriod long"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ formatMatcher: "basic" }}                                           | ${"2/29/2024, 10:00:00 AM – 12:00:00 PM"}                 | ${"formatMatcher basic"}
+    ${"2024-02-29T10:00:00-05:00[America/New_York]"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"} | ${"en-US"} | ${{ formatMatcher: "best fit" }}                                        | ${"2/29/2024, 10:00:00 AM – 12:00:00 PM"}                 | ${"formatMatcher best fit"}
   `(
-    "formats a valid zoned datetime range correctly for locale $locale",
+    "formats a valid zoned datetime range correctly for locale $locale with $label",
     ({ from, to, locale, options, expected }) => {
       expect(formatZonedRange(from, to, locale, options)).toBe(
         normalizeDateTime(expected),
@@ -61,7 +61,7 @@ describe("formatZonedRange", () => {
     ${{ hour: "numeric", minute: "numeric", timeZoneName: "short", timeZone: "UTC" }} | ${""}                        | ${"a timeZone option is rejected"}
     ${{ hour: "numeric", minute: "numeric", timeZoneName: "short" }}                  | ${"10:00 AM - 12:00 PM EST"} | ${"without it the endpoints' zone applies"}
   `(
-    "formats a New York range with $options to $expected ($reason)",
+    "formats a New York range with $options to '$expected' ($reason)",
     ({ options, expected }) => {
       expect(
         formatZonedRange(
@@ -80,7 +80,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.enGB].start} | ${rangeByLocale[MustTestLocales.enGB].end} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"3 February 2024, 14:30:45 GMT – 16:46:15 GMT"}
     ${rangeByLocale[MustTestLocales.enGB].start} | ${rangeByLocale[MustTestLocales.enGB].end} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"03/02/2024, 14:30–16:46"}
   `(
-    "formats valid zoned datetime range for en-GB",
+    "formats valid zoned datetime range for en-GB with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.enGB, options)).toBe(
         normalizeDateTime(expected),
@@ -112,7 +112,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.deDE].start} | ${rangeByLocale[MustTestLocales.deDE].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"03.02.24, 14:30–16:46 Uhr"}
     ${rangeByLocale[MustTestLocales.deDE].start} | ${rangeByLocale[MustTestLocales.deDE].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14:30–16:46 Uhr GMT+1"}
   `(
-    "formats valid zoned datetime range for de-DE",
+    "formats valid zoned datetime range for de-DE with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.deDE, options)).toBe(
         normalizeDateTime(expected),
@@ -127,7 +127,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.frFR].start} | ${rangeByLocale[MustTestLocales.frFR].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"03/02/2024, 14:30 – 16:46"}
     ${rangeByLocale[MustTestLocales.frFR].start} | ${rangeByLocale[MustTestLocales.frFR].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14:30 – 16:46 UTC+1"}
   `(
-    "formats valid zoned datetime range for fr-FR",
+    "formats valid zoned datetime range for fr-FR with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.frFR, options)).toBe(
         normalizeDateTime(expected),
@@ -142,7 +142,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.esES].start} | ${rangeByLocale[MustTestLocales.esES].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"3/2/24, 14:30–16:46"}
     ${rangeByLocale[MustTestLocales.esES].start} | ${rangeByLocale[MustTestLocales.esES].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14:30–16:46 GMT+1"}
   `(
-    "formats valid zoned datetime range for es-ES",
+    "formats valid zoned datetime range for es-ES with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.esES, options)).toBe(
         normalizeDateTime(expected),
@@ -157,7 +157,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.itIT].start} | ${rangeByLocale[MustTestLocales.itIT].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"03/02/24, 14:30–16:46"}
     ${rangeByLocale[MustTestLocales.itIT].start} | ${rangeByLocale[MustTestLocales.itIT].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14:30–16:46 GMT+1"}
   `(
-    "formats valid zoned datetime range for it-IT",
+    "formats valid zoned datetime range for it-IT with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.itIT, options)).toBe(
         normalizeDateTime(expected),
@@ -172,7 +172,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.ptPT].start} | ${rangeByLocale[MustTestLocales.ptPT].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"03/02/24, 14:30 – 16:46"}
     ${rangeByLocale[MustTestLocales.ptPT].start} | ${rangeByLocale[MustTestLocales.ptPT].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14:30 – 16:46 GMT+0"}
   `(
-    "formats valid zoned datetime range for pt-PT",
+    "formats valid zoned datetime range for pt-PT with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.ptPT, options)).toBe(
         normalizeDateTime(expected),
@@ -187,7 +187,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.svSE].start} | ${rangeByLocale[MustTestLocales.svSE].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"2024-02-03 14:30–16:46"}
     ${rangeByLocale[MustTestLocales.svSE].start} | ${rangeByLocale[MustTestLocales.svSE].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14:30–16:46 GMT+1"}
   `(
-    "formats valid zoned datetime range for sv-SE",
+    "formats valid zoned datetime range for sv-SE with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.svSE, options)).toBe(
         normalizeDateTime(expected),
@@ -201,7 +201,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.isIS].start} | ${rangeByLocale[MustTestLocales.isIS].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"3.2.2024, 14:30–16:46"}
     ${rangeByLocale[MustTestLocales.isIS].start} | ${rangeByLocale[MustTestLocales.isIS].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14:30–16:46 GMT+0"}
   `(
-    "formats valid zoned datetime range for is-IS",
+    "formats valid zoned datetime range for is-IS with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.isIS, options)).toBe(
         normalizeDateTime(expected),
@@ -233,7 +233,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.zhCN].start} | ${rangeByLocale[MustTestLocales.zhCN].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"2024/2/3 14:30–16:46"}
     ${rangeByLocale[MustTestLocales.zhCN].start} | ${rangeByLocale[MustTestLocales.zhCN].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"GMT+8 14:30–16:46"}
   `(
-    "formats valid zoned datetime range for zh-CN",
+    "formats valid zoned datetime range for zh-CN with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.zhCN, options)).toBe(
         normalizeDateTime(expected),
@@ -248,7 +248,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.zhTW].start} | ${rangeByLocale[MustTestLocales.zhTW].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"2024/2/3 下午2:30–4:46"}
     ${rangeByLocale[MustTestLocales.zhTW].start} | ${rangeByLocale[MustTestLocales.zhTW].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"下午2:30至4:46 [GMT+8]"}
   `(
-    "formats valid zoned datetime range for zh-TW",
+    "formats valid zoned datetime range for zh-TW with $options",
     ({ from, to, options, expected }) => {
       expectDateTimeEqual(
         formatZonedRange(from, to, MustTestLocales.zhTW, options),
@@ -264,7 +264,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.jaJP].start} | ${rangeByLocale[MustTestLocales.jaJP].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"2024/02/03 14時30分～16時46分"}
     ${rangeByLocale[MustTestLocales.jaJP].start} | ${rangeByLocale[MustTestLocales.jaJP].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14時30分～16時46分(GMT+9)"}
   `(
-    "formats valid zoned datetime range for ja-JP",
+    "formats valid zoned datetime range for ja-JP with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.jaJP, options)).toBe(
         normalizeDateTime(expected),
@@ -279,7 +279,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.koKR].start} | ${rangeByLocale[MustTestLocales.koKR].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"24. 2. 3. 오후 2:30~4:46"}
     ${rangeByLocale[MustTestLocales.koKR].start} | ${rangeByLocale[MustTestLocales.koKR].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"오후 2:30~4:46 GMT+9"}
   `(
-    "formats valid zoned datetime range for ko-KR",
+    "formats valid zoned datetime range for ko-KR with $options",
     ({ from, to, options, expected }) => {
       expectDateTimeEqual(
         formatZonedRange(from, to, MustTestLocales.koKR, options),
@@ -295,7 +295,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.arSA].start} | ${rangeByLocale[MustTestLocales.arSA].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"٣/٢/٢٠٢٤، ٢:٣٠–٤:٤٦ م"}
     ${rangeByLocale[MustTestLocales.arSA].start} | ${rangeByLocale[MustTestLocales.arSA].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"٢:٣٠–٤:٤٦ م غرينتش+٣"}
   `(
-    "formats valid zoned datetime range for ar-SA",
+    "formats valid zoned datetime range for ar-SA with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.arSA, options)).toBe(
         normalizeDateTime(expected),
@@ -310,7 +310,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.heIL].start} | ${rangeByLocale[MustTestLocales.heIL].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"3.2.2024, 14:30–16:46"}
     ${rangeByLocale[MustTestLocales.heIL].start} | ${rangeByLocale[MustTestLocales.heIL].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14:30–16:46 GMT\u200E+2\u200E"}
   `(
-    "formats valid zoned datetime range for he-IL",
+    "formats valid zoned datetime range for he-IL with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.heIL, options)).toBe(
         normalizeDateTime(expected),
@@ -325,7 +325,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.ruRU].start} | ${rangeByLocale[MustTestLocales.ruRU].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"03.02.2024, 14:30–16:46"}
     ${rangeByLocale[MustTestLocales.ruRU].start} | ${rangeByLocale[MustTestLocales.ruRU].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14:30–16:46 GMT+3"}
   `(
-    "formats valid zoned datetime range for ru-RU",
+    "formats valid zoned datetime range for ru-RU with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.ruRU, options)).toBe(
         normalizeDateTime(expected),
@@ -340,7 +340,7 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.trTR].start} | ${rangeByLocale[MustTestLocales.trTR].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"3.02.2024 14:30–16:46"}
     ${rangeByLocale[MustTestLocales.trTR].start} | ${rangeByLocale[MustTestLocales.trTR].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"14:30–16:46 GMT+3"}
   `(
-    "formats valid zoned datetime range for tr-TR",
+    "formats valid zoned datetime range for tr-TR with $options",
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, MustTestLocales.trTR, options)).toBe(
         normalizeDateTime(expected),
@@ -378,7 +378,7 @@ describe("formatZonedRange", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"03/02/2024, 14:30 – 16:46"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatZonedRange(
         "2024-02-03T14:30:45+01:00[Europe/Paris]",

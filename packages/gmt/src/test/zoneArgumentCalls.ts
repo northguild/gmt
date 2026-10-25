@@ -747,6 +747,14 @@ export function zoneLabel(zone: unknown): string {
   return typeof zone === "string" ? zone : `(${String(zone)})`;
 }
 
+/** The zone written as a JavaScript literal for a test title: `'UTC'`, `''`, `null`, `['UTC']`. */
+export function zoneLiteral(zone: unknown): string {
+  if (typeof zone === "string") return `'${zone}'`;
+  if (Array.isArray(zone)) return `[${zone.map(zoneLiteral).join(", ")}]`;
+  if (typeof zone === "object" && zone !== null) return "{}";
+  return String(zone);
+}
+
 /** A result as JSON stores it, so a recorded value and a live one compare alike. */
 export function asRecorded(result: unknown): unknown {
   return JSON.parse(JSON.stringify(result ?? null)) as unknown;

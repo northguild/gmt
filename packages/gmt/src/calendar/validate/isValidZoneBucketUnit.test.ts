@@ -30,7 +30,7 @@ describe("isValidZoneBucketUnit", () => {
     ${"invalid"} | ${"not a unit at all"}
     ${""}        | ${"empty string"}
   `(
-    "returns false for invalid zone bucket unit: $invalidUnit ($reason)",
+    "returns false for invalid zone bucket unit: '$invalidUnit' ($reason)",
     ({ invalidUnit }) => {
       expect(isValidZoneBucketUnit(invalidUnit)).toBe(false);
     },

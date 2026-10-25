@@ -168,21 +168,21 @@ describe("endOfDateTime for an input inside the unit's final second", () => {
   // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
   // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
   it.each`
-    unit      | weekStartsOn
-    ${"week"} | ${"tuesday"}
-    ${"week"} | ${"Monday"}
-    ${"week"} | ${""}
-    ${"week"} | ${null}
-    ${"week"} | ${1}
-    ${"week"} | ${true}
-    ${"day"}  | ${"tuesday"}
-    ${"day"}  | ${"Monday"}
-    ${"day"}  | ${""}
-    ${"day"}  | ${null}
-    ${"day"}  | ${1}
-    ${"day"}  | ${true}
+    unit      | weekStartsOn | label
+    ${"week"} | ${"tuesday"} | ${"'tuesday'"}
+    ${"week"} | ${"Monday"}  | ${"'Monday'"}
+    ${"week"} | ${""}        | ${"''"}
+    ${"week"} | ${null}      | ${"null"}
+    ${"week"} | ${1}         | ${"1"}
+    ${"week"} | ${true}      | ${"true"}
+    ${"day"}  | ${"tuesday"} | ${"'tuesday'"}
+    ${"day"}  | ${"Monday"}  | ${"'Monday'"}
+    ${"day"}  | ${""}        | ${"''"}
+    ${"day"}  | ${null}      | ${"null"}
+    ${"day"}  | ${1}         | ${"1"}
+    ${"day"}  | ${true}      | ${"true"}
   `(
-    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    "returns an empty string for unit $unit with invalid weekStartsOn $label",
     ({ unit, weekStartsOn }) => {
       expect(endOfDateTime("2024-02-29T13:45:30", unit, { weekStartsOn })).toBe(
         "",

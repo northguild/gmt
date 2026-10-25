@@ -52,7 +52,7 @@ describe("readExactMoment", () => {
     ${"2024-06-15 10:00:00Z"}                        | ${"a space separator"}
     ${"-271821-04-19T23:59:59.999999999Z"}           | ${"one nanosecond before the instant range"}
     ${""}                                            | ${"empty"}
-  `("returns null for $value ($why)", ({ value }) => {
+  `("returns null for '$value' ($why)", ({ value }) => {
     expect(readExactMoment(value)).toBeNull();
   });
 

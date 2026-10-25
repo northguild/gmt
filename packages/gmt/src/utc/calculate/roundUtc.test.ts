@@ -122,30 +122,27 @@ describe("roundUtc", () => {
   );
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-06-15T12:34:56"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns empty string for invalid value $invalidValue",
-    ({ invalidValue }) => {
-      expect(
-        roundUtc(invalidValue as never, { smallestUnit: "hour" as never }),
-      ).toBe("");
-    },
-  );
+    invalidValue             | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-06-15T12:34:56"} | ${"'2024-06-15T12:34:56'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+  `("returns empty string for invalid value $label", ({ invalidValue }) => {
+    expect(
+      roundUtc(invalidValue as never, { smallestUnit: "hour" as never }),
+    ).toBe("");
+  });
 
   it.each`
-    invalidUnit
-    ${"invalid-unit"}
-    ${"hourss"}
-    ${"Hours"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit       | label
+    ${"invalid-unit"} | ${"'invalid-unit'"}
+    ${"hourss"}       | ${"'hourss'"}
+    ${"Hours"}        | ${"'Hours'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
+  `("returns empty string for invalid unit $label", ({ invalidUnit }) => {
     expect(
       roundUtc("2024-06-15T12:34:56Z", { smallestUnit: invalidUnit as never }),
     ).toBe("");
@@ -179,9 +176,12 @@ describe("roundUtc", () => {
   it.each`
     value                     | unit        | expected
     ${"2024-12-31T23:59:60Z"} | ${"second"} | ${""}
-  `("returns $expected for leap second $value", ({ value, unit, expected }) => {
-    expect(roundUtc(value, { smallestUnit: unit as never })).toBe(expected);
-  });
+  `(
+    "returns '$expected' for leap second $value",
+    ({ value, unit, expected }) => {
+      expect(roundUtc(value, { smallestUnit: unit as never })).toBe(expected);
+    },
+  );
 
   it("returns empty string when Temporal.Instant.from throws", () => {
     mockTemporalInstantFromThrow();

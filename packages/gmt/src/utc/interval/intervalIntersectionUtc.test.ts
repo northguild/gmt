@@ -30,7 +30,7 @@ describe("intervalIntersectionUtc", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-07-01T00:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${null}
     ${"2024-07-01T00:00:00Z"} | ${"2024-12-31T23:59:59Z"} | ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${null}
   `(
-    "returns $expected for disjoint intervals",
+    "returns $expected for disjoint intervals $aStart to $aEnd and $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionUtc(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -43,7 +43,7 @@ describe("intervalIntersectionUtc", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${null}
     ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${null}
   `(
-    "returns $expected for adjacent intervals",
+    "returns $expected for adjacent intervals $aStart to $aEnd and $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionUtc(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,
@@ -75,7 +75,7 @@ describe("intervalIntersectionUtc", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-04-01T00:00:00Z"} | ${"invalid"}
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-04-01T00:00:00Z"} | ${""}
   `(
-    "returns null for malformed UTC: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for malformed UTC: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalIntersectionUtc(aStart, aEnd, bStart, bEnd)).toBeNull();
     },

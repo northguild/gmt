@@ -45,7 +45,7 @@ describe("toProtoDuration", () => {
     ${"P1DT1M1W"}         | ${"out-of-order designators"}
     ${"invalid"}          | ${"not a duration"}
     ${""}                 | ${"empty"}
-  `("returns null for $iso ($reason)", ({ iso }) => {
+  `("returns null for '$iso' ($reason)", ({ iso }) => {
     expect(toProtoDuration(iso)).toBeNull();
   });
 

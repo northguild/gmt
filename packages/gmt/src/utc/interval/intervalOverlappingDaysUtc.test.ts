@@ -73,7 +73,7 @@ describe("intervalOverlappingDaysUtc", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-04-01T00:00:00Z"} | ${"invalid"}
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-04-01T00:00:00Z"} | ${""}
   `(
-    "returns null for malformed UTC: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for malformed UTC: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalOverlappingDaysUtc(aStart, aEnd, bStart, bEnd)).toBeNull();
     },

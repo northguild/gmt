@@ -260,50 +260,50 @@ describe("formatEpcisEvent", () => {
   // `eventTimeZoneOffset` has a grammar of its own, narrower than the offsets a pair can hold:
   // minutes only, and no further than 14:00. `fromOffsetInstant` accepts several of these.
   it.each`
-    offset         | reads
-    ${"+14:01"}    | ${"one minute past the range GS1 allows"}
-    ${"-14:01"}    | ${"one minute past the range, west"}
-    ${"+14:30"}    | ${"past 14:00"}
-    ${"-14:30"}    | ${"past 14:00, west"}
-    ${"+15:00"}    | ${"hour 15"}
-    ${"-15:00"}    | ${"hour 15, west"}
-    ${"+23:59"}    | ${"the largest offset utcOffset accepts"}
-    ${"+05:30:00"} | ${"seconds, though they are zero"}
-    ${"-00:44:30"} | ${"a sub-minute offset: Africa/Monrovia before 1972"}
-    ${"Z"}         | ${"Z is eventTime's designator, not an offset"}
-    ${"+0200"}     | ${"no colon"}
-    ${"+02"}       | ${"hours only"}
-    ${"02:00"}     | ${"no sign"}
-    ${"+02:00 "}   | ${"trailing whitespace"}
-    ${"UTC"}       | ${"a zone name"}
-    ${""}          | ${"an empty string"}
-    ${undefined}   | ${"missing"}
-    ${null}        | ${"null"}
-    ${-300}        | ${"a number of minutes"}
-    ${["-05:00"]}  | ${"an array holding the offset: nothing is coerced to a string"}
-  `("returns null when offset is $offset ($reads)", ({ offset }) => {
+    offset         | reads                                                            | label
+    ${"+14:01"}    | ${"one minute past the range GS1 allows"}                        | ${"'+14:01'"}
+    ${"-14:01"}    | ${"one minute past the range, west"}                             | ${"'-14:01'"}
+    ${"+14:30"}    | ${"past 14:00"}                                                  | ${"'+14:30'"}
+    ${"-14:30"}    | ${"past 14:00, west"}                                            | ${"'-14:30'"}
+    ${"+15:00"}    | ${"hour 15"}                                                     | ${"'+15:00'"}
+    ${"-15:00"}    | ${"hour 15, west"}                                               | ${"'-15:00'"}
+    ${"+23:59"}    | ${"the largest offset utcOffset accepts"}                        | ${"'+23:59'"}
+    ${"+05:30:00"} | ${"seconds, though they are zero"}                               | ${"'+05:30:00'"}
+    ${"-00:44:30"} | ${"a sub-minute offset: Africa/Monrovia before 1972"}            | ${"'-00:44:30'"}
+    ${"Z"}         | ${"Z is eventTime's designator, not an offset"}                  | ${"'Z'"}
+    ${"+0200"}     | ${"no colon"}                                                    | ${"'+0200'"}
+    ${"+02"}       | ${"hours only"}                                                  | ${"'+02'"}
+    ${"02:00"}     | ${"no sign"}                                                     | ${"'02:00'"}
+    ${"+02:00 "}   | ${"trailing whitespace"}                                         | ${"'+02:00 '"}
+    ${"UTC"}       | ${"a zone name"}                                                 | ${"'UTC'"}
+    ${""}          | ${"an empty string"}                                             | ${"''"}
+    ${undefined}   | ${"missing"}                                                     | ${"undefined"}
+    ${null}        | ${"null"}                                                        | ${"null"}
+    ${-300}        | ${"a number of minutes"}                                         | ${"-300"}
+    ${["-05:00"]}  | ${"an array holding the offset: nothing is coerced to a string"} | ${"['-05:00']"}
+  `("returns null when offset is $label ($reads)", ({ offset }) => {
     expect(formatEpcisEvent({ instant, offset: offset as never })).toBeNull();
   });
 
   // `instant` is any string `isValidInstant` accepts, and nothing else.
   it.each`
-    value                                         | reads
-    ${"2024-06-15T14:30:00"}                      | ${"no Z and no offset: not an instant"}
-    ${"2024-06-15"}                               | ${"a date"}
-    ${"2024-06-15 14:30:00Z"}                     | ${"a space separator"}
-    ${"2024-06-15T14:30:00z"}                     | ${"lower-case z"}
-    ${"20240615T143000Z"}                         | ${"basic format"}
-    ${"2016-12-31T23:59:60Z"}                     | ${"a leap second, which Temporal does not represent"}
-    ${"2024-02-30T14:30:00Z"}                     | ${"a day that does not exist"}
-    ${"2024-06-15T14:30:00.1234567891Z"}          | ${"a fraction finer than a nanosecond"}
-    ${"2024-06-15T14:30:00Z[!foo=bar]"}           | ${"a critical unknown annotation"}
-    ${"not an instant"}                           | ${"garbage"}
-    ${""}                                         | ${"an empty string"}
-    ${undefined}                                  | ${"missing"}
-    ${null}                                       | ${"null"}
-    ${1718461800000}                              | ${"epoch milliseconds"}
-    ${{ toString: () => "2024-06-15T14:30:00Z" }} | ${"an object that stringifies to an instant: nothing is coerced"}
-  `("returns null when instant is $value ($reads)", ({ value }) => {
+    value                                         | reads                                                             | label
+    ${"2024-06-15T14:30:00"}                      | ${"no Z and no offset: not an instant"}                           | ${"'2024-06-15T14:30:00'"}
+    ${"2024-06-15"}                               | ${"a date"}                                                       | ${"'2024-06-15'"}
+    ${"2024-06-15 14:30:00Z"}                     | ${"a space separator"}                                            | ${"'2024-06-15 14:30:00Z'"}
+    ${"2024-06-15T14:30:00z"}                     | ${"lower-case z"}                                                 | ${"'2024-06-15T14:30:00z'"}
+    ${"20240615T143000Z"}                         | ${"basic format"}                                                 | ${"'20240615T143000Z'"}
+    ${"2016-12-31T23:59:60Z"}                     | ${"a leap second, which Temporal does not represent"}             | ${"'2016-12-31T23:59:60Z'"}
+    ${"2024-02-30T14:30:00Z"}                     | ${"a day that does not exist"}                                    | ${"'2024-02-30T14:30:00Z'"}
+    ${"2024-06-15T14:30:00.1234567891Z"}          | ${"a fraction finer than a nanosecond"}                           | ${"'2024-06-15T14:30:00.1234567891Z'"}
+    ${"2024-06-15T14:30:00Z[!foo=bar]"}           | ${"a critical unknown annotation"}                                | ${"'2024-06-15T14:30:00Z[!foo=bar]'"}
+    ${"not an instant"}                           | ${"garbage"}                                                      | ${"'not an instant'"}
+    ${""}                                         | ${"an empty string"}                                              | ${"''"}
+    ${undefined}                                  | ${"missing"}                                                      | ${"undefined"}
+    ${null}                                       | ${"null"}                                                         | ${"null"}
+    ${1718461800000}                              | ${"epoch milliseconds"}                                           | ${"1718461800000"}
+    ${{ toString: () => "2024-06-15T14:30:00Z" }} | ${"an object that stringifies to an instant: nothing is coerced"} | ${"{ toString: () => '2024-06-15T14:30:00Z' }"}
+  `("returns null when instant is $label ($reads)", ({ value }) => {
     expect(formatEpcisEvent({ instant: value as never, offset })).toBeNull();
   });
 

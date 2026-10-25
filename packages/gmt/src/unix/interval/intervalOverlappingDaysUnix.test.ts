@@ -139,24 +139,24 @@ describe("intervalOverlappingDaysUnix", () => {
   );
 
   it.each`
-    aStart        | aEnd          | bStart     | bEnd
-    ${NaN}        | ${1700000000} | ${1000000} | ${2000000}
-    ${Infinity}   | ${1700000000} | ${1000000} | ${2000000}
-    ${-Infinity}  | ${1700000000} | ${1000000} | ${2000000}
-    ${1.5}        | ${1700000000} | ${1000000} | ${2000000}
-    ${1700000000} | ${NaN}        | ${1000000} | ${2000000}
-    ${1700000000} | ${Infinity}   | ${1000000} | ${2000000}
-    ${1700000000} | ${1700000000} | ${NaN}     | ${2000000}
-    ${1700000000} | ${1700000000} | ${1000000} | ${NaN}
-    ${""}         | ${1700000000} | ${1000000} | ${2000000}
-    ${"0"}        | ${"1.5"}      | ${1000000} | ${2000000}
-    ${0}          | ${2 ** 53}    | ${1000000} | ${2000000}
-    ${"   "}      | ${1700000000} | ${1000000} | ${2000000}
-    ${0}          | ${1700000000} | ${1.5}     | ${2000000}
-    ${0}          | ${1700000000} | ${""}      | ${2000000}
-    ${0}          | ${1700000000} | ${1000000} | ${2 ** 53}
+    aStart        | aEnd          | bStart     | bEnd       | label
+    ${NaN}        | ${1700000000} | ${1000000} | ${2000000} | ${"[NaN, 1700000000) and [1000000, 2000000)"}
+    ${Infinity}   | ${1700000000} | ${1000000} | ${2000000} | ${"[Infinity, 1700000000) and [1000000, 2000000)"}
+    ${-Infinity}  | ${1700000000} | ${1000000} | ${2000000} | ${"[-Infinity, 1700000000) and [1000000, 2000000)"}
+    ${1.5}        | ${1700000000} | ${1000000} | ${2000000} | ${"[1.5, 1700000000) and [1000000, 2000000)"}
+    ${1700000000} | ${NaN}        | ${1000000} | ${2000000} | ${"[1700000000, NaN) and [1000000, 2000000)"}
+    ${1700000000} | ${Infinity}   | ${1000000} | ${2000000} | ${"[1700000000, Infinity) and [1000000, 2000000)"}
+    ${1700000000} | ${1700000000} | ${NaN}     | ${2000000} | ${"[1700000000, 1700000000) and [NaN, 2000000)"}
+    ${1700000000} | ${1700000000} | ${1000000} | ${NaN}     | ${"[1700000000, 1700000000) and [1000000, NaN)"}
+    ${""}         | ${1700000000} | ${1000000} | ${2000000} | ${"['', 1700000000) and [1000000, 2000000)"}
+    ${"0"}        | ${"1.5"}      | ${1000000} | ${2000000} | ${"['0', '1.5') and [1000000, 2000000)"}
+    ${0}          | ${2 ** 53}    | ${1000000} | ${2000000} | ${"[0, 2 ** 53) and [1000000, 2000000)"}
+    ${"   "}      | ${1700000000} | ${1000000} | ${2000000} | ${"['   ', 1700000000) and [1000000, 2000000)"}
+    ${0}          | ${1700000000} | ${1.5}     | ${2000000} | ${"[0, 1700000000) and [1.5, 2000000)"}
+    ${0}          | ${1700000000} | ${""}      | ${2000000} | ${"[0, 1700000000) and ['', 2000000)"}
+    ${0}          | ${1700000000} | ${1000000} | ${2 ** 53} | ${"[0, 1700000000) and [1000000, 2 ** 53)"}
   `(
-    "returns null for non-finite/non-integer: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for non-finite or non-integer $label",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(
         intervalOverlappingDaysUnix(aStart, aEnd, bStart, bEnd, {
@@ -183,17 +183,20 @@ describe("intervalOverlappingDaysUnix", () => {
     ${1700000000} | ${1700000000} | ${1000000}   | ${null}
     ${1700000000} | ${1700000000} | ${1000000}   | ${undefined}
     ${1700000000} | ${1700000000} | ${1000000}   | ${"abc"}
-  `("returns null for non-numeric input", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(
-      intervalOverlappingDaysUnix(
-        aStart as never,
-        aEnd as never,
-        bStart as never,
-        bEnd as never,
-        { timeZone: "UTC" },
-      ),
-    ).toBeNull();
-  });
+  `(
+    "returns null for non-numeric input [$aStart, $aEnd) and [$bStart, $bEnd)",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(
+        intervalOverlappingDaysUnix(
+          aStart as never,
+          aEnd as never,
+          bStart as never,
+          bEnd as never,
+          { timeZone: "UTC" },
+        ),
+      ).toBeNull();
+    },
+  );
 
   it("accepts string epoch inputs", () => {
     expect(
@@ -229,13 +232,13 @@ describe("intervalOverlappingDaysUnix with an unrecognised epochUnit", () => {
   // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
-    epochUnit
-    ${"nanoseconds"}
-    ${"SECONDS"}
-    ${"ms"}
-    ${""}
-    ${1000}
-  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    epochUnit        | label
+    ${"nanoseconds"} | ${"'nanoseconds'"}
+    ${"SECONDS"}     | ${"'SECONDS'"}
+    ${"ms"}          | ${"'ms'"}
+    ${""}            | ${"''"}
+    ${1000}          | ${"1000"}
+  `("returns null for epochUnit $label", ({ epochUnit }) => {
     expect(
       intervalOverlappingDaysUnix(
         1_706_659_200,

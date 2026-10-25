@@ -35,7 +35,7 @@ describe("utcOffset", () => {
     ${"-04:00 "}                   | ${"trailing whitespace"}
     ${"2024-03-10T12:00:00-04:00"} | ${"a whole datetime string"}
     ${""}                          | ${"empty string"}
-  `("rejects $value ($description)", ({ value }) => {
+  `("rejects '$value' ($description)", ({ value }) => {
     expect(utcOffset.test(value)).toBe(false);
   });
 });

@@ -28,17 +28,14 @@ describe("mapDaysInMonth", () => {
   );
 
   it.each`
-    invalidMonth
-    ${"2024-13"}
-    ${"not-a-month"}
-    ${"2024-03-01"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns an empty array for invalid month $invalidMonth",
-    ({ invalidMonth }) => {
-      expect(mapDaysInMonth(invalidMonth as never)).toEqual([]);
-    },
-  );
+    invalidMonth     | label
+    ${"2024-13"}     | ${"'2024-13'"}
+    ${"not-a-month"} | ${"'not-a-month'"}
+    ${"2024-03-01"}  | ${"'2024-03-01'"}
+    ${""}            | ${"''"}
+    ${null}          | ${"null"}
+    ${undefined}     | ${"undefined"}
+  `("returns an empty array for invalid month $label", ({ invalidMonth }) => {
+    expect(mapDaysInMonth(invalidMonth as never)).toEqual([]);
+  });
 });

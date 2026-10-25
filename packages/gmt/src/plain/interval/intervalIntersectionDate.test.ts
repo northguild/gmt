@@ -40,7 +40,7 @@ describe("intervalIntersectionDate", () => {
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-07-01"} | ${"2024-12-31"} | ${null}
     ${"2024-07-01"} | ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-30"} | ${null}
   `(
-    "returns $expected for disjoint intervals",
+    "returns $expected for disjoint intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionDate(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -53,7 +53,7 @@ describe("intervalIntersectionDate", () => {
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-06-30"} | ${null}
     ${"2024-06-30"} | ${"2024-06-30"} | ${"2024-01-01"} | ${"2024-06-30"} | ${null}
   `(
-    "returns $expected for adjacent intervals",
+    "returns $expected for adjacent intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionDate(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,
@@ -66,7 +66,7 @@ describe("intervalIntersectionDate", () => {
     ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-04-01"} | ${"2024-12-31"} | ${null}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-06-15"} | ${"2024-06-10"} | ${null}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionDate(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -87,7 +87,7 @@ describe("intervalIntersectionDate", () => {
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${""}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${"2024-13-01"}
   `(
-    "returns null for malformed date: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for malformed date: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalIntersectionDate(aStart, aEnd, bStart, bEnd)).toBeNull();
     },

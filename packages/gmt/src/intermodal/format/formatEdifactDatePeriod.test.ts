@@ -53,7 +53,7 @@ describe("formatEdifactDatePeriod", () => {
       ${"20240615"}              | ${"20240620"}         | ${"basic format: the input is extended ISO 8601"}
       ${"2024-06-15"}            | ${""}                 | ${"an empty end"}
       ${""}                      | ${"2024-06-20"}       | ${"an empty start"}
-    `("returns '' for $start to $end ($reads)", ({ start, end }) => {
+    `("returns '' for '$start' to '$end' ($reads)", ({ start, end }) => {
       expect(formatEdifactDatePeriod(start, end, "718")).toBe("");
     });
   });

@@ -316,20 +316,20 @@ describe("formatRelativeZoned", () => {
     // returns the sentinel (Core Rule 3), including the name of another Math function, an
     // inherited Object.prototype key, another letter case and null.
     it.each`
-      roundingMethod
-      ${"nonsense"}
-      ${"abs"}
-      ${"trunc"}
-      ${"sign"}
-      ${"random"}
-      ${"constructor"}
-      ${"hasOwnProperty"}
-      ${"toString"}
-      ${"ROUND"}
-      ${""}
-      ${null}
+      roundingMethod      | label
+      ${"nonsense"}       | ${"'nonsense'"}
+      ${"abs"}            | ${"'abs'"}
+      ${"trunc"}          | ${"'trunc'"}
+      ${"sign"}           | ${"'sign'"}
+      ${"random"}         | ${"'random'"}
+      ${"constructor"}    | ${"'constructor'"}
+      ${"hasOwnProperty"} | ${"'hasOwnProperty'"}
+      ${"toString"}       | ${"'toString'"}
+      ${"ROUND"}          | ${"'ROUND'"}
+      ${""}               | ${"''"}
+      ${null}             | ${"null"}
     `(
-      "returns '' for the invalid roundingMethod $roundingMethod",
+      "returns '' for the invalid roundingMethod $label",
       ({ roundingMethod }) => {
         expect(
           formatRelativeZoned(
@@ -435,17 +435,17 @@ describe("formatRelativeZoned", () => {
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {
     it.each`
-      value
-      ${""}
-      ${"not-a-datetime"}
-      ${"2024-02-29T00:00:00Z"}
-      ${"2024-02-29T00:00:00"}
-      ${"2024-02-29"}
-      ${null}
-      ${undefined}
-      ${42}
-      ${true}
-    `("returns '' for invalid value $value", ({ value }) => {
+      value                     | label
+      ${""}                     | ${"''"}
+      ${"not-a-datetime"}       | ${"'not-a-datetime'"}
+      ${"2024-02-29T00:00:00Z"} | ${"'2024-02-29T00:00:00Z'"}
+      ${"2024-02-29T00:00:00"}  | ${"'2024-02-29T00:00:00'"}
+      ${"2024-02-29"}           | ${"'2024-02-29'"}
+      ${null}                   | ${"null"}
+      ${undefined}              | ${"undefined"}
+      ${42}                     | ${"42"}
+      ${true}                   | ${"true"}
+    `("returns '' for invalid value $label", ({ value }) => {
       expect(formatRelativeZoned(value as never, MustTestLocales.enUS)).toBe(
         "",
       );
@@ -583,7 +583,7 @@ describe("formatRelativeZoned months in the first month of the range", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"il y a 30 minutes"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatRelativeZoned("2024-02-28T23:30:00+00:00[UTC]", locale, {
         reference: "2024-02-29T00:00:00+00:00[UTC]",
@@ -708,7 +708,7 @@ describe("formatRelativeZoned largestUnit", () => {
     ${"auto"}                      | ${"auto"}                    | ${"not a unit of the function"}
     ${"DAY"}                       | ${"DAY"}                     | ${"unit names are lower case"}
     ${"Days"}                      | ${"Days"}                    | ${"unit names are lower case"}
-    ${""}                          | ${""}                        | ${"an empty string"}
+    ${"''"}                        | ${""}                        | ${"an empty string"}
     ${"x"}                         | ${"x"}                       | ${"not a unit"}
     ${"null"}                      | ${null}                      | ${"null is a value, not an omission"}
     ${"1"}                         | ${1}                         | ${"a number"}

@@ -405,20 +405,20 @@ describe("formatRelativeUnix", () => {
     // returns the sentinel (Core Rule 3), including the name of another Math function, an
     // inherited Object.prototype key, another letter case and null.
     it.each`
-      roundingMethod
-      ${"nonsense"}
-      ${"abs"}
-      ${"trunc"}
-      ${"sign"}
-      ${"random"}
-      ${"constructor"}
-      ${"hasOwnProperty"}
-      ${"toString"}
-      ${"ROUND"}
-      ${""}
-      ${null}
+      roundingMethod      | roundingMethodLabel
+      ${"nonsense"}       | ${"'nonsense'"}
+      ${"abs"}            | ${"'abs'"}
+      ${"trunc"}          | ${"'trunc'"}
+      ${"sign"}           | ${"'sign'"}
+      ${"random"}         | ${"'random'"}
+      ${"constructor"}    | ${"'constructor'"}
+      ${"hasOwnProperty"} | ${"'hasOwnProperty'"}
+      ${"toString"}       | ${"'toString'"}
+      ${"ROUND"}          | ${"'ROUND'"}
+      ${""}               | ${"''"}
+      ${null}             | ${"null"}
     `(
-      "returns '' for the invalid roundingMethod $roundingMethod",
+      "returns '' for the invalid roundingMethod $roundingMethodLabel",
       ({ roundingMethod }) => {
         expect(
           formatRelativeUnix(REF_MS - 8280000, MustTestLocales.enUS, {
@@ -482,11 +482,11 @@ describe("formatRelativeUnix", () => {
 
     // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
     it.each`
-      timeZone
-      ${"Invalid/Zone"}
-      ${""}
-      ${null}
-    `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
+      timeZone          | timeZoneLabel
+      ${"Invalid/Zone"} | ${"'Invalid/Zone'"}
+      ${""}             | ${"''"}
+      ${null}           | ${"null"}
+    `("returns '' for invalid timeZone $timeZoneLabel", ({ timeZone }) => {
       expect(
         formatRelativeUnix(value, MustTestLocales.enUS, {
           reference: REF_MS,
@@ -615,14 +615,14 @@ describe("formatRelativeUnix months and years in the last month of the range", (
   // the reference, 0.9932795698924731 months; in a zone ahead of UTC that month's end wall clock is
   // past +275760-09-13T00:00 but in range. Floor gives 0 ("this month"), ceil 1 ("next month").
   it.each`
-    timeZone                | largestUnit | roundingMethod | expected
-    ${"Australia/Sydney"}   | ${"month"}  | ${"floor"}     | ${"this month"}
-    ${"Australia/Sydney"}   | ${"month"}  | ${"ceil"}      | ${"next month"}
-    ${"Pacific/Kiritimati"} | ${"month"}  | ${"floor"}     | ${"this month"}
-    ${"UTC"}                | ${"month"}  | ${"floor"}     | ${"this month"}
-    ${"Australia/Sydney"}   | ${"year"}   | ${"floor"}     | ${""}
+    timeZone                | largestUnit | roundingMethod | expected        | expectedLabel
+    ${"Australia/Sydney"}   | ${"month"}  | ${"floor"}     | ${"this month"} | ${"'this month'"}
+    ${"Australia/Sydney"}   | ${"month"}  | ${"ceil"}      | ${"next month"} | ${"'next month'"}
+    ${"Pacific/Kiritimati"} | ${"month"}  | ${"floor"}     | ${"this month"} | ${"'this month'"}
+    ${"UTC"}                | ${"month"}  | ${"floor"}     | ${"this month"} | ${"'this month'"}
+    ${"Australia/Sydney"}   | ${"year"}   | ${"floor"}     | ${""}           | ${"''"}
   `(
-    "formats max - 5h against max - 31d in $timeZone by $largestUnit with $roundingMethod as $expected",
+    "formats max - 5h against max - 31d in $timeZone by $largestUnit with $roundingMethod as $expectedLabel",
     ({ timeZone, largestUnit, roundingMethod, expected }) => {
       // A year total's window ends past the maximum, so Temporal throws and the result is "".
       expect(
@@ -672,13 +672,13 @@ describe("formatRelativeUnix with an unrecognised epochUnit", () => {
   // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
-    epochUnit
-    ${"nanoseconds"}
-    ${"SECONDS"}
-    ${"ms"}
-    ${""}
-    ${1000}
-  `('returns "" for epochUnit $epochUnit', ({ epochUnit }) => {
+    epochUnit        | epochUnitLabel
+    ${"nanoseconds"} | ${"'nanoseconds'"}
+    ${"SECONDS"}     | ${"'SECONDS'"}
+    ${"ms"}          | ${"'ms'"}
+    ${""}            | ${"''"}
+    ${1000}          | ${"1000"}
+  `('returns "" for epochUnit $epochUnitLabel', ({ epochUnit }) => {
     expect(
       formatRelativeUnix(1_706_659_200, "en-US", {
         epochUnit: epochUnit as never,
@@ -720,16 +720,19 @@ describe("formatRelativeUnix auto-picks week, month and year", () => {
 // Intl with the same list (Chromium 153).
 describe("formatRelativeUnix with a locale list", () => {
   it.each`
-    locale                                          | expected
-    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"il y a 30 minutes"}
-    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
-    expect(
-      formatRelativeUnix(REF_MS - 1_800_000, locale as string[], {
-        reference: REF_MS,
-      }),
-    ).toBe(expected);
-  });
+    locale                                          | expected               | expectedLabel
+    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"il y a 30 minutes"} | ${"'il y a 30 minutes'"}
+    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}                  | ${"''"}
+  `(
+    "returns $expectedLabel for locale list $locale",
+    ({ locale, expected }) => {
+      expect(
+        formatRelativeUnix(REF_MS - 1_800_000, locale as string[], {
+          reference: REF_MS,
+        }),
+      ).toBe(expected);
+    },
+  );
 });
 
 // The allowed units of `largestUnit` are the ones the option's type lists: "year", "month", "week", "day", "hour", "minute", "second", each
@@ -795,23 +798,23 @@ describe("formatRelativeUnix largestUnit", () => {
   );
 
   it.each`
-    label                          | largestUnit                  | why
-    ${"quarter"}                   | ${"quarter"}                 | ${"not a unit of the function"}
-    ${"quarters"}                  | ${"quarters"}                | ${"not a unit of the function"}
-    ${"millisecond"}               | ${"millisecond"}             | ${"not a unit of the function"}
-    ${"nanoseconds"}               | ${"nanoseconds"}             | ${"not a unit of the function"}
-    ${"auto"}                      | ${"auto"}                    | ${"not a unit of the function"}
-    ${"DAY"}                       | ${"DAY"}                     | ${"unit names are lower case"}
-    ${"Days"}                      | ${"Days"}                    | ${"unit names are lower case"}
-    ${""}                          | ${""}                        | ${"an empty string"}
-    ${"x"}                         | ${"x"}                       | ${"not a unit"}
-    ${"null"}                      | ${null}                      | ${"null is a value, not an omission"}
-    ${"1"}                         | ${1}                         | ${"a number"}
-    ${"true"}                      | ${true}                      | ${"a boolean"}
-    ${'["day"]'}                   | ${["day"]}                   | ${"an array, not a string"}
-    ${'{ toString: () => "day" }'} | ${{ toString: () => "day" }} | ${"an object, not a string"}
+    label                          | largestUnit                  | why                                   | largestUnitLabel
+    ${"quarter"}                   | ${"quarter"}                 | ${"not a unit of the function"}       | ${"'quarter'"}
+    ${"quarters"}                  | ${"quarters"}                | ${"not a unit of the function"}       | ${"'quarters'"}
+    ${"millisecond"}               | ${"millisecond"}             | ${"not a unit of the function"}       | ${"'millisecond'"}
+    ${"nanoseconds"}               | ${"nanoseconds"}             | ${"not a unit of the function"}       | ${"'nanoseconds'"}
+    ${"auto"}                      | ${"auto"}                    | ${"not a unit of the function"}       | ${"'auto'"}
+    ${"DAY"}                       | ${"DAY"}                     | ${"unit names are lower case"}        | ${"'DAY'"}
+    ${"Days"}                      | ${"Days"}                    | ${"unit names are lower case"}        | ${"'Days'"}
+    ${""}                          | ${""}                        | ${"an empty string"}                  | ${"''"}
+    ${"x"}                         | ${"x"}                       | ${"not a unit"}                       | ${"'x'"}
+    ${"null"}                      | ${null}                      | ${"null is a value, not an omission"} | ${"null"}
+    ${"1"}                         | ${1}                         | ${"a number"}                         | ${"1"}
+    ${"true"}                      | ${true}                      | ${"a boolean"}                        | ${"true"}
+    ${'["day"]'}                   | ${["day"]}                   | ${"an array, not a string"}           | ${'["day"]'}
+    ${'{ toString: () => "day" }'} | ${{ toString: () => "day" }} | ${"an object, not a string"}          | ${'{ toString: () => "day" }'}
   `(
-    'returns "" for largestUnit $label outside the listed units ($why)',
+    'returns "" for largestUnit $largestUnitLabel outside the listed units ($why)',
     ({ largestUnit }) => {
       expect(
         formatRelativeUnix(1679054400000, MustTestLocales.enUS, {

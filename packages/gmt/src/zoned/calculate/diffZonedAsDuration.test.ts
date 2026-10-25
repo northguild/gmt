@@ -35,7 +35,7 @@ describe("diffZonedAsDuration", () => {
     ${"2028-01-01T00:00:00+00:00[UTC]"} | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"} | ${"months"} | ${""}
     ${"2028-01-01T00:00:00+00:00[UTC]"} | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"} | ${"hours"}  | ${"PT24H"}
   `(
-    "returns $expected for $unit from $value1 to $value2 across time zones",
+    "returns '$expected' for $unit from $value1 to $value2 across time zones",
     ({ value1, value2, unit, expected }) => {
       expect(diffZonedAsDuration(value1, value2, unit)).toBe(expected);
     },
@@ -91,15 +91,15 @@ describe("diffZonedAsDuration", () => {
   });
 
   it.each`
-    value1                              | value2                              | unit
-    ${"invalid"}                        | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"days"}
-    ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"invalid"}                        | ${"days"}
-    ${""}                               | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"days"}
-    ${null}                             | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"days"}
-    ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"2024-03-02T00:00:00+00:00[UTC]"} | ${"invalid"}
-    ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"2024-03-02T00:00:00+00:00[UTC]"} | ${["days"]}
+    value1                              | value2                              | unit         | label
+    ${"invalid"}                        | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"days"}    | ${"'invalid'"}
+    ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"invalid"}                        | ${"days"}    | ${"'2024-03-01T00:00:00+00:00[UTC]'"}
+    ${""}                               | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"days"}    | ${"''"}
+    ${null}                             | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"days"}    | ${"null"}
+    ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"2024-03-02T00:00:00+00:00[UTC]"} | ${"invalid"} | ${"'2024-03-01T00:00:00+00:00[UTC]'"}
+    ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"2024-03-02T00:00:00+00:00[UTC]"} | ${["days"]}  | ${"'2024-03-01T00:00:00+00:00[UTC]'"}
   `(
-    'returns "" for invalid inputs: $value1 | $value2 | $unit',
+    "returns '' for invalid inputs: $label | $value2 | $unit",
     ({ value1, value2, unit }) => {
       expect(
         diffZonedAsDuration(value1 as never, value2 as never, unit as never),
@@ -212,7 +212,7 @@ describe("diffZonedAsDuration with RFC 9557 calendar-annotated values", () => {
     ${"mismatched tags"}        | ${Y.tishri1_5784NewYork} | ${ISLAMIC_END}           | ${""}
     ${"tagged start, bare end"} | ${Y.tishri1_5784NewYork} | ${Y.isoEnd}              | ${""}
   `(
-    "returns $expected for $label measured in months",
+    "returns '$expected' for $label measured in months",
     ({ start, end, expected }) => {
       expect(diffZonedAsDuration(start, end, "months")).toBe(expected);
     },
@@ -305,7 +305,7 @@ describe("diffZonedAsDuration at the minimum instant", () => {
     ${"-271821-04-22T05:00:00+00:00[+00:00]"} | ${"-271821-04-20T00:00:00+00:00[+00:00]"} | ${""}
     ${"-271821-04-27T05:00:00+00:00[UTC]"}    | ${"-271821-04-25T00:00:00+00:00[UTC]"}    | ${"-P2DT5H"}
   `(
-    "returns $expected rounding days to an hour from $value1 back to $value2",
+    "returns '$expected' rounding days to an hour from $value1 back to $value2",
     ({ value1, value2, expected }) => {
       expect(
         diffZonedAsDuration(value1, value2, "days", { smallestUnit: "hour" }),
@@ -325,7 +325,7 @@ describe("diffZonedAsDuration with a non-object options argument", () => {
     ${5}         | ${""}
     ${true}      | ${""}
     ${undefined} | ${"PT49H"}
-  `("returns $expected for options $options", ({ options, expected }) => {
+  `("returns '$expected' for options $options", ({ options, expected }) => {
     expect(
       diffZonedAsDuration(
         "2024-02-28T14:30:00+00:00[UTC]",

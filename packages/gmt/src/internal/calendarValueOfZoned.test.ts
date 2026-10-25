@@ -10,19 +10,19 @@ const islamicEnd =
 
 describe("calendarSystemOfZonedValue", () => {
   it.each`
-    value                                                                      | expected
-    ${"2024-10-03T14:30:45-04:00[America/New_York]"}                           | ${"iso8601"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=iso8601]"}             | ${"iso8601"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York][!u-ca=HEBREW]"}             | ${"hebrew"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=ethiopic-amete-alem]"} | ${"ethioaa"}
-    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"}              | ${"hebrew"}
-    ${"2019-04-30T12:00:00+09:00[Asia/Tokyo][u-ca=japanese]"}                  | ${"japanese"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=ethioaa]"}             | ${"ethioaa"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=islamic-tbla]"}        | ${"islamic-tbla"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew][u-ca=roc]"}    | ${"hebrew"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York][foo=bar][u-ca=japanese]"}   | ${"japanese"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York][foo=bar]"}                  | ${"iso8601"}
-  `("returns $expected for $value", ({ value, expected }) => {
+    value                                                                      | expected          | label
+    ${"2024-10-03T14:30:45-04:00[America/New_York]"}                           | ${"iso8601"}      | ${"no annotation"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=iso8601]"}             | ${"iso8601"}      | ${"[u-ca=iso8601]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][!u-ca=HEBREW]"}             | ${"hebrew"}       | ${"[!u-ca=HEBREW]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=ethiopic-amete-alem]"} | ${"ethioaa"}      | ${"[u-ca=ethiopic-amete-alem]"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"}              | ${"hebrew"}       | ${"[u-ca=hebrew]"}
+    ${"2019-04-30T12:00:00+09:00[Asia/Tokyo][u-ca=japanese]"}                  | ${"japanese"}     | ${"[u-ca=japanese]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=ethioaa]"}             | ${"ethioaa"}      | ${"[u-ca=ethioaa]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=islamic-tbla]"}        | ${"islamic-tbla"} | ${"[u-ca=islamic-tbla]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew][u-ca=roc]"}    | ${"hebrew"}       | ${"[u-ca=hebrew][u-ca=roc]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][foo=bar][u-ca=japanese]"}   | ${"japanese"}     | ${"[foo=bar][u-ca=japanese]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][foo=bar]"}                  | ${"iso8601"}      | ${"[foo=bar]"}
+  `("returns $expected for the annotations $label", ({ value, expected }) => {
     expect(calendarSystemOfZonedValue(value)).toBe(expected);
   });
 

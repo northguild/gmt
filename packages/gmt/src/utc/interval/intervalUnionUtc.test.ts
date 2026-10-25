@@ -29,7 +29,7 @@ describe("intervalUnionUtc", () => {
     ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-04-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${{ start: "2024-04-01T00:00:00Z", end: "2024-06-30T23:59:59Z" }}
     ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-12-31T23:59:59Z"} | ${{ start: "2024-06-30T23:59:59Z", end: "2024-12-31T23:59:59Z" }}
   `(
-    "returns merged interval for zero-length $aStart interval",
+    "returns merged interval for zero-length $aStart interval with $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalUnionUtc(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },
@@ -85,7 +85,7 @@ describe("intervalUnionUtc", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-04-01T00:00:60Z"} | ${"2024-12-31T23:59:59Z"}
     ${"2024-01-01T00:00:00Z"} | ${"2024-06-30T23:59:59Z"} | ${"2024-04-01T00:00:00Z"} | ${"2024-12-31T23:59:60Z"}
   `(
-    "returns null for malformed UTC datetime: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for malformed UTC datetime: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalUnionUtc(aStart, aEnd, bStart, bEnd)).toBeNull();
     },

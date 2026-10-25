@@ -16,7 +16,7 @@ describe("parseDuration", () => {
     ${""}               | ${""}
     ${"not a duration"} | ${""}
     ${"P1DT-2H"}        | ${""}
-  `("normalizes $value to $expected", ({ value, expected }) => {
+  `("normalizes '$value' to '$expected'", ({ value, expected }) => {
     expect(parseDuration(value)).toBe(expected);
   });
 
@@ -114,7 +114,7 @@ describe("parseDuration", () => {
     ${"not a duration"}
     ${"P1DT-2H"}
   `(
-    "returns an empty string for invalid value $invalidValue even when options are provided",
+    "returns an empty string for invalid value '$invalidValue' even when options are provided",
     ({ invalidValue }) => {
       expect(
         parseDuration(invalidValue, {

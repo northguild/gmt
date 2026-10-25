@@ -21,7 +21,7 @@ describe("regex/rfc-2822", () => {
     ${"not a date"}                          | ${false}
     ${""}                                    | ${false}
   `(
-    "rfc2822DateTime pattern matches $value as $expected",
+    "rfc2822DateTime pattern matches '$value' as $expected",
     ({ value, expected }: { value: string; expected: boolean }) => {
       expect(rfc2822DateTime.test(value)).toBe(expected);
     },

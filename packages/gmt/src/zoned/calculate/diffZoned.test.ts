@@ -92,13 +92,13 @@ describe("diffZonedDateTime", () => {
 
   // Error and invalid-input cases: return null when inputs or units are invalid
   it.each`
-    value1                              | value2                              | units
-    ${"invalid"}                        | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${["days"]}
-    ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"invalid"}                        | ${["days"]}
-    ${""}                               | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${["days"]}
-    ${null}                             | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${["days"]}
+    value1                              | value2                              | units       | label
+    ${"invalid"}                        | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${["days"]} | ${"'invalid'"}
+    ${"2024-03-01T00:00:00+00:00[UTC]"} | ${"invalid"}                        | ${["days"]} | ${"'2024-03-01T00:00:00+00:00[UTC]'"}
+    ${""}                               | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${["days"]} | ${"''"}
+    ${null}                             | ${"2024-03-01T00:00:00+00:00[UTC]"} | ${["days"]} | ${"null"}
   `(
-    "returns null for invalid inputs: $value1 | $value2 | $units",
+    "returns null for invalid inputs: $label | $value2 | $units",
     ({ value1, value2, units }) => {
       expect(diffZoned(value1 as never, value2 as never, units as never)).toBe(
         null,

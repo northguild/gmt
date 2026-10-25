@@ -77,7 +77,7 @@ describe("toFileTime", () => {
     ${"2016-12-31 23:59:60Z"} | ${"leap second, space separator"}
     ${"invalid"}              | ${"unparseable"}
     ${""}                     | ${"empty string"}
-  `("returns 0n when $value is invalid ($reason)", ({ value }) => {
+  `("returns 0n when '$value' is invalid ($reason)", ({ value }) => {
     expect(toFileTime(value)).toBe(0n);
   });
 

@@ -44,7 +44,7 @@ describe("isValidZonedInterval", () => {
     ${"2024-02-29T12:00:00+00:00[UTC]"} | ${"not-a-zoned"}
     ${"invalid"}                        | ${"invalid"}
     ${""}                               | ${""}
-  `("returns false for malformed zoned: $start, $end", ({ start, end }) => {
+  `("returns false for malformed zoned: '$start', '$end'", ({ start, end }) => {
     expect(isValidZonedInterval(start, end)).toBe(false);
   });
 

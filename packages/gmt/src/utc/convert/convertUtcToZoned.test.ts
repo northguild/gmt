@@ -41,27 +41,27 @@ describe("convertUtcToZoned", () => {
   );
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-02-29T14:30:45"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidValue             | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-02-29T14:30:45"} | ${"'2024-02-29T14:30:45'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
   `(
-    "returns an empty string for invalid UTC datetime $invalidValue",
+    "returns an empty string for invalid UTC datetime $label",
     ({ invalidValue }) => {
       expect(convertUtcToZoned(invalidValue as never, "UTC")).toBe("");
     },
   );
 
   it.each`
-    invalidTimeZone
-    ${"Mars/Olympus"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidTimeZone   | label
+    ${"Mars/Olympus"} | ${"'Mars/Olympus'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
   `(
-    "returns an empty string for invalid timeZone $invalidTimeZone",
+    "returns an empty string for invalid timeZone $label",
     ({ invalidTimeZone }) => {
       expect(
         convertUtcToZoned("2024-02-29T14:30:45Z", invalidTimeZone as never),
@@ -77,7 +77,7 @@ describe("convertUtcToZoned", () => {
     ${"+05:30:00"} | ${""}
     ${"+05:30"}    | ${"2024-02-29T20:00:45+05:30[+05:30]"}
   `(
-    "returns $expected for the offset $timeZone as the zone",
+    "returns '$expected' for the offset $timeZone as the zone",
     ({ timeZone, expected }) => {
       expect(convertUtcToZoned("2024-02-29T14:30:45Z", timeZone)).toBe(
         expected,

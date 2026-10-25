@@ -48,7 +48,7 @@ describe("normalizeDateTime", () => {
     ${"2024-02-29T10:00:00.123456"}                                    | ${"2024-02-29T10:00:00.123456"}
     ${"2024-02-29T10:00:00Z"}                                          | ${"2024-02-29T10:00:00Z"}
     ${"2024-02-29T10:00:00+02:00"}                                     | ${"2024-02-29T10:00:00+02:00"}
-  `("normalizes $input -> $expected", ({ input, expected }) => {
+  `("normalizes $input -> '$expected'", ({ input, expected }) => {
     expect(normalizeDateTime(input)).toBe(expected);
   });
 

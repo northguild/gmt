@@ -33,7 +33,7 @@ describe("hasCalendarAnnotation", () => {
     ${"2024-02-10T12:00:00Z"}
     ${""}
   `(
-    "returns false for a non-annotated value $value",
+    "returns false for a non-annotated value '$value'",
     ({ value }: { value: string }) => {
       expect(hasCalendarAnnotation(value)).toBe(false);
     },

@@ -210,47 +210,47 @@ describe("isValidHolidayRule", () => {
   );
 
   it.each`
-    calendar                 | monthCode    | expected
-    ${"coptic"}              | ${"M13"}     | ${true}
-    ${"ethiopic"}            | ${"M13"}     | ${true}
-    ${"ethioaa"}             | ${"M13"}     | ${true}
-    ${"ethiopic-amete-alem"} | ${"M13"}     | ${true}
-    ${"iso8601"}             | ${"M13"}     | ${false}
-    ${"gregory"}             | ${"M13"}     | ${false}
-    ${"hebrew"}              | ${"M13"}     | ${false}
-    ${"islamic-civil"}       | ${"M13"}     | ${false}
-    ${"islamic-tbla"}        | ${"M13"}     | ${false}
-    ${"islamic-umalqura"}    | ${"M13"}     | ${false}
-    ${"japanese"}            | ${"M13"}     | ${false}
-    ${"buddhist"}            | ${"M13"}     | ${false}
-    ${"roc"}                 | ${"M13"}     | ${false}
-    ${"persian"}             | ${"M13"}     | ${false}
-    ${"indian"}              | ${"M13"}     | ${false}
-    ${"hebrew"}              | ${"M05L"}    | ${true}
-    ${"iso8601"}             | ${"M05L"}    | ${false}
-    ${"gregory"}             | ${"M05L"}    | ${false}
-    ${"islamic-civil"}       | ${"M05L"}    | ${false}
-    ${"persian"}             | ${"M05L"}    | ${false}
-    ${"coptic"}              | ${"M05L"}    | ${false}
-    ${"hebrew"}              | ${"M06L"}    | ${false}
-    ${"hebrew"}              | ${"M01L"}    | ${false}
-    ${"hebrew"}              | ${"M12L"}    | ${false}
-    ${"hebrew"}              | ${"M13L"}    | ${false}
-    ${"coptic"}              | ${"M13L"}    | ${false}
-    ${"hebrew"}              | ${"M00"}     | ${false}
-    ${"hebrew"}              | ${"M14"}     | ${false}
-    ${"hebrew"}              | ${"M1"}      | ${false}
-    ${"hebrew"}              | ${"M5"}      | ${false}
-    ${"hebrew"}              | ${"m07"}     | ${false}
-    ${"hebrew"}              | ${"M07 "}    | ${false}
-    ${"hebrew"}              | ${" M07"}    | ${false}
-    ${"hebrew"}              | ${"M007"}    | ${false}
-    ${"hebrew"}              | ${""}        | ${false}
-    ${"hebrew"}              | ${7}         | ${false}
-    ${"hebrew"}              | ${null}      | ${false}
-    ${"hebrew"}              | ${undefined} | ${false}
+    calendar                 | monthCode    | expected | label
+    ${"coptic"}              | ${"M13"}     | ${true}  | ${"'M13'"}
+    ${"ethiopic"}            | ${"M13"}     | ${true}  | ${"'M13'"}
+    ${"ethioaa"}             | ${"M13"}     | ${true}  | ${"'M13'"}
+    ${"ethiopic-amete-alem"} | ${"M13"}     | ${true}  | ${"'M13'"}
+    ${"iso8601"}             | ${"M13"}     | ${false} | ${"'M13'"}
+    ${"gregory"}             | ${"M13"}     | ${false} | ${"'M13'"}
+    ${"hebrew"}              | ${"M13"}     | ${false} | ${"'M13'"}
+    ${"islamic-civil"}       | ${"M13"}     | ${false} | ${"'M13'"}
+    ${"islamic-tbla"}        | ${"M13"}     | ${false} | ${"'M13'"}
+    ${"islamic-umalqura"}    | ${"M13"}     | ${false} | ${"'M13'"}
+    ${"japanese"}            | ${"M13"}     | ${false} | ${"'M13'"}
+    ${"buddhist"}            | ${"M13"}     | ${false} | ${"'M13'"}
+    ${"roc"}                 | ${"M13"}     | ${false} | ${"'M13'"}
+    ${"persian"}             | ${"M13"}     | ${false} | ${"'M13'"}
+    ${"indian"}              | ${"M13"}     | ${false} | ${"'M13'"}
+    ${"hebrew"}              | ${"M05L"}    | ${true}  | ${"'M05L'"}
+    ${"iso8601"}             | ${"M05L"}    | ${false} | ${"'M05L'"}
+    ${"gregory"}             | ${"M05L"}    | ${false} | ${"'M05L'"}
+    ${"islamic-civil"}       | ${"M05L"}    | ${false} | ${"'M05L'"}
+    ${"persian"}             | ${"M05L"}    | ${false} | ${"'M05L'"}
+    ${"coptic"}              | ${"M05L"}    | ${false} | ${"'M05L'"}
+    ${"hebrew"}              | ${"M06L"}    | ${false} | ${"'M06L'"}
+    ${"hebrew"}              | ${"M01L"}    | ${false} | ${"'M01L'"}
+    ${"hebrew"}              | ${"M12L"}    | ${false} | ${"'M12L'"}
+    ${"hebrew"}              | ${"M13L"}    | ${false} | ${"'M13L'"}
+    ${"coptic"}              | ${"M13L"}    | ${false} | ${"'M13L'"}
+    ${"hebrew"}              | ${"M00"}     | ${false} | ${"'M00'"}
+    ${"hebrew"}              | ${"M14"}     | ${false} | ${"'M14'"}
+    ${"hebrew"}              | ${"M1"}      | ${false} | ${"'M1'"}
+    ${"hebrew"}              | ${"M5"}      | ${false} | ${"'M5'"}
+    ${"hebrew"}              | ${"m07"}     | ${false} | ${"'m07'"}
+    ${"hebrew"}              | ${"M07 "}    | ${false} | ${"'M07 '"}
+    ${"hebrew"}              | ${" M07"}    | ${false} | ${"' M07'"}
+    ${"hebrew"}              | ${"M007"}    | ${false} | ${"'M007'"}
+    ${"hebrew"}              | ${""}        | ${false} | ${"''"}
+    ${"hebrew"}              | ${7}         | ${false} | ${"7"}
+    ${"hebrew"}              | ${null}      | ${false} | ${"null"}
+    ${"hebrew"}              | ${undefined} | ${false} | ${"undefined"}
   `(
-    "calendarFixed $calendar monthCode $monthCode: $expected",
+    "calendarFixed $calendar monthCode $label: $expected",
     ({ calendar, monthCode, expected }) => {
       expect(
         isValidHolidayRule({
@@ -284,28 +284,28 @@ describe("isValidHolidayRule", () => {
   );
 
   it.each`
-    calendar      | day          | expected
-    ${"hebrew"}   | ${1}         | ${true}
-    ${"hebrew"}   | ${30}        | ${true}
-    ${"hebrew"}   | ${0}         | ${false}
-    ${"hebrew"}   | ${31}        | ${false}
-    ${"hebrew"}   | ${32}        | ${false}
-    ${"hebrew"}   | ${-1}        | ${false}
-    ${"hebrew"}   | ${1.5}       | ${false}
-    ${"hebrew"}   | ${"1"}       | ${false}
-    ${"hebrew"}   | ${NaN}       | ${false}
-    ${"hebrew"}   | ${undefined} | ${false}
-    ${"chinese"}  | ${1}         | ${false}
-    ${"dangi"}    | ${1}         | ${false}
-    ${"nope"}     | ${1}         | ${false}
-    ${""}         | ${1}         | ${false}
-    ${"hebrew "}  | ${1}         | ${false}
-    ${1}          | ${1}         | ${false}
-    ${null}       | ${1}         | ${false}
-    ${undefined}  | ${1}         | ${false}
-    ${["hebrew"]} | ${1}         | ${false}
+    calendar      | day          | expected | label
+    ${"hebrew"}   | ${1}         | ${true}  | ${"'hebrew'"}
+    ${"hebrew"}   | ${30}        | ${true}  | ${"'hebrew'"}
+    ${"hebrew"}   | ${0}         | ${false} | ${"'hebrew'"}
+    ${"hebrew"}   | ${31}        | ${false} | ${"'hebrew'"}
+    ${"hebrew"}   | ${32}        | ${false} | ${"'hebrew'"}
+    ${"hebrew"}   | ${-1}        | ${false} | ${"'hebrew'"}
+    ${"hebrew"}   | ${1.5}       | ${false} | ${"'hebrew'"}
+    ${"hebrew"}   | ${"1"}       | ${false} | ${"'hebrew'"}
+    ${"hebrew"}   | ${NaN}       | ${false} | ${"'hebrew'"}
+    ${"hebrew"}   | ${undefined} | ${false} | ${"'hebrew'"}
+    ${"chinese"}  | ${1}         | ${false} | ${"'chinese'"}
+    ${"dangi"}    | ${1}         | ${false} | ${"'dangi'"}
+    ${"nope"}     | ${1}         | ${false} | ${"'nope'"}
+    ${""}         | ${1}         | ${false} | ${"''"}
+    ${"hebrew "}  | ${1}         | ${false} | ${"'hebrew '"}
+    ${1}          | ${1}         | ${false} | ${"1"}
+    ${null}       | ${1}         | ${false} | ${"null"}
+    ${undefined}  | ${1}         | ${false} | ${"undefined"}
+    ${["hebrew"]} | ${1}         | ${false} | ${"['hebrew']"}
   `(
-    "calendarFixed calendar $calendar day $day: $expected",
+    "calendarFixed calendar $label day $day: $expected",
     ({ calendar, day, expected }) => {
       expect(
         isValidHolidayRule({
@@ -381,27 +381,27 @@ describe("isValidHolidayRule", () => {
   );
 
   it.each`
-    offsetDays                     | computus       | expected
-    ${0}                           | ${undefined}   | ${true}
-    ${-0}                          | ${"gregorian"} | ${true}
-    ${Number.MAX_SAFE_INTEGER}     | ${"julian"}    | ${true}
-    ${-Number.MAX_SAFE_INTEGER}    | ${"julian"}    | ${true}
-    ${Number.MAX_SAFE_INTEGER + 1} | ${undefined}   | ${false}
-    ${-(2 ** 53)}                  | ${undefined}   | ${false}
-    ${1.5}                         | ${undefined}   | ${false}
-    ${NaN}                         | ${undefined}   | ${false}
-    ${Infinity}                    | ${undefined}   | ${false}
-    ${-Infinity}                   | ${undefined}   | ${false}
-    ${"1"}                         | ${undefined}   | ${false}
-    ${null}                        | ${undefined}   | ${false}
-    ${undefined}                   | ${undefined}   | ${false}
-    ${1}                           | ${"orthodox"}  | ${false}
-    ${1}                           | ${"Julian"}    | ${false}
-    ${1}                           | ${""}          | ${false}
-    ${1}                           | ${null}        | ${false}
-    ${1}                           | ${1}           | ${false}
+    offsetDays                     | computus       | expected | label
+    ${0}                           | ${undefined}   | ${true}  | ${"undefined"}
+    ${-0}                          | ${"gregorian"} | ${true}  | ${"'gregorian'"}
+    ${Number.MAX_SAFE_INTEGER}     | ${"julian"}    | ${true}  | ${"'julian'"}
+    ${-Number.MAX_SAFE_INTEGER}    | ${"julian"}    | ${true}  | ${"'julian'"}
+    ${Number.MAX_SAFE_INTEGER + 1} | ${undefined}   | ${false} | ${"undefined"}
+    ${-(2 ** 53)}                  | ${undefined}   | ${false} | ${"undefined"}
+    ${1.5}                         | ${undefined}   | ${false} | ${"undefined"}
+    ${NaN}                         | ${undefined}   | ${false} | ${"undefined"}
+    ${Infinity}                    | ${undefined}   | ${false} | ${"undefined"}
+    ${-Infinity}                   | ${undefined}   | ${false} | ${"undefined"}
+    ${"1"}                         | ${undefined}   | ${false} | ${"undefined"}
+    ${null}                        | ${undefined}   | ${false} | ${"undefined"}
+    ${undefined}                   | ${undefined}   | ${false} | ${"undefined"}
+    ${1}                           | ${"orthodox"}  | ${false} | ${"'orthodox'"}
+    ${1}                           | ${"Julian"}    | ${false} | ${"'Julian'"}
+    ${1}                           | ${""}          | ${false} | ${"''"}
+    ${1}                           | ${null}        | ${false} | ${"null"}
+    ${1}                           | ${1}           | ${false} | ${"1"}
   `(
-    "easterRelative offsetDays $offsetDays computus $computus: $expected",
+    "easterRelative offsetDays $offsetDays computus $label: $expected",
     ({ offsetDays, computus, expected }) => {
       expect(
         isValidHolidayRule({
@@ -461,35 +461,35 @@ describe("isValidHolidayRule", () => {
   });
 
   it.each`
-    kind
-    ${"Fixed"}
-    ${"FIXED"}
-    ${"calendarfixed"}
-    ${"nthweekday"}
-    ${"easter"}
-    ${"holiday"}
-    ${"weekly"}
-    ${""}
-    ${1}
-    ${null}
-    ${undefined}
-    ${["fixed"]}
-  `("kind $kind: false", ({ kind }) => {
+    kind               | label
+    ${"Fixed"}         | ${"'Fixed'"}
+    ${"FIXED"}         | ${"'FIXED'"}
+    ${"calendarfixed"} | ${"'calendarfixed'"}
+    ${"nthweekday"}    | ${"'nthweekday'"}
+    ${"easter"}        | ${"'easter'"}
+    ${"holiday"}       | ${"'holiday'"}
+    ${"weekly"}        | ${"'weekly'"}
+    ${""}              | ${"''"}
+    ${1}               | ${"1"}
+    ${null}            | ${"null"}
+    ${undefined}       | ${"undefined"}
+    ${["fixed"]}       | ${"['fixed']"}
+  `("kind $label: false", ({ kind }) => {
     expect(isValidHolidayRule({ name: "x", kind, month: 1, day: 1 })).toBe(
       false,
     );
   });
 
   it.each`
-    name                | expected
-    ${""}               | ${true}
-    ${"Easter minus 2"} | ${true}
-    ${1}                | ${false}
-    ${null}             | ${false}
-    ${undefined}        | ${false}
-    ${["x"]}            | ${false}
-    ${{}}               | ${false}
-  `("name $name: $expected", ({ name, expected }) => {
+    name                | expected | label
+    ${""}               | ${true}  | ${"''"}
+    ${"Easter minus 2"} | ${true}  | ${"'Easter minus 2'"}
+    ${1}                | ${false} | ${"1"}
+    ${null}             | ${false} | ${"null"}
+    ${undefined}        | ${false} | ${"undefined"}
+    ${["x"]}            | ${false} | ${"['x']"}
+    ${{}}               | ${false} | ${"{}"}
+  `("name $label: $expected", ({ name, expected }) => {
     expect(isValidHolidayRule({ ...fixed, name })).toBe(expected);
   });
 

@@ -58,7 +58,7 @@ describe("formatX12DateTimeRange", () => {
       ${"2024-06-15T14:30"}     | ${"2023-02-29T16:00"}     | ${"an end that is not a real date"}
       ${"2024-06-15T14:30"}     | ${"+010000-01-01T00:00"}  | ${"an end in year 10000"}
       ${"2024-06-15T14:30"}     | ${""}                     | ${"an empty end"}
-    `("returns '' for $start to $end ($reads)", ({ start, end }) => {
+    `("returns '' for $start to '$end' ($reads)", ({ start, end }) => {
       expect(formatX12DateTimeRange(start, end, "RDT")).toBe("");
       expect(formatX12DateTimeRange(start, end, "DTS")).toBe("");
     });

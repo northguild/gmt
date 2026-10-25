@@ -15,7 +15,7 @@ describe("parseMillisecondFromZoned", () => {
     value
     ${"invalid"}
     ${""}
-  `("returns empty string for invalid value $value", ({ value }) => {
+  `("returns empty string for invalid value '$value'", ({ value }) => {
     expect(parseMillisecondFromZoned(value)).toBe("");
   });
 

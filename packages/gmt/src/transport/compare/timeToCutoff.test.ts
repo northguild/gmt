@@ -53,7 +53,7 @@ describe("timeToCutoff", () => {
     ${"-271821-04-20T00:00:00Z"}           | ${"-271821-04-20T00:00:00Z"}           | ${"PT0S"}           | ${"the first instant against itself"}
     ${"-271821-04-19T23:59:59.999999999Z"} | ${"-271821-04-20T00:00:00Z"}           | ${""}               | ${"one nanosecond before the first instant"}
     ${"-271821-04-20T00:00:00Z"}           | ${"+275760-09-13T00:00:00.000000001Z"} | ${""}               | ${"one nanosecond after the last instant"}
-  `("$why: $expected", ({ now, deadline, expected }) => {
+  `("$why: '$expected'", ({ now, deadline, expected }) => {
     expect(timeToCutoff(now, deadline)).toBe(expected);
   });
 

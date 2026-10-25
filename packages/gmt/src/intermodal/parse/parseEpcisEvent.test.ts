@@ -231,31 +231,31 @@ describe("parseEpcisEvent", () => {
 
   // The JSON schema's `eventTimeZoneOffset` pattern: a sign, then `HH:MM` up to 13:59, or 14:00.
   it.each`
-    offset         | reads
-    ${undefined}   | ${"missing: the schema requires the field"}
-    ${"Z"}         | ${"Z is eventTime's designator, not an offset"}
-    ${"z"}         | ${"lower-case z"}
-    ${"+0200"}     | ${"no colon"}
-    ${"+02"}       | ${"hours only"}
-    ${"02:00"}     | ${"no sign"}
-    ${"+2:00"}     | ${"an unpadded hour"}
-    ${"+14:01"}    | ${"one minute past the range GS1 allows"}
-    ${"-14:01"}    | ${"one minute past the range, west"}
-    ${"+14:30"}    | ${"past 14:00"}
-    ${"-14:30"}    | ${"past 14:00, west"}
-    ${"+15:00"}    | ${"hour 15"}
-    ${"-15:00"}    | ${"hour 15, west"}
-    ${"+02:60"}    | ${"minute 60"}
-    ${"+05:30:00"} | ${"seconds, which utcOffset accepts and GS1 does not"}
-    ${"+02:00 "}   | ${"trailing whitespace"}
-    ${" +02:00"}   | ${"leading whitespace"}
-    ${"UTC"}       | ${"a zone name"}
-    ${""}          | ${"an empty string"}
-    ${null}        | ${"null"}
-    ${-300}        | ${"a number of minutes"}
-    ${["-05:00"]}  | ${"an array holding the offset: nothing is coerced to a string"}
+    offset         | reads                                                            | label
+    ${undefined}   | ${"missing: the schema requires the field"}                      | ${"undefined"}
+    ${"Z"}         | ${"Z is eventTime's designator, not an offset"}                  | ${"'Z'"}
+    ${"z"}         | ${"lower-case z"}                                                | ${"'z'"}
+    ${"+0200"}     | ${"no colon"}                                                    | ${"'+0200'"}
+    ${"+02"}       | ${"hours only"}                                                  | ${"'+02'"}
+    ${"02:00"}     | ${"no sign"}                                                     | ${"'02:00'"}
+    ${"+2:00"}     | ${"an unpadded hour"}                                            | ${"'+2:00'"}
+    ${"+14:01"}    | ${"one minute past the range GS1 allows"}                        | ${"'+14:01'"}
+    ${"-14:01"}    | ${"one minute past the range, west"}                             | ${"'-14:01'"}
+    ${"+14:30"}    | ${"past 14:00"}                                                  | ${"'+14:30'"}
+    ${"-14:30"}    | ${"past 14:00, west"}                                            | ${"'-14:30'"}
+    ${"+15:00"}    | ${"hour 15"}                                                     | ${"'+15:00'"}
+    ${"-15:00"}    | ${"hour 15, west"}                                               | ${"'-15:00'"}
+    ${"+02:60"}    | ${"minute 60"}                                                   | ${"'+02:60'"}
+    ${"+05:30:00"} | ${"seconds, which utcOffset accepts and GS1 does not"}           | ${"'+05:30:00'"}
+    ${"+02:00 "}   | ${"trailing whitespace"}                                         | ${"'+02:00 '"}
+    ${" +02:00"}   | ${"leading whitespace"}                                          | ${"' +02:00'"}
+    ${"UTC"}       | ${"a zone name"}                                                 | ${"'UTC'"}
+    ${""}          | ${"an empty string"}                                             | ${"''"}
+    ${null}        | ${"null"}                                                        | ${"null"}
+    ${-300}        | ${"a number of minutes"}                                         | ${"-300"}
+    ${["-05:00"]}  | ${"an array holding the offset: nothing is coerced to a string"} | ${"['-05:00']"}
   `(
-    "returns null when eventTimeZoneOffset is $offset ($reads)",
+    "returns null when eventTimeZoneOffset is $label ($reads)",
     ({ offset }) => {
       expect(
         parseEpcisEvent({ eventTime, eventTimeZoneOffset: offset as never }),
@@ -266,36 +266,36 @@ describe("parseEpcisEvent", () => {
   // The XSD's `DateTimeStamp` pattern: seconds required, upper-case `T` and `Z`, a four-digit
   // year, `Z` or a colon offset in the range above, and nothing after it.
   it.each`
-    value                                         | reads
-    ${undefined}                                  | ${"missing: the schema requires the field"}
-    ${"2024-06-15 14:30:00Z"}                     | ${"a space separator"}
-    ${"2024-06-15t14:30:00Z"}                     | ${"lower-case t"}
-    ${"2024-06-15T14:30:00z"}                     | ${"lower-case z"}
-    ${"2024-06-15T14:30Z"}                        | ${"no seconds"}
-    ${"2024-06-15T14:30:00"}                      | ${"no Z and no offset: not an instant"}
-    ${"2024-06-15T14:30:00+0200"}                 | ${"an offset without a colon"}
-    ${"2024-06-15T14:30:00+02"}                   | ${"an hours-only offset"}
-    ${"2024-06-15T14:30:00+15:00"}                | ${"an offset past the range GS1 allows"}
-    ${"2024-06-15T14:30:00+14:01"}                | ${"an offset one minute past 14:00"}
-    ${"2024-06-15T14:30:00-14:30"}                | ${"an offset past 14:00, west"}
-    ${"2024-06-15T14:30:00-04:56:02"}             | ${"an offset with seconds"}
-    ${"2024-06-15T24:00:00Z"}                     | ${"hour 24"}
-    ${"2016-12-31T23:59:60Z"}                     | ${"a leap second: second 60 is outside the pattern"}
-    ${"2024-06-15T14:30:00,5Z"}                   | ${"a comma before the fraction"}
-    ${"2024-06-15T14:30:00.Z"}                    | ${"a period with no fraction digits"}
-    ${"+002024-06-15T14:30:00Z"}                  | ${"an expanded year"}
-    ${"20240615T143000Z"}                         | ${"basic format"}
-    ${"2024-06-15T14:30:00Z[UTC]"}                | ${"a bracketed zone: the grammar has no annotation"}
-    ${"2024-06-15T14:30:00Z[u-ca=iso8601]"}       | ${"a calendar annotation"}
-    ${"2024-06-15T14:30:00-04:00[-04:00]"}        | ${"a bracketed offset"}
-    ${"2024-06-15"}                               | ${"a date"}
-    ${" 2024-06-15T14:30:00Z"}                    | ${"leading whitespace"}
-    ${"2024-06-15T14:30:00Z\n"}                   | ${"a trailing newline"}
-    ${""}                                         | ${"an empty string"}
-    ${null}                                       | ${"null"}
-    ${1718461800000}                              | ${"epoch milliseconds"}
-    ${{ toString: () => "2024-06-15T14:30:00Z" }} | ${"an object that stringifies to an instant: nothing is coerced"}
-  `("returns null when eventTime is $value ($reads)", ({ value }) => {
+    value                                         | reads                                                             | label
+    ${undefined}                                  | ${"missing: the schema requires the field"}                       | ${"undefined"}
+    ${"2024-06-15 14:30:00Z"}                     | ${"a space separator"}                                            | ${"'2024-06-15 14:30:00Z'"}
+    ${"2024-06-15t14:30:00Z"}                     | ${"lower-case t"}                                                 | ${"'2024-06-15t14:30:00Z'"}
+    ${"2024-06-15T14:30:00z"}                     | ${"lower-case z"}                                                 | ${"'2024-06-15T14:30:00z'"}
+    ${"2024-06-15T14:30Z"}                        | ${"no seconds"}                                                   | ${"'2024-06-15T14:30Z'"}
+    ${"2024-06-15T14:30:00"}                      | ${"no Z and no offset: not an instant"}                           | ${"'2024-06-15T14:30:00'"}
+    ${"2024-06-15T14:30:00+0200"}                 | ${"an offset without a colon"}                                    | ${"'2024-06-15T14:30:00+0200'"}
+    ${"2024-06-15T14:30:00+02"}                   | ${"an hours-only offset"}                                         | ${"'2024-06-15T14:30:00+02'"}
+    ${"2024-06-15T14:30:00+15:00"}                | ${"an offset past the range GS1 allows"}                          | ${"'2024-06-15T14:30:00+15:00'"}
+    ${"2024-06-15T14:30:00+14:01"}                | ${"an offset one minute past 14:00"}                              | ${"'2024-06-15T14:30:00+14:01'"}
+    ${"2024-06-15T14:30:00-14:30"}                | ${"an offset past 14:00, west"}                                   | ${"'2024-06-15T14:30:00-14:30'"}
+    ${"2024-06-15T14:30:00-04:56:02"}             | ${"an offset with seconds"}                                       | ${"'2024-06-15T14:30:00-04:56:02'"}
+    ${"2024-06-15T24:00:00Z"}                     | ${"hour 24"}                                                      | ${"'2024-06-15T24:00:00Z'"}
+    ${"2016-12-31T23:59:60Z"}                     | ${"a leap second: second 60 is outside the pattern"}              | ${"'2016-12-31T23:59:60Z'"}
+    ${"2024-06-15T14:30:00,5Z"}                   | ${"a comma before the fraction"}                                  | ${"'2024-06-15T14:30:00,5Z'"}
+    ${"2024-06-15T14:30:00.Z"}                    | ${"a period with no fraction digits"}                             | ${"'2024-06-15T14:30:00.Z'"}
+    ${"+002024-06-15T14:30:00Z"}                  | ${"an expanded year"}                                             | ${"'+002024-06-15T14:30:00Z'"}
+    ${"20240615T143000Z"}                         | ${"basic format"}                                                 | ${"'20240615T143000Z'"}
+    ${"2024-06-15T14:30:00Z[UTC]"}                | ${"a bracketed zone: the grammar has no annotation"}              | ${"'2024-06-15T14:30:00Z[UTC]'"}
+    ${"2024-06-15T14:30:00Z[u-ca=iso8601]"}       | ${"a calendar annotation"}                                        | ${"'2024-06-15T14:30:00Z[u-ca=iso8601]'"}
+    ${"2024-06-15T14:30:00-04:00[-04:00]"}        | ${"a bracketed offset"}                                           | ${"'2024-06-15T14:30:00-04:00[-04:00]'"}
+    ${"2024-06-15"}                               | ${"a date"}                                                       | ${"'2024-06-15'"}
+    ${" 2024-06-15T14:30:00Z"}                    | ${"leading whitespace"}                                           | ${"' 2024-06-15T14:30:00Z'"}
+    ${"2024-06-15T14:30:00Z\n"}                   | ${"a trailing newline"}                                           | ${"'2024-06-15T14:30:00Z\\n'"}
+    ${""}                                         | ${"an empty string"}                                              | ${"''"}
+    ${null}                                       | ${"null"}                                                         | ${"null"}
+    ${1718461800000}                              | ${"epoch milliseconds"}                                           | ${"1718461800000"}
+    ${{ toString: () => "2024-06-15T14:30:00Z" }} | ${"an object that stringifies to an instant: nothing is coerced"} | ${"{ toString: () => '2024-06-15T14:30:00Z' }"}
+  `("returns null when eventTime is $label ($reads)", ({ value }) => {
     expect(
       parseEpcisEvent({ eventTime: value as never, eventTimeZoneOffset }),
     ).toBeNull();

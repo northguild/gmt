@@ -40,7 +40,7 @@ describe("intervalsOverlapDate", () => {
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${""}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${"2024-13-01"}
   `(
-    "returns false for malformed date: $aStart, $aEnd, $bStart, $bEnd",
+    "returns false for malformed date: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalsOverlapDate(aStart, aEnd, bStart, bEnd)).toBe(false);
     },

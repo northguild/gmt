@@ -92,7 +92,7 @@ describe("readEdiValue", () => {
     ${"x12"}     | ${"date"}           | ${"D8"}  | ${"2024-06-15"}      | ${"an ISO 8601 date is not the mask"}
     ${"x12"}     | ${"date"}           | ${"D8"}  | ${""}                | ${"an empty value"}
   `(
-    "returns '' for $standard $code $value ($reads)",
+    "returns '' for $standard $code '$value' ($reads)",
     ({ standard, kind, code, value }) => {
       expect(readEdiValue(standard, kind, code, value)).toBe("");
     },
@@ -341,7 +341,7 @@ describe("readX12Time", () => {
     ${"14A0"}         | ${"a letter"}
     ${"１４３０"}     | ${"full-width digits: a digit is 0–9"}
     ${""}             | ${"an empty value"}
-  `("returns '' for $value ($reads)", ({ value }) => {
+  `("returns '' for '$value' ($reads)", ({ value }) => {
     expect(readX12Time(value)).toBe("");
   });
 
@@ -555,7 +555,7 @@ describe("readX12DateAndTime", () => {
     ${"240615"}   | ${"1430"}  | ${"a two-digit year: element 373 is CCYYMMDD"}
     ${"06152024"} | ${"1430"}  | ${"month first: element 373 is CCYYMMDD"}
     ${"20240615"} | ${"14:30"} | ${"a colon in the time"}
-  `("returns '' for $date and $time ($reads)", ({ date, time }) => {
+  `("returns '' for '$date' and '$time' ($reads)", ({ date, time }) => {
     expect(readX12DateAndTime(date, time)).toBe("");
   });
 

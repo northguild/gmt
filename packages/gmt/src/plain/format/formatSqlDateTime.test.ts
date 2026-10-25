@@ -33,7 +33,7 @@ describe("formatSqlDateTime", () => {
     ${"0000-01-01T00:00:00"}
     ${"-000001-01-01T00:00:00"}
     ${"+010000-01-01T00:00:00"}
-  `("returns '' for invalid input $value", ({ value }: { value: string }) => {
+  `("returns '' for invalid input '$value'", ({ value }: { value: string }) => {
     expect(formatSqlDateTime(value)).toBe("");
   });
 

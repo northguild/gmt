@@ -69,26 +69,26 @@ describe("convertZonedToZoned", () => {
   );
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidValue | label
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
   `(
-    "returns an empty string for invalid zoned datetime $invalidValue",
+    "returns an empty string for invalid zoned datetime $label",
     ({ invalidValue }) => {
       expect(convertZonedToZoned(invalidValue as never, "UTC")).toBe("");
     },
   );
 
   it.each`
-    invalidTimeZone
-    ${"Mars/Olympus"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidTimeZone   | label
+    ${"Mars/Olympus"} | ${"'Mars/Olympus'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
   `(
-    "returns an empty string for invalid timeZone $invalidTimeZone",
+    "returns an empty string for invalid timeZone $label",
     ({ invalidTimeZone }) => {
       expect(
         convertZonedToZoned(

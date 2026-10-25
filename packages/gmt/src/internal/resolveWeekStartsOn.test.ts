@@ -14,20 +14,17 @@ describe("resolveWeekStartsOn", () => {
   );
 
   it.each`
-    weekStartsOn
-    ${"tuesday"}
-    ${"Monday"}
-    ${"SUNDAY"}
-    ${""}
-    ${null}
-    ${1}
-    ${7}
-    ${true}
-    ${{}}
-  `(
-    "returns null for invalid weekStartsOn $weekStartsOn",
-    ({ weekStartsOn }) => {
-      expect(resolveWeekStartsOn(weekStartsOn)).toBeNull();
-    },
-  );
+    weekStartsOn | label
+    ${"tuesday"} | ${"'tuesday'"}
+    ${"Monday"}  | ${"'Monday'"}
+    ${"SUNDAY"}  | ${"'SUNDAY'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${1}         | ${"1"}
+    ${7}         | ${"7"}
+    ${true}      | ${"true"}
+    ${{}}        | ${"{}"}
+  `("returns null for invalid weekStartsOn $label", ({ weekStartsOn }) => {
+    expect(resolveWeekStartsOn(weekStartsOn)).toBeNull();
+  });
 });

@@ -24,9 +24,12 @@ describe("intervalLengthDate", () => {
     start           | end             | unit
     ${"2024-01-01"} | ${"2024-01-01"} | ${"day"}
     ${"2024-01-01"} | ${"2024-01-01"} | ${"month"}
-  `("returns 0 for zero-length $start to $end", ({ start, end, unit }) => {
-    expect(intervalLengthDate(start, end, unit)).toBe(0);
-  });
+  `(
+    "returns 0 for zero-length $start to $end in $unit",
+    ({ start, end, unit }) => {
+      expect(intervalLengthDate(start, end, unit)).toBe(0);
+    },
+  );
 
   it("distinguishes from intervalCountDate on a fractional-month interval", () => {
     // intervalCountDate would report 1 month boundary crossed; intervalLengthDate reports the
@@ -47,7 +50,7 @@ describe("intervalLengthDate", () => {
     ${"2024-01-01"} | ${"2024-01-10"} | ${"hour"}
     ${"2024-01-01"} | ${"2024-01-10"} | ${"nanosecond"}
   `(
-    "returns null for invalid $start, $end, or $unit",
+    "returns null for invalid '$start', $end, or '$unit'",
     ({ start, end, unit }) => {
       expect(intervalLengthDate(start, end, unit)).toBeNull();
     },

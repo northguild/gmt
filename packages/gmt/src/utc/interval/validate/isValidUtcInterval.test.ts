@@ -45,7 +45,7 @@ describe("isValidUtcInterval", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-01-01T00:00:00"}
     ${"invalid"}              | ${"invalid"}
     ${""}                     | ${""}
-  `("returns false for malformed UTC: $start, $end", ({ start, end }) => {
+  `("returns false for malformed UTC: '$start', '$end'", ({ start, end }) => {
     expect(isValidUtcInterval(start, end)).toBe(false);
   });
 

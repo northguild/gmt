@@ -260,32 +260,35 @@ describe("floorToZone", () => {
   );
 
   it.each`
-    unit         | description
-    ${"minute"}  | ${"a unit below hour, which needs no zone"}
-    ${"second"}  | ${"the same"}
-    ${"year"}    | ${"a unit above month, which getQuarter and getFiscalPeriod answer"}
-    ${"quarter"} | ${"not a Temporal unit at all"}
-    ${"Day"}     | ${"a capitalised spelling"}
-    ${""}        | ${"an empty string"}
-    ${undefined} | ${"absent"}
-    ${null}      | ${"null"}
-    ${1}         | ${"a number"}
-  `("returns an empty string when unit is $unit ($description)", ({ unit }) => {
-    expect(floorToZone(sourceInstant, unit as "day", "America/New_York")).toBe(
-      "",
-    );
-  });
+    unit         | description                                                          | label
+    ${"minute"}  | ${"a unit below hour, which needs no zone"}                          | ${"'minute'"}
+    ${"second"}  | ${"the same"}                                                        | ${"'second'"}
+    ${"year"}    | ${"a unit above month, which getQuarter and getFiscalPeriod answer"} | ${"'year'"}
+    ${"quarter"} | ${"not a Temporal unit at all"}                                      | ${"'quarter'"}
+    ${"Day"}     | ${"a capitalised spelling"}                                          | ${"'Day'"}
+    ${""}        | ${"an empty string"}                                                 | ${"''"}
+    ${undefined} | ${"absent"}                                                          | ${"undefined"}
+    ${null}      | ${"null"}                                                            | ${"null"}
+    ${1}         | ${"a number"}                                                        | ${"1"}
+  `(
+    "returns an empty string when unit is $label ($description)",
+    ({ unit }) => {
+      expect(
+        floorToZone(sourceInstant, unit as "day", "America/New_York"),
+      ).toBe("");
+    },
+  );
 
   it.each`
-    timeZone              | description
-    ${"Invalid/Zone"}     | ${"an unknown identifier"}
-    ${"America/New York"} | ${"a space where an underscore belongs"}
-    ${""}                 | ${"an empty string"}
-    ${undefined}          | ${"absent"}
-    ${null}               | ${"null"}
-    ${123}                | ${"a number"}
+    timeZone              | description                              | label
+    ${"Invalid/Zone"}     | ${"an unknown identifier"}               | ${"'Invalid/Zone'"}
+    ${"America/New York"} | ${"a space where an underscore belongs"} | ${"'America/New York'"}
+    ${""}                 | ${"an empty string"}                     | ${"''"}
+    ${undefined}          | ${"absent"}                              | ${"undefined"}
+    ${null}               | ${"null"}                                | ${"null"}
+    ${123}                | ${"a number"}                            | ${"123"}
   `(
-    "returns an empty string when timeZone is $timeZone ($description)",
+    "returns an empty string when timeZone is $label ($description)",
     ({ timeZone }) => {
       expect(floorToZone(sourceInstant, "day", timeZone as string)).toBe("");
     },
@@ -300,7 +303,7 @@ describe("floorToZone", () => {
     ${"2024-06-15T03:00:00Z[foo=bar]"}     | ${"2024-06-14T04:00:00Z"}
     ${"2024-06-15T03:00:00Z[!foo=bar]"}    | ${""}
   `(
-    "reads the annotations of $value as Temporal does → $expected",
+    "reads the annotations of $value as Temporal does → '$expected'",
     ({ value, expected }) => {
       expect(floorToZone(value, "day", "America/New_York")).toBe(expected);
     },
@@ -314,7 +317,7 @@ describe("floorToZone", () => {
     ${""}                     | ${"an empty string"}
     ${"2016-12-31T23:59:60Z"} | ${"a leap second"}
     ${"2024-02-30T00:00:00Z"} | ${"a date that does not exist"}
-  `("returns an empty string when $value is $description", ({ value }) => {
+  `("returns an empty string when '$value' is $description", ({ value }) => {
     expect(floorToZone(value, "day", "America/New_York")).toBe("");
   });
 
@@ -341,7 +344,7 @@ describe("floorToZone", () => {
     ${"-271821-04-20T00:00:00Z"} | ${"week"}  | ${""}                        | ${"the week holding the first instant began before the range does"}
     ${"-271821-04-20T00:00:00Z"} | ${"month"} | ${""}                        | ${"and so did the month"}
   `(
-    "floors $value to the $unit in UTC as $expected ($description)",
+    "floors $value to the $unit in UTC as '$expected' ($description)",
     ({ value, unit, expected }) => {
       expect(floorToZone(value, unit, "UTC")).toBe(expected);
     },

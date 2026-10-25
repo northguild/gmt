@@ -314,23 +314,20 @@ describe("billingTimeline", () => {
   // An explicit `undefined` on an optional date or the agreed date is an omission (TC39
   // GetOption); the result equals the call without it.
   it.each`
-    dates                                                        | windows
-    ${{ anchorOn: "2026-03-01", invoiceIssuedOn: undefined }}    | ${thirty}
-    ${{ anchorOn: "2026-03-01", requestReceivedOn: undefined }}  | ${thirty}
-    ${{ anchorOn: "2026-03-01" }}                                | ${{ ...thirty, agreedResolutionOn: undefined }}
-    ${{ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }} | ${{ ...thirty, agreedResolutionOn: undefined }}
-  `(
-    "treats an explicit undefined as absent in $dates with $windows",
-    ({ dates, windows }) => {
-      const stripped = Object.fromEntries(
-        Object.entries(dates).filter(([, value]) => value !== undefined),
-      ) as { anchorOn: string };
-      expect(billingTimeline(dates, windows)).toEqual(
-        billingTimeline(stripped, thirty),
-      );
-      expect(billingTimeline(dates, windows)).not.toBeNull();
-    },
-  );
+    dates                                                        | windows                                         | label
+    ${{ anchorOn: "2026-03-01", invoiceIssuedOn: undefined }}    | ${thirty}                                       | ${"an undefined invoiceIssuedOn"}
+    ${{ anchorOn: "2026-03-01", requestReceivedOn: undefined }}  | ${thirty}                                       | ${"an undefined requestReceivedOn"}
+    ${{ anchorOn: "2026-03-01" }}                                | ${{ ...thirty, agreedResolutionOn: undefined }} | ${"an undefined agreedResolutionOn"}
+    ${{ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31" }} | ${{ ...thirty, agreedResolutionOn: undefined }} | ${"an undefined agreedResolutionOn beside an invoiceIssuedOn"}
+  `("treats $label as absent", ({ dates, windows }) => {
+    const stripped = Object.fromEntries(
+      Object.entries(dates).filter(([, value]) => value !== undefined),
+    ) as { anchorOn: string };
+    expect(billingTimeline(dates, windows)).toEqual(
+      billingTimeline(stripped, thirty),
+    );
+    expect(billingTimeline(dates, windows)).not.toBeNull();
+  });
 
   it.each`
     dates                                                                                                      | windows                                            | reason

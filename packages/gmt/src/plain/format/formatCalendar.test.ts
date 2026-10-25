@@ -216,7 +216,7 @@ describe("formatCalendar", () => {
       ${{ toString: () => "short" }} | ${"toString object short"} | ${"tomorrow at 2:30 PM"}
       ${Symbol("short")}             | ${"Symbol short"}          | ${""}
     `(
-      "timeStyle given as $shape formats tomorrow as $expected",
+      "timeStyle given as $shape formats tomorrow as '$expected'",
       ({ timeStyle, expected }) => {
         expect(
           formatCalendar("2024-03-16T14:30:00", MustTestLocales.enUS, {
@@ -277,17 +277,17 @@ describe("formatCalendar", () => {
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {
     it.each`
-      value
-      ${""}
-      ${"not-a-date"}
-      ${"2024-13-01T14:30:00"}
-      ${"2024-02-30T14:30:00"}
-      ${"2024-03-15"}
-      ${null}
-      ${undefined}
-      ${42}
-      ${true}
-    `("returns '' for invalid value $value", ({ value }) => {
+      value                    | label
+      ${""}                    | ${"''"}
+      ${"not-a-date"}          | ${"'not-a-date'"}
+      ${"2024-13-01T14:30:00"} | ${"'2024-13-01T14:30:00'"}
+      ${"2024-02-30T14:30:00"} | ${"'2024-02-30T14:30:00'"}
+      ${"2024-03-15"}          | ${"'2024-03-15'"}
+      ${null}                  | ${"null"}
+      ${undefined}             | ${"undefined"}
+      ${42}                    | ${"42"}
+      ${true}                  | ${"true"}
+    `("returns '' for invalid value $label", ({ value }) => {
       expect(formatCalendar(value as never, MustTestLocales.enUS)).toBe("");
     });
   });
@@ -311,7 +311,7 @@ describe("formatCalendar", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"demain à 14:30"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatCalendar("2024-03-16T14:30:00", locale, {
         reference: "2024-03-15T09:00:00",

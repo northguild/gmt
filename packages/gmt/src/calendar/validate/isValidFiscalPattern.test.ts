@@ -20,7 +20,7 @@ describe("isValidFiscalPattern", () => {
     ${"invalid"}   | ${"not a pattern at all"}
     ${""}          | ${"empty string"}
   `(
-    "returns false for invalid fiscal pattern: $invalidPattern ($reason)",
+    "returns false for invalid fiscal pattern: '$invalidPattern' ($reason)",
     ({ invalidPattern }) => {
       expect(isValidFiscalPattern(invalidPattern)).toBe(false);
     },

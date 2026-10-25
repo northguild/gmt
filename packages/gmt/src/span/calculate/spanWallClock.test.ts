@@ -177,16 +177,16 @@ describe("spanWallClock", () => {
   );
 
   it.each`
-    unit
-    ${"minutes"}
-    ${"weeks"}
-    ${"months"}
-    ${"Days"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-  `("returns null when $unit is not a wall-clock span unit", ({ unit }) => {
+    unit         | label
+    ${"minutes"} | ${"'minutes'"}
+    ${"weeks"}   | ${"'weeks'"}
+    ${"months"}  | ${"'months'"}
+    ${"Days"}    | ${"'Days'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${123}       | ${"123"}
+  `("returns null when $label is not a wall-clock span unit", ({ unit }) => {
     expect(
       spanWallClock(
         "2024-03-01T12:00:00-05:00[America/New_York]",

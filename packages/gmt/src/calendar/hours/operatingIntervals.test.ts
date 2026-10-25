@@ -314,13 +314,13 @@ describe("operatingIntervals across a skipped local midnight", () => {
   };
 
   it.each`
-    schedule                                                                                                                  | range                                                             | disambiguation  | expected
-    ${cairo}                                                                                                                  | ${cairoDays}                                                      | ${"earlier"}    | ${[{ start: "2024-04-25T20:00:00Z", end: "2024-04-26T00:00:00Z" }]}
-    ${cairo}                                                                                                                  | ${cairoDays}                                                      | ${"compatible"} | ${[{ start: "2024-04-25T20:00:00Z", end: "2024-04-25T21:45:00Z" }, { start: "2024-04-25T22:30:00Z", end: "2024-04-26T00:00:00Z" }]}
-    ${cairo}                                                                                                                  | ${cairoDays}                                                      | ${"reject"}     | ${[]}
-    ${{ timeZone: "America/Santiago", weekly: { 6: [{ from: "22:00", to: "23:45" }], 7: [{ from: "00:30", to: "03:00" }] } }} | ${{ start: "2024-09-07T00:00:00Z", end: "2024-09-09T00:00:00Z" }} | ${"earlier"}    | ${[{ start: "2024-09-08T02:00:00Z", end: "2024-09-08T06:00:00Z" }]}
+    schedule                                                                                                                  | range                                                             | disambiguation  | expected                                                                                                                            | zone
+    ${cairo}                                                                                                                  | ${cairoDays}                                                      | ${"earlier"}    | ${[{ start: "2024-04-25T20:00:00Z", end: "2024-04-26T00:00:00Z" }]}                                                                 | ${"Africa/Cairo"}
+    ${cairo}                                                                                                                  | ${cairoDays}                                                      | ${"compatible"} | ${[{ start: "2024-04-25T20:00:00Z", end: "2024-04-25T21:45:00Z" }, { start: "2024-04-25T22:30:00Z", end: "2024-04-26T00:00:00Z" }]} | ${"Africa/Cairo"}
+    ${cairo}                                                                                                                  | ${cairoDays}                                                      | ${"reject"}     | ${[]}                                                                                                                               | ${"Africa/Cairo"}
+    ${{ timeZone: "America/Santiago", weekly: { 6: [{ from: "22:00", to: "23:45" }], 7: [{ from: "00:30", to: "03:00" }] } }} | ${{ start: "2024-09-07T00:00:00Z", end: "2024-09-09T00:00:00Z" }} | ${"earlier"}    | ${[{ start: "2024-09-08T02:00:00Z", end: "2024-09-08T06:00:00Z" }]}                                                                 | ${"America/Santiago"}
   `(
-    "merges a window moved onto the previous date under $disambiguation",
+    "merges a window moved onto the previous date in $zone under $disambiguation",
     ({ schedule, range, disambiguation, expected }) => {
       expect(operatingIntervals(schedule, range, { disambiguation })).toEqual(
         expected,

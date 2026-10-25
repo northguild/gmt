@@ -16,7 +16,7 @@ describe("isValidEdifactDate", () => {
     ${"2024-06-15"} | ${false} | ${"an ISO 8601 date"}
     ${""}           | ${false} | ${"an empty value"}
   `(
-    "returns $expected for $value under 102 ($reads), as parseEdifactDate reads it",
+    "returns $expected for '$value' under 102 ($reads), as parseEdifactDate reads it",
     ({ value, expected }) => {
       expect(isValidEdifactDate(value, "102")).toBe(expected);
       expect(parseEdifactDate(value, "102") !== "").toBe(expected);

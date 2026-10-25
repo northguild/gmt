@@ -26,7 +26,7 @@ describe("parseRfc3339", () => {
     ${"2024-03-15T14:30:00+00:00[UTC]"}
     ${"2024-03-15T14:30:00-0400"}
     ${"2024-03-15T14:30:60Z"}
-  `("returns '' for invalid input $value", ({ value }: { value: string }) => {
+  `("returns '' for invalid input '$value'", ({ value }: { value: string }) => {
     expect(parseRfc3339(value)).toBe("");
   });
 

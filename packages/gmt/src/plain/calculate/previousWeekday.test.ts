@@ -61,14 +61,14 @@ describe("previousWeekday", () => {
   );
 
   it.each`
-    value
-    ${"invalid"}
-    ${""}
-    ${"2024-02-30"}
-    ${"2024-13-01"}
-    ${null}
-    ${undefined}
-  `("returns an empty string for invalid value $value", ({ value }) => {
+    value           | label
+    ${"invalid"}    | ${"'invalid'"}
+    ${""}           | ${"''"}
+    ${"2024-02-30"} | ${"'2024-02-30'"}
+    ${"2024-13-01"} | ${"'2024-13-01'"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
+  `("returns an empty string for invalid value $label", ({ value }) => {
     expect(previousWeekday(value as never, 5)).toBe("");
   });
 

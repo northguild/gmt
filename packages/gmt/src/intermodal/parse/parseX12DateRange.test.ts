@@ -51,7 +51,7 @@ describe("parseX12DateRange", () => {
       ${"RD"}  | ${"20240615-20240620"}  | ${"RD8's order under RD"}
       ${"RD"}  | ${"0615202406202024"}   | ${"no hyphen"}
       ${"RD8"} | ${""}                   | ${"an empty value"}
-    `("returns null for $code $value ($reads)", ({ code, value }) => {
+    `("returns null for $code '$value' ($reads)", ({ code, value }) => {
       expect(parseX12DateRange(value, code)).toBeNull();
     });
   });
@@ -99,7 +99,7 @@ describe("parseX12DateRange", () => {
       ${"RD8"} | ${"20240615-20240631"} | ${"31 June in the end"}
       ${"RD"}  | ${"02292023-06202024"} | ${"29 February 2023, month first"}
       ${"RD8"} | ${"20241315-20240620"} | ${"month 13 in the start"}
-    `("returns null for $code $value ($reads)", ({ code, value }) => {
+    `("returns null for $code '$value' ($reads)", ({ code, value }) => {
       expect(parseX12DateRange(value, code)).toBeNull();
     });
   });

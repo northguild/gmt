@@ -92,12 +92,12 @@ describe("formatUtc", () => {
 
   // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
   it.each`
-    timeZone
-    ${"Invalid/Zone"}
-    ${"Europe/Londn"}
-    ${""}
-    ${null}
-  `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
+    timeZone          | label
+    ${"Invalid/Zone"} | ${"'Invalid/Zone'"}
+    ${"Europe/Londn"} | ${"'Europe/Londn'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+  `("returns '' for invalid timeZone $label", ({ timeZone }) => {
     expect(
       formatUtc("2024-02-03T14:30:45Z", MustTestLocales.enUS, {
         dateStyle: "long",
@@ -134,19 +134,19 @@ describe("formatUtc", () => {
   });
 
   it.each`
-    invalidValue
-    ${"not-a-datetime"}
-    ${"2024-02-29"}
-    ${"2024-02-29Z"}
-    ${"2024-02-29T00:00:00"}
-    ${"2024-02-29T24:00:00"}
-    ${"2024-02-29T24:00:00Z"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${true}
+    invalidValue              | label
+    ${"not-a-datetime"}       | ${"'not-a-datetime'"}
+    ${"2024-02-29"}           | ${"'2024-02-29'"}
+    ${"2024-02-29Z"}          | ${"'2024-02-29Z'"}
+    ${"2024-02-29T00:00:00"}  | ${"'2024-02-29T00:00:00'"}
+    ${"2024-02-29T24:00:00"}  | ${"'2024-02-29T24:00:00'"}
+    ${"2024-02-29T24:00:00Z"} | ${"'2024-02-29T24:00:00Z'"}
+    ${""}                     | ${"''"}
+    ${null}                   | ${"null"}
+    ${undefined}              | ${"undefined"}
+    ${true}                   | ${"true"}
   `(
-    "returns an empty string for invalid datetime $invalidValue",
+    "returns an empty string for invalid datetime $label",
     ({ invalidValue }) => {
       expect(formatUtc(invalidValue as never)).toBe("");
     },
@@ -192,7 +192,7 @@ describe("formatUtc with a locale list", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"3 février 2024"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatUtc("2024-02-03T14:30:45Z", locale as string[], {
         dateStyle: "long",

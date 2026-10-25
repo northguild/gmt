@@ -17,17 +17,17 @@ describe("isValidDateTimeCycleField", () => {
   });
 
   it.each`
-    field
-    ${"week"}
-    ${"invalid"}
-    ${""}
-    ${123}
-    ${null}
-    ${undefined}
-    ${true}
-    ${[]}
-    ${{}}
-  `("returns false for $field", ({ field }) => {
+    field        | label
+    ${"week"}    | ${"'week'"}
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${123}       | ${"123"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${true}      | ${"true"}
+    ${[]}        | ${"[]"}
+    ${{}}        | ${"{}"}
+  `("returns false for $label", ({ field }) => {
     expect(isValidDateTimeCycleField(field)).toBe(false);
   });
 });

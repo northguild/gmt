@@ -77,16 +77,16 @@ describe("areZonedEqualBy", () => {
   });
 
   it.each`
-    value1                                     | value2
-    ${""}                                      | ${""}
-    ${null}                                    | ${"2024-03-15T00:00:00[America/New_York]"}
-    ${undefined}                               | ${"2024-03-15T00:00:00[America/New_York]"}
-    ${"not-a-zoned-datetime"}                  | ${"2024-03-15T00:00:00[America/New_York]"}
-    ${"2024-03-15T00:00:00[America/New_York]"} | ${null}
-    ${"2024-03-15T00:00:00[America/New_York]"} | ${undefined}
-    ${"2024-03-15T00:00:00[America/New_York]"} | ${"not-a-zoned-datetime"}
+    value1                                     | value2                                     | value1Label                                  | value2Label
+    ${""}                                      | ${""}                                      | ${"''"}                                      | ${"''"}
+    ${null}                                    | ${"2024-03-15T00:00:00[America/New_York]"} | ${"null"}                                    | ${"'2024-03-15T00:00:00[America/New_York]'"}
+    ${undefined}                               | ${"2024-03-15T00:00:00[America/New_York]"} | ${"undefined"}                               | ${"'2024-03-15T00:00:00[America/New_York]'"}
+    ${"not-a-zoned-datetime"}                  | ${"2024-03-15T00:00:00[America/New_York]"} | ${"'not-a-zoned-datetime'"}                  | ${"'2024-03-15T00:00:00[America/New_York]'"}
+    ${"2024-03-15T00:00:00[America/New_York]"} | ${null}                                    | ${"'2024-03-15T00:00:00[America/New_York]'"} | ${"null"}
+    ${"2024-03-15T00:00:00[America/New_York]"} | ${undefined}                               | ${"'2024-03-15T00:00:00[America/New_York]'"} | ${"undefined"}
+    ${"2024-03-15T00:00:00[America/New_York]"} | ${"not-a-zoned-datetime"}                  | ${"'2024-03-15T00:00:00[America/New_York]'"} | ${"'not-a-zoned-datetime'"}
   `(
-    "returns false for invalid input $value1 and $value2",
+    "returns false for invalid input $value1Label and $value2Label",
     ({ value1, value2 }) => {
       expect(areZonedEqualBy(value1 as never, value2 as never, "month")).toBe(
         false,
@@ -191,21 +191,21 @@ describe("areZonedEqualBy across zone transitions", () => {
   // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
   // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
   it.each`
-    unit      | weekStartsOn
-    ${"week"} | ${"tuesday"}
-    ${"week"} | ${"Monday"}
-    ${"week"} | ${""}
-    ${"week"} | ${null}
-    ${"week"} | ${1}
-    ${"week"} | ${true}
-    ${"day"}  | ${"tuesday"}
-    ${"day"}  | ${"Monday"}
-    ${"day"}  | ${""}
-    ${"day"}  | ${null}
-    ${"day"}  | ${1}
-    ${"day"}  | ${true}
+    unit      | weekStartsOn | label
+    ${"week"} | ${"tuesday"} | ${"'tuesday'"}
+    ${"week"} | ${"Monday"}  | ${"'Monday'"}
+    ${"week"} | ${""}        | ${"''"}
+    ${"week"} | ${null}      | ${"null"}
+    ${"week"} | ${1}         | ${"1"}
+    ${"week"} | ${true}      | ${"true"}
+    ${"day"}  | ${"tuesday"} | ${"'tuesday'"}
+    ${"day"}  | ${"Monday"}  | ${"'Monday'"}
+    ${"day"}  | ${""}        | ${"''"}
+    ${"day"}  | ${null}      | ${"null"}
+    ${"day"}  | ${1}         | ${"1"}
+    ${"day"}  | ${true}      | ${"true"}
   `(
-    "returns false by unit $unit with invalid weekStartsOn $weekStartsOn",
+    "returns false by unit $unit with invalid weekStartsOn $label",
     ({ unit, weekStartsOn }) => {
       expect(
         areZonedEqualBy(

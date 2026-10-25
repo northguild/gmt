@@ -462,16 +462,16 @@ describe("formatDateTime", () => {
   );
 
   it.each`
-    invalidValue
-    ${"not-a-datetime"}
-    ${"2024-02-29"}
-    ${"2024-02-29T24:00:00"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${true}
+    invalidValue             | label
+    ${"not-a-datetime"}      | ${"'not-a-datetime'"}
+    ${"2024-02-29"}          | ${"'2024-02-29'"}
+    ${"2024-02-29T24:00:00"} | ${"'2024-02-29T24:00:00'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+    ${true}                  | ${"true"}
   `(
-    "returns an empty string for invalid datetime $invalidValue",
+    "returns an empty string for invalid datetime $label",
     ({ invalidValue }) => {
       expect(formatDateTime(invalidValue as never)).toBe("");
     },
@@ -490,7 +490,7 @@ describe("formatDateTime", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"03/02/2024 14:30"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatDateTime("2024-02-03T14:30:45", locale, {
         year: "numeric",
@@ -513,7 +513,7 @@ describe("formatDateTime with primitive options", () => {
     ${null}   | ${""}
     ${"long"} | ${"2/3/2024, 2:30:00 PM"}
     ${1}      | ${"2/3/2024, 2:30:00 PM"}
-  `("returns $expected for options $options", ({ options, expected }) => {
+  `("returns '$expected' for options $options", ({ options, expected }) => {
     expect(
       formatDateTime(
         "2024-02-03T14:30:00",

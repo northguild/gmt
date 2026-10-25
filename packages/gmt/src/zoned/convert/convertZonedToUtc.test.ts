@@ -27,14 +27,14 @@ describe("convertZonedToUtc", () => {
   });
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-02-29T14:30:45"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidValue             | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-02-29T14:30:45"} | ${"'2024-02-29T14:30:45'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
   `(
-    "returns an empty string for invalid zoned datetime $invalidValue",
+    "returns an empty string for invalid zoned datetime $label",
     ({ invalidValue }) => {
       expect(convertZonedToUtc(invalidValue as never)).toBe("");
     },
@@ -61,7 +61,7 @@ describe("convertZonedToUtc", () => {
     ${"2024-02-28T18:00:00-06:00[America/Chicago]"}     | ${"2024-02-29T00:00:00Z"}
     ${"2024-02-28T17:00:00-07:00[America/Phoenix]"}     | ${"2024-02-29T00:00:00Z"}
   `(
-    "converts all battle-test timeZones representing 2024-02-29T00:00:00Z to UTC $expected",
+    "converts the battle-test value $value to UTC $expected",
     ({ value, expected }) => {
       expect(convertZonedToUtc(value)).toBe(expected);
     },

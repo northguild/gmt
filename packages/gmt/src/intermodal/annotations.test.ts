@@ -69,7 +69,7 @@ describe("intermodal annotations (RFC 9557)", () => {
     ${"[UTC][u-ca=iso8601]"} | ${true}  | ${true}   | ${"202406141900+00"} | ${"zone then ISO calendar"}
     ${"[Not/AZone]"}         | ${true}  | ${false}  | ${""}                | ${"zone that does not exist: only the instant is read, but a departure's bracket and a 303 value's zone must be real"}
   `(
-    "reads $annotation on an instant consistently ($kind)",
+    "reads '$annotation' on an instant consistently ($kind)",
     ({ annotation, accepted, departure, dtm303 }) => {
       const value = `${clockStart}${annotation}`;
 

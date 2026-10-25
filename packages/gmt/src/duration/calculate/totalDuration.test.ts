@@ -247,50 +247,50 @@ describe("totalDuration", () => {
   });
 
   it.each`
-    value
-    ${"not a duration"}
-    ${""}
-    ${"P"}
-    ${"2024-03-10"}
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-    ${[]}
-    ${{}}
+    value               | label
+    ${"not a duration"} | ${"'not a duration'"}
+    ${""}               | ${"''"}
+    ${"P"}              | ${"'P'"}
+    ${"2024-03-10"}     | ${"'2024-03-10'"}
+    ${null}             | ${"null"}
+    ${undefined}        | ${"undefined"}
+    ${123}              | ${"123"}
+    ${true}             | ${"true"}
+    ${[]}               | ${"[]"}
+    ${{}}               | ${"{}"}
   `(
-    "returns null when value $value is not a valid duration string",
+    "returns null when value $label is not a valid duration string",
     ({ value }) => {
       expect(totalDuration(value, "hours")).toBeNull();
     },
   );
 
   it.each`
-    unit
-    ${"fortnights"}
-    ${"fortnight"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-    ${[]}
-    ${{}}
+    unit            | label
+    ${"fortnights"} | ${"'fortnights'"}
+    ${"fortnight"}  | ${"'fortnight'"}
+    ${""}           | ${"''"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
+    ${123}          | ${"123"}
+    ${[]}           | ${"[]"}
+    ${{}}           | ${"{}"}
   `(
-    "returns null when unit $unit is not a valid DateTimeDurationUnit",
+    "returns null when unit $label is not a valid DateTimeDurationUnit",
     ({ unit }) => {
       expect(totalDuration("P1DT2H30M", unit)).toBeNull();
     },
   );
 
   it.each`
-    relativeTo
-    ${"not a date"}
-    ${""}
-    ${"2024-13-45"}
-    ${123}
-    ${true}
-    ${[]}
-  `("returns null when relativeTo $relativeTo is invalid", ({ relativeTo }) => {
+    relativeTo      | label
+    ${"not a date"} | ${"'not a date'"}
+    ${""}           | ${"''"}
+    ${"2024-13-45"} | ${"'2024-13-45'"}
+    ${123}          | ${"123"}
+    ${true}         | ${"true"}
+    ${[]}           | ${"[]"}
+  `("returns null when relativeTo $label is invalid", ({ relativeTo }) => {
     expect(totalDuration("P1M", "days", { relativeTo })).toBeNull();
   });
 

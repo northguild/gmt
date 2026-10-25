@@ -37,7 +37,7 @@ describe("isValidX12DateAndTime", () => {
     ${"2024-06-15"} | ${"14:30"}     | ${false} | ${"ISO 8601: the values are the digits of the elements"}
     ${"20240615"}   | ${"1430ET"}    | ${false} | ${"a time code is its own element"}
   `(
-    "returns $expected for $date and $time ($reads), as parseX12DateAndTime reads them",
+    "returns $expected for '$date' and '$time' ($reads), as parseX12DateAndTime reads them",
     ({
       date,
       time,

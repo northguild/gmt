@@ -69,8 +69,8 @@ describe("readSetFields", () => {
 
   it.each`
     fields                                             | reason
-    ${{ year: null }}                                  | ${"null"}
-    ${{ year: "2025" }}                                | ${"a string"}
+    ${{ year: null }}                                  | ${"null as the year"}
+    ${{ year: "2025" }}                                | ${"a string as the year"}
     ${{ year: true }}                                  | ${"a boolean"}
     ${{ year: 2025n }}                                 | ${"a bigint"}
     ${{ year: Number.NaN }}                            | ${"NaN"}
@@ -105,18 +105,21 @@ describe("readSetFields", () => {
   // TC39 IsPartialTemporalObject: a Temporal object holding a date or a time is never a partial,
   // even when every field it reads is one the function takes.
   it.each`
-    value                                                         | allowed
-    ${Temporal.PlainDate.from("2025-06-01")}                      | ${DATE_FIELDS}
-    ${Temporal.PlainYearMonth.from("2025-06")}                    | ${DATE_FIELDS}
-    ${Temporal.PlainMonthDay.from("06-01")}                       | ${DATE_FIELDS}
-    ${Temporal.PlainTime.from("05:00")}                           | ${TIME_FIELDS}
-    ${Temporal.PlainDate.from("2025-06-01")}                      | ${DATE_TIME_FIELDS}
-    ${Temporal.PlainTime.from("05:00")}                           | ${DATE_TIME_FIELDS}
-    ${Temporal.PlainDateTime.from("2025-06-01T05:00")}            | ${DATE_TIME_FIELDS}
-    ${Temporal.ZonedDateTime.from("2025-06-01T05:00+00:00[UTC]")} | ${DATE_TIME_FIELDS}
-  `("returns null for the Temporal object $value", ({ value, allowed }) => {
-    expect(readSetFields(value, allowed)).toBeNull();
-  });
+    value                                                         | allowed             | taken
+    ${Temporal.PlainDate.from("2025-06-01")}                      | ${DATE_FIELDS}      | ${"date fields"}
+    ${Temporal.PlainYearMonth.from("2025-06")}                    | ${DATE_FIELDS}      | ${"date fields"}
+    ${Temporal.PlainMonthDay.from("06-01")}                       | ${DATE_FIELDS}      | ${"date fields"}
+    ${Temporal.PlainTime.from("05:00")}                           | ${TIME_FIELDS}      | ${"time fields"}
+    ${Temporal.PlainDate.from("2025-06-01")}                      | ${DATE_TIME_FIELDS} | ${"date-time fields"}
+    ${Temporal.PlainTime.from("05:00")}                           | ${DATE_TIME_FIELDS} | ${"date-time fields"}
+    ${Temporal.PlainDateTime.from("2025-06-01T05:00")}            | ${DATE_TIME_FIELDS} | ${"date-time fields"}
+    ${Temporal.ZonedDateTime.from("2025-06-01T05:00+00:00[UTC]")} | ${DATE_TIME_FIELDS} | ${"date-time fields"}
+  `(
+    "returns null for the Temporal object $value taking $taken",
+    ({ value, allowed }) => {
+      expect(readSetFields(value, allowed)).toBeNull();
+    },
+  );
 
   it("does not take an object for a Temporal object by its prototype alone", () => {
     // Own data properties shadow the prototype's getters, as `Object.defineProperties` writes them.

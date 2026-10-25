@@ -87,7 +87,7 @@ describe("toNanoseconds", () => {
     ${"2024-03-10T120000Z"}                          | ${"basic-format time (strict extended shape)"}
     ${"invalid"}                                     | ${"unparseable"}
     ${""}                                            | ${"empty string"}
-  `("returns 0n when $value is invalid ($reason)", ({ value }) => {
+  `("returns 0n when '$value' is invalid ($reason)", ({ value }) => {
     expect(toNanoseconds(value)).toBe(0n);
   });
 

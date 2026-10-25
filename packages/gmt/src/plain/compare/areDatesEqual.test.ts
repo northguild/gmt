@@ -32,7 +32,7 @@ describe("areDatesEqual", () => {
     ${"2024-01-01"} | ${"2024-01-02"}
     ${""}           | ${""}
   `(
-    "returns false for non-equal or empty values $value1 and $value2",
+    "returns false for non-equal or empty values '$value1' and '$value2'",
     ({ value1, value2 }) => {
       expect(areDatesEqual(value1, value2)).toBe(false);
     },

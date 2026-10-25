@@ -89,7 +89,7 @@ describe("transitTime", () => {
     ${"invalid"}                                     | ${"PT2H"}    | ${"garbage departure"}
     ${"2024-06-15T10:00:00Z[UTC][u-ca=gregory]"}     | ${"PT2H"}    | ${"a zoned departure's calendar must be ISO"}
   `(
-    "returns the sentinel for $departure + $duration ($reason)",
+    "returns the sentinel for '$departure' + '$duration' ($reason)",
     ({ departure, duration }) => {
       expect(transitTime(departure, duration)).toBe("");
     },

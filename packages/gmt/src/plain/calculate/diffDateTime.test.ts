@@ -37,37 +37,34 @@ describe("diffDateTime", () => {
   );
 
   it.each`
-    nonStringInput
-    ${"2024-02-30T12:00:00"}
-    ${"not-a-datetime"}
-    ${"2024-13-01T12:00:00"}
-    ${"2024-00-10T12:00:00"}
-    ${""}
-    ${true}
-    ${null}
-    ${undefined}
-    ${"12"}
-    ${"2024"}
-    ${"2024-02"}
-    ${"2024-02-29"}
-    ${"12:00:00"}
-    ${"2024-02-29T25:00:00"}
-  `(
-    "returns null for non-string input $nonStringInput",
-    ({ nonStringInput }) => {
-      expect(
-        diffDateTime(nonStringInput as never, "2024-01-01T00:00:00", ["days"]),
-      ).toBeNull();
-    },
-  );
+    nonStringInput           | label
+    ${"2024-02-30T12:00:00"} | ${"'2024-02-30T12:00:00'"}
+    ${"not-a-datetime"}      | ${"'not-a-datetime'"}
+    ${"2024-13-01T12:00:00"} | ${"'2024-13-01T12:00:00'"}
+    ${"2024-00-10T12:00:00"} | ${"'2024-00-10T12:00:00'"}
+    ${""}                    | ${"''"}
+    ${true}                  | ${"true"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+    ${"12"}                  | ${"'12'"}
+    ${"2024"}                | ${"'2024'"}
+    ${"2024-02"}             | ${"'2024-02'"}
+    ${"2024-02-29"}          | ${"'2024-02-29'"}
+    ${"12:00:00"}            | ${"'12:00:00'"}
+    ${"2024-02-29T25:00:00"} | ${"'2024-02-29T25:00:00'"}
+  `("returns null for non-string input $label", ({ nonStringInput }) => {
+    expect(
+      diffDateTime(nonStringInput as never, "2024-01-01T00:00:00", ["days"]),
+    ).toBeNull();
+  });
 
   it.each`
-    invalidUnit
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns null for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit  | label
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+  `("returns null for invalid unit $label", ({ invalidUnit }) => {
     expect(
       diffDateTime("2024-01-01T00:00:00", "2024-01-02T00:00:00", [
         invalidUnit,

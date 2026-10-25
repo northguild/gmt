@@ -53,7 +53,7 @@ describe("parseUtcOffsetNanoseconds", () => {
     ${"+01:00:00.5"} | ${"sub-second offset"}
     ${""}            | ${"empty string"}
     ${"invalid"}     | ${"non-offset text"}
-  `("returns null for $offset ($description)", ({ offset }) => {
+  `("returns null for '$offset' ($description)", ({ offset }) => {
     expect(parseUtcOffsetNanoseconds(offset)).toBeNull();
   });
 

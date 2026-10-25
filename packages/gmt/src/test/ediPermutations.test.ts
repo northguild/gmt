@@ -1119,7 +1119,7 @@ describe("EDI permutations: a call the types accept returns a value", () => {
       ${"20240615"} | ${"2430"}  | ${"hour 24"}
       ${"20240615"} | ${"14304"} | ${"five digits is not an element 337 form"}
     `(
-      "$date and $time ($reads) return '' from the parser and false from the validator",
+      "'$date' and '$time' ($reads) return '' from the parser and false from the validator",
       ({ date, time }: { date: string; time: string }) => {
         expect(parseX12DateAndTime(date, time)).toBe("");
         expect(isValidX12DateAndTime(date, time)).toBe(false);

@@ -37,26 +37,26 @@ describe("getTimeZoneOffset", () => {
   );
 
   it.each`
-    timeZone
-    ${"Not/AZone"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-  `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
+    timeZone       | label
+    ${"Not/AZone"} | ${"'Not/AZone'"}
+    ${""}          | ${"''"}
+    ${null}        | ${"null"}
+    ${undefined}   | ${"undefined"}
+    ${123}         | ${"123"}
+    ${true}        | ${"true"}
+  `("returns '' for invalid timeZone $label", ({ timeZone }) => {
     expect(getTimeZoneOffset(timeZone as never, "2024-07-15T12:00:00Z")).toBe(
       "",
     );
   });
 
   it.each`
-    instant
-    ${"not an instant"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns '' for invalid instant $instant", ({ instant }) => {
+    instant             | label
+    ${"not an instant"} | ${"'not an instant'"}
+    ${""}               | ${"''"}
+    ${null}             | ${"null"}
+    ${undefined}        | ${"undefined"}
+  `("returns '' for invalid instant $label", ({ instant }) => {
     expect(getTimeZoneOffset("America/New_York", instant as never)).toBe("");
   });
 
@@ -124,7 +124,7 @@ describe("getTimeZoneOffset", () => {
     ${"+24:00:00"} | ${"2024-07-15T12:00:00Z"}        | ${""}
     ${"-0400:30"}  | ${"2024-07-15T12:00:00Z"}        | ${""}
   `(
-    "returns $expected for the stored offset $timeZone at $instant",
+    "returns '$expected' for the stored offset $timeZone at $instant",
     ({ timeZone, instant, expected }) => {
       expect(getTimeZoneOffset(timeZone, instant)).toBe(expected);
     },

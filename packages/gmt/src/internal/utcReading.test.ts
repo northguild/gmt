@@ -137,7 +137,7 @@ describe("formatUtcReading", () => {
     ${"+010000-01-01T00:00:00Z"}        | ${""}
     ${"+275760-09-13T00:00:00Z"}        | ${""}
   `(
-    "writes $instant as $expected (four-digit years only)",
+    "writes $instant as '$expected' (four-digit years only)",
     ({ instant, expected }) => {
       expect(
         formatUtcReading({

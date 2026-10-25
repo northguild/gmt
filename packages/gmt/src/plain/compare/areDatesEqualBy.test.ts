@@ -53,16 +53,16 @@ describe("areDatesEqualBy", () => {
   });
 
   it.each`
-    value1          | value2
-    ${""}           | ${""}
-    ${null}         | ${"2024-03-15"}
-    ${undefined}    | ${"2024-03-15"}
-    ${"not-a-date"} | ${"2024-03-15"}
-    ${"2024-03-15"} | ${null}
-    ${"2024-03-15"} | ${undefined}
-    ${"2024-03-15"} | ${"not-a-date"}
+    value1          | value2          | label1            | label2
+    ${""}           | ${""}           | ${"''"}           | ${"''"}
+    ${null}         | ${"2024-03-15"} | ${"null"}         | ${"'2024-03-15'"}
+    ${undefined}    | ${"2024-03-15"} | ${"undefined"}    | ${"'2024-03-15'"}
+    ${"not-a-date"} | ${"2024-03-15"} | ${"'not-a-date'"} | ${"'2024-03-15'"}
+    ${"2024-03-15"} | ${null}         | ${"'2024-03-15'"} | ${"null"}
+    ${"2024-03-15"} | ${undefined}    | ${"'2024-03-15'"} | ${"undefined"}
+    ${"2024-03-15"} | ${"not-a-date"} | ${"'2024-03-15'"} | ${"'not-a-date'"}
   `(
-    "returns false for invalid input $value1 and $value2",
+    "returns false for invalid input $label1 and $label2",
     ({ value1, value2 }) => {
       expect(areDatesEqualBy(value1 as never, value2 as never, "month")).toBe(
         false,
@@ -91,21 +91,21 @@ describe("areDatesEqualBy", () => {
   // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
   // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
   it.each`
-    unit      | weekStartsOn
-    ${"week"} | ${"tuesday"}
-    ${"week"} | ${"Monday"}
-    ${"week"} | ${""}
-    ${"week"} | ${null}
-    ${"week"} | ${1}
-    ${"week"} | ${true}
-    ${"day"}  | ${"tuesday"}
-    ${"day"}  | ${"Monday"}
-    ${"day"}  | ${""}
-    ${"day"}  | ${null}
-    ${"day"}  | ${1}
-    ${"day"}  | ${true}
+    unit      | weekStartsOn | label
+    ${"week"} | ${"tuesday"} | ${"'tuesday'"}
+    ${"week"} | ${"Monday"}  | ${"'Monday'"}
+    ${"week"} | ${""}        | ${"''"}
+    ${"week"} | ${null}      | ${"null"}
+    ${"week"} | ${1}         | ${"1"}
+    ${"week"} | ${true}      | ${"true"}
+    ${"day"}  | ${"tuesday"} | ${"'tuesday'"}
+    ${"day"}  | ${"Monday"}  | ${"'Monday'"}
+    ${"day"}  | ${""}        | ${"''"}
+    ${"day"}  | ${null}      | ${"null"}
+    ${"day"}  | ${1}         | ${"1"}
+    ${"day"}  | ${true}      | ${"true"}
   `(
-    "returns false by unit $unit with invalid weekStartsOn $weekStartsOn",
+    "returns false by unit $unit with invalid weekStartsOn $label",
     ({ unit, weekStartsOn }) => {
       expect(
         areDatesEqualBy("2024-02-29", "2024-02-29", unit, { weekStartsOn }),

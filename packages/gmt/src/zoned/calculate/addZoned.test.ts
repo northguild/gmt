@@ -83,14 +83,14 @@ describe("addZoned", () => {
   );
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-02-29T14:30:00"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidValue             | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-02-29T14:30:00"} | ${"'2024-02-29T14:30:00'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
   `(
-    "returns an empty string for invalid zoned datetime $invalidValue",
+    "returns an empty string for invalid zoned datetime $label",
     ({ invalidValue }) => {
       expect(addZoned(invalidValue as never, { hours: 1 } as never)).toBe("");
     },
@@ -114,21 +114,18 @@ describe("addZoned", () => {
   );
 
   it.each`
-    invalidUnit
-    ${"timeZone"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns an empty string for invalid unit $invalidUnit",
-    ({ invalidUnit }) => {
-      expect(
-        addZoned("2024-02-29T14:30:00+00:00[UTC]", {
-          [String(invalidUnit)]: 1,
-        } as never),
-      ).toBe("");
-    },
-  );
+    invalidUnit   | label
+    ${"timeZone"} | ${"'timeZone'"}
+    ${""}         | ${"''"}
+    ${null}       | ${"null"}
+    ${undefined}  | ${"undefined"}
+  `("returns an empty string for invalid unit $label", ({ invalidUnit }) => {
+    expect(
+      addZoned("2024-02-29T14:30:00+00:00[UTC]", {
+        [String(invalidUnit)]: 1,
+      } as never),
+    ).toBe("");
+  });
 
   for (const { timeZone, value } of localNoonBattleCases) {
     it(`preserves battle-test timeZone ${timeZone} when adding`, () => {
@@ -156,7 +153,7 @@ describe("addZoned", () => {
     ${"2024-04-06T01:45:00+11:00[Australia/Lord_Howe]"} | ${"later"}      | ${"2024-04-07T01:45:00+10:30[Australia/Lord_Howe]"}
     ${"2024-04-06T01:45:00+11:00[Australia/Lord_Howe]"} | ${"reject"}     | ${""}
   `(
-    "resolves fall-back overlap for $value + 1 day with disambiguation $disambiguation to $expected",
+    "resolves fall-back overlap for $value + 1 day with disambiguation $disambiguation to '$expected'",
     ({ value, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -189,7 +186,7 @@ describe("addZoned", () => {
     ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"later"}      | ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}
     ${"2011-12-29T12:00:00-10:00[Pacific/Apia]"}        | ${"reject"}     | ${""}
   `(
-    "resolves the spring-forward gap for $value + 1 day with disambiguation $disambiguation to $expected",
+    "resolves the spring-forward gap for $value + 1 day with disambiguation $disambiguation to '$expected'",
     ({ value, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -213,7 +210,7 @@ describe("addZoned", () => {
     ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"later"}     | ${"2024-03-10T03:40:00-04:00[America/New_York]"}
     ${"2024-03-09T02:30:00-05:00[America/New_York]"} | ${{ days: 1, minutes: 10 }} | ${"reject"}    | ${""}
   `(
-    "adds the time portion of $units to $value in exact time with disambiguation $disambiguation, returns $expected",
+    "adds the time portion of $units to $value in exact time with disambiguation $disambiguation, returns '$expected'",
     ({ value, units, disambiguation, expected }) => {
       expect(addZoned(value, units, { disambiguation })).toBe(expected);
     },
@@ -269,7 +266,7 @@ describe("addZoned", () => {
     ${"2024-03-31T12:00:00-04:00[America/New_York]"} | ${{ months: -1 }} | ${"constrain"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"}
     ${"2024-03-31T12:00:00-04:00[America/New_York]"} | ${{ months: -1 }} | ${"reject"}    | ${""}
   `(
-    "returns $expected for $value + $units with overflow $overflow",
+    "returns '$expected' for $value + $units with overflow $overflow",
     ({ value, units, overflow, expected }) => {
       expect(
         addZoned(
@@ -370,7 +367,7 @@ describe("addZoned with GMT calendar-annotated values", () => {
     ${"later"}      | ${"2019-05-05T02:30:00+00:00[Africa/Casablanca][u-ca=japanese]"}
     ${"reject"}     | ${""}
   `(
-    "resolves the Heisei->Reiwa Casablanca fold to $expected with disambiguation $disambiguation",
+    "resolves the Heisei->Reiwa Casablanca fold to '$expected' with disambiguation $disambiguation",
     ({ disambiguation, expected }) => {
       expect(
         addZoned(
@@ -410,7 +407,7 @@ describe("addZoned with GMT calendar-annotated values", () => {
     ${"later"}      | ${G.afterGap}
     ${"reject"}     | ${""}
   `(
-    "resolves the Jerusalem gap to $expected with disambiguation $disambiguation",
+    "resolves the Jerusalem gap to '$expected' with disambiguation $disambiguation",
     ({ disambiguation, expected }) => {
       expect(addZoned(G.beforeGap, { days: 1 }, { disambiguation })).toBe(
         expected,
@@ -463,9 +460,12 @@ describe("addZoned at the maximum instant", () => {
     ${"+275760-09-12T10:00:00+10:00[Australia/Sydney]"}   | ${{ days: 1 }} | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}
     ${"+275760-09-12T14:00:00+14:00[Pacific/Kiritimati]"} | ${{ days: 1 }} | ${"+275760-09-13T14:00:00+14:00[Pacific/Kiritimati]"}
     ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}   | ${{ days: 1 }} | ${""}
-  `("adds $units to $value giving $expected", ({ value, units, expected }) => {
-    expect(addZoned(value, units)).toBe(expected);
-  });
+  `(
+    "adds $units to $value giving '$expected'",
+    ({ value, units, expected }) => {
+      expect(addZoned(value, units)).toBe(expected);
+    },
+  );
 });
 
 // CORE-6 S5: the calendar part of a zoned add follows the Intl era/monthCode proposal's
@@ -483,7 +483,7 @@ describe("addZoned in non-ISO calendars (CORE-6)", () => {
     ${"1000-01-31T00:00:00-04:56:02[America/New_York][u-ca=buddhist]"} | ${{ months: 1 }} | ${"1000-02-28T00:00:00-04:56[America/New_York][u-ca=buddhist]"}    | ${"proleptic buddhist: ISO 1000 has no Feb 29"}
     ${"1000-01-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}          | ${{ months: 1 }} | ${"1000-02-28T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}          | ${"proleptic buddhist behind UTC"}
   `(
-    "adds $units to $value giving $expected ($reason)",
+    "adds $units to $value giving '$expected' ($reason)",
     ({ value, units, expected }) => {
       expect(addZoned(value, units)).toBe(expected);
     },

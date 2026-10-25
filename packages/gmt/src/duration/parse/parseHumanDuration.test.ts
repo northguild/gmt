@@ -235,37 +235,37 @@ describe("parseHumanDuration", () => {
   });
 
   it.each`
-    text
-    ${""}
-    ${" "}
-    ${"h"}
-    ${"30"}
-    ${"2 x"}
-    ${"2 hours ago"}
-    ${"1:30"}
-    ${"1:30:00"}
-    ${"PT1H"}
-    ${"P1M"}
-    ${"2us"}
-    ${"2μs"}
-    ${"2ns"}
-    ${"2 fortnights"}
-    ${"1ſ"}
-    ${"1 mın"}
-    ${"１h"}
-    ${"٢h"}
-    ${"2h\u0000"}
-    ${"pt2h30m"}
-    ${"-PT1H"}
-    ${"P1D"}
-    ${undefined}
-    ${null}
-    ${120}
-    ${{}}
-    ${true}
-    ${["2h"]}
-    ${2n}
-  `("returns the sentinel for $text", ({ text }) => {
+    text              | label
+    ${""}             | ${"''"}
+    ${" "}            | ${"' '"}
+    ${"h"}            | ${"'h'"}
+    ${"30"}           | ${"'30'"}
+    ${"2 x"}          | ${"'2 x'"}
+    ${"2 hours ago"}  | ${"'2 hours ago'"}
+    ${"1:30"}         | ${"'1:30'"}
+    ${"1:30:00"}      | ${"'1:30:00'"}
+    ${"PT1H"}         | ${"'PT1H'"}
+    ${"P1M"}          | ${"'P1M'"}
+    ${"2us"}          | ${"'2us'"}
+    ${"2μs"}          | ${"'2μs'"}
+    ${"2ns"}          | ${"'2ns'"}
+    ${"2 fortnights"} | ${"'2 fortnights'"}
+    ${"1ſ"}           | ${"'1ſ'"}
+    ${"1 mın"}        | ${"'1 mın'"}
+    ${"１h"}          | ${"'１h'"}
+    ${"٢h"}           | ${"'٢h'"}
+    ${"2h\u0000"}     | ${"'2h\u0000'"}
+    ${"pt2h30m"}      | ${"'pt2h30m'"}
+    ${"-PT1H"}        | ${"'-PT1H'"}
+    ${"P1D"}          | ${"'P1D'"}
+    ${undefined}      | ${"undefined"}
+    ${null}           | ${"null"}
+    ${120}            | ${"120"}
+    ${{}}             | ${"{}"}
+    ${true}           | ${"true"}
+    ${["2h"]}         | ${"['2h']"}
+    ${2n}             | ${"2n"}
+  `("returns the sentinel for $label", ({ text }) => {
     expect(parseHumanDuration(text as string)).toBe("");
   });
 

@@ -14,7 +14,7 @@ describe("clampDate", () => {
     ${"2024-01-15"} | ${"2024-02-01"} | ${"2024-06-30"} | ${"2024-02-01"}
     ${"2024-03-15"} | ${"2024-03-31"} | ${"2024-03-01"} | ${""}
   `(
-    "returns $expected for value=$value, min=$min, max=$max",
+    "returns '$expected' for value=$value, min=$min, max=$max",
     ({ value, min, max, expected }) => {
       expect(clampDate(value, min, max)).toBe(expected);
     },
@@ -29,9 +29,12 @@ describe("clampDate", () => {
     ${"2024-03-15"} | ${""}           | ${"2024-03-31"}
     ${"2024-03-15"} | ${"2024-03-01"} | ${""}
     ${"2024-02-30"} | ${"2024-03-01"} | ${"2024-03-31"}
-  `('returns "" for invalid input', ({ value, min, max }) => {
-    expect(clampDate(value, min, max)).toBe("");
-  });
+  `(
+    "returns '' for invalid input value='$value', min='$min', max='$max'",
+    ({ value, min, max }) => {
+      expect(clampDate(value, min, max)).toBe("");
+    },
+  );
 
   // Temporal's ISO grammar reads an elective annotation (`[foo=bar]`) and `[u-ca=iso8601]` and ignores
   // them (RFC 9557 §3.3; native Temporal agrees), so the result is the unannotated input's.

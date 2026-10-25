@@ -74,17 +74,17 @@ describe("toTAI", () => {
   });
 
   it.each`
-    isoString
-    ${null}
-    ${undefined}
-    ${123}
-    ${""}
-    ${"x"}
-    ${"2024-01-01"}
-    ${"2024-01-01T00:00:00"}
-    ${"2024-01-01T00:00:00[UTC]"}
-    ${"20240101T000000Z"}
-  `("returns '' for the invalid $isoString", ({ isoString }) => {
+    isoString                     | label
+    ${null}                       | ${"null"}
+    ${undefined}                  | ${"undefined"}
+    ${123}                        | ${"123"}
+    ${""}                         | ${"''"}
+    ${"x"}                        | ${"'x'"}
+    ${"2024-01-01"}               | ${"'2024-01-01'"}
+    ${"2024-01-01T00:00:00"}      | ${"'2024-01-01T00:00:00'"}
+    ${"2024-01-01T00:00:00[UTC]"} | ${"'2024-01-01T00:00:00[UTC]'"}
+    ${"20240101T000000Z"}         | ${"'20240101T000000Z'"}
+  `("returns '' for the invalid $label", ({ isoString }) => {
     expect(toTAI(isoString)).toBe("");
   });
 

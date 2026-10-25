@@ -129,17 +129,17 @@ describe("formatDateTimeRange", () => {
   );
 
   it.each`
-    start                    | end
-    ${"invalid"}             | ${"2024-02-05T17:00:00"}
-    ${"2024-02-03T09:00:00"} | ${"invalid"}
-    ${"invalid"}             | ${"invalid"}
-    ${"2024-02-30T09:00:00"} | ${"2024-02-05T17:00:00"}
-    ${""}                    | ${"2024-02-05T17:00:00"}
-    ${null}                  | ${"2024-02-05T17:00:00"}
-    ${undefined}             | ${"2024-02-05T17:00:00"}
-    ${123}                   | ${"2024-02-05T17:00:00"}
+    start                    | end                      | label
+    ${"invalid"}             | ${"2024-02-05T17:00:00"} | ${"'invalid'"}
+    ${"2024-02-03T09:00:00"} | ${"invalid"}             | ${"'2024-02-03T09:00:00'"}
+    ${"invalid"}             | ${"invalid"}             | ${"'invalid'"}
+    ${"2024-02-30T09:00:00"} | ${"2024-02-05T17:00:00"} | ${"'2024-02-30T09:00:00'"}
+    ${""}                    | ${"2024-02-05T17:00:00"} | ${"''"}
+    ${null}                  | ${"2024-02-05T17:00:00"} | ${"null"}
+    ${undefined}             | ${"2024-02-05T17:00:00"} | ${"undefined"}
+    ${123}                   | ${"2024-02-05T17:00:00"} | ${"123"}
   `(
-    "returns empty string when either endpoint is invalid or non-string: $start -> $end",
+    "returns empty string when either endpoint is invalid or non-string: $label -> $end",
     ({ start, end }) => {
       expect(
         formatDateTimeRange(start as never, end, MustTestLocales.enUS),
@@ -181,7 +181,7 @@ describe("formatDateTimeRange", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"14:30 – 16:46"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatDateTimeRange(
         "2024-02-03T14:30:45",
@@ -204,7 +204,7 @@ describe("formatDateTimeRange with primitive options", () => {
     ${null}   | ${""}
     ${"long"} | ${"2/3/2024, 2:30:00 PM - 2/5/2024, 5:00:00 PM"}
     ${1}      | ${"2/3/2024, 2:30:00 PM - 2/5/2024, 5:00:00 PM"}
-  `("returns $expected for options $options", ({ options, expected }) => {
+  `("returns '$expected' for options $options", ({ options, expected }) => {
     expect(
       formatDateTimeRange(
         "2024-02-03T14:30:00",

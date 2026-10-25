@@ -16,7 +16,7 @@ describe("isValidX12DateRange", () => {
     ${"RD8"} | ${"20240615"}          | ${false} | ${"one date"}
     ${"RD8"} | ${""}                  | ${false} | ${"an empty value"}
   `(
-    "returns $expected for $value under $code ($reads), as parseX12DateRange reads it",
+    "returns $expected for '$value' under $code ($reads), as parseX12DateRange reads it",
     ({ code, value, expected }) => {
       expect(isValidX12DateRange(value, code)).toBe(expected);
       expect(parseX12DateRange(value, code) !== null).toBe(expected);

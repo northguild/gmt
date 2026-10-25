@@ -128,23 +128,23 @@ describe("roundTime", () => {
   );
 
   it.each`
-    invalidUnit
-    ${"invalid-unit"}
-    ${"year"}
-    ${"month"}
-    ${"week"}
-    ${"day"}
-    ${"days"}
-    ${"hourss"}
-    ${"Hours"}
-    ${"minutez"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${12}
-    ${true}
-    ${false}
-  `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit       | label
+    ${"invalid-unit"} | ${"'invalid-unit'"}
+    ${"year"}         | ${"'year'"}
+    ${"month"}        | ${"'month'"}
+    ${"week"}         | ${"'week'"}
+    ${"day"}          | ${"'day'"}
+    ${"days"}         | ${"'days'"}
+    ${"hourss"}       | ${"'hourss'"}
+    ${"Hours"}        | ${"'Hours'"}
+    ${"minutez"}      | ${"'minutez'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
+    ${12}             | ${"12"}
+    ${true}           | ${"true"}
+    ${false}          | ${"false"}
+  `("returns empty string for invalid unit $label", ({ invalidUnit }) => {
     expect(roundTime("12:34:56", { smallestUnit: invalidUnit as never })).toBe(
       "",
     );

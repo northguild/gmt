@@ -76,21 +76,21 @@ describe("parseUnitFromUtc week with a year outside 0000-9999", () => {
   // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
   // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
   it.each`
-    unit      | weekStartsOn
-    ${"week"} | ${"tuesday"}
-    ${"week"} | ${"Monday"}
-    ${"week"} | ${""}
-    ${"week"} | ${null}
-    ${"week"} | ${1}
-    ${"week"} | ${true}
-    ${"hour"} | ${"tuesday"}
-    ${"hour"} | ${"Monday"}
-    ${"hour"} | ${""}
-    ${"hour"} | ${null}
-    ${"hour"} | ${1}
-    ${"hour"} | ${true}
+    unit      | weekStartsOn | label
+    ${"week"} | ${"tuesday"} | ${"'tuesday'"}
+    ${"week"} | ${"Monday"}  | ${"'Monday'"}
+    ${"week"} | ${""}        | ${"''"}
+    ${"week"} | ${null}      | ${"null"}
+    ${"week"} | ${1}         | ${"1"}
+    ${"week"} | ${true}      | ${"true"}
+    ${"hour"} | ${"tuesday"} | ${"'tuesday'"}
+    ${"hour"} | ${"Monday"}  | ${"'Monday'"}
+    ${"hour"} | ${""}        | ${"''"}
+    ${"hour"} | ${null}      | ${"null"}
+    ${"hour"} | ${1}         | ${"1"}
+    ${"hour"} | ${true}      | ${"true"}
   `(
-    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    "returns an empty string for unit $unit with invalid weekStartsOn $label",
     ({ unit, weekStartsOn }) => {
       expect(
         parseUnitFromUtc("2024-03-15T12:00:00Z", unit, { weekStartsOn }),
@@ -137,18 +137,15 @@ describe("parseUnitFromUtc week with a year outside 0000-9999", () => {
 
   // An unknown IANA zone is invalid input; an explicit undefined is the omitted option (UTC).
   it.each`
-    timeZone
-    ${"Mars/Olympus"}
-    ${""}
-    ${null}
-  `(
-    "returns an empty string for invalid timeZone $timeZone",
-    ({ timeZone }) => {
-      expect(
-        parseUnitFromUtc("2024-03-17T02:30:45.123456789Z", "day", { timeZone }),
-      ).toBe("");
-    },
-  );
+    timeZone          | label
+    ${"Mars/Olympus"} | ${"'Mars/Olympus'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+  `("returns an empty string for invalid timeZone $label", ({ timeZone }) => {
+    expect(
+      parseUnitFromUtc("2024-03-17T02:30:45.123456789Z", "day", { timeZone }),
+    ).toBe("");
+  });
 
   // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
   it.each`

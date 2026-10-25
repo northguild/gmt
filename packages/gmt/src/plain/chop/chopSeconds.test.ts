@@ -36,18 +36,18 @@ describe("chopSeconds", () => {
   });
 
   it.each`
-    invalidValue
-    ${"2024-02-29"}
-    ${"2024-02-29T12:30:45Z"}
-    ${"2024-02-29T12:30:45+01:00[Europe/Paris]"}
-    ${"not-a-datetime"}
-    ${""}
-    ${NaN}
-    ${null}
-    ${undefined}
-    ${true}
-    ${false}
-  `("returns empty string for $invalidValue", ({ invalidValue }) => {
+    invalidValue                                 | label
+    ${"2024-02-29"}                              | ${"'2024-02-29'"}
+    ${"2024-02-29T12:30:45Z"}                    | ${"'2024-02-29T12:30:45Z'"}
+    ${"2024-02-29T12:30:45+01:00[Europe/Paris]"} | ${"'2024-02-29T12:30:45+01:00[Europe/Paris]'"}
+    ${"not-a-datetime"}                          | ${"'not-a-datetime'"}
+    ${""}                                        | ${"''"}
+    ${NaN}                                       | ${"NaN"}
+    ${null}                                      | ${"null"}
+    ${undefined}                                 | ${"undefined"}
+    ${true}                                      | ${"true"}
+    ${false}                                     | ${"false"}
+  `("returns empty string for $label", ({ invalidValue }) => {
     expect(chopSeconds(invalidValue)).toBe("");
   });
 });

@@ -118,14 +118,14 @@ describe("mapZonedHoursInDay", () => {
   );
 
   it.each`
-    invalidAnchor
-    ${"invalid"}
-    ${"2024-02-29T12:00:00"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidAnchor            | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-02-29T12:00:00"} | ${"'2024-02-29T12:00:00'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
   `(
-    "returns an empty array for invalid zoned datetime $invalidAnchor",
+    "returns an empty array for invalid zoned datetime $label",
     ({ invalidAnchor }) => {
       expect(mapZonedHoursInDay(invalidAnchor as never)).toEqual([]);
     },

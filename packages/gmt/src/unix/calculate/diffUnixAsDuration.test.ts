@@ -81,13 +81,13 @@ describe("diffUnixAsDuration", () => {
   );
 
   it.each`
-    invalidUnit
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${["days"]}
-  `('returns "" for invalid unit $invalidUnit', ({ invalidUnit }) => {
+    invalidUnit  | invalidUnitLabel
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${["days"]}  | ${'["days"]'}
+  `('returns "" for invalid unit $invalidUnitLabel', ({ invalidUnit }) => {
     expect(
       diffUnixAsDuration(1704067200000, 1704153600000, invalidUnit as never),
     ).toBe("");
@@ -280,13 +280,13 @@ describe("diffUnixAsDuration with an unrecognised epochUnit", () => {
   // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
-    epochUnit
-    ${"nanoseconds"}
-    ${"SECONDS"}
-    ${"ms"}
-    ${""}
-    ${1000}
-  `('returns "" for epochUnit $epochUnit', ({ epochUnit }) => {
+    epochUnit        | epochUnitLabel
+    ${"nanoseconds"} | ${"'nanoseconds'"}
+    ${"SECONDS"}     | ${"'SECONDS'"}
+    ${"ms"}          | ${"'ms'"}
+    ${""}            | ${"''"}
+    ${1000}          | ${"1000"}
+  `('returns "" for epochUnit $epochUnitLabel', ({ epochUnit }) => {
     expect(
       diffUnixAsDuration(1_706_659_200, 1_706_659_200, "days", {
         epochUnit: epochUnit as never,
@@ -323,7 +323,7 @@ describe("diffUnixAsDuration with a non-object options argument", () => {
     ${5}         | ${""}
     ${true}      | ${""}
     ${undefined} | ${"PT25H"}
-  `("returns $expected for options $options", ({ options, expected }) => {
+  `("returns '$expected' for options $options", ({ options, expected }) => {
     expect(diffUnixAsDuration(0, 90000000, "hours", options)).toBe(expected);
   });
 });

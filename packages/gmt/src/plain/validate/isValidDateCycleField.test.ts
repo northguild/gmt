@@ -11,18 +11,18 @@ describe("isValidDateCycleField", () => {
   });
 
   it.each`
-    field
-    ${"week"}
-    ${"hour"}
-    ${"invalid"}
-    ${""}
-    ${123}
-    ${null}
-    ${undefined}
-    ${true}
-    ${[]}
-    ${{}}
-  `("returns false for $field", ({ field }) => {
+    field        | label
+    ${"week"}    | ${"'week'"}
+    ${"hour"}    | ${"'hour'"}
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${123}       | ${"123"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${true}      | ${"true"}
+    ${[]}        | ${"[]"}
+    ${{}}        | ${"{}"}
+  `("returns false for $label", ({ field }) => {
     expect(isValidDateCycleField(field)).toBe(false);
   });
 });

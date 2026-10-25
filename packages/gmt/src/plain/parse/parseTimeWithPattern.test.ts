@@ -218,7 +218,7 @@ describe("parseTimeWithPattern", () => {
     ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${""}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
   `(
-    "returns $expected for the Japanese meridiem 午後 with locale list $locale",
+    "returns '$expected' for the Japanese meridiem 午後 with locale list $locale",
     ({ locale, expected }) => {
       expect(parseTimeWithPattern("午後 10:20", "a h:mm", locale)).toBe(
         expected,

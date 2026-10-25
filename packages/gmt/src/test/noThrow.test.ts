@@ -49,12 +49,12 @@ describe("no-throw harness coverage", () => {
   });
 
   it.each`
-    result       | failures
-    ${() => 1}   | ${1}
-    ${() => ""}  | ${0}
-    ${() => "a"} | ${1}
+    result       | returned          | failures
+    ${() => 1}   | ${"the number 1"} | ${1}
+    ${() => ""}  | ${"''"}           | ${0}
+    ${() => "a"} | ${"'a'"}          | ${1}
   `(
-    "reports a wrong type or a missing sentinel ($failures failure(s) for a string function)",
+    "reports a wrong type or a missing sentinel ($failures failure(s) for a string function returning $returned)",
     ({ result, failures }) => {
       const testCase: NoThrowCase = {
         name: "fake",

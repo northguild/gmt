@@ -90,27 +90,27 @@ function eachZoneFunction(
   test: (row: ZoneFunction) => void,
 ): void {
   it.each`
-    name                           | call                                                   | sentinel | inTokyo
-    ${"parseDateFromUtc"}          | ${(o: Options) => parseDateFromUtc(VALUE, o)}          | ${""}    | ${"2024-01-31"}
-    ${"parseDayFromUtc"}           | ${(o: Options) => parseDayFromUtc(VALUE, o)}           | ${""}    | ${"31"}
-    ${"parseDayOfWeekFromUtc"}     | ${(o: Options) => parseDayOfWeekFromUtc(VALUE, o)}     | ${null}  | ${3}
-    ${"parseHourFromUtc"}          | ${(o: Options) => parseHourFromUtc(VALUE, o)}          | ${""}    | ${"05"}
-    ${"parseMicrosecondFromUtc"}   | ${(o: Options) => parseMicrosecondFromUtc(VALUE, o)}   | ${""}    | ${"456"}
-    ${"parseMillisecondFromUtc"}   | ${(o: Options) => parseMillisecondFromUtc(VALUE, o)}   | ${""}    | ${"123"}
-    ${"parseMinuteFromUtc"}        | ${(o: Options) => parseMinuteFromUtc(VALUE, o)}        | ${""}    | ${"30"}
-    ${"parseMonthFromUtc"}         | ${(o: Options) => parseMonthFromUtc(VALUE, o)}         | ${""}    | ${"01"}
-    ${"parseNanosecondFromUtc"}    | ${(o: Options) => parseNanosecondFromUtc(VALUE, o)}    | ${""}    | ${"789"}
-    ${"parseSecondFromUtc"}        | ${(o: Options) => parseSecondFromUtc(VALUE, o)}        | ${""}    | ${"45"}
-    ${"parseTimeFromUtc"}          | ${(o: Options) => parseTimeFromUtc(VALUE, o)}          | ${""}    | ${"05:30:45.123456789"}
-    ${"parseUnitFromUtc"}          | ${(o: Options) => parseUnitFromUtc(VALUE, "hour", o)}  | ${""}    | ${"05"}
-    ${"parseWeekFromUtc"}          | ${(o: Options) => parseWeekFromUtc(VALUE, o)}          | ${null}  | ${5}
-    ${"parseYearFromUtc"}          | ${(o: Options) => parseYearFromUtc(VALUE, o)}          | ${""}    | ${"2024"}
-    ${"convertUtcToPlainDate"}     | ${(o: Options) => convertUtcToPlainDate(VALUE, o)}     | ${""}    | ${"2024-01-31"}
-    ${"convertUtcToPlainDateTime"} | ${(o: Options) => convertUtcToPlainDateTime(VALUE, o)} | ${""}    | ${"2024-01-31T05:30:45"}
-    ${"convertUtcToPlainTime"}     | ${(o: Options) => convertUtcToPlainTime(VALUE, o)}     | ${""}    | ${"05:30:45"}
-    ${"formatUtc"}                 | ${formatShortDate}                                     | ${""}    | ${"1/31/24"}
-    ${"formatCalendarUtc"}         | ${formatCalendarFromMorning}                           | ${""}    | ${"tomorrow at 5:30 AM"}
-    ${"formatRelativeUtc"}         | ${formatFifteenDaysInMonths}                           | ${""}    | ${"this month"}
+    name                           | call                                                   | sentinel | inTokyo                  | label
+    ${"parseDateFromUtc"}          | ${(o: Options) => parseDateFromUtc(VALUE, o)}          | ${""}    | ${"2024-01-31"}          | ${"''"}
+    ${"parseDayFromUtc"}           | ${(o: Options) => parseDayFromUtc(VALUE, o)}           | ${""}    | ${"31"}                  | ${"''"}
+    ${"parseDayOfWeekFromUtc"}     | ${(o: Options) => parseDayOfWeekFromUtc(VALUE, o)}     | ${null}  | ${3}                     | ${"null"}
+    ${"parseHourFromUtc"}          | ${(o: Options) => parseHourFromUtc(VALUE, o)}          | ${""}    | ${"05"}                  | ${"''"}
+    ${"parseMicrosecondFromUtc"}   | ${(o: Options) => parseMicrosecondFromUtc(VALUE, o)}   | ${""}    | ${"456"}                 | ${"''"}
+    ${"parseMillisecondFromUtc"}   | ${(o: Options) => parseMillisecondFromUtc(VALUE, o)}   | ${""}    | ${"123"}                 | ${"''"}
+    ${"parseMinuteFromUtc"}        | ${(o: Options) => parseMinuteFromUtc(VALUE, o)}        | ${""}    | ${"30"}                  | ${"''"}
+    ${"parseMonthFromUtc"}         | ${(o: Options) => parseMonthFromUtc(VALUE, o)}         | ${""}    | ${"01"}                  | ${"''"}
+    ${"parseNanosecondFromUtc"}    | ${(o: Options) => parseNanosecondFromUtc(VALUE, o)}    | ${""}    | ${"789"}                 | ${"''"}
+    ${"parseSecondFromUtc"}        | ${(o: Options) => parseSecondFromUtc(VALUE, o)}        | ${""}    | ${"45"}                  | ${"''"}
+    ${"parseTimeFromUtc"}          | ${(o: Options) => parseTimeFromUtc(VALUE, o)}          | ${""}    | ${"05:30:45.123456789"}  | ${"''"}
+    ${"parseUnitFromUtc"}          | ${(o: Options) => parseUnitFromUtc(VALUE, "hour", o)}  | ${""}    | ${"05"}                  | ${"''"}
+    ${"parseWeekFromUtc"}          | ${(o: Options) => parseWeekFromUtc(VALUE, o)}          | ${null}  | ${5}                     | ${"null"}
+    ${"parseYearFromUtc"}          | ${(o: Options) => parseYearFromUtc(VALUE, o)}          | ${""}    | ${"2024"}                | ${"''"}
+    ${"convertUtcToPlainDate"}     | ${(o: Options) => convertUtcToPlainDate(VALUE, o)}     | ${""}    | ${"2024-01-31"}          | ${"''"}
+    ${"convertUtcToPlainDateTime"} | ${(o: Options) => convertUtcToPlainDateTime(VALUE, o)} | ${""}    | ${"2024-01-31T05:30:45"} | ${"''"}
+    ${"convertUtcToPlainTime"}     | ${(o: Options) => convertUtcToPlainTime(VALUE, o)}     | ${""}    | ${"05:30:45"}            | ${"''"}
+    ${"formatUtc"}                 | ${formatShortDate}                                     | ${""}    | ${"1/31/24"}             | ${"''"}
+    ${"formatCalendarUtc"}         | ${formatCalendarFromMorning}                           | ${""}    | ${"tomorrow at 5:30 AM"} | ${"''"}
+    ${"formatRelativeUtc"}         | ${formatFifteenDaysInMonths}                           | ${""}    | ${"this month"}          | ${"''"}
   `(`$name ${title}`, test);
 }
 
@@ -146,7 +146,7 @@ describe("utc/ timeZone option with a mocked system zone", () => {
   );
 
   eachZoneFunction(
-    "returns its sentinel $sentinel for timeZone 'Asia/Tokio' | '' | 'UTC+9' | 'Local' | null",
+    "returns its sentinel $label for timeZone 'Asia/Tokio' | '' | 'UTC+9' | 'Local' | null",
     ({ call, sentinel }) => {
       expect({
         misspelled: call({ timeZone: "Asia/Tokio" }),
@@ -179,7 +179,7 @@ describe("utc/ timeZone local when the host reports no valid zone", () => {
   });
 
   eachZoneFunction(
-    "returns its sentinel $sentinel for local with the system zone not-a-timezone",
+    "returns its sentinel $label for local with the system zone not-a-timezone",
     ({ call, sentinel }) => {
       expect(call({ timeZone: "local" })).toEqual(sentinel);
     },

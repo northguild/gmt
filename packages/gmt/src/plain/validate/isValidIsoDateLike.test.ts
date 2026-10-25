@@ -18,21 +18,21 @@ describe("isValidIsoDateLike", () => {
   );
 
   it.each`
-    value
-    ${"2024-02-30"}
-    ${"2024-02-29T24:00:00"}
-    ${"2024-02-29T12:60:00"}
-    ${"2024-02-29T12:30:60"}
-    ${"2024-02-29T12:30:45.1234567890"}
-    ${"invalid-date"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${NaN}
-    ${true}
-    ${false}
+    value                               | label
+    ${"2024-02-30"}                     | ${"'2024-02-30'"}
+    ${"2024-02-29T24:00:00"}            | ${"'2024-02-29T24:00:00'"}
+    ${"2024-02-29T12:60:00"}            | ${"'2024-02-29T12:60:00'"}
+    ${"2024-02-29T12:30:60"}            | ${"'2024-02-29T12:30:60'"}
+    ${"2024-02-29T12:30:45.1234567890"} | ${"'2024-02-29T12:30:45.1234567890'"}
+    ${"invalid-date"}                   | ${"'invalid-date'"}
+    ${""}                               | ${"''"}
+    ${null}                             | ${"null"}
+    ${undefined}                        | ${"undefined"}
+    ${NaN}                              | ${"NaN"}
+    ${true}                             | ${"true"}
+    ${false}                            | ${"false"}
   `(
-    "returns false for invalid date or datetime string $value",
+    "returns false for invalid date or datetime string $label",
     ({ value }: { value: string }) => {
       expect(isValidIsoDateLike(value)).toBe(false);
     },

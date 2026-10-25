@@ -64,7 +64,7 @@ describe("intervalCountUtc", () => {
     ${"2024-01-01T00:00:00Z"} | ${"2024-01-02T00:00:00Z"} | ${""}
     ${"2024-01-01T00:00:00Z"} | ${"2024-01-02T00:00:00Z"} | ${"quarter"}
   `(
-    "returns null for invalid $start, $end, or $unit",
+    "returns null for invalid '$start', '$end', or '$unit'",
     ({ start, end, unit }) => {
       expect(intervalCountUtc(start, end, unit)).toBeNull();
     },

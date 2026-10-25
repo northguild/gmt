@@ -66,25 +66,25 @@ describe("gnssToUtc", () => {
   });
 
   it.each`
-    system       | why
-    ${"gps"}     | ${"lower case"}
-    ${"BDS"}     | ${"the constellation, not a RINEX time token"}
-    ${"GLONASS"} | ${"not a RINEX token"}
-    ${"NAVIC"}   | ${"not a RINEX token"}
-    ${""}        | ${"empty"}
-    ${null}      | ${"null"}
-  `("returns '' for the system $system ($why)", ({ system }) => {
+    system       | why                                            | label
+    ${"gps"}     | ${"lower case"}                                | ${"'gps'"}
+    ${"BDS"}     | ${"the constellation, not a RINEX time token"} | ${"'BDS'"}
+    ${"GLONASS"} | ${"not a RINEX token"}                         | ${"'GLONASS'"}
+    ${"NAVIC"}   | ${"not a RINEX token"}                         | ${"'NAVIC'"}
+    ${""}        | ${"empty"}                                     | ${"''"}
+    ${null}      | ${"null"}                                      | ${"null"}
+  `("returns '' for the system $label ($why)", ({ system }) => {
     expect(gnssToUtc(system, "2024-01-01T00:00:18 GPS")).toBe("");
   });
 
   it.each`
-    value
-    ${null}
-    ${undefined}
-    ${123}
-    ${""}
-    ${"2024-01-01T00:00:18"}
-  `("returns '' for the invalid scale string $value", ({ value }) => {
+    value                    | label
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+    ${123}                   | ${"123"}
+    ${""}                    | ${"''"}
+    ${"2024-01-01T00:00:18"} | ${"'2024-01-01T00:00:18'"}
+  `("returns '' for the invalid scale string $label", ({ value }) => {
     expect(gnssToUtc("GPS", value)).toBe("");
   });
 
