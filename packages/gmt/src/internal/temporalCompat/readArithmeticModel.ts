@@ -31,7 +31,7 @@ import type { ArithmeticModel, YearMonth } from "./nonIsoArithmetic";
  * a time from the field search, and the polyfill only counts or jumps between month starts away
  * from the limit.
  *
- * Where the polyfill's month arithmetic cannot be asked at all (D18: Islamic years <= 0 in
+ * Where the polyfill's month arithmetic cannot be asked at all (D18: Islamic years <= 1 in
  * WebKit, where it does not return), the calendar has the same months in every year, so the two
  * questions are integer arithmetic on the month count read from a modern year
  * (`fixedMonthArithmetic.ts`); the field search places the result and says whether it is in range.

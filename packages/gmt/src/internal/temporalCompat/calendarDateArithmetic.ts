@@ -186,7 +186,7 @@ function verifiedPolyfillUntil(
  *   and Indian arithmetic.
  * - D9: months counted across `LARGE_MONTH_SPAN` months or more run the spec loops, whose month
  *   counts are bounded.
- * - D18: an Islamic year the polyfill cannot return from (<= 0 in WebKit) at either end runs the
+ * - D18: an Islamic year the polyfill cannot return from (<= 1 in WebKit) at either end runs the
  *   spec loops over the read-backed model, without asking the polyfill.
  */
 export function calendarDateUntil(
@@ -273,7 +273,7 @@ function ownedDateAdd(
  * - D2/D3/D4/D5: in a corrected range the spec algorithm runs over ISO (buddhist) or the owned
  *   Hebrew and Indian arithmetic.
  * - D9: `LARGE_MONTH_SPAN` months or more run the spec algorithm, whose month jumps are bounded.
- * - D18: a sum that may reach an Islamic year the polyfill cannot return from (<= 0 in WebKit)
+ * - D18: a sum that may reach an Islamic year the polyfill cannot return from (<= 1 in WebKit)
  *   runs the spec algorithm over the read-backed model, without asking the polyfill.
  *
  * @returns a PlainDate in `date`'s calendar; throws RangeError out of range or on `reject`
