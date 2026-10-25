@@ -67,16 +67,16 @@ describe("fromFileTime", () => {
   );
 
   it.each`
-    value
-    ${0}
-    ${116444736000000000}
-    ${"116444736000000000"}
-    ${null}
-    ${undefined}
-    ${true}
-    ${[]}
-    ${{}}
-  `('returns "" when $value is non-bigint input', ({ value }) => {
+    value                   | kind
+    ${0}                    | ${"the number zero"}
+    ${116444736000000000}   | ${"a number"}
+    ${"116444736000000000"} | ${"a numeric string"}
+    ${null}                 | ${"null"}
+    ${undefined}            | ${"undefined"}
+    ${true}                 | ${"a boolean"}
+    ${[]}                   | ${"an array"}
+    ${{}}                   | ${"an object"}
+  `('returns "" when $value ($kind) is non-bigint input', ({ value }) => {
     expect(fromFileTime(value as unknown as bigint)).toBe("");
   });
 

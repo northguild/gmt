@@ -147,8 +147,8 @@ function collect(suite) {
   // Vitest's own bin on this Node, not `npx`: npm checks `devEngines.runtime` and refuses to run
   // on the older Node versions CI tests on purpose.
   // `--no-staticParse`: Vitest 5 parses test files statically by default, which miscounts
-  // every test an `it.each` table or a loop builds. Without the flag Vitest collects by
-  // executing the files (never a test body), as `vitest run` does, and counts every row.
+  // every test an `it.each` table or a loop builds. With it, Vitest collects by executing the
+  // files (never a test body), as `vitest run` does, and counts every row.
   const args = [VITEST_BIN, "list", "--json", "--no-staticParse"];
   if (suite.config) args.push("--config", suite.config);
   const raw = execFileSync(process.execPath, args, {

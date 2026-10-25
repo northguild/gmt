@@ -42,7 +42,7 @@ describe("getWeeksInMonth", () => {
     ${MustTestLocales.ruRU} | ${5}
     ${MustTestLocales.trTR} | ${5}
   `(
-    "returns $expected week-rows for 2026-02-15 in $locale",
+    "returns $expected week-rows for 2026-02-15 in $locale (locale matrix)",
     ({ locale, expected }) => {
       expect(getWeeksInMonth("2026-02-15", locale)).toBe(expected);
     },

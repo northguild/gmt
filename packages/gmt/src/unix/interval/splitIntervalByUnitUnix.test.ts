@@ -132,13 +132,25 @@ describe("splitIntervalByUnitUnix", () => {
   const expectedSingleStep = [{ start: 0, end: 3600000 }];
 
   it.each`
-    start  | end           | unit      | amount | expected
-    ${0}   | ${86400000}   | ${"hour"} | ${6}   | ${expectedExactDivision}
-    ${0}   | ${5400000}    | ${"hour"} | ${1}   | ${expectedRemainder}
-    ${0}   | ${864000000}  | ${"day"}  | ${2}   | ${expectedDayUnit}
-    ${"0"} | ${"86400000"} | ${"hour"} | ${6}   | ${expectedExactDivision}
+    start | end          | unit      | amount | expected
+    ${0}  | ${86400000}  | ${"hour"} | ${6}   | ${expectedExactDivision}
+    ${0}  | ${5400000}   | ${"hour"} | ${1}   | ${expectedRemainder}
+    ${0}  | ${864000000} | ${"day"}  | ${2}   | ${expectedDayUnit}
   `(
     "returns $expected for $start to $end split by $amount $unit",
+    ({ start, end, unit, amount, expected }) => {
+      expect(splitIntervalByUnitUnix(start, end, unit, amount)).toEqual(
+        expected,
+      );
+    },
+  );
+
+  // The title prints a string without quotes, so the numeric-string row is its own table.
+  it.each`
+    start  | end           | unit      | amount | expected
+    ${"0"} | ${"86400000"} | ${"hour"} | ${6}   | ${expectedExactDivision}
+  `(
+    "returns $expected for the numeric strings $start to $end split by $amount $unit",
     ({ start, end, unit, amount, expected }) => {
       expect(splitIntervalByUnitUnix(start, end, unit, amount)).toEqual(
         expected,

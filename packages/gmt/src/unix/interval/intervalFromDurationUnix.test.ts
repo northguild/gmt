@@ -25,14 +25,26 @@ describe("intervalFromDurationUnix", () => {
   });
 
   it.each`
-    value              | duration  | anchor     | expected
-    ${1704067200000}   | ${"P1D"}  | ${"start"} | ${{ start: 1704067200000, end: 1704153600000 }}
-    ${1704153600000}   | ${"P1D"}  | ${"end"}   | ${{ start: 1704067200000, end: 1704153600000 }}
-    ${1704067200000}   | ${"P0D"}  | ${"start"} | ${{ start: 1704067200000, end: 1704067200000 }}
-    ${1704067200000}   | ${"PT0S"} | ${"end"}   | ${{ start: 1704067200000, end: 1704067200000 }}
-    ${"1704067200000"} | ${"P1D"}  | ${"start"} | ${{ start: 1704067200000, end: 1704153600000 }}
+    value            | duration  | anchor     | expected
+    ${1704067200000} | ${"P1D"}  | ${"start"} | ${{ start: 1704067200000, end: 1704153600000 }}
+    ${1704153600000} | ${"P1D"}  | ${"end"}   | ${{ start: 1704067200000, end: 1704153600000 }}
+    ${1704067200000} | ${"P0D"}  | ${"start"} | ${{ start: 1704067200000, end: 1704067200000 }}
+    ${1704067200000} | ${"PT0S"} | ${"end"}   | ${{ start: 1704067200000, end: 1704067200000 }}
   `(
     "returns $expected for $value with duration $duration anchored at $anchor (default system timeZone = UTC)",
+    ({ value, duration, anchor, expected }) => {
+      expect(intervalFromDurationUnix(value, duration, anchor)).toEqual(
+        expected,
+      );
+    },
+  );
+
+  // The title prints a string without quotes, so the numeric-string row is its own table.
+  it.each`
+    value              | duration | anchor     | expected
+    ${"1704067200000"} | ${"P1D"} | ${"start"} | ${{ start: 1704067200000, end: 1704153600000 }}
+  `(
+    "returns $expected for the numeric string $value with duration $duration anchored at $anchor (default system timeZone = UTC)",
     ({ value, duration, anchor, expected }) => {
       expect(intervalFromDurationUnix(value, duration, anchor)).toEqual(
         expected,
@@ -108,13 +120,16 @@ describe("intervalFromDurationUnix", () => {
     ${[]}             | ${"P1D"} | ${"start"}
     ${""}             | ${"P1D"} | ${"start"}
     ${"   "}          | ${"P1D"} | ${"start"}
-    ${"1.5"}          | ${"P1D"} | ${"start"}
     ${2 ** 53}        | ${"P1D"} | ${"start"}
     ${-(2 ** 53)}     | ${"P1D"} | ${"start"}
   `("returns null for invalid value $value", ({ value, duration, anchor }) => {
     expect(
       intervalFromDurationUnix(value as never, duration, anchor),
     ).toBeNull();
+  });
+
+  it("returns null for the fractional numeric string 1.5", () => {
+    expect(intervalFromDurationUnix("1.5", "P1D", "start")).toBeNull();
   });
 
   it.each`

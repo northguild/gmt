@@ -11,22 +11,22 @@ describe("epochNanoseconds", () => {
   });
 
   it.each`
-    value                       | expected
-    ${0n}                       | ${true}
-    ${1710072000123456789n}     | ${true}
-    ${-1000000000n}             | ${true}
-    ${8640000000000000000000n}  | ${true}
-    ${-8640000000000000000000n} | ${true}
-    ${8640000000000000000001n}  | ${false}
-    ${-8640000000000000000001n} | ${false}
-    ${0}                        | ${false}
-    ${"0"}                      | ${false}
-    ${null}                     | ${false}
-    ${undefined}                | ${false}
-    ${true}                     | ${false}
-    ${[]}                       | ${false}
-    ${{}}                       | ${false}
-  `("returns $expected for $value", ({ value, expected }) => {
+    value                       | expected | type
+    ${0n}                       | ${true}  | ${"bigint"}
+    ${1710072000123456789n}     | ${true}  | ${"bigint"}
+    ${-1000000000n}             | ${true}  | ${"bigint"}
+    ${8640000000000000000000n}  | ${true}  | ${"bigint"}
+    ${-8640000000000000000000n} | ${true}  | ${"bigint"}
+    ${8640000000000000000001n}  | ${false} | ${"bigint"}
+    ${-8640000000000000000001n} | ${false} | ${"bigint"}
+    ${0}                        | ${false} | ${"number"}
+    ${"0"}                      | ${false} | ${"string"}
+    ${null}                     | ${false} | ${"null"}
+    ${undefined}                | ${false} | ${"undefined"}
+    ${true}                     | ${false} | ${"boolean"}
+    ${[]}                       | ${false} | ${"array"}
+    ${{}}                       | ${false} | ${"object"}
+  `("returns $expected for $value ($type)", ({ value, expected }) => {
     expect(isValidEpochNanoseconds(value)).toBe(expected);
   });
 });
