@@ -2137,8 +2137,8 @@ comment that points at tc39/proposal-temporal#3014. The champions kept the check
 
 ### Effect on GMT
 
-None in the library. Eleven tests pin the `RangeError` or the sentinel it produces
-(`zonedDateTimeFrom` ×3, `minuteRoundedOffsets` ×2, `storedOffsetValues` ×2, `convertZonedToCalendar` ×4);
+None in the library. Twelve tests pin the `RangeError` or the sentinel it produces
+(`zonedDateTimeFrom` ×3, `minuteRoundedOffsets` ×2, `storedOffsetValues` ×2, `convertZonedToCalendar` ×5);
 the native-suite runner tags them to this section on the Firefox leg. When Firefox changes the check the
 tags go stale and the runner reports it.
 

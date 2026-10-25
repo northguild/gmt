@@ -46,7 +46,7 @@ const T_ANCHOR =
  * The 13 tests that fail on Node 26 and Chromium 153 (V8 on `temporal_rs`) and pass on the
  * polyfill. Ten are L (`ixdtf` rejects a one-character annotation key, fixed in unicode-org/icu4x#8623,
  * not yet in an `ixdtf` release or a V8 roll); three are M (`temporal_rs` reads `islamic` as a
- * calendar, boa-dev/temporal#529). The 11 tests that fail on Firefox 155 (SpiderMonkey) and pass on the
+ * calendar, boa-dev/temporal#529). The 12 tests that fail on Firefox 155 (SpiderMonkey) and pass on the
  * polyfill are P: SpiderMonkey accepts a zoned string whose local date is -271821-04-19, where the
  * spec refuses it (Bugzilla 1998020). The 7 tests that fail on WebKit 26.6 (JavaScriptCore) and pass on
  * the polyfill are S (six: JavaScriptCore adds a year to Dhu al-Hijjah 30 of a year before the Hijra as
@@ -131,8 +131,8 @@ export const KNOWN_NATIVE_FAILURES = [
     file: "src/zoned/validate/isValidCalendarZonedDateTime.test.ts",
     test: "isValidCalendarZonedDateTime returns false for the unsupported calendar id in 2024-01-10T12:00:00+00:00[UTC][u-ca=isl… (not in the proposal's calendar table)",
     legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
+    defect: M_ANCHOR,
+    upstream: BOA_529,
   },
   {
     file: "src/internal/calendarDateString.test.ts",
@@ -207,6 +207,14 @@ export const KNOWN_NATIVE_FAILURES = [
   {
     file: "src/zoned/convert/convertZonedToCalendar.test.ts",
     test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting -271821-04-19T12:00:00-12:00[Etc/GMT+12] to iso8601: its offset makes TC39 check the local date against the day range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    // The `[u-ca=hebrew]` input is 53 characters: Vitest cuts it at 40 and ends it with `…`.
+    file: "src/zoned/convert/convertZonedToCalendar.test.ts",
+    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting -271821-04-19T12:00:00-12:00[Etc/GMT+12… to iso8601: its offset makes TC39 check the local date against the day range",
     legs: ["firefox"],
     defect: P_ANCHOR,
     upstream: BUGZILLA_1998020,
