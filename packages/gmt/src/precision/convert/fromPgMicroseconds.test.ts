@@ -49,16 +49,16 @@ describe("fromPgMicroseconds", () => {
   });
 
   it.each`
-    value
-    ${0}
-    ${763387200123456}
-    ${"763387200123456"}
-    ${null}
-    ${undefined}
-    ${true}
-    ${[]}
-    ${{}}
-  `('returns "" when $value is non-bigint input', ({ value }) => {
+    value                | kind
+    ${0}                 | ${"the number zero"}
+    ${763387200123456}   | ${"a number"}
+    ${"763387200123456"} | ${"a numeric string"}
+    ${null}              | ${"null"}
+    ${undefined}         | ${"undefined"}
+    ${true}              | ${"a boolean"}
+    ${[]}                | ${"an array"}
+    ${{}}                | ${"an object"}
+  `('returns "" when $value ($kind) is non-bigint input', ({ value }) => {
     expect(fromPgMicroseconds(value as unknown as bigint)).toBe("");
   });
 

@@ -97,12 +97,12 @@ describe("observedDate", () => {
   });
 
   it.each`
-    calendar
-    ${null}
-    ${[]}
-    ${{ weekend: [6, 7], holidays: [], timeZone: "Nowhere/Zone" }}
-    ${{ weekend: [1, 2, 3, 4, 5, 6, 7], holidays: [], timeZone: "UTC" }}
-  `("invalid calendar $calendar gives an empty string", ({ calendar }) => {
+    calendar                                                             | why
+    ${null}                                                              | ${"null"}
+    ${[]}                                                                | ${"an array"}
+    ${{ weekend: [6, 7], holidays: [], timeZone: "Nowhere/Zone" }}       | ${"an unknown time zone"}
+    ${{ weekend: [1, 2, 3, 4, 5, 6, 7], holidays: [], timeZone: "UTC" }} | ${"a weekend of all seven days"}
+  `("invalid calendar ($why) gives an empty string", ({ calendar }) => {
     expect(observedDate("2027-12-25", {}, calendar)).toBe("");
   });
 

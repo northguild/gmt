@@ -147,12 +147,12 @@ describe("getQuarter", () => {
   });
 
   it.each`
-    options
-    ${null}
-    ${"4"}
-    ${4}
-    ${true}
-  `("returns null when options is the non-object $options", ({ options }) => {
+    options | kind
+    ${null} | ${"null"}
+    ${"4"}  | ${"the string 4"}
+    ${4}    | ${"the number 4"}
+    ${true} | ${"the boolean true"}
+  `("returns null when options is $kind", ({ options }) => {
     expect(getQuarter("2024-06-15", options)).toBeNull();
   });
 

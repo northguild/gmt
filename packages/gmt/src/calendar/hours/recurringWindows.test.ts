@@ -365,30 +365,27 @@ describe("recurringWindows", () => {
 
   describe("probe zones", () => {
     it.each`
-      zone                     | weekly                                     | range                                                             | expected
-      ${"Pacific/Apia"}        | ${{ 4: [{ from: "23:00", to: "06:00" }] }} | ${{ start: "2011-12-29T00:00:00Z", end: "2012-01-02T00:00:00Z" }} | ${[{ start: "2011-12-30T09:00:00Z", end: "2011-12-30T16:00:00Z" }]}
-      ${"Pacific/Apia"}        | ${{ 5: nineToFive }}                       | ${{ start: "2011-12-28T00:00:00Z", end: "2012-01-02T00:00:00Z" }} | ${[]}
-      ${"America/Santiago"}    | ${{ 7: allDay }}                           | ${{ start: "2024-09-08T00:00:00Z", end: "2024-09-10T00:00:00Z" }} | ${[{ start: "2024-09-08T04:00:00Z", end: "2024-09-09T03:00:00Z" }]}
-      ${"America/Havana"}      | ${{ 7: [{ from: "00:00", to: "06:00" }] }} | ${{ start: "2024-11-03T00:00:00Z", end: "2024-11-04T00:00:00Z" }} | ${[{ start: "2024-11-03T04:00:00Z", end: "2024-11-03T11:00:00Z" }]}
-      ${"America/Goose_Bay"}   | ${{ 6: [{ from: "23:30", to: "00:30" }] }} | ${{ start: "2010-11-06T00:00:00Z", end: "2010-11-08T00:00:00Z" }} | ${[{ start: "2010-11-07T02:30:00Z", end: "2010-11-07T04:30:00Z" }]}
-      ${"America/Goose_Bay"}   | ${{ 6: [{ from: "22:00", to: "23:00" }] }} | ${{ start: "2010-11-06T00:00:00Z", end: "2010-11-08T00:00:00Z" }} | ${[{ start: "2010-11-07T01:00:00Z", end: "2010-11-07T02:00:00Z" }]}
-      ${"Pacific/Chatham"}     | ${{ 7: [{ from: "02:00", to: "05:00" }] }} | ${{ start: "2024-09-28T00:00:00Z", end: "2024-09-29T00:00:00Z" }} | ${[{ start: "2024-09-28T13:15:00Z", end: "2024-09-28T15:15:00Z" }]}
-      ${"Pacific/Chatham"}     | ${{ 7: [{ from: "03:00", to: "04:00" }] }} | ${{ start: "2024-09-28T00:00:00Z", end: "2024-09-29T00:00:00Z" }} | ${[]}
-      ${"Pacific/Chatham"}     | ${{ 7: allDay }}                           | ${{ start: "2024-04-06T00:00:00Z", end: "2024-04-08T00:00:00Z" }} | ${[{ start: "2024-04-06T10:15:00Z", end: "2024-04-07T11:15:00Z" }]}
-      ${"Australia/Lord_Howe"} | ${{ 7: allDay }}                           | ${{ start: "2024-04-06T00:00:00Z", end: "2024-04-08T00:00:00Z" }} | ${[{ start: "2024-04-06T13:00:00Z", end: "2024-04-07T13:30:00Z" }]}
-      ${"Australia/Lord_Howe"} | ${{ 7: allDay }}                           | ${{ start: "2024-10-05T00:00:00Z", end: "2024-10-07T00:00:00Z" }} | ${[{ start: "2024-10-05T13:30:00Z", end: "2024-10-06T13:00:00Z" }]}
-      ${"Antarctica/Casey"}    | ${{ 7: [{ from: "00:00", to: "04:00" }] }} | ${{ start: "2020-10-03T00:00:00Z", end: "2020-10-05T00:00:00Z" }} | ${[{ start: "2020-10-03T16:00:00Z", end: "2020-10-03T17:00:00Z" }]}
-    `(
-      "resolves $weekly in $zone to $expected",
-      ({ zone, weekly, range, expected }) => {
-        // Apia: Thursday 23:00 (−10:00) runs to Saturday 06:00 (+14:00), seven real hours; the deleted
-        // Friday has no window. Santiago skips 00:00, so the day opens at 01:00 and is 23 hours.
-        // Havana repeats midnight; "compatible" takes the first. Goose Bay's re-entered Saturday is
-        // walked once. Chatham's 03:00 edge moves an hour forward onto its own 04:00, leaving the
-        // window empty. Casey's clock reads 00:00–00:01 and 03:01–04:00: one hour.
-        expect(recurringWindows(weekly, range, zone)).toEqual(expected);
-      },
-    );
+      zone                     | label                                        | weekly                                     | range                                                             | expected
+      ${"Pacific/Apia"}        | ${"Thursday 23:00 to 06:00, skipped Friday"} | ${{ 4: [{ from: "23:00", to: "06:00" }] }} | ${{ start: "2011-12-29T00:00:00Z", end: "2012-01-02T00:00:00Z" }} | ${[{ start: "2011-12-30T09:00:00Z", end: "2011-12-30T16:00:00Z" }]}
+      ${"Pacific/Apia"}        | ${"Friday nine to five, deleted day"}        | ${{ 5: nineToFive }}                       | ${{ start: "2011-12-28T00:00:00Z", end: "2012-01-02T00:00:00Z" }} | ${[]}
+      ${"America/Santiago"}    | ${"Sunday all day, September change"}        | ${{ 7: allDay }}                           | ${{ start: "2024-09-08T00:00:00Z", end: "2024-09-10T00:00:00Z" }} | ${[{ start: "2024-09-08T04:00:00Z", end: "2024-09-09T03:00:00Z" }]}
+      ${"America/Havana"}      | ${"Sunday 00:00 to 06:00, fall-back"}        | ${{ 7: [{ from: "00:00", to: "06:00" }] }} | ${{ start: "2024-11-03T00:00:00Z", end: "2024-11-04T00:00:00Z" }} | ${[{ start: "2024-11-03T04:00:00Z", end: "2024-11-03T11:00:00Z" }]}
+      ${"America/Goose_Bay"}   | ${"Saturday 23:30 to 00:30, fall-back"}      | ${{ 6: [{ from: "23:30", to: "00:30" }] }} | ${{ start: "2010-11-06T00:00:00Z", end: "2010-11-08T00:00:00Z" }} | ${[{ start: "2010-11-07T02:30:00Z", end: "2010-11-07T04:30:00Z" }]}
+      ${"America/Goose_Bay"}   | ${"Saturday 22:00 to 23:00, fall-back"}      | ${{ 6: [{ from: "22:00", to: "23:00" }] }} | ${{ start: "2010-11-06T00:00:00Z", end: "2010-11-08T00:00:00Z" }} | ${[{ start: "2010-11-07T01:00:00Z", end: "2010-11-07T02:00:00Z" }]}
+      ${"Pacific/Chatham"}     | ${"Sunday 02:00 to 05:00, September edge"}   | ${{ 7: [{ from: "02:00", to: "05:00" }] }} | ${{ start: "2024-09-28T00:00:00Z", end: "2024-09-29T00:00:00Z" }} | ${[{ start: "2024-09-28T13:15:00Z", end: "2024-09-28T15:15:00Z" }]}
+      ${"Pacific/Chatham"}     | ${"Sunday 03:00 to 04:00, empty window"}     | ${{ 7: [{ from: "03:00", to: "04:00" }] }} | ${{ start: "2024-09-28T00:00:00Z", end: "2024-09-29T00:00:00Z" }} | ${[]}
+      ${"Pacific/Chatham"}     | ${"Sunday all day, April change"}            | ${{ 7: allDay }}                           | ${{ start: "2024-04-06T00:00:00Z", end: "2024-04-08T00:00:00Z" }} | ${[{ start: "2024-04-06T10:15:00Z", end: "2024-04-07T11:15:00Z" }]}
+      ${"Australia/Lord_Howe"} | ${"Sunday all day, April change"}            | ${{ 7: allDay }}                           | ${{ start: "2024-04-06T00:00:00Z", end: "2024-04-08T00:00:00Z" }} | ${[{ start: "2024-04-06T13:00:00Z", end: "2024-04-07T13:30:00Z" }]}
+      ${"Australia/Lord_Howe"} | ${"Sunday all day, October change"}          | ${{ 7: allDay }}                           | ${{ start: "2024-10-05T00:00:00Z", end: "2024-10-07T00:00:00Z" }} | ${[{ start: "2024-10-05T13:30:00Z", end: "2024-10-06T13:00:00Z" }]}
+      ${"Antarctica/Casey"}    | ${"Sunday 00:00 to 04:00, offset change"}    | ${{ 7: [{ from: "00:00", to: "04:00" }] }} | ${{ start: "2020-10-03T00:00:00Z", end: "2020-10-05T00:00:00Z" }} | ${[{ start: "2020-10-03T16:00:00Z", end: "2020-10-03T17:00:00Z" }]}
+    `("resolves $label in $zone", ({ zone, weekly, range, expected }) => {
+      // Apia: Thursday 23:00 (−10:00) runs to Saturday 06:00 (+14:00), seven real hours; the deleted
+      // Friday has no window. Santiago skips 00:00, so the day opens at 01:00 and is 23 hours.
+      // Havana repeats midnight; "compatible" takes the first. Goose Bay's re-entered Saturday is
+      // walked once. Chatham's 03:00 edge moves an hour forward onto its own 04:00, leaving the
+      // window empty. Casey's clock reads 00:00–00:01 and 03:01–04:00: one hour.
+      expect(recurringWindows(weekly, range, zone)).toEqual(expected);
+    });
   });
 
   it("reads windows in a fixed-offset zone, which observes no DST", () => {

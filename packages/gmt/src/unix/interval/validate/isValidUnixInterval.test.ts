@@ -2,13 +2,23 @@ import { isValidUnixInterval } from "./isValidUnixInterval";
 
 describe("isValidUnixInterval", () => {
   it.each`
-    start         | end             | expected
-    ${0}          | ${1704067200}   | ${true}
-    ${-86400}     | ${0}            | ${true}
-    ${1704067200} | ${1735689599}   | ${true}
-    ${"0"}        | ${"1704067200"} | ${true}
+    start         | end           | expected
+    ${0}          | ${1704067200} | ${true}
+    ${-86400}     | ${0}          | ${true}
+    ${1704067200} | ${1735689599} | ${true}
   `(
     "returns $expected for valid Unix interval $start to $end",
+    ({ start, end, expected }) => {
+      expect(isValidUnixInterval(start, end)).toBe(expected);
+    },
+  );
+
+  // The title prints a string without quotes, so the numeric-string row is its own table.
+  it.each`
+    start  | end             | expected
+    ${"0"} | ${"1704067200"} | ${true}
+  `(
+    "returns $expected for valid Unix interval of the numeric strings $start to $end",
     ({ start, end, expected }) => {
       expect(isValidUnixInterval(start, end)).toBe(expected);
     },

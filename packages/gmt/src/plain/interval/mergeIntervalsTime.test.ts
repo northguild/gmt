@@ -32,12 +32,12 @@ describe("mergeIntervalsTime", () => {
   });
 
   it.each`
-    intervals
-    ${"not-an-array"}
-    ${[{ start: "15:00:00", end: "09:00:00" }]}
-    ${[{ start: "invalid", end: "09:00:00" }]}
-    ${[{ start: "09:00:00", end: "12:00:00" }, "not-an-object"]}
-  `("returns [] for invalid intervals $intervals", ({ intervals }) => {
+    intervals                                                    | why
+    ${"not-an-array"}                                            | ${"a string, not an array"}
+    ${[{ start: "15:00:00", end: "09:00:00" }]}                  | ${"an end before the start"}
+    ${[{ start: "invalid", end: "09:00:00" }]}                   | ${"an unparsable start"}
+    ${[{ start: "09:00:00", end: "12:00:00" }, "not-an-object"]} | ${"an entry that is not an object"}
+  `("returns [] for invalid intervals: $why", ({ intervals }) => {
     expect(mergeIntervalsTime(intervals)).toEqual([]);
   });
 

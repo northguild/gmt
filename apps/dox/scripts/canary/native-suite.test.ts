@@ -499,7 +499,7 @@ describe("classify", () => {
 // --- what Vitest really reports ---------------------------------------------------------------
 
 type Status = "passed" | "failed" | "skipped" | "pending" | "todo";
-/** A suite as Vitest 4 writes it: the file status is its own, apart from its tests. */
+/** A suite as Vitest 5 writes it: the file status is its own, apart from its tests. */
 const rawSuite = (
   file: string,
   fileStatus: "passed" | "failed",

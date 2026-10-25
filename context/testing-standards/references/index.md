@@ -90,10 +90,10 @@ If an existing fixture's fixed date doesn't fit the case under test (e.g. testin
 
 ## Never Pass a Path to `vitest list --json`
 
-`npx vitest list --json <file>` does **not** list that file's tests: Vitest 4 treats the argument as the JSON **output** path and overwrites the file with the entire suite listing. It destroyed two test files during CORE-6.
+`npx vitest list --json <file>` does **not** list that file's tests: Vitest 5 treats the argument as the JSON **output** path and overwrites the file with the entire suite listing. It destroyed two test files during CORE-6.
 
 - **To see test names:** run `npx vitest run <file> --reporter=verbose`.
-- **`scripts/stats.mjs` is safe:** it calls `vitest list --json` with no file argument.
+- **`scripts/stats.mjs` is safe:** it calls `vitest list --json --no-staticParse` with no file argument. Without `--no-staticParse`, Vitest 5 reads the files statically and counts an `it.each` table as one test.
 
 ## Verify Every Expected Value Against Real Temporal Before Writing It
 

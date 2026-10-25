@@ -77,12 +77,12 @@ describe("intervalXorAllDate", () => {
   });
 
   it.each`
-    intervals
-    ${"not-an-array"}
-    ${[{ start: "2024-01-10", end: "2024-01-01" }]}
-    ${[{ start: "invalid", end: "2024-01-01" }]}
-    ${[{ start: "2024-01-01", end: "2024-01-10" }, "not-an-object"]}
-  `("returns [] for invalid intervals $intervals", ({ intervals }) => {
+    intervals                                                        | why
+    ${"not-an-array"}                                                | ${"a string, not an array"}
+    ${[{ start: "2024-01-10", end: "2024-01-01" }]}                  | ${"an end before the start"}
+    ${[{ start: "invalid", end: "2024-01-01" }]}                     | ${"an unparsable start"}
+    ${[{ start: "2024-01-01", end: "2024-01-10" }, "not-an-object"]} | ${"an entry that is not an object"}
+  `("returns [] for invalid intervals: $why", ({ intervals }) => {
     expect(intervalXorAllDate(intervals)).toEqual([]);
   });
 
