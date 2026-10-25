@@ -5,7 +5,7 @@
 
 **Checked against:** `@js-temporal/polyfill` 0.5.1, `temporal-polyfill` 1.0.6 through its
 `/full/implementation` entry, Node 26.12.1 (ICU 78.3), with Node's built-in `Temporal` as the
-tie-breaker.
+tie-breaker. The WebKit-only groups D18 and D19 were also probed in Playwright WebKit 26.6.
 
 ---
 
@@ -26,7 +26,8 @@ implementation) imported from `temporal-polyfill/full/implementation`. Then:
 - `tsc --noEmit` in `packages/gmt`;
 - the full `packages/gmt` Vitest suite;
 - every repro in `internal/temporalCompat/repros.ts`, run through `runRepro` and `reproPasses`;
-- one sample from each failure group, run on all three implementations.
+- one sample from each failure group, run on all three implementations;
+- the D18 and D19 probes in Playwright WebKit 26.6, on both polyfills.
 
 ## 3. What `temporal-polyfill` fixes
 
@@ -41,14 +42,19 @@ Workaround probes passing, out of each group's total:
 | D6 | 11 / 11 | D15 | 1 / 1 |
 | D7 | 2 / 2 | D16 | **2 / 6** |
 | D8 | 3 / 3 | D17 | 1 / 1 |
-| D9 | 4 / 4 | zoned.A | **9 / 10** |
-| D10 | 2 / 2 | zoned.B | 3 / 3 |
+| D9 | 4 / 4 | D18 (WebKit) | 6 / 6 |
+| D10 | 2 / 2 | D19 (WebKit) | **0 / 1** |
+| | | zoned.A | **9 / 10** |
+| | | zoned.B | 3 / 3 |
 | | | zoned.D | 2 / 2 |
 | | | zoned.E | **0 / 5** |
 
-Every probe passes in 16 of the 20 groups. Two of those say nothing about the swap: D10 is a guard
+Every probe passes in 17 of the 22 groups. Two of those say nothing about the swap: D10 is a guard
 whose probes pass on 0.5.1 too, and D17 is a Firefox defect that a Node run cannot judge. That leaves
-14 groups the swap would retire. D16 is an ICU defect in the engine, so no polyfill fixes it. A passing probe proves only the case it
+15 groups the swap would retire. D18 counts among them: in WebKit, 0.5.1 reads ISO `0621-01-01` as
+`islamic-civil` year 2 and 1.0.6 reads year -1, as V8 does. D19 does not: 1.0.6 also answers false
+for `Etc/UTC` equals `UTC` in WebKit, because it too takes a non-primary identifier's primary from
+`resolvedOptions().timeZone`. D16 is an ICU defect in the engine, so no polyfill fixes it. A passing probe proves only the case it
 probes: D13's probes pass for `America/Boa_Vista` and `Europe/Riga`, yet § 4.3 shows the same class
 of defect in `Africa/Casablanca`.
 
@@ -100,7 +106,7 @@ Tests: `zoned/get/getDstTransitions.test.ts`, `zoned/calculate/getHoursInZonedDa
 | Types | About 238 type errors, nearly all from 12 helper type names the package does not export (`DateTimeUnit`, `SmallestUnit`, `RoundingMode`, `ToStringPrecisionOptions`, `PluralUnit`, `DifferenceOptions`, `DurationRoundTo`, `LargestUnit`, `TotalUnit`, `ToInstantOptions`, `ArithmeticOptions`, `ZonedDateTimeAssignmentOptions`). A short alias file in GMT covers them. Also 7 `@ts-expect-error` lines that no longer fire, and `ZonedDateTimeLike` without `timeZone` and `offset` |
 | Dox | 68 files under `apps/dox/src` import `@js-temporal/polyfill` directly and move with it |
 | Compat tooling | `scripts/lib/workarounds.mjs`, `scripts/temporal-compat.mjs`, the native suite and the upstream tracker name `@js-temporal/polyfill` in triggers and version checks |
-| Workarounds | Delete the groups whose probes all pass; keep zoned.A, zoned.E, D13 and D16; add one for each defect in § 4 unless a release has fixed it |
+| Workarounds | Delete the groups whose probes all pass; keep zoned.A, zoned.E, D13, D16 and D19; add one for each defect in § 4 unless a release has fixed it |
 | Seam test | `internal/temporal.test.ts` asserts the package name |
 
 What a swap gains: most of `internal/temporalCompat/` deleted, a smaller polyfill (19.5 kB, or
@@ -110,7 +116,9 @@ maintained release line.
 ## 6. When to swap
 
 The swap is due when a `temporal-polyfill` release, imported through `/full/implementation`, passes
-the whole `packages/gmt` suite. Then nothing in § 4 needs a workaround, and § 5 is cleanup. CORE-92
+the whole `packages/gmt` suite on Node and in the three browsers the native suite runs. A Node run
+alone is not enough: D17, D18 and D19 show only in a browser, and D19 shows in 1.0.6. Then nothing in
+§ 4 needs a workaround, and § 5 is cleanup. CORE-92
 adds this check to the weekly Temporal oracle run, which opens an issue when it holds.
 
 ## 7. Design notes for the swap
