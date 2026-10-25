@@ -206,7 +206,8 @@ jobs:
       # this attempt is an earlier attempt's upload of a job that was rerun; it is skipped, so a
       # rerun leg that uploads nothing leaves no verdict rather than its earlier one. A job that
       # was not rerun keeps the start time of the attempt it last ran in, so its artifact stays.
-      # No artifact = no verdicts = a could-not-run issue.
+      # If the job list cannot be fetched, the newest artifact per name stands. No artifact = no
+      # verdicts = a could-not-run issue.
       - name: Download verdicts
         continue-on-error: true
         env:
@@ -226,10 +227,13 @@ jobs:
               }
               $1 == "Native Temporal oracle" { print "temporal-oracle-" run, $2 }' \
           > job-starts.txt
+          if [ ! -s job-starts.txt ]; then
+            echo "attempt ${GITHUB_RUN_ATTEMPT} job list unavailable: newest artifact per name" >&2
+          fi
           gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts?per_page=100" \
             --jq '.artifacts[] | select(.expired | not) | "\(.name) \(.created_at) \(.id)"' \
           | awk -v suffix="-${RUN_ID}" '
-              NR == FNR { started[$1] = $2; next }
+              FILENAME == ARGV[1] { started[$1] = $2; next }
               substr($1, length($1) - length(suffix) + 1) != suffix { next }
               ($1 in started) && $2 < started[$1] {
                 print $1 ": artifact " $3 ", uploaded " $2 " before its job started at " \
