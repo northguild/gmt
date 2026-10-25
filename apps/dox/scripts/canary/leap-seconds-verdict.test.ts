@@ -18,11 +18,14 @@ import {
  * invented row is how a wrong leap second once entered a spec.
  */
 const HEADER = "Updated through IERS Bulletin C 72";
+const IERS = "IERS Leap_Second.dat";
+const IANA = "IANA leap-seconds.list";
 
 describe("leapSecondsVerdict", () => {
   it("a matching table is status ran with equal row counts and no differences", () => {
     expect(
       leapSecondsVerdict({
+        from: IERS,
         header: HEADER,
         gmtRows: 28,
         iersRows: 28,
@@ -31,14 +34,28 @@ describe("leapSecondsVerdict", () => {
     ).toEqual({
       source: "leap-seconds",
       status: "ran",
+      from: IERS,
       header: HEADER,
       rows: { gmt: 28, iers: 28 },
       differences: [],
     });
   });
 
+  it("a table read from the IANA copy records from as IANA leap-seconds.list", () => {
+    expect(
+      leapSecondsVerdict({
+        from: IANA,
+        header: HEADER,
+        gmtRows: 28,
+        iersRows: 28,
+        differences: [],
+      }).from,
+    ).toBe(IANA);
+  });
+
   it("an added IERS row keeps its difference string verbatim", () => {
     const verdict = leapSecondsVerdict({
+      from: IERS,
       header: HEADER,
       gmtRows: 28,
       iersRows: 29,
@@ -51,6 +68,7 @@ describe("leapSecondsVerdict", () => {
   it("a file with no header line records header null and keeps the problem", () => {
     const problem = 'IERS: no "Updated through" line';
     const verdict = leapSecondsVerdict({
+      from: IERS,
       header: null,
       gmtRows: 28,
       iersRows: 28,
@@ -62,6 +80,7 @@ describe("leapSecondsVerdict", () => {
 
   it("keeps several differences in the order given", () => {
     const verdict = leapSecondsVerdict({
+      from: IERS,
       header: HEADER,
       gmtRows: 28,
       iersRows: 28,
@@ -77,6 +96,7 @@ describe("leapSecondsVerdict", () => {
   it("does not share the caller's differences array", () => {
     const differences = ["x"];
     const verdict = leapSecondsVerdict({
+      from: IERS,
       header: HEADER,
       gmtRows: 1,
       iersRows: 1,
@@ -100,6 +120,7 @@ describe("the leap-seconds verdict file", () => {
 
   it("writes a ran verdict in formatJson layout, creating the folder", () => {
     const verdict = leapSecondsVerdict({
+      from: IERS,
       header: HEADER,
       gmtRows: 28,
       iersRows: 29,

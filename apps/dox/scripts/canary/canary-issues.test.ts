@@ -150,9 +150,10 @@ const oracle = (
   report: "artifacts/temporal-oracle-2026-10-19.json",
 });
 
-const leap = (differences: string[] = []) => ({
+const leap = (differences: string[] = [], from = "IERS Leap_Second.dat") => ({
   source: "leap-seconds" as const,
   status: "ran" as const,
+  from,
   header: "Updated through IERS Bulletin C 72",
   rows: { gmt: 28, iers: 28 + differences.length },
   differences,
@@ -946,9 +947,7 @@ describe("leap-second findings", () => {
     const [action] = actions;
     if (action.kind !== "open") throw new Error("expected open");
     expect(action.key).toBe(KEY);
-    expect(action.title).toBe(
-      "Leap-second table differs from IERS Leap_Second.dat",
-    );
+    expect(action.title).toBe("Leap-second table differs from the IERS table");
     expect(action.labels).toEqual(["canary"]);
     expect(action.body.split("\n")[0]).toBe(`<!-- gmt-canary key="${KEY}" -->`);
     expect(action.body).toContain(
@@ -962,6 +961,16 @@ describe("leap-second findings", () => {
       "A new row is a data edit in leapSeconds.ts plus a patch changeset; leapSeconds.test.ts checks the edit.",
     );
     expect(action.body.endsWith(`Run: ${RUN}`)).toBe(true);
+  });
+
+  it("a difference read from the IANA copy names that file and its URL", () => {
+    const [action] = leapPlan(leap([DIFFERENCE], "IANA leap-seconds.list"));
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.key).toBe(KEY);
+    expect(action.body).toContain(
+      "packages/gmt/src/internal/leapSeconds.ts no longer matches IANA leap-seconds.list (https://data.iana.org/time-zones/tzdb/leap-seconds.list).",
+    );
+    expect(action.body).not.toContain("Leap_Second.dat");
   });
 
   it("the same finding with the issue open as #77 comments on 77", () => {
@@ -1321,7 +1330,7 @@ describe("applyForce and forced findings", () => {
     if (action.kind !== "open") throw new Error("expected open");
     expect(action.key).toBe("dry-run/leap-seconds/table-difference");
     expect(action.title).toBe(
-      "[dry run] Leap-second table differs from IERS Leap_Second.dat",
+      "[dry run] Leap-second table differs from the IERS table",
     );
     expect(action.labels).toEqual(["canary", "canary-dry-run"]);
     expect(action.body).toContain(
