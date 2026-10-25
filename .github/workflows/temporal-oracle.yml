@@ -177,8 +177,9 @@ jobs:
 
   # Its own job so that the oracle job, which installs the whole workspace with build scripts
   # approved and runs Chromium, never holds a write token. This one runs only first-party Node and
-  # `gh`. `actions: read` lets `gh` list and download the run's artifacts. `!cancelled()` runs it after a failed `oracle` job (the could-not-run case) and not after
-  # a person cancels the run (GitHub Docs, "Contexts", status check functions).
+  # `gh`. `actions: read` lets `gh` list and download the run's artifacts. `!cancelled()` runs it
+  # after a failed `oracle` job (the could-not-run case) and not after a person cancels the run
+  # (GitHub Docs, "Contexts", status check functions).
   report:
     name: Report to issues
     needs: [oracle, native-suite]
@@ -201,7 +202,11 @@ jobs:
 
       # Downloads the run's verdict artifacts by id, the newest per name. A rerun of the failed
       # jobs uploads a second artifact under the same name, and actions/download-artifact kept
-      # whichever of the two it met first (#380). No artifact = no verdicts = a could-not-run issue.
+      # whichever of the two it met first (#380). An artifact created before its job started in
+      # this attempt is an earlier attempt's upload of a job that was rerun; it is skipped, so a
+      # rerun leg that uploads nothing leaves no verdict rather than its earlier one. A job that
+      # was not rerun keeps the start time of the attempt it last ran in, so its artifact stays.
+      # No artifact = no verdicts = a could-not-run issue.
       - name: Download verdicts
         continue-on-error: true
         env:
@@ -209,13 +214,30 @@ jobs:
           RUN_ID: ${{ github.run_id }}
         run: |
           mkdir -p artifacts
+          # Job start times, keyed by the verdict artifact each job uploads. The job names are
+          # the `name:` fields of the oracle and native-suite jobs above.
+          attempt="repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}"
+          gh api --paginate "${attempt}/jobs?per_page=100" \
+            --jq '.jobs[] | "\(.name)\t\(.started_at)"' \
+          | awk -F'\t' -v run="${RUN_ID}" '
+              /^Native Temporal suite \(/ {
+                leg = $1; sub(/^Native Temporal suite \(/, "", leg); sub(/\)$/, "", leg)
+                print "native-suite-" leg "-" run, $2
+              }
+              $1 == "Native Temporal oracle" { print "temporal-oracle-" run, $2 }' \
+          > job-starts.txt
           gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts?per_page=100" \
             --jq '.artifacts[] | select(.expired | not) | "\(.name) \(.created_at) \(.id)"' \
           | awk -v suffix="-${RUN_ID}" '
-              substr($1, length($1) - length(suffix) + 1) == suffix {
-                if (!($1 in created) || $2 > created[$1]) { created[$1] = $2; id[$1] = $3 }
+              NR == FNR { started[$1] = $2; next }
+              substr($1, length($1) - length(suffix) + 1) != suffix { next }
+              ($1 in started) && $2 < started[$1] {
+                print $1 ": artifact " $3 ", uploaded " $2 " before its job started at " \
+                  started[$1] ", skipped" > "/dev/stderr"
+                next
               }
-              END { for (name in created) print name, created[name], id[name] }' \
+              !($1 in created) || $2 > created[$1] { created[$1] = $2; id[$1] = $3 }
+              END { for (name in created) print name, created[name], id[name] }' job-starts.txt - \
           | sort \
           | while read -r name created id; do
               echo "${name}: artifact ${id}, uploaded ${created}"
@@ -223,6 +245,7 @@ jobs:
               unzip -o -q "artifacts/${name}.zip" -d artifacts/
               rm "artifacts/${name}.zip"
             done
+          rm -f job-starts.txt
 
       - name: Open or update canary issues
         env:
