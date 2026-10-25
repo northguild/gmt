@@ -131,8 +131,8 @@ export const KNOWN_NATIVE_FAILURES = [
     file: "src/zoned/validate/isValidCalendarZonedDateTime.test.ts",
     test: "isValidCalendarZonedDateTime returns false for the unsupported calendar id in 2024-01-10T12:00:00+00:00[UTC][u-ca=isl… (not in the proposal's calendar table)",
     legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
+    defect: M_ANCHOR,
+    upstream: BOA_529,
   },
   {
     file: "src/internal/calendarDateString.test.ts",
