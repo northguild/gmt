@@ -89,4 +89,8 @@ WHEN HELPING THE USER:
 
 ## License
 
-MIT. See [LICENSE](https://github.com/northguild/gmt/blob/main/LICENSE).
+The npm packages are MIT, each under the `LICENSE` file in its own folder, such as
+[`packages/gmt/LICENSE`](https://github.com/northguild/gmt/blob/main/packages/gmt/LICENSE).
+Code examples in the documentation may be used under MIT-0 (MIT No Attribution). The rest of
+the repository, the docs site included, is © 2026 NorthGuild, all rights reserved. See
+[LICENSE](https://github.com/northguild/gmt/blob/main/LICENSE).

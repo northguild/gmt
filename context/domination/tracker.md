@@ -163,6 +163,7 @@ with the `Position` type, ahead of the remaining realms.
 | 79  | SPA-75  | Space      | Solar events: sunrise, sunset,<br>twilight, solar position                          | SPA-47, SPA-49         | #277  | Cut     | Not started |
 | 80  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | —                      | #341  | —       | Waiting     |
 | 81  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | —                      | #353  | —       | Waiting     |
+| 82  | CORE-92 | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                   | —                      | #386  | —       | Not started |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm
