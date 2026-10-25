@@ -25,7 +25,7 @@ and [§ Git — Only on an Explicit Instruction](../AGENTS.md#git--only-on-an-ex
 **Testing patterns (deep knowledge):**
 
 - `it.each` with template-literal syntax — never array syntax, never `forEach`
-- Test names interpolate distinguishing variables, no two tests in a file share a full name, and a string-only placeholder is written `'$value'` so an empty string prints `''` ([test-name standards](../context/testing-standards/references/index.md#test-name-standards))
+- Test names interpolate distinguishing variables, no two tests in a file share a full name, and a string-only placeholder is written `'$value'` so an empty string prints `''`, a quoted placeholder never holds a non-string, and no label column hides two rows with the same inputs ([test-name standards](../context/testing-standards/references/index.md#test-name-standards))
 - Canonical values from [test-matrix.md](../context/testing-standards/references/test-matrix.md), written inline — they are values, not exported constants ([the one inline-strings rule](../context/testing-standards/references/index.md#canonical-date-fixtures))
 - `MustTestLocales` named constants for the 17-locale matrix
 - ICU-variant-aware assertions from `src/test/icuVariants.ts` (`oneOfIcu`, `expectOneOfIcu`, `expectDateTimeEqual`, `expectOneOfDateTimeIcu`)
