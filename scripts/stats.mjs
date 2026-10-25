@@ -73,7 +73,7 @@
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { relative, resolve, sep } from "node:path";
 
 import { formatJson } from "./lib/format-json.mjs";
 
@@ -127,7 +127,13 @@ const COUNT_WORDS = [
 // ---------------------------------------------------------------- sources of truth
 
 /** Vitest's own entry point, run on the current Node. */
-const VITEST_BIN = resolve(import.meta.dirname, "..", "node_modules", "vitest", "vitest.mjs");
+const VITEST_BIN = resolve(
+  import.meta.dirname,
+  "..",
+  "node_modules",
+  "vitest",
+  "vitest.mjs",
+);
 
 /**
  * The library's own suite — the subject of every published figure.
@@ -170,10 +176,41 @@ function collect(suite) {
     );
   }
 
+  // Two tests with one full name in one file cannot be told apart in a report, and a canary
+  // tag that names one of them names both. Refuse to count a suite that has any.
+  const duplicates = duplicateNames(collected);
+  if (duplicates.length > 0) {
+    const list = duplicates
+      .map(
+        ({ file, name, count }) =>
+          `  ${relative(".", file)}: ${count} × ${JSON.stringify(name)}`,
+      )
+      .join("\n");
+    throw new Error(
+      `${duplicates.length} test names repeat within a file. Give each test a title of its own ` +
+        `(context/testing-standards/references/index.md#test-name-standards):\n${list}`,
+    );
+  }
+
   return {
     tests: collected.length,
     files: new Set(collected.map((t) => t.file)).size,
   };
+}
+
+/** Each full name that more than one test in the same file carries, with how many carry it. */
+function duplicateNames(collected) {
+  const counts = new Map();
+  for (const { file, name } of collected) {
+    const key = `${file}\0${name}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts]
+    .filter(([, count]) => count > 1)
+    .map(([key, count]) => {
+      const [file, name] = key.split("\0");
+      return { file, name, count };
+    });
 }
 
 /**
