@@ -127,6 +127,15 @@
       "engines": ["firefox"]
     },
     {
+      "defects": ["D18"],
+      "title": "D18 — Islamic calendar dates before the Hijra read as positive years in a second era (WebKit)",
+      "trigger": "the weekly run's compat check in WebKit (the temporal-compat-webkit verdict) reports D18 removable: every D18 repro passes in the WebKit the native suite runs, once a js-temporal release reads the Islamic eras or WebKit prints the year as V8 does. WebKit is the only engine in D18's scope; this check runs on Node, where D18 is out of scope and never removable",
+      "probes": 6,
+      "failing": 0,
+      "state": "out-of-scope",
+      "engines": ["webkit"]
+    },
+    {
       "defects": ["D19"],
       "title": "D19 — ZonedDateTime#equals answers false for two identifiers of one zone where resolvedOptions keeps the identifier (JavaScriptCore)",
       "trigger": "a js-temporal release whose TimeZoneEquals finds the primary identifier on a host whose Intl.DateTimeFormat#resolvedOptions returns the identifier as written, so the D19 probe (Etc/UTC equals UTC, ECMA-402 §6.5) passes in the WebKit the native suite runs: the weekly run's compat check in WebKit (the temporal-compat-webkit verdict) reports it. WebKit is the only engine in D19's scope; this check runs on Node, where D19 is out of scope and never removable",

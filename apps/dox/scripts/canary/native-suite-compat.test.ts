@@ -156,33 +156,43 @@ describe("groupResults", () => {
     expect(d1.passing).toBe(1);
   });
 
-  it("on V8, every passing group is removable except a guard inside its window and the engine-scoped groups", () => {
+  it("on V8, every passing group is removable except a guard inside its window and the one-engine groups", () => {
     const groups = groupResults(everyProbe(), "0.5.1", "v8");
     const states = Object.fromEntries(
       groups.map((g) => [g.workaround.defects.join("+"), g.state]),
     );
     expect(states.D10).toBe("guard");
     expect(states.D17).toBe("out-of-scope");
+    expect(states.D18).toBe("out-of-scope");
     expect(states.D19).toBe("out-of-scope");
     expect(
       Object.entries(states)
-        .filter(([id]) => id !== "D10" && id !== "D17" && id !== "D19")
+        .filter(
+          ([id]) =>
+            id !== "D10" && id !== "D17" && id !== "D18" && id !== "D19",
+        )
         .every(([, state]) => state === "removable"),
     ).toBe(true);
     expect(groupOf(groups, "D10").guardLapsed).toBe(false);
   });
 
-  it("the same results on Firefox make the Firefox-only group removable and keep the WebKit-only one out of scope", () => {
+  it("the same results on Firefox make the Firefox-only group removable", () => {
     const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.firefox);
     expect(groupOf(groups, "D17").state).toBe("removable");
-    expect(groupOf(groups, "D19").state).toBe("out-of-scope");
     expect(groupOf(groups, "D10").state).toBe("guard");
   });
 
-  it("on WebKit the Firefox-only group is out of scope and the WebKit-only one is removable", () => {
+  it("on WebKit the Firefox-only group is out of scope and the WebKit-only groups are removable", () => {
     const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.webkit);
     expect(groupOf(groups, "D17").state).toBe("out-of-scope");
+    expect(groupOf(groups, "D18").state).toBe("removable");
     expect(groupOf(groups, "D19").state).toBe("removable");
+  });
+
+  it("on Firefox the WebKit-only groups are out of scope", () => {
+    const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.firefox);
+    expect(groupOf(groups, "D18").state).toBe("out-of-scope");
+    expect(groupOf(groups, "D19").state).toBe("out-of-scope");
   });
 
   it("one failing probe makes its group still needed, on any engine", () => {

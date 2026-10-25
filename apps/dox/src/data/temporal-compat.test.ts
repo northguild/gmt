@@ -188,6 +188,19 @@ describe("temporal compat snapshot", () => {
       },
     );
 
+    it("names each engine in an out-of-scope row's scope as the page prints it", () => {
+      expect(
+        stateLine({ ...group("out-of-scope"), engines: ["webkit"] }).badge,
+      ).toBe("✓ Yes, on WebKit");
+      expect(
+        stateLine({ ...group("out-of-scope"), engines: ["firefox", "webkit"] })
+          .badge,
+      ).toBe("✓ Yes, on Firefox and WebKit");
+      expect(
+        stateLine({ ...group("out-of-scope"), engines: ["chromium"] }).badge,
+      ).toBe("✓ Yes, on Chromium");
+    });
+
     it("chooses by state alone, not by the probe counts", () => {
       expect(stateLine({ ...group("guard"), failing: 2 }).badge).toBe(
         "Kept on purpose",

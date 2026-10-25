@@ -207,6 +207,20 @@ export const WORKAROUNDS = [
     ],
   },
   {
+    defects: ["D18"],
+    // JavaScriptCore only: on any other engine the probes pass because the defect is not there.
+    engines: ["webkit"],
+    title:
+      "D18 — Islamic calendar dates before the Hijra read as positive years in a second era (WebKit)",
+    trigger:
+      "the weekly run's compat check in WebKit (the temporal-compat-webkit verdict) reports D18 removable: every D18 repro passes in the WebKit the native suite runs, once a js-temporal release reads the Islamic eras or WebKit prints the year as V8 does. WebKit is the only engine in D18's scope; this check runs on Node, where D18 is out of scope and never removable",
+    steps: [
+      "Delete islamicEra.ts, fixedMonthArithmetic.ts and their tests, islamicFields, polyfillMisreadsIslamicEra and polyfillCannotReturn in calendarFields.ts, the D18 branch and term in calendarDateFromFields.ts, fixedMonthsIfPolyfillCannotReturn in readArithmeticModel.ts, reachesPolyfillLimit and lowestYearOfSum in calendarDateArithmetic.ts, fixedMonthsPerYearOf in largeMonthSpan.ts, and the D18 repros.",
+      "Keep every Islamic row of diffDateAsDuration.edges.test.ts and addDate.edges.test.ts: the values are the spec's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 18.`,
+    ],
+  },
+  {
     defects: ["D19"],
     // A polyfill defect that shows only on an engine whose Intl.DateTimeFormat keeps a time zone
     // identifier as written: JavaScriptCore today. V8 and SpiderMonkey return the primary
@@ -219,7 +233,7 @@ export const WORKAROUNDS = [
     steps: [
       "Delete timeZoneEquals.ts, its exports in index.ts, isTimeZoneEqualsCompatNeeded in capabilities.ts and the D19 repros; isCalendarDifferenceAcrossZones (internal/zonedWallClockDifference.ts) compares with new Temporal.ZonedDateTime(0n, id).equals(...) again.",
       "Keep every diffZoned and intervalLengthZoned row: the values are TimeZoneEquals answers and hold either way.",
-      `Full wording: ${COMPAT_README} § Removal steps 18.`,
+      `Full wording: ${COMPAT_README} § Removal steps 19.`,
     ],
   },
   {

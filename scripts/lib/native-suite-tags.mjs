@@ -26,6 +26,10 @@ const P_ANCHOR =
 const ICU4X_8620 = "https://github.com/unicode-org/icu4x/issues/8620";
 const BOA_529 = "https://github.com/boa-dev/temporal/issues/529";
 const BUGZILLA_1998020 = "https://bugzilla.mozilla.org/show_bug.cgi?id=1998020";
+const S_ANCHOR =
+  "s-webkit-adds-a-year-to-the-30th-of-dhu-al-hijjah-before-the-hijra-as-13-months-webkit-only-engine";
+const T_ANCHOR =
+  "t-webkit-throws-adding-a-year-to-the-last-day-of-chaitra-in-far-past-indian-years-webkit-only-engine";
 
 /**
  * One test that fails natively and passes on the polyfill, for a known defect. `file` is
@@ -39,7 +43,10 @@ const BUGZILLA_1998020 = "https://bugzilla.mozilla.org/show_bug.cgi?id=1998020";
  * not yet in an `ixdtf` release or a V8 roll); three are M (`temporal_rs` reads `islamic` as a
  * calendar, boa-dev/temporal#529). The 11 tests that fail on Firefox 155 (SpiderMonkey) and pass on the
  * polyfill are P: SpiderMonkey accepts a zoned string whose local date is -271821-04-19, where the
- * spec refuses it (Bugzilla 1998020). Evidence: the records.
+ * spec refuses it (Bugzilla 1998020). The 7 tests that fail on WebKit 26.6 (JavaScriptCore) and pass on
+ * the polyfill are S (six: JavaScriptCore adds a year to Dhu al-Hijjah 30 of a year before the Hijra as
+ * 13 months) and T (one: it throws adding a year to the last day of Chaitra in a far-past Indian year);
+ * neither is filed yet. Evidence: the records.
  * Goose Bay day rounding is not here: it was a GMT defect and is fixed (temporalCompat D14).
  *
  * @type {ReadonlyArray<{ file: string, test: string, legs: Leg[], defect: string, upstream: string | null }>}
@@ -213,6 +220,55 @@ export const KNOWN_NATIVE_FAILURES = [
     defect: P_ANCHOR,
     upstream: BUGZILLA_1998020,
   },
+  {
+    file: "src/plain/calculate/diffDateAsDuration.edges.test.ts",
+    test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns 'P1Y5M23D' in 'years' from '-271820-01-19[u-ca=islamic-civil]' to '-271819-06-27[u-ca=islamic-civil]' ('xscan islamic-civil min[275], 800 d i…')",
+    legs: ["webkit"],
+    defect: S_ANCHOR,
+    upstream: null,
+  },
+  {
+    file: "src/plain/calculate/diffDateAsDuration.edges.test.ts",
+    test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns 'P1Y5M24D' in 'years' from '-271820-01-18[u-ca=islamic-tbla]' to '-271819-06-27[u-ca=islamic-tbla]' ('xscan islamic-tbla min[274], 800 d in…')",
+    legs: ["webkit"],
+    defect: S_ANCHOR,
+    upstream: null,
+  },
+  {
+    file: "src/plain/calculate/diffDateAsDuration.edges.test.ts",
+    test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns 'P1Y5M23D' in 'years' from '-271820-01-19[u-ca=islamic-umalqura]' to '-271819-06-27[u-ca=islamic-umalqura]' ('xscan islamic-umalqura min[275], 800 …')",
+    legs: ["webkit"],
+    defect: S_ANCHOR,
+    upstream: null,
+  },
+  {
+    file: "src/plain/calculate/diffDateAsDuration.edges.test.ts",
+    test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns 'P2Y2M7D' in 'years' from '-271821-04-20[u-ca=indian]' to '-271819-06-27[u-ca=indian]' ('xscan indian min[1], 800 d inside')",
+    legs: ["webkit"],
+    defect: T_ANCHOR,
+    upstream: null,
+  },
+  {
+    file: "src/plain/calculate/addDate.edges.test.ts",
+    test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to '-271820-01-19[u-ca=islamic-civil]' as '-271819-01-07[u-ca=islamic-civil]' ('xscan islamic-civil min[275]')",
+    legs: ["webkit"],
+    defect: S_ANCHOR,
+    upstream: null,
+  },
+  {
+    file: "src/plain/calculate/addDate.edges.test.ts",
+    test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to '-271820-01-18[u-ca=islamic-tbla]' as '-271819-01-06[u-ca=islamic-tbla]' ('xscan islamic-tbla min[274]')",
+    legs: ["webkit"],
+    defect: S_ANCHOR,
+    upstream: null,
+  },
+  {
+    file: "src/plain/calculate/addDate.edges.test.ts",
+    test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to '-271820-01-19[u-ca=islamic-umalqura]' as '-271819-01-07[u-ca=islamic-umalqura]' ('xscan islamic-umalqura min[275]')",
+    legs: ["webkit"],
+    defect: S_ANCHOR,
+    upstream: null,
+  },
 ];
 /**
  * A group of tests that fail on both engines in a runtime, for one stated reason. `id` is
@@ -267,26 +323,87 @@ export const KNOWN_HOST_FAILURES = [
     // 156.0.8078.4 under Playwright 1.64.1 gives Vancouver -07:00 but Winnipeg -06:00 (before
     // 2026e). Firefox 155.0 under Playwright 1.63.0 fails the same 17 rows of this file: at
     // 2026-11-01T08:00Z it gives America/Edmonton -07:00 (Edmonton changed in 2026c, so its data
-    // predates 2026c), and at 2026-11-01T07:00Z America/Winnipeg -06:00 (before 2026e). Node 26.12.1 (tz 2026e) gives -07:00 and -05:00. The
-    // group goes stale once a Playwright Chromium and a Firefox both carry 2026e.
+    // predates 2026c), and at 2026-11-01T07:00Z America/Winnipeg -06:00 (before 2026e). Node 26.12.1 (tz 2026e) gives -07:00 and -05:00.
+    // Playwright's Linux WebKit 26.6 (ubuntu-24.04, the runner's libicu74 74.2) fails all 37 rows of this
+    // file on both engines; Mac WebKit 26.6 gives America/Vancouver -07:00 at 2026-11-15T17:00Z. The
+    // group goes stale once a Playwright Chromium, Firefox and Linux WebKit all carry 2026e.
     id: "browser-canada-2026-tz-data",
-    legs: ["chromium", "firefox"],
+    legs: ["chromium", "firefox", "webkit"],
     reason:
-      "Chromium's and Firefox's time zone data predates tzdb 2026e, so some of the Canadian zones that stopped changing their clocks in 2026 still turn back on 2026-11-01.",
+      "Chromium's, Firefox's and Linux WebKit's time zone data predates tzdb 2026e, so some of the Canadian zones that stopped changing their clocks in 2026 still turn back on 2026-11-01.",
     file: /\/oh-canada\.test\.ts$/,
   },
   {
     // Evidence: under Playwright 1.63.0, Chromium 153.0.8010.12 gives Africa/Casablanca and
     // Africa/El_Aaiun +01:00 at 2026-09-20T01:00Z, 2026-11-02T12:00Z and 2027-06-01T12:00Z, and
     // +00:00 at 2027-02-22T12:00Z (tz data before 2026c). Chromium 156.0.8078.4 under Playwright
-    // 1.64.1, WebKit 26.6 and Node 26.12.1 (tz 2026e) give +00:00 at all four. Firefox 155.0 under
+    // 1.64.1, Mac WebKit 26.6 and Node 26.12.1 (tz 2026e) give +00:00 at all four. Firefox 155.0 under
     // Playwright 1.63.0 fails the same 44 rows of this file: it gives Africa/Casablanca +01:00 at
-    // 2026-09-20T01:00Z, where tz data from 2026c gives +00:00. The group goes stale once a Playwright Chromium and a Firefox both carry 2026c.
+    // 2026-09-20T01:00Z, where tz data from 2026c gives +00:00. Playwright's Linux WebKit 26.6
+    // (ubuntu-24.04, the runner's libicu74 74.2) fails the same 44 rows on both engines. The group
+    // goes stale once a Playwright Chromium, Firefox and Linux WebKit all carry 2026c.
     id: "browser-morocco-2026-tz-data",
-    legs: ["chromium", "firefox"],
+    legs: ["chromium", "firefox", "webkit"],
     reason:
-      "Chromium's and Firefox's time zone data predates tzdb 2026c, so Morocco and Western Sahara still read +01:00 outside the old Ramadan weeks.",
+      "Chromium's, Firefox's and Linux WebKit's time zone data predates tzdb 2026c, so Morocco and Western Sahara still read +01:00 outside the old Ramadan weeks.",
     file: /\/oh-morocco\.test\.ts$/,
+  },
+  {
+    // Evidence, Playwright's Linux WebKit 26.6 on ubuntu-24.04 (the runner's libicu74 74.2), both
+    // engines: Asia/Manila local mean time in December 1844 is -15:56:00, where tzdb 2024b corrected
+    // the Philippines before 1899 to -15:56:08 and moved the 1899 change from 1899-05-11 to
+    // 1899-09-06 (the rows read 1844-12-30T00:00:00-15:56 for 1844-12-30T00:00:08-15:56, count 62
+    // days for 61 and list the 1899 change at 1899-05-10T23:56:00+08:00); and Antarctica/Casey has
+    // no change on 2021-03-13, which tzdb 2023d added with Casey's other changes since 2020. Mac
+    // WebKit 26.6 has the Casey change (2021-03-13T21:00:00+08:00) and the same Manila -15:56:00.
+    // Node 26.12.1 (tz 2026e) passes every row. The group goes stale once a Playwright Linux WebKit
+    // carries 2024b.
+    id: "webkit-linux-tz-data",
+    legs: ["webkit"],
+    reason:
+      "Linux WebKit's time zone data predates tzdb 2023d and 2024b, so Asia/Manila's 1844 local mean time and 1899 change and Antarctica/Casey's 2021 change read as before those releases.",
+    test: /\bManila\b|Antarctica\/Casey/,
+  },
+  {
+    // Evidence, Playwright's Linux WebKit 26.6, both engines: `new Intl.DateTimeFormat("en", { timeZone:
+    // "CET" })` and `Temporal.ZonedDateTime.from("...[CET]")` throw `RangeError: invalid time zone: CET`,
+    // and the same for CST6CDT, EET, EST5EDT, MET, MST7MDT, PST8PDT and WET; tzdb 2024b made these
+    // ids links in `backward`. Mac WebKit 26.6 accepts CET and EST in Intl and Temporal and refuses
+    // EST5EDT in Temporal only (`contains an invalid time zone identifier`). Node 26.12.1 accepts all
+    // eight (CET resolves to Europe/Brussels), as do Chromium 153 and Firefox 155.
+    id: "webkit-legacy-zone-ids",
+    legs: ["webkit"],
+    reason:
+      "Linux WebKit refuses the tzdb legacy zone ids CET, CST6CDT, EET, EST5EDT, MET, MST7MDT, PST8PDT and WET as invalid time zones, so the rows that pass them through fail.",
+    file: /\/(isValidTimeZone|toOffsetInstant|fromOffsetInstant|getTimeZoneOffset)\.test\.ts$/,
+    test: /\b(CET|CST6CDT|EET|EST5EDT|MET|MST7MDT|PST8PDT|WET)\b/,
+  },
+  {
+    // Evidence, WebKit 26.6 (Mac and Playwright Linux alike), both engines:
+    // `new Intl.DateTimeFormat("ar-SA").resolvedOptions().calendar` is "islamic-umalqura" and
+    // `{ dateStyle: "long" }` prints 2024-02-03 as "٢٢ رجب، ١٤٤٥ هـ". Node 26.12.1 (CLDR 48), Chromium 153
+    // and Firefox 155 resolve "gregory" and print "٣ فبراير ٢٠٢٤", which the expected values carry.
+    id: "webkit-ar-sa-islamic-default-calendar",
+    legs: ["webkit"],
+    reason:
+      "WebKit's default calendar for ar-SA is islamic-umalqura where Node, Chromium and Firefox use gregory, so ar-SA rows that name no calendar print Hijri dates.",
+    test: /\bar-SA\b/,
+  },
+  {
+    // Evidence, Playwright's Linux WebKit 26.6 on ubuntu-24.04, which takes its locale data from the
+    // runner's libicu74 (74.2), both engines: he-IL prints the day period as "אחה״צ"/"לפנה״צ" and the
+    // duration unit first ("יום 1"), where Node 26.12.1 (ICU 78.3, CLDR 48) prints "PM"/"AM" and "1 יום";
+    // en-GB's full date has no comma ("Saturday 3 February 2024"); ru-RU's short range is
+    // "03.02.2024 - 05.02.2024" for "03.02.2024-05.02.2024"; ko-KR prints "오후 2:30:45" for
+    // "오후 2시 30분 45초" and zh-TW "清晨5時" for "清晨5"; and pt-PT, is-IS and en-US print the zone as
+    // "GMT" where Node prints "GMT+0" or "GMT+00:00". Mac WebKit 26.6 agrees with Node on the en-GB
+    // comma and prints the ru-RU range with an em dash, so these are the runner's ICU, not WebKit.
+    id: "webkit-linux-icu74-locale-data",
+    legs: ["webkit"],
+    reason:
+      "Linux WebKit formats with the runner's ICU 74 locale data, which differs from Node's ICU 78 in Hebrew day periods and unit order, the en-GB full date, the ru-RU range dash, the ko-KR and zh-TW time patterns and the GMT name without an offset for pt-PT, is-IS and en-US.",
+    file: /\/(formatDuration|formatDate|formatDateRange|formatDateTime|formatTime|getLocaleMeridiems|formatZonedDateTime|formatZonedRange)\.test\.ts$/,
+    test: /\b(he-IL|en-GB|ru-RU|pt-PT|is-IS|ko-KR|zh-TW)\b|keeps the requested timeZoneName style/,
   },
 ];
 

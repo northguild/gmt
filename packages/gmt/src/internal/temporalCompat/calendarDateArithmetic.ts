@@ -1,9 +1,18 @@
 import type { Temporal } from "../temporal";
-import { calendarFieldsOf, hasReadCorrection } from "./calendarFields";
+import {
+  calendarFieldsOf,
+  hasReadCorrection,
+  polyfillCannotReturn,
+  polyfillMisreadsIslamicEra,
+} from "./calendarFields";
 import { isDefectPresent } from "./capabilities";
 import { hebrewArithmeticModel } from "./hebrewArithmetic";
 import { indianArithmeticModel } from "./indianArithmetic";
-import { isLargeMonthSpan, isLargeYearSpan } from "./largeMonthSpan";
+import {
+  fixedMonthsPerYearOf,
+  isLargeMonthSpan,
+  isLargeYearSpan,
+} from "./largeMonthSpan";
 import {
   type ArithmeticModel,
   type ArithmeticOverflow,
@@ -74,6 +83,34 @@ function reachesCorrectedRange(calendarId: string, years: number[]): boolean {
   return hasReadCorrection(
     calendarId,
     Math.min(...years) - CORRECTED_RANGE_MARGIN_YEARS,
+  );
+}
+
+/**
+ * D18: true when an operation over `years` may ask the polyfill about a year it cannot return
+ * from, with the same margin as the owned models. Such an operation runs the spec loops over the
+ * read-backed model, whose every step avoids the polyfill for those years.
+ */
+function reachesPolyfillLimit(calendarId: string, years: number[]): boolean {
+  return polyfillCannotReturn(
+    calendarId,
+    Math.min(...years) - CORRECTED_RANGE_MARGIN_YEARS,
+  );
+}
+
+/**
+ * The lowest calendar year `date + fields` can land in, for `reachesPolyfillLimit`: whole years
+ * plus the months as years, at the month count of a calendar the polyfill cannot answer for.
+ */
+function lowestYearOfSum(
+  calendarId: string,
+  startYear: number,
+  fields: DateDurationFields,
+): number {
+  const perYear = fixedMonthsPerYearOf(calendarId) ?? 1;
+  return Math.min(
+    startYear,
+    startYear + fields.years + Math.floor(Math.min(fields.months, 0) / perYear),
   );
 }
 
@@ -149,6 +186,8 @@ function verifiedPolyfillUntil(
  *   and Indian arithmetic.
  * - D9: months counted across `LARGE_MONTH_SPAN` months or more run the spec loops, whose month
  *   counts are bounded.
+ * - D18: an Islamic year the polyfill cannot return from (<= 1 in WebKit) at either end runs the
+ *   spec loops over the read-backed model, without asking the polyfill.
  */
 export function calendarDateUntil(
   one: Temporal.PlainDate,
@@ -182,6 +221,19 @@ export function calendarDateUntil(
     ])
   ) {
     return nonIsoDateUntil(owned, one, two, largestUnit);
+  }
+  if (
+    reachesPolyfillLimit(calendarId, [
+      calendarFieldsOf(one, calendarId).year,
+      calendarFieldsOf(two, calendarId).year,
+    ])
+  ) {
+    return nonIsoDateUntil(
+      readArithmeticModel(calendarId),
+      one,
+      two,
+      largestUnit,
+    );
   }
   return verifiedPolyfillUntil(one, two, largestUnit);
 }
@@ -221,6 +273,8 @@ function ownedDateAdd(
  * - D2/D3/D4/D5: in a corrected range the spec algorithm runs over ISO (buddhist) or the owned
  *   Hebrew and Indian arithmetic.
  * - D9: `LARGE_MONTH_SPAN` months or more run the spec algorithm, whose month jumps are bounded.
+ * - D18: a sum that may reach an Islamic year the polyfill cannot return from (<= 1 in WebKit)
+ *   runs the spec algorithm over the read-backed model, without asking the polyfill.
  *
  * @returns a PlainDate in `date`'s calendar; throws RangeError out of range or on `reject`
  */
@@ -251,6 +305,24 @@ export function calendarDateAdd(
   const ownedResult = ownedDateAdd(date, fields, overflow);
   if (ownedResult !== undefined) {
     return ownedResult;
+  }
+  if (
+    polyfillMisreadsIslamicEra(calendarId) &&
+    reachesPolyfillLimit(calendarId, [
+      lowestYearOfSum(
+        calendarId,
+        calendarFieldsOf(date, calendarId).year,
+        fields,
+      ),
+    ])
+  ) {
+    // D18: the polyfill's add does not return for such a year; the spec algorithm answers.
+    return nonIsoDateAdd(
+      readArithmeticModel(calendarId),
+      date,
+      fields,
+      overflow,
+    ).withCalendar(calendarId);
   }
   if (isLargeMonthSpan(fields.months)) {
     // D9: the polyfill adds months one at a time; the spec algorithm jumps whole years instead.
