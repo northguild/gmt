@@ -7,11 +7,11 @@
 CORE-7 answers "is this a business day". Nothing in the library answers "is this place open right now", "how many working hours passed between these two instants", or "if the SLA is eight working hours, when is it due" — and those are the questions a terminal gate, a support desk, a trading venue, a customs office, a pharmacy and a crew-rest rule all ask. Each realm was about to answer it privately:
 
 - INT-12 working-day free time suspends the clock outside gate hours.
-- FIN-40 session templates are opening hours with named phases.
-- AV-27's circadian windows and AV-28's curfews (a 23:00–06:00 example) are recurring windows that wrap midnight.
-- MAR-19 office hours decide when a Notice of Readiness can be tendered.
+- Market session templates are opening hours with named phases.
+- Circadian windows and airport curfews (a 23:00–06:00 example) are recurring windows that wrap midnight.
+- Office hours decide when a Notice of Readiness can be tendered under a charter party.
 - Truck-ban regimes (Sunday bans, holiday bans) are recurring closed windows.
-- HLTH turnaround targets and IOT maintenance windows are open-time SLAs.
+- Clinical turnaround targets and device maintenance windows are open-time SLAs.
 
 One implementation of "weekday × local time window, with holidays and one-off overrides, resolved to instants in a zone" is what stops seven realms disagreeing about a midnight wrap or a DST-night window.
 
@@ -41,7 +41,7 @@ One implementation of "weekday × local time window, with holidays and one-off o
 - **Holidays and overrides are dates in the schedule's zone**, consistent with CORE-7's `BusinessCalendar`, and a `BusinessCalendar` can be passed as `holidays` directly.
 - **`operatingTimeBetween` and `addOperatingTime` are interval algebra**, not loops over minutes: intersect the open intervals with the range and sum (CORE-6), or walk open intervals until the duration is consumed. A deadline that would fall past `within` returns `''` rather than searching forever; the horizon default is stated.
 - **This is not RFC 5545.** Weekly patterns with dated exceptions cover every consumer in the epic; monthly and yearly recurrence stay parked (see painpoints). The type is deliberately too small to become a recurrence engine.
-- FIN-40's `MarketCalendar.sessions` are `LocalWindow`s with a phase tag and are resolved through `recurringWindows`; the two types share the edge semantics by construction.
+- A market's trading sessions are `LocalWindow`s with a phase tag, resolved through `recurringWindows`, so sessions and opening hours share the edge semantics by construction.
 
 ## Decisions of record
 

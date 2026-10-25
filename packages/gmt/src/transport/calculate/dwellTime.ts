@@ -55,7 +55,7 @@ function dwellZone(
  * charge by elapsed hours. They count the local calendar days the thing was present, so a
  * container that gates in at 23:00 and out at 01:00 has been there two hours and two days.
  * `dwellTime` returns both, and is the one "local days crossed" primitive in the library: free
- * time and demurrage (INT-12), laytime day counts (MAR-19) and hospital length of stay
+ * time and demurrage (INT-12), laytime day counts and hospital length of stay
  * all take their day boundary from here rather than each deciding what a midnight is.
  *
  * - **`duration` is exact elapsed time.** A dwell spanning a DST transition reports the hours

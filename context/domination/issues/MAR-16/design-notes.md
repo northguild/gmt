@@ -11,7 +11,7 @@ Part of [MAR-16](../MAR-16.md).
 - **RINEX navigation weeks have their own functions.** A RINEX navigation record's week is continuous from 1980 for GPS, QZSS, NavIC and Galileo (RINEX 4.02 Table A30: "Continuous number, not mod (1024), counted from 1980 (same as GPS)"), and BeiDou records count BDT weeks from 2006. It never wraps and has no era, so `rinexWeekToUtc` / `utcToRinexWeek` read it. A RINEX NavIC week read as a NavIC broadcast week is 1024 weeks off.
 - **Offsets are nominal.** The nanosecond corrections a satellite broadcasts (C0, C1, A0/A1, GGTO) are not inputs and are not applied.
 - Before each system's epoch its time is undefined. Return the sentinel rather than extrapolating.
-- NMEA sentence parsing (RMC, ZDA) is MAR-59; this story is the scale arithmetic those parsers feed.
+- NMEA sentence parsing (RMC, ZDA) is not part of this story; this story is the scale arithmetic such a parser feeds.
 
 ## Corrections
 

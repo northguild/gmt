@@ -29,7 +29,7 @@ import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
  *   wall time, offset, bracketed zone.
  * - `targetZone` is whatever `isValidTimeZone` accepts, which is what Temporal accepts: an IANA
  *   identifier, or a fixed offset such as `"+09:00"`, which renders with the offset as its zone.
- *   A fixed offset is a legitimate rendering choice for a ship's log (MAR-18); it is not a place.
+ *   A fixed offset is a legitimate rendering choice for a ship's log; it is not a place.
  * - Returns `""` when the instant or the zone is invalid.
  * - An offset with seconds (`-00:44:30`) returns `""`. A written zone cannot carry seconds (RFC
  *   9557 §4.1), so the result could not name it. Pass the IANA name, or call

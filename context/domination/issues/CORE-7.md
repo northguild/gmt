@@ -41,8 +41,8 @@ Beyond weekends and holidays, the missing piece is **roll conventions**: what ha
 ## Design notes
 
 - **Weekends are not universally Saturday and Sunday.** Much of the Middle East uses Friday–Saturday, and some markets have a one-day weekend. `weekend` is an explicit array of ISO weekday numbers, never assumed.
-- **`mergeCalendars` is the reason this is core, not finance.** FX settlement needs both currencies' calendars (FIN-43); an intermodal move needs the origin port's and the destination port's; a cross-border rail path needs both national calendars. One implementation, four consumers.
-- **Holidays are caller-supplied data.** GMT bundles no holiday table on the default import path. Convenience calendars for named exchanges live behind an opt-in `…/data` subpath (FIN-41). Holiday data is jurisdictional, changes annually and sometimes with days of notice — baking it into core would make GMT wrong on a schedule.
+- **`mergeCalendars` is the reason this is core, not finance.** FX settlement needs both currencies' calendars; an intermodal move needs the origin port's and the destination port's; a cross-border rail path needs both national calendars. One implementation, four consumers.
+- **Holidays are caller-supplied data.** GMT bundles no holiday table on the default import path. Convenience calendars for named exchanges may live behind an opt-in `…/data` subpath. Holiday data is jurisdictional, changes annually and sometimes with days of notice — baking it into core would make GMT wrong on a schedule.
 - Calendars carry a `timeZone` because "is this a business day" is a question about a local date, not an instant. The field records which locality the calendar describes; the business-day functions never read it, because they take and return local dates. It is what a consumer holding an instant needs, to know which zone to reduce it in first — with `floorToZone` — before asking.
 
 ## Corrections
@@ -62,7 +62,7 @@ a no-op: `modifiedFollowing` already returns the last business day of the month 
 input, because rolling forward from it always crosses into the next month. The rule only earns
 its place if it snaps unconditionally, which is also the primitive tenor arithmetic needs: the
 caller tests the *anchor* for month-end and applies `endOfMonth` to the unadjusted target, so
-"the result is the last business day of the target month" holds (FIN-43, FIN-44).
+"the result is the last business day of the target month" holds for settlement and tenor dates.
 
 **The shared business-day walker was recursive and overflowed the stack.** `addBusinessDays`,
 `subtractBusinessDays` and the zoned pair all routed through `internal/advanceBusinessDays`,

@@ -107,7 +107,7 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
         `library-measurements.json`. Those figures are a dated snapshot and nothing
         measures them again automatically. The owner decides when to re-measure.
 
-5. **Draft a commit message for the owner** with `/commit-message` — scoped to the story (e.g. `feat(domination): laytime, laycan and NOR (MAR-19, #200)`). Output it; never run `git commit`.
+5. **Draft a commit message for the owner** with `/commit-message` — scoped to the story (e.g. `feat(domination): CCSDS time codes (SPA-52, #233)`). Output it; never run `git commit`.
 
 6. **Draft a PR description for the owner** with `/pr-desc`; never open the PR. Include the GitHub issue number (from `tracker.md`), a summary of what changed, and validation results.
 
