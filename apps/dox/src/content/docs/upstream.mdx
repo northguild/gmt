@@ -106,6 +106,27 @@ already fixed:
 
 GMT gives the standard's answer in every case.
 
+## Why this polyfill
+
+There are two Temporal polyfills: [`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill),
+which GMT uses, and [`temporal-polyfill`](https://github.com/fullcalendar/temporal-polyfill) from
+FullCalendar, which is smaller and publishes releases more often. We ran GMT's whole test suite on
+`temporal-polyfill` 1.0.6 to see whether GMT should switch.
+
+It fixes most of the bugs on this page. But it gets three things wrong that `@js-temporal/polyfill`
+and the Temporal built into Node both get right:
+
+- **Bad annotations.** It accepts strings the standard rejects, such as `2024-10-03[]` or a
+  calendar written before the time zone.
+- **The very first and last instant.** It rejects the two instants at the ends of Temporal's
+  range, such as `-271821-04-20T00:00:00Z[Asia/Tokyo]`, which the standard accepts.
+- **Short daylight saving breaks.** It misses a clock change that is undone within a few weeks.
+  For example, it gives 24 hours for 13 May 2018 in `Africa/Casablanca`, where the right answer is 25.
+
+So GMT stays on `@js-temporal/polyfill` for now. When a `temporal-polyfill` release passes GMT's
+whole test suite, we will switch. The full comparison is in GMT's repository:
+[`temporal-polyfill-swap.md`](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md).
+
 ## What kind of bugs are these?
 
 They're rare edge cases. Most only show up:
