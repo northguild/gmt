@@ -15,6 +15,7 @@ import vm from "node:vm";
 
 import {
   main,
+  mergeReports,
   runPass,
   shimProblems,
   shimSource,
@@ -859,7 +860,8 @@ describe("unhandled errors captured by the reporter", () => {
       write([
         {
           name: "Error",
-          message: "Failed to run the test /work/gmt/packages/gmt/src/x.test.ts.",
+          message:
+            "Failed to run the test /work/gmt/packages/gmt/src/x.test.ts.",
           cause: {
             name: "Error",
             message: "page.evaluate: Target closed",
@@ -980,7 +982,11 @@ const BROWSER_ENGINES: Record<string, string> = {
   firefox: "Firefox 155.0",
   webkit: "WebKit 26.6",
 };
-const COMPAT_RUNTIME = { polyfill: "0.5.1", node: "v26.10.0", playwright: "1.63.0" };
+const COMPAT_RUNTIME = {
+  polyfill: "0.5.1",
+  node: "v26.10.0",
+  playwright: "1.63.0",
+};
 /** The stubbed compat check's verdict for a browser leg: one group, still needed. */
 function compatVerdict(leg: string) {
   return browserCompatVerdict({
@@ -1042,6 +1048,7 @@ function setup() {
         }
         return exit;
       },
+      shards: () => 1,
       runtime: () => ({ node: "26.10.0", vitest: "4.1.4" }),
       divergenceRows: [],
       hostGroups: [],
@@ -1071,6 +1078,320 @@ function setup() {
     done: () => rmSync(root, { recursive: true, force: true }),
   };
 }
+
+describe("a browser pass split into shards", () => {
+  const THIRD = "src/utc/convert/convertUtcToPlainDateTime.test.ts";
+  type ShardCall = {
+    pass: "control" | "native";
+    index: number;
+    count: number;
+    left: number;
+  };
+  /**
+   * A `runPass` that writes one shard's files from `bodies[pass][index - 1]` (or nothing when that
+   * entry is `null`) and records every call.
+   */
+  const sharded = (
+    bodies: Record<"control" | "native", (unknown | null)[]>,
+    messages: Record<string, unknown[]> = {},
+  ) => {
+    const calls: ShardCall[] = [];
+    const runPass = (
+      leg: string,
+      pass: "control" | "native",
+      r: string,
+      shard: { index: number; count: number },
+      left: number,
+    ) => {
+      calls.push({ pass, index: shard.index, count: shard.count, left });
+      const body = bodies[pass][shard.index - 1];
+      if (body === null) return 0;
+      const suffix = `.${shard.index}of${shard.count}`;
+      mkdirSync(join(r, "artifacts"), { recursive: true });
+      writeFileSync(
+        join(r, `artifacts/native-suite-${leg}.${pass}${suffix}.vitest.json`),
+        JSON.stringify(body),
+      );
+      writeFileSync(
+        join(r, `artifacts/native-suite-${leg}.${pass}${suffix}.errors.json`),
+        JSON.stringify(
+          pass === "native" && shard.index === 2
+            ? [{ name: "Error", message: "late in shard 2", causes: [] }]
+            : [],
+        ),
+      );
+      const captured = messages[`${pass}${suffix}`];
+      if (captured) {
+        writeFileSync(
+          join(
+            r,
+            `artifacts/native-suite-${leg}.${pass}${suffix}.messages.json`,
+          ),
+          JSON.stringify(captured),
+        );
+      }
+      return pass === "native" && shard.index === 2 ? 1 : 0;
+    };
+    return { calls, runPass };
+  };
+  const firstHalf = report(suite(FILE, [["a", "passed"]]));
+  const secondHalf = report(
+    suite(OTHER, [["b", "passed"]]),
+    suite(THIRD, [["c", "failed"]]),
+  );
+
+  it("runs each shard in turn within the pass's time and judges the merged report", async () => {
+    const s = setup();
+    const { calls, runPass } = sharded(
+      { control: [firstHalf, secondHalf], native: [firstHalf, secondHalf] },
+      {
+        "native.2of2": [
+          {
+            file: `/work/gmt/packages/gmt/${THIRD}`,
+            fullName: "c",
+            message: "RangeError: c differs on this engine",
+          },
+        ],
+      },
+    );
+    try {
+      const code = await main(
+        ["chromium"],
+        s.io(null, { runPass, shards: () => 2 }),
+      );
+      expect(code).toBe(1);
+      expect(
+        calls.map(({ pass, index, count }) => `${pass} ${index}/${count}`),
+      ).toEqual(["control 1/2", "control 2/2", "native 1/2", "native 2/2"]);
+      // The second shard gets what the first left of the 18 minutes.
+      expect(calls[0].left).toBeLessThanOrEqual(18 * 60 * 1000);
+      expect(calls[0].left).toBeGreaterThan(17 * 60 * 1000);
+      expect(Number.isInteger(calls[0].left)).toBe(true);
+      expect(calls[1].left).toBeLessThanOrEqual(calls[0].left);
+      expect(calls[1].left).toBeGreaterThan(17 * 60 * 1000);
+      // Files from both shards, the host failure in shard 2 with the message its reporter kept,
+      // and the error shard 2 reported, which counts as one failed test in its own file.
+      expect(s.verdict("chromium")).toMatchObject({
+        status: "ran",
+        counts: { files: 4, tests: 4, passed: 2, hostUntagged: 1, untagged: 1 },
+      });
+      const verdict = s.verdict("chromium");
+      expect(verdict.hostUntagged).toEqual([
+        {
+          file: THIRD,
+          test: "c",
+          message:
+            "RangeError: c differs on this engine\nAssertionError: c differs",
+        },
+      ]);
+      expect(verdict.untagged[0]).toMatchObject({
+        file: "(vitest)",
+        test: "(unhandled error)",
+        message: expect.stringContaining("late in shard 2"),
+      });
+      // One merged report per pass is left for the artifact, the shards' files are gone.
+      const left = readdirSync(join(s.root, "artifacts")).sort();
+      expect(left).toEqual([
+        "native-suite-chromium.control.errors.json",
+        "native-suite-chromium.control.messages.json",
+        "native-suite-chromium.control.vitest.json",
+        "native-suite-chromium.json",
+        "native-suite-chromium.native.errors.json",
+        "native-suite-chromium.native.messages.json",
+        "native-suite-chromium.native.vitest.json",
+        "temporal-compat-chromium.json",
+      ]);
+      const merged = JSON.parse(
+        readFileSync(
+          join(s.root, "artifacts/native-suite-chromium.native.vitest.json"),
+          "utf8",
+        ),
+      );
+      expect(merged.testResults.map((f: { name: string }) => f.name)).toEqual([
+        `/work/gmt/packages/gmt/${FILE}`,
+        `/work/gmt/packages/gmt/${OTHER}`,
+        `/work/gmt/packages/gmt/${THIRD}`,
+      ]);
+    } finally {
+      s.done();
+    }
+  });
+
+  it("a shard that leaves no report is could-not-run, naming the shard", async () => {
+    const s = setup();
+    const { calls, runPass } = sharded({
+      control: [firstHalf, secondHalf],
+      native: [firstHalf, null],
+    });
+    try {
+      const code = await main(
+        ["chromium"],
+        s.io(null, { runPass, shards: () => 2 }),
+      );
+      expect(code).toBe(2);
+      expect(calls).toHaveLength(4);
+      expect(s.verdict("chromium")).toEqual({
+        source: "native-suite-chromium",
+        status: "could-not-run",
+        message:
+          "the native pass left no Vitest report in shard 2 of 2 (artifacts/native-suite-chromium.native.2of2.vitest.json)",
+      });
+    } finally {
+      s.done();
+    }
+  });
+
+  it("a shard Vitest stopped early is a stopped pass: every shard runs again", async () => {
+    const s = setup();
+    const unstarted = {
+      name: `/work/gmt/packages/gmt/${THIRD}`,
+      status: "passed",
+      message: "",
+      startTime: 1700000000000,
+      endTime: 1700000000000,
+      assertionResults: [],
+    };
+    let nativeRuns = 0;
+    const { calls, runPass } = sharded({
+      control: [firstHalf, secondHalf],
+      native: [firstHalf, secondHalf],
+    });
+    const stoppingOnce = (
+      leg: string,
+      pass: "control" | "native",
+      r: string,
+      shard: { index: number; count: number },
+      left: number,
+    ) => {
+      const code = runPass(leg, pass, r, shard, left);
+      if (pass === "native" && shard.index === 2 && nativeRuns++ === 0) {
+        writeFileSync(
+          join(r, `artifacts/native-suite-${leg}.native.2of2.vitest.json`),
+          JSON.stringify(report(suite(OTHER, [["b", "passed"]]), unstarted)),
+        );
+      }
+      return code;
+    };
+    try {
+      const code = await main(
+        ["chromium"],
+        s.io(null, { runPass: stoppingOnce, shards: () => 2 }),
+      );
+      expect(code).toBe(1);
+      expect(calls.filter((c) => c.pass === "native")).toHaveLength(4);
+      expect(s.err()).toContain(
+        "native-suite: the native pass stopped after 2 of 3 files (Vitest said: Error: late in shard 2); running it again\n",
+      );
+      // The three files of the second try plus the unhandled error shard 2 reports each time.
+      expect(s.verdict("chromium").counts).toMatchObject({
+        files: 4,
+        tests: 4,
+      });
+    } finally {
+      s.done();
+    }
+  });
+
+  it("the node leg runs in one shard, with no suffix on its files", async () => {
+    const s = setup();
+    const seen: { index: number; count: number }[] = [];
+    try {
+      const code = await main(
+        ["node"],
+        s.io(
+          { native: firstHalf, control: firstHalf },
+          {
+            runPass: (
+              leg: string,
+              pass: "control" | "native",
+              r: string,
+              shard: { index: number; count: number },
+            ) => {
+              seen.push(shard);
+              return s
+                .io({ native: firstHalf, control: firstHalf })
+                .deps.runPass(leg, pass, r);
+            },
+          },
+        ),
+      );
+      expect(code).toBe(0);
+      expect(seen).toEqual([
+        { index: 1, count: 1 },
+        { index: 1, count: 1 },
+      ]);
+    } finally {
+      s.done();
+    }
+  });
+});
+
+describe("mergeReports", () => {
+  const top = (over: Record<string, unknown>) => ({
+    numTotalTestSuites: 1,
+    numPassedTestSuites: 1,
+    numFailedTestSuites: 0,
+    numPendingTestSuites: 0,
+    numTotalTests: 2,
+    numPassedTests: 2,
+    numFailedTests: 0,
+    numPendingTests: 0,
+    numTodoTests: 0,
+    snapshot: { total: 0 },
+    startTime: 1700000000000,
+    success: true,
+    testResults: [],
+    ...over,
+  });
+
+  it("adds the counts, keeps every file in shard order, takes the earliest start and the first snapshot", () => {
+    const a = top({
+      startTime: 1700000005000,
+      testResults: [suite(FILE, [["a", "passed"]])],
+      snapshot: { total: 1 },
+    });
+    const b = top({
+      numFailedTests: 1,
+      numPassedTests: 1,
+      numFailedTestSuites: 1,
+      numPassedTestSuites: 0,
+      success: false,
+      startTime: 1700000001000,
+      testResults: [suite(OTHER, [["b", "failed"]])],
+      snapshot: { total: 2 },
+    });
+    expect(mergeReports([a, b])).toEqual({
+      numTotalTestSuites: 2,
+      numPassedTestSuites: 1,
+      numFailedTestSuites: 1,
+      numPendingTestSuites: 0,
+      numTotalTests: 4,
+      numPassedTests: 3,
+      numFailedTests: 1,
+      numPendingTests: 0,
+      numTodoTests: 0,
+      snapshot: { total: 1 },
+      startTime: 1700000001000,
+      success: false,
+      testResults: [
+        suite(FILE, [["a", "passed"]]),
+        suite(OTHER, [["b", "failed"]]),
+      ],
+    });
+  });
+
+  it("one report merges to itself; a count or start that is missing counts as nothing", () => {
+    const only = top({});
+    expect(mergeReports([only])).toEqual(only);
+    const bare = { testResults: [], success: true };
+    expect(mergeReports([bare, top({})])).toMatchObject({
+      numTotalTests: 2,
+      startTime: 1700000000000,
+      success: true,
+    });
+    expect(() => mergeReports([])).toThrow("no shard reports to merge");
+  });
+});
 
 describe("native-suite command", () => {
   const ok = report(suite(FILE, [["a", "passed"]]));
@@ -1361,9 +1682,13 @@ describe("native-suite command", () => {
   it("a pass that runs past its time limit is could-not-run, naming the pass", async () => {
     const root = mkdtempSync(join(tmpdir(), "native-suite-timeout-"));
     try {
-      expect(() => runPass("node", "native", root, 1)).toThrow(
-        /native pass.*timed out/,
-      );
+      expect(() =>
+        runPass("node", "native", root, { index: 1, count: 1 }, 1),
+      ).toThrow("the native pass ran past its 18-minute limit");
+      // A shard that starts with no time left never starts Vitest.
+      expect(() =>
+        runPass("node", "native", root, { index: 3, count: 8 }, 0),
+      ).toThrow("the native pass ran past its 18-minute limit in shard 3 of 8");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -1679,7 +2004,9 @@ describe("native-suite command: the compat check in a browser", () => {
           { native: ok, control: ok },
           {
             compatCheck: async () => {
-              throw new Error("packages/gmt/dist is missing: run pnpm build first");
+              throw new Error(
+                "packages/gmt/dist is missing: run pnpm build first",
+              );
             },
           },
         ),
