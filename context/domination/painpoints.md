@@ -494,7 +494,7 @@ Researched, deliberately unscheduled. Do not re-propose without new evidence.
 | Item | Why parked |
 | --- | --- |
 | Place registries (UN/LOCODE, IATA, ICAO, UIC → IANA zone) | Real and unsolved in JS, but data-heavy and a maintenance commitment. GMT takes zones as parameters instead. Revisit as a separate package. |
-| tzdb version pinning | Reproducing a historical conversion exactly needs the tzdb version in force at the time. Deep change; Temporal exposes no version hook. Reading a caller-supplied TZif file (RFC 9636) to compare rules is an Ultimation candidate. |
+| tzdb version pinning | Reproducing a historical conversion exactly needs the tzdb version in force at the time. Deep change; Temporal exposes no version hook. Reading a caller-supplied TZif file (RFC 9636) to compare rules is not in scope either. |
 | Full Fairhead & Bretagnon TDB−TT model | Simplified formula first; sub-10 ns accuracy is a later story. |
 | Weather / climate timestamps | netCDF, GRIB. Domain expertise beyond time math. |
 | Legal timestamps | PKI and court filing. Certificate-based, not time math. |

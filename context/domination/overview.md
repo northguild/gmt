@@ -16,19 +16,14 @@ transitions). Real-world applications span multiple domains with distinct semant
 | **Core / Precision**   | Nanoseconds, spans, calendars, intervals, offsets, duty-log rules | Everything below depends on it |
 | **Transport (shared)** | Transit, dwell, ETA, multi-leg, cut-offs              | Shared across all transport modes    |
 | **Intermodal**         | Containers, demurrage, filing deadlines, EDI          | Ocean freight, multimodal logistics  |
-| **Maritime**           | GNSS/UTC, AIS, ship's time, laytime                   | Ship navigation, chartering          |
-| **Rail**               | Cross-border schedules, GTFS service days             | Rail operators, transit data         |
-| **Aviation**           | Flight legs, IATA seasons, crew duty, NOTAM           | Airlines, airports, crew scheduling  |
-| **IoT / Continuous**   | Monotonic clocks, PTP, clock drift, ingest lag        | Sensors, telemetry, observability    |
-| **Healthcare**         | HL7 v2, FHIR, DICOM, clinical age, dosing windows     | Patient records, imaging, pharmacy   |
-| **Finance**            | Sessions, day counts, settlement, tenors              | Trading, settlement, fixed income    |
-| **Space / Celestial**  | TAI, GPS, TT, TDB, leap seconds, CCSDS, Mars          | Satellite ops, orbital mechanics     |
+| **Maritime**           | GNSS time scales, week rollover                       | Ship navigation                      |
+| **Space / Celestial**  | TAI, GPS, TT, TDB, UT1, leap seconds, CCSDS           | Satellite ops, orbital mechanics     |
 
 Each realm is an **inner module** under `packages/gmt/src/`. Single package, tree-shakeable,
 shared Temporal dependency.
 
 **Start here:** [painpoints.md](painpoints.md) records the researched evidence behind every
-realm. [tracker.md](tracker.md) has the 78 stories in build order.
+realm. [tracker.md](tracker.md) has the 44 stories in build order.
 
 ---
 
@@ -38,12 +33,12 @@ realm. [tracker.md](tracker.md) has the 78 stories in build order.
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Drop gmt-otel?              | **Yes** — too niche. Telemetry consumers use core GMT primitives directly.                                                                                |
 | Drop gmt-time package?      | **Yes** — its value (`toNanoseconds`, `fromNanoseconds`) moves into core GMT.                                                                             |
-| Realm architecture          | **Inner modules** — `@northguild/gmt/finance`, `@northguild/gmt/maritime`, etc.                                                                           |
-| Realm build order           | **Value first** — Core → Logistics/Transport → IoT → Healthcare → Finance → Space.                                                                        |
+| Realm architecture          | **Inner modules** — `@northguild/gmt/transport`, `@northguild/gmt/intermodal`, etc.                                                                       |
+| Realm build order           | **Value first** — Core → Logistics/Transport → Space.                                                                                                     |
 | Bundled place registries    | **No.** GMT takes IANA zones and calendars as parameters. It does not map UN/LOCODE, IATA, ICAO or UIC codes to timezones. Parked as separate future work. |
 | Bundled reference data      | **Opt-in subpaths only, two kinds** — standards-body data (IERS, IANA, CLDR) and operator-published calendars (exchanges, payment systems), under `…/data`, never the default import path, each with source, revision and validity. No national holiday, regulator or dealer-convention tables. A table its standards body has closed is exempt and ships on the default path as an internal constant: the IERS leap-second table (CGPM 2026 Resolution 5; IERS Bulletin C 72). |
 | Space scales                | **Function-based** — `toTAI()`, `gnssToUtc()`, etc.                                                                                                      |
-| Leap seconds                | **Handle correctly** — `SPA-48` owns the IERS table, a closed table built into the default path in the `timescale/` Core namespace; `MAR-16` and `IOT-31` consume it. |
+| Leap seconds                | **Handle correctly** — `SPA-48` owns the IERS table, a closed table built into the default path in the `timescale/` Core namespace; `MAR-16` consumes it. |
 | Telemetry role              | **Output layer, not a realm** — every realm produces telemetry. GMT provides correct timestamps.                                                          |
 | Invented quantities         | **Forbidden.** If a value cannot be derived from the inputs, the function does not return it.                                                              |
 | Authority order             | **International first.** An international treaty or standards body, then a multinational industry body, then national sources only as labelled peers. No national system, agency or convention is a default, the sole authority, or gets its own named function; with no international source, a GMT rule backed by sources from at least two countries. Example: the six GNSS are peers because each is an IMO-recognised WWRNS component, not because any one nation's document says so. Examples are spread across regions (tracker, "Added for this epic"). |
@@ -110,15 +105,8 @@ which were correct, complete, or GMT's facts to assert.
                                     │   industry layers
                                     ├── transport/      (TRAN-8 … TRAN-10, TRAN-57)
                                     ├── intermodal/     (INT-12, INT-14, INT-15, INT-58)
-                                    ├── maritime/       (MAR-17 … MAR-19, MAR-59)
-                                    ├── aviation/       (AV-25 … AV-28, AV-64)
-                                    ├── rail/           (RAI-22 … RAI-24)
-                                    ├── iot/            (IOT-29 … IOT-32, IOT-66)
-                                    ├── health/         (HLTH-33 … HLTH-39, HLTH-67, HLTH-68)
-                                    ├── finance/        (FIN-40 … FIN-45, FIN-71 … FIN-73)
-                                    │   └── data/       (opt-in: exchange and payment-system calendars)
                                     └── Space realm — namespace name decided when the SPA stories start
-                                                        (SPA-47, SPA-49 … SPA-53, SPA-74, SPA-75)
+                                                        (SPA-47, SPA-49, SPA-50, SPA-52, SPA-74)
 
 packages/gmt-time/ (DELETE — value moved to core)
 packages/gmt-otel/ (DELETE — too niche)
@@ -153,9 +141,9 @@ entry per category barrel, mirrored in `typesVersions`).
 | `interval/`  | CORE-6         | Overlap, intersect, clamp, subtract, merge, split, sum                     |
 | `timescale/` | SPA-48, MAR-16, SPA-46 | TAI − UTC, leap seconds, TAI and TAI64 |
 
-These are universal primitives. `interval/` and `calendar/` in particular are consumed by
-laytime, hours-of-work rules, free time, market sessions and medication windows — five realms
-that would otherwise each implement interval arithmetic and disagree about boundaries.
+These are universal primitives. `interval/` and `calendar/` in particular serve hours-of-work
+rules and free time, which would otherwise each implement interval arithmetic and disagree about
+boundaries, and any caller's own windows.
 `CORE-54` … `CORE-56` exist for the same reason: holiday rules, weekly opening windows and
 identifier timestamps would otherwise each be written several times.
 
@@ -167,8 +155,8 @@ industry's namespace, because several industries need it.
 
 | Layer        | Story          | What it provides                                                          | Drawn on by |
 | ------------ | -------------- | ------------------------------------------------------------------------- | ----------- |
-| `workforce/` | CORE-76        | Workforce management: duty-log rule objects, the operator-designated day, violations and remaining-time reports | Transport now; Health (resident duty hours), Aviation, Rail, Maritime later |
-| `gnss/`      | MAR-16         | The GNSS industry: the six RINEX system times, week counters, rollovers, RINEX weeks | Maritime now; Aviation, IoT later |
+| `workforce/` | CORE-76        | Workforce management: duty-log rule objects, the operator-designated day, violations and remaining-time reports | Transport now; other industries later |
+| `gnss/`      | MAR-16         | The GNSS industry: the six RINEX system times, week counters, rollovers, RINEX weeks | Maritime now; other industries later |
 
 `CORE-76` keeps its Core id: it was planned as a Core story, and its id is the build-order key.
 
@@ -226,7 +214,7 @@ leave no trace, so they are described, not named.
 | Not included               | Reason                                                                              |
 | -------------------------- | ------------------------------------------------------------------------------------- |
 | Place registries           | UN/LOCODE, IATA, ICAO, UIC → IANA zone. Real gap, but a data commitment. Parked.     |
-| tzdb version pinning       | Reproducing historical conversions exactly. Temporal exposes no version hook. Comparing rules from a caller's TZif file is an Ultimation candidate. |
+| tzdb version pinning       | Reproducing historical conversions exactly. Temporal exposes no version hook. Comparing rules from a caller's TZif file is not in scope either. |
 | OTel integration           | Precision functions in core serve all telemetry consumers.                            |
 | Weather/climate timestamps | netCDF, GRIB files. Domain expertise beyond time math.                                |
 | Legal timestamps           | Certificate-based, PKI, court filing. Future realm.                                   |
@@ -243,13 +231,13 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 
 | Risk                          | Mitigation                                                                          |
 | ----------------------------- | ------------------------------------------------------------------------------------- |
-| Epic size (78 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
+| Epic size (44 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
 | Bundled data staleness        | Every data module exposes provenance and a staleness predicate. Never on the hot path.|
 | Holiday calendar maintenance  | Caller-supplied. Opt-in exchange and payment-system calendars carry coverage windows; no national holiday sets ship. |
 | IERS data staleness           | Bulletin A ships at build and `isUt1Stale` surfaces its expiry. The leap-second table (Bulletin C) is closed and built in; a weekly canary checks it against IERS until IERS publishes its file format for continuous UTC. |
 | Regulatory tables drift       | GMT tracks no law: windows, limits and tables are caller parameters, never logic or docs text (tracker, "Added for this epic"). |
 | Transport scope creep         | Time math only. Routing and optimisation are the consumer's problem.                  |
-| Safety-critical approximation | CORE-76 and AV-27 evaluate only the rules and numbers the caller states, report every rule separately, and approximate nothing. |
+| Safety-critical approximation | CORE-76 evaluates only the rules and numbers the caller states, reports every rule separately, and approximates nothing. |
 | Space realm complexity        | Model against `astrotime` and ERFA. Accuracy limits stated as numbers in JSDoc.       |
 | TDB-TT accuracy               | Simplified formula first. Fairhead & Bretagnon parked as a separate story.            |
 | Bundle size bloat             | Inner modules tree-shakeable; data behind subpaths. Monitor with `size-limit`.        |
@@ -260,7 +248,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 ## References
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
-- [tracker.md](tracker.md) — 78 stories, `Blocked by` column, Definition of Done
+- [tracker.md](tracker.md) — 44 stories, `Blocked by` column, Definition of Done
 - [research/index.md](research/index.md) — all research records, including the
   `research/spike-2026-09/` verification files: claim, quote, source and clause behind each spec's numbers, and what could not be verified
 - [issues/index.md](issues/index.md) — story specs, one file per story, named by story ID
