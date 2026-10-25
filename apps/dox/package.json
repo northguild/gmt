@@ -3,6 +3,7 @@
   "version": "0.1.1",
   "private": true,
   "description": "Documentation site for @northguild/gmt",
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "generate": "node ../../scripts/upstream.mjs refresh && node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs && tsx ./scripts/build-tool-index.ts && tsx ./scripts/build-industry-pages.ts && tsx ./scripts/build-industry-sidebars.ts && node ./scripts/ensure-sidebar-order.mjs && tsx ./scripts/build-corpus-counts.ts",

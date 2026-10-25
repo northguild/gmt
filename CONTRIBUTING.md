@@ -4,6 +4,10 @@ pnpm 12 is the only tool you install. It downloads the pinned pnpm version and t
 
 This guide covers local development, quality checks, and publishing for workspace packages.
 
+## Contributions
+
+Pull requests are accepted only for the packages in `packages/`. A contribution there is licensed under MIT, the licence of the package it changes. A pull request that changes anything else in this repository is not accepted: open an issue instead.
+
 ## Prerequisites
 
 - pnpm 12 or newer. Install it any way you like, for example `npm i -g pnpm@12`. You need no Corepack, fnm, nvm or Volta.
