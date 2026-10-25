@@ -2,14 +2,21 @@
 /**
  * Leap-second canary.
  *
- *   node scripts/leap-seconds.mjs check [--file=<path>]
+ *   node scripts/leap-seconds.mjs check [--file=<path>] [--iana-file=<path>]
  *     Fetches IERS `Leap_Second.dat`, parses its data rows (MJD, day, month, year, TAI − UTC) and
  *     compares them, row by row, with `LEAP_SECOND_STEPS` re-parsed from the source literal in
  *     `packages/gmt/src/internal/leapSeconds.ts`. Exit 0 when every row matches. Exit 1, printing
  *     the IERS header line ("Updated through IERS Bulletin …"), when any row differs, a row is
  *     added or removed, or the file no longer reads as rows. Exit 2 when it cannot run (the
- *     network or the source file). `--file` reads a local copy instead of fetching, for offline
- *     debugging.
+ *     network or the source file). `--file` reads a local IERS copy instead of fetching, for
+ *     offline debugging.
+ *
+ *     When IERS cannot be read (network error, timeout, HTTP error, unreadable `--file`), it reads
+ *     IANA's `leap-seconds.list` instead: the same IERS table, republished by tzdb. A file that is
+ *     read but differs or does not parse never falls back; that stays exit 1 against IERS. The IANA
+ *     file carries an expiry (`#@`, NTP seconds); once it is at or before now, the fallback cannot
+ *     vouch for the table and the run exits 2. `--iana-file` reads a local IANA copy instead of
+ *     fetching. If both sources fail, exit 2 with both failures named.
  *
  * Every run that gets as far as reading the two tables writes `artifacts/leap-seconds.json`
  * (CORE-81) before it prints or exits: a verdict of what it found, or a could-not-run note ahead of
@@ -24,8 +31,9 @@
  * `leapSeconds.ts` plus a `patch` changeset; `leapSeconds.test.ts` checks the edit.
  *
  * It reads the source text rather than importing the module, so it needs no build. It uses no
- * `Date`: an epoch-nanosecond value and an MJD are both whole days from a fixed epoch, so they
- * compare with integer arithmetic.
+ * `Date` arithmetic: an epoch-nanosecond value, an NTP second count and an MJD are all whole days
+ * from a fixed epoch, so they compare with integer arithmetic. Only `Date.now()` is read, for the
+ * IANA expiry check.
  *
  * Never wired into `validate` or `ci.yml`: those runs have no network. The weekly/manual run is
  * `.github/workflows/leap-seconds.yml`. Both are retired once IERS publishes its file format for
@@ -45,8 +53,30 @@ import {
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const SOURCE = "packages/gmt/src/internal/leapSeconds.ts";
 const IERS_URL = "https://hpiers.obspm.fr/iers/bul/bulc/Leap_Second.dat";
+const IANA_URL = "https://data.iana.org/time-zones/tzdb/leap-seconds.list";
+const IERS_NAME = "IERS Leap_Second.dat";
+const IANA_NAME = "IANA leap-seconds.list";
 const FETCH_TIMEOUT_MS = 30_000;
 
+const SECONDS_PER_DAY = 86_400n;
+/** MJD of 1900-01-01, the epoch NTP seconds count from (RFC 5905 §6). */
+const MJD_OF_NTP_EPOCH = 15_020n;
+/** NTP seconds at 1970-01-01: 25 567 days (70 years, 17 leap days) of 86 400 s. */
+const NTP_OF_UNIX_EPOCH = 2_208_988_800n;
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 const NANOSECONDS_PER_DAY = 86_400_000_000_000n;
 /** MJD of 1970-01-01, the epoch `epochNanoseconds` counts from. */
 const MJD_OF_UNIX_EPOCH = 40_587n;
@@ -56,6 +86,12 @@ const SOURCE_ROW =
   /^\s*\[(\d+)n,\s*(-?\d+)n\],\s*\/\/\s*(\d{4})-(\d{2})-(\d{2})T00:00:00Z\s*$/;
 /** One `Leap_Second.dat` data row: `    41317.0    1  1 1972       10`. */
 const IERS_ROW = /^\s*(\d+)\.0\s+(\d{1,2})\s+(\d{1,2})\s+(\d{4})\s+(-?\d+)\s*$/;
+/** One `leap-seconds.list` data row: `2272060800\t10\t# 1 Jan 1972`. */
+const IANA_ROW = new RegExp(
+  `^\\s*(\\d+)\\s+(-?\\d+)\\s*#\\s*(\\d{1,2})\\s+(${MONTHS.join("|")})\\s+(\\d{4})\\s*$`,
+);
+/** The expiry line of `leap-seconds.list`: `#@\t4023129600`. */
+const IANA_EXPIRY = /^#@\s+(\d+)\s*$/m;
 const IERS_HEADER = /Updated through[^\n]*/;
 /** The body of `const ROWS = [ … ];`: every line after the opening one, up to the closing `];`. */
 const SOURCE_BLOCK = /const ROWS[^\n]*\n([\s\S]*?)\n\];/;
@@ -152,6 +188,38 @@ function iersRow(match) {
   };
 }
 
+/**
+ * The data rows of IANA's `leap-seconds.list` (NTP seconds, TAI − UTC, a date comment). `#` lines
+ * are comments except `#@`, the expiry; any other non-blank line must be a row. Returns
+ * `{ header, rows, expiry, problems }`; `expiry` is NTP seconds as a bigint, or null when missing.
+ */
+function parseIanaRows(text) {
+  const header = IERS_HEADER.exec(text);
+  const lines = text.split("\n").filter((l) => !COMMENT_OR_BLANK.test(l));
+  const { rows, problems } = readRows(lines, IANA_ROW, ianaRow, "IANA");
+  if (!header) problems.push('IANA: no "Updated through" line');
+  const expiry = IANA_EXPIRY.exec(text);
+  if (!expiry) problems.push("IANA: no expiry (#@) line");
+  return {
+    header: header ? header[0].trim() : null,
+    rows,
+    expiry: expiry ? BigInt(expiry[1]) : null,
+    problems,
+  };
+}
+
+/** An IANA row as `{ mjd, date, offset }`, checking the NTP value against its own comment. */
+function ianaRow(match, problems) {
+  const [, ntp, offset, day, month, year] = match;
+  const at = BigInt(ntp);
+  const mjd = MJD_OF_NTP_EPOCH + at / SECONDS_PER_DAY;
+  const date = isoDate(year, BigInt(MONTHS.indexOf(month) + 1), day);
+  if (at % SECONDS_PER_DAY !== 0n || dateOfMjd(mjd) !== date) {
+    problems.push(`IANA: ${ntp} is not 00:00:00 on ${date}`);
+  }
+  return { mjd, date, offset: BigInt(offset) };
+}
+
 /** One line per row that differs, is missing from the source, or is missing from IERS. */
 function compareRows(source, iers) {
   const problems = [];
@@ -178,13 +246,20 @@ function compareRow(index, source, iers) {
 
 // ---------------------------------------------------------------- command
 
-async function readIers(file) {
-  if (file) return readFileSync(file, "utf8");
-  const response = await fetch(IERS_URL, {
+async function fetchText(url) {
+  const response = await fetch(url, {
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
-  if (!response.ok) throw new Error(`HTTP ${response.status} from ${IERS_URL}`);
+  if (!response.ok) throw new Error(`HTTP ${response.status} from ${url}`);
   return await response.text();
+}
+
+async function readIers(file) {
+  return file ? readFileSync(file, "utf8") : await fetchText(IERS_URL);
+}
+
+async function readIana(file) {
+  return file ? readFileSync(file, "utf8") : await fetchText(IANA_URL);
 }
 
 /** Writes the verdict file; a failure is only reported (see `saveVerdict`). */
@@ -192,25 +267,65 @@ function saveLeapVerdict(verdict) {
   saveVerdict(ROOT, verdict, "leap-seconds");
 }
 
-async function loadTables(file) {
+/** Reports that the check cannot run, writes the could-not-run verdict and exits 2. */
+function cannotRun(message) {
+  console.error(`leap-seconds: cannot run: ${message}`);
+  saveLeapVerdict(couldNotRunVerdict("leap-seconds", `cannot run: ${message}`));
+  process.exit(2);
+}
+
+/** The current time as NTP seconds. `Date.now()` is whole milliseconds. */
+function nowNtpSeconds() {
+  // oxlint-disable-next-line @northguild/gmt-oxlint/no-date-now -- this script imports no build of the library (see header)
+  return BigInt(Date.now()) / 1000n + NTP_OF_UNIX_EPOCH; // date-ban: epoch seconds compared with the IANA expiry in epoch seconds, not a date value
+}
+
+/** `{ from, table }`: IERS when it can be read, otherwise IANA, which must not have expired. */
+async function loadSourceTable(options) {
+  let iersError;
   try {
-    const sourceText = readFileSync(join(ROOT, SOURCE), "utf8");
-    const iersText = await readIers(file);
     return {
-      source: parseSourceRows(sourceText),
-      iers: parseIersRows(iersText),
+      from: IERS_NAME,
+      table: parseIersRows(await readIers(options.file)),
     };
   } catch (error) {
-    console.error(`leap-seconds: cannot run: ${error.message}`);
-    saveLeapVerdict(
-      couldNotRunVerdict("leap-seconds", `cannot run: ${error.message}`),
-    );
-    process.exit(2);
+    iersError = error.message;
   }
+  console.error(
+    `leap-seconds: ${IERS_NAME} unreachable (${iersError}); reading ${IANA_NAME}`,
+  );
+  let table;
+  try {
+    table = parseIanaRows(await readIana(options.ianaFile));
+  } catch (error) {
+    return cannotRun(
+      `${IERS_NAME}: ${iersError}; ${IANA_NAME}: ${error.message}`,
+    );
+  }
+  if (table.expiry !== null && table.expiry <= nowNtpSeconds()) {
+    const expired = dateOfMjd(
+      MJD_OF_NTP_EPOCH + table.expiry / SECONDS_PER_DAY,
+    );
+    return cannotRun(
+      `${IERS_NAME}: ${iersError}; ${IANA_NAME} expired on ${expired}, so it cannot vouch for the table`,
+    );
+  }
+  return { from: IANA_NAME, table };
+}
+
+async function loadTables(options) {
+  let sourceText;
+  try {
+    sourceText = readFileSync(join(ROOT, SOURCE), "utf8");
+  } catch (error) {
+    return cannotRun(error.message);
+  }
+  const { from, table } = await loadSourceTable(options);
+  return { from, source: parseSourceRows(sourceText), iers: table };
 }
 
 async function check(options) {
-  const { source, iers } = await loadTables(options.file);
+  const { from, source, iers } = await loadTables(options);
   const problems = [
     ...source.problems,
     ...iers.problems,
@@ -218,6 +333,7 @@ async function check(options) {
   ];
   saveLeapVerdict(
     leapSecondsVerdict({
+      from,
       header: iers.header,
       gmtRows: source.rows.length,
       iersRows: iers.rows.length,
@@ -227,7 +343,7 @@ async function check(options) {
   const header = iers.header ?? "(no header line)";
   if (problems.length > 0) {
     console.error(
-      `leap-seconds: ${SOURCE} no longer matches IERS Leap_Second.dat.\n` +
+      `leap-seconds: ${SOURCE} no longer matches ${from}.\n` +
         `IERS: ${header}\n` +
         problems.map((p) => `  ${p}`).join("\n") +
         "\nA new row is a data edit in leapSeconds.ts plus a `patch` changeset; " +
@@ -236,16 +352,21 @@ async function check(options) {
     process.exit(1);
   }
   console.log(
-    `leap-seconds: ${source.rows.length} rows match IERS Leap_Second.dat (${header})`,
+    `leap-seconds: ${source.rows.length} rows match ${from} (${header})`,
   );
 }
 
 const argv = process.argv.slice(2).filter((a) => a !== "--");
 const command = argv[0] ?? "check";
 const file = argv.find((a) => a.startsWith("--file="))?.slice("--file=".length);
+const ianaFile = argv
+  .find((a) => a.startsWith("--iana-file="))
+  ?.slice("--iana-file=".length);
 const commands = { check };
 if (!commands[command]) {
-  console.error("Usage: node scripts/leap-seconds.mjs check [--file=<path>]");
+  console.error(
+    "Usage: node scripts/leap-seconds.mjs check [--file=<path>] [--iana-file=<path>]",
+  );
   process.exit(1);
 }
-await commands[command]({ file });
+await commands[command]({ file, ianaFile });

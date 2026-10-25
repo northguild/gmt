@@ -66,6 +66,9 @@ const SOURCE_ENGINE = {
 };
 const ORACLE = "temporal-oracle";
 const LEAP = "leap-seconds";
+const LEAP_IANA = "IANA leap-seconds.list";
+const LEAP_IANA_URL = "https://data.iana.org/time-zones/tzdb/leap-seconds.list";
+const LEAP_IERS_URL = "https://hpiers.obspm.fr/iers/bul/bulc/Leap_Second.dat";
 /** The native-suite legs, in the order their findings and summary rows list them. */
 const NATIVE_LEGS = ["node", "chromium", "firefox", "webkit"];
 /** @param {string} leg */
@@ -133,7 +136,8 @@ const FORCED_ROW = {
  *   forced?: { mismatch: true },
  * }} OracleVerdict
  * @typedef {{
- *   source: "leap-seconds", status: "ran", header: string | null,
+ *   source: "leap-seconds", status: "ran",
+ *   from: "IERS Leap_Second.dat" | "IANA leap-seconds.list", header: string | null,
  *   rows: { gmt: number, iers: number }, differences: string[],
  *   forced?: { difference: true },
  * }} LeapSecondsVerdict
@@ -872,8 +876,9 @@ function leapFinding(leap, isForced, runUrl) {
   const header = leap.header ?? 'no "Updated through" line';
   const differences = isForced ? [FORCED_LEAP_LINE] : leap.differences;
   const list = differences.map((d) => `- ${d}`).join("\n");
+  const url = leap.from === LEAP_IANA ? LEAP_IANA_URL : LEAP_IERS_URL;
   const paragraphs = [
-    "packages/gmt/src/internal/leapSeconds.ts no longer matches IERS Leap_Second.dat (https://hpiers.obspm.fr/iers/bul/bulc/Leap_Second.dat).",
+    `packages/gmt/src/internal/leapSeconds.ts no longer matches ${leap.from} (${url}).`,
     `**IERS:** ${header}`,
     `### Differences\n\n${list}`,
     "A new row is a data edit in leapSeconds.ts plus a patch changeset; leapSeconds.test.ts checks the edit.",
@@ -885,7 +890,7 @@ function leapFinding(leap, isForced, runUrl) {
   /** @type {Finding} */
   const real = {
     key: "leap-seconds/table-difference",
-    title: "Leap-second table differs from IERS Leap_Second.dat",
+    title: "Leap-second table differs from the IERS table",
     labels: [CANARY_LABEL],
     body: withRun(paragraphs.join("\n\n"), runUrl),
     comment,

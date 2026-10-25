@@ -116,6 +116,7 @@ const oracle = (untagged = 0) => ({
 const leap = (differences: string[] = []) => ({
   source: "leap-seconds",
   status: "ran",
+  from: "IERS Leap_Second.dat",
   header: "Updated through IERS Bulletin C 72",
   rows: { gmt: 28, iers: 28 + differences.length },
   differences,
@@ -694,6 +695,8 @@ describe("summaryMarkdown: leap-seconds", () => {
       [
         "## Leap-second canary",
         "",
+        "Read from: IERS Leap_Second.dat",
+        "",
         "IERS: Updated through IERS Bulletin C 72",
         "",
         "| Leap-second table | Count |",
@@ -706,6 +709,12 @@ describe("summaryMarkdown: leap-seconds", () => {
         "",
       ].join("\n"),
     );
+  });
+
+  it("a run on the IANA fallback names IANA leap-seconds.list", () => {
+    const text = leapSummary({ ...leap(), from: "IANA leap-seconds.list" });
+    expect(text.split("\n")).toContain("Read from: IANA leap-seconds.list");
+    expect(text).not.toContain("Read from: IERS");
   });
 
   it("one difference gives Differences 1 and lists the difference after the table", () => {
@@ -732,6 +741,7 @@ describe("summaryMarkdown: leap-seconds", () => {
       "Leap-second table: could not run — cannot run: HTTP 503",
     );
     expect(text).not.toContain("IERS:");
+    expect(text).not.toContain("Read from:");
   });
 
   it("a verdict without a header says the line is missing", () => {

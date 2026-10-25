@@ -226,13 +226,21 @@ export function nativeSuiteVerdict({
  * The `leap-seconds check` verdict. `differences` is the exact `problems` list the command prints:
  * source parse problems, IERS parse problems, then the row comparisons, each string unchanged.
  *
- * @param {{ header: string | null, gmtRows: number, iersRows: number, differences: string[] }} input
- *        `header` is the IERS "Updated through …" line, or null when the file has none
+ * @param {{ from: "IERS Leap_Second.dat" | "IANA leap-seconds.list", header: string | null, gmtRows: number, iersRows: number, differences: string[] }} input
+ *        `from` is the file the table was read from; `header` is its IERS "Updated through …"
+ *        line, or null when the file has none
  */
-export function leapSecondsVerdict({ header, gmtRows, iersRows, differences }) {
+export function leapSecondsVerdict({
+  from,
+  header,
+  gmtRows,
+  iersRows,
+  differences,
+}) {
   return {
     source: "leap-seconds",
     status: "ran",
+    from,
     header,
     rows: { gmt: gmtRows, iers: iersRows },
     differences: [...differences],

@@ -382,6 +382,7 @@ export function summaryMarkdown(
     if ("ran" in found) {
       const leap = found.ran;
       blocks.push(
+        `Read from: ${leap.from}`,
         `IERS: ${leap.header ?? 'no "Updated through" line'}`,
         table("Leap-second table", [
           ["GMT rows", String(leap.rows.gmt)],
