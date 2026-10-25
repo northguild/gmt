@@ -28,6 +28,7 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 ## Tests
 
 - [ ] `it.each` uses template literal syntax, not array syntax
+- [ ] No two tests in a file share a full name, and a string-only placeholder in a title is written `'$value'` so an empty string prints `''` ([test-name standards](./testing-standards/references/index.md#test-name-standards))
 - [ ] Full locale matrix covered for any locale-aware function (17 locales via `MustTestLocales`)
 - [ ] Error paths tested using pre-built mocks from `packages/gmt/src/test/mocks` (imported relatively, e.g. `../../test/mocks`)
 - [ ] `expectOneOfIcu` / `expectDateTimeEqual` / `expectOneOfDateTimeIcu` (from `src/test/icuVariants.ts`) used only for verified CLDR wording variants
