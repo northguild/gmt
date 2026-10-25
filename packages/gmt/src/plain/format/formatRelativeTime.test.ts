@@ -785,30 +785,30 @@ describe("formatRelativeTime largestUnit", () => {
 
   it.each`
     label                           | largestUnit                   | why
-    ${"day"}                        | ${"day"}                      | ${"a date unit; a time has none"}
-    ${"days"}                       | ${"days"}                     | ${"a date unit; a time has none"}
-    ${"week"}                       | ${"week"}                     | ${"a date unit; a time has none"}
-    ${"weeks"}                      | ${"weeks"}                    | ${"a date unit; a time has none"}
-    ${"month"}                      | ${"month"}                    | ${"a date unit; a time has none"}
-    ${"months"}                     | ${"months"}                   | ${"a date unit; a time has none"}
-    ${"year"}                       | ${"year"}                     | ${"a date unit; a time has none"}
-    ${"years"}                      | ${"years"}                    | ${"a date unit; a time has none"}
-    ${"quarter"}                    | ${"quarter"}                  | ${"not a unit of the function"}
-    ${"quarters"}                   | ${"quarters"}                 | ${"not a unit of the function"}
-    ${"millisecond"}                | ${"millisecond"}              | ${"not a unit of the function"}
-    ${"nanoseconds"}                | ${"nanoseconds"}              | ${"not a unit of the function"}
-    ${"auto"}                       | ${"auto"}                     | ${"not a unit of the function"}
-    ${"HOUR"}                       | ${"HOUR"}                     | ${"unit names are lower case"}
-    ${"Hours"}                      | ${"Hours"}                    | ${"unit names are lower case"}
-    ${""}                           | ${""}                         | ${"an empty string"}
-    ${"x"}                          | ${"x"}                        | ${"not a unit"}
+    ${"'day'"}                      | ${"day"}                      | ${"a date unit; a time has none"}
+    ${"'days'"}                     | ${"days"}                     | ${"a date unit; a time has none"}
+    ${"'week'"}                     | ${"week"}                     | ${"a date unit; a time has none"}
+    ${"'weeks'"}                    | ${"weeks"}                    | ${"a date unit; a time has none"}
+    ${"'month'"}                    | ${"month"}                    | ${"a date unit; a time has none"}
+    ${"'months'"}                   | ${"months"}                   | ${"a date unit; a time has none"}
+    ${"'year'"}                     | ${"year"}                     | ${"a date unit; a time has none"}
+    ${"'years'"}                    | ${"years"}                    | ${"a date unit; a time has none"}
+    ${"'quarter'"}                  | ${"quarter"}                  | ${"not a unit of the function"}
+    ${"'quarters'"}                 | ${"quarters"}                 | ${"not a unit of the function"}
+    ${"'millisecond'"}              | ${"millisecond"}              | ${"not a unit of the function"}
+    ${"'nanoseconds'"}              | ${"nanoseconds"}              | ${"not a unit of the function"}
+    ${"'auto'"}                     | ${"auto"}                     | ${"not a unit of the function"}
+    ${"'HOUR'"}                     | ${"HOUR"}                     | ${"unit names are lower case"}
+    ${"'Hours'"}                    | ${"Hours"}                    | ${"unit names are lower case"}
+    ${"''"}                         | ${""}                         | ${"an empty string"}
+    ${"'x'"}                        | ${"x"}                        | ${"not a unit"}
     ${"null"}                       | ${null}                       | ${"null is a value, not an omission"}
     ${"1"}                          | ${1}                          | ${"a number"}
     ${"true"}                       | ${true}                       | ${"a boolean"}
-    ${'["hour"]'}                   | ${["hour"]}                   | ${"an array, not a string"}
-    ${'{ toString: () => "hour" }'} | ${{ toString: () => "hour" }} | ${"an object, not a string"}
+    ${"['hour']"}                   | ${["hour"]}                   | ${"an array, not a string"}
+    ${"{ toString: () => 'hour' }"} | ${{ toString: () => "hour" }} | ${"an object, not a string"}
   `(
-    "returns '' for largestUnit '$label' outside the listed units ($why)",
+    "returns '' for largestUnit $label outside the listed units ($why)",
     ({ largestUnit }) => {
       expect(
         formatRelativeTime("10:00:00", MustTestLocales.enUS, {

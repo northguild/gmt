@@ -611,11 +611,15 @@ describe("classifyStoredZoned", () => {
       });
     }
 
-    for (const { timeZone, value, source } of [
-      ...sameInstantBattleCases.map((c) => ({ ...c, source: "same instant" })),
-      ...localNoonBattleCases.map((c) => ({ ...c, source: "local noon" })),
-    ]) {
-      it(`${timeZone}: ${value} (${source}) with one hour added to the offset is an offsetMismatch`, () => {
+    // One test per stored string: a zone's same-instant and local-noon cases can be one string.
+    const offsetCases = new Map(
+      [...sameInstantBattleCases, ...localNoonBattleCases].map((c) => [
+        c.value,
+        c,
+      ]),
+    );
+    for (const { timeZone, value } of offsetCases.values()) {
+      it(`${timeZone}: ${value} with one hour added to the offset is an offsetMismatch`, () => {
         const zoned = Temporal.ZonedDateTime.from(value);
         const storedOffset = formatUtcOffset(
           BigInt(zoned.offsetNanoseconds) + 3_600_000_000_000n,

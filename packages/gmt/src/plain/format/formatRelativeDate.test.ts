@@ -858,28 +858,28 @@ describe("formatRelativeDate largestUnit", () => {
 
   it.each`
     label                          | largestUnit                  | why
-    ${"hour"}                      | ${"hour"}                    | ${"a time unit; a date has none"}
-    ${"hours"}                     | ${"hours"}                   | ${"a time unit; a date has none"}
-    ${"minute"}                    | ${"minute"}                  | ${"a time unit; a date has none"}
-    ${"minutes"}                   | ${"minutes"}                 | ${"a time unit; a date has none"}
-    ${"second"}                    | ${"second"}                  | ${"a time unit; a date has none"}
-    ${"seconds"}                   | ${"seconds"}                 | ${"a time unit; a date has none"}
-    ${"quarter"}                   | ${"quarter"}                 | ${"not a unit of the function"}
-    ${"quarters"}                  | ${"quarters"}                | ${"not a unit of the function"}
-    ${"millisecond"}               | ${"millisecond"}             | ${"not a unit of the function"}
-    ${"nanoseconds"}               | ${"nanoseconds"}             | ${"not a unit of the function"}
-    ${"auto"}                      | ${"auto"}                    | ${"not a unit of the function"}
-    ${"DAY"}                       | ${"DAY"}                     | ${"unit names are lower case"}
-    ${"Days"}                      | ${"Days"}                    | ${"unit names are lower case"}
-    ${""}                          | ${""}                        | ${"an empty string"}
-    ${"x"}                         | ${"x"}                       | ${"not a unit"}
+    ${"'hour'"}                    | ${"hour"}                    | ${"a time unit; a date has none"}
+    ${"'hours'"}                   | ${"hours"}                   | ${"a time unit; a date has none"}
+    ${"'minute'"}                  | ${"minute"}                  | ${"a time unit; a date has none"}
+    ${"'minutes'"}                 | ${"minutes"}                 | ${"a time unit; a date has none"}
+    ${"'second'"}                  | ${"second"}                  | ${"a time unit; a date has none"}
+    ${"'seconds'"}                 | ${"seconds"}                 | ${"a time unit; a date has none"}
+    ${"'quarter'"}                 | ${"quarter"}                 | ${"not a unit of the function"}
+    ${"'quarters'"}                | ${"quarters"}                | ${"not a unit of the function"}
+    ${"'millisecond'"}             | ${"millisecond"}             | ${"not a unit of the function"}
+    ${"'nanoseconds'"}             | ${"nanoseconds"}             | ${"not a unit of the function"}
+    ${"'auto'"}                    | ${"auto"}                    | ${"not a unit of the function"}
+    ${"'DAY'"}                     | ${"DAY"}                     | ${"unit names are lower case"}
+    ${"'Days'"}                    | ${"Days"}                    | ${"unit names are lower case"}
+    ${"''"}                        | ${""}                        | ${"an empty string"}
+    ${"'x'"}                       | ${"x"}                       | ${"not a unit"}
     ${"null"}                      | ${null}                      | ${"null is a value, not an omission"}
     ${"1"}                         | ${1}                         | ${"a number"}
     ${"true"}                      | ${true}                      | ${"a boolean"}
-    ${'["day"]'}                   | ${["day"]}                   | ${"an array, not a string"}
-    ${'{ toString: () => "day" }'} | ${{ toString: () => "day" }} | ${"an object, not a string"}
+    ${"['day']"}                   | ${["day"]}                   | ${"an array, not a string"}
+    ${"{ toString: () => 'day' }"} | ${{ toString: () => "day" }} | ${"an object, not a string"}
   `(
-    "returns '' for largestUnit '$label' outside the listed units ($why)",
+    "returns '' for largestUnit $label outside the listed units ($why)",
     ({ largestUnit }) => {
       expect(
         formatRelativeDate("2023-03-17", MustTestLocales.enUS, {

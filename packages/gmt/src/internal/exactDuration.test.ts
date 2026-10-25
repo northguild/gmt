@@ -69,13 +69,13 @@ describe("nonNegativeExactDurationNanoseconds", () => {
   });
 
   it.each`
-    duration             | why
-    ${"-PT15M"}          | ${"a negative duration"}
-    ${"-PT0.000000001S"} | ${"one nanosecond below zero"}
-    ${"P1W"}             | ${"a calendar unit"}
-    ${"15 minutes"}      | ${"not a duration"}
-    ${null}              | ${"a non-string"}
-  `("returns null for '$duration' ($why)", ({ duration }) => {
+    duration             | label                  | why
+    ${"-PT15M"}          | ${"'-PT15M'"}          | ${"a negative duration"}
+    ${"-PT0.000000001S"} | ${"'-PT0.000000001S'"} | ${"one nanosecond below zero"}
+    ${"P1W"}             | ${"'P1W'"}             | ${"a calendar unit"}
+    ${"15 minutes"}      | ${"'15 minutes'"}      | ${"not a duration"}
+    ${null}              | ${"null"}              | ${"a non-string"}
+  `("returns null for $label ($why)", ({ duration }) => {
     expect(nonNegativeExactDurationNanoseconds(duration)).toBeNull();
   });
 });

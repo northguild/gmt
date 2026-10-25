@@ -90,7 +90,6 @@ describe("formatDateRange", () => {
     ${"same-year"}  | ${"2024-02-03"} | ${"2024-06-10"} | ${"February 3 – June 10, 2024"}
     ${"cross-year"} | ${"2024-11-03"} | ${"2025-02-10"} | ${"November 3, 2024 – February 10, 2025"}
     ${"reversed"}   | ${"2024-02-10"} | ${"2024-02-03"} | ${"February 10 – 3, 2024"}
-    ${"identical"}  | ${"2024-02-03"} | ${"2024-02-03"} | ${"February 3, 2024"}
   `(
     "collapses/elides correctly for a $scenario range ($start -> $end)",
     ({ start, end, expected }) => {

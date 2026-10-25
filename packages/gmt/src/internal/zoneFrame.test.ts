@@ -1,6 +1,7 @@
 import { Temporal } from "./temporal";
 import { isValidUtcOffset } from "../instant/validate/isValidUtcOffset";
 import { battleTestTimeZones, mockSystemTimeZone } from "../test";
+import { zoneLiteral } from "../test/zoneArgumentCalls";
 import { isValidTimeZone } from "../zoned/validate/isValidTimeZone";
 import {
   frameEpochNanoseconds,
@@ -43,13 +44,6 @@ const CANDIDATES: readonly unknown[] = [
   undefined,
   {},
 ];
-
-// The zone written as a JavaScript literal, so an empty string prints as '' and null as null.
-const zoneLabel = (zone: unknown): string => {
-  if (typeof zone === "string") return `'${zone}'`;
-  if (typeof zone === "object" && zone !== null) return "{}";
-  return String(zone);
-};
 
 describe("zoneFrame", () => {
   // Rule 1.
@@ -157,7 +151,7 @@ describe("zoneFrame", () => {
     },
   );
 
-  it.each(CANDIDATES.map((zone) => ({ zone, label: zoneLabel(zone) })))(
+  it.each(CANDIDATES.map((zone) => ({ zone, label: zoneLiteral(zone) })))(
     "accepts $label exactly when isValidTimeZone or isValidUtcOffset does",
     ({ zone }) => {
       const accepted =
@@ -166,7 +160,7 @@ describe("zoneFrame", () => {
     },
   );
 
-  it.each(CANDIDATES.map((zone) => ({ zone, label: zoneLabel(zone) })))(
+  it.each(CANDIDATES.map((zone) => ({ zone, label: zoneLiteral(zone) })))(
     "never returns a timeZone that is not a time zone identifier (for $label)",
     ({ zone }) => {
       const frame = zoneFrame(zone);
@@ -209,7 +203,7 @@ describe("normalizeZoneFrame", () => {
 
   it.each(
     CANDIDATES.filter((zone) => zone !== undefined && zone !== "local").map(
-      (zone) => ({ zone, label: zoneLabel(zone) }),
+      (zone) => ({ zone, label: zoneLiteral(zone) }),
     ),
   )("reads $label as zoneFrame does", ({ zone }) => {
     expect(normalizeZoneFrame(zone)).toEqual(zoneFrame(zone));

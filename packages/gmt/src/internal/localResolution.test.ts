@@ -423,13 +423,16 @@ describe("createLocalResolver against the offsets Temporal reports", () => {
   // An oracle that does not use classifyWall or any GMT function: a wall time W (read as UTC) can
   // be an instant `W - offset` only when the zone's offset at that instant is `offset`. The offsets
   // in force a day either side of W are the only candidates (no two offsets differ by a day).
+  // A Set, because the battle-test list already holds some of these zones.
   const zones = [
-    ...battleTestTimeZones,
-    "Australia/Lord_Howe",
-    "Pacific/Chatham",
-    "Pacific/Apia",
-    "Antarctica/Casey",
-    "America/Santiago",
+    ...new Set([
+      ...battleTestTimeZones,
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Antarctica/Casey",
+      "America/Santiago",
+    ]),
   ];
   const DAY = 86_400_000_000_000n;
 
@@ -534,16 +537,8 @@ describe("createLocalResolver against the offsets Temporal reports", () => {
     return bad ? `${wall} readings` : null;
   }
 
-  it.each(
-    zones.map((zone, index) => ({
-      zone,
-      source:
-        index < battleTestTimeZones.length
-          ? "the battle-test zones"
-          : "the extra zones",
-    })),
-  )(
-    "agrees in $zone, from $source, around each transition of 2024-2025 and every 7 days",
+  it.each(zones.map((zone) => ({ zone })))(
+    "agrees in $zone around each transition of 2024-2025 and every 7 days",
     ({ zone }) => {
       const resolve = resolver(zone);
       const walls = sweepWalls(
