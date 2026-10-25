@@ -1,6 +1,6 @@
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
 import { addBusinessDays, businessDaysBetween } from "../src/calendar";
-import { addDaysTo, businessCalendar, holidays480 } from "./fixtures";
+import { addDaysTo, bench, businessCalendar, holidays480 } from "./fixtures";
 
 const START = "2024-01-01";
 const spans: Array<[string, number]> = [

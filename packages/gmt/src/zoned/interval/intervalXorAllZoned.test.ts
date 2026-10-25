@@ -226,13 +226,13 @@ describe("intervalXorAllZoned", () => {
   });
 
   it.each`
-    intervals
-    ${"not-an-array"}
-    ${[{ start: "2024-01-10T00:00:00+00:00[UTC]", end: "2024-01-01T00:00:00+00:00[UTC]" }]}
-    ${[{ start: "invalid", end: "2024-01-01T00:00:00+00:00[UTC]" }]}
-    ${[{ start: "2023-12-31T23:59:60+00:00[UTC]", end: "2024-01-01T00:00:00+00:00[UTC]" }]}
-    ${[{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-10T00:00:00+00:00[UTC]" }, "not-an-object"]}
-  `("returns [] for invalid intervals $intervals", ({ intervals }) => {
+    intervals                                                                                                | why
+    ${"not-an-array"}                                                                                        | ${"a string, not an array"}
+    ${[{ start: "2024-01-10T00:00:00+00:00[UTC]", end: "2024-01-01T00:00:00+00:00[UTC]" }]}                  | ${"an end before the start"}
+    ${[{ start: "invalid", end: "2024-01-01T00:00:00+00:00[UTC]" }]}                                         | ${"an unparsable start"}
+    ${[{ start: "2023-12-31T23:59:60+00:00[UTC]", end: "2024-01-01T00:00:00+00:00[UTC]" }]}                  | ${"a start at second :60"}
+    ${[{ start: "2024-01-01T00:00:00+00:00[UTC]", end: "2024-01-10T00:00:00+00:00[UTC]" }, "not-an-object"]} | ${"an entry that is not an object"}
+  `("returns [] for invalid intervals: $why", ({ intervals }) => {
     expect(intervalXorAllZoned(intervals)).toEqual([]);
   });
 
@@ -375,12 +375,12 @@ describe("intervalXorAllZoned", () => {
   // UTC on 09-12 is covered twice, so the odd runs end at 06:00 and resume at 12:00.
   // Sydney row: max is 09-13T10:00+10:00; [04:00, 06:00) local is covered twice.
   it.each`
-    intervals                                                                                                                                                                                                                                   | expected
-    ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}                                                                                                                                               | ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}
-    ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }, { start: "+275760-09-12T06:00:00+00:00[UTC]", end: "+275760-09-12T12:00:00+00:00[UTC]" }]}                                                     | ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-12T06:00:00+00:00[UTC]" }, { start: "+275760-09-12T12:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}
-    ${[{ start: "+275760-09-13T00:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T10:00:00+10:00[Australia/Sydney]" }, { start: "+275760-09-13T04:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T06:00:00+10:00[Australia/Sydney]" }]} | ${[{ start: "+275760-09-13T00:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T04:00:00+10:00[Australia/Sydney]" }, { start: "+275760-09-13T06:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T10:00:00+10:00[Australia/Sydney]" }]}
+    intervals                                                                                                                                                                                                                                   | expected                                                                                                                                                                                                                                    | description
+    ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}                                                                                                                                               | ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}                                                                                                                                               | ${"UTC, one full day"}
+    ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }, { start: "+275760-09-12T06:00:00+00:00[UTC]", end: "+275760-09-12T12:00:00+00:00[UTC]" }]}                                                     | ${[{ start: "+275760-09-12T00:00:00+00:00[UTC]", end: "+275760-09-12T06:00:00+00:00[UTC]" }, { start: "+275760-09-12T12:00:00+00:00[UTC]", end: "+275760-09-13T00:00:00+00:00[UTC]" }]}                                                     | ${"UTC, nested run"}
+    ${[{ start: "+275760-09-13T00:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T10:00:00+10:00[Australia/Sydney]" }, { start: "+275760-09-13T04:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T06:00:00+10:00[Australia/Sydney]" }]} | ${[{ start: "+275760-09-13T00:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T04:00:00+10:00[Australia/Sydney]" }, { start: "+275760-09-13T06:00:00+10:00[Australia/Sydney]", end: "+275760-09-13T10:00:00+10:00[Australia/Sydney]" }]} | ${"Australia/Sydney, nested run"}
   `(
-    "returns $expected for $intervals (an end at the maximum instant)",
+    "returns the odd-coverage runs for $description (an end at the maximum instant)",
     ({ intervals, expected }) => {
       expect(intervalXorAllZoned(intervals)).toEqual(expected);
     },

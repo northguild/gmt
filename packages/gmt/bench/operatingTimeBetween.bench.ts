@@ -1,7 +1,7 @@
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
 import { addOperatingTime, operatingTimeBetween } from "../src/calendar";
 import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
-import { londonSchedule, utcMidnight } from "./fixtures";
+import { bench, londonSchedule, utcMidnight } from "./fixtures";
 
 describe("operatingTimeBetween, Europe/London", () => {
   const rows: Array<[string, number]> = [

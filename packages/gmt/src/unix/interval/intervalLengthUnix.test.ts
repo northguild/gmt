@@ -113,12 +113,22 @@ describe("intervalLengthUnix", () => {
     ${0}              | ${86400000} | ${"quarter"}
     ${""}             | ${86400000} | ${"hour"}
     ${0}              | ${""}       | ${"hour"}
-    ${"0"}            | ${"1.5"}    | ${"hour"}
     ${0}              | ${2 ** 53}  | ${"hour"}
     ${"   "}          | ${86400000} | ${"hour"}
     ${-(2 ** 53)}     | ${0}        | ${"hour"}
   `(
     "returns null for invalid $start, $end, or $unit",
+    ({ start, end, unit }) => {
+      expect(intervalLengthUnix(start, end, unit)).toBeNull();
+    },
+  );
+
+  // The title prints a string without quotes, so the numeric-string row is its own table.
+  it.each`
+    start  | end      | unit
+    ${"0"} | ${"1.5"} | ${"hour"}
+  `(
+    "returns null for the numeric strings $start and $end with $unit",
     ({ start, end, unit }) => {
       expect(intervalLengthUnix(start, end, unit)).toBeNull();
     },

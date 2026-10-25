@@ -1,6 +1,7 @@
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
 import { buildBusinessCalendar } from "../src/calendar/rules";
 import type { BusinessCalendarSpec, HolidayRule } from "../src/types";
+import { bench } from "./fixtures";
 
 const SAT_FRI_SUN_MON = { 6: { previous: 5 }, 7: { next: 1 } } as const;
 const NEXT_WORKING = { 6: "nextWorkingDay", 7: "nextWorkingDay" } as const;

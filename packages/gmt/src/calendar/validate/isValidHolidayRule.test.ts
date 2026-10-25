@@ -91,8 +91,6 @@ describe("isValidHolidayRule", () => {
     ${1}         | ${-1}        | ${false}
     ${1.5}       | ${1}         | ${false}
     ${1}         | ${1.5}       | ${false}
-    ${"1"}       | ${1}         | ${false}
-    ${1}         | ${"1"}       | ${false}
     ${NaN}       | ${1}         | ${false}
     ${1}         | ${NaN}       | ${false}
     ${1}         | ${Infinity}  | ${false}
@@ -103,6 +101,18 @@ describe("isValidHolidayRule", () => {
   `("fixed month $month day $day: $expected", ({ month, day, expected }) => {
     expect(isValidHolidayRule({ ...fixed, month, day })).toBe(expected);
   });
+
+  // The title prints a string without quotes, so each string row names which field is the string.
+  it.each`
+    field      | month  | day    | expected
+    ${"month"} | ${"1"} | ${1}   | ${false}
+    ${"day"}   | ${1}   | ${"1"} | ${false}
+  `(
+    "fixed $field given as a string: month $month day $day: $expected",
+    ({ month, day, expected }) => {
+      expect(isValidHolidayRule({ ...fixed, month, day })).toBe(expected);
+    },
+  );
 
   it.each`
     observed                                  | expected
@@ -235,13 +245,31 @@ describe("isValidHolidayRule", () => {
     ${"hebrew"}              | ${"M07 "}    | ${false}
     ${"hebrew"}              | ${" M07"}    | ${false}
     ${"hebrew"}              | ${"M007"}    | ${false}
-    ${"hebrew"}              | ${"7"}       | ${false}
     ${"hebrew"}              | ${""}        | ${false}
     ${"hebrew"}              | ${7}         | ${false}
     ${"hebrew"}              | ${null}      | ${false}
     ${"hebrew"}              | ${undefined} | ${false}
   `(
     "calendarFixed $calendar monthCode $monthCode: $expected",
+    ({ calendar, monthCode, expected }) => {
+      expect(
+        isValidHolidayRule({
+          name: "x",
+          kind: "calendarFixed",
+          calendar,
+          monthCode,
+          day: 1,
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  // The title prints a string without quotes, so the numeric-string row is named for what it is.
+  it.each`
+    calendar    | monthCode | expected
+    ${"hebrew"} | ${"7"}    | ${false}
+  `(
+    "calendarFixed $calendar monthCode given as the string $monthCode: $expected",
     ({ calendar, monthCode, expected }) => {
       expect(
         isValidHolidayRule({
@@ -301,12 +329,10 @@ describe("isValidHolidayRule", () => {
     ${0}         | ${1}         | ${1}         | ${false}
     ${13}        | ${1}         | ${1}         | ${false}
     ${1.5}       | ${1}         | ${1}         | ${false}
-    ${"1"}       | ${1}         | ${1}         | ${false}
     ${undefined} | ${1}         | ${1}         | ${false}
     ${1}         | ${0}         | ${1}         | ${false}
     ${1}         | ${8}         | ${1}         | ${false}
     ${1}         | ${1.5}       | ${1}         | ${false}
-    ${1}         | ${"1"}       | ${1}         | ${false}
     ${1}         | ${NaN}       | ${1}         | ${false}
     ${1}         | ${undefined} | ${1}         | ${false}
     ${1}         | ${1}         | ${0}         | ${false}
@@ -316,11 +342,31 @@ describe("isValidHolidayRule", () => {
     ${1}         | ${1}         | ${NaN}       | ${false}
     ${1}         | ${1}         | ${"first"}   | ${false}
     ${1}         | ${1}         | ${"Last"}    | ${false}
-    ${1}         | ${1}         | ${"1"}       | ${false}
     ${1}         | ${1}         | ${null}      | ${false}
     ${1}         | ${1}         | ${undefined} | ${false}
   `(
     "nthWeekday month $month weekday $weekday n $n: $expected",
+    ({ month, weekday, n, expected }) => {
+      expect(
+        isValidHolidayRule({
+          name: "x",
+          kind: "nthWeekday",
+          month,
+          weekday,
+          n,
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  // The title prints a string without quotes, so each string row names which field is the string.
+  it.each`
+    field        | month  | weekday | n      | expected
+    ${"month"}   | ${"1"} | ${1}    | ${1}   | ${false}
+    ${"weekday"} | ${1}   | ${"1"}  | ${1}   | ${false}
+    ${"n"}       | ${1}   | ${1}    | ${"1"} | ${false}
+  `(
+    "nthWeekday $field given as a string: month $month weekday $weekday n $n: $expected",
     ({ month, weekday, n, expected }) => {
       expect(
         isValidHolidayRule({

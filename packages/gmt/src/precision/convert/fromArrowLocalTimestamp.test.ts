@@ -48,7 +48,6 @@ describe("fromArrowLocalTimestamp", () => {
     ${undefined}                   | ${"second"}
     ${null}                        | ${"second"}
     ${0}                           | ${"second"}
-    ${"0"}                         | ${"second"}
     ${0n}                          | ${"toString"}
     ${0n}                          | ${"s"}
     ${0n}                          | ${undefined}
@@ -62,4 +61,15 @@ describe("fromArrowLocalTimestamp", () => {
   `("returns an empty string for $value $unit", ({ value, unit }) => {
     expect(fromArrowLocalTimestamp(value, unit)).toBe("");
   });
+
+  // The title prints a string without quotes, so the numeric-string row is its own table.
+  it.each`
+    value  | unit
+    ${"0"} | ${"second"}
+  `(
+    "returns an empty string for the numeric string $value $unit",
+    ({ value, unit }) => {
+      expect(fromArrowLocalTimestamp(value, unit)).toBe("");
+    },
+  );
 });

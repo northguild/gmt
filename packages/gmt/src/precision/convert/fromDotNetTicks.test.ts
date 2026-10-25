@@ -49,16 +49,16 @@ describe("fromDotNetTicks", () => {
   });
 
   it.each`
-    value
-    ${0}
-    ${621355968000000000}
-    ${"621355968000000000"}
-    ${null}
-    ${undefined}
-    ${true}
-    ${[]}
-    ${{}}
-  `('returns "" when $value is non-bigint input', ({ value }) => {
+    value                   | kind
+    ${0}                    | ${"the number zero"}
+    ${621355968000000000}   | ${"a number"}
+    ${"621355968000000000"} | ${"a numeric string"}
+    ${null}                 | ${"null"}
+    ${undefined}            | ${"undefined"}
+    ${true}                 | ${"a boolean"}
+    ${[]}                   | ${"an array"}
+    ${{}}                   | ${"an object"}
+  `('returns "" when $value ($kind) is non-bigint input', ({ value }) => {
     expect(fromDotNetTicks(value as unknown as bigint)).toBe("");
   });
 

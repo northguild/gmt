@@ -28,12 +28,24 @@ const bridgedHoliday = {
   timeZone: "America/New_York",
 };
 const invalidCalendars = [
-  { weekend: [6, 7], holidays: [], timeZone: "Invalid/Zone" },
-  { weekend: [1, 2, 3, 4, 5, 6, 7], holidays: [], timeZone: "UTC" },
-  { weekend: [6, 8], holidays: [], timeZone: "UTC" },
-  { weekend: [6, 7], holidays: ["2024-02-30"], timeZone: "UTC" },
-  {},
-  null,
+  {
+    calendar: { weekend: [6, 7], holidays: [], timeZone: "Invalid/Zone" },
+    why: "an unknown time zone",
+  },
+  {
+    calendar: { weekend: [1, 2, 3, 4, 5, 6, 7], holidays: [], timeZone: "UTC" },
+    why: "a weekend of all seven days",
+  },
+  {
+    calendar: { weekend: [6, 8], holidays: [], timeZone: "UTC" },
+    why: "a weekend day of 8",
+  },
+  {
+    calendar: { weekend: [6, 7], holidays: ["2024-02-30"], timeZone: "UTC" },
+    why: "a holiday that is not a date",
+  },
+  { calendar: {}, why: "an empty object" },
+  { calendar: null, why: "null" },
 ];
 
 describe("subtractBusinessDays", () => {
@@ -114,8 +126,8 @@ describe("subtractBusinessDays", () => {
     },
   );
 
-  it.each(invalidCalendars.map((calendar) => ({ calendar })))(
-    "returns an empty string for the invalid calendar $calendar",
+  it.each(invalidCalendars)(
+    "returns an empty string for the invalid calendar ($why)",
     ({ calendar }) => {
       expect(subtractBusinessDays("2024-07-05", 1, calendar as never)).toBe("");
     },

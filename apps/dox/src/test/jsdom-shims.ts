@@ -8,7 +8,7 @@
  * DOM shims into every one of them.
  *
  * Note there is no `environmentMatchGlobs` option to reach for here — it was
- * removed in Vitest 3, and this repo is on 4.x. Per-file
+ * removed in Vitest 3, and this repo is on 5.x. Per-file
  * `@vitest-environment jsdom` docblocks are the supported route, and are
  * already the convention (`PlaygroundForm.test.ts`, `chat-warning.test.ts`).
  */

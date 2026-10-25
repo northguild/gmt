@@ -208,15 +208,15 @@ describe("formatCalendar", () => {
     // timeStyle given as an object formats exactly as the plain string does.
     // A symbol makes ToString throw, so it is invalid input.
     it.each`
-      timeStyle                      | expected
-      ${new String("long")}          | ${"tomorrow at 2:30:00 PM"}
-      ${new String("full")}          | ${"tomorrow at 2:30:00 PM"}
-      ${new String("medium")}        | ${"tomorrow at 2:30:00 PM"}
-      ${{ toString: () => "full" }}  | ${"tomorrow at 2:30:00 PM"}
-      ${{ toString: () => "short" }} | ${"tomorrow at 2:30 PM"}
-      ${Symbol("short")}             | ${""}
+      timeStyle                      | shape                      | expected
+      ${new String("long")}          | ${"String object long"}    | ${"tomorrow at 2:30:00 PM"}
+      ${new String("full")}          | ${"String object full"}    | ${"tomorrow at 2:30:00 PM"}
+      ${new String("medium")}        | ${"String object medium"}  | ${"tomorrow at 2:30:00 PM"}
+      ${{ toString: () => "full" }}  | ${"toString object full"}  | ${"tomorrow at 2:30:00 PM"}
+      ${{ toString: () => "short" }} | ${"toString object short"} | ${"tomorrow at 2:30 PM"}
+      ${Symbol("short")}             | ${"Symbol short"}          | ${""}
     `(
-      "timeStyle given as $timeStyle formats tomorrow as $expected",
+      "timeStyle given as $shape formats tomorrow as $expected",
       ({ timeStyle, expected }) => {
         expect(
           formatCalendar("2024-03-16T14:30:00", MustTestLocales.enUS, {

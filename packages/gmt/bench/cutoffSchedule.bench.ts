@@ -1,5 +1,6 @@
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
 import { cutoffSchedule } from "../src/transport";
+import { bench } from "./fixtures";
 
 const cutoffs = Array.from({ length: 50 }, (_, index) => ({
   name: `cutoff-${index}`,

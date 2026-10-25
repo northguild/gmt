@@ -77,12 +77,12 @@ describe("intervalXorAllTime", () => {
   });
 
   it.each`
-    intervals
-    ${"not-an-array"}
-    ${[{ start: "15:00:00", end: "09:00:00" }]}
-    ${[{ start: "invalid", end: "09:00:00" }]}
-    ${[{ start: "09:00:00", end: "12:00:00" }, "not-an-object"]}
-  `("returns [] for invalid intervals $intervals", ({ intervals }) => {
+    intervals                                                    | why
+    ${"not-an-array"}                                            | ${"a string, not an array"}
+    ${[{ start: "15:00:00", end: "09:00:00" }]}                  | ${"an end before the start"}
+    ${[{ start: "invalid", end: "09:00:00" }]}                   | ${"an unparsable start"}
+    ${[{ start: "09:00:00", end: "12:00:00" }, "not-an-object"]} | ${"an entry that is not an object"}
+  `("returns [] for invalid intervals: $why", ({ intervals }) => {
     expect(intervalXorAllTime(intervals)).toEqual([]);
   });
 
@@ -97,13 +97,13 @@ describe("intervalXorAllTime", () => {
   // boundary may wrap to 00:00:00. Half-open runs end exactly where coverage parity changes (23:00,
   // 23:30), with no one-nanosecond step on either side.
   it.each`
-    intervals                                                                                               | expected
-    ${[{ start: "22:00:00", end: "23:59:59.999999999" }]}                                                   | ${[{ start: "22:00:00", end: "23:59:59.999999999" }]}
-    ${[{ start: "00:00:00", end: "23:59:59.999999999" }]}                                                   | ${[{ start: "00:00:00", end: "23:59:59.999999999" }]}
-    ${[{ start: "22:00:00", end: "23:59:59.999999999" }, { start: "23:00:00", end: "23:30:00" }]}           | ${[{ start: "22:00:00", end: "23:00:00" }, { start: "23:30:00", end: "23:59:59.999999999" }]}
-    ${[{ start: "22:00:00", end: "23:59:59.999999999" }, { start: "23:00:00", end: "23:59:59.999999999" }]} | ${[{ start: "22:00:00", end: "23:00:00" }]}
+    intervals                                                                                               | expected                                                                                      | description
+    ${[{ start: "22:00:00", end: "23:59:59.999999999" }]}                                                   | ${[{ start: "22:00:00", end: "23:59:59.999999999" }]}                                         | ${"a run ending at the last nanosecond"}
+    ${[{ start: "00:00:00", end: "23:59:59.999999999" }]}                                                   | ${[{ start: "00:00:00", end: "23:59:59.999999999" }]}                                         | ${"the whole day"}
+    ${[{ start: "22:00:00", end: "23:59:59.999999999" }, { start: "23:00:00", end: "23:30:00" }]}           | ${[{ start: "22:00:00", end: "23:00:00" }, { start: "23:30:00", end: "23:59:59.999999999" }]} | ${"a nested run splits it in two"}
+    ${[{ start: "22:00:00", end: "23:59:59.999999999" }, { start: "23:00:00", end: "23:59:59.999999999" }]} | ${[{ start: "22:00:00", end: "23:00:00" }]}                                                   | ${"two runs sharing the last nanosecond"}
   `(
-    "returns $expected for $intervals at the end of the day (no midnight wrap)",
+    "returns the odd-coverage runs at the end of the day (no midnight wrap): $description",
     ({ intervals, expected }) => {
       expect(intervalXorAllTime(intervals)).toEqual(expected);
     },

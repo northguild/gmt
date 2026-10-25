@@ -58,14 +58,14 @@
     "@northguild/gmt-oxlint": "workspace:*",
     "@tanstack/intent": "^0.4.0",
     "@types/node": "^22.13.10",
-    "@vitest/browser-playwright": "4.1.12",
+    "@vitest/browser-playwright": "5.0.5",
     "esbuild": "^0.28.2",
     "fallow": "^3.35.0",
     "oxfmt": "^0.67.0",
     "oxlint": "^1.78.0",
     "playwright": "1.63.0",
     "typescript": "^5.0.0",
-    "vitest": "4.1.12"
+    "vitest": "5.0.5"
   },
   "devEngines": {
     "runtime": {

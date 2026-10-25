@@ -79,13 +79,13 @@ describe("intervalXorAllUtc", () => {
   });
 
   it.each`
-    intervals
-    ${"not-an-array"}
-    ${[{ start: "2024-01-10T00:00:00Z", end: "2024-01-01T00:00:00Z" }]}
-    ${[{ start: "invalid", end: "2024-01-01T00:00:00Z" }]}
-    ${[{ start: "2023-12-31T23:59:60Z", end: "2024-01-01T00:00:00Z" }]}
-    ${[{ start: "2024-01-01T00:00:00Z", end: "2024-01-10T00:00:00Z" }, "not-an-object"]}
-  `("returns [] for invalid intervals $intervals", ({ intervals }) => {
+    intervals                                                                            | why
+    ${"not-an-array"}                                                                    | ${"a string, not an array"}
+    ${[{ start: "2024-01-10T00:00:00Z", end: "2024-01-01T00:00:00Z" }]}                  | ${"an end before the start"}
+    ${[{ start: "invalid", end: "2024-01-01T00:00:00Z" }]}                               | ${"an unparsable start"}
+    ${[{ start: "2023-12-31T23:59:60Z", end: "2024-01-01T00:00:00Z" }]}                  | ${"a start at second :60"}
+    ${[{ start: "2024-01-01T00:00:00Z", end: "2024-01-10T00:00:00Z" }, "not-an-object"]} | ${"an entry that is not an object"}
+  `("returns [] for invalid intervals: $why", ({ intervals }) => {
     expect(intervalXorAllUtc(intervals)).toEqual([]);
   });
 

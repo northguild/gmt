@@ -1,5 +1,6 @@
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
 import { formatDate, getLocaleMonthNames } from "../src/plain";
+import { bench } from "./fixtures";
 
 // One locale, repeated: the formatter is the cost.
 describe("formatDate and getLocaleMonthNames", () => {

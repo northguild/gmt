@@ -33,14 +33,14 @@ describe("mergeIntervalsUtc", () => {
   });
 
   it.each`
-    intervals
-    ${"not-an-array"}
-    ${[{ start: "2024-01-10T00:00:00Z", end: "2024-01-01T00:00:00Z" }]}
-    ${[{ start: "invalid", end: "2024-01-01T00:00:00Z" }]}
-    ${[{ start: "2024-01-01T00:00:00Z", end: "2024-01-10T00:00:00Z" }, "not-an-object"]}
-    ${[{ start: "2024-06-30T23:59:60Z", end: "2024-07-01T00:00:00Z" }]}
-    ${[{ start: "2024-01-01T00:00:00Z", end: "2024-06-30T23:59:60Z" }]}
-  `("returns [] for invalid intervals $intervals", ({ intervals }) => {
+    intervals                                                                            | why
+    ${"not-an-array"}                                                                    | ${"a string, not an array"}
+    ${[{ start: "2024-01-10T00:00:00Z", end: "2024-01-01T00:00:00Z" }]}                  | ${"an end before the start"}
+    ${[{ start: "invalid", end: "2024-01-01T00:00:00Z" }]}                               | ${"an unparsable start"}
+    ${[{ start: "2024-01-01T00:00:00Z", end: "2024-01-10T00:00:00Z" }, "not-an-object"]} | ${"an entry that is not an object"}
+    ${[{ start: "2024-06-30T23:59:60Z", end: "2024-07-01T00:00:00Z" }]}                  | ${"a start at second :60"}
+    ${[{ start: "2024-01-01T00:00:00Z", end: "2024-06-30T23:59:60Z" }]}                  | ${"an end at second :60"}
+  `("returns [] for invalid intervals: $why", ({ intervals }) => {
     expect(mergeIntervalsUtc(intervals)).toEqual([]);
   });
 
