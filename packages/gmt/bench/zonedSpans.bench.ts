@@ -1,5 +1,5 @@
 import { Temporal } from "../src/internal/temporal";
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
 import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
 import { dwellTime } from "../src/transport";
 import {
@@ -8,6 +8,7 @@ import {
   intervalSplitAtZoned,
   roundZoned,
 } from "../src/zoned";
+import { bench } from "./fixtures";
 
 const ZONE = "Europe/London";
 // The string carries the zone's real offset for that date: a wrong one is invalid input.

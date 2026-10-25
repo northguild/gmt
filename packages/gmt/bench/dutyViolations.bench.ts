@@ -1,8 +1,8 @@
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
 import { dutyViolations } from "../src/workforce";
 import { type DutyStep, dutySequence } from "../src/test";
 import type { DutyEntry, DutyRule } from "../src/types";
-import { drivingCap, dutyLog, dutyRange, utcMidnight } from "./fixtures";
+import { bench, drivingCap, dutyLog, dutyRange, utcMidnight } from "./fixtures";
 
 const label = (days: number) => (days === 3650 ? "10 y log" : `${days} d log`);
 

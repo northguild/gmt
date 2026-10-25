@@ -1,7 +1,7 @@
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
 import { bucketRange } from "../src/calendar";
 import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
-import { utcMidnight } from "./fixtures";
+import { bench, utcMidnight } from "./fixtures";
 
 // Exercises `certainlyTouchesMoreBuckets`.
 describe("bucketRange by day", () => {

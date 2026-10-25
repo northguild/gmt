@@ -1,3 +1,4 @@
+import { type BenchRunOptions, test } from "vitest";
 import { Temporal } from "../src/internal/temporal";
 import type {
   BusinessCalendar,
@@ -103,3 +104,17 @@ export function businessCalendar(holidays: string[]): BusinessCalendar {
 
 /** The free-time clock start the audit used. */
 export const freeTimeStart = "2024-06-14T19:00:00Z";
+
+/**
+ * One benchmark row. Vitest 5 has no top-level `bench`: a row is a `test` that takes the `bench`
+ * fixture and runs it, so this keeps the call shape the files had.
+ */
+export function bench(
+  name: string,
+  fn: () => void,
+  options: BenchRunOptions,
+): void {
+  test(name, async ({ bench: register }) => {
+    await register(name, fn).run(options);
+  });
+}

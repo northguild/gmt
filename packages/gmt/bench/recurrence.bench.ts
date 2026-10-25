@@ -1,10 +1,11 @@
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
 import {
   cronRuns,
   expandRecurrence,
   parseCronExpression,
   parseRecurrenceRule,
 } from "../src/recurrence";
+import { bench } from "./fixtures";
 
 // Benchmarks for the recurrence namespace: expansion over a week, a year and ten years, a
 // fast-forward from 1970, and the never-matching rules that hit the work cap.
