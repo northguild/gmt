@@ -1,14 +1,20 @@
 import type { Temporal } from "../temporal";
 import { calendarDateFromFields } from "./calendarDateFromFields";
-import { calendarFieldsOf } from "./calendarFields";
+import {
+  calendarFieldsOf,
+  polyfillCannotReturn,
+  polyfillMisreadsIslamicEra,
+} from "./calendarFields";
 import {
   floorDateForFields,
   floorDateForFieldsBetween,
   isLastRepresentableDate,
 } from "./fieldSearch";
+import { addFixedMonths, fixedMonthsBetween } from "./fixedMonthArithmetic";
 import {
   addManyMonths,
   countManyMonths,
+  fixedMonthsPerYearOf,
   isLargeMonthSpan,
   isLargeYearSpan,
 } from "./largeMonthSpan";
@@ -24,6 +30,11 @@ import type { ArithmeticModel, YearMonth } from "./nonIsoArithmetic";
  * The polyfill throws within about a year of a range limit (D1). There, months are stepped one at
  * a time from the field search, and the polyfill only counts or jumps between month starts away
  * from the limit.
+ *
+ * Where the polyfill's month arithmetic cannot be asked at all (D18: Islamic years <= 1 in
+ * WebKit, where it does not return), the calendar has the same months in every year, so the two
+ * questions are integer arithmetic on the month count read from a modern year
+ * (`fixedMonthArithmetic.ts`); the field search places the result and says whether it is in range.
  */
 
 const ISO_CALENDAR = "iso8601";
@@ -166,6 +177,23 @@ function polyfillAddMonths(
     : undefined;
 }
 
+/**
+ * D18: the months in every year of `calendarId` when the polyfill cannot be asked about some year
+ * (`isAffected` is read only then, so the count is measured only on an affected runtime), else
+ * undefined. A calendar the polyfill cannot answer for has fixed months per year (the Islamic
+ * calendars); a leap-month calendar would have none and so always takes the other paths.
+ */
+function fixedMonthsIfPolyfillCannotReturn(
+  calendarId: string,
+  isAffected: (perYear: number) => boolean,
+): number | undefined {
+  if (!polyfillMisreadsIslamicEra(calendarId)) {
+    return undefined;
+  }
+  const perYear = fixedMonthsPerYearOf(calendarId);
+  return perYear !== undefined && isAffected(perYear) ? perYear : undefined;
+}
+
 function addMonths(
   calendarId: string,
   start: YearMonth,
@@ -173,6 +201,19 @@ function addMonths(
 ): YearMonth | null {
   if (months === 0) {
     return start;
+  }
+  const perYear = fixedMonthsIfPolyfillCannotReturn(
+    calendarId,
+    (count) =>
+      polyfillCannotReturn(calendarId, start.year) ||
+      polyfillCannotReturn(
+        calendarId,
+        addFixedMonths(start, months, count).year,
+      ),
+  );
+  if (perYear !== undefined) {
+    const target = addFixedMonths(start, months, perYear);
+    return monthCodeAt(calendarId, target) === undefined ? null : target;
   }
   if (isLargeMonthSpan(months)) {
     // D9: jump whole years instead of the polyfill's month-by-month loop.
@@ -251,6 +292,15 @@ function monthsBetween(
   const sign = Math.sign(compareYearMonths(to, from));
   if (sign === 0) {
     return 0;
+  }
+  const perYear = fixedMonthsIfPolyfillCannotReturn(
+    calendarId,
+    () =>
+      polyfillCannotReturn(calendarId, from.year) ||
+      polyfillCannotReturn(calendarId, to.year),
+  );
+  if (perYear !== undefined) {
+    return fixedMonthsBetween(from, to, perYear);
   }
   if (isLargeYearSpan(from.year, to.year)) {
     // D9: count whole years instead of the polyfill's month-by-month loop.

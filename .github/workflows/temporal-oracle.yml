@@ -128,10 +128,26 @@ jobs:
         if: matrix.leg != 'node'
         run: pnpm --filter @northguild/gmt build
 
+      # A browser leg logs the runner's free scratch space and memory every 15 s while the passes
+      # run. A browser that outgrows the runner leaves no report, so this is the trace it leaves.
       - name: Native suite
         env:
           LEG: ${{ matrix.leg }}
-        run: node scripts/native-suite.mjs "$LEG"
+        run: |
+          if [ "$LEG" != node ]; then
+            (
+              while true; do
+                printf 'resources %s: %s MiB free under %s, %s MiB memory available\n' \
+                  "$(date -u +%H:%M:%S)" \
+                  "$(($(df --output=avail -k "${TMPDIR:-/tmp}" | tail -1) / 1024))" \
+                  "${TMPDIR:-/tmp}" \
+                  "$(free -m | awk '/^Mem:/ { print $7 }')"
+                sleep 15
+              done
+            ) &
+            trap 'kill %1 2>/dev/null || true' EXIT
+          fi
+          node scripts/native-suite.mjs "$LEG"
 
       - name: Job summary
         if: always()

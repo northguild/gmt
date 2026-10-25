@@ -1,5 +1,6 @@
 import {
   compatGroups,
+  engineLabel,
   groupLabel,
   groupWhatBreaks,
 } from "../data/temporal-compat";
@@ -61,7 +62,7 @@ describe("<UpstreamDefects /> as Markdown", () => {
         "still-needed": "✓ Yes",
         removable: "No",
         guard: "Kept on purpose",
-        "out-of-scope": "✓ Yes, on Firefox",
+        "out-of-scope": `✓ Yes, on ${(group.engines ?? []).map(engineLabel).join(" and ")}`,
       }[group.state];
       expect(cell.startsWith(`${expected} — `), groupLabel(group)).toBe(true);
     });
