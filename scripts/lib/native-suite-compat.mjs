@@ -1,7 +1,7 @@
 /**
  * The compat check in a browser: the same probes `scripts/temporal-compat.mjs check` runs on Node,
  * run on each browser engine the native suite covers, against the `@js-temporal/polyfill` GMT
- * ships. A workaround group with `engines` (D17, say) is a defect in one engine's own `Intl`;
+ * ships. A workaround group with `engines` (D17, say) is a defect only that engine's `Intl` shows;
  * only that engine can show whether it is still needed, and Node cannot. The runner writes one
  * `temporal-compat-<leg>` verdict per browser leg; `canary-issues.mjs` reports a group removable
  * only when every engine in its scope says so.
@@ -128,10 +128,7 @@ export function compatPaths(root) {
   }
   const entry = realpathSync(polyfillEntry());
   const polyfill = join(dirname(entry), "index.esm.js");
-  const jsbi = join(
-    dirname(createRequire(entry).resolve("jsbi")),
-    "jsbi.mjs",
-  );
+  const jsbi = join(dirname(createRequire(entry).resolve("jsbi")), "jsbi.mjs");
   for (const file of [polyfill, jsbi]) {
     if (!existsSync(file)) {
       throw new Error(`the installed polyfill has no ESM build at ${file}`);
@@ -151,7 +148,9 @@ export function compatPaths(root) {
 export function groupResults(results, installed, engineId) {
   const covered = new Set(WORKAROUNDS.flatMap((w) => w.defects));
   const unknown = [
-    ...new Set(results.filter((r) => !covered.has(r.defect)).map((r) => r.defect)),
+    ...new Set(
+      results.filter((r) => !covered.has(r.defect)).map((r) => r.defect),
+    ),
   ];
   if (unknown.length > 0) {
     throw new Error(
@@ -219,7 +218,11 @@ export async function runBrowserCompat(leg, root, { playwright: load }) {
     await context.route(`${COMPAT_ORIGIN}/**`, (route) => {
       const { pathname } = new URL(route.request().url());
       if (pathname === "/") {
-        return route.fulfill({ status: 200, contentType: "text/html", body: page });
+        return route.fulfill({
+          status: 200,
+          contentType: "text/html",
+          body: page,
+        });
       }
       const file = compatFile(pathname, paths);
       if (!file) return route.fulfill({ status: 404, body: "not found" });
@@ -235,7 +238,9 @@ export async function runBrowserCompat(leg, root, { playwright: load }) {
       timeout: PAGE_TIMEOUT_MS,
     });
     /** @type {{ results: ProbeResult[] } | { error: string }} */
-    const outcome = await tab.evaluate(() => /** @type {any} */ (window).__compat);
+    const outcome = await tab.evaluate(
+      () => /** @type {any} */ (window).__compat,
+    );
     if ("error" in outcome) {
       throw new Error(`the compat page failed in ${leg}: ${outcome.error}`);
     }

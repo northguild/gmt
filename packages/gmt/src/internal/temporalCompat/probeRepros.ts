@@ -29,7 +29,8 @@ export type DefectId =
   | "D14"
   | "D15"
   | "D16"
-  | "D17";
+  | "D17"
+  | "D19";
 
 export interface ProbeRepro {
   defect: DefectId;
@@ -773,6 +774,33 @@ const d17Repros: readonly ProbeRepro[] = [
   },
 ];
 
+/**
+ * D19 (`internal/zonedWallClockDifference.ts`): `ZonedDateTime#equals` answers false for two
+ * identifiers of one zone on a host whose `Intl.DateTimeFormat#resolvedOptions` returns the
+ * identifier as written. The polyfill's `GetAvailableNamedTimeZoneIdentifier` finds the primary
+ * identifier in `Intl.supportedValuesOf("timeZone")` or, for a non-primary one, takes
+ * `resolvedOptions().timeZone`. ECMA-402 §6.5 (Time Zone Identifiers) says "UTC" is primary and
+ * "Etc/UTC" is a non-primary identifier that resolves to "UTC", and TimeZoneEquals compares the
+ * primary identifiers, so `Etc/UTC` equals `UTC` on every host. JavaScriptCore (WebKit 26.6, Safari
+ * 27) keeps the identifier as written (the Time Zone Canonicalization proposal), so the polyfill
+ * compares `Etc/UTC` with `UTC` there and answers false. V8 and SpiderMonkey return the primary
+ * identifier. The repro names the one pair the specification fixes, so it owns no time zone data.
+ */
+const d19Repros: readonly ProbeRepro[] = [
+  {
+    defect: "D19",
+    calendar: "iso8601",
+    name: "etcUtcEqualsUtc",
+    expected: "true",
+    run: () =>
+      String(
+        new Temporal.ZonedDateTime(0n, "Etc/UTC").equals(
+          new Temporal.ZonedDateTime(0n, "UTC"),
+        ),
+      ),
+  },
+];
+
 /** The shipped-probe groups, each in the order the full table places it. */
 export const probeReproGroups = {
   d1: d1Repros,
@@ -785,6 +813,7 @@ export const probeReproGroups = {
   d15: d15Repros,
   d16: d16Repros,
   d17: d17Repros,
+  d19: d19Repros,
   d6: d6Repros,
   d7: [d7Repro, d7LeapMonthEndRepro],
   /** D2-D5 and D8: single-read repros. */

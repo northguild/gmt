@@ -413,14 +413,18 @@ export function compatStates(verdicts) {
     if (!ran) continue;
     for (const workaround of ran.workarounds) {
       if (!groups.has(workaround.id)) {
-        groups.set(workaround.id, { workaround, polyfill: ran.runtime.polyfill });
+        groups.set(workaround.id, {
+          workaround,
+          polyfill: ran.runtime.polyfill,
+        });
       }
     }
   }
   return [...groups].map(([id, { workaround, polyfill }]) => {
     const engines = sources.map(({ source, ran, message }) => {
       const engineId = SOURCE_ENGINE[source];
-      const inScope = !workaround.engines || workaround.engines.includes(engineId);
+      const inScope =
+        !workaround.engines || workaround.engines.includes(engineId);
       const row = ran?.workarounds.find((w) => w.id === id) ?? null;
       return {
         source,
@@ -469,7 +473,9 @@ function engineStateText(e) {
 
 /** @param {EngineState} e */
 function engineProbesText(e) {
-  return e.row ? `${e.row.probes - e.row.failing} of ${e.row.probes} pass` : "—";
+  return e.row
+    ? `${e.row.probes - e.row.failing} of ${e.row.probes} pass`
+    : "—";
 }
 
 /** @param {CompatCheckVerdict | null} check  the Node check, when it ran */
@@ -499,7 +505,7 @@ function removableFinding(state, check, isForced, runUrl) {
         .join("; ")}.`
     : `Every probe for **${id}** returns the spec value on @js-temporal/polyfill ${polyfill} on every engine in its scope (${scopeLabels}), so the workaround can go.`;
   const scope = w.engines
-    ? `only ${w.engines.join(", ")}: the defect is in that engine's own Intl, so the other rows are out of scope and count for nothing`
+    ? `only ${w.engines.join(", ")}: only that engine's Intl shows the defect, so the other rows are out of scope and count for nothing`
     : "every engine";
   const paragraphs = [
     opening,

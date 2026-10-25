@@ -54,9 +54,9 @@ export interface CompatGroup {
    */
   state: CompatState;
   /**
-   * Present when only some engines have the defect, from the script's `engines` scope (for
+   * Present when only some engines show the defect, from the script's `engines` scope (for
    * example `["firefox"]`). The snapshot is probed on Node, so such a row says `out-of-scope`
-   * rather than `removable`: its probes pass there because the defect is not there.
+   * rather than `removable`: its probes pass there because the defect does not show there.
    */
   engines?: readonly string[];
   /**
@@ -141,7 +141,7 @@ export const stateLine = (g: CompatGroup): { badge: string; count: string } => {
     case "out-of-scope":
       return {
         badge: `✓ Yes, on ${(g.engines ?? []).map(engineLabel).join(" and ")}`,
-        count: `${g.probes} of ${g.probes} checks pass on Node, which does not have this defect`,
+        count: `${g.probes} of ${g.probes} checks pass on Node, which does not show this defect`,
       };
     default: {
       const unreachable: never = g.state;
@@ -253,6 +253,7 @@ const WHAT_BREAKS: Readonly<Record<string, string>> = {
   D15: "Zoned strings that end in Z, read with the offset option set to ignore, where the time was taken as local clock time rather than UTC",
   D16: "Time ranges that name the time zone in a long or offset form, such as Eastern Standard Time or GMT-5, which Chrome, Node and Safari cut to a short name or drop",
   D17: "Time ranges that show a flexible day period and a time zone, such as 10 in the morning GMT-5, which Firefox writes as 10 AM",
+  D19: "Two names for one zone, such as UTC and Etc/UTC or Asia/Kolkata and Asia/Calcutta, which the polyfill treats as different zones in Safari and WebKit",
   "zoned.A":
     "Zoned times within a day of the earliest or latest instant Temporal supports",
   "zoned.B":

@@ -61,7 +61,9 @@ describe("<UpstreamDefects /> as Markdown", () => {
         "still-needed": "✓ Yes",
         removable: "No",
         guard: "Kept on purpose",
-        "out-of-scope": "✓ Yes, on Firefox",
+        "out-of-scope": `✓ Yes, on ${(group.engines ?? [])
+          .map((e) => e.charAt(0).toUpperCase() + e.slice(1))
+          .join(" and ")}`,
       }[group.state];
       expect(cell.startsWith(`${expected} — `), groupLabel(group)).toBe(true);
     });

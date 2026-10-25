@@ -16,7 +16,13 @@ export {
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,
   isSecondsOffsetMatchCompatNeeded,
+  isTimeZoneEqualsCompatNeeded,
   isTransitionSearchCompatNeeded,
   isZIgnoreExactCompatNeeded,
 } from "./capabilities";
 export { calendarFieldsOf } from "./calendarFields";
+export {
+  type HostTemporal,
+  timeZoneEquals,
+  timeZoneEqualsByHost,
+} from "./timeZoneEquals";

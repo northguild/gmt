@@ -618,7 +618,7 @@ describe("removable on every engine in scope", () => {
       "Every probe for **D17** returns the spec value on @js-temporal/polyfill 0.5.1 on every engine in its scope (Firefox 155.0), so the workaround can go.",
     );
     expect(action.body).toContain(
-      "**Scope:** only firefox: the defect is in that engine's own Intl, so the other rows are out of scope and count for nothing.",
+      "**Scope:** only firefox: only that engine's Intl shows the defect, so the other rows are out of scope and count for nothing.",
     );
     expect(action.body).toContain(
       "| temporal-compat-check | Node v24.11.0 | out of scope | 2 of 2 pass |\n" +

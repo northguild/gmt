@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -11,7 +17,10 @@ import {
   groupResults,
   runBrowserCompat,
 } from "../../../../scripts/lib/native-suite-compat.mjs";
-import { ENGINE_IDS, WORKAROUNDS } from "../../../../scripts/lib/workarounds.mjs";
+import {
+  ENGINE_IDS,
+  WORKAROUNDS,
+} from "../../../../scripts/lib/workarounds.mjs";
 
 /**
  * The compat check in a browser (#364): the page, the files it may load, the grouping of its
@@ -62,7 +71,7 @@ describe("compatPage", () => {
     );
     expect(page).toContain("window.__compat = {\n    results:");
     expect(page).toContain("window.__compat = { error:");
-    expect(page.startsWith("<!doctype html>\n<meta charset=\"utf-8\">")).toBe(
+    expect(page.startsWith('<!doctype html>\n<meta charset="utf-8">')).toBe(
       true,
     );
   });
@@ -81,24 +90,24 @@ describe("compatFile", () => {
   });
 
   it("serves a .js file under dist", () => {
-    expect(compatFile("/dist/internal/temporalCompat/repros.js", PATHS)).toEqual(
-      {
-        path: "/repo/packages/gmt/dist/internal/temporalCompat/repros.js",
-        contentType: "text/javascript",
-      },
-    );
+    expect(
+      compatFile("/dist/internal/temporalCompat/repros.js", PATHS),
+    ).toEqual({
+      path: "/repo/packages/gmt/dist/internal/temporalCompat/repros.js",
+      contentType: "text/javascript",
+    });
   });
 
   it.each`
-    pathname                                          | what
-    ${"/"}                                            | ${"the page itself"}
-    ${"/dist/"}                                       | ${"the dist folder"}
-    ${"/dist/internal/temporalCompat/repros.js.map"}  | ${"a source map"}
-    ${"/dist/package.json"}                           | ${"a file that is not .js"}
-    ${"/dist/../package.json"}                        | ${"a path that leaves dist"}
-    ${"/dist/..%2Fpackage.js"}                        | ${"an encoded step out of dist"}
-    ${"/other.js"}                                    | ${"a .js file outside dist"}
-    ${"/repo/packages/gmt/dist/index.js"}             | ${"an absolute path to dist"}
+    pathname                                         | what
+    ${"/"}                                           | ${"the page itself"}
+    ${"/dist/"}                                      | ${"the dist folder"}
+    ${"/dist/internal/temporalCompat/repros.js.map"} | ${"a source map"}
+    ${"/dist/package.json"}                          | ${"a file that is not .js"}
+    ${"/dist/../package.json"}                       | ${"a path that leaves dist"}
+    ${"/dist/..%2Fpackage.js"}                       | ${"an encoded step out of dist"}
+    ${"/other.js"}                                   | ${"a .js file outside dist"}
+    ${"/repo/packages/gmt/dist/index.js"}            | ${"an absolute path to dist"}
   `("refuses $pathname ($what)", ({ pathname }: { pathname: string }) => {
     expect(compatFile(pathname, PATHS)).toBeNull();
   });
@@ -123,9 +132,9 @@ describe("compatPaths", () => {
     writeFileSync(join(folder, "repros.js"), "export const repros = [];\n");
     const paths = compatPaths(root);
     expect(paths.dist).toBe(join(root, "packages/gmt/dist"));
-    expect(paths.polyfill.endsWith("/@js-temporal/polyfill/dist/index.esm.js")).toBe(
-      true,
-    );
+    expect(
+      paths.polyfill.endsWith("/@js-temporal/polyfill/dist/index.esm.js"),
+    ).toBe(true);
     expect(paths.jsbi.endsWith("/jsbi/dist/jsbi.mjs")).toBe(true);
     expect(existsSync(paths.polyfill)).toBe(true);
     expect(existsSync(paths.jsbi)).toBe(true);
@@ -147,30 +156,33 @@ describe("groupResults", () => {
     expect(d1.passing).toBe(1);
   });
 
-  it("on V8, every passing group is removable except a guard inside its window and a Firefox-only group", () => {
+  it("on V8, every passing group is removable except a guard inside its window and the engine-scoped groups", () => {
     const groups = groupResults(everyProbe(), "0.5.1", "v8");
     const states = Object.fromEntries(
       groups.map((g) => [g.workaround.defects.join("+"), g.state]),
     );
     expect(states.D10).toBe("guard");
     expect(states.D17).toBe("out-of-scope");
+    expect(states.D19).toBe("out-of-scope");
     expect(
       Object.entries(states)
-        .filter(([id]) => id !== "D10" && id !== "D17")
+        .filter(([id]) => id !== "D10" && id !== "D17" && id !== "D19")
         .every(([, state]) => state === "removable"),
     ).toBe(true);
     expect(groupOf(groups, "D10").guardLapsed).toBe(false);
   });
 
-  it("the same results on Firefox make the Firefox-only group removable", () => {
+  it("the same results on Firefox make the Firefox-only group removable and keep the WebKit-only one out of scope", () => {
     const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.firefox);
     expect(groupOf(groups, "D17").state).toBe("removable");
+    expect(groupOf(groups, "D19").state).toBe("out-of-scope");
     expect(groupOf(groups, "D10").state).toBe("guard");
   });
 
-  it("on WebKit the Firefox-only group is out of scope", () => {
+  it("on WebKit the Firefox-only group is out of scope and the WebKit-only one is removable", () => {
     const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.webkit);
     expect(groupOf(groups, "D17").state).toBe("out-of-scope");
+    expect(groupOf(groups, "D19").state).toBe("removable");
   });
 
   it("one failing probe makes its group still needed, on any engine", () => {
@@ -303,6 +315,10 @@ describe("runBrowserCompat with a fake browser", () => {
       state: "out-of-scope",
       engines: ["firefox"],
     });
+    expect(verdict.workarounds.find((w) => w.id === "D19")).toMatchObject({
+      state: "removable",
+      engines: ["webkit"],
+    });
     expect(fake.log).toEqual([
       { newContext: { timezoneId: "UTC", locale: "en-US" } },
       { route: "http://gmt.local/**" },
@@ -329,10 +345,16 @@ describe("runBrowserCompat with a fake browser", () => {
     expect(page).toMatchObject({ status: 200, contentType: "text/html" });
     expect(String(page.body)).toBe(compatPage());
     const repros = await fake.route("/dist/internal/temporalCompat/repros.js");
-    expect(repros).toMatchObject({ status: 200, contentType: "text/javascript" });
+    expect(repros).toMatchObject({
+      status: 200,
+      contentType: "text/javascript",
+    });
     expect(String(repros.body)).toBe("export const repros = [];\n");
     const polyfill = await fake.route("/polyfill.js");
-    expect(polyfill).toMatchObject({ status: 200, contentType: "text/javascript" });
+    expect(polyfill).toMatchObject({
+      status: 200,
+      contentType: "text/javascript",
+    });
     expect(String(polyfill.body).length).toBeGreaterThan(1000);
     expect(await fake.route("/dist/../package.json")).toEqual({
       status: 404,
@@ -347,7 +369,9 @@ describe("runBrowserCompat with a fake browser", () => {
   it("throws the page's error, naming the leg, and still closes the browser", async () => {
     const fake = fakePlaywright({ error: "TypeError: boom\n  at <anonymous>" });
     await expect(
-      runBrowserCompat("firefox", root, { playwright: async () => fake.module }),
+      runBrowserCompat("firefox", root, {
+        playwright: async () => fake.module,
+      }),
     ).rejects.toThrow(
       "the compat page failed in firefox: TypeError: boom\n  at <anonymous>",
     );

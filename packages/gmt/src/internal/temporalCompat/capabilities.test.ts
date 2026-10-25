@@ -4,6 +4,7 @@ import {
   isDefectPresent,
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,
+  isTimeZoneEqualsCompatNeeded,
   reproPasses,
   runRepro,
 } from "./capabilities";
@@ -371,7 +372,7 @@ describe("isCalendarArithmeticCompatNeeded", () => {
 });
 
 describe("repro split", () => {
-  // DefectId (D1-D8, D10-D17) is the type the shipped probes can ask about; the canary-only
+  // DefectId (D1-D8, D10-D17, D19) is the type the shipped probes can ask about; the canary-only
   // groups are ZonedDefectId (zoned.*) and BoundedWorkDefectId (D9).
   const probeDefects = new Set([
     "D1",
@@ -390,6 +391,7 @@ describe("repro split", () => {
     "D15",
     "D16",
     "D17",
+    "D19",
   ]);
 
   it("holds every probe-defect repro of the full table in probeRepros", () => {
@@ -482,5 +484,32 @@ describe("D17 range day period probe", () => {
 
   it("answers the same on a second call", () => {
     expect(isRangeDayPeriodCompatNeeded()).toBe(isRangeDayPeriodCompatNeeded());
+  });
+});
+
+// D19: ECMA-402 §6.5 fixes "UTC" as a primary time zone identifier and "Etc/UTC" as a non-primary
+// one that resolves to it, and ECMA-262 TimeZoneEquals compares primary identifiers, so the two
+// are one zone on every host. The polyfill reads a non-primary identifier's primary from
+// `Intl.DateTimeFormat#resolvedOptions`, which JavaScriptCore (WebKit 26.6) returns as written.
+describe("D19 time zone equals probe", () => {
+  it("expects Etc/UTC to equal UTC", () => {
+    expect(findRepro("D19", "iso8601", "etcUtcEqualsUtc")?.expected).toBe(
+      "true",
+    );
+  });
+
+  it("returns true or false", () => {
+    expect(runRepro(findRepro("D19", "iso8601", "etcUtcEqualsUtc")!)).toMatch(
+      /^(true|false)$/,
+    );
+  });
+
+  it("reads the recorded WebKit 26.6 output as the defect", () => {
+    const repro = findRepro("D19", "iso8601", "etcUtcEqualsUtc")!;
+    expect(reproPasses(repro, "false")).toBe(false);
+  });
+
+  it("answers the same on a second call", () => {
+    expect(isTimeZoneEqualsCompatNeeded()).toBe(isTimeZoneEqualsCompatNeeded());
   });
 });
