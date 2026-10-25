@@ -277,7 +277,7 @@ function cannotRun(message) {
 /** The current time as NTP seconds. `Date.now()` is whole milliseconds. */
 function nowNtpSeconds() {
   // oxlint-disable-next-line @northguild/gmt-oxlint/no-date-now -- this script imports no build of the library (see header)
-  return BigInt(Date.now()) / 1000n + NTP_OF_UNIX_EPOCH;
+  return BigInt(Date.now()) / 1000n + NTP_OF_UNIX_EPOCH; // date-ban: epoch seconds compared with the IANA expiry in epoch seconds, not a date value
 }
 
 /** `{ from, table }`: IERS when it can be read, otherwise IANA, which must not have expired. */

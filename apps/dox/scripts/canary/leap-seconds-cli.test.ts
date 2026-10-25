@@ -48,7 +48,7 @@ const IANA_ROWS = [
 
 function ntpNow(): number {
   // oxlint-disable-next-line @northguild/gmt-oxlint/no-date-now -- the child process reads the same clock
-  return Math.floor(Date.now() / 1000) + NTP_OF_UNIX_EPOCH;
+  return Math.floor(Date.now() / 1000) + NTP_OF_UNIX_EPOCH; // date-ban: the same epoch-seconds clock the script compares with the expiry
 }
 
 function ianaFile(rows: string[], expiry = ntpNow() + 365 * DAY): string {
