@@ -241,7 +241,7 @@ on several cases; and memory.
 5. **Look for the unpinned rule.** For each rule the story claims to implement, find the test
    that would fail if it were broken. A rule with no such test is a finding.
 6. **Verify the citations.** Every link in `## Gap` and `## Design notes` is unverified until
-   you fetch it and confirm it says what the doc claims. `RAI-23` cited `UIC 9602`, which does
+   you fetch it and confirm it says what the doc claims. One story cited `UIC 9602`, which does
    not exist; the real reference is UIC 406. That correction was found by someone checking.
 7. **Check the documented convention matches the code.** JSDoc that states a convention —
    which endpoint is exclusive, which direction a roll goes, what the sentinel means — is part

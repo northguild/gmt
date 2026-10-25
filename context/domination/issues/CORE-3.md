@@ -31,7 +31,7 @@ Sources: [FILETIME epoch](https://devblogs.microsoft.com/oldnewthing/20090306-00
 
 ## Design notes
 
-- NTP's seconds field is unsigned 32-bit, so it wraps every ~136.19 years into a new era. `fromNtpTimestamp` cannot disambiguate era from the value alone — hence the explicit `era` parameter, defaulting to 0. This is the same class of ambiguity as the aviation `DDHHMM` problem (AV-28).
+- NTP's seconds field is unsigned 32-bit, so it wraps every ~136.19 years into a new era. `fromNtpTimestamp` cannot disambiguate era from the value alone — hence the explicit `era` parameter, defaulting to 0. This is the same class of ambiguity as a `DDHHMM` timestamp, which names no month or year.
 - Excel's 1900 leap-year bug is deliberate Lotus 1-2-3 compatibility, not a rounding artefact. Serials at or below 60 need special handling, and silently "fixing" it makes GMT disagree with Excel.
 - These are instant conversions. None of them involve leap seconds.
 

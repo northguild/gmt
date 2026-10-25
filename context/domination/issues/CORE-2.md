@@ -107,8 +107,8 @@ Shipped as `packages/gmt/src/span/` — `calculate/spanMs.ts`, `calculate/spanNs
   Found in review.
 - **`spanWallClock` reads each endpoint's own wall clock**, rather than requiring a shared
   zone or re-zoning `end` into `start`'s zone. Same-zone is the DST case the story
-  describes and degenerates correctly; cross-zone is the flight-leg question TRAN-8/AV-25
-  will ask (New York 23:00 to Berlin 11:00 next local day is 12 wall-clock hours, 7
+  describes and degenerates correctly; cross-zone is the multi-zone journey question TRAN-8
+  asks (New York 23:00 to Berlin 11:00 next local day is 12 wall-clock hours, 7
   elapsed). Both endpoints must carry a bracketed IANA zone — it gates on
   `isValidZonedDateTime`, so an instant string or bare offset is invalid input.
 - **`spanWallClock` truncates toward zero and is not a boundary count.** Noon Friday to

@@ -46,7 +46,7 @@ fabricated functions, an invented standards citation and numerically wrong crite
    evidence per realm. No painpoint, no function — if the gap is real and not recorded there,
    the new painpoint goes in first, with its source, before anything is specced.
 2. **Primary sources only.** The issuing body's own text — the regulation, the standard, the
-   RFC, the rulebook — not a vendor summary or a blog restatement of it. `RAI-23` cited
+   RFC, the rulebook — not a vendor summary or a blog restatement of it. One story cited
    `UIC 9602`, which does not exist; the real reference is UIC 406, and the difference was
    found by someone opening the source.
 3. **Cite in the shape painpoints already uses:** the claim, then the source as a link on its
