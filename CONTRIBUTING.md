@@ -6,7 +6,7 @@ This guide covers local development, quality checks, and publishing for workspac
 
 ## Contributions
 
-Pull requests are accepted only for the packages in `packages/`. A contribution there is licensed under MIT, the licence of the package it changes. A pull request that changes anything else in this repository is not accepted: open an issue instead.
+Pull requests are accepted only for the packages in `packages/`, together with the files the checks require alongside them: the changeset, the synced `README.md` and `packages/gmt/README.md`, and `apps/dox/src/data/gmt-stats.json`. A contribution to a package is licensed under MIT, the licence of the package it changes. A pull request that changes anything else in this repository is not accepted: open an issue instead.
 
 ## Prerequisites
 

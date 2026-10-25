@@ -1,5 +1,6 @@
 ---
-// Override of Starlight's Footer that appends an empty end-of-page marker. The
+// Override of Starlight's Footer that appends the site's licence note and an empty end-of-page
+// marker. The licence note matches the root LICENSE. The
 // `<link rel="expect" href="#gmt-page-end" blocking="render">` in astro.config
 // holds the first paint of each page until the parser reaches this element.
 // Without it, Chrome paints a reference page (~200 KB, most of it sidebar) in
@@ -10,8 +11,9 @@ import Default from '@astrojs/starlight/components/Footer.astro';
 
 <Default />
 <p class="gmt-licence-note">
-	Code examples: MIT-0. Packages: MIT. Everything else on this site: © 2026 NorthGuild, all
-	rights reserved.
+	Code examples: MIT-0. Packages: MIT. Third-party data and components: their own licences,
+	credited where they appear. Everything else:
+	<a href="https://github.com/northguild/gmt/blob/main/LICENSE">© 2026 NorthGuild, all rights reserved</a>.
 </p>
 <div id="gmt-page-end" hidden></div>
 
@@ -19,6 +21,11 @@ import Default from '@astrojs/starlight/components/Footer.astro';
 	.gmt-licence-note {
 		margin-block-start: 1.5rem;
 		font-size: var(--sl-text-xs);
-		color: var(--sl-color-gray-3);
+		color: var(--gmt-ice-dim);
+	}
+
+	.gmt-licence-note a {
+		color: inherit;
+		text-decoration: underline;
 	}
 </style>
