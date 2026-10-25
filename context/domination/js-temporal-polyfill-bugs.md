@@ -4,14 +4,14 @@ Record of the defects GMT needs fixed in `js-temporal/temporal-polyfill` (and, w
 `tc39/proposal-temporal`), the evidence for each, and what has been filed. The owner files every item, or
 tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) were posted that way.
 
-> **Status of this document:** updated 2026-10-21. **Filed:** 13 items by us, plus a comment on the
+> **Status of this document:** updated 2026-10-25. **Filed:** 13 items by us, plus a comment on the
 > maintainer's own PR #361. The newest are tc39 #3331 (J) and #3332 (K), both 2026-10-21. **All six js-temporal PRs
 > (#367–#372) are closed unmerged and none was rejected** — each was routed to `tc39/proposal-temporal` first, so the polyfill's rebase stays
 > manageable. #373 (release) is open and answered: one release once the rebase has caught up. #361
 > merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply; #3331 (J) is
 > closed as answered (the check is intended, see § J).
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
-> 20 workarounds, 18 still needed, 1 guard (D10) and 1 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; a Node run cannot judge it). The newest are § I (D12), fixed on `main` with nothing
+> 22 workarounds, 18 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest are § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags; § I (D12), fixed on `main` with nothing
 > to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
 > and § O (D15), not filed yet and not fixed on either `main`. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
@@ -31,6 +31,8 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D4`: Hebrew years 0 and earlier, one day off | ICU `5267bb5778` (unicode-org/icu, ICU-23007). Not a polyfill fix | An ICU4C release with that commit, and a Node release that bundles it as GMT's `engines.node` floor |
 | `D16`: `formatRange` cuts long zone names to short and drops offset names (V8, JSC; ICU-20548) | Not a polyfill fix. ICU-20548 is open | An ICU release that keeps `long`, `longGeneric`, `shortOffset` and `longOffset` in range output, in every engine GMT supports. `pnpm compat` reports the Node half: the `D16` probes must all pass on the `engines.node` floor. The weekly `temporal-oracle` run runs the same probes in Chromium, Firefox and WebKit (`temporal-compat-<leg>` verdicts) and files the removal issue only when every engine says removable |
 | `D17`: Firefox `formatRange` prints AM/PM for a day period with a zone name (§ Q) | Not a polyfill fix. A SpiderMonkey bug, open as [Bugzilla 2085525](https://bugzilla.mozilla.org/show_bug.cgi?id=2085525) | A Firefox release that prints the flexible day period in a range: the weekly `temporal-oracle` run's compat check in Firefox (`temporal-compat-firefox`) reports D17 removable, and Firefox is the only engine in D17's scope |
+| `D18`: Islamic dates before the Hijra read as positive years in WebKit (§ R) | None. Not filed yet | A js-temporal release that reads the Islamic eras (`main` declares them; whether its parser accepts WebKit's `Before Hijra` spelling is untested), or a WebKit that prints the year as V8 does, so every `D18` repro passes in the weekly `temporal-oracle` run's compat check in WebKit (`temporal-compat-webkit`); WebKit is the only engine in D18's scope |
+| `D19`: `ZonedDateTime#equals` answers false for two identifiers of one zone where `resolvedOptions` keeps the identifier (§ U) | None. Not filed yet | A js-temporal release that finds a non-primary identifier's primary without `Intl.DateTimeFormat#resolvedOptions`, so the `D19` probe passes in the weekly `temporal-oracle` run's compat check in WebKit (`temporal-compat-webkit`); WebKit is the only engine in D19's scope |
 | `D5`: Indian calendar before ISO year 1 | js-temporal `8de299a` (PR #361; `b6c9844` on its branch) | Nothing |
 | `D6`: non-ISO `until` re-constrains the day | js-temporal `10aeb98` | `D7`. With `10aeb98` and `1c64f14` alone one Hebrew `until` by years is still wrong (Corrections, item 3) |
 | `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b), which is not on `main`. The `D7.leapMonthEnd` probe fails until it is |
@@ -40,7 +42,7 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 
 `D8` is part-way: `2bb6ba1` fixes two of its three probes, and the third needs tc39 `977d11e0` and
 `993e6322`, which are not on `main`. `D1`, `D9`, `zoned.B`, `zoned.D` and `zoned.E` have no fix on
-`main`. Neither has `D15`, on js-temporal `main` or tc39 `main` (§ O).
+`main`. Neither has `D15`, on js-temporal `main` or tc39 `main` (§ O), nor `D19` (§ U).
 
 To check, without cloning anything:
 
@@ -2260,3 +2262,72 @@ The other calendars (`persian`, `hebrew`, `coptic`, `ethiopic`, `buddhist`, `jap
 ### Effect on GMT
 
 Only GMT run on WebKit's own `Temporal` sees it: `diffDateAsDuration` returns the sentinel `""` where the engine throws. GMT on the polyfill is right. The one native-suite row (`plain/calculate/diffDateAsDuration.edges.test.ts`, the `xscan indian min` row) is tagged; the tag goes stale, with a finding, once WebKit returns the date.
+
+## U. `ZonedDateTime#equals` answers false for two identifiers of one zone where `resolvedOptions` keeps the identifier (polyfill; shows in JavaScriptCore)
+
+### Title
+
+TimeZoneEquals: find a non-primary identifier's primary without `Intl.DateTimeFormat#resolvedOptions`, which the Time Zone Canonicalization proposal makes return the identifier as written
+
+### Status
+
+**Not filed upstream yet.** The owner files every item. Found by the native suite's WebKit control pass
+(#378): four `diffZoned` and `intervalLengthZoned` rows, a calendar unit between `UTC` and `Etc/UTC` or
+`Asia/Calcutta` and `Asia/Kolkata`, returned `null` on polyfill 0.5.1 in Playwright WebKit 26.6 and passed on
+native WebKit `Temporal`, Node 26, Chromium 153 and Firefox 155. Confirmed on polyfill 0.5.1;
+`GetAvailableNamedTimeZoneIdentifier` in `lib/ecmascript.ts` is the same on js-temporal `main` (read 2026-10-25).
+No upstream issue found (searched the polyfill's issues for `resolvedOptions`, `canonical` and
+`GetAvailableNamedTimeZoneIdentifier`). GMT works around it as temporalCompat **D19** (`temporalCompat/timeZoneEquals.ts`,
+probe `isTimeZoneEqualsCompatNeeded`), scoped to WebKit (`engines: ["webkit"]` in `scripts/lib/workarounds.mjs`, so the
+Node, Chromium and Firefox checks report it out of scope, and the weekly run's `temporal-compat-webkit` verdict decides).
+
+### What goes wrong
+
+The polyfill's `TimeZoneEquals(one, two)` compares `GetAvailableNamedTimeZoneIdentifier(id).primaryIdentifier` for the
+two identifiers. That function returns the identifier itself when `Intl.supportedValuesOf("timeZone")` lists it, and
+otherwise `new Intl.DateTimeFormat("en-US", { timeZone: id }).resolvedOptions().timeZone`.
+
+ECMA-402 `main` (`spec/datetimeformat.html`, CreateDateTimeFormat) sets [[TimeZone]] to the identifier record's
+[[PrimaryIdentifier]], so V8 and SpiderMonkey return `UTC` for `Etc/UTC` and the polyfill is right there. The Stage 3
+Time Zone Canonicalization proposal (tc39/proposal-canonical-tz, Stage 3 since July 2023, to be merged through Temporal;
+`spec/intl.html`) changes that step to keep [[Identifier]], and JavaScriptCore implements it (WebKit PRs #63050 and
+#63185): `resolvedOptions().timeZone` is `Etc/UTC` for `Etc/UTC` and `Asia/Calcutta` for `Asia/Calcutta`, while
+`supportedValuesOf` lists only `UTC` and `Asia/Kolkata`. No Intl API on such a host exposes the primary identifier. So
+the polyfill, on a host that follows the newer rule, compares the identifiers as written and answers false.
+
+The specification is not in doubt either way. ECMA-402 §6.5 Time Zone Identifiers (`spec/locales-currencies-tz.html`)
+requires `"UTC"` to be a primary identifier and `"Etc/UTC"`, `"Etc/GMT"`, `"GMT"` and every link to them to be
+non-primary identifiers that resolve to `"UTC"`, and ECMA-262 TimeZoneEquals compares the two [[PrimaryIdentifier]]s.
+`Etc/UTC` equals `UTC` on every host; the rest of the pairs are the IANA backward links.
+
+### Repro (polyfill 0.5.1, Playwright WebKit 26.6, macOS; `ZonedDateTime` is `Temporal.ZonedDateTime`)
+
+| Call | Polyfill in WebKit 26.6 | Expected (spec; native WebKit 26.6, Node 26, Chromium 153) |
+| ---- | ----------------------- | ---------------------------------------------------------- |
+| `new ZonedDateTime(0n, "Etc/UTC").equals(new ZonedDateTime(0n, "UTC"))` | `false` | `true` |
+| `new ZonedDateTime(0n, "Asia/Calcutta").equals(new ZonedDateTime(0n, "Asia/Kolkata"))` | `false` | `true` |
+| `new ZonedDateTime(0n, "Europe/Kiev").equals(new ZonedDateTime(0n, "Europe/Kyiv"))` | `false` | `true` |
+| `new Intl.DateTimeFormat("en-US", { timeZone: "Etc/UTC" }).resolvedOptions().timeZone` (the host, not the polyfill) | `Etc/UTC` | `UTC` on V8; the proposal allows `Etc/UTC` |
+
+Probe: `String(new Temporal.ZonedDateTime(0n, "Etc/UTC").equals(new Temporal.ZonedDateTime(0n, "UTC")))`, expected
+`true`. It names the one pair ECMA-402 fixes, so GMT owns no time zone data.
+
+### Effect on GMT
+
+`diffZoned`, `diffZonedAsDuration` and `intervalLengthZoned` refuse a calendar unit (day or larger) between two time
+zones, as Temporal's DifferenceTemporalZonedDateTime does, and return the sentinel. On the polyfill in JavaScriptCore the
+pairs above counted as two zones, so `diffZoned("…[UTC]", "…[Etc/UTC]", "days")` was `null`. With D19, where the probe
+fails, GMT first resolves `Etc/UTC`, `Etc/GMT` and `GMT` to `UTC` by name, the last step of ECMA-402
+AvailableNamedTimeZoneIdentifiers, which needs no time zone data and holds on every host, Safari 27 included. For any
+other pair it asks the host's own `Temporal.ZonedDateTime#equals` when `globalThis.Temporal` exists (WebKit 26.6).
+
+On a host without `Temporal` (Safari 27) the polyfill's answer stands for every other pair, and the IANA links
+(`Asia/Calcutta` and `Asia/Kolkata`, and the links to `Etc/UTC` such as `Etc/UCT`) remain two zones. This is a limit of
+the engine, not a gap in the workaround: resolving a link needs the IANA `backward`, `backzone` and `zone.tab` data,
+`resolvedOptions().timeZone` keeps the identifier as written, `supportedValuesOf` lists only primary identifiers, and no
+other Intl output names a link's primary (two zones with the same rules since 1970, such as `Europe/Oslo` and
+`Europe/Berlin`, are still two primary identifiers, so comparing offsets cannot stand in for it). GMT owns no time zone
+data, so those pairs wait for the polyfill fix or a WebKit `Temporal`. GMT's other identifier
+comparisons (`areZonedEqual`, `areZonedEqualBy`, `formatZonedRange`, `mapZonedDatesInRange` and the same-zone fast paths)
+compare identifiers as written by their documented contract and are not affected. The `diffZoned` and
+`intervalLengthZoned` rows run unmocked, so they exercise the real path on the WebKit control pass.

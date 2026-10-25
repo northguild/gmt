@@ -180,7 +180,7 @@ describe("temporal compat snapshot", () => {
       ${"still-needed"} | ${"✓ Yes"}             | ${"3 of 4 checks fail"}
       ${"removable"}    | ${"No"}                | ${"4 of 4 checks pass"}
       ${"guard"}        | ${"Kept on purpose"}   | ${"4 of 4 checks pass"}
-      ${"out-of-scope"} | ${"✓ Yes, on Firefox"} | ${"4 of 4 checks pass on Node, which does not have this defect"}
+      ${"out-of-scope"} | ${"✓ Yes, on Firefox"} | ${"4 of 4 checks pass on Node, which does not show this defect"}
     `(
       "gives $state the badge '$badge' and '$count'",
       ({ state, badge, count }) => {

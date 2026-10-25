@@ -7,8 +7,9 @@
  *
  * A leg runs the suite twice on the same host: once on @js-temporal/polyfill (the control) and
  * once on the native engine. A test that fails natively and passes on the control is a
- * divergence; one that fails on both is the runtime's own data or setup. Known failures are tagged
- * in scripts/lib/native-suite-tags.mjs. The verdict goes to artifacts/native-suite-<leg>.json for
+ * divergence; one that fails on both is the runtime's own data or setup; one that fails on the
+ * control alone is a wrong answer GMT gives on the polyfill in that runtime. Known divergences and
+ * host failures are tagged in scripts/lib/native-suite-tags.mjs; a control-only failure never is. The verdict goes to artifacts/native-suite-<leg>.json for
  * the canary reporter, the raw Vitest reports beside it.
  *
  * A browser leg first runs the compat check in that browser (scripts/lib/native-suite-compat.mjs):
@@ -17,8 +18,9 @@
  * one engine's defect (D17 on Firefox, say) can only be judged there, so the reporter calls a
  * group removable when every engine in its scope says so.
  *
- * Exit 0 when nothing is untagged (stale tags never fail the job), 1 when a divergence or host
- * failure has no tag, 2 when the leg could not run (wrong Node, browser missing, a pass left no
+ * Exit 0 when nothing is untagged and nothing failed on the control alone (stale tags never fail
+ * the job), 1 when a divergence or host failure has no tag or a test failed on the control alone,
+ * 2 when the leg could not run (wrong Node, browser missing, a pass left no
  * report, a pass that stopped before every file ran on both tries), when a browser's compat
  * check could not run (the suite still runs and its verdict is still written), or when the
  * argument is unknown. `summary <leg>` prints the verdict files' engine line and counts for the job
@@ -789,7 +791,7 @@ function summary(leg, root, stdout) {
       `${verdict.engine}\n` +
         `${c.tests} tests in ${c.files} files: ${c.passed} passed, ${c.tagged} tagged, ` +
         `${c.untagged} untagged, ${c.hostTagged} host tagged, ${c.hostUntagged} host untagged, ` +
-        `${c.staleTags} stale tags\n`,
+        `${c.controlOnly} control only, ${c.staleTags} stale tags\n`,
     );
   }
   if (leg === "node") return;
@@ -968,12 +970,17 @@ function reportText(engine, result) {
       engine.engine,
       `${c.tests} tests in ${c.files} files: ${c.passed} passed, ${c.tagged} tagged, ` +
         `${c.untagged} untagged, ${c.hostTagged} host tagged, ${c.hostUntagged} host untagged, ` +
-        `${c.staleTags} stale tags`,
+        `${c.controlOnly} control only, ${c.staleTags} stale tags`,
       ...listFailures("Untagged failures", result.untagged, c.untagged),
       ...listFailures(
         "Untagged host failures",
         result.hostUntagged,
         c.hostUntagged,
+      ),
+      ...listFailures(
+        "Failures on the control alone",
+        result.controlOnly,
+        c.controlOnly,
       ),
       ...(c.staleTags > 0
         ? [
@@ -1086,7 +1093,8 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
   );
   stdout(reportText(engine, result));
   if (compatFailed) return 2;
-  return result.counts.untagged > 0 || result.counts.hostUntagged > 0 ? 1 : 0;
+  const { untagged, hostUntagged, controlOnly } = result.counts;
+  return untagged > 0 || hostUntagged > 0 || controlOnly > 0 ? 1 : 0;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

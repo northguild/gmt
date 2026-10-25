@@ -4,7 +4,7 @@
  * and snapshots them on Node; `scripts/lib/native-suite-compat.mjs` judges them in each browser of
  * the native suite. Both read this one list, so no engine can disagree about what a group is.
  *
- * A group with `engines` is a defect only those engines have; its probes passing anywhere else
+ * A group with `engines` is a defect only those engines show; its probes passing anywhere else
  * proves nothing (see `workaroundState`). The ids are the ones in `ENGINE_IDS`, one per JavaScript
  * engine, so the same group reads the same on Node and on Chromium, which both run V8.
  *
@@ -218,6 +218,22 @@ export const WORKAROUNDS = [
       "Delete islamicEra.ts, fixedMonthArithmetic.ts and their tests, islamicFields, polyfillMisreadsIslamicEra and polyfillCannotReturn in calendarFields.ts, the D18 branch and term in calendarDateFromFields.ts, fixedMonthsIfPolyfillCannotReturn in readArithmeticModel.ts, reachesPolyfillLimit and lowestYearOfSum in calendarDateArithmetic.ts, fixedMonthsPerYearOf in largeMonthSpan.ts, and the D18 repros.",
       "Keep every Islamic row of diffDateAsDuration.edges.test.ts and addDate.edges.test.ts: the values are the spec's and hold either way.",
       `Full wording: ${COMPAT_README} § Removal steps 18.`,
+    ],
+  },
+  {
+    defects: ["D19"],
+    // A polyfill defect that shows only on an engine whose Intl.DateTimeFormat keeps a time zone
+    // identifier as written: JavaScriptCore today. V8 and SpiderMonkey return the primary
+    // identifier, so the probe passes there whatever the polyfill does.
+    engines: ["webkit"],
+    title:
+      "D19 — ZonedDateTime#equals answers false for two identifiers of one zone where resolvedOptions keeps the identifier (JavaScriptCore)",
+    trigger:
+      "a js-temporal release whose TimeZoneEquals finds the primary identifier on a host whose Intl.DateTimeFormat#resolvedOptions returns the identifier as written, so the D19 probe (Etc/UTC equals UTC, ECMA-402 §6.5) passes in the WebKit the native suite runs: the weekly run's compat check in WebKit (the temporal-compat-webkit verdict) reports it. WebKit is the only engine in D19's scope; this check runs on Node, where D19 is out of scope and never removable",
+    steps: [
+      "Delete timeZoneEquals.ts, its exports in index.ts, isTimeZoneEqualsCompatNeeded in capabilities.ts and the D19 repros; isCalendarDifferenceAcrossZones (internal/zonedWallClockDifference.ts) compares with new Temporal.ZonedDateTime(0n, id).equals(...) again.",
+      "Keep every diffZoned and intervalLengthZoned row: the values are TimeZoneEquals answers and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 19.`,
     ],
   },
   {

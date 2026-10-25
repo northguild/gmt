@@ -164,9 +164,13 @@ describe("groupResults", () => {
     expect(states.D10).toBe("guard");
     expect(states.D17).toBe("out-of-scope");
     expect(states.D18).toBe("out-of-scope");
+    expect(states.D19).toBe("out-of-scope");
     expect(
       Object.entries(states)
-        .filter(([id]) => id !== "D10" && id !== "D17" && id !== "D18")
+        .filter(
+          ([id]) =>
+            id !== "D10" && id !== "D17" && id !== "D18" && id !== "D19",
+        )
         .every(([, state]) => state === "removable"),
     ).toBe(true);
     expect(groupOf(groups, "D10").guardLapsed).toBe(false);
@@ -178,15 +182,17 @@ describe("groupResults", () => {
     expect(groupOf(groups, "D10").state).toBe("guard");
   });
 
-  it("on WebKit the Firefox-only group is out of scope and the WebKit-only group is removable", () => {
+  it("on WebKit the Firefox-only group is out of scope and the WebKit-only groups are removable", () => {
     const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.webkit);
     expect(groupOf(groups, "D17").state).toBe("out-of-scope");
     expect(groupOf(groups, "D18").state).toBe("removable");
+    expect(groupOf(groups, "D19").state).toBe("removable");
   });
 
-  it("on Firefox the WebKit-only group is out of scope", () => {
+  it("on Firefox the WebKit-only groups are out of scope", () => {
     const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.firefox);
     expect(groupOf(groups, "D18").state).toBe("out-of-scope");
+    expect(groupOf(groups, "D19").state).toBe("out-of-scope");
   });
 
   it("one failing probe makes its group still needed, on any engine", () => {
@@ -318,6 +324,10 @@ describe("runBrowserCompat with a fake browser", () => {
     expect(verdict.workarounds.find((w) => w.id === "D17")).toMatchObject({
       state: "out-of-scope",
       engines: ["firefox"],
+    });
+    expect(verdict.workarounds.find((w) => w.id === "D19")).toMatchObject({
+      state: "removable",
+      engines: ["webkit"],
     });
     expect(fake.log).toEqual([
       { newContext: { timezoneId: "UTC", locale: "en-US" } },

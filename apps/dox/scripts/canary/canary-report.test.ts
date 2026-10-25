@@ -418,6 +418,7 @@ describe("main", () => {
       untagged: 0,
       hostTagged: 0,
       hostUntagged: 0,
+      controlOnly: 0,
       staleTags: 0,
     },
     tagged: [],
@@ -426,6 +427,8 @@ describe("main", () => {
     hostTagged: [],
     hostUntagged: [],
     hostUntaggedTruncated: false,
+    controlOnly: [],
+    controlOnlyTruncated: false,
     staleTags: [],
     ...over,
   });
@@ -437,7 +440,10 @@ describe("main", () => {
   /** The three browsers' compat verdicts, the same rows as the Node check. */
   const writeCompatFiles = (workarounds?: ReturnType<typeof workaround>[]) => {
     for (const leg of ["chromium", "firefox", "webkit"]) {
-      write(`temporal-compat-${leg}.json`, browserCompatVerdict(leg, workarounds));
+      write(
+        `temporal-compat-${leg}.json`,
+        browserCompatVerdict(leg, workarounds),
+      );
     }
   };
   const writeOracleFiles = (workarounds?: ReturnType<typeof workaround>[]) => {

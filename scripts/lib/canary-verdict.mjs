@@ -103,7 +103,13 @@ export function compatCheckVerdict({ runtime, groups, snapshotCurrent }) {
  *           runtime: { polyfill: string, node: string, playwright: string },
  *           groups: CompatGroup[] }} input
  */
-export function browserCompatVerdict({ leg, engine, engineId, runtime, groups }) {
+export function browserCompatVerdict({
+  leg,
+  engine,
+  engineId,
+  runtime,
+  groups,
+}) {
   return {
     source: `temporal-compat-${leg}`,
     status: "ran",
@@ -163,19 +169,20 @@ const MESSAGE_CHARS_IN_VERDICT = 300;
  */
 
 /**
- * The verdict of one native-suite leg. `untagged` and `hostUntagged` come in full from
- * `classify`; the verdict keeps the first 50 of each, with each message cut to 300 characters, and
+ * The verdict of one native-suite leg. `untagged`, `hostUntagged` and `controlOnly` come in full
+ * from `classify`; the verdict keeps the first 50 of each, with each message cut to 300 characters, and
  * says when it cut. The counts stay the full numbers. Raw Vitest reports stay in `artifacts/`.
  *
  * @param {{ leg: "node" | "chromium" | "firefox" | "webkit", engine: string,
  *           runtime: { node: string, vitest: string, playwright: string | null },
  *           counts: { files: number, tests: number, passed: number, tagged: number,
  *                     untagged: number, hostTagged: number, hostUntagged: number,
- *                     staleTags: number },
+ *                     controlOnly: number, staleTags: number },
  *           tagged: Array<{ file: string, test: string, defect: string }>,
  *           untagged: NativeFailure[],
  *           hostTagged: Array<{ group: string, count: number, reason: string }>,
  *           hostUntagged: NativeFailure[],
+ *           controlOnly: NativeFailure[],
  *           staleTags: NativeStaleTag[] }} input
  */
 export function nativeSuiteVerdict({
@@ -187,6 +194,7 @@ export function nativeSuiteVerdict({
   untagged,
   hostTagged,
   hostUntagged,
+  controlOnly,
   staleTags,
 }) {
   const keep = (/** @type {NativeFailure[]} */ rows) =>
@@ -208,6 +216,8 @@ export function nativeSuiteVerdict({
     hostTagged,
     hostUntagged: keep(hostUntagged),
     hostUntaggedTruncated: hostUntagged.length > UNTAGGED_ROWS_IN_VERDICT,
+    controlOnly: keep(controlOnly),
+    controlOnlyTruncated: controlOnly.length > UNTAGGED_ROWS_IN_VERDICT,
     staleTags,
   };
 }
