@@ -4,7 +4,7 @@
 
 ## Gap
 
-UTC has leap seconds; TAI and GPS do not. Every conversion in the Space realm, plus PTP in IoT (IOT-31) and GPS in Maritime (MAR-16), needs to know the TAI − UTC offset for a given date. That requires the IERS table, and it requires being honest about the several ways the concept breaks down.
+UTC has leap seconds; TAI and GPS do not. Every conversion in the Space realm, plus PTP device time and GPS in Maritime (MAR-16), needs to know the TAI − UTC offset for a given date. That requires the IERS table, and it requires being honest about the several ways the concept breaks down.
 
 ## Scope
 
@@ -43,7 +43,7 @@ Encoding wrong numbers as acceptance criteria would have produced an implementat
 - **`isLeapSecond` is a table lookup, not a pattern match.** `23:59:60` is syntactically well-formed on any date and valid on only 27 of them. Validating the format alone accepts fabricated leap seconds.
 - **Leap smearing is not a leap second.** Google, AWS and Meta spread the extra second across a window, so a smeared clock never reads `23:59:60` and is offset from true UTC by up to a second during the smear. GMT cannot detect smearing; the JSDoc must warn that timestamps from smeared infrastructure are not exactly UTC near an insertion.
 - **The table is closed and built in** (tracker DoD exemption for closed tables). A weekly canary, `scripts/leap-seconds.mjs`, compares it with the IERS file until IERS publishes its file format for continuous UTC. ITU-R TF.460-6 §2.3 requires at least eight weeks' notice of any insertion, so the canary would catch one in time.
-- The constant cites its source and final revision beside it: IERS `Leap_Second.dat`, updated through Bulletin C 72 (6 July 2026). It is shared with MAR-16 and IOT-31 and must not be duplicated.
+- The constant cites its source and final revision beside it: IERS `Leap_Second.dat`, updated through Bulletin C 72 (6 July 2026). It is shared with MAR-16 and must not be duplicated.
 - The syntax-only check in `plain/validate/` is `hasSecond60`.
 
 ## What gmt provides (do not re-implement)
