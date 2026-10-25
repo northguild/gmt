@@ -3,7 +3,7 @@ import { Temporal } from "../temporal";
 /*
  * Upstream repros for each `@js-temporal/polyfill` calendar defect GMT works around, with the
  * spec-correct answer. This file holds the repros the shipped capability probes read (D1-D8 and
- * D10-D17); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
+ * D10-D18); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
  * polyfill, through `../temporal` (no other GMT module), so a canary script can load its compiled
  * copy straight from `dist`.
  *
@@ -29,7 +29,9 @@ export type DefectId =
   | "D14"
   | "D15"
   | "D16"
-  | "D17";
+  | "D17"
+  | "D18"
+  | "D19";
 
 export interface ProbeRepro {
   defect: DefectId;
@@ -773,6 +775,52 @@ const d17Repros: readonly ProbeRepro[] = [
   },
 ];
 
+/**
+ * D18 (`calendarFields.ts`, `islamicEra.ts`): in WebKit (JavaScriptCore, Safari and Playwright
+ * WebKit 26.6), `Intl.DateTimeFormat` prints an `islamic-civil`, `islamic-tbla` or
+ * `islamic-umalqura` date before the Hijra as a positive year in a second era (`Before Hijra`),
+ * and polyfill 0.5.1 (`IslamicBaseHelper`, no era) takes the year part as printed, so ISO
+ * `0621-01-01` reads as year 2 instead of -1. V8 and SpiderMonkey print the year as -1 in the
+ * one era. Expected values are Node 26.12.1's native Temporal (`bh` era year 2 = year -1), as the
+ * Intl era/monthCode proposal numbers the years. Reads only: the polyfill's fields → ISO and
+ * `until` for such a year do not return in WebKit, so no probe may ask them.
+ */
+const d18Repros: readonly ProbeRepro[] = [
+  readRepro("D18", "islamic-civil", "0621-01-01", "-1|M05|28"),
+  readRepro("D18", "islamic-civil", "0500-01-01", "-126|M09|12"),
+  readRepro("D18", "islamic-tbla", "0621-01-01", "-1|M05|29"),
+  readRepro("D18", "islamic-tbla", "0500-01-01", "-126|M09|13"),
+  readRepro("D18", "islamic-umalqura", "0621-01-01", "-1|M05|28"),
+  readRepro("D18", "islamic-umalqura", "0500-01-01", "-126|M09|12"),
+];
+
+/**
+ * D19 (`internal/zonedWallClockDifference.ts`): `ZonedDateTime#equals` answers false for two
+ * identifiers of one zone on a host whose `Intl.DateTimeFormat#resolvedOptions` returns the
+ * identifier as written. The polyfill's `GetAvailableNamedTimeZoneIdentifier` finds the primary
+ * identifier in `Intl.supportedValuesOf("timeZone")` or, for a non-primary one, takes
+ * `resolvedOptions().timeZone`. ECMA-402 §6.5 (Time Zone Identifiers) says "UTC" is primary and
+ * "Etc/UTC" is a non-primary identifier that resolves to "UTC", and TimeZoneEquals compares the
+ * primary identifiers, so `Etc/UTC` equals `UTC` on every host. JavaScriptCore (WebKit 26.6, Safari
+ * 27) keeps the identifier as written (the Time Zone Canonicalization proposal), so the polyfill
+ * compares `Etc/UTC` with `UTC` there and answers false. V8 and SpiderMonkey return the primary
+ * identifier. The repro names the one pair the specification fixes, so it owns no time zone data.
+ */
+const d19Repros: readonly ProbeRepro[] = [
+  {
+    defect: "D19",
+    calendar: "iso8601",
+    name: "etcUtcEqualsUtc",
+    expected: "true",
+    run: () =>
+      String(
+        new Temporal.ZonedDateTime(0n, "Etc/UTC").equals(
+          new Temporal.ZonedDateTime(0n, "UTC"),
+        ),
+      ),
+  },
+];
+
 /** The shipped-probe groups, each in the order the full table places it. */
 export const probeReproGroups = {
   d1: d1Repros,
@@ -785,6 +833,8 @@ export const probeReproGroups = {
   d15: d15Repros,
   d16: d16Repros,
   d17: d17Repros,
+  d18: d18Repros,
+  d19: d19Repros,
   d6: d6Repros,
   d7: [d7Repro, d7LeapMonthEndRepro],
   /** D2-D5 and D8: single-read repros. */

@@ -4,9 +4,16 @@ import {
   isDefectPresent,
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,
+  isTimeZoneEqualsCompatNeeded,
   reproPasses,
   runRepro,
 } from "./capabilities";
+import {
+  calendarFieldsOf,
+  polyfillCannotReturn,
+  polyfillMisreadsIslamicEra,
+} from "./calendarFields";
+import { Temporal } from "../temporal";
 import { probeRepros } from "./probeRepros";
 import { type DefectId, findRepro, repros } from "./repros";
 
@@ -371,7 +378,7 @@ describe("isCalendarArithmeticCompatNeeded", () => {
 });
 
 describe("repro split", () => {
-  // DefectId (D1-D8, D10-D17) is the type the shipped probes can ask about; the canary-only
+  // DefectId (D1-D8, D10-D19) is the type the shipped probes can ask about; the canary-only
   // groups are ZonedDefectId (zoned.*) and BoundedWorkDefectId (D9).
   const probeDefects = new Set([
     "D1",
@@ -390,6 +397,8 @@ describe("repro split", () => {
     "D15",
     "D16",
     "D17",
+    "D18",
+    "D19",
   ]);
 
   it("holds every probe-defect repro of the full table in probeRepros", () => {
@@ -482,5 +491,111 @@ describe("D17 range day period probe", () => {
 
   it("answers the same on a second call", () => {
     expect(isRangeDayPeriodCompatNeeded()).toBe(isRangeDayPeriodCompatNeeded());
+  });
+});
+
+// D18: the Intl era/monthCode proposal numbers an Islamic calendar's years through the epoch
+// (`bh` era year n is year 1 - n), and Temporal's `year` is that number. WebKit prints a date
+// before the Hijra as a positive year in a second era and polyfill 0.5.1 takes it as printed,
+// so ISO 0621-01-01 reads as year 2. Expected values are Node 26.12.1's native Temporal.
+describe("D18 Islamic era probe", () => {
+  it.each`
+    calendar              | iso             | expected
+    ${"islamic-civil"}    | ${"0621-01-01"} | ${"-1|M05|28"}
+    ${"islamic-civil"}    | ${"0500-01-01"} | ${"-126|M09|12"}
+    ${"islamic-tbla"}     | ${"0621-01-01"} | ${"-1|M05|29"}
+    ${"islamic-tbla"}     | ${"0500-01-01"} | ${"-126|M09|13"}
+    ${"islamic-umalqura"} | ${"0621-01-01"} | ${"-1|M05|28"}
+    ${"islamic-umalqura"} | ${"0500-01-01"} | ${"-126|M09|12"}
+  `(
+    "expects $calendar $iso to read $expected",
+    ({ calendar, iso, expected }) => {
+      const repro = findRepro("D18", calendar, iso);
+      expect(repro?.expected).toBe(expected);
+      expect(runRepro(repro!)).toMatch(/^-?\d+\|M\d\d\|\d+$/);
+    },
+  );
+
+  // WebKit prints the epoch day itself (1 Muharram of year 1) as year 0 in the earlier era, so a
+  // read of it is corrected to 1 - 0. The day before it is the last day of year 0 on every engine.
+  // Only the four shared fields are compared: a native engine also reads `era` and `eraYear`.
+  it.each`
+    calendar              | epochDay        | dayBefore
+    ${"islamic-civil"}    | ${"0622-07-19"} | ${"0622-07-18"}
+    ${"islamic-tbla"}     | ${"0622-07-18"} | ${"0622-07-17"}
+    ${"islamic-umalqura"} | ${"0622-07-19"} | ${"0622-07-18"}
+  `(
+    "reads the $calendar epoch day $epochDay as 1 Muharram of year 1 on every engine",
+    ({ calendar, epochDay, dayBefore }) => {
+      expect(
+        calendarFieldsOf(Temporal.PlainDate.from(epochDay), calendar),
+      ).toMatchObject({ year: 1, month: 1, monthCode: "M01", day: 1 });
+      expect(
+        calendarFieldsOf(Temporal.PlainDate.from(dayBefore), calendar),
+      ).toMatchObject({ year: 0, month: 12, monthCode: "M12", day: 29 });
+    },
+  );
+
+  it("reads the recorded WebKit 26.6 output as the defect", () => {
+    const repro = findRepro("D18", "islamic-civil", "0621-01-01")!;
+    expect(reproPasses(repro, "2|M05|28")).toBe(false);
+    expect(reproPasses(repro, "-1|M05|28")).toBe(true);
+  });
+
+  it("reads only: no D18 repro asks the polyfill to convert fields or count months", () => {
+    // Every row is a readRepro of an ISO date, so its name parses as an ISO date.
+    for (const repro of probeRepros.filter((row) => row.defect === "D18")) {
+      expect(() => Temporal.PlainDate.from(repro.name)).not.toThrow();
+    }
+  });
+
+  it("never withholds the polyfill for an Islamic year above 1 or for another calendar", () => {
+    expect(polyfillCannotReturn("islamic-civil", 2)).toBe(false);
+    expect(polyfillCannotReturn("islamic-tbla", 1000)).toBe(false);
+    expect(polyfillCannotReturn("hebrew", -5)).toBe(false);
+    expect(polyfillCannotReturn("persian", 0)).toBe(false);
+    expect(polyfillMisreadsIslamicEra("persian")).toBe(false);
+    expect(polyfillMisreadsIslamicEra("iso8601")).toBe(false);
+  });
+
+  it("withholds every year up to 1 together, or none", () => {
+    for (const calendar of [
+      "islamic-civil",
+      "islamic-tbla",
+      "islamic-umalqura",
+    ]) {
+      const misreads = polyfillMisreadsIslamicEra(calendar);
+      expect(misreads).toBe(isDefectPresent("D18", calendar));
+      for (const year of [1, 0, -1, -280804]) {
+        expect(polyfillCannotReturn(calendar, year)).toBe(misreads);
+      }
+    }
+  });
+});
+
+// D19: ECMA-402 §6.5 fixes "UTC" as a primary time zone identifier and "Etc/UTC" as a non-primary
+// one that resolves to it, and ECMA-262 TimeZoneEquals compares primary identifiers, so the two
+// are one zone on every host. The polyfill reads a non-primary identifier's primary from
+// `Intl.DateTimeFormat#resolvedOptions`, which JavaScriptCore (WebKit 26.6) returns as written.
+describe("D19 time zone equals probe", () => {
+  it("expects Etc/UTC to equal UTC", () => {
+    expect(findRepro("D19", "iso8601", "etcUtcEqualsUtc")?.expected).toBe(
+      "true",
+    );
+  });
+
+  it("returns true or false", () => {
+    expect(runRepro(findRepro("D19", "iso8601", "etcUtcEqualsUtc")!)).toMatch(
+      /^(true|false)$/,
+    );
+  });
+
+  it("reads the recorded WebKit 26.6 output as the defect", () => {
+    const repro = findRepro("D19", "iso8601", "etcUtcEqualsUtc")!;
+    expect(reproPasses(repro, "false")).toBe(false);
+  });
+
+  it("answers the same on a second call", () => {
+    expect(isTimeZoneEqualsCompatNeeded()).toBe(isTimeZoneEqualsCompatNeeded());
   });
 });

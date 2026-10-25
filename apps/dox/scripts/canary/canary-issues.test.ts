@@ -181,6 +181,7 @@ const ENGINES = {
 interface NativeOptions {
   untagged?: number;
   hostUntagged?: number;
+  controlOnly?: number;
   staleTags?: unknown[];
   hostTagged?: { group: string; count: number; reason: string }[];
   untaggedTruncated?: boolean;
@@ -199,6 +200,7 @@ const native = (
   {
     untagged = 0,
     hostUntagged = 0,
+    controlOnly = 0,
     staleTags = [],
     hostTagged = [],
     untaggedTruncated = false,
@@ -218,6 +220,7 @@ const native = (
     untagged,
     hostTagged: hostTagged.reduce((n, g) => n + g.count, 0),
     hostUntagged,
+    controlOnly,
     staleTags: staleTags.length,
   },
   tagged: [],
@@ -230,6 +233,10 @@ const native = (
     nativeRow(leg, i + 1, message),
   ),
   hostUntaggedTruncated: hostUntagged > 50,
+  controlOnly: Array.from({ length: Math.min(controlOnly, 50) }, (_, i) =>
+    nativeRow(leg, i + 1, message),
+  ),
+  controlOnlyTruncated: controlOnly > 50,
   staleTags,
 });
 
@@ -618,7 +625,7 @@ describe("removable on every engine in scope", () => {
       "Every probe for **D17** returns the spec value on @js-temporal/polyfill 0.5.1 on every engine in its scope (Firefox 155.0), so the workaround can go.",
     );
     expect(action.body).toContain(
-      "**Scope:** only firefox: the defect is in that engine's own Intl, so the other rows are out of scope and count for nothing.",
+      "**Scope:** only firefox: only that engine's Intl shows the defect, so the other rows are out of scope and count for nothing.",
     );
     expect(action.body).toContain(
       "| temporal-compat-check | Node v24.11.0 | out of scope | 2 of 2 pass |\n" +
@@ -1395,6 +1402,7 @@ describe("findings", () => {
       "native-suite-node": native("node", {
         untagged: 1,
         hostUntagged: 1,
+        controlOnly: 1,
         staleTags: [
           { kind: "host", group: "old-group", reason: "Old reason." },
         ],
@@ -1409,6 +1417,7 @@ describe("findings", () => {
       "temporal-oracle/untagged-mismatch",
       "native-suite/untagged-failure",
       "native-suite/untagged-host-failure",
+      "native-suite/control-only-failure",
       "native-suite/stale-tag",
       "temporal-oracle/could-not-run",
     ]);
@@ -1423,14 +1432,18 @@ describe("findings", () => {
   });
 });
 
-/** The two fixed paragraphs, written out here word for word. */
+/** The three fixed paragraphs, written out here word for word. */
 const TRIAGE =
   "Each row failed on the native engine and passed on @js-temporal/polyfill in the same runtime. Decide which it is: a GMT defect (fix it), a polyfill defect or an engine or specification defect (record it in context/domination/js-temporal-polyfill-bugs.md and tag the test in scripts/lib/native-suite-tags.mjs). Never skip the test.";
 const HOST =
   "Each row failed on the native engine and on @js-temporal/polyfill in the same runtime, so the cause is the runtime (its locale or time zone data, or its setup), not Temporal. Find what the runtime lacks, then add or widen a group in KNOWN_HOST_FAILURES in scripts/lib/native-suite-tags.mjs with that reason — one group per cause, never one entry per test — or fix the test if it depends on the host by mistake. Never skip the test.";
 
+const CONTROL =
+  "Each row failed on @js-temporal/polyfill and passed on the native engine in the same runtime. GMT ships the polyfill, so this is a wrong answer GMT gives users of that runtime. Find the polyfill defect, record it in context/domination/js-temporal-polyfill-bugs.md and fix GMT's answer with a temporalCompat workaround, or fix GMT if the defect is its own. There is no tag for these rows. Never skip the test.";
+
 const FAILURE_KEY = "native-suite/untagged-failure";
 const HOST_KEY = "native-suite/untagged-host-failure";
+const CONTROL_KEY = "native-suite/control-only-failure";
 const STALE_KEY = "native-suite/stale-tag";
 
 /** An oracle-clean verdict set, every compat source clean, with the given native legs (the others clean). */
@@ -1443,6 +1456,14 @@ const withLegs = (legs: Partial<Record<string, unknown>>) =>
       Object.entries(legs).map(([leg, v]) => [`native-suite-${leg}`, v]),
     ),
   }) as never;
+
+/** 60 rows of the kind a finding key tables, each with `message`. */
+const optionsOf = (key: string, message: string): NativeOptions =>
+  ({
+    [FAILURE_KEY]: { untagged: 60, message },
+    [HOST_KEY]: { hostUntagged: 60, message },
+    [CONTROL_KEY]: { controlOnly: 60, message },
+  })[key] ?? {};
 
 const only = (verdicts: unknown, key: string) =>
   findings(verdicts as never, ORACLE_CONTEXT).filter((f) => f.key === key);
@@ -1720,12 +1741,46 @@ describe("native suite findings", () => {
     expect(action.body).not.toContain(TRIAGE);
   });
 
-  it("both kinds on one leg: two findings, two keys", () => {
+  it("WebKit with 4 control-only rows and nothing else: one control-only finding, labels canary and temporal-compat", () => {
+    const actions = plan(
+      withLegs({ webkit: native("webkit", { controlOnly: 4 }) }),
+    );
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.key).toBe(CONTROL_KEY);
+    expect(action.title).toBe(
+      "Native suite: tests fail only on the polyfill in WebKit 26",
+    );
+    expect(action.labels).toEqual(["canary", "temporal-compat"]);
+    expect(action.body.match(/^### /gm)).toHaveLength(1);
+    expect(action.body).toContain(
+      `### ${ENGINES.webkit}\n\n| file | test | message |`,
+    );
+    expect(action.body).toContain("`src/webkit/file4.test.ts`");
+    expect(action.body).toContain(`\n\n${CONTROL}\n\nRun: ${RUN}`);
+    expect(action.body).not.toContain(TRIAGE);
+    expect(action.body).not.toContain(HOST);
+  });
+
+  it("the three kinds on one leg: three findings, three keys", () => {
     const keys = findings(
-      withLegs({ node: native("node", { untagged: 1, hostUntagged: 1 }) }),
+      withLegs({
+        node: native("node", { untagged: 1, hostUntagged: 1, controlOnly: 1 }),
+      }),
       ORACLE_CONTEXT,
     ).map((f) => f.key);
-    expect(keys).toEqual([FAILURE_KEY, HOST_KEY]);
+    expect(keys).toEqual([FAILURE_KEY, HOST_KEY, CONTROL_KEY]);
+  });
+
+  it("control-only rows appear in neither the divergence nor the host finding", () => {
+    const verdicts = withLegs({
+      node: native("node", { untagged: 1, hostUntagged: 1, controlOnly: 3 }),
+    });
+    for (const key of [FAILURE_KEY, HOST_KEY]) {
+      const [finding] = only(verdicts, key);
+      expect(finding.body).not.toContain("`src/node/file3.test.ts`");
+    }
   });
 
   it("host-untagged rows never appear in the divergence finding", () => {
@@ -1740,14 +1795,12 @@ describe("native suite findings", () => {
     key
     ${FAILURE_KEY}
     ${HOST_KEY}
+    ${CONTROL_KEY}
   `(
     "body size: 4 legs of 50 rows with 300-character messages stay under 65,536 for $key, every leg cut to the same count",
     ({ key }) => {
       const message = "m".repeat(300);
-      const options =
-        key === FAILURE_KEY
-          ? { untagged: 60, message }
-          : { hostUntagged: 60, message };
+      const options = optionsOf(key, message);
       const [finding] = only(
         withLegs({
           node: native("node", options),
@@ -1774,6 +1827,7 @@ describe("native suite findings", () => {
     key
     ${FAILURE_KEY}
     ${HOST_KEY}
+    ${CONTROL_KEY}
   `(
     "body size: 4 legs of 60 rows with 365-character names and 300-character messages stay under 65,536 for $key",
     ({ key }) => {
@@ -1791,13 +1845,11 @@ describe("native suite findings", () => {
           ...v,
           untagged: v.untagged.map(name),
           hostUntagged: v.hostUntagged.map(name),
+          controlOnly: v.controlOnly.map(name),
         };
       };
       const message = "m".repeat(300);
-      const options =
-        key === FAILURE_KEY
-          ? { untagged: 60, message }
-          : { hostUntagged: 60, message };
+      const options = optionsOf(key, message);
       const [finding] = only(
         withLegs({
           node: longName("node", options),

@@ -99,7 +99,14 @@ function compatEngineBlocks(verdicts) {
   const rows = COMPAT_SOURCES.map((source) => {
     const found = sourceOf(verdicts, source);
     if (!("ran" in found)) {
-      return [source, `could not run — ${oneLine(found.message)}`, "—", "—", "—", "—"];
+      return [
+        source,
+        `could not run — ${oneLine(found.message)}`,
+        "—",
+        "—",
+        "—",
+        "—",
+      ];
     }
     const v = found.ran;
     const engine = source === CHECK ? `Node ${v.runtime.node}` : v.engine;
@@ -206,6 +213,7 @@ function nativeBlocks(verdicts) {
     "Untagged",
     "Host tagged",
     "Host untagged",
+    "Control only",
     "Stale tags",
   ];
   /** @type {string[]} */
@@ -216,6 +224,7 @@ function nativeBlocks(verdicts) {
       return [
         leg,
         `could not run — ${oneLine(found.message).replace(/\|/g, "\\|")}`,
+        "",
         "",
         "",
         "",
@@ -236,6 +245,7 @@ function nativeBlocks(verdicts) {
       String(c.untagged),
       String(c.hostTagged),
       String(c.hostUntagged),
+      String(c.controlOnly),
       String(c.staleTags),
     ];
   });

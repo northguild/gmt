@@ -88,8 +88,7 @@ Firefox and WebKit, and expects the same answers it gets on the polyfill. A fail
 explains opens an issue in GMT's repository. Each run lists the exact engine versions it used:
 see the [weekly runs](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml).
 
-The built-in engines have a few bugs of their own. Each one we know about is already reported or
-already fixed:
+The built-in engines have a few bugs of their own. We report each one we find. The list so far:
 
 - [`unicode-org/icu4x#8620`](https://github.com/unicode-org/icu4x/issues/8620): Node and Chromium
   reject a one-letter annotation key, such as `[a=bc]`, which the standard allows.
@@ -103,6 +102,10 @@ already fixed:
   zoned date on 19 April −271821, just outside the range the standard allows.
 - [Bugzilla 2085525](https://bugzilla.mozilla.org/show_bug.cgi?id=2085525): Firefox prints AM and
   PM in a time range that asks for a day period such as "in the morning", when a zone name is shown.
+- WebKit adds a year to the 30th of Dhu al-Hijjah in an Islamic year before the Hijra as 13
+  months, so the result lands a month late. The report to WebKit is pending.
+- WebKit throws when it adds a year to the last day of Chaitra in a year before about
+  4800 BCE. The report to WebKit is pending.
 
 GMT gives the standard's answer in every case.
 

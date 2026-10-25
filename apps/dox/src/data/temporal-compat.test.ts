@@ -180,13 +180,26 @@ describe("temporal compat snapshot", () => {
       ${"still-needed"} | ${"✓ Yes"}             | ${"3 of 4 checks fail"}
       ${"removable"}    | ${"No"}                | ${"4 of 4 checks pass"}
       ${"guard"}        | ${"Kept on purpose"}   | ${"4 of 4 checks pass"}
-      ${"out-of-scope"} | ${"✓ Yes, on Firefox"} | ${"4 of 4 checks pass on Node, which does not have this defect"}
+      ${"out-of-scope"} | ${"✓ Yes, on Firefox"} | ${"4 of 4 checks pass on Node, which does not show this defect"}
     `(
       "gives $state the badge '$badge' and '$count'",
       ({ state, badge, count }) => {
         expect(stateLine(group(state))).toEqual({ badge, count });
       },
     );
+
+    it("names each engine in an out-of-scope row's scope as the page prints it", () => {
+      expect(
+        stateLine({ ...group("out-of-scope"), engines: ["webkit"] }).badge,
+      ).toBe("✓ Yes, on WebKit");
+      expect(
+        stateLine({ ...group("out-of-scope"), engines: ["firefox", "webkit"] })
+          .badge,
+      ).toBe("✓ Yes, on Firefox and WebKit");
+      expect(
+        stateLine({ ...group("out-of-scope"), engines: ["chromium"] }).badge,
+      ).toBe("✓ Yes, on Chromium");
+    });
 
     it("chooses by state alone, not by the probe counts", () => {
       expect(stateLine({ ...group("guard"), failing: 2 }).badge).toBe(

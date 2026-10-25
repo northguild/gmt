@@ -173,6 +173,19 @@ export function isRangeDayPeriodCompatNeeded(): boolean {
   return isDefectPresent("D17", "iso8601");
 }
 
+/**
+ * True when this runtime's `ZonedDateTime#equals` answers false for two identifiers of one time
+ * zone (defect D19).
+ *
+ * ECMA-262 TimeZoneEquals compares the two [[PrimaryIdentifier]]s, and ECMA-402 §6.5 fixes
+ * `"UTC"` as primary and `"Etc/UTC"` as a non-primary identifier that resolves to it. The polyfill
+ * finds a non-primary identifier's primary through `Intl.DateTimeFormat#resolvedOptions`, which
+ * JavaScriptCore returns as written, so `Etc/UTC` and `UTC` compare unequal there.
+ */
+export function isTimeZoneEqualsCompatNeeded(): boolean {
+  return isDefectPresent("D19", "iso8601");
+}
+
 /** Defects that make the runtime's calendar arithmetic or reads differ from the spec. */
 const ARITHMETIC_DEFECTS: readonly DefectId[] = [
   "D1",
@@ -183,6 +196,7 @@ const ARITHMETIC_DEFECTS: readonly DefectId[] = [
   "D6",
   "D7",
   "D10",
+  "D18",
 ];
 
 /**

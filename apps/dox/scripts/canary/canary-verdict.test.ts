@@ -188,7 +188,11 @@ describe("browserCompatVerdict", () => {
     group({ defects: ["D3", "D4"], state: "removable" }),
     group({ defects: ["D10"], state: "guard", withGuard: true }),
   ];
-  const browserRuntime = { polyfill: "0.5.1", node: "v26.10.0", playwright: "1.63.0" };
+  const browserRuntime = {
+    polyfill: "0.5.1",
+    node: "v26.10.0",
+    playwright: "1.63.0",
+  };
   const verdict = browserCompatVerdict({
     leg: "firefox",
     engine: "Firefox 155.0",
@@ -210,7 +214,11 @@ describe("browserCompatVerdict", () => {
   });
 
   it("counts and lists the groups exactly as the check verdict does", () => {
-    const check = compatCheckVerdict({ runtime, groups, snapshotCurrent: true });
+    const check = compatCheckVerdict({
+      runtime,
+      groups,
+      snapshotCurrent: true,
+    });
     expect(verdict.counts).toEqual(check.counts);
     expect(verdict.workarounds).toEqual(check.workarounds);
   });
@@ -345,6 +353,7 @@ describe("nativeSuiteVerdict", () => {
       untagged: 2,
       hostTagged: 5,
       hostUntagged: 3,
+      controlOnly: 1,
       staleTags: 1,
     },
     tagged: [{ file: "src/a.test.ts", test: "t", defect: "a-defect" }],
@@ -357,6 +366,7 @@ describe("nativeSuiteVerdict", () => {
       },
     ],
     hostUntagged: [failure(3), failure(4), failure(5)],
+    controlOnly: [failure(6)],
     staleTags: [
       { kind: "host" as const, group: "old-group", reason: "Old reason." },
     ],
@@ -378,6 +388,8 @@ describe("nativeSuiteVerdict", () => {
     expect(v.hostTagged).toEqual(base.hostTagged);
     expect(v.staleTags).toEqual(base.staleTags);
     expect(Object.keys(v).sort()).toEqual([
+      "controlOnly",
+      "controlOnlyTruncated",
       "counts",
       "engine",
       "hostTagged",
@@ -402,29 +414,43 @@ describe("nativeSuiteVerdict", () => {
       ...base,
       untagged: rows,
       hostUntagged: rows,
+      controlOnly: rows,
     });
     expect(v.untagged).toHaveLength(50);
     expect(v.hostUntagged).toHaveLength(50);
+    expect(v.controlOnly).toHaveLength(50);
     expect(v.untaggedTruncated).toBe(false);
     expect(v.hostUntaggedTruncated).toBe(false);
+    expect(v.controlOnlyTruncated).toBe(false);
   });
 
   it("keeps the first 50 of 60 rows of each kind, in order, and flags the cut", () => {
     const rows = Array.from({ length: 60 }, (_, i) => failure(i));
     const v = nativeSuiteVerdict({
       ...base,
-      counts: { ...base.counts, untagged: 60, hostUntagged: 60 },
+      counts: {
+        ...base.counts,
+        untagged: 60,
+        hostUntagged: 60,
+        controlOnly: 60,
+      },
       untagged: rows,
       hostUntagged: rows,
+      controlOnly: rows,
     });
     expect(v.untagged.map((r) => r.test)).toEqual(
       rows.slice(0, 50).map((r) => r.test),
     );
     expect(v.hostUntagged).toHaveLength(50);
     expect(v.untaggedTruncated).toBe(true);
+    expect(v.controlOnly.map((r) => r.test)).toEqual(
+      rows.slice(0, 50).map((r) => r.test),
+    );
     expect(v.hostUntaggedTruncated).toBe(true);
+    expect(v.controlOnlyTruncated).toBe(true);
     expect(v.counts.untagged).toBe(60);
     expect(v.counts.hostUntagged).toBe(60);
+    expect(v.counts.controlOnly).toBe(60);
   });
 
   it("flags only the kind that was cut", () => {
@@ -434,6 +460,17 @@ describe("nativeSuiteVerdict", () => {
     });
     expect(v.untaggedTruncated).toBe(true);
     expect(v.hostUntaggedTruncated).toBe(false);
+    expect(v.controlOnlyTruncated).toBe(false);
+  });
+
+  it("flags the control-only rows alone when only they were cut", () => {
+    const v = nativeSuiteVerdict({
+      ...base,
+      controlOnly: Array.from({ length: 51 }, (_, i) => failure(i)),
+    });
+    expect(v.untaggedTruncated).toBe(false);
+    expect(v.hostUntaggedTruncated).toBe(false);
+    expect(v.controlOnlyTruncated).toBe(true);
   });
 
   it("cuts a message to 300 characters and leaves a shorter one alone", () => {
@@ -441,10 +478,12 @@ describe("nativeSuiteVerdict", () => {
       ...base,
       untagged: [failure(1, "x".repeat(301)), failure(2, "y".repeat(300))],
       hostUntagged: [failure(3, "z".repeat(1000))],
+      controlOnly: [failure(4, "w".repeat(301))],
     });
     expect(v.untagged[0].message).toBe("x".repeat(300));
     expect(v.untagged[1].message).toBe("y".repeat(300));
     expect(v.hostUntagged[0].message).toBe("z".repeat(300));
+    expect(v.controlOnly[0].message).toBe("w".repeat(300));
   });
 
   it("is written to artifacts/native-suite-<leg>.json by writeVerdict", () => {

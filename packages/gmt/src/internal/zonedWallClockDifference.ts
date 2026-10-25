@@ -10,6 +10,7 @@ import {
   calendarDateUntil as compatCalendarDateUntil,
   isCalendarArithmeticCompatNeeded,
   isNudgeWindowCompatNeeded,
+  timeZoneEquals,
 } from "./temporalCompat";
 import {
   epochNanosecondsFor,
@@ -1529,8 +1530,9 @@ const CALENDAR_DIFFERENCE_UNITS: ReadonlySet<string> = new Set([
 /**
  * Whether Temporal's DifferenceTemporalZonedDateTime would reject `largestUnit` for this pair: a
  * calendar unit (day or larger) between two different time zones (TimeZoneEquals is false), because
- * "day lengths can vary between time zones due to DST". `ZonedDateTime#equals` applies TC39
- * TimeZoneEquals, so `UTC` equals `Etc/UTC` and `Asia/Calcutta` equals `Asia/Kolkata`.
+ * "day lengths can vary between time zones due to DST". TimeZoneEquals compares primary
+ * identifiers, so `UTC` equals `Etc/UTC` and `Asia/Calcutta` equals `Asia/Kolkata`
+ * (`timeZoneEquals`, temporalCompat D19).
  *
  * @param one the start
  * @param two the end
@@ -1543,9 +1545,7 @@ export function isCalendarDifferenceAcrossZones(
   largestUnit: string,
 ): boolean {
   if (!CALENDAR_DIFFERENCE_UNITS.has(largestUnit)) return false;
-  return !new Temporal.ZonedDateTime(0n, one.timeZoneId).equals(
-    new Temporal.ZonedDateTime(0n, two.timeZoneId),
-  );
+  return !timeZoneEquals(one, two);
 }
 
 /**
