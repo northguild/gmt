@@ -17,7 +17,8 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const GMT_DIR = join(ROOT, "packages/gmt");
-export const COMPAT_README = "packages/gmt/src/internal/temporalCompat/README.md";
+export const COMPAT_README =
+  "packages/gmt/src/internal/temporalCompat/README.md";
 
 /**
  * The JavaScript engine each native-suite leg runs on, as a group's `engines` names it. Node and
@@ -203,6 +204,20 @@ export const WORKAROUNDS = [
       "Delete the dayPeriods branch of rangeWithRepairedParts and its gate in zoned/format/formatZonedRange.ts, isRangeDayPeriodCompatNeeded in capabilities.ts and its export in index.ts, and the D17 repros.",
       "Keep every formatZonedRange row and the D17 rows of internal/repairRangeParts.test.ts: the values are the requested forms and hold either way. Delete repairRangeParts only with the last of D16 and D17.",
       `Full wording: ${COMPAT_README} § Removal steps 17.`,
+    ],
+  },
+  {
+    defects: ["D18"],
+    // JavaScriptCore only: on any other engine the probes pass because the defect is not there.
+    engines: ["webkit"],
+    title:
+      "D18 — Islamic calendar dates before the Hijra read as positive years in a second era (WebKit)",
+    trigger:
+      "the weekly run's compat check in WebKit (the temporal-compat-webkit verdict) reports D18 removable: every D18 repro passes in the WebKit the native suite runs, once a js-temporal release reads the Islamic eras or WebKit prints the year as V8 does. WebKit is the only engine in D18's scope; this check runs on Node, where D18 is out of scope and never removable",
+    steps: [
+      "Delete islamicEra.ts, fixedMonthArithmetic.ts and their tests, islamicFields, polyfillMisreadsIslamicEra and polyfillCannotReturn in calendarFields.ts, the D18 branch and term in calendarDateFromFields.ts, fixedMonthsIfPolyfillCannotReturn in readArithmeticModel.ts, reachesPolyfillLimit and lowestYearOfSum in calendarDateArithmetic.ts, fixedMonthsPerYearOf in largeMonthSpan.ts, and the D18 repros.",
+      "Keep every Islamic row of diffDateAsDuration.edges.test.ts and addDate.edges.test.ts: the values are the spec's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 18.`,
     ],
   },
   {

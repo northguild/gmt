@@ -194,6 +194,14 @@ function monthsBetweenYearStarts(
   return wholeMonths(daysBetween(start, end), profile.meanMonthDays);
 }
 
+/**
+ * Months in every year of `calendarId`, read from the runtime, or undefined for a calendar with
+ * leap months. Measuring it asks the polyfill about a modern year only.
+ */
+export function fixedMonthsPerYearOf(calendarId: string): number | undefined {
+  return profileOf(calendarId).fixedMonthsPerYear;
+}
+
 /** True when an amount of months is large enough for the year jumps. */
 export function isLargeMonthSpan(months: number): boolean {
   return Math.abs(months) >= LARGE_MONTH_SPAN;

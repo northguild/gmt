@@ -15,12 +15,12 @@ Nothing checks that today. Every test runs on the polyfill. The weekly oracle (`
 1. **Node leg.** A Vitest configuration that points CORE-80's Temporal seam at `globalThis.Temporal` and runs the whole `packages/gmt` suite on Node 26.
 2. **Browser legs.** The same suite in Chromium, Firefox and WebKit through Vitest browser mode with the Playwright provider, on each browser's own `Temporal`, one matrix leg each. The oracle job already installs Playwright's Chromium; these legs add Firefox and WebKit. Each browser leg first runs the `pnpm compat` probes in that browser (`scripts/lib/native-suite-compat.mjs`) and writes a `temporal-compat-<leg>` verdict, so a workaround scoped to one engine (D17, Firefox) is reported removable by that engine alone.
 3. **Weekly job.** A job in `temporal-oracle.yml`, on the weekly schedule and on `workflow_dispatch`, never on pull requests. It writes a verdict file under `artifacts/` in CORE-81's shape (`{ source, status: "ran" | "could-not-run", … }`).
-4. **New canary sources, one per leg.** CORE-81's reporter knows only its own three sources, so this story adds `native-suite-node`, `native-suite-chromium` and `native-suite-firefox`:
+4. **New canary sources, one per leg.** CORE-81's reporter knows only its own three sources, so this story adds `native-suite-node`, `native-suite-chromium`, `native-suite-firefox` and `native-suite-webkit`:
    - its verdict builder and file in `scripts/lib/canary-verdict.mjs`;
    - the source in the `temporal-oracle` entry of `WORKFLOW_SOURCES`, so a leg that writes no verdict is listed in the workflow's could-not-run issue;
    - a finding builder in `scripts/lib/canary-issues.mjs`, with its marker key;
    - a `force_*` dispatch input for the dry run, read only through `env:` like the existing ones.
-5. **Upstream page.** The Dox upstream page names the three runtimes the suite runs on and links to the workflow's runs; each run's job summary names the engine versions. No new page and no new data file: a divergence reaches an issue, not the page.
+5. **Upstream page.** The Dox upstream page names the four runtimes the suite runs on and links to the workflow's runs; each run's job summary names the engine versions. No new page and no new data file: a divergence reaches an issue, not the page.
 6. **Triage.** A divergence is one of three things, and each is closed in the story that finds it: a GMT defect, fixed; a polyfill defect, recorded in [js-temporal-polyfill-bugs.md](../js-temporal-polyfill-bugs.md) with its upstream link; an engine defect, recorded the same way with the engine's bug link. No test is skipped to make a leg green.
 
 ## Tool
@@ -39,7 +39,7 @@ None. The story adds no public function. The existing upstream page names the ru
 
 - CORE-80 — the single internal module every `Temporal` import goes through
 - CORE-81 — the verdict files, the reporter (`scripts/canary-report.mjs`, `scripts/lib/canary-issues.mjs`, `scripts/lib/canary-verdict.mjs`) and the `report` job in `temporal-oracle.yml`
-- `scripts/lib/native-suite-tags.mjs` — exports `KNOWN_NATIVE_FAILURES` (24 rows: 10 for record L, icu4x#8620; 3 for record M, boa-dev/temporal#529; 11 for record P, Bugzilla 1998020, Firefox only) and `KNOWN_HOST_FAILURES` (the `is-IS` group; and the `browser-zone-city-names`, `browser-canada-2026-tz-data` and `browser-morocco-2026-tz-data` groups for the browser legs)
+- `scripts/lib/native-suite-tags.mjs` — exports `KNOWN_NATIVE_FAILURES` (31 rows: 10 for record L, icu4x#8620; 3 for record M, boa-dev/temporal#529; 11 for record P, Bugzilla 1998020, Firefox only; 6 for record S and 1 for record T, WebKit only, not yet filed) and `KNOWN_HOST_FAILURES` (the `is-IS` group; the `browser-zone-city-names`, `browser-canada-2026-tz-data` and `browser-morocco-2026-tz-data` groups for the browser legs; and the `webkit-linux-tz-data`, `webkit-legacy-zone-ids`, `webkit-ar-sa-islamic-default-calendar` and `webkit-linux-icu74-locale-data` groups for the WebKit leg)
 - `scripts/native-suite.mjs <leg>` — a two-pass control/native runner with the `shimProblems` preflight; a browser pass runs as eight Vitest shards, each in a fresh browser, because a browser holds what it fetched for every test file until it exits and the whole suite in one browser outgrows a GitHub runner
 - `packages/gmt/src/test/nativeTemporal.ts` — the test-clock shim: the host's `Temporal` with `Now` derived from `Date.now()`
 - `artifacts/native-suite-<leg>.json` — the verdict, source `native-suite-<leg>`, in the canary framework (CORE-81's reporter)
@@ -49,7 +49,7 @@ None. The story adds no public function. The existing upstream page names the ru
 - A `workflow_dispatch` run is green on Node 26, Chromium, Firefox and WebKit, and its job summary names each engine version.
 - A dry run with one forced failure opens one `[dry run]` issue through CORE-81's path; a second dry run comments on it.
 - A runtime that cannot start writes `could-not-run`, which files CORE-81's could-not-run issue.
-- The upstream page names the three runtimes and links to the workflow's runs.
+- The upstream page names the four runtimes and links to the workflow's runs.
 - `pnpm run validate` stays green and takes no longer than before.
 
 ## Decisions
@@ -58,7 +58,7 @@ Stated as current rules. Where each rule is enforced is named beside it.
 
 **What runs**
 
-- The whole `packages/gmt` suite runs unchanged in what it asserts on Node 26 (V8), Chromium (V8) and Firefox (SpiderMonkey), weekly and on dispatch, never on pull requests. The polyfill stays the engine CI and the published package use. Browser legs use Vitest browser mode with `@vitest/browser-playwright`.
+- The whole `packages/gmt` suite runs unchanged in what it asserts on Node 26 (V8), Chromium (V8), Firefox (SpiderMonkey) and WebKit (JavaScriptCore), weekly and on dispatch, never on pull requests. The polyfill stays the engine CI and the published package use. Browser legs use Vitest browser mode with `@vitest/browser-playwright`.
 - Native `Temporal.Now` reads the host clock, so `vi.setSystemTime` cannot reach it. The native legs alias `@js-temporal/polyfill` to `packages/gmt/src/test/nativeTemporal.ts`, which derives `Now` from `Date.now()` by the polyfill's carried sub-millisecond rule. Expected values stay polyfill-derived; every other `Temporal` behaviour is the engine's.
 - About 45 test files were made portable so the same suite loads in a browser: spies use `vi.mock(path, { spy: true })`, and host file reads, deep equality and bounded child processes sit behind modules with a browser twin (a time-limited Worker that starts its timeout only after GMT has loaded).
 - ICU data is the same per runtime, not across runtimes. Expected values were recorded on Node's full ICU, so a browser with less locale data fails those rows on any engine.
@@ -76,6 +76,9 @@ Stated as current rules. Where each rule is enforced is named beside it.
 - Three tests fail because `[u-ca=islamic]` is accepted: record M, boa-dev/temporal#529. `islamic` is not a Temporal calendar (Intl Era and Month Code proposal, CreateDateTimeFormat step 9; test262 `intl402/Temporal/PlainDate/from/islamic.js`).
 - Record N covers the day-rounding defect below. Records K, L and M were not used for this story because K was already taken.
 - Each Firefox failure gets three questions in order: does it also fail on the polyfill in Firefox (host group), does the spec disagree with GMT (fix it now), otherwise an engine defect (record it). Firefox 155 gave 11 engine rows (record P) and the shared browser host groups, and the one GMT fix, `formatZonedRange` (D16, D17).
+- WebKit's control pass (the polyfill in WebKit) hung on `diffDateAsDuration` over the Islamic minimum date: WebKit prints a date before the Hijra as a positive year in a second era and polyfill 0.5.1 reads the year as printed, so a month count across the epoch never finished (record R). GMT corrects the read and answers such years itself as temporalCompat workaround D18, scoped to WebKit like D17; a patch changeset ships it.
+- WebKit's native pass gives 7 engine rows: six where JavaScriptCore adds a year to Dhu al-Hijjah 30 of a year before the Hijra as 13 months (record S) and one where it throws adding a year to the last day of Chaitra in a far-past Indian year (record T). Both are open for filing on bugs.webkit.org. GMT on the polyfill is right in both cases, so neither gets a workaround.
+- WebKit's host failures are the Canada and Morocco 2026 data groups it shares with Chromium and Firefox, and four groups of its own: Playwright's Linux WebKit takes time zone and locale data from the runner's `libicu74` (tz before 2023d and 2024b: Asia/Manila in 1844 and 1899, Antarctica/Casey in 2021; CLDR 44 strings for he-IL, en-GB, ru-RU, pt-PT, is-IS, ko-KR, zh-TW and en-US), refuses the tzdb legacy zone ids (CET, EST5EDT and six more), and formats ar-SA in islamic-umalqura by default. The control pass alone (the polyfill in WebKit) also returns `null` from `diffZoned` and `intervalLengthZoned` for `UTC` against `Etc/UTC` and `Asia/Calcutta` against `Asia/Kolkata`; the leg does not count a control-only failure, and #378 tracks it.
 
 **GMT defects found**
 
