@@ -137,7 +137,7 @@ describe("addOperatingTime", () => {
       ${"2024-03-09T16:00:00Z"} | ${"reject"}    | ${""}
       ${"2024-03-10T08:00:00Z"} | ${"reject"}    | ${"2024-03-11T14:00:00Z"}
     `(
-      "returns $expected from $start under $disambiguation",
+      "returns '$expected' from $start under $disambiguation",
       ({ start, disambiguation, expected }) => {
         expect(addOperatingTime(start, "PT1H", gap, { disambiguation })).toBe(
           expected,
@@ -211,7 +211,7 @@ describe("addOperatingTime across a skipped local midnight", () => {
     ${"PT1H45M"} | ${"reject"}    | ${""}
     ${"PT1H30M"} | ${"reject"}    | ${"2024-04-25T21:30:00Z"}
   `(
-    "returns $expected for $duration under $disambiguation",
+    "returns '$expected' for $duration under $disambiguation",
     ({ duration, disambiguation, expected }) => {
       expect(
         addOperatingTime("2024-04-25T20:00:00Z", duration, cairo, {
@@ -233,7 +233,7 @@ describe("addOperatingTime at the search cap", () => {
     ${"2051-11-01"} | ${[{ from: "23:00", to: "00:00" }]} | ${""}
     ${"2051-11-02"} | ${[{ from: "00:00", to: "01:00" }]} | ${""}
   `(
-    "returns $expected for one open hour on $date under a 30-year horizon",
+    "returns '$expected' for one open hour on $date under a 30-year horizon",
     ({ date, windows, expected }) => {
       expect(
         addOperatingTime(

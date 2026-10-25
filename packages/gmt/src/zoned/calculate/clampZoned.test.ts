@@ -65,7 +65,7 @@ describe("clampZoned", () => {
       ${"2024-02-01T12:00:00[America/New_York]"} | ${"2024-03-01T00:00:00[America/New_York]"} | ${"2024-03-01T00:00:00[America/New_York]"} | ${"2024-03-01T00:00:00-05:00[America/New_York]"}
       ${"2024-04-01T12:00:00[America/New_York]"} | ${"2024-03-01T00:00:00[America/New_York]"} | ${"2024-03-01T00:00:00[America/New_York]"} | ${"2024-03-01T00:00:00-05:00[America/New_York]"}
     `(
-      "returns $expected when min equals max ($min)",
+      "returns $expected when min equals max ($min) for value $value",
       ({ value, min, max, expected }) => {
         expect(clampZoned(value, min, max)).toBe(expected);
       },
@@ -94,7 +94,7 @@ describe("clampZoned", () => {
       ${"2024-01-01T12:00:00[America/New_York]"} | ${"2024-12-31T00:00:00[America/New_York]"} | ${"2024-01-01T00:00:00[America/New_York]"} | ${""}
       ${"2025-01-01T12:00:00[America/New_York]"} | ${"2024-12-31T00:00:00[America/New_York]"} | ${"2024-01-01T00:00:00[America/New_York]"} | ${""}
     `(
-      'returns "" when min > max (min=$min, max=$max)',
+      "returns '' when min > max (min=$min, max=$max) for value $value",
       ({ value, min, max, expected }) => {
         expect(clampZoned(value, min, max)).toBe(expected);
       },
@@ -161,7 +161,7 @@ describe("clampZoned", () => {
       ${"2024-03-15T12:00:00[America/New_York]"} | ${"invalid"}                               | ${"2024-03-01T00:00:00[America/New_York]"} | ${""}
       ${"2024-03-15T12:00:00[America/New_York]"} | ${"2024-03-31T00:00:00[America/New_York]"} | ${"invalid"}                               | ${""}
     `(
-      'returns "" when one bound is invalid even if min > max',
+      "returns '' when one bound is invalid even if min > max (min=$min, max=$max)",
       ({ value, min, max, expected }) => {
         expect(clampZoned(value, min, max)).toBe(expected);
       },

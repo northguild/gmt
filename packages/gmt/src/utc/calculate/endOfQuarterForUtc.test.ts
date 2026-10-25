@@ -16,18 +16,15 @@ describe("endOfQuarterForUtc", () => {
   });
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-02-29T12:00:00"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns empty string for invalid value $invalidValue",
-    ({ invalidValue }) => {
-      expect(endOfQuarterForUtc(invalidValue as never)).toBe("");
-    },
-  );
+    invalidValue             | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-02-29T12:00:00"} | ${"'2024-02-29T12:00:00'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+  `("returns empty string for invalid value $label", ({ invalidValue }) => {
+    expect(endOfQuarterForUtc(invalidValue as never)).toBe("");
+  });
 
   it("returns empty string when Temporal.Instant.from throws", () => {
     mockTemporalInstantFromThrow();

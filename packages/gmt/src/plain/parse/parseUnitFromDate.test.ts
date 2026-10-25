@@ -26,27 +26,24 @@ describe("parseUnitFromDate", () => {
   );
 
   it.each`
-    invalidValue
-    ${"not-a-date"}
-    ${"2024-02-30"}
-    ${"2024-02-29T12:00:00"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns an empty string for invalid date $invalidValue",
-    ({ invalidValue }) => {
-      expect(parseUnitFromDate(invalidValue as never, "year")).toBe("");
-    },
-  );
+    invalidValue             | label
+    ${"not-a-date"}          | ${"'not-a-date'"}
+    ${"2024-02-30"}          | ${"'2024-02-30'"}
+    ${"2024-02-29T12:00:00"} | ${"'2024-02-29T12:00:00'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+  `("returns an empty string for invalid date $label", ({ invalidValue }) => {
+    expect(parseUnitFromDate(invalidValue as never, "year")).toBe("");
+  });
 
   it.each`
-    unit         | expected
-    ${"hour"}    | ${""}
-    ${""}        | ${""}
-    ${null}      | ${""}
-    ${undefined} | ${""}
-  `("returns an empty string for invalid unit $unit", ({ unit, expected }) => {
+    unit         | expected | label
+    ${"hour"}    | ${""}    | ${"'hour'"}
+    ${""}        | ${""}    | ${"''"}
+    ${null}      | ${""}    | ${"null"}
+    ${undefined} | ${""}    | ${"undefined"}
+  `("returns an empty string for invalid unit $label", ({ unit, expected }) => {
     expect(parseUnitFromDate("2024-02-29", unit as never)).toBe(expected);
   });
 
@@ -70,21 +67,21 @@ describe("parseUnitFromDate", () => {
   // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
   // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
   it.each`
-    unit      | weekStartsOn
-    ${"week"} | ${"tuesday"}
-    ${"week"} | ${"Monday"}
-    ${"week"} | ${""}
-    ${"week"} | ${null}
-    ${"week"} | ${1}
-    ${"week"} | ${true}
-    ${"day"}  | ${"tuesday"}
-    ${"day"}  | ${"Monday"}
-    ${"day"}  | ${""}
-    ${"day"}  | ${null}
-    ${"day"}  | ${1}
-    ${"day"}  | ${true}
+    unit      | weekStartsOn | label
+    ${"week"} | ${"tuesday"} | ${"'tuesday'"}
+    ${"week"} | ${"Monday"}  | ${"'Monday'"}
+    ${"week"} | ${""}        | ${"''"}
+    ${"week"} | ${null}      | ${"null"}
+    ${"week"} | ${1}         | ${"1"}
+    ${"week"} | ${true}      | ${"true"}
+    ${"day"}  | ${"tuesday"} | ${"'tuesday'"}
+    ${"day"}  | ${"Monday"}  | ${"'Monday'"}
+    ${"day"}  | ${""}        | ${"''"}
+    ${"day"}  | ${null}      | ${"null"}
+    ${"day"}  | ${1}         | ${"1"}
+    ${"day"}  | ${true}      | ${"true"}
   `(
-    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    "returns an empty string for unit $unit with invalid weekStartsOn $label",
     ({ unit, weekStartsOn }) => {
       expect(parseUnitFromDate("2024-03-15", unit, { weekStartsOn })).toBe("");
     },

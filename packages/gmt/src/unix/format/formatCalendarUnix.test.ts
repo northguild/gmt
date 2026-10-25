@@ -212,11 +212,11 @@ describe("formatCalendarUnix", () => {
 
     // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
     it.each`
-      timeZone
-      ${"Not/AZone"}
-      ${""}
-      ${null}
-    `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
+      timeZone       | timeZoneLabel
+      ${"Not/AZone"} | ${"'Not/AZone'"}
+      ${""}          | ${"''"}
+      ${null}        | ${"null"}
+    `("returns '' for invalid timeZone $timeZoneLabel", ({ timeZone }) => {
       expect(
         formatCalendarUnix(VAL_MS, MustTestLocales.enUS, {
           reference: REF_MS,
@@ -243,15 +243,15 @@ describe("formatCalendarUnix", () => {
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {
     it.each`
-      value
-      ${""}
-      ${"not-a-number"}
-      ${"12.5"}
-      ${null}
-      ${undefined}
-      ${true}
-      ${Number.NaN}
-    `("returns '' for invalid value $value", ({ value }) => {
+      value             | valueLabel
+      ${""}             | ${"''"}
+      ${"not-a-number"} | ${"'not-a-number'"}
+      ${"12.5"}         | ${"'12.5'"}
+      ${null}           | ${"null"}
+      ${undefined}      | ${"undefined"}
+      ${true}           | ${"true"}
+      ${Number.NaN}     | ${"NaN"}
+    `("returns '' for invalid value $valueLabel", ({ value }) => {
       expect(formatCalendarUnix(value as never, MustTestLocales.enUS)).toBe("");
     });
 
@@ -279,13 +279,13 @@ describe("formatCalendarUnix with an unrecognised epochUnit", () => {
   // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
-    epochUnit
-    ${"nanoseconds"}
-    ${"SECONDS"}
-    ${"ms"}
-    ${""}
-    ${1000}
-  `('returns "" for epochUnit $epochUnit', ({ epochUnit }) => {
+    epochUnit        | epochUnitLabel
+    ${"nanoseconds"} | ${"'nanoseconds'"}
+    ${"SECONDS"}     | ${"'SECONDS'"}
+    ${"ms"}          | ${"'ms'"}
+    ${""}            | ${"''"}
+    ${1000}          | ${"1000"}
+  `('returns "" for epochUnit $epochUnitLabel', ({ epochUnit }) => {
     expect(
       formatCalendarUnix(1_706_659_200, "en-US", {
         epochUnit: epochUnit as never,
@@ -334,7 +334,7 @@ describe("formatCalendarUnix with a locale list", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"demain à 18:30"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatCalendarUnix(VAL_MS, locale as string[], { reference: REF_MS }),
     ).toBe(expected);

@@ -5,14 +5,14 @@ import { getDstTransitions } from ".";
 
 describe("getDstTransitions", () => {
   it.each`
-    timeZone
-    ${"Not/AZone"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-  `("returns [] for invalid timeZone $timeZone", ({ timeZone }) => {
+    timeZone       | label
+    ${"Not/AZone"} | ${"'Not/AZone'"}
+    ${""}          | ${"''"}
+    ${null}        | ${"null"}
+    ${undefined}   | ${"undefined"}
+    ${123}         | ${"123"}
+    ${true}        | ${"true"}
+  `("returns [] for invalid timeZone $label", ({ timeZone }) => {
     expect(getDstTransitions(timeZone as never, 2024)).toEqual([]);
   });
 

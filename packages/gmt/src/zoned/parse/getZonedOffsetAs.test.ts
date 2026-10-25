@@ -17,27 +17,24 @@ describe("getZonedOffsetAs", () => {
   });
 
   it.each`
-    invalidValue
-    ${"2024-02-29T14:30:45.123-04:00"}
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns null for invalid zoned datetime $invalidValue",
-    ({ invalidValue }) => {
-      expect(getZonedOffsetAs(invalidValue as never, "minutes")).toBe(null);
-    },
-  );
+    invalidValue                       | label
+    ${"2024-02-29T14:30:45.123-04:00"} | ${"'2024-02-29T14:30:45.123-04:00'"}
+    ${"invalid"}                       | ${"'invalid'"}
+    ${""}                              | ${"''"}
+    ${null}                            | ${"null"}
+    ${undefined}                       | ${"undefined"}
+  `("returns null for invalid zoned datetime $label", ({ invalidValue }) => {
+    expect(getZonedOffsetAs(invalidValue as never, "minutes")).toBe(null);
+  });
 
   it.each`
-    unit
-    ${"fortnights"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-  `("returns null for invalid unit $unit", ({ unit }) => {
+    unit            | label
+    ${"fortnights"} | ${"'fortnights'"}
+    ${""}           | ${"''"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
+    ${123}          | ${"123"}
+  `("returns null for invalid unit $label", ({ unit }) => {
     expect(
       getZonedOffsetAs("2024-02-29T12:00:00+00:00[UTC]", unit as never),
     ).toBe(null);

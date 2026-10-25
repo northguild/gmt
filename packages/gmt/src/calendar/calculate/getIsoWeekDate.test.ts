@@ -71,7 +71,7 @@ describe("getIsoWeekDate", () => {
     ${"2024-12-31T23:59:60"}     | ${"a leap second"}
     ${"2024-06"}                 | ${"a year-month with no day"}
     ${"5784-01-01[u-ca=hebrew]"} | ${"a calendar-annotated date"}
-  `("returns null when $value is $description", ({ value }) => {
+  `("returns null when '$value' is $description", ({ value }) => {
     expect(getIsoWeekDate(value)).toBeNull();
   });
 

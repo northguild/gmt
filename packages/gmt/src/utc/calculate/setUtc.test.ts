@@ -29,14 +29,14 @@ describe("setUtc", () => {
   });
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-03-10T12:00:00"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidValue             | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-03-10T12:00:00"} | ${"'2024-03-10T12:00:00'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
   `(
-    "returns an empty string for an invalid UTC datetime $invalidValue",
+    "returns an empty string for an invalid UTC datetime $label",
     ({ invalidValue }) => {
       expect(setUtc(invalidValue as never, { hour: 9 })).toBe("");
     },
@@ -48,7 +48,7 @@ describe("setUtc", () => {
     ${"2024-01-31T12:00:00Z"} | ${{ month: 2 }} | ${"constrain"} | ${"2024-02-29T12:00:00Z"}
     ${"2024-01-31T12:00:00Z"} | ${{ month: 2 }} | ${"reject"}    | ${""}
   `(
-    "returns $expected for $value with fields $fields and overflow $overflow",
+    "returns '$expected' for $value with fields $fields and overflow $overflow",
     ({ value, fields, overflow, expected }) => {
       expect(
         setUtc(

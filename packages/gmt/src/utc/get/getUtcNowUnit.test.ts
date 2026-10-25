@@ -34,12 +34,12 @@ describe("getUtcNowUnit", () => {
   });
 
   it.each`
-    invalidUnit
-    ${""}
-    ${null}
-    ${undefined}
-    ${"invalid"}
-  `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit  | label
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${"invalid"} | ${"'invalid'"}
+  `("returns empty string for invalid unit $label", ({ invalidUnit }) => {
     expect(getUtcNowUnit(invalidUnit as never)).toBe("");
   });
 

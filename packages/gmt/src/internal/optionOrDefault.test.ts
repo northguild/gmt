@@ -12,7 +12,7 @@ describe("optionOrDefault", () => {
     ${0}         | ${9}            | ${0}            | ${"0 is a value"}
     ${""}        | ${"long"}       | ${""}           | ${"an empty string is a value"}
   `(
-    "returns $expected for value $value with default $fallback ($why)",
+    "returns the option or its default ($why)",
     ({ value, fallback, expected }) => {
       expect(optionOrDefault(value, fallback)).toBe(expected);
     },

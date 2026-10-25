@@ -510,7 +510,7 @@ describe("parseDateTimeWithPattern", () => {
     ${[MustTestLocales.enUS, MustTestLocales.frFR]} | ${""}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
   `(
-    "returns $expected for a French month name with locale list $locale",
+    "returns '$expected' for a French month name with locale list $locale",
     ({ locale, expected }) => {
       expect(
         parseDateTimeWithPattern(

@@ -42,7 +42,7 @@ describe("isValidDateInterval", () => {
     ${"invalid"}    | ${"invalid"}    | ${false}
     ${""}           | ${""}           | ${false}
   `(
-    "returns false for malformed date: $start, $end",
+    "returns false for malformed date: '$start', '$end'",
     ({ start, end, expected }) => {
       expect(isValidDateInterval(start, end)).toBe(expected);
     },

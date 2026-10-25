@@ -26,7 +26,7 @@ describe("intervalIntersectionTime", () => {
     ${"09:00:00"} | ${"17:00:00"} | ${"17:00:00"} | ${"18:00:00"} | ${null}
     ${"17:00:00"} | ${"18:00:00"} | ${"09:00:00"} | ${"17:00:00"} | ${null}
   `(
-    "returns $expected for adjacent intervals",
+    "returns $expected for adjacent intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionTime(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,
@@ -39,7 +39,7 @@ describe("intervalIntersectionTime", () => {
     ${"09:00:00"} | ${"17:00:00"} | ${"18:00:00"} | ${"20:00:00"} | ${null}
     ${"18:00:00"} | ${"20:00:00"} | ${"09:00:00"} | ${"17:00:00"} | ${null}
   `(
-    "returns $expected for disjoint intervals",
+    "returns $expected for disjoint intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionTime(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -52,7 +52,7 @@ describe("intervalIntersectionTime", () => {
     ${"17:00:00"} | ${"09:00:00"} | ${"12:00:00"} | ${"18:00:00"} | ${null}
     ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${"11:00:00"} | ${null}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionTime(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -71,7 +71,7 @@ describe("intervalIntersectionTime", () => {
     ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${"invalid"}
     ${"09:00:00"} | ${"17:00:00"} | ${"12:00:00"} | ${""}
   `(
-    "returns null for malformed time: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for malformed time: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalIntersectionTime(aStart, aEnd, bStart, bEnd)).toBeNull();
     },

@@ -81,7 +81,7 @@ describe("intervalContainsUnix", () => {
     ${1700000000} | ${0}        | ${170000000} | ${1000000}   | ${false}
     ${1000}       | ${1000}     | ${1000}      | ${500}       | ${false}
   `(
-    "returns $expected for reversed outer interval",
+    "returns $expected for reversed outer interval [$intervalStart, $intervalEnd] containing [$pointOrStart, $pointEnd]",
     ({ intervalStart, intervalEnd, pointOrStart, pointEnd, expected }) => {
       expect(
         intervalContainsUnix(
@@ -99,7 +99,7 @@ describe("intervalContainsUnix", () => {
     ${0}          | ${1700000000} | ${1000000} | ${100000}  | ${false}
     ${0}          | ${1700000000} | ${2000000} | ${1000000} | ${false}
   `(
-    "returns $expected for reversed inner interval",
+    "returns $expected for reversed inner interval [$innerStart, $innerEnd] within [$intervalStart, $intervalEnd]",
     ({ intervalStart, intervalEnd, innerStart, innerEnd, expected }) => {
       expect(
         intervalContainsUnix(intervalStart, intervalEnd, innerStart, innerEnd),
@@ -166,7 +166,7 @@ describe("intervalContainsUnix", () => {
     ${1700000000} | ${1700000000} | ${"abc"}     | ${1000000}
     ${1700000000} | ${1700000000} | ${170000000} | ${"abc"}
   `(
-    "returns false for non-numeric 4-arg input",
+    "returns false for non-numeric 4-arg input: $intervalStart, $intervalEnd, $innerStart, $innerEnd",
     ({ intervalStart, intervalEnd, innerStart, innerEnd }) => {
       expect(
         intervalContainsUnix(
@@ -200,16 +200,16 @@ describe("intervalContainsUnix", () => {
 
   // Epoch values are whole units; fractions, unsafe integers and empty strings are invalid input.
   it.each`
-    intervalStart | intervalEnd | pointOrStart | pointEnd     | description
-    ${0}          | ${10}       | ${0.5}       | ${undefined} | ${"a fractional point"}
-    ${0}          | ${10.5}     | ${1}         | ${undefined} | ${"a fractional end"}
-    ${0}          | ${2 ** 53}  | ${1}         | ${undefined} | ${"an unsafe end"}
-    ${"0"}        | ${"10"}     | ${"1.5"}     | ${undefined} | ${"a fractional numeric string"}
-    ${""}         | ${"10"}     | ${"1"}       | ${undefined} | ${"an empty string, which Number() reads as 0"}
-    ${0}          | ${10}       | ${1}         | ${2.5}       | ${"a fractional inner end"}
-    ${0}          | ${10}       | ${1}         | ${""}        | ${"an empty inner end"}
+    intervalStart | intervalEnd | pointOrStart | pointEnd     | description                                     | intervalStartLabel | pointEndLabel
+    ${0}          | ${10}       | ${0.5}       | ${undefined} | ${"a fractional point"}                         | ${"0"}             | ${"undefined"}
+    ${0}          | ${10.5}     | ${1}         | ${undefined} | ${"a fractional end"}                           | ${"0"}             | ${"undefined"}
+    ${0}          | ${2 ** 53}  | ${1}         | ${undefined} | ${"an unsafe end"}                              | ${"0"}             | ${"undefined"}
+    ${"0"}        | ${"10"}     | ${"1.5"}     | ${undefined} | ${"a fractional numeric string"}                | ${"'0'"}           | ${"undefined"}
+    ${""}         | ${"10"}     | ${"1"}       | ${undefined} | ${"an empty string, which Number() reads as 0"} | ${"''"}            | ${"undefined"}
+    ${0}          | ${10}       | ${1}         | ${2.5}       | ${"a fractional inner end"}                     | ${"0"}             | ${"2.5"}
+    ${0}          | ${10}       | ${1}         | ${""}        | ${"an empty inner end"}                         | ${"0"}             | ${"''"}
   `(
-    "returns false for [$intervalStart, $intervalEnd] containing [$pointOrStart, $pointEnd] ($description)",
+    "returns false for [$intervalStartLabel, $intervalEnd] containing [$pointOrStart, $pointEndLabel] ($description)",
     ({ intervalStart, intervalEnd, pointOrStart, pointEnd }) => {
       expect(
         intervalContainsUnix(

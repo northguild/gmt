@@ -311,20 +311,20 @@ describe("formatRelativeUtc", () => {
     // returns the sentinel (Core Rule 3), including the name of another Math function, an
     // inherited Object.prototype key, another letter case and null.
     it.each`
-      roundingMethod
-      ${"nonsense"}
-      ${"abs"}
-      ${"trunc"}
-      ${"sign"}
-      ${"random"}
-      ${"constructor"}
-      ${"hasOwnProperty"}
-      ${"toString"}
-      ${"ROUND"}
-      ${""}
-      ${null}
+      roundingMethod      | label
+      ${"nonsense"}       | ${"'nonsense'"}
+      ${"abs"}            | ${"'abs'"}
+      ${"trunc"}          | ${"'trunc'"}
+      ${"sign"}           | ${"'sign'"}
+      ${"random"}         | ${"'random'"}
+      ${"constructor"}    | ${"'constructor'"}
+      ${"hasOwnProperty"} | ${"'hasOwnProperty'"}
+      ${"toString"}       | ${"'toString'"}
+      ${"ROUND"}          | ${"'ROUND'"}
+      ${""}               | ${"''"}
+      ${null}             | ${"null"}
     `(
-      "returns '' for the invalid roundingMethod $roundingMethod",
+      "returns '' for the invalid roundingMethod $label",
       ({ roundingMethod }) => {
         expect(
           formatRelativeUtc("2024-03-15T09:42:00Z", MustTestLocales.enUS, {
@@ -388,11 +388,11 @@ describe("formatRelativeUtc", () => {
 
     // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
     it.each`
-      timeZone
-      ${"Invalid/Zone"}
-      ${""}
-      ${null}
-    `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
+      timeZone          | label
+      ${"Invalid/Zone"} | ${"'Invalid/Zone'"}
+      ${""}             | ${"''"}
+      ${null}           | ${"null"}
+    `("returns '' for invalid timeZone $label", ({ timeZone }) => {
       expect(
         formatRelativeUtc(value, MustTestLocales.enUS, {
           reference: REF,
@@ -451,17 +451,17 @@ describe("formatRelativeUtc", () => {
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {
     it.each`
-      value
-      ${""}
-      ${"not-a-date"}
-      ${"2024-13-01T00:00:00Z"}
-      ${"2024-02-30T00:00:00Z"}
-      ${"2024-12-31T23:59:60Z"}
-      ${null}
-      ${undefined}
-      ${42}
-      ${true}
-    `("returns '' for invalid value $value", ({ value }) => {
+      value                     | label
+      ${""}                     | ${"''"}
+      ${"not-a-date"}           | ${"'not-a-date'"}
+      ${"2024-13-01T00:00:00Z"} | ${"'2024-13-01T00:00:00Z'"}
+      ${"2024-02-30T00:00:00Z"} | ${"'2024-02-30T00:00:00Z'"}
+      ${"2024-12-31T23:59:60Z"} | ${"'2024-12-31T23:59:60Z'"}
+      ${null}                   | ${"null"}
+      ${undefined}              | ${"undefined"}
+      ${42}                     | ${"42"}
+      ${true}                   | ${"true"}
+    `("returns '' for invalid value $label", ({ value }) => {
       expect(formatRelativeUtc(value as never, MustTestLocales.enUS)).toBe("");
     });
 
@@ -523,7 +523,7 @@ describe("formatRelativeUtc months and years in the last month of the range", ()
     ${"UTC"}                | ${"month"}  | ${"floor"}     | ${"this month"}
     ${"Australia/Sydney"}   | ${"year"}   | ${"floor"}     | ${""}
   `(
-    "formats max - 5h against max - 31d in $timeZone by $largestUnit with $roundingMethod as $expected",
+    "formats max - 5h against max - 31d in $timeZone by $largestUnit with $roundingMethod as '$expected'",
     ({ timeZone, largestUnit, roundingMethod, expected }) => {
       // A year total's window ends past the maximum, so Temporal throws and the result is "".
       expect(
@@ -600,7 +600,7 @@ describe("formatRelativeUtc with a locale list", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"il y a 30 minutes"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatRelativeUtc("2024-03-15T11:30:00Z", locale as string[], {
         reference: REF,
@@ -683,7 +683,7 @@ describe("formatRelativeUtc largestUnit", () => {
     ${"auto"}                      | ${"auto"}                    | ${"not a unit of the function"}
     ${"DAY"}                       | ${"DAY"}                     | ${"unit names are lower case"}
     ${"Days"}                      | ${"Days"}                    | ${"unit names are lower case"}
-    ${""}                          | ${""}                        | ${"an empty string"}
+    ${"''"}                        | ${""}                        | ${"an empty string"}
     ${"x"}                         | ${"x"}                       | ${"not a unit"}
     ${"null"}                      | ${null}                      | ${"null is a value, not an omission"}
     ${"1"}                         | ${1}                         | ${"a number"}
@@ -691,7 +691,7 @@ describe("formatRelativeUtc largestUnit", () => {
     ${'["day"]'}                   | ${["day"]}                   | ${"an array, not a string"}
     ${'{ toString: () => "day" }'} | ${{ toString: () => "day" }} | ${"an object, not a string"}
   `(
-    'returns "" for largestUnit $label outside the listed units ($why)',
+    "returns '' for largestUnit $label outside the listed units ($why)",
     ({ largestUnit }) => {
       expect(
         formatRelativeUtc("2023-03-17T12:00:00Z", MustTestLocales.enUS, {

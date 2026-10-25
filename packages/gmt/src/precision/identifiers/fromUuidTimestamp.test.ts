@@ -58,7 +58,7 @@ describe("fromUuidTimestamp", () => {
     ${"c232ab00-9414-11ec-b3c8-9f6bdeced846 "}         | ${"trailing whitespace"}
     ${"c232ab00-9414-11ec-b3c8-9f6bdeced84g"}          | ${"non-hex digit"}
     ${""}                                              | ${"empty"}
-  `("returns an empty string for $uuid ($reason)", ({ uuid }) => {
+  `("returns an empty string for '$uuid' ($reason)", ({ uuid }) => {
     expect(fromUuidTimestamp(uuid)).toBe("");
   });
 

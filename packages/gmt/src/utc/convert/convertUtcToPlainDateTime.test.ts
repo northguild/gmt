@@ -24,12 +24,12 @@ describe("convertUtcToPlainDateTime", () => {
   );
 
   it.each`
-    value
-    ${"invalid"}
-    ${"2024-02-29T00:00:00"}
-    ${""}
-    ${null}
-  `("returns empty string for invalid value $value", ({ value }) => {
+    value                    | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-02-29T00:00:00"} | ${"'2024-02-29T00:00:00'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+  `("returns empty string for invalid value $label", ({ value }) => {
     expect(convertUtcToPlainDateTime(value as never)).toBe("");
   });
 });

@@ -219,15 +219,15 @@ describe("formatCalendarZoned", () => {
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {
     it.each`
-      value
-      ${""}
-      ${"not-a-date"}
-      ${"2024-03-16T14:30:00"}
-      ${null}
-      ${undefined}
-      ${42}
-      ${true}
-    `("returns '' for invalid value $value", ({ value }) => {
+      value                    | label
+      ${""}                    | ${"''"}
+      ${"not-a-date"}          | ${"'not-a-date'"}
+      ${"2024-03-16T14:30:00"} | ${"'2024-03-16T14:30:00'"}
+      ${null}                  | ${"null"}
+      ${undefined}             | ${"undefined"}
+      ${42}                    | ${"42"}
+      ${true}                  | ${"true"}
+    `("returns '' for invalid value $label", ({ value }) => {
       expect(formatCalendarZoned(value as never, MustTestLocales.enUS)).toBe(
         "",
       );
@@ -256,7 +256,7 @@ describe("formatCalendarZoned", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"demain à 14:30"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatCalendarZoned(
         "2024-03-16T14:30:00-04:00[America/New_York]",

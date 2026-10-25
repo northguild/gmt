@@ -25,7 +25,7 @@ describe("intervalXorDateTime", () => {
     ${"2024-12-31T17:00:00"} | ${"2024-01-01T09:00:00"} | ${"2024-06-01T12:00:00"} | ${"2024-07-01T13:00:00"} | ${[]}
     ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"} | ${"2024-06-15T12:00:00"} | ${"2024-06-10T12:00:00"} | ${[]}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalXorDateTime(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },
@@ -42,7 +42,7 @@ describe("intervalXorDateTime", () => {
     ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"} | ${"2024-07-01T13:00:00"} | ${"invalid"}
     ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"} | ${"2024-07-01T13:00:00"} | ${""}
   `(
-    "returns [] for malformed datetime: $aStart, $aEnd, $bStart, $bEnd",
+    "returns [] for malformed datetime: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalXorDateTime(aStart, aEnd, bStart, bEnd)).toEqual([]);
     },
@@ -54,7 +54,10 @@ describe("intervalXorDateTime", () => {
     ${"2024-01-01T09:00:00"} | ${undefined}             | ${"2024-07-01T13:00:00"} | ${"2024-12-31T17:00:00"}
     ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"} | ${null}                  | ${"2024-12-31T17:00:00"}
     ${"2024-01-01T09:00:00"} | ${"2024-06-30T12:00:00"} | ${"2024-07-01T13:00:00"} | ${undefined}
-  `("returns [] for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalXorDateTime(aStart, aEnd, bStart, bEnd)).toEqual([]);
-  });
+  `(
+    "returns [] for non-string input: A=$aStart to $aEnd, B=$bStart to $bEnd",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalXorDateTime(aStart, aEnd, bStart, bEnd)).toEqual([]);
+    },
+  );
 });

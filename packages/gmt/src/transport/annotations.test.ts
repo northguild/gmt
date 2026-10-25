@@ -113,7 +113,7 @@ describe("transport annotations (RFC 9557)", () => {
     ${"[UTC][u-ca=gregory]"} | ${""}                                         | ${true}         | ${"zone then non-ISO calendar: a zoned departure's calendar must be ISO"}
     ${"[Not/AZone]"}         | ${""}                                         | ${true}         | ${"zone that does not exist: only transitTime reads it"}
   `(
-    "reads $annotation on an instant consistently ($kind)",
+    "reads '$annotation' on an instant consistently ($kind)",
     ({ annotation, transit, instantAccepted }) => {
       const value = `${departure}${annotation}`;
 

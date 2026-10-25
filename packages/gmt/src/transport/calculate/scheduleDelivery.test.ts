@@ -603,16 +603,16 @@ describe("scheduleDelivery", () => {
 
   // The last leg's dwell is still validated as a duration, without computing an instant.
   it.each`
-    dwellAfter   | reason
-    ${"P1W"}     | ${"a week is a calendar unit"}
-    ${"P1M"}     | ${"a month is a calendar unit"}
-    ${"P1Y"}     | ${"a year is a calendar unit"}
-    ${"-PT1H"}   | ${"a negative dwell"}
-    ${"2 hours"} | ${"not an ISO 8601 duration"}
-    ${""}        | ${"an empty string"}
-    ${5}         | ${"not a string"}
+    dwellAfter   | reason                          | dwellLabel
+    ${"P1W"}     | ${"a week is a calendar unit"}  | ${"'P1W'"}
+    ${"P1M"}     | ${"a month is a calendar unit"} | ${"'P1M'"}
+    ${"P1Y"}     | ${"a year is a calendar unit"}  | ${"'P1Y'"}
+    ${"-PT1H"}   | ${"a negative dwell"}           | ${"'-PT1H'"}
+    ${"2 hours"} | ${"not an ISO 8601 duration"}   | ${"'2 hours'"}
+    ${""}        | ${"an empty string"}            | ${"''"}
+    ${5}         | ${"not a string"}               | ${"5"}
   `(
-    "returns the sentinel when the last leg's dwellAfter is $reason ($dwellAfter)",
+    "returns the sentinel when the last leg's dwellAfter is $reason ($dwellLabel)",
     ({ dwellAfter }) => {
       expect(
         scheduleDelivery([{ ...validLeg, duration: "PT1H", dwellAfter }]),

@@ -28,48 +28,48 @@ describe("subtractTime", () => {
   );
 
   it.each`
-    nonStringInput
-    ${"not-a-time"}
-    ${"2024-02-30T14:30:00"}
-    ${"2024-02-30T14:30:00Z"}
-    ${"2024-02-30"}
-    ${NaN}
-    ${null}
-    ${undefined}
-    ${true}
-    ${false}
-    ${""}
+    nonStringInput            | label
+    ${"not-a-time"}           | ${"'not-a-time'"}
+    ${"2024-02-30T14:30:00"}  | ${"'2024-02-30T14:30:00'"}
+    ${"2024-02-30T14:30:00Z"} | ${"'2024-02-30T14:30:00Z'"}
+    ${"2024-02-30"}           | ${"'2024-02-30'"}
+    ${NaN}                    | ${"NaN"}
+    ${null}                   | ${"null"}
+    ${undefined}              | ${"undefined"}
+    ${true}                   | ${"true"}
+    ${false}                  | ${"false"}
+    ${""}                     | ${"''"}
   `(
-    "returns an empty string for non-string input $nonStringInput",
+    "returns an empty string for non-string input $label",
     ({ nonStringInput }) => {
       expect(subtractTime(nonStringInput as never, { minutes: 30 })).toBe("");
     },
   );
 
   it.each`
-    invalidUnit
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidUnit  | label
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
   `(
-    "returns an empty string for an invalid unit: $invalidUnit",
+    "returns an empty string for an invalid unit: $label",
     ({ invalidUnit }) => {
       expect(subtractTime("14:30:00", { [invalidUnit as never]: 1 })).toBe("");
     },
   );
 
   it.each`
-    invalidAmount
-    ${"not-a-number"}
-    ${NaN}
-    ${null}
-    ${undefined}
-    ${true}
-    ${false}
-    ${""}
+    invalidAmount     | label
+    ${"not-a-number"} | ${"'not-a-number'"}
+    ${NaN}            | ${"NaN"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
+    ${true}           | ${"true"}
+    ${false}          | ${"false"}
+    ${""}             | ${"''"}
   `(
-    "returns an empty string for an invalid amount: $invalidAmount",
+    "returns an empty string for an invalid amount: $label",
     ({ invalidAmount }) => {
       expect(
         subtractTime("14:30:00", { minutes: invalidAmount } as never),

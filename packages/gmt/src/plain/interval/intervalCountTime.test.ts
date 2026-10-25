@@ -73,7 +73,7 @@ describe("intervalCountTime", () => {
     ${"12:00:00"} | ${"14:00:00"} | ${"month"}
     ${"12:00:00"} | ${"14:00:00"} | ${"year"}
   `(
-    "returns null for invalid $start, $end, or $unit",
+    "returns null for invalid '$start', '$end', or '$unit'",
     ({ start, end, unit }) => {
       expect(intervalCountTime(start, end, unit)).toBeNull();
     },

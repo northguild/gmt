@@ -89,7 +89,7 @@ describe("closestZonedTo", () => {
       ${""}                                      | ${["2024-03-01T00:00:00[America/New_York]"]} | ${""}
       ${"2024-02-30T12:00:00[America/New_York]"} | ${["2024-03-01T00:00:00[America/New_York]"]} | ${""}
     `(
-      "returns an empty string when target is invalid ($target)",
+      "returns an empty string when target is invalid ('$target')",
       ({ target, candidates, expected }) => {
         expect(closestZonedTo(target, candidates)).toBe(expected);
       },
@@ -98,11 +98,11 @@ describe("closestZonedTo", () => {
 
   describe("all-invalid candidates", () => {
     it.each`
-      target                                     | candidates                                              | expected
-      ${"2024-03-15T12:00:00[America/New_York]"} | ${["invalid", "2024-02-30T00:00:00[America/New_York]"]} | ${""}
-      ${"2024-03-15T12:00:00[America/New_York]"} | ${["", "not-a-date[America/New_York]"]}                 | ${""}
+      target                                     | candidates                                              | expected | label
+      ${"2024-03-15T12:00:00[America/New_York]"} | ${["invalid", "2024-02-30T00:00:00[America/New_York]"]} | ${""}    | ${"'invalid' and a 30 February date"}
+      ${"2024-03-15T12:00:00[America/New_York]"} | ${["", "not-a-date[America/New_York]"]}                 | ${""}    | ${"'' and a malformed zoned string"}
     `(
-      "returns an empty string when all candidates are invalid",
+      "returns an empty string when all candidates are invalid: $label",
       ({ target, candidates, expected }) => {
         expect(closestZonedTo(target, candidates)).toBe(expected);
       },
@@ -165,11 +165,11 @@ describe("closestZonedTo", () => {
 
   describe("duplicate candidates", () => {
     it.each`
-      target                                     | candidates                                                                                                                     | expected
-      ${"2024-03-15T12:00:00[America/New_York]"} | ${["2024-03-10T00:00:00[America/New_York]", "2024-03-10T00:00:00[America/New_York]", "2024-03-20T00:00:00[America/New_York]"]} | ${"2024-03-20T00:00:00-04:00[America/New_York]"}
-      ${"2024-03-15T12:00:00[America/New_York]"} | ${["2024-03-20T00:00:00[America/New_York]", "2024-03-20T00:00:00[America/New_York]"]}                                          | ${"2024-03-20T00:00:00-04:00[America/New_York]"}
+      target                                     | candidates                                                                                                                     | expected                                         | label
+      ${"2024-03-15T12:00:00[America/New_York]"} | ${["2024-03-10T00:00:00[America/New_York]", "2024-03-10T00:00:00[America/New_York]", "2024-03-20T00:00:00[America/New_York]"]} | ${"2024-03-20T00:00:00-04:00[America/New_York]"} | ${"the earlier date twice, then a later date"}
+      ${"2024-03-15T12:00:00[America/New_York]"} | ${["2024-03-20T00:00:00[America/New_York]", "2024-03-20T00:00:00[America/New_York]"]}                                          | ${"2024-03-20T00:00:00-04:00[America/New_York]"} | ${"the later date twice"}
     `(
-      "returns $expected when candidates contain duplicates",
+      "returns $expected when candidates contain duplicates: $label",
       ({ target, candidates, expected }) => {
         expect(closestZonedTo(target, candidates)).toBe(expected);
       },
@@ -178,11 +178,11 @@ describe("closestZonedTo", () => {
 
   describe("single valid among invalid", () => {
     it.each`
-      target                                     | candidates                                                              | expected
-      ${"2024-03-15T12:00:00[America/New_York]"} | ${["invalid", "2024-03-20T00:00:00[America/New_York]", "also invalid"]} | ${"2024-03-20T00:00:00-04:00[America/New_York]"}
-      ${"2024-03-15T12:00:00[America/New_York]"} | ${["2024-03-20T00:00:00[America/New_York]", "invalid", "invalid"]}      | ${"2024-03-20T00:00:00-04:00[America/New_York]"}
+      target                                     | candidates                                                              | expected                                         | label
+      ${"2024-03-15T12:00:00[America/New_York]"} | ${["invalid", "2024-03-20T00:00:00[America/New_York]", "also invalid"]} | ${"2024-03-20T00:00:00-04:00[America/New_York]"} | ${"the valid one is second of three"}
+      ${"2024-03-15T12:00:00[America/New_York]"} | ${["2024-03-20T00:00:00[America/New_York]", "invalid", "invalid"]}      | ${"2024-03-20T00:00:00-04:00[America/New_York]"} | ${"the valid one is first of three"}
     `(
-      "returns $expected when only one candidate is valid",
+      "returns $expected when only one candidate is valid: $label",
       ({ target, candidates, expected }) => {
         expect(closestZonedTo(target, candidates)).toBe(expected);
       },

@@ -180,16 +180,16 @@ describe("getHoursInZonedDay", () => {
 
   // Invalid input → null, per GMT's number-return sentinel convention.
   it.each`
-    value
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-    ${[]}
-    ${{}}
-  `("returns null for invalid input $value", ({ value }) => {
+    value        | label
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${123}       | ${"123"}
+    ${true}      | ${"true"}
+    ${[]}        | ${"[]"}
+    ${{}}        | ${"{}"}
+  `("returns null for invalid input $label", ({ value }) => {
     expect(getHoursInZonedDay(value as never)).toBeNull();
   });
 

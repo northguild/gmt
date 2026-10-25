@@ -330,30 +330,30 @@ describe("totalUnits", () => {
 
   // The two shapes stay separate: an ISO 8601 duration string goes to `totalDuration`.
   it.each`
-    units
-    ${"PT15M"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${15}
-    ${true}
-  `("returns null when units $units is not an object", ({ units }) => {
+    units        | label
+    ${"PT15M"}   | ${"'PT15M'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${15}        | ${"15"}
+    ${true}      | ${"true"}
+  `("returns null when units $label is not an object", ({ units }) => {
     expect(totalUnits(units, "seconds")).toBeNull();
   });
 
   it.each`
-    unit
-    ${"fortnights"}
-    ${"fortnight"}
-    ${"Seconds"}
-    ${"secondss"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-    ${[]}
-    ${{}}
-  `("returns null when unit $unit is not an exact unit name", ({ unit }) => {
+    unit            | label
+    ${"fortnights"} | ${"'fortnights'"}
+    ${"fortnight"}  | ${"'fortnight'"}
+    ${"Seconds"}    | ${"'Seconds'"}
+    ${"secondss"}   | ${"'secondss'"}
+    ${""}           | ${"''"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
+    ${123}          | ${"123"}
+    ${[]}           | ${"[]"}
+    ${{}}           | ${"{}"}
+  `("returns null when unit $label is not an exact unit name", ({ unit }) => {
     expect(totalUnits({ minutes: 15 }, unit)).toBeNull();
   });
 

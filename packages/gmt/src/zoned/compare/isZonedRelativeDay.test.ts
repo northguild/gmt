@@ -27,7 +27,7 @@ describe("isZonedRelativeDay", () => {
   );
 
   it.each(battleTestTimeZones)(
-    "returns true for $timeZone one day ahead at offsetDays 1",
+    "returns true for %s one day ahead at offsetDays 1",
     (timeZone) => {
       const tomorrow = Temporal.Now.zonedDateTimeISO(timeZone)
         .toPlainDate()
@@ -72,12 +72,12 @@ describe("isZonedRelativeDay", () => {
   );
 
   it.each`
-    value
-    ${""}
-    ${null}
-    ${undefined}
-    ${"not-a-zoned-datetime"}
-  `("returns false for invalid value $value", ({ value }) => {
+    value                     | label
+    ${""}                     | ${"''"}
+    ${null}                   | ${"null"}
+    ${undefined}              | ${"undefined"}
+    ${"not-a-zoned-datetime"} | ${"'not-a-zoned-datetime'"}
+  `("returns false for invalid value $label", ({ value }) => {
     expect(isZonedRelativeDay(value as never, 0)).toBe(false);
   });
 

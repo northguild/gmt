@@ -18,14 +18,14 @@ describe("parseDateFromZoned", () => {
   });
 
   it.each`
-    invalidValue
-    ${"2024-02-29T14:30:45.123-04:00"}
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidValue                       | label
+    ${"2024-02-29T14:30:45.123-04:00"} | ${"'2024-02-29T14:30:45.123-04:00'"}
+    ${"invalid"}                       | ${"'invalid'"}
+    ${""}                              | ${"''"}
+    ${null}                            | ${"null"}
+    ${undefined}                       | ${"undefined"}
   `(
-    "returns an empty string for invalid zoned datetime $invalidValue",
+    "returns an empty string for invalid zoned datetime $label",
     ({ invalidValue }) => {
       expect(parseDateFromZoned(invalidValue as never)).toBe("");
     },

@@ -55,14 +55,14 @@ describe("hasDaylightSaving", () => {
   );
 
   it.each`
-    timeZone
-    ${"Not/AZone"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-  `("returns false for invalid timeZone $timeZone", ({ timeZone }) => {
+    timeZone       | label
+    ${"Not/AZone"} | ${"'Not/AZone'"}
+    ${""}          | ${"''"}
+    ${null}        | ${"null"}
+    ${undefined}   | ${"undefined"}
+    ${123}         | ${"123"}
+    ${true}        | ${"true"}
+  `("returns false for invalid timeZone $label", ({ timeZone }) => {
     expect(hasDaylightSaving(timeZone as never)).toBe(false);
     expect(hasDaylightSaving(timeZone as never, { at: BATTLE_AT })).toBe(false);
   });
@@ -211,16 +211,16 @@ describe("hasDaylightSaving", () => {
   });
 
   it.each`
-    at
-    ${"2015-06-15"}
-    ${"2015-06-15T12:00:00"}
-    ${"2016-12-31T23:59:60Z"}
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${123}
-    ${true}
-  `("returns false for invalid at $at", ({ at }) => {
+    at                        | label
+    ${"2015-06-15"}           | ${"'2015-06-15'"}
+    ${"2015-06-15T12:00:00"}  | ${"'2015-06-15T12:00:00'"}
+    ${"2016-12-31T23:59:60Z"} | ${"'2016-12-31T23:59:60Z'"}
+    ${"invalid"}              | ${"'invalid'"}
+    ${""}                     | ${"''"}
+    ${null}                   | ${"null"}
+    ${123}                    | ${"123"}
+    ${true}                   | ${"true"}
+  `("returns false for invalid at $label", ({ at }) => {
     vi.useFakeTimers();
     vi.setSystemTime("2015-06-15T12:00:00.000Z");
     expect(hasDaylightSaving("Europe/Istanbul")).toBe(true);

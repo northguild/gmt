@@ -33,7 +33,7 @@ describe("regex/epcisTimeZoneOffset (JSON schema eventTimeZoneOffset)", () => {
     ${" +02:00"}   | ${false} | ${"leading whitespace"}
     ${"+02:00 "}   | ${false} | ${"trailing whitespace"}
     ${""}          | ${false} | ${"empty string"}
-  `("matches $value as $expected ($reason)", ({ value, expected }) => {
+  `("matches '$value' as $expected ($reason)", ({ value, expected }) => {
     expect(epcisTimeZoneOffset.test(value)).toBe(expected);
   });
 
@@ -81,7 +81,7 @@ describe("regex/epcisEventTime (XSD DateTimeStamp)", () => {
     ${" 2024-06-15T14:30:00Z"}           | ${false} | ${"leading whitespace"}
     ${"2024-06-15T14:30:00Z "}           | ${false} | ${"trailing whitespace"}
     ${""}                                | ${false} | ${"empty string"}
-  `("matches $value as $expected ($reason)", ({ value, expected }) => {
+  `("matches '$value' as $expected ($reason)", ({ value, expected }) => {
     expect(epcisEventTime.test(value)).toBe(expected);
   });
 

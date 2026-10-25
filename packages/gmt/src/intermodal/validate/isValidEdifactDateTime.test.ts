@@ -17,7 +17,7 @@ describe("isValidEdifactDateTime", () => {
     ${"203"} | ${"202406151430+0200"} | ${false} | ${"205's value"}
     ${"203"} | ${""}                  | ${false} | ${"an empty value"}
   `(
-    "returns $expected for $value under $code ($reads), as parseEdifactDateTime reads it",
+    "returns $expected for '$value' under $code ($reads), as parseEdifactDateTime reads it",
     ({ code, value, expected }) => {
       expect(isValidEdifactDateTime(value, code)).toBe(expected);
       expect(parseEdifactDateTime(value, code) !== "").toBe(expected);

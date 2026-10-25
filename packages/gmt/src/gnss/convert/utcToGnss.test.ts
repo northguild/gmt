@@ -89,37 +89,37 @@ describe("utcToGnss", () => {
     ${"BDT"} | ${""}
     ${"IRN"} | ${""}
   `(
-    "returns $expected for $system at 1999-01-01T00:00:00Z",
+    "returns '$expected' for $system at 1999-01-01T00:00:00Z",
     ({ system, expected }) => {
       expect(utcToGnss(system, "1999-01-01T00:00:00Z")).toBe(expected);
     },
   );
 
   it.each`
-    utcString
-    ${null}
-    ${undefined}
-    ${123}
-    ${""}
-    ${"x"}
-    ${"2024-01-01"}
-    ${"2024-01-01T00:00:00"}
-    ${"2024-01-01T00:00:00[UTC]"}
-    ${"20240101T000000Z"}
-  `("returns '' for the invalid instant $utcString", ({ utcString }) => {
+    utcString                     | label
+    ${null}                       | ${"null"}
+    ${undefined}                  | ${"undefined"}
+    ${123}                        | ${"123"}
+    ${""}                         | ${"''"}
+    ${"x"}                        | ${"'x'"}
+    ${"2024-01-01"}               | ${"'2024-01-01'"}
+    ${"2024-01-01T00:00:00"}      | ${"'2024-01-01T00:00:00'"}
+    ${"2024-01-01T00:00:00[UTC]"} | ${"'2024-01-01T00:00:00[UTC]'"}
+    ${"20240101T000000Z"}         | ${"'20240101T000000Z'"}
+  `("returns '' for the invalid instant $label", ({ utcString }) => {
     expect(utcToGnss("GPS", utcString)).toBe("");
   });
 
   it.each`
-    system       | why
-    ${"gps"}     | ${"lower case"}
-    ${"BDS"}     | ${"the constellation, not a RINEX time token"}
-    ${"GLONASS"} | ${"not a RINEX token"}
-    ${"NAVIC"}   | ${"not a RINEX token"}
-    ${"TAI"}     | ${"not a satellite system"}
-    ${""}        | ${"empty"}
-    ${null}      | ${"null"}
-  `("returns '' for the system $system ($why)", ({ system }) => {
+    system       | why                                            | label
+    ${"gps"}     | ${"lower case"}                                | ${"'gps'"}
+    ${"BDS"}     | ${"the constellation, not a RINEX time token"} | ${"'BDS'"}
+    ${"GLONASS"} | ${"not a RINEX token"}                         | ${"'GLONASS'"}
+    ${"NAVIC"}   | ${"not a RINEX token"}                         | ${"'NAVIC'"}
+    ${"TAI"}     | ${"not a satellite system"}                    | ${"'TAI'"}
+    ${""}        | ${"empty"}                                     | ${"''"}
+    ${null}      | ${"null"}                                      | ${"null"}
+  `("returns '' for the system $label ($why)", ({ system }) => {
     expect(utcToGnss(system, "2024-01-01T00:00:00Z")).toBe("");
   });
 

@@ -65,15 +65,15 @@ describe("isZonedBusinessDay", () => {
 
   // Invalid input — returns false
   it.each`
-    value
-    ${"invalid-date"}
-    ${"2024-02-30T12:00:00+00:00[UTC]"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${"not-a-date"}
-    ${"2024/03/15T12:00:00+00:00[UTC]"}
-  `("returns false for invalid value $value", ({ value }) => {
+    value                               | label
+    ${"invalid-date"}                   | ${"'invalid-date'"}
+    ${"2024-02-30T12:00:00+00:00[UTC]"} | ${"'2024-02-30T12:00:00+00:00[UTC]'"}
+    ${""}                               | ${"''"}
+    ${null}                             | ${"null"}
+    ${undefined}                        | ${"undefined"}
+    ${"not-a-date"}                     | ${"'not-a-date'"}
+    ${"2024/03/15T12:00:00+00:00[UTC]"} | ${"'2024/03/15T12:00:00+00:00[UTC]'"}
+  `("returns false for invalid value $label", ({ value }) => {
     expect(isZonedBusinessDay(value as never)).toBe(false);
   });
 
@@ -122,45 +122,48 @@ describe("isZonedBusinessDay", () => {
     amount | expectedSuffix
     ${1}   | ${"T14:30:00"}
     ${2}   | ${"T14:30:00"}
-  `("correctly identifies business days across all battle-test zones", () => {
-    battleTestTimeZones.forEach((timeZone) => {
-      // Monday in each zone
-      const monday = Temporal.ZonedDateTime.from({
-        year: 2024,
-        month: 2,
-        day: 5, // Monday
-        hour: 14,
-        minute: 30,
-        second: 0,
-        timeZone,
-      });
-      expect(isZonedBusinessDay(monday.toString())).toBe(true);
+  `(
+    "correctly identifies business days across all battle-test zones for amount $amount",
+    () => {
+      battleTestTimeZones.forEach((timeZone) => {
+        // Monday in each zone
+        const monday = Temporal.ZonedDateTime.from({
+          year: 2024,
+          month: 2,
+          day: 5, // Monday
+          hour: 14,
+          minute: 30,
+          second: 0,
+          timeZone,
+        });
+        expect(isZonedBusinessDay(monday.toString())).toBe(true);
 
-      // Saturday in each zone
-      const saturday = Temporal.ZonedDateTime.from({
-        year: 2024,
-        month: 2,
-        day: 3, // Saturday
-        hour: 14,
-        minute: 30,
-        second: 0,
-        timeZone,
-      });
-      expect(isZonedBusinessDay(saturday.toString())).toBe(false);
+        // Saturday in each zone
+        const saturday = Temporal.ZonedDateTime.from({
+          year: 2024,
+          month: 2,
+          day: 3, // Saturday
+          hour: 14,
+          minute: 30,
+          second: 0,
+          timeZone,
+        });
+        expect(isZonedBusinessDay(saturday.toString())).toBe(false);
 
-      // Sunday in each zone
-      const sunday = Temporal.ZonedDateTime.from({
-        year: 2024,
-        month: 2,
-        day: 4, // Sunday
-        hour: 14,
-        minute: 30,
-        second: 0,
-        timeZone,
+        // Sunday in each zone
+        const sunday = Temporal.ZonedDateTime.from({
+          year: 2024,
+          month: 2,
+          day: 4, // Sunday
+          hour: 14,
+          minute: 30,
+          second: 0,
+          timeZone,
+        });
+        expect(isZonedBusinessDay(sunday.toString())).toBe(false);
       });
-      expect(isZonedBusinessDay(sunday.toString())).toBe(false);
-    });
-  });
+    },
+  );
 
   // DST boundary — same UTC instant can be different local days across DST transitions
   it.each`

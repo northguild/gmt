@@ -47,16 +47,16 @@ describe("parseDateTimeFromZoned", () => {
   );
 
   it.each`
-    invalidValue
-    ${"not-a-zoned-datetime"}
-    ${"2024-02-29T09:00:00+00:00"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${true}
-    ${false}
+    invalidValue                   | label
+    ${"not-a-zoned-datetime"}      | ${"'not-a-zoned-datetime'"}
+    ${"2024-02-29T09:00:00+00:00"} | ${"'2024-02-29T09:00:00+00:00'"}
+    ${""}                          | ${"''"}
+    ${null}                        | ${"null"}
+    ${undefined}                   | ${"undefined"}
+    ${true}                        | ${"true"}
+    ${false}                       | ${"false"}
   `(
-    "returns an empty string for invalid zoned date time string $invalidValue",
+    "returns an empty string for invalid zoned date time string $label",
     ({ invalidValue }) => {
       expect(parseDateTimeFromZoned(invalidValue as never)).toBe("");
     },

@@ -41,17 +41,17 @@ describe("leapSecondsBetween", () => {
   });
 
   it.each`
-    value
-    ${null}
-    ${undefined}
-    ${123}
-    ${""}
-    ${"x"}
-    ${"2024-01-01"}
-    ${"2024-01-01T00:00:00"}
-    ${"2024-01-01T00:00:00[UTC]"}
-    ${"20240101T000000Z"}
-  `("returns null when either argument is the invalid $value", ({ value }) => {
+    value                         | label
+    ${null}                       | ${"null"}
+    ${undefined}                  | ${"undefined"}
+    ${123}                        | ${"123"}
+    ${""}                         | ${"''"}
+    ${"x"}                        | ${"'x'"}
+    ${"2024-01-01"}               | ${"'2024-01-01'"}
+    ${"2024-01-01T00:00:00"}      | ${"'2024-01-01T00:00:00'"}
+    ${"2024-01-01T00:00:00[UTC]"} | ${"'2024-01-01T00:00:00[UTC]'"}
+    ${"20240101T000000Z"}         | ${"'20240101T000000Z'"}
+  `("returns null when either argument is the invalid $label", ({ value }) => {
     expect(leapSecondsBetween(value, "2024-01-01T00:00:00Z")).toBeNull();
     expect(leapSecondsBetween("2000-01-01T00:00:00Z", value)).toBeNull();
   });

@@ -27,7 +27,7 @@ describe("parseCronExpression", () => {
     ${"60 * * * *"}
     ${"*/0 * * * *"}
     ${"1,*/5 * * * *"}
-  `("returns null for $value", ({ value }) => {
+  `("returns null for '$value'", ({ value }) => {
     expect(parseCronExpression(value)).toBeNull();
   });
 

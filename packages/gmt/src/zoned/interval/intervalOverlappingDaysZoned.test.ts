@@ -139,7 +139,7 @@ describe("intervalOverlappingDaysZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-04-01T00:00:00+00:00[UTC]"} | ${"invalid"}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-04-01T00:00:00+00:00[UTC]"} | ${""}
   `(
-    "returns null for malformed zoned: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for malformed zoned: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(
         intervalOverlappingDaysZoned(aStart, aEnd, bStart, bEnd),

@@ -121,20 +121,17 @@ describe("subtractZonedBusinessDays", () => {
 
   // Invalid input — returns empty string
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-02-30T14:30:00+00:00[UTC]"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${"not-a-date"}
-    ${"2024/03/15T14:30:00+00:00[UTC]"}
-  `(
-    "returns an empty string for invalid value $invalidValue",
-    ({ invalidValue }) => {
-      expect(subtractZonedBusinessDays(invalidValue as never, 1)).toBe("");
-    },
-  );
+    invalidValue                        | label
+    ${"invalid"}                        | ${"'invalid'"}
+    ${"2024-02-30T14:30:00+00:00[UTC]"} | ${"'2024-02-30T14:30:00+00:00[UTC]'"}
+    ${""}                               | ${"''"}
+    ${null}                             | ${"null"}
+    ${undefined}                        | ${"undefined"}
+    ${"not-a-date"}                     | ${"'not-a-date'"}
+    ${"2024/03/15T14:30:00+00:00[UTC]"} | ${"'2024/03/15T14:30:00+00:00[UTC]'"}
+  `("returns an empty string for invalid value $label", ({ invalidValue }) => {
+    expect(subtractZonedBusinessDays(invalidValue as never, 1)).toBe("");
+  });
 
   // Invalid amount — returns empty string
   it.each`

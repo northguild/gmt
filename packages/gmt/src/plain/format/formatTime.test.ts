@@ -423,7 +423,7 @@ describe("formatTime", () => {
     ${{ timeStyle: "full" }}                      | ${"2:30:45 PM"} | ${"zone field removed from the full time style"}
     ${{ year: "numeric" }}                        | ${""}           | ${"only date fields: no PlainTime format"}
   `(
-    "formats 14:30:45.123 in en-US with $options to $expected ($reason)",
+    "formats 14:30:45.123 in en-US with $options to '$expected' ($reason)",
     ({ options, expected }) => {
       expect(formatTime("14:30:45.123", MustTestLocales.enUS, options)).toBe(
         expected,
@@ -432,20 +432,17 @@ describe("formatTime", () => {
   );
 
   it.each`
-    invalidValue
-    ${"not-a-time"}
-    ${"24:00:00"}
-    ${"2024-02-29T14:30:45"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${true}
-  `(
-    "returns an empty string for invalid time $invalidValue",
-    ({ invalidValue }) => {
-      expect(formatTime(invalidValue as never)).toBe("");
-    },
-  );
+    invalidValue             | label
+    ${"not-a-time"}          | ${"'not-a-time'"}
+    ${"24:00:00"}            | ${"'24:00:00'"}
+    ${"2024-02-29T14:30:45"} | ${"'2024-02-29T14:30:45'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+    ${true}                  | ${"true"}
+  `("returns an empty string for invalid time $label", ({ invalidValue }) => {
+    expect(formatTime(invalidValue as never)).toBe("");
+  });
 
   it("returns empty string on failure", () => {
     mockTemporalPlainTimeFromThrow();
@@ -460,7 +457,7 @@ describe("formatTime", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"14:30"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatTime("14:30:45", locale, { hour: "2-digit", minute: "2-digit" }),
     ).toBe(expected);
@@ -477,7 +474,7 @@ describe("formatTime with primitive options", () => {
     ${null}   | ${""}
     ${"long"} | ${"2:30:00 PM"}
     ${1}      | ${"2:30:00 PM"}
-  `("returns $expected for options $options", ({ options, expected }) => {
+  `("returns '$expected' for options $options", ({ options, expected }) => {
     expect(formatTime("14:30:00", MustTestLocales.enUS, options as never)).toBe(
       expected,
     );

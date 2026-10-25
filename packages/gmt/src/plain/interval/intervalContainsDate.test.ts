@@ -57,7 +57,7 @@ describe("intervalContainsDate", () => {
     ${"2024-12-31"} | ${"2024-01-01"} | ${"2024-06-15"} | ${"2024-07-15"} | ${false}
     ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-10"} | ${false}
   `(
-    "returns $expected for reversed outer interval",
+    "returns $expected for reversed outer interval $intervalStart to $intervalEnd with $pointOrStart to $pointEnd",
     ({ intervalStart, intervalEnd, pointOrStart, pointEnd, expected }) => {
       expect(
         intervalContainsDate(
@@ -75,7 +75,7 @@ describe("intervalContainsDate", () => {
     ${"2024-01-01"} | ${"2024-06-15"} | ${"2024-06-15"} | ${"2024-06-10"} | ${false}
     ${"2024-01-01"} | ${"2024-06-15"} | ${"2024-06-20"} | ${"2024-06-15"} | ${false}
   `(
-    "returns $expected for reversed inner interval",
+    "returns $expected for reversed inner interval $intervalStart to $intervalEnd with $innerStart to $innerEnd",
     ({ intervalStart, intervalEnd, innerStart, innerEnd, expected }) => {
       expect(
         intervalContainsDate(intervalStart, intervalEnd, innerStart, innerEnd),
@@ -95,7 +95,7 @@ describe("intervalContainsDate", () => {
     ${"2024-01-01"} | ${"2024-12-31"} | ${""}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"not-a-date"}
   `(
-    "returns false for malformed date: $intervalStart, $intervalEnd, $pointOrStart",
+    "returns false for malformed date: '$intervalStart', '$intervalEnd', '$pointOrStart'",
     ({ intervalStart, intervalEnd, pointOrStart }) => {
       expect(
         intervalContainsDate(
@@ -134,7 +134,7 @@ describe("intervalContainsDate", () => {
     ${"2024-01-01"} | ${"2024-12-31"} | ${null}         | ${"2024-07-15"}
     ${"2024-01-01"} | ${"2024-12-31"} | ${"2024-06-15"} | ${null}
   `(
-    "returns false for non-string 4-arg input",
+    "returns false for non-string 4-arg input $intervalStart to $intervalEnd with $innerStart to $innerEnd",
     ({ intervalStart, intervalEnd, innerStart, innerEnd }) => {
       expect(
         intervalContainsDate(

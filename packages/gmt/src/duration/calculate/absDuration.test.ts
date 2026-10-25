@@ -60,21 +60,21 @@ describe("absDuration", () => {
   });
 
   it.each`
-    value
-    ${"not a duration"}
-    ${""}
-    ${"P"}
-    ${"1D"}
-    ${"2024-03-10"}
-    ${"PT"}
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-    ${[]}
-    ${{}}
+    value               | label
+    ${"not a duration"} | ${"'not a duration'"}
+    ${""}               | ${"''"}
+    ${"P"}              | ${"'P'"}
+    ${"1D"}             | ${"'1D'"}
+    ${"2024-03-10"}     | ${"'2024-03-10'"}
+    ${"PT"}             | ${"'PT'"}
+    ${null}             | ${"null"}
+    ${undefined}        | ${"undefined"}
+    ${123}              | ${"123"}
+    ${true}             | ${"true"}
+    ${[]}               | ${"[]"}
+    ${{}}               | ${"{}"}
   `(
-    "returns empty string when $value is not a valid duration string",
+    "returns empty string when $label is not a valid duration string",
     ({ value }) => {
       expect(absDuration(value)).toBe("");
     },

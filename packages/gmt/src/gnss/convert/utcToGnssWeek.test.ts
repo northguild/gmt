@@ -249,17 +249,17 @@ describe("utcToGnssWeek", () => {
   });
 
   it.each`
-    utcString
-    ${null}
-    ${undefined}
-    ${123}
-    ${""}
-    ${"x"}
-    ${"2024-01-01"}
-    ${"2024-01-01T00:00:00"}
-    ${"2024-01-01T00:00:00[UTC]"}
-    ${"20240101T000000Z"}
-  `("returns null for the invalid instant $utcString", ({ utcString }) => {
+    utcString                     | label
+    ${null}                       | ${"null"}
+    ${undefined}                  | ${"undefined"}
+    ${123}                        | ${"123"}
+    ${""}                         | ${"''"}
+    ${"x"}                        | ${"'x'"}
+    ${"2024-01-01"}               | ${"'2024-01-01'"}
+    ${"2024-01-01T00:00:00"}      | ${"'2024-01-01T00:00:00'"}
+    ${"2024-01-01T00:00:00[UTC]"} | ${"'2024-01-01T00:00:00[UTC]'"}
+    ${"20240101T000000Z"}         | ${"'20240101T000000Z'"}
+  `("returns null for the invalid instant $label", ({ utcString }) => {
     expect(utcToGnssWeek("GPS-LNAV", utcString)).toBeNull();
   });
 

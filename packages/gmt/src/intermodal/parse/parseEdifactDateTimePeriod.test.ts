@@ -38,7 +38,7 @@ describe("parseEdifactDateTimePeriod", () => {
       ${"24061514302406201600"}       | ${"YYMMDDHHMM-YYMMDDHHMM: a two-digit year is not read"}
       ${"20240615143020240620160"}    | ${"one digit short"}
       ${""}                           | ${"an empty value"}
-    `("returns null for $value ($reads)", ({ value }) => {
+    `("returns null for '$value' ($reads)", ({ value }) => {
       expect(parseEdifactDateTimePeriod(value, "719")).toBeNull();
     });
   });
@@ -85,7 +85,7 @@ describe("parseEdifactDateTimePeriod", () => {
       ${"202302291430202406201600"} | ${"29 February 2023 in the start"}
       ${"202406152430202406201600"} | ${"hour 24 in the start"}
       ${"202406151430202406201660"} | ${"minute 60 in the end"}
-    `("returns null for $value ($reads)", ({ value }) => {
+    `("returns null for '$value' ($reads)", ({ value }) => {
       expect(parseEdifactDateTimePeriod(value, "719")).toBeNull();
     });
   });

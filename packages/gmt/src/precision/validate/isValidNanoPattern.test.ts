@@ -30,7 +30,7 @@ describe("isValidNanoPattern", () => {
     ${"1".repeat(400)}           | ${"absurdly long, rejected before BigInt"}
     ${"garbage"}                 | ${"not a number"}
     ${""}                        | ${"empty string"}
-  `("returns false for $value ($reason)", ({ value }) => {
+  `("returns false for '$value' ($reason)", ({ value }) => {
     expect(isValidNanoPattern(value)).toBe(false);
   });
 

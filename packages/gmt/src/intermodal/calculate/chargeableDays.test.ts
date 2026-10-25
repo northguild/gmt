@@ -204,7 +204,7 @@ describe("chargeableDays", () => {
     ${[2, 20]}   | ${"2024-06-17T15:00:00Z"} | ${[{ from: 1, to: 2, days: 1 }, { from: 3, to: 20, days: 0 }, { from: 21, to: null, days: 0 }]}
     ${[1]}       | ${"2024-06-17T04:00:00Z"} | ${[{ from: 1, to: 1, days: 0 }, { from: 2, to: null, days: 0 }]}
   `(
-    "splits the charged days into the bands $tiers describe",
+    "splits the charged days into the bands $tiers describe when the clock ends $clockEnd",
     ({ tiers, clockEnd, byTier }) => {
       expect(
         chargeableDays(friday, clockEnd, 3, { ...calendar, tiers })?.byTier,

@@ -339,17 +339,17 @@ describe("gnssWeekToUtc: notBefore pivot", () => {
   );
 
   it.each`
-    notBefore                                        | why
-    ${"2019-04-07"}                                  | ${"a date only"}
-    ${"2019-04-07T00:00:00"}                         | ${"no offset"}
-    ${"2017-12-31T23:59:60Z"}                        | ${"a second 60 the table does not list"}
-    ${"2019-04-07 00:00:00Z"}                        | ${"a space separator"}
-    ${""}                                            | ${"empty"}
-    ${123}                                           | ${"a number"}
-    ${Temporal.Instant.from("2019-01-01T00:00:00Z")} | ${"an Instant, not a string"}
-    ${null}                                          | ${"null"}
-    ${undefined}                                     | ${"undefined"}
-  `("returns '' for notBefore $notBefore ($why)", ({ notBefore }) => {
+    notBefore                                        | why                                      | label
+    ${"2019-04-07"}                                  | ${"a date only"}                         | ${"'2019-04-07'"}
+    ${"2019-04-07T00:00:00"}                         | ${"no offset"}                           | ${"'2019-04-07T00:00:00'"}
+    ${"2017-12-31T23:59:60Z"}                        | ${"a second 60 the table does not list"} | ${"'2017-12-31T23:59:60Z'"}
+    ${"2019-04-07 00:00:00Z"}                        | ${"a space separator"}                   | ${"'2019-04-07 00:00:00Z'"}
+    ${""}                                            | ${"empty"}                               | ${"''"}
+    ${123}                                           | ${"a number"}                            | ${"123"}
+    ${Temporal.Instant.from("2019-01-01T00:00:00Z")} | ${"an Instant, not a string"}            | ${"Temporal.Instant.from('2019-01-01T00:00:00Z')"}
+    ${null}                                          | ${"null"}                                | ${"null"}
+    ${undefined}                                     | ${"undefined"}                           | ${"undefined"}
+  `("returns '' for notBefore $label ($why)", ({ notBefore }) => {
     expect(gnssWeekToUtc("GPS-LNAV", 100, 0, { notBefore })).toBe("");
   });
 

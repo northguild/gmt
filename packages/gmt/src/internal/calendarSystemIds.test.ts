@@ -49,7 +49,7 @@ describe("isCalendarSystem", () => {
     ${"chinese"}             | ${"not supported by GMT"}
     ${"martian"}             | ${"unknown"}
     ${""}                    | ${"empty"}
-  `("returns false for $value ($reason)", ({ value }) => {
+  `("returns false for '$value' ($reason)", ({ value }) => {
     expect(isCalendarSystem(value)).toBe(false);
   });
 });
@@ -81,7 +81,7 @@ describe("canonicalCalendarSystem", () => {
     ${"dangi"}           | ${"not supported by GMT"}
     ${"martian"}         | ${"unknown"}
     ${""}                | ${"empty"}
-  `("returns null for $value ($reason)", ({ value }) => {
+  `("returns null for '$value' ($reason)", ({ value }) => {
     expect(canonicalCalendarSystem(value)).toBeNull();
   });
 });

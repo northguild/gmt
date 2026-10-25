@@ -37,19 +37,19 @@ describe("resolveRelativeRounding", () => {
   // RelativeRoundingMethod is "floor" | "ceil" | "round": the name of another Math function, an
   // inherited Object.prototype key, another letter case and null are not rounding methods.
   it.each`
-    method
-    ${"nonsense"}
-    ${"abs"}
-    ${"trunc"}
-    ${"sign"}
-    ${"random"}
-    ${"constructor"}
-    ${"hasOwnProperty"}
-    ${"toString"}
-    ${"ROUND"}
-    ${""}
-    ${null}
-  `("throws RangeError for the unknown method $method", ({ method }) => {
+    method              | label
+    ${"nonsense"}       | ${"'nonsense'"}
+    ${"abs"}            | ${"'abs'"}
+    ${"trunc"}          | ${"'trunc'"}
+    ${"sign"}           | ${"'sign'"}
+    ${"random"}         | ${"'random'"}
+    ${"constructor"}    | ${"'constructor'"}
+    ${"hasOwnProperty"} | ${"'hasOwnProperty'"}
+    ${"toString"}       | ${"'toString'"}
+    ${"ROUND"}          | ${"'ROUND'"}
+    ${""}               | ${"''"}
+    ${null}             | ${"null"}
+  `("throws RangeError for the unknown method $label", ({ method }) => {
     expect(() => resolveRelativeRounding(-1.5, method)).toThrow(RangeError);
   });
 });

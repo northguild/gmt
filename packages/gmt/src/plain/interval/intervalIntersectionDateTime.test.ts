@@ -26,7 +26,7 @@ describe("intervalIntersectionDateTime", () => {
     ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-07-01T00:00:00"} | ${"2024-12-31T23:59:59"} | ${null}
     ${"2024-07-01T00:00:00"} | ${"2024-12-31T23:59:59"} | ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${null}
   `(
-    "returns $expected for disjoint intervals",
+    "returns $expected for disjoint intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionDateTime(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -39,7 +39,7 @@ describe("intervalIntersectionDateTime", () => {
     ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${null}
     ${"2024-06-30T23:59:59"} | ${"2024-06-30T23:59:59"} | ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${null}
   `(
-    "returns $expected for adjacent intervals",
+    "returns $expected for adjacent intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionDateTime(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,
@@ -52,7 +52,7 @@ describe("intervalIntersectionDateTime", () => {
     ${"2024-12-31T23:59:59"} | ${"2024-01-01T10:00:00"} | ${"2024-04-01T00:00:00"} | ${"2024-12-31T23:59:59"} | ${null}
     ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-06-15T12:00:00"} | ${"2024-06-10T12:00:00"} | ${null}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionDateTime(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -71,7 +71,7 @@ describe("intervalIntersectionDateTime", () => {
     ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-04-01T00:00:00"} | ${"invalid"}
     ${"2024-01-01T10:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-04-01T00:00:00"} | ${""}
   `(
-    "returns null for malformed datetime: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for malformed datetime: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(
         intervalIntersectionDateTime(aStart, aEnd, bStart, bEnd),

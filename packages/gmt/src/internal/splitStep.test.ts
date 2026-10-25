@@ -25,7 +25,7 @@ describe("isExactDurationUnit", () => {
     ${"days"}         | ${false}
     ${"hour"}         | ${false}
     ${""}             | ${false}
-  `("returns $expected for unit $unit", ({ unit, expected }) => {
+  `("returns $expected for unit '$unit'", ({ unit, expected }) => {
     expect(isExactDurationUnit(unit)).toBe(expected);
   });
 });

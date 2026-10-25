@@ -38,7 +38,7 @@ describe("intervalFromDurationTime", () => {
     ${"12:00:00"} | ${"P1W"} | ${"start"}
     ${"12:00:00"} | ${"P1D"} | ${"end"}
   `(
-    "returns null when duration $duration has a calendar-unit component (no relativeTo for PlainTime)",
+    "returns null when duration $duration with anchor $anchor has a calendar-unit component (no relativeTo for PlainTime)",
     ({ value, duration, anchor }) => {
       expect(intervalFromDurationTime(value, duration, anchor)).toBeNull();
     },
@@ -119,13 +119,13 @@ describe("intervalFromDurationTime", () => {
   });
 
   it.each`
-    value         | duration       | anchor
-    ${"12:00:00"} | ${"not-a-dur"} | ${"start"}
-    ${"12:00:00"} | ${""}          | ${"start"}
-    ${"12:00:00"} | ${123}         | ${"start"}
-    ${"12:00:00"} | ${null}        | ${"start"}
+    value         | duration       | anchor     | label
+    ${"12:00:00"} | ${"not-a-dur"} | ${"start"} | ${"'not-a-dur'"}
+    ${"12:00:00"} | ${""}          | ${"start"} | ${"''"}
+    ${"12:00:00"} | ${123}         | ${"start"} | ${"123"}
+    ${"12:00:00"} | ${null}        | ${"start"} | ${"null"}
   `(
-    "returns null for invalid duration $duration",
+    "returns null for invalid duration $label",
     ({ value, duration, anchor }) => {
       expect(
         intervalFromDurationTime(value, duration as never, anchor),
@@ -134,19 +134,16 @@ describe("intervalFromDurationTime", () => {
   );
 
   it.each`
-    value         | duration  | anchor
-    ${"12:00:00"} | ${"PT1H"} | ${"middle"}
-    ${"12:00:00"} | ${"PT1H"} | ${""}
-    ${"12:00:00"} | ${"PT1H"} | ${null}
-    ${"12:00:00"} | ${"PT1H"} | ${undefined}
-  `(
-    "returns null for invalid anchor $anchor",
-    ({ value, duration, anchor }) => {
-      expect(
-        intervalFromDurationTime(value, duration, anchor as never),
-      ).toBeNull();
-    },
-  );
+    value         | duration  | anchor       | label
+    ${"12:00:00"} | ${"PT1H"} | ${"middle"}  | ${"'middle'"}
+    ${"12:00:00"} | ${"PT1H"} | ${""}        | ${"''"}
+    ${"12:00:00"} | ${"PT1H"} | ${null}      | ${"null"}
+    ${"12:00:00"} | ${"PT1H"} | ${undefined} | ${"undefined"}
+  `("returns null for invalid anchor $label", ({ value, duration, anchor }) => {
+    expect(
+      intervalFromDurationTime(value, duration, anchor as never),
+    ).toBeNull();
+  });
 
   it("returns null when Temporal.PlainTime.from throws", () => {
     mockTemporalPlainTimeFromThrow();

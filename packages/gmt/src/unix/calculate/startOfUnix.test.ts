@@ -70,12 +70,12 @@ describe("startOfUnix", () => {
   });
 
   it.each`
-    invalidUnit
-    ${"invalid-unit"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns null for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit       | invalidUnitLabel
+    ${"invalid-unit"} | ${"'invalid-unit'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
+  `("returns null for invalid unit $invalidUnitLabel", ({ invalidUnit }) => {
     expect(startOfUnix(1706659200, invalidUnit as never)).toBeNull();
   });
 
@@ -228,21 +228,21 @@ describe("startOfUnix unit names", () => {
 // 1710504000000 is 2024-03-15T12:00:00Z.
 describe("startOfUnix with an invalid weekStartsOn", () => {
   it.each`
-    unit      | weekStartsOn
-    ${"week"} | ${"tuesday"}
-    ${"week"} | ${"Monday"}
-    ${"week"} | ${""}
-    ${"week"} | ${null}
-    ${"week"} | ${1}
-    ${"week"} | ${true}
-    ${"day"}  | ${"tuesday"}
-    ${"day"}  | ${"Monday"}
-    ${"day"}  | ${""}
-    ${"day"}  | ${null}
-    ${"day"}  | ${1}
-    ${"day"}  | ${true}
+    unit      | weekStartsOn | weekStartsOnLabel
+    ${"week"} | ${"tuesday"} | ${"'tuesday'"}
+    ${"week"} | ${"Monday"}  | ${"'Monday'"}
+    ${"week"} | ${""}        | ${"''"}
+    ${"week"} | ${null}      | ${"null"}
+    ${"week"} | ${1}         | ${"1"}
+    ${"week"} | ${true}      | ${"true"}
+    ${"day"}  | ${"tuesday"} | ${"'tuesday'"}
+    ${"day"}  | ${"Monday"}  | ${"'Monday'"}
+    ${"day"}  | ${""}        | ${"''"}
+    ${"day"}  | ${null}      | ${"null"}
+    ${"day"}  | ${1}         | ${"1"}
+    ${"day"}  | ${true}      | ${"true"}
   `(
-    "returns null for unit $unit with invalid weekStartsOn $weekStartsOn",
+    "returns null for unit $unit with invalid weekStartsOn $weekStartsOnLabel",
     ({ unit, weekStartsOn }) => {
       expect(
         startOfUnix(1710504000000, unit, { timeZone: "UTC", weekStartsOn }),

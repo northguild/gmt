@@ -38,31 +38,31 @@ describe("closestDateTo", () => {
     ${""}           | ${["2024-03-01"]} | ${""}
     ${"2024-02-30"} | ${["2024-03-01"]} | ${""}
   `(
-    "returns an empty string when target is invalid ($target)",
+    "returns an empty string when target is invalid ('$target')",
     ({ target, candidates, expected }) => {
       expect(closestDateTo(target, candidates)).toBe(expected);
     },
   );
 
   it.each`
-    target          | candidates                   | expected
-    ${"2024-03-15"} | ${["invalid", "2024-02-30"]} | ${""}
-    ${"2024-03-15"} | ${["", "not-a-date"]}        | ${""}
+    target          | candidates                   | expected | label
+    ${"2024-03-15"} | ${["invalid", "2024-02-30"]} | ${""}    | ${"['invalid', '2024-02-30']"}
+    ${"2024-03-15"} | ${["", "not-a-date"]}        | ${""}    | ${"['', 'not-a-date']"}
   `(
-    "returns an empty string when all candidates are invalid",
+    "returns an empty string when all candidates are invalid $label",
     ({ target, candidates, expected }) => {
       expect(closestDateTo(target, candidates)).toBe(expected);
     },
   );
 
   it.each`
-    target          | candidates                                   | expected
-    ${"2024-03-15"} | ${["invalid", "2024-03-20", "2024-02-30"]}   | ${"2024-03-20"}
-    ${"2024-03-15"} | ${["2024-01-01", "", "2024-06-01"]}          | ${"2024-01-01"}
-    ${"2024-03-15"} | ${["invalid", "2024-03-20", "also invalid"]} | ${"2024-03-20"}
-    ${"2024-03-15"} | ${["2024-03-20", "invalid", "invalid"]}      | ${"2024-03-20"}
+    target          | candidates                                   | expected        | label
+    ${"2024-03-15"} | ${["invalid", "2024-03-20", "2024-02-30"]}   | ${"2024-03-20"} | ${"['invalid', '2024-03-20', '2024-02-30']"}
+    ${"2024-03-15"} | ${["2024-01-01", "", "2024-06-01"]}          | ${"2024-01-01"} | ${"['2024-01-01', '', '2024-06-01']"}
+    ${"2024-03-15"} | ${["invalid", "2024-03-20", "also invalid"]} | ${"2024-03-20"} | ${"['invalid', '2024-03-20', 'also invalid']"}
+    ${"2024-03-15"} | ${["2024-03-20", "invalid", "invalid"]}      | ${"2024-03-20"} | ${"['2024-03-20', 'invalid', 'invalid']"}
   `(
-    "ignores invalid candidates and returns closest valid ($expected)",
+    "ignores invalid candidates and returns closest valid ($expected) from $label",
     ({ target, candidates, expected }) => {
       expect(closestDateTo(target, candidates)).toBe(expected);
     },

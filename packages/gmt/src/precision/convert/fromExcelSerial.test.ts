@@ -135,14 +135,14 @@ describe("fromExcelSerial", () => {
   });
 
   it.each`
-    system    | reason
-    ${"1899"} | ${"not a date system Excel has"}
-    ${1900}   | ${"number, not the string literal"}
-    ${1904}   | ${"number, not the string literal"}
-    ${""}     | ${"empty string"}
-    ${true}   | ${"boolean"}
-    ${null}   | ${"explicitly null, a value to validate rather than an omission"}
-  `('returns "" when system $system is invalid ($reason)', ({ system }) => {
+    system    | reason                                                            | label
+    ${"1899"} | ${"not a date system Excel has"}                                  | ${"'1899'"}
+    ${1900}   | ${"number, not the string literal"}                               | ${"1900"}
+    ${1904}   | ${"number, not the string literal"}                               | ${"1904"}
+    ${""}     | ${"empty string"}                                                 | ${"''"}
+    ${true}   | ${"boolean"}                                                      | ${"true"}
+    ${null}   | ${"explicitly null, a value to validate rather than an omission"} | ${"null"}
+  `('returns "" when system $label is invalid ($reason)', ({ system }) => {
     expect(
       fromExcelSerial(45361.5, { system: system as unknown as "1900" }),
     ).toBe("");

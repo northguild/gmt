@@ -28,22 +28,19 @@ describe("setDate", () => {
   });
 
   it.each`
-    invalidDate
-    ${"2024-02-30"}
-    ${"not-a-date"}
-    ${"2024-13-01"}
-    ${"2024-00-10"}
-    ${""}
-    ${true}
-    ${null}
-    ${undefined}
-    ${"2024-02-29T12:00:00"}
-  `(
-    "returns an empty string for an invalid date $invalidDate",
-    ({ invalidDate }) => {
-      expect(setDate(invalidDate, { year: 2025 })).toBe("");
-    },
-  );
+    invalidDate              | label
+    ${"2024-02-30"}          | ${"'2024-02-30'"}
+    ${"not-a-date"}          | ${"'not-a-date'"}
+    ${"2024-13-01"}          | ${"'2024-13-01'"}
+    ${"2024-00-10"}          | ${"'2024-00-10'"}
+    ${""}                    | ${"''"}
+    ${true}                  | ${"true"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+    ${"2024-02-29T12:00:00"} | ${"'2024-02-29T12:00:00'"}
+  `("returns an empty string for an invalid date $label", ({ invalidDate }) => {
+    expect(setDate(invalidDate, { year: 2025 })).toBe("");
+  });
 
   it.each`
     value           | fields          | overflow       | expected
@@ -55,7 +52,7 @@ describe("setDate", () => {
     ${"2024-01-15"} | ${{ month: 2 }} | ${"reject"}    | ${"2024-02-15"}
     ${"2024-03-15"} | ${{ day: 1 }}   | ${"reject"}    | ${"2024-03-01"}
   `(
-    "returns $expected for $value with fields $fields and overflow $overflow",
+    "returns '$expected' for $value with fields $fields and overflow $overflow",
     ({ value, fields, overflow, expected }) => {
       expect(
         setDate(

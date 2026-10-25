@@ -63,7 +63,7 @@ describe("isValidRfc3339DateTime", () => {
     ${"2024-09-31t10:00:00-04:00"}           | ${false} | ${true}  | ${"September has 30 days"}
     ${"2024-11-31T10:00:00.5+05:30"}         | ${false} | ${true}  | ${"November has 30 days"}
   `(
-    "returns $expected for $value ($reason); the pattern alone says $pattern; parseRfc3339 agrees",
+    "returns $expected for '$value' ($reason); the pattern alone says $pattern; parseRfc3339 agrees",
     ({
       value,
       expected,

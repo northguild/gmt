@@ -247,7 +247,7 @@ describe("every input that worked before returns what it returned before", () =>
   });
 
   it.each(rows)(
-    "$name returns the recorded result for $label",
+    "$name returns the recorded result for '$label'",
     ({ name, zone, label }) => {
       pinClock(BASELINE_AT);
       const call = zoneArgumentCalls(gmt, BASELINE_AT)[name];
@@ -477,7 +477,7 @@ describe("the accepted set is what isValidTimeZone or isValidUtcOffset accepts",
   });
 
   it.each(rows)(
-    "$name returns its sentinel for $label exactly when neither validator accepts it",
+    "$name returns its sentinel for '$label' exactly when neither validator accepts it",
     ({ name, zone }) => {
       pinClock(BASELINE_AT);
       const call = zoneArgumentCalls(gmt, BASELINE_AT)[name];

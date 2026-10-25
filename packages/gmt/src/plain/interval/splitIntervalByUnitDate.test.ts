@@ -159,7 +159,7 @@ describe("splitIntervalByUnitDate", () => {
     ${"2024-01-01"} | ${"2024-01-10"} | ${"day"}     | ${1.5}
     ${"2024-01-01"} | ${"2024-01-10"} | ${"hours"}   | ${1}
   `(
-    "returns [] for invalid $start, $end, $unit, or $amount",
+    "returns [] for invalid '$start', '$end', '$unit', or $amount",
     ({ start, end, unit, amount }) => {
       expect(splitIntervalByUnitDate(start, end, unit, amount)).toEqual([]);
     },

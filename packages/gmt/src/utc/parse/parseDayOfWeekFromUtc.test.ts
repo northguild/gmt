@@ -15,7 +15,7 @@ describe("parseDayOfWeekFromUtc", () => {
     value
     ${"invalid"}
     ${""}
-  `("returns null for invalid value $value", ({ value }) => {
+  `("returns null for invalid value '$value'", ({ value }) => {
     expect(parseDayOfWeekFromUtc(value)).toBeNull();
   });
 
@@ -43,11 +43,11 @@ describe("parseDayOfWeekFromUtc", () => {
 
   // An unknown IANA zone is invalid input; an explicit undefined is the omitted option (UTC).
   it.each`
-    timeZone
-    ${"Mars/Olympus"}
-    ${""}
-    ${null}
-  `("returns the sentinel for invalid timeZone $timeZone", ({ timeZone }) => {
+    timeZone          | label
+    ${"Mars/Olympus"} | ${"'Mars/Olympus'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+  `("returns the sentinel for invalid timeZone $label", ({ timeZone }) => {
     expect(
       parseDayOfWeekFromUtc("2024-03-17T02:30:45.123456789Z", { timeZone }),
     ).toBeNull();

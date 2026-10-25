@@ -75,12 +75,12 @@ describe("intervalDivideEquallyUnix", () => {
 
   // Epoch values are safe whole units; an empty string is not a numeric string.
   it.each`
-    start  | end         | description
-    ${0}   | ${2 ** 53}  | ${"an unsafe end"}
-    ${""}  | ${90000000} | ${"an empty-string start, which Number() reads as 0"}
-    ${"0"} | ${"1.5"}    | ${"a fractional numeric-string end"}
+    start  | end         | description                                           | startLabel
+    ${0}   | ${2 ** 53}  | ${"an unsafe end"}                                    | ${"0"}
+    ${""}  | ${90000000} | ${"an empty-string start, which Number() reads as 0"} | ${"''"}
+    ${"0"} | ${"1.5"}    | ${"a fractional numeric-string end"}                  | ${"'0'"}
   `(
-    "returns [] for [$start, $end] divided into 3 ($description)",
+    "returns [] for [$startLabel, $end] divided into 3 ($description)",
     ({ start, end }) => {
       expect(intervalDivideEquallyUnix(start, end, 3)).toEqual([]);
     },

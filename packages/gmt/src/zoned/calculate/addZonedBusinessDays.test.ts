@@ -140,20 +140,17 @@ describe("addZonedBusinessDays", () => {
 
   // Invalid input — returns empty string
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-02-30T14:30:00+00:00[UTC]"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${"not-a-date"}
-    ${"2024/03/15T14:30:00+00:00[UTC]"}
-  `(
-    "returns an empty string for invalid value $invalidValue",
-    ({ invalidValue }) => {
-      expect(addZonedBusinessDays(invalidValue as never, 1)).toBe("");
-    },
-  );
+    invalidValue                        | label
+    ${"invalid"}                        | ${"'invalid'"}
+    ${"2024-02-30T14:30:00+00:00[UTC]"} | ${"'2024-02-30T14:30:00+00:00[UTC]'"}
+    ${""}                               | ${"''"}
+    ${null}                             | ${"null"}
+    ${undefined}                        | ${"undefined"}
+    ${"not-a-date"}                     | ${"'not-a-date'"}
+    ${"2024/03/15T14:30:00+00:00[UTC]"} | ${"'2024/03/15T14:30:00+00:00[UTC]'"}
+  `("returns an empty string for invalid value $label", ({ invalidValue }) => {
+    expect(addZonedBusinessDays(invalidValue as never, 1)).toBe("");
+  });
 
   // Invalid amount — returns empty string
   it.each`
@@ -213,9 +210,12 @@ describe("addZonedBusinessDays", () => {
     ${"2024-12-30T14:30:00-05:00[America/New_York]"} | ${1}   | ${"2024-12-31T14:30:00-05:00[America/New_York]"}
     ${"2024-12-30T14:30:00-05:00[America/New_York]"} | ${2}   | ${"2025-01-01T14:30:00-05:00[America/New_York]"}
     ${"2024-12-31T14:30:00-05:00[America/New_York]"} | ${1}   | ${"2025-01-01T14:30:00-05:00[America/New_York]"}
-  `("returns $expected across year boundary", ({ value, amount, expected }) => {
-    expect(addZonedBusinessDays(value, amount)).toBe(expected);
-  });
+  `(
+    "returns $expected across year boundary adding $amount to $value",
+    ({ value, amount, expected }) => {
+      expect(addZonedBusinessDays(value, amount)).toBe(expected);
+    },
+  );
   // E5 (issue #78), decision of record D2 and D9 (business-day functions reject calendar
   // tags -- weekday is calendar-independent in every supported calendar) -- see
   // addZoned.test.ts for the full rationale.

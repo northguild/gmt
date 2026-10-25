@@ -570,7 +570,7 @@ describe("unix/ timeZone option", () => {
       ["Asia/Tokio", "", "UTC+9"].map((timeZone) => ({ ...row, timeZone })),
     ),
   )(
-    "$name returns its sentinel for timeZone $timeZone",
+    "$name returns its sentinel for timeZone '$timeZone'",
     ({ call, sentinel, timeZone }) => {
       expect(call(EPOCH_MS, { timeZone })).toEqual(sentinel);
     },

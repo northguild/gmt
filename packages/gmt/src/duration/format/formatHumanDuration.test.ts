@@ -82,28 +82,28 @@ describe("formatHumanDuration", () => {
   }
 
   it.each`
-    input
-    ${""}
-    ${"2h 30m"}
-    ${"P"}
-    ${"PT"}
-    ${"P1.5D"}
-    ${"PT1.5H30M"}
-    ${" PT1H"}
-    ${"PT1H "}
-    ${"P4294967296Y"}
-    ${"P104249991375D"}
-    ${"−PT1H"}
-    ${"invalid"}
-    ${"PT9007199254740992S"}
-    ${"PT150119987579017M"}
-    ${"PT2501999792984H"}
-    ${"PT150119987579016M59.999999999S"}
-    ${undefined}
-    ${null}
-    ${120}
-    ${{}}
-  `("returns the sentinel for $input", ({ input }) => {
+    input                                | label
+    ${""}                                | ${"''"}
+    ${"2h 30m"}                          | ${"'2h 30m'"}
+    ${"P"}                               | ${"'P'"}
+    ${"PT"}                              | ${"'PT'"}
+    ${"P1.5D"}                           | ${"'P1.5D'"}
+    ${"PT1.5H30M"}                       | ${"'PT1.5H30M'"}
+    ${" PT1H"}                           | ${"' PT1H'"}
+    ${"PT1H "}                           | ${"'PT1H '"}
+    ${"P4294967296Y"}                    | ${"'P4294967296Y'"}
+    ${"P104249991375D"}                  | ${"'P104249991375D'"}
+    ${"−PT1H"}                           | ${"'−PT1H'"}
+    ${"invalid"}                         | ${"'invalid'"}
+    ${"PT9007199254740992S"}             | ${"'PT9007199254740992S'"}
+    ${"PT150119987579017M"}              | ${"'PT150119987579017M'"}
+    ${"PT2501999792984H"}                | ${"'PT2501999792984H'"}
+    ${"PT150119987579016M59.999999999S"} | ${"'PT150119987579016M59.999999999S'"}
+    ${undefined}                         | ${"undefined"}
+    ${null}                              | ${"null"}
+    ${120}                               | ${"120"}
+    ${{}}                                | ${"{}"}
+  `("returns the sentinel for $label", ({ input }) => {
     expect(formatHumanDuration(input as string)).toBe("");
   });
 
@@ -129,7 +129,9 @@ describe("formatHumanDuration", () => {
       expect(fixtureRows.length).toBeGreaterThan(50);
     });
 
-    for (const { text, iso } of fixtureRows) {
+    // Groups share a few spellings (`1ms` is in two), so each text is tested once.
+    const roundTripRows = new Map(fixtureRows.map((row) => [row.text, row]));
+    for (const { text, iso } of roundTripRows.values()) {
       it(`${JSON.stringify(text)} survives formatting and parsing`, () => {
         expect(parseHumanDuration(formatHumanDuration(iso))).toBe(iso);
         expect(

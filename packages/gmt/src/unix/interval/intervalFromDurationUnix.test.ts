@@ -110,36 +110,39 @@ describe("intervalFromDurationUnix", () => {
   );
 
   it.each`
-    value             | duration | anchor
-    ${NaN}            | ${"P1D"} | ${"start"}
-    ${Infinity}       | ${"P1D"} | ${"start"}
-    ${1.5}            | ${"P1D"} | ${"start"}
-    ${"not-a-number"} | ${"P1D"} | ${"start"}
-    ${null}           | ${"P1D"} | ${"start"}
-    ${true}           | ${"P1D"} | ${"start"}
-    ${[]}             | ${"P1D"} | ${"start"}
-    ${""}             | ${"P1D"} | ${"start"}
-    ${"   "}          | ${"P1D"} | ${"start"}
-    ${2 ** 53}        | ${"P1D"} | ${"start"}
-    ${-(2 ** 53)}     | ${"P1D"} | ${"start"}
-  `("returns null for invalid value $value", ({ value, duration, anchor }) => {
-    expect(
-      intervalFromDurationUnix(value as never, duration, anchor),
-    ).toBeNull();
-  });
+    value             | duration | anchor     | valueLabel
+    ${NaN}            | ${"P1D"} | ${"start"} | ${"NaN"}
+    ${Infinity}       | ${"P1D"} | ${"start"} | ${"Infinity"}
+    ${1.5}            | ${"P1D"} | ${"start"} | ${"1.5"}
+    ${"not-a-number"} | ${"P1D"} | ${"start"} | ${"'not-a-number'"}
+    ${null}           | ${"P1D"} | ${"start"} | ${"null"}
+    ${true}           | ${"P1D"} | ${"start"} | ${"true"}
+    ${[]}             | ${"P1D"} | ${"start"} | ${"[]"}
+    ${""}             | ${"P1D"} | ${"start"} | ${"''"}
+    ${"   "}          | ${"P1D"} | ${"start"} | ${"'   '"}
+    ${2 ** 53}        | ${"P1D"} | ${"start"} | ${"2 ** 53"}
+    ${-(2 ** 53)}     | ${"P1D"} | ${"start"} | ${"-(2 ** 53)"}
+  `(
+    "returns null for invalid value $valueLabel",
+    ({ value, duration, anchor }) => {
+      expect(
+        intervalFromDurationUnix(value as never, duration, anchor),
+      ).toBeNull();
+    },
+  );
 
   it("returns null for the fractional numeric string 1.5", () => {
     expect(intervalFromDurationUnix("1.5", "P1D", "start")).toBeNull();
   });
 
   it.each`
-    value            | duration       | anchor
-    ${1704067200000} | ${"not-a-dur"} | ${"start"}
-    ${1704067200000} | ${""}          | ${"start"}
-    ${1704067200000} | ${123}         | ${"start"}
-    ${1704067200000} | ${null}        | ${"start"}
+    value            | duration       | anchor     | durationLabel
+    ${1704067200000} | ${"not-a-dur"} | ${"start"} | ${"'not-a-dur'"}
+    ${1704067200000} | ${""}          | ${"start"} | ${"''"}
+    ${1704067200000} | ${123}         | ${"start"} | ${"123"}
+    ${1704067200000} | ${null}        | ${"start"} | ${"null"}
   `(
-    "returns null for invalid duration $duration",
+    "returns null for invalid duration $durationLabel",
     ({ value, duration, anchor }) => {
       expect(
         intervalFromDurationUnix(value, duration as never, anchor),
@@ -148,13 +151,13 @@ describe("intervalFromDurationUnix", () => {
   );
 
   it.each`
-    value            | duration | anchor
-    ${1704067200000} | ${"P1D"} | ${"middle"}
-    ${1704067200000} | ${"P1D"} | ${""}
-    ${1704067200000} | ${"P1D"} | ${null}
-    ${1704067200000} | ${"P1D"} | ${undefined}
+    value            | duration | anchor       | anchorLabel
+    ${1704067200000} | ${"P1D"} | ${"middle"}  | ${"'middle'"}
+    ${1704067200000} | ${"P1D"} | ${""}        | ${"''"}
+    ${1704067200000} | ${"P1D"} | ${null}      | ${"null"}
+    ${1704067200000} | ${"P1D"} | ${undefined} | ${"undefined"}
   `(
-    "returns null for invalid anchor $anchor",
+    "returns null for invalid anchor $anchorLabel",
     ({ value, duration, anchor }) => {
       expect(
         intervalFromDurationUnix(value, duration, anchor as never),
@@ -213,13 +216,13 @@ describe("intervalFromDurationUnix with an unrecognised epochUnit", () => {
   // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
-    epochUnit
-    ${"nanoseconds"}
-    ${"SECONDS"}
-    ${"ms"}
-    ${""}
-    ${1000}
-  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    epochUnit        | epochUnitLabel
+    ${"nanoseconds"} | ${"'nanoseconds'"}
+    ${"SECONDS"}     | ${"'SECONDS'"}
+    ${"ms"}          | ${"'ms'"}
+    ${""}            | ${"''"}
+    ${1000}          | ${"1000"}
+  `("returns null for epochUnit $epochUnitLabel", ({ epochUnit }) => {
     expect(
       intervalFromDurationUnix(1_706_659_200, "P1D", "start", {
         epochUnit: epochUnit as never,

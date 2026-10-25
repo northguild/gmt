@@ -144,7 +144,7 @@ describe("writeEdiValue", () => {
     ${"x12"}     | ${"time"}     | ${"TM"}  | ${"2024-06-15"}                | ${"a date under a time code"}
     ${"x12"}     | ${"date"}     | ${"D8"}  | ${""}                          | ${"an empty value"}
   `(
-    "returns '' for $value under $standard $code ($reads)",
+    "returns '' for '$value' under $standard $code ($reads)",
     ({ standard, kind, code, value }) => {
       expect(writeEdiValue(standard, kind, code, value)).toBe("");
     },
@@ -291,7 +291,7 @@ describe("writeEdiRange", () => {
     ${"x12"}     | ${"dateTimeRange"}  | ${"DDT"} | ${"2024-06-15T14:30"}      | ${"2024-06-20T16:00"}     | ${"a date and a date-time: not written"}
     ${"x12"}     | ${"dateRange"}      | ${"RD8"} | ${"2024-06-15"}            | ${""}                     | ${"an empty end"}
   `(
-    "returns '' for $start to $end under $standard $code and $kind ($reads)",
+    "returns '' for $start to '$end' under $standard $code and $kind ($reads)",
     ({ standard, kind, code, start, end }) => {
       expect(writeEdiRange(standard, kind, code, start, end)).toBe("");
     },
@@ -390,7 +390,7 @@ describe("writeX12TimeElement", () => {
     ${"24:00"}               | ${"hour 24"}
     ${"23:59:60"}            | ${"a leap second"}
     ${""}                    | ${"an empty value"}
-  `("returns '' for $value under every form ($reads)", ({ value }) => {
+  `("returns '' for '$value' under every form ($reads)", ({ value }) => {
     for (const form of ["HHMM", "HHMMSS", "HHMMSSD", "HHMMSSDD"]) {
       expect(writeX12TimeElement(form, value), form).toBe("");
     }

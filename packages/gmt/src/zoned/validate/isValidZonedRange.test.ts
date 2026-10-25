@@ -52,7 +52,7 @@ describe("isValidZonedRange", () => {
     ${"invalid"}                        | ${"invalid"}
     ${""}                               | ${""}
   `(
-    "returns false for malformed zoned: $value1, $value2",
+    "returns false for malformed zoned: '$value1', '$value2'",
     ({ value1, value2 }) => {
       expect(isValidZonedRange({ value1, value2 })).toBe(false);
     },

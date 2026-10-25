@@ -57,13 +57,13 @@ describe("mapZonedDatesInRange", () => {
   );
 
   it.each`
-    invalidStart             | end                                              | stepDays
-    ${"invalid"}             | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${1}
-    ${"2024-03-01T10:00:00"} | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${1}
-    ${""}                    | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${1}
-    ${null}                  | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${1}
+    invalidStart             | end                                              | stepDays | label
+    ${"invalid"}             | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${1}     | ${"'invalid'"}
+    ${"2024-03-01T10:00:00"} | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${1}     | ${"'2024-03-01T10:00:00'"}
+    ${""}                    | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${1}     | ${"''"}
+    ${null}                  | ${"2024-03-03T10:00:00-05:00[America/New_York]"} | ${1}     | ${"null"}
   `(
-    "returns an empty array for invalid start value $invalidStart",
+    "returns an empty array for invalid start value $label",
     ({ invalidStart, end, stepDays }) => {
       expect(
         mapZonedDatesInRange(invalidStart as never, end, stepDays),
@@ -72,13 +72,13 @@ describe("mapZonedDatesInRange", () => {
   );
 
   it.each`
-    start                                            | invalidEnd
-    ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"invalid"}
-    ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"2024-03-03T10:00:00"}
-    ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${""}
-    ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${null}
+    start                                            | invalidEnd               | label
+    ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"invalid"}             | ${"'invalid'"}
+    ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${"2024-03-03T10:00:00"} | ${"'2024-03-03T10:00:00'"}
+    ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${""}                    | ${"''"}
+    ${"2024-03-01T10:00:00-05:00[America/New_York]"} | ${null}                  | ${"null"}
   `(
-    "returns an empty array for invalid end value $invalidEnd",
+    "returns an empty array for invalid end value $label",
     ({ start, invalidEnd }) => {
       expect(mapZonedDatesInRange(start, invalidEnd as never)).toEqual([]);
     },

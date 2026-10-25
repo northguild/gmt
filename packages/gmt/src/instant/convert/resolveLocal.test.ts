@@ -66,7 +66,7 @@ describe("resolveLocal", () => {
     ${"later"}      | ${"2024-11-03T06:30:00Z"}
     ${"reject"}     | ${""}
   `(
-    "resolves the ambiguous 2024-11-03T01:30:00 in America/New_York to $expected with disambiguation $disambiguation",
+    "resolves the ambiguous 2024-11-03T01:30:00 in America/New_York to '$expected' with disambiguation $disambiguation",
     ({ disambiguation, expected }) => {
       expect(
         resolveLocal("2024-11-03T01:30:00", "America/New_York", {
@@ -84,7 +84,7 @@ describe("resolveLocal", () => {
     ${"later"}      | ${"2024-03-10T07:30:00Z"}
     ${"reject"}     | ${""}
   `(
-    "resolves the nonexistent 2024-03-10T02:30:00 in America/New_York to $expected with disambiguation $disambiguation",
+    "resolves the nonexistent 2024-03-10T02:30:00 in America/New_York to '$expected' with disambiguation $disambiguation",
     ({ disambiguation, expected }) => {
       expect(
         resolveLocal("2024-03-10T02:30:00", "America/New_York", {
@@ -300,7 +300,7 @@ describe("resolveLocal at the maximum instant", () => {
     ${"+275760-09-13T14:00:00"} | ${"Pacific/Kiritimati"} | ${"+275760-09-13T00:00:00Z"}
     ${"+275760-09-13T10:00:01"} | ${"Australia/Sydney"}   | ${""}
   `(
-    "resolves $localDateTime in $timeZone to $expected",
+    "resolves $localDateTime in $timeZone to '$expected'",
     ({ localDateTime, timeZone, expected }) => {
       expect(resolveLocal(localDateTime, timeZone)).toBe(expected);
     },
@@ -316,7 +316,7 @@ describe("resolveLocal at the maximum instant", () => {
     ${"2024-11-03T01:30:00[America/New_York]"} | ${"2024-11-03T05:30:00Z"}
     ${"2024-07-15T12:00:00[!foo=bar]"}         | ${""}
   `(
-    "reads the annotations of $localDateTime as Temporal.PlainDateTime.from does → $expected",
+    "reads the annotations of $localDateTime as Temporal.PlainDateTime.from does → '$expected'",
     ({ localDateTime, expected }) => {
       expect(resolveLocal(localDateTime, "America/New_York")).toBe(expected);
     },
@@ -331,7 +331,7 @@ describe("resolveLocal at the maximum instant", () => {
     ${"+0530"}  | ${"2024-11-02T20:00:00Z"}
     ${"+24:00"} | ${""}
   `(
-    "resolves 2024-11-03T01:30:00 in the offset zone $timeZone → $expected",
+    "resolves 2024-11-03T01:30:00 in the offset zone $timeZone → '$expected'",
     ({ timeZone, expected }) => {
       expect(resolveLocal("2024-11-03T01:30:00", timeZone)).toBe(expected);
     },
@@ -475,7 +475,7 @@ describe("resolveLocal with a stored UTC offset", () => {
     ${"-271821-04-20T00:44:30"}           | ${"+00:44:30"} | ${"-271821-04-20T00:00:00Z"}
     ${"-271821-04-20T00:44:29.999999999"} | ${"+00:44:30"} | ${""}
   `(
-    "resolves $localDateTime at $timeZone at the limit of the instant range → $expected",
+    "resolves $localDateTime at $timeZone at the limit of the instant range → '$expected'",
     ({ localDateTime, timeZone, expected }) => {
       expect(resolveLocal(localDateTime, timeZone)).toBe(expected);
     },

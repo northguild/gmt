@@ -56,7 +56,7 @@ describe("isValidInstant", () => {
     ${"2024-03-10T07:00:00-0500"}              | ${"basic offset (strict extended shape)"}
     ${"invalid"}                               | ${"unparseable"}
     ${""}                                      | ${"empty string"}
-  `("returns false for $value ($reason)", ({ value }) => {
+  `("returns false for '$value' ($reason)", ({ value }) => {
     expect(isValidInstant(value)).toBe(false);
   });
 

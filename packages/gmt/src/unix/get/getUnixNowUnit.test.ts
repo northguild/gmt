@@ -43,7 +43,7 @@ describe("getUnixNowUnit", () => {
     ${"weeks"}      | ${"9"}
     ${"hours"}      | ${"00"}
     ${"dayOfWeeks"} | ${""}
-  `("returns $expected for plural unit $unit", ({ unit, expected }) => {
+  `("returns '$expected' for plural unit $unit", ({ unit, expected }) => {
     expect(getUnixNowUnit(unit as never)).toBe(expected);
   });
 
@@ -52,12 +52,15 @@ describe("getUnixNowUnit", () => {
   });
 
   it.each`
-    invalidUnit
-    ${""}
-    ${null}
-    ${undefined}
-    ${"invalid"}
-  `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
-    expect(getUnixNowUnit(invalidUnit as never)).toBe("");
-  });
+    invalidUnit  | invalidUnitLabel
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${"invalid"} | ${"'invalid'"}
+  `(
+    "returns empty string for invalid unit $invalidUnitLabel",
+    ({ invalidUnit }) => {
+      expect(getUnixNowUnit(invalidUnit as never)).toBe("");
+    },
+  );
 });

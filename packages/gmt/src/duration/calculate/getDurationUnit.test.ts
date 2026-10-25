@@ -105,37 +105,37 @@ describe("getDurationUnit", () => {
   );
 
   it.each`
-    value
-    ${"not a duration"}
-    ${""}
-    ${"P"}
-    ${"1D"}
-    ${"2024-03-10"}
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-    ${[]}
-    ${{}}
+    value               | label
+    ${"not a duration"} | ${"'not a duration'"}
+    ${""}               | ${"''"}
+    ${"P"}              | ${"'P'"}
+    ${"1D"}             | ${"'1D'"}
+    ${"2024-03-10"}     | ${"'2024-03-10'"}
+    ${null}             | ${"null"}
+    ${undefined}        | ${"undefined"}
+    ${123}              | ${"123"}
+    ${true}             | ${"true"}
+    ${[]}               | ${"[]"}
+    ${{}}               | ${"{}"}
   `(
-    "returns null when value $value is not a valid duration string",
+    "returns null when value $label is not a valid duration string",
     ({ value }) => {
       expect(getDurationUnit(value, "hours")).toBeNull();
     },
   );
 
   it.each`
-    unit
-    ${"fortnights"}
-    ${"fortnight"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-    ${[]}
-    ${{}}
+    unit            | label
+    ${"fortnights"} | ${"'fortnights'"}
+    ${"fortnight"}  | ${"'fortnight'"}
+    ${""}           | ${"''"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
+    ${123}          | ${"123"}
+    ${[]}           | ${"[]"}
+    ${{}}           | ${"{}"}
   `(
-    "returns null when unit $unit is not a valid DateTimeDurationUnit",
+    "returns null when unit $label is not a valid DateTimeDurationUnit",
     ({ unit }) => {
       expect(getDurationUnit("P1DT2H30M", unit)).toBeNull();
     },

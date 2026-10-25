@@ -26,34 +26,33 @@ describe("subtractDate", () => {
   );
 
   it.each`
-    nonStringInput
-    ${"2024-02-30"}
-    ${"not-a-date"}
-    ${"2024-13-01"}
-    ${"2024-00-10"}
-    ${""}
-    ${true}
-    ${null}
-    ${undefined}
-    ${"12"}
-    ${"2024"}
-    ${"2024-02"}
-    ${"2024-02-29T12:00:00Z"}
-    ${"2024-02-29T12:00:00Z"}
+    nonStringInput            | label
+    ${"2024-02-30"}           | ${"'2024-02-30'"}
+    ${"not-a-date"}           | ${"'not-a-date'"}
+    ${"2024-13-01"}           | ${"'2024-13-01'"}
+    ${"2024-00-10"}           | ${"'2024-00-10'"}
+    ${""}                     | ${"''"}
+    ${true}                   | ${"true"}
+    ${null}                   | ${"null"}
+    ${undefined}              | ${"undefined"}
+    ${"12"}                   | ${"'12'"}
+    ${"2024"}                 | ${"'2024'"}
+    ${"2024-02"}              | ${"'2024-02'"}
+    ${"2024-02-29T12:00:00Z"} | ${"'2024-02-29T12:00:00Z'"}
   `(
-    "returns an empty string for non-string input $nonStringInput",
+    "returns an empty string for non-string input $label",
     ({ nonStringInput }) => {
       expect(subtractDate(nonStringInput, { days: 1 })).toEqual("");
     },
   );
 
   it.each`
-    invalidUnit
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns an empty string for an invalid unit", ({ invalidUnit }) => {
+    invalidUnit  | label
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+  `("returns an empty string for an invalid unit $label", ({ invalidUnit }) => {
     expect(subtractDate("2024-02-29", { [invalidUnit as never]: 1 })).toEqual(
       "",
     );
@@ -86,7 +85,7 @@ describe("subtractDate", () => {
     ${"2024-02-29"} | ${{ years: 1 }}   | ${"reject"}    | ${""}
     ${"2024-01-15"} | ${{ months: 1 }}  | ${"reject"}    | ${"2023-12-15"}
   `(
-    "returns $expected for $value - $units with overflow $overflow",
+    "returns '$expected' for $value - $units with overflow $overflow",
     ({ value, units, overflow, expected }) => {
       expect(subtractDate(value, units, { overflow })).toBe(expected);
     },
@@ -126,7 +125,7 @@ describe("subtractDate", () => {
     ${"-271820-05-23[u-ca=indian]"}        | ${{ years: 1 }}  | ${"-271821-05-23[u-ca=indian]"}        | ${"D5 indian (xscan min[400])"}
     ${"-271821-05-29[u-ca=indian]"}        | ${{ months: 1 }} | ${"-271821-04-28[u-ca=indian]"}        | ${"D5 indian (xscan min[40])"}
   `(
-    "returns $expected for $value - $units ($reason)",
+    "returns '$expected' for $value - $units ($reason)",
     ({ value, units, expected }) => {
       expect(subtractDate(value, units)).toBe(expected);
     },

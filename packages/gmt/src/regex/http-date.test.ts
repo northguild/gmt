@@ -16,7 +16,7 @@ describe("regex/http-date", () => {
     ${"not a date"}                      | ${false}
     ${""}                                | ${false}
   `(
-    "httpDate pattern matches $value as $expected",
+    "httpDate pattern matches '$value' as $expected",
     ({ value, expected }: { value: string; expected: boolean }) => {
       expect(httpDate.test(value)).toBe(expected);
     },

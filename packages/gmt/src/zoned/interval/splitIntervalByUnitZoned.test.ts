@@ -209,7 +209,7 @@ describe("splitIntervalByUnitZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T01:30:00+00:00[UTC]"} | ${"hour"}    | ${-1}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-01T01:30:00+00:00[UTC]"} | ${"hour"}    | ${1.5}
   `(
-    "returns [] for invalid $start, $end, $unit, or $amount",
+    "returns [] for invalid '$start', '$end', '$unit', or $amount",
     ({ start, end, unit, amount }) => {
       expect(splitIntervalByUnitZoned(start, end, unit, amount)).toEqual([]);
     },

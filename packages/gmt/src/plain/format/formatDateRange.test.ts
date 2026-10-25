@@ -103,17 +103,17 @@ describe("formatDateRange", () => {
   );
 
   it.each`
-    start           | end
-    ${"invalid"}    | ${"2024-02-05"}
-    ${"2024-02-03"} | ${"invalid"}
-    ${"invalid"}    | ${"invalid"}
-    ${"2024-02-30"} | ${"2024-02-05"}
-    ${""}           | ${"2024-02-05"}
-    ${null}         | ${"2024-02-05"}
-    ${undefined}    | ${"2024-02-05"}
-    ${123}          | ${"2024-02-05"}
+    start           | end             | label
+    ${"invalid"}    | ${"2024-02-05"} | ${"'invalid'"}
+    ${"2024-02-03"} | ${"invalid"}    | ${"'2024-02-03'"}
+    ${"invalid"}    | ${"invalid"}    | ${"'invalid'"}
+    ${"2024-02-30"} | ${"2024-02-05"} | ${"'2024-02-30'"}
+    ${""}           | ${"2024-02-05"} | ${"''"}
+    ${null}         | ${"2024-02-05"} | ${"null"}
+    ${undefined}    | ${"2024-02-05"} | ${"undefined"}
+    ${123}          | ${"2024-02-05"} | ${"123"}
   `(
-    "returns empty string when either endpoint is invalid or non-string: $start -> $end",
+    "returns empty string when either endpoint is invalid or non-string: $label -> $end",
     ({ start, end }) => {
       expect(formatDateRange(start as never, end, MustTestLocales.enUS)).toBe(
         "",
@@ -131,7 +131,7 @@ describe("formatDateRange", () => {
     ${MustTestLocales.jaJP} | ${{ timeZoneName: "short" }} | ${"2024/02/03～2024/03/05"} | ${"timeZoneName is not inherited, defaults apply"}
     ${MustTestLocales.enUS} | ${{ timeStyle: "short" }}    | ${""}                       | ${"timeStyle alone: no PlainDate format"}
   `(
-    "formats 2024-02-03 to 2024-03-05 in $locale with $options to $expected ($reason)",
+    "formats 2024-02-03 to 2024-03-05 in $locale with $options to '$expected' ($reason)",
     ({ locale, options, expected }) => {
       expect(formatDateRange("2024-02-03", "2024-03-05", locale, options)).toBe(
         expected,
@@ -146,7 +146,7 @@ describe("formatDateRange", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"3–5 février 2024"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatDateRange("2024-02-03", "2024-02-05", locale, {
         dateStyle: "long",
@@ -166,7 +166,7 @@ describe("formatDateRange with primitive options", () => {
     ${null}   | ${""}
     ${"long"} | ${"2/3/2024 - 2/5/2024"}
     ${1}      | ${"2/3/2024 - 2/5/2024"}
-  `("returns $expected for options $options", ({ options, expected }) => {
+  `("returns '$expected' for options $options", ({ options, expected }) => {
     expect(
       formatDateRange(
         "2024-02-03",

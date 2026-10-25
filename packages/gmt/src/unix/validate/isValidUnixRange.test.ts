@@ -65,7 +65,7 @@ describe("isValidUnixRange", () => {
     ${""}         | ${1000}    | ${false}   | ${"empty string is not epoch 0"}
     ${0}          | ${"   "}   | ${true}    | ${"whitespace string is not epoch 0"}
   `(
-    "returns false for a non-safe-integer epoch: $value1, $value2 (allowEqual=$allowEqual, $reason)",
+    "returns false for a non-safe-integer epoch: $reason (allowEqual=$allowEqual)",
     ({ value1, value2, allowEqual }) => {
       expect(
         isValidUnixRange({ value1, value2, options: { allowEqual } }),
@@ -82,7 +82,7 @@ describe("isValidUnixRange", () => {
     ${"+1"}                     | ${"2"}                     | ${false}   | ${false} | ${"a plus sign is not an epoch"}
     ${""}                       | ${""}                      | ${true}    | ${false} | ${"empty strings are never an equal pair"}
   `(
-    "returns $expected for epochs $value1, $value2 (allowEqual=$allowEqual, $reason)",
+    "returns $expected for epochs: $reason (allowEqual=$allowEqual)",
     ({ value1, value2, allowEqual, expected }) => {
       expect(
         isValidUnixRange({ value1, value2, options: { allowEqual } }),

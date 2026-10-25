@@ -163,12 +163,12 @@ describe("getLocaleZonedStartOfWeek", () => {
   });
 
   it.each`
-    locale
-    ${"not-a-locale-!!"}
-    ${""}
-    ${null}
-    ${undefined}
-  `('returns "" for invalid locale $locale', ({ locale }) => {
+    locale               | label
+    ${"not-a-locale-!!"} | ${"'not-a-locale-!!'"}
+    ${""}                | ${"''"}
+    ${null}              | ${"null"}
+    ${undefined}         | ${"undefined"}
+  `("returns '' for invalid locale $label", ({ locale }) => {
     expect(
       getLocaleZonedStartOfWeek("2024-02-03T12:00:00+00:00[UTC]", locale),
     ).toBe("");
@@ -268,7 +268,7 @@ describe("getLocaleZonedStartOfWeek across zone transitions with default options
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"2024-05-13T00:00:00+02:00[Europe/Berlin]"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
   `(
-    "returns $expected for 2024-05-15T12:00 Berlin with locale list $locale",
+    "returns '$expected' for 2024-05-15T12:00 Berlin with locale list $locale",
     ({ locale, expected }) => {
       expect(
         getLocaleZonedStartOfWeek(

@@ -22,7 +22,7 @@ describe("addDate", () => {
     ${"-000001-02-28[u-ca=gregory]"}         | ${{ days: 1 }}    | ${"-000001-03-01[u-ca=gregory]"}
     ${"+275760-09-13[u-ca=gregory]"}         | ${{ days: 1 }}    | ${""}
   `(
-    "adds $units to $value as $expected (RFC 9557 input)",
+    "adds $units to $value as '$expected' (RFC 9557 input)",
     ({ value, units, expected }) => {
       expect(addDate(value, units)).toBe(expected);
     },
@@ -66,34 +66,30 @@ describe("addDate", () => {
   );
 
   it.each`
-    invalidDate
-    ${"2024-02-30"}
-    ${"not-a-date"}
-    ${"2024-13-01"}
-    ${"2024-00-10"}
-    ${""}
-    ${true}
-    ${null}
-    ${undefined}
-    ${"12"}
-    ${"2024"}
-    ${"2024-02"}
-    ${"2024-02-29T12:00:00Z"}
-    ${"2024-02-29T12:00:00Z"}
-  `(
-    "returns an empty string for an invalid date $invalidDate",
-    ({ invalidDate }) => {
-      expect(addDate(invalidDate, { days: 1 })).toEqual("");
-    },
-  );
+    invalidDate               | label
+    ${"2024-02-30"}           | ${"'2024-02-30'"}
+    ${"not-a-date"}           | ${"'not-a-date'"}
+    ${"2024-13-01"}           | ${"'2024-13-01'"}
+    ${"2024-00-10"}           | ${"'2024-00-10'"}
+    ${""}                     | ${"''"}
+    ${true}                   | ${"true"}
+    ${null}                   | ${"null"}
+    ${undefined}              | ${"undefined"}
+    ${"12"}                   | ${"'12'"}
+    ${"2024"}                 | ${"'2024'"}
+    ${"2024-02"}              | ${"'2024-02'"}
+    ${"2024-02-29T12:00:00Z"} | ${"'2024-02-29T12:00:00Z'"}
+  `("returns an empty string for an invalid date $label", ({ invalidDate }) => {
+    expect(addDate(invalidDate, { days: 1 })).toEqual("");
+  });
 
   it.each`
-    invalidUnit
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns an empty string for an invalid unit", ({ invalidUnit }) => {
+    invalidUnit  | label
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+  `("returns an empty string for an invalid unit $label", ({ invalidUnit }) => {
     expect(addDate("2024-02-29", { [invalidUnit as never]: 1 })).toEqual("");
   });
 
@@ -131,7 +127,7 @@ describe("addDate", () => {
     ${"2024-03-31"} | ${{ months: -1 }} | ${"constrain"} | ${"2024-02-29"}
     ${"2024-03-31"} | ${{ months: -1 }} | ${"reject"}    | ${""}
   `(
-    "returns $expected for $value + $units with overflow $overflow",
+    "returns '$expected' for $value + $units with overflow $overflow",
     ({ value, units, overflow, expected }) => {
       expect(
         addDate(
@@ -173,7 +169,7 @@ describe("addDate", () => {
     ${"+275760-08-15[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"+275760-09-13[u-ca=hebrew]"}   | ${"lands exactly on the maximum (xscan hebrew max[29])"}
     ${"+275760-08-16[u-ca=hebrew]"}   | ${{ months: 1 }} | ${""}                             | ${"one day past the maximum is a RangeError, not clamped (xscan hebrew max[28] ERR)"}
   `(
-    "returns $expected for $value + $units ($reason)",
+    "returns '$expected' for $value + $units ($reason)",
     ({ value, units, expected }) => {
       expect(addDate(value, units)).toBe(expected);
     },
@@ -393,7 +389,7 @@ describe("addDate", () => {
     ${"2023-09-30"}                        | ${{ years: 1 }}    | ${"constrain"} | ${"2024-09-30"}                        | ${"grid gregory i=121"}
     ${"2023-09-30"}                        | ${{ months: -13 }} | ${"constrain"} | ${"2022-08-30"}                        | ${"grid gregory i=121"}
   `(
-    "returns $expected for $value + $units with overflow $overflow ($source)",
+    "returns '$expected' for $value + $units with overflow $overflow ($source)",
     ({ value, units, overflow, expected }) => {
       expect(addDate(value, units, { overflow })).toBe(expected);
     },
@@ -425,7 +421,7 @@ describe("addDate", () => {
     ${"+012704-12-01[u-ca=ethioaa]"}  | ${{ months: -1 }} | ${"constrain"} | ${"+012704-11-26[u-ca=ethioaa]"}  | ${"back from the next year's month 1 into month 13"}
     ${"+012704-11-24[u-ca=ethioaa]"}  | ${{ months: 2 }}  | ${"constrain"} | ${"+012704-12-29[u-ca=ethioaa]"}  | ${"month 12 day 29 over month 13 to month 1 day 29"}
   `(
-    "returns $expected for far-year $value + $units with overflow $overflow ($reason)",
+    "returns '$expected' for far-year $value + $units with overflow $overflow ($reason)",
     ({ value, units, overflow, expected }) => {
       expect(addDate(value, units, { overflow })).toBe(expected);
     },

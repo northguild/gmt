@@ -22,27 +22,24 @@ describe("isValidAmount", () => {
   });
 
   it.each`
-    invalidAmount       | type
-    ${NaN}              | ${"NaN"}
-    ${Infinity}         | ${"Infinity"}
-    ${-Infinity}        | ${"-Infinity"}
-    ${"string"}         | ${"string"}
-    ${""}               | ${"empty string"}
-    ${"42"}             | ${"numeric string"}
-    ${{}}               | ${"object"}
-    ${[]}               | ${"array"}
-    ${true}             | ${"boolean true"}
-    ${false}            | ${"boolean false"}
-    ${null}             | ${"null"}
-    ${undefined}        | ${"undefined"}
-    ${() => {}}         | ${"function"}
-    ${Symbol("test")}   | ${"symbol"}
-    ${BigInt(42)}       | ${"bigint"}
-    ${Object("string")} | ${"String object"}
-  `(
-    "returns false for invalid amount ($type): $invalidAmount",
-    ({ invalidAmount }) => {
-      expect(isValidAmount(invalidAmount as unknown as number)).toBe(false);
-    },
-  );
+    invalidAmount       | type                | label
+    ${NaN}              | ${"NaN"}            | ${"NaN"}
+    ${Infinity}         | ${"Infinity"}       | ${"Infinity"}
+    ${-Infinity}        | ${"-Infinity"}      | ${"-Infinity"}
+    ${"string"}         | ${"string"}         | ${"'string'"}
+    ${""}               | ${"empty string"}   | ${"''"}
+    ${"42"}             | ${"numeric string"} | ${"'42'"}
+    ${{}}               | ${"object"}         | ${"{}"}
+    ${[]}               | ${"array"}          | ${"[]"}
+    ${true}             | ${"boolean true"}   | ${"true"}
+    ${false}            | ${"boolean false"}  | ${"false"}
+    ${null}             | ${"null"}           | ${"null"}
+    ${undefined}        | ${"undefined"}      | ${"undefined"}
+    ${() => {}}         | ${"function"}       | ${"() => {}"}
+    ${Symbol("test")}   | ${"symbol"}         | ${"Symbol('test')"}
+    ${BigInt(42)}       | ${"bigint"}         | ${"42n"}
+    ${Object("string")} | ${"String object"}  | ${"Object('string')"}
+  `("returns false for invalid amount ($type): $label", ({ invalidAmount }) => {
+    expect(isValidAmount(invalidAmount as unknown as number)).toBe(false);
+  });
 });

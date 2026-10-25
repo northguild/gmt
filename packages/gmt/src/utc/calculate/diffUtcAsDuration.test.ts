@@ -34,15 +34,15 @@ describe("diffUtcAsDuration", () => {
   );
 
   it.each`
-    value1                    | value2                    | unit
-    ${"invalid"}              | ${"2024-03-01T00:00:00Z"} | ${"days"}
-    ${"2024-03-01T00:00:00Z"} | ${"invalid"}              | ${"days"}
-    ${""}                     | ${"2024-03-01T00:00:00Z"} | ${"days"}
-    ${null}                   | ${"2024-03-01T00:00:00Z"} | ${"days"}
-    ${"2024-03-01T00:00:00Z"} | ${"2024-03-02T00:00:00Z"} | ${"invalid"}
-    ${"2024-03-01T00:00:00Z"} | ${"2024-03-02T00:00:00Z"} | ${["days"]}
+    value1                    | value2                    | unit         | label
+    ${"invalid"}              | ${"2024-03-01T00:00:00Z"} | ${"days"}    | ${"'invalid'"}
+    ${"2024-03-01T00:00:00Z"} | ${"invalid"}              | ${"days"}    | ${"'2024-03-01T00:00:00Z'"}
+    ${""}                     | ${"2024-03-01T00:00:00Z"} | ${"days"}    | ${"''"}
+    ${null}                   | ${"2024-03-01T00:00:00Z"} | ${"days"}    | ${"null"}
+    ${"2024-03-01T00:00:00Z"} | ${"2024-03-02T00:00:00Z"} | ${"invalid"} | ${"'2024-03-01T00:00:00Z'"}
+    ${"2024-03-01T00:00:00Z"} | ${"2024-03-02T00:00:00Z"} | ${["days"]}  | ${"'2024-03-01T00:00:00Z'"}
   `(
-    'returns "" for invalid inputs: $value1 | $value2 | $unit',
+    "returns '' for invalid inputs: $label | $value2 | $unit",
     ({ value1, value2, unit }) => {
       expect(
         diffUtcAsDuration(value1 as never, value2 as never, unit as never),
@@ -137,7 +137,7 @@ describe("diffUtcAsDuration", () => {
     ${"+275760-09-02T19:00:00Z"} | ${"+275760-09-08T00:00:00Z"} | ${"P5DT5H"}
     ${"+275760-09-09T19:00:00Z"} | ${"+275760-09-13T00:00:00Z"} | ${""}
   `(
-    "returns $expected rounded to an hour from $value1 to $value2",
+    "returns '$expected' rounded to an hour from $value1 to $value2",
     ({ value1, value2, expected }) => {
       expect(
         diffUtcAsDuration(value1, value2, "days", { smallestUnit: "hour" }),
@@ -153,7 +153,7 @@ describe("diffUtcAsDuration", () => {
     ${"-271821-04-27T05:00:00Z"} | ${"-271821-04-25T00:00:00Z"} | ${"-P2DT5H"}
     ${"-271821-04-22T05:00:00Z"} | ${"-271821-04-20T00:00:00Z"} | ${""}
   `(
-    "returns $expected rounded to an hour from $value1 back to $value2",
+    "returns '$expected' rounded to an hour from $value1 back to $value2",
     ({ value1, value2, expected }) => {
       expect(
         diffUtcAsDuration(value1, value2, "days", { smallestUnit: "hour" }),
@@ -188,7 +188,7 @@ describe("diffUtcAsDuration with a non-object options argument", () => {
     ${5}         | ${""}
     ${true}      | ${""}
     ${undefined} | ${"PT49H"}
-  `("returns $expected for options $options", ({ options, expected }) => {
+  `("returns '$expected' for options $options", ({ options, expected }) => {
     expect(
       diffUtcAsDuration(
         "2024-02-28T14:30:00Z",

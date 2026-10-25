@@ -119,7 +119,7 @@ describe("intervalCountDateTime", () => {
     ${"2024-01-01T00:00:00"} | ${"2024-01-02T00:00:00"} | ${""}
     ${"2024-01-01T00:00:00"} | ${"2024-01-02T00:00:00"} | ${"quarter"}
   `(
-    "returns null for invalid $start, $end, or $unit",
+    "returns null for invalid '$start', '$end', or '$unit'",
     ({ start, end, unit }) => {
       expect(intervalCountDateTime(start, end, unit)).toBeNull();
     },

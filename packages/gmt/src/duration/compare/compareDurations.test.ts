@@ -145,30 +145,33 @@ describe("compareDurations", () => {
   });
 
   it.each`
-    a                   | b
-    ${"not a duration"} | ${"PT1H"}
-    ${"PT1H"}           | ${"not a duration"}
-    ${""}               | ${"PT1H"}
-    ${"PT1H"}           | ${""}
-    ${"2024-03-10"}     | ${"PT1H"}
-    ${null}             | ${"PT1H"}
-    ${"PT1H"}           | ${undefined}
-    ${123}              | ${"PT1H"}
-    ${"PT1H"}           | ${true}
-    ${[]}               | ${{}}
-  `("returns null when $a or $b is not a valid duration string", ({ a, b }) => {
-    expect(compareDurations(a, b)).toBeNull();
-  });
+    a                   | b                   | aLabel                | bLabel
+    ${"not a duration"} | ${"PT1H"}           | ${"'not a duration'"} | ${"'PT1H'"}
+    ${"PT1H"}           | ${"not a duration"} | ${"'PT1H'"}           | ${"'not a duration'"}
+    ${""}               | ${"PT1H"}           | ${"''"}               | ${"'PT1H'"}
+    ${"PT1H"}           | ${""}               | ${"'PT1H'"}           | ${"''"}
+    ${"2024-03-10"}     | ${"PT1H"}           | ${"'2024-03-10'"}     | ${"'PT1H'"}
+    ${null}             | ${"PT1H"}           | ${"null"}             | ${"'PT1H'"}
+    ${"PT1H"}           | ${undefined}        | ${"'PT1H'"}           | ${"undefined"}
+    ${123}              | ${"PT1H"}           | ${"123"}              | ${"'PT1H'"}
+    ${"PT1H"}           | ${true}             | ${"'PT1H'"}           | ${"true"}
+    ${[]}               | ${{}}               | ${"[]"}               | ${"{}"}
+  `(
+    "returns null when $aLabel or $bLabel is not a valid duration string",
+    ({ a, b }) => {
+      expect(compareDurations(a, b)).toBeNull();
+    },
+  );
 
   it.each`
-    relativeTo
-    ${"not a date"}
-    ${""}
-    ${"2024-13-45"}
-    ${123}
-    ${true}
-    ${[]}
-  `("returns null when relativeTo $relativeTo is invalid", ({ relativeTo }) => {
+    relativeTo      | label
+    ${"not a date"} | ${"'not a date'"}
+    ${""}           | ${"''"}
+    ${"2024-13-45"} | ${"'2024-13-45'"}
+    ${123}          | ${"123"}
+    ${true}         | ${"true"}
+    ${[]}           | ${"[]"}
+  `("returns null when relativeTo $label is invalid", ({ relativeTo }) => {
     expect(compareDurations("P1M", "P30D", { relativeTo })).toBeNull();
   });
 

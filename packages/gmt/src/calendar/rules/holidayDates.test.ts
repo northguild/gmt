@@ -98,23 +98,23 @@ describe("holidayDates", () => {
   });
 
   it.each`
-    year       | rule                                                                         | expected
-    ${-271821} | ${{ kind: "fixed", month: 1, day: 1 }}                                       | ${[]}
-    ${-271821} | ${{ kind: "fixed", month: 12, day: 25 }}                                     | ${["-271821-12-25"]}
-    ${275760}  | ${{ kind: "fixed", month: 12, day: 25 }}                                     | ${[]}
-    ${275760}  | ${{ kind: "fixed", month: 9, day: 13 }}                                      | ${["+275760-09-13"]}
-    ${275760}  | ${{ kind: "fixed", month: 9, day: 14 }}                                      | ${[]}
-    ${-271821} | ${{ kind: "fixed", month: 4, day: 19 }}                                      | ${["-271821-04-19"]}
-    ${-271821} | ${{ kind: "fixed", month: 4, day: 18 }}                                      | ${[]}
-    ${-271821} | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M04", day: 19 }} | ${["-271821-04-19"]}
-    ${-271821} | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M04", day: 30 }} | ${["-271821-04-30"]}
-    ${-271821} | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M04", day: 18 }} | ${[]}
-    ${-271821} | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M03", day: 31 }} | ${[]}
-    ${275760}  | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M08", day: 31 }} | ${["+275760-08-31"]}
-    ${275760}  | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M09", day: 14 }} | ${[]}
-    ${275760}  | ${{ kind: "calendarFixed", calendar: "roc", monthCode: "M09", day: 13 }}     | ${["+275760-09-13"]}
+    year       | rule                                                                         | expected             | label
+    ${-271821} | ${{ kind: "fixed", month: 1, day: 1 }}                                       | ${[]}                | ${"fixed month 1 day 1"}
+    ${-271821} | ${{ kind: "fixed", month: 12, day: 25 }}                                     | ${["-271821-12-25"]} | ${"fixed month 12 day 25"}
+    ${275760}  | ${{ kind: "fixed", month: 12, day: 25 }}                                     | ${[]}                | ${"fixed month 12 day 25"}
+    ${275760}  | ${{ kind: "fixed", month: 9, day: 13 }}                                      | ${["+275760-09-13"]} | ${"fixed month 9 day 13"}
+    ${275760}  | ${{ kind: "fixed", month: 9, day: 14 }}                                      | ${[]}                | ${"fixed month 9 day 14"}
+    ${-271821} | ${{ kind: "fixed", month: 4, day: 19 }}                                      | ${["-271821-04-19"]} | ${"fixed month 4 day 19"}
+    ${-271821} | ${{ kind: "fixed", month: 4, day: 18 }}                                      | ${[]}                | ${"fixed month 4 day 18"}
+    ${-271821} | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M04", day: 19 }} | ${["-271821-04-19"]} | ${"calendarFixed iso8601 M04 day 19"}
+    ${-271821} | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M04", day: 30 }} | ${["-271821-04-30"]} | ${"calendarFixed iso8601 M04 day 30"}
+    ${-271821} | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M04", day: 18 }} | ${[]}                | ${"calendarFixed iso8601 M04 day 18"}
+    ${-271821} | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M03", day: 31 }} | ${[]}                | ${"calendarFixed iso8601 M03 day 31"}
+    ${275760}  | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M08", day: 31 }} | ${["+275760-08-31"]} | ${"calendarFixed iso8601 M08 day 31"}
+    ${275760}  | ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M09", day: 14 }} | ${[]}                | ${"calendarFixed iso8601 M09 day 14"}
+    ${275760}  | ${{ kind: "calendarFixed", calendar: "roc", monthCode: "M09", day: 13 }}     | ${["+275760-09-13"]} | ${"calendarFixed roc M09 day 13"}
   `(
-    "range edge: $rule in year $year gives $expected",
+    "range edge: $label in year $year gives $expected",
     ({ year, rule, expected }) => {
       expect(holidayDates({ name: "x", ...rule }, year)).toEqual(expected);
     },
@@ -181,47 +181,47 @@ describe("holidayDates", () => {
   });
 
   it.each`
-    options
-    ${"x"}
-    ${null}
-    ${1}
-    ${{ calendar: "x" }}
-    ${{ calendar: null }}
-    ${{ calendar: { weekend: [1, 2, 3, 4, 5, 6, 7], holidays: [], timeZone: "UTC" } }}
-    ${{ calendar: { weekend: [6, 7], holidays: [], timeZone: "Not/AZone" } }}
-  `("returns [] for options $options", ({ options }) => {
+    options                                                                            | label
+    ${"x"}                                                                             | ${"'x'"}
+    ${null}                                                                            | ${"null"}
+    ${1}                                                                               | ${"1"}
+    ${{ calendar: "x" }}                                                               | ${"calendar 'x'"}
+    ${{ calendar: null }}                                                              | ${"calendar null"}
+    ${{ calendar: { weekend: [1, 2, 3, 4, 5, 6, 7], holidays: [], timeZone: "UTC" } }} | ${"a calendar with every weekday closed"}
+    ${{ calendar: { weekend: [6, 7], holidays: [], timeZone: "Not/AZone" } }}          | ${"a calendar with an unknown timeZone"}
+  `("returns [] for options $label", ({ options }) => {
     expect(holidayDates(valid as never, 2026, options)).toEqual([]);
   });
 
   it.each`
-    rule
-    ${null}
-    ${undefined}
-    ${[]}
-    ${"rule"}
-    ${{ kind: "fixed", month: 1, day: 1 }}
-    ${{ name: 1, kind: "fixed", month: 1, day: 1 }}
-    ${{ name: "x", kind: "weekly" }}
-    ${{ name: "x", kind: "fixed", month: 13, day: 1 }}
-    ${{ name: "x", kind: "fixed", month: 1, day: 0 }}
-    ${{ name: "x", kind: "fixed", month: 2, day: 30 }}
-    ${{ name: "x", kind: "fixed", month: 4, day: 31 }}
-    ${{ name: "x", kind: "fixed", month: 1, day: 1.5 }}
-    ${{ name: "x", kind: "calendarFixed", calendar: "hebrew", monthCode: "M5", day: 1 }}
-    ${{ name: "x", kind: "calendarFixed", calendar: "hebrew", monthCode: "M14", day: 1 }}
-    ${{ name: "x", kind: "calendarFixed", calendar: "islamic-civil", monthCode: "M13", day: 1 }}
-    ${{ name: "x", kind: "calendarFixed", calendar: "persian", monthCode: "M05L", day: 1 }}
-    ${{ name: "x", kind: "calendarFixed", calendar: "hebrew", monthCode: "M07", day: 32 }}
-    ${{ name: "x", kind: "nthWeekday", month: 1, weekday: 1, n: 0 }}
-    ${{ name: "x", kind: "nthWeekday", month: 1, weekday: 1, n: "first" }}
-    ${{ name: "x", kind: "nthWeekday", month: 1, weekday: 8, n: 1 }}
-    ${{ name: "x", kind: "easterRelative", offsetDays: 1.5 }}
-    ${{ name: "x", kind: "easterRelative", offsetDays: 2 ** 53 }}
-    ${{ name: "x", kind: "easterRelative", offsetDays: 0, computus: "orthodox" }}
-    ${{ name: "x", kind: "dates", dates: ["2026-02-30"] }}
-    ${{ name: "x", kind: "dates", dates: "2026-01-01" }}
-    ${{ name: "x", kind: "fixed", month: 1, day: 1, observed: { 6: "none" } }}
-  `("returns [] for rule $rule", ({ rule }) => {
+    rule                                                                                         | label
+    ${null}                                                                                      | ${"null"}
+    ${undefined}                                                                                 | ${"undefined"}
+    ${[]}                                                                                        | ${"[]"}
+    ${"rule"}                                                                                    | ${"'rule'"}
+    ${{ kind: "fixed", month: 1, day: 1 }}                                                       | ${"fixed month 1 day 1, no name"}
+    ${{ name: 1, kind: "fixed", month: 1, day: 1 }}                                              | ${"fixed month 1 day 1, name 1"}
+    ${{ name: "x", kind: "weekly" }}                                                             | ${"kind weekly"}
+    ${{ name: "x", kind: "fixed", month: 13, day: 1 }}                                           | ${"fixed month 13 day 1"}
+    ${{ name: "x", kind: "fixed", month: 1, day: 0 }}                                            | ${"fixed month 1 day 0"}
+    ${{ name: "x", kind: "fixed", month: 2, day: 30 }}                                           | ${"fixed month 2 day 30"}
+    ${{ name: "x", kind: "fixed", month: 4, day: 31 }}                                           | ${"fixed month 4 day 31"}
+    ${{ name: "x", kind: "fixed", month: 1, day: 1.5 }}                                          | ${"fixed month 1 day 1.5"}
+    ${{ name: "x", kind: "calendarFixed", calendar: "hebrew", monthCode: "M5", day: 1 }}         | ${"calendarFixed hebrew M5 day 1"}
+    ${{ name: "x", kind: "calendarFixed", calendar: "hebrew", monthCode: "M14", day: 1 }}        | ${"calendarFixed hebrew M14 day 1"}
+    ${{ name: "x", kind: "calendarFixed", calendar: "islamic-civil", monthCode: "M13", day: 1 }} | ${"calendarFixed islamic-civil M13 day 1"}
+    ${{ name: "x", kind: "calendarFixed", calendar: "persian", monthCode: "M05L", day: 1 }}      | ${"calendarFixed persian M05L day 1"}
+    ${{ name: "x", kind: "calendarFixed", calendar: "hebrew", monthCode: "M07", day: 32 }}       | ${"calendarFixed hebrew M07 day 32"}
+    ${{ name: "x", kind: "nthWeekday", month: 1, weekday: 1, n: 0 }}                             | ${"nthWeekday m1 wd1 n 0"}
+    ${{ name: "x", kind: "nthWeekday", month: 1, weekday: 1, n: "first" }}                       | ${"nthWeekday m1 wd1 n first"}
+    ${{ name: "x", kind: "nthWeekday", month: 1, weekday: 8, n: 1 }}                             | ${"nthWeekday m1 wd8 n 1"}
+    ${{ name: "x", kind: "easterRelative", offsetDays: 1.5 }}                                    | ${"easter offset 1.5"}
+    ${{ name: "x", kind: "easterRelative", offsetDays: 2 ** 53 }}                                | ${"easter offset 2**53"}
+    ${{ name: "x", kind: "easterRelative", offsetDays: 0, computus: "orthodox" }}                | ${"easter offset 0 orthodox"}
+    ${{ name: "x", kind: "dates", dates: ["2026-02-30"] }}                                       | ${"dates ['2026-02-30']"}
+    ${{ name: "x", kind: "dates", dates: "2026-01-01" }}                                         | ${"dates '2026-01-01'"}
+    ${{ name: "x", kind: "fixed", month: 1, day: 1, observed: { 6: "none" } }}                   | ${"fixed month 1 day 1 observed 6 none"}
+  `("returns [] for rule $label", ({ rule }) => {
     expect(holidayDates(rule, 2026)).toEqual([]);
   });
 
@@ -422,26 +422,26 @@ describe("holidayDates", () => {
   );
 
   it.each`
-    rule                                                                         | year       | expected
-    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M12", day: 25 }} | ${-271821} | ${["-271821-12-25"]}
-    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M04", day: 19 }} | ${-271821} | ${["-271821-04-19"]}
-    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M04", day: 18 }} | ${-271821} | ${[]}
-    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M09", day: 13 }} | ${275760}  | ${["+275760-09-13"]}
-    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M09", day: 1 }}  | ${275760}  | ${["+275760-09-01"]}
-    ${{ kind: "calendarFixed", calendar: "gregory", monthCode: "M09", day: 13 }} | ${275760}  | ${["+275760-09-13"]}
-    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M08", day: 31 }} | ${275760}  | ${["+275760-08-31"]}
-    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M09", day: 14 }} | ${275760}  | ${[]}
-    ${{ kind: "calendarFixed", calendar: "gregory", monthCode: "M01", day: 1 }}  | ${275760}  | ${["+275760-01-01"]}
-    ${{ kind: "calendarFixed", calendar: "gregory", monthCode: "M01", day: 1 }}  | ${-271821} | ${[]}
-    ${{ kind: "easterRelative", offsetDays: 0 }}                                 | ${275760}  | ${["+275760-03-30"]}
-    ${{ kind: "nthWeekday", month: 9, weekday: 6, n: 2 }}                        | ${275760}  | ${["+275760-09-13"]}
-    ${{ kind: "nthWeekday", month: 9, weekday: 6, n: "last" }}                   | ${275760}  | ${[]}
-    ${{ kind: "nthWeekday", month: 4, weekday: 1, n: 3 }}                        | ${-271821} | ${["-271821-04-19"]}
-    ${{ kind: "nthWeekday", month: 4, weekday: 1, n: 1 }}                        | ${-271821} | ${[]}
-    ${{ kind: "dates", dates: ["-271821-04-19", "+275760-09-13"] }}              | ${-271821} | ${["-271821-04-19"]}
-    ${{ kind: "dates", dates: ["-271821-04-19", "+275760-09-13"] }}              | ${275760}  | ${["+275760-09-13"]}
+    rule                                                                         | year       | expected             | label
+    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M12", day: 25 }} | ${-271821} | ${["-271821-12-25"]} | ${"calendarFixed iso8601 M12 day 25"}
+    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M04", day: 19 }} | ${-271821} | ${["-271821-04-19"]} | ${"calendarFixed iso8601 M04 day 19"}
+    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M04", day: 18 }} | ${-271821} | ${[]}                | ${"calendarFixed iso8601 M04 day 18"}
+    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M09", day: 13 }} | ${275760}  | ${["+275760-09-13"]} | ${"calendarFixed iso8601 M09 day 13"}
+    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M09", day: 1 }}  | ${275760}  | ${["+275760-09-01"]} | ${"calendarFixed iso8601 M09 day 1"}
+    ${{ kind: "calendarFixed", calendar: "gregory", monthCode: "M09", day: 13 }} | ${275760}  | ${["+275760-09-13"]} | ${"calendarFixed gregory M09 day 13"}
+    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M08", day: 31 }} | ${275760}  | ${["+275760-08-31"]} | ${"calendarFixed iso8601 M08 day 31"}
+    ${{ kind: "calendarFixed", calendar: "iso8601", monthCode: "M09", day: 14 }} | ${275760}  | ${[]}                | ${"calendarFixed iso8601 M09 day 14"}
+    ${{ kind: "calendarFixed", calendar: "gregory", monthCode: "M01", day: 1 }}  | ${275760}  | ${["+275760-01-01"]} | ${"calendarFixed gregory M01 day 1"}
+    ${{ kind: "calendarFixed", calendar: "gregory", monthCode: "M01", day: 1 }}  | ${-271821} | ${[]}                | ${"calendarFixed gregory M01 day 1"}
+    ${{ kind: "easterRelative", offsetDays: 0 }}                                 | ${275760}  | ${["+275760-03-30"]} | ${"easter offset 0"}
+    ${{ kind: "nthWeekday", month: 9, weekday: 6, n: 2 }}                        | ${275760}  | ${["+275760-09-13"]} | ${"nthWeekday m9 wd6 n 2"}
+    ${{ kind: "nthWeekday", month: 9, weekday: 6, n: "last" }}                   | ${275760}  | ${[]}                | ${"nthWeekday m9 wd6 n last"}
+    ${{ kind: "nthWeekday", month: 4, weekday: 1, n: 3 }}                        | ${-271821} | ${["-271821-04-19"]} | ${"nthWeekday m4 wd1 n 3"}
+    ${{ kind: "nthWeekday", month: 4, weekday: 1, n: 1 }}                        | ${-271821} | ${[]}                | ${"nthWeekday m4 wd1 n 1"}
+    ${{ kind: "dates", dates: ["-271821-04-19", "+275760-09-13"] }}              | ${-271821} | ${["-271821-04-19"]} | ${"dates at both limits"}
+    ${{ kind: "dates", dates: ["-271821-04-19", "+275760-09-13"] }}              | ${275760}  | ${["+275760-09-13"]} | ${"dates at both limits"}
   `(
-    "range edge: $rule in year $year gives $expected",
+    "range edge across kinds: $label in year $year gives $expected",
     ({ rule, year, expected }) => {
       expect(holidayDates({ name: "x", ...rule }, year)).toEqual(expected);
     },
@@ -642,64 +642,27 @@ describe("holidayDates", () => {
   r.revoke();
   return r.proxy;
 }}
-    ${"a proxy whose get throws"} | ${() =>
-  new Proxy(
-    {},
-    {
-      get() {
+    ${"a proxy whose get throws"} | ${() => new Proxy({}, { get() {
         throw new Error("boom");
-      },
-    },
-  )}
-    ${"a proxy whose has throws"} | ${() =>
-  new Proxy(
-    {},
-    {
-      has() {
+      } })}
+    ${"a proxy whose has throws"} | ${() => new Proxy({}, { has() {
         throw new Error("boom");
-      },
-      get: () => "fixed",
-    },
-  )}
-    ${"a throwing kind getter"} | ${() => ({
-  name: "x",
-  get kind(): string {
+      }, get: () => "fixed" })}
+    ${"a throwing kind getter"} | ${() => ({ name: "x", get kind(): string {
     throw new Error("boom");
-  },
-})}
-    ${"a throwing name getter"} | ${() => ({
-  get name(): string {
+  } })}
+    ${"a throwing name getter"} | ${() => ({ get name(): string {
     throw new Error("boom");
-  },
-  kind: "fixed",
-  month: 1,
-  day: 1,
-})}
-    ${"a throwing dates getter"} | ${() => ({
-  name: "x",
-  kind: "dates",
-  get dates(): string[] {
+  }, kind: "fixed", month: 1, day: 1 })}
+    ${"a throwing dates getter"} | ${() => ({ name: "x", kind: "dates", get dates(): string[] {
     throw new Error("boom");
-  },
-})}
-    ${"a throwing observed getter"} | ${() => ({
-  name: "x",
-  kind: "fixed",
-  month: 1,
-  day: 1,
-  get observed(): never {
+  } })}
+    ${"a throwing observed getter"} | ${() => ({ name: "x", kind: "fixed", month: 1, day: 1, get observed(): never {
     throw new Error("boom");
-  },
-})}
-    ${"a dates array proxy that throws"} | ${() => ({
-  name: "x",
-  kind: "dates",
-  dates: new Proxy(["2026-03-20"], {
-    get() {
+  } })}
+    ${"a dates array proxy that throws"} | ${() => ({ name: "x", kind: "dates", dates: new Proxy(["2026-03-20"], { get() {
       throw new Error("boom");
-    },
-  }),
-})}
+    } }) })}
   `("returns [] for $why", ({ make }) => {
     expect(holidayDates(make(), 2026)).toEqual([]);
   });

@@ -49,16 +49,16 @@ describe("isRelativeDay", () => {
   );
 
   it.each`
-    value           | offsetDays
-    ${"2024-02-29"} | ${1.5}
-    ${"2024-02-29"} | ${NaN}
-    ${"2024-02-29"} | ${Infinity}
-    ${"invalid"}    | ${0}
-    ${""}           | ${0}
-    ${null}         | ${0}
-    ${undefined}    | ${0}
+    value           | offsetDays  | label
+    ${"2024-02-29"} | ${1.5}      | ${"'2024-02-29'"}
+    ${"2024-02-29"} | ${NaN}      | ${"'2024-02-29'"}
+    ${"2024-02-29"} | ${Infinity} | ${"'2024-02-29'"}
+    ${"invalid"}    | ${0}        | ${"'invalid'"}
+    ${""}           | ${0}        | ${"''"}
+    ${null}         | ${0}        | ${"null"}
+    ${undefined}    | ${0}        | ${"undefined"}
   `(
-    "returns false for invalid input value $value, offsetDays $offsetDays",
+    "returns false for invalid input value $label, offsetDays $offsetDays",
     ({ value, offsetDays }) => {
       expect(isRelativeDay(value as never, offsetDays)).toBe(false);
     },

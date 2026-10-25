@@ -29,7 +29,7 @@ describe("regex/sql-date-time", () => {
     ${"not a date"}                     | ${false} | ${"not a literal"}
     ${""}                               | ${false} | ${"empty"}
   `(
-    "sqlDateTime matches $value as $expected ($reason)",
+    "sqlDateTime matches '$value' as $expected ($reason)",
     ({ value, expected }: { value: string; expected: boolean }) => {
       expect(sqlDateTime.test(value)).toBe(expected);
     },

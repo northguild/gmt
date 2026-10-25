@@ -34,14 +34,14 @@ describe("addUtc", () => {
   );
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-01-01T00:00:00"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidValue             | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-01-01T00:00:00"} | ${"'2024-01-01T00:00:00'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
   `(
-    "returns empty string for invalid UTC datetime $invalidValue",
+    "returns empty string for invalid UTC datetime $label",
     ({ invalidValue }) => {
       expect(addUtc(invalidValue as never, { hours: 1 } as never)).toBe("");
     },
@@ -63,12 +63,12 @@ describe("addUtc", () => {
   );
 
   it.each`
-    invalidUnit
-    ${"timeZone"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit   | label
+    ${"timeZone"} | ${"'timeZone'"}
+    ${""}         | ${"''"}
+    ${null}       | ${"null"}
+    ${undefined}  | ${"undefined"}
+  `("returns empty string for invalid unit $label", ({ invalidUnit }) => {
     expect(addUtc(canonicalInput, { [String(invalidUnit)]: 1 } as never)).toBe(
       "",
     );
@@ -86,7 +86,7 @@ describe("addUtc", () => {
     ${"2024-03-31T12:00:00Z"} | ${{ months: -1 }} | ${"constrain"} | ${"2024-02-29T12:00:00Z"}
     ${"2024-03-31T12:00:00Z"} | ${{ months: -1 }} | ${"reject"}    | ${""}
   `(
-    "returns $expected for $value + $units with overflow $overflow",
+    "returns '$expected' for $value + $units with overflow $overflow",
     ({ value, units, overflow, expected }) => {
       expect(addUtc(value, units, { overflow })).toBe(expected);
     },

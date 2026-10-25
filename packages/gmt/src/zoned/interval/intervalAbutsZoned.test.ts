@@ -56,7 +56,7 @@ describe("intervalAbutsZoned", () => {
     ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-07-01T13:00:00+00:00[UTC]"} | ${"invalid"}                        | ${false}
     ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-07-01T13:00:00+00:00[UTC]"} | ${""}                               | ${false}
   `(
-    "returns false for malformed zoned datetime: $aStart, $aEnd, $bStart, $bEnd",
+    "returns false for malformed zoned datetime: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalAbutsZoned(aStart, aEnd, bStart, bEnd)).toBe(false);
     },
@@ -68,9 +68,12 @@ describe("intervalAbutsZoned", () => {
     ${"2024-01-01T09:00:00+00:00[UTC]"} | ${undefined}                        | ${"2024-07-01T13:00:00+00:00[UTC]"} | ${"2024-12-31T17:00:00+00:00[UTC]"}
     ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${null}                             | ${"2024-12-31T17:00:00+00:00[UTC]"}
     ${"2024-01-01T09:00:00+00:00[UTC]"} | ${"2024-06-30T12:00:00+00:00[UTC]"} | ${"2024-07-01T13:00:00+00:00[UTC]"} | ${undefined}
-  `("returns false for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalAbutsZoned(aStart, aEnd, bStart, bEnd)).toBe(false);
-  });
+  `(
+    "returns false for non-string input: $aStart, $aEnd, $bStart, $bEnd",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalAbutsZoned(aStart, aEnd, bStart, bEnd)).toBe(false);
+    },
+  );
 
   it("returns false when Temporal.ZonedDateTime.from throws", () => {
     mockTemporalZonedDateTimeFromThrow();

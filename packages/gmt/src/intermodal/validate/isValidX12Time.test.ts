@@ -19,7 +19,7 @@ describe("isValidX12Time", () => {
     ${"14:30"}     | ${false} | ${"a colon"}
     ${""}          | ${false} | ${"an empty value"}
   `(
-    "returns $expected for $value ($reads), as parseX12Time reads it",
+    "returns $expected for '$value' ($reads), as parseX12Time reads it",
     ({ value, expected }) => {
       expect(isValidX12Time(value)).toBe(expected);
       expect(parseX12Time(value) !== "").toBe(expected);
@@ -40,7 +40,7 @@ describe("isValidX12Time", () => {
     ${"TS"} | ${"143060"}   | ${false} | ${false}    | ${"second 60"}
     ${"TM"} | ${""}         | ${false} | ${false}    | ${"an empty value"}
   `(
-    "returns $expected for $value under $format ($reads) and $unqualified with no qualifier, as parseX12Time reads it",
+    "returns $expected for '$value' under $format ($reads) and $unqualified with no qualifier, as parseX12Time reads it",
     ({ format, value, expected, unqualified }) => {
       expect(isValidX12Time(value, format)).toBe(expected);
       expect(parseX12Time(value, format) !== "").toBe(expected);

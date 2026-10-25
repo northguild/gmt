@@ -215,7 +215,7 @@ describe("intervalCountZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"}          | ${"2024-01-02T00:00:00+00:00[UTC]"} | ${""}
     ${"2024-01-01T00:00:00+00:00[UTC]"}          | ${"2024-01-02T00:00:00+00:00[UTC]"} | ${"quarter"}
   `(
-    "returns null for invalid $start, $end, or $unit",
+    "returns null for invalid '$start', '$end', or '$unit'",
     ({ start, end, unit }) => {
       expect(intervalCountZoned(start, end, unit)).toBeNull();
     },
@@ -341,15 +341,15 @@ describe("intervalCountZoned with GMT calendar-annotated values", () => {
   // ISO twin (5785-02-01/02 in GMT digits is ISO 2024-11-02/03). Verified on
   // @js-temporal/polyfill@0.5.1.
   it.each`
-    start                                                         | end                                                           | unit      | expected
-    ${"2024-11-03T01:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"2024-11-03T01:45:00-05:00[America/New_York][u-ca=hebrew]"} | ${"hour"} | ${1}
-    ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"2024-11-03T01:45:00-05:00[America/New_York]"}              | ${"hour"} | ${1}
-    ${"2024-11-03T01:30:00-04:00[America/New_York][u-ca=hebrew]"} | ${"2024-11-03T01:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"hour"} | ${2}
-    ${"2024-11-03T01:30:00-04:00[America/New_York]"}              | ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"hour"} | ${2}
-    ${"2024-11-02T12:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"2024-11-03T01:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"day"}  | ${2}
-    ${"2024-11-02T12:00:00-04:00[America/New_York]"}              | ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"day"}  | ${2}
+    start                                                         | end                                                           | unit      | expected | calendar
+    ${"2024-11-03T01:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"2024-11-03T01:45:00-05:00[America/New_York][u-ca=hebrew]"} | ${"hour"} | ${1}     | ${"hebrew"}
+    ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"2024-11-03T01:45:00-05:00[America/New_York]"}              | ${"hour"} | ${1}     | ${"iso8601"}
+    ${"2024-11-03T01:30:00-04:00[America/New_York][u-ca=hebrew]"} | ${"2024-11-03T01:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"hour"} | ${2}     | ${"hebrew"}
+    ${"2024-11-03T01:30:00-04:00[America/New_York]"}              | ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"hour"} | ${2}     | ${"iso8601"}
+    ${"2024-11-02T12:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"2024-11-03T01:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"day"}  | ${2}     | ${"hebrew"}
+    ${"2024-11-02T12:00:00-04:00[America/New_York]"}              | ${"2024-11-03T01:30:00-05:00[America/New_York]"}              | ${"day"}  | ${2}     | ${"iso8601"}
   `(
-    "returns $expected $unit buckets for $start to $end across the fall-back",
+    "returns $expected $unit buckets in the $calendar calendar for $start to $end across the fall-back",
     ({ start, end, unit, expected }) => {
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
     },

@@ -158,16 +158,16 @@ describe("formatDateToParts", () => {
 
   describe("invalid input", () => {
     it.each`
-      value
-      ${"not-a-date"}
-      ${"2024-13-01"}
-      ${"2024-02-30"}
-      ${""}
-      ${null}
-      ${undefined}
-      ${false}
-      ${[]}
-    `("returns [] for invalid input: $value", ({ value }) => {
+      value           | label
+      ${"not-a-date"} | ${"'not-a-date'"}
+      ${"2024-13-01"} | ${"'2024-13-01'"}
+      ${"2024-02-30"} | ${"'2024-02-30'"}
+      ${""}           | ${"''"}
+      ${null}         | ${"null"}
+      ${undefined}    | ${"undefined"}
+      ${false}        | ${"false"}
+      ${[]}           | ${"[]"}
+    `("returns [] for invalid input: $label", ({ value }) => {
       expect(formatDateToParts(value as never)).toEqual([]);
     });
   });
@@ -180,7 +180,7 @@ describe("formatDateToParts", () => {
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"03/02/2024"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
   `(
-    "returns $expected (parts joined) for locale list $locale",
+    "returns '$expected' (parts joined) for locale list $locale",
     ({ locale, expected }) => {
       const actual = formatDateToParts("2024-02-03", locale);
       expect(
@@ -202,7 +202,7 @@ describe("formatDateToParts with primitive options", () => {
     ${null}   | ${""}
     ${"long"} | ${"2/3/2024"}
     ${1}      | ${"2/3/2024"}
-  `("returns $expected for options $options", ({ options, expected }) => {
+  `("returns '$expected' for options $options", ({ options, expected }) => {
     expectDateTimeEqual(
       formatDateToParts("2024-02-03", MustTestLocales.enUS, options as never)
         .map((part) => part.value)

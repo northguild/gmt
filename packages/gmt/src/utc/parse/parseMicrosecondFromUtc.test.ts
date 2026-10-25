@@ -13,7 +13,7 @@ describe("parseMicrosecondFromUtc", () => {
     value
     ${"invalid"}
     ${""}
-  `("returns empty string for invalid value $value", ({ value }) => {
+  `("returns empty string for invalid value '$value'", ({ value }) => {
     expect(parseMicrosecondFromUtc(value)).toBe("");
   });
 
@@ -41,11 +41,11 @@ describe("parseMicrosecondFromUtc", () => {
 
   // An unknown IANA zone is invalid input; an explicit undefined is the omitted option (UTC).
   it.each`
-    timeZone
-    ${"Mars/Olympus"}
-    ${""}
-    ${null}
-  `("returns the sentinel for invalid timeZone $timeZone", ({ timeZone }) => {
+    timeZone          | label
+    ${"Mars/Olympus"} | ${"'Mars/Olympus'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+  `("returns the sentinel for invalid timeZone $label", ({ timeZone }) => {
     expect(
       parseMicrosecondFromUtc("2024-03-17T02:30:45.123456789Z", { timeZone }),
     ).toBe("");

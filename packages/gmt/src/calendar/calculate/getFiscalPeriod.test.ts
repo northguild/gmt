@@ -236,15 +236,15 @@ describe("getFiscalPeriod", () => {
   );
 
   it.each`
-    pattern      | description
-    ${"4-5-5"}   | ${"a pattern that is not one of the three"}
-    ${"454"}     | ${"a pattern missing its separators"}
-    ${"4-5-4 "}  | ${"a pattern with trailing whitespace"}
-    ${""}        | ${"an empty pattern"}
-    ${undefined} | ${"no pattern"}
-    ${null}      | ${"a null pattern"}
-    ${454}       | ${"a non-string pattern"}
-  `("returns null when pattern is $pattern ($description)", ({ pattern }) => {
+    pattern      | description                                 | label
+    ${"4-5-5"}   | ${"a pattern that is not one of the three"} | ${"'4-5-5'"}
+    ${"454"}     | ${"a pattern missing its separators"}       | ${"'454'"}
+    ${"4-5-4 "}  | ${"a pattern with trailing whitespace"}     | ${"'4-5-4 '"}
+    ${""}        | ${"an empty pattern"}                       | ${"''"}
+    ${undefined} | ${"no pattern"}                             | ${"undefined"}
+    ${null}      | ${"a null pattern"}                         | ${"null"}
+    ${454}       | ${"a non-string pattern"}                   | ${"454"}
+  `("returns null when pattern is $label ($description)", ({ pattern }) => {
     expect(
       getFiscalPeriod("2024-06-15", {
         pattern,
@@ -255,19 +255,19 @@ describe("getFiscalPeriod", () => {
   });
 
   it.each`
-    yearEndsOn                                       | description
-    ${"invalid"}                                     | ${"an unparseable string"}
-    ${""}                                            | ${"an empty string"}
-    ${"2026-02-30"}                                  | ${"a date that does not exist"}
-    ${"2026-01-31T00:00:00"}                         | ${"a datetime rather than a date"}
-    ${"2026-01-31T00:00:00Z"}                        | ${"an instant"}
-    ${"2026-01-31T00:00:00-05:00[America/New_York]"} | ${"a zoned datetime"}
-    ${"2026-01-31[u-ca=hebrew]"}                     | ${"a non-ISO calendar, whose year and month are not ISO's"}
-    ${undefined}                                     | ${"absent"}
-    ${null}                                          | ${"null"}
-    ${20260131}                                      | ${"a number"}
+    yearEndsOn                                       | description                                                 | label
+    ${"invalid"}                                     | ${"an unparseable string"}                                  | ${"'invalid'"}
+    ${""}                                            | ${"an empty string"}                                        | ${"''"}
+    ${"2026-02-30"}                                  | ${"a date that does not exist"}                             | ${"'2026-02-30'"}
+    ${"2026-01-31T00:00:00"}                         | ${"a datetime rather than a date"}                          | ${"'2026-01-31T00:00:00'"}
+    ${"2026-01-31T00:00:00Z"}                        | ${"an instant"}                                             | ${"'2026-01-31T00:00:00Z'"}
+    ${"2026-01-31T00:00:00-05:00[America/New_York]"} | ${"a zoned datetime"}                                       | ${"'2026-01-31T00:00:00-05:00[America/New_York]'"}
+    ${"2026-01-31[u-ca=hebrew]"}                     | ${"a non-ISO calendar, whose year and month are not ISO's"} | ${"'2026-01-31[u-ca=hebrew]'"}
+    ${undefined}                                     | ${"absent"}                                                 | ${"undefined"}
+    ${null}                                          | ${"null"}                                                   | ${"null"}
+    ${20260131}                                      | ${"a number"}                                               | ${"20260131"}
   `(
-    "returns null when yearEndsOn is $yearEndsOn ($description)",
+    "returns null when yearEndsOn is $label ($description)",
     ({ yearEndsOn }) => {
       expect(
         getFiscalPeriod("2024-06-15", {
@@ -304,7 +304,7 @@ describe("getFiscalPeriod", () => {
     ${"2024-02-30"}                                  | ${"a date that does not exist"}
     ${"2024-12-31T23:59:60"}                         | ${"a leap second"}
     ${"2024-06-15[u-ca=hebrew]"}                     | ${"a date in a non-ISO calendar"}
-  `("returns null when $value is $description", ({ value }) => {
+  `("returns null when '$value' is $description", ({ value }) => {
     expect(getFiscalPeriod(value, nrf)).toBeNull();
   });
 
@@ -798,13 +798,13 @@ describe("getFiscalPeriod calendar validation", () => {
   });
 
   it.each`
-    extraWeek
-    ${"lastQuarter"}
-    ${"middle"}
-    ${""}
-    ${12}
-    ${null}
-  `("returns null when extraWeek is $extraWeek", ({ extraWeek }) => {
+    extraWeek        | label
+    ${"lastQuarter"} | ${"'lastQuarter'"}
+    ${"middle"}      | ${"'middle'"}
+    ${""}            | ${"''"}
+    ${12}            | ${"12"}
+    ${null}          | ${"null"}
+  `("returns null when extraWeek is $label", ({ extraWeek }) => {
     expect(
       getFiscalPeriod("2024-06-15", {
         ...nrf,
@@ -814,13 +814,13 @@ describe("getFiscalPeriod calendar validation", () => {
   });
 
   it.each`
-    yearLabel
-    ${"fiscalYear"}
-    ${"StartYear"}
-    ${""}
-    ${2024}
-    ${null}
-  `("returns null when yearLabel is $yearLabel", ({ yearLabel }) => {
+    yearLabel       | label
+    ${"fiscalYear"} | ${"'fiscalYear'"}
+    ${"StartYear"}  | ${"'StartYear'"}
+    ${""}           | ${"''"}
+    ${2024}         | ${"2024"}
+    ${null}         | ${"null"}
+  `("returns null when yearLabel is $label", ({ yearLabel }) => {
     expect(
       getFiscalPeriod("2024-06-15", {
         ...nrf,

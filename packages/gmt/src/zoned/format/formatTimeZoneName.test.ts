@@ -140,23 +140,23 @@ describe("formatTimeZoneName", () => {
   });
 
   it.each`
-    timeZone
-    ${"Not/AZone"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-  `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
+    timeZone       | label
+    ${"Not/AZone"} | ${"'Not/AZone'"}
+    ${""}          | ${"''"}
+    ${null}        | ${"null"}
+    ${undefined}   | ${"undefined"}
+    ${123}         | ${"123"}
+  `("returns '' for invalid timeZone $label", ({ timeZone }) => {
     expect(formatTimeZoneName(timeZone as never, "en-US")).toBe("");
   });
 
   it.each`
-    locale
-    ${"!!!"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns '' for invalid locale $locale", ({ locale }) => {
+    locale       | label
+    ${"!!!"}     | ${"'!!!'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+  `("returns '' for invalid locale $label", ({ locale }) => {
     expect(formatTimeZoneName("America/New_York", locale as never)).toBe("");
   });
 
@@ -167,7 +167,7 @@ describe("formatTimeZoneName", () => {
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"heure d’Europe centrale"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
   `(
-    "returns $expected for Europe/Berlin longGeneric with locale list $locale",
+    "returns '$expected' for Europe/Berlin longGeneric with locale list $locale",
     ({ locale, expected }) => {
       expect(
         formatTimeZoneName("Europe/Berlin", locale, { style: "longGeneric" }),

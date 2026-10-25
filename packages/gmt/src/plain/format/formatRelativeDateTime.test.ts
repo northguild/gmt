@@ -64,20 +64,20 @@ describe("formatRelativeDateTime", () => {
 
   // en-US
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 minutes ago"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"in 30 minutes"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 min. ago"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30m ago"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"in 30m"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 seconds ago"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"in 45 seconds"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 hours ago"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"in 3 hours"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 days ago"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"in 3 days"}
+    value                    | options                                         | expected            | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 minutes ago"} | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"in 30 minutes"}  | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 min. ago"}    | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30m ago"}        | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"in 30m"}         | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 seconds ago"} | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"in 45 seconds"}  | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 hours ago"}    | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"in 3 hours"}     | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 days ago"}     | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"in 3 days"}      | ${"default options"}
   `(
-    "formats $value for en-US with $options as $expected",
+    "formats $value for en-US with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.enUS, options)).toBe(
         expected,
@@ -87,20 +87,20 @@ describe("formatRelativeDateTime", () => {
 
   // en-GB
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 minutes ago"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"in 30 minutes"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 min ago"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 min ago"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"in 30 min"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 seconds ago"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"in 45 seconds"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 hours ago"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"in 3 hours"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 days ago"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"in 3 days"}
+    value                    | options                                         | expected            | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 minutes ago"} | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"in 30 minutes"}  | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 min ago"}     | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 min ago"}     | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"in 30 min"}      | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 seconds ago"} | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"in 45 seconds"}  | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 hours ago"}    | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"in 3 hours"}     | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 days ago"}     | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"in 3 days"}      | ${"default options"}
   `(
-    "formats $value for en-GB with $options as $expected",
+    "formats $value for en-GB with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.enGB, options)).toBe(
         expected,
@@ -110,20 +110,20 @@ describe("formatRelativeDateTime", () => {
 
   // de-DE
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"vor 30 Minuten"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"in 30 Minuten"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"vor 30 Min."}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"vor 30 m"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"in 30 m"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"vor 45 Sekunden"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"in 45 Sekunden"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"vor 3 Stunden"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"in 3 Stunden"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"vor 3 Tagen"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"in 3 Tagen"}
+    value                    | options                                         | expected             | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"vor 30 Minuten"}  | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"in 30 Minuten"}   | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"vor 30 Min."}     | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"vor 30 m"}        | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"in 30 m"}         | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"vor 45 Sekunden"} | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"in 45 Sekunden"}  | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"vor 3 Stunden"}   | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"in 3 Stunden"}    | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"vor 3 Tagen"}     | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"in 3 Tagen"}      | ${"default options"}
   `(
-    "formats $value for de-DE with $options as $expected",
+    "formats $value for de-DE with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.deDE, options)).toBe(
         expected,
@@ -133,20 +133,20 @@ describe("formatRelativeDateTime", () => {
 
   // fr-FR
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"il y a 30 minutes"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"dans 30 minutes"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"il y a 30 min"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"-30 min"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"+30 min"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"il y a 45 secondes"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"dans 45 secondes"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"il y a 3 heures"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"dans 3 heures"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"il y a 3 jours"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"dans 3 jours"}
+    value                    | options                                         | expected                | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"il y a 30 minutes"}  | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"dans 30 minutes"}    | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"il y a 30 min"}      | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"-30 min"}            | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"+30 min"}            | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"il y a 45 secondes"} | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"dans 45 secondes"}   | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"il y a 3 heures"}    | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"dans 3 heures"}      | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"il y a 3 jours"}     | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"dans 3 jours"}       | ${"default options"}
   `(
-    "formats $value for fr-FR with $options as $expected",
+    "formats $value for fr-FR with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.frFR, options)).toBe(
         expected,
@@ -156,20 +156,20 @@ describe("formatRelativeDateTime", () => {
 
   // es-ES
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"hace 30 minutos"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"dentro de 30 minutos"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"hace 30 min"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"hace 30 min"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"dentro de 30 min"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"hace 45 segundos"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"dentro de 45 segundos"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"hace 3 horas"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"dentro de 3 horas"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"hace 3 días"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"dentro de 3 días"}
+    value                    | options                                         | expected                   | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"hace 30 minutos"}       | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"dentro de 30 minutos"}  | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"hace 30 min"}           | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"hace 30 min"}           | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"dentro de 30 min"}      | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"hace 45 segundos"}      | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"dentro de 45 segundos"} | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"hace 3 horas"}          | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"dentro de 3 horas"}     | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"hace 3 días"}           | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"dentro de 3 días"}      | ${"default options"}
   `(
-    "formats $value for es-ES with $options as $expected",
+    "formats $value for es-ES with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.esES, options)).toBe(
         expected,
@@ -179,20 +179,20 @@ describe("formatRelativeDateTime", () => {
 
   // it-IT
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 minuti fa"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"tra 30 minuti"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 min fa"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 min fa"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"tra 30 min"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 secondi fa"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"tra 45 secondi"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 ore fa"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"tra 3 ore"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 giorni fa"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"tra 3 giorni"}
+    value                    | options                                         | expected            | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 minuti fa"}   | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"tra 30 minuti"}  | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 min fa"}      | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 min fa"}      | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"tra 30 min"}     | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 secondi fa"}  | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"tra 45 secondi"} | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 ore fa"}       | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"tra 3 ore"}      | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 giorni fa"}    | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"tra 3 giorni"}   | ${"default options"}
   `(
-    "formats $value for it-IT with $options as $expected",
+    "formats $value for it-IT with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.itIT, options)).toBe(
         expected,
@@ -202,20 +202,20 @@ describe("formatRelativeDateTime", () => {
 
   // pt-PT
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"há 30 minutos"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"dentro de 30 minutos"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"há 30 min"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"-30 min"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"+30 min"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"há 45 segundos"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"dentro de 45 segundos"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"há 3 horas"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"dentro de 3 horas"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"há 3 dias"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"dentro de 3 dias"}
+    value                    | options                                         | expected                   | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"há 30 minutos"}         | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"dentro de 30 minutos"}  | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"há 30 min"}             | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"-30 min"}               | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"+30 min"}               | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"há 45 segundos"}        | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"dentro de 45 segundos"} | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"há 3 horas"}            | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"dentro de 3 horas"}     | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"há 3 dias"}             | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"dentro de 3 dias"}      | ${"default options"}
   `(
-    "formats $value for pt-PT with $options as $expected",
+    "formats $value for pt-PT with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.ptPT, options)).toBe(
         expected,
@@ -225,20 +225,20 @@ describe("formatRelativeDateTime", () => {
 
   // sv-SE
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"för 30 minuter sedan"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"om 30 minuter"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"för 30 min sen"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"- 30 min"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"+30 min"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"för 45 sekunder sedan"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"om 45 sekunder"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"för 3 timmar sedan"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"om 3 timmar"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"för 3 dagar sedan"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"om 3 dagar"}
+    value                    | options                                         | expected                   | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"för 30 minuter sedan"}  | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"om 30 minuter"}         | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"för 30 min sen"}        | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"- 30 min"}              | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"+30 min"}               | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"för 45 sekunder sedan"} | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"om 45 sekunder"}        | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"för 3 timmar sedan"}    | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"om 3 timmar"}           | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"för 3 dagar sedan"}     | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"om 3 dagar"}            | ${"default options"}
   `(
-    "formats $value for sv-SE with $options as $expected",
+    "formats $value for sv-SE with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.svSE, options)).toBe(
         expected,
@@ -248,20 +248,20 @@ describe("formatRelativeDateTime", () => {
 
   // is-IS
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"fyrir 30 mínútum"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"eftir 30 mínútur"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"fyrir 30 mín."}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"-30 mín."}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"+30 mín."}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"fyrir 45 sekúndum"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"eftir 45 sekúndur"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"fyrir 3 klukkustundum"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"eftir 3 klukkustundir"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"fyrir 3 dögum"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"eftir 3 daga"}
+    value                    | options                                         | expected                   | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"fyrir 30 mínútum"}      | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"eftir 30 mínútur"}      | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"fyrir 30 mín."}         | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"-30 mín."}              | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"+30 mín."}              | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"fyrir 45 sekúndum"}     | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"eftir 45 sekúndur"}     | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"fyrir 3 klukkustundum"} | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"eftir 3 klukkustundir"} | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"fyrir 3 dögum"}         | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"eftir 3 daga"}          | ${"default options"}
   `(
-    "formats $value for is-IS with $options as $expected",
+    "formats $value for is-IS with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.isIS, options)).toBe(
         expected,
@@ -271,20 +271,20 @@ describe("formatRelativeDateTime", () => {
 
   // zh-CN
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30分钟前"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"30分钟后"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30分钟前"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30分钟前"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30分钟后"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45秒钟前"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"45秒钟后"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3小时前"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"3小时后"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3天前"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"3天后"}
+    value                    | options                                         | expected      | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30分钟前"} | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"30分钟后"} | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30分钟前"} | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30分钟前"} | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30分钟后"} | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45秒钟前"} | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"45秒钟后"} | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3小时前"}  | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"3小时后"}  | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3天前"}    | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"3天后"}    | ${"default options"}
   `(
-    "formats $value for zh-CN with $options as $expected",
+    "formats $value for zh-CN with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.zhCN, options)).toBe(
         expected,
@@ -294,20 +294,20 @@ describe("formatRelativeDateTime", () => {
 
   // zh-TW
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 分鐘前"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"30 分鐘後"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 分鐘前"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 分鐘前"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 分鐘後"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 秒前"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"45 秒後"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 小時前"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"3 小時後"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 天前"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"3 天後"}
+    value                    | options                                         | expected       | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 分鐘前"} | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"30 分鐘後"} | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 分鐘前"} | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 分鐘前"} | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 分鐘後"} | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 秒前"}   | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"45 秒後"}   | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 小時前"}  | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"3 小時後"}  | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 天前"}    | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"3 天後"}    | ${"default options"}
   `(
-    "formats $value for zh-TW with $options as $expected",
+    "formats $value for zh-TW with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.zhTW, options)).toBe(
         expected,
@@ -317,20 +317,20 @@ describe("formatRelativeDateTime", () => {
 
   // ja-JP
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 分前"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"30 分後"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 分前"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30分前"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30分後"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 秒前"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"45 秒後"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 時間前"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"3 時間後"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 日前"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"3 日後"}
+    value                    | options                                         | expected      | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 分前"}  | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"30 分後"}  | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 分前"}  | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30分前"}   | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30分後"}   | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 秒前"}  | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"45 秒後"}  | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 時間前"} | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"3 時間後"} | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 日前"}   | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"3 日後"}   | ${"default options"}
   `(
-    "formats $value for ja-JP with $options as $expected",
+    "formats $value for ja-JP with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.jaJP, options)).toBe(
         expected,
@@ -340,20 +340,20 @@ describe("formatRelativeDateTime", () => {
 
   // ko-KR
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30분 전"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"30분 후"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30분 전"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30분 전"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30분 후"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45초 전"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"45초 후"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3시간 전"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"3시간 후"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3일 전"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"3일 후"}
+    value                    | options                                         | expected      | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30분 전"}  | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"30분 후"}  | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30분 전"}  | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30분 전"}  | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30분 후"}  | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45초 전"}  | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"45초 후"}  | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3시간 전"} | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"3시간 후"} | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3일 전"}   | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"3일 후"}   | ${"default options"}
   `(
-    "formats $value for ko-KR with $options as $expected",
+    "formats $value for ko-KR with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.koKR, options)).toBe(
         expected,
@@ -363,20 +363,20 @@ describe("formatRelativeDateTime", () => {
 
   // ar-SA
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"قبل ٣٠ دقيقة"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"خلال ٣٠ دقيقة"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"قبل ٣٠ دقيقة"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"قبل ٣٠ دقيقة"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"خلال ٣٠ دقيقة"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"قبل ٤٥ ثانية"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"خلال ٤٥ ثانية"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"قبل ٣ ساعات"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"خلال ٣ ساعات"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"قبل ٣ أيام"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"خلال ٣ أيام"}
+    value                    | options                                         | expected          | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"قبل ٣٠ دقيقة"} | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"خلال ٣٠ دقيقة"} | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"قبل ٣٠ دقيقة"} | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"قبل ٣٠ دقيقة"} | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"خلال ٣٠ دقيقة"} | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"قبل ٤٥ ثانية"} | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"خلال ٤٥ ثانية"} | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"قبل ٣ ساعات"}  | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"خلال ٣ ساعات"}  | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"قبل ٣ أيام"}   | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"خلال ٣ أيام"}   | ${"default options"}
   `(
-    "formats $value for ar-SA with $options as $expected",
+    "formats $value for ar-SA with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.arSA, options)).toBe(
         expected,
@@ -386,20 +386,20 @@ describe("formatRelativeDateTime", () => {
 
   // he-IL
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"לפני 30 דקות"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"בעוד 30 דקות"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"לפני 30 דק׳"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"לפני 30 דק׳"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"בעוד 30 דק׳"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"לפני 45 שניות"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"בעוד 45 שניות"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"לפני 3 שעות"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"בעוד 3 שעות"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"לפני 3 ימים"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"בעוד 3 ימים"}
+    value                    | options                                         | expected           | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"לפני 30 דקות"}  | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"בעוד 30 דקות"}  | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"לפני 30 דק׳"}   | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"לפני 30 דק׳"}   | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"בעוד 30 דק׳"}   | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"לפני 45 שניות"} | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"בעוד 45 שניות"} | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"לפני 3 שעות"}   | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"בעוד 3 שעות"}   | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"לפני 3 ימים"}   | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"בעוד 3 ימים"}   | ${"default options"}
   `(
-    "formats $value for he-IL with $options as $expected",
+    "formats $value for he-IL with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.heIL, options)).toBe(
         expected,
@@ -409,20 +409,20 @@ describe("formatRelativeDateTime", () => {
 
   // ru-RU
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 минут назад"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"через 30 минут"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 мин. назад"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"-30 мин"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"+30 мин"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 секунд назад"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"через 45 секунд"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 часа назад"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"через 3 часа"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 дня назад"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"через 3 дня"}
+    value                    | options                                         | expected             | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 минут назад"}  | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"через 30 минут"}  | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 мин. назад"}   | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"-30 мин"}         | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"+30 мин"}         | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 секунд назад"} | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"через 45 секунд"} | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 часа назад"}    | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"через 3 часа"}    | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 дня назад"}     | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"через 3 дня"}     | ${"default options"}
   `(
-    "formats $value for ru-RU with $options as $expected",
+    "formats $value for ru-RU with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.ruRU, options)).toBe(
         expected,
@@ -432,20 +432,20 @@ describe("formatRelativeDateTime", () => {
 
   // tr-TR
   it.each`
-    value                    | options                                         | expected
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 dakika önce"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"30 dakika sonra"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 dk. önce"}
-    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 dk. önce"}
-    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 dk. sonra"}
-    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 saniye önce"}
-    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"45 saniye sonra"}
-    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 saat önce"}
-    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"3 saat sonra"}
-    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 gün önce"}
-    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"3 gün sonra"}
+    value                    | options                                         | expected             | label
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF }}                           | ${"30 dakika önce"}  | ${"default options"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF }}                           | ${"30 dakika sonra"} | ${"default options"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "short" as const }}  | ${"30 dk. önce"}     | ${"style short"}
+    ${"2024-03-15T11:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 dk. önce"}     | ${"style narrow"}
+    ${"2024-03-15T12:30:00"} | ${{ reference: REF, style: "narrow" as const }} | ${"30 dk. sonra"}    | ${"style narrow"}
+    ${"2024-03-15T11:59:15"} | ${{ reference: REF }}                           | ${"45 saniye önce"}  | ${"default options"}
+    ${"2024-03-15T12:00:45"} | ${{ reference: REF }}                           | ${"45 saniye sonra"} | ${"default options"}
+    ${"2024-03-15T09:00:00"} | ${{ reference: REF }}                           | ${"3 saat önce"}     | ${"default options"}
+    ${"2024-03-15T15:00:00"} | ${{ reference: REF }}                           | ${"3 saat sonra"}    | ${"default options"}
+    ${"2024-03-12T12:00:00"} | ${{ reference: REF }}                           | ${"3 gün önce"}      | ${"default options"}
+    ${"2024-03-18T12:00:00"} | ${{ reference: REF }}                           | ${"3 gün sonra"}     | ${"default options"}
   `(
-    "formats $value for tr-TR with $options as $expected",
+    "formats $value for tr-TR with $label as $expected",
     ({ value, options, expected }) => {
       expect(formatRelativeDateTime(value, MustTestLocales.trTR, options)).toBe(
         expected,
@@ -631,20 +631,20 @@ describe("formatRelativeDateTime", () => {
     // returns the sentinel (Core Rule 3), including the name of another Math function, an
     // inherited Object.prototype key, another letter case and null.
     it.each`
-      roundingMethod
-      ${"nonsense"}
-      ${"abs"}
-      ${"trunc"}
-      ${"sign"}
-      ${"random"}
-      ${"constructor"}
-      ${"hasOwnProperty"}
-      ${"toString"}
-      ${"ROUND"}
-      ${""}
-      ${null}
+      roundingMethod      | label
+      ${"nonsense"}       | ${"'nonsense'"}
+      ${"abs"}            | ${"'abs'"}
+      ${"trunc"}          | ${"'trunc'"}
+      ${"sign"}           | ${"'sign'"}
+      ${"random"}         | ${"'random'"}
+      ${"constructor"}    | ${"'constructor'"}
+      ${"hasOwnProperty"} | ${"'hasOwnProperty'"}
+      ${"toString"}       | ${"'toString'"}
+      ${"ROUND"}          | ${"'ROUND'"}
+      ${""}               | ${"''"}
+      ${null}             | ${"null"}
     `(
-      "returns '' for the invalid roundingMethod $roundingMethod",
+      "returns '' for the invalid roundingMethod $label",
       ({ roundingMethod }) => {
         expect(
           formatRelativeDateTime("2024-03-15T09:42:00", MustTestLocales.enUS, {
@@ -684,18 +684,18 @@ describe("formatRelativeDateTime", () => {
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {
     it.each`
-      value
-      ${""}
-      ${"not-a-date"}
-      ${"2024-03-15"}
-      ${"2024-13-01T00:00:00"}
-      ${"2024-02-30T00:00:00"}
-      ${"2024-12-31T23:59:60"}
-      ${null}
-      ${undefined}
-      ${42}
-      ${true}
-    `("returns '' for invalid value $value", ({ value }) => {
+      value                    | label
+      ${""}                    | ${"''"}
+      ${"not-a-date"}          | ${"'not-a-date'"}
+      ${"2024-03-15"}          | ${"'2024-03-15'"}
+      ${"2024-13-01T00:00:00"} | ${"'2024-13-01T00:00:00'"}
+      ${"2024-02-30T00:00:00"} | ${"'2024-02-30T00:00:00'"}
+      ${"2024-12-31T23:59:60"} | ${"'2024-12-31T23:59:60'"}
+      ${null}                  | ${"null"}
+      ${undefined}             | ${"undefined"}
+      ${42}                    | ${"42"}
+      ${true}                  | ${"true"}
+    `("returns '' for invalid value $label", ({ value }) => {
       expect(formatRelativeDateTime(value as never, MustTestLocales.enUS)).toBe(
         "",
       );
@@ -745,7 +745,7 @@ describe("formatRelativeDateTime", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"il y a 3 heures"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(
       formatRelativeDateTime("2024-03-15T09:00:00", locale, {
         reference: "2024-03-15T12:00:00",
@@ -878,7 +878,7 @@ describe("formatRelativeDateTime largestUnit", () => {
     ${'["day"]'}                   | ${["day"]}                   | ${"an array, not a string"}
     ${'{ toString: () => "day" }'} | ${{ toString: () => "day" }} | ${"an object, not a string"}
   `(
-    'returns "" for largestUnit $label outside the listed units ($why)',
+    "returns '' for largestUnit '$label' outside the listed units ($why)",
     ({ largestUnit }) => {
       expect(
         formatRelativeDateTime("2023-03-17T12:00:00", MustTestLocales.enUS, {

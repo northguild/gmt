@@ -215,14 +215,14 @@ describe("durationFromUnits", () => {
 
   // The two shapes stay separate: a duration string is already what this function writes.
   it.each`
-    units
-    ${"PT15M"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${15}
-    ${true}
-  `('returns "" when units $units is not an object', ({ units }) => {
+    units        | label
+    ${"PT15M"}   | ${"'PT15M'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${15}        | ${"15"}
+    ${true}      | ${"true"}
+  `("returns '' when units $label is not an object", ({ units }) => {
     expect(durationFromUnits(units)).toBe("");
   });
 
@@ -331,7 +331,7 @@ describe("durationFromUnits", () => {
     ${"an inherited boolean amount"}                           | ${Object.create({ minutes: true })}                            | ${""}
     ${"a Temporal.Duration with every field zero"}             | ${new Temporal.Duration()}                                     | ${"PT0S"}
     ${"an empty object"}                                       | ${{}}                                                          | ${""}
-  `("returns $expected for $shape", ({ units, expected }) => {
+  `("returns '$expected' for $shape", ({ units, expected }) => {
     expect(durationFromUnits(units)).toBe(expected);
   });
 

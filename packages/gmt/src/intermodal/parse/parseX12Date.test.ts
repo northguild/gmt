@@ -70,7 +70,7 @@ describe("parseX12Date", () => {
       ${"D8"} | ${"202406150"}  | ${"one digit long"}
       ${"D8"} | ${" 20240615"}  | ${"a leading space"}
       ${"D8"} | ${""}           | ${"an empty value"}
-    `("returns '' for $code $value ($reads)", ({ code, value }) => {
+    `("returns '' for $code '$value' ($reads)", ({ code, value }) => {
       expect(parseX12Date(value, code)).toBe("");
     });
   });

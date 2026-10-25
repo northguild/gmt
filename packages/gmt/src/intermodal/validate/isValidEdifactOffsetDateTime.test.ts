@@ -21,7 +21,7 @@ describe("isValidEdifactOffsetDateTime", () => {
     ${"205"} | ${"202406151430"}        | ${false} | ${"203's value: no offset"}
     ${"205"} | ${""}                    | ${false} | ${"an empty value"}
   `(
-    "returns $expected for $value under $code ($reads), as parseEdifactOffsetDateTime reads it",
+    "returns $expected for '$value' under $code ($reads), as parseEdifactOffsetDateTime reads it",
     ({ code, value, expected }) => {
       expect(isValidEdifactOffsetDateTime(value, code)).toBe(expected);
       expect(parseEdifactOffsetDateTime(value, code) !== "").toBe(expected);

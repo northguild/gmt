@@ -44,7 +44,7 @@ describe("isValidTimeInterval", () => {
     ${"12:00:00"} | ${"25:00:00"}
     ${"invalid"}  | ${"invalid"}
     ${""}         | ${""}
-  `("returns false for malformed time: $start, $end", ({ start, end }) => {
+  `("returns false for malformed time: '$start', '$end'", ({ start, end }) => {
     expect(isValidTimeInterval(start, end)).toBe(false);
   });
 

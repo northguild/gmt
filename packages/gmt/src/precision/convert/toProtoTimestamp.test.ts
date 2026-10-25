@@ -38,7 +38,7 @@ describe("toProtoTimestamp", () => {
     ${"invalid"}                             | ${"not a date"}
     ${""}                                    | ${"empty"}
     ${"2024-01-01T00:00:00Z[!foo=bar]"}      | ${"critical unknown annotation"}
-  `("returns null for $iso ($reason)", ({ iso }) => {
+  `("returns null for '$iso' ($reason)", ({ iso }) => {
     expect(toProtoTimestamp(iso)).toBeNull();
   });
 

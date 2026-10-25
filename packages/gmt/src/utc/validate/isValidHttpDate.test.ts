@@ -69,7 +69,7 @@ describe("isValidHttpDate", () => {
     ${"Fri, 15 Mar 2024 14:60:00 GMT"}   | ${false} | ${true}  | ${"minute 60"}
     ${"Fri, 15 Mar 2024 14:30:60 GMT"}   | ${false} | ${true}  | ${"second 60: GMT rejects leap seconds"}
   `(
-    "returns $expected for $value ($reason); the pattern alone says $pattern; parseHttpDate agrees",
+    "returns $expected for '$value' ($reason); the pattern alone says $pattern; parseHttpDate agrees",
     ({
       value,
       expected,

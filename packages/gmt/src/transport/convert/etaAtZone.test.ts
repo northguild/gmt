@@ -60,7 +60,7 @@ describe("etaAtZone", () => {
     ${""}                     | ${"Asia/Tokyo"} | ${"empty instant"}
     ${"invalid"}              | ${"Asia/Tokyo"} | ${"garbage instant"}
   `(
-    "returns the sentinel for $arrivalUtc in $targetZone ($reason)",
+    "returns the sentinel for '$arrivalUtc' in '$targetZone' ($reason)",
     ({ arrivalUtc, targetZone }) => {
       expect(etaAtZone(arrivalUtc, targetZone)).toBe("");
     },

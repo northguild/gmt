@@ -52,7 +52,7 @@ describe("parseInstantNanoseconds", () => {
     ${"2024-03-10T12Z"}                              | ${"hour-only time (strict extended shape)"}
     ${"invalid"}                                     | ${"unparseable"}
     ${""}                                            | ${"empty string"}
-  `("returns null when $value is invalid ($reason)", ({ value }) => {
+  `("returns null when '$value' is invalid ($reason)", ({ value }) => {
     expect(parseInstantNanoseconds(value)).toBeNull();
   });
 
@@ -109,8 +109,8 @@ describe("parseInstantNanoseconds and instantFrom: a minute-rounded offset", () 
     ${"1960-01-01T00:20:00.5-00:45[Africa/Monrovia]"}             | ${"1960-01-01T01:04:30.5Z"} | ${"a fractional second is kept"}
     ${"1960-01-01T00:20:00-00:45[!Africa/Monrovia]"}              | ${"1960-01-01T01:04:30Z"}   | ${"a critical zone annotation"}
     ${"1960-01-01T00:20:00-00:45[Africa/Monrovia][foo=bar]"}      | ${"1960-01-01T01:04:30Z"}   | ${"an elective annotation after the zone"}
-    ${"1960-01-01T00:20:00-00:45[Africa/Monrovia][u-ca=gregory]"} | ${"1960-01-01T01:04:30Z"}   | ${"a calendar, which an instant does not have"}
-    ${"1960-01-01T00:20:00-00:45[Africa/Monrovia][u-ca=bogus]"}   | ${"1960-01-01T01:04:30Z"}   | ${"a calendar, which an instant does not have"}
+    ${"1960-01-01T00:20:00-00:45[Africa/Monrovia][u-ca=gregory]"} | ${"1960-01-01T01:04:30Z"}   | ${"a known calendar, which an instant does not have"}
+    ${"1960-01-01T00:20:00-00:45[Africa/Monrovia][u-ca=bogus]"}   | ${"1960-01-01T01:04:30Z"}   | ${"an unknown calendar, ignored all the same"}
     ${"1883-11-18T09:00:00-04:56[America/New_York]"}              | ${"1883-11-18T13:56:02Z"}   | ${"-04:56:02 rounds down to -04:56"}
   `("reads the minute-rounded $value as $utc ($why)", ({ value, utc }) => {
     expect(parseInstantNanoseconds(value)).toBe(ns(utc));
@@ -253,7 +253,7 @@ describe("parseInstantNanoseconds and instantFrom: a minute-rounded offset", () 
     ${"1960-01-01T00:20:00-00:45[Africa/Monrovia][!foo=bar]"} | ${"an unknown critical annotation"}
     ${""}                                                     | ${"an empty string"}
     ${"invalid"}                                              | ${"not a date"}
-  `("returns null for $value ($why)", ({ value }) => {
+  `("returns null for '$value' ($why)", ({ value }) => {
     expect(parseInstantNanoseconds(value)).toBeNull();
     expect(() => instantFrom(value)).toThrow(RangeError);
   });

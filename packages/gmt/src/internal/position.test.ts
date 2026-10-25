@@ -311,17 +311,17 @@ describe("readPosition", () => {
     });
 
     it.each`
-      row     | input
-      ${"N6"} | ${null}
-      ${"N6"} | ${undefined}
-      ${"N6"} | ${"x"}
-      ${"N6"} | ${""}
-      ${"N6"} | ${0}
-      ${"N6"} | ${Number.NaN}
-      ${"N6"} | ${true}
-      ${"N6"} | ${1n}
-      ${"N6"} | ${Symbol("p")}
-    `("$row $input is null", ({ input }) => {
+      row     | label          | input
+      ${"N6"} | ${"null"}      | ${null}
+      ${"N6"} | ${"undefined"} | ${undefined}
+      ${"N6"} | ${"'x'"}       | ${"x"}
+      ${"N6"} | ${"''"}        | ${""}
+      ${"N6"} | ${"0"}         | ${0}
+      ${"N6"} | ${"NaN"}       | ${Number.NaN}
+      ${"N6"} | ${"true"}      | ${true}
+      ${"N6"} | ${"1n"}        | ${1n}
+      ${"N6"} | ${"a symbol"}  | ${Symbol("p")}
+    `("$row $label is null", ({ input }) => {
       expect(readPosition(input)).toBeNull();
     });
 

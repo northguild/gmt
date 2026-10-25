@@ -72,18 +72,15 @@ describe("fromNanoseconds", () => {
   });
 
   it.each`
-    timeZone             | reason
-    ${"Not/AZone"}       | ${"unknown identifier"}
-    ${"America/Newyork"} | ${"misspelled identifier"}
-    ${""}                | ${"empty string"}
-    ${null}              | ${"null"}
-    ${123}               | ${"non-string"}
-  `(
-    'returns "" when timeZone $timeZone is invalid ($reason)',
-    ({ timeZone }) => {
-      expect(fromNanoseconds(0n, timeZone as unknown as string)).toBe("");
-    },
-  );
+    timeZone             | reason                     | label
+    ${"Not/AZone"}       | ${"unknown identifier"}    | ${"'Not/AZone'"}
+    ${"America/Newyork"} | ${"misspelled identifier"} | ${"'America/Newyork'"}
+    ${""}                | ${"empty string"}          | ${"''"}
+    ${null}              | ${"null"}                  | ${"null"}
+    ${123}               | ${"non-string"}            | ${"123"}
+  `('returns "" when timeZone $label is invalid ($reason)', ({ timeZone }) => {
+    expect(fromNanoseconds(0n, timeZone as unknown as string)).toBe("");
+  });
 
   // TC39 treats an explicit undefined argument as absent (GetOption, and every optional Temporal
   // parameter), so `undefined` is the same as omitting the time zone: a UTC instant string.

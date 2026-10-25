@@ -93,7 +93,7 @@ describe("intervalCountDate", () => {
     ${"2024-01-01"} | ${"2024-01-10"} | ${"hours"}
     ${"2024-01-01"} | ${"2024-01-10"} | ${"nanosecond"}
   `(
-    "returns null for invalid $start, $end, or $unit",
+    "returns null for invalid '$start', '$end', or '$unit'",
     ({ start, end, unit }) => {
       expect(intervalCountDate(start, end, unit)).toBeNull();
     },

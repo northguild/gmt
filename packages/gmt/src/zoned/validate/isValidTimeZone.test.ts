@@ -96,14 +96,14 @@ describe("isValidTimeZone", () => {
   });
 
   it.each`
-    timeZone
-    ${"Not/AZone"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-  `("returns false for invalid timeZone $timeZone", ({ timeZone }) => {
+    timeZone       | label
+    ${"Not/AZone"} | ${"'Not/AZone'"}
+    ${""}          | ${"''"}
+    ${null}        | ${"null"}
+    ${undefined}   | ${"undefined"}
+    ${123}         | ${"123"}
+    ${true}        | ${"true"}
+  `("returns false for invalid timeZone $label", ({ timeZone }) => {
     expect(isValidTimeZone(timeZone as never)).toBe(false);
   });
 
@@ -138,7 +138,7 @@ describe("isValidTimeZone", () => {
       ${"-00:44:30"}
       ${"Not/AZone"}
       ${""}
-    `("answers false every time for $timeZone", ({ timeZone }) => {
+    `("answers false every time for '$timeZone'", ({ timeZone }) => {
       expect(isValidTimeZone(timeZone)).toBe(false);
       expect(isValidTimeZone(timeZone)).toBe(false);
       expect(isValidTimeZone(timeZone)).toBe(false);

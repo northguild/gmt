@@ -24,7 +24,7 @@ describe("intervalIntersectionZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-07-01T00:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:59+00:00[UTC]"} | ${null}
     ${"2024-07-01T00:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${null}
   `(
-    "returns $expected for disjoint intervals",
+    "returns $expected for disjoint intervals $aStart to $aEnd and $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionZoned(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -79,7 +79,7 @@ describe("intervalIntersectionZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-04-01T00:00:00+00:00[UTC]"} | ${"invalid"}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-04-01T00:00:00+00:00[UTC]"} | ${""}
   `(
-    "returns null for malformed zoned: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for malformed zoned: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalIntersectionZoned(aStart, aEnd, bStart, bEnd)).toBeNull();
     },

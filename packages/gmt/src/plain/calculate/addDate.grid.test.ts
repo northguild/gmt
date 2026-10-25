@@ -163,7 +163,7 @@ describe("addDate at ordinary dates in every calendar (CORE-6 §4.4 grid)", () =
     ${"2024-03-01"}                     | ${{ months: 1 }} | ${"reject"}    | ${"2024-04-01"}                     | ${"grid gregory i=274"}
     ${"2024-03-01"}                     | ${{ years: 1 }}  | ${"constrain"} | ${"2025-03-01"}                     | ${"grid gregory i=274"}
   `(
-    "adds $units to $value with overflow $overflow as $expected ($source)",
+    "adds $units to $value with overflow $overflow as '$expected' ($source)",
     ({ value, units, overflow, expected }) => {
       expect(addDate(value, units, { overflow })).toBe(expected);
     },

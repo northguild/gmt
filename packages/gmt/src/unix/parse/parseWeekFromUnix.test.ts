@@ -127,15 +127,15 @@ describe("parseWeekFromUnix with a year outside 0000-9999", () => {
 // 1710504000000 is 2024-03-15T12:00:00Z.
 describe("parseWeekFromUnix with an invalid weekStartsOn", () => {
   it.each`
-    weekStartsOn
-    ${"tuesday"}
-    ${"Monday"}
-    ${""}
-    ${null}
-    ${1}
-    ${true}
+    weekStartsOn | label
+    ${"tuesday"} | ${"'tuesday'"}
+    ${"Monday"}  | ${"'Monday'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${1}         | ${"1"}
+    ${true}      | ${"true"}
   `(
-    "returns null for 1710504000000 with invalid weekStartsOn $weekStartsOn",
+    "returns null for 1710504000000 with invalid weekStartsOn $label",
     ({ weekStartsOn }) => {
       expect(
         parseWeekFromUnix(1710504000000, { timeZone: "UTC", weekStartsOn }),

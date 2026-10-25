@@ -29,7 +29,7 @@ describe("intervalsOverlapZoned", () => {
     ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:59+00:00[UTC]"} | ${"2024-04-01T00:00:00+00:00[UTC]"} | ${false}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-05-01T00:00:00+00:00[UTC]"} | ${false}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed intervals $aStart to $aEnd and $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalsOverlapZoned(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -49,9 +49,12 @@ describe("intervalsOverlapZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-04-01T00:00:00+00:00[UTC]"} | ${"invalid"}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-04-01T00:00:00+00:00[UTC]"} | ${""}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-04-01T00:00:00+00:00[UTC]"} | ${"not-a-zoned"}
-  `("returns false for malformed zoned", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalsOverlapZoned(aStart, aEnd, bStart, bEnd)).toBe(false);
-  });
+  `(
+    "returns false for malformed zoned: '$aStart', '$aEnd', '$bStart', '$bEnd'",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalsOverlapZoned(aStart, aEnd, bStart, bEnd)).toBe(false);
+    },
+  );
 
   it.each`
     aStart          | aEnd            | bStart          | bEnd
@@ -59,16 +62,19 @@ describe("intervalsOverlapZoned", () => {
     ${"2024-01-01"} | ${null}         | ${"2024-01-01"} | ${"2024-01-01"}
     ${"2024-01-01"} | ${"2024-01-01"} | ${null}         | ${"2024-01-01"}
     ${"2024-01-01"} | ${"2024-01-01"} | ${"2024-01-01"} | ${null}
-  `("returns false for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(
-      intervalsOverlapZoned(
-        aStart as never,
-        aEnd as never,
-        bStart as never,
-        bEnd as never,
-      ),
-    ).toBe(false);
-  });
+  `(
+    "returns false for non-string input: $aStart, $aEnd, $bStart, $bEnd",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(
+        intervalsOverlapZoned(
+          aStart as never,
+          aEnd as never,
+          bStart as never,
+          bEnd as never,
+        ),
+      ).toBe(false);
+    },
+  );
 
   it("returns false when Temporal.ZonedDateTime.from throws", () => {
     mockTemporalZonedDateTimeFromThrow();

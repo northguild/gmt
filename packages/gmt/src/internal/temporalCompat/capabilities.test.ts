@@ -198,13 +198,13 @@ describe("repros", () => {
   // main with a79c6a1 alone). The other repros are made to return their expected value, and the
   // El_Aaiun ones the bounded-read error a stalled search gives.
   it.each`
-    failing                                       | expected
-    ${[]}                                         | ${false}
-    ${["stall.nextElAaiun 1976-04-14T00:30:00Z"]} | ${true}
-    ${["stall.nextElAaiun 1976-03-28T00:30:00Z"]} | ${true}
-    ${["skip.nextBoaVista"]}                      | ${true}
+    failing                                       | expected | label
+    ${[]}                                         | ${false} | ${"no repro"}
+    ${["stall.nextElAaiun 1976-04-14T00:30:00Z"]} | ${true}  | ${"El_Aaiun 1976-04-14"}
+    ${["stall.nextElAaiun 1976-03-28T00:30:00Z"]} | ${true}  | ${"El_Aaiun 1976-03-28"}
+    ${["skip.nextBoaVista"]}                      | ${true}  | ${"skip.nextBoaVista"}
   `(
-    "reports D13 present: $expected when only $failing fail",
+    "reports D13 present: $expected when only $label fail",
     ({ failing, expected }) => {
       const candidates = repros
         .filter((repro) => repro.defect === "D13")

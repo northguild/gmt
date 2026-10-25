@@ -76,21 +76,21 @@ const UNIX = 1706659200000;
 /** Each of the 14 functions that take `units`. `plain` is one `key` added, taken away or totalled. */
 const everyFunction = (title: string, body: (testCase: UnitsCase) => void) =>
   it.each`
-    name                   | call                                                        | key        | other        | plain                               | sentinel | duration
-    ${"addDate"}           | ${(u: never) => addDate("2024-01-31", u)}                   | ${"days"}  | ${"months"}  | ${"2024-02-01"}                     | ${""}    | ${"P1D"}
-    ${"subtractDate"}      | ${(u: never) => subtractDate("2024-01-31", u)}              | ${"days"}  | ${"months"}  | ${"2024-01-30"}                     | ${""}    | ${"P1D"}
-    ${"addTime"}           | ${(u: never) => addTime("14:30:00", u)}                     | ${"hours"} | ${"minutes"} | ${"15:30:00"}                       | ${""}    | ${"PT1H"}
-    ${"subtractTime"}      | ${(u: never) => subtractTime("14:30:00", u)}                | ${"hours"} | ${"minutes"} | ${"13:30:00"}                       | ${""}    | ${"PT1H"}
-    ${"addDateTime"}       | ${(u: never) => addDateTime("2024-01-31T10:00:00", u)}      | ${"days"}  | ${"hours"}   | ${"2024-02-01T10:00:00"}            | ${""}    | ${"P1D"}
-    ${"subtractDateTime"}  | ${(u: never) => subtractDateTime("2024-01-31T10:00:00", u)} | ${"days"}  | ${"hours"}   | ${"2024-01-30T10:00:00"}            | ${""}    | ${"P1D"}
-    ${"addUtc"}            | ${(u: never) => addUtc(UTC, u)}                             | ${"days"}  | ${"hours"}   | ${"2024-03-11T12:00:00Z"}           | ${""}    | ${"P1D"}
-    ${"subtractUtc"}       | ${(u: never) => subtractUtc(UTC, u)}                        | ${"days"}  | ${"hours"}   | ${"2024-03-09T12:00:00Z"}           | ${""}    | ${"P1D"}
-    ${"addUnix"}           | ${(u: never) => addUnix(UNIX, u)}                           | ${"days"}  | ${"hours"}   | ${1706745600000}                    | ${null}  | ${"P1D"}
-    ${"subtractUnix"}      | ${(u: never) => subtractUnix(UNIX, u)}                      | ${"days"}  | ${"hours"}   | ${1706572800000}                    | ${null}  | ${"P1D"}
-    ${"addZoned"}          | ${(u: never) => addZoned(ZONED, u)}                         | ${"days"}  | ${"hours"}   | ${"2024-06-16T10:00:00+00:00[UTC]"} | ${""}    | ${"P1D"}
-    ${"subtractZoned"}     | ${(u: never) => subtractZoned(ZONED, u)}                    | ${"days"}  | ${"hours"}   | ${"2024-06-14T10:00:00+00:00[UTC]"} | ${""}    | ${"P1D"}
-    ${"totalUnits"}        | ${(u: never) => totalUnits(u, "hours")}                     | ${"days"}  | ${"hours"}   | ${24}                               | ${null}  | ${"P1D"}
-    ${"durationFromUnits"} | ${(u: never) => durationFromUnits(u)}                       | ${"days"}  | ${"hours"}   | ${"P1D"}                            | ${""}    | ${"P1D"}
+    name                   | call                                                        | key        | other        | plain                               | sentinel | duration  | sentinelLabel
+    ${"addDate"}           | ${(u: never) => addDate("2024-01-31", u)}                   | ${"days"}  | ${"months"}  | ${"2024-02-01"}                     | ${""}    | ${"P1D"}  | ${"''"}
+    ${"subtractDate"}      | ${(u: never) => subtractDate("2024-01-31", u)}              | ${"days"}  | ${"months"}  | ${"2024-01-30"}                     | ${""}    | ${"P1D"}  | ${"''"}
+    ${"addTime"}           | ${(u: never) => addTime("14:30:00", u)}                     | ${"hours"} | ${"minutes"} | ${"15:30:00"}                       | ${""}    | ${"PT1H"} | ${"''"}
+    ${"subtractTime"}      | ${(u: never) => subtractTime("14:30:00", u)}                | ${"hours"} | ${"minutes"} | ${"13:30:00"}                       | ${""}    | ${"PT1H"} | ${"''"}
+    ${"addDateTime"}       | ${(u: never) => addDateTime("2024-01-31T10:00:00", u)}      | ${"days"}  | ${"hours"}   | ${"2024-02-01T10:00:00"}            | ${""}    | ${"P1D"}  | ${"''"}
+    ${"subtractDateTime"}  | ${(u: never) => subtractDateTime("2024-01-31T10:00:00", u)} | ${"days"}  | ${"hours"}   | ${"2024-01-30T10:00:00"}            | ${""}    | ${"P1D"}  | ${"''"}
+    ${"addUtc"}            | ${(u: never) => addUtc(UTC, u)}                             | ${"days"}  | ${"hours"}   | ${"2024-03-11T12:00:00Z"}           | ${""}    | ${"P1D"}  | ${"''"}
+    ${"subtractUtc"}       | ${(u: never) => subtractUtc(UTC, u)}                        | ${"days"}  | ${"hours"}   | ${"2024-03-09T12:00:00Z"}           | ${""}    | ${"P1D"}  | ${"''"}
+    ${"addUnix"}           | ${(u: never) => addUnix(UNIX, u)}                           | ${"days"}  | ${"hours"}   | ${1706745600000}                    | ${null}  | ${"P1D"}  | ${"null"}
+    ${"subtractUnix"}      | ${(u: never) => subtractUnix(UNIX, u)}                      | ${"days"}  | ${"hours"}   | ${1706572800000}                    | ${null}  | ${"P1D"}  | ${"null"}
+    ${"addZoned"}          | ${(u: never) => addZoned(ZONED, u)}                         | ${"days"}  | ${"hours"}   | ${"2024-06-16T10:00:00+00:00[UTC]"} | ${""}    | ${"P1D"}  | ${"''"}
+    ${"subtractZoned"}     | ${(u: never) => subtractZoned(ZONED, u)}                    | ${"days"}  | ${"hours"}   | ${"2024-06-14T10:00:00+00:00[UTC]"} | ${""}    | ${"P1D"}  | ${"''"}
+    ${"totalUnits"}        | ${(u: never) => totalUnits(u, "hours")}                     | ${"days"}  | ${"hours"}   | ${24}                               | ${null}  | ${"P1D"}  | ${"null"}
+    ${"durationFromUnits"} | ${(u: never) => durationFromUnits(u)}                       | ${"days"}  | ${"hours"}   | ${"P1D"}                            | ${""}    | ${"P1D"}  | ${"''"}
   `(title, body as (testCase: unknown) => void);
 
 /** The five functions whose unit set is narrower than the ten duration units. */
@@ -99,12 +99,12 @@ const everyRestrictedFunction = (
   body: (testCase: RestrictedCase) => void,
 ) =>
   it.each`
-    name              | call                                           | key        | plain           | sentinel | outside    | outsideDuration
-    ${"addDate"}      | ${(u: never) => addDate("2024-01-31", u)}      | ${"days"}  | ${"2024-02-01"} | ${""}    | ${"hours"} | ${"P1DT36H"}
-    ${"subtractDate"} | ${(u: never) => subtractDate("2024-01-31", u)} | ${"days"}  | ${"2024-01-30"} | ${""}    | ${"hours"} | ${"P1DT36H"}
-    ${"addTime"}      | ${(u: never) => addTime("14:30:00", u)}        | ${"hours"} | ${"15:30:00"}   | ${""}    | ${"days"}  | ${"P1DT1H"}
-    ${"subtractTime"} | ${(u: never) => subtractTime("14:30:00", u)}   | ${"hours"} | ${"13:30:00"}   | ${""}    | ${"days"}  | ${"P1DT1H"}
-    ${"totalUnits"}   | ${(u: never) => totalUnits(u, "hours")}        | ${"days"}  | ${24}           | ${null}  | ${"weeks"} | ${"P1W1D"}
+    name              | call                                           | key        | plain           | sentinel | outside    | outsideDuration | sentinelLabel
+    ${"addDate"}      | ${(u: never) => addDate("2024-01-31", u)}      | ${"days"}  | ${"2024-02-01"} | ${""}    | ${"hours"} | ${"P1DT36H"}    | ${"''"}
+    ${"subtractDate"} | ${(u: never) => subtractDate("2024-01-31", u)} | ${"days"}  | ${"2024-01-30"} | ${""}    | ${"hours"} | ${"P1DT36H"}    | ${"''"}
+    ${"addTime"}      | ${(u: never) => addTime("14:30:00", u)}        | ${"hours"} | ${"15:30:00"}   | ${""}    | ${"days"}  | ${"P1DT1H"}     | ${"''"}
+    ${"subtractTime"} | ${(u: never) => subtractTime("14:30:00", u)}   | ${"hours"} | ${"13:30:00"}   | ${""}    | ${"days"}  | ${"P1DT1H"}     | ${"''"}
+    ${"totalUnits"}   | ${(u: never) => totalUnits(u, "hours")}        | ${"days"}  | ${24}           | ${null}  | ${"weeks"} | ${"P1W1D"}      | ${"null"}
   `(title, body as (testCase: unknown) => void);
 
 describe("units: the baseline of each function", () => {
@@ -125,7 +125,7 @@ describe("units: undefined is an absent unit, as Temporal reads it", () => {
   );
 
   everyFunction(
-    "$name returns $sentinel when no unit is present",
+    "$name returns $sentinelLabel when no unit is present",
     ({ call, key, sentinel }) => {
       expect(run(call, {}), "{}").toEqual(sentinel);
       expect(run(call, { [key]: undefined }), "only undefined").toEqual(
@@ -148,7 +148,7 @@ describe("units: a unit is read with an ordinary property get", () => {
   );
 
   everyFunction(
-    "$name returns $sentinel for an inherited or non-enumerable $key that is not a finite number",
+    "$name returns $sentinelLabel for an inherited or non-enumerable $key that is not a finite number",
     ({ call, key, sentinel }) => {
       expect(run(call, inheriting({ [key]: "1" })), "string").toEqual(sentinel);
       expect(run(call, inheriting({ [key]: true })), "boolean").toEqual(
@@ -161,7 +161,7 @@ describe("units: a unit is read with an ordinary property get", () => {
   );
 
   everyFunction(
-    "$name returns $sentinel when an invalid $other is inherited beside an own $key",
+    "$name returns $sentinelLabel when an invalid $other is inherited beside an own $key",
     ({ call, key, other, sentinel }) => {
       expect(run(call, inheriting({ [other]: "1" }, { [key]: 1 }))).toEqual(
         sentinel,
@@ -202,7 +202,7 @@ describe("units: a unit is read with an ordinary property get", () => {
 
 describe("units: a key that is no unit of the function", () => {
   everyFunction(
-    "$name returns $sentinel for an own misspelt key beside $key",
+    "$name returns $sentinelLabel for an own misspelt key beside $key",
     ({ call, key, sentinel }) => {
       expect(run(call, { [key]: 1, nope: 1 }), "nonzero").toEqual(sentinel);
       expect(run(call, { [key]: 1, nope: undefined }), "undefined").toEqual(
@@ -228,7 +228,7 @@ describe("units: a key that is no unit of the function", () => {
 
 describe("units: a duration unit outside the function's set", () => {
   everyRestrictedFunction(
-    "$name returns $sentinel for an own $outside, whatever its amount",
+    "$name returns $sentinelLabel for an own $outside, whatever its amount",
     ({ call, key, outside, sentinel }) => {
       expect(run(call, { [key]: 1, [outside]: 1 }), "nonzero").toEqual(
         sentinel,
@@ -242,7 +242,7 @@ describe("units: a duration unit outside the function's set", () => {
   );
 
   everyRestrictedFunction(
-    "$name returns $sentinel for an inherited or non-enumerable nonzero $outside",
+    "$name returns $sentinelLabel for an inherited or non-enumerable nonzero $outside",
     ({ call, key, outside, sentinel }) => {
       expect(run(call, inheriting({ [outside]: 1 })), "alone").toEqual(
         sentinel,
@@ -274,7 +274,7 @@ describe("units: a duration unit outside the function's set", () => {
   );
 
   everyRestrictedFunction(
-    "$name returns $sentinel for a Temporal.Duration of $outsideDuration",
+    "$name returns $sentinelLabel for a Temporal.Duration of $outsideDuration",
     ({ call, outsideDuration, sentinel }) => {
       expect(run(call, Temporal.Duration.from(outsideDuration))).toEqual(
         sentinel,
@@ -296,33 +296,33 @@ describe("units: an object whose units are all inherited getters", () => {
 
 describe("units: the reported cases", () => {
   it.each`
-    name                                               | call                                                                                                 | expected
-    ${"addDate, a 36-hour Duration"}                   | ${() => addDate("2024-01-31", Temporal.Duration.from("PT36H") as never)}                             | ${""}
-    ${"addDate, a 15-minute Duration"}                 | ${() => addDate("2024-01-31", Temporal.Duration.from("PT15M") as never)}                             | ${""}
-    ${"subtractDate, a 36-hour Duration"}              | ${() => subtractDate("2024-01-31", Temporal.Duration.from("PT36H") as never)}                        | ${""}
-    ${"addTime, a Duration with a day"}                | ${() => addTime("14:30:00", Temporal.Duration.from("P1DT1H") as never)}                              | ${""}
-    ${"subtractTime, a Duration with a day"}           | ${() => subtractTime("14:30:00", Temporal.Duration.from("P1DT1H") as never)}                         | ${""}
-    ${"addDate, inherited hours"}                      | ${() => addDate("2024-01-31", Object.create({ hours: 36 }) as never)}                                | ${""}
-    ${"durationFromUnits, inherited string amount"}    | ${() => durationFromUnits(Object.create({ minutes: "15" }) as never)}                                | ${""}
-    ${"durationFromUnits, inherited true"}             | ${() => durationFromUnits(Object.create({ minutes: true }) as never)}                                | ${""}
-    ${"totalUnits, inherited string amount"}           | ${() => totalUnits(Object.create({ minutes: "15" }) as never, "seconds")}                            | ${null}
-    ${"addUtc, inherited string amount"}               | ${() => addUtc(UTC, Object.create({ days: "5" }) as never)}                                          | ${""}
-    ${"totalUnits, undefined beside an amount"}        | ${() => totalUnits({ minutes: 15, hours: undefined }, "seconds")}                                    | ${900}
-    ${"durationFromUnits, undefined beside an amount"} | ${() => durationFromUnits({ minutes: 15, hours: undefined })}                                        | ${"PT15M"}
-    ${"addUtc, undefined beside an amount"}            | ${() => addUtc(UTC, { days: 5, hours: undefined })}                                                  | ${"2024-03-15T12:00:00Z"}
-    ${"addDate, a one-day Duration"}                   | ${() => addDate("2024-01-31", Temporal.Duration.from("P1D"))}                                        | ${"2024-02-01"}
-    ${"totalUnits, a 15-minute Duration"}              | ${() => totalUnits(Temporal.Duration.from("PT15M"), "seconds")}                                      | ${900}
-    ${"totalUnits, a one-week Duration"}               | ${() => totalUnits(Temporal.Duration.from("P1W"), "days")}                                           | ${null}
-    ${"totalUnits, a one-month Duration"}              | ${() => totalUnits(Temporal.Duration.from("P1M"), "days")}                                           | ${null}
-    ${"totalUnits, a one-year Duration"}               | ${() => totalUnits(Temporal.Duration.from("P1Y"), "days")}                                           | ${null}
-    ${"durationFromUnits, a Duration"}                 | ${() => durationFromUnits(Temporal.Duration.from("P1Y2MT15M"))}                                      | ${"P1Y2MT15M"}
-    ${"totalUnits, own minutes and inherited hours"}   | ${() => totalUnits(Object.assign(Object.create({ hours: 1 }), { minutes: 15 }) as never, "seconds")} | ${4500}
-    ${"totalUnits, own minutes and inherited hour"}    | ${() => totalUnits(Object.assign(Object.create({ hour: 1 }), { minutes: 15 }) as never, "seconds")}  | ${900}
-    ${"totalUnits, a blank Duration"}                  | ${() => totalUnits(new Temporal.Duration(), "seconds")}                                              | ${0}
-    ${"durationFromUnits, a blank Duration"}           | ${() => durationFromUnits(new Temporal.Duration())}                                                  | ${"PT0S"}
-    ${"totalUnits, an empty object"}                   | ${() => totalUnits({}, "seconds")}                                                                   | ${null}
-    ${"durationFromUnits, an empty object"}            | ${() => durationFromUnits({})}                                                                       | ${""}
-  `("$name returns $expected", ({ call, expected }) => {
+    name                                               | call                                                                                                 | expected                  | expectedLabel
+    ${"addDate, a 36-hour Duration"}                   | ${() => addDate("2024-01-31", Temporal.Duration.from("PT36H") as never)}                             | ${""}                     | ${"''"}
+    ${"addDate, a 15-minute Duration"}                 | ${() => addDate("2024-01-31", Temporal.Duration.from("PT15M") as never)}                             | ${""}                     | ${"''"}
+    ${"subtractDate, a 36-hour Duration"}              | ${() => subtractDate("2024-01-31", Temporal.Duration.from("PT36H") as never)}                        | ${""}                     | ${"''"}
+    ${"addTime, a Duration with a day"}                | ${() => addTime("14:30:00", Temporal.Duration.from("P1DT1H") as never)}                              | ${""}                     | ${"''"}
+    ${"subtractTime, a Duration with a day"}           | ${() => subtractTime("14:30:00", Temporal.Duration.from("P1DT1H") as never)}                         | ${""}                     | ${"''"}
+    ${"addDate, inherited hours"}                      | ${() => addDate("2024-01-31", Object.create({ hours: 36 }) as never)}                                | ${""}                     | ${"''"}
+    ${"durationFromUnits, inherited string amount"}    | ${() => durationFromUnits(Object.create({ minutes: "15" }) as never)}                                | ${""}                     | ${"''"}
+    ${"durationFromUnits, inherited true"}             | ${() => durationFromUnits(Object.create({ minutes: true }) as never)}                                | ${""}                     | ${"''"}
+    ${"totalUnits, inherited string amount"}           | ${() => totalUnits(Object.create({ minutes: "15" }) as never, "seconds")}                            | ${null}                   | ${"null"}
+    ${"addUtc, inherited string amount"}               | ${() => addUtc(UTC, Object.create({ days: "5" }) as never)}                                          | ${""}                     | ${"''"}
+    ${"totalUnits, undefined beside an amount"}        | ${() => totalUnits({ minutes: 15, hours: undefined }, "seconds")}                                    | ${900}                    | ${"900"}
+    ${"durationFromUnits, undefined beside an amount"} | ${() => durationFromUnits({ minutes: 15, hours: undefined })}                                        | ${"PT15M"}                | ${"'PT15M'"}
+    ${"addUtc, undefined beside an amount"}            | ${() => addUtc(UTC, { days: 5, hours: undefined })}                                                  | ${"2024-03-15T12:00:00Z"} | ${"'2024-03-15T12:00:00Z'"}
+    ${"addDate, a one-day Duration"}                   | ${() => addDate("2024-01-31", Temporal.Duration.from("P1D"))}                                        | ${"2024-02-01"}           | ${"'2024-02-01'"}
+    ${"totalUnits, a 15-minute Duration"}              | ${() => totalUnits(Temporal.Duration.from("PT15M"), "seconds")}                                      | ${900}                    | ${"900"}
+    ${"totalUnits, a one-week Duration"}               | ${() => totalUnits(Temporal.Duration.from("P1W"), "days")}                                           | ${null}                   | ${"null"}
+    ${"totalUnits, a one-month Duration"}              | ${() => totalUnits(Temporal.Duration.from("P1M"), "days")}                                           | ${null}                   | ${"null"}
+    ${"totalUnits, a one-year Duration"}               | ${() => totalUnits(Temporal.Duration.from("P1Y"), "days")}                                           | ${null}                   | ${"null"}
+    ${"durationFromUnits, a Duration"}                 | ${() => durationFromUnits(Temporal.Duration.from("P1Y2MT15M"))}                                      | ${"P1Y2MT15M"}            | ${"'P1Y2MT15M'"}
+    ${"totalUnits, own minutes and inherited hours"}   | ${() => totalUnits(Object.assign(Object.create({ hours: 1 }), { minutes: 15 }) as never, "seconds")} | ${4500}                   | ${"4500"}
+    ${"totalUnits, own minutes and inherited hour"}    | ${() => totalUnits(Object.assign(Object.create({ hour: 1 }), { minutes: 15 }) as never, "seconds")}  | ${900}                    | ${"900"}
+    ${"totalUnits, a blank Duration"}                  | ${() => totalUnits(new Temporal.Duration(), "seconds")}                                              | ${0}                      | ${"0"}
+    ${"durationFromUnits, a blank Duration"}           | ${() => durationFromUnits(new Temporal.Duration())}                                                  | ${"PT0S"}                 | ${"'PT0S'"}
+    ${"totalUnits, an empty object"}                   | ${() => totalUnits({}, "seconds")}                                                                   | ${null}                   | ${"null"}
+    ${"durationFromUnits, an empty object"}            | ${() => durationFromUnits({})}                                                                       | ${""}                     | ${"''"}
+  `("$name returns $expectedLabel", ({ call, expected }) => {
     expect((call as () => unknown)()).toBe(expected);
   });
 });

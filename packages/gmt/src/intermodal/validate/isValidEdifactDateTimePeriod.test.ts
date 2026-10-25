@@ -14,7 +14,7 @@ describe("isValidEdifactDateTimePeriod", () => {
     ${"202406151430"}              | ${false} | ${"one date-time"}
     ${""}                          | ${false} | ${"an empty value"}
   `(
-    "returns $expected for $value under 719 ($reads), as parseEdifactDateTimePeriod reads it",
+    "returns $expected for '$value' under 719 ($reads), as parseEdifactDateTimePeriod reads it",
     ({ value, expected }) => {
       expect(isValidEdifactDateTimePeriod(value, "719")).toBe(expected);
       expect(parseEdifactDateTimePeriod(value, "719") !== null).toBe(expected);

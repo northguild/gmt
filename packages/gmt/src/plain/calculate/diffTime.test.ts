@@ -34,32 +34,27 @@ describe("diffTime", () => {
   );
 
   it.each`
-    nonStringInput
-    ${"25:00:00"}
-    ${"not-a-time"}
-    ${"12:60:00"}
-    ${"12:00:61"}
-    ${""}
-    ${true}
-    ${null}
-    ${undefined}
-  `(
-    "returns null for non-string input $nonStringInput",
-    ({ nonStringInput }) => {
-      expect(
-        diffTime(nonStringInput as never, "12:00:00", ["hours"]),
-      ).toBeNull();
-    },
-  );
+    nonStringInput  | label
+    ${"25:00:00"}   | ${"'25:00:00'"}
+    ${"not-a-time"} | ${"'not-a-time'"}
+    ${"12:60:00"}   | ${"'12:60:00'"}
+    ${"12:00:61"}   | ${"'12:00:61'"}
+    ${""}           | ${"''"}
+    ${true}         | ${"true"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
+  `("returns null for non-string input $label", ({ nonStringInput }) => {
+    expect(diffTime(nonStringInput as never, "12:00:00", ["hours"])).toBeNull();
+  });
 
   it.each`
-    invalidUnit
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${"week"}
-  `("returns null for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit  | label
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${"week"}    | ${"'week'"}
+  `("returns null for invalid unit $label", ({ invalidUnit }) => {
     expect(diffTime("12:00:00", "13:00:00", [invalidUnit] as never)).toBeNull();
   });
 

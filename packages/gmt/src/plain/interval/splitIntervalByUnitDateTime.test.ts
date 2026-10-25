@@ -180,7 +180,7 @@ describe("splitIntervalByUnitDateTime", () => {
     ${"2024-01-01T12:00:00"} | ${"2024-01-01T14:00:00"} | ${"hour"}    | ${-1}
     ${"2024-01-01T12:00:00"} | ${"2024-01-01T14:00:00"} | ${"hour"}    | ${1.5}
   `(
-    "returns [] for invalid $start, $end, $unit, or $amount",
+    "returns [] for invalid '$start', '$end', '$unit', or $amount",
     ({ start, end, unit, amount }) => {
       expect(splitIntervalByUnitDateTime(start, end, unit, amount)).toEqual([]);
     },

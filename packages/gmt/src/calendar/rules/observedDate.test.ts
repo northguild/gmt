@@ -55,19 +55,19 @@ describe("observedDate", () => {
     ${"+275760-09-12"} | ${{ 5: "nextWorkingDay" }}                    | ${UTC([], [])}                                     | ${"+275760-09-13"} | ${"the maximum is itself the first open day"}
     ${"+275760-09-12"} | ${{ 5: "nextWorkingDay" }}                    | ${UTC([])}                                         | ${""}              | ${"the maximum is a weekend: the walk passes the range"}
   `(
-    "($isoDate, $policy) gives $expected: $why",
+    "($isoDate, $policy) gives '$expected': $why",
     ({ isoDate, policy, calendar, expected }) => {
       expect(observedDate(isoDate, policy, calendar)).toBe(expected);
     },
   );
 
   it.each`
-    isoDate               | why
-    ${"2027-02-30"}       | ${"not a date"}
-    ${"2027-12-25T00:00"} | ${"datetime"}
-    ${""}                 | ${"empty"}
-    ${20_271_225}         | ${"number"}
-  `("invalid date $isoDate gives an empty string: $why", ({ isoDate }) => {
+    isoDate               | why             | label
+    ${"2027-02-30"}       | ${"not a date"} | ${"'2027-02-30'"}
+    ${"2027-12-25T00:00"} | ${"datetime"}   | ${"'2027-12-25T00:00'"}
+    ${""}                 | ${"empty"}      | ${"''"}
+    ${20_271_225}         | ${"number"}     | ${"20271225"}
+  `("invalid date $label gives an empty string: $why", ({ isoDate }) => {
     expect(observedDate(isoDate, { 6: { next: 1 } })).toBe("");
   });
 
@@ -147,7 +147,7 @@ describe("observedDate", () => {
     ${Object.create({ 6: { next: 1 } })}              | ${"2027-12-25"} | ${"inherited keys are ignored: unshifted"}
     ${Object.assign(() => 0, { 6: { previous: 5 } })} | ${"2027-12-24"} | ${"function with own keys: shifts Saturday to Friday"}
     ${{ 6: Object.create({ previous: 5 }) }}          | ${""}           | ${"inherited shift key: no own key, invalid"}
-  `("odd policy object gives $expected: $why", ({ policy, expected }) => {
+  `("odd policy object gives '$expected': $why", ({ policy, expected }) => {
     expect(observedDate("2027-12-25", policy)).toBe(expected);
   });
 });

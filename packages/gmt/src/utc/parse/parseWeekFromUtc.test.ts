@@ -33,7 +33,7 @@ describe("parseWeekFromUtc", () => {
     value
     ${"invalid"}
     ${""}
-  `("returns null for invalid value $value", ({ value }) => {
+  `("returns null for invalid value '$value'", ({ value }) => {
     expect(parseWeekFromUtc(value)).toBeNull();
   });
 
@@ -87,15 +87,15 @@ describe("parseWeekFromUtc with a year outside 0000-9999", () => {
   // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
   // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
   it.each`
-    weekStartsOn
-    ${"tuesday"}
-    ${"Monday"}
-    ${""}
-    ${null}
-    ${1}
-    ${true}
+    weekStartsOn | label
+    ${"tuesday"} | ${"'tuesday'"}
+    ${"Monday"}  | ${"'Monday'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${1}         | ${"1"}
+    ${true}      | ${"true"}
   `(
-    "returns null for 2024-03-15T12:00:00Z with invalid weekStartsOn $weekStartsOn",
+    "returns null for 2024-03-15T12:00:00Z with invalid weekStartsOn $label",
     ({ weekStartsOn }) => {
       expect(
         parseWeekFromUtc("2024-03-15T12:00:00Z", { weekStartsOn }),
@@ -127,11 +127,11 @@ describe("parseWeekFromUtc with a year outside 0000-9999", () => {
 
   // An unknown IANA zone is invalid input; an explicit undefined is the omitted option (UTC).
   it.each`
-    timeZone
-    ${"Mars/Olympus"}
-    ${""}
-    ${null}
-  `("returns null for invalid timeZone $timeZone", ({ timeZone }) => {
+    timeZone          | label
+    ${"Mars/Olympus"} | ${"'Mars/Olympus'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+  `("returns null for invalid timeZone $label", ({ timeZone }) => {
     expect(
       parseWeekFromUtc("2024-03-17T02:30:45.123456789Z", { timeZone }),
     ).toBeNull();

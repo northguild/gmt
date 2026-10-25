@@ -129,7 +129,7 @@ describe("parseRfc2822", () => {
     ${"Fri, 15 Mar 2024 14:30:00\u0000-0400"}
     ${"Fri, 15 Mar 2024 14:30:00 -0400 (\u0000)"}
     ${"Fri, 15 Mar 2024 14:30:00 -0400 (\\\\\u0000)"}
-  `("returns '' for invalid input $value", ({ value }: { value: string }) => {
+  `("returns '' for invalid input '$value'", ({ value }: { value: string }) => {
     expect(parseRfc2822(value)).toBe("");
   });
 

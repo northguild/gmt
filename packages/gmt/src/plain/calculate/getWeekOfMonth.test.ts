@@ -82,12 +82,12 @@ describe("getWeekOfMonth", () => {
   });
 
   it.each`
-    locale
-    ${"not-a-locale-!!"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns null for invalid locale $locale", ({ locale }) => {
+    locale               | label
+    ${"not-a-locale-!!"} | ${"'not-a-locale-!!'"}
+    ${""}                | ${"''"}
+    ${null}              | ${"null"}
+    ${undefined}         | ${"undefined"}
+  `("returns null for invalid locale $label", ({ locale }) => {
     expect(getWeekOfMonth("2024-02-18", locale)).toBeNull();
   });
 

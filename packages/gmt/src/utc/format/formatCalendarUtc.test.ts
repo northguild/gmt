@@ -154,11 +154,11 @@ describe("formatCalendarUtc", () => {
 
     // ECMA-402 and Temporal throw RangeError for an unknown zone, so a typo is the sentinel, never UTC.
     it.each`
-      timeZone
-      ${"Not/AZone"}
-      ${""}
-      ${null}
-    `("returns '' for invalid timeZone $timeZone", ({ timeZone }) => {
+      timeZone       | label
+      ${"Not/AZone"} | ${"'Not/AZone'"}
+      ${""}          | ${"''"}
+      ${null}        | ${"null"}
+    `("returns '' for invalid timeZone $label", ({ timeZone }) => {
       expect(
         formatCalendarUtc(VAL, MustTestLocales.enUS, {
           reference: REF,
@@ -201,15 +201,15 @@ describe("formatCalendarUtc", () => {
   // ---------------------------------------------------------------------------
   describe("invalid inputs", () => {
     it.each`
-      value
-      ${""}
-      ${"not-a-date"}
-      ${"2024-03-16T14:30:00"}
-      ${null}
-      ${undefined}
-      ${42}
-      ${true}
-    `("returns '' for invalid value $value", ({ value }) => {
+      value                    | label
+      ${""}                    | ${"''"}
+      ${"not-a-date"}          | ${"'not-a-date'"}
+      ${"2024-03-16T14:30:00"} | ${"'2024-03-16T14:30:00'"}
+      ${null}                  | ${"null"}
+      ${undefined}             | ${"undefined"}
+      ${42}                    | ${"42"}
+      ${true}                  | ${"true"}
+    `("returns '' for invalid value $label", ({ value }) => {
       expect(formatCalendarUtc(value as never, MustTestLocales.enUS)).toBe("");
     });
 
@@ -249,7 +249,7 @@ describe("formatCalendarUtc with a locale list", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"demain à 18:30"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(formatCalendarUtc(VAL, locale as string[], { reference: REF })).toBe(
       expected,
     );

@@ -44,7 +44,7 @@ describe("isValidEpcisTimeZoneOffset", () => {
     ${"+02:00\n"}  | ${false} | ${"trailing line feed"}
     ${""}          | ${false} | ${"empty"}
   `(
-    "returns $expected for $value ($reason), as the pattern does; isValidEpcisEvent and parseEpcisEvent agree",
+    "returns $expected for '$value' ($reason), as the pattern does; isValidEpcisEvent and parseEpcisEvent agree",
     ({ value, expected }: { value: string; expected: boolean }) => {
       const event = {
         eventTime: "2024-06-15T14:30:00Z",

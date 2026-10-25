@@ -35,26 +35,23 @@ describe("startOfUtc", () => {
   );
 
   it.each`
-    invalidValue
-    ${"invalid"}
-    ${"2024-02-29T12:34:56"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns empty string for invalid value $invalidValue",
-    ({ invalidValue }) => {
-      expect(startOfUtc(invalidValue as never, "day" as never)).toBe("");
-    },
-  );
+    invalidValue             | label
+    ${"invalid"}             | ${"'invalid'"}
+    ${"2024-02-29T12:34:56"} | ${"'2024-02-29T12:34:56'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+  `("returns empty string for invalid value $label", ({ invalidValue }) => {
+    expect(startOfUtc(invalidValue as never, "day" as never)).toBe("");
+  });
 
   it.each`
-    invalidUnit
-    ${"invalid-unit"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns empty string for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit       | label
+    ${"invalid-unit"} | ${"'invalid-unit'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
+  `("returns empty string for invalid unit $label", ({ invalidUnit }) => {
     expect(startOfUtc("2024-02-29T12:34:56Z", invalidUnit as never)).toBe("");
   });
 
@@ -86,21 +83,21 @@ describe("startOfUtc", () => {
   // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
   // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
   it.each`
-    unit      | weekStartsOn
-    ${"week"} | ${"tuesday"}
-    ${"week"} | ${"Monday"}
-    ${"week"} | ${""}
-    ${"week"} | ${null}
-    ${"week"} | ${1}
-    ${"week"} | ${true}
-    ${"day"}  | ${"tuesday"}
-    ${"day"}  | ${"Monday"}
-    ${"day"}  | ${""}
-    ${"day"}  | ${null}
-    ${"day"}  | ${1}
-    ${"day"}  | ${true}
+    unit      | weekStartsOn | label
+    ${"week"} | ${"tuesday"} | ${"'tuesday'"}
+    ${"week"} | ${"Monday"}  | ${"'Monday'"}
+    ${"week"} | ${""}        | ${"''"}
+    ${"week"} | ${null}      | ${"null"}
+    ${"week"} | ${1}         | ${"1"}
+    ${"week"} | ${true}      | ${"true"}
+    ${"day"}  | ${"tuesday"} | ${"'tuesday'"}
+    ${"day"}  | ${"Monday"}  | ${"'Monday'"}
+    ${"day"}  | ${""}        | ${"''"}
+    ${"day"}  | ${null}      | ${"null"}
+    ${"day"}  | ${1}         | ${"1"}
+    ${"day"}  | ${true}      | ${"true"}
   `(
-    "returns an empty string for unit $unit with invalid weekStartsOn $weekStartsOn",
+    "returns an empty string for unit $unit with invalid weekStartsOn $label",
     ({ unit, weekStartsOn }) => {
       expect(
         startOfUtc("2024-02-29T13:45:30.123456789Z", unit, { weekStartsOn }),

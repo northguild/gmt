@@ -60,7 +60,7 @@ describe("parseEdifactDateTime", () => {
       ${"203"} | ${"2024061514３0"}     | ${"a full-width digit"}
       ${"203"} | ${"2406151430"}        | ${"YYMMDDHHMM: a two-digit year is not read"}
       ${"203"} | ${""}                  | ${"an empty value"}
-    `("returns '' for $code $value ($reads)", ({ code, value }) => {
+    `("returns '' for $code '$value' ($reads)", ({ code, value }) => {
       expect(parseEdifactDateTime(value, code)).toBe("");
     });
   });

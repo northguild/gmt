@@ -54,20 +54,20 @@ describe("getDurationSign", () => {
   );
 
   it.each`
-    value
-    ${"not a duration"}
-    ${""}
-    ${"P"}
-    ${"1D"}
-    ${"2024-03-10"}
-    ${"PT"}
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-    ${[]}
-    ${{}}
-  `("returns null when $value is not a valid duration string", ({ value }) => {
+    value               | label
+    ${"not a duration"} | ${"'not a duration'"}
+    ${""}               | ${"''"}
+    ${"P"}              | ${"'P'"}
+    ${"1D"}             | ${"'1D'"}
+    ${"2024-03-10"}     | ${"'2024-03-10'"}
+    ${"PT"}             | ${"'PT'"}
+    ${null}             | ${"null"}
+    ${undefined}        | ${"undefined"}
+    ${123}              | ${"123"}
+    ${true}             | ${"true"}
+    ${[]}               | ${"[]"}
+    ${{}}               | ${"{}"}
+  `("returns null when $label is not a valid duration string", ({ value }) => {
     expect(getDurationSign(value)).toBeNull();
   });
 

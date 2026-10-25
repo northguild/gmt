@@ -41,7 +41,7 @@ describe("parseX12DateTimeRange", () => {
       ${"RDT"} | ${"202406151430-20240620"}         | ${"DTD's value: a date-time and a date are not read"}
       ${"RDT"} | ${"20240615-20240620"}             | ${"RD8's value: no times"}
       ${"RDT"} | ${""}                              | ${"an empty value"}
-    `("returns null for $code $value ($reads)", ({ code, value }) => {
+    `("returns null for $code '$value' ($reads)", ({ code, value }) => {
       expect(parseX12DateTimeRange(value, code)).toBeNull();
     });
   });
@@ -89,7 +89,7 @@ describe("parseX12DateTimeRange", () => {
       ${"RDT"} | ${"202406152430-202406201600"}     | ${"hour 24 in the start"}
       ${"DTS"} | ${"20240615143060-20240620160000"} | ${"second 60 in the start"}
       ${"DTS"} | ${"20240615143000-20240631160000"} | ${"31 June in the end"}
-    `("returns null for $code $value ($reads)", ({ code, value }) => {
+    `("returns null for $code '$value' ($reads)", ({ code, value }) => {
       expect(parseX12DateTimeRange(value, code)).toBeNull();
     });
   });

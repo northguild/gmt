@@ -22,37 +22,37 @@ describe("fromUlid", () => {
   });
 
   it.each`
-    ulid                              | reason
-    ${"80000000000000000000000000"}   | ${"overflow: first character 8"}
-    ${"ZZZZZZZZZZZZZZZZZZZZZZZZZZ"}   | ${"overflow"}
-    ${"01HK153X00000000000000000I"}   | ${"excluded I"}
-    ${"01HK153X00000000000000000L"}   | ${"excluded L"}
-    ${"01HK153X00000000000000000O"}   | ${"excluded O"}
-    ${"01HK153X00000000000000000U"}   | ${"excluded U"}
-    ${"01HK153X00000000000000000i"}   | ${"excluded i, lower case"}
-    ${"01HK153X00000000000000000l"}   | ${"excluded l, lower case"}
-    ${"01HK153X00000000000000000o"}   | ${"excluded o, lower case"}
-    ${"01HK153X00000000000000000u"}   | ${"excluded u, lower case"}
-    ${"0IHK153X000000000000000000"}   | ${"excluded I inside the timestamp"}
-    ${"01HK153X0000000000000L0000"}   | ${"excluded L inside the randomness"}
-    ${"O1HK153X000000000000000000"}   | ${"O not folded to 0 at the start"}
-    ${"90000000000000000000000000"}   | ${"overflow: first character 9"}
-    ${"A0000000000000000000000000"}   | ${"overflow: first character A"}
-    ${"a0000000000000000000000000"}   | ${"overflow: first character a, lower case"}
-    ${"87ZZZZZZZZZZZZZZZZZZZZZZZZ"}   | ${"overflow: 8 then max digits"}
-    ${"01HK153X00000000000000000"}    | ${"25 characters"}
-    ${"01HK153X0000000000000000000"}  | ${"27 characters"}
-    ${" 01HK153X000000000000000000"}  | ${"leading space"}
-    ${"01HK153X000000000000000000 "}  | ${"trailing space"}
-    ${"01HK153X00000000000000000-"}   | ${"hyphen"}
-    ${""}                             | ${"empty"}
-    ${42}                             | ${"number"}
-    ${undefined}                      | ${"undefined"}
-    ${null}                           | ${"null"}
-    ${{}}                             | ${"object"}
-    ${["01HK153X000000000000000000"]} | ${"array holding a valid ULID"}
-    ${2704067200000}                  | ${"number of milliseconds"}
-  `("returns an empty string for $ulid ($reason)", ({ ulid }) => {
+    ulid                              | reason                                       | label
+    ${"80000000000000000000000000"}   | ${"overflow: first character 8"}             | ${"'80000000000000000000000000'"}
+    ${"ZZZZZZZZZZZZZZZZZZZZZZZZZZ"}   | ${"overflow"}                                | ${"'ZZZZZZZZZZZZZZZZZZZZZZZZZZ'"}
+    ${"01HK153X00000000000000000I"}   | ${"excluded I"}                              | ${"'01HK153X00000000000000000I'"}
+    ${"01HK153X00000000000000000L"}   | ${"excluded L"}                              | ${"'01HK153X00000000000000000L'"}
+    ${"01HK153X00000000000000000O"}   | ${"excluded O"}                              | ${"'01HK153X00000000000000000O'"}
+    ${"01HK153X00000000000000000U"}   | ${"excluded U"}                              | ${"'01HK153X00000000000000000U'"}
+    ${"01HK153X00000000000000000i"}   | ${"excluded i, lower case"}                  | ${"'01HK153X00000000000000000i'"}
+    ${"01HK153X00000000000000000l"}   | ${"excluded l, lower case"}                  | ${"'01HK153X00000000000000000l'"}
+    ${"01HK153X00000000000000000o"}   | ${"excluded o, lower case"}                  | ${"'01HK153X00000000000000000o'"}
+    ${"01HK153X00000000000000000u"}   | ${"excluded u, lower case"}                  | ${"'01HK153X00000000000000000u'"}
+    ${"0IHK153X000000000000000000"}   | ${"excluded I inside the timestamp"}         | ${"'0IHK153X000000000000000000'"}
+    ${"01HK153X0000000000000L0000"}   | ${"excluded L inside the randomness"}        | ${"'01HK153X0000000000000L0000'"}
+    ${"O1HK153X000000000000000000"}   | ${"O not folded to 0 at the start"}          | ${"'O1HK153X000000000000000000'"}
+    ${"90000000000000000000000000"}   | ${"overflow: first character 9"}             | ${"'90000000000000000000000000'"}
+    ${"A0000000000000000000000000"}   | ${"overflow: first character A"}             | ${"'A0000000000000000000000000'"}
+    ${"a0000000000000000000000000"}   | ${"overflow: first character a, lower case"} | ${"'a0000000000000000000000000'"}
+    ${"87ZZZZZZZZZZZZZZZZZZZZZZZZ"}   | ${"overflow: 8 then max digits"}             | ${"'87ZZZZZZZZZZZZZZZZZZZZZZZZ'"}
+    ${"01HK153X00000000000000000"}    | ${"25 characters"}                           | ${"'01HK153X00000000000000000'"}
+    ${"01HK153X0000000000000000000"}  | ${"27 characters"}                           | ${"'01HK153X0000000000000000000'"}
+    ${" 01HK153X000000000000000000"}  | ${"leading space"}                           | ${"' 01HK153X000000000000000000'"}
+    ${"01HK153X000000000000000000 "}  | ${"trailing space"}                          | ${"'01HK153X000000000000000000 '"}
+    ${"01HK153X00000000000000000-"}   | ${"hyphen"}                                  | ${"'01HK153X00000000000000000-'"}
+    ${""}                             | ${"empty"}                                   | ${"''"}
+    ${42}                             | ${"number"}                                  | ${"42"}
+    ${undefined}                      | ${"undefined"}                               | ${"undefined"}
+    ${null}                           | ${"null"}                                    | ${"null"}
+    ${{}}                             | ${"object"}                                  | ${"{}"}
+    ${["01HK153X000000000000000000"]} | ${"array holding a valid ULID"}              | ${'["01HK153X000000000000000000"]'}
+    ${2704067200000}                  | ${"number of milliseconds"}                  | ${"2704067200000"}
+  `("returns an empty string for $label ($reason)", ({ ulid }) => {
     expect(fromUlid(ulid)).toBe("");
   });
 

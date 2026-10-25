@@ -81,9 +81,12 @@ describe("intervalUnionDate", () => {
     ${"2024-01-01"} | ${"2024-13-01"} | ${"2024-04-01"} | ${"2024-12-31"} | ${"aEnd"}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-13-01"} | ${"2024-12-31"} | ${"bStart"}
     ${"2024-01-01"} | ${"2024-06-30"} | ${"2024-04-01"} | ${"2024-13-01"} | ${"bEnd"}
-  `("returns null for malformed $param", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalUnionDate(aStart, aEnd, bStart, bEnd)).toBeNull();
-  });
+  `(
+    "returns null for malformed $param: A='$aStart' to '$aEnd', B='$bStart' to '$bEnd'",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalUnionDate(aStart, aEnd, bStart, bEnd)).toBeNull();
+    },
+  );
 
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | param

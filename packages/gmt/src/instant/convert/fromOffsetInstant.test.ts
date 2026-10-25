@@ -268,7 +268,7 @@ describe("fromOffsetInstant", () => {
     ${"2024-07-15T16:00:00Z[Europe/Paris]"} | ${"2024-07-15T12:00:00-04:00"}
     ${"2024-07-15T16:00:00Z[!foo=bar]"}     | ${""}
   `(
-    "reads the annotations of $instant as Temporal does → $expected",
+    "reads the annotations of $instant as Temporal does → '$expected'",
     ({ instant, expected }) => {
       expect(fromOffsetInstant({ instant, offset: "-04:00" })).toBe(expected);
     },

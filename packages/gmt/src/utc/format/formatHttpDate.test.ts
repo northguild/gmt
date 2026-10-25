@@ -35,7 +35,7 @@ describe("formatHttpDate", () => {
     ${"2024-03-15T14:30:00"}
     ${"2024-03-15"}
     ${"2024-02-30T14:30:00Z"}
-  `("returns '' for invalid input $value", ({ value }: { value: string }) => {
+  `("returns '' for invalid input '$value'", ({ value }: { value: string }) => {
     expect(formatHttpDate(value)).toBe("");
   });
 

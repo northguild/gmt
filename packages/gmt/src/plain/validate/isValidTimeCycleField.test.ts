@@ -14,19 +14,19 @@ describe("isValidTimeCycleField", () => {
   });
 
   it.each`
-    field
-    ${"year"}
-    ${"month"}
-    ${"day"}
-    ${"invalid"}
-    ${""}
-    ${123}
-    ${null}
-    ${undefined}
-    ${true}
-    ${[]}
-    ${{}}
-  `("returns false for $field", ({ field }) => {
+    field        | label
+    ${"year"}    | ${"'year'"}
+    ${"month"}   | ${"'month'"}
+    ${"day"}     | ${"'day'"}
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${123}       | ${"123"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${true}      | ${"true"}
+    ${[]}        | ${"[]"}
+    ${{}}        | ${"{}"}
+  `("returns false for $label", ({ field }) => {
     expect(isValidTimeCycleField(field)).toBe(false);
   });
 });

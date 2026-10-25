@@ -68,15 +68,15 @@ describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
   );
 
   it.each`
-    value                                                          | calendar     | expected
-    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"}  | ${"hebrew"}  | ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"}
-    ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=ethioaa]"} | ${"ethioaa"} | ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=ethioaa]"}
-    ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=coptic]"}  | ${"coptic"}  | ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=coptic]"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York]"}               | ${"iso8601"} | ${"2024-10-03T14:30:45-04:00[America/New_York]"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=iso8601]"} | ${"iso8601"} | ${"2024-10-03T14:30:45-04:00[America/New_York]"}
-    ${"2024-10-03T14:30:45-04:00[America/New_York][!u-ca=HEBREW]"} | ${"hebrew"}  | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"}
+    value                                                          | calendar     | expected                                                       | label
+    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"}  | ${"hebrew"}  | ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew]"}  | ${"[u-ca=hebrew]"}
+    ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=ethioaa]"} | ${"ethioaa"} | ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=ethioaa]"} | ${"[u-ca=ethioaa]"}
+    ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=coptic]"}  | ${"coptic"}  | ${"2025-09-05T00:30:00-04:00[America/Santiago][u-ca=coptic]"}  | ${"[u-ca=coptic]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York]"}               | ${"iso8601"} | ${"2024-10-03T14:30:45-04:00[America/New_York]"}               | ${"no annotation"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=iso8601]"} | ${"iso8601"} | ${"2024-10-03T14:30:45-04:00[America/New_York]"}               | ${"[u-ca=iso8601]"}
+    ${"2024-10-03T14:30:45-04:00[America/New_York][!u-ca=HEBREW]"} | ${"hebrew"}  | ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=hebrew]"}  | ${"[!u-ca=HEBREW]"}
   `(
-    "re-formats parsed $value in $calendar as $expected",
+    "re-formats a parsed value with annotations $label in $calendar as $expected",
     ({ value, calendar, expected }) => {
       expect(
         formatZonedInCalendar(
@@ -147,18 +147,21 @@ describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
   });
 
   it.each`
-    value                                                                   | calendarId
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew]"}           | ${"hebrew"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=ethiopic]"}         | ${"ethioaa"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=islamicc]"}         | ${"islamic-civil"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][foo=bar][u-ca=hebrew]"}  | ${"hebrew"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew][foo=bar]"}  | ${"hebrew"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew][u-ca=roc]"} | ${"hebrew"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=coptic][foo=bar]"}  | ${"ethioaa"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][foo=bar]"}               | ${"iso8601"}
-  `("parses $value, computing in $calendarId", ({ value, calendarId }) => {
-    expect(parseCalendarZonedValue(value).calendarId).toBe(calendarId);
-  });
+    value                                                                   | calendarId         | label
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew]"}           | ${"hebrew"}        | ${"[u-ca=hebrew]"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=ethiopic]"}         | ${"ethioaa"}       | ${"[u-ca=ethiopic]"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=islamicc]"}         | ${"islamic-civil"} | ${"[u-ca=islamicc]"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][foo=bar][u-ca=hebrew]"}  | ${"hebrew"}        | ${"[foo=bar][u-ca=hebrew]"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew][foo=bar]"}  | ${"hebrew"}        | ${"[u-ca=hebrew][foo=bar]"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew][u-ca=roc]"} | ${"hebrew"}        | ${"[u-ca=hebrew][u-ca=roc]"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=coptic][foo=bar]"}  | ${"ethioaa"}       | ${"[u-ca=coptic][foo=bar]"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][foo=bar]"}               | ${"iso8601"}       | ${"[foo=bar]"}
+  `(
+    "parses a value with annotations $label, computing in $calendarId",
+    ({ value, calendarId }) => {
+      expect(parseCalendarZonedValue(value).calendarId).toBe(calendarId);
+    },
+  );
 
   it("passes disambiguation through to Temporal for a fold landing", () => {
     // Morocco's 2019-05-05 fall-back fold — the same fixture the Japanese era tests use.

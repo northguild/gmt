@@ -73,7 +73,7 @@ describe("normalizeDuration", () => {
     ${"PT1S"}   | ${"millisecond"} | ${1000}           | ${""}
     ${"PT1.3S"} | ${"millisecond"} | ${500}            | ${"PT1.5S"}
   `(
-    "applies roundingIncrement $roundingIncrement to $value with smallestUnit $smallestUnit -> $expected",
+    "applies roundingIncrement $roundingIncrement to $value with smallestUnit $smallestUnit -> '$expected'",
     ({ value, smallestUnit, roundingIncrement, expected }) => {
       expect(
         normalizeDuration(value, { smallestUnit, roundingIncrement }),
@@ -89,7 +89,7 @@ describe("normalizeDuration", () => {
     ${"P10D"}  | ${"day"}     | ${"week"}    | ${2}              | ${""}
     ${"P11D"}  | ${"day"}     | ${"day"}     | ${2}              | ${"P12D"}
   `(
-    "applies date-unit roundingIncrement $roundingIncrement to $value (smallestUnit $smallestUnit, largestUnit $largestUnit) -> $expected",
+    "applies date-unit roundingIncrement $roundingIncrement to $value (smallestUnit $smallestUnit, largestUnit $largestUnit) -> '$expected'",
     ({ value, smallestUnit, largestUnit, roundingIncrement, expected }) => {
       expect(
         normalizeDuration(value, {
@@ -111,7 +111,7 @@ describe("normalizeDuration", () => {
     ${"2024-11-03T01:30-05:00[America/New_York]"}    | ${"P1DT1H"} | ${"explicit later EST offset"}
     ${"2024-03-10T00:00:00-04:00[America/New_York]"} | ${""}       | ${"offset does not match zone, rejected"}
   `(
-    "rebalances PT25H to $expected with largestUnit day relativeTo $relativeTo ($note)",
+    "rebalances PT25H to '$expected' with largestUnit day relativeTo $relativeTo ($note)",
     ({ relativeTo, expected }) => {
       expect(
         normalizeDuration("PT25H", { largestUnit: "day", relativeTo }),
@@ -147,7 +147,7 @@ describe("normalizeDuration", () => {
     ${"P400D"} | ${"year"}   | ${"2023-01-01"} | ${"P1Y1M4D"}
     ${"-P45D"} | ${"month"}  | ${"2024-01-01"} | ${"-P1M14D"}
   `(
-    "rebalancing $value to largestUnit $largestUnit with relativeTo $relativeTo -> $expected",
+    "rebalancing $value to largestUnit $largestUnit with relativeTo $relativeTo -> '$expected'",
     ({ value, largestUnit, relativeTo, expected }) => {
       expect(normalizeDuration(value, { largestUnit, relativeTo })).toBe(
         expected,
@@ -172,7 +172,7 @@ describe("normalizeDuration", () => {
     ${"P1M"} | ${{ largestUnit: "day" }}                           | ${""}
     ${"P1M"} | ${{ largestUnit: "day", relativeTo: "2024-01-01" }} | ${"P31D"}
   `(
-    "input with a calendar unit requires relativeTo even under default auto: $value with $options -> $expected",
+    "input with a calendar unit requires relativeTo even under default auto: $value with $options -> '$expected'",
     ({ value, options, expected }) => {
       expect(normalizeDuration(value, options)).toBe(expected);
     },
@@ -209,7 +209,7 @@ describe("normalizeDuration", () => {
     ${"not a duration"}
     ${""}
   `(
-    "returns an empty string for invalid value $invalidValue",
+    "returns an empty string for invalid value '$invalidValue'",
     ({ invalidValue }) => {
       expect(normalizeDuration(invalidValue)).toBe("");
     },

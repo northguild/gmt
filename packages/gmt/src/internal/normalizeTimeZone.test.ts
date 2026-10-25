@@ -44,7 +44,7 @@ describe("normalizeTimeZone", () => {
     ${"UTC+5"}            | ${"POSIX-style offset"}
     ${null}               | ${"null is not omitted"}
     ${5}                  | ${"a number"}
-  `("returns empty string for $input ($reason)", ({ input }) => {
+  `("returns empty string for $reason", ({ input }) => {
     expect(normalizeTimeZone(input as never)).toBe("");
   });
 
@@ -76,7 +76,7 @@ describe("normalizeTimeZone", () => {
     ${"-0800"}  | ${"-0800"}
     ${"+24:00"} | ${""}
   `(
-    "returns $expected for the offset identifier $input",
+    "returns '$expected' for the offset identifier $input",
     ({ input, expected }) => {
       expect(normalizeTimeZone(input)).toBe(expected);
     },

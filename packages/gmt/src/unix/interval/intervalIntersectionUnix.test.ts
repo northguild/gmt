@@ -29,7 +29,7 @@ describe("intervalIntersectionUnix", () => {
     ${0}       | ${1000000} | ${1000001} | ${2000000} | ${null}
     ${1000001} | ${2000000} | ${0}       | ${1000000} | ${null}
   `(
-    "returns $expected for disjoint intervals",
+    "returns $expected for disjoint [$aStart, $aEnd) and [$bStart, $bEnd)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionUnix(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -42,7 +42,7 @@ describe("intervalIntersectionUnix", () => {
     ${1000000} | ${0}       | ${2000000} | ${500000} | ${null}
     ${0}       | ${1000000} | ${1000000} | ${999999} | ${null}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed [$aStart, $aEnd) and [$bStart, $bEnd)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalIntersectionUnix(aStart, aEnd, bStart, bEnd)).toBe(
         expected,
@@ -85,16 +85,19 @@ describe("intervalIntersectionUnix", () => {
     ${1700000000} | ${1700000000} | ${1000000}   | ${null}
     ${1700000000} | ${1700000000} | ${1000000}   | ${undefined}
     ${1700000000} | ${1700000000} | ${1000000}   | ${"abc"}
-  `("returns null for non-numeric input", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(
-      intervalIntersectionUnix(
-        aStart as never,
-        aEnd as never,
-        bStart as never,
-        bEnd as never,
-      ),
-    ).toBeNull();
-  });
+  `(
+    "returns null for non-numeric input [$aStart, $aEnd) and [$bStart, $bEnd)",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(
+        intervalIntersectionUnix(
+          aStart as never,
+          aEnd as never,
+          bStart as never,
+          bEnd as never,
+        ),
+      ).toBeNull();
+    },
+  );
 
   it.each`
     aStart | aEnd         | bStart       | bEnd         | expected
@@ -117,10 +120,7 @@ describe("intervalIntersectionUnix", () => {
     ${0}   | ${2 ** 53} | ${1}     | ${2}   | ${"an unsafe end"}
     ${"0"} | ${"10"}    | ${"1.5"} | ${"2"} | ${"a fractional numeric string"}
     ${""}  | ${"10"}    | ${"1"}   | ${"2"} | ${"an empty string, which Number() reads as 0"}
-  `(
-    "returns null for A=[$aStart, $aEnd] and B=[$bStart, $bEnd] ($description)",
-    ({ aStart, aEnd, bStart, bEnd }) => {
-      expect(intervalIntersectionUnix(aStart, aEnd, bStart, bEnd)).toBeNull();
-    },
-  );
+  `("returns null for $description", ({ aStart, aEnd, bStart, bEnd }) => {
+    expect(intervalIntersectionUnix(aStart, aEnd, bStart, bEnd)).toBeNull();
+  });
 });

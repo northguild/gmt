@@ -52,7 +52,7 @@ describe("parseNanoseconds", () => {
     ${"abc"}                   | ${"not a number"}
     ${""}                      | ${"empty string"}
     ${"-"}                     | ${"sign only"}
-  `("returns 0n when $value is invalid ($reason)", ({ value }) => {
+  `("returns 0n when '$value' is invalid ($reason)", ({ value }) => {
     expect(parseNanoseconds(value)).toBe(0n);
   });
 

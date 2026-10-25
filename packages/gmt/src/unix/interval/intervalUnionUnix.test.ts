@@ -132,10 +132,7 @@ describe("intervalUnionUnix", () => {
     ${0}   | ${2 ** 53} | ${1}     | ${2}   | ${"an unsafe end"}
     ${"0"} | ${"10"}    | ${"1.5"} | ${"2"} | ${"a fractional numeric string"}
     ${""}  | ${"10"}    | ${"1"}   | ${"2"} | ${"an empty string, which Number() reads as 0"}
-  `(
-    "returns null for A=[$aStart, $aEnd] and B=[$bStart, $bEnd] ($description)",
-    ({ aStart, aEnd, bStart, bEnd }) => {
-      expect(intervalUnionUnix(aStart, aEnd, bStart, bEnd)).toBeNull();
-    },
-  );
+  `("returns null for $description", ({ aStart, aEnd, bStart, bEnd }) => {
+    expect(intervalUnionUnix(aStart, aEnd, bStart, bEnd)).toBeNull();
+  });
 });

@@ -96,7 +96,7 @@ describe("isValidRfc2822DateTime", () => {
     ${"Fri, 15 Mar 2024 14:30:00 -0460"}                      | ${false} | ${true}  | ${"zone minutes above 59"}
     ${"Fri, 15 Mar 2024 14:30:00 +2400"}                      | ${false} | ${true}  | ${"an offset of 24 hours cannot be represented"}
   `(
-    "returns $expected for $value ($reason); the pattern alone says $pattern; parseRfc2822 agrees",
+    "returns $expected for '$value' ($reason); the pattern alone says $pattern; parseRfc2822 agrees",
     ({
       value,
       expected,

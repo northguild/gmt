@@ -25,28 +25,25 @@ describe("parseUnitFromTime", () => {
   );
 
   it.each`
-    invalidValue
-    ${"not-a-time"}
-    ${"24:00:00"}
-    ${"2024-02-29T14:30:45"}
-    ${""}
-    ${null}
-    ${undefined}
-  `(
-    "returns an empty string for invalid time $invalidValue",
-    ({ invalidValue }) => {
-      expect(parseUnitFromTime(invalidValue as never, "hour")).toBe("");
-    },
-  );
+    invalidValue             | label
+    ${"not-a-time"}          | ${"'not-a-time'"}
+    ${"24:00:00"}            | ${"'24:00:00'"}
+    ${"2024-02-29T14:30:45"} | ${"'2024-02-29T14:30:45'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+  `("returns an empty string for invalid time $label", ({ invalidValue }) => {
+    expect(parseUnitFromTime(invalidValue as never, "hour")).toBe("");
+  });
 
   it.each`
-    unit            | expected
-    ${"day"}        | ${""}
-    ${"picosecond"} | ${""}
-    ${""}           | ${""}
-    ${null}         | ${""}
-    ${undefined}    | ${""}
-  `("returns an empty string for invalid unit $unit", ({ unit, expected }) => {
+    unit            | expected | label
+    ${"day"}        | ${""}    | ${"'day'"}
+    ${"picosecond"} | ${""}    | ${"'picosecond'"}
+    ${""}           | ${""}    | ${"''"}
+    ${null}         | ${""}    | ${"null"}
+    ${undefined}    | ${""}    | ${"undefined"}
+  `("returns an empty string for invalid unit $label", ({ unit, expected }) => {
     expect(parseUnitFromTime("14:30:45.123", unit as never)).toBe(expected);
   });
 

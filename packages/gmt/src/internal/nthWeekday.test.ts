@@ -154,12 +154,12 @@ describe("nthWeekdayInRange", () => {
     ${epochDayOf(2024, 5, 13)} | ${epochDayOf(2024, 5, 19)} | ${7}    | ${1}  | ${epochDayOf(2024, 5, 19)} | ${"first Sunday of a Monday-to-Sunday week is its last day"}
     ${epochDayOf(2024, 5, 13)} | ${epochDayOf(2024, 5, 19)} | ${1}    | ${2}  | ${null}                    | ${"a seven-day range holds only one Monday"}
     ${epochDayOf(2024, 5, 13)} | ${epochDayOf(2024, 5, 20)} | ${1}    | ${2}  | ${epochDayOf(2024, 5, 20)} | ${"second Monday is the last day of an eight-day range"}
-    ${epochDayOf(2024, 5, 13)} | ${epochDayOf(2024, 5, 20)} | ${1}    | ${-2} | ${epochDayOf(2024, 5, 13)} | ${"second Monday from the end is the first day of an eight-day range"}
+    ${epochDayOf(2024, 5, 13)} | ${epochDayOf(2024, 5, 20)} | ${1}    | ${-2} | ${epochDayOf(2024, 5, 13)} | ${"eight-day range: second Monday from the end is its first day"}
     ${epochDayOf(2024, 5, 14)} | ${epochDayOf(2024, 5, 13)} | ${1}    | ${-1} | ${null}                    | ${"an empty range (first after last) holds nothing"}
     ${epochDayOf(2024, 5, 14)} | ${epochDayOf(2024, 5, 13)} | ${2}    | ${1}  | ${null}                    | ${"an empty range holds nothing, counted from the start"}
     ${MIN_EPOCH_DAY - 3}       | ${MIN_EPOCH_DAY + 10}      | ${1}    | ${1}  | ${MIN_EPOCH_DAY}           | ${"the first Monday is the first Temporal date"}
     ${MIN_EPOCH_DAY - 3}       | ${MIN_EPOCH_DAY + 10}      | ${7}    | ${1}  | ${null}                    | ${"the Sunday before Temporal's minimum is out of range"}
-    ${MIN_EPOCH_DAY - 3}       | ${MIN_EPOCH_DAY + 10}      | ${1}    | ${-2} | ${MIN_EPOCH_DAY}           | ${"second Monday from the end is the first Temporal date"}
+    ${MIN_EPOCH_DAY - 3}       | ${MIN_EPOCH_DAY + 10}      | ${1}    | ${-2} | ${MIN_EPOCH_DAY}           | ${"Temporal minimum: second Monday from the end is the first date"}
     ${MIN_EPOCH_DAY - 3}       | ${MIN_EPOCH_DAY + 10}      | ${1}    | ${-3} | ${null}                    | ${"third Monday from the end is a week before Temporal's minimum"}
   `("$description", ({ first, last, weekday, n, expected }) => {
     expect(nthWeekdayInRange(first, last, weekday, n)).toBe(expected);

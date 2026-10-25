@@ -60,7 +60,7 @@ describe("intervalDifferenceUnix", () => {
     ${1700000000} | ${0}          | ${1500000000} | ${1600000000} | ${[]}
     ${1500000000} | ${1000000000} | ${1200000000} | ${1100000000} | ${[]}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed intervals A=[$aStart, $aEnd] and B=[$bStart, $bEnd]",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalDifferenceUnix(aStart, aEnd, bStart, bEnd)).toEqual(
         expected,
@@ -96,16 +96,19 @@ describe("intervalDifferenceUnix", () => {
     ${0}    | ${1700000000} | ${null}       | ${1600000000}
     ${0}    | ${1700000000} | ${1500000000} | ${undefined}
     ${true} | ${1700000000} | ${1500000000} | ${1600000000}
-  `("returns [] for invalid types", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalDifferenceUnix(aStart, aEnd, bStart, bEnd)).toEqual([]);
-  });
+  `(
+    "returns [] for invalid types: $aStart, $aEnd, $bStart, $bEnd",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalDifferenceUnix(aStart, aEnd, bStart, bEnd)).toEqual([]);
+    },
+  );
 
   it.each`
     aStart | aEnd            | bStart          | bEnd            | expected
     ${"0"} | ${"1700000000"} | ${"1500000000"} | ${"1600000000"} | ${{ result: [{ start: 0, end: 1500000000 }, { start: 1600000000, end: 1700000000 }] }}
     ${"0"} | ${"1700000000"} | ${"0"}          | ${"1700000000"} | ${{ result: [] }}
   `(
-    "returns $expected for string numeric input",
+    "returns $expected for string numeric input A=[$aStart, $aEnd] and B=[$bStart, $bEnd]",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalDifferenceUnix(aStart, aEnd, bStart, bEnd)).toEqual(
         expected.result,
@@ -116,14 +119,14 @@ describe("intervalDifferenceUnix", () => {
   // Epoch values are whole units. A fraction would produce pieces such as [0, -0.5], and past 2^53
   // "one unit before" is not representable.
   it.each`
-    aStart | aEnd       | bStart   | bEnd   | description
-    ${0}   | ${2}       | ${0.5}   | ${1}   | ${"a fractional start"}
-    ${0}   | ${1.5}     | ${1}     | ${2}   | ${"a fractional end"}
-    ${0}   | ${2 ** 53} | ${1}     | ${2}   | ${"an unsafe end"}
-    ${"0"} | ${"2"}     | ${"0.5"} | ${"1"} | ${"a fractional numeric string"}
-    ${""}  | ${"2"}     | ${"1"}   | ${"2"} | ${"an empty string, which Number() reads as 0"}
+    aStart | aEnd       | bStart   | bEnd   | description                                     | aStartLabel
+    ${0}   | ${2}       | ${0.5}   | ${1}   | ${"a fractional start"}                         | ${"0"}
+    ${0}   | ${1.5}     | ${1}     | ${2}   | ${"a fractional end"}                           | ${"0"}
+    ${0}   | ${2 ** 53} | ${1}     | ${2}   | ${"an unsafe end"}                              | ${"0"}
+    ${"0"} | ${"2"}     | ${"0.5"} | ${"1"} | ${"a fractional numeric string"}                | ${"'0'"}
+    ${""}  | ${"2"}     | ${"1"}   | ${"2"} | ${"an empty string, which Number() reads as 0"} | ${"''"}
   `(
-    "returns [] for A=[$aStart, $aEnd] minus B=[$bStart, $bEnd] ($description)",
+    "returns [] for A=[$aStartLabel, $aEnd] minus B=[$bStart, $bEnd] ($description)",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalDifferenceUnix(aStart, aEnd, bStart, bEnd)).toEqual([]);
     },

@@ -200,37 +200,37 @@ describe("bolTimestamp", () => {
     ${"2016-12-31T23:59:60Z"}                  | ${"a leap second, which Temporal does not represent"}
     ${"not a date"}                            | ${"garbage"}
     ${""}                                      | ${"an empty string"}
-  `("returns the sentinel for $value ($reads)", ({ value }) => {
+  `("returns the sentinel for '$value' ($reads)", ({ value }) => {
     expect(
       bolTimestamp(value, "shippedOnBoard", { timeZone: "America/New_York" }),
     ).toBe("");
   });
 
   it.each`
-    event                    | reads
-    ${"shipped"}             | ${"an unknown event"}
-    ${"ShippedOnBoard"}      | ${"a different case"}
-    ${"receivedForShipment"} | ${"a DCSA field name, not an event"}
-    ${"onBoard"}             | ${"an on-board notation, which has no DCSA date field"}
-    ${""}                    | ${"an empty string"}
-    ${undefined}             | ${"undefined"}
-    ${null}                  | ${"null"}
-    ${1}                     | ${"a number"}
-  `("returns the sentinel for event $event ($reads)", ({ event }) => {
+    event                    | reads                                                   | label
+    ${"shipped"}             | ${"an unknown event"}                                   | ${"'shipped'"}
+    ${"ShippedOnBoard"}      | ${"a different case"}                                   | ${"'ShippedOnBoard'"}
+    ${"receivedForShipment"} | ${"a DCSA field name, not an event"}                    | ${"'receivedForShipment'"}
+    ${"onBoard"}             | ${"an on-board notation, which has no DCSA date field"} | ${"'onBoard'"}
+    ${""}                    | ${"an empty string"}                                    | ${"''"}
+    ${undefined}             | ${"undefined"}                                          | ${"undefined"}
+    ${null}                  | ${"null"}                                               | ${"null"}
+    ${1}                     | ${"a number"}                                           | ${"1"}
+  `("returns the sentinel for event $label ($reads)", ({ event }) => {
     expect(
       bolTimestamp(newYorkEvening, event, { timeZone: "America/New_York" }),
     ).toBe("");
   });
 
   it.each`
-    timeZone             | reads
-    ${"America/Nowhere"} | ${"a zone that does not exist"}
-    ${"EST5EDT "}        | ${"trailing space"}
-    ${""}                | ${"an empty string"}
-    ${"local"}           | ${"the system zone, which GMT does not read"}
-    ${null}              | ${"null"}
-    ${-4}                | ${"a number"}
-  `("returns the sentinel for timeZone $timeZone ($reads)", ({ timeZone }) => {
+    timeZone             | reads                                         | label
+    ${"America/Nowhere"} | ${"a zone that does not exist"}               | ${"'America/Nowhere'"}
+    ${"EST5EDT "}        | ${"trailing space"}                           | ${"'EST5EDT '"}
+    ${""}                | ${"an empty string"}                          | ${"''"}
+    ${"local"}           | ${"the system zone, which GMT does not read"} | ${"'local'"}
+    ${null}              | ${"null"}                                     | ${"null"}
+    ${-4}                | ${"a number"}                                 | ${"-4"}
+  `("returns the sentinel for timeZone $label ($reads)", ({ timeZone }) => {
     expect(bolTimestamp(newYorkEvening, "issue", { timeZone })).toBe("");
   });
 

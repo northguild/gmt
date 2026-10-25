@@ -50,7 +50,7 @@ describe("parseEdifactDate", () => {
       ${"２０２４０６１５"} | ${"full-width digits"}
       ${"not a date"}       | ${"garbage"}
       ${""}                 | ${"an empty value"}
-    `("returns '' for $value ($reads)", ({ value }) => {
+    `("returns '' for '$value' ($reads)", ({ value }) => {
       expect(parseEdifactDate(value, "102")).toBe("");
     });
   });

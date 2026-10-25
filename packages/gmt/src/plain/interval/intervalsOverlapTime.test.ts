@@ -42,7 +42,7 @@ describe("intervalsOverlapTime", () => {
     ${"12:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${"25:00:00"}
     ${"12:00:00"} | ${"12:00:00"} | ${"12:00:00"} | ${"23:59:60"}
   `(
-    "returns false for malformed time: $aStart, $aEnd, $bStart, $bEnd",
+    "returns false for malformed time: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalsOverlapTime(aStart, aEnd, bStart, bEnd)).toBe(false);
     },

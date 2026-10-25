@@ -37,9 +37,12 @@ describe("setUnix", () => {
     ${null}          | ${{ hour: 9 }} | ${undefined}
     ${NaN}           | ${{ hour: 9 }} | ${undefined}
     ${1709208000000} | ${{ hour: 9 }} | ${{ timeZone: "Invalid/Zone" }}
-  `("returns null for invalid input", ({ value, fields, options }) => {
-    expect(setUnix(value as never, fields, options)).toBeNull();
-  });
+  `(
+    "returns null for value $value with fields $fields and options $options",
+    ({ value, fields, options }) => {
+      expect(setUnix(value as never, fields, options)).toBeNull();
+    },
+  );
 
   it.each`
     value            | fields          | overflow       | expected
@@ -168,13 +171,13 @@ describe("setUnix with an unrecognised epochUnit", () => {
   // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
-    epochUnit
-    ${"nanoseconds"}
-    ${"SECONDS"}
-    ${"ms"}
-    ${""}
-    ${1000}
-  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    epochUnit        | epochUnitLabel
+    ${"nanoseconds"} | ${"'nanoseconds'"}
+    ${"SECONDS"}     | ${"'SECONDS'"}
+    ${"ms"}          | ${"'ms'"}
+    ${""}            | ${"''"}
+    ${1000}          | ${"1000"}
+  `("returns null for epochUnit $epochUnitLabel", ({ epochUnit }) => {
     expect(
       setUnix(
         1_706_659_200,

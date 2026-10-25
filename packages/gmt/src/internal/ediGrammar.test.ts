@@ -138,7 +138,7 @@ describe("EDIFACT_DTM_GRAMMAR", () => {
     ${"719"} | ${"202406152400202406201600"}   | ${"hour 24 in the start"}
     ${"719"} | ${"202406151430-202406201600"}  | ${"one hyphen: the mask's notation, never transmitted"}
     ${"719"} | ${"202406151430--202406201600"} | ${"two hyphens"}
-  `("code $code rejects $value ($reason)", ({ code, value }) => {
+  `("code $code rejects '$value' ($reason)", ({ code, value }) => {
     expect(EDIFACT_DTM_GRAMMAR[code as EdifactDtmFormat].test(value)).toBe(
       false,
     );
@@ -223,7 +223,7 @@ describe("X12_DATE_TIME_PERIOD_GRAMMAR", () => {
     ${"DTS"} | ${"202406151430-202406201600"}     | ${"RDT's value"}
     ${"DTS"} | ${"20240615143000"}                | ${"RTS's value"}
     ${"DTS"} | ${"20240615143060-20240620160000"} | ${"second 60 in the start"}
-  `("code $code rejects $value ($reason)", ({ code, value }) => {
+  `("code $code rejects '$value' ($reason)", ({ code, value }) => {
     expect(
       X12_DATE_TIME_PERIOD_GRAMMAR[code as X12DateTimePeriodFormat].test(value),
     ).toBe(false);
@@ -304,7 +304,7 @@ describe("X12_TIME_ELEMENT_GRAMMAR", () => {
     ${"HHMMSSDD"} | ${"+1430451"}  | ${"a sign and seven digits: eight characters, not eight digits"}
     ${"HHMMSSDD"} | ${"143045.12"} | ${"a decimal point: the element has none"}
     ${"HHMMSSDD"} | ${"1430451 "}  | ${"a space for the hundredths digit"}
-  `("form $form rejects $value ($reason)", ({ form, value }) => {
+  `("form $form rejects '$value' ($reason)", ({ form, value }) => {
     expect(
       X12_TIME_ELEMENT_GRAMMAR[form as X12TimeElementForm].test(value),
     ).toBe(false);
@@ -337,7 +337,7 @@ describe("X12_TIME_ELEMENT_GRAMMAR", () => {
     ${"143045123"} | ${[]}
     ${"2400"}      | ${[]}
     ${""}          | ${[]}
-  `("$value fits the forms $fits and no other", ({ value, fits }) => {
+  `("'$value' fits the forms $fits and no other", ({ value, fits }) => {
     expect(
       X12_TIME_ELEMENT_FORMS.filter((form) =>
         X12_TIME_ELEMENT_GRAMMAR[form].test(value),

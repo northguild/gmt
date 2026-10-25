@@ -121,7 +121,7 @@ describe("formatDuration", () => {
     ${"not a duration"}
     ${""}
   `(
-    "returns an empty string for invalid value $invalidValue",
+    "returns an empty string for invalid value '$invalidValue'",
     ({ invalidValue }) => {
       expect(formatDuration(invalidValue)).toBe("");
     },
@@ -148,7 +148,7 @@ describe("formatDuration", () => {
     locale                                          | expected
     ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"1 jour, 2 heures et 30 minutes"}
     ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `("returns $expected for locale list $locale", ({ locale, expected }) => {
+  `("returns '$expected' for locale list $locale", ({ locale, expected }) => {
     expect(formatDuration("P1DT2H30M", locale)).toBe(expected);
   });
 });

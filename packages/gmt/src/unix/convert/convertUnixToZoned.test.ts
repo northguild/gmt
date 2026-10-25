@@ -118,25 +118,25 @@ describe("convertUnixToZoned", () => {
   );
 
   it.each`
-    invalidTimeZone
-    ${"Mars/Olympus"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidTimeZone   | invalidTimeZoneLabel
+    ${"Mars/Olympus"} | ${"'Mars/Olympus'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
   `(
-    "returns an empty string for invalid timeZone $invalidTimeZone",
+    "returns an empty string for invalid timeZone $invalidTimeZoneLabel",
     ({ invalidTimeZone }) => {
       expect(convertUnixToZoned(0, invalidTimeZone as never)).toBe("");
     },
   );
 
   it.each`
-    invalidUnit
-    ${"minutes"}
-    ${""}
-    ${null}
+    invalidUnit  | invalidUnitLabel
+    ${"minutes"} | ${"'minutes'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
   `(
-    "returns an empty string for invalid unit $invalidUnit",
+    "returns an empty string for invalid unit $invalidUnitLabel",
     ({ invalidUnit }) => {
       expect(
         convertUnixToZoned(0, "UTC", { epochUnit: invalidUnit as never }),

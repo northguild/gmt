@@ -38,12 +38,12 @@ describe("isFuture", () => {
   );
 
   it.each`
-    value
-    ${""}
-    ${null}
-    ${undefined}
-    ${"not-a-date"}
-  `("returns false for invalid value $value", ({ value }) => {
+    value           | label
+    ${""}           | ${"''"}
+    ${null}         | ${"null"}
+    ${undefined}    | ${"undefined"}
+    ${"not-a-date"} | ${"'not-a-date'"}
+  `("returns false for invalid value $label", ({ value }) => {
     expect(isFuture(value as never)).toBe(false);
   });
 

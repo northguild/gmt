@@ -61,7 +61,7 @@ describe("isValidUtcTimestamp", () => {
     ${"2026-10-06T12:00:00Z\n"}             | ${false} | ${"trailing line feed"}
     ${""}                                   | ${false} | ${"empty"}
   `(
-    "returns $expected for $value ($reason); a true row is true for isValidUtc",
+    "returns $expected for '$value' ($reason); a true row is true for isValidUtc",
     ({ value, expected }: { value: string; expected: boolean }) => {
       expect(isValidUtcTimestamp(value)).toBe(expected);
       // A subset of isValidUtc: no row is true here and false there.

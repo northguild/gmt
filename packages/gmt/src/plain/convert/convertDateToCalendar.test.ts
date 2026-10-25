@@ -153,26 +153,26 @@ describe("convertDateToCalendar", () => {
   );
 
   it.each`
-    value                                    | calendar       | reason
-    ${"invalid"}                             | ${"hebrew"}    | ${"not a date"}
-    ${"2024-02-30"}                          | ${"hebrew"}    | ${"invalid ISO date"}
-    ${""}                                    | ${"hebrew"}    | ${"empty"}
-    ${null}                                  | ${"hebrew"}    | ${"not a string"}
-    ${123}                                   | ${"hebrew"}    | ${"not a string"}
-    ${"0006-10-03[u-ca=japanese;era=reiwa]"} | ${"iso8601"}   | ${"';era=' is not RFC 9557 syntax"}
-    ${"279517-10-11[u-ca=hebrew]"}           | ${"iso8601"}   | ${"six-digit unsigned year"}
-    ${"-0911-01-01[u-ca=roc]"}               | ${"iso8601"}   | ${"four-digit signed year"}
-    ${"+275760-09-14"}                       | ${"hebrew"}    | ${"past the maximum"}
-    ${"-271821-04-18"}                       | ${"hebrew"}    | ${"before the minimum"}
-    ${"2024-10-03[u-ca=martian]"}            | ${"hebrew"}    | ${"unknown annotation calendar"}
-    ${"2024-10-03[u-ca=taiwan]"}             | ${"hebrew"}    | ${"pre-1.16.0 GMT id in the annotation"}
-    ${"2024-10-03[u-ca=chinese]"}            | ${"hebrew"}    | ${"calendar GMT does not support"}
-    ${"2024-10-03"}                          | ${"martian"}   | ${"unknown target calendar"}
-    ${"2024-10-03"}                          | ${"gregorian"} | ${"CLDR alias Temporal rejects"}
-    ${"2024-10-03"}                          | ${"taiwan"}    | ${"pre-1.16.0 GMT id as the target"}
-    ${"2024-10-03"}                          | ${"islamic"}   | ${"calendar GMT does not support"}
+    value                                    | calendar       | reason                                   | label
+    ${"invalid"}                             | ${"hebrew"}    | ${"not a date"}                          | ${"'invalid'"}
+    ${"2024-02-30"}                          | ${"hebrew"}    | ${"invalid ISO date"}                    | ${"'2024-02-30'"}
+    ${""}                                    | ${"hebrew"}    | ${"empty"}                               | ${"''"}
+    ${null}                                  | ${"hebrew"}    | ${"not a string"}                        | ${"null"}
+    ${123}                                   | ${"hebrew"}    | ${"not a string"}                        | ${"123"}
+    ${"0006-10-03[u-ca=japanese;era=reiwa]"} | ${"iso8601"}   | ${"';era=' is not RFC 9557 syntax"}      | ${"'0006-10-03[u-ca=japanese;era=reiwa]'"}
+    ${"279517-10-11[u-ca=hebrew]"}           | ${"iso8601"}   | ${"six-digit unsigned year"}             | ${"'279517-10-11[u-ca=hebrew]'"}
+    ${"-0911-01-01[u-ca=roc]"}               | ${"iso8601"}   | ${"four-digit signed year"}              | ${"'-0911-01-01[u-ca=roc]'"}
+    ${"+275760-09-14"}                       | ${"hebrew"}    | ${"past the maximum"}                    | ${"'+275760-09-14'"}
+    ${"-271821-04-18"}                       | ${"hebrew"}    | ${"before the minimum"}                  | ${"'-271821-04-18'"}
+    ${"2024-10-03[u-ca=martian]"}            | ${"hebrew"}    | ${"unknown annotation calendar"}         | ${"'2024-10-03[u-ca=martian]'"}
+    ${"2024-10-03[u-ca=taiwan]"}             | ${"hebrew"}    | ${"pre-1.16.0 GMT id in the annotation"} | ${"'2024-10-03[u-ca=taiwan]'"}
+    ${"2024-10-03[u-ca=chinese]"}            | ${"hebrew"}    | ${"calendar GMT does not support"}       | ${"'2024-10-03[u-ca=chinese]'"}
+    ${"2024-10-03"}                          | ${"martian"}   | ${"unknown target calendar"}             | ${"'2024-10-03'"}
+    ${"2024-10-03"}                          | ${"gregorian"} | ${"CLDR alias Temporal rejects"}         | ${"'2024-10-03'"}
+    ${"2024-10-03"}                          | ${"taiwan"}    | ${"pre-1.16.0 GMT id as the target"}     | ${"'2024-10-03'"}
+    ${"2024-10-03"}                          | ${"islamic"}   | ${"calendar GMT does not support"}       | ${"'2024-10-03'"}
   `(
-    "returns empty string for $value to $calendar ($reason)",
+    "returns empty string for $label to $calendar ($reason)",
     ({ value, calendar }) => {
       expect(convertDateToCalendar(value, calendar)).toBe("");
     },

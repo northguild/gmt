@@ -85,7 +85,7 @@ describe("isValidX12DateTimePeriodFormat", () => {
     ${"ZZ"}         | ${"an unknown code"}
     ${""}           | ${"an empty string"}
     ${"toString"}   | ${"an inherited property name"}
-  `("returns false for $formatQualifier ($reads)", ({ formatQualifier }) => {
+  `("returns false for '$formatQualifier' ($reads)", ({ formatQualifier }) => {
     expect(isValidX12DateTimePeriodFormat(formatQualifier)).toBe(false);
   });
 

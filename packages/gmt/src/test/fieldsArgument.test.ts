@@ -38,6 +38,8 @@ type FieldsCase = {
   /** The result when nothing is set. */
   unchanged: unknown;
   sentinel: unknown;
+  /** `sentinel` written as a JavaScript literal, for test titles. */
+  sentinelLabel: string;
   /** A misspelling of `key`. */
   misspelt: string;
   /** A property `with` reads that the function does not take, with a well-formed value. */
@@ -63,13 +65,13 @@ const everySetFunction = (
   body: (testCase: FieldsCase) => void,
 ) =>
   it.each`
-    name             | call                                                   | key       | value   | changed                             | unchanged                 | sentinel | misspelt  | foreign
-    ${"setDate"}     | ${(f: never) => setDate("2024-03-10", f)}              | ${"year"} | ${2025} | ${"2025-03-10"}                     | ${"2024-03-10"}           | ${""}    | ${"yaer"} | ${{ hour: 5 }}
-    ${"setTime"}     | ${(f: never) => setTime("12:00:00", f)}                | ${"hour"} | ${5}    | ${"05:00:00"}                       | ${"12:00:00"}             | ${""}    | ${"huor"} | ${{ year: 2025 }}
-    ${"setDateTime"} | ${(f: never) => setDateTime("2024-03-10T12:00:00", f)} | ${"year"} | ${2025} | ${"2025-03-10T12:00:00"}            | ${"2024-03-10T12:00:00"}  | ${""}    | ${"yaer"} | ${{ era: "ce" }}
-    ${"setUtc"}      | ${(f: never) => setUtc("2024-03-10T12:00:00Z", f)}     | ${"year"} | ${2025} | ${"2025-03-10T12:00:00Z"}           | ${"2024-03-10T12:00:00Z"} | ${""}    | ${"yaer"} | ${{ offset: "+00:00" }}
-    ${"setUnix"}     | ${(f: never) => setUnix(UNIX, f)}                      | ${"year"} | ${2025} | ${1738281600000}                    | ${1706659200000}          | ${null}  | ${"yaer"} | ${{ offset: "+00:00" }}
-    ${"setZoned"}    | ${(f: never) => setZoned(ZONED, f)}                    | ${"year"} | ${2025} | ${"2025-06-15T10:00:00+00:00[UTC]"} | ${ZONED}                  | ${""}    | ${"yaer"} | ${{ offset: "+00:00" }}
+    name             | call                                                   | key       | value   | changed                             | unchanged                 | sentinel | misspelt  | foreign                 | sentinelLabel
+    ${"setDate"}     | ${(f: never) => setDate("2024-03-10", f)}              | ${"year"} | ${2025} | ${"2025-03-10"}                     | ${"2024-03-10"}           | ${""}    | ${"yaer"} | ${{ hour: 5 }}          | ${"''"}
+    ${"setTime"}     | ${(f: never) => setTime("12:00:00", f)}                | ${"hour"} | ${5}    | ${"05:00:00"}                       | ${"12:00:00"}             | ${""}    | ${"huor"} | ${{ year: 2025 }}       | ${"''"}
+    ${"setDateTime"} | ${(f: never) => setDateTime("2024-03-10T12:00:00", f)} | ${"year"} | ${2025} | ${"2025-03-10T12:00:00"}            | ${"2024-03-10T12:00:00"}  | ${""}    | ${"yaer"} | ${{ era: "ce" }}        | ${"''"}
+    ${"setUtc"}      | ${(f: never) => setUtc("2024-03-10T12:00:00Z", f)}     | ${"year"} | ${2025} | ${"2025-03-10T12:00:00Z"}           | ${"2024-03-10T12:00:00Z"} | ${""}    | ${"yaer"} | ${{ offset: "+00:00" }} | ${"''"}
+    ${"setUnix"}     | ${(f: never) => setUnix(UNIX, f)}                      | ${"year"} | ${2025} | ${1738281600000}                    | ${1706659200000}          | ${null}  | ${"yaer"} | ${{ offset: "+00:00" }} | ${"null"}
+    ${"setZoned"}    | ${(f: never) => setZoned(ZONED, f)}                    | ${"year"} | ${2025} | ${"2025-06-15T10:00:00+00:00[UTC]"} | ${ZONED}                  | ${""}    | ${"yaer"} | ${{ offset: "+00:00" }} | ${"''"}
   `(title, body as (testCase: unknown) => void);
 
 /** Every property Temporal's `with` methods read, sorted. */
@@ -149,7 +151,7 @@ describe("fields: a field is read with an ordinary property get", () => {
 describe("fields: what Temporal's with refuses returns the sentinel", () => {
   // IsPartialTemporalObject is false for every Temporal object that holds a date or a time.
   everySetFunction(
-    "$name returns $sentinel for a Temporal object",
+    "$name returns $sentinelLabel for a Temporal object",
     ({ call, sentinel }) => {
       expect(
         run(call, Temporal.PlainDate.from("2025-06-01")),
@@ -178,7 +180,7 @@ describe("fields: what Temporal's with refuses returns the sentinel", () => {
   );
 
   everySetFunction(
-    "$name returns $sentinel for a calendar or timeZone property, own or inherited",
+    "$name returns $sentinelLabel for a calendar or timeZone property, own or inherited",
     ({ call, key, value, sentinel }) => {
       expect(run(call, { calendar: "iso8601" }), "own calendar").toEqual(
         sentinel,
@@ -199,7 +201,7 @@ describe("fields: what Temporal's with refuses returns the sentinel", () => {
   );
 
   everySetFunction(
-    "$name returns $sentinel for a value that is not an object",
+    "$name returns $sentinelLabel for a value that is not an object",
     ({ call, sentinel }) => {
       expect(run(call, 5), "number").toEqual(sentinel);
       expect(run(call, true), "boolean").toEqual(sentinel);
@@ -210,7 +212,7 @@ describe("fields: what Temporal's with refuses returns the sentinel", () => {
   );
 
   everySetFunction(
-    "$name returns $sentinel for an object whose only own key is no field",
+    "$name returns $sentinelLabel for an object whose only own key is no field",
     ({ call, sentinel }) => {
       expect(run(call, { nope: 1 }), "nonzero").toEqual(sentinel);
       expect(run(call, { nope: undefined }), "undefined").toEqual(sentinel);
@@ -223,7 +225,7 @@ describe("fields: what Temporal's with refuses returns the sentinel", () => {
     ${"setDate"} | ${(f: never) => setDate("2024-03-10", f)} | ${"hour"} | ${""}
     ${"setTime"} | ${(f: never) => setTime("12:00:00", f)}   | ${"year"} | ${""}
   `(
-    "$name returns $sentinel for a $foreign alone, own or inherited",
+    "$name returns '$sentinel' for a $foreign alone, own or inherited",
     ({ call, foreign, sentinel }) => {
       expect(run(call as Call, { [foreign]: 5 }), "own").toEqual(sentinel);
       expect(
@@ -236,7 +238,7 @@ describe("fields: what Temporal's with refuses returns the sentinel", () => {
 
 describe("fields: a value is not converted", () => {
   everySetFunction(
-    "$name returns $sentinel for a $key that is not an integer number",
+    "$name returns $sentinelLabel for a $key that is not an integer number",
     ({ call, key, value, sentinel }) => {
       expect(run(call, { [key]: null }), "null").toEqual(sentinel);
       expect(run(call, { [key]: String(value) }), "string").toEqual(sentinel);
@@ -254,7 +256,7 @@ describe("fields: a value is not converted", () => {
 
   // A month code is a string; Temporal still checks its content. A time has no month code.
   everySetFunction(
-    "$name returns $sentinel for a number as monthCode",
+    "$name returns $sentinelLabel for a number as monthCode",
     ({ call, sentinel }) => {
       expect(run(call, { monthCode: 3 })).toEqual(sentinel);
     },
@@ -266,7 +268,7 @@ describe("fields: a value is not converted", () => {
     ${"setDateTime"} | ${() => setDateTime("2024-03-10T12:00:00", { monthCode: "M02" })} | ${"2024-02-10T12:00:00"}
     ${"setDate"}     | ${() => setDate("2024-03-10", { monthCode: "M13" })}              | ${""}
   `(
-    "$name sets a month code as Temporal reads it, giving $expected",
+    "$name sets a month code as Temporal reads it, giving '$expected'",
     ({ call, expected }) => {
       expect((call as () => unknown)()).toBe(expected);
     },
@@ -275,7 +277,7 @@ describe("fields: a value is not converted", () => {
 
 describe("fields: a key or a field the function does not take", () => {
   everySetFunction(
-    "$name returns $sentinel for an own misspelt key ($misspelt)",
+    "$name returns $sentinelLabel for an own misspelt key ($misspelt)",
     ({ call, key, value, misspelt, sentinel }) => {
       expect(
         run(call, { [key]: value, [misspelt]: 1 }),
@@ -299,7 +301,7 @@ describe("fields: a key or a field the function does not take", () => {
   );
 
   everySetFunction(
-    "$name returns $sentinel for $foreign, alone, beside $key, or inherited",
+    "$name returns $sentinelLabel for $foreign, alone, beside $key, or inherited",
     ({ call, key, value, foreign, sentinel }) => {
       expect(run(call, foreign), "alone").toEqual(sentinel);
       expect(run(call, { [key]: value, ...foreign }), "beside").toEqual(
@@ -319,7 +321,7 @@ describe("fields: a key or a field the function does not take", () => {
     ${"setUnix"}  | ${(f: never) => setUnix(UNIX, f)}                  | ${null}
     ${"setZoned"} | ${(f: never) => setZoned(ZONED, f)}                | ${""}
   `(
-    "$name returns $sentinel for an offset, a string or a number",
+    "$name returns $sentinelLabel for an offset, a string or a number",
     ({ call, sentinel }) => {
       expect(
         run(call as Call, { year: 2025, offset: "+00:00" }),
@@ -443,12 +445,12 @@ describe("fields: era and eraYear are not fields", () => {
   // Temporal reads only the fields of the value's calendar and would ignore these beside a field
   // it does read. GMT returns the sentinel, as it does for each of them alone.
   it.each`
-    name         | call                                                               | expected
-    ${"setDate"} | ${() => setDate("2024-03-10", { year: 2025, hour: 5 } as never)}   | ${""}
-    ${"setDate"} | ${() => setDate("2024-03-10", { year: 2025, era: "ce" } as never)} | ${""}
-    ${"setTime"} | ${() => setTime("12:00:00", { hour: 5, year: 2025 } as never)}     | ${""}
+    name         | call                                                               | expected | fields
+    ${"setDate"} | ${() => setDate("2024-03-10", { year: 2025, hour: 5 } as never)}   | ${""}    | ${"year and hour"}
+    ${"setDate"} | ${() => setDate("2024-03-10", { year: 2025, era: "ce" } as never)} | ${""}    | ${"year and era"}
+    ${"setTime"} | ${() => setTime("12:00:00", { hour: 5, year: 2025 } as never)}     | ${""}    | ${"hour and year"}
   `(
-    "$name returns $expected for a field it does not take beside one it does",
+    "$name returns '$expected' for $fields, a field it does not take beside one it does",
     ({ call, expected }) => {
       expect((call as () => unknown)()).toBe(expected);
     },
@@ -460,25 +462,25 @@ describe("fields: era and eraYear are not fields", () => {
 // a date outside Temporal's range (years -271821 to 275760) is refused under either setting.
 describe("fields: a number out of range for its field", () => {
   it.each`
-    name             | call                                                                    | expected
-    ${"setDate"}     | ${() => setDate("2024-01-31", { month: 0 })}                            | ${""}
-    ${"setDate"}     | ${() => setDate("2024-01-31", { month: -1 })}                           | ${""}
-    ${"setDate"}     | ${() => setDate("2024-01-31", { day: 0 })}                              | ${""}
-    ${"setDate"}     | ${() => setDate("2024-01-31", { day: -1 })}                             | ${""}
-    ${"setDate"}     | ${() => setDate("2024-01-31", { month: 0 }, { overflow: "constrain" })} | ${""}
-    ${"setDate"}     | ${() => setDate("2024-01-31", { year: 300000 })}                        | ${""}
-    ${"setDate"}     | ${() => setDate("2024-01-31", { month: 13 })}                           | ${"2024-12-31"}
-    ${"setDate"}     | ${() => setDate("2024-01-31", { month: 13 }, { overflow: "reject" })}   | ${""}
-    ${"setDateTime"} | ${() => setDateTime("2024-01-31T12:00:00", { day: 0 })}                 | ${""}
-    ${"setDateTime"} | ${() => setDateTime("2024-01-31T12:00:00", { month: 13 })}              | ${"2024-12-31T12:00:00"}
-    ${"setUtc"}      | ${() => setUtc("2024-01-31T12:00:00Z", { year: 300000 })}               | ${""}
-    ${"setUtc"}      | ${() => setUtc("2024-01-31T12:00:00Z", { month: 0 })}                   | ${""}
-    ${"setZoned"}    | ${() => setZoned(ZONED, { day: 0 })}                                    | ${""}
-    ${"setZoned"}    | ${() => setZoned(ZONED, { year: 300000 })}                              | ${""}
-    ${"setUnix"}     | ${() => setUnix(UNIX, { month: 0 })}                                    | ${null}
-    ${"setUnix"}     | ${() => setUnix(UNIX, { year: 300000 })}                                | ${null}
-    ${"setUnix"}     | ${() => setUnix(UNIX, { month: 13 })}                                   | ${1735603200000}
-  `("$name returns $expected ($call)", ({ call, expected }) => {
+    name             | call                                                                    | expected                 | input                                  | label
+    ${"setDate"}     | ${() => setDate("2024-01-31", { month: 0 })}                            | ${""}                    | ${"month 0"}                           | ${"''"}
+    ${"setDate"}     | ${() => setDate("2024-01-31", { month: -1 })}                           | ${""}                    | ${"month -1"}                          | ${"''"}
+    ${"setDate"}     | ${() => setDate("2024-01-31", { day: 0 })}                              | ${""}                    | ${"day 0"}                             | ${"''"}
+    ${"setDate"}     | ${() => setDate("2024-01-31", { day: -1 })}                             | ${""}                    | ${"day -1"}                            | ${"''"}
+    ${"setDate"}     | ${() => setDate("2024-01-31", { month: 0 }, { overflow: "constrain" })} | ${""}                    | ${"month 0 with overflow 'constrain'"} | ${"''"}
+    ${"setDate"}     | ${() => setDate("2024-01-31", { year: 300000 })}                        | ${""}                    | ${"year 300000"}                       | ${"''"}
+    ${"setDate"}     | ${() => setDate("2024-01-31", { month: 13 })}                           | ${"2024-12-31"}          | ${"month 13"}                          | ${"'2024-12-31'"}
+    ${"setDate"}     | ${() => setDate("2024-01-31", { month: 13 }, { overflow: "reject" })}   | ${""}                    | ${"month 13 with overflow 'reject'"}   | ${"''"}
+    ${"setDateTime"} | ${() => setDateTime("2024-01-31T12:00:00", { day: 0 })}                 | ${""}                    | ${"day 0"}                             | ${"''"}
+    ${"setDateTime"} | ${() => setDateTime("2024-01-31T12:00:00", { month: 13 })}              | ${"2024-12-31T12:00:00"} | ${"month 13"}                          | ${"'2024-12-31T12:00:00'"}
+    ${"setUtc"}      | ${() => setUtc("2024-01-31T12:00:00Z", { year: 300000 })}               | ${""}                    | ${"year 300000"}                       | ${"''"}
+    ${"setUtc"}      | ${() => setUtc("2024-01-31T12:00:00Z", { month: 0 })}                   | ${""}                    | ${"month 0"}                           | ${"''"}
+    ${"setZoned"}    | ${() => setZoned(ZONED, { day: 0 })}                                    | ${""}                    | ${"day 0"}                             | ${"''"}
+    ${"setZoned"}    | ${() => setZoned(ZONED, { year: 300000 })}                              | ${""}                    | ${"year 300000"}                       | ${"''"}
+    ${"setUnix"}     | ${() => setUnix(UNIX, { month: 0 })}                                    | ${null}                  | ${"month 0"}                           | ${"null"}
+    ${"setUnix"}     | ${() => setUnix(UNIX, { year: 300000 })}                                | ${null}                  | ${"year 300000"}                       | ${"null"}
+    ${"setUnix"}     | ${() => setUnix(UNIX, { month: 13 })}                                   | ${1735603200000}         | ${"month 13"}                          | ${"1735603200000"}
+  `("$name returns $label for $input", ({ call, expected }) => {
     expect((call as () => unknown)()).toBe(expected);
   });
 });
@@ -540,7 +542,7 @@ describe("fields: the prototype decides whether the brand check runs", () => {
   );
 
   everySetFunction(
-    "$name returns $sentinel when reading the prototype throws",
+    "$name returns $sentinelLabel when reading the prototype throws",
     ({ call, key, value, sentinel }) => {
       const fields = new Proxy(
         { [key]: value },
@@ -568,7 +570,7 @@ describe("fields: the reported cases", () => {
     ${"setDate, a misspelt key"}        | ${() => setDate("2024-01-31", { year: 2025, yaer: 1 } as never)}       | ${""}
     ${"setDate, an hour beside a year"} | ${() => setDate("2024-03-10", { year: 2025, hour: 5 } as never)}       | ${""}
     ${"setDate, year undefined"}        | ${() => setDate("2024-03-10", { year: undefined })}                    | ${"2024-03-10"}
-  `("$name returns $expected", ({ call, expected }) => {
+  `("$name returns '$expected'", ({ call, expected }) => {
     expect((call as () => unknown)()).toBe(expected);
   });
 });

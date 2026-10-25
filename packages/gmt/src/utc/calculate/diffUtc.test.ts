@@ -37,13 +37,13 @@ describe("diffUtc", () => {
   );
 
   it.each`
-    value1                    | value2
-    ${"invalid"}              | ${"2024-03-01T00:00:00Z"}
-    ${"2024-03-01T00:00:00Z"} | ${"invalid"}
-    ${""}                     | ${"2024-03-01T00:00:00Z"}
-    ${null}                   | ${"2024-03-01T00:00:00Z"}
+    value1                    | value2                    | label
+    ${"invalid"}              | ${"2024-03-01T00:00:00Z"} | ${"'invalid'"}
+    ${"2024-03-01T00:00:00Z"} | ${"invalid"}              | ${"'2024-03-01T00:00:00Z'"}
+    ${""}                     | ${"2024-03-01T00:00:00Z"} | ${"''"}
+    ${null}                   | ${"2024-03-01T00:00:00Z"} | ${"null"}
   `(
-    "returns null for invalid inputs: $value1 | $value2",
+    "returns null for invalid inputs: $label | $value2",
     ({ value1, value2 }) => {
       expect(diffUtc(value1 as never, value2 as never, "days" as never)).toBe(
         null,

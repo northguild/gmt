@@ -19,19 +19,19 @@ describe("fromObjectId", () => {
   });
 
   it.each`
-    objectId                                  | reason
-    ${"65a0f4d0c3b1a2e4f5d6c7b"}              | ${"23 characters"}
-    ${"65a0f4d0c3b1a2e4f5d6c7b81"}            | ${"25 characters"}
-    ${"65a0f4d0c3b1a2e4f5d6c7bg"}             | ${"not hex"}
-    ${'ObjectId("65a0f4d0c3b1a2e4f5d6c7b8")'} | ${"shell form not accepted"}
-    ${" 65a0f4d0c3b1a2e4f5d6c7b8"}            | ${"leading space"}
-    ${"65a0f4d0c3b1a2e4f5d6c7b8\n"}           | ${"trailing newline"}
-    ${""}                                     | ${"empty"}
-    ${42}                                     | ${"number"}
-    ${null}                                   | ${"null"}
-    ${undefined}                              | ${"undefined"}
-    ${{}}                                     | ${"object"}
-  `("returns an empty string for $objectId ($reason)", ({ objectId }) => {
+    objectId                                  | reason                       | label
+    ${"65a0f4d0c3b1a2e4f5d6c7b"}              | ${"23 characters"}           | ${"'65a0f4d0c3b1a2e4f5d6c7b'"}
+    ${"65a0f4d0c3b1a2e4f5d6c7b81"}            | ${"25 characters"}           | ${"'65a0f4d0c3b1a2e4f5d6c7b81'"}
+    ${"65a0f4d0c3b1a2e4f5d6c7bg"}             | ${"not hex"}                 | ${"'65a0f4d0c3b1a2e4f5d6c7bg'"}
+    ${'ObjectId("65a0f4d0c3b1a2e4f5d6c7b8")'} | ${"shell form not accepted"} | ${"'ObjectId(\"65a0f4d0c3b1a2e4f5d6c7b8\")'"}
+    ${" 65a0f4d0c3b1a2e4f5d6c7b8"}            | ${"leading space"}           | ${"' 65a0f4d0c3b1a2e4f5d6c7b8'"}
+    ${"65a0f4d0c3b1a2e4f5d6c7b8\n"}           | ${"trailing newline"}        | ${"'65a0f4d0c3b1a2e4f5d6c7b8\\n'"}
+    ${""}                                     | ${"empty"}                   | ${"''"}
+    ${42}                                     | ${"number"}                  | ${"42"}
+    ${null}                                   | ${"null"}                    | ${"null"}
+    ${undefined}                              | ${"undefined"}               | ${"undefined"}
+    ${{}}                                     | ${"object"}                  | ${"{}"}
+  `("returns an empty string for $label ($reason)", ({ objectId }) => {
     expect(fromObjectId(objectId)).toBe("");
   });
 

@@ -73,13 +73,13 @@ describe("getZonedNow", () => {
   );
 
   it.each`
-    invalidTimeZone
-    ${"Mars/Olympus"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidTimeZone   | label
+    ${"Mars/Olympus"} | ${"'Mars/Olympus'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
   `(
-    "returns an empty string for invalid timeZone $invalidTimeZone",
+    "returns an empty string for invalid timeZone $label",
     ({ invalidTimeZone }) => {
       expect(getZonedNow(invalidTimeZone as never)).toBe("");
     },
@@ -217,18 +217,15 @@ describe("getZonedNow", () => {
   // Temporal.ZonedDateTime.prototype.toString accepts smallestUnit from "minute" to
   // "nanosecond" and throws RangeError for anything else, which is invalid input here.
   it.each`
-    smallestUnit
-    ${"fortnight"}
-    ${"hour"}
-    ${"day"}
-    ${""}
-    ${null}
-  `(
-    "returns '' for the invalid smallestUnit $smallestUnit",
-    ({ smallestUnit }) => {
-      expect(getZonedNow("UTC", { smallestUnit })).toBe("");
-    },
-  );
+    smallestUnit   | label
+    ${"fortnight"} | ${"'fortnight'"}
+    ${"hour"}      | ${"'hour'"}
+    ${"day"}       | ${"'day'"}
+    ${""}          | ${"''"}
+    ${null}        | ${"null"}
+  `("returns '' for the invalid smallestUnit $label", ({ smallestUnit }) => {
+    expect(getZonedNow("UTC", { smallestUnit })).toBe("");
+  });
 
   it("returns empty string on failure", () => {
     vi.useRealTimers();

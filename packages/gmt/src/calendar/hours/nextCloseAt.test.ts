@@ -207,7 +207,7 @@ describe("nextCloseAt across a skipped local midnight", () => {
     ${"2024-04-25T21:00:00Z"} | ${"compatible"} | ${"2024-04-25T21:45:00Z"}
     ${"2024-04-25T20:30:00Z"} | ${"reject"}     | ${""}
   `(
-    "returns $expected from $from under $disambiguation",
+    "returns '$expected' from $from under $disambiguation",
     ({ from, disambiguation, expected }) => {
       expect(nextCloseAt(from, cairo, { disambiguation })).toBe(expected);
     },

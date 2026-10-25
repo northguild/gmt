@@ -187,12 +187,12 @@ describe("roundUnix", () => {
   });
 
   it.each`
-    invalidUnit
-    ${"invalid-unit"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns null for invalid unit $invalidUnit", ({ invalidUnit }) => {
+    invalidUnit       | invalidUnitLabel
+    ${"invalid-unit"} | ${"'invalid-unit'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
+  `("returns null for invalid unit $invalidUnitLabel", ({ invalidUnit }) => {
     expect(
       roundUnix(1706780800000, { smallestUnit: invalidUnit as never }),
     ).toBeNull();
@@ -255,14 +255,14 @@ describe("roundUnix", () => {
   // roundingIncrement. An option given as an object therefore rounds exactly as the plain value
   // does, on GMT's own day-rounding path as well as on Temporal's.
   it.each`
-    value            | options                                                                                      | expected
-    ${1718483696000} | ${{ smallestUnit: "day", timeZone: "America/New_York", roundingMode: new String("floor") }}  | ${1718424000000}
-    ${1718427600000} | ${{ smallestUnit: "day", timeZone: "America/New_York", roundingMode: new String("ceil") }}   | ${1718510400000}
-    ${1289100600000} | ${{ smallestUnit: "day", timeZone: "America/Goose_Bay", roundingMode: new String("floor") }} | ${1289012400000}
-    ${1718483696000} | ${{ smallestUnit: "hour", timeZone: "America/New_York", roundingMode: new String("floor") }} | ${1718481600000}
-    ${1718483696000} | ${{ smallestUnit: "hour", timeZone: "America/New_York", roundingIncrement: new Number(2) }}  | ${1718481600000}
+    value            | options                                                                                      | expected         | description
+    ${1718483696000} | ${{ smallestUnit: "day", timeZone: "America/New_York", roundingMode: new String("floor") }}  | ${1718424000000} | ${"a String floor to the day in New York"}
+    ${1718427600000} | ${{ smallestUnit: "day", timeZone: "America/New_York", roundingMode: new String("ceil") }}   | ${1718510400000} | ${"a String ceil to the day in New York"}
+    ${1289100600000} | ${{ smallestUnit: "day", timeZone: "America/Goose_Bay", roundingMode: new String("floor") }} | ${1289012400000} | ${"a String floor to the day in Goose Bay"}
+    ${1718483696000} | ${{ smallestUnit: "hour", timeZone: "America/New_York", roundingMode: new String("floor") }} | ${1718481600000} | ${"a String floor to the hour in New York"}
+    ${1718483696000} | ${{ smallestUnit: "hour", timeZone: "America/New_York", roundingIncrement: new Number(2) }}  | ${1718481600000} | ${"a Number increment of 2 to the hour in New York"}
   `(
-    "returns $expected for $value with options given as objects",
+    "returns $expected for $value with options given as objects: $description",
     ({ value, options, expected }) => {
       expect(roundUnix(value, options)).toBe(expected);
     },
@@ -295,13 +295,13 @@ describe("roundUnix with an unrecognised epochUnit", () => {
   // isValidUnixUnit defines the domain ("seconds" | "milliseconds", singular or plural): any other value is invalid
   // input and returns the sentinel, never a silent read as milliseconds.
   it.each`
-    epochUnit
-    ${"nanoseconds"}
-    ${"SECONDS"}
-    ${"ms"}
-    ${""}
-    ${1000}
-  `("returns null for epochUnit $epochUnit", ({ epochUnit }) => {
+    epochUnit        | epochUnitLabel
+    ${"nanoseconds"} | ${"'nanoseconds'"}
+    ${"SECONDS"}     | ${"'SECONDS'"}
+    ${"ms"}          | ${"'ms'"}
+    ${""}            | ${"''"}
+    ${1000}          | ${"1000"}
+  `("returns null for epochUnit $epochUnitLabel", ({ epochUnit }) => {
     expect(
       roundUnix(1_706_659_200, {
         smallestUnit: "day",

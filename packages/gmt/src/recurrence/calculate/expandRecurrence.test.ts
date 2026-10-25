@@ -1202,22 +1202,22 @@ describe("expandRecurrence, sub-second and malformed RDATE and EXDATE entries re
   const daily = rule("FREQ=DAILY;COUNT=2");
 
   it.each`
-    option      | entry
-    ${"rdate"}  | ${"2024-01-02T09:00:00.5Z"}
-    ${"rdate"}  | ${"2024-01-02T09:00:00.000000001Z"}
-    ${"rdate"}  | ${"2024-01-02T10:00:00.5+01:00"}
-    ${"rdate"}  | ${"2024-01-02T09:00:00.5"}
-    ${"exdate"} | ${"2024-01-02T09:00:00.5Z"}
-    ${"exdate"} | ${"2024-01-02T09:00:00.000000001Z"}
-    ${"exdate"} | ${"2024-01-02T10:00:00.5+01:00"}
-    ${"exdate"} | ${"2024-01-02T09:00:00.5"}
-    ${"rdate"}  | ${5}
-    ${"exdate"} | ${null}
-    ${"rdate"}  | ${""}
-    ${"exdate"} | ${"2024-02-30T09:00:00"}
-    ${"rdate"}  | ${"2024-01-02T09:00:00Z/2024-01-02T10:00:00Z"}
-    ${"exdate"} | ${"20240102T090000Z"}
-  `("$option entry $entry", ({ option, entry }) => {
+    option      | entry                                          | label
+    ${"rdate"}  | ${"2024-01-02T09:00:00.5Z"}                    | ${"'2024-01-02T09:00:00.5Z'"}
+    ${"rdate"}  | ${"2024-01-02T09:00:00.000000001Z"}            | ${"'2024-01-02T09:00:00.000000001Z'"}
+    ${"rdate"}  | ${"2024-01-02T10:00:00.5+01:00"}               | ${"'2024-01-02T10:00:00.5+01:00'"}
+    ${"rdate"}  | ${"2024-01-02T09:00:00.5"}                     | ${"'2024-01-02T09:00:00.5'"}
+    ${"exdate"} | ${"2024-01-02T09:00:00.5Z"}                    | ${"'2024-01-02T09:00:00.5Z'"}
+    ${"exdate"} | ${"2024-01-02T09:00:00.000000001Z"}            | ${"'2024-01-02T09:00:00.000000001Z'"}
+    ${"exdate"} | ${"2024-01-02T10:00:00.5+01:00"}               | ${"'2024-01-02T10:00:00.5+01:00'"}
+    ${"exdate"} | ${"2024-01-02T09:00:00.5"}                     | ${"'2024-01-02T09:00:00.5'"}
+    ${"rdate"}  | ${5}                                           | ${"5"}
+    ${"exdate"} | ${null}                                        | ${"null"}
+    ${"rdate"}  | ${""}                                          | ${"''"}
+    ${"exdate"} | ${"2024-02-30T09:00:00"}                       | ${"'2024-02-30T09:00:00'"}
+    ${"rdate"}  | ${"2024-01-02T09:00:00Z/2024-01-02T10:00:00Z"} | ${"'2024-01-02T09:00:00Z/2024-01-02T10:00:00Z'"}
+    ${"exdate"} | ${"20240102T090000Z"}                          | ${"'20240102T090000Z'"}
+  `("$option entry $label", ({ option, entry }) => {
     expect(
       expandRecurrence(daily, "2024-01-01T09:00:00", "UTC", WIDE, {
         [option]: [entry],
@@ -1580,19 +1580,19 @@ describe("expandRecurrence, a bracketed annotation on DTSTART, RDATE or EXDATE r
   const window = { start: "2024-06-01T00:00:00Z", end: "2024-07-01T00:00:00Z" };
 
   it.each`
-    option      | entry
-    ${"rdate"}  | ${"2024-06-05T12:00:00[Europe/Paris]"}
-    ${"rdate"}  | ${"2024-06-05T12:00:00[!Europe/Paris]"}
-    ${"rdate"}  | ${"2024-06-05T12:00:00[u-ca=hebrew]"}
-    ${"rdate"}  | ${"2024-06-05T12:00:00[foo=bar]"}
-    ${"rdate"}  | ${"2024-06-05T12:00:00+02:00[America/New_York]"}
-    ${"rdate"}  | ${"2024-06-05T12:00:00Z[UTC]"}
-    ${"exdate"} | ${"2024-06-05T12:00:00[Europe/Paris]"}
-    ${"exdate"} | ${"2024-06-05T12:00:00[!Europe/Paris]"}
-    ${"exdate"} | ${"2024-06-05T12:00:00[u-ca=hebrew]"}
-    ${"exdate"} | ${"2024-06-05T12:00:00[foo=bar]"}
-    ${"exdate"} | ${"2024-06-05T12:00:00+02:00[America/New_York]"}
-  `("$option entry $entry", ({ option, entry }) => {
+    option      | entry                                            | label
+    ${"rdate"}  | ${"2024-06-05T12:00:00[Europe/Paris]"}           | ${"'2024-06-05T12:00:00[Europe/Paris]'"}
+    ${"rdate"}  | ${"2024-06-05T12:00:00[!Europe/Paris]"}          | ${"'2024-06-05T12:00:00[!Europe/Paris]'"}
+    ${"rdate"}  | ${"2024-06-05T12:00:00[u-ca=hebrew]"}            | ${"'2024-06-05T12:00:00[u-ca=hebrew]'"}
+    ${"rdate"}  | ${"2024-06-05T12:00:00[foo=bar]"}                | ${"'2024-06-05T12:00:00[foo=bar]'"}
+    ${"rdate"}  | ${"2024-06-05T12:00:00+02:00[America/New_York]"} | ${"'2024-06-05T12:00:00+02:00[America/New_York]'"}
+    ${"rdate"}  | ${"2024-06-05T12:00:00Z[UTC]"}                   | ${"'2024-06-05T12:00:00Z[UTC]'"}
+    ${"exdate"} | ${"2024-06-05T12:00:00[Europe/Paris]"}           | ${"'2024-06-05T12:00:00[Europe/Paris]'"}
+    ${"exdate"} | ${"2024-06-05T12:00:00[!Europe/Paris]"}          | ${"'2024-06-05T12:00:00[!Europe/Paris]'"}
+    ${"exdate"} | ${"2024-06-05T12:00:00[u-ca=hebrew]"}            | ${"'2024-06-05T12:00:00[u-ca=hebrew]'"}
+    ${"exdate"} | ${"2024-06-05T12:00:00[foo=bar]"}                | ${"'2024-06-05T12:00:00[foo=bar]'"}
+    ${"exdate"} | ${"2024-06-05T12:00:00+02:00[America/New_York]"} | ${"'2024-06-05T12:00:00+02:00[America/New_York]'"}
+  `("$option entry $label", ({ option, entry }) => {
     expect(
       expandRecurrence(daily, "2024-06-01T12:00:00", NY, window, {
         [option]: [entry],
@@ -1823,14 +1823,14 @@ describe("expandRecurrence, a sub-daily rule whose steps rarely meet its BY part
   // - 86,400 mod 59 = 24 and gcd(24, 59) = 1: midnight comes round every 59th day;
   // - 25 hours = a day and an hour: hour 9 comes round every 24th step, 25 days on.
   it.each`
-    rule                                                          | start           | step  | passes        | time          | count
-    ${"FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0"}             | ${"2024-01-01"} | ${7}  | ${always}     | ${"03:00:00"} | ${10_000}
-    ${"FREQ=SECONDLY;INTERVAL=59;BYHOUR=0;BYMINUTE=0;BYSECOND=0"} | ${"2024-01-01"} | ${59} | ${always}     | ${"00:00:00"} | ${10_000}
-    ${"FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0;BYDAY=MO"}    | ${"2024-01-01"} | ${7}  | ${always}     | ${"03:00:00"} | ${10_000}
-    ${"FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0;BYMONTH=2"}   | ${"2024-02-05"} | ${7}  | ${inFebruary} | ${"03:00:00"} | ${1000}
-    ${"FREQ=HOURLY;INTERVAL=25;BYHOUR=9;BYMONTH=2;BYMONTHDAY=29"} | ${"2024-02-29"} | ${25} | ${leapDay}    | ${"09:00:00"} | ${20}
+    rule                                                          | start           | step  | passes        | time          | count     | label
+    ${"FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0"}             | ${"2024-01-01"} | ${7}  | ${always}     | ${"03:00:00"} | ${10_000} | ${"every 7 minutes at 03:00"}
+    ${"FREQ=SECONDLY;INTERVAL=59;BYHOUR=0;BYMINUTE=0;BYSECOND=0"} | ${"2024-01-01"} | ${59} | ${always}     | ${"00:00:00"} | ${10_000} | ${"every 59 seconds at midnight"}
+    ${"FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0;BYDAY=MO"}    | ${"2024-01-01"} | ${7}  | ${always}     | ${"03:00:00"} | ${10_000} | ${"every 7 minutes at 03:00 on Mondays"}
+    ${"FREQ=MINUTELY;INTERVAL=7;BYHOUR=3;BYMINUTE=0;BYMONTH=2"}   | ${"2024-02-05"} | ${7}  | ${inFebruary} | ${"03:00:00"} | ${1000}   | ${"every 7 minutes at 03:00 in February"}
+    ${"FREQ=HOURLY;INTERVAL=25;BYHOUR=9;BYMONTH=2;BYMONTHDAY=29"} | ${"2024-02-29"} | ${25} | ${leapDay}    | ${"09:00:00"} | ${20}     | ${"every 25 hours at 09:00 on 29 February"}
   `(
-    "$rule from $start gives $count rows on every matching date",
+    "$label from $start gives $count rows on every matching date",
     ({ rule: text, start, step, passes, time, count }) => {
       const dates = stepDates(start, step, count, passes);
       const rows = expandRecurrence(rule(text), `${start}T${time}`, "UTC", {

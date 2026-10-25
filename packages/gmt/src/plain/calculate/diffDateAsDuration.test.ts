@@ -46,37 +46,36 @@ describe("diffDateAsDuration", () => {
   });
 
   it.each`
-    nonStringInput
-    ${"2024-02-30"}
-    ${"not-a-date"}
-    ${"2024-13-01"}
-    ${"2024-00-10"}
-    ${""}
-    ${true}
-    ${null}
-    ${undefined}
-    ${"12"}
-    ${"2024"}
-    ${"2024-02"}
-    ${"2024-02-29T12:00:00Z"}
-    ${"2024-02-29T12:00:00Z"}
-  `('returns "" for non-string input $nonStringInput', ({ nonStringInput }) => {
+    nonStringInput            | label
+    ${"2024-02-30"}           | ${"'2024-02-30'"}
+    ${"not-a-date"}           | ${"'not-a-date'"}
+    ${"2024-13-01"}           | ${"'2024-13-01'"}
+    ${"2024-00-10"}           | ${"'2024-00-10'"}
+    ${""}                     | ${"''"}
+    ${true}                   | ${"true"}
+    ${null}                   | ${"null"}
+    ${undefined}              | ${"undefined"}
+    ${"12"}                   | ${"'12'"}
+    ${"2024"}                 | ${"'2024'"}
+    ${"2024-02"}              | ${"'2024-02'"}
+    ${"2024-02-29T12:00:00Z"} | ${"'2024-02-29T12:00:00Z'"}
+  `('returns "" for non-string input $label', ({ nonStringInput }) => {
     expect(
       diffDateAsDuration(nonStringInput as never, "2024-01-01", "days"),
     ).toBe("");
   });
 
   it.each`
-    invalidUnit
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${"hour"}
-    ${"hours"}
-    ${"dayss"}
-    ${["days"]}
-  `('returns "" for invalid unit $invalidUnit', ({ invalidUnit }) => {
+    invalidUnit  | label
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
+    ${"hour"}    | ${"'hour'"}
+    ${"hours"}   | ${"'hours'"}
+    ${"dayss"}   | ${"'dayss'"}
+    ${["days"]}  | ${'["days"]'}
+  `('returns "" for invalid unit $label', ({ invalidUnit }) => {
     expect(
       diffDateAsDuration("2024-01-01", "2024-01-02", invalidUnit as never),
     ).toBe("");
@@ -535,7 +534,7 @@ describe("diffDateAsDuration with rounding options in non-ISO calendars (CORE-6)
     ${"+275760-07-06[u-ca=hebrew]"} | ${"+275760-09-13[u-ca=hebrew]"} | ${"months"} | ${{ smallestUnit: "days" }}                               | ${"P2M10D"}  | ${"D1 up to the maximum"}
     ${"+275760-07-06[u-ca=hebrew]"} | ${"+275760-09-13[u-ca=hebrew]"} | ${"months"} | ${{ smallestUnit: "months" }}                             | ${""}        | ${"D1: the 3-month window ends past the maximum, so Temporal throws"}
   `(
-    "returns $expected from $start to $end in $unit with $options ($reason)",
+    "returns '$expected' from $start to $end in $unit with $options ($reason)",
     ({ start, end, unit, options, expected }) => {
       expect(diffDateAsDuration(start, end, unit, options)).toBe(expected);
     },
@@ -596,7 +595,7 @@ describe("diffDateAsDuration with a non-object options argument", () => {
     ${5}         | ${""}
     ${true}      | ${""}
     ${undefined} | ${"P31D"}
-  `("returns $expected for options $options", ({ options, expected }) => {
+  `("returns '$expected' for options $options", ({ options, expected }) => {
     expect(
       diffDateAsDuration("2024-01-01", "2024-02-01", "days", options),
     ).toBe(expected);

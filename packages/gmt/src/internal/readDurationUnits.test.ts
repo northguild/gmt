@@ -61,10 +61,10 @@ describe("readDurationUnits", () => {
     ${{ days: 1 }}                                | ${"own key outside the allowed set"}
     ${{ days: 0, minutes: 15 }}                   | ${"own key outside the allowed set, zero amount"}
     ${{ days: undefined, minutes: 15 }}           | ${"own key outside the allowed set, undefined amount"}
-    ${inheriting({ days: 1 })}                    | ${"inherited unit outside the allowed set, nonzero"}
-    ${inheriting({ days: 1 }, { minutes: 15 })}   | ${"inherited unit outside the allowed set, beside a valid one"}
+    ${inheriting({ days: 1 })}                    | ${"inherited nonzero unit outside the allowed set"}
+    ${inheriting({ days: 1 }, { minutes: 15 })}   | ${"inherited unit beside a valid one, outside the allowed set"}
     ${hidden("days", 1)}                          | ${"non-enumerable unit outside the allowed set, nonzero"}
-    ${inheriting({ days: "0" }, { minutes: 15 })} | ${"inherited unit outside the allowed set, not a number"}
+    ${inheriting({ days: "0" }, { minutes: 15 })} | ${"inherited non-number unit outside the allowed set"}
     ${inheriting({ minutes: "15" })}              | ${"inherited string amount"}
     ${inheriting({ minutes: true })}              | ${"inherited boolean amount"}
     ${inheriting({ minutes: null })}              | ${"inherited null amount"}

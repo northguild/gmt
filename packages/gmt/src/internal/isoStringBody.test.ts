@@ -20,7 +20,7 @@ describe("hasZonedDateTimeShape", () => {
     ${"2024-10-03T14[America/New_York]"}                   | ${false} | ${"hour-only time"}
     ${"2024-10-03[America/New_York]"}                      | ${false} | ${"date without a time"}
     ${""}                                                  | ${false} | ${"empty string"}
-  `("returns $expected for $value ($reason)", ({ value, expected }) => {
+  `("returns $expected for '$value' ($reason)", ({ value, expected }) => {
     expect(hasZonedDateTimeShape(value)).toBe(expected);
   });
 });

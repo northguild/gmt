@@ -70,7 +70,7 @@ describe("isValidCalendarZonedDateTime", () => {
     ${"2024-02-24t14:30:00-05:00[America/New_York]"}                         | ${"lower-case t separator (strict extended shape)"}
     ${"2024-02-24T19:30:00z[America/New_York][u-ca=hebrew]"}                 | ${"lower-case z designator (strict extended shape)"}
     ${"2024-02-24[America/New_York][u-ca=hebrew]"}                           | ${"date without a time (strict extended shape)"}
-  `("returns false for $value ($reason)", ({ value }) => {
+  `("returns false for '$value' ($reason)", ({ value }) => {
     expect(isValidCalendarZonedDateTime(value)).toBe(false);
   });
 
@@ -108,14 +108,14 @@ describe("isValidCalendarZonedDateTime", () => {
 
   // The calendar must be one GMT supports.
   it.each`
-    value                                                  | reason
-    ${"2024-01-10T12:00:00+00:00[UTC][u-ca=islamic]"}      | ${"not in the proposal's calendar table"}
-    ${"2024-01-10T12:00:00+00:00[UTC][u-ca=islamic-rgsa]"} | ${"not in the proposal's calendar table"}
-    ${"2024-01-10T12:00:00+00:00[UTC][u-ca=chinese]"}      | ${"not supported by GMT"}
-    ${"2024-01-10T12:00:00+00:00[UTC][u-ca=gregorian]"}    | ${"CLDR alias Temporal does not accept"}
-    ${"2024-01-10T12:00:00+00:00[UTC][u-ca=taiwan]"}       | ${"pre-1.16.0 GMT id"}
+    value                                                  | reason                                    | calendar
+    ${"2024-01-10T12:00:00+00:00[UTC][u-ca=islamic]"}      | ${"not in the proposal's calendar table"} | ${"islamic"}
+    ${"2024-01-10T12:00:00+00:00[UTC][u-ca=islamic-rgsa]"} | ${"not in the proposal's calendar table"} | ${"islamic-rgsa"}
+    ${"2024-01-10T12:00:00+00:00[UTC][u-ca=chinese]"}      | ${"not supported by GMT"}                 | ${"chinese"}
+    ${"2024-01-10T12:00:00+00:00[UTC][u-ca=gregorian]"}    | ${"CLDR alias Temporal does not accept"}  | ${"gregorian"}
+    ${"2024-01-10T12:00:00+00:00[UTC][u-ca=taiwan]"}       | ${"pre-1.16.0 GMT id"}                    | ${"taiwan"}
   `(
-    "returns false for the unsupported calendar id in $value ($reason)",
+    "returns false for the unsupported calendar id $calendar in $value ($reason)",
     ({ value }) => {
       expect(isValidCalendarZonedDateTime(value)).toBe(false);
     },

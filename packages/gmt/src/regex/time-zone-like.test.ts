@@ -11,7 +11,7 @@ describe("regex/timeZoneLike", () => {
     ${"Asia/Kathmandu"}   | ${true}
     ${"Not/AZone"}        | ${true}
     ${""}                 | ${false}
-  `("timeZone pattern matches $value as $expected", ({ value, expected }) => {
+  `("timeZone pattern matches '$value' as $expected", ({ value, expected }) => {
     expect(timeZoneLike.test(value)).toBe(expected);
   });
 

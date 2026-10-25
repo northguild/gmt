@@ -24,7 +24,7 @@ describe("toInstantFromUtc", () => {
     ${"2024-03-10"}                           | ${"date without time or Z"}
     ${"2024-03-10T12:00:00[Europe/Helsinki]"} | ${"zoned string"}
     ${"2024-03-10T25:00:00Z"}                 | ${"invalid hour"}
-  `("returns null for invalid UTC string $value ($reason)", ({ value }) => {
+  `("returns null for invalid UTC string '$value' ($reason)", ({ value }) => {
     expect(toInstantFromUtc(value)).toBeNull();
   });
 });

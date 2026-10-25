@@ -71,15 +71,15 @@ describe("truncateNanoseconds", () => {
   });
 
   it.each`
-    unit         | reason
-    ${"ns"}      | ${"nanoseconds are the input precision, not a target"}
-    ${"s"}       | ${"unsupported unit"}
-    ${"US"}      | ${"wrong case"}
-    ${""}        | ${"empty string"}
-    ${undefined} | ${"undefined"}
-    ${null}      | ${"null"}
-    ${1000}      | ${"non-string"}
-  `("returns 0n when unit $unit is invalid ($reason)", ({ unit }) => {
+    unit         | reason                                                 | label
+    ${"ns"}      | ${"nanoseconds are the input precision, not a target"} | ${"'ns'"}
+    ${"s"}       | ${"unsupported unit"}                                  | ${"'s'"}
+    ${"US"}      | ${"wrong case"}                                        | ${"'US'"}
+    ${""}        | ${"empty string"}                                      | ${"''"}
+    ${undefined} | ${"undefined"}                                         | ${"undefined"}
+    ${null}      | ${"null"}                                              | ${"null"}
+    ${1000}      | ${"non-string"}                                        | ${"1000"}
+  `("returns 0n when unit $label is invalid ($reason)", ({ unit }) => {
     expect(
       truncateNanoseconds(1710072000123456789n, unit as unknown as "ms" | "us"),
     ).toBe(0n);

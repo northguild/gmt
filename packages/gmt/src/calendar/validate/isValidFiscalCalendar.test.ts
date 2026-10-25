@@ -62,29 +62,29 @@ describe("isValidFiscalCalendar", () => {
   });
 
   it.each`
-    field           | value
-    ${"pattern"}    | ${"4-5-5"}
-    ${"pattern"}    | ${undefined}
-    ${"pattern"}    | ${454}
-    ${"yearEndsOn"} | ${"2026-02-30"}
-    ${"yearEndsOn"} | ${"2026-01-31T00:00:00"}
-    ${"yearEndsOn"} | ${undefined}
-    ${"yearEndsOn"} | ${20260131}
-    ${"yearEndsOn"} | ${"2026-01-31[u-ca=hebrew]"}
-    ${"extraWeek"}  | ${"lastQuarter"}
-    ${"extraWeek"}  | ${"middle"}
-    ${"extraWeek"}  | ${""}
-    ${"extraWeek"}  | ${12}
-    ${"extraWeek"}  | ${null}
-    ${"extraWeek"}  | ${undefined}
-    ${"yearLabel"}  | ${"fiscalYear"}
-    ${"yearLabel"}  | ${"StartYear"}
-    ${"yearLabel"}  | ${""}
-    ${"yearLabel"}  | ${2024}
-    ${"yearLabel"}  | ${null}
-    ${"yearLabel"}  | ${undefined}
+    field           | value                        | label
+    ${"pattern"}    | ${"4-5-5"}                   | ${"'4-5-5'"}
+    ${"pattern"}    | ${undefined}                 | ${"undefined"}
+    ${"pattern"}    | ${454}                       | ${"454"}
+    ${"yearEndsOn"} | ${"2026-02-30"}              | ${"'2026-02-30'"}
+    ${"yearEndsOn"} | ${"2026-01-31T00:00:00"}     | ${"'2026-01-31T00:00:00'"}
+    ${"yearEndsOn"} | ${undefined}                 | ${"undefined"}
+    ${"yearEndsOn"} | ${20260131}                  | ${"20260131"}
+    ${"yearEndsOn"} | ${"2026-01-31[u-ca=hebrew]"} | ${"'2026-01-31[u-ca=hebrew]'"}
+    ${"extraWeek"}  | ${"lastQuarter"}             | ${"'lastQuarter'"}
+    ${"extraWeek"}  | ${"middle"}                  | ${"'middle'"}
+    ${"extraWeek"}  | ${""}                        | ${"''"}
+    ${"extraWeek"}  | ${12}                        | ${"12"}
+    ${"extraWeek"}  | ${null}                      | ${"null"}
+    ${"extraWeek"}  | ${undefined}                 | ${"undefined"}
+    ${"yearLabel"}  | ${"fiscalYear"}              | ${"'fiscalYear'"}
+    ${"yearLabel"}  | ${"StartYear"}               | ${"'StartYear'"}
+    ${"yearLabel"}  | ${""}                        | ${"''"}
+    ${"yearLabel"}  | ${2024}                      | ${"2024"}
+    ${"yearLabel"}  | ${null}                      | ${"null"}
+    ${"yearLabel"}  | ${undefined}                 | ${"undefined"}
   `(
-    "returns false when only $field is wrong, set to $value",
+    "returns false when only $field is wrong, set to $label",
     ({ field, value }) => {
       expect(isValidFiscalCalendar({ ...NRF, [field]: value })).toBe(false);
     },

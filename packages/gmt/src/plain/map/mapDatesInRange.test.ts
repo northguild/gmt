@@ -51,14 +51,14 @@ describe("mapDatesInRange", () => {
   );
 
   it.each`
-    invalidStartDate | endDate         | stepDays
-    ${"invalid"}     | ${"2024-03-03"} | ${1}
-    ${"2024-02-30"}  | ${"2024-03-03"} | ${1}
-    ${""}            | ${"2024-03-03"} | ${1}
-    ${null}          | ${"2024-03-03"} | ${1}
-    ${undefined}     | ${"2024-03-03"} | ${1}
+    invalidStartDate | endDate         | stepDays | label
+    ${"invalid"}     | ${"2024-03-03"} | ${1}     | ${"'invalid'"}
+    ${"2024-02-30"}  | ${"2024-03-03"} | ${1}     | ${"'2024-02-30'"}
+    ${""}            | ${"2024-03-03"} | ${1}     | ${"''"}
+    ${null}          | ${"2024-03-03"} | ${1}     | ${"null"}
+    ${undefined}     | ${"2024-03-03"} | ${1}     | ${"undefined"}
   `(
-    "returns an empty array for invalid startDate $invalidStartDate",
+    "returns an empty array for invalid startDate $label",
     ({ invalidStartDate, endDate, stepDays }) => {
       expect(
         mapDatesInRange(invalidStartDate as never, endDate, stepDays),
@@ -67,14 +67,14 @@ describe("mapDatesInRange", () => {
   );
 
   it.each`
-    startDate       | invalidEndDate  | stepDays
-    ${"2024-03-01"} | ${"invalid"}    | ${1}
-    ${"2024-03-01"} | ${"2024-02-30"} | ${1}
-    ${"2024-03-01"} | ${""}           | ${1}
-    ${"2024-03-01"} | ${null}         | ${1}
-    ${"2024-03-01"} | ${undefined}    | ${1}
+    startDate       | invalidEndDate  | stepDays | label
+    ${"2024-03-01"} | ${"invalid"}    | ${1}     | ${"'invalid'"}
+    ${"2024-03-01"} | ${"2024-02-30"} | ${1}     | ${"'2024-02-30'"}
+    ${"2024-03-01"} | ${""}           | ${1}     | ${"''"}
+    ${"2024-03-01"} | ${null}         | ${1}     | ${"null"}
+    ${"2024-03-01"} | ${undefined}    | ${1}     | ${"undefined"}
   `(
-    "returns an empty array for invalid endDate $invalidEndDate",
+    "returns an empty array for invalid endDate $label",
     ({ startDate, invalidEndDate, stepDays }) => {
       expect(
         mapDatesInRange(startDate, invalidEndDate as never, stepDays),

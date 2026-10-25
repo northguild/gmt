@@ -94,12 +94,12 @@ describe("isWeekend", () => {
   });
 
   it.each`
-    locale
-    ${"not-a-locale-!!"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns false for invalid locale $locale", ({ locale }) => {
+    locale               | label
+    ${"not-a-locale-!!"} | ${"'not-a-locale-!!'"}
+    ${""}                | ${"''"}
+    ${null}              | ${"null"}
+    ${undefined}         | ${"undefined"}
+  `("returns false for invalid locale $label", ({ locale }) => {
     expect(isWeekend("2024-02-03", locale)).toBe(false);
   });
 

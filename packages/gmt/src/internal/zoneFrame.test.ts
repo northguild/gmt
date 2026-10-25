@@ -44,6 +44,13 @@ const CANDIDATES: readonly unknown[] = [
   {},
 ];
 
+// The zone written as a JavaScript literal, so an empty string prints as '' and null as null.
+const zoneLabel = (zone: unknown): string => {
+  if (typeof zone === "string") return `'${zone}'`;
+  if (typeof zone === "object" && zone !== null) return "{}";
+  return String(zone);
+};
+
 describe("zoneFrame", () => {
   // Rule 1.
   it.each`
@@ -82,7 +89,7 @@ describe("zoneFrame", () => {
     ${"Invalid/Zone"} | ${"an unknown name"}
     ${"local"}        | ${"the keyword only normalizeZoneFrame reads"}
     ${""}             | ${"empty"}
-  `("returns null for $zone ($reason)", ({ zone }) => {
+  `("returns null for '$zone' ($reason)", ({ zone }) => {
     expect(zoneFrame(zone)).toBeNull();
   });
 
@@ -150,8 +157,8 @@ describe("zoneFrame", () => {
     },
   );
 
-  it.each(CANDIDATES.map((zone) => ({ zone })))(
-    "accepts $zone exactly when isValidTimeZone or isValidUtcOffset does",
+  it.each(CANDIDATES.map((zone) => ({ zone, label: zoneLabel(zone) })))(
+    "accepts $label exactly when isValidTimeZone or isValidUtcOffset does",
     ({ zone }) => {
       const accepted =
         isValidTimeZone(zone as string) || isValidUtcOffset(zone as string);
@@ -159,8 +166,8 @@ describe("zoneFrame", () => {
     },
   );
 
-  it.each(CANDIDATES.map((zone) => ({ zone })))(
-    "never returns a timeZone that is not a time zone identifier (for $zone)",
+  it.each(CANDIDATES.map((zone) => ({ zone, label: zoneLabel(zone) })))(
+    "never returns a timeZone that is not a time zone identifier (for $label)",
     ({ zone }) => {
       const frame = zoneFrame(zone);
       expect(frame === null || isValidTimeZone(frame.timeZone)).toBe(true);
@@ -202,9 +209,9 @@ describe("normalizeZoneFrame", () => {
 
   it.each(
     CANDIDATES.filter((zone) => zone !== undefined && zone !== "local").map(
-      (zone) => ({ zone }),
+      (zone) => ({ zone, label: zoneLabel(zone) }),
     ),
-  )("reads $zone as zoneFrame does", ({ zone }) => {
+  )("reads $label as zoneFrame does", ({ zone }) => {
     expect(normalizeZoneFrame(zone)).toEqual(zoneFrame(zone));
   });
 });

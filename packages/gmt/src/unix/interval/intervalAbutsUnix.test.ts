@@ -26,7 +26,7 @@ describe("intervalAbutsUnix", () => {
     ${0}   | ${1500000001} | ${1500000000} | ${1700000000} | ${false}
     ${0}   | ${1500000000} | ${1600000000} | ${1700000000} | ${false}
   `(
-    "returns $expected for non-adjacent intervals",
+    "returns $expected for non-adjacent intervals A=[$aStart, $aEnd) and B=[$bStart, $bEnd)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalAbutsUnix(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -37,7 +37,7 @@ describe("intervalAbutsUnix", () => {
     ${1700000000} | ${0}          | ${1500000000} | ${1600000000} | ${false}
     ${1500000000} | ${1000000000} | ${1200000000} | ${1100000000} | ${false}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed intervals A=[$aStart, $aEnd) and B=[$bStart, $bEnd)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalAbutsUnix(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -71,16 +71,19 @@ describe("intervalAbutsUnix", () => {
     ${0}    | ${1700000000} | ${null}       | ${1600000000}
     ${0}    | ${1700000000} | ${1500000000} | ${undefined}
     ${true} | ${1700000000} | ${1500000000} | ${1600000000}
-  `("returns false for invalid types", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalAbutsUnix(aStart, aEnd, bStart, bEnd)).toBe(false);
-  });
+  `(
+    "returns false for invalid types: $aStart, $aEnd, $bStart, $bEnd",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalAbutsUnix(aStart, aEnd, bStart, bEnd)).toBe(false);
+    },
+  );
 
   it.each`
     aStart          | aEnd            | bStart          | bEnd            | expected
     ${"0"}          | ${"1500000000"} | ${"1500000000"} | ${"1700000000"} | ${true}
     ${"1500000000"} | ${"1700000000"} | ${"0"}          | ${"1500000000"} | ${true}
   `(
-    "returns $expected for string numeric input",
+    "returns $expected for string numeric input A=[$aStart, $aEnd) and B=[$bStart, $bEnd)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalAbutsUnix(aStart, aEnd, bStart, bEnd)).toBe(expected);
     },
@@ -89,14 +92,14 @@ describe("intervalAbutsUnix", () => {
   // Epoch values are whole units: fractions are invalid, and past 2^53 consecutive integers
   // collapse (2 ** 53 + 1 === 2 ** 53), so a value there does not name one unit.
   it.each`
-    aStart | aEnd       | bStart     | bEnd           | description
-    ${0}   | ${1.5}     | ${1.5}     | ${3}           | ${"a fractional shared end"}
-    ${0}   | ${1}       | ${0.5}     | ${2}           | ${"a fractional start"}
-    ${0}   | ${2 ** 53} | ${2 ** 53} | ${2 ** 53 + 4} | ${"unsafe integers (2^53 + 1 === 2^53)"}
-    ${"0"} | ${"1.5"}   | ${"1.5"}   | ${"3"}         | ${"fractional numeric strings"}
-    ${""}  | ${"0"}     | ${"1"}     | ${"2"}         | ${"an empty string, which Number() reads as 0"}
+    aStart | aEnd       | bStart     | bEnd           | description                                     | aStartLabel
+    ${0}   | ${1.5}     | ${1.5}     | ${3}           | ${"a fractional shared end"}                    | ${"0"}
+    ${0}   | ${1}       | ${0.5}     | ${2}           | ${"a fractional start"}                         | ${"0"}
+    ${0}   | ${2 ** 53} | ${2 ** 53} | ${2 ** 53 + 4} | ${"unsafe integers (2^53 + 1 === 2^53)"}        | ${"0"}
+    ${"0"} | ${"1.5"}   | ${"1.5"}   | ${"3"}         | ${"fractional numeric strings"}                 | ${"'0'"}
+    ${""}  | ${"0"}     | ${"1"}     | ${"2"}         | ${"an empty string, which Number() reads as 0"} | ${"''"}
   `(
-    "returns false for A=[$aStart, $aEnd) and B=[$bStart, $bEnd) ($description)",
+    "returns false for A=[$aStartLabel, $aEnd) and B=[$bStart, $bEnd) ($description)",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalAbutsUnix(aStart, aEnd, bStart, bEnd)).toBe(false);
     },

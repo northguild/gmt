@@ -72,7 +72,7 @@ describe("intervalOverlappingDaysDateTime", () => {
     ${"2024-01-01T00:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-04-01T00:00:00"} | ${"invalid"}
     ${"2024-01-01T00:00:00"} | ${"2024-06-30T23:59:59"} | ${"2024-04-01T00:00:00"} | ${""}
   `(
-    "returns null for malformed datetime: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for malformed datetime: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(
         intervalOverlappingDaysDateTime(aStart, aEnd, bStart, bEnd),

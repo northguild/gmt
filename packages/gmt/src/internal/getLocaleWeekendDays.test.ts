@@ -34,7 +34,7 @@ describe("getLocaleWeekendDays", () => {
     ${"en_US"}
     ${""}
     ${"x"}
-  `("returns null for invalid locale $invalidLocale", ({ invalidLocale }) => {
+  `("returns null for invalid locale '$invalidLocale'", ({ invalidLocale }) => {
     expect(getLocaleWeekendDays(invalidLocale)).toBeNull();
   });
 });

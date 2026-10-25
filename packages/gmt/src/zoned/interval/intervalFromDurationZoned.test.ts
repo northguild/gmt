@@ -178,13 +178,13 @@ describe("intervalFromDurationZoned", () => {
   });
 
   it.each`
-    value                               | duration       | anchor
-    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"not-a-dur"} | ${"start"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${""}          | ${"start"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${123}         | ${"start"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${null}        | ${"start"}
+    value                               | duration       | anchor     | label
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"not-a-dur"} | ${"start"} | ${"'not-a-dur'"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${""}          | ${"start"} | ${"''"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${123}         | ${"start"} | ${"123"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${null}        | ${"start"} | ${"null"}
   `(
-    "returns null for invalid duration $duration",
+    "returns null for invalid duration $label",
     ({ value, duration, anchor }) => {
       expect(
         intervalFromDurationZoned(value, duration as never, anchor),
@@ -193,19 +193,16 @@ describe("intervalFromDurationZoned", () => {
   );
 
   it.each`
-    value                               | duration | anchor
-    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${"middle"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${""}
-    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${null}
-    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${undefined}
-  `(
-    "returns null for invalid anchor $anchor",
-    ({ value, duration, anchor }) => {
-      expect(
-        intervalFromDurationZoned(value, duration, anchor as never),
-      ).toBeNull();
-    },
-  );
+    value                               | duration | anchor       | label
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${"middle"}  | ${"'middle'"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${""}        | ${"''"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${null}      | ${"null"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"P1D"} | ${undefined} | ${"undefined"}
+  `("returns null for invalid anchor $label", ({ value, duration, anchor }) => {
+    expect(
+      intervalFromDurationZoned(value, duration, anchor as never),
+    ).toBeNull();
+  });
 
   it("returns null when Temporal.ZonedDateTime.from throws", () => {
     mockTemporalZonedDateTimeFromThrow();

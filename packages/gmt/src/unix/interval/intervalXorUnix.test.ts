@@ -41,7 +41,7 @@ describe("intervalXorUnix", () => {
     ${1700000000} | ${0}          | ${1500000000} | ${1600000000} | ${[]}
     ${1500000000} | ${1000000000} | ${1200000000} | ${1100000000} | ${[]}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed [$aStart, $aEnd) and [$bStart, $bEnd)",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalXorUnix(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },
@@ -75,9 +75,12 @@ describe("intervalXorUnix", () => {
     ${0}    | ${1700000000} | ${null}       | ${1600000000}
     ${0}    | ${1700000000} | ${1500000000} | ${undefined}
     ${true} | ${1700000000} | ${1500000000} | ${1600000000}
-  `("returns [] for invalid types", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalXorUnix(aStart, aEnd, bStart, bEnd)).toEqual([]);
-  });
+  `(
+    "returns [] for invalid types [$aStart, $aEnd) and [$bStart, $bEnd)",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalXorUnix(aStart, aEnd, bStart, bEnd)).toEqual([]);
+    },
+  );
 
   it.each`
     aStart | aEnd            | bStart          | bEnd            | expected
@@ -101,12 +104,9 @@ describe("intervalXorUnix", () => {
     ${0}   | ${2 ** 53} | ${1}     | ${2}   | ${"an unsafe end"}
     ${"0"} | ${"1"}     | ${"0.5"} | ${"2"} | ${"a fractional numeric string"}
     ${""}  | ${"1"}     | ${"1"}   | ${"2"} | ${"an empty string, which Number() reads as 0"}
-  `(
-    "returns [] for A=[$aStart, $aEnd] xor B=[$bStart, $bEnd] ($description)",
-    ({ aStart, aEnd, bStart, bEnd }) => {
-      expect(intervalXorUnix(aStart, aEnd, bStart, bEnd)).toEqual([]);
-    },
-  );
+  `("returns [] for $description", ({ aStart, aEnd, bStart, bEnd }) => {
+    expect(intervalXorUnix(aStart, aEnd, bStart, bEnd)).toEqual([]);
+  });
 
   // Range edge (CORE-6): nothing is computed past the largest safe integer. Half-open, the overlap
   // is [MAX - 7, MAX - 5): A keeps [MAX - 10, MAX - 7), B keeps [MAX - 5, MAX).

@@ -32,19 +32,19 @@ describe("subtractDateTime", () => {
   );
 
   it.each`
-    nonStringInput
-    ${"not-a-datetime"}
-    ${"2024-02-30T14:30:00"}
-    ${"2024-02-30T14:30:00Z"}
-    ${"2024-02-30"}
-    ${NaN}
-    ${null}
-    ${undefined}
-    ${true}
-    ${false}
-    ${""}
+    nonStringInput            | label
+    ${"not-a-datetime"}       | ${"'not-a-datetime'"}
+    ${"2024-02-30T14:30:00"}  | ${"'2024-02-30T14:30:00'"}
+    ${"2024-02-30T14:30:00Z"} | ${"'2024-02-30T14:30:00Z'"}
+    ${"2024-02-30"}           | ${"'2024-02-30'"}
+    ${NaN}                    | ${"NaN"}
+    ${null}                   | ${"null"}
+    ${undefined}              | ${"undefined"}
+    ${true}                   | ${"true"}
+    ${false}                  | ${"false"}
+    ${""}                     | ${"''"}
   `(
-    "returns an empty string for non-string input $nonStringInput",
+    "returns an empty string for non-string input $label",
     ({ nonStringInput }) => {
       expect(subtractDateTime(nonStringInput as never, { minutes: 30 })).toBe(
         "",
@@ -53,13 +53,13 @@ describe("subtractDateTime", () => {
   );
 
   it.each`
-    invalidUnit
-    ${"invalid"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidUnit  | label
+    ${"invalid"} | ${"'invalid'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${undefined} | ${"undefined"}
   `(
-    "returns an empty string for an invalid unit: $invalidUnit",
+    "returns an empty string for an invalid unit: $label",
     ({ invalidUnit }) => {
       expect(
         subtractDateTime("2024-02-29T14:30", { [invalidUnit as never]: 1 }),
@@ -68,16 +68,16 @@ describe("subtractDateTime", () => {
   );
 
   it.each`
-    invalidAmount
-    ${"not-a-number"}
-    ${NaN}
-    ${null}
-    ${undefined}
-    ${true}
-    ${false}
-    ${""}
+    invalidAmount     | label
+    ${"not-a-number"} | ${"'not-a-number'"}
+    ${NaN}            | ${"NaN"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
+    ${true}           | ${"true"}
+    ${false}          | ${"false"}
+    ${""}             | ${"''"}
   `(
-    "returns an empty string for an invalid amount: $invalidAmount",
+    "returns an empty string for an invalid amount: $label",
     ({ invalidAmount }) => {
       expect(
         subtractDateTime("2024-02-29T14:30", {
@@ -97,7 +97,7 @@ describe("subtractDateTime", () => {
     ${"2024-02-29T12:00:00"} | ${{ years: 1 }}   | ${"reject"}    | ${""}
     ${"2024-01-15T12:00:00"} | ${{ months: 1 }}  | ${"reject"}    | ${"2023-12-15T12:00:00"}
   `(
-    "returns $expected for $value - $units with overflow $overflow",
+    "returns '$expected' for $value - $units with overflow $overflow",
     ({ value, units, overflow, expected }) => {
       expect(subtractDateTime(value, units, { overflow })).toBe(expected);
     },

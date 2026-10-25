@@ -60,15 +60,15 @@ describe("parseWeekFromDate", () => {
   // weekStartsOn only names "monday" or "sunday"; any other value is invalid input, for every unit
   // (Temporal GetOption rejects a value outside its allowed list; undefined means the default).
   it.each`
-    weekStartsOn
-    ${"tuesday"}
-    ${"Monday"}
-    ${""}
-    ${null}
-    ${1}
-    ${true}
+    weekStartsOn | label
+    ${"tuesday"} | ${"'tuesday'"}
+    ${"Monday"}  | ${"'Monday'"}
+    ${""}        | ${"''"}
+    ${null}      | ${"null"}
+    ${1}         | ${"1"}
+    ${true}      | ${"true"}
   `(
-    "returns null for 2024-03-15 with invalid weekStartsOn $weekStartsOn",
+    "returns null for 2024-03-15 with invalid weekStartsOn $label",
     ({ weekStartsOn }) => {
       expect(parseWeekFromDate("2024-03-15", { weekStartsOn })).toBeNull();
     },

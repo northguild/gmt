@@ -97,7 +97,7 @@ describe("parseRecurrenceRule UNTIL", () => {
     ${"lower-case t and z"}             | ${"FREQ=DAILY;UNTIL=20240101t120000z"}
     ${"lower-case t"}                   | ${"FREQ=DAILY;UNTIL=20240101t120000"}
     ${"lower-case z"}                   | ${"FREQ=DAILY;UNTIL=20240101T120000z"}
-  `("returns null for $name: $input", ({ input }) => {
+  `("returns null for $name: '$input'", ({ input }) => {
     expect(parseRecurrenceRule(input)).toBeNull();
   });
 });
@@ -198,7 +198,7 @@ describe("parseRecurrenceRule sentinel", () => {
     ${"name with sign"}             | ${"FREQ=DAILY;+COUNT=1"}
     ${"inherited property name"}    | ${"FREQ=DAILY;constructor=1"}
     ${"__proto__ name"}             | ${"FREQ=DAILY;__proto__=1"}
-  `("returns null for $name: $input", ({ input }) => {
+  `("returns null for $name: '$input'", ({ input }) => {
     expect(parseRecurrenceRule(input)).toBeNull();
   });
 
@@ -236,7 +236,7 @@ describe("parseRecurrenceRule MUST NOT combinations (RFC 5545 3.3.10)", () => {
     ${"BYWEEKNO with HOURLY"}                        | ${"FREQ=HOURLY;BYWEEKNO=1"}
     ${"BYWEEKNO with SECONDLY"}                      | ${"FREQ=SECONDLY;BYWEEKNO=1"}
     ${"BYMONTHDAY with WEEKLY, negative"}            | ${"FREQ=WEEKLY;BYMONTHDAY=-1"}
-  `("returns null for $name: $input", ({ input }) => {
+  `("returns null for $name: '$input'", ({ input }) => {
     expect(parseRecurrenceRule(input)).toBeNull();
   });
 

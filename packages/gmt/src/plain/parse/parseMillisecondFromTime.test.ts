@@ -3,13 +3,12 @@ import { parseMillisecondFromTime } from "./parseMillisecondFromTime";
 
 describe("parseMillisecondFromTime", () => {
   it.each`
-    value             | expected
-    ${"12:30:45"}     | ${"000"}
-    ${"12:30:45.000"} | ${"000"}
-    ${"12:30:45.123"} | ${"123"}
-    ${"12:30:45.000"} | ${"000"}
-    ${"23:59:59.999"} | ${"999"}
-  `("returns $expected for $value", ({ value, expected }) => {
+    value             | expected | label
+    ${"12:30:45"}     | ${"000"} | ${"no fraction"}
+    ${"12:30:45.000"} | ${"000"} | ${"zero fraction"}
+    ${"12:30:45.123"} | ${"123"} | ${"fraction 123"}
+    ${"23:59:59.999"} | ${"999"} | ${"largest fraction"}
+  `("returns $expected for $value ($label)", ({ value, expected }) => {
     expect(parseMillisecondFromTime(value)).toBe(expected);
   });
 

@@ -132,7 +132,7 @@ describe("parseHttpDate", () => {
     ${"Fri, 15 Mar 2024 14:30:00 gmt"}
     ${"Fri, 32 Mar 2024 14:30:00 GMT"}
     ${"Fri, 15 Mar 2024 14:30 GMT"}
-  `("returns '' for invalid input $value", ({ value }: { value: string }) => {
+  `("returns '' for invalid input '$value'", ({ value }: { value: string }) => {
     expect(parseHttpDate(value)).toBe("");
   });
 

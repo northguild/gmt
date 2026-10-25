@@ -98,30 +98,27 @@ describe("intervalLengthUnix", () => {
   });
 
   it.each`
-    start             | end         | unit
-    ${NaN}            | ${86400000} | ${"hour"}
-    ${Infinity}       | ${86400000} | ${"hour"}
-    ${-Infinity}      | ${86400000} | ${"hour"}
-    ${1.5}            | ${86400000} | ${"hour"}
-    ${0}              | ${NaN}      | ${"hour"}
-    ${0}              | ${Infinity} | ${"hour"}
-    ${0}              | ${1.5}      | ${"hour"}
-    ${"not-a-number"} | ${86400000} | ${"hour"}
-    ${86400000}       | ${0}        | ${"hour"}
-    ${0}              | ${86400000} | ${"invalid"}
-    ${0}              | ${86400000} | ${""}
-    ${0}              | ${86400000} | ${"quarter"}
-    ${""}             | ${86400000} | ${"hour"}
-    ${0}              | ${""}       | ${"hour"}
-    ${0}              | ${2 ** 53}  | ${"hour"}
-    ${"   "}          | ${86400000} | ${"hour"}
-    ${-(2 ** 53)}     | ${0}        | ${"hour"}
-  `(
-    "returns null for invalid $start, $end, or $unit",
-    ({ start, end, unit }) => {
-      expect(intervalLengthUnix(start, end, unit)).toBeNull();
-    },
-  );
+    start             | end         | unit         | label
+    ${NaN}            | ${86400000} | ${"hour"}    | ${"NaN to 86400000 in 'hour'"}
+    ${Infinity}       | ${86400000} | ${"hour"}    | ${"Infinity to 86400000 in 'hour'"}
+    ${-Infinity}      | ${86400000} | ${"hour"}    | ${"-Infinity to 86400000 in 'hour'"}
+    ${1.5}            | ${86400000} | ${"hour"}    | ${"1.5 to 86400000 in 'hour'"}
+    ${0}              | ${NaN}      | ${"hour"}    | ${"0 to NaN in 'hour'"}
+    ${0}              | ${Infinity} | ${"hour"}    | ${"0 to Infinity in 'hour'"}
+    ${0}              | ${1.5}      | ${"hour"}    | ${"0 to 1.5 in 'hour'"}
+    ${"not-a-number"} | ${86400000} | ${"hour"}    | ${"'not-a-number' to 86400000 in 'hour'"}
+    ${86400000}       | ${0}        | ${"hour"}    | ${"86400000 to 0 in 'hour'"}
+    ${0}              | ${86400000} | ${"invalid"} | ${"0 to 86400000 in 'invalid'"}
+    ${0}              | ${86400000} | ${""}        | ${"0 to 86400000 in ''"}
+    ${0}              | ${86400000} | ${"quarter"} | ${"0 to 86400000 in 'quarter'"}
+    ${""}             | ${86400000} | ${"hour"}    | ${"'' to 86400000 in 'hour'"}
+    ${0}              | ${""}       | ${"hour"}    | ${"0 to '' in 'hour'"}
+    ${0}              | ${2 ** 53}  | ${"hour"}    | ${"0 to 2 ** 53 in 'hour'"}
+    ${"   "}          | ${86400000} | ${"hour"}    | ${"'   ' to 86400000 in 'hour'"}
+    ${-(2 ** 53)}     | ${0}        | ${"hour"}    | ${"-(2 ** 53) to 0 in 'hour'"}
+  `("returns null for invalid input $label", ({ start, end, unit }) => {
+    expect(intervalLengthUnix(start, end, unit)).toBeNull();
+  });
 
   // The title prints a string without quotes, so the numeric-string row is its own table.
   it.each`

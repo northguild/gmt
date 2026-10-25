@@ -356,28 +356,28 @@ describe("bucketRange", () => {
   });
 
   it.each`
-    unit         | description
-    ${"minute"}  | ${"a unit below hour"}
-    ${"year"}    | ${"a unit above month"}
-    ${""}        | ${"an empty string"}
-    ${undefined} | ${"absent"}
-    ${null}      | ${"null"}
-    ${1}         | ${"a number"}
-  `("returns an empty array when unit is $unit ($description)", ({ unit }) => {
+    unit         | description             | label
+    ${"minute"}  | ${"a unit below hour"}  | ${"'minute'"}
+    ${"year"}    | ${"a unit above month"} | ${"'year'"}
+    ${""}        | ${"an empty string"}    | ${"''"}
+    ${undefined} | ${"absent"}             | ${"undefined"}
+    ${null}      | ${"null"}               | ${"null"}
+    ${1}         | ${"a number"}           | ${"1"}
+  `("returns an empty array when unit is $label ($description)", ({ unit }) => {
     expect(
       bucketRange(rangeStart, rangeEnd, unit as "day", "America/New_York"),
     ).toEqual([]);
   });
 
   it.each`
-    timeZone          | description
-    ${"Invalid/Zone"} | ${"an unknown identifier"}
-    ${""}             | ${"an empty string"}
-    ${undefined}      | ${"absent"}
-    ${null}           | ${"null"}
-    ${123}            | ${"a number"}
+    timeZone          | description                | label
+    ${"Invalid/Zone"} | ${"an unknown identifier"} | ${"'Invalid/Zone'"}
+    ${""}             | ${"an empty string"}       | ${"''"}
+    ${undefined}      | ${"absent"}                | ${"undefined"}
+    ${null}           | ${"null"}                  | ${"null"}
+    ${123}            | ${"a number"}              | ${"123"}
   `(
-    "returns an empty array when timeZone is $timeZone ($description)",
+    "returns an empty array when timeZone is $label ($description)",
     ({ timeZone }) => {
       expect(
         bucketRange(rangeStart, rangeEnd, "day", timeZone as string),
@@ -386,16 +386,16 @@ describe("bucketRange", () => {
   );
 
   it.each`
-    start                     | end                      | description
-    ${"2024-06-15T03:00:00"}  | ${rangeEnd}              | ${"a zoneless start, which names no instant"}
-    ${rangeStart}             | ${"2024-06-18T03:00:00"} | ${"a zoneless end"}
-    ${"invalid"}              | ${rangeEnd}              | ${"an unparseable start"}
-    ${rangeStart}             | ${"invalid"}             | ${"an unparseable end"}
-    ${""}                     | ${rangeEnd}              | ${"an empty start"}
-    ${"2016-12-31T23:59:60Z"} | ${rangeEnd}              | ${"a leap-second start"}
-    ${"2024-06-15"}           | ${rangeEnd}              | ${"a date start"}
+    start                     | end                      | description                                   | label
+    ${"2024-06-15T03:00:00"}  | ${rangeEnd}              | ${"a zoneless start, which names no instant"} | ${"'2024-06-15T03:00:00'"}
+    ${rangeStart}             | ${"2024-06-18T03:00:00"} | ${"a zoneless end"}                           | ${"rangeStart"}
+    ${"invalid"}              | ${rangeEnd}              | ${"an unparseable start"}                     | ${"'invalid'"}
+    ${rangeStart}             | ${"invalid"}             | ${"an unparseable end"}                       | ${"rangeStart"}
+    ${""}                     | ${rangeEnd}              | ${"an empty start"}                           | ${"''"}
+    ${"2016-12-31T23:59:60Z"} | ${rangeEnd}              | ${"a leap-second start"}                      | ${"'2016-12-31T23:59:60Z'"}
+    ${"2024-06-15"}           | ${rangeEnd}              | ${"a date start"}                             | ${"'2024-06-15'"}
   `(
-    "returns an empty array for $start to $end ($description)",
+    "returns an empty array for $label to $end ($description)",
     ({ start, end }) => {
       expect(bucketRange(start, end, "day", "America/New_York")).toEqual([]);
     },

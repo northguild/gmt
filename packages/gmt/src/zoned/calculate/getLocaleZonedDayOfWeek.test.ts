@@ -153,12 +153,12 @@ describe("getLocaleZonedDayOfWeek", () => {
   });
 
   it.each`
-    locale
-    ${"not-a-locale-!!"}
-    ${""}
-    ${null}
-    ${undefined}
-  `("returns null for invalid locale $locale", ({ locale }) => {
+    locale               | label
+    ${"not-a-locale-!!"} | ${"'not-a-locale-!!'"}
+    ${""}                | ${"''"}
+    ${null}              | ${"null"}
+    ${undefined}         | ${"undefined"}
+  `("returns null for invalid locale $label", ({ locale }) => {
     expect(
       getLocaleZonedDayOfWeek("2024-02-03T12:00:00+00:00[UTC]", locale),
     ).toBeNull();

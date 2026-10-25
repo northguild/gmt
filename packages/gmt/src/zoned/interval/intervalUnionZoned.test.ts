@@ -87,7 +87,7 @@ describe("intervalUnionZoned", () => {
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-04-01T00:00:60+00:00[UTC]"} | ${"2024-12-31T23:59:59+00:00[UTC]"}
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-06-30T23:59:59+00:00[UTC]"} | ${"2024-04-01T00:00:00+00:00[UTC]"} | ${"2024-12-31T23:59:60+00:00[UTC]"}
   `(
-    "returns null for malformed zoned datetime: $aStart, $aEnd, $bStart, $bEnd",
+    "returns null for malformed zoned datetime: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalUnionZoned(aStart, aEnd, bStart, bEnd)).toBeNull();
     },

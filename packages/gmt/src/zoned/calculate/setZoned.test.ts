@@ -28,17 +28,17 @@ describe("setZoned", () => {
   });
 
   it.each`
-    invalidValue
-    ${"invalid-zoned-datetime"}
-    ${"2024-02-30T12:00:00-05:00[America/New_York]"}
-    ${"2024-03-10T12:00:00"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${12}
-    ${true}
+    invalidValue                                     | label
+    ${"invalid-zoned-datetime"}                      | ${"'invalid-zoned-datetime'"}
+    ${"2024-02-30T12:00:00-05:00[America/New_York]"} | ${"'2024-02-30T12:00:00-05:00[America/New_York]'"}
+    ${"2024-03-10T12:00:00"}                         | ${"'2024-03-10T12:00:00'"}
+    ${""}                                            | ${"''"}
+    ${null}                                          | ${"null"}
+    ${undefined}                                     | ${"undefined"}
+    ${12}                                            | ${"12"}
+    ${true}                                          | ${"true"}
   `(
-    "returns an empty string for an invalid zoned datetime $invalidValue",
+    "returns an empty string for an invalid zoned datetime $label",
     ({ invalidValue }) => {
       expect(setZoned(invalidValue, { hour: 9 })).toBe("");
     },
@@ -50,7 +50,7 @@ describe("setZoned", () => {
     ${"2024-01-31T12:00:00-05:00[America/New_York]"} | ${{ month: 2 }} | ${"constrain"} | ${"2024-02-29T12:00:00-05:00[America/New_York]"}
     ${"2024-01-31T12:00:00-05:00[America/New_York]"} | ${{ month: 2 }} | ${"reject"}    | ${""}
   `(
-    "returns $expected for $value with fields $fields and overflow $overflow",
+    "returns '$expected' for $value with fields $fields and overflow $overflow",
     ({ value, fields, overflow, expected }) => {
       expect(
         setZoned(
@@ -86,7 +86,7 @@ describe("setZoned", () => {
     ${"Europe/Berlin"}   | ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}   | ${"ignore"}  | ${""}
     ${"Europe/Berlin"}   | ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}   | ${"prefer"}  | ${"2024-10-27T02:00:00+01:00[Europe/Berlin]"}
   `(
-    "with disambiguation reject and offset $offset, returns $expected for the fall-back overlap in $timeZone",
+    "with disambiguation reject and offset $offset, returns '$expected' for the fall-back overlap in $timeZone",
     ({ value, offset, expected }) => {
       const optionsArg =
         offset === undefined
@@ -138,7 +138,7 @@ describe("setZoned", () => {
     ${"Europe/Berlin"}   | ${"2024-03-31T01:00:00+01:00[Europe/Berlin]"}   | ${{ hour: 2, minute: 30 }} | ${"later"}      | ${"2024-03-31T03:30:00+02:00[Europe/Berlin]"}
     ${"Europe/Berlin"}   | ${"2024-03-31T01:00:00+01:00[Europe/Berlin]"}   | ${{ hour: 2, minute: 30 }} | ${"reject"}     | ${""}
   `(
-    "resolves spring-forward gap for $value with fields $fields and disambiguation $disambiguation to $expected",
+    "resolves spring-forward gap for $value with fields $fields and disambiguation $disambiguation to '$expected'",
     ({ value, fields, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined ? undefined : { disambiguation };
@@ -173,7 +173,7 @@ describe("setZoned", () => {
     ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${"ignore"}  | ${"later"}      | ${"2024-10-27T02:45:00+01:00[Europe/Berlin]"}
     ${"Europe/Berlin"}   | ${"2024-10-26T02:45:00+02:00[Europe/Berlin]"}   | ${"ignore"}  | ${"reject"}     | ${""}
   `(
-    "resolves fall-back overlap for $value + day:+1 with offset $offset and disambiguation $disambiguation to $expected",
+    "resolves fall-back overlap for $value + day:+1 with offset $offset and disambiguation $disambiguation to '$expected'",
     ({ value, offset, disambiguation, expected }) => {
       const optionsArg =
         disambiguation === undefined && offset === undefined
@@ -200,7 +200,7 @@ describe("setZoned at the maximum instant", () => {
     ${"+275760-09-12T10:00:00+10:00[Australia/Sydney]"} | ${{ day: 13 }}  | ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"}
     ${"+275760-09-13T08:00:00+10:00[Australia/Sydney]"} | ${{ hour: 11 }} | ${""}
   `(
-    "sets $fields on $value giving $expected",
+    "sets $fields on $value giving '$expected'",
     ({ value, fields, expected }) => {
       expect(setZoned(value, fields)).toBe(expected);
     },

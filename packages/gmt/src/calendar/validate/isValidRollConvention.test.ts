@@ -14,21 +14,21 @@ describe("isValidRollConvention", () => {
   });
 
   it.each`
-    convention              | description
-    ${"Following"}          | ${"wrong case"}
-    ${"modified_following"} | ${"snake case"}
-    ${"modifiedfollowing"}  | ${"lower case"}
-    ${"eom"}                | ${"an abbreviation"}
-    ${"nearest"}            | ${"a convention GMT does not implement"}
-    ${""}                   | ${"an empty string"}
-    ${" following "}        | ${"padded whitespace"}
-    ${null}                 | ${"null"}
-    ${undefined}            | ${"undefined"}
-    ${1}                    | ${"a number"}
-    ${true}                 | ${"a boolean"}
-    ${{}}                   | ${"an object"}
-    ${[]}                   | ${"an array"}
-  `("returns false for $description $convention", ({ convention }) => {
+    convention              | description                              | label
+    ${"Following"}          | ${"wrong case"}                          | ${"'Following'"}
+    ${"modified_following"} | ${"snake case"}                          | ${"'modified_following'"}
+    ${"modifiedfollowing"}  | ${"lower case"}                          | ${"'modifiedfollowing'"}
+    ${"eom"}                | ${"an abbreviation"}                     | ${"'eom'"}
+    ${"nearest"}            | ${"a convention GMT does not implement"} | ${"'nearest'"}
+    ${""}                   | ${"an empty string"}                     | ${"''"}
+    ${" following "}        | ${"padded whitespace"}                   | ${"' following '"}
+    ${null}                 | ${"null"}                                | ${"null"}
+    ${undefined}            | ${"undefined"}                           | ${"undefined"}
+    ${1}                    | ${"a number"}                            | ${"1"}
+    ${true}                 | ${"a boolean"}                           | ${"true"}
+    ${{}}                   | ${"an object"}                           | ${"{}"}
+    ${[]}                   | ${"an array"}                            | ${"[]"}
+  `("returns false for $description $label", ({ convention }) => {
     expect(isValidRollConvention(convention)).toBe(false);
   });
 });

@@ -34,7 +34,7 @@ describe("addDuration", () => {
     a                   | b
     ${"not a duration"} | ${"P1D"}
     ${""}               | ${"P1D"}
-  `('returns "" when either operand is invalid: $a + $b', ({ a, b }) => {
+  `("returns '' when either operand is invalid: '$a' + '$b'", ({ a, b }) => {
     expect(addDuration(a, b)).toBe("");
   });
 });

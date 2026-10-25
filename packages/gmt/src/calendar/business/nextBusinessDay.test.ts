@@ -70,16 +70,16 @@ describe("nextBusinessDay", () => {
   });
 
   it.each`
-    value                    | description
-    ${"invalid"}             | ${"an unparseable date"}
-    ${"2024-02-30"}          | ${"a date that does not exist"}
-    ${"2024-07-03T00:00:00"} | ${"a datetime"}
-    ${""}                    | ${"an empty string"}
-    ${" 2024-07-03 "}        | ${"padded whitespace"}
-    ${null}                  | ${"null"}
-    ${undefined}             | ${"undefined"}
-    ${12}                    | ${"a number"}
-  `("returns an empty string for $description $value", ({ value }) => {
+    value                    | description                     | label
+    ${"invalid"}             | ${"an unparseable date"}        | ${"'invalid'"}
+    ${"2024-02-30"}          | ${"a date that does not exist"} | ${"'2024-02-30'"}
+    ${"2024-07-03T00:00:00"} | ${"a datetime"}                 | ${"'2024-07-03T00:00:00'"}
+    ${""}                    | ${"an empty string"}            | ${"''"}
+    ${" 2024-07-03 "}        | ${"padded whitespace"}          | ${"' 2024-07-03 '"}
+    ${null}                  | ${"null"}                       | ${"null"}
+    ${undefined}             | ${"undefined"}                  | ${"undefined"}
+    ${12}                    | ${"a number"}                   | ${"12"}
+  `("returns an empty string for $description $label", ({ value }) => {
     expect(nextBusinessDay(value as never, usIndependence)).toBe("");
   });
 

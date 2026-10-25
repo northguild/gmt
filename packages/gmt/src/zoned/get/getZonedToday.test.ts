@@ -70,13 +70,13 @@ describe("getZonedToday", () => {
   );
 
   it.each`
-    invalidTimeZone
-    ${"Mars/Olympus"}
-    ${""}
-    ${null}
-    ${undefined}
+    invalidTimeZone   | label
+    ${"Mars/Olympus"} | ${"'Mars/Olympus'"}
+    ${""}             | ${"''"}
+    ${null}           | ${"null"}
+    ${undefined}      | ${"undefined"}
   `(
-    "returns an empty string for invalid timeZone $invalidTimeZone",
+    "returns an empty string for invalid timeZone $label",
     ({ invalidTimeZone }) => {
       expect(getZonedToday(invalidTimeZone as never)).toBe("");
     },

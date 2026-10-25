@@ -49,7 +49,7 @@ describe("formatEdifactDate", () => {
       ${"-000001-12-31"}             | ${"a year before 0000: CCYY has no sign"}
       ${"2024-06-15/2024-06-20"}     | ${"an interval: use formatEdifactDatePeriod"}
       ${""}                          | ${"an empty value"}
-    `("returns '' for $value ($reads)", ({ value }) => {
+    `("returns '' for '$value' ($reads)", ({ value }) => {
       expect(formatEdifactDate(value, "102")).toBe("");
     });
   });

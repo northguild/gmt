@@ -27,7 +27,7 @@ describe("intervalXorUtc", () => {
     ${"2024-12-31T17:00:00Z"} | ${"2024-01-01T09:00:00Z"} | ${"2024-06-01T12:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${[]}
     ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-06-15T12:00:00Z"} | ${"2024-06-10T12:00:00Z"} | ${[]}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed intervals $aStart to $aEnd and $bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalXorUtc(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },
@@ -44,29 +44,35 @@ describe("intervalXorUtc", () => {
     ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${"invalid"}
     ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${""}
   `(
-    "returns [] for malformed UTC datetime: $aStart, $aEnd, $bStart, $bEnd",
+    "returns [] for malformed UTC datetime: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalXorUtc(aStart, aEnd, bStart, bEnd)).toEqual([]);
     },
   );
 
   it.each`
-    aStart                    | aEnd                      | bStart                    | bEnd
-    ${null}                   | ${"2024-06-30T12:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${"2024-12-31T17:00:00Z"}
-    ${"2024-01-01T09:00:00Z"} | ${undefined}              | ${"2024-07-01T13:00:00Z"} | ${"2024-12-31T17:00:00Z"}
-    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${null}                   | ${"2024-12-31T17:00:00Z"}
-    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${undefined}
-  `("returns [] for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalXorUtc(aStart, aEnd, bStart, bEnd)).toEqual([]);
-  });
+    aStart                    | aEnd                      | bStart                    | bEnd                      | label
+    ${null}                   | ${"2024-06-30T12:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${"aStart is null"}
+    ${"2024-01-01T09:00:00Z"} | ${undefined}              | ${"2024-07-01T13:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${"aEnd is undefined"}
+    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${null}                   | ${"2024-12-31T17:00:00Z"} | ${"bStart is null"}
+    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${undefined}              | ${"bEnd is undefined"}
+  `(
+    "returns [] for non-string input when $label",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalXorUtc(aStart, aEnd, bStart, bEnd)).toEqual([]);
+    },
+  );
 
   it.each`
-    aStart                    | aEnd                      | bStart                    | bEnd
-    ${"2024-06-30T23:59:60Z"} | ${"2024-12-31T17:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${"2024-12-31T17:00:00Z"}
-    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T23:59:60Z"} | ${"2024-07-01T13:00:00Z"} | ${"2024-12-31T17:00:00Z"}
-    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-06-30T23:59:60Z"} | ${"2024-12-31T17:00:00Z"}
-    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${"2024-06-30T23:59:60Z"}
-  `("returns [] for leap second input", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalXorUtc(aStart, aEnd, bStart, bEnd)).toEqual([]);
-  });
+    aStart                    | aEnd                      | bStart                    | bEnd                      | label
+    ${"2024-06-30T23:59:60Z"} | ${"2024-12-31T17:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${"aStart is a leap second"}
+    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T23:59:60Z"} | ${"2024-07-01T13:00:00Z"} | ${"2024-12-31T17:00:00Z"} | ${"aEnd is a leap second"}
+    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-06-30T23:59:60Z"} | ${"2024-12-31T17:00:00Z"} | ${"bStart is a leap second"}
+    ${"2024-01-01T09:00:00Z"} | ${"2024-06-30T12:00:00Z"} | ${"2024-07-01T13:00:00Z"} | ${"2024-06-30T23:59:60Z"} | ${"bEnd is a leap second"}
+  `(
+    "returns [] for leap second input when $label",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalXorUtc(aStart, aEnd, bStart, bEnd)).toEqual([]);
+    },
+  );
 });

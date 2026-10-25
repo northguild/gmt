@@ -45,7 +45,7 @@ describe("cycleDateTime", () => {
     ${"2024-01-31T09:00:00"} | ${"month"} | ${1}   | ${undefined} | ${"2024-02-29T09:00:00"}
     ${"2024-01-31T09:00:00"} | ${"month"} | ${1}   | ${"reject"}  | ${""}
   `(
-    "returns $expected for $value cycling $field by $amount with overflow $overflow",
+    "returns '$expected' for $value cycling $field by $amount with overflow $overflow",
     ({ value, field, amount, overflow, expected }) => {
       expect(cycleDateTime(value, field, amount, { overflow })).toBe(expected);
     },
@@ -69,21 +69,21 @@ describe("cycleDateTime", () => {
     ${"week"}
     ${"invalid"}
     ${""}
-  `("returns an empty string for an invalid field $field", ({ field }) => {
+  `("returns an empty string for an invalid field '$field'", ({ field }) => {
     expect(cycleDateTime("2024-06-15T09:30:00", field, 1)).toBe("");
   });
 
   it.each`
-    invalidValue
-    ${"not-a-datetime"}
-    ${"2024-02-30T09:00:00"}
-    ${""}
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
+    invalidValue             | label
+    ${"not-a-datetime"}      | ${"'not-a-datetime'"}
+    ${"2024-02-30T09:00:00"} | ${"'2024-02-30T09:00:00'"}
+    ${""}                    | ${"''"}
+    ${null}                  | ${"null"}
+    ${undefined}             | ${"undefined"}
+    ${123}                   | ${"123"}
+    ${true}                  | ${"true"}
   `(
-    "returns an empty string for an invalid value $invalidValue",
+    "returns an empty string for an invalid value $label",
     ({ invalidValue }) => {
       expect(cycleDateTime(invalidValue, "hour", 1)).toBe("");
     },
@@ -91,18 +91,18 @@ describe("cycleDateTime", () => {
 
   // `amount` must be a finite number (isValidAmount); anything else is invalid input, never 0.
   it.each`
-    amount
-    ${null}
-    ${undefined}
-    ${""}
-    ${"1"}
-    ${[]}
-    ${{}}
-    ${true}
-    ${Number.NaN}
-    ${Number.POSITIVE_INFINITY}
+    amount                      | label
+    ${null}                     | ${"null"}
+    ${undefined}                | ${"undefined"}
+    ${""}                       | ${"''"}
+    ${"1"}                      | ${"'1'"}
+    ${[]}                       | ${"[]"}
+    ${{}}                       | ${"{}"}
+    ${true}                     | ${"true"}
+    ${Number.NaN}               | ${"NaN"}
+    ${Number.POSITIVE_INFINITY} | ${"Number.POSITIVE_INFINITY"}
   `(
-    "returns an empty string for a non-finite-number amount $amount",
+    "returns an empty string for a non-finite-number amount $label",
     ({ amount }) => {
       expect(cycleDateTime("2024-06-15T09:30:00", "hour", amount)).toBe("");
     },

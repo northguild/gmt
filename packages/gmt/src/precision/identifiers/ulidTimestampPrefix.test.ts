@@ -27,21 +27,21 @@ describe("ulidTimestampPrefix", () => {
   });
 
   it.each`
-    input                                 | reason
-    ${"+010889-08-02T05:31:50.657Z"}      | ${"past the exclusive end 2^48 ms"}
-    ${"1969-12-31T23:59:59.999Z"}         | ${"before the Unix epoch"}
-    ${"1969-12-31T23:59:59.9999999Z"}     | ${"-0.0001 ms floors to -1 ms, not truncated to 0"}
-    ${"1970-01-01T00:00:00+01:00"}        | ${"zoned/offset input an hour before the epoch"}
-    ${"-000001-01-01T00:00:00Z"}          | ${"far before the epoch"}
-    ${"+010889-08-02T14:31:50.657+09:00"} | ${"past the exclusive end, expressed with an offset"}
-    ${"2024-01-01T00:00:00"}              | ${"no offset"}
-    ${"invalid"}                          | ${"not a date"}
-    ${""}                                 | ${"empty"}
-    ${42}                                 | ${"number"}
-    ${undefined}                          | ${"undefined"}
-    ${null}                               | ${"null"}
-    ${{}}                                 | ${"object"}
-  `("returns an empty string for $input ($reason)", ({ input }) => {
+    input                                 | reason                                                | label
+    ${"+010889-08-02T05:31:50.657Z"}      | ${"past the exclusive end 2^48 ms"}                   | ${"'+010889-08-02T05:31:50.657Z'"}
+    ${"1969-12-31T23:59:59.999Z"}         | ${"before the Unix epoch"}                            | ${"'1969-12-31T23:59:59.999Z'"}
+    ${"1969-12-31T23:59:59.9999999Z"}     | ${"-0.0001 ms floors to -1 ms, not truncated to 0"}   | ${"'1969-12-31T23:59:59.9999999Z'"}
+    ${"1970-01-01T00:00:00+01:00"}        | ${"zoned/offset input an hour before the epoch"}      | ${"'1970-01-01T00:00:00+01:00'"}
+    ${"-000001-01-01T00:00:00Z"}          | ${"far before the epoch"}                             | ${"'-000001-01-01T00:00:00Z'"}
+    ${"+010889-08-02T14:31:50.657+09:00"} | ${"past the exclusive end, expressed with an offset"} | ${"'+010889-08-02T14:31:50.657+09:00'"}
+    ${"2024-01-01T00:00:00"}              | ${"no offset"}                                        | ${"'2024-01-01T00:00:00'"}
+    ${"invalid"}                          | ${"not a date"}                                       | ${"'invalid'"}
+    ${""}                                 | ${"empty"}                                            | ${"''"}
+    ${42}                                 | ${"number"}                                           | ${"42"}
+    ${undefined}                          | ${"undefined"}                                        | ${"undefined"}
+    ${null}                               | ${"null"}                                             | ${"null"}
+    ${{}}                                 | ${"object"}                                           | ${"{}"}
+  `("returns an empty string for $label ($reason)", ({ input }) => {
     expect(ulidTimestampPrefix(input)).toBe("");
   });
 

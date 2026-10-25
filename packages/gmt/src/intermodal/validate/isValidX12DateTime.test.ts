@@ -15,7 +15,7 @@ describe("isValidX12DateTime", () => {
     ${"RTS"} | ${"20240615143060"} | ${false} | ${"second 60"}
     ${"DT"}  | ${""}               | ${false} | ${"an empty value"}
   `(
-    "returns $expected for $value under $code ($reads), as parseX12DateTime reads it",
+    "returns $expected for '$value' under $code ($reads), as parseX12DateTime reads it",
     ({ code, value, expected }) => {
       expect(isValidX12DateTime(value, code)).toBe(expected);
       expect(parseX12DateTime(value, code) !== "").toBe(expected);

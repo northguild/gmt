@@ -26,7 +26,7 @@ describe("intervalXorTime", () => {
     ${"17:00:00"} | ${"09:00:00"} | ${"12:00:00"} | ${"13:00:00"} | ${[]}
     ${"09:00:00"} | ${"12:00:00"} | ${"11:00:00"} | ${"10:00:00"} | ${[]}
   `(
-    "returns $expected for reversed intervals",
+    "returns $expected for reversed intervals: A=$aStart to $aEnd, B=$bStart to $bEnd",
     ({ aStart, aEnd, bStart, bEnd, expected }) => {
       expect(intervalXorTime(aStart, aEnd, bStart, bEnd)).toEqual(expected);
     },
@@ -43,7 +43,7 @@ describe("intervalXorTime", () => {
     ${"09:00:00"} | ${"12:00:00"} | ${"13:00:00"} | ${"invalid"}
     ${"09:00:00"} | ${"12:00:00"} | ${"13:00:00"} | ${""}
   `(
-    "returns [] for malformed time: $aStart, $aEnd, $bStart, $bEnd",
+    "returns [] for malformed time: '$aStart', '$aEnd', '$bStart', '$bEnd'",
     ({ aStart, aEnd, bStart, bEnd }) => {
       expect(intervalXorTime(aStart, aEnd, bStart, bEnd)).toEqual([]);
     },
@@ -55,7 +55,10 @@ describe("intervalXorTime", () => {
     ${"09:00:00"} | ${undefined}  | ${"13:00:00"} | ${"17:00:00"}
     ${"09:00:00"} | ${"12:00:00"} | ${null}       | ${"17:00:00"}
     ${"09:00:00"} | ${"12:00:00"} | ${"13:00:00"} | ${undefined}
-  `("returns [] for non-string input", ({ aStart, aEnd, bStart, bEnd }) => {
-    expect(intervalXorTime(aStart, aEnd, bStart, bEnd)).toEqual([]);
-  });
+  `(
+    "returns [] for non-string input: A=$aStart to $aEnd, B=$bStart to $bEnd",
+    ({ aStart, aEnd, bStart, bEnd }) => {
+      expect(intervalXorTime(aStart, aEnd, bStart, bEnd)).toEqual([]);
+    },
+  );
 });

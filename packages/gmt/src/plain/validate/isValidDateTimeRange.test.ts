@@ -21,7 +21,7 @@ describe("isValidDateTimeRange", () => {
     ${"2024-01-01T00:00:00"} | ${"2024-01-01T00:00:00"}     | ${true}    | ${true}
     ${"2024-01-01T00:00:00"} | ${"2024-01-01T00:00:00.000"} | ${true}    | ${true}
   `(
-    "returns $expected for equal datetimes $value1 (allowEqual=$allowEqual)",
+    "returns $expected for equal datetimes $value1 and $value2 (allowEqual=$allowEqual)",
     ({ value1, value2, allowEqual, expected }) => {
       expect(
         isValidDateTimeRange({ value1, value2, options: { allowEqual } }),
@@ -53,7 +53,7 @@ describe("isValidDateTimeRange", () => {
     ${"invalid"}             | ${"invalid"}
     ${""}                    | ${""}
   `(
-    "returns false for malformed datetime: $value1, $value2",
+    "returns false for malformed datetime: '$value1', '$value2'",
     ({ value1, value2 }) => {
       expect(isValidDateTimeRange({ value1, value2 })).toBe(false);
     },

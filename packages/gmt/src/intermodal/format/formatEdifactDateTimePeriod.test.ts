@@ -54,7 +54,7 @@ describe("formatEdifactDateTimePeriod", () => {
       ${"2024-06-15T14:30"}     | ${"+010000-01-01T00:00"}  | ${"an end in year 10000"}
       ${"2024-06-15T14:30"}     | ${"PT5H"}                 | ${"a duration is not an end"}
       ${"2024-06-15T14:30"}     | ${""}                     | ${"an empty end"}
-    `("returns '' for $start to $end ($reads)", ({ start, end }) => {
+    `("returns '' for $start to '$end' ($reads)", ({ start, end }) => {
       expect(formatEdifactDateTimePeriod(start, end, "719")).toBe("");
     });
   });
