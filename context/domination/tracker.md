@@ -123,13 +123,13 @@ with the `Position` type, ahead of the remaining realms.
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm
 story built on an API still carrying a cross-namespace defect inherits it.
 
-**The later Core primitives are built just before their first consumer.** `CORE-55` (operating
-hours) sits before the Transport rows that need it. Core primitives
-carry high ID numbers because they
-were added after the realm IDs were assigned, which is exactly why the `#` column and not the ID
-is the build order. `CORE-76` (hours of work) is Core because duty rules in many industries run on it;
-no story names it as a dependency, so it takes the slot of its first intended consumer. Its
-engine lives in `workforce/` (`@northguild/gmt/workforce`), a cross-industry layer for
+**The later Core primitives are built just before their first consumer.** `CORE-54` (holiday
+rules) sits at #32, right before `CORE-84`, whose ordinal `BYDAY` uses it. Core primitives carry
+high ID numbers because they were added after the realm IDs were assigned, which is exactly why
+the `#` column and not the ID is the build order. `CORE-55` (operating hours) and `CORE-76`
+(hours of work) were placed for consumers this epic no longer has, and no remaining story names
+either as a dependency; both stay where they are. `CORE-76` is Core because duty rules in many
+industries run on it. Its engine lives in `workforce/` (`@northguild/gmt/workforce`), a cross-industry layer for
 workforce management that other industries draw on and declare in Dox: Transport now, others
 as their stories ship.
 `CORE-78` (the UTC timestamp check) is one function that no story consumes, so it takes the

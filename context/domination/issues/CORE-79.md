@@ -75,6 +75,7 @@ This story adds the `Position` input type and no function a reader could try. Th
 ### Notes for consumer stories
 
 - Every consumer calls `readPosition(position)` once, first, uses only the returned object, and returns its own sentinel on `null`. A consumer whose answer differs at ±180, at a pole or at `-0` says so in its own JSDoc and tests.
+- **No story in this epic takes a `Position` yet.** The type stays internal until one does.
 - **The first consumer** takes the export (moving `Position` from `internal/position.ts` to `types/position.ts`), the root-import type row and the `minor` changeset (D1).
 - A function that derives a value from the longitude says what it returns for `-0` (`Math.round(-0 / 15)` is `-0`, not `0`, unless normalised).
 - A function that uses only the longitude returns its sentinel for an invalid latitude too (D2).

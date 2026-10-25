@@ -141,9 +141,9 @@ entry per category barrel, mirrored in `typesVersions`).
 | `interval/`  | CORE-6         | Overlap, intersect, clamp, subtract, merge, split, sum                     |
 | `timescale/` | SPA-48, MAR-16, SPA-46 | TAI − UTC, leap seconds, TAI and TAI64 |
 
-These are universal primitives. `interval/` and `calendar/` in particular are consumed by
-laytime, hours-of-work rules, free time, market sessions and medication windows — five realms
-that would otherwise each implement interval arithmetic and disagree about boundaries.
+These are universal primitives. `interval/` and `calendar/` in particular serve hours-of-work
+rules and free time, which would otherwise each implement interval arithmetic and disagree about
+boundaries, and any caller's own windows.
 `CORE-54` … `CORE-56` exist for the same reason: holiday rules, weekly opening windows and
 identifier timestamps would otherwise each be written several times.
 
