@@ -45,13 +45,31 @@ export function timeZoneEqualsByHost(
 }
 
 /**
+ * The identifiers ECMA-402 §6.5 resolves to `"UTC"` by name, with no time zone data: the last
+ * step of AvailableNamedTimeZoneIdentifiers. The polyfill hands them back in this casing.
+ */
+const RESOLVE_TO_UTC: ReadonlySet<string> = new Set([
+  "Etc/UTC",
+  "Etc/GMT",
+  "GMT",
+]);
+
+/** The identifier, or `"UTC"` when ECMA-402 §6.5 names it as one that resolves to `"UTC"`. */
+function utcByName(id: string): string {
+  return RESOLVE_TO_UTC.has(id) ? "UTC" : id;
+}
+
+/**
  * Whether two zoned values are in the same time zone by TC39 TimeZoneEquals: the same
  * identifier, or two identifiers with one primary identifier (`UTC` and `Etc/UTC`,
  * `Asia/Kolkata` and `Asia/Calcutta`).
  *
  * The polyfill's `ZonedDateTime#equals` answers it, except where probe D19 fails: there the
- * polyfill cannot find a non-primary identifier's primary, so GMT asks the host's own `Temporal`
- * when it has one, and keeps the polyfill's answer when it has none (temporalCompat README, D19).
+ * polyfill cannot find a non-primary identifier's primary. GMT then resolves the names ECMA-402
+ * §6.5 sends to `"UTC"` itself, which needs no time zone data, and asks the host's own `Temporal`
+ * for any other pair. With no host `Temporal` (Safari 27) the polyfill's answer stands for the
+ * IANA links such as `Asia/Calcutta`: no Intl API there names their primary identifier
+ * (temporalCompat README, D19).
  *
  * @param one a zoned value
  * @param two a zoned value
@@ -67,5 +85,6 @@ export function timeZoneEquals(
   const byPolyfill = (): boolean =>
     new Temporal.ZonedDateTime(0n, a).equals(new Temporal.ZonedDateTime(0n, b));
   if (!isTimeZoneEqualsCompatNeeded()) return byPolyfill();
+  if (utcByName(a) === utcByName(b)) return true;
   return timeZoneEqualsByHost(hostTemporal(), a, b) ?? byPolyfill();
 }

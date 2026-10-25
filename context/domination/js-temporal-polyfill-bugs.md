@@ -2316,9 +2316,18 @@ Probe: `String(new Temporal.ZonedDateTime(0n, "Etc/UTC").equals(new Temporal.Zon
 
 `diffZoned`, `diffZonedAsDuration` and `intervalLengthZoned` refuse a calendar unit (day or larger) between two time
 zones, as Temporal's DifferenceTemporalZonedDateTime does, and return the sentinel. On the polyfill in JavaScriptCore the
-pairs above counted as two zones, so `diffZoned("…[UTC]", "…[Etc/UTC]", "days")` was `null`. With D19, GMT asks the host's
-own `Temporal.ZonedDateTime#equals` where the probe fails and `globalThis.Temporal` exists (WebKit 26.6); on a host without
-`Temporal` (Safari 27) the polyfill's answer stands and the two identifiers remain two zones. GMT's other identifier
+pairs above counted as two zones, so `diffZoned("…[UTC]", "…[Etc/UTC]", "days")` was `null`. With D19, where the probe
+fails, GMT first resolves `Etc/UTC`, `Etc/GMT` and `GMT` to `UTC` by name, the last step of ECMA-402
+AvailableNamedTimeZoneIdentifiers, which needs no time zone data and holds on every host, Safari 27 included. For any
+other pair it asks the host's own `Temporal.ZonedDateTime#equals` when `globalThis.Temporal` exists (WebKit 26.6).
+
+On a host without `Temporal` (Safari 27) the polyfill's answer stands for every other pair, and the IANA links
+(`Asia/Calcutta` and `Asia/Kolkata`, and the links to `Etc/UTC` such as `Etc/UCT`) remain two zones. This is a limit of
+the engine, not a gap in the workaround: resolving a link needs the IANA `backward`, `backzone` and `zone.tab` data,
+`resolvedOptions().timeZone` keeps the identifier as written, `supportedValuesOf` lists only primary identifiers, and no
+other Intl output names a link's primary (two zones with the same rules since 1970, such as `Europe/Oslo` and
+`Europe/Berlin`, are still two primary identifiers, so comparing offsets cannot stand in for it). GMT owns no time zone
+data, so those pairs wait for the polyfill fix or a WebKit `Temporal`. GMT's other identifier
 comparisons (`areZonedEqual`, `areZonedEqualBy`, `formatZonedRange`, `mapZonedDatesInRange` and the same-zone fast paths)
 compare identifiers as written by their documented contract and are not affected. The `diffZoned` and
 `intervalLengthZoned` rows run unmocked, so they exercise the real path on the WebKit control pass.

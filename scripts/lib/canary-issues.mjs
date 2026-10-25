@@ -75,6 +75,8 @@ const TRIAGE_PARAGRAPH =
   "Each row failed on the native engine and passed on @js-temporal/polyfill in the same runtime. Decide which it is: a GMT defect (fix it), a polyfill defect or an engine or specification defect (record it in context/domination/js-temporal-polyfill-bugs.md and tag the test in scripts/lib/native-suite-tags.mjs). Never skip the test.";
 const HOST_PARAGRAPH =
   "Each row failed on the native engine and on @js-temporal/polyfill in the same runtime, so the cause is the runtime (its locale or time zone data, or its setup), not Temporal. Find what the runtime lacks, then add or widen a group in KNOWN_HOST_FAILURES in scripts/lib/native-suite-tags.mjs with that reason — one group per cause, never one entry per test — or fix the test if it depends on the host by mistake. Never skip the test.";
+const CONTROL_PARAGRAPH =
+  "Each row failed on @js-temporal/polyfill and passed on the native engine in the same runtime. GMT ships the polyfill, so this is a wrong answer GMT gives users of that runtime. Find the polyfill defect, record it in context/domination/js-temporal-polyfill-bugs.md and fix GMT's answer with a temporalCompat workaround, or fix GMT if the defect is its own. There is no tag for these rows. Never skip the test.";
 const FORCED_NATIVE_ROW = {
   file: "src/dry-run.test.ts",
   test: "dry run: forced failure (no real test failed)",
@@ -141,11 +143,12 @@ const FORCED_ROW = {
  *   source: string, status: "ran", leg: "node" | "chromium" | "firefox" | "webkit", engine: string,
  *   runtime: { node: string, vitest: string, playwright: string | null },
  *   counts: { files: number, tests: number, passed: number, skipped: number, tagged: number, untagged: number,
- *             hostTagged: number, hostUntagged: number, staleTags: number },
+ *             hostTagged: number, hostUntagged: number, controlOnly: number, staleTags: number },
  *   tagged: { file: string, test: string, defect: string }[],
  *   untagged: NativeFailure[], untaggedTruncated: boolean,
  *   hostTagged: { group: string, count: number, reason: string }[],
  *   hostUntagged: NativeFailure[], hostUntaggedTruncated: boolean,
+ *   controlOnly: NativeFailure[], controlOnlyTruncated: boolean,
  *   staleTags: ({ kind: "divergence", file: string, test: string, defect: string }
  *     | { kind: "host", group: string, reason: string })[],
  *   forced?: { nativeFailure: true },
@@ -765,6 +768,29 @@ function nativeHostFailureFinding(ranLegs, runUrl) {
 }
 
 /**
+ * Tests that fail on the polyfill and pass on the native engine in the same runtime.
+ * @param {NativeSuiteVerdict[]} ranLegs
+ * @param {string} runUrl
+ * @returns {Finding}
+ */
+function nativeControlOnlyFinding(ranLegs, runUrl) {
+  const legs = ranLegs.filter((v) => v.counts.controlOnly > 0);
+  const sections = failureSections(
+    legs,
+    (v) => v.controlOnly,
+    (v) => v.counts.controlOnly,
+    CONTROL_PARAGRAPH.length,
+  );
+  return {
+    key: "native-suite/control-only-failure",
+    title: `Native suite: tests fail only on the polyfill in ${legs.map(legLabel).join(", ")}`,
+    labels: [CANARY_LABEL, COMPAT_LABEL],
+    body: withRun([...sections, CONTROL_PARAGRAPH].join("\n\n"), runUrl),
+    comment: withRun(sections.join("\n\n"), runUrl),
+  };
+}
+
+/**
  * Known-failure tags that no longer apply.
  * @param {NativeSuiteVerdict[]} ranLegs
  * @param {string} runUrl
@@ -953,6 +979,10 @@ function nativeSuiteFindings(verdicts, runUrl) {
     [
       ranLegs.some((v) => v.counts.hostUntagged > 0),
       () => nativeHostFailureFinding(ranLegs, runUrl),
+    ],
+    [
+      ranLegs.some((v) => v.counts.controlOnly > 0),
+      () => nativeControlOnlyFinding(ranLegs, runUrl),
     ],
     [
       ranLegs.some((v) => v.staleTags.length > 0),

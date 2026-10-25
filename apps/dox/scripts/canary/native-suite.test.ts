@@ -34,7 +34,8 @@ import {
  * The native-suite runner's pure sorting (`classify`) and its command (`main`, with the Vitest
  * runs and the browser launch replaced). Fixtures are small hand-written Vitest JSON reports;
  * every expected value is written out here from the rules: native fail + control pass is a
- * divergence, native fail + control fail is a host failure.
+ * divergence, native fail + control fail is a host failure, control fail + native pass (or absent)
+ * is control-only.
  */
 
 type Leg = "node" | "chromium" | "firefox" | "webkit";
@@ -320,6 +321,111 @@ describe("classify", () => {
       { file: FILE, test: "(file did not load)", message: "Error: boom" },
     ]);
     expect(r.untagged).toEqual([]);
+  });
+
+  it("native pass, control fail: one control-only, nothing else", () => {
+    const r = classify(
+      report(suite(FILE, [["diff > UTC vs Etc/UTC", "passed"]])),
+      report(suite(FILE, [["diff > UTC vs Etc/UTC", "failed"]])),
+      "webkit",
+      [],
+      [],
+    );
+    expect(r.controlOnly).toEqual([
+      {
+        file: FILE,
+        test: "diff > UTC vs Etc/UTC",
+        message: "AssertionError: diff > UTC vs Etc/UTC differs",
+      },
+    ]);
+    expect(r.counts).toMatchObject({
+      passed: 1,
+      untagged: 0,
+      hostUntagged: 0,
+      controlOnly: 1,
+      staleTags: 0,
+    });
+    expect(r.untagged).toEqual([]);
+    expect(r.hostUntagged).toEqual([]);
+  });
+
+  it("test absent natively, failed on control: counts as control-only", () => {
+    const r = classify(
+      report(suite(OTHER, [["format > x", "passed"]])),
+      report(suite(FILE, [["round > day", "failed"]])),
+      "node",
+      [],
+      [],
+    );
+    expect(r.controlOnly.map((f) => f.test)).toEqual(["round > day"]);
+    expect(r.counts).toMatchObject({ controlOnly: 1, tests: 1, passed: 1 });
+  });
+
+  it("a control-only failure is never matched against a divergence row or a host group: both go stale", () => {
+    const r = classify(
+      report(suite(OTHER, [["format > is-IS", "passed"]])),
+      report(suite(OTHER, [["format > is-IS", "failed"]])),
+      "chromium",
+      [row({ file: OTHER, test: "format > is-IS", legs: ["chromium"] })],
+      [group()],
+    );
+    expect(r.counts).toMatchObject({
+      tagged: 0,
+      hostTagged: 0,
+      controlOnly: 1,
+      staleTags: 2,
+    });
+    expect(r.staleTags.map((t) => t.kind)).toEqual(["divergence", "host"]);
+  });
+
+  it("a test that fails on both passes is a host failure, never control-only", () => {
+    const r = classify(
+      report(suite(FILE, [["round > day", "failed"]])),
+      report(suite(FILE, [["round > day", "failed"]])),
+      "node",
+      [],
+      [],
+    );
+    expect(r.controlOnly).toEqual([]);
+    expect(r.counts).toMatchObject({ hostUntagged: 1, controlOnly: 0 });
+  });
+
+  it("file failed to load on the control alone: one control-only (file did not load)", () => {
+    const r = classify(
+      report(suite(FILE, [["round > day", "passed"]])),
+      report(loadFailure(FILE, "Error: polyfill hung")),
+      "webkit",
+      [],
+      [],
+    );
+    expect(r.controlOnly).toEqual([
+      {
+        file: FILE,
+        test: "(file did not load)",
+        message: "Error: polyfill hung",
+      },
+    ]);
+    expect(r.untagged).toEqual([]);
+  });
+
+  it("an unhandled error on the control alone is control-only; one on both passes is a host failure", () => {
+    const r = classify(
+      report(suite(FILE, [["round > day", "passed"]])),
+      report(suite(FILE, [["round > day", "passed"]])),
+      "node",
+      [],
+      [],
+      [{ message: "on both" }],
+      [{ message: "on both" }, { message: "control only" }],
+    );
+    expect(r.controlOnly).toEqual([
+      {
+        file: "(vitest)",
+        test: "(unhandled error)",
+        message: "control only",
+      },
+    ]);
+    expect(r.hostUntagged.map((f) => f.message)).toEqual(["on both"]);
   });
 
   it("test present natively, absent from control: counts as a control pass", () => {
@@ -1461,6 +1567,37 @@ describe("native-suite command", () => {
     }
   });
 
+  it("a test that fails on the control alone: exit 1, the row in the verdict and in the printed report", async () => {
+    const s = setup();
+    try {
+      const code = await main(
+        ["webkit"],
+        s.io({
+          native: report(suite(FILE, [["diff > UTC vs Etc/UTC", "passed"]])),
+          control: report(suite(FILE, [["diff > UTC vs Etc/UTC", "failed"]])),
+          controlExit: 1,
+        }),
+      );
+      expect(code).toBe(1);
+      const v = s.verdict("webkit");
+      expect(v.counts).toMatchObject({ untagged: 0, controlOnly: 1 });
+      expect(v.controlOnly).toEqual([
+        {
+          file: FILE,
+          test: "diff > UTC vs Etc/UTC",
+          message: "AssertionError: diff > UTC vs Etc/UTC differs",
+        },
+      ]);
+      expect(v.controlOnlyTruncated).toBe(false);
+      expect(s.out()).toContain(
+        "0 host untagged, 1 control only, 0 stale tags\nFailures on the control alone (1, first 1):\n" +
+          `  ${FILE} > diff > UTC vs Etc/UTC\n    AssertionError: diff > UTC vs Etc/UTC differs`,
+      );
+    } finally {
+      s.done();
+    }
+  });
+
   it.each`
     pass
     ${"native"}
@@ -2065,7 +2202,7 @@ describe("native-suite command: the compat check in a browser", () => {
       const before = s.out().length;
       expect(await main(["summary", "webkit"], s.io(null))).toBe(0);
       expect(s.out().slice(before)).toBe(
-        `${ENGINE}\n1 tests in 1 files: 1 passed, 0 tagged, 0 untagged, 0 host tagged, 0 host untagged, 0 stale tags\ntemporal-compat-webkit: could not run — no browser\n`,
+        `${ENGINE}\n1 tests in 1 files: 1 passed, 0 tagged, 0 untagged, 0 host tagged, 0 host untagged, 0 control only, 0 stale tags\ntemporal-compat-webkit: could not run — no browser\n`,
       );
     } finally {
       s.done();
@@ -2092,7 +2229,7 @@ describe("native-suite summary", () => {
       const code = await main(["summary", "chromium"], s.io(null));
       expect(code).toBe(0);
       expect(s.out().slice(before)).toBe(
-        `${ENGINE}\n2 tests in 1 files: 1 passed, 0 tagged, 0 untagged, 1 host tagged, 0 host untagged, 0 stale tags\n${compatLine("chromium")}`,
+        `${ENGINE}\n2 tests in 1 files: 1 passed, 0 tagged, 0 untagged, 1 host tagged, 0 host untagged, 0 control only, 0 stale tags\n${compatLine("chromium")}`,
       );
     } finally {
       s.done();

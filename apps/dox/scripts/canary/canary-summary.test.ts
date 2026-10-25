@@ -150,6 +150,7 @@ const native = (leg: string, over: Record<string, unknown> = {}) => ({
     untagged: 0,
     hostTagged: 0,
     hostUntagged: 0,
+    controlOnly: 0,
     staleTags: 0,
   },
   tagged: [],
@@ -158,6 +159,8 @@ const native = (leg: string, over: Record<string, unknown> = {}) => ({
   hostTagged: [],
   hostUntagged: [],
   hostUntaggedTruncated: false,
+  controlOnly: [],
+  controlOnlyTruncated: false,
   staleTags: [],
   ...over,
 });
@@ -205,12 +208,12 @@ const CLEAN_SUMMARY = [
   "",
   "### Native Temporal suite",
   "",
-  "| Leg | Engine | Tests | Passed | Tagged | Untagged | Host tagged | Host untagged | Stale tags |",
-  "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
-  "| node | Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
-  "| chromium | Chromium 153.0.8010.12 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
-  "| firefox | Firefox 155.0 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
-  "| webkit | WebKit 26.6 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
+  "| Leg | Engine | Tests | Passed | Tagged | Untagged | Host tagged | Host untagged | Control only | Stale tags |",
+  "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+  "| node | Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
+  "| chromium | Chromium 153.0.8010.12 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
+  "| firefox | Firefox 155.0 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
+  "| webkit | WebKit 26.6 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
   "",
   "**Issues:** No issues filed.",
   "",
@@ -231,10 +234,10 @@ describe("summaryMarkdown: temporal-oracle", () => {
       },
     });
     expect(text.split("\n")).toContain(
-      "| chromium | could not run — playwright is not installed \\| try pnpm install |  |  |  |  |  |  |  |",
+      "| chromium | could not run — playwright is not installed \\| try pnpm install |  |  |  |  |  |  |  |  |",
     );
     expect(text.split("\n")).toContain(
-      "| firefox | Firefox 155.0 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 |",
+      "| firefox | Firefox 155.0 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
     );
   });
 
@@ -242,11 +245,11 @@ describe("summaryMarkdown: temporal-oracle", () => {
     const verdicts: Record<string, unknown> = clean();
     verdicts["native-suite-firefox"] = null;
     expect(oracleSummary(verdicts).split("\n")).toContain(
-      "| firefox | could not run — no verdict file: an earlier step or job failed |  |  |  |  |  |  |  |",
+      "| firefox | could not run — no verdict file: an earlier step or job failed |  |  |  |  |  |  |  |  |",
     );
   });
 
-  it("untagged, host and stale counts print as the verdict holds them", () => {
+  it("untagged, host, control-only and stale counts print as the verdict holds them", () => {
     const text = oracleSummary({
       ...clean(),
       "native-suite-node": native("node", {
@@ -258,12 +261,13 @@ describe("summaryMarkdown: temporal-oracle", () => {
           untagged: 2,
           hostTagged: 4,
           hostUntagged: 5,
+          controlOnly: 6,
           staleTags: 1,
         },
       }),
     });
     expect(text.split("\n")).toContain(
-      "| node | Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c | 61613 | 61590 | 3 | 2 | 4 | 5 | 1 |",
+      "| node | Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c | 61613 | 61590 | 3 | 2 | 4 | 5 | 6 | 1 |",
     );
   });
 
@@ -323,7 +327,9 @@ describe("summaryMarkdown: temporal-oracle", () => {
     expect(text).not.toContain("Removable on some engines only");
     expect(text).toContain("| Removable | 2 |");
     expect(text).toContain("| Still needed | 13 |");
-    expect(text).toContain("| temporal-compat-webkit | WebKit 26.6 (webkit) | 13 | 2 | 1 | 0 |");
+    expect(text).toContain(
+      "| temporal-compat-webkit | WebKit 26.6 (webkit) | 13 | 2 | 1 | 0 |",
+    );
   });
 
   it("a group removable on the Node check alone is removable on some engines only, and names each engine's state", () => {

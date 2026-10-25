@@ -15,6 +15,11 @@
  *
  * `TAGGED_MISMATCHES` in `scripts/temporal-compat.mjs` keys oracle rows and cannot key a test, so
  * these lists are separate. A defect behind both names the same `defect` anchor in both.
+ *
+ * A test that fails on the control and not natively is control-only, and no list tags it. GMT
+ * ships the polyfill, and in each runtime the polyfill and the native engine read the same locale
+ * and time zone data, so a control-only failure is a wrong answer GMT gives that runtime's users:
+ * fix it in GMT (a temporalCompat workaround for a polyfill defect), never tag it.
  */
 
 /** @typedef {"node" | "chromium" | "firefox" | "webkit"} Leg */
@@ -432,10 +437,10 @@ const FILE_FAILED_MESSAGE =
  *   | { kind: "host", group: string, reason: string }} StaleTag
  * @typedef {{
  *   counts: { files: number, tests: number, passed: number, skipped: number, tagged: number, untagged: number,
- *             hostTagged: number, hostUntagged: number, staleTags: number },
+ *             hostTagged: number, hostUntagged: number, controlOnly: number, staleTags: number },
  *   tagged: TaggedFailure[], untagged: Failure[],
  *   hostTagged: { group: string, count: number, reason: string }[], hostUntagged: Failure[],
- *   staleTags: StaleTag[],
+ *   controlOnly: Failure[], staleTags: StaleTag[],
  * }} Classification
  */
 
@@ -669,10 +674,11 @@ function staleTagsOf(rows, usedRows, groups, hostCounts) {
 }
 
 /**
- * Sorts every failing test of the native pass by the control pass (the polyfill, same runtime).
- * Pure: parsed Vitest JSON reports in, lists out. A test absent from the control counts as passing
- * there (the native run is the subject). A divergence is never matched against host groups, and
- * a host failure never against divergence rows.
+ * Sorts every failing test of the native pass by the control pass (the polyfill, same runtime),
+ * then lists the tests that failed on the control alone. Pure: parsed Vitest JSON reports in,
+ * lists out. A test absent from the control counts as passing there, and one absent from the
+ * native pass as passing natively, so a control failure is never lost. A divergence is never
+ * matched against host groups, and a host failure never against divergence rows.
  *
  * @param {any} nativeResults  Vitest JSON report of the native pass
  * @param {any} controlResults  Vitest JSON report of the control (polyfill) pass
@@ -742,6 +748,10 @@ export function classify(
     if (control.get(id)?.failed === true) sortHostFailure(t);
     else sortDivergence(t);
   }
+  /** @type {Failure[]} */
+  const controlOnly = [...control]
+    .filter(([id, t]) => t.failed && native.get(id)?.failed !== true)
+    .map(([, { file, test, message }]) => ({ file, test, message }));
 
   const staleTags = staleTagsOf(rows, usedRows, groups, hostCounts);
   const hostTagged = groups
@@ -762,12 +772,14 @@ export function classify(
       untagged: untagged.length,
       hostTagged: hostTaggedTests,
       hostUntagged: hostUntagged.length,
+      controlOnly: controlOnly.length,
       staleTags: staleTags.length,
     },
     tagged,
     untagged,
     hostTagged,
     hostUntagged,
+    controlOnly,
     staleTags,
   };
 }
