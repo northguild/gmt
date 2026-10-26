@@ -3,8 +3,10 @@
  * lists, one line per path, appended to `$AFFECTED_TRACE_LOG`. Loaded with `--import` through
  * `NODE_OPTIONS`, so the child processes and workers a check starts record into the same log.
  *
- * Lines are `R <path>` for a file opened or read and `D <path>` for a directory listed, relative to
- * `$AFFECTED_TRACE_ROOT`. Paths outside it, and anything under `node_modules`, are dropped. Native
+ * Lines are `R <path>` for a file opened or read, `S <path>` for a file stat'ed or checked for
+ * existence, and `D <path>` for a directory listed, relative to `$AFFECTED_TRACE_ROOT`. A script
+ * that skips its work when its output is newer than its input shows only an `S` for the input on a
+ * run that skips, so the stat must be recorded too. Paths outside it, and anything under `node_modules`, are dropped. Native
  * tools (esbuild, oxlint, rolldown) read without Node's `fs` and are not seen.
  */
 import fs from "node:fs";
@@ -57,9 +59,22 @@ if (ROOT && LOG) {
   ]) {
     wrap(fs, name, "R");
   }
+  for (const name of [
+    "statSync",
+    "stat",
+    "lstatSync",
+    "lstat",
+    "existsSync",
+    "exists",
+    "accessSync",
+    "access",
+  ]) {
+    wrap(fs, name, "S");
+  }
   for (const name of ["readdirSync", "readdir", "opendirSync", "opendir"])
     wrap(fs, name, "D");
   for (const name of ["readFile", "open"]) wrap(fs.promises, name, "R");
+  for (const name of ["stat", "lstat", "access"]) wrap(fs.promises, name, "S");
   for (const name of ["readdir", "opendir"]) wrap(fs.promises, name, "D");
   // `import { readFileSync } from "node:fs"` binds the export, not the property; this updates it.
   syncBuiltinESMExports();

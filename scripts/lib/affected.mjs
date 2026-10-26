@@ -15,6 +15,11 @@
  * build and lint:dox. The toolchain files (the lockfile, the root package.json and tsconfig, the
  * Node version, CI itself, and these rules) run every check.
  *
+ * The audit also cannot see a check that reads generated output. The audit counts reads of tracked
+ * files only, and generated files are gitignored. So when a check reads a file a generator writes,
+ * add that check to the rule for the generator's inputs by hand. For example, build-guides.mjs
+ * copies docs/dst-disambiguation.md into the Dox content, and api-surface reads the copy.
+ *
  * Pure: no file system, no git, no process. `scripts/affected.mjs` is the command line.
  */
 
@@ -128,6 +133,16 @@ const DOX_APP = [
   "test:dox",
 ];
 
+/** What a Dox content page feeds: the generated pages, the build and the checks that read pages. */
+const DOX_CONTENT = [
+  "dox-pages",
+  "build:dox",
+  "api-surface",
+  "dox-dist",
+  "typecheck:dox",
+  "test:dox",
+];
+
 /** The lint plugin: its own build, checks and tests, and the two lints that load it. */
 const OXLINT = [
   ...every(
@@ -183,7 +198,8 @@ export const RULES = [
     checks: ["api-surface", "stats", "test:dox"],
     listed: ALL,
   },
-  { test: /^docs\//, checks: ["build:dox", "dox-dist"] },
+  // build-guides.mjs copies docs/ into the Dox content, so it runs what a content page runs.
+  { test: /^docs\//, checks: DOX_CONTENT },
 
   // A README, changelog or licence at a package root is read by no check, but the builds and
   // pnpm list the folder it sits in.
@@ -226,6 +242,8 @@ export const RULES = [
   {
     test: /^packages\/gmt\/skills\//,
     checks: ["markers", "api-surface", "test:dox"],
+    // apps/dox/worker/vocabulary.ts imports the SKILL.md files; the type check resolves them.
+    listed: ["typecheck:dox"],
   },
   {
     test: /^packages\/gmt\/oxlint\.config\.mts$/,
@@ -263,14 +281,7 @@ export const RULES = [
   // The Dox site. Content is Markdown: the lint and the library's own checks do not read it.
   {
     test: /^apps\/dox\/src\/content\//,
-    checks: [
-      "dox-pages",
-      "build:dox",
-      "api-surface",
-      "dox-dist",
-      "typecheck:dox",
-      "test:dox",
-    ],
+    checks: DOX_CONTENT,
     listed: ["markers", "stats"],
   },
   {
@@ -396,10 +407,12 @@ export function withNeeds(reasons) {
 
 /**
  * What the rules miss, from the reads `node scripts/affected.mjs audit` recorded. `traces` maps a
- * check id to its `R <path>` and `D <dir>` lines; `tracked` is every tracked file. A tracked file a
- * check read must name that check in its rule's `checks`. A tracked file directly inside a folder
- * the check listed must name it in `checks` or `listed`, since adding or deleting the file
- * changes what the check sees.
+ * check id to its `R <path>`, `S <path>` and `D <dir>` lines; `tracked` is every tracked file. A
+ * tracked file a check read must name that check in its rule's `checks`. A tracked file the check
+ * stat'ed, or one directly inside a folder the check listed, must name it in `checks` or `listed`:
+ * adding or deleting the file changes what the check sees. A stat counts like a listing because
+ * most stats only ask whether a path exists or is a folder (a walk, an import resolved); a check
+ * that compares mtimes also reads the file whenever it is out of date.
  */
 export function uncovered(traces, tracked) {
   const isTracked = new Set(tracked);
@@ -416,11 +429,11 @@ export function uncovered(traces, tracked) {
       const kind = line[0];
       const target = line.slice(2).replace(/\/$/, "");
       const files =
-        kind === "R"
-          ? isTracked.has(target)
+        kind === "D"
+          ? (children.get(target) ?? [])
+          : isTracked.has(target)
             ? [target]
-            : []
-          : (children.get(target) ?? []);
+            : [];
       for (const file of files) {
         if (seen.has(`${kind} ${file}`)) continue;
         seen.add(`${kind} ${file}`);
@@ -429,11 +442,9 @@ export function uncovered(traces, tracked) {
         const covered =
           kind === "R" ? rule.checks : [...rule.checks, ...(rule.listed ?? [])];
         if (!covered.includes(check)) {
-          misses.push({
-            check,
-            path: file,
-            via: kind === "R" ? "reads" : `lists ${target || "."}`,
-          });
+          const via =
+            { R: "reads", S: "stats" }[kind] ?? `lists ${target || "."}`;
+          misses.push({ check, path: file, via });
         }
       }
     }

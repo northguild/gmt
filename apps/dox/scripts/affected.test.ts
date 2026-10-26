@@ -131,6 +131,19 @@ describe("affected: which checks a change runs", () => {
       checks: ["deps", "markers", "build:gmt", "test:dox"],
     },
     {
+      name: "the DST guide's source runs the checks of the Dox page it becomes",
+      changes: [{ path: "docs/dst-disambiguation.md", status: "M" }],
+      checks: [
+        "build:gmt",
+        "dox-pages",
+        "build:dox",
+        "api-surface",
+        "dox-dist",
+        "typecheck:dox",
+        "test:dox",
+      ],
+    },
+    {
       name: "a Windows path matches like a POSIX one",
       changes: ["context\\domination\\tracker.md"],
       checks: ["deps"],
@@ -181,7 +194,7 @@ describe("affected: which checks a change runs", () => {
 
   it("brings in a build that a build needs", () => {
     const result = affected([{ path: "docs/guide.md", status: "M" }]);
-    expect(result.checks).toEqual(["build:gmt", "build:dox", "dox-dist"]);
+    expect(result.reasons.get("build:gmt")).toContain("needed by build:dox");
   });
 
   it("marks a deleted file's extra checks as deleted", () => {
@@ -253,6 +266,18 @@ describe("uncovered: reads the rules miss", () => {
         path: "apps/dox/src/content/docs/guides/dst.mdx",
         via,
       },
+    ]);
+  });
+
+  it("a stat is covered by the rule's listed checks", () => {
+    const traces = new Map([["markers", [`S ${guide}`]]]);
+    expect(uncovered(traces, tracked)).toEqual([]);
+  });
+
+  it("a stat the file's rule names in neither list is a miss", () => {
+    const traces = new Map([["lint:dox", [`S ${guide}`]]]);
+    expect(uncovered(traces, tracked)).toEqual([
+      { check: "lint:dox", path: guide, via: "stats" },
     ]);
   });
 

@@ -299,6 +299,13 @@ function audit(opts) {
       traces.set(check.id, lines(readFileSync(logOf(check.id), "utf8")));
     else console.log(`  no log for ${check.id} in ${dir}`);
   }
+  // A check with no log measured nothing, so it cannot pass.
+  if (traces.size < checks.length) {
+    console.error(
+      `\n✗ ${checks.length - traces.size} of ${checks.length} checks have no read log in ${dir}.`,
+    );
+    return 1;
+  }
   const misses = uncovered(traces, lines(git("ls-files")));
   console.log(`\nRead logs: ${dir}`);
   if (misses.length === 0) {

@@ -99,8 +99,12 @@ as `stats check` or the Dox tests, brings that build with it. Adding or deleting
 run more than editing it: `stats check` counts the guides, so a new guide runs it.
 
 When a check starts reading a file it did not read before, add that check to the file's rule.
-`pnpm run affected:audit` finds what is missing: it runs every check with each repo file read
-and folder listed recorded, and lists the reads no rule covers. It takes as long as
+`pnpm run affected:audit` finds what is missing. It runs every check and records each repo file
+the check reads, each file it stats or tests for existence, and each folder it lists. Then it
+lists the reads no rule covers. A stat counts like a listing: it is covered when the check is in
+the rule's `checks` or `listed`. It cannot see reads of generated output, because generated files are not
+tracked. When a check reads a generated file, add that check to the rule for the generator's
+inputs by hand. The audit takes as long as
 `validate:full`. Tools that do not read through Node (tsdown, esbuild, oxlint, Astro's
 bundler) are not recorded, so the rules cover their inputs by hand.
 
