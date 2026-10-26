@@ -43,10 +43,20 @@ function note(kind, target) {
 function wrap(target, name, kind) {
   const original = target[name];
   if (typeof original !== "function") return;
-  target[name] = function traced(p, ...rest) {
-    note(kind, p);
-    return original.call(this, p, ...rest);
-  };
+  // A method has no `prototype`, like the async `fs.promises` functions; the copy below adds one
+  // back for the functions that have it.
+  target[name] = {
+    [name](p, ...rest) {
+      note(kind, p);
+      return original.call(this, p, ...rest);
+    },
+  }[name];
+  // Keep the original's own properties: its name and length, and the `util.promisify.custom`
+  // hook on `fs.exists`, without which `promisify(fs.exists)` rejects with `true`.
+  Object.defineProperties(
+    target[name],
+    Object.getOwnPropertyDescriptors(original),
+  );
 }
 
 if (ROOT && LOG) {
