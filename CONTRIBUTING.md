@@ -62,24 +62,47 @@ pnpm run test
 pnpm run lint
 pnpm run typecheck
 
-# Full local gate before PR
+# The local gate before a PR: the checks your branch needs
 pnpm run validate
 
-# Only run on projects affected by your branch changes
-pnpm --filter '...[origin/main]' run test
-pnpm --filter '...[origin/main]' run lint
-pnpm --filter '...[origin/main]' run typecheck
-pnpm --filter '...[origin/main]' run build
+# Every check, whatever changed
+pnpm run validate:full
+
+# Which checks the branch, or the paths you name, need, without running them
+node scripts/affected.mjs show
+node scripts/affected.mjs show apps/dox/src/content/docs/guides/example.mdx
 ```
 
-Recommended PR flow:
+### What `validate` runs
 
-```bash
-pnpm --filter '...[origin/main]' run lint
-pnpm --filter '...[origin/main]' run test
-pnpm --filter '...[origin/main]' run typecheck
-pnpm --filter '...[origin/main]' run build
-```
+`validate` compares your branch with `origin/main`, counting commits, staged and unstaged
+edits and new files. It runs each check that reads a changed file, and prints the checks it
+runs, the files that asked for each, and the checks it skipped. CI uses the same rules, in
+`scripts/lib/affected.mjs`.
+
+| The change touches | What runs |
+| --- | --- |
+| Notes: `context/` outside the trackers, `.agents/`, `.claude/`, `.changeset/`, `AGENTS.md`, `CLAUDE.md`, `PUBLISHING.md`, the workflows other than `ci.yml` | Nothing |
+| The trackers: `context/domination/`, `context/dox/tracker.md` | `deps check` |
+| `CONTRIBUTING.md`, the root `oxlint.config.mts` | The Dox tests, which compare copies of their text |
+| `README.md`, `packages/gmt/README.md` | `stats check`, the API surface check and the Dox tests |
+| Dox content, `apps/dox/src/content/` | The page generators, the site build and its checks, the Dox typecheck and tests, and the API surface check |
+| Other Dox files | Every Dox check, plus the reference docs check |
+| Library tests only | The library's lint, typecheck and tests, `stats check`, the test marker check and the Dox tests |
+| Library source | Every check but `deps check`, the Dox lint and the lint plugin's own checks |
+| A repo script | That script's check and the Dox tests, which hold the script tests |
+| The toolchain: any `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.node-version`, `tsconfig.base.json`, `ci.yml`, or the rules themselves | Every check |
+| A file no rule names | Every check |
+
+A change that touches several rows runs what each row runs. A check that needs a build, such
+as `stats check` or the Dox tests, brings that build with it. Adding or deleting a file can
+run more than editing it: `stats check` counts the guides, so a new guide runs it.
+
+When a check starts reading a file it did not read before, add that check to the file's rule.
+`pnpm run affected:audit` finds what is missing: it runs every check with each repo file read
+and folder listed recorded, and lists the reads no rule covers. It takes as long as
+`validate:full`. Tools that do not read through Node (tsdown, esbuild, oxlint, Astro's
+bundler) are not recorded, so the rules cover their inputs by hand.
 
 ### Run within a specific package
 
@@ -387,8 +410,14 @@ trusted-publishing setup, and how to add a new publishable package.
 
 CI strategy:
 
-- Pull requests run `pnpm --filter '...[origin/main]'` targets (`lint`, `test`, `typecheck`, `build`).
-- Pushes to `main` run `pnpm run validate` across all projects.
+- On a pull request, the `Determine affected packages` job applies the same rules as
+  `validate` to the pull request's changes and hands the list of checks to the other jobs.
+- A push to `main` runs every check, so a check a rule wrongly skipped fails on the merge that
+  skipped it.
+- Every job runs on every change, because the build, test and timezone jobs are required
+  checks. A job with nothing to check skips its steps and passes in seconds, so a change to
+  notes alone finishes CI in about a minute.
+- The commit trailer check, the dependency audit and the changeset check run on every change.
 
 ## Agent prompt
 
