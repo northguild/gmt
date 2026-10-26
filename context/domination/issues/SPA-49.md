@@ -44,7 +44,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 - **The two-part form is primary; the single-value form is a convenience.** Both are provided because callers integrating with systems that accept only one number need it, but the lossy one carries its error bound in its JSDoc so the choice is informed.
 - **MJD is materially more precise than JD as a single double**, because subtracting 2 400 000.5 frees several digits of mantissa. Worth stating, since it is a cheap mitigation for callers stuck with one number.
 - **The time scale matters and defaults differ by function.** J2000 seconds default to TT because the J2000.0 epoch is itself defined as 2000-01-01 12:00 TT (Key epochs above), so a count from it in TT needs no further correction. JD conversions default to UTC. Divergent defaults are justified by convention but must be explicit in every signature and JSDoc, or callers will assume one applies to all.
-- **TDB is not supported.** No story in this epic provides it, so `toJ2000Seconds` supports `'UTC'`, `'TAI'` and `'TT'` and returns the sentinel for `'TDB'` rather than approximating the correction.
+- **`TimeScale` is `'UTC' | 'TAI' | 'TT' | 'TCG'`**, the scales this epic's stories provide: UTC and TAI already, TT and TCG from SPA-47. Every function in this story accepts each of them; a JD, MJD or J2000 count in TCG is taken on TCG's own time line, through SPA-47's conversions. TDB is not a member: no story in this epic provides it, so a caller cannot pass it without a cast, and a value outside the type returns the sentinel like any other invalid input.
 - JD begins at **noon**, not midnight — a half-day offset that is a classic source of off-by-12-hours errors.
 
 ## Corrections
@@ -66,7 +66,8 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 - `toModifiedJulianDate('2000-01-01T00:00:00Z')` returns `51544.5`
 - MJD round-trip is demonstrably more precise than JD round-trip at the same date
 - `toJ2000Seconds('2000-01-01T11:58:55.816Z')` returns `0` by default: J2000.0 is 2000-01-01T12:00:00 TT, and TT − UTC was 64.184 s that day
-- `toJ2000Seconds` with the scale `'TDB'` returns the sentinel
+- Each function accepts all four `TimeScale` members; a JD in TCG round-trips through SPA-47's `toTCG` and `fromTCG`
+- A scale outside `TimeScale` (for example `'TDB'`, passed with a cast) returns the sentinel
 - JD noon offset is asserted: midnight UTC yields a `.5` fraction
 - Invalid input returns the sentinel
 - `pnpm run validate` stays green

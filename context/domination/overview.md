@@ -287,6 +287,6 @@ rules; those citations prove a painpoint exists and are not standards any story 
 - FIX Latest data types; SWIFT MT fields 32A, 13C, 13D
 - D. J. Bernstein, libtai TAI64
 
-National sources that stories also name — NASA/NAIF SPICE, Bowditch, ACP 121, PQA, ARRC, USNO,
+National sources that stories also name — Bowditch, ACP 121, PQA, ARRC, USNO,
 NOAA — appear only as labelled peers, corroboration or test oracles, never as the
 authority (tracker, "International authority first").
