@@ -37,7 +37,11 @@ pattern that allows `60` on any day accepts a second that never happened on all 
   `@northguild/gmt/finance/parse`, `@northguild/gmt/finance/format` and
   `@northguild/gmt/finance/validate` subpaths (`package.json` `exports` and `typesVersions`, the dox
   `gmt-modules.ts` barrel), and the Finance industry in `apps/dox/src/data/industries.json`, with
-  namespace `finance`.
+  namespace `finance`; its glyph in `INDUSTRY_ICON_PATHS` (`apps/dox/src/lib/industry-tags.ts`), and
+  its hub text in `apps/dox/src/lib/industry-overview.ts`: three to five problems, each answered by
+  a function the industry may name, in that file's wording rules. `context/dox/built.md` names all
+  three as what a new industry takes, and `industry-tags.test.ts` and `industry-overview.test.ts`
+  fail without them. Finance declares no `drawsOn`, so its hub text names only `finance` functions.
 
 ### The result of `parseFixUtcTimestamp`
 

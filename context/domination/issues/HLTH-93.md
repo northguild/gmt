@@ -13,11 +13,13 @@ the sender's offset. painpoints.md records it: "HL7 v2 DTM without an offset mea
 sending facility' — an ambiguity that must be surfaced, not silently resolved to UTC"
 ([painpoints § Healthcare](../painpoints.md#healthcare)).
 
-Most live feeds are versions 2.3.1 to 2.5.1, whose time stamp is `TS`, not `DTM`. `TS` adds a
-second component, the degree of precision, which "may not indicate greater precision" than the
+Most live feeds are versions 2.3.1 to 2.5.1, whose time stamp is `TS`, not `DTM`. From v2.3 on,
+`TS` component 1 is a `DTM`, and component 2, the degree of precision, is "Retained only for
+purposes of backward compatibility as of v 2.3"; it "may not indicate greater precision" than the
 digits ([painpoints § Findings — Healthcare](../painpoints.md#findings--healthcare)). A parser
-that accepts only `DTM` cannot read most of the messages hospitals send; one that ignores the
-second component reads a date as a time.
+that accepts only `DTM` rejects any value that still carries the degree of precision, which HL7 has
+kept only for backward compatibility since v2.3. One that ignores it reads a date as a time:
+`199904011200^L`, the chapter's own example, is April 1999, not 12:00.
 
 ([HL7 v2.5.1 Chapter 2A, 2.A.22 DTM and 2.A.77 TS](https://www.hl7.eu/HL7v2x/v251/std251/ch02a.html))
 
@@ -42,7 +44,13 @@ second component reads a date as a time.
   `@northguild/gmt/healthcare/parse`, `@northguild/gmt/healthcare/format` and
   `@northguild/gmt/healthcare/validate` subpaths (`package.json` `exports` and `typesVersions`, the
   dox `gmt-modules.ts` barrel), and the Healthcare industry in `apps/dox/src/data/industries.json`,
-  with namespace `healthcare`.
+  with namespace `healthcare`; its glyph in `INDUSTRY_ICON_PATHS`
+  (`apps/dox/src/lib/industry-tags.ts`), and its hub text in
+  `apps/dox/src/lib/industry-overview.ts`: three to five problems, each answered by a function the
+  industry may name, in that file's wording rules. `context/dox/built.md` names all three as what a
+  new industry takes, and `industry-tags.test.ts` and `industry-overview.test.ts` fail without them.
+  Healthcare declares no `drawsOn`, so its hub text names only `healthcare` functions; if it ever
+  names `isLeapSecond` (HLTH-94's check), Healthcare draws on `timescale`.
 
 ### The result of `parseHL7`
 

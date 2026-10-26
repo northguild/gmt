@@ -33,12 +33,14 @@ every ordering, age and date-range query downstream inherits the invented fact.
 - `packages/gmt/src/regex/fhir.ts` — `fhirDate`, `fhirDateTime` and `fhirInstant`, the three
   patterns FHIR R4 publishes, verbatim and anchored with `^…$`, exported from `regex/index.ts` and
   so from `@northguild/gmt/regex`. The source is the `regex` extension on `date.value`,
-  `dateTime.value` and `instant.value` in the R4 StructureDefinitions; the Datatypes page prints
-  the same patterns with each backslash doubled. Shape only, as `epcisEventTime` is.
+  `dateTime.value` and `instant.value` in the R4 StructureDefinitions. The Datatypes page prints
+  the same patterns; the StructureDefinition JSON escapes each backslash (`\\.`, `\\+`), so decode
+  it before copying. Copied raw, `\\.` would match a backslash and then any character, and
+  `(\\+|-)` one or more backslashes or a minus. Shape only, as `epcisEventTime` is.
 - `packages/gmt/src/types/fhir.ts` — `FhirDateType` (`"date"`, `"dateTime"`, `"instant"`),
   `FhirPrecision` (`"year"`, `"month"`, `"day"`, `"second"`, `"fraction"`) and `FhirDateTime`.
-- If the `healthcare/` realm does not exist yet when this story starts, this story opens it, with
-  the subpaths (`validate` included) and the industry declaration its sibling story names.
+- HLTH-93 opens the `healthcare/` realm, with its subpaths, industry, guide and mistakes page; this
+  story comes after it and adds its functions to them.
 
 ### FHIR R4 precision rules
 
@@ -125,6 +127,8 @@ FHIR is published by HL7 International, a multinational industry body. R4 was re
 
 ## What gmt provides (do not re-implement)
 
+- HLTH-93 — the `healthcare/` realm: its subpaths, its Dox industry, the guide and the mistakes
+  page this story extends
 - `toOffsetInstant` from CORE-4 — the instant-plus-offset pair a full FHIR value is
 - `isLeapSecond` from SPA-48 — checking a second of `60` against the leap-second table
 - `isValidDate`, `isValidDateTime` — the ISO values the formatter takes
@@ -146,7 +150,7 @@ FHIR is published by HL7 International, a multinational industry body. R4 was re
 - Round-trip: `parseFHIR(formatFHIR(v, 'dateTime')).precision` equals the precision of `v` for every `FhirPrecision`
 - `isValidFHIR` agrees with `parseFHIR` on every row above, as the design note states
 - `fhirDateTime.test('2024-06')` and `fhirInstant.test('2015-02-07T13:28:17.239+02:00')` are `true`; `fhirDate.test('2024-06-15T10:30:00Z')`, `fhirInstant.test('2024-06-15')` and `fhirDateTime.test('2024-06-15T10:30:00')` are `false`
-- Each pattern's `source` is the StructureDefinition's `regex` string with `^` and `$` added, asserted against a copy kept in the test
+- Each pattern's `source` is the StructureDefinition's `regex` string, decoded from JSON, with `^` and `$` added, asserted against a copy kept in the test; `fhirDateTime.test('2017-01-01T00:00:00.000+02:00')` is `true`, so the fraction and the `+` offset match
 - `fhirDateTime.test('2024-02-30')`, `fhirInstant.test('2017-12-31T23:59:60Z')` and an instant with a ten-digit fraction are `true`, and `isValidFHIR` is `false` for each: the pattern is shape only
 - Every value `isValidFHIR(v, t)` accepts in the rows above matches `t`'s pattern; `isValidFHIR(20240615, 'date')` and `isValidFHIR(null, 'dateTime')` are `false`
 - `pnpm run validate` stays green

@@ -113,11 +113,11 @@ with the `Position` type, ahead of the remaining realms.
 | 38  | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                                  | SPA-47     | #230  | —       | Not started |
 | 39  | SPA-52  | Space      | CCSDS ASCII time codes A and B                                                      | —          | #233  | Cut     | Not started |
 | 40  | HLTH-93 | Healthcare | HL7 v2 timestamps: `parseHL7`,<br>`formatHL7`, `isValidHL7`                         | —          | #401  | —       | Not started |
-| 41  | HLTH-94 | Healthcare | FHIR datetimes: `parseFHIR`, `formatFHIR`,<br>`isValidFHIR`, three FHIR regexes     | —          | #402  | —       | Not started |
+| 41  | HLTH-94 | Healthcare | FHIR datetimes: `parseFHIR`, `formatFHIR`,<br>`isValidFHIR`, three FHIR regexes     | HLTH-93    | #402  | —       | Not started |
 | 42  | FIN-95  | Finance    | FIX UTC timestamps: parse, format and<br>`isValidFixUtcTimestamp`                   | —          | #403  | —       | Not started |
-| 43  | FIN-96  | Finance    | SWIFT dates: `parseSwiftDate`,<br>`formatSwiftDate`, `isValidSwiftDate`             | —          | #404  | —       | Not started |
+| 43  | FIN-96  | Finance    | SWIFT dates: `parseSwiftDate`,<br>`formatSwiftDate`, `isValidSwiftDate`             | FIN-95     | #404  | —       | Not started |
 | 44  | AV-97   | Aviation   | SSIM dates: `parseSsimDate`,<br>`formatSsimDate`, `isValidSsimDate`                 | —          | #405  | —       | Not started |
-| 45  | AV-98   | Aviation   | METAR and NOTAM times: parse,<br>`isValidMetarTime`, `isValidNotamValidity`         | —          | #406  | —       | Not started |
+| 45  | AV-98   | Aviation   | METAR and NOTAM times: parse,<br>`isValidMetarTime`, `isValidNotamValidity`         | AV-97      | #406  | —       | Not started |
 | 46  | RAI-99  | Rail       | GTFS time strings: `parseGtfsTime`,<br>`formatGtfsTime`, `isValidGtfsTime`          | —          | #407  | —       | Not started |
 | 47  | RAI-100 | Rail       | GTFS times to instants: `gtfsToInstant`                                             | RAI-99     | #408  | —       | Not started |
 | 48  | IOT-101 | IoT        | PTP time: `ptpToUtc`, `utcToPtp`,<br>`isValidPtpTimestamp`                          | —          | #409  | —       | Not started |
@@ -175,13 +175,15 @@ alone. Every row in the table is a buildable order.
 the rest of Space, because the GNSS time scales need its leap-second table. Read the `#` column,
 not the realm column, for order.
 
-**The industry formats come after Space.** `HLTH-93` … `IOT-101` open five realms —
-Healthcare, Finance, Aviation, Rail and IoT — each an inner module for how its
-industry writes a timestamp on the wire, read and written. Every one draws only
-on shipped primitives (`CORE-1`, `CORE-2`, `CORE-4`, `INT-15`'s two-digit-year window, `MAR-16`,
-`SPA-48`), so the nine can be built in any order but one: `RAI-100` turns `RAI-99`'s times into
-instants. They sit before the `CORE` rows that wait or run on a schedule, and no `Cut` follows them
-yet.
+**The industry formats come after Space.** `HLTH-93` … `IOT-101` open five realms — Healthcare,
+Finance, Aviation, Rail and IoT — each an inner module for how its industry writes a timestamp on
+the wire, read and written. Every one draws only on shipped primitives (`CORE-1`, `CORE-2`,
+`CORE-4`, `INT-15`'s two-digit-year window, `MAR-16`, `SPA-48`). In each realm the first story opens
+it, with its subpaths, Dox industry, guide and mistakes page, and the second extends them, so four
+pairs are ordered: `HLTH-93` before `HLTH-94`, `FIN-95` before `FIN-96`, `AV-97` before `AV-98`, and
+`RAI-99` before `RAI-100`, which also turns `RAI-99`'s times into instants. The realms themselves
+can be built in any order. They sit before the `CORE` rows that wait or run on a schedule, and no
+`Cut` follows them yet.
 
 ---
 
@@ -257,7 +259,8 @@ Highest commercial value and the thinnest coverage in the original plan.
 
 ### Phase 4 — Industry timestamp formats
 
-Five realms, each an inner module like any other, with its own subpath and Dox industry.
+Five realms, each an inner module like any other, with its own subpath and Dox industry. The
+first story named in each realm opens it; the second comes after it.
 
 - **HLTH-93, HLTH-94** — `@northguild/gmt/healthcare`: HL7 v2 `DTM` and `TS`, and the FHIR R4
   `date`, `dateTime` and `instant`.

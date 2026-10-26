@@ -37,7 +37,11 @@ service day, and every trip after midnight moves to the wrong date.
 - This story opens the `rail/` realm: the `@northguild/gmt/rail`, `@northguild/gmt/rail/parse`,
   `@northguild/gmt/rail/format` and `@northguild/gmt/rail/validate` subpaths (`package.json`
   `exports` and `typesVersions`, the dox `gmt-modules.ts` barrel), and the Rail industry in
-  `apps/dox/src/data/industries.json`, with namespace `rail`, drawing on `transport`.
+  `apps/dox/src/data/industries.json`, with namespace `rail`, drawing on `transport`; its glyph in
+  `INDUSTRY_ICON_PATHS` (`apps/dox/src/lib/industry-tags.ts`), and its hub text in
+  `apps/dox/src/lib/industry-overview.ts`: three to five problems, each answered by a function the
+  industry may name, in that file's wording rules. `context/dox/built.md` names all three as what a
+  new industry takes, and `industry-tags.test.ts` and `industry-overview.test.ts` fail without them.
 
 ### What returns the sentinel
 
