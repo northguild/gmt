@@ -7,7 +7,7 @@
 
 ## Overview
 
-`@northguild/gmt` expands with **44 stories across Core and 4 realms**, built in three phases.
+`@northguild/gmt` expands with **51 stories across Core and 9 realms**, built in four phases.
 
 Reading the table top to bottom is the build order, and the `#` column is that order. A story
 ID is a permanent name: it is what every cross-reference, spec filename and GitHub issue uses,
@@ -65,59 +65,65 @@ with the `Position` type, ahead of the remaining realms.
 | CORE-76 (#20) | INT-15, CORE-78, INT-14, CORE-76           | Intermodal complete with its tools (#304), and hours of work: the engine every duty rule runs on                                                                          |
 | CORE-88 (#29) | MAR-16 … CORE-88 (#21–#29)                 | GNSS time and leap seconds, then the second Core round: the site on its domain, the `Temporal` seam, the native suite, stored times, the Canada 2026 clock-change checker |
 | CORE-79 (#35) | CORE-89 … CORE-79 (#30–#35)                | The rest of the second Core round: the Morocco checker, identifiers, holiday rules, recurrence and cron, human durations, `Position`                                      |
-| SPA-74 (#39)  | SPA-46 … SPA-49, SPA-74                    | The time-scale chain: TAI, TT, leap seconds, Julian Date, TDB                                                                                                             |
-| SPA-52 (#41)  | SPA-50, SPA-52                             | UT1 and sidereal time, CCSDS time codes                                                                                                                                   |
+| SPA-52 (#39)  | SPA-46 … SPA-52 (#36–#39)                  | The time-scale conversions: TAI64 text labels, TT and TCG, Julian Date, MJD and J2000, CCSDS ASCII time codes                                                             |
 
 ---
 
 ## Stories
 
-| #   | Story   | Realm      | Deliverable                                                                         | Blocked by     | Issue | Release | Status      |
-| --- | ------- | ---------- | ----------------------------------------------------------------------------------- | -------------- | ----- | ------- | ----------- |
-| 1   | CORE-1  | Core       | `toNanoseconds` + `fromNanoseconds`<br>+ JSON bridge + truncation                   | —              | #182  | 1.16.0  | Done        |
-| 2   | CORE-2  | Core       | `spanMs` + `spanNs` +<br>`spanWallClock`                                            | —              | #183  | 1.16.0  | Done        |
-| 3   | CORE-3  | Core       | NTP / FILETIME / .NET ticks / Excel<br>/ Postgres epoch bridges                     | —              | #184  | 1.16.0  | Done        |
-| 4   | CORE-4  | Core       | `toOffsetInstant` + `resolveLocal` +<br>`classifyLocal`                             | —              | #185  | 1.16.0  | Done        |
-| 5   | CORE-5  | Core       | ISO week + ordinal + fiscal periods<br>+ `floorToZone` + `bucketRange`              | —              | #186  | 1.16.0  | Done        |
-| 6   | CORE-6  | Core       | Interval algebra: intersect, clamp,<br>subtract, merge, split, sum                  | —              | #187  | 1.16.0  | Done        |
-| 7   | CORE-7  | Core       | Business calendars,<br>`mergeCalendars`, roll conventions                           | —              | #188  | 1.16.0  | Done        |
-| 8   | CORE-8  | Core       | Full-API standards review with<br>`gmt-reviewer` (pre-1.16.0)                       | —              | #251  | 1.16.0  | Done        |
-| 9   | TRAN-8  | Transport  | `transitTime` + `etaAtZone` +<br>`dwellTime`                                        | —              | #189  | 1.17.0  | Done        |
-| 10  | INT-12  | Intermodal | `freeTimeExpiry` + `chargeableDays`<br>+ `demurrageClock`                           | —              | #193  | 1.17.0  | Done        |
-| 11  | INT-58  | Intermodal | `billingTimeline`: invoice, dispute and<br>resolution deadlines                     | —              | #260  | 1.17.0  | Done        |
-| 12  | CORE-55 | Core       | Operating hours and recurring<br>windows, open-time SLA arithmetic                  | —              | #257  | 1.18.0  | Done        |
-| 13  | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                                 | —              | #190  | 1.18.0  | Done        |
-| 14  | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff` + `timeToCutoff`                  | —              | #191  | 1.18.0  | Done        |
-| 15  | TRAN-57 | Transport  | Schedule deviation, punctuality,<br>PLN/EST/REQ/ACT, `nextDeparture`                | —              | #259  | 1.18.0  | Done        |
-| 16  | CORE-77 | Core       | Daylight time read from clock changes:<br>`isInDaylightSaving`, `hasDaylightSaving` | —              | #294  | 1.18.0  | Done        |
-| 17  | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                         | —              | #196  | 1.19.0  | Done        |
-| 18  | CORE-78 | Core       | `isValidUtcTimestamp`: a UTC timestamp<br>in the plain RFC 3339 spelling            | —              | #307  | 1.19.0  | Done        |
-| 19  | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`,<br>and the intermodal tools (#304)                | —              | #195  | 1.19.0  | Done        |
-| 20  | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —              | #283  | 1.19.0  | Done        |
-| 21  | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —              | #197  | 1.20.0  | Done        |
-| 22  | SPA-48  | Space      | Leap second table and queries                                                       | —              | #229  | 1.20.0  | Done        |
-| 23  | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —              | #319  | 1.20.0  | Done        |
-| 24  | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —              | #316  | 1.20.0  | Done        |
-| 25  | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —              | #317  | 1.20.0  | Done        |
-| 26  | CORE-87 | Core       | The reference corpus exported for<br>another repo                                   | —              | #328  | 1.20.0  | Done        |
-| 27  | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, WebKit, weekly  | —              | #322  | 1.20.0  | Done        |
-| 28  | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —              | #323  | 1.20.0  | Done        |
-| 29  | CORE-88 | Core       | The Canada 2026 clock-change checker in Dox                                         | —              | #329  | 1.20.0  | Done        |
-| 30  | CORE-89 | Core       | The Morocco 2026 clock-change checker in Dox                                        | —              | #340  | —       | Done        |
-| 31  | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —              | #258  | —       | Done        |
-| 32  | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —              | #256  | —       | Done        |
-| 33  | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | —              | #324  | —       | Done        |
-| 34  | CORE-85 | Core       | Human duration strings:<br>`parseHumanDuration`, `formatHumanDuration`              | —              | #325  | —       | Done        |
-| 35  | CORE-79 | Core       | `Position` input type                                                               | —              | #314  | Cut     | Done        |
-| 36  | SPA-46  | Space      | TAI64 / TAI64N / TAI64NA labels                                                     | —              | #227  | —       | Not started |
-| 37  | SPA-47  | Space      | `toTT` + `toTCG`                                                                    | —              | #228  | —       | Not started |
-| 38  | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                                  | SPA-47         | #230  | —       | Not started |
-| 39  | SPA-74  | Space      | `toTDB` + `tdbMinusTt` + `toTCB`                                                    | SPA-47, SPA-49 | #276  | Cut     | Not started |
-| 40  | SPA-50  | Space      | UT1 / DUT1, ΔT polynomials and<br>sidereal time                                     | SPA-47, SPA-49 | #231  | —       | Not started |
-| 41  | SPA-52  | Space      | CCSDS time codes (ASCII A/B, CUC,<br>CDS)                                           | —              | #233  | Cut     | Not started |
-| 42  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | —              | #341  | —       | Waiting     |
-| 43  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | —              | #353  | —       | Waiting     |
-| 44  | CORE-92 | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                   | —              | #386  | —       | Not started |
+| #   | Story   | Realm      | Deliverable                                                                         | Blocked by | Issue | Release | Status      |
+| --- | ------- | ---------- | ----------------------------------------------------------------------------------- | ---------- | ----- | ------- | ----------- |
+| 1   | CORE-1  | Core       | `toNanoseconds` + `fromNanoseconds`<br>+ JSON bridge + truncation                   | —          | #182  | 1.16.0  | Done        |
+| 2   | CORE-2  | Core       | `spanMs` + `spanNs` +<br>`spanWallClock`                                            | —          | #183  | 1.16.0  | Done        |
+| 3   | CORE-3  | Core       | NTP / FILETIME / .NET ticks / Excel<br>/ Postgres epoch bridges                     | —          | #184  | 1.16.0  | Done        |
+| 4   | CORE-4  | Core       | `toOffsetInstant` + `resolveLocal` +<br>`classifyLocal`                             | —          | #185  | 1.16.0  | Done        |
+| 5   | CORE-5  | Core       | ISO week + ordinal + fiscal periods<br>+ `floorToZone` + `bucketRange`              | —          | #186  | 1.16.0  | Done        |
+| 6   | CORE-6  | Core       | Interval algebra: intersect, clamp,<br>subtract, merge, split, sum                  | —          | #187  | 1.16.0  | Done        |
+| 7   | CORE-7  | Core       | Business calendars,<br>`mergeCalendars`, roll conventions                           | —          | #188  | 1.16.0  | Done        |
+| 8   | CORE-8  | Core       | Full-API standards review with<br>`gmt-reviewer` (pre-1.16.0)                       | —          | #251  | 1.16.0  | Done        |
+| 9   | TRAN-8  | Transport  | `transitTime` + `etaAtZone` +<br>`dwellTime`                                        | —          | #189  | 1.17.0  | Done        |
+| 10  | INT-12  | Intermodal | `freeTimeExpiry` + `chargeableDays`<br>+ `demurrageClock`                           | —          | #193  | 1.17.0  | Done        |
+| 11  | INT-58  | Intermodal | `billingTimeline`: invoice, dispute and<br>resolution deadlines                     | —          | #260  | 1.17.0  | Done        |
+| 12  | CORE-55 | Core       | Operating hours and recurring<br>windows, open-time SLA arithmetic                  | —          | #257  | 1.18.0  | Done        |
+| 13  | TRAN-9  | Transport  | `scheduleDelivery` + `crossingTime`                                                 | —          | #190  | 1.18.0  | Done        |
+| 14  | TRAN-10 | Transport  | `cutoffAt` + `cutoffSchedule` +<br>`isPastCutoff` + `timeToCutoff`                  | —          | #191  | 1.18.0  | Done        |
+| 15  | TRAN-57 | Transport  | Schedule deviation, punctuality,<br>PLN/EST/REQ/ACT, `nextDeparture`                | —          | #259  | 1.18.0  | Done        |
+| 16  | CORE-77 | Core       | Daylight time read from clock changes:<br>`isInDaylightSaving`, `hasDaylightSaving` | —          | #294  | 1.18.0  | Done        |
+| 17  | INT-15  | Intermodal | EDIFACT DTM + X12 1250/623 + EPCIS<br>2.0 timestamp interop                         | —          | #196  | 1.19.0  | Done        |
+| 18  | CORE-78 | Core       | `isValidUtcTimestamp`: a UTC timestamp<br>in the plain RFC 3339 spelling            | —          | #307  | 1.19.0  | Done        |
+| 19  | INT-14  | Intermodal | `bolTimestamp` + `multimodalETA`,<br>and the intermodal tools (#304)                | —          | #195  | 1.19.0  | Done        |
+| 20  | CORE-76 | Core       | Hours of work: composable duty-log<br>rules, `dutyDayFor`, violations report        | —          | #283  | 1.19.0  | Done        |
+| 21  | MAR-16  | Maritime   | GNSS time scales (GPS, Galileo,<br>BeiDou, GLONASS, QZSS) + week<br>rollover        | —          | #197  | 1.20.0  | Done        |
+| 22  | SPA-48  | Space      | Leap second table and queries                                                       | —          | #229  | 1.20.0  | Done        |
+| 23  | CORE-81 | Core       | Weekly Temporal oracle and leap-second<br>canary open issues, not just write logs   | —          | #319  | 1.20.0  | Done        |
+| 24  | CORE-80 | Core       | Faster span arithmetic and a smaller<br>bundle: closed forms, size budget           | —          | #316  | 1.20.0  | Done        |
+| 25  | CORE-86 | Core       | Dox at `northguild.dev/gmt`, the<br>landing page, `/api/*` and `/mcp/*` kept clear  | —          | #317  | 1.20.0  | Done        |
+| 26  | CORE-87 | Core       | The reference corpus exported for<br>another repo                                   | —          | #328  | 1.20.0  | Done        |
+| 27  | CORE-82 | Core       | The suite runs on native `Temporal`:<br>Node 26, Chromium, Firefox, WebKit, weekly  | —          | #322  | 1.20.0  | Done        |
+| 28  | CORE-83 | Core       | `classifyStoredZoned`: why a stored<br>zoned time no longer resolves                | —          | #323  | 1.20.0  | Done        |
+| 29  | CORE-88 | Core       | The Canada 2026 clock-change checker in Dox                                         | —          | #329  | 1.20.0  | Done        |
+| 30  | CORE-89 | Core       | The Morocco 2026 clock-change checker in Dox                                        | —          | #340  | —       | Done        |
+| 31  | CORE-56 | Core       | Time-ordered identifiers (UUID,<br>ULID, Snowflake…) +<br>Parquet/Arrow/protobuf    | —          | #258  | —       | Done        |
+| 32  | CORE-54 | Core       | Holiday rule engine: nth weekday,<br>Easter, observance shifts                      | —          | #256  | —       | Done        |
+| 33  | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | —          | #324  | —       | Done        |
+| 34  | CORE-85 | Core       | Human duration strings:<br>`parseHumanDuration`, `formatHumanDuration`              | —          | #325  | —       | Done        |
+| 35  | CORE-79 | Core       | `Position` input type                                                               | —          | #314  | Cut     | Done        |
+| 36  | SPA-46  | Space      | TAI64 / TAI64N / TAI64NA text labels                                                | —          | #227  | —       | Not started |
+| 37  | SPA-47  | Space      | `toTT` + `toTCG`                                                                    | —          | #228  | —       | Not started |
+| 38  | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                                  | SPA-47     | #230  | —       | Not started |
+| 39  | SPA-52  | Space      | CCSDS ASCII time codes A and B                                                      | —          | #233  | Cut     | Not started |
+| 40  | HLTH-93 | Healthcare | HL7 v2 timestamps: `parseHL7`,<br>`formatHL7`, `isValidHL7`                         | —          | #401  | —       | Not started |
+| 41  | HLTH-94 | Healthcare | FHIR datetimes: `parseFHIR`, `formatFHIR`,<br>`isValidFHIR`, three FHIR regexes     | HLTH-93    | #402  | —       | Not started |
+| 42  | FIN-95  | Finance    | FIX UTC timestamps: parse, format and<br>`isValidFixUtcTimestamp`                   | —          | #403  | —       | Not started |
+| 43  | FIN-96  | Finance    | SWIFT dates: `parseSwiftDate`,<br>`formatSwiftDate`, `isValidSwiftDate`             | FIN-95     | #404  | —       | Not started |
+| 44  | AV-97   | Aviation   | SSIM dates: `parseSsimDate`,<br>`formatSsimDate`, `isValidSsimDate`                 | —          | #405  | —       | Not started |
+| 45  | AV-98   | Aviation   | METAR and NOTAM times: parse,<br>`isValidMetarTime`, `isValidNotamValidity`         | AV-97      | #406  | —       | Not started |
+| 46  | RAI-99  | Rail       | GTFS time strings: `parseGtfsTime`,<br>`formatGtfsTime`, `isValidGtfsTime`          | —          | #407  | —       | Not started |
+| 47  | RAI-100 | Rail       | GTFS times to instants: `gtfsToInstant`                                             | RAI-99     | #408  | —       | Not started |
+| 48  | IOT-101 | IoT        | PTP time: `ptpToUtc`, `utcToPtp`,<br>`isValidPtpTimestamp`                          | —          | #409  | —       | Not started |
+| 49  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | —          | #341  | —       | Waiting     |
+| 50  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | —          | #353  | —       | Waiting     |
+| 51  | CORE-92 | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                   | —          | #386  | —       | Not started |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm
@@ -161,13 +167,23 @@ checker.
 `dwellTime.calendarDays`, and `INT-58` adds the billing deadline chain, every window a caller
 parameter, on top of it, so the two follow the primitive they test before the rest of Transport.
 
-**`SPA-47`, `SPA-49` and `SPA-74` form a chain, not a cycle.** `SPA-47` owns TT and TCG, which
-are a constant offset and a constant rate from TAI and need no Julian Date; `SPA-49` depends on it
-alone; `SPA-74` owns TDB and TCB and depends on both. Every row in the table is a buildable order.
+**`SPA-47` and `SPA-49` form a chain, not a cycle.** `SPA-47` owns TT and TCG, which are a
+constant offset and a constant rate from TAI and need no Julian Date; `SPA-49` depends on it
+alone. Every row in the table is a buildable order.
 
 **Realms interleave where a dependency demands it.** `SPA-48` sits beside `MAR-16`, far ahead of
 the rest of Space, because the GNSS time scales need its leap-second table. Read the `#` column,
 not the realm column, for order.
+
+**The industry formats come after Space.** `HLTH-93` … `IOT-101` open five realms — Healthcare,
+Finance, Aviation, Rail and IoT — each an inner module for how its industry writes a timestamp on
+the wire, read and written. Every one draws only on shipped primitives (`CORE-1`, `CORE-2`,
+`CORE-4`, `INT-15`'s two-digit-year window, `MAR-16`, `SPA-48`). In each realm the first story opens
+it, with its subpaths, Dox industry, guide and mistakes page, and the second extends them, so four
+pairs are ordered: `HLTH-93` before `HLTH-94`, `FIN-95` before `FIN-96`, `AV-97` before `AV-98`, and
+`RAI-99` before `RAI-100`, which also turns `RAI-99`'s times into instants. The realms themselves
+can be built in any order. They sit before the `CORE` rows that wait or run on a schedule, and no
+`Cut` follows them yet.
 
 ---
 
@@ -238,8 +254,24 @@ Highest commercial value and the thinnest coverage in the original plan.
 
 - **`SPA-48` came first in this realm, not third.** The leap-second table is what `SPA-46`
   needs, and `MAR-16` needed it early in Phase 2, so it was built beside `MAR-16`.
-- **SPA-46 → SPA-47 → SPA-49 → SPA-74 → SPA-50** is the scale-conversion chain, now acyclic.
-- **SPA-52** needs `SPA-46` and `SPA-48`.
+- **SPA-46 → SPA-47 → SPA-49** is the scale-conversion chain, now acyclic.
+- **SPA-52** needs `SPA-48`.
+
+### Phase 4 — Industry timestamp formats
+
+Five realms, each an inner module like any other, with its own subpath and Dox industry. The
+first story named in each realm opens it; the second comes after it.
+
+- **HLTH-93, HLTH-94** — `@northguild/gmt/healthcare`: HL7 v2 `DTM` and `TS`, and the FHIR R4
+  `date`, `dateTime` and `instant`.
+- **FIN-95, FIN-96** — `@northguild/gmt/finance`: the FIX `UTCTimestamp` and the SWIFT MT `YYMMDD`
+  date.
+- **AV-97, AV-98** — `@northguild/gmt/aviation`: the SSIM `DDMMMYY` date, the METAR report time and
+  NOTAM validity.
+- **RAI-99, RAI-100** — `@northguild/gmt/rail`: GTFS times past midnight, and their instants from
+  noon minus 12 hours.
+- **IOT-101** — `@northguild/gmt/iot`: PTP timestamps, TAI on the wire, with the announced UTC
+  offset.
 
 ---
 

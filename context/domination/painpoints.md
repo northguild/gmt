@@ -261,6 +261,12 @@ and GTFS-RT POSIX seconds.
   last Saturday in October; Northern Winter covers the remainder — deliberately aligned
   to EU DST. Written NS26 / NW25. Airline scheduling is unusable without season
   boundaries. ([Simple Flying](https://simpleflying.com/iata-summer-winter-schedule/))
+- **SSIM dates are not ISO 8601.** Schedule and slot messages write a date as two digits
+  of day and "the first three letters of the name of the month in English: JAN, FEB, ……,
+  NOV, DEC", upper case. A period of operation adds two digits of year after them (IATA
+  SSIM Chapter 7, not reached; marked, not asserted). A parser that reads the month
+  through the platform's locale breaks on any machine whose default locale is not
+  English, and a two-digit year has no century until someone states one. ([AECFA, _Quick Guide to Using the IATA SSIM format_](https://www.slotcoordination.es/sites/Satellite?blobcol=urldata&blobkey=id&blobtable=MungoBlobs&blobwhere=1576865330896&ssbinary=true))
 - **`DDHHMMZ` is ambiguous; NOTAM validity is not.** METAR and TAF report times carry
   day-of-month, hour and minute only — **no month, no year** — so parsing one *requires*
   a reference instant to disambiguate. ICAO NOTAM items B) and C), by contrast, use a
@@ -279,7 +285,7 @@ and GTFS-RT POSIX seconds.
 - Minimum connect time is in local time at the connecting airport; CTOT slot windows run
   −5/+10 minutes.
 
-→ AV-25, AV-26, AV-27, AV-28
+→ AV-25, AV-26, AV-27, AV-28, AV-97, AV-98
 
 ---
 

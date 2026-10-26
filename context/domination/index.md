@@ -6,7 +6,7 @@ This file is a progressive-disclosure entry point. Read what you need:
   table, risks, and the verified standards list. **The entry file.**
 - [painpoints.md](painpoints.md) — Researched domain evidence per realm, with primary-source
   citations. **Read this before adding or changing any realm function.**
-- [tracker.md](tracker.md) — The 44 stories in build order, the `Blocked by` column, and
+- [tracker.md](tracker.md) — The 51 stories in build order, the `Blocked by` column, and
   the Definition of Done binding every story.
 - [issues/index.md](issues/index.md) — Full specs, one file per story, named by story ID.
 - [docs-site.md](docs-site.md) — The guide, scenarios and mistakes page every realm story ships on
@@ -18,10 +18,12 @@ This file is a progressive-disclosure entry point. Read what you need:
 ## Orientation
 
 GMT today covers one temporal domain: Earth Reference time. This epic adds Core primitives and
-four realms, as tree-shakeable inner modules under `packages/gmt/src/`.
+nine realms, as tree-shakeable inner modules under `packages/gmt/src/`. Five of them —
+Healthcare, Finance, Aviation, Rail and IoT — hold their industry's timestamp formats.
 
-Build order is **Core → Logistics/Transport → Space**, in three phases. Story IDs are globally
-sequential, so reading the tracker top to bottom is the build order. Phases 1 and 2 — Core plus
+Build order is **Core → Logistics/Transport → Space → industry timestamp formats**, in four
+phases. Story IDs are globally sequential, so reading the tracker top to bottom is the build
+order. Phases 1 and 2 — Core plus
 the logistics realms — are the priority and stand alone as a deliverable.
 
 ## Two rules that shape every story
