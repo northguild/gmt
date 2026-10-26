@@ -4,9 +4,9 @@
 
 ## Gap
 
-Spacecraft navigation and orbital mechanics use TT as the independent variable of Earth-based ephemerides. TT is a constant offset from TAI. TCG, the coordinate time of the geocentric reference system, differs from TT by a constant rate fixed by IAU resolution. Both are exactly defined, and both are prerequisites for the Julian Date story and for the barycentric scales.
+Spacecraft navigation and orbital mechanics use TT as the independent variable of Earth-based ephemerides. TT is a constant offset from TAI. TCG, the coordinate time of the geocentric reference system, differs from TT by a constant rate fixed by IAU resolution. Both are exactly defined, and both are prerequisites for the Julian Date story.
 
-The first draft bundled TT with TDB in one story. TDB needs the two-part Julian Date (SPA-49) for its periodic correction, while SPA-49 needs `toTT` to express a JD in a scale other than UTC — a mutual dependency the tracker flagged as unbuildable. Splitting the JD-free scales here and moving TDB/TCB to SPA-74 resolves it: SPA-49 depends on this story alone.
+The first draft bundled TT with TDB in one story. TDB needs the two-part Julian Date (SPA-49) for its periodic correction, while SPA-49 needs `toTT` to express a JD in a scale other than UTC — a mutual dependency the tracker flagged as unbuildable. This story keeps only the scales that need no Julian Date, and TDB and TCB are not part of the epic: SPA-49 depends on this story alone.
 
 ## Scope
 
@@ -18,7 +18,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 - `<space-ns>/convert/tcg.ts`:
   - `toTCG(isoString: string): string` — ISO UTC to a TCG scale string.
   - `fromTCG(tcgString: string): string` — TCG to ISO UTC.
-  - `tcgMinusTt(isoString: string): number` — The accumulated rate difference in seconds, exposed like the TDB correction so callers see the magnitude.
+  - `tcgMinusTt(isoString: string): number` — The accumulated rate difference in seconds, exposed so callers see the magnitude.
 
 ## Key constants
 
@@ -41,9 +41,9 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 ## Design notes
 
 - **No Julian Date is needed here.** Eq. (10.1) is linear in elapsed TT from a fixed epoch; `(JD_TT − T₀) × 86400` is simply TT seconds since 1977-01-01T00:00:32.184 TT, and that is computed from nanoseconds since the epoch (CORE-1), which is exact, not from a JD, which is not. That is what lets SPA-49 depend on this story without a cycle. The `1 / (1 − L_G)` factor is kept, not dropped: the IERS note that it "may be approximated" away is a 10⁻¹⁸ rate statement, and an exact formula costs nothing.
-- **`tcgMinusTt` is exported for the same reason SPA-74 exports `tdbMinusTt`:** a caller at millisecond precision needs to know a ~1 second-per-50-years drift is being applied; hiding it inside the conversion makes the difference between "TT" and "TCG" look like a label.
-- TT is the geocentric scale for Earth ephemerides; barycentric work needs TDB (SPA-74). Note the distinction rather than assuming callers know it.
-- Pre-1972 input inherits SPA-46's sentinel: no integer TAI − UTC exists before then.
+- **`tcgMinusTt` is exported deliberately:** a caller at millisecond precision needs to know a ~1 second-per-50-years drift is being applied; hiding it inside the conversion makes the difference between "TT" and "TCG" look like a label.
+- TT is the geocentric scale for Earth ephemerides; barycentric work needs TDB, which this epic does not provide. Note the distinction rather than assuming callers know it.
+- Pre-1972 input returns the sentinel, as `toTAI` does (MAR-16): no integer TAI − UTC exists before then.
 
 ## Corrections
 

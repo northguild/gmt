@@ -38,7 +38,7 @@ The types live in `packages/gmt/src/types/gnss.ts`:
 - `RolloverEra` is `number | 'rolling' | { notBefore: string }`, and `rolloverEra` is required.
 - `GnssWeek` is `{ week, timeOfWeekSeconds, era }`; `RinexWeekSystem` is `'GPS' | 'GAL' | 'BDT' | 'QZS' | 'IRN'`; `RinexWeek` is `{ week, timeOfWeekSeconds }`.
 
-`toTAI` / `fromTAI` (`packages/gmt/src/timescale/convert/`) and the time-scale string grammar are built here; the TAI64 labels stay in their own story.
+`toTAI` / `fromTAI` (`packages/gmt/src/timescale/convert/`) and the time-scale string grammar are built here; TAI64 labels are not part of this story.
 
 The code lives in the `gnss/` and `timescale/` building-block namespaces; this story creates no `maritime/` namespace (see [Decisions](#decisions)).
 

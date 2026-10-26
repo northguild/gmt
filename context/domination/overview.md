@@ -17,13 +17,13 @@ transitions). Real-world applications span multiple domains with distinct semant
 | **Transport (shared)** | Transit, dwell, ETA, multi-leg, cut-offs              | Shared across all transport modes    |
 | **Intermodal**         | Containers, demurrage, filing deadlines, EDI          | Ocean freight, multimodal logistics  |
 | **Maritime**           | GNSS time scales, week rollover                       | Ship navigation                      |
-| **Space / Celestial**  | TAI, GPS, TT, TDB, UT1, leap seconds, CCSDS           | Satellite ops, orbital mechanics     |
+| **Space / Celestial**  | TAI, GPS, TT, TCG, Julian Date, leap seconds, CCSDS   | Satellite ops, orbital mechanics     |
 
 Each realm is an **inner module** under `packages/gmt/src/`. Single package, tree-shakeable,
 shared Temporal dependency.
 
 **Start here:** [painpoints.md](painpoints.md) records the researched evidence behind every
-realm. [tracker.md](tracker.md) has the 44 stories in build order.
+realm. [tracker.md](tracker.md) has the 41 stories in build order.
 
 ---
 
@@ -96,7 +96,7 @@ which were correct, complete, or GMT's facts to assert.
                                     ├── instant/        (CORE-4)
                                     ├── calendar/       (CORE-5, CORE-7, CORE-54, CORE-55)
                                     ├── interval/       (CORE-6)
-                                    ├── timescale/      (SPA-48, MAR-16 — TAI, leap seconds; SPA-46 TAI64)
+                                    ├── timescale/      (SPA-48, MAR-16 — TAI, leap seconds)
                                     │
                                     │   cross-industry layers (industry domains others draw on)
                                     ├── workforce/      (CORE-76 — hours of work: duty logs and rules)
@@ -106,7 +106,7 @@ which were correct, complete, or GMT's facts to assert.
                                     ├── transport/      (TRAN-8 … TRAN-10, TRAN-57)
                                     ├── intermodal/     (INT-12, INT-14, INT-15, INT-58)
                                     └── Space realm — namespace name decided when the SPA stories start
-                                                        (SPA-47, SPA-49, SPA-50, SPA-52, SPA-74)
+                                                        (SPA-47, SPA-49, SPA-52)
 
 packages/gmt-time/ (DELETE — value moved to core)
 packages/gmt-otel/ (DELETE — too niche)
@@ -139,7 +139,7 @@ entry per category barrel, mirrored in `typesVersions`).
 | `instant/`   | CORE-4         | Instant-plus-offset pairs, explicit local-time resolution                 |
 | `calendar/`  | CORE-5, CORE-7, CORE-54, CORE-55 | ISO week, ordinal, fiscal periods, zone-aware buckets, business calendars, holiday rules, operating hours |
 | `interval/`  | CORE-6         | Overlap, intersect, clamp, subtract, merge, split, sum                     |
-| `timescale/` | SPA-48, MAR-16, SPA-46 | TAI − UTC, leap seconds, TAI and TAI64 |
+| `timescale/` | SPA-48, MAR-16 | TAI − UTC, leap seconds, TAI |
 
 These are universal primitives. `interval/` and `calendar/` in particular serve hours-of-work
 rules and free time, which would otherwise each implement interval arithmetic and disagree about
@@ -231,15 +231,14 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 
 | Risk                          | Mitigation                                                                          |
 | ----------------------------- | ------------------------------------------------------------------------------------- |
-| Epic size (44 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
+| Epic size (41 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
 | Bundled data staleness        | Every data module exposes provenance and a staleness predicate. Never on the hot path.|
 | Holiday calendar maintenance  | Caller-supplied. Opt-in exchange and payment-system calendars carry coverage windows; no national holiday sets ship. |
-| IERS data staleness           | Bulletin A ships at build and `isUt1Stale` surfaces its expiry. The leap-second table (Bulletin C) is closed and built in; a weekly canary checks it against IERS until IERS publishes its file format for continuous UTC. |
+| IERS data staleness           | The leap-second table (Bulletin C) is closed and built in; a weekly canary checks it against IERS until IERS publishes its file format for continuous UTC. |
 | Regulatory tables drift       | GMT tracks no law: windows, limits and tables are caller parameters, never logic or docs text (tracker, "Added for this epic"). |
 | Transport scope creep         | Time math only. Routing and optimisation are the consumer's problem.                  |
 | Safety-critical approximation | CORE-76 evaluates only the rules and numbers the caller states, reports every rule separately, and approximates nothing. |
 | Space realm complexity        | Model against `astrotime` and ERFA. Accuracy limits stated as numbers in JSDoc.       |
-| TDB-TT accuracy               | Simplified formula first. Fairhead & Bretagnon parked as a separate story.            |
 | Bundle size bloat             | Inner modules tree-shakeable; data behind subpaths. Monitor with `size-limit`.        |
 | Re-derivation of bad APIs     | Every replacement carries a `## Corrections` section. Do not undo without a source.   |
 
@@ -248,7 +247,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 ## References
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
-- [tracker.md](tracker.md) — 44 stories, `Blocked by` column, Definition of Done
+- [tracker.md](tracker.md) — 41 stories, `Blocked by` column, Definition of Done
 - [research/index.md](research/index.md) — all research records, including the
   `research/spike-2026-09/` verification files: claim, quote, source and clause behind each spec's numbers, and what could not be verified
 - [issues/index.md](issues/index.md) — story specs, one file per story, named by story ID
@@ -258,7 +257,7 @@ Standards cited by stories in this epic, each verified against a primary source.
 records (`painpoints.md`, `research/`) also cite statutes, regulations and professional-body
 rules; those citations prove a painpoint exists and are not standards any story implements.
 
-- CCSDS 301.0-B-4 — Time Code Formats (CUC §3.2, CDS §3.3, ASCII §3.5)
+- CCSDS 301.0-B-4 — Time Code Formats (ASCII §3.5)
 - CCSDS 502.0-B-3 — Orbit Data Messages; CCSDS 503.0-B — Tracking Data Message
 - ITU-R M.585 — Assignment and use of maritime mobile service identities
 - IEC/IEEE 61588:2021 (IEEE 1588) / IEEE 802.1AS — Precision Time Protocol
@@ -268,9 +267,9 @@ rules; those citations prove a painpoint exists and are not standards any story 
 - GTFS — `stop_times`, service days, "noon minus 12h"
 - HL7 v2.x DTM, FHIR R4, DICOM PS3.5 §6.2 — clinical and imaging timestamps
 - UIC 406 — capacity, blocking time and dwell (**not** "UIC 9602", which does not exist)
-- IERS Bulletin A (Earth orientation) and Bulletin C (leap seconds); IERS Conventions (2010) ch. 10
-- IAU 2000 Resolution B1.9 (TT/TCG rate) and IAU 2006 Resolution B3 (TDB/TCB)
-- IAU SOFA (and its ERFA port) — two-part Julian Date, Fairhead & Bretagnon TDB−TT model
+- IERS Bulletin C (leap seconds); IERS Conventions (2010) ch. 10
+- IAU 2000 Resolution B1.9 (TT/TCG rate)
+- IAU SOFA (and its ERFA port) — two-part Julian Date
 - IATA SSIM — Standard Schedules Information Manual (paid; field layout labelled secondary)
 - ICAO Annex 15 ch. 6 (AIRAC); ICAO Doc 10066 (PANS-AIM); ICAO Doc 9971 (Manual on Collaborative Air Traffic Flow Management); EUROCONTROL OPADD 4.1 (NOTAM item D); WMO-No. 306 FM 51 (TAF)
 - BIMCO Laytime Definitions for Charter Parties 2013; Gencon 1994 cl. 6(c)
@@ -286,8 +285,7 @@ rules; those citations prove a painpoint exists and are not standards any story 
 - FpML day-count-fraction 2-3, business-center 9-4, `CalculationPeriodDates`, `RollConventionEnum`; ISDA 2006 Definitions §4.16 with Supplements 14 and 43; ISDA RFR memorandum; ISDA CDS roll FAQ (2015)
 - ISO 10383 — Market Identifier Codes
 - FIX Latest data types; SWIFT MT fields 32A, 13C, 13D
-- D. J. Bernstein, libtai TAI64
 
 National sources that stories also name — NASA/NAIF SPICE, Bowditch, ACP 121, PQA, ARRC, USNO,
-NOAA, Espenak & Meeus — appear only as labelled peers, corroboration or test oracles, never as the
+NOAA — appear only as labelled peers, corroboration or test oracles, never as the
 authority (tracker, "International authority first").
