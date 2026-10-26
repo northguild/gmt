@@ -29,12 +29,20 @@ second component reads a date as a time.
 - `packages/gmt/src/healthcare/format/formatHL7.ts`:
   - `formatHL7(value: string, options?: { precision?: Hl7Precision }): string` — Writes an ISO 8601
     value as an HL7 `DTM`. It never writes `TS`, which HL7 withdrew in v2.6.
+- `packages/gmt/src/healthcare/validate/isValidHL7.ts`:
+  - `isValidHL7(value: string): boolean` — True exactly when `parseHL7` returns a value; it calls
+    the parser, so the two cannot disagree. The null value `'""'` is true, because it is a value.
+    False for a value that is not a string.
+- `internal/hl7DateTime.ts` — the one `DTM` grammar, a regex built from HL7's format picture, and
+  the split of a `TS` at `^`. Not in `regex/`: HL7 publishes a format picture, not a pattern.
+  It joins `context/coding-standards.md` as a scoped exception, as INT-15's EDI grammars did.
 - `packages/gmt/src/types/hl7.ts` — `Hl7Precision` (`"year"`, `"month"`, `"day"`, `"hour"`,
   `"minute"`, `"second"`, `"fraction"`) and `Hl7DateTime`.
 - This story opens the `healthcare/` realm: the `@northguild/gmt/healthcare`,
-  `@northguild/gmt/healthcare/parse` and `@northguild/gmt/healthcare/format` subpaths
-  (`package.json` `exports` and `typesVersions`, the dox `gmt-modules.ts` barrel), and the
-  Healthcare industry in `apps/dox/src/data/industries.json`, with namespace `healthcare`.
+  `@northguild/gmt/healthcare/parse`, `@northguild/gmt/healthcare/format` and
+  `@northguild/gmt/healthcare/validate` subpaths (`package.json` `exports` and `typesVersions`, the
+  dox `gmt-modules.ts` barrel), and the Healthcare industry in `apps/dox/src/data/industries.json`,
+  with namespace `healthcare`.
 
 ### The result of `parseHL7`
 
@@ -103,6 +111,9 @@ UTC.
   with an offset writes that offset; a local date-time writes none. A caller who must send the
   facility's wall clock passes the string `fromOffsetInstant` writes for that zone. An offset is
   never dropped or rounded.
+- **One public check, no public pattern.** A `DTM` is valid only as a whole: its digit count, its
+  `TS` component and its calendar together. So the public check is `isValidHL7`, and the grammar
+  stays in `internal/`, as INT-15 keeps the EDI grammars.
 - **The formatter cuts to the precision and never rounds**, as INT-15's formatters do. The default is
   the value's own precision, with a fraction cut to the four digits `DTM` holds.
 
@@ -121,6 +132,8 @@ HL7 Europe's published copy.
 | `TS` is not written | [HL7 v2.6 ch. 2A, 2.A.77](https://www.hl7.eu/HL7v2x/v26/std26/ch02a.html): "The TS data type has been replaced by the DTM data type and the detail was withdrawn and removed from the standard as of v 2.6" |
 | The null value `""` | [HL7 v2.5.1 ch. 2, §2.5.3](https://www.hl7.eu/HL7v2x/v251/std251/ch02.html) |
 | A partial value has no instant | **GMT rule.** An instant needs a minute at least; adding digits the sender did not send states a fact the message does not hold |
+| The grammar is internal; the public check is `isValidHL7` | **GMT rule**, INT-15's: HL7 publishes a format picture, not a pattern |
+| `isValidHL7` is true exactly when `parseHL7` returns a value | **GMT rule.** The validator calls the parser, so the two cannot disagree |
 | A second of `60` is rejected | **GMT rule.** 2.A.22 gives no leap second, and Temporal has none |
 | A field out of range, or a day the year does not have, is rejected | TC39 Temporal `overflow: "reject"`; [coding-standards § Calendar & zone semantics](../../coding-standards.md#calendar--zone-semantics) |
 | Sentinels | [coding-standards § API Contract](../../coding-standards.md#api-contract) |
@@ -148,4 +161,6 @@ HL7 Europe's published copy.
 - `formatHL7('2024-06-15T10:30:45.98765-05:00')` returns `20240615103045.9876-0500`, cut and not rounded; with `{ precision: 'minute' }` it returns `202406151030-0500`
 - `formatHL7('2024-06', { precision: 'day' })` returns the sentinel
 - Round-trip: `parseHL7(formatHL7(iso))` returns the instant and offset of `iso` for every instant row above
+- `isValidHL7('20240615103000-0500')`, `'2024'` and `'""'` are `true`; `'20240615^S'`, `'20240230'` and `''` are `false`
+- `isValidHL7` agrees with `parseHL7` on every `parseHL7` row above; `isValidHL7(20240615)` and `isValidHL7(null)` are `false`
 - `pnpm run validate` stays green

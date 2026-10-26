@@ -27,13 +27,18 @@ every ordering, age and date-range query downstream inherits the invented fact.
   - `formatFHIR(value: string, type: FhirDateType, options?: { precision?: FhirPrecision }): string`
     — Writes an ISO 8601 value as a FHIR value of the named type.
 - `packages/gmt/src/healthcare/validate/isValidFHIR.ts`:
-  - `isValidFHIR(value: string, type: FhirDateType): boolean`
+  - `isValidFHIR(value: string, type: FhirDateType): boolean` — True exactly when `parseFHIR`
+    returns a value at a precision `type` allows; it calls the parser, so the two cannot disagree.
+    False for a value that is not a string.
+- `packages/gmt/src/regex/fhir.ts` — `fhirDate`, `fhirDateTime` and `fhirInstant`, the three
+  patterns FHIR R4 publishes, verbatim and anchored with `^…$`, exported from `regex/index.ts` and
+  so from `@northguild/gmt/regex`. The source is the `regex` extension on `date.value`,
+  `dateTime.value` and `instant.value` in the R4 StructureDefinitions; the Datatypes page prints
+  the same patterns with each backslash doubled. Shape only, as `epcisEventTime` is.
 - `packages/gmt/src/types/fhir.ts` — `FhirDateType` (`"date"`, `"dateTime"`, `"instant"`),
   `FhirPrecision` (`"year"`, `"month"`, `"day"`, `"second"`, `"fraction"`) and `FhirDateTime`.
-- The `@northguild/gmt/healthcare/validate` subpath (`package.json` `exports` and
-  `typesVersions`, the dox `gmt-modules.ts` barrel). If the `healthcare/` realm does not exist yet
-  when this story starts, this story opens it, with the subpaths and the industry declaration its
-  sibling story names.
+- If the `healthcare/` realm does not exist yet when this story starts, this story opens it, with
+  the subpaths (`validate` included) and the industry declaration its sibling story names.
 
 ### FHIR R4 precision rules
 
@@ -64,8 +69,10 @@ There is no minute or hour precision: a time without seconds is invalid in every
 
 **FHIR Date Checker.** Paste a value and see, for each of `date`, `dateTime` and `instant`, whether
 it is valid and why not; the value's precision is drawn as the span it names on a calendar strip.
-A second panel writes an instant as each type at each precision it allows. Calls `parseFHIR`,
-`isValidFHIR`, `formatFHIR`. Teaches: `2024-06` is a month, not midnight on the first.
+Beside each verdict, whether FHIR's published pattern matches, so `2024-02-30` shows a match that
+is not valid. A second panel writes an instant as each type at each precision it allows. Calls
+`parseFHIR`, `isValidFHIR`, `formatFHIR`, and tests `fhirDate`, `fhirDateTime` and `fhirInstant`.
+Teaches: `2024-06` is a month, not midnight on the first.
 
 ## Design notes
 
@@ -75,6 +82,11 @@ A second panel writes an instant as each type at each precision it allows. Calls
   `parseFHIR` reads the `dateTime` grammar and the type check is a question about the result:
   `isValidFHIR(v, "dateTime")` is true exactly when `parseFHIR(v)` returns a value;
   `"date"` adds a precision of day or coarser; `"instant"` adds second or fraction.
+- **The patterns are FHIR's, and they prove shape only.** FHIR calls its regexes "informative, not
+  normative", and GMT publishes them unchanged, neither loosened nor tightened, as it publishes
+  GS1's EPCIS patterns. Each matches 30 February, a second of `60` on any day and a fraction of any
+  length. `isValidFHIR` refuses all three, so a string it accepts always matches the type's
+  pattern, and not the other way round.
 - **A time without a zone is invalid, not local.** FHIR requires the zone wherever a time is
   present, so `2024-06-15T10:30:00` is invalid as every type. This differs from HL7 v2 (HLTH-93),
   where no offset is legal and means the sender's local time.
@@ -101,6 +113,10 @@ FHIR is published by HL7 International, a multinational industry body. R4 was re
 | `instant` precision and zone | FHIR R4 §2.24.0.1, `instant`: "The time SHALL specified at least to the second and SHALL include a time zone" |
 | Leap seconds are allowed | FHIR R4 §2.24.0.1, `dateTime`: "Leap Seconds are allowed"; the second field of each regex is `([0-5][0-9]\|60)` |
 | Offset range `-14:00` … `+14:00`; year `0000` refused | FHIR R4 §2.24.0.1 regexes. The page calls the regexes "informative, not normative"; **GMT rule** to follow them where the prose is silent |
+| `fhirDate`, `fhirDateTime`, `fhirInstant` | FHIR R4 StructureDefinitions `date`, `dateTime` and `instant`, the `regex` extension on `.value`, verbatim |
+| The patterns are informative | FHIR R4 §2.24.0.1: "The regexes are provided to assist with tooling, but are informative, not normative" |
+| A pattern match is shape only; validity is `isValidFHIR`'s | **GMT rule**, as for `epcisEventTime` and `isValidEpcisEventTime` (INT-15) |
+| `isValidFHIR` calls `parseFHIR` | **GMT rule.** The validator calls the parser, so the two cannot disagree |
 | A second of `60` only on an inserted leap second | **GMT rule**, on SPA-48's closed leap-second table |
 | A fraction of more than nine digits is refused | **GMT rule.** Temporal holds nanoseconds |
 | `Z`, `+00:00`, `-00:00` read as `+00:00` | **GMT rule.** One spelling for one fact |
@@ -129,4 +145,8 @@ FHIR is published by HL7 International, a multinational industry body. R4 was re
 - `formatFHIR('2024-06-15T10:30:00Z', 'dateTime', { precision: 'month' })` returns `2024-06`; `formatFHIR('2024-06', 'dateTime', { precision: 'day' })` returns the sentinel
 - Round-trip: `parseFHIR(formatFHIR(v, 'dateTime')).precision` equals the precision of `v` for every `FhirPrecision`
 - `isValidFHIR` agrees with `parseFHIR` on every row above, as the design note states
+- `fhirDateTime.test('2024-06')` and `fhirInstant.test('2015-02-07T13:28:17.239+02:00')` are `true`; `fhirDate.test('2024-06-15T10:30:00Z')`, `fhirInstant.test('2024-06-15')` and `fhirDateTime.test('2024-06-15T10:30:00')` are `false`
+- Each pattern's `source` is the StructureDefinition's `regex` string with `^` and `$` added, asserted against a copy kept in the test
+- `fhirDateTime.test('2024-02-30')`, `fhirInstant.test('2017-12-31T23:59:60Z')` and an instant with a ten-digit fraction are `true`, and `isValidFHIR` is `false` for each: the pattern is shape only
+- Every value `isValidFHIR(v, t)` accepts in the rows above matches `t`'s pattern; `isValidFHIR(20240615, 'date')` and `isValidFHIR(null, 'dateTime')` are `false`
 - `pnpm run validate` stays green

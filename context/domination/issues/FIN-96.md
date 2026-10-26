@@ -23,9 +23,16 @@ a mirror of SWIFT's User Handbook, whose own copy needs a login)
   - `formatSwiftDate(value: string, options: TwoDigitYearOptions): string` — An ISO date to
     `YYMMDD`. Returns the sentinel for a year outside the window, so a round trip never changes a
     century.
+- `packages/gmt/src/finance/validate/isValidSwiftDate.ts`:
+  - `isValidSwiftDate(value: string, options: TwoDigitYearOptions): boolean` — True exactly when
+    `parseSwiftDate` returns a date for the same arguments; it calls the parser, so the two cannot
+    disagree. False without `yearWindow`, and for a value that is not a string.
+- `internal/swiftDate.ts` — the `YYMMDD` regex. Not in `regex/`: SWIFT gives a format code (`6!n`),
+  not a pattern. It joins `context/coding-standards.md` as a scoped exception, as INT-15's EDI
+  grammars did.
 - `TwoDigitYearOptions` is the type INT-15 defined; this story adds no type.
 - If the `finance/` realm does not exist yet when this story starts, this story opens it, with the
-  subpaths and the industry declaration its sibling story names.
+  subpaths (`validate` included) and the industry declaration its sibling story names.
 
 ### What returns the sentinel
 
@@ -56,6 +63,10 @@ Teaches: a two-digit year has no century until someone states one.
 - **Leap days are checked in the year the window gives.** `000229` is 29 February 2000 with a
   window starting in 2000, and invalid with one starting in 1900: 2000 was a leap year and 1900 was
   not. So the day check runs after the century is known.
+- **The validator takes the window too.** `000229` is valid with a window from 2000 and not with
+  one from 1900, so `isValidSwiftDate` takes the parser's options and is false without
+  `yearWindow`. The grammar stays in `internal/`: a value is valid only once its century is known,
+  which no pattern can say.
 - **A round trip never changes a century.** `formatSwiftDate` refuses a year outside the window
   rather than writing digits that would read back as another year.
 - **A value date is a date.** The formatter takes an ISO calendar date only. A date-time has a
@@ -72,6 +83,8 @@ own copy needs a login.
 | --- | --- |
 | The date is six digits, `YYMMDD`, and must be a valid date | SWIFT MT 103, field 32A: format `6!n3!a15d`, subfield 1 Date; network validated rule "Date must be a valid date expressed as YYMMDD (Error code(s): T50)" |
 | The century is the caller's | **GMT rule**, INT-15's: no standard names the century of a two-digit year |
+| The grammar is internal; the public check is `isValidSwiftDate` | **GMT rule**, INT-15's: SWIFT gives a format code, not a pattern |
+| `isValidSwiftDate` is true exactly when the parser returns a date | **GMT rule.** The validator calls the parser, so the two cannot disagree |
 | A year outside the window is refused by the formatter | **GMT rule.** Writing it would read back as another year |
 | A day that does not exist in the windowed year is rejected | TC39 Temporal `overflow: "reject"`; [coding-standards § Calendar & zone semantics](../../coding-standards.md#calendar--zone-semantics) |
 | Sentinels | [coding-standards § API Contract](../../coding-standards.md#api-contract) |
@@ -92,4 +105,6 @@ own copy needs a login.
 - `'24061'`, `'2406150'`, `'241315'` and `'24-06-15'` return the sentinel
 - `formatSwiftDate('2024-06-15', { yearWindow: 2000 })` returns `240615`; `formatSwiftDate('1969-01-01', { yearWindow: 2000 })` returns the sentinel; `'2024-06-15T10:00:00'` returns the sentinel
 - Round-trip: `parseSwiftDate(formatSwiftDate(d, w), w)` returns `d` for every date `d` inside the window `w`
+- `isValidSwiftDate('240615', { yearWindow: 2000 })` is `true`; `isValidSwiftDate('000229', { yearWindow: 1900 })`, `isValidSwiftDate('241315', { yearWindow: 2000 })` and `isValidSwiftDate('240615', {})` are `false`
+- `isValidSwiftDate` agrees with `parseSwiftDate` on every parse row above; a number and `null` are `false`
 - `pnpm run validate` stays green

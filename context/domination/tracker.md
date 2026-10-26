@@ -112,15 +112,15 @@ with the `Position` type, ahead of the remaining realms.
 | 37  | SPA-47  | Space      | `toTT` + `toTCG`                                                                    | —          | #228  | —       | Not started |
 | 38  | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                                  | SPA-47     | #230  | —       | Not started |
 | 39  | SPA-52  | Space      | CCSDS ASCII time codes A and B                                                      | —          | #233  | Cut     | Not started |
-| 40  | HLTH-93 | Healthcare | HL7 v2 timestamps: `parseHL7`,<br>`formatHL7`                                       | —          | #401  | —       | Not started |
-| 41  | HLTH-94 | Healthcare | FHIR datetimes: `parseFHIR`,<br>`formatFHIR`, `isValidFHIR`                         | —          | #402  | —       | Not started |
-| 42  | FIN-95  | Finance    | FIX UTC timestamps:<br>`parseFixUtcTimestamp`, `formatFixUtcTimestamp`              | —          | #403  | —       | Not started |
-| 43  | FIN-96  | Finance    | SWIFT dates: `parseSwiftDate`,<br>`formatSwiftDate`                                 | —          | #404  | —       | Not started |
-| 44  | AV-97   | Aviation   | SSIM dates: `parseSsimDate`,<br>`formatSsimDate`                                    | —          | #405  | —       | Not started |
-| 45  | AV-98   | Aviation   | METAR and NOTAM times: `parseMetarTime`,<br>`parseNotamValidity`                    | —          | #406  | —       | Not started |
-| 46  | RAI-99  | Rail       | GTFS time strings: `parseGtfsTime`,<br>`formatGtfsTime`                             | —          | #407  | —       | Not started |
+| 40  | HLTH-93 | Healthcare | HL7 v2 timestamps: `parseHL7`,<br>`formatHL7`, `isValidHL7`                         | —          | #401  | —       | Not started |
+| 41  | HLTH-94 | Healthcare | FHIR datetimes: `parseFHIR`, `formatFHIR`,<br>`isValidFHIR`, three FHIR regexes     | —          | #402  | —       | Not started |
+| 42  | FIN-95  | Finance    | FIX UTC timestamps: parse, format and<br>`isValidFixUtcTimestamp`                   | —          | #403  | —       | Not started |
+| 43  | FIN-96  | Finance    | SWIFT dates: `parseSwiftDate`,<br>`formatSwiftDate`, `isValidSwiftDate`             | —          | #404  | —       | Not started |
+| 44  | AV-97   | Aviation   | SSIM dates: `parseSsimDate`,<br>`formatSsimDate`, `isValidSsimDate`                 | —          | #405  | —       | Not started |
+| 45  | AV-98   | Aviation   | METAR and NOTAM times: parse,<br>`isValidMetarTime`, `isValidNotamValidity`         | —          | #406  | —       | Not started |
+| 46  | RAI-99  | Rail       | GTFS time strings: `parseGtfsTime`,<br>`formatGtfsTime`, `isValidGtfsTime`          | —          | #407  | —       | Not started |
 | 47  | RAI-100 | Rail       | GTFS times to instants: `gtfsToInstant`                                             | RAI-99     | #408  | —       | Not started |
-| 48  | IOT-101 | IoT        | PTP time: `ptpToUtc`, `utcToPtp`                                                    | —          | #409  | —       | Not started |
+| 48  | IOT-101 | IoT        | PTP time: `ptpToUtc`, `utcToPtp`,<br>`isValidPtpTimestamp`                          | —          | #409  | —       | Not started |
 | 49  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | —          | #341  | —       | Waiting     |
 | 50  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | —          | #353  | —       | Waiting     |
 | 51  | CORE-92 | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                   | —          | #386  | —       | Not started |

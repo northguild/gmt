@@ -23,12 +23,21 @@ pattern that allows `60` on any day accepts a second that never happened on all 
     `{ instant, precision, leapSecond, picoseconds }`.
 - `packages/gmt/src/finance/format/formatFixUtcTimestamp.ts`:
   - `formatFixUtcTimestamp(value: string, precision: FixPrecision): string`
+- `packages/gmt/src/finance/validate/isValidFixUtcTimestamp.ts`:
+  - `isValidFixUtcTimestamp(value: string): boolean` — True exactly when `parseFixUtcTimestamp`
+    returns a value; it calls the parser, so the two cannot disagree. False for a value that is
+    not a string.
+- `internal/fixUtcTimestamp.ts` — the one `UTCTimestamp` regex: digits, dash, colons, and a fraction
+  of 0, 3, 6, 9 or 12 digits. Not in `regex/`: the FIX Trading Community states the format in prose,
+  not as a pattern. It joins `context/coding-standards.md` as a scoped exception, as INT-15's EDI
+  grammars did.
 - `packages/gmt/src/types/fix.ts` — `FixPrecision` (`"second"`, `"millisecond"`, `"microsecond"`,
   `"nanosecond"`, `"picosecond"`) and `FixUtcTimestamp`.
 - This story opens the `finance/` realm: the `@northguild/gmt/finance`,
-  `@northguild/gmt/finance/parse` and `@northguild/gmt/finance/format` subpaths (`package.json`
-  `exports` and `typesVersions`, the dox `gmt-modules.ts` barrel), and the Finance industry in
-  `apps/dox/src/data/industries.json`, with namespace `finance`.
+  `@northguild/gmt/finance/parse`, `@northguild/gmt/finance/format` and
+  `@northguild/gmt/finance/validate` subpaths (`package.json` `exports` and `typesVersions`, the dox
+  `gmt-modules.ts` barrel), and the Finance industry in `apps/dox/src/data/industries.json`, with
+  namespace `finance`.
 
 ### The result of `parseFixUtcTimestamp`
 
@@ -79,6 +88,9 @@ measurement, and `60` is real on 27 days.
   and real on 27. The parser accepts it only where `isLeapSecond` (SPA-48) does, and returns the
   instant as `…T23:59:60Z`, the string `fromTAI` writes. The formatter takes that string back, so a
   leap second round-trips.
+- **One public check, no public pattern.** A `UTCTimestamp` is valid only once its day exists and
+  its `60` is an inserted second, which no pattern can say. So the public check is
+  `isValidFixUtcTimestamp`, and the grammar stays in `internal/`, as INT-15 keeps the EDI grammars.
 - **A local time is not written.** `UTCTimestamp` is UTC. A local date-time with no offset names no
   UTC second until a zone is supplied, so the formatter returns the sentinel for one; `resolveLocal`
   gives the instant first.
@@ -102,6 +114,8 @@ through the FIX Orchestra data-type browser, to which FIXimate now redirects.
 | No fraction means no period | FIX Latest, `UTCTimestamp`: "The fractions of seconds may be empty when no fractions of seconds are conveyed (in such a case the period is not conveyed)" |
 | A leap-second sequence | FIX Latest, `UTCTimestamp` examples: `19981231-23:59:59`, `19981231-23:59:60`, `19990101-00:00:00` |
 | `60` is valid on the 27 inserted seconds only | IERS leap-second table, built in by SPA-48 (Bulletin C 72; closed by CGPM 2026 Resolution 5) |
+| The grammar is internal; the public check is `isValidFixUtcTimestamp` | **GMT rule**, INT-15's: FIX states the format in prose and publishes no pattern |
+| `isValidFixUtcTimestamp` is true exactly when the parser returns a value | **GMT rule.** The validator calls the parser, so the two cannot disagree |
 | Another width returns the sentinel | **GMT rule.** FIX names the precision of four widths only; another is "used with bilateral agreement", which no value carries |
 | Picoseconds returned apart from the instant | **GMT rule.** Temporal holds nanoseconds; a parser does not cut a value without saying so |
 | The formatter cuts, never rounds | **GMT rule.** Rounding can move a value into the next second, minute or day |
@@ -124,4 +138,6 @@ through the FIX Orchestra data-type browser, to which FIXimate now redirects.
 - `formatFixUtcTimestamp('2024-06-15T16:30:00.123456789+02:00', 'millisecond')` returns `20240615-14:30:00.123`; `'second'` returns `20240615-14:30:00`; `'picosecond'` returns `20240615-14:30:00.123456789000`
 - `formatFixUtcTimestamp('2016-12-31T23:59:60Z', 'second')` returns `20161231-23:59:60`; `'2017-12-31T23:59:60Z'` and `'2024-06-15T14:30:00'` return the sentinel
 - Round-trip: `parseFixUtcTimestamp(formatFixUtcTimestamp(iso, p))` returns `iso` cut to `p`, with `precision: p`, for each of the five precisions
+- `isValidFixUtcTimestamp('20240615-14:30:00.123')` and `'20161231-23:59:60'` are `true`; `'20171231-23:59:60'`, `'20240615-14:30:00.12'` and `'2024-06-15T14:30:00Z'` are `false`
+- `isValidFixUtcTimestamp` agrees with `parseFixUtcTimestamp` on every parse row above; a number, `null` and `undefined` are `false`
 - `pnpm run validate` stays green
