@@ -18,12 +18,28 @@ transitions). Real-world applications span multiple domains with distinct semant
 | **Intermodal**         | Containers, demurrage, filing deadlines, EDI          | Ocean freight, multimodal logistics  |
 | **Maritime**           | GNSS time scales, week rollover                       | Ship navigation                      |
 | **Space / Celestial**  | TAI, TAI64, GPS, TT, TCG, Julian Date, leap seconds, CCSDS | Satellite ops, orbital mechanics     |
+| **Healthcare**         | HL7 v2 and FHIR timestamps — `@northguild/gmt/healthcare` | Clinical messages, patient records |
+| **Finance**            | FIX UTC timestamps, SWIFT dates — `@northguild/gmt/finance` | Trading sessions, payment messages |
+| **Aviation**           | SSIM dates, METAR report times, NOTAM validity — `@northguild/gmt/aviation` | Schedule files, weather reports, NOTAMs |
+| **Rail**               | GTFS times past midnight and their instants — `@northguild/gmt/rail` | Public-transport timetables |
+| **IoT**                | PTP time, TAI on the wire — `@northguild/gmt/iot`     | Sensor and industrial clocks         |
 
 Each realm is an **inner module** under `packages/gmt/src/`. Single package, tree-shakeable,
 shared Temporal dependency.
 
+Healthcare, Finance, Aviation, Rail and IoT are inner modules like the others, each with its own
+subpath and Dox industry. Each holds its industry's timestamp formats, read and written:
+
+| Realm | Subpath | Stories |
+| --- | --- | --- |
+| Healthcare | `@northguild/gmt/healthcare` | HLTH-93, HLTH-94 |
+| Finance | `@northguild/gmt/finance` | FIN-95, FIN-96 |
+| Aviation | `@northguild/gmt/aviation` | AV-97, AV-98 |
+| Rail | `@northguild/gmt/rail` | RAI-99, RAI-100 |
+| IoT | `@northguild/gmt/iot` | IOT-101 |
+
 **Start here:** [painpoints.md](painpoints.md) records the researched evidence behind every
-realm. [tracker.md](tracker.md) has the 42 stories in build order.
+realm. [tracker.md](tracker.md) has the 51 stories in build order.
 
 ---
 
@@ -105,6 +121,14 @@ which were correct, complete, or GMT's facts to assert.
                                     │   industry layers
                                     ├── transport/      (TRAN-8 … TRAN-10, TRAN-57)
                                     ├── intermodal/     (INT-12, INT-14, INT-15, INT-58)
+                                    │
+                                    │   industry timestamp formats
+                                    ├── healthcare/     (HLTH-93, HLTH-94 — HL7 v2, FHIR)
+                                    ├── finance/        (FIN-95, FIN-96 — FIX, SWIFT)
+                                    ├── aviation/       (AV-97, AV-98 — SSIM, METAR, NOTAM)
+                                    ├── rail/           (RAI-99, RAI-100 — GTFS)
+                                    ├── iot/            (IOT-101 — PTP)
+                                    │
                                     └── Space realm — namespace name decided when the SPA stories start
                                                         (SPA-47, SPA-49, SPA-52)
 
@@ -231,7 +255,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 
 | Risk                          | Mitigation                                                                          |
 | ----------------------------- | ------------------------------------------------------------------------------------- |
-| Epic size (42 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
+| Epic size (51 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
 | Bundled data staleness        | Every data module exposes provenance and a staleness predicate. Never on the hot path.|
 | Holiday calendar maintenance  | Caller-supplied. Opt-in exchange and payment-system calendars carry coverage windows; no national holiday sets ship. |
 | IERS data staleness           | The leap-second table (Bulletin C) is closed and built in; a weekly canary checks it against IERS until IERS publishes its file format for continuous UTC. |
@@ -247,7 +271,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 ## References
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
-- [tracker.md](tracker.md) — 42 stories, `Blocked by` column, Definition of Done
+- [tracker.md](tracker.md) — 51 stories, `Blocked by` column, Definition of Done
 - [research/index.md](research/index.md) — all research records, including the
   `research/spike-2026-09/` verification files: claim, quote, source and clause behind each spec's numbers, and what could not be verified
 - [issues/index.md](issues/index.md) — story specs, one file per story, named by story ID

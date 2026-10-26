@@ -7,7 +7,7 @@
 
 ## Overview
 
-`@northguild/gmt` expands with **42 stories across Core and 4 realms**, built in three phases.
+`@northguild/gmt` expands with **51 stories across Core and 9 realms**, built in four phases.
 
 Reading the table top to bottom is the build order, and the `#` column is that order. A story
 ID is a permanent name: it is what every cross-reference, spec filename and GitHub issue uses,
@@ -112,9 +112,18 @@ with the `Position` type, ahead of the remaining realms.
 | 37  | SPA-47  | Space      | `toTT` + `toTCG`                                                                    | —          | #228  | —       | Not started |
 | 38  | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                                  | SPA-47     | #230  | —       | Not started |
 | 39  | SPA-52  | Space      | CCSDS ASCII time codes A and B                                                      | —          | #233  | Cut     | Not started |
-| 40  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | —          | #341  | —       | Waiting     |
-| 41  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | —          | #353  | —       | Waiting     |
-| 42  | CORE-92 | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                   | —          | #386  | —       | Not started |
+| 40  | HLTH-93 | Healthcare | HL7 v2 timestamps: `parseHL7`,<br>`formatHL7`                                       | —          | #401  | —       | Not started |
+| 41  | HLTH-94 | Healthcare | FHIR datetimes: `parseFHIR`,<br>`formatFHIR`, `isValidFHIR`                         | —          | #402  | —       | Not started |
+| 42  | FIN-95  | Finance    | FIX UTC timestamps:<br>`parseFixUtcTimestamp`, `formatFixUtcTimestamp`              | —          | #403  | —       | Not started |
+| 43  | FIN-96  | Finance    | SWIFT dates: `parseSwiftDate`,<br>`formatSwiftDate`                                 | —          | #404  | —       | Not started |
+| 44  | AV-97   | Aviation   | SSIM dates: `parseSsimDate`,<br>`formatSsimDate`                                    | —          | #405  | —       | Not started |
+| 45  | AV-98   | Aviation   | METAR and NOTAM times: `parseMetarTime`,<br>`parseNotamValidity`                    | —          | #406  | —       | Not started |
+| 46  | RAI-99  | Rail       | GTFS time strings: `parseGtfsTime`,<br>`formatGtfsTime`                             | —          | #407  | —       | Not started |
+| 47  | RAI-100 | Rail       | GTFS times to instants: `gtfsToInstant`                                             | RAI-99     | #408  | —       | Not started |
+| 48  | IOT-101 | IoT        | PTP time: `ptpToUtc`, `utcToPtp`                                                    | —          | #409  | —       | Not started |
+| 49  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | —          | #341  | —       | Waiting     |
+| 50  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | —          | #353  | —       | Waiting     |
+| 51  | CORE-92 | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                   | —          | #386  | —       | Not started |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm
@@ -165,6 +174,14 @@ alone. Every row in the table is a buildable order.
 **Realms interleave where a dependency demands it.** `SPA-48` sits beside `MAR-16`, far ahead of
 the rest of Space, because the GNSS time scales need its leap-second table. Read the `#` column,
 not the realm column, for order.
+
+**The industry formats come after Space.** `HLTH-93` … `IOT-101` open five realms —
+Healthcare, Finance, Aviation, Rail and IoT — each an inner module for how its
+industry writes a timestamp on the wire, read and written. Every one draws only
+on shipped primitives (`CORE-1`, `CORE-2`, `CORE-4`, `INT-15`'s two-digit-year window, `MAR-16`,
+`SPA-48`), so the nine can be built in any order but one: `RAI-100` turns `RAI-99`'s times into
+instants. They sit before the `CORE` rows that wait or run on a schedule, and no `Cut` follows them
+yet.
 
 ---
 
@@ -237,6 +254,21 @@ Highest commercial value and the thinnest coverage in the original plan.
   needs, and `MAR-16` needed it early in Phase 2, so it was built beside `MAR-16`.
 - **SPA-46 → SPA-47 → SPA-49** is the scale-conversion chain, now acyclic.
 - **SPA-52** needs `SPA-48`.
+
+### Phase 4 — Industry timestamp formats
+
+Five realms, each an inner module like any other, with its own subpath and Dox industry.
+
+- **HLTH-93, HLTH-94** — `@northguild/gmt/healthcare`: HL7 v2 `DTM` and `TS`, and the FHIR R4
+  `date`, `dateTime` and `instant`.
+- **FIN-95, FIN-96** — `@northguild/gmt/finance`: the FIX `UTCTimestamp` and the SWIFT MT `YYMMDD`
+  date.
+- **AV-97, AV-98** — `@northguild/gmt/aviation`: the SSIM `DDMMMYY` date, the METAR report time and
+  NOTAM validity.
+- **RAI-99, RAI-100** — `@northguild/gmt/rail`: GTFS times past midnight, and their instants from
+  noon minus 12 hours.
+- **IOT-101** — `@northguild/gmt/iot`: PTP timestamps, TAI on the wire, with the announced UTC
+  offset.
 
 ---
 
