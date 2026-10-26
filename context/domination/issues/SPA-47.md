@@ -43,7 +43,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 - **No Julian Date is needed here.** Eq. (10.1) is linear in elapsed TT from a fixed epoch; `(JD_TT − T₀) × 86400` is simply TT seconds since 1977-01-01T00:00:32.184 TT, and that is computed from nanoseconds since the epoch (CORE-1), which is exact, not from a JD, which is not. That is what lets SPA-49 depend on this story without a cycle. The `1 / (1 − L_G)` factor is kept, not dropped: the IERS note that it "may be approximated" away is a 10⁻¹⁸ rate statement, and an exact formula costs nothing.
 - **`tcgMinusTt` is exported deliberately:** a caller at millisecond precision needs to know a ~1 second-per-50-years drift is being applied; hiding it inside the conversion makes the difference between "TT" and "TCG" look like a label.
 - TT is the geocentric scale for Earth ephemerides; barycentric work needs TDB, which this epic does not provide. Note the distinction rather than assuming callers know it.
-- Pre-1972 input returns the sentinel, as `toTAI` does (MAR-16): no integer TAI − UTC exists before then.
+- Pre-1972 input inherits SPA-46's sentinel: no integer TAI − UTC exists before then.
 
 ## Corrections
 

@@ -6,7 +6,7 @@ This file is a progressive-disclosure entry point. Read what you need:
   table, risks, and the verified standards list. **The entry file.**
 - [painpoints.md](painpoints.md) — Researched domain evidence per realm, with primary-source
   citations. **Read this before adding or changing any realm function.**
-- [tracker.md](tracker.md) — The 41 stories in build order, the `Blocked by` column, and
+- [tracker.md](tracker.md) — The 42 stories in build order, the `Blocked by` column, and
   the Definition of Done binding every story.
 - [issues/index.md](issues/index.md) — Full specs, one file per story, named by story ID.
 - [docs-site.md](docs-site.md) — The guide, scenarios and mistakes page every realm story ships on

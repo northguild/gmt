@@ -46,7 +46,7 @@ The same code then writes those records to Parquet, Arrow, or a protobuf API, ea
 - **INT96 is deprecated and everywhere.** Spark and Hive wrote it for a decade. Its Julian day is the same JD the Space realm uses (SPA-49); the conversion here is the integer-day special case and cites the same epoch constant, 2440588 for 1970-01-01.
 - **Arrow zone-less timestamps are not instants.** The format says a `Timestamp` without a `timezone` is a wall-clock value "as if UTC"; returning it as an instant is the bug this function's union type prevents, the same shape a clinical timestamp parser needs for offset-absent values. INT-15 prevents it another way: a code that states no offset is read by a parser that returns a local date-time.
 - **protobuf `Duration` and `Timestamp` share a shape and differ in sign rules.** `Timestamp.nanos` is always non-negative; `Duration.nanos` takes the sign of `seconds`. Both are encoded here, not inferred.
-- TAI64 labels are not covered here: they are TAI, and the identifiers here are all UTC-based.
+- TAI64 labels live in SPA-46 because they are TAI; the identifiers here are all UTC-based.
 
 ## What gmt provides (do not re-implement)
 

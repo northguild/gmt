@@ -17,13 +17,13 @@ transitions). Real-world applications span multiple domains with distinct semant
 | **Transport (shared)** | Transit, dwell, ETA, multi-leg, cut-offs              | Shared across all transport modes    |
 | **Intermodal**         | Containers, demurrage, filing deadlines, EDI          | Ocean freight, multimodal logistics  |
 | **Maritime**           | GNSS time scales, week rollover                       | Ship navigation                      |
-| **Space / Celestial**  | TAI, GPS, TT, TCG, Julian Date, leap seconds, CCSDS   | Satellite ops, orbital mechanics     |
+| **Space / Celestial**  | TAI, TAI64, GPS, TT, TCG, Julian Date, leap seconds, CCSDS | Satellite ops, orbital mechanics     |
 
 Each realm is an **inner module** under `packages/gmt/src/`. Single package, tree-shakeable,
 shared Temporal dependency.
 
 **Start here:** [painpoints.md](painpoints.md) records the researched evidence behind every
-realm. [tracker.md](tracker.md) has the 41 stories in build order.
+realm. [tracker.md](tracker.md) has the 42 stories in build order.
 
 ---
 
@@ -96,7 +96,7 @@ which were correct, complete, or GMT's facts to assert.
                                     ├── instant/        (CORE-4)
                                     ├── calendar/       (CORE-5, CORE-7, CORE-54, CORE-55)
                                     ├── interval/       (CORE-6)
-                                    ├── timescale/      (SPA-48, MAR-16 — TAI, leap seconds)
+                                    ├── timescale/      (SPA-48, MAR-16 — TAI, leap seconds; SPA-46 TAI64)
                                     │
                                     │   cross-industry layers (industry domains others draw on)
                                     ├── workforce/      (CORE-76 — hours of work: duty logs and rules)
@@ -139,7 +139,7 @@ entry per category barrel, mirrored in `typesVersions`).
 | `instant/`   | CORE-4         | Instant-plus-offset pairs, explicit local-time resolution                 |
 | `calendar/`  | CORE-5, CORE-7, CORE-54, CORE-55 | ISO week, ordinal, fiscal periods, zone-aware buckets, business calendars, holiday rules, operating hours |
 | `interval/`  | CORE-6         | Overlap, intersect, clamp, subtract, merge, split, sum                     |
-| `timescale/` | SPA-48, MAR-16 | TAI − UTC, leap seconds, TAI |
+| `timescale/` | SPA-48, MAR-16, SPA-46 | TAI − UTC, leap seconds, TAI and TAI64 |
 
 These are universal primitives. `interval/` and `calendar/` in particular serve hours-of-work
 rules and free time, which would otherwise each implement interval arithmetic and disagree about
@@ -231,7 +231,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 
 | Risk                          | Mitigation                                                                          |
 | ----------------------------- | ------------------------------------------------------------------------------------- |
-| Epic size (41 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
+| Epic size (42 stories)        | Phase boundaries are clean cut points. Phases 1–2 deliver the priority realms alone.  |
 | Bundled data staleness        | Every data module exposes provenance and a staleness predicate. Never on the hot path.|
 | Holiday calendar maintenance  | Caller-supplied. Opt-in exchange and payment-system calendars carry coverage windows; no national holiday sets ship. |
 | IERS data staleness           | The leap-second table (Bulletin C) is closed and built in; a weekly canary checks it against IERS until IERS publishes its file format for continuous UTC. |
@@ -247,7 +247,7 @@ See [painpoints.md](painpoints.md) for the full parked list with reasons.
 ## References
 
 - [painpoints.md](painpoints.md) — researched evidence per realm, with citations
-- [tracker.md](tracker.md) — 41 stories, `Blocked by` column, Definition of Done
+- [tracker.md](tracker.md) — 42 stories, `Blocked by` column, Definition of Done
 - [research/index.md](research/index.md) — all research records, including the
   `research/spike-2026-09/` verification files: claim, quote, source and clause behind each spec's numbers, and what could not be verified
 - [issues/index.md](issues/index.md) — story specs, one file per story, named by story ID
@@ -285,6 +285,7 @@ rules; those citations prove a painpoint exists and are not standards any story 
 - FpML day-count-fraction 2-3, business-center 9-4, `CalculationPeriodDates`, `RollConventionEnum`; ISDA 2006 Definitions §4.16 with Supplements 14 and 43; ISDA RFR memorandum; ISDA CDS roll FAQ (2015)
 - ISO 10383 — Market Identifier Codes
 - FIX Latest data types; SWIFT MT fields 32A, 13C, 13D
+- D. J. Bernstein, libtai TAI64
 
 National sources that stories also name — NASA/NAIF SPICE, Bowditch, ACP 121, PQA, ARRC, USNO,
 NOAA — appear only as labelled peers, corroboration or test oracles, never as the

@@ -7,7 +7,7 @@
 
 ## Overview
 
-`@northguild/gmt` expands with **41 stories across Core and 4 realms**, built in three phases.
+`@northguild/gmt` expands with **42 stories across Core and 4 realms**, built in three phases.
 
 Reading the table top to bottom is the build order, and the `#` column is that order. A story
 ID is a permanent name: it is what every cross-reference, spec filename and GitHub issue uses,
@@ -65,7 +65,7 @@ with the `Position` type, ahead of the remaining realms.
 | CORE-76 (#20) | INT-15, CORE-78, INT-14, CORE-76           | Intermodal complete with its tools (#304), and hours of work: the engine every duty rule runs on                                                                          |
 | CORE-88 (#29) | MAR-16 … CORE-88 (#21–#29)                 | GNSS time and leap seconds, then the second Core round: the site on its domain, the `Temporal` seam, the native suite, stored times, the Canada 2026 clock-change checker |
 | CORE-79 (#35) | CORE-89 … CORE-79 (#30–#35)                | The rest of the second Core round: the Morocco checker, identifiers, holiday rules, recurrence and cron, human durations, `Position`                                      |
-| SPA-52 (#38)  | SPA-47, SPA-49, SPA-52                     | The time-scale conversions: TT and TCG, Julian Date, MJD and J2000, CCSDS ASCII time codes                                                                                |
+| SPA-52 (#39)  | SPA-46 … SPA-52 (#36–#39)                  | The time-scale conversions: TAI64 text labels, TT and TCG, Julian Date, MJD and J2000, CCSDS ASCII time codes                                                             |
 
 ---
 
@@ -108,12 +108,13 @@ with the `Position` type, ahead of the remaining realms.
 | 33  | CORE-84 | Core       | Recurrence rules and cron lines in a<br>zone: RRULE, RDATE, EXDATE, cron            | —          | #324  | —       | Done        |
 | 34  | CORE-85 | Core       | Human duration strings:<br>`parseHumanDuration`, `formatHumanDuration`              | —          | #325  | —       | Done        |
 | 35  | CORE-79 | Core       | `Position` input type                                                               | —          | #314  | Cut     | Done        |
-| 36  | SPA-47  | Space      | `toTT` + `toTCG`                                                                    | —          | #228  | —       | Not started |
-| 37  | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                                  | SPA-47     | #230  | —       | Not started |
-| 38  | SPA-52  | Space      | CCSDS ASCII time codes A and B                                                      | —          | #233  | Cut     | Not started |
-| 39  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | —          | #341  | —       | Waiting     |
-| 40  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | —          | #353  | —       | Waiting     |
-| 41  | CORE-92 | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                   | —          | #386  | —       | Not started |
+| 36  | SPA-46  | Space      | TAI64 / TAI64N / TAI64NA text labels                                                | —          | #227  | —       | Not started |
+| 37  | SPA-47  | Space      | `toTT` + `toTCG`                                                                    | —          | #228  | —       | Not started |
+| 38  | SPA-49  | Space      | Two-part Julian Date + MJD + J2000                                                  | SPA-47     | #230  | —       | Not started |
+| 39  | SPA-52  | Space      | CCSDS ASCII time codes A and B                                                      | —          | #233  | Cut     | Not started |
+| 40  | CORE-90 | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law            | —          | #341  | —       | Waiting     |
+| 41  | CORE-91 | Core       | Past tense only on the Canada checker<br>after 1 November 2026                      | —          | #353  | —       | Waiting     |
+| 42  | CORE-92 | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                   | —          | #386  | —       | Not started |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm
@@ -232,9 +233,9 @@ Highest commercial value and the thinnest coverage in the original plan.
 
 ### Phase 3 — Space / Celestial
 
-- **`SPA-48` came first in this realm.** The leap-second table is what the scale conversions
-  need, and `MAR-16` needed it early in Phase 2, so it was built beside `MAR-16`.
-- **SPA-47 → SPA-49** is the scale-conversion chain, now acyclic.
+- **`SPA-48` came first in this realm, not third.** The leap-second table is what `SPA-46`
+  needs, and `MAR-16` needed it early in Phase 2, so it was built beside `MAR-16`.
+- **SPA-46 → SPA-47 → SPA-49** is the scale-conversion chain, now acyclic.
 - **SPA-52** needs `SPA-48`.
 
 ---
