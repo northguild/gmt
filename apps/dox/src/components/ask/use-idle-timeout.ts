@@ -10,16 +10,21 @@ import { FIRST_OUTPUT_TIMEOUT_MS, IDLE_TIMEOUT_MS } from "~/lib/chat-constants";
  * Two limits, because the two waits are different:
  *
  * - **`submitted` — waiting for the first output** (`FIRST_OUTPUT_TIMEOUT_MS`).
- *   Nothing can arrive yet: the Worker may be failing over past spent brains
- *   before it sends a byte, and the Workers AI fallback takes 6-24 s to start.
- *   Holding this to the idle limit stopped answers that were on their way.
+ *   No answer text can arrive yet: the Worker may be failing over past spent
+ *   or slow brains first. Holding this to the idle limit stopped answers that
+ *   were on their way. Each progress line the Worker sends (`activity`)
+ *   restarts it, so a long walk through several brains is never cut off while
+ *   it is still moving — the Worker gives each brain its own start timeout
+ *   (`BRAIN_START_TIMEOUT_MS`), well inside this one.
  * - **`streaming` — silence between chunks** (`timeoutMs`, default
  *   `IDLE_TIMEOUT_MS`), restarted on every chunk.
  *
  * The restart signal is `messages`' identity, not a per-chunk callback: `onData`
  * only fires for custom `data-*` parts, never for text deltas. `useChat`
  * replaces the `messages` array on every streamed delta, so each chunk re-runs
- * this effect, clearing the old timer and arming a fresh one.
+ * this effect, clearing the old timer and arming a fresh one. Progress parts
+ * are transient and never touch `messages`, which is why they arrive
+ * separately as `activity`.
  *
  * Cleanup clears the handle on every re-run and on unmount, so no timer
  * dangles past a `stop()`, a completed answer, or a navigation away.
@@ -27,6 +32,7 @@ import { FIRST_OUTPUT_TIMEOUT_MS, IDLE_TIMEOUT_MS } from "~/lib/chat-constants";
 export function useIdleTimeout({
   status,
   messages,
+  activity,
   stop,
   onStall,
   timeoutMs = IDLE_TIMEOUT_MS,
@@ -34,6 +40,9 @@ export function useIdleTimeout({
 }: {
   status: string;
   messages: readonly unknown[];
+  /** Any other sign of life — the current progress line. A change restarts
+   *  the timer. */
+  activity?: unknown;
   stop: () => void;
   onStall: () => void;
   timeoutMs?: number;
@@ -51,5 +60,13 @@ export function useIdleTimeout({
     );
 
     return () => clearTimeout(handle);
-  }, [status, messages, stop, onStall, timeoutMs, firstOutputTimeoutMs]);
+  }, [
+    status,
+    messages,
+    activity,
+    stop,
+    onStall,
+    timeoutMs,
+    firstOutputTimeoutMs,
+  ]);
 }

@@ -22,6 +22,8 @@ import {
   secondsUntilMidnight,
 } from "../src/lib/pt-day";
 import { DOX_TOOL_NAMES, ENABLED_TOOL_NAMES } from "../src/lib/dox-tools";
+import type { VocabularySkill } from "./select-vocabulary";
+import type { BrainsInfo } from "../src/lib/chat-types";
 import { APICallError } from "ai";
 import { convertUnixToUtc, convertUtcToUnix } from "@northguild/gmt";
 import { getUnixNowMs } from "./clock";
@@ -71,14 +73,30 @@ function fakeModel(text: string): MockLanguageModelV4 {
   });
 }
 
-// Fixed stand-ins for the real `.md`-backed VOCABULARY_CONTENT /
+// Fixed stand-ins for the real `.md`-backed VOCABULARY_SKILLS /
 // CORE_RULES_CONTENT (see chat-handler.ts's ChatHandlerDeps doc comment for
-// why those aren't imported directly into this test).
+// why those aren't imported directly into this test). The zoned skill covers
+// SAMPLE_CHUNKS; the GNSS one covers nothing it retrieves.
+const FAKE_SKILLS: VocabularySkill[] = [
+  {
+    name: "fake-zoned",
+    body: "FAKE_ZONED_VOCABULARY",
+    modules: ["zoned/"],
+    pages: [],
+  },
+  {
+    name: "fake-gnss",
+    body: "FAKE_GNSS_VOCABULARY",
+    modules: ["gnss/"],
+    pages: [],
+  },
+];
+
 function makeHandler(
   overrides: Partial<ChatHandlerDeps> & Pick<ChatHandlerDeps, "resolveModel">,
 ) {
   return createChatHandler({
-    vocabulary: "FAKE_VOCABULARY_CONTENT",
+    vocabulary: FAKE_SKILLS,
     coreRules: "FAKE_CORE_RULES_CONTENT",
     fetchChunksImpl: async () => SAMPLE_CHUNKS,
     ...overrides,
@@ -238,11 +256,53 @@ describe("createChatHandler", () => {
     await response.text();
 
     const [call] = model.doStreamCalls;
-    /* Exactly the mountable set, not every tool defined. Offering one whose
-       widget is not registered would have the model promise a widget the panel
-       cannot show — see `ENABLED_TOOL_NAMES`. */
-    const toolNames = (call.tools ?? []).map((t) => t.name).sort();
-    expect(toolNames).toEqual([...ENABLED_TOOL_NAMES].sort());
+    /* The question's own set (see `select-tools.ts`), always within the
+       mountable set. Offering one whose widget is not registered would have
+       the model promise a widget the panel cannot show — see
+       `ENABLED_TOOL_NAMES`. */
+    const toolNames = (call.tools ?? []).map((t) => t.name);
+    expect(toolNames).toContain("showGlobe");
+    expect(toolNames.length).toBeLessThan(ENABLED_TOOL_NAMES.length);
+    for (const name of toolNames) {
+      expect(ENABLED_TOOL_NAMES as readonly string[]).toContain(name);
+    }
+  });
+
+  it("describes exactly the offered tools in the prompt", async () => {
+    const model = fakeModel("ok");
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what time is it in Tokyo")] }),
+    );
+    await response.text();
+
+    const [call] = model.doStreamCalls;
+    const offered = new Set((call.tools ?? []).map((t) => t.name));
+    const prompt = JSON.stringify(call.prompt);
+    for (const name of ENABLED_TOOL_NAMES) {
+      expect(prompt.includes(`\`${name}\` —`)).toBe(offered.has(name));
+    }
+  });
+
+  it("puts only the matching skill's vocabulary in the prompt", async () => {
+    const model = fakeModel("ok");
+    const handler = makeHandler({
+      resolveModel: singleBrain(model),
+      searchChunksImpl: () => SAMPLE_CHUNKS,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("convert between zones")] }),
+    );
+    await response.text();
+
+    const prompt = JSON.stringify(model.doStreamCalls[0].prompt);
+    expect(prompt).toContain("FAKE_ZONED_VOCABULARY");
+    expect(prompt).not.toContain("FAKE_GNSS_VOCABULARY");
   });
 
   it("never offers a tool whose widget cannot be mounted", async () => {
@@ -481,6 +541,85 @@ describe("createChatHandler", () => {
     expect(finished.toolCalled).toBe("showGlobe");
   });
 
+  describe("a widget answered without text", () => {
+    const usage = {
+      inputTokens: {
+        total: 10,
+        noCache: 10,
+        cacheRead: undefined,
+        cacheWrite: undefined,
+      },
+      outputTokens: { total: 10, text: 0, reasoning: undefined },
+    };
+    const globeCall = (text?: string): LanguageModelV4StreamPart[] => [
+      { type: "stream-start", warnings: [] },
+      ...(text
+        ? ([
+            { type: "text-start", id: "t" },
+            { type: "text-delta", id: "t", delta: text },
+            { type: "text-end", id: "t" },
+          ] satisfies LanguageModelV4StreamPart[])
+        : []),
+      {
+        type: "tool-call",
+        toolCallId: "call-1",
+        toolName: "showGlobe",
+        input: JSON.stringify({ zone: "Asia/Tokyo" }),
+      },
+      {
+        type: "finish",
+        finishReason: { unified: "tool-calls", raw: undefined },
+        usage,
+      },
+    ];
+    /** Step 1 returns `first`; every later step writes `later`. */
+    const stepModel = (
+      first: LanguageModelV4StreamPart[],
+      later = "Tokyo is on Japan Standard Time.",
+    ) => {
+      let calls = 0;
+      return new MockLanguageModelV4({
+        doStream: async () => ({
+          stream: convertArrayToReadableStream(
+            calls++ === 0 ? first : textStreamParts(later),
+          ),
+        }),
+      });
+    };
+    const ask = async (model: MockLanguageModelV4) => {
+      const handler = makeHandler({
+        resolveModel: singleBrain(model),
+        searchChunksImpl: () => SAMPLE_CHUNKS,
+      });
+      const response = await handler(
+        chatRequest({ messages: [userMessage("show me Tokyo")] }),
+      );
+      return response.text();
+    };
+
+    it("asks the same model once more, with no tools, for the prose", async () => {
+      const model = stepModel(globeCall());
+      const body = await ask(model);
+      expect(model.doStreamCalls).toHaveLength(2);
+      expect(model.doStreamCalls[1].tools ?? []).toEqual([]);
+      expect(body).toContain("Tokyo is on Japan Standard Time.");
+      expect(partsOfType(body, "tool-input-available")).toHaveLength(1);
+      const finished = retrievalParts(body).at(-1)?.data as Record<
+        string,
+        unknown
+      >;
+      expect(finished.toolCalled).toBe("showGlobe");
+    });
+
+    it("stops after one step when the widget came with text", async () => {
+      const model = stepModel(globeCall("Here is Tokyo on the globe."));
+      const body = await ask(model);
+      expect(model.doStreamCalls).toHaveLength(1);
+      expect(body).toContain("Here is Tokyo on the globe.");
+      expect(body).not.toContain("Tokyo is on Japan Standard Time.");
+    });
+  });
+
   it("logs one dox-timing line per answered request", async () => {
     const logged: string[] = [];
     const spy = vi.spyOn(console, "log").mockImplementation((...args) => {
@@ -597,11 +736,29 @@ describe("brains, budgets and failover", () => {
     expect(asked).toEqual([BRAINS[2].id]);
   });
 
-  it("falls through rather than refusing when the picked brain is spent", async () => {
+  it("asks the reader's pick first even when the ledger has it spent, then falls through", async () => {
+    /* The selector and the progress line must agree: a pick quietly moved to
+       the back read as Dox ignoring the reader. A spent brain refuses fast,
+       so honouring the pick costs one refusal. */
     const usage = fakeUsage();
     await markBrain(usage, BRAINS[2], "spent", getUnixNowMs());
 
-    const { asked, resolveModel } = spyResolver();
+    const asked: string[] = [];
+    const resolveModel = (brainId: string) => {
+      asked.push(brainId);
+      if (brainId !== BRAINS[2].id) return fakeModel("an answer");
+      return new MockLanguageModelV4({
+        doStream: async () => {
+          throw new APICallError({
+            message: "quota",
+            url: "https://x.test",
+            requestBodyValues: {},
+            statusCode: 429,
+            isRetryable: true,
+          });
+        },
+      });
+    };
     const handler = makeHandler({ resolveModel, usage });
 
     const response = await handler(
@@ -611,7 +768,118 @@ describe("brains, budgets and failover", () => {
       }),
     );
     expect(response.status).toBe(200);
-    expect(asked[0]).not.toBe(BRAINS[2].id);
+    await response.text();
+    expect(asked).toEqual([BRAINS[2].id, BRAINS[0].id]);
+  });
+
+  it("moves past a brain that has not started answering in time, without retiring it", async () => {
+    /* A model that sends nothing held the whole request until the chat's own
+       stall timer gave up. The walk now gives each brain a start deadline. */
+    const usage = fakeUsage();
+    const asked: string[] = [];
+    const resolveModel = (brainId: string) => {
+      asked.push(brainId);
+      if (brainId !== BRAINS[0].id) return fakeModel("The next one answered.");
+      return new MockLanguageModelV4({
+        doStream: ({ abortSignal }) =>
+          new Promise((_, reject) => {
+            abortSignal?.addEventListener("abort", () =>
+              reject(new DOMException("aborted", "AbortError")),
+            );
+          }),
+      });
+    };
+    const handler = makeHandler({
+      resolveModel,
+      usage,
+      startTimeoutMs: () => 20,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    const body = await response.text();
+
+    expect(body).toContain("The next one answered.");
+    expect(asked).toEqual([BRAINS[0].id, BRAINS[1].id]);
+    expect(
+      partsOfType(body, "data-status").map(
+        (part) => (part.data as { text: string }).text,
+      ),
+    ).toEqual([
+      `Asking ${BRAINS[0].label}\u2026`,
+      `${BRAINS[0].label} is taking too long \u2014 trying the next model\u2026`,
+      `Asking ${BRAINS[1].label}\u2026`,
+    ]);
+    // Slow today says nothing about tomorrow: the ledger is untouched.
+    const [usagePart] = partsOfType(body, "data-usage");
+    const states = (usagePart.data as BrainsInfo).brains.map((b) => b.state);
+    expect(states.every((state) => state === "ok")).toBe(true);
+  });
+
+  it("sends the counts as they stand after the question, so the badge needs no refetch", async () => {
+    // KV can take a minute to show a write, and the reader saw "5 left"
+    // after asking. The stream carries the new counts instead.
+    const usage = fakeUsage();
+    const { resolveModel } = spyResolver();
+    const handler = makeHandler({ resolveModel, usage });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    const body = await response.text();
+
+    const parts = partsOfType(body, "data-usage");
+    expect(parts).toHaveLength(1);
+    expect(parts[0].transient).toBe(true);
+    const info = parts[0].data as BrainsInfo;
+    expect(info.visitor.used).toBe(1);
+    const answered = info.brains.find((brain) => brain.id === BRAINS[0].id)!;
+    expect(answered.remaining).toBe(BRAINS[0].dailyLimit - 1);
+    const untouched = info.brains.find((brain) => brain.id === BRAINS[1].id)!;
+    expect(untouched.remaining).toBe(BRAINS[1].dailyLimit);
+  });
+
+  it("shows a brain the walk found out in the same usage part", async () => {
+    const usage = fakeUsage();
+    const handler = makeHandler({
+      usage,
+      resolveModel: (brainId) =>
+        brainId === BRAINS[0].id
+          ? new MockLanguageModelV4({
+              doStream: async () => {
+                throw new APICallError({
+                  message: "no such model",
+                  url: "https://x.test",
+                  requestBodyValues: {},
+                  statusCode: 404,
+                  isRetryable: false,
+                });
+              },
+            })
+          : fakeModel("an answer"),
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    const body = await response.text();
+
+    const info = partsOfType(body, "data-usage")[0].data as BrainsInfo;
+    const out = info.brains.find((brain) => brain.id === BRAINS[0].id)!;
+    expect(out.state).toBe("unavailable");
+    expect(out.remaining).toBe(0);
+    expect(info.activeBrainId).toBe(BRAINS[1].id);
+  });
+
+  it("sends no usage part when there is no ledger", async () => {
+    const { resolveModel } = spyResolver();
+    const handler = makeHandler({ resolveModel });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    expect(partsOfType(await response.text(), "data-usage")).toEqual([]);
   });
 
   it("reports exhaustion as a sentinel state with a reset time, not an error", async () => {
@@ -782,22 +1050,25 @@ describe("brains, budgets and failover", () => {
   });
 
   it("bounds Gemini's thinking with the brain's thinkingLevel", async () => {
+    const gemini = BRAINS.find((brain) => brain.provider === "google")!;
     const model = fakeModel("ok");
     const handler = makeHandler({
       resolveModel: singleBrain(model),
       searchChunksImpl: () => SAMPLE_CHUNKS,
     });
     const response = await handler(
-      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+      chatRequest({
+        messages: [userMessage("what is a DST gap")],
+        model: gemini.id,
+      }),
     );
     await response.text();
 
     const [call] = model.doStreamCalls;
-    expect(BRAINS[0].provider).toBe("google");
     expect(call.providerOptions).toEqual({
-      google: { thinkingConfig: { thinkingLevel: BRAINS[0].thinkingLevel } },
+      google: { thinkingConfig: { thinkingLevel: gemini.thinkingLevel } },
     });
-    expect(BRAINS[0].thinkingLevel).toBe("low");
+    expect(gemini.thinkingLevel).toBe("low");
   });
 
   it("moves to the next brain on a retryable 429 without retrying the spent one first", async () => {

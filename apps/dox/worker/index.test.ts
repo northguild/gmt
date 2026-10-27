@@ -81,7 +81,7 @@ describe("worker entry — /api/brains", () => {
     expect(isValidUtc(body.visitor.resetsAt)).toBe(true);
     // DOX-C4: each provider refills on its own clock, so each carries its own
     // reset instant.
-    expect(body.providers.map((p) => p.id)).toEqual(["google", "workers-ai"]);
+    expect(body.providers.map((p) => p.id)).toEqual(["workers-ai", "google"]);
     for (const provider of body.providers) {
       expect(isValidUtc(provider.resetsAt)).toBe(true);
     }

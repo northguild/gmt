@@ -32,12 +32,14 @@ import {
   APICallError,
   NoOutputGeneratedError,
   RetryError,
+  isStepCount,
   streamText,
   type LanguageModel,
   type ModelMessage,
   type ToolSet,
 } from "ai";
 import {
+  BRAIN_START_TIMEOUT_MS,
   BRAINS,
   DEFAULT_BRAIN_ID,
   type Brain,
@@ -45,6 +47,34 @@ import {
 } from "../src/lib/chat-constants";
 import type { BrainAttemptTrace } from "../src/lib/chat-types";
 import type { BrainState, UsageSnapshot } from "./usage";
+
+/**
+ * One more step, with no tools, for a model that answered with a widget alone.
+ *
+ * The system prompt asks for prose first and the tool call after, and a
+ * model that thinks before answering does that. Gemma 4 and GLM 4.7 with
+ * thinking off — 2–5 s instead of 6–21 s — mostly reply with the tool call
+ * and nothing else (in a probe, 4 widget answers of 8 had no text).
+ * A widget beside silence is a worse answer than the paragraph it replaces,
+ * so such a step is followed by one with every tool switched off, where the
+ * only thing the model can do is write. The widget reaches the reader first
+ * and the text follows it.
+ *
+ * Only that case gets a second step: one whose step 1 wrote text, or called
+ * no tool, ends after step 1 as before. Step 2 runs after the stream has
+ * opened, so it cannot fail over to another brain; if it fails, the reader
+ * keeps the widget and sees the mapped error after it. It costs a second
+ * read of the prompt, which is why it is limited to answers that need it.
+ */
+const WIDGET_THEN_PROSE = {
+  stopWhen: [
+    isStepCount(2),
+    ({ steps }: { steps: ReadonlyArray<{ text: string }> }) =>
+      (steps.at(-1)?.text.trim() ?? "") !== "",
+  ],
+  prepareStep: ({ stepNumber }: { stepNumber: number }) =>
+    stepNumber === 0 ? undefined : { activeTools: [] as never[] },
+};
 
 export interface BrainChoice {
   /** The brain to use, or `undefined` when every one is out. */
@@ -110,7 +140,15 @@ export function brainStateFromError(
 
   if (!APICallError.isInstance(error)) return undefined;
 
-  if (error.statusCode === 429) return "spent";
+  // A Workers AI 429 is only "spent" when it says the Neuron pool is gone.
+  // Code 3040 ("no more data centers to forward the request to") is also a
+  // 429, and it is a capacity blip on one model: `isTransientOverload` moves
+  // the request on without retiring the brain for the day.
+  if (
+    error.statusCode === 429 &&
+    !(isWorkersAIError(error) && !isWorkersAIAllocationExhausted(error))
+  )
+    return "spent";
 
   // 404 is "no such model"; Google also answers 400 for a model this key may
   // not use. Either way the brain is not coming back today, so stop trying it.
@@ -136,7 +174,8 @@ export function brainStateFromError(
 /**
  * The model is overloaded for this request, not out for the day: HTTP 503
  * ("This model is currently experiencing high demand", observed from Gemini on
- * 2026-09-24) or 529 ("overloaded").
+ * 2026-09-24), 529 ("overloaded"), or a Workers AI 429 that is not the daily
+ * allocation (3040, out of capacity).
  *
  * Separate from `brainStateFromError` because the answer is different on both
  * sides. It is worth the next brain *now* — the overload belongs to one model,
@@ -147,9 +186,12 @@ export function brainStateFromError(
  */
 export function isTransientOverload(rawError: unknown): boolean {
   const error = unwrapModelError(rawError);
+  if (!APICallError.isInstance(error)) return false;
+  if (error.statusCode === 503 || error.statusCode === 529) return true;
   return (
-    APICallError.isInstance(error) &&
-    (error.statusCode === 503 || error.statusCode === 529)
+    error.statusCode === 429 &&
+    isWorkersAIError(error) &&
+    !isWorkersAIAllocationExhausted(error)
   );
 }
 
@@ -226,8 +268,14 @@ export interface BrainAttempt {
  * the registry order, with anything the ledger already knows is out pushed to
  * the back rather than dropped.
  *
+ * The reader's pick always leads, even when the ledger has it as out. The
+ * progress line names each brain as it is asked, so a pick that was quietly
+ * moved to the back read as Dox ignoring the selector ("Asking 3.6 Flash…"
+ * under a badge that says GLM). A spent brain refuses in well under a second,
+ * so honouring the pick costs one fast refusal, and the walk carries on.
+ *
  * Known-bad brains are kept as a last resort on purpose. The ledger can be
- * stale, absent, or simply wrong about a model Google has restored — and
+ * stale, absent, or simply wrong about a model a provider has restored — and
  * refusing to answer because of a cached opinion would be worse than spending
  * one request to find out.
  */
@@ -237,7 +285,7 @@ export function orderCandidates(
   pool: readonly Brain[] = BRAINS,
 ): Brain[] {
   const healthy: Brain[] = [];
-  const known0ut: Brain[] = [];
+  const knownOut: Brain[] = [];
 
   const requested = requestedId
     ? pool.find((brain) => brain.id === requestedId)
@@ -248,19 +296,12 @@ export function orderCandidates(
 
   for (const brain of pool) {
     if (brain.id === requested?.id) continue;
-    (isHealthy(brain) ? healthy : known0ut).push(brain);
+    (isHealthy(brain) ? healthy : knownOut).push(brain);
   }
 
-  // A requested brain leads only if the ledger has nothing against it. If it is
-  // already known to be out, it drops to the back with the rest: honouring the
-  // preference is not worth making the reader wait for a call we are fairly
-  // sure will fail. It stays in the list because the ledger can be stale.
-  if (requested && isHealthy(requested)) {
-    return [requested, ...healthy, ...known0ut];
-  }
   return requested
-    ? [...healthy, ...known0ut, requested]
-    : [...healthy, ...known0ut];
+    ? [requested, ...healthy, ...knownOut]
+    : [...healthy, ...knownOut];
 }
 
 /**
@@ -279,6 +320,7 @@ export async function openFirstWorkingBrain({
   onBrainOut,
   onAttempt,
   onMovedOn,
+  startTimeoutMs = (brain) => BRAIN_START_TIMEOUT_MS[brain.provider],
 }: {
   candidates: readonly Brain[];
   resolveModel: (brainId: string) => LanguageModel;
@@ -293,7 +335,13 @@ export async function openFirstWorkingBrain({
   onAttempt?: (brain: Brain) => void;
   /** After a brain refused and the walk moves on. For progress only; the
    *  ledger hears about `spent`/`unavailable` through `onBrainOut`. */
-  onMovedOn?: (brain: Brain, outcome: "busy" | "spent" | "unavailable") => void;
+  onMovedOn?: (
+    brain: Brain,
+    outcome: "busy" | "slow" | "spent" | "unavailable",
+  ) => void;
+  /** How long a brain may take to start answering before the walk gives up
+   *  on it. Per provider by default; tests shorten it. */
+  startTimeoutMs?: (brain: Brain) => number;
 }): Promise<BrainAttempt | undefined> {
   const exhaustedProviders = new Set<BrainProvider>();
   const attempts: BrainAttemptTrace[] = [];
@@ -319,8 +367,24 @@ export async function openFirstWorkingBrain({
     const started = performance.now();
     onAttempt?.(brain);
 
+    // A brain that never answers would otherwise hold the whole request:
+    // `gemini-3.8-flash` was measured on 2026-10-27 sending nothing at all
+    // for 60 s, twice, and the reader saw "Asking 3.8 Flash…" until the
+    // chat's own stall timer gave up. The abort cancels the upstream call;
+    // the race below is what actually moves the walk on, whatever the SDK
+    // does with the abort.
+    const abort = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<"slow">((resolve) => {
+      timer = setTimeout(() => {
+        abort.abort();
+        resolve("slow");
+      }, startTimeoutMs(brain));
+    });
+
     const result = streamText({
       model: resolveModel(brain.id),
+      abortSignal: abort.signal,
       instructions,
       messages,
       tools,
@@ -341,21 +405,18 @@ export async function openFirstWorkingBrain({
       // One structured line per answered request, so real token counts — and
       // from them, real Neuron cost — can be read from `wrangler dev` or
       // Workers Logs instead of estimated. `scripts/probe-brains.ts` parses it.
-      onFinish: ({ usage }) => {
+      // Both steps' tokens, when the answer took two — see `stopWhen`.
+      onFinish: ({ totalUsage }) => {
         console.log(
           "dox-usage",
           JSON.stringify({
             brain: brain.id,
-            inputTokens: usage.inputTokens,
-            outputTokens: usage.outputTokens,
+            inputTokens: totalUsage.inputTokens,
+            outputTokens: totalUsage.outputTokens,
           }),
         );
       },
-      /* No `stopWhen`. The default is `isStepCount(1)`, which is exactly what
-         is wanted: the tool's `execute` runs inside step 1 and the stream ends.
-         Raising it would add a second upstream call *after* headers are already
-         sent, where failover is no longer available and a failure reaches the
-         reader mid-answer — against a five-questions-per-visitor budget. */
+      ...WIDGET_THEN_PROSE,
       onError: ({ error }) => {
         providerError = error;
       },
@@ -373,7 +434,20 @@ export async function openFirstWorkingBrain({
       // Resolves once the model call has returned its opening metadata, and
       // rejects if that call failed — the seam that lets a 429 be caught before
       // anything has been written to the reader.
-      await result.warnings;
+      const outcome = await Promise.race([result.warnings, timedOut]);
+      clearTimeout(timer);
+      if (outcome === "slow") {
+        // The aborted call rejects later; nothing reads it again.
+        result.warnings.then(undefined, () => undefined);
+        attempts.push({
+          brainId: brain.id,
+          ms: Math.round(performance.now() - started),
+          outcome: "slow",
+        });
+        console.error(`brain ${brain.id} did not start in time; trying the next`);
+        onMovedOn?.(brain, "slow");
+        continue;
+      }
       attempts.push({
         brainId: brain.id,
         ms: Math.round(performance.now() - started),
@@ -381,6 +455,7 @@ export async function openFirstWorkingBrain({
       });
       return { brain, result, attempts };
     } catch (error) {
+      clearTimeout(timer);
       // Prefer the provider's error over the SDK's contentless wrapper.
       const underlying = providerError ?? error;
       const state = brainStateFromError(underlying);
