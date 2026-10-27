@@ -7,7 +7,8 @@
  * step the first failures (test, file and line, message) plus the log path.
  *
  * Run as:
- *   node scripts/verdict.mjs validate                        # the root validate chain
+ *   node scripts/verdict.mjs validate [--full] [--base <ref>]
+ *                                      # the checks `pnpm run validate` runs, one step each
  *   node scripts/verdict.mjs run <filter> <script> [-- args] # pnpm --filter <filter> run <script> [args]
  *   node scripts/verdict.mjs all <script>                    # pnpm -r --if-present run <script>
  *
@@ -18,7 +19,6 @@
 import { spawn } from "node:child_process";
 import {
   closeSync,
-  existsSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -28,6 +28,8 @@ import {
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { plan as affectedPlan } from "./affected.mjs";
+import { assertRulesValid, CHECKS } from "./lib/affected.mjs";
 import { formatDuration, formatScreen } from "./lib/verdict-format.mjs";
 import {
   countPassedTests,
@@ -41,33 +43,37 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 
 const USAGE = `usage:
-  node scripts/verdict.mjs validate
+  node scripts/verdict.mjs validate [--full] [--base <ref>]
   node scripts/verdict.mjs run <filter> <script> [-- args]
   node scripts/verdict.mjs all <script>`;
 
-/** The step label for a command: see the table in the slice spec. */
-export function stepLabel(command) {
-  const node = /^node scripts\/([\w-]+)\.mjs\s*(.*)$/.exec(command);
-  if (node) return `${node[1]} ${node[2]}`.trim();
-  const tokens = command.trim().split(/\s+/);
-  if (tokens[0] !== "pnpm") return command.trim();
-  const rest = tokens.slice(1);
-  while (rest.length > 0 && rest[0].startsWith("-")) {
-    rest.shift();
-    if (rest[0] && !rest[0].startsWith("-") && tokens[1] === "--filter")
-      rest.shift();
-  }
-  if (rest[0] === "run") rest.shift();
-  return rest[0] ?? command.trim();
+/**
+ * The checks `pnpm run validate` runs, from the rules in `scripts/lib/affected.mjs`: each local
+ * check that reads a file changed against `base` (origin/main), or every one with `full`.
+ * @param {{ full?: boolean, base?: string }} opts
+ */
+export function validateChecks(opts) {
+  assertRulesValid();
+  const p = affectedPlan(opts);
+  const local = CHECKS.filter((check) => check.local !== false);
+  return {
+    header: p.header,
+    run: local.filter((check) => p.checks.includes(check.id)),
+    skipped: local
+      .filter((check) => !p.checks.includes(check.id))
+      .map((check) => check.id),
+  };
 }
 
-/** `scripts.validate` split on ` && `, each step with its command and label. */
-export function stepsFromChain(chain) {
-  return chain
-    .split(" && ")
-    .map((command) => command.trim())
-    .filter(Boolean)
-    .map((command) => ({ command, label: stepLabel(command) }));
+/** `--full` and `--base <ref>` after `validate`, or null for anything else. */
+function validateOptions(args) {
+  const opts = {};
+  for (let i = 0; i < args.length; i += 1) {
+    if (args[i] === "--full") opts.full = true;
+    else if (args[i] === "--base" && args[i + 1]) opts.base = args[++i];
+    else return null;
+  }
+  return opts;
 }
 
 function quote(arg) {
@@ -84,21 +90,28 @@ function slug(text) {
 }
 
 /**
- * `{ title, dir, steps }` for the arguments, or `{ error }`.
+ * `{ title, dir, steps, skipped }` for the arguments, or `{ error }`. `checksFor` is
+ * `validateChecks`, which reads git; the tests pass their own.
  * @param {string[]} args
- * @param {{ scripts?: Record<string, string> } | null} pkg
- * @returns {{ title?: string, dir?: string, steps?: Array<{ command: string, label: string, script?: string }>, error?: string }}
+ * @param {typeof validateChecks} [checksFor]
+ * @returns {{ title?: string, dir?: string, steps?: Array<{ command: string, label: string, script?: string }>, skipped?: string[], error?: string }}
  */
-export function plan(args, pkg) {
+export function plan(args, checksFor = validateChecks) {
   const [mode, ...rest] = args;
-  if (mode === "validate" && rest.length === 0) {
-    const chain = pkg?.scripts?.validate;
-    if (!chain)
-      return { error: "verdict: package.json has no scripts.validate" };
+  if (mode === "validate") {
+    const opts = validateOptions(rest);
+    if (!opts) return { error: USAGE };
+    const checks = checksFor(opts);
     return {
-      title: "verdict validate",
+      title: opts.full
+        ? "verdict validate --full"
+        : `verdict validate for ${checks.header}`,
       dir: "validate",
-      steps: stepsFromChain(chain),
+      steps: checks.run.map((check) => ({
+        command: check.run,
+        label: check.id,
+      })),
+      skipped: checks.skipped,
     };
   }
   if (mode === "run" && rest.length >= 2) {
@@ -183,16 +196,25 @@ function runStep(command, logFile, env, onChild) {
   });
 }
 
+/** The line under a validate screen that names the checks the change did not need. */
+export function skippedLine(skipped) {
+  if (!skipped?.length) return null;
+  return `skipped: ${skipped.join(", ")} (nothing they read changed; --full runs every check)`;
+}
+
 function main(args) {
-  const pkgPath = join(root, "package.json");
-  const pkg = existsSync(pkgPath)
-    ? JSON.parse(readFileSync(pkgPath, "utf-8"))
-    : null;
-  const run = plan(args, pkg);
+  let run;
+  try {
+    run = plan(args);
+  } catch (error) {
+    console.error(`verdict: ${error.message}`);
+    return Promise.resolve(2);
+  }
   if (run.error) {
     console.error(run.error);
     return Promise.resolve(2);
   }
+  const skipped = skippedLine(run.skipped);
 
   const verdictDir = join(root, ".verdict");
   mkdirSync(verdictDir, { recursive: true });
@@ -291,6 +313,7 @@ function main(args) {
           logPath: logDir,
         }),
       );
+      if (skipped) console.log(skipped);
       return 0;
     }
     for (const [i, step] of run.steps.entries()) {

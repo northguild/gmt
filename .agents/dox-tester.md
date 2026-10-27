@@ -36,7 +36,7 @@ correctness lives in build output, rendered pages, keyboard paths and live behav
 
 `pnpm` commands run on the Node that `devEngines.runtime` pins. Prefix a bare `node` command with `eval "$(fnm env)" && fnm use &&` (Astro 7 needs Node `>=22.12.0`).
 
-- `node scripts/verdict.mjs validate` is PASS across the monorepo, including the CI timezone matrix (10 zones × Node 22/24/26 — the `gmt-matrix` job in `.github/workflows/ci.yml`).
+- `node scripts/verdict.mjs validate` is PASS (every check that reads a file the branch changed; `--full` runs them all), and so is the CI timezone matrix (10 zones × Node 22/24/26 — the `gmt-matrix` job in `.github/workflows/ci.yml`).
   Check the task list, not only the exit code: the verdict screen is that list.
 - `git diff --stat packages/gmt` is empty, or a changeset exists.
 - `node scripts/verdict.mjs run dox test` (and `check`, `lint`).

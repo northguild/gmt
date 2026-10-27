@@ -25,15 +25,25 @@ env:
   pnpm_config_verify_deps_before_run: "false"
 
 jobs:
+  # Decides which checks this change needs. The rules are in scripts/lib/affected.mjs, and
+  # `pnpm run validate` uses the same ones. `checks` is a JSON array of check ids, which a step
+  # tests with `contains(fromJSON(...), '<id>')`. `build_lint`, `tests` and `gmt_tests` say
+  # whether a matrix job has anything to do. `dox_changed` says whether a pull request changed a
+  # file under apps/dox/, which the advisory `dox-gates` job waits for.
+  #
+  # The matrix jobs are required status checks. A matrix job skipped by a job-level `if`
+  # reports one check under its unexpanded name ("Tests (Node ${{ matrix.node-version }})"),
+  # so the required "Tests (Node 22)" would never report. They always run instead, and skip
+  # every step when there is nothing to do: a passing check in seconds, with no checkout.
   determine-affected:
     name: Determine affected packages
     runs-on: ubuntu-latest
     outputs:
-      any_changed: ${{ steps.detect.outputs.any_changed }}
-      gmt_changed: ${{ steps.detect.outputs.gmt_changed }}
-      non_gmt_changed: ${{ steps.detect.outputs.non_gmt_changed }}
+      checks: ${{ steps.detect.outputs.checks }}
+      build_lint: ${{ steps.detect.outputs.build_lint }}
+      tests: ${{ steps.detect.outputs.tests }}
+      gmt_tests: ${{ steps.detect.outputs.gmt_tests }}
       dox_changed: ${{ steps.detect.outputs.dox_changed }}
-      base: ${{ steps.detect.outputs.base }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -41,44 +51,20 @@ jobs:
 
       - id: detect
         run: |
+          # The runner's own Node, before any install: the script uses built-in modules only.
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             git fetch --no-tags origin "${{ github.base_ref }}"
             BASE=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
-          else
-            BASE="${{ github.event.before }}"
-            # A force-push leaves `before` naming a commit the checkout does not have.
-            if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
-              || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
-              BASE=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)
+            node scripts/affected.mjs github --base "$BASE" --head "$(git rev-parse HEAD)"
+            if git diff --name-only "$BASE" HEAD | grep -q '^apps/dox/'; then
+              echo "dox_changed=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "dox_changed=false" >> "$GITHUB_OUTPUT"
             fi
-          fi
-          HEAD_SHA=$(git rev-parse HEAD)
-          echo "base=$BASE" >> "$GITHUB_OUTPUT"
-          CHANGED=$(git diff --name-only "$BASE" "$HEAD_SHA")
-          echo "changed files: $CHANGED"
-          if echo "$CHANGED" | grep -q '^packages/gmt/'; then
-            echo "gmt_changed=true" >> $GITHUB_OUTPUT
           else
-            echo "gmt_changed=false" >> $GITHUB_OUTPUT
-          fi
-          # apps/** is deliberately classified as non-GMT: docs changes run the
-          # build-lint matrix and the `tests` job, never the GMT TZ matrix.
-          # Surfaced as its own output so DOX-A2's deploy workflow can gate on it.
-          if echo "$CHANGED" | grep -q '^apps/dox/'; then
-            echo "dox_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "dox_changed=false" >> $GITHUB_OUTPUT
-          fi
-          NON_GMT=$(echo "$CHANGED" | grep -v '^packages/gmt/' | grep -v '^packages/gmt-oxlint/' || true)
-          if [ -z "$NON_GMT" ]; then
-            echo "non_gmt_changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "non_gmt_changed=true" >> $GITHUB_OUTPUT
-          fi
-          if [ -z "$CHANGED" ]; then
-            echo "any_changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "any_changed=true" >> $GITHUB_OUTPUT
+            # A push to main runs every check, so a file a rule misses is caught on the merge
+            # that changed it rather than on some later pull request.
+            node scripts/affected.mjs github --full
           fi
 
   # John Conner termination of false attribution
@@ -128,7 +114,10 @@ jobs:
     name: Story consistency
     runs-on: ubuntu-latest
     needs: determine-affected
-    if: needs.determine-affected.outputs.any_changed == 'true'
+    # Not a required check, so each step is gated on the check it runs. The audit and the
+    # changeset check run on every change.
+    env:
+      CHECKS: ${{ needs.determine-affected.outputs.checks }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -151,27 +140,37 @@ jobs:
       - name: No known vulnerabilities in dependencies
         run: pnpm audit
 
-      # `validate` runs these, but only on pushes to main — by which point a drifting
-      # tracker, a carried bug or a missing changeset has already merged. These are the
-      # parts of it that are cheap enough to also gate every PR.
+      # The repo checks `validate` runs locally, each when the change touches a file it reads.
       - name: Tracker dependency columns are in sync
+        if: contains(fromJSON(env.CHECKS), 'deps')
         run: node scripts/deps.mjs check
 
       # GMT ships zero known bugs (AGENTS.md Core Rule 12): no skipped, todo, focused or
       # expected-to-fail test, and no known-defect note, may merge.
       - name: No disabled tests or known-defect notes
+        if: contains(fromJSON(env.CHECKS), 'markers')
         run: node scripts/test-markers.mjs check
 
-      # apps/dox's tests import `@northguild/gmt/*` subpaths, which resolve to its `dist`,
-      # so collecting them needs the package built first. `validate` gets this for free by
-      # running the whole build ahead of `stats check`; this job builds just the one package.
+      # `stats check`, the API surface check and the dox site read `@northguild/gmt`'s `dist`,
+      # so the package is built first. `validate` orders the same build ahead of them.
       - name: Build @northguild/gmt
+        if: contains(fromJSON(env.CHECKS), 'build:gmt')
         run: pnpm --filter @northguild/gmt run build
 
+      - name: No gaps in the reference docs
+        if: contains(fromJSON(env.CHECKS), 'docs-check')
+        run: pnpm dox:docs-check
+
+      - name: Temporal compatibility snapshot is current
+        if: contains(fromJSON(env.CHECKS), 'compat')
+        run: node scripts/temporal-compat.mjs snapshot --check
+
       - name: Published figures match the repo
+        if: contains(fromJSON(env.CHECKS), 'stats')
         run: node scripts/stats.mjs check
 
       - name: Upstream filing tracker matches the committed snapshot
+        if: contains(fromJSON(env.CHECKS), 'upstream')
         run: node scripts/upstream.mjs check
 
       # Three content pages are generated, not committed: `guides/concepts/dst-disambiguation.md`
@@ -181,6 +180,7 @@ jobs:
       # perfectly fine. All three generators read tracked sources, so CI produces byte-identical
       # pages to a local run.
       - name: Generate the dox content pages that are not committed
+        if: contains(fromJSON(env.CHECKS), 'dox-pages')
         run: |
           node apps/dox/scripts/build-guides.mjs
           node apps/dox/scripts/build-scenario-index.mjs
@@ -188,9 +188,11 @@ jobs:
           pnpm --filter dox exec tsx scripts/build-industry-pages.ts
 
       - name: Public API surface — reachability, examples, doc imports and links
+        if: contains(fromJSON(env.CHECKS), 'api-surface')
         run: node scripts/api-surface.mjs check
 
       - name: Bundle size budgets
+        if: contains(fromJSON(env.CHECKS), 'bundle-size')
         run: node scripts/bundle-size.mjs check
 
       # `llms.test.ts`'s three text-surface gates all early-return when `apps/dox/dist` is absent,
@@ -199,6 +201,7 @@ jobs:
       # reached every text surface with the suite green (CORE-8 review, #253). Built here, once,
       # rather than in the Node matrix, because one runner is enough to check generated output.
       - name: Build the dox site
+        if: contains(fromJSON(env.CHECKS), 'dox-dist')
         run: pnpm --filter dox run build
 
       # DOX_DIST_REQUIRED turns those gates' "no dist, nothing to check" skip into a failure, but
@@ -207,6 +210,7 @@ jobs:
       # `dist-base.test.ts` reads the same build for the /gmt base: a root URL without `/gmt` in any
       # HTML, CSS, script, `.md`, `llms*.txt`, sitemap or `_redirects` fails here.
       - name: "Built site: text surfaces and the /gmt base"
+        if: contains(fromJSON(env.CHECKS), 'dox-dist')
         env:
           DOX_DIST_REQUIRED: "1"
         run: pnpm --filter dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts
@@ -296,33 +300,45 @@ jobs:
     name: Build & Lint (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     needs: determine-affected
-    if: needs.determine-affected.outputs.any_changed == 'true'
     strategy:
       fail-fast: false
       matrix:
         node-version: [22, 24, 26]
+    env:
+      ACTIVE: ${{ needs.determine-affected.outputs.build_lint }}
+      CHECKS: ${{ needs.determine-affected.outputs.checks }}
     steps:
+      - name: Nothing to build, lint or typecheck
+        if: env.ACTIVE != 'true'
+        run: echo "Skipping - no changed file is read by a build, a lint or a typecheck."
+
       - uses: actions/checkout@v7
+        if: env.ACTIVE == 'true'
         with:
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
+        if: env.ACTIVE == 'true'
 
       - uses: actions/setup-node@v7
+        if: env.ACTIVE == 'true'
         with:
           node-version: ${{ matrix.node-version }}
           check-latest: true
           cache: pnpm
 
       - name: Node and tzdata this job runs
+        if: env.ACTIVE == 'true'
         run: node -p "process.version+' tz '+process.versions.tz"
 
       - name: Install dependencies
+        if: env.ACTIVE == 'true'
         run: pnpm install --frozen-lockfile --no-runtime
 
       # The matrix names a Node, and pnpm must run that one, not the Node that
       # devEngines.runtime pins for local work. This fails the job if they differ.
       - name: pnpm runs the matrix Node
+        if: env.ACTIVE == 'true'
         env:
           WANT: ${{ matrix.node-version }}
         run: |
@@ -330,21 +346,23 @@ jobs:
           test "$(pnpm exec node -p 'process.versions.node.split(".")[0]')" = "$WANT"
 
       - name: Clean stale build artifacts
+        if: env.ACTIVE == 'true'
         run: find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
 
       # Lets the `tests` job (which needs a built @northguild/gmt to resolve
       # its dist-only exports) reuse this build instead of rebuilding gmt itself.
       - name: Cache @northguild/gmt dist
+        if: env.ACTIVE == 'true' && contains(fromJSON(env.CHECKS), 'build:gmt')
         uses: actions/cache@v6
         with:
           path: packages/gmt/dist
           key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json', 'pnpm-lock.yaml') }}
 
+      # Each package's build, lint and typecheck that the change needs, builds first.
       - name: Build, lint, typecheck
+        if: env.ACTIVE == 'true'
         run: |
-          pnpm -r --if-present run build
-          pnpm -r --if-present run lint
-          pnpm -r --if-present run typecheck
+          node scripts/affected.mjs run --checks "$CHECKS" --only build:,lint:,typecheck:
 
   tests:
     name: Tests (Node ${{ matrix.node-version }})
@@ -355,46 +373,41 @@ jobs:
       matrix:
         node-version: [22, 24, 26]
     timeout-minutes: 120
+    env:
+      ACTIVE: ${{ needs.determine-affected.outputs.tests }}
+      CHECKS: ${{ needs.determine-affected.outputs.checks }}
     steps:
+      - name: Nothing to test outside the GMT matrix
+        if: env.ACTIVE != 'true'
+        run: echo "Skipping - no changed file is read by the dox or gmt-oxlint tests."
+
       - uses: actions/checkout@v7
+        if: env.ACTIVE == 'true'
         with:
           fetch-depth: 0
 
-      - name: Check if non-GMT changed
-        id: check-non-gmt
-        run: |
-          if [ "${{ needs.determine-affected.outputs.non_gmt_changed }}" = "false" ]; then
-            echo "run_tests=false" >> $GITHUB_OUTPUT
-          else
-            echo "run_tests=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: No non-GMT changes, skip tests
-        if: steps.check-non-gmt.outputs.run_tests == 'false'
-        run: echo "Skipping tests - no non-GMT package changes detected"
-
       - uses: pnpm/action-setup@v6
-        if: steps.check-non-gmt.outputs.run_tests == 'true'
+        if: env.ACTIVE == 'true'
 
       - uses: actions/setup-node@v7
-        if: steps.check-non-gmt.outputs.run_tests == 'true'
+        if: env.ACTIVE == 'true'
         with:
           node-version: ${{ matrix.node-version }}
           check-latest: true
           cache: pnpm
 
       - name: Node and tzdata this job runs
-        if: steps.check-non-gmt.outputs.run_tests == 'true'
+        if: env.ACTIVE == 'true'
         run: node -p "process.version+' tz '+process.versions.tz"
 
       - name: Install dependencies
-        if: steps.check-non-gmt.outputs.run_tests == 'true'
+        if: env.ACTIVE == 'true'
         run: pnpm install --frozen-lockfile --no-runtime
 
       # The matrix names a Node, and pnpm must run that one, not the Node that
       # devEngines.runtime pins for local work. This fails the job if they differ.
       - name: pnpm runs the matrix Node
-        if: steps.check-non-gmt.outputs.run_tests == 'true'
+        if: env.ACTIVE == 'true'
         env:
           WANT: ${{ matrix.node-version }}
         run: |
@@ -405,25 +418,23 @@ jobs:
       # node version/gmt-source hash, so we skip rebuilding it here.
       - name: Cache @northguild/gmt dist
         id: cache-gmt-dist
-        if: steps.check-non-gmt.outputs.run_tests == 'true'
+        if: env.ACTIVE == 'true'
         uses: actions/cache@v6
         with:
           path: packages/gmt/dist
           key: gmt-dist-${{ matrix.node-version }}-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json', 'pnpm-lock.yaml') }}
 
       - name: Build @northguild/gmt
-        if: steps.check-non-gmt.outputs.run_tests == 'true' && steps.cache-gmt-dist.outputs.cache-hit != 'true'
+        if: env.ACTIVE == 'true' && contains(fromJSON(env.CHECKS), 'test:dox') && steps.cache-gmt-dist.outputs.cache-hit != 'true'
         run: pnpm --filter @northguild/gmt run build
 
-      # Mirrors the old path-based gating for non-gmt packages.
-      # gmt has its own TZ matrix (gmt-matrix job); gmt-oxlint is excluded as before.
-      # `!root` keeps the root `vitest run` (which globs the gmt suite) out of this job.
-      - name: Run tests (excluding gmt, gmt-oxlint)
-        if: steps.check-non-gmt.outputs.run_tests == 'true'
-        run: pnpm --filter='!root' --filter='!@northguild/gmt' --filter='!@northguild/gmt-oxlint' -r --if-present run test
+      # The dox and gmt-oxlint suites the change needs. gmt has its own TZ matrix (gmt-matrix job).
+      - name: Run tests (dox, gmt-oxlint)
+        if: env.ACTIVE == 'true'
+        run: node scripts/affected.mjs run --checks "$CHECKS" --only test:dox,test:gmt-oxlint
 
       - name: Collect test artifacts
-        if: steps.check-non-gmt.outputs.run_tests == 'true' && always()
+        if: env.ACTIVE == 'true' && always()
         run: |
           mkdir -p artifact || true
           # Covers apps/ as well as packages/ so DOX-A3a's future docs:test
@@ -436,7 +447,7 @@ jobs:
           done
 
       - uses: actions/upload-artifact@v7
-        if: steps.check-non-gmt.outputs.run_tests == 'true' && always()
+        if: env.ACTIVE == 'true' && always()
         with:
           name: test-artifacts-${{ matrix.node-version }}
           path: artifact
@@ -465,46 +476,39 @@ jobs:
     timeout-minutes: 120
     env:
       TZ: ${{ matrix.timezone }}
+      ACTIVE: ${{ needs.determine-affected.outputs.gmt_tests }}
     steps:
+      - name: Nothing for the GMT suite to test
+        if: env.ACTIVE != 'true'
+        run: echo "Skipping GMT TZ tests - no changed file is read by the gmt suite."
+
       - uses: actions/checkout@v7
+        if: env.ACTIVE == 'true'
         with:
           fetch-depth: 0
 
-      - name: Check if GMT changed
-        id: check-gmt
-        run: |
-          if [ "${{ needs.determine-affected.outputs.gmt_changed }}" = "false" ]; then
-            echo "gmt_changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "gmt_changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: No GMT changes, skip tests
-        if: steps.check-gmt.outputs.gmt_changed == 'false'
-        run: echo "Skipping GMT TZ tests - no gmt package changes detected"
-
       - uses: pnpm/action-setup@v6
-        if: steps.check-gmt.outputs.gmt_changed == 'true'
+        if: env.ACTIVE == 'true'
 
       - uses: actions/setup-node@v7
-        if: steps.check-gmt.outputs.gmt_changed == 'true'
+        if: env.ACTIVE == 'true'
         with:
           node-version: ${{ matrix.node-version }}
           check-latest: true
           cache: pnpm
 
       - name: Node and tzdata this job runs
-        if: steps.check-gmt.outputs.gmt_changed == 'true'
+        if: env.ACTIVE == 'true'
         run: node -p "process.version+' tz '+process.versions.tz"
 
       - name: Install dependencies
-        if: steps.check-gmt.outputs.gmt_changed == 'true'
+        if: env.ACTIVE == 'true'
         run: pnpm install --frozen-lockfile --no-runtime
 
       # The matrix names a Node, and pnpm must run that one, not the Node that
       # devEngines.runtime pins for local work. This fails the job if they differ.
       - name: pnpm runs the matrix Node
-        if: steps.check-gmt.outputs.gmt_changed == 'true'
+        if: env.ACTIVE == 'true'
         env:
           WANT: ${{ matrix.node-version }}
         run: |
@@ -512,11 +516,11 @@ jobs:
           test "$(pnpm exec node -p 'process.versions.node.split(".")[0]')" = "$WANT"
 
       - name: Run GMT tests
-        if: steps.check-gmt.outputs.gmt_changed == 'true'
+        if: env.ACTIVE == 'true'
         run: pnpm -w exec vitest run --config packages/gmt/vitest.config.ts
 
       - name: Collect GMT test artifacts
-        if: steps.check-gmt.outputs.gmt_changed == 'true' && always()
+        if: env.ACTIVE == 'true' && always()
         run: |
           mkdir -p artifact || true
           if [ -d packages/gmt/test-results ]; then cp -r packages/gmt/test-results artifact/ || true; fi
@@ -524,7 +528,7 @@ jobs:
           if [ -d packages/gmt/coverage ]; then cp -r packages/gmt/coverage artifact/ || true; fi
 
       - uses: actions/upload-artifact@v7
-        if: steps.check-gmt.outputs.gmt_changed == 'true' && always()
+        if: env.ACTIVE == 'true' && always()
         with:
           name: gmt-artifacts-${{ matrix.node-version }}-${{ matrix.timezone }}
           path: artifact

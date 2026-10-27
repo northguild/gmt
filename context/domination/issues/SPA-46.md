@@ -1,21 +1,20 @@
-# SPA-46 — Space: TAI64 labels
+# SPA-46 — Space: TAI64 text labels
 
-**Scope:** The TAI64, TAI64N and TAI64NA label formats built on TAI.
+**Scope:** The TAI64, TAI64N and TAI64NA labels built on TAI, in their hex text form.
 
 ## Gap
 
 Space and GNSS systems store timestamps in TAI (continuous, no leap seconds). Converting TAI to UTC requires the leap-second table.
 
-Beyond the TAI time-scale strings MAR-16 builds, one binary TAI format is in everyday infrastructure use: D. J. Bernstein's **TAI64** labels, which timestamp every line of qmail, daemontools and s6 logs. "A TAI64 label is an integer between 0 and 2^64 referring to a particular second of real time": label `s` in `[2⁶², 2⁶³)` is "the TAI second beginning exactly s − 2⁶² seconds after the beginning of 1970 TAI"; the external format is "eight 8-bit bytes in big-endian format", so `40 00 00 00 00 00 00 00` is the second that began 1970 TAI and `40 00 00 00 2a 2b 2c 2d` is "1992-06-02 08:07:09 TAI, also known as 1992-06-02 08:06:43 UTC". TAI64N appends four bytes of nanoseconds; TAI64NA four more of attoseconds. The `@4000000…` hex spelling seen in log files is daemontools' rendering of those bytes, not part of the definition. They are TAI, so reading them as Unix seconds is off by the leap-second count.
+Beyond the TAI time-scale strings MAR-16 builds, one binary TAI format is in everyday infrastructure use: D. J. Bernstein's **TAI64** labels, which timestamp every line of qmail, daemontools and s6 logs. "A TAI64 label is an integer between 0 and 2^64 referring to a particular second of real time": label `s` in `[2⁶², 2⁶³)` is "the TAI second beginning exactly s − 2⁶² seconds after the beginning of 1970 TAI"; the external format is "eight 8-bit bytes in big-endian format", so `40 00 00 00 00 00 00 00` is the second that began 1970 TAI and `40 00 00 00 2a 2b 2c 2d` is "1992-06-02 08:07:09 TAI, also known as 1992-06-02 08:06:43 UTC". TAI64N appends four bytes of nanoseconds; TAI64NA four more of attoseconds. The `@4000000…` hex spelling seen in log files is daemontools' rendering of those bytes, not part of the definition. This story reads and writes that text form, the one found in log files. They are TAI, so reading them as Unix seconds is off by the leap-second count.
 ([D. J. Bernstein, libtai, TAI64, TAI64N, and TAI64NA](https://cr.yp.to/libtai/tai64.html))
 
 ## Scope
 
 - `toTAI` / `fromTAI` and the GNSS conversions (`gnssToUtc` / `utcToGnss`, the same for every system) are in MAR-16.
-- `packages/gmt/src/timescale/convert/`, one function per file (`toTai64n.ts`, `fromTai64n.ts`, `toTai64Bytes.ts`, `fromTai64Bytes.ts`). No function takes a table argument: the leap-second table is built in.
+- `packages/gmt/src/timescale/convert/`, one function per file (`toTai64n.ts`, `fromTai64n.ts`). No function takes a table argument: the leap-second table is built in.
   - `toTai64n(isoString: string): string` — The TAI64N label in the daemontools text form: `@` followed by 24 hex digits (8 big-endian bytes of TAI seconds + 2⁶², 4 bytes of nanoseconds).
   - `fromTai64n(label: string): string` — Inverse; accepts TAI64 (16 hex digits), TAI64N (24) and TAI64NA (32, attoseconds truncated to the nanosecond core), with or without the `@`.
-  - `toTai64Bytes(isoString: string): Uint8Array` / `fromTai64Bytes(bytes: Uint8Array): string` — The binary external format itself, 8, 12 or 16 bytes.
 
 ## Key constants
 
@@ -43,7 +42,7 @@ Beyond the TAI time-scale strings MAR-16 builds, one binary TAI format is in eve
 
 ## Verification
 
-- `toTai64Bytes('1992-06-02T08:06:43Z')` returns `40 00 00 00 2a 2b 2c 2d` — Bernstein's own worked example — and `toTai64n` of the same instant is `@400000002a2b2c2d00000000`. TAI − UTC on 1992-06-02 is 26 s (the 1991-01-01 row), which matches Bernstein's "08:07:09 TAI, also known as 1992-06-02 08:06:43 UTC"
+- `toTai64n('1992-06-02T08:06:43Z')` returns `@400000002a2b2c2d00000000` — Bernstein's own worked example, `40 00 00 00 2a 2b 2c 2d`, written as hex text with zero nanoseconds. TAI − UTC on 1992-06-02 is 26 s (the 1991-01-01 row), which matches Bernstein's "08:07:09 TAI, also known as 1992-06-02 08:06:43 UTC"
 - `fromTai64n(toTai64n(iso))` round-trips to the nanosecond; a TAI64NA label round-trips to the nanosecond and drops attoseconds, documented
-- A label of odd hex length, a byte array of a length other than 8, 12 or 16, or a label for an instant before 1972 returns the sentinel
+- A label of a hex length other than 16, 24 or 32, a label with a non-hex character, or a label for an instant before 1972 returns the sentinel
 - `pnpm run validate` stays green
