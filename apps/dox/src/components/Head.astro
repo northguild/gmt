@@ -47,6 +47,10 @@ const CF_BEACON = JSON.stringify({ token: '94af68f89d8c4c8eac46ce6c17609d5f' });
 	// scroll cue — see src/lib/ref-table.ts.
 	import { mountRefTables } from '~/lib/ref-table';
 	mountRefTables(document);
+	// A code block or widget table that scrolls gets a tab stop, a name and a focus ring — see
+	// src/lib/scroll-regions.ts.
+	import { mountScrollRegions } from '~/lib/scroll-regions';
+	mountScrollRegions(document);
 </script>
 
 {

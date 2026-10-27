@@ -534,6 +534,8 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
   }
 
   let dragging: string | null = null;
+  /** The pointer's distance from the dragged edge when it took hold, in px. */
+  let grab = 0;
   let captured: { el: HTMLElement; id: number } | null = null;
 
   container.addEventListener("pointerdown", (e) => {
@@ -542,6 +544,13 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     ) as HTMLElement | null;
     if (!target) return;
     dragging = target.dataset.role ?? null;
+    // A grip leans out past its edge (gmt-dwell-ledger.css) and is taken hold of anywhere on it.
+    // Keep the pointer's distance from the edge, so the first move does not jump the edge to it.
+    const bar = target.parentElement?.getBoundingClientRect();
+    grab = bar
+      ? (dragging === "handle-entry" ? bar.left : bar.right) -
+        (e as PointerEvent).clientX
+      : 0;
     const id = (e as PointerEvent).pointerId;
     try {
       target.setPointerCapture(id);
@@ -558,7 +567,8 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     if (!track) return;
     const rect = track.getBoundingClientRect();
     if (rect.width <= 0) return;
-    const pct = (((e as PointerEvent).clientX - rect.left) / rect.width) * 100;
+    const pct =
+      (((e as PointerEvent).clientX + grab - rect.left) / rect.width) * 100;
     setHandle(dragging, canvas.fromPercent(pct));
   });
 

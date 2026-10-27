@@ -156,7 +156,7 @@
 .gmt-defects-note,
 .gmt-upstream-links,
 .gmt-upstream-muted {
-  color: var(--sl-color-gray-3);
+  color: var(--gmt-ice-dim);
   font-size: var(--sl-text-xs);
 }
 

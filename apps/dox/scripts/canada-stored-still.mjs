@@ -28,8 +28,12 @@
  */
 
 import { readFileSync } from "node:fs";
-import { chromium, webkit } from "@playwright/test";
+import { chromium, firefox, webkit } from "@playwright/test";
 import { blockOffSite } from "./gate-checks.mjs";
+import { applyPageContract } from "./gates/contract.mjs";
+import { recordLabelled, recordMeasured } from "./gates/findings.mjs";
+
+const GATE = "canada-stored-still";
 import {
   ROOT_SELECTOR,
   canadaGetFixture,
@@ -38,6 +42,10 @@ import {
   waitForState,
 } from "./lib/clock-check-harness.mjs";
 
+// The runner's page contract (`scripts/gates/`): the one page this gate checks is its `--path`.
+const CHECKER_PATH = "/check/canada-2026-clock-change/";
+const PAGES_ARG = applyPageContract({ gate: GATE, pages: [CHECKER_PATH] });
+
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
@@ -45,8 +53,16 @@ const arg = (name, fallback) => {
 };
 const BASE = arg("base", "http://127.0.0.1:4351/gmt").replace(/\/$/, "");
 const BROWSERS = arg("browsers", "chromium").split(",");
+const LAUNCHERS = { chromium, firefox, webkit };
+for (const name of BROWSERS) {
+  if (!LAUNCHERS[name]) {
+    console.error(`canada-stored-still: unknown browser "${name}"`);
+    process.exit(2);
+  }
+}
+let measured = 0;
 const WIDTHS = [1440, 1024, 375];
-const PATH = arg("path", "/check/canada-2026-clock-change/");
+const PATH = PAGES_ARG ? PAGES_ARG[0] : arg("path", CHECKER_PATH);
 /* The page's Worker route, zone and saved-times answer come from its path; an unknown path throws. */
 const REGION = regionOf(PATH);
 
@@ -63,7 +79,10 @@ const GET_FIXTURE = FIXTURE_FILE
   : canadaGetFixture("2026-10-22T12:00:00Z");
 
 const failures = [];
-const fail = (message) => failures.push(message);
+const fail = (message) => {
+  failures.push(message);
+  recordLabelled({ gate: GATE, page: PATH, message });
+};
 
 async function snapshot(page) {
   return page.evaluate(() => {
@@ -194,11 +213,12 @@ async function errorAnswerStill(browser, name, width, status) {
 }
 
 for (const name of BROWSERS) {
-  const launcher = name === "webkit" ? webkit : chromium;
+  const launcher = LAUNCHERS[name];
   const browser = await launcher.launch();
   try {
     for (const width of WIDTHS) {
       const label = `${name} ${width}px`;
+      measured += 1;
       const failuresBefore = failures.length;
       const context = await browser.newContext({
         viewport: { width, height: 900 },
@@ -277,6 +297,7 @@ for (const name of BROWSERS) {
   }
 }
 
+recordMeasured(GATE, measured);
 if (failures.length > 0) {
   console.error(failures.map((f) => `FAIL ${f}`).join("\n"));
   process.exit(1);

@@ -43,6 +43,10 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 		   this element, which is the island, so they are the dark values. In the
 		   dark theme the page is already dark and no band is needed. */
 		:global([data-theme='light']) .gmt-herostage {
+			/* The same dark, under the gradient: a border-image is invisible to a contrast
+			   checker, which read the page's white behind the light text (axe `color-contrast`,
+			   114 findings). The gradient paints over this, so the band looks as it did. */
+			background-color: var(--gmt-void);
 			border-image: linear-gradient(
 					180deg,
 					var(--gmt-void),

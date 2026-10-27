@@ -7,21 +7,28 @@
 // pieces as it streams in — header first, then sidebar, then content — which
 // reads as the sidebar and content flashing on every route change.
 import Default from '@astrojs/starlight/components/Footer.astro';
+import { LICENCE_LEAD, LICENCE_LINK_TEXT, LICENCE_URL } from '~/lib/licence';
+
+// /dox/ is one fixed viewport of chat, so a note placed after the page would sit behind it,
+// reachable by Tab and invisible. That page renders the note inside its own shell instead
+// (DoxPage.tsx), from the same text.
+const inChatShell = /\/dox\/?$/.test(Astro.url.pathname);
 ---
 
 <Default />
-<p class="gmt-licence-note">
-	Code examples: MIT-0. Packages: MIT. Third-party data and components: their own licences,
-	credited where they appear. Everything else:
-	<a href="https://github.com/northguild/gmt/blob/main/LICENSE">© 2026 NorthGuild, all rights reserved</a>.
-</p>
+{!inChatShell && (
+	<p class="gmt-licence-note">
+		{LICENCE_LEAD}
+		<a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
+	</p>
+)}
 <div id="gmt-page-end" hidden></div>
 
 <style>
 	.gmt-licence-note {
 		margin-block-start: 1.5rem;
 		font-size: var(--sl-text-xs);
-		color: var(--gmt-ice-dim);
+		color: var(--gmt-ice);
 	}
 
 	.gmt-licence-note a {

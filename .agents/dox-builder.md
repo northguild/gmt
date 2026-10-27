@@ -116,8 +116,9 @@ These bind every change.
 2. Read the actual files you are about to modify before modifying them. The spec was
    written from verified state, but verify anything it flags as uncertain.
 3. Implement. Match the surrounding code's conventions — comment density, naming, idiom.
-4. Run the story's own verification commands as you go, not only at the end. `fnm use &&`
-   on each.
+4. Run the story's verification as you go with `node scripts/verdict.mjs run dox test` (and
+   `check`, `lint`) and `pnpm --filter dox gates`. Read a log file only for a failure the screen
+   names. `fnm use &&` on each bare `node`.
 5. Report what you did, what you verified, and anything that did not go as the spec
    predicted. **Report failures faithfully** — if a command errored, quote the output. Do
    not paper over a step you skipped.
@@ -133,6 +134,9 @@ These bind every change.
   `pnpm install --frozen-lockfile --no-runtime`, and the workflow-level
   `pnpm_config_verify_deps_before_run: "false"`, so the job runs the Node it names and not the
   `devEngines.runtime` pin. `pnpm run validate` is the build.
+- A new gate script follows the page contract (`--list-pages`, `--pages`, `--base`, findings
+  under `GATE_REPORT`) and is registered in `apps/dox/scripts/gates/registry.mjs`; see the runner
+  and page-contract bullets in [built.md § Tier 2](../context/dox/built.md#tier-2--widget-platform).
 - Formatting is `oxfmt` (`.oxfmtrc.json`); linting is `oxlint`. Note both use
   allow-list-shaped config — a new top-level directory is invisible to them until it is
   explicitly added.

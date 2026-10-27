@@ -43,7 +43,10 @@
      reaches for it next. */
   --sl-badge-default-bg: #0b5d73;
   --sl-color-text: var(--gmt-ice);
-  --sl-color-text-accent: var(--gmt-cyan);
+  /* The ink tier: dark theme keeps the cyan, light theme takes the 8.71:1 ink.
+     The bare cyan was 3.4:1 on the header's tint (the site title) and 3.68:1 on
+     white (the current "On this page" entry). */
+  --sl-color-text-accent: var(--gmt-cyan-ink);
   --sl-color-bg: var(--gmt-void);
   /* Match the sidebar's ice-glass wash (see gmt-glass.css) — used by the
      mobile "On this page" bar. */

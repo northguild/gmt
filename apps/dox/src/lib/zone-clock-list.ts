@@ -174,6 +174,9 @@ export function mountZoneClockList(
     row.className = "gmt-clock-entry";
     row.id = zoneOptionId(panelId, index);
     row.setAttribute("role", "option");
+    // The listbox is the one tab stop and the arrow keys browse its rows
+    // (aria-activedescendant); a click still focuses a row, Tab does not.
+    row.tabIndex = -1;
     row.dataset.index = String(index);
     row.dataset.tzId = id;
     row.style.position = "absolute";
@@ -272,6 +275,22 @@ export function mountZoneClockList(
     }
   }
 
+  /* `aria-activedescendant` names a row only while that row is in the DOM. The virtualizer mounts
+     the rows in view and no others, so an index scrolled out of view, a list not yet measured
+     and a list with no zones all have no element to name, and an id that matches nothing is an
+     invalid reference (axe `aria-valid-attr-value`). Called at the end of every render, which
+     is the one place the set of mounted rows changes. */
+  function syncActiveDescendant(): void {
+    if (rows.has(activeIndex)) {
+      panel.setAttribute(
+        "aria-activedescendant",
+        zoneOptionId(panelId, activeIndex),
+      );
+    } else {
+      panel.removeAttribute("aria-activedescendant");
+    }
+  }
+
   function renderRows(
     instance: Virtualizer<HTMLElement, HTMLButtonElement>,
   ): void {
@@ -299,6 +318,7 @@ export function mountZoneClockList(
       writeReading(row, id, viewerDate);
       instance.measureElement(row);
     }
+    syncActiveDescendant();
   }
 
   panel.addEventListener("click", (event) => {
@@ -327,7 +347,6 @@ export function mountZoneClockList(
     if (next === activeIndex) return;
     event.preventDefault();
     activeIndex = next;
-    panel.setAttribute("aria-activedescendant", zoneOptionId(panelId, next));
     // `align: "auto"` is TanStack's "nearest" — scroll the minimum distance
     // needed to bring the row into view, not always to the center.
     virtualizer.scrollToIndex(next, { align: "auto", behavior: "auto" });
@@ -354,10 +373,6 @@ export function mountZoneClockList(
          find. Row 0 is the one row certain to be mounted after the reset. With
          no zones left there is nothing to name at all. */
       activeIndex = 0;
-      if (ids.length === 0) panel.removeAttribute("aria-activedescendant");
-      else {
-        panel.setAttribute("aria-activedescendant", zoneOptionId(panelId, 0));
-      }
       /* Through the virtualizer rather than `panel.scrollTop = 0`, so the
          library records the intent instead of being silently overtaken. */
       virtualizer.scrollToOffset(0, { behavior: "instant" });
@@ -383,10 +398,6 @@ export function mountZoneClockList(
         // wherever an ArrowUp/Down session was left mid-browse.
         if (index !== -1) {
           activeIndex = index;
-          panel.setAttribute(
-            "aria-activedescendant",
-            zoneOptionId(panelId, index),
-          );
         }
       }
       renderRows(virtualizer);

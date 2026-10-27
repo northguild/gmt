@@ -67,7 +67,7 @@ export const CHECKS = [
   {
     id: "dox-dist",
     local: false,
-    run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts",
+    run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/gates/registry.test.ts",
     needs: ["build:dox"],
   },
   {
@@ -345,7 +345,11 @@ export const RULES = [
     checks: ["typecheck:dox", ...SCRIPT_TESTS],
   },
   {
-    test: /^scripts\/(?:leap-seconds|release-announcement|release-notes|sync-intent-version|unshipped-deps)\.mjs$/,
+    test: /^scripts\/(?:verdict|lib\/(?:verdict-(?:format|parse)|pr-status-plan))\.mjs$/,
+    checks: ["typecheck:dox", ...SCRIPT_TESTS],
+  },
+  {
+    test: /^scripts\/(?:leap-seconds|pr-status|release-announcement|release-notes|sync-intent-version|unshipped-deps)\.mjs$/,
     checks: SCRIPT_TESTS,
   },
 ];

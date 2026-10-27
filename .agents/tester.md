@@ -35,7 +35,7 @@ and [§ Git — Only on an Explicit Instruction](../AGENTS.md#git--only-on-an-ex
 - Edge-case taxonomy ([testing standards](../context/testing-standards/references/index.md#edge-case-taxonomy))
 - [Test cost](../context/testing-standards/references/index.md#test-cost): every row you add or keep runs under 0.3 s locally; a slower row gets a cheaper oracle before it gets a timeout
 
-**Test output:** keep it small. From `packages/gmt`, run `npx vitest run <file> --reporter=dot 2>&1 | tail -n 40`; switch one file to `--reporter=verbose` only when you need the failing names. Never paste a full suite log into your report. Read files in excerpts (`offset`/`limit`, `grep -n`); a spec arrives as an index plus your slice — read only those.
+**Test output:** keep it small. From `packages/gmt`, run `npx vitest run <file> --reporter=dot 2>&1 | tail -n 40`; switch one file to `--reporter=verbose` only when you need the failing names. For the whole package or the repo, run `node scripts/verdict.mjs run @northguild/gmt test` or `node scripts/verdict.mjs validate` and read its screen. Never paste a full suite log into your report. Read files in excerpts (`offset`/`limit`, `grep -n`); a spec arrives as an index plus your slice — read only those.
 
 **Legacy library awareness:** Luxon, date-fns, Moment.js — comparison for edge-case discovery. **Never as authority.** A rule is justified by a specification or standard, never by what a library chose.
 

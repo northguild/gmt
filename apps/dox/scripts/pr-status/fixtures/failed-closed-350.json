@@ -1,0 +1,547 @@
+{
+  "_fixture": "Captured with the query buildQuery() sends (scripts/lib/pr-status-plan.mjs), northguild/gmt, viewer baldurpan. PR #350 (closed): two failing check runs. Real response.",
+  "data": {
+    "viewer": {
+      "login": "baldurpan"
+    },
+    "repository": {
+      "pullRequest": {
+        "number": 350,
+        "title": "feat(dox): the Morocco 2026 clock-change checker (CORE-89)",
+        "url": "https://github.com/northguild/gmt/pull/350",
+        "state": "CLOSED",
+        "isDraft": true,
+        "reviewDecision": "REVIEW_REQUIRED",
+        "mergeStateStatus": "BLOCKED",
+        "headRefOid": "5ff63bc8eaff2d6dae65fad8bb8b6aafb70ea4f4",
+        "commits": {
+          "nodes": [
+            {
+              "commit": {
+                "statusCheckRollup": {
+                  "contexts": {
+                    "nodes": [
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Determine affected packages",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336811012",
+                        "databaseId": 120336811012,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "No machine trailers",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336811468",
+                        "databaseId": 120336811468,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Story consistency",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336870371",
+                        "databaseId": 120336870371,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Build & Lint (Node 22)",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336870470",
+                        "databaseId": 120336870470,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Build & Lint (Node 24)",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336870398",
+                        "databaseId": 120336870398,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Build & Lint (Node 26)",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336870309",
+                        "databaseId": 120336870309,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 22 / Pacific/Niue",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871035",
+                        "databaseId": 120336871035,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 22 / America/New_York",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871099",
+                        "databaseId": 120336871099,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 22 / UTC",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336870954",
+                        "databaseId": 120336870954,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 22 / Europe/London",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871150",
+                        "databaseId": 120336871150,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 22 / Asia/Kolkata",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871067",
+                        "databaseId": 120336871067,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 22 / Asia/Kathmandu",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871027",
+                        "databaseId": 120336871027,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 22 / Asia/Shanghai",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871114",
+                        "databaseId": 120336871114,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 22 / Australia/Lord_Howe",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871209",
+                        "databaseId": 120336871209,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 22 / Pacific/Chatham",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871250",
+                        "databaseId": 120336871250,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 22 / Pacific/Apia",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871059",
+                        "databaseId": 120336871059,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 24 / Pacific/Niue",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871166",
+                        "databaseId": 120336871166,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 24 / America/New_York",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871133",
+                        "databaseId": 120336871133,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 24 / UTC",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871216",
+                        "databaseId": 120336871216,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 24 / Europe/London",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871126",
+                        "databaseId": 120336871126,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 24 / Asia/Kolkata",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336870995",
+                        "databaseId": 120336870995,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 24 / Asia/Kathmandu",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336870970",
+                        "databaseId": 120336870970,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 24 / Asia/Shanghai",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871056",
+                        "databaseId": 120336871056,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 24 / Australia/Lord_Howe",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871105",
+                        "databaseId": 120336871105,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 24 / Pacific/Chatham",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871290",
+                        "databaseId": 120336871290,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 24 / Pacific/Apia",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871139",
+                        "databaseId": 120336871139,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 26 / Pacific/Niue",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871101",
+                        "databaseId": 120336871101,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 26 / America/New_York",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871111",
+                        "databaseId": 120336871111,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 26 / UTC",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871213",
+                        "databaseId": 120336871213,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 26 / Europe/London",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871094",
+                        "databaseId": 120336871094,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 26 / Asia/Kolkata",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871233",
+                        "databaseId": 120336871233,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 26 / Asia/Kathmandu",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871398",
+                        "databaseId": 120336871398,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 26 / Asia/Shanghai",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871211",
+                        "databaseId": 120336871211,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 26 / Australia/Lord_Howe",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871226",
+                        "databaseId": 120336871226,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 26 / Pacific/Chatham",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871082",
+                        "databaseId": 120336871082,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "GMT TZ Tests — Node 26 / Pacific/Apia",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120336871137",
+                        "databaseId": 120336871137,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Tests (Node 22)",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120337937075",
+                        "databaseId": 120337937075,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Tests (Node 24)",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120337937039",
+                        "databaseId": 120337937039,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Tests (Node 26)",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/39930358774/job/120337937115",
+                        "databaseId": 120337937115,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 39930358774
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "reviewThreads": {
+          "nodes": []
+        },
+        "latestReviews": {
+          "nodes": []
+        }
+      }
+    }
+  }
+}

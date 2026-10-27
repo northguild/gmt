@@ -81,6 +81,8 @@ comments or context files; cite the issue's Decisions section or the external st
 - `gmt-reviewer` gets the index plus the slices that the diff under review touches.
 - Pass paths, not pasted content. Name the context file **sections** each worker needs.
 - Ask each worker for a short report (findings, files changed, test counts), not a transcript.
+- Workers verify with `node scripts/verdict.mjs`, `pnpm --filter dox gates` and
+  `node scripts/pr-status.mjs`, and quote the screen. A raw log is read only for a failure it names.
 
 **Escalate one call, not the default.** Pass `model: "opus"` on a single `tdd-dev` or `tester`
 call only when a slice has failed review twice, or turns on tricky domain arithmetic or a

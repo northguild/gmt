@@ -1,0 +1,58 @@
+# command: pnpm exec vitest run scripts/verdict/scratch-fail.test.ts (in apps/dox; two failing tests)
+# captured with NO_COLOR=1 FORCE_COLOR=0 from a deliberate break, reverted straight after
+
+ RUN  v5.0.5 /abs/repo/apps/dox
+
+ ❯ |dox| scripts/verdict/scratch-fail.test.ts (2 tests | 2 failed) 6ms
+   ❯ select (2)
+     × maps a widget file to its page 5ms
+     × second failing 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |dox| scripts/verdict/scratch-fail.test.ts > select > maps a widget file to its page
+AssertionError: expected [] to deeply equal [ '/tools/dst-inspector/' ]
+
+- Expected
++ Received
+
+- [
+-   "/tools/dst-inspector/",
+- ]
++ []
+
+ ❯ scripts/verdict/scratch-fail.test.ts:3:16
+      1| describe("select", () => {
+      2|   it("maps a widget file to its page", () => {
+      3|     expect([]).toEqual(["/tools/dst-inspector/"]);
+       |                ^
+      4|   });
+      5|   it("second failing", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |dox| scripts/verdict/scratch-fail.test.ts > select > second failing
+AssertionError: expected 1 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 1
+
+ ❯ scripts/verdict/scratch-fail.test.ts:6:15
+      4|   });
+      5|   it("second failing", () => {
+      6|     expect(1).toBe(2);
+       |               ^
+      7|   });
+      8| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  11:19:22
+   Duration  132ms (transform 42%, tests 21%, worker 19%, import 18%)
+

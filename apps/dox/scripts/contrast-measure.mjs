@@ -47,6 +47,12 @@
  *   pnpm run contrast:measure -- --base http://127.0.0.1:4381/gmt --only tools/timetable --theme dark
  *   pnpm run contrast:measure -- --base http://127.0.0.1:4381/gmt --json out.json --verbose
  *
+ * `--only` takes one substring or a comma list of them (a page id or path matches any).
+ *
+ * The runner's contract (`pnpm --filter dox gates`, `scripts/gates/`): `--list-pages` prints the
+ * pages and exits; `--pages /path/,...` runs only those (an unknown path exits 2); with
+ * `GATE_REPORT` set, every failure is also a finding and the run ends with its measured count.
+ *
  * Exit 1 if any `--gmt-ice-dim` text is under 7:1, any disabled border is under
  * 3:1, or the run measured nothing.
  */
@@ -56,6 +62,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PNG } from "pngjs";
 import { blockOffSite } from "./gate-checks.mjs";
+import { applyPageContract } from "./gates/contract.mjs";
+import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+
+const GATE = "contrast-measure";
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -66,7 +76,7 @@ const opt = (name, fallback) => {
 };
 const flag = (name) => args.includes(`--${name}`);
 const BASE = opt("base", "http://127.0.0.1:4381/gmt").replace(/\/$/, "");
-const ONLY = opt("only", "");
+const ONLY = opt("only", "").split(",").filter(Boolean);
 const THEME = opt("theme", "");
 const JSON_OUT = opt("json", "");
 const WIDTH = Number(opt("width", "1440"));
@@ -85,7 +95,7 @@ const toolSlugs = readdirSync(path.join(HERE, "../src/content/docs/tools"))
   .sort();
 
 /** Pages that are not tool pages. The tool pages are added below, one per slug. */
-const PAGES = [
+const ALL_PAGES = [
   { id: "home", path: "/" },
   { id: "why-gmt", path: "/why-gmt/" },
   { id: "guide-standards", path: "/guides/concepts/standards/" },
@@ -122,7 +132,20 @@ const PAGES = [
     path: `/tools/${slug}/`,
     tool: true,
   })),
-].filter((p) => !ONLY || p.id.includes(ONLY) || p.path.includes(ONLY));
+];
+
+const PAGES_ARG = applyPageContract({
+  gate: GATE,
+  pages: [...new Set(ALL_PAGES.map((p) => p.path))],
+});
+const PAGES = ALL_PAGES.filter(
+  (p) =>
+    (!ONLY.length ||
+      ONLY.some((word) => p.id.includes(word) || p.path.includes(word))) &&
+    (!PAGES_ARG || PAGES_ARG.includes(p.path)),
+);
+/** A page id's site path, for findings. */
+const PATH_OF = new Map(ALL_PAGES.map((p) => [p.id, p.path]));
 
 const lin = (v) => {
   v /= 255;
@@ -804,6 +827,42 @@ for (const g of VERBOSE ? bg : bfails)
     `${g.ratio.toFixed(2)}  ${g.theme.padEnd(5)} ${g.kind} ${g.text} | worst on ${g.page} [${g.state}]`,
   );
 for (const e of errors) console.log(`ERROR ${e.page} ${e.theme}: ${e.surface}`);
+for (const g of fails) {
+  recordFinding({
+    gate: GATE,
+    rule: "contrast-below-7",
+    page: PATH_OF.get(g.page) ?? null,
+    selector: `${g.kind} | ${g.surface}`,
+    browser: "chromium",
+    width: WIDTH,
+    theme: g.theme,
+    message: `${g.ratio.toFixed(2)}:1 under ${FLOOR}:1 for "${g.text}" (${g.size}px, bg ${g.bg}) [${g.state}]`,
+  });
+}
+for (const g of bfails) {
+  recordFinding({
+    gate: GATE,
+    rule: "border-below-3",
+    page: PATH_OF.get(g.page) ?? null,
+    selector: `${g.kind} ${g.text}`,
+    browser: "chromium",
+    width: WIDTH,
+    theme: g.theme,
+    message: `disabled border ${g.ratio.toFixed(2)}:1 under ${BORDER_FLOOR}:1 [${g.state}]`,
+  });
+}
+for (const e of errors) {
+  recordFinding({
+    gate: GATE,
+    rule: "page-error",
+    page: PATH_OF.get(e.page) ?? null,
+    browser: "chromium",
+    width: WIDTH,
+    theme: e.theme,
+    message: e.surface,
+  });
+}
+recordMeasured(GATE, PAGES.length * themes.length - errors.length);
 const failed = fails.length || bfails.length || errors.length || !text.length;
 console.log(failed ? "\nFAIL" : "\nPASS");
 process.exit(failed ? 1 : 0);

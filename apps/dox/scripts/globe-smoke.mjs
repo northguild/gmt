@@ -61,6 +61,10 @@ import { fileURLToPath } from "node:url";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 import { blockOffSite } from "./gate-checks.mjs";
+import { applyPageContract } from "./gates/contract.mjs";
+import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+
+const GATE = "globe-smoke";
 
 const DOX = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(DOX, "dist");
@@ -96,6 +100,19 @@ const PAGES = [
     height: 844,
   },
 ];
+
+/**
+ * The runner's page contract (`scripts/gates/`): `--list-pages` and `--pages` name routes. The
+ * parity and imagery loops run for the chosen routes only; the fixed single-page checks after
+ * them (the fallback, the reference page, the hero) always run, because they are not per page.
+ */
+const PAGES_ARG = applyPageContract({
+  gate: GATE,
+  pages: [...new Set(PAGES.map((target) => target.route))],
+});
+const SELECTED = PAGES.filter(
+  (target) => !PAGES_ARG || PAGES_ARG.includes(target.route),
+);
 
 /**
  * Presses of the zoom-in button (×1.4 each) to compare at, since zoom changes
@@ -243,6 +260,26 @@ async function launch() {
 
 const failures = [];
 const notes = [];
+
+/**
+ * Every failure is also a finding. The messages are free text from many checks, so the rule is
+ * one stable id and the page is the target whose name starts the message, when one does.
+ */
+const pushFailure = failures.push.bind(failures);
+failures.push = (...messages) => {
+  for (const message of messages) {
+    const target = PAGES.find((t) => String(message).startsWith(t.name));
+    recordFinding({
+      gate: GATE,
+      rule: "globe-check-failed",
+      page: target?.route ?? null,
+      width: target?.width ?? null,
+      browser: "chromium",
+      message: String(message),
+    });
+  }
+  return pushFailure(...messages);
+};
 
 function check(condition, message) {
   if (!condition) failures.push(message);
@@ -393,7 +430,7 @@ async function main() {
 
   const { server, base } = await serve(DIST);
 
-  for (const target of PAGES) {
+  for (const target of SELECTED) {
     for (const zoom of ZOOMS) {
       const shots = {};
       for (const renderer of ["webgpu", "canvas2d"]) {
@@ -467,7 +504,7 @@ async function main() {
   }
 
   // --- the Earth imagery ---------------------------------------------------
-  for (const target of PAGES) {
+  for (const target of SELECTED) {
     /* The dark theme draws the imagery: at rest the image is requested once,
        arrives, and changes the globe from its own flat rendering. */
     {
@@ -861,6 +898,7 @@ async function main() {
   await browser.close();
 
   for (const note of notes) console.log(`  ${note}`);
+  recordMeasured(GATE, SELECTED.length);
   if (failures.length > 0) {
     console.error(`\nglobe-smoke: ${failures.length} failure(s)`);
     for (const failure of failures) console.error(`  - ${failure}`);

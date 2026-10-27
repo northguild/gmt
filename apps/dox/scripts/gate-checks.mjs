@@ -190,3 +190,262 @@ export async function blockOffSite(target, base) {
       route.fulfill({ status: 200, contentType: "text/javascript", body: "" }),
   );
 }
+
+// ---------------------------------------------------------------------------------------------
+// The a11y gates (`a11y-axe.mjs`, `a11y-tab-walk.mjs`, `a11y-media.mjs`). Each function takes what
+// the browser observed and returns findings as `{ rule, selector, message }` objects, so a rule's
+// logic is tested without a browser. An empty array is a pass.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * The pages the Tab walk visits: every page outside `/reference/`, plus the first function page and
+ * the first type page in sorted order. Reference pages share one template and each carries the full
+ * sidebar, so one of each stands for the 940.
+ */
+export function tabWalkPages(allPages) {
+  const sorted = [...allPages].sort();
+  const outside = sorted.filter((p) => !p.startsWith("/reference/"));
+  // /reference/<namespace>/<category>/<function>/ is a function page; /reference/types/<Name>/ a type.
+  const fn = sorted.find((p) =>
+    /^\/reference\/(?!types\/)[^/]+\/[^/]+\/[^/]+\/$/.test(p),
+  );
+  const type = sorted.find((p) => /^\/reference\/types\/[^/]+\/$/.test(p));
+  return [...outside, ...[fn, type].filter(Boolean)];
+}
+
+/** Most Tab presses one control may take in a row before it counts as holding focus. A date field
+ *  has up to six segments (`datetime-local`: month, day, year, hour, minute, AM/PM) and Tab moves
+ *  through them one press each, so a longer stay is not a field. */
+export const SEGMENT_CAP = 8;
+
+/**
+ * Folds the consecutive repeats of one path in a Tab sequence into a single stop, as long as the run
+ * is at most `cap` presses (the segments of one date field). A longer run is left as it came, two or
+ * more entries of the same path, which `tabWalkProblems` reads as focus held by that control.
+ */
+export function collapseStops(sequence, cap = SEGMENT_CAP) {
+  const out = [];
+  for (let i = 0; i < sequence.length;) {
+    let j = i;
+    while (j < sequence.length && sequence[j] === sequence[i]) j++;
+    const run = j - i;
+    if (sequence[i] == null || run > cap) out.push(...sequence.slice(i, j));
+    else out.push(sequence[i]);
+    i = j;
+  }
+  return out;
+}
+
+/**
+ * Tab walk: `candidates` are the paths of the elements that should take focus, `sequence` the paths
+ * focused by each Tab press in order (null where focus sat on nothing, e.g. the page body).
+ *
+ * `tab-trap`: focus came back to an element other than the first stop while candidates were still
+ * unvisited, so Tab cycles in a loop short of the page end. `tab-unreached`: a candidate never took focus. With a trap the
+ * unreached ones are named in the trap's message instead of one finding each.
+ */
+export function tabWalkProblems({ candidates, sequence }) {
+  const visited = new Set();
+  let trap = null;
+  let first = null;
+  let previous = null;
+  for (const path of collapseStops(sequence)) {
+    if (path == null) continue;
+    if (visited.has(path)) {
+      // Back at the first stop is Tab wrapping round the page: whatever it skipped is unreached,
+      // and a control Tab cannot reach looks exactly like this. Back at any other stop is a loop,
+      // and so is the same stop again straight away, which is focus that will not leave it.
+      if (
+        (path !== first || path === previous) &&
+        candidates.some((c) => !visited.has(c))
+      )
+        trap = path;
+      break;
+    }
+    previous = path;
+    first ??= path;
+    visited.add(path);
+  }
+  const unreached = candidates.filter((c) => !visited.has(c));
+  if (trap) {
+    return [
+      {
+        rule: "tab-trap",
+        selector: trap,
+        message: `Tab returned to ${trap} with ${unreached.length} of ${candidates.length} controls still unreached (first: ${unreached[0]})`,
+      },
+    ];
+  }
+  return unreached.map((selector) => ({
+    rule: "tab-unreached",
+    selector,
+    message: "Tab never reached this control",
+  }));
+}
+
+/**
+ * Tab walk: is the focused control covered? `samples` holds one `{ ok, by }` per box the control
+ * draws (a link that wraps has one per line): `ok` when the element at that box's centre is the
+ * control, its part or its label, `by` a name for what was there instead. The control is covered
+ * only when every box is, and then the answer is what covers the last one. No samples (off screen,
+ * no pointer events) is not covered.
+ */
+export function obscuredByProblem(samples) {
+  if (!samples || samples.length === 0) return null;
+  if (samples.some((s) => s.ok)) return null;
+  return samples[samples.length - 1].by;
+}
+
+/** A computed `outline-width` such as "2px" as a number (0 when it does not parse). */
+function px(value) {
+  const n = Number.parseFloat(value ?? "");
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Tab walk: does focus change how a control looks? `before` and `after` are the computed
+ * `{ outlineStyle, outlineWidth, boxShadow, borderColor, backgroundColor }` of the element unfocused
+ * and focused. A visible change is an outline of at least 2px that is not `none` (the UA's `auto`
+ * ring counts), a box-shadow that is not `none` and not the one it already had, or a different
+ * border or background colour.
+ */
+export function focusVisibleProblem({ before, after }) {
+  const outline =
+    after.outlineStyle !== "none" &&
+    (after.outlineStyle === "auto" || px(after.outlineWidth) >= 2) &&
+    (after.outlineStyle !== before.outlineStyle ||
+      after.outlineWidth !== before.outlineWidth);
+  const shadow =
+    after.boxShadow !== "none" && after.boxShadow !== before.boxShadow;
+  const border = after.borderColor !== before.borderColor;
+  const fill = after.backgroundColor !== before.backgroundColor;
+  return outline || shadow || border || fill
+    ? []
+    : [
+        {
+          rule: "focus-invisible",
+          message: `focus changes nothing visible (outline ${after.outlineStyle} ${after.outlineWidth}, box-shadow ${after.boxShadow})`,
+        },
+      ];
+}
+
+/**
+ * Tab walk: a slider answers ArrowRight and ArrowLeft. `before` is its value as found, `moved` the
+ * value after the first key and `restored` after the opposite key. A slider already at its far end
+ * is tried the other way round by the script, and `keys` names the two keys used.
+ */
+export function arrowMoveProblems({ before, moved, restored, keys }) {
+  if (before == null) {
+    return ["the control exposes no value (aria-valuenow or value)"];
+  }
+  const problems = [];
+  if (moved === before)
+    problems.push(`${keys[0]} did not change the value (still ${before})`);
+  else if (restored !== before) {
+    problems.push(`${keys[1]} did not restore ${before} (got ${restored})`);
+  }
+  return problems;
+}
+
+/**
+ * axe: does an exclusion entry cover a result? Rule, selector and page must all match; an entry's
+ * `pages` holds site paths or `"*"`.
+ */
+export function exclusionMatches(entry, { rule, selector, page }) {
+  return (
+    entry.rule === rule &&
+    entry.selector === selector &&
+    Array.isArray(entry.pages) &&
+    (entry.pages.includes("*") || entry.pages.includes(page))
+  );
+}
+
+/** Whether any entry of `exclusions` covers the result. */
+export function isExcluded(exclusions, result) {
+  return exclusions.some((entry) => exclusionMatches(entry, result));
+}
+
+/** Problems with the exclusions file itself: an entry without a reason excludes nothing. */
+export function exclusionProblems(entries) {
+  if (!Array.isArray(entries))
+    return ["the exclusions file must hold a JSON array"];
+  const problems = [];
+  entries.forEach((e, i) => {
+    const where = `entry ${i}`;
+    if (typeof e?.rule !== "string" || !e.rule)
+      problems.push(`${where}: rule is required`);
+    if (typeof e?.selector !== "string" || !e.selector)
+      problems.push(`${where}: selector is required`);
+    if (
+      !Array.isArray(e?.pages) ||
+      e.pages.length === 0 ||
+      e.pages.some((p) => typeof p !== "string")
+    ) {
+      problems.push(`${where}: pages must list site paths or "*"`);
+    }
+    if (typeof e?.reason !== "string" || e.reason.trim().length < 20) {
+      problems.push(
+        `${where}: reason must say, with the measured evidence, why this is a false positive`,
+      );
+    }
+  });
+  return problems;
+}
+
+/**
+ * The alpha channel of a computed CSS colour: `rgb(1, 2, 3)` is 1, `rgba(1, 2, 3, 0.5)` and
+ * `color(srgb 1 1 1 / 0.5)` are 0.5, `transparent` is 0. Null when the string is not a colour.
+ */
+export function colorAlpha(css) {
+  const text = String(css ?? "")
+    .trim()
+    .toLowerCase();
+  if (text === "transparent") return 0;
+  const open = text.indexOf("(");
+  if (open === -1 || !text.endsWith(")")) return null;
+  const inner = text.slice(open + 1, -1);
+  const slash = inner.indexOf("/");
+  let raw = null;
+  if (slash !== -1) raw = inner.slice(slash + 1).trim();
+  else if (text.startsWith("rgba(") || text.startsWith("hsla(")) {
+    raw = inner.split(",")[3]?.trim() ?? null;
+  }
+  if (raw == null) return 1;
+  const n = raw.endsWith("%")
+    ? Number.parseFloat(raw) / 100
+    : Number.parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Reduced transparency: the fill of a blurred element must be at least this opaque. */
+export const MIN_OPAQUE_ALPHA = 0.9;
+
+/**
+ * Media gate, reduced transparency, for an element that had a `backdrop-filter` in the normal run:
+ * the blur must be gone (`transparency-blur`) and the background at least 0.9 opaque
+ * (`transparency-fill`). `backdropFilter` and `backgroundColor` are the computed values under the
+ * emulated preference.
+ */
+export function transparencyProblems({ backdropFilter, backgroundColor }) {
+  const out = [];
+  if (backdropFilter !== "none") {
+    out.push({
+      rule: "transparency-blur",
+      message: `backdrop-filter is still ${backdropFilter} under prefers-reduced-transparency`,
+    });
+  }
+  const alpha = colorAlpha(backgroundColor);
+  if (alpha == null || alpha < MIN_OPAQUE_ALPHA) {
+    out.push({
+      rule: "transparency-fill",
+      message: `background ${backgroundColor} has alpha ${alpha ?? "unknown"}, under ${MIN_OPAQUE_ALPHA}, under prefers-reduced-transparency`,
+    });
+  }
+  return out;
+}
+
+/** Media gate, reduced motion: an animation still going 2s after load is a `motion-running` finding. */
+export function motionProblem({ playState, iterations, remainingMs }) {
+  if (playState !== "running") return false;
+  return iterations === Infinity || remainingMs > 1000;
+}

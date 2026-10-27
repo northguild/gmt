@@ -1755,6 +1755,50 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `scripts/html-diff.mjs` compares built widget markup (✗ the widget changed,
   ~ only the page around it did, + a new widget page with no baseline); `visual:diff` is the
   pixel gate.
+  - **The runner.** `pnpm --filter dox gates` (`scripts/gates.mjs`) runs all of them from one
+    build and one static server, and prints one screen (§ Runbooks, "Run the gates"). The gates are
+    data in `scripts/gates/registry.mjs` (`id`, `script`, `tier`, `browsers`, `fullBrowsers`,
+    `themes`, `needs`, plus `args`, `base`, `browserArg`, `pages`); `select.mjs` turns the changed
+    files and the import graph (`graph.mjs`) into the pages to check; `screen.mjs` prints the result.
+    Tiers nest: `pr` (contrast-measure, grow-measure, readout-still, data-credits-check,
+    canada-layout-check) is inside `nightly` (adds canada-clock-still and canada-stored-still), which
+    is inside `local` (adds globe-smoke, html-diff and visual-diff, the three that need a GPU or a
+    baseline).
+  - **The PR job.** `dox-gates` in `.github/workflows/ci.yml` ("Dox gates (changed pages, Chromium)")
+    runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22: `gates --tier pr
+    --browsers chromium --themes dark,light --against origin/<base>`, so the `pr` tier only, on the
+    pages the diff selects; the nightly covers the rest (Firefox, WebKit, the clock-still gates). The
+    runner appends its screen to `$GITHUB_STEP_SUMMARY` in a fenced `text` block
+    (`gates/step-summary.mjs`); a failed job uploads `apps/dox/.gates/` (without `vite-cache/`) as the
+    `dox-gates-<run id>` artifact. It is **advisory**: the owner makes it a required check after about
+    10 clean Dox PR runs. A PR that touches nothing under `apps/dox/` or `pnpm-lock.yaml` skips it;
+    a lockfile change alone runs it, since it can bump Playwright or axe-core.
+  - **The page contract.** Every gate script answers `--list-pages` (a JSON array of site paths,
+    no `/gmt`, without a browser), takes `--pages <path,...>` (an unknown path exits 2, so a typo is
+    never an empty run) and, when it loads pages, `--base <url>`. With `GATE_REPORT` set, each
+    failure is also appended through `recordFinding` as `{ gate, rule, page, selector, browser,
+    width, theme, message }` (`rule` is a short stable id such as `readout-moved`, `grew` or
+    `contrast-below-7`, never prose), and the run ends with `recordMeasured(gate, n)`, the pages x
+    browsers x widths it measured (`scripts/gates/findings.mjs`, `contract.mjs`). A gate that exits 0
+    without that line, or with `n = 0`, is `FAIL measured nothing`; one that exits 0 with findings is
+    a FAIL. `contrast-measure --only` takes a comma list. `grow-measure`, `readout-still`,
+    `data-credits-check` and the three Canada scripts accept `firefox` in `--browsers`;
+    `canada-layout-check` takes `--browsers` as well as `--engine`. `contrast-measure` is
+    Chromium only.
+  - **Selection.** A changed file selects the pages whose import closure holds it (`.mdx`, `.astro`,
+    `.ts`, `.tsx`, `.mjs`, `.css`; relative paths and the `~/` alias); a change under
+    `packages/gmt/src/<ns>/<module>/` selects the pages that import
+    `@northguild/gmt/<ns>/<module>` and the sample, since a page that reaches the module through
+    another one, or imports the package whole, is not in the graph. Chrome (`src/styles/*`, the
+    Starlight component overrides, `astro.config.mjs`, `apps/dox/package.json`, `pnpm-lock.yaml`),
+    any other library change, and any other `apps/dox/` file no page's closure holds (a component
+    the chrome imports, the `/reference/` generators, `public/`) select the sample (`SAMPLE` in the
+    registry; `registry.test.ts` asserts each path is in `dist`). A changed gate script runs that
+    gate on the sample, and a changed runner file (`scripts/gates/`, `gates.mjs`, `gate-checks.mjs`,
+    `scripts/lib/`) runs every gate on the sample. Over 12 pages, the run keeps the sample plus 6 picked evenly from the rest (the
+    screen's context line says so under `--plan`); `--all` lifts the cap. With no changed file under
+    `apps/dox/` (other than `*.test.ts`), `packages/gmt/src/` or `pnpm-lock.yaml`, the runner prints
+    `gates: PASS  nothing to check` and does not build.
   - **The MAR-16 tools measure the whole widget** (`scope: "widget"`, frame `.gmt-gnss-frame`).
     Only their drawings (`GNSS_DRAWN`: lanes, bars, strip, plot, rulers and a hold's live
     wrapper) may move; the range chip is a `riders` element (its left moves, nothing else), and
@@ -2693,6 +2737,62 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     static import of the page script, so the widget's mount never runs (§ Tier 2, "A widget
     that cannot load says so"). Dead widgets with no notice on every page mean the dev
     server needs a restart, not that a widget is broken.
+  - **The a11y gates.** Three gates, tier `pr`, run on the sample in every engine and on all pages in Chromium only (`fullBrowsers`): `a11y-axe`
+    (`scripts/a11y-axe.mjs`, `@axe-core/playwright` 4.13.0, tags `wcag2a`, `wcag2aa`, `wcag21a`,
+    `wcag21aa`, `wcag22aa`, at 1440 and 390, both themes), `a11y-tab-walk` (Tab through each page: every focusable
+    shows a focus indicator, nothing traps, each `[role=slider]`/range moves on arrow keys and no
+    interactive element is skipped) and `a11y-media` (the preference media queries:
+    `prefers-reduced-transparency` needs no `backdrop-filter` and a fill alpha of at least 0.9,
+    forced colours keep an edge on every control). **The WCAG 2.2 answer:** axe-core 4.13.0 tags 0
+    rules `wcag22a`, and `wcag22aa` holds `target-size` only, so `wcag22aa` is what the gate adds;
+    2.2 criteria axe cannot test (focus not obscured, dragging alternatives, consistent help) stay
+    with `a11y-tab-walk` and the Tier 3 pass. `scripts/a11y-axe-exclusions.json` (empty) is the
+    only place a rule or selector may be waived, and a change to it runs `a11y-axe` on the sample
+    (`inputIndex()` in the registry). `scripts/lib/a11y-sweep.mjs` settles transitions before each
+    read, because a clock row mid-fade reads as a false colour finding, and `settle()` waits for every
+    `.gmt-grow[data-growing]` to release, because a region still easing to its height is clipped at a
+    stale one and the text after it sits over it (a false `target-size` and `focus-obscured`).
+    `a11y-tab-walk` runs both themes like the others; it collects candidates once their count is
+    stable, counts the up to eight Tab presses through one date field's segments as one stop (more
+    is a trap: `collapseStops`, `SEGMENT_CAP`), tests the centre of every box of a wrapped link, and
+    looks again 300 ms after a `focus-obscured` before reporting it. Standing fixes the first sweep
+    forced, which a change must not undo: scrollable `pre` and `.gmt-widget table` get
+    `tabindex=0`, `role=region` and a label while they overflow (`src/lib/scroll-regions.ts`, and the
+    same for the `/dox/` transcript in `DoxChat.tsx`); running prose links are underlined
+    (`gmt-content.css`, `dox.css`); `--sl-color-text-accent` is `--gmt-cyan-ink`; the globe list's
+    `aria-activedescendant` only ever names a rendered row (`syncActiveDescendant`); the dwell-ledger
+    handles are 24px wide and lean 8px outward; the light hero has its own `background-color`
+    because axe cannot read a `border-image` band; the `/dox/` licence note lives inside the chat
+    shell (`.gmt-hive-licence`) and the Starlight footer omits it on that page. `contrast-measure`
+    (the 7:1 gate) only measures text coloured `--gmt-ice-dim`, which is why it never saw the
+    cyan accent text; `a11y-axe` `color-contrast` (4.5:1) now covers all text.
+- **Run the gates.** `pnpm --filter dox gates` builds `packages/gmt` only when its `dist` is
+  missing, builds the site with `DOX_VITE_CACHE_DIR=apps/dox/.gates/vite-cache` (unless the
+  variable is set), serves `dist` on a free port, and runs the selected gates one after another
+  (the clock-still gates flake under load), each with `GATE_REPORT=.gates/<gate>.ndjson` and its log
+  at `.gates/<gate>.log`. A failed gate runs again once on its failing pages (`--retries`): a pass
+  there is `FLAKY`, a second failure `FAIL`. Everything lands in `apps/dox/.gates/` (git-ignored),
+  with `summary.json` and a `lock` that a second run refuses (exit 2). Exit 0 means no FAIL
+  (`FLAKY` and `SKIP` pass); 1 a gate failed or measured nothing; 2 usage, a live lock, a failed
+  build or a gate that exited 2.
+  - `--plan` prints the selection and exits without running a gate; it builds only when `dist` is
+    missing. `--only <gate,...>`, `--pages <path,...>` (replaces the diff selection),
+    `--browsers`, `--themes`, `--tier pr|nightly|local` (default `local`), `--shard i/n` (every
+    n-th page of each gate's sorted list), `--no-build` (needs `dist/gmt/index.html`) and `--json`
+    (the summary as JSON) narrow or reshape a run. `--against <ref>` is the diff base (default
+    `origin/main`, else `main`).
+  - `--all` selects every page of every gate. `globe-smoke` is `SKIP needs a GPU` when `CI` is set.
+    `html-diff` and `visual-diff` are `SKIP` without `--baseline <path to a built base apps/dox>`
+    (see the next entry): with it, `html-diff` captures in the base and compares here, and
+    `visual-diff` serves the base `dist` on a second port for `before`, runs `after` here, then `diff`.
+  - **Measured on this machine (2026-10-26), `--all --tier pr --browsers chromium`: 125 minutes**
+    (51 pages; build 37s, contrast-measure 37m, grow-measure 24m, readout-still 62m, data-credits-check
+    36s, canada-layout-check 57s). That first sweep found six text runs under 7:1 on
+    `/tools/cron-in-a-zone/` and `/dox/`, since fixed; every other gate passed. A child process that runs 90
+    minutes is stopped and shows `timed out after 90m`. A diff-driven run takes minutes: one page with
+    `--only` is about 4 minutes, 36s of it the build; `--plan` shows what a run would do.
+  - **Firefox does not launch on the author's machine.** The five scripts accept `firefox`, but
+    those legs have not run here (see "Owed verification").
 - **A gate baseline is a clean worktree of the commit the branch is based on.**
   `html-diff.mjs capture` and `visual:before` run in a detached worktree at
   `git merge-base HEAD origin/main`, with its own install, library build and site build;
@@ -2720,6 +2820,60 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
   Re-run the `rsync` and the site build of `$SP/after` after any change. Firefox does not
   launch on the author's machine; record it as blocked and do not bypass the sandbox.
+- **The nightly gate sweep** (`.github/workflows/dox-gates-nightly.yml`). Every page, three browsers,
+  both themes, filed as `bug` issues.
+  - **Triggers.** A daily cron (`23 4 * * *`) that skips when nothing changed, a Sunday cron
+    (`41 4 * * 0`) that always runs, and `workflow_dispatch` with `force` (run anyway) and
+    `force_finding` (also file one `[dry run]` issue). The weekly run is recognised by
+    `github.event.schedule`, never by a computed date.
+  - **Skip rule.** Job `decide` (`actions: read`) takes the newest finished `main` run of the
+    workflow that filed its findings (its `Report to issues` job succeeded, or it skipped the night
+    and ended `success`) and runs the sweep when `git diff --name-only <sha> HEAD -- apps/dox/
+    pnpm-lock.yaml` is not empty, when there is no such run or its commit is not in the history, or
+    when a listing or the diff fails (fail open, with the reason in the summary). A run whose report
+    job failed is never the baseline, so its findings are swept and filed again the next night. The
+    rule is the pure `shouldRun` in `apps/dox/scripts/gates/nightly-decide.mjs`, which the step calls.
+  - **Legs.** `pnpm --filter dox gates --all --tier nightly --browsers <b> --themes dark,light
+    --retries 1 --shard i/n`, `timeout-minutes: 90`, `fail-fast: false`. `--shard` splits each
+    gate's sorted page list round-robin, not the gates, so every leg of a browser runs every gate
+    on its share of the pages. Under `--all`, Chromium gets every page of every gate; WebKit and
+    Firefox get every page of `grow-measure`, `readout-still`, `data-credits-check` and
+    `canada-layout-check`, and the six-page sample of the three a11y gates (`fullBrowsers`);
+    `contrast-measure` is Chromium-only; the two clock-still gates have one page each (shard 1 only).
+    Layout: **chromium 6 legs, webkit 3, firefox 3** (12). Sizing, from the local sweep on the
+    author's Mac (a runner is assumed 1.5 to 2 times slower; each leg also builds the site, about 40 s
+    locally): Chromium is 125 min for `readout-still` (62), `contrast-measure` (37), `grow-measure`
+    (24) and the rest, plus the three a11y gates over 1,092 pages and both themes, measured at 77
+    (`a11y-axe` 38, `a11y-media` 33, `a11y-tab-walk` 6): about 202 min, so 202 / 6 is 34 per leg and
+    the worst shard (extra single-page gates, rounding up) about 37. WebKit and Firefox are about
+    90 each (`readout-still` 62 plus `grow-measure` 24 plus a few), so 90 / 3 is 30 per leg and the
+    worst about 34. That keeps every leg under 40 local minutes and about 75 on a runner at 2 times;
+    the slowest real leg is recorded here after the first runs. Chromium on 5 legs would be about 44
+    local at the worst shard, which leaves no margin under the 90-minute timeout at 2 times.
+  - **Report.** Job `report` (`issues: write`) downloads the newest `dox-gates-<leg>-<run id>` artifact of
+    each leg (`summary.json`, `*.ndjson`) and runs `apps/dox/scripts/gates/file-issues.mjs --legs <all
+    twelve>`. Only `FAIL` rows file; `FLAKY` (failed, passed on the retry) is listed in the step
+    summary. The key is `<gate>:<rule>:<page>:<selector>` (selector trimmed, whitespace collapsed);
+    browsers, widths and themes are not in it, so one issue tables every place the finding was seen.
+    A leg with no readable `summary.json` files `dox-gate:could-not-run:<leg>`; a `FAIL` with no
+    structured finding files `<gate>:unstructured:all:` with its log tail.
+  - **Issues.** Labels `bug` and `dox-gate` (created when missing, with `dox-gate-dry-run`), issue type
+    `Bug`, first body line `<!-- dox-gate key="…" -->` (`"`, `>` and `--` in a key are written as
+    entities). An open `dox-gate` issue whose first line equals the marker gets a comment on the
+    lowest-numbered match; otherwise a new issue opens. **Flood guard:** more than 10 new issues in one
+    run opens none and files one `dox-gate:flood` issue listing every held-back key (a comment if it
+    is already open); comments on already-open findings still go out. Nothing is closed
+    automatically: whoever fixes a finding closes its issue.
+  - **Dry run.** `node apps/dox/scripts/gates/file-issues.mjs --print --dry-run-finding <summary.json>`
+    plans against the live open-issue list, prints one line per action (`open  <key>  <title>` or
+    `comment #123  <key>`) and a count, and files nothing; it needs `gh` signed in. Outside GitHub
+    Actions (`GITHUB_ACTIONS` not `true`) it only plans: without `--print` it exits 2 with "run with
+    --print locally; issues are filed by the nightly workflow". A summary path that is unreadable (without
+    `--legs`) or has no leg folder is also exit 2, before any `gh` call; with `--legs`, the crashed legs
+    are the `--legs` entries with no readable summary, including when no summary arrived at all. Use a summary with
+    no `FAIL` row, since a local `--all` summary's hundred findings plan as one flood issue. In CI,
+    dispatch with `force_finding`: one `[dry run]` issue appears (key `dry-run:synthetic:/:body`,
+    label `dox-gate-dry-run` instead of `bug`), and a second dispatch comments on it.
 - **Local dev:** `pnpm dox:dev` (site + chat Worker) or `pnpm dox:dev:site` (site only), both at `http://localhost:4321/gmt/`.
   A warm start is ~10 s: the gmt dev build (`build:dev`) rebuilds `dist/` in place in ~5 s, every `generate` step
   skips when its inputs are unchanged, and `upstream refresh` makes no network calls
@@ -2767,10 +2921,29 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `curl -s <url>/dox/ | grep -c GEMINI` prints `0`;
   - the first deploy with the `ai` binding confirms the CI token may bind Workers AI.
 - **Owed verification:**
+  - the Firefox legs of `grow-measure`, `readout-still`, `data-credits-check`, `canada-clock-still`,
+    `canada-stored-still` and `canada-layout-check` (`--browsers firefox`, or `chromium,webkit,firefox`
+    through `pnpm --filter dox gates`): the scripts accept the engine and Firefox's sandbox blocks the
+    launch on the author's machine, so run them on a machine where it launches;
+  - the runner's `--baseline` path for `html-diff` and `visual-diff` end to end on a real base tree
+    (the contract of each script is checked; the base-tree wiring is exercised with the working tree as
+    its own baseline);
   - `html-diff` and `visual:diff` after the interval visualizer's `data-role="axis"`
     attribute — both need a baseline captured from a clean worktree of the commit before that
     change (see the baseline runbook above);
-  - the Tier 3 keyboard-only, reduced-preference and Firefox/Safari pass.
+  - the Tier 3 keyboard-only, reduced-preference and Firefox/Safari pass;
+  - the Firefox and WebKit legs of `a11y-axe`, `a11y-tab-walk` and `a11y-media` (`--browsers
+    firefox`): the scripts accept the engine, but Firefox cannot launch on the author's machine;
+  - **the `dox-gates` PR job** (`ci.yml`, "The PR job"): a run passes in under 15 minutes (record
+    the time in the "The PR job" bullet), and a PR that touches nothing under `apps/dox/` or
+    `pnpm-lock.yaml` shows the job as skipped;
+  - **the nightly gate sweep** (`dox-gates-nightly.yml`, "The nightly gate sweep"), which can only be
+    dispatched once the file is on `main`:
+    - a `force_finding` dispatch finishes every leg, Firefox included, and files one `[dry run]`
+      issue with the marker on line 1; a second dispatch comments on it;
+    - a scheduled run with nothing changed shows the skip line in `decide`, and `sweep` and `report`
+      are skipped;
+    - every leg finishes inside its 90 minutes; record the slowest leg's time in the runbook entry.
 
 ---
 
