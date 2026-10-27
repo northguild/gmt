@@ -2627,6 +2627,14 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Rail** (`WidgetRail.tsx`, AI Elements `Artifact`): shows the examples panel until a tool
   call opens a widget, and has a copy-permalink button. The transcript's `WidgetReceipt` chip is a seeded
   link to the widget's tool page.
+  - **Width** (`RailResizer.tsx`, `rail-width.ts`): a `role="separator"` handle on the rail's
+    left edge. Drag it, or focus it and use ← → (Shift for bigger steps), Home and End.
+    Double-click resets it. The narrowest is the default `clamp(22rem, 34vw, 34rem)`. The widest
+    is half the page body, and the transcript keeps at least 28rem. The width is one CSS
+    property, `--gmt-hive-rail-width`, on `.gmt-hive-body`, so a widget swap keeps it. The
+    reader's width is kept in `localStorage` (`gmt-dox-rail-width`) and applied after mount.
+    The CSS clamps it again, so a window resize needs no script. Below 60rem the rail is the
+    bottom sheet and the handle is hidden.
 - **Tool prompt wording matters.** "When the question matches a `Call when` line, call that
   tool" works; "Prefer prose; call a tool only when seeing beats reading" took the converter
   to 0 calls in 3. Prose first, at most one tool, no default widget, never invent a zone.

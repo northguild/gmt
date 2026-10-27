@@ -174,14 +174,75 @@
   min-height: 0;
 }
 
+/* The default width is also the narrowest. The reader can drag the rail out to
+   half the page, while the transcript keeps at least 28rem (`RailResizer.tsx`,
+   bounds in `rail-width.ts`). The clamp lives here too, so a window resize
+   needs no script. */
 .gmt-hive-rail {
-  flex: 0 0 clamp(22rem, 34vw, 34rem);
+  --gmt-hive-rail-min: clamp(22rem, 34vw, 34rem);
+  flex: 0 0 var(--gmt-hive-rail-width, var(--gmt-hive-rail-min));
+  min-width: var(--gmt-hive-rail-min);
+  max-width: max(var(--gmt-hive-rail-min), min(50%, 100% - 28rem));
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow-y: auto;
   border-inline-start: 1px solid var(--gmt-border);
   background: var(--gmt-surface-1);
+}
+
+/* The resize handle: no width of its own, so the layout is unchanged. Its
+   hit area straddles the rail's border, which lights up on hover, focus and
+   drag. */
+.gmt-hive-resizer {
+  position: relative;
+  flex: 0 0 0;
+  z-index: 1;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.gmt-hive-resizer::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -0.375rem;
+  width: 0.75rem;
+}
+
+.gmt-hive-resizer::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -1px;
+  width: 3px;
+  background: transparent;
+  transition: background var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-hive-resizer:hover::after,
+.gmt-hive-body[data-resizing] .gmt-hive-resizer::after {
+  background: var(--gmt-cyan);
+}
+
+.gmt-hive-resizer:focus-visible {
+  outline: none;
+}
+
+.gmt-hive-resizer:focus-visible::after {
+  background: var(--gmt-cyan);
+  box-shadow: 0 0 0 2px var(--gmt-cyan-ink);
+}
+
+/* While dragging, text in either pane must not select, and the cursor must not
+   flicker as it crosses a widget. */
+.gmt-hive-body[data-resizing] {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.gmt-hive-body[data-resizing] .gmt-hive-rail {
+  pointer-events: none;
 }
 
 /* Below this width a side-by-side split leaves neither half usable, so the rail
@@ -192,8 +253,14 @@
     flex-direction: column;
   }
 
+  .gmt-hive-resizer {
+    display: none;
+  }
+
   .gmt-hive-rail {
     flex: 0 0 55%;
+    min-width: 0;
+    max-width: none;
     border-inline-start: none;
     border-block-start: 1px solid var(--gmt-border);
   }

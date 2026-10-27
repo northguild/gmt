@@ -29,6 +29,7 @@ import { ExamplesBar } from "./ExamplesBar";
 import { HeaderClock } from "./HeaderClock";
 import { useBrains } from "./use-brains";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
+import { RailResizer } from "./RailResizer";
 import { WidgetRail, type RailWidget } from "./WidgetRail";
 import { isSameWidget, resolveWidget } from "./widget-registry";
 import { withBase } from "~/lib/site";
@@ -203,6 +204,7 @@ export default function DoxPage() {
             }
           />
         </ChatErrorBoundary>
+        <RailResizer railId={railId} />
         <ChatErrorBoundary
           label="widget rail"
           /* No reload offered here: the conversation behind this is intact and
