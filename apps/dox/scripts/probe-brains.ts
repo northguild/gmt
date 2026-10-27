@@ -16,8 +16,10 @@
  *   - real token usage and estimated Neurons, when given the wrangler log
  *
  * **It spends real quota.** AI models never run locally, so every probe draws
- * on the account's 10,000 Neurons for the day. Default settings ask each
- * Workers AI brain 5 questions: 5 requests and roughly 500 Neurons per brain.
+ * on the account's 10,000 Neurons for the day — the same pool the live site
+ * answers from. Default settings ask each brain every chat starter plus the
+ * refusal question; `--starters N` asks only the first N starters, which is
+ * how to compare several brains without spending the site's day.
  *
  * Usage, from apps/dox with `dist/` already built (the Worker serves the site
  * and its API under `/gmt`, so `--base` defaults to `http://localhost:8787/gmt`):
@@ -35,18 +37,17 @@ import { parseArgs } from "node:util";
 import { BRAINS, CHAT_STARTERS, type Brain } from "../src/lib/chat-constants";
 import { RETRIEVAL_PART_TYPE } from "../src/lib/chat-types";
 
-/** Neurons per million tokens, [input, output], from Cloudflare's pricing page
- * on 2026-09-11. Only used to turn logged token counts into an estimate. */
+/** Neurons per million tokens, [input, output], from the dollar prices in
+ * Cloudflare's model catalog on 2026-10-27 ($0.011 per 1,000 Neurons). Only
+ * used to turn logged token counts into an estimate. */
 const NEURONS_PER_MILLION: Record<string, [number, number]> = {
-  "@cf/zai-org/glm-4.7-flash": [5500, 36400],
-  "@cf/qwen/qwen3-30b-a3b-fp8": [4625, 30475],
-  "@cf/openai/gpt-oss-20b": [18182, 27273],
-  "@cf/meta/llama-4-scout-17b-16e-instruct": [24545, 77273],
+  "@cf/zai-org/glm-4.7-flash": [5500, 36364],
+  "@cf/google/gemma-4-26b-a4b-it": [9091, 27273],
 };
 
 /** The refusal fixture: plausible for a date library, and absent
  * from gmt — the case where grounding fails quietly if it fails at all. */
-const REFUSAL_QUESTION = "How do I parse a cron expression with gmt?";
+const REFUSAL_QUESTION = "How do I get the sunrise time for a city with gmt?";
 const REFUSAL_PATTERN =
   /does(?: not|n't) cover|not covered|not documented|isn't documented|no (?:function|support)|can only help|doesn't (?:have|include|provide)|does not (?:have|include|provide)/i;
 
@@ -83,6 +84,7 @@ const { values } = parseArgs({
     log: { type: "string" },
     out: { type: "string" },
     "delay-ms": { type: "string", default: "3500" },
+    starters: { type: "string" },
   },
 });
 
@@ -101,7 +103,10 @@ const brains: Brain[] = values.brains
 
 const questions: Question[] = [
   ...Array.from({ length: attempts }, () =>
-    CHAT_STARTERS.map((starter) => ({
+    CHAT_STARTERS.slice(
+      0,
+      values.starters ? Math.max(0, Number(values.starters)) : undefined,
+    ).map((starter) => ({
       label: starter.widget,
       text: starter.text,
       expectTool: starter.widget,
