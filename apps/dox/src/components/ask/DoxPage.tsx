@@ -56,7 +56,7 @@ function useEnvironment(): Environment | null {
 
 export default function DoxPage() {
   const environment = useEnvironment();
-  const { info, refresh } = useBrains();
+  const { info, refresh, apply } = useBrains();
 
   /* The rail's state lives here rather than in `DoxChat`: it is this host's
      chrome, and the dock will lay widgets out its own way. One at a time. */
@@ -188,6 +188,7 @@ export default function DoxPage() {
             ref={chatRef}
             brains={info}
             onUsed={refresh}
+            onUsage={apply}
             onWidget={showWidget}
             onEmptyChange={handleEmptyChange}
             aboveComposer={

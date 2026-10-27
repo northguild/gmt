@@ -56,6 +56,7 @@ import {
   REFUSAL_PART_TYPE,
   RETRIEVAL_PART_TYPE,
   STATUS_PART_TYPE,
+  USAGE_PART_TYPE,
   type RefusalData,
   type RetrievalTraceData,
   type StatusData,
@@ -147,8 +148,11 @@ export interface DoxChatProps {
   /** Today's budget, from `/api/brains`. Null while loading or if the endpoint
    * is unreachable — the chat stays fully usable either way. */
   brains?: BrainsInfo | null;
-  /** Called after a question is sent, so the host can re-read the counts. */
+  /** Called when a question ends without the Worker's counts — refused, or
+   * failed — so the host can re-read them. */
   onUsed?: () => void;
+  /** The counts after a question, as the Worker recorded them. */
+  onUsage?: (info: BrainsInfo) => void;
   /** DOX-C3b — the host owns the widget rail; this is how a tool call reaches
    *  it, either automatically when one streams in or when the reader reopens a
    *  receipt. */
@@ -171,6 +175,7 @@ export interface DoxChatHandle {
 export function DoxChat({
   brains = null,
   onUsed,
+  onUsage,
   onWidget,
   ref,
   onEmptyChange,
@@ -231,10 +236,17 @@ export function DoxChat({
 
   const { messages, sendMessage, stop, status } = useChat({
     transport,
-    onError: (error) => setWarning(classifyChatError(error)),
+    onError: (error) => {
+      setWarning(classifyChatError(error));
+      onUsed?.();
+    },
     onData: (part) => {
       if (part.type === STATUS_PART_TYPE) {
         setProgress((part.data as StatusData).text);
+        return;
+      }
+      if (part.type === USAGE_PART_TYPE) {
+        onUsage?.(part.data as BrainsInfo);
         return;
       }
       if (part.type === REFUSAL_PART_TYPE) {
@@ -250,6 +262,8 @@ export function DoxChat({
             }),
           ),
         );
+        // A refusal can follow brains being marked out on the way.
+        onUsed?.();
         return;
       }
       if (part.type !== RETRIEVAL_PART_TYPE) return;
@@ -271,7 +285,7 @@ export function DoxChat({
     });
   }, []);
 
-  useIdleTimeout({ status, messages, stop, onStall });
+  useIdleTimeout({ status, messages, activity: progress, stop, onStall });
 
   const knownRoutes = useMemo(() => {
     const combined = new Set<string>(referenceRoutes);
@@ -352,13 +366,13 @@ export function DoxChat({
       setProgress(null);
       sendMessage({ text: checked.text });
       conversationRef.current?.scrollToBottom();
-      // Re-read the budget after the request has had a moment to be recorded.
-      // Advisory numbers, so a slightly late refresh is fine; a missing one
-      // would leave a stale badge for the rest of the session.
-      window.setTimeout(() => onUsed?.(), 1500);
+      // No re-read here. The counts arrive on the stream once a brain has
+      // accepted the question (`USAGE_PART_TYPE`); a timed re-read used to
+      // fire before a slow brain had answered, or read KV before its write
+      // was visible, and left the badge at its old count.
       return true;
     },
-    [isBusy, onUsed, outOfBudget, sendMessage],
+    [isBusy, outOfBudget, sendMessage],
   );
 
   /** Enter submits (PromptInputTextarea, vendored). While Dox is working that
