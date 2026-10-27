@@ -1,5 +1,5 @@
 /**
- * The behaviour-matrix cases (M1 to M16).
+ * The behaviour-matrix cases (M1, M2, M3, M3b and so on).
  *
  * Each case names one input, the Temporal call that defines the expected value, the GMT call, and
  * one call per library. `run.mjs` runs all of them and writes `apps/dox/src/data/behaviour-matrix.json`.
@@ -22,6 +22,9 @@
  *   issues    Per library the open upstream issues. Only issues that match a measured difference are kept.
  *
  * A call that throws, an invalid object, and GMT's empty-string sentinel all reduce to "rejected".
+ *
+ * Every library call runs once under each host zone in `HOST_ZONES` (see `run.mjs`), so a call must
+ * not pass the host zone in by hand: a library that reads it shows up as "varies".
  *
  * No native `Date` is named in this file: date-fns gets `parseISO` and `TZDate`, the others get strings.
  */
@@ -46,6 +49,18 @@ const lxDate = (d) => (d.isValid ? d.toISODate() : REJECTED);
 const jsDate = (d) => (d.isValid() ? d.format("YYYY-MM-DD") : REJECTED);
 
 const BERLIN = "Europe/Berlin";
+
+/** M10c: a string with a calendar annotation, and the instant every reader must give for it. */
+const ANNOTATED = "2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]";
+const ANNOTATED_INSTANT = "2024-03-31T01:30:00Z";
+
+/** "accepted" when the instant is the right one, else says which instant the reader gave. */
+const acceptedAt = (iso) => {
+  const written = iso.replace(/\.0+Z$/, "Z");
+  return written === ANNOTATED_INSTANT
+    ? "accepted"
+    : `accepted, reads ${written}`;
+};
 
 /** The same operation in the five libraries, for "add one day to this zoned time". */
 function addDayLibs(isoLocal, tz, tzDateArgs) {
@@ -152,10 +167,7 @@ export const cases = [
         "DisambiguatePossibleEpochNanoseconds (11.1.12)",
         "sec-temporal-disambiguatepossibleepochnanoseconds",
       ),
-      tc(
-        "GetTemporalDisambiguationOption (13.7)",
-        "sec-temporal-gettemporaldisambiguationoption",
-      ),
+      tc("AddZonedDateTime (6.5.5)", "sec-temporal-addzoneddatetime"),
     ],
     temporal: (T) =>
       T.ZonedDateTime.from("2024-10-26T02:30:00+02:00[Europe/Berlin]")
@@ -582,23 +594,66 @@ export const cases = [
   },
   {
     id: "M9",
-    title: "Parse a date with a one-digit year and month",
-    input: '"2-12-12" read as year-month-day',
+    title: "Parse a date whose year has one digit",
+    input: '"2-12-12" read as an ISO 8601 date',
     compare: "date, or rejected",
     norm: "plain",
     clauses: [
-      tc(
-        "IsValidDate (13.31.2)",
-        "sec-temporal-iso8601grammar-static-semantics-isvaliddate",
-      ),
+      tc("ISO 8601 grammar (13.31)", "sec-temporal-iso8601grammar"),
       rfc("RFC 3339 section 5.6", 3339, "5.6"),
     ],
     temporal: (T) => T.PlainDate.from("2-12-12").toString(),
+    gmt: {
+      fn: "isValidDate",
+      call: 'isValidDate("2-12-12")',
+      run: (g) => (g.isValidDate("2-12-12") ? "2-12-12" : REJECTED),
+    },
+    libs: {
+      "date-fns": {
+        call: 'parseISO("2-12-12")',
+        run: (L) => dfDate(L, L.df.parseISO("2-12-12")),
+      },
+      luxon: {
+        call: 'DateTime.fromISO("2-12-12")',
+        run: (L) => lxDate(L.DateTime.fromISO("2-12-12")),
+      },
+      dayjs: {
+        call: 'dayjs("2-12-12")',
+        run: (L) => jsDate(L.dayjs("2-12-12")),
+      },
+      moment: {
+        call: 'moment("2-12-12", moment.ISO_8601, true)',
+        run: (L) => jsDate(L.moment("2-12-12", L.moment.ISO_8601, true)),
+      },
+      "internationalized-date": {
+        call: 'parseDate("2-12-12")',
+        run: (L) => L.intl.parseDate("2-12-12").toString(),
+      },
+    },
+    issues: {},
+  },
+  {
+    id: "M9d",
+    title: "Read a year of one digit with a pattern",
+    input: '"2-12-12" read with the pattern year-month-day',
+    compare: "date, or rejected",
+    norm: "plain",
+    clauses: [
+      {
+        label: "UTS #35 Date Format Patterns",
+        url: "https://www.unicode.org/reports/tr35/tr35-dates.html#Date_Format_Patterns",
+      },
+      tc("ISO 8601 grammar (13.31)", "sec-temporal-iso8601grammar"),
+    ],
+    temporal: null,
+    expected: "rejected",
     gmt: {
       fn: "parseDateWithPattern",
       call: 'parseDateWithPattern("2-12-12", "yyyy-MM-dd")',
       run: (g) => g.parseDateWithPattern("2-12-12", "yyyy-MM-dd"),
     },
+    gmtNote:
+      "Temporal reads no patterns, so the stated result is GMT's choice: `yyyy` is four digits, as the year is in the ISO 8601 grammar. UTS #35 recommends lenient pattern parsing, so a library that reads `2` as year 2 follows it. The rows show the difference and make no claim about which is right.",
     libs: {
       "date-fns": {
         call: 'parse("2-12-12", "yyyy-MM-dd", parseISO("2000-01-01"))',
@@ -609,8 +664,8 @@ export const cases = [
           ),
       },
       luxon: {
-        call: 'DateTime.fromISO("2-12-12")',
-        run: (L) => lxDate(L.DateTime.fromISO("2-12-12")),
+        call: 'DateTime.fromFormat("2-12-12", "yyyy-MM-dd")',
+        run: (L) => lxDate(L.DateTime.fromFormat("2-12-12", "yyyy-MM-dd")),
       },
       dayjs: {
         call: 'dayjs("2-12-12", "YYYY-MM-DD", true)',
@@ -621,8 +676,7 @@ export const cases = [
         run: (L) => jsDate(L.moment("2-12-12", "YYYY-MM-DD", true)),
       },
       "internationalized-date": {
-        call: 'parseDate("2-12-12")',
-        run: (L) => L.intl.parseDate("2-12-12").toString(),
+        none: "it has no pattern parser; parseDate reads ISO 8601 only",
       },
     },
     issues: { "date-fns": ["date-fns/date-fns#942", "date-fns/date-fns#1569"] },
@@ -638,10 +692,9 @@ export const cases = [
         "IsValidDate (13.31.2)",
         "sec-temporal-iso8601grammar-static-semantics-isvaliddate",
       ),
-      tc("RegulateISODate (3.5.7)", "sec-temporal-regulateisodate"),
+      tc("IsValidISODate (3.5.8)", "sec-temporal-isvalidisodate"),
     ],
-    temporal: (T) =>
-      T.PlainDate.from("2024-02-30", { overflow: "reject" }).toString(),
+    temporal: (T) => T.PlainDate.from("2024-02-30").toString(),
     gmt: {
       fn: "isValidDate",
       call: 'isValidDate("2024-02-30")',
@@ -806,10 +859,11 @@ export const cases = [
         none: "parseISO returns a Date; it keeps no time zone name",
       },
       luxon: {
-        call: 'DateTime.fromISO("2024-03-31T03:30:00+02:00[Europe/Berlin]").zoneName',
+        call: 'DateTime.fromISO("2024-03-31T03:30:00+02:00[Europe/Berlin]", { setZone: true }).zoneName',
         run: (L) =>
-          L.DateTime.fromISO("2024-03-31T03:30:00+02:00[Europe/Berlin]")
-            .zoneName,
+          L.DateTime.fromISO("2024-03-31T03:30:00+02:00[Europe/Berlin]", {
+            setZone: true,
+          }).zoneName,
       },
       dayjs: {
         none: "it rejects the bracketed string, so there is no time zone to read",
@@ -824,88 +878,75 @@ export const cases = [
             .timeZone,
       },
     },
-    issues: { luxon: ["moment/luxon#1621"] },
+    issues: {},
   },
   {
     id: "M10c",
     title: "Read a string with a calendar annotation",
     input: "2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]",
-    compare: "accepted or rejected",
+    compare: "accepted or rejected, and for an accepted string the UTC instant",
     norm: "plain",
     clauses: [
       rfc("RFC 9557 section 3.3", 9557, "3.3"),
+      rfc("RFC 9557 section 4.1", 9557, "4.1"),
+      tc(
+        "ToTemporalZonedDateTime (6.5.2)",
+        "sec-temporal-totemporalzoneddatetime",
+      ),
       tc("ParseISODateTime (13.35)", "sec-temporal-parseisodatetime"),
     ],
-    temporal: (T) => {
-      T.ZonedDateTime.from(
-        "2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]",
-      );
-      return "accepted";
-    },
+    temporal: (T) =>
+      acceptedAt(T.ZonedDateTime.from(ANNOTATED).toInstant().toString()),
     gmt: {
       fn: "isValidCalendarZonedDateTime",
-      call: 'isValidCalendarZonedDateTime("2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]")',
+      call: `isValidCalendarZonedDateTime("${ANNOTATED}")`,
       run: (g) =>
-        g.isValidCalendarZonedDateTime(
-          "2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]",
-        )
-          ? "accepted"
+        g.isValidCalendarZonedDateTime(ANNOTATED)
+          ? acceptedAt(
+              g.convertZonedToUtc(ANNOTATED.replace(/\[u-ca=[^\]]*\]/, "")),
+            )
           : REJECTED,
     },
+    gmtNote:
+      "GMT's validator reports whether the string is accepted. The run also reads the instant with `convertZonedToUtc` from the string without its annotation, which that function does not take.",
     libs: {
       "date-fns": {
-        call: 'parseISO("2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]")',
-        run: (L) =>
-          Number.isNaN(
-            L.df
-              .parseISO(
-                "2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]",
-              )
-              .getTime(),
-          )
-            ? REJECTED
-            : "accepted",
-      },
-      luxon: {
-        call: 'DateTime.fromISO("2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]")',
-        run: (L) =>
-          L.DateTime.fromISO(
-            "2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]",
-          ).isValid
-            ? "accepted"
-            : REJECTED,
-      },
-      dayjs: {
-        call: 'dayjs("2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]")',
-        run: (L) =>
-          L.dayjs(
-            "2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]",
-          ).isValid()
-            ? "accepted"
-            : REJECTED,
-      },
-      moment: {
-        call: 'moment("2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]", moment.ISO_8601, true)',
-        run: (L) =>
-          L.moment(
-            "2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]",
-            L.moment.ISO_8601,
-            true,
-          ).isValid()
-            ? "accepted"
-            : REJECTED,
-      },
-      "internationalized-date": {
-        call: 'parseZonedDateTime("2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]")',
+        call: `parseISO("${ANNOTATED}").toISOString()`,
         run: (L) => {
-          L.intl.parseZonedDateTime(
-            "2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]",
-          );
-          return "accepted";
+          const d = L.df.parseISO(ANNOTATED);
+          return Number.isNaN(d.getTime())
+            ? REJECTED
+            : acceptedAt(d.toISOString());
         },
       },
+      luxon: {
+        call: `DateTime.fromISO("${ANNOTATED}").toUTC().toISO()`,
+        run: (L) => {
+          const d = L.DateTime.fromISO(ANNOTATED);
+          return d.isValid ? acceptedAt(d.toUTC().toISO()) : REJECTED;
+        },
+      },
+      dayjs: {
+        call: `dayjs("${ANNOTATED}").toISOString()`,
+        run: (L) => {
+          const d = L.dayjs(ANNOTATED);
+          return d.isValid() ? acceptedAt(d.toISOString()) : REJECTED;
+        },
+      },
+      moment: {
+        call: `moment("${ANNOTATED}", moment.ISO_8601, true).toISOString()`,
+        run: (L) => {
+          const d = L.moment(ANNOTATED, L.moment.ISO_8601, true);
+          return d.isValid() ? acceptedAt(d.toISOString()) : REJECTED;
+        },
+      },
+      "internationalized-date": {
+        call: `parseZonedDateTime("${ANNOTATED}").toAbsoluteString()`,
+        run: (L) =>
+          acceptedAt(L.intl.parseZonedDateTime(ANNOTATED).toAbsoluteString()),
+      },
     },
-    issues: {},
+    issues: { luxon: ["moment/luxon#1621"] },
   },
   {
     id: "M10d",
@@ -974,10 +1015,9 @@ export const cases = [
     ],
     temporal: (T) => T.Instant.from("2024-01-15T12:00:00-03:30").toString(),
     gmt: {
-      fn: "convertZonedToUtc",
-      call: 'convertZonedToUtc("2024-01-15T12:00:00-03:30[America/St_Johns]")',
-      run: (g) =>
-        g.convertZonedToUtc("2024-01-15T12:00:00-03:30[America/St_Johns]"),
+      fn: "toOffsetInstant",
+      call: 'toOffsetInstant("2024-01-15T12:00:00-03:30").instant',
+      run: (g) => g.toOffsetInstant("2024-01-15T12:00:00-03:30")?.instant,
     },
     libs: {
       "date-fns": {
@@ -1228,15 +1268,20 @@ export const cases = [
     title: "Offset written for a UTC instant",
     input:
       "2024-03-31T01:30:00Z, written back as ISO 8601 with each library's default writer",
-    compare: "UTC instant",
+    compare: "the text written: the local time and offset, or Z",
     norm: "instant",
-    clauses: [rfc("RFC 9557 section 2", 9557, "2")],
+    clauses: [
+      tc(
+        "Temporal.Instant.prototype.toString (8.3.11)",
+        "sec-temporal.instant.prototype.tostring",
+      ),
+      rfc("RFC 9557 section 2", 9557, "2"),
+    ],
     temporal: (T) => T.Instant.from("2024-03-31T01:30:00Z").toString(),
     gmt: {
-      fn: "convertZonedToUtc",
-      call: 'convertZonedToUtc("2024-03-31T03:30:00+02:00[Europe/Berlin]")',
-      run: (g) =>
-        g.convertZonedToUtc("2024-03-31T03:30:00+02:00[Europe/Berlin]"),
+      fn: "toOffsetInstant",
+      call: 'toOffsetInstant("2024-03-31T01:30:00Z").instant',
+      run: (g) => g.toOffsetInstant("2024-03-31T01:30:00Z")?.instant,
     },
     libs: {
       "date-fns": {
@@ -1279,7 +1324,7 @@ export const cases = [
       },
       {
         label: "UTS #35 Week Data",
-        url: "https://www.unicode.org/reports/tr35/tr35-dates.html",
+        url: "https://www.unicode.org/reports/tr35/tr35-dates.html#Week_Data",
       },
     ],
     temporal: null,
@@ -1296,9 +1341,7 @@ export const cases = [
     },
     libs: {
       "date-fns": {
-        call: 'addBusinessDays(parseISO("2024-07-04"), 1)',
-        run: (L) =>
-          dfDate(L, L.df.addBusinessDays(L.df.parseISO("2024-07-04"), 1)),
+        none: "the weekend is fixed to Saturday and Sunday; addBusinessDays has no weekend option",
       },
       luxon: { none: "it has no business-day call" },
       dayjs: { none: "it has no business-day call" },

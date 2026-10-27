@@ -7,7 +7,7 @@
  * it. The verdict is a word, never colour alone. The Markdown twin is `renderBehaviourMatrix` in
  * `src/lib/mdx-jsx.ts`. Styles live in `src/styles/gmt-migrate.css`.
  */
-import { matrixView } from "../lib/migrate-view";
+import { codeSpans, matrixView } from "../lib/migrate-view";
 
 const cases = matrixView();
 ---
@@ -29,7 +29,7 @@ const cases = matrixView();
         .
       </p>
       {c.expectedNote && <p>{c.expectedNote}</p>}
-      {c.note && <p>{c.note}</p>}
+      {c.note && <p set:html={codeSpans(c.note)} />}
       <div
         class="gmt-migrate-scroll"
         tabindex="0"
@@ -42,7 +42,7 @@ const cases = matrixView();
               <th>Library</th>
               <th>Call</th>
               <th>Returns</th>
-              <th>Compared with Temporal</th>
+              <th>Compared with {c.reference}</th>
               <th>Upstream issue</th>
             </tr>
           </thead>

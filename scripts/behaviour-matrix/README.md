@@ -1,6 +1,6 @@
 # Behaviour matrix runner
 
-Runs sixteen cases (M1 to M16, some with a lettered variant) against Temporal, GMT, date-fns,
+Runs the cases in `cases.mjs` against Temporal, GMT, date-fns,
 Luxon, Day.js, Moment.js and `@internationalized/date`, and writes the committed record
 `apps/dox/src/data/behaviour-matrix.json`. The Dox pages `/compare/behaviour/` and
 `/migrate/` read that file.
@@ -15,13 +15,21 @@ Node 26 or newer is needed (it ships native `Temporal`).
 
 ```sh
 cd scripts/behaviour-matrix
-pnpm install
-TZ=Asia/Kolkata pnpm matrix
+pnpm install --ignore-workspace
+pnpm matrix
 ```
 
-`TZ` must be set to a zone that is not UTC. A library that reads the host zone then shows its
-offset instead of looking correct by accident. The runner stops with exit code 2 otherwise.
+No `TZ` is needed. The runner repeats every library call under each host zone in `HOST_ZONES`
+(`run.mjs`): Asia/Kolkata, Europe/London, Australia/Sydney and America/Santiago. One has no
+daylight saving time and the others cover both hemispheres. None is UTC, and a child process
+stops with exit code 2 if its zone resolves to UTC or `Etc/*`.
 
+- A library cell whose comparable result changes with the host zone gets the verdict `varies`.
+  It has no `returns` and carries `hosts`, a list of `{ zone, returns, verdict, detail? }`, one
+  per host zone. A cell whose raw text differs between hosts but whose comparable form does not
+  also carries `hosts`. A cell is `same` only when it is the same on every host.
+- GMT and Temporal must give identical results on every host. If either does not, the runner
+  stops with exit code 1 and names the case.
 - Each Temporal call runs on `@js-temporal/polyfill` and on native `Temporal`. If the two give
   different results the runner stops with exit code 1 and names the case.
 - GMT is bundled from `packages/gmt/src` into `.cache/gmt.mjs` with esbuild. The runner never

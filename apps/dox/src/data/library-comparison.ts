@@ -197,7 +197,7 @@ export const libraryComparisons: LibraryComparison[] = [
     foundation: "built on Date",
     detail:
       "Tree-shakeable functions — but every argument and every return value is a Date, so all of its footguns are still yours.",
-    bannedCompanions: ["date-fns-tz"],
+    bannedCompanions: ["date-fns-tz", "@date-fns/tz"],
     measurement: measured("date-fns"),
     stats: statsOf(measured("date-fns")),
   },

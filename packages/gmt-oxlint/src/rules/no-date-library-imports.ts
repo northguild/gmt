@@ -1,4 +1,4 @@
-import { MSG_DATE_LIBRARY_IMPORT } from "../messages";
+import { dateLibraryImportMessage } from "../messages";
 import type {
   CallExpressionNode,
   ExportFromNode,
@@ -8,7 +8,7 @@ import type {
   RuleContext,
   RuleModule,
 } from "../types";
-import { isBannedDateLibrary, isIdentifier } from "../utils";
+import { bannedDateLibraryOf, isIdentifier } from "../utils";
 
 /**
  * Every form carries its specifier in a node with a `value`, so each visitor
@@ -18,11 +18,12 @@ const reportIfBanned = (
   context: RuleContext,
   source: Node | null | undefined,
 ): void => {
-  if (!source || !isBannedDateLibrary(source.value)) {
+  const lib = bannedDateLibraryOf(source?.value);
+  if (!source || lib === undefined) {
     return;
   }
 
-  context.report({ node: source, message: MSG_DATE_LIBRARY_IMPORT });
+  context.report({ node: source, message: dateLibraryImportMessage(lib) });
 };
 
 export const noDateLibraryImportsRule: RuleModule = {

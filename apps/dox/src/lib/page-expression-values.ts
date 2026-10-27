@@ -62,7 +62,7 @@ export function pageExpressionValues(): Record<string, string> {
     ...checkedLines,
     "matrix.measuredOn": matrix.measuredOn,
     "matrix.runtime.node": matrix.runtime.node,
-    "matrix.runtime.tz": matrix.runtime.tz,
+    'matrix.runtime.hostZones.join(", ")': matrix.runtime.hostZones.join(", "),
     "competitorComparisons.length": String(competitorComparisons.length),
     "formatCount(gmtStats.files)": formatCount(gmtStats.files),
     'gmtStats.localeList.join(", ")': gmtStats.localeList.join(", "),

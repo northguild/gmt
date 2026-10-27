@@ -147,6 +147,91 @@ describe("referenceHeadTitle", () => {
   });
 });
 
+describe("cuts that would leave a phrase unfinished", () => {
+  it.each([
+    [
+      "a relative clause cut before its verb",
+      doc({
+        name: "subtractIntervals",
+        namespace: "interval",
+        module: "calculate",
+        description:
+          "Return the parts of `from` that no interval in `remove` covers, as sorted half-open intervals.",
+      }),
+      "subtractIntervals() in interval/calculate",
+    ],
+    [
+      "a clause that opens with a question word",
+      doc({
+        name: "Disambiguation",
+        kind: "type",
+        namespace: "types",
+        module: "types",
+        description:
+          "How a local wall time that a time zone's clock shows twice or never is resolved to an instant, as Temporal's `disambiguation` option.",
+      }),
+      "Disambiguation in types",
+    ],
+    [
+      "a cut between two names joined by `and`",
+      doc({
+        name: "TimeCycleField",
+        kind: "type",
+        namespace: "types",
+        module: "types",
+        description:
+          'A time field `cycleTime`, `cycleDateTime` and `cycleZoned` can step and wrap, from `"hour"` down to `"nanosecond"`: the fields of PlainTime.',
+      }),
+      "TimeCycleField in types",
+    ],
+    [
+      "a cut between two names joined by `or`",
+      doc({
+        name: "sortDates",
+        module: "sort",
+        description:
+          "Sort an array of PlainDate values in ascending or descending order.",
+      }),
+      "sortDates(): sort an array of PlainDate values",
+    ],
+    [
+      "a verb particle left at the end",
+      doc({
+        name: "fromFileTime",
+        namespace: "precision",
+        module: "convert",
+        description:
+          "Convert a Windows `FILETIME` back to an ISO 8601 instant string.",
+      }),
+      "fromFileTime(): convert a Windows FILETIME",
+    ],
+    [
+      "a `whether` clause cut before its verb",
+      doc({
+        name: "classifyStoredZoned",
+        namespace: "zoned",
+        module: "classify",
+        description:
+          "Says whether a stored RFC 9557 string with both an offset and a zone still names one instant.",
+      }),
+      "classifyStoredZoned() in zoned/classify",
+    ],
+    [
+      "a participle left at the end",
+      doc({
+        name: "totalUnits",
+        namespace: "duration",
+        module: "calculate",
+        description:
+          "Express an amount written as a unit object, such as `{ minutes: 15 }`, as a single fractional total in one unit.",
+      }),
+      "totalUnits() in duration/calculate",
+    ],
+  ])("%s", (_case, input, expected) => {
+    expect(referenceHeadTitle(input)).toBe(expected);
+  });
+});
+
 describe("the live corpus", () => {
   const corpusPath = resolve(
     import.meta.dirname,

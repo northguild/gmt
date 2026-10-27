@@ -31,7 +31,7 @@ Use this skill when a user wants to adopt `@northguild/gmt-oxlint`.
 - Run Oxlint and confirm Date API bans are reported.
 - Confirm rule IDs are emitted as `@northguild/gmt-oxlint/*`.
 - The recommended config also enables `no-date-library-imports`, which errors on `moment`,
-  `moment-timezone`, `dayjs`, `luxon`, `date-fns`, `date-fns-tz` and `spacetime` imports.
+  `moment-timezone`, `dayjs`, `luxon`, `date-fns`, `date-fns-tz`, `@date-fns/tz` and `spacetime` imports.
   In a codebase that still uses them, warn the user before enabling it, or stage it (see
   the CI enforcement skill) instead of disabling it.
 

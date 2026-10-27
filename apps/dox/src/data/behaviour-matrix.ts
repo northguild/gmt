@@ -1,6 +1,6 @@
 /**
- * The behaviour matrix as the pages read it: sixteen cases, each run against Temporal, GMT and
- * five date libraries.
+ * The behaviour matrix as the pages read it: every case run against Temporal, GMT and five date
+ * libraries. The number of cases is whatever `./behaviour-matrix.json` holds; no text here counts them.
  *
  * `./behaviour-matrix.json` is written by `scripts/behaviour-matrix/run.mjs`, which a person runs
  * by hand (the libraries it measures live outside the workspace). Nothing here computes a
@@ -10,7 +10,11 @@
  */
 import snapshot from "./behaviour-matrix.json";
 
-export const VERDICTS = ["same", "differs", "unsupported"] as const;
+/**
+ * `varies` is a library cell whose result changes with the host time zone. It keeps the result of
+ * each host in `hosts`, and it is never `same`.
+ */
+export const VERDICTS = ["same", "differs", "varies", "unsupported"] as const;
 export type Verdict = (typeof VERDICTS)[number];
 
 export const LIBRARY_IDS = [
@@ -42,18 +46,29 @@ export interface Clause {
   url: string;
 }
 
+export interface HostResult {
+  /** The host time zone the call ran under, e.g. `Europe/London`. */
+  zone: string;
+  returns: string;
+  /** Whether that result equals Temporal's (or the stated result) on that host. */
+  verdict: "same" | "differs";
+  detail?: string;
+}
+
 export interface LibraryRow {
   library: LibraryId;
   /** The call as the case prints it. Absent when the library has no such operation. */
   call?: string;
-  /** What the call returned, as the library wrote it. Absent when unsupported. */
+  /** What the call returned, as the library wrote it. Absent when unsupported and when it varies. */
   returns?: string;
+  /** The result of each host zone. Present when the result changes with the host zone. */
+  hosts?: readonly HostResult[];
   /** The error a throwing call raised, as `Name: message`. */
   detail?: string;
   verdict: Verdict;
   /** Why the library has no such operation. Present only with `unsupported`. */
   reason?: string;
-  /** Open upstream issues, as `owner/repo#number`. Present only with `differs`. */
+  /** Open upstream issues, as `owner/repo#number`. Present only with `differs` and `varies`. */
   issues: readonly string[];
 }
 
@@ -62,7 +77,7 @@ export interface GmtRow {
   call: string;
   returns: string;
   detail?: string;
-  verdict: Exclude<Verdict, "unsupported">;
+  verdict: "same" | "differs";
   /** Why GMT's result differs on purpose. */
   note?: string;
 }
@@ -85,7 +100,8 @@ export interface MatrixCase {
 export interface Matrix {
   /** The day the runner wrote the file, as `YYYY-MM-DD`. */
   measuredOn: string;
-  runtime: { node: string; tz: string; icu: string; hostTimeZone: string };
+  /** `hostZones` are the host time zones every library call ran under. */
+  runtime: { node: string; icu: string; hostZones: readonly string[] };
   libraries: readonly MatrixLibrary[];
   cases: readonly MatrixCase[];
 }
@@ -137,6 +153,22 @@ const toClause = (value: unknown, where: string): Clause => {
   };
 };
 
+const toHostResult = (value: unknown, where: string): HostResult => {
+  const host = recordOf(value, where);
+  const verdict = verdictOf(host.verdict, `${where}.verdict`);
+  if (verdict !== "same" && verdict !== "differs") {
+    return fail(where, "must be same or differs");
+  }
+  const out: HostResult = {
+    zone: text(host.zone, `${where}.zone`),
+    returns: text(host.returns, `${where}.returns`),
+    verdict,
+  };
+  const detail = optionalText(host.detail, `${where}.detail`);
+  if (detail !== undefined) out.detail = detail;
+  return out;
+};
+
 const toLibraryRow = (value: unknown, where: string): LibraryRow => {
   const row = recordOf(value, where);
   const verdict = verdictOf(row.verdict, `${where}.verdict`);
@@ -152,6 +184,19 @@ const toLibraryRow = (value: unknown, where: string): LibraryRow => {
     return out;
   }
   out.call = text(row.call, `${where}.call`);
+  if (row.hosts !== undefined) {
+    out.hosts = listOf(row.hosts, `${where}.hosts`).map((host, i) =>
+      toHostResult(host, `${where}.hosts[${i}]`),
+    );
+  }
+  if (verdict === "varies") {
+    if (out.hosts === undefined || out.hosts.length < 2) {
+      fail(where, "varies with the host zone, so it needs two or more hosts");
+    }
+    if (row.returns !== undefined)
+      fail(where, "varies, so it has no single result");
+    return out;
+  }
   out.returns = text(row.returns, `${where}.returns`);
   const detail = optionalText(row.detail, `${where}.detail`);
   if (detail !== undefined) out.detail = detail;
@@ -161,12 +206,14 @@ const toLibraryRow = (value: unknown, where: string): LibraryRow => {
 const toGmtRow = (value: unknown, where: string): GmtRow => {
   const row = recordOf(value, where);
   const verdict = verdictOf(row.verdict, `${where}.verdict`);
-  if (verdict === "unsupported") fail(where, "cannot be unsupported");
+  if (verdict === "unsupported" || verdict === "varies") {
+    return fail(where, `cannot be ${verdict}`);
+  }
   const out: GmtRow = {
     fn: text(row.fn, `${where}.fn`),
     call: text(row.call, `${where}.call`),
     returns: text(row.returns, `${where}.returns`),
-    verdict: verdict as GmtRow["verdict"],
+    verdict,
   };
   const detail = optionalText(row.detail, `${where}.detail`);
   if (detail !== undefined) out.detail = detail;
@@ -251,9 +298,10 @@ export const toMatrix = (json: unknown): Matrix => {
     measuredOn: text(root.measuredOn, "measuredOn"),
     runtime: {
       node: text(runtime.node, "runtime.node"),
-      tz: text(runtime.tz, "runtime.tz"),
       icu: text(runtime.icu, "runtime.icu"),
-      hostTimeZone: text(runtime.hostTimeZone, "runtime.hostTimeZone"),
+      hostZones: listOf(runtime.hostZones, "runtime.hostZones").map((zone, i) =>
+        text(zone, `runtime.hostZones[${i}]`),
+      ),
     },
     libraries,
     cases: listOf(root.cases, "cases").map(toCase),
@@ -279,9 +327,11 @@ export const casesFor = (id: LibraryId): LibraryCase[] =>
     return row === undefined ? [] : [{ case: matrixCase, row }];
   });
 
-/** The cases where the library's result differs from Temporal's. */
+/** The cases where the library's result differs from Temporal's, on every host or on some. */
 export const diffsFor = (id: LibraryId): LibraryCase[] =>
-  casesFor(id).filter(({ row }) => row.verdict === "differs");
+  casesFor(id).filter(
+    ({ row }) => row.verdict === "differs" || row.verdict === "varies",
+  );
 
 /** `m1-date-fns`: the anchor of one library's row on `/compare/behaviour/`. */
 export const rowAnchor = (caseId: string, libraryId: LibraryId): string =>
@@ -303,6 +353,7 @@ export const checkedLine = (id: LibraryId): string => {
 export const VERDICT_LABEL: Record<Verdict, string> = {
   same: "Same",
   differs: "Differs",
+  varies: "Depends on the host zone",
   unsupported: "Not supported",
 };
 

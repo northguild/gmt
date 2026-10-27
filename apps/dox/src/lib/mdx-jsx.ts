@@ -336,7 +336,7 @@ function renderBehaviourDiffs(props: Record<string, string>): string {
       const issues = diff.issues.length
         ? ` Upstream: ${diff.issues.map((i) => `[${i.text}](${i.url})`).join(", ")}.`
         : "";
-      return `- **${diff.id}. ${escapeMarkdownInline(diff.title)}** Input: ${escapeMarkdownInline(diff.input)}. The library returns ${escapeMarkdownInline(diff.libraryReturns)}; Temporal returns ${escapeMarkdownInline(diff.temporalReturns)}. Specification: [${escapeMarkdownInline(diff.clause.label)}](${diff.clause.url}).${issues} [Matrix row](${diff.matrixHref}).`;
+      return `- **${diff.id}. ${escapeMarkdownInline(diff.title)}** Input: ${escapeMarkdownInline(diff.input)}. The library returns ${escapeMarkdownInline(diff.libraryReturns)}; ${diff.referenceLabel === "Temporal returns" ? "Temporal returns" : "the stated result is"} ${escapeMarkdownInline(diff.temporalReturns)}. Specification: [${escapeMarkdownInline(diff.clause.label)}](${diff.clause.url}).${issues} [Matrix row](${diff.matrixHref}).`;
     },
   );
   return ["", ...items, ""].join("\n");
@@ -352,9 +352,10 @@ function renderBehaviourMatrix(): string {
       "",
     );
     if (view.expectedNote) out.push(view.expectedNote, "");
-    if (view.note) out.push(escapeMarkdownInline(view.note), "");
+    // The note is written by hand with backtick code spans, so it passes through as it is.
+    if (view.note) out.push(view.note, "");
     out.push(
-      "| Library | Call | Returns | Compared with Temporal | Upstream issue |",
+      `| Library | Call | Returns | Compared with ${view.reference} | Upstream issue |`,
       "| --- | --- | --- | --- | --- |",
     );
     for (const row of view.rows) {

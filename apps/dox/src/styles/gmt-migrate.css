@@ -47,7 +47,8 @@
 .sl-markdown-content .gmt-migrate-module {
   font-family: var(--gmt-font-mono);
   font-size: var(--sl-text-xs);
-  color: var(--sl-color-gray-3);
+  /* The full text tier: the muted gray tiers measure under 7:1 here. */
+  color: var(--gmt-ice);
   overflow-wrap: anywhere;
 }
 
@@ -92,7 +93,8 @@
 }
 
 .sl-markdown-content .gmt-diff-facts dt {
-  color: var(--sl-color-gray-3);
+  color: var(--gmt-ice);
+  font-weight: 600;
 }
 
 .sl-markdown-content .gmt-diff-facts dd {
@@ -115,7 +117,7 @@
 /* ---- Behaviour matrix ---- */
 
 .sl-markdown-content .gmt-matrix-meta {
-  color: var(--sl-color-gray-2);
+  color: var(--gmt-ice);
 }
 
 .sl-markdown-content .gmt-matrix-table tbody tr:target {

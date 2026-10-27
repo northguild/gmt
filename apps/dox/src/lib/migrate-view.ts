@@ -18,6 +18,7 @@ import {
   matrix,
   rowAnchor,
   type LibraryId,
+  type LibraryRow,
   type MatrixCase,
 } from "../data/behaviour-matrix";
 import { mapFor, type MapRow } from "../data/migration-maps";
@@ -87,6 +88,8 @@ export interface DiffView {
   input: string;
   compare: string;
   libraryReturns: string;
+  /** `Temporal returns`, or `Stated result` for a case Temporal has no call for. */
+  referenceLabel: string;
   temporalReturns: string;
   clause: { label: string; url: string };
   issues: { text: string; url: string }[];
@@ -97,13 +100,33 @@ export interface DiffView {
 export const temporalText = (matrixCase: MatrixCase): string =>
   matrixCase.temporal?.returns ?? matrixCase.expected ?? "";
 
+/** What Temporal's column is called: the case's reference is Temporal, or a stated result. */
+export const referenceName = (matrixCase: MatrixCase): string =>
+  matrixCase.temporal === null ? "the stated result" : "Temporal";
+
+/**
+ * What a library row returned, as one line. A row that varies with the host zone lists the result
+ * of each host, so the reader sees which host gives which answer.
+ */
+export const rowResult = (row: LibraryRow): string => {
+  if (row.verdict === "unsupported") return row.reason ?? "";
+  if (row.verdict === "varies" || (row.hosts && row.hosts.length > 0)) {
+    return (row.hosts ?? [])
+      .map((host) => `${host.zone} host: ${host.detail ?? host.returns}`)
+      .join(", ");
+  }
+  return row.detail ?? row.returns ?? "";
+};
+
 export function diffViews(library: LibraryId): DiffView[] {
   return diffsFor(library).map(({ case: matrixCase, row }) => ({
     id: matrixCase.id,
     title: matrixCase.title,
     input: matrixCase.input,
     compare: matrixCase.compare,
-    libraryReturns: row.returns ?? "",
+    libraryReturns: rowResult(row),
+    referenceLabel:
+      matrixCase.temporal === null ? "Stated result" : "Temporal returns",
     temporalReturns: temporalText(matrixCase),
     clause: matrixCase.clauses[0],
     issues: row.issues.map((issue) => ({ text: issue, url: issueUrl(issue) })),
@@ -126,6 +149,8 @@ export interface MatrixCaseView {
   title: string;
   input: string;
   compare: string;
+  /** What the verdict column compares with: `Temporal` or `the stated result`. */
+  reference: string;
   clauses: { label: string; url: string }[];
   /** Set for a case Temporal has no call for. */
   expectedNote: string | null;
@@ -160,10 +185,7 @@ export function matrixView(): MatrixCaseView[] {
         anchor: rowAnchor(matrixCase.id, row.library),
         who: library.name,
         call: row.call ?? "none",
-        returns:
-          row.verdict === "unsupported"
-            ? (row.reason ?? "")
-            : (row.detail ?? row.returns ?? ""),
+        returns: rowResult(row),
         verdict: VERDICT_LABEL[row.verdict],
         issues: row.issues.map((issue) => ({
           text: issue,
@@ -177,6 +199,7 @@ export function matrixView(): MatrixCaseView[] {
       title: matrixCase.title,
       input: matrixCase.input,
       compare: matrixCase.compare,
+      reference: referenceName(matrixCase),
       clauses: [...matrixCase.clauses],
       expectedNote:
         matrixCase.temporal === null

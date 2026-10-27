@@ -72,7 +72,7 @@ Include only the plugins you need:
 | `Date.now()`                                                                      | `no-date-now`               | Use `getUnixNow({ epochUnit: 'milliseconds' \| 'seconds' })` or `getNow()`                                            |
 | `Date.parse(...)`                                                                 | `no-date-parse`             | Use `convertZonedToUnix(value)`                                                                                       |
 | `Date.UTC(...)`                                                                   | `no-date-utc`               | Use `convertUtcToUnix('YYYY-MM-DDTHH:mm:ssZ', { epochUnit: 'milliseconds' \| 'seconds' })`                            |
-| Importing moment, moment-timezone, dayjs, luxon, date-fns, date-fns-tz, spacetime | `no-date-library-imports`   | Use `@northguild/gmt`                                                                                                 |
+| Importing moment, moment-timezone, dayjs, luxon, date-fns, date-fns-tz, @date-fns/tz, spacetime | `no-date-library-imports`   | Use `@northguild/gmt`                                                                                                 |
 | `$date.getTimezoneOffset()`                                                       | `no-date-getTimezoneOffset` | Use `getZonedNow(timezone)`, other gmt zoned helpers such as `convertZonedToUnix(value)`, or `Temporal.ZonedDateTime` |
 
 > **`@js-joda/core` is deliberately allowed.** It has its own value types and touches

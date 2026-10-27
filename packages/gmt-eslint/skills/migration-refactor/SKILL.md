@@ -33,11 +33,11 @@ Use this skill when ESLint surfaces Date-related violations and code changes are
 - `new Date(...)` -> appropriate gmt parsing/conversion path.
 - `Date.parse(...)` -> gmt conversion helper where available.
 - `Date.UTC(...)` -> gmt UTC conversion helper where available.
-- `no-restricted-imports` / `no-restricted-syntax` on `moment`, `moment-timezone`, `dayjs`,
-  `luxon`, `date-fns`, `date-fns-tz` or `spacetime` (including subpaths, `require()` and dynamic
-  `import()`) -> replace the call sites with gmt equivalents, then remove the import. Do not
-  route around it with a local re-export — `export … from` is flagged too. `@js-joda/core` is
-  intentionally allowed.
+- `no-restricted-imports` / `no-restricted-syntax` on `moment`, `moment-timezone`, `dayjs`, `luxon`,
+  `date-fns`, `date-fns-tz`, `@date-fns/tz` or `spacetime` (including subpaths, `require()` and
+  dynamic `import()`) -> replace the call sites with gmt equivalents (the message links the
+  migration guide that maps the library's calls), then remove the import. Do not route around it
+  with a local re-export — `export … from` is flagged too. `@js-joda/core` is intentionally allowed.
 - When porting library arithmetic, keep Temporal's semantics: a non-existent day clamps
   (`2024-02-29` + 1 year → `2025-02-28`); date-fns `setYear` rolls to 1 March instead, so
   flag that behaviour change to the user rather than copying it.

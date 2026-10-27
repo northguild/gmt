@@ -1,4 +1,3 @@
-import { MSG_DATE_LIBRARY_IMPORT } from "../messages";
 import type { LiteralNode, Node, RuleContext } from "../types";
 import { noDateLibraryImportsRule } from "./no-date-library-imports";
 
@@ -17,27 +16,61 @@ function literal(value: string): LiteralNode {
 
 describe("noDateLibraryImportsRule", () => {
   describe("reports", () => {
-    it.each`
-      specifier
-      ${"moment"}
-      ${"moment-timezone"}
-      ${"dayjs"}
-      ${"luxon"}
-      ${"date-fns"}
-      ${"date-fns-tz"}
-      ${"spacetime"}
-      ${"date-fns/format"}
-    `("reports import from $specifier", ({ specifier }) => {
+    // Each message names the package and links the guide that maps its calls.
+    it.each([
+      {
+        specifier: "moment",
+        message:
+          "Avoid moment: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/moment/ maps Moment.js calls to their gmt replacements.",
+      },
+      {
+        specifier: "moment-timezone",
+        message:
+          "Avoid moment-timezone: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/moment/ maps Moment.js calls to their gmt replacements.",
+      },
+      {
+        specifier: "dayjs",
+        message:
+          "Avoid dayjs: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/dayjs/ maps Day.js calls to their gmt replacements.",
+      },
+      {
+        specifier: "luxon",
+        message:
+          "Avoid luxon: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/luxon/ maps Luxon calls to their gmt replacements.",
+      },
+      {
+        specifier: "date-fns",
+        message:
+          "Avoid date-fns: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/date-fns/ maps date-fns calls to their gmt replacements.",
+      },
+      {
+        specifier: "date-fns-tz",
+        message:
+          "Avoid date-fns-tz: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/date-fns/ maps date-fns calls to their gmt replacements.",
+      },
+      {
+        specifier: "@date-fns/tz",
+        message:
+          "Avoid @date-fns/tz: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/date-fns/ maps date-fns calls to their gmt replacements.",
+      },
+      {
+        specifier: "spacetime",
+        message:
+          "Avoid spacetime: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/ lists the migration guides.",
+      },
+      {
+        specifier: "date-fns/format",
+        message:
+          "Avoid date-fns: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/date-fns/ maps date-fns calls to their gmt replacements.",
+      },
+    ])("reports import from $specifier", ({ specifier, message }) => {
       const { report, ctx } = makeContext();
       const source = literal(specifier);
       noDateLibraryImportsRule
         .create(ctx)
         .ImportDeclaration?.({ type: "ImportDeclaration", source });
       expect(report).toHaveBeenCalledOnce();
-      expect(report).toHaveBeenCalledWith({
-        node: source,
-        message: MSG_DATE_LIBRARY_IMPORT,
-      });
+      expect(report).toHaveBeenCalledWith({ node: source, message });
     });
 
     it.each`

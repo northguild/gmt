@@ -1,10 +1,14 @@
 {
-  "measuredOn": "2026-10-26",
+  "measuredOn": "2026-10-27",
   "runtime": {
     "node": "v26.12.1",
-    "tz": "Asia/Kolkata",
     "icu": "78.3",
-    "hostTimeZone": "Asia/Calcutta"
+    "hostZones": [
+      "Asia/Kolkata",
+      "Europe/London",
+      "Australia/Sydney",
+      "America/Santiago"
+    ]
   },
   "libraries": [
     {
@@ -81,8 +85,29 @@
         {
           "library": "date-fns",
           "call": "addDays(new TZDate(2024, 2, 30, 2, 30, \"Europe/Berlin\"), 1)",
-          "returns": "2024-03-31T03:30:00.000+02:00",
-          "verdict": "same",
+          "verdict": "varies",
+          "hosts": [
+            {
+              "zone": "Asia/Kolkata",
+              "returns": "2024-03-31T03:30:00.000+02:00",
+              "verdict": "same"
+            },
+            {
+              "zone": "Europe/London",
+              "returns": "2024-03-31T01:30:00.000+01:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Australia/Sydney",
+              "returns": "2024-03-31T03:30:00.000+02:00",
+              "verdict": "same"
+            },
+            {
+              "zone": "America/Santiago",
+              "returns": "2024-03-31T03:30:00.000+02:00",
+              "verdict": "same"
+            }
+          ],
           "issues": []
         },
         {
@@ -196,8 +221,8 @@
           "url": "https://tc39.es/proposal-temporal/#sec-temporal-disambiguatepossibleepochnanoseconds"
         },
         {
-          "label": "GetTemporalDisambiguationOption (13.7)",
-          "url": "https://tc39.es/proposal-temporal/#sec-temporal-gettemporaldisambiguationoption"
+          "label": "AddZonedDateTime (6.5.5)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-addzoneddatetime"
         }
       ],
       "temporal": {
@@ -213,8 +238,29 @@
         {
           "library": "date-fns",
           "call": "addDays(new TZDate(2024, 9, 26, 2, 30, \"Europe/Berlin\"), 1)",
-          "returns": "2024-10-27T02:30:00.000+02:00",
-          "verdict": "same",
+          "verdict": "varies",
+          "hosts": [
+            {
+              "zone": "Asia/Kolkata",
+              "returns": "2024-10-27T02:30:00.000+02:00",
+              "verdict": "same"
+            },
+            {
+              "zone": "Europe/London",
+              "returns": "2024-10-27T02:30:00.000+01:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Australia/Sydney",
+              "returns": "2024-10-27T02:30:00.000+02:00",
+              "verdict": "same"
+            },
+            {
+              "zone": "America/Santiago",
+              "returns": "2024-10-27T02:30:00.000+01:00",
+              "verdict": "differs"
+            }
+          ],
           "issues": []
         },
         {
@@ -337,8 +383,29 @@
         {
           "library": "date-fns",
           "call": "new TZDate(2024, 2, 31, 2, 30, \"Europe/Berlin\")",
-          "returns": "2024-03-31T01:30:00.000+00:00",
-          "verdict": "same",
+          "verdict": "varies",
+          "hosts": [
+            {
+              "zone": "Asia/Kolkata",
+              "returns": "2024-03-31T01:30:00.000+00:00",
+              "verdict": "same"
+            },
+            {
+              "zone": "Europe/London",
+              "returns": "2024-03-31T00:30:00.000+00:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Australia/Sydney",
+              "returns": "2024-03-31T01:30:00.000+00:00",
+              "verdict": "same"
+            },
+            {
+              "zone": "America/Santiago",
+              "returns": "2024-03-31T01:30:00.000+00:00",
+              "verdict": "same"
+            }
+          ],
           "issues": []
         },
         {
@@ -458,8 +525,29 @@
         {
           "library": "date-fns",
           "call": "addDays(new TZDate(2024, 9, 5, 2, 15, \"Australia/Lord_Howe\"), 1)",
-          "returns": "2024-10-06T02:45:00.000+11:00",
-          "verdict": "same",
+          "verdict": "varies",
+          "hosts": [
+            {
+              "zone": "Asia/Kolkata",
+              "returns": "2024-10-06T02:45:00.000+11:00",
+              "verdict": "same"
+            },
+            {
+              "zone": "Europe/London",
+              "returns": "2024-10-06T02:45:00.000+11:00",
+              "verdict": "same"
+            },
+            {
+              "zone": "Australia/Sydney",
+              "returns": "2024-10-06T03:15:00.000+11:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "America/Santiago",
+              "returns": "2024-10-06T02:45:00.000+11:00",
+              "verdict": "same"
+            }
+          ],
           "issues": []
         },
         {
@@ -472,8 +560,29 @@
         {
           "library": "dayjs",
           "call": "dayjs.tz(\"2024-10-05T02:15\", \"Australia/Lord_Howe\").add(1, \"day\").format()",
-          "returns": "2024-10-06T02:15:00+10:30",
-          "verdict": "differs",
+          "verdict": "varies",
+          "hosts": [
+            {
+              "zone": "Asia/Kolkata",
+              "returns": "2024-10-06T02:15:00+10:30",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Europe/London",
+              "returns": "2024-10-06T02:15:00+10:30",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Australia/Sydney",
+              "returns": "2024-10-06T03:15:00+10:30",
+              "verdict": "differs"
+            },
+            {
+              "zone": "America/Santiago",
+              "returns": "2024-10-06T02:15:00+10:30",
+              "verdict": "differs"
+            }
+          ],
           "issues": []
         },
         {
@@ -534,8 +643,29 @@
         {
           "library": "dayjs",
           "call": "dayjs.tz(\"2024-09-08T12:00\", \"America/Santiago\").startOf(\"day\").format()",
-          "returns": "2024-09-08T00:00:00-04:00",
-          "verdict": "differs",
+          "verdict": "varies",
+          "hosts": [
+            {
+              "zone": "Asia/Kolkata",
+              "returns": "2024-09-08T00:00:00-04:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Europe/London",
+              "returns": "2024-09-08T00:00:00-04:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Australia/Sydney",
+              "returns": "2024-09-08T00:00:00-04:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "America/Santiago",
+              "returns": "2024-09-08T01:00:00-03:00",
+              "verdict": "same"
+            }
+          ],
           "issues": [
             "iamkun/dayjs#1437",
             "iamkun/dayjs#2553",
@@ -683,13 +813,13 @@
     },
     {
       "id": "M9",
-      "title": "Parse a date with a one-digit year and month",
-      "input": "\"2-12-12\" read as year-month-day",
+      "title": "Parse a date whose year has one digit",
+      "input": "\"2-12-12\" read as an ISO 8601 date",
       "compare": "date, or rejected",
       "clauses": [
         {
-          "label": "IsValidDate (13.31.2)",
-          "url": "https://tc39.es/proposal-temporal/#sec-temporal-iso8601grammar-static-semantics-isvaliddate"
+          "label": "ISO 8601 grammar (13.31)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-iso8601grammar"
         },
         {
           "label": "RFC 3339 section 5.6",
@@ -700,10 +830,73 @@
         "returns": "rejected"
       },
       "gmt": {
+        "fn": "isValidDate",
+        "call": "isValidDate(\"2-12-12\")",
+        "returns": "rejected",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "parseISO(\"2-12-12\")",
+          "returns": "rejected",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2-12-12\")",
+          "returns": "rejected",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"2-12-12\")",
+          "returns": "2012-02-12",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment(\"2-12-12\", moment.ISO_8601, true)",
+          "returns": "rejected",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseDate(\"2-12-12\")",
+          "returns": "rejected",
+          "detail": "Error: Invalid ISO 8601 date string: 2-12-12",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M9d",
+      "title": "Read a year of one digit with a pattern",
+      "input": "\"2-12-12\" read with the pattern year-month-day",
+      "compare": "date, or rejected",
+      "clauses": [
+        {
+          "label": "UTS #35 Date Format Patterns",
+          "url": "https://www.unicode.org/reports/tr35/tr35-dates.html#Date_Format_Patterns"
+        },
+        {
+          "label": "ISO 8601 grammar (13.31)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-iso8601grammar"
+        }
+      ],
+      "temporal": null,
+      "expected": "rejected",
+      "gmt": {
         "fn": "parseDateWithPattern",
         "call": "parseDateWithPattern(\"2-12-12\", \"yyyy-MM-dd\")",
         "returns": "rejected",
-        "verdict": "same"
+        "verdict": "same",
+        "note": "Temporal reads no patterns, so the stated result is GMT's choice: `yyyy` is four digits, as the year is in the ISO 8601 grammar. UTS #35 recommends lenient pattern parsing, so a library that reads `2` as year 2 follows it. The rows show the difference and make no claim about which is right."
       },
       "libraries": [
         {
@@ -715,7 +908,7 @@
         },
         {
           "library": "luxon",
-          "call": "DateTime.fromISO(\"2-12-12\")",
+          "call": "DateTime.fromFormat(\"2-12-12\", \"yyyy-MM-dd\")",
           "returns": "rejected",
           "verdict": "same",
           "issues": []
@@ -736,10 +929,8 @@
         },
         {
           "library": "internationalized-date",
-          "call": "parseDate(\"2-12-12\")",
-          "returns": "rejected",
-          "detail": "Error: Invalid ISO 8601 date string: 2-12-12",
-          "verdict": "same",
+          "verdict": "unsupported",
+          "reason": "it has no pattern parser; parseDate reads ISO 8601 only",
           "issues": []
         }
       ]
@@ -755,8 +946,8 @@
           "url": "https://tc39.es/proposal-temporal/#sec-temporal-iso8601grammar-static-semantics-isvaliddate"
         },
         {
-          "label": "RegulateISODate (3.5.7)",
-          "url": "https://tc39.es/proposal-temporal/#sec-temporal-regulateisodate"
+          "label": "IsValidISODate (3.5.8)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-isvalidisodate"
         }
       ],
       "temporal": {
@@ -966,10 +1157,10 @@
         },
         {
           "library": "luxon",
-          "call": "DateTime.fromISO(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\").zoneName",
-          "returns": "Asia/Calcutta",
-          "verdict": "differs",
-          "issues": ["moment/luxon#1621"]
+          "call": "DateTime.fromISO(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\", { setZone: true }).zoneName",
+          "returns": "Europe/Berlin",
+          "verdict": "same",
+          "issues": []
         },
         {
           "library": "dayjs",
@@ -996,11 +1187,19 @@
       "id": "M10c",
       "title": "Read a string with a calendar annotation",
       "input": "2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]",
-      "compare": "accepted or rejected",
+      "compare": "accepted or rejected, and for an accepted string the UTC instant",
       "clauses": [
         {
           "label": "RFC 9557 section 3.3",
           "url": "https://www.rfc-editor.org/rfc/rfc9557#section-3.3"
+        },
+        {
+          "label": "RFC 9557 section 4.1",
+          "url": "https://www.rfc-editor.org/rfc/rfc9557#section-4.1"
+        },
+        {
+          "label": "ToTemporalZonedDateTime (6.5.2)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-totemporalzoneddatetime"
         },
         {
           "label": "ParseISODateTime (13.35)",
@@ -1014,40 +1213,41 @@
         "fn": "isValidCalendarZonedDateTime",
         "call": "isValidCalendarZonedDateTime(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\")",
         "returns": "accepted",
-        "verdict": "same"
+        "verdict": "same",
+        "note": "GMT's validator reports whether the string is accepted. The run also reads the instant with `convertZonedToUtc` from the string without its annotation, which that function does not take."
       },
       "libraries": [
         {
           "library": "date-fns",
-          "call": "parseISO(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\")",
-          "returns": "accepted",
-          "verdict": "same",
-          "issues": []
-        },
-        {
-          "library": "luxon",
-          "call": "DateTime.fromISO(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\")",
-          "returns": "rejected",
+          "call": "parseISO(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\").toISOString()",
+          "returns": "accepted, reads 2024-03-31T03:30:00Z",
           "verdict": "differs",
           "issues": []
         },
         {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\").toUTC().toISO()",
+          "returns": "rejected",
+          "verdict": "differs",
+          "issues": ["moment/luxon#1621"]
+        },
+        {
           "library": "dayjs",
-          "call": "dayjs(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\")",
+          "call": "dayjs(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\").toISOString()",
           "returns": "rejected",
           "verdict": "differs",
           "issues": []
         },
         {
           "library": "moment",
-          "call": "moment(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\", moment.ISO_8601, true)",
+          "call": "moment(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\", moment.ISO_8601, true).toISOString()",
           "returns": "rejected",
           "verdict": "differs",
           "issues": []
         },
         {
           "library": "internationalized-date",
-          "call": "parseZonedDateTime(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\")",
+          "call": "parseZonedDateTime(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\").toAbsoluteString()",
           "returns": "rejected",
           "detail": "RangeError: Invalid time zone specified: Europe/Berlin][u-ca=japanese",
           "verdict": "differs",
@@ -1139,8 +1339,8 @@
         "returns": "2024-01-15T15:30:00Z"
       },
       "gmt": {
-        "fn": "convertZonedToUtc",
-        "call": "convertZonedToUtc(\"2024-01-15T12:00:00-03:30[America/St_Johns]\")",
+        "fn": "toOffsetInstant",
+        "call": "toOffsetInstant(\"2024-01-15T12:00:00-03:30\").instant",
         "returns": "2024-01-15T15:30:00Z",
         "verdict": "same"
       },
@@ -1416,8 +1616,12 @@
       "id": "M14",
       "title": "Offset written for a UTC instant",
       "input": "2024-03-31T01:30:00Z, written back as ISO 8601 with each library's default writer",
-      "compare": "UTC instant",
+      "compare": "the text written: the local time and offset, or Z",
       "clauses": [
+        {
+          "label": "Temporal.Instant.prototype.toString (8.3.11)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal.instant.prototype.tostring"
+        },
         {
           "label": "RFC 9557 section 2",
           "url": "https://www.rfc-editor.org/rfc/rfc9557#section-2"
@@ -1427,8 +1631,8 @@
         "returns": "2024-03-31T01:30:00Z"
       },
       "gmt": {
-        "fn": "convertZonedToUtc",
-        "call": "convertZonedToUtc(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\")",
+        "fn": "toOffsetInstant",
+        "call": "toOffsetInstant(\"2024-03-31T01:30:00Z\").instant",
         "returns": "2024-03-31T01:30:00Z",
         "verdict": "same"
       },
@@ -1436,29 +1640,113 @@
         {
           "library": "date-fns",
           "call": "formatISO(parseISO(\"2024-03-31T01:30:00Z\"))",
-          "returns": "2024-03-31T07:00:00+05:30",
-          "verdict": "differs",
+          "verdict": "varies",
+          "hosts": [
+            {
+              "zone": "Asia/Kolkata",
+              "returns": "2024-03-31T07:00:00+05:30",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Europe/London",
+              "returns": "2024-03-31T02:30:00+01:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Australia/Sydney",
+              "returns": "2024-03-31T12:30:00+11:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "America/Santiago",
+              "returns": "2024-03-30T22:30:00-03:00",
+              "verdict": "differs"
+            }
+          ],
           "issues": ["date-fns/date-fns#2151"]
         },
         {
           "library": "luxon",
           "call": "DateTime.fromISO(\"2024-03-31T01:30:00Z\").toISO()",
-          "returns": "2024-03-31T07:00:00.000+05:30",
-          "verdict": "differs",
+          "verdict": "varies",
+          "hosts": [
+            {
+              "zone": "Asia/Kolkata",
+              "returns": "2024-03-31T07:00:00.000+05:30",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Europe/London",
+              "returns": "2024-03-31T02:30:00.000+01:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Australia/Sydney",
+              "returns": "2024-03-31T12:30:00.000+11:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "America/Santiago",
+              "returns": "2024-03-30T22:30:00.000-03:00",
+              "verdict": "differs"
+            }
+          ],
           "issues": []
         },
         {
           "library": "dayjs",
           "call": "dayjs(\"2024-03-31T01:30:00Z\").format()",
-          "returns": "2024-03-31T07:00:00+05:30",
-          "verdict": "differs",
+          "verdict": "varies",
+          "hosts": [
+            {
+              "zone": "Asia/Kolkata",
+              "returns": "2024-03-31T07:00:00+05:30",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Europe/London",
+              "returns": "2024-03-31T02:30:00+01:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Australia/Sydney",
+              "returns": "2024-03-31T12:30:00+11:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "America/Santiago",
+              "returns": "2024-03-30T22:30:00-03:00",
+              "verdict": "differs"
+            }
+          ],
           "issues": []
         },
         {
           "library": "moment",
           "call": "moment(\"2024-03-31T01:30:00Z\").format()",
-          "returns": "2024-03-31T07:00:00+05:30",
-          "verdict": "differs",
+          "verdict": "varies",
+          "hosts": [
+            {
+              "zone": "Asia/Kolkata",
+              "returns": "2024-03-31T07:00:00+05:30",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Europe/London",
+              "returns": "2024-03-31T02:30:00+01:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "Australia/Sydney",
+              "returns": "2024-03-31T12:30:00+11:00",
+              "verdict": "differs"
+            },
+            {
+              "zone": "America/Santiago",
+              "returns": "2024-03-30T22:30:00-03:00",
+              "verdict": "differs"
+            }
+          ],
           "issues": []
         },
         {
@@ -1482,7 +1770,7 @@
         },
         {
           "label": "UTS #35 Week Data",
-          "url": "https://www.unicode.org/reports/tr35/tr35-dates.html"
+          "url": "https://www.unicode.org/reports/tr35/tr35-dates.html#Week_Data"
         }
       ],
       "temporal": null,
@@ -1496,9 +1784,8 @@
       "libraries": [
         {
           "library": "date-fns",
-          "call": "addBusinessDays(parseISO(\"2024-07-04\"), 1)",
-          "returns": "2024-07-05",
-          "verdict": "differs",
+          "verdict": "unsupported",
+          "reason": "the weekend is fixed to Saturday and Sunday; addBusinessDays has no weekend option",
           "issues": []
         },
         {

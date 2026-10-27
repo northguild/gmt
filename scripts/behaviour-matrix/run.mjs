@@ -3,11 +3,17 @@
  * Behaviour matrix: runs every case in `cases.mjs` against Temporal, GMT and five date libraries,
  * and writes the committed record `apps/dox/src/data/behaviour-matrix.json`.
  *
- * Run it by hand, in this folder, with a host time zone that is not UTC so that a library which
- * reads the host zone shows it:
+ * Run it by hand, in this folder:
  *
- *   pnpm install
- *   TZ=Asia/Kolkata pnpm matrix
+ *   pnpm install --ignore-workspace
+ *   pnpm matrix
+ *
+ * The run repeats on several host time zones, one child process per zone, because a library that
+ * reads the host zone looks correct on a host where the zone happens to agree. The zones are in
+ * `HOST_ZONES`: one without daylight saving time and zones that observe it in both hemispheres.
+ * A library cell whose result changes with the host gets the verdict "varies" and keeps the result
+ * of each host. Temporal and GMT read no host zone, so the run stops when either differs between
+ * hosts.
  *
  * Re-run it whenever a pinned version in `package.json` changes. It never builds `packages/gmt`:
  * GMT's source is bundled with esbuild into `.cache/gmt.mjs`.
@@ -16,8 +22,10 @@
  * `Temporal`. The run stops at the first case where the two differ, so the expected value never
  * rests on one implementation.
  *
- * Exit codes: 0 written, 1 the polyfill and native Temporal disagree, 2 the run cannot start.
+ * Exit codes: 0 written, 1 the polyfill and native Temporal disagree or GMT or Temporal depends
+ * on the host zone, 2 the run cannot start.
  */
+import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -40,32 +48,19 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..", "..");
 const OUTPUT = join(ROOT, "apps/dox/src/data/behaviour-matrix.json");
 
-const UTC_ZONES = new Set([
-  "UTC",
-  "Etc/UTC",
-  "Etc/UCT",
-  "Etc/Universal",
-  "Etc/Zulu",
-  "Etc/GMT",
-  "GMT",
-  "UCT",
-  "Universal",
-  "Zulu",
-]);
+/** The host zones every library cell runs under: no daylight saving time, then both hemispheres. */
+const HOST_ZONES = [
+  "Asia/Kolkata",
+  "Europe/London",
+  "Australia/Sydney",
+  "America/Santiago",
+];
 
 function stop(code, message) {
   console.error(message);
   process.exit(code);
 }
 
-const hostTimeZone = new Intl.DateTimeFormat("en").resolvedOptions().timeZone;
-if (!process.env.TZ || UTC_ZONES.has(hostTimeZone)) {
-  stop(
-    2,
-    `The host time zone is ${process.env.TZ ? "UTC" : "not set"}. ` +
-      "A library that reads the host zone would look correct in UTC. Run: TZ=Asia/Kolkata pnpm matrix",
-  );
-}
 const NativeTemporal = globalThis.Temporal;
 if (!NativeTemporal)
   stop(
@@ -78,16 +73,18 @@ dayjs.extend(dayjsTimezone);
 dayjs.extend(dayjsParse);
 dayjs.extend(dayjsIsoWeek);
 
-mkdirSync(join(HERE, ".cache"), { recursive: true });
-const bundle = join(HERE, ".cache/gmt.mjs");
-await build({
-  entryPoints: [join(ROOT, "packages/gmt/src/index.ts")],
-  outfile: bundle,
-  bundle: true,
-  format: "esm",
-  platform: "node",
-  logLevel: "error",
-});
+const bundle = process.env.BM_BUNDLE ?? join(HERE, ".cache/gmt.mjs");
+if (!process.env.BM_CHILD) {
+  mkdirSync(join(HERE, ".cache"), { recursive: true });
+  await build({
+    entryPoints: [join(ROOT, "packages/gmt/src/index.ts")],
+    outfile: bundle,
+    bundle: true,
+    format: "esm",
+    platform: "node",
+    logLevel: "error",
+  });
+}
 const gmt = await import(pathToFileURL(bundle).href);
 
 const L = { df: dateFns, TZDate, DateTime, dayjs, moment, intl };
@@ -154,28 +151,100 @@ function attempt(kind, run) {
   }
 }
 
+/** Run every case once, on this process's host zone, and return the comparable forms. */
+function runAllCases() {
+  return cases.map((c) => {
+    let temporal = null;
+    if (c.temporal) {
+      const onPolyfill = attempt(c.norm, () => c.temporal(Polyfill));
+      const onNative = attempt(c.norm, () => c.temporal(NativeTemporal));
+      if (onPolyfill.form !== onNative.form) {
+        stop(
+          1,
+          `${c.id}: the polyfill and native Temporal disagree.\n  polyfill: ${onPolyfill.returns}\n  native:   ${onNative.returns}`,
+        );
+      }
+      temporal = onNative;
+    }
+    const libs = {};
+    for (const library of LIBRARIES) {
+      const lib = c.libs[library.id];
+      if (!lib) throw new Error(`${c.id} has no entry for ${library.id}`);
+      if (!lib.none) libs[library.id] = attempt(c.norm, () => lib.run(L));
+    }
+    return {
+      id: c.id,
+      temporal,
+      gmt: attempt(c.norm, () => c.gmt.run(gmt)),
+      libs,
+    };
+  });
+}
+
+if (process.env.BM_CHILD) {
+  // Child process: one host zone. The parent merges what this prints.
+  const zone = new Intl.DateTimeFormat("en").resolvedOptions().timeZone;
+  if (zone === "UTC" || zone.startsWith("Etc/"))
+    stop(2, `The child resolved the host zone ${zone}, not ${process.env.TZ}.`);
+  writeFileSync(process.env.BM_OUT, JSON.stringify(runAllCases()));
+  process.exit(0);
+}
+
+// Parent process: one child per host zone, so a library that reads the host zone is measured
+// where it can show it.
+const perHost = HOST_ZONES.map((zone, index) => {
+  const out = join(HERE, `.cache/host-${index}.json`);
+  const child = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], {
+    env: {
+      ...process.env,
+      TZ: zone,
+      BM_CHILD: "1",
+      BM_BUNDLE: bundle,
+      BM_OUT: out,
+    },
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (child.status !== 0) {
+    stop(
+      child.status === 1 ? 1 : 2,
+      `The run on host zone ${zone} failed.\n${child.stderr}`,
+    );
+  }
+  return { zone, results: JSON.parse(readFileSync(out, "utf8")) };
+});
+
 const results = [];
 for (const c of cases) {
-  let expected;
-  if (c.temporal) {
-    const onPolyfill = attempt(c.norm, () => c.temporal(Polyfill));
-    const onNative = attempt(c.norm, () => c.temporal(NativeTemporal));
-    if (onPolyfill.form !== onNative.form) {
+  const runs = perHost.map(({ zone, results: all }) => ({
+    zone,
+    ...all.find((r) => r.id === c.id),
+  }));
+  const [first] = runs;
+
+  // Temporal and GMT read no host zone: their result must be identical on every host.
+  for (const run of runs) {
+    if (run.gmt.returns !== first.gmt.returns) {
       stop(
         1,
-        `${c.id}: the polyfill and native Temporal disagree.\n  polyfill: ${onPolyfill.returns}\n  native:   ${onNative.returns}`,
+        `${c.id}: GMT depends on the host zone.\n  ${first.zone}: ${first.gmt.returns}\n  ${run.zone}: ${run.gmt.returns}`,
       );
     }
-    expected = onNative;
-  } else {
-    expected = { returns: c.expected, form: c.expected };
+    if (c.temporal && run.temporal.returns !== first.temporal.returns) {
+      stop(
+        1,
+        `${c.id}: Temporal depends on the host zone.\n  ${first.zone}: ${first.temporal.returns}\n  ${run.zone}: ${run.temporal.returns}`,
+      );
+    }
   }
+  const expected = c.temporal
+    ? first.temporal
+    : { returns: c.expected, form: c.expected };
   const verdict = (form) => (form === expected.form ? "same" : "differs");
+  const gmtRun = first.gmt;
 
-  const gmtRun = attempt(c.norm, () => c.gmt.run(gmt));
   const rows = LIBRARIES.map((library) => {
     const lib = c.libs[library.id];
-    if (!lib) throw new Error(`${c.id} has no entry for ${library.id}`);
     if (lib.none)
       return {
         library: library.id,
@@ -183,20 +252,35 @@ for (const c of cases) {
         reason: lib.none,
         issues: [],
       };
-    const out = attempt(c.norm, () => lib.run(L));
-    const verdictNow = verdict(out.form);
+    const outs = runs.map((run) => ({
+      zone: run.zone,
+      ...run.libs[library.id],
+    }));
+    const varies = outs.some((o) => o.form !== outs[0].form);
+    const verdictNow = varies ? "varies" : verdict(outs[0].form);
+    const showHosts = outs.some((o) => o.returns !== outs[0].returns);
     return {
       library: library.id,
       call: lib.call,
-      returns: out.returns,
-      ...(out.detail ? { detail: out.detail } : {}),
+      ...(varies ? {} : { returns: outs[0].returns }),
+      ...(!varies && outs[0].detail ? { detail: outs[0].detail } : {}),
       verdict: verdictNow,
-      issues: verdictNow === "differs" ? (c.issues[library.id] ?? []) : [],
+      ...(showHosts
+        ? {
+            hosts: outs.map((o) => ({
+              zone: o.zone,
+              returns: o.returns,
+              verdict: verdict(o.form),
+              ...(o.detail ? { detail: o.detail } : {}),
+            })),
+          }
+        : {}),
+      issues: verdictNow === "same" ? [] : (c.issues[library.id] ?? []),
     };
   });
   for (const library of Object.keys(c.issues)) {
     const row = rows.find((r) => r.library === library);
-    if (!row || row.verdict !== "differs") {
+    if (!row || (row.verdict !== "differs" && row.verdict !== "varies")) {
       console.warn(
         `${c.id}: issue listed for ${library}, but it does not differ here. It is left out.`,
       );
@@ -227,9 +311,8 @@ const matrix = {
   measuredOn: Polyfill.Now.plainDateISO("UTC").toString(),
   runtime: {
     node: process.version,
-    tz: process.env.TZ,
     icu: process.versions.icu,
-    hostTimeZone,
+    hostZones: HOST_ZONES,
   },
   libraries: LIBRARIES,
   cases: results,
@@ -240,7 +323,7 @@ const tally = {};
 for (const r of results) {
   for (const row of [r.gmt, ...r.libraries]) {
     const who = row.library ?? "gmt";
-    tally[who] ??= { same: 0, differs: 0, unsupported: 0 };
+    tally[who] ??= { same: 0, differs: 0, varies: 0, unsupported: 0 };
     tally[who][row.verdict] += 1;
   }
 }

@@ -77,7 +77,7 @@ module.exports = [...gmtEslintConfig];
 | `Date.now()`                                                                      | `no-restricted-properties` | Use `getUnixNow({ epochUnit: 'milliseconds' \| 'seconds' })` or `getNow()`                                            |
 | `Date.UTC(...)`                                                                   | `no-restricted-properties` | Use `convertUtcToUnix('YYYY-MM-DDTHH:mm:ssZ', { epochUnit: 'milliseconds' \| 'seconds' })`                            |
 | `Date.parse(...)`                                                                 | `no-restricted-properties` | Use `convertZonedToUnix(value)`                                                                                       |
-| Importing moment, moment-timezone, dayjs, luxon, date-fns, date-fns-tz, spacetime | `no-restricted-imports`    | Use `@northguild/gmt`                                                                                                 |
+| Importing moment, moment-timezone, dayjs, luxon, date-fns, date-fns-tz, @date-fns/tz, spacetime | `no-restricted-imports`    | Use `@northguild/gmt`                                                                                                 |
 | `$date.getTimezoneOffset()`                                                       | `no-restricted-syntax`     | Use `getZonedNow(timezone)`, other gmt zoned helpers such as `convertZonedToUnix(value)`, or `Temporal.ZonedDateTime` |
 
 > **`@js-joda/core` is deliberately allowed.** It has its own value types and touches

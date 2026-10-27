@@ -1,11 +1,9 @@
 ---
-
 title: Migrate to Temporal with GMT
 description: What changes when you replace a date library with GMT, and a page for each of five libraries with every call mapped to its GMT function.
 sidebar:
   order: 0
 ---
-
 
 GMT follows the Temporal specification. Moving to it from a date library changes the same few things whichever library you leave, so they are listed once here. Each library page then maps its calls one by one.
 
@@ -15,7 +13,7 @@ GMT follows the Temporal specification. Moving to it from a date library changes
 - **Bad input gives a typed fallback.** A function that cannot read its input returns `""`, `null`, `false` or `[]` for its return type, and does not throw. A correct empty result, such as two intervals that do not overlap, is `[]` too, so read the function's page for what its fallback means.
 - **Months run from 1 to 12.** This matches Temporal. A library that counts from 0 needs each month number moved by one.
 - **No token formatter.** GMT formats through `Intl` with a locale and a style, as in `formatDate(value, "de-DE", { dateStyle: "long" })`. It does not read tokens such as `dd/MM/yyyy` when it writes. `parseDateWithPattern` reads them.
-- **A day in a zone is a calendar day.** Adding one day to a zoned value gives the same wall-clock time on the next date, as Temporal does. Adding hours adds exact time.
+- **A day in a zone is a calendar day.** Adding one day to a zoned value gives the same wall-clock time on the next date when that time exists, as Temporal does. When it falls in a gap, the result moves forward by the length of the gap (Temporal 6.5.5 AddZonedDateTime, with the default `compatible` disambiguation): `addZoned("2024-03-30T02:30:00+01:00[Europe/Berlin]", { days: 1 })` gives `2024-03-31T03:30:00+02:00[Europe/Berlin]`. Adding hours adds exact time.
 
 ## Pages
 
@@ -29,3 +27,5 @@ GMT follows the Temporal specification. Moving to it from a date library changes
 | [Native Temporal and GMT](./temporal/) | Which runtimes ship Temporal, and the GMT function for each Temporal call |
 
 The results behind the differences are in [Behaviour of date libraries against Temporal](/compare/behaviour/).
+
+For a comparison of how each library handles time zones and DST, see [Time zones and DST in JavaScript: which date library handles them](/guides/how-to/time-zones-and-dst-in-javascript/).

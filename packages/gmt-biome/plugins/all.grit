@@ -21,7 +21,39 @@ or {
     `require($source)`,
     `import($source)`
   } where {
-    $source <: r"[\"'](?:moment|dayjs|luxon|date-fns|spacetime)(?:-timezone|-tz)?(?:/.*)?[\"']",
-    register_diagnostic(span=$source, message="Avoid date libraries that wrap native Date (moment, dayjs, luxon, date-fns, spacetime). Use @northguild/gmt instead.", severity="error")
+    or {
+      and {
+        $source <: r"[\"']moment(?:/.*)?[\"']",
+        register_diagnostic(span=$source, message="Avoid moment: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/moment/ maps Moment.js calls to their gmt replacements.", severity="error")
+      },
+      and {
+        $source <: r"[\"']moment-timezone(?:/.*)?[\"']",
+        register_diagnostic(span=$source, message="Avoid moment-timezone: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/moment/ maps Moment.js calls to their gmt replacements.", severity="error")
+      },
+      and {
+        $source <: r"[\"']dayjs(?:/.*)?[\"']",
+        register_diagnostic(span=$source, message="Avoid dayjs: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/dayjs/ maps Day.js calls to their gmt replacements.", severity="error")
+      },
+      and {
+        $source <: r"[\"']luxon(?:/.*)?[\"']",
+        register_diagnostic(span=$source, message="Avoid luxon: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/luxon/ maps Luxon calls to their gmt replacements.", severity="error")
+      },
+      and {
+        $source <: r"[\"']date-fns(?:/.*)?[\"']",
+        register_diagnostic(span=$source, message="Avoid date-fns: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/date-fns/ maps date-fns calls to their gmt replacements.", severity="error")
+      },
+      and {
+        $source <: r"[\"']date-fns-tz(?:/.*)?[\"']",
+        register_diagnostic(span=$source, message="Avoid date-fns-tz: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/date-fns/ maps date-fns calls to their gmt replacements.", severity="error")
+      },
+      and {
+        $source <: r"[\"']@date-fns/tz(?:/.*)?[\"']",
+        register_diagnostic(span=$source, message="Avoid @date-fns/tz: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/date-fns/ maps date-fns calls to their gmt replacements.", severity="error")
+      },
+      and {
+        $source <: r"[\"']spacetime(?:/.*)?[\"']",
+        register_diagnostic(span=$source, message="Avoid spacetime: it wraps native Date. Use @northguild/gmt instead; https://northguild.dev/gmt/migrate/ lists the migration guides.", severity="error")
+      }
+    }
   }
 }

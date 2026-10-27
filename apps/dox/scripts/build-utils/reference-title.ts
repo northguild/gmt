@@ -10,11 +10,12 @@ import { TITLE_SUFFIX } from "../../src/lib/head-tags";
 /** The longest full `<title>`, suffix included, in characters. */
 export const MAX = 70;
 
-/** Words a cut may be made before. A cut drops the word and what follows it. */
+/**
+ * Words a cut may be made before. A cut drops the word and what follows it. `and` and `or` are not
+ * among them: they join two names, and a cut between them leaves one (`in ascending`).
+ */
 const CUT_WORDS = new Set([
   "to",
-  "and",
-  "or",
   "for",
   "in",
   "using",
@@ -41,6 +42,7 @@ const CUT_WORDS = new Set([
   "since",
   "until",
   "within",
+  "back",
 ]);
 
 /** Words a cut title does not end on: the sentence they belong to goes on after them. */
@@ -96,7 +98,63 @@ const DANGLING_WORDS = new Set([
   "onto",
   "per",
   "via",
+  "back",
+  "out",
+  "up",
+  "down",
+  "off",
+  "over",
+  "away",
+  "can",
+  "will",
+  "must",
+  "may",
+  "does",
+  "has",
+  "have",
+  "given",
+  "such",
+  "written",
 ]);
+
+/** Words that open a relative clause: a cut after one leaves the clause without its verb. */
+const RELATIVE_WORDS = new Set(["that", "which", "who", "whose", "whom"]);
+
+/** Words that open a question clause, which a cut would leave without its verb. */
+const QUESTION_WORDS = new Set([
+  "how",
+  "what",
+  "why",
+  "which",
+  "who",
+  "where",
+  "when",
+]);
+
+/** Verbs a `whether` clause may keep: a cut that leaves none of them leaves the question unasked. */
+const WHETHER_VERBS = new Set([
+  "is",
+  "are",
+  "has",
+  "have",
+  "falls",
+  "fall",
+  "lies",
+  "can",
+  "does",
+  "do",
+  "contains",
+  "overlaps",
+  "equals",
+  "matches",
+  "names",
+]);
+
+/** Whether a `whether` in the words is followed by a verb. */
+function whetherHasVerb(words: string[]): boolean {
+  const at = words.indexOf("whether");
+  return at === -1 || words.slice(at + 1).some((word) => WHETHER_VERBS.has(word));
+}
 
 /** The fields of a documented symbol the title reads. */
 export type TitleDoc = {
@@ -142,7 +200,10 @@ function withoutReturn(clause: string): string {
 /** The first word in lower case, unless it is a name, an acronym or a proper noun. */
 function lowerFirstWord(clause: string): string {
   const [first = "", second = ""] = clause.split(" ");
-  if (!/^(A|An|[A-Z][a-z]+)$/.test(first)) return clause;
+  if (/^(A|An|The|Per)$/.test(first)) {
+    return first.toLowerCase() + clause.slice(first.length);
+  }
+  if (!/^[A-Z][a-z]+$/.test(first)) return clause;
   if (/^[A-Z]/.test(second)) return clause;
   return first.toLowerCase() + clause.slice(first.length);
 }
@@ -188,8 +249,9 @@ function fallback(doc: TitleDoc, room: number): string {
  *
  * The first clause of the description follows the name. A clause that is too long is cut before its
  * last linking word that leaves a title that fits, has at least three words, closes its brackets
- * and quotes and does not end on a word that needs more after it; when no cut does, the title is
- * the name and where it lives.
+ * and quotes and does not end on a word that needs more after it. A cut never ends a relative
+ * clause early or a `whether` clause before its verb, and a clause that opens with a question word
+ * (`how`, `where`) is never cut. When no cut works, the title is the name and where it lives.
  */
 export function referenceHeadTitle(doc: TitleDoc): string {
   const room = MAX - TITLE_SUFFIX.length;
@@ -203,14 +265,14 @@ export function referenceHeadTitle(doc: TitleDoc): string {
   if (whole.length <= room && isBalanced(whole)) return whole;
 
   const words = phrase.split(" ");
+  if (QUESTION_WORDS.has(words[0].toLowerCase())) return fallback(doc, room);
   for (let at = words.length - 1; at >= 3; at--) {
     if (!CUT_WORDS.has(words[at])) continue;
-    const cut =
-      prefix +
-      words
-        .slice(0, at)
-        .join(" ")
-        .replace(/[,;:]+$/, "");
+    const kept = words.slice(0, at);
+    // A relative clause cut before its end.
+    if (kept.some((word) => RELATIVE_WORDS.has(word))) continue;
+    if (!whetherHasVerb(kept)) continue;
+    const cut = prefix + kept.join(" ").replace(/[,;:]+$/, "");
     if (cut.length <= room && isBalanced(cut) && !endsOnDanglingWord(cut)) {
       return cut;
     }

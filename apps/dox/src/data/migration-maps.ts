@@ -38,14 +38,14 @@ const dateFns: LibraryMap = {
         "isValidZonedDateTime",
         "isValidUtc",
       ],
-      note: "The string is the value, so there is nothing to parse; check it with a validator. `parseISO` drops the offset before a `[zone]`. Temporal reads the basic format `20240212`; GMT rejects it on purpose and follows the extended format of RFC 3339 §5.6.",
+      note: "The string is the value, so there is nothing to parse; check it with a validator. `parseISO` drops the offset before a `[zone]` and then reads the wall time as UTC (`03:30Z`). Temporal reads the basic format `20240212`; GMT rejects it on purpose and follows the extended format of RFC 3339 §5.6.",
       cases: ["M9c", "M10"],
     },
     {
       theirs: '`parse(s, "dd/MM/yyyy", ref)`',
       gmt: ["parseDateWithPattern"],
       note: "`yyyy` is four digits in GMT. date-fns reads `2-12-12` as year 2.",
-      cases: ["M9"],
+      cases: ["M9d"],
     },
     {
       theirs: "`isValid(d)`",
@@ -72,7 +72,7 @@ const dateFns: LibraryMap = {
     {
       theirs: "`addDays(d, n)`",
       gmt: ["addDate", "addZoned"],
-      note: "In a zone, a day is a calendar day.",
+      note: "date-fns works in the host zone, so a day is a calendar day of the host, and the result depends on the host zone. GMT takes the zone from the value.",
       cases: ["M1", "M2"],
     },
     {
@@ -150,7 +150,7 @@ const dateFns: LibraryMap = {
       theirs:
         "`isWeekend(d)`, `addBusinessDays(d, n)`, `differenceInBusinessDays(a, b)`",
       gmt: ["isWeekend", "addBusinessDays", "businessDaysBetween"],
-      note: "date-fns fixes the weekend to Saturday and Sunday. GMT takes the weekend from the locale or from a calendar you pass.",
+      note: "date-fns fixes the weekend to Saturday and Sunday. `isWeekend` in GMT takes a locale. `addBusinessDays` takes an optional calendar and counts Monday to Friday without one. `businessDaysBetween` requires a calendar and reads the weekend from `calendar.weekend`.",
       cases: ["M15"],
     },
     {
@@ -202,6 +202,7 @@ const luxon: LibraryMap = {
     {
       theirs: '`DateTime.fromFormat(s, "dd/MM/yyyy")`',
       gmt: ["parseDateWithPattern"],
+      cases: ["M9d"],
     },
     {
       theirs: "`dt.isValid`, `dt.invalidReason`",
@@ -342,12 +343,13 @@ const dayjs: LibraryMap = {
       theirs: "`dayjs(s)`",
       gmt: ["isValidDate", "isValidDateTime"],
       note: 'The string is the value; check it with a validator. `dayjs("2024-02-30")` is 2024-03-01.',
-      cases: ["M9b"],
+      cases: ["M9", "M9b"],
     },
     {
       theirs: '`dayjs(s, "DD/MM/YYYY", true)` (customParseFormat)',
       gmt: ["parseDateWithPattern"],
       note: "Rewrite the tokens to `dd/MM/yyyy`.",
+      cases: ["M9d"],
     },
     { theirs: "`.isValid()`", gmt: ["isValidDate"] },
     {
@@ -369,7 +371,7 @@ const dayjs: LibraryMap = {
     {
       theirs: '`.add(1, "day")`',
       gmt: ["addDate", "addZoned"],
-      note: "With the `timezone` plugin, Day.js gives a wrong offset across a gap.",
+      note: "With the `timezone` plugin, Day.js keeps the starting offset after a clock change: 2024-03-30 12:00 in Berlin plus one day gives `12:00+01:00`; Temporal gives `12:00+02:00`.",
       cases: ["M1", "M2", "M3", "M5"],
     },
     {
@@ -396,7 +398,7 @@ const dayjs: LibraryMap = {
     {
       theirs: '`dayjs.tz(s, z).startOf("day")` (timezone)',
       gmt: ["startOfZoned"],
-      note: "Day.js returns a 00:00 that does not exist on a day whose midnight is skipped.",
+      note: "On a day whose midnight is skipped, Day.js returns a 00:00 that does not exist unless the host zone is America/Santiago, so the result depends on the host zone.",
       cases: ["M6"],
     },
     {
@@ -477,6 +479,7 @@ const moment: LibraryMap = {
       theirs: '`moment(s, "DD/MM/YYYY", true)`',
       gmt: ["parseDateWithPattern"],
       note: "Rewrite the tokens to `dd/MM/yyyy`.",
+      cases: ["M9d"],
     },
     { theirs: "`.isValid()`", gmt: ["isValidDate"] },
     {

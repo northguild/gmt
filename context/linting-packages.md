@@ -20,7 +20,7 @@ GMT publishes three opt-in linting packages that enforce the `Date` API ban at t
 | `Date.parse(...)`          | `convertZonedToUnix(value)`                                  |
 | `Date.UTC(...)`            | `convertUtcToUnix(value, { epochUnit })`                     |
 | `date.getTimezoneOffset()` | `getZonedNow(tz)` or zoned helpers                           |
-| Importing `moment`, `moment-timezone`, `dayjs`, `luxon`, `date-fns`, `date-fns-tz`, `spacetime` | `@northguild/gmt` |
+| Importing `moment`, `moment-timezone`, `dayjs`, `luxon`, `date-fns`, `date-fns-tz`, `@date-fns/tz`, `spacetime` | `@northguild/gmt` |
 
 The import ban covers every specifier form — default, named, namespace, side-effect,
 type-only, subpaths (`date-fns/format`), `require()`, dynamic `import()`, and

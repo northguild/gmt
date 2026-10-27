@@ -45,7 +45,7 @@ TC39 moved Temporal to Stage 4 on 2026-03-11. It is not yet part of ECMA-262. On
 | ISO week | `d.yearOfWeek`, `d.weekOfYear`, `d.dayOfWeek` | `getIsoWeekDate` | [3.3.12](https://tc39.es/proposal-temporal/#sec-get-temporal.plaindate.prototype.weekofyear), [3.3.13](https://tc39.es/proposal-temporal/#sec-get-temporal.plaindate.prototype.yearofweek), [12.3.18](https://tc39.es/proposal-temporal/#sec-temporal-isoweekofyear) |
 | Change calendar | `d.withCalendar("japanese")` | `convertDateToCalendar` | [3.3.24](https://tc39.es/proposal-temporal/#sec-temporal.plaindate.prototype.withcalendar) |
 | Duration total | `Duration.from(s).total({ unit, relativeTo })` | `totalDuration` | [7.3.21](https://tc39.es/proposal-temporal/#sec-temporal.duration.prototype.total) |
-| A legacy date object | `date.toTemporalInstant()` | `toTemporalInstant` | none |
+| A `Date` object | `date.toTemporalInstant()` | `toTemporalInstant` | [14.9.1](https://tc39.es/proposal-temporal/#sec-date.prototype.totemporalinstant) |
 
 The clause in each row is the rule GMT follows for that call.
 

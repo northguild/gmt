@@ -178,6 +178,10 @@ export const RULES = [
 
   // The licence files. licences.mjs reads the root LICENSE, each top-level folder's LICENSE and
   // each package's LICENSE, and lists every tracked file to find the top-level folders.
+  // The Dox tests copy scripts/, so they read its LICENSE too.
+  { test: /^scripts\/LICENSE$/, checks: ["licences", ...SCRIPT_TESTS] },
+  // The markers check lists apps/ to find test files.
+  { test: /^apps\/LICENSE$/, checks: ["licences"], listed: ["markers"] },
   { test: /^(?:[^/]+\/)?LICENSE$/, checks: ["licences"] },
   { test: /^packages\/[^/]+\/LICENSE$/, checks: ["licences"], listed: ALL },
 
@@ -303,7 +307,7 @@ export const RULES = [
 
   // The repo scripts. Each runs as its own check, and the Dox tests cover them all.
   { test: /^scripts\/deps\.mjs$/, checks: ["deps", ...SCRIPT_TESTS] },
-  { test: /^scripts\/licences\.mjs$/, checks: ["licences"] },
+  { test: /^scripts\/licences\.mjs$/, checks: ["licences", ...SCRIPT_TESTS] },
   // The behaviour matrix runner is run by hand; the Dox tests walk and copy scripts/.
   { test: /^scripts\/behaviour-matrix\//, checks: SCRIPT_TESTS },
   {

@@ -86,9 +86,50 @@ describe("behaviour matrix snapshot", () => {
     expect(rowAnchor("M3b", "date-fns")).toBe("m3b-date-fns");
   });
 
-  it("lists only differing cases as differences", () => {
+  it("lists only differing or host-dependent cases as differences", () => {
     for (const id of LIBRARY_IDS) {
-      for (const { row } of diffsFor(id)) expect(row.verdict).toBe("differs");
+      for (const { row } of diffsFor(id)) {
+        expect(["differs", "varies"]).toContain(row.verdict);
+      }
+    }
+  });
+
+  it("names the host zones, none of them UTC", () => {
+    expect(matrix.runtime.hostZones.length).toBeGreaterThanOrEqual(2);
+    for (const zone of matrix.runtime.hostZones) {
+      expect(zone).not.toMatch(/^(UTC|Etc\/)/);
+    }
+  });
+
+  it("gives a host-dependent row its per-host results and no single result", () => {
+    for (const matrixCase of matrix.cases) {
+      for (const row of matrixCase.libraries) {
+        if (row.verdict !== "varies") continue;
+        expect(row.hosts?.length, matrixCase.id).toBe(
+          matrix.runtime.hostZones.length,
+        );
+        expect(row.returns, matrixCase.id).toBeUndefined();
+      }
+    }
+  });
+
+  it("never says same while the hosts disagree", () => {
+    for (const matrixCase of matrix.cases) {
+      for (const row of matrixCase.libraries) {
+        if (row.verdict !== "same" || !row.hosts) continue;
+        expect(
+          row.hosts.every((host) => host.verdict === "same"),
+          matrixCase.id,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("holds GMT to a same or differs verdict on every host", () => {
+    for (const matrixCase of matrix.cases) {
+      expect(["same", "differs"], matrixCase.id).toContain(
+        matrixCase.gmt.verdict,
+      );
     }
   });
 
