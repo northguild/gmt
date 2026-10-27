@@ -503,6 +503,9 @@ textarea.gmt-input::-webkit-resizer {
 }
 
 .gmt-handle:focus-visible {
+  /* Two grips can sit within a hit area of each other; the focused one comes
+     to the front so a neighbour never covers its ring or its centre. */
+  z-index: 1;
   outline: none;
   box-shadow:
     0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),

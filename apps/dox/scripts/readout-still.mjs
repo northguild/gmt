@@ -110,11 +110,15 @@
  *
  * `--all` prints every distinct problem element once, instead of the first few.
  * `--keyboard-only` skips the pointer drags (WebKit's synthetic pointer events
- * are flaky). Chromium and WebKit only: Firefox is blocked by the sandbox on
- * this machine.
+ * are flaky). `--browsers` also takes `firefox`, which does not launch under the
+ * sandbox on the author's machine.
+ *
+ * The runner's contract (`pnpm --filter dox gates`, `scripts/gates/`): `--list-pages` prints the
+ * tool pages and exits; `--pages /tools/<slug>/,...` runs only those (an unknown path exits 2); with
+ * `GATE_REPORT` set, every failure is also a finding and the run ends with its measured count.
  */
 
-import { chromium, webkit } from "@playwright/test";
+import { chromium, firefox, webkit } from "@playwright/test";
 import {
   blockOffSite,
   controlPresence,
@@ -122,7 +126,11 @@ import {
   keyboardMoveProblems,
   pointerMoveProblems,
 } from "./gate-checks.mjs";
+import { applyPageContract } from "./gates/contract.mjs";
+import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 
+const GATE = "readout-still";
+const ENGINES = { chromium, webkit, firefox };
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
@@ -135,9 +143,9 @@ const ONLY = opt("only", "").split(",").filter(Boolean);
 const KEYBOARD_ONLY = args.includes("--keyboard-only");
 /** `--all` prints every problem, one line per element, instead of the first six. */
 const ALL = args.includes("--all");
-if (!BROWSERS.every((b) => b === "chromium" || b === "webkit")) {
+if (!BROWSERS.every((b) => b in ENGINES)) {
   console.error(
-    `Unsupported --browsers "${BROWSERS.join(",")}": only chromium and webkit run here.`,
+    `Unsupported --browsers "${BROWSERS.join(",")}": chromium, webkit and firefox run here.`,
   );
   process.exit(2);
 }
@@ -458,6 +466,59 @@ const TOOLS = [
  * settling ease is never read as a readout that moved. A readout that moves
  * during the drag still fails, because the base is taken after this.
  */
+/** The pages this gate checks, as site paths. */
+const SITE_PAGES = TOOLS.map((t) => `/tools/${t.slug}/`);
+const PAGES_ARG = applyPageContract({ gate: GATE, pages: SITE_PAGES });
+/** The page, browser and width the measurement in progress belongs to, for its findings. */
+let current = { page: null, browser: null, width: null };
+/** Page x browser x width cells the run reached and measured. */
+let cells = 0;
+
+/** One finding, tagged with the page, browser and width in progress. */
+function finding(rule, message, selector = null) {
+  recordFinding({ gate: GATE, rule, selector, message, ...current });
+}
+
+/**
+ * One drag problem as `{ key, message }`. A moved element reads
+ * `<step> (value <v>): <element>: {before} -> {after}`; the key is the element, so a drag that
+ * moves it on every step is one finding, and the message names the first step that moved it.
+ */
+function dragProblem(problem) {
+  const body = problem.split(": {")[0];
+  const at = body.lastIndexOf("): ");
+  if (at === -1) return { key: body, message: problem };
+  const element = body.slice(at + 3);
+  return {
+    key: element,
+    message: `${element} moved at ${body.slice(0, at + 1)}`,
+  };
+}
+
+/** Findings already written, so a repeat drag of the same handle adds nothing. */
+const reported = new Set();
+
+/**
+ * A drag's problems as findings: one per page, browser, width, handle and element, however many
+ * steps or drags moved it.
+ */
+function recordDragFindings(result, selector) {
+  for (const p of result.problems) {
+    const { key, message } = dragProblem(p);
+    const id = [
+      current.page,
+      current.browser,
+      current.width,
+      selector,
+      key,
+    ].join("|");
+    if (reported.has(id)) continue;
+    reported.add(id);
+    const stuck = /never moved|exposes no value/.test(p);
+    finding(stuck ? "value-not-moved" : "readout-moved", message, selector);
+  }
+}
+
 async function settled(page, root) {
   let last = -1;
   let same = 0;
@@ -609,7 +670,11 @@ async function valueOf(page, sel, field) {
 
 async function run() {
   const unknown = ONLY.filter((slug) => !TOOLS.some((t) => t.slug === slug));
-  const tools = TOOLS.filter((t) => !ONLY.length || ONLY.includes(t.slug));
+  const tools = TOOLS.filter(
+    (t) =>
+      (!ONLY.length || ONLY.includes(t.slug)) &&
+      (!PAGES_ARG || PAGES_ARG.includes(`/tools/${t.slug}/`)),
+  );
   if (unknown.length || !tools.length) {
     console.error(
       `--only ${unknown.length ? `"${unknown.join(",")}" matches no tool` : "matched no tool"}; known: ${TOOLS.map((t) => t.slug).join(", ")}`,
@@ -626,10 +691,14 @@ async function run() {
   const fail = (id, message) => {
     failures++;
     summary.push({ id, ok: false, problems: [message] });
+    finding(
+      /required control/.test(message) ? "control-missing" : "page-error",
+      message,
+    );
     console.log(`FAIL ${id}: ${message}`);
   };
   for (const name of BROWSERS) {
-    const browser = await (name === "webkit" ? webkit : chromium).launch();
+    const browser = await ENGINES[name].launch();
     const variants = [
       ...WIDTHS.map((w) => ({ viewport: w, root: null })),
       ...EXTRA_WIDTHS.map((w) => ({ viewport: w, root: null, extra: true })),
@@ -644,6 +713,11 @@ async function run() {
       for (const tool of tools) {
         if (v.extra && !tool.extraWidths?.includes(v.viewport)) continue;
         const where = `${name} ${v.root ? `root${v.root}` : v.viewport} ${tool.slug}`;
+        current = {
+          page: `/tools/${tool.slug}/`,
+          browser: name,
+          width: v.root ?? v.viewport,
+        };
         const response = await page.goto(`${BASE}/tools/${tool.slug}/`, {
           waitUntil: "networkidle",
         });
@@ -661,6 +735,7 @@ async function run() {
           fail(where, `widget root ${tool.root} matched nothing on the page`);
           continue;
         }
+        cells++;
         await page.addStyleTag({
           content:
             "header, .header, starlight-menu-button, .sl-banner, mobile-starlight-toc { display: none !important; }" +
@@ -737,6 +812,7 @@ async function run() {
               const ok = result.problems.length === 0;
               if (!ok) failures++;
               summary.push({ id, ...result, ok });
+              recordDragFindings(result, sel);
               console.log(
                 `${ok ? "ok  " : "FAIL"} ${id}: ${result.keyboard} keyboard steps, ${result.pointer} pointer steps` +
                   (ok ? "" : `, ${result.problems.length} problem(s)`),
@@ -825,6 +901,7 @@ async function run() {
             const ok = result.problems.length === 0;
             if (!ok) failures++;
             summary.push({ id, ...result, ok });
+            recordDragFindings(result, sel);
             console.log(
               `${ok ? "ok  " : "FAIL"} ${id}: ${result.keyboard} keyboard steps, ${result.pointer} pointer steps` +
                 (ok ? "" : `, ${result.problems.length} problem(s)`),
@@ -857,6 +934,7 @@ async function run() {
   );
   const empty = emptyRunProblem(summary.length, "drags");
   if (empty) console.error(empty);
+  recordMeasured(GATE, cells);
   process.exit(failures === 0 && !empty ? 0 : 1);
 }
 

@@ -1,0 +1,23 @@
+# command: pnpm --filter @gmt/dox lint with the oxlint plugin not built (a failure no parser knows)
+# captured with NO_COLOR=1 FORCE_COLOR=0 from a deliberate break, reverted straight after
+$ oxlint
+Failed to parse oxlint configuration file.
+
+  x Failed to load config: /abs/repo/apps/dox/oxlint.config.mts
+  | 
+  | Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/abs/repo/apps/dox/node_modules/@northguild/gmt-oxlint/dist/index.js' imported from /abs/repo/apps/dox/oxlint.config.mts
+  |     at finalizeResolution (node:internal/modules/esm/resolve:241:11)
+  |     at moduleResolve (node:internal/modules/esm/resolve:846:10)
+  |     at defaultResolve (node:internal/modules/esm/resolve:973:11)
+  |     at #cachedDefaultResolve (node:internal/modules/esm/loader:708:20)
+  |     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:728:38)
+  |     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:766:56)
+  |     at #resolve (node:internal/modules/esm/loader:690:17)
+  |     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:610:35)
+  |     at ModuleJob.syncLink (node:internal/modules/esm/module_job:277:33)
+  |     at ModuleJob.link (node:internal/modules/esm/module_job:389:17)
+
+[ELIFECYCLE] Command failed with exit code 1.
+Error: ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL
+
+  × "pnpm recursive run" failed in /abs/repo/apps/dox

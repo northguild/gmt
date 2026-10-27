@@ -1,0 +1,304 @@
+{
+  "_fixture": "Captured with the query buildQuery() sends (scripts/lib/pr-status-plan.mjs), northguild/gmt, viewer baldurpan. PR #399 with ONE FIELD EDITED: the IOT-101.md thread's only comment is now authored by craig-o-curtis (body replaced too), so that thread is unanswered. Everything else is the real response.",
+  "data": {
+    "viewer": {
+      "login": "baldurpan"
+    },
+    "repository": {
+      "pullRequest": {
+        "number": 399,
+        "title": "chore(domination): narrow the Space stories and add the industry timestamp format stories",
+        "url": "https://github.com/northguild/gmt/pull/399",
+        "state": "OPEN",
+        "isDraft": false,
+        "reviewDecision": null,
+        "mergeStateStatus": "BLOCKED",
+        "headRefOid": "1bbd3dee2f8ee4bb1f60ecc6a8bb203aa39939d6",
+        "commits": {
+          "nodes": [
+            {
+              "commit": {
+                "statusCheckRollup": {
+                  "contexts": {
+                    "nodes": [
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Determine affected packages",
+                        "status": "IN_PROGRESS",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/40317423053/job/121553411882",
+                        "databaseId": 121553411882,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 40317423053
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "No machine trailers",
+                        "status": "IN_PROGRESS",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/northguild/gmt/actions/runs/40317423053/job/121553412406",
+                        "databaseId": 121553412406,
+                        "checkSuite": {
+                          "workflowRun": {
+                            "databaseId": 40317423053
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "reviewThreads": {
+          "nodes": [
+            {
+              "isResolved": true,
+              "isOutdated": true,
+              "path": "context/domination/overview.md",
+              "line": null,
+              "originalLine": 290,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "With SPA-74 gone and SPA-49's design note rewritten, no story names NASA/NAIF SPICE any more. Those were its only two citations, and `git grep -E 'NAIF|SPICE'` over `context/domination/issues` and `tracker.md` now finds nothing.\n\nThis line lists the national sources that stories name, and this PR already took Espenak & Meeus out of it for the same reason. NASA/NAIF SPICE should come out too.",
+                    "createdAt": "2026-10-26T10:36:23Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376285835"
+                  },
+                  {
+                    "author": {
+                      "login": "craig-o-curtis"
+                    },
+                    "body": "Removed in 7c2d6c65. No remaining story cites NASA/NAIF SPICE, so it is out of the national-sources line, as Espenak & Meeus was.",
+                    "createdAt": "2026-10-26T10:40:35Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376319409"
+                  },
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "Confirmed in 7c2d6c65. NASA/NAIF SPICE is off the line, and outside Corrections, `painpoints.md` and `research/` nothing in `context/domination` names it any more. Resolving.",
+                    "createdAt": "2026-10-26T10:43:01Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376339293"
+                  }
+                ]
+              }
+            },
+            {
+              "isResolved": true,
+              "isOutdated": true,
+              "path": "context/domination/issues/SPA-49.md",
+              "line": null,
+              "originalLine": 47,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "On main, `'TDB'` was in the scale type because SPA-74 would make it work later without changing the signature. With SPA-74 gone, no story will ever make it work. So is `'TDB'` still a member of `TimeScale`?\n\n- If it is, every function in this story accepts a value that can only ever return the sentinel.\n- If it is not, the `'TDB'` row on line 69 is just another case of the \"Invalid input\" row on line 71, and the test needs a cast to pass it.\n\nThis spec never defines `TimeScale`, and `packages/gmt/src` has no such type yet, only `GnssTimeScale`. One line naming its members would settle this. The same line could say what the JD and J2000 functions do with `'TCG'`, which SPA-47 provides.",
+                    "createdAt": "2026-10-26T10:36:24Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376285844"
+                  },
+                  {
+                    "author": {
+                      "login": "craig-o-curtis"
+                    },
+                    "body": "Settled in 7c2d6c65: SPA-49 now defines `TimeScale` as `'UTC' | 'TAI' | 'TT' | 'TCG'`, the scales the epic's stories provide. Every function accepts all four; a JD, MJD or J2000 count in TCG is taken on TCG's own time line through SPA-47's conversions. TDB is not a member, so it needs a cast and returns the sentinel like any other invalid input. The verification rows are now: each function accepts all four members, a JD in TCG round-trips through `toTCG`/`fromTCG`, and a scale outside the type (e.g. `'TDB'` with a cast) returns the sentinel.",
+                    "createdAt": "2026-10-26T10:40:37Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376319684"
+                  },
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "Confirmed in 7c2d6c65. `TimeScale` is now defined, TDB is clearly outside it, and TCG has a meaning in every function, backed by `toTCG` and `fromTCG`, which SPA-47 defines. The new verification rows match the note. Resolving.",
+                    "createdAt": "2026-10-26T10:43:04Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376339642"
+                  }
+                ]
+              }
+            },
+            {
+              "isResolved": false,
+              "isOutdated": true,
+              "path": "context/domination/issues/FIN-96.md",
+              "line": null,
+              "originalLine": 53,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "SWIFT does say which century, for this field. *Message Format Validation Rules* (November 2006), Part II §4.1.1 Value Date covers \"all category 1 and category 2 messages containing fields 30 or 32A\", and lists MT 103 by name:\n\n> The valid range of value dates implemented on the SWII system is from 1980 to 2060 (limits included) … IF YY >79 THEN year = \"19\" || \"YY\" ELSE year = \"20\" || \"YY\" ENDIF IF year > 2060 THEN <error:'T50'>\n\n(Source: https://pinas.synology.me/Swift_Manual/2006/FINAL/UTMF/PTII.PDF, on the same mirror as the one cited on line 14. I couldn't reach a current edition. If a later Standards Release moved the window, cite that edition instead, and the numbers below change with it.)\n\nSo SWIFT reads `990615` as 1999 and `000229` as 2000. It rejects `750101` and `760101` with T50, because 2075 and 2076 are past 2060. Three verification rows disagree:\n\n- Line 89: `{ yearWindow: 2000 }` gives `2099-06-15`, a date SWIFT rejects.\n- Line 90: `{ yearWindow: 1900 }` returns the sentinel for a date SWIFT accepts.\n- Line 91: rolling at 2026-10-26 gives `2075-01-01` and `1976-01-01`, and SWIFT rejects both.\n\nA caller can get SWIFT's reading by passing `{ yearWindow: 1980 }`. But nothing in the spec tells them 1980 is the right value, and nothing refuses 2061 to 2079. Either fix works; it's your call:\n\n- make SWIFT's rule the parser's behaviour for 32A (a window from 1980, refused after 2060), with no `yearWindow` needed, or\n- keep the caller's window, but say in this note that SWIFT fixes it at 1980 to 2060. Add an authority row for that, and name 1980 as the value to pass.\n\nEither way, line 74 (\"no standard names the century of a two-digit year\") and line 10 (\"a parser that does has to choose a century\") need to change, along with rows 89 to 91.",
+                    "createdAt": "2026-10-26T11:22:35Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376663356"
+                  },
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "The push to 8660386 adds `isValidSwiftDate`, and its new row on line 108 depends on this thread. It says `isValidSwiftDate('000229', { yearWindow: 1900 })` is `false`, but SWIFT reads `00` as 2000 and accepts the date. A window from 2000 would also make `750101` valid, where SWIFT returns T50. Both will change with whichever fix you choose, and so will the authority row that is now on line 85.\n\nThe repo's own rule supports the first fix. `context/coding-standards.md:113` says GMT \"never picks a century where it has a choice. Two formats have no choice: RFC 5322 §4.3 and RFC 9110 each mandate a two-digit-year rule for their own obsolete date forms, and `parseRfc2822` and `parseHttpDate` apply exactly those.\" SWIFT's §4.1.1 is a third mandated rule of the same kind. Applying it in `parseSwiftDate` would follow that precedent, not break it.",
+                    "createdAt": "2026-10-26T11:32:20Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376738993"
+                  }
+                ]
+              }
+            },
+            {
+              "isResolved": false,
+              "isOutdated": false,
+              "path": "context/domination/issues/IOT-101.md",
+              "line": 82,
+              "originalLine": 69,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "craig-o-curtis"
+                    },
+                    "body": "Why not keep the old name?\nSecond line.",
+                    "createdAt": "2026-10-26T11:22:35Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376663364"
+                  }
+                ]
+              }
+            },
+            {
+              "isResolved": false,
+              "isOutdated": false,
+              "path": "context/domination/issues/HLTH-94.md",
+              "line": 65,
+              "originalLine": 58,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "This line says to \"extend\" the guide, and line 61 says to extend the mistakes page, so this story assumes HLTH-93 has already shipped. But `tracker.md:182` says \"the nine can be built in any order but one\". Lines 34 to 36 also plan for this story going first: it then opens the realm \"with the subpaths and the industry declaration its sibling story names\".\n\nThat fallback doesn't create the guide, the mistakes page or the three indexes that HLTH-93 lists on lines 65 to 70. If this story goes first, there is nothing to extend. It can't leave the guide out either, because `apps/dox/src/lib/industry-tags.test.ts:186-190` fails unless the industry's `guide` points at a page that exists.\n\nFIN-96 (the fallback on 27–28, \"extend\" on 39 and 42) and AV-98 (35–36, 55 and 58) have the same gap.\n\nEither fix works:\n\n- make each pair ordered (HLTH-93 before HLTH-94, FIN-95 before FIN-96, AV-97 before AV-98), say so on `tracker.md:182`, and drop the fallback, or\n- widen the fallback to everything the sibling story lists under \"Docs site\", and write \"create or extend\".",
+                    "createdAt": "2026-10-26T11:22:35Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376663368"
+                  }
+                ]
+              }
+            },
+            {
+              "isResolved": false,
+              "isOutdated": true,
+              "path": "context/domination/issues/HLTH-93.md",
+              "line": null,
+              "originalLine": 37,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "Opening an industry takes more than the `industries.json` entry. `context/dox/built.md:1497-1499` says: \"A new industry is one entry in `industries.json`, one glyph in `INDUSTRY_ICON_PATHS` and one hub text in `industry-overview.ts`\". The dox tests enforce all three:\n\n- `apps/dox/src/lib/industry-tags.test.ts:182-184`: the entry's `icon` must be a key of `INDUSTRY_ICON_PATHS`.\n- `apps/dox/src/lib/industry-overview.test.ts:41-45`: `INDUSTRY_OVERVIEWS` must have text for every industry in `industries.json`.\n- `apps/dox/src/lib/industry-overview.test.ts:47-79`: that text must state three to five problems, name at least one function for each, and name only functions from the industry's own namespace or a module in its `drawsOn`.\n\nNone of the specs mention the glyph or the hub text, so the dox suite will go red as soon as a story adds the entry. Please add both to this line, and to the same line in FIN-95 (28–31), AV-97 (33–36), RAI-99 (31–34) and IOT-101 (29–32).\n\nAbout `drawsOn`: RAI-99 and IOT-101 declare theirs, and Healthcare and Finance declare none. That's fine as long as their hub texts name only their own functions. HLTH-94 uses `isLeapSecond` from `timescale`, so if the Healthcare hub ever names it, Healthcare needs `timescale` in `drawsOn`.",
+                    "createdAt": "2026-10-26T11:22:35Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376663380"
+                  }
+                ]
+              }
+            },
+            {
+              "isResolved": false,
+              "isOutdated": true,
+              "path": "context/domination/issues/AV-97.md",
+              "line": null,
+              "originalLine": 13,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "`painpoints.md:24-25` says: \"do not add a realm function that is not traceable to a painpoint below. If you find a new one, add it here first, with a source.\"\n\n§ Aviation supports the sentence this link is on: the schedule seasons are on line 260. But nothing in `painpoints.md` mentions SSIM or the `DDMMMYY` date, and searching the file for \"SSIM\" finds nothing. So `parseSsimDate` and `formatSsimDate` don't trace to a painpoint yet.\n\nThe fix is the one the rule names. Add an Aviation entry for SSIM dates (English month letters and a two-digit year), with the AECFA guide from line 20 as its source.",
+                    "createdAt": "2026-10-26T11:22:35Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376663387"
+                  }
+                ]
+              }
+            },
+            {
+              "isResolved": false,
+              "isOutdated": true,
+              "path": "context/domination/issues/HLTH-93.md",
+              "line": null,
+              "originalLine": 19,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "This overstates the problem. From v2.3 on, `TS` component 1 is a `DTM`, and component 2 is kept only for older senders. The chapter linked on line 22 says this about component 2, the degree of precision: \"Retained only for purposes of backward compatibility as of v 2.3. Refer to component 1 for current method of designating degree of precision.\" Every row of Table 0529 is marked \"Retained for backward compatibility only\".\n\nA `TS` value without `^` is a valid `DTM`, so a `DTM`-only parser reads it. It fails only on values that still carry the second component. The second half of the sentence is right: `|199904011200^L|`, the chapter's own example, is April 1999, not 12:00.\n\nYou could write: \"A parser that accepts only `DTM` rejects any value that still carries the degree of precision, which HL7 has kept only for backward compatibility since v2.3. One that ignores it reads a date as a time.\"",
+                    "createdAt": "2026-10-26T11:22:35Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376663395"
+                  }
+                ]
+              }
+            },
+            {
+              "isResolved": false,
+              "isOutdated": true,
+              "path": "context/domination/issues/RAI-100.md",
+              "line": null,
+              "originalLine": 75,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "`Temporal.PlainDate.from` reads `YYYYMMDD`, but it also reads much more than the two forms on line 25. I passed each of these to `Temporal.PlainDate.from` in `@js-temporal/polyfill` 0.5.1, and every one returned 30 January 2024:\n\n- `2024-01-30T23:00` and `20240130T2300`: date-times, and the time is dropped\n- `+002024-01-30`: an extended year\n- `2024-01-30[u-ca=hebrew]`: a calendar annotation, and the result is a Hebrew-calendar date\n- `2024-01-30T10:00+05:00[Asia/Kolkata]`: a zoned date-time\n\nLine 42 says a `serviceDate` in neither form returns the sentinel, so each of these should. Code that follows this note would accept all of them and still pass every Verification row, because no row tries one. `'20240230'` on line 108 is the only bad date there, and Temporal rejects that one by itself.\n\nPlease change this note to say that the shape is checked first, as exactly `YYYYMMDD` or `YYYY-MM-DD`, and that only a value in that shape goes to `Temporal.PlainDate.from`. Then add `'2024-01-30T23:00'` and `'+002024-01-30'` to the sentinel row on line 108.",
+                    "createdAt": "2026-10-26T11:32:18Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376738764"
+                  }
+                ]
+              }
+            },
+            {
+              "isResolved": false,
+              "isOutdated": true,
+              "path": "context/domination/issues/HLTH-94.md",
+              "line": null,
+              "originalLine": 37,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "baldurpan"
+                    },
+                    "body": "This is the wrong way round. The Datatypes page prints each pattern with single backslashes, so its `dateTime` row reads `(\\.[0-9]+)?(Z|(\\+|-)(…`, and the page has no `\\\\` anywhere. The doubled form is in the StructureDefinition JSON, `\"valueString\" : \"…(\\\\.[0-9]+)?(Z|(\\\\+|-)…\"`, and that is only how JSON escapes a backslash in a string. Once the JSON is decoded, the two sources print the same pattern.\n\nIt matters because this line says to copy the patterns verbatim from the StructureDefinitions. Pasted from the raw JSON into a regex literal, which is how `epcisTimeZoneOffset` is written, `\\\\.` matches a backslash followed by any character, and `(\\\\+|-)` matches one or more backslashes or a minus sign. `fhirDateTime` and `fhirInstant` would then reject every value with a fraction of a second or a `+` offset.\n\nYou could write: \"the Datatypes page prints the same patterns; the StructureDefinition JSON escapes each backslash, so decode it before copying.\"",
+                    "createdAt": "2026-10-26T11:32:18Z",
+                    "url": "https://github.com/northguild/gmt/pull/399#discussion_r4376738768"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "latestReviews": {
+          "nodes": [
+            {
+              "author": {
+                "login": "baldurpan"
+              },
+              "state": "COMMENTED"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

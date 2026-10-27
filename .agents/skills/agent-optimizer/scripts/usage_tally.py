@@ -8,7 +8,10 @@ import os
 import time
 from datetime import datetime, timezone
 from collections import Counter, defaultdict
+from datetime import date, timedelta
 from pathlib import Path
+
+from usage_activity import classify
 
 BIG_CONTEXT = 150_000  # requests above this many context tokens are counted separately
 NOTE = (
@@ -36,26 +39,33 @@ def result_size(content: object) -> int:
     return len(json.dumps(content))
 
 
-def too_old(raw_ts: object, cutoff: float) -> bool:
-    """True when a line's ISO 8601 `timestamp` is before the cutoff (epoch seconds).
+def parse_ts(raw_ts: object) -> datetime | None:
+    """A line's ISO 8601 `timestamp` as an aware datetime, or None when absent or unparseable."""
+    if not isinstance(raw_ts, str):
+        return None
+    try:
+        when = datetime.fromisoformat(raw_ts[:-1] + "+00:00" if raw_ts.endswith("Z") else raw_ts)
+    except ValueError:
+        return None
+    return when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+
+
+def too_old(raw_ts: object, cutoff: float, until: float = float("inf")) -> bool:
+    """True when a line's ISO 8601 `timestamp` is before the cutoff or at/after `until` (epoch seconds).
 
     A line with no timestamp, or one that does not parse, is kept: its file already passed the
     mtime prefilter, and dropping unknown lines would hide real usage.
     """
-    if not isinstance(raw_ts, str):
-        return False
-    try:
-        when = datetime.fromisoformat(raw_ts[:-1] + "+00:00" if raw_ts.endswith("Z") else raw_ts)
-    except ValueError:
-        return False
-    if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
-    return when.timestamp() < cutoff
+    when = parse_ts(raw_ts)
+    return when is not None and not cutoff <= when.timestamp() < until
 
 
-def scan_file(path: Path, agg: dict, depth_ctx: Counter, reads: dict, cutoff: float = 0.0) -> None:
+def scan_file(path: Path, agg: dict, depth_ctx: Counter, reads: dict, cutoff: float = 0.0,
+              until: float = float("inf"), activity: dict | None = None, day_set: set | None = None) -> None:
     agent, depth, _ = agent_of(path)
     seen: set[str] = set()
+    ctx_of: dict[str, int] = {}
+    calls_of: dict[str, dict[str, tuple]] = {}  # message id -> tool_use id -> (name, input)
     pending: dict[str, str] = {}
     with open(path, errors="ignore") as fh:
         for raw in fh:
@@ -64,8 +74,11 @@ def scan_file(path: Path, agg: dict, depth_ctx: Counter, reads: dict, cutoff: fl
                 msg = entry.get("message") or {}
             except (ValueError, AttributeError):
                 continue
-            if too_old(entry.get("timestamp"), cutoff):
+            if too_old(entry.get("timestamp"), cutoff, until):
                 continue
+            when = parse_ts(entry.get("timestamp"))
+            if day_set is not None and when is not None:
+                day_set.add(when.astimezone(timezone.utc).date())
             if not isinstance(msg, dict):
                 continue
             content = msg.get("content")
@@ -80,6 +93,11 @@ def scan_file(path: Path, agg: dict, depth_ctx: Counter, reads: dict, cutoff: fl
                     entry["chars"] += result_size(block.get("content"))
             usage = msg.get("usage")
             mid = msg.get("id")
+            if activity is not None and mid is not None:
+                for block in content if isinstance(content, list) else []:
+                    if isinstance(block, dict) and block.get("type") == "tool_use":
+                        calls_of.setdefault(mid, {})[block.get("id", len(calls_of.get(mid, {})))] = (
+                            str(block.get("name", "?")), block.get("input"))
             if not isinstance(usage, dict) or mid in seen:
                 continue
             seen.add(mid)
@@ -91,10 +109,34 @@ def scan_file(path: Path, agg: dict, depth_ctx: Counter, reads: dict, cutoff: fl
             row["peak"] = max(row["peak"], ctx)
             row["over_150k"] += ctx > BIG_CONTEXT
             depth_ctx[str(depth)] += ctx
+            ctx_of[mid] = ctx
+    if activity is None:
+        return
+    for mid, ctx in ctx_of.items():
+        calls = list(calls_of.get(mid, {}).values())
+        if not calls:
+            activity[(agent, "reply")]["context"] += ctx
+            continue
+        for name, tool_input in calls:
+            bucket, a11y = classify(name, tool_input)
+            cell = activity[(agent, bucket)]
+            cell["calls"] += 1
+            cell["context"] += ctx / len(calls)
+            cell["a11y"] += ctx / len(calls) if a11y else 0
 
 
-def tally(root: Path, days: int = 7, project_glob: str = "*", top: int = 15) -> dict[str, object]:
-    cutoff = time.time() - days * 86400
+def day_start(day: date) -> float:
+    return datetime(day.year, day.month, day.day, tzinfo=timezone.utc).timestamp()
+
+
+def tally(root: Path, days: int = 7, project_glob: str = "*", top: int = 15, by_activity: bool = False,
+          since: date | None = None, until: date | None = None) -> dict[str, object]:
+    cutoff = day_start(since) if since else time.time() - days * 86400
+    end = day_start(until + timedelta(days=1)) if until else float("inf")
+    if since:  # a window replaces --days; its length is what coverage is measured against
+        days = ((until or datetime.now(timezone.utc).date()) - since).days + 1
+    activity: dict | None = defaultdict(Counter) if by_activity else None
+    day_set: set = set()
     agg: dict = defaultdict(Counter)
     depth_ctx: Counter = Counter()
     reads: dict = defaultdict(Counter)
@@ -106,7 +148,7 @@ def tally(root: Path, days: int = 7, project_glob: str = "*", top: int = 15) -> 
             continue
         agent, _, is_sub = agent_of(path)
         spawns[agent] += is_sub
-        scan_file(path, agg, depth_ctx, reads, cutoff)
+        scan_file(path, agg, depth_ctx, reads, cutoff, end, activity, day_set)
     total = sum(r["context"] for r in agg.values()) or 1
     rows = [
         {"agent": a, "model": m, "requests": r["requests"], "context": r["context"],
@@ -119,10 +161,44 @@ def tally(root: Path, days: int = 7, project_glob: str = "*", top: int = 15) -> 
         ({"file": f, "reads": v["reads"], "chars": v["chars"]} for f, v in reads.items()),
         key=lambda r: -r["chars"],
     )
-    return {
+    out = {
         "note": NOTE, "days": days, "total_context": sum(r["context"] for r in agg.values()),
         "rows": rows[:top],
         "spawns": {k: v for k, v in spawns.most_common() if v},
         "by_depth": dict(sorted(depth_ctx.items())),
         "top_reads": top_reads[:top],
+    }
+    if since:
+        out["window"] = f"{since}..{until or 'now'}"
+    if activity is not None:
+        out.update(activity_report(activity, out["total_context"], days, day_set))
+    return out
+
+
+def activity_report(activity: dict, total: int, days: int, day_set: set) -> dict[str, object]:
+    """activity_rows, the browser summary and coverage from the per-(agent, bucket) cells."""
+    rows = [
+        {"agent": a, "activity": b, "calls": c["calls"], "context": round(c["context"]),
+         "share": round(100 * c["context"] / (total or 1), 1)}
+        for (a, b), c in activity.items()
+    ]
+    rows.sort(key=lambda r: (-r["context"], r["agent"], r["activity"]))
+    by_agent: dict = defaultdict(lambda: {"context": 0, "a11y": 0})
+    for (a, b), c in activity.items():
+        if b == "browser":
+            by_agent[a]["context"] += round(c["context"])
+            by_agent[a]["a11y"] += round(c["a11y"])
+    browser = sum(v["context"] for v in by_agent.values())
+    return {
+        "activity_rows": rows,
+        "browser": {
+            "context": browser, "share": round(100 * browser / (total or 1), 1),
+            "a11y": sum(v["a11y"] for v in by_agent.values()),
+            "by_agent": dict(sorted(by_agent.items(), key=lambda kv: -kv[1]["context"])),
+        },
+        "coverage": {
+            "days_in_window": days, "days_with_data": len(day_set),
+            "first": min(day_set).isoformat() if day_set else None,
+            "last": max(day_set).isoformat() if day_set else None,
+        },
     }

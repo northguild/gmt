@@ -1,0 +1,13 @@
+{
+  "_fixture": "Captured with the query buildQuery() sends (scripts/lib/pr-status-plan.mjs), northguild/gmt, viewer baldurpan. Branch lookup for a branch with no open PR (empty nodes). Real response.",
+  "data": {
+    "viewer": {
+      "login": "baldurpan"
+    },
+    "repository": {
+      "pullRequests": {
+        "nodes": []
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+# command: pnpm --filter @northguild/gmt-oxlint typecheck (a scratch file with 'const x: number = "s"')
+# captured with NO_COLOR=1 FORCE_COLOR=0 from a deliberate break, reverted straight after
+$ tsc --project tsconfig.json --noEmit
+src/scratch-verdict.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.
+[ELIFECYCLE] Command failed with exit code 2.
+Error: ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL
+
+  × "pnpm recursive run" failed in /home/runner/work/gmt/gmt/
+  │ gmt.worktrees/396-cut-agent-token-use-with-verdict-scripts-one-dox/
+  │ packages/gmt-oxlint
+

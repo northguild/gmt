@@ -235,6 +235,63 @@ jobs:
             pnpm exec changeset status --since="$BASE"
           fi
 
+  # The Dox browser gates on the pages the PR changed, in Chromium. Advisory: it is not a required
+  # check until the owner makes it one. `main` is covered by the nightly sweep, not by this job.
+  # `--against` is the merge base `determine-affected` computes, so both see the same diff.
+  dox-gates:
+    name: Dox gates (changed pages, Chromium)
+    runs-on: ubuntu-latest
+    needs: determine-affected
+    if: github.event_name == 'pull_request' && needs.determine-affected.outputs.dox_changed == 'true'
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          check-latest: true
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      - name: Fetch the base branch
+        run: git fetch --no-tags origin "${{ github.base_ref }}"
+
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+
+      - name: Install Chromium
+        run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium
+
+      # The runner prints one screen to the log and appends it to the job summary.
+      - name: Gates on the changed pages
+        run: >
+          pnpm --filter dox gates --tier pr --browsers chromium --themes dark,light
+          --against "origin/${{ github.base_ref }}"
+
+      - name: Upload the gate logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dox-gates-${{ github.run_id }}
+          path: |
+            apps/dox/.gates/
+            !apps/dox/.gates/vite-cache/
+          retention-days: 14
+
   build-lint:
     name: Build & Lint (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest

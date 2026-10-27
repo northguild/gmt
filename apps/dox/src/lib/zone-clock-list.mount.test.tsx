@@ -91,6 +91,13 @@ describe("mountZoneClockList", () => {
     expect(panel.querySelectorAll("[data-tz-id]").length).toBeGreaterThan(0);
   });
 
+  it("keeps the listbox as the one tab stop: no row is tabbable", () => {
+    const { panel } = mount();
+    const rows = [...panel.querySelectorAll<HTMLElement>("[data-tz-id]")];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row.getAttribute("tabindex")).toBe("-1");
+  });
+
   it("ticks without throwing, repeatedly", () => {
     const { list } = mount();
     expect(() => {
@@ -291,6 +298,43 @@ describe("mountZoneClockList", () => {
 
     list.setIds([]);
     expect(panel.hasAttribute("aria-activedescendant")).toBe(false);
+  });
+
+  it("never points aria-activedescendant at a row that is not in the DOM", () => {
+    /* The virtualizer mounts only the rows in view. A selection made while the list has no
+       size yet (the Home page's clock panel before it is laid out), or one that has since
+       scrolled out of view, has no element to name, and an id that matches nothing is an
+       invalid reference. The attribute must exist only while its target does. */
+    const many = Array.from({ length: 200 }, (_, i) => `Etc/Fake${i}`);
+    const { panel, list } = mount(many);
+    const active = () => panel.getAttribute("aria-activedescendant");
+    const resolves = () => {
+      const id = active();
+      return id === null || document.getElementById(id) !== null;
+    };
+    list.select(many[0] as string);
+    expect(active()).toBe(zoneOptionId(panel.id, 0));
+    expect(resolves()).toBe(true);
+
+    // The End key moves the active row to the last one and scrolls it into view.
+    panel.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
+    );
+    expect(resolves()).toBe(true);
+
+    // Selecting a zone far from the rendered window: whatever the attribute says must resolve.
+    list.select(many[120] as string);
+    expect(resolves()).toBe(true);
+
+    // A panel with no size yet mounts no rows, so there is nothing to name.
+    const bare = document.createElement("div");
+    bare.id = "unsized-clock-panel";
+    document.body.appendChild(bare);
+    const unsized = mountZoneClockList(bare, many, () => {});
+    mounted.push(unsized);
+    unsized.select(many[0] as string);
+    expect(bare.querySelectorAll("[data-tz-id]")).toHaveLength(0);
+    expect(bare.hasAttribute("aria-activedescendant")).toBe(false);
   });
 
   it("leaves row positions alone on a tick", () => {

@@ -26,6 +26,31 @@
   gap: var(--gmt-space-2);
 }
 
+/* The entry and exit grips are 24px wide, not the shared 14px. A dwell can be short, and then
+   the two sit closer than 24px centre to centre: a 14px-wide target is under WCAG 2.5.8's
+   minimum with no spacing to excuse it (axe `target-size`, found at 390px). At 24px each is
+   large enough on its own.
+
+   The grips also lean outward, the entry grip to the left of its edge and the exit grip to the
+   right of its own, each by 8px past centre. A short dwell puts the edges 12px apart; centred
+   grips would overlap and each hide half of the other, which axe reads as a partly obscured
+   target. Leaning keeps them clear of each other down to 8px. The track gives the 8px a side back. */
+.gmt-dwell-bar > .gmt-handle {
+  --gmt-handle-w: 24px;
+}
+
+.gmt-dwell-bar > .gmt-handle:first-child {
+  translate: calc(-50% - 8px) -50%;
+}
+
+.gmt-dwell-bar > .gmt-handle:last-child {
+  translate: calc(-50% + 8px) -50%;
+}
+
+.gmt-dwell-track {
+  margin-inline: 8px;
+}
+
 /* ---------------------------------------------------------------------------
  * Readouts hold still while a handle is dragged. Each plate reserves the width
  * of the longest value its tool can show: the value in `em` (the display font
