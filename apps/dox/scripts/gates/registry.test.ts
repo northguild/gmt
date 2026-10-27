@@ -69,6 +69,10 @@ describe("the gate registry", () => {
   });
 });
 
+// `a11y-tab-walk` lists a subset of the built pages, so without `dist` it exits 2 before it reads
+// a flag: its list fails, and its unknown-page case passes for the wrong reason.
+const LISTS_FROM_DIST = new Set(["a11y-tab-walk"]);
+
 // Each gate answers the page contract without a browser: a JSON list of site paths, and an unknown
 // page is a usage error (exit 2), so a typo never passes as an empty run.
 describe.each(GATES.filter((g) => g.pages !== "dist"))(
@@ -80,8 +84,10 @@ describe.each(GATES.filter((g) => g.pages !== "dist"))(
         encoding: "utf8",
         env: { ...process.env, GATE_REPORT: "" },
       });
+    const unbuilt = () => LISTS_FROM_DIST.has(gate.id) && !distDirOrSkip();
 
     it("answers --list-pages with a non-empty array of site paths", () => {
+      if (unbuilt()) return;
       const r = run("--list-pages");
       expect(r.status).toBe(0);
       const pages: string[] = JSON.parse(r.stdout);
@@ -91,6 +97,7 @@ describe.each(GATES.filter((g) => g.pages !== "dist"))(
     });
 
     it("rejects an unknown --pages path with exit 2", () => {
+      if (unbuilt()) return;
       const r = run("--pages", "/no/such/page/");
       expect(r.status).toBe(2);
     });
