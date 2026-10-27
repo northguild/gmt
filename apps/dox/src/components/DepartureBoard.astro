@@ -19,7 +19,7 @@ import { renderDepartureBoardTemplate } from "../lib/departure-board-mount";
  *
  * Default `false`, which is the safe direction: this widget is embedded on
  * `reference/**` prose pages as well as its own `/tools/` page, and those pages
- * must keep their 50rem column. Only the tools page opts in. On a reference
+ * must keep the prose column. Only the tools page opts in. On a reference
  * page the section grid simply fits fewer columns, which is what `auto-fit` is
  * for. The marker goes on a wrapper here rather than inside `renderTemplate()`
  * so the mount's markup stays byte-identical and `scripts/html-diff.mjs` sees

@@ -20,10 +20,9 @@ const view = mapView(libraryProp(library, "MigrationMap"), part);
 ---
 
 <div
-  class="gmt-migrate-scroll"
-  tabindex="0"
-  role="region"
-  aria-label={`${view.heading} calls and their GMT functions`}
+  class="gmt-ref-table"
+  data-kind="content"
+  data-label={`${view.heading} calls and their GMT functions`}
 >
   <table class="gmt-migrate-table">
     <thead>
@@ -74,9 +73,3 @@ const view = mapView(libraryProp(library, "MigrationMap"), part);
     </tbody>
   </table>
 </div>
-
-<script>
-  import { mountOverflowFocus } from "../lib/overflow-focus";
-
-  mountOverflowFocus(document, ".gmt-migrate-scroll");
-</script>

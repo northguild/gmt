@@ -69,12 +69,14 @@ h1[data-page-title] {
   background-color: var(--gmt-void);
 }
 
-/* Content width. Starlight's default is 45rem, which on a monospace body
- * reads as a thin column; 50rem matches react.dev's text column (its
- * `max-w-4xl` article minus 3rem padding either side). Sidebar-less pages
- * are unaffected: Starlight's Page.astro re-declares this for them. */
+/* Content width. Starlight's default is 45rem; at 50rem the column still
+ * left a third of a wide screen empty beside it and squeezed the call-by-call
+ * tables. 72rem fills the pane between the sidebars on a 1920px screen and
+ * changes nothing below about 1600px, where the pane is already narrower.
+ * Sidebar-less pages are unaffected: Starlight's Page.astro re-declares this
+ * for them. */
 :root {
-  --sl-content-width: 50rem;
+  --sl-content-width: 72rem;
 }
 
 /* Wide-screen columns: sidebar | centred content | "On this page".

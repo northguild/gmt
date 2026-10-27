@@ -127,8 +127,6 @@ const outRedirects = resolve(appRoot, "src", "generated", "_redirects");
 const SKIP_DIRS = ["test", "internal"];
 const SKIP_EXTS = [".test.ts", ".spec.ts"];
 const GH_BASE = "https://github.com/northguild/gmt/blob/main/packages/gmt/src";
-const EDIT_BASE =
-  "https://github.com/northguild/gmt/edit/main/packages/gmt/src";
 
 // ---------------------------------------------------------------------------
 // Walk
@@ -2581,14 +2579,12 @@ export function renderFn(doc: FnDoc, page: PageContext): string {
 
 /**
  * The frontmatter lines every symbol page shares after its `title`: a plain-text `description`
- * (the body keeps the Markdown form), the `headTitle` the `<title>` uses and the link to the
- * symbol's source file for the edit link.
+ * (the body keeps the Markdown form) and the `headTitle` the `<title>` uses.
  */
 function titleFields(doc: FnDoc | TypeDoc | RegexDoc): string[] {
   return [
     `description: ${JSON.stringify(plainText(doc.description))}`,
     `headTitle: ${JSON.stringify(referenceHeadTitle(doc))}`,
-    `editUrl: ${JSON.stringify(`${EDIT_BASE}/${doc.sourcePath}`)}`,
   ];
 }
 

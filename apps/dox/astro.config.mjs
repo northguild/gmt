@@ -14,6 +14,7 @@ import { mistakesSidebar } from "./src/generated/mistakes-sidebar.ts";
 import { guidesIndustriesSidebar } from "./src/generated/guides-industries-sidebar.ts";
 import rehypeBaseLinks from "./src/lib/rehype-base-links.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
+import rehypeTableScroll from "./src/lib/rehype-table-scroll.ts";
 import { copyRedirects } from "./src/lib/copy-redirects.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
@@ -68,8 +69,9 @@ export default defineConfig({
   // while wrangler.jsonc keeps `directory: "./dist"`.
   outDir: "./dist/gmt",
   markdown: {
-    // External links in Markdown and MDX open in a new tab, like ButtonLink's do.
-    rehypePlugins: [rehypeBaseLinks, rehypeExternalLinks],
+    // External links in Markdown and MDX open in a new tab, like ButtonLink's do. Every table
+    // sits in the site's table scroll box, so it fills the column.
+    rehypePlugins: [rehypeBaseLinks, rehypeExternalLinks, rehypeTableScroll],
   },
   vite: {
     server: {
@@ -124,12 +126,9 @@ export default defineConfig({
         "Date and time library for JavaScript and TypeScript, built on TC39 Temporal: time zones, DST, business days, ISO 8601 strings in and out. Never throws.",
       // Adds the share, breadcrumb and Markdown-twin tags to each page's head (src/route-data.ts).
       routeMiddleware: "./src/route-data.ts",
-      // Each page shows the date of its last commit (CI checks out the full history) and an
-      // edit link. A generated page sets its own `editUrl`, or `false` where there is no source.
+      // Each page shows the date of its last commit (CI checks out the full history). No page
+      // carries an edit link; scripts/head-tags.test.ts fails on one.
       lastUpdated: true,
-      editLink: {
-        baseUrl: "https://github.com/northguild/gmt/edit/main/apps/dox/",
-      },
       social: [
         {
           icon: "github",

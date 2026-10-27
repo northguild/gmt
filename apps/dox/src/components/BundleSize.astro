@@ -9,7 +9,7 @@ import { BUNDLE_COLUMNS, bundleCells, bundleRows } from "../lib/bundle-size";
 const rows = bundleRows();
 ---
 
-<div class="gmt-bundle-scroll" tabindex="0" role="region" aria-label="Bundle size per import">
+<div class="gmt-ref-table" data-kind="content" data-label="Bundle size per import">
   <table class="gmt-bundle">
     <thead>
       <tr>
@@ -32,17 +32,7 @@ const rows = bundleRows();
   </table>
 </div>
 
-<script>
-  import { mountOverflowFocus } from "../lib/overflow-focus";
-
-  mountOverflowFocus(document, ".gmt-bundle-scroll");
-</script>
-
 <style>
-  .gmt-bundle-scroll {
-    overflow-x: auto;
-  }
-
   .gmt-bundle {
     width: 100%;
     table-layout: auto;

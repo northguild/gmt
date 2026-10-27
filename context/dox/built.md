@@ -397,8 +397,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `BreadcrumbList` on every docs page, `TechArticle` on every guide with `dateModified`.
   - Every docs page links its Markdown twin (`<link rel="alternate" type="text/markdown">`); the
     twin route is `src/pages/[...slug].md.ts`, the path rule `src/lib/md-twin.ts`.
-  - A generated page sets `editUrl`: the symbol's source file for the reference, `false` for index
-    pages. Starlight's `lastUpdated` and edit link are styled in `Footer.astro`.
+  - No page carries an edit link: there is no Starlight `editLink` and no page sets `editUrl`.
+    Starlight's `lastUpdated` is styled in `Footer.astro`.
   - The sitemap leaves out `/dox/`. The gate is `scripts/head-tags.test.ts` over `dist/gmt`.
 - **Guides (`A4a`).** The guides under `src/content/docs/guides/` are the home of every
   feature's explanation and examples; the generated reference holds the signatures.
@@ -454,10 +454,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   the canary (`pnpm compat:snapshot`) owns state: the page never reads `failing`, `through` or a
   version to choose a badge, and `toCompatGroup` fails the build on an unknown state or an
   incomplete guard. The badge has a full `--gmt-ice-dim-fill` border (`--gmt-border-strong`
-  measures under the 3:1 bar in both themes) and wraps inside it at the table's 34rem minimum;
-  the wrapper that scrolls the table is a named region that ships `tabindex="0"`, and
-  `mountOverflowFocus` (`src/lib/overflow-focus.ts`) drops the tab stop while the table fits
-  (role and label stay), so a desktop reader never lands on a box that cannot scroll. The Markdown
+  measures under the 3:1 bar in both themes) and wraps inside it at the table's 34rem minimum.
+  The table sits in the site's table box (`.gmt-ref-table`, named by `data-label`), like every
+  table on the site; `src/lib/ref-table.ts` makes the box a focusable, named region only while it
+  overflows, so a desktop reader never lands on a box that cannot scroll. The Markdown
   twin runs every free-text cell (reason, what-breaks text, label) through `escapeMarkdownInline`
   so `_`, `*`, `[`, `<` and the rest read the way the HTML shows them. The label is "Kept on purpose"
   because it answers the column's question in familiar words, and "Guarded" already means the

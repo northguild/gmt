@@ -93,7 +93,6 @@ description: >
   twice a year for timezones that observe daylight saving time, and how GMT's
   disambiguation options let you control what happens.
 slug: guides/concepts/dst-disambiguation
-editUrl: https://github.com/northguild/gmt/edit/main/docs/dst-disambiguation.md
 ${lastUpdated}sidebar:
   order: 1
 ---

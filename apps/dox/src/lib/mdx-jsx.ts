@@ -361,7 +361,7 @@ function renderBehaviourMatrix(): string {
     for (const row of view.rows) {
       const issues = row.issues.map((i) => `[${i.text}](${i.url})`).join(", ");
       out.push(
-        `| ${escapeMarkdownInline(row.who)} | ${escapeMarkdownInline(row.call)} | ${escapeMarkdownInline(row.returns)} | ${row.verdict} | ${issues || "none"} |`,
+        `| ${escapeMarkdownInline(row.who)} | ${escapeMarkdownInline(row.call)} | ${escapeMarkdownInline(row.returns.join(", "))} | ${row.verdict} | ${issues || "none"} |`,
       );
     }
     out.push("");

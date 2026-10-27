@@ -8,33 +8,27 @@
  * `gmt-content.css`, these win on order. Every colour is a token.
  */
 
-.gmt-migrate-scroll {
-  overflow-x: auto;
-  margin-block: 1rem;
-}
-
-.gmt-migrate-scroll:focus-visible {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-  box-shadow:
-    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
-    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
-}
-
+/* Each table sits in the site's table box (`.gmt-ref-table`, gmt-content.css), which draws the
+   border and scrolls it sideways. */
 .sl-markdown-content .gmt-migrate-table {
-  display: table;
-  width: 100%;
   min-width: 40rem;
-  table-layout: auto;
   font-size: var(--sl-text-sm);
 }
 
 .sl-markdown-content .gmt-migrate-table :is(th, td) {
-  vertical-align: top;
   text-align: left;
-  white-space: normal;
-  width: auto;
-  overflow-wrap: anywhere;
+}
+
+/* An import path is one token, like the code spans the site's table rule keeps whole (see
+   gmt-content.css § Tables), so the GMT column is as wide as its longest path. The note keeps a
+   floor so it never runs a word to a line; past that the table scrolls sideways. */
+.sl-markdown-content .gmt-migrate-module {
+  white-space: nowrap;
+}
+
+/* The behaviour matrix's last column is a short list of issue links, so it takes no floor. */
+.sl-markdown-content .gmt-migrate-table:not(.gmt-matrix-table) :is(th, td):last-child {
+  min-width: 16rem;
 }
 
 .sl-markdown-content .gmt-migrate-fn {
@@ -49,7 +43,6 @@
   font-size: var(--sl-text-xs);
   /* The full text tier: the muted gray tiers measure under 7:1 here. */
   color: var(--gmt-ice);
-  overflow-wrap: anywhere;
 }
 
 /* ---- Difference cards ---- */
@@ -118,6 +111,15 @@
 
 .sl-markdown-content .gmt-matrix-meta {
   color: var(--gmt-ice);
+}
+
+/* A result that varies with the host zone shows one host per line. */
+.sl-markdown-content .gmt-matrix-line {
+  display: block;
+}
+
+.sl-markdown-content .gmt-matrix-line + .gmt-matrix-line {
+  margin-block-start: 0.25rem;
 }
 
 .sl-markdown-content .gmt-matrix-table tbody tr:target {

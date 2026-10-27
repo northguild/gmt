@@ -1,19 +1,15 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { SITE_URL } from "../src/lib/site";
 import { TITLE_SUFFIX } from "../src/lib/head-tags";
-import {
-  editPath,
-  scanHead,
-  type HeadScan,
-} from "./build-utils/head-tags-scan";
+import { scanHead, type HeadScan } from "./build-utils/head-tags-scan";
 import { distDirOrSkip as distRootOrSkip } from "./dist-dir";
 
 /**
  * The tags every built page carries, read off `dist/gmt`: one title that ends in the site suffix,
- * a description of its own, a share image that exists, the JSON-LD blocks, the Markdown twin, an
- * edit link that reaches a tracked file, and no `noindex` page in the sitemap.
+ * a description of its own, a share image that exists, the JSON-LD blocks, the Markdown twin, no
+ * edit link, and no `noindex` page in the sitemap.
  *
  * Needs a build; each test returns early without one and throws under `DOX_DIST_REQUIRED`.
  */
@@ -299,38 +295,14 @@ describe("head tags of the built site", () => {
     expectNone(failures);
   });
 
-  it("points every edit link at a file that exists in the repository and is not ignored", () => {
+  it("gives no page an edit link", () => {
     const dist = distDirOrSkip();
     if (dist === null) return;
-    const targets = new Map<string, string>();
-    let links = 0;
+    const failures: string[] = [];
     for (const page of builtPages(dist)) {
       for (const href of page.scan.editLinks) {
-        links += 1;
-        targets.set(editPath(href), page.file);
+        failures.push(`${page.file}: edit link ${href}`);
       }
-    }
-    expect(links).toBeGreaterThan(0);
-    const failures: string[] = [];
-    const present = [...targets.keys()].filter((path) => {
-      const found = existsSync(resolve(repoRoot, path));
-      if (!found) failures.push(`${targets.get(path)}: ${path} does not exist`);
-      return found;
-    });
-    // One batched call; `git check-ignore` prints each path that an ignore rule matches.
-    const ignored = new Set(
-      spawnSync("git", ["check-ignore", "--stdin"], {
-        cwd: repoRoot,
-        input: present.join("\n"),
-        encoding: "utf8",
-        maxBuffer: 64 * 1024 * 1024,
-      })
-        .stdout.split("\n")
-        .filter(Boolean),
-    );
-    for (const path of present) {
-      if (ignored.has(path))
-        failures.push(`${targets.get(path)}: ${path} is gitignored`);
     }
     expectNone(failures);
   });

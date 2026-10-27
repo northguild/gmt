@@ -6,7 +6,7 @@
  * enough and adds no HTML parser to the app.
  */
 
-/** What a page's `<head>` and edit link say. */
+/** What a page's `<head>` says, and any edit link in its body. */
 export type HeadScan = {
   /** Every `<title>` element's text; a page has exactly one. */
   titles: string[];
@@ -21,7 +21,7 @@ export type HeadScan = {
   markdownAlternates: string[];
   /** The text of each `<script type="application/ld+json">`. */
   jsonLd: string[];
-  /** The `href` of each link to a file's edit page on GitHub. */
+  /** The `href` of each link to a file's edit page on GitHub. The site carries none. */
   editLinks: string[];
 };
 
@@ -53,7 +53,8 @@ export function attributesOf(tag: string): Record<string, string> {
   return attrs;
 }
 
-const EDIT_PREFIX = "https://github.com/northguild/gmt/edit/main/";
+/** A GitHub edit page, in any repository or branch. */
+const EDIT_LINK = /^https:\/\/github\.com\/[^/]+\/[^/]+\/edit\//;
 
 /** A start tag by name. A quoted attribute value may hold a `>`, so quotes are matched whole. */
 function startTag(name: string): RegExp {
@@ -107,13 +108,8 @@ export function scanHead(html: string): HeadScan {
 
   for (const match of html.matchAll(/<a\b[^>]*>/g)) {
     const href = attributesOf(match[0]).href;
-    if (href?.startsWith(EDIT_PREFIX)) scan.editLinks.push(href);
+    if (href !== undefined && EDIT_LINK.test(href)) scan.editLinks.push(href);
   }
 
   return scan;
-}
-
-/** The repository path an edit link points at: `apps/dox/src/content/docs/install.mdx`. */
-export function editPath(href: string): string {
-  return href.startsWith(EDIT_PREFIX) ? href.slice(EDIT_PREFIX.length) : href;
 }

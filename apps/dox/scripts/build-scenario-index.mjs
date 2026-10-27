@@ -78,7 +78,6 @@ const entries = files.map((file) => {
 const frontmatter = `---
 title: Scenarios
 description: Live examples showing common date/time problems and how GMT solves them.
-editUrl: false
 ---
 
 `;

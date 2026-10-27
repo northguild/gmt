@@ -198,10 +198,20 @@ dialog > .dialog-frame {
   border-color: var(--gmt-border-strong) !important;
 }
 
-/* ---- Parameter / options tables ---- */
+/* ---- Tables ----
+   Every table on the site sizes its columns to their content. A fixed layout with a `nowrap`
+   first column ran a sentence in the first cell across 1000px and squeezed the other columns
+   to a word a line.
+
+   A code span in a cell is one token and is never broken: not mid-word (`overflow-wrap:
+   anywhere` printed `strin` / `g` in a narrow column), and not after a hyphen either
+   (`"4-4-5"`, `2024-03-10`). The prose around it wraps instead. When a code span is wider than
+   the column, the table scrolls sideways: Starlight makes every content table a scroll box. A
+   long union in a reference Type cell is one span per member (render-table.ts `typeSpans`), so
+   that cell still wraps, between members. */
 .sl-markdown-content table {
   width: 100%;
-  table-layout: fixed;
+  table-layout: auto;
   border-collapse: separate;
   border-spacing: 0;
   border: 1px solid var(--gmt-hairline);
@@ -210,16 +220,22 @@ dialog > .dialog-frame {
   overflow: auto;
 }
 
-/* Keep first column compact, let last column fill remaining width */
-.sl-markdown-content th:first-child,
-.sl-markdown-content td:first-child {
+.sl-markdown-content :is(th, td) {
+  vertical-align: top;
+  overflow-wrap: normal;
+}
+
+.sl-markdown-content :is(th, td) code {
   white-space: nowrap;
-  width: 1%;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 /* ---- Generated reference tables (Options, Members, Parameters) ----
    The generator wraps each one in `<div class="gmt-ref-table" data-kind="options|members|parameters">`.
-   Every rule below hangs on that wrapper, so a table an author wrote in a guide is untouched.
+   The same box holds every Markdown table (`data-kind="content"`, src/lib/rehype-table-scroll.ts),
+   so a table fills its column; the rules keyed on the Options, Members and Parameters kinds leave
+   those tables alone.
 
    The wrapper is the box: it draws the border and the glass, scrolls sideways when a cell is
    wider than the column, and is the container the layout asks its width of. The table inside
@@ -260,17 +276,6 @@ dialog > .dialog-frame {
   -webkit-backdrop-filter: none;
 }
 
-/* A code span in a cell is one token and is never broken: not mid-word (Starlight's
-   `overflow-wrap: anywhere` printed `strin` / `g` in a narrow Type column), and not after a
-   hyphen either (`"4-4-5"`, `2024-03-10`), which the browser allows where `normal` wrapping
-   applies. A long union is therefore one span per member (render-table.ts `typeSpans`), so the
-   Type cell still wraps, between members. */
-.sl-markdown-content .gmt-ref-table :is(th, td) code {
-  white-space: nowrap;
-  overflow-wrap: normal;
-  word-break: normal;
-}
-
 /* A quoted, hyphenated literal in prose (`"4-5-4"`; render-table.ts `keepQuotedLiterals`) is one
    word: a browser would otherwise wrap after its hyphen. An inline block is wrapped to the next
    line whole when it fits there, and only when it is wider than the whole column does it shrink
@@ -296,11 +301,9 @@ dialog > .dialog-frame {
   min-width: 14rem;
 }
 
-/* A /compare table whose first column is a sentence, not a short name: the global first-cell
-   rule (`nowrap; width: 1%`) is right for a name and printed one capability per 1000px line.
-   Here the first column wraps and the columns share the width. */
+/* A /compare table whose first column is a sentence, not a short name: the columns share the
+   width in fixed proportions. */
 .sl-markdown-content .gmt-compare--prose :is(th, td):first-child {
-  white-space: normal;
   width: 14%;
 }
 
@@ -313,7 +316,6 @@ dialog > .dialog-frame {
 }
 
 .sl-markdown-content .gmt-compare--prose :is(th, td) {
-  vertical-align: top;
   text-align: left;
 }
 

@@ -13,38 +13,12 @@
 /* ---- The defect table: what GMT works around ---- */
 
 /*
- * Two site-wide rules have to be undone here, because this is the only table on the site whose
- * first column is prose rather than a short label:
- *
- * 1. Starlight sets `.sl-markdown-content table { display: block; overflow: auto }` so wide tables
- *    scroll. A block box is not a table box, so `table-layout` and a percentage `width` never
- *    reach the columns — the anonymous table inside sizes itself to its content, and one long
- *    summary stretched the first column to 862px inside a 612px page. Restoring `display: table`
- *    is what makes the widths below apply; the scrolling moves to the wrapper, which keeps the
- *    narrow-screen escape hatch.
- * 2. `gmt-content.css` sets `white-space: nowrap; width: 1%` on every first cell, which is right
- *    for a parameter table and wrong for prose.
+ * The table sits in the site's table box (`.gmt-ref-table`, gmt-content.css), which draws the
+ * border and scrolls it sideways. Its first column is prose rather than a short label, so the
+ * columns share the width in fixed proportions instead of sizing to their content. The selector
+ * names the box so it outranks the box's own `table-layout: auto`.
  */
-.gmt-defects-scroll {
-  overflow-x: auto;
-}
-
-/*
- * The wrapper is a focusable, named region (`UpstreamDefects.astro`), so a keyboard reader can
- * scroll the table sideways where it overflows. The ring is the site's cyan box-shadow focus
- * style, drawn only for keyboard focus. The transparent outline is what forced-colors mode paints.
- */
-.gmt-defects-scroll:focus-visible {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-  box-shadow:
-    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
-    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
-}
-
-.sl-markdown-content .gmt-defects {
-  display: table;
-  width: 100%;
+.sl-markdown-content .gmt-ref-table > .gmt-defects {
   min-width: 34rem;
   table-layout: fixed;
   font-size: var(--sl-text-sm);

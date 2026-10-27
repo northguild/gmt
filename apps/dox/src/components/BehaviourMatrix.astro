@@ -31,10 +31,9 @@ const cases = matrixView();
       {c.expectedNote && <p>{c.expectedNote}</p>}
       {c.note && <p set:html={codeSpans(c.note)} />}
       <div
-        class="gmt-migrate-scroll"
-        tabindex="0"
-        role="region"
-        aria-label={`${c.id} results`}
+        class="gmt-ref-table"
+        data-kind="content"
+        data-label={`${c.id} results`}
       >
         <table class="gmt-migrate-table gmt-matrix-table">
           <thead>
@@ -54,7 +53,11 @@ const cases = matrixView();
                   <code>{row.call}</code>
                 </td>
                 <td>
-                  <code>{row.returns}</code>
+                  {row.returns.map((line) => (
+                    <span class="gmt-matrix-line">
+                      <code>{line}</code>
+                    </span>
+                  ))}
                 </td>
                 <td>{row.verdict}</td>
                 <td>
@@ -75,9 +78,3 @@ const cases = matrixView();
     </section>
   ))
 }
-
-<script>
-  import { mountOverflowFocus } from "../lib/overflow-focus";
-
-  mountOverflowFocus(document, ".gmt-migrate-scroll");
-</script>

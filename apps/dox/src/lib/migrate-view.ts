@@ -105,18 +105,22 @@ export const referenceName = (matrixCase: MatrixCase): string =>
   matrixCase.temporal === null ? "the stated result" : "Temporal";
 
 /**
- * What a library row returned, as one line. A row that varies with the host zone lists the result
- * of each host, so the reader sees which host gives which answer.
+ * What a library row returned, one entry per line. A row that varies with the host zone has one
+ * entry per host, so the reader sees which host gives which answer.
  */
-export const rowResult = (row: LibraryRow): string => {
-  if (row.verdict === "unsupported") return row.reason ?? "";
+export const rowResultLines = (row: LibraryRow): string[] => {
+  if (row.verdict === "unsupported") return [row.reason ?? ""];
   if (row.verdict === "varies" || (row.hosts && row.hosts.length > 0)) {
-    return (row.hosts ?? [])
-      .map((host) => `${host.zone} host: ${host.detail ?? host.returns}`)
-      .join(", ");
+    return (row.hosts ?? []).map(
+      (host) => `${host.zone} host: ${host.detail ?? host.returns}`,
+    );
   }
-  return row.detail ?? row.returns ?? "";
+  return [row.detail ?? row.returns ?? ""];
 };
+
+/** What a library row returned, as one line. */
+export const rowResult = (row: LibraryRow): string =>
+  rowResultLines(row).join(", ");
 
 export function diffViews(library: LibraryId): DiffView[] {
   return diffsFor(library).map(({ case: matrixCase, row }) => ({
@@ -138,7 +142,8 @@ export interface MatrixRowView {
   anchor: string | null;
   who: string;
   call: string;
-  returns: string;
+  /** What the call returned, one entry per line: a row that varies with the host has one per host. */
+  returns: string[];
   verdict: string;
   issues: { text: string; url: string }[];
 }
@@ -166,7 +171,7 @@ export function matrixView(): MatrixCaseView[] {
         anchor: null,
         who: "Temporal",
         call: "the proposal's own call",
-        returns: matrixCase.temporal.returns,
+        returns: [matrixCase.temporal.returns],
         verdict: "Reference",
         issues: [],
       });
@@ -175,7 +180,7 @@ export function matrixView(): MatrixCaseView[] {
       anchor: null,
       who: "GMT",
       call: matrixCase.gmt.call,
-      returns: matrixCase.gmt.detail ?? matrixCase.gmt.returns,
+      returns: [matrixCase.gmt.detail ?? matrixCase.gmt.returns],
       verdict: VERDICT_LABEL[matrixCase.gmt.verdict],
       issues: [],
     });
@@ -185,7 +190,7 @@ export function matrixView(): MatrixCaseView[] {
         anchor: rowAnchor(matrixCase.id, row.library),
         who: library.name,
         call: row.call ?? "none",
-        returns: rowResult(row),
+        returns: rowResultLines(row),
         verdict: VERDICT_LABEL[row.verdict],
         issues: row.issues.map((issue) => ({
           text: issue,

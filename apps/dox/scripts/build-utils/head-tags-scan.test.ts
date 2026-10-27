@@ -1,9 +1,4 @@
-import {
-  attributesOf,
-  decodeEntities,
-  editPath,
-  scanHead,
-} from "./head-tags-scan";
+import { attributesOf, decodeEntities, scanHead } from "./head-tags-scan";
 
 const PAGE = `<!doctype html><html><head>
 <title>addDate(): add units &amp; more · GMT</title>
@@ -19,6 +14,8 @@ const PAGE = `<!doctype html><html><head>
 <script>var a = 1;</script>
 </head><body>
 <a class="sl-flex" href="https://github.com/northguild/gmt/edit/main/packages/gmt/src/plain/calculate/addDate.ts">Edit page</a>
+<a href="https://github.com/withastro/starlight/edit/v1/docs/a.md">Edit page</a>
+<a href="https://github.com/northguild/gmt/blob/main/packages/gmt/src/plain/calculate/addDate.ts">Source</a>
 <a href="/elsewhere/">x</a>
 </body></html>`;
 
@@ -57,14 +54,11 @@ describe("scanHead", () => {
     expect(scan.jsonLd).toEqual(['{"@type":"BreadcrumbList"}']);
   });
 
-  it("finds the edit link and no other anchor", () => {
-    const scan = scanHead(PAGE);
-    expect(scan.editLinks).toEqual([
+  it("finds an edit link to any GitHub repository and no other anchor", () => {
+    expect(scanHead(PAGE).editLinks).toEqual([
       "https://github.com/northguild/gmt/edit/main/packages/gmt/src/plain/calculate/addDate.ts",
+      "https://github.com/withastro/starlight/edit/v1/docs/a.md",
     ]);
-    expect(editPath(scan.editLinks[0])).toBe(
-      "packages/gmt/src/plain/calculate/addDate.ts",
-    );
   });
 
   it("reports a page with no tags as empty", () => {

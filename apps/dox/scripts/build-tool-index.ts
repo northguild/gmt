@@ -90,7 +90,6 @@ const sections = INDUSTRY_TAG_IDS.flatMap((id) => {
 const source = `---
 title: Tools
 description: Every interactive tool on the site, grouped by the industry it belongs to.
-editUrl: false
 sidebar:
   order: 0
   label: All tools

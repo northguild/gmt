@@ -24,23 +24,13 @@ import Default from '@astrojs/starlight/components/Footer.astro';
 		color: var(--gmt-ice-dim);
 	}
 
-	/* Starlight's edit link and last-updated date, above the previous/next links. */
+	/* Starlight's last-updated date, above the previous/next links. */
 	:global(footer .meta) {
 		gap: var(--gmt-space-2) var(--gmt-space-4);
 		font-size: var(--sl-text-xs);
 		color: var(--gmt-ice-dim);
 		padding-block-end: var(--gmt-space-3);
 		border-block-end: 1px solid var(--gmt-hairline);
-	}
-
-	:global(footer .meta a) {
-		color: inherit;
-		text-decoration: underline;
-	}
-
-	:global(footer .meta a:hover),
-	:global(footer .meta a:focus-visible) {
-		color: var(--sl-color-white);
 	}
 
 	.gmt-licence-note a {

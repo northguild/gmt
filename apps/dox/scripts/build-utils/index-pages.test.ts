@@ -109,12 +109,11 @@ describe("renderIndexPages", () => {
 
   it("writes the slug and the block form of sidebar order in the frontmatter", () => {
     const { mdx } = pageAt("/reference/transport/calculate");
-    expect(mdx.split("\n").slice(0, 9)).toEqual([
+    expect(mdx.split("\n").slice(0, 8)).toEqual([
       "---",
       'title: "transport/calculate"',
       'description: "The calculate module of the transport namespace of @northguild/gmt."',
       'slug: "reference/transport/calculate"',
-      "editUrl: false",
       "sidebar:",
       "  order: 0",
       "---",
@@ -122,7 +121,7 @@ describe("renderIndexPages", () => {
     ]);
     for (const page of renderIndexPages(INPUT)) {
       expect(page.mdx, page.route).toContain(
-        `slug: ${JSON.stringify(page.route.slice(1))}\neditUrl: false\nsidebar:\n  order: 0\n---\n`,
+        `slug: ${JSON.stringify(page.route.slice(1))}\nsidebar:\n  order: 0\n---\n`,
       );
       expect(page.mdx, page.route).not.toContain("sidebar: {");
     }
@@ -384,7 +383,7 @@ describe("renderIndexPages with industries", () => {
   it("puts the tag in the block frontmatter before `sidebar`, so ensure-sidebar-order leaves it alone", () => {
     const { mdx } = pageAt("/reference/transport", WITH_INDUSTRIES);
     expect(mdx).toContain(
-      'slug: "reference/transport"\neditUrl: false\nindustries: [transport]\nsidebar:\n  order: 0\n---\n',
+      'slug: "reference/transport"\nindustries: [transport]\nsidebar:\n  order: 0\n---\n',
     );
   });
 
