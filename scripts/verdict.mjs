@@ -127,7 +127,9 @@ export function plan(args, checksFor = validateChecks) {
     ].join(" ");
     return {
       title: `verdict run ${rest.join(" ")}`,
-      dir: slug(`${filter}-${script}`),
+      // A name with no letter or digit would make the log directory `.verdict` itself, which
+      // the run empties first, lock and all.
+      dir: slug(`${filter}-${script}`) || "run",
       steps: [{ command, label: script, script }],
     };
   }

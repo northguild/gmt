@@ -113,11 +113,14 @@ describe("formatStatus", () => {
   });
 
   it("prints a failing status context, a job over the log cap and a full page of checks", () => {
-    // Synthetic edit of the green fixture: one status context, one failed job, 100 contexts.
+    // Synthetic edit of the green fixture: one status context, one failed job, 100 contexts and a
+    // next page.
     const data = load("green-395");
-    const nodes =
+    const contexts =
       data.repository.pullRequest.commits.nodes[0].commit.statusCheckRollup
-        .contexts.nodes;
+        .contexts;
+    contexts.pageInfo = { hasNextPage: true };
+    const nodes = contexts.nodes;
     const passing = nodes[0];
     nodes.length = 0;
     for (let i = 0; i < 98; i++) nodes.push(passing);

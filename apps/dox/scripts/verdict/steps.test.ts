@@ -76,6 +76,10 @@ describe("the other two commands", () => {
     expect(run.title).toBe("verdict run @northguild/gmt test -- src/plain");
   });
 
+  it("never logs into `.verdict` itself", () => {
+    expect(plan(["run", "@", "."]).dir).toBe("run");
+  });
+
   it("quotes an argument the shell would split", () => {
     const run = plan(["run", "dox", "test", "--", "-t", "a b"]);
     expect(run.steps?.[0].command).toBe("pnpm --filter dox run test -t 'a b'");

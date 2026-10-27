@@ -2,7 +2,7 @@
 /**
  * The skip rule of the nightly gate sweep (`.github/workflows/dox-gates-nightly.yml`, job
  * `decide`): run the sweep, or say nothing under `apps/dox/` or `pnpm-lock.yaml` changed since the
- * last finished run. `shouldRun` is pure and tested (`nightly-decide.test.ts`); the CLI reads its
+ * last run that filed its findings. `shouldRun` is pure and tested (`nightly-decide.test.ts`); the CLI reads its
  * input from the environment the workflow step sets and writes `run=true|false` to
  * `$GITHUB_OUTPUT` and the reason to `$GITHUB_STEP_SUMMARY`.
  *
@@ -10,11 +10,11 @@
  *   SCHEDULE        github.event.schedule (the cron that fired; empty otherwise)
  *   FORCE           "true" for a dispatch with `force`
  *   FORCE_FINDING   "true" for a dispatch with `force_finding`
- *   LAST_SHA        commit of the newest finished run, empty when there is none or it is not in
- *                   the history
+ *   LAST_SHA        commit of the newest finished run whose report job succeeded, or that skipped
+ *                   and ended `success`; empty when there is none or it is not in the history
  *   CHANGED         the files `git diff --name-only $LAST_SHA HEAD -- apps/dox/ pnpm-lock.yaml`
  *                   printed, one per line
- *   LAST_ERROR      why the earlier runs could not be listed (empty when they could)
+ *   LAST_ERROR      why the earlier runs or their jobs could not be listed (empty when they could)
  *
  * Fails open: anything it cannot decide runs the sweep. Node built-ins only, no `Date`.
  */

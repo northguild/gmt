@@ -75,12 +75,15 @@ describe("selectPages", () => {
     expect(plan.reasons["/"]).toEqual(["chrome: pnpm-lock.yaml"]);
   });
 
-  it("selects the pages importing a changed library module", () => {
-    const plan = select(["packages/gmt/src/plain/calculate/addDays.ts"]);
-    expect(plan.pages).toEqual(["/tools/dwell-ledger/"]);
-    expect(plan.reasons["/tools/dwell-ledger/"]).toEqual([
-      "imports @northguild/gmt/plain/calculate",
+  it("selects the pages importing a changed library module, and the sample", () => {
+    const file = "packages/gmt/src/zoned/get/getOffset.ts";
+    const plan = select([file]);
+    expect(plan.pages).toEqual([...SAMPLE, "/tools/dst-inspector/"].sort());
+    expect(plan.reasons["/tools/dst-inspector/"]).toEqual([
+      "imports @northguild/gmt/zoned/get",
     ]);
+    // A page can reach the module through another one, or import the package whole.
+    expect(plan.reasons["/"]).toEqual([`library: ${file}`]);
   });
 
   it("selects the sample for a library change no page imports", () => {
@@ -115,21 +118,37 @@ describe("selectPages", () => {
     expect(plan.gatesOnSample).toEqual([]);
   });
 
-  it("runs every gate on the sample when the runner itself changes", () => {
-    expect(select(["apps/dox/scripts/gates/select.mjs"]).gatesOnSample).toEqual(
-      ["*"],
-    );
+  it("runs every gate on the sample when the runner or a shared gate library changes", () => {
+    for (const file of [
+      "apps/dox/scripts/gates/select.mjs",
+      "apps/dox/scripts/lib/a11y-sweep.mjs",
+      "apps/dox/scripts/lib/grow-frames.mjs",
+    ]) {
+      expect(select([file]).gatesOnSample, file).toEqual(["*"]);
+    }
   });
 
-  it("selects nothing for a test file, a doc, or a file no page reaches", () => {
+  it("selects the sample for a site file no page's closure holds", () => {
+    // A component the chrome imports, a generator of the /reference/ pages, a runtime asset.
+    for (const file of [
+      "apps/dox/src/components/DoxMark.astro",
+      "apps/dox/scripts/build-reference.ts",
+      "apps/dox/public/timezone-boundaries-1.json",
+      "apps/dox/src/lib/unused.ts",
+    ]) {
+      const plan = select([file]);
+      expect(plan.pages, file).toEqual([...SAMPLE].sort());
+      expect(plan.reasons["/"]).toEqual([`no page imports it: ${file}`]);
+    }
+  });
+
+  it("selects nothing for a test file or a file outside the site and the library", () => {
     const plan = select([
       "apps/dox/src/lib/format.test.ts",
       "context/dox/built.md",
-      "apps/dox/src/lib/unused.ts",
     ]);
     expect(plan.pages).toEqual([]);
-    expect(plan.relevant).toBe(true);
-    expect(select(["context/dox/built.md"]).relevant).toBe(false);
+    expect(plan.relevant).toBe(false);
   });
 
   it("caps at the sample plus six evenly picked pages", () => {

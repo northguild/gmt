@@ -1771,8 +1771,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     runner appends its screen to `$GITHUB_STEP_SUMMARY` in a fenced `text` block
     (`gates/step-summary.mjs`); a failed job uploads `apps/dox/.gates/` (without `vite-cache/`) as the
     `dox-gates-<run id>` artifact. It is **advisory**: the owner makes it a required check after about
-    10 clean Dox PR runs. A PR that touches nothing under `apps/dox/` skips it, and so does one that
-    changes only `pnpm-lock.yaml`.
+    10 clean Dox PR runs. A PR that touches nothing under `apps/dox/` or `pnpm-lock.yaml` skips it;
+    a lockfile change alone runs it, since it can bump Playwright or axe-core.
   - **The page contract.** Every gate script answers `--list-pages` (a JSON array of site paths,
     no `/gmt`, without a browser), takes `--pages <path,...>` (an unknown path exits 2, so a typo is
     never an empty run) and, when it loads pages, `--base <url>`. With `GATE_REPORT` set, each
@@ -1783,16 +1783,19 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     without that line, or with `n = 0`, is `FAIL measured nothing`; one that exits 0 with findings is
     a FAIL. `contrast-measure --only` takes a comma list. `grow-measure`, `readout-still`,
     `data-credits-check` and the three Canada scripts accept `firefox` in `--browsers`;
-    `canada-layout-check` gained `--browsers` (its `--engine` still works). `contrast-measure` is
+    `canada-layout-check` takes `--browsers` as well as `--engine`. `contrast-measure` is
     Chromium only.
   - **Selection.** A changed file selects the pages whose import closure holds it (`.mdx`, `.astro`,
     `.ts`, `.tsx`, `.mjs`, `.css`; relative paths and the `~/` alias); a change under
     `packages/gmt/src/<ns>/<module>/` selects the pages that import
-    `@northguild/gmt/<ns>/<module>`; chrome (`src/styles/*`, the Starlight component overrides,
-    `astro.config.mjs`, `apps/dox/package.json`, `pnpm-lock.yaml`) and any other library change
-    select the sample (`SAMPLE` in the registry; `registry.test.ts` asserts each path is in `dist`).
-    A changed gate script runs that gate on the sample, and a changed runner file runs every gate on
-    the sample. Over 12 pages, the run keeps the sample plus 6 picked evenly from the rest (the
+    `@northguild/gmt/<ns>/<module>` and the sample, since a page that reaches the module through
+    another one, or imports the package whole, is not in the graph. Chrome (`src/styles/*`, the
+    Starlight component overrides, `astro.config.mjs`, `apps/dox/package.json`, `pnpm-lock.yaml`),
+    any other library change, and any other `apps/dox/` file no page's closure holds (a component
+    the chrome imports, the `/reference/` generators, `public/`) select the sample (`SAMPLE` in the
+    registry; `registry.test.ts` asserts each path is in `dist`). A changed gate script runs that
+    gate on the sample, and a changed runner file (`scripts/gates/`, `gates.mjs`, `gate-checks.mjs`,
+    `scripts/lib/`) runs every gate on the sample. Over 12 pages, the run keeps the sample plus 6 picked evenly from the rest (the
     screen's context line says so under `--plan`); `--all` lifts the cap. With no changed file under
     `apps/dox/` (other than `*.test.ts`), `packages/gmt/src/` or `pnpm-lock.yaml`, the runner prints
     `gates: PASS  nothing to check` and does not build.
@@ -2824,9 +2827,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `force_finding` (also file one `[dry run]` issue). The weekly run is recognised by
     `github.event.schedule`, never by a computed date.
   - **Skip rule.** Job `decide` (`actions: read`) takes the newest finished `main` run of the
-    workflow that ended `success` or `failure` and runs the sweep when `git diff --name-only <sha> HEAD
-    -- apps/dox/ pnpm-lock.yaml` is not empty, when there is no such run or its commit is not in the
-    history, or when the listing or the diff fails (fail open, with the reason in the summary). The
+    workflow that filed its findings (its `Report to issues` job succeeded, or it skipped the night
+    and ended `success`) and runs the sweep when `git diff --name-only <sha> HEAD -- apps/dox/
+    pnpm-lock.yaml` is not empty, when there is no such run or its commit is not in the history, or
+    when a listing or the diff fails (fail open, with the reason in the summary). A run whose report
+    job failed is never the baseline, so its findings are swept and filed again the next night. The
     rule is the pure `shouldRun` in `apps/dox/scripts/gates/nightly-decide.mjs`, which the step calls.
   - **Legs.** `pnpm --filter dox gates --all --tier nightly --browsers <b> --themes dark,light
     --retries 1 --shard i/n`, `timeout-minutes: 90`, `fail-fast: false`. `--shard` splits each
@@ -2929,13 +2934,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - the Tier 3 keyboard-only, reduced-preference and Firefox/Safari pass;
   - the Firefox and WebKit legs of `a11y-axe`, `a11y-tab-walk` and `a11y-media` (`--browsers
     firefox`): the scripts accept the engine, but Firefox cannot launch on the author's machine;
-  - **the `dox-gates` PR job** (`ci.yml`, "The PR job"): its first run on this PR passes in under 15
-    minutes (record the time in the "The PR job" bullet), and a PR that touches nothing under
-    `apps/dox/` or `pnpm-lock.yaml` shows the job as skipped;
+  - **the `dox-gates` PR job** (`ci.yml`, "The PR job"): a run passes in under 15 minutes (record
+    the time in the "The PR job" bullet), and a PR that touches nothing under `apps/dox/` or
+    `pnpm-lock.yaml` shows the job as skipped;
   - **the nightly gate sweep** (`dox-gates-nightly.yml`, "The nightly gate sweep"), which can only be
     dispatched once the file is on `main`:
     - a `force_finding` dispatch finishes every leg, Firefox included, and files one `[dry run]`
-      issue with the marker on line 1; a second dispatch comments on it. Then remove this line;
+      issue with the marker on line 1; a second dispatch comments on it;
     - a scheduled run with nothing changed shows the skip line in `decide`, and `sweep` and `report`
       are skipped;
     - every leg finishes inside its 90 minutes; record the slowest leg's time in the runbook entry.

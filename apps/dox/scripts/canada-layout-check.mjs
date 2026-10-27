@@ -280,7 +280,14 @@ for (const engineName of ENGINES) {
       measured += 1;
       if (data.hscroll) fail(`${tag}: the page scrolls sideways`);
       const present = Object.entries(data.rects).filter(([, r]) => r);
+      /* A renamed class or a page that did not render leaves nothing to measure: a fail, not a pass. */
+      if (!data.stack)
+        fail(
+          `${tag}: the card stack (.gmt-clockcheck-stack) is not on the page`,
+        );
+      if (present.length === 0) fail(`${tag}: no card found on the page`);
       for (const [name, r] of present) {
+        if (!data.stack) break;
         if (r.left < data.stack.left - 1 || r.right > data.stack.right + 1) {
           fail(
             `${tag}: ${name} reaches past the stack (${r.left}..${r.right} in ${data.stack.left}..${data.stack.right})`,

@@ -9,7 +9,10 @@
 
 import { failureLines, parseLog, stripAnsi } from "./verdict-parse.mjs";
 
-/** How many checks and threads one query returns; a full page is flagged `(first 100 shown)`. */
+/**
+ * How many checks and threads one query returns. More than that is flagged `(first 100 shown)`, and
+ * the verdict is never PASS: a check or a thread past the page is unread.
+ */
 export const PAGE_SIZE = 100;
 /** How many failing jobs get a log fetch. */
 export const MAX_LOG_FETCHES = 3;
@@ -33,6 +36,7 @@ const PR_FIELDS = `
       commit {
         statusCheckRollup {
           contexts(first: ${PAGE_SIZE}) {
+            pageInfo { hasNextPage }
             nodes {
               __typename
               ... on CheckRun {
@@ -47,9 +51,11 @@ const PR_FIELDS = `
     }
   }
   reviewThreads(first: ${PAGE_SIZE}) {
+    pageInfo { hasNextPage }
     nodes {
       isResolved isOutdated path line originalLine
-      comments(first: 50) { nodes { author { login } body createdAt url } }
+      comments(first: 1) { totalCount nodes { author { login } body createdAt url } }
+      latest: comments(last: 1) { nodes { author { login } body createdAt url } }
     }
   }
   latestReviews(first: 20) { nodes { author { login } state } }
@@ -159,9 +165,17 @@ function planCheck(node) {
   };
 }
 
-/** @param {any} thread */
+/**
+ * The query reads a thread's first comment in `comments` and its last in `latest`, so a long thread
+ * is still judged by its real last comment. A response that lists every comment in `comments` (the
+ * test fixtures) reads the same: the comments are sorted, then the first and the last are taken.
+ * @param {any} thread
+ */
 function planThread(thread, viewer) {
-  const comments = [...(thread.comments?.nodes ?? [])].sort((a, b) =>
+  const comments = [
+    ...(thread.comments?.nodes ?? []),
+    ...(thread.latest?.nodes ?? []),
+  ].sort((a, b) =>
     a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
   );
   const first = comments[0];
@@ -170,7 +184,7 @@ function planThread(thread, viewer) {
     path: thread.path ?? null,
     line: thread.line ?? thread.originalLine ?? null,
     isOutdated: Boolean(thread.isOutdated),
-    commentCount: comments.length,
+    commentCount: thread.comments?.totalCount ?? comments.length,
     firstAuthor: first?.author?.login ?? null,
     quote: (first?.body ?? "").split("\n")[0].trim().slice(0, QUOTE_WIDTH),
     url: first?.url ?? null,
@@ -187,19 +201,30 @@ export function planStatus(data) {
   if (!pr) return null;
   const viewer = data?.viewer?.login ?? null;
 
-  const contexts =
-    pr.commits?.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes ?? [];
-  const checks = contexts.map(planCheck);
+  const rollup = pr.commits?.nodes?.[0]?.commit?.statusCheckRollup?.contexts;
+  const checks = (rollup?.nodes ?? []).map(planCheck);
   const unresolved = (pr.reviewThreads?.nodes ?? [])
     .filter((thread) => !thread.isResolved)
     .map((thread) => planThread(thread, viewer));
+  const checksTruncated = Boolean(rollup?.pageInfo?.hasNextPage);
+  const threadsTruncated = Boolean(pr.reviewThreads?.pageInfo?.hasNextPage);
 
   const failed = checks.filter((c) => c.state === "FAIL").length;
   const pending = checks.filter((c) => c.state === "PEND").length;
   const waiting = unresolved.filter((t) => !t.answered).length;
-  const checksStatus = failed > 0 ? "FAIL" : pending > 0 ? "PEND" : "PASS";
+  // No check at all is a push CI has not picked up yet, not a pass; nor is a check past the page.
+  const checksStatus =
+    failed > 0
+      ? "FAIL"
+      : pending > 0 || checks.length === 0 || checksTruncated
+        ? "PEND"
+        : "PASS";
   const verdict =
-    failed > 0 || waiting > 0 ? "FAIL" : pending > 0 ? "PEND" : "PASS";
+    failed > 0 || waiting > 0
+      ? "FAIL"
+      : checksStatus === "PEND" || threadsTruncated
+        ? "PEND"
+        : "PASS";
 
   return {
     pr: {
@@ -219,13 +244,13 @@ export function planStatus(data) {
       pending,
       passed: checks.length - failed - pending,
       total: checks.length,
-      truncated: contexts.length >= PAGE_SIZE,
+      truncated: checksTruncated,
       items: checks,
     },
     threads: {
       unresolved: unresolved.length,
       waiting,
-      truncated: (pr.reviewThreads?.nodes?.length ?? 0) >= PAGE_SIZE,
+      truncated: threadsTruncated,
       items: unresolved,
     },
     verdict,
@@ -343,7 +368,7 @@ export function formatStatus(
     checks.passed > 0 ? `${checks.passed} passed` : "",
   ].filter(Boolean);
   out.push(
-    `checks: ${checks.status}  ${counts.length > 0 ? counts.join(", ") : "none"}${checks.truncated ? "  (first 100 shown)" : ""}`,
+    `checks: ${checks.status}  ${counts.length > 0 ? counts.join(", ") : "none yet"}${checks.truncated ? "  (first 100 shown)" : ""}`,
   );
   for (const check of checks.items) {
     if (check.state === "PASS") continue;

@@ -11,7 +11,8 @@
  *   no argument  the open PR whose head is the current branch
  *   --json       print the planned status as JSON instead of the screen (no log fetch)
  *
- * Exit: 0 PASS, 1 FAIL, 3 PEND (nothing failed, something still runs), 2 usage error, no PR found
+ * Exit: 0 PASS, 1 FAIL, 3 PEND (nothing failed, and a check still runs, no check has registered
+ * yet, or more than 100 checks or threads went unread), 2 usage error, no PR found
  * or a `gh` error. The decision lives in `scripts/lib/pr-status-plan.mjs`.
  */
 import { spawnSync } from "node:child_process";

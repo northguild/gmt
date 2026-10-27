@@ -34,7 +34,10 @@
    The grips also lean outward, the entry grip to the left of its edge and the exit grip to the
    right of its own, each by 8px past centre. A short dwell puts the edges 12px apart; centred
    grips would overlap and each hide half of the other, which axe reads as a partly obscured
-   target. Leaning keeps them clear of each other down to 8px. The track gives the 8px a side back. */
+   target. Leaning keeps them clear of each other down to 8px. The track gives the 8px a side back,
+   and the axis under it is inset by as much, so its dates stay on the day columns. The drag
+   keeps the pointer's distance from the edge (`dwell-ledger-mount.ts`), so the lean does not
+   make the first move jump. */
 .gmt-dwell-bar > .gmt-handle {
   --gmt-handle-w: 24px;
 }
@@ -49,6 +52,11 @@
 
 .gmt-dwell-track {
   margin-inline: 8px;
+}
+
+/* Padding, not margin: the shared axis rule owns the margin that lines it up with the track. */
+.gmt-dwell-axis {
+  padding-inline: 8px;
 }
 
 /* ---------------------------------------------------------------------------

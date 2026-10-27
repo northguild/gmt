@@ -29,7 +29,8 @@ jobs:
   # `pnpm run validate` uses the same ones. `checks` is a JSON array of check ids, which a step
   # tests with `contains(fromJSON(...), '<id>')`. `build_lint`, `tests` and `gmt_tests` say
   # whether a matrix job has anything to do. `dox_changed` says whether a pull request changed a
-  # file under apps/dox/, which the advisory `dox-gates` job waits for.
+  # file under apps/dox/ or pnpm-lock.yaml (a Playwright or axe-core bump), which the advisory
+  # `dox-gates` job waits for. The nightly sweep's change check reads the same two paths.
   #
   # The matrix jobs are required status checks. A matrix job skipped by a job-level `if`
   # reports one check under its unexpanded name ("Tests (Node ${{ matrix.node-version }})"),
@@ -56,7 +57,7 @@ jobs:
             git fetch --no-tags origin "${{ github.base_ref }}"
             BASE=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
             node scripts/affected.mjs github --base "$BASE" --head "$(git rev-parse HEAD)"
-            if git diff --name-only "$BASE" HEAD | grep -q '^apps/dox/'; then
+            if git diff --name-only "$BASE" HEAD | grep -qE '^(apps/dox/|pnpm-lock\.yaml$)'; then
               echo "dox_changed=true" >> "$GITHUB_OUTPUT"
             else
               echo "dox_changed=false" >> "$GITHUB_OUTPUT"

@@ -6,10 +6,14 @@
  *
  * - A changed file selects every page whose closure holds it.
  * - A change under `packages/gmt/src/<namespace>/<module>/` selects the pages that import
- *   `@northguild/gmt/<namespace>/<module>`; any other library change selects the sample.
+ *   `@northguild/gmt/<namespace>/<module>`, and the sample: a page that reaches the module through
+ *   another one, or imports the package whole, is not in the graph. Any other library change
+ *   selects the sample.
  * - Chrome (the Starlight shell, its stylesheets and component overrides, `astro.config.mjs`,
  *   `apps/dox/package.json`, `pnpm-lock.yaml`) selects the sample.
  * - A changed gate script selects that gate on the sample (`gateScripts` names the scripts and the data files a gate reads).
+ * - Any other `apps/dox/` file that no page's closure holds selects the sample, never nothing: a
+ *   component the chrome imports, a generator of the `/reference/` pages, a file in `public/`.
  * - Over `CAP` pages, only the sample and `CAP_REST` evenly picked others are kept.
  */
 
@@ -38,8 +42,7 @@ const RUNNER_PREFIXES = [
   "apps/dox/scripts/gates/",
   "apps/dox/scripts/gates.mjs",
   "apps/dox/scripts/gate-checks.mjs",
-  "apps/dox/scripts/lib/clock-check-harness.mjs",
-  "apps/dox/scripts/lib/static-server.mjs",
+  "apps/dox/scripts/lib/",
 ];
 
 /** Whether a changed file is worth a build at all (the early exit). */
@@ -120,15 +123,17 @@ export function selectPages({
       const module = `${library[1]}/${library[2]}`;
       const hit = pages.filter((p) => p.gmt.includes(module));
       for (const p of hit) why(p.path, `imports @northguild/gmt/${module}`);
-      if (hit.length === 0) addSample(`library: ${file}`);
+      addSample(`library: ${file}`);
       continue;
     }
     if (file.startsWith("packages/gmt/src/")) {
       addSample(`library: ${file}`);
       continue;
     }
-    for (const p of pages) {
-      if (p.closure.includes(file)) why(p.path, file);
+    const reached = pages.filter((p) => p.closure.includes(file));
+    for (const p of reached) why(p.path, file);
+    if (reached.length === 0 && file.startsWith("apps/dox/")) {
+      addSample(`no page imports it: ${file}`);
     }
   }
 

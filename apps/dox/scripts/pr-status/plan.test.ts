@@ -8,6 +8,7 @@ import {
   cleanLog,
   exitCodeFor,
   extractPullRequest,
+  formatStatus,
   jobSlug,
   planStatus,
   viewFailure,
@@ -52,6 +53,9 @@ describe("buildQuery", () => {
       expect(query).toContain("viewer { login }");
       expect(query).toContain("statusCheckRollup");
       expect(query).toContain("reviewThreads(first: 100)");
+      // Truncation is read, not guessed, and a thread's last comment is asked for by name.
+      expect(query.match(/pageInfo \{ hasNextPage \}/g)).toHaveLength(2);
+      expect(query).toContain("latest: comments(last: 1)");
       expect(query).toContain("latestReviews(first: 20)");
     }
     expect(buildQuery("branch")).toContain(
@@ -161,21 +165,33 @@ describe("check states", () => {
     ]);
   });
 
-  it("flags a full page of checks", () => {
+  it("flags checks past the page, and never passes on the 100 it read", () => {
+    // Synthetic edit: 100 passing checks and a next page.
     const many = Array.from({ length: 100 }, (_, i) => run({ databaseId: i }));
     const data = load("green-395");
-    data.repository.pullRequest.commits.nodes[0].commit.statusCheckRollup.contexts.nodes =
-      many;
-    expect(planStatus(data)!.checks.truncated).toBe(true);
+    const contexts =
+      data.repository.pullRequest.commits.nodes[0].commit.statusCheckRollup
+        .contexts;
+    contexts.nodes = many;
+    expect(planStatus(data)!.checks).toMatchObject({
+      truncated: false,
+      status: "PASS",
+    });
+    contexts.pageInfo = { hasNextPage: true };
+    const status = planStatus(data)!;
+    expect(status.checks).toMatchObject({ truncated: true, status: "PEND" });
+    expect(status.verdict).toBe("PEND");
   });
 
-  it("reads a commit with no rollup as no checks", () => {
+  it("reads a commit with no rollup as no checks yet, which is pending", () => {
+    // Right after a push, before CI registers a check run.
     const data = load("green-395");
     data.repository.pullRequest.commits.nodes[0].commit.statusCheckRollup =
       null;
     const status = planStatus(data)!;
-    expect(status.checks).toMatchObject({ total: 0, status: "PASS" });
-    expect(status.verdict).toBe("PASS");
+    expect(status.checks).toMatchObject({ total: 0, status: "PEND" });
+    expect(status.verdict).toBe("PEND");
+    expect(formatStatus(status).split("\n")[2]).toBe("checks: PEND  none yet");
   });
 });
 
@@ -234,6 +250,43 @@ describe("threads", () => {
     );
     expect(item!.answered).toBe(true);
     expect(item!.firstAuthor).toBe("craig-o-curtis");
+  });
+
+  it("judges a long thread by its latest comment and counts all of them", () => {
+    // Synthetic edit in the live query's shape: the first comment, the last in `latest`, and a
+    // total past what one page of comments would hold.
+    const data = load("unanswered-edited-399");
+    const thread = data.repository.pullRequest.reviewThreads.nodes.find(
+      (t: any) => !t.isResolved && t.path.endsWith("IOT-101.md"),
+    );
+    thread.comments.totalCount = 75;
+    thread.latest = {
+      nodes: [
+        {
+          author: { login: "baldurpan" },
+          body: "Fixed.",
+          createdAt: "2999-01-01T00:00:00Z",
+          url: "u",
+        },
+      ],
+    };
+    const item = planStatus(data)!.threads.items.find((t: any) =>
+      t.path.endsWith("IOT-101.md"),
+    );
+    expect(item).toMatchObject({
+      answered: true,
+      commentCount: 75,
+      firstAuthor: "craig-o-curtis",
+    });
+  });
+
+  it("never passes with threads past the page", () => {
+    // Synthetic edit: every check passed and no thread waits, but a next page of threads is unread.
+    const data = load("green-395");
+    data.repository.pullRequest.reviewThreads.pageInfo = { hasNextPage: true };
+    const status = planStatus(data)!;
+    expect(status.threads.truncated).toBe(true);
+    expect(status.verdict).toBe("PEND");
   });
 
   it("quotes only the first line of the first comment, cut at 100 characters", () => {

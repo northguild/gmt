@@ -5,8 +5,8 @@ name: Dox gates nightly
 # finding (apps/dox/scripts/gates/issue-plan.mjs). A failing gate fails its leg; the report job still
 # runs and files.
 #
-# It skips a night when nothing under apps/dox/ or pnpm-lock.yaml changed since the last finished
-# run (the `decide` job; the rule is apps/dox/scripts/gates/nightly-decide.mjs), and always runs on
+# It skips a night when nothing under apps/dox/ or pnpm-lock.yaml changed since the last run that
+# filed its findings (the `decide` job; the rule is apps/dox/scripts/gates/nightly-decide.mjs), and always runs on
 # Sundays. A manual dispatch with `force` runs it anyway; `force_finding` also files one
 # [dry run] issue for a synthetic finding, to prove the filing path without a real failure.
 #
@@ -66,9 +66,11 @@ jobs:
           node-version: 24
           check-latest: true
 
-      # The earlier run is the newest finished run on main that ended `success` or `failure`. A
-      # skipped night ends `success` at the same tree, so comparing against it is correct. Without
-      # `actions: read` the listing fails and the sweep runs (fail open), saying why.
+      # The earlier run is the newest finished run on main that filed its findings: its report job
+      # succeeded (the run itself ends `failure` when a gate failed), or it skipped the night and
+      # ended `success`, which leaves the tree it compared against. A run whose report job failed
+      # never counts, so its findings are swept and filed again the next night. Without
+      # `actions: read` a listing fails and the sweep runs (fail open), saying why.
       - name: Decide
         id: decide
         env:
@@ -80,12 +82,24 @@ jobs:
         run: |
           last=""
           LAST_ERROR=""
-          if ! last=$(gh run list --workflow dox-gates-nightly.yml --branch main --status completed \
-              --limit 20 --json headSha,conclusion \
-              --jq '[.[] | select(.conclusion == "success" or .conclusion == "failure")][0].headSha // ""' 2>err.txt); then
+          if ! runs=$(gh run list --workflow dox-gates-nightly.yml --branch main --status completed \
+              --limit 20 --json databaseId,headSha,conclusion \
+              --jq '.[] | select(.conclusion == "success" or .conclusion == "failure") | "\(.databaseId) \(.headSha) \(.conclusion)"' 2>err.txt); then
             LAST_ERROR=$(head -c 200 err.txt | tr '\n' ' ')
-            last=""
+            runs=""
           fi
+          while read -r id sha conclusion; do
+            [ -n "$id" ] || continue
+            if ! report=$(gh run view "$id" --json jobs \
+                --jq '[.jobs[] | select(.name == "Report to issues")][0].conclusion // ""' 2>err.txt); then
+              LAST_ERROR=$(head -c 200 err.txt | tr '\n' ' ')
+              break
+            fi
+            if [ "$report" = success ] || { [ "$conclusion" = success ] && [ "$report" = skipped ]; }; then
+              last="$sha"
+              break
+            fi
+          done <<< "$runs"
           CHANGED=""
           if [ -n "$last" ]; then
             if git merge-base --is-ancestor "$last" HEAD 2>/dev/null; then

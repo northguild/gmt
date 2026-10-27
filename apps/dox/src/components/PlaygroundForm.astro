@@ -387,13 +387,22 @@ const isWide = (kind: string) =>
       return { name, kind, items, element: element as CallField["element"], optional };
     }
 
-    /** Names each row's fields ("items 2", "intervals 1 start"): a bare input has no label. */
+    /**
+     * Names each row's fields ("items 2", "intervals 1 start") and its remove button ("Remove
+     * items 2"): a bare input has no label, and a list of buttons all named "Remove" says not
+     * which row each one takes. Re-run after a row is added or removed, so the numbers follow.
+     */
     const labelRows = () => {
       rows.querySelectorAll<HTMLElement>(".gmt-pf-row").forEach((row, i) => {
         row.querySelectorAll<HTMLElement>("input,select").forEach((c) => {
           const part = kind === "intervals" ? ` ${c.dataset.role}` : "";
           c.setAttribute("aria-label", `${name} ${i + 1}${part}`);
         });
+        const remove = row.querySelector<HTMLElement>('[data-role="remove"]');
+        if (remove) {
+          remove.title = `Remove ${name} ${i + 1}`;
+          remove.setAttribute("aria-label", remove.title);
+        }
       });
     };
 
