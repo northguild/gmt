@@ -361,6 +361,7 @@ describe("diffZoned in non-ISO calendars (CORE-6)", () => {
     ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"2023-09-30T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"months"} | ${0}     | ${"D6: P30D is no whole month"}
     ${"2023-08-31T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${"2023-09-30T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${"months"} | ${0}     | ${"D6 in a named zone"}
     ${"2024-02-11T00:00:00-05:00[America/New_York][u-ca=hebrew]"}   | ${"2025-03-01T00:00:00-05:00[America/New_York][u-ca=hebrew]"}   | ${"years"}  | ${0}     | ${"D7: P12M29D is no whole year"}
+    ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"2023-09-30T00:00:00+00:00[Etc/UTC][u-ca=buddhist]"}          | ${"months"} | ${0}     | ${"D6 across UTC and Etc/UTC, one time zone"}
   `(
     "returns $expected $unit from $start to $end ($reason)",
     ({ start, end, unit, expected }) => {
@@ -446,4 +447,29 @@ describe("diffZoned with singular unit names", () => {
       ),
     ).toEqual(expected);
   });
+});
+
+// Defect 4 (D11): the calendar nudge window needs a spec path for a month `smallestUnit` from the
+// 31st. UTC and Etc/UTC are one time zone (TimeZoneEquals), so the pair takes it too. Native
+// Temporal gives ceil/expand 2 and floor/trunc 1 for 2024-01-31 to 2024-02-29T12:00.
+describe("diffZoned rounds by months across two identifiers of one time zone", () => {
+  it.each`
+    roundingMode | expected
+    ${"ceil"}    | ${2}
+    ${"expand"}  | ${2}
+    ${"floor"}   | ${1}
+    ${"trunc"}   | ${1}
+  `(
+    "returns $expected months from UTC to Etc/UTC with roundingMode $roundingMode",
+    ({ roundingMode, expected }) => {
+      expect(
+        diffZoned(
+          "2024-01-31T00:00:00+00:00[UTC]",
+          "2024-02-29T12:00:00+00:00[Etc/UTC]",
+          "months",
+          { smallestUnit: "months", roundingMode },
+        ),
+      ).toBe(expected);
+    },
+  );
 });

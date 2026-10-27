@@ -1,7 +1,7 @@
 import { INDUSTRY_LAYER_IDS } from "./industry-tags";
 
 /**
- * The "Start here" and "Industries" pages both `llms.txt` and `llms-full.txt` list. The page
+ * The "Start here", "Migrate" and "Industries" pages both `llms.txt` and `llms-full.txt` list. The page
  * modules keep their own `import.meta.glob` (Vite resolves it per module) and
  * pass the resulting raw-source map in.
  */
@@ -14,6 +14,7 @@ const START_ORDER = [
   "upstream",
   "core-rules",
   "install",
+  "bundle-size",
 ];
 
 /** A glob key's path relative to `content/docs/`, without its extension. */
@@ -52,6 +53,34 @@ export function industryPages(
     "industries/index",
     ...INDUSTRY_LAYER_IDS.map((id) => `industries/${id}`),
   ].flatMap((slug) => {
+    const source = bySlug.get(slug);
+    return source === undefined ? [] : [{ slug, source }];
+  });
+}
+
+/** The Migrate section's pages, in reading order: the index, the five libraries, native Temporal, then the matrix. */
+export const MIGRATE_ORDER = [
+  "migrate/index",
+  "migrate/date-fns",
+  "migrate/luxon",
+  "migrate/dayjs",
+  "migrate/moment",
+  "migrate/internationalized-date",
+  "migrate/temporal",
+  "compare/behaviour",
+] as const;
+
+/**
+ * The Migrate pages with their raw source, in `MIGRATE_ORDER`. A page that is not on disk is left
+ * out, so the lists stay valid while a page is being written.
+ */
+export function migratePages(
+  raw: Record<string, string>,
+): { slug: string; source: string }[] {
+  const bySlug = new Map(
+    Object.entries(raw).map(([key, source]) => [docsRelativePath(key), source]),
+  );
+  return MIGRATE_ORDER.flatMap((slug) => {
     const source = bySlug.get(slug);
     return source === undefined ? [] : [{ slug, source }];
   });

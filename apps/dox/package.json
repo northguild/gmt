@@ -6,7 +6,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "generate": "node ../../scripts/upstream.mjs refresh && node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs && tsx ./scripts/build-tool-index.ts && tsx ./scripts/build-industry-pages.ts && tsx ./scripts/build-industry-sidebars.ts && node ./scripts/ensure-sidebar-order.mjs && tsx ./scripts/build-corpus-counts.ts",
+    "generate": "node ../../scripts/upstream.mjs refresh && node ./scripts/generate-version-map.mjs && tsx ./scripts/build-reference.ts && node ./scripts/build-guides.mjs && node ./scripts/build-scenario-index.mjs && tsx ./scripts/build-tool-index.ts && tsx ./scripts/build-industry-pages.ts && tsx ./scripts/build-industry-sidebars.ts && node ./scripts/ensure-sidebar-order.mjs && tsx ./scripts/build-corpus-counts.ts && node ../../scripts/bundle-size.mjs report --json src/generated/bundle-size.json",
     "predev": "pnpm --filter @northguild/gmt build:dev",
     "dev": "pnpm run generate && node ./scripts/dev-all.mjs",
     "predev:site": "pnpm --filter @northguild/gmt build:dev",
@@ -22,6 +22,7 @@
     "docs-check": "tsx ./scripts/check-reference-docs.ts",
     "astro": "astro",
     "favicons": "node scripts/build-favicons.mjs",
+    "social-preview": "tsx scripts/build-social-preview.ts",
     "globe:smoke": "node scripts/globe-smoke.mjs",
     "grow:measure": "node scripts/grow-measure.mjs",
     "canada:still": "node scripts/canada-clock-still.mjs",
@@ -35,6 +36,7 @@
     "@ai-sdk/google": "^4.0.66",
     "@ai-sdk/react": "4.0.98",
     "@astrojs/react": "6.0.6",
+    "@astrojs/sitemap": "3.7.3",
     "@astrojs/starlight": "0.41.11",
     "@js-temporal/polyfill": "^0.5.1",
     "@northguild/gmt": "workspace:*",
@@ -49,6 +51,8 @@
     "@tanstack/virtual-core": "^3.17.8",
     "ai": "^7.0.95",
     "astro": "7.4.2",
+    "astro-og-canvas": "0.13.2",
+    "canvaskit-wasm": "^0.42.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "2.1.1",
     "cmdk": "^1.1.1",
@@ -72,6 +76,7 @@
     "use-stick-to-bottom": "^1.1.6",
     "workers-ai-provider": "^4.0.0",
     "world-atlas": "^2.0.2",
+    "yaml": "2.9.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {

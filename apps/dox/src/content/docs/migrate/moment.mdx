@@ -1,0 +1,40 @@
+---
+title: Migrate from Moment.js to Temporal with GMT
+description: Each Moment.js call, the GMT function that replaces it, and the cases where Moment returns a different result from Temporal.
+---
+
+import BehaviourDiffs from "../../../components/BehaviourDiffs.astro";
+import MigrationMap from "../../../components/MigrationMap.astro";
+import { checkedLine } from "../../../data/behaviour-matrix";
+
+{checkedLine("moment")}
+
+[Migrate to Temporal with GMT](/migrate/) explains the one change that applies to every call below: GMT takes strings in and gives strings out.
+
+## Call by call
+
+<MigrationMap library="moment" />
+
+## What changes
+
+- Moment objects are mutable: `a.add(1, "day")` changes `a` and returns it. GMT returns a new string and never changes its input.
+- `month()` counts months from 0. GMT counts them from 1 to 12.
+- `b.diff(a, unit)` subtracts the earlier value from the later one. `diffDate(a, b, unit)` takes the earlier value first.
+- Invalid input gives an object whose `format()` returns `"Invalid date"`. GMT returns `""`, `null`, `false` or `[]`.
+- Time zones come from the companion package `moment-timezone`.
+
+```js
+import { diffDate } from "@northguild/gmt/plain/calculate";
+
+diffDate("2024-03-01", "2024-03-15", "days"); // 14
+```
+
+## Where Moment.js differs from Temporal
+
+Each item is a case where the library's result differs from Temporal's. The [full matrix](/compare/behaviour/) also lists the cases where it matches.
+
+<BehaviourDiffs library="moment" />
+
+## More calls
+
+<MigrationMap library="moment" part="more" />

@@ -2,12 +2,15 @@
 import { Temporal } from "../../internal/temporal";
 import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
+import { timeZoneEquals } from "../../internal/temporalCompat";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
  * Return an array of plain ISO date strings covering the inclusive date range between two zoned datetimes.
  *
- * - Both datetimes must have the same timezone.
+ * - Both datetimes must have the same time zone: identifiers of one zone count as the same
+ *   (`UTC` and `Etc/UTC` on every host; an IANA link such as `Europe/Kiev` and `Europe/Kyiv` where
+ *   the host resolves it, which Safari 27 without `Temporal` does not).
  * - Returns [] for invalid inputs, mismatched timezones, start > end, or invalid step.
  * - A range holding more dates than `options.maxPieces` returns `[]` without generating any.
  * - An explicit `undefined` `stepDays` is the default step, so `(start, end, undefined, options)`
@@ -81,7 +84,7 @@ export function mapZonedDatesInRange(
         return [];
       }
 
-      if (start.timeZoneId !== end.timeZoneId) {
+      if (!timeZoneEquals(start, end)) {
         return [];
       }
 

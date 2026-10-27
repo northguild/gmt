@@ -1,0 +1,39 @@
+---
+title: Migrate from Day.js to Temporal with GMT
+description: Each Day.js call, the GMT function that replaces it, and the cases where Day.js returns a different result from Temporal.
+---
+
+import BehaviourDiffs from "../../../components/BehaviourDiffs.astro";
+import MigrationMap from "../../../components/MigrationMap.astro";
+import { checkedLine } from "../../../data/behaviour-matrix";
+
+{checkedLine("dayjs")}
+
+[Migrate to Temporal with GMT](/migrate/) explains the one change that applies to every call below: GMT takes strings in and gives strings out.
+
+## Call by call
+
+<MigrationMap library="dayjs" />
+
+## What changes
+
+- Day.js values are immutable objects. Most calls in the table need a plugin from the same package; the plugin is named in brackets.
+- `month()` counts months from 0. GMT counts them from 1 to 12.
+- `b.diff(a, unit)` subtracts the earlier value from the later one. `diffDate(a, b, unit)` takes the earlier value first.
+- Invalid input gives an object whose `format()` returns `"Invalid Date"`. GMT returns `""`, `null`, `false` or `[]`.
+
+```js
+import { diffDate } from "@northguild/gmt/plain/calculate";
+
+diffDate("2024-03-01", "2024-03-15", "days"); // 14
+```
+
+## Where Day.js differs from Temporal
+
+Each item is a case where the library's result differs from Temporal's. The [full matrix](/compare/behaviour/) also lists the cases where it matches.
+
+<BehaviourDiffs library="dayjs" />
+
+## More calls
+
+<MigrationMap library="dayjs" part="more" />

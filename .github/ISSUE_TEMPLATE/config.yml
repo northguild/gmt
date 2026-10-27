@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://northguild.dev/gmt/
+    about: Guides, the API reference with a playground for every function, and tools.
+  - name: Discord
+    url: https://discord.gg/TdvQdP3t5a
+    about: Questions and help with using GMT.

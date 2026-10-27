@@ -1,0 +1,82 @@
+---
+/**
+ * One library's call-by-call table: their call, the GMT functions that replace it, and a note.
+ *
+ * The rows are `data/migration-maps.ts`; each GMT name links to its reference page and shows the
+ * module to import it from. `part="more"` prints the shorter table of further calls. The
+ * Markdown twin of this table is `renderMigrationMap` in `src/lib/mdx-jsx.ts`. Styles live in
+ * `src/styles/gmt-migrate.css`.
+ */
+import { codeSpans, libraryProp, mapView } from "../lib/migrate-view";
+import { withBase } from "../lib/site";
+
+interface Props {
+  library: string;
+  part?: "rows" | "more";
+}
+
+const { library, part = "rows" } = Astro.props;
+const view = mapView(libraryProp(library, "MigrationMap"), part);
+---
+
+<div
+  class="gmt-migrate-scroll"
+  tabindex="0"
+  role="region"
+  aria-label={`${view.heading} calls and their GMT functions`}
+>
+  <table class="gmt-migrate-table">
+    <thead>
+      <tr>
+        <th>{view.heading}</th>
+        <th>GMT</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        view.rows.map((row) => (
+          <tr>
+            <td set:html={codeSpans(row.theirs)} />
+            <td>
+              {row.gmt.length === 0 ? (
+                <span>none</span>
+              ) : (
+                row.gmt.map((fn) => (
+                  <div class="gmt-migrate-fn">
+                    <a href={withBase(fn.url)}>
+                      <code>{fn.name}</code>
+                    </a>
+                    <span class="gmt-migrate-module">{fn.importPath}</span>
+                  </div>
+                ))
+              )}
+            </td>
+            <td>
+              {row.note && <span set:html={codeSpans(row.note)} />}
+              {row.cases.length > 0 && (
+                <span class="gmt-migrate-cases">
+                  {" "}
+                  Measured in{" "}
+                  {row.cases.map((c, index) => (
+                    <>
+                      {index > 0 && ", "}
+                      <a href={withBase(c.href)}>{c.id}</a>
+                    </>
+                  ))}
+                  .
+                </span>
+              )}
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
+
+<script>
+  import { mountOverflowFocus } from "../lib/overflow-focus";
+
+  mountOverflowFocus(document, ".gmt-migrate-scroll");
+</script>

@@ -1,0 +1,59 @@
+---
+/**
+ * The cases where one library's result differs from Temporal's, taken from the behaviour matrix.
+ *
+ * One card per case: the input, what the library returns, what Temporal returns, the clause that
+ * decides it, any open upstream issue and a link to the full matrix row. A library that matches
+ * Temporal in every case prints one sentence saying so. The Markdown twin is
+ * `renderBehaviourDiffs` in `src/lib/mdx-jsx.ts`. Styles live in `src/styles/gmt-migrate.css`.
+ */
+import { diffViews, libraryProp } from "../lib/migrate-view";
+import { withBase } from "../lib/site";
+
+interface Props {
+  library: string;
+}
+
+const diffs = diffViews(libraryProp(Astro.props.library, "BehaviourDiffs"));
+---
+
+<ul class="gmt-diffs">
+  {
+    diffs.map((diff) => (
+      <li class="gmt-diff">
+        <h3 class="gmt-diff-title">
+          <span class="gmt-diff-id">{diff.id}</span> {diff.title}
+        </h3>
+        <dl class="gmt-diff-facts">
+          <div>
+            <dt>Input</dt>
+            <dd>{diff.input}</dd>
+          </div>
+          <div>
+            <dt>Library returns</dt>
+            <dd>
+              <code>{diff.libraryReturns}</code>
+            </dd>
+          </div>
+          <div>
+            <dt>Temporal returns</dt>
+            <dd>
+              <code>{diff.temporalReturns}</code>
+            </dd>
+          </div>
+        </dl>
+        <p class="gmt-diff-links">
+          <a href={diff.clause.url}>{diff.clause.label}</a>
+          {diff.issues.map((issue) => (
+            <>
+              {" · "}
+              <a href={issue.url}>{issue.text}</a>
+            </>
+          ))}
+          {" · "}
+          <a href={withBase(diff.matrixHref)}>Matrix row</a>
+        </p>
+      </li>
+    ))
+  }
+</ul>

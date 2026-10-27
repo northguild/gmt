@@ -5,6 +5,7 @@ import {
   stripFrontmatter,
   stripMdx,
 } from "~/lib/page-markdown";
+import { docsRelPath, markdownTwinSlug } from "~/lib/md-twin";
 import { pageExpressionValues } from "~/lib/page-expression-values";
 
 /** The splash pages' figures, evaluated once per build. */
@@ -17,18 +18,23 @@ const RAW = import.meta.glob("../content/docs/**/*.{md,mdx}", {
 }) as Record<string, string>;
 
 const pages = Object.entries(RAW).flatMap(([path, raw]) => {
-  const rel = path
-    .replace(/^.*\/content\/docs\//, "")
-    .replace(/\.(md|mdx)$/, "");
-  if (rel === "index") return []; // splash homepage — skip
+  const rel = docsRelPath(path);
   const { data, body } = stripFrontmatter(raw);
-  const slug = data.slug ?? rel; // reference pages carry explicit slug:
+  // A page with a `slug:` (the generated reference) is served at it; the home page at `index.md`.
+  const slug = markdownTwinSlug(
+    data.slug ?? rel.replace(/(?:^|\/)index$/, ""),
+    path,
+  );
   const md = stripMdx(body, { gmtVersion, values });
   return [
     {
       slug,
       markdown: pageToMarkdown({
-        title: data.title ?? slug,
+        // The home page's `title` is the page's `<title>`; its heading is the package name.
+        title:
+          (rel === "index" ? data["hero.title"] : undefined) ??
+          data.title ??
+          slug,
         body: md,
         industries: data.industries,
       }),

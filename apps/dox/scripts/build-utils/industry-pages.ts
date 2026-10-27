@@ -168,6 +168,8 @@ const frontmatter = (title: string, description: string, tag?: string) => [
   `---`,
   `title: ${JSON.stringify(title)}`,
   `description: ${JSON.stringify(description)}`,
+  // A generated page has no source file to edit.
+  `editUrl: false`,
   ...(tag ? [`industries: [${tag}]`] : []),
   // The block form, the only one `ensure-sidebar-order.mjs` leaves alone.
   `sidebar:`,

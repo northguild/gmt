@@ -109,6 +109,18 @@ export function readSectionPage(slug: string, source: string): SectionPage {
     }
     return folded.join(" ");
   };
+  // `sidebar: { label }` in the block form names the page in the sidebar when its title is longer.
+  const sidebarLabel = (): string => {
+    const lines = frontmatter.split("\n");
+    const start = lines.findIndex((line) => line.startsWith("sidebar:"));
+    if (start === -1) return "";
+    for (const line of lines.slice(start + 1)) {
+      if (!/^\s+\S/.test(line)) break;
+      const found = line.match(/^\s+label:\s*(.*)$/)?.[1]?.trim();
+      if (found) return unquote(found);
+    }
+    return "";
+  };
   const industries = field("industries")
     .replace(/^\[|\]$/g, "")
     .split(",")
@@ -121,7 +133,7 @@ export function readSectionPage(slug: string, source: string): SectionPage {
   }
   return {
     slug,
-    title: unquote(field("title")) || slug,
+    title: sidebarLabel() || unquote(field("title")) || slug,
     description: description(),
     industries,
   };

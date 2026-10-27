@@ -2328,6 +2328,10 @@ the engine, not a gap in the workaround: resolving a link needs the IANA `backwa
 other Intl output names a link's primary (two zones with the same rules since 1970, such as `Europe/Oslo` and
 `Europe/Berlin`, are still two primary identifiers, so comparing offsets cannot stand in for it). GMT owns no time zone
 data, so those pairs wait for the polyfill fix or a WebKit `Temporal`. GMT's other identifier
-comparisons (`areZonedEqual`, `areZonedEqualBy`, `formatZonedRange`, `mapZonedDatesInRange` and the same-zone fast paths)
-compare identifiers as written by their documented contract and are not affected. The `diffZoned` and
-`intervalLengthZoned` rows run unmocked, so they exercise the real path on the WebKit control pass.
+comparisons (`areZonedEqual`, `areZonedEqualBy`, `formatZonedRange`, `mapZonedDatesInRange` and the same-zone range-limit
+gates in `zonedWallClockDifference.ts`) go through `timeZoneEquals`, so the same limit applies to them: on a host without
+`Temporal`, an IANA link such as `Europe/Kiev` and `Europe/Kyiv` is two zones there too, while `UTC`, `Etc/UTC`, `Etc/GMT` and
+`GMT` are one zone on every host. The `diffZoned` and
+`intervalLengthZoned` rows, the `diffZoned` and `diffZonedAsDuration` month-rounding and buddhist-calendar rows for
+`UTC` and `Etc/UTC`, and the `areZonedEqual`, `areZonedEqualBy`, `formatZonedRange` and `mapZonedDatesInRange` rows run
+unmocked, so they exercise the real path on the WebKit control pass.

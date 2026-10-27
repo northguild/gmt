@@ -74,5 +74,10 @@ export default defineConfig({
       files: ["packages/gmt/src/internal/temporal.ts"],
       rules: { "no-restricted-imports": "off" },
     },
+    {
+      // The behaviour matrix runs the date libraries this rule bans, to measure what they return.
+      files: ["scripts/behaviour-matrix/**"],
+      rules: { "@northguild/gmt-oxlint/no-date-library-imports": "off" },
+    },
   ],
 });

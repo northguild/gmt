@@ -64,9 +64,13 @@ const ROOTS = [
   join(REPO, "packages/gmt/src"),
 ];
 
+// Installed packages and the behaviour-matrix runner's bundled copy of GMT are not our source.
+const SKIPPED_DIRECTORIES = new Set(["node_modules", ".cache"]);
+
 function walk(dir: string): string[] {
   if (!statSync(dir, { throwIfNoEntry: false })?.isDirectory()) return [];
   return readdirSync(dir).flatMap((name) => {
+    if (SKIPPED_DIRECTORIES.has(name)) return [];
     const full = join(dir, name);
     if (statSync(full).isDirectory()) return walk(full);
     if (!SCANNED_EXTENSIONS.has(extname(name))) return [];

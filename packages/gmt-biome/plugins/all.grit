@@ -12,7 +12,7 @@ or {
     register_diagnostic(span=`Date.UTC`, message="Avoid Date.UTC(). Use @northguild/gmt convertUtcToUnix('YYYY-MM-DDTHH:mm:ssZ', { epochUnit: 'milliseconds' | 'seconds' }) instead.", severity="error")
   },
   `$obj.getTimezoneOffset()` where {
-    register_diagnostic(span=`getTimezoneOffset`, message="Avoid getTimezoneOffset(). Timezone offsets change throughout the year, so use @northguild/gmt zoned methods instead.", severity="error")
+    register_diagnostic(span=`getTimezoneOffset`, message="Avoid getTimezoneOffset(). Timezone offsets change throughout the year, so use @northguild/gmt getTimeZoneOffset(timeZone, instant) instead.", severity="error")
   },
   or {
     `import $_ from $source`,

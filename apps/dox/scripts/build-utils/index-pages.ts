@@ -128,6 +128,8 @@ function frontmatter(
     `title: ${JSON.stringify(title)}`,
     `description: ${JSON.stringify(description)}`,
     `slug: ${JSON.stringify(slug)}`,
+    // A generated page has no source file to edit.
+    `editUrl: false`,
     // The tag under the title (`PageTitle.astro`). A general page has none.
     ...(industry ? [`industries: [${industry}]`] : []),
     `sidebar:`,

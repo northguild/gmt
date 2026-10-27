@@ -1,0 +1,70 @@
+---
+/**
+ * The bundle-size table. Every figure is read from `src/generated/bundle-size.json`, which
+ * `scripts/bundle-size.mjs report` writes during `generate`; nothing here is typed in. A size is
+ * in kB, 1 kB being 1,000 bytes. The budget column is the minified limit the repo's gate holds.
+ */
+import { BUNDLE_COLUMNS, bundleCells, bundleRows } from "../lib/bundle-size";
+
+const rows = bundleRows();
+---
+
+<div class="gmt-bundle-scroll" tabindex="0" role="region" aria-label="Bundle size per import">
+  <table class="gmt-bundle">
+    <thead>
+      <tr>
+        {BUNDLE_COLUMNS.map((label, i) => <th scope="col" class={i > 0 ? "num" : undefined}>{label}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((row) => {
+          const [importLine, ...figures] = bundleCells(row);
+          return (
+            <tr>
+              <th scope="row"><code>{importLine}</code></th>
+              {figures.map((cell) => <td class="num">{cell}</td>)}
+            </tr>
+          );
+        })
+      }
+    </tbody>
+  </table>
+</div>
+
+<script>
+  import { mountOverflowFocus } from "../lib/overflow-focus";
+
+  mountOverflowFocus(document, ".gmt-bundle-scroll");
+</script>
+
+<style>
+  .gmt-bundle-scroll {
+    overflow-x: auto;
+  }
+
+  .gmt-bundle {
+    width: 100%;
+    table-layout: auto;
+    border-collapse: collapse;
+    font-size: var(--sl-text-sm);
+  }
+
+  .gmt-bundle :is(th, td) {
+    padding: var(--gmt-space-2) var(--gmt-space-3);
+    border-block-end: 1px solid var(--gmt-hairline);
+    text-align: start;
+    vertical-align: top;
+  }
+
+  .gmt-bundle th[scope="row"] {
+    white-space: nowrap;
+    font-weight: normal;
+  }
+
+  .gmt-bundle .num {
+    text-align: end;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+</style>

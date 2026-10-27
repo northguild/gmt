@@ -14,7 +14,7 @@ export const MSG_DATE_PARSE =
   "Avoid Date.parse(). Use @northguild/gmt convertZonedToUnix(value) instead.";
 
 export const MSG_GET_TIMEZONE_OFFSET =
-  "Avoid date.getTimezoneOffset(). Timezone offsets change throughout the year, so use @northguild/gmt zoned methods instead.";
+  "Avoid date.getTimezoneOffset(). Timezone offsets change throughout the year, so use @northguild/gmt getTimeZoneOffset(timeZone, instant) instead.";
 
 export const MSG_DATE_LIBRARY_IMPORT =
   "Avoid date libraries that wrap native Date (moment, dayjs, luxon, date-fns, spacetime). Use @northguild/gmt instead.";

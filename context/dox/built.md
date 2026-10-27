@@ -380,10 +380,26 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **AI surface (`A3b`).** `llms.txt`, `llms-full.txt` and a raw `.md` route with "copy as
   markdown" for every page, emitted from the corpus rather than via a rendered-MDX plugin.
   Every URL is in the route manifest.
-- **Brand (`A5`).** A token layer mapped onto Starlight's variables; JetBrains Mono for body
-  and code; a display face for headings only; self-hosted fonts; body text ≥ 7:1; amber
+- **Brand (`A5`).** A token layer mapped onto Starlight's variables; the system monospace stack
+  (`--gmt-font-mono`) for body and code; Michroma, a display face, for headings only; self-hosted fonts; body text ≥ 7:1; amber
   reserved for the sentinel. See [reference/visual-design.md](reference/visual-design.md)
   and [reference/design-system.md](reference/design-system.md).
+- **Search and share tags.** `src/lib/head-tags.ts` (pure) builds each docs page's head tags and
+  `src/route-data.ts` (Starlight route middleware) applies them; `Head.astro` does not.
+  - `<title>` is unique per page and ends ` · GMT` (`TITLE_SUFFIX`); the home page's title is its
+    frontmatter title with no suffix. A reference page's `headTitle` is written by
+    `scripts/build-utils/reference-title.ts` (at most 70 characters with the suffix).
+  - Every page has a description of its own; only the home page uses the site's.
+  - `og:image` is `/og/<key>.png` from `src/pages/og/[...route].ts`: one per guide, tool and
+    scenario, one per reference namespace, else `site`. Fonts for them sit in `src/assets/og-fonts/`
+    under SIL OFL 1.1.
+  - JSON-LD: `SoftwareSourceCode` on the home page (version from `@northguild/gmt`),
+    `BreadcrumbList` on every docs page, `TechArticle` on every guide with `dateModified`.
+  - Every docs page links its Markdown twin (`<link rel="alternate" type="text/markdown">`); the
+    twin route is `src/pages/[...slug].md.ts`, the path rule `src/lib/md-twin.ts`.
+  - A generated page sets `editUrl`: the symbol's source file for the reference, `false` for index
+    pages. Starlight's `lastUpdated` and edit link are styled in `Footer.astro`.
+  - The sitemap leaves out `/dox/`. The gate is `scripts/head-tags.test.ts` over `dist/gmt`.
 - **Guides (`A4a`).** The guides under `src/content/docs/guides/` are the home of every
   feature's explanation and examples; the generated reference holds the signatures.
   `README.md` and `packages/gmt/README.md` are landing pages that hold neither, so a story
@@ -451,6 +467,37 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   after a word character, so `and/or#1` and `…/issues/3292#3` stay text. Both "ok" badges
   (`.gmt-defects-badge--ok`, `.gmt-upstream-badge--ok`) use `--gmt-cyan-ink`, not Starlight green
   (1.69:1 in light).
+- **Migration pages.** `/migrate/` has an index, one page each for date-fns, Luxon, Day.js,
+  Moment and `@internationalized/date`, and a Temporal page. `/compare/behaviour/` holds the
+  full behaviour matrix. Each library page is a call-by-call table (`MigrationMap`, data in
+  `src/data/migration-maps.ts`, one row per call, with GMT names checked against the corpus by
+  `gmtFunction` in `src/lib/migrate-view.ts`), a short "What changes" list and the cases where
+  that library differs from Temporal (`BehaviourDiffs`). The pages draw data and compute
+  nothing; each has a Markdown twin in `src/lib/mdx-jsx.ts`.
+  - **Matrix data.** `src/data/behaviour-matrix.json` is the output of
+    `scripts/behaviour-matrix/run.mjs`, read through `src/data/behaviour-matrix.ts`. A page
+    quotes a case by id (`checkedLine("<id>")`, `matrix.measuredOn`), never by retyping a
+    result.
+  - **Matrix runner.** `scripts/behaviour-matrix/` is its own folder, outside the workspace, with
+    exact pins and its own `pnpm-workspace.yaml` (`allowBuilds` for esbuild). It is run by hand
+    with `TZ=Asia/Kolkata pnpm matrix`; it bundles GMT's source, runs each case against every
+    library and against native Temporal, and exits 2 when the polyfill and native Temporal
+    disagree or `TZ` is UTC. Each cell carries one reason. A case where a library only
+    appears to differ (not reproduced, or the cell is equal) is left out. The folder is
+    gitignored for `node_modules`, `.cache` and the lockfile, and is skipped by `date-ban`,
+    oxlint's date-library rule, fallow and Renovate.
+  - **Rules.** Facts and links only, no adjective about another library; clauses cite
+    tc39.es, rfc-editor.org, unicode.org or iso.org only; examples use international zones.
+    Both the date-fns and Luxon pages say that `isValidDate("20240212")` is `false` on purpose
+    (basic format; RFC 3339 §5.6).
+  - **Sections.** `migrate` and `compare` pages each get their own share image
+    (`OWN_IMAGE_SECTIONS`); `migrate/**` except the index also carries `TechArticle`. The
+    sidebar group "Migrate" and the `/llms.txt` section come from `migratePages` in
+    `src/lib/top-level-pages.ts`. Migration pages are not in the chat's retrieval corpus.
+- **How-to guides.** `guides/how-to/` holds short task pages (add business days, convert
+  between time zones, check that a local time exists), each with a worked example whose result
+  the API-surface check runs. They carry `industries: [core]`, and avoid generic words in titles
+  and descriptions, because the refusal tests in `search.test.ts` count weak matches.
 
 ## Tier 2 · Widget platform
 

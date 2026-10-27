@@ -186,10 +186,11 @@ describe("renderIndustryHubs", () => {
   });
 
   it("opens a hub with the industry's tag, title and definition in block frontmatter", () => {
-    expect(hub("transport").split("\n").slice(0, 7)).toEqual([
+    expect(hub("transport").split("\n").slice(0, 8)).toEqual([
       "---",
       'title: "Transport"',
       'description: "Legs and dwell."',
+      "editUrl: false",
       "industries: [transport]",
       "sidebar:",
       "  order: 0",
@@ -387,10 +388,11 @@ describe("the index of the hubs", () => {
   });
 
   it("is titled `By industry`, carries no tag and holds still under ensure-sidebar-order", () => {
-    expect(index().split("\n").slice(0, 5)).toEqual([
+    expect(index().split("\n").slice(0, 6)).toEqual([
       "---",
       'title: "By industry"',
       expect.stringMatching(/^description: /),
+      "editUrl: false",
       "sidebar:",
       "  order: 0",
     ]);

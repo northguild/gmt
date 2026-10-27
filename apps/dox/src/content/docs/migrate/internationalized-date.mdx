@@ -1,0 +1,40 @@
+---
+title: Migrate from @internationalized/date to Temporal with GMT
+description: Each @internationalized/date call, the GMT function that replaces it, and the cases where it returns a different result from Temporal.
+---
+
+import BehaviourDiffs from "../../../components/BehaviourDiffs.astro";
+import MigrationMap from "../../../components/MigrationMap.astro";
+import { checkedLine } from "../../../data/behaviour-matrix";
+
+{checkedLine("internationalized-date")}
+
+[Migrate to Temporal with GMT](/migrate/) explains the one change that applies to every call below: GMT takes strings in and gives strings out.
+
+## Call by call
+
+<MigrationMap library="internationalized-date" />
+
+## What changes
+
+- The library has immutable `CalendarDate`, `CalendarDateTime` and `ZonedDateTime` classes. GMT takes and returns strings.
+- Months run from 1 to 12 in both.
+- Its `Disambiguation` type has the same four values as Temporal and as GMT: `compatible`, `earlier`, `later` and `reject`.
+- Invalid input throws. GMT returns `""`, `null`, `false` or `[]`.
+- The library has no ISO-week call and no month difference between two dates.
+
+```js
+import { diffDate } from "@northguild/gmt/plain/calculate";
+
+diffDate("2024-03-01", "2024-03-15", "days"); // 14
+```
+
+## Where @internationalized/date differs from Temporal
+
+Each item is a case where the library's result differs from Temporal's. The [full matrix](/compare/behaviour/) also lists the cases where it matches.
+
+<BehaviourDiffs library="internationalized-date" />
+
+## More calls
+
+<MigrationMap library="internationalized-date" part="more" />

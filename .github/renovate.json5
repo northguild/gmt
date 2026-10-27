@@ -24,6 +24,11 @@
   // on the weekly branch.
   packageRules: [
     {
+      // The behaviour matrix pins the versions it measured; they move only with a re-run of the matrix.
+      matchFileNames: ["scripts/behaviour-matrix/package.json"],
+      enabled: false,
+    },
+    {
       groupName: "Astro",
       groupSlug: "astro",
       matchPackageNames: ["astro", "@astrojs/**"],

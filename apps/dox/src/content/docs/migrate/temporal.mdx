@@ -1,0 +1,60 @@
+---
+title: Native Temporal and GMT
+description: Which runtimes ship Temporal, how the proposal stands in ECMA-262, and the GMT function for each Temporal call.
+---
+
+GMT is built on `@js-temporal/polyfill`, so it runs on a runtime that has no native Temporal. This page lists where Temporal is native and which GMT function matches each Temporal call.
+
+## Where Temporal runs
+
+Checked 2026-10-26, from the MDN browser compatibility data.
+
+| Runtime | First version with Temporal |
+| --- | --- |
+| Chrome and Edge | 144 |
+| Firefox | 139 |
+| Node.js | 26 |
+| Deno | 2.7 |
+| Bun | 1.4.0 |
+| Safari on macOS | Technology Preview only |
+| Safari on iOS | not supported |
+
+## Status of the specification
+
+TC39 moved Temporal to Stage 4 on 2026-03-11. It is not yet part of ECMA-262. On 2026-10-26 the pull request that adds it, [ecma262 #3966](https://github.com/tc39/ecma262/pull/3966), was open. An earlier pull request, #3759, was closed without merging. The text of the proposal is at [tc39.es/proposal-temporal](https://tc39.es/proposal-temporal/), and the clause numbers below refer to it.
+
+## Temporal call to GMT function
+
+| Task | Temporal | GMT | Specification |
+| --- | --- | --- | --- |
+| Today in a zone | `Temporal.Now.plainDateISO(z).toString()` | `getZonedToday` | [2.2.5](https://tc39.es/proposal-temporal/#sec-temporal.now.plaindateiso) |
+| Now in a zone | `Temporal.Now.zonedDateTimeISO(z).toString()` | `getZonedNow` | [2.2.4](https://tc39.es/proposal-temporal/#sec-temporal.now.zoneddatetimeiso) |
+| Now as UTC | `Temporal.Now.instant().toString()` | `getUtcNow` | [2.2.2](https://tc39.es/proposal-temporal/#sec-temporal.now.instant) |
+| Add a month | `PlainDate.from(s).add({ months: 1 }).toString()` | `addDate` | [3.3.21](https://tc39.es/proposal-temporal/#sec-temporal.plaindate.prototype.add), [3.5.7](https://tc39.es/proposal-temporal/#sec-temporal-regulateisodate) |
+| Add a calendar day in a zone | `ZonedDateTime.from(s).add({ days: 1 })` | `addZoned` | [6.3.35](https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.add), [6.5.5](https://tc39.es/proposal-temporal/#sec-temporal-addzoneddatetime) |
+| Difference | `a.until(b, { largestUnit: "months" })` | `diffDate` | [3.3.25](https://tc39.es/proposal-temporal/#sec-temporal.plaindate.prototype.until), [12.3.9](https://tc39.es/proposal-temporal/#sec-temporal-calendardateuntil) |
+| Start of day | `zdt.startOfDay()` | `startOfZoned` | [6.3.45](https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.startofday), [11.1.14](https://tc39.es/proposal-temporal/#sec-temporal-getstartofday) |
+| Hours in a day | `zdt.hoursInDay` | `getHoursInZonedDay` | [6.3.23](https://tc39.es/proposal-temporal/#sec-get-temporal.zoneddatetime.prototype.hoursinday) |
+| Change zone | `zdt.withTimeZone(z)` | `convertZonedToZoned` | [6.3.33](https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.withtimezone) |
+| UTC to zone | `Instant.from(u).toZonedDateTimeISO(z)` | `convertUtcToZoned` | [8.3.15](https://tc39.es/proposal-temporal/#sec-temporal.instant.prototype.tozoneddatetimeiso) |
+| Wall time to zone | `PlainDateTime.from(l).toZonedDateTime(z, { disambiguation })` | `convertPlainDateTimeToZoned` | [5.3.38](https://tc39.es/proposal-temporal/#sec-temporal.plaindatetime.prototype.tozoneddatetime), [11.1.11](https://tc39.es/proposal-temporal/#sec-temporal-getepochnanosecondsfor) |
+| Does the wall time exist | No public method; the specification counts the candidate instants | `classifyLocal` | [11.1.13](https://tc39.es/proposal-temporal/#sec-temporal-getpossibleepochnanoseconds) |
+| Next transition | `zdt.getTimeZoneTransition("next")` | `getDstTransitions` | [6.3.46](https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.gettimezonetransition) |
+| Round | `zdt.round({ smallestUnit: "hour" })` | `roundZoned` | [6.3.39](https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.round) |
+| Equal values | `a.equals(b)` | `areZonedEqual` | [6.3.40](https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.equals) |
+| ISO week | `d.yearOfWeek`, `d.weekOfYear`, `d.dayOfWeek` | `getIsoWeekDate` | [3.3.12](https://tc39.es/proposal-temporal/#sec-get-temporal.plaindate.prototype.weekofyear), [3.3.13](https://tc39.es/proposal-temporal/#sec-get-temporal.plaindate.prototype.yearofweek), [12.3.18](https://tc39.es/proposal-temporal/#sec-temporal-isoweekofyear) |
+| Change calendar | `d.withCalendar("japanese")` | `convertDateToCalendar` | [3.3.24](https://tc39.es/proposal-temporal/#sec-temporal.plaindate.prototype.withcalendar) |
+| Duration total | `Duration.from(s).total({ unit, relativeTo })` | `totalDuration` | [7.3.21](https://tc39.es/proposal-temporal/#sec-temporal.duration.prototype.total) |
+| A legacy date object | `date.toTemporalInstant()` | `toTemporalInstant` | none |
+
+The clause in each row is the rule GMT follows for that call.
+
+## Using both from one import
+
+GMT re-exports `Temporal`, `Intl` and `toTemporalInstant` from its root, taken from the polyfill. Code that needs a Temporal object and a GMT function can take both from `@northguild/gmt`.
+
+```js
+import { Temporal, toTemporalInstant } from "@northguild/gmt";
+```
+
+For the results other libraries return on the same inputs, see [Behaviour of date libraries against Temporal](/compare/behaviour/). Each library has its own page: [date-fns](/migrate/date-fns/), [Luxon](/migrate/luxon/), [Day.js](/migrate/dayjs/), [Moment.js](/migrate/moment/) and [@internationalized/date](/migrate/internationalized-date/).

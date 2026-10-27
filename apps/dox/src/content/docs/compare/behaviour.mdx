@@ -1,0 +1,19 @@
+---
+title: Behaviour of date libraries against Temporal
+description: The same inputs run through Temporal, GMT and five date libraries, with the result, the verdict and the clause of the specification for each case.
+---
+
+import BehaviourMatrix from "../../../components/BehaviourMatrix.astro";
+import { matrix } from "../../../data/behaviour-matrix";
+
+Each case below gives one input to Temporal, to GMT and to five libraries: date-fns, Luxon, Day.js, Moment.js and @internationalized/date. A library's result is reduced to the form named in the case, then compared with Temporal's result. The verdict is "Same" when the two are equal, "Differs" when they are not, and "Not supported" when the library has no such operation.
+
+## How it was measured
+
+A person runs `TZ=Asia/Kolkata pnpm matrix` in `scripts/behaviour-matrix/`. The runner refuses to start when the host time zone is UTC, because a library that reads the host zone would then look correct by chance. This run used Node {matrix.runtime.node} with the host zone set to {matrix.runtime.tz} on {matrix.measuredOn}.
+
+Every Temporal call ran twice, once on the polyfill and once on native Temporal, and the runner stops when the two disagree. The versions of the five libraries, and of the companion packages date-fns and Moment.js use for time zones, are named at the top of each library's page under [Migrate to Temporal with GMT](/migrate/).
+
+GMT's result is run from the source of this repository. Where GMT's result differs from Temporal's, the case says why.
+
+<BehaviourMatrix />

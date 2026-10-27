@@ -1,0 +1,43 @@
+---
+title: Migrate from date-fns to Temporal with GMT
+description: Each date-fns call, the GMT function that replaces it, and the cases where date-fns returns a different result from Temporal.
+---
+
+import BehaviourDiffs from "../../../components/BehaviourDiffs.astro";
+import MigrationMap from "../../../components/MigrationMap.astro";
+import { checkedLine } from "../../../data/behaviour-matrix";
+
+{checkedLine("date-fns")}
+
+[Migrate to Temporal with GMT](/migrate/) explains the one change that applies to every call below: GMT takes strings in and gives strings out.
+
+## Call by call
+
+<MigrationMap library="date-fns" />
+
+## What changes
+
+- date-fns takes and returns `Date` objects, or `TZDate` from `@date-fns/tz`. GMT takes and returns strings.
+- `getMonth` counts months from 0. GMT counts them from 1 to 12, as Temporal does.
+- The difference functions take the later date first, as in `differenceInCalendarDays(later, earlier)`. `diffDate` takes the earlier date first.
+- Invalid input gives an `Invalid Date`, and `format` throws a `RangeError`. GMT returns `""`, `null`, `false` or `[]` instead of throwing.
+
+```js
+import { diffDate } from "@northguild/gmt/plain/calculate";
+
+diffDate("2024-03-01", "2024-03-15", "days"); // 14
+```
+
+## Basic-format dates
+
+`parseISO` reads `20240212`, as Temporal does. GMT's validators and parsers accept only the extended format, `2024-02-12`, which is the format of RFC 3339 §5.6, so `isValidDate("20240212")` returns `false`. This is deliberate. Convert a basic-format string before you pass it on. The behaviour matrix shows the library's result in case [M9c](/compare/behaviour/#m9c-date-fns).
+
+## Where date-fns differs from Temporal
+
+Each item is a case where the library's result differs from Temporal's. The [full matrix](/compare/behaviour/) also lists the cases where it matches.
+
+<BehaviourDiffs library="date-fns" />
+
+## More calls
+
+<MigrationMap library="date-fns" part="more" />

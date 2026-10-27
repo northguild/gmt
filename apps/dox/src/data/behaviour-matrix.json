@@ -1,0 +1,1589 @@
+{
+  "measuredOn": "2026-10-26",
+  "runtime": {
+    "node": "v26.12.1",
+    "tz": "Asia/Kolkata",
+    "icu": "78.3",
+    "hostTimeZone": "Asia/Calcutta"
+  },
+  "libraries": [
+    {
+      "id": "date-fns",
+      "name": "date-fns",
+      "version": "4.4.0",
+      "companions": [
+        {
+          "name": "@date-fns/tz",
+          "version": "1.5.0"
+        }
+      ]
+    },
+    {
+      "id": "luxon",
+      "name": "Luxon",
+      "version": "3.7.2",
+      "companions": []
+    },
+    {
+      "id": "dayjs",
+      "name": "Day.js",
+      "version": "1.11.23",
+      "companions": []
+    },
+    {
+      "id": "moment",
+      "name": "Moment.js",
+      "version": "2.31.0",
+      "companions": [
+        {
+          "name": "moment-timezone",
+          "version": "0.6.5"
+        }
+      ]
+    },
+    {
+      "id": "internationalized-date",
+      "name": "@internationalized/date",
+      "version": "3.12.4",
+      "companions": []
+    }
+  ],
+  "cases": [
+    {
+      "id": "M1",
+      "title": "Add one calendar day across a DST gap",
+      "input": "2024-03-30T02:30:00+01:00[Europe/Berlin], plus 1 day (02:30 does not exist on 2024-03-31)",
+      "compare": "local time and offset",
+      "clauses": [
+        {
+          "label": "AddZonedDateTime (6.5.5)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-addzoneddatetime"
+        },
+        {
+          "label": "DisambiguatePossibleEpochNanoseconds (11.1.12)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-disambiguatepossibleepochnanoseconds"
+        },
+        {
+          "label": "RFC 5545 section 3.3.6",
+          "url": "https://www.rfc-editor.org/rfc/rfc5545#section-3.3.6"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-03-31T03:30:00+02:00[Europe/Berlin]"
+      },
+      "gmt": {
+        "fn": "addZoned",
+        "call": "addZoned(\"2024-03-30T02:30:00+01:00[Europe/Berlin]\", { days: 1 })",
+        "returns": "2024-03-31T03:30:00+02:00[Europe/Berlin]",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "addDays(new TZDate(2024, 2, 30, 2, 30, \"Europe/Berlin\"), 1)",
+          "returns": "2024-03-31T03:30:00.000+02:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-03-30T02:30\", { zone: \"Europe/Berlin\" }).plus({ days: 1 }).toISO()",
+          "returns": "2024-03-31T03:30:00.000+02:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs.tz(\"2024-03-30T02:30\", \"Europe/Berlin\").add(1, \"day\").format()",
+          "returns": "2024-03-31T02:30:00+01:00",
+          "verdict": "differs",
+          "issues": [
+            "iamkun/dayjs#1271",
+            "iamkun/dayjs#1260",
+            "iamkun/dayjs#1827"
+          ]
+        },
+        {
+          "library": "moment",
+          "call": "moment.tz(\"2024-03-30T02:30\", \"Europe/Berlin\").add(1, \"day\").format()",
+          "returns": "2024-03-31T03:30:00+02:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseZonedDateTime(\"2024-03-30T02:30[Europe/Berlin]\").add({ days: 1 }).toString()",
+          "returns": "2024-03-31T03:30:00+02:00[Europe/Berlin]",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "Add one calendar day, not 24 hours",
+      "input": "2024-03-30T12:00:00+01:00[Europe/Berlin], plus 1 day (the day of 2024-03-31 has 23 hours)",
+      "compare": "local time and offset",
+      "clauses": [
+        {
+          "label": "AddZonedDateTime (6.5.5)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-addzoneddatetime"
+        },
+        {
+          "label": "hoursInDay (6.3.23)",
+          "url": "https://tc39.es/proposal-temporal/#sec-get-temporal.zoneddatetime.prototype.hoursinday"
+        },
+        {
+          "label": "RFC 5545 section 3.3.6",
+          "url": "https://www.rfc-editor.org/rfc/rfc5545#section-3.3.6"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-03-31T12:00:00+02:00[Europe/Berlin]"
+      },
+      "gmt": {
+        "fn": "addZoned",
+        "call": "addZoned(\"2024-03-30T12:00:00+01:00[Europe/Berlin]\", { days: 1 })",
+        "returns": "2024-03-31T12:00:00+02:00[Europe/Berlin]",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "addDays(new TZDate(2024, 2, 30, 12, 0, \"Europe/Berlin\"), 1)",
+          "returns": "2024-03-31T12:00:00.000+02:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-03-30T12:00\", { zone: \"Europe/Berlin\" }).plus({ days: 1 }).toISO()",
+          "returns": "2024-03-31T12:00:00.000+02:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs.tz(\"2024-03-30T12:00\", \"Europe/Berlin\").add(1, \"day\").format()",
+          "returns": "2024-03-31T12:00:00+01:00",
+          "verdict": "differs",
+          "issues": ["iamkun/dayjs#1271"]
+        },
+        {
+          "library": "moment",
+          "call": "moment.tz(\"2024-03-30T12:00\", \"Europe/Berlin\").add(1, \"day\").format()",
+          "returns": "2024-03-31T12:00:00+02:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseZonedDateTime(\"2024-03-30T12:00[Europe/Berlin]\").add({ days: 1 }).toString()",
+          "returns": "2024-03-31T12:00:00+02:00[Europe/Berlin]",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "Add one day into a repeated hour",
+      "input": "2024-10-26T02:30:00+02:00[Europe/Berlin], plus 1 day (02:30 happens twice on 2024-10-27)",
+      "compare": "local time and offset",
+      "clauses": [
+        {
+          "label": "DisambiguatePossibleEpochNanoseconds (11.1.12)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-disambiguatepossibleepochnanoseconds"
+        },
+        {
+          "label": "GetTemporalDisambiguationOption (13.7)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-gettemporaldisambiguationoption"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-10-27T02:30:00+02:00[Europe/Berlin]"
+      },
+      "gmt": {
+        "fn": "addZoned",
+        "call": "addZoned(\"2024-10-26T02:30:00+02:00[Europe/Berlin]\", { days: 1 })",
+        "returns": "2024-10-27T02:30:00+02:00[Europe/Berlin]",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "addDays(new TZDate(2024, 9, 26, 2, 30, \"Europe/Berlin\"), 1)",
+          "returns": "2024-10-27T02:30:00.000+02:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-10-26T02:30\", { zone: \"Europe/Berlin\" }).plus({ days: 1 }).toISO()",
+          "returns": "2024-10-27T02:30:00.000+02:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs.tz(\"2024-10-26T02:30\", \"Europe/Berlin\").add(1, \"day\").format()",
+          "returns": "2024-10-27T02:30:00+02:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment.tz(\"2024-10-26T02:30\", \"Europe/Berlin\").add(1, \"day\").format()",
+          "returns": "2024-10-27T02:30:00+02:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseZonedDateTime(\"2024-10-26T02:30[Europe/Berlin]\").add({ days: 1 }).toString()",
+          "returns": "2024-10-27T02:30:00+02:00[Europe/Berlin]",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M3b",
+      "title": "Two readings of 02:30 on the repeated-hour day: equal or not",
+      "input": "2024-10-27T02:30:00+02:00[Europe/Berlin] and 2024-10-27T02:30:00+01:00[Europe/Berlin]",
+      "compare": "equal (true or false)",
+      "clauses": [
+        {
+          "label": "ZonedDateTime.prototype.equals (6.3.40)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.equals"
+        }
+      ],
+      "temporal": {
+        "returns": "false"
+      },
+      "gmt": {
+        "fn": "areZonedEqual",
+        "call": "areZonedEqual(\"2024-10-27T02:30:00+02:00[Europe/Berlin]\", \"2024-10-27T02:30:00+01:00[Europe/Berlin]\")",
+        "returns": "false",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "isEqual(parseISO(\"2024-10-27T02:30:00+02:00\"), parseISO(\"2024-10-27T02:30:00+01:00\"))",
+          "returns": "false",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(a, { zone: \"Europe/Berlin\" }).equals(DateTime.fromISO(b, { zone: \"Europe/Berlin\" }))",
+          "returns": "false",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(a).isSame(dayjs(b))",
+          "returns": "false",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment.parseZone(a).isSame(moment.parseZone(b))",
+          "returns": "false",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseZonedDateTime(a).compare(parseZonedDateTime(b)) === 0",
+          "returns": "false",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M4",
+      "title": "Resolve a wall time that does not exist",
+      "input": "2024-03-31T02:30:00 in Europe/Berlin (the clocks skip from 02:00 to 03:00)",
+      "compare": "UTC instant",
+      "clauses": [
+        {
+          "label": "GetEpochNanosecondsFor (11.1.11)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-getepochnanosecondsfor"
+        },
+        {
+          "label": "DisambiguatePossibleEpochNanoseconds (11.1.12)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-disambiguatepossibleepochnanoseconds"
+        },
+        {
+          "label": "GetPossibleEpochNanoseconds (11.1.13)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-getpossibleepochnanoseconds"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-03-31T01:30:00Z"
+      },
+      "gmt": {
+        "fn": "resolveLocal",
+        "call": "resolveLocal(\"2024-03-31T02:30:00\", \"Europe/Berlin\")",
+        "returns": "2024-03-31T01:30:00Z",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "new TZDate(2024, 2, 31, 2, 30, \"Europe/Berlin\")",
+          "returns": "2024-03-31T01:30:00.000+00:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-03-31T02:30\", { zone: \"Europe/Berlin\" }).toUTC().toISO()",
+          "returns": "2024-03-31T01:30:00.000Z",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs.tz(\"2024-03-31T02:30\", \"Europe/Berlin\").utc().format()",
+          "returns": "2024-03-31T01:30:00Z",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment.tz(\"2024-03-31T02:30\", \"Europe/Berlin\").utc().format()",
+          "returns": "2024-03-31T01:30:00Z",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseZonedDateTime(\"2024-03-31T02:30[Europe/Berlin]\").toAbsoluteString()",
+          "returns": "2024-03-31T01:30:00.000Z",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M4b",
+      "title": "Reject a wall time that does not exist",
+      "input": "2024-03-31T02:30:00 in Europe/Berlin, asking for an error instead of a shifted time",
+      "compare": "UTC instant, or rejected",
+      "clauses": [
+        {
+          "label": "DisambiguatePossibleEpochNanoseconds (11.1.12)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-disambiguatepossibleepochnanoseconds"
+        },
+        {
+          "label": "GetTemporalDisambiguationOption (13.7)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-gettemporaldisambiguationoption"
+        }
+      ],
+      "temporal": {
+        "returns": "rejected"
+      },
+      "gmt": {
+        "fn": "resolveLocal",
+        "call": "resolveLocal(\"2024-03-31T02:30:00\", \"Europe/Berlin\", { disambiguation: \"reject\" })",
+        "returns": "rejected",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "verdict": "unsupported",
+          "reason": "TZDate always resolves a skipped wall time; it has no option to reject it",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "verdict": "unsupported",
+          "reason": "fromISO always resolves a skipped wall time; it has no option to reject it",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "verdict": "unsupported",
+          "reason": "dayjs.tz always resolves a skipped wall time; it has no option to reject it",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "verdict": "unsupported",
+          "reason": "moment.tz always resolves a skipped wall time; it has no option to reject it",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseZonedDateTime(\"2024-03-31T02:30[Europe/Berlin]\", \"reject\")",
+          "returns": "rejected",
+          "detail": "RangeError: No such absolute time found",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M5",
+      "title": "Add one day across a 30-minute DST change",
+      "input": "2024-10-05T02:15:00+10:30[Australia/Lord_Howe], plus 1 day (the clocks move 30 minutes on 2024-10-06)",
+      "compare": "local time and offset",
+      "clauses": [
+        {
+          "label": "AddZonedDateTime (6.5.5)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-addzoneddatetime"
+        },
+        {
+          "label": "hoursInDay (6.3.23)",
+          "url": "https://tc39.es/proposal-temporal/#sec-get-temporal.zoneddatetime.prototype.hoursinday"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-10-06T02:45:00+11:00[Australia/Lord_Howe]"
+      },
+      "gmt": {
+        "fn": "addZoned",
+        "call": "addZoned(\"2024-10-05T02:15:00+10:30[Australia/Lord_Howe]\", { days: 1 })",
+        "returns": "2024-10-06T02:45:00+11:00[Australia/Lord_Howe]",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "addDays(new TZDate(2024, 9, 5, 2, 15, \"Australia/Lord_Howe\"), 1)",
+          "returns": "2024-10-06T02:45:00.000+11:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-10-05T02:15\", { zone: \"Australia/Lord_Howe\" }).plus({ days: 1 }).toISO()",
+          "returns": "2024-10-06T02:45:00.000+11:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs.tz(\"2024-10-05T02:15\", \"Australia/Lord_Howe\").add(1, \"day\").format()",
+          "returns": "2024-10-06T02:15:00+10:30",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment.tz(\"2024-10-05T02:15\", \"Australia/Lord_Howe\").add(1, \"day\").format()",
+          "returns": "2024-10-06T02:45:00+11:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseZonedDateTime(\"2024-10-05T02:15[Australia/Lord_Howe]\").add({ days: 1 }).toString()",
+          "returns": "2024-10-06T02:45:00+11:00[Australia/Lord_Howe]",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M6",
+      "title": "Start of a day whose midnight does not exist",
+      "input": "2024-09-08T12:00:00-03:00[America/Santiago], start of day (the clocks skip from 00:00 to 01:00)",
+      "compare": "local time and offset",
+      "clauses": [
+        {
+          "label": "GetStartOfDay (11.1.14)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-getstartofday"
+        },
+        {
+          "label": "startOfDay (6.3.45)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.startofday"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-09-08T01:00:00-03:00[America/Santiago]"
+      },
+      "gmt": {
+        "fn": "startOfZoned",
+        "call": "startOfZoned(\"2024-09-08T12:00:00-03:00[America/Santiago]\", \"day\")",
+        "returns": "2024-09-08T01:00:00-03:00[America/Santiago]",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "startOfDay(new TZDate(2024, 8, 8, 12, 0, \"America/Santiago\"))",
+          "returns": "2024-09-08T01:00:00.000-03:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-09-08T12:00\", { zone: \"America/Santiago\" }).startOf(\"day\").toISO()",
+          "returns": "2024-09-08T01:00:00.000-03:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs.tz(\"2024-09-08T12:00\", \"America/Santiago\").startOf(\"day\").format()",
+          "returns": "2024-09-08T00:00:00-04:00",
+          "verdict": "differs",
+          "issues": [
+            "iamkun/dayjs#1437",
+            "iamkun/dayjs#2553",
+            "iamkun/dayjs#2057"
+          ]
+        },
+        {
+          "library": "moment",
+          "call": "moment.tz(\"2024-09-08T12:00\", \"America/Santiago\").startOf(\"day\").format()",
+          "returns": "2024-09-08T01:00:00-03:00",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "toZoned(toCalendarDate(parseZonedDateTime(\"2024-09-08T12:00[America/Santiago]\")), \"America/Santiago\")",
+          "returns": "2024-09-08T01:00:00-03:00[America/Santiago]",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M7",
+      "title": "Add one month to January 31",
+      "input": "2024-01-31, plus 1 month",
+      "compare": "date",
+      "clauses": [
+        {
+          "label": "RegulateISODate (3.5.7)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-regulateisodate"
+        },
+        {
+          "label": "CalendarDateAdd (12.3.7)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-calendardateadd"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-02-29"
+      },
+      "gmt": {
+        "fn": "addDate",
+        "call": "addDate(\"2024-01-31\", { months: 1 })",
+        "returns": "2024-02-29",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "addMonths(parseISO(\"2024-01-31\"), 1)",
+          "returns": "2024-02-29",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-01-31\").plus({ months: 1 }).toISODate()",
+          "returns": "2024-02-29",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"2024-01-31\").add(1, \"month\").format(\"YYYY-MM-DD\")",
+          "returns": "2024-02-29",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment(\"2024-01-31\").add(1, \"month\").format(\"YYYY-MM-DD\")",
+          "returns": "2024-02-29",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseDate(\"2024-01-31\").add({ months: 1 }).toString()",
+          "returns": "2024-02-29",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M8",
+      "title": "Whole months between January 31 and February 29",
+      "input": "2024-01-31 until 2024-02-29",
+      "compare": "whole months",
+      "clauses": [
+        {
+          "label": "CompareSurpasses (3.5.5)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-comparesurpasses"
+        },
+        {
+          "label": "CalendarDateUntil (12.3.9)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-calendardateuntil"
+        }
+      ],
+      "temporal": {
+        "returns": "0"
+      },
+      "gmt": {
+        "fn": "diffDate",
+        "call": "diffDate(\"2024-01-31\", \"2024-02-29\", \"months\")",
+        "returns": "0",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "differenceInMonths(parseISO(\"2024-02-29\"), parseISO(\"2024-01-31\"))",
+          "returns": "1",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-02-29\").diff(DateTime.fromISO(\"2024-01-31\"), \"months\").months",
+          "returns": "1",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"2024-02-29\").diff(dayjs(\"2024-01-31\"), \"month\")",
+          "returns": "1",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment(\"2024-02-29\").diff(moment(\"2024-01-31\"), \"months\")",
+          "returns": "1",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "verdict": "unsupported",
+          "reason": "it has no month difference; compare() returns a count of days",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M9",
+      "title": "Parse a date with a one-digit year and month",
+      "input": "\"2-12-12\" read as year-month-day",
+      "compare": "date, or rejected",
+      "clauses": [
+        {
+          "label": "IsValidDate (13.31.2)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-iso8601grammar-static-semantics-isvaliddate"
+        },
+        {
+          "label": "RFC 3339 section 5.6",
+          "url": "https://www.rfc-editor.org/rfc/rfc3339#section-5.6"
+        }
+      ],
+      "temporal": {
+        "returns": "rejected"
+      },
+      "gmt": {
+        "fn": "parseDateWithPattern",
+        "call": "parseDateWithPattern(\"2-12-12\", \"yyyy-MM-dd\")",
+        "returns": "rejected",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "parse(\"2-12-12\", \"yyyy-MM-dd\", parseISO(\"2000-01-01\"))",
+          "returns": "0002-12-12",
+          "verdict": "differs",
+          "issues": ["date-fns/date-fns#942", "date-fns/date-fns#1569"]
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2-12-12\")",
+          "returns": "rejected",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"2-12-12\", \"YYYY-MM-DD\", true)",
+          "returns": "rejected",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment(\"2-12-12\", \"YYYY-MM-DD\", true)",
+          "returns": "rejected",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseDate(\"2-12-12\")",
+          "returns": "rejected",
+          "detail": "Error: Invalid ISO 8601 date string: 2-12-12",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M9b",
+      "title": "Parse a date that is not on the calendar",
+      "input": "\"2024-02-30\"",
+      "compare": "date, or rejected",
+      "clauses": [
+        {
+          "label": "IsValidDate (13.31.2)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-iso8601grammar-static-semantics-isvaliddate"
+        },
+        {
+          "label": "RegulateISODate (3.5.7)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-regulateisodate"
+        }
+      ],
+      "temporal": {
+        "returns": "rejected"
+      },
+      "gmt": {
+        "fn": "isValidDate",
+        "call": "isValidDate(\"2024-02-30\")",
+        "returns": "rejected",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "parseISO(\"2024-02-30\")",
+          "returns": "rejected",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-02-30\")",
+          "returns": "rejected",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"2024-02-30\")",
+          "returns": "2024-03-01",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment(\"2024-02-30\", moment.ISO_8601, true)",
+          "returns": "rejected",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseDate(\"2024-02-30\")",
+          "returns": "rejected",
+          "detail": "RangeError: Value out of range: 1 <= 30 <= 29",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M9c",
+      "title": "Parse a date in basic format",
+      "input": "\"20240212\"",
+      "compare": "date, or rejected",
+      "clauses": [
+        {
+          "label": "RFC 3339 section 5.6",
+          "url": "https://www.rfc-editor.org/rfc/rfc3339#section-5.6"
+        },
+        {
+          "label": "ISO 8601 grammar (13.31)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-iso8601grammar"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-02-12"
+      },
+      "gmt": {
+        "fn": "isValidDate",
+        "call": "isValidDate(\"20240212\")",
+        "returns": "rejected",
+        "verdict": "differs",
+        "note": "GMT validators take the extended form of RFC 3339 section 5.6 only, so `20240212` is rejected on purpose. Temporal accepts the basic form."
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "parseISO(\"20240212\")",
+          "returns": "2024-02-12",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"20240212\")",
+          "returns": "2024-02-12",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"20240212\")",
+          "returns": "2024-02-12",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment(\"20240212\", moment.ISO_8601, true)",
+          "returns": "2024-02-12",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseDate(\"20240212\")",
+          "returns": "rejected",
+          "detail": "Error: Invalid ISO 8601 date string: 20240212",
+          "verdict": "differs",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M10",
+      "title": "Read a string with a bracketed time zone",
+      "input": "2024-03-31T03:30:00+02:00[Europe/Berlin]",
+      "compare": "UTC instant",
+      "clauses": [
+        {
+          "label": "RFC 9557 section 4.1",
+          "url": "https://www.rfc-editor.org/rfc/rfc9557#section-4.1"
+        },
+        {
+          "label": "InterpretISODateTimeOffset (6.5.1)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-interpretisodatetimeoffset"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-03-31T01:30:00Z"
+      },
+      "gmt": {
+        "fn": "convertZonedToUtc",
+        "call": "convertZonedToUtc(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\")",
+        "returns": "2024-03-31T01:30:00Z",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "parseISO(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\").toISOString()",
+          "returns": "2024-03-31T03:30:00.000Z",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\").toUTC().toISO()",
+          "returns": "2024-03-31T01:30:00.000Z",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\").toISOString()",
+          "returns": "rejected",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\", moment.ISO_8601, true)",
+          "returns": "rejected",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseZonedDateTime(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\").toAbsoluteString()",
+          "returns": "2024-03-31T01:30:00.000Z",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M10b",
+      "title": "Time zone name after reading a bracketed time zone",
+      "input": "2024-03-31T03:30:00+02:00[Europe/Berlin]",
+      "compare": "time zone name",
+      "clauses": [
+        {
+          "label": "RFC 9557 section 4.1",
+          "url": "https://www.rfc-editor.org/rfc/rfc9557#section-4.1"
+        },
+        {
+          "label": "ToTemporalZonedDateTime (6.5.2)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-totemporalzoneddatetime"
+        }
+      ],
+      "temporal": {
+        "returns": "Europe/Berlin"
+      },
+      "gmt": {
+        "fn": "parseTimeZoneFromZoned",
+        "call": "parseTimeZoneFromZoned(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\")",
+        "returns": "Europe/Berlin",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "verdict": "unsupported",
+          "reason": "parseISO returns a Date; it keeps no time zone name",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\").zoneName",
+          "returns": "Asia/Calcutta",
+          "verdict": "differs",
+          "issues": ["moment/luxon#1621"]
+        },
+        {
+          "library": "dayjs",
+          "verdict": "unsupported",
+          "reason": "it rejects the bracketed string, so there is no time zone to read",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "verdict": "unsupported",
+          "reason": "strict ISO 8601 parsing rejects the bracketed string, so there is no time zone to read",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseZonedDateTime(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\").timeZone",
+          "returns": "Europe/Berlin",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M10c",
+      "title": "Read a string with a calendar annotation",
+      "input": "2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]",
+      "compare": "accepted or rejected",
+      "clauses": [
+        {
+          "label": "RFC 9557 section 3.3",
+          "url": "https://www.rfc-editor.org/rfc/rfc9557#section-3.3"
+        },
+        {
+          "label": "ParseISODateTime (13.35)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-parseisodatetime"
+        }
+      ],
+      "temporal": {
+        "returns": "accepted"
+      },
+      "gmt": {
+        "fn": "isValidCalendarZonedDateTime",
+        "call": "isValidCalendarZonedDateTime(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\")",
+        "returns": "accepted",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "parseISO(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\")",
+          "returns": "accepted",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\")",
+          "returns": "rejected",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\")",
+          "returns": "rejected",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\", moment.ISO_8601, true)",
+          "returns": "rejected",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseZonedDateTime(\"2024-03-31T03:30:00+02:00[Europe/Berlin][u-ca=japanese]\")",
+          "returns": "rejected",
+          "detail": "RangeError: Invalid time zone specified: Europe/Berlin][u-ca=japanese",
+          "verdict": "differs",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M10d",
+      "title": "Read a string whose offset does not match its time zone",
+      "input": "2022-07-08T00:14:07+01:00[Europe/Paris] (Paris is at +02:00 on that date)",
+      "compare": "UTC instant, or rejected",
+      "clauses": [
+        {
+          "label": "RFC 9557 section 3.4",
+          "url": "https://www.rfc-editor.org/rfc/rfc9557#section-3.4"
+        },
+        {
+          "label": "InterpretISODateTimeOffset (6.5.1)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-interpretisodatetimeoffset"
+        },
+        {
+          "label": "GetTemporalOffsetOption (13.9)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-gettemporaloffsetoption"
+        }
+      ],
+      "temporal": {
+        "returns": "rejected"
+      },
+      "gmt": {
+        "fn": "convertZonedToUtc",
+        "call": "convertZonedToUtc(\"2022-07-08T00:14:07+01:00[Europe/Paris]\")",
+        "returns": "rejected",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "parseISO(\"2022-07-08T00:14:07+01:00[Europe/Paris]\").toISOString()",
+          "returns": "2022-07-08T00:14:07.000Z",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2022-07-08T00:14:07+01:00[Europe/Paris]\").toUTC().toISO()",
+          "returns": "2022-07-07T22:14:07.000Z",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "verdict": "unsupported",
+          "reason": "it rejects the bracketed string",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "verdict": "unsupported",
+          "reason": "strict ISO 8601 parsing rejects the bracketed string",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseZonedDateTime(\"2022-07-08T00:14:07+01:00[Europe/Paris]\").toAbsoluteString()",
+          "returns": "rejected",
+          "detail": "Error: Offset +01:00 is invalid for 2022-07-08T00:14:07 in Europe/Paris",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M11",
+      "title": "Read an offset with minutes before UTC",
+      "input": "2024-01-15T12:00:00-03:30",
+      "compare": "UTC instant",
+      "clauses": [
+        {
+          "label": "RFC 3339 section 4.2",
+          "url": "https://www.rfc-editor.org/rfc/rfc3339#section-4.2"
+        },
+        {
+          "label": "ParseDateTimeUTCOffset (14.6.11)",
+          "url": "https://tc39.es/proposal-temporal/#sec-parsedatetimeutcoffset"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-01-15T15:30:00Z"
+      },
+      "gmt": {
+        "fn": "convertZonedToUtc",
+        "call": "convertZonedToUtc(\"2024-01-15T12:00:00-03:30[America/St_Johns]\")",
+        "returns": "2024-01-15T15:30:00Z",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "parseISO(\"2024-01-15T12:00:00-03:30\").toISOString()",
+          "returns": "2024-01-15T15:30:00.000Z",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-01-15T12:00:00-03:30\").toUTC().toISO()",
+          "returns": "2024-01-15T15:30:00.000Z",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"2024-01-15T12:00:00-03:30\").toISOString()",
+          "returns": "2024-01-15T15:30:00.000Z",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment(\"2024-01-15T12:00:00-03:30\").toISOString()",
+          "returns": "2024-01-15T15:30:00.000Z",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseAbsolute(\"2024-01-15T12:00:00-03:30\", \"UTC\").toAbsoluteString()",
+          "returns": "2024-01-15T14:30:00.000Z",
+          "verdict": "differs",
+          "issues": ["adobe/react-spectrum#10809"]
+        }
+      ]
+    },
+    {
+      "id": "M12",
+      "title": "ISO week and week-year at a year boundary",
+      "input": "2024-12-30",
+      "compare": "ISO week-year and week",
+      "clauses": [
+        {
+          "label": "ISOWeekOfYear (12.3.18)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-isoweekofyear"
+        },
+        {
+          "label": "ISO 8601-1 (week calendar)",
+          "url": "https://www.iso.org/standard/70907.html"
+        }
+      ],
+      "temporal": {
+        "returns": "2025-W01"
+      },
+      "gmt": {
+        "fn": "getIsoWeekDate",
+        "call": "getIsoWeekDate(\"2024-12-30\")",
+        "returns": "2025-W01",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "getISOWeekYear(parseISO(\"2024-12-30\")), getISOWeek(parseISO(\"2024-12-30\"))",
+          "returns": "2025-W01",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-12-30\").weekYear, .weekNumber",
+          "returns": "2025-W01",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"2024-12-30\").isoWeekYear(), .isoWeek()",
+          "returns": "2025-W01",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment(\"2024-12-30\").isoWeekYear(), .isoWeek()",
+          "returns": "2025-W01",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "verdict": "unsupported",
+          "reason": "it has no ISO week call",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M13",
+      "title": "Time zone name kept for Etc/UTC",
+      "input": "2024-01-01T00:00:00Z shown in Etc/UTC",
+      "compare": "time zone name",
+      "clauses": [
+        {
+          "label": "Time Zone Identifiers (14.6.2)",
+          "url": "https://tc39.es/proposal-temporal/#sec-time-zone-identifiers"
+        }
+      ],
+      "temporal": {
+        "returns": "Etc/UTC"
+      },
+      "gmt": {
+        "fn": "parseTimeZoneFromZoned",
+        "call": "parseTimeZoneFromZoned(convertUtcToZoned(\"2024-01-01T00:00:00Z\", \"Etc/UTC\"))",
+        "returns": "Etc/UTC",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "new TZDate(parseISO(\"2024-01-01T00:00:00Z\").getTime(), \"Etc/UTC\").timeZone",
+          "returns": "Etc/UTC",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-01-01T00:00:00Z\").setZone(\"Etc/UTC\").zoneName",
+          "returns": "Etc/UTC",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "verdict": "unsupported",
+          "reason": "it has no public accessor for the zone name after tz()",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment.tz(\"2024-01-01T00:00:00Z\", \"Etc/UTC\").tz()",
+          "returns": "Etc/UTC",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseAbsolute(\"2024-01-01T00:00:00Z\", \"Etc/UTC\").timeZone",
+          "returns": "Etc/UTC",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M13b",
+      "title": "UTC and Etc/UTC: same time zone or not",
+      "input": "2024-01-01T00:00:00+00:00[UTC] and 2024-01-01T00:00:00+00:00[Etc/UTC]",
+      "compare": "equal (true or false)",
+      "clauses": [
+        {
+          "label": "TimeZoneEquals (11.1.15)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-timezoneequals"
+        },
+        {
+          "label": "ZonedDateTime.prototype.equals (6.3.40)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.equals"
+        }
+      ],
+      "temporal": {
+        "returns": "true"
+      },
+      "gmt": {
+        "fn": "areZonedEqual",
+        "call": "areZonedEqual(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-01-01T00:00:00+00:00[Etc/UTC]\")",
+        "returns": "true",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "verdict": "unsupported",
+          "reason": "isEqual compares instants; no call compares time zone names",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(s, { zone: \"UTC\" }).equals(DateTime.fromISO(s, { zone: \"Etc/UTC\" }))",
+          "returns": "false",
+          "verdict": "differs",
+          "issues": ["moment/luxon#1358"]
+        },
+        {
+          "library": "dayjs",
+          "verdict": "unsupported",
+          "reason": "isSame compares instants; no call compares time zone names",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "verdict": "unsupported",
+          "reason": "isSame compares instants; no call compares time zone names",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "verdict": "unsupported",
+          "reason": "compare() orders instants; no call compares time zone names",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M13c",
+      "title": "Europe/Kiev and Europe/Kyiv: same time zone or not",
+      "input": "2024-01-01T00:00:00+02:00[Europe/Kiev] and 2024-01-01T00:00:00+02:00[Europe/Kyiv]",
+      "compare": "equal (true or false)",
+      "clauses": [
+        {
+          "label": "TimeZoneEquals (11.1.15)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal-timezoneequals"
+        }
+      ],
+      "temporal": {
+        "returns": "true"
+      },
+      "gmt": {
+        "fn": "areZonedEqual",
+        "call": "areZonedEqual(\"2024-01-01T00:00:00+02:00[Europe/Kiev]\", \"2024-01-01T00:00:00+02:00[Europe/Kyiv]\")",
+        "returns": "true",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "verdict": "unsupported",
+          "reason": "isEqual compares instants; no call compares time zone names",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(s, { zone: \"Europe/Kiev\" }).equals(DateTime.fromISO(s, { zone: \"Europe/Kyiv\" }))",
+          "returns": "false",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "verdict": "unsupported",
+          "reason": "isSame compares instants; no call compares time zone names",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "verdict": "unsupported",
+          "reason": "isSame compares instants; no call compares time zone names",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "verdict": "unsupported",
+          "reason": "compare() orders instants; no call compares time zone names",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M14",
+      "title": "Offset written for a UTC instant",
+      "input": "2024-03-31T01:30:00Z, written back as ISO 8601 with each library's default writer",
+      "compare": "UTC instant",
+      "clauses": [
+        {
+          "label": "RFC 9557 section 2",
+          "url": "https://www.rfc-editor.org/rfc/rfc9557#section-2"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-03-31T01:30:00Z"
+      },
+      "gmt": {
+        "fn": "convertZonedToUtc",
+        "call": "convertZonedToUtc(\"2024-03-31T03:30:00+02:00[Europe/Berlin]\")",
+        "returns": "2024-03-31T01:30:00Z",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "formatISO(parseISO(\"2024-03-31T01:30:00Z\"))",
+          "returns": "2024-03-31T07:00:00+05:30",
+          "verdict": "differs",
+          "issues": ["date-fns/date-fns#2151"]
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-03-31T01:30:00Z\").toISO()",
+          "returns": "2024-03-31T07:00:00.000+05:30",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"2024-03-31T01:30:00Z\").format()",
+          "returns": "2024-03-31T07:00:00+05:30",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment(\"2024-03-31T01:30:00Z\").format()",
+          "returns": "2024-03-31T07:00:00+05:30",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "parseAbsolute(\"2024-03-31T01:30:00Z\", \"UTC\").toAbsoluteString()",
+          "returns": "2024-03-31T01:30:00.000Z",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M15",
+      "title": "Add one business day with a Friday and Saturday weekend",
+      "input": "2024-07-04 (a Thursday), plus 1 business day, weekend on Friday and Saturday (ISO weekdays 5 and 6)",
+      "compare": "date",
+      "clauses": [
+        {
+          "label": "ISO 8601-1 (week calendar)",
+          "url": "https://www.iso.org/standard/70907.html"
+        },
+        {
+          "label": "UTS #35 Week Data",
+          "url": "https://www.unicode.org/reports/tr35/tr35-dates.html"
+        }
+      ],
+      "temporal": null,
+      "expected": "2024-07-07",
+      "gmt": {
+        "fn": "addBusinessDays",
+        "call": "addBusinessDays(\"2024-07-04\", 1, { weekend: [5, 6], holidays: [], timeZone: \"Asia/Riyadh\" })",
+        "returns": "2024-07-07",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "addBusinessDays(parseISO(\"2024-07-04\"), 1)",
+          "returns": "2024-07-05",
+          "verdict": "differs",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "verdict": "unsupported",
+          "reason": "it has no business-day call",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "verdict": "unsupported",
+          "reason": "it has no business-day call",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "verdict": "unsupported",
+          "reason": "it has no business-day call",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "verdict": "unsupported",
+          "reason": "it has no business-day call",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "M16",
+      "title": "Show the same instant in another time zone",
+      "input": "2024-07-15T12:00:00+02:00[Europe/Berlin], shown in America/St_Johns",
+      "compare": "local time and offset",
+      "clauses": [
+        {
+          "label": "withTimeZone (6.3.33)",
+          "url": "https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.withtimezone"
+        }
+      ],
+      "temporal": {
+        "returns": "2024-07-15T07:30:00-02:30[America/St_Johns]"
+      },
+      "gmt": {
+        "fn": "convertZonedToZoned",
+        "call": "convertZonedToZoned(\"2024-07-15T12:00:00+02:00[Europe/Berlin]\", \"America/St_Johns\")",
+        "returns": "2024-07-15T07:30:00-02:30[America/St_Johns]",
+        "verdict": "same"
+      },
+      "libraries": [
+        {
+          "library": "date-fns",
+          "call": "new TZDate(parseISO(\"2024-07-15T12:00:00+02:00\").getTime(), \"America/St_Johns\").toISOString()",
+          "returns": "2024-07-15T07:30:00.000-02:30",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "luxon",
+          "call": "DateTime.fromISO(\"2024-07-15T12:00:00+02:00\").setZone(\"America/St_Johns\").toISO()",
+          "returns": "2024-07-15T07:30:00.000-02:30",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "dayjs",
+          "call": "dayjs(\"2024-07-15T12:00:00+02:00\").tz(\"America/St_Johns\").format()",
+          "returns": "2024-07-15T07:30:00-02:30",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "moment",
+          "call": "moment.parseZone(\"2024-07-15T12:00:00+02:00\").tz(\"America/St_Johns\").format()",
+          "returns": "2024-07-15T07:30:00-02:30",
+          "verdict": "same",
+          "issues": []
+        },
+        {
+          "library": "internationalized-date",
+          "call": "toTimeZone(parseZonedDateTime(\"2024-07-15T12:00:00+02:00[Europe/Berlin]\"), \"America/St_Johns\")",
+          "returns": "2024-07-15T07:30:00-02:30[America/St_Johns]",
+          "verdict": "same",
+          "issues": []
+        }
+      ]
+    }
+  ]
+}

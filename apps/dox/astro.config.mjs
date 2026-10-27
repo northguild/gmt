@@ -1,5 +1,6 @@
 // @ts-check
 import react from "@astrojs/react";
+import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
@@ -120,7 +121,15 @@ export default defineConfig({
     starlight({
       title: "@northguild/gmt",
       description:
-        "Temporal-first date and time utilities with timezone support and polyfill integration.",
+        "Date and time library for JavaScript and TypeScript, built on TC39 Temporal: time zones, DST, business days, ISO 8601 strings in and out. Never throws.",
+      // Adds the share, breadcrumb and Markdown-twin tags to each page's head (src/route-data.ts).
+      routeMiddleware: "./src/route-data.ts",
+      // Each page shows the date of its last commit (CI checks out the full history) and an
+      // edit link. A generated page sets its own `editUrl`, or `false` where there is no source.
+      lastUpdated: true,
+      editLink: {
+        baseUrl: "https://github.com/northguild/gmt/edit/main/apps/dox/",
+      },
       social: [
         {
           icon: "github",
@@ -238,6 +247,21 @@ export default defineConfig({
             { slug: "upstream" },
             { slug: "core-rules" },
             { slug: "install" },
+            { slug: "bundle-size" },
+          ],
+        },
+        {
+          label: "Migrate",
+          collapsed: true,
+          items: [
+            { slug: "migrate" },
+            { slug: "migrate/date-fns" },
+            { slug: "migrate/luxon" },
+            { slug: "migrate/dayjs" },
+            { slug: "migrate/moment" },
+            { slug: "migrate/internationalized-date" },
+            { slug: "migrate/temporal" },
+            { slug: "compare/behaviour" },
           ],
         },
         { label: "Industries", collapsed: true, items: industriesSidebar },
@@ -343,9 +367,15 @@ export default defineConfig({
         "./src/styles/gmt-reveal.css", // shared scroll-into-view stagger utility
         "./src/styles/dox.css", // live component layout
         "./src/styles/gmt-upstream.css", // /upstream/ defect table + filings tracker
+        "./src/styles/gmt-migrate.css", // /migrate/ call tables, difference cards, behaviour matrix
         "./src/styles/gmt-view-transitions.css", // cross-document route transitions (static header/sidebar, content fade)
         "./src/styles/gmt-a11y.css", // DOX-D1 prefers-reduced-transparency / -contrast / forced-colors — loaded last
       ],
+    }),
+    // After starlight(): Starlight adds its own sitemap only when none is configured. /dox/ is
+    // the chat shell and has `noindex`, so it is not listed.
+    sitemap({
+      filter: (page) => new URL(page).pathname !== withBase("/dox/"),
     }),
   ],
 });

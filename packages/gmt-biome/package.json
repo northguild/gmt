@@ -2,12 +2,14 @@
   "name": "@northguild/gmt-biome",
   "version": "1.1.1",
   "private": false,
-  "description": "Shared Biome configuration for gmt projects",
+  "description": "Biome GritQL plugins that ban the JavaScript Date object and Date-based libraries, and name the Temporal-based @northguild/gmt function to use instead.",
   "keywords": [
     "biome",
     "biome-plugin",
     "date",
+    "gritql",
     "lint",
+    "no-date",
     "tanstack-intent",
     "temporal"
   ],

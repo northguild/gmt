@@ -2,6 +2,7 @@ import { normalizeDateTime } from "../../internal";
 import {
   expectDateTimeEqual,
   expectOneOfIcu,
+  linkPairIsOneZone,
   localeZonedRangeInputByLocale,
   MustTestLocales,
   oneOfIcu,
@@ -563,6 +564,53 @@ describe("formatZonedRange keeps the requested timeZoneName style", () => {
     ({ from, to, options, expected }) => {
       expect(formatZonedRange(from, to, "en-US", options)).toBe(
         normalizeDateTime(expected),
+      );
+    },
+  );
+});
+
+describe("formatZonedRange across two identifiers of one time zone", () => {
+  it.each`
+    from                                | to                                      | expected
+    ${"2024-01-01T10:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[Etc/UTC]"} | ${"10:00 AM – 12:00 PM"}
+    ${"2024-01-01T10:00:00+00:00[UTC]"} | ${"2024-01-01T12:00:00+00:00[GMT]"}     | ${"10:00 AM – 12:00 PM"}
+    ${"2024-01-01T10:00:00+00:00[utc]"} | ${"2024-01-01T12:00:00+00:00[UTC]"}     | ${"10:00 AM – 12:00 PM"}
+  `(
+    "formats the range $from to $to as $expected",
+    ({
+      from,
+      to,
+      expected,
+    }: {
+      from: string;
+      to: string;
+      expected: string;
+    }) => {
+      expect(
+        formatZonedRange(from, to, "en-US", {
+          hour: "numeric",
+          minute: "numeric",
+        }),
+      ).toBe(normalizeDateTime(expected));
+    },
+  );
+});
+
+describe("formatZonedRange across an IANA link pair", () => {
+  it.each`
+    from                                          | to                                           | zone1              | zone2             | formatted
+    ${"2024-01-01T10:00:00+02:00[Europe/Kiev]"}   | ${"2024-01-01T12:00:00+02:00[Europe/Kyiv]"}  | ${"Europe/Kiev"}   | ${"Europe/Kyiv"}  | ${"10:00 AM – 12:00 PM"}
+    ${"2024-01-01T15:30:00+05:30[Asia/Calcutta]"} | ${"2024-01-01T17:30:00+05:30[Asia/Kolkata]"} | ${"Asia/Calcutta"} | ${"Asia/Kolkata"} | ${"3:30 – 5:30 PM"}
+  `(
+    "answers as the host does for $zone1 and $zone2",
+    ({ from, to, zone1, zone2, formatted }: Record<string, string>) => {
+      expect(
+        formatZonedRange(from, to, "en-US", {
+          hour: "numeric",
+          minute: "numeric",
+        }),
+      ).toBe(
+        linkPairIsOneZone(zone1, zone2) ? normalizeDateTime(formatted) : "",
       );
     },
   );

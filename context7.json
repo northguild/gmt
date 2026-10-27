@@ -1,4 +1,29 @@
 {
+  "$schema": "https://context7.com/schema/context7.json",
   "url": "https://context7.com/northguild/gmt",
-  "public_key": "pk_hE7QfxqWAEcy3P78OEapo"
+  "public_key": "pk_hE7QfxqWAEcy3P78OEapo",
+  "projectTitle": "GMT (@northguild/gmt)",
+  "description": "Date and time library for JavaScript and TypeScript, built on TC39 Temporal. Covers time zones, DST, business days, durations, intervals, calendars and formatting. Functions take and return ISO 8601 strings (epoch values in the unix namespace are numbers) and never throw: invalid input returns an empty string, null, false or an empty array.",
+  "folders": ["apps/dox/src/content/docs", "packages/gmt/skills"],
+  "excludeFolders": [
+    "packages/gmt/skills/_artifacts",
+    "packages/gmt/skills/contributor",
+    "context",
+    ".agents",
+    ".claude"
+  ],
+  "excludeFiles": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "PUBLISHING.md",
+    "CHANGELOG.md"
+  ],
+  "rules": [
+    "Import from @northguild/gmt; functions take and return ISO 8601 strings, or epoch numbers in the unix namespace, never Date or Temporal objects.",
+    "Never use the JavaScript Date object or Date-based libraries alongside GMT; use getUtcNow(), getNow() or getZonedNow(timeZone) for the current time.",
+    "GMT never throws: check for the sentinel results \"\", null, false or [] instead of wrapping calls in try/catch.",
+    "Zoned date-times carry their zone as an RFC 9557 annotation, for example 2024-10-06T03:30:00+11:00[Australia/Sydney]; pass IANA time zone names such as Europe/Berlin.",
+    "Choose the namespace by the kind of value: plain (calendar dates and wall times), zoned (date-times in a time zone), utc (instants ending in Z), unix (epoch numbers), duration and interval."
+  ]
 }

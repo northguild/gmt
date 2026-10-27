@@ -9,6 +9,7 @@
  *
  * Kept free of Astro globals so vitest can import it directly.
  */
+import { BUNDLE_COLUMNS, bundleCells, bundleRows } from "./bundle-size";
 import { KEY_POINTS } from "../data/canada-key-points";
 import { keyPointsMarkdown } from "../data/clock-change-text";
 import { MOROCCO_KEY_POINTS } from "../data/morocco-key-points";
@@ -36,6 +37,7 @@ import {
   type CompareTableId,
 } from "./library-compare-tables";
 import { contributionClause, coverageClause } from "./upstream-summary";
+import { diffViews, libraryProp, mapView, matrixView } from "./migrate-view";
 
 /** A parsed JSX element: the props it was given, and the span it occupied. */
 interface JsxElement {
@@ -289,6 +291,83 @@ function renderUpstreamDefects(): string {
   ].join("\n");
 }
 
+/** `<BundleSize />` as a Markdown table of the same figures. */
+function renderBundleSize(): string {
+  return [
+    "",
+    `| ${BUNDLE_COLUMNS.join(" | ")} |`,
+    `| ${BUNDLE_COLUMNS.map(() => "---").join(" | ")} |`,
+    ...bundleRows().map((row) => {
+      const [importLine, ...figures] = bundleCells(row);
+      return `| \`${importLine}\` | ${figures.join(" | ")} |`;
+    }),
+    "",
+  ].join("\n");
+}
+
+/** `<MigrationMap library="…" part="more" />` as a Markdown table: their call, the GMT functions, a note. */
+function renderMigrationMap(props: Record<string, string>): string {
+  const view = mapView(
+    libraryProp(props.library, "MigrationMap"),
+    props.part === "more" ? "more" : "rows",
+  );
+  const rows = view.rows.map((row) => {
+    const gmt =
+      row.gmt.length === 0
+        ? "none"
+        : row.gmt.map((fn) => `[\`${fn.name}\`](${fn.url})`).join(", ");
+    // Notes are written by hand with backtick code spans, so they pass through as they are.
+    const note = row.note ?? "";
+    return `| ${row.theirs} | ${gmt} | ${note} |`;
+  });
+  return [
+    "",
+    `| ${view.heading} | GMT | Note |`,
+    "| --- | --- | --- |",
+    ...rows,
+    "",
+  ].join("\n");
+}
+
+/** `<BehaviourDiffs library="…" />` as a list: one item per case where the library differs from Temporal. */
+function renderBehaviourDiffs(props: Record<string, string>): string {
+  const items = diffViews(libraryProp(props.library, "BehaviourDiffs")).map(
+    (diff) => {
+      const issues = diff.issues.length
+        ? ` Upstream: ${diff.issues.map((i) => `[${i.text}](${i.url})`).join(", ")}.`
+        : "";
+      return `- **${diff.id}. ${escapeMarkdownInline(diff.title)}** Input: ${escapeMarkdownInline(diff.input)}. The library returns ${escapeMarkdownInline(diff.libraryReturns)}; Temporal returns ${escapeMarkdownInline(diff.temporalReturns)}. Specification: [${escapeMarkdownInline(diff.clause.label)}](${diff.clause.url}).${issues} [Matrix row](${diff.matrixHref}).`;
+    },
+  );
+  return ["", ...items, ""].join("\n");
+}
+
+/** `<BehaviourMatrix />` as one heading and one table per case. */
+function renderBehaviourMatrix(): string {
+  const out: string[] = [""];
+  for (const view of matrixView()) {
+    out.push(`## ${view.id}. ${escapeMarkdownInline(view.title)}`, "");
+    out.push(
+      `Input: ${escapeMarkdownInline(view.input)}. Compared as: ${escapeMarkdownInline(view.compare)}. Specification: ${view.clauses.map((c) => `[${escapeMarkdownInline(c.label)}](${c.url})`).join(", ")}.`,
+      "",
+    );
+    if (view.expectedNote) out.push(view.expectedNote, "");
+    if (view.note) out.push(escapeMarkdownInline(view.note), "");
+    out.push(
+      "| Library | Call | Returns | Compared with Temporal | Upstream issue |",
+      "| --- | --- | --- | --- | --- |",
+    );
+    for (const row of view.rows) {
+      const issues = row.issues.map((i) => `[${i.text}](${i.url})`).join(", ");
+      out.push(
+        `| ${escapeMarkdownInline(row.who)} | ${escapeMarkdownInline(row.call)} | ${escapeMarkdownInline(row.returns)} | ${row.verdict} | ${issues || "none"} |`,
+      );
+    }
+    out.push("");
+  }
+  return out.join("\n");
+}
+
 /**
  * `<UpstreamTracker />` keeps only its tally sentence.
  *
@@ -346,6 +425,10 @@ export function renderMdxComponents(body: string): string {
   out = replaceElements(out, "LibraryCompare", renderLibraryCompare);
   out = replaceElements(out, "UpstreamDefects", renderUpstreamDefects);
   out = replaceElements(out, "UpstreamTracker", renderUpstreamTracker);
+  out = replaceElements(out, "BundleSize", renderBundleSize);
+  out = replaceElements(out, "MigrationMap", renderMigrationMap);
+  out = replaceElements(out, "BehaviourDiffs", renderBehaviourDiffs);
+  out = replaceElements(out, "BehaviourMatrix", renderBehaviourMatrix);
 
   // `SectionHeading` is an `<h2>` around its children, so it becomes one.
   out = replaceElements(

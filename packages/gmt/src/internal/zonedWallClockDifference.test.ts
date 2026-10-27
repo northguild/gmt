@@ -267,3 +267,20 @@ describe("durationCompare at the range limits", () => {
     },
   );
 });
+
+// Two identifiers of one time zone (TimeZoneEquals) take the same range-limit repair as one
+// identifier: Australia/ACT is a link to Australia/Sydney. TC39, read from Node's built-in
+// Temporal, answers P1D; the polyfill throws for this pair.
+describe("zonedUntil across two identifiers of one time zone at the range limit", () => {
+  it("returns P1D from Australia/Sydney at max - 1d to Australia/ACT at max", () => {
+    expect(
+      zonedUntil(
+        at(MAX_INSTANT - DAY, SYDNEY),
+        at(MAX_INSTANT, "Australia/ACT"),
+        {
+          largestUnit: "day",
+        },
+      ).toString(),
+    ).toBe("P1D");
+  });
+});

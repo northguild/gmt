@@ -100,7 +100,7 @@ export default [
           selector:
             "CallExpression[callee.type='MemberExpression'][callee.property.name='getTimezoneOffset']",
           message:
-            "Avoid date.getTimezoneOffset(). Timezone offsets change throughout the year, so use @northguild/gmt zoned methods instead.",
+            "Avoid date.getTimezoneOffset(). Timezone offsets change throughout the year, so use @northguild/gmt getTimeZoneOffset(timeZone, instant) instead.",
         },
         {
           selector: `CallExpression[callee.name='require'] > Literal[value=${DATE_LIBRARY_SELECTOR_VALUES}]`,
