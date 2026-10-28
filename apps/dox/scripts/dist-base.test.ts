@@ -127,6 +127,43 @@ describe("the built site keeps the /gmt base", () => {
     expect(scan(pages, text, badLinksInMarkdown)).toEqual([]);
   });
 
+  it("every page carries one same-tab NorthGuild link with the inlined mark", () => {
+    const b = built();
+    if (b === null) return;
+    const { pages } = b;
+    const failures: Array<BaseFailure & { file: string }> = [];
+    for (const file of walk(pages, (n) => n.endsWith(".html"))) {
+      const html = readFileSync(file, "utf8");
+      if (/http-equiv=["']refresh["']/i.test(html)) continue;
+      // The 404 page is exempt only when it has no header at all.
+      if (basename(file) === "404.html" && !/class="header"/.test(html))
+        continue;
+      const anchors = [
+        ...html.matchAll(
+          /<a\b[^>]*\shref="https:\/\/northguild\.dev\/"[^>]*>([\s\S]*?)<\/a>/g,
+        ),
+      ];
+      const fail = (why: string) =>
+        failures.push({ file, value: "https://northguild.dev/", where: why });
+      if (anchors.length !== 1) {
+        fail(`${anchors.length} NorthGuild anchors, expected 1`);
+        continue;
+      }
+      const [tag, inner] = [anchors[0][0], anchors[0][1]];
+      const open = tag.slice(0, tag.indexOf(">") + 1);
+      if (/\starget=/.test(open)) fail("opens in a new tab");
+      if (!/<span class="sr-only[^"]*">NorthGuild home<\/span>/.test(inner))
+        fail("no sr-only NorthGuild home name");
+      const svg = /<svg\b[^>]*aria-hidden="true"[^>]*>([\s\S]*?)<\/svg>/.exec(
+        inner,
+      );
+      if (svg === null) fail("no aria-hidden svg");
+      else if ((svg[1].match(/<path\b/g) ?? []).length !== 5)
+        fail("the mark does not have five paths");
+    }
+    expect(report(pages, failures)).toEqual([]);
+  });
+
   it("_redirects has rules and every one sits under /gmt/", () => {
     const b = built();
     if (b === null) return;

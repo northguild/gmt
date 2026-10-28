@@ -121,6 +121,24 @@
  * CanvasText blocks.
  * ======================================================================= */
 @media (forced-colors: active) {
+  /* NorthGuild mark (#424): the shield, its peaks and `</>` stay visible in
+     every system palette, so the SVG opts out of forced colour adjustment and
+     paints with system colours itself. */
+  .gmt-ng-mark {
+    forced-color-adjust: none;
+  }
+
+  .gmt-ng-body,
+  .gmt-ng-body-lit {
+    fill: LinkText;
+  }
+
+  .gmt-ng-field,
+  .gmt-ng-field-lit,
+  .gmt-ng-glyph {
+    fill: Canvas;
+  }
+
   /* A borderless icon button has no edge once forced colours drop its fill. */
   .gmt-scrubber-remove {
     border: 1px solid ButtonText;
@@ -249,6 +267,7 @@
      outline: none and lean on a box-shadow ring — forced-colors drops
      box-shadow, so restore a real outline on these controls too. */
   .gmt-icon-button:focus,
+  .gmt-ng-link:focus,
   .expressive-code .copy button:focus,
   .sl-link-button:focus,
   .pagination-links a:focus,

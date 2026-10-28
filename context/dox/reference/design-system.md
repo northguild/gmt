@@ -386,9 +386,34 @@ and leap-second tools list their roots in the same sheets. All of them read as o
 ## `/dox` and the header
 
 - `src/pages/dox.astro` wraps `<StarlightPage>` so the chat keeps the site's `customCss`;
-  `data-dox-shell` hides Starlight's header and `<h1>` for a full-bleed page. `noindex`,
-  `pagefind: false`.
-- `Header.astro` adds the "Ask Dox" link: a plain `<a>` carrying `DoxMark.astro`, no JavaScript.
+  `data-dox-shell` hides only Starlight's `<h1>` for a full-bleed page, and the hive shell
+  starts at `--sl-nav-height`, below the site header. `noindex`, `pagefind: false`.
+- `Header.astro` adds the "Chat with Dox" link: a plain `<a>` carrying `DoxMark.astro`, no
+  JavaScript. On `/dox` it has `aria-current="page"`, shown by a 2px bar along its bottom
+  edge (WCAG 2.2 SC 1.4.1), never a left one. The bar is an `::after` drawn over the box on
+  `/dox` only, so the button matches its neighbours' size and forced colours show it on that
+  page alone.
+- `Header.astro` also adds the NorthGuild mark link (#424) before the site title: a plain
+  `<a>`, not `ButtonLink`, in the same tab, named by an sr-only span, with
+  `NorthGuildMark.astro` `aria-hidden`. Its fills are in `gmt-primitives.css`, because a
+  scoped style does not reach an imported SVG's paths. A hairline divider separates it from
+  the title.
+  - The shield's five path strings and its `viewBox` are the owner's drawing, unchanged; only
+    the fills became `gmt-ng-*` classes. The file lives at `src/assets/northguild-logo.svg`
+    and is inlined, never served by URL, because an SVG loaded through `<img>` or
+    `background-image` cannot follow the reader's `data-theme` choice.
+  - The link's name "NorthGuild home" comes from the sr-only span plus a matching `title`; the
+    SVG is `aria-hidden` and not focusable, so the name is not read twice (WCAG 2.2 SC 4.1.2).
+  - The link box is at least 24x24 CSS px (SC 2.5.8) and takes `.gmt-sonar-focus`. In forced
+    colours it gets a real `Highlight` outline, the body paths use `LinkText`, and the field
+    and glyph paths use `Canvas` with `forced-color-adjust: none` on the SVG.
+  - The URL is absolute and in the same tab: it is the same site one level up, and a
+    root-relative `/` would fail the `/gmt` dist guard.
+- The `/dox` strip under the header keeps only the clock and the Live/Local badge, at its end.
+  It is a `<div>`, not a `<header>`, so the page has one banner landmark.
+- The title is a `SiteTitle.astro` override: "Give Me Temporal" from `50rem` up, "GMT" below.
+  Only one form is displayed, so the link's name is the visible text (WCAG 2.2 SC 2.5.3).
+  Starlight's `title` stays `@northguild/gmt` for tabs, search results and social cards.
 - `Header.astro` composes Starlight's parts via `virtual:starlight/components/*`, not
   `@astrojs/starlight/components/*.astro`. The direct path resolves Starlight's defaults and
   silently bypasses this repo's `SocialIcons` and `ThemeSelect` overrides. Types for the virtual
@@ -397,8 +422,8 @@ and leap-second tools list their roots in the same sheets. All of them read as o
 ## The composer control bar
 
 - The brain menu (Radix `DropdownMenu`, `menuitemradio`) and the reset clock (Popover + cmdk) sit
-  in `PromptInputTools`, left of Send, and both open upward. The `/dox` strip holds wayfinding,
-  the header clock and the Live/Local badge.
+  in `PromptInputTools`, left of Send, and both open upward. The `/dox` strip holds the header
+  clock and the Live/Local badge; the site header gives the way back.
 - The brain menu groups brains by provider, each heading showing that provider's reset.
 - The reset chip shows whatever refills next (`src/lib/quota-resets.ts`). Every format is one gmt
   call (`src/lib/reset-formats.ts`), shown with its reference link, opened in a new tab.
@@ -418,12 +443,23 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   7:1 in light, so hover and focus change the border and fill only. The chip is
   `--gmt-ice-dim` with its own bevelled border, distinct from the card's. Long text wraps with
   `overflow-wrap: anywhere`; nothing scrolls sideways at 390px.
-- **Phone:** below 60rem a collapsed rail is `display: none` (`[data-collapsed]`) and the
-  `Examples · N` bar is shown above the composer. The bar is `display: none` by default and
-  switched on only inside that query, in a block placed after its base rule.
+- **Phone:** below 60rem, once a conversation has started, a collapsed rail is `display: none`
+  (`[data-collapsed]`) and the `Examples · N` bar is shown above the composer. The bar is
+  `display: none` by default and switched on only inside that query, in a block placed after
+  its base rule. Before the first message the sheet stays open and the bar hidden, except on a
+  short phone (below).
 - **Empty phone layout:** `.gmt-hive-body[data-empty]` (set by `DoxPage` with no conversation and
-  no widget) sizes the chat to its content and gives the rail `flex: 1 1 0` with a 12rem floor,
+  no widget) sizes the chat to its content and gives the rail `flex: 1 1 0` with a 7rem floor,
   so the crystal, status line and prompt are never clipped. The 55% sheet applies otherwise.
+- **Short phone (below 44rem tall):** the empty state starts folded too (bar shown, sheet
+  hidden) and drops its block padding. Measured: at 320px wide the open sheet hits its floor
+  at about 688px tall. **Below 35rem** (landscape phones, 540px portraits) the body keeps a
+  30rem floor and `.gmt-hive-shell` scrolls as a page, rather than leaving the transcript a
+  sliver beside a 210px composer.
+- **Fine print on a phone:** below 60rem the accuracy note and `.gmt-hive-licence` are hidden;
+  `.gmt-hive-info` (44px, first in the composer's control bar, Send stays last) opens both in
+  one `popover="auto"` panel anchored above it, falling back to the bottom edge without anchor
+  positioning.
 - **Focus:** the widget title (`tabIndex={-1}`, focused after a card opens it) draws a cyan
   `:focus-visible` outline. In forced colours the cards, bar and title use a `Highlight` outline;
   the card and bar rules double `.gmt-sonar-focus` to out-rank `.gmt-sonar-focus:focus { outline: none }`.

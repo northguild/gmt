@@ -80,9 +80,18 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 				min-height: 0;
 			}
 
+			/* The copy scrolls down on a short screen, never sideways. The
+			   column is sized to its content, and the tagline's first line is
+			   exactly 50 characters, its own 50ch cap, so the text sits flush
+			   with the edge. `overflow-y: auto` alone makes `overflow-x` auto
+			   too, and a browser that measures the line a fraction of a pixel
+			   wider then shows a horizontal scrollbar. The stable gutter keeps
+			   room for an always-visible vertical scrollbar in that size, so
+			   the bar never covers the text when it appears. */
 			.gmt-herostage-copy {
 				height: 100%;
-				overflow-y: auto;
+				overflow: hidden auto;
+				scrollbar-gutter: stable;
 			}
 		}
 	}

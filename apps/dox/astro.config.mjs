@@ -301,6 +301,7 @@ export default defineConfig({
         PageTitle: "./src/components/PageTitle.astro",
         Sidebar: "./src/components/Sidebar.astro",
         SocialIcons: "./src/components/SocialIcons.astro",
+        SiteTitle: "./src/components/SiteTitle.astro",
       },
       customCss: [
         "./src/styles/gmt-tokens.css", // palette + --gmt-* tokens, @font-face

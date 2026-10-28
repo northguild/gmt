@@ -1,16 +1,18 @@
 ---
 // The `/dox` route — the only chat surface, full-bleed.
 //
-//  1. No Starlight chrome. The header and the page `<h1>` are hidden, the page
-//     itself never scrolls, and the chat fills the viewport — on this route the
-//     chat is the product.
+//  1. The route keeps the site header, the same one as every page (WCAG 2.2
+//     SC 3.2.3 Consistent Navigation), and hides only the page `<h1>`. The page
+//     itself never scrolls, and the chat fills the viewport below the header —
+//     on this route the chat is the product.
 //  2. The transcript is a hive diagram rather than an ordinary page frame.
 //
 // `<StarlightPage>` is still the wrapper even though none of its chrome is
 // wanted: `customCss` (the whole 25-sheet design system) is injected only by
 // Starlight's own Page.astro, which is reachable only through StarlightPage.
 // Bypassing it would mean re-importing the entire stylesheet stack by hand.
-// So the chrome is removed with CSS rather than by dropping the wrapper.
+// So the prose chrome (the `<h1>` and the page frame) is removed with CSS
+// rather than by dropping the wrapper.
 import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
 import DoxPage from "~/components/ask/DoxPage";
 ---
@@ -29,9 +31,9 @@ import DoxPage from "~/components/ask/DoxPage";
         attrs: { name: "robots", content: "noindex" },
       },
       {
-        // Marks this document as the chrome-free shell, in <head> before
-        // <body> parses, so there's no flash of the header before it's
-        // hidden. Every override below keys off this attribute, which is why
+        // Marks this document as the chat shell, in <head> before <body>
+        // parses, so there's no flash of the page `<h1>` before it's hidden.
+        // Every override below keys off this attribute, which is why
         // none of them can leak to another page: no other page's <head>
         // carries this script, so no other <html> ever has the attribute.
         //
@@ -59,20 +61,15 @@ import DoxPage from "~/components/ask/DoxPage";
     overflow: hidden;
   }
 
-  /* Defect #1: the site header. `display: none` rather than `visibility:
-     hidden` so it takes no layout space and leaves the tab order. */
-  html[data-dox-shell] .header {
-    display: none;
-  }
-
-  /* Defect #2: Starlight's PageTitle renders <h1 id="_top"> on every page,
+  /* Starlight's PageTitle renders <h1 id="_top"> on every page,
      splash included. The frontmatter title stays (for <title>/SEO); only the
      visual heading goes. */
   html[data-dox-shell] #_top {
     display: none;
   }
 
-  /* Reclaim the space the fixed header and sidebar were padded against. */
+  /* Remove the sidebar and title padding meant for a prose page. The hive
+     shell is fixed below the header, so this padding does not place it. */
   html[data-dox-shell] .main-frame {
     padding-top: 0;
     padding-inline-start: 0;

@@ -1,10 +1,10 @@
 /**
  * DOX-C3a (#139) — Host 2 chrome: the full-bleed `/dox` surface.
  *
- * Deliberately not a nav bar. The Starlight header is hidden on this route
- * (see `dox.astro`'s `data-dox-shell` scoping), so this strip carries the only
- * wayfinding a reader needs — one way back to the docs — plus an environment
- * badge when pointed at a local Worker. Everything else is the conversation.
+ * Deliberately not a nav bar. The Starlight header shows on this route like on
+ * every page and gives the way back, so this strip holds only chat status: the
+ * reader's clock, plus an environment badge when pointed at a local Worker.
+ * Everything else is the conversation.
  *
  * The brain selector and the reset clock used to sit in this strip too. They
  * now live in the composer's control bar inside `DoxChat`, next to Send — the
@@ -13,7 +13,9 @@
  * DOX-C3b adds the widget rail as a sibling of `<DoxChat>` inside
  * `.gmt-hive-body`. With no widget mounted the rail holds the examples panel;
  * on a phone, once a conversation has started, that panel folds away behind an
- * "Examples" bar above the composer.
+ * "Examples" bar above the composer. A phone too short for the empty state and
+ * the open sheet folds it from the start. CSS makes that call (gmt-hive.css),
+ * so the server-rendered page is already right and nothing snaps shut on load.
  */
 import {
   startTransition,
@@ -26,14 +28,13 @@ import {
 import { starterWidgetCall, type CHAT_STARTERS } from "~/lib/chat-constants";
 import { DoxChat, type DoxChatHandle } from "./DoxChat";
 import { ExamplesBar } from "./ExamplesBar";
+import { LicenceNote } from "./ChatInfo";
 import { HeaderClock } from "./HeaderClock";
 import { useBrains } from "./use-brains";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
 import { RailResizer } from "./RailResizer";
 import { WidgetRail, type RailWidget } from "./WidgetRail";
 import { isSameWidget, resolveWidget } from "./widget-registry";
-import { withBase } from "~/lib/site";
-import { LICENCE_LEAD, LICENCE_LINK_TEXT, LICENCE_URL } from "~/lib/licence";
 
 /** Which Worker this page is talking to.
  *
@@ -72,7 +73,7 @@ export default function DoxPage() {
   const barRef = useRef<HTMLButtonElement>(null);
   /* Has the reader sent anything? Drives the phone's "Examples" bar. */
   const [conversationStarted, setConversationStarted] = useState(false);
-  /* Phone: the examples sheet is open over a started conversation. */
+  /* Phone: the reader has opened the examples sheet from the bar. */
   const [examplesOpen, setExamplesOpen] = useState(false);
   /* Focus requests are read by effects after the commit that makes their
      target exist, so they are refs, not state. */
@@ -154,10 +155,7 @@ export default function DoxPage() {
 
   return (
     <div className="gmt-ask gmt-hive-shell">
-      <header className="gmt-hive-strip">
-        <a className="gmt-hive-back" href={withBase("/")}>
-          ← @northguild/gmt
-        </a>
+      <div className="gmt-hive-strip">
         <div className="gmt-hive-strip-end">
           {/* The reader's local time, in the app's date format. */}
           <HeaderClock />
@@ -176,7 +174,7 @@ export default function DoxPage() {
             </span>
           )}
         </div>
-      </header>
+      </div>
       <div
         className="gmt-hive-body"
         data-empty={(!conversationStarted && !railWidget) || undefined}
@@ -193,8 +191,10 @@ export default function DoxPage() {
             onUsage={apply}
             onWidget={showWidget}
             onEmptyChange={handleEmptyChange}
+            /* Always in the page with no widget open: CSS shows it only on a
+               phone, and before the first message only on a short one. */
             aboveComposer={
-              conversationStarted && !railWidget ? (
+              !railWidget ? (
                 <ExamplesBar
                   ref={barRef}
                   expanded={examplesOpen}
@@ -242,18 +242,17 @@ export default function DoxPage() {
             widget={railWidget}
             onClose={closeWidget}
             onPick={pickExample}
-            collapsed={conversationStarted && !examplesOpen}
+            collapsed={!examplesOpen}
             railId={railId}
             focusTitleRef={focusTitleRef}
           />
         </ChatErrorBoundary>
       </div>
       {/* The site's licence note. Starlight's footer is not rendered on this route (see
-          `Footer.astro`), so the note sits here, in view and in the tab order. */}
+          `Footer.astro`), so the note sits here, in view and in the tab order. On a phone it is
+          hidden and the composer's info button opens it (ChatInfo.tsx). */}
       <footer className="gmt-hive-licence">
-        <p>
-          {LICENCE_LEAD} <a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
-        </p>
+        <LicenceNote />
       </footer>
     </div>
   );

@@ -149,6 +149,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `CHUNKS_PATH` in `fetch-chunks.ts` is Worker-only code, not in `dist`, so
   `fetch-chunks.test.ts` guards it. The dev server serves `/gmt/` and proxies `/gmt/api`
   with no rewrite.
+  - **The NorthGuild mark** (#424) is the header's way back to the landing page: a same-tab
+    `<a>` to `LANDING_URL` (`https://northguild.dev/`, in `site.ts`) before the site title,
+    named "NorthGuild home", on every page. The shield is inlined from
+    `src/assets/northguild-logo.svg`, so the page theme reaches its paths. The dist guard
+    allows exactly that URL in an `<a href>` (`LANDING` in `dist-base.ts`) and nowhere else;
+    `judgeUrl` is unchanged.
 - **Web Analytics.** Every HTML page loads Cloudflare's beacon
   (`static.cloudflareinsights.com/beacon.min.js`) from the `Head` override
   (`src/components/Head.astro`), in production builds only. The site is registered by
@@ -2370,8 +2376,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ### Shape
 
-- **One surface: `/dox`** (`src/pages/dox.astro`, `<DoxPage client:load />`), chrome-free,
-  `noindex`, reached from the header's "Ask Dox" link.
+- **One surface: `/dox`** (`src/pages/dox.astro`, `<DoxPage client:load />`), under the site
+  header, with no page title. `noindex`, reached from the header's "Chat with Dox" button,
+  which carries `aria-current="page"` there. The header is Astro with no JavaScript, so no
+  React reaches another page (WCAG 2.2 SC 3.2.3: the navigation is the same on every page).
   - There is no every-page dock: it would put React on every reference page to duplicate
     `/dox`.
   - The cost is that asking means leaving the page. Page context still follows through the
@@ -2562,6 +2570,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   AI models write the answers and can get things wrong, so the reader should check them. The
   widgets and tools run `@northguild/gmt` itself, and the line cites its test count from
   `src/data/gmt-stats.json`, formatted in `en-US` so the server and browser renders match.
+- **Fine print on a phone** (`ChatInfo.tsx`): below 60rem the accuracy note and the shell's
+  licence footer (`.gmt-hive-licence`) are `display: none`, and an info button
+  (`.gmt-hive-info`, named "About Dox's answers and licences") at the start of the composer's
+  control bar opens both in one native `popover="auto"` panel, anchored above the button. Send
+  stays at the end of the bar. Above 60rem the button is hidden and both notes show inline. CSS
+  picks the form, so the server render is already right. `AccuracyNote` and `LicenceNote` are
+  the single source for both forms.
 - **Retrieval trace** (`RetrievalTrace.tsx`): chunk count and titles, zero for an
   out-of-corpus question, plus the brain that actually answered.
   - **Timings.** The Worker times each stage (`worker/timing.ts`): ledger, corpus, search,
@@ -2718,12 +2733,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `<ViewTransition>`, and closing the widget brings it back.
   - **Phone (below 60rem):** while the conversation is empty the panel is the bottom sheet. `DoxPage`
     sets `data-empty` on `.gmt-hive-body`, so the chat keeps its content height (crystal, status
-    line, prompt, composer) and the sheet takes the rest, at least 12rem; a started conversation
+    line, prompt, composer) and the sheet takes the rest, at least 7rem; a started conversation
     or an open widget gets the usual 55% sheet.
     Once it starts, the sheet collapses (`data-collapsed`, `display: none`) and an
     `Examples · N` bar (`ExamplesBar.tsx`, `aria-expanded`, `aria-controls` the rail) sits above
     the composer and toggles it. N is `CHAT_STARTERS.length`. Picking a card collapses the sheet
-    again. The bar is hidden by CSS above 60rem.
+    again. The bar is hidden by CSS above 60rem. `DoxPage` renders the bar whenever no widget is
+    open; CSS decides when it shows, so the server render is already right.
+  - **Short phone:** below 44rem tall the empty state starts folded behind the bar as well, with
+    its block padding dropped. Below 35rem (landscape phones) the chat keeps a 30rem floor and
+    the shell scrolls as a page.
   - **Focus.** Activating a card moves focus to the open widget's title (`tabIndex={-1}`);
     a widget the model opens never takes focus, since the reader may be typing. Closing a
     widget returns focus to that tool's card when the panel is visible, otherwise to the bar

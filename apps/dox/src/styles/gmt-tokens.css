@@ -38,6 +38,15 @@
   /* ---- Derived tokens ---- */
   --gmt-surface: #061018; /* elevated bg / nav / sidebar (was --mg-void-2) */
   --gmt-surface-2: #0a1a24; /* inline-code bg / hover (was --mg-void-3) */
+
+  /* ---- NorthGuild mark (#424) ----
+     Dark: body 3.30:1 or more and lit body 3.77:1 or more against the header
+     surfaces (WCAG 2.2 SC 1.4.11); the glyph reaches 4.70:1 on the body parts. */
+  --gmt-logo-body: #0e7490; /* Teal */
+  --gmt-logo-body-lit: #107e99; /* Teal mixed with 10% Cyan, in srgb */
+  --gmt-logo-field: #22d3ee; /* Cyan */
+  --gmt-logo-field-lit: #67e8f9; /* Cyan bright */
+  --gmt-logo-glyph: #ffffff;
   --gmt-cyan-bright: #67e8f9; /* h3 / hover accent (was --mg-cyan-glow) */
   /* Muted text. Overwhelmingly a TEXT colour: captions, hints, table headers,
      the sidebar's idle links, Starlight's `--sl-color-gray-2`, Pagefind's
@@ -468,6 +477,10 @@
 
 /* ---- Light mode overrides ---- */
 [data-theme="light"] {
+  /* NorthGuild mark (#424). Light: body 7.37:1 or more and lit body 4.54:1 or
+     more against the header surfaces; the glyph reaches 5.36:1 on the body parts. */
+  --gmt-logo-body: #045268; /* light --gmt-cyan-ink */
+  --gmt-logo-body-lit: #0e7490;
   /* ---- Color palette (inverted for light background) ---- */
   --gmt-void: #ffffff;
   --gmt-surface: #f5f5f5;
