@@ -31,7 +31,10 @@ describe("fitChunks", () => {
   });
 
   it("always keeps the best chunk, whatever its size", () => {
-    const chunks = [chunk("huge", MAX_PROMPT_CHUNK_CHARS * 2), chunk("small", 10)];
+    const chunks = [
+      chunk("huge", MAX_PROMPT_CHUNK_CHARS * 2),
+      chunk("small", 10),
+    ];
     expect(ids(fitChunks(chunks))).toEqual(["huge"]);
   });
 

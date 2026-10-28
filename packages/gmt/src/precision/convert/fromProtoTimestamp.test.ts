@@ -79,18 +79,12 @@ describe("fromProtoTimestamp", () => {
     value             | reason
     ${hostileProxy()} | ${"proxy that throws on every trap"}
     ${revokedProxy()} | ${"revoked proxy"}
-    ${{
-  get seconds() {
+    ${{ get seconds() {
     throw new Error("hostile getter");
-  },
-  nanos: 0,
-}} | ${"throwing seconds getter"}
-    ${{
-  seconds: 0n,
-  get nanos() {
+  }, nanos: 0 }} | ${"throwing seconds getter"}
+    ${{ seconds: 0n, get nanos() {
     throw new Error("hostile getter");
-  },
-}} | ${"throwing nanos getter"}
+  } }} | ${"throwing nanos getter"}
   `('returns "" without throwing for $reason', ({ value }) => {
     expect(fromProtoTimestamp(value)).toBe("");
   });

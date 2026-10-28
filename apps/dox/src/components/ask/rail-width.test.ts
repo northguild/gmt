@@ -11,7 +11,9 @@ const REM = 16;
 describe("railBounds", () => {
   it("keeps today's width as the narrowest on a 1440 px desktop", () => {
     // 34vw of 1440 = 489.6, inside clamp(352, …, 544).
-    expect(railBounds({ viewportWidth: 1440, bodyWidth: 1440, rem: REM })).toEqual({
+    expect(
+      railBounds({ viewportWidth: 1440, bodyWidth: 1440, rem: REM }),
+    ).toEqual({
       min: 489.6,
       max: 720,
     });
@@ -39,7 +41,11 @@ describe("railBounds", () => {
 
   it("never sets the widest below the narrowest on a small window", () => {
     // Half of a 700 px body is 350, under the 22rem (352) default.
-    const bounds = railBounds({ viewportWidth: 1000, bodyWidth: 700, rem: REM });
+    const bounds = railBounds({
+      viewportWidth: 1000,
+      bodyWidth: 700,
+      rem: REM,
+    });
     expect(bounds).toEqual({ min: 352, max: 352 });
   });
 });

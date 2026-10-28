@@ -57,8 +57,9 @@ const STOPWORDS = new Set(
 /** Splits `showDwellLedger` into its words, without the `show` every name has. */
 function nameWords(name: string): string {
   return (
-    name.replace(/^show/, "").match(/\p{Lu}+(?!\p{Ll})|\p{Lu}?\p{Ll}+|\p{Nd}+/gu) ??
-    []
+    name
+      .replace(/^show/, "")
+      .match(/\p{Lu}+(?!\p{Ll})|\p{Lu}?\p{Ll}+|\p{Nd}+/gu) ?? []
   ).join(" ");
 }
 

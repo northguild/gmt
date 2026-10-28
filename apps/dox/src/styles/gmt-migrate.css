@@ -27,7 +27,9 @@
 }
 
 /* The behaviour matrix's last column is a short list of issue links, so it takes no floor. */
-.sl-markdown-content .gmt-migrate-table:not(.gmt-matrix-table) :is(th, td):last-child {
+.sl-markdown-content
+  .gmt-migrate-table:not(.gmt-matrix-table)
+  :is(th, td):last-child {
   min-width: 16rem;
 }
 

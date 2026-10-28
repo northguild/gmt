@@ -66,7 +66,8 @@
     var(--gmt-surface);
 }
 
-.gmt-id-timestamp-decoder .gmt-iddecode-hero:is([data-state="one"], [data-state="many"]) {
+.gmt-id-timestamp-decoder
+  .gmt-iddecode-hero:is([data-state="one"], [data-state="many"]) {
   --bar: var(--gmt-series-1);
 }
 
@@ -75,7 +76,10 @@
   visibility: hidden;
 }
 
-.gmt-id-timestamp-decoder .gmt-iddecode-hero .gmt-ledger-hold > .gmt-iddecode-pill {
+.gmt-id-timestamp-decoder
+  .gmt-iddecode-hero
+  .gmt-ledger-hold
+  > .gmt-iddecode-pill {
   justify-self: start;
   align-self: center;
 }
@@ -163,7 +167,9 @@
   white-space: normal;
 }
 
-.gmt-id-timestamp-decoder .gmt-iddecode-table.gmt-iddecode-table td:first-child {
+.gmt-id-timestamp-decoder
+  .gmt-iddecode-table.gmt-iddecode-table
+  td:first-child {
   width: auto;
   white-space: normal;
 }

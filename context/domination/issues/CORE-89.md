@@ -8,7 +8,7 @@ Since 2026-09-20, Morocco and Western Sahara stay on UTC+00 all year and no long
 
 ## Scope
 
-- **The checker** at `/gmt/check/morocco-2026-clock-change`, MIT like the rest of Dox, with its chat pill and widget registration: the reader's runtime against tzdb 2026c for both zones, the clock changes that no longer happen, and which saved events moved (`classifyStoredZoned`). The Dox Worker computes it when the page is requested.
+- **The checker** at `/gmt/check/morocco-2026-clock-change`, reserved under `apps/LICENSE` like the rest of Dox, with its chat pill and widget registration: the reader's runtime against tzdb 2026c for both zones, the clock changes that no longer happen, and which saved events moved (`classifyStoredZoned`). The Dox Worker computes it when the page is requested.
 - **Shared parts.** The Canada checker's runtime probe, live clocks, saved-events check and help card become parts both pages use. The Canada page keeps its behaviour and its tests.
 - **A test file** beside `packages/gmt/src/test/oh-canada.test.ts`: fixed instants through 2027, Ramadan included, every row failing on tz data older than 2026c. The page links to it.
 - **The weekly native run.** A `KNOWN_HOST_FAILURES` group for Chromium, with evidence, if the run's Chromium still predates 2026c when the test lands.
