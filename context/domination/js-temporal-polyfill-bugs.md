@@ -4,14 +4,14 @@ Record of the defects GMT needs fixed in `js-temporal/temporal-polyfill` (and, w
 `tc39/proposal-temporal`), the evidence for each, and what has been filed. The owner files every item, or
 tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) were posted that way.
 
-> **Status of this document:** updated 2026-10-25. **Filed:** 13 items by us, plus a comment on the
+> **Status of this document:** updated 2026-10-28. **Filed:** 13 items by us, plus a comment on the
 > maintainer's own PR #361. The newest are tc39 #3331 (J) and #3332 (K), both 2026-10-21. **All six js-temporal PRs
 > (#367–#372) are closed unmerged and none was rejected** — each was routed to `tc39/proposal-temporal` first, so the polyfill's rebase stays
 > manageable. #373 (release) is open and answered: one release once the rebase has caught up. #361
 > merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply; #3331 (J) is
 > closed as answered (the check is intended, see § J).
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
-> 22 workarounds, 18 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest are § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags; § I (D12), fixed on `main` with nothing
+> 23 workarounds, 19 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest are § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags; § I (D12), fixed on `main` with nothing
 > to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
 > and § O (D15), not filed yet and not fixed on either `main`. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
@@ -33,6 +33,7 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D17`: Firefox `formatRange` prints AM/PM for a day period with a zone name (§ Q) | Not a polyfill fix. A SpiderMonkey bug, open as [Bugzilla 2085525](https://bugzilla.mozilla.org/show_bug.cgi?id=2085525) | A Firefox release that prints the flexible day period in a range: the weekly `temporal-oracle` run's compat check in Firefox (`temporal-compat-firefox`) reports D17 removable, and Firefox is the only engine in D17's scope |
 | `D18`: Islamic dates before the Hijra read as positive years in WebKit (§ R) | None. Not filed yet | A js-temporal release that reads the Islamic eras (`main` declares them; whether its parser accepts WebKit's `Before Hijra` spelling is untested), or a WebKit that prints the year as V8 does, so every `D18` repro passes in the weekly `temporal-oracle` run's compat check in WebKit (`temporal-compat-webkit`); WebKit is the only engine in D18's scope |
 | `D19`: `ZonedDateTime#equals` answers false for two identifiers of one zone where `resolvedOptions` keeps the identifier (§ U) | None. Not filed yet | A js-temporal release that finds a non-primary identifier's primary without `Intl.DateTimeFormat#resolvedOptions`, so the `D19` probe passes in the weekly `temporal-oracle` run's compat check in WebKit (`temporal-compat-webkit`); WebKit is the only engine in D19's scope |
+| `D20`: `PlainMonthDay.from` rejects an upper-case `iso8601` calendar annotation (§ V) | tc39 `385b479bf8` | A js-temporal rebase and a release |
 | `D5`: Indian calendar before ISO year 1 | js-temporal `8de299a` (PR #361; `b6c9844` on its branch) | Nothing |
 | `D6`: non-ISO `until` re-constrains the day | js-temporal `10aeb98` | `D7`. With `10aeb98` and `1c64f14` alone one Hebrew `until` by years is still wrong (Corrections, item 3) |
 | `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b), which is not on `main`. The `D7.leapMonthEnd` probe fails until it is |
@@ -280,6 +281,28 @@ only filings worth making now are in tc39.
     era-less read is a polyfill defect on its own terms, and `main`'s era declarations may not cover
     WebKit's spelling; WebKit's own era output follows CLDR, so there is nothing to file at WebKit.
     See § R.
+13. **W: to file on tc39/proposal-temporal first** (then the polyfill rebase). `PlainMonthDay.from`
+    accepts `--02-30`, `--04-31`, `0230` and `--0230`: `ParseTemporalMonthDayString` never applies the
+    IsValidMonthDay early error, and the tc39 reference polyfill has the same gap. GMT needs no
+    workaround (the `plainMonthDay` regex refuses these strings first), so W has no D-number. See § W.
+14. **X: to file on tc39/proposal-temporal first** (then the polyfill rebase). `toLocaleString` builds
+    its Temporal formats from a clone of `resolvedOptions()`, so in zh-CN, zh-TW and ja-JP a requested
+    `month: "long"` or `"short"` comes back numeric (`12/25` for `12月25日`, `2024/12/25` for a
+    PlainDate). Chromium 153 shows the same for `PlainMonthDay` and `PlainDate`, which needs a
+    separate V8 report; WebKit 26.6 does not. GMT never calls `toLocaleString`, so X has no
+    D-number. See § X.
+15. **Y: to file on js-temporal/temporal-polyfill after the rebase, or on tc39 if its polyfill differs.**
+    `PlainYearMonth#add` and `#subtract` predate tc39 `41faca474a`: they accept weeks, days and time,
+    and a subtraction still starts from the last day of the month. GMT never calls them, so Y has no
+    D-number. See § Y.
+16. **Z: to file on js-temporal/temporal-polyfill, or on tc39 if its polyfill differs.**
+    `PlainYearMonth#toLocaleString` with only `era` prints a day (`10/1/2026 AD`) where the
+    specification and WebKit print `10/2026 AD`; Chromium prints just `AD`. GMT calls Intl itself, so Z
+    has no D-number. See § Z.
+17. **AA: to file on js-temporal/temporal-polyfill, or on tc39 if its polyfill differs.**
+    `PlainYearMonth#toLocaleString` and `PlainMonthDay#toLocaleString` accept a `timeStyle` and drop
+    it, where the specification and both native engines throw a `TypeError`. GMT calls Intl itself, so
+    AA has no D-number. See § AA.
 
 ## Upstream issues these fixes close
 
@@ -2335,3 +2358,167 @@ gates in `zonedWallClockDifference.ts`) go through `timeZoneEquals`, so the same
 `intervalLengthZoned` rows, the `diffZoned` and `diffZonedAsDuration` month-rounding and buddhist-calendar rows for
 `UTC` and `Etc/UTC`, and the `areZonedEqual`, `areZonedEqualBy`, `formatZonedRange` and `mapZonedDatesInRange` rows run
 unmocked, so they exercise the real path on the WebKit control pass.
+
+## V. `PlainYearMonth.from` and `PlainMonthDay.from` reject an upper-case `iso8601` calendar annotation (polyfill; fixed on tc39 `main`)
+
+### Title
+
+ParseTemporalYearMonthString and ParseTemporalMonthDayString: canonicalize the calendar before checking that a `YYYY-MM` or `MM-DD` string names the ISO calendar
+
+### Status
+
+**Fixed on tc39 `main` by `385b479bf8` (2026-02-26, "Canonicalize calendar before checking YYYY-MM or MM-DD format"). Not yet on js-temporal `main`** (`c55b211`, 2026-09-22, still has the old check), so it arrives with the polyfill's in-order catch-up and the release in #373. Nothing to file: the fix exists upstream. The one commit fixes both parsers, so GMT works around both as the one temporalCompat **D20** (`temporalCompat/isoCalendarFrom.ts`, probe `isIsoCalendarCaseCompatNeeded`).
+
+### What goes wrong
+
+Two parsers in `@js-temporal/polyfill` 0.5.1 (`lib/ecmascript.ts`) compare the `u-ca` value with `'iso8601'` as written: `ParseTemporalYearMonthString` (the function at :619, comparison at :629, throws at :630) and `ParseTemporalMonthDayString` (the function at :641, comparison at :648, throws at :649). `Temporal.PlainMonthDay.from("--12-25[u-ca=ISO8601]")` throws "MM-DD format is only valid with iso8601 calendar", and `Temporal.PlainYearMonth.from("2026-10[u-ca=ISO8601]")` throws "YYYY-MM format is only valid with iso8601 calendar".
+
+The specification lower-cases first. Temporal ParseISODateTime, for the goals TemporalMonthDayString with no DateYear and TemporalYearMonthString with no DateDay: "If _calendar_ is not ~empty~ and the ASCII-lowercase of _calendar_ is not *"iso8601"*, throw a *RangeError* exception". Calendar identifiers are case-insensitive everywhere else in Temporal, so `[u-ca=ISO8601]` is the ISO calendar.
+
+### Repro (polyfill 0.5.1, Node 24.22.1)
+
+| Call | Polyfill 0.5.1 | Expected (spec) |
+| ---- | -------------- | --------------- |
+| `Temporal.PlainMonthDay.from("--12-25[u-ca=ISO8601]").toString()` | `RangeError` | `12-25` |
+| `Temporal.PlainMonthDay.from("--12-25[!u-ca=ISO8601]").toString()` | `RangeError` | `12-25` |
+| `Temporal.PlainMonthDay.from("--12-25[u-ca=iso8601]").toString()` | `12-25` | `12-25` |
+| `Temporal.PlainYearMonth.from("2026-10[u-ca=ISO8601]").toString()` | `RangeError` | `2026-10` |
+| `Temporal.PlainYearMonth.from("2026-10[!u-ca=Iso8601]").toString()` | `RangeError` | `2026-10` |
+| `Temporal.PlainYearMonth.from("2026-10[u-ca=iso8601]").toString()` | `2026-10` | `2026-10` |
+
+Probe, two repros that share one answer: `Temporal.PlainMonthDay.from("--12-25[u-ca=ISO8601]").toString()`, expected `12-25`, and `Temporal.PlainYearMonth.from("2026-10[u-ca=ISO8601]").toString()`, expected `2026-10`; a throw counts as a failed repro.
+
+### Effect on GMT
+
+`isValidMonthDay`, `parseMonthDay`, `isValidYearMonth` and `parseYearMonth` would refuse `--12-25[u-ca=ISO8601]` and `2026-10[u-ca=ISO8601]`, which the specification reads. While the D20 probe fails, `monthDayFrom` and `yearMonthFrom` rewrite the value of every `[u-ca=…]` and `[!u-ca=…]` annotation to ASCII lower case before Temporal reads the string. Every other part of the string is passed unchanged, so every other error is Temporal's own.
+
+## W. `PlainMonthDay.from` accepts a day no year has (polyfill and tc39 reference polyfill)
+
+### Title
+
+ParseTemporalMonthDayString: apply the IsValidMonthDay early error
+
+### Status
+
+**Not filed upstream yet.** Found while reading the `--MM-DD` grammar for CORE-102. Confirmed on polyfill 0.5.1. The same gap is in the tc39 reference polyfill, so the route is tc39 first, then the polyfill rebase. GMT needs no workaround and so has no D-number.
+
+### What goes wrong
+
+The grammar makes `--02-30` a Syntax Error (early error IsValidMonthDay: the day must exist in the month for some year). After `PARSE.monthday` matches, `ParseTemporalMonthDayString` never applies it.
+
+| Call | Polyfill 0.5.1 | Expected (spec) |
+| ---- | -------------- | --------------- |
+| `Temporal.PlainMonthDay.from("--02-30").toString()` | `02-30` | `RangeError` |
+| `Temporal.PlainMonthDay.from("--02-30").toPlainDate({ year: 2024 }).toString()` | `2024-02-29` | `RangeError` already at `from` |
+| `Temporal.PlainMonthDay.from("--04-31")`, `"--02-31"` | accepted | `RangeError` |
+| `Temporal.PlainMonthDay.from("0230")`, `"--0230"` | `02-30` | `RangeError` |
+
+The year-month twin (`ParseTemporalYearMonthString`, :619) has no day to check and no GMT caller.
+
+### Effect on GMT
+
+None. The `plainMonthDay` regex (`regex/month-day.ts`) encodes IsValidMonthDay in its alternation and refuses these strings before Temporal reads them, so `isValidMonthDay` and `parseMonthDay` return the sentinel for them on every polyfill version. W stays here as a record for the owner to file.
+
+## X. `toLocaleString` rebuilds the options from `resolvedOptions()`, so a month width the locale prints numerically is lost (polyfill and tc39 reference polyfill; Chromium shows it too)
+
+### Title
+
+DateTimeFormat: build the Temporal formats from the caller's options, not from resolvedOptions()
+
+### Status
+
+**Not filed upstream yet.** Found while choosing an oracle for `formatMonthDay` in CORE-102. Confirmed on polyfill 0.5.1 (Node 24.22.1, ICU 78.3). tc39's reference polyfill has the same clone (`e8cc03fc97`, `polyfill/lib/intl.mjs`, `internalCreateDateTimeFormat` at :133, clone at :238–:247), so the route is tc39 first, then the polyfill rebase. Native Chromium 153 prints the same as the polyfill for `PlainMonthDay` and `PlainDate`, so V8 needs its own report; native WebKit 26.6 prints the expected values. GMT needs no workaround and so has no D-number.
+
+### What goes wrong
+
+`createDateTimeFormat` (`lib/intl.ts:65`) builds an `Intl.DateTimeFormat` from the caller's options, then stores a clone of its `resolvedOptions()` (`:111`, `:128`–`:139`) and builds the Temporal formatters from that clone. `resolvedOptions()` reports the widths of the pattern the locale chose, not the widths asked for: in zh-CN, zh-TW and ja-JP, `{ month: "long", day: "numeric" }` with no year resolves to `month: "numeric"`, because the CLDR pattern `M月d日` writes the month as a number. The rebuilt formatter then asks for a numeric month and gets `12/25`. The specification builds `[[TemporalPlainMonthDayFormat]]` and the other Temporal formats with GetDateTimeFormat over the caller's options (CreateDateTimeFormat), so the requested width reaches the format matcher.
+
+| Call (ICU 78.3) | Polyfill 0.5.1 | Expected (spec) |
+| ---- | -------------- | --------------- |
+| `Temporal.PlainMonthDay.from({ calendar: "gregory", monthCode: "M12", day: 25 }).toLocaleString("zh-CN", { calendar: "gregory", month: "long", day: "numeric" })` | `12/25` | `12月25日` |
+| the same in `zh-TW` and `ja-JP`, and with `month: "short"` | `12/25` | `12月25日` |
+| `Temporal.PlainDate.from("2024-12-25").toLocaleString("zh-CN", { calendar: "gregory", year: "numeric", month: "long", day: "numeric" })` | `2024/12/25` | `2024年12月25日` |
+| `new Intl.DateTimeFormat("zh-CN", { calendar: "gregory", month: "long", day: "numeric", timeZone: "UTC" }).format(Date.UTC(1972, 11, 25, 12))` | `12月25日` | `12月25日` |
+
+ko-KR resolves the same options to `month: "long"` and is not affected.
+
+### Effect on GMT
+
+None. GMT never calls `toLocaleString`: `formatMonthDay`, `formatDate` and the other formatters format epoch milliseconds through `cachedFormatter("DateTimeFormat", …)`, which passes the caller's widths to Intl, as the last row shows. X stays here as a record for the owner to file, and as the reason `formatMonthDay.test.ts` has no `toLocaleString` oracle.
+
+## Y. `PlainYearMonth#add` and `#subtract` predate tc39 `41faca474a` (polyfill)
+
+### Title
+
+AddDurationToYearMonth: reject weeks, days and time, and start every subtraction from day 1
+
+### Status
+
+**Not filed upstream yet.** Found while specifying `addYearMonth` in CORE-102. Confirmed on polyfill 0.5.1 (Node 24.22.1). js-temporal `main` at `c55b211` still has the old code (`lib/ecmascript.ts:4714`), so the route is the polyfill's in-order catch-up to tc39 `41faca474a` (2026-01-15), then the release in #373. GMT needs no workaround and so has no D-number.
+
+### What goes wrong
+
+`AddDurationToYearMonth` in 0.5.1 (`lib/ecmascript.ts:4541`) does not reject a duration with weeks, days or time, and keeps the old `if (sign < 0)` branch that starts a subtraction from the last day of the month. The specification (tc39 `41faca474a`) throws a `RangeError` for weeks, days or time, sets `[[Day]]` to 1, and then runs CalendarDateFromFields and CalendarDateAdd, which throw when ISODateWithinLimits is false.
+
+### Repro (polyfill 0.5.1, Node 24.22.1)
+
+| Call | Polyfill 0.5.1 | Expected (spec) |
+| ---- | -------------- | --------------- |
+| `Temporal.PlainYearMonth.from("2026-10").add({ days: 1 })`, `{ weeks: 1 }`, `{ hours: 1 }` | `2026-10` | `RangeError` |
+| `Temporal.PlainYearMonth.from("+275760-09").subtract({ months: 1 })` | `RangeError` | `+275760-08` |
+| `Temporal.PlainYearMonth.from("-271821-05").subtract({ months: 1 })` | `-271821-04` | `RangeError` (day 1 is outside ISODateWithinLimits) |
+
+### Effect on GMT
+
+None. `addYearMonth`, `subtractYearMonth` and `diffYearMonth` never call `PlainYearMonth#add` or `#subtract`; they run the specification's steps on `PlainDate`. Y stays here as a record for the owner to file.
+
+## Z. `PlainYearMonth#toLocaleString` with only `era` prints a day (polyfill; Chromium prints no date)
+
+### Title
+
+GetDateTimeFormat for ~year-month~: an `era` alone keeps the year-month defaults
+
+### Status
+
+**Not filed upstream yet.** Found while reviewing `formatYearMonth` in CORE-102. Measured 2026-10-28 on polyfill 0.5.1 (Node 24, and the polyfill in Chromium 153 and WebKit 26.6 with `GMT_TEMPORAL=polyfill`) and on native Temporal in Chromium 153 and WebKit 26.6. GMT needs no workaround and so has no D-number.
+
+### What goes wrong
+
+`yearMonthAmend` (`lib/intl.ts:419`) applies the year-month defaults only when `year`, `month` and `era` are all absent (`:445`). With only `era`, no default is applied, the underlying formatter gets `era` alone and falls back to its full date pattern, which prints a day. The specification's GetDateTimeFormat (required ~date~, defaults ~year-month~, inherit ~all~) copies `era`, then applies the year-month defaults because neither `year` nor `month` is present, so `year` and `month` become `"numeric"` next to the era.
+
+### Repro (`ym` is `Temporal.PlainYearMonth.from({ calendar: "gregory", year: 2026, month: 10 })`)
+
+| Call | Node (polyfill 0.5.1) | Chromium 153 native | WebKit 26.6 native | Specification |
+| ---- | --------------------- | ------------------- | ------------------ | ------------- |
+| `ym.toLocaleString("en-US", { calendar: "gregory", era: "short" })` | `10/1/2026 AD` | `AD` | `10/2026 AD` | `10/2026 AD` |
+| the same polyfill in Chromium and WebKit | `10/1/2026 AD` | `10/1/2026 AD` | `10/1/2026 AD` | `10/2026 AD` |
+
+### Effect on GMT
+
+None. `formatYearMonth` formats epoch milliseconds through `cachedFormatter("DateTimeFormat", …)` with `year`, `month` and the caller's `era`, so `{ era: "short" }` gives the year-month with the era in every engine. Z stays here as a record for the owner to file.
+
+## AA. `PlainYearMonth#toLocaleString` and `PlainMonthDay#toLocaleString` accept a `timeStyle` (polyfill)
+
+### Title
+
+toLocaleString: throw a TypeError for a `timeStyle` on a PlainYearMonth or PlainMonthDay
+
+### Status
+
+**Not filed upstream yet.** Found while reviewing `formatYearMonth` in CORE-102. Measured 2026-10-28 on polyfill 0.5.1 (Node 24, and in Chromium 153 and WebKit 26.6 with `GMT_TEMPORAL=polyfill`) and on native Temporal in Chromium 153 and WebKit 26.6. GMT needs no workaround and so has no D-number.
+
+### What goes wrong
+
+`yearMonthAmend` (`lib/intl.ts:419`) and `monthDayAmend` (`:452`) both pass `timeStyle: false` to `amend`, which deletes it, so the call formats as if no time style had been given. The specification's `toLocaleString` calls CreateDateTimeFormat with required ~date~, which throws a `TypeError` for a `timeStyle` because a time style is a time option; both native engines throw.
+
+### Repro (`ym` is `Temporal.PlainYearMonth.from({ calendar: "gregory", year: 2026, month: 10 })`, `md` is `Temporal.PlainMonthDay.from({ calendar: "gregory", monthCode: "M10", day: 26 })`; options `{ calendar: "gregory", dateStyle: "short", timeStyle: "short" }`)
+
+| Call | Node (polyfill 0.5.1) | Chromium 153 native | WebKit 26.6 native | Specification |
+| ---- | --------------------- | ------------------- | ------------------ | ------------- |
+| `ym.toLocaleString("en-US", options)` | `10/26` | `TypeError` | `TypeError` | `TypeError` |
+| `md.toLocaleString("en-US", options)` | `10/26` | `TypeError` | `TypeError` | `TypeError` |
+| the same polyfill in Chromium and WebKit | `10/26` | `10/26` | `10/26` | `TypeError` |
+
+### Effect on GMT
+
+None. `formatYearMonth` and `formatMonthDay` format epoch milliseconds through Intl and return `""` for a `timeStyle` themselves (`plainYearMonthFormatOptions` and `plainMonthDayFormatOptions` return `null`). AA stays here as a record for the owner to file.

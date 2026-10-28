@@ -82,6 +82,28 @@ formatDate("2024-03-15", "ja-JP", { dateStyle: "long" }); // "2024年3月15日" 
 formatRelativeDateTime("2024-03-16T09:00:00", "en", { reference: "2024-03-15T08:00:00" }); // "tomorrow"`}
 />
 
+<Mistake
+  severity="high"
+  title="Calling toLocaleString on an ISO month-day"
+  description="Temporal.PlainMonthDay has the ISO calendar, and toLocaleString throws a RangeError when the locale's calendar differs, which it does for en-US. formatMonthDay formats through the Gregorian calendar and returns text, or an empty string for invalid input."
+  wrongCode={`Temporal.PlainMonthDay.from("--12-25").toLocaleString("en-US");
+// throws a RangeError`}
+  rightCode={`import { formatMonthDay } from "@northguild/gmt";
+
+formatMonthDay("--12-25", "en-US"); // "12/25"`}
+/>
+
+<Mistake
+  severity="high"
+  title="Calling toLocaleString on an ISO year-month"
+  description="Temporal.PlainYearMonth has the ISO calendar, and toLocaleString throws a RangeError when the locale's calendar differs, which it does for en-US. This throws in polyfill 0.5.1, in Chromium 153 and in WebKit 26.6. formatYearMonth formats through the Gregorian calendar and returns text, or an empty string for invalid input."
+  wrongCode={`Temporal.PlainYearMonth.from("2026-10").toLocaleString("en-US");
+// throws a RangeError`}
+  rightCode={`import { formatYearMonth } from "@northguild/gmt";
+
+formatYearMonth("2026-10", "en-US"); // "10/2026"`}
+/>
+
 ## See also
 
 - [Formatting guide](/guides/core-date-operations/formatting/)

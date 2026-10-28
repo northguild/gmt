@@ -13,6 +13,7 @@ sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/relative-time.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/comparisons.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/validation.mdx'
+  - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/month-day-values.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/calendar-boundaries.mdx'
   - 'northguild/gmt:packages/gmt/src/plain/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/plain/parse/index.ts'
@@ -82,6 +83,14 @@ input before you act on it.
 - **Formatting**: `formatDate`, `formatTime`, `formatDateTime`,
   `formatRelativeDate`, `formatCalendar`, `formatRfc3339`, `formatRfc2822`,
   `formatHttpDate`, `formatSqlDateTime`
+- **Month-day (`--MM-DD`) and year-month (`YYYY-MM`)**: `isValidMonthDay`,
+  `parseMonthDay`, `parseMonthDayFromDate`, `parseMonthDayFromDateTime`,
+  `parseMonthDayWithPattern`, `formatMonthDay`, `compareMonthDays`,
+  `areMonthDaysEqual`, `monthDayToDate`; `isValidYearMonth`, `parseYearMonth`,
+  `parseYearMonthFromDate`, `parseYearMonthFromDateTime`,
+  `parseYearMonthWithPattern`, `formatYearMonth`, `compareYearMonths`,
+  `areYearMonthsEqual`, `addYearMonth`, `subtractYearMonth`, `diffYearMonth`,
+  `startOfYearMonth`, `endOfYearMonth`, `getDaysInYearMonth`
 - **Locale names**: `getLocaleMonthNames`, `getLocaleWeekdayNames`,
   `getLocaleMeridiems`, `getLocaleEraNames`
 - **Comparison**: `isAfterDate`, `isBeforeDate`, `areDatesEqual`,
@@ -97,6 +106,12 @@ input before you act on it.
 
 ## Common pitfalls
 
+- A birthday or a fixed holiday is a month-day, not a date in a made-up year. Store
+  it as `--MM-DD` (`parseMonthDay("12-25")` gives `"--12-25"`), and ask for the date
+  in a year with `monthDayToDate("--02-29", 2023)`, which gives `"2023-02-28"`.
+  A card expiry or billing month is a year-month: `isValidYearMonth("2026-10")` is
+  `true`, while `isValidDate("2026-10")` stays `false`. Do not append `-01` to
+  make a date. `addYearMonth` takes `years` and `months` only; `{ days: 1 }` gives `""`.
 - `formatRelative*` measure from now when `reference` is omitted, so the output
   changes from day to day. Pass `reference` whenever the result must be deterministic.
   `largestUnit` takes a singular or plural unit name (`"hour"` or `"hours"`) from the

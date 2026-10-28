@@ -145,6 +145,14 @@
       "engines": ["webkit"]
     },
     {
+      "defects": ["D20"],
+      "title": "D20 — PlainYearMonth.from and PlainMonthDay.from reject an upper-case iso8601 calendar annotation",
+      "trigger": "a js-temporal release carrying tc39 385b479bf8 (Canonicalize calendar before checking YYYY-MM or MM-DD format), so the D20 probe (--12-25[u-ca=ISO8601] reads as 12-25 and 2026-10[u-ca=ISO8601] as 2026-10) passes on Node",
+      "probes": 2,
+      "failing": 2,
+      "state": "still-needed"
+    },
+    {
       "defects": ["D9"],
       "title": "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
       "trigger": "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",

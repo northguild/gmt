@@ -151,6 +151,10 @@ import {
   renderCronInAZoneTemplate,
 } from "./cron-in-a-zone-mount";
 import {
+  mountLeapDayBirthday,
+  renderLeapDayBirthdayTemplate,
+} from "./leap-day-birthday-mount";
+import {
   mountColumnTimestampBridge,
   renderColumnTimestampBridgeTemplate,
 } from "./column-timestamp-bridge-mount";
@@ -342,6 +346,11 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
     "cron in a zone",
     () => renderCronInAZoneTemplate(),
     mountCronInAZone as MountFn<never>,
+  ],
+  [
+    "leap-day birthday",
+    () => renderLeapDayBirthdayTemplate(),
+    mountLeapDayBirthday as MountFn<never>,
   ],
 ];
 

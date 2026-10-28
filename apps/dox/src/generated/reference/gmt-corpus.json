@@ -5888,6 +5888,47 @@
     ]
   },
   {
+    "url": "/reference/plain/calculate/addYearMonth",
+    "page": "/reference/plain/calculate/addYearMonth",
+    "name": "addYearMonth",
+    "namespace": "plain",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "addYearMonth(value: string, units: { years?: number; months?: number; }): string",
+    "description": "Return a year-month string moved forward by `units`.",
+    "sourcePath": "packages/gmt/src/plain/calculate/addYearMonth.ts",
+    "examples": [
+      {
+        "call": "addYearMonth(\"2026-10\", { months: 1 })",
+        "result": "\"2026-11\""
+      },
+      {
+        "call": "addYearMonth(\"2026-12\", { months: 1 })",
+        "result": "\"2027-01\""
+      },
+      {
+        "call": "addYearMonth(\"2024-02\", { years: 1 })",
+        "result": "\"2025-02\""
+      },
+      {
+        "call": "addYearMonth(\"2026-01\", { months: -3 })",
+        "result": "\"2025-10\""
+      },
+      {
+        "call": "addYearMonth(\"2026-10\", { days: 1 })",
+        "result": "\"\""
+      },
+      {
+        "call": "addYearMonth(\"2026-10\", { months: 1, days: 0 })",
+        "result": "\"\""
+      },
+      {
+        "call": "addYearMonth(\"+275760-09\", { months: 1 })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/calculate/clampDate",
     "page": "/reference/plain/calculate/clampDate",
     "name": "clampDate",
@@ -6242,6 +6283,39 @@
     ]
   },
   {
+    "url": "/reference/plain/calculate/diffYearMonth",
+    "page": "/reference/plain/calculate/diffYearMonth",
+    "name": "diffYearMonth",
+    "namespace": "plain",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "diffYearMonth(a: string, b: string, unit: \"years\" | \"months\" | \"year\" | \"month\"): number | null",
+    "description": "Return the whole years or months from year-month `a` to year-month `b`.",
+    "sourcePath": "packages/gmt/src/plain/calculate/diffYearMonth.ts",
+    "examples": [
+      {
+        "call": "diffYearMonth(\"2025-11\", \"2026-10\", \"months\")",
+        "result": "11"
+      },
+      {
+        "call": "diffYearMonth(\"2026-10\", \"2025-11\", \"months\")",
+        "result": "-11"
+      },
+      {
+        "call": "diffYearMonth(\"2025-11\", \"2027-10\", \"years\")",
+        "result": "1"
+      },
+      {
+        "call": "diffYearMonth(\"2026-10\", \"2026-11\", \"days\")",
+        "result": "null"
+      },
+      {
+        "call": "diffYearMonth(\"2026-10\", \"2026-10-01\", \"months\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/calculate/endOfDate",
     "page": "/reference/plain/calculate/endOfDate",
     "name": "endOfDate",
@@ -6416,6 +6490,39 @@
     ]
   },
   {
+    "url": "/reference/plain/calculate/endOfYearMonth",
+    "page": "/reference/plain/calculate/endOfYearMonth",
+    "name": "endOfYearMonth",
+    "namespace": "plain",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "endOfYearMonth(value: string): string",
+    "description": "The last day of a year-month, as an ISO date.",
+    "sourcePath": "packages/gmt/src/plain/calculate/endOfYearMonth.ts",
+    "examples": [
+      {
+        "call": "endOfYearMonth(\"2026-10\")",
+        "result": "\"2026-10-31\""
+      },
+      {
+        "call": "endOfYearMonth(\"2024-02\")",
+        "result": "\"2024-02-29\" (leap year)"
+      },
+      {
+        "call": "endOfYearMonth(\"2023-02\")",
+        "result": "\"2023-02-28\""
+      },
+      {
+        "call": "endOfYearMonth(\"+275760-09\")",
+        "result": "\"\" (day 30 is above the PlainDate range)"
+      },
+      {
+        "call": "endOfYearMonth(\"2026-13\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/calculate/getDayOfYear",
     "page": "/reference/plain/calculate/getDayOfYear",
     "name": "getDayOfYear",
@@ -6502,6 +6609,39 @@
       },
       {
         "call": "getDaysInYear(\"invalid\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/calculate/getDaysInYearMonth",
+    "page": "/reference/plain/calculate/getDaysInYearMonth",
+    "name": "getDaysInYearMonth",
+    "namespace": "plain",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "getDaysInYearMonth(value: string): number | null",
+    "description": "Return the number of days in a year-month.",
+    "sourcePath": "packages/gmt/src/plain/calculate/getDaysInYearMonth.ts",
+    "examples": [
+      {
+        "call": "getDaysInYearMonth(\"2024-02\")",
+        "result": "29 (leap year)"
+      },
+      {
+        "call": "getDaysInYearMonth(\"2023-02\")",
+        "result": "28"
+      },
+      {
+        "call": "getDaysInYearMonth(\"2026-04\")",
+        "result": "30"
+      },
+      {
+        "call": "getDaysInYearMonth(\"2026-10\")",
+        "result": "31"
+      },
+      {
+        "call": "getDaysInYearMonth(\"2026-10-01\")",
         "result": "null"
       }
     ]
@@ -7761,6 +7901,39 @@
     ]
   },
   {
+    "url": "/reference/plain/calculate/startOfYearMonth",
+    "page": "/reference/plain/calculate/startOfYearMonth",
+    "name": "startOfYearMonth",
+    "namespace": "plain",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "startOfYearMonth(value: string): string",
+    "description": "The first day of a year-month, as an ISO date.",
+    "sourcePath": "packages/gmt/src/plain/calculate/startOfYearMonth.ts",
+    "examples": [
+      {
+        "call": "startOfYearMonth(\"2026-10\")",
+        "result": "\"2026-10-01\""
+      },
+      {
+        "call": "startOfYearMonth(\"-000001-12\")",
+        "result": "\"-000001-12-01\""
+      },
+      {
+        "call": "startOfYearMonth(\"-271821-04\")",
+        "result": "\"\" (day 1 is below the PlainDate range)"
+      },
+      {
+        "call": "startOfYearMonth(\"2026-13\")",
+        "result": "\"\""
+      },
+      {
+        "call": "startOfYearMonth(\"2026-10-01\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/calculate/subtractBusinessDays",
     "page": "/reference/plain/calculate/subtractBusinessDays",
     "name": "subtractBusinessDays",
@@ -7876,6 +8049,39 @@
       },
       {
         "call": "subtractTime(\"invalid\", { hours: 1 })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/calculate/subtractYearMonth",
+    "page": "/reference/plain/calculate/subtractYearMonth",
+    "name": "subtractYearMonth",
+    "namespace": "plain",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "subtractYearMonth(value: string, units: { years?: number; months?: number; }): string",
+    "description": "Return a year-month string moved backward by `units`.",
+    "sourcePath": "packages/gmt/src/plain/calculate/subtractYearMonth.ts",
+    "examples": [
+      {
+        "call": "subtractYearMonth(\"2026-10\", { months: 10 })",
+        "result": "\"2025-12\""
+      },
+      {
+        "call": "subtractYearMonth(\"2026-03\", { years: 1, months: 4 })",
+        "result": "\"2024-11\""
+      },
+      {
+        "call": "subtractYearMonth(\"+275760-09\", { months: 1 })",
+        "result": "\"+275760-08\""
+      },
+      {
+        "call": "subtractYearMonth(\"-271821-05\", { months: 1 })",
+        "result": "\"\""
+      },
+      {
+        "call": "subtractYearMonth(\"2026-10\", { weeks: 1 })",
         "result": "\"\""
       }
     ]
@@ -8167,6 +8373,31 @@
     ]
   },
   {
+    "url": "/reference/plain/compare/areMonthDaysEqual",
+    "page": "/reference/plain/compare/areMonthDaysEqual",
+    "name": "areMonthDaysEqual",
+    "namespace": "plain",
+    "module": "compare",
+    "kind": "function",
+    "signature": "areMonthDaysEqual(a: string, b: string): boolean",
+    "description": "Check whether two month-day strings (`--MM-DD`, or `MM-DD`) name the same day of the year.",
+    "sourcePath": "packages/gmt/src/plain/compare/areMonthDaysEqual.ts",
+    "examples": [
+      {
+        "call": "areMonthDaysEqual(\"12-25\", \"--12-25\")",
+        "result": "true"
+      },
+      {
+        "call": "areMonthDaysEqual(\"--02-29\", \"--02-28\")",
+        "result": "false"
+      },
+      {
+        "call": "areMonthDaysEqual(\"--02-30\", \"--02-30\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/compare/areTimesEqual",
     "page": "/reference/plain/compare/areTimesEqual",
     "name": "areTimesEqual",
@@ -8200,6 +8431,97 @@
       {
         "call": "areTimesEqual(\"12:34:56\", \"invalid\")",
         "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/compare/areYearMonthsEqual",
+    "page": "/reference/plain/compare/areYearMonthsEqual",
+    "name": "areYearMonthsEqual",
+    "namespace": "plain",
+    "module": "compare",
+    "kind": "function",
+    "signature": "areYearMonthsEqual(a: string, b: string): boolean",
+    "description": "Check whether two year-month strings (`YYYY-MM`) name the same year and month.",
+    "sourcePath": "packages/gmt/src/plain/compare/areYearMonthsEqual.ts",
+    "examples": [
+      {
+        "call": "areYearMonthsEqual(\"+002026-10\", \"2026-10\")",
+        "result": "true"
+      },
+      {
+        "call": "areYearMonthsEqual(\"2026-10\", \"2025-10\")",
+        "result": "false"
+      },
+      {
+        "call": "areYearMonthsEqual(\"2026-13\", \"2026-13\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/compare/compareMonthDays",
+    "page": "/reference/plain/compare/compareMonthDays",
+    "name": "compareMonthDays",
+    "namespace": "plain",
+    "module": "compare",
+    "kind": "function",
+    "signature": "compareMonthDays(a: string, b: string): number | null",
+    "description": "Compare two month-day strings (`--MM-DD`, or `MM-DD`) in calendar order: month first, then day.",
+    "sourcePath": "packages/gmt/src/plain/compare/compareMonthDays.ts",
+    "examples": [
+      {
+        "call": "compareMonthDays(\"--01-01\", \"--12-31\")",
+        "result": "-1"
+      },
+      {
+        "call": "compareMonthDays(\"12-25\", \"--12-25\")",
+        "result": "0"
+      },
+      {
+        "call": "compareMonthDays(\"--02-29\", \"--02-28\")",
+        "result": "1"
+      },
+      {
+        "call": "compareMonthDays(\"--02-30\", \"--03-01\")",
+        "result": "null"
+      },
+      {
+        "call": "[\"--12-25\", \"--02-29\", \"--02-28\"].sort((a, b) => compareMonthDays(a, b) ?? 0)",
+        "result": "[\"--02-28\", \"--02-29\", \"--12-25\"]"
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/compare/compareYearMonths",
+    "page": "/reference/plain/compare/compareYearMonths",
+    "name": "compareYearMonths",
+    "namespace": "plain",
+    "module": "compare",
+    "kind": "function",
+    "signature": "compareYearMonths(a: string, b: string): number | null",
+    "description": "Compare two year-month strings (`YYYY-MM`) in calendar order: year first, then month.",
+    "sourcePath": "packages/gmt/src/plain/compare/compareYearMonths.ts",
+    "examples": [
+      {
+        "call": "compareYearMonths(\"2026-09\", \"2026-10\")",
+        "result": "-1"
+      },
+      {
+        "call": "compareYearMonths(\"+002026-10\", \"2026-10\")",
+        "result": "0"
+      },
+      {
+        "call": "compareYearMonths(\"-000001-12\", \"0000-01\")",
+        "result": "-1"
+      },
+      {
+        "call": "compareYearMonths(\"2026-13\", \"2026-10\")",
+        "result": "null"
+      },
+      {
+        "call": "[\"2026-10\", \"2025-12\", \"2026-01\"].sort((a, b) => compareYearMonths(a, b) ?? 0)",
+        "result": "[\"2025-12\", \"2026-01\", \"2026-10\"] (validate every entry first)"
       }
     ]
   },
@@ -8804,6 +9126,43 @@
     ]
   },
   {
+    "url": "/reference/plain/convert/monthDayToDate",
+    "page": "/reference/plain/convert/monthDayToDate",
+    "name": "monthDayToDate",
+    "namespace": "plain",
+    "module": "convert",
+    "kind": "function",
+    "signature": "monthDayToDate(monthDay: string, year: number): string",
+    "description": "The ISO date of a month-day in a given year.",
+    "sourcePath": "packages/gmt/src/plain/convert/monthDayToDate.ts",
+    "examples": [
+      {
+        "call": "monthDayToDate(\"--12-25\", 2024)",
+        "result": "\"2024-12-25\""
+      },
+      {
+        "call": "monthDayToDate(\"--02-29\", 2024)",
+        "result": "\"2024-02-29\""
+      },
+      {
+        "call": "monthDayToDate(\"--02-29\", 2023)",
+        "result": "\"2023-02-28\" (constrained)"
+      },
+      {
+        "call": "monthDayToDate(\"--02-30\", 2024)",
+        "result": "\"\""
+      },
+      {
+        "call": "monthDayToDate(\"--12-25\", 2024.5)",
+        "result": "\"\""
+      },
+      {
+        "call": "monthDayToDate(\"--09-14\", 275760)",
+        "result": "\"\" (above the PlainDate range)"
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/format/formatCalendar#formatcalendaroptions",
     "page": "/reference/plain/format/formatCalendar",
     "name": "FormatCalendarOptions",
@@ -9114,6 +9473,51 @@
     ]
   },
   {
+    "url": "/reference/plain/format/formatMonthDay",
+    "page": "/reference/plain/format/formatMonthDay",
+    "name": "formatMonthDay",
+    "namespace": "plain",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatMonthDay(value: string, locale?: string | string[], options?: DateTimeFormatOptions): string",
+    "description": "Return a localized string for a month-day (`--MM-DD` or `MM-DD`) using Intl options.",
+    "sourcePath": "packages/gmt/src/plain/format/formatMonthDay.ts",
+    "examples": [
+      {
+        "call": "formatMonthDay(\"--12-25\", \"en-US\")",
+        "result": "\"12/25\""
+      },
+      {
+        "call": "formatMonthDay(\"--12-25\", \"de-DE\", { month: \"long\", day: \"numeric\" })",
+        "result": "\"25. Dezember\""
+      },
+      {
+        "call": "formatMonthDay(\"--12-25\", \"fr-FR\", { dateStyle: \"medium\" })",
+        "result": "\"25 déc.\""
+      },
+      {
+        "call": "formatMonthDay(\"--02-29\", \"en-US\", { month: \"long\", day: \"numeric\" })",
+        "result": "\"February 29\""
+      },
+      {
+        "call": "formatMonthDay(\"--12-25\", \"en-US\", { year: \"numeric\", month: \"long\", day: \"numeric\" })",
+        "result": "\"December 25\""
+      },
+      {
+        "call": "formatMonthDay(\"--12-25\", \"en-US\", { timeStyle: \"short\" })",
+        "result": "\"\""
+      },
+      {
+        "call": "formatMonthDay(\"--12-25\", \"en-US\", { calendar: \"hebrew\" })",
+        "result": "\"\""
+      },
+      {
+        "call": "formatMonthDay(\"--02-30\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/format/formatRelativeDate#formatrelativedateoptions",
     "page": "/reference/plain/format/formatRelativeDate",
     "name": "FormatRelativeDateOptions",
@@ -9392,6 +9796,51 @@
       {
         "call": "formatTime(\"14:30:45\", [\"fr-FR\", \"en-US\"], { hour: \"2-digit\", minute: \"2-digit\" })",
         "result": "\"14:30\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/format/formatYearMonth",
+    "page": "/reference/plain/format/formatYearMonth",
+    "name": "formatYearMonth",
+    "namespace": "plain",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatYearMonth(value: string, locale?: string | string[], options?: DateTimeFormatOptions): string",
+    "description": "Return a localized string for a year-month (`YYYY-MM`) using Intl options.",
+    "sourcePath": "packages/gmt/src/plain/format/formatYearMonth.ts",
+    "examples": [
+      {
+        "call": "formatYearMonth(\"2026-10\", \"en-US\")",
+        "result": "\"10/2026\""
+      },
+      {
+        "call": "formatYearMonth(\"2026-10\", \"de-DE\", { year: \"numeric\", month: \"long\" })",
+        "result": "\"Oktober 2026\""
+      },
+      {
+        "call": "formatYearMonth(\"2026-10\", \"fr-FR\", { dateStyle: \"medium\" })",
+        "result": "\"oct. 2026\""
+      },
+      {
+        "call": "formatYearMonth(\"2026-10\", \"en-US\", { era: \"short\", year: \"numeric\", month: \"long\" })",
+        "result": "\"October 2026 AD\""
+      },
+      {
+        "call": "formatYearMonth(\"2026-10\", \"en-US\", { year: \"numeric\", month: \"long\", day: \"numeric\" })",
+        "result": "\"October 2026\""
+      },
+      {
+        "call": "formatYearMonth(\"2026-10\", \"en-US\", { timeStyle: \"short\" })",
+        "result": "\"\""
+      },
+      {
+        "call": "formatYearMonth(\"2026-10\", \"en-US\", { calendar: \"hebrew\" })",
+        "result": "\"\""
+      },
+      {
+        "call": "formatYearMonth(\"2026-13\")",
+        "result": "\"\""
       }
     ]
   },
@@ -12171,6 +12620,142 @@
     ]
   },
   {
+    "url": "/reference/plain/parse/parseMonthDay",
+    "page": "/reference/plain/parse/parseMonthDay",
+    "name": "parseMonthDay",
+    "namespace": "plain",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseMonthDay(value: string): string",
+    "description": "Return the canonical `--MM-DD` form of an ISO month-day string.",
+    "sourcePath": "packages/gmt/src/plain/parse/parseMonthDay.ts",
+    "examples": [
+      {
+        "call": "parseMonthDay(\"--12-25\")",
+        "result": "\"--12-25\""
+      },
+      {
+        "call": "parseMonthDay(\"12-25\")",
+        "result": "\"--12-25\""
+      },
+      {
+        "call": "parseMonthDay(\"--02-29\")",
+        "result": "\"--02-29\""
+      },
+      {
+        "call": "parseMonthDay(\"--12-25[u-ca=ISO8601]\")",
+        "result": "\"--12-25\""
+      },
+      {
+        "call": "parseMonthDay(\"--02-30\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseMonthDay(\"--1225\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/parse/parseMonthDayFromDate",
+    "page": "/reference/plain/parse/parseMonthDayFromDate",
+    "name": "parseMonthDayFromDate",
+    "namespace": "plain",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseMonthDayFromDate(value: string): string",
+    "description": "Return the month-day (`--MM-DD`) of an ISO 8601 date string.",
+    "sourcePath": "packages/gmt/src/plain/parse/parseMonthDayFromDate.ts",
+    "examples": [
+      {
+        "call": "parseMonthDayFromDate(\"2024-12-25\")",
+        "result": "\"--12-25\""
+      },
+      {
+        "call": "parseMonthDayFromDate(\"2024-02-29\")",
+        "result": "\"--02-29\""
+      },
+      {
+        "call": "parseMonthDayFromDate(\"2024-02-30\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseMonthDayFromDate(\"2024-12-25[u-ca=hebrew]\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/parse/parseMonthDayFromDateTime",
+    "page": "/reference/plain/parse/parseMonthDayFromDateTime",
+    "name": "parseMonthDayFromDateTime",
+    "namespace": "plain",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseMonthDayFromDateTime(value: string): string",
+    "description": "Return the month-day (`--MM-DD`) of an ISO 8601 date-time string.",
+    "sourcePath": "packages/gmt/src/plain/parse/parseMonthDayFromDateTime.ts",
+    "examples": [
+      {
+        "call": "parseMonthDayFromDateTime(\"2024-12-25T10:00:00\")",
+        "result": "\"--12-25\""
+      },
+      {
+        "call": "parseMonthDayFromDateTime(\"2024-02-29T23:59:59.999999999\")",
+        "result": "\"--02-29\""
+      },
+      {
+        "call": "parseMonthDayFromDateTime(\"2024-12-25\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseMonthDayFromDateTime(\"2024-12-25T10:00:00Z\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseMonthDayFromDateTime(\"2024-12-25T10:00:00[Europe/Paris]\")",
+        "result": "\"--12-25\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/parse/parseMonthDayWithPattern",
+    "page": "/reference/plain/parse/parseMonthDayWithPattern",
+    "name": "parseMonthDayWithPattern",
+    "namespace": "plain",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseMonthDayWithPattern(value: string, pattern: string, locale?: string | string[]): string",
+    "description": "Parse a month-day string against a caller-supplied token pattern (e.g. `\"MM-dd\"`, `\"d MMMM\"`) and return it as an ISO month-day string, `--MM-DD`.",
+    "sourcePath": "packages/gmt/src/plain/parse/parseMonthDayWithPattern.ts",
+    "examples": [
+      {
+        "call": "parseMonthDayWithPattern(\"12-25\", \"MM-dd\")",
+        "result": "\"--12-25\""
+      },
+      {
+        "call": "parseMonthDayWithPattern(\"December 25\", \"MMMM d\")",
+        "result": "\"--12-25\""
+      },
+      {
+        "call": "parseMonthDayWithPattern(\"25 décembre\", \"d MMMM\", [\"fr-FR\", \"en-US\"])",
+        "result": "\"--12-25\""
+      },
+      {
+        "call": "parseMonthDayWithPattern(\"2/29\", \"M/d\")",
+        "result": "\"--02-29\""
+      },
+      {
+        "call": "parseMonthDayWithPattern(\"2/30\", \"M/d\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseMonthDayWithPattern(\"25 décembre 2024\", \"d MMMM yyyy\", \"fr-FR\")",
+        "result": "\"\" (year token)"
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/parse/parseMonthFromDate",
     "page": "/reference/plain/parse/parseMonthFromDate",
     "name": "parseMonthFromDate",
@@ -12654,6 +13239,142 @@
       {
         "call": "parseYearFromDateTime(\"invalid\")",
         "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/parse/parseYearMonth",
+    "page": "/reference/plain/parse/parseYearMonth",
+    "name": "parseYearMonth",
+    "namespace": "plain",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseYearMonth(value: string): string",
+    "description": "Return the canonical `YYYY-MM` form of an ISO year-month string (`±YYYYYY-MM` outside 0000-9999).",
+    "sourcePath": "packages/gmt/src/plain/parse/parseYearMonth.ts",
+    "examples": [
+      {
+        "call": "parseYearMonth(\"2026-10\")",
+        "result": "\"2026-10\""
+      },
+      {
+        "call": "parseYearMonth(\"+002026-10\")",
+        "result": "\"2026-10\""
+      },
+      {
+        "call": "parseYearMonth(\"-000001-12\")",
+        "result": "\"-000001-12\""
+      },
+      {
+        "call": "parseYearMonth(\"2026-10[u-ca=ISO8601]\")",
+        "result": "\"2026-10\""
+      },
+      {
+        "call": "parseYearMonth(\"+275760-10\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseYearMonth(\"202610\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseYearMonth(\"2026-10-01\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/parse/parseYearMonthFromDate",
+    "page": "/reference/plain/parse/parseYearMonthFromDate",
+    "name": "parseYearMonthFromDate",
+    "namespace": "plain",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseYearMonthFromDate(value: string): string",
+    "description": "Return the year-month (`YYYY-MM`) of an ISO 8601 date string.",
+    "sourcePath": "packages/gmt/src/plain/parse/parseYearMonthFromDate.ts",
+    "examples": [
+      {
+        "call": "parseYearMonthFromDate(\"2026-10-01\")",
+        "result": "\"2026-10\""
+      },
+      {
+        "call": "parseYearMonthFromDate(\"2026-10-31\")",
+        "result": "\"2026-10\""
+      },
+      {
+        "call": "parseYearMonthFromDate(\"+275760-09-13\")",
+        "result": "\"+275760-09\""
+      },
+      {
+        "call": "parseYearMonthFromDate(\"2023-02-29\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseYearMonthFromDate(\"2026-10-01[u-ca=hebrew]\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/parse/parseYearMonthFromDateTime",
+    "page": "/reference/plain/parse/parseYearMonthFromDateTime",
+    "name": "parseYearMonthFromDateTime",
+    "namespace": "plain",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseYearMonthFromDateTime(value: string): string",
+    "description": "Return the year-month (`YYYY-MM`) of an ISO 8601 date-time string.",
+    "sourcePath": "packages/gmt/src/plain/parse/parseYearMonthFromDateTime.ts",
+    "examples": [
+      {
+        "call": "parseYearMonthFromDateTime(\"2026-10-01T10:00:00\")",
+        "result": "\"2026-10\""
+      },
+      {
+        "call": "parseYearMonthFromDateTime(\"2026-10-31T23:59:59.999999999\")",
+        "result": "\"2026-10\""
+      },
+      {
+        "call": "parseYearMonthFromDateTime(\"2026-10-01\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseYearMonthFromDateTime(\"2026-10-01T10:00:00Z\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/parse/parseYearMonthWithPattern",
+    "page": "/reference/plain/parse/parseYearMonthWithPattern",
+    "name": "parseYearMonthWithPattern",
+    "namespace": "plain",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseYearMonthWithPattern(value: string, pattern: string, locale?: string | string[], options?: TwoDigitYearOptions): string",
+    "description": "Parse a year-month string against a caller-supplied token pattern (e.g. `\"MM/yyyy\"`, `\"MMMM yyyy\"`) and return it as an ISO year-month string, `YYYY-MM`.",
+    "sourcePath": "packages/gmt/src/plain/parse/parseYearMonthWithPattern.ts",
+    "examples": [
+      {
+        "call": "parseYearMonthWithPattern(\"10/2026\", \"MM/yyyy\")",
+        "result": "\"2026-10\""
+      },
+      {
+        "call": "parseYearMonthWithPattern(\"octobre 2026\", \"MMMM yyyy\", \"fr\")",
+        "result": "\"2026-10\""
+      },
+      {
+        "call": "parseYearMonthWithPattern(\"10/26\", \"MM/yy\", undefined, { yearWindow: 1950 })",
+        "result": "\"2026-10\""
+      },
+      {
+        "call": "parseYearMonthWithPattern(\"13/2026\", \"MM/yyyy\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseYearMonthWithPattern(\"1 octobre 2026\", \"d MMMM yyyy\", \"fr-FR\")",
+        "result": "\"\" (day token)"
       }
     ]
   },
@@ -13247,6 +13968,55 @@
     ]
   },
   {
+    "url": "/reference/plain/validate/isValidMonthDay",
+    "page": "/reference/plain/validate/isValidMonthDay",
+    "name": "isValidMonthDay",
+    "namespace": "plain",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidMonthDay(value: string): boolean",
+    "description": "Return true if `value` is a valid ISO month-day string: `--MM-DD` or `MM-DD`.",
+    "sourcePath": "packages/gmt/src/plain/validate/isValidMonthDay.ts",
+    "examples": [
+      {
+        "call": "isValidMonthDay(\"--12-25\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidMonthDay(\"12-25\")",
+        "result": "true (the -- is optional)"
+      },
+      {
+        "call": "isValidMonthDay(\"--02-29\")",
+        "result": "true (exists in the 1972 reference year)"
+      },
+      {
+        "call": "isValidMonthDay(\"--12-25[u-ca=ISO8601]\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidMonthDay(\"--02-30\")",
+        "result": "false (no such day in any year)"
+      },
+      {
+        "call": "isValidMonthDay(\"--1225\")",
+        "result": "false (basic format)"
+      },
+      {
+        "call": "isValidMonthDay(\"--12-25[u-ca=gregory]\")",
+        "result": "false (only iso8601)"
+      },
+      {
+        "call": "isValidMonthDay(\"2024-12-25\")",
+        "result": "false (a date, not a month-day)"
+      },
+      {
+        "call": "isValidMonthDay(\"\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/validate/isValidSqlDateTime",
     "page": "/reference/plain/validate/isValidSqlDateTime",
     "name": "isValidSqlDateTime",
@@ -13452,6 +14222,55 @@
       },
       {
         "call": "isValidTimeUnit(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/validate/isValidYearMonth",
+    "page": "/reference/plain/validate/isValidYearMonth",
+    "name": "isValidYearMonth",
+    "namespace": "plain",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidYearMonth(value: string): boolean",
+    "description": "Return true if `value` is a valid ISO year-month string: `YYYY-MM` or `±YYYYYY-MM`.",
+    "sourcePath": "packages/gmt/src/plain/validate/isValidYearMonth.ts",
+    "examples": [
+      {
+        "call": "isValidYearMonth(\"2026-10\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidYearMonth(\"+275760-09\")",
+        "result": "true (the latest year-month)"
+      },
+      {
+        "call": "isValidYearMonth(\"2026-10[u-ca=ISO8601]\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidYearMonth(\"+275760-10\")",
+        "result": "false (outside Temporal's range)"
+      },
+      {
+        "call": "isValidYearMonth(\"202610\")",
+        "result": "false (basic format)"
+      },
+      {
+        "call": "isValidYearMonth(\"2026-13\")",
+        "result": "false (month 13)"
+      },
+      {
+        "call": "isValidYearMonth(\"2026-10-01\")",
+        "result": "false (a date, not a year-month)"
+      },
+      {
+        "call": "isValidYearMonth(\"2026-10[u-ca=gregory]\")",
+        "result": "false (only iso8601)"
+      },
+      {
+        "call": "isValidYearMonth(\"\")",
         "result": "false"
       }
     ]
@@ -15848,6 +16667,39 @@
     ]
   },
   {
+    "url": "/reference/regex/month-day/plainMonthDay",
+    "page": "/reference/regex/month-day/plainMonthDay",
+    "name": "plainMonthDay",
+    "namespace": "regex",
+    "module": "month-day",
+    "kind": "regex",
+    "signature": "",
+    "description": "RegExp matching an ISO 8601 month-day (extended): `--MM-DD` or `MM-DD`.",
+    "sourcePath": "packages/gmt/src/regex/month-day.ts",
+    "examples": [
+      {
+        "call": "plainMonthDay.test(\"--12-25\")",
+        "result": "true"
+      },
+      {
+        "call": "plainMonthDay.test(\"12-25\")",
+        "result": "true (the -- is optional)"
+      },
+      {
+        "call": "plainMonthDay.test(\"--02-29\")",
+        "result": "true (exists in the 1972 reference year)"
+      },
+      {
+        "call": "plainMonthDay.test(\"--02-30\")",
+        "result": "false (no such day in any year)"
+      },
+      {
+        "call": "plainMonthDay.test(\"--1225\")",
+        "result": "false (basic format)"
+      }
+    ]
+  },
+  {
     "url": "/reference/regex/nanoseconds/nanosecondDecimal",
     "page": "/reference/regex/nanoseconds/nanosecondDecimal",
     "name": "nanosecondDecimal",
@@ -16395,6 +17247,43 @@
       {
         "call": "utcOffset.test(\"+24:00\")",
         "result": "false (out of range)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/regex/year-month/plainYearMonth",
+    "page": "/reference/regex/year-month/plainYearMonth",
+    "name": "plainYearMonth",
+    "namespace": "regex",
+    "module": "year-month",
+    "kind": "regex",
+    "signature": "",
+    "description": "RegExp matching an ISO 8601 year-month in the extended form: `YYYY-MM` or `±YYYYYY-MM`.",
+    "sourcePath": "packages/gmt/src/regex/year-month.ts",
+    "examples": [
+      {
+        "call": "plainYearMonth.test(\"2026-10\")",
+        "result": "true"
+      },
+      {
+        "call": "plainYearMonth.test(\"+275760-09\")",
+        "result": "true"
+      },
+      {
+        "call": "plainYearMonth.test(\"+999999-12\")",
+        "result": "true (shape only; outside Temporal's range)"
+      },
+      {
+        "call": "plainYearMonth.test(\"202610\")",
+        "result": "false (basic format)"
+      },
+      {
+        "call": "plainYearMonth.test(\"2026-13\")",
+        "result": "false (month 13)"
+      },
+      {
+        "call": "plainYearMonth.test(\"2026-10-01\")",
+        "result": "false (a full date)"
       }
     ]
   },

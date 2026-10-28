@@ -107,7 +107,32 @@ skills:
       - isValidFiscalExtraWeek
       - isValidFiscalYearLabel
       - hasSecond60
+      - isValidMonthDay
+      - parseMonthDay
+      - parseMonthDayFromDate
+      - parseMonthDayFromDateTime
+      - parseMonthDayWithPattern
+      - formatMonthDay
+      - compareMonthDays
+      - areMonthDaysEqual
+      - monthDayToDate
+      - isValidYearMonth
+      - parseYearMonth
+      - parseYearMonthFromDate
+      - parseYearMonthFromDateTime
+      - parseYearMonthWithPattern
+      - formatYearMonth
+      - compareYearMonths
+      - areYearMonthsEqual
+      - addYearMonth
+      - subtractYearMonth
+      - diffYearMonth
+      - startOfYearMonth
+      - endOfYearMonth
+      - getDaysInYearMonth
     tasks:
+      - Store a birthday or fixed holiday as a month-day (--MM-DD) and get its date in a year, 29 February included
+      - Read, format, compare and step a year-month (card expiry, billing month) without inventing a day
       - Get current date/time/timestamp as ISO strings
       - Parse individual components from date/time strings
       - Decode a fixed producer format with a UTS #35 token pattern, literal quotes included

@@ -1043,6 +1043,41 @@ export const showCronInAZoneInput = z
   });
 
 /**
+ * Leap-Day Birthday: a yearly date (a month-day, a date of birth or a date-time),
+ * an optional year and an optional locale. Every key is the permalink key. The
+ * widget judges the value, the year and the locale itself, so the schema checks
+ * shape only: a date the library refuses is the widget's NO SIGNAL to show, not
+ * a failed tool call.
+ */
+export const showLeapDayBirthdayInput = z.object({
+  value: z
+    .string()
+    .min(1)
+    .max(64)
+    .describe(
+      "The date exactly as the reader gave it: --MM-DD, MM-DD, a date such as 2000-02-29 or a date-time. Never corrected, and never a date the reader did not give.",
+    ),
+  year: z
+    .number()
+    .int()
+    .min(-271821)
+    .max(275760)
+    .optional()
+    .describe(
+      "The first of the eight years to draw. Send it only when the reader named a year; the tool starts on the reader's current year otherwise.",
+    ),
+  locale: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,4}$/)
+    .optional()
+    .describe(
+      "A BCP 47 language tag such as de-DE. Send it only when the reader named a language; never infer it from a name or a place.",
+    ),
+});
+
+/**
  * What a tool returns to the model.
  *
  * The widget is rendered on the client from `part.input`; this output exists so
@@ -1095,7 +1130,8 @@ export type DoxToolName =
   | "showIdTimestampDecoder"
   | "showColumnTimestampBridge"
   | "showMoroccoClockChange"
-  | "showCronInAZone";
+  | "showCronInAZone"
+  | "showLeapDayBirthday";
 
 export const DOX_TOOL_INPUTS = {
   showGlobe: showGlobeInput,
@@ -1137,6 +1173,7 @@ export const DOX_TOOL_INPUTS = {
   showColumnTimestampBridge: showColumnTimestampBridgeInput,
   showMoroccoClockChange: showMoroccoClockChangeInput,
   showCronInAZone: showCronInAZoneInput,
+  showLeapDayBirthday: showLeapDayBirthdayInput,
 } as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1419,6 +1456,13 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader asks whether a cron job runs, runs twice or is skipped when the clocks change, what happens to a `30 2 * * *` job in spring, or how a Kubernetes CronJob or GitHub Actions schedule behaves across a clock change.",
     args: 'line: the cron line exactly as the reader wrote it, never corrected; zone: an IANA id, only when the reader named it; year: required, a whole year from 1900 to 2100; change: the year\'s first ("1") or second ("2") clock change in time order; after: optional instant for the lists. The tool shows both rules and there is no default to pick.',
   },
+  {
+    name: "showLeapDayBirthday",
+    purpose:
+      "Show a yearly date with no year, such as a birthday on 29 February, as the stored --MM-DD, how it reads in a locale and the date it falls on in each of eight years, marking the years the library moves it and showing two alternatives beside its answer: the year pasted onto the string, and a 1 March policy.",
+    when: "Call when the reader asks what happens to a 29 February birthday or anniversary in a year with no 29 February, how to store a birthday or another date that repeats every year, or how a month-day differs from a date. Pass only the date the reader gave; never infer a birth date or a locale from a name or a place.",
+    args: "value: required, the date exactly as the reader gave it (--MM-DD, MM-DD, a date or a date-time); year: optional whole year, the first of eight, only when the reader named one; locale: optional BCP 47 tag, only when the reader named a language.",
+  },
 ];
 
 /**
@@ -1583,6 +1627,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[38].purpose,
     inputSchema: showCronInAZoneInput,
   }),
+  showLeapDayBirthday: tool({
+    description: DOX_TOOL_DOCS[39].purpose,
+    inputSchema: showLeapDayBirthdayInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1645,6 +1693,7 @@ export const ENABLED_TOOL_NAMES = [
   "showColumnTimestampBridge",
   "showMoroccoClockChange",
   "showCronInAZone",
+  "showLeapDayBirthday",
 ] as const satisfies readonly DoxToolName[];
 
 export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];

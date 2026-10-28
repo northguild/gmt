@@ -68,6 +68,7 @@ import {
   showIdTimestampDecoderInput,
   showColumnTimestampBridgeInput,
   showCronInAZoneInput,
+  showLeapDayBirthdayInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
   showObservanceComparatorInput,
@@ -587,6 +588,13 @@ export function buildWorkerTools(
             )
           : accept("cron-in-a-zone");
       },
+    }),
+    // The schema is the whole check: a date, a year or a locale the library
+    // refuses is the widget's NO SIGNAL to show, not a failed call.
+    showLeapDayBirthday: tool({
+      description: docFor("showLeapDayBirthday"),
+      inputSchema: showLeapDayBirthdayInput,
+      execute: () => accept("leap-day-birthday"),
     }),
   };
 

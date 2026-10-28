@@ -1511,6 +1511,41 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **A change is named by `change`, a 1-based ordinal digit string into that year's
     `getDstTransitions` list, plus a required `year`**, because `seedFromLocation` keeps only
     strings and years. An ordinal past the list opens on change 1, and a note says so.
+- **Leap-Day Birthday** (CORE-102, `/tools/leap-day-birthday/`, `leapday`): a Core tool that
+  draws the month-day functions of `@northguild/gmt/plain`. The reader types a yearly date (a
+  month-day, a date of birth or a date-time), picks a locale and a year.
+  - **What it draws.** Three plates (Stored as `--MM-DD`, Reads as in the locale, In the year) and
+    a table of eight consecutive years from the chosen one: the library's date, a verdict word,
+    the year pasted onto the string and a 1 March rule. A moved year is a word, a hatch and a
+    bottom edge on its verdict cell, never a coloured left edge. Below: one reason line and the
+    printed calls.
+  - **Calls.** `isValidMonthDay`, then the first of `parseMonthDay`, `parseMonthDayFromDate`,
+    `parseMonthDayFromDateTime` that does not return `""` (a dispatch, so the site never inspects
+    the string with a regex of its own), `formatMonthDay`, `monthDayToDate`, `parseMonthDayFromDate`
+    on the result with `areMonthDaysEqual` and `compareMonthDays` for the verdict, `isValidDate`
+    and `addDate`, through `month-day-lib.ts` (heavy, throws `WidgetLoadError`). The widget
+    compares no digits and checks no leap year.
+  - **The 1 March column is the caller's policy**, built from library calls (`isValidDate` on the
+    pasted year, else `addDate(monthDayToDate(...), { days: 1 })`), because Temporal's constrain
+    rule takes no option and gmt has no such mode. It only moves a date the library moved, so a
+    year outside 0 to 9999 (refused for its width, not its day) is not shifted.
+  - **Hold-still.** All eight rows and five cells are laid out in every state; a verdict word and
+    the "Reads as" plate sit in a hold sized by hidden twins (the four verdict words; the longest
+    of 12 month texts, measured at mount and on a locale change, never during a drag). A date
+    reserves 13 characters. The reason is a hold over its five static texts, and the calls frame
+    reserves its widest print (`callsSizerText`). The table is `table-layout: fixed` with a
+    doubled class on the Year column, and under a `40rem` container it becomes labelled blocks
+    (mirrored in `gmt-a11y.css`; the 732 px box of a 1440 px viewport shows the real table). `readout-still.mjs` drags `year-slider` and steps the typed year
+    on all five presets; only the range chip moves.
+  - **NO SIGNAL is not "no result".** A value no reader accepts, or a year the library cannot place,
+    is NO SIGNAL; the pasted-year cell is NO SIGNAL for `2023-02-29` because `isValidDate` refuses
+    it, which is the lesson. `--02-30` alone is told apart ("the month has no such day"), by the
+    `not-a-day` preset's own `noSuchDay` flag, because the library gives `""` for every refused
+    input alike and the widget computes nothing; other junk gets the generic text. A kept date is a correct answer and never amber.
+  - **Permalink.** `{ preset }` alone while the state matches a preset, else the strings `value`,
+    `year` and `locale` (a year as a string, because a number outside 1900 to 2100 is dropped).
+    `value` is in `EMPTY_KEYS_BY_KIND` so a cleared field round-trips. The chat schema takes a
+    year of -271821 to 275760 and a BCP 47 `locale`; the default locale is `en`.
 - **A new tool is registered in lists no single test covers.** The pieces are in
   [docs-site.md § Purpose-built widgets](../domination/docs-site.md#purpose-built-widgets). The
   chat side is guarded: a missing schema or `ENABLED_TOOL_NAMES` entry in `src/lib/dox-tools.ts`,
@@ -1685,8 +1720,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   under `packages/gmt/src/regex/` adds a chip with no Dox edit. The chip list grows, so
   `/tools/converter-bench/` and the reference page that embeds the bench
   (`convertZonedToZoned`) change height in a visual diff.
-  `epcisEventTime` and `epcisTimeZoneOffset` are two such chips. Read that diff as expected; it
-  is not a regression.
+  `epcisEventTime`, `epcisTimeZoneOffset` and `plainMonthDay` are three such chips. Read that
+  diff as expected; it is not a regression.
 - **Trap: `Date.parse` is banned in tests too.** `date-ban.test.ts` and `oxlint` reject it
   in test files as well as source. Use `Temporal.Instant.from(…).epochMilliseconds`.
 - **Result regions ease through `.gmt-grow`.** Sections after the first, and elements marked
@@ -1710,7 +1745,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`,
   `/tools/holiday-rule-builder/`, `/tools/observance-comparator/`, `/tools/moving-feasts/`,
   `/tools/duration-parser-bench/`, `/tools/id-timestamp-decoder/`, `/tools/column-timestamp-bridge/`,
-  `/tools/cron-in-a-zone/`, plus the Tier 4
+  `/tools/cron-in-a-zone/`, `/tools/leap-day-birthday/`, plus the Tier 4
   `/tools/zoned-earth/` and `/tools/zone-planner/`. Permalinks (`?w=&wa=`) seed a widget through `seedFromLocation`,
   with structural checks rather than zod so a docs page never pulls in the `ai` package. The
   Zone Planner's is `/tools/zone-planner/?w=planner&wa={"time":…,"zone1":…,"zone2":…}`: a UTC
@@ -2622,11 +2657,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     on the map; the Worker's `execute` (`accept("morocco-clock-change")`) and the registry's
     `validate` refuse any other id. The widget kind is `moroccoclock`, its permalink
     `/check/morocco-2026-clock-change/?w=moroccoclock&wa={"zone":…}`.
+  - `showLeapDayBirthday({ value, year?, locale? })` (CORE-102): the date the reader gave, exactly
+    as typed (a month-day, a date or a date-time, at most 64 characters), a year only when asked
+    and a locale only when the reader names one; never infer a birth date or a locale from a name or
+    a place. The Worker's `execute` is `accept("leap-day-birthday")`; the registry's `validate`
+    refuses a locale tag the runtime cannot read. The widget kind is `leapday`.
 - **Count:** `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers, one starter card per tool;
   re-derive them from there, and never write a literal in a test or a page. The Leap Second
   Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada and Morocco clock-change
-  checkers, the Duration Parser Bench, the three holiday tools, the ID Timestamp Decoder and the
-  Column Timestamp Bridge are core.
+  checkers, the Duration Parser Bench, the three holiday tools, the ID Timestamp Decoder, the
+  Column Timestamp Bridge and the Leap-Day Birthday are core.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.

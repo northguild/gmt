@@ -457,6 +457,31 @@ const TOOLS = [
     drawn: CRON_DRAWN,
     textBoxes: CODE_TEXT,
   },
+  {
+    slug: "leap-day-birthday",
+    root: ".gmt-leap-day",
+    presets: [
+      "leap-day-birth",
+      "century",
+      "short-form",
+      "from-date-time",
+      "not-a-day",
+    ],
+    // The year slider by keyboard and by pointer, and the typed year stepped
+    // three times each way. Eight rows are laid out in every state and every
+    // slot that comes and goes is hidden with `data-off`, so no year changes a
+    // box; only the range chip rides its track.
+    controls: [
+      { sel: '[data-role="year-slider"]' },
+      { sel: '[data-role="year"]', step: 3 },
+    ],
+    track: null,
+    frame: ".gmt-holiday-frame",
+    scope: "widget",
+    drawn: ".gmt-ledger-hold > :first-child",
+    riders: RANGE_CHIP,
+    textBoxes: CODE_TEXT,
+  },
 ];
 
 /**

@@ -186,6 +186,18 @@ export function isTimeZoneEqualsCompatNeeded(): boolean {
   return isDefectPresent("D19", "iso8601");
 }
 
+/**
+ * True when this runtime's `Temporal.PlainMonthDay.from` or `Temporal.PlainYearMonth.from` throws
+ * for an upper-case `iso8601` calendar annotation (defect D20).
+ *
+ * Temporal ParseISODateTime, for the goals TemporalMonthDayString (no DateYear) and
+ * TemporalYearMonthString (no DateDay), lower-cases the `u-ca` value before comparing it with
+ * `"iso8601"`; polyfill 0.5.1 compares it as written in both parsers.
+ */
+export function isIsoCalendarCaseCompatNeeded(): boolean {
+  return isDefectPresent("D20", "iso8601");
+}
+
 /** Defects that make the runtime's calendar arithmetic or reads differ from the spec. */
 const ARITHMETIC_DEFECTS: readonly DefectId[] = [
   "D1",

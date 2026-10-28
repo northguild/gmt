@@ -73,7 +73,8 @@ export type WidgetKind =
   | "iddecode"
   | "colbridge"
   | "moroccoclock"
-  | "cronzone";
+  | "cronzone"
+  | "leapday";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -133,6 +134,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   colbridge: "/tools/column-timestamp-bridge/",
   moroccoclock: withBase("/check/morocco-2026-clock-change/"),
   cronzone: "/tools/cron-in-a-zone/",
+  leapday: "/tools/leap-day-birthday/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */
@@ -225,7 +227,11 @@ const KIND_STRING_CAPS: Readonly<Partial<Record<WidgetKind, number>>> = {
  */
 const EMPTY_KEYS_BY_KIND: Readonly<
   Partial<Record<WidgetKind, ReadonlySet<string>>>
-> = { iddecode: new Set(["id"]) };
+> = {
+  iddecode: new Set(["id"]),
+  // A reader may clear the field, and an empty value is the NO SIGNAL state.
+  leapday: new Set(["value"]),
+};
 
 /**
  * Read this page's own permalink, if it carries one for `kind`.

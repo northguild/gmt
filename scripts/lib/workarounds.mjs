@@ -237,6 +237,18 @@ export const WORKAROUNDS = [
     ],
   },
   {
+    defects: ["D20"],
+    title:
+      "D20 — PlainYearMonth.from and PlainMonthDay.from reject an upper-case iso8601 calendar annotation",
+    trigger:
+      "a js-temporal release carrying tc39 385b479bf8 (Canonicalize calendar before checking YYYY-MM or MM-DD format), so the D20 probe (--12-25[u-ca=ISO8601] reads as 12-25 and 2026-10[u-ca=ISO8601] as 2026-10) passes on Node",
+    steps: [
+      "Delete isoCalendarFrom.ts (monthDayFrom and yearMonthFrom) and its test, their exports in index.ts, isIsoCalendarCaseCompatNeeded in capabilities.ts and its export in index.ts, and both D20 repros; plainMonthDayOf and plainYearMonthOf (internal/inputChecks.ts) call Temporal.PlainMonthDay.from and Temporal.PlainYearMonth.from again.",
+      "Keep every isValidMonthDay and isValidYearMonth row: the values are the specification's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 20.`,
+    ],
+  },
+  {
     defects: ["D9"],
     title:
       "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",

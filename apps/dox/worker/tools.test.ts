@@ -9,7 +9,11 @@
  *    a bug that only shows up on a reader's second question.
  */
 import { convertToModelMessages, type UIMessage } from "ai";
-import { DOX_TOOL_NAMES, showCronInAZoneInput } from "../src/lib/dox-tools";
+import {
+  DOX_TOOL_NAMES,
+  showCronInAZoneInput,
+  showLeapDayBirthdayInput,
+} from "../src/lib/dox-tools";
 import { buildWorkerTools } from "./tools";
 
 /* Every defined tool, not only the offered ones: a pending tool's `execute` is
@@ -220,6 +224,31 @@ describe("worker tool execute", () => {
         const r = await run("showCronInAZone", bad);
         expect(r).toMatchObject({ ok: false, widget: "cron-in-a-zone" });
       }
+    });
+  });
+
+  describe("showLeapDayBirthday refusals", () => {
+    it("accepts a value no reader would read, because that is the widget's NO SIGNAL", async () => {
+      expect(
+        await run("showLeapDayBirthday", { value: "--02-30" }),
+      ).toMatchObject({ ok: true, widget: "leap-day-birthday" });
+    });
+
+    it("refuses an empty value, a non-integer year and a bad locale tag", async () => {
+      for (const bad of [
+        { value: "" },
+        { value: "--02-29", year: 2023.5 },
+        { value: "--02-29", locale: "not a locale" },
+      ]) {
+        expect(showLeapDayBirthdayInput.safeParse(bad).success).toBe(false);
+      }
+      expect(
+        showLeapDayBirthdayInput.safeParse({
+          value: "--02-29",
+          year: 2023,
+          locale: "de-DE",
+        }).success,
+      ).toBe(true);
     });
   });
 

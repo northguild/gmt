@@ -1,0 +1,26 @@
+---
+title: A 29 February Birthday in a Common Year
+description: Someone was born on 29 February 2000. Find their birthday in 2023 without moving the day by accident.
+industries: [core]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A 29 February Birthday in a Common Year"
+  description="Someone was born on 29 February 2000. When is their birthday in 2023?"
+  naiveCode={`// The naive approach: build the date in the year you need
+const d = new Date(2023, 1, 29);
+console.log(d.getMonth() + 1, d.getDate()); // 3 1
+// 29 February 2023 rolls over to 1 March 2023. The day moved, and nothing said so.`}
+  explanation={`A month-day has no year, so \`--02-29\` is a valid value. Placing it in a year that has no 29 February is a question with two common answers. Temporal's \`toPlainDate\` constrains it to the last day of February, and \`monthDayToDate\` does the same. Some rules and contracts use 1 March instead. That is the caller's policy, so the last two lines show it rather than a gmt option.`}
+  gmtCode={`import { monthDayToDate, isValidDate, addDate } from "@northguild/gmt";
+
+monthDayToDate("--02-29", 2023); // "2023-02-28"
+monthDayToDate("--02-29", 2024); // "2024-02-29"
+
+// The 1 March policy
+isValidDate("2023-02-29") ? "2023-02-29" : addDate(monthDayToDate("--02-29", 2023), { days: 1 });
+// "2023-03-01"`}
+  fixedSpecId="monthDayToDate"
+/>

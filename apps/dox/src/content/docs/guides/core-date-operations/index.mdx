@@ -1,6 +1,6 @@
 ---
 title: Core Date Operations
-description: Getting the current time, arithmetic, comparison, durations, parsing, formatting, relative time, validation, calendar systems, business calendars, operating hours, nanosecond precision, spans, and leap seconds and TAI.
+description: Getting the current time, arithmetic, comparison, durations, parsing, formatting, relative time, validation, calendar systems, business calendars, operating hours, nanosecond precision, spans, leap seconds and TAI, and month-day values.
 sidebar:
   order: 0
 ---
@@ -20,4 +20,5 @@ Everything you do with plain dates and datetimes in GMT.
 - [Operating Hours and Open-Time SLAs](./operating-hours/) — is it open, how many open hours have passed, and when an open-hours SLA falls due.
 - [Nanosecond Precision](./nanosecond-precision/) — `bigint` nanosecond instants, wire format, truncation for storage and zoned strings with sub-minute offsets.
 - [Spans](./spans/) — exact elapsed time as a number, and wall-clock spans.
+- [Month-Day Values](./month-day-values/) — birthdays and recurring holidays as `--MM-DD`: validate, parse, format, compare and place in a year.
 - [Leap Seconds and TAI](./leap-seconds-and-tai/) — the inserted seconds, TAI minus UTC by date, which days really have a second 60, and elapsed time against the clock difference.

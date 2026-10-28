@@ -76,6 +76,7 @@ import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import type { IdTimestampDecoderArgs } from "~/lib/id-timestamp-decoder-mount";
 import type { ColumnTimestampBridgeArgs } from "~/lib/column-timestamp-bridge-mount";
 import type { CronInAZoneArgs } from "~/lib/cron-in-a-zone-mount";
+import type { LeapDayArgs } from "~/lib/leap-day-birthday-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
@@ -113,6 +114,7 @@ import {
   showIdTimestampDecoderInput,
   showColumnTimestampBridgeInput,
   showCronInAZoneInput,
+  showLeapDayBirthdayInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -1080,6 +1082,40 @@ const cronZoneEntry = defineWidget<CronInAZoneArgs>({
     })),
 });
 
+const leapDayEntry = defineWidget<LeapDayArgs>({
+  title: "Leap-day birthday",
+  kind: "leapday",
+  parse: (input) => {
+    const result = showLeapDayBirthdayInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Every argument is a control value, and a date the library refuses is this widget's own
+     NO SIGNAL. The hook refuses only a locale tag the runtime cannot read at all, which the
+     "Reads as" plate could not explain to the reader. */
+  load: () =>
+    import("~/lib/leap-day-birthday-mount").then((m) => ({
+      renderTemplate: (_idPrefix, args) =>
+        m.renderLeapDayBirthdayTemplate(args),
+      mount: m.mountLeapDayBirthday,
+    })),
+  validate: ({ locale }) => {
+    if (locale === undefined) return Promise.resolve(null);
+    try {
+      Intl.getCanonicalLocales(locale);
+      return Promise.resolve(null);
+    } catch {
+      return Promise.resolve(
+        `"${locale}" is not a locale tag this runtime reads.`,
+      );
+    }
+  },
+});
+
 const plannerEntry = defineWidget<ZonePlannerArgs>({
   title: "Zone planner",
   kind: "planner",
@@ -1165,6 +1201,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showColumnTimestampBridge: columnBridgeEntry,
   showMoroccoClockChange: moroccoClockEntry,
   showCronInAZone: cronZoneEntry,
+  showLeapDayBirthday: leapDayEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

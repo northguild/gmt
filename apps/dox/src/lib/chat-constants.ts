@@ -860,6 +860,12 @@ export const CHAT_STARTERS: readonly {
       change: "1",
     },
   },
+  {
+    text: "When is a 29 February birthday in a year that has none?",
+    widget: "showLeapDayBirthday",
+    area: "core",
+    args: { value: "--02-29", year: 2023 },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

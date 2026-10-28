@@ -2,7 +2,15 @@ import { Temporal } from "./temporal";
 import { isoStringBody } from "./isoStringBody";
 import { isRememberedZone, rememberZone } from "./validatedZones";
 import { hasSecond60 } from "../plain/validate/hasSecond60";
-import { plainDate, plainDateTime, plainTime, timeZoneLike } from "../regex";
+import {
+  plainDate,
+  plainDateTime,
+  plainMonthDay,
+  plainTime,
+  plainYearMonth,
+  timeZoneLike,
+} from "../regex";
+import { monthDayFrom, yearMonthFrom } from "./temporalCompat";
 import type { RollConvention } from "../types";
 
 /** The cores of the `isValid*` functions, so a public function never calls another. */
@@ -109,6 +117,63 @@ export function plainDateTimeOf(value: string): Temporal.PlainDateTime | null {
   try {
     const dateTime = Temporal.PlainDateTime.from(value);
     return dateTime.calendarId === "iso8601" ? dateTime : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The check behind `isValidMonthDay`: the ISO calendar `PlainMonthDay` a month-day string names,
+ * or `null`.
+ *
+ * The part before the first annotation must match `plainMonthDay`, which refuses the basic form,
+ * a year, a time, `Z`, an offset and a day no year has (`--02-30`) before Temporal is asked.
+ * Temporal then reads the annotations (`monthDayFrom`, defect D20) and the calendar must be ISO.
+ *
+ * @param value the candidate
+ * @returns the `PlainMonthDay` when the string is a month-day in the ISO calendar, else `null`
+ *
+ * @example plainMonthDayOf("--02-29")?.day // 29
+ * @example plainMonthDayOf("--02-30") // null
+ * @example plainMonthDayOf(null) // null
+ */
+export function plainMonthDayOf(value: unknown): Temporal.PlainMonthDay | null {
+  if (typeof value !== "string" || !plainMonthDay.test(isoStringBody(value))) {
+    return null;
+  }
+  try {
+    const monthDay = monthDayFrom(value);
+    return monthDay.calendarId === "iso8601" ? monthDay : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The check behind `isValidYearMonth`: the ISO calendar `PlainYearMonth` a year-month string
+ * names, or `null`.
+ *
+ * The part before the first annotation must match `plainYearMonth`, which refuses the basic form,
+ * a date, a time, `Z` and an offset before Temporal is asked. Temporal then enforces the range
+ * (`-271821-04` to `+275760-09`) and reads the annotations (`yearMonthFrom`, defect D20), and the
+ * calendar must be ISO.
+ *
+ * @param value the candidate
+ * @returns the `PlainYearMonth` when the string is a year-month in the ISO calendar, else `null`
+ *
+ * @example plainYearMonthOf("2026-10")?.month // 10
+ * @example plainYearMonthOf("2026-10-01") // null
+ * @example plainYearMonthOf(null) // null
+ */
+export function plainYearMonthOf(
+  value: unknown,
+): Temporal.PlainYearMonth | null {
+  if (typeof value !== "string" || !plainYearMonth.test(isoStringBody(value))) {
+    return null;
+  }
+  try {
+    const yearMonth = yearMonthFrom(value);
+    return yearMonth.calendarId === "iso8601" ? yearMonth : null;
   } catch {
     return null;
   }

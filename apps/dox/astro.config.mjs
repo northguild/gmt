@@ -354,6 +354,7 @@ export default defineConfig({
         "./src/styles/gmt-id-timestamp-decoder.css", // ID Timestamp Decoder widget (CORE-56)
         "./src/styles/gmt-column-timestamp-bridge.css", // Column Timestamp Bridge widget (CORE-56)
         "./src/styles/gmt-cron-in-a-zone.css", // Cron in a Zone widget (CORE-84)
+        "./src/styles/gmt-leap-day-birthday.css", // Leap-Day Birthday widget (CORE-102)
         "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
         "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
         "./src/styles/gmt-charts.css", // chart theme variables + container styles

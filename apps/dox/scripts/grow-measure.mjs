@@ -321,6 +321,12 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "leap-day-birthday",
+    root: ".gmt-widget",
+    preset: '[data-role="preset"]',
+    drag: '[data-role="year-slider"]',
+  },
+  {
     slug: "zone-planner",
     root: ".gmt-scrubber-block",
     preset: null,

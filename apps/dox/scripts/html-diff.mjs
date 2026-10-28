@@ -196,6 +196,10 @@ const PAGES = [
     path: "tools/cron-in-a-zone",
     widget: "gmt-cron-zone gmt-widget",
   },
+  {
+    path: "tools/leap-day-birthday",
+    widget: "gmt-leap-day gmt-widget",
+  },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";

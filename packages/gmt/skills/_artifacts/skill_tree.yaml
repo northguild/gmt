@@ -20,7 +20,7 @@ skills:
     domain: core-date-operations
     path: 'skills/gmt-basics/SKILL.md'
     package: 'packages/gmt'
-    description: Get current values, parse components, read ISO week/ordinal/quarter/fiscal-period identifiers, format for display, format relative time, compare dates, and validate strings/timezones/intervals
+    description: Get current values, parse components, read ISO week/ordinal/quarter/fiscal-period identifiers, format for display, format relative time, compare dates, handle month-day (--MM-DD) and year-month values, and validate strings/timezones/intervals
     sources:
       - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/get-current.mdx'
       - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/parsing.mdx'
@@ -28,6 +28,7 @@ skills:
       - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/relative-time.mdx'
       - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/comparisons.mdx'
       - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/validation.mdx'
+      - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/month-day-values.mdx'
       - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/calendar-boundaries.mdx'
       - 'northguild/gmt:packages/gmt/src/plain/get/index.ts'
       - 'northguild/gmt:packages/gmt/src/plain/parse/index.ts'

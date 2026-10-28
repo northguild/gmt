@@ -14,14 +14,14 @@ new Date("2024-03-31T02:30:00").toISOString(); // "2024-03-31T01:30:00.000Z" on 
 resolveLocal("2024-03-31T02:30:00", "Europe/Berlin", { disambiguation: "reject" }); // "" — the same on every machine
 ```
 
-- **66,903 tests, run 2,007,090 times in CI.** Every test runs in 10 time zones on 3 Node versions.
-- **60× the CI test runs** of the six libraries below, combined.
-- **691 functions, to the nanosecond**, tested in 17 locales.
+- **69,479 tests, run 2,084,370 times in CI.** Every test runs in 10 time zones on 3 Node versions.
+- **62× the CI test runs** of the six libraries below, combined.
+- **714 functions, to the nanosecond**, tested in 17 locales.
 - **Never throws.** ISO 8601 strings in. Invalid input returns `""`, `null`, `false` or `[]`.
 
 | Library                   | Tests      | CI test runs  | Built on  |
 | ------------------------- | ---------- | ------------- | --------- |
-| **`@northguild/gmt`**     | **66,903** | **2,007,090** | Temporal  |
+| **`@northguild/gmt`**     | **69,479** | **2,084,370** | Temporal  |
 | Spacetime                 | 6,086      | 12,172        | `Date`    |
 | Moment.js                 | 3,901      | 11,703        | `Date`    |
 | date-fns                  | 3,213      | 3,213         | `Date`    |

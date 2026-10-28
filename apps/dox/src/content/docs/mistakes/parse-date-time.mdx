@@ -100,6 +100,42 @@ if (r === "") {
 }`}
 />
 
+<Mistake
+  severity="medium"
+  title="Matching only the stand-alone month name"
+  description="Some languages inflect a month name when a day comes with it. A hand-written list of the stand-alone names misses the inflected form, so '15 марта 2024' fails while '15 март 2024' passes. parseDateWithPattern reads both."
+  wrongCode={`const MONTHS = ["январь", "февраль", "март", "апрель" /* ... */];
+const month = "15 марта 2024".split(" ")[1]; // "марта"
+MONTHS.includes(month); // false — the list has "март", not "марта"`}
+  rightCode={`import { parseDateWithPattern, parseMonthDayWithPattern } from "@northguild/gmt";
+
+parseDateWithPattern("15 марта 2024", "d MMMM yyyy", "ru-RU"); // "2024-03-15"
+parseMonthDayWithPattern("25 декабря", "d MMMM", "ru-RU"); // "--12-25" — for a value with no year`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Reading a year-month with parseDateWithPattern"
+  description="A date needs a day, so parseDateWithPattern returns an empty string for a pattern with none. Appending a day to make it parse invents a day the producer never sent. parseYearMonthWithPattern reads the year and month alone."
+  wrongCode={`import { parseDateWithPattern } from "@northguild/gmt";
+
+parseDateWithPattern("10/2026", "MM/yyyy"); // "" — no day to read`}
+  rightCode={`import { parseYearMonthWithPattern } from "@northguild/gmt";
+
+parseYearMonthWithPattern("10/2026", "MM/yyyy"); // "2026-10"`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Trusting Temporal.PlainMonthDay.from with a day that never exists"
+  description="Polyfill 0.5.1 accepts --02-30, which the grammar refuses, and keeps day 30. Placing it in a year then quietly gives 29 February. isValidMonthDay refuses it first."
+  wrongCode={`const md = Temporal.PlainMonthDay.from("--02-30"); // no error
+md.toPlainDate({ year: 2024 }).toString(); // "2024-02-29" — a day nobody wrote`}
+  rightCode={`import { isValidMonthDay } from "@northguild/gmt";
+
+isValidMonthDay("--02-30"); // false`}
+/>
+
 ## See also
 
 - [Parsing guide](/guides/core-date-operations/parsing/)

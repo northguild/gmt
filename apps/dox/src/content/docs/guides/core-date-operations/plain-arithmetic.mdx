@@ -61,6 +61,8 @@ The rest of the business-day family (counting days between two dates, rolling a 
 onto a working day, merging calendars) is in
 [Business Calendars and Roll Conventions](../business-calendars/).
 
+A year-month such as a card expiry has `addYearMonth` and `subtractYearMonth`, which take only years and months: `addYearMonth("2026-12", { months: 1 })` gives `"2027-01"`.
+
 ## Control out-of-range results with `overflow`
 
 `add*`/`subtract*` accept an optional `overflow` (`"constrain"` (default) | `"reject"`).
@@ -95,6 +97,8 @@ diffDate("2024-03-15", "2024-03-20", "days");
 Need a full multi-unit breakdown (e.g. `"P26D"`) instead of a single-unit number?
 Use the durations bridge functions like `diffDateAsDuration`.
 
+For year-months, `diffYearMonth("2025-11", "2026-10", "months")` gives `11`.
+
 ## Round a diff result
 
 `diff*` accept optional `smallestUnit`/`roundingIncrement`/`roundingMode`:
@@ -120,6 +124,8 @@ endOfDateTime("2024-02-29T12:34:56", "day"); // "2024-02-29T23:59:59.999999999" 
 startOfDate("2024-03-15", "month"); // "2024-03-01"
 endOfDate("2024-03-15", "month"); // "2024-03-31"
 ```
+
+A year-month has `startOfYearMonth` and `endOfYearMonth`, and `getDaysInYearMonth`: `endOfYearMonth("2024-02")` gives `"2024-02-29"` and `getDaysInYearMonth("2024-02")` gives `29`.
 
 ## Quarter boundaries
 

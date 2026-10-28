@@ -111,7 +111,7 @@ describe("regex/epcis barrel", () => {
   // The EDI grammars (UNTDID 2379, X12 1250) are a value-plus-code relation, so their public form
   // is the validator function, not a constant per code; they live in `internal/ediGrammar.ts`.
   // The two EPCIS patterns are the only RegExp constants this story adds to the barrel.
-  it("adds exactly the two EPCIS patterns to the barrel's RegExp exports", () => {
+  it("adds exactly the two EPCIS patterns and the month-day and year-month patterns to the barrel's RegExp exports", () => {
     // Read off the barrel at `main` (`git show main:packages/gmt/src/regex/index.ts`, every
     // RegExp export of the fifteen modules it names), not typed from memory.
     const patternsOnMain = [
@@ -141,12 +141,20 @@ describe("regex/epcis barrel", () => {
       "utcOffset",
       "year",
     ];
+    // CORE-102 adds `plainMonthDay` (`regex/month-day.ts`) and `plainYearMonth`
+    // (`regex/year-month.ts`), not EPCIS patterns.
     const patternsNow = Object.entries(regex)
       .filter(([, value]) => value instanceof RegExp)
       .map(([name]) => name)
       .sort();
     expect(patternsNow).toEqual(
-      [...patternsOnMain, "epcisEventTime", "epcisTimeZoneOffset"].sort(),
+      [
+        ...patternsOnMain,
+        "epcisEventTime",
+        "epcisTimeZoneOffset",
+        "plainMonthDay",
+        "plainYearMonth",
+      ].sort(),
     );
   });
 });
