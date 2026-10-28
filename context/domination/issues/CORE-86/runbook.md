@@ -26,9 +26,10 @@ the Domains list does not show it.
 | SSL/TLS mode | SSL/TLS → Overview | Automatic — no change | Workers answer without an origin, so the mode never applies |
 | Always Use HTTPS | SSL/TLS → Edge Certificates | On | `http://` → `https://` |
 | Minimum TLS | SSL/TLS → Edge Certificates | 1.2 | |
-| Bot Fight Mode | Security → Bots | **Off** | it challenges scripted clients, including those that fetch `llms.txt` and the `.md` twins, and it cannot be limited to some paths |
-| AI crawlers | AI Crawl Control → Crawlers | **Allow** every crawler, the "AI Crawler" category included (GPTBot, CCBot, ClaudeBot, Google-Extended, …); no category policy | matches `ai-train=yes` in `robots.txt`. `/api/` and `/mcp/` stay closed by `Disallow` |
-| Managed robots.txt / Bot Preference Sync | AI Crawl Control → Robots.txt | **Off** | on, Cloudflare prepends its own `Content-signal` and `Disallow` lines to our `robots.txt`. The commented preamble seen today is Cloudflare's default for a host that has no `robots.txt`; our file (landing repo) replaces it |
+| Bot Fight Mode | Security → Settings → Bot traffic | **Off** | it challenges scripted clients, including those that fetch `llms.txt` and the `.md` twins, and it cannot be limited to some paths |
+| AI crawlers | AI Crawl Control → Security | **Block Crawler** off for every row, the "AI Crawler" category included (GPTBot, CCBot, ClaudeBot, Bytespider, Amazonbot, Meta-ExternalAgent, …) | matches `ai-train=yes` in `robots.txt`. A switch that is on makes AI Crawl Control add the custom rule "AI Crawl Control - Block AI bots by User Agent", which answers that crawler with 403 whatever `robots.txt` says. Change the switches, never that rule: AI Crawl Control rewrites it. `/api/` and `/mcp/` stay closed by `Disallow` |
+| AI bot policies | Security → Settings → Bot traffic → Configure AI bot policies | Search, Agent and Training **Allow (do not block)**; **Enable Bot Preference Sync** off | with Training set to block, Cloudflare blocks training crawlers at the edge whatever `robots.txt` says. Bot Preference Sync on prepends Cloudflare's own `Content-signal` and `Disallow` lines to our `robots.txt` |
+| Managed robots.txt | search `robots.txt` in the dashboard | **Off** | on, Cloudflare prepends its own lines to our `robots.txt`. `robots.txt` holds no `# BEGIN Cloudflare Managed content` block. The commented preamble Cloudflare serves for a host with no `robots.txt` does not apply: our file (landing repo) replaces it |
 | Email Address Obfuscation | Scrape Shield (search the setting name) | Off | it rewrites HTML and adds a `/cdn-cgi/` script. It is unrelated to Email Routing, which keeps working |
 | Rocket Loader | Speed → Settings → Content Optimization | Off | it rewrites `<script>` tags and breaks Astro islands |
 
@@ -39,7 +40,14 @@ dig +short NS northguild.dev                 # jarred…, selah…
 dig +short northguild.dev A; dig +short northguild.dev AAAA; dig +short northguild.dev CNAME  # all empty today
 dig +short www.northguild.dev                # empty today
 dig +short MX northguild.dev; dig +short TXT northguild.dev   # route1/2/3, v=spf1 …
+for ua in GPTBot ClaudeBot CCBot Google-Extended PerplexityBot Bytespider Amazonbot meta-externalagent; do
+  printf '%-20s ' $ua; h -A "Mozilla/5.0 (compatible; $ua/1.0)" $ND/gmt/
+done                                         # 200 for every one
+curl -s $ND/robots.txt                       # our file only, no `# BEGIN Cloudflare Managed content` block
 ```
+
+A crawler that gets 403 shows as a blocked request under Security → Analytics → **Events**. The event names
+the rule that blocked it.
 
 ## 1. API tokens
 
