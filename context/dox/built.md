@@ -2643,6 +2643,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   with thinking off mostly answer a widget question with the call alone. Step 2 runs after
   the stream has opened, so it cannot fail over; if it fails, the reader keeps the widget
   and sees the error after it. It costs a second read of the prompt.
+- **Tool calls written as text become real ones** (`toolCallMarkupMiddleware`,
+  `worker/tool-call-markup.ts`, wrapped round each brain's model with `wrapLanguageModel`).
+  GLM 4.7 Flash sometimes writes `<tool_call>showGlobe<arg_key>…</tool_call>` into its
+  answer instead of calling the tool. The middleware takes everything from `<tool_call>` to
+  `</tool_call>` out of the text, across deltas and unclosed, and drops a text block that
+  held only markup. When the step made no real call, each complete written call to a tool
+  on offer is sent as a real `tool-call` at the end of the step, so the widget opens and
+  step 2 writes the prose. A string argument keeps its text; any other is read as JSON.
+  When the step also made a real call, the written ones are only dropped, so a widget never
+  opens twice. `scripts/probe-brains.ts` fails an answer that still carries the markup.
 - **The client never trusts tool input.** `widget-registry.ts` re-validates at mount and
   checks IANA zones with gmt's `isValidTimeZone`; a nonsense zone renders an error state.
   The registry is fixed and typed, with a literal `import()` per mount and no `eval` or

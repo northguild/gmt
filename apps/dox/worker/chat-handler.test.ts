@@ -655,6 +655,41 @@ describe("createChatHandler", () => {
       expect(body).toContain("Here is Tokyo on the globe.");
       expect(body).not.toContain("Tokyo is on Japan Standard Time.");
     });
+
+    /* GLM 4.7 Flash sometimes writes its tool-call syntax as text. */
+    const markup =
+      "<tool_call>showGlobe<arg_key>zone</arg_key><arg_value>Asia/Tokyo</arg_value></tool_call>";
+
+    it("asks for the prose when the widget came with only tool-call markup", async () => {
+      const model = stepModel(globeCall(markup));
+      const body = await ask(model);
+      expect(model.doStreamCalls).toHaveLength(2);
+      expect(body).not.toContain("tool_call");
+      // The written call repeats the real one, so one widget opens, not two.
+      expect(partsOfType(body, "tool-input-available")).toHaveLength(1);
+      expect(body).toContain("Tokyo is on Japan Standard Time.");
+    });
+
+    it("opens the widget and then asks for the prose when the call came only as text", async () => {
+      const model = stepModel(textStreamParts(markup));
+      const body = await ask(model);
+      expect(model.doStreamCalls).toHaveLength(2);
+      expect(body).not.toContain("tool_call");
+      expect(partsOfType(body, "tool-input-available")).toHaveLength(1);
+      expect(body).toContain("Tokyo is on Japan Standard Time.");
+      const finished = retrievalParts(body).at(-1)?.data as Record<
+        string,
+        unknown
+      >;
+      expect(finished.toolCalled).toBe("showGlobe");
+    });
+
+    it("never sends tool-call markup written in the prose step", async () => {
+      const model = stepModel(globeCall(), `Here is Tokyo. ${markup}`);
+      const body = await ask(model);
+      expect(body).not.toContain("tool_call");
+      expect(body).toContain("Here is Tokyo.");
+    });
   });
 
   it("logs one dox-timing line per answered request", async () => {

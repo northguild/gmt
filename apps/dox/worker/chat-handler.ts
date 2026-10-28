@@ -4,7 +4,6 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   toUIMessageStream,
-  type LanguageModel,
 } from "ai";
 import type {
   ChunkCache,
@@ -35,7 +34,12 @@ import { selectVocabulary, type VocabularySkill } from "./select-vocabulary";
 import { assembleSystemPrompt } from "./system-prompt";
 import { buildWorkerTools } from "./tools";
 import { validateChatRequest } from "./validation";
-import { chooseBrain, openFirstWorkingBrain, orderCandidates } from "./brains";
+import {
+  chooseBrain,
+  openFirstWorkingBrain,
+  orderCandidates,
+  type BrainModel,
+} from "./brains";
 import {
   hashVisitor,
   markBrain,
@@ -60,7 +64,7 @@ export interface ChatHandlerDeps {
    * because the free tier's allowance is per model, so Dox keeps several and
    * moves between them — see `brains.ts`. Tests pass `() => fakeModel(...)`,
    * and can make one brain throw to cover failover. */
-  resolveModel: (brainId: string) => LanguageModel;
+  resolveModel: (brainId: string) => BrainModel;
   /** The brains this deployment can actually reach, in preference order.
    * Defaults to every brain; worker/index.ts narrows it to the providers it
    * has a key or binding for (DOX-C4), so an unconfigured provider is simply

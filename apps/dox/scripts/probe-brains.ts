@@ -265,6 +265,10 @@ async function ask(
   if (result.badLinks.length > 0)
     problems.push(`${result.badLinks.length} link(s) off the allowlist`);
   if (result.answer.trim() === "") problems.push("no prose");
+  // The Worker takes this out of the text (`worker/tool-call-markup.ts`);
+  // seeing it means a model found a form the middleware does not cover.
+  if (/<\/?tool_call>/.test(result.answer))
+    problems.push("tool-call markup in the prose");
   if (result.note) problems.push(result.note);
 
   result.pass = problems.length === 0;

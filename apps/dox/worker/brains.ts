@@ -35,6 +35,7 @@ import {
   RetryError,
   isStepCount,
   streamText,
+  wrapLanguageModel,
   type LanguageModel,
   type ModelMessage,
   type ToolSet,
@@ -47,7 +48,11 @@ import {
   type BrainProvider,
 } from "../src/lib/chat-constants";
 import type { BrainAttemptTrace } from "../src/lib/chat-types";
+import { toolCallMarkupMiddleware } from "./tool-call-markup";
 import type { BrainState, UsageSnapshot } from "./usage";
+
+/** A model object, never a gateway id string: the walk wraps it in middleware. */
+export type BrainModel = Exclude<LanguageModel, string>;
 
 /**
  * One more step, with no tools, for a model that answered with a widget alone.
@@ -346,7 +351,7 @@ export async function openFirstWorkingBrain({
   startTimeoutMs = (brain) => BRAIN_START_TIMEOUT_MS[brain.provider],
 }: {
   candidates: readonly Brain[];
-  resolveModel: (brainId: string) => LanguageModel;
+  resolveModel: (brainId: string) => BrainModel;
   instructions: string;
   messages: ModelMessage[];
   /** DOX-C3b's widget tools. Passed to every attempt, so a brain that rejects
@@ -417,7 +422,11 @@ export async function openFirstWorkingBrain({
     });
 
     const result = streamText({
-      model: resolveModel(brain.id),
+      // A tool call the model wrote as text becomes a real one, or is dropped.
+      model: wrapLanguageModel({
+        model: resolveModel(brain.id),
+        middleware: toolCallMarkupMiddleware,
+      }),
       abortSignal: abort.signal,
       instructions,
       messages,
