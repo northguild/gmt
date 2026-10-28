@@ -31,6 +31,11 @@ describe("affected: which checks a change runs", () => {
       checks: ["format"],
     },
     {
+      name: "a .yaml file skips the format check, which oxfmt ignores",
+      changes: [".agents/skills/tdd/agents/openai.yaml"],
+      checks: [],
+    },
+    {
       name: "a tracker runs deps check",
       changes: ["context/domination/tracker.md"],
       checks: ["deps"],
@@ -280,7 +285,8 @@ describe("affected: the rules and checks are well formed", () => {
         new URL(`../../../${script}`, import.meta.url),
         "utf8",
       );
-      if (source.includes("./lib/gmt.mjs"))
+      // Through the shared loader, or by path to the build.
+      if (/\.\/lib\/gmt\.mjs|packages\/gmt\/dist/.test(source))
         expect(check.needs ?? [], check.id).toContain("build:gmt");
     }
   });

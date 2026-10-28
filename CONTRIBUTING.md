@@ -95,9 +95,9 @@ runs, the files that asked for each, and the checks it skipped. CI uses the same
 | The toolchain: any `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.node-version`, `tsconfig.base.json`, `ci.yml`, or the rules themselves | Every check |
 | A file no rule names | Every check |
 
-Every changed file that oxfmt formats (TypeScript, JavaScript, JSON, CSS, YAML and TOML) also
-runs the format check, `oxfmt --check`, whatever its row says. Run `pnpm run format:fix` to fix
-what it finds.
+Every changed file that oxfmt formats (TypeScript, JavaScript, JSON, CSS, YAML (`.yml`) and
+TOML) also runs the format check, `oxfmt --check`, whatever its row says. Run
+`pnpm run format:fix` to fix what it finds.
 
 A change that touches several rows runs what each row runs. A check that needs a build, such
 as `stats check` or the Dox tests, brings that build with it. Adding or deleting a file can

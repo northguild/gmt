@@ -166,7 +166,7 @@ const OXLINT = [
  * whatever its rule says, because oxfmt reads every such file `.oxfmtrc.json` does not ignore.
  * oxfmt is a native tool, so `affected:audit` cannot see its reads.
  */
-export const FORMATTED = /\.(?:[cm]?[jt]sx?|json[c5]?|css|ya?ml|toml)$/;
+export const FORMATTED = /\.(?:[cm]?[jt]sx?|json[c5]?|css|yml|toml)$/;
 
 /** The tests of the repo scripts live in apps/dox/scripts and run with the Dox tests. */
 const SCRIPT_TESTS = ["test:dox"];
