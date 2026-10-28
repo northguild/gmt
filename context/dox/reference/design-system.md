@@ -396,6 +396,19 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   `NorthGuildMark.astro` `aria-hidden`. Its fills are in `gmt-primitives.css`, because a
   scoped style does not reach an imported SVG's paths. A hairline divider separates it from
   the title.
+  - The shield's five path strings and its `viewBox` are the owner's drawing, unchanged; only
+    the fills became `gmt-ng-*` classes. The file lives at `src/assets/northguild-logo.svg`
+    and is inlined, never served by URL, because an SVG loaded through `<img>` or
+    `background-image` cannot follow the reader's `data-theme` choice.
+  - The link's name "NorthGuild home" comes from the sr-only span plus a matching `title`; the
+    SVG is `aria-hidden` and not focusable, so the name is not read twice (WCAG 2.2 SC 4.1.2).
+  - The link box is at least 24x24 CSS px (SC 2.5.8) and takes `.gmt-sonar-focus`. In forced
+    colours it gets a real `Highlight` outline, the body paths use `LinkText`, and the field
+    and glyph paths use `Canvas` with `forced-color-adjust: none` on the SVG.
+  - The URL is absolute and in the same tab: it is the same site one level up, and a
+    root-relative `/` would fail the `/gmt` dist guard.
+- The `/dox` strip under the header keeps only the clock and the Live/Local badge, at its end.
+  It is a `<div>`, not a `<header>`, so the page has one banner landmark.
 - The title is a `SiteTitle.astro` override: "Give Me Temporal" from `50rem` up, "GMT" below.
   Only one form is displayed, so the link's name is the visible text (WCAG 2.2 SC 2.5.3).
   Starlight's `title` stays `@northguild/gmt` for tabs, search results and social cards.
