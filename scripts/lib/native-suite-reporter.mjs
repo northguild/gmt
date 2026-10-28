@@ -52,7 +52,8 @@ function writeMessages(testModules) {
 const CAUSE_DEPTH = 8;
 
 /** @param {{ name?: string, message?: string }} e */
-const lineOf = (e) => `${String(e.name ?? "Error")}: ${String(e.message ?? "")}`;
+const lineOf = (e) =>
+  `${String(e.name ?? "Error")}: ${String(e.message ?? "")}`;
 
 /**
  * The `cause` chain under an error, outermost first, one line each.
@@ -74,9 +75,10 @@ function causesOf(error) {
       out.push(String(cause));
       break;
     }
-    const c = /** @type {{ name?: string, message?: string, cause?: unknown }} */ (
-      cause
-    );
+    const c =
+      /** @type {{ name?: string, message?: string, cause?: unknown }} */ (
+        cause
+      );
     out.push(lineOf(c));
     cause = c.cause;
   }

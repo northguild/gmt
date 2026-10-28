@@ -135,11 +135,9 @@ async function handleBrains(request: Request, env: Env): Promise<Response> {
     ? await readUsage(env.DOX_USAGE, brains, visitorHash, nowMs)
     : { perBrain: {}, states: {}, visitor: 0 };
 
-  return Response.json(
-    brainsPayload({ brains, snapshot, nowMs, dev }),
-    {
-      headers: {
-        /* `private`, never `public`: this body carries `visitor.used`,
+  return Response.json(brainsPayload({ brains, snapshot, nowMs, dev }), {
+    headers: {
+      /* `private`, never `public`: this body carries `visitor.used`,
            `visitor.remaining` and `visitor.unlimited`, all keyed on one
            visitor's hashed IP and dev cookie. Under `public` any shared or CDN
            cache is entitled to hand one reader's counts — including a dev's
@@ -157,10 +155,9 @@ async function handleBrains(request: Request, env: Env): Promise<Response> {
            re-adds the header: this endpoint is fetched once per chat mount
            plus once per refused question, so a visitor costs single-digit KV
            reads per day. */
-        "cache-control": "private, no-store",
-      },
+      "cache-control": "private, no-store",
     },
-  );
+  });
 }
 
 /**

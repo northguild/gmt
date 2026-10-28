@@ -496,7 +496,9 @@ export async function openFirstWorkingBrain({
           ms: Math.round(performance.now() - started),
           outcome: "slow",
         });
-        console.error(`brain ${brain.id} did not start in time; trying the next`);
+        console.error(
+          `brain ${brain.id} did not start in time; trying the next`,
+        );
         onMovedOn?.(brain, "slow");
         continue;
       }

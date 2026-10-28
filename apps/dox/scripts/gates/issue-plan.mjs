@@ -8,8 +8,10 @@
  * One open issue per finding key. The key is `<gate>:<rule>:<page>:<selector>`, with the selector
  * trimmed and its whitespace collapsed; browsers, widths and themes are not in it, so one issue
  * lists every place the finding was seen. Only `FAIL` rows file: `FLAKY` is listed in the step
- * summary (`flakyRows`) and never filed. A leg with no readable `summary.json` files
- * `dox-gate:could-not-run:<leg>`, and a `FAIL` row with no structured finding files
+ * summary (`flakyRows`) and never filed. A leg with no readable `summary.json` is sorted by its
+ * sweep job (`missingSummary`): one whose `SUMMARY_STEP` passed wrote the file and lost it on the
+ * way, and joins the one `dox-gate:not-uploaded:all:` issue; any other files
+ * `dox-gate:could-not-run:<leg>`. A `FAIL` row with no structured finding files
  * `<gate>:unstructured:all:` with its log tail. A run that would open more than `FLOOD_LIMIT` new
  * issues opens none and files one `dox-gate:flood` issue listing them, because that many at
  * once is one systemic cause for a person to triage.
@@ -30,6 +32,19 @@ export const FLOOD_KEY = "dox-gate:flood";
 /** The synthetic finding a dry run files. */
 export const DRY_RUN_KEY = "dry-run:synthetic:/:body";
 
+/**
+ * Names in `.github/workflows/dox-gates-nightly.yml` that the report reads or points at. A test
+ * checks the workflow still has each one.
+ */
+/** The leg step that passes only when the runner left a readable summary.json. */
+export const SUMMARY_STEP = "Check the summary was written";
+/** The leg step that uploads the summary. */
+export const UPLOAD_STEP = "Upload the findings";
+/** The report step that downloads every leg's summary. */
+export const DOWNLOAD_STEP = "Download the findings";
+/** The key of the one issue for every leg whose summary was written but never reached the report. */
+export const NOT_UPLOADED_KEY = "dox-gate:not-uploaded:all:";
+
 /** Rows a body or comment tables, so a sweep-wide failure cannot push a body past GitHub's limit. */
 const TABLE_ROWS = 40;
 const MESSAGE_CHARS = 600;
@@ -44,8 +59,11 @@ const LOG_LINES = 10;
  *   id: string, status: string, detail?: string, findings?: Finding[], logTail?: string[],
  * }} Row
  * @typedef {{ status: string, rows: Row[] }} Summary
- * @typedef {{ leg: string, summary: Summary | null }} LegSummary
- *   `summary` null: the leg wrote no readable `summary.json`
+ * @typedef {{ name: string, conclusion: string | null }} Step
+ * @typedef {{ conclusion: string | null, steps: Step[] }} Job
+ * @typedef {{ leg: string, summary: Summary | null, job?: Job | null }} LegSummary
+ *   `summary` null: no readable `summary.json` reached the report. `job` is the leg's sweep job
+ *   from the run's job list; absent or null when that list could not be read or lacks the leg.
  * @typedef {{ number: number, body: string, labels: { name: string }[] }} OpenIssue
  * @typedef {{ runUrl: string, sha: string, dryRun?: boolean }} Context
  * @typedef {{ kind: "open", key: string, title: string, labels: string[], body: string }
@@ -112,6 +130,47 @@ function table(header, rows) {
 const browserOfLeg = (leg) => leg.split("-")[0];
 
 /**
+ * Why a leg's summary never reached the report. `SUMMARY_STEP` passing means the runner wrote it,
+ * so the upload or the download lost it: that is `not-uploaded`. Anything else is `could-not-run`,
+ * described by how the job ended and the first step that did not succeed.
+ * @param {string} leg
+ * @param {Job | null | undefined} job
+ * @returns {{ key: string, rule: string, page: string, message: string }}
+ */
+export function missingSummary(leg, job) {
+  if (
+    job?.steps.some(
+      (s) => s.name === SUMMARY_STEP && s.conclusion === "success",
+    )
+  ) {
+    return {
+      key: NOT_UPLOADED_KEY,
+      rule: "not-uploaded",
+      page: "all",
+      message: `These legs ran and wrote summary.json, but no readable copy reached the report job, so their findings were not filed. The gates did not cause this: look at each leg's \`${UPLOAD_STEP}\` step, the report's \`${DOWNLOAD_STEP}\` step and the run's artifacts.`,
+    };
+  }
+  let message;
+  if (!job) {
+    message = `No readable summary.json reached the report from the ${leg} leg, and the run's job list did not say how the leg ended. It may have crashed, timed out or been cancelled, or it may have run and lost its upload. Open the leg's log in the run.`;
+  } else {
+    const first = job.steps.find(
+      (s) => s.conclusion !== "success" && s.conclusion !== "skipped",
+    );
+    const step = first
+      ? `; the first step that did not succeed is \`${first.name}\` (\`${first.conclusion ?? "unfinished"}\`)`
+      : "";
+    message = `The ${leg} leg did not finish: its gates runner wrote no summary.json. Its job ended \`${job.conclusion ?? "unfinished"}\`${step}. Open the leg's log in the run.`;
+  }
+  return {
+    key: `dox-gate:could-not-run:${leg}`,
+    rule: "could-not-run",
+    page: leg,
+    message,
+  };
+}
+
+/**
  * Every finding the legs reported, one entry per key, with every place it was seen.
  * @param {LegSummary[]} legs
  * @returns {{ key: string, gate: string, rule: string, page: string, selector: string,
@@ -132,18 +191,12 @@ export function collect(legs) {
     }
     byKey.set(key, entry);
   };
-  for (const { leg, summary } of legs) {
+  for (const { leg, summary, job } of legs) {
     if (!summary) {
+      const { key, rule, page, message } = missingSummary(leg, job);
       add(
-        `dox-gate:could-not-run:${leg}`,
-        {
-          gate: "dox-gate",
-          rule: "could-not-run",
-          page: leg,
-          selector: "",
-          message: `The ${leg} leg wrote no readable summary.json: it crashed, timed out or was cancelled before the runner finished. Open the leg's log in the run.`,
-          tail: [],
-        },
+        key,
+        { gate: "dox-gate", rule, page, selector: "", message, tail: [] },
         { leg, browser: browserOfLeg(leg), width: "", theme: "" },
       );
       continue;
@@ -228,10 +281,13 @@ function placesTable(entry) {
  * @returns {Planned}
  */
 function planned(entry, context) {
-  const couldNot = entry.rule === "could-not-run";
-  const title = couldNot
-    ? `Dox nightly could not run the ${entry.page} leg`
-    : `Dox gate: ${entry.rule} on ${entry.page} (${entry.gate})`;
+  const ofLegs = entry.gate === "dox-gate";
+  const title =
+    entry.rule === "could-not-run"
+      ? `Dox nightly could not run the ${entry.page} leg`
+      : entry.rule === "not-uploaded"
+        ? "Dox nightly: leg findings did not reach the report"
+        : `Dox gate: ${entry.rule} on ${entry.page} (${entry.gate})`;
   const tail =
     entry.tail.length > 0
       ? `\n\nLog tail:\n\n\`\`\`text\n${entry.tail
@@ -243,7 +299,7 @@ function planned(entry, context) {
     ? `\n\nSelector: ${codeCell(entry.selector)}`
     : "";
   const run = `Commit: ${context.sha}\nRun: ${context.runUrl}`;
-  const repro = couldNot
+  const repro = ofLegs
     ? ""
     : `\n\nReproduce:\n\n\`\`\`bash\n${reproduce(entry)}\n\`\`\``;
   return {

@@ -82,7 +82,8 @@ runs, the files that asked for each, and the checks it skipped. CI uses the same
 
 | The change touches | What runs |
 | --- | --- |
-| Notes: `context/` outside the trackers, `.agents/`, `.claude/`, `.changeset/`, `AGENTS.md`, `CLAUDE.md`, `PUBLISHING.md`, the workflows other than `ci.yml` | Nothing |
+| Notes: `context/` outside the trackers, `.agents/`, `.claude/`, `.changeset/`, `AGENTS.md`, `CLAUDE.md`, `PUBLISHING.md` | Nothing |
+| The workflows other than `ci.yml`, `.oxfmtrc.json` | The format check |
 | The trackers: `context/domination/`, `context/dox/tracker.md` | `deps check` |
 | `CONTRIBUTING.md`, the root `oxlint.config.mts` | The Dox tests, which compare copies of their text |
 | `README.md`, `packages/gmt/README.md` | `stats check`, the API surface check and the Dox tests |
@@ -93,6 +94,10 @@ runs, the files that asked for each, and the checks it skipped. CI uses the same
 | A repo script | That script's check and the Dox tests, which hold the script tests |
 | The toolchain: any `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.node-version`, `tsconfig.base.json`, `ci.yml`, or the rules themselves | Every check |
 | A file no rule names | Every check |
+
+Every changed file that oxfmt formats (TypeScript, JavaScript, JSON, CSS, YAML (`.yml`) and
+TOML) also runs the format check, `oxfmt --check`, whatever its row says. Run
+`pnpm run format:fix` to fix what it finds.
 
 A change that touches several rows runs what each row runs. A check that needs a build, such
 as `stats check` or the Dox tests, brings that build with it. Adding or deleting a file can

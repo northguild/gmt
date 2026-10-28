@@ -153,7 +153,9 @@ const WHETHER_VERBS = new Set([
 /** Whether a `whether` in the words is followed by a verb. */
 function whetherHasVerb(words: string[]): boolean {
   const at = words.indexOf("whether");
-  return at === -1 || words.slice(at + 1).some((word) => WHETHER_VERBS.has(word));
+  return (
+    at === -1 || words.slice(at + 1).some((word) => WHETHER_VERBS.has(word))
+  );
 }
 
 /** The fields of a documented symbol the title reads. */

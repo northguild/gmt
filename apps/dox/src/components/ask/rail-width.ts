@@ -46,7 +46,10 @@ export function railBounds({
   return { min, max };
 }
 
-export function clampRailWidth(width: number, { min, max }: RailBounds): number {
+export function clampRailWidth(
+  width: number,
+  { min, max }: RailBounds,
+): number {
   return Math.min(Math.max(width, min), max);
 }
 

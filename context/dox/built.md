@@ -214,6 +214,37 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `()`, `[]`, `{}` or a string. A double-quoted, hyphenated token with no space in prose
     (`"4-5-4"`) is wrapped in `<span class="gmt-nobreak">` so it cannot wrap at the hyphen;
     `stripMdx` removes the span for the text surfaces.
+  - **Code in a table cell wraps only at set points.** A code token never breaks inside a word,
+    at a hyphen or at a `.`. `src/lib/code-break.ts` (`codeBreakPieces`, `codeBreakHtml`,
+    `codeBreakHast`, `codeBreakClass`) splits a cell's code at each run of spaces and directly after
+    a `/` that joins two names (`Europe/` `Berlin`, `@northguild/` `gmt/` `zoned`): a letter, digit,
+    `_` or `$` before it and a letter, `_`, `$` or `@` after it. So `//`, a lone ` / `, `1/2`,
+    `<br/>` and `a/-b` are not break points. Each piece is
+    `<span class="gmt-cw">` (`nowrap`), a joining `/` is followed by `<wbr>`, and the `code` carries
+    `gmt-codebreak` (`white-space: pre-wrap`). Code with one piece comes back unchanged and keeps the
+    plain `nowrap` rule. `rehype-table-scroll.ts` splits every Markdown cell's code, including a table
+    already in a `.gmt-ref-table` box or inside MDX JSX; `codeSpans` in `migrate-view.ts` and the
+    `set:html` cells of BehaviourMatrix, BundleSize and MigrationMap use the same helper, so a
+    component's table wraps the same way.
+  - **Entries layout.** `.gmt-ref-table[data-layout="entries"]` takes the Options entry for its rows
+    (a block table, hidden header row, a wrapping flex row with a bottom hairline and a hover wash):
+    the first cell is the entry's title, every other cell is a fact labelled with its column header
+    (`data-col`), and an empty cell is hidden. It is for a table whose cells hold long code or that has
+    too many columns for the article column. A table opts in where it is built: a component sets
+    `data-layout` and `data-col` (BehaviourMatrix; UpstreamTracker through `UPSTREAM_COLUMNS`;
+    LibraryCompare for the ids in `ENTRY_TABLES`; MigrationMap through `layout="entries"`), and a
+    Markdown table takes an MDX comment that reads `table: entries` on the line directly above it.
+    That comment reaches rehype as an `mdxFlowExpression` beside the table; the plugin sets the
+    layout and `data-col`, removes it, and a paragraph between the two cancels it. The `.md` twin
+    strips the comment. A table CI reports as scrolling gets the entries layout, never smaller
+    padding or a pinned width.
+  - **A label drawn into a table cell is out of its accessible name.** Generated `::before` text
+    joins the cell's name with no space (`NoteThe string is…`), and every table that draws a column
+    label into its cells (the entries layout, the Options, members and parameters entries, and the
+    tool tables that stack on a narrow card) keeps its header row for screen readers. So each such
+    rule declares the label twice: `content: attr(data-col);` for a browser without the alternative
+    syntax, then `content: attr(data-col) / "";`. `src/lib/table-cell-label.test.ts` reads every
+    stylesheet and fails on a table-cell label without the pair.
   - **Unit names print largest first.** The TypeScript printer lists a union in the checker's
     internal order, which changes with what else the program holds. `orderUnitUnions`
     (`build-utils.ts`) rewrites every type the generator prints: the signature, the
@@ -396,7 +427,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - JSON-LD: `SoftwareSourceCode` on the home page (version from `@northguild/gmt`),
     `BreadcrumbList` on every docs page, `TechArticle` on every guide with `dateModified`.
   - Every docs page links its Markdown twin (`<link rel="alternate" type="text/markdown">`); the
-    twin route is `src/pages/[...slug].md.ts`, the path rule `src/lib/md-twin.ts`.
+    twin route is `src/pages/[...slug].md.ts`, the path rule `src/lib/md-twin.ts`. A page with a
+    `slug:` has its twin at `<slug>.md` (`reference/workforce.md`); any other page at its path
+    (`guides/index.md`, the home page `index.md`). `scripts/llms.test.ts` checks every `.md` link
+    in `llms.txt`, `llms-full.txt` and `_redirects` against `dist`.
   - No page carries an edit link: there is no Starlight `editLink` and no page sets `editUrl`.
     Starlight's `lastUpdated` is styled in `Footer.astro`.
   - The sitemap leaves out `/dox/`. The gate is `scripts/head-tags.test.ts` over `dist/gmt`.
@@ -473,7 +507,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `src/data/migration-maps.ts`, one row per call, with GMT names checked against the corpus by
   `gmtFunction` in `src/lib/migrate-view.ts`), a short "What changes" list and the cases where
   that library differs from Temporal (`BehaviourDiffs`). The pages draw data and compute
-  nothing; each has a Markdown twin in `src/lib/mdx-jsx.ts`.
+  nothing; each has a Markdown twin in `src/lib/mdx-jsx.ts`. The Luxon page's call table
+  (`rows`) uses the entries layout (`layout="entries"`), and so do the Day.js, Moment.js and
+  Internationalized Date pages. Tables that keep the plain layout have a `40rem` minimum and a
+  `16rem` note column.
   - **Matrix data.** `src/data/behaviour-matrix.json` is the output of
     `scripts/behaviour-matrix/run.mjs`, read through `src/data/behaviour-matrix.ts`. A page
     quotes a case by id (`checkedLine("<id>")`, `matrix.measuredOn`), never by retyping a
@@ -1142,7 +1179,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     list); a checker keeps `gmt-<name>-*` only for its own layout. The shared sheet is
     `styles/clock-change.css` (tokens `--zonemap-*`); a checker's sheet holds only its own rules.
     Canada has no sheet of its own (`canada-clock-change.css` is gone); Morocco's holds the
-    `gmt-morocco-wrong*` rules and its 26.5rem header-note query. Card-level classes (stack, row,
+    `gmt-morocco-wrong*` rules and its 29rem header-note query. Card-level classes (stack, row,
     key points, servers, groups, changes, pick card, clocks) are `gmt-clockcheck-*`; only the root
     `gmt-canada` / `gmt-morocco` stays per region.
     - **Years live once.** Each region states a `stopYear` (`CANADA_STOP_YEAR`,
@@ -1843,9 +1880,23 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `themes`, `needs`, plus `args`, `base`, `browserArg`, `pages`); `select.mjs` turns the changed
     files and the import graph (`graph.mjs`) into the pages to check; `screen.mjs` prints the result.
     Tiers nest: `pr` (contrast-measure, grow-measure, readout-still, data-credits-check,
-    canada-layout-check) is inside `nightly` (adds canada-clock-still and canada-stored-still), which
+    canada-layout-check) is inside `nightly` (adds canada-clock-still, canada-stored-still and
+    table-fit), which
     is inside `local` (adds globe-smoke, html-diff and visual-diff, the three that need a GPU or a
     baseline).
+  - **`table-fit`** (`scripts/table-fit.mjs`, tier `nightly`, all three engines) opens every built page
+    that holds a `<table` (`listTablePages` in `scripts/lib/table-pages.mjs`, read from `dist`, never a
+    fixed count) at 1440 x 900 with every `<details>` open and every tab panel shown, and fails when a
+    table's scroll box (the table or its nearest `overflow-x` ancestor) is wider than it shows. A
+    table with no scroll box is measured two ways and fails on either: against the content box of the
+    nearest block that holds it and against `main`'s (a table with automatic layout grows with its
+    content), and by its own `scrollWidth` against its `clientWidth` (a `table-layout: fixed` table
+    keeps its width and its content spills out of its cells). A table
+    not drawn at that width is skipped, and a run that measures no table at all fails. A
+    finding names the page, the first three headers, the overflow and the widest unbreakable piece
+    (`.gmt-cw`, `code:not(.gmt-codebreak)`, `.gmt-nobreak`). Rule `table-scrolls`. The same check runs
+    in the `consistency` job as `dox-tables` (`scripts/lib/affected.mjs`, after `dox-dist`), in
+    Chromium, whenever a Dox file or page changes.
   - **The PR job.** `dox-gates` in `.github/workflows/ci.yml` ("Dox gates (changed pages, Chromium)")
     runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22: `gates --tier pr
     --browsers chromium --themes dark,light --against origin/<base>`, so the `pr` tier only, on the
@@ -3043,8 +3094,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     twelve>`. Only `FAIL` rows file; `FLAKY` (failed, passed on the retry) is listed in the step
     summary. The key is `<gate>:<rule>:<page>:<selector>` (selector trimmed, whitespace collapsed);
     browsers, widths and themes are not in it, so one issue tables every place the finding was seen.
-    A leg with no readable `summary.json` files `dox-gate:could-not-run:<leg>`; a `FAIL` with no
-    structured finding files `<gate>:unstructured:all:` with its log tail.
+    A leg with no readable `summary.json` is sorted by its job in the run's job list (`gh api
+    …/runs/<id>/jobs`, read only when a summary is missing): if its `Check the summary was written`
+    step passed, the runner wrote the file and the upload or download lost it, and the leg joins the
+    one `dox-gate:not-uploaded:all:` issue, which points at those two steps. Otherwise it files
+    `dox-gate:could-not-run:<leg>`, naming how the job ended and the first step that did not
+    succeed. A failed gate run and a lost upload both end with the gates step failed and the upload
+    step passed (`if-no-files-found: warn`), so the check step is the only signal that separates
+    them. If the job list cannot be read, the leg is filed as could-not-run, saying the cause is
+    unknown. A `FAIL` with no structured finding files `<gate>:unstructured:all:` with its log tail.
   - **Issues.** Labels `bug` and `dox-gate` (created when missing, with `dox-gate-dry-run`), issue type
     `Bug`, first body line `<!-- dox-gate key="…" -->` (`"`, `>` and `--` in a key are written as
     entities). An open `dox-gate` issue whose first line equals the marker gets a comment on the
@@ -3057,8 +3115,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `comment #123  <key>`) and a count, and files nothing; it needs `gh` signed in. Outside GitHub
     Actions (`GITHUB_ACTIONS` not `true`) it only plans: without `--print` it exits 2 with "run with
     --print locally; issues are filed by the nightly workflow". A summary path that is unreadable (without
-    `--legs`) or has no leg folder is also exit 2, before any `gh` call; with `--legs`, the crashed legs
-    are the `--legs` entries with no readable summary, including when no summary arrived at all. Use a summary with
+    `--legs`) or has no leg folder is also exit 2, before any `gh` call; with `--legs`, the legs with no
+    summary are the `--legs` entries with no readable summary, including when no summary arrived at
+    all. Locally (no `GITHUB_RUN_ID`) there is no job list, so they plan as could-not-run. Use a summary with
     no `FAIL` row, since a local `--all` summary's hundred findings plan as one flood issue. In CI,
     dispatch with `force_finding`: one `[dry run]` issue appears (key `dry-run:synthetic:/:body`,
     label `dox-gate-dry-run` instead of `bug`), and a second dispatch comments on it.

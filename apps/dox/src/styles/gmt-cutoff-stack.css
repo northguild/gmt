@@ -105,6 +105,7 @@
 
   .gmt-cutoff-stack-table td[data-label]::before {
     content: attr(data-label) ": ";
+    content: attr(data-label) ": " / "";
     font-family: var(--gmt-font-mono);
     font-size: var(--gmt-text-xs);
     text-transform: uppercase;

@@ -8,9 +8,10 @@
  */
 
 /* Morocco's "tzdb 2026c or later" note is longer than Canada's: with the notes on one line the
-   probe table needs 416px (measured), so they wrap in a card narrower than 26.5rem. The query reads
-   the card that holds the table, as the shared rule in `clock-change.css` does. */
-@container (max-width: 26.5rem) {
+   probe table needs 416px in Chromium and 457px in WebKit (measured), so they wrap in a card
+   narrower than 29rem. The query reads the card that holds the table, as the shared rule in
+   `clock-change.css` does. */
+@container (max-width: 29rem) {
   .gmt-morocco .gmt-clockcheck-table thead th:nth-child(n + 2) {
     white-space: normal;
   }

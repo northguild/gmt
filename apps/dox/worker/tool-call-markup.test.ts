@@ -158,7 +158,10 @@ describe("toolCallMarkupMiddleware", () => {
       ),
     );
     expect(callsOf(out)).toEqual([
-      { toolName: "showConverterBench", input: { from: "2024-03-15", hours: 9 } },
+      {
+        toolName: "showConverterBench",
+        input: { from: "2024-03-15", hours: 9 },
+      },
     ]);
   });
 
@@ -186,7 +189,9 @@ describe("toolCallMarkupMiddleware", () => {
 
   it("drops an unclosed call at the end of the block", async () => {
     const out = await run(
-      textStep("Done. <tool_call>showGlobe<arg_key>zone</arg_key><arg_value>Asia/To"),
+      textStep(
+        "Done. <tool_call>showGlobe<arg_key>zone</arg_key><arg_value>Asia/To",
+      ),
     );
     expect(textOf(out)).toBe("Done. ");
     expect(callsOf(out)).toEqual([]);

@@ -57,7 +57,9 @@ describe("assembleSystemPrompt", () => {
       vocabulary: "",
       coreRules: "CORE_RULES_MARKER",
     });
-    expect(prompt).toMatch(/## Vocabulary\n\n\(none for this question\)\n\n## Core rules/);
+    expect(prompt).toMatch(
+      /## Vocabulary\n\n\(none for this question\)\n\n## Core rules/,
+    );
   });
 
   /* This assertion used to pass `routeAllowlist` and `chunks` from one fixture

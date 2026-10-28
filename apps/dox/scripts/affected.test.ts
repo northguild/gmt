@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   affected,
@@ -25,8 +26,13 @@ describe("affected: which checks a change runs", () => {
       checks: [],
     },
     {
-      name: "a workflow other than ci.yml runs nothing",
+      name: "a workflow other than ci.yml runs only the format check",
       changes: [".github/workflows/canary.yml"],
+      checks: ["format"],
+    },
+    {
+      name: "a .yaml file skips the format check, which oxfmt ignores",
+      changes: [".agents/skills/tdd/agents/openai.yaml"],
       checks: [],
     },
     {
@@ -55,6 +61,7 @@ describe("affected: which checks a change runs", () => {
         "build:dox",
         "api-surface",
         "dox-dist",
+        "dox-tables",
         "typecheck:dox",
         "test:dox",
       ],
@@ -72,6 +79,7 @@ describe("affected: which checks a change runs", () => {
         "stats",
         "api-surface",
         "dox-dist",
+        "dox-tables",
         "typecheck:dox",
         "test:dox",
       ],
@@ -87,6 +95,7 @@ describe("affected: which checks a change runs", () => {
         "stats",
         "api-surface",
         "dox-dist",
+        "dox-tables",
         "typecheck:dox",
         "test:dox",
       ],
@@ -95,6 +104,7 @@ describe("affected: which checks a change runs", () => {
       name: "an edited library test skips the Dox build",
       changes: [{ path: "packages/gmt/src/zone/zone.test.ts", status: "M" }],
       checks: [
+        "format",
         "markers",
         "build:gmt-oxlint",
         "build:gmt",
@@ -118,12 +128,12 @@ describe("affected: which checks a change runs", () => {
     {
       name: "a repo script runs its own check and the Dox tests",
       changes: [{ path: "scripts/deps.mjs", status: "M" }],
-      checks: ["deps", "build:gmt", "test:dox"],
+      checks: ["format", "deps", "build:gmt", "test:dox"],
     },
     {
       name: "the licence check script runs its own check and the Dox tests, which copy scripts/",
       changes: [{ path: "scripts/licences.mjs", status: "M" }],
-      checks: ["licences", "build:gmt", "test:dox"],
+      checks: ["format", "licences", "build:gmt", "test:dox"],
     },
     {
       name: "the scripts/ licence runs the licence check and the Dox tests, which copy scripts/",
@@ -143,7 +153,36 @@ describe("affected: which checks a change runs", () => {
         { path: "CONTRIBUTING.md", status: "M" },
         { path: "scripts/test-markers.mjs", status: "M" },
       ],
-      checks: ["deps", "markers", "build:gmt", "test:dox"],
+      checks: ["format", "deps", "markers", "build:gmt", "test:dox"],
+    },
+    {
+      name: "the formatter's config runs only the format check",
+      changes: [{ path: ".oxfmtrc.json", status: "M" }],
+      checks: ["format"],
+    },
+    {
+      name: "a Dox stylesheet runs the format check with the Dox checks",
+      changes: [{ path: "apps/dox/src/styles/gmt-migrate.css", status: "M" }],
+      checks: [
+        "format",
+        "markers",
+        "docs-check",
+        "build:gmt-oxlint",
+        "build:gmt",
+        "dox-pages",
+        "build:dox",
+        "api-surface",
+        "dox-dist",
+        "dox-tables",
+        "lint:dox",
+        "typecheck:dox",
+        "test:dox",
+      ],
+    },
+    {
+      name: "a deleted script skips the format check",
+      changes: [{ path: "scripts/deps.mjs", status: "D" }],
+      checks: ["deps", "build:gmt", "test:dox"],
     },
     {
       name: "the DST guide's source runs the checks of the Dox page it becomes",
@@ -154,6 +193,7 @@ describe("affected: which checks a change runs", () => {
         "build:dox",
         "api-surface",
         "dox-dist",
+        "dox-tables",
         "typecheck:dox",
         "test:dox",
       ],
@@ -229,6 +269,40 @@ describe("affected: the rules and checks are well formed", () => {
 
   it("no check id appears twice", () => {
     expect(new Set(ALL_CHECKS).size).toBe(CHECKS.length);
+  });
+
+  it("each check comes after the checks it needs", () => {
+    for (const check of CHECKS) {
+      for (const need of check.needs ?? []) {
+        expect(
+          ALL_CHECKS.indexOf(need),
+          `${check.id} needs ${need}`,
+        ).toBeLessThan(ALL_CHECKS.indexOf(check.id));
+      }
+    }
+  });
+
+  it("a check whose script loads the built library needs its build", () => {
+    for (const check of CHECKS) {
+      // A repo script, or a Dox script run in apps/dox.
+      const found =
+        /(pnpm --filter @gmt\/dox exec )?node (scripts\/[\w-]+\.mjs)/.exec(
+          check.run,
+        );
+      if (!found) continue;
+      const root = found[1] ? "../" : "../../../";
+      const source = readFileSync(
+        new URL(`${root}${found[2]}`, import.meta.url),
+        "utf8",
+      );
+      // Through the shared loader, by path to the build, or by package name.
+      if (
+        /\.\/lib\/gmt\.mjs|packages\/gmt\/dist|["']@northguild\/gmt["'/]/.test(
+          source,
+        )
+      )
+        expect(check.needs ?? [], check.id).toContain("build:gmt");
+    }
   });
 
   it("every rule's listed checks add something its checks do not", () => {

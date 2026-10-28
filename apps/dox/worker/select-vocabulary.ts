@@ -62,7 +62,9 @@ export function parseSkill(markdown: string): VocabularySkill {
   const content = match ? markdown.slice(match[0].length) : markdown;
 
   const name = /^name:\s*(.+)$/m.exec(frontmatter)?.[1]?.trim() ?? "";
-  const sources = [...frontmatter.matchAll(/^\s+-\s+['"]?([^'"\n]+)['"]?\s*$/gm)]
+  const sources = [
+    ...frontmatter.matchAll(/^\s+-\s+['"]?([^'"\n]+)['"]?\s*$/gm),
+  ]
     .map((m) => m[1]?.replace(/^[^:]+:/, "") ?? "")
     .filter(Boolean);
 
@@ -71,7 +73,9 @@ export function parseSkill(markdown: string): VocabularySkill {
   for (const source of sources) {
     if (source.startsWith(LIB_SOURCE)) {
       const path = source.slice(LIB_SOURCE.length).replace(/\.ts$/, "");
-      modules.push(path.endsWith("/index") ? path.slice(0, -"index".length) : path);
+      modules.push(
+        path.endsWith("/index") ? path.slice(0, -"index".length) : path,
+      );
     } else if (source.startsWith(DOCS_SOURCE)) {
       const path = source.slice(DOCS_SOURCE.length);
       // `guides/intervals/*.mdx` → every page in the folder.

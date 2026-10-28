@@ -59,7 +59,11 @@
         "packages/gmt-eslint/package.json",
         "packages/gmt-oxlint/package.json",
       ],
-      matchDepTypes: ["dependencies", "peerDependencies", "optionalDependencies"],
+      matchDepTypes: [
+        "dependencies",
+        "peerDependencies",
+        "optionalDependencies",
+      ],
     },
     // The supported Node versions are a product decision, made by hand.
     {

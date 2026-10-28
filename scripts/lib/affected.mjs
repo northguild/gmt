@@ -13,7 +13,8 @@
  * native tools read (tsdown, esbuild, oxlint, Astro's bundler), so those are added by hand: the
  * library's sources feed its build, bundle-size and lint:gmt, and every Dox file feeds the Dox
  * build and lint:dox. The toolchain files (the lockfile, the root package.json and tsconfig, the
- * Node version, CI itself, and these rules) run every check.
+ * Node version, CI itself, and these rules) run every check. The format check is asked by file
+ * type, not by rule: see `FORMATTED`.
  *
  * The audit also cannot see a check that reads generated output. The audit counts reads of tracked
  * files only, and generated files are gitignored. So when a check reads a file a generator writes,
@@ -29,11 +30,11 @@
  * marks a check only CI runs.
  */
 export const CHECKS = [
+  { id: "format", run: "pnpm exec oxfmt --check" },
   { id: "deps", run: "node scripts/deps.mjs check" },
   { id: "markers", run: "node scripts/test-markers.mjs check" },
   { id: "licences", run: "node scripts/licences.mjs check" },
   { id: "docs-check", run: "pnpm dox:docs-check" },
-  { id: "upstream", run: "node scripts/upstream.mjs check" },
   { id: "bundle-size", run: "node scripts/bundle-size.mjs check" },
   {
     id: "build:gmt-oxlint",
@@ -61,6 +62,11 @@ export const CHECKS = [
     needs: ["build:gmt"],
   },
   {
+    id: "upstream",
+    run: "node scripts/upstream.mjs check",
+    needs: ["build:gmt"],
+  },
+  {
     id: "api-surface",
     run: "node scripts/api-surface.mjs check",
     needs: ["build:gmt", "dox-pages"],
@@ -69,6 +75,12 @@ export const CHECKS = [
     id: "dox-dist",
     local: false,
     run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/head-tags.test.ts scripts/gates/registry.test.ts",
+    needs: ["build:dox"],
+  },
+  {
+    // No table on a built page scrolls sideways at 1440 px (apps/dox/scripts/table-fit.mjs).
+    id: "dox-tables",
+    run: "pnpm --filter @gmt/dox exec node scripts/table-fit.mjs",
     needs: ["build:dox"],
   },
   {
@@ -129,6 +141,7 @@ const DOX_APP = [
   "build:dox",
   "api-surface",
   "dox-dist",
+  "dox-tables",
   "lint:dox",
   "typecheck:dox",
   "test:dox",
@@ -140,6 +153,7 @@ const DOX_CONTENT = [
   "build:dox",
   "api-surface",
   "dox-dist",
+  "dox-tables",
   "typecheck:dox",
   "test:dox",
 ];
@@ -154,6 +168,13 @@ const OXLINT = [
   ),
   "markers",
 ];
+
+/**
+ * The file types oxfmt formats. A changed file of one of these types runs the format check,
+ * whatever its rule says, because oxfmt reads every such file `.oxfmtrc.json` does not ignore.
+ * oxfmt is a native tool, so `affected:audit` cannot see its reads.
+ */
+export const FORMATTED = /\.(?:[cm]?[jt]sx?|json[c5]?|css|yml|toml)$/;
 
 /** The tests of the repo scripts live in apps/dox/scripts and run with the Dox tests. */
 const SCRIPT_TESTS = ["test:dox"];
@@ -397,6 +418,13 @@ export function affected(changes) {
       continue;
     }
     for (const id of rule.checks) ask(id, path);
+    // A deleted file has nothing left to format.
+    if (
+      status !== "D" &&
+      FORMATTED.test(path) &&
+      !rule.checks.includes("format")
+    )
+      ask("format", path);
     if (status !== "M") {
       for (const id of rule.listed ?? []) {
         if (!rule.checks.includes(id))

@@ -23,6 +23,9 @@
   7:1 and every disabled field's border at 3:1. The gate runner runs it in both themes.
 - **a11y and media:** `a11y-axe` (WCAG 2.2 AA tags; exclusions for false positives only) and
   `a11y-media` (reduced motion, reduced transparency, more contrast, forced colours).
+- **Tables fit:** `table-fit` (`scripts/table-fit.mjs`) fails when a table on any built page
+  scrolls sideways at 1440 px. It is a nightly gate in three browsers and the `dox-tables` check in
+  CI, in Chromium.
 - **Visual gates** after any CSS or widget-markup change: `visual:diff` and
   `scripts/html-diff.mjs`, through `pnpm --filter dox gates --baseline <base apps/dox>` (see
   [design-system.md](design-system.md)).

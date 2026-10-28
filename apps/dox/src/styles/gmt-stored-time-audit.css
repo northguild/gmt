@@ -285,6 +285,7 @@
 
   .gmt-stored-time-audit .gmt-stored-table td::before {
     content: attr(data-label);
+    content: attr(data-label) / "";
     display: block;
     font-size: var(--gmt-text-xs);
     color: var(--gmt-ice-dim);

@@ -9,8 +9,11 @@
  *        [--legs <leg,...>] <summary.json ...>
  *
  * A summary's leg is the name of the folder it sits in (`artifacts/chromium-1/summary.json` is
- * `chromium-1`). `--legs` names every leg the sweep ran: one with no readable summary is filed as
- * could-not-run, which is how a crashed leg that uploaded nothing is still seen. `--print` plans
+ * `chromium-1`). `--legs` names every leg the sweep ran, so one with no readable summary is still
+ * seen. When a leg has none and `GITHUB_REPOSITORY` and `GITHUB_RUN_ID` are set, the run's job list
+ * says why (`readJobs`, then `missingSummary` in `./issue-plan.mjs`): the leg wrote its summary
+ * and lost it on the way (not-uploaded), or never wrote it (could-not-run). Without the job list,
+ * such a leg is filed as could-not-run, saying the cause is unknown. `--print` plans
  * against the live open-issue list and prints the actions instead of running them (one line per
  * action, then a count); with `$GITHUB_STEP_SUMMARY` set it also appends the plan there.
  * `--dry-run-finding` adds one synthetic `[dry run]` finding under the `dox-gate-dry-run` label.
@@ -169,6 +172,45 @@ export function runActions(gh, actions) {
   });
 }
 
+/** The name of a leg's sweep job, `Sweep (<leg>)`; the leg is group 1. */
+const SWEEP_JOB = /^Sweep \((.+)\)$/;
+
+/**
+ * The sweep job of each leg in run `runId`, keyed by leg. The jobs endpoint lists the latest
+ * attempt of each job, so a re-run leg reads as its re-run. Needs `actions: read`; throws when the
+ * call fails. Lines that are not a sweep job are skipped.
+ * @param {Gh} gh
+ * @param {string} repo  `owner/name`
+ * @param {string} runId
+ * @returns {Map<string, import("./issue-plan.mjs").Job>}
+ */
+export function readJobs(gh, repo, runId) {
+  const out = gh([
+    "api",
+    "--paginate",
+    `repos/${repo}/actions/runs/${runId}/jobs?per_page=100`,
+    "--jq",
+    ".jobs[] | {name, conclusion, steps: [.steps[]? | {name, conclusion}]} | tojson",
+  ]);
+  /** @type {Map<string, import("./issue-plan.mjs").Job>} */
+  const jobs = new Map();
+  for (const line of out.split("\n")) {
+    let job;
+    try {
+      job = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const leg = SWEEP_JOB.exec(job?.name ?? "")?.[1];
+    if (!leg) continue;
+    jobs.set(leg, {
+      conclusion: job.conclusion ?? null,
+      steps: Array.isArray(job.steps) ? job.steps : [],
+    });
+  }
+  return jobs;
+}
+
 /** The leg a summary file belongs to: its folder's name. */
 export function legOf(file) {
   return path
@@ -245,9 +287,26 @@ export function main(argv, { env, gh, stdout, stderr }) {
     stderr(`${read.error}\n`);
     return 2;
   }
-  const legSummaries = read.legs;
+  let legSummaries = read.legs;
   const { GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID, GITHUB_SHA } =
     env;
+  let jobsText = "";
+  if (
+    GITHUB_REPOSITORY &&
+    GITHUB_RUN_ID &&
+    legSummaries.some((l) => !l.summary)
+  ) {
+    try {
+      const jobs = readJobs(gh, GITHUB_REPOSITORY, GITHUB_RUN_ID);
+      legSummaries = legSummaries.map((l) =>
+        l.summary ? l : { ...l, job: jobs.get(l.leg) ?? null },
+      );
+    } catch (error) {
+      const why = `file-issues: cannot read the run's jobs: ${messageOf(error)}; a leg with no summary is filed as could-not-run`;
+      stderr(`${why}\n`);
+      jobsText = `\n${why}\n`;
+    }
+  }
   const runUrl =
     GITHUB_SERVER_URL && GITHUB_REPOSITORY && GITHUB_RUN_ID
       ? `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`
@@ -291,12 +350,12 @@ export function main(argv, { env, gh, stdout, stderr }) {
     const count = `${actions.length} action${actions.length === 1 ? "" : "s"}${print ? " planned (not run)" : ""}`;
     stdout(`${[...lines, count].join("\n")}\n`);
     summarise(
-      `### Dox gate issues\n\n\`\`\`text\n${[...lines, count].join("\n")}\n\`\`\`${flakyText}`,
+      `### Dox gate issues\n\n\`\`\`text\n${[...lines, count].join("\n")}\n\`\`\`${jobsText}${flakyText}`,
     );
   } catch (error) {
     stderr(`file-issues: gh failed: ${messageOf(error)}\n`);
     summarise(
-      `### Dox gate issues\n\nNothing filed: gh failed: ${messageOf(error)}${flakyText}`,
+      `### Dox gate issues\n\nNothing filed: gh failed: ${messageOf(error)}${jobsText}${flakyText}`,
     );
     code = 1;
   }

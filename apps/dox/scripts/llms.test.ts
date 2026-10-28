@@ -847,3 +847,73 @@ Body text here.`;
     });
   });
 });
+
+/**
+ * Every `.md` URL the site hands out resolves to a built file.
+ *
+ * `llms.txt`, `llms-full.txt` and `_redirects` each build `.md` URLs on their own, and the twin
+ * route decides where the files are. When the two disagreed, `reference/workforce.md` and
+ * `reference.md` went to 404 while every page's own alternate link still resolved.
+ */
+describe("dist .md links resolve (build-only)", () => {
+  const SITE = "https://northguild.dev";
+
+  /** The built file a `/gmt/….md` path names, or a redirect's target followed to the end. */
+  function resolveMd(
+    dist: string,
+    path: string,
+    redirects: Map<string, string>,
+  ): boolean {
+    const seen = new Set<string>();
+    let current = path;
+    while (!existsSync(resolve(dist, `.${current}`))) {
+      const next = redirects.get(current);
+      if (next === undefined || seen.has(current)) return false;
+      seen.add(current);
+      current = next;
+    }
+    return true;
+  }
+
+  /** The `_redirects` rules: source path to target path. */
+  function redirectRules(dist: string): Map<string, string> {
+    return new Map(
+      readFileSync(resolve(dist, "_redirects"), "utf8")
+        .split("\n")
+        .map((line) => line.trim().split(/\s+/))
+        .filter((parts) => parts.length >= 2 && parts[0]?.startsWith("/"))
+        .map((parts): [string, string] => [parts[0] ?? "", parts[1] ?? ""]),
+    );
+  }
+
+  it.each(["llms.txt", "llms-full.txt"])(
+    "every .md link in %s is a built file",
+    (file) => {
+      const dist = distRootOrSkip();
+      if (dist === null) return;
+      const text = readFileSync(resolve(dist, "gmt", file), "utf8");
+      const urls = [
+        ...new Set(
+          text.match(/https:\/\/northguild\.dev\/gmt\/[^\s)>"]*?\.md\b/g) ?? [],
+        ),
+      ];
+      expect(urls.length).toBeGreaterThan(100);
+      const missing = urls.filter(
+        (url) => !existsSync(resolve(dist, `.${url.slice(SITE.length)}`)),
+      );
+      expect(missing).toEqual([]);
+    },
+  );
+
+  it("every _redirects rule to a .md twin ends at a built file", () => {
+    const dist = distRootOrSkip();
+    if (dist === null) return;
+    const redirects = redirectRules(dist);
+    const twins = [...redirects].filter(([, target]) => target.endsWith(".md"));
+    expect(twins.length).toBeGreaterThan(0);
+    const broken = twins
+      .filter(([, target]) => !resolveMd(dist, target, redirects))
+      .map(([source, target]) => `${source} -> ${target}`);
+    expect(broken).toEqual([]);
+  });
+});

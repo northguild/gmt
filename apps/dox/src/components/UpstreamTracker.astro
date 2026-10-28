@@ -5,20 +5,12 @@
  * browser. Sentences come from `lib/upstream-summary.ts`, styles from `styles/gmt-upstream.css`.
  */
 import { filingRepos, filingsForRepo } from "../data/upstream-filings";
+import { UPSTREAM_COLUMNS as COLUMNS } from "../lib/upstream-status";
 import { asDate } from "../lib/upstream-summary";
 import UpstreamFilingRow from "./UpstreamFilingRow.astro";
 import UpstreamTrackerLegend from "./UpstreamTrackerLegend.astro";
 import UpstreamTrackerSummary from "./UpstreamTrackerSummary.astro";
 
-const COLUMNS = [
-  "Filing",
-  "In GMT",
-  "The problem",
-  "Kind",
-  "Upstream status",
-  "Replies",
-  "Last activity",
-];
 ---
 
 <UpstreamTrackerSummary />
@@ -29,7 +21,7 @@ const COLUMNS = [
       <h3>
         <a href={`https://github.com/${repo}`}>{repo}</a>
       </h3>
-      <div class="gmt-ref-table" data-kind="content" data-label={`Filings to ${repo}`}>
+      <div class="gmt-ref-table" data-kind="content" data-layout="entries" data-label={`Filings to ${repo}`}>
       <table class="gmt-upstream-table">
         <thead>
           <tr>{COLUMNS.map((column) => <th>{column}</th>)}</tr>

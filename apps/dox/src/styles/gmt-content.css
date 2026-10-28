@@ -203,12 +203,14 @@ dialog > .dialog-frame {
    first column ran a sentence in the first cell across 1000px and squeezed the other columns
    to a word a line.
 
-   A code span in a cell is one token and is never broken: not mid-word (`overflow-wrap:
-   anywhere` printed `strin` / `g` in a narrow column), and not after a hyphen either
-   (`"4-4-5"`, `2024-03-10`). The prose around it wraps instead. When a code span is wider than
-   the column, the table scrolls sideways: Starlight makes every content table a scroll box. A
-   long union in a reference Type cell is one span per member (render-table.ts `typeSpans`), so
-   that cell still wraps, between members. */
+   A code token in a cell is never broken mid-word (`overflow-wrap: anywhere` printed `strin` /
+   `g` in a narrow column), at a hyphen (`"4-4-5"`, `2024-03-10`) or at a `.`. Code with no
+   break point stays on one line (`white-space: nowrap`). Code with break points wraps only at a
+   run of spaces and after a `/` that joins two names (`code.gmt-codebreak`; the pieces are
+   `.gmt-cw`, see src/lib/code-break.ts). The prose around code wraps normally. When a token is
+   wider than its column the box scrolls sideways, so a table whose cells hold long code is laid
+   out as entries instead (see below). A long union in a reference Type cell is one span per
+   member (render-table.ts `typeSpans`), so that cell still wraps, between members. */
 .sl-markdown-content table {
   width: 100%;
   table-layout: auto;
@@ -229,6 +231,16 @@ dialog > .dialog-frame {
   white-space: nowrap;
   overflow-wrap: normal;
   word-break: normal;
+}
+
+/* Code with break points (src/lib/code-break.ts) wraps at its spaces and after a `/` that joins
+   two names; each piece between is `.gmt-cw`, which stays whole. */
+.sl-markdown-content :is(th, td) code.gmt-codebreak {
+  white-space: pre-wrap;
+}
+
+.sl-markdown-content .gmt-cw {
+  white-space: nowrap;
 }
 
 /* ---- Generated reference tables (Options, Members, Parameters) ----
@@ -376,12 +388,15 @@ dialog > .dialog-frame {
    short cells and read better as a table; they become entries when the wrapper is 34rem or
    narrower, which is the 390px phone and the 1200px viewport's 530px column. The declarations
    are the same in both places because CSS cannot take a width from a variable. */
-.sl-markdown-content .gmt-ref-table[data-kind="options"] table,
-.sl-markdown-content .gmt-ref-table[data-kind="options"] tbody {
+.sl-markdown-content
+  .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  :is(table, tbody) {
   display: block;
 }
 
-.sl-markdown-content .gmt-ref-table[data-kind="options"] thead {
+.sl-markdown-content
+  .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  thead {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -392,7 +407,9 @@ dialog > .dialog-frame {
   -webkit-backdrop-filter: none;
 }
 
-.sl-markdown-content .gmt-ref-table[data-kind="options"] tr {
+.sl-markdown-content
+  .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  tr {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -401,20 +418,31 @@ dialog > .dialog-frame {
   border-bottom: 1px solid var(--gmt-hairline);
 }
 
-.sl-markdown-content .gmt-ref-table[data-kind="options"] tbody tr:last-child {
+.sl-markdown-content
+  .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  tbody
+  tr:last-child {
   border-bottom: 0;
 }
 
 /* The wash goes on the entry, not on each cell, so the gap between cells is washed too. */
-.sl-markdown-content .gmt-ref-table[data-kind="options"] tr:hover {
+.sl-markdown-content
+  .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  tr:hover {
   background: var(--gmt-accent-wash);
 }
 
-.sl-markdown-content .gmt-ref-table[data-kind="options"] tr:hover td {
+.sl-markdown-content
+  .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  tr:hover
+  :is(th, td) {
   background: transparent;
 }
 
-.sl-markdown-content .gmt-ref-table[data-kind="options"] td {
+.sl-markdown-content
+  .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  tbody
+  :is(th, td) {
   display: block;
   flex: 0 1 auto;
   min-width: 0;
@@ -445,12 +473,54 @@ dialog > .dialog-frame {
   .gmt-ref-table[data-kind="options"]
   td:nth-child(2)::before {
   content: "Type";
+  content: "Type" / "";
 }
 
 .sl-markdown-content
   .gmt-ref-table[data-kind="options"]
   td:nth-child(3)::before {
   content: "Default";
+  content: "Default" / "";
+}
+
+/* A table laid out as entries (`data-layout="entries"`) takes the Options entry for its rows: a
+   table opts in where it is built (a component's `data-layout`, or a marker comment on the line
+   above a Markdown table; src/lib/rehype-table-scroll.ts). Its first cell is the entry's title, on a
+   line of its own; every other cell is a labelled fact (the label is the column header the cell
+   names in `data-col`), and an empty cell is not drawn. Used for a table whose cells are long
+   code, or that has too many columns to fit the article column. */
+.sl-markdown-content
+  .gmt-ref-table[data-layout="entries"]
+  tbody
+  :is(th, td):first-child {
+  flex: 1 1 100%;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  letter-spacing: normal;
+  color: var(--gmt-ice);
+}
+
+.sl-markdown-content
+  .gmt-ref-table[data-layout="entries"]
+  tbody
+  :is(th, td):not(:first-child)::before {
+  content: attr(data-col);
+  content: attr(data-col) / "";
+  margin-inline-end: var(--gmt-space-2);
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.sl-markdown-content
+  .gmt-ref-table[data-layout="entries"]
+  tbody
+  :is(th, td):empty {
+  display: none;
 }
 
 @container gmt-ref (max-width: 34rem) {
@@ -526,6 +596,7 @@ dialog > .dialog-frame {
     .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
     td:nth-child(2)::before {
     content: "Type";
+    content: "Type" / "";
     margin-inline-end: var(--gmt-space-2);
     font-family: var(--gmt-font-display);
     font-size: var(--gmt-text-xs);

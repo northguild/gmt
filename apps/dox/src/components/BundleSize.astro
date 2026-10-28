@@ -4,6 +4,7 @@
  * `scripts/bundle-size.mjs report` writes during `generate`; nothing here is typed in. A size is
  * in kB, 1 kB being 1,000 bytes. The budget column is the minified limit the repo's gate holds.
  */
+import { codeBreakClass, codeBreakHtml } from "../lib/code-break";
 import { BUNDLE_COLUMNS, bundleCells, bundleRows } from "../lib/bundle-size";
 
 const rows = bundleRows();
@@ -22,7 +23,7 @@ const rows = bundleRows();
           const [importLine, ...figures] = bundleCells(row);
           return (
             <tr>
-              <th scope="row"><code>{importLine}</code></th>
+              <th scope="row"><code class={codeBreakClass(importLine)} set:html={codeBreakHtml(importLine)} /></th>
               {figures.map((cell) => <td class="num">{cell}</td>)}
             </tr>
           );
@@ -48,13 +49,15 @@ const rows = bundleRows();
   }
 
   .gmt-bundle th[scope="row"] {
-    white-space: nowrap;
     font-weight: normal;
   }
 
   .gmt-bundle .num {
     text-align: end;
-    white-space: nowrap;
     font-variant-numeric: tabular-nums;
+  }
+
+  .gmt-bundle td.num {
+    white-space: nowrap;
   }
 </style>

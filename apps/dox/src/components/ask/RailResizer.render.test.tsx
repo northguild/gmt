@@ -11,11 +11,23 @@ const DEFAULT_WIDTH = 489.6;
 
 function railWidth(body: HTMLElement): number {
   const set = body.style.getPropertyValue("--gmt-hive-rail-width");
-  return set ? Math.min(Math.max(parseFloat(set), DEFAULT_WIDTH), 720) : DEFAULT_WIDTH;
+  return set
+    ? Math.min(Math.max(parseFloat(set), DEFAULT_WIDTH), 720)
+    : DEFAULT_WIDTH;
 }
 
 function rect(width: number): DOMRect {
-  return { width, height: 800, top: 0, left: 0, right: width, bottom: 800, x: 0, y: 0, toJSON: () => ({}) };
+  return {
+    width,
+    height: 800,
+    top: 0,
+    left: 0,
+    right: width,
+    bottom: 800,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  };
 }
 
 function renderResizer() {
@@ -57,7 +69,9 @@ describe("RailResizer", () => {
     const { body, handle } = renderResizer();
     handle.focus();
     await userEvent.keyboard("{ArrowLeft}");
-    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe("505.6px");
+    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe(
+      "505.6px",
+    );
     expect(window.localStorage.getItem("gmt-dox-rail-width")).toBe("506");
   });
 
@@ -107,7 +121,9 @@ describe("RailResizer", () => {
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 800 });
     fireEvent.pointerUp(handle, { pointerId: 1, clientX: 800 });
 
-    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe("589.6px");
+    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe(
+      "589.6px",
+    );
     expect(window.localStorage.getItem("gmt-dox-rail-width")).toBe("590");
     expect(body.hasAttribute("data-resizing")).toBe(false);
   });

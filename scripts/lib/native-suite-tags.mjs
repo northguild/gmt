@@ -199,14 +199,14 @@ export const KNOWN_NATIVE_FAILURES = [
   },
   {
     file: "src/zoned/convert/convertZonedToCalendar.test.ts",
-    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting -271821-04-19T12:00:00-12:00[Etc/GMT+12] to hebrew: its offset makes TC39 check the local date against the day range",
+    test: 'convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns "" converting -271821-04-19T12:00:00-12:00[Etc/GMT+12] to hebrew: its offset makes TC39 check the local date against the day range',
     legs: ["firefox"],
     defect: P_ANCHOR,
     upstream: BUGZILLA_1998020,
   },
   {
     file: "src/zoned/convert/convertZonedToCalendar.test.ts",
-    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting -271821-04-19T12:00:00-12:00[Etc/GMT+12] to iso8601: its offset makes TC39 check the local date against the day range",
+    test: 'convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns "" converting -271821-04-19T12:00:00-12:00[Etc/GMT+12] to iso8601: its offset makes TC39 check the local date against the day range',
     legs: ["firefox"],
     defect: P_ANCHOR,
     upstream: BUGZILLA_1998020,
@@ -214,21 +214,21 @@ export const KNOWN_NATIVE_FAILURES = [
   {
     // The `[u-ca=hebrew]` input is 53 characters: Vitest cuts it at 40 and ends it with `…`.
     file: "src/zoned/convert/convertZonedToCalendar.test.ts",
-    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting -271821-04-19T12:00:00-12:00[Etc/GMT+12… to iso8601: its offset makes TC39 check the local date against the day range",
+    test: 'convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns "" converting -271821-04-19T12:00:00-12:00[Etc/GMT+12… to iso8601: its offset makes TC39 check the local date against the day range',
     legs: ["firefox"],
     defect: P_ANCHOR,
     upstream: BUGZILLA_1998020,
   },
   {
     file: "src/zoned/convert/convertZonedToCalendar.test.ts",
-    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting -271821-04-19T19:03:58-04:56:02[America… to hebrew: its offset makes TC39 check the local date against the day range",
+    test: 'convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns "" converting -271821-04-19T19:03:58-04:56:02[America… to hebrew: its offset makes TC39 check the local date against the day range',
     legs: ["firefox"],
     defect: P_ANCHOR,
     upstream: BUGZILLA_1998020,
   },
   {
     file: "src/zoned/convert/convertZonedToCalendar.test.ts",
-    test: "convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns \"\" converting -271821-04-19T19:03:58-04:56:02[America… to iso8601: its offset makes TC39 check the local date against the day range",
+    test: 'convertZonedToCalendar at the minimum instant behind UTC (CORE-6) returns "" converting -271821-04-19T19:03:58-04:56:02[America… to iso8601: its offset makes TC39 check the local date against the day range',
     legs: ["firefox"],
     defect: P_ANCHOR,
     upstream: BUGZILLA_1998020,

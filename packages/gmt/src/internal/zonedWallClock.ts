@@ -176,7 +176,8 @@ const UTC_REFERENCE = new Temporal.ZonedDateTime(0n, "UTC");
 const TIME_SEPARATOR = /^[^[]*[Tt ]/;
 const UTC_OFFSET = /^[^[]*[Tt ][^[]*[+\-−]/;
 /** RFC 9557 offset with a seconds field — TC39 `ToTemporalZonedDateTime` then matches exactly. */
-export const UTC_OFFSET_WITH_SECONDS = /^[^[]*[Tt ][^[+\-−]*[+\-−]\d{2}:?\d{2}:?\d{2}/;
+export const UTC_OFFSET_WITH_SECONDS =
+  /^[^[]*[Tt ][^[+\-−]*[+\-−]\d{2}:?\d{2}:?\d{2}/;
 /** A UTC designator (`Z` or `z`) ends the date-time before the bracketed annotations. */
 const UTC_DESIGNATOR = /^[^[]*[Zz]\[/;
 

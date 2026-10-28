@@ -102,7 +102,9 @@ describe("parseSkill", () => {
   });
 
   it("drops the frontmatter and the sections a reader never needs", () => {
-    expect(parsed.body).toBe("# Example\n\nIntro.\n\n## Core rules\n\nRule one.");
+    expect(parsed.body).toBe(
+      "# Example\n\nIntro.\n\n## Core rules\n\nRule one.",
+    );
   });
 
   it("reads a skill with no frontmatter as all body", () => {
@@ -125,9 +127,9 @@ describe("parseSkill", () => {
 
 describe("selectVocabulary", () => {
   it("returns nothing when no chunk belongs to any skill", () => {
-    expect(
-      selectVocabulary([skill({ modules: ["gnss/"] })], [chunk({})]),
-    ).toBe("");
+    expect(selectVocabulary([skill({ modules: ["gnss/"] })], [chunk({})])).toBe(
+      "",
+    );
   });
 
   it("always includes the best skill, even over budget", () => {
@@ -170,9 +172,15 @@ describe("selectVocabulary", () => {
       kind: "guide",
       url: "/guides/intervals/set-operations/#union",
     });
-    const page = skill({ body: "PAGE", pages: ["/guides/intervals/set-operations/"] });
+    const page = skill({
+      body: "PAGE",
+      pages: ["/guides/intervals/set-operations/"],
+    });
     const folder = skill({ body: "FOLDER", pages: ["/guides/intervals/"] });
-    const sibling = skill({ body: "SIBLING", pages: ["/guides/intervals/overview/"] });
+    const sibling = skill({
+      body: "SIBLING",
+      pages: ["/guides/intervals/overview/"],
+    });
     expect(selectVocabulary([sibling, page], [guide])).toBe("PAGE");
     expect(selectVocabulary([sibling, folder], [guide])).toBe("FOLDER");
     expect(selectVocabulary([sibling], [guide])).toBe("");
@@ -191,7 +199,9 @@ describe("selectVocabulary", () => {
   });
 
   it("picks the time-zone skill for a DST question", () => {
-    expect(vocabularyFor("what is a DST gap")).toBe(byName("gmt-timezone").body);
+    expect(vocabularyFor("what is a DST gap")).toBe(
+      byName("gmt-timezone").body,
+    );
   });
 
   it("picks the interval rules for an interval question", () => {
