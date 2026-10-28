@@ -35,7 +35,6 @@ export const CHECKS = [
   { id: "markers", run: "node scripts/test-markers.mjs check" },
   { id: "licences", run: "node scripts/licences.mjs check" },
   { id: "docs-check", run: "pnpm dox:docs-check" },
-  { id: "upstream", run: "node scripts/upstream.mjs check" },
   { id: "bundle-size", run: "node scripts/bundle-size.mjs check" },
   {
     id: "build:gmt-oxlint",
@@ -60,6 +59,11 @@ export const CHECKS = [
   {
     id: "compat",
     run: "node scripts/temporal-compat.mjs snapshot --check",
+    needs: ["build:gmt"],
+  },
+  {
+    id: "upstream",
+    run: "node scripts/upstream.mjs check",
     needs: ["build:gmt"],
   },
   {

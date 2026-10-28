@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   affected,
@@ -258,6 +259,30 @@ describe("affected: the rules and checks are well formed", () => {
 
   it("no check id appears twice", () => {
     expect(new Set(ALL_CHECKS).size).toBe(CHECKS.length);
+  });
+
+  it("each check comes after the checks it needs", () => {
+    for (const check of CHECKS) {
+      for (const need of check.needs ?? []) {
+        expect(
+          ALL_CHECKS.indexOf(need),
+          `${check.id} needs ${need}`,
+        ).toBeLessThan(ALL_CHECKS.indexOf(check.id));
+      }
+    }
+  });
+
+  it("a check whose script loads the built library needs its build", () => {
+    for (const check of CHECKS) {
+      const script = /node (scripts\/[\w-]+\.mjs)/.exec(check.run)?.[1];
+      if (!script) continue;
+      const source = readFileSync(
+        new URL(`../../../${script}`, import.meta.url),
+        "utf8",
+      );
+      if (source.includes("./lib/gmt.mjs"))
+        expect(check.needs ?? [], check.id).toContain("build:gmt");
+    }
   });
 
   it("every rule's listed checks add something its checks do not", () => {
