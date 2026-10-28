@@ -42,6 +42,18 @@ describe("codeBreakPieces", () => {
     expect(codeBreakPieces("1/2")).toEqual(["1/2"]);
   });
 
+  it("does not break a slash that does not join two names", () => {
+    expect(codeBreakPieces("<br/>")).toEqual(["<br/>"]);
+    expect(codeBreakPieces("</>")).toEqual(["</>"]);
+    expect(codeBreakPieces("a/-b")).toEqual(["a/-b"]);
+    expect(codeBreakPieces("(a)/b")).toEqual(["(a)/b"]);
+    expect(codeBreakHtml("<br/> a")).not.toContain("<wbr>");
+  });
+
+  it("breaks after a slash between non-Latin names", () => {
+    expect(codeBreakPieces("東京/大阪")).toEqual(["東京/", "大阪"]);
+  });
+
   it("breaks a date pattern after each slash", () => {
     expect(codeBreakPieces("dd/MM/yyyy")).toEqual(["dd/", "MM/", "yyyy"]);
   });

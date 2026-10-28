@@ -217,8 +217,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **Code in a table cell wraps only at set points.** A code token never breaks inside a word,
     at a hyphen or at a `.`. `src/lib/code-break.ts` (`codeBreakPieces`, `codeBreakHtml`,
     `codeBreakHast`, `codeBreakClass`) splits a cell's code at each run of spaces and directly after
-    a `/` that joins two names (`Europe/` `Berlin`, `@northguild/` `gmt/` `zoned`); `//`, a lone
-    ` / ` and a `/` before a digit (`1/2`) are not break points. Each piece is
+    a `/` that joins two names (`Europe/` `Berlin`, `@northguild/` `gmt/` `zoned`): a letter, digit,
+    `_` or `$` before it and a letter, `_`, `$` or `@` after it. So `//`, a lone ` / `, `1/2`,
+    `<br/>` and `a/-b` are not break points. Each piece is
     `<span class="gmt-cw">` (`nowrap`), a joining `/` is followed by `<wbr>`, and the `code` carries
     `gmt-codebreak` (`white-space: pre-wrap`). Code with one piece comes back unchanged and keeps the
     plain `nowrap` rule. `rehype-table-scroll.ts` splits every Markdown cell's code, including a table
@@ -237,6 +238,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     layout and `data-col`, removes it, and a paragraph between the two cancels it. The `.md` twin
     strips the comment. A table CI reports as scrolling gets the entries layout, never smaller
     padding or a pinned width.
+  - **A label drawn into a table cell is out of its accessible name.** Generated `::before` text
+    joins the cell's name with no space (`NoteThe string is…`), and every table that draws a column
+    label into its cells (the entries layout, the Options, members and parameters entries, and the
+    tool tables that stack on a narrow card) keeps its header row for screen readers. So each such
+    rule declares the label twice: `content: attr(data-col);` for a browser without the alternative
+    syntax, then `content: attr(data-col) / "";`. `src/lib/table-cell-label.test.ts` reads every
+    stylesheet and fails on a table-cell label without the pair.
   - **Unit names print largest first.** The TypeScript printer lists a union in the checker's
     internal order, which changes with what else the program holds. `orderUnitUnions`
     (`build-utils.ts`) rewrites every type the generator prints: the signature, the
@@ -1171,7 +1179,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     list); a checker keeps `gmt-<name>-*` only for its own layout. The shared sheet is
     `styles/clock-change.css` (tokens `--zonemap-*`); a checker's sheet holds only its own rules.
     Canada has no sheet of its own (`canada-clock-change.css` is gone); Morocco's holds the
-    `gmt-morocco-wrong*` rules and its 26.5rem header-note query. Card-level classes (stack, row,
+    `gmt-morocco-wrong*` rules and its 29rem header-note query. Card-level classes (stack, row,
     key points, servers, groups, changes, pick card, clocks) are `gmt-clockcheck-*`; only the root
     `gmt-canada` / `gmt-morocco` stays per region.
     - **Years live once.** Each region states a `stopYear` (`CANADA_STOP_YEAR`,
@@ -1845,6 +1853,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     that holds a `<table` (`listTablePages` in `scripts/lib/table-pages.mjs`, read from `dist`, never a
     fixed count) at 1440 x 900 with every `<details>` open and every tab panel shown, and fails when a
     table's scroll box (the table or its nearest `overflow-x` ancestor) is wider than it shows. A
+    table with no scroll box grows with its content, so it is measured against the content box of the
+    nearest block that holds it and against `main`'s, and fails when it reaches past either. A table
+    not drawn at that width is skipped, and a run that measures no table at all fails. A
     finding names the page, the first three headers, the overflow and the widest unbreakable piece
     (`.gmt-cw`, `code:not(.gmt-codebreak)`, `.gmt-nobreak`). Rule `table-scrolls`. The same check runs
     in the `consistency` job as `dox-tables` (`scripts/lib/affected.mjs`, after `dox-dist`), in

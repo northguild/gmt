@@ -347,6 +347,7 @@
 
   .gmt-observance-comparator .gmt-obs-table td::before {
     content: attr(data-label);
+    content: attr(data-label) / "";
     display: block;
     padding-inline: var(--gmt-space-2);
     font-size: var(--gmt-text-xs);

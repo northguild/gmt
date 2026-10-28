@@ -473,12 +473,14 @@ dialog > .dialog-frame {
   .gmt-ref-table[data-kind="options"]
   td:nth-child(2)::before {
   content: "Type";
+  content: "Type" / "";
 }
 
 .sl-markdown-content
   .gmt-ref-table[data-kind="options"]
   td:nth-child(3)::before {
   content: "Default";
+  content: "Default" / "";
 }
 
 /* A table laid out as entries (`data-layout="entries"`) takes the Options entry for its rows: a
@@ -504,6 +506,7 @@ dialog > .dialog-frame {
   tbody
   :is(th, td):not(:first-child)::before {
   content: attr(data-col);
+  content: attr(data-col) / "";
   margin-inline-end: var(--gmt-space-2);
   font-family: var(--gmt-font-display);
   font-size: var(--gmt-text-xs);
@@ -593,6 +596,7 @@ dialog > .dialog-frame {
     .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
     td:nth-child(2)::before {
     content: "Type";
+    content: "Type" / "";
     margin-inline-end: var(--gmt-space-2);
     font-family: var(--gmt-font-display);
     font-size: var(--gmt-text-xs);

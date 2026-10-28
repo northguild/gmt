@@ -3,9 +3,9 @@
  *
  * A code token is never broken inside a word, at a hyphen or at a `.`. A cell's code may wrap in
  * two places only: at a run of spaces, and directly after a `/` that joins two names
- * (`Europe/` `Berlin`, `@northguild/` `gmt/` `zoned`). A `/` is not a break point when it is
- * doubled (`//`), stands alone between spaces, has nothing before or after it, or is followed by
- * a digit (`1/2`; UAX #14 rule LB25 keeps a slash before a number).
+ * (`Europe/` `Berlin`, `@northguild/` `gmt/` `zoned`): a letter, digit, `_` or `$` before it,
+ * and a letter, `_`, `$` or `@` after it. So a doubled `//`, a slash between spaces, `1/2`
+ * (UAX #14 rule LB25 keeps a slash before a number), `<br/>` and `a/-b` never break.
  *
  * `codeBreakHtml` and `codeBreakHast` wrap each piece in `<span class="gmt-cw">`, which the
  * stylesheet sets to `white-space: nowrap`, and put a `<wbr>` after each joining `/`. The code
@@ -26,13 +26,21 @@ type Part =
   | { kind: "space"; text: string }
   | { kind: "piece"; text: string; wbrAfter: boolean };
 
-/** True when a break is allowed between `text[index]` (a `/`) and the character after it. */
+/** The last character of a name: the character before a joining `/`. */
+const NAME_END = /[\p{L}\p{N}_$]/u;
+/** The first character of a name: the character after a joining `/`. */
+const NAME_START = /[\p{L}_$@]/u;
+
+/** True when `text[index]` (a `/`) joins two names, so a break is allowed after it. */
 function breaksAfterSlash(text: string, index: number): boolean {
   const before = text[index - 1];
   const after = text[index + 1];
-  if (before === undefined || after === undefined) return false;
-  if (before === " " || before === "/") return false;
-  return after !== " " && after !== "/" && !/\d/.test(after);
+  return (
+    before !== undefined &&
+    after !== undefined &&
+    NAME_END.test(before) &&
+    NAME_START.test(after)
+  );
 }
 
 function parts(text: string): Part[] {

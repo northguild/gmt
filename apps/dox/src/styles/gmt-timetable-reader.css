@@ -1061,6 +1061,7 @@
 
   .gmt-timetable-rows td::before {
     content: attr(data-label);
+    content: attr(data-label) / "";
     grid-column: 1;
     grid-row: 1 / span 2;
     font-family: var(--gmt-font-mono);

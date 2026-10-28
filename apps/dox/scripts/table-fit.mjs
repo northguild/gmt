@@ -6,9 +6,13 @@
  * holds a `<table` (`lib/table-pages.mjs`, read from `dist`, never a fixed list), opens every
  * `<details>` and tab panel, and for each table in `main` finds its scroll box: the table itself or
  * the nearest ancestor whose `overflow-x` is `auto`, `scroll` or `hidden`. It fails when the box's
- * `scrollWidth` is more than 1 px past its `clientWidth`, and names the widest piece that cannot
- * break (`.gmt-cw`, `code:not(.gmt-codebreak)`, `.gmt-nobreak`), which is what to give a break
- * point or move to the entries layout.
+ * `scrollWidth` is more than 1 px past its `clientWidth`. A table with no scroll box grows to fit
+ * its content, so its own scroll width never passes its client width; it is measured against
+ * the content box of the nearest block that holds it and against `main`'s content box (a flex or
+ * grid item that holds it can grow with it), and fails when it reaches more than 1 px past either.
+ * A table that is not drawn (`display: none` at this width) is not measured.
+ * A failure names the widest piece that cannot break (`.gmt-cw`, `code:not(.gmt-codebreak)`,
+ * `.gmt-nobreak`), which is what to give a break point or move to the entries layout.
  *
  * Usage (from apps/dox, after a build):
  *   node scripts/table-fit.mjs [--base http://127.0.0.1:48291/gmt] [--browsers chromium,webkit]
@@ -16,8 +20,8 @@
  *
  * Without `--base` it serves `dist` itself on a free port. The runner's contract: `--list-pages`
  * prints the table pages and exits; with `GATE_REPORT` set every scrolling table is a finding.
- * Last line `table-fit: <pages> pages, <tables> tables, <n> scroll`. Exit 0 pass, 1 any finding,
- * 2 usage or a missing build.
+ * Last line `table-fit: <pages> pages, <tables> tables, <n> scroll`. Exit 0 pass, 1 any finding
+ * or no table measured at all, 2 usage or a missing build.
  */
 import { chromium, firefox, webkit } from "@playwright/test";
 import { existsSync } from "node:fs";
@@ -103,16 +107,56 @@ function measureTables() {
   const scrollBox = (table) => {
     for (let el = table; el && el !== document.body; el = el.parentElement) {
       const x = getComputedStyle(el).overflowX;
-      if (el === table || x === "auto" || x === "scroll" || x === "hidden") {
-        if (el === table && x === "visible") continue;
-        return el;
-      }
+      if (x === "auto" || x === "scroll" || x === "hidden") return el;
     }
-    return table;
+    return null;
+  };
+  /** The nearest ancestor that lays out as a block, not inline or `display: contents`. */
+  const holder = (table) => {
+    let el = table.parentElement;
+    while (el && /^(inline|contents)$/.test(getComputedStyle(el).display)) {
+      el = el.parentElement;
+    }
+    return el ?? document.body;
+  };
+  /** The left and right edges of an element's content box. */
+  const contentEdges = (el) => {
+    const r = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    return {
+      left: r.left + el.clientLeft + parseFloat(style.paddingLeft),
+      right:
+        r.left +
+        el.clientLeft +
+        el.clientWidth -
+        parseFloat(style.paddingRight),
+    };
+  };
+  const main = document.querySelector("main");
+  /** How far the table reaches past the room it has, and that room's width. */
+  const measure = (table) => {
+    const box = scrollBox(table);
+    if (box) {
+      return {
+        overflow: box.scrollWidth - box.clientWidth,
+        boxWidth: box.clientWidth,
+      };
+    }
+    const t = table.getBoundingClientRect();
+    if (t.width === 0 && t.height === 0) return { overflow: 0, boxWidth: 0 };
+    const past = (edges) =>
+      Math.max(t.right - edges.right, edges.left - t.left);
+    const inHolder = contentEdges(holder(table));
+    const inMain = contentEdges(main);
+    const overflow = Math.max(past(inHolder), past(inMain));
+    const room = past(inHolder) >= past(inMain) ? inHolder : inMain;
+    return {
+      overflow: Math.round(overflow),
+      boxWidth: Math.round(room.right - room.left),
+    };
   };
   return [...document.querySelectorAll("main table")].map((table) => {
-    const box = scrollBox(table);
-    const overflow = box.scrollWidth - box.clientWidth;
+    const { overflow, boxWidth } = measure(table);
     let widest = null;
     if (overflow > 1) {
       for (const piece of table.querySelectorAll(
@@ -130,7 +174,7 @@ function measureTables() {
     return {
       scrolls: overflow > 1,
       overflow,
-      boxWidth: box.clientWidth,
+      boxWidth,
       headers: [...table.querySelectorAll("th")]
         .slice(0, 3)
         .map((th) => th.textContent.trim()),
@@ -218,4 +262,7 @@ recordMeasured(GATE, measuredPages);
 console.log(
   `${GATE}: ${pages.length} pages, ${tables} tables, ${scrolling} scroll`,
 );
-process.exit(scrolling > 0 || measuredPages === 0 ? 1 : 0);
+if (tables === 0) {
+  console.log(`FAIL no table measured: \`main table\` matched nothing`);
+}
+process.exit(scrolling > 0 || measuredPages === 0 || tables === 0 ? 1 : 0);
