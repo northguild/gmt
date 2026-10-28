@@ -281,14 +281,16 @@
      crystal, status line and prompt keep their full height and the examples
      sheet takes the rest, rather than a fixed 55% squeezing the hub off the
      top. Once a conversation starts, or a widget opens, the 55% sheet above
-     applies unchanged. */
+     applies unchanged. The sheet's floor is low (the examples title and about
+     two rows, which scroll inside it) so that the crystal and its status line
+     keep their height below the site header on short phones. */
   .gmt-hive-body[data-empty] .gmt-hive-chat {
     flex: 0 1 auto;
   }
 
   .gmt-hive-body[data-empty] .gmt-hive-rail {
     flex: 1 1 0;
-    min-height: 12rem;
+    min-height: 7rem;
   }
 
   .gmt-hive-body[data-empty] .gmt-hive-empty {

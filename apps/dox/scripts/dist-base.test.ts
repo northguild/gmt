@@ -152,7 +152,7 @@ describe("the built site keeps the /gmt base", () => {
       const [tag, inner] = [anchors[0][0], anchors[0][1]];
       const open = tag.slice(0, tag.indexOf(">") + 1);
       if (/\starget=/.test(open)) fail("opens in a new tab");
-      if (!/<span class="sr-only">NorthGuild home<\/span>/.test(inner))
+      if (!/<span class="sr-only[^"]*">NorthGuild home<\/span>/.test(inner))
         fail("no sr-only NorthGuild home name");
       const svg = /<svg\b[^>]*aria-hidden="true"[^>]*>([\s\S]*?)<\/svg>/.exec(
         inner,
