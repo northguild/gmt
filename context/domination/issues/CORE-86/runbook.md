@@ -27,7 +27,7 @@ the Domains list does not show it.
 | Always Use HTTPS | SSL/TLS → Edge Certificates | On | `http://` → `https://` |
 | Minimum TLS | SSL/TLS → Edge Certificates | 1.2 | |
 | Bot Fight Mode | Security → Bots | **Off** | it challenges scripted clients, including those that fetch `llms.txt` and the `.md` twins, and it cannot be limited to some paths |
-| AI crawlers | AI Crawl Control → Crawlers | **Block** each crawler in the "AI Crawler" category (GPTBot, CCBot, ClaudeBot, Google-Extended, …) one row at a time, **except Claude-User**; every search engine, AI search and AI assistant crawler stays allowed | matches `ai-train=no` in `robots.txt` for crawlers that ignore it. The category policy "Training: Block" is **not** used: it also blocks Googlebot and Claude-User. Recheck the list every few months; Cloudflare adds crawlers |
+| AI crawlers | AI Crawl Control → Crawlers | **Allow** every crawler, the "AI Crawler" category included (GPTBot, CCBot, ClaudeBot, Google-Extended, …); no category policy | matches `ai-train=yes` in `robots.txt`. `/api/` and `/mcp/` stay closed by `Disallow` |
 | Managed robots.txt / Bot Preference Sync | AI Crawl Control → Robots.txt | **Off** | on, Cloudflare prepends its own `Content-signal` and `Disallow` lines to our `robots.txt`. The commented preamble seen today is Cloudflare's default for a host that has no `robots.txt`; our file (landing repo) replaces it |
 | Email Address Obfuscation | Scrape Shield (search the setting name) | Off | it rewrites HTML and adds a `/cdn-cgi/` script. It is unrelated to Email Routing, which keeps working |
 | Rocket Loader | Speed → Settings → Content Optimization | Off | it rewrites `<script>` tags and breaks Astro islands |
@@ -90,7 +90,7 @@ certificate (allow a few minutes for the certificate).
 h $ND/                    # 200
 h $ND/api/x; h $ND/mcp/x  # 404 404 (the landing 404 page)
 n $ND/nope               # 404, the landing 404 page
-curl -s $ND/robots.txt    # exactly the landing repo's `robots.txt` (ai-train=no, Disallow /api/ and /mcp/); no "BEGIN Cloudflare Managed content"
+curl -s $ND/robots.txt    # exactly the landing repo's `robots.txt` (ai-train=yes, Disallow /api/ and /mcp/); no "BEGIN Cloudflare Managed content"
 h http://northguild.dev/  # 301 https://northguild.dev/
 curl -s $ND/ | grep -c cdn-cgi   # 0
 ```
