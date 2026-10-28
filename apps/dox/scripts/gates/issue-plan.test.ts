@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  DOWNLOAD_STEP,
   DRY_RUN_KEY,
   FLOOD_KEY,
+  NOT_UPLOADED_KEY,
+  SUMMARY_STEP,
+  UPLOAD_STEP,
   collect,
   flakyRows,
   keyOf,
@@ -34,6 +38,19 @@ const leg = (name: string, rows: unknown[]) => ({
   leg: name,
   summary: { status: "FAIL", rows } as any,
 });
+/** A sweep job as the run's job list gives it: its end, then each step's. */
+const job = (conclusion: string | null, steps: [string, string | null][]) => ({
+  conclusion,
+  steps: steps.map(([name, c]) => ({ name, conclusion: c })),
+});
+const GATES = "Gates, every page (shard 1/6)";
+/** The job of a leg whose runner finished and wrote summary.json. */
+const ranJob = job("failure", [
+  ["Install chromium", "success"],
+  [GATES, "failure"],
+  [SUMMARY_STEP, "success"],
+  [UPLOAD_STEP, "success"],
+]);
 const context = { runUrl: "https://example.test/run/1", sha: "abc1234" };
 const issue = (number: number, body: string, labels = ["dox-gate"]) => ({
   number,
@@ -158,6 +175,114 @@ describe("planIssueActions", () => {
       marker("dox-gate:could-not-run:firefox-2"),
     );
     expect(a.labels).toEqual(["bug", "dox-gate"]);
+    expect(a.body).toContain("did not say how the leg ended");
+    expect(a.body).toContain("lost its upload");
+  });
+
+  it("files every leg that wrote a summary the report never got as one not-uploaded issue", () => {
+    const actions = planIssueActions(
+      [
+        { leg: "chromium-1", summary: null, job: ranJob },
+        { leg: "webkit-2", summary: null, job: ranJob },
+      ],
+      [],
+      context,
+    ) as any[];
+    expect(actions).toHaveLength(1);
+    const [a] = actions;
+    expect(a.kind).toBe("open");
+    expect(a.title).toBe("Dox nightly: leg findings did not reach the report");
+    expect(a.body.split("\n")[0]).toBe(marker(NOT_UPLOADED_KEY));
+    expect(a.body).toContain(`\`${UPLOAD_STEP}\``);
+    expect(a.body).toContain(`\`${DOWNLOAD_STEP}\``);
+    expect(a.body).toContain("| chromium-1 | chromium |");
+    expect(a.body).toContain("| webkit-2 | webkit |");
+    expect(a.body).not.toContain("Reproduce");
+    expect(a.body).not.toContain("could not run");
+  });
+
+  it("does not flood when all twelve legs lost their upload", () => {
+    const legs = ["chromium", "webkit", "firefox"].flatMap((b) =>
+      [1, 2, 3, 4].map((i) => ({
+        leg: `${b}-${i}`,
+        summary: null,
+        job: ranJob,
+      })),
+    );
+    const actions = planIssueActions(legs, [], context) as any[];
+    expect(actions.map((a) => a.key)).toEqual([NOT_UPLOADED_KEY]);
+  });
+
+  it("files a leg whose runner wrote no summary as could-not-run, naming the first step that did not succeed", () => {
+    const crashed = job("failure", [
+      ["Install chromium", "success"],
+      [GATES, "failure"],
+      [SUMMARY_STEP, "failure"],
+      [UPLOAD_STEP, "success"],
+      ["Post Run actions/checkout@v7", "skipped"],
+    ]);
+    const [a] = planIssueActions(
+      [{ leg: "chromium-1", summary: null, job: crashed }],
+      [],
+      context,
+    ) as any[];
+    expect(a.body.split("\n")[0]).toBe(
+      marker("dox-gate:could-not-run:chromium-1"),
+    );
+    expect(a.title).toBe("Dox nightly could not run the chromium-1 leg");
+    expect(a.body).toContain("wrote no summary.json");
+    expect(a.body).toContain("Its job ended `failure`");
+    expect(a.body).toContain(`\`${GATES}\` (\`failure\`)`);
+    expect(a.body).not.toContain("lost its upload");
+  });
+
+  it("names a cancelled gates step and an install that failed before the gates", () => {
+    const cancelled = job("cancelled", [
+      [GATES, "cancelled"],
+      [SUMMARY_STEP, "failure"],
+    ]);
+    const install = job("failure", [
+      ["Install webkit", "failure"],
+      [GATES, "skipped"],
+      [SUMMARY_STEP, "failure"],
+    ]);
+    const actions = planIssueActions(
+      [
+        { leg: "firefox-1", summary: null, job: cancelled },
+        { leg: "webkit-1", summary: null, job: install },
+      ],
+      [],
+      context,
+    ) as any[];
+    const body = (leg: string) =>
+      actions.find((a) => a.key === `dox-gate:could-not-run:${leg}`).body;
+    expect(body("firefox-1")).toContain(
+      `Its job ended \`cancelled\`; the first step that did not succeed is \`${GATES}\` (\`cancelled\`)`,
+    );
+    expect(body("webkit-1")).toContain(
+      "the first step that did not succeed is `Install webkit` (`failure`)",
+    );
+  });
+
+  it("files a job that never started a step as could-not-run", () => {
+    const [a] = planIssueActions(
+      [{ leg: "webkit-3", summary: null, job: job("cancelled", []) }],
+      [],
+      context,
+    ) as any[];
+    expect(a.key).toBe("dox-gate:could-not-run:webkit-3");
+    expect(a.body).toContain("Its job ended `cancelled`.");
+  });
+
+  it("ignores the job of a leg that has a summary", () => {
+    const crashed = job("cancelled", [[SUMMARY_STEP, "failure"]]);
+    expect(
+      planIssueActions(
+        [{ ...leg("chromium-1", []), job: crashed }],
+        [],
+        context,
+      ),
+    ).toEqual([]);
   });
 
   it("files a FAIL with no structured findings as unstructured, quoting the log tail", () => {

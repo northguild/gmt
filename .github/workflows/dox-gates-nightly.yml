@@ -14,6 +14,12 @@ name: Dox gates nightly
 # share the work. The shard counts are sized from measured local times (built.md, Runbooks, "The
 # nightly gate sweep"). Adding or removing a leg means changing the matrix and the LEGS list of the
 # report job, which names every leg so one that crashed without uploading is still filed.
+#
+# A leg whose summary never reaches the report is sorted by its job (apps/dox/scripts/gates/
+# issue-plan.mjs, `missingSummary`): if its "Check the summary was written" step passed, the runner
+# wrote the summary and the upload or download lost it; otherwise the leg could not run. The report
+# reads job and step names, so renaming the sweep job, that step, "Upload the findings" or
+# "Download the findings" means changing the constants there (a test checks them).
 
 on:
   workflow_dispatch:
@@ -167,6 +173,15 @@ jobs:
           pnpm --filter dox gates --all --tier nightly --browsers ${{ matrix.browser }}
           --themes dark,light --retries 1 --shard ${{ matrix.shard }}
 
+      # Passes only when the runner left a summary the report can read. The report reads this
+      # step's result from the jobs API to tell a leg that lost its upload from one that never
+      # finished, since both end with the gates step failed and the upload step passed.
+      - name: Check the summary was written
+        if: always()
+        run: >
+          node -e 'const s = JSON.parse(require("node:fs").readFileSync("apps/dox/.gates/summary.json", "utf8"));
+          if (!Array.isArray(s.rows)) throw new Error("summary.json has no rows")'
+
       # `.gates/` starts with a dot, and upload-artifact skips dot paths unless told otherwise; without
       # `include-hidden-files` nothing uploads and the report files every leg as could-not-run.
       - name: Upload the findings
@@ -183,7 +198,8 @@ jobs:
 
   # `!cancelled()` runs this after a failed leg (the gates failing is why it exists) and not after a
   # person cancels the run. One job that installs nothing and runs first-party Node and `gh`, so
-  # there is no third-party code beside the write token.
+  # there is no third-party code beside the write token. `actions: read` lets it download the
+  # artifacts and, for a leg with no summary, read the run's jobs.
   report:
     name: Report to issues
     needs: [decide, sweep]
