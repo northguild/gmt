@@ -180,6 +180,23 @@ function replaceElements(
   return out + body.slice(cursor);
 }
 
+/**
+ * Remove the indentation every non-blank line shares. A wrapper's children are indented for the
+ * author's sake; MDX ignores it, but Markdown reads four spaces after a blank line as code.
+ */
+function dedent(text: string): string {
+  const indents = text
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => /^[ \t]*/.exec(line)?.[0].length ?? 0);
+  const common = indents.length > 0 ? Math.min(...indents) : 0;
+  if (common === 0) return text;
+  return text
+    .split("\n")
+    .map((line) => (line.trim() === "" ? "" : line.slice(common)))
+    .join("\n");
+}
+
 const fence = (code: string): string =>
   code.trim() ? `\n\`\`\`js\n${code.trim()}\n\`\`\`\n` : "";
 
@@ -418,8 +435,12 @@ export function renderMdxComponents(body: string): string {
     "Card",
   ]) {
     out = replaceElements(out, wrapper, (props, children) => {
-      const caption = [props.title, props.caption].filter(Boolean).join(" — ");
-      return `${caption ? `\n**${caption}**\n` : ""}${children}`;
+      // A template-literal title's `${expr}` becomes `{expr}`, which `stripMdx` replaces with the figure.
+      const caption = [props.title, props.caption]
+        .filter(Boolean)
+        .join(" — ")
+        .replace(/\$\{/g, "{");
+      return `${caption ? `\n**${caption}**\n` : ""}${dedent(children)}`;
     });
   }
 

@@ -4,7 +4,8 @@
  * The root `LICENSE` and each `packages/<name>/LICENSE` hold the MIT text. Every other top-level
  * folder that git tracks holds its own `LICENSE` that reserves all rights, so a new folder cannot
  * fall under the root MIT text by accident. Folders that hold only repository configuration are
- * exempt.
+ * exempt. The root files `AGENTS.md` and `CLAUDE.md` are the entry points to the agent setup in
+ * `.agents/`, so each carries a notice that puts it under `.agents/LICENSE` instead of the root MIT.
  *
  * Usage: node scripts/licences.mjs check
  */
@@ -17,6 +18,9 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const CONFIG_ONLY = new Set([".github", ".changeset", ".vscode"]);
 const MIT = /^MIT License\n/;
 const RESERVED = /^Copyright \(c\) \d{4} NorthGuild\. All rights reserved\.\n/;
+const AGENT_ENTRY_POINTS = ["AGENTS.md", "CLAUDE.md"];
+const AGENT_NOTICE =
+  /^Copyright \(c\) \d{4} NorthGuild\. All rights reserved under \[`\.agents\/LICENSE`\]\(\.agents\/LICENSE\); the root MIT licence does not apply to this file\.$/m;
 
 /** Lists the tracked paths under `root`, so local build and tool folders are left out. */
 function trackedPaths(root) {
@@ -33,6 +37,14 @@ export function findLicenceProblems(root, paths = trackedPaths(root)) {
 
   if (!MIT.test(read(join(root, "LICENSE")) ?? "")) {
     problems.push("LICENSE: the root licence must be the MIT text");
+  }
+
+  for (const file of AGENT_ENTRY_POINTS) {
+    if (!AGENT_NOTICE.test(read(join(root, file)) ?? "")) {
+      problems.push(
+        `${file}: the agent entry point must carry the all-rights-reserved notice for .agents/LICENSE`,
+      );
+    }
   }
 
   const folders = new Set(

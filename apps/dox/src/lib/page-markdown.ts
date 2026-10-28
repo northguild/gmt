@@ -154,6 +154,9 @@ export function stripMdx(
       // The wrapper the generator puts round an Options or Members table (a styling hook); the
       // table inside stays.
       .replace(/<div class="gmt-ref-table"[^>]*>\s*([\s\S]*?)\s*<\/div>/g, "$1")
+      // Any other `<div …>` or `</div>` alone on a line is a layout hook (the home page's grid,
+      // a reveal group); the text between stays.
+      .replace(/^[ \t]*<\/?div\b[^>]*>[ \t]*$/gm, "")
       // The span the generator puts round a quoted, hyphenated literal in prose (`"4-5-4"`) so
       // it never wraps after the hyphen; the text stays.
       .replace(/<span class="gmt-nobreak">([^<]*)<\/span>/g, "$1")
@@ -188,6 +191,10 @@ export function stripMdx(
 
   // A `.map(…)` block is a generated table or chart, whose figures the prose already states.
   md = outsideFences(md, dropMapBlocks);
+
+  // Dropped tags and blocks leave runs of blank lines; one is enough. Lines holding only spaces
+  // count as blank.
+  md = outsideFences(md, (part) => part.replace(/\n(?:[ \t]*\n){2,}/g, "\n\n"));
 
   return prefixMarkdownLinks(md);
 }

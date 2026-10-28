@@ -587,6 +587,19 @@ Body text here.`;
       expect(readFileSync(twin, "utf8")).toMatch(/^# @northguild\/gmt$/m);
     });
 
+    // The two pages with layout `<div>`s and indented cards: no wrapper survives, and no prose
+    // line outside a fence is indented, which Markdown would read as a code block.
+    it.each(["index.md", "why-gmt.md"])("%s keeps no layout HTML", (file) => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const prose = readFileSync(resolve(distDir, file), "utf8").replace(
+        /^[ \t]*```[\s\S]*?^[ \t]*```/gm,
+        "",
+      );
+      expect(prose).not.toMatch(/^[ \t]*<\/?div\b/m);
+      expect(prose).not.toMatch(/^(?: {4}|\t)\S/m);
+    });
+
     it("sample .md route exists and is clean markdown", () => {
       const distMd = resolve(
         import.meta.dirname,

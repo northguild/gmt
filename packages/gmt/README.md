@@ -99,6 +99,7 @@ MIT. The four npm packages in `packages/` and the
 [root `LICENSE`](https://github.com/northguild/gmt/blob/main/LICENSE) are MIT.
 
 Every other folder is © 2026 NorthGuild, all rights reserved, under the `LICENSE` file in that
-folder: `apps/` (the docs site), `context/`, `.agents/`, `.claude/`, `scripts/` and `docs/`.
+folder: `apps/` (the docs site), `context/`, `.agents/`, `.claude/`, `scripts/` and `docs/`. The
+root files `AGENTS.md` and `CLAUDE.md` are reserved too, under `.agents/LICENSE`.
 Code examples in the documentation may be used under MIT-0 (MIT No Attribution); see
 [`apps/LICENSE`](https://github.com/northguild/gmt/blob/main/apps/LICENSE).
