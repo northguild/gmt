@@ -194,6 +194,7 @@
 
   .gmt-leap-day .gmt-leap-table td::before {
     content: attr(data-label);
+    content: attr(data-label) / "";
     display: block;
     font-size: var(--gmt-text-xs);
     color: var(--gmt-ice);
