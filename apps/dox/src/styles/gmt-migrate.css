@@ -72,7 +72,7 @@
 
 .sl-markdown-content .gmt-diff-id {
   font-family: var(--gmt-font-mono);
-  color: var(--gmt-cyan);
+  color: var(--gmt-cyan-ink);
 }
 
 .sl-markdown-content .gmt-diff-facts {
