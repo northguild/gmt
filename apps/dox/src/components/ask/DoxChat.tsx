@@ -43,6 +43,7 @@ import type { StickToBottomContext } from "use-stick-to-bottom";
 import { SearchIcon } from "lucide-react";
 
 import { referenceRoutes } from "~/generated/reference/route-manifest";
+import { gmtStats } from "~/data/gmt-stats";
 import { CORPUS_SUMMARY } from "~/lib/chat-constants";
 import { checkUserText } from "~/lib/chat-sanitize";
 import { pageContextFromReferrer } from "~/lib/page-context";
@@ -143,6 +144,9 @@ async function chatFetch(
   });
   throw error;
 }
+
+/** A fixed locale, so the server render and the browser agree on the digits. */
+const GMT_TEST_COUNT = new Intl.NumberFormat("en-US").format(gmtStats.tests);
 
 export interface DoxChatProps {
   /** Today's budget, from `/api/brains`. Null while loading or if the endpoint
@@ -703,6 +707,14 @@ export function DoxChat({
               />
             </PromptInputFooter>
           </PromptInput>
+          {/* Always shown, under every question. The prose comes from a free
+              model and can be wrong; a widget runs the library itself. */}
+          <p className="gmt-hive-accuracy-note">
+            Free AI models write Dox&rsquo;s answers and can get things wrong,
+            so check them before you rely on them. The widgets and tools run{" "}
+            <code>@northguild/gmt</code> itself, checked by {GMT_TEST_COUNT}{" "}
+            tests.
+          </p>
         </div>
       </div>
     </div>

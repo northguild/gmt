@@ -2460,6 +2460,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Composer:** a real `<textarea>` from `prompt-input.tsx`. The vendored file defers
   `form.reset()` to the success paths so a refused send keeps the reader's text — keep that
   on any AI Elements re-sync.
+- **Accuracy note** (`.gmt-hive-accuracy-note`): one standing line under the composer. Free
+  AI models write the answers and can get things wrong, so the reader should check them. The
+  widgets and tools run `@northguild/gmt` itself, and the line cites its test count from
+  `src/data/gmt-stats.json`, formatted in `en-US` so the server and browser renders match.
 - **Retrieval trace** (`RetrievalTrace.tsx`): chunk count and titles, zero for an
   out-of-corpus question, plus the brain that actually answered.
   - **Timings.** The Worker times each stage (`worker/timing.ts`): ledger, corpus, search,

@@ -1508,6 +1508,21 @@
   margin: 0 auto;
 }
 
+/* The standing note under the composer: small and quiet, since it shows under
+   every question, but in the readable ice tone rather than a faint one. */
+.gmt-hive-accuracy-note {
+  margin: var(--gmt-space-2) 0 0;
+  font-size: var(--gmt-text-xs);
+  line-height: 1.5;
+  color: var(--gmt-ice-dim);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.gmt-hive-accuracy-note code {
+  font-size: inherit;
+}
+
 /* ------------------------------------------------------------------ *
  * Two-column zigzag — the one container breakpoint.
  * Below this the layout is a single column.
