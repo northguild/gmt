@@ -70,7 +70,7 @@ Only a namespace that exports functions has a link. `regex` and `types` have non
 
 ## 6. Hand edit: a sampled function changed
 
-This applies when the story renames or removes a function the sample shows, or changes what it returns.
+This applies when the story renames or removes a function the sample or the DST example shows, or changes what it returns. The `new Date()` line in the DST example is not checked: if you change it, run it under `TZ=Europe/Berlin` and `TZ=Asia/Tokyo` and paste both results.
 
 1. Build the library if you have not: `pnpm --filter @northguild/gmt build`.
 2. Run the call for real and print its result. From `packages/gmt`, the package name resolves to the built library:

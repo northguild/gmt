@@ -1,0 +1,17 @@
+---
+title: Bundle size
+description: Minified and gzipped bytes of the whole package and of single functions, measured from the source on every build, with the budget each is held to.
+---
+
+import BundleSize from "~/components/BundleSize.astro";
+import { gmtStats, formatCount } from "~/data/gmt-stats";
+
+Every import of `@northguild/gmt` carries `@js-temporal/polyfill`, so the polyfill row is the floor under every other row: no import is smaller than it. The last four columns of the other rows show what is left once the floor is taken away.
+
+The `@northguild/gmt` row is the whole package, all {formatCount(gmtStats.functions)} public functions, which is the figure a package-size service such as Bundlephobia reports. A single function from a module costs far less than that row.
+
+<BundleSize />
+
+Sizes come from bundling `packages/gmt/src` with esbuild, minified, as ES modules for a neutral platform. 1 kB is 1,000 bytes. The minified size of each row is gated: the repository's check fails when it passes the budget in the last column, and a budget changes only by a reviewed edit. Gzipped sizes are reported and never gated, because they vary with the version of zlib.
+
+The polyfill stays until a stable Safari ships `Temporal` and the weekly run against native `Temporal` passes on Node 26, Chromium, Firefox and WebKit for 12 weeks running ([#316](https://github.com/northguild/gmt/issues/316)).

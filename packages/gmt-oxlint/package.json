@@ -1,12 +1,15 @@
 {
   "name": "@northguild/gmt-oxlint",
   "version": "1.2.1",
-  "description": "Oxlint JS plugin for banning Date APIs in Temporal-first projects",
+  "description": "Oxlint plugin that bans the JavaScript Date object and Date-based libraries, and names the Temporal-based @northguild/gmt function to use instead.",
   "keywords": [
     "date",
     "eslint-plugin",
+    "eslintplugin",
     "lint",
+    "no-date",
     "oxlint",
+    "oxlint-plugin",
     "tanstack-intent",
     "temporal"
   ],

@@ -1,0 +1,5 @@
+Copyright (c) 2026 NorthGuild. All rights reserved.
+
+The files in `.agents/` (agent personas and skills) are not licensed for reuse, and neither are
+`AGENTS.md` and `CLAUDE.md` at the repository root, the entry points to them. The MIT licence in the
+repository root does not apply to any of them.

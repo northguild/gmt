@@ -13,7 +13,19 @@ import { stripMdx } from "./page-markdown";
  * This test reads the pages and fails on any expression that `stripMdx` cannot resolve.
  */
 
-const PAGES = ["index.mdx", "why-gmt.mdx", "compare.mdx"] as const;
+const PAGES = [
+  "index.mdx",
+  "why-gmt.mdx",
+  "compare.mdx",
+  "compare/behaviour.mdx",
+  "migrate/index.mdx",
+  "migrate/date-fns.mdx",
+  "migrate/luxon.mdx",
+  "migrate/dayjs.mdx",
+  "migrate/moment.mdx",
+  "migrate/internationalized-date.mdx",
+  "migrate/temporal.mdx",
+] as const;
 
 const sourceOf = (page: string): string =>
   readFileSync(

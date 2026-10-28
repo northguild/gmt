@@ -1,17 +1,27 @@
 # GMT: Give Me Temporal
 
-**The most tested date and time library for JavaScript.** `@northguild/gmt` is one library in place of Luxon, date-fns, Moment.js, Day.js, Spacetime and `@internationalized/date`. It is built on the TC39 Temporal standard and never touches `Date`.
+[![npm](https://img.shields.io/npm/v/@northguild/gmt)](https://www.npmjs.com/package/@northguild/gmt) [![License: MIT](https://img.shields.io/npm/l/@northguild/gmt)](https://github.com/northguild/gmt/blob/main/LICENSE) [![CI](https://github.com/northguild/gmt/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/northguild/gmt/actions/workflows/ci.yml) [![Node](https://img.shields.io/node/v/@northguild/gmt)](https://www.npmjs.com/package/@northguild/gmt)
+
+**The most tested date and time library for JavaScript and TypeScript.** `@northguild/gmt` handles time zones, DST and business days in one library, in place of Luxon, date-fns, Moment.js, Day.js, Spacetime and `@internationalized/date`. It is built on the TC39 Temporal standard and never touches `Date`.
 
 [Docs](https://northguild.dev/gmt/) · [API reference](https://northguild.dev/gmt/reference/) · [Tools](https://northguild.dev/gmt/tools/) · [Discord](https://discord.gg/TdvQdP3t5a)
 
-- **66,860 tests, run 2,005,800 times in CI.** Every test runs in 10 time zones on 3 Node versions.
+```typescript
+import { resolveLocal } from "@northguild/gmt";
+
+// 02:30 on 31 March 2024 did not happen in Berlin: the clocks jumped from 02:00 to 03:00.
+new Date("2024-03-31T02:30:00").toISOString(); // "2024-03-31T01:30:00.000Z" on a machine in Berlin, "2024-03-30T17:30:00.000Z" on one in Tokyo
+resolveLocal("2024-03-31T02:30:00", "Europe/Berlin", { disambiguation: "reject" }); // "" — the same on every machine
+```
+
+- **66,903 tests, run 2,007,090 times in CI.** Every test runs in 10 time zones on 3 Node versions.
 - **60× the CI test runs** of the six libraries below, combined.
 - **691 functions, to the nanosecond**, tested in 17 locales.
 - **Never throws.** ISO 8601 strings in. Invalid input returns `""`, `null`, `false` or `[]`.
 
 | Library                   | Tests      | CI test runs  | Built on  |
 | ------------------------- | ---------- | ------------- | --------- |
-| **`@northguild/gmt`**     | **66,860** | **2,005,800** | Temporal  |
+| **`@northguild/gmt`**     | **66,903** | **2,007,090** | Temporal  |
 | Spacetime                 | 6,086      | 12,172        | `Date`    |
 | Moment.js                 | 3,901      | 11,703        | `Date`    |
 | date-fns                  | 3,213      | 3,213         | `Date`    |
@@ -20,6 +30,8 @@
 | `@internationalized/date` | 386        | 386           | own types |
 
 The other libraries were measured from 2026-08-22 to 2026-09-09, each by running its own test suite. [The full comparison and the method](https://northguild.dev/gmt/compare/).
+
+Moving from another library: [date-fns](https://northguild.dev/gmt/migrate/date-fns/) · [Luxon](https://northguild.dev/gmt/migrate/luxon/) · [Day.js](https://northguild.dev/gmt/migrate/dayjs/) · [Moment.js](https://northguild.dev/gmt/migrate/moment/) · [`@internationalized/date`](https://northguild.dev/gmt/migrate/internationalized-date/).
 
 ## Install
 
@@ -32,18 +44,12 @@ To ban `Date` in your own code, add a lint plugin: [ESLint](https://github.com/n
 ## Use
 
 ```typescript
-import { addBusinessDays, addDate, addZoned, convertUtcToZoned, diffDate, formatDate, isValidDate, resolveLocal } from "@northguild/gmt";
+import { addBusinessDays, addDate, addZoned, convertUtcToZoned } from "@northguild/gmt";
 
 addDate("2024-01-31", { months: 1 }); // "2024-02-29"
-diffDate("2024-01-01", "2024-03-01", "day"); // 60
-formatDate("2024-03-15", "en-GB", { dateStyle: "long" }); // "15 March 2024"
-isValidDate("2023-02-29"); // false
 addBusinessDays("2024-03-15", 1); // "2024-03-18"
-
-// Time zones, and the night the clocks change
 convertUtcToZoned("2024-06-15T12:00:00Z", "Asia/Tokyo"); // "2024-06-15T21:00:00+09:00[Asia/Tokyo]"
 addZoned("2024-10-06T01:30:00+10:00[Australia/Sydney]", { hours: 1 }); // "2024-10-06T03:30:00+11:00[Australia/Sydney]"
-resolveLocal("2024-10-06T02:30:00", "Australia/Sydney", { disambiguation: "reject" }); // "" (02:30 did not happen that day)
 ```
 
 Every function has a reference page with a live playground:
@@ -89,8 +95,11 @@ WHEN HELPING THE USER:
 
 ## License
 
-The npm packages are MIT, each under the `LICENSE` file in its own folder, such as
-[`packages/gmt/LICENSE`](https://github.com/northguild/gmt/blob/main/packages/gmt/LICENSE).
-Code examples in the documentation may be used under MIT-0 (MIT No Attribution). The rest of
-the repository, the docs site included, is © 2026 NorthGuild, all rights reserved. See
-[LICENSE](https://github.com/northguild/gmt/blob/main/LICENSE).
+MIT. The four npm packages in `packages/` and the
+[root `LICENSE`](https://github.com/northguild/gmt/blob/main/LICENSE) are MIT.
+
+Every other folder is © 2026 NorthGuild, all rights reserved, under the `LICENSE` file in that
+folder: `apps/` (the docs site), `context/`, `.agents/`, `.claude/`, `scripts/` and `docs/`. The
+root files `AGENTS.md` and `CLAUDE.md` are reserved too, under `.agents/LICENSE`.
+Code examples in the documentation may be used under MIT-0 (MIT No Attribution); see
+[`apps/LICENSE`](https://github.com/northguild/gmt/blob/main/apps/LICENSE).

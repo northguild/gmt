@@ -1,5 +1,7 @@
 # GMT — Claude Code Entry Point
 
+Copyright (c) 2026 NorthGuild. All rights reserved under [`.agents/LICENSE`](.agents/LICENSE); the root MIT licence does not apply to this file.
+
 **Read first:** [AGENTS.md](./AGENTS.md) — core rules, context file index, and quick reference.
 
 ## Git — read before any `git` or `gh` command

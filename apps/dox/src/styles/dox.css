@@ -90,8 +90,8 @@ html:not([data-has-sidebar]) .sl-container {
  *   2. the page title's, its own .content-panel — max-width --sl-content-width
  *   3. the content's, holding the widget        — the one with the marker
  *
- * A `:has()` on the container itself therefore widened (3) and left (2) at
- * 50rem, so the `<h1>` stayed in a narrow column while the prose and the widget
+ * A `:has()` on the container itself therefore widened (3) and left (2) at the
+ * content width, so the `<h1>` stayed in a narrow column while the prose and the widget
  * beneath it ran the full width of the pane — measured at 2560px: title 800px,
  * content 1912px, on `/tools/zoned-earth/` and `/tools/zone-planner/` as much as
  * anywhere. Matching every `.sl-container` inside `main` takes the title with

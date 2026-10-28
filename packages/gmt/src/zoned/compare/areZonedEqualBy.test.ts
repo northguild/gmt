@@ -1,4 +1,5 @@
 import {
+  linkPairIsOneZone,
   dateLineCrossingAt,
   dateLineCrossingTimeZones,
   localNoonBattleCases,
@@ -244,6 +245,50 @@ describe("areZonedEqualBy across the 1844 date-line crossings (zoned.E)", () => 
           "week",
         ),
       ).toBe(false);
+    },
+  );
+});
+
+// Two identifiers of one time zone are one zone (Temporal TimeZoneEquals), so the same-zone rule
+// applies: buckets are compared as instants, and a repeated wall clock is not a match.
+describe("areZonedEqualBy across two identifiers of one time zone", () => {
+  it.each`
+    value1                                        | value2                                       | unit      | expected | label
+    ${"2024-10-27T03:30:00+03:00[Europe/Kiev]"}   | ${"2024-10-27T03:45:00+03:00[Europe/Kyiv]"}  | ${"hour"} | ${true}  | ${"the same pass of Kyiv's repeated hour"}
+    ${"2024-01-01T10:30:00+00:00[UTC]"}           | ${"2024-01-01T10:45:00+00:00[Etc/UTC]"}      | ${"hour"} | ${true}  | ${"UTC and Etc/UTC share the 10:00 hour"}
+    ${"2024-01-01T05:30:00+05:30[Asia/Calcutta]"} | ${"2024-01-01T23:30:00+05:30[Asia/Kolkata]"} | ${"day"}  | ${true}  | ${"Calcutta and Kolkata share the local day"}
+  `(
+    "returns $expected for $value1 and $value2 by $unit ($label)",
+    ({
+      value1,
+      value2,
+      unit,
+      expected,
+    }: {
+      value1: string;
+      value2: string;
+      unit: "hour" | "day";
+      expected: boolean;
+    }) => {
+      expect(areZonedEqualBy(value1, value2, unit)).toBe(expected);
+    },
+  );
+});
+
+// A repeated hour is two hours only where the host resolves the two names to one zone (temporalCompat
+// D19); otherwise the pair is two zones and the clock labels decide. The expected value is the
+// host's own answer, so the rows hold on every engine and fail under a name-equality check.
+describe("areZonedEqualBy across an IANA link pair in a repeated hour", () => {
+  it.each`
+    value1                                        | value2                                           | zone1              | zone2
+    ${"2024-10-27T03:30:00+03:00[Europe/Kiev]"}   | ${"2024-10-27T03:30:00+02:00[Europe/Kyiv]"}      | ${"Europe/Kiev"}   | ${"Europe/Kyiv"}
+    ${"2024-04-07T02:30:00+11:00[Australia/ACT]"} | ${"2024-04-07T02:30:00+10:00[Australia/Sydney]"} | ${"Australia/ACT"} | ${"Australia/Sydney"}
+  `(
+    "answers as the host resolves $zone1 and $zone2",
+    ({ value1, value2, zone1, zone2 }: Record<string, string>) => {
+      expect(areZonedEqualBy(value1, value2, "hour")).toBe(
+        !linkPairIsOneZone(zone1, zone2),
+      );
     },
   );
 });

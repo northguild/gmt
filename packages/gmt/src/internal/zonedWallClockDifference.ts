@@ -1554,7 +1554,9 @@ export function isCalendarDifferenceAcrossZones(
  * @param one the start
  * @param two the end
  * @param options Temporal `largestUnit` / `smallestUnit` / `roundingIncrement` / `roundingMode`
- * @returns the difference; throws where TC39 Temporal throws
+ * @returns the difference; throws where TC39 Temporal throws for the rounding options. A calendar
+ *   `largestUnit` across two time zones is not rejected here (TC39 DifferenceTemporalZonedDateTime
+ *   throws a RangeError): callers gate it with `isCalendarDifferenceAcrossZones`.
  */
 export function zonedUntil(
   one: Temporal.ZonedDateTime,
@@ -1568,13 +1570,17 @@ export function zonedUntil(
     options.roundingIncrement,
     options.roundingMode ?? "trunc",
   );
+  // TimeZoneEquals runs at most once per call, and only after the cheaper conditions need it.
+  let sameZone: boolean | undefined;
+  const inSameZone = (): boolean => (sameZone ??= timeZoneEquals(one, two));
+
   // Defect 3: a calendar whose arithmetic the polyfill gets wrong takes the spec path outright,
   // because a wrong month-end difference (D6) is returned, not thrown.
   if (
     settings !== null &&
-    one.timeZoneId === two.timeZoneId &&
     one.calendarId === two.calendarId &&
-    isCalendarArithmeticCompatNeeded(one.calendarId)
+    isCalendarArithmeticCompatNeeded(one.calendarId) &&
+    inSameZone()
   ) {
     const bySpec = untilAtLimit(one, two, options, settings);
     if (bySpec !== null) return bySpec;
@@ -1584,11 +1590,11 @@ export function zonedUntil(
   // calendar `smallestUnit` from a day that a month add would constrain takes the spec path too.
   if (
     settings !== null &&
-    one.timeZoneId === two.timeZoneId &&
     one.calendarId === two.calendarId &&
     isNudgeWindowUnit(settings.smallestUnit) &&
     one.day >= 29 &&
-    isNudgeWindowCompatNeeded()
+    isNudgeWindowCompatNeeded() &&
+    inSameZone()
   ) {
     const bySpec = untilAtLimit(one, two, options, settings);
     if (bySpec !== null) return bySpec;
@@ -1596,11 +1602,11 @@ export function zonedUntil(
 
   const atRangeLimit =
     settings !== null &&
-    one.timeZoneId === two.timeZoneId &&
     reachesRangeLimit(
       [one.epochNanoseconds, two.epochNanoseconds],
       roundingReach(settings),
-    );
+    ) &&
+    inSameZone();
 
   return runAtRangeLimit(
     one.timeZoneId,

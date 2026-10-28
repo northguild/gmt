@@ -84,6 +84,7 @@ import {
 } from "./build-utils/render-table";
 import { buildRedirects } from "./build-utils/redirects";
 import { SITE_BASE } from "../src/lib/site";
+import { plainText, referenceHeadTitle } from "./build-utils/reference-title";
 import { MOVED_PAGES } from "./build-utils/moved-pages";
 import { RENAMED_FUNCTIONS } from "./build-utils/renamed-functions";
 import {
@@ -2410,7 +2411,7 @@ export function renderFn(doc: FnDoc, page: PageContext): string {
   const lines: string[] = [];
   lines.push(`---`);
   lines.push(`title: ${JSON.stringify(doc.name)}`);
-  lines.push(`description: ${JSON.stringify(doc.description)}`);
+  lines.push(...titleFields(doc));
   lines.push(`slug: ${JSON.stringify(slug)}`);
   lines.push(`---`);
   lines.push("");
@@ -2576,6 +2577,17 @@ export function renderFn(doc: FnDoc, page: PageContext): string {
   return lines.join("\n");
 }
 
+/**
+ * The frontmatter lines every symbol page shares after its `title`: a plain-text `description`
+ * (the body keeps the Markdown form) and the `headTitle` the `<title>` uses.
+ */
+function titleFields(doc: FnDoc | TypeDoc | RegexDoc): string[] {
+  return [
+    `description: ${JSON.stringify(plainText(doc.description))}`,
+    `headTitle: ${JSON.stringify(referenceHeadTitle(doc))}`,
+  ];
+}
+
 /** The page of a shared type: one that two or more public functions reach. */
 export function renderType(doc: TypeDoc, page: PageContext): string {
   const { usage } = page;
@@ -2588,7 +2600,7 @@ export function renderType(doc: TypeDoc, page: PageContext): string {
   const lines: string[] = [];
   lines.push(`---`);
   lines.push(`title: ${JSON.stringify(doc.name)}`);
-  lines.push(`description: ${JSON.stringify(doc.description)}`);
+  lines.push(...titleFields(doc));
   lines.push(`slug: ${JSON.stringify(typePageSlug(doc.name))}`);
   lines.push(`---`);
   lines.push("");
@@ -2639,7 +2651,7 @@ function renderRegex(doc: RegexDoc): string {
   const lines: string[] = [];
   lines.push(`---`);
   lines.push(`title: ${JSON.stringify(doc.name)}`);
-  lines.push(`description: ${JSON.stringify(doc.description)}`);
+  lines.push(...titleFields(doc));
   lines.push(`slug: ${JSON.stringify(slug)}`);
   lines.push(`---`);
   lines.push("");
@@ -2963,6 +2975,8 @@ function referenceInputs(): string[] {
     resolve(appRoot, "scripts", "build-utils", "index-pages.ts"),
     resolve(appRoot, "scripts", "build-utils", "null-is-empty.ts"),
     resolve(appRoot, "scripts", "build-utils", "redirects.ts"),
+    resolve(appRoot, "scripts", "build-utils", "reference-title.ts"),
+    resolve(appRoot, "src", "lib", "head-tags.ts"),
     resolve(appRoot, "scripts", "build-utils", "renamed-functions.ts"),
     resolve(appRoot, "scripts", "build-utils", "reference-urls.ts"),
     resolve(appRoot, "scripts", "build-utils", "released-exports.ts"),

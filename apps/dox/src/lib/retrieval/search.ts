@@ -51,6 +51,9 @@ const STOPWORDS = new Set([
   "it",
   "this",
   "that",
+  // Every page is about a JavaScript library, so these name no topic.
+  "javascript",
+  "typescript",
 ]);
 
 /* A function's name is the sharpest statement of what it does, but the

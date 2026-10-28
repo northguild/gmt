@@ -26929,12 +26929,28 @@
     "module": "compare",
     "kind": "function",
     "signature": "areZonedEqual(value1: string, value2: string): boolean",
-    "description": "Compare two zoned datetime strings for exact local-field equality.",
+    "description": "Compare two zoned datetime strings the way Temporal's `ZonedDateTime.prototype.equals` does.",
     "sourcePath": "packages/gmt/src/zoned/compare/areZonedEqual.ts",
     "examples": [
       {
         "call": "areZonedEqual(\"2024-02-29T12:34:56.789+00:00[UTC]\", \"2024-02-29T12:34:56.789+00:00[UTC]\")",
         "result": "true"
+      },
+      {
+        "call": "areZonedEqual(\"2024-10-27T02:30:00+02:00[Europe/Berlin]\", \"2024-10-27T02:30:00+01:00[Europe/Berlin]\")",
+        "result": "false (the two passes of Berlin's repeated 02:30 are an hour apart)"
+      },
+      {
+        "call": "areZonedEqual(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-01-01T00:00:00+00:00[Etc/UTC]\")",
+        "result": "true (one time zone, two identifiers)"
+      },
+      {
+        "call": "areZonedEqual(\"2024-01-01T00:00:00+00:00[UTC]\", \"2024-01-01T00:00:00+00:00[GMT]\")",
+        "result": "true (GMT is another identifier of UTC)"
+      },
+      {
+        "call": "areZonedEqual(\"2024-01-01T12:00:00+01:00[Europe/Berlin]\", \"2024-01-01T20:00:00+09:00[Asia/Tokyo]\")",
+        "result": "false (the same instant in two zones)"
       },
       {
         "call": "areZonedEqual(\"invalid\", \"2024-02-29T12:34:56.789+00:00[UTC]\")",

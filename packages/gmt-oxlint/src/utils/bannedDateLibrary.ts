@@ -13,20 +13,26 @@ export const BANNED_DATE_LIBRARIES = [
   "luxon",
   "date-fns",
   "date-fns-tz",
+  "@date-fns/tz",
   "spacetime",
 ] as const;
 
+export type BannedDateLibrary = (typeof BANNED_DATE_LIBRARIES)[number];
+
 /**
- * True for a banned package or any of its subpaths (`date-fns/format`), and
- * false for anything relative — `./my-moment-helper` is a local file, not the
- * package, even though its name contains one.
+ * The banned package a specifier imports, for the package itself or any of
+ * its subpaths (`date-fns/format`), and `undefined` for anything else. A
+ * relative path is never a package: `./my-moment-helper` is a local file,
+ * even though its name contains one.
  */
-export const isBannedDateLibrary = (specifier: unknown): boolean => {
+export const bannedDateLibraryOf = (
+  specifier: unknown,
+): BannedDateLibrary | undefined => {
   if (typeof specifier !== "string") {
-    return false;
+    return undefined;
   }
 
-  return BANNED_DATE_LIBRARIES.some(
+  return BANNED_DATE_LIBRARIES.find(
     (lib) => specifier === lib || specifier.startsWith(`${lib}/`),
   );
 };

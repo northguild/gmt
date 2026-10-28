@@ -5,6 +5,7 @@ import { instantFormatOptions } from "../../internal/instantFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { isValidZonedDateTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import { timeZoneEquals } from "../../internal/temporalCompat";
 import { repairRangeParts } from "../../internal/repairRangeParts";
 import {
   isRangeDayPeriodCompatNeeded,
@@ -48,7 +49,9 @@ function rangeWithRepairedParts(
 /**
  * Format a zoned datetime range using the Temporal Intl.DateTimeFormat formatRange API.
  *
- * - Both datetimes must have the same timezone.
+ * - Both datetimes must have the same time zone: identifiers of one zone count as the same
+ *   (`UTC` and `Etc/UTC` on every host; an IANA link such as `Europe/Kiev` and `Europe/Kyiv` where
+ *   the host resolves it, which Safari 27 without `Temporal` does not).
  * - Formats both instants as Temporal's ECMA-402 Instant format does, through the runtime's
  *   `Intl.DateTimeFormat#formatRange` in the endpoints' zone: the requested fields and widths are
  *   kept, and with no date or time field (`era` alone included) the date and time are the
@@ -110,7 +113,7 @@ export function formatZonedRange(
       return "";
     }
 
-    if (zdt1.timeZoneId !== zdt2.timeZoneId) {
+    if (!timeZoneEquals(zdt1, zdt2)) {
       return "";
     }
 

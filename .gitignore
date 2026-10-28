@@ -84,5 +84,9 @@ context/archives/
 # Agent plans
 memories/
 
+# The behaviour-matrix runner installs on its own, outside the workspace (scripts/behaviour-matrix/README.md)
+/scripts/behaviour-matrix/pnpm-lock.yaml
+/scripts/behaviour-matrix/node_modules/
+/scripts/behaviour-matrix/.cache/
 # Verdict logs and lock
 /.verdict/

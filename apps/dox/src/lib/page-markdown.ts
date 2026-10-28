@@ -1,3 +1,4 @@
+import { parse as parseYaml } from "yaml";
 import { industryLabels } from "./industry-tags";
 import { renderMdxComponents } from "./mdx-jsx";
 import { withBase } from "./site";
@@ -16,8 +17,9 @@ import { withBase } from "./site";
 /**
  * Strip a leading `---`-delimited frontmatter block from raw page content.
  *
- * Returns the parsed data fields (simple `key: "json"` / `key: value` lines)
- * and the body text that follows the closing `---`.
+ * Returns the frontmatter's top-level fields as text and the body that follows the closing `---`.
+ * The block is read as YAML, so a folded `>` or literal `|` value is one string, as Astro reads it.
+ * A list is written `[a, b]`; a nested map is left out, except that `hero.title` is kept under that name.
  */
 export function stripFrontmatter(raw: string): {
   data: Record<string, string>;
@@ -26,20 +28,20 @@ export function stripFrontmatter(raw: string): {
   const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
   if (!m) return { data: {}, body: raw };
 
+  const parsed: unknown = parseYaml(m[1]);
   const data: Record<string, string> = {};
-  for (const line of m[1].split(/\r?\n/)) {
-    const colonIdx = line.indexOf(":");
-    if (colonIdx < 0) continue;
-    const key = line.slice(0, colonIdx).trim();
-    let val = line.slice(colonIdx + 1).trim();
-    // Strip surrounding JSON quotes for simple string values
-    if (
-      (val.startsWith('"') && val.endsWith('"')) ||
-      (val.startsWith("'") && val.endsWith("'"))
-    ) {
-      val = val.slice(1, -1);
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === "string") data[key] = value.trim();
+      else if (typeof value === "number" || typeof value === "boolean") {
+        data[key] = String(value);
+      } else if (Array.isArray(value)) {
+        data[key] = `[${value.map(String).join(", ")}]`;
+      } else if (key === "hero" && value && typeof value === "object") {
+        const title = (value as { title?: unknown }).title;
+        if (typeof title === "string") data["hero.title"] = title.trim();
+      }
     }
-    data[key] = val;
   }
 
   return { data, body: m[2] };
@@ -152,6 +154,9 @@ export function stripMdx(
       // The wrapper the generator puts round an Options or Members table (a styling hook); the
       // table inside stays.
       .replace(/<div class="gmt-ref-table"[^>]*>\s*([\s\S]*?)\s*<\/div>/g, "$1")
+      // Any other `<div …>` or `</div>` alone on a line is a layout hook (the home page's grid,
+      // a reveal group); the text between stays.
+      .replace(/^[ \t]*<\/?div\b[^>]*>[ \t]*$/gm, "")
       // The span the generator puts round a quoted, hyphenated literal in prose (`"4-5-4"`) so
       // it never wraps after the hyphen; the text stays.
       .replace(/<span class="gmt-nobreak">([^<]*)<\/span>/g, "$1")
@@ -186,6 +191,10 @@ export function stripMdx(
 
   // A `.map(…)` block is a generated table or chart, whose figures the prose already states.
   md = outsideFences(md, dropMapBlocks);
+
+  // Dropped tags and blocks leave runs of blank lines; one is enough. Lines holding only spaces
+  // count as blank.
+  md = outsideFences(md, (part) => part.replace(/\n(?:[ \t]*\n){2,}/g, "\n\n"));
 
   return prefixMarkdownLinks(md);
 }

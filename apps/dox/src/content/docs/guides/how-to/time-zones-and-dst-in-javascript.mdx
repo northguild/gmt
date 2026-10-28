@@ -1,0 +1,76 @@
+---
+title: "Time zones and DST in JavaScript: which date library handles them"
+description: Which JavaScript library handles time zones and DST, what each does with a time that falls in a DST gap, and how Temporal and the GMT library compare.
+industries: [core]
+---
+
+import { gmtVersion } from "~/generated/versions";
+
+Temporal is built into Chrome 144, Firefox 139 and Node.js 26. `Temporal.ZonedDateTime` holds an IANA time zone and applies its DST rules, and it takes an explicit `disambiguation` for a wall-clock time that falls in a gap or an overlap. `@northguild/gmt` is built on Temporal. It takes and returns ISO 8601 and RFC 9557 strings, and adds functions for jobs Temporal leaves to you, such as business days, intervals and formatting.
+
+The table below lists what each library needs for time zones and what it returns for a wall-clock time that does not exist.
+
+## What each library needs and returns
+
+The test input is `2024-03-31T02:30:00` in `Europe/Berlin`. The clocks skip from 02:00 to 03:00 that day, so 02:30 does not exist. Every result is shown as a UTC instant. Temporal's `compatible` rule moves the time forward by the length of the gap (Temporal 11.1.12, DisambiguatePossibleEpochNanoseconds).
+
+| Library | Version tested | Time zones | Result for the gap | Case |
+| --- | --- | --- | --- | --- |
+| Temporal (native) | Node.js 26.12.1 | Built in | `2024-03-31T01:30:00Z` | [M4](/compare/behaviour/#m4) |
+| `@northguild/gmt` | {gmtVersion} | Built in (uses Temporal) | `2024-03-31T01:30:00Z` | [M4](/compare/behaviour/#m4) |
+| Luxon | 3.7.2 | Built in, through `Intl` | `2024-03-31T01:30:00.000Z` | [M4](/compare/behaviour/#m4-luxon) |
+| date-fns | 4.4.0 | Add-on needed: `@date-fns/tz` 1.5.0 (or `date-fns-tz`) | Depends on the host zone | [M4](/compare/behaviour/#m4-date-fns) |
+| Day.js | 1.11.23 | Plugins needed: `utc` and `timezone` | `2024-03-31T01:30:00Z` | [M4](/compare/behaviour/#m4-dayjs) |
+| Moment.js | 2.31.0 | Add-on needed: `moment-timezone` 0.6.5 | `2024-03-31T01:30:00Z` | [M4](/compare/behaviour/#m4-moment) |
+| @internationalized/date | 3.12.4 | Built in (`ZonedDateTime`) | `2024-03-31T01:30:00.000Z` | [M4](/compare/behaviour/#m4-internationalized-date) |
+
+For date-fns with `@date-fns/tz`, the result depends on the zone of the machine that runs the code. On hosts set to `Asia/Kolkata`, `Australia/Sydney` or `America/Santiago` it is `2024-03-31T01:30:00.000+00:00`. On a host set to `Europe/London` it is `2024-03-31T00:30:00.000+00:00`. Temporal and GMT read no host zone and give the same result on every host.
+
+Only Temporal, GMT and @internationalized/date can refuse the time. Date-fns, Luxon, Day.js and Moment.js always resolve it ([M4b](/compare/behaviour/#m4b)).
+
+The results were measured on 2026-10-27 with the versions in the table. [Behaviour of date libraries against Temporal](/compare/behaviour/) lists every case, the call that produced each result and the clauses of the specification.
+
+## Worked example: Berlin on 2024-03-31
+
+`new Date("2024-03-31T02:30:00")` has no zone in the string. It reads the string in the zone of the machine, so the same code returns different instants on different machines. `resolveLocal` takes the zone as an argument.
+
+```js
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+resolveLocal("2024-03-31T02:30:00", "Europe/Berlin"); // "2024-03-31T01:30:00Z"
+resolveLocal("2024-03-31T02:30:00", "Europe/Berlin", { disambiguation: "reject" }); // ""
+```
+
+The default is `compatible`, so the time moves forward to 03:30 Berlin time, which is 01:30 UTC. With `reject`, `resolveLocal` returns `""` because the time does not exist, and your code can treat it as an error. The four values are `compatible`, `earlier`, `later` and `reject` (Temporal 13.7).
+
+To find out which case you have before you choose an instant, call `classifyLocal`.
+
+```js
+import { classifyLocal } from "@northguild/gmt/instant/convert";
+
+classifyLocal("2024-03-31T02:30:00", "Europe/Berlin"); // "nonexistent"
+```
+
+[Check whether a local time exists on a DST day](../check-local-time-exists/) covers gaps and overlaps in more zones.
+
+## Adding a day across a change
+
+One calendar day after `2024-03-30T02:30` in Berlin is `03:30` on `2024-03-31`, because 02:30 does not exist that day (Temporal 6.5.5, AddZonedDateTime).
+
+```js
+import { addZoned } from "@northguild/gmt/zoned/calculate";
+
+addZoned("2024-03-30T02:30:00+01:00[Europe/Berlin]", { days: 1 }); // "2024-03-31T03:30:00+02:00[Europe/Berlin]"
+```
+
+Day.js with its `timezone` plugin returns `2024-03-31T02:30:00+01:00` for the same input, which is a time that does not exist on that day ([M1](/compare/behaviour/#m1-dayjs)).
+
+## Where to go next
+
+- Leaving a library: [date-fns](/migrate/date-fns/), [Luxon](/migrate/luxon/), [Day.js](/migrate/dayjs/), [Moment.js](/migrate/moment/), [@internationalized/date](/migrate/internationalized-date/).
+- Using Temporal directly: [Native Temporal and GMT](/migrate/temporal/) lists which runtimes ship it and the GMT function for each Temporal call.
+- Every case and every result: [Behaviour of date libraries against Temporal](/compare/behaviour/).
+
+Checked on 2026-10-27 with GMT {gmtVersion}. The runtime versions come from the MDN browser compatibility data as listed on [Native Temporal and GMT](/migrate/temporal/). The time zone claims for each library come from its own documentation: [Luxon](https://github.com/moment/luxon/blob/master/docs/zones.md), [@date-fns/tz](https://github.com/date-fns/tz), [Day.js timezone plugin](https://github.com/iamkun/dayjs/blob/dev/_autodocs/api-reference/plugin-time.md), [Moment Timezone](https://github.com/moment/momentjs.com/blob/master/docs/moment-timezone/00-use-it/00-intro.md) and [@internationalized/date](https://github.com/adobe/react-spectrum/blob/main/packages/@internationalized/date/docs/ZonedDateTime.mdx).
+
+See also: [`resolveLocal`](/reference/instant/convert/resolveLocal/), [`classifyLocal`](/reference/instant/convert/classifyLocal/), [`addZoned`](/reference/zoned/calculate/addZoned/), and the guide [DST Disambiguation](/guides/concepts/dst-disambiguation/).

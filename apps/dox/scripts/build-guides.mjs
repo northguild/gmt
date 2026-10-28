@@ -21,6 +21,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -70,6 +71,20 @@ const body = canonical.replace(
   "- [Guides](/guides/) — the rest of the guides site.",
 );
 
+// The page's source is outside the docs tree, so Starlight's own git lookup finds no date for
+// it: the date of the commit that last changed `docs/dst-disambiguation.md` is written instead.
+let committed = "";
+try {
+  committed = execFileSync(
+    "git",
+    ["log", "-1", "--format=%cI", "--", "docs/dst-disambiguation.md"],
+    { cwd: repoRoot, encoding: "utf8" },
+  ).trim();
+} catch {
+  committed = "";
+}
+const lastUpdated = committed ? `lastUpdated: ${committed}\n` : "";
+
 const frontmatter = `---
 title: DST Disambiguation
 industries: [core]
@@ -78,7 +93,7 @@ description: >
   twice a year for timezones that observe daylight saving time, and how GMT's
   disambiguation options let you control what happens.
 slug: guides/concepts/dst-disambiguation
-sidebar:
+${lastUpdated}sidebar:
   order: 1
 ---
 

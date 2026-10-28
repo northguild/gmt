@@ -121,6 +121,21 @@ describe("affected: which checks a change runs", () => {
       checks: ["deps", "build:gmt", "test:dox"],
     },
     {
+      name: "the licence check script runs its own check and the Dox tests, which copy scripts/",
+      changes: [{ path: "scripts/licences.mjs", status: "M" }],
+      checks: ["licences", "build:gmt", "test:dox"],
+    },
+    {
+      name: "the scripts/ licence runs the licence check and the Dox tests, which copy scripts/",
+      changes: [{ path: "scripts/LICENSE", status: "M" }],
+      checks: ["licences", "build:gmt", "test:dox"],
+    },
+    {
+      name: "a top-level folder's licence runs only the licence check",
+      changes: [{ path: "apps/LICENSE", status: "M" }],
+      checks: ["licences"],
+    },
+    {
       name: "a mixed change runs the union of its paths",
       changes: [
         "context/skills.md",

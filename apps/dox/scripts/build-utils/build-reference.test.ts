@@ -3100,10 +3100,11 @@ describe("industry tag on a page", () => {
 
   it("writes `industries: [id]` into a function page's frontmatter, after the slug", () => {
     const mdx = BR.withIndustry(placed(SOURCE).fnPage("charge"), "intermodal");
-    expect(mdx.split("\n").slice(0, 6)).toEqual([
+    expect(mdx.split("\n").slice(0, 7)).toEqual([
       "---",
       'title: "charge"',
       expect.stringMatching(/^description: /),
+      expect.stringMatching(/^headTitle: /),
       'slug: "reference/plain/calculate/charge"',
       "industries: [intermodal]",
       "---",

@@ -31,6 +31,7 @@
 export const CHECKS = [
   { id: "deps", run: "node scripts/deps.mjs check" },
   { id: "markers", run: "node scripts/test-markers.mjs check" },
+  { id: "licences", run: "node scripts/licences.mjs check" },
   { id: "docs-check", run: "pnpm dox:docs-check" },
   { id: "upstream", run: "node scripts/upstream.mjs check" },
   { id: "bundle-size", run: "node scripts/bundle-size.mjs check" },
@@ -67,7 +68,7 @@ export const CHECKS = [
   {
     id: "dox-dist",
     local: false,
-    run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/gates/registry.test.ts",
+    run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/head-tags.test.ts scripts/gates/registry.test.ts",
     needs: ["build:dox"],
   },
   {
@@ -175,13 +176,22 @@ export const RULES = [
   },
   { test: /^(?:packages\/[^/]+|apps\/dox)\/package\.json$/, checks: ALL },
 
+  // The licence files. licences.mjs reads the root LICENSE, each top-level folder's LICENSE and
+  // each package's LICENSE, and lists every tracked file to find the top-level folders.
+  // The Dox tests copy scripts/, so they read its LICENSE too.
+  { test: /^scripts\/LICENSE$/, checks: ["licences", ...SCRIPT_TESTS] },
+  // The markers check lists apps/ to find test files.
+  { test: /^apps\/LICENSE$/, checks: ["licences"], listed: ["markers"] },
+  { test: /^(?:[^/]+\/)?LICENSE$/, checks: ["licences"] },
+  { test: /^packages\/[^/]+\/LICENSE$/, checks: ["licences"], listed: ALL },
+
   // Notes for people and agents, and the changesets (CI checks those on every run).
   {
     test: /^(?:\.agents|\.claude|\.vscode|\.changeset)\//,
     checks: [],
   },
   {
-    test: /^(?:AGENTS\.md|CLAUDE\.md|PUBLISHING\.md|LICENSE|\.gitignore|\.fallowrc\.jsonc|\.oxfmtrc\.json|context7\.json|skills-lock\.json|pyproject\.toml|uv\.lock|tsconfig\.json|vitest\.config\.ts)$/,
+    test: /^(?:AGENTS\.md|CLAUDE\.md|PUBLISHING\.md|SECURITY\.md|\.gitignore|\.fallowrc\.jsonc|\.oxfmtrc\.json|context7\.json|skills-lock\.json|pyproject\.toml|uv\.lock|tsconfig\.json|vitest\.config\.ts)$/,
     checks: [],
   },
   { test: /^\.github\//, checks: [] },
@@ -297,6 +307,9 @@ export const RULES = [
 
   // The repo scripts. Each runs as its own check, and the Dox tests cover them all.
   { test: /^scripts\/deps\.mjs$/, checks: ["deps", ...SCRIPT_TESTS] },
+  { test: /^scripts\/licences\.mjs$/, checks: ["licences", ...SCRIPT_TESTS] },
+  // The behaviour matrix runner is run by hand; the Dox tests walk and copy scripts/.
+  { test: /^scripts\/behaviour-matrix\//, checks: SCRIPT_TESTS },
   {
     test: /^scripts\/test-markers\.mjs$/,
     checks: ["markers", ...SCRIPT_TESTS],
@@ -307,7 +320,14 @@ export const RULES = [
   },
   {
     test: /^scripts\/bundle-size\.(?:mjs|budgets\.json)$/,
-    checks: ["bundle-size", ...SCRIPT_TESTS],
+    // The Dox generate step runs `bundle-size.mjs report` for the bundle-size page.
+    checks: [
+      "bundle-size",
+      "build:dox",
+      "dox-dist",
+      "typecheck:dox",
+      ...SCRIPT_TESTS,
+    ],
   },
   { test: /^scripts\/stats\.mjs$/, checks: ["stats", ...SCRIPT_TESTS] },
   {

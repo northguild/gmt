@@ -10,6 +10,9 @@ export const collections = {
     loader: docsLoader(),
     schema: docsSchema({
       extend: z.object({
+        /** The text of `<title>` and `og:title`, without the site suffix, where it should
+         *  differ from `title`. Generated for reference pages (`build-utils/reference-title.ts`). */
+        headTitle: z.string().optional(),
         /** The industries a tool, scenario or guide belongs to
          *  (lib/industry-tags.ts). Shown as tags under its title; the tools
          *  index groups by them. */

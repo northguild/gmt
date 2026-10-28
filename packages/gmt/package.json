@@ -1,15 +1,30 @@
 {
   "name": "@northguild/gmt",
   "version": "1.20.0",
-  "description": "Temporal-based date and time utilities with timezone support and polyfill integration",
+  "description": "Date and time library for JavaScript and TypeScript, built on TC39 Temporal: time zones, DST, business days, ISO 8601 strings in and out. Never throws.",
   "keywords": [
+    "business-days",
+    "calendar",
     "date",
     "datetime",
-    "polyfill",
+    "daylight-saving-time",
+    "dst",
+    "duration",
+    "format",
+    "i18n",
+    "immutable",
+    "iso8601",
+    "parse",
+    "rfc3339",
+    "rfc9557",
     "tanstack-intent",
+    "tc39",
     "temporal",
+    "temporal-api",
     "time",
-    "timezone"
+    "time-zone",
+    "timezone",
+    "typescript"
   ],
   "homepage": "https://northguild.dev/gmt/",
   "bugs": {

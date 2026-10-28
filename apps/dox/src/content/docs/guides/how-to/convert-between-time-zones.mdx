@@ -1,0 +1,58 @@
+---
+title: Convert a time between time zones
+description: Show one moment in another time zone from a zoned value, a UTC instant or a wall-clock time, including zones with half-hour offsets.
+industries: [core]
+---
+
+import { gmtVersion } from "~/generated/versions";
+
+There is one function for each starting point. All three return a zoned string: the local date and time, the offset, and the zone name in brackets (RFC 9557).
+
+## From a zoned value
+
+```js
+import { convertZonedToZoned } from "@northguild/gmt/zoned/convert";
+
+convertZonedToZoned(
+  "2024-07-15T12:00:00+02:00[Europe/Berlin]",
+  "America/St_Johns",
+); // "2024-07-15T07:30:00-02:30[America/St_Johns]"
+```
+
+`America/St_Johns` is 3 hours 30 minutes behind UTC in standard time and 2 hours 30 minutes behind in summer. The offset keeps its minutes, and one sign covers hours and minutes (RFC 3339 §5.6, `time-numoffset`).
+
+## From a UTC instant
+
+```js
+import { convertUtcToZoned } from "@northguild/gmt/utc/convert";
+
+convertUtcToZoned("2024-07-15T10:00:00Z", "Asia/Tokyo"); // "2024-07-15T19:00:00+09:00[Asia/Tokyo]"
+```
+
+## From a wall-clock time
+
+A wall-clock time has no zone yet, so you name the zone it belongs to.
+
+```js
+import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned/convert";
+
+convertPlainDateTimeToZoned("2024-07-15T12:00:00", "Asia/Kolkata"); // "2024-07-15T12:00:00.000+05:30[Asia/Kolkata]"
+```
+
+If the wall-clock time falls in a gap or an overlap on the day the clocks change, pass a `disambiguation`. [Check whether a local time exists on a DST day](../check-local-time-exists/) shows how.
+
+## What to expect
+
+| Starting point | Function | Result |
+| --- | --- | --- |
+| Zoned value | `convertZonedToZoned(value, timeZone)` | `"2024-07-15T07:30:00-02:30[America/St_Johns]"` |
+| UTC instant | `convertUtcToZoned(value, timeZone)` | `"2024-07-15T19:00:00+09:00[Asia/Tokyo]"` |
+| Wall-clock time | `convertPlainDateTimeToZoned(value, timeZone)` | `"2024-07-15T12:00:00.000+05:30[Asia/Kolkata]"` |
+
+Invalid input, such as an unknown zone name, returns `""`.
+
+In Temporal the same three steps are `withTimeZone`, `Instant.toZonedDateTimeISO` and `PlainDateTime.toZonedDateTime`. [Native Temporal and GMT](/migrate/temporal/) lists them.
+
+Checked on 2026-10-26 with GMT {gmtVersion}.
+
+See also: [`convertZonedToZoned`](/reference/zoned/convert/convertZonedToZoned/), [`convertUtcToZoned`](/reference/utc/convert/convertUtcToZoned/), [`convertPlainDateTimeToZoned`](/reference/zoned/convert/convertPlainDateTimeToZoned/).

@@ -535,6 +535,71 @@ Body text here.`;
       expect(llmsFull.length).toBeGreaterThan(llms.length);
     });
 
+    it("llms.txt opens with the summary and lists its sections in order", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const llms = readFileSync(resolve(distDir, "llms.txt"), "utf8");
+      expect(llms.split("\n")[2]).toMatch(
+        /^> GMT \(`@northguild\/gmt`\) is a date and time library for JavaScript and TypeScript built on TC39 Temporal\./,
+      );
+      const headings = [...llms.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
+      const at = (heading: string): number => {
+        const found = headings.indexOf(heading);
+        expect(found, `${heading} is a section`).toBeGreaterThanOrEqual(0);
+        return found;
+      };
+      const order = [
+        "Install",
+        "Tools",
+        "Checks",
+        "Start here",
+        "Migrate",
+        "Guides",
+        "Reference",
+        "Industries",
+        "Scenarios",
+        "Mistakes",
+      ].map(at);
+      expect(order).toEqual([...order].sort((a, b) => a - b));
+      // Every namespace section sits between the reference index and the industries.
+      for (const heading of headings.filter((h) =>
+        h.startsWith("Reference — "),
+      )) {
+        expect(at(heading)).toBeGreaterThan(at("Reference"));
+        expect(at(heading)).toBeLessThan(at("Industries"));
+      }
+    });
+
+    it("no llms.txt line ends in a bare `>` or `: >`", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const llms = readFileSync(resolve(distDir, "llms.txt"), "utf8");
+      for (const line of llms.split("\n").slice(3)) {
+        expect(line, line).not.toMatch(/(?:^|: | )>$/);
+      }
+    });
+
+    it("the home page has a Markdown twin", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const twin = resolve(distDir, "index.md");
+      expect(existsSync(twin), "index.md").toBe(true);
+      expect(readFileSync(twin, "utf8")).toMatch(/^# @northguild\/gmt$/m);
+    });
+
+    // The two pages with layout `<div>`s and indented cards: no wrapper survives, and no prose
+    // line outside a fence is indented, which Markdown would read as a code block.
+    it.each(["index.md", "why-gmt.md"])("%s keeps no layout HTML", (file) => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const prose = readFileSync(resolve(distDir, file), "utf8").replace(
+        /^[ \t]*```[\s\S]*?^[ \t]*```/gm,
+        "",
+      );
+      expect(prose).not.toMatch(/^[ \t]*<\/?div\b/m);
+      expect(prose).not.toMatch(/^(?: {4}|\t)\S/m);
+    });
+
     it("sample .md route exists and is clean markdown", () => {
       const distMd = resolve(
         import.meta.dirname,

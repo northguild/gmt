@@ -21,7 +21,7 @@ import { renderTimetableReaderTemplate } from "../lib/timetable-reader-mount";
  * around the widget is laid out is ToolLayout.astro's job, not this one's.
  *
  * Default `false`, which is the safe direction: a prose page that embedded this
- * widget would keep its 50rem column unless it opted in. The widget is mounted
+ * widget would keep the prose column unless it opted in. The widget is mounted
  * in two places only: its own `/tools/` page, which opts in, and the `/dox`
  * rail, which mounts the template without this shell. No `reference/**` page
  * embeds it. The marker goes on a wrapper here rather than inside `renderTemplate()`

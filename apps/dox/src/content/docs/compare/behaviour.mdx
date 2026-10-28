@@ -1,0 +1,21 @@
+---
+title: Behaviour of date libraries against Temporal
+description: The same inputs run through Temporal, GMT and five date libraries, with the result, the verdict and the clause of the specification for each case.
+---
+
+import BehaviourMatrix from "../../../components/BehaviourMatrix.astro";
+import { matrix } from "../../../data/behaviour-matrix";
+
+Each case below gives one input to Temporal, to GMT and to five libraries: date-fns, Luxon, Day.js, Moment.js and @internationalized/date. A library's result is reduced to the form named in the case, then compared with Temporal's result. The verdict is "Same" when the two are equal on every host, "Differs" when they are not, "Depends on the host zone" when the result changes with the host, and "Not supported" when the library has no such operation. A case Temporal has no call for is compared with a stated result, and the case says so.
+
+## How it was measured
+
+A person runs `pnpm matrix` in `scripts/behaviour-matrix/`. Some libraries read the time zone of the machine they run on, so a result can depend on where the code runs. The runner therefore repeats every library call once under each of these host time zones: {matrix.runtime.hostZones.join(", ")}. One has no daylight saving time, and the others observe it in the northern and southern hemispheres. This run used Node {matrix.runtime.node} on {matrix.measuredOn}.
+
+A library whose result is the same on every host gets the verdict "Same" or "Differs". A library whose result changes with the host zone gets the verdict "Depends on the host zone", and its row lists the result of each host. It is never "Same", because it would give a different answer on another machine. Temporal and GMT read no host zone, and the runner stops if either gives a different result on any host.
+
+Every Temporal call ran twice, once on the polyfill and once on native Temporal, and the runner stops when the two disagree. The versions of the five libraries, and of the companion packages date-fns and Moment.js use for time zones, are named at the top of each library's page under [Migrate to Temporal with GMT](/migrate/).
+
+GMT's result is run from the source of this repository. Where GMT's result differs from Temporal's, the case says why.
+
+<BehaviourMatrix />

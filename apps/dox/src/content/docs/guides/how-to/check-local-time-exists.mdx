@@ -1,0 +1,70 @@
+---
+title: Check whether a local time exists on a DST day
+description: Find out whether a wall-clock time exists, is repeated or is unique in a zone, and resolve it with an explicit rule.
+industries: [core]
+---
+
+import { gmtVersion } from "~/generated/versions";
+
+When the clocks go forward, some wall-clock times do not exist. When they go back, some happen twice. `classifyLocal` tells you which case you have before you pick an instant.
+
+```js
+import { classifyLocal } from "@northguild/gmt/instant/convert";
+
+classifyLocal("2024-03-31T02:30:00", "Europe/Berlin"); // "nonexistent"
+classifyLocal("2024-10-27T02:30:00", "Europe/Berlin"); // "ambiguous"
+classifyLocal("2024-03-31T12:30:00", "Europe/Berlin"); // "unique"
+```
+
+On 2024-03-31 Berlin moves from 02:00 to 03:00, so 02:30 is skipped. On 2024-10-27 it moves from 03:00 back to 02:00, so 02:30 happens twice.
+
+## Other zones
+
+Not every change is an hour, and not every change is at 02:00.
+
+```js
+import { classifyLocal } from "@northguild/gmt/instant/convert";
+
+classifyLocal("2024-10-06T02:15:00", "Australia/Lord_Howe"); // "nonexistent"
+classifyLocal("2024-04-07T01:45:00", "Australia/Lord_Howe"); // "ambiguous"
+classifyLocal("2024-09-08T00:30:00", "America/Santiago"); // "nonexistent"
+classifyLocal("2024-03-31T02:30:00", "Asia/Tokyo"); // "unique"
+```
+
+`Australia/Lord_Howe` shifts by 30 minutes. `America/Santiago` skips midnight itself, so 00:30 does not exist on 2024-09-08. `Asia/Tokyo` has no clock changes.
+
+## Resolve it with a rule
+
+`resolveLocal` returns a UTC instant. The default is `compatible`: a time in a gap moves forward by the length of the gap, and a time in an overlap takes the earlier instant.
+
+```js
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+resolveLocal("2024-03-31T02:30:00", "Europe/Berlin"); // "2024-03-31T01:30:00Z"
+resolveLocal("2024-10-27T02:30:00", "Europe/Berlin"); // "2024-10-27T00:30:00Z"
+```
+
+Pass `disambiguation` to choose another rule.
+
+```js
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+resolveLocal("2024-10-27T02:30:00", "Europe/Berlin", { disambiguation: "later" }); // "2024-10-27T01:30:00Z"
+resolveLocal("2024-03-31T02:30:00", "Europe/Berlin", { disambiguation: "reject" }); // ""
+```
+
+`reject` returns `""` for a time that does not exist or is repeated, so you can handle it as an error. The four values, `compatible`, `earlier`, `later` and `reject`, are the ones Temporal uses (Temporal 13.7).
+
+## What to expect
+
+| Wall-clock time | Zone | `classifyLocal` | `resolveLocal` |
+| --- | --- | --- | --- |
+| 2024-03-31T02:30:00 | Europe/Berlin | `"nonexistent"` | `"2024-03-31T01:30:00Z"` |
+| 2024-10-27T02:30:00 | Europe/Berlin | `"ambiguous"` | `"2024-10-27T00:30:00Z"`, or `"2024-10-27T01:30:00Z"` with `later` |
+| 2024-10-06T02:15:00 | Australia/Lord_Howe | `"nonexistent"` | not shown |
+| 2024-09-08T00:30:00 | America/Santiago | `"nonexistent"` | not shown |
+| 2024-03-31T02:30:00 | Asia/Tokyo | `"unique"` | not shown |
+
+Checked on 2026-10-26 with GMT {gmtVersion}.
+
+See also: [`classifyLocal`](/reference/instant/convert/classifyLocal/), [`resolveLocal`](/reference/instant/convert/resolveLocal/), and the guide [DST Disambiguation](/guides/concepts/dst-disambiguation/).

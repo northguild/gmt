@@ -1,0 +1,4 @@
+Copyright (c) 2026 NorthGuild. All rights reserved.
+
+The files in `scripts/` (build, check and CI scripts) are not licensed for reuse. The MIT licence in the
+repository root does not apply to them.

@@ -29,6 +29,7 @@ const COLUMNS = [
       <h3>
         <a href={`https://github.com/${repo}`}>{repo}</a>
       </h3>
+      <div class="gmt-ref-table" data-kind="content" data-label={`Filings to ${repo}`}>
       <table class="gmt-upstream-table">
         <thead>
           <tr>{COLUMNS.map((column) => <th>{column}</th>)}</tr>
@@ -39,6 +40,7 @@ const COLUMNS = [
           ))}
         </tbody>
       </table>
+      </div>
     </section>
   ))
 }

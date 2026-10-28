@@ -4,6 +4,10 @@
  *
  *   node scripts/bundle-size.mjs [check]            table; exit 1 over a budget or a listed
  *                                                   `absent` path, exit 2 when esbuild fails
+ *   node scripts/bundle-size.mjs report            the same table and the same --json file, but
+ *                                                   exit 0 over a budget (still 2 when esbuild
+ *                                                   fails); the Dox build uses it to write the
+ *                                                   figures its bundle-size page shows
  *   node scripts/bundle-size.mjs --files <entry>    also the top 15 inputs of one entry
  *   node scripts/bundle-size.mjs --json <file>      also write the measurements to a file
  *   node scripts/bundle-size.mjs --compare <file>   also print the change against such a file
@@ -12,6 +16,9 @@
  * esbuild bundles `packages/gmt/src` in memory (`write: false`), so `dist` is never touched and
  * the minified sizes are byte-for-byte repeatable for a pinned esbuild. Gzipped sizes are
  * reported, never gated: they vary with zlib's version.
+ *
+ * The `--json` file holds `floor` (the entry every other size contains, `polyfill`) and, per entry,
+ * its minified and gzipped bytes and its `budget` (a number, or null for an entry with none).
  *
  * Budgets live in `scripts/bundle-size.budgets.json`. A budget is raised only by a reviewed edit
  * to that file; `--update` is for that edit.
@@ -90,6 +97,7 @@ function parseArgs(argv) {
   for (let i = 0; i < args.length; i += 1) {
     const a = args[i];
     if (a === "check") out.mode = "check";
+    else if (a === "report") out.mode = "report";
     else if (a === "--update") out.mode = "update";
     else if (a === "--files") out.files = args[++i];
     else if (a === "--json") out.json = args[++i];
@@ -184,7 +192,11 @@ if (args.files !== null) {
 if (args.json !== null) {
   const entries = {};
   for (const [name, m] of Object.entries(measured)) {
-    entries[name] = { minified: m.minified, gzipped: m.gzipped };
+    entries[name] = {
+      minified: m.minified,
+      gzipped: m.gzipped,
+      budget: budgets.entries[name]?.minified ?? null,
+    };
   }
   writeFileSync(
     path.resolve(args.json),
@@ -198,6 +210,7 @@ if (args.json !== null) {
         esbuild: esbuildVersion,
         commit: git("rev-parse", "HEAD"),
         dirty: git("status", "--porcelain") !== "",
+        floor: FLOOR,
         entries,
       },
       null,
@@ -263,7 +276,12 @@ if (args.compare !== null) {
   );
 }
 
-if (failures.length > 0) {
+if (failures.length > 0 && args.mode === "report") {
+  console.log(
+    `\nbundle-size: ${failures.length} problem(s), not failing in report mode`,
+  );
+  for (const f of failures) console.log(`  ${f}`);
+} else if (failures.length > 0) {
   console.error(`\nbundle-size: ${failures.length} problem(s)`);
   for (const f of failures) console.error(`  ${f}`);
   process.exit(1);

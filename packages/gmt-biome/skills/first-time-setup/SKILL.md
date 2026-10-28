@@ -46,7 +46,7 @@ Use this skill when a user wants to adopt `@northguild/gmt-biome`.
 - Run a Biome check command and confirm Date API bans are enforced.
 - Ensure diagnostics map to gmt-biome plugin rules.
 - `all.grit` also includes `no-date-library-imports`, which errors on `moment`,
-  `moment-timezone`, `dayjs`, `luxon`, `date-fns`, `date-fns-tz` and `spacetime` imports. In a
+  `moment-timezone`, `dayjs`, `luxon`, `date-fns`, `date-fns-tz`, `@date-fns/tz` and `spacetime` imports. In a
   codebase that still uses them, warn the user before enabling `all.grit`, or list the
   individual `.grit` files without it and stage it in later (see the CI enforcement skill).
 

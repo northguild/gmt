@@ -1,4 +1,4 @@
-import { localRangeBattleCases } from "../../test";
+import { linkPairIsOneZone, localRangeBattleCases } from "../../test";
 import { mapZonedDatesInRange } from "./mapZonedDatesInRange";
 
 describe("mapZonedDatesInRange", () => {
@@ -228,4 +228,40 @@ describe("mapZonedDatesInRange default piece limit", () => {
       mapZonedDatesInRange(start, end, undefined, { maxPieces: 2 }),
     ).toEqual([]);
   });
+});
+
+describe("mapZonedDatesInRange across two identifiers of one time zone", () => {
+  it.each`
+    start                                         | end                                        | expected
+    ${"2024-01-01T00:00:00+00:00[UTC]"}           | ${"2024-01-02T00:00:00+00:00[Etc/UTC]"}    | ${["2024-01-01", "2024-01-02"]}
+    ${"2024-01-01T00:00:00+01:00[Europe/Berlin]"} | ${"2024-01-02T00:00:00+09:00[Asia/Tokyo]"} | ${[]}
+  `(
+    "returns $expected for $start to $end",
+    ({
+      start,
+      end,
+      expected,
+    }: {
+      start: string;
+      end: string;
+      expected: string[];
+    }) => {
+      expect(mapZonedDatesInRange(start, end)).toEqual(expected);
+    },
+  );
+});
+
+describe("mapZonedDatesInRange across an IANA link pair", () => {
+  it.each`
+    start                                         | end                                          | zone1              | zone2
+    ${"2024-01-01T00:00:00+02:00[Europe/Kiev]"}   | ${"2024-01-02T00:00:00+02:00[Europe/Kyiv]"}  | ${"Europe/Kiev"}   | ${"Europe/Kyiv"}
+    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"} | ${"2024-01-02T00:00:00+05:30[Asia/Kolkata]"} | ${"Asia/Calcutta"} | ${"Asia/Kolkata"}
+  `(
+    "answers as the host does for $zone1 and $zone2",
+    ({ start, end, zone1, zone2 }: Record<string, string>) => {
+      expect(mapZonedDatesInRange(start, end)).toEqual(
+        linkPairIsOneZone(zone1, zone2) ? ["2024-01-01", "2024-01-02"] : [],
+      );
+    },
+  );
 });

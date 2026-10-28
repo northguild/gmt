@@ -642,6 +642,11 @@ function openingParagraph(text) {
   let start = lines.findIndex((line) => line.startsWith("# ")) + 1;
   if (start === 0) return null;
   while (start < lines.length && lines[start].trim() === "") start++;
+  // The badge line sits between the title and the opening paragraph.
+  if (lines[start]?.startsWith("[![")) {
+    while (start < lines.length && lines[start].trim() !== "") start++;
+    while (start < lines.length && lines[start].trim() === "") start++;
+  }
   let end = start;
   while (end < lines.length && lines[end].trim() !== "") end++;
   return start === end ? null : lines.slice(start, end).join(" ");

@@ -7,7 +7,11 @@ import {
   stripFrontmatter,
   stripMdx,
 } from "~/lib/page-markdown";
-import { industryPages, topLevelPages } from "~/lib/top-level-pages";
+import {
+  industryPages,
+  migratePages,
+  topLevelPages,
+} from "~/lib/top-level-pages";
 import { pageExpressionValues } from "~/lib/page-expression-values";
 
 /** The splash pages' figures, evaluated once per build. */
@@ -113,6 +117,22 @@ export const GET: APIRoute = () => {
     };
   });
 
+  // Migrate pages: the index, one page per library, native Temporal, then the behaviour matrix.
+  const migratePageList = migratePages(RAW).map(({ slug, source }) => {
+    const { data, body } = stripFrontmatter(source);
+    const md = stripMdx(body, { gmtVersion, values });
+    const title = data.title ?? slug;
+    return {
+      title,
+      url: `${base}/${slug}.md`,
+      markdown: pageToMarkdown({
+        title,
+        body: md,
+        industries: data.industries,
+      }),
+    };
+  });
+
   // Industry pages: the index, then one page per industry in declared order.
   const industryPageList = industryPages(RAW).map(({ slug, source }) => {
     const { data, body } = stripFrontmatter(source);
@@ -157,6 +177,7 @@ export const GET: APIRoute = () => {
 
   const allPages = [
     ...startPages,
+    ...migratePageList,
     ...industryPageList,
     ...guidePages,
     ...scenarioPages,

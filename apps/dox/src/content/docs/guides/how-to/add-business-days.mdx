@@ -1,0 +1,79 @@
+---
+title: Add business days
+description: Add working days to a date with a weekend and a holiday list that you pass in, including a Friday and Saturday weekend.
+industries: [core]
+---
+
+import { gmtVersion } from "~/generated/versions";
+
+`addBusinessDays` moves a date forward by working days. With no calendar it counts Monday to Friday.
+
+```js
+import { addBusinessDays } from "@northguild/gmt/plain/calculate";
+
+addBusinessDays("2024-03-15", 1); // "2024-03-18"
+```
+
+2024-03-15 is a Friday, so the next working day is Monday 2024-03-18.
+
+## A weekend that is not Saturday and Sunday
+
+Pass the weekend as ISO weekday numbers (Monday is 1, Sunday is 7), the holidays as dates, and the time zone. Saudi Arabia in `Asia/Riyadh` has its weekend on Friday and Saturday, so `[5, 6]`.
+
+```js
+import { addBusinessDays } from "@northguild/gmt/plain/calculate";
+
+addBusinessDays("2024-07-04", 1, {
+  weekend: [5, 6],
+  holidays: [],
+  timeZone: "Asia/Riyadh",
+}); // "2024-07-07"
+```
+
+2024-07-04 is a Thursday. Friday 07-05 and Saturday 07-06 are weekend days, so the answer is Sunday 2024-07-07.
+
+Temporal's `PlainDate` has no working-day operation, so this is a function you call on the string, not a method on a value. The result is a date string again.
+
+## Holidays come from you
+
+GMT holds no holiday list. You pass the dates your organisation treats as non-working, in the format `YYYY-MM-DD`.
+
+```js
+import { nextBusinessDay } from "@northguild/gmt/calendar/business";
+
+nextBusinessDay("2024-03-15", {
+  weekend: [6, 7],
+  holidays: ["2024-03-18"],
+  timeZone: "Africa/Nairobi",
+}); // "2024-03-19"
+```
+
+Monday 2024-03-18 is in the list, so the next working day after Friday is Tuesday 2024-03-19.
+
+## Count working days between two dates
+
+```js
+import { businessDaysBetween } from "@northguild/gmt/calendar/business";
+
+businessDaysBetween("2024-03-15", "2024-03-22", {
+  weekend: [6, 7],
+  holidays: [],
+  timeZone: "Europe/Berlin",
+}); // 5
+```
+
+## What to expect
+
+| Call | Input | Result |
+| --- | --- | --- |
+| `addBusinessDays(value, 1)` | Friday 2024-03-15 | `"2024-03-18"` |
+| `addBusinessDays(value, 1, calendar)` | Thursday 2024-07-04, weekend `[5, 6]` | `"2024-07-07"` |
+| `nextBusinessDay(value, calendar)` | Friday 2024-03-15, holiday 2024-03-18 | `"2024-03-19"` |
+| `businessDaysBetween(start, end, calendar)` | 2024-03-15 to 2024-03-22 | `5` |
+| `addBusinessDays(value, 0)` | Saturday 2024-03-16 | `"2024-03-16"` |
+
+An `amount` of 0 returns the input unchanged, even when it falls on a non-working day. Use `rollDate` to move a non-working day onto a working one.
+
+Checked on 2026-10-26 with GMT {gmtVersion}.
+
+See also: [`addBusinessDays`](/reference/plain/calculate/addBusinessDays/), [`nextBusinessDay`](/reference/calendar/business/nextBusinessDay/), [`businessDaysBetween`](/reference/calendar/business/businessDaysBetween/), [`rollDate`](/reference/calendar/business/rollDate/). [Migrate from date-fns](/migrate/date-fns/) lists the fixed-weekend `addBusinessDays` there.

@@ -38,7 +38,12 @@ describe("temporal-compat.mjs check", () => {
   let root = "";
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), "compat-cli-"));
-    cpSync(join(REPO, "scripts"), join(root, "scripts"), { recursive: true });
+    // Skip the installed dependencies of runners such as scripts/behaviour-matrix: the script
+    // never reads them, and copying them for every test is slow.
+    cpSync(join(REPO, "scripts"), join(root, "scripts"), {
+      recursive: true,
+      filter: (source) => !/[\\/](node_modules|\.cache)$/.test(source),
+    });
     for (const name of ["packages", "apps", "node_modules"]) {
       symlinkSync(join(REPO, name), join(root, name));
     }

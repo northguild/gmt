@@ -83,6 +83,57 @@ describe("stripMdx fences", () => {
   });
 });
 
+describe("stripMdx layout wrappers", () => {
+  // The home page's shape: a layout `<div>` round a `<CardGrid>` whose cards are indented, one
+  // card nested two deep and one at the margin.
+  const body = [
+    '<div class="gmt-home-grid">',
+    "",
+    "<div data-reveal-group>",
+    "<CardGrid>",
+    '  <Card title="Nested card" icon="star">',
+    "    Built on [Temporal](https://tc39.es/proposal-temporal/), the",
+    "    standard API.",
+    "  </Card>",
+    "",
+    '<Card title="Margin card" icon="document">',
+    "  Strings in, strings out.",
+    "</Card>",
+    "</CardGrid>",
+    "</div>",
+    "",
+    "</div>",
+  ].join("\n");
+  const out = stripMdx(body, {});
+
+  it("drops the layout <div> lines", () => {
+    expect(out).not.toMatch(/^[ \t]*<\/?div\b/m);
+  });
+
+  it("leaves no card text indented, so none of it reads as a code block", () => {
+    expect(out).not.toMatch(/^[ \t]+\S/m);
+    expect(out).toContain(
+      "**Nested card**\n\nBuilt on [Temporal](https://tc39.es/proposal-temporal/), the\nstandard API.",
+    );
+    expect(out).toContain("**Margin card**\n\nStrings in, strings out.");
+  });
+
+  it("leaves at most one blank line between blocks", () => {
+    expect(out).not.toMatch(/\n[ \t]*\n[ \t]*\n/);
+  });
+
+  it("states a template-literal card title's figure, with no stray $", () => {
+    const card = [
+      '<Card title={`~${ratio(all())}× more runs`} icon="rocket">',
+      "  Text.",
+      "</Card>",
+    ].join("\n");
+    expect(stripMdx(card, { values: { "ratio(all())": "60" } })).toContain(
+      "**~60× more runs**",
+    );
+  });
+});
+
 describe("stripMdx link prefixing", () => {
   it("emits every root-absolute link under /gmt/", () => {
     const body = [

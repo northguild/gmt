@@ -21,15 +21,17 @@ There are four levels of README in this repo:
 
 The two files are one page, identical byte for byte. The root file adds nothing. In order, the page holds:
 
-1. The title, a one-line claim and one line of links (docs, API reference, tools, Discord).
-2. Four fact lines: bullets led by numbers. They give the tests and CI test runs, the multiple over the other libraries, the functions and locales, and the never-throws contract.
-3. The comparison table: GMT's row, then one row for each library in `apps/dox/src/data/library-measurements.json`. The columns are Tests, CI test runs and Built on.
-4. One sentence under the table. It gives the days the other libraries were measured and links to the docs site's `/compare/` page.
-5. **Install**: one command, then one line that links the three lint plugins.
-6. **Use**: the sample. It is one import line and eight calls with their results.
-7. The namespace links: one line of links to `/reference/<namespace>/` for every namespace, then a "By industry:" line that links each industry's page (`/industries/<id>/`). Only a namespace that exports functions has a link, so `regex` and `types` have none. A line linking the guides and the tools follows.
-8. **Agent prompt**: a setup prompt for someone using the library.
-9. **License**.
+1. The title, then one line of badges: npm version, licence, CI status and Node version. No downloads badge.
+2. A one-line claim that names JavaScript, TypeScript, time zones, DST and business days, and lists the libraries GMT stands in for ("in place of …"). Then one line of links (docs, API reference, tools, Discord).
+3. The DST example: a short code block that shows `new Date()` giving a different answer on machines in two zones, next to one GMT call that gives the same answer on every machine. Its GMT result is a `call // result` line, checked like the sample.
+4. Four fact lines: bullets led by numbers. They give the tests and CI test runs, the multiple over the other libraries, the functions and locales, and the never-throws contract.
+5. The comparison table: GMT's row, then one row for each library in `apps/dox/src/data/library-measurements.json`. The columns are Tests, CI test runs and Built on.
+6. One sentence under the table. It gives the days the other libraries were measured and links to the docs site's `/compare/` page.
+7. **Install**: one command, then one line that links the three lint plugins.
+8. **Use**: the sample. It is one import line and four calls with their results. Longer examples belong on the docs site.
+9. The namespace links: one line of links to `/reference/<namespace>/` for every namespace, then a "By industry:" line that links each industry's page (`/industries/<id>/`). Only a namespace that exports functions has a link, so `regex` and `types` have none. A line linking the guides and the tools follows.
+10. **Agent prompt**: a setup prompt for someone using the library.
+11. **License**.
 
 ## What they never hold
 

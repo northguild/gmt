@@ -1,0 +1,47 @@
+name: Bug
+description: A GMT function returns a result that does not match the spec.
+labels: ["bug"]
+body:
+  - type: input
+    id: function
+    attributes:
+      label: Function
+      description: The GMT function you called, with its import path.
+      placeholder: "addZoned from @northguild/gmt"
+    validations:
+      required: true
+  - type: textarea
+    id: call
+    attributes:
+      label: Call
+      description: The exact call, with the input strings and options. One call per line.
+      render: typescript
+      placeholder: 'addZoned("2024-10-06T01:30:00+10:00[Australia/Sydney]", { hours: 1 });'
+    validations:
+      required: true
+  - type: input
+    id: expected
+    attributes:
+      label: Expected result
+      placeholder: '"2024-10-06T03:30:00+11:00[Australia/Sydney]"'
+    validations:
+      required: true
+  - type: input
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: input
+    id: spec
+    attributes:
+      label: Spec clause
+      description: The clause that sets the expected result, such as a Temporal spec section, an ISO 8601-1 clause or an RFC 9557 section. Leave it empty if you do not know it.
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: The GMT version and the runtime, such as Node 26.12.1, Chrome 144 or Deno 2.7.
+      placeholder: "@northguild/gmt 1.20.0, Node 26.12.1"
+    validations:
+      required: true

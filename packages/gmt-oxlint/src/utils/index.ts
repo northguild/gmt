@@ -1,9 +1,10 @@
 export { getMemberExpressionFromCall } from "./getMemberExpressionFromCall";
 export { hasDateStaticMemberCall } from "./hasDateStaticMemberCall";
 export {
-  isBannedDateLibrary,
+  bannedDateLibraryOf,
   BANNED_DATE_LIBRARIES,
-} from "./isBannedDateLibrary";
+  type BannedDateLibrary,
+} from "./bannedDateLibrary";
 export { isChainExpression } from "./isChainExpression";
 export { isIdentifier } from "./isIdentifier";
 export { isMemberExpression } from "./isMemberExpression";

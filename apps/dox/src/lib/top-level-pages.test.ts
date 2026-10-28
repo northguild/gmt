@@ -2,6 +2,8 @@ import { INDUSTRY_LAYER_IDS } from "./industry-tags";
 import {
   docsRelativePath,
   industryPages,
+  migratePages,
+  MIGRATE_ORDER,
   topLevelPages,
 } from "./top-level-pages";
 
@@ -68,5 +70,38 @@ describe("industryPages", () => {
         "../content/docs/why-gmt.mdx": "w",
       }),
     ).toEqual([]);
+  });
+});
+
+describe("migratePages", () => {
+  const page = (slug: string) => `../content/docs/${slug}.mdx`;
+
+  it("lists the pages in reading order, whatever order the glob gave", () => {
+    const raw = {
+      [page("compare/behaviour")]: "matrix",
+      [page("migrate/temporal")]: "temporal",
+      [page("migrate/index")]: "index",
+      [page("migrate/luxon")]: "luxon",
+    };
+    expect(migratePages(raw).map((p) => p.slug)).toEqual([
+      "migrate/index",
+      "migrate/luxon",
+      "migrate/temporal",
+      "compare/behaviour",
+    ]);
+  });
+
+  it("leaves out a page that is not on disk and any page outside the list", () => {
+    expect(
+      migratePages({
+        [page("migrate/elsewhere")]: "x",
+        [page("compare")]: "c",
+        [page("migrate/index")]: "index",
+      }),
+    ).toEqual([{ slug: "migrate/index", source: "index" }]);
+  });
+
+  it("names eight pages", () => {
+    expect(MIGRATE_ORDER).toHaveLength(8);
   });
 });

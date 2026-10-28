@@ -1,5 +1,6 @@
 // @ts-check
 import react from "@astrojs/react";
+import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
@@ -13,6 +14,7 @@ import { mistakesSidebar } from "./src/generated/mistakes-sidebar.ts";
 import { guidesIndustriesSidebar } from "./src/generated/guides-industries-sidebar.ts";
 import rehypeBaseLinks from "./src/lib/rehype-base-links.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
+import rehypeTableScroll from "./src/lib/rehype-table-scroll.ts";
 import { copyRedirects } from "./src/lib/copy-redirects.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
@@ -67,8 +69,9 @@ export default defineConfig({
   // while wrangler.jsonc keeps `directory: "./dist"`.
   outDir: "./dist/gmt",
   markdown: {
-    // External links in Markdown and MDX open in a new tab, like ButtonLink's do.
-    rehypePlugins: [rehypeBaseLinks, rehypeExternalLinks],
+    // External links in Markdown and MDX open in a new tab, like ButtonLink's do. Every table
+    // sits in the site's table scroll box, so it fills the column.
+    rehypePlugins: [rehypeBaseLinks, rehypeExternalLinks, rehypeTableScroll],
   },
   vite: {
     server: {
@@ -120,7 +123,12 @@ export default defineConfig({
     starlight({
       title: "@northguild/gmt",
       description:
-        "Temporal-first date and time utilities with timezone support and polyfill integration.",
+        "Date and time library for JavaScript and TypeScript, built on TC39 Temporal: time zones, DST, business days, ISO 8601 strings in and out. Never throws.",
+      // Adds the share, breadcrumb and Markdown-twin tags to each page's head (src/route-data.ts).
+      routeMiddleware: "./src/route-data.ts",
+      // Each page shows the date of its last commit (CI checks out the full history). No page
+      // carries an edit link; scripts/head-tags.test.ts fails on one.
+      lastUpdated: true,
       social: [
         {
           icon: "github",
@@ -238,6 +246,21 @@ export default defineConfig({
             { slug: "upstream" },
             { slug: "core-rules" },
             { slug: "install" },
+            { slug: "bundle-size" },
+          ],
+        },
+        {
+          label: "Migrate",
+          collapsed: true,
+          items: [
+            { slug: "migrate" },
+            { slug: "migrate/date-fns" },
+            { slug: "migrate/luxon" },
+            { slug: "migrate/dayjs" },
+            { slug: "migrate/moment" },
+            { slug: "migrate/internationalized-date" },
+            { slug: "migrate/temporal" },
+            { slug: "compare/behaviour" },
           ],
         },
         { label: "Industries", collapsed: true, items: industriesSidebar },
@@ -343,9 +366,15 @@ export default defineConfig({
         "./src/styles/gmt-reveal.css", // shared scroll-into-view stagger utility
         "./src/styles/dox.css", // live component layout
         "./src/styles/gmt-upstream.css", // /upstream/ defect table + filings tracker
+        "./src/styles/gmt-migrate.css", // /migrate/ call tables, difference cards, behaviour matrix
         "./src/styles/gmt-view-transitions.css", // cross-document route transitions (static header/sidebar, content fade)
         "./src/styles/gmt-a11y.css", // DOX-D1 prefers-reduced-transparency / -contrast / forced-colors — loaded last
       ],
+    }),
+    // After starlight(): Starlight adds its own sitemap only when none is configured. /dox/ is
+    // the chat shell and has `noindex`, so it is not listed.
+    sitemap({
+      filter: (page) => new URL(page).pathname !== withBase("/dox/"),
     }),
   ],
 });

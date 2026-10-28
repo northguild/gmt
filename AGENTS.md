@@ -1,5 +1,7 @@
 # GMT Temporal Library — Agent Guide
 
+Copyright (c) 2026 NorthGuild. All rights reserved under [`.agents/LICENSE`](.agents/LICENSE); the root MIT licence does not apply to this file.
+
 `@northguild/gmt` is a Temporal-first date/time library. String-in, string-out. No `Date` object anywhere.
 
 ## Context Files

@@ -354,3 +354,27 @@ describe("diffZonedAsDuration with singular unit names", () => {
     ).toBe(expected);
   });
 });
+
+// Defect 4 (D11) across two identifiers of one time zone: native Temporal gives P2M for ceil and
+// expand and P1M for floor and trunc over 2024-01-31 to 2024-02-29T12:00.
+describe("diffZonedAsDuration rounds by months across two identifiers of one time zone", () => {
+  it.each`
+    roundingMode | expected
+    ${"ceil"}    | ${"P2M"}
+    ${"expand"}  | ${"P2M"}
+    ${"floor"}   | ${"P1M"}
+    ${"trunc"}   | ${"P1M"}
+  `(
+    "returns $expected from UTC to Etc/UTC with roundingMode $roundingMode",
+    ({ roundingMode, expected }) => {
+      expect(
+        diffZonedAsDuration(
+          "2024-01-31T00:00:00+00:00[UTC]",
+          "2024-02-29T12:00:00+00:00[Etc/UTC]",
+          "months",
+          { smallestUnit: "months", roundingMode },
+        ),
+      ).toBe(expected);
+    },
+  );
+});

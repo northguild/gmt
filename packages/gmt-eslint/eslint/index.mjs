@@ -1,21 +1,35 @@
 import tsParser from "@typescript-eslint/parser";
 
-const MSG_DATE_LIBRARY =
-  "Avoid date libraries that wrap native Date (moment, dayjs, luxon, date-fns, spacetime). Use @northguild/gmt instead.";
+const MIGRATE_URL = "https://northguild.dev/gmt/migrate/";
 
-// Bare package names plus their subpaths, for the esquery selectors that cover
-// require() and dynamic import() — neither of which no-restricted-imports sees.
-const DATE_LIBRARIES = [
-  "moment",
-  "moment-timezone",
-  "dayjs",
-  "luxon",
-  "date-fns",
-  "date-fns-tz",
-  "spacetime",
-];
+const guideFor = (name, slug) =>
+  `${MIGRATE_URL}${slug}/ maps ${name} calls to their gmt replacements.`;
 
-const DATE_LIBRARY_SELECTOR_VALUES = `/^(${DATE_LIBRARIES.join("|")})(\\/.*)?$/`;
+const MOMENT_GUIDE = guideFor("Moment.js", "moment");
+const DATE_FNS_GUIDE = guideFor("date-fns", "date-fns");
+
+// Each banned package and the migration guide its message points at.
+// spacetime has no guide of its own.
+const DATE_LIBRARY_GUIDES = {
+  moment: MOMENT_GUIDE,
+  "moment-timezone": MOMENT_GUIDE,
+  dayjs: guideFor("Day.js", "dayjs"),
+  luxon: guideFor("Luxon", "luxon"),
+  "date-fns": DATE_FNS_GUIDE,
+  "date-fns-tz": DATE_FNS_GUIDE,
+  "@date-fns/tz": DATE_FNS_GUIDE,
+  spacetime: `${MIGRATE_URL} lists the migration guides.`,
+};
+
+const DATE_LIBRARIES = Object.entries(DATE_LIBRARY_GUIDES).map(
+  ([name, guide]) => ({
+    name,
+    message: `Avoid ${name}: it wraps native Date. Use @northguild/gmt instead; ${guide}`,
+    // The package and its subpaths, for the esquery selectors that cover
+    // require() and dynamic import(), neither of which no-restricted-imports sees.
+    selectorValue: `/^${name.replaceAll("/", "\\/")}(\\/.*)?$/`,
+  }),
+);
 
 export default [
   {
@@ -55,8 +69,8 @@ export default [
             "Avoid Date.parse(). Use @northguild/gmt convertZonedToUnix(value) instead.",
         },
       ],
-      // Static import forms. `patterns` catches subpaths (date-fns/format) and
-      // the -tz/-timezone companions in one entry.
+      // Static import forms. `paths` matches each package, and `patterns`
+      // its subpaths (date-fns/format).
       //
       // @js-joda/core is deliberately absent: it has its own value types and
       // touches Date only at the boundary, so it doesn't carry the ambient
@@ -64,29 +78,11 @@ export default [
       "no-restricted-imports": [
         "error",
         {
-          paths: [
-            { name: "moment", message: MSG_DATE_LIBRARY },
-            { name: "moment-timezone", message: MSG_DATE_LIBRARY },
-            { name: "dayjs", message: MSG_DATE_LIBRARY },
-            { name: "luxon", message: MSG_DATE_LIBRARY },
-            { name: "date-fns", message: MSG_DATE_LIBRARY },
-            { name: "date-fns-tz", message: MSG_DATE_LIBRARY },
-            { name: "spacetime", message: MSG_DATE_LIBRARY },
-          ],
-          patterns: [
-            {
-              group: [
-                "moment/*",
-                "moment-timezone/*",
-                "dayjs/*",
-                "luxon/*",
-                "date-fns/*",
-                "date-fns-tz/*",
-                "spacetime/*",
-              ],
-              message: MSG_DATE_LIBRARY,
-            },
-          ],
+          paths: DATE_LIBRARIES.map(({ name, message }) => ({ name, message })),
+          patterns: DATE_LIBRARIES.map(({ name, message }) => ({
+            group: [`${name}/*`],
+            message,
+          })),
         },
       ],
       "no-restricted-syntax": [
@@ -100,16 +96,18 @@ export default [
           selector:
             "CallExpression[callee.type='MemberExpression'][callee.property.name='getTimezoneOffset']",
           message:
-            "Avoid date.getTimezoneOffset(). Timezone offsets change throughout the year, so use @northguild/gmt zoned methods instead.",
+            "Avoid date.getTimezoneOffset(). Timezone offsets change throughout the year, so use @northguild/gmt getTimeZoneOffset(timeZone, instant) instead.",
         },
-        {
-          selector: `CallExpression[callee.name='require'] > Literal[value=${DATE_LIBRARY_SELECTOR_VALUES}]`,
-          message: MSG_DATE_LIBRARY,
-        },
-        {
-          selector: `ImportExpression > Literal[value=${DATE_LIBRARY_SELECTOR_VALUES}]`,
-          message: MSG_DATE_LIBRARY,
-        },
+        ...DATE_LIBRARIES.flatMap(({ message, selectorValue }) => [
+          {
+            selector: `CallExpression[callee.name='require'] > Literal[value=${selectorValue}]`,
+            message,
+          },
+          {
+            selector: `ImportExpression > Literal[value=${selectorValue}]`,
+            message,
+          },
+        ]),
       ],
     },
   },

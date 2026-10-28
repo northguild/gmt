@@ -1,0 +1,80 @@
+---
+/**
+ * The full behaviour matrix: one section per case, one table per section.
+ *
+ * Every figure comes from `data/behaviour-matrix.json`, which `scripts/behaviour-matrix/run.mjs`
+ * writes. Each library row carries the anchor `m1-date-fns` so the `/migrate/` pages can link to
+ * it. The verdict is a word, never colour alone. The Markdown twin is `renderBehaviourMatrix` in
+ * `src/lib/mdx-jsx.ts`. Styles live in `src/styles/gmt-migrate.css`.
+ */
+import { codeSpans, matrixView } from "../lib/migrate-view";
+
+const cases = matrixView();
+---
+
+{
+  cases.map((c) => (
+    <section class="gmt-matrix-case">
+      <h2 id={c.anchor}>
+        {c.id}. {c.title}
+      </h2>
+      <p class="gmt-matrix-meta">
+        Input: {c.input}. Compared as: {c.compare}. Specification:{" "}
+        {c.clauses.map((clause, index) => (
+          <>
+            {index > 0 && ", "}
+            <a href={clause.url}>{clause.label}</a>
+          </>
+        ))}
+        .
+      </p>
+      {c.expectedNote && <p>{c.expectedNote}</p>}
+      {c.note && <p set:html={codeSpans(c.note)} />}
+      <div
+        class="gmt-ref-table"
+        data-kind="content"
+        data-label={`${c.id} results`}
+      >
+        <table class="gmt-migrate-table gmt-matrix-table">
+          <thead>
+            <tr>
+              <th>Library</th>
+              <th>Call</th>
+              <th>Returns</th>
+              <th>Compared with {c.reference}</th>
+              <th>Upstream issue</th>
+            </tr>
+          </thead>
+          <tbody>
+            {c.rows.map((row) => (
+              <tr id={row.anchor ?? undefined}>
+                <td>{row.who}</td>
+                <td>
+                  <code>{row.call}</code>
+                </td>
+                <td>
+                  {row.returns.map((line) => (
+                    <span class="gmt-matrix-line">
+                      <code>{line}</code>
+                    </span>
+                  ))}
+                </td>
+                <td>{row.verdict}</td>
+                <td>
+                  {row.issues.length === 0
+                    ? "none"
+                    : row.issues.map((issue, index) => (
+                        <>
+                          {index > 0 && ", "}
+                          <a href={issue.url}>{issue.text}</a>
+                        </>
+                      ))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ))
+}

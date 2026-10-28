@@ -10,6 +10,7 @@
  * `page-expression-values.test.ts` fails when a page grows an expression this table doesn't
  * resolve, so the two cannot drift apart silently.
  */
+import { LIBRARY_IDS, checkedLine, matrix } from "../data/behaviour-matrix";
 import {
   combinedCompetitorExecutions,
   competitorComparisons,
@@ -52,7 +53,16 @@ export function pageExpressionValues(): Record<string, string> {
 
   const measuredOn = measurementDateRange();
 
+  // `/migrate/` pages open with the version line of the library they cover.
+  const checkedLines = Object.fromEntries(
+    LIBRARY_IDS.map((id) => [`checkedLine("${id}")`, checkedLine(id)]),
+  );
+
   return {
+    ...checkedLines,
+    "matrix.measuredOn": matrix.measuredOn,
+    "matrix.runtime.node": matrix.runtime.node,
+    'matrix.runtime.hostZones.join(", ")': matrix.runtime.hostZones.join(", "),
     "competitorComparisons.length": String(competitorComparisons.length),
     "formatCount(gmtStats.files)": formatCount(gmtStats.files),
     'gmtStats.localeList.join(", ")': gmtStats.localeList.join(", "),

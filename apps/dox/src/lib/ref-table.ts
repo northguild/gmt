@@ -1,8 +1,10 @@
 /**
- * Makes a generated Options or Members table that scrolls sideways reachable and visible.
+ * Makes a table that scrolls sideways reachable and visible.
  *
- * `renderOptionsTable` and `renderMembersTable` are wrapped by the generator in
- * `<div class="gmt-ref-table">` (see `scripts/build-utils/render-table.ts`). The stylesheet
+ * Every table on the site sits in `<div class="gmt-ref-table">`: the generator writes it round
+ * `renderOptionsTable` and `renderMembersTable` (`scripts/build-utils/render-table.ts`),
+ * `src/lib/rehype-table-scroll.ts` puts each Markdown table in one, and a component that draws a
+ * table writes it itself, naming the table in `data-label`. The stylesheet
  * lays the table out to fit its column and stacks it on a narrow one, so it rarely overflows.
  * When a cell does hold something wider than the column (an unbreakable token in a narrow
  * viewport), the wrapper is the box that scrolls, and this module gives it what a scrolling
@@ -46,8 +48,13 @@ function headingBefore(el: Element): string | undefined {
   return undefined;
 }
 
-/** What a screen reader announces for a scrolling table: "Members of Foo, table, scrolls sideways". */
+/**
+ * What a screen reader announces for a scrolling table: "Members of Foo, table, scrolls sideways".
+ * A component's own name for its table (`data-label`) comes first.
+ */
 function accessibleName(wrapper: HTMLElement): string {
+  const label = wrapper.dataset.label?.trim();
+  if (label) return `${label}, table, scrolls sideways`;
   // A table the author wrote in a behaviour note belongs to no section of its own.
   if (wrapper.dataset.kind === "notes") {
     return "Table in the description, scrolls sideways";
