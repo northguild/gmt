@@ -167,6 +167,8 @@ jobs:
           pnpm --filter dox gates --all --tier nightly --browsers ${{ matrix.browser }}
           --themes dark,light --retries 1 --shard ${{ matrix.shard }}
 
+      # `.gates/` starts with a dot, and upload-artifact skips dot paths unless told otherwise; without
+      # `include-hidden-files` nothing uploads and the report files every leg as could-not-run.
       - name: Upload the findings
         if: always()
         uses: actions/upload-artifact@v7
@@ -175,6 +177,7 @@ jobs:
           path: |
             apps/dox/.gates/summary.json
             apps/dox/.gates/*.ndjson
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14
 

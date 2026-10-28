@@ -304,6 +304,8 @@ jobs:
           path: |
             apps/dox/.gates/
             !apps/dox/.gates/vite-cache/
+          # `.gates/` starts with a dot; upload-artifact skips dot paths by default.
+          include-hidden-files: true
           retention-days: 14
 
   build-lint:
