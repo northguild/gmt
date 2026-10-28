@@ -11,78 +11,98 @@ import type { DoxToolName } from "./dox-tools";
  */
 
 /**
- * Dox's brains, in preference order.
+ * Dox's brains, in preference order. `BRAINS[0]` is the default brain.
  *
- * This list is the free tier's escape hatch. Gemini's quota id is
- * `GenerateRequestsPerDayPerProjectPerModel-FreeTier` — the allowance is per
- * **model**, so every additional brain adds its own daily budget. One model
- * gives ~20 requests/day across all visitors, which is not a product; the nine
- * below give roughly ~165/day between them (eight at 20, one Pro at 5).
+ * Two free pools, and every brain draws on one of them:
  *
- * **Every id here was probed with a real request on 2026-09-10**, not merely
- * read off the model list. That distinction mattered: the list returns models
- * this key cannot actually call. Each entry either answered, or answered 429
- * (`spent`) — which still proves the model exists and carries a free quota.
+ * - **Workers AI** — one pool of `WORKERS_AI_DAILY_NEURONS` a day for the whole
+ *   account, shared by every `workers-ai` brain. More brains here add no
+ *   budget; they add somewhere to go when one model is out of capacity.
+ * - **Gemini** — the free tier's allowance is per **model**
+ *   (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`), so each Gemini brain
+ *   adds its own ~20 requests a day.
  *
- * What is still unverified is each model's *actual* daily allowance;
- * `dailyLimit` is a uniform 20 for Flash because that is what the free tier
- * granted the ones we measured. That remains safe, because:
+ * Workers AI leads because it answers. Measured on 2026-10-27 with one short
+ * request per model: every Workers AI brain below answered in under 2 s, while
+ * the Gemini line-up was the reason Dox felt broken — the default
+ * `gemini-3.8-flash` sent nothing at all for 60 s, twice; `gemini-3.7-flash`
+ * and `gemini-flash-latest` answered 503 ("high demand"); the Pro and newest
+ * preview models answered 429 with a free limit of 0. The Gemini brains kept
+ * are the ones that answered 200 in that probe, fastest first among equals.
  *
- *   - `dailyLimit` feeds the UI badge ONLY. It never gates a request — Google's
- *     429 is the only real gate, so a wrong number here misprints a digit and
- *     nothing more.
- *   - The chain self-prunes: a brain that answers 404/400 is marked unavailable
- *     for the rest of the day and skipped (see worker/brains.ts).
+ * Every entry stays self-pruning: a brain that answers 404/400 is marked
+ * unavailable for the day, one that is out of quota is marked spent, and one
+ * that does not start within `BRAIN_START_TIMEOUT_MS` is skipped for that
+ * question (see worker/brains.ts). A stale entry degrades; it cannot hang Dox.
  *
- * That last point is not theoretical. DOX-C1 picked "gemini-2.5-flash" and a
- * live call during DOX-C2 (2026-09-09) found Google had withdrawn it for new
- * keys mid-story: "no longer available to new users. Please update your code to
- * use models/gemini-3.6-flash." A hardcoded list that assumes availability is
- * the bug; a chain that discovers it is the fix.
+ * `dailyLimit` feeds the UI badge ONLY. It never gates a request — the
+ * provider's own refusal is the only real gate, so a wrong number misprints a
+ * digit and nothing more.
  *
  * ## What is deliberately NOT in this list
  *
- * Three candidates were dropped because a real probe on 2026-09-10 got 404/400
- * (`unavailable`) rather than an answer or a 429: `gemini-2.5-flash-lite`,
- * `gemini-2.5-pro`, and `gemini-2.5-flash` — the last confirming DOX-C2's
- * earlier finding that it is closed to new keys. Keeping any of them would
- * spend a doomed request a day to re-learn what we already know.
+ * - **Gemini models that did not answer** on 2026-10-27: `gemini-3.8-flash`
+ *   (no response), `gemini-3.7-flash` (503), `gemini-3.1-pro-preview` and
+ *   `gemini-4-argon` (429, free limit 0), `gemma-4-31b-it` (500). Preview
+ *   models that a newer stable model replaces (`gemini-3.1-flash-lite-preview`,
+ *   `gemini-3-flash-preview`) and `gemini-3.1-flash-lite` (6 s to answer one
+ *   line) were dropped with them.
+ * - **The `-latest` aliases** (`gemini-flash-latest`,
+ *   `gemini-flash-lite-latest`). They resolve to a model already here, and it
+ *   is unknown whether the quota follows the alias or the target. A badge that
+ *   claims 20 more a day and does not have them is worse than a shorter list.
+ * - **Workers AI models the Free plan cannot run** (error 5035 "requires a paid
+ *   plan"): `glm-5.3-flash`, `deepseek-v4.1-flash-1017`, `kimi-k2.6` and the
+ *   rest of the paid catalogue.
+ * - **Workers AI models that failed the probe through the Worker**:
+ *   `llama-3.3-70b-instruct-fp8-fast` and `mistral-small-3.1-24b-instruct`
+ *   arrive with every piece of text twice through `workers-ai-provider`, so
+ *   each tool call is unreadable JSON and each sentence stutters;
+ *   `gpt-oss-120b` called its widget but wrote no answer, once printed its raw
+ *   channel markup, and cost ~410 Neurons a question.
+ * - **Workers AI models too dear for the free pool**: `qwen3.8-27b` and
+ *   `nemotron-3-120b-a12b` charge 4–5 times Gemma's input price, ~600 Neurons
+ *   for a Dox prompt, or about 16 questions a day for the whole site.
+ * - **Image, TTS, audio, embedding and robotics models.** Wrong shape.
  *
- * Also excluded:
- *
- * - **The `-latest` aliases** (`gemini-flash-latest`, `gemini-flash-lite-latest`).
- *   They resolve to a model already in this list, and it is unknown whether the
- *   quota bucket follows the alias or the target. If it follows the target they
- *   add nothing while looking like they add 20/day — a badge that lies is worse
- *   than a shorter list. Worth testing one day; not worth guessing.
- * - **Image, TTS, native-audio, embedding, transcription, computer-use and
- *   robotics models.** Wrong shape for the job.
- *
- * One Pro model *is* included, unlike an earlier draft of this comment that
- * dismissed the whole tier: `gemini-3.1-pro-preview` answered 429 when probed,
- * which proves it exists and carries a free allowance. It sits last because
- * that allowance is much smaller than Flash's.
- *
- * Ordering is preference order: full Flash before Flash-Lite (better answers),
- * newest first within each tier, Pro last. `BRAINS[0]` is the default brain.
- *
- * **Re-probe when Google ships models.** This is a snapshot of one key's access
- * on one day, and this epic has already been bitten once by a model being
- * withdrawn mid-story. The chain self-prunes, so a stale entry degrades rather
- * than breaks — but a missing entry is 20 free requests a day left on the table.
+ * **Re-probe when either provider ships models.** This is one account's access
+ * on one day; Gemini has withdrawn a model mid-story before.
  */
 export const BRAINS = [
-  // Full Flash — best answers. Newest first.
+  // Workers AI — chosen by live probe through the Worker
+  // (`scripts/probe-brains.ts`; results in context/dox/built.md, "Brains and
+  // budget"): widget calls, refusal of the absent question, link discipline,
+  // time to first output and Neurons a question.
+  //
+  // `maxOutputTokens` is not optional here: Workers AI defaults `max_tokens`
+  // to 256, which truncates a normal Dox answer mid-sentence.
+  //
+  // Both think before answering unless told not to, and the thinking is the
+  // slow part — see `enableThinking`.
   {
-    id: "gemini-3.8-flash",
-    label: "3.8 Flash",
-    provider: "google",
-    thinkingLevel: "low",
-    dailyLimit: 20,
+    id: "cf-gemma-4-26b",
+    label: "Gemma 4 26B",
+    provider: "workers-ai",
+    model: "@cf/google/gemma-4-26b-a4b-it",
+    enableThinking: false,
+    maxOutputTokens: 2048,
+    dailyLimit: 40,
   },
   {
-    id: "gemini-3.7-flash",
-    label: "3.7 Flash",
+    id: "cf-glm-4.7-flash",
+    label: "GLM 4.7 Flash",
+    provider: "workers-ai",
+    model: "@cf/zai-org/glm-4.7-flash",
+    enableThinking: false,
+    maxOutputTokens: 2048,
+    dailyLimit: 40,
+  },
+  // Gemini — Flash-Lite first: in the probe through the Worker it answered
+  // 5 questions of 5 correctly at 2.9 s mean, against 6–10 s for the full
+  // Flash models. Then full Flash, newest first.
+  {
+    id: "gemini-3.5-flash-lite",
+    label: "3.5 Flash-Lite",
     provider: "google",
     thinkingLevel: "low",
     dailyLimit: 20,
@@ -100,84 +120,6 @@ export const BRAINS = [
     provider: "google",
     thinkingLevel: "low",
     dailyLimit: 20,
-  },
-  // Flash-Lite — faster and cheaper, still comfortably good enough for
-  // documentation Q&A over retrieved chunks.
-  {
-    id: "gemini-3.5-flash-lite",
-    label: "3.5 Flash-Lite",
-    provider: "google",
-    thinkingLevel: "low",
-    dailyLimit: 20,
-  },
-  {
-    id: "gemini-3.1-flash-lite",
-    label: "3.1 Flash-Lite",
-    provider: "google",
-    thinkingLevel: "low",
-    dailyLimit: 20,
-  },
-  {
-    id: "gemini-3.1-flash-lite-preview",
-    label: "3.1 Lite Preview",
-    provider: "google",
-    thinkingLevel: "low",
-    dailyLimit: 20,
-  },
-  {
-    id: "gemini-3-flash-preview",
-    label: "3 Flash Preview",
-    provider: "google",
-    thinkingLevel: "low",
-    dailyLimit: 20,
-  },
-  // Pro, last resort. Confirmed real (it answered 429, not 404) but its free
-  // allowance is far smaller than Flash's, so this limit is a conservative
-  // guess. Reaching it means every Flash brain is spent, which is a good day.
-  {
-    id: "gemini-3.1-pro-preview",
-    label: "3.1 Pro Preview",
-    provider: "google",
-    thinkingLevel: "low",
-    dailyLimit: 5,
-  },
-  // Workers AI (DOX-C4, #240) — a second, independent free pool, tried only
-  // once every Gemini brain is out or when a reader picks it explicitly. See
-  // WORKERS_AI_DAILY_NEURONS for how its budget differs from Gemini's.
-  //
-  // One brain, chosen by live probe on 2026-09-11 (`scripts/probe-brains.ts`;
-  // results in context/dox/built.md, "Brains and budget") from four
-  // tool-capable candidates that run on the Workers Free plan:
-  //
-  //   - glm-4.7-flash — kept: 4/4 widget calls, refused the absent question,
-  //     ~88 Neurons a question. Slow (6-24 s) and imperfect; a fallback, not
-  //     a Gemini replacement.
-  //   - qwen3-30b-a3b-fp8, llama-4-scout — dropped, and not for the model's
-  //     sake: `workers-ai-provider` 4.0.0 reads text and tool calls from both
-  //     `response` and `choices[0].delta` of the same chunk, so for these two
-  //     every token arrives twice ("ToTo convert convert") and every tool
-  //     call's arguments fail to parse. Where visible, both chose the right
-  //     tool. Re-probe when the provider stops double-emitting.
-  //   - gpt-oss-20b — dropped: 0/4 widget calls; it writes the call's JSON
-  //     arguments as reply text instead, at ~224 Neurons a question.
-  //
-  // `reasoningEffort: null` asks for thinking off. With `low`, glm spent its
-  // whole 2,048-token cap reasoning on one question and answered nothing; with
-  // `null` it did not — though latency did not improve, so whether the model
-  // fully honours it is unverified.
-  //
-  // `maxOutputTokens` is not optional here: Workers AI defaults `max_tokens` to
-  // 256, which truncates a normal Dox answer mid-sentence. Gemini's default is
-  // large enough that its entries leave it unset.
-  {
-    id: "cf-glm-4.7-flash",
-    label: "GLM 4.7 Flash",
-    provider: "workers-ai",
-    model: "@cf/zai-org/glm-4.7-flash",
-    reasoningEffort: null,
-    maxOutputTokens: 2048,
-    // 10,000 Neurons / ~88 measured per question ≈ 113, rounded down.
-    dailyLimit: 100,
   },
 ] as const satisfies readonly Brain[];
 
@@ -211,6 +153,24 @@ export const BRAIN_PROVIDERS: Readonly<
   "workers-ai": { label: "Workers AI", resetTimeZone: "UTC" },
 };
 
+/**
+ * How long one brain may take to start answering before the Worker gives up
+ * on it for this question and asks the next. Not a mark in the ledger: a slow
+ * start is today's weather, not a spent quota.
+ *
+ * Without it one silent model held the whole request — `gemini-3.8-flash` sent
+ * nothing for 60 s on 2026-10-27, and the reader watched "Asking 3.8 Flash…"
+ * until the chat's own stall timer gave up. Every Gemini brain kept here
+ * answered a short request in under 3 s; Workers AI gets longer because its
+ * models start more slowly under load. Each progress line restarts the
+ * chat's own first-output timer (`FIRST_OUTPUT_TIMEOUT_MS`), so a walk past
+ * several slow brains is not cut off on the client.
+ */
+export const BRAIN_START_TIMEOUT_MS: Readonly<Record<BrainProvider, number>> = {
+  google: 15_000,
+  "workers-ai": 20_000,
+};
+
 export interface Brain {
   id: string;
   label: string;
@@ -222,18 +182,25 @@ export interface Brain {
   model?: string;
   /** Output cap passed to `streamText`. Unset means the provider's default. */
   maxOutputTokens?: number;
-  /** Workers AI reasoning budget for models that think before answering.
-   * Thinking tokens are billed as output Neurons and add latency to a reply
-   * the reader never sees. `null` turns thinking off where the model allows
-   * it; unset leaves the model's default. */
-  reasoningEffort?: "low" | "medium" | "high" | null;
+  /** Workers AI: whether a model that thinks before answering may do so,
+   * sent as `chat_template_kwargs.enable_thinking`. Unset leaves the model's
+   * default, which for Gemma 4 and GLM 4.7 is on.
+   *
+   * Thinking tokens are billed as output Neurons and come before the first
+   * word the reader sees. Measured on 2026-10-27 with one short grounded
+   * question: `false` answered in 1.6 s (Gemma) and 2.5 s (GLM) with about 60
+   * output tokens; left on, the same question took 4–21 s and 430–600 tokens,
+   * and often spent the whole cap thinking and answered nothing.
+   * `reasoning_effort: null` and `"none"` did not switch it off for either
+   * model, so this is the only setting that does. */
+  enableThinking?: boolean;
   /** Gemini 3 thinking depth (`thinkingConfig.thinkingLevel`). Left unset,
-   * Gemini 3 thinks dynamically over the whole 10–16k-token prompt before its
+   * Gemini 3 thinks dynamically over the whole prompt before its
    * first token. `"low"` is meant to cut that pause while keeping the tool call
    * and the grounded answer — the timing trace (`dox-timing`) shows whether it
    * does. A brain that stops calling its widget under `"low"` moves to
    * `"medium"`.
-   * Ignored for Workers AI brains, which use `reasoningEffort`. */
+   * Ignored for Workers AI brains, which use `enableThinking`. */
   thinkingLevel?: "minimal" | "low" | "medium" | "high";
   /** Advisory only — used to render "N left", never to refuse a request. */
   dailyLimit: number;
@@ -249,13 +216,13 @@ export interface Brain {
  *   the same 10,000, so an allocation-exhausted error on one means all of them
  *   are out — `worker/brains.ts` retires the whole provider at once rather than
  *   spending a doomed request per model to rediscover it.
- * - **It is metered in Neurons, which scale with tokens, not requests.** Dox's
- *   system prompt measured 10-16k input tokens a question in the live probe
- *   (19 KB of SKILL.md vocabulary is the bulk of it), so glm-4.7-flash costs
- *   ~88 Neurons a question and the larger candidates 220-320. If more than one
- *   `workers-ai` brain is ever enabled, split `dailyLimit` across them so the
- *   badge's sum stays near what the pool actually buys, rather than each
- *   claiming the whole of it.
+ * - **It is metered in Neurons, which scale with tokens, not requests.** A Dox
+ *   prompt measured 10–19k input tokens a question in the live probe of
+ *   2026-10-27, nearly all of it input: Gemma 4 26B costs ~130–180 Neurons a
+ *   question and GLM 4.7 Flash ~80–110. Both `dailyLimit`s are a share of the
+ *   one pool — 40 of each is about 8,500–11,600 Neurons — so the badge's sum
+ *   stays near what the pool actually buys rather than each claiming all of
+ *   it.
  *
  * On the Workers **Free** plan, exceeding this fails with an error — it cannot
  * bill. That is the property that keeps Dox 100% free, and it would stop being
@@ -285,11 +252,11 @@ export function findBrain(id: string): Brain | undefined {
  * that is shared by everybody, which on the free tier is a real and easy
  * accident rather than an attack.
  *
- * Sized against the shared pool rather than picked for feel. Eight Flash brains
- * at 20 requests each, plus one smaller Pro one, is ~165 per day for
- * *everyone*; the Workers AI pool (DOX-C4) adds ~110 more, from a live probe of
- * glm-4.7-flash at ~88 Neurons a question. Against ~275 a cap of 5 lets roughly
- * 55 readers get a full turn before the day is spent. Left at 5 until real
+ * Sized against the shared pool rather than picked for feel. Three Gemini
+ * brains at 20 requests each is ~60 per day for *everyone*; the Workers AI pool
+ * adds ~80 more, at the ~130 Neurons a question Gemma 4 26B measured. Against
+ * ~140 a cap of 5 lets roughly 28 readers get a full turn before the day is
+ * spent. Left at 5 until real
  * traffic confirms that figure — a cap raised on a twenty-question probe is the
  * drift this comment warns about. Five questions is already more than a typical
  * reader asks of a documentation bot in one sitting.
@@ -313,10 +280,11 @@ export const RATE_LIMIT_WINDOW_SECONDS = 60;
 export const IDLE_TIMEOUT_MS = 30_000;
 
 /**
- * How long the chat waits for the *first* output before calling a request
- * stalled. Longer than `IDLE_TIMEOUT_MS` because nothing can arrive yet: the
- * Worker fails over past spent brains before it sends a byte, and the Workers
- * AI fallback measured 6-24 s to first output.
+ * How long the chat waits for the *first* output, or for the next progress
+ * line before it, before calling a request stalled. Longer than
+ * `IDLE_TIMEOUT_MS` because no answer text can arrive yet: the Worker is still
+ * walking the brains, and each one may take up to `BRAIN_START_TIMEOUT_MS`
+ * to start and then think before its first token.
  */
 export const FIRST_OUTPUT_TIMEOUT_MS = 90_000;
 

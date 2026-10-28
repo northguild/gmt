@@ -26,9 +26,11 @@
  * an opaque mid-stream failure whose cause is one turn upstream.
  *
  * So each tool gets an `execute` that does **no I/O and no model call**. It
- * validates its input and returns a small object. Because `streamText`'s default
- * `stopWhen` is `isStepCount(1)`, this costs no extra upstream request and no
- * extra quota — which matters against a shared free-tier pool.
+ * validates its input and returns a small object. An answer that came with
+ * text ends after that one step, so the tool costs no extra upstream request
+ * and no extra quota — which matters against a shared free-tier pool. Only a
+ * tool call with no text earns a second step, for the prose (see
+ * `WIDGET_THEN_PROSE` in brains.ts).
  *
  * The widget is still rendered entirely on the client, from `part.input`. This
  * output is for the model's benefit, not the reader's: it tells the next turn
@@ -113,13 +115,11 @@ function reject(widget: string, note: string) {
  * should not require restructuring this.
  */
 /**
- * @param names Which tools to return. **Production must not pass this** — the
- *   default is the only correct value, and offering a tool whose widget is not
- *   registered means the model promises a widget the panel cannot show.
- *   It exists so tests can exercise a pending tool's `execute` before its widget
- *   is extracted, which is what makes enabling one genuinely a one-line change.
- *   `chat-handler.test.ts` asserts the *offered* set equals `ENABLED_TOOL_NAMES`,
- *   so a stray argument here fails there rather than reaching a reader.
+ * @param names Which tools to return, from `ENABLED_TOOL_NAMES`. Production
+ *   passes the set `select-tools.ts` chose for the question; the default (every
+ *   enabled tool) serves tests. A name outside `ENABLED_TOOL_NAMES` would offer
+ *   a widget the panel cannot show, so `chat-handler.test.ts` asserts the
+ *   offered set is always a subset of it.
  */
 export function buildWorkerTools(
   names: readonly string[] = ENABLED_TOOL_NAMES,

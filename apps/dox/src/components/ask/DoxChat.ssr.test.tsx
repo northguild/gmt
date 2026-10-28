@@ -19,6 +19,7 @@ import { renderToString } from "react-dom/server";
 import { DoxChat } from "./DoxChat";
 import DoxPage from "./DoxPage";
 import type { BrainsInfo } from "./use-brains";
+import { gmtStats } from "~/data/gmt-stats";
 
 const PACIFIC_MIDNIGHT = "2026-06-16T07:00:00Z";
 
@@ -58,6 +59,16 @@ describe("DoxChat server-side render", () => {
     // The pre-hydration markup a reader sees first must be the real empty
     // state, not a blank shell.
     expect(html).toContain("chunks indexed");
+  });
+
+  it("server-renders the note that the answers can be wrong but the widgets are tested", () => {
+    // React marks the seams between text pieces with empty comments.
+    const html = renderToString(<DoxChat />).replaceAll("<!-- -->", "");
+    expect(html).toContain("gmt-hive-accuracy-note");
+    expect(html).toContain("can get things wrong");
+    expect(html).toContain(
+      `checked by ${new Intl.NumberFormat("en-US").format(gmtStats.tests)} tests`,
+    );
   });
 
   it("server-renders the examples rail without touching a browser global", () => {

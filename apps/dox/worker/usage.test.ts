@@ -189,14 +189,14 @@ describe("providerResets", () => {
   it("lists each provider once, in preference order, with its next midnight", () => {
     expect(providerResets(BRAINS, NOW)).toEqual([
       {
-        id: "google",
-        label: "Gemini",
-        resetsAt: "2026-06-16T07:00:00Z",
-      },
-      {
         id: "workers-ai",
         label: "Workers AI",
         resetsAt: "2026-06-16T00:00:00Z",
+      },
+      {
+        id: "google",
+        label: "Gemini",
+        resetsAt: "2026-06-16T07:00:00Z",
       },
     ]);
   });

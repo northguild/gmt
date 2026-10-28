@@ -11,6 +11,7 @@ import { useIdleTimeout } from "./use-idle-timeout";
 interface Props {
   status: string;
   messages: readonly unknown[];
+  activity?: unknown;
 }
 
 function setup(status: string, messages: readonly unknown[] = [1]) {
@@ -18,7 +19,7 @@ function setup(status: string, messages: readonly unknown[] = [1]) {
   const onStall = vi.fn();
   const hook = renderHook(
     (props: Props) => useIdleTimeout({ ...props, stop, onStall }),
-    { initialProps: { status, messages } },
+    { initialProps: { status, messages } as Props },
   );
   return { stop, onStall, ...hook };
 }
@@ -33,9 +34,8 @@ afterEach(() => {
 
 describe("useIdleTimeout", () => {
   it("waits for the first output far longer than the idle limit", () => {
-    // Before a byte arrives the Worker may be failing over past spent brains,
-    // and the Workers AI fallback took 6-24 s to start. The idle limit alone
-    // stopped answers that were coming.
+    // Before any answer text arrives the Worker may be failing over past spent
+    // or slow brains. The idle limit alone stopped answers that were coming.
     expect(FIRST_OUTPUT_TIMEOUT_MS).toBeGreaterThan(IDLE_TIMEOUT_MS);
     const { stop, onStall } = setup("submitted");
 
@@ -64,6 +64,20 @@ describe("useIdleTimeout", () => {
     vi.advanceTimersByTime(IDLE_TIMEOUT_MS - 1_000);
     rerender({ status: "streaming", messages: [1, 2] });
     vi.advanceTimersByTime(IDLE_TIMEOUT_MS - 1_000);
+    expect(onStall).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1_000);
+    expect(onStall).toHaveBeenCalledTimes(1);
+  });
+
+  it("restarts the first-output clock on each progress line", () => {
+    // A walk past several slow brains can outlast the limit in total while
+    // every step of it is reported.
+    const { onStall, rerender } = setup("submitted", [1]);
+
+    vi.advanceTimersByTime(FIRST_OUTPUT_TIMEOUT_MS - 1_000);
+    rerender({ status: "submitted", messages: [1], activity: "Asking B" });
+    vi.advanceTimersByTime(FIRST_OUTPUT_TIMEOUT_MS - 1_000);
     expect(onStall).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(1_000);

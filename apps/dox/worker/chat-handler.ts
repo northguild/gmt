@@ -4,7 +4,6 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   toUIMessageStream,
-  type LanguageModel,
 } from "ai";
 import type {
   ChunkCache,
@@ -17,6 +16,7 @@ import {
   RETRIEVAL_PART_ID,
   RETRIEVAL_PART_TYPE,
   STATUS_PART_TYPE,
+  USAGE_PART_TYPE,
   type RefusalData,
   type RetrievalTraceData,
   type StatusData,
@@ -27,16 +27,26 @@ import { mapUpstreamError } from "./error-mapping";
 import { namespaceFromPageContext } from "./namespace-from-page";
 import { checkRateLimit, clientIdFromRequest } from "./rate-limit";
 import { ENABLED_TOOL_DOCS } from "../src/lib/dox-tools";
+import { brainsPayload, withRecordedRequest } from "./brains-payload";
+import { fitChunks } from "./fit-chunks";
+import { selectTools } from "./select-tools";
+import { selectVocabulary, type VocabularySkill } from "./select-vocabulary";
 import { assembleSystemPrompt } from "./system-prompt";
 import { buildWorkerTools } from "./tools";
 import { validateChatRequest } from "./validation";
-import { chooseBrain, openFirstWorkingBrain, orderCandidates } from "./brains";
+import {
+  chooseBrain,
+  openFirstWorkingBrain,
+  orderCandidates,
+  type BrainModel,
+} from "./brains";
 import {
   hashVisitor,
   markBrain,
   providerResets,
   readUsage,
   recordRequest,
+  type BrainState,
   type UsageSnapshot,
   type UsageStore,
 } from "./usage";
@@ -54,7 +64,7 @@ export interface ChatHandlerDeps {
    * because the free tier's allowance is per model, so Dox keeps several and
    * moves between them — see `brains.ts`. Tests pass `() => fakeModel(...)`,
    * and can make one brain throw to cover failover. */
-  resolveModel: (brainId: string) => LanguageModel;
+  resolveModel: (brainId: string) => BrainModel;
   /** The brains this deployment can actually reach, in preference order.
    * Defaults to every brain; worker/index.ts narrows it to the providers it
    * has a key or binding for (DOX-C4), so an unconfigured provider is simply
@@ -68,13 +78,15 @@ export interface ChatHandlerDeps {
    * per-visitor daily cap — not from the shared pool, which nothing can raise
    * on the free tier. */
   isDev?: (request: Request) => Promise<boolean>;
-  /** `VOCABULARY_CONTENT` / `CORE_RULES_CONTENT` in production (worker/index.ts
-   * wires these in). Injected — not imported directly here — so this module
+  /** `VOCABULARY_SKILLS` / `CORE_RULES_CONTENT` in production (worker/index.ts
+   * wires these in). Each question gets only the skills its retrieved context
+   * points at — see `select-vocabulary.ts`. Injected — not imported directly
+   * here — so this module
    * never touches the `.md` Text-module imports those come from: Wrangler's
    * bundler resolves them fine, but Vitest runs under Vite, which has no
    * such rule and fails to even parse the file. Verified during this story
    * when `chat-handler.test.ts` failed to load until this was split out. */
-  vocabulary: string;
+  vocabulary: readonly VocabularySkill[];
   coreRules: string;
   /** Overridable in tests; defaults to the real `fetchChunks`. */
   fetchChunksImpl?: typeof fetchChunks;
@@ -88,6 +100,9 @@ export interface ChatHandlerDeps {
   fetchImpl?: FetchChunksOptions["fetchImpl"];
   cache?: ChunkCache;
   now?: () => number;
+  /** How long a brain may take to start answering. Defaults to
+   *  `BRAIN_START_TIMEOUT_MS` per provider; tests shorten it. */
+  startTimeoutMs?: (brain: Brain) => number;
 }
 
 /**
@@ -138,6 +153,7 @@ export function createChatHandler(deps: ChatHandlerDeps) {
     fetchImpl,
     cache,
     now = getUnixNowMs,
+    startTimeoutMs,
   } = deps;
 
   return async function handleChat(request: Request): Promise<Response> {
@@ -233,23 +249,32 @@ export function createChatHandler(deps: ChatHandlerDeps) {
             .join("")
         : "";
 
-      const retrieved = await watch.time("search", () =>
-        searchChunksImpl(chunks, query, {
-          namespace: namespaceFromPageContext(pageContext),
-        }),
+      // Capped before anything else reads it, so the prompt, the linking
+      // allowlist and the trace all describe the same chunks.
+      const retrieved = fitChunks(
+        await watch.time("search", () =>
+          searchChunksImpl(chunks, query, {
+            namespace: namespaceFromPageContext(pageContext),
+          }),
+        ),
       );
 
-      /* Built per request. `streamText`, `convertToModelMessages` and
+      /* Only the tools this question could use (see `select-tools.ts`), which
+         always include every tool the history already called. Built per
+         request. `streamText`, `convertToModelMessages` and
          `toUIMessageStream` must all be handed the *same* set, or a tool part
          is typed in one layer and opaque in the next. */
-      const tools = buildWorkerTools();
+      const offered = selectTools({ query, retrieved, messages });
+      const tools = buildWorkerTools(offered);
 
       const systemPrompt = assembleSystemPrompt({
         routeAllowlist: retrieved.map((c) => c.url),
         chunks: retrieved,
-        vocabulary,
+        vocabulary: selectVocabulary(vocabulary, retrieved),
         coreRules,
-        tools: ENABLED_TOOL_DOCS,
+        tools: offered.flatMap(
+          (name) => ENABLED_TOOL_DOCS.find((doc) => doc.name === name) ?? [],
+        ),
       });
 
       /* `ignoreIncompleteToolCalls` drops a tool part that never reached a
@@ -293,9 +318,10 @@ export function createChatHandler(deps: ChatHandlerDeps) {
 
       // ---- Failover, inside this one request ---------------------------
       //
-      // Awaiting `result.warnings` forces the upstream call and surfaces a 429
-      // or a 404 *before* any UI stream is opened — which is what makes it
-      // possible to quietly try the next brain instead of showing an error.
+      // `openFirstWorkingBrain` waits for each brain's first piece of content,
+      // and a 429 or a 404 surfaces *before* any UI stream is opened — which is
+      // what makes it possible to quietly try the next brain instead of
+      // showing an error.
       //
       // The first design deferred this, reasoning that a pre-flight ledger
       // check made an in-request failure "a rare race". That was wrong, and the
@@ -308,7 +334,7 @@ export function createChatHandler(deps: ChatHandlerDeps) {
       // The ledger is now an optimisation (skip brains already known to be out,
       // and drive the badge), not the mechanism.
       /* The stream opens *before* a brain is chosen, so the reader sees each
-         step of the walk ("3.8 Flash is busy — trying 3.7 Flash…") instead of
+         step of the walk ("Gemma 4 26B is busy — trying the next model…") instead of
          a silent wait: measured 2026-09-24, two busy brains cost 2.8 s of a
          6.7 s answer. Everything written before a brain answers is
          `transient` — progress and refusals reach `onData` but never enter a
@@ -331,6 +357,10 @@ export function createChatHandler(deps: ChatHandlerDeps) {
               transient: true,
             });
 
+          /* Every brain this walk found out, so the usage part below can show
+             them as out without waiting on the ledger. */
+          const markedOut: Record<string, Exclude<BrainState, "ok">> = {};
+
           let attempt: Awaited<ReturnType<typeof openFirstWorkingBrain>>;
           try {
             attempt = await watch.time("brains", () =>
@@ -340,14 +370,18 @@ export function createChatHandler(deps: ChatHandlerDeps) {
                 instructions: systemPrompt,
                 messages: modelMessages,
                 tools,
+                startTimeoutMs,
                 onAttempt: (brain) => progress(`Asking ${brain.label}\u2026`),
                 onMovedOn: (brain, outcome) =>
                   progress(
                     outcome === "busy"
                       ? `${brain.label} is busy \u2014 trying the next model\u2026`
-                      : `${brain.label} is out for today \u2014 trying the next model\u2026`,
+                      : outcome === "slow"
+                        ? `${brain.label} is taking too long \u2014 trying the next model\u2026`
+                        : `${brain.label} is out for today \u2014 trying the next model\u2026`,
                   ),
                 onBrainOut: (brainId, state) => {
+                  markedOut[brainId] = state;
                   // `markBrain` expires the mark on the brain's own provider
                   // clock — UTC midnight for Workers AI, Pacific for Gemini.
                   const brain = brains.find(
@@ -377,6 +411,24 @@ export function createChatHandler(deps: ChatHandlerDeps) {
           // Best-effort: a ledger failure must never fail a chat.
           if (usage) {
             void recordRequest(usage, answered.brain, visitorHash, nowMs);
+            // The counts as they stand after this question, for the badge.
+            // Re-reading `/api/brains` instead would race the write above,
+            // and KV can take a minute to show it — the reader saw "5 left"
+            // after asking.
+            writer.write({
+              type: USAGE_PART_TYPE,
+              data: brainsPayload({
+                brains,
+                snapshot: withRecordedRequest(
+                  snapshot,
+                  answered.brain,
+                  markedOut,
+                ),
+                nowMs,
+                dev,
+              }),
+              transient: true,
+            });
           }
 
           /* Written twice with the same `id`: once before the answer, so the

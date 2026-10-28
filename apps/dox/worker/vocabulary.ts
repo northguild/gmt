@@ -1,7 +1,8 @@
 // DOX-C2 (#138) — "vocabulary" for the system prompt: the consumer-facing
-// packages/gmt/skills/*/SKILL.md content, concatenated so the model learns
-// the library's terminology before reading reference signatures (see the
-// section order in worker/system-prompt.ts).
+// packages/gmt/skills/*/SKILL.md content, so the model learns the library's
+// terminology before reading reference signatures (see the section order in
+// worker/system-prompt.ts). Parsed once here; each question then carries only
+// the skills its retrieved context points at (worker/select-vocabulary.ts).
 //
 // Deliberately excludes packages/gmt/skills/contributor/*/SKILL.md (issue
 // creation, PR contribution, new-method implementation, unit-test
@@ -23,6 +24,7 @@
 // tsconfig with `astro check`; the `as unknown as string` casts below route
 // around that mismatch rather than reflecting a real type error — see
 // core-rules.ts for the same pattern.
+import { parseSkill, type VocabularySkill } from "./select-vocabulary";
 import gmtArithmetic from "../../../packages/gmt/skills/gmt-arithmetic/SKILL.md";
 import gmtBasics from "../../../packages/gmt/skills/gmt-basics/SKILL.md";
 import gmtGnss from "../../../packages/gmt/skills/gmt-gnss/SKILL.md";
@@ -32,7 +34,7 @@ import gmtTimezone from "../../../packages/gmt/skills/gmt-timezone/SKILL.md";
 import gmtTransport from "../../../packages/gmt/skills/gmt-transport/SKILL.md";
 import gmtWorkforce from "../../../packages/gmt/skills/gmt-workforce/SKILL.md";
 
-export const VOCABULARY_CONTENT: string = [
+export const VOCABULARY_SKILLS: readonly VocabularySkill[] = [
   gmtBasics,
   gmtArithmetic,
   gmtTimezone,
@@ -41,6 +43,4 @@ export const VOCABULARY_CONTENT: string = [
   gmtTransport,
   gmtIntermodal,
   gmtWorkforce,
-]
-  .map((s) => s as unknown as string)
-  .join("\n\n---\n\n");
+].map((s) => parseSkill(s as unknown as string));

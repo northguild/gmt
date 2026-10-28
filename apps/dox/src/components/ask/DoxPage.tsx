@@ -29,6 +29,7 @@ import { ExamplesBar } from "./ExamplesBar";
 import { HeaderClock } from "./HeaderClock";
 import { useBrains } from "./use-brains";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
+import { RailResizer } from "./RailResizer";
 import { WidgetRail, type RailWidget } from "./WidgetRail";
 import { isSameWidget, resolveWidget } from "./widget-registry";
 import { withBase } from "~/lib/site";
@@ -57,7 +58,7 @@ function useEnvironment(): Environment | null {
 
 export default function DoxPage() {
   const environment = useEnvironment();
-  const { info, refresh } = useBrains();
+  const { info, refresh, apply } = useBrains();
 
   /* The rail's state lives here rather than in `DoxChat`: it is this host's
      chrome, and the dock will lay widgets out its own way. One at a time. */
@@ -189,6 +190,7 @@ export default function DoxPage() {
             ref={chatRef}
             brains={info}
             onUsed={refresh}
+            onUsage={apply}
             onWidget={showWidget}
             onEmptyChange={handleEmptyChange}
             aboveComposer={
@@ -203,6 +205,7 @@ export default function DoxPage() {
             }
           />
         </ChatErrorBoundary>
+        <RailResizer railId={railId} />
         <ChatErrorBoundary
           label="widget rail"
           /* No reload offered here: the conversation behind this is intact and
