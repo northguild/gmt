@@ -25,9 +25,9 @@ describe("affected: which checks a change runs", () => {
       checks: [],
     },
     {
-      name: "a workflow other than ci.yml runs nothing",
+      name: "a workflow other than ci.yml runs only the format check",
       changes: [".github/workflows/canary.yml"],
-      checks: [],
+      checks: ["format"],
     },
     {
       name: "a tracker runs deps check",
@@ -95,6 +95,7 @@ describe("affected: which checks a change runs", () => {
       name: "an edited library test skips the Dox build",
       changes: [{ path: "packages/gmt/src/zone/zone.test.ts", status: "M" }],
       checks: [
+        "format",
         "markers",
         "build:gmt-oxlint",
         "build:gmt",
@@ -118,12 +119,12 @@ describe("affected: which checks a change runs", () => {
     {
       name: "a repo script runs its own check and the Dox tests",
       changes: [{ path: "scripts/deps.mjs", status: "M" }],
-      checks: ["deps", "build:gmt", "test:dox"],
+      checks: ["format", "deps", "build:gmt", "test:dox"],
     },
     {
       name: "the licence check script runs its own check and the Dox tests, which copy scripts/",
       changes: [{ path: "scripts/licences.mjs", status: "M" }],
-      checks: ["licences", "build:gmt", "test:dox"],
+      checks: ["format", "licences", "build:gmt", "test:dox"],
     },
     {
       name: "the scripts/ licence runs the licence check and the Dox tests, which copy scripts/",
@@ -143,7 +144,35 @@ describe("affected: which checks a change runs", () => {
         { path: "CONTRIBUTING.md", status: "M" },
         { path: "scripts/test-markers.mjs", status: "M" },
       ],
-      checks: ["deps", "markers", "build:gmt", "test:dox"],
+      checks: ["format", "deps", "markers", "build:gmt", "test:dox"],
+    },
+    {
+      name: "the formatter's config runs only the format check",
+      changes: [{ path: ".oxfmtrc.json", status: "M" }],
+      checks: ["format"],
+    },
+    {
+      name: "a Dox stylesheet runs the format check with the Dox checks",
+      changes: [{ path: "apps/dox/src/styles/gmt-migrate.css", status: "M" }],
+      checks: [
+        "format",
+        "markers",
+        "docs-check",
+        "build:gmt-oxlint",
+        "build:gmt",
+        "dox-pages",
+        "build:dox",
+        "api-surface",
+        "dox-dist",
+        "lint:dox",
+        "typecheck:dox",
+        "test:dox",
+      ],
+    },
+    {
+      name: "a deleted script skips the format check",
+      changes: [{ path: "scripts/deps.mjs", status: "D" }],
+      checks: ["deps", "build:gmt", "test:dox"],
     },
     {
       name: "the DST guide's source runs the checks of the Dox page it becomes",

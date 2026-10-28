@@ -13,7 +13,8 @@
  * native tools read (tsdown, esbuild, oxlint, Astro's bundler), so those are added by hand: the
  * library's sources feed its build, bundle-size and lint:gmt, and every Dox file feeds the Dox
  * build and lint:dox. The toolchain files (the lockfile, the root package.json and tsconfig, the
- * Node version, CI itself, and these rules) run every check.
+ * Node version, CI itself, and these rules) run every check. The format check is asked by file
+ * type, not by rule: see `FORMATTED`.
  *
  * The audit also cannot see a check that reads generated output. The audit counts reads of tracked
  * files only, and generated files are gitignored. So when a check reads a file a generator writes,
@@ -29,6 +30,7 @@
  * marks a check only CI runs.
  */
 export const CHECKS = [
+  { id: "format", run: "pnpm exec oxfmt --check" },
   { id: "deps", run: "node scripts/deps.mjs check" },
   { id: "markers", run: "node scripts/test-markers.mjs check" },
   { id: "licences", run: "node scripts/licences.mjs check" },
@@ -154,6 +156,13 @@ const OXLINT = [
   ),
   "markers",
 ];
+
+/**
+ * The file types oxfmt formats. A changed file of one of these types runs the format check,
+ * whatever its rule says, because oxfmt reads every such file `.oxfmtrc.json` does not ignore.
+ * oxfmt is a native tool, so `affected:audit` cannot see its reads.
+ */
+export const FORMATTED = /\.(?:[cm]?[jt]sx?|json[c5]?|css|ya?ml|toml)$/;
 
 /** The tests of the repo scripts live in apps/dox/scripts and run with the Dox tests. */
 const SCRIPT_TESTS = ["test:dox"];
@@ -397,6 +406,13 @@ export function affected(changes) {
       continue;
     }
     for (const id of rule.checks) ask(id, path);
+    // A deleted file has nothing left to format.
+    if (
+      status !== "D" &&
+      FORMATTED.test(path) &&
+      !rule.checks.includes("format")
+    )
+      ask("format", path);
     if (status !== "M") {
       for (const id of rule.listed ?? []) {
         if (!rule.checks.includes(id))

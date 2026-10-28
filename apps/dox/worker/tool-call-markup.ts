@@ -59,7 +59,11 @@ interface WrittenCall {
 
 /** How many characters at the end of `text` could begin `tag`. */
 function partialTagLength(text: string, tag: string): number {
-  for (let length = Math.min(tag.length - 1, text.length); length > 0; length--) {
+  for (
+    let length = Math.min(tag.length - 1, text.length);
+    length > 0;
+    length--
+  ) {
     if (tag.startsWith(text.slice(-length))) return length;
   }
   return 0;
@@ -69,7 +73,11 @@ function partialTagLength(text: string, tag: string): number {
  * Returns the visible text in `block.pending + delta`, updating `block`, and
  * adds the body of each call that closes to `bodies`.
  */
-function visibleText(block: BlockState, delta: string, bodies: string[]): string {
+function visibleText(
+  block: BlockState,
+  delta: string,
+  bodies: string[],
+): string {
   let rest = block.pending + delta;
   let visible = "";
   block.pending = "";
@@ -164,7 +172,13 @@ function markupTransform(
           return;
         case "text-delta": {
           const block = blocks.get(part.id);
-          if (block) send(controller, block, part, visibleText(block, part.delta, bodies));
+          if (block)
+            send(
+              controller,
+              block,
+              part,
+              visibleText(block, part.delta, bodies),
+            );
           else controller.enqueue(part);
           return;
         }
@@ -177,7 +191,12 @@ function markupTransform(
           // A held `<` that never became a tag is ordinary text. A call the
           // model never closed is dropped.
           if (!block.inside && block.pending !== "") {
-            send(controller, block, { type: "text-delta", id: part.id, delta: "" }, block.pending);
+            send(
+              controller,
+              block,
+              { type: "text-delta", id: part.id, delta: "" },
+              block.pending,
+            );
           }
           blocks.delete(part.id);
           if (block.started) controller.enqueue(part);
@@ -192,11 +211,18 @@ function markupTransform(
             ? []
             : bodies.flatMap((body) => readWrittenCall(body, tools) ?? []);
           for (const call of calls) {
-            controller.enqueue({ type: "tool-call", toolCallId: generateId(), ...call });
+            controller.enqueue({
+              type: "tool-call",
+              toolCallId: generateId(),
+              ...call,
+            });
           }
           controller.enqueue(
             calls.length > 0
-              ? { ...part, finishReason: { ...part.finishReason, unified: "tool-calls" } }
+              ? {
+                  ...part,
+                  finishReason: { ...part.finishReason, unified: "tool-calls" },
+                }
               : part,
           );
           return;
@@ -212,6 +238,9 @@ export const toolCallMarkupMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v4",
   wrapStream: async ({ doStream, params }) => {
     const result = await doStream();
-    return { ...result, stream: result.stream.pipeThrough(markupTransform(params.tools)) };
+    return {
+      ...result,
+      stream: result.stream.pipeThrough(markupTransform(params.tools)),
+    };
   },
 };

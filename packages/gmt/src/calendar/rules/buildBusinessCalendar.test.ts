@@ -558,15 +558,13 @@ describe("buildBusinessCalendar", () => {
       return [
         { name: "closed", kind: "dates", dates: closed },
         { name: "last", kind: "fixed", month: 12, day: 31, observed: ALL_DAYS },
-        ...origins.slice(0, -1).map(
-          (origin, index): HolidayRule => ({
-            name: `walk ${index}`,
-            kind: "fixed",
-            month: origin.month,
-            day: origin.day,
-            observed: ALL_DAYS,
-          }),
-        ),
+        ...origins.slice(0, -1).map((origin, index): HolidayRule => ({
+          name: `walk ${index}`,
+          kind: "fixed",
+          month: origin.month,
+          day: origin.day,
+          observed: ALL_DAYS,
+        })),
       ];
     }
 
@@ -594,15 +592,13 @@ describe("buildBusinessCalendar", () => {
     it("gives 2027 the same holidays from a one-year and a longer window (10 calendar rules)", () => {
       const rules: HolidayRule[] = [
         { name: "closed", kind: "dates", dates: ["2026-12-28", "2026-12-29"] },
-        ...[20, 21, 22, 23, 24, 25, 26, 27, 28, 29].map(
-          (day): HolidayRule => ({
-            name: `walk ${day}`,
-            kind: "fixed",
-            month: 12,
-            day,
-            observed: ALL_DAYS,
-          }),
-        ),
+        ...[20, 21, 22, 23, 24, 25, 26, 27, 28, 29].map((day): HolidayRule => ({
+          name: `walk ${day}`,
+          kind: "fixed",
+          month: 12,
+          day,
+          observed: ALL_DAYS,
+        })),
       ];
       const wide = inYear(rules, 2020, 2027, "2027");
 

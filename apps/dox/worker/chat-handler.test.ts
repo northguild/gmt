@@ -1057,7 +1057,9 @@ describe("brains, budgets and failover", () => {
     // The ledger write is fire-and-forget; drain the stream so it has run.
     await response.text();
 
-    expect(await usage.get(`model:${brainDay(BRAINS[0])}:${BRAINS[0].id}`)).toBe("1");
+    expect(
+      await usage.get(`model:${brainDay(BRAINS[0])}:${BRAINS[0].id}`),
+    ).toBe("1");
   });
 
   it("stops a visitor who has spent their daily allowance", async () => {
@@ -1291,7 +1293,9 @@ describe("brains, budgets and failover", () => {
       )
     ).text();
 
-    expect(await usage.get(`state:${brainDay(BRAINS[0])}:${BRAINS[0].id}`)).toBe("spent");
+    expect(
+      await usage.get(`state:${brainDay(BRAINS[0])}:${BRAINS[0].id}`),
+    ).toBe("spent");
   });
 
   it("only reports exhaustion when every brain really refuses", async () => {
@@ -1507,7 +1511,9 @@ describe("brains, budgets and failover", () => {
     );
     await response.text();
 
-    expect(await usage.get(`state:${brainDay(BRAINS[0])}:${BRAINS[0].id}`)).toBe("spent");
+    expect(
+      await usage.get(`state:${brainDay(BRAINS[0])}:${BRAINS[0].id}`),
+    ).toBe("spent");
   });
 
   it("names the answering brain in the retrieval trace", async () => {

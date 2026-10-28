@@ -58,7 +58,11 @@ describe("brainsPayload", () => {
   it("moves the active brain past one that is out", () => {
     const info = brainsPayload({
       brains: BRAINS,
-      snapshot: { perBrain: {}, states: { [BRAINS[0].id]: "spent" }, visitor: 0 },
+      snapshot: {
+        perBrain: {},
+        states: { [BRAINS[0].id]: "spent" },
+        visitor: 0,
+      },
       nowMs: NOW,
       dev: false,
     });

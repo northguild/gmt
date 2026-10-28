@@ -311,7 +311,9 @@ async function fetchSyncedAsync(repo, number, kind, timeout) {
 
 /** Every `DefectId` / `ZonedDefectId` / `BoundedWorkDefectId` literal `probeRepros.ts` and `repros.ts` declare. */
 function knownGuards() {
-  const src = REPROS.map((path) => readFileSync(`${ROOT}${path}`, "utf8")).join("\n");
+  const src = REPROS.map((path) => readFileSync(`${ROOT}${path}`, "utf8")).join(
+    "\n",
+  );
   const guards = new Set();
   for (const m of src.matchAll(
     /export type (?:DefectId|ZonedDefectId|BoundedWorkDefectId) =([^;]+);/g,

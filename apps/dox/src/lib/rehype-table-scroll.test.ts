@@ -65,8 +65,9 @@ describe("rehypeTableScroll", () => {
   it("boxes each of two tables once", () => {
     const tree = run({ type: "root", children: [table(), table()] });
     expect(tree.children?.map((c) => c.tagName)).toEqual(["div", "div"]);
-    expect(
-      tree.children?.map((c) => c.children?.[0].tagName),
-    ).toEqual(["table", "table"]);
+    expect(tree.children?.map((c) => c.children?.[0].tagName)).toEqual([
+      "table",
+      "table",
+    ]);
   });
 });
