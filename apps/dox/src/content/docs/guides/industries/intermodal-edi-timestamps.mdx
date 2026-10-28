@@ -369,6 +369,7 @@ return `null`. Modern guides send four-digit years, and X12 has since release 00
 partner still sends one, read it with the pattern parsers and state the century yourself with
 `yearWindow`:
 
+{/* table: entries */}
 | Code          | Mask           | Pattern          | Parser                   | Example                                                          |
 | ------------- | -------------- | ---------------- | ------------------------ | ---------------------------------------------------------------- |
 | `101`, `D6`   | `YYMMDD`       | `yyMMdd`         | `parseDateWithPattern`   | `"240615"` reads as `"2024-06-15"`                               |

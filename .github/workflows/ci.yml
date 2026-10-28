@@ -212,7 +212,7 @@ jobs:
       # reached every text surface with the suite green (CORE-8 review, #253). Built here, once,
       # rather than in the Node matrix, because one runner is enough to check generated output.
       - name: Build the dox site
-        if: contains(fromJSON(env.CHECKS), 'dox-dist')
+        if: contains(fromJSON(env.CHECKS), 'dox-dist') || contains(fromJSON(env.CHECKS), 'dox-tables')
         run: pnpm --filter dox run build
 
       # DOX_DIST_REQUIRED turns those gates' "no dist, nothing to check" skip into a failure, but
@@ -228,6 +228,28 @@ jobs:
         env:
           DOX_DIST_REQUIRED: "1"
         run: pnpm --filter dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/head-tags.test.ts scripts/gates/registry.test.ts
+
+      # No table on a built page scrolls sideways at 1440 px. The check opens every built page with a
+      # table in Chromium, so it needs the browser the Dox gates job installs.
+      - name: Playwright version
+        id: pw
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        run: echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+
+      - name: Install Chromium
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium
+
+      - name: Built site, tables fit at 1440 px
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        run: pnpm --filter dox exec node scripts/table-fit.mjs
 
       # A release PR (`changeset:version` already run) deletes the changesets it consumed
       # and bumps versions instead of adding a new one — that's the point of it, per

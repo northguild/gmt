@@ -61,6 +61,7 @@ describe("affected: which checks a change runs", () => {
         "build:dox",
         "api-surface",
         "dox-dist",
+        "dox-tables",
         "typecheck:dox",
         "test:dox",
       ],
@@ -78,6 +79,7 @@ describe("affected: which checks a change runs", () => {
         "stats",
         "api-surface",
         "dox-dist",
+        "dox-tables",
         "typecheck:dox",
         "test:dox",
       ],
@@ -93,6 +95,7 @@ describe("affected: which checks a change runs", () => {
         "stats",
         "api-surface",
         "dox-dist",
+        "dox-tables",
         "typecheck:dox",
         "test:dox",
       ],
@@ -170,6 +173,7 @@ describe("affected: which checks a change runs", () => {
         "build:dox",
         "api-surface",
         "dox-dist",
+        "dox-tables",
         "lint:dox",
         "typecheck:dox",
         "test:dox",
@@ -189,6 +193,7 @@ describe("affected: which checks a change runs", () => {
         "build:dox",
         "api-surface",
         "dox-dist",
+        "dox-tables",
         "typecheck:dox",
         "test:dox",
       ],
@@ -279,14 +284,23 @@ describe("affected: the rules and checks are well formed", () => {
 
   it("a check whose script loads the built library needs its build", () => {
     for (const check of CHECKS) {
-      const script = /node (scripts\/[\w-]+\.mjs)/.exec(check.run)?.[1];
-      if (!script) continue;
+      // A repo script, or a Dox script run in apps/dox.
+      const found =
+        /(pnpm --filter @gmt\/dox exec )?node (scripts\/[\w-]+\.mjs)/.exec(
+          check.run,
+        );
+      if (!found) continue;
+      const root = found[1] ? "../" : "../../../";
       const source = readFileSync(
-        new URL(`../../../${script}`, import.meta.url),
+        new URL(`${root}${found[2]}`, import.meta.url),
         "utf8",
       );
-      // Through the shared loader, or by path to the build.
-      if (/\.\/lib\/gmt\.mjs|packages\/gmt\/dist/.test(source))
+      // Through the shared loader, by path to the build, or by package name.
+      if (
+        /\.\/lib\/gmt\.mjs|packages\/gmt\/dist|["']@northguild\/gmt["'/]/.test(
+          source,
+        )
+      )
         expect(check.needs ?? [], check.id).toContain("build:gmt");
     }
   });

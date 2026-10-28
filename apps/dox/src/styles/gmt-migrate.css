@@ -10,7 +10,9 @@
 
 /* Each table sits in the site's table box (`.gmt-ref-table`, gmt-content.css), which draws the
    border and scrolls it sideways. */
-.sl-markdown-content .gmt-migrate-table {
+.sl-markdown-content
+  .gmt-ref-table:not([data-layout="entries"])
+  .gmt-migrate-table {
   min-width: 40rem;
   font-size: var(--sl-text-sm);
 }
@@ -19,15 +21,12 @@
   text-align: left;
 }
 
-/* An import path is one token, like the code spans the site's table rule keeps whole (see
-   gmt-content.css § Tables), so the GMT column is as wide as its longest path. The note keeps a
-   floor so it never runs a word to a line; past that the table scrolls sideways. */
-.sl-markdown-content .gmt-migrate-module {
-  white-space: nowrap;
-}
-
-/* The behaviour matrix's last column is a short list of issue links, so it takes no floor. */
+/* An import path wraps only after a `/` (src/lib/code-break.ts), so each piece stays whole.
+   The note keeps a floor so it never runs a word to a line; past that the table scrolls
+   sideways. The behaviour matrix's last column is a short list of issue links, so it takes no
+   floor, and a table laid out as entries has no columns to give one. */
 .sl-markdown-content
+  .gmt-ref-table:not([data-layout="entries"])
   .gmt-migrate-table:not(.gmt-matrix-table)
   :is(th, td):last-child {
   min-width: 16rem;

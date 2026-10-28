@@ -348,6 +348,7 @@
 
   .gmt-duration-bench .gmt-dbench-table td::before {
     content: attr(data-label);
+    content: attr(data-label) / "";
     display: block;
     font-size: var(--gmt-text-xs);
     color: var(--gmt-ice-dim);

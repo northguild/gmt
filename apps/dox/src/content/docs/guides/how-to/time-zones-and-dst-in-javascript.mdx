@@ -14,6 +14,7 @@ The table below lists what each library needs for time zones and what it returns
 
 The test input is `2024-03-31T02:30:00` in `Europe/Berlin`. The clocks skip from 02:00 to 03:00 that day, so 02:30 does not exist. Every result is shown as a UTC instant. Temporal's `compatible` rule moves the time forward by the length of the gap (Temporal 11.1.12, DisambiguatePossibleEpochNanoseconds).
 
+{/* table: entries */}
 | Library | Version tested | Time zones | Result for the gap | Case |
 | --- | --- | --- | --- | --- |
 | Temporal (native) | Node.js 26.12.1 | Built in | `2024-03-31T01:30:00Z` | [M4](/compare/behaviour/#m4) |

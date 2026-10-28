@@ -424,6 +424,7 @@
 
   .gmt-gnss-table tbody :is(th, td)[data-label]::before {
     content: attr(data-label);
+    content: attr(data-label) / "";
     flex: none;
     color: var(--gmt-ice-dim);
     text-align: left;

@@ -38,6 +38,9 @@ export type CompareTableId = "overview" | "measured" | "differs" | "covers";
 /** Tables whose first column is a sentence, not a short name, so it must wrap. */
 export const PROSE_TABLES: readonly CompareTableId[] = ["covers", "differs"];
 
+/** Tables laid out as entries (gmt-content.css): a row of short facts under a title, not columns. */
+export const ENTRY_TABLES: readonly CompareTableId[] = ["overview", "measured"];
+
 /** One table cell as HTML. */
 export function cellHtml(cell: Cell): string {
   const inner = cell.code
