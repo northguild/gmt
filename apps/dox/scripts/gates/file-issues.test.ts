@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -8,9 +14,16 @@ import {
   listOpenGateIssues,
   main,
   parseArgs,
+  readJobs,
   runActions,
 } from "./file-issues.mjs";
-import { marker } from "./issue-plan.mjs";
+import {
+  DOWNLOAD_STEP,
+  NOT_UPLOADED_KEY,
+  SUMMARY_STEP,
+  UPLOAD_STEP,
+  marker,
+} from "./issue-plan.mjs";
 
 type Call = { args: string[]; input?: string };
 /** A `gh` that records calls and answers from `reply`. */
@@ -182,6 +195,59 @@ describe("the gh argument lists", () => {
   });
 });
 
+/** One line of the jobs listing `readJobs` asks `gh api` for. */
+const jobLine = (name: string, conclusion: string, steps: [string, string][]) =>
+  JSON.stringify({
+    name,
+    conclusion,
+    steps: steps.map(([n, c]) => ({ name: n, conclusion: c })),
+  });
+
+describe("readJobs", () => {
+  it("asks for every job of the run and keys the sweep jobs by leg", () => {
+    const { gh, calls } = fakeGh(() =>
+      [
+        jobLine("Changed since the last run?", "success", []),
+        jobLine("Sweep (chromium-1)", "failure", [[SUMMARY_STEP, "success"]]),
+        "not json",
+        "",
+        jobLine("Sweep (webkit-2)", "cancelled", []),
+        jobLine("Report to issues", "success", []),
+      ].join("\n"),
+    );
+    const jobs = readJobs(gh, "o/r", "7");
+    expect(calls[0].args.slice(0, 3)).toEqual([
+      "api",
+      "--paginate",
+      "repos/o/r/actions/runs/7/jobs?per_page=100",
+    ]);
+    expect([...jobs.keys()]).toEqual(["chromium-1", "webkit-2"]);
+    expect(jobs.get("chromium-1")).toEqual({
+      conclusion: "failure",
+      steps: [{ name: SUMMARY_STEP, conclusion: "success" }],
+    });
+    expect(jobs.get("webkit-2")).toEqual({
+      conclusion: "cancelled",
+      steps: [],
+    });
+  });
+});
+
+describe("the nightly workflow", () => {
+  const yml = readFileSync(
+    new URL(
+      "../../../../.github/workflows/dox-gates-nightly.yml",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  it("names the jobs and steps the report reads", () => {
+    expect(yml).toContain("name: Sweep (${{ matrix.leg }})");
+    for (const step of [SUMMARY_STEP, UPLOAD_STEP, DOWNLOAD_STEP])
+      expect(yml).toContain(`- name: ${step}\n`);
+  });
+});
+
 describe("main", () => {
   const io = (gh: ReturnType<typeof fakeGh>["gh"]) => {
     const out: string[] = [];
@@ -254,6 +320,57 @@ describe("main", () => {
     ).toBe(0);
     expect(out.join("")).toContain("dox-gate:could-not-run:webkit-2");
     expect(out.join("")).not.toContain("could-not-run:chromium-1");
+  });
+
+  it("files a leg that wrote a summary the report never got as not-uploaded", () => {
+    const { gh, calls } = fakeGh((args) =>
+      args[0] === "api"
+        ? jobLine("Sweep (webkit-2)", "failure", [
+            ["Gates, every page (shard 2/3)", "failure"],
+            [SUMMARY_STEP, "success"],
+          ])
+        : "[]",
+    );
+    const { out, err, io: i } = io(gh);
+    expect(
+      main(
+        [
+          "--print",
+          "--legs",
+          "chromium-1,webkit-2",
+          summaryFile("chromium-1", { status: "PASS", rows: [] }),
+        ],
+        i,
+      ),
+    ).toBe(0);
+    expect(calls.map((c) => c.args[0])).toEqual(["api", "issue"]);
+    expect(out.join("")).toContain(`open  ${NOT_UPLOADED_KEY}`);
+    expect(out.join("")).not.toContain("could-not-run");
+    expect(err).toHaveLength(0);
+  });
+
+  it("still files could-not-run when the job list cannot be read, and says so", () => {
+    const { gh } = fakeGh((args) => {
+      if (args[0] === "api") throw new Error("HTTP 403");
+      return "[]";
+    });
+    const { out, err, io: i } = io(gh);
+    expect(main(["--print", "--legs", "webkit-2"], i)).toBe(0);
+    expect(out.join("")).toContain("open  dox-gate:could-not-run:webkit-2");
+    expect(err.join("")).toContain("cannot read the run's jobs: HTTP 403");
+  });
+
+  it("reads no job list outside a run", () => {
+    const { gh, calls } = fakeGh(() => "[]");
+    const out: string[] = [];
+    main(["--print", "--legs", "webkit-2"], {
+      env: { GITHUB_ACTIONS: "" },
+      gh,
+      stdout: (t: string) => out.push(t),
+      stderr: () => {},
+    });
+    expect(calls.map((c) => c.args[0])).toEqual(["issue"]);
+    expect(out.join("")).toContain("open  dox-gate:could-not-run:webkit-2");
   });
 
   it("treats an unreadable summary of a named leg as could-not-run", () => {

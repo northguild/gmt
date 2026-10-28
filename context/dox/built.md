@@ -3054,8 +3054,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     twelve>`. Only `FAIL` rows file; `FLAKY` (failed, passed on the retry) is listed in the step
     summary. The key is `<gate>:<rule>:<page>:<selector>` (selector trimmed, whitespace collapsed);
     browsers, widths and themes are not in it, so one issue tables every place the finding was seen.
-    A leg with no readable `summary.json` files `dox-gate:could-not-run:<leg>`; a `FAIL` with no
-    structured finding files `<gate>:unstructured:all:` with its log tail.
+    A leg with no readable `summary.json` is sorted by its job in the run's job list (`gh api
+    …/runs/<id>/jobs`, read only when a summary is missing): if its `Check the summary was written`
+    step passed, the runner wrote the file and the upload or download lost it, and the leg joins the
+    one `dox-gate:not-uploaded:all:` issue, which points at those two steps. Otherwise it files
+    `dox-gate:could-not-run:<leg>`, naming how the job ended and the first step that did not
+    succeed. A failed gate run and a lost upload both end with the gates step failed and the upload
+    step passed (`if-no-files-found: warn`), so the check step is the only signal that separates
+    them. If the job list cannot be read, the leg is filed as could-not-run, saying the cause is
+    unknown. A `FAIL` with no structured finding files `<gate>:unstructured:all:` with its log tail.
   - **Issues.** Labels `bug` and `dox-gate` (created when missing, with `dox-gate-dry-run`), issue type
     `Bug`, first body line `<!-- dox-gate key="…" -->` (`"`, `>` and `--` in a key are written as
     entities). An open `dox-gate` issue whose first line equals the marker gets a comment on the
@@ -3068,8 +3075,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `comment #123  <key>`) and a count, and files nothing; it needs `gh` signed in. Outside GitHub
     Actions (`GITHUB_ACTIONS` not `true`) it only plans: without `--print` it exits 2 with "run with
     --print locally; issues are filed by the nightly workflow". A summary path that is unreadable (without
-    `--legs`) or has no leg folder is also exit 2, before any `gh` call; with `--legs`, the crashed legs
-    are the `--legs` entries with no readable summary, including when no summary arrived at all. Use a summary with
+    `--legs`) or has no leg folder is also exit 2, before any `gh` call; with `--legs`, the legs with no
+    summary are the `--legs` entries with no readable summary, including when no summary arrived at
+    all. Locally (no `GITHUB_RUN_ID`) there is no job list, so they plan as could-not-run. Use a summary with
     no `FAIL` row, since a local `--all` summary's hundred findings plan as one flood issue. In CI,
     dispatch with `force_finding`: one `[dry run]` issue appears (key `dry-run:synthetic:/:body`,
     label `dox-gate-dry-run` instead of `bug`), and a second dispatch comments on it.
