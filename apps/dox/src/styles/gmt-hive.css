@@ -322,7 +322,8 @@
     display: none;
   }
 
-  .gmt-hive-body[data-empty]:has(.gmt-hive-rail[data-collapsed]) .gmt-hive-chat {
+  .gmt-hive-body[data-empty]:has(.gmt-hive-rail[data-collapsed])
+    .gmt-hive-chat {
     flex: 1 1 auto;
   }
 
