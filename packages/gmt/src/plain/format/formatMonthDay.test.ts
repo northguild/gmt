@@ -17,41 +17,47 @@ function expectText(actual: string, expected: Expected): void {
 }
 
 describe("formatMonthDay", () => {
-  // 17 locales, --12-25 (ICU 78.3). short is numeric month and day; full and long are
-  // { month: "long", day: "numeric" }; medium is { month: "short", day: "numeric" }.
-  // PlainMonthDay#toLocaleString is no oracle: native engines take dateStyle widths from the
-  // locale's date pattern, and polyfill 0.5.1 drops a month width zh and ja print numerically
-  // (js-temporal-polyfill-bugs.md, record X). tr-TR short: "25/12" on ICU 78.3 (Node 24.22.1,
-  // Chromium 153), "25.12" on WebKit 26.6.
+  // 17 locales, --12-25. A dateStyle takes the month and day widths from the locale's own date
+  // pattern (ECMA-402 AdjustDateTimeStyleFormat), so medium and long are the locale's: de-DE medium
+  // "25.12.", ja-JP long "12/25". Every dateStyle cell is what native
+  // PlainMonthDay#toLocaleString prints with calendar gregory in Chromium 153 and WebKit 26.6; on
+  // Node the Temporal is polyfill 0.5.1, which maps the style to fixed widths instead. full gives
+  // the long cell in all 17. monthLong is { month: "long", day: "numeric" }: zh and ja write the
+  // month as a name there and as a number in every dateStyle. tr-TR short: "25/12" on ICU 78.3
+  // (Node 24.22.1, Chromium 153), "25.12" on WebKit 26.6.
   it.each`
-    locale                  | short                         | long                 | medium
-    ${MustTestLocales.enUS} | ${"12/25"}                    | ${"December 25"}     | ${"Dec 25"}
-    ${MustTestLocales.enGB} | ${"25/12"}                    | ${"25 December"}     | ${"25 Dec"}
-    ${MustTestLocales.deDE} | ${"25.12."}                   | ${"25. Dezember"}    | ${"25. Dez."}
-    ${MustTestLocales.frFR} | ${"25/12"}                    | ${"25 décembre"}     | ${"25 déc."}
-    ${MustTestLocales.esES} | ${"25/12"}                    | ${"25 de diciembre"} | ${"25 dic"}
-    ${MustTestLocales.itIT} | ${"25/12"}                    | ${"25 dicembre"}     | ${"25 dic"}
-    ${MustTestLocales.ptPT} | ${"25/12"}                    | ${"25 de dezembro"}  | ${"25/12"}
-    ${MustTestLocales.svSE} | ${"25/12"}                    | ${"25 december"}     | ${"25 dec."}
-    ${MustTestLocales.isIS} | ${"25.12."}                   | ${"25. desember"}    | ${"25. des."}
-    ${MustTestLocales.zhCN} | ${"12/25"}                    | ${"12月25日"}        | ${"12月25日"}
-    ${MustTestLocales.zhTW} | ${"12/25"}                    | ${"12月25日"}        | ${"12月25日"}
-    ${MustTestLocales.jaJP} | ${"12/25"}                    | ${"12月25日"}        | ${"12月25日"}
-    ${MustTestLocales.koKR} | ${"12. 25."}                  | ${"12월 25일"}       | ${"12월 25일"}
-    ${MustTestLocales.arSA} | ${"٢٥/١٢"}                    | ${"٢٥ ديسمبر"}       | ${"٢٥ ديسمبر"}
-    ${MustTestLocales.heIL} | ${"25.12"}                    | ${"25 בדצמבר"}       | ${"25 בדצמ׳"}
-    ${MustTestLocales.ruRU} | ${"25.12"}                    | ${"25 декабря"}      | ${"25 дек."}
-    ${MustTestLocales.trTR} | ${oneOfIcu("25/12", "25.12")} | ${"25 Aralık"}       | ${"25 Ara"}
+    locale                  | short                         | medium        | long                 | monthLong
+    ${MustTestLocales.enUS} | ${"12/25"}                    | ${"Dec 25"}   | ${"December 25"}     | ${"December 25"}
+    ${MustTestLocales.enGB} | ${"25/12"}                    | ${"25 Dec"}   | ${"25 December"}     | ${"25 December"}
+    ${MustTestLocales.deDE} | ${"25.12."}                   | ${"25.12."}   | ${"25. Dezember"}    | ${"25. Dezember"}
+    ${MustTestLocales.frFR} | ${"25/12"}                    | ${"25 déc."}  | ${"25 décembre"}     | ${"25 décembre"}
+    ${MustTestLocales.esES} | ${"25/12"}                    | ${"25 dic"}   | ${"25 de diciembre"} | ${"25 de diciembre"}
+    ${MustTestLocales.itIT} | ${"25/12"}                    | ${"25 dic"}   | ${"25 dicembre"}     | ${"25 dicembre"}
+    ${MustTestLocales.ptPT} | ${"25/12"}                    | ${"25/12"}    | ${"25 de dezembro"}  | ${"25 de dezembro"}
+    ${MustTestLocales.svSE} | ${"25/12"}                    | ${"25 dec."}  | ${"25 december"}     | ${"25 december"}
+    ${MustTestLocales.isIS} | ${"25.12."}                   | ${"25. des."} | ${"25. desember"}    | ${"25. desember"}
+    ${MustTestLocales.zhCN} | ${"12/25"}                    | ${"12/25"}    | ${"12/25"}           | ${"12月25日"}
+    ${MustTestLocales.zhTW} | ${"12/25"}                    | ${"12/25"}    | ${"12/25"}           | ${"12月25日"}
+    ${MustTestLocales.jaJP} | ${"12/25"}                    | ${"12/25"}    | ${"12/25"}           | ${"12月25日"}
+    ${MustTestLocales.koKR} | ${"12. 25."}                  | ${"12. 25."}  | ${"12월 25일"}       | ${"12월 25일"}
+    ${MustTestLocales.arSA} | ${"٢٥/١٢"}                    | ${"٢٥/١٢"}    | ${"٢٥ ديسمبر"}       | ${"٢٥ ديسمبر"}
+    ${MustTestLocales.heIL} | ${"25.12"}                    | ${"25 בדצמ׳"} | ${"25 בדצמבר"}       | ${"25 בדצמבר"}
+    ${MustTestLocales.ruRU} | ${"25.12"}                    | ${"25 дек."}  | ${"25 декабря"}      | ${"25 декабря"}
+    ${MustTestLocales.trTR} | ${oneOfIcu("25/12", "25.12")} | ${"25 Ara"}   | ${"25 Aralık"}       | ${"25 Aralık"}
   `(
-    "formats --12-25 for $locale as $short with no options, $long for full, long and month long and $medium for medium",
-    ({ locale, short, long, medium }) => {
+    "formats --12-25 for $locale as $short with no options and short, $medium for medium, $long for full and long and $monthLong for month long",
+    ({ locale, short, medium, long, monthLong }) => {
       expectText(formatMonthDay("--12-25", locale), short);
       expectText(
         formatMonthDay("--12-25", locale, { dateStyle: "short" }),
         short,
       );
       expectText(
-        formatMonthDay("--12-25", locale, { month: "long", day: "numeric" }),
+        formatMonthDay("--12-25", locale, { dateStyle: "medium" }),
+        medium,
+      );
+      expectText(
+        formatMonthDay("--12-25", locale, { dateStyle: "long" }),
         long,
       );
       expectText(
@@ -59,12 +65,8 @@ describe("formatMonthDay", () => {
         long,
       );
       expectText(
-        formatMonthDay("--12-25", locale, { dateStyle: "long" }),
-        long,
-      );
-      expectText(
-        formatMonthDay("--12-25", locale, { dateStyle: "medium" }),
-        medium,
+        formatMonthDay("--12-25", locale, { month: "long", day: "numeric" }),
+        monthLong,
       );
     },
   );

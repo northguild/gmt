@@ -5,6 +5,8 @@
 // ~relevant~, AdjustDateTimeStyleFormat); the formatter is then anchored at
 // UTC, which is an implementation detail and must never surface as a field.
 
+import { cachedFormatter } from "./formatterCache";
+
 type Options = Intl.DateTimeFormatOptions;
 
 // GetDateTimeFormat requiredOptions for ~date~ and ~time~.
@@ -46,6 +48,87 @@ function pickFields(
     if (options[key] !== undefined) out[key] = options[key];
   }
   return out;
+}
+
+// Noon UTC on 2026-01-05 and 2026-09-05: a four-digit year, a one-digit month and day, and a
+// second month for a locale whose January has the same name at two widths.
+const STYLE_PROBE_INSTANTS = [1_767_614_400_000, 1_788_609_600_000] as const;
+
+const ALL_DIGITS = /^\d+$/;
+
+/**
+ * Read the widths a locale's `dateStyle` date pattern gives `fields` (ECMA-402
+ * AdjustDateTimeStyleFormat).
+ *
+ * - AdjustDateTimeStyleFormat copies each allowed field's width from the locale's `dateStyle`
+ *   pattern, then runs the format matcher. `resolvedOptions()` reports no fields beside a
+ *   `dateStyle`, so the widths are read from `formatToParts` on two Gregorian instants.
+ * - A number is `"2-digit"` when it is written with two digits (month 1, day 5, year 2026),
+ *   otherwise `"numeric"`. A name is the first of `"long"`, `"short"` and `"narrow"` that a
+ *   year-month-day pattern writes the same on both instants, so both names are in the format
+ *   context (fa `ژانویهٔ`, not the stand-alone `ژانویه`). A name no width matches is `"long"`;
+ *   none of 101 locales in Node 24, Chromium 153 or WebKit 26.6 has one.
+ * - The probes use Latin digits (`numberingSystem: "latn"`), so a number is told from a name
+ *   with `\d`.
+ * - Only PlainDate patterns, the style and year-month-day, are formatted to parts:
+ *   `formatDateToParts` formats the same ones.
+ * - A field the style's pattern does not show is left out.
+ *
+ * @param locale the caller's locale, already checked
+ * @param options the caller's options, for `localeMatcher`
+ * @param dateStyle the caller's `dateStyle`
+ * @param fields the fields to read, in AdjustDateTimeStyleFormat's order
+ * @returns each shown field's width
+ * @example dateStyleWidths("de-DE", {}, "medium", ["month", "day"]) // { month: "2-digit", day: "2-digit" }
+ * @example dateStyleWidths("en-US", {}, "short", ["era", "year", "month"]) // { year: "2-digit", month: "numeric" }
+ */
+function dateStyleWidths(
+  locale: string | string[] | undefined,
+  options: Options,
+  dateStyle: NonNullable<Options["dateStyle"]>,
+  fields: ReadonlyArray<"era" | "year" | "month" | "day">,
+): Options {
+  const probe = {
+    ...(options.localeMatcher === undefined
+      ? {}
+      : { localeMatcher: options.localeMatcher }),
+    calendar: "gregory",
+    numberingSystem: "latn",
+    timeZone: "UTC",
+  };
+  const partsAt = (extra: Options): Intl.DateTimeFormatPart[][] => {
+    const formatter = cachedFormatter("DateTimeFormat", locale, {
+      ...probe,
+      ...extra,
+    });
+    return STYLE_PROBE_INSTANTS.map((at) => formatter.formatToParts(at));
+  };
+  const styled = partsAt({ dateStyle });
+  const widths: Record<string, string> = {};
+  for (const field of fields) {
+    const shown = styled.map(
+      (parts) => parts.find((part) => part.type === field)?.value,
+    );
+    const first = shown[0];
+    if (first === undefined) continue;
+    if (ALL_DIGITS.test(first)) {
+      widths[field] = first.length === 2 ? "2-digit" : "numeric";
+      continue;
+    }
+    const width = (["long", "short", "narrow"] as const).find((candidate) =>
+      partsAt({
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        [field]: candidate,
+      }).every(
+        (parts, index) =>
+          parts.find((part) => part.type === field)?.value === shown[index],
+      ),
+    );
+    widths[field] = width ?? "long";
+  }
+  return widths as Options;
 }
 
 /**
@@ -185,12 +268,11 @@ export function plainDateTimeFormatOptions(options: Options): Options {
  *   `Dezember 25` for de-DE). HandleDateTimeTemporalMonthDay throws
  *   a RangeError for any calendar mismatch, so `PlainMonthDay#toLocaleString` with a locale's
  *   default calendar throws and this does not.
- * - **`dateStyle` (GMT rule).** `full` and `long` become `{ month: "long", day: "numeric" }`,
- *   `medium` becomes `{ month: "short", day: "numeric" }` and `short` becomes
- *   `{ month: "numeric", day: "numeric" }`: polyfill 0.5.1's mapping. This departs from ECMA-402,
- *   whose AdjustDateTimeStyleFormat copies the month and day widths from the locale's dateStyle
- *   pattern. Native engines follow it, so there `toLocaleString` prints, for example, `25.12.` for
- *   de-DE `medium` and `12/25` for zh-CN `long`. GMT prints the same in every engine.
+ * - **`dateStyle`** (AdjustDateTimeStyleFormat, « [[Month]], [[Day]] »). The month and day widths
+ *   are the locale's own `dateStyle` pattern's, read by {@link dateStyleWidths}: de-DE `medium`
+ *   is `25.12.`, ja-JP `long` `12/25` and en-US `medium` `Dec 25`, as native
+ *   `PlainMonthDay#toLocaleString` prints them. Polyfill 0.5.1 maps the style to fixed widths
+ *   instead (`25. Dez.`, `12月25日`).
  * - **Fields** (GetDateTimeFormat, required and defaults ~month-day~, inherit ~relevant~): only
  *   `month` and `day` are copied. `era`, `year`, `weekday`, time fields and `timeZoneName` are
  *   dropped. With neither `month` nor `day`, a `weekday`, `year`, `dayPeriod`, `hour`, `minute`,
@@ -200,21 +282,23 @@ export function plainDateTimeFormatOptions(options: Options): Options {
  * - Returns `null` for a `timeStyle` (a month-day has no time format).
  *
  * @param options caller's `Intl.DateTimeFormatOptions`
+ * @param locale the caller's locale, already checked; read only for a `dateStyle`
  * @returns runtime options anchored at UTC, or `null` when no format exists
  */
-export function plainMonthDayFormatOptions(options: Options): Options | null {
+export function plainMonthDayFormatOptions(
+  options: Options,
+  locale: string | string[] | undefined,
+): Options | null {
   const base = { ...formatterOptions(options), calendar: "gregory" };
   if (options.timeStyle !== undefined) return null;
   if (options.dateStyle !== undefined) {
-    switch (options.dateStyle) {
-      case "full":
-      case "long":
-        return { ...base, month: "long", day: "numeric" };
-      case "medium":
-        return { ...base, month: "short", day: "numeric" };
-      default:
-        return { ...base, month: "numeric", day: "numeric" };
-    }
+    const widths = dateStyleWidths(locale, options, options.dateStyle, [
+      "month",
+      "day",
+    ]);
+    return Object.keys(widths).length > 0
+      ? { ...base, ...widths }
+      : { ...base, month: "numeric", day: "numeric" };
   }
   const fields = pickFields(options, ["month", "day"]);
   if (Object.keys(fields).length > 0) return { ...base, ...fields };
@@ -234,13 +318,11 @@ export function plainMonthDayFormatOptions(options: Options): Options | null {
  *   `{ year: "numeric", month: "long" }` prints `"1970 "` on Node 24 with no month name, and
  *   HandleDateTimeTemporalYearMonth throws a RangeError for any calendar mismatch, so
  *   `PlainYearMonth#toLocaleString` with the locale's default calendar throws and this does not.
- * - **`dateStyle` (GMT rule).** `full` and `long` become `{ year: "numeric", month: "long" }`,
- *   `medium` becomes `{ year: "numeric", month: "short" }` and `short` becomes
- *   `{ year: "2-digit", month: "numeric" }`: polyfill 0.5.1's `yearMonthAmend` mapping. This
- *   departs from ECMA-402, whose AdjustDateTimeStyleFormat (« "era", "year", "month" ») copies the
- *   widths from the locale's date pattern. Native engines follow it, so there `toLocaleString`
- *   prints, for example, `10/2026` for en-GB `short` and `2026/10` for zh-CN `long`. GMT prints the
- *   same in every engine.
+ * - **`dateStyle`** (AdjustDateTimeStyleFormat, « [[Era]], [[Year]], [[Month]] »). The widths
+ *   are the locale's own `dateStyle` pattern's, read by {@link dateStyleWidths}: de-DE `medium`
+ *   is `10/2026`, zh-CN `full` `2026/10` and en-US `short` `10/26`, as native
+ *   `PlainYearMonth#toLocaleString` prints them. Polyfill 0.5.1's `yearMonthAmend` maps the style
+ *   to fixed widths instead (`Okt. 2026`, `2026年10月`).
  * - **Fields** (GetDateTimeFormat, required and defaults ~year-month~, inherit ~relevant~): `year`,
  *   `month` and `era` are copied (`era` qualifies the year). `day`, `weekday`, `dayPeriod`, time
  *   fields and `timeZoneName` are dropped. With neither `year` nor `month`, a `weekday`, `day`,
@@ -251,21 +333,24 @@ export function plainMonthDayFormatOptions(options: Options): Options | null {
  * - Returns `null` for a `timeStyle` (a year-month has no time format).
  *
  * @param options caller's `Intl.DateTimeFormatOptions`
+ * @param locale the caller's locale, already checked; read only for a `dateStyle`
  * @returns runtime options anchored at UTC, or `null` when no format exists
  */
-export function plainYearMonthFormatOptions(options: Options): Options | null {
+export function plainYearMonthFormatOptions(
+  options: Options,
+  locale: string | string[] | undefined,
+): Options | null {
   const base = { ...formatterOptions(options), calendar: "gregory" };
   if (options.timeStyle !== undefined) return null;
   if (options.dateStyle !== undefined) {
-    switch (options.dateStyle) {
-      case "full":
-      case "long":
-        return { ...base, year: "numeric", month: "long" };
-      case "medium":
-        return { ...base, year: "numeric", month: "short" };
-      default:
-        return { ...base, year: "2-digit", month: "numeric" };
-    }
+    const widths = dateStyleWidths(locale, options, options.dateStyle, [
+      "era",
+      "year",
+      "month",
+    ]);
+    return widths.year !== undefined || widths.month !== undefined
+      ? { ...base, ...widths }
+      : { ...base, year: "numeric", month: "numeric" };
   }
   const era = options.era === undefined ? {} : { era: options.era };
   const fields = pickFields(options, ["year", "month"]);

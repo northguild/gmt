@@ -6,8 +6,8 @@
 a locale, and from a date or a date-time; format it with a locale; compare two of them. A month-day
 gives the date it falls on in a given year; a year-month adds and subtracts months and years, counts
 the months between two, and gives its first and last date and its number of days. Every function
-lives in `plain/`, returns the sentinel and never throws. Scope is **parity only** (owner, #416,
-2026-10-28): what Temporal's two types give, and the functions listed here.
+lives in `plain/`, returns the sentinel and never throws. Scope is **parity only**: what
+Temporal's two types give, and the functions listed here.
 
 ## Gap
 
@@ -22,8 +22,8 @@ The common workaround is to store the month-day in a fixed year and strip it aga
 29 February into 1 March, or into an error, in every year that has no such day.
 
 A card expiry, a billing period, a statement month or a reporting month has a year and a month and
-no day. gmt has no type for that either, and the existing date functions keep their contracts (owner,
-#416): these three calls still return the sentinel, and the new year-month functions read them.
+no day. gmt has no type for that either, and the existing date functions keep their contracts:
+these three calls still return the sentinel, and the new year-month functions read them.
 
 ```text
 isValidDate("2026-10")                                   → false (unchanged)
@@ -110,8 +110,8 @@ Temporal, plus the polyfill control); the guard calls `Intl` itself, so it is th
 S5's rules table for month-day (built) and S12's guard table for year-month, one row per refused
 option family and one per accepted style. **A foreign field beside an own field is dropped**, as
 `formatDate` drops a time field beside a date field (ECMA-402 ~relevant~ fields):
-`{ year: "numeric", month: "long", day: "numeric" }` on `2026-10` gives `October 2026`. Owner
-decision, 2026-10-28: `formatDate` parity, candidate (a) in § Decisions.
+`{ year: "numeric", month: "long", day: "numeric" }` on `2026-10` gives `October 2026`:
+`formatDate` parity, candidate (a) in § Decisions.
 
 ### Docs site — `apps/dox/src/content/docs/`
 
@@ -121,7 +121,7 @@ decision, 2026-10-28: `formatDate` parity, candidate (a) in § Decisions.
 - Mistakes: `mistakes/parse-date-time.mdx` (a month name in the wrong context; `--02-30`) and
   `mistakes/format-date-time.mdx` (`toLocaleString` throws for an ISO month-day).
 - Indexes: `guides/core-date-operations/index.mdx`, `scenarios/index.mdx`.
-- Year-month (S16): no new guide page and no Tool (owner, #416). Pointer lines in `parsing.mdx`,
+- Year-month (S16): no new guide page and no Tool. Pointer lines in `parsing.mdx`,
   `formatting.mdx`, `comparisons.mdx`, `validation.mdx` and `plain-arithmetic.mdx`; one mistake each
   in `mistakes/parse-date-time.mdx` (a year-month through `parseDateWithPattern`) and
   `mistakes/format-date-time.mdx` (`toLocaleString` throws for an ISO year-month). The reference
@@ -133,7 +133,7 @@ Left to `dox-architect`.
 
 ## Design notes
 
-[Design notes](CORE-102/design-notes.md): the `--MM-DD` and `YYYY-MM` output forms, refused basic forms, no invented year or day, 29 February, the Gregorian formatting rule and gmt's `dateStyle` mapping, why the tests have no `toLocaleString` oracle, year-month arithmetic after tc39 `41faca474a`, and the authority each rule rests on.
+[Design notes](CORE-102/design-notes.md): the `--MM-DD` and `YYYY-MM` output forms, refused basic forms, no invented year or day, 29 February, the Gregorian formatting rule, `dateStyle` widths per ECMA-402, why the tests have no `toLocaleString` oracle, year-month arithmetic after tc39 `41faca474a`, and the authority each rule rests on.
 
 ## What gmt provides (do not re-implement)
 
@@ -155,8 +155,8 @@ Left to `dox-architect`.
 
 ## Decisions
 
-**What the `Intl` format guard does with a foreign field beside an own field** — settled by the
-owner on 2026-10-28: **(a) `formatDate` parity** (ECMA-402 ~relevant~). The foreign field is
+**What the `Intl` format guard does with a foreign field beside an own field:**
+**(a) `formatDate` parity** (ECMA-402 ~relevant~). The foreign field is
 dropped (`October 2026`); options whose only fields are foreign give `""`. `formatMonthDay` already
 did this, so its S5 rows stand. The candidates not chosen were (b) strict, any foreign field gives
 `""` (a GMT rule that departs from `formatDate`); (c) the calendar check alone, which every

@@ -19,30 +19,37 @@ function expectText(actual: string, expected: Expected): void {
 describe("formatYearMonth", () => {
   // is-IS: Chromium ships no Icelandic data; those failures are tagged chromium-icelandic-locale-data
   // in scripts/lib/native-suite-tags.mjs by the "is-IS" in the title, as for formatMonthDay.
-  // 17 locales, 2026-10 (ICU 78.3). full and long are { year: "numeric", month: "long" }; medium
-  // is { year: "numeric", month: "short" }; short is { year: "2-digit", month: "numeric" }.
+  // 17 locales, 2026-10. A dateStyle takes the year and month widths from the locale's own date
+  // pattern (ECMA-402 AdjustDateTimeStyleFormat), so each style is the locale's: en-US short
+  // "10/26", de-DE medium "10/2026", zh-CN long "2026/10". Every dateStyle cell is what native
+  // PlainYearMonth#toLocaleString prints with calendar gregory in Chromium 153 and WebKit 26.6; on
+  // Node the Temporal is polyfill 0.5.1, which maps the style to fixed widths instead. full gives
+  // the long cell in all 17. yearMonthLong is { year: "numeric", month: "long" }: zh and ja write
+  // the month as a name there and as a number in every dateStyle.
+  // de-DE and tr-TR, no options: "10/2026" on ICU 78.3 (Node 24.22.1, Chromium 153), "10.2026" on
+  // WebKit 26.6. ko-KR short: "26. 10." on ICU 78.3, "2026. 10." on WebKit 26.6.
   it.each`
-    locale                  | none                              | short                         | medium            | long
-    ${MustTestLocales.enUS} | ${"10/2026"}                      | ${"10/26"}                    | ${"Oct 2026"}     | ${"October 2026"}
-    ${MustTestLocales.enGB} | ${"10/2026"}                      | ${"10/26"}                    | ${"Oct 2026"}     | ${"October 2026"}
-    ${MustTestLocales.deDE} | ${oneOfIcu("10/2026", "10.2026")} | ${oneOfIcu("10/26", "10.26")} | ${"Okt. 2026"}    | ${"Oktober 2026"}
-    ${MustTestLocales.frFR} | ${"10/2026"}                      | ${"10/26"}                    | ${"oct. 2026"}    | ${"octobre 2026"}
-    ${MustTestLocales.esES} | ${"10/2026"}                      | ${"10/26"}                    | ${"oct 2026"}     | ${"octubre de 2026"}
-    ${MustTestLocales.itIT} | ${"10/2026"}                      | ${"10/26"}                    | ${"ott 2026"}     | ${"ottobre 2026"}
-    ${MustTestLocales.ptPT} | ${"10/2026"}                      | ${"10/26"}                    | ${"10/2026"}      | ${"outubro de 2026"}
-    ${MustTestLocales.svSE} | ${"2026-10"}                      | ${"26-10"}                    | ${"okt. 2026"}    | ${"oktober 2026"}
-    ${MustTestLocales.isIS} | ${"10. 2026"}                     | ${"10. 26"}                   | ${"okt. 2026"}    | ${"október 2026"}
-    ${MustTestLocales.zhCN} | ${"2026/10"}                      | ${"26/10"}                    | ${"2026年10月"}   | ${"2026年10月"}
-    ${MustTestLocales.zhTW} | ${"2026/10"}                      | ${"26/10"}                    | ${"2026年10月"}   | ${"2026年10月"}
-    ${MustTestLocales.jaJP} | ${"2026/10"}                      | ${"26/10"}                    | ${"2026年10月"}   | ${"2026年10月"}
-    ${MustTestLocales.koKR} | ${"2026. 10."}                    | ${"26. 10."}                  | ${"2026년 10월"}  | ${"2026년 10월"}
-    ${MustTestLocales.arSA} | ${"١٠/٢٠٢٦"}                      | ${"١٠/٢٦"}                    | ${"أكتوبر ٢٠٢٦"}  | ${"أكتوبر ٢٠٢٦"}
-    ${MustTestLocales.heIL} | ${"10.2026"}                      | ${"10.26"}                    | ${"אוק׳ 2026"}    | ${"אוקטובר 2026"}
-    ${MustTestLocales.ruRU} | ${"10.2026"}                      | ${"10.26"}                    | ${"окт. 2026 г."} | ${"октябрь 2026 г."}
-    ${MustTestLocales.trTR} | ${oneOfIcu("10/2026", "10.2026")} | ${oneOfIcu("10/26", "10.26")} | ${"Eki 2026"}     | ${"Ekim 2026"}
+    locale                  | none                              | short                               | medium            | long                 | yearMonthLong
+    ${MustTestLocales.enUS} | ${"10/2026"}                      | ${"10/26"}                          | ${"Oct 2026"}     | ${"October 2026"}    | ${"October 2026"}
+    ${MustTestLocales.enGB} | ${"10/2026"}                      | ${"10/2026"}                        | ${"Oct 2026"}     | ${"October 2026"}    | ${"October 2026"}
+    ${MustTestLocales.deDE} | ${oneOfIcu("10/2026", "10.2026")} | ${"10/26"}                          | ${"10/2026"}      | ${"Oktober 2026"}    | ${"Oktober 2026"}
+    ${MustTestLocales.frFR} | ${"10/2026"}                      | ${"10/2026"}                        | ${"oct. 2026"}    | ${"octobre 2026"}    | ${"octobre 2026"}
+    ${MustTestLocales.esES} | ${"10/2026"}                      | ${"10/26"}                          | ${"oct 2026"}     | ${"octubre de 2026"} | ${"octubre de 2026"}
+    ${MustTestLocales.itIT} | ${"10/2026"}                      | ${"10/26"}                          | ${"ott 2026"}     | ${"ottobre 2026"}    | ${"ottobre 2026"}
+    ${MustTestLocales.ptPT} | ${"10/2026"}                      | ${"10/26"}                          | ${"10/2026"}      | ${"outubro de 2026"} | ${"outubro de 2026"}
+    ${MustTestLocales.svSE} | ${"2026-10"}                      | ${"2026-10"}                        | ${"okt. 2026"}    | ${"oktober 2026"}    | ${"oktober 2026"}
+    ${MustTestLocales.isIS} | ${"10. 2026"}                     | ${"10. 2026"}                       | ${"okt. 2026"}    | ${"október 2026"}    | ${"október 2026"}
+    ${MustTestLocales.zhCN} | ${"2026/10"}                      | ${"2026/10"}                        | ${"2026/10"}      | ${"2026/10"}         | ${"2026年10月"}
+    ${MustTestLocales.zhTW} | ${"2026/10"}                      | ${"2026/10"}                        | ${"2026/10"}      | ${"2026/10"}         | ${"2026年10月"}
+    ${MustTestLocales.jaJP} | ${"2026/10"}                      | ${"2026/10"}                        | ${"2026/10"}      | ${"2026/10"}         | ${"2026年10月"}
+    ${MustTestLocales.koKR} | ${"2026. 10."}                    | ${oneOfIcu("26. 10.", "2026. 10.")} | ${"2026. 10."}    | ${"2026년 10월"}     | ${"2026년 10월"}
+    ${MustTestLocales.arSA} | ${"١٠/٢٠٢٦"}                      | ${"١٠/٢٠٢٦"}                        | ${"١٠/٢٠٢٦"}      | ${"أكتوبر ٢٠٢٦"}     | ${"أكتوبر ٢٠٢٦"}
+    ${MustTestLocales.heIL} | ${"10.2026"}                      | ${"10.2026"}                        | ${"אוק׳ 2026"}    | ${"אוקטובר 2026"}    | ${"אוקטובר 2026"}
+    ${MustTestLocales.ruRU} | ${"10.2026"}                      | ${"10.2026"}                        | ${"окт. 2026 г."} | ${"октябрь 2026 г."} | ${"октябрь 2026 г."}
+    ${MustTestLocales.trTR} | ${oneOfIcu("10/2026", "10.2026")} | ${"10.2026"}                        | ${"Eki 2026"}     | ${"Ekim 2026"}       | ${"Ekim 2026"}
   `(
-    "formats 2026-10 for $locale as $none with no options, $short for short, $medium for medium and $long for full, long and month long",
-    ({ locale, none, short, medium, long }) => {
+    "formats 2026-10 for $locale as $none with no options, $short for short, $medium for medium, $long for full and long and $yearMonthLong for month long",
+    ({ locale, none, short, medium, long, yearMonthLong }) => {
       expectText(formatYearMonth("2026-10", locale), none);
       expectText(
         formatYearMonth("2026-10", locale, { dateStyle: "short" }),
@@ -53,7 +60,7 @@ describe("formatYearMonth", () => {
         medium,
       );
       expectText(
-        formatYearMonth("2026-10", locale, { year: "numeric", month: "long" }),
+        formatYearMonth("2026-10", locale, { dateStyle: "long" }),
         long,
       );
       expectText(
@@ -61,15 +68,11 @@ describe("formatYearMonth", () => {
         long,
       );
       expectText(
-        formatYearMonth("2026-10", locale, { dateStyle: "long" }),
-        long,
+        formatYearMonth("2026-10", locale, { year: "numeric", month: "long" }),
+        yearMonthLong,
       );
     },
   );
-
-  // No PlainYearMonth#toLocaleString oracle rows: on Node the oracle is polyfill 0.5.1's mapping on
-  // the same ICU, and native engines differ by design (they take the widths from the locale's date
-  // pattern), so the matrix pins GMT's own output on every engine.
 
   // Rules, en-US.
   it.each`

@@ -17,32 +17,34 @@ Part of [CORE-102](../CORE-102.md).
   Intl resolves must be `gregory` or `iso8601`, otherwise the sentinel. Intl ignores an unsupported
   value and uses the locale's default, so `{ calendar: "foo" }` formats in en-US and gives `""` in
   th-TH.
-- **`dateStyle` is mapped by gmt, the same in every engine.** `full` and `long` give
-  `{ month: "long", day: "numeric" }`, `medium` gives `{ month: "short", day: "numeric" }`, and
-  `short` gives numeric month and day. This is polyfill 0.5.1's mapping. Native V8 and JavaScriptCore
-  run ECMA-402 AdjustDateTimeStyleFormat and copy the widths from the locale's own date pattern, so
-  their `toLocaleString` differs in six locales: de-DE medium `25.12.`, zh-CN, zh-TW and ja-JP full,
-  long and medium `12/25`, ko-KR medium `12. 25.`, ar-SA medium `٢٥/١٢`. Deriving the widths per
-  ECMA-402 instead is open for the owner.
-- **No `toLocaleString` oracle in the tests.** With `dateStyle` the engines differ by design. With
-  explicit fields, polyfill 0.5.1 and Chromium 153 drop a month width that zh and ja print as a
-  number (`12/25` for `12月25日`; record X in `js-temporal-polyfill-bugs.md`). The 17-locale exact
-  rows are the authority.
+- **`dateStyle` follows ECMA-402 AdjustDateTimeStyleFormat.** The month and day widths are copied
+  from the locale's own `dateStyle` date pattern, read from `formatToParts` because
+  `resolvedOptions` reports no fields for a style: de-DE medium `25.12.`, zh-CN long `12/25`, en-US
+  medium `Dec 25`. This matches native `PlainMonthDay#toLocaleString` in Chromium 153 and WebKit
+  26.6 on all 101 locales surveyed, for every style. Polyfill 0.5.1 maps each style to fixed widths
+  instead (`full` and `long` long month, `medium` short month, `short` numeric), so its output
+  differs (de-DE medium `25. Dez.`).
+- **No `toLocaleString` oracle in the Node tests.** On Node the Temporal is polyfill 0.5.1, whose
+  `dateStyle` mapping is not the specification's. With explicit fields, polyfill 0.5.1 and Chromium
+  153 drop a month width that zh and ja print as a number (`12/25` for `12月25日`; record X in
+  `js-temporal-polyfill-bugs.md`). The 17-locale exact rows are the authority; their `dateStyle`
+  cells are what native Chromium 153 and WebKit 26.6 print.
 
 - **Year-month output is `YYYY-MM`** (`±YYYYYY-MM` outside 0000–9999), Temporal's own `toString`
   with no calendar. Input is the extended form only: `202610` is refused, as for dates.
 - **No day is invented.** The ISO reference day 1 stays internal. There is no `overflow` option:
   day 1 exists in every month, so `constrain` and `reject` never differ.
-- **Arithmetic follows AddDurationToYearMonth as amended by tc39 `41faca474a`** (2026-01-15), run on
+- **Arithmetic follows AddDurationToYearMonth as amended by tc39 `41faca474a`** (merged 2026-01-29), run on
   `PlainDate` from day 1, so every engine gives the specification's result. A consequence: the
   lowest year-month, `-271821-04`, cannot be moved or have its first day, because its day 1 is
   outside the PlainDate range; its `getDaysInYearMonth` is still `30`. Likewise `+275760-09` has no
   last day.
 - **Year-month formatting** keeps `era` (ECMA-402 inherits it for ~year-month~, not for
-  ~month-day~), maps `dateStyle` as polyfill 0.5.1 does (`short` `{ year: "2-digit", month:
-  "numeric" }`, `medium` short month, `long` and `full` long month), and formats `-271821-04` on
-  day 20, the first day whose noon is a time value. A year at or before 0 prints the era year with no
-  era (`0000-10` gives `October 1`), as `formatDate` does; pass `era` to show it.
+  ~month-day~), takes the `dateStyle` era, year and month widths from the locale's date pattern
+  as for month-day (en-US short `10/26`, de-DE medium `10/2026`, zh-CN long `2026/10`), and
+  formats `-271821-04` on day 20, the first day whose noon is a time value. A year at or before 0
+  prints the era year with no era (`0000-10` gives `October 1`), as `formatDate` does; pass `era`
+  to show it.
 
 ## Authority — what each rule rests on
 
@@ -64,5 +66,6 @@ Part of [CORE-102](../CORE-102.md).
 | Months between, truncated, zero for equal values | Temporal DifferenceTemporalPlainYearMonth, GetDifferenceSettings |
 | First and last date; days in the month | Temporal `PlainYearMonth.prototype.toPlainDate`, `daysInMonth` |
 | Year-month formatting fields and `era` | ECMA-402 Temporal GetDateTimeFormat, required and defaults ~year-month~, inherit ~relevant~; HandleDateTimeTemporalYearMonth |
-| Gregorian rule, `dateStyle` mapping, the `-271821-04` day, extended form only | **GMT rule** (spec S5, S9, S12) |
+| `dateStyle` widths from the locale's date pattern | ECMA-402 Temporal AdjustDateTimeStyleFormat, « [[Month]], [[Day]] » for ~month-day~ and « [[Era]], [[Year]], [[Month]] » for ~year-month~ |
+| Gregorian rule, the `-271821-04` day, extended form only | **GMT rule** (spec S5, S9, S12) |
 | Sentinels | [coding-standards § API Contract](../../../coding-standards.md#api-contract) |

@@ -82,15 +82,17 @@ formatMonthDay("--12-25", "en-US", { dateStyle: "medium" }); // "Dec 25"
 
 formatMonthDay("--12-25", "de-DE"); // "25.12."
 formatMonthDay("--12-25", "de-DE", { month: "long", day: "numeric" }); // "25. Dezember"
-formatMonthDay("--12-25", "de-DE", { dateStyle: "medium" }); // "25. Dez."
+formatMonthDay("--12-25", "de-DE", { dateStyle: "medium" }); // "25.12."
 
 formatMonthDay("--12-25", "ja-JP"); // "12/25"
 formatMonthDay("--12-25", "ja-JP", { month: "long", day: "numeric" }); // "12月25日"
-formatMonthDay("--12-25", "ja-JP", { dateStyle: "medium" }); // "12月25日"
+formatMonthDay("--12-25", "ja-JP", { dateStyle: "long" }); // "12/25"
 ```
 
-`formatMonthDay` prints the same text in every engine. It formats through the Gregorian
-calendar, whatever calendar the locale tag names. A `year` or `weekday` option is dropped, and a
+A `dateStyle` takes the month and day widths from the locale's own date pattern, as the
+specification says and as native `Temporal.PlainMonthDay#toLocaleString` does. So de-DE `medium`
+is `25.12.`, and ja-JP writes the month as a number in every style. `formatMonthDay` formats
+through the Gregorian calendar, whatever calendar the locale tag names. A `year` or `weekday` option is dropped, and a
 `timeStyle` gives `""`.
 
 ## Compare and sort

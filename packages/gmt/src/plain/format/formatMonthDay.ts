@@ -23,12 +23,11 @@ import {
  *   overridden. With a `calendar` option, the calendar Intl resolves must be `gregory` or
  *   `iso8601`, otherwise `""`. Intl ignores an unsupported value and uses the locale's default, so
  *   `{ calendar: "foo" }` gives `"12/25"` in en-US and `""` in th-TH (Buddhist).
- * - **`dateStyle` (GMT rule).** `full` and `long` become `{ month: "long", day: "numeric" }`,
- *   `medium` becomes `{ month: "short", day: "numeric" }` and `short` becomes
- *   `{ month: "numeric", day: "numeric" }`. This is the mapping polyfill 0.5.1's `toLocaleString`
- *   uses. Native engines take the widths from the locale's own date pattern, so there
- *   `toLocaleString` prints, for example, `25.12.` for de-DE `medium` and `12/25` for zh-CN `long`.
- *   GMT prints the same in every engine.
+ * - **`dateStyle`.** The month and day widths are the locale's own `dateStyle` date pattern's, as
+ *   ECMA-402 (AdjustDateTimeStyleFormat) and native `PlainMonthDay#toLocaleString` take them:
+ *   de-DE `medium` is `25.12.`, en-US `medium` `Dec 25` and zh-CN `long` `12/25`. Polyfill 0.5.1
+ *   maps each style to fixed widths instead, so its `toLocaleString` prints `25. Dez.` for de-DE
+ *   `medium`.
  * - A `year`, `weekday`, `era`, time field or `timeZoneName` is dropped; only those fields with no
  *   `month` or `day` give `""`, except `era` and `timeZoneName`, which fall back to the defaults.
  * - Returns `""` for invalid input, a `timeStyle`, invalid options, `null` options or an
@@ -73,7 +72,7 @@ export function formatMonthDay(
         return "";
       }
     }
-    const resolved = plainMonthDayFormatOptions(read);
+    const resolved = plainMonthDayFormatOptions(read, locale);
     if (resolved === null) {
       return "";
     }

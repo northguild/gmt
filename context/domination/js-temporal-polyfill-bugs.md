@@ -2454,7 +2454,7 @@ AddDurationToYearMonth: reject weeks, days and time, and start every subtraction
 
 ### Status
 
-**Not filed upstream yet.** Found while specifying `addYearMonth` in CORE-102. Confirmed on polyfill 0.5.1 (Node 24.22.1). js-temporal `main` at `c55b211` still has the old code (`lib/ecmascript.ts:4714`), so the route is the polyfill's in-order catch-up to tc39 `41faca474a` (2026-01-15), then the release in #373. GMT needs no workaround and so has no D-number.
+**Not filed upstream yet.** Found while specifying `addYearMonth` in CORE-102. Confirmed on polyfill 0.5.1 (Node 24.22.1). js-temporal `main` at `c55b211` still has the old code (`lib/ecmascript.ts:4714`), so the route is the polyfill's in-order catch-up to tc39 `41faca474a` (merged 2026-01-29), then the release in #373. GMT needs no workaround and so has no D-number.
 
 ### What goes wrong
 

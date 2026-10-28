@@ -21,9 +21,11 @@ import {
  *   is overridden. With a `calendar` option, the calendar Intl resolves must be `gregory` or
  *   `iso8601`, otherwise `""`. Intl ignores an unsupported value and uses the locale's default, so
  *   `{ calendar: "foo" }` gives `"10/2026"` in en-US and `""` in th-TH (Buddhist).
- * - **`dateStyle` (GMT rule).** `full` and `long` become `{ year: "numeric", month: "long" }`,
- *   `medium` becomes `{ year: "numeric", month: "short" }` and `short` becomes
- *   `{ year: "2-digit", month: "numeric" }`. GMT prints the same in every engine.
+ * - **`dateStyle`.** The year and month widths are the locale's own `dateStyle` date pattern's, as
+ *   ECMA-402 (AdjustDateTimeStyleFormat) and native `PlainYearMonth#toLocaleString` take them:
+ *   en-US `short` is `10/26`, de-DE `medium` `10/2026` and zh-CN `long` `2026/10`. Polyfill 0.5.1
+ *   maps each style to fixed widths instead, so its `toLocaleString` prints `Okt. 2026` for de-DE
+ *   `medium`.
  * - A `day`, `weekday`, time field or `timeZoneName` is dropped; only those fields with no `year`
  *   or `month` give `""`, except `timeZoneName`, which falls back to the defaults. An `era` is
  *   kept.
@@ -71,7 +73,7 @@ export function formatYearMonth(
         return "";
       }
     }
-    const resolved = plainYearMonthFormatOptions(read);
+    const resolved = plainYearMonthFormatOptions(read, locale);
     if (resolved === null) {
       return "";
     }
