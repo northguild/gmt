@@ -1,5 +1,7 @@
 import { APICallError, RetryError } from "ai";
 
+import { BrainsTimedOutError } from "./brains";
+
 export interface MappedError {
   status: number;
   body: { error: string; retryable: boolean };
@@ -46,6 +48,18 @@ function unwrapRetry(error: unknown): unknown {
  */
 export function mapUpstreamError(rawError: unknown): MappedError {
   const error = unwrapRetry(rawError);
+
+  // No brain started in time. Nothing was spent, so this is a try-again.
+  if (error instanceof BrainsTimedOutError) {
+    return {
+      status: 503,
+      body: {
+        error:
+          "The assistant is slow to respond right now. Please try again in a moment.",
+        retryable: true,
+      },
+    };
+  }
 
   if (APICallError.isInstance(error)) {
     const status = error.statusCode ?? 502;

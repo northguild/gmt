@@ -8,10 +8,11 @@
  * ## Failover happens inside a single request
  *
  * `openFirstWorkingBrain` walks the candidates and returns the first that
- * actually starts producing output. The trick is `await result.warnings`: it
- * forces the upstream call and rejects on a 429 or 404 *before* any UI message
- * stream has been opened, so the next brain can be tried with the reader none
- * the wiser.
+ * actually starts producing output. It waits for the model's first piece of
+ * content (`onChunk`), racing `result.warnings`: a 429 or 404 rejects that
+ * promise *before* any UI message stream has been opened, so the next brain
+ * can be tried with the reader none the wiser. The walk returns as soon as
+ * content arrives, so the answer streams to the reader as it is written.
  *
  * An earlier design skipped this, on the reasoning that a pre-flight ledger
  * check made an in-request failure "a rare race". That was wrong twice over:
@@ -305,11 +306,33 @@ export function orderCandidates(
 }
 
 /**
+ * Thrown when no candidate started answering in time and none was busy.
+ * Nothing was spent, so the reader is asked to try again rather than told the
+ * day's allowance is gone.
+ */
+export class BrainsTimedOutError extends Error {
+  override readonly name = "BrainsTimedOutError";
+  constructor() {
+    super("No brain started answering in time.");
+  }
+}
+
+/** Stream parts that mean the model has begun its answer. An `error` part is
+ *  not one: the SDK passes those to `onChunk` too. */
+const ANSWER_STARTED_PARTS: ReadonlySet<string> = new Set([
+  "text-delta",
+  "reasoning-delta",
+  "tool-input-start",
+  "tool-call",
+]);
+
+/**
  * Start the first brain that answers.
  *
  * Returns `undefined` only when every candidate refused for a reason that says
- * the brain is out — an unrelated failure is rethrown rather than silently
- * costing the reader their whole candidate list.
+ * the brain is out. When every remaining one was busy, the last overload is
+ * thrown; when one was slow, `BrainsTimedOutError` is. An unrelated failure is
+ * rethrown rather than silently costing the reader their whole candidate list.
  */
 export async function openFirstWorkingBrain({
   candidates,
@@ -349,6 +372,9 @@ export async function openFirstWorkingBrain({
      thrown rather than returning "spent": a reader who hit a busy minute has
      not used up anyone's allowance, and should be told to try again. */
   let lastOverload: unknown;
+  /* Whether any brain was given up on for being slow. A slow brain has not
+     spent anything either, so the walk must not end in "spent". */
+  let sawSlow = false;
 
   for (const brain of candidates) {
     // One Workers AI brain reporting an exhausted allocation means all of them
@@ -373,6 +399,10 @@ export async function openFirstWorkingBrain({
     // chat's own stall timer gave up. The abort cancels the upstream call;
     // the race below is what actually moves the walk on, whatever the SDK
     // does with the abort.
+    //
+    // The deadline covers only the start of the answer. Once the first piece
+    // of content arrives, the brain keeps going for as long as it needs: a
+    // widget and then its prose can run well past the deadline.
     const abort = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timedOut = new Promise<"slow">((resolve) => {
@@ -380,6 +410,10 @@ export async function openFirstWorkingBrain({
         abort.abort();
         resolve("slow");
       }, startTimeoutMs(brain));
+    });
+    let markStarted: (() => void) | undefined;
+    const answerStarted = new Promise<"started">((resolve) => {
+      markStarted = () => resolve("started");
     });
 
     const result = streamText({
@@ -417,6 +451,9 @@ export async function openFirstWorkingBrain({
         );
       },
       ...WIDGET_THEN_PROSE,
+      onChunk: ({ chunk }) => {
+        if (ANSWER_STARTED_PARTS.has(chunk.type)) markStarted?.();
+      },
       onError: ({ error }) => {
         providerError = error;
       },
@@ -431,12 +468,18 @@ export async function openFirstWorkingBrain({
     });
 
     try {
-      // Resolves once the model call has returned its opening metadata, and
-      // rejects if that call failed — the seam that lets a 429 be caught before
-      // anything has been written to the reader.
-      const outcome = await Promise.race([result.warnings, timedOut]);
+      // `answerStarted` resolves on the model's first piece of content.
+      // `result.warnings` settles only when the whole answer is done, but it
+      // rejects at once if the call failed — the seam that lets a 429 be
+      // caught before anything has been written to the reader.
+      const outcome = await Promise.race([
+        result.warnings,
+        answerStarted,
+        timedOut,
+      ]);
       clearTimeout(timer);
       if (outcome === "slow") {
+        sawSlow = true;
         // The aborted call rejects later; nothing reads it again.
         result.warnings.then(undefined, () => undefined);
         attempts.push({
@@ -490,5 +533,6 @@ export async function openFirstWorkingBrain({
   }
 
   if (lastOverload !== undefined) throw lastOverload;
+  if (sawSlow) throw new BrainsTimedOutError();
   return undefined;
 }

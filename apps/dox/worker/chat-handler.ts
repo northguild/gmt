@@ -314,9 +314,10 @@ export function createChatHandler(deps: ChatHandlerDeps) {
 
       // ---- Failover, inside this one request ---------------------------
       //
-      // Awaiting `result.warnings` forces the upstream call and surfaces a 429
-      // or a 404 *before* any UI stream is opened — which is what makes it
-      // possible to quietly try the next brain instead of showing an error.
+      // `openFirstWorkingBrain` waits for each brain's first piece of content,
+      // and a 429 or a 404 surfaces *before* any UI stream is opened — which is
+      // what makes it possible to quietly try the next brain instead of
+      // showing an error.
       //
       // The first design deferred this, reasoning that a pre-flight ledger
       // check made an in-request failure "a rare race". That was wrong, and the

@@ -75,6 +75,41 @@ function fakeModel(text: string): MockLanguageModelV4 {
   });
 }
 
+/** A model that never sends anything until its call is aborted. */
+function silentModel(): MockLanguageModelV4 {
+  return new MockLanguageModelV4({
+    doStream: ({ abortSignal }) =>
+      new Promise((_, reject) => {
+        abortSignal?.addEventListener("abort", () =>
+          reject(new DOMException("aborted", "AbortError")),
+        );
+      }),
+  });
+}
+
+/** A model that starts writing at once but finishes `finishAfterMs` later. */
+function slowFinishingModel(
+  text: string,
+  finishAfterMs: number,
+): MockLanguageModelV4 {
+  const [streamStart, textStart, textDelta, ...rest] = textStreamParts(text);
+  return new MockLanguageModelV4({
+    doStream: async () => ({
+      stream: new ReadableStream<LanguageModelV4StreamPart>({
+        start(controller) {
+          controller.enqueue(streamStart);
+          controller.enqueue(textStart);
+          controller.enqueue(textDelta);
+          setTimeout(() => {
+            for (const part of rest) controller.enqueue(part);
+            controller.close();
+          }, finishAfterMs);
+        },
+      }),
+    }),
+  });
+}
+
 // Fixed stand-ins for the real `.md`-backed VOCABULARY_SKILLS /
 // CORE_RULES_CONTENT (see chat-handler.ts's ChatHandlerDeps doc comment for
 // why those aren't imported directly into this test). The zoned skill covers
@@ -817,6 +852,53 @@ describe("brains, budgets and failover", () => {
     const [usagePart] = partsOfType(body, "data-usage");
     const states = (usagePart.data as BrainsInfo).brains.map((b) => b.state);
     expect(states.every((state) => state === "ok")).toBe(true);
+  });
+
+  it("keeps a brain that starts in time but is still writing at the deadline", async () => {
+    /* The deadline is for starting, not finishing: a long answer, such as a
+       widget and then its prose, must not be thrown away part-way. */
+    const asked: string[] = [];
+    const resolveModel = (brainId: string) => {
+      asked.push(brainId);
+      return slowFinishingModel("A long answer.", 150);
+    };
+    const handler = makeHandler({
+      resolveModel,
+      usage: fakeUsage(),
+      startTimeoutMs: () => 50,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    const body = await response.text();
+
+    expect(body).toContain("A long answer.");
+    expect(asked).toEqual([BRAINS[0].id]);
+    expect(partsOfType(body, "data-refusal")).toEqual([]);
+  });
+
+  it("asks the reader to try again when no brain starts in time", async () => {
+    /* Nothing was spent, so this must not read as the daily allowance. */
+    const usage = fakeUsage();
+    const handler = makeHandler({
+      resolveModel: () => silentModel(),
+      usage,
+      startTimeoutMs: () => 20,
+    });
+
+    const response = await handler(
+      chatRequest({ messages: [userMessage("what is a DST gap")] }),
+    );
+    const refusal = refusalOf(await response.text());
+
+    expect(refusal.status).toBe(503);
+    expect(refusal.payload.retryable).toBe(true);
+    expect(String(refusal.payload.error)).not.toMatch(/allowance|tomorrow/);
+    expect(refusal.payload.resetsAt).toBeUndefined();
+    expect(
+      await usage.get(`state:${brainDay(BRAINS[0])}:${BRAINS[0].id}`),
+    ).toBeNull();
   });
 
   it("sends the counts as they stand after the question, so the badge needs no refetch", async () => {

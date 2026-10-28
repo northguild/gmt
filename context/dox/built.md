@@ -2704,7 +2704,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   provider's day and expire at its provider's midnight; the visitor cap is on the UTC day
   (`VISITOR_CAP_TIME_ZONE` in `src/lib/pt-day.ts`). Writes are best-effort, and visitors are hashed IPs.
 - **Failover inside one request** (`openFirstWorkingBrain`, `worker/brains.ts`):
-  - `await result.warnings` forces the upstream call before any stream opens.
+  - The walk waits for the first content part (`onChunk`: text, reasoning or a tool call),
+    racing `result.warnings`. `warnings` settles only when the whole answer is done, but
+    it rejects at once on a failed call, so a 429 is caught before any stream opens. The
+    walk returns on the first content, so the answer streams to the reader as it is
+    written. A failure after that reaches the reader through `onStreamError`.
   - That rejection is a contentless `NoOutputGeneratedError`, so `onError` captures the
     real provider error; unwrap `RetryError` and `NoOutputGeneratedError` before
     classifying.
@@ -2717,6 +2721,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **A brain that does not start in time is skipped** for this question, with outcome
     `slow` and nothing in the ledger: `BRAIN_START_TIMEOUT_MS` is 15 s for Gemini and
     20 s for Workers AI. One silent Gemini model once held the whole request for 60 s.
+    The deadline covers only the start: a brain that has begun keeps going, however long
+    the answer takes. If no brain started and none was busy, the walk throws
+    `BrainsTimedOutError`, which `mapUpstreamError` turns into a retryable 503, never
+    "allowance used".
   - Workers AI allocation exhaustion (3036, or the unmapped 4006) retires every Workers AI
     brain at once. A capacity 429 (3040, "no more data centers") is transient: the request
     moves on and nothing is marked.
