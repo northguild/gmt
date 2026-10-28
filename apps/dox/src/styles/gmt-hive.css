@@ -96,9 +96,9 @@
 /* The reader's local time, in the app's date format (HeaderClock.tsx). Same
    mono HUD voice as the environment badge beside it, ruled off from it by a
    hairline, and in the accent cyan — the site's colour for a live value, the
-   same one the back link and the brain name use. Tabular figures so a ticking
-   value never shifts the badge, and it truncates rather than pushing the back
-   link off a narrow strip — an RFC 9557 string is long. */
+   same one the brain name uses. Tabular figures so a ticking value never
+   shifts the badge, and it truncates rather than pushing the badge off a
+   narrow strip — an RFC 9557 string is long, and the badge cannot shrink. */
 .gmt-hive-now {
   min-width: 0;
   padding-inline-end: var(--gmt-space-3);

@@ -389,8 +389,10 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   `data-dox-shell` hides only Starlight's `<h1>` for a full-bleed page, and the hive shell
   starts at `--sl-nav-height`, below the site header. `noindex`, `pagefind: false`.
 - `Header.astro` adds the "Chat with Dox" link: a plain `<a>` carrying `DoxMark.astro`, no
-  JavaScript. On `/dox` it has `aria-current="page"`, shown by a 2px bottom border reserved
-  transparent on every page (WCAG 2.2 SC 1.4.1), never a left one.
+  JavaScript. On `/dox` it has `aria-current="page"`, shown by a 2px bar along its bottom
+  edge (WCAG 2.2 SC 1.4.1), never a left one. The bar is an `::after` drawn over the box on
+  `/dox` only, so the button matches its neighbours' size and forced colours show it on that
+  page alone.
 - `Header.astro` also adds the NorthGuild mark link (#424) before the site title: a plain
   `<a>`, not `ButtonLink`, in the same tab, named by an sr-only span, with
   `NorthGuildMark.astro` `aria-hidden`. Its fills are in `gmt-primitives.css`, because a

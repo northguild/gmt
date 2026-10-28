@@ -358,15 +358,24 @@
 }
 
 /* The Dox button is the current page on `/dox` (`aria-current="page"`, set by
-   Header.astro). A 2px bottom border marks it, so the state is not colour
-   alone (WCAG 2.2 SC 1.4.1). The border is reserved transparent on the base
-   rule so the box is the same size on every page. */
+   Header.astro). A 2px bar along its bottom edge marks it, so the state is not
+   colour alone (WCAG 2.2 SC 1.4.1). The bar is drawn over the box, never part
+   of it, so the button is the same size as its neighbours on every page. It
+   exists only on `/dox`: a transparent border reserved on every page would
+   show as a solid line on all of them in forced colours, and the current page
+   would look like any other. A border survives forced colours, so the bar
+   stays visible there. */
 .gmt-ask-dox-link {
-  border-bottom: 2px solid transparent;
+  position: relative;
 }
 
-.gmt-ask-dox-link[aria-current="page"] {
-  border-bottom-color: var(--gmt-cyan-ink);
+.gmt-ask-dox-link[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0.25em;
+  inset-block-end: 0;
+  border-block-end: 2px solid var(--gmt-cyan-ink);
+  pointer-events: none;
 }
 
 /* Header button: the mark replaces the old icon+label pair, so it needs a real
