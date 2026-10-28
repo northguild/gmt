@@ -80,4 +80,4 @@ These are the non-negotiables. Full detail is in the context files above.
 - **One story per session.** Near 200K tokens, `/handoff` and start anew.
 - **Only the main session spawns agents** ([`pipeline`](./.agents/skills/pipeline/SKILL.md)).
 - **Needs Claude Code 2.1.251+.** Older ones run every agent on Sonnet.
-- **Read in excerpts.** Pass paths, not content; tests: `--reporter=dot | tail`.
+- **Verdicts, not logs:** `pnpm verdict`, `pnpm pr-status`, `pnpm -F dox gates`.

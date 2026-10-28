@@ -11,6 +11,8 @@
     "typecheck": "pnpm -r --if-present run typecheck",
     "lint:all": "pnpm -r --if-present run lint",
     "test:all": "pnpm -r --if-present run test",
+    "verdict": "node scripts/verdict.mjs",
+    "pr-status": "node scripts/pr-status.mjs",
     "validate": "node scripts/affected.mjs run",
     "validate:full": "node scripts/affected.mjs run --full",
     "affected:audit": "node scripts/affected.mjs audit",

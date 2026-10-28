@@ -50,6 +50,7 @@ __pycache__/
 # Astro docs site (apps/dox)
 # NOTE: apps/dox/dist is already covered by the unanchored `dist/` rule above.
 apps/dox/.astro/
+apps/dox/.gates/
 apps/dox/dist/
 apps/dox/src/generated/
 apps/dox/src/content/docs/reference/
@@ -87,3 +88,5 @@ memories/
 /scripts/behaviour-matrix/pnpm-lock.yaml
 /scripts/behaviour-matrix/node_modules/
 /scripts/behaviour-matrix/.cache/
+# Verdict logs and lock
+/.verdict/

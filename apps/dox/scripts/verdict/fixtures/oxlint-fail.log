@@ -1,0 +1,14 @@
+# command: env -u AI_AGENT -u CLAUDECODE pnpm exec oxlint -D no-debugger <scratch file> (in apps/dox; graphical format)
+# captured with NO_COLOR=1 FORCE_COLOR=0 from a deliberate break, reverted straight after
+
+  x eslint(no-debugger): `debugger` statement is not allowed
+   ,-[src/lib/scratch-verdict.ts:2:3]
+ 1 | export function f(): void {
+ 2 |   debugger;
+   :   ^^^^^^^^^
+ 3 | }
+   `----
+  help: Remove the debugger statement
+
+Found 0 warnings and 1 error.
+Finished in 76ms on 1 file with 103 rules using 10 threads.

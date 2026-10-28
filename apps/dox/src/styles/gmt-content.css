@@ -589,9 +589,13 @@ dialog > .dialog-frame {
 }
 
 /* ---- Links ---- */
+/* Underlined: a link in running text that differs from the text around it by
+   colour alone fails WCAG 1.4.1 (1.43:1 dark, 1.99:1 light against the prose).
+   Navigation, cards and buttons sit under `.not-content` and keep their look. */
 .sl-markdown-content a:not(:where(.not-content *)) {
   color: var(--gmt-cyan-ink);
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 
   transition:
     color var(--gmt-duration-fast) var(--gmt-easing),

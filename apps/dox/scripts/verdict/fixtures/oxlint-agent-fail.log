@@ -1,0 +1,3 @@
+# command: pnpm exec oxlint -D no-debugger <scratch file> (in apps/dox; AI_AGENT set, so oxlint picks its one-line agent format)
+# captured with NO_COLOR=1 FORCE_COLOR=0 from a deliberate break, reverted straight after
+src/lib/scratch-verdict.ts:2:3: error eslint(no-debugger): `debugger` statement is not allowed help: Remove the debugger statement

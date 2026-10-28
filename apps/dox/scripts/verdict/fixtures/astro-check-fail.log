@@ -1,0 +1,39 @@
+# command: pnpm exec astro check (in apps/dox; a scratch .astro file with a type error; ANSI kept, Astro ignores NO_COLOR)
+# captured with NO_COLOR=1 FORCE_COLOR=0 from a deliberate break, reverted straight after
+[astro] `markdown.remarkPlugins`, `markdown.rehypePlugins`, and `markdown.remarkRehype` are deprecated. Pass them to `unified({...})` from `@astrojs/markdown-remark` directly instead.
+11:20:44 [content] Syncing content
+11:20:44 [content] Synced content
+11:20:44 [types] Generated 644ms
+11:20:44 [check] Getting diagnostics for Astro files in /abs/repo/apps/dox...
+[96mscripts/canary/native-suite-compat.test.ts[0m:[93m289[0m:[93m14[0m - [93mwarning[0m[90m ts(80006): [0mThis may be converted to an async function.
+
+[7m289[0m       route: (pathname: string) => {
+[7m   [0m [93m             ~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mscripts/canary/native-suite-compat.test.ts[0m:[93m265[0m:[93m9[0m - [93mwarning[0m[90m ts(6133): [0m'arg' is declared but its value is never read.
+
+[7m265[0m         arg: unknown,
+[7m   [0m [93m        ~~~[0m
+[96mscripts/canary/native-suite-compat.test.ts[0m:[93m264[0m:[93m9[0m - [93mwarning[0m[90m ts(6133): [0m'fn' is declared but its value is never read.
+
+[7m264[0m         fn: () => boolean,
+[7m   [0m [93m        ~~[0m
+
+[96msrc/components/ScratchVerdict.astro[0m:[93m2[0m:[93m7[0m - [91merror[0m[90m ts(2322): [0mType 'string' is not assignable to type 'number'.
+
+[7m2[0m const n: number = "x";
+[7m [0m [91m      ~[0m
+
+[96msrc/lib/crystal-clock.ts[0m:[93m346[0m:[93m5[0m - [93mwarning[0m[90m ts(6133): [0m'sublabel' is declared but its value is never read.
+
+[7m346[0m     sublabel,
+[7m   [0m [93m    ~~~~~~~~[0m
+[96msrc/lib/crystal-clock.ts[0m:[93m345[0m:[93m5[0m - [93mwarning[0m[90m ts(6133): [0m'label' is declared but its value is never read.
+
+[7m345[0m     label,
+[7m   [0m [93m    ~~~~~[0m
+
+Result (726 files): 
+- 1 error
+- 0 warnings
+- 5 hints
+

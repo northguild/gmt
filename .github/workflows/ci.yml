@@ -28,7 +28,9 @@ jobs:
   # Decides which checks this change needs. The rules are in scripts/lib/affected.mjs, and
   # `pnpm run validate` uses the same ones. `checks` is a JSON array of check ids, which a step
   # tests with `contains(fromJSON(...), '<id>')`. `build_lint`, `tests` and `gmt_tests` say
-  # whether a matrix job has anything to do.
+  # whether a matrix job has anything to do. `dox_changed` says whether a pull request changed a
+  # file under apps/dox/ or pnpm-lock.yaml (a Playwright or axe-core bump), which the advisory
+  # `dox-gates` job waits for. The nightly sweep's change check reads the same two paths.
   #
   # The matrix jobs are required status checks. A matrix job skipped by a job-level `if`
   # reports one check under its unexpanded name ("Tests (Node ${{ matrix.node-version }})"),
@@ -42,6 +44,7 @@ jobs:
       build_lint: ${{ steps.detect.outputs.build_lint }}
       tests: ${{ steps.detect.outputs.tests }}
       gmt_tests: ${{ steps.detect.outputs.gmt_tests }}
+      dox_changed: ${{ steps.detect.outputs.dox_changed }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -54,6 +57,11 @@ jobs:
             git fetch --no-tags origin "${{ github.base_ref }}"
             BASE=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
             node scripts/affected.mjs github --base "$BASE" --head "$(git rev-parse HEAD)"
+            if git diff --name-only "$BASE" HEAD | grep -qE '^(apps/dox/|pnpm-lock\.yaml$)'; then
+              echo "dox_changed=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "dox_changed=false" >> "$GITHUB_OUTPUT"
+            fi
           else
             # A push to main runs every check, so a file a rule misses is caught on the merge
             # that changed it rather than on some later pull request.
@@ -208,11 +216,14 @@ jobs:
       # Tests job too, which runs the same suite on three Node versions and does not build the site.
       # `dist-base.test.ts` reads the same build for the /gmt base: a root URL without `/gmt` in any
       # HTML, CSS, script, `.md`, `llms*.txt`, sitemap or `_redirects` fails here.
-      - name: "Built site: text surfaces and the /gmt base"
+      # `head-tags.test.ts` checks each built page's title, description and share tags.
+      # `gates/registry.test.ts` checks the gates' sample pages exist in it, and `a11y-tab-walk`'s
+      # page contract, which lists a subset of the built pages.
+      - name: "Built site: text surfaces, the /gmt base, head tags and the gate pages"
         if: contains(fromJSON(env.CHECKS), 'dox-dist')
         env:
           DOX_DIST_REQUIRED: "1"
-        run: pnpm --filter dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/head-tags.test.ts
+        run: pnpm --filter dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/head-tags.test.ts scripts/gates/registry.test.ts
 
       # A release PR (`changeset:version` already run) deletes the changesets it consumed
       # and bumps versions instead of adding a new one — that's the point of it, per
@@ -237,6 +248,63 @@ jobs:
           else
             pnpm exec changeset status --since="$BASE"
           fi
+
+  # The Dox browser gates on the pages the PR changed, in Chromium. Advisory: it is not a required
+  # check until the owner makes it one. `main` is covered by the nightly sweep, not by this job.
+  # `--against` is the merge base `determine-affected` computes, so both see the same diff.
+  dox-gates:
+    name: Dox gates (changed pages, Chromium)
+    runs-on: ubuntu-latest
+    needs: determine-affected
+    if: github.event_name == 'pull_request' && needs.determine-affected.outputs.dox_changed == 'true'
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          check-latest: true
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      - name: Fetch the base branch
+        run: git fetch --no-tags origin "${{ github.base_ref }}"
+
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+
+      - name: Install Chromium
+        run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium
+
+      # The runner prints one screen to the log and appends it to the job summary.
+      - name: Gates on the changed pages
+        run: >
+          pnpm --filter dox gates --tier pr --browsers chromium --themes dark,light
+          --against "origin/${{ github.base_ref }}"
+
+      - name: Upload the gate logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dox-gates-${{ github.run_id }}
+          path: |
+            apps/dox/.gates/
+            !apps/dox/.gates/vite-cache/
+          retention-days: 14
 
   build-lint:
     name: Build & Lint (Node ${{ matrix.node-version }})

@@ -229,3 +229,12 @@ header {
   letter-spacing: var(--gmt-tracking-tight);
   font-size: 1.25rem;
 }
+
+/* "On this page": Starlight paints the idle entries in --sl-color-gray-3, which
+   is #5c7a85 on the dark page (4.38:1) and #999999 on the light one (2.84:1).
+   The muted text tier already holds the 7:1 floor in both themes, so the nav
+   takes it for gray-3 and nothing else on the page changes. */
+nav[aria-labelledby="starlight__on-this-page"],
+mobile-starlight-toc nav {
+  --sl-color-gray-3: var(--gmt-ice-dim);
+}

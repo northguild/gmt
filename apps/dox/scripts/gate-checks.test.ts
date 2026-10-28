@@ -3,18 +3,31 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   MIN_FRAMES,
+  arrowMoveProblems,
   blockOffSite,
+  colorAlpha,
   controlPresence,
   crashProblem,
   dragProblem,
   emptyRunProblem,
+  exclusionMatches,
+  exclusionProblems,
+  focusVisibleProblem,
+  isExcluded,
   isOffSite,
   jumpProblems,
   keyboardMoveProblems,
   maxFrameJump,
+  motionProblem,
   pageProblems,
   pointerMoveProblems,
   skippedProblem,
+  tabWalkPages,
+  tabWalkProblems,
+  collapseStops,
+  obscuredByProblem,
+  SEGMENT_CAP,
+  transparencyProblems,
 } from "./gate-checks.mjs";
 
 describe("pageProblems", () => {
@@ -300,5 +313,353 @@ describe("every browser gate", () => {
       }))
       .filter(({ opened, blocked }) => opened === 0 || blocked !== opened);
     expect(uncovered).toEqual([]);
+  });
+});
+
+describe("collapseStops", () => {
+  it("folds the segments of one field into a single stop", () => {
+    expect(collapseStops(["a", "d", "d", "d", "d", "d", "d", "b"])).toEqual([
+      "a",
+      "d",
+      "b",
+    ]);
+  });
+  it("leaves a run longer than the cap as it came", () => {
+    const run = Array<string>(SEGMENT_CAP + 1).fill("d");
+    expect(collapseStops(["a", ...run, "b"])).toEqual(["a", ...run, "b"]);
+  });
+  it("keeps stops on nothing apart", () => {
+    expect(collapseStops(["a", null, null, "b"])).toEqual([
+      "a",
+      null,
+      null,
+      "b",
+    ]);
+  });
+});
+
+describe("obscuredByProblem", () => {
+  it("is clear when any box of a wrapped link is hit", () => {
+    expect(
+      obscuredByProblem([
+        { ok: false, by: "div.gap" },
+        { ok: true, by: "a.link" },
+      ]),
+    ).toBeNull();
+  });
+  it("names what covers the control when every box is covered", () => {
+    expect(
+      obscuredByProblem([
+        { ok: false, by: "header" },
+        { ok: false, by: "nav" },
+      ]),
+    ).toBe("nav");
+  });
+  it("is clear with no samples", () => {
+    expect(obscuredByProblem([])).toBeNull();
+  });
+});
+
+describe("tabWalkProblems with date segments", () => {
+  it("counts the segments of a date field as one stop", () => {
+    const seq = ["a", "d", "d", "d", "d", "d", "d", "b", "c"];
+    expect(
+      tabWalkProblems({ candidates: ["a", "d", "b", "c"], sequence: seq }),
+    ).toEqual([]);
+  });
+  it("still calls a control that holds focus a trap", () => {
+    const run = Array<string>(SEGMENT_CAP + 2).fill("d");
+    const found = tabWalkProblems({
+      candidates: ["d", "b", "c"],
+      sequence: run,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({ rule: "tab-trap", selector: "d" });
+  });
+});
+
+describe("tabWalkProblems", () => {
+  const candidates = ["a", "b", "c"];
+  it("passes a walk that reaches every candidate", () => {
+    expect(tabWalkProblems({ candidates, sequence: ["a", "b", "c"] })).toEqual(
+      [],
+    );
+  });
+  it("ignores stops on nothing and extra stops that are not candidates", () => {
+    expect(
+      tabWalkProblems({
+        candidates,
+        sequence: ["a", null, "scroller", "b", "c"],
+      }),
+    ).toEqual([]);
+  });
+  it("names a candidate that never took focus", () => {
+    const found = tabWalkProblems({ candidates, sequence: ["a", "c"] });
+    expect(found).toEqual([
+      { rule: "tab-unreached", selector: "b", message: expect.any(String) },
+    ]);
+  });
+  it("reports a trap once, with the unreached count, instead of one finding each", () => {
+    const four = ["a", "b", "c", "d"];
+    const found = tabWalkProblems({
+      candidates: four,
+      sequence: ["a", "b", "c", "b"],
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({ rule: "tab-trap", selector: "b" });
+    expect(found[0].message).toMatch(
+      /1 of 4 controls still unreached \(first: d\)/,
+    );
+  });
+  it("calls a wrap to the first stop with candidates unvisited tab-unreached, not a trap", () => {
+    const found = tabWalkProblems({ candidates, sequence: ["a", "b", "a"] });
+    expect(found).toEqual([
+      { rule: "tab-unreached", selector: "c", message: expect.any(String) },
+    ]);
+  });
+  it("lets focus wrap to the start once every candidate has been visited", () => {
+    expect(
+      tabWalkProblems({ candidates, sequence: ["a", "b", "c", "a"] }),
+    ).toEqual([]);
+  });
+});
+
+describe("tabWalkPages", () => {
+  const all = [
+    "/reference/types/Z/",
+    "/reference/types/A/",
+    "/reference/calendar/",
+    "/reference/calendar/business/",
+    "/reference/calendar/business/nextBusinessDay/",
+    "/reference/calendar/business/businessDaysBetween/",
+    "/tools/x/",
+    "/",
+  ];
+  it("keeps every page outside /reference/ and one function and one type page", () => {
+    expect(tabWalkPages(all)).toEqual([
+      "/",
+      "/tools/x/",
+      "/reference/calendar/business/businessDaysBetween/",
+      "/reference/types/A/",
+    ]);
+  });
+  it("copes with a site that has no reference pages", () => {
+    expect(tabWalkPages(["/", "/why-gmt/"])).toEqual(["/", "/why-gmt/"]);
+  });
+});
+
+describe("focusVisibleProblem", () => {
+  const rest = {
+    outlineStyle: "none",
+    outlineWidth: "0px",
+    boxShadow: "none",
+    borderColor: "rgb(1, 1, 1) rgb(1, 1, 1) rgb(1, 1, 1) rgb(1, 1, 1)",
+    backgroundColor: "rgba(0, 0, 0, 0)",
+  };
+  it("passes a 2px outline", () => {
+    expect(
+      focusVisibleProblem({
+        before: rest,
+        after: { ...rest, outlineStyle: "solid", outlineWidth: "2px" },
+      }),
+    ).toEqual([]);
+  });
+  it("passes the UA auto ring", () => {
+    expect(
+      focusVisibleProblem({
+        before: rest,
+        after: { ...rest, outlineStyle: "auto", outlineWidth: "1px" },
+      }),
+    ).toEqual([]);
+  });
+  it("fails a 1px outline with nothing else", () => {
+    const found = focusVisibleProblem({
+      before: rest,
+      after: { ...rest, outlineStyle: "solid", outlineWidth: "1px" },
+    });
+    expect(found[0].rule).toBe("focus-invisible");
+  });
+  it("passes a box-shadow that appears, fails one that was already there", () => {
+    const shadow = "rgb(0, 0, 0) 0px 0px 4px 0px";
+    expect(
+      focusVisibleProblem({
+        before: rest,
+        after: { ...rest, boxShadow: shadow },
+      }),
+    ).toEqual([]);
+    expect(
+      focusVisibleProblem({
+        before: { ...rest, boxShadow: shadow },
+        after: { ...rest, boxShadow: shadow },
+      }),
+    ).toHaveLength(1);
+  });
+  it("passes a changed border or background colour", () => {
+    expect(
+      focusVisibleProblem({
+        before: rest,
+        after: {
+          ...rest,
+          borderColor: "rgb(9, 9, 9) rgb(9, 9, 9) rgb(9, 9, 9) rgb(9, 9, 9)",
+        },
+      }),
+    ).toEqual([]);
+    expect(
+      focusVisibleProblem({
+        before: rest,
+        after: { ...rest, backgroundColor: "rgb(5, 5, 5)" },
+      }),
+    ).toEqual([]);
+  });
+  it("fails when nothing changed", () => {
+    expect(focusVisibleProblem({ before: rest, after: rest })).toHaveLength(1);
+  });
+});
+
+describe("arrowMoveProblems", () => {
+  const keys = ["ArrowRight", "ArrowLeft"];
+  it("passes a slider that moves and comes back", () => {
+    expect(
+      arrowMoveProblems({ before: "5", moved: "6", restored: "5", keys }),
+    ).toEqual([]);
+  });
+  it("fails one that ignores the first key", () => {
+    expect(
+      arrowMoveProblems({ before: "5", moved: "5", restored: "5", keys })[0],
+    ).toMatch(/ArrowRight did not change/);
+  });
+  it("fails one that does not come back", () => {
+    expect(
+      arrowMoveProblems({ before: "5", moved: "6", restored: "6", keys })[0],
+    ).toMatch(/ArrowLeft did not restore 5/);
+  });
+  it("fails a control with no value", () => {
+    expect(
+      arrowMoveProblems({ before: null, moved: null, restored: null, keys })[0],
+    ).toMatch(/exposes no value/);
+  });
+});
+
+describe("axe exclusions", () => {
+  const entry = {
+    rule: "color-contrast",
+    selector: ".a",
+    pages: ["/tools/x/"],
+    reason: "measured 7.1:1 on the real pixels, axe read the gradient as white",
+  };
+  const hit = { rule: "color-contrast", selector: ".a", page: "/tools/x/" };
+  it("matches only when rule, selector and page all match", () => {
+    expect(exclusionMatches(entry, hit)).toBe(true);
+    expect(exclusionMatches(entry, { ...hit, rule: "label" })).toBe(false);
+    expect(exclusionMatches(entry, { ...hit, selector: ".b" })).toBe(false);
+    expect(exclusionMatches(entry, { ...hit, page: "/tools/y/" })).toBe(false);
+  });
+  it('treats "*" as every page', () => {
+    expect(
+      exclusionMatches(
+        { ...entry, pages: ["*"] },
+        { ...hit, page: "/anything/" },
+      ),
+    ).toBe(true);
+  });
+  it("isExcluded asks every entry", () => {
+    expect(isExcluded([], hit)).toBe(false);
+    expect(isExcluded([{ ...entry, selector: ".z" }, entry], hit)).toBe(true);
+  });
+  it("accepts an empty file and a complete entry, and rejects a missing reason", () => {
+    expect(exclusionProblems([])).toEqual([]);
+    expect(exclusionProblems([entry])).toEqual([]);
+    expect(exclusionProblems([{ ...entry, reason: "" }])[0]).toMatch(/reason/);
+    expect(exclusionProblems([{ ...entry, pages: [] }])[0]).toMatch(/pages/);
+    expect(exclusionProblems({})[0]).toMatch(/array/);
+  });
+});
+
+describe("colorAlpha", () => {
+  it("reads the alpha of the computed colour forms", () => {
+    expect(colorAlpha("rgb(1, 2, 3)")).toBe(1);
+    expect(colorAlpha("rgba(1, 2, 3, 0.5)")).toBe(0.5);
+    expect(colorAlpha("rgb(1 2 3 / 25%)")).toBe(0.25);
+    expect(colorAlpha("color(srgb 0.1 0.2 0.3 / 0.92)")).toBe(0.92);
+    expect(colorAlpha("oklch(0.5 0.1 200)")).toBe(1);
+    expect(colorAlpha("transparent")).toBe(0);
+    expect(colorAlpha("rgba(0, 0, 0, 0)")).toBe(0);
+  });
+  it("returns null for something that is not a colour", () => {
+    expect(colorAlpha("")).toBeNull();
+    expect(colorAlpha("blue")).toBeNull();
+  });
+});
+
+describe("transparencyProblems", () => {
+  it("passes a flat, nearly opaque element", () => {
+    expect(
+      transparencyProblems({
+        backdropFilter: "none",
+        backgroundColor: "rgb(10, 10, 10)",
+      }),
+    ).toEqual([]);
+    expect(
+      transparencyProblems({
+        backdropFilter: "none",
+        backgroundColor: "rgba(10, 10, 10, 0.92)",
+      }),
+    ).toEqual([]);
+  });
+  it("names the blur that is still there", () => {
+    const found = transparencyProblems({
+      backdropFilter: "blur(12px)",
+      backgroundColor: "rgb(10, 10, 10)",
+    });
+    expect(found.map((f) => f.rule)).toEqual(["transparency-blur"]);
+  });
+  it("names a fill under 0.9", () => {
+    const found = transparencyProblems({
+      backdropFilter: "none",
+      backgroundColor: "rgba(10, 10, 10, 0.4)",
+    });
+    expect(found.map((f) => f.rule)).toEqual(["transparency-fill"]);
+  });
+  it("reports both when both fail", () => {
+    expect(
+      transparencyProblems({
+        backdropFilter: "blur(4px)",
+        backgroundColor: "rgba(0, 0, 0, 0)",
+      }).map((f) => f.rule),
+    ).toEqual(["transparency-blur", "transparency-fill"]);
+  });
+});
+
+describe("motionProblem", () => {
+  it("flags a running infinite animation and a long one", () => {
+    expect(
+      motionProblem({
+        playState: "running",
+        iterations: Infinity,
+        remainingMs: 0,
+      }),
+    ).toBe(true);
+    expect(
+      motionProblem({ playState: "running", iterations: 1, remainingMs: 5000 }),
+    ).toBe(true);
+  });
+  it("lets a short or finished animation go", () => {
+    expect(
+      motionProblem({ playState: "running", iterations: 1, remainingMs: 800 }),
+    ).toBe(false);
+    expect(
+      motionProblem({
+        playState: "finished",
+        iterations: Infinity,
+        remainingMs: 0,
+      }),
+    ).toBe(false);
+    expect(
+      motionProblem({
+        playState: "paused",
+        iterations: Infinity,
+        remainingMs: 0,
+      }),
+    ).toBe(false);
   });
 });

@@ -39,7 +39,14 @@
   .search-dialog,
   .DocSearch-Modal,
   dialog > .dialog-frame,
-  .gmt-chart {
+  .gmt-chart,
+  .sl-link-button.primary,
+  .sl-link-button.cta,
+  .gmt-hive-composer [data-slot="input-group"],
+  .gmt-widget table,
+  [role="tab"],
+  .sl-markdown-content .tab > [role="tab"][aria-selected="true"],
+  [data-theme="light"] site-search button[data-open-modal] {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     background-color: var(--gmt-surface);
@@ -63,6 +70,9 @@
   .gmt-theme-dark {
     --gmt-globe-atmosphere-alpha: 0;
     --gmt-globe-haze-alpha: 0;
+    /* The glass tints are the see-through fills of panels, tables and tabs. */
+    --gmt-glass-tint-subtle: var(--gmt-surface);
+    --gmt-glass-tint: var(--gmt-surface);
   }
 }
 
@@ -111,6 +121,16 @@
  * CanvasText blocks.
  * ======================================================================= */
 @media (forced-colors: active) {
+  /* A borderless icon button has no edge once forced colours drop its fill. */
+  .gmt-scrubber-remove {
+    border: 1px solid ButtonText;
+  }
+
+  .gmt-scrubber-remove:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
   /* The industry icon in the sidebar is a mask over a background colour, which
      forced-colors would repaint as the canvas and hide. Keep the mask and paint
      it in the text colour. */
@@ -172,6 +192,17 @@
 
   .gmt-scrubber-mark[data-kind="back"] {
     background: CanvasText;
+  }
+
+  /* The /dox/ composer draws its focus ring as a cyan border and glow on the panel and removes
+     the textarea's own outline (gmt-hive.css). Forced colours repaint the border but drop the
+     glow, and the textarea inside has no edge of its own, so a focused composer showed no
+     change. The textarea takes a system-colour outline, inset so the panel's
+     `overflow: hidden` does not clip it. */
+  .gmt-hive-composer textarea:focus,
+  .gmt-hive-composer textarea:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
   }
 
   .gmt-glass::before,
@@ -1885,5 +1916,21 @@
     border-color: Mark;
     color: MarkText;
     background: Mark;
+  }
+}
+
+/* =======================================================================
+ * Scroll regions (src/lib/scroll-regions.ts, DoxChat.tsx)
+ * A code block, widget table or chat rail that scrolls takes focus so the arrow keys scroll
+ * it; the ring says where focus is. Outline, not box-shadow: it survives forced colours.
+ * ======================================================================= */
+[data-scroll-region]:focus-visible {
+  outline: 2px solid var(--gmt-cyan-ink);
+  outline-offset: -2px;
+}
+
+@media (forced-colors: active) {
+  [data-scroll-region]:focus-visible {
+    outline-color: Highlight;
   }
 }

@@ -182,6 +182,12 @@
   text-decoration-color: var(--gmt-series-1);
 }
 
+.gmt-obs-colbtn,
+.gmt-obs-yearbtn {
+  min-block-size: 24px;
+  line-height: 24px;
+}
+
 .gmt-obs-yearbtn {
   font-family: var(--gmt-font-mono);
   font-variant-numeric: tabular-nums;
@@ -297,6 +303,32 @@
     inline-size: 1px;
     block-size: 1px;
     overflow: hidden;
+  }
+
+  /* The column buttons stay in the Tab order, so the header they sit in must be
+     seen while one has focus: it opens in flow, above the cards, and closes
+     again when focus leaves. */
+  .gmt-observance-comparator .gmt-obs-table thead:focus-within {
+    position: static;
+    inline-size: auto;
+    block-size: auto;
+    overflow: visible;
+    display: block;
+    margin-block-end: var(--gmt-space-2);
+  }
+
+  .gmt-observance-comparator .gmt-obs-table thead:focus-within tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gmt-space-1);
+    padding: 0;
+    margin: 0;
+    border: 0;
+  }
+
+  .gmt-observance-comparator .gmt-obs-table thead:focus-within th {
+    display: block;
+    inline-size: auto;
   }
 
   .gmt-observance-comparator .gmt-obs-table tr {

@@ -51,10 +51,15 @@
  * to `<out>/frames/<browser>-<width>-<slug>-<pass>.json`, to find which frame
  * made a jump.
  *
- * Chromium and WebKit only: Firefox is blocked by the sandbox on this machine.
+ * `--browsers` also takes `firefox`, which does not launch under the sandbox on the author's
+ * machine.
+ *
+ * The runner's contract (`pnpm --filter dox gates`, `scripts/gates/`): `--list-pages` prints the
+ * pages and exits; `--pages /tools/<slug>/,...` runs only those (an unknown path exits 2); with
+ * `GATE_REPORT` set, every failure is also a finding and the run ends with its measured count.
  */
 
-import { chromium, webkit } from "@playwright/test";
+import { chromium, firefox, webkit } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -67,6 +72,12 @@ import {
   pageProblems,
   skippedProblem,
 } from "./gate-checks.mjs";
+import { applyPageContract } from "./gates/contract.mjs";
+import { settledMainHeights } from "./lib/grow-frames.mjs";
+import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+
+const GATE = "grow-measure";
+const ENGINES = { chromium, webkit, firefox };
 
 const JUMP_LIMIT_PX = 48;
 const HEIGHT_MATCH_PX = 1;
@@ -327,6 +338,24 @@ const PAGES = [
   },
 ].map((p) => ({ ...p, path: p.path ?? `/tools/${p.slug}/` }));
 
+const PAGES_ARG = applyPageContract({
+  gate: GATE,
+  pages: PAGES.map((p) => p.path),
+});
+
+/** A short stable id for one failure message of a run. */
+function ruleOf(message) {
+  const text = message.replace(/^reduced-motion reference: /, "");
+  if (/max jump/.test(text)) return "jump-over-limit";
+  if (text.startsWith("grew ")) return "grew";
+  if (/^final .* != reduced/.test(text)) return "final-height-differs";
+  if (/not at rest/.test(text)) return "not-at-rest";
+  if (/data-growing/.test(text)) return "growing-under-reduced-motion";
+  if (/did not happen/.test(text)) return "interaction-skipped";
+  if (text.startsWith("the run crashed")) return "run-crashed";
+  return "page-error";
+}
+
 function parseArgs(argv) {
   const o = {
     base: null,
@@ -343,6 +372,8 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const next = () => argv[++i];
+    // pnpm passes the literal `--` of `pnpm run grow:measure -- ...` through.
+    if (a === "--" && i === 0) continue;
     if (a === "--base") o.base = next();
     else if (a === "--out") o.out = next();
     else if (a === "--browsers") o.browsers = next().split(",");
@@ -354,6 +385,8 @@ function parseArgs(argv) {
     else if (a === "--reduce-ref") o.reduceRef = next();
     else if (a === "--frames") o.frames = true;
     else if (a === "--init") o.init = next();
+    else if (a === "--pages") next(); // read by applyPageContract above
+    else if (a === "--list-pages") continue;
     else {
       console.error(`Unknown argument: ${a}`);
       process.exit(2);
@@ -361,7 +394,7 @@ function parseArgs(argv) {
   }
   if (!o.base || !o.out) {
     console.error(
-      "Usage: node scripts/grow-measure.mjs --base <url> --out <dir> [--browsers chromium,webkit] [--widths 1440,390] [--reduce] [--video] [--css <css>] [--only <slug,...>] [--reduce-ref <results.json>] [--frames] [--init <script.js>]",
+      "Usage: node scripts/grow-measure.mjs --base <url> --out <dir> [--browsers chromium,webkit] [--widths 1440,390] [--reduce] [--video] [--css <css>] [--only <slug,...>] [--reduce-ref <results.json>] [--frames] [--init <script.js>] [--pages <path,...>] [--list-pages]",
     );
     process.exit(2);
   }
@@ -370,9 +403,9 @@ function parseArgs(argv) {
     process.exit(2);
   }
   for (const b of o.browsers) {
-    if (b !== "chromium" && b !== "webkit") {
+    if (!(b in ENGINES)) {
       console.error(
-        `Unsupported browser "${b}". Firefox is blocked by the sandbox on this machine; only chromium and webkit run.`,
+        `Unsupported browser "${b}"; chromium, webkit and firefox run here.`,
       );
       process.exit(2);
     }
@@ -416,6 +449,7 @@ function samplerInit({ rootSelector, auto }) {
       h: root.getBoundingClientRect().height,
       m: main ? main.getBoundingClientRect().height : 0,
       g: document.querySelector("[data-growing]") ? 1 : 0,
+      l: document.readyState === "loading" ? 1 : 0,
     };
   };
   const NativeResizeObserver = window.ResizeObserver;
@@ -456,6 +490,7 @@ function samplerInit({ rootSelector, auto }) {
       h: use.h,
       m: use.m,
       g: use.g,
+      l: use.l || raw.l,
       raw: raw.h,
       rawMain: raw.m,
     });
@@ -495,7 +530,6 @@ function samplerInit({ rootSelector, auto }) {
 
 function stats(frames) {
   const hs = frames.map((f) => f.h);
-  const ms = frames.map((f) => f.m);
   const jumps = hs.slice(1).map((h, i) => Math.abs(h - hs[i]));
   const dts = frames
     .slice(1)
@@ -519,7 +553,9 @@ function stats(frames) {
     // were read: kept for comparison, never asserted.
     rawMaxJump: maxFrameJump(frames.map((f) => f.raw)),
     over48: jumps.filter((j) => j > JUMP_LIMIT_PX).length,
-    mainMaxJump: maxFrameJump(ms),
+    /* Frames drawn mid-parse are left out: `<main>` grows as the footer streams
+       in below the widget, which is not a shift (see lib/grow-frames.mjs). */
+    mainMaxJump: maxFrameJump(settledMainHeights(frames)),
     medianDt: dts.length ? dts[Math.floor(dts.length / 2)] : 0,
     growingSeen: frames.some((f) => f.g === 1),
   };
@@ -838,7 +874,11 @@ function mdTable(results, reduceMode) {
 async function main() {
   const o = parseArgs(process.argv.slice(2));
   await mkdir(o.out, { recursive: true });
-  const pages = o.only ? PAGES.filter((p) => o.only.includes(p.slug)) : PAGES;
+  const pages = PAGES.filter(
+    (p) =>
+      (!o.only || o.only.includes(p.slug)) &&
+      (!PAGES_ARG || PAGES_ARG.includes(p.path)),
+  );
   if (!pages.length) {
     console.error("--only matched no page");
     process.exit(2);
@@ -853,7 +893,7 @@ async function main() {
 
   const results = [];
   for (const name of o.browsers) {
-    const browser = await (name === "webkit" ? webkit : chromium).launch();
+    const browser = await ENGINES[name].launch();
     try {
       for (const width of o.widths) {
         for (const def of pages) {
@@ -950,6 +990,17 @@ async function main() {
               failures,
             };
             results.push(row);
+            for (const failure of failures) {
+              recordFinding({
+                gate: GATE,
+                rule: ruleOf(failure),
+                page: def.path,
+                selector: def.root,
+                browser: name,
+                width,
+                message: `${pass} pass: ${failure}`,
+              });
+            }
             console.log(
               `${row.ok ? "ok  " : "FAIL"} ${name} ${width} ${def.slug} ${pass}: growth ${Math.round(r.growth)} px, max jump ${Math.round(r.maxJump)} px, >48 ${r.over48}, final ${Math.round(r.finalH)}${failures.length ? " :: " + failures.join("; ") : ""}`,
             );
@@ -971,20 +1022,24 @@ async function main() {
     css: o.css,
     widths: o.widths,
     browsers: o.browsers,
-    firefox: "blocked by the sandbox on this machine; not run",
+    firefox: o.browsers.includes("firefox") ? "run" : "not run",
   };
   await writeFile(
     path.join(o.out, `results${suffix}.json`),
     JSON.stringify({ meta, results }, null, 2),
   );
   const failed = results.filter((r) => !r.ok);
+  recordMeasured(
+    GATE,
+    new Set(results.map((r) => `${r.browser}|${r.width}|${r.slug}`)).size,
+  );
   // Zero runs would otherwise print "all 0 runs passed".
   const empty = emptyRunProblem(results.length, "runs");
   if (empty) failed.push({ slug: "(none)" });
   const md = [
     `# Growth measurement`,
     ``,
-    `base ${o.base}; reduce ${o.reduce}; css ${o.css || "(none)"}; Firefox: blocked by the sandbox, not run.`,
+    `base ${o.base}; reduce ${o.reduce}; css ${o.css || "(none)"}; browsers ${o.browsers.join(",")}.`,
     ``,
     mdTable(results, o.reduce),
     ``,
