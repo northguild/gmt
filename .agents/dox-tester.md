@@ -36,10 +36,10 @@ correctness lives in build output, rendered pages, keyboard paths and live behav
 
 `pnpm` commands run on the Node that `devEngines.runtime` pins. Prefix a bare `node` command with `eval "$(fnm env)" && fnm use &&` (Astro 7 needs Node `>=22.12.0`).
 
-- `pnpm run validate` is green across the monorepo, including the CI timezone matrix (10 zones × Node 22/24/26 — the `gmt-matrix` job in `.github/workflows/ci.yml`).
-  Check the task list, not only the exit code.
+- `node scripts/verdict.mjs validate` is PASS (every check that reads a file the branch changed; `--full` runs them all), and so is the CI timezone matrix (10 zones × Node 22/24/26 — the `gmt-matrix` job in `.github/workflows/ci.yml`).
+  Check the task list, not only the exit code: the verdict screen is that list.
 - `git diff --stat packages/gmt` is empty, or a changeset exists.
-- From `apps/dox`: `pnpm test`, `pnpm check`, `pnpm lint`.
+- `node scripts/verdict.mjs run dox test` (and `check`, `lint`).
 - No `octane` or `@octanejs/*` dependency; no hardcoded version literal in the site.
 
 ## Surface gates — apply what the work touches
@@ -49,16 +49,21 @@ Full list: `context/dox/reference/verification-and-risks.md`.
 - **Generator:** the `startOfZoned` spot-check line by line; `getDstTransitions`'s multi-line
   example; `weekOfYear.ts`'s two pages; route manifest equals the page set; the count test
   fails when a function is added without re-extraction (verify by adding one, then revert).
-- **Pages and widgets:** keyboard-only pass with the mouse unplugged; contrast ≥ 7:1 on real
-  rendered pages, widgets included; `visual:diff` and `scripts/html-diff.mjs` after CSS or
-  widget-markup changes; reduced-motion, reduced-transparency and high-contrast preferences gate
-  what they claim.
+- **Measured:** `pnpm --filter dox gates` on the branch: the Tab walk, axe, the media
+  preferences, contrast, growth and readouts. Quote the screen. Open a gate's log only for a
+  FAIL it names. A FLAKY line is rerun once with `--only <gate>` before it is reported.
+  `visual:diff` and `html-diff` run through `gates --baseline <base apps/dox>`, built as the
+  built.md runbook "A gate baseline" describes.
+- **Judged:** read one long changed page top to bottom in both themes ("maximal chrome,
+  disciplined content surface"). For a new interaction pattern that no gate knows (a new kind
+  of handle, a dialog), do one keyboard pass by hand and say what you pressed.
 - **Card accents:** no card, callout, row or result block has a left-border-only accent. Grep the
   changed styles for `border-left`, `border-inline-start`, left `inset` box-shadows and left
   `::before` stripes, and confirm on screenshots. An accent edge must be a bottom border or part
   of a full border.
-- **Readouts during a drag:** drag each handle across its full range and record the bounding
-  boxes of every readout card beside it. They must not move or resize, to the pixel.
+- **Readouts during a drag:** readout cards beside a handle must not move or resize during a
+  drag, to the pixel. `readout-still` measures every tool in its `TOOLS` list; check bounding
+  boxes by hand only for a tool missing from that list, and report the missing entry as a gap.
 - **Chat:**
   - An out-of-corpus question is refused, not improvised.
   - A stubbed hallucinated route renders as plain text.

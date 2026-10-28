@@ -27,17 +27,28 @@
  *   ...make changes, pnpm run build...
  *   pnpm run visual:after                      # capture the comparison set
  *   pnpm run visual:diff                       # assert before ~= after (exit 1 over threshold)
+ *
+ * The runner's contract (`pnpm --filter dox gates`, `scripts/gates/`), after the mode:
+ *   --list-pages   print the page paths and exit;
+ *   --pages a,b    capture only those paths (an unknown path exits 2), and clear the label's folder
+ *                  first so `diff` never meets a shot of an earlier, wider run;
+ *   --base <url>   shoot that already-served site instead of starting `astro preview`.
+ * With `GATE_REPORT` set, `diff` also writes a finding per differing snapshot and its count.
  */
 
 import { chromium } from "@playwright/test";
 import { execFile, spawn } from "node:child_process";
-import { mkdir, readdir, readFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 import { blockOffSite } from "./gate-checks.mjs";
+import { applyPageContract } from "./gates/contract.mjs";
+import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+
+const GATE = "visual-diff";
 
 const execFileAsync = promisify(execFile);
 
@@ -56,24 +67,23 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 // of it.
 const PORT = 48173;
 // `astro preview` serves under the site `base`, so the URL carries `/gmt`; page paths stay base-less.
-const BASE_URL = `http://localhost:${PORT}/gmt`;
+const args = process.argv.slice(2);
+const flagValue = (name) => {
+  const i = args.indexOf(`--${name}`);
+  return i === -1 ? undefined : args[i + 1];
+};
+/** A site the runner already serves; without it this script starts `astro preview` itself. */
+const EXTERNAL_BASE = flagValue("base");
+const BASE_URL = (EXTERNAL_BASE ?? `http://localhost:${PORT}/gmt`).replace(
+  /\/$/,
+  "",
+);
 // Sentinel string only this repo's built pages contain — used to confirm the preview
 // server we're talking to is actually serving THIS worktree's dist/, not a stray
 // process left running on the same port by another worktree or a previous run.
 const SENTINEL = "Give Me Temporal";
 
-const label = process.argv[2];
-if (label === "diff") {
-  await diffSnapshots();
-  // Exit with whatever diffSnapshots set (0 if all identical, 1 if any
-  // differed or was missing) — do not hardcode 0 here, or every failure gets
-  // silently swallowed.
-  process.exit(process.exitCode ?? 0);
-}
-if (label !== "before" && label !== "after") {
-  console.error("Usage: node scripts/visual-snapshot.mjs <before|after|diff>");
-  process.exit(1);
-}
+const label = args[0]?.startsWith("--") ? undefined : args[0];
 
 /* Page list — see design-system.md's "Verifying a change is visually safe": landing,
    a dense reference page, the two /tools pages this epic is actively changing, and one
@@ -176,6 +186,25 @@ const PAGES = [
      by nothing else. */
   { slug: "dox", path: "/dox/" },
 ];
+
+const PAGES_ARG = applyPageContract({
+  gate: GATE,
+  pages: [...new Set(PAGES.map((p) => p.path))],
+});
+
+if (label === "diff") {
+  await diffSnapshots();
+  // Exit with whatever diffSnapshots set (0 if all identical, 1 if any
+  // differed or was missing) — do not hardcode 0 here, or every failure gets
+  // silently swallowed.
+  process.exit(process.exitCode ?? 0);
+}
+if (label !== "before" && label !== "after") {
+  console.error(
+    "Usage: node scripts/visual-snapshot.mjs <before|after|diff> [--base <url>] [--pages <path,...>] [--list-pages]",
+  );
+  process.exit(1);
+}
 
 const THEMES = ["dark", "light"];
 const VIEWPORTS = [
@@ -353,9 +382,31 @@ function missingLine(name, hasBefore) {
   return `✗ ${name.padEnd(32)} MISSING (${hasBefore ? "no after" : "no before"})`;
 }
 
+/** A failed snapshot as a finding: its page, theme and width come from the file name. */
+function recordSnapshotFinding(name, line) {
+  const m = /^(.*)-(dark|light)-(desktop|mobile)\.png$/.exec(name);
+  const page = m ? PAGES.find((p) => p.slug === m[1]) : undefined;
+  recordFinding({
+    gate: GATE,
+    rule: /MISSING/.test(line)
+      ? "snapshot-missing"
+      : /ERROR/.test(line)
+        ? "snapshot-error"
+        : "pixel-diff",
+    page: page?.path ?? null,
+    selector: name,
+    browser: "chromium",
+    width: m ? (m[3] === "desktop" ? 1440 : 390) : null,
+    theme: m ? m[2] : null,
+    message: line.replace(/^✗ /, ""),
+  });
+}
+
 async function reportSnapshot(name, dirs, presence) {
   if (!presence.hasBefore || !presence.hasAfter) {
-    console.log(missingLine(name, presence.hasBefore));
+    const line = missingLine(name, presence.hasBefore);
+    console.log(line);
+    recordSnapshotFinding(name, line);
     return true;
   }
   const { failed, line } = await compareOne(
@@ -364,10 +415,12 @@ async function reportSnapshot(name, dirs, presence) {
     path.join(dirs.afterDir, name),
   );
   console.log(line);
+  if (failed) recordSnapshotFinding(name, line);
   return failed;
 }
 
 function reportDiffTotal(failures, total) {
+  recordMeasured(GATE, total);
   console.log();
   if (failures === 0) {
     console.log(`All ${total} snapshots match within tolerance.`);
@@ -458,8 +511,17 @@ async function shoot(page, outDir, fileName, clockMasks, options = {}) {
 
 /** Every page in `PAGES`, full height. */
 async function capturePages(page, outDir, clockMasks, theme, viewport) {
-  for (const p of PAGES) {
-    await page.goto(`${BASE_URL}${p.path}`, { waitUntil: "networkidle" });
+  for (const p of PAGES.filter(
+    (q) => !PAGES_ARG || PAGES_ARG.includes(q.path),
+  )) {
+    const response = await page.goto(`${BASE_URL}${p.path}`, {
+      waitUntil: "networkidle",
+    });
+    if (response?.status() !== 200) {
+      throw new Error(
+        `${p.path} answered HTTP ${response?.status()}, not 200 (wrong --base or a missing build?)`,
+      );
+    }
     // Let ambient globe rotation / any load-time animation settle to a consistent frame.
     await page.waitForTimeout(300);
     await shoot(
@@ -511,6 +573,8 @@ async function captureOnePass(browser, outDir, viewport, theme) {
     const page = await context.newPage();
     const clockMasks = LIVE_CLOCK_SELECTORS.map((sel) => page.locator(sel));
     await capturePages(page, outDir, clockMasks, theme, viewport);
+    // The search modal and the mobile menu belong to the whole set, not to a page.
+    if (PAGES_ARG) return;
     const captureInteraction =
       viewport.name === "desktop" ? captureSearchModal : captureMobileMenu;
     await captureInteraction(page, outDir, clockMasks, theme, viewport);
@@ -534,18 +598,25 @@ async function captureAll(outDir) {
 
 async function main() {
   const outDir = path.join(ROOT, ".visual", label);
+  // A narrowed or served run replaces the label's folder, so `diff` meets only what it shot.
+  if (PAGES_ARG || EXTERNAL_BASE)
+    await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
 
-  // Clear any daemon this project left running (e.g. from a prior interrupted run)
-  // before starting a fresh one.
-  await stopPreviewDaemon();
-  startPreviewDaemon();
-
-  try {
-    await waitForOurServer(BASE_URL);
+  if (EXTERNAL_BASE) {
     await captureAll(outDir);
-  } finally {
+  } else {
+    // Clear any daemon this project left running (e.g. from a prior interrupted run)
+    // before starting a fresh one.
     await stopPreviewDaemon();
+    startPreviewDaemon();
+
+    try {
+      await waitForOurServer(BASE_URL);
+      await captureAll(outDir);
+    } finally {
+      await stopPreviewDaemon();
+    }
   }
 
   console.log(`Done. Screenshots in ${path.relative(ROOT, outDir)}/`);

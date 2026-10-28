@@ -65,6 +65,8 @@ the files read most (sum of `Read` result sizes). Context = input + cache read +
 tokens per request, de-duplicated by message id. Output tokens are not reported because
 transcripts log them mid-stream.
 
+Add `--by-activity` for context per agent and activity bucket (reading, tests, gh, browser; the browser line is the share spent on browser and gate checking, a11y split out) and `--since`/`--until YYYY-MM-DD` for an exact UTC window instead of `--days`.
+
 Read it like this: a high share on an agent with a large average points at a model or context
 problem; many requests over 150K point at missing compaction or oversized reads; the same file
 read many times belongs in a shorter context file or an entry-file summary.

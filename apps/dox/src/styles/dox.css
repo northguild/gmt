@@ -194,6 +194,14 @@ html:not([data-has-sidebar]) .sl-container {
   padding: var(--gmt-space-4);
 }
 
+/* A link in running prose is underlined: colour alone does not set it apart from
+   the text around it (WCAG 1.4.1, axe link-in-text-block). */
+.gmt-tool-intro a,
+.gmt-tool-after a {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 .gmt-tool-intro > :first-child,
 .gmt-tool-after > :first-child {
   margin-top: 0;

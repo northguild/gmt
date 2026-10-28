@@ -145,7 +145,8 @@ function describe({ checks, reasons }, { local }) {
   return out;
 }
 
-function plan(opts) {
+/** The checks to run and why, from `--checks`, `--full` or the change against `--base`. */
+export function plan(opts) {
   if (opts.checks) {
     const named = JSON.parse(opts.checks);
     for (const id of named) {
@@ -322,19 +323,25 @@ function audit(opts) {
   return 1;
 }
 
-try {
-  assertRulesValid();
-  const [command, ...rest] = process.argv.slice(2);
-  const opts = parseArgs(rest);
-  const commands = { run, show, github, audit };
-  if (!commands[command]) {
-    console.error(
-      "Usage: node scripts/affected.mjs run|show|github|audit [options] — see the header of this file.",
-    );
+// `scripts/verdict.mjs validate` imports `plan`; only a direct run is the command line.
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  try {
+    assertRulesValid();
+    const [command, ...rest] = process.argv.slice(2);
+    const opts = parseArgs(rest);
+    const commands = { run, show, github, audit };
+    if (!commands[command]) {
+      console.error(
+        "Usage: node scripts/affected.mjs run|show|github|audit [options] — see the header of this file.",
+      );
+      process.exit(2);
+    }
+    process.exit(commands[command](opts));
+  } catch (error) {
+    console.error(`affected: ${error.message}`);
     process.exit(2);
   }
-  process.exit(commands[command](opts));
-} catch (error) {
-  console.error(`affected: ${error.message}`);
-  process.exit(2);
 }

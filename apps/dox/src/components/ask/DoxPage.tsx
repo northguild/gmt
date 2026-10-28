@@ -33,6 +33,7 @@ import { RailResizer } from "./RailResizer";
 import { WidgetRail, type RailWidget } from "./WidgetRail";
 import { isSameWidget, resolveWidget } from "./widget-registry";
 import { withBase } from "~/lib/site";
+import { LICENCE_LEAD, LICENCE_LINK_TEXT, LICENCE_URL } from "~/lib/licence";
 
 /** Which Worker this page is talking to.
  *
@@ -247,6 +248,13 @@ export default function DoxPage() {
           />
         </ChatErrorBoundary>
       </div>
+      {/* The site's licence note. Starlight's footer is not rendered on this route (see
+          `Footer.astro`), so the note sits here, in view and in the tab order. */}
+      <footer className="gmt-hive-licence">
+        <p>
+          {LICENCE_LEAD} <a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
+        </p>
+      </footer>
     </div>
   );
 }

@@ -169,7 +169,9 @@
 
 .gmt-cron-zone .gmt-cron-axis-row {
   position: relative;
-  block-size: 1.2rem;
+  /* A tick is its 9px mark gap plus a 14px line, so the next row's marks start
+     below this row's digits instead of inside them. */
+  block-size: 1.5rem;
 }
 
 .gmt-cron-zone .gmt-cron-axis-cap {
@@ -435,7 +437,7 @@
   display: block;
   margin-block-start: var(--gmt-space-1);
   font-size: var(--gmt-text-xs);
-  color: var(--gmt-ice-dim);
+  color: var(--gmt-ice);
 }
 
 /* A run the other rule does not give: hatched, and it says so in words. */

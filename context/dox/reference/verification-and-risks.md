@@ -5,7 +5,8 @@
 ## Checks that apply to any Dox change
 
 - `pnpm run validate` (root) is green, **including the CI timezone matrix (10 zones × Node 22/24/26 — the `gmt-matrix` job in `.github/workflows/ci.yml`)** — Dox must
-  not perturb `packages/gmt`. From `apps/dox`: `pnpm test`, `pnpm check`, `pnpm lint`.
+  not perturb `packages/gmt`. Run it as `node scripts/verdict.mjs validate`, and the Dox
+  package alone as `node scripts/verdict.mjs run dox test` (and `check`, `lint`).
 - **Generator:** the generated `startOfZoned` page matches
   `packages/gmt/src/zoned/calculate/startOfZoned.ts` line by line (options table, and its first
   `@example`: a function page shows the first example only, and the corpus that feeds chat
@@ -14,12 +15,21 @@
   function is added without re-extraction.
 - **Search:** `addBusinessDays` in the deployed Pagefind index lands on its page (Pagefind does
   not run in dev).
-- **Keyboard-only pass** with the mouse unplugged, on pages and on every widget touched.
+- **Keyboard:** the `a11y-tab-walk` gate (every control reachable, focus visible and not
+  obscured, no trap, arrow keys move every handle), plus a human pass for a new interaction
+  pattern.
 - **Contrast** measured on real rendered pages, widget surfaces included: body text ≥ 7:1.
   `pnpm run contrast:measure` (against a served build) gates every `--gmt-ice-dim` text use at
-  7:1 and every disabled field's border at 3:1, in both themes.
+  7:1 and every disabled field's border at 3:1. The gate runner runs it in both themes.
+- **a11y and media:** `a11y-axe` (WCAG 2.2 AA tags; exclusions for false positives only) and
+  `a11y-media` (reduced motion, reduced transparency, more contrast, forced colours).
 - **Visual gates** after any CSS or widget-markup change: `visual:diff` and
-  `scripts/html-diff.mjs` (see [design-system.md](design-system.md)).
+  `scripts/html-diff.mjs`, through `pnpm --filter dox gates --baseline <base apps/dox>` (see
+  [design-system.md](design-system.md)).
+- **Where they run:** a Dox PR runs the `pr` tier on its changed pages in Chromium (the
+  `dox-gates` job), and `dox-gates-nightly.yml` sweeps every page in three browsers. See
+  built.md, [Tier 2](../built.md#tier-2--widget-platform) ("The PR job") and
+  [Runbooks](../built.md#runbooks) ("The nightly gate sweep").
 - **Chat:**
   - An out-of-corpus question is **refused, not improvised**.
   - A hallucinated route renders as **plain text**, never a broken link.

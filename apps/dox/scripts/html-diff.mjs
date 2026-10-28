@@ -33,9 +33,19 @@
  * these pages are here to police. Without the distinction the only way to tell
  * the two apart was to read the diff by hand and decide — which is precisely
  * the judgement a gate is supposed to make for you.
+ *
+ * The runner's contract (`pnpm --filter dox gates`, `scripts/gates/`), after the mode and folder:
+ * `--list-pages` prints the widget pages and exits; `--pages /tools/dwell-ledger/,...` captures
+ * and compares only those (an unknown path exits 2); with `GATE_REPORT` set, every changed widget
+ * is also a finding and the run ends with the count it compared. The runner runs `capture` in the
+ * base tree and `compare` here.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { applyPageContract } from "./gates/contract.mjs";
+import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+
+const GATE = "html-diff";
 
 const PAGES = [
   {
@@ -190,6 +200,27 @@ const PAGES = [
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";
 
+/** A page entry's site path, as the other gates write it. */
+const sitePath = (p) => `/${p.path}/`;
+const PAGES_ARG = applyPageContract({
+  gate: GATE,
+  pages: PAGES.map(sitePath),
+});
+const SELECTED = PAGES.filter(
+  (p) => !PAGES_ARG || PAGES_ARG.includes(sitePath(p)),
+);
+
+/** A changed widget or a missing subtree, as a finding. */
+function widgetFinding(p, rule, message) {
+  recordFinding({
+    gate: GATE,
+    rule,
+    page: sitePath(p),
+    selector: p.widget,
+    message,
+  });
+}
+
 /**
  * Collapse whitespace between tags (never inside <pre>/<textarea>), and mask
  * Vite's content-addressed asset hashes.
@@ -262,7 +293,14 @@ function renamed(html) {
   return RENAMES.reduce((out, [from, to]) => out.split(from).join(to), html);
 }
 
-const [mode, dir] = process.argv.slice(2);
+// Positional mode and folder; the contract flags (`--pages x`, `--list-pages`) are not positional.
+const positional = [];
+for (let i = 2; i < process.argv.length; i++) {
+  const arg = process.argv[i];
+  if (arg === "--pages") i++;
+  else if (!arg.startsWith("--")) positional.push(arg);
+}
+const [mode, dir] = positional;
 if (!mode || !dir) {
   console.error("usage: html-diff.mjs <capture|compare> <dir>");
   process.exit(2);
@@ -270,20 +308,26 @@ if (!mode || !dir) {
 
 if (mode === "capture") {
   mkdirSync(dir, { recursive: true });
-  for (const p of PAGES) {
-    writeFileSync(
-      path.join(dir, slug(p.path)),
-      readFileSync(`dist/gmt/${p.path}/index.html`, "utf8"),
-    );
+  let captured = 0;
+  for (const p of SELECTED) {
+    const source = `dist/gmt/${p.path}/index.html`;
+    // A page the base does not have yet is reported by `compare` as "+", not a crash here.
+    if (!existsSync(source)) {
+      console.log(`- ${p.path} — not in the base build, not captured`);
+      continue;
+    }
+    writeFileSync(path.join(dir, slug(p.path)), readFileSync(source, "utf8"));
+    captured++;
   }
-  console.log(`captured ${PAGES.length} widget pages to ${dir}`);
+  console.log(`captured ${captured} widget pages to ${dir}`);
   process.exit(0);
 }
 
 let widgetChanged = 0;
 let pageChanged = 0;
+let compared = 0;
 
-for (const p of PAGES) {
+for (const p of SELECTED) {
   /* A widget page added since the baseline was captured has nothing to be
      compared against. Say so, rather than crash or pass it silently; the
      visual gate still covers what it looks like. */
@@ -291,6 +335,7 @@ for (const p of PAGES) {
     console.log(`+ ${p.path} — new widget page, no baseline to compare`);
     continue;
   }
+  compared += 1;
   const beforeRaw = readFileSync(path.join(dir, slug(p.path)), "utf8");
   const afterRaw = renamed(
     readFileSync(`dist/gmt/${p.path}/index.html`, "utf8"),
@@ -302,6 +347,11 @@ for (const p of PAGES) {
   if (!beforeWidget || !afterWidget) {
     widgetChanged += 1;
     console.log(`✗ ${p.path} — widget subtree not found (class "${p.widget}")`);
+    widgetFinding(
+      p,
+      "widget-not-found",
+      `widget subtree not found (class "${p.widget}")`,
+    );
     continue;
   }
 
@@ -311,6 +361,11 @@ for (const p of PAGES) {
     widgetChanged += 1;
     console.log(`✗ ${p.path} — WIDGET markup changed`);
     console.log(firstDivergence(bw, aw));
+    widgetFinding(
+      p,
+      "widget-markup-changed",
+      firstDivergence(bw, aw).replace(/\s+/g, " ").trim(),
+    );
     continue;
   }
 
@@ -326,6 +381,7 @@ for (const p of PAGES) {
   console.log(`✓ ${p.path}`);
 }
 
+recordMeasured(GATE, compared);
 if (widgetChanged > 0) {
   console.log(
     `\n${widgetChanged} widget(s) changed. This is the failure this gate exists for.`,

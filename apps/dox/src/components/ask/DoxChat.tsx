@@ -433,6 +433,42 @@ export function DoxChat({
 
   useImperativeHandle(ref, () => ({ send }), [send]);
 
+  /* The transcript scrolls inside `StickToBottom`'s own element, which the library renders
+     and gives no props to. A box that scrolls must take focus so the arrow keys reach it
+     (axe `scrollable-region-focusable`), and a focusable region needs a name. As in
+     `scroll-regions.ts`, it has them only while it overflows: the hub and a short conversation
+     are not a tab stop. The attributes are set on the element itself: React never owns them,
+     so a render does not remove them. */
+  useEffect(() => {
+    const scroller = conversationRef.current?.scrollRef.current;
+    if (!scroller) return;
+    const update = () => {
+      if (scroller.scrollHeight > scroller.clientHeight + 1) {
+        scroller.tabIndex = 0;
+        scroller.setAttribute("role", "region");
+        scroller.setAttribute("aria-label", "Conversation, scrollable");
+        scroller.setAttribute("data-scroll-region", "");
+      } else {
+        for (const name of [
+          "tabindex",
+          "role",
+          "aria-label",
+          "data-scroll-region",
+        ]) {
+          scroller.removeAttribute(name);
+        }
+      }
+    };
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    // The scroller keeps its size as turns arrive; its content is what grows.
+    const observer = new ResizeObserver(update);
+    observer.observe(scroller);
+    const content = conversationRef.current?.contentRef.current;
+    if (content) observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
+
   const rawEmpty = messages.length === 0;
   useEffect(() => {
     onEmptyChange?.(rawEmpty);

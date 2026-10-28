@@ -34,8 +34,12 @@
  * `--shots` saves a screenshot of each drawing with its panel open. Exits non-zero on any failure.
  */
 import { mkdirSync } from "node:fs";
-import { chromium, webkit } from "@playwright/test";
+import { chromium, firefox, webkit } from "@playwright/test";
 import { blockOffSite } from "./gate-checks.mjs";
+import { applyPageContract } from "./gates/contract.mjs";
+import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+
+const GATE = "data-credits-check";
 
 const GLOBE = {
   stack: true,
@@ -88,14 +92,29 @@ const VIEWPORTS = [
   { width: 375, height: 812 },
 ];
 
+// The runner's page contract (`scripts/gates/`).
+const PAGES_ARG = applyPageContract({
+  gate: GATE,
+  pages: TARGETS.map((target) => target.path),
+});
+const SELECTED = PAGES_ARG
+  ? TARGETS.filter((target) => PAGES_ARG.includes(target.path))
+  : TARGETS;
+
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
   return i === -1 ? fallback : args[i + 1];
 };
 const base = flag("base", "http://127.0.0.1:4351/gmt").replace(/\/$/, "");
-const engines = { chromium, webkit };
+const engines = { chromium, firefox, webkit };
 const browsers = flag("browsers", "chromium").split(",");
+for (const name of browsers) {
+  if (!engines[name]) {
+    console.error(`data-credits-check: unknown browser "${name}"`);
+    process.exit(2);
+  }
+}
 const shots = flag("shots", "");
 if (shots) mkdirSync(shots, { recursive: true });
 
@@ -106,7 +125,24 @@ if (shots) mkdirSync(shots, { recursive: true });
 const TAB = (name) => (name === "webkit" ? "Alt+Tab" : "Tab");
 
 const failures = [];
-const fail = (msg) => failures.push(msg);
+let measured = 0;
+/** Every message starts "<browser> <width>px <path>: ", which is the finding's cell. */
+const fail = (msg) => {
+  failures.push(msg);
+  const cell = /^(\w+) (\d+)px (\S+?)(?: @\S+)?: (.*)$/s.exec(msg);
+  recordFinding({
+    gate: GATE,
+    rule: (cell?.[4] ?? "").startsWith("HTTP")
+      ? "http-status"
+      : /overlaps|covers/.test(msg)
+        ? "overlap"
+        : "credits-check",
+    page: cell?.[3] ?? null,
+    browser: cell?.[1] ?? null,
+    width: cell ? Number(cell[2]) : null,
+    message: cell?.[4] ?? msg,
+  });
+};
 
 const STUB = {
   now: "2026-10-22T12:00:00Z",
@@ -264,7 +300,7 @@ const intersects = (a, b) =>
 for (const name of browsers) {
   const browser = await engines[name].launch();
   for (const viewport of VIEWPORTS) {
-    for (const target of TARGETS) {
+    for (const target of SELECTED) {
       const label = `${name} ${viewport.width}px ${target.path}`;
       const context = await browser.newContext({ viewport });
       await blockOffSite(context, base);
@@ -483,6 +519,7 @@ for (const name of browsers) {
       await frame.hover();
       await page.waitForTimeout(400);
       await shoot("closed");
+      measured += 1;
       console.log(`checked ${label}`);
       await context.close();
     }
@@ -490,6 +527,7 @@ for (const name of browsers) {
   await browser.close();
 }
 
+recordMeasured(GATE, measured);
 if (failures.length) {
   console.error(`\n${failures.length} failure(s):\n- ${failures.join("\n- ")}`);
   process.exit(1);
