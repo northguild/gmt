@@ -9,7 +9,9 @@ import {
   badUrlsInCss,
   badUrlsInHtml,
   baseHelperNames,
+  LANDING,
 } from "./dist-base";
+import { LANDING_URL } from "../../src/lib/site";
 
 const values = (found: Array<{ value: string }>) => found.map((f) => f.value);
 
@@ -27,6 +29,35 @@ describe("badUrlsInHtml", () => {
       <a data-handoff-href="/gmt/tools/x/">x</a>
       <div style="background:url('/gmt/a.png')"></div></body></html>`;
     expect(badUrlsInHtml(html)).toEqual([]);
+  });
+
+  it("passes the header's anchor to the landing page", () => {
+    expect(badUrlsInHtml('<a href="https://northguild.dev/">x</a>')).toEqual(
+      [],
+    );
+  });
+
+  it("keeps the landing exception to that one anchor", () => {
+    for (const html of [
+      '<a href="https://northguild.dev">x</a>',
+      '<a href="https://northguild.dev/about">x</a>',
+      '<a href="/">x</a>',
+      '<link href="https://northguild.dev/">',
+      '<meta property="og:url" content="https://northguild.dev/">',
+    ])
+      expect(badUrlsInHtml(html), html).not.toEqual([]);
+    expect(
+      badLinksInMarkdown("See https://northguild.dev/ for more."),
+    ).not.toEqual([]);
+    expect(
+      badSitemapLocs(
+        "<urlset><url><loc>https://northguild.dev/</loc></url></urlset>",
+      ),
+    ).not.toEqual([]);
+  });
+
+  it("LANDING equals LANDING_URL in site.ts", () => {
+    expect(LANDING).toBe(LANDING_URL);
   });
 
   it("flags a root-absolute href", () => {

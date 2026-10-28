@@ -1,0 +1,15 @@
+---
+/**
+ * #424 — the NorthGuild shield, inlined.
+ *
+ * Renders the imported SVG as markup so page CSS and the theme tokens reach its
+ * paths (an `<img>` would be a separate document and could not follow the
+ * reader's theme). `aria-hidden`: every consumer supplies the accessible name
+ * (the header link labels itself "NorthGuild home"), so the mark must not
+ * announce twice. The fills live in `gmt-primitives.css`, because a scoped
+ * style does not reach an imported SVG's paths.
+ */
+import Logo from "~/assets/northguild-logo.svg";
+---
+
+<Logo class="gmt-ng-mark" aria-hidden="true" focusable="false" />

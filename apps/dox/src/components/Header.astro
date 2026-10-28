@@ -1,12 +1,14 @@
 ---
-// Override of Starlight's Header — adds an "Ask Dox" link into the header's
-// right-hand group, next to the social icons, so the /dox chat is reachable
-// from every page. It is a plain nav link with no JavaScript: no page but /dox
-// hydrates React.
+// Override of Starlight's Header. It adds two things to Starlight's own layout:
+// the NorthGuild link (the shield, then a divider) before the site title, which
+// leads back to northguild.dev in the same tab (#424); and a "Chat with Dox"
+// link in the right-hand group, next to the social icons, so the /dox chat is
+// reachable from every page. Both are plain links with no JavaScript: no page
+// but /dox hydrates React.
 //
 // Structure copied from @astrojs/starlight/components/Header.astro so the
 // existing search/social/theme layout is preserved byte-for-byte; only the
-// `<ButtonLink>` in `right-group` is new.
+// NorthGuild link and the `<ButtonLink>` in `right-group` are new.
 import config from "virtual:starlight/user-config";
 
 import LanguageSelect from "virtual:starlight/components/LanguageSelect";
@@ -16,7 +18,10 @@ import SocialIcons from "virtual:starlight/components/SocialIcons";
 import ThemeSelect from "virtual:starlight/components/ThemeSelect";
 import ButtonLink from "./ButtonLink.astro";
 import DoxMark from "./DoxMark.astro";
-import { withBase } from "~/lib/site";
+import NorthGuildMark from "./NorthGuildMark.astro";
+import { LANDING_URL, stripBase, withBase } from "~/lib/site";
+
+const onDox = stripBase(Astro.url.pathname).replace(/\/$/, "") === "/dox";
 
 const shouldRenderSearch =
   config.pagefind ||
@@ -25,6 +30,13 @@ const shouldRenderSearch =
 
 <div class="header">
   <div class="title-wrapper sl-flex">
+    {/* Same site, one level up, so a plain same-tab link, not `ButtonLink`
+        (which opens an absolute URL in a new tab and draws a chip). */}
+    <a href={LANDING_URL} class="gmt-ng-link gmt-sonar-focus" title="NorthGuild home">
+      <span class="sr-only">NorthGuild home</span>
+      <NorthGuildMark />
+    </a>
+    <span class="gmt-ng-divider" aria-hidden="true"></span>
     <SiteTitle />
   </div>
   <div class="sl-flex print:hidden">
@@ -43,6 +55,7 @@ const shouldRenderSearch =
         class="gmt-ask-dox-link"
         label="Chat with Dox"
         title="Chat with Dox"
+        aria-current={onDox ? "page" : undefined}
       >
         <DoxMark id="header" />
       </ButtonLink>
@@ -64,6 +77,8 @@ const shouldRenderSearch =
     }
 
     .title-wrapper {
+      align-items: center;
+      gap: var(--gmt-space-3);
       overflow: clip;
       padding: 0.25rem;
       margin: -0.25rem;

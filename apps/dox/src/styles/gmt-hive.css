@@ -28,9 +28,11 @@
      content wrappers contribute a 1rem top margin this island can't see, which
      pushed a `height: 100dvh` shell down 16px and clipped the composer off the
      bottom edge. Taking it out of flow makes the fit exact and immune to every
-     ancestor's box model — and nothing else renders on this route anyway. */
+     ancestor's box model — and nothing else renders on this route anyway.
+     It starts below Starlight's fixed header, whose height `--sl-nav-height`
+     already changes at the desktop breakpoint, so the two never overlap. */
   position: fixed;
-  inset: 0;
+  inset: var(--sl-nav-height) 0 0 0;
   /* Starlight's prose rhythm reaches this element through the island's
      `display: contents` wrapper (so a `> * + *` reset upstream can't see it),
      and a margin on a fixed box shrinks it away from its inset edges. */
@@ -68,30 +70,19 @@
 }
 
 /* ------------------------------------------------------------------ *
- * Top strip — wayfinding only. Deliberately NOT a nav bar.
+ * Top strip — chat status only (clock and badge). Deliberately NOT a nav bar:
+ * the site header above it gives the way back.
  * ------------------------------------------------------------------ */
 
 .gmt-hive-strip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--gmt-space-3);
   flex: 0 0 auto;
   padding: var(--gmt-space-3) clamp(var(--gmt-space-3), 3vw, var(--gmt-space-6));
   border-bottom: 1px solid var(--gmt-hairline);
   font-size: var(--gmt-text-sm);
-}
-
-.gmt-hive-back {
-  color: var(--gmt-ice-dim);
-  text-decoration: none;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.gmt-hive-back:hover,
-.gmt-hive-back:focus-visible {
-  color: var(--gmt-cyan-ink);
 }
 
 .gmt-hive-strip-end {
@@ -105,9 +96,9 @@
 /* The reader's local time, in the app's date format (HeaderClock.tsx). Same
    mono HUD voice as the environment badge beside it, ruled off from it by a
    hairline, and in the accent cyan — the site's colour for a live value, the
-   same one the back link and the brain name use. Tabular figures so a ticking
-   value never shifts the badge, and it truncates rather than pushing the back
-   link off a narrow strip — an RFC 9557 string is long. */
+   same one the brain name uses. Tabular figures so a ticking value never
+   shifts the badge, and it truncates rather than pushing the badge off a
+   narrow strip — an RFC 9557 string is long, and the badge cannot shrink. */
 .gmt-hive-now {
   min-width: 0;
   padding-inline-end: var(--gmt-space-3);
@@ -290,14 +281,16 @@
      crystal, status line and prompt keep their full height and the examples
      sheet takes the rest, rather than a fixed 55% squeezing the hub off the
      top. Once a conversation starts, or a widget opens, the 55% sheet above
-     applies unchanged. */
+     applies unchanged. The sheet's floor is low (the examples title and about
+     two rows, which scroll inside it) so that the crystal and its status line
+     keep their height below the site header on short phones. */
   .gmt-hive-body[data-empty] .gmt-hive-chat {
     flex: 0 1 auto;
   }
 
   .gmt-hive-body[data-empty] .gmt-hive-rail {
     flex: 1 1 0;
-    min-height: 12rem;
+    min-height: 7rem;
   }
 
   .gmt-hive-body[data-empty] .gmt-hive-empty {
@@ -306,9 +299,61 @@
   }
 
   /* Phone, conversation started: the examples sheet folds away until the bar
-     above the composer opens it. */
-  .gmt-hive-rail[data-collapsed] {
+     above the composer opens it. Before the first message the bar stays hidden
+     and the sheet stays open, unless the phone is short (below). */
+  .gmt-hive-body:not([data-empty]) .gmt-hive-rail[data-collapsed] {
     display: none;
+  }
+
+  .gmt-hive-body[data-empty] .gmt-hive-examples-bar {
+    display: none;
+  }
+}
+
+/* Short phone, empty conversation: the crystal, status line and prompt do not
+   fit beside even the examples sheet's floor, so the sheet starts folded
+   behind the bar, as it does once a conversation has started. Measured: at
+   320px wide the open sheet reaches its 7rem floor at about 688px tall, and
+   below that the empty state overflows; 44rem keeps a margin. The empty
+   state's padding also goes: without it the folded layout still ran 39px
+   over at 320x568. */
+@media (max-width: 60rem) and (max-height: 44rem) {
+  .gmt-hive-body[data-empty] .gmt-hive-rail[data-collapsed] {
+    display: none;
+  }
+
+  .gmt-hive-body[data-empty]:has(.gmt-hive-rail[data-collapsed])
+    .gmt-hive-chat {
+    flex: 1 1 auto;
+  }
+
+  .gmt-hive-body[data-empty] .gmt-hive-examples-bar {
+    display: flex;
+  }
+
+  .gmt-hive-body[data-empty] .gmt-hive:has(> .gmt-hive-empty) {
+    padding-block: 0;
+  }
+
+  .gmt-hive-body[data-empty] .gmt-hive-empty {
+    padding-block: var(--gmt-space-1);
+  }
+}
+
+/* Shorter still, a landscape phone or a 540px portrait: the composer alone
+   takes about 210px, so squeezing leaves the transcript a 35px sliver (0px at
+   568x320). Below 35rem, the height at which the trimmed empty state stops
+   fitting at 320px wide, the chat keeps a 30rem floor and the shell scrolls
+   as a page instead. Focusing the composer scrolls it into view. */
+@media (max-width: 60rem) and (max-height: 35rem) {
+  .gmt-hive-shell {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .gmt-hive-body {
+    flex: 1 0 auto;
+    min-height: 30rem;
   }
 }
 
@@ -1521,6 +1566,135 @@
 
 .gmt-hive-accuracy-note code {
   font-size: inherit;
+}
+
+/* ---- Fine print (ChatInfo.tsx) ----
+ * The AI note and the licence note show inline on a wide screen. On a phone,
+ * where the two took about 170px of a 600px screen, both are hidden and the
+ * info button at the start of the control bar opens them in one popup. */
+.gmt-hive-info {
+  display: none;
+}
+
+@media (max-width: 60rem) {
+  .gmt-hive-accuracy-note,
+  .gmt-hive-licence {
+    display: none;
+  }
+
+  .gmt-hive-info {
+    display: inline-grid;
+  }
+}
+
+/* The submit button's shape and touch size, on the quieter surface of the
+   brain badge: Send stays the one primary action in the bar. */
+.gmt-hive-info {
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  color: var(--gmt-cyan);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  cursor: pointer;
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-hive-info svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.gmt-hive-info:hover,
+.gmt-hive-info:has(+ :popover-open) {
+  background: var(--gmt-fill-strong);
+  border-color: var(--gmt-border-strong);
+}
+
+.gmt-hive-info-panel[popover] {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 24rem;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.5;
+  color: var(--gmt-ice-dim);
+}
+
+/* Above the button, from its start edge, and 12px inside the viewport; below
+   it when there is no room above. */
+@supports (top: anchor(top)) {
+  .gmt-hive-info-panel[popover] {
+    position-anchor: auto;
+    inset-inline-start: anchor(left);
+    inset-inline-end: 12px;
+    justify-self: start;
+    inset-block-end: anchor(top);
+    margin-block-end: var(--gmt-space-2);
+    position-try-fallbacks: flip-block;
+  }
+}
+
+/* No anchor positioning: pin to the viewport's bottom edge. */
+@supports not (top: anchor(top)) {
+  .gmt-hive-info-panel[popover] {
+    inset-inline: 12px;
+    inset-block-end: calc(12px + env(safe-area-inset-bottom, 0px));
+    margin-inline: auto;
+  }
+}
+
+.gmt-hive-info-panel p {
+  margin: 0;
+}
+
+.gmt-hive-info-panel p + p {
+  margin-block-start: var(--gmt-space-2);
+  padding-block-start: var(--gmt-space-2);
+  border-top: 1px solid var(--gmt-hairline);
+}
+
+.gmt-hive-info-panel code {
+  font-size: inherit;
+}
+
+.gmt-hive-info-panel a {
+  color: var(--gmt-ice);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-hive-info {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .gmt-hive-info {
+    color: ButtonText;
+    background: ButtonFace;
+    border-color: ButtonText;
+  }
+
+  .gmt-hive-info-panel {
+    color: CanvasText;
+    border: 1px solid CanvasText;
+  }
+
+  .gmt-hive-info-panel a {
+    color: LinkText;
+  }
 }
 
 /* ------------------------------------------------------------------ *

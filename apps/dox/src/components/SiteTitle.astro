@@ -1,0 +1,30 @@
+---
+// Override of Starlight's SiteTitle. The header names the library
+// "Give Me Temporal" on wide screens and "GMT" on narrow ones (#424).
+// Starlight's `title` config stays "@northguild/gmt", so every <title>,
+// og:site_name and social card keeps the name people search for and install.
+// Only one form is displayed at a time, so the link's accessible name is
+// exactly the visible text (WCAG 2.2 SC 2.5.3). The switch lives in
+// gmt-shell.css.
+const { siteTitleHref } = Astro.locals.starlightRoute;
+---
+
+<a href={siteTitleHref} class="site-title sl-flex" translate="no">
+  <span class="gmt-title-long">Give Me Temporal</span>
+  <span class="gmt-title-short">GMT</span>
+</a>
+
+<style>
+  @layer starlight.core {
+    .site-title {
+      align-items: center;
+      color: var(--sl-color-text-accent);
+      text-decoration: none;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    span {
+      overflow: hidden;
+    }
+  }
+</style>

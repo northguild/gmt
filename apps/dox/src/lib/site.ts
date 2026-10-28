@@ -12,6 +12,9 @@ export const SITE_BASE = "/gmt";
 /** The site root without a trailing slash: `${SITE_URL}/install/`. */
 export const SITE_URL = `${SITE_ORIGIN}${SITE_BASE}`;
 
+/** The organisation landing page, one level above Dox. The header's NorthGuild mark links here. */
+export const LANDING_URL = `${SITE_ORIGIN}/`;
+
 /** The old host. Read only by the Worker's legacy branch, its tests and the guards. */
 export const LEGACY_ORIGIN = "https://gmt-dox.northguild.workers.dev";
 

@@ -78,9 +78,10 @@ const BASE_URL = (EXTERNAL_BASE ?? `http://localhost:${PORT}/gmt`).replace(
   /\/$/,
   "",
 );
-// Sentinel string only this repo's built pages contain — used to confirm the preview
-// server we're talking to is actually serving THIS worktree's dist/, not a stray
-// process left running on the same port by another worktree or a previous run.
+// Sentinel string only this repo's built pages contain (the header title on every
+// page) — used to confirm the preview server we're talking to is actually serving
+// THIS worktree's dist/, not a stray process left running on the same port by
+// another worktree or a previous run.
 const SENTINEL = "Give Me Temporal";
 
 const label = args[0]?.startsWith("--") ? undefined : args[0];
