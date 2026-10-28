@@ -8,7 +8,7 @@ import { defineRouteMiddleware } from "@astrojs/starlight/route-data";
 import { getCollection } from "astro:content";
 import { gmtVersion } from "~/generated/versions";
 import { headEntries, isHomeId, upsertHead } from "~/lib/head-tags";
-import { markdownTwinSlug } from "~/lib/md-twin";
+import { docsRelPath, markdownTwinSlugs } from "~/lib/md-twin";
 import { SITE_URL } from "~/lib/site";
 
 /** The site's description, as `starlight({ description })` in `astro.config.mjs` sets it. */
@@ -20,6 +20,18 @@ type DocEntry = {
   filePath?: string;
   data: { title: string };
 };
+
+/**
+ * Each page's Markdown twin path, keyed by its path under `content/docs/`. Starlight's schema drops
+ * the frontmatter `slug:` from `entry.data`, so the rule reads the raw sources, as the twin route does.
+ */
+const TWINS = markdownTwinSlugs(
+  import.meta.glob("./content/docs/**/*.{md,mdx}", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>,
+);
 
 /** The docs collection by route id, read once per build. The home page is `""`. */
 const docsById = getCollection("docs").then(
@@ -54,8 +66,8 @@ export const onRequest = defineRouteMiddleware(async (context) => {
       const found = docs.get(ancestor);
       return found ? { title: found.data.title } : undefined;
     },
-    markdownSlug: entry
-      ? markdownTwinSlug(entry.id, entry.filePath ?? "")
+    markdownSlug: entry?.filePath
+      ? TWINS.get(docsRelPath(entry.filePath))
       : undefined,
     siteUrl: SITE_URL,
     gmtVersion,

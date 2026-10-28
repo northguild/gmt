@@ -396,7 +396,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - JSON-LD: `SoftwareSourceCode` on the home page (version from `@northguild/gmt`),
     `BreadcrumbList` on every docs page, `TechArticle` on every guide with `dateModified`.
   - Every docs page links its Markdown twin (`<link rel="alternate" type="text/markdown">`); the
-    twin route is `src/pages/[...slug].md.ts`, the path rule `src/lib/md-twin.ts`.
+    twin route is `src/pages/[...slug].md.ts`, the path rule `src/lib/md-twin.ts`. A page with a
+    `slug:` has its twin at `<slug>.md` (`reference/workforce.md`); any other page at its path
+    (`guides/index.md`, the home page `index.md`). `scripts/llms.test.ts` checks every `.md` link
+    in `llms.txt`, `llms-full.txt` and `_redirects` against `dist`.
   - No page carries an edit link: there is no Starlight `editLink` and no page sets `editUrl`.
     Starlight's `lastUpdated` is styled in `Footer.astro`.
   - The sitemap leaves out `/dox/`. The gate is `scripts/head-tags.test.ts` over `dist/gmt`.
