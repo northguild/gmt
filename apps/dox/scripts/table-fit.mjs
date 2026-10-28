@@ -6,10 +6,12 @@
  * holds a `<table` (`lib/table-pages.mjs`, read from `dist`, never a fixed list), opens every
  * `<details>` and tab panel, and for each table in `main` finds its scroll box: the table itself or
  * the nearest ancestor whose `overflow-x` is `auto`, `scroll` or `hidden`. It fails when the box's
- * `scrollWidth` is more than 1 px past its `clientWidth`. A table with no scroll box grows to fit
- * its content, so its own scroll width never passes its client width; it is measured against
- * the content box of the nearest block that holds it and against `main`'s content box (a flex or
- * grid item that holds it can grow with it), and fails when it reaches more than 1 px past either.
+ * `scrollWidth` is more than 1 px past its `clientWidth`. A table with no scroll box is measured
+ * two ways, and fails when either is more than 1 px over. With automatic layout it grows to fit its
+ * content, so its own scroll width never passes its client width: it is measured against the
+ * content box of the nearest block that holds it and against `main`'s content box (a flex or grid
+ * item that holds it can grow with it). With `table-layout: fixed` its box stays in the column and
+ * the content spills out of its cells: its own `scrollWidth` is measured against its `clientWidth`.
  * A table that is not drawn (`display: none` at this width) is not measured.
  * A failure names the widest piece that cannot break (`.gmt-cw`, `code:not(.gmt-codebreak)`,
  * `.gmt-nobreak`), which is what to give a break point or move to the entries layout.
@@ -148,12 +150,15 @@ function measureTables() {
       Math.max(t.right - edges.right, edges.left - t.left);
     const inHolder = contentEdges(holder(table));
     const inMain = contentEdges(main);
-    const overflow = Math.max(past(inHolder), past(inMain));
+    const spill = table.scrollWidth - table.clientWidth;
     const room = past(inHolder) >= past(inMain) ? inHolder : inMain;
-    return {
-      overflow: Math.round(overflow),
-      boxWidth: Math.round(room.right - room.left),
-    };
+    const grows = Math.max(past(inHolder), past(inMain));
+    return grows >= spill
+      ? {
+          overflow: Math.round(grows),
+          boxWidth: Math.round(room.right - room.left),
+        }
+      : { overflow: spill, boxWidth: table.clientWidth };
   };
   return [...document.querySelectorAll("main table")].map((table) => {
     const { overflow, boxWidth } = measure(table);

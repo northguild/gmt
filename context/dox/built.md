@@ -1853,8 +1853,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     that holds a `<table` (`listTablePages` in `scripts/lib/table-pages.mjs`, read from `dist`, never a
     fixed count) at 1440 x 900 with every `<details>` open and every tab panel shown, and fails when a
     table's scroll box (the table or its nearest `overflow-x` ancestor) is wider than it shows. A
-    table with no scroll box grows with its content, so it is measured against the content box of the
-    nearest block that holds it and against `main`'s, and fails when it reaches past either. A table
+    table with no scroll box is measured two ways and fails on either: against the content box of the
+    nearest block that holds it and against `main`'s (a table with automatic layout grows with its
+    content), and by its own `scrollWidth` against its `clientWidth` (a `table-layout: fixed` table
+    keeps its width and its content spills out of its cells). A table
     not drawn at that width is skipped, and a run that measures no table at all fails. A
     finding names the page, the first three headers, the overflow and the widest unbreakable piece
     (`.gmt-cw`, `code:not(.gmt-codebreak)`, `.gmt-nobreak`). Rule `table-scrolls`. The same check runs
