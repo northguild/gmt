@@ -49,6 +49,8 @@ export function RailResizer({ railId }: { railId: string }) {
   const [measured, setMeasured] = useState<Measured | null>(null);
   const drag = useRef<{ startX: number; startWidth: number } | null>(null);
   const frame = useRef(0);
+  /** The width the last pointer move asked for, until its frame is drawn. */
+  const pending = useRef<number | undefined>(undefined);
 
   const elements = useCallback(() => {
     const body = handleRef.current?.parentElement ?? null;
@@ -113,8 +115,12 @@ export function RailResizer({ railId }: { railId: string }) {
     if (!start) return;
     // The rail is on the right: moving the pointer left widens it.
     const width = start.startWidth + (start.startX - event.clientX);
+    pending.current = width;
     cancelAnimationFrame(frame.current);
-    frame.current = requestAnimationFrame(() => apply(width));
+    frame.current = requestAnimationFrame(() => {
+      pending.current = undefined;
+      apply(width);
+    });
   };
 
   const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -124,6 +130,13 @@ export function RailResizer({ railId }: { railId: string }) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     elements()?.body.removeAttribute("data-resizing");
+    // A move whose frame has not run yet would otherwise be lost, and the
+    // width stored below would be one frame old.
+    cancelAnimationFrame(frame.current);
+    if (pending.current !== undefined) {
+      apply(pending.current);
+      pending.current = undefined;
+    }
     const width = measure()?.width;
     if (width !== undefined) storeWidth(width);
   };

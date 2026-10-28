@@ -91,6 +91,27 @@ describe("RailResizer", () => {
     expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe("720px");
   });
 
+  it("remembers the final width when the drag ends before the next frame", () => {
+    /* Hold every frame: the pointer is released before the last move is drawn. */
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation(() => 1);
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+    const { body, handle } = renderResizer();
+    const captured = new Set<number>();
+    Object.assign(handle, {
+      setPointerCapture: (id: number) => captured.add(id),
+      hasPointerCapture: (id: number) => captured.has(id),
+      releasePointerCapture: (id: number) => captured.delete(id),
+    });
+
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 900 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 800 });
+    fireEvent.pointerUp(handle, { pointerId: 1, clientX: 800 });
+
+    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe("589.6px");
+    expect(window.localStorage.getItem("gmt-dox-rail-width")).toBe("590");
+    expect(body.hasAttribute("data-resizing")).toBe(false);
+  });
+
   it("resets to the default width on double-click", async () => {
     const { body, handle } = renderResizer();
     handle.focus();
