@@ -185,8 +185,10 @@ export { normalizeDateTime } from "./normalizeDateTime";
 export {
   DATE_PATTERN_FIELDS,
   DATE_TIME_PATTERN_FIELDS,
+  MONTH_DAY_PATTERN_FIELDS,
   parseValueWithPattern,
   TIME_PATTERN_FIELDS,
+  YEAR_MONTH_PATTERN_FIELDS,
 } from "./patternToken";
 export { plainDateAdd } from "./plainDateAdd";
 export { parsePunctualityTolerance, punctualityOf } from "./punctuality";

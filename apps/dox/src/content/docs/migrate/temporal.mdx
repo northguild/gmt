@@ -45,6 +45,9 @@ TC39 moved Temporal to Stage 4 on 2026-03-11. It is not yet part of ECMA-262. On
 | Equal values | `a.equals(b)` | `areZonedEqual` | [6.3.40](https://tc39.es/proposal-temporal/#sec-temporal.zoneddatetime.prototype.equals) |
 | ISO week | `d.yearOfWeek`, `d.weekOfYear`, `d.dayOfWeek` | `getIsoWeekDate` | [3.3.12](https://tc39.es/proposal-temporal/#sec-get-temporal.plaindate.prototype.weekofyear), [3.3.13](https://tc39.es/proposal-temporal/#sec-get-temporal.plaindate.prototype.yearofweek), [12.3.18](https://tc39.es/proposal-temporal/#sec-temporal-isoweekofyear) |
 | Change calendar | `d.withCalendar("japanese")` | `convertDateToCalendar` | [3.3.24](https://tc39.es/proposal-temporal/#sec-temporal.plaindate.prototype.withcalendar) |
+| A year and a month | `PlainYearMonth.from(s).toString()` | `parseYearMonth`, `isValidYearMonth` | [9.2.2](https://tc39.es/proposal-temporal/#sec-temporal.plainyearmonth.from) |
+| A month and a day | `PlainMonthDay.from(s).toString()` | `parseMonthDay`, `isValidMonthDay` | [10.2.2](https://tc39.es/proposal-temporal/#sec-temporal.plainmonthday.from) |
+| A month-day in a year | `md.toPlainDate({ year })` | `monthDayToDate` | [10.3.12](https://tc39.es/proposal-temporal/#sec-temporal.plainmonthday.prototype.toplaindate) |
 | Duration total | `Duration.from(s).total({ unit, relativeTo })` | `totalDuration` | [7.3.21](https://tc39.es/proposal-temporal/#sec-temporal.duration.prototype.total) |
 | A `Date` object | `date.toTemporalInstant()` | `toTemporalInstant` | [14.9.1](https://tc39.es/proposal-temporal/#sec-date.prototype.totemporalinstant) |
 

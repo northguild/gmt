@@ -529,6 +529,7 @@ export function renderMdxComponents(body: string): string {
     "IdTimestampDecoder",
     "ColumnTimestampBridge",
     "CronInAZone",
+    "LeapDayBirthday",
   ]) {
     out = replaceElements(out, dropped, (props) =>
       props.caption ? `\n${props.caption}\n` : "",

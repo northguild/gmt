@@ -2,6 +2,7 @@ import {
   anyReproFails,
   isCalendarArithmeticCompatNeeded,
   isDefectPresent,
+  isIsoCalendarCaseCompatNeeded,
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,
   isTimeZoneEqualsCompatNeeded,
@@ -378,7 +379,7 @@ describe("isCalendarArithmeticCompatNeeded", () => {
 });
 
 describe("repro split", () => {
-  // DefectId (D1-D8, D10-D19) is the type the shipped probes can ask about; the canary-only
+  // DefectId (D1-D8, D10-D20) is the type the shipped probes can ask about; the canary-only
   // groups are ZonedDefectId (zoned.*) and BoundedWorkDefectId (D9).
   const probeDefects = new Set([
     "D1",
@@ -399,6 +400,7 @@ describe("repro split", () => {
     "D17",
     "D18",
     "D19",
+    "D20",
   ]);
 
   it("holds every probe-defect repro of the full table in probeRepros", () => {
@@ -597,5 +599,58 @@ describe("D19 time zone equals probe", () => {
 
   it("answers the same on a second call", () => {
     expect(isTimeZoneEqualsCompatNeeded()).toBe(isTimeZoneEqualsCompatNeeded());
+  });
+});
+
+// D20: Temporal ParseISODateTime, goal TemporalMonthDayString with no DateYear and goal
+// TemporalYearMonthString with no DateDay, throws only "If calendar is not empty and the
+// ASCII-lowercase of calendar is not "iso8601"", so an upper-case value is read. Polyfill 0.5.1
+// compares it as written and throws "MM-DD format is only valid with iso8601 calendar" or "YYYY-MM
+// format is only valid with iso8601 calendar".
+describe("D20 ISO calendar case probe", () => {
+  it("expects the month-day 12-25", () => {
+    expect(
+      findRepro("D20", "iso8601", "upperCaseIsoCalendarOnMonthDay")?.expected,
+    ).toBe("12-25");
+  });
+
+  it("reads the recorded polyfill 0.5.1 throw as the defect", () => {
+    const repro = findRepro(
+      "D20",
+      "iso8601",
+      "upperCaseIsoCalendarOnMonthDay",
+    )!;
+    expect(
+      reproPasses(
+        repro,
+        "ERR RangeError: MM-DD format is only valid with iso8601 calendar",
+      ),
+    ).toBe(false);
+  });
+
+  it("expects the year-month 2026-10", () => {
+    expect(
+      findRepro("D20", "iso8601", "upperCaseIsoCalendarOnYearMonth")?.expected,
+    ).toBe("2026-10");
+  });
+
+  it("reads the recorded polyfill 0.5.1 year-month throw as the defect", () => {
+    const repro = findRepro(
+      "D20",
+      "iso8601",
+      "upperCaseIsoCalendarOnYearMonth",
+    )!;
+    expect(
+      reproPasses(
+        repro,
+        "ERR RangeError: YYYY-MM format is only valid with iso8601 calendar",
+      ),
+    ).toBe(false);
+  });
+
+  it("answers the same on a second call", () => {
+    expect(isIsoCalendarCaseCompatNeeded()).toBe(
+      isIsoCalendarCaseCompatNeeded(),
+    );
   });
 });

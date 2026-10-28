@@ -9,6 +9,8 @@ export { mockTemporalNowPlainTimeISOThrow } from "./mockTemporalNowPlainTimeISOT
 export { mockTemporalNowZonedDateTimeISOThrow } from "./mockTemporalNowZonedDateTimeISOThrow";
 export { mockTemporalPlainDateFromThrow } from "./mockTemporalPlainDateFromThrow";
 export { mockTemporalPlainDateTimeFromThrow } from "./mockTemporalPlainDateTimeFromThrow";
+export { mockTemporalPlainMonthDayFromThrow } from "./mockTemporalPlainMonthDayFromThrow";
+export { mockTemporalPlainYearMonthFromThrow } from "./mockTemporalPlainYearMonthFromThrow";
 export { mockTemporalPlainTimeFromThrow } from "./mockTemporalPlainTimeThrow";
 export { mockTemporalZonedDateTimeFromThrow } from "./mockTemporalZonedDateTimeFromThrow";
 export { mockTemporalZonedDateTimeOffsetThrow } from "./mockTemporalZonedDateTimeOffsetThrow";

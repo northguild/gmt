@@ -29,8 +29,12 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
  * | `yy` | year | 2 digits | 00–99 | Needs `options.yearWindow`; returns `""` without it |
  * | `MM` | month | 2 digits | 01–12 | |
  * | `M` | month | 1-2 digits | 1–12 | |
- * | `MMMM` | month name (long) | locale | — | `getLocaleMonthNames(locale, "long")` |
- * | `MMM` | month name (short) | locale | — | `getLocaleMonthNames(locale, "short")` |
+ * | `MMMM` | month name (long) | locale | — | Reads the format-context name ("марта") or the stand-alone name ("март"); UTS #35 Part 4, Parsing Dates and Times |
+ * | `MMM` | month name (short) | locale | — | Reads either context, as `MMMM` ("März" and "Mär" in `de`) |
+ * | `LL` | month | 2 digits | 01–12 | Stand-alone context; read as `MM` |
+ * | `L` | month | 1-2 digits | 1–12 | Stand-alone context; read as `M` |
+ * | `LLLL` | month name (long) | locale | — | Same names as `MMMM` |
+ * | `LLL` | month name (short) | locale | — | Same names as `MMM` |
  * | `dd` | day | 2 digits | 01–31 | |
  * | `d` | day | 1-2 digits | 1–31 | |
  * | `EEEE` | weekday name (long) | locale | — | consumed, NOT cross-validated against the date (see below) |
@@ -45,7 +49,7 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
  *   `"o'clock"`. A quote that never closes makes the pattern malformed
  *   (`""`). Any other character that is not a letter (`/ - , space`,
  *   digits and so on) is a literal with no quoting.
- * - `MMMM`/`MMM`/`EEEE`/`EEE`/`GGGG`/`GG` are locale-aware. If `locale`
+ * - `MMMM`/`MMM`/`LLLL`/`LLL`/`EEEE`/`EEE`/`GGGG`/`GG` are locale-aware. If `locale`
  *   is omitted (or an empty list) and the pattern uses any of them, GMT
  *   reads English names in `"en"`, the language with no region, rather
  *   than returning `""`. CLDR gives `"en"` the same names as `"en-US"`.

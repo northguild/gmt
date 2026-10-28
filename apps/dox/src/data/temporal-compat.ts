@@ -261,6 +261,7 @@ const WHAT_BREAKS: Readonly<Record<string, string>> = {
   D17: "Time ranges that show a flexible day period and a time zone, such as 10 in the morning GMT-5, which Firefox writes as 10 AM",
   D18: "Islamic calendar dates before the Hijra (622 CE), which Safari reads as positive years in a second era, so a count of months across them never finished",
   D19: "Two names for one zone, such as UTC and Etc/UTC or Asia/Kolkata and Asia/Calcutta, which the polyfill treats as different zones in Safari and WebKit",
+  D20: "A month and day with an upper-case ISO calendar tag, such as --12-25[u-ca=ISO8601], which the polyfill refuses",
   "zoned.A":
     "Zoned times within a day of the earliest or latest instant Temporal supports",
   "zoned.B":

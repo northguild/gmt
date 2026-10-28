@@ -31,7 +31,8 @@ export type DefectId =
   | "D16"
   | "D17"
   | "D18"
-  | "D19";
+  | "D19"
+  | "D20";
 
 export interface ProbeRepro {
   defect: DefectId;
@@ -821,6 +822,33 @@ const d19Repros: readonly ProbeRepro[] = [
   },
 ];
 
+/**
+ * D20 (`temporalCompat/isoCalendarFrom.ts`): `ParseTemporalMonthDayString` and `ParseTemporalYearMonthString` compare the `u-ca` value
+ * with `"iso8601"` as written, so an upper-case calendar annotation throws "MM-DD format is only
+ * valid with iso8601 calendar" on a month-day and "YYYY-MM format is only valid with iso8601
+ * calendar" on a year-month. Temporal ParseISODateTime lower-cases the value first, for goal
+ * TemporalMonthDayString with no DateYear and for goal TemporalYearMonthString with no DateDay:
+ * "If calendar is not empty and the ASCII-lowercase of calendar is not "iso8601", throw a
+ * RangeError exception". tc39
+ * `385b479bf8` aligned the reference polyfill. A throw counts as a failed repro.
+ */
+const d20Repros: readonly ProbeRepro[] = [
+  {
+    defect: "D20",
+    calendar: "iso8601",
+    name: "upperCaseIsoCalendarOnMonthDay",
+    expected: "12-25",
+    run: () => Temporal.PlainMonthDay.from("--12-25[u-ca=ISO8601]").toString(),
+  },
+  {
+    defect: "D20",
+    calendar: "iso8601",
+    name: "upperCaseIsoCalendarOnYearMonth",
+    expected: "2026-10",
+    run: () => Temporal.PlainYearMonth.from("2026-10[u-ca=ISO8601]").toString(),
+  },
+];
+
 /** The shipped-probe groups, each in the order the full table places it. */
 export const probeReproGroups = {
   d1: d1Repros,
@@ -835,6 +863,7 @@ export const probeReproGroups = {
   d17: d17Repros,
   d18: d18Repros,
   d19: d19Repros,
+  d20: d20Repros,
   d6: d6Repros,
   d7: [d7Repro, d7LeapMonthEndRepro],
   /** D2-D5 and D8: single-read repros. */

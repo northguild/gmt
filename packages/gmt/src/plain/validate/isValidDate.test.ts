@@ -73,6 +73,7 @@ describe("isValidDate", () => {
     ${"2024-03-10[u-ca=gregory]"}               | ${"non-ISO calendar: isValidCalendarDate reads it"}
     ${"2024-02-30[foo=bar]"}                    | ${"invalid date"}
     ${"2024-03-10T12:00[foo=bar]"}              | ${"a date-time, not a date"}
+    ${"2026-10"}                                | ${"a year-month, not a date: isValidYearMonth reads it"}
   `("returns false for $value ($reason)", ({ value }: { value: string }) => {
     expect(isValidDate(value)).toBe(false);
   });

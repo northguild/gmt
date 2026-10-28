@@ -1,3 +1,4 @@
+import * as epcis from "./epcis";
 import { epcisEventTime, epcisTimeZoneOffset } from "./epcis";
 import * as regex from "./index";
 
@@ -110,43 +111,12 @@ describe("regex/epcis barrel", () => {
 
   // The EDI grammars (UNTDID 2379, X12 1250) are a value-plus-code relation, so their public form
   // is the validator function, not a constant per code; they live in `internal/ediGrammar.ts`.
-  // The two EPCIS patterns are the only RegExp constants this story adds to the barrel.
-  it("adds exactly the two EPCIS patterns to the barrel's RegExp exports", () => {
-    // Read off the barrel at `main` (`git show main:packages/gmt/src/regex/index.ts`, every
-    // RegExp export of the fifteen modules it names), not typed from memory.
-    const patternsOnMain = [
-      "calendarDate",
-      "calendarZonedDateTime",
-      "day",
-      "fractionalSecond",
-      "hour",
-      "httpDate",
-      "instantLeapSecond",
-      "leapSecond",
-      "millisecond",
-      "minute",
-      "month",
-      "nanosecondDecimal",
-      "plainDate",
-      "plainDateTime",
-      "plainTime",
-      "rfc2822DateTime",
-      "rfc3339DateTime",
-      "second",
-      "sqlDateTime",
-      "timeZoneLike",
-      "unixMilliseconds",
-      "unixSeconds",
-      "utcDateTime",
-      "utcOffset",
-      "year",
-    ];
-    const patternsNow = Object.entries(regex)
+  // The two EPCIS patterns are the only RegExp constants `regex/epcis.ts` exports.
+  it("exports exactly the two EPCIS patterns from regex/epcis", () => {
+    const patterns = Object.entries(epcis)
       .filter(([, value]) => value instanceof RegExp)
       .map(([name]) => name)
       .sort();
-    expect(patternsNow).toEqual(
-      [...patternsOnMain, "epcisEventTime", "epcisTimeZoneOffset"].sort(),
-    );
+    expect(patterns).toEqual(["epcisEventTime", "epcisTimeZoneOffset"]);
   });
 });

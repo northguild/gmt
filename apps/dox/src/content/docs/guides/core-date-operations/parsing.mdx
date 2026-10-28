@@ -50,6 +50,10 @@ parseUnitFromDate("0005-06-01", "year"); // "0005"
 There are `parse*FromDateTime` siblings for datetime strings, plus
 `parseDayOfWeekFromDate` and `parseWeekFromDate`, which return numbers (sentinel `null`).
 
+A birthday or a holiday has no year: [Month-Day Values](/guides/core-date-operations/month-day-values/) reads and writes it as `--MM-DD`, with `parseMonthDay`, `parseMonthDayFromDate` and `parseMonthDayWithPattern`.
+
+A card expiry or a billing month has no day: [`parseYearMonth`](/reference/plain/parse/parseYearMonth), [`parseYearMonthFromDate`](/reference/plain/parse/parseYearMonthFromDate) and [`parseYearMonthWithPattern`](/reference/plain/parse/parseYearMonthWithPattern) read it as `YYYY-MM`. `parseYearMonthWithPattern("10/2026", "MM/yyyy")` gives `"2026-10"`.
+
 ## Calendar quantities (derived, not stored)
 
 These compute a derived quantity rather than extracting a stored field, so they
@@ -104,8 +108,12 @@ shape-valid-but-unreal date/time.
 | --- | --- |
 | `yyyy` `MM` `dd` `HH` `mm` `ss` `SSS` | fixed-width fields |
 | `M` `d` `H` `h` `m` `s` | variable-width fields |
-| `MMMM` `MMM` `EEEE` `EEE` `a` `GGGG` `GG` | locale-aware names |
+| `MMMM` `MMM` | locale-aware month names: the format-context name (`15 марта`) or the stand-alone one (`март`) |
+| `LLLL` `LLL` `LL` `L` | the stand-alone tokens: `LLLL` and `LLL` read the same names as `MMMM` and `MMM`, `LL` and `L` the number as `MM` and `M` |
+| `EEEE` `EEE` `a` `GGGG` `GG` | locale-aware names |
 | `'single quotes'` | literal text |
+
+A pattern with no day token is a year-month pattern: use `parseYearMonthWithPattern`, because `parseDateWithPattern` returns `""` for it.
 
 Two single quotes in a row are one literal quote, inside or outside quoted text, as UTS #35
 reads them:
@@ -122,6 +130,9 @@ A `locale` parameter (default `"en-US"`) controls name-token matching:
 ```typescript
 parseDateWithPattern("15. März 2024", "dd. MMMM yyyy", "de-DE");
 // "2024-03-15"
+
+parseDateWithPattern("15 марта 2024", "d MMMM yyyy", "ru-RU");
+// "2024-03-15" — MMMM also reads the genitive form that follows a day
 ```
 
 ### Two-digit years
@@ -214,6 +225,8 @@ parsers read, so a pattern can reject a string its parser accepts.
 
 - [Formatting](../formatting/) — the inverse: producing strings for display and interchange
 - [Validation](../validation/) — checking a string before parsing
+- [Month-Day Values](../month-day-values/) — `--MM-DD` birthdays and holidays
+- [`parseYearMonth` reference](/reference/plain/parse/parseYearMonth)
 - [`parseYearFromDate` reference](/reference/plain/parse/parseYearFromDate)
 - [`parseDateWithPattern` reference](/reference/plain/parse/parseDateWithPattern)
 - [`parseRfc2822` reference](/reference/zoned/parse/parseRfc2822)

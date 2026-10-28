@@ -1,0 +1,44 @@
+---
+/**
+ * Leap-Day Birthday widget (CORE-102).
+ *
+ * A yearly date with no year in it, read by the library, and the date it falls
+ * on in each of eight years. Where a year has no 29 February, the table marks
+ * the year as moved and sets two alternatives beside the library's answer.
+ *
+ * **The markup and the wiring both live in `lib/leap-day-birthday-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+import { renderLeapDayBirthdayTemplate } from "../lib/leap-day-birthday-mount";
+
+/** `fullbleed` lets the page use the whole main pane (see ObservanceComparator). */
+interface Props {
+  fullbleed?: boolean;
+}
+
+const { fullbleed = false } = Astro.props;
+const html = renderLeapDayBirthdayTemplate();
+---
+
+{
+  fullbleed ? (
+    <div data-tools-fullbleed set:html={html} />
+  ) : (
+    <Fragment set:html={html} />
+  )
+}
+
+<script>
+  import { mountLeapDayBirthday } from "../lib/leap-day-birthday-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("leapday");
+    document.querySelectorAll<HTMLElement>(".gmt-leap-day").forEach((el) => {
+      mountLeapDayBirthday(el, seed, new AbortController().signal).catch((error) =>
+        showUnavailable(el, error),
+      );
+    });
+  }
+</script>

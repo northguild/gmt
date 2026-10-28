@@ -2,6 +2,8 @@ import { Temporal } from "../../internal/temporal";
 import { MustTestLocales } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { hostileProxy, revokedProxy } from "../../test/hostileValues";
+import { expectOneOfIcu, oneOfIcu } from "../../test/icuVariants";
+import { utcMs } from "../../test/utcMs";
 import { getLocaleEraNames } from "../locale/getLocaleEraNames";
 import { getLocaleWeekdayNames } from "../locale/getLocaleWeekdayNames";
 import { parseDateWithPattern } from "./parseDateWithPattern";
@@ -12,6 +14,7 @@ describe("parseDateWithPattern", () => {
       value           | pattern         | expected
       ${"2024"}       | ${"yyyy"}       | ${""}
       ${"2024-03"}    | ${"yyyy-MM"}    | ${""}
+      ${"10/2026"}    | ${"MM/yyyy"}    | ${""}
       ${"03/15/24"}   | ${"MM/dd/yy"}   | ${""}
       ${"03/15/2024"} | ${"MM/dd/yyyy"} | ${"2024-03-15"}
       ${"3/5/2024"}   | ${"M/d/yyyy"}   | ${"2024-03-05"}
@@ -37,6 +40,10 @@ describe("parseDateWithPattern", () => {
       expect(parseDateWithPattern("2024-03-05", "yyyy-MM-dd")).toBe(
         "2024-03-05",
       );
+    });
+
+    it("returns '' for a month-name year-month with no day", () => {
+      expect(parseDateWithPattern("octobre 2026", "MMMM yyyy", "fr")).toBe("");
     });
 
     it("parses d (1-2 digits) individually", () => {
@@ -317,6 +324,107 @@ describe("parseDateWithPattern", () => {
         "2024-03-15",
       );
     });
+  });
+
+  describe("month names in the format context and the stand-alone context (UTS #35 Part 4, Parsing Dates and Times)", () => {
+    it.each`
+      value              | pattern           | locale     | expected
+      ${"15 марта 2024"} | ${"d MMMM yyyy"}  | ${"ru-RU"} | ${"2024-03-15"}
+      ${"15 март 2024"}  | ${"d MMMM yyyy"}  | ${"ru-RU"} | ${"2024-03-15"}
+      ${"15 мая 2024"}   | ${"d MMM yyyy"}   | ${"ru-RU"} | ${"2024-05-15"}
+      ${"15 МАРТА 2024"} | ${"d MMMM yyyy"}  | ${"ru-RU"} | ${"2024-03-15"}
+      ${"15 MÄRZ 2024"}  | ${"d MMM yyyy"}   | ${"de-DE"} | ${"2024-03-15"}
+      ${"15 März 2024"}  | ${"d MMM yyyy"}   | ${"de-DE"} | ${"2024-03-15"}
+      ${"15 Mär 2024"}   | ${"d MMM yyyy"}   | ${"de-DE"} | ${"2024-03-15"}
+      ${"15. Juni 2024"} | ${"d. MMM yyyy"}  | ${"de-DE"} | ${"2024-06-15"}
+      ${"15 марта 2024"} | ${"d LLLL yyyy"}  | ${"ru-RU"} | ${"2024-03-15"}
+      ${"15 март 2024"}  | ${"d LLLL yyyy"}  | ${"ru-RU"} | ${"2024-03-15"}
+      ${"15 марта 2024"} | ${"d LLLLL yyyy"} | ${"ru-RU"} | ${""}
+    `(
+      "reads $value against $pattern in $locale as '$expected'",
+      ({ value, pattern, locale, expected }) => {
+        expect(parseDateWithPattern(value, pattern, locale)).toBe(expected);
+      },
+    );
+
+    it.each`
+      value           | pattern        | expected
+      ${"15 3 2024"}  | ${"d L yyyy"}  | ${"2024-03-15"}
+      ${"15 03 2024"} | ${"d LL yyyy"} | ${"2024-03-15"}
+      ${"15 3 2024"}  | ${"d LL yyyy"} | ${""}
+      ${"15 13 2024"} | ${"d L yyyy"}  | ${""}
+    `(
+      "reads the numeric stand-alone token: $value against $pattern is '$expected'",
+      ({ value, pattern, expected }) => {
+        expect(parseDateWithPattern(value, pattern)).toBe(expected);
+      },
+    );
+
+    it.each`
+      locale                  | long       | short
+      ${MustTestLocales.enUS} | ${"March"} | ${"Mar"}
+      ${MustTestLocales.enGB} | ${"March"} | ${"Mar"}
+      ${MustTestLocales.deDE} | ${"März"}  | ${"März"}
+      ${MustTestLocales.frFR} | ${"mars"}  | ${"mars"}
+      ${MustTestLocales.esES} | ${"marzo"} | ${"mar"}
+      ${MustTestLocales.itIT} | ${"marzo"} | ${"mar"}
+      ${MustTestLocales.ptPT} | ${"março"} | ${"mar."}
+      ${MustTestLocales.svSE} | ${"mars"}  | ${"mars"}
+      ${MustTestLocales.isIS} | ${"mars"}  | ${"mar."}
+      ${MustTestLocales.zhCN} | ${"三月"}  | ${"3月"}
+      ${MustTestLocales.zhTW} | ${"3月"}   | ${"3月"}
+      ${MustTestLocales.jaJP} | ${"3月"}   | ${"3月"}
+      ${MustTestLocales.koKR} | ${"3월"}   | ${"3월"}
+      ${MustTestLocales.arSA} | ${"مارس"}  | ${"مارس"}
+      ${MustTestLocales.heIL} | ${"מרץ"}   | ${"מרץ"}
+      ${MustTestLocales.trTR} | ${"Mart"}  | ${"Mar"}
+    `(
+      "resolves the format-context name for $locale (not ru-RU, which has its own rows) to month 03 (long $long, short $short)",
+      ({ locale, long, short }) => {
+        expect(
+          parseDateWithPattern(`15 ${long} 2024`, "d MMMM yyyy", locale),
+        ).toBe("2024-03-15");
+        expect(
+          parseDateWithPattern(`15 ${short} 2024`, "d MMM yyyy", locale),
+        ).toBe("2024-03-15");
+      },
+    );
+
+    it.each`
+      pattern         | token
+      ${"d MMM yyyy"} | ${"MMM"}
+      ${"d LLL yyyy"} | ${"LLL"}
+    `(
+      "reads the ru-RU short March that the engine writes beside a day for $token",
+      ({ pattern }) => {
+        // Chromium and Node print `мар.`; WebKit 26.6's locale data prints `марта`.
+        const march = utcMs("2024-03-15T00:00:00Z");
+        const printed = new Intl.DateTimeFormat("ru-RU", {
+          month: "short",
+          day: "numeric",
+          calendar: "gregory",
+          timeZone: "UTC",
+        })
+          .formatToParts(march)
+          .find((part) => part.type === "month")?.value;
+        const standalone = new Intl.DateTimeFormat("ru-RU", {
+          month: "short",
+          calendar: "gregory",
+          timeZone: "UTC",
+        })
+          .formatToParts(march)
+          .find((part) => part.type === "month")?.value;
+        expectOneOfIcu(printed ?? "", oneOfIcu("мар.", "марта"));
+        expect(
+          parseDateWithPattern(`15 ${printed} 2024`, pattern, "ru-RU"),
+        ).toBe("2024-03-15");
+        // `мар.` is a March name only where the engine prints it in a context.
+        const known = printed === "мар." || standalone === "мар.";
+        expect(parseDateWithPattern("15 мар. 2024", pattern, "ru-RU")).toBe(
+          known ? "2024-03-15" : "",
+        );
+      },
+    );
   });
 
   describe("weekday name tokens (EEEE / EEE) — consumed, not cross-validated", () => {

@@ -171,6 +171,36 @@ describe("parseDateTimeWithPattern", () => {
     );
   });
 
+  describe("month names in the format context and the stand-alone context (UTS #35 Part 4, Parsing Dates and Times)", () => {
+    it.each`
+      value                    | pattern                 | locale       | expected
+      ${"15 марта 2024 10:30"} | ${"d MMMM yyyy HH:mm"}  | ${"ru-RU"}   | ${"2024-03-15T10:30:00"}
+      ${"15 март 2024 10:30"}  | ${"d MMMM yyyy HH:mm"}  | ${"ru-RU"}   | ${"2024-03-15T10:30:00"}
+      ${"15 März 2024 10:30"}  | ${"d MMM yyyy HH:mm"}   | ${"de-DE"}   | ${"2024-03-15T10:30:00"}
+      ${"15 Mär 2024 10:30"}   | ${"d MMM yyyy HH:mm"}   | ${"de-DE"}   | ${"2024-03-15T10:30:00"}
+      ${"15 марта 2024 10:30"} | ${"d LLLL yyyy HH:mm"}  | ${"ru-RU"}   | ${"2024-03-15T10:30:00"}
+      ${"15 3 2024 10:30"}     | ${"d L yyyy HH:mm"}     | ${undefined} | ${"2024-03-15T10:30:00"}
+      ${"15 03 2024 10:30"}    | ${"d LL yyyy HH:mm"}    | ${undefined} | ${"2024-03-15T10:30:00"}
+      ${"15 13 2024 10:30"}    | ${"d L yyyy HH:mm"}     | ${undefined} | ${""}
+      ${"15 марта 2024 10:30"} | ${"d LLLLL yyyy HH:mm"} | ${"ru-RU"}   | ${""}
+    `(
+      "reads $value against $pattern in $locale as '$expected'",
+      ({ value, pattern, locale, expected }) => {
+        expect(parseDateTimeWithPattern(value, pattern, locale)).toBe(expected);
+      },
+    );
+
+    it("reads a ru-RU format-context month as the numeric date does", () => {
+      expect(
+        parseDateTimeWithPattern(
+          "15 марта 2024 10:30",
+          "d MMMM yyyy HH:mm",
+          "ru-RU",
+        ),
+      ).toBe(parseDateTimeWithPattern("15.03.2024 10:30", "dd.MM.yyyy HH:mm"));
+    });
+  });
+
   describe("shape-valid but calendar/time-invalid input (Temporal handoff regression)", () => {
     it('returns "" for 02/31/2024 14:30:00 against MM/dd/yyyy HH:mm:ss', () => {
       expect(

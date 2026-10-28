@@ -1953,3 +1953,41 @@
     outline-color: Highlight;
   }
 }
+
+/* =======================================================================
+ * Leap-Day Birthday, forced-colors (gmt-leap-day-birthday.css). A moved year
+ * keeps its word, a hatch in CanvasText and a bottom edge in Highlight; a NO
+ * SIGNAL block keeps its brackets and a CanvasText border.
+ * ======================================================================= */
+@media (forced-colors: active) {
+  .gmt-leap-day td[data-verdict^="moved"] {
+    forced-color-adjust: none;
+    color: CanvasText;
+    background: repeating-linear-gradient(
+      45deg,
+      CanvasText 0 1px,
+      transparent 1px 8px
+    );
+    border-block-end-color: Highlight;
+    box-shadow: inset 0 -1px 0 Highlight;
+  }
+
+  .gmt-leap-day [data-signal].gmt-punct-hero {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .gmt-leap-day [data-signal].gmt-punct-hero .gmt-punct-hero-value,
+  .gmt-leap-day [data-signal].gmt-punct-hero .gmt-punct-hero-cap,
+  .gmt-leap-day .gmt-leap-date[data-signal],
+  .gmt-leap-day .gmt-leap-reason[data-state="sentinel"] {
+    color: CanvasText;
+  }
+
+  @container gmt-leap-table (max-width: 40rem) {
+    .gmt-leap-day .gmt-leap-table tr {
+      border-block-end-color: CanvasText;
+    }
+  }
+}

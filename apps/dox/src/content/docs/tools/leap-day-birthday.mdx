@@ -1,0 +1,54 @@
+---
+title: Leap-Day Birthday
+description: Type a birthday or any yearly date and see the stored month-day, how it reads in a locale and the date it falls on in each of eight years, with the years that have no 29 February marked.
+industries: [core]
+---
+
+import LeapDayBirthday from "../../../components/LeapDayBirthday.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="Yearly dates with no year">
+
+<Fragment slot="keypoint">
+
+A month-day has no year to drift. In a year with no 29 February it becomes 28 February, and GMT tells you it moved.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A birthday, a renewal or an anniversary repeats every year, so it is stored without one: `--02-29`. [`monthDayToDate`](/reference/plain/convert/monthDayToDate/) puts it in a year and, where the year has no such day, gives the nearest earlier one.
+
+Type a date, pick a locale and a year, or press one of the presets. The plates show the stored form, how it reads in the locale and the date in your year. The table shows eight years in a row, and two alternatives beside the library's answer. Section 2 prints every call made. Every date on the page is a library result.
+
+</Fragment>
+
+<LeapDayBirthday fullbleed />
+
+<Fragment slot="after">
+
+**Stored as.** [`parseMonthDay`](/reference/plain/parse/parseMonthDay/) reads `--MM-DD` or `MM-DD`. A full date of birth goes through [`parseMonthDayFromDate`](/reference/plain/parse/parseMonthDayFromDate/), and a date-time through [`parseMonthDayFromDateTime`](/reference/plain/parse/parseMonthDayFromDateTime/). Each returns the canonical `--MM-DD`, or an empty string when it cannot read the input.
+
+**Reads as.** [`formatMonthDay`](/reference/plain/format/formatMonthDay/) writes the month-day in a locale, with no year to invent.
+
+**gmt.** [`monthDayToDate`](/reference/plain/convert/monthDayToDate/) gives the date in the year. For `--02-29` in a common year the answer is 28 February.
+
+**Verdict.** [`areMonthDaysEqual`](/reference/plain/compare/areMonthDaysEqual/) says whether the date kept its month and day, and [`compareMonthDays`](/reference/plain/compare/compareMonthDays/) says whether it moved earlier or later.
+
+**Year pasted on.** Pasting the year onto the stored string and asking [`isValidDate`](/reference/plain/validate/isValidDate/) is what a caller without a month-day type does. For `2023-02-29` the answer is no, and the cell reads NO SIGNAL. That is the failure this column shows, not a result of GMT.
+
+**1 March rule.** Some contracts move the date to 1 March instead. That is a policy, and GMT has no mode for it: the column builds it from [`addDate`](/reference/plain/calculate/addDate/) on the library's answer. Pick the rule your own agreement states and write it in your code.
+
+See [month-day values](/guides/core-date-operations/month-day-values/) and [a 29 February birthday in a common year](/scenarios/a-29-february-birthday-in-a-common-year/).
+
+**Worth trying:**
+
+- [A date of birth on 29 February](/tools/leap-day-birthday/?w=leapday&wa=%7B%22preset%22%3A%22leap-day-birth%22%7D) — read for its month and day, and moved in most years.
+- [A century year](/tools/leap-day-birthday/?w=leapday&wa=%7B%22preset%22%3A%22century%22%7D) — 2100 is not a leap year and 2104 is.
+- [`03-15`, the short form](/tools/leap-day-birthday/?w=leapday&wa=%7B%22preset%22%3A%22short-form%22%7D) — stored as `--03-15` and kept in every year.
+- [A date-time](/tools/leap-day-birthday/?w=leapday&wa=%7B%22preset%22%3A%22from-date-time%22%7D) — the time never moves the day.
+- [`--02-30`](/tools/leap-day-birthday/?w=leapday&wa=%7B%22preset%22%3A%22not-a-day%22%7D) — no reader accepts it, and nothing is guessed.
+
+</Fragment>
+
+</ToolLayout>

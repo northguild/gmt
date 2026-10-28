@@ -12,6 +12,7 @@ export { calendarDateFromFields } from "./calendarDateFromFields";
 export {
   isCalendarArithmeticCompatNeeded,
   isDayRoundClampCompatNeeded,
+  isIsoCalendarCaseCompatNeeded,
   isNudgeWindowCompatNeeded,
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,
@@ -20,6 +21,7 @@ export {
   isTransitionSearchCompatNeeded,
   isZIgnoreExactCompatNeeded,
 } from "./capabilities";
+export { monthDayFrom, yearMonthFrom } from "./isoCalendarFrom";
 export { calendarFieldsOf } from "./calendarFields";
 export {
   type HostTemporal,

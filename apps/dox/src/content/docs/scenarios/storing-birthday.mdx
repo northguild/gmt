@@ -13,11 +13,10 @@ import Scenario from "~/components/Scenario.astro";
 const birthday = new Date("2024-03-15T00:00:00Z");
 // In São Paulo that is March 14 at 9 PM — the wrong local date!
 console.log(birthday.toLocaleString("en", { timeZone: "America/Sao_Paulo" }));`}
-  explanation={`A birthday is a *calendar date*, not an instant in time. Storing it as a UTC datetime ties it to a specific moment, which shifts when viewed from a different timezone. GMT's plain date functions (\`PlainDate\`) are timezone-free by design — "2024-03-15" is March 15 everywhere.`}
-  gmtCode={`import { addDate } from "@northguild/gmt";
+  explanation={`A birthday is a *calendar date*, not an instant in time. Storing it as a UTC datetime ties it to a specific moment, which shifts when viewed from a different timezone. GMT's plain date functions (\`PlainDate\`) are timezone-free by design — "2024-03-15" is March 15 everywhere. A birthday is also a month and a day with no year, so there is no year to drift: adding 365 days from "2023-03-15" gives "2024-03-14", because 29 February 2024 falls inside the span. Store \`--03-15\` and place it in the year you need.`}
+  gmtCode={`import { parseMonthDayFromDate, monthDayToDate } from "@northguild/gmt";
 
-const birthday = "2024-03-15";
-const nextYear = addDate(birthday, { days: 365 });
-// "2025-03-15" — same calendar date, no timezone ambiguity`}
-  fixedSpecId="addDate"
+const birthday = parseMonthDayFromDate("2024-03-15"); // "--03-15"
+monthDayToDate(birthday, 2025); // "2025-03-15" — for any year, no timezone ambiguity`}
+  fixedSpecId="monthDayToDate"
 />

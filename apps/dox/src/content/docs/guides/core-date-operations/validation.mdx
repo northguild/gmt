@@ -22,6 +22,10 @@ isValidTime("25:00:00"); // false — invalid hour
 isValidDateTime("2024-03-15T14:30:45"); // true
 ```
 
+A month and day with no year is checked by `isValidMonthDay`: see [Month-Day Values](/guides/core-date-operations/month-day-values/).
+
+A year and month with no day is checked by `isValidYearMonth`: `isValidYearMonth("2026-10")` is `true`, and `isValidDate("2026-10")` stays `false`.
+
 ## Timezone and zoned-datetime validation
 
 ```typescript

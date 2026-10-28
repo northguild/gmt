@@ -1,0 +1,144 @@
+---
+title: Month-Day Values
+description: Birthdays, anniversaries and recurring holidays as a month and a day with no year, written --MM-DD, with validate, parse, format, compare and convert.
+sidebar:
+  order: 15
+industries: [core]
+---
+
+A month-day is a month and a day with no year. Use it for a birthday, an anniversary or a
+recurring holiday, where the year would only drift. gmt writes it as `--MM-DD`, the ISO 8601
+truncated form that RFC 3339 and RFC 6350 also use.
+
+## What a month-day is
+
+```typescript
+import { isValidMonthDay } from "@northguild/gmt";
+
+isValidMonthDay("--12-25"); // true
+isValidMonthDay("12-25"); // true — the leading -- is optional on input
+isValidMonthDay("--02-29"); // true — 29 February exists, in leap years
+isValidMonthDay("--1225"); // false — the basic form is refused
+```
+
+gmt reads `--MM-DD` and `MM-DD`, and always writes `--MM-DD`. The basic form `--MMDD` is
+refused, as `isValidDate` refuses `20241225`.
+
+## Validate and read
+
+```typescript
+import { isValidMonthDay, parseMonthDay } from "@northguild/gmt";
+
+isValidMonthDay("--02-30"); // false — February has no 30th
+isValidMonthDay("--12-25[u-ca=gregory]"); // false — without a year, only the ISO calendar is read
+
+parseMonthDay("12-25"); // "--12-25"
+parseMonthDay("--12-25[u-ca=iso8601]"); // "--12-25" — the annotation is dropped
+parseMonthDay("--12-25[u-ca=gregory]"); // ""
+parseMonthDay("--02-30"); // ""
+```
+
+`parseMonthDay` returns `""` for anything `isValidMonthDay` refuses, so the two always agree.
+
+## From a date or a date-time
+
+```typescript
+import { parseMonthDayFromDate, parseMonthDayFromDateTime } from "@northguild/gmt";
+
+parseMonthDayFromDate("2024-12-25"); // "--12-25"
+parseMonthDayFromDate("2024-02-29"); // "--02-29" — the leap day is kept
+parseMonthDayFromDate("2024-12-25T10:00:00"); // "" — a date-time is not a date
+
+parseMonthDayFromDateTime("2024-02-29T23:59:59.999999999"); // "--02-29" — the time never moves the day
+parseMonthDayFromDateTime("2024-12-25"); // "" — a date has no time
+```
+
+## From a producer's pattern
+
+`parseMonthDayWithPattern` reads a month-day a producer wrote in its own layout. The `locale`
+matters for month names:
+
+```typescript
+import { parseMonthDayWithPattern } from "@northguild/gmt";
+
+parseMonthDayWithPattern("December 25", "MMMM d", "en-US"); // "--12-25"
+parseMonthDayWithPattern("25 декабря", "d MMMM", "ru-RU"); // "--12-25"
+parseMonthDayWithPattern("12月25日", "M月d日", "ja-JP"); // "--12-25"
+parseMonthDayWithPattern("25 décembre 2024", "d MMMM yyyy", "fr-FR"); // "" — a year token is refused
+```
+
+Some languages inflect a month name when a day comes with it (`25 декабря`) and write the bare
+name another way (`декабрь`). The `MMMM` token reads either form, and so does its stand-alone
+twin `LLLL`. A pattern with a year token is refused: use `parseDateWithPattern` for those.
+
+## Format
+
+```typescript
+import { formatMonthDay } from "@northguild/gmt";
+
+formatMonthDay("--12-25", "en-US"); // "12/25"
+formatMonthDay("--12-25", "en-US", { month: "long", day: "numeric" }); // "December 25"
+formatMonthDay("--12-25", "en-US", { dateStyle: "medium" }); // "Dec 25"
+
+formatMonthDay("--12-25", "de-DE"); // "25.12."
+formatMonthDay("--12-25", "de-DE", { month: "long", day: "numeric" }); // "25. Dezember"
+formatMonthDay("--12-25", "de-DE", { dateStyle: "medium" }); // "25.12."
+
+formatMonthDay("--12-25", "ja-JP"); // "12/25"
+formatMonthDay("--12-25", "ja-JP", { month: "long", day: "numeric" }); // "12月25日"
+formatMonthDay("--12-25", "ja-JP", { dateStyle: "long" }); // "12/25"
+```
+
+A `dateStyle` takes the month and day widths from the locale's own date pattern, as the
+specification says and as native `Temporal.PlainMonthDay#toLocaleString` does. So de-DE `medium`
+is `25.12.`, and ja-JP writes the month as a number in every style. `formatMonthDay` formats
+through the Gregorian calendar, whatever calendar the locale tag names. A `year` or `weekday` option is dropped, and a
+`timeStyle` gives `""`.
+
+## Compare and sort
+
+Order is by month, then by day. 29 February sorts between 28 February and 1 March.
+
+```typescript
+import { compareMonthDays, areMonthDaysEqual } from "@northguild/gmt";
+
+compareMonthDays("--01-01", "--12-31"); // -1 — month first
+compareMonthDays("--02-29", "--03-01"); // -1
+compareMonthDays("12-25", "--12-25"); // 0 — both input forms
+compareMonthDays("--02-30", "--03-01"); // null — an invalid month-day
+
+areMonthDaysEqual("12-25", "--12-25"); // true
+areMonthDaysEqual("--02-29", "--02-28"); // false — 29 February is not constrained
+
+["--12-25", "--02-29", "--01-01", "--03-01", "--02-28"].sort((a, b) => compareMonthDays(a, b) ?? 0);
+// ["--01-01", "--02-28", "--02-29", "--03-01", "--12-25"]
+```
+
+`compareMonthDays` returns `null` for an invalid value, so a sort callback maps it to `0`.
+
+## A date in a given year
+
+`monthDayToDate` puts a month-day in a year:
+
+```typescript
+import { monthDayToDate } from "@northguild/gmt";
+
+monthDayToDate("--12-25", 2024); // "2024-12-25"
+monthDayToDate("--02-29", 2024); // "2024-02-29" — a leap year
+monthDayToDate("--02-29", 2023); // "2023-02-28" — not a leap year
+monthDayToDate("--02-29", 1900); // "1900-02-28" — a century that is not a leap year
+monthDayToDate("--02-29", 2000); // "2000-02-29" — divisible by 400
+```
+
+In a year with no 29 February, the date is moved back to the last day of February. Some rules
+and contracts use 1 March instead. That is your policy to apply: see
+[a 29 February birthday in a common year](/scenarios/a-29-february-birthday-in-a-common-year/).
+
+## See also
+
+- [Parsing](../parsing/) — token patterns and the other parsers
+- [Formatting](../formatting/) — locale-aware display
+- [Comparisons](../comparisons/) — ordering and equality for dates
+- [Validation](../validation/) — checking a string before parsing
+- [A 29 February birthday in a common year](/scenarios/a-29-february-birthday-in-a-common-year/)
+- [`monthDayToDate` reference](/reference/plain/convert/monthDayToDate)

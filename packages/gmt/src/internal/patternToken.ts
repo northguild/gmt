@@ -3,7 +3,7 @@ import { twoDigitYear } from "./twoDigitYear";
 import { readYearWindowStart } from "./yearWindowStart";
 import { getLocaleEraNames } from "../plain/locale/getLocaleEraNames";
 import { getLocaleMeridiems } from "../plain/locale/getLocaleMeridiems";
-import { getLocaleMonthNames } from "../plain/locale/getLocaleMonthNames";
+import { localeMonthNames } from "./localeMonthNames";
 import { getLocaleWeekdayNames } from "../plain/locale/getLocaleWeekdayNames";
 
 /**
@@ -62,6 +62,30 @@ export const DATE_TIME_PATTERN_FIELDS: ReadonlySet<PatternField> = new Set([
   ...TIME_PATTERN_FIELDS,
 ]);
 
+/**
+ * Fields accepted by `parseMonthDayWithPattern`: the month and the day.
+ *
+ * There is no year, weekday or era. A weekday and an era have no meaning without a year
+ * (Temporal `PlainMonthDay` keeps only a month, a day and a calendar), and a time field has
+ * no place in a month-day.
+ */
+export const MONTH_DAY_PATTERN_FIELDS: ReadonlySet<PatternField> = new Set([
+  "month",
+  "day",
+]);
+
+/**
+ * Fields accepted by `parseYearMonthWithPattern`: the year, the month and the era.
+ *
+ * No day, weekday or time: Temporal `PlainYearMonth` keeps a year, a month and a calendar. An era
+ * is kept because it qualifies the year (`GG` with BC gives year `1 - y`, as the date parser does).
+ */
+export const YEAR_MONTH_PATTERN_FIELDS: ReadonlySet<PatternField> = new Set([
+  "year",
+  "month",
+  "era",
+]);
+
 /** Resolved output of a successful parse — only fields the pattern actually contained are set. */
 export interface ParsedPatternFields {
   year?: number;
@@ -99,7 +123,8 @@ interface TokenSpec {
 }
 
 // Recognized vocabulary letters: a subset of the UTS #35 Date Field Symbol
-// Table, with its field lengths (`MMM` abbreviated, `MMMM` wide), restricted
+// Table, with its field lengths (`MMM`/`LLL` abbreviated, `MMMM`/`LLLL` wide;
+// `M` is the format context, `L` the stand-alone context), restricted
 // to what's unambiguous to parse — no offset/zone-name tokens since this
 // story is plain-only (Decision 1). Any other unquoted letter in a pattern
 // is malformed. Numeric ranges are baked into each regex so a shape
@@ -120,6 +145,21 @@ const TOKEN_TABLE: Record<string, TokenSpec> = {
   },
   M3: { field: "month", kind: "monthNameShort" },
   M4: { field: "month", kind: "monthNameLong" },
+  // `L` is the stand-alone month context (UTS #35 Part 4, Date Field Symbol
+  // Table). A parser reads both contexts for `M` and `L` alike (§ Parsing
+  // Dates and Times), so each `L` token shares its `M` twin's reader.
+  L2: {
+    field: "month",
+    kind: "monthNumber",
+    regexSource: "(?:0[1-9]|1[0-2])",
+  },
+  L1: {
+    field: "month",
+    kind: "monthNumber",
+    regexSource: "(?:0?[1-9]|1[0-2])",
+  },
+  L3: { field: "month", kind: "monthNameShort" },
+  L4: { field: "month", kind: "monthNameLong" },
   d2: { field: "day", kind: "day", regexSource: "(?:0[1-9]|[12]\\d|3[01])" },
   d1: {
     field: "day",
@@ -150,7 +190,7 @@ const TOKEN_TABLE: Record<string, TokenSpec> = {
   G4: { field: "era", kind: "eraLong" },
 };
 
-const VOCABULARY_LETTERS = "yMdHhmsSEaG";
+const VOCABULARY_LETTERS = "yMLdHhmsSEaG";
 
 interface PatternPart {
   type: "literal" | "token";
@@ -248,7 +288,7 @@ function escapeRegExp(text: string): string {
  * alternation would greedily commit to the shorter match and never
  * backtrack into the longer one.
  */
-function buildNameAlternation(names: string[]): string {
+function buildNameAlternation(names: readonly string[]): string {
   return [...names]
     .sort((a, b) => b.length - a.length)
     .map((name) => escapeRegExp(name))
@@ -259,7 +299,8 @@ interface CompiledToken {
   groupName: string;
   field: PatternField;
   kind: TokenKind;
-  monthNames?: string[];
+  monthNames?: readonly string[];
+  standAloneMonthNames?: readonly string[];
   meridiems?: string[];
   eras?: string[];
 }
@@ -330,17 +371,23 @@ function compilePattern(
     }
 
     if (spec.kind === "monthNameShort" || spec.kind === "monthNameLong") {
-      const names = getLocaleMonthNames(
+      // Both contexts (UTS #35 Part 4, Parsing Dates and Times): the format name
+      // ("марта") and the stand-alone name ("март"), tried longest first so
+      // `März` wins over `Mär`.
+      const lists = localeMonthNames(
         locale,
         spec.kind === "monthNameLong" ? "long" : "short",
       );
-      if (names.length !== 12) return null; // locale not resolvable
-      regexPieces.push(`(?<${groupName}>${buildNameAlternation(names)})`);
+      if (lists === null) return null; // locale not resolvable, or a name is ambiguous
+      const names = [...lists.format, ...lists.standAlone];
+      const union = [...new Set(names)];
+      regexPieces.push(`(?<${groupName}>${buildNameAlternation(union)})`);
       tokens.push({
         groupName,
         field: spec.field,
         kind: spec.kind,
-        monthNames: names,
+        monthNames: lists.format,
+        standAloneMonthNames: lists.standAlone,
       });
       continue;
     }
@@ -445,10 +492,14 @@ function resolvePatternFields(
         break;
       case "monthNameShort":
       case "monthNameLong": {
-        const names = token.monthNames ?? [];
-        const index = names.findIndex(
-          (name) => name.toLowerCase() === raw.toLowerCase(),
-        );
+        const wanted = raw.toLowerCase();
+        const matches = (name: string): boolean =>
+          name.toLowerCase() === wanted;
+        // Format or stand-alone name; `localeMonthNames` guarantees one name never
+        // stands for two months, so the first hit is the month.
+        let index = (token.monthNames ?? []).findIndex(matches);
+        if (index === -1)
+          index = (token.standAloneMonthNames ?? []).findIndex(matches);
         fields.month = index + 1; // -1 (not found) would yield 0, which Temporal rejects
         break;
       }

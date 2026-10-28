@@ -48,6 +48,11 @@ const dateFns: LibraryMap = {
       cases: ["M9d"],
     },
     {
+      theirs: '`parse(s, "yyyy MMMM", ref)`',
+      gmt: ["parseYearMonthWithPattern"],
+      note: "A year and a month with no day, returned as `YYYY-MM`.",
+    },
+    {
       theirs: "`isValid(d)`",
       gmt: ["isValidDate"],
       note: "GMT rejects 2024-02-30 and basic format.",
@@ -137,7 +142,7 @@ const dateFns: LibraryMap = {
     { theirs: "`min(ds)`, `max(ds)`", gmt: ["minDate", "maxDate"] },
     {
       theirs: "`getDaysInMonth(d)`, `isLeapYear(d)`",
-      gmt: ["getDaysInMonth", "isLeapYear"],
+      gmt: ["getDaysInMonth", "getDaysInYearMonth", "isLeapYear"],
     },
     {
       theirs: "`getISOWeek(d)`, `getISOWeekYear(d)`",
@@ -203,6 +208,11 @@ const luxon: LibraryMap = {
       theirs: '`DateTime.fromFormat(s, "dd/MM/yyyy")`',
       gmt: ["parseDateWithPattern"],
       cases: ["M9d"],
+    },
+    {
+      theirs: '`DateTime.fromFormat(s, "yyyy MMMM")`',
+      gmt: ["parseYearMonthWithPattern"],
+      note: "A year and a month with no day, returned as `YYYY-MM`.",
     },
     {
       theirs: "`dt.isValid`, `dt.invalidReason`",
@@ -284,7 +294,7 @@ const luxon: LibraryMap = {
     },
     {
       theirs: "`dt.daysInMonth`, `dt.isInLeapYear`",
-      gmt: ["getDaysInMonth", "isLeapYear"],
+      gmt: ["getDaysInMonth", "getDaysInYearMonth", "isLeapYear"],
     },
     {
       theirs: "`dt.weekYear`, `dt.weekNumber`, `dt.weeksInWeekYear`",
@@ -350,6 +360,11 @@ const dayjs: LibraryMap = {
       gmt: ["parseDateWithPattern"],
       note: "Rewrite the tokens to `dd/MM/yyyy`.",
       cases: ["M9d"],
+    },
+    {
+      theirs: '`dayjs(s, "YYYY-MM", true)` (customParseFormat)',
+      gmt: ["parseYearMonth", "parseYearMonthWithPattern"],
+      note: "`YYYY-MM` is the ISO form, which `parseYearMonth` reads. For another pattern, rewrite the tokens, as in `MM/yyyy`.",
     },
     { theirs: "`.isValid()`", gmt: ["isValidDate"] },
     {
@@ -422,7 +437,7 @@ const dayjs: LibraryMap = {
     },
     {
       theirs: "`.daysInMonth()`, `.isLeapYear()` (isLeapYear)",
-      gmt: ["getDaysInMonth", "isLeapYear"],
+      gmt: ["getDaysInMonth", "getDaysInYearMonth", "isLeapYear"],
     },
     {
       theirs: "`.isoWeek()`, `.isoWeekYear()`, `.isoWeeksInYear()` (isoWeek)",
@@ -480,6 +495,11 @@ const moment: LibraryMap = {
       gmt: ["parseDateWithPattern"],
       note: "Rewrite the tokens to `dd/MM/yyyy`.",
       cases: ["M9d"],
+    },
+    {
+      theirs: '`moment(s, "YYYY MMM", locale)`',
+      gmt: ["parseYearMonthWithPattern"],
+      note: "Rewrite the tokens to `yyyy MMM`. The result is `YYYY-MM`, with no day.",
     },
     { theirs: "`.isValid()`", gmt: ["isValidDate"] },
     {
@@ -553,7 +573,7 @@ const moment: LibraryMap = {
     { theirs: "`moment.min(…)`, `moment.max(…)`", gmt: ["minDate", "maxDate"] },
     {
       theirs: "`.daysInMonth()`, `.isLeapYear()`",
-      gmt: ["getDaysInMonth", "isLeapYear"],
+      gmt: ["getDaysInMonth", "getDaysInYearMonth", "isLeapYear"],
     },
     {
       theirs: "`.isoWeek()`, `.isoWeekYear()`, `.isoWeeksInYear()`",

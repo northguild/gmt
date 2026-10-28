@@ -28,6 +28,10 @@ areDatesEqual("2026-03-17", "2026-03-17T09:00:00");
 Each has `DateTime`, `Time`, `Zoned`, `Unix`, and `Utc` siblings —
 `isAfterDateTime`, `isBeforeTime`, `areZonedEqual`, and so on.
 
+Month-days such as `--12-25` have their own `compareMonthDays` and `areMonthDaysEqual`: see [Month-Day Values](/guides/core-date-operations/month-day-values/).
+
+Year-months such as `2026-10` have `compareYearMonths` and `areYearMonthsEqual`: `compareYearMonths("2025-12", "2026-01")` gives `-1`.
+
 ## Equality at a given unit
 
 `areDatesEqualBy` and its siblings compare two values at a given calendar unit

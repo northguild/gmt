@@ -31,6 +31,10 @@ formatDate("2024-03-15", "en-US", { year: "numeric", month: "long", day: "numeri
 // "March 15, 2024"
 ```
 
+For a birthday or a holiday with no year, see [Month-Day Values](/guides/core-date-operations/month-day-values/): `formatMonthDay("--12-25", "en-US")` gives `"12/25"`.
+
+For a card expiry or a billing month, `formatYearMonth("2026-10", "fr-FR", { year: "numeric", month: "long" })` gives `"octobre 2026"`. A day or time field is dropped, and it formats through the Gregorian calendar.
+
 ## Locale-elided ranges
 
 `formatDateRange` and `formatDateTimeRange` are the plain counterparts of

@@ -174,6 +174,7 @@ const PAGES = [
     path: "/check/morocco-2026-clock-change/",
   },
   { slug: "tool-cron-in-a-zone", path: "/tools/cron-in-a-zone/" },
+  { slug: "tool-leap-day-birthday", path: "/tools/leap-day-birthday/" },
   /* The industry pages the new tools are linked from, and the reference index. */
   { slug: "industries", path: "/industries/" },
   { slug: "industries-maritime", path: "/industries/maritime/" },
