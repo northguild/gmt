@@ -43,13 +43,13 @@ import type { StickToBottomContext } from "use-stick-to-bottom";
 import { SearchIcon } from "lucide-react";
 
 import { referenceRoutes } from "~/generated/reference/route-manifest";
-import { gmtStats } from "~/data/gmt-stats";
 import { CORPUS_SUMMARY } from "~/lib/chat-constants";
 import { checkUserText } from "~/lib/chat-sanitize";
 import { pageContextFromReferrer } from "~/lib/page-context";
 import { nextReset } from "~/lib/quota-resets";
 import { findResetFormat } from "~/lib/reset-formats";
 import { BrainSelector } from "./BrainSelector";
+import { AccuracyNote, ChatInfo } from "./ChatInfo";
 import { ResetClock } from "./ResetClock";
 import type { BrainsInfo } from "./use-brains";
 import { useResetClock } from "./use-reset-clock";
@@ -144,9 +144,6 @@ async function chatFetch(
   });
   throw error;
 }
-
-/** A fixed locale, so the server render and the browser agree on the digits. */
-const GMT_TEST_COUNT = new Intl.NumberFormat("en-US").format(gmtStats.tests);
 
 export interface DoxChatProps {
   /** Today's budget, from `/api/brains`. Null while loading or if the endpoint
@@ -688,6 +685,7 @@ export function DoxChat({
                 format, and at that edge its popover's anchor never moves. */}
             <PromptInputFooter className="gmt-hive-composer-footer">
               <PromptInputTools className="gmt-hive-controls">
+                <ChatInfo />
                 <ResetClock
                   info={brains}
                   selectedBrainId={selectedBrainId}
@@ -707,14 +705,9 @@ export function DoxChat({
               />
             </PromptInputFooter>
           </PromptInput>
-          {/* Always shown, under every question. The prose comes from a free
-              model and can be wrong; a widget runs the library itself. */}
-          <p className="gmt-hive-accuracy-note">
-            Free AI models write Dox&rsquo;s answers and can get things wrong,
-            so check them before you rely on them. The widgets and tools run{" "}
-            <code>@northguild/gmt</code> itself, checked by {GMT_TEST_COUNT}{" "}
-            tests.
-          </p>
+          {/* Always shown under every question on a wide screen. On a phone
+              it moves into the info button's popup (ChatInfo.tsx). */}
+          <AccuracyNote className="gmt-hive-accuracy-note" />
         </div>
       </div>
     </div>

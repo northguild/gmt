@@ -299,9 +299,60 @@
   }
 
   /* Phone, conversation started: the examples sheet folds away until the bar
-     above the composer opens it. */
-  .gmt-hive-rail[data-collapsed] {
+     above the composer opens it. Before the first message the bar stays hidden
+     and the sheet stays open, unless the phone is short (below). */
+  .gmt-hive-body:not([data-empty]) .gmt-hive-rail[data-collapsed] {
     display: none;
+  }
+
+  .gmt-hive-body[data-empty] .gmt-hive-examples-bar {
+    display: none;
+  }
+}
+
+/* Short phone, empty conversation: the crystal, status line and prompt do not
+   fit beside even the examples sheet's floor, so the sheet starts folded
+   behind the bar, as it does once a conversation has started. Measured: at
+   320px wide the open sheet reaches its 7rem floor at about 688px tall, and
+   below that the empty state overflows; 44rem keeps a margin. The empty
+   state's padding also goes: without it the folded layout still ran 39px
+   over at 320x568. */
+@media (max-width: 60rem) and (max-height: 44rem) {
+  .gmt-hive-body[data-empty] .gmt-hive-rail[data-collapsed] {
+    display: none;
+  }
+
+  .gmt-hive-body[data-empty]:has(.gmt-hive-rail[data-collapsed]) .gmt-hive-chat {
+    flex: 1 1 auto;
+  }
+
+  .gmt-hive-body[data-empty] .gmt-hive-examples-bar {
+    display: flex;
+  }
+
+  .gmt-hive-body[data-empty] .gmt-hive:has(> .gmt-hive-empty) {
+    padding-block: 0;
+  }
+
+  .gmt-hive-body[data-empty] .gmt-hive-empty {
+    padding-block: var(--gmt-space-1);
+  }
+}
+
+/* Shorter still, a landscape phone or a 540px portrait: the composer alone
+   takes about 210px, so squeezing leaves the transcript a 35px sliver (0px at
+   568x320). Below 35rem, the height at which the trimmed empty state stops
+   fitting at 320px wide, the chat keeps a 30rem floor and the shell scrolls
+   as a page instead. Focusing the composer scrolls it into view. */
+@media (max-width: 60rem) and (max-height: 35rem) {
+  .gmt-hive-shell {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .gmt-hive-body {
+    flex: 1 0 auto;
+    min-height: 30rem;
   }
 }
 
@@ -1514,6 +1565,135 @@
 
 .gmt-hive-accuracy-note code {
   font-size: inherit;
+}
+
+/* ---- Fine print (ChatInfo.tsx) ----
+ * The AI note and the licence note show inline on a wide screen. On a phone,
+ * where the two took about 170px of a 600px screen, both are hidden and the
+ * info button at the start of the control bar opens them in one popup. */
+.gmt-hive-info {
+  display: none;
+}
+
+@media (max-width: 60rem) {
+  .gmt-hive-accuracy-note,
+  .gmt-hive-licence {
+    display: none;
+  }
+
+  .gmt-hive-info {
+    display: inline-grid;
+  }
+}
+
+/* The submit button's shape and touch size, on the quieter surface of the
+   brain badge: Send stays the one primary action in the bar. */
+.gmt-hive-info {
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  color: var(--gmt-cyan);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  cursor: pointer;
+  transition:
+    background var(--gmt-duration-fast) var(--gmt-easing),
+    border-color var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-hive-info svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.gmt-hive-info:hover,
+.gmt-hive-info:has(+ :popover-open) {
+  background: var(--gmt-fill-strong);
+  border-color: var(--gmt-border-strong);
+}
+
+.gmt-hive-info-panel[popover] {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 24rem;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.5;
+  color: var(--gmt-ice-dim);
+}
+
+/* Above the button, from its start edge, and 12px inside the viewport; below
+   it when there is no room above. */
+@supports (top: anchor(top)) {
+  .gmt-hive-info-panel[popover] {
+    position-anchor: auto;
+    inset-inline-start: anchor(left);
+    inset-inline-end: 12px;
+    justify-self: start;
+    inset-block-end: anchor(top);
+    margin-block-end: var(--gmt-space-2);
+    position-try-fallbacks: flip-block;
+  }
+}
+
+/* No anchor positioning: pin to the viewport's bottom edge. */
+@supports not (top: anchor(top)) {
+  .gmt-hive-info-panel[popover] {
+    inset-inline: 12px;
+    inset-block-end: calc(12px + env(safe-area-inset-bottom, 0px));
+    margin-inline: auto;
+  }
+}
+
+.gmt-hive-info-panel p {
+  margin: 0;
+}
+
+.gmt-hive-info-panel p + p {
+  margin-block-start: var(--gmt-space-2);
+  padding-block-start: var(--gmt-space-2);
+  border-top: 1px solid var(--gmt-hairline);
+}
+
+.gmt-hive-info-panel code {
+  font-size: inherit;
+}
+
+.gmt-hive-info-panel a {
+  color: var(--gmt-ice);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-hive-info {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .gmt-hive-info {
+    color: ButtonText;
+    background: ButtonFace;
+    border-color: ButtonText;
+  }
+
+  .gmt-hive-info-panel {
+    color: CanvasText;
+    border: 1px solid CanvasText;
+  }
+
+  .gmt-hive-info-panel a {
+    color: LinkText;
+  }
 }
 
 /* ------------------------------------------------------------------ *

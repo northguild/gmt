@@ -13,7 +13,9 @@
  * DOX-C3b adds the widget rail as a sibling of `<DoxChat>` inside
  * `.gmt-hive-body`. With no widget mounted the rail holds the examples panel;
  * on a phone, once a conversation has started, that panel folds away behind an
- * "Examples" bar above the composer.
+ * "Examples" bar above the composer. A phone too short for the empty state and
+ * the open sheet folds it from the start. CSS makes that call (gmt-hive.css),
+ * so the server-rendered page is already right and nothing snaps shut on load.
  */
 import {
   startTransition,
@@ -26,13 +28,13 @@ import {
 import { starterWidgetCall, type CHAT_STARTERS } from "~/lib/chat-constants";
 import { DoxChat, type DoxChatHandle } from "./DoxChat";
 import { ExamplesBar } from "./ExamplesBar";
+import { LicenceNote } from "./ChatInfo";
 import { HeaderClock } from "./HeaderClock";
 import { useBrains } from "./use-brains";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
 import { RailResizer } from "./RailResizer";
 import { WidgetRail, type RailWidget } from "./WidgetRail";
 import { isSameWidget, resolveWidget } from "./widget-registry";
-import { LICENCE_LEAD, LICENCE_LINK_TEXT, LICENCE_URL } from "~/lib/licence";
 
 /** Which Worker this page is talking to.
  *
@@ -71,7 +73,7 @@ export default function DoxPage() {
   const barRef = useRef<HTMLButtonElement>(null);
   /* Has the reader sent anything? Drives the phone's "Examples" bar. */
   const [conversationStarted, setConversationStarted] = useState(false);
-  /* Phone: the examples sheet is open over a started conversation. */
+  /* Phone: the reader has opened the examples sheet from the bar. */
   const [examplesOpen, setExamplesOpen] = useState(false);
   /* Focus requests are read by effects after the commit that makes their
      target exist, so they are refs, not state. */
@@ -189,8 +191,10 @@ export default function DoxPage() {
             onUsage={apply}
             onWidget={showWidget}
             onEmptyChange={handleEmptyChange}
+            /* Always in the page with no widget open: CSS shows it only on a
+               phone, and before the first message only on a short one. */
             aboveComposer={
-              conversationStarted && !railWidget ? (
+              !railWidget ? (
                 <ExamplesBar
                   ref={barRef}
                   expanded={examplesOpen}
@@ -238,18 +242,17 @@ export default function DoxPage() {
             widget={railWidget}
             onClose={closeWidget}
             onPick={pickExample}
-            collapsed={conversationStarted && !examplesOpen}
+            collapsed={!examplesOpen}
             railId={railId}
             focusTitleRef={focusTitleRef}
           />
         </ChatErrorBoundary>
       </div>
       {/* The site's licence note. Starlight's footer is not rendered on this route (see
-          `Footer.astro`), so the note sits here, in view and in the tab order. */}
+          `Footer.astro`), so the note sits here, in view and in the tab order. On a phone it is
+          hidden and the composer's info button opens it (ChatInfo.tsx). */}
       <footer className="gmt-hive-licence">
-        <p>
-          {LICENCE_LEAD} <a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
-        </p>
+        <LicenceNote />
       </footer>
     </div>
   );

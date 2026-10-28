@@ -1,7 +1,8 @@
 /**
  * The phone's way back to the examples once a conversation has started: a bar
- * above the composer that toggles the bottom sheet. Hidden by CSS outside the
- * phone layout (gmt-hive.css), so on desktop it is neither seen nor tabbed to.
+ * above the composer that toggles the bottom sheet. On a short phone it shows
+ * from the start, in place of the open sheet. Hidden by CSS everywhere else
+ * (gmt-hive.css), so there it is neither seen nor tabbed to.
  */
 import type { Ref } from "react";
 import { ChevronUpIcon } from "lucide-react";

@@ -428,12 +428,23 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   7:1 in light, so hover and focus change the border and fill only. The chip is
   `--gmt-ice-dim` with its own bevelled border, distinct from the card's. Long text wraps with
   `overflow-wrap: anywhere`; nothing scrolls sideways at 390px.
-- **Phone:** below 60rem a collapsed rail is `display: none` (`[data-collapsed]`) and the
-  `Examples · N` bar is shown above the composer. The bar is `display: none` by default and
-  switched on only inside that query, in a block placed after its base rule.
+- **Phone:** below 60rem, once a conversation has started, a collapsed rail is `display: none`
+  (`[data-collapsed]`) and the `Examples · N` bar is shown above the composer. The bar is
+  `display: none` by default and switched on only inside that query, in a block placed after
+  its base rule. Before the first message the sheet stays open and the bar hidden, except on a
+  short phone (below).
 - **Empty phone layout:** `.gmt-hive-body[data-empty]` (set by `DoxPage` with no conversation and
-  no widget) sizes the chat to its content and gives the rail `flex: 1 1 0` with a 12rem floor,
+  no widget) sizes the chat to its content and gives the rail `flex: 1 1 0` with a 7rem floor,
   so the crystal, status line and prompt are never clipped. The 55% sheet applies otherwise.
+- **Short phone (below 44rem tall):** the empty state starts folded too (bar shown, sheet
+  hidden) and drops its block padding. Measured: at 320px wide the open sheet hits its floor
+  at about 688px tall. **Below 35rem** (landscape phones, 540px portraits) the body keeps a
+  30rem floor and `.gmt-hive-shell` scrolls as a page, rather than leaving the transcript a
+  sliver beside a 210px composer.
+- **Fine print on a phone:** below 60rem the accuracy note and `.gmt-hive-licence` are hidden;
+  `.gmt-hive-info` (44px, first in the composer's control bar, Send stays last) opens both in
+  one `popover="auto"` panel anchored above it, falling back to the bottom edge without anchor
+  positioning.
 - **Focus:** the widget title (`tabIndex={-1}`, focused after a card opens it) draws a cyan
   `:focus-visible` outline. In forced colours the cards, bar and title use a `Highlight` outline;
   the card and bar rules double `.gmt-sonar-focus` to out-rank `.gmt-sonar-focus:focus { outline: none }`.

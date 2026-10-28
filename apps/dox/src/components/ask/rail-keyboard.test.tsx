@@ -398,7 +398,10 @@ describe("the examples rail on /dox", () => {
     render(<DoxPage />);
     const user = userEvent.setup();
     const name = `Examples ${CHAT_STARTERS.length}`;
-    expect(screen.queryByRole("button", { name })).toBeNull();
+    // The bar is in the page from the start; CSS shows it before the first
+    // message only on a short phone (gmt-hive.css).
+    const first = screen.getByRole("button", { name });
+    expect(first.getAttribute("aria-expanded")).toBe("false");
 
     card("showConverterBench").focus();
     await user.keyboard("{Enter}");

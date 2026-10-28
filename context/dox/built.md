@@ -2570,6 +2570,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   AI models write the answers and can get things wrong, so the reader should check them. The
   widgets and tools run `@northguild/gmt` itself, and the line cites its test count from
   `src/data/gmt-stats.json`, formatted in `en-US` so the server and browser renders match.
+- **Fine print on a phone** (`ChatInfo.tsx`): below 60rem the accuracy note and the shell's
+  licence footer (`.gmt-hive-licence`) are `display: none`, and an info button
+  (`.gmt-hive-info`, named "About Dox's answers and licences") at the start of the composer's
+  control bar opens both in one native `popover="auto"` panel, anchored above the button. Send
+  stays at the end of the bar. Above 60rem the button is hidden and both notes show inline. CSS
+  picks the form, so the server render is already right. `AccuracyNote` and `LicenceNote` are
+  the single source for both forms.
 - **Retrieval trace** (`RetrievalTrace.tsx`): chunk count and titles, zero for an
   out-of-corpus question, plus the brain that actually answered.
   - **Timings.** The Worker times each stage (`worker/timing.ts`): ledger, corpus, search,
@@ -2726,12 +2733,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `<ViewTransition>`, and closing the widget brings it back.
   - **Phone (below 60rem):** while the conversation is empty the panel is the bottom sheet. `DoxPage`
     sets `data-empty` on `.gmt-hive-body`, so the chat keeps its content height (crystal, status
-    line, prompt, composer) and the sheet takes the rest, at least 12rem; a started conversation
+    line, prompt, composer) and the sheet takes the rest, at least 7rem; a started conversation
     or an open widget gets the usual 55% sheet.
     Once it starts, the sheet collapses (`data-collapsed`, `display: none`) and an
     `Examples · N` bar (`ExamplesBar.tsx`, `aria-expanded`, `aria-controls` the rail) sits above
     the composer and toggles it. N is `CHAT_STARTERS.length`. Picking a card collapses the sheet
-    again. The bar is hidden by CSS above 60rem.
+    again. The bar is hidden by CSS above 60rem. `DoxPage` renders the bar whenever no widget is
+    open; CSS decides when it shows, so the server render is already right.
+  - **Short phone:** below 44rem tall the empty state starts folded behind the bar as well, with
+    its block padding dropped. Below 35rem (landscape phones) the chat keeps a 30rem floor and
+    the shell scrolls as a page.
   - **Focus.** Activating a card moves focus to the open widget's title (`tabIndex={-1}`);
     a widget the model opens never takes focus, since the reader may be typing. Closing a
     widget returns focus to that tool's card when the panel is visible, otherwise to the bar

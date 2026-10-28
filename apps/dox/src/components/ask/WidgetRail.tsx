@@ -101,7 +101,9 @@ export function WidgetRail({
   }, [handle, widget]);
 
   /* With no widget the rail holds the examples panel, so it is never empty.
-     Phone, conversation started: `collapsed` hides it until the bar opens it. */
+     `collapsed` marks it as folded behind the bar. CSS applies that only on a
+     phone once a conversation has started, or on a short phone from the start
+     (gmt-hive.css). */
   if (!widget) {
     return (
       <ViewTransition
