@@ -149,6 +149,12 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `CHUNKS_PATH` in `fetch-chunks.ts` is Worker-only code, not in `dist`, so
   `fetch-chunks.test.ts` guards it. The dev server serves `/gmt/` and proxies `/gmt/api`
   with no rewrite.
+  - **The NorthGuild mark** (#424) is the header's way back to the landing page: a same-tab
+    `<a>` to `LANDING_URL` (`https://northguild.dev/`, in `site.ts`) before the site title,
+    named "NorthGuild home", on every page. The shield is inlined from
+    `src/assets/northguild-logo.svg`, so the page theme reaches its paths. The dist guard
+    allows exactly that URL in an `<a href>` (`LANDING` in `dist-base.ts`) and nowhere else;
+    `judgeUrl` is unchanged.
 - **Web Analytics.** Every HTML page loads Cloudflare's beacon
   (`static.cloudflareinsights.com/beacon.min.js`) from the `Head` override
   (`src/components/Head.astro`), in production builds only. The site is registered by
@@ -2370,8 +2376,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ### Shape
 
-- **One surface: `/dox`** (`src/pages/dox.astro`, `<DoxPage client:load />`), chrome-free,
-  `noindex`, reached from the header's "Ask Dox" link.
+- **One surface: `/dox`** (`src/pages/dox.astro`, `<DoxPage client:load />`), under the site
+  header, with no page title. `noindex`, reached from the header's "Chat with Dox" button,
+  which carries `aria-current="page"` there. The header is Astro with no JavaScript, so no
+  React reaches another page (WCAG 2.2 SC 3.2.3: the navigation is the same on every page).
   - There is no every-page dock: it would put React on every reference page to duplicate
     `/dox`.
   - The cost is that asking means leaving the page. Page context still follows through the

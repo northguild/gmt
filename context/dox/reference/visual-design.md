@@ -41,6 +41,10 @@ Cool blue→green on a blue-tinted near-black. Everything is a token.
   in colour alone: a double edge is a repeated hour and a dashed edge a skipped one. A new
   chart follows the pair. The Crossing Clock uses the edges but purple for both, and the two
   ledgers flag a short or long day in gold (built.md § Tier 2, "The DST colours").
+- **The NorthGuild mark** (#424): the field and the `</>` glyphs are fixed (Cyan and white) and
+  the shield body follows the theme (Teal in dark, the light `--gmt-cyan-ink` in light). The
+  `--gmt-logo-*` tokens hold every value, each at 3:1 or more against every header surface
+  (WCAG 2.2 SC 1.4.11), with the glyphs at 4.5:1 or more on the body.
 - **Role colours in the transcript** resolve from one `--gmt-hive-role` per turn, so recolouring
   a role is one declaration.
 - **The Dox mark** — the faceted crystal — is one geometry module (`src/lib/dox-mark.ts`) shared

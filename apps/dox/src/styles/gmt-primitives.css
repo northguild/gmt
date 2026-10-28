@@ -267,6 +267,53 @@
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
 }
 
+/* ---- NorthGuild mark (#424) ----
+ * Fills for the inlined shield (`NorthGuildMark.astro`). They live here because
+ * a scoped style does not reach the paths inside an imported SVG component. */
+.gmt-ng-mark {
+  display: block;
+  block-size: 2rem;
+  inline-size: auto;
+}
+
+.gmt-ng-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-inline-size: 1.75rem; /* 28px: the box stays at or above 24x24 (WCAG 2.2 SC 2.5.8) */
+  min-block-size: 2rem;
+  border-radius: var(--gmt-radius-sm);
+  text-decoration: none;
+}
+
+/* A full-height hairline between two items, the same token as `.social-icons::after`. */
+.gmt-ng-divider {
+  flex: 0 0 auto;
+  block-size: 1.5rem;
+  border-inline-end: 1px solid var(--sl-color-gray-5);
+}
+
+.gmt-ng-body {
+  fill: var(--gmt-logo-body);
+}
+
+.gmt-ng-body-lit {
+  fill: var(--gmt-logo-body-lit);
+}
+
+.gmt-ng-field {
+  fill: var(--gmt-logo-field);
+}
+
+.gmt-ng-field-lit {
+  fill: var(--gmt-logo-field-lit);
+}
+
+.gmt-ng-glyph {
+  fill: var(--gmt-logo-glyph);
+}
+
 /* ---- The Dox mark ----
  * The faceted crystal used by the chat (every Dox/You turn, the empty-state
  * hub) and by the header's "Chat with Dox" button. It lives here rather than
@@ -308,6 +355,18 @@
   stroke-linejoin: round;
   opacity: 0.75;
   vector-effect: non-scaling-stroke;
+}
+
+/* The Dox button is the current page on `/dox` (`aria-current="page"`, set by
+   Header.astro). A 2px bottom border marks it, so the state is not colour
+   alone (WCAG 2.2 SC 1.4.1). The border is reserved transparent on the base
+   rule so the box is the same size on every page. */
+.gmt-ask-dox-link {
+  border-bottom: 2px solid transparent;
+}
+
+.gmt-ask-dox-link[aria-current="page"] {
+  border-bottom-color: var(--gmt-cyan-ink);
 }
 
 /* Header button: the mark replaces the old icon+label pair, so it needs a real

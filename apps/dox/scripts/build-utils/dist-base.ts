@@ -15,6 +15,8 @@ export interface BaseFailure {
 
 const ORIGIN = "https://northguild.dev";
 const BASE = "/gmt";
+/** The header's NorthGuild link (#424); equal to `LANDING_URL` in `src/lib/site.ts`. */
+export const LANDING = `${ORIGIN}/`;
 const LEGACY_HOST = "gmt-dox.northguild.workers.dev";
 
 /** `/gmt` or `/gmt/…`, and not a doubled `/gmt/gmt`. */
@@ -116,6 +118,8 @@ export function badUrlsInHtml(html: string): BaseFailure[] {
     ).toLowerCase();
     for (const [name, value] of props) {
       const where = `<${tagName}> ${name}`;
+      // The one exception to the rule below: an anchor to the landing page itself.
+      if (tagName === "a" && name === "href" && value === LANDING) continue;
       if (URL_ATTRS.has(name)) check([value], where, out);
       else if (name === "srcset" || name === "imagesrcset")
         check(srcsetUrls(value), where, out);

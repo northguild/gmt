@@ -386,9 +386,19 @@ and leap-second tools list their roots in the same sheets. All of them read as o
 ## `/dox` and the header
 
 - `src/pages/dox.astro` wraps `<StarlightPage>` so the chat keeps the site's `customCss`;
-  `data-dox-shell` hides Starlight's header and `<h1>` for a full-bleed page. `noindex`,
-  `pagefind: false`.
-- `Header.astro` adds the "Ask Dox" link: a plain `<a>` carrying `DoxMark.astro`, no JavaScript.
+  `data-dox-shell` hides only Starlight's `<h1>` for a full-bleed page, and the hive shell
+  starts at `--sl-nav-height`, below the site header. `noindex`, `pagefind: false`.
+- `Header.astro` adds the "Chat with Dox" link: a plain `<a>` carrying `DoxMark.astro`, no
+  JavaScript. On `/dox` it has `aria-current="page"`, shown by a 2px bottom border reserved
+  transparent on every page (WCAG 2.2 SC 1.4.1), never a left one.
+- `Header.astro` also adds the NorthGuild mark link (#424) before the site title: a plain
+  `<a>`, not `ButtonLink`, in the same tab, named by an sr-only span, with
+  `NorthGuildMark.astro` `aria-hidden`. Its fills are in `gmt-primitives.css`, because a
+  scoped style does not reach an imported SVG's paths. A hairline divider separates it from
+  the title.
+- The title is a `SiteTitle.astro` override: "Give Me Temporal" from `50rem` up, "GMT" below.
+  Only one form is displayed, so the link's name is the visible text (WCAG 2.2 SC 2.5.3).
+  Starlight's `title` stays `@northguild/gmt` for tabs, search results and social cards.
 - `Header.astro` composes Starlight's parts via `virtual:starlight/components/*`, not
   `@astrojs/starlight/components/*.astro`. The direct path resolves Starlight's defaults and
   silently bypasses this repo's `SocialIcons` and `ThemeSelect` overrides. Types for the virtual
@@ -397,8 +407,8 @@ and leap-second tools list their roots in the same sheets. All of them read as o
 ## The composer control bar
 
 - The brain menu (Radix `DropdownMenu`, `menuitemradio`) and the reset clock (Popover + cmdk) sit
-  in `PromptInputTools`, left of Send, and both open upward. The `/dox` strip holds wayfinding,
-  the header clock and the Live/Local badge.
+  in `PromptInputTools`, left of Send, and both open upward. The `/dox` strip holds the header
+  clock and the Live/Local badge; the site header gives the way back.
 - The brain menu groups brains by provider, each heading showing that provider's reset.
 - The reset chip shows whatever refills next (`src/lib/quota-resets.ts`). Every format is one gmt
   call (`src/lib/reset-formats.ts`), shown with its reference link, opened in a new tab.

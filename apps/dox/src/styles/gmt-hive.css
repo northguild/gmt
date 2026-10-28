@@ -28,9 +28,11 @@
      content wrappers contribute a 1rem top margin this island can't see, which
      pushed a `height: 100dvh` shell down 16px and clipped the composer off the
      bottom edge. Taking it out of flow makes the fit exact and immune to every
-     ancestor's box model — and nothing else renders on this route anyway. */
+     ancestor's box model — and nothing else renders on this route anyway.
+     It starts below Starlight's fixed header, whose height `--sl-nav-height`
+     already changes at the desktop breakpoint, so the two never overlap. */
   position: fixed;
-  inset: 0;
+  inset: var(--sl-nav-height) 0 0 0;
   /* Starlight's prose rhythm reaches this element through the island's
      `display: contents` wrapper (so a `> * + *` reset upstream can't see it),
      and a margin on a fixed box shrinks it away from its inset edges. */
@@ -68,30 +70,19 @@
 }
 
 /* ------------------------------------------------------------------ *
- * Top strip — wayfinding only. Deliberately NOT a nav bar.
+ * Top strip — chat status only (clock and badge). Deliberately NOT a nav bar:
+ * the site header above it gives the way back.
  * ------------------------------------------------------------------ */
 
 .gmt-hive-strip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--gmt-space-3);
   flex: 0 0 auto;
   padding: var(--gmt-space-3) clamp(var(--gmt-space-3), 3vw, var(--gmt-space-6));
   border-bottom: 1px solid var(--gmt-hairline);
   font-size: var(--gmt-text-sm);
-}
-
-.gmt-hive-back {
-  color: var(--gmt-ice-dim);
-  text-decoration: none;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.gmt-hive-back:hover,
-.gmt-hive-back:focus-visible {
-  color: var(--gmt-cyan-ink);
 }
 
 .gmt-hive-strip-end {

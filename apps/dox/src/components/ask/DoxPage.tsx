@@ -1,10 +1,10 @@
 /**
  * DOX-C3a (#139) — Host 2 chrome: the full-bleed `/dox` surface.
  *
- * Deliberately not a nav bar. The Starlight header is hidden on this route
- * (see `dox.astro`'s `data-dox-shell` scoping), so this strip carries the only
- * wayfinding a reader needs — one way back to the docs — plus an environment
- * badge when pointed at a local Worker. Everything else is the conversation.
+ * Deliberately not a nav bar. The Starlight header shows on this route like on
+ * every page and gives the way back, so this strip holds only chat status: the
+ * reader's clock, plus an environment badge when pointed at a local Worker.
+ * Everything else is the conversation.
  *
  * The brain selector and the reset clock used to sit in this strip too. They
  * now live in the composer's control bar inside `DoxChat`, next to Send — the
@@ -32,7 +32,6 @@ import { ChatErrorBoundary } from "./ChatErrorBoundary";
 import { RailResizer } from "./RailResizer";
 import { WidgetRail, type RailWidget } from "./WidgetRail";
 import { isSameWidget, resolveWidget } from "./widget-registry";
-import { withBase } from "~/lib/site";
 import { LICENCE_LEAD, LICENCE_LINK_TEXT, LICENCE_URL } from "~/lib/licence";
 
 /** Which Worker this page is talking to.
@@ -154,10 +153,7 @@ export default function DoxPage() {
 
   return (
     <div className="gmt-ask gmt-hive-shell">
-      <header className="gmt-hive-strip">
-        <a className="gmt-hive-back" href={withBase("/")}>
-          ← @northguild/gmt
-        </a>
+      <div className="gmt-hive-strip">
         <div className="gmt-hive-strip-end">
           {/* The reader's local time, in the app's date format. */}
           <HeaderClock />
@@ -176,7 +172,7 @@ export default function DoxPage() {
             </span>
           )}
         </div>
-      </header>
+      </div>
       <div
         className="gmt-hive-body"
         data-empty={(!conversationStarted && !railWidget) || undefined}

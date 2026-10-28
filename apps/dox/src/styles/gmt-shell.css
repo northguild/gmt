@@ -230,6 +230,29 @@ header {
   font-size: 1.25rem;
 }
 
+/* The header says "Give Me Temporal" where it fits and "GMT" below that
+   (#424). `display: none` takes the hidden form out of the accessibility tree,
+   so the link's name is the visible text (WCAG 2.2 SC 2.5.3). */
+.gmt-title-long {
+  display: none;
+}
+@media (min-width: 50rem) {
+  .gmt-title-long {
+    display: inline;
+  }
+  .gmt-title-short {
+    display: none;
+  }
+}
+@media print {
+  .gmt-title-long {
+    display: inline;
+  }
+  .gmt-title-short {
+    display: none;
+  }
+}
+
 /* "On this page": Starlight paints the idle entries in --sl-color-gray-3, which
    is #5c7a85 on the dark page (4.38:1) and #999999 on the light one (2.84:1).
    The muted text tier already holds the 7:1 floor in both themes, so the nav
