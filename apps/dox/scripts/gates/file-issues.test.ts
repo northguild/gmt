@@ -246,6 +246,15 @@ describe("the nightly workflow", () => {
     for (const step of [SUMMARY_STEP, UPLOAD_STEP, DOWNLOAD_STEP])
       expect(yml).toContain(`- name: ${step}\n`);
   });
+
+  // Without `if: always()` both steps are skipped whenever the gates fail, which is every night
+  // with findings: the check could never pass, and a lost upload would read as could-not-run.
+  it("runs the summary check and the upload after the gates fail", () => {
+    for (const step of [SUMMARY_STEP, UPLOAD_STEP])
+      expect(yml).toMatch(
+        new RegExp(`- name: ${step}\\n\\s+if: always\\(\\)\\n`),
+      );
+  });
 });
 
 describe("main", () => {
