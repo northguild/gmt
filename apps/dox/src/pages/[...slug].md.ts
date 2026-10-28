@@ -21,10 +21,7 @@ const pages = Object.entries(RAW).flatMap(([path, raw]) => {
   const rel = docsRelPath(path);
   const { data, body } = stripFrontmatter(raw);
   // A page with a `slug:` (the generated reference) is served at it; the home page at `index.md`.
-  const slug = markdownTwinSlug(
-    data.slug ?? rel.replace(/(?:^|\/)index$/, ""),
-    path,
-  );
+  const slug = markdownTwinSlug(path, data.slug);
   const md = stripMdx(body, { gmtVersion, values });
   return [
     {
