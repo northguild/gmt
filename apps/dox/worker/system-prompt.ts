@@ -6,12 +6,14 @@ export interface PromptSections {
    * A model shown 20 valid routes hallucinates far less than one shown 120. */
   routeAllowlist: string[];
   chunks: RetrievalChunk[];
-  /** packages/gmt/skills/*\/SKILL.md content (consumer-facing skills only) — see worker/vocabulary.ts. */
+  /** The SKILL.md text chosen for this question (consumer-facing skills only) —
+   * see worker/select-vocabulary.ts. Empty when no skill matched. */
   vocabulary: string;
   /** the four core rules and the sentinel fallbacks, verbatim from worker/core-rules.md (see worker/core-rules.ts). */
   coreRules: string;
-  /** DOX-C3b's widget tools. Omitted or empty keeps the "no tools" wording, so
-   *  this stays a pure function with one shape whether or not tools exist. */
+  /** The widget tools offered for this question (worker/select-tools.ts) —
+   *  the same set `streamText` declares. Omitted or empty keeps the "no tools"
+   *  wording, so this stays a pure function with one shape either way. */
   tools?: {
     name: DoxToolName;
     purpose: string;
@@ -74,11 +76,10 @@ export function assembleSystemPrompt(sections: PromptSections): string {
   /* Generated from the registry rather than written by hand, so a tool cannot be
      added without the model being told it exists.
 
-     The prose-first instruction is load-bearing, not politeness. There is
-     exactly one step (see brains.ts on `stopWhen`), so a turn that returns a
-     function call and no text has no later opportunity to produce any — and a
-     widget that mounts beside silence is a worse answer than the paragraph it
-     replaced. */
+     The prose-first instruction is load-bearing, not politeness. A turn that
+     returns a function call and no text costs a second step to get the prose
+     (see `WIDGET_THEN_PROSE` in brains.ts) — a second read of the whole
+     prompt — and the reader waits for it after the widget has mounted. */
   const toolsBlock =
     tools && tools.length > 0
       ? [
@@ -126,7 +127,7 @@ If the question has no good match above, do not produce a link at all.
 
 ## Vocabulary
 
-${vocabulary}
+${vocabulary || "(none for this question)"}
 
 ## Core rules
 

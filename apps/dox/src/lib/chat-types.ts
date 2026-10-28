@@ -69,9 +69,11 @@ export interface RetrievalTimings {
 export interface BrainAttemptTrace {
   brainId: string;
   ms: number;
-  /** `busy`: the model was overloaded (503) for this request only — tried
-   * the next brain, marked nothing in the ledger. */
-  outcome: "answered" | "spent" | "unavailable" | "busy";
+  /** `busy`: the model was overloaded (503, or a Workers AI capacity 429)
+   * for this request only. `slow`: it had not started answering within its
+   * provider's `BRAIN_START_TIMEOUT_MS`. Either way the walk tried the next
+   * brain and marked nothing in the ledger. */
+  outcome: "answered" | "spent" | "unavailable" | "busy" | "slow";
 }
 
 /** The `id` on the retrieval part. Fixed, so the finishing write replaces the
@@ -82,8 +84,8 @@ export const RETRIEVAL_PART_ID = "retrieval" as const;
  * convention for custom data parts (`DataUIPart`'s `type: \`data-${NAME}\``). */
 export const RETRIEVAL_PART_TYPE = "data-retrieval" as const;
 
-/** Progress while Dox chooses a brain — "Asking 3.8 Flash…", "3.8 Flash is
- * busy — trying the next model…". Written `transient`: it reaches `onData`
+/** Progress while Dox chooses a brain — "Asking Gemma 4 26B…", "Gemma 4 26B
+ * is busy — trying the next model…". Written `transient`: it reaches `onData`
  * and the pending card, never the message or the history. */
 export interface StatusData {
   text: string;
@@ -102,3 +104,51 @@ export interface RefusalData {
   payload: unknown;
 }
 export const REFUSAL_PART_TYPE = "data-refusal" as const;
+
+/** One brain as the badge and the selector show it. */
+export interface BrainStatus {
+  id: string;
+  label: string;
+  provider: "google" | "workers-ai";
+  remaining: number;
+  limit: number;
+  state: "ok" | "spent" | "unavailable";
+}
+
+/** One provider behind the brains, and when its daily allowance refills —
+ * midnight Pacific for Gemini, 00:00 UTC for Workers AI. */
+export interface ProviderStatus {
+  id: "google" | "workers-ai";
+  label: string;
+  /** ISO instant of this provider's next reset. */
+  resetsAt: string;
+}
+
+/** What `/api/brains` answers, and what the chat stream's usage part carries
+ * once a question has been counted. */
+export interface BrainsInfo {
+  brains: BrainStatus[];
+  /** Configured providers only, in preference order. */
+  providers: ProviderStatus[];
+  activeBrainId: string | null;
+  visitor: {
+    used: number;
+    limit: number;
+    /** `null` for a dev, who is exempt from the per-visitor cap. */
+    remaining: number | null;
+    unlimited: boolean;
+    /** ISO instant of the next UTC midnight, when this visitor's own
+     * questions refill. */
+    resetsAt: string;
+  };
+}
+
+/**
+ * The counts after this question, written by the Worker as soon as a brain
+ * has accepted it. The badge takes them from here rather than re-reading
+ * `/api/brains`: the ledger is Workers KV, whose reads can lag a write by up
+ * to a minute, so a re-read straight after a question can still return the
+ * old count. The Worker already knows the new one. `transient`, like the
+ * progress line.
+ */
+export const USAGE_PART_TYPE = "data-usage" as const;

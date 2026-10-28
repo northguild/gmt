@@ -2431,8 +2431,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 - **The stream opens before a brain is chosen.** Measured 2026-09-24: two busy brains
   took 2.8 s of a 6.7 s answer, and the reader saw nothing but "Searching corpus…". Now
-  each step arrives as a transient `data-status` part ("3.8 Flash is busy — trying the
+  each step arrives as a transient `data-status` part ("Gemma 4 26B is busy — trying the
   next model…") and shows in the pending card.
+- **The badge counts arrive in the stream.** Once a brain answers, the Worker writes a
+  transient `data-usage` part (`USAGE_PART_TYPE`): the `/api/brains` payload built from the
+  snapshot read at the start of the request, plus this question and every brain the walk
+  marked out (`withRecordedRequest`, `worker/brains-payload.ts`). `DoxChat` hands it to
+  `useBrains().apply`. Re-reading `/api/brains` after the answer raced the ledger write,
+  and KV can take a minute to show it, so the badge kept its old count. A refusal or a
+  stream error still re-reads `/api/brains`.
 - **A refusal is a transient `data-refusal` part** carrying the `{ status, payload }` the
   HTTP error used to (`RefusalData`, `src/lib/chat-types.ts`). `DoxChat` passes it to the
   same `classifyChatError`, so the warning, retry and reset time are unchanged. Transient
@@ -2445,9 +2452,28 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 - **System prompt** (`worker/system-prompt.ts`), eight sections in order: Persona and
   scope · Standing order (the prompt-injection boundary) · Linking rules (only this
-  answer's retrieved URLs) · Vocabulary (consumer `SKILL.md`s) · Core rules
+  answer's retrieved URLs) · Vocabulary (the consumer `SKILL.md`s this question needs) · Core rules
   (`worker/core-rules.md`, pinned by `core-rules.test.ts`) · Retrieved context · Available
   tools · Refusal instruction. The order is pinned by `system-prompt.test.ts`.
+- **The prompt is cut to the question.** It used to be 145–200 KB on every question:
+  ~100 KB of `SKILL.md` vocabulary, ~60 KB of tool text and schemas, then up to 15 chunks.
+  Most of a model's wait before its first token was reading that. Now:
+  - **Vocabulary** (`worker/select-vocabulary.ts`): each consumer skill's frontmatter
+    `sources:` (modules, guide pages, or a guide folder as `*.mdx`) are matched against the
+    top ten retrieved chunks. A chunk votes for each skill that lists it, by rank, split
+    evenly between them. The best skill always goes in; another joins when it scores at
+    least half the best and fits `VOCABULARY_BUDGET_CHARS` (16,000). A skill's "When to
+    load" and "References" sections are dropped. A question that matches no skill gets
+    "(none for this question)". Averages ~13 KB a question.
+  - **Tools:** at most eight — see "Widget tools".
+  - **Chunks** (`worker/fit-chunks.ts`): at most 10, and at most 24,000 characters, best
+    first; the best chunk always goes in. The linking allowlist and the trace come from the
+    same list, so the reader is never shown a source the model did not see.
+
+  A chunk no skill lists votes for nothing. A rule that also counted a neighbouring page in
+  the same guide folder gave the conversion guide to the Integration skill, so it was
+  dropped. When a skill's guide coverage looks thin, add the page or folder to its
+  `sources:`.
 - **No provider flag restricts a model to a corpus.** Grounding is the prompt, the context
   and the refusal instruction.
 - **Key custody:** keys live only in Worker secrets and `.dev.vars`, never in `dist/` or a
@@ -2471,13 +2497,20 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
   Bold phrases are never auto-linked.
 - **Timeouts** (`use-idle-timeout.ts`): 90 s to the first output — failover plus a slow
-  first token — then 30 s of silence between chunks, reset on every chunk.
+  first token — restarted by each progress line, then 30 s of silence between chunks,
+  reset on every chunk. The Worker gives each brain its own start deadline
+  (`BRAIN_START_TIMEOUT_MS`), so a walk past several slow brains reports each one and is
+  not cut off by the client.
 - **Warnings are not errors.** A rate limit, a refused send or a stall renders a warning
   (`chat-warning.tsx`), not a message, so it never reaches the history. `retryable` drives
   "Try again".
 - **Composer:** a real `<textarea>` from `prompt-input.tsx`. The vendored file defers
   `form.reset()` to the success paths so a refused send keeps the reader's text — keep that
   on any AI Elements re-sync.
+- **Accuracy note** (`.gmt-hive-accuracy-note`): one standing line under the composer. Free
+  AI models write the answers and can get things wrong, so the reader should check them. The
+  widgets and tools run `@northguild/gmt` itself, and the line cites its test count from
+  `src/data/gmt-stats.json`, formatted in `en-US` so the server and browser renders match.
 - **Retrieval trace** (`RetrievalTrace.tsx`): chunk count and titles, zero for an
   out-of-corpus question, plus the brain that actually answered.
   - **Timings.** The Worker times each stage (`worker/timing.ts`): ledger, corpus, search,
@@ -2597,6 +2630,20 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.
+- **Offered per question, not all at once** (`worker/select-tools.ts`). Every tool travels
+  twice — a `Call when` line in the prompt and a JSON schema beside it — and all of them
+  came to ~60 KB a question. Each question gets at most eight:
+  - the widgets of the first five `CHAT_STARTERS` (`CORE_TOOL_COUNT`), so **the order of
+    the first five starters decides the core tools**;
+  - the best three matches from a small MiniSearch index over each tool's name, purpose and
+    `Call when` line, plus a bonus for a tool whose description names a function the
+    retrieval ranked near the top;
+  - every tool the conversation has already called, since a provider can reject a history
+    that calls an undeclared function.
+
+  `select-tools.test.ts` checks that every starter's own widget is offered for its own
+  question. A new tool whose starter misses needs better `Call when` wording, not a larger
+  set.
 - **Example cards open their widget on the click.** The `CHAT_STARTERS` live in the widget
   rail, not the empty chat, as a scrolling panel of bevelled cards (`ExamplesPanel.tsx`)
   grouped by area. The areas are industries: `EXAMPLE_AREAS` is Core, Transport, Intermodal and
@@ -2640,8 +2687,23 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   replayed turn has a tool call with no tool result, which the provider rejects on the
   reader's next question (`tools.test.ts`). `convertToModelMessages` runs with
   `ignoreIncompleteToolCalls: true`.
-- **One step** (the default `stopWhen`): the tool runs inside step 1, so no second upstream
-  call happens after headers are sent.
+- **One step, unless the widget came alone** (`WIDGET_THEN_PROSE`, `worker/brains.ts`): the
+  tool runs inside step 1, and an answer that wrote text, or called no tool, ends there.
+  A step 1 that called a tool and wrote nothing gets one more step with every tool switched
+  off (`prepareStep` → `activeTools: []`), so the model can only write. Gemma 4 and GLM 4.7
+  with thinking off mostly answer a widget question with the call alone. Step 2 runs after
+  the stream has opened, so it cannot fail over; if it fails, the reader keeps the widget
+  and sees the error after it. It costs a second read of the prompt.
+- **Tool calls written as text become real ones** (`toolCallMarkupMiddleware`,
+  `worker/tool-call-markup.ts`, wrapped round each brain's model with `wrapLanguageModel`).
+  GLM 4.7 Flash sometimes writes `<tool_call>showGlobe<arg_key>…</tool_call>` into its
+  answer instead of calling the tool. The middleware takes everything from `<tool_call>` to
+  `</tool_call>` out of the text, across deltas and unclosed, and drops a text block that
+  held only markup. When the step made no real call, each complete written call to a tool
+  on offer is sent as a real `tool-call` at the end of the step, so the widget opens and
+  step 2 writes the prose. A string argument keeps its text; any other is read as JSON.
+  When the step also made a real call, the written ones are only dropped, so a widget never
+  opens twice. `scripts/probe-brains.ts` fails an answer that still carries the markup.
 - **The client never trusts tool input.** `widget-registry.ts` re-validates at mount and
   checks IANA zones with gmt's `isValidTimeZone`; a nonsense zone renders an error state.
   The registry is fixed and typed, with a literal `import()` per mount and no `eval` or
@@ -2670,18 +2732,29 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Rail** (`WidgetRail.tsx`, AI Elements `Artifact`): shows the examples panel until a tool
   call opens a widget, and has a copy-permalink button. The transcript's `WidgetReceipt` chip is a seeded
   link to the widget's tool page.
+  - **Width** (`RailResizer.tsx`, `rail-width.ts`): a `role="separator"` handle on the rail's
+    left edge. Drag it, or focus it and use ← → (Shift for bigger steps), Home and End.
+    Double-click resets it. The narrowest is the default `clamp(22rem, 34vw, 34rem)`. The widest
+    is half the page body, and the transcript keeps at least 28rem. The width is one CSS
+    property, `--gmt-hive-rail-width`, on `.gmt-hive-body`, so a widget swap keeps it. The
+    reader's width is kept in `localStorage` (`gmt-dox-rail-width`) and applied after mount.
+    The CSS clamps it again, so a window resize needs no script. Below 60rem the rail is the
+    bottom sheet and the handle is hidden.
 - **Tool prompt wording matters.** "When the question matches a `Call when` line, call that
   tool" works; "Prefer prose; call a tool only when seeing beats reading" took the converter
   to 0 calls in 3. Prose first, at most one tool, no default widget, never invent a zone.
 
 ### Brains and budget
 
-- **`BRAINS`** (`src/lib/chat-constants.ts`), in preference order:
-  - eight Gemini Flash / Flash-Lite models, ~20 requests/day each;
-  - `gemini-3.1-pro-preview`, ~5/day;
-  - `cf-glm-4.7-flash` on Workers AI, ~110 questions/day.
-  
-  That is ~275 questions a day in total.
+- **`BRAINS`** (`src/lib/chat-constants.ts`), in preference order. `BRAINS[0]` is the
+  default:
+  - `cf-gemma-4-26b` and `cf-glm-4.7-flash` on Workers AI, badge 40 a day each;
+  - `gemini-3.5-flash-lite` (5 of 5 correct at 2.9 s mean in the probe), then
+    `gemini-3.6-flash` and `gemini-3.5-flash` (6–10 s), ~20 requests a day each.
+
+  Workers AI leads because it answers: Gemma with thinking off answers in ~2–3 s, GLM in
+  ~4–5 s. The Gemini models kept are the ones that answered 200 in a live probe; the
+  rest, and the reasons, are listed above `BRAINS`.
 - **Two kinds of allowance** (`BRAIN_PROVIDERS`):
   - **Gemini** — per project, per model, resets at midnight Pacific.
   - **Workers AI** — 10,000 Neurons/day per account, shared by every Workers AI model,
@@ -2692,15 +2765,30 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   provider's day and expire at its provider's midnight; the visitor cap is on the UTC day
   (`VISITOR_CAP_TIME_ZONE` in `src/lib/pt-day.ts`). Writes are best-effort, and visitors are hashed IPs.
 - **Failover inside one request** (`openFirstWorkingBrain`, `worker/brains.ts`):
-  - `await result.warnings` forces the upstream call before any stream opens.
+  - The walk waits for the first content part (`onChunk`: text, reasoning or a tool call),
+    racing `result.warnings`. `warnings` settles only when the whole answer is done, but
+    it rejects at once on a failed call, so a 429 is caught before any stream opens. The
+    walk returns on the first content, so the answer streams to the reader as it is
+    written. A failure after that reaches the reader through `onStreamError`.
   - That rejection is a contentless `NoOutputGeneratedError`, so `onError` captures the
     real provider error; unwrap `RetryError` and `NoOutputGeneratedError` before
     classifying.
   - 429 → `spent`; 404 / 400 (and a Workers AI 403) → `unavailable`; anything else
     rethrows.
-  - Known-out brains are tried last, never pruned — the ledger can be stale.
+  - **The reader's pick leads** (`orderCandidates`), even when the ledger has it as out:
+    the progress line names each brain as it is asked, and a pick moved to the back read
+    as Dox ignoring the selector. Then registry order, with known-out brains last, never
+    pruned — the ledger can be stale.
+  - **A brain that does not start in time is skipped** for this question, with outcome
+    `slow` and nothing in the ledger: `BRAIN_START_TIMEOUT_MS` is 15 s for Gemini and
+    20 s for Workers AI. One silent Gemini model once held the whole request for 60 s.
+    The deadline covers only the start: a brain that has begun keeps going, however long
+    the answer takes. If no brain started and none was busy, the walk throws
+    `BrainsTimedOutError`, which `mapUpstreamError` turns into a retryable 503, never
+    "allowance used".
   - Workers AI allocation exhaustion (3036, or the unmapped 4006) retires every Workers AI
-    brain at once; a capacity 429 (3040) retires only that brain.
+    brain at once. A capacity 429 (3040, "no more data centers") is transient: the request
+    moves on and nothing is marked.
   - `maxRetries: 0`. The SDK's retry backs off from 2 s, which put a pause in front of
     every failover; the next brain is the retry.
   - **A busy model moves on, and is not marked.** Gemini answers 503 "This model is
@@ -2710,27 +2798,40 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     brain was out or busy, the last overload becomes a retryable refusal, not "allowance
     used". A 500 still stops at the first brain: an error in the request would fail on all
     of them.
-- **Thinking level.** Each Gemini brain carries `thinkingLevel` (`chat-constants.ts`), passed
-  as `providerOptions.google.thinkingConfig`. All are `"low"`: left unset, Gemini 3 thinks
-  dynamically over the 10–16k-token prompt before its first token. A brain that stops
-  calling its widget under `"low"` moves to `"medium"` on its own; confirm with
-  `probe-brains.ts` after changing any.
+- **Thinking.** Thinking before the first word is most of a model's wait, so every brain
+  turns it down:
+  - Each Gemini brain carries `thinkingLevel` (`chat-constants.ts`), passed as
+    `providerOptions.google.thinkingConfig`. All are `"low"`; left unset, Gemini 3 thinks
+    dynamically over the whole prompt. A brain that stops calling its widget under `"low"`
+    moves to `"medium"` on its own.
+  - Each Workers AI brain carries `enableThinking: false`, sent as
+    `chat_template_kwargs: { enable_thinking: false }` (`worker/workers-ai-settings.ts`,
+    forwarded by `workers-ai-provider` to the model's inputs). It is the only switch that
+    works for Gemma 4 and GLM 4.7: `reasoning_effort` set to `null`, `"none"` or `"low"`
+    still thought for 4–21 s and often returned an empty answer.
+
+  Confirm with `probe-brains.ts` after changing any.
 - **Workers AI wiring:** `workers-ai-provider@4` over the `AI` binding (`remote: true`).
   - `worker/index.ts` offers only configured brains — Gemini needs the key, Workers AI the
     binding — so a missing provider shrinks the list instead of failing requests.
-  - Each Workers AI brain sets `maxOutputTokens: 2048` (the default 256 truncates answers)
-    and `reasoningEffort: null`.
+  - Each Workers AI brain sets `maxOutputTokens: 2048` (the default 256 truncates answers).
   - Every answered request logs `dox-usage` with token counts.
-- **Workers AI model choice** (probed 2026-09-11, 10–16k input tokens a question):
-  - Kept: `glm-4.7-flash` — 4/4 widget calls, refuses, ~88 Neurons a question, but 6–24 s
-    replies and occasional factual slips.
-  - Dropped `qwen3-30b-a3b-fp8` and `llama-4-scout`: `workers-ai-provider@4.0.0` reads
-    both `response` and `choices[0].delta` from one chunk, so text and tool arguments
-    arrive doubled. Re-probe when the provider fixes it.
-  - Dropped `gpt-oss-20b`: it writes tool calls as reply text.
-  - Dropped `glm-5.3-flash`: Workers Paid only.
-  - The cheapest lever for more Workers AI questions is a trimmed vocabulary for those
-    brains — the `SKILL.md` text is the largest part of the prompt.
+- **Workers AI model choice** (`scripts/probe-brains.ts` through the Worker, 10–19k input
+  tokens a question; measured 2026-10-27):
+  - Kept: `gemma-4-26b-a4b-it` — mean 2.6 s, ~130–180 Neurons a question — and
+    `glm-4.7-flash` — mean 4.6 s, ~80–110 Neurons. Both called the widget 4 of 4 times and
+    refused the absent question.
+  - Dropped `llama-3.3-70b-instruct-fp8-fast` and `mistral-small-3.1-24b-instruct`:
+    `workers-ai-provider@4.0.0` emits every delta twice, so tool JSON is unreadable and
+    prose stutters. Re-probe when the provider fixes it.
+  - Dropped `gpt-oss-120b`: widget with no prose, once printed its raw channel markup,
+    ~410 Neurons a question.
+  - Dropped `qwen3.8-27b` and `nemotron-3-120b-a12b`: ~600 Neurons a Dox prompt, about 16
+    questions a day for the whole site.
+  - Paid-plan models (5035) are out while Dox stays on Free.
+  - Probe: `npx tsx scripts/probe-brains.ts --base http://localhost:8799/gmt --log <log>
+    --starters 4 --brains cf-gemma-4-26b,cf-glm-4.7-flash`. A local `wrangler dev` spends
+    the Neurons of the account Wrangler is logged into.
 - **`VISITOR_DAILY_MAX` is 5.** Recompute it whenever `BRAINS` changes.
 
 ### Traps

@@ -45,7 +45,7 @@ export function describeTimings(timings: RetrievalTimings): string {
     .join(" · ");
 }
 
-/** "3.8 Flash spent 2.1 s → 3.7 Flash answered 1.8 s". */
+/** "Gemma 4 26B slow 20.0 s → GPT-OSS 120B answered 1.8 s". */
 export function describeAttempts(attempts: BrainAttemptTrace[]): string {
   return attempts
     .map(

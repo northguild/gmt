@@ -50,6 +50,16 @@ describe("assembleSystemPrompt", () => {
     expect(prompt).toContain("CORE_RULES_MARKER");
   });
 
+  it("says so when no skill matched, rather than leaving the section blank", () => {
+    const prompt = assembleSystemPrompt({
+      routeAllowlist: [],
+      chunks: [],
+      vocabulary: "",
+      coreRules: "CORE_RULES_MARKER",
+    });
+    expect(prompt).toMatch(/## Vocabulary\n\n\(none for this question\)\n\n## Core rules/);
+  });
+
   /* This assertion used to pass `routeAllowlist` and `chunks` from one fixture
      and then only check `prompt).toContain(chunk.url)` — which would hold
      just as well if `assembleSystemPrompt` ignored `routeAllowlist` entirely,

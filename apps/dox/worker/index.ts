@@ -1,13 +1,6 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { convertUnixToUtc } from "@northguild/gmt";
 import { createWorkersAI } from "workers-ai-provider";
-import {
-  BRAINS,
-  VISITOR_DAILY_MAX,
-  findBrain,
-  type Brain,
-} from "../src/lib/chat-constants";
-import { nextVisitorMidnightMs } from "../src/lib/pt-day";
+import { BRAINS, findBrain, type Brain } from "../src/lib/chat-constants";
 import {
   SITE_BASE,
   SITE_ORIGIN,
@@ -15,7 +8,7 @@ import {
   isUnderBase,
   stripBase,
 } from "../src/lib/site";
-import { chooseBrain, remainingFor } from "./brains";
+import { brainsPayload } from "./brains-payload";
 import { getUnixNowMs } from "./clock";
 import { handleCanadaClockChange } from "./canada-clock-change";
 import { handleMoroccoClockChange } from "./morocco-clock-change";
@@ -28,13 +21,9 @@ import {
   timingSafeEqual,
 } from "./dev-access";
 import { clientIdFromRequest } from "./rate-limit";
-import {
-  hashVisitor,
-  providerResets,
-  readUsage,
-  type UsageStore,
-} from "./usage";
-import { VOCABULARY_CONTENT } from "./vocabulary";
+import { hashVisitor, readUsage, type UsageStore } from "./usage";
+import { VOCABULARY_SKILLS } from "./vocabulary";
+import { workersAISettings } from "./workers-ai-settings";
 
 /** Hand-declared rather than pulling in `@cloudflare/workers-types` — this
  * Worker only ever touches a few binding methods, and the spike in this story
@@ -146,37 +135,8 @@ async function handleBrains(request: Request, env: Env): Promise<Response> {
     ? await readUsage(env.DOX_USAGE, brains, visitorHash, nowMs)
     : { perBrain: {}, states: {}, visitor: 0 };
 
-  const active = chooseBrain(snapshot, undefined, brains).brain;
-
   return Response.json(
-    {
-      brains: brains.map((brain: Brain) => ({
-        id: brain.id,
-        label: brain.label,
-        provider: brain.provider,
-        remaining: remainingFor(brain, snapshot),
-        limit: brain.dailyLimit,
-        state: snapshot.states[brain.id] ?? "ok",
-      })),
-      /* One entry per configured provider, each with its own next midnight —
-         Pacific for Gemini, UTC for Workers AI (DOX-C4). There is no single
-         pool-wide reset any more, so the old top-level `resetsAt` is gone;
-         the chat decides which of these (or the visitor's) to show. */
-      providers: providerResets(brains, nowMs),
-      activeBrainId: active?.id ?? null,
-      visitor: {
-        used: snapshot.visitor,
-        limit: VISITOR_DAILY_MAX,
-        remaining: dev
-          ? null
-          : Math.max(0, VISITOR_DAILY_MAX - snapshot.visitor),
-        // A dev is exempt from the per-visitor cap. NOT from the shared pool —
-        // nothing on the free tier can raise that, and the UI says so.
-        unlimited: dev,
-        // The visitor cap is Dox's own and always on the UTC day.
-        resetsAt: convertUnixToUtc(nextVisitorMidnightMs(nowMs)),
-      },
-    },
+    brainsPayload({ brains, snapshot, nowMs, dev }),
     {
       headers: {
         /* `private`, never `public`: this body carries `visitor.used`,
@@ -190,14 +150,13 @@ async function handleBrains(request: Request, env: Env): Promise<Response> {
            it was an argument for an *edge* cache absorbing shared traffic,
            and `private` is precisely the instruction not to have one. What
            is left to cache is one visitor's own browser, and any window at
-           all swallows DoxChat's post-send refresh 1.5s later — leaving the
-           badge motionless after the reader's own question, which is what
-           DOX-C3a's "they move with real requests" line rules out.
+           all would hand back stale counts to the re-read DoxChat makes after
+           a refused question.
 
            The load this gives up is negligible and worth stating so nobody
            re-adds the header: this endpoint is fetched once per chat mount
-           plus once per send, against a per-visitor cap of VISITOR_DAILY_MAX,
-           so a visitor costs single-digit KV reads per day. */
+           plus once per refused question, so a visitor costs single-digit KV
+           reads per day. */
         "cache-control": "private, no-store",
       },
     },
@@ -265,14 +224,7 @@ async function routeApi(
       const brain = findBrain(brainId);
       const model = brain?.model ?? brainId;
       if (brain?.provider === "workers-ai" && workersAI) {
-        return workersAI(
-          model,
-          // `!== undefined`, not truthiness: `null` is a real setting
-          // ("thinking off"), distinct from leaving the model's default.
-          brain.reasoningEffort !== undefined
-            ? { reasoning_effort: brain.reasoningEffort }
-            : {},
-        );
+        return workersAI(model, workersAISettings(brain));
       }
       if (brain?.provider === "google" && google) return google(model);
       // Unreachable while `brains` is `configuredBrains(env)`: the handler
@@ -282,7 +234,7 @@ async function routeApi(
     brains,
     usage: env.DOX_USAGE,
     isDev: (req) => isDevRequest(req, env.DOX_DEV_KEY, getUnixNowMs()),
-    vocabulary: VOCABULARY_CONTENT,
+    vocabulary: VOCABULARY_SKILLS,
     coreRules: CORE_RULES_CONTENT,
     fetchImpl: corpusFetcher(env),
     cache: caches.default,
