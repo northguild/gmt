@@ -15,11 +15,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { BrainsInfo } from "~/lib/chat-types";
 import { withBase } from "~/lib/site";
 
-export type {
-  BrainsInfo,
-  BrainStatus,
-  ProviderStatus,
-} from "~/lib/chat-types";
+export type { BrainsInfo, BrainStatus, ProviderStatus } from "~/lib/chat-types";
 export type BrainState = BrainsInfo["brains"][number]["state"];
 
 export function useBrains() {

@@ -87,14 +87,9 @@ describe("fromSnowflake", () => {
     ${{ ...D, shift: 22n }}                            | ${"bigint shift"}
     ${{ ...T, shift: 22n }}                            | ${"bigint shift with timestampBits"}
     ${{ ...T, shift: Symbol("22") }}                   | ${"symbol shift with timestampBits"}
-    ${{
-  ...T,
-  shift: {
-    valueOf: () => {
+    ${{ ...T, shift: { valueOf: () => {
       throw new Error("valueOf");
-    },
-  },
-}} | ${"shift whose valueOf throws"}
+    } } }} | ${"shift whose valueOf throws"}
     ${{ ...D, timestampBits: 43 }}                     | ${"timestampBits above 64 - shift"}
     ${{ ...D, timestampBits: 0 }}                      | ${"timestampBits 0"}
     ${{ ...D, timestampBits: 41.5 }}                   | ${"non-integer timestampBits"}
@@ -132,25 +127,15 @@ describe("fromSnowflake", () => {
     layout            | reason
     ${hostileProxy()} | ${"proxy that throws on every trap"}
     ${revokedProxy()} | ${"revoked proxy"}
-    ${{
-  get epochMs() {
+    ${{ get epochMs() {
     throw new Error("hostile getter");
-  },
-  shift: 22,
-}} | ${"throwing epochMs getter"}
-    ${{
-  epochMs: 1420070400000,
-  get shift() {
+  }, shift: 22 }} | ${"throwing epochMs getter"}
+    ${{ epochMs: 1420070400000, get shift() {
     throw new Error("hostile getter");
-  },
-}} | ${"throwing shift getter"}
-    ${{
-  epochMs: 1420070400000,
-  shift: 22,
-  get timestampBits() {
+  } }} | ${"throwing shift getter"}
+    ${{ epochMs: 1420070400000, shift: 22, get timestampBits() {
     throw new Error("hostile getter");
-  },
-}} | ${"throwing timestampBits getter"}
+  } }} | ${"throwing timestampBits getter"}
   `('returns "" without throwing for $reason', ({ layout }) => {
     expect(fromSnowflake("1", layout)).toBe("");
   });

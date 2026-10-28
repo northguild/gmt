@@ -327,12 +327,9 @@ describe("readPosition", () => {
 
     it.each`
       row      | label               | make
-      ${"N10"} | ${"throwing getter"} | ${() => ({
-  get latitude(): number {
+      ${"N10"} | ${"throwing getter"} | ${() => ({ get latitude(): number {
     throw new Error("boom");
-  },
-  longitude: 0,
-})}
+  }, longitude: 0 })}
       ${"N10"} | ${"hostileProxy()"} | ${hostileProxy}
       ${"N10"} | ${"revokedProxy()"} | ${revokedProxy}
     `("$row $label returns null and does not throw", ({ make }) => {

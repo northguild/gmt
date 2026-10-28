@@ -62,9 +62,7 @@ describe("selectTools", () => {
         ],
       },
     ];
-    expect(pick("and in Tokyo?", history)).toContain(
-      "showGnssRolloverChecker",
-    );
+    expect(pick("and in Tokyo?", history)).toContain("showGnssRolloverChecker");
   });
 
   it("ignores a tool part that is not an enabled widget", () => {
