@@ -4,6 +4,7 @@ import { createChatHandler, type ChatHandlerDeps } from "./chat-handler";
 import { resetRateLimitState } from "./rate-limit";
 import type { RetrievalChunk } from "../src/lib/retrieval/types";
 import {
+  BRAIN_PROVIDERS,
   BRAINS,
   VISITOR_DAILY_MAX,
   type Brain,
@@ -18,7 +19,6 @@ import {
 import {
   dayKey,
   nextMidnightMs,
-  ptDayKey,
   secondsUntilMidnight,
 } from "../src/lib/pt-day";
 import { DOX_TOOL_NAMES, ENABLED_TOOL_NAMES } from "../src/lib/dox-tools";
@@ -28,9 +28,11 @@ import { APICallError } from "ai";
 import { convertUnixToUtc, convertUtcToUnix } from "@northguild/gmt";
 import { getUnixNowMs } from "./clock";
 
-/** The ledger's bucket for "now" — tests assert against real keys rather than
- * reimplementing the Pacific-day rule. */
-const ptDay = () => ptDayKey(getUnixNowMs());
+/** The ledger's bucket for "now" on the brain's own clock: Gemini resets at
+ * Pacific midnight, Workers AI at UTC midnight. Tests assert against real keys
+ * rather than reimplementing the rule. */
+const brainDay = (brain: Brain) =>
+  dayKey(getUnixNowMs(), BRAIN_PROVIDERS[brain.provider].resetTimeZone);
 
 const SAMPLE_CHUNKS: RetrievalChunk[] = [
   {
@@ -938,7 +940,7 @@ describe("brains, budgets and failover", () => {
     // The ledger write is fire-and-forget; drain the stream so it has run.
     await response.text();
 
-    expect(await usage.get(`model:${ptDay()}:${BRAINS[0].id}`)).toBe("1");
+    expect(await usage.get(`model:${brainDay(BRAINS[0])}:${BRAINS[0].id}`)).toBe("1");
   });
 
   it("stops a visitor who has spent their daily allowance", async () => {
@@ -1172,7 +1174,7 @@ describe("brains, budgets and failover", () => {
       )
     ).text();
 
-    expect(await usage.get(`state:${ptDay()}:${BRAINS[0].id}`)).toBe("spent");
+    expect(await usage.get(`state:${brainDay(BRAINS[0])}:${BRAINS[0].id}`)).toBe("spent");
   });
 
   it("only reports exhaustion when every brain really refuses", async () => {
@@ -1388,7 +1390,7 @@ describe("brains, budgets and failover", () => {
     );
     await response.text();
 
-    expect(await usage.get(`state:${ptDay()}:${BRAINS[0].id}`)).toBe("spent");
+    expect(await usage.get(`state:${brainDay(BRAINS[0])}:${BRAINS[0].id}`)).toBe("spent");
   });
 
   it("names the answering brain in the retrieval trace", async () => {
