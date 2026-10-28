@@ -78,6 +78,12 @@ export const CHECKS = [
     needs: ["build:dox"],
   },
   {
+    // No table on a built page scrolls sideways at 1440 px (apps/dox/scripts/table-fit.mjs).
+    id: "dox-tables",
+    run: "pnpm --filter @gmt/dox exec node scripts/table-fit.mjs",
+    needs: ["build:dox"],
+  },
+  {
     id: "lint:gmt",
     run: "pnpm --filter @northguild/gmt run lint",
     needs: ["build:gmt-oxlint"],
@@ -135,6 +141,7 @@ const DOX_APP = [
   "build:dox",
   "api-surface",
   "dox-dist",
+  "dox-tables",
   "lint:dox",
   "typecheck:dox",
   "test:dox",
@@ -146,6 +153,7 @@ const DOX_CONTENT = [
   "build:dox",
   "api-surface",
   "dox-dist",
+  "dox-tables",
   "typecheck:dox",
   "test:dox",
 ];

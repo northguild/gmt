@@ -1,6 +1,7 @@
 ---
 import {
   cellHtml,
+  ENTRY_TABLES,
   compareTables,
   notesHtml,
   PROSE_TABLES,
@@ -24,12 +25,13 @@ interface Props {
 const { table } = Astro.props;
 const data = table === "notes" ? undefined : compareTables[table]();
 const notes = table === "notes" ? notesHtml() : [];
+const entries = table !== "notes" && ENTRY_TABLES.includes(table);
 const prose = table !== "notes" && PROSE_TABLES.includes(table);
 ---
 
 {
   data && (
-    <div class="gmt-ref-table" data-kind="notes">
+    <div class="gmt-ref-table" data-kind="notes" data-layout={entries ? "entries" : undefined}>
       <table class:list={["gmt-compare", prose && "gmt-compare--prose", prose && `gmt-compare--${table}`]}>
         <thead>
           <tr>
@@ -43,9 +45,9 @@ const prose = table !== "notes" && PROSE_TABLES.includes(table);
             <tr>
               {row.map((cell, index) =>
                 index === 0 ? (
-                  <th scope="row" set:html={cellHtml(cell)} />
+                  <th scope="row" data-col={data.head[0]} set:html={cellHtml(cell)} />
                 ) : (
-                  <td set:html={cellHtml(cell)} />
+                  <td data-col={data.head[index]} set:html={cellHtml(cell)} />
                 ),
               )}
             </tr>

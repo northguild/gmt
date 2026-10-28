@@ -10,10 +10,12 @@ import type { UpstreamFiling } from "../data/upstream-filings";
 
 interface Props {
   filing: UpstreamFiling;
+  /** The column header, named on the cell for the entries layout. */
+  column: string;
 }
 
 // See `UpstreamFilingRow.astro`: `Astro.props` is untyped in this app, so `Props` is applied here.
-const { filing } = Astro.props as Props;
+const { filing, column } = Astro.props as Props;
 
 const KIND = { pr: "Pull request", issue: "Issue" } as const;
 const WORK = {
@@ -24,7 +26,7 @@ const WORK = {
 } as const;
 ---
 
-<td>
+<td data-col={column}>
   {KIND[filing.kind]}
   {filing.work && (
     <>

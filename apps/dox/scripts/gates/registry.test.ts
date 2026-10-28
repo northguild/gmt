@@ -45,6 +45,7 @@ describe("the gate registry", () => {
       ...at("pr"),
       "canada-clock-still",
       "canada-stored-still",
+      "table-fit",
     ]);
     expect(at("local")).toHaveLength(GATES.length);
   });

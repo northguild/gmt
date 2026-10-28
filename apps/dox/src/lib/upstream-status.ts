@@ -14,6 +14,17 @@ type InGmtFields = Pick<
   "kind" | "gmtGuard" | "gmtNote" | "pairsWith"
 >;
 
+/** The tracker's column headers; each cell names its own on `data-col` for the entries layout. */
+export const UPSTREAM_COLUMNS = [
+  "Filing",
+  "In GMT",
+  "The problem",
+  "Kind",
+  "Upstream status",
+  "Replies",
+  "Last activity",
+] as const;
+
 /** Where a filing stands on GitHub, most decisive state first. */
 export function filingStatus(f: StatusFields): string {
   if (f.mergedAt) return "Merged, not yet in a published release";

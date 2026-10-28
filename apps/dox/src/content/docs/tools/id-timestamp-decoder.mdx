@@ -29,6 +29,7 @@ Paste an identifier, or pick a preset. All five decoders run on it, exactly as t
 
 **Epochs and precision.** Each decoder reads one format. [`fromUuidTimestamp`](/reference/precision/identifiers/fromUuidTimestamp/), [`fromUlid`](/reference/precision/identifiers/fromUlid/), [`fromObjectId`](/reference/precision/identifiers/fromObjectId/) and [`fromKsuid`](/reference/precision/identifiers/fromKsuid/) carry their epoch and precision inside the library. [`fromSnowflake`](/reference/precision/identifiers/fromSnowflake/) takes them from you.
 
+{/* table: entries */}
 | Format | Epoch | Precision | Last instant | Source |
 | --- | --- | --- | --- | --- |
 | UUID v1 and v6 | `1582-10-15T00:00:00Z` | 100 ns | `5236-03-31T21:21:00.6846975Z` | RFC 9562 §5.1, §5.6, §6.1 with erratum 8288 |

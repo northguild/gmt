@@ -296,6 +296,7 @@ describe("every browser gate", () => {
       "globe-smoke.mjs",
       "grow-measure.mjs",
       "readout-still.mjs",
+      "table-fit.mjs",
       "visual-snapshot.mjs",
     ]);
   });

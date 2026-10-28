@@ -149,6 +149,15 @@ export const GATES = [
     needs: null,
   },
   {
+    id: "table-fit",
+    script: "table-fit.mjs",
+    tier: "nightly",
+    browsers: ENGINES,
+    fullBrowsers: null,
+    themes: false,
+    needs: null,
+  },
+  {
     id: "globe-smoke",
     script: "globe-smoke.mjs",
     tier: "local",

@@ -6,6 +6,7 @@
  * carry the same words. Nothing here measures anything: results come from
  * `data/behaviour-matrix.json` and function links come from the reference corpus.
  */
+import { codeBreakClass, codeBreakHtml } from "./code-break";
 import { corpus } from "../generated/reference/corpus";
 
 import {
@@ -221,11 +222,17 @@ export { casesFor };
 const escapeHtml = (text: string): string =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+/** One code span as HTML; a span with break points carries `gmt-codebreak` and its pieces. */
+const codeSpanHtml = (text: string): string => {
+  const breakClass = codeBreakClass(text);
+  return `<code${breakClass ? ` class="${breakClass}"` : ""}>${codeBreakHtml(text)}</code>`;
+};
+
 /** Text with `backtick` spans as HTML: escaped, with `<code>` around each span. */
 export const codeSpans = (text: string): string =>
   text
     .split("`")
     .map((part, index) =>
-      index % 2 === 1 ? `<code>${escapeHtml(part)}</code>` : escapeHtml(part),
+      index % 2 === 1 ? codeSpanHtml(part) : escapeHtml(part),
     )
     .join("");
