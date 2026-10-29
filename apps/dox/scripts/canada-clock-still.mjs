@@ -10,7 +10,7 @@
  *   - the Worker answer stubbed (a fixed fixture, no network) and
  *   - a fake clock (`page.clock`) set 90 s before America/Toronto leaves daylight time, so one
  *     advance crosses a minute and the next crosses Toronto's `next.instant` (-04:00 to -05:00).
- * It records every `.gmt-clockcheck-clock` card's and `[data-role="clock-time"]` readout's rect, then
+ * It records every clock card's and clock readout's rect (the `clock` and `clock-time` gate hooks), then
  * advances 60 s twice and asserts the rects are unchanged, the readouts did change, and Toronto's
  * readout moved from -04:00 to -05:00. At 375 px it also asserts no horizontal page scroll.
  *
@@ -38,6 +38,7 @@ import { chromium, firefox, webkit } from "@playwright/test";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordLabelled, recordMeasured } from "./gates/findings.mjs";
+import { gate, resolveMisses } from "./lib/locate.mjs";
 
 const GATE = "canada-clock-still";
 import {
@@ -136,23 +137,33 @@ const fail = (message) => {
   recordLabelled({ gate: GATE, page: PATH, message });
 };
 
+/** The parts the pin-panel check measures, by their gate hooks. */
+const PIN_SEL = {
+  pin: gate("map-pin"),
+  cell: gate("pin-cell"),
+  map: gate("map-frame"),
+  form: gate("stored-form"),
+  list: 'ul[aria-label="Zones"]',
+};
+
 async function snapshot(page) {
-  return page.evaluate(() => {
-    const box = (el) => {
-      const r = el.getBoundingClientRect();
-      return [r.x, r.y, r.width, r.height].map(
-        (n) => Math.round(n * 100) / 100,
-      );
-    };
-    return [...document.querySelectorAll(".gmt-clockcheck-clock")].map(
-      (card) => ({
+  return page.evaluate(
+    (sel) => {
+      const box = (el) => {
+        const r = el.getBoundingClientRect();
+        return [r.x, r.y, r.width, r.height].map(
+          (n) => Math.round(n * 100) / 100,
+        );
+      };
+      return [...document.querySelectorAll(sel.clock)].map((card) => ({
         zone: card.dataset.zone,
         card: box(card),
-        readout: box(card.querySelector('[data-role="clock-time"]')),
-        text: card.querySelector('[data-role="clock-time"]').textContent.trim(),
-      }),
-    );
-  });
+        readout: box(card.querySelector(sel.time)),
+        text: card.querySelector(sel.time).textContent.trim(),
+      }));
+    },
+    { clock: gate("clock"), time: gate("clock-time") },
+  );
 }
 
 function sameRects(label, before, after) {
@@ -175,17 +186,17 @@ function sameRects(label, before, after) {
 
 /** Page-absolute rects of what must not move when a zone is pinned. */
 async function pinRects(page) {
-  return page.evaluate(() => {
-    const box = (sel) => {
-      const el = document.querySelector(sel);
+  return page.evaluate((sel) => {
+    const box = (selector) => {
+      const el = document.querySelector(selector);
       if (!el) return null;
       const r = el.getBoundingClientRect();
       return [r.x + scrollX, r.y + scrollY, r.width, r.height].map(
         (n) => Math.round(n * 100) / 100,
       );
     };
-    const panel = document.querySelector(".gmt-zonemap-pin");
-    const cells = [...panel.querySelectorAll("dd[data-role]")].map((cell) => {
+    const panel = document.querySelector(sel.pin);
+    const cells = [...panel.querySelectorAll(sel.cell)].map((cell) => {
       const probe = document.createElement("span");
       probe.style.cssText =
         "display:block;width:4ch;height:0;visibility:hidden";
@@ -193,20 +204,20 @@ async function pinRects(page) {
       const four = probe.getBoundingClientRect().width;
       probe.remove();
       return {
-        role: cell.dataset.role,
+        role: cell.parentElement.querySelector("dt")?.textContent.trim(),
         width: cell.getBoundingClientRect().width,
         four,
       };
     });
     return {
-      panel: box(".gmt-zonemap-pin"),
-      map: box(".gmt-zonemap-map"),
-      form: box(".gmt-clockcheck-stored-form"),
+      panel: box(sel.pin),
+      map: box(sel.map),
+      form: box(sel.form),
       cells,
       // The panel opens below the zone list's box (never inside it, where it would scroll with it).
       belowList: (() => {
         // The box that clips the list (its nearest scrolling ancestor), or the list itself.
-        const list = document.querySelector('[data-role="zone-list"]');
+        const list = document.querySelector(sel.list);
         let box = list;
         for (let e = list.parentElement; e; e = e.parentElement) {
           if (getComputedStyle(e).overflowY !== "visible") {
@@ -223,10 +234,9 @@ async function pinRects(page) {
         );
       })(),
       mapShown:
-        getComputedStyle(document.querySelector(".gmt-zonemap-map")).display !==
-        "none",
+        getComputedStyle(document.querySelector(sel.map)).display !== "none",
     };
-  });
+  }, PIN_SEL);
 }
 
 async function checkPinPanel(page, label, width) {
@@ -242,11 +252,9 @@ async function checkPinPanel(page, label, width) {
       await page.locator(`button[data-tz-id="${id}"]`).click();
       const ok = await page
         .waitForFunction(
-          (zone) =>
-            document
-              .querySelector('[data-role="pin-zone"]')
-              ?.textContent?.trim() === zone,
-          id,
+          ({ zone, selector }) =>
+            document.querySelector(selector)?.textContent?.trim() === zone,
+          { zone: id, selector: gate("pin-zone") },
           { timeout: 1500 },
         )
         .then(
@@ -302,6 +310,44 @@ async function checkPinPanel(page, label, width) {
   console.log(
     `${label}: pinned ${ALL_ZONES.length} zones, panel, map and form held still`,
   );
+}
+
+/* `--resolve-only`: load the page once and check that every hook this gate measures by is on it. */
+if (args.includes("--resolve-only")) {
+  const browser = await chromium.launch();
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+  });
+  await blockOffSite(context, BASE);
+  const page = await context.newPage();
+  await routeWorker(page, REGION, { getFixture: RUN_FIXTURE });
+  const response = await page.goto(`${BASE}${PATH}`, { waitUntil: "load" });
+  const miss = [];
+  if (!response || response.status() !== 200)
+    miss.push(`the page answered HTTP ${response?.status() ?? "none"}`);
+  else {
+    await waitForState(page, ["ready"]);
+    miss.push(
+      ...(await resolveMisses(page, [
+        { name: "clock card", sel: gate("clock"), min: 1 },
+        { name: "clock readout", sel: gate("clock-time"), min: 1 },
+        { name: "pin panel", sel: gate("map-pin"), min: 1, max: 1 },
+        { name: "pin cell", sel: gate("pin-cell"), min: 1 },
+        { name: "map frame", sel: gate("map-frame"), min: 1, max: 1 },
+        { name: "stored form", sel: gate("stored-form"), min: 1, max: 1 },
+        {
+          name: "zone list",
+          loc: page.getByRole("list", { name: "Zones", exact: true }),
+          min: 1,
+          max: 1,
+        },
+      ])),
+    );
+  }
+  console.log(`${miss.length ? "FAIL" : "ok  "} resolve ${PATH}`);
+  for (const m of miss) console.log(`       ${m}`);
+  await browser.close();
+  process.exit(miss.length ? 1 : 0);
 }
 
 for (const name of BROWSERS) {

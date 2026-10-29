@@ -5,7 +5,7 @@
  * `visual:diff` is a perceptual pixel diff with a 0.2% tolerance, by deliberate
  * design (see visual-snapshot.mjs). That makes it blind to exactly the class of
  * mistake the DOX-C3b refactor can introduce: a dropped `selected` attribute, a
- * reordered attribute pair, a missing `data-role`, a lost comment node. Each
+ * reordered attribute pair, a missing hook attribute, a lost comment node. Each
  * renders identically and breaks a control silently, because every lookup in
  * the widget scripts is a null-tolerant `q()`.
  *
@@ -50,155 +50,155 @@ const GATE = "html-diff";
 const PAGES = [
   {
     path: "reference/zoned/get/getDstTransitions",
-    widget: "gmt-dst gmt-widget",
+    widget: "dst-inspector",
   },
   {
     path: "reference/zoned/interval/intervalIntersectionZoned",
-    widget: "gmt-interval gmt-widget",
+    widget: "interval-visualizer",
   },
   {
     path: "reference/zoned/convert/convertZonedToZoned",
-    widget: "gmt-converter gmt-widget",
+    widget: "converter-bench",
   },
   {
     path: "tools/dwell-ledger",
-    widget: "gmt-dwell gmt-widget",
+    widget: "dwell-ledger",
   },
   {
     path: "tools/free-time-ledger",
-    widget: "gmt-freetime gmt-widget",
+    widget: "free-time-ledger",
   },
   {
     path: "tools/billing-deadlines",
-    widget: "gmt-billing gmt-widget",
+    widget: "billing-deadlines",
   },
   {
     path: "tools/delivery-scheduler",
-    widget: "gmt-delivery gmt-widget",
+    widget: "delivery-scheduler",
   },
   {
     path: "tools/connection-checker",
-    widget: "gmt-connection gmt-widget",
+    widget: "connection-checker",
   },
   {
     path: "tools/timetable-reader",
-    widget: "gmt-timetable gmt-widget",
+    widget: "timetable-reader",
   },
   {
     path: "tools/crossing-clock",
-    widget: "gmt-crossing gmt-widget",
+    widget: "crossing-clock",
   },
   {
     path: "tools/cutoff-stack",
-    widget: "gmt-cutoff-stack gmt-widget",
+    widget: "cutoff-stack",
   },
   {
     path: "tools/cutoff-ruler",
-    widget: "gmt-cutoff-ruler gmt-widget",
+    widget: "cutoff-ruler",
   },
   {
     path: "tools/cutoff-countdown",
-    widget: "gmt-cutoff-countdown gmt-widget",
+    widget: "cutoff-countdown",
   },
   {
     path: "tools/punctuality-board",
-    widget: "gmt-punctuality-board gmt-widget",
+    widget: "punctuality-board",
   },
   {
     path: "tools/eta-drift",
-    widget: "gmt-eta-drift gmt-widget",
+    widget: "eta-drift",
   },
   {
     path: "tools/departure-board",
-    widget: "gmt-departure-board gmt-widget",
+    widget: "departure-board",
   },
   {
     path: "tools/dtm-decoder",
-    widget: "gmt-dtm-decoder gmt-widget",
+    widget: "dtm-decoder",
   },
   {
     path: "tools/x12-time-reader",
-    widget: "gmt-x12-time-reader gmt-widget",
+    widget: "x12-time-reader",
   },
   {
     path: "tools/demurrage-clock",
-    widget: "gmt-demurrage-clock gmt-widget",
+    widget: "demurrage-clock",
   },
   {
     path: "tools/bl-date-stamp",
-    widget: "gmt-bl-date-stamp gmt-widget",
+    widget: "bl-date-stamp",
   },
   {
     path: "tools/epcis-event-reader",
-    widget: "gmt-epcis-event-reader gmt-widget",
+    widget: "epcis-event-reader",
   },
   {
     path: "tools/journey-split",
-    widget: "gmt-journey-split gmt-widget",
+    widget: "journey-split",
   },
   {
     path: "tools/gnss-week-decoder",
-    widget: "gmt-gnss-week-decoder gmt-widget",
+    widget: "gnss-week-decoder",
   },
   {
     path: "tools/satellite-clock-converter",
-    widget: "gmt-satellite-clock-converter gmt-widget",
+    widget: "satellite-clock-converter",
   },
   {
     path: "tools/gnss-rollover-checker",
-    widget: "gmt-gnss-rollover-checker gmt-widget",
+    widget: "gnss-rollover-checker",
   },
   {
     path: "tools/leap-second-timeline",
-    widget: "gmt-leap-second-timeline gmt-widget",
+    widget: "leap-second-timeline",
   },
   {
     path: "tools/elapsed-vs-clock-difference",
-    widget: "gmt-elapsed-vs-clock gmt-widget",
+    widget: "elapsed-vs-clock",
   },
   {
     path: "tools/stored-time-audit",
-    widget: "gmt-stored-time-audit gmt-widget",
+    widget: "stored-time-audit",
   },
   {
     path: "tools/holiday-rule-builder",
-    widget: "gmt-holiday-rule-builder gmt-widget",
+    widget: "holiday-rule-builder",
   },
   {
     path: "tools/observance-comparator",
-    widget: "gmt-observance-comparator gmt-widget",
+    widget: "observance-comparator",
   },
   {
     path: "tools/moving-feasts",
-    widget: "gmt-moving-feasts gmt-widget",
+    widget: "moving-feasts",
   },
   {
     path: "check/canada-2026-clock-change",
-    widget: "gmt-canada gmt-widget",
+    widget: "canada-clock-change",
   },
   {
     path: "check/morocco-2026-clock-change",
-    widget: "gmt-morocco gmt-widget",
+    widget: "morocco-clock-change",
   },
   {
     path: "tools/duration-parser-bench",
-    widget: "gmt-duration-parser-bench gmt-widget",
+    widget: "duration-parser-bench",
   },
   {
     path: "tools/id-timestamp-decoder",
-    widget: "gmt-id-timestamp-decoder gmt-widget",
+    widget: "id-timestamp-decoder",
   },
   {
     path: "tools/column-timestamp-bridge",
-    widget: "gmt-column-timestamp-bridge gmt-widget",
+    widget: "column-timestamp-bridge",
   },
   {
     path: "tools/cron-in-a-zone",
-    widget: "gmt-cron-zone gmt-widget",
+    widget: "cron-in-a-zone",
   },
   {
     path: "tools/leap-day-birthday",
-    widget: "gmt-leap-day gmt-widget",
+    widget: "leap-day-birthday",
   },
 ];
 
@@ -220,6 +220,7 @@ function widgetFinding(p, rule, message) {
     gate: GATE,
     rule,
     page: sitePath(p),
+    target: `widget:${p.path.split("/").pop()}`,
     selector: p.widget,
     message,
   });
@@ -253,16 +254,19 @@ function normalise(html) {
 }
 
 /** The widget's own subtree, found by matching `<div>` depth from its root. */
-function widgetSubtree(html, cls) {
-  /* A root may carry Starlight's `not-content` opt-out after the baseline
-     class pair (the control-system retrofit adds it), so match with or
-     without it. */
-  const rootRe = new RegExp(`<div class="${cls}(?: not-content)?">`);
-  const start = html.search(rootRe);
-  if (start < 0) return null;
+function widgetSubtree(html, name) {
+  /* The root is the element that carries `data-widget="<name>"`, whatever its tag
+     or classes: the component kit renames classes, so the diff never keys on one. */
+  const rootRe = new RegExp(
+    `<([a-z][a-z0-9-]*)\\b[^>]*\\sdata-widget="${name}"[^>]*>`,
+  );
+  const root = rootRe.exec(html);
+  if (!root) return null;
+  const start = root.index;
+  const tag = root[1];
   let depth = 0;
   let end = start;
-  const re = /<\/?div\b[^>]*>/g;
+  const re = new RegExp(`<\\/?${tag}\\b[^>]*>`, "g");
   re.lastIndex = start;
   let m;
   while ((m = re.exec(html))) {
@@ -350,11 +354,13 @@ for (const p of SELECTED) {
 
   if (!beforeWidget || !afterWidget) {
     widgetChanged += 1;
-    console.log(`✗ ${p.path} — widget subtree not found (class "${p.widget}")`);
+    console.log(
+      `✗ ${p.path} — widget subtree not found (data-widget="${p.widget}")`,
+    );
     widgetFinding(
       p,
       "widget-not-found",
-      `widget subtree not found (class "${p.widget}")`,
+      `widget subtree not found (data-widget="${p.widget}")`,
     );
     continue;
   }

@@ -85,8 +85,21 @@ async function violationsOf(page, pagePath, note) {
         isExcluded(exclusions, { rule: violation.id, selector, page: pagePath })
       )
         continue;
+      // The identity key of the node axe named. Axe's own selector is kept for people; a node
+      // that does not resolve (inside a shadow root or a frame) is a gate failure, never null.
+      const first = node.target.length === 1 ? node.target[0] : null;
+      const target = await page.evaluate((sel) => {
+        const el = typeof sel === "string" ? document.querySelector(sel) : null;
+        return el ? window.__gmtIdentity(el) : null;
+      }, first);
+      if (!target) {
+        throw new Error(
+          `axe named ${violation.id} on ${selector}, which does not resolve to one element in the page`,
+        );
+      }
       found.push({
         rule: violation.id,
+        target,
         selector,
         message: [note.trim(), violation.help, summaryOf(node)]
           .filter(Boolean)
@@ -105,7 +118,12 @@ await sweep({
     // The chat page is the React island: once as it opens, once with a widget in the rail.
     if (pagePath === "/dox/") {
       const closed = await openRail(page);
-      if (closed) found.push({ rule: "rail-not-opened", message: closed });
+      if (closed)
+        found.push({
+          rule: "rail-not-opened",
+          target: "page",
+          message: closed,
+        });
       else found.push(...(await violationsOf(page, pagePath, " (rail open)")));
     }
     return found;

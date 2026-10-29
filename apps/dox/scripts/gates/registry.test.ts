@@ -28,7 +28,7 @@ describe("the gate registry", () => {
     }
   });
 
-  it("nests the tiers: pr < nightly < local", () => {
+  it("nests the tiers: pr < weekly < local", () => {
     const at = (tier: string) =>
       GATES.filter((g) => inTier(g, tier)).map((g) => g.id);
     expect(at("pr")).toEqual([
@@ -41,7 +41,7 @@ describe("the gate registry", () => {
       "a11y-tab-walk",
       "a11y-media",
     ]);
-    expect(at("nightly")).toEqual([
+    expect(at("weekly")).toEqual([
       ...at("pr"),
       "canada-clock-still",
       "canada-stored-still",
@@ -105,3 +105,15 @@ describe.each(GATES.filter((g) => g.pages !== "dist"))(
     });
   },
 );
+
+describe("the tier name", () => {
+  it("refuses the retired nightly tier with a usage error", () => {
+    const r = spawnSync(
+      process.execPath,
+      [path.join(SCRIPTS, "gates.mjs"), "--plan", "--tier", "nightly"],
+      { encoding: "utf8" },
+    );
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("--tier is one of pr, weekly, local");
+  });
+});

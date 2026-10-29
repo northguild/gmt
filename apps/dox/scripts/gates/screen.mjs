@@ -8,7 +8,7 @@
  *   gates: FAIL  1 of 8 failed  (against origin/main @ 0a59823, 4 pages, chromium,webkit, dark,light)  4m12s
  *     PASS   build                 1m48s
  *     FAIL   readout-still         1 page · chromium,webkit           52s
- *            readout-moved  /tools/dwell-ledger/  chromium 390  .gmt-dwell-total moved 4px
+ *            readout-moved  /tools/dwell-ledger/  chromium 390  dwell total moved 4px
  *   logs: /abs/path/apps/dox/.gates/   summary: .gates/summary.json
  *
  * A status is `PASS`, `FAIL`, `FLAKY` or `SKIP`. `MAX_FINDINGS` findings show under a FAIL, then

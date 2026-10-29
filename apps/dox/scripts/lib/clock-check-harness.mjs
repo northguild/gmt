@@ -4,7 +4,7 @@
  *
  * It imports nothing, so `clock-check-harness.test.ts` runs it without a browser.
  *
- * The ready signal is `data-state` on the page's root (`.gmt-canada` or `.gmt-morocco`): the mount
+ * The ready signal is `data-state` on the page's root (`canada-clock-change` or `morocco-clock-change`): the mount
  * sets `ready` right after the first clock tick that has the Worker's answer and `error` where it
  * shows its error state. A gate waits for it instead of guessing from readout text, so a slow
  * module chunk, library import or routed fetch on a busy machine cannot make it measure too soon.
@@ -14,7 +14,8 @@
 export const READY_MS = 60_000;
 
 /** The page's root element, whichever checker it is. */
-export const ROOT_SELECTOR = ".gmt-canada, .gmt-morocco";
+export const ROOT_SELECTOR =
+  '[data-widget="canada-clock-change"], [data-widget="morocco-clock-change"]';
 
 /** One entry per checker page, keyed by its path. An unknown path throws: it gets no default. */
 export const REGIONS = {

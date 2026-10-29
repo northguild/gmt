@@ -449,3 +449,155 @@ export function motionProblem({ playState, iterations, remainingMs }) {
   if (playState !== "running") return false;
   return iterations === Infinity || remainingMs > 1000;
 }
+
+/** A number printed to 0.1 px, the precision the gates' messages state sizes and positions at. */
+export const px1 = (n) => (Math.round(n * 10) / 10).toFixed(1);
+
+/** `{ left, top, width, height }` of a rect as `x,y WxH`, to 0.1 px. */
+export const rectText = (r) =>
+  r ? `${px1(r.left)},${px1(r.top)} ${px1(r.width)}x${px1(r.height)}` : "none";
+
+/**
+ * Samples once per animation frame until `done(sample)` holds or `maxMs` has passed.
+ * `sample` returns one reading after the next frame (the caller waits for the frame inside it);
+ * `now` is the clock, injected so a test needs no real time. Returns
+ * `{ ok, frames, last }`: `frames` counts the readings taken, `last` is the final one.
+ */
+export async function waitForFrames(sample, done, { maxMs, now }) {
+  const start = now();
+  let frames = 0;
+  let last;
+  for (;;) {
+    last = await sample();
+    frames++;
+    if (done(last)) return { ok: true, frames, last };
+    if (now() - start >= maxMs) return { ok: false, frames, last };
+  }
+}
+
+/** True when `prefers-contrast: more` has reached the page's tokens and text. */
+export const contrastApplied = ({ border, strong, shadowCount }) =>
+  border === strong && shadowCount === 0;
+
+/**
+ * Contrast check: the finding for a page that never reached the emulated state. The cell fails
+ * on this alone, and neither product rule is recorded, since both read the state that is missing.
+ */
+export function emulationNotAppliedProblem({
+  frames,
+  matches,
+  border,
+  strong,
+  shadowCount,
+}) {
+  return {
+    rule: "emulation-not-applied",
+    target: "root",
+    selector: ":root",
+    message:
+      `prefers-contrast: more did not reach the page within ${frames} animation frames: ` +
+      `matchMedia(prefers-contrast: more) is ${matches}, --gmt-border is ${border}, ` +
+      `--gmt-border-strong is ${strong}, ${shadowCount} visible text element(s) still have a text-shadow`,
+  };
+}
+
+/**
+ * Tab walk: the full message for a control that is covered. `info` is what the page read at the
+ * moment of the check: `by` (the covering element's identity), `byRect`, `byDisplay`, `byPosition`,
+ * `byZIndex`, `rect` (the focused control), `container` (the nearest scroll container's identity,
+ * `rect`, `scrollTop`, `scrollPaddingBlock`), `viewport` ({ width, height }) and `narrow`
+ * (`matchMedia('(max-width: 60rem)').matches`).
+ */
+export function obscuredMessage(name, info) {
+  const c = info.container;
+  return (
+    `${name} is covered by ${info.by} ` +
+    `[${rectText(info.byRect)}; display ${info.byDisplay}, position ${info.byPosition}, z-index ${info.byZIndex}]. ` +
+    `Focused control at ${rectText(info.rect)}. ` +
+    (c
+      ? `Nearest scroll container ${c.identity} at ${rectText(c.rect)}, scrollTop ${px1(c.scrollTop)}, scroll-padding-block ${c.scrollPaddingBlock}. `
+      : "No scroll container above it. ") +
+    `Viewport ${info.viewport.width}x${info.viewport.height}, (max-width: 60rem) ${info.narrow}.`
+  );
+}
+
+/**
+ * Contrast measure: did the layout move between the two screenshot passes? `before` and `after`
+ * are `{ key, top, height }` lists in the same order. Returns `null` when no rect moved by more
+ * than 0.5 px; otherwise `{ moved, largest, cause }`: `moved` is the key of the element that moved
+ * most, `largest` its shift, `cause` the key of the first element above it whose height changed.
+ */
+export function staleRectProblem(before, after, tolerance = 0.5) {
+  if (before.length !== after.length) {
+    return {
+      moved: "page",
+      largest: Math.abs(after.length - before.length),
+      cause: null,
+      countChanged: true,
+    };
+  }
+  let largest = 0;
+  let movedAt = -1;
+  for (let i = 0; i < before.length; i++) {
+    const shift = Math.max(
+      Math.abs(after[i].top - before[i].top),
+      Math.abs(after[i].height - before[i].height),
+    );
+    if (shift > tolerance && shift > largest) {
+      largest = shift;
+      movedAt = i;
+    }
+  }
+  if (movedAt === -1) return null;
+  let cause = null;
+  for (let i = 0; i < movedAt; i++) {
+    if (Math.abs(after[i].height - before[i].height) > tolerance) {
+      cause = before[i].key;
+      break;
+    }
+  }
+  return { moved: before[movedAt].key, largest, cause, countChanged: false };
+}
+
+/** The message for `staleRectProblem`'s result. */
+export function staleRectMessage(problem) {
+  return problem.countChanged
+    ? `the page drew ${px1(problem.largest)} more or fewer elements during the measure, so the rects taken before the second screenshot no longer describe it`
+    : `layout moved during the measure: ${problem.moved} shifted ${px1(problem.largest)} px between the two screenshots` +
+        (problem.cause
+          ? `; the first element above it whose height changed is ${problem.cause}`
+          : "");
+}
+
+/**
+ * Grow measure: why a frame jumped. `frame` is `{ index, msSinceNavigation, key, before, after }`
+ * where `before` and `after` are the deepest resized element's `{ width, height }`; `fonts` is
+ * `{ status, loaded }` (`document.fonts.status` and the families that loaded since the last frame).
+ */
+export function frameDiagnostic({
+  index,
+  msSinceNavigation,
+  key,
+  before,
+  after,
+  fonts,
+}) {
+  const size = (s) => `${px1(s.width)}x${px1(s.height)}`;
+  return (
+    `frame ${index}, ${Math.round(msSinceNavigation)} ms after navigation: ${key} went ${size(before)} -> ${size(after)}; ` +
+    `document.fonts.status ${fonts.status}` +
+    (fonts.loaded.length > 0
+      ? `, newly loaded: ${fonts.loaded.join(", ")}`
+      : ", no font newly loaded")
+  );
+}
+
+/**
+ * `--resolve-only`: the problem with one locator's match count, or `null` when it is in range.
+ * `min` and `max` default to exactly one; an optional control passes `min: 0`.
+ */
+export function locatorCountProblem(name, count, { min = 1, max = 1 } = {}) {
+  if (count >= min && count <= max) return null;
+  const want = min === max ? `${min}` : `${min} to ${max}`;
+  return `${name} matched ${count} element(s), expected ${want}`;
+}

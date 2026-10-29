@@ -14,7 +14,7 @@
  *                in ~20 pointer steps, sample 2 s.
  *
  * Per run it reports total growth, the largest frame-to-frame jump, the number
- * of frames over 48 px, the final height, whether every `.gmt-grow` is at rest
+ * of frames over 48 px, the final height, whether every `data-gate="grow"` section is at rest
  * (no inline height, no `data-growing`) and the median frame interval.
  *
  * Assertions (the exit code is non-zero when any fails):
@@ -26,7 +26,7 @@
  *     where it was, a page that never reached rest all fail);
  *   - the largest jump of the root and of `<main>` is at most 48 px (not under
  *     `--reduce`, whose heights snap by design);
- *   - every `.gmt-grow` is at rest at the end;
+ *   - every `data-gate="grow"` section is at rest at the end;
  *   - the final height equals the `prefers-reduced-motion: reduce` run's, within 1 px;
  *   - Zoned Earth does not grow;
  *   - under `--reduce`, `[data-growing]` never appears.
@@ -45,7 +45,7 @@
  * Without `--reduce` the script first runs each combination under reduced
  * motion to get the reference final height (or reads `--reduce-ref`, a
  * `results.json` from an earlier `--reduce` run). `--css` injects a style tag at
- * the end of <head> (try a rule: `--css ".gmt-enter{animation:none !important}"`).
+ * the end of <head> (try a rule: `--css "*{animation:none !important}"`).
  * `--video` records the load pass into `<out>/video/`. `--frames` writes every
  * run's per-frame samples (`t`, root height `h`, main height `m`, growing `g`)
  * to `<out>/frames/<browser>-<width>-<slug>-<pass>.json`, to find which frame
@@ -67,12 +67,16 @@ import {
   crashProblem,
   dragProblem,
   emptyRunProblem,
+  frameDiagnostic,
   jumpProblems,
+  locatorCountProblem,
   maxFrameJump,
   pageProblems,
   skippedProblem,
 } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
+import { identityScript } from "./lib/element-identity.mjs";
+import { control, controlLabel, gate } from "./lib/locate.mjs";
 import { settledMainHeights } from "./lib/grow-frames.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 
@@ -88,261 +92,239 @@ const INTERACT_MS = 2000;
    the select the interaction pass switches (to the next option); a tool with no
    preset names the input it changes instead. `drag` is the handle or range the
    second half drags. */
+/** Pages whose widget is not named after the page. */
+const WIDGET_OF = {
+  "elapsed-vs-clock-difference": "elapsed-vs-clock",
+  "zone-planner": "multi-zone-scrubber",
+  "zoned-earth": "globe",
+};
+const PRESET = { role: "combobox", name: "Preset" };
 const PAGES = [
   {
     slug: "dst-inspector",
-    root: ".gmt-widget",
-    preset: '[data-role="value-preset"]',
-    drag: '[data-role="ticker-handle"]',
+    preset: { role: "combobox", name: "Value preset" },
+    drag: { role: "slider", name: "Local probe time" },
   },
   {
     slug: "interval-visualizer",
-    root: ".gmt-widget",
-    preset: '[data-role="relationship-preset"]',
-    drag: '[data-role="handle-a-end"]',
+    preset: { role: "combobox", name: "Relationship preset" },
+    drag: { role: "slider", name: "Interval A end" },
   },
   {
     slug: "converter-bench",
-    root: ".gmt-widget",
-    preset: '[data-role="convert-target"]',
+    preset: { role: "combobox", name: "To" },
     presetNote: "no preset; changes the target zone",
     drag: null,
   },
   {
     slug: "dwell-ledger",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="handle-exit"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Exit" },
   },
   {
     slug: "free-time-ledger",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="handle-end"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Clock end" },
   },
   {
     slug: "billing-deadlines",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "delivery-scheduler",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "connection-checker",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="handling"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Handling time (minimum connect time)" },
   },
   {
     slug: "timetable-reader",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="handle-1"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Row 1 printed time" },
   },
   {
     slug: "crossing-clock",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "cutoff-stack",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "cutoff-ruler",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "cutoff-countdown",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="now-slider"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Drag now" },
   },
   {
     slug: "punctuality-board",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: ".gmt-handle[data-role]:not([hidden])",
+    preset: PRESET,
+    drag: { role: "slider", name: "Late tolerance" },
   },
   {
     slug: "eta-drift",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="tolerance-slider"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Drag the tolerance" },
   },
   {
     slug: "departure-board",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="handle-after"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Arrival" },
   },
   {
     slug: "dtm-decoder",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "x12-time-reader",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: { ...PRESET, nth: 0 },
     drag: null,
   },
   {
     slug: "demurrage-clock",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "bl-date-stamp",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="moment-slider"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Move the moment" },
   },
   {
     slug: "epcis-event-reader",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "journey-split",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "gnss-week-decoder",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="tow-slider"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Slide the time of week" },
   },
   {
     slug: "satellite-clock-converter",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="moment-slider"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Step through the leap seconds" },
   },
   {
     slug: "gnss-rollover-checker",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="date-slider"]',
+    preset: PRESET,
+    drag: {
+      role: "slider",
+      name: "Slide the date through the firmware's window",
+    },
   },
   {
     slug: "leap-second-timeline",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="date-slider"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Move the date" },
   },
   {
     slug: "elapsed-vs-clock-difference",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="end-slider"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Move the end" },
   },
   {
     slug: "stored-time-audit",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "holiday-rule-builder",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="year"]',
+    preset: PRESET,
+    drag: { role: "spinbutton", name: "Year" },
   },
   {
     slug: "observance-comparator",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="to"]',
+    preset: PRESET,
+    drag: { role: "spinbutton", name: "Last year" },
   },
   {
     slug: "moving-feasts",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="year-slider"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Year slider" },
   },
   {
     // A checker under /check/, not /tools/: the answer fills the tables in place.
     slug: "canada-clock-change",
     path: "/check/canada-2026-clock-change/",
-    root: ".gmt-canada",
     preset: null,
-    click: '[data-role="recheck"]',
+    click: { role: "button", name: "Check again" },
     presetNote: "no preset; clicks Check again",
     drag: null,
   },
   {
     slug: "morocco-clock-change",
     path: "/check/morocco-2026-clock-change/",
-    root: ".gmt-morocco",
     preset: null,
-    click: '[data-role="recheck"]',
+    click: { role: "button", name: "Check again" },
     presetNote: "no preset; clicks Check again",
     drag: null,
   },
   {
     slug: "duration-parser-bench",
-    root: ".gmt-widget",
-    preset: '[data-role="locale"]',
+    preset: { role: "combobox", name: "Locale" },
     presetNote: "no preset; changes the locale",
     drag: null,
   },
   {
     slug: "id-timestamp-decoder",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "column-timestamp-bridge",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: PRESET,
     drag: null,
   },
   {
     slug: "cron-in-a-zone",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
+    preset: { role: "combobox", name: "Try" },
     drag: null,
   },
   {
     slug: "leap-day-birthday",
-    root: ".gmt-widget",
-    preset: '[data-role="preset"]',
-    drag: '[data-role="year-slider"]',
+    preset: PRESET,
+    drag: { role: "slider", name: "Year slider" },
   },
   {
     slug: "zone-planner",
-    root: ".gmt-scrubber-block",
     preset: null,
-    click: '[data-role="dst-preset"]',
+    click: { role: "button", name: "Jump to the next DST transition" },
     presetNote: "no preset; clicks Jump to the next DST transition",
-    drag: '[data-role="slider"]',
+    drag: {
+      role: "slider",
+      name: "Shift every pinned clock, in 5-minute steps",
+    },
   },
   {
     slug: "zoned-earth",
-    root: ".gmt-globe",
     preset: null,
     drag: null,
     noGrowth: true,
     presetNote: "no input; load pass only",
   },
-].map((p) => ({ ...p, path: p.path ?? `/tools/${p.slug}/` }));
+].map((p) => ({
+  ...p,
+  path: p.path ?? `/tools/${p.slug}/`,
+  // The root is the widget the page draws, found by the name every mount gives it.
+  root: `[data-widget="${WIDGET_OF[p.slug] ?? p.slug}"]`,
+}));
 
 const PAGES_ARG = applyPageContract({
   gate: GATE,
@@ -390,6 +372,7 @@ function parseArgs(argv) {
     else if (a === "--only") o.only = next().split(",");
     else if (a === "--reduce-ref") o.reduceRef = next();
     else if (a === "--frames") o.frames = true;
+    else if (a === "--resolve-only") o.resolveOnly = true;
     else if (a === "--init") o.init = next();
     else if (a === "--pages") next(); // read by applyPageContract above
     else if (a === "--list-pages") continue;
@@ -400,7 +383,7 @@ function parseArgs(argv) {
   }
   if (!o.base || !o.out) {
     console.error(
-      "Usage: node scripts/grow-measure.mjs --base <url> --out <dir> [--browsers chromium,webkit] [--widths 1440,390] [--reduce] [--video] [--css <css>] [--only <slug,...>] [--reduce-ref <results.json>] [--frames] [--init <script.js>] [--pages <path,...>] [--list-pages]",
+      "Usage: node scripts/grow-measure.mjs --base <url> --out <dir> [--browsers chromium,webkit] [--widths 1440,390] [--reduce] [--video] [--css <css>] [--only <slug,...>] [--reduce-ref <results.json>] [--frames] [--init <script.js>] [--pages <path,...>] [--list-pages] [--resolve-only]",
     );
     process.exit(2);
   }
@@ -482,6 +465,74 @@ function samplerInit({ rootSelector, auto }) {
     document.documentElement.append(sentinel);
     new window.ResizeObserver(() => {}).observe(sentinel);
   };
+  /* Diagnostics for a jump: each frame keeps the size of every element under the root, and a
+     frame whose root height changed names the deepest element that resized with its before and
+     after size. Fonts that finished loading since the last frame are listed beside it. */
+  let prevSnap = null;
+  let prevH = null;
+  const seenFonts = new Set();
+  const fontsNow = () => {
+    const loaded = [];
+    try {
+      document.fonts.forEach((face) => {
+        const id = `${face.family} ${face.weight} ${face.style}`;
+        if (face.status === "loaded" && !seenFonts.has(id)) {
+          seenFonts.add(id);
+          loaded.push(face.family.replace(/["']/g, ""));
+        }
+      });
+      return { status: document.fonts.status, loaded };
+    } catch {
+      return { status: "unknown", loaded };
+    }
+  };
+  const depthOf = (el, root) => {
+    let d = 0;
+    for (let a = el; a && a !== root; a = a.parentElement) d += 1;
+    return d;
+  };
+  const diagnose = (root, h) => {
+    const snap = [...root.querySelectorAll("*")].slice(0, 600).map((el) => {
+      const r = el.getBoundingClientRect();
+      return { el, width: r.width, height: r.height };
+    });
+    let found = null;
+    if (prevSnap && prevH !== null && Math.abs(h - prevH) > 0.5) {
+      const before = new Map(prevSnap.map((e) => [e.el, e]));
+      let best = -1;
+      for (const now of snap) {
+        const was = before.get(now.el);
+        if (!was) continue;
+        if (
+          Math.abs(now.height - was.height) > 0.5 ||
+          Math.abs(now.width - was.width) > 0.5
+        ) {
+          const depth = depthOf(now.el, root);
+          if (depth > best) {
+            best = depth;
+            found = {
+              key: window.__gmtIdentity
+                ? window.__gmtIdentity(now.el)
+                : now.el.localName,
+              before: { width: was.width, height: was.height },
+              after: { width: now.width, height: now.height },
+            };
+          }
+        }
+      }
+      if (!found) {
+        const rr = root.getBoundingClientRect();
+        found = {
+          key: window.__gmtIdentity ? window.__gmtIdentity(root) : "root",
+          before: { width: rr.width, height: prevH },
+          after: { width: rr.width, height: h },
+        };
+      }
+    }
+    prevSnap = snap;
+    prevH = h;
+    return found;
+  };
   const record = () => {
     const raw = read();
     // Nothing to measure until the root is in the document. A root that never
@@ -490,7 +541,11 @@ function samplerInit({ rootSelector, auto }) {
     const exact = painted && painted.n === S.n ? painted : null;
     if (!exact) S.unpainted += 1;
     const use = exact ?? raw;
+    const rootEl = document.querySelector(rootSelector);
+    const diag = rootEl ? diagnose(rootEl, use.h) : null;
     S.frames.push({
+      diag,
+      fonts: fontsNow(),
       n: S.n,
       t: performance.now() - S.t0,
       h: use.h,
@@ -564,7 +619,31 @@ function stats(frames) {
     mainMaxJump: maxFrameJump(settledMainHeights(frames)),
     medianDt: dts.length ? dts[Math.floor(dts.length / 2)] : 0,
     growingSeen: frames.some((f) => f.g === 1),
+    jumpDiagnostic: largestJumpDiagnostic(frames),
   };
+}
+
+/** The diagnostic of the frame with the largest root-height step, or `""` when none was kept. */
+function largestJumpDiagnostic(frames) {
+  let at = -1;
+  let largest = 0;
+  for (let i = 1; i < frames.length; i++) {
+    const jump = Math.abs(frames[i].h - frames[i - 1].h);
+    if (jump > largest && frames[i].diag) {
+      largest = jump;
+      at = i;
+    }
+  }
+  if (at < 0) return "";
+  const f = frames[at];
+  return frameDiagnostic({
+    index: f.n,
+    msSinceNavigation: f.t,
+    key: f.diag.key,
+    before: f.diag.before,
+    after: f.diag.after,
+    fonts: f.fonts,
+  });
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -590,19 +669,19 @@ async function waitForRest(page, rootSelector, capMs = 8000) {
   return false;
 }
 
-/* True when every `.gmt-grow` is at rest. Polls up to 1 s so the timeout
+/* True when every `data-gate="grow"` section is at rest. Polls up to 1 s so the timeout
    fallback (duration + 100 ms) has run. */
 async function growsAtRest(page) {
   const probe = () =>
-    page.evaluate(() => {
-      const els = [...document.querySelectorAll(".gmt-grow")];
+    page.evaluate((sel) => {
+      const els = [...document.querySelectorAll(sel)];
       return {
         count: els.length,
         bad: els.filter(
           (el) => el.style.height || el.hasAttribute("data-growing"),
         ).length,
       };
-    });
+    }, gate("grow"));
   let r = await probe();
   for (let i = 0; i < 10 && r.bad > 0; i++) {
     await sleep(100);
@@ -611,8 +690,8 @@ async function growsAtRest(page) {
   return r;
 }
 
-async function drag(page, selector) {
-  const el = page.locator(selector).first();
+async function drag(page, root, spec) {
+  const el = control(page, root, spec).first();
   if (!(await el.isVisible().catch(() => false))) return "handle not visible";
   await el.scrollIntoViewIfNeeded();
   /* The value the control exposes, null when it exposes none. */
@@ -679,14 +758,14 @@ async function drag(page, selector) {
 
 async function changeInput(page, def) {
   if (def.click) {
-    const el = page.locator(def.click).first();
+    const el = control(page, def.root, def.click).first();
     if (!(await el.isVisible().catch(() => false)))
       return "click target not visible";
     await el.click();
     return null;
   }
   if (!def.preset) return "no input";
-  const sel = page.locator(def.preset).first();
+  const sel = control(page, def.root, def.preset).first();
   if (!(await sel.isVisible().catch(() => false))) return "select not visible";
   const idx = await sel.evaluate((s) => {
     const n = s.options.length;
@@ -735,6 +814,7 @@ async function runOneUnguarded(
   await blockOffSite(context, o.base);
   if (o.init) await context.addInitScript({ path: o.init });
   const page = await context.newPage();
+  await context.addInitScript({ content: identityScript() });
   await context.addInitScript(samplerInit, {
     rootSelector: def.root,
     auto: pass === "load",
@@ -791,7 +871,7 @@ async function runOneUnguarded(
         if (!skip1 && def.presetNote) notes.push(def.presetNote);
         await sleep(INTERACT_MS);
         if (def.drag) {
-          const skip2 = await drag(page, def.drag);
+          const skip2 = await drag(page, def.root, def.drag);
           problems.push(...skippedProblem("the drag", skip2));
           await sleep(INTERACT_MS);
         } else notes.push("no drag handle");
@@ -812,10 +892,14 @@ async function runOneUnguarded(
         frames: frames.length,
       }),
     );
+    stat.rootKey = await page.evaluate((sel) => {
+      const el = document.querySelector(sel);
+      return el && window.__gmtIdentity ? window.__gmtIdentity(el) : null;
+    }, def.root);
     const rest = await growsAtRest(page);
     stat.growCount = rest.count;
     stat.atRest = rest.bad === 0;
-    if (!stat.atRest) notes.push(`${rest.bad} .gmt-grow not at rest`);
+    if (!stat.atRest) notes.push(`${rest.bad} grow section not at rest`);
   } finally {
     const video = page.video();
     await page.close().catch(() => {});
@@ -889,6 +973,59 @@ async function main() {
     console.error("--only matched no page");
     process.exit(2);
   }
+  if (o.resolveOnly) {
+    const browser = await chromium.launch();
+    const context = await browser.newContext({
+      viewport: { width: 1440, height: 900 },
+      colorScheme: "dark",
+    });
+    await blockOffSite(context, o.base);
+    const page = await context.newPage();
+    let missed = 0;
+    for (const def of pages) {
+      const response = await page.goto(o.base + def.path, {
+        waitUntil: "networkidle",
+      });
+      const miss = [];
+      if (!response || response.status() !== 200)
+        miss.push(`the page answered HTTP ${response?.status() ?? "none"}`);
+      const asks = [
+        { name: `widget root ${def.root}`, sel: def.root, min: 1, max: 1 },
+        // The drag handle may be a list of the visible handles: the run takes the first.
+        ...[def.preset, def.click].filter(Boolean).map((spec) => ({
+          name: `control ${controlLabel(spec)}`,
+          spec,
+          min: 1,
+          max: 1,
+        })),
+        ...(def.drag
+          ? [
+              {
+                name: `handle ${controlLabel(def.drag)}`,
+                spec: def.drag,
+                min: 1,
+                max: 1,
+              },
+            ]
+          : []),
+      ];
+      for (const ask of asks) {
+        const problem = locatorCountProblem(
+          ask.name,
+          await (
+            ask.spec ? control(page, def.root, ask.spec) : page.locator(ask.sel)
+          ).count(),
+          ask,
+        );
+        if (problem) miss.push(problem);
+      }
+      missed += miss.length;
+      console.log(`${miss.length ? "FAIL" : "ok  "} resolve ${def.path}`);
+      for (const m of miss) console.log(`       ${m}`);
+    }
+    await browser.close();
+    process.exit(missed ? 1 : 0);
+  }
   const key = (b, w, slug, pass) => `${b}|${w}|${slug}|${pass}`;
   let refs = new Map();
   if (o.reduceRef) {
@@ -951,6 +1088,10 @@ async function main() {
               r = await runOne(browser, o, def, width, pass, false, false);
               r.notes.push("final height re-measured after a mismatch");
             }
+            const withDiag = (text) =>
+              r.jumpDiagnostic && /max jump|^grew /.test(text)
+                ? `${text} (${r.jumpDiagnostic})`
+                : text;
             const failures = [
               ...r.problems,
               ...refProblems.map((p) => `reduced-motion reference: ${p}`),
@@ -959,9 +1100,9 @@ async function main() {
                 mainMaxJump: r.mainMaxJump,
                 limit: JUMP_LIMIT_PX,
                 reduce: o.reduce,
-              }),
+              }).map(withDiag),
             ];
-            if (!r.atRest) failures.push("a .gmt-grow is not at rest");
+            if (!r.atRest) failures.push("a grow section is not at rest");
             const finalMatch =
               refH == null || o.reduce
                 ? null
@@ -969,7 +1110,7 @@ async function main() {
             if (finalMatch === false)
               failures.push(`final ${r.finalH} != reduced ${refH}`);
             if (def.noGrowth && Math.abs(r.growth) > HEIGHT_MATCH_PX)
-              failures.push(`grew ${Math.round(r.growth)} px`);
+              failures.push(withDiag(`grew ${Math.round(r.growth)} px`));
             if (o.reduce && r.growingSeen)
               failures.push("[data-growing] appeared under reduced motion");
             if (o.frames) {
@@ -1001,6 +1142,7 @@ async function main() {
                 gate: GATE,
                 rule: ruleOf(failure),
                 page: def.path,
+                target: r.rootKey ?? `widget:${def.slug}`,
                 selector: def.root,
                 browser: name,
                 width,

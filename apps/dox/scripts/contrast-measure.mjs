@@ -33,7 +33,7 @@
  * It also measures the dashed border of every disabled field against its
  * surface (3:1, the non-text bar).
  *
- * The place labels of the zone maps (`.gmt-zonemap-label`) are measured on the
+ * The place labels of the zone maps (the `map-label` part) are measured on the
  * same footing, against their own bar of 4.5:1: the text colour over the pixels
  * the halo leaves behind the glyphs. The halo is a text-shadow, so the
  * hidden-glyph pass keeps it for labels and drops it everywhere else.
@@ -61,9 +61,15 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PNG } from "pngjs";
-import { blockOffSite } from "./gate-checks.mjs";
+import {
+  blockOffSite,
+  staleRectMessage,
+  staleRectProblem,
+} from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+import { identityScript } from "./lib/element-identity.mjs";
+import { gate, presetSelect } from "./lib/locate.mjs";
 
 const GATE = "contrast-measure";
 
@@ -251,18 +257,8 @@ function collect() {
     }
     return rr - l > 1 && b - t > 1 ? [l, t, rr - l, b - t] : null;
   };
-  const label = (e) => {
-    const cls = (
-      typeof e.className === "string"
-        ? e.className
-        : (e.className?.baseVal ?? "")
-    )
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .join(".");
-    return `${e.tagName.toLowerCase()}${cls ? "." + cls : ""}`;
-  };
+  /** The identity key of an element (`lib/element-identity.mjs`), the name a finding carries. */
+  const label = (e) => window.__gmtIdentity(e);
   /** Nearest ancestor that paints a background or blurs what is behind it. */
   const surface = (e) => {
     for (let p = e; p && p !== document.documentElement; p = p.parentElement) {
@@ -285,6 +281,8 @@ function collect() {
     if (!clipped.length) return;
     items.push({
       kind: `${kind} ${label(e)}`,
+      target: label(e),
+      selector: window.__gmtCssPath(e),
       surface: surface(e),
       text: (extra.text ?? "").trim().slice(0, 30),
       color,
@@ -334,7 +332,12 @@ function collect() {
   for (let n; (n = labelWalker.nextNode());) {
     if (!n.textContent.trim()) continue;
     const e = n.parentElement;
-    if (!e || !e.closest(".gmt-zonemap-label") || hiddenChain(e) || tiny(e))
+    if (
+      !e ||
+      !e.closest('[data-gate~="map-label"]') ||
+      hiddenChain(e) ||
+      tiny(e)
+    )
       continue;
     const r = document.createRange();
     r.selectNodeContents(n);
@@ -390,7 +393,9 @@ function collect() {
     const cs = getComputedStyle(e);
     const w = parseFloat(cs.borderTopWidth) || 1;
     borders.push({
-      kind: `border ${label(e)}[${e.dataset.role ?? ""}]`,
+      kind: `border ${label(e)}`,
+      target: label(e),
+      selector: window.__gmtCssPath(e),
       color: rgba(cs.borderTopColor),
       style: cs.borderTopStyle,
       chrome: isChrome(e),
@@ -413,7 +418,7 @@ function collect() {
 }
 
 const HIDE_TEXT = `*, *::before, *::after { -webkit-text-fill-color: transparent !important; text-decoration: none !important; caret-color: transparent !important; -webkit-text-stroke: 0 !important; }
-*:not(.gmt-zonemap-label, .gmt-zonemap-label *), *::before, *::after { text-shadow: none !important; }
+*:not(${gate("map-label")}, ${gate("map-label")} *), *::before, *::after { text-shadow: none !important; }
 svg text, svg tspan { fill: transparent !important; stroke: none !important; }
 ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; }`;
 
@@ -423,6 +428,7 @@ async function setup(page, theme, p) {
       localStorage.setItem("starlight-theme", t);
     } catch {}
   }, theme);
+  await page.addInitScript({ content: identityScript() });
   await serveFixture(page, p);
   const res = await page.goto(BASE + p.path, { waitUntil: "networkidle" });
   if (!res || res.status() !== 200)
@@ -453,11 +459,11 @@ async function serveFixture(page, p) {
 
 /** The zone map draws when it scrolls into view: bring it there, wait for it, and go back to the top. */
 async function drawMap(page) {
-  const section = page.locator(".gmt-zonemap-mapsec");
+  const section = page.locator(gate("map-section"));
   if ((await section.count()) === 0) return;
   await section.scrollIntoViewIfNeeded();
   await page
-    .waitForSelector(".gmt-zonemap-svg", { timeout: 20000 })
+    .waitForSelector(gate("map-svg"), { timeout: 20000 })
     .catch(() => {});
   await page.waitForTimeout(800);
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -466,10 +472,10 @@ async function drawMap(page) {
 /** States to measure for a page: the default, plus every preset and a sentinel pass for tools. */
 async function statesFor(page, p) {
   if (!p.tool) return [{ name: "default" }];
-  const presets = await page.evaluate(() => {
-    const s = document.querySelector("[data-role=preset]");
-    return s ? [...s.options].map((o) => o.value) : [];
-  });
+  const select = presetSelect(page);
+  const presets = (await select.count())
+    ? await select.evaluate((s) => [...s.options].map((o) => o.value))
+    : [];
   const states = [{ name: "default" }];
   for (const v of presets.slice(1))
     states.push({ name: `preset:${v}`, preset: v });
@@ -479,7 +485,9 @@ async function statesFor(page, p) {
 
 async function applyState(page, st) {
   if (st.preset)
-    await page.selectOption("[data-role=preset]", st.preset).catch(() => {});
+    await presetSelect(page)
+      .selectOption(st.preset)
+      .catch(() => {});
   if (st.garbage) {
     await page.evaluate(() => {
       for (const e of document.querySelectorAll(
@@ -549,9 +557,38 @@ async function measureState(page, rows, ctx) {
   };
   const wantChrome = chrome.items.length > 0 || chrome.borders.length > 0;
   const vis = await shoot(page, data, wantChrome);
-  await page.addStyleTag({ content: HIDE_TEXT });
+  const hideStyle = await page.addStyleTag({ content: HIDE_TEXT });
   await page.waitForTimeout(150);
   const hid = await shoot(page, data, wantChrome);
+
+  // The rects were read before the first screenshot. If the layout moved while the two
+  // screenshots were taken, they no longer describe the page: fail the cell, never score it.
+  // The glyphs come back first: `collect` skips text whose fill is transparent, so a read taken
+  // under the hiding style would count fewer elements than the first read for that reason alone.
+  await hideStyle.evaluate((el) => el.remove());
+  const moved = await page.evaluate(collect);
+  const spots = (d) =>
+    d.items.map((i, n) => ({
+      key: `${i.kind}#${n}`,
+      target: i.target,
+      top: i.rects[0][1] + d.scroll.y,
+      height: i.rects[0][3],
+    }));
+  const stale = staleRectProblem(spots(data), spots(moved));
+  if (stale) {
+    const named = spots(data).find((s) => s.key === stale.moved);
+    const err = new Error(
+      staleRectMessage({
+        ...stale,
+        moved: named?.target ?? stale.moved,
+        cause:
+          spots(data).find((s) => s.key === stale.cause)?.target ?? stale.cause,
+      }),
+    );
+    err.rule = "layout-moved-during-measure";
+    err.target = named?.target ?? "page";
+    throw err;
+  }
 
   const INK = 40; // summed channel difference that counts as a glyph pixel
   const HALO = Number(opt("halo", "1")); // pixels around a glyph pixel that still count as behind it
@@ -617,6 +654,8 @@ async function measureState(page, rows, ctx) {
       theme: ctx.theme,
       state: ctx.state,
       kind: it.kind,
+      target: it.target,
+      selector: it.selector,
       surface: it.surface ?? "",
       text: it.text ?? "",
       size: it.size,
@@ -674,6 +713,8 @@ async function measureState(page, rows, ctx) {
       theme: ctx.theme,
       state: ctx.state,
       kind: b.kind,
+      target: b.target,
+      selector: b.selector,
       surface: "outside the box",
       text: b.style,
       size: 0,
@@ -723,7 +764,7 @@ for (const p of PAGES) {
     try {
       await setup(page, theme, p);
       if (p.open) {
-        await page.click(`[data-widget="${p.open}"]`);
+        await page.click(`[data-starter="${p.open}"]`);
         await page.waitForTimeout(1500);
       }
       const states = await statesFor(page, p);
@@ -754,6 +795,8 @@ for (const p of PAGES) {
         state: "error",
         kind: "error",
         surface: err.message,
+        rule: err.rule,
+        target: err.target,
         ratio: 0,
       });
     }
@@ -768,10 +811,10 @@ if (JSON_OUT)
 const text = rows.filter((r) => !r.border && r.kind !== "error");
 const borders = rows.filter((r) => r.border);
 const errors = rows.filter((r) => r.kind === "error");
-const group = (list) => {
+const group = (list, perPage = false) => {
   const m = new Map();
   for (const r of list) {
-    const k = `${r.theme} | ${r.kind} | ${r.surface}`;
+    const k = `${perPage ? `${r.page} | ` : ""}${r.theme} | ${r.kind} | ${r.surface}`;
     const prev = m.get(k);
     if (!prev) m.set(k, { ...r, pages: new Set([r.page]), n: 1 });
     else {
@@ -786,6 +829,8 @@ const group = (list) => {
           bg: r.bg,
           state: r.state,
           page: r.page,
+          target: r.target,
+          selector: r.selector,
         });
     }
   }
@@ -827,24 +872,29 @@ for (const g of VERBOSE ? bg : bfails)
     `${g.ratio.toFixed(2)}  ${g.theme.padEnd(5)} ${g.kind} ${g.text} | worst on ${g.page} [${g.state}]`,
   );
 for (const e of errors) console.log(`ERROR ${e.page} ${e.theme}: ${e.surface}`);
-for (const g of fails) {
+// A finding is one element on one page, so its key does not depend on which page was worst.
+const perPage = (list, floor) =>
+  group(list, true).filter((g) => g.ratio < floor(g) - 0.005);
+for (const g of perPage(text, (r) => r.floor)) {
   recordFinding({
     gate: GATE,
     rule: "contrast-below-7",
     page: PATH_OF.get(g.page) ?? null,
-    selector: `${g.kind} | ${g.surface}`,
+    target: g.target,
+    selector: g.selector,
     browser: "chromium",
     width: WIDTH,
     theme: g.theme,
     message: `${g.ratio.toFixed(2)}:1 under ${FLOOR}:1 for "${g.text}" (${g.size}px, bg ${g.bg}) [${g.state}]`,
   });
 }
-for (const g of bfails) {
+for (const g of perPage(borders, () => BORDER_FLOOR)) {
   recordFinding({
     gate: GATE,
     rule: "border-below-3",
     page: PATH_OF.get(g.page) ?? null,
-    selector: `${g.kind} ${g.text}`,
+    target: g.target,
+    selector: g.selector,
     browser: "chromium",
     width: WIDTH,
     theme: g.theme,
@@ -854,8 +904,9 @@ for (const g of bfails) {
 for (const e of errors) {
   recordFinding({
     gate: GATE,
-    rule: "page-error",
+    rule: e.rule ?? "page-error",
     page: PATH_OF.get(e.page) ?? null,
+    target: e.target ?? "page",
     browser: "chromium",
     width: WIDTH,
     theme: e.theme,

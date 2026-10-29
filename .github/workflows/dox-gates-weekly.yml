@@ -1,18 +1,14 @@
-name: Dox gates nightly
+name: Dox gates weekly
 
 # The PR job (ci.yml, `dox-gates`) checks the changed pages in Chromium. This sweep checks every page
-# in three browsers and both themes, and files what fails as a `bug` issue, one open issue per
-# finding (apps/dox/scripts/gates/issue-plan.mjs). A failing gate fails its leg; the report job still
-# runs and files.
-#
-# It skips a night when nothing under apps/dox/ or pnpm-lock.yaml changed since the last run that
-# filed its findings (the `decide` job; the rule is apps/dox/scripts/gates/nightly-decide.mjs), and always runs on
-# Sundays. A manual dispatch with `force` runs it anyway; `force_finding` also files one
-# [dry run] issue for a synthetic finding, to prove the filing path without a real failure.
+# in three browsers and both themes, once a week, and files what fails as a `dox-gate` issue, one
+# open issue per finding (apps/dox/scripts/gates/issue-plan.mjs). A failing gate fails its leg; the
+# report job still runs and files. `force_finding` on a manual dispatch also files one [dry run]
+# issue for a synthetic finding, to prove the filing path without a real failure.
 #
 # Legs: --shard i/n splits each gate's sorted page list round-robin, so the legs of one browser
 # share the work. The shard counts are sized from measured local times (built.md, Runbooks, "The
-# nightly gate sweep"). Adding or removing a leg means changing the matrix and the LEGS list of the
+# weekly gate sweep"). Adding or removing a leg means changing the matrix and the LEGS list of the
 # report job, which names every leg so one that crashed without uploading is still filed.
 #
 # A leg whose summary never reaches the report is sorted by its job (apps/dox/scripts/gates/
@@ -24,24 +20,17 @@ name: Dox gates nightly
 on:
   workflow_dispatch:
     inputs:
-      force:
-        description: "Run even if nothing changed"
-        type: boolean
-        required: false
-        default: false
       force_finding:
         description: "Dry run: file one [dry run] issue for a synthetic finding"
         type: boolean
         required: false
         default: false
   schedule:
-    # Daily 04:23 UTC; skips when nothing changed.
-    - cron: "23 4 * * *"
-    # Sundays 04:41 UTC; always runs.
+    # Sundays 04:41 UTC.
     - cron: "41 4 * * 0"
 
 concurrency:
-  group: dox-gates-nightly
+  group: dox-gates-weekly
   cancel-in-progress: false
 
 permissions:
@@ -52,75 +41,8 @@ env:
   pnpm_config_verify_deps_before_run: "false"
 
 jobs:
-  decide:
-    name: Changed since the last run?
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      actions: read
-      contents: read
-    outputs:
-      run: ${{ steps.decide.outputs.run }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          check-latest: true
-
-      # The earlier run is the newest finished run on main that filed its findings: its report job
-      # succeeded (the run itself ends `failure` when a gate failed), or it skipped the night and
-      # ended `success`, which leaves the tree it compared against. A run whose report job failed
-      # never counts, so its findings are swept and filed again the next night. Without
-      # `actions: read` a listing fails and the sweep runs (fail open), saying why.
-      - name: Decide
-        id: decide
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EVENT_NAME: ${{ github.event_name }}
-          SCHEDULE: ${{ github.event.schedule }}
-          FORCE: ${{ inputs.force }}
-          FORCE_FINDING: ${{ inputs.force_finding }}
-        run: |
-          last=""
-          LAST_ERROR=""
-          if ! runs=$(gh run list --workflow dox-gates-nightly.yml --branch main --status completed \
-              --limit 20 --json databaseId,headSha,conclusion \
-              --jq '.[] | select(.conclusion == "success" or .conclusion == "failure") | "\(.databaseId) \(.headSha) \(.conclusion)"' 2>err.txt); then
-            LAST_ERROR=$(head -c 200 err.txt | tr '\n' ' ')
-            runs=""
-          fi
-          while read -r id sha conclusion; do
-            [ -n "$id" ] || continue
-            if ! report=$(gh run view "$id" --json jobs \
-                --jq '[.jobs[] | select(.name == "Report to issues")][0].conclusion // ""' 2>err.txt); then
-              LAST_ERROR=$(head -c 200 err.txt | tr '\n' ' ')
-              break
-            fi
-            if [ "$report" = success ] || { [ "$conclusion" = success ] && [ "$report" = skipped ]; }; then
-              last="$sha"
-              break
-            fi
-          done <<< "$runs"
-          CHANGED=""
-          if [ -n "$last" ]; then
-            if git merge-base --is-ancestor "$last" HEAD 2>/dev/null; then
-              CHANGED=$(git diff --name-only "$last" HEAD -- apps/dox/ pnpm-lock.yaml)
-            else
-              last=""
-            fi
-          fi
-          export LAST_SHA="$last" LAST_ERROR CHANGED
-          node apps/dox/scripts/gates/nightly-decide.mjs
-
   sweep:
     name: Sweep (${{ matrix.leg }})
-    needs: decide
-    if: needs.decide.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -170,7 +92,7 @@ jobs:
       # (--retries 1); a pass there is FLAKY and never filed.
       - name: Gates, every page (shard ${{ matrix.shard }})
         run: >
-          pnpm --filter dox gates --all --tier nightly --browsers ${{ matrix.browser }}
+          pnpm --filter dox gates --all --tier weekly --browsers ${{ matrix.browser }}
           --themes dark,light --retries 1 --shard ${{ matrix.shard }}
 
       # Passes only when the runner left a summary the report can read. The report reads this
@@ -202,8 +124,8 @@ jobs:
   # artifacts and, for a leg with no summary, read the run's jobs.
   report:
     name: Report to issues
-    needs: [decide, sweep]
-    if: ${{ !cancelled() && needs.decide.outputs.run == 'true' }}
+    needs: [sweep]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

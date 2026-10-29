@@ -26,7 +26,16 @@ import {
   tabWalkProblems,
   collapseStops,
   obscuredByProblem,
+  obscuredMessage,
   SEGMENT_CAP,
+  contrastApplied,
+  emulationNotAppliedProblem,
+  frameDiagnostic,
+  px1,
+  locatorCountProblem,
+  staleRectMessage,
+  staleRectProblem,
+  waitForFrames,
   transparencyProblems,
 } from "./gate-checks.mjs";
 
@@ -662,5 +671,156 @@ describe("motionProblem", () => {
         remainingMs: 0,
       }),
     ).toBe(false);
+  });
+});
+
+describe("waitForFrames", () => {
+  it("returns as soon as the state holds", async () => {
+    let n = 0;
+    const out = await waitForFrames(
+      async () => ++n,
+      (v: number) => v >= 3,
+      { maxMs: 1000, now: () => 0 },
+    );
+    expect(out).toEqual({ ok: true, frames: 3, last: 3 });
+  });
+
+  it("times out with the frame count and the last sample", async () => {
+    let clock = 0;
+    const out = await waitForFrames(
+      async () => "stale",
+      () => false,
+      { maxMs: 50, now: () => (clock += 20) },
+    );
+    expect(out.ok).toBe(false);
+    expect(out.frames).toBeGreaterThan(1);
+    expect(out.last).toBe("stale");
+  });
+});
+
+describe("emulation not applied", () => {
+  it("is applied only when the border matches and no shadow is left", () => {
+    expect(
+      contrastApplied({ border: "#fff", strong: "#fff", shadowCount: 0 }),
+    ).toBe(true);
+    expect(
+      contrastApplied({ border: "#000", strong: "#fff", shadowCount: 0 }),
+    ).toBe(false);
+    expect(
+      contrastApplied({ border: "#fff", strong: "#fff", shadowCount: 2 }),
+    ).toBe(false);
+  });
+
+  it("names the frames, the media query and both token values", () => {
+    const p = emulationNotAppliedProblem({
+      frames: 120,
+      matches: false,
+      border: "#111",
+      strong: "#fff",
+      shadowCount: 1,
+    });
+    expect(p.rule).toBe("emulation-not-applied");
+    expect(p.target).toBe("root");
+    expect(p.message).toContain("120 animation frames");
+    expect(p.message).toContain("is false");
+    expect(p.message).toContain("#111");
+    expect(p.message).toContain("#fff");
+  });
+});
+
+describe("px1", () => {
+  it("prints one decimal place", () => {
+    expect(px1(12)).toBe("12.0");
+    expect(px1(12.349)).toBe("12.3");
+  });
+});
+
+describe("staleRectProblem", () => {
+  const rows = (tops: number[], heights: number[]) =>
+    tops.map((top, i) => ({ key: `k${i}`, top, height: heights[i] }));
+
+  it("is null when nothing moved past half a pixel", () => {
+    expect(
+      staleRectProblem(rows([0, 10], [10, 10]), rows([0.4, 10.4], [10, 10])),
+    ).toBeNull();
+  });
+
+  it("names the element that moved most and the first taller one above it", () => {
+    const p = staleRectProblem(
+      rows([0, 10, 20], [10, 10, 10]),
+      rows([0, 10, 32], [10, 12, 10]),
+    );
+    expect(p).toMatchObject({ moved: "k2", cause: "k1", countChanged: false });
+    expect(p?.largest).toBe(12);
+    expect(staleRectMessage(p!)).toContain("k2 shifted 12.0 px");
+  });
+
+  it("reports a changed element count", () => {
+    const p = staleRectProblem(rows([0], [1]), rows([0, 5], [1, 1]));
+    expect(p?.countChanged).toBe(true);
+    expect(staleRectMessage(p!)).toContain("more or fewer elements");
+  });
+});
+
+describe("obscuredMessage and frameDiagnostic", () => {
+  it("lists the covering element, the container, the viewport and the breakpoint", () => {
+    const message = obscuredMessage("the control", {
+      by: "banner › generic",
+      byRect: { left: 0, top: 0, width: 100, height: 56 },
+      byDisplay: "block",
+      byPosition: "fixed",
+      byZIndex: "10",
+      rect: { left: 4, top: 20, width: 80, height: 24 },
+      container: {
+        identity: "page",
+        rect: { left: 0, top: 0, width: 1000, height: 800 },
+        scrollTop: 120.25,
+        scrollPaddingBlock: "auto",
+      },
+      viewport: { width: 1000, height: 800 },
+      narrow: false,
+    });
+    for (const part of [
+      "banner › generic",
+      "position fixed",
+      "z-index 10",
+      "scrollTop 120.3",
+      "1000x800",
+      "false",
+    ])
+      expect(message).toContain(part);
+  });
+
+  it("names the frame, the element, its sizes and the fonts", () => {
+    const text = frameDiagnostic({
+      index: 7,
+      msSinceNavigation: 812.4,
+      key: "widget:x › table",
+      before: { width: 400, height: 100 },
+      after: { width: 400, height: 148.26 },
+      fonts: { status: "loading", loaded: ["Mono"] },
+    });
+    expect(text).toContain("frame 7, 812 ms");
+    expect(text).toContain("400.0x100.0 -> 400.0x148.3");
+    expect(text).toContain("status loading");
+    expect(text).toContain("newly loaded: Mono");
+  });
+});
+
+describe("locatorCountProblem", () => {
+  it("accepts exactly one by default", () => {
+    expect(locatorCountProblem("root", 1)).toBeNull();
+    expect(locatorCountProblem("root", 0)).toBe(
+      "root matched 0 element(s), expected 1",
+    );
+    expect(locatorCountProblem("root", 2)).toContain("matched 2");
+  });
+
+  it("takes a range for an optional control or a list", () => {
+    expect(locatorCountProblem("c", 0, { min: 0, max: 1 })).toBeNull();
+    expect(locatorCountProblem("c", 3, { min: 1, max: 99 })).toBeNull();
+    expect(locatorCountProblem("c", 2, { min: 0, max: 1 })).toBe(
+      "c matched 2 element(s), expected 0 to 1",
+    );
   });
 });

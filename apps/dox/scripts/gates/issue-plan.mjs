@@ -1,12 +1,12 @@
 /**
- * The pure decision behind the nightly gate issues. The summaries the sweep legs wrote and the
+ * The pure decision behind the weekly gate issues. The summaries the sweep legs wrote and the
  * open `dox-gate` issues go in; a list of `open` / `comment` actions comes out. Nothing here reads
  * a file, the network, the process or the clock, so the whole rule set is tested offline
  * (`issue-plan.test.ts`). It is modelled on `scripts/lib/canary-issues.mjs`; the `gh` shell is
  * `file-issues.mjs`.
  *
- * One open issue per finding key. The key is `<gate>:<rule>:<page>:<selector>`, with the selector
- * trimmed and its whitespace collapsed; browsers, widths and themes are not in it, so one issue
+ * One open issue per finding key. The key is `<gate>:<rule>:<page>:<target>`, the target being the
+ * element's identity key (`lib/element-identity.mjs`: scope, role and accessible name); browsers, widths and themes are not in it, so one issue
  * lists every place the finding was seen. Only `FAIL` rows file: `FLAKY` is listed in the step
  * summary (`flakyRows`) and never filed. A leg with no readable `summary.json` is sorted by its
  * sweep job (`missingSummary`): one whose `SUMMARY_STEP` passed wrote the file and lost it on the
@@ -17,14 +17,10 @@
  * once is one systemic cause for a person to triage.
  */
 
-/** Label every nightly gate issue carries, and the one the open-issue query filters on. */
+/** The one label every gate issue carries, and the one the open-issue query filters on. */
 export const GATE_LABEL = "dox-gate";
-/** Label of the issue a dry run files, in place of `bug`. */
+/** Label of the issue a dry run files, in place of `dox-gate`. */
 export const DRY_RUN_LABEL = "dox-gate-dry-run";
-/** The other label a real finding carries. */
-export const BUG_LABEL = "bug";
-/** GitHub issue type of every nightly gate issue. */
-export const ISSUE_TYPE = "Bug";
 /** More new issues than this in one run become the single flood issue. */
 export const FLOOD_LIMIT = 10;
 /** The key of the flood issue. */
@@ -33,7 +29,7 @@ export const FLOOD_KEY = "dox-gate:flood";
 export const DRY_RUN_KEY = "dry-run:synthetic:/:body";
 
 /**
- * Names in `.github/workflows/dox-gates-nightly.yml` that the report reads or points at. A test
+ * Names in `.github/workflows/dox-gates-weekly.yml` that the report reads or points at. A test
  * checks the workflow still has each one.
  */
 /** The leg step that passes only when the runner left a readable summary.json. */
@@ -52,7 +48,7 @@ const LOG_LINES = 10;
 
 /**
  * @typedef {{
- *   kind?: string, gate: string, rule: string, page: string, selector?: string,
+ *   kind?: string, gate: string, rule: string, page: string, target: string, selector?: string,
  *   browser?: string, width?: number, theme?: string | null, message?: string,
  * }} Finding
  * @typedef {{
@@ -83,11 +79,11 @@ export function collapse(text) {
  * @param {Finding} f
  */
 export function keyOf(f) {
-  return `${f.gate}:${f.rule}:${f.page}:${collapse(f.selector)}`;
+  return `${f.gate}:${f.rule}:${f.page}:${f.target}`;
 }
 
 /**
- * The hidden first line of a gate issue body. A key can hold `"`, `>` and `--` (a CSS selector
+ * The hidden first line of a gate issue body. A key can hold `"`, `>` and `--` (an identity key
  * does), none of which may sit in an HTML comment attribute unescaped, so each is written as an
  * entity. The same function builds the line and the line it is matched against, so the escape never
  * needs undoing.
@@ -173,7 +169,7 @@ export function missingSummary(leg, job) {
 /**
  * Every finding the legs reported, one entry per key, with every place it was seen.
  * @param {LegSummary[]} legs
- * @returns {{ key: string, gate: string, rule: string, page: string, selector: string,
+ * @returns {{ key: string, gate: string, rule: string, page: string, target?: string, selector: string,
  *   message: string, tail: string[], places: { leg: string, browser: string, width: string,
  *   theme: string }[] }[]}
  */
@@ -226,6 +222,7 @@ export function collect(legs) {
             gate: f.gate ?? row.id,
             rule: f.rule,
             page: f.page,
+            target: f.target,
             selector: collapse(f.selector),
             message: collapse(f.message).slice(0, MESSAGE_CHARS),
             tail: [],
@@ -284,9 +281,9 @@ function planned(entry, context) {
   const ofLegs = entry.gate === "dox-gate";
   const title =
     entry.rule === "could-not-run"
-      ? `Dox nightly could not run the ${entry.page} leg`
+      ? `Dox weekly could not run the ${entry.page} leg`
       : entry.rule === "not-uploaded"
-        ? "Dox nightly: leg findings did not reach the report"
+        ? "Dox weekly: leg findings did not reach the report"
         : `Dox gate: ${entry.rule} on ${entry.page} (${entry.gate})`;
   const tail =
     entry.tail.length > 0
@@ -295,9 +292,9 @@ function planned(entry, context) {
           .join("\n")
           .replace(/```/g, "'''")}\n\`\`\``
       : "";
-  const selector = entry.selector
-    ? `\n\nSelector: ${codeCell(entry.selector)}`
-    : "";
+  const selector = `${entry.target ? `\n\nTarget: ${codeCell(entry.target)}` : ""}${
+    entry.selector ? `\n\nSelector: ${codeCell(entry.selector)}` : ""
+  }`;
   const run = `Commit: ${context.sha}\nRun: ${context.runUrl}`;
   const repro = ofLegs
     ? ""
@@ -305,7 +302,7 @@ function planned(entry, context) {
   return {
     key: entry.key,
     title,
-    labels: [BUG_LABEL, GATE_LABEL],
+    labels: [GATE_LABEL],
     body: `${entry.message}${selector}${tail}\n\n${placesTable(entry)}\n\n${run}${repro}`,
     comment: `Still failing at ${context.sha}: ${context.runUrl}\n\n${placesTable(entry)}`,
   };
@@ -318,6 +315,7 @@ function dryRunFinding(context) {
     gate: "dry-run",
     rule: "synthetic",
     page: "/",
+    target: "page",
     selector: "body",
     message:
       "**Dry run.** Forced by a manual dispatch (force_finding); nothing here is a real finding. Close this issue once checked.",
@@ -379,7 +377,7 @@ export function planIssueActions(legs, openIssues, context) {
     findings.push({
       key: FLOOD_KEY,
       title: `Dox gate: ${fresh.length} new failures in one run`,
-      labels: [BUG_LABEL, GATE_LABEL],
+      labels: [GATE_LABEL],
       body: lines.join("\n"),
       comment: `Still flooding at ${context.sha}: ${context.runUrl}\n\n${fresh.length} new failures:\n\n${list}`,
     });

@@ -30,7 +30,13 @@
  * The preferences do not change with the viewport, so the default is one width (1440).
  * Exit 0 pass, 1 any finding or nothing measured, 2 usage.
  */
-import { motionProblem, transparencyProblems } from "./gate-checks.mjs";
+import {
+  contrastApplied,
+  emulationNotAppliedProblem,
+  motionProblem,
+  transparencyProblems,
+  waitForFrames,
+} from "./gate-checks.mjs";
 import {
   distPages,
   parseSweep,
@@ -40,6 +46,8 @@ import {
 
 const GATE = "a11y-media";
 const MOTION_WAIT_MS = 2000;
+/** How long the contrast check waits for the emulated state to reach the page. */
+const EMULATION_WAIT_MS = 2000;
 
 const run = parseSweep({
   gate: GATE,
@@ -48,30 +56,6 @@ const run = parseSweep({
 });
 
 const fullSet = (browserName) => browserName === "chromium";
-
-/** In the page: a path for an element, as `a11y-tab-walk.mjs` writes it. */
-function installPath() {
-  window.__pathOf = (el) => {
-    const parts = [];
-    for (
-      let n = el;
-      n && n.nodeType === 1 && n !== document.documentElement;
-      n = n.parentElement
-    ) {
-      let s = n.localName;
-      if (n.id) {
-        parts.unshift(`${s}#${CSS.escape(n.id)}`);
-        break;
-      }
-      const same = [...n.parentElement.children].filter(
-        (c) => c.localName === s,
-      );
-      if (same.length > 1) s += `:nth-of-type(${same.indexOf(n) + 1})`;
-      parts.unshift(s);
-    }
-    return parts.join(" > ");
-  };
-}
 
 const matches = (page, query) =>
   page.evaluate((q) => matchMedia(q).matches, query);
@@ -82,6 +66,7 @@ async function emulationMissing(page, query, what) {
     : [
         {
           rule: "emulation-unsupported",
+          target: "page",
           message: `${what}: matchMedia(${query}) is false after emulating it`,
         },
       ];
@@ -105,7 +90,8 @@ async function checkMotion(page) {
           timing.iterations === Infinity ? "infinite" : timing.iterations,
         remainingMs: (timing.endTime ?? 0) - (a.currentTime ?? 0),
         name: a.animationName ?? a.transitionProperty ?? a.id ?? "animation",
-        selector: target ? window.__pathOf(target) : null,
+        target: target ? window.__gmtIdentity(target) : null,
+        selector: target ? window.__gmtCssPath(target) : null,
       };
     }),
   );
@@ -119,6 +105,8 @@ async function checkMotion(page) {
     )
     .map((a) => ({
       rule: "motion-running",
+      // An animation with no target element (a document timeline effect) names the page.
+      target: a.target ?? "page",
       selector: a.selector,
       message: `${a.name} is still running ${MOTION_WAIT_MS / 1000}s after load under prefers-reduced-motion (${a.iterations === "infinite" ? "infinite" : `${Math.round(a.remainingMs)}ms left`})`,
     }));
@@ -150,14 +138,19 @@ async function checkTransparency(page, cdp) {
       window.__blurred.map((el) => {
         const c = getComputedStyle(el);
         return {
-          selector: window.__pathOf(el),
+          target: window.__gmtIdentity(el),
+          selector: window.__gmtCssPath(el),
           backdropFilter: c.backdropFilter,
           backgroundColor: c.backgroundColor,
         };
       }),
     );
     return after.flatMap((el) =>
-      transparencyProblems(el).map((f) => ({ ...f, selector: el.selector })),
+      transparencyProblems(el).map((f) => ({
+        ...f,
+        target: el.target,
+        selector: el.selector,
+      })),
     );
   } finally {
     await cdp.send("Emulation.setEmulatedMedia", {
@@ -178,36 +171,77 @@ async function checkContrast(page) {
     );
     if (bad.length) return bad;
     await settleTransitions(page);
-    const read = await page.evaluate(() => {
-      const root = getComputedStyle(document.documentElement);
-      const shadows = [];
-      const walker = document.createTreeWalker(
-        document.body,
-        NodeFilter.SHOW_TEXT,
+    /* One reading after the next animation frame. The emulation reaches the tokens and the text
+       a frame or more after `emulateMedia` resolves, so a reading taken at once can be of the
+       page before it. */
+    const sample = () =>
+      page.evaluate(
+        () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => {
+              const root = getComputedStyle(document.documentElement);
+              const shadows = [];
+              const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+              );
+              const seen = new Set();
+              for (
+                let node = walker.nextNode();
+                node;
+                node = walker.nextNode()
+              ) {
+                const el = node.parentElement;
+                if (!el || seen.has(el) || !node.textContent.trim()) continue;
+                seen.add(el);
+                if (!el.checkVisibility({ checkVisibilityCSS: true })) continue;
+                const c = getComputedStyle(el);
+                if (c.textShadow !== "none")
+                  shadows.push({
+                    target: window.__gmtIdentity(el),
+                    selector: window.__gmtCssPath(el),
+                    textShadow: c.textShadow,
+                  });
+              }
+              resolve({
+                matches: matchMedia("(prefers-contrast: more)").matches,
+                border: root.getPropertyValue("--gmt-border").trim(),
+                strong: root.getPropertyValue("--gmt-border-strong").trim(),
+                shadows,
+              });
+            }),
+          ),
       );
-      const seen = new Set();
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        const el = node.parentElement;
-        if (!el || seen.has(el) || !node.textContent.trim()) continue;
-        seen.add(el);
-        if (!el.checkVisibility({ checkVisibilityCSS: true })) continue;
-        const c = getComputedStyle(el);
-        if (c.textShadow !== "none")
-          shadows.push({
-            selector: window.__pathOf(el),
-            textShadow: c.textShadow,
-          });
-      }
-      return {
-        border: root.getPropertyValue("--gmt-border").trim(),
-        strong: root.getPropertyValue("--gmt-border-strong").trim(),
-        shadows,
-      };
-    });
+    const waited = await waitForFrames(
+      sample,
+      (r) =>
+        contrastApplied({
+          border: r.border,
+          strong: r.strong,
+          shadowCount: r.shadows.length,
+        }),
+      { maxMs: EMULATION_WAIT_MS, now: () => performance.now() },
+    );
+    const read = waited.last;
+    if (!waited.ok && !read.matches) {
+      /* The emulation never reached the page, so neither product rule is recorded: both read
+         state that is not there. With the media query matching and the state still wrong after
+         the wait, the page is wrong and the rules below say how. */
+      return [
+        emulationNotAppliedProblem({
+          frames: waited.frames,
+          matches: read.matches,
+          border: read.border,
+          strong: read.strong,
+          shadowCount: read.shadows.length,
+        }),
+      ];
+    }
     const found = [];
     if (read.border !== read.strong) {
       found.push({
         rule: "contrast-border-token",
+        target: "root",
         selector: ":root",
         message: `--gmt-border is ${read.border}, not --gmt-border-strong (${read.strong}), under prefers-contrast: more`,
       });
@@ -215,6 +249,7 @@ async function checkContrast(page) {
     for (const s of read.shadows) {
       found.push({
         rule: "contrast-text-shadow",
+        target: s.target,
         selector: s.selector,
         message: `visible text keeps text-shadow ${s.textShadow} under prefers-contrast: more`,
       });
@@ -257,12 +292,17 @@ async function checkForcedColors(page) {
           f.outlineStyle !== "none" &&
           (f.outlineStyle === "auto" || parseFloat(f.outlineWidth) > 0);
         el.blur();
-        if (!outline) out.push(window.__pathOf(el));
+        if (!outline)
+          out.push({
+            target: window.__gmtIdentity(el),
+            selector: window.__gmtCssPath(el),
+          });
       }
       return out;
     });
-    return controls.map((selector) => ({
+    return controls.map(({ target, selector }) => ({
       rule: "forced-colors-boundary",
+      target,
       selector,
       message:
         "under forced colours the control has no border and, focused, no outline, so it has no visible edge",
@@ -279,7 +319,6 @@ await sweep({
   browserNote: (browserName) =>
     fullSet(browserName) ? "" : "  (reduced motion and more contrast only)",
   check: async ({ page, context, browserName }) => {
-    await page.evaluate(installPath);
     const found = [...(await checkMotion(page))];
     if (fullSet(browserName)) {
       const cdp = await context.newCDPSession(page);
