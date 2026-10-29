@@ -57,6 +57,22 @@
         "apps/dox/src/components/ui/**",
         "apps/dox/src/components/ai-elements/**"
       ]
+    },
+    {
+      "files": ["apps/dox/src/**/*.{ts,tsx}"],
+      "excludeFiles": [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/.astro/**",
+        "**/coverage/**",
+        "**/*.tsbuildinfo",
+        "**/out/**",
+        "apps/dox/src/generated/**",
+        "apps/dox/src/data/gmt-stats.json",
+        "apps/dox/src/components/ui/**",
+        "apps/dox/src/components/ai-elements/**"
+      ],
+      "options": { "embeddedLanguageFormatting": "off" }
     }
   ]
 }

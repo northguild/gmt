@@ -5,7 +5,8 @@
  * Imported explicitly by the test files that need it, never wired as a global
  * `setupFiles`: the great majority of this package's ~480 tests run in the
  * `node` environment (see `vitest.config.ts`), and a global setup would load
- * DOM shims into every one of them.
+ * DOM shims into every one of them. The one global setup file is `setup-dom.ts`,
+ * which does nothing in node and adds only the jest-dom matchers in jsdom.
  *
  * Note there is no `environmentMatchGlobs` option to reach for here — it was
  * removed in Vitest 3, and this repo is on 5.x. Per-file

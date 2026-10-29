@@ -43,12 +43,15 @@ export default defineConfig({
     globals: true,
     root: ".",
     include: [
+      "lint/**/*.test.ts",
       "scripts/**/*.test.ts",
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
       "worker/**/*.test.ts",
     ],
     environment: "node",
+    // A no-op in node; in jsdom files it adds the jest-dom matchers.
+    setupFiles: ["./src/test/setup-dom.ts"],
     // Vitest's default is 5 s, which was never chosen for this suite. Several tests here are
     // import-bound rather than slow: they `await import()` a GMT namespace, which pulls in
     // `@js-temporal/polyfill` and costs ~3.9 s in a fresh worker on an idle machine
