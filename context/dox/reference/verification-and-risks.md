@@ -24,15 +24,23 @@
 - **a11y and media:** `a11y-axe` (WCAG 2.2 AA tags; exclusions for false positives only) and
   `a11y-media` (reduced motion, reduced transparency, more contrast, forced colours).
 - **Tables fit:** `table-fit` (`scripts/table-fit.mjs`) fails when a table on any built page
-  scrolls sideways at 1440 px. It is a nightly gate in three browsers and the `dox-tables` check in
+  scrolls sideways at 1440 px. It is a weekly gate in three browsers and the `dox-tables` check in
   CI, in Chromium.
 - **Visual gates** after any CSS or widget-markup change: `visual:diff` and
   `scripts/html-diff.mjs`, through `pnpm --filter dox gates --baseline <base apps/dox>` (see
   [design-system.md](design-system.md)).
 - **Where they run:** a Dox PR runs the `pr` tier on its changed pages in Chromium (the
-  `dox-gates` job), and `dox-gates-nightly.yml` sweeps every page in three browsers. See
+  `dox-gates` job), and `dox-gates-weekly.yml` sweeps every page in three browsers. See
   built.md, [Tier 2](../built.md#tier-2--widget-platform) ("The PR job") and
-  [Runbooks](../built.md#runbooks) ("The nightly gate sweep").
+  [Runbooks](../built.md#runbooks) ("The weekly gate sweep").
+- **Gate findings:** a finding's key is `gate:rule:page:target`, where the target is the element's
+  identity key. A widget root without `data-widget` makes every finding under it fall back to the
+  page, so one weekly issue hides several; every new widget root carries `data-widget`, a `region`
+  role and an `aria-label`.
+- **Gate locators:** a gate finds a control by role and exact accessible name inside its widget
+  root, and a part with neither by its `data-gate` hook; no gate names a style class or a
+  `data-role`. Renaming a control's label or removing a hook shows as a `--resolve-only` miss
+  naming the locator.
 - **Chat:**
   - An out-of-corpus question is **refused, not improvised**.
   - A hallucinated route renders as **plain text**, never a broken link.

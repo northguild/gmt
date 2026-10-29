@@ -69,9 +69,29 @@ These bind every change.
    regenerating them shows a diff that belongs in the change. The MDX pages are ignored and
    untracked.
 
-6. **No new React islands.** The `/dox` chat (`client:load`) is the only one. Widgets are
-   an Astro shell plus a plain-DOM `mount(root)` module, so the same markup server-renders on
+6. **Widgets are an Astro shell, a pure `renderTemplate` built from the kit, and a `mount`.**
+   The `/dox` chat (`client:load`) is the only React island; the same markup server-renders on
    a docs page and mounts in the chat rail.
+   - Markup comes only from `src/widgets/builders` and the `src/widgets/primitives` elements.
+   - A missing piece is added to the kit, with a test, and never typed inline.
+   - Style lives in the widget's CSS Module. Global sheets are layered and hold only tokens,
+     Starlight overrides and the shell.
+   - No `nth-*` selector, no `!important`, no id selector, no colour literal in a module, and
+     no class shared across widgets.
+   - State is a class or `data-*` attribute that the builder or `mount` sets.
+   - Tests follow Testing Library: `screen` queries by role, label or text, `userEvent`,
+     jest-dom, and the `src/test/render-widget.ts` helpers only.
+
+   **Accessibility is the component's job.** Each element owns its role, name, states and its
+   WAI-ARIA APG keyboard model, and a builder does not compile without a label. Targets are
+   WCAG 2.2 AA, with these house rules:
+   - a 7:1 text floor;
+   - targets of at least 24 × 24 px (SC 2.5.8);
+   - focus never obscured (SC 2.4.11, through `scroll-padding`);
+   - an `outline` focus ring that passes in forced colours and `prefers-contrast`;
+   - motion from tokens that are 0 under reduced motion.
+
+   Every component test runs `expectNoAxeViolations`.
 
 7. **Sentinel rendering is mandatory in every widget, not just the playground.** GMT
    returns `""` / `null` / `false` / `[]` for invalid input rather than throwing. Render

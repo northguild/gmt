@@ -6,17 +6,20 @@ owned by [design-system.md](design-system.md) — this file does not repeat them
 
 ## Where a rule goes
 
-- **Shared or Starlight-facing rules** live in `apps/dox/src/styles/*.css`, loaded through
-  `customCss` in `apps/dox/astro.config.mjs` (the config holds the full ordered list). Pick the
-  owning sheet from design-system.md's stack table: token, Starlight mapping, primitive,
-  glass, shell, content, controls, a per-widget sheet, `gmt-light.css`, `dox.css` (homepage
-  and live-component layout) or `gmt-a11y.css` (loaded last).
+- **A widget rule** goes in the widget's CSS Module (`src/widgets/tools/<widget>.module.css`).
+  It is unlayered, so it beats every global rule without `!important`.
+- **A family rule** goes in its family piece, `src/widgets/families/<family>/`.
+- **A global rule** goes in its `gmt.*` layer. `src/styles/gmt.css` is the one `customCss`
+  entry; it sets the layer order and imports every other sheet into a layer. Pick the owning
+  layer and sheet from design-system.md: tokens, base, shell, content, controls, tools,
+  third-party or a11y.
+- **Chat sheets** sit in `gmt.chat`, after Tailwind's layers. `DoxChat.tsx` imports them.
+- **The eight Astro components on `@layer starlight.*`** keep it.
 - **Component `<style>` blocks** may stay in their `.astro` file when the rule is private to
   that component. They consume `--gmt-*` tokens and never redefine them. Components that
   already scope rules with `@layer` (`Hero.astro`, `HeroCopy.astro`, `HeroGlobe.astro`,
   `Header.astro`, `Icon.astro`, `LinkButton.astro`) keep the layer they use — changing it moves
   the rule's cascade position relative to Starlight.
-- **Chat styles** are not in `customCss`; they are imported by `src/components/ask/DoxChat.tsx`.
 - Do not create a new CSS file for a one-off rule.
 
 ## Token-only rule

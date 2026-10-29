@@ -5,9 +5,10 @@
 
 ## The stylesheet stack
 
-The theme is plain, **unlayered** CSS custom properties — no Tailwind, no `@layer` — which is
-what lets it beat Starlight's defaults. The core sheets load in this order via
-`starlight({ customCss })` in `apps/dox/astro.config.mjs`:
+The theme is plain CSS custom properties, with no Tailwind outside the chat island. One
+`customCss` entry, `src/styles/gmt.css`, sets the layer order and imports every sheet into a
+`gmt.*` layer, so a later layer beats Starlight's defaults without `!important`. The core
+sheets import in this order:
 
 | #   | File                 | Owns                                                                                                                           |
 | --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -80,10 +81,13 @@ redefine them.
    same selector lives elsewhere.
 2. **No colour literals in rules.** One-off gradient stops are the only exception.
 3. **Widgets compose primitives** and never touch a Starlight-override sheet.
-4. **Respect the `customCss` order.** Moving a rule between files can change which of two
-   equal-specificity rules wins — verify with the visual gate below.
-5. **No `@layer` in the GMT sheets.** Tailwind's layers exist only inside the chat island, under
-   the constraints below.
+4. **Respect the layer order.** Which layer a rule sits in decides what it beats, not bundle
+   order. Moving a rule to another layer can change the winner — verify with the visual gate
+   below.
+5. **The layer order is fixed in `gmt.css`.** It reads `starlight, theme, base, components,
+   utilities, vendor, gmt.tokens, gmt.base, gmt.shell, gmt.content, gmt.controls, gmt.tools,
+   gmt.chat, gmt.thirdparty, gmt.a11y`. Unlayered rules beat every layer, so CSS Modules and
+   Astro component styles win over every global rule without `!important`.
 6. **An accent used as text uses its `-ink` theme-role token; the bright accent is for fills,
    borders and non-text only.** `--gmt-cyan`, `--gmt-cyan-bright`, `--gmt-spring`, `--gmt-signal`
    and `--gmt-dst-purple` are tuned to read well as a *fill* or a *border* against the page — a
@@ -105,6 +109,30 @@ redefine them.
    headers, idle sidebar links, and the tokens that alias it — Starlight's `--sl-color-gray-2`,
    Pagefind's `--pagefind-ui-text`, shadcn's `--muted-foreground`), so the base value is the
    text-safe one and `--gmt-ice-dim-fill` keeps the dimmer value for the few non-text consumers.
+
+## Custom elements and CSS Modules
+
+The kit's custom elements (`gmt-range`, `gmt-handle`, `gmt-readout`, `gmt-preset`, `gmt-chips`,
+`gmt-copy`, `gmt-grow`) live in `src/widgets/primitives/<name>/`, each with its module and test.
+
+- **Light DOM, no shadow root.** Global tokens and Starlight theming must reach inside an
+  element, and a shadow root would block both.
+- **Module class names are stable.** Vite names them `gmt-<file>__<local>` with no hash, so a
+  name is predictable in the DOM. `localsConvention` is `camelCaseOnly`. Tests and gates never
+  select by these names; a global sheet never reaches them.
+- **Contrast.** Text is at least 7:1 in both themes, so text uses an `-ink` token. Interactive
+  parts need 3:1 against their surroundings.
+- **Forced colours.** An element sets no colour the system palette must replace. It draws its
+  focus ring with `outline`, never `box-shadow`, and keeps a visible border on thumbs and
+  tracks.
+- **`prefers-contrast` and reduced motion.** Borders and the ring strengthen under
+  `prefers-contrast: more`. Motion reads the duration tokens, which are 0 under
+  `prefers-reduced-motion: reduce`.
+- **Targets and focus.** Every control is at least 24 × 24 px, and `scroll-padding` keeps a
+  focused control clear of sticky chrome.
+- **Modern CSS only.** Use nesting, container queries on the widget root, logical properties,
+  `:focus-visible`, `:where()` and `:is()`, `clamp()`, `color-mix()`, and the motion and
+  z-index tokens. Stylelint enforces Baseline 2024.
 
 ## Form controls
 
@@ -240,28 +268,23 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
 
 The site has one arrival gesture: a fade from 92% scale over 0.5 s on the spring curve, first
 performed by the globe. Five things use it: the globe canvas, the globe's zone list, the Crossing
-Clock's two faces, the `/dox` crystal, and every numbered card of a tool widget.
+Clock's two faces, the `/dox` crystal, and every card of a tool widget.
 A landmark visual that appears once its content is ready uses it, and so does each card of a
 teaching widget; nothing else does, and it never replays on a value change.
 
-- **Numbered cards** (`lib/widget-enter.ts`): `enterWidgetSections(scope)` calls `enter()` on each
-  `.gmt-widget-section` that is a direct child of a `.gmt-widget-card`, staggered 70 ms apart in
-  document order. The stagger restarts per card, so two widgets on one page do not compound. Head.astro
-  runs it over the document after `smoothHeights`, and `MountedWidget.tsx` runs it over the chat
-  rail's widget root, so a tool page and the rail behave alike. A section nested deeper (inside a
-  `.gmt-grow` wrapper) or outside any card does not enter. Only `transform` and `opacity` move, so
-  the entrance never changes a page's height and stays clear of `smoothHeight`'s height easing and
-  the height budget `grow:measure` asserts.
-- **First-paint hold.** A server-rendered card would paint visible and then drop out for its entrance
-  if `.gmt-enter` only arrived with the module script. `Head.astro` therefore runs a tiny inline
-  script that puts `gmt-enter-hold` on `<html>` before the first paint (not under reduced motion,
-  and not without JS), and `gmt-primitives.css` makes a direct-child numbered card that has not
-  entered transparent while the class is set. `releaseEntranceHold()` lifts it in the same task that
-  starts the entrances, so no frame can paint a card visible in between, and a 2 s timer lifts it if
-  the module script never runs.
+- **Cards** (`card()` in `builders/layout.ts`): a card carries a valueless `data-enter`, and
+  `card(children, { enter: n })` also writes `style="--gmt-enter-i: n"`, its index in the widget. The
+  stylesheet runs the entrance itself on `[data-enter]:not([data-enter="pending"])`, with the delay
+  `calc(var(--gmt-enter-i, 0) * var(--gmt-motion-stagger))` and `animation-fill-mode: backwards`. No
+  script is involved, so a server-rendered card's first paint is the animation's first frame, a page
+  without script shows the card, and a chat-rail widget that connects later enters the same way. The
+  index is written into the markup and never changed, because a delay that changes after the
+  animation starts makes it jump. Only `transform` and `opacity` move, so the entrance never changes
+  a page's height and stays clear of `<gmt-grow>`'s height easing.
 
 - **CSS** (`gmt-primitives.css`): the `gmt-enter` keyframes, the `.gmt-enter` class that plays
-  them, and `[data-enter="pending"]`, which hides an element held for its moment.
+  them, the `[data-enter]` rule above, and `[data-enter="pending"]`, which hides an element held
+  for its moment.
   `--gmt-enter-transform` keeps an element's own transform through the entrance (the crystal's
   `rotateX(10deg)`).
 - **JS** (`lib/enter.ts`):
@@ -275,7 +298,7 @@ teaching widget; nothing else does, and it never replays on a value change.
 - **Pure CSS use:** server-rendered markup that enters on first paint (the crystal) uses
   `animation: gmt-enter var(--gmt-enter-duration) var(--gmt-enter-easing) both` directly.
 - **Nothing hidden before script:** only `lib/enter.ts` sets the class or the pending attribute.
-- **Reduced motion:** `.gmt-enter` is `animation: none`; `enter()` marks the element entered at
+- **Reduced motion:** `.gmt-enter` and a card's `[data-enter]` are `animation: none`; `enter()` marks the element entered at
   once and runs `onEntered`, and `holdEntrance()` does not hold.
 - **Tokens** (`gmt-tokens.css`): `--gmt-enter-duration`, `--gmt-enter-easing`,
   `--gmt-enter-scale`.

@@ -544,6 +544,68 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ## Tier 2 · Widget platform
 
+**Component kit.** A widget is an Astro shell, a pure `renderTemplate` built from the kit, and a
+`mount`. The kit is 7 custom elements and 11 builders. The builders and their helpers sit in
+`src/widgets/builders` (`aside`, `codeFrame`, `hero`, `card`, `field`, `fieldGrid`, `hint`,
+`section`, `widget`, `table`, `toolLinks`; the `html`, `raw` and `idScope` helpers escape and
+scope). The elements sit in `src/widgets/primitives/<name>/`: `gmt-range`, `gmt-handle`,
+`gmt-readout`, `gmt-preset`, `gmt-chips`, `gmt-copy` and `gmt-grow`. A builder takes its
+accessible name as a required argument, so a piece without a label does not compile. Family
+pieces, shared by the tools of one family, live in `src/widgets/families/<family>/`.
+- **Registration.** `defineElements()` runs on the first line of each `mountX()`, never at module
+  top level, because SSR and node tests have no `customElements`. Each element extends a base
+  that falls back to an empty class when `globalThis.HTMLElement` is missing. Each connection
+  owns one `AbortController`, so a double connect or a removed element leaves no listener.
+- **CSS Modules.** `generateScopedName` in `astro.config.mjs` names a class
+  `gmt-<file>__<local>`. The name has no hash, so it is the same in every build and readable in
+  the DOM. Tests do not rely on it.
+- **Layer order.** `src/styles/gmt.css` declares `starlight, theme, base, components,
+  utilities, vendor, gmt.tokens, gmt.base, gmt.shell, gmt.content, gmt.controls, gmt.tools,
+  gmt.chat, gmt.thirdparty, gmt.a11y`. Unlayered rules win over every layer, so CSS Modules and
+  Astro component styles beat every global rule. Modules need no `!important`.
+- **Browser target.** Baseline 2024. `build.cssTarget` is `chrome130`, `edge130`, `firefox132`
+  and `safari18.2`, the oldest engines `browserslist "baseline 2024"` lists. Stylelint's
+  `use-baseline` rule holds the CSS to the same line.
+
+**Widget tests.** A widget test follows Testing Library guidance. It finds things by role, label
+or text and asserts what a person sees.
+- **Helpers.** `src/test/render-widget.ts` is the only place that touches the DOM by hand:
+  `renderWidget`, `setRange` (the one sanctioned direct input event), `expectNoAxeViolations` and
+  `flushWidget`. `userEvent` drives clicks and keys.
+- **Every component test runs `expectNoAxeViolations`.** `src/widgets/axe-guard.test.ts` fails
+  a kit test that does not.
+- **Lint rules.** The oxlint plugin `dox-test` bans `dispatchEvent`, class queries, `data-role`
+  and `gmt-` house classes in tests. The plugin `dox-src` bans hand-typed markup, `nth-*`
+  selectors, module-level instance counters and element registration at import time. Stylelint
+  bans `!important`, id selectors, colour literals in modules and shared module classes.
+- **Legacy lists only shrink.** `lint/legacy-test-files.mjs`, `lint/legacy-src-files.mjs` and
+  the `LEGACY_FILES` list in `stylelint.config.mjs` name files by path, with no globs. A
+  migrated file leaves the list and never returns.
+- **Measured in Chromium.** `color-contrast` and `target-size` are off in `expectNoAxeViolations`,
+  because jsdom has no layout. The `a11y-axe` and `contrast-measure` gates measure them.
+
+**Widget roots and element identity.** Every widget root carries `data-widget="<mount name>"`,
+`role="region"` and an `aria-label` that is the tool page's title (the playground's is
+`<function> playground`, the globe's "Zoned Earth", the zone planner's "Zone Planner"). The
+`/dox` starter pills use `data-starter`, so `data-widget` names widgets only. Gates find a widget
+by `[data-widget="…"]`, never by a `.gmt-*` class. A finding's `target` is the element's identity
+key from `scripts/lib/element-identity.mjs`: `widget:<slug> › role "name"`, with digit runs
+collapsed, a name cut at 60 characters and `[n]` only on true repeats. It never reads an id, a
+class or an `nth-*` position, so a sibling insert, a `useId` change or a class rename leaves the
+weekly issue's key alone. `recordFinding` throws without a `target`.
+
+**How gates find a control or a part.** No gate script names a style class or a `data-role`: the
+component kit hashes class names, so a class is a style detail. A control is found by
+`getByRole(role, { name, exact: true })` inside `[data-widget="…"]` (`scripts/lib/locate.mjs`). A
+structural part with no role or name (a chart frame, a drawn region, a drag track, a zone of a
+card, the wall-clock text a screenshot masks) carries a `data-gate` hook, a space-separated list
+of part names, found with `gate("part")`. The hooks and why each exists are in
+[the slice](specs/gate-stability/03-locators.md). A new mount puts `data-gate` only on a part a
+gate measures and no role describes. Each gate with a `--resolve-only` flag loads its pages and
+checks that every control and part it needs is there, so a rename shows as a missing locator
+before it shows as a measurement.
+
+
 `DOX-B1a`, `B2a`–`B2d`
 
 - **Playground on every example.** The generator renders the first `@example` as a static
@@ -1886,11 +1948,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `themes`, `needs`, plus `args`, `base`, `browserArg`, `pages`); `select.mjs` turns the changed
     files and the import graph (`graph.mjs`) into the pages to check; `screen.mjs` prints the result.
     Tiers nest: `pr` (contrast-measure, grow-measure, readout-still, data-credits-check,
-    canada-layout-check) is inside `nightly` (adds canada-clock-still, canada-stored-still and
+    canada-layout-check) is inside `weekly` (adds canada-clock-still, canada-stored-still and
     table-fit), which
     is inside `local` (adds globe-smoke, html-diff and visual-diff, the three that need a GPU or a
     baseline).
-  - **`table-fit`** (`scripts/table-fit.mjs`, tier `nightly`, all three engines) opens every built page
+  - **`table-fit`** (`scripts/table-fit.mjs`, tier `weekly`, all three engines) opens every built page
     that holds a `<table` (`listTablePages` in `scripts/lib/table-pages.mjs`, read from `dist`, never a
     fixed count) at 1440 x 900 with every `<details>` open and every tab panel shown, and fails when a
     table's scroll box (the table or its nearest `overflow-x` ancestor) is wider than it shows. A
@@ -1906,7 +1968,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **The PR job.** `dox-gates` in `.github/workflows/ci.yml` ("Dox gates (changed pages, Chromium)")
     runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22: `gates --tier pr
     --browsers chromium --themes dark,light --against origin/<base>`, so the `pr` tier only, on the
-    pages the diff selects; the nightly covers the rest (Firefox, WebKit, the clock-still gates). The
+    pages the diff selects; the weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). The
     runner appends its screen to `$GITHUB_STEP_SUMMARY` in a fenced `text` block
     (`gates/step-summary.mjs`); a failed job uploads `apps/dox/.gates/` (without `vite-cache/`) as the
     `dox-gates-<run id>` artifact. It is **advisory**: the owner makes it a required check after about
@@ -3035,7 +3097,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   build or a gate that exited 2.
   - `--plan` prints the selection and exits without running a gate; it builds only when `dist` is
     missing. `--only <gate,...>`, `--pages <path,...>` (replaces the diff selection),
-    `--browsers`, `--themes`, `--tier pr|nightly|local` (default `local`), `--shard i/n` (every
+    `--browsers`, `--themes`, `--tier pr|weekly|local` (default `local`), `--shard i/n` (every
     n-th page of each gate's sorted list), `--no-build` (needs `dist/gmt/index.html`) and `--json`
     (the summary as JSON) narrow or reshape a run. `--against <ref>` is the diff base (default
     `origin/main`, else `main`).
@@ -3078,20 +3140,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
   Re-run the `rsync` and the site build of `$SP/after` after any change. Firefox does not
   launch on the author's machine; record it as blocked and do not bypass the sandbox.
-- **The nightly gate sweep** (`.github/workflows/dox-gates-nightly.yml`). Every page, three browsers,
-  both themes, filed as `bug` issues.
-  - **Triggers.** A daily cron (`23 4 * * *`) that skips when nothing changed, a Sunday cron
-    (`41 4 * * 0`) that always runs, and `workflow_dispatch` with `force` (run anyway) and
-    `force_finding` (also file one `[dry run]` issue). The weekly run is recognised by
-    `github.event.schedule`, never by a computed date.
-  - **Skip rule.** Job `decide` (`actions: read`) takes the newest finished `main` run of the
-    workflow that filed its findings (its `Report to issues` job succeeded, or it skipped the night
-    and ended `success`) and runs the sweep when `git diff --name-only <sha> HEAD -- apps/dox/
-    pnpm-lock.yaml` is not empty, when there is no such run or its commit is not in the history, or
-    when a listing or the diff fails (fail open, with the reason in the summary). A run whose report
-    job failed is never the baseline, so its findings are swept and filed again the next night. The
-    rule is the pure `shouldRun` in `apps/dox/scripts/gates/nightly-decide.mjs`, which the step calls.
-  - **Legs.** `pnpm --filter dox gates --all --tier nightly --browsers <b> --themes dark,light
+- **The weekly gate sweep** (`.github/workflows/dox-gates-weekly.yml`). Every page, three browsers,
+  both themes, filed as `dox-gate` issues.
+  - **Triggers.** A Sunday cron (`41 4 * * 0`) and `workflow_dispatch` with `force_finding` (also
+    file one `[dry run]` issue). The sweep always runs: there is no skip rule. The workflow stays
+    disabled until the owner says to enable it; Claude never enables it, and dispatches a run only
+    when asked.
+  - **Legs.** `pnpm --filter dox gates --all --tier weekly --browsers <b> --themes dark,light
     --retries 1 --shard i/n`, `timeout-minutes: 90`, `fail-fast: false`. `--shard` splits each
     gate's sorted page list round-robin, not the gates, so every leg of a browser runs every gate
     on its share of the pages. Under `--all`, Chromium gets every page of every gate; WebKit and
@@ -3111,7 +3166,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **Report.** Job `report` (`issues: write`) downloads the newest `dox-gates-<leg>-<run id>` artifact of
     each leg (`summary.json`, `*.ndjson`) and runs `apps/dox/scripts/gates/file-issues.mjs --legs <all
     twelve>`. Only `FAIL` rows file; `FLAKY` (failed, passed on the retry) is listed in the step
-    summary. The key is `<gate>:<rule>:<page>:<selector>` (selector trimmed, whitespace collapsed);
+    summary. The key is `<gate>:<rule>:<page>:<target>`; the target is the element's identity key (see
+    "Element identity" below), never a class or an `nth` position;
     browsers, widths and themes are not in it, so one issue tables every place the finding was seen.
     A leg with no readable `summary.json` is sorted by its job in the run's job list (`gh api
     …/runs/<id>/jobs`, read only when a summary is missing): if its `Check the summary was written`
@@ -3122,8 +3178,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     step passed (`if-no-files-found: warn`), so the check step is the only signal that separates
     them. If the job list cannot be read, the leg is filed as could-not-run, saying the cause is
     unknown. A `FAIL` with no structured finding files `<gate>:unstructured:all:` with its log tail.
-  - **Issues.** Labels `bug` and `dox-gate` (created when missing, with `dox-gate-dry-run`), issue type
-    `Bug`, first body line `<!-- dox-gate key="…" -->` (`"`, `>` and `--` in a key are written as
+  - **Issues.** Label `dox-gate` only (created when missing, with `dox-gate-dry-run`), and no issue
+    type; first body line `<!-- dox-gate key="…" -->` (`"`, `>` and `--` in a key are written as
     entities). An open `dox-gate` issue whose first line equals the marker gets a comment on the
     lowest-numbered match; otherwise a new issue opens. **Flood guard:** more than 10 new issues in one
     run opens none and files one `dox-gate:flood` issue listing every held-back key (a comment if it
@@ -3133,13 +3189,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     plans against the live open-issue list, prints one line per action (`open  <key>  <title>` or
     `comment #123  <key>`) and a count, and files nothing; it needs `gh` signed in. Outside GitHub
     Actions (`GITHUB_ACTIONS` not `true`) it only plans: without `--print` it exits 2 with "run with
-    --print locally; issues are filed by the nightly workflow". A summary path that is unreadable (without
+    --print locally; issues are filed by the weekly workflow". A summary path that is unreadable (without
     `--legs`) or has no leg folder is also exit 2, before any `gh` call; with `--legs`, the legs with no
     summary are the `--legs` entries with no readable summary, including when no summary arrived at
     all. Locally (no `GITHUB_RUN_ID`) there is no job list, so they plan as could-not-run. Use a summary with
     no `FAIL` row, since a local `--all` summary's hundred findings plan as one flood issue. In CI,
     dispatch with `force_finding`: one `[dry run]` issue appears (key `dry-run:synthetic:/:body`,
-    label `dox-gate-dry-run` instead of `bug`), and a second dispatch comments on it.
+    label `dox-gate-dry-run` instead of `dox-gate`), and a second dispatch comments on it.
 - **Local dev:** `pnpm dox:dev` (site + chat Worker) or `pnpm dox:dev:site` (site only), both at `http://localhost:4321/gmt/`.
   A warm start is ~10 s: the gmt dev build (`build:dev`) rebuilds `dist/` in place in ~5 s, every `generate` step
   skips when its inputs are unchanged, and `upstream refresh` makes no network calls
@@ -3203,12 +3259,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **the `dox-gates` PR job** (`ci.yml`, "The PR job"): a run passes in under 15 minutes (record
     the time in the "The PR job" bullet), and a PR that touches nothing under `apps/dox/` or
     `pnpm-lock.yaml` shows the job as skipped;
-  - **the nightly gate sweep** (`dox-gates-nightly.yml`, "The nightly gate sweep"), which can only be
+  - **the weekly gate sweep** (`dox-gates-weekly.yml`, "The weekly gate sweep"), which can only be
     dispatched once the file is on `main`:
     - a `force_finding` dispatch finishes every leg, Firefox included, and files one `[dry run]`
       issue with the marker on line 1; a second dispatch comments on it;
-    - a scheduled run with nothing changed shows the skip line in `decide`, and `sweep` and `report`
-      are skipped;
     - every leg finishes inside its 90 minutes; record the slowest leg's time in the runbook entry.
 
 ---
