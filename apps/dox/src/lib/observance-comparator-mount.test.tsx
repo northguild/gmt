@@ -356,7 +356,7 @@ describe("a hand-written date that is not on the calendar", () => {
 describe("the Builder's compare link", () => {
   it("seeds the Comparator with the row's date and policy", async () => {
     const root = document.createElement("div");
-    root.innerHTML = renderHolidayRuleBuilderTemplate({});
+    root.innerHTML = renderHolidayRuleBuilderTemplate("test", {});
     document.body.append(root);
     await mountHolidayRuleBuilder(root, {}, new AbortController().signal);
     const link = root.querySelector<HTMLAnchorElement>(
@@ -377,7 +377,7 @@ describe("the Builder's compare link", () => {
 
   it("is only on fixed rows", async () => {
     const root = document.createElement("div");
-    root.innerHTML = renderHolidayRuleBuilderTemplate({});
+    root.innerHTML = renderHolidayRuleBuilderTemplate("test", {});
     document.body.append(root);
     await mountHolidayRuleBuilder(root, {}, new AbortController().signal);
     for (const li of root.querySelectorAll<HTMLElement>("[data-row]")) {

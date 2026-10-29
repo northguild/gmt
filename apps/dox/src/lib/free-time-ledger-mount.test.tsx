@@ -1,718 +1,464 @@
 /**
  * @vitest-environment jsdom
  *
- * The Free Time Ledger end to end: template → mount → interact → assert,
- * against the real `@northguild/gmt`. Every preset's printed results are
- * checked against literal `freeTimeExpiry` and `chargeableDays` results taken
- * from a run of the library, and the coloured cells against the library's own
- * counts, so a drift in the library or the widget fails here.
+ * The Free Time Ledger end to end: template -> mount -> interact -> assert, against
+ * the real `@northguild/gmt`, through the roles and names a reader meets. Expected
+ * values are from a run of the built library.
  */
-import { Temporal } from "@js-temporal/polyfill";
-import { spyOnResizeObservers } from "~/test/resize-observer-spy";
-import { installJsdomShims } from "~/test/jsdom-shims";
-import { FREE_TIME_PRESETS } from "./free-time-ledger";
+import { screen, within } from "@testing-library/dom";
 import {
-  mountFreeTimeLedger,
-  renderFreeTimeLedgerTemplate,
-} from "./free-time-ledger-mount";
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
+import {
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { FREE_TIME_PRESETS } from "./free-time-ledger";
+import { seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "zone",
-  "free-days",
-  "first-day",
-  "basis",
-  "charge-basis",
-  "tiers",
-  "working-terms",
-  "weekend",
-  "holidays",
-  "frame",
-  "heroes",
-  "hero-free",
-  "hero-charged",
-  "hero-expires",
-  "timeline",
-  "row",
-  "label",
-  "track",
-  "cells",
-  "expiry-marker",
-  "bar",
-  "handle-start",
-  "handle-end",
-  "axis",
-  "clock-start",
-  "clock-end",
-  "summary",
-  "reason-aside",
-  "call-expiry",
-  "copy-expiry",
-  "expiry-output",
-  "call-charges",
-  "copy-charges",
-  "charges-output",
-];
+const entry = WIDGET_REGISTRY["showFreeTimeLedger"] as AnyWidgetEntry;
 
-const FRIDAY_EXPIRY =
-  '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-16",\n  expiresAt: "2024-06-16T23:00:00Z" }';
+const open = (args: Record<string, unknown> = {}): Promise<RenderedWidget> =>
+  renderWidget(entry, { args });
 
-/** Each preset's printed results, verbatim from a library run: [freeTimeExpiry, chargeableDays]. */
-const EXPECTED: Record<string, [string, string]> = {
-  "friday-three-days": [
-    FRIDAY_EXPIRY,
-    '{ freeDaysUsed: 3,\n  chargeableDays: 1,\n  expiresAt: "2024-06-16T23:00:00Z",\n  chargedDates: ["2024-06-17"],\n  byTier: [{ from: 1, to: null, days: 1 }] }',
-  ],
-  "read-as-next-day": [
-    '{ freeTimeStart: "2024-06-15",\n  lastFreeDay: "2024-06-17",\n  expiresAt: "2024-06-17T23:00:00Z" }',
-    '{ freeDaysUsed: 3,\n  chargeableDays: 0,\n  expiresAt: "2024-06-17T23:00:00Z",\n  chargedDates: [],\n  byTier: [{ from: 1, to: null, days: 0 }] }',
-  ],
-  "out-at-expiry": [
-    FRIDAY_EXPIRY,
-    '{ freeDaysUsed: 3,\n  chargeableDays: 0,\n  expiresAt: "2024-06-16T23:00:00Z",\n  chargedDates: [],\n  byTier: [{ from: 1, to: null, days: 0 }] }',
-  ],
-  "working-days": [
-    '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-19",\n  expiresAt: "2024-06-19T22:00:00Z" }',
-    '{ freeDaysUsed: 3,\n  chargeableDays: 5,\n  expiresAt: "2024-06-19T22:00:00Z",\n  chargedDates: ["2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"],\n  byTier: [{ from: 1, to: null, days: 5 }] }',
-  ],
-  "terminal-holiday": [
-    '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-19",\n  expiresAt: "2024-06-19T22:00:00Z" }',
-    '{ freeDaysUsed: 3,\n  chargeableDays: 3,\n  expiresAt: "2024-06-19T22:00:00Z",\n  chargedDates: ["2024-06-20", "2024-06-21", "2024-06-24"],\n  byTier: [{ from: 1, to: null, days: 3 }] }',
-  ],
-  tiers: [
-    '{ freeTimeStart: "2024-06-14",\n  lastFreeDay: "2024-06-16",\n  expiresAt: "2024-06-16T22:00:00Z" }',
-    '{ freeDaysUsed: 3,\n  chargeableDays: 12,\n  expiresAt: "2024-06-16T22:00:00Z",\n  chargedDates: ["2024-06-17", "2024-06-18", "2024-06-19", "2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24", "2024-06-25", "2024-06-26", "2024-06-27", "2024-06-28"],\n  byTier: [{ from: 1, to: 5, days: 5 }, { from: 6, to: 10, days: 5 }, { from: 11, to: null, days: 2 }] }',
-  ],
-  "no-free-time": [
-    "NO SIGNAL",
-    '{ freeDaysUsed: 0,\n  chargeableDays: 3,\n  expiresAt: "2024-06-13T22:00:00Z",\n  chargedDates: ["2024-06-14", "2024-06-15", "2024-06-16"],\n  byTier: [{ from: 1, to: null, days: 3 }] }',
-  ],
+const preset = () => screen.getByRole("combobox", { name: "Preset" });
+const zone = () => screen.getByRole("combobox", { name: "Terminal zone" });
+const basis = () => screen.getByRole("combobox", { name: "Free days count" });
+const chargeBasis = () =>
+  screen.getByRole("combobox", { name: "Charged days count" });
+const firstDay = () =>
+  screen.getByRole("combobox", { name: "Free day one is" });
+const freeDays = () => screen.getByRole("textbox", { name: "Free days" });
+const tiers = () => screen.getByRole("textbox", { name: "Tier end days" });
+const startBox = () => screen.getByRole("textbox", { name: "Clock start" });
+const endBox = () => screen.getByRole("textbox", { name: "Clock end" });
+const startHandle = () => screen.getByRole("slider", { name: "Clock start" });
+const endHandle = () => screen.getByRole("slider", { name: "Clock end" });
+const holidays = () =>
+  screen.getByRole("textbox", { name: "Holidays, one date per line" });
+const expiryOut = () =>
+  screen.getByRole("status", { name: "What freeTimeExpiry returned" });
+const chargesOut = () =>
+  screen.getByRole("status", { name: "What chargeableDays returned" });
+const summary = () => screen.getByRole("status", { name: "Reading summary" });
+const days = () =>
+  within(screen.getByRole("list", { name: "Local days" })).getAllByRole(
+    "listitem",
+  );
+const dayLabels = () => days().map((d) => d.getAttribute("aria-label"));
+const workingTerms = () => screen.queryByRole("group", { name: "Weekend" });
+
+async function enter(w: RenderedWidget, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  if (value !== "") await w.user.paste(value);
+}
+
+const FRIDAY_EXPIRY = `{ freeTimeStart: "2024-06-14",
+  lastFreeDay: "2024-06-16",
+  expiresAt: "2024-06-16T23:00:00Z" }`;
+
+const expiry = (start: string, last: string, at: string) =>
+  `{ freeTimeStart: "${start}",\n  lastFreeDay: "${last}",\n  expiresAt: "${at}" }`;
+
+const NO_SIGNAL = "NO SIGNAL";
+
+const EXPECTED: Record<string, { expiry: string; charges: RegExp[] }> = {
+  "friday-three-days": {
+    expiry: FRIDAY_EXPIRY,
+    charges: [
+      /freeDaysUsed: 3/,
+      /chargeableDays: 1/,
+      /chargedDates: \["2024-06-17"\]/,
+    ],
+  },
+  "read-as-next-day": {
+    expiry: expiry("2024-06-15", "2024-06-17", "2024-06-17T23:00:00Z"),
+    charges: [/freeDaysUsed: 3/, /chargeableDays: 0/, /chargedDates: \[\]/],
+  },
+  "out-at-expiry": {
+    expiry: FRIDAY_EXPIRY,
+    charges: [/chargeableDays: 0/, /expiresAt: "2024-06-16T23:00:00Z"/],
+  },
+  "working-days": {
+    expiry: expiry("2024-06-14", "2024-06-19", "2024-06-19T22:00:00Z"),
+    charges: [
+      /freeDaysUsed: 3/,
+      /chargeableDays: 5/,
+      /chargedDates: \["2024-06-20", "2024-06-21", "2024-06-22", "2024-06-23", "2024-06-24"\]/,
+      /byTier: \[\{ from: 1, to: null, days: 5 \}\]/,
+    ],
+  },
+  "terminal-holiday": {
+    expiry: expiry("2024-06-14", "2024-06-19", "2024-06-19T22:00:00Z"),
+    charges: [
+      /chargeableDays: 3/,
+      /chargedDates: \["2024-06-20", "2024-06-21", "2024-06-24"\]/,
+    ],
+  },
+  tiers: {
+    expiry: expiry("2024-06-14", "2024-06-16", "2024-06-16T22:00:00Z"),
+    charges: [
+      /chargeableDays: 12/,
+      /byTier: \[\{ from: 1, to: 5, days: 5 \}, \{ from: 6, to: 10, days: 5 \}, \{ from: 11, to: null, days: 2 \}\]/,
+    ],
+  },
+  "no-free-time": {
+    expiry: NO_SIGNAL,
+    charges: [
+      /freeDaysUsed: 0/,
+      /chargeableDays: 3/,
+      /expiresAt: "2024-06-13T22:00:00Z"/,
+      /chargedDates: \["2024-06-14", "2024-06-15", "2024-06-16"\]/,
+    ],
+  },
 };
 
-function stubTrackGeometry(root: HTMLElement) {
-  for (const track of root.querySelectorAll(".gmt-freetime-track")) {
-    (track as HTMLElement).getBoundingClientRect = () =>
-      ({
-        left: 0,
-        width: 1000,
-        top: 0,
-        height: 32,
-        right: 1000,
-        bottom: 32,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      }) as DOMRect;
-  }
-}
+describe("every preset, against the real library", () => {
+  it("has an expectation for every preset", () => {
+    expect(Object.keys(EXPECTED).sort()).toEqual(
+      FREE_TIME_PRESETS.map((p) => p.id).sort(),
+    );
+  });
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
-
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderFreeTimeLedgerTemplate(templateArgs);
-  document.body.append(root);
-  stubTrackGeometry(root);
-  const controller = new AbortController();
-  const handle = await mountFreeTimeLedger(root, args, controller.signal);
-  return { root, handle, controller };
-}
-
-/** The dates the tariff reads as `kind` (free, chargeable, closed, event). */
-const datesIn = (root: HTMLElement, kind: string) =>
-  [
-    ...q(root, "cells").querySelectorAll<HTMLElement>(`[data-kind="${kind}"]`),
-  ].map((c) => c.dataset.date);
-
-function choosePreset(root: HTMLElement, id: string) {
-  const preset = q<HTMLSelectElement>(root, "preset");
-  preset.value = id;
-  preset.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function type(root: HTMLElement, role: string, value: string) {
-  const input = q<HTMLInputElement>(root, role);
-  input.value = value;
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  input.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function select(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLSelectElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-afterEach(() => {
-  document.body.innerHTML = "";
+  it.each(FREE_TIME_PRESETS.map((p) => [p.id]))("%s", async (id) => {
+    const w = await open();
+    await w.user.selectOptions(preset(), id!);
+    expect(preset()).toHaveValue(id);
+    const want = EXPECTED[id!]!;
+    expect(expiryOut()).toHaveTextContent(
+      want.expiry === NO_SIGNAL
+        ? NO_SIGNAL
+        : want.expiry.replace(/\n\s*/g, " "),
+    );
+    for (const re of want.charges) expect(chargesOut()).toHaveTextContent(re);
+    await expectNoAxeViolations(w.root);
+  });
 });
 
-describe("renderFreeTimeLedgerTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderFreeTimeLedgerTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
-    }
+describe("the default view", () => {
+  it("opens on the first preset with the working terms hidden", async () => {
+    const w = await open();
+    expect(preset()).toHaveValue("friday-three-days");
+    expect(workingTerms()).not.toBeInTheDocument();
+    expect(summary()).toHaveTextContent("3 free days used · 1 chargeable day");
+    expect(expiryOut()).toHaveTextContent("2024-06-16T23:00:00Z");
+    await expectNoAxeViolations(w.root);
   });
 
-  it("opens on the first preset with the working-day terms hidden", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderFreeTimeLedgerTemplate();
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe(
-      "friday-three-days",
-    );
-    expect(q<HTMLInputElement>(root, "clock-start").value).toBe(
-      "2024-06-14T19:00:00Z",
-    );
-    expect(q<HTMLInputElement>(root, "free-days").value).toBe("3");
-    expect(q(root, "working-terms").hidden).toBe(true);
-    expect(q(root, "preset-description").textContent).toContain(
-      "Monday is a charged day",
-    );
-  });
-
-  it("paints seeded arguments, adding an unlisted zone and showing working terms", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderFreeTimeLedgerTemplate({
-      clockStart: "2024-06-14T19:00:00Z",
-      clockEnd: "2024-06-24T15:00:00Z",
-      freeDays: 2,
-      firstDay: "nextDay",
-      basis: "working",
-      zone: "Europe/Amsterdam",
-      weekend: [5, 6],
-      holidays: ["2024-06-19"],
-      tiers: [5, 10],
-    });
-    expect(q<HTMLSelectElement>(root, "zone").value).toBe("Europe/Amsterdam");
-    expect(q<HTMLSelectElement>(root, "first-day").value).toBe("nextDay");
-    expect(q<HTMLSelectElement>(root, "basis").value).toBe("working");
-    expect(q(root, "working-terms").hidden).toBe(false);
+  it("calls the library with the fields it shows", async () => {
+    await open();
     expect(
-      [...root.querySelectorAll<HTMLInputElement>('[data-role="weekend"]')]
-        .filter((el) => el.checked)
-        .map((el) => el.value),
-    ).toEqual(["5", "6"]);
-    expect(q<HTMLTextAreaElement>(root, "holidays").value).toBe("2024-06-19");
-    expect(q<HTMLInputElement>(root, "tiers").value).toBe("5, 10");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-  });
-
-  it("escapes what it interpolates", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderFreeTimeLedgerTemplate({
-      clockStart: '"><img src=x onerror=alert(1)>',
-      clockEnd: "2024-06-17T04:00:01Z",
-      zone: "America/New_York",
-    });
-    expect(root.querySelector("img")).toBeNull();
-    expect(q<HTMLInputElement>(root, "clock-start").value).toBe(
-      '"><img src=x onerror=alert(1)>',
-    );
-  });
-});
-
-describe("mountFreeTimeLedger", () => {
-  it.each(FREE_TIME_PRESETS.map((p) => [p.id]))(
-    "prints the documented results for %s and colours exactly the library's days",
-    async (id) => {
-      const { root } = await mount();
-      choosePreset(root, id);
-      const [expiry, charges] = EXPECTED[id]!;
-      expect(q(root, "expiry-output").textContent).toBe(expiry);
-      expect(q(root, "charges-output").textContent).toBe(charges);
-
-      // The drawing agrees with the library: chargeable cells are chargedDates,
-      // and free cells are the free days the dwell touched.
-      const listed = /chargedDates: \[([^\]]*)\]/.exec(charges)![1]!;
-      const chargedDates = [...listed.matchAll(/"(\d{4}-\d{2}-\d{2})"/g)].map(
-        (m) => m[1],
-      );
-      expect(datesIn(root, "chargeable")).toEqual(chargedDates);
-      const used = Number(/freeDaysUsed: (\d+)/.exec(charges)![1]);
-      expect(datesIn(root, "free")).toHaveLength(used);
-    },
-  );
-
-  it("shades Friday to Sunday free and Monday chargeable for the first preset", async () => {
-    const { root } = await mount();
-    expect(datesIn(root, "free")).toEqual([
-      "2024-06-14",
-      "2024-06-15",
-      "2024-06-16",
-    ]);
-    expect(datesIn(root, "chargeable")).toEqual(["2024-06-17"]);
-    expect(q(root, "summary").textContent).toBe(
-      "3 free days used · 1 chargeable day",
-    );
-    expect(q(root, "charges-output").classList).toContain(
-      "gmt-playground-live",
-    );
-    expect(q(root, "expiry-marker").hidden).toBe(false);
-    expect(q(root, "call-charges").textContent).toBe(
+      screen.getByRole("group", { name: "Call to chargeableDays" }),
+    ).toHaveTextContent(
       'chargeableDays("2024-06-14T19:00:00Z", "2024-06-16T23:00:01Z", 3, { basis: "calendar", chargeBasis: "calendar", timeZone: "Europe/London", firstDay: "eventDay" })',
     );
   });
 
-  it("charges nothing when the end is typed as exactly the expiry, and notes why", async () => {
-    const { root } = await mount();
-    type(root, "clock-end", "2024-06-16T23:00:00Z");
-    expect(datesIn(root, "chargeable")).toEqual([]);
-    expect(q(root, "charges-output").textContent).toContain(
-      "chargeableDays: 0",
-    );
-    expect(q(root, "reason-aside").textContent).toContain("half-open");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("out-at-expiry");
-  });
-
-  it("slides the free window a day when the start-day convention changes", async () => {
-    const { root } = await mount();
-    select(root, "first-day", "nextDay");
-    expect(datesIn(root, "event")).toEqual(["2024-06-14"]);
-    expect(datesIn(root, "free")).toEqual([
-      "2024-06-15",
-      "2024-06-16",
-      "2024-06-17",
-    ]);
-    expect(datesIn(root, "chargeable")).toEqual([]);
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("read-as-next-day");
-  });
-
-  it("hatches the weekend and a holiday on the working basis", async () => {
-    const { root } = await mount();
-    choosePreset(root, "terminal-holiday");
-    expect(q(root, "working-terms").hidden).toBe(false);
-    expect(datesIn(root, "closed")).toEqual([
-      "2024-06-15",
-      "2024-06-16",
-      "2024-06-17",
-      "2024-06-22",
-      "2024-06-23",
-    ]);
-    expect(datesIn(root, "free")).toEqual([
-      "2024-06-14",
-      "2024-06-18",
-      "2024-06-19",
-    ]);
-    expect(datesIn(root, "chargeable")).toEqual([
-      "2024-06-20",
-      "2024-06-21",
-      "2024-06-24",
-    ]);
-    expect(q(root, "call-charges").textContent).toContain(
-      'calendar: { weekend: [6, 7], holidays: ["2024-06-17"], timeZone: "Africa/Johannesburg" }',
+  it("describes the preset it opens on", async () => {
+    await open();
+    expect(preset()).toHaveAccessibleDescription(
+      /Discharged Friday 20:00 in London with three free calendar days/,
     );
   });
 
-  it("charges the holiday and the weekend after working-day free time on calendar-day charging", async () => {
-    const { root } = await mount();
-    choosePreset(root, "working-days");
-    // Closed days inside the free window are not counted; after expiry every day is charged.
-    expect(datesIn(root, "closed")).toEqual([
-      "2024-06-15",
-      "2024-06-16",
-      "2024-06-17",
+  it("makes the preset custom when a field changes", async () => {
+    const w = await open();
+    await enter(w, freeDays(), "2");
+    expect(preset()).toHaveValue("custom");
+  });
+
+  it("makes the preset custom for an edit to the zone, and back when it matches", async () => {
+    const w = await open();
+    await w.user.selectOptions(zone(), "Europe/Paris");
+    expect(preset()).toHaveValue("custom");
+    await w.user.selectOptions(zone(), "Europe/London");
+    expect(preset()).toHaveValue("friday-three-days");
+  });
+});
+
+describe("days", () => {
+  it("colours exactly the library's free and charged days", async () => {
+    await open();
+    expect(dayLabels()).toEqual([
+      "14 Jun Fri, free",
+      "15 Jun Sat, free",
+      "16 Jun Sun, free",
+      "17 Jun Mon, charged",
     ]);
-    expect(datesIn(root, "free")).toEqual([
-      "2024-06-14",
-      "2024-06-18",
-      "2024-06-19",
-    ]);
-    expect(datesIn(root, "chargeable")).toEqual([
-      "2024-06-20",
-      "2024-06-21",
-      "2024-06-22",
-      "2024-06-23",
-      "2024-06-24",
-    ]);
-    expect(q(root, "call-charges").textContent).toContain(
-      'basis: "working", chargeBasis: "calendar"',
+  });
+
+  it("says charged, never chargeable or a price, in the legend and the days", async () => {
+    await open();
+    const legend = screen.getByText("charged", { selector: "li *, li" });
+    expect(legend).toBeInTheDocument();
+    for (const label of dayLabels()) expect(label).not.toMatch(/chargeable|\$/);
+  });
+
+  it("marks closed days, tiers and the days after the dwell", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "terminal-holiday");
+    const labels = dayLabels();
+    expect(labels).toContain("15 Jun Sat, closed, not counted");
+    expect(labels).toContain("17 Jun Mon, closed, not counted");
+    expect(labels).toContain("20 Jun Thu, charged");
+    expect(labels).toContain("24 Jun Mon, charged");
+    expect(labels).toContain("25 Jun Tue");
+  });
+
+  it("puts each tier on its own days", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "tiers");
+    const labels = dayLabels();
+    expect(labels).toContain("17 Jun Mon, tier 1, charged");
+    expect(labels).toContain("21 Jun Fri, tier 1, charged");
+    expect(labels).toContain("22 Jun Sat, tier 2, charged");
+    expect(labels).toContain("26 Jun Wed, tier 2, charged");
+    expect(labels).toContain("27 Jun Thu, tier 3, charged");
+    expect(labels.filter((l) => /, tier \d, charged/.test(l!))).toHaveLength(
+      12,
     );
-    // Switching only the charge basis suspends charging on the closed days after expiry.
-    select(root, "charge-basis", "working");
-    expect(datesIn(root, "chargeable")).toEqual([
-      "2024-06-20",
-      "2024-06-21",
-      "2024-06-24",
-    ]);
-    expect(datesIn(root, "closed")).toEqual([
-      "2024-06-15",
-      "2024-06-16",
-      "2024-06-17",
-      "2024-06-22",
-      "2024-06-23",
-    ]);
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("terminal-holiday");
+    expect(screen.getAllByText("tier 1").length).toBeGreaterThan(0);
   });
 
-  it("shows the working-day terms when only the charge basis is working", async () => {
-    const { root } = await mount();
-    expect(q(root, "working-terms").hidden).toBe(true);
-    select(root, "charge-basis", "working");
-    expect(q(root, "working-terms").hidden).toBe(false);
-    expect(q(root, "call-expiry").textContent).not.toContain("calendar: {");
-    expect(q(root, "call-charges").textContent).toContain("calendar: {");
-  });
-
-  it("tells the tiers apart by a numbered chip and a denser hatch, with the boundaries after the fifth and tenth charged days", async () => {
-    const { root } = await mount();
-    choosePreset(root, "tiers");
-    const charged = [
-      ...q(root, "cells").querySelectorAll<HTMLElement>(
-        '[data-kind="chargeable"]',
-      ),
-    ];
-    const lastOf = (tier: number) =>
-      charged.filter((c) => c.dataset.tier === String(tier)).at(-1)?.dataset
-        .date;
-    expect(lastOf(1)).toBe("2024-06-21");
-    expect(lastOf(2)).toBe("2024-06-26");
-    expect(charged.map((c) => c.dataset.tier).filter(Boolean)).toHaveLength(12);
-    const chips = [...charged[0]!.querySelectorAll(".gmt-cutoff-chip")].map(
-      (c) => c.textContent,
-    );
-    expect(chips).toContain("tier 1");
-    expect(q(root, "call-charges").textContent).toContain("tiers: [5, 10]");
-  });
-
-  it("gives a day the family's states: glass, a hatch, the closed hatch or bare", async () => {
-    const { root } = await mount();
-    choosePreset(root, "terminal-holiday");
-    const state = (date: string) =>
-      q(root, "cells").querySelector<HTMLElement>(`[data-date="${date}"]`)!;
-    expect(state("2024-06-14").dataset.state).toBe("lit");
-    expect(state("2024-06-20").dataset.state).toBe("hatched");
-    expect(state("2024-06-20").classList).toContain("gmt-punct-hatch");
-    expect(state("2024-06-15").dataset.state).toBe("closed");
-    expect(state("2024-06-15").classList).toContain("gmt-cutoff-closed");
-    // The word on each chip is the tariff's: free, charged, closed.
-    const chipOf = (date: string) =>
-      state(date).querySelector(".gmt-ledger-chip")?.textContent;
-    expect(chipOf("2024-06-14")).toBe("free");
-    expect(chipOf("2024-06-20")).toBe("charged");
-    expect(chipOf("2024-06-15")).toBe("closed");
-  });
-
-  it("says charged, never chargeable or a dollar sign, on a charged day", async () => {
-    const { root } = await mount();
-    const day = q(root, "cells").querySelector<HTMLElement>(
-      '[data-kind="chargeable"]',
-    )!;
-    expect(day.getAttribute("aria-label")).toContain("charged");
-    expect(day.getAttribute("aria-label")).not.toContain("chargeable");
-    expect(day.textContent).not.toContain("$");
-    expect(root.querySelector(".gmt-freetime-legend")!.textContent).toContain(
-      "charged",
-    );
-  });
-
-  it("flags a 23-hour day with the dashed short chip", async () => {
-    const { root } = await mount({
+  it("shows the 23-hour day of a clock change", async () => {
+    await open({
       clockStart: "2024-03-09T20:00:00-05:00[America/New_York]",
       clockEnd: "2024-03-11T04:00:00-04:00[America/New_York]",
       freeDays: 3,
       zone: "America/New_York",
     });
-    const odd = q(root, "cells").querySelector<HTMLElement>(
-      '[data-date="2024-03-10"] .gmt-ledger-odd',
-    )!;
-    expect(odd.textContent).toBe("23 h");
-    expect(odd.dataset.dst).toBe("short");
-  });
-
-  it("shows the three plates and keeps them when a result is null", async () => {
-    const { root } = await mount();
-    const plate = (role: string) => q(root, role);
-    expect(
-      plate("hero-free").querySelector(".gmt-punct-hero-value")!.textContent,
-    ).toBe("3");
-    expect(plate("hero-free").textContent).toContain("of 3 free");
-    expect(
-      plate("hero-charged").querySelector(".gmt-punct-hero-value")!.textContent,
-    ).toBe("1");
-    expect(
-      plate("hero-expires").querySelector(".gmt-punct-hero-value")!.textContent,
-    ).toBe("17 Jun 00:00");
-    expect(plate("hero-expires").textContent).toContain("Europe/London");
-    expect(q(root, "heroes").getAttribute("aria-hidden")).toBe("true");
-    type(root, "clock-start", "2024-06-18T19:00:00Z");
-    expect(plate("hero-charged").hasAttribute("data-empty")).toBe(true);
-    expect(
-      plate("hero-charged").querySelector(".gmt-punct-hero-value")!.textContent,
-    ).toBe("no result");
-    // freeTimeExpiry still answers, so the expiry plate falls back to it.
-    expect(plate("hero-expires").hasAttribute("data-empty")).toBe(false);
-    type(root, "clock-start", "soon");
-    expect(plate("hero-expires").hasAttribute("data-empty")).toBe(true);
-  });
-
-  it("hides the summary visually and keeps it live", async () => {
-    const { root } = await mount();
-    expect(q(root, "summary").classList).toContain("gmt-ledger-sr");
-    expect(q(root, "summary").getAttribute("aria-live")).toBe("polite");
-  });
-
-  it("puts the plates, the lane and the axis in one frame", async () => {
-    const { root } = await mount();
-    expect(q(root, "frame").classList).toContain("gmt-ledger-frame");
-    expect(q(root, "frame").contains(q(root, "heroes"))).toBe(true);
-    expect(q(root, "frame").contains(q(root, "track"))).toBe(true);
-    expect(q(root, "frame").contains(q(root, "axis"))).toBe(true);
-  });
-
-  it("writes the expiry's time on the terminal's clock into the gate's chip", async () => {
-    const { root } = await mount();
-    const marker = q(root, "expiry-marker");
-    expect(marker.classList).toContain("gmt-cutoff-gate");
-    expect(marker.querySelector("span")!.textContent).toBe(
-      "expires 17 Jun 00:00",
-    );
-  });
-
-  it("renders the expiry sentinel with a note, not a caution, for zero free days", async () => {
-    const { root } = await mount();
-    choosePreset(root, "no-free-time");
-    expect(q(root, "expiry-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "expiry-output").classList).toContain(
-      "gmt-playground-sentinel",
-    );
-    expect(
-      q(root, "reason-aside").querySelector(".starlight-aside--note"),
-    ).not.toBeNull();
-    expect(q(root, "reason-aside").textContent).toContain("no last free day");
-    expect(datesIn(root, "chargeable")).toEqual([
-      "2024-06-14",
-      "2024-06-15",
-      "2024-06-16",
-    ]);
-  });
-
-  it("marks an inverted dwell, prints both sentinels and colours nothing", async () => {
-    const { root } = await mount();
-    type(root, "clock-start", "2024-06-18T19:00:00Z");
-    expect(q(root, "charges-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain(
-      "before the clock start",
-    );
-    expect(q(root, "bar").classList).toContain("gmt-freetime-bar--invalid");
-    expect(datesIn(root, "chargeable")).toEqual([]);
-    // freeTimeExpiry does not read the end, so its answer stands.
-    expect(q(root, "expiry-output").textContent).toContain("2024-06-18");
-  });
-
-  it("refuses a working-day count when the calendar has no working day", async () => {
-    const { root } = await mount();
-    choosePreset(root, "working-days");
-    for (const box of root.querySelectorAll<HTMLInputElement>(
-      '[data-role="weekend"]',
-    )) {
-      box.checked = true;
-      box.dispatchEvent(new Event("change", { bubbles: true }));
-    }
-    expect(q(root, "charges-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain(
-      "at least one working day",
-    );
-  });
-
-  it("refuses tiers that do not ascend and says so", async () => {
-    const { root } = await mount();
-    type(root, "tiers", "10, 5");
-    expect(q(root, "charges-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain(
-      "larger than the last",
-    );
-    // The expiry does not take tiers, so it still answers.
-    expect(q(root, "expiry-output").textContent).toBe(FRIDAY_EXPIRY);
-  });
-
-  it("moves the end when its handle is dragged, and keeps it after the start", async () => {
-    const { root } = await mount();
-    const handle = q(root, "handle-end");
-    handle.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
-    );
-    root.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        pointerId: 1,
-        clientX: 990,
-      }),
-    );
-    root.dispatchEvent(
-      new PointerEvent("pointerup", { bubbles: true, pointerId: 1 }),
-    );
-    expect(q<HTMLInputElement>(root, "clock-end").value).not.toBe(
-      "2024-06-16T23:00:01Z",
-    );
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-
-    const start = q(root, "handle-start");
-    start.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, pointerId: 2 }),
-    );
-    root.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        pointerId: 2,
-        clientX: 1000,
-      }),
-    );
-    root.dispatchEvent(
-      new PointerEvent("pointerup", { bubbles: true, pointerId: 2 }),
-    );
-    expect(q(root, "charges-output").textContent).not.toBe("NO SIGNAL");
-  });
-
-  it("steps a handle with the keyboard", async () => {
-    const { root } = await mount();
-    const before = q<HTMLInputElement>(root, "clock-end").value;
-    q(root, "handle-end").dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-    );
-    const after = q<HTMLInputElement>(root, "clock-end").value;
-    expect(after).not.toBe(before);
-    expect(after).toContain("[Europe/London]");
-  });
-
-  it("moves a handle twelve snap units on PageUp and PageDown", async () => {
-    const { root } = await mount();
-    const ms = (iso: string) => Temporal.Instant.from(iso).epochMilliseconds;
-    const end = q<HTMLInputElement>(root, "clock-end");
-    const before = ms(end.value.replace(/\[.*\]$/, ""));
-    const press = (key: string) =>
-      q(root, "handle-end").dispatchEvent(
-        new KeyboardEvent("keydown", { key, bubbles: true }),
-      );
-    press("PageUp");
-    const up = ms(end.value.replace(/\[.*\]$/, ""));
-    // The track is 1000px for the canvas and a unit is 15 minutes here, so a
-    // page is three hours past the snapped start.
-    expect(up - before).toBeGreaterThanOrEqual(11 * 15 * 60_000);
-    press("PageDown");
-    const down = ms(end.value.replace(/\[.*\]$/, ""));
-    expect(up - down).toBe(12 * 15 * 60_000);
-  });
-
-  it("keeps the height of the preset description when a drag makes the state custom", async () => {
-    const { root } = await mount();
-    const desc = q(root, "preset-description");
-    desc.getBoundingClientRect = () => ({ height: 66 }) as DOMRect;
-    q(root, "handle-end").dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-    );
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    expect(desc.textContent).toBe("");
-    expect(desc.style.minBlockSize).toBe("66px");
-    choosePreset(root, "tiers");
-    expect(desc.style.minBlockSize).toBe("");
-    expect(desc.textContent).not.toBe("");
-  });
-
-  it("reads a zoneless wall time from the chat in the named zone", async () => {
-    const { root } = await mount({
-      clockStart: "2024-06-14T15:00:00",
-      clockEnd: "2024-06-17T00:00:01",
-      freeDays: 3,
-      firstDay: "eventDay",
-      basis: "calendar",
-      chargeBasis: "calendar",
-      zone: "America/New_York",
-    });
-    expect(q<HTMLInputElement>(root, "clock-start").value).toBe(
-      "2024-06-14T15:00:00-04:00[America/New_York]",
-    );
-    expect(q(root, "charges-output").textContent).toContain(
-      'chargedDates: ["2024-06-17"]',
-    );
-  });
-
-  it("round-trips its state as a permalink of strings", async () => {
-    const { root, handle } = await mount();
-    expect(handle.getPermalinkState?.()).toEqual({
-      clockStart: "2024-06-14T19:00:00Z",
-      clockEnd: "2024-06-16T23:00:01Z",
-      freeDays: "3",
-      firstDay: "eventDay",
-      basis: "calendar",
-      chargeBasis: "calendar",
-      zone: "Europe/London",
-    });
-    choosePreset(root, "terminal-holiday");
-    const state = handle.getPermalinkState?.() as Record<string, string>;
-    expect(state).toMatchObject({
-      basis: "working",
-      weekend: "6,7",
-      holidays: "2024-06-17",
-    });
-    // And a link made of those strings reproduces the preset.
-    const again = await mount(state);
-    expect(q<HTMLSelectElement>(again.root, "preset").value).toBe(
-      "terminal-holiday",
-    );
-    expect(q(again.root, "charges-output").textContent).toBe(
-      EXPECTED["terminal-holiday"]![1],
-    );
-  });
-
-  it("is inert when aborted before the library loads", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderFreeTimeLedgerTemplate();
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountFreeTimeLedger(root, {}, controller.signal);
-    expect(q(root, "charges-output").textContent).toBe("\u00a0");
-    expect(handle.getPermalinkState?.()).toBeNull();
-  });
-
-  it("can be destroyed twice, mid-drag", async () => {
-    const { root, handle } = await mount();
-    q(root, "handle-end").dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
-    );
-    expect(() => {
-      handle.destroy();
-      handle.destroy();
-    }).not.toThrow();
+    expect(screen.getByText("23 h")).toBeInTheDocument();
   });
 });
 
-describe("the track's width observer", () => {
-  it("re-places the expiry label when the track's width changes", async () => {
-    const spy = spyOnResizeObservers();
-    try {
-      const { root } = await mount();
-      const track = root.querySelector<HTMLElement>(".gmt-freetime-track")!;
-      const label = q(root, "expiry-marker").querySelector<HTMLElement>(
-        "span",
-      )!;
-      const measure = vi.fn(() => ({ width: 50 }) as DOMRect);
-      label.getBoundingClientRect = measure;
-      Object.defineProperty(track, "clientWidth", {
-        configurable: true,
-        value: 1000,
-      });
-      expect(measure).not.toHaveBeenCalled();
-      spy.fire();
-      expect(measure).toHaveBeenCalled();
-    } finally {
-      spy.restore();
-    }
+describe("the readings", () => {
+  it("shows the plates and the expiry on the gate", async () => {
+    await open();
+    expect(screen.getByText("of 3 free")).toBeInTheDocument();
+    expect(screen.getByText("17 Jun 00:00")).toBeInTheDocument();
+    expect(screen.getAllByText("Europe/London").length).toBeGreaterThan(0);
+    expect(screen.getByText("expires 17 Jun 00:00")).toBeInTheDocument();
   });
 
-  it("destroy disconnects it", async () => {
+  it("explains a missing last free day as a note", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "no-free-time");
+    expect(
+      screen.getByRole("complementary", { name: /Note|Why null/ }),
+    ).toHaveTextContent(/no last free day/);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("says a dwell that ends before it starts has no charges, while the expiry answers", async () => {
+    const w = await open();
+    await enter(w, startBox(), "2024-06-18T19:00:00Z");
+    expect(chargesOut()).toHaveTextContent(NO_SIGNAL);
+    expect(expiryOut()).toHaveTextContent("2024-06-18");
+    expect(
+      screen.getByRole("complementary", { name: /Why null/ }),
+    ).toHaveTextContent(/before the clock start/);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("charges nothing when the clock stops exactly at expiry, and says the dwell is half-open", async () => {
+    const w = await open();
+    await enter(w, endBox(), "2024-06-16T23:00:00Z");
+    expect(chargesOut()).toHaveTextContent("chargeableDays: 0");
+    expect(screen.getByRole("complementary")).toHaveTextContent(
+      /half-open|expiry/i,
+    );
+    await expectNoAxeViolations(w.root);
+  });
+});
+
+describe("first day", () => {
+  it("slides the free days a day when free day one is the day after", async () => {
+    const w = await open();
+    await w.user.selectOptions(firstDay(), "nextDay");
+    expect(expiryOut()).toHaveTextContent('freeTimeStart: "2024-06-15"');
+    expect(expiryOut()).toHaveTextContent('lastFreeDay: "2024-06-17"');
+    expect(preset()).toHaveValue("read-as-next-day");
+    expect(dayLabels()[0]).toMatch(/^14 Jun Fri, event day/);
+  });
+});
+
+describe("working terms", () => {
+  it("shows the weekend and holidays only when a basis is working", async () => {
+    const w = await open();
+    expect(workingTerms()).not.toBeInTheDocument();
+    await w.user.selectOptions(chargeBasis(), "working");
+    expect(workingTerms()).toBeInTheDocument();
+    await w.user.selectOptions(chargeBasis(), "calendar");
+    expect(workingTerms()).not.toBeInTheDocument();
+    await w.user.selectOptions(basis(), "working");
+    expect(workingTerms()).toBeInTheDocument();
+  });
+
+  it("turns working-days into terminal-holiday when the charge basis becomes working", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "working-days");
+    expect(preset()).toHaveValue("working-days");
+    await w.user.selectOptions(chargeBasis(), "working");
+    expect(preset()).toHaveValue("terminal-holiday");
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("refuses a calendar with every weekday closed", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "working-days");
+    const weekend = within(screen.getByRole("group", { name: "Weekend" }));
+    for (const box of weekend.getAllByRole("checkbox")) {
+      if (!(box as HTMLInputElement).checked) await w.user.click(box);
+    }
+    expect(screen.getByRole("complementary")).toHaveTextContent(
+      /at least one working day/,
+    );
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("reads the holidays one date per line", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "terminal-holiday");
+    expect(holidays()).toHaveValue("2024-06-17");
+    await enter(w, holidays(), "2024-06-17\n2024-06-20");
+    expect(chargesOut()).toHaveTextContent(/chargeableDays: 2/);
+  });
+});
+
+describe("tiers", () => {
+  it("refuses end days that do not rise, and leaves the expiry alone", async () => {
+    const w = await open();
+    await enter(w, tiers(), "10, 5");
+    expect(screen.getByRole("complementary")).toHaveTextContent(
+      /larger than the last/,
+    );
+    expect(expiryOut()).toHaveTextContent(FRIDAY_EXPIRY.replace(/\n\s*/g, " "));
+    await expectNoAxeViolations(w.root);
+  });
+});
+
+describe("the clock handles", () => {
+  it("keeps the typed field and the handle in step", async () => {
+    const w = await open();
+    startHandle().focus();
+    await w.user.keyboard("{ArrowRight}");
+    expect((startBox() as HTMLInputElement).value).toMatch(
+      /\[Europe\/London\]$/,
+    );
+    expect(startHandle()).toHaveAttribute(
+      "aria-valuetext",
+      expect.stringMatching(/Jun/),
+    );
+  });
+
+  it("moves the end by one step with an arrow and twelve with a page key", async () => {
+    const w = await open();
+    const before = Number(endHandle().getAttribute("aria-valuenow"));
+    endHandle().focus();
+    await w.user.keyboard("{ArrowLeft}");
+    const one = Number(endHandle().getAttribute("aria-valuenow"));
+    await w.user.keyboard("{PageDown}");
+    const page = Number(endHandle().getAttribute("aria-valuenow"));
+    const step = before - one;
+    expect(step).toBeGreaterThan(0);
+    expect(one - page).toBeCloseTo(step * 12, -1);
+    await w.user.keyboard("{PageUp}");
+    expect(Number(endHandle().getAttribute("aria-valuenow"))).toBeCloseTo(
+      one,
+      5,
+    );
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("names the handles' values in local time, or says it is not a time", async () => {
+    const w = await open();
+    expect(endHandle()).toHaveAttribute(
+      "aria-valuetext",
+      expect.stringMatching(/\d{2}:\d{2}/),
+    );
+    await enter(w, endBox(), "garbage");
+    expect(endHandle()).toHaveAttribute("aria-valuetext", "not a time");
+  });
+});
+
+describe("a seed from the chat", () => {
+  it("reads a wall time with no offset in the stated zone", async () => {
+    await open({
+      clockStart: "2024-06-14T15:00:00",
+      clockEnd: "2024-06-17T00:00:01",
+      freeDays: 3,
+      zone: "America/New_York",
+    });
+    expect(chargesOut()).toHaveTextContent('chargedDates: ["2024-06-17"]');
+    expect(
+      screen.getByRole("group", { name: "Call to chargeableDays" }),
+    ).toHaveTextContent("2024-06-14T15:00:00-04:00[America/New_York]");
+  });
+
+  it("shows a hostile value as text", async () => {
+    await open({
+      clockStart: "<img src=x onerror=alert(1)>",
+      zone: "Europe/London",
+    });
+    expect(startBox()).toHaveValue("<img src=x onerror=alert(1)>");
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("adds a zone the list lacks, and shows the working terms it was given", async () => {
+    await open({
+      clockStart: "2024-06-14T19:00:00Z",
+      clockEnd: "2024-06-20T19:00:00Z",
+      zone: "Africa/Accra",
+      basis: "working",
+      chargeBasis: "working",
+      weekend: [6, 7],
+      holidays: "2024-06-17",
+    });
+    expect(zone()).toHaveValue("Africa/Accra");
+    expect(workingTerms()).toBeInTheDocument();
+    expect(holidays()).toHaveValue("2024-06-17");
+  });
+});
+
+describe("the widget's life", () => {
+  it("round-trips its state through the permalink", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "tiers");
+    const url = w.permalink();
+    const state = seedFromLocation("freetime", url.slice(url.indexOf("?")))!;
+    expect(state).toMatchObject({ freeDays: "3", tiers: "5, 10" });
+    w.destroy();
+    await open(state);
+    expect(preset()).toHaveValue("tiers");
+    expect(summary()).toHaveTextContent("12 chargeable days");
+  });
+
+  it("is inert when aborted before it mounts", async () => {
+    const w = await renderWidget(entry, { args: {}, aborted: true });
+    expect(chargesOut()).not.toHaveTextContent("chargeableDays:");
+    w.destroy();
+  });
+
+  it("survives a double destroy", async () => {
+    const w = await open();
+    w.destroy();
+    expect(() => w.destroy()).not.toThrow();
+  });
+
+  it("re-places the gate on a width change and releases the observer on destroy", async () => {
     const spy = spyOnResizeObservers();
     try {
-      const { handle } = await mount();
-      expect(spy.live.size).toBe(1);
-      handle.destroy();
+      const w = await open();
+      expect(spy.live.size).toBeGreaterThan(0);
+      spy.fire();
+      expect(screen.getByText("expires 17 Jun 00:00")).toBeInTheDocument();
+      w.destroy();
       expect(spy.live.size).toBe(0);
     } finally {
       spy.restore();

@@ -209,12 +209,12 @@ export interface PlateSpec {
 export function plateHtml(p: PlateSpec): string {
   const empty = p.value === null;
   return (
-    `<div class="gmt-punct-hero${p.quiet === true ? " gmt-punct-hero--quiet" : ""}" data-role="${escapeAttr(p.role)}"` +
+    `<div class="gmt-punct-hero${p.quiet === true ? " gmt-punct-hero--quiet" : ""}" data-gate="hero" data-role="${escapeAttr(p.role)}"` +
     (p.series === undefined ? "" : ` data-series="${p.series}"`) +
     (empty ? " data-empty" : "") +
     `>` +
     captionHtml(p) +
-    `<span class="gmt-punct-hero-value">${empty ? `<span class="gmt-punct-hero-none">${escapeHtml(NO_RESULT)}</span>` : escapeHtml(p.value!)}</span>` +
+    `<span class="gmt-punct-hero-value">${empty ? `<span class="gmt-punct-hero-none" data-gate="instant">${escapeHtml(NO_RESULT)}</span>` : escapeHtml(p.value!)}</span>` +
     heroLinesHtml(p.lines.map((text) => ({ text: empty ? "" : text }))) +
     `</div>`
   );

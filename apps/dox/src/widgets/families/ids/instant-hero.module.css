@@ -1,0 +1,143 @@
+/* instantHero: a full bevelled plate with the series colour as a 3px bottom bar while a
+   reading shows. The bar's 3px is always in the padding, so it never changes the height. */
+
+.root {
+  --bar: transparent;
+
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4) calc(var(--gmt-space-3) + 3px);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background:
+    linear-gradient(var(--bar), var(--bar)) left bottom / 100% 3px no-repeat,
+    var(--gmt-surface-widget);
+
+  &[data-bar="true"] {
+    --bar: var(--gmt-series-1);
+  }
+}
+
+.caption {
+  display: block;
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+}
+
+/* The value breaks only at the kit's break points between the pieces of an instant. */
+.value {
+  display: block;
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: clamp(1.25rem, 0.9rem + 1.2vw, 2rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: normal;
+}
+
+/* The signal-lost pill: bracketed, amber, never a blank field. */
+.pill {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-3);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* The UUID version: a full border, in the ink of the plate. */
+.chip {
+  display: inline-block;
+  box-sizing: border-box;
+  justify-self: start;
+  padding: 1px var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* The validator call: code, wrapping anywhere. */
+.call {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.reason {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+}
+
+@container (inline-size < 40rem) {
+  .value {
+    font-size: var(--gmt-text-xl);
+  }
+}
+
+@container (inline-size < 24rem) {
+  .value {
+    font-size: var(--gmt-text-lg);
+  }
+}
+
+@media (forced-colors: active) {
+  .root,
+  .pill,
+  .chip {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .caption,
+  .value,
+  .call,
+  .reason {
+    color: CanvasText;
+  }
+
+  .root[data-bar="true"] {
+    border-block-end-width: 3px;
+  }
+
+  .pill {
+    border-style: dashed;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root,
+  .chip {
+    border-color: var(--gmt-ice);
+  }
+
+  .caption,
+  .call {
+    color: var(--gmt-ice);
+  }
+}

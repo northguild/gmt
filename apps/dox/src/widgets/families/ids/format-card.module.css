@@ -1,0 +1,194 @@
+/*
+ * formatCard and precisionLadder. A card has a full 1px border and a bottom edge in its
+ * form's series colour; nothing here is a single-sided stripe. Amber is the sentinel pill's
+ * alone. Stored lines break at any character, so no region here scrolls.
+ */
+
+.card {
+  display: grid;
+  gap: var(--gmt-space-2);
+  align-content: start;
+  min-inline-size: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-block-end: 3px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+
+  &[data-series="1"] {
+    border-block-end-color: var(--gmt-series-1);
+  }
+
+  &[data-series="2"] {
+    border-block-end-color: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    border-block-end-color: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    border-block-end-color: var(--gmt-series-4);
+  }
+
+  &[data-state="idle"] {
+    color: var(--gmt-ice-dim);
+  }
+}
+
+.head {
+  margin: 0;
+  font-size: var(--gmt-text-sm);
+  font-weight: 600;
+}
+
+.body {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.group {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+
+  &[data-off] {
+    visibility: hidden;
+  }
+}
+
+.cap {
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.line,
+.rungText,
+.literal {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.wrap {
+  overflow-wrap: anywhere;
+}
+
+.chip {
+  display: inline-block;
+  padding: 0 var(--gmt-space-2);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+}
+
+.signal {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  font-size: var(--gmt-text-xs);
+}
+
+.pill {
+  padding-inline: var(--gmt-space-2);
+  border: 1px solid var(--gmt-signal-border);
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  white-space: nowrap;
+}
+
+.validator,
+.message {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+  overflow-wrap: anywhere;
+}
+
+.validator {
+  font-family: var(--gmt-font-mono);
+}
+
+/* The ladder: four rows under a series bottom edge, left aligned. */
+.ladder {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-block-end: 3px solid var(--gmt-series-1);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+}
+
+.rung {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+  align-items: baseline;
+  min-inline-size: 0;
+}
+
+.rungLabel {
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+}
+
+@media (forced-colors: active) {
+  .card,
+  .ladder,
+  .chip,
+  .pill {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .card[data-series] {
+    border-block-end-color: Highlight;
+  }
+
+  .ladder {
+    border-block-end-color: Highlight;
+  }
+
+  .cap,
+  .rungLabel,
+  .validator,
+  .message {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .card,
+  .ladder,
+  .chip {
+    border-color: var(--gmt-ice);
+  }
+
+  .cap,
+  .rungLabel,
+  .validator,
+  .message,
+  .card[data-state="idle"] {
+    color: var(--gmt-ice);
+  }
+}

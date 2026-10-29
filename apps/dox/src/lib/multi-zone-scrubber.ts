@@ -362,6 +362,9 @@ export async function initScrubber(
   let urlTimer: ReturnType<typeof setTimeout> | undefined;
 
   host.classList.add("gmt-scrubber", "gmt-widget", "not-content");
+  host.setAttribute("data-widget", "multi-zone-scrubber");
+  host.setAttribute("role", "region");
+  host.setAttribute("aria-label", "Zone Planner");
   /* The two numbered cards of the shared widget grid (styles/gmt-widget.css):
      card 1 takes the input, card 2 draws the answer. Card 2 is the chart card,
      so it takes the rest of the row on a wide pane — which is what gives the
@@ -372,7 +375,7 @@ export async function initScrubber(
     <h4>1. Pin the zones and pick a time</h4>
     <div class="gmt-scrubber-controls">
       <label>Reference time (UTC)
-        <input type="datetime-local" class="gmt-field" data-role="anchor" step="${SLIDER_STEP_MIN * 60}" />
+        <input type="datetime-local" class="gmt-field" data-role="anchor" data-gate="live" step="${SLIDER_STEP_MIN * 60}" />
       </label>
       <div class="gmt-combobox">
         <label for="scrubber-add">Add a zone</label>
@@ -393,7 +396,7 @@ export async function initScrubber(
         Reset to today
       </button>
     </div>
-    <p class="gmt-scrubber-jump-status" data-role="jump-status"></p>
+    <p class="gmt-scrubber-jump-status" data-gate="live" data-role="jump-status"></p>
     <p class="gmt-scrubber-visually-hidden" role="status" aria-live="polite" data-role="live"></p>
     <div class="gmt-scrubber-slider">${rangeFieldHtml({
       role: "slider",
@@ -405,7 +408,7 @@ export async function initScrubber(
       ends: [formatShift(-SLIDER_RANGE_MIN), formatShift(SLIDER_RANGE_MIN)],
       label: `Shift every pinned clock, in ${SLIDER_STEP_MIN}-minute steps`,
     })}</div>
-    <p class="gmt-scrubber-readout" data-role="readout" aria-live="polite"></p>
+    <p class="gmt-scrubber-readout" data-gate="live" data-role="readout" aria-live="polite"></p>
     <div class="gmt-scrubber-share">
       <button type="button" class="gmt-button" data-role="share">Copy shareable link</button>
       <span data-role="share-status" aria-live="polite"></span>
@@ -444,6 +447,7 @@ export async function initScrubber(
      range. Decorative: each tile says the same in words. */
   const marks = document.createElement("span");
   marks.className = "gmt-scrubber-marks";
+  marks.dataset.gate = "live";
   marks.setAttribute("aria-hidden", "true");
   host.querySelector(".gmt-range-field")?.append(marks);
 
@@ -479,13 +483,13 @@ export async function initScrubber(
       const yours = id === state.yours;
       if (yours) row.dataset.yours = "true";
       row.innerHTML =
-        `<div class="gmt-scrubber-clock-face" data-field="face"></div>` +
-        `<p class="gmt-scrubber-clock-time" data-field="time">&nbsp;</p>` +
-        `<p class="gmt-scrubber-clock-date" data-field="date">&nbsp;</p>` +
+        `<div class="gmt-scrubber-clock-face" data-gate="live live-face" data-field="face"></div>` +
+        `<p class="gmt-scrubber-clock-time" data-gate="live" data-field="time">&nbsp;</p>` +
+        `<p class="gmt-scrubber-clock-date" data-gate="live" data-field="date">&nbsp;</p>` +
         `<p class="gmt-scrubber-clock-zone" title="${escapeHtml(id)}">${escapeHtml(shortZone(id))}</p>` +
-        `<p class="gmt-scrubber-clock-offset" data-field="offset">&nbsp;</p>` +
-        `<p class="gmt-scrubber-dst-slot"><span class="gmt-scrubber-dst" data-field="dst" data-state="none"></span></p>` +
-        `<p class="gmt-scrubber-switch-slot"><span class="gmt-scrubber-switch" data-field="switch"></span></p>` +
+        `<p class="gmt-scrubber-clock-offset" data-gate="live" data-field="offset">&nbsp;</p>` +
+        `<p class="gmt-scrubber-dst-slot"><span class="gmt-scrubber-dst" data-gate="live" data-field="dst" data-state="none"></span></p>` +
+        `<p class="gmt-scrubber-switch-slot"><span class="gmt-scrubber-switch" data-gate="live" data-field="switch"></span></p>` +
         (yours
           ? `<p class="gmt-scrubber-clock-yours" data-field="yours">Your time zone</p>`
           : "") +

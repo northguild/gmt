@@ -1,18 +1,37 @@
 /** @vitest-environment jsdom */
-import { fireEvent, render, screen } from "@testing-library/react";
+import { useRef } from "react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { RailResizer } from "./RailResizer";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import { RailResizer, STORAGE_KEY, WIDTH_PROPERTY } from "./RailResizer";
+
+installJsdomShims();
 
 /* jsdom has no layout, so the body and rail report the width their CSS would
    give them: the rail's width var when set, otherwise the default. A 1440 px
    page gives bounds of 489.6 to 720 px (`rail-width.test.ts`). */
 const BODY_WIDTH = 1440;
 const DEFAULT_WIDTH = 489.6;
+const MAX_WIDTH = 720;
+const BODY_LABEL = "Page body";
 
-function railWidth(body: HTMLElement): number {
-  const set = body.style.getPropertyValue("--gmt-hive-rail-width");
-  return set
-    ? Math.min(Math.max(parseFloat(set), DEFAULT_WIDTH), 720)
+/** The parent that renders the resizer and hands it the container by ref. */
+function Page() {
+  const body = useRef<HTMLDivElement>(null);
+  return (
+    <section ref={body} aria-label={BODY_LABEL}>
+      <RailResizer railId="rail" container={body} />
+      <aside id="rail" aria-label="Widget rail" />
+    </section>
+  );
+}
+
+/** The width the component last asked for, as the layout would apply it. */
+let requestedWidth: string | undefined;
+
+function railWidth(): number {
+  return requestedWidth
+    ? Math.min(Math.max(parseFloat(requestedWidth), DEFAULT_WIDTH), MAX_WIDTH)
     : DEFAULT_WIDTH;
 }
 
@@ -30,24 +49,46 @@ function rect(width: number): DOMRect {
   };
 }
 
+/** The separator, when it reports `now` as its value. */
+function handleAt(now: number): HTMLElement {
+  return screen.getByRole("separator", {
+    name: "Resize the widget panel",
+    value: { now },
+  });
+}
+
 function renderResizer() {
-  const result = render(
-    <div className="gmt-hive-body" data-testid="body">
-      <RailResizer railId="rail" />
-      <aside id="rail" />
-    </div>,
-  );
-  const body = screen.getByTestId("body");
-  return { ...result, body, handle: screen.getByRole("separator") };
+  render(<Page />);
+  return {
+    handle: screen.getByRole("separator", { name: "Resize the widget panel" }),
+    body: screen.getByRole("region", { name: BODY_LABEL }),
+  };
 }
 
 beforeEach(() => {
   window.localStorage.clear();
+  requestedWidth = undefined;
+  const setProperty = CSSStyleDeclaration.prototype.setProperty;
+  const removeProperty = CSSStyleDeclaration.prototype.removeProperty;
+  vi.spyOn(CSSStyleDeclaration.prototype, "setProperty").mockImplementation(
+    function (this: CSSStyleDeclaration, name: string, value: string | null) {
+      if (name === WIDTH_PROPERTY) requestedWidth = value ?? undefined;
+      return setProperty.call(this, name, value);
+    },
+  );
+  vi.spyOn(CSSStyleDeclaration.prototype, "removeProperty").mockImplementation(
+    function (this: CSSStyleDeclaration, name: string) {
+      if (name === WIDTH_PROPERTY) requestedWidth = undefined;
+      return removeProperty.call(this, name);
+    },
+  );
   vi.spyOn(window, "innerWidth", "get").mockReturnValue(BODY_WIDTH);
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
-      if (this.id === "rail") return rect(railWidth(this.parentElement!));
-      if (this.classList.contains("gmt-hive-body")) return rect(BODY_WIDTH);
+      if (this.getAttribute("aria-label") === "Widget rail")
+        return rect(railWidth());
+      if (this.getAttribute("aria-label") === BODY_LABEL)
+        return rect(BODY_WIDTH);
       return rect(0);
     },
   );
@@ -58,82 +99,85 @@ afterEach(() => {
 });
 
 describe("RailResizer", () => {
-  it("is a focusable vertical separator for the rail", () => {
+  it("is a focusable vertical separator that controls the rail", () => {
     const { handle } = renderResizer();
-    expect(handle.getAttribute("aria-orientation")).toBe("vertical");
-    expect(handle.getAttribute("aria-controls")).toBe("rail");
-    expect(handle.getAttribute("tabindex")).toBe("0");
+    expect(handle).toHaveAttribute("aria-orientation", "vertical");
+    expect(handle).toHaveAttribute("aria-controls", "rail");
+    expect(handle).toHaveAttribute("tabindex", "0");
+  });
+
+  it("reports the default width and the page share it holds", () => {
+    const { handle } = renderResizer();
+    expect(handleAt(490)).toBeInTheDocument();
+    expect(handle).toHaveAttribute("aria-valuemin", "490");
+    expect(handle).toHaveAttribute("aria-valuemax", "720");
+    expect(handle).toHaveAttribute("aria-valuetext", "34% of the page");
   });
 
   it("widens the rail with ArrowLeft and remembers the width", async () => {
-    const { body, handle } = renderResizer();
-    handle.focus();
-    await userEvent.keyboard("{ArrowLeft}");
-    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe(
-      "505.6px",
-    );
-    expect(window.localStorage.getItem("gmt-dox-rail-width")).toBe("506");
+    const user = userEvent.setup();
+    const { handle } = renderResizer();
+    await user.tab();
+    expect(handle).toHaveFocus();
+    await user.keyboard("{ArrowLeft}");
+    expect(handleAt(506)).toBeInTheDocument();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe("506");
   });
 
   it("goes no wider than half the page with End", async () => {
-    const { body, handle } = renderResizer();
-    handle.focus();
-    await userEvent.keyboard("{End}");
-    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe("720px");
-    expect(handle.getAttribute("aria-valuenow")).toBe("720");
-    expect(handle.getAttribute("aria-valuetext")).toBe("50% of the page");
+    const user = userEvent.setup();
+    const { handle } = renderResizer();
+    await user.tab();
+    await user.keyboard("{End}");
+    expect(handleAt(720)).toBeInTheDocument();
+    expect(handle).toHaveAttribute("aria-valuetext", "50% of the page");
   });
 
   it("goes no narrower than the default with ArrowRight", async () => {
-    const { body, handle } = renderResizer();
-    handle.focus();
-    await userEvent.keyboard("{ArrowRight}");
-    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe(
-      `${DEFAULT_WIDTH}px`,
-    );
+    const user = userEvent.setup();
+    renderResizer();
+    await user.tab();
+    await user.keyboard("{ArrowRight}");
+    expect(handleAt(490)).toBeInTheDocument();
   });
 
   it("restores the stored width on mount", () => {
-    window.localStorage.setItem("gmt-dox-rail-width", "600");
-    const { body } = renderResizer();
-    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe("600px");
+    window.localStorage.setItem(STORAGE_KEY, "600");
+    renderResizer();
+    expect(handleAt(600)).toBeInTheDocument();
   });
 
   it("clamps a stored width wider than half the page", () => {
-    window.localStorage.setItem("gmt-dox-rail-width", "5000");
-    const { body } = renderResizer();
-    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe("720px");
+    window.localStorage.setItem(STORAGE_KEY, "5000");
+    renderResizer();
+    expect(handleAt(720)).toBeInTheDocument();
   });
 
-  it("remembers the final width when the drag ends before the next frame", () => {
+  it("remembers the final width when the drag ends before the next frame", async () => {
     /* Hold every frame: the pointer is released before the last move is drawn. */
     vi.spyOn(window, "requestAnimationFrame").mockImplementation(() => 1);
     vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
-    const { body, handle } = renderResizer();
-    const captured = new Set<number>();
-    Object.assign(handle, {
-      setPointerCapture: (id: number) => captured.add(id),
-      hasPointerCapture: (id: number) => captured.has(id),
-      releasePointerCapture: (id: number) => captured.delete(id),
-    });
+    const user = userEvent.setup();
+    const { handle } = renderResizer();
 
-    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 900 });
-    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 800 });
-    fireEvent.pointerUp(handle, { pointerId: 1, clientX: 800 });
+    await user.pointer([
+      { keys: "[MouseLeft>]", target: handle, coords: { clientX: 900 } },
+      { target: handle, coords: { clientX: 800 } },
+      { keys: "[/MouseLeft]", target: handle, coords: { clientX: 800 } },
+    ]);
 
-    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe(
-      "589.6px",
-    );
-    expect(window.localStorage.getItem("gmt-dox-rail-width")).toBe("590");
-    expect(body.hasAttribute("data-resizing")).toBe(false);
+    expect(handleAt(590)).toBeInTheDocument();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe("590");
   });
 
   it("resets to the default width on double-click", async () => {
-    const { body, handle } = renderResizer();
-    handle.focus();
-    await userEvent.keyboard("{End}");
-    fireEvent.doubleClick(handle);
-    expect(body.style.getPropertyValue("--gmt-hive-rail-width")).toBe("");
-    expect(window.localStorage.getItem("gmt-dox-rail-width")).toBeNull();
+    const user = userEvent.setup();
+    const { handle } = renderResizer();
+    await user.tab();
+    await user.keyboard("{End}");
+    expect(handleAt(720)).toBeInTheDocument();
+    await user.dblClick(handle);
+    expect(handleAt(490)).toBeInTheDocument();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 });

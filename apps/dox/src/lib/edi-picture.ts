@@ -620,7 +620,7 @@ export function holdHtml(
   sizers: readonly string[],
   className = "gmt-edi-hold",
 ): string {
-  return `<div class="${escapeAttr(className)}">${live}${sizers.join("")}</div>`;
+  return `<div class="${escapeAttr(className)}" data-gate="hold">${live}${sizers.join("")}</div>`;
 }
 
 /** One hidden sizer: the same element and class as the live one, holding a text
@@ -646,7 +646,7 @@ export function textSizers(
 
 /** The call frame's sizer: the longest call the region prints. */
 export function callSizer(call: string): string {
-  return `<div class="gmt-codeframe gmt-edi-sizer" aria-hidden="true" data-pagefind-ignore><pre class="gmt-codeframe-pre"><code>${escapeHtml(call)}</code></pre></div>`;
+  return `<div class="gmt-codeframe gmt-edi-sizer" data-gate="codeframe" aria-hidden="true" data-pagefind-ignore><pre class="gmt-codeframe-pre"><code>${escapeHtml(call)}</code></pre></div>`;
 }
 
 /** An output's sizer: the longest result the region prints. */
@@ -696,5 +696,5 @@ export function lit(text: string, mask: string, group: PicGroup): PicField {
 
 /** A call frame with its result under it, as one sizer. */
 export function callOutputSizer(call: string, output: string): string {
-  return `<div class="gmt-edi-sizer" aria-hidden="true" data-pagefind-ignore><div class="gmt-codeframe"><pre class="gmt-codeframe-pre"><code>${escapeHtml(call)}</code></pre></div><div class="gmt-widget-output">${escapeHtml(output)}</div></div>`;
+  return `<div class="gmt-edi-sizer" aria-hidden="true" data-pagefind-ignore><div class="gmt-codeframe" data-gate="codeframe"><pre class="gmt-codeframe-pre"><code>${escapeHtml(call)}</code></pre></div><div class="gmt-widget-output">${escapeHtml(output)}</div></div>`;
 }

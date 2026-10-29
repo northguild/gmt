@@ -1,0 +1,126 @@
+/* cutoffBands and cutoffScale. A band is placed by `--gmt-at` and `--gmt-span`; a tick by
+   `--gmt-at`. The tick shifts by its own share of its width (`translate`), so the first
+   label sits flush at the start edge and the last flush at the end, and no label leaves the
+   track. */
+
+.bands {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.band {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--gmt-at) * 100%);
+  inline-size: calc(var(--gmt-span) * 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+
+  &[data-kind="open"] {
+    background: color-mix(in srgb, var(--gmt-spring) 14%, transparent);
+    color: var(--gmt-spring-ink);
+  }
+
+  &[data-kind="closed"] {
+    background: repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--gmt-danger) 22%, transparent) 0 6px,
+      color-mix(in srgb, var(--gmt-danger) 8%, transparent) 6px 12px
+    );
+    color: var(--gmt-danger-ink);
+  }
+
+  &[data-kind="hour"][data-tint="true"] {
+    background: color-mix(in srgb, var(--gmt-cyan) 10%, transparent);
+  }
+
+  &[data-kind="overlap"] {
+    background: color-mix(in srgb, var(--gmt-dst-purple) 22%, transparent);
+  }
+}
+
+.scale {
+  position: relative;
+  block-size: 1.5rem;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+}
+
+.tick {
+  position: absolute;
+  inset-inline-start: calc(var(--gmt-at) * 100%);
+  translate: calc(var(--gmt-at) * -100%) 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  &[data-day="true"] {
+    font-weight: 700;
+  }
+
+  /* A narrow axis keeps the major ticks only. */
+  @container (inline-size < 30rem) {
+    &[data-rank="1"] {
+      display: none;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .band {
+    color: CanvasText;
+
+    &[data-kind="open"] {
+      background: Canvas;
+    }
+
+    &[data-kind="closed"] {
+      background: repeating-linear-gradient(
+        135deg,
+        CanvasText 0 1px,
+        Canvas 1px 8px
+      );
+    }
+
+    &[data-kind="hour"][data-tint="true"] {
+      background: Canvas;
+      border-inline: 1px solid CanvasText;
+    }
+
+    &[data-kind="overlap"] {
+      background: Canvas;
+      border-inline: 2px dotted CanvasText;
+    }
+  }
+
+  .scale {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .band {
+    color: var(--gmt-ice);
+
+    &[data-kind="closed"] {
+      background: repeating-linear-gradient(
+        135deg,
+        var(--gmt-ice) 0 1px,
+        transparent 1px 8px
+      );
+    }
+
+    &[data-kind="open"] {
+      background: transparent;
+    }
+  }
+}

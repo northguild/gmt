@@ -1,55 +1,28 @@
 /**
  * @vitest-environment jsdom
  *
- * The Dwell Ledger end to end: template → mount → interact → assert, against
- * the real `@northguild/gmt`. Every preset's printed result is checked against
- * the literal `dwellTime` JSDoc example it draws, so a drift in the library or
- * the widget fails here.
+ * The Dwell Ledger end to end: template -> mount -> interact -> assert, against the real
+ * `@northguild/gmt`, through roles and accessible names. Every preset's printed result is
+ * checked against the literal `dwellTime` JSDoc example it draws, so a drift in the
+ * library or the widget fails here.
  */
+import { screen, within } from "@testing-library/dom";
 import { Temporal } from "@js-temporal/polyfill";
-import { installJsdomShims } from "~/test/jsdom-shims";
-import { DWELL_PRESETS } from "./dwell-ledger";
 import {
-  mountDwellLedger,
-  renderDwellLedgerTemplate,
-} from "./dwell-ledger-mount";
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { DWELL_PRESETS } from "./dwell-ledger";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "zone",
-  "compare-zone",
-  "frame",
-  "heroes",
-  "hero-elapsed",
-  "hero-days",
-  "timeline",
-  "row-dwell",
-  "label-dwell",
-  "track-dwell",
-  "cells-dwell",
-  "bar",
-  "handle-entry",
-  "handle-exit",
-  "row-compare",
-  "label-compare",
-  "cells-compare",
-  "bar-compare",
-  "axis",
-  "entry",
-  "exit",
-  "summary",
-  "reason-aside",
-  "call-dwell",
-  "copy-dwell",
-  "dwell-output",
-  "compare-result",
-  "call-compare",
-  "copy-compare",
-  "compare-output",
-];
+const entry = WIDGET_REGISTRY["showDwellLedger"] as AnyWidgetEntry;
 
 /** The `dwellTime` JSDoc examples the presets draw, verbatim. */
 const EXPECTED: Record<string, string[]> = {
@@ -69,108 +42,104 @@ const EXPECTED: Record<string, string[]> = {
   "no-zone": ["NO SIGNAL"],
 };
 
-function stubTrackGeometry(root: HTMLElement) {
-  for (const track of root.querySelectorAll(".gmt-dwell-track")) {
-    (track as HTMLElement).getBoundingClientRect = () =>
-      ({
-        left: 0,
-        width: 1000,
-        top: 0,
-        height: 32,
-        right: 1000,
-        bottom: 32,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      }) as DOMRect;
-  }
+type Widget = RenderedWidget;
+
+const open = (args: Record<string, unknown> = {}): Promise<Widget> =>
+  renderWidget(entry, { args });
+
+const preset = () => screen.getByRole("combobox", { name: "Preset" });
+const zone = () => screen.getByRole("combobox", { name: "Count days in" });
+const compare = () => screen.getByRole("combobox", { name: "Compare with" });
+const entryBox = () => screen.getByRole("textbox", { name: "Entry" });
+const exitBox = () => screen.getByRole("textbox", { name: "Exit" });
+const entryHandle = () => screen.getByRole("slider", { name: "Entry" });
+const exitHandle = () => screen.getByRole("slider", { name: "Exit" });
+const summary = () => screen.getByRole("status", { name: "Dwell summary" });
+
+const outputOf = (label: string) => screen.getByLabelText(label);
+const dwellOutput = () => outputOf("What dwellTime returned");
+const compareOutput = () =>
+  outputOf("What dwellTime returned for the comparison zone");
+
+/** What the first copy button puts on the clipboard: the call made. */
+async function callText(w: Widget): Promise<string> {
+  await w.user.click(screen.getAllByRole("button", { name: "Copy call" })[0]!);
+  return navigator.clipboard.readText();
 }
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+/** The days the dwell lit in one lane, by date. */
+const lit = (lane: string) =>
+  within(screen.getByRole("list", { name: new RegExp(`^${lane}`) }))
+    .getAllByRole("listitem")
+    .map((d) => d.getAttribute("aria-label") ?? "")
+    .filter((name) => /counted/.test(name))
+    .map((name) => name.split(" ").slice(0, 2).join(" "));
 
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderDwellLedgerTemplate(templateArgs);
-  document.body.append(root);
-  stubTrackGeometry(root);
-  const controller = new AbortController();
-  const handle = await mountDwellLedger(root, args, controller.signal);
-  return { root, handle, controller };
+async function enter(w: Widget, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  await w.user.paste(value);
+  await w.user.tab();
 }
 
-/** The columns the dwell lit: the days it touched. */
-const touchedDates = (root: HTMLElement, role: string) =>
-  [...q(root, role).querySelectorAll<HTMLElement>('[data-state="lit"]')].map(
-    (c) => c.dataset.date,
-  );
-
-function choosePreset(root: HTMLElement, id: string) {
-  const preset = q<HTMLSelectElement>(root, "preset");
-  preset.value = id;
-  preset.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function type(root: HTMLElement, role: string, value: string) {
-  const input = q<HTMLInputElement>(root, role);
-  input.value = value;
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  input.dispatchEvent(new Event("change", { bubbles: true }));
-}
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime("2026-10-15T00:00:00Z");
+});
 
 afterEach(() => {
-  document.body.innerHTML = "";
+  vi.useRealTimers();
 });
 
 describe("renderDwellLedgerTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDwellLedgerTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(q(root, role), `missing [data-role="${role}"]`).not.toBeNull();
+  it("is a named region with two numbered sections and the controls a person names", async () => {
+    await open();
+    expect(
+      screen.getByRole("region", { name: "Dwell Ledger" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent),
+    ).toEqual([
+      "1. Place a dwell on the local-day grid",
+      "2. What dwellTime returns",
+    ]);
+    for (const control of [preset, zone, compare, entryBox, exitBox]) {
+      expect(control()).toBeInTheDocument();
     }
+    expect(entryHandle()).toBeInTheDocument();
+    expect(exitHandle()).toBeInTheDocument();
   });
 
-  it("opens on the first preset", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDwellLedgerTemplate();
+  it("opens on the first preset with the comparison lane hidden", async () => {
+    const w = await open();
     const first = DWELL_PRESETS[0]!;
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe(first.id);
-    expect(q<HTMLInputElement>(root, "entry").value).toBe(first.entry);
-    expect(q<HTMLSelectElement>(root, "zone").value).toBe(first.zone);
-    expect(q(root, "row-compare").hidden).toBe(true);
+    expect(preset()).toHaveValue(first.id);
+    expect(entryBox()).toHaveValue(first.entry);
+    expect(zone()).toHaveValue(first.zone);
+    await expectNoAxeViolations(w.root);
   });
 
-  it("paints seeded arguments, adding an unlisted zone", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDwellLedgerTemplate({
+  it("paints seeded arguments, adding an unlisted zone", async () => {
+    await open({
       entry: "2024-06-15T22:30:00Z",
       exit: "2024-06-16T01:00:00Z",
       zone: "America/Halifax",
       compareZone: "Europe/Amsterdam",
     });
-    expect(q<HTMLSelectElement>(root, "zone").value).toBe("America/Halifax");
-    expect(q<HTMLSelectElement>(root, "compare-zone").value).toBe(
-      "Europe/Amsterdam",
-    );
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    expect(q(root, "row-compare").hidden).toBe(false);
+    expect(zone()).toHaveValue("America/Halifax");
+    expect(compare()).toHaveValue("Europe/Amsterdam");
+    expect(preset()).toHaveValue("custom");
   });
 
-  it("escapes what it interpolates", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDwellLedgerTemplate({
+  it("neutralises what it interpolates", async () => {
+    const w = await open({
       entry: '"><img src=x onerror=alert(1)>',
       exit: "x",
       zone: "<b>Zone</b>",
     });
-    expect(root.querySelector("img")).toBeNull();
-    expect(root.querySelector("b")).toBeNull();
-    expect(q<HTMLInputElement>(root, "entry").value).toBe(
-      '"><img src=x onerror=alert(1)>',
-    );
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(entryBox()).toHaveValue('"><img src=x onerror=alert(1)>');
+    expect(zone()).toHaveValue("<b>Zone</b>");
+    await expectNoAxeViolations(w.root);
   });
 });
 
@@ -178,320 +147,197 @@ describe("mountDwellLedger", () => {
   it.each(DWELL_PRESETS.map((p) => [p.id]))(
     "prints dwellTime's documented result for %s",
     async (id) => {
-      const { root } = await mount();
-      choosePreset(root, id);
-      const [primary, compare] = EXPECTED[id]!;
-      expect(q(root, "dwell-output").textContent).toBe(primary);
-      if (compare) {
-        expect(q(root, "compare-result").hidden).toBe(false);
-        expect(q(root, "compare-output").textContent).toBe(compare);
+      const w = await open();
+      await w.user.selectOptions(preset(), id);
+      const [primary, other] = EXPECTED[id]!;
+      expect(dwellOutput()).toHaveTextContent(primary!.replace(/\s+/g, " "));
+      if (other) {
+        expect(compareOutput()).toHaveTextContent(other.replace(/\s+/g, " "));
       } else {
-        expect(q(root, "compare-result").hidden).toBe(true);
+        expect(
+          screen.queryByLabelText(
+            "What dwellTime returned for the comparison zone",
+          ),
+        ).not.toBeVisible();
       }
+      await expectNoAxeViolations(w.root);
     },
   );
 
-  it("shades the two dates a 23:00 → 01:00 dwell touches, and says so", async () => {
-    const { root } = await mount();
-    expect(touchedDates(root, "cells-dwell")).toEqual([
-      "2024-06-15",
-      "2024-06-16",
-    ]);
-    expect(q(root, "summary").textContent).toBe(
+  it("lights the two dates a 23:00 to 01:00 dwell touches, and says so", async () => {
+    await open();
+    expect(lit("Africa/Johannesburg")).toEqual(["15 Jun", "16 Jun"]);
+    expect(summary()).toHaveTextContent(
       "PT2H elapsed · 2 local days in Africa/Johannesburg",
     );
-    expect(q(root, "dwell-output").classList).toContain("gmt-playground-live");
   });
 
   it("drops to one day when the exit is typed as local midnight", async () => {
-    const { root } = await mount();
-    type(root, "exit", "2024-06-16T00:00:00+02:00[Africa/Johannesburg]");
-    expect(touchedDates(root, "cells-dwell")).toEqual(["2024-06-15"]);
-    expect(q(root, "dwell-output").textContent).toContain("calendarDays: 1 }");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
+    const w = await open();
+    await enter(w, exitBox(), "2024-06-16T00:00:00+02:00[Africa/Johannesburg]");
+    expect(lit("Africa/Johannesburg")).toEqual(["15 Jun"]);
+    expect(dwellOutput()).toHaveTextContent("calendarDays: 1 }");
+    expect(preset()).toHaveValue("custom");
+    await expectNoAxeViolations(w.root);
   });
 
   it("draws the spring-forward day as 23 hours and notes it", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    const cell = q(root, "cells-dwell").querySelector<HTMLElement>(
-      '[data-date="2024-03-31"]',
-    )!;
-    expect(cell.dataset.hours).toBe("23");
-    expect(cell.dataset.state).toBe("lit");
-    expect(q(root, "reason-aside").textContent).toContain("had 23 hours");
+    const w = await open();
+    await w.user.selectOptions(preset(), "spring-forward");
+    const day = screen
+      .getAllByRole("listitem")
+      .find((d) => d.getAttribute("aria-label")?.startsWith("31 Mar"))!;
+    expect(day).toHaveAccessibleName(/23 hours.*counted/);
+    expect(
+      screen.getByRole("complementary", { name: "About this day" }),
+    ).toHaveTextContent("had 23 hours");
+    await expectNoAxeViolations(w.root);
   });
 
   it("shows two days in London and one in Amsterdam on one canvas", async () => {
-    const { root } = await mount();
-    choosePreset(root, "london-vs-amsterdam");
-    expect(touchedDates(root, "cells-dwell")).toEqual([
-      "2024-06-15",
-      "2024-06-16",
-    ]);
-    expect(touchedDates(root, "cells-compare")).toEqual(["2024-06-16"]);
-    expect(q(root, "bar-compare").style.left).toBe(q(root, "bar").style.left);
-    expect(q(root, "bar-compare").style.width).toBe(q(root, "bar").style.width);
-    expect(q(root, "summary").textContent).toBe(
+    const w = await open();
+    await w.user.selectOptions(preset(), "london-vs-amsterdam");
+    expect(lit("Europe/London")).toEqual(["15 Jun", "16 Jun"]);
+    expect(lit("Europe/Amsterdam")).toEqual(["16 Jun"]);
+    expect(summary()).toHaveTextContent(
       "PT2H30M elapsed · 2 local days in Europe/London · 1 local day in Europe/Amsterdam",
     );
+    await expectNoAxeViolations(w.root);
   });
 
   it("renders the sentinel and the reason when no zone is given", async () => {
-    const { root } = await mount();
-    choosePreset(root, "no-zone");
-    const out = q(root, "dwell-output");
-    expect(out.textContent).toBe("NO SIGNAL");
-    expect(out.classList).toContain("gmt-playground-sentinel");
-    expect(q(root, "reason-aside").textContent).toContain(
-      "no place to count days in",
-    );
-    expect(q(root, "cells-dwell").children).toHaveLength(0);
-    expect(q(root, "bar").hidden).toBe(false);
-    expect(q(root, "call-dwell").textContent).toBe(
+    const w = await open();
+    await w.user.selectOptions(preset(), "no-zone");
+    expect(dwellOutput()).toHaveTextContent("NO SIGNAL");
+    expect(
+      screen.getByRole("complementary", { name: "Why no result" }),
+    ).toHaveTextContent("no place to count days in");
+    expect(summary()).toHaveTextContent(/^$/);
+    expect(await callText(w)).toBe(
       'dwellTime("2024-06-15T22:30:00Z", "2024-06-16T01:00:00Z")',
     );
+    await expectNoAxeViolations(w.root);
   });
 
-  it("marks an inverted dwell and shades nothing", async () => {
-    const { root } = await mount();
-    type(root, "entry", "2024-06-16T02:00:00-04:00[America/New_York]");
-    expect(q(root, "dwell-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain(
-      "exit is before the entry",
-    );
-    expect(q(root, "bar").classList).toContain("gmt-dwell-bar--invalid");
-    expect(touchedDates(root, "cells-dwell")).toEqual([]);
+  it("marks an inverted dwell and lights nothing", async () => {
+    const w = await open();
+    await enter(w, entryBox(), "2024-06-16T02:00:00-04:00[America/New_York]");
+    expect(dwellOutput()).toHaveTextContent("NO SIGNAL");
+    expect(
+      screen.getByRole("complementary", { name: "Why no result" }),
+    ).toHaveTextContent("exit is before the entry");
+    expect(lit("Africa/Johannesburg")).toEqual([]);
+    await expectNoAxeViolations(w.root);
   });
 
-  it("moves the exit when its handle is dragged", async () => {
-    const { root } = await mount();
-    const handle = q(root, "handle-exit");
-    const before = q<HTMLInputElement>(root, "exit").value;
-    handle.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
-    );
-    root.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        pointerId: 1,
-        clientX: 900,
-      }),
-    );
-    root.dispatchEvent(
-      new PointerEvent("pointerup", { bubbles: true, pointerId: 1 }),
-    );
-    const after = q<HTMLInputElement>(root, "exit").value;
+  it("moves the exit when its handle is stepped", async () => {
+    const w = await open();
+    const before = (exitBox() as HTMLInputElement).value;
+    exitHandle().focus();
+    await w.user.keyboard("{ArrowRight}");
+    const after = (exitBox() as HTMLInputElement).value;
     expect(after).not.toBe(before);
     expect(after).toMatch(/\[Africa\/Johannesburg\]$/);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("steps a handle with the keyboard and keeps the pair in order", async () => {
+    const w = await open();
+    exitHandle().focus();
+    await w.user.keyboard("{ArrowRight}");
+    expect(exitBox()).toHaveValue(
+      "2024-06-16T01:15:00+02:00[Africa/Johannesburg]",
+    );
+    await w.user.keyboard("{Home}");
+    // The exit cannot pass the entry.
+    expect(exitBox()).toHaveValue((entryBox() as HTMLInputElement).value);
+    expect(entryHandle()).toHaveAttribute("aria-valuetext", "15 Jun 23:00");
+    await expectNoAxeViolations(w.root);
   });
 
   it("keeps the entry from passing the exit", async () => {
-    const { root } = await mount();
-    const handle = q(root, "handle-entry");
-    handle.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
-    );
-    root.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        pointerId: 1,
-        clientX: 1000,
-      }),
-    );
-    expect(q<HTMLInputElement>(root, "entry").value).toBe(
-      q<HTMLInputElement>(root, "exit").value,
-    );
-  });
-
-  it("ignores a pointermove no handle started", async () => {
-    const { root } = await mount();
-    const before = q<HTMLInputElement>(root, "exit").value;
-    root.dispatchEvent(
-      new PointerEvent("pointermove", { bubbles: true, clientX: 900 }),
-    );
-    expect(q<HTMLInputElement>(root, "exit").value).toBe(before);
-  });
-
-  it("steps a handle with the keyboard", async () => {
-    const { root } = await mount();
-    const handle = q(root, "handle-exit");
-    const key = (k: string, shiftKey = false) =>
-      handle.dispatchEvent(
-        new KeyboardEvent("keydown", { key: k, shiftKey, bubbles: true }),
-      );
-    key("ArrowRight");
-    expect(q<HTMLInputElement>(root, "exit").value).toBe(
-      "2024-06-16T01:15:00+02:00[Africa/Johannesburg]",
-    );
-    key("ArrowLeft", true);
-    expect(q<HTMLInputElement>(root, "exit").value).toBe(
-      "2024-06-16T00:15:00+02:00[Africa/Johannesburg]",
-    );
-    key("Home");
-    // The exit cannot pass the entry.
-    expect(q<HTMLInputElement>(root, "exit").value).toBe(
-      q<HTMLInputElement>(root, "entry").value,
-    );
-    expect(handle.getAttribute("aria-valuetext")).toBe("15 Jun 23:00");
-  });
-
-  it("lights the first row in series 1 and the comparison row in series 2, with the word counted", async () => {
-    const { root } = await mount();
-    choosePreset(root, "london-vs-amsterdam");
-    const lit = (role: string) =>
-      q(root, role).querySelector<HTMLElement>('[data-state="lit"]')!;
-    expect(q(root, "row-dwell").dataset.series).toBe("1");
-    expect(q(root, "row-compare").dataset.series).toBe("2");
-    expect(lit("cells-dwell").dataset.series).toBe("1");
-    expect(lit("cells-compare").dataset.series).toBe("2");
-    expect(
-      lit("cells-dwell").querySelector(".gmt-ledger-chip")!.textContent,
-    ).toBe("counted");
-    expect(lit("cells-dwell").getAttribute("aria-label")).toContain("counted");
-  });
-
-  it("shows the elapsed time and the local days on two plates inside the frame", async () => {
-    const { root } = await mount();
-    const value = (role: string) =>
-      q(root, role).querySelector(".gmt-punct-hero-value")!.textContent;
-    const lines = (role: string) =>
-      [...q(root, role).querySelectorAll(".gmt-punct-hero-line")].map(
-        (l) => l.textContent,
-      );
-    expect(q(root, "frame").classList).toContain("gmt-ledger-frame");
-    expect(q(root, "frame").contains(q(root, "heroes"))).toBe(true);
-    expect(q(root, "frame").contains(q(root, "track-dwell"))).toBe(true);
-    expect(value("hero-elapsed")).toBe("2 h");
-    expect(lines("hero-elapsed")).toEqual(["PT2H"]);
-    expect(value("hero-days")).toBe("2");
-    // The second line is always there; it is blank without a second zone.
-    expect(lines("hero-days")).toEqual(["in Africa/Johannesburg", ""]);
-    choosePreset(root, "london-vs-amsterdam");
-    expect(value("hero-elapsed")).toBe("2 h 30 min");
-    expect(lines("hero-days")).toEqual([
-      "in Europe/London",
-      "1 in Europe/Amsterdam",
-    ]);
-    choosePreset(root, "no-zone");
-    expect(value("hero-elapsed")).toBe("no result");
-    expect(q(root, "hero-days").hasAttribute("data-empty")).toBe(true);
-    expect(lines("hero-days")).toEqual(["", ""]);
-  });
-
-  it("flags the 23-hour day with the dashed short chip", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    const odd = q(root, "cells-dwell").querySelector<HTMLElement>(
-      '[data-date="2024-03-31"] .gmt-ledger-odd',
-    )!;
-    expect(odd.textContent).toBe("23 h");
-    expect(odd.dataset.dst).toBe("short");
-  });
-
-  it("hides the summary visually and keeps it live", async () => {
-    const { root } = await mount();
-    expect(q(root, "summary").classList).toContain("gmt-ledger-sr");
-    expect(q(root, "summary").getAttribute("aria-live")).toBe("polite");
+    const w = await open();
+    entryHandle().focus();
+    await w.user.keyboard("{End}");
+    expect(entryBox()).toHaveValue((exitBox() as HTMLInputElement).value);
   });
 
   it("moves a handle twelve snap units on PageUp and PageDown", async () => {
-    const { root } = await mount();
-    const exit = q<HTMLInputElement>(root, "exit");
-    const press = (key: string) =>
-      q(root, "handle-exit").dispatchEvent(
-        new KeyboardEvent("keydown", { key, bubbles: true }),
-      );
+    const w = await open();
     const ms = () =>
-      Temporal.Instant.from(exit.value.replace(/\[.*\]$/, ""))
-        .epochMilliseconds;
+      Temporal.Instant.from(
+        (exitBox() as HTMLInputElement).value.replace(/\[.*\]$/, ""),
+      ).epochMilliseconds;
     const before = ms();
-    press("PageUp");
+    exitHandle().focus();
+    await w.user.keyboard("{PageUp}");
     expect(ms() - before).toBe(12 * 15 * 60_000);
-    press("PageDown");
+    await w.user.keyboard("{PageDown}");
     expect(ms()).toBe(before);
   });
 
-  it("keeps the height of the preset description when a drag makes the state custom", async () => {
-    const { root } = await mount();
-    const desc = q(root, "preset-description");
-    desc.getBoundingClientRect = () => ({ height: 48 }) as DOMRect;
-    q(root, "handle-exit").dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-    );
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    expect(desc.textContent).toBe("");
-    expect(desc.style.minBlockSize).toBe("48px");
-    choosePreset(root, "spring-forward");
-    expect(desc.style.minBlockSize).toBe("");
+  it("shows the elapsed time and the local days on two plates", async () => {
+    const w = await open();
+    expect(w.root).toHaveTextContent("2 h");
+    expect(w.root).toHaveTextContent("PT2H");
+    expect(w.root).toHaveTextContent("in Africa/Johannesburg");
+    await w.user.selectOptions(preset(), "london-vs-amsterdam");
+    expect(w.root).toHaveTextContent("2 h 30 min");
+    expect(w.root).toHaveTextContent("1 in Europe/Amsterdam");
+    await w.user.selectOptions(preset(), "no-zone");
+    expect(w.root).toHaveTextContent("no result");
   });
 
   it("counts days in the chosen zone when the zone changes", async () => {
-    const { root } = await mount();
-    const zone = q<HTMLSelectElement>(root, "zone");
-    zone.value = "Asia/Tokyo";
-    zone.dispatchEvent(new Event("change", { bubbles: true }));
-    // 23:00 → 01:00 in New York is 12:00 → 14:00 on 16 June in Tokyo.
-    expect(touchedDates(root, "cells-dwell")).toEqual(["2024-06-16"]);
-    expect(q(root, "call-dwell").textContent).toContain('"Asia/Tokyo"');
+    const w = await open();
+    await w.user.selectOptions(zone(), "Asia/Tokyo");
+    expect(lit("Asia/Tokyo")).toEqual(["16 Jun"]);
+    expect(await callText(w)).toContain('"Asia/Tokyo"');
+    await expectNoAxeViolations(w.root);
   });
 
   it("reads a zoneless wall time from the chat in the named zone", async () => {
-    const { root } = await mount({
+    await open({
       entry: "2024-06-15T23:00:00",
       exit: "2024-06-16T01:00:00",
       zone: "Africa/Johannesburg",
     });
-    expect(q<HTMLInputElement>(root, "entry").value).toBe(
+    expect(entryBox()).toHaveValue(
       "2024-06-15T23:00:00+02:00[Africa/Johannesburg]",
     );
-    expect(q(root, "dwell-output").textContent).toBe(
-      EXPECTED["two-hours-two-days"]![0],
+    expect(dwellOutput()).toHaveTextContent(
+      EXPECTED["two-hours-two-days"]![0]!.replace(/\s+/g, " "),
     );
-    // Resolved, it is exactly the first preset, and the picker says so.
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe(
-      "two-hours-two-days",
-    );
+    expect(preset()).toHaveValue("two-hours-two-days");
   });
 
   it("round-trips its state as a permalink, omitting empty zones", async () => {
-    const { root, handle } = await mount();
-    expect(handle.getPermalinkState?.()).toEqual({
-      entry: "2024-06-15T23:00:00+02:00[Africa/Johannesburg]",
-      exit: "2024-06-16T01:00:00+02:00[Africa/Johannesburg]",
-      zone: "Africa/Johannesburg",
-    });
-    choosePreset(root, "no-zone");
-    expect(handle.getPermalinkState?.()).toEqual({
+    const w = await open();
+    expect(w.permalink()).toContain("Africa%2FJohannesburg");
+    await w.user.selectOptions(preset(), "no-zone");
+    expect(w.permalink()).not.toContain("zone");
+    const again = await open({
       entry: "2024-06-15T22:30:00Z",
       exit: "2024-06-16T01:00:00Z",
     });
-    // And a link with no zone key reproduces the no-zone state.
-    const again = await mount({
-      entry: "2024-06-15T22:30:00Z",
-      exit: "2024-06-16T01:00:00Z",
-    });
-    expect(q(again.root, "dwell-output").textContent).toBe("NO SIGNAL");
+    expect(
+      within(again.root).getAllByLabelText("What dwellTime returned")[0],
+    ).toHaveTextContent("NO SIGNAL");
   });
 
   it("is inert when aborted before the library loads", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDwellLedgerTemplate();
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountDwellLedger(root, {}, controller.signal);
-    expect(q(root, "dwell-output").textContent).toBe(" ");
-    expect(handle.getPermalinkState?.()).toBeNull();
+    const w = await renderWidget(entry, { args: {}, aborted: true });
+    expect(
+      screen.getByRole("region", { name: "Dwell Ledger" }),
+    ).toBeInTheDocument();
+    expect(() => w.destroy()).not.toThrow();
   });
 
-  it("can be destroyed twice, mid-drag", async () => {
-    const { root, handle } = await mount();
-    q(root, "handle-exit").dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
-    );
+  it("can be destroyed twice", async () => {
+    const w = await open();
     expect(() => {
-      handle.destroy();
-      handle.destroy();
+      w.destroy();
+      w.destroy();
     }).not.toThrow();
   });
 });

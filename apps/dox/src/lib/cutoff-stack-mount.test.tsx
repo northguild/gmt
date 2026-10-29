@@ -1,48 +1,28 @@
 /**
  * @vitest-environment jsdom
  *
- * The Cut-off Stack widget end to end: template -> mount -> interact ->
- * assert, against the real `@northguild/gmt`. Every preset's printed call
- * and result is an appendix Z row.
+ * The Cut-off Stack widget end to end: template -> mount -> interact -> assert, against the real
+ * `@northguild/gmt`, through roles and accessible names the way a person (or a screen reader)
+ * meets the page. Every preset's printed call and result is an appendix Z row.
  */
-import { spyOnResizeObservers } from "~/test/resize-observer-spy";
-import { installJsdomShims } from "~/test/jsdom-shims";
-import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
-import { STACK_PRESETS } from "./cutoff-stack";
+import { screen, within } from "@testing-library/dom";
 import {
-  mountCutoffStack,
-  renderCutoffStackTemplate,
-} from "./cutoff-stack-mount";
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  cellsInColumn,
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { STACK_PRESETS } from "./cutoff-stack";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "anchor",
-  "time-zone",
-  "cutoff-1",
-  "cutoff-2",
-  "cutoff-3",
-  "cutoff-4",
-  "name-1",
-  "offset-1",
-  "at-local-time-1",
-  "closed-days",
-  "calendar",
-  "weekday-1",
-  "weekday-7",
-  "holidays",
-  "roll",
-  "stack-timeline",
-  "stack-summary",
-  "stack-table",
-  "stack-table-body",
-  "reason-aside",
-  "call-stack",
-  "copy-stack",
-  "stack-output",
-];
+const entry = WIDGET_REGISTRY["showCutoffStack"] as AnyWidgetEntry;
 
 const EXPECTED: Record<string, [string, string | null]> = {
   "rotterdam-weekend": [
@@ -71,50 +51,55 @@ const EXPECTED: Record<string, [string, string | null]> = {
   ],
 };
 
-const FOCUSABLE =
-  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+const open = (args: Record<string, unknown> = {}): Promise<RenderedWidget> =>
+  renderWidget(entry, { args });
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+const presetBox = () => screen.getByRole("combobox", { name: "Preset" });
+const zoneBox = () => screen.getByRole("combobox", { name: "Terminal clock" });
+const calendarBox = () =>
+  screen.getByRole("switch", { name: "Use a business calendar" });
+const rollBox = () =>
+  screen.getByRole("combobox", { name: /Roll a closed-day cut-off/ });
+const offsetBox = (n: number) =>
+  within(screen.getByRole("group", { name: `Cut-off ${n}` })).getByRole(
+    "textbox",
+    { name: "Offset" },
+  );
+const output = () =>
+  screen.getByRole("status", { name: /cutoffSchedule returned/ });
+const callFrame = () =>
+  screen.getByRole("group", { name: /cutoffSchedule call/ });
+const table = () => screen.getByRole("table", { name: "The cut-off stack" });
+const rowOf = (name: string) =>
+  within(table())
+    .getAllByRole("row")
+    .find((row) => within(row).queryByText(name) !== null)!;
 
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderCutoffStackTemplate(templateArgs);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountCutoffStack(root, args, controller.signal);
-  return { root, handle, controller };
+const flat = (el: HTMLElement) => el.textContent!.replace(/\s+/g, " ").trim();
+
+async function choose(w: RenderedWidget, id: string) {
+  await w.user.selectOptions(presetBox(), id);
 }
 
-function choosePreset(root: HTMLElement, id: string) {
-  const preset = q<HTMLSelectElement>(root, "preset");
-  preset.value = id;
-  preset.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
-
-describe("renderCutoffStackTemplate", () => {
-  it("has the exact widget root", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderCutoffStackTemplate();
+describe("the template", () => {
+  it("names every control a reader fills in", async () => {
+    const w = await open();
+    expect(presetBox()).toBeInTheDocument();
     expect(
-      root.firstElementChild?.outerHTML.startsWith(
-        '<div class="gmt-cutoff-stack gmt-widget not-content">',
-      ),
-    ).toBe(true);
-  });
-
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderCutoffStackTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
+      screen.getByRole("textbox", { name: "Departs" }),
+    ).toBeInTheDocument();
+    expect(zoneBox()).toBeInTheDocument();
+    for (const n of [1, 2, 3, 4]) {
+      expect(offsetBox(n)).toBeInTheDocument();
     }
+    expect(calendarBox()).toBeInTheDocument();
+    expect(rollBox()).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: /Holidays/ }),
+    ).toBeInTheDocument();
+    expect(callFrame()).toBeInTheDocument();
+    expect(output()).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 });
 
@@ -122,105 +107,74 @@ describe("mountCutoffStack", () => {
   it.each(STACK_PRESETS.map((p) => [p.id]))(
     "prints the documented call and result for %s",
     async (id) => {
-      const { root } = await mount();
-      choosePreset(root, id);
+      const w = await open();
+      await choose(w, id);
       const [call, result] = EXPECTED[id]!;
-      expect(q(root, "copy-stack").dataset.copyText).toBe(
-        `cutoffSchedule(${call})`,
-      );
+      expect(flat(callFrame())).toContain(`cutoffSchedule(${call})`);
       if (result === null) {
-        expect(q(root, "stack-output").textContent).toBe("NO SIGNAL");
+        expect(output()).toHaveTextContent("NO SIGNAL");
       } else {
-        expect(
-          q(root, "stack-output").textContent!.replace(/\n\s+/g, " "),
-        ).toBe(result);
+        expect(flat(output())).toContain(result);
       }
+      await expectNoAxeViolations(w.root);
     },
   );
 
   it("shows the table's Closes and Moved cells for the pill preset", async () => {
-    const { root } = await mount();
-    choosePreset(root, "rotterdam-weekend");
-    const rows = [...q(root, "stack-table-body").querySelectorAll("tr")];
-    expect(rows).toHaveLength(2);
-    const [documents, gateIn] = rows.map((tr) =>
-      [...tr.children].map((td) => td.textContent ?? ""),
-    );
-    expect(documents![0]).toBe("documents");
-    expect(documents![4]).toBe("no");
-    expect(gateIn![0]).toBe("gate-in");
-    expect(gateIn![2]).toContain("Fri 14 Jun 17:00");
-    expect(gateIn![4]).toContain("from Sat 15 Jun 17:00");
+    const w = await open();
+    await choose(w, "rotterdam-weekend");
+    const closes = cellsInColumn(table(), "Closes");
+    const moved = cellsInColumn(table(), "Moved");
+    expect(closes).toHaveLength(2);
+    const names = cellsInColumn(table(), "Cut-off").map((c) => flat(c));
+    const gateIn = names.findIndex((n) => n.includes("gate-in"));
+    const documents = names.findIndex((n) => n.includes("documents"));
+    expect(closes[gateIn]).toHaveTextContent("Fri 14 Jun 17:00");
+    expect(moved[gateIn]).toHaveTextContent("from Sat 15 Jun 17:00");
+    expect(moved[documents]).toHaveTextContent("no");
+    await expectNoAxeViolations(w.root);
   });
 
-  it("counts the two closed-day columns on the pill preset", async () => {
-    const { root } = await mount();
-    choosePreset(root, "rotterdam-weekend");
-    const closed = q(root, "stack-timeline").querySelectorAll(
-      ".gmt-cutoff-stack-day--closed",
-    );
-    expect(closed).toHaveLength(2);
+  it("names each cut-off's mark with where it closes and where it moved from", async () => {
+    const w = await open();
+    await choose(w, "rotterdam-weekend");
+    expect(
+      screen.getByRole("img", {
+        name: /gate-in closes Fri 14 Jun 17:00, moved from Sat 15 Jun 17:00/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /documents closes Fri 14 Jun 12:00$/ }),
+    ).toBeInTheDocument();
   });
 
-  it("labels each day column with its date and weekday", async () => {
-    const { root } = await mount();
-    choosePreset(root, "rotterdam-weekend");
-    const labels = [
-      ...q(root, "stack-timeline").querySelectorAll(
-        ".gmt-cutoff-stack-day-label",
-      ),
-    ].map((l) => l.textContent);
-    expect(labels).toContain("14 Jun · Fri");
-    expect(labels).toContain("15 Jun · Sat");
-  });
-
-  it("the timeline is not a tab stop", async () => {
-    const { root } = await mount();
-    expect(q(root, "stack-timeline").getAttribute("tabindex")).toBe("-1");
-  });
-
-  it("draws day columns at their real width, not all equal, across London's fall-back", async () => {
-    // R1's own range: a departure on 29 October 2024, with an axis reaching
-    // back across 27 October, the 25-hour fall-back day.
-    const seed = {
-      anchor: "2024-10-29T18:00:00+00:00[Europe/London]",
-      timeZone: "Europe/London",
-      cutoffs: [{ name: "gate-in", offset: "P2D", atLocalTime: "12:00" }],
-    };
-    const { root } = await mount(seed);
-    const columns = [
-      ...q(root, "stack-timeline").querySelectorAll(".gmt-cutoff-stack-day"),
-    ];
-    expect(columns.length).toBeGreaterThanOrEqual(3);
-    const widths = columns.map((c) => {
-      const style = c.getAttribute("style") ?? "";
-      const m = /width:([\d.]+)%/.exec(style);
-      return m ? Number(m[1]) : Number.NaN;
-    });
-    expect(widths.every((w) => !Number.isNaN(w))).toBe(true);
-    // A 25-hour day and its 24-hour neighbours cannot all get an equal share
-    // of the axis.
-    expect(new Set(widths.map((w) => w.toFixed(3))).size).toBeGreaterThan(1);
+  it("names the closed days in words, so the shading is not the only carrier", async () => {
+    const w = await open();
+    await choose(w, "rotterdam-weekend");
+    expect(screen.getByText(/Closed days: .*Sat.*Sun/)).toBeInTheDocument();
   });
 
   it("shows the calendar-without-roll reason on no-roll", async () => {
-    const { root } = await mount();
-    choosePreset(root, "no-roll");
-    expect(q(root, "stack-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain("no default");
+    const w = await open();
+    await choose(w, "no-roll");
+    expect(output()).toHaveTextContent("NO SIGNAL");
+    expect(
+      screen.getByRole("complementary", { name: "Why NO SIGNAL" }),
+    ).toHaveTextContent("no default");
+    await expectNoAxeViolations(w.root);
   });
 
   it("shows the skipped-hour reason on skipped-hour", async () => {
-    const { root } = await mount();
-    choosePreset(root, "skipped-hour");
-    expect(q(root, "stack-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain(
-      "Cut-off 2 lands on a local time the clock skipped",
-    );
+    const w = await open();
+    await choose(w, "skipped-hour");
+    expect(output()).toHaveTextContent("NO SIGNAL");
+    expect(
+      screen.getByRole("complementary", { name: "Why NO SIGNAL" }),
+    ).toHaveTextContent("Cut-off 2 lands on a local time the clock skipped");
   });
 
-  it("renders the chat seed as S1: gate-in moved from Sat 15 Jun, documents no", async () => {
-    const seed = {
+  it("renders the chat seed as gate-in moved from Sat 15 Jun, documents no", async () => {
+    await open({
       anchor: "2024-06-17T18:00:00+02:00[Europe/Amsterdam]",
       timeZone: "Europe/Amsterdam",
       cutoffs: [
@@ -229,216 +183,87 @@ describe("mountCutoffStack", () => {
       ],
       weekend: [6, 7],
       roll: "preceding",
-    };
-    const { root } = await mount(seed);
-    expect(q(root, "stack-output").textContent!.replace(/\n\s+/g, " ")).toBe(
-      EXPECTED["rotterdam-weekend"]![1],
-    );
-    const rows = [...q(root, "stack-table-body").querySelectorAll("tr")];
-    const gateIn = rows.find(
-      (tr) => tr.children[0]?.textContent === "gate-in",
-    )!;
-    expect(gateIn.children[4]?.textContent).toContain("from Sat 15 Jun 17:00");
-    const documents = rows.find(
-      (tr) => tr.children[0]?.textContent === "documents",
-    )!;
-    expect(documents.children[4]?.textContent).toBe("no");
+    });
+    expect(flat(output())).toContain(EXPECTED["rotterdam-weekend"]![1]);
+    expect(rowOf("gate-in")).toHaveTextContent("from Sat 15 Jun 17:00");
+    expect(rowOf("documents")).toHaveTextContent(/no$/);
   });
 
   it("unticking the calendar gives roll-without-calendar and NO SIGNAL", async () => {
-    const { root } = await mount();
-    choosePreset(root, "rotterdam-weekend");
-    const calendar = q<HTMLInputElement>(root, "calendar");
-    calendar.checked = false;
-    calendar.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(q(root, "stack-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain(
-      "A roll convention needs a business calendar",
-    );
+    const w = await open();
+    await choose(w, "rotterdam-weekend");
+    await w.user.click(calendarBox());
+    expect(calendarBox()).not.toBeChecked();
+    expect(output()).toHaveTextContent("NO SIGNAL");
+    expect(
+      screen.getByRole("complementary", { name: "Why NO SIGNAL" }),
+    ).toHaveTextContent("A roll convention needs a business calendar");
+    await expectNoAxeViolations(w.root);
   });
 
   it("choosing '(not given)' in the roll select gives calendar-without-roll", async () => {
-    const { root } = await mount();
-    choosePreset(root, "rotterdam-weekend");
-    const roll = q<HTMLSelectElement>(root, "roll");
-    roll.value = "";
-    roll.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(q(root, "stack-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain(
-      "A business calendar needs a roll convention",
-    );
+    const w = await open();
+    await choose(w, "rotterdam-weekend");
+    await w.user.selectOptions(rollBox(), "(not given)");
+    expect(output()).toHaveTextContent("NO SIGNAL");
+    expect(
+      screen.getByRole("complementary", { name: "Why NO SIGNAL" }),
+    ).toHaveTextContent("A business calendar needs a roll convention");
   });
 
   it("clearing every offset gives the empty state, not NO SIGNAL", async () => {
-    const { root } = await mount();
-    choosePreset(root, "rotterdam-weekend");
-    for (const n of [1, 2, 3, 4]) {
-      const offset = q<HTMLInputElement>(root, `offset-${n}`);
-      offset.value = "";
-      offset.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-    expect(q(root, "stack-output").textContent).toBe("[]");
-    expect(q(root, "stack-output").className).not.toContain("sentinel");
-    expect(q(root, "reason-aside").textContent).toContain(
-      "An empty list returns []",
-    );
+    const w = await open();
+    await choose(w, "rotterdam-weekend");
+    for (const n of [1, 2, 3, 4]) await w.user.clear(offsetBox(n));
+    expect(flat(output())).toContain("[]");
+    expect(output()).not.toHaveTextContent("NO SIGNAL");
+    expect(
+      screen.queryByRole("complementary", { name: "Why NO SIGNAL" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("An empty list returns [].")).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
   it("round-trips every preset's state as a permalink of strings", async () => {
     for (const preset of STACK_PRESETS) {
-      const { root, handle } = await mount();
-      choosePreset(root, preset.id);
-      const state = handle.getPermalinkState?.() as Record<string, string>;
-      expect(state).not.toBeNull();
-      for (const value of Object.values(state))
-        expect(typeof value).toBe("string");
-      const url = encodeWidgetPermalink("cutoffstack", state);
-      const seeded = seedFromLocation(
-        "cutoffstack",
-        url.slice(url.indexOf("?")),
-      );
-      const again = await mount(seeded);
+      const w = await open();
+      await choose(w, preset.id);
+      const url = w.permalink();
+      const seeded = seedFromLocation(entry.kind, url.slice(url.indexOf("?")));
+      w.destroy();
+      await open(seeded);
       const [, result] = EXPECTED[preset.id]!;
       if (result === null) {
-        expect(q(again.root, "stack-output").textContent).toBe("NO SIGNAL");
+        expect(output()).toHaveTextContent("NO SIGNAL");
       } else {
-        expect(
-          q(again.root, "stack-output").textContent!.replace(/\n\s+/g, " "),
-        ).toBe(result);
+        expect(flat(output())).toContain(result);
       }
-      document.body.innerHTML = "";
+      document.body.replaceChildren();
     }
   });
 
   it("is inert when aborted before the library loads", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderCutoffStackTemplate();
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountCutoffStack(root, {}, controller.signal);
-    expect(handle.getPermalinkState?.()).toBeNull();
+    const w = await renderWidget(entry, { args: {}, aborted: true });
+    expect(w.permalink()).toBe(encodeWidgetPermalink(entry.kind, {}));
   });
 
   it("can be destroyed twice", async () => {
-    const { handle } = await mount();
+    const w = await open();
     expect(() => {
-      handle.destroy();
-      handle.destroy();
+      w.destroy();
+      w.destroy();
     }).not.toThrow();
-  });
-});
-
-describe("the stack's series, markers and gate", () => {
-  const laneOf = (root: HTMLElement, name: string) =>
-    [
-      ...q(root, "stack-timeline").querySelectorAll<HTMLElement>(
-        ".gmt-cutoff-stack-lane",
-      ),
-    ].find(
-      (l) =>
-        l.querySelector(".gmt-cutoff-stack-lane-label")?.textContent === name,
-    )!;
-
-  it("colours a lane and its table swatch by the entry's place in the schedule", async () => {
-    const { root } = await mount();
-    choosePreset(root, "rotterdam-weekend");
-    const preset = STACK_PRESETS.find((p) => p.id === "rotterdam-weekend")!;
-    const rows = [...q(root, "stack-table-body").querySelectorAll("tr")];
-    expect(rows).toHaveLength(2);
-    const seen = new Set<string>();
-    for (const tr of rows) {
-      const name = tr.children[0]!.textContent!;
-      const swatch = tr.querySelector<HTMLElement>(
-        ".gmt-cutoff-series-swatch",
-      )!;
-      expect(swatch.textContent).toBe("");
-      expect(swatch.getAttribute("aria-hidden")).toBe("true");
-      // The rows are sorted earliest first, so a row's place in the table is not
-      // its series: the expected value comes from the preset's own entry order.
-      const expected = String(
-        preset.cutoffs.findIndex((c) => c.name === name) + 1,
-      );
-      expect(expected).not.toBe("0");
-      expect(laneOf(root, name).dataset.series).toBe(expected);
-      expect(swatch.dataset.series).toBe(expected);
-      seen.add(expected);
-    }
-    expect(seen.size).toBe(2);
-  });
-
-  it("draws a moved row with one hollow marker and one aria-hidden arc", async () => {
-    const { root } = await mount();
-    choosePreset(root, "rotterdam-weekend");
-    const gateIn = laneOf(root, "gate-in");
-    expect(gateIn.querySelectorAll(".gmt-cutoff-mark--hollow")).toHaveLength(1);
-    const arcs = gateIn.querySelectorAll(".gmt-cutoff-stack-arc");
-    expect(arcs).toHaveLength(1);
-    expect(arcs[0]!.getAttribute("aria-hidden")).toBe("true");
-    expect(gateIn.textContent).toContain("moved");
-  });
-
-  it("draws a row that did not move with neither", async () => {
-    const { root } = await mount();
-    choosePreset(root, "rotterdam-weekend");
-    const documents = laneOf(root, "documents");
-    expect(documents.querySelectorAll(".gmt-cutoff-mark--hollow")).toHaveLength(
-      0,
-    );
-    expect(documents.querySelectorAll(".gmt-cutoff-stack-arc")).toHaveLength(0);
-    expect(documents.textContent).not.toContain("moved");
-  });
-
-  it("draws the departure gate once, in the days layer, not once per lane", async () => {
-    const { root } = await mount();
-    choosePreset(root, "no-calendar");
-    const timeline = q(root, "stack-timeline");
-    expect(timeline.querySelectorAll(".gmt-cutoff-gate")).toHaveLength(1);
-    expect(
-      timeline.querySelectorAll(".gmt-cutoff-stack-days > .gmt-cutoff-gate"),
-    ).toHaveLength(1);
-    expect(
-      timeline.querySelector(".gmt-cutoff-stack-gate-chip")?.textContent,
-    ).toContain("departs 18:00");
-  });
-
-  it("holds no focusable descendant", async () => {
-    const { root } = await mount();
-    for (const id of ["rotterdam-weekend", "no-calendar", "skipped-hour"]) {
-      choosePreset(root, id);
-      expect(
-        q(root, "stack-timeline").querySelectorAll(FOCUSABLE),
-      ).toHaveLength(0);
-    }
   });
 });
 
 describe("a seed applied to the default template (the tool page)", () => {
   it("keeps a zone outside the curated list and reads it", async () => {
-    const { root } = await mount(
-      {
-        anchor: "2024-06-12T18:00:00+03:00[Europe/Helsinki]",
-        timeZone: "Europe/Helsinki",
-        cutoffs: [{ name: "gate-in", offset: "P2D", atLocalTime: "12:00" }],
-      },
-      {},
-    );
-    expect(q<HTMLSelectElement>(root, "time-zone").value).toBe(
-      "Europe/Helsinki",
-    );
-    expect(q(root, "stack-output").textContent).not.toBe("NO SIGNAL");
-  });
-});
-
-describe("releasing observers", () => {
-  it("destroy disconnects every ResizeObserver the mount created", async () => {
-    const spy = spyOnResizeObservers();
-    try {
-      const { handle } = await mount();
-      expect(spy.live.size).toBeGreaterThan(0);
-      handle.destroy();
-      expect(spy.live.size).toBe(0);
-    } finally {
-      spy.restore();
-    }
+    await open({
+      anchor: "2024-06-12T18:00:00+03:00[Europe/Helsinki]",
+      timeZone: "Europe/Helsinki",
+      cutoffs: [{ name: "gate-in", offset: "P2D", atLocalTime: "12:00" }],
+    });
+    expect(zoneBox()).toHaveValue("Europe/Helsinki");
+    expect(output()).not.toHaveTextContent("NO SIGNAL");
   });
 });

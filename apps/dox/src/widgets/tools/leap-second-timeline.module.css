@@ -1,0 +1,53 @@
+/*
+ * Leap Second Timeline: what only this tool needs. The sections, fields, preset, range,
+ * plates, table, code frames, call output and tool links are the kit's, and the staircase is
+ * `families/timescale/leap-chart.module.css`. This sheet lays out the wide controls, the
+ * frame around the chart and the three call groups. The widget root is the container the
+ * chart asks about.
+ */
+
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.frame {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+
+  & + & {
+    margin-block-start: var(--gmt-space-3);
+  }
+}
+
+@media (forced-colors: active) {
+  .frame {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frame {
+    border-color: var(--gmt-ice);
+  }
+}

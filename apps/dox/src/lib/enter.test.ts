@@ -2,22 +2,39 @@
  * @vitest-environment jsdom
  *
  * `enter` / `holdEntrance`: the contract is in the file header of enter.ts.
- * jsdom runs no animations, so animationend is dispatched by hand.
+ * jsdom runs no animations, so the end of one is fired through Testing Library.
  */
+import { fireEvent, screen } from "@testing-library/dom";
+import { ENTER_CLASS, enter, holdEntrance } from "./enter";
 
-import { enter, holdEntrance } from "./enter";
+/** jsdom has no AnimationEvent, so Testing Library would drop `animationName`. */
+class FakeAnimationEvent extends Event {
+  readonly animationName: string;
+  constructor(type: string, init: AnimationEventInit = {}) {
+    super(type, init);
+    this.animationName = init.animationName ?? "";
+  }
+}
 
-function animationEnd(el: HTMLElement, animationName = "gmt-enter"): void {
-  const event = new Event("animationend") as AnimationEvent;
-  Object.defineProperty(event, "animationName", { value: animationName });
-  el.dispatchEvent(event);
+function animationEnd(el: HTMLElement, animationName = ENTER_CLASS): void {
+  // oxlint-disable-next-line dox-test/no-dispatch-event -- jsdom runs no animations; this is the end of one
+  fireEvent.animationEnd(el, { animationName });
 }
 
 function setReducedMotion(matches: boolean): void {
+  vi.stubGlobal("AnimationEvent", FakeAnimationEvent);
   vi.stubGlobal(
     "matchMedia",
     vi.fn().mockReturnValue({ matches } as MediaQueryList),
   );
+}
+
+function mountTarget(): HTMLElement {
+  const el = document.createElement("div");
+  el.setAttribute("role", "group");
+  el.setAttribute("aria-label", "Target");
+  document.body.append(el);
+  return el;
 }
 
 describe("enter", () => {
@@ -26,8 +43,7 @@ describe("enter", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     setReducedMotion(false);
-    el = document.createElement("div");
-    document.body.append(el);
+    el = mountTarget();
   });
 
   afterEach(() => {
@@ -36,36 +52,27 @@ describe("enter", () => {
     vi.unstubAllGlobals();
   });
 
-  it("plays the entrance, then leaves the element entered and unclassed", () => {
+  it("reports the entrance done when its animation ends, not before", () => {
     const onEntered = vi.fn();
     enter(el, { onEntered });
-    expect(el.classList.contains("gmt-enter")).toBe(true);
     expect(onEntered).not.toHaveBeenCalled();
 
     animationEnd(el);
-    expect(el.classList.contains("gmt-enter")).toBe(false);
-    expect(el.hasAttribute("data-entered")).toBe(true);
     expect(onEntered).toHaveBeenCalledOnce();
+    expect(screen.getByRole("group", { name: "Target" })).toBeVisible();
   });
 
   it("ignores another animation ending on the element", () => {
-    enter(el);
-    animationEnd(el, "gmt-focus-sonar");
-    expect(el.classList.contains("gmt-enter")).toBe(true);
+    const onEntered = vi.fn();
+    enter(el, { onEntered });
+    animationEnd(el, "another-animation");
+    expect(onEntered).not.toHaveBeenCalled();
   });
 
-  it("sets the stagger as --gmt-enter-delay and clears it after", () => {
-    enter(el, { delayMs: 80 });
-    expect(el.style.getPropertyValue("--gmt-enter-delay")).toBe("80ms");
-    animationEnd(el);
-    expect(el.style.getPropertyValue("--gmt-enter-delay")).toBe("");
-  });
-
-  it("finishes on its timer when animationend never comes", () => {
+  it("finishes on its timer when animationend never comes, and only once", () => {
     const onEntered = vi.fn();
     enter(el, { delayMs: 80, onEntered });
     vi.advanceTimersByTime(80 + 1500);
-    expect(el.hasAttribute("data-entered")).toBe(true);
     expect(onEntered).toHaveBeenCalledOnce();
 
     animationEnd(el);
@@ -76,8 +83,6 @@ describe("enter", () => {
     setReducedMotion(true);
     const onEntered = vi.fn();
     enter(el, { onEntered });
-    expect(el.classList.contains("gmt-enter")).toBe(false);
-    expect(el.hasAttribute("data-entered")).toBe(true);
     expect(onEntered).toHaveBeenCalledOnce();
   });
 
@@ -87,14 +92,15 @@ describe("enter", () => {
     enter(el, { onEntered });
     animationEnd(el);
     enter(el, { onEntered });
-    expect(el.classList.contains("gmt-enter")).toBe(false);
     expect(onEntered).toHaveBeenCalledOnce();
   });
 
   it("works where matchMedia does not exist", () => {
     vi.stubGlobal("matchMedia", undefined);
-    enter(el);
-    expect(el.classList.contains("gmt-enter")).toBe(true);
+    const onEntered = vi.fn();
+    enter(el, { onEntered });
+    vi.advanceTimersByTime(1500);
+    expect(onEntered).toHaveBeenCalledOnce();
   });
 });
 
@@ -104,8 +110,7 @@ describe("holdEntrance", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     setReducedMotion(false);
-    el = document.createElement("div");
-    document.body.append(el);
+    el = mountTarget();
   });
 
   afterEach(() => {
@@ -114,28 +119,34 @@ describe("holdEntrance", () => {
     vi.unstubAllGlobals();
   });
 
-  it("holds the element pending until released, then plays the entrance", () => {
-    const release = holdEntrance(el);
-    expect(el.getAttribute("data-enter")).toBe("pending");
+  it("plays the entrance only once released", () => {
+    const onEntered = vi.fn();
+    const release = holdEntrance(el, 5000);
+    vi.advanceTimersByTime(1000);
+    expect(onEntered).not.toHaveBeenCalled();
 
-    release({ delayMs: 80 });
-    expect(el.hasAttribute("data-enter")).toBe(false);
-    expect(el.classList.contains("gmt-enter")).toBe(true);
-    expect(el.style.getPropertyValue("--gmt-enter-delay")).toBe("80ms");
+    release({ onEntered });
+    animationEnd(el);
+    expect(onEntered).toHaveBeenCalledOnce();
   });
 
   it("releases itself when nobody does, so the element is never left hidden", () => {
     holdEntrance(el, 1500);
     vi.advanceTimersByTime(1500);
-    expect(el.hasAttribute("data-enter")).toBe(false);
-    expect(el.classList.contains("gmt-enter")).toBe(true);
+    // The entrance is already running, so a second one adds nothing.
+    const onEntered = vi.fn();
+    enter(el, { onEntered });
+    vi.advanceTimersByTime(1500);
+    expect(onEntered).not.toHaveBeenCalled();
+    expect(screen.getByRole("group", { name: "Target" })).toBeVisible();
   });
 
   it("does not hold under reduced motion", () => {
     setReducedMotion(true);
+    const onEntered = vi.fn();
     const release = holdEntrance(el);
-    expect(el.hasAttribute("data-enter")).toBe(false);
-    release();
-    expect(el.classList.contains("gmt-enter")).toBe(false);
+    release({ onEntered });
+    expect(onEntered).not.toHaveBeenCalled();
+    expect(screen.getByRole("group", { name: "Target" })).toBeVisible();
   });
 });

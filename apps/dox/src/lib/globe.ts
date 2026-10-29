@@ -133,6 +133,7 @@ export async function initGlobe(
 
   const tooltip = document.createElement("div");
   tooltip.className = "gmt-globe-tooltip gmt-popover";
+  tooltip.dataset.gate = "globe-tooltip";
   tooltip.hidden = true;
   host.appendChild(tooltip);
 

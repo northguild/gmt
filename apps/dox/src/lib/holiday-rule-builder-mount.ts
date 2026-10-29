@@ -8,14 +8,52 @@
  * library's own answer. Everything on screen is a library call
  * (`attributeRules`, `marksFromAttribution`); the widget computes no date.
  *
- * Follows the `renderTemplate` / `mount` split in `widget-mount.ts`. Every
- * listener is delegated on the root. The rows are drawn again only when the
- * list changes shape (add, remove, move, a new kind, a preset or a seed); a
- * field edit only recomputes the outputs, so focus and IME composition stay in
- * the field being typed in.
+ * Built on the component kit: `renderHolidayRuleBuilderTemplate` writes the markup from
+ * builders only, with ids from `idScope(idPrefix)`, and `mount` finds its parts by those
+ * ids. Every listener is delegated on the widget with the mount's `signal`. The rows are
+ * drawn again only when the list changes shape (add, remove, move, a new kind, a preset or
+ * a seed); a field edit only recomputes the outputs, so focus and IME composition stay in
+ * the field being typed in. A row's controls have ids `${scope}-r${row}-${part}`, and the
+ * delegated listeners read the row and the part back from the id.
  */
-import { codeFrameHtml } from "./code-frame";
-import { callSizer, holdHtml, outputSizer, textSizers } from "./edi-picture";
+import { defineElements } from "~/widgets/define";
+import {
+  button,
+  codeFrame,
+  field,
+  fieldGrid,
+  findWidget,
+  hint,
+  html,
+  idScope,
+  plates,
+  section,
+  select,
+  setHtml,
+  srOnly,
+  textInput,
+  toolLinks,
+  widget,
+  type SafeHtml,
+} from "~/widgets/builders";
+import { callOutput } from "~/widgets/families/gnss/call-output";
+import { heldText, type HeldState } from "~/widgets/families/holiday/held-text";
+import { holidayFrame } from "~/widgets/families/holiday/holiday-frame";
+import {
+  holidayLegend,
+  kindItems,
+} from "~/widgets/families/holiday/holiday-legend";
+import { monthGrid } from "~/widgets/families/holiday/month-grid";
+import {
+  policyEditor,
+  policySelectId,
+} from "~/widgets/families/holiday/policy-editor";
+import { ruleCard } from "~/widgets/families/holiday/rule-card";
+import { yearStepper } from "~/widgets/families/holiday/year-stepper";
+import { chips, type GmtChips } from "~/widgets/primitives/chips/chips";
+import { grow } from "~/widgets/primitives/grow/grow";
+import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
+import styles from "~/widgets/tools/holiday-rule-builder.module.css";
 import { MAX_RULES, formatPolicyText, parsePolicyText } from "./holiday-codec";
 import { loadHolidayLib, type HolidayLib } from "./holiday-lib";
 import {
@@ -47,7 +85,6 @@ import {
   rowResult,
   rulesOf,
   ruleCallLines,
-  ruleCallSizerText,
   weekendNames,
   yearOf,
   type BuilderState,
@@ -58,11 +95,8 @@ import {
 } from "./holiday-rule-builder";
 import {
   attributeRules,
-  legendHtml,
   marksFromAttribution,
-  monthGridHtml,
   monthName,
-  policyEditorHtml,
   policySummary,
   policyTextFromSelects,
   weekdayShort,
@@ -70,32 +104,16 @@ import {
 } from "./holiday-widgets";
 import { LEDGER_ZONES } from "./free-time-ledger";
 import { onWidthChange } from "./label-fit";
-import {
-  descriptionHoldHtml,
-  plateHtml,
-  type PlateSpec,
-} from "./ledger-widgets";
-import { setPresetDescription } from "./punctuality-widgets";
 import { compareHandoffHref } from "./observance-comparator";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
-import {
-  chipToggleHtml,
-  clearCallLine,
-  escapeAttr,
-  escapeHtml,
-  labelTextHtml,
-  renderCallLine,
-  renderWidgetOutput,
-  setControlValue,
-  setToolLink,
-  toolLinksHtml,
-  wireCopyButtons,
-} from "./widget-ui";
+import { setControlValue, setToolLink } from "./widget-ui";
 
 export type { HolidayRuleBuilderArgs } from "./holiday-rule-builder";
 
 /** The container width under which the policy editor folds, in px (30rem). */
 export const FOLD_WIDTH = 480;
+
+const WIDGET_NAME = "holiday-rule-builder";
 
 const HINT_ORDER =
   "Swap the two rows: the order decides which day each holiday lands on.";
@@ -104,24 +122,34 @@ const YEAR_RANGE = `the year is not a whole number from ${YEAR_MIN} to ${YEAR_MA
 const YEAR_NOTE_INVALID = `${NO_SIGNAL_TEXT}: ${YEAR_RANGE}.`;
 const ROW_NO_YEAR = `${NO_SIGNAL_TEXT}: there is no year to place it in.`;
 
-// Neutral filler as wide as the longest zone id, so the sizer names no place.
-const SIZER_ZONE = "Xxxxxxx/Xxxxxxxxx/Xxxxxxxxxxxxxx";
-const CALL_SIZER =
-  "buildBusinessCalendar({\n" +
-  `  timeZone: "${SIZER_ZONE}",\n` +
-  "  weekend: [6, 7],\n" +
-  "  rules: [\n" +
-  '    { name: "Easter +1 (Easter Monday)", kind: "easterRelative", offsetDays: 1 },\n' +
-  '    { name: "25 Dec", kind: "fixed", month: 12, day: 25, observed: { 6: { previous: 5 }, 7: { next: 1 } } },\n' +
-  "  ],\n" +
-  "  years: { from: 2026, to: 2026 },\n" +
-  "})";
-const OUTPUT_SIZER =
-  "{ weekend: [6, 7],\n" +
-  '  holidays: ["2026-01-01", "2026-04-03", "2026-04-06", "2026-05-01", "2026-12-25", "2026-12-26"],\n' +
-  `  timeZone: "${SIZER_ZONE}" }`;
+const RESULT_SIZERS = [
+  ...RULE_KINDS.map((k) => `${NO_SIGNAL_TEXT}: ${INVALID_REASON[k]}.`),
+  ROW_NO_YEAR,
+  "Closes Mon 27 Dec, moved from Sat 25 Dec",
+];
+const YEAR_NOTE_SIZERS = [YEAR_NOTE_NULL, YEAR_NOTE_INVALID];
+const HINT_SIZERS = [HANDOFF_NO_CALENDAR, HANDOFF_TOO_LONG, HANDOFF_NO_YEAR];
 
-let counter = 0;
+const CALENDARS = [
+  "islamic-umalqura",
+  "islamic-civil",
+  "islamic-tbla",
+  "hebrew",
+  "persian",
+  "indian",
+  "buddhist",
+  "japanese",
+  "roc",
+  "ethiopic",
+  "ethioaa",
+  "coptic",
+  "gregory",
+  "iso8601",
+] as const;
+const WEEKDAYS = ["1", "2", "3", "4", "5", "6", "7"] as const;
+const ORDINALS = ["1", "2", "3", "4", "5", "last"] as const;
+const WEEKEND_DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
+const NAME_MAX = 40;
 
 const ordinalLabel = (value: string): string =>
   value === "last"
@@ -130,317 +158,383 @@ const ordinalLabel = (value: string): string =>
       ? `${-Number(value)} from the end`
       : `${value}`;
 
-function options(
+/** A list of values as select options, with the selected one added when it is not listed. */
+function optionsOf(
   values: readonly string[],
   label: (v: string) => string,
   selected: string,
-): string {
+): { value: string; label: string }[] {
   const list = values.includes(selected) ? values : [...values, selected];
-  return list
-    .map(
-      (v) =>
-        `<option value="${escapeAttr(v)}"${v === selected ? " selected" : ""}>${escapeHtml(label(v))}</option>`,
-    )
-    .join("");
+  return list.map((value) => ({ value, label: label(value) }));
 }
 
-const numberField = (
-  field: string,
-  label: string,
-  value: string,
-  extra = "",
-): string =>
-  `<label class="gmt-label">${labelTextHtml(label)}` +
-  `<input class="gmt-input" data-field="${field}" type="number" step="1" inputmode="numeric" ${extra} value="${escapeAttr(value)}"></label>`;
+// ---------------------------------------------------------------------------
+// Markup
+// ---------------------------------------------------------------------------
 
-function kindFieldsHtml(row: RowState): string {
-  const days = ["1", "2", "3", "4", "5", "6", "7"];
+const noteOf = (
+  id: string,
+  label: string,
+  text: string,
+  state: HeldState,
+  sizers: readonly string[],
+  gate?: string,
+): SafeHtml =>
+  heldText({
+    id,
+    label,
+    text,
+    state,
+    sizers,
+    ...(gate === undefined ? {} : { gate }),
+  });
+
+const resultNote = (index: number, result: RowResult | null): SafeHtml =>
+  heldText({
+    label: `Rule ${index + 1} result`,
+    text: result === null ? "" : result.text,
+    state:
+      result === null
+        ? "ok"
+        : result.state === "sentinel"
+          ? "sentinel"
+          : result.state === "empty"
+            ? "note"
+            : "ok",
+    sizers: RESULT_SIZERS,
+  });
+
+function numberField(id: string, label: string, value: string): SafeHtml {
+  return field({
+    id,
+    label,
+    control: ({ id: cid }) =>
+      textInput({
+        id: cid,
+        value,
+        inputMode: "numeric",
+        autocomplete: "off",
+        spellcheck: false,
+      }),
+  });
+}
+
+function kindFields(row: RowState, rowId: string): SafeHtml {
   switch (row.kind) {
     case "fixed":
-      return (
-        numberField("month", "Month", row.month, 'min="1" max="12"') +
-        numberField("day", "Day", row.day, 'min="1" max="31"')
-      );
+      return html`${numberField(`${rowId}-month`, "Month", row.month)}${numberField(`${rowId}-day`, "Day", row.day)}`;
     case "calendarFixed":
-      return (
-        `<label class="gmt-label">${labelTextHtml("Calendar")}` +
-        `<select class="gmt-select" data-field="calendar">` +
-        options(
-          [
-            "islamic-umalqura",
-            "islamic-civil",
-            "islamic-tbla",
-            "hebrew",
-            "persian",
-            "indian",
-            "buddhist",
-            "japanese",
-            "roc",
-            "ethiopic",
-            "ethioaa",
-            "coptic",
-            "gregory",
-            "iso8601",
-          ],
-          (v) => v,
-          row.calendar === "" ? "islamic-umalqura" : row.calendar,
-        ) +
-        `</select></label>` +
-        `<label class="gmt-label">${labelTextHtml("Month code")}` +
-        `<input class="gmt-input" data-field="monthCode" type="text" spellcheck="false" autocomplete="off" placeholder="M01" value="${escapeAttr(row.monthCode)}"></label>` +
-        numberField("day", "Day", row.day, 'min="1" max="31"')
-      );
+      return html`${field({
+        id: `${rowId}-calendar`,
+        label: "Calendar",
+        control: ({ id }) =>
+          select({
+            id,
+            value: row.calendar === "" ? "islamic-umalqura" : row.calendar,
+            options: optionsOf(
+              CALENDARS,
+              (v) => v,
+              row.calendar === "" ? "islamic-umalqura" : row.calendar,
+            ),
+          }),
+      })}${field({
+        id: `${rowId}-monthCode`,
+        label: "Month code",
+        control: ({ id }) =>
+          textInput({
+            id,
+            value: row.monthCode,
+            autocomplete: "off",
+            spellcheck: false,
+            placeholder: "M01",
+          }),
+      })}${numberField(`${rowId}-day`, "Day", row.day)}`;
     case "nthWeekday":
-      return (
-        numberField("month", "Month", row.month, 'min="1" max="12"') +
-        `<label class="gmt-label">${labelTextHtml("Weekday")}` +
-        `<select class="gmt-select" data-field="weekday">` +
-        days
-          .map(
-            (d) =>
-              `<option value="${d}"${d === row.weekday ? " selected" : ""}>${weekdayShort(Number(d))}</option>`,
-          )
-          .join("") +
-        `</select></label>` +
-        `<label class="gmt-label">${labelTextHtml("Which")}` +
-        `<select class="gmt-select" data-field="ordinal">` +
-        options(["1", "2", "3", "4", "5", "last"], ordinalLabel, row.ordinal) +
-        `</select></label>`
-      );
+      return html`${numberField(`${rowId}-month`, "Month", row.month)}${field({
+        id: `${rowId}-weekday`,
+        label: "Weekday",
+        control: ({ id }) =>
+          select({
+            id,
+            value: row.weekday,
+            options: WEEKDAYS.map((d) => ({
+              value: d,
+              label: weekdayShort(Number(d)),
+            })),
+          }),
+      })}${field({
+        id: `${rowId}-ordinal`,
+        label: "Which",
+        control: ({ id }) =>
+          select({
+            id,
+            value: row.ordinal,
+            options: optionsOf(ORDINALS, ordinalLabel, row.ordinal),
+          }),
+      })}`;
     case "easterRelative":
-      return (
-        numberField("offset", "Days from Easter", row.offset) +
-        `<span class="gmt-hrb-easter" data-role="easter-label">${escapeHtml(easterLabel(row.offset))}</span>` +
-        `<label class="gmt-chip-toggle"><input type="checkbox" data-field="julian"${row.julian ? " checked" : ""}><span class="gmt-chip-toggle-face">Julian computus</span></label>`
-      );
+      return html`${field({
+        id: `${rowId}-offset`,
+        label: "Days from Easter",
+        hint: hint(`${rowId}-offset-hint`, easterLabel(row.offset)),
+        control: ({ id, describedBy }) =>
+          textInput({
+            id,
+            value: row.offset,
+            inputMode: "numeric",
+            autocomplete: "off",
+            spellcheck: false,
+            describedBy,
+          }),
+      })}<span id="${`${rowId}-julian`}">${chips({
+        legend: "Computus",
+        kind: "checkbox",
+        name: `${rowId}-julian-chip`,
+        items: [
+          { value: "julian", label: "Julian computus", checked: row.julian },
+        ],
+      })}</span>`;
     case "dates":
-      return (
-        `<label class="gmt-label gmt-hrb-wide">${labelTextHtml("Dates, comma separated")}` +
-        `<input class="gmt-input" data-field="dates" type="text" spellcheck="false" autocomplete="off" placeholder="2026-03-20, 2026-03-21" value="${escapeAttr(row.dates)}"></label>`
-      );
+      return html`<div class="${styles.wide}">${field({
+        id: `${rowId}-dates`,
+        label: "Dates, comma separated",
+        control: ({ id }) =>
+          textInput({
+            id,
+            value: row.dates,
+            autocomplete: "off",
+            spellcheck: false,
+            placeholder: "2026-03-20, 2026-03-21",
+          }),
+      })}</div>`;
   }
 }
-
-const RESULT_SIZERS = [
-  ...RULE_KINDS.map((k) => `${NO_SIGNAL_TEXT}: ${INVALID_REASON[k]}.`),
-  "Closes Mon 27 Dec, moved from Sat 25 Dec",
-];
 
 /** One rule row: a full bevelled card, never a coloured left edge. */
 export function ruleRowHtml(
   row: RowState,
   index: number,
   total: number,
-  uid: string,
+  rowId: string,
   folded: boolean,
-): string {
-  const n = index + 1;
-  const kindOptions = RULE_KINDS.map(
-    (k) =>
-      `<option value="${k}"${k === row.kind ? " selected" : ""}>${escapeHtml(KIND_LABELS[k])}</option>`,
-  ).join("");
-  const button = (action: string, glyph: string, name: string, off = false) =>
-    `<button type="button" class="gmt-button gmt-hrb-btn" data-action="${action}" aria-label="${escapeAttr(name)}"${off ? " disabled" : ""}>${glyph}</button>`;
+): SafeHtml {
   const policy = hasPolicy(row.kind)
-    ? `<div class="gmt-hrb-policy"><span class="gmt-label-text">Observance when it falls on a weekday (blank: none)</span>` +
-      policyEditorHtml({
-        idPrefix: `${uid}-p${index}`,
-        policy: parsePolicyText(row.policy) ?? {},
-        folded,
-      }) +
-      `</div>`
-    : "";
+    ? html`<div class="${styles.policy}"
+        ><span class="${styles.policyLabel}"
+          >Observance when it falls on a weekday (blank: none)</span
+        >${policyEditor({
+          id: `${rowId}-p`,
+          policy: parsePolicyText(row.policy) ?? {},
+          label: `Rule ${index + 1} observance`,
+          folded,
+        })}</div
+      >`
+    : undefined;
   const compare =
     row.kind === "fixed"
-      ? `<a class="gmt-button gmt-button--pad gmt-hrb-compare" data-role="link-compare" aria-disabled="true">Compare policies for this date</a>`
-      : "";
-  return (
-    `<li class="gmt-holiday-card gmt-hrb-row" data-row="${index}" data-kind="${row.kind}">` +
-    `<div class="gmt-hrb-head">` +
-    `<span class="gmt-hrb-num" aria-hidden="true">${n}</span>` +
-    `<label class="gmt-label gmt-hrb-name">${labelTextHtml(`Rule ${n} name`)}` +
-    `<input class="gmt-input" data-field="name" type="text" autocomplete="off" maxlength="40" value="${escapeAttr(row.name)}"></label>` +
-    `<label class="gmt-label gmt-hrb-kind">${labelTextHtml(`Rule ${n} kind`)}` +
-    `<select class="gmt-select" data-field="kind">${kindOptions}</select></label>` +
-    `<div class="gmt-hrb-actions">` +
-    button("up", "↑", `Move rule ${n} up`, index === 0) +
-    button("down", "↓", `Move rule ${n} down`, index === total - 1) +
-    button("remove", "×", `Remove rule ${n}`) +
-    `</div></div>` +
-    `<div class="gmt-hrb-fields">${kindFieldsHtml(row)}</div>` +
-    policy +
-    compare +
-    holdHtml(
-      `<p class="gmt-hrb-result" data-role="row-result" aria-live="off"></p>`,
-      textSizers("p", "gmt-hrb-result", RESULT_SIZERS),
-      "gmt-ledger-hold",
-    ) +
-    `</li>`
-  );
+      ? toolLinks({
+          label: `Rule ${index + 1} comparison`,
+          links: [{ text: "Compare policies for this date" }],
+        })
+      : undefined;
+  return ruleCard({
+    id: rowId,
+    index,
+    total,
+    kind: row.kind,
+    kindOptions: RULE_KINDS.map((k) => ({ value: k, label: KIND_LABELS[k] })),
+    name: row.name,
+    maxName: NAME_MAX,
+    fields: kindFields(row, rowId),
+    ...(policy === undefined ? {} : { policy }),
+    ...(compare === undefined ? {} : { compare }),
+    result: resultNote(index, null),
+  });
 }
 
-function rowsHtml(state: BuilderState, uid: string, folded: boolean): string {
-  return state.rows
-    .map((row, i) => ruleRowHtml(row, i, state.rows.length, uid, folded))
-    .join("");
+function rowsHtml(
+  state: BuilderState,
+  id: (local: string) => string,
+  folded: boolean,
+): SafeHtml {
+  return html`${state.rows.map((row, i) =>
+    ruleRowHtml(row, i, state.rows.length, id(`r${i}`), folded),
+  )}`;
 }
 
-function plates(
+const ALL_WEEKEND = weekendNames(WEEKEND_DAYS);
+
+function yearPlates(
   year: number | null,
   closed: number | null,
   moved: number | null,
   weekend: readonly number[],
-): PlateSpec[] {
-  return [
+): SafeHtml {
+  return plates([
     {
-      role: "hero-closed",
       caption: "Closed days",
       value: closed === null ? null : String(closed),
       lines: [year === null ? "" : `holidays in ${year}`],
       series: 1,
+      samples: ["366"],
     },
     {
-      role: "hero-moved",
       caption: "Moved",
       value: moved === null ? null : String(moved),
       lines: ["observed on another day"],
       series: 2,
+      samples: ["12"],
     },
     {
-      role: "hero-weekend",
       caption: "Weekend",
       value: weekendNames(weekend),
       lines: ["closed every week"],
       quiet: true,
+      samples: [ALL_WEEKEND],
     },
+  ]);
+}
+
+function gridOf(
+  year: number,
+  weekend: readonly number[],
+  marks: Parameters<typeof monthGrid>[0]["marks"],
+): SafeHtml {
+  return monthGrid({ year, months: { from: 1, to: 12 }, marks, weekend });
+}
+
+function presetOptions(): {
+  value: string;
+  label: string;
+  description: string;
+}[] {
+  return [
+    { value: CUSTOM_PRESET_ID, label: "Custom", description: "" },
+    ...BUILDER_PRESETS.map((p) => ({
+      value: p.id,
+      label: p.label,
+      description: p.description,
+    })),
   ];
 }
 
-function zoneOptions(selected: string): string {
-  const list = LEDGER_ZONES.includes(selected)
-    ? LEDGER_ZONES
-    : [...LEDGER_ZONES, selected];
-  return options(list, (v) => v, selected);
-}
-
-function presetOptionsHtml(id: string): string {
-  return (
-    `<option value="${CUSTOM_PRESET_ID}"${id === CUSTOM_PRESET_ID ? " selected" : ""}>Custom</option>` +
-    BUILDER_PRESETS.map(
-      (p) =>
-        `<option value="${escapeAttr(p.id)}"${p.id === id ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-    ).join("")
-  );
+function weekendChips(
+  id: (local: string) => string,
+  weekend: readonly number[],
+): SafeHtml {
+  return chips({
+    legend: "Weekend",
+    kind: "checkbox",
+    name: id("weekend-chip"),
+    items: WEEKEND_DAYS.map((d) => ({
+      value: String(d),
+      label: weekdayShort(d),
+      checked: weekend.includes(d),
+    })),
+  });
 }
 
 /**
  * The widget's chrome, seeded with `args` so the first paint shows them. With
- * no args it shows the first preset. The rows, the month grids and the plates
+ * no args it shows the first preset. The rows, the month grid and the plates
  * are drawn here without the library (weekend cells only); `mount` draws the
  * closed days and every printed result.
  */
 export function renderHolidayRuleBuilderTemplate(
+  idPrefix: string,
   args: HolidayRuleBuilderArgs = {},
 ): string {
-  const uid = `gmt-hrb-${++counter}`;
+  const id = idScope(idPrefix);
   const state = isSeeded(args)
     ? readArgs(args)
     : presetState(BUILDER_PRESETS[0]!);
   const presetId = matchPreset(state);
-  const preset = BUILDER_PRESETS.find((p) => p.id === presetId);
   const year = yearOf(state) ?? BUILDER_PRESETS[0]!.year;
-  const weekendBoxes = [1, 2, 3, 4, 5, 6, 7]
-    .map((d) =>
-      chipToggleHtml({
-        type: "checkbox",
-        role: "weekend",
-        value: String(d),
-        label: weekdayShort(d),
-        checked: state.weekend.includes(d),
-      }),
-    )
-    .join("");
 
-  return (
-    `<div class="gmt-holiday-rule-builder gmt-widget not-content" data-uid="${uid}">` +
-    `<div class="gmt-widget-card">` +
-    // 1. Rules
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>1. Rules</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
-    `<select class="gmt-select" data-role="preset">${presetOptionsHtml(presetId)}</select></label>` +
-    `</div>` +
-    descriptionHoldHtml(
-      `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>`,
-      BUILDER_PRESETS.map((p) => p.description),
-    ) +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label">${labelTextHtml("Zone")}` +
-    `<select class="gmt-select" data-role="zone">${zoneOptions(state.zone)}</select></label>` +
-    `<div class="gmt-label gmt-hrb-year">` +
-    `<label class="gmt-label-text" for="${uid}-year">Year</label>` +
-    `<div class="gmt-hrb-yearrow">` +
-    `<button type="button" class="gmt-button gmt-hrb-btn" data-action="year-down" aria-label="Previous year">−</button>` +
-    `<input class="gmt-input" id="${uid}-year" data-role="year" type="number" min="${YEAR_MIN}" max="${YEAR_MAX}" step="1" inputmode="numeric" value="${escapeAttr(state.year)}">` +
-    `<button type="button" class="gmt-button gmt-hrb-btn" data-action="year-up" aria-label="Next year">+</button>` +
-    `</div></div>` +
-    `<fieldset class="gmt-chip-group gmt-field-wide"><legend>Weekend</legend>${weekendBoxes}</fieldset>` +
-    `</div>` +
-    `<div class="gmt-holiday-frame" data-role="rules-frame">` +
-    `<ol class="gmt-hrb-rules" data-role="rules" data-grow="slot">${rowsHtml(state, uid, false)}</ol>` +
-    `<div class="gmt-hrb-addrow">` +
-    `<button type="button" class="gmt-button gmt-button--pad" data-action="add"${state.rows.length >= MAX_RULES ? " disabled" : ""}>Add rule</button>` +
-    `<span class="gmt-widget-hint" data-role="rule-count">${state.rows.length} of ${MAX_RULES} rules</span>` +
-    `</div>` +
-    `<p class="gmt-widget-hint">${escapeHtml(HINT_ORDER)}</p>` +
-    `</div>` +
-    `</div>` +
-    // 2. The year
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>2. The year</h4>` +
-    `<div class="gmt-holiday-frame">` +
-    `<div class="gmt-punct-heroes gmt-hrb-heroes" data-role="heroes" aria-hidden="true">${plates(year, null, 0, state.weekend).map(plateHtml).join("")}</div>` +
-    `<p class="gmt-ledger-sr" data-role="year-sentence" aria-live="polite"></p>` +
-    `<div data-role="grid">${monthGridHtml({ year, months: { from: 1, to: 12 }, marks: {}, weekend: state.weekend })}</div>` +
-    legendHtml() +
-    `<p class="gmt-hrb-note" data-role="year-note"></p>` +
-    `</div>` +
-    `</div>` +
-    // 3. The call
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>3. The call</h4>` +
-    holdHtml(
-      codeFrameHtml("calendar"),
-      [callSizer(CALL_SIZER)],
-      "gmt-ledger-hold",
-    ) +
-    holdHtml(
-      `<output class="gmt-widget-output" data-role="calendar-output">&nbsp;</output>`,
-      [outputSizer("gmt-widget-output", OUTPUT_SIZER)],
-      "gmt-ledger-hold",
-    ) +
-    `<details class="gmt-hrb-calls"><summary>Each rule's own calls</summary>` +
-    // The pre sits in a hold: a hidden twin holds the tallest text the rules
-    // can print (`ruleCallSizerText`), so a year that moves a date across 1
-    // January adds a line the frame already has room for.
-    `<div class="gmt-ledger-hold">` +
-    `<pre class="gmt-codeframe-pre"><code data-role="rule-calls"></code></pre>` +
-    `<pre class="gmt-codeframe-pre gmt-edi-sizer" aria-hidden="true" data-pagefind-ignore><code data-role="rule-calls-sizer"></code></pre>` +
-    `</div></details>` +
-    toolLinksHtml(BUILDER_LINKS) +
-    holdHtml(
-      `<p class="gmt-widget-hint" data-role="handoff-hint"></p>`,
-      textSizers("p", "gmt-widget-hint", [
-        HANDOFF_NO_CALENDAR,
-        HANDOFF_TOO_LONG,
-      ]),
-      "gmt-ledger-hold",
-    ) +
-    `</div>` +
-    `</div>` +
-    `</div>`
+  const rules = section(
+    { id: id("rules-section"), heading: "1. Rules", level: 3 },
+    html`<div class="${styles.stack}">${preset({
+      id: id("preset"),
+      label: "Preset",
+      value: presetId,
+      options: presetOptions(),
+    })}${fieldGrid(
+      html`${field({
+        id: id("zone"),
+        label: "Zone",
+        control: ({ id: cid }) =>
+          select({
+            id: cid,
+            value: state.zone,
+            options: optionsOf(LEDGER_ZONES, (v) => v, state.zone),
+          }),
+      })}${yearStepper({
+        id: id("year"),
+        label: "Year",
+        value: state.year,
+        min: YEAR_MIN,
+        max: YEAR_MAX,
+        prevLabel: "Previous year",
+        nextLabel: "Next year",
+      })}<div class="${styles.wide}">${weekendChips(id, state.weekend)}</div>`,
+    )}${holidayFrame(
+      html`${grow(
+        html`<ol class="${styles.rules}" id="${id("rules")}" aria-label="Rules" data-gate="drawn">${rowsHtml(state, id, false)}</ol>`,
+      )}<div class="${styles.addrow}">${button({
+        id: id("add"),
+        label: "Add rule",
+      })}<span class="${styles.count}" id="${id("count")}"
+          >${String(state.rows.length)} of ${String(MAX_RULES)} rules</span
+        ></div
+        ><p class="${styles.hint}">${HINT_ORDER}</p>`,
+      { gate: "frame" },
+    )}</div>`,
   );
+
+  const yearSection = section(
+    { id: id("year-section"), heading: "2. The year", level: 3 },
+    holidayFrame(
+      html`<div class="${styles.plates}" aria-hidden="true" id="${id("plates")}">${yearPlates(year, null, 0, state.weekend)}</div
+        ><p role="status" aria-label="Year summary" id="${id("year-sentence")}">${srOnly("")}</p
+        >${grow(html`<div class="${styles.slot}" id="${id("grid")}">${gridOf(year, state.weekend, {})}</div>`)}${holidayLegend(
+          { label: "Marks", items: kindItems() },
+        )}<div id="${id("year-note")}">${noteOf(id("year-note-text"), "Year note", "", "ok", YEAR_NOTE_SIZERS, "hold")}</div>`,
+      { gate: "frame" },
+    ),
+  );
+
+  const call = section(
+    { id: id("call-section"), heading: "3. The call", level: 3 },
+    html`<div class="${styles.stack}"><div id="${id("call")}">${codeFrame({
+      label: "buildBusinessCalendar call",
+      copyLabel: "Copy call",
+      copyText: "",
+      gate: "codeframe",
+    })}</div>${grow(
+      html`<div class="${styles.slot}" id="${id("output")}">${callOutput({
+        label: "Calendar returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}<details class="${styles.calls}"
+      ><summary>Each rule's own calls</summary
+      >${grow(
+        html`<div class="${styles.slot}" id="${id("rule-calls")}">${codeFrame({
+          label: "Rule calls",
+          copyLabel: "Copy rule calls",
+          copyText: "",
+        })}</div>`,
+      )}</details
+    ><div id="${id("ledger")}">${toolLinks({
+      label: "Open this result in another tool",
+      links: BUILDER_LINKS.map((l) => ({ text: l.text })),
+    })}</div><div id="${id("hint")}">${noteOf(id("hint-text"), "Hand-off hint", "", "ok", HINT_SIZERS, "hold")}</div></div>`,
+  );
+
+  return widget(
+    { name: WIDGET_NAME, label: "Holiday Rule Builder", scope: idPrefix },
+    html`${rules}${yearSection}${call}`,
+  ).toString();
 }
 
 // ---------------------------------------------------------------------------
@@ -460,20 +554,34 @@ const FIELD_KEYS = [
 ] as const;
 type FieldKey = (typeof FIELD_KEYS)[number];
 
-function drawResult(el: HTMLElement | null, result: RowResult): void {
-  if (!el) return;
-  if (result.state === "sentinel") {
-    renderWidgetOutput(el, result.text, "sentinel");
-  } else {
-    // A correct answer, including "no date this year": never the sentinel.
-    el.classList.remove(
-      "gmt-playground-live",
-      "gmt-playground-sentinel",
-      "gmt-widget-output--empty",
-    );
-    el.textContent = result.text;
-  }
-  el.dataset["state"] = result.state;
+const isFieldKey = (key: string): key is FieldKey =>
+  (FIELD_KEYS as readonly string[]).includes(key);
+
+/** The call as the reader would write it, one highlighted-free line. */
+function callFrame(label: string, copyLabel: string, text: string): SafeHtml {
+  return codeFrame({
+    label,
+    copyLabel,
+    copyText: text,
+    code: html`${text}`,
+    ...(label === "buildBusinessCalendar call" ? { gate: "codeframe" } : {}),
+  });
+}
+
+function outputOf(
+  state: "live" | "sentinel" | "empty",
+  text: string,
+): SafeHtml {
+  const lines =
+    state === "sentinel"
+      ? text.split("\n").map((line) => ({
+          text: line,
+          lost: line === NO_SIGNAL_TEXT,
+        }))
+      : text === ""
+        ? []
+        : text.split("\n").map((line) => ({ text: line, lost: false }));
+  return callOutput({ label: "Calendar returned", state, lines });
 }
 
 interface Controller {
@@ -482,21 +590,27 @@ interface Controller {
   release(): void;
 }
 
-function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const uid = root.dataset["uid"] ?? `gmt-hrb-${++counter}`;
-  const presetEl = q<HTMLSelectElement>("preset")!;
-  const zoneEl = q<HTMLSelectElement>("zone")!;
-  const yearEl = q<HTMLInputElement>("year")!;
-  const rulesEl = q<HTMLElement>("rules")!;
-  const addEl = root.querySelector<HTMLButtonElement>('[data-action="add"]')!;
-  const weekendEls = [
-    ...root.querySelectorAll<HTMLInputElement>('[data-role="weekend"]'),
-  ];
+function setupWidget(
+  root: HTMLElement,
+  lib: HolidayLib,
+  signal: AbortSignal,
+): Controller {
+  const { el: widgetEl, id, part: el } = findWidget(root, WIDGET_NAME);
+  const presetEl = el("preset").closest<GmtPreset>("gmt-preset")!;
+  const zoneEl = el<HTMLSelectElement>("zone");
+  const yearEl = el<HTMLInputElement>("year");
+  const yearPrev = el("year-prev");
+  const yearNext = el("year-next");
+  const rulesEl = el<HTMLElement>("rules");
+  const addEl = el<HTMLButtonElement>("add");
+  const weekendEl = widgetEl.querySelector<GmtChips>(
+    `gmt-chips:has([name="${CSS.escape(id("weekend-chip"))}"])`,
+  )!;
+  const ledgerLink = el("ledger").querySelector<HTMLElement>("a");
 
   let state: BuilderState = presetState(BUILDER_PRESETS[0]!);
   let folded = false;
+  let lastYear = yearOf(state) ?? BUILDER_PRESETS[0]!.year;
 
   const narrow = (): boolean => {
     const width = rulesEl.clientWidth;
@@ -505,57 +619,43 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
 
   function applyFold(): void {
     folded = narrow();
-    for (const d of rulesEl.querySelectorAll<HTMLDetailsElement>(
-      ".gmt-holiday-policy",
-    )) {
-      d.open = !folded;
-    }
+    for (const d of rulesEl.querySelectorAll("details")) d.open = !folded;
   }
 
   function syncControls(): void {
     setControlValue(zoneEl, state.zone);
     yearEl.value = state.year;
-    for (const el of weekendEls) {
-      el.checked = state.weekend.includes(Number(el.value));
-    }
+    weekendEl.value = state.weekend.map(String);
   }
 
   function syncPreset(): void {
-    const id = matchPreset(state);
-    presetEl.value = id;
-    const slot = q("preset-description");
-    if (slot) {
-      setPresetDescription(
-        slot,
-        BUILDER_PRESETS.find((p) => p.id === id)?.description ?? "",
-      );
-    }
+    presetEl.value = matchPreset(state);
   }
 
+  /** A row's part by its id, or null when the row has no such part. */
+  const rowPart = <T extends HTMLElement>(i: number, key: string): T | null =>
+    rulesEl.querySelector<T>(`[id="${CSS.escape(id(`r${i}-${key}`))}"]`);
+
   /** Draws the rows again, then puts focus where `focus` says. */
-  function renderRows(focus?: { row: number; sel: string } | "add"): void {
+  function renderRows(
+    focus?: { row: number; parts: readonly string[] } | "add",
+  ): void {
     folded = narrow();
-    rulesEl.innerHTML = rowsHtml(state, uid, folded);
+    setHtml(rulesEl, rowsHtml(state, id, folded));
     addEl.disabled = state.rows.length >= MAX_RULES;
-    const count = q("rule-count");
-    if (count) count.textContent = `${state.rows.length} of ${MAX_RULES} rules`;
+    el("count").textContent = `${state.rows.length} of ${MAX_RULES} rules`;
     if (focus === "add") {
       addEl.focus();
     } else if (focus) {
-      const li = rulesEl.querySelector<HTMLElement>(
-        `[data-row="${Math.min(focus.row, state.rows.length - 1)}"]`,
-      );
-      // `sel` lists alternates; the first enabled one takes focus.
-      const target = [
-        ...(li?.querySelectorAll<HTMLElement>(focus.sel) ?? []),
-      ].find((el) => !(el as HTMLButtonElement).disabled);
-      if (target) target.focus();
-      else li?.querySelector<HTMLElement>("[data-field]")?.focus();
+      const row = Math.min(focus.row, state.rows.length - 1);
+      // `parts` lists alternates; the first enabled one takes focus.
+      const target = focus.parts
+        .map((p) => rowPart<HTMLButtonElement>(row, p))
+        .find((c) => c !== null && !c.disabled);
+      (target ?? rowPart(row, "name"))?.focus();
     }
     recompute();
   }
-
-  let lastYear = yearOf(state) ?? BUILDER_PRESETS[0]!.year;
 
   function recompute(): void {
     const year = yearOf(state);
@@ -579,49 +679,66 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
     drawCall(rules, attribution, year);
   }
 
+  function drawResult(i: number, result: RowResult): void {
+    const slot = rowPart(i, "result");
+    if (slot) setHtml(slot, resultNote(i, result));
+  }
+
+  function drawCompare(i: number, year: number | null): void {
+    const source = state.rows[i];
+    const li = rowPart(i, "name")?.closest("li") ?? null;
+    const link = li?.querySelector<HTMLElement>("a") ?? null;
+    if (link && source) {
+      setToolLink(link, compareHandoffHref(lib, source, state.weekend, year));
+    }
+  }
+
   /** An invalid year: every readout of the year goes to NO SIGNAL or empty, so
    *  none goes on showing the last valid year's answer as this one's. The grid
    *  keeps its frame, unmarked, and a row's compare link, which needs no year,
    *  stays. */
   function drawNoYear(): void {
-    rulesEl.querySelectorAll<HTMLElement>("[data-row]").forEach((li, i) => {
-      drawResult(li.querySelector('[data-role="row-result"]'), {
-        state: "sentinel",
-        text: ROW_NO_YEAR,
-      });
-      const source = state.rows[i];
-      const link = li.querySelector<HTMLElement>('[data-role="link-compare"]');
-      if (link && source) {
-        setToolLink(link, compareHandoffHref(lib, source, state.weekend, null));
-      }
+    state.rows.forEach((_row, i) => {
+      drawResult(i, { state: "sentinel", text: ROW_NO_YEAR });
+      drawCompare(i, null);
     });
-    const heroes = q("heroes");
-    if (heroes) {
-      heroes.innerHTML = plates(null, null, null, state.weekend)
-        .map(plateHtml)
-        .join("");
-    }
-    const grid = q("grid");
-    if (grid) {
-      grid.innerHTML = monthGridHtml({
-        year: lastYear,
-        months: { from: 1, to: 12 },
-        marks: {},
-        weekend: state.weekend,
-      });
-    }
-    const note = q("year-note");
-    if (note) renderWidgetOutput(note, YEAR_NOTE_INVALID, "sentinel");
-    const sentence = q("year-sentence");
-    if (sentence) sentence.textContent = `No calendar: ${YEAR_RANGE}.`;
-    clearCallLine(q("call-calendar"));
-    const out = q("calendar-output");
-    if (out) renderWidgetOutput(out, NO_SIGNAL_TEXT, "sentinel");
-    const calls = q("rule-calls");
-    if (calls) calls.textContent = "";
-    setToolLink(q("link-ledger"), null);
-    const hint = q("handoff-hint");
-    if (hint) hint.textContent = HANDOFF_NO_YEAR;
+    setHtml(el("plates"), yearPlates(null, null, null, state.weekend));
+    setHtml(el("grid"), gridOf(lastYear, state.weekend, {}));
+    setHtml(
+      el("year-note"),
+      noteOf(
+        id("year-note-text"),
+        "Year note",
+        YEAR_NOTE_INVALID,
+        "sentinel",
+        YEAR_NOTE_SIZERS,
+        "hold",
+      ),
+    );
+    setHtml(el("year-sentence"), srOnly(`No calendar: ${YEAR_RANGE}.`));
+    setHtml(
+      el("call"),
+      codeFrame({
+        label: "buildBusinessCalendar call",
+        copyLabel: "Copy call",
+        copyText: "",
+        gate: "codeframe",
+      }),
+    );
+    setHtml(el("output"), outputOf("sentinel", NO_SIGNAL_TEXT));
+    setHtml(el("rule-calls"), callFrame("Rule calls", "Copy rule calls", ""));
+    setToolLink(ledgerLink, null);
+    setHtml(
+      el("hint"),
+      noteOf(
+        id("hint-text"),
+        "Hand-off hint",
+        HANDOFF_NO_YEAR,
+        "note",
+        HINT_SIZERS,
+        "hold",
+      ),
+    );
   }
 
   function drawRows(
@@ -629,19 +746,12 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
     attribution: Attribution,
     year: number,
   ): void {
-    rulesEl.querySelectorAll<HTMLElement>("[data-row]").forEach((li, i) => {
+    state.rows.forEach((_row, i) => {
       const rule = rules[i];
       const row = attribution.rows[i];
       if (!rule || !row) return;
-      drawResult(
-        li.querySelector('[data-role="row-result"]'),
-        rowResult(rule, row.valid, row.pairs, year),
-      );
-      const source = state.rows[i];
-      const link = li.querySelector<HTMLElement>('[data-role="link-compare"]');
-      if (link && source) {
-        setToolLink(link, compareHandoffHref(lib, source, state.weekend, year));
-      }
+      drawResult(i, rowResult(rule, row.valid, row.pairs, year));
+      drawCompare(i, year);
     });
   }
 
@@ -651,41 +761,38 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
       lib,
       attribution.rows.map((r) => r.pairs),
     );
-    const heroes = q("heroes");
-    if (heroes) {
-      heroes.innerHTML = plates(
+    setHtml(
+      el("plates"),
+      yearPlates(
         year,
         full === null ? null : full.holidays.length,
         moved,
         state.weekend,
-      )
-        .map(plateHtml)
-        .join("");
-    }
-    const grid = q("grid");
-    if (grid) {
-      grid.innerHTML = monthGridHtml({
-        year,
-        months: { from: 1, to: 12 },
-        marks: marksFromAttribution(lib, attribution, year),
-        weekend: state.weekend,
-      });
-    }
-    const note = q("year-note");
-    if (note) {
-      if (full === null) renderWidgetOutput(note, YEAR_NOTE_NULL, "sentinel");
-      else {
-        renderWidgetOutput(note, "", "empty");
-        note.classList.remove("gmt-widget-output--empty");
-      }
-    }
-    const sentence = q("year-sentence");
-    if (sentence) {
-      sentence.textContent =
+      ),
+    );
+    setHtml(
+      el("grid"),
+      gridOf(year, state.weekend, marksFromAttribution(lib, attribution, year)),
+    );
+    setHtml(
+      el("year-note"),
+      noteOf(
+        id("year-note-text"),
+        "Year note",
+        full === null ? YEAR_NOTE_NULL : "",
+        full === null ? "sentinel" : "ok",
+        YEAR_NOTE_SIZERS,
+        "hold",
+      ),
+    );
+    setHtml(
+      el("year-sentence"),
+      srOnly(
         full === null
           ? `${year}: no calendar, a rule is not valid.`
-          : `${year}: ${full.holidays.length} closed ${full.holidays.length === 1 ? "day" : "days"}, ${moved} moved. Weekend: ${weekendNames(state.weekend)}.`;
-    }
+          : `${year}: ${full.holidays.length} closed ${full.holidays.length === 1 ? "day" : "days"}, ${moved} moved. Weekend: ${weekendNames(state.weekend)}.`,
+      ),
+    );
   }
 
   function drawCall(
@@ -695,130 +802,109 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
   ): void {
     const { full } = attribution;
     const args = callArgsText(state, year);
-    renderCallLine(
-      q("call-calendar"),
-      "buildBusinessCalendar",
-      escapeHtml(args),
-      args,
+    setHtml(
+      el("call"),
+      codeFrame({
+        label: "buildBusinessCalendar call",
+        copyLabel: "Copy call",
+        copyText: `buildBusinessCalendar(${args})`,
+        code: html`buildBusinessCalendar(${args})`,
+        gate: "codeframe",
+      }),
     );
-    const out = q("calendar-output");
-    if (out) {
-      if (full === null) {
-        renderWidgetOutput(out, `null\n${NO_SIGNAL_TEXT}`, "sentinel");
-      } else {
-        const text =
-          `{ weekend: ${literal(full.weekend)},\n` +
-          `  holidays: ${literal(full.holidays)},\n` +
-          `  timeZone: ${literal(full.timeZone)} }`;
-        renderWidgetOutput(
-          out,
-          text,
-          full.holidays.length > 0 ? "live" : "empty",
-        );
-      }
+    if (full === null) {
+      setHtml(el("output"), outputOf("sentinel", `null\n${NO_SIGNAL_TEXT}`));
+    } else {
+      const text =
+        `{ weekend: ${literal(full.weekend)},\n` +
+        `  holidays: ${literal(full.holidays)},\n` +
+        `  timeZone: ${literal(full.timeZone)} }`;
+      setHtml(
+        el("output"),
+        outputOf(full.holidays.length > 0 ? "live" : "empty", text),
+      );
     }
-    const calls = q("rule-calls");
-    if (calls) {
-      calls.textContent = ruleCallLines(
-        rules,
-        attribution.rows.map((r) => r.pairs),
-        year,
-      ).join("\n");
-    }
-    const callsSizer = q("rule-calls-sizer");
-    if (callsSizer) callsSizer.textContent = ruleCallSizerText(rules);
+    const lines = ruleCallLines(
+      rules,
+      attribution.rows.map((r) => r.pairs),
+      year,
+    ).join("\n");
+    setHtml(
+      el("rule-calls"),
+      callFrame("Rule calls", "Copy rule calls", lines),
+    );
     const handoff = ledgerHandoff(full, state.zone, state.weekend);
-    setToolLink(q("link-ledger"), handoff.href);
-    const hint = q("handoff-hint");
-    if (hint) hint.textContent = handoff.href === null ? handoff.hint : "";
+    setToolLink(ledgerLink, handoff.href);
+    setHtml(
+      el("hint"),
+      noteOf(
+        id("hint-text"),
+        "Hand-off hint",
+        handoff.href === null ? handoff.hint : "",
+        handoff.href === null ? "note" : "ok",
+        HINT_SIZERS,
+        "hold",
+      ),
+    );
   }
 
   // --- state changes -------------------------------------------------------
 
-  const rowIndex = (el: HTMLElement): number => {
-    const li = el.closest<HTMLElement>("[data-row]");
-    return li ? Number(li.dataset["row"]) : -1;
-  };
+  const ROW_ID = new RegExp(`^${escapeRegExp(id("r"))}(\\d+)-(.+)$`);
 
-  function setField(el: HTMLElement, i: number): void {
+  /** The row and part an event target belongs to, read from the nearest id up the tree. */
+  function locate(
+    target: EventTarget | null,
+  ): { i: number; key: string; node: HTMLElement } | null {
+    let node = target instanceof HTMLElement ? target : null;
+    while (node && node !== rulesEl) {
+      const match = ROW_ID.exec(node.id);
+      if (match) return { i: Number(match[1]), key: match[2]!, node };
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function setField(node: HTMLElement, i: number, key: string): void {
     const row = state.rows[i];
     if (!row) return;
-    const key = el.dataset["field"] as FieldKey | "julian" | "kind" | undefined;
     if (key === "julian") {
-      row.julian = (el as HTMLInputElement).checked;
-    } else if (key && (FIELD_KEYS as readonly string[]).includes(key)) {
-      row[key as FieldKey] = (el as HTMLInputElement).value;
+      row.julian =
+        node.querySelector<HTMLInputElement>("input")?.checked === true;
+    } else if (isFieldKey(key)) {
+      row[key] = (node as HTMLInputElement).value;
       if (key === "offset") {
-        const label = el
-          .closest("[data-row]")
-          ?.querySelector('[data-role="easter-label"]');
-        if (label) label.textContent = easterLabel(row.offset);
+        const note = rowPart(i, "offset-hint");
+        if (note) note.textContent = easterLabel(row.offset);
       }
     }
     recompute();
   }
 
-  function setPolicy(el: HTMLSelectElement, i: number): void {
+  function setPolicy(i: number): void {
     const row = state.rows[i];
-    const details = el.closest<HTMLElement>(".gmt-holiday-policy");
-    if (!row || !details) return;
+    if (!row) return;
     const values: Record<number, string> = {};
-    for (const s of details.querySelectorAll<HTMLSelectElement>("select")) {
-      values[Number(s.dataset["weekday"])] = s.value;
+    for (const weekday of WEEKEND_DAYS) {
+      const s = rowPart<HTMLSelectElement>(i, `p-${weekday}`);
+      if (s) values[weekday] = s.value;
     }
     row.policy = policyTextFromSelects(values);
-    const summary = details.querySelector(".gmt-holiday-policy-summary");
+    const summary = rowPart(i, "p")?.querySelector("summary");
     if (summary) {
-      summary.textContent = policySummary(parsePolicyText(row.policy) ?? {});
+      summary.textContent = policySummaryOf(row.policy);
     }
     recompute();
   }
 
-  function onField(e: Event): void {
-    const el = e.target as HTMLElement;
-    const role = el.dataset?.["role"];
-    const i = rowIndex(el);
-    if (role === "preset") {
-      const preset = BUILDER_PRESETS.find(
-        (p) => p.id === (el as HTMLSelectElement).value,
-      );
-      if (!preset) return;
-      state = presetState(preset);
-      syncControls();
-      renderRows();
-    } else if (role === "zone") {
-      state.zone = (el as HTMLSelectElement).value;
-      recompute();
-    } else if (role === "year") {
-      state.year = (el as HTMLInputElement).value;
-      recompute();
-    } else if (role === "weekend") {
-      state.weekend = normaliseWeekend(
-        weekendEls.filter((c) => c.checked).map((c) => Number(c.value)),
-      );
-      recompute();
-    } else if (i >= 0 && el.dataset?.["weekday"] !== undefined) {
-      setPolicy(el as HTMLSelectElement, i);
-    } else if (i >= 0 && el.dataset?.["field"] === "kind") {
-      if (e.type !== "change") return;
-      const row = state.rows[i];
-      const kind = (el as HTMLSelectElement).value as RuleKind;
-      if (!row || !RULE_KINDS.includes(kind) || kind === row.kind) return;
-      state.rows[i] = { ...blankRow(kind), name: row.name };
-      renderRows({ row: i, sel: '[data-field="kind"]' });
-    } else if (i >= 0 && el.dataset?.["field"] !== undefined) {
-      setField(el, i);
-    }
-  }
-
-  function move(i: number, by: -1 | 1, sel: string): void {
+  function move(i: number, by: -1 | 1, parts: readonly string[]): void {
     const j = i + by;
     if (i < 0 || j < 0 || j >= state.rows.length) return;
     const [row] = state.rows.splice(i, 1);
     state.rows.splice(j, 0, row!);
     // Focus follows the row to the same button; at an end that button is
     // disabled, so it falls to the other direction.
-    renderRows({ row: j, sel });
+    renderRows({ row: j, parts });
   }
 
   function stepYear(by: number): void {
@@ -831,44 +917,74 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
     recompute();
   }
 
-  root.addEventListener("click", (e) => {
-    const button = (e.target as HTMLElement).closest<HTMLButtonElement>(
-      "[data-action]",
-    );
-    if (!button || !root.contains(button) || button.disabled) return;
-    const i = rowIndex(button);
-    switch (button.dataset["action"]) {
-      case "up":
-        move(i, -1, '[data-action="up"], [data-action="down"]');
-        break;
-      case "down":
-        move(i, 1, '[data-action="down"], [data-action="up"]');
-        break;
-      case "remove":
-        if (i < 0) break;
+  function onField(e: Event): void {
+    const target = e.target;
+    if (target === presetEl) {
+      if (e.type !== "change") return;
+      const chosen = BUILDER_PRESETS.find((p) => p.id === presetEl.value);
+      if (!chosen) return;
+      state = presetState(chosen);
+      syncControls();
+      renderRows();
+    } else if (target === zoneEl) {
+      state.zone = zoneEl.value;
+      recompute();
+    } else if (target === yearEl) {
+      state.year = yearEl.value;
+      recompute();
+    } else if (target === weekendEl) {
+      state.weekend = normaliseWeekend(
+        (weekendEl.value as string[]).map(Number),
+      );
+      recompute();
+    } else {
+      const found = locate(target);
+      if (!found) return;
+      const { i, key, node } = found;
+      if (key.startsWith("p-")) {
+        if (node instanceof HTMLSelectElement) setPolicy(i);
+      } else if (key === "kind") {
+        if (e.type !== "change") return;
+        const row = state.rows[i];
+        const kind = (node as HTMLSelectElement).value as RuleKind;
+        if (!row || !RULE_KINDS.includes(kind) || kind === row.kind) return;
+        state.rows[i] = { ...blankRow(kind), name: row.name };
+        renderRows({ row: i, parts: ["kind"] });
+      } else if (key === "julian" || isFieldKey(key)) {
+        setField(node, i, key);
+      }
+    }
+  }
+
+  widgetEl.addEventListener("input", onField, { signal });
+  widgetEl.addEventListener("change", onField, { signal });
+  widgetEl.addEventListener(
+    "click",
+    (e) => {
+      const target = e.target;
+      if (target === yearPrev) return stepYear(-1);
+      if (target === yearNext) return stepYear(1);
+      if (target === addEl) {
+        if (state.rows.length >= MAX_RULES) return;
+        state.rows.push(blankRow());
+        renderRows({ row: state.rows.length - 1, parts: ["name"] });
+        return;
+      }
+      const found = locate(target);
+      if (!found || !(found.node instanceof HTMLButtonElement)) return;
+      if (found.node.disabled) return;
+      const { i, key } = found;
+      if (key === "up") move(i, -1, ["up", "down"]);
+      else if (key === "down") move(i, 1, ["down", "up"]);
+      else if (key === "remove") {
         state.rows.splice(i, 1);
         renderRows(
-          state.rows.length === 0
-            ? "add"
-            : { row: i, sel: '[data-action="remove"]' },
+          state.rows.length === 0 ? "add" : { row: i, parts: ["remove"] },
         );
-        break;
-      case "add":
-        if (state.rows.length >= MAX_RULES) break;
-        state.rows.push(blankRow());
-        renderRows({ row: state.rows.length - 1, sel: '[data-field="name"]' });
-        break;
-      case "year-down":
-        stepYear(-1);
-        break;
-      case "year-up":
-        stepYear(1);
-        break;
-    }
-  });
-  root.addEventListener("input", onField);
-  root.addEventListener("change", onField);
-  wireCopyButtons(root);
+      }
+    },
+    { signal },
+  );
 
   const disposeWidth = onWidthChange(rulesEl, () => {
     if (narrow() !== folded) applyFold();
@@ -890,11 +1006,22 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
   };
 }
 
+/** A string safe inside a `RegExp`. */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** The folded summary line of a policy text. */
+function policySummaryOf(text: string): string {
+  return policySummary(parsePolicyText(text) ?? {});
+}
+
 export const mountHolidayRuleBuilder: MountFn<HolidayRuleBuilderArgs> = async (
   root,
   args,
   signal,
 ) => {
+  defineElements();
   let lib: HolidayLib;
   try {
     lib = await loadHolidayLib();
@@ -904,7 +1031,7 @@ export const mountHolidayRuleBuilder: MountFn<HolidayRuleBuilderArgs> = async (
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  const widget = setupWidget(root, lib);
+  const widget = setupWidget(root, lib, signal);
   if (isSeeded(args)) widget.apply(readArgs(args));
 
   return onceDestroy(
@@ -913,6 +1040,7 @@ export const mountHolidayRuleBuilder: MountFn<HolidayRuleBuilderArgs> = async (
   );
 };
 
-// Re-exported for the tests and for slice 5's chat tool.
+// The month's name, a policy's text and a policy select's id, for the tests and the chat tool.
 export { monthName };
 export { formatPolicyText };
+export { policySelectId };

@@ -57,32 +57,32 @@ import DoxPage from "~/components/ask/DoxPage";
   /* The page never scrolls; the transcript is the only scroll container. */
   html[data-dox-shell],
   html[data-dox-shell] body {
-    height: 100%;
+    block-size: 100%;
     overflow: hidden;
   }
 
   /* Starlight's PageTitle renders <h1 id="_top"> on every page,
      splash included. The frontmatter title stays (for <title>/SEO); only the
      visual heading goes. */
-  html[data-dox-shell] #_top {
+  html[data-dox-shell] .content-panel:first-child h1 {
     display: none;
   }
 
   /* Remove the sidebar and title padding meant for a prose page. The hive
      shell is fixed below the header, so this padding does not place it. */
   html[data-dox-shell] .main-frame {
-    padding-top: 0;
+    padding-block-start: 0;
     padding-inline-start: 0;
   }
 
   html[data-dox-shell] .page {
-    min-height: 0;
-    height: 100dvh;
+    min-block-size: 0;
+    block-size: 100dvh;
   }
 
   html[data-dox-shell] main {
     padding: 0;
-    height: 100%;
+    block-size: 100%;
   }
 
   /* Starlight's content wrappers cap width and add vertical rhythm meant for
@@ -93,12 +93,12 @@ import DoxPage from "~/components/ask/DoxPage";
   }
 
   html[data-dox-shell] .sl-container {
-    max-width: none;
+    max-inline-size: none;
     margin: 0;
   }
 
   html[data-dox-shell] .sl-container > * + * {
-    margin-top: 0;
+    margin-block-start: 0;
   }
 
   /* Starlight wraps page content in `.sl-markdown-content`, which applies
@@ -107,7 +107,6 @@ import DoxPage from "~/components/ask/DoxPage";
      box and are meaningless around an app surface. */
   html[data-dox-shell] .sl-markdown-content > * + *,
   html[data-dox-shell] .sl-markdown-content {
-    margin-top: 0;
     margin-block: 0;
   }
 </style>

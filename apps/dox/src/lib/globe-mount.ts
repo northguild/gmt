@@ -74,7 +74,7 @@ export function renderGlobeTemplate({
   const fullbleed = embedded ? "" : " data-tools-fullbleed";
 
   return (
-    `<div class="${rootClass}"${fullbleed}>` +
+    `<div class="${rootClass}" data-widget="globe" role="region" aria-label="${embedded ? "Zoned Earth overview" : "Zoned Earth"}"${fullbleed}>` +
     (embedded
       ? ""
       : `<h2 class="gmt-chart-title">${escapeHtml(heading)}</h2>`) +
@@ -90,8 +90,8 @@ export function renderGlobeTemplate({
        bottom of the globe on every viewport whose stage was under ~600px.
        Scoped to the stage, not `.gmt-globe`: the root's own `<h2>` heading
        and `<p>` caption *should* keep Starlight's content styling. */
-    `<div class="gmt-globe-stage gmt-glass not-content" id="${stageId}" data-role="stage">` +
-    `<div class="gmt-globe-zoom" role="group" aria-label="Globe controls">` +
+    `<div class="gmt-globe-stage gmt-glass not-content" id="${stageId}" data-role="stage" data-gate="globe-stage">` +
+    `<div class="gmt-globe-zoom" data-gate="globe-zoom" role="group" aria-label="Globe controls">` +
     `<button type="button" data-globe-zoom="in" aria-label="Zoom in">+</button>` +
     `<button type="button" data-globe-zoom="out" aria-label="Zoom out">−</button>` +
     `<button type="button" data-globe-zoom="reset" aria-label="Reset zoom">⊙</button>` +

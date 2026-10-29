@@ -4,7 +4,7 @@
  * The strip's clock: the reader's local time, in whatever format the shared
  * date display store holds — and never in the zone it holds.
  */
-import { act, render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import {
   resetDateDisplay,
   setDateFormat,
@@ -12,13 +12,13 @@ import {
 } from "~/lib/date-display-store";
 import { HeaderClock } from "./HeaderClock";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import { expectNoAxeViolations } from "~/test/render-widget";
 
 installJsdomShims();
 
 const systemZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-const clockText = () =>
-  document.querySelector("time.gmt-hive-now")?.textContent ?? "";
+const clock = () => screen.getByRole("time");
 
 describe("HeaderClock", () => {
   beforeEach(() => {
@@ -26,32 +26,37 @@ describe("HeaderClock", () => {
     resetDateDisplay();
   });
 
-  it("shows the current local time in the default calendar format", () => {
-    render(<HeaderClock />);
+  it("shows the current local time in the default calendar format", async () => {
+    const { container } = render(<HeaderClock />);
     // Calendar against its own reference instant is always "today".
-    expect(clockText()).toMatch(/^today at /);
+    expect(clock()).toHaveTextContent(/^today at /);
+    await expectNoAxeViolations(container);
   });
 
-  it("follows the format picked in the shared store", () => {
-    render(<HeaderClock />);
+  it("follows the format picked in the shared store", async () => {
+    const { container } = render(<HeaderClock />);
     act(() => setDateFormat("unix-s"));
-    expect(clockText()).toMatch(/^\d{10}$/);
+    expect(clock()).toHaveTextContent(/^\d{10}$/);
+    await expectNoAxeViolations(container);
   });
 
-  it("falls back to the calendar format for a relative pick, which would only ever say now", () => {
-    render(<HeaderClock />);
+  it("falls back to the calendar format for a relative pick, which would only ever say now", async () => {
+    const { container } = render(<HeaderClock />);
     act(() => setDateFormat("relative-long"));
-    expect(clockText()).toMatch(/^today at /);
+    expect(clock()).toHaveTextContent(/^today at /);
+    await expectNoAxeViolations(container);
   });
 
-  it("stays on the reader's own zone, whatever zone the store holds", () => {
+  it("stays on the reader's own zone, whatever zone the store holds", async () => {
     const elsewhere =
       systemZone === "Asia/Tokyo" ? "Europe/London" : "Asia/Tokyo";
-    render(<HeaderClock />);
+    const { container } = render(<HeaderClock />);
     act(() => {
       setDateZone(elsewhere);
       setDateFormat("iso-zoned");
     });
-    expect(clockText().endsWith(`[${systemZone}]`)).toBe(true);
+    expect(clock()).toHaveTextContent(`[${systemZone}]`);
+    expect(clock()).toHaveTextContent(/\]$/);
+    await expectNoAxeViolations(container);
   });
 });

@@ -2,14 +2,21 @@
  * The handle on the widget rail's left edge. Drag it, or focus it and use the
  * arrow keys, to make the rail wider; double-click it to reset the width.
  *
- * The width lives in one CSS custom property on `.gmt-hive-body`
+ * The width lives in one CSS custom property on the container the parent passes
  * (`--gmt-hive-rail-width`), so a widget swap, which remounts the rail, keeps
  * it. The reader's last width is remembered in this browser only.
  *
  * Desktop only: below 60rem the rail is a bottom sheet and the handle is
  * hidden (`gmt-hive.css`).
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
+import styles from "./RailResizer.module.css";
 import {
   clampRailWidth,
   railBounds,
@@ -17,8 +24,8 @@ import {
   type RailBounds,
 } from "./rail-width";
 
-const WIDTH_PROPERTY = "--gmt-hive-rail-width";
-const STORAGE_KEY = "gmt-dox-rail-width";
+export const WIDTH_PROPERTY = "--gmt-hive-rail-width";
+export const STORAGE_KEY = "gmt-dox-rail-width";
 
 function readStoredWidth(): number | undefined {
   try {
@@ -38,13 +45,27 @@ function storeWidth(width: number | undefined): void {
   }
 }
 
+/** What the server markup says before the browser has measured anything: the
+ * rail's default (22rem) at its narrowest, up to a plausible half page. A
+ * splitter must carry its value from the first render, and the measured one
+ * replaces this as soon as the page mounts. */
+const SERVER_VALUE = { min: 352, now: 352, max: 704 };
+
 interface Measured {
   width: number;
   bounds: RailBounds;
   bodyWidth: number;
 }
 
-export function RailResizer({ railId }: { railId: string }) {
+export function RailResizer({
+  railId,
+  container,
+}: {
+  railId: string;
+  /** The element that holds the transcript and the rail: it carries the width
+   * property and the dragging flag. A ref from the parent that renders it. */
+  container: RefObject<HTMLElement | null>;
+}) {
   const handleRef = useRef<HTMLDivElement>(null);
   const [measured, setMeasured] = useState<Measured | null>(null);
   const drag = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -53,10 +74,10 @@ export function RailResizer({ railId }: { railId: string }) {
   const pending = useRef<number | undefined>(undefined);
 
   const elements = useCallback(() => {
-    const body = handleRef.current?.parentElement ?? null;
+    const body = container.current;
     const rail = document.getElementById(railId);
     return body && rail ? { body, rail } : null;
-  }, [railId]);
+  }, [railId, container]);
 
   const measure = useCallback((): Measured | null => {
     const found = elements();
@@ -108,6 +129,7 @@ export function RailResizer({ railId }: { railId: string }) {
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = { startX: event.clientX, startWidth: current.width };
     elements()?.body.setAttribute("data-resizing", "");
+    event.currentTarget.setAttribute("data-resizing", "");
   };
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -130,6 +152,7 @@ export function RailResizer({ railId }: { railId: string }) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     elements()?.body.removeAttribute("data-resizing");
+    event.currentTarget.removeAttribute("data-resizing");
     // A move whose frame has not run yet would otherwise be lost, and the
     // width stored below would be one frame old.
     cancelAnimationFrame(frame.current);
@@ -164,17 +187,21 @@ export function RailResizer({ railId }: { railId: string }) {
   return (
     <div
       ref={handleRef}
-      className="gmt-hive-resizer"
+      className={styles.resizer}
+      // A focusable separator is the ARIA Authoring Practices window splitter,
+      // an interactive widget. <hr> is non-interactive and cannot take focus
+      // or key handlers.
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="separator"
       aria-orientation="vertical"
       aria-controls={railId}
       aria-label="Resize the widget panel"
       tabIndex={0}
       title="Drag to resize. Double-click to reset."
+      aria-valuemin={Math.round(measured?.bounds.min ?? SERVER_VALUE.min)}
+      aria-valuemax={Math.round(measured?.bounds.max ?? SERVER_VALUE.max)}
+      aria-valuenow={Math.round(measured?.width ?? SERVER_VALUE.now)}
       {...(measured && {
-        "aria-valuemin": Math.round(measured.bounds.min),
-        "aria-valuemax": Math.round(measured.bounds.max),
-        "aria-valuenow": Math.round(measured.width),
         "aria-valuetext": `${Math.round((measured.width / measured.bodyWidth) * 100) || 0}% of the page`,
       })}
       onPointerDown={onPointerDown}

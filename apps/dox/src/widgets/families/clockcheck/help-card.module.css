@@ -1,0 +1,198 @@
+/* The "How gmt helps" card: a full-bordered panel, tag / input -> output / why cases inside it.
+   Amber stays the sentinel's. The card keeps its own height, so it does not stretch to a taller
+   neighbour. Full borders only: no left-edge accent. */
+
+.card {
+  align-self: start;
+  display: grid;
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+
+  & > * {
+    min-inline-size: 0;
+    margin: 0;
+  }
+
+  & a {
+    color: var(--gmt-cyan-ink);
+    text-underline-offset: 0.15em;
+  }
+
+  & code {
+    overflow-wrap: anywhere;
+    font-size: 0.75rem;
+  }
+}
+
+.title {
+  font-size: 0.9375rem;
+  color: var(--gmt-cyan-ink);
+}
+
+.lede {
+  max-inline-size: 68ch;
+  color: var(--gmt-ice-dim);
+}
+
+.verified {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.badge {
+  flex: none;
+  padding: 0.1em 0.6em;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--gmt-cyan-ink);
+  white-space: nowrap;
+}
+
+.verifiedText {
+  flex: 1 1 14rem;
+}
+
+.cases {
+  display: grid;
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case {
+  display: grid;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+
+  & code {
+    background: var(--gmt-surface-2);
+  }
+}
+
+.tag {
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--gmt-cyan-ink);
+}
+
+.io {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-2);
+}
+
+.arrow {
+  font-weight: 700;
+  color: var(--gmt-cyan-ink);
+}
+
+.out {
+  font-weight: 600;
+  color: var(--gmt-cyan-ink);
+}
+
+.note {
+  color: var(--gmt-ice-dim);
+}
+
+.why {
+  color: var(--gmt-ice);
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-2) var(--gmt-space-3);
+}
+
+/* A link drawn as the page's button: a full border and the bevel, at least 24 px tall. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  min-block-size: 1.5rem;
+  padding: var(--gmt-space-2) var(--gmt-space-4);
+  border: 1px solid var(--gmt-cyan);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill);
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--gmt-cyan-ink);
+
+  &:is(:hover, :focus-visible) {
+    background: var(--gmt-surface-2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+@media (forced-colors: active) {
+  .card,
+  .verified,
+  .case,
+  .badge,
+  .button {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .card a,
+  .title,
+  .tag,
+  .arrow,
+  .out {
+    color: LinkText;
+  }
+
+  .button:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .card,
+  .verified,
+  .case,
+  .badge,
+  .button {
+    border-color: var(--gmt-ice);
+  }
+
+  .lede,
+  .note {
+    color: var(--gmt-ice);
+  }
+}

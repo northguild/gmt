@@ -21,7 +21,7 @@ import {
   type Crossing,
   type TransportLib,
 } from "./transport-widgets";
-import { escapeHtml } from "./widget-ui";
+import { codeSpan } from "./widget-ui";
 
 /** Fixed offsets, offered only here: the one widget that specifically
  *  teaches that a fixed offset observes no DST. */
@@ -159,12 +159,7 @@ export function crossingCallSource(state: CrossingState): [string, string] {
     state.exit.trim(),
     state.targetZone.trim(),
   ];
-  const html = values
-    .map(
-      (v) =>
-        `<span class="gmt-code-str">${escapeHtml(JSON.stringify(v))}</span>`,
-    )
-    .join(", ");
+  const html = values.map((v) => codeSpan("str", JSON.stringify(v))).join(", ");
   const plain = values.map((v) => JSON.stringify(v)).join(", ");
   return [html, plain];
 }

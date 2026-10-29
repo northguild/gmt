@@ -19,7 +19,7 @@ const { data } = Astro.locals.starlightRoute.entry;
 const { title = data.title, tagline, actions = [] } = data.hero || {};
 ---
 
-<div class="gmt-herostage gmt-brackets gmt-theme-dark">
+<div class="gmt-herostage gmt-brackets gmt-theme-dark" data-gate="hero-stage">
 	<div class="gmt-herostage-copy">
 		<HeroCopy data={{ title, tagline, actions }} />
 	</div>
@@ -32,8 +32,10 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 			display: grid;
 			grid-template-columns: 100%;
 			gap: 2rem;
+
 			/* Named so the bracket spacing below can add to it. */
 			--gmt-herostage-pad: 1rem;
+
 			padding-block: var(--gmt-herostage-pad);
 		}
 
@@ -58,17 +60,19 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 		.gmt-herostage-copy {
 			display: flex;
 			align-items: center;
-			padding-left: 1rem;
+			padding-inline-start: 1rem;
 		}
 
-		@media (min-width: 80rem) {
+		@media (width >= 80rem) {
 			.gmt-herostage {
 				grid-template-columns: minmax(0, auto) minmax(40rem, 1fr);
 				align-items: stretch;
 				gap: 3rem;
+
 				/* Fixed height (not min-height): the plan calls for the first
 				   section to cap at one screen, not grow past it. */
-				height: calc(100dvh - var(--sl-nav-height));
+				block-size: calc(100dvh - var(--sl-nav-height));
+
 				--gmt-herostage-pad: clamp(1rem, 4vh, 3rem);
 			}
 
@@ -77,7 +81,7 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 			   fixed row height above to fit its content (the zone list in
 			   particular). */
 			.gmt-herostage > * {
-				min-height: 0;
+				min-block-size: 0;
 			}
 
 			/* The copy scrolls down on a short screen, never sideways. The
@@ -89,7 +93,7 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 			   room for an always-visible vertical scrollbar in that size, so
 			   the bar never covers the text when it appears. */
 			.gmt-herostage-copy {
-				height: 100%;
+				block-size: 100%;
 				overflow: hidden auto;
 				scrollbar-gutter: stable;
 			}
@@ -103,11 +107,11 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 	   gmt-primitives.css is unlayered, and an unlayered rule beats any
 	   layered one whatever its specificity. */
 	.gmt-herostage::before {
-		top: var(--gmt-space-6);
+		inset-block-start: var(--gmt-space-6);
 	}
 
 	.gmt-herostage::after {
-		bottom: var(--gmt-space-6);
+		inset-block-end: var(--gmt-space-6);
 	}
 
 	/* The bottom-right bracket now stands that far above the hero's bottom
@@ -115,23 +119,23 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 	   (gmt-primitives.css), and the zone list ends clear of it. The top one
 	   needs no room of its own: it sits beside the copy, never over it. */
 	.gmt-herostage {
-		padding-bottom: calc(var(--gmt-herostage-pad) + var(--gmt-space-6) + 12px);
+		padding-block-end: calc(var(--gmt-herostage-pad) + var(--gmt-space-6) + 12px);
 	}
 
 	/* On a wide screen the hero is one screen tall, so growing it would only
 	   take height from the zone list. Each bracket sits in the middle of the
 	   hero's own padding instead: clear of the edge and of the content alike. */
-	@media (min-width: 80rem) {
+	@media (width >= 80rem) {
 		.gmt-herostage {
-			padding-bottom: var(--gmt-herostage-pad);
+			padding-block-end: var(--gmt-herostage-pad);
 		}
 
 		.gmt-herostage::before {
-			top: calc((var(--gmt-herostage-pad) - 12px) / 2);
+			inset-block-start: calc((var(--gmt-herostage-pad) - 12px) / 2);
 		}
 
 		.gmt-herostage::after {
-			bottom: calc((var(--gmt-herostage-pad) - 12px) / 2);
+			inset-block-end: calc((var(--gmt-herostage-pad) - 12px) / 2);
 		}
 	}
 </style>

@@ -17,8 +17,10 @@
  * and the panel takes the transcript down with it.
  */
 import type { ToolUIPart } from "ai";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import { WidgetReceipt } from "./WidgetReceipt";
 
 installJsdomShims();
@@ -35,40 +37,44 @@ function part(overrides: Record<string, unknown>): ToolUIPart {
 }
 
 describe("WidgetReceipt — terminal failure states", () => {
-  it("renders an output-error without crashing, and never opens the rail", () => {
+  it("renders an output-error without crashing, and never opens the rail", async () => {
     const onOpen = vi.fn();
-    render(
+    const { container } = render(
       <WidgetReceipt
         part={part({ state: "output-error", errorText: "upstream refused" })}
         onOpen={onOpen}
       />,
     );
 
-    expect(screen.getByText(/couldn.t build that widget/i)).toBeTruthy();
-    expect(screen.getByText(/upstream refused/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Open in panel" })).toBeNull();
+    expect(screen.getByText(/couldn.t build that widget/i)).toBeInTheDocument();
+    expect(screen.getByText(/upstream refused/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Open in panel" }),
+    ).not.toBeInTheDocument();
     expect(onOpen).not.toHaveBeenCalled();
+    await expectNoAxeViolations(container);
   });
 
-  it("renders an output-error that carries no input at all", () => {
+  it("renders an output-error that carries no input at all", async () => {
     // The hazard the ordering exists for: reading `part.input` first would
     // parse undefined against a schema on a part that legitimately has none.
-    expect(() =>
-      render(
-        <WidgetReceipt
-          part={part({
-            state: "output-error",
-            errorText: "boom",
-            input: undefined,
-          })}
-          onOpen={() => {}}
-        />,
-      ),
-    ).not.toThrow();
+    const { container } = render(
+      <WidgetReceipt
+        part={part({
+          state: "output-error",
+          errorText: "boom",
+          input: undefined,
+        })}
+        onOpen={() => {}}
+      />,
+    );
+    expect(screen.getByText(/couldn.t build that widget/i)).toBeInTheDocument();
+    expect(screen.getByText(/boom/)).toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 
-  it("renders an output-error with no errorText either", () => {
-    render(
+  it("renders an output-error with no errorText either", async () => {
+    const { container } = render(
       <WidgetReceipt
         part={part({
           state: "output-error",
@@ -78,91 +84,116 @@ describe("WidgetReceipt — terminal failure states", () => {
         onOpen={() => {}}
       />,
     );
-    expect(screen.getByText(/couldn.t build that widget/i)).toBeTruthy();
+    expect(screen.getByText(/couldn.t build that widget/i)).toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 
-  it("shows a placeholder while the arguments are still streaming", () => {
+  it("shows a placeholder while the arguments are still streaming", async () => {
     // `part.input` is partial JSON at this point and must not be parsed.
-    render(
+    const { container } = render(
       <WidgetReceipt
         part={part({ state: "input-streaming", input: { zon: "Asia/To" } })}
         onOpen={() => {}}
       />,
     );
-    expect(screen.getByText(/preparing a widget/i)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Open in panel" })).toBeNull();
+    expect(screen.getByText(/preparing a widget/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Open in panel" }),
+    ).not.toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 });
 
 describe("WidgetReceipt — unknown and malformed calls", () => {
-  it("renders an inert chip for a tool this build does not have", () => {
+  it("renders an inert chip for a tool this build does not have", async () => {
     const onOpen = vi.fn();
-    render(
+    const { container } = render(
       <WidgetReceipt
         part={part({ type: "tool-showSomethingElse", input: {} })}
         onOpen={onOpen}
       />,
     );
 
-    expect(screen.getByText(/doesn.t have/i)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Open in panel" })).toBeNull();
+    expect(screen.getByText(/doesn.t have/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Open in panel" }),
+    ).not.toBeInTheDocument();
     expect(onOpen).not.toHaveBeenCalled();
+    await expectNoAxeViolations(container);
   });
 
-  it("renders an inert chip when the arguments do not fit the schema", () => {
-    render(
+  it("renders an inert chip when the arguments do not fit the schema", async () => {
+    const { container } = render(
       <WidgetReceipt part={part({ input: { zone: 42 } })} onOpen={() => {}} />,
     );
-    expect(screen.getByText(/don.t fit/i)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Open in panel" })).toBeNull();
+    expect(screen.getByText(/don.t fit/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Open in panel" }),
+    ).not.toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 
-  it("survives a dynamic-tool part, which is how the SDK coerces an unknown terminal call", () => {
-    expect(() =>
-      render(
-        <WidgetReceipt
-          part={part({ type: "dynamic-tool", toolName: "whatever" })}
-          onOpen={() => {}}
-        />,
-      ),
-    ).not.toThrow();
+  it("survives a dynamic-tool part, which is how the SDK coerces an unknown terminal call", async () => {
+    const { container } = render(
+      <WidgetReceipt
+        part={part({ type: "dynamic-tool", toolName: "whatever" })}
+        onOpen={() => {}}
+      />,
+    );
+    // No chip to open: the reader is not offered a panel for a tool it cannot build.
+    expect(
+      screen.queryByRole("button", { name: "Open in panel" }),
+    ).not.toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 });
 
 describe("WidgetReceipt — a real call", () => {
-  it("names the widget and offers to open it", () => {
+  it("names the widget and offers to open it", async () => {
+    const user = userEvent.setup();
     const onOpen = vi.fn();
-    render(<WidgetReceipt part={part({})} onOpen={onOpen} />);
+    const { container } = render(
+      <WidgetReceipt part={part({})} onOpen={onOpen} />,
+    );
 
-    expect(screen.getByText("Zoned Earth")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Open in panel" }));
+    expect(screen.getByText("Zoned Earth")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open in panel" }));
     expect(onOpen).toHaveBeenCalledWith("call-1", "showGlobe", {
       zone: "Asia/Tokyo",
     });
+    await expectNoAxeViolations(container);
   });
 
-  it("links to the widget's own page, seeded, and never to /dox", () => {
-    render(<WidgetReceipt part={part({})} onOpen={() => {}} />);
+  it("links to the widget's own page, seeded, and never to /dox", async () => {
+    const { container } = render(
+      <WidgetReceipt part={part({})} onOpen={() => {}} />,
+    );
 
     const link = screen.getByRole("link", { name: /full page/i });
     const href = link.getAttribute("href") ?? "";
-    expect(href).toContain("/tools/zoned-earth/");
-    expect(href).not.toContain("/dox");
-    expect(href).toContain("w=globe");
+    expect(link).toHaveAttribute(
+      "href",
+      expect.stringContaining("/tools/zoned-earth/"),
+    );
+    expect(link).not.toHaveAttribute("href", expect.stringContaining("/dox"));
+    expect(link).toHaveAttribute("href", expect.stringContaining("w=globe"));
     expect(decodeURIComponent(href)).toContain("Asia/Tokyo");
+    await expectNoAxeViolations(container);
   });
 
-  it("still opens the rail for a shape-valid but nonsense zone", () => {
+  it("still opens the rail for a shape-valid but nonsense zone", async () => {
     // Semantics are the mount boundary's job, not the receipt's — the reader
     // gets an explanatory error state in the panel rather than a dead chip.
+    const user = userEvent.setup();
     const onOpen = vi.fn();
-    render(
+    const { container } = render(
       <WidgetReceipt
         part={part({ input: { zone: "Mars/Olympus_Mons" } })}
         onOpen={onOpen}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Open in panel" }));
+    await user.click(screen.getByRole("button", { name: "Open in panel" }));
     expect(onOpen).toHaveBeenCalled();
+    await expectNoAxeViolations(container);
   });
 });

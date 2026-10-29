@@ -1,0 +1,36 @@
+/* eraPin: a round marker for one era. The series colour is a ring and a fill, never text. */
+
+.root {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  border: 2px solid var(--gmt-border-strong);
+  border-radius: 50%;
+
+  &[data-chosen="true"] {
+    border-color: var(--gmt-series-1);
+    background: var(--gmt-series-1);
+  }
+
+  &[data-empty="true"] {
+    border-style: dashed;
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+
+    &[data-chosen="true"] {
+      background: Highlight;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+  }
+}

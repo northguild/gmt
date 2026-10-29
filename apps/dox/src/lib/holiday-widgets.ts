@@ -249,7 +249,7 @@ export const MARK_KINDS: readonly MarkKind[] = [
   "pick",
 ];
 
-const MARK_WORDS: Record<MarkKind, string> = {
+export const MARK_WORDS: Record<MarkKind, string> = {
   closed: "Closed",
   weekend: "Weekend",
   "moved-from": "Moved from (not closed)",
@@ -367,7 +367,7 @@ export function isMarked(mark: CellMark | undefined): boolean {
 // ---------------------------------------------------------------------------
 
 /** The sentence a marked date reads out: for the list a grid carries. */
-function markSentence(
+export function markSentence(
   date: string,
   mark: CellMark,
   isWeekend: boolean,
@@ -533,7 +533,7 @@ export function monthGridHtml(o: MonthGridOptions): string {
       : `${monthName(from)} to ${monthName(to)} ${o.year}`;
   const weekendWords = weekdayList(o.weekend);
   return (
-    `<div class="gmt-holiday-grid" data-year="${o.year}">` +
+    `<div class="gmt-holiday-grid" data-gate="grid" data-year="${o.year}">` +
     `<div class="gmt-holiday-months" role="img"` +
     ` aria-label="${escapeAttr(`Calendar, ${span}. Weekend: ${weekendWords}. The marked dates follow in the list.`)}">` +
     months.join("") +
@@ -543,7 +543,7 @@ export function monthGridHtml(o: MonthGridOptions): string {
   );
 }
 
-function weekdayList(weekend: readonly number[]): string {
+export function weekdayList(weekend: readonly number[]): string {
   const names = [...weekend]
     .sort((a, b) => a - b)
     .map((d) => WEEKDAY_LONG[d - 1])

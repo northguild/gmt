@@ -138,10 +138,10 @@ describe("renderZoneTooltip", () => {
   it("puts the time, the date and the offset on their own spans", () => {
     const html = renderZoneTooltip(reading(), TODAY);
     expect(html).toContain(
-      '<span class="gmt-globe-tooltip-time">12:04:25</span>',
+      '<span class="gmt-globe-tooltip-time" data-gate="live">12:04:25</span>',
     );
     expect(html).toContain(
-      '<span class="gmt-globe-tooltip-date">2026-09-30</span>',
+      '<span class="gmt-globe-tooltip-date" data-gate="live">2026-09-30</span>',
     );
     expect(html).toContain(
       '<span class="gmt-globe-tooltip-offset">UTC+01:00</span>',

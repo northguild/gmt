@@ -1,0 +1,53 @@
+/*
+ * Journey Split: what only this tool needs. The sections, preset, plates, fields, code frame and
+ * links are the kit's; the leg fieldsets, the ribbons and the hand-off table are the transport
+ * family's. This sheet lays out the form and the frame that holds the plates over the ribbons.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone, and an accent edge is never
+ * a single side.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+}
+
+/* The frame: the plates over the ribbons. It is the container the ribbons' layout reads. */
+.frame {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+  padding-block: var(--gmt-space-4);
+  padding-inline: calc(var(--gmt-space-3) + 4px);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: linear-gradient(
+    var(--gmt-glass-tint),
+    var(--gmt-glass-tint-subtle)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+@media (forced-colors: active) {
+  .frame {
+    border-color: CanvasText;
+    background-color: Canvas;
+    background-image: none;
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frame {
+    border-color: var(--gmt-ice);
+  }
+}

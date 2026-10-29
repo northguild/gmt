@@ -1,0 +1,106 @@
+/*
+ * The Cut-off Stack's two kinds of group: a bevelled box with its legend, the cut-off's own
+ * series colour at two corners as an L of two edges each (never a single-side stripe). The
+ * series is `data-series` (1 to 4) and is never the only mark: the number is in the legend.
+ */
+
+.group {
+  --group-color: var(--gmt-series-1);
+
+  position: relative;
+  container-type: inline-size;
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+
+  &[data-series="2"] {
+    --group-color: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --group-color: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --group-color: var(--gmt-series-4);
+  }
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inline-size: 12px;
+    block-size: 12px;
+    border: 0 solid var(--group-color);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  &::before {
+    inset-block-start: 3px;
+    inset-inline-start: 3px;
+    border-block-start-width: 2px;
+    border-inline-start-width: 2px;
+  }
+
+  &::after {
+    inset-block-end: 3px;
+    inset-inline-end: 3px;
+    border-block-end-width: 2px;
+    border-inline-end-width: 2px;
+  }
+
+  legend {
+    padding-inline: var(--gmt-space-1);
+    color: var(--gmt-ice-dim);
+    font-family: var(--gmt-font-mono);
+    font-size: var(--gmt-text-xs);
+    letter-spacing: var(--gmt-tracking-wide);
+    text-transform: uppercase;
+  }
+
+  select {
+    text-overflow: ellipsis;
+  }
+
+  @container (inline-size < 24rem) {
+    padding-inline: var(--gmt-space-2);
+  }
+}
+
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+@media (forced-colors: active) {
+  .group {
+    border-color: CanvasText;
+    background: Canvas;
+
+    &::before,
+    &::after {
+      border-color: CanvasText;
+    }
+
+    legend {
+      color: CanvasText;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .group {
+    border-color: var(--gmt-ice);
+
+    legend {
+      color: var(--gmt-ice);
+    }
+  }
+}

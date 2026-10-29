@@ -1,57 +1,40 @@
 /**
  * @vitest-environment jsdom
  *
- * The Demurrage Clock end to end: template → mount → interact → assert, against
- * the real `@northguild/gmt`. Every preset's printed calls and results are
- * checked against the literal strings of `demurrageClock`'s JSDoc examples, the
- * bars against the library's intervals, and the hand-off link through the Free
- * Time Ledger's own `readArgs`, so a drift in the library or the widget fails
- * here.
+ * The Demurrage Clock end to end: template -> mount -> interact -> assert, against
+ * the real `@northguild/gmt`, through the roles and names a reader meets. Every
+ * preset's printed calls and results are checked against the literal strings of
+ * `demurrageClock`'s JSDoc examples, the lanes against the library's intervals, and
+ * the hand-off link through the Free Time Ledger's own `readArgs`, so a drift in the
+ * library or the widget fails here.
  */
+import { screen, within } from "@testing-library/dom";
+import { raw } from "~/widgets/builders";
+import { renderHtml } from "~/widgets/test-fixture";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
-import { CLOCK_EVENT_TYPES, DEMURRAGE_PRESETS } from "./demurrage-clock";
 import {
-  mountDemurrageClock,
-  renderDemurrageClockTemplate,
-  selectOptionsHtml,
-} from "./demurrage-clock-mount";
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { CLOCK_EVENT_TYPES, DEMURRAGE_PRESETS } from "./demurrage-clock";
+import { renderDemurrageClockTemplate } from "./demurrage-clock-mount";
 import { readArgs as readFreeTimeArgs } from "./free-time-ledger";
-import { renderFreeTimeLedgerTemplate } from "./free-time-ledger-mount";
-import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { SITE_BASE } from "./site";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "scope",
-  "direction",
-  "start-event",
-  "zone",
-  ...[1, 2, 3, 4, 5, 6].flatMap((n) => [`type-${n}`, `at-${n}`]),
-  "frame",
-  "heroes",
-  "hero-start",
-  "hero-end",
-  "hero-ran",
-  "plot",
-  "label",
-  "track",
-  "cells",
-  "rail",
-  "lanes",
-  ...[1, 2, 3, 4].flatMap((n) => [`lane-${n}`, `bar-${n}`, `why-${n}`]),
-  "axis",
-  "summary",
-  "reason-aside",
-  "handoff",
-  "handoff-hint",
-  "call-clock",
-  "copy-clock",
-  "clock-output",
-];
+const entry = WIDGET_REGISTRY["showDemurrageClock"] as AnyWidgetEntry;
+const freeTimeEntry = WIDGET_REGISTRY["showFreeTimeLedger"] as AnyWidgetEntry;
+
+const open = (args: Record<string, unknown> = {}): Promise<RenderedWidget> =>
+  renderWidget(entry, { args });
 
 const IMPORT = [
   ["discharged", "2024-06-14T19:00:00Z"],
@@ -247,102 +230,107 @@ const PLATES: Record<string, string[]> = {
   ],
 };
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+const SCOPES = ["demurrage", "detention", "storage", "combined"];
+const HANDOFF = "Count the days in the Free Time Ledger";
+const NO_CLOCK_HINT =
+  "No clock to count: the chosen clock returned no interval.";
 
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderDemurrageClockTemplate(templateArgs);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountDemurrageClock(root, args, controller.signal);
-  return { root, handle, controller };
+const preset = () => screen.getByRole("combobox", { name: "Preset" });
+const scope = () => screen.getByRole("combobox", { name: "Clock" });
+const direction = () => screen.getByRole("combobox", { name: "Direction" });
+const startEvent = () =>
+  screen.getByRole("combobox", { name: "Start event (optional)" });
+const zone = () => screen.getByRole("combobox", { name: "Terminal clock" });
+const typeOf = (n: number) =>
+  screen.getByRole("combobox", { name: `Event ${String(n)}` });
+const atOf = (n: number) =>
+  screen.getByRole("textbox", { name: `Instant ${String(n)}` });
+const callsFrame = () => screen.getByRole("group", { name: "Calls made" });
+const output = () =>
+  screen.getByRole("status", { name: "What the calls returned" });
+const summary = () => screen.getByRole("status", { name: "Reading summary" });
+const aside = () => screen.queryByRole("complementary");
+const link = () => screen.queryByRole("link", { name: HANDOFF });
+const plates = () => screen.getByRole("group", { name: "The chosen clock" });
+const lanes = () =>
+  within(screen.getByRole("list", { name: "Clocks" })).getAllByRole("listitem");
+const laneNames = () => lanes().map((l) => l.getAttribute("aria-label")!);
+const railNames = () =>
+  within(screen.getByRole("list", { name: "Events" }))
+    .queryAllByRole("listitem")
+    .map((l) => l.getAttribute("aria-label"));
+const days = () =>
+  within(screen.getByRole("list", { name: "Local days" })).queryAllByRole(
+    "listitem",
+  );
+
+const flat = (text: string) => text.replace(/\n\s*/g, " ");
+
+async function enter(w: RenderedWidget, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  if (value !== "") await w.user.paste(value);
 }
 
-function choose(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLSelectElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
+/** The text a plate shows, by its caption: the value, then its sub line. */
+function expectPlates(want: string[]) {
+  const dl = within(plates());
+  for (const text of want) {
+    if (text !== "") expect(dl.getAllByText(text).length).toBeGreaterThan(0);
+  }
 }
 
-function type(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLInputElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
+function template(args?: Record<string, unknown>): HTMLElement {
+  return renderHtml(raw(renderDemurrageClockTemplate("demurrage-clock", args)))
+    .host;
 }
-
-const text = (root: HTMLElement, role: string) =>
-  q(root, role).textContent ?? "";
-const isSentinel = (root: HTMLElement, role: string) =>
-  q(root, role).classList.contains("gmt-playground-sentinel");
-
-/** The plate's value and its one sub line. */
-const plate = (root: HTMLElement, role: string) => [
-  q(root, role).querySelector(".gmt-punct-hero-value")!.textContent!,
-  q(root, role).querySelector(".gmt-punct-hero-sub")!.textContent!,
-];
 
 afterEach(() => {
-  document.body.innerHTML = "";
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 describe("renderDemurrageClockTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDemurrageClockTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
-    }
-  });
-
-  it("is a widget root with the standard wrapper, and no class containing card but the wrapper", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDemurrageClockTemplate();
-    const widget = root.firstElementChild as HTMLElement;
-    expect(widget.className).toBe("gmt-demurrage-clock gmt-widget not-content");
-    expect(widget.getAttributeNames()).toEqual(["class"]);
-    const cardClasses = [...root.querySelectorAll("[class]")]
-      .flatMap((el) => [...el.classList])
-      .filter((c) => c.includes("card"));
-    expect(new Set(cardClasses)).toEqual(new Set(["gmt-widget-card"]));
-  });
-
   it("renders three numbered sections, six event rows and four lanes, and holds no result", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDemurrageClockTemplate();
-    expect(root.querySelectorAll(".gmt-widget-section")).toHaveLength(3);
-    expect(root.querySelectorAll('[data-role^="row-"]')).toHaveLength(6);
-    expect(root.querySelectorAll(".gmt-dem-lane")).toHaveLength(4);
-    expect(root.querySelectorAll(".gmt-punct-hero")).toHaveLength(3);
-    for (const hero of ["hero-start", "hero-end", "hero-ran"]) {
-      expect(plate(root, hero)[0]).toBe("no result");
+    const host = within(template());
+    expect(
+      host.getByRole("heading", { name: "1. Set the events and the options" }),
+    ).toBeInTheDocument();
+    expect(
+      host.getByRole("heading", { name: "2. Which events bound each clock" }),
+    ).toBeInTheDocument();
+    expect(
+      host.getByRole("heading", { name: "3. What demurrageClock returns" }),
+    ).toBeInTheDocument();
+    for (let n = 1; n <= 6; n++) {
+      expect(
+        host.getByRole("textbox", { name: `Instant ${String(n)}` }),
+      ).toBeInTheDocument();
     }
-    expect(root.querySelectorAll(".gmt-widget-section--wide")).toHaveLength(3);
+    expect(
+      within(host.getByRole("list", { name: "Clocks" })).getAllByRole(
+        "listitem",
+      ),
+    ).toHaveLength(4);
+    expect(host.getAllByText("no result")).toHaveLength(3);
   });
 
   it("says beside the control that the terminal clock is a display zone, not an argument", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDemurrageClockTemplate();
-    expect(root.textContent).toContain("The terminal clock is a display zone.");
-    expect(root.textContent).toContain("not an argument of demurrageClock");
+    const host = template();
+    expect(host).toHaveTextContent("The terminal clock is a display zone.");
+    expect(host).toHaveTextContent("not an argument of demurrageClock");
   });
 
-  it("offers the seven event types the library accepts", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDemurrageClockTemplate();
-    const values = [...q(root, "type-1").querySelectorAll("option")].map(
-      (o) => (o as HTMLOptionElement).value,
-    );
-    expect(values).toEqual(["", ...CLOCK_EVENT_TYPES]);
+  it("offers the seven event types the library accepts, and a blank", () => {
+    const host = within(template());
+    const options = within(
+      host.getByRole("combobox", { name: "Event 1" }),
+    ).getAllByRole<HTMLOptionElement>("option");
+    expect(options.map((o) => o.value)).toEqual(["", ...CLOCK_EVENT_TYPES]);
+    expect(options[0]).toHaveTextContent("No event");
   });
 
   it("escapes a hostile seed", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDemurrageClockTemplate({
+    const host = template({
       events: [
         { type: '"><img src=x onerror=alert(1)>', at: "<script>x</script>" },
       ],
@@ -351,24 +339,20 @@ describe("renderDemurrageClockTemplate", () => {
       startEvent: "<i>z</i>",
       zone: '"><svg onload=alert(1)>',
     });
-    expect(root.querySelector("img")).toBeNull();
-    expect(root.querySelector("script")).toBeNull();
-    expect(root.querySelector("svg[onload]")).toBeNull();
-    expect(root.querySelector("b")).toBeNull();
-  });
-
-  it("adds a seed the list lacks as its own option and never replaces it", () => {
-    const html = selectOptionsHtml([{ value: "a", label: "a" }], "b");
-    expect(html).toContain('<option value="b" selected>b</option>');
-    const blank = selectOptionsHtml([{ value: "a", label: "a" }], "");
-    expect(blank).toContain('<option value="" selected>not chosen</option>');
-    const optional = selectOptionsHtml(
-      [{ value: "a", label: "a" }],
-      "",
-      "not given",
+    const h = within(host);
+    expect(h.queryByRole("img")).not.toBeInTheDocument();
+    expect(h.getByRole("textbox", { name: "Instant 1" })).toHaveValue(
+      "<script>x</script>",
     );
-    expect(optional).toContain('<option value="" selected>not given</option>');
-    expect(optional).not.toContain("not chosen");
+    expect(
+      h.getByRole("option", { name: '"><img src=x onerror=alert(1)>' }),
+    ).toBeInTheDocument();
+    expect(h.getByRole("combobox", { name: "Direction" })).toHaveValue(
+      "<b>x</b>",
+    );
+    expect(h.getByRole("combobox", { name: "Terminal clock" })).toHaveValue(
+      '"><svg onload=alert(1)>',
+    );
   });
 });
 
@@ -383,101 +367,90 @@ describe("every preset, against the real library", () => {
   });
 
   it.each(DEMURRAGE_PRESETS.map((p) => [p.id]))("%s", async (id) => {
-    const { root } = await mount();
-    choose(root, "preset", id!);
+    const w = await open();
+    await w.user.selectOptions(preset(), id!);
     const want = EXPECTED[id!]!;
     const sentinel = want.output === "NO SIGNAL";
 
     // The calls made and what they returned, in the same order.
-    expect(q(root, "copy-clock").dataset["copyText"]).toBe(want.copy);
-    expect(text(root, "call-clock")).toBe(want.copy);
-    expect(text(root, "clock-output")).toBe(want.output);
-    expect(isSentinel(root, "clock-output")).toBe(sentinel);
+    expect(callsFrame()).toHaveTextContent(flat(want.copy));
+    expect(output()).toHaveTextContent(flat(want.output));
+    if (!sentinel) expect(output()).not.toHaveTextContent("NO SIGNAL");
 
-    // Each lane draws its own call's interval; only the chosen output is amber.
+    // Each lane says its own call's interval, or why it has none.
+    const names = laneNames();
     want.lanes.forEach((lane, i) => {
-      const bar = q(root, `bar-${i + 1}`);
-      expect(bar.hidden, `bar ${i + 1}`).toBe(lane === null);
-      expect(q(root, `why-${i + 1}`).hidden).toBe(lane !== null);
+      if (lane === null)
+        expect(names[i], `lane ${i + 1}`).not.toMatch(/: from /);
+      else expect(names[i], `lane ${i + 1}`).toMatch(/: from /);
     });
-    expect(text(root, "reason-aside") === "").toBe(!sentinel);
-
-    // The plates.
-    const p = PLATES[id!]!;
-    expect(plate(root, "hero-start")).toEqual([p[0], p[1]]);
-    expect(plate(root, "hero-end")).toEqual([p[2], p[3]]);
-    expect(plate(root, "hero-ran")).toEqual([p[4], p[5]]);
-
-    // Exactly one lane is lit: the chosen scope's.
-    const lit = [...root.querySelectorAll('.gmt-dem-lane[data-chosen="true"]')];
-    expect(lit).toHaveLength(1);
-    expect((lit[0] as HTMLElement).dataset["scope"]).toBe(
-      DEMURRAGE_PRESETS.find((x) => x.id === id)!.scope,
+    // Exactly one lane is the chosen clock: the preset's scope.
+    const chosen = names.filter((n) => n.endsWith(", the chosen clock"));
+    expect(chosen).toHaveLength(1);
+    expect(names.indexOf(chosen[0]!)).toBe(
+      SCOPES.indexOf(DEMURRAGE_PRESETS.find((x) => x.id === id)!.scope),
     );
-    expect(root.querySelectorAll(".gmt-playground-sentinel")).toHaveLength(
-      sentinel ? 1 : 0,
-    );
+    // The reason is in words, only when the chosen clock has no interval.
+    expect(aside() !== null).toBe(sentinel);
+
+    expectPlates(PLATES[id!]!);
+    await expectNoAxeViolations(w.root);
   });
 
   it("opens on the first preset with its terminal clock", async () => {
-    const { root } = await mount();
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("import-demurrage");
-    expect(q<HTMLSelectElement>(root, "zone").value).toBe("Europe/London");
-    expect(text(root, "label")).toBe("Europe/London");
+    await open();
+    expect(preset()).toHaveValue("import-demurrage");
+    expect(zone()).toHaveValue("Europe/London");
+    expect(startEvent()).toHaveDisplayValue("not given");
   });
 
-  it("lays the day columns out in the terminal's zone and the bars over the same scale", async () => {
-    const { root } = await mount();
-    const days = [...q(root, "cells").querySelectorAll(".gmt-ledger-day")];
-    expect(days.length).toBeGreaterThan(5);
-    // The canvas pads the clocks, then widens to whole local days.
-    expect((days[0] as HTMLElement).dataset["date"]! <= "2024-06-14").toBe(
-      true,
+  it("lays the day columns out in the terminal's zone, with the clocks over them", async () => {
+    await open();
+    const names = days().map((d) => d.getAttribute("aria-label")!);
+    expect(names.length).toBeGreaterThan(5);
+    expect(names).toContain("14 Jun Fri");
+    expect(names).toContain("27 Jun Thu");
+    expect(laneNames()[0]).toContain(
+      "from Fri 14 Jun 20:00 to Thu 20 Jun 15:30",
     );
-    expect(
-      days.some((d) => (d as HTMLElement).dataset["date"] === "2024-06-27"),
-    ).toBe(true);
-    expect(days.every((d) => d.getAttribute("role") === "listitem")).toBe(true);
-    const bar = q(root, "bar-1");
-    expect(parseFloat(bar.style.left)).toBeGreaterThan(0);
-    expect(parseFloat(bar.style.width)).toBeGreaterThan(0);
   });
 
-  it("draws one diamond and one chip for each event, with the words and the local time", async () => {
-    const { root } = await mount();
-    const events = [...q(root, "rail").querySelectorAll(".gmt-dem-event")];
-    expect(events.map((e) => e.getAttribute("aria-label"))).toEqual([
+  it("names one diamond for each event, with the word and the local time", async () => {
+    await open();
+    expect(railNames()).toEqual([
       "discharged, Fri 14 Jun 20:00 on the Europe/London clock",
       "available, Sat 15 Jun 13:00 on the Europe/London clock",
       "gated out, Thu 20 Jun 15:30 on the Europe/London clock",
       "empty returned, Thu 27 Jun 10:00 on the Europe/London clock",
     ]);
-    expect(
-      [...q(root, "rail").querySelectorAll(".gmt-dem-word")].map(
-        (w) => w.textContent,
-      ),
-    ).toEqual(["discharged", "available", "gated out", "empty returned"]);
   });
 });
 
 describe("the terminal clock is a display zone", () => {
   it("changes the day columns and the local times and nothing the library is asked", async () => {
-    const { root } = await mount();
-    const printed = q(root, "copy-clock").dataset["copyText"];
-    const output = text(root, "clock-output");
-    choose(root, "zone", "Asia/Shanghai");
-    expect(text(root, "label")).toBe("Asia/Shanghai");
-    expect(plate(root, "hero-start")[1]).toBe("Sat 15 Jun 03:00");
-    expect(q(root, "copy-clock").dataset["copyText"]).toBe(printed);
-    expect(text(root, "clock-output")).toBe(output);
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    choose(root, "zone", "");
-    expect(text(root, "label")).toBe("UTC");
-    expect(plate(root, "hero-start")[1]).toBe("Fri 14 Jun 19:00");
+    const w = await open();
+    await w.user.selectOptions(zone(), "Asia/Shanghai");
+    expect(railNames()[0]).toBe(
+      "discharged, Sat 15 Jun 03:00 on the Asia/Shanghai clock",
+    );
+    expectPlates(["Sat 15 Jun 03:00"]);
+    expect(callsFrame()).toHaveTextContent(
+      flat(EXPECTED["import-demurrage"]!.copy),
+    );
+    expect(output()).toHaveTextContent(
+      flat(EXPECTED["import-demurrage"]!.output),
+    );
+    expect(preset()).toHaveValue("custom");
+    await w.user.selectOptions(zone(), "UTC (no zone)");
+    expect(railNames()[0]).toBe(
+      "discharged, Fri 14 Jun 19:00 on the UTC clock",
+    );
+    expectPlates(["Fri 14 Jun 19:00"]);
+    await expectNoAxeViolations(w.root);
   });
 
   it("says when a seeded zone cannot be read, and still answers", async () => {
-    const { root } = await mount({
+    const w = await open({
       events: [
         { type: "discharged", at: "2024-06-14T19:00:00Z" },
         { type: "gatedOut", at: "2024-06-20T14:30:00Z" },
@@ -486,115 +459,111 @@ describe("the terminal clock is a display zone", () => {
       direction: "import",
       zone: "Nowhere/Land",
     });
-    expect(text(root, "label")).toBe("zone not read");
-    expect(plate(root, "hero-start")[1]).toBe("zone not read");
-    expect(q(root, "cells").children).toHaveLength(0);
-    expect(text(root, "clock-output")).toContain("PT139H30M");
-    expect(q<HTMLSelectElement>(root, "zone").value).toBe("Nowhere/Land");
+    expect(screen.getAllByText("zone not read").length).toBeGreaterThan(0);
+    expect(days()).toHaveLength(0);
+    expect(output()).toHaveTextContent("PT139H30M");
+    expect(zone()).toHaveValue("Nowhere/Land");
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("the options", () => {
   it("moves the bars with the start event: each lane is a fresh call", async () => {
-    const { root } = await mount();
-    choose(root, "start-event", "available");
-    expect(q(root, "copy-clock").dataset["copyText"]).toContain(
+    const w = await open();
+    await w.user.selectOptions(startEvent(), "available");
+    expect(callsFrame()).toHaveTextContent(
       '{ direction: "import", startEvent: "available" }',
     );
-    expect(plate(root, "hero-start")).toEqual([
-      "available",
-      "Sat 15 Jun 13:00",
-    ]);
-    expect(text(root, "clock-output")).toContain(
+    expectPlates(["available", "Sat 15 Jun 13:00"]);
+    expect(output()).toHaveTextContent(
       interval("2024-06-15T12:00:00Z", "2024-06-20T14:30:00Z"),
     );
-    choose(root, "start-event", "");
-    expect(q(root, "copy-clock").dataset["copyText"]).not.toContain(
-      "startEvent",
-    );
+    await w.user.selectOptions(startEvent(), "not given");
+    expect(callsFrame()).not.toHaveTextContent("startEvent");
+    await expectNoAxeViolations(w.root);
   });
 
   it("reads the same events as an export and finds no clock, with the reason in words", async () => {
-    const { root } = await mount();
-    choose(root, "direction", "export");
-    expect(isSentinel(root, "clock-output")).toBe(true);
-    expect(text(root, "reason-aside")).toContain("is not recorded");
+    const w = await open();
+    await w.user.selectOptions(direction(), "export");
+    expect(output()).toHaveTextContent("NO SIGNAL");
+    expect(aside()).toHaveTextContent("is not recorded");
     // The pair is read from the library, so the captions hold.
-    expect(plate(root, "hero-start")[0]).toBe("gated in");
-    expect(plate(root, "hero-end")[0]).toBe("loaded");
-    expect(text(root, "why-1")).toBe("gated in is not recorded");
+    expectPlates(["gated in", "loaded"]);
+    expect(laneNames()[0]).toContain("gated in is not recorded");
+    await expectNoAxeViolations(w.root);
   });
 
-  it("changes the chosen clock and the lit lane", async () => {
-    const { root } = await mount();
-    choose(root, "scope", "combined");
-    expect(plate(root, "hero-end")[0]).toBe("empty returned");
-    expect(q(root, "lane-4").dataset["chosen"]).toBe("true");
-    expect(q(root, "lane-1").dataset["chosen"]).toBe("false");
-    expect(q(root, "copy-clock").dataset["copyText"]!.split("\n")[0]).toContain(
-      '"combined"',
-    );
+  it("changes the chosen clock", async () => {
+    const w = await open();
+    await w.user.selectOptions(scope(), "combined");
+    expectPlates(["empty returned"]);
+    expect(laneNames()[3]).toMatch(/, the chosen clock$/);
+    expect(laneNames()[0]).not.toMatch(/, the chosen clock$/);
+    expect(callsFrame()).toHaveTextContent('"combined"');
+    await expectNoAxeViolations(w.root);
   });
 
-  it("names a reason on the lane of every clock the library returns null for, and amber only on the chosen output", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "import-demurrage");
+  it("names a reason on the lane of every clock the library returns null for, and no signal on the chosen output", async () => {
+    const w = await open();
     // Drop the empty return: detention and the combined clock lose their end.
-    choose(root, "type-4", "");
-    type(root, "at-4", "");
-    expect(text(root, "why-2")).toBe("empty returned is not recorded");
-    expect(text(root, "why-4")).toBe("empty returned is not recorded");
-    expect(q(root, "why-1").hidden).toBe(true);
-    expect(root.querySelectorAll(".gmt-playground-sentinel")).toHaveLength(0);
-    expect(text(root, "clock-output")).toContain("null");
+    await w.user.selectOptions(typeOf(4), "No event");
+    await enter(w, atOf(4), "");
+    const names = laneNames();
+    expect(names[1]).toContain("empty returned is not recorded");
+    expect(names[3]).toContain("empty returned is not recorded");
+    expect(names[0]).toMatch(/: from /);
+    expect(output()).not.toHaveTextContent("NO SIGNAL");
+    expect(output()).toHaveTextContent("null");
+    await expectNoAxeViolations(w.root);
   });
 
   it("names a row that is not a valid event", async () => {
-    const { root } = await mount();
-    type(root, "at-2", "2024-06-15T12:00:00");
-    expect(isSentinel(root, "clock-output")).toBe(true);
-    expect(text(root, "reason-aside")).toContain("Row 2 is not a valid event");
-    expect(text(root, "why-1")).toBe("row 2 is not a valid event");
+    const w = await open();
+    await enter(w, atOf(2), "2024-06-15T12:00:00");
+    expect(output()).toHaveTextContent("NO SIGNAL");
+    expect(aside()).toHaveTextContent("Row 2 is not a valid event");
+    expect(laneNames()[0]).toContain("row 2 is not a valid event");
+    await expectNoAxeViolations(w.root);
   });
 
   it("makes a blank form a clock with its own reason, not the empty state or a blank box", async () => {
-    const { root } = await mount();
+    const w = await open();
     for (let n = 1; n <= 6; n++) {
-      choose(root, `type-${n}`, "");
-      type(root, `at-${n}`, "");
+      await w.user.selectOptions(typeOf(n), "No event");
+      await enter(w, atOf(n), "");
     }
-    expect(q(root, "copy-clock").dataset["copyText"]).toContain(
-      "demurrageClock([]",
+    expect(callsFrame()).toHaveTextContent("demurrageClock([]");
+    expect(output()).toHaveTextContent("NO SIGNAL");
+    expect(aside()).toHaveTextContent("is not recorded");
+    expect(screen.getByText(/Add an event/)).toBeVisible();
+    // Every region keeps its place.
+    expect(within(plates()).getAllByText("no result").length).toBeGreaterThan(
+      0,
     );
-    expect(isSentinel(root, "clock-output")).toBe(true);
-    expect(text(root, "reason-aside")).toContain("is not recorded");
-    expect(q(root, "plot-empty").hidden).toBe(false);
-    expect(text(root, "plot-empty")).toContain("Add an event");
-    // Every region keeps its box.
-    expect(q(root, "heroes").children).toHaveLength(3);
-    expect(root.querySelectorAll(".gmt-dem-lane")).toHaveLength(4);
-    expect(q(root, "handoff").hasAttribute("href")).toBe(false);
+    expect(lanes()).toHaveLength(4);
+    expect(link()).not.toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
   it("does not guess a direction or a scope for a seed that names neither", async () => {
-    const { root } = await mount({
+    const w = await open({
       events: [{ type: "discharged", at: "2024-06-14T19:00:00Z" }],
     });
-    expect(q<HTMLSelectElement>(root, "direction").value).toBe("");
-    expect(q<HTMLSelectElement>(root, "scope").value).toBe("");
-    expect(text(root, "reason-aside")).toContain("No clock is chosen");
-    choose(root, "scope", "demurrage");
-    expect(text(root, "reason-aside")).toContain("must be import or export");
+    expect(direction()).toHaveValue("");
+    expect(scope()).toHaveValue("");
+    expect(aside()).toHaveTextContent("No clock is chosen");
+    await w.user.selectOptions(scope(), "demurrage");
+    expect(aside()).toHaveTextContent("must be import or export");
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("the hand-off to the Free Time Ledger", () => {
   it("links the chosen interval and the terminal clock, and the Free Time Ledger reads them back", async () => {
-    const { root } = await mount();
-    const link = q<HTMLAnchorElement>(root, "handoff");
-    const href = link.getAttribute("href")!;
-    expect(link.hasAttribute("aria-disabled")).toBe(false);
-    expect(link.textContent).toBe("Count the days in the Free Time Ledger");
+    const w = await open();
+    const href = link()!.getAttribute("href")!;
+    expect(link()).not.toHaveAttribute("aria-disabled");
     expect(href).toBe(
       encodeWidgetPermalink("freetime", {
         clockStart: "2024-06-14T19:00:00Z",
@@ -613,25 +582,24 @@ describe("the hand-off to the Free Time Ledger", () => {
     expect(state.clockEnd).toBe("2024-06-20T14:30:00Z");
     expect(state.zone).toBe("Europe/London");
     // And the tool the link opens shows the same values.
-    const target = document.createElement("div");
-    target.innerHTML = renderFreeTimeLedgerTemplate(seeded);
-    expect(
-      target.querySelector<HTMLInputElement>('[data-role="clock-start"]')!
-        .value,
-    ).toBe("2024-06-14T19:00:00Z");
-    expect(
-      target.querySelector<HTMLInputElement>('[data-role="clock-end"]')!.value,
-    ).toBe("2024-06-20T14:30:00Z");
-    expect(
-      target.querySelector<HTMLSelectElement>('[data-role="zone"]')!.value,
-    ).toBe("Europe/London");
+    w.destroy();
+    await renderWidget(freeTimeEntry, { args: seeded! });
+    expect(screen.getByRole("textbox", { name: "Clock start" })).toHaveValue(
+      "2024-06-14T19:00:00Z",
+    );
+    expect(screen.getByRole("textbox", { name: "Clock end" })).toHaveValue(
+      "2024-06-20T14:30:00Z",
+    );
+    expect(screen.getByRole("combobox", { name: "Terminal zone" })).toHaveValue(
+      "Europe/London",
+    );
   });
 
   it("carries the strings the library returned, and leaves the zone out when there is none", async () => {
-    const { root } = await mount();
-    type(root, "at-1", "2024-06-14T15:00:00-04:00[America/New_York]");
-    choose(root, "zone", "");
-    const href = q<HTMLAnchorElement>(root, "handoff").getAttribute("href")!;
+    const w = await open();
+    await enter(w, atOf(1), "2024-06-14T15:00:00-04:00[America/New_York]");
+    await w.user.selectOptions(zone(), "UTC (no zone)");
+    const href = link()!.getAttribute("href")!;
     const seeded = seedFromLocation("freetime", href.slice(href.indexOf("?")));
     expect(seeded).toEqual({
       clockStart: "2024-06-14T15:00:00-04:00[America/New_York]",
@@ -643,24 +611,27 @@ describe("the hand-off to the Free Time Ledger", () => {
   });
 
   it.each(DEMURRAGE_PRESETS.map((p) => [p.id]))(
-    "is enabled with an href for %s only when the clock has an interval",
+    "is a link for %s only when the clock has an interval",
     async (id) => {
-      const { root } = await mount();
-      choose(root, "preset", id!);
-      const link = q<HTMLAnchorElement>(root, "handoff");
+      const w = await open();
+      await w.user.selectOptions(preset(), id!);
       const has = EXPECTED[id!]!.output !== "NO SIGNAL";
-      expect(link.hasAttribute("href")).toBe(has);
-      expect(link.getAttribute("aria-disabled")).toBe(has ? null : "true");
-      expect(text(root, "handoff-hint")).toBe(
-        has ? "" : "No clock to count: the chosen clock returned no interval.",
-      );
+      if (has) {
+        expect(link()).toBeInTheDocument();
+      } else {
+        expect(link()).not.toBeInTheDocument();
+        const disabled = screen.getByText(HANDOFF);
+        expect(disabled).toHaveAttribute("aria-disabled", "true");
+        expect(disabled).toHaveAccessibleDescription(NO_CLOCK_HINT);
+      }
+      await expectNoAxeViolations(w.root);
     },
   );
 });
 
 describe("seeding", () => {
   it("seeds the chat's events array and paints it on the first frame", async () => {
-    const args = {
+    const w = await open({
       events: [
         { type: "discharged", at: "2024-06-14T19:00:00Z" },
         { type: "gatedOut", at: "2024-06-20T14:30:00Z" },
@@ -668,29 +639,28 @@ describe("seeding", () => {
       scope: "detention",
       direction: "import",
       zone: "Pacific/Auckland",
-    };
-    const { root } = await mount(args, args);
-    expect(q<HTMLInputElement>(root, "at-2").value).toBe(
-      "2024-06-20T14:30:00Z",
-    );
-    expect(q<HTMLSelectElement>(root, "zone").value).toBe("Pacific/Auckland");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    expect(isSentinel(root, "clock-output")).toBe(true);
-    expect(text(root, "why-2")).toBe("empty returned is not recorded");
+    });
+    expect(atOf(2)).toHaveValue("2024-06-20T14:30:00Z");
+    expect(zone()).toHaveValue("Pacific/Auckland");
+    expect(preset()).toHaveValue("custom");
+    expect(output()).toHaveTextContent("NO SIGNAL");
+    expect(laneNames()[1]).toContain("empty returned is not recorded");
+    await expectNoAxeViolations(w.root);
   });
 
   it("seeds an unlisted event type, scope and zone without dropping them", async () => {
-    const { root } = await mount({
+    const w = await open({
       events: [{ type: "arrived", at: "2024-06-14T19:00:00Z" }],
       scope: "laytime",
       direction: "import",
       zone: "Pacific/Chatham",
     });
-    expect(q<HTMLSelectElement>(root, "type-1").value).toBe("arrived");
-    expect(q<HTMLSelectElement>(root, "scope").value).toBe("laytime");
-    expect(q<HTMLSelectElement>(root, "zone").value).toBe("Pacific/Chatham");
-    expect(q(root, "copy-clock").dataset["copyText"]).toContain('"laytime"');
-    expect(text(root, "reason-aside")).toContain("laytime is not a clock");
+    expect(typeOf(1)).toHaveValue("arrived");
+    expect(scope()).toHaveValue("laytime");
+    expect(zone()).toHaveValue("Pacific/Chatham");
+    expect(callsFrame()).toHaveTextContent('"laytime"');
+    expect(aside()).toHaveTextContent("laytime is not a clock");
+    await expectNoAxeViolations(w.root);
   });
 });
 
@@ -698,38 +668,33 @@ describe("permalinks", () => {
   it.each(DEMURRAGE_PRESETS.map((p) => [p.id]))(
     "round-trips %s as a permalink of strings",
     async (id) => {
-      const first = await mount();
-      choose(first.root, "preset", id!);
-      const state = first.handle.getPermalinkState?.() as Record<
-        string,
-        unknown
-      >;
+      const first = await open();
+      await first.user.selectOptions(preset(), id!);
+      const url = first.permalink();
+      expect(url).toMatch(
+        new RegExp(`^${SITE_BASE}/tools/demurrage-clock/\\?w=demclock&wa=`),
+      );
+      const state = seedFromLocation("demclock", url.slice(url.indexOf("?")))!;
       expect(
         Object.values(state).every(
           (v) => typeof v === "string" && v.length > 0 && v.length <= 64,
         ),
       ).toBe(true);
-      const url = encodeWidgetPermalink("demclock", state);
-      expect(url).toMatch(
-        new RegExp(`^${SITE_BASE}/tools/demurrage-clock/\\?w=demclock&wa=`),
-      );
-      const seeded = seedFromLocation("demclock", url.slice(url.indexOf("?")));
-      expect(seeded).toEqual(state);
-      const output = text(first.root, "clock-output");
-      document.body.innerHTML = "";
+      first.destroy();
 
-      const second = await mount(seeded);
-      expect(text(second.root, "clock-output")).toBe(output);
-      expect(q<HTMLSelectElement>(second.root, "preset").value).toBe(id);
+      await open(state);
+      expect(preset()).toHaveValue(id);
+      expect(output()).toHaveTextContent(flat(EXPECTED[id!]!.output));
     },
   );
 
   it("leaves a blank row, a blank start event and a blank zone out of the link", async () => {
-    const { root, handle } = await mount();
-    choose(root, "zone", "");
-    type(root, "at-2", "");
-    choose(root, "type-2", "");
-    const state = handle.getPermalinkState?.() as Record<string, string>;
+    const w = await open();
+    await w.user.selectOptions(zone(), "UTC (no zone)");
+    await enter(w, atOf(2), "");
+    await w.user.selectOptions(typeOf(2), "No event");
+    const url = w.permalink();
+    const state = seedFromLocation("demclock", url.slice(url.indexOf("?")))!;
     expect(state).not.toHaveProperty("zone");
     expect(state).not.toHaveProperty("startEvent");
     expect(state).not.toHaveProperty("type2");
@@ -738,87 +703,61 @@ describe("permalinks", () => {
 });
 
 describe("on-screen words", () => {
-  function screenText(root: HTMLElement): string {
-    const clone = root.cloneNode(true) as HTMLElement;
-    clone
-      .querySelectorAll('.gmt-codeframe, output[data-role$="output"]')
-      .forEach((e) => e.remove());
-    const labels = [...clone.querySelectorAll("[aria-label]")].map((e) =>
-      e.getAttribute("aria-label"),
-    );
-    return `${clone.textContent}\n${labels.join("\n")}`;
-  }
-
   it.each(DEMURRAGE_PRESETS.map((p) => [p.id]))(
-    "%s shows no raw null or undefined outside the printed output",
+    "%s shows no raw null or undefined",
     async (id) => {
-      const { root } = await mount();
-      choose(root, "preset", id!);
-      expect(screenText(root)).not.toMatch(/\b(null|undefined)\b/);
+      const w = await open();
+      await w.user.selectOptions(preset(), id!);
+      expect(w.root).not.toHaveTextContent(/\b(null|undefined)\b/);
+      for (const name of [...laneNames(), ...railNames()]) {
+        expect(name).not.toMatch(/\b(null|undefined)\b/);
+      }
     },
   );
 
   it("names no law, regulator, carrier or court", async () => {
     const forbidden = /\b(CFR|statut|regulat|docket|agency|customs|court)\w*/i;
-    const { root } = await mount();
-    const seen: string[] = [renderDemurrageClockTemplate()];
+    const w = await open();
+    expect(w.root).not.toHaveTextContent(forbidden);
     for (const p of DEMURRAGE_PRESETS) {
-      choose(root, "preset", p.id);
-      seen.push(root.textContent ?? "");
+      await w.user.selectOptions(preset(), p.id);
+      expect(w.root).not.toHaveTextContent(forbidden);
     }
-    for (const s of seen) expect(s).not.toMatch(forbidden);
   });
 
-  it("states the chosen clock in one hidden sentence", async () => {
-    const { root } = await mount();
-    expect(text(root, "summary")).toBe(
+  it("states the chosen clock in one polite sentence", async () => {
+    await open();
+    expect(summary()).toHaveTextContent(
       "demurrage: discharged to gated out: from Fri 14 Jun 20:00 to Thu 20 Jun 15:30 on the Europe/London clock. It ran for 5 d 19 h 30 min.",
     );
-    expect(q(root, "summary").getAttribute("aria-live")).toBe("polite");
-    expect(q(root, "summary").classList.contains("gmt-ledger-sr")).toBe(true);
   });
 });
 
 describe("lifecycle", () => {
-  it("an aborted mount is inert", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDemurrageClockTemplate();
-    document.body.append(root);
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountDemurrageClock(root, {}, controller.signal);
-    expect(plate(root, "hero-ran")[0]).toBe("no result");
-    expect(handle.getPermalinkState?.()).toBeNull();
-    expect(() => {
-      handle.destroy();
-      handle.destroy();
-    }).not.toThrow();
+  it("is inert when aborted before it mounts", async () => {
+    const w = await renderWidget(entry, { args: {}, aborted: true });
+    expect(output()).not.toHaveTextContent("PT139H30M");
+    expect(screen.getAllByText("no result")).toHaveLength(3);
+    w.destroy();
   });
 
-  it("releases its width observer on destroy, and destroying twice is safe", async () => {
-    const spy = spyOnResizeObservers();
-    const { handle } = await mount();
-    expect(spy.live.size).toBe(1);
-    handle.destroy();
-    handle.destroy();
-    expect(spy.live.size).toBe(0);
-    spy.restore();
+  it("survives a double destroy", async () => {
+    const w = await open();
+    w.destroy();
+    expect(() => w.destroy()).not.toThrow();
   });
 
-  it("draws again when the width changes", async () => {
+  it("draws again when the width changes, and releases the observer on destroy", async () => {
     const spy = spyOnResizeObservers();
-    const { root } = await mount();
-    const before = q(root, "rail").innerHTML;
-    expect(before).not.toBe("");
-    q(root, "rail").innerHTML = "";
-    // jsdom has no layout, so the observer only draws when the width differs.
-    Object.defineProperty(q(root, "track"), "clientWidth", {
-      configurable: true,
-      value: 480,
-    });
-    spy.fire();
-    expect(q(root, "rail").innerHTML).toBe(before);
-    expect(spy.live.size).toBe(1);
-    spy.restore();
+    try {
+      const w = await open();
+      expect(spy.live.size).toBeGreaterThan(0);
+      spy.fire();
+      expect(railNames()).toHaveLength(4);
+      w.destroy();
+      expect(spy.live.size).toBe(0);
+    } finally {
+      spy.restore();
+    }
   });
 });

@@ -57,18 +57,18 @@ if (image) {
 			grid-template-columns: 100%;
 			align-items: center;
 			gap: 1rem;
-			padding-bottom: 1rem;
+			padding-block-end: 1rem;
 		}
 
 		.hero > img,
 		.hero > .hero-html {
 			object-fit: contain;
-			width: min(70%, 20rem);
-			height: auto;
+			inline-size: min(70%, 20rem);
+			block-size: auto;
 			margin-inline: auto;
 		}
 
-		@media (min-width: 50rem) {
+		@media (width >= 50rem) {
 			.hero {
 				grid-template-columns: 7fr 4fr;
 				gap: 3%;
@@ -78,7 +78,7 @@ if (image) {
 			.hero > img,
 			.hero > .hero-html {
 				order: 2;
-				width: min(100%, 25rem);
+				inline-size: min(100%, 25rem);
 			}
 		}
 	}

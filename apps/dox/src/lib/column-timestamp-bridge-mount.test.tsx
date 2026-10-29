@@ -1,67 +1,62 @@
 /**
  * @vitest-environment jsdom
  *
- * The Column Timestamp Bridge end to end against the real `@northguild/gmt`.
- * Every preset's cards are literal values read once from a run of the built
- * library, and they agree with the slice's table (the † rows). A drift in the
- * library or in the widget fails here.
+ * The Column Timestamp Bridge end to end against the real `@northguild/gmt`, through roles and
+ * accessible names the way a person (or a screen reader) meets the page. Every preset's cards
+ * are literal values read once from a run of the built library, and they agree with the
+ * slice's table (the † rows). A drift in the library or in the widget fails here.
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { installJsdomShims } from "~/test/jsdom-shims";
-import { BRIDGE_PRESETS } from "./column-timestamp-bridge-presets";
+import { screen, within } from "@testing-library/dom";
 import {
-  mountColumnTimestampBridge,
-  renderColumnTimestampBridgeTemplate,
-} from "./column-timestamp-bridge-mount";
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { BRIDGE_PRESETS } from "./column-timestamp-bridge-presets";
+import { ZONELESS_CHIP } from "./column-timestamp-bridge";
+import { NO_SIGNAL_PILL } from "./column-timestamp-bridge-mount";
+import { SITE_BASE } from "./site";
+import { seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+const entry = WIDGET_REGISTRY["showColumnTimestampBridge"] as AnyWidgetEntry;
 
-const clean = (el: Element | null) =>
-  (el?.textContent ?? "").replace(/\u00a0/g, "").trim();
+const open = (args: Record<string, unknown> = {}, idPrefix = "test") =>
+  renderWidget(entry, { args, idPrefix });
 
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderColumnTimestampBridgeTemplate(args);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountColumnTimestampBridge(
-    root,
-    args,
-    controller.signal,
-  );
-  return { root, handle, controller };
+const preset = () => screen.getByRole("combobox", { name: "Preset" });
+const valueBox = () =>
+  screen.getByRole("textbox", { name: "Instant or wall time" });
+const zoneBox = () =>
+  screen.getByRole("textbox", { name: "Arrow column timezone (optional)" });
+const heroValue = () =>
+  screen.getByRole("status", { name: "Exact instant value", hidden: true });
+const ladder = () =>
+  screen.getByRole("group", { name: /^Precision ladder/, hidden: true });
+const output = () => screen.getByLabelText("What the calls returned");
+const calls = () => screen.getByRole("group", { name: "Calls made" });
+const card = (title: string) => screen.getByRole("region", { name: title });
+const radio = (name: string) => screen.getByRole("radio", { name });
+
+const LADDER_LABELS = ["exact", "INT96", "Arrow", "Timestamp"];
+
+/** Replaces what a text box holds, in one input event. */
+async function enter(w: RenderedWidget, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  if (value !== "") await w.user.paste(value);
 }
 
-function choose(root: HTMLElement, value: string) {
-  const el = q<HTMLSelectElement>(root, "preset");
-  el.value = value;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function type(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLInputElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-function pick(root: HTMLElement, role: string, value: string) {
-  const el = root.querySelector<HTMLInputElement>(
-    `input[type="radio"][data-role="${role}"][value="${value}"]`,
-  )!;
-  el.checked = true;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-const card = (root: HTMLElement, id: string) =>
-  root.querySelector<HTMLElement>(`.gmt-colbridge-card[data-card="${id}"]`)!;
-const slot = (c: HTMLElement, name: string) =>
-  clean(c.querySelector(`[data-slot="${name}"]`));
+/** A regular expression that matches exactly this text. */
+const exact = (text: string) =>
+  new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
 
 // [state, stored-1, stored-2, read-back, literal]
 type Row = [string, string, string, string, string];
@@ -70,6 +65,13 @@ interface Recorded {
   ladder: string[];
   cards: Record<string, Row>;
 }
+
+const TITLES: Record<string, string> = {
+  int96: "Parquet INT96",
+  arrow: "Arrow Timestamp",
+  timestamp: "protobuf Timestamp",
+  duration: "protobuf Duration",
+};
 
 /** Read once from the built library. */
 const RECORDED: Record<string, Recorded> = {
@@ -322,6 +324,32 @@ const RECORDED: Record<string, Recorded> = {
   },
 };
 
+/** What one card says it stored, read back and returned. */
+function expectCard(id: string, row: Row, label: string) {
+  const [, stored1, stored2, readBack, literal] = row;
+  const c = card(TITLES[id]!);
+  const stored = within(
+    within(c).getByRole("group", { name: "Stored" }),
+  ).queryAllByRole("code");
+  const wantStored = [stored1, stored2].filter((t) => t !== "");
+  expect(stored, label).toHaveLength(wantStored.length);
+  wantStored.forEach((t, i) => expect(stored[i]).toHaveTextContent(exact(t)));
+  const back = within(
+    within(c).getByRole("group", { name: "Reads back" }),
+  ).queryAllByRole("code");
+  expect(back, label).toHaveLength(readBack === "" ? 0 : 1);
+  if (readBack !== "") expect(back[0]).toHaveTextContent(exact(readBack));
+  if (literal === "") {
+    expect(
+      within(c).queryByText(NO_SIGNAL_PILL),
+      label,
+    ).not.toBeInTheDocument();
+  } else {
+    expect(within(c).getByText(NO_SIGNAL_PILL), label).toBeInTheDocument();
+    expect(within(c).getByText(literal), label).toBeInTheDocument();
+  }
+}
+
 describe("presets against the real library", () => {
   it("records a result for every preset", () => {
     expect(Object.keys(RECORDED).sort()).toEqual(
@@ -331,188 +359,309 @@ describe("presets against the real library", () => {
 
   for (const p of BRIDGE_PRESETS) {
     it(`reads ${p.id}`, async () => {
-      const { root, handle } = await mount({ preset: p.id });
+      await open({ preset: p.id });
       const want = RECORDED[p.id]!;
-      const hero = q(root, "hero-exact");
-      expect([hero.dataset["state"], clean(q(root, "hero-value"))]).toEqual(
-        want.hero,
-      );
-      for (const [id, row] of Object.entries(want.cards)) {
-        const c = card(root, id);
-        expect(
-          [
-            c.dataset["state"],
-            slot(c, "stored-1"),
-            slot(c, "stored-2"),
-            slot(c, "readback"),
-            slot(c, "literal"),
-          ],
-          `${p.id} ${id}`,
-        ).toEqual(row);
+      if (want.hero[1] === "") {
+        expect(heroValue()).not.toHaveTextContent(/\d/);
+      } else {
+        expect(heroValue()).toHaveTextContent(exact(want.hero[1]));
       }
-      const ladder = [
-        ...root.querySelectorAll('[data-role="ladder"] [data-slot]'),
-      ].map(clean);
-      expect(ladder).toEqual(want.ladder);
-      handle.destroy();
+      for (const [id, row] of Object.entries(want.cards)) {
+        expectCard(id, row, `${p.id} ${id}`);
+      }
+      const rungs = LADDER_LABELS.map((label) =>
+        within(ladder()).getByRole("group", { name: label, hidden: true }),
+      );
+      rungs.forEach((rung, i) => {
+        const text = within(rung).queryAllByRole("code", { hidden: true });
+        const wantText = want.ladder[i]!;
+        expect(text, `${p.id} ladder ${LADDER_LABELS[i]}`).toHaveLength(
+          wantText === "" ? 0 : 1,
+        );
+        if (wantText !== "") expect(text[0]).toHaveTextContent(exact(wantText));
+      });
     });
   }
 });
 
 describe("behaviour", () => {
   it("opens on the Tokyo default with no signal pill", async () => {
-    const { root } = await mount();
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("tokyo-seconds");
-    expect(q(root, "hero-pill").hasAttribute("data-off")).toBe(true);
+    await open();
+    expect(preset()).toHaveValue("tokyo-seconds");
+    expect(heroValue()).not.toHaveTextContent(NO_SIGNAL_PILL);
+    expect(heroValue()).toHaveTextContent("2024-01-01T00:00:00Z");
   });
 
   it("marks a zoneless wall time as not an instant, with a chip and no hero pill", async () => {
-    const { root } = await mount({ preset: "wall-time-zoneless" });
-    expect(q(root, "hero-exact").dataset["state"]).toBe("not-instant");
+    await open({ preset: "wall-time-zoneless" });
     expect(
-      card(root, "arrow")
-        .querySelector('[data-slot="chip"]')!
-        .hasAttribute("data-off"),
-    ).toBe(false);
+      within(card("Arrow Timestamp")).getByText(ZONELESS_CHIP),
+    ).toBeInTheDocument();
     // Arrow read it, so the hero does not claim a lost signal.
-    expect(q(root, "hero-pill").hasAttribute("data-off")).toBe(true);
+    expect(heroValue()).not.toHaveTextContent(NO_SIGNAL_PILL);
+    expect(
+      screen.getByText("Not an instant, so there is no exact value."),
+    ).toBeInTheDocument();
   });
 
   it("shows NO SIGNAL in the hero when no format read the input", async () => {
-    const { root } = await mount({ value: "not a time" });
-    expect(q(root, "hero-pill").hasAttribute("data-off")).toBe(false);
+    const w = await open({ value: "not a time" });
+    expect(heroValue()).toHaveTextContent(NO_SIGNAL_PILL);
+    await expectNoAxeViolations(w.root);
   });
 
-  it("shows a legitimate zero as a value, not a lost signal", async () => {
-    const { root } = await mount({ preset: "past-proto-range" });
-    const arrow = card(root, "arrow");
+  it("says the empty box is empty, and not NO SIGNAL", async () => {
+    const w = await open();
+    await w.user.clear(valueBox());
+    await w.user.clear(
+      screen.getByRole("textbox", { name: "ISO duration (optional)" }),
+    );
+    expect(heroValue()).not.toHaveTextContent(NO_SIGNAL_PILL);
+    expect(
+      screen.getAllByText("Give an instant or a wall time.").length,
+    ).toBeGreaterThan(0);
+    expect(output()).toHaveTextContent("No call made: give a value.");
+  });
+
+  it("shows a refused read as NO SIGNAL beside its literal, not a blank", async () => {
+    const w = await open({ preset: "past-proto-range" });
+    const arrow = card("Arrow Timestamp");
     // A nanosecond count past int64 is out of range, not the 1970 epoch.
-    expect(arrow.dataset["state"]).toBe("sentinel");
-    expect(slot(arrow, "readback")).toBe("");
-    expect(slot(arrow, "literal")).toBe("0n");
+    expect(within(arrow).getByText(NO_SIGNAL_PILL)).toBeInTheDocument();
+    expect(within(arrow).getByText("0n")).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
   it("keeps a legitimate zero as a value", async () => {
-    const { root } = await mount({
+    await open({
       value: "1970-01-01T00:00:00Z",
       unit: "second",
       zone: "UTC",
     });
-    const arrow = card(root, "arrow");
-    expect(arrow.dataset["state"]).toBe("read");
-    expect(slot(arrow, "stored-1")).toBe("0n");
+    const arrow = card("Arrow Timestamp");
+    expect(
+      within(within(arrow).getByRole("group", { name: "Stored" })).getByRole(
+        "code",
+      ),
+    ).toHaveTextContent(exact("0n"));
+    expect(within(arrow).queryByText(NO_SIGNAL_PILL)).not.toBeInTheDocument();
   });
 
   it("names an unknown zone in the other tools' words", async () => {
-    const { root } = await mount({
+    await open({
       value: "2024-01-01T00:00:00Z",
       unit: "second",
       zone: "Mars/Olympus",
     });
-    const arrow = card(root, "arrow");
-    expect(arrow.dataset["state"]).toBe("sentinel");
-    expect(arrow.textContent).toContain(
-      "Mars/Olympus is not a time zone this browser knows.",
-    );
+    const arrow = card("Arrow Timestamp");
+    expect(
+      within(arrow).getByText(
+        "Mars/Olympus is not a time zone this browser knows.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("fills the inputs from a preset and switches to Your values on typing", async () => {
-    const { root } = await mount();
-    choose(root, "sub-microsecond");
-    expect(q<HTMLInputElement>(root, "value").value).toBe(
-      "2024-01-01T00:00:00.123456789Z",
-    );
-    type(root, "value", "2024-01-01T00:00:00.5Z");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    choose(root, "custom");
-    expect(q<HTMLInputElement>(root, "value").value).toBe(
-      "2024-01-01T00:00:00.5Z",
-    );
+    const w = await open();
+    await w.user.selectOptions(preset(), "sub-microsecond");
+    expect(valueBox()).toHaveValue("2024-01-01T00:00:00.123456789Z");
+    await enter(w, valueBox(), "2024-01-01T00:00:00.5Z");
+    expect(preset()).toHaveValue("custom");
+    await w.user.selectOptions(preset(), "custom");
+    expect(valueBox()).toHaveValue("2024-01-01T00:00:00.5Z");
   });
 
   it("switches mode, hiding the fields the mode does not use", async () => {
-    const { root } = await mount();
-    expect(q(root, "decode-fields").hasAttribute("hidden")).toBe(true);
-    pick(root, "mode", "decode");
-    expect(q(root, "encode-fields").hasAttribute("hidden")).toBe(true);
-    expect(q(root, "decode-fields").hasAttribute("hidden")).toBe(false);
-    expect(q(root, "encode-panels-hero").hasAttribute("hidden")).toBe(true);
-    pick(root, "mode", "encode");
-    expect(q(root, "encode-fields").hasAttribute("hidden")).toBe(false);
+    const w = await open();
+    expect(valueBox()).toBeVisible();
+    await w.user.click(radio("From stored values"));
+    expect(
+      screen.queryByRole("textbox", { name: "Instant or wall time" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("figure", { name: "Exact instant" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "int64" })).toBeInTheDocument();
+    await w.user.click(radio("From an instant"));
+    expect(valueBox()).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("keeps the decode panel out of the accessibility tree until it opens", async () => {
+    const w = await open();
+    expect(
+      screen.queryByRole("group", { name: "Parquet INT96" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "julianDay" }),
+    ).not.toBeInTheDocument();
+    expect(valueBox()).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
+    await w.user.click(radio("From stored values"));
+    expect(
+      screen.getByRole("group", { name: "Parquet INT96" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "julianDay" })).toBeVisible();
+    expect(
+      screen.queryByRole("textbox", { name: "Instant or wall time" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "ISO duration (optional)" }),
+    ).not.toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("shows the INT96 field of the form that is chosen", async () => {
+    const w = await open({ mode: "decode" });
+    expect(
+      screen.getByRole("textbox", { name: "julianDay" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "Bytes" }),
+    ).not.toBeInTheDocument();
+    await w.user.click(radio("12 bytes"));
+    expect(screen.getByRole("textbox", { name: "Bytes" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "julianDay" }),
+    ).not.toBeInTheDocument();
   });
 
   it("decodes typed fields and says what is wrong with a bad one", async () => {
-    const { root } = await mount({
+    const w = await open({
       mode: "decode",
       julianDay: "2440588",
       nanosOfDay: "0",
     });
-    expect(slot(card(root, "int96"), "readback")).toBe("1970-01-01T00:00:00Z");
-    type(root, "julianDay", "12x");
-    expect(slot(card(root, "int96"), "message")).toBe("Type a whole number");
-    pick(root, "int96Form", "bytes");
-    type(root, "bytes", "zz");
-    expect(slot(card(root, "int96"), "message")).toBe("Type 24 hex digits");
-  });
-
-  it("round trips through the permalink in both modes", async () => {
-    const { handle } = await mount({ preset: "int64-edge" });
-    expect(handle.getPermalinkState?.()).toEqual({ preset: "int64-edge" });
-    const enc = await mount({
-      value: "2024-01-01T00:00:00Z",
-      unit: "millisecond",
-      zone: "UTC",
-    });
-    expect(enc.handle.getPermalinkState?.()).toEqual({
-      value: "2024-01-01T00:00:00Z",
-      unit: "millisecond",
-      zone: "UTC",
-    });
-    const dec = await mount({ mode: "decode", int64: "-1" });
-    expect(dec.handle.getPermalinkState?.()).toEqual({
-      mode: "decode",
-      int64: "-1",
-    });
-    const again = await mount(
-      dec.handle.getPermalinkState?.() as Record<string, string>,
-    );
-    expect(again.handle.getPermalinkState?.()).toEqual({
-      mode: "decode",
-      int64: "-1",
-    });
-  });
-
-  it("keeps the regions and holds of the hold-still contract", async () => {
-    const { root } = await mount();
-    for (const role of [
-      "hero-exact",
-      "hero-value",
-      "hero-pill",
-      "hero-reason",
-      "cards",
-      "ladder",
-      "ladder-list",
-      "bridge-output",
-    ]) {
-      expect(q(root, role), role).toBeTruthy();
-    }
-    expect(root.querySelectorAll(".gmt-colbridge-card")).toHaveLength(4);
+    const int96 = () => card("Parquet INT96");
     expect(
-      root.querySelectorAll('[data-role="ladder"] [data-slot]'),
+      within(
+        within(int96()).getByRole("group", { name: "Reads back" }),
+      ).getByRole("code"),
+    ).toHaveTextContent("1970-01-01T00:00:00Z");
+    await enter(w, screen.getByRole("textbox", { name: "julianDay" }), "12x");
+    expect(
+      within(int96()).getByText("Type a whole number"),
+    ).toBeInTheDocument();
+    await w.user.click(radio("12 bytes"));
+    await enter(w, screen.getByRole("textbox", { name: "Bytes" }), "zz");
+    expect(within(int96()).getByText("Type 24 hex digits")).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("names every control", async () => {
+    await open({ mode: "decode" });
+    for (const name of ["Preset"]) {
+      expect(screen.getByRole("combobox", { name })).toBeInTheDocument();
+    }
+    for (const name of [
+      "Arrow column timezone (optional)",
+      "julianDay",
+      "nanosOfDay",
+      "int64",
+    ]) {
+      expect(screen.getByRole("textbox", { name })).toBeInTheDocument();
+    }
+    expect(screen.getAllByRole("textbox", { name: "seconds" })).toHaveLength(2);
+    expect(screen.getAllByRole("textbox", { name: "nanos" })).toHaveLength(2);
+    for (const name of ["Mode", "Arrow unit", "Form"]) {
+      expect(screen.getByRole("group", { name })).toBeInTheDocument();
+    }
+    expect(radio("Day and nanoseconds")).toBeChecked();
+    expect(radio("second")).toBeChecked();
+  });
+
+  it("keeps four cards and four ladder rows while a value is typed", async () => {
+    const w = await open();
+    const count = () => screen.getAllByRole("region").length;
+    const before = count();
+    expect(before).toBeGreaterThanOrEqual(4);
+    expect(
+      within(ladder()).getAllByRole("group", { hidden: true }),
     ).toHaveLength(4);
-    const before = root.querySelectorAll(".gmt-ledger-hold").length;
-    expect(before).toBeGreaterThan(0);
-    type(root, "value", "x".repeat(64));
-    expect(root.querySelectorAll(".gmt-ledger-hold").length).toBe(before);
-    expect(root.querySelectorAll(".gmt-colbridge-card")).toHaveLength(4);
+    await enter(w, valueBox(), "x".repeat(64));
+    expect(count()).toBe(before);
+    expect(
+      within(ladder()).getAllByRole("group", { hidden: true }),
+    ).toHaveLength(4);
+    for (const title of Object.values(TITLES)) {
+      expect(card(title)).toBeInTheDocument();
+    }
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("prints the calls it made and links each function's page", async () => {
+    const w = await open();
+    expect(calls()).toHaveTextContent("toParquetInt96(");
+    expect(output()).toHaveTextContent("2024-01-01T00:00:00Z");
+    expect(
+      screen.getByRole("link", { name: "toParquetInt96 reference" }),
+    ).toHaveAttribute(
+      "href",
+      `${SITE_BASE}/reference/precision/convert/toParquetInt96/`,
+    );
+    expect(
+      screen.getByRole("link", { name: "ID Timestamp Decoder" }),
+    ).toHaveAttribute("href", `${SITE_BASE}/tools/id-timestamp-decoder/`);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("keeps two copies on one page apart", async () => {
+    const a = await open({ preset: "tokyo-seconds" }, "first");
+    const b = await open({ preset: "int64-edge" }, "second");
+    const boxes = screen.getAllByRole("combobox", { name: "Preset" });
+    expect(boxes).toHaveLength(2);
+    expect(boxes[0]).toHaveValue("tokyo-seconds");
+    expect(boxes[1]).toHaveValue("int64-edge");
+    await b.user.selectOptions(boxes[1]!, "before-1970");
+    expect(boxes[0]).toHaveValue("tokyo-seconds");
+    await enter(
+      a,
+      screen.getAllByRole("textbox", { name: "Instant or wall time" })[0]!,
+      "x",
+    );
+    expect(boxes[1]).toHaveValue("before-1970");
   });
 
   it("escapes what is typed", async () => {
-    const { root } = await mount();
-    type(root, "value", '<img src=x onerror="1">');
-    type(root, "zone", '<b>"</b>');
-    expect(root.querySelector("img")).toBeNull();
-    expect(root.querySelector("b")).toBeNull();
+    const w = await open();
+    await enter(w, valueBox(), '<img src=x onerror="1">');
+    await enter(w, zoneBox(), "<b>x</b>");
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(calls()).toHaveTextContent(
+      'toParquetInt96("<img src=x onerror=\\"1\\">")',
+    );
+  });
+});
+
+describe("permalinks", () => {
+  const seedOf = (w: RenderedWidget) => {
+    const url = w.permalink();
+    return seedFromLocation("colbridge", url.slice(url.indexOf("?")));
+  };
+
+  it("round trips a preset", async () => {
+    const w = await open({ preset: "int64-edge" });
+    expect(seedOf(w)).toEqual({ preset: "int64-edge" });
+  });
+
+  it("round trips typed values", async () => {
+    const w = await open({
+      value: "2024-01-01T00:00:00Z",
+      unit: "millisecond",
+      zone: "UTC",
+    });
+    expect(seedOf(w)).toEqual({
+      value: "2024-01-01T00:00:00Z",
+      unit: "millisecond",
+      zone: "UTC",
+    });
+  });
+
+  it("round trips a decode", async () => {
+    const w = await open({ mode: "decode", int64: "-1" });
+    expect(seedOf(w)).toEqual({ mode: "decode", int64: "-1" });
+    const again = await open(seedOf(w) as Record<string, unknown>, "again");
+    expect(seedOf(again)).toEqual({ mode: "decode", int64: "-1" });
   });
 });
 

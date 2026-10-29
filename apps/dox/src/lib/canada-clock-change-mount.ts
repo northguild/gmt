@@ -31,7 +31,6 @@ import {
 import { CANADA_MAP } from "./canada-map";
 import zoneIds from "./canada-zones.json";
 import { CANADA_MINIMUMS } from "../data/canada-runtime-minimums";
-import { minimumsCardHtml } from "../data/clock-change-minimums";
 import { CANADA_STORED } from "./canada-saved-example";
 import { HELP, canadaKeyPoints } from "../data/canada-key-points";
 import {
@@ -41,13 +40,17 @@ import {
   msToNextSecond,
 } from "./clock-change-common";
 import { clocksHtml, mountClocks } from "./clock-change-clocks";
-import { helpCardHtml } from "./clock-change-help";
+import { defineElements } from "~/widgets/define";
+import { helpCard } from "~/widgets/families/clockcheck/help-card";
+import {
+  minimumsCard,
+  serversCard,
+} from "~/widgets/families/clockcheck/info-card";
 import {
   browserCardHtml,
   fillBrowserCard,
   idPrefixOf,
   placesHtml,
-  serversCardHtml,
 } from "./clock-change-probe";
 import { mountStoredTimes, storedSectionHtml } from "./clock-change-stored";
 import type { StoredHandle } from "./clock-change-stored";
@@ -60,7 +63,6 @@ import {
   loadTenseView,
   transitionGroupHtml,
   wallText,
-  wireCopy,
   yearsOf,
 } from "./clock-change-mount";
 import type { ClockChangeChatArgs, ClockLib } from "./clock-change-mount";
@@ -130,8 +132,8 @@ export function renderCanadaClockChangeTemplate({
   const mapId = `${idPrefix}-map-title`;
   const pickId = `${idPrefix}-pick-title`;
   return (
-    `<div class="gmt-canada gmt-widget not-content">` +
-    `<div class="gmt-clockcheck-stack">` +
+    `<div class="gmt-canada gmt-widget not-content" data-widget="canada-clock-change" role="region" aria-label="Canada 2026 clock-change checker">` +
+    `<div class="gmt-clockcheck-stack" data-gate="stack">` +
     // Row 1: the Key points on the left, the reader's own browser on the right.
     `<div class="gmt-clockcheck-row gmt-clockcheck-row--top">` +
     (keyPoints
@@ -140,19 +142,19 @@ export function renderCanadaClockChangeTemplate({
     browserCardHtml(canadaProbe(idPrefix), CANADA_VERDICT) +
     `</div>` +
     // Row 2: the map, the zone list, the pin panel and the live clocks.
-    `<div class="gmt-zonemap-mapsec" data-role="map-section">` +
-    `<div class="gmt-widget-section gmt-zonemap-stage">` +
-    `<div class="gmt-zonemap-map-block" role="group" aria-labelledby="${mapId}">` +
+    `<div class="gmt-zonemap-mapsec" data-role="map-section" data-gate="map-section">` +
+    `<div class="gmt-widget-section gmt-zonemap-stage" data-gate="map-stage">` +
+    `<div class="gmt-zonemap-map-block" data-gate="map-block" role="group" aria-labelledby="${mapId}">` +
     `<h4 id="${mapId}">Zones on the map</h4>` +
     // The map draws the sheet's boundaries; `canada-map.ts` puts the credits button in its corner
     // when it draws, under this id.
-    `<div class="gmt-zonemap-map gmt-theme-dark" data-role="map" data-credits-id="${idPrefix}-data-credits"></div>` +
+    `<div class="gmt-zonemap-map gmt-theme-dark" data-role="map" data-gate="map-frame" data-credits-id="${idPrefix}-data-credits"></div>` +
     `<ul class="gmt-zonemap-legend" aria-label="Map classes">` +
     legendHtml(canadaClassText, tense) +
     `</ul>` +
     `</div>` +
     `</div>` +
-    `<section class="gmt-widget-section gmt-clockcheck-pickcard" aria-labelledby="${pickId}">` +
+    `<section class="gmt-widget-section gmt-clockcheck-pickcard" data-gate="pickcard" aria-labelledby="${pickId}">` +
     `<h4 id="${pickId}">Pick a zone</h4>` +
     `<p class="gmt-widget-hint">Each zone is in one class. Press a zone, on the map or in the list, to pin its clock and its last and next change.</p>` +
     `<div class="gmt-clockcheck-pick">` +
@@ -161,8 +163,8 @@ export function renderCanadaClockChangeTemplate({
     `</div></div>` +
     `</div>` +
     `</section>` +
-    `<div class="gmt-zonemap-pin" data-role="pin">${renderPinPanelHtml()}</div>` +
-    `<section class="gmt-widget-section gmt-clockcheck-nowsec" aria-labelledby="${clocksId}">` +
+    `<div class="gmt-zonemap-pin" data-role="pin" data-gate="map-pin">${renderPinPanelHtml()}</div>` +
+    `<section class="gmt-widget-section gmt-clockcheck-nowsec" data-gate="clocks" aria-labelledby="${clocksId}">` +
     `<h4 id="${clocksId}">Live clocks</h4>` +
     `<p class="gmt-clockcheck-now-notice" data-role="clocks-notice" hidden>${CLOCKS_NOTICE}</p>` +
     clocksHtml(CLOCK_ZONES, STOPPED_ZONES) +
@@ -171,22 +173,22 @@ export function renderCanadaClockChangeTemplate({
     `</div>` +
     // Row 3: the reader's servers beside the minimum releases. Both are info cards.
     `<div class="gmt-clockcheck-row">` +
-    serversCardHtml({
+    serversCard({
       idPrefix,
       command: NODE_PROBE_COMMAND,
       expected: expectedProbeOutput(),
       line: SERVERS_LINE,
-    }) +
-    minimumsCardHtml(idPrefix, CANADA_MINIMUMS) +
+    }).value +
+    minimumsCard(idPrefix, CANADA_MINIMUMS).value +
     `</div>` +
     // Row 4: the clock changes beside what the library does about them.
     `<div class="gmt-clockcheck-row">` +
-    `<section class="gmt-widget-section" aria-labelledby="${changesId}">` +
+    `<section class="gmt-widget-section" data-gate="changes" aria-labelledby="${changesId}">` +
     `<h4 id="${changesId}">Clock changes in 2026 and 2027</h4>` +
     `<p class="gmt-widget-hint">${changesHintHtml(tense)}</p>` +
     `<ul class="gmt-clockcheck-groups" data-role="transitions">${TRANSITION_ZONES.map((zone) => transitionGroupHtml(zone, YEARS)).join("")}</ul>` +
     `</section>` +
-    helpCardHtml(idPrefix, HELP) +
+    helpCard(idPrefix, HELP).value +
     `</div>` +
     // Row 5: the saved events, the form on the left and the answers on the right.
     storedSectionHtml({ ...CANADA_STORED, idPrefix }) +
@@ -226,6 +228,7 @@ export async function mountCanadaClockChange(
   signal: AbortSignal,
   options: CanadaMountOptions = {},
 ): Promise<void> {
+  defineElements();
   const q = <T extends HTMLElement>(
     selector: string,
     within: ParentNode = root,
@@ -268,7 +271,6 @@ export async function mountCanadaClockChange(
   });
 
   // --- the copy button announces -------------------------------------------
-  wireCopy(root, signal);
   bindClockGlow(root, signal);
 
   // --- the transitions -----------------------------------------------------

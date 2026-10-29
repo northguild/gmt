@@ -1,0 +1,24 @@
+/* The ghosts of a call frame and a result pane: blocks of the real thing's size. */
+
+.frameGhost {
+  margin: 0;
+  padding-block: 0.75rem;
+  padding-inline: 1rem 3rem;
+  border: 1px solid var(--gmt-hairline);
+  overflow-x: auto;
+  font-family: var(--sl-font-mono, var(--gmt-font-mono));
+  font-size: clamp(0.8125rem, 0.78rem + 0.2vw, 0.9375rem);
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.outputGhost {
+  box-sizing: border-box;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  overflow-x: auto;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+}

@@ -15,7 +15,6 @@
  * `renderMoroccoClockChangeTemplate()` is pure markup, so the server renders every table with its
  * known rows and the page does not grow once the answer arrives.
  */
-import { minimumsCardHtml } from "../data/clock-change-minimums";
 import { MOROCCO_HELP, moroccoKeyPoints } from "../data/morocco-key-points";
 import { MOROCCO_MINIMUMS } from "../data/morocco-runtime-minimums";
 import { clocksHtml, mountClocks } from "./clock-change-clocks";
@@ -26,13 +25,17 @@ import {
   msToNextSecond,
   signedOffset,
 } from "./clock-change-common";
-import { helpCardHtml } from "./clock-change-help";
+import { defineElements } from "~/widgets/define";
+import { helpCard } from "~/widgets/families/clockcheck/help-card";
+import {
+  minimumsCard,
+  serversCard,
+} from "~/widgets/families/clockcheck/info-card";
 import {
   browserCardHtml,
   fillBrowserCard,
   idPrefixOf,
   placesHtml,
-  serversCardHtml,
 } from "./clock-change-probe";
 import { mountStoredTimes, storedSectionHtml } from "./clock-change-stored";
 import type { StoredHandle } from "./clock-change-stored";
@@ -67,7 +70,6 @@ import {
   loadTenseView,
   transitionGroupHtml,
   wallText,
-  wireCopy,
   yearsOf,
 } from "./clock-change-mount";
 import type { ClockChangeChatArgs, ClockLib } from "./clock-change-mount";
@@ -134,8 +136,8 @@ export function renderMoroccoClockChangeTemplate({
   const mapId = `${idPrefix}-map-title`;
   const pickId = `${idPrefix}-pick-title`;
   return (
-    `<div class="gmt-morocco gmt-widget not-content">` +
-    `<div class="gmt-clockcheck-stack">` +
+    `<div class="gmt-morocco gmt-widget not-content" data-widget="morocco-clock-change" role="region" aria-label="Morocco 2026 clock-change checker">` +
+    `<div class="gmt-clockcheck-stack" data-gate="stack">` +
     // Row 1: the Key points on the left, the reader's own browser on the right.
     `<div class="gmt-clockcheck-row gmt-clockcheck-row--top">` +
     (keyPoints
@@ -144,19 +146,19 @@ export function renderMoroccoClockChangeTemplate({
     browserCardHtml(moroccoProbe(idPrefix), MOROCCO_VERDICT) +
     `</div>` +
     // Row 2: the map, the zone list, the pin panel and the live clocks.
-    `<div class="gmt-zonemap-mapsec" data-role="map-section" style="--zonemap-map-height:${MOROCCO_MAP.height}">` +
-    `<div class="gmt-widget-section gmt-zonemap-stage">` +
-    `<div class="gmt-zonemap-map-block" role="group" aria-labelledby="${mapId}">` +
+    `<div class="gmt-zonemap-mapsec" data-role="map-section" data-gate="map-section" style="--zonemap-map-height:${MOROCCO_MAP.height}">` +
+    `<div class="gmt-widget-section gmt-zonemap-stage" data-gate="map-stage">` +
+    `<div class="gmt-zonemap-map-block" data-gate="map-block" role="group" aria-labelledby="${mapId}">` +
     `<h4 id="${mapId}">Zones on the map</h4>` +
     // The map draws the sheet's boundaries; `zone-map.ts` puts the credits button in its corner
     // when it draws, under this id.
-    `<div class="gmt-zonemap-map gmt-theme-dark" data-role="map" data-credits-id="${idPrefix}-data-credits"></div>` +
+    `<div class="gmt-zonemap-map gmt-theme-dark" data-role="map" data-gate="map-frame" data-credits-id="${idPrefix}-data-credits"></div>` +
     `<ul class="gmt-zonemap-legend" aria-label="Map classes">` +
     legendHtml(moroccoClassText, tense) +
     `</ul>` +
     `</div>` +
     `</div>` +
-    `<section class="gmt-widget-section gmt-clockcheck-pickcard" aria-labelledby="${pickId}">` +
+    `<section class="gmt-widget-section gmt-clockcheck-pickcard" data-gate="pickcard" aria-labelledby="${pickId}">` +
     `<h4 id="${pickId}">Pick a zone</h4>` +
     `<p class="gmt-widget-hint">Each zone is in one class. Press a zone, on the map or in the list, to pin its clock and its last and next change.</p>` +
     `<div class="gmt-clockcheck-pick">` +
@@ -165,8 +167,8 @@ export function renderMoroccoClockChangeTemplate({
     `</div></div>` +
     `</div>` +
     `</section>` +
-    `<div class="gmt-zonemap-pin" data-role="pin">${renderPinPanelHtml()}</div>` +
-    `<section class="gmt-widget-section gmt-clockcheck-nowsec" aria-labelledby="${clocksId}">` +
+    `<div class="gmt-zonemap-pin" data-role="pin" data-gate="map-pin">${renderPinPanelHtml()}</div>` +
+    `<section class="gmt-widget-section gmt-clockcheck-nowsec" data-gate="clocks" aria-labelledby="${clocksId}">` +
     `<h4 id="${clocksId}">Live clocks</h4>` +
     `<p class="gmt-clockcheck-now-notice" data-role="clocks-notice" hidden>${CLOCKS_NOTICE}</p>` +
     clocksHtml(MOROCCO_ZONES, MOROCCO_STOPPED) +
@@ -175,27 +177,27 @@ export function renderMoroccoClockChangeTemplate({
     `</div>` +
     // Row 3: the reader's servers beside the minimum releases. Both are info cards.
     `<div class="gmt-clockcheck-row">` +
-    serversCardHtml({
+    serversCard({
       idPrefix,
       command: NODE_PROBE_COMMAND,
       expected: expectedProbeOutput(),
       line: SERVERS_LINE,
-    }) +
-    minimumsCardHtml(idPrefix, MOROCCO_MINIMUMS) +
+    }).value +
+    minimumsCard(idPrefix, MOROCCO_MINIMUMS).value +
     `</div>` +
     // Row 4: the clock changes your data gets wrong, beside what the library does about them.
     `<div class="gmt-clockcheck-row">` +
-    `<section class="gmt-widget-section" aria-labelledby="${changesId}">` +
+    `<section class="gmt-widget-section" data-gate="changes" aria-labelledby="${changesId}">` +
     `<h4 id="${changesId}">Clock changes your data gets wrong</h4>` +
     `<p class="gmt-widget-hint">Each row is a clock change that the old data and the new data disagree about. Times are the clock as it read just before the change.</p>` +
     `<ul class="gmt-morocco-wrong" data-role="wrong">${MOROCCO_ZONES.flatMap(
       (zone) => MOROCCO_CHANGES.map((change) => wrongRowHtml(zone, change)),
     ).join("")}</ul>` +
     `</section>` +
-    helpCardHtml(idPrefix, MOROCCO_HELP) +
+    helpCard(idPrefix, MOROCCO_HELP).value +
     `</div>` +
     // Row 5: the clock changes of 2026 and 2027, full width.
-    `<section class="gmt-widget-section" aria-labelledby="${transitionsId}">` +
+    `<section class="gmt-widget-section" data-gate="transitions" aria-labelledby="${transitionsId}">` +
     `<h4 id="${transitionsId}">Clock changes in 2026 and 2027</h4>` +
     `<ul class="gmt-clockcheck-groups" data-role="transitions">${MOROCCO_ZONES.map((zone) => transitionGroupHtml(zone, YEARS)).join("")}</ul>` +
     `</section>` +
@@ -240,6 +242,7 @@ export async function mountMoroccoClockChange(
   signal: AbortSignal,
   options: MoroccoMountOptions = {},
 ): Promise<void> {
+  defineElements();
   const q = <T extends HTMLElement>(
     selector: string,
     within: ParentNode = root,
@@ -275,7 +278,6 @@ export async function mountMoroccoClockChange(
   const tense = tenseView(lib, MOROCCO_MOMENTS, now());
 
   // --- the copy button announces -------------------------------------------
-  wireCopy(root, signal);
   bindClockGlow(root, signal);
 
   // --- the changes your data gets wrong -------------------------------------

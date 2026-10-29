@@ -153,7 +153,7 @@ function withSiteBase(href: string) {
 		}
 
 		.copy > * {
-			max-width: 50ch;
+			max-inline-size: 50ch;
 		}
 
 		h1 {
@@ -185,7 +185,7 @@ function withSiteBase(href: string) {
 			justify-content: center;
 		}
 
-		@media (min-width: 50rem) {
+		@media (width >= 50rem) {
 			.stack {
 				text-align: start;
 			}

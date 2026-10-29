@@ -1,272 +1,216 @@
 /**
  * @vitest-environment jsdom
  *
- * The first Tier 2 widget driven end to end in a test: template → mount →
- * interact → assert, against the real `@northguild/gmt`.
- *
- * `apps/dox` had no DOM-testing pattern before DOX-C3b — the widget tests here
- * all covered pure logic modules, and the `.astro` scripts that wired them to
- * the page were reachable by nothing. Extracting `mount(root)` is what makes
- * this possible, and this file is the pattern the two harder widgets follow.
+ * The Converter Bench end to end: template, mount, interact, assert, against the real
+ * `@northguild/gmt`, through roles and accessible names the way a reader meets the page.
  */
-import { installJsdomShims } from "~/test/jsdom-shims";
+import { screen, within } from "@testing-library/dom";
 import {
-  mountConverterBench,
-  renderConverterTemplate,
-} from "./converter-bench-mount";
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import { expectNoAxeViolations, renderWidget } from "~/test/render-widget";
+import { mountConverterBench } from "./converter-bench-mount";
+import { WidgetLoadError } from "./widget-mount";
 
 installJsdomShims();
 
-/** Roles the mount looks up. Every lookup is a null-tolerant `querySelector`,
- *  so a missing role does not throw — it silently makes a control inert, which
- *  is exactly the failure a test has to catch instead. */
-const REQUIRED_ROLES = [
-  "convert-value",
-  "convert-source",
-  "convert-target",
-  "convert-result",
-  "format-value",
-  "format-locale",
-  "format-parts",
-  "format-relative",
-  "call-format-parts",
-  "call-format-relative",
-  "regex-input",
-  "regex-results",
-];
+const entry = WIDGET_REGISTRY["showConverterBench"] as AnyWidgetEntry;
 
-function mountInto(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderConverterTemplate(args);
-  document.body.append(root);
-  return { root, controller: new AbortController() };
-}
+const open = (args: Record<string, unknown> = {}, idPrefix = "test") =>
+  renderWidget(entry, { args, idPrefix });
 
-const q = (root: HTMLElement, role: string) =>
-  root.querySelector(`[data-role="${role}"]`);
+const zones = () =>
+  within(screen.getByRole("region", { name: "Zone conversion" }));
+const bench = () =>
+  within(screen.getByRole("region", { name: "Format bench" }));
+const tester = () =>
+  within(screen.getByRole("region", { name: "Regex tester" }));
 
-afterEach(() => {
-  document.body.innerHTML = "";
-});
+const from = () => zones().getByRole("combobox", { name: "From" });
+const to = () => zones().getByRole("combobox", { name: "To" });
+const locale = () => bench().getByRole("combobox", { name: "Locale" });
+const converted = () => screen.getByLabelText("Converted value");
+const regexList = () => tester().getByRole("list", { name: "Regex results" });
+const matches = () =>
+  within(regexList())
+    .getAllByRole("listitem")
+    .filter((li) => /· match/.test(li.textContent ?? ""));
 
-describe("renderConverterTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderConverterTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(q(root, role), `missing [data-role="${role}"]`).not.toBeNull();
-    }
+describe("the template", () => {
+  it("is a named region with three sections and every control named", async () => {
+    await open();
+    expect(
+      screen.getByRole("region", { name: "Converter Bench" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent),
+    ).toEqual(["Zone conversion", "Format bench", "Regex tester"]);
+    expect(zones().getByRole("textbox", { name: "Input" })).toBeInTheDocument();
+    expect(bench().getByRole("textbox", { name: "Input" })).toBeInTheDocument();
+    expect(
+      tester().getByRole("textbox", { name: "Input" }),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
-  it("opens on the London to Sydney pair in regionless English", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderConverterTemplate();
-    expect((q(root, "convert-source") as HTMLSelectElement).value).toBe(
-      "Europe/London",
-    );
-    expect((q(root, "convert-target") as HTMLSelectElement).value).toBe(
-      "Australia/Sydney",
-    );
-    expect((q(root, "format-locale") as HTMLSelectElement).value).toBe("en");
-    expect((q(root, "convert-value") as HTMLInputElement).value).toBe(
+  it("opens on the London to Sydney pair in regionless English", async () => {
+    await open();
+    expect(from()).toHaveValue("Europe/London");
+    expect(to()).toHaveValue("Australia/Sydney");
+    expect(locale()).toHaveValue("en");
+    expect(zones().getByRole("textbox", { name: "Input" })).toHaveValue(
       "2024-03-15T14:30:00.000+00:00[Europe/London]",
     );
   });
 
-  it("marks exactly one option selected per select", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderConverterTemplate();
-    for (const role of ["convert-source", "convert-target", "format-locale"]) {
-      const select = q(root, role) as HTMLSelectElement;
-      expect(select.querySelectorAll("option[selected]")).toHaveLength(1);
-    }
+  it("paints seeded arguments rather than defaults", async () => {
+    await open({ from: "Asia/Tokyo", to: "Europe/Paris", locale: "fr-FR" });
+    expect(from()).toHaveValue("Asia/Tokyo");
+    expect(to()).toHaveValue("Europe/Paris");
+    expect(locale()).toHaveValue("fr-FR");
   });
 
-  it("paints seeded arguments rather than defaults", () => {
-    // A seeded widget must not flash defaults and correct itself, which is why
-    // the template takes args at all.
-    const root = document.createElement("div");
-    root.innerHTML = renderConverterTemplate({
-      from: "Asia/Tokyo",
-      to: "Europe/Paris",
-      locale: "fr-FR",
-    });
-    expect((q(root, "convert-source") as HTMLSelectElement).value).toBe(
-      "Asia/Tokyo",
-    );
-    expect((q(root, "convert-target") as HTMLSelectElement).value).toBe(
-      "Europe/Paris",
-    );
-    expect((q(root, "format-locale") as HTMLSelectElement).value).toBe("fr-FR");
+  it("appends a seeded zone the curated list does not contain", async () => {
+    await open({ to: "Pacific/Chatham" });
+    expect(to()).toHaveValue("Pacific/Chatham");
+    expect(
+      within(to()).getByRole("option", { name: "Pacific/Chatham" }),
+    ).toBeInTheDocument();
   });
 
-  it("appends a seeded zone the curated list does not contain", () => {
-    // Otherwise a valid but unusual zone would silently fall back to the first
-    // option, and the widget would answer a different question than was asked.
-    const root = document.createElement("div");
-    root.innerHTML = renderConverterTemplate({ to: "Pacific/Chatham" });
-    expect((q(root, "convert-target") as HTMLSelectElement).value).toBe(
-      "Pacific/Chatham",
-    );
+  it("gives two copies on one page their own ids", async () => {
+    await open({}, "one");
+    await open({}, "two");
+    expect(screen.getAllByRole("combobox", { name: "From" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("region", { name: "Converter Bench" }),
+    ).toHaveLength(2);
   });
 });
 
-describe("mountConverterBench", () => {
+describe("the mount", () => {
   it("converts on mount, into the real library", async () => {
-    const { root, controller } = mountInto();
-    await mountConverterBench(root, {}, controller.signal);
-
-    const out = q(root, "convert-result") as HTMLElement;
-    // Default input is 14:30 in London (GMT in March); Sydney is on daylight
-    // time, eleven hours ahead, so it is 01:30 the next morning.
-    expect(out.textContent).toContain("2024-03-16T01:30:00+11:00");
-    expect(out.textContent).toContain("Australia/Sydney");
+    await open();
+    // 14:30 in London (GMT in March); Sydney is on daylight time, eleven hours ahead.
+    expect(converted()).toHaveTextContent("2024-03-16T01:30:00+11:00");
+    expect(converted()).toHaveTextContent("Australia/Sydney");
+    await expectNoAxeViolations(document.body);
   });
 
   it("reconverts when the target zone changes", async () => {
-    const { root, controller } = mountInto();
-    await mountConverterBench(root, {}, controller.signal);
-
-    const target = q(root, "convert-target") as HTMLSelectElement;
-    target.value = "Asia/Tokyo";
-    target.dispatchEvent(new Event("change", { bubbles: true }));
-
-    const out = q(root, "convert-result") as HTMLElement;
-    expect(out.textContent).toContain("Asia/Tokyo");
+    const w = await open();
+    await w.user.selectOptions(to(), "Asia/Tokyo");
+    expect(converted()).toHaveTextContent("Asia/Tokyo");
+    await expectNoAxeViolations(document.body);
   });
 
-  it("writes the live call line the copy button copies", async () => {
-    const { root, controller } = mountInto();
-    await mountConverterBench(root, {}, controller.signal);
-
-    const call = q(root, "call-format-parts") as HTMLElement;
-    expect(call.textContent).toContain("formatZonedToParts");
+  it("shows NO SIGNAL for an input the library refuses, and not a blank box", async () => {
+    const w = await open();
+    const input = zones().getByRole("textbox", { name: "Input" });
+    await w.user.clear(input);
+    await w.user.paste("not a date");
+    expect(converted()).toHaveTextContent("NO SIGNAL");
+    await expectNoAxeViolations(document.body);
   });
 
-  it("renders a regex chip per exported pattern, marking matches", async () => {
-    const { root, controller } = mountInto();
-    await mountConverterBench(root, {}, controller.signal);
-
-    const chips = (q(root, "regex-results") as HTMLElement).querySelectorAll(
-      ".gmt-converter-chip",
-    );
-    expect(chips.length).toBeGreaterThan(10);
+  it("writes the call each format output answers, and what it returned", async () => {
+    await open();
+    const parts = screen.getByRole("group", {
+      name: "formatZonedToParts call",
+    });
+    expect(parts).toHaveTextContent(/formatZonedToParts\("2024-03-15/);
     expect(
-      (q(root, "regex-results") as HTMLElement).querySelectorAll(
-        ".gmt-converter-chip--match",
-      ).length,
-    ).toBeGreaterThan(0);
+      screen.getByRole("group", { name: "formatRelativeZoned call" }),
+    ).toHaveTextContent("formatRelativeZoned");
+    expect(screen.getByLabelText("Format parts")).toHaveTextContent('"type"');
+    expect(screen.getByLabelText("Relative format")).not.toBeEmptyDOMElement();
+  });
+
+  it("reformats in the locale the reader picks", async () => {
+    const w = await open();
+    await w.user.selectOptions(locale(), "fr-FR");
+    expect(
+      screen.getByRole("group", { name: "formatZonedToParts call" }),
+    ).toHaveTextContent('"fr-FR"');
+    await expectNoAxeViolations(document.body);
+  });
+
+  it("renders a regex chip per exported pattern, marking matches in words", async () => {
+    await open();
+    expect(within(regexList()).getAllByRole("listitem").length).toBeGreaterThan(
+      10,
+    );
+    expect(matches().length).toBeGreaterThan(0);
   });
 
   it("re-tests the regexes as the input changes", async () => {
-    const { root, controller } = mountInto();
-    await mountConverterBench(root, {}, controller.signal);
-
-    const results = q(root, "regex-results") as HTMLElement;
-    const before = results.querySelectorAll(
-      ".gmt-converter-chip--match",
-    ).length;
-
-    const input = q(root, "regex-input") as HTMLInputElement;
-    input.value = "not a date at all";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-
-    expect(
-      results.querySelectorAll(".gmt-converter-chip--match").length,
-    ).toBeLessThan(before);
+    const w = await open();
+    const before = matches().length;
+    const input = tester().getByRole("textbox", { name: "Input" });
+    await w.user.clear(input);
+    await w.user.paste("not a date at all");
+    expect(matches().length).toBeLessThan(before);
+    await expectNoAxeViolations(document.body);
   });
 
   it("reports its live state for a permalink, not the seeded state", async () => {
-    const { root, controller } = mountInto();
-    const handle = await mountConverterBench(root, {}, controller.signal);
-
-    const target = q(root, "convert-target") as HTMLSelectElement;
-    target.value = "Asia/Tokyo";
-    target.dispatchEvent(new Event("change", { bubbles: true }));
-
-    expect(handle.getPermalinkState?.()).toMatchObject({ to: "Asia/Tokyo" });
+    const w = await open();
+    await w.user.selectOptions(to(), "Asia/Tokyo");
+    expect(new URL(w.permalink(), "https://x.test").search).toContain("Tokyo");
   });
 
+  it("shows the zones a link or a call names, not the first of the list", async () => {
+    await open({ from: "America/Nuuk", to: "Australia/Lord_Howe" });
+    expect(from()).toHaveValue("America/Nuuk");
+    expect(to()).toHaveValue("Australia/Lord_Howe");
+  });
+
+  it("offers a locale a link names", async () => {
+    await open({ locale: "xx-XX" });
+    expect(locale()).toHaveValue("xx-XX");
+  });
+});
+
+describe("the lifecycle", () => {
   it("returns an inert handle when the mount is already aborted", async () => {
-    const { root, controller } = mountInto();
-    controller.abort();
-    const handle = await mountConverterBench(root, {}, controller.signal);
-    expect(() => handle.destroy()).not.toThrow();
+    const w = await renderWidget(entry, { args: {}, aborted: true });
+    expect(() => w.destroy()).not.toThrow();
   });
 
   it("survives destroy being called twice", async () => {
-    const { root, controller } = mountInto();
-    const handle = await mountConverterBench(root, {}, controller.signal);
-    handle.destroy();
-    expect(() => handle.destroy()).not.toThrow();
+    const w = await open();
+    w.destroy();
+    expect(() => w.destroy()).not.toThrow();
+  });
+
+  it("throws a WidgetLoadError when the template is broken", async () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    await expect(
+      mountConverterBench(root, {}, new AbortController().signal),
+    ).rejects.toBeInstanceOf(WidgetLoadError);
+    root.remove();
   });
 });
 
-/**
- * Escaping at the template boundary.
- *
- * Until DOX-C3b these widgets were `.astro` templates and **Astro escaped every
- * interpolation**. A hand-written template string does not, and the values
- * flowing in now are the least trustworthy these widgets have ever seen: chosen
- * by a language model, or decoded from a URL a reader was handed by someone
- * else. `escapeHtml` alone is not enough — it leaves quotes alone, and every
- * one of these values lands in an HTML attribute.
- */
-describe("template escaping", () => {
-  it("neutralises a quote that would otherwise close an attribute", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderConverterTemplate({
-      value: `" autofocus onfocus="alert(1)`,
-    });
-
-    const input = root.querySelector(
-      '[data-role="convert-value"]',
-    ) as HTMLInputElement;
-    // The payload survives as text *in the value*, and nothing became an
-    // attribute of its own.
-    expect(input.getAttribute("value")).toBe(`" autofocus onfocus="alert(1)`);
-    expect(input.hasAttribute("onfocus")).toBe(false);
-    expect(input.hasAttribute("autofocus")).toBe(false);
+describe("escaping", () => {
+  it("neutralises a quote that would otherwise close an attribute", async () => {
+    await open({ value: `" autofocus onfocus="alert(1)` });
+    const input = zones().getByRole("textbox", { name: "Input" });
+    // The mount normalises the text; the payload survives as text in the value.
+    expect((input as HTMLInputElement).value).toContain(
+      `" autofocus onfocus="alert(1)`,
+    );
+    expect(input).not.toHaveAttribute("onfocus");
+    expect(input).not.toHaveAttribute("autofocus");
   });
 
-  it("neutralises a tag injected through a zone name", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderConverterTemplate({
-      to: `<script>alert(1)</script>`,
-    });
-    expect(root.querySelector("script")).toBeNull();
-  });
-
-  it("leaves ordinary values untouched", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderConverterTemplate({ to: "Asia/Tokyo" });
+  it("neutralises a tag injected through a zone name", async () => {
+    await open({ to: "<script>alert(1)</script>" });
     expect(
-      (root.querySelector('[data-role="convert-target"]') as HTMLSelectElement)
-        .value,
-    ).toBe("Asia/Tokyo");
-  });
-});
-
-describe("mountConverterBench: a seeded zone the list lacks", () => {
-  it("shows the zones a link or a call names, not the first of the list", async () => {
-    const { root, controller } = mountInto({});
-    await mountConverterBench(
-      root,
-      { from: "America/Nuuk", to: "Australia/Lord_Howe" },
-      controller.signal,
-    );
-    expect((q(root, "convert-source") as HTMLSelectElement).value).toBe(
-      "America/Nuuk",
-    );
-    expect((q(root, "convert-target") as HTMLSelectElement).value).toBe(
-      "Australia/Lord_Howe",
-    );
-  });
-
-  it("still ignores a locale it does not offer", async () => {
-    const { root, controller } = mountInto({});
-    const before = (q(root, "format-locale") as HTMLSelectElement).value;
-    await mountConverterBench(root, { locale: "xx-XX" }, controller.signal);
-    expect((q(root, "format-locale") as HTMLSelectElement).value).toBe(before);
+      within(to()).getByRole("option", { name: "<script>alert(1)</script>" }),
+    ).toBeInTheDocument();
   });
 });

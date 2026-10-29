@@ -1,0 +1,54 @@
+/* callOutput: a block of mono text that scrolls sideways rather than wrapping a call. */
+
+.output {
+  display: block;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-x: auto;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+/* The sentinel: amber words in a bracketed chip. */
+.lost {
+  padding-inline: var(--gmt-space-1);
+  border: 1px solid var(--gmt-signal-border);
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+
+  &::before {
+    content: "\27e8\a0";
+  }
+
+  &::after {
+    content: "\a0\27e9";
+  }
+}
+
+@media (forced-colors: active) {
+  .output,
+  .lost {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .output {
+    border-color: var(--gmt-ice);
+  }
+}

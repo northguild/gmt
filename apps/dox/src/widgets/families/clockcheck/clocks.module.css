@@ -1,0 +1,160 @@
+/* The live clocks: five rows of fixed height, each a face, the zone and a time line. Every box is
+   sized before any hand is drawn and every time line holds its height, so a tick moves nothing.
+   Full borders only: stopped is purple, still changing is gold, the picked zone is green. */
+
+.clocks {
+  display: grid;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clock {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: center;
+  align-items: center;
+  column-gap: var(--gmt-space-3);
+  min-block-size: 3.75rem;
+  margin: 0;
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+
+  & p {
+    margin: 0;
+    min-inline-size: 0;
+  }
+
+  &[data-picked="true"] {
+    border-color: var(--gmt-spring);
+    background: var(--gmt-fill);
+    box-shadow: 0 0 0 1px var(--gmt-spring);
+  }
+}
+
+.stopped {
+  border-color: var(--gmt-dst-purple-ink);
+}
+
+.changes {
+  border-color: var(--gmt-dst-gold-ink);
+}
+
+/* The face's box is square before any hand is drawn. */
+.face {
+  grid-row: 1 / span 2;
+  inline-size: 3rem;
+  block-size: 3rem;
+}
+
+.zone {
+  align-self: end;
+  color: var(--gmt-ice-dim);
+  font-size: 0.75rem;
+
+  & code {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: inherit;
+    white-space: nowrap;
+  }
+}
+
+/* A flex line, not an inline one: as flex items the 20px time and the 13px offset each keep their
+   own box, and the line holds the height of the NO SIGNAL line before them. In a narrow column the
+   offset drops under the time, whole; the time never splits. */
+.time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  align-self: start;
+  column-gap: 0.5ch;
+  min-block-size: 1.75rem;
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hm,
+.off {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.hm {
+  color: var(--gmt-cyan-bright);
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+  line-height: 1.75rem;
+}
+
+.off {
+  color: var(--gmt-ice-dim);
+  font-size: 0.8125rem;
+}
+
+/* In a card under 16rem (the nearest container: beside the map) a smaller face, a tighter gap and one step down on the
+   time keep the two lines, so the row does not grow when the answer arrives. */
+@container (max-width: 16rem) {
+  .clock {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    column-gap: var(--gmt-space-2);
+    padding-inline: var(--gmt-space-2);
+  }
+
+  .face {
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+  }
+
+  .hm {
+    font-size: 1.125rem;
+  }
+
+  .off {
+    font-size: 0.75rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .clock {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .stopped,
+  .changes {
+    border-color: CanvasText;
+  }
+
+  .clock[data-picked="true"] {
+    border-color: Highlight;
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .hm,
+  .off,
+  .zone {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .clock {
+    border-color: currentcolor;
+  }
+
+  .hm,
+  .off,
+  .zone {
+    color: inherit;
+  }
+}

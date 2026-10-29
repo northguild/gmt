@@ -1,0 +1,44 @@
+/* policyEditor: seven native selects in a native details. */
+
+.policy {
+  container-type: inline-size;
+  min-inline-size: 0;
+}
+
+.details {
+  min-inline-size: 0;
+}
+
+.summary {
+  min-block-size: var(--gmt-target-min);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+  cursor: pointer;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--gmt-space-2);
+  padding-block-start: var(--gmt-space-2);
+}
+
+/* With room, the controls are open and the summary is a plain line, so it hides. */
+@container (min-width: 28rem) {
+  .details[open] > .summary {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .summary {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .summary {
+    text-decoration: underline;
+  }
+}

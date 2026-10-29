@@ -1,0 +1,50 @@
+/* intervalBar: a bar on a timeline lane. Position is `--gmt-at` and `--gmt-span`, each 0 to 1.
+   The handles sit above it, so it never takes the pointer. */
+
+.bar {
+  --series: var(--gmt-series-1);
+
+  position: absolute;
+  inset-block: 0.25rem;
+  inset-inline-start: calc(var(--gmt-at) * 100%);
+  inline-size: calc(var(--gmt-span) * 100%);
+  min-inline-size: 0.25rem;
+  box-sizing: border-box;
+  border: 1px solid var(--series);
+  border-radius: var(--gmt-radius-sm);
+  background: color-mix(in srgb, var(--series) 45%, transparent);
+  pointer-events: none;
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  /* The library refused this interval: the sentinel's amber, with a dashed edge as well. */
+  &[data-valid="false"] {
+    border-color: var(--gmt-signal-border);
+    border-style: dashed;
+    background: var(--gmt-signal-fill);
+  }
+}
+
+@media (forced-colors: active) {
+  .bar {
+    border-color: CanvasText;
+    background: Canvas;
+
+    &[data-series="2"] {
+      border-style: dashed;
+    }
+
+    &[data-valid="false"] {
+      border-style: dotted;
+      border-color: Mark;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .bar {
+    border-width: 2px;
+  }
+}

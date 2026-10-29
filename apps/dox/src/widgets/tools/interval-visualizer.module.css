@@ -1,0 +1,59 @@
+/*
+ * Interval Visualizer: what only this tool needs. The sections, preset, lanes, handles, fields,
+ * aside, code frames and outputs are the kit's; this sheet sets the label column the lanes and
+ * the axis share, and lays the four operations beside one another.
+ *
+ * Amber is the sentinel's alone: a refused interval and a NO SIGNAL output. A result that is
+ * correctly empty is plain text.
+ */
+
+/* The six lanes and the axis share one label column, so a result bar sits under the interval
+   it answers. The end padding leaves room for the last axis label, which starts at the lane's
+   right edge. */
+.timeline {
+  --gmt-timeline-label-w: 7.5rem;
+
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+  padding-inline-end: 4.5rem;
+}
+
+/* A slot only holds what a draw writes into it; its children sit on the lane's own track. */
+.slot {
+  display: contents;
+}
+
+.ops {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.op {
+  display: grid;
+  align-content: start;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.opLabel {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-weight: 600;
+}
+
+@media (forced-colors: active) {
+  .opLabel {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .opLabel {
+    color: var(--gmt-ice);
+  }
+}

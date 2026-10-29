@@ -13,13 +13,14 @@
  * multi-minute build.
  *
  * Deliberately the `node` environment, with no jsdom docblock and no shims:
- * the absence of DOM globals is the whole point of the test.
+ * the absence of DOM globals is the whole point of the test. It checks that the
+ * render does not throw. What the server-rendered page shows the reader is read
+ * with role queries in `DoxChat.ssr-markup.test.tsx`.
  */
 import { renderToString } from "react-dom/server";
 import { DoxChat } from "./DoxChat";
 import DoxPage from "./DoxPage";
 import type { BrainsInfo } from "./use-brains";
-import { gmtStats } from "~/data/gmt-stats";
 
 const PACIFIC_MIDNIGHT = "2026-06-16T07:00:00Z";
 
@@ -53,33 +54,9 @@ describe("DoxChat server-side render", () => {
     expect(() => renderToString(<DoxChat />)).not.toThrow();
   });
 
-  it("server-renders the empty state, including the corpus figures", () => {
-    const html = renderToString(<DoxChat />);
-    expect(html).toContain("Dox");
-    // The pre-hydration markup a reader sees first must be the real empty
-    // state, not a blank shell.
-    expect(html).toContain("chunks indexed");
-  });
-
-  it("server-renders the note that the answers can be wrong but the widgets are tested", () => {
-    // React marks the seams between text pieces with empty comments.
-    const html = renderToString(<DoxChat />).replaceAll("<!-- -->", "");
-    expect(html).toContain("gmt-hive-accuracy-note");
-    expect(html).toContain("can get things wrong");
-    expect(html).toContain(
-      `checked by ${new Intl.NumberFormat("en-US").format(gmtStats.tests)} tests`,
-    );
-  });
-
   it("server-renders the examples rail without touching a browser global", () => {
     expect(typeof window).toBe("undefined");
-    let html = "";
-    expect(() => {
-      html = renderToString(<DoxPage />);
-    }).not.toThrow();
-    expect(html).toContain('aria-label="Examples"');
-    expect(html).toContain("gmt-hive-example");
-    expect(html).not.toContain("gmt-hive-starter");
+    expect(() => renderToString(<DoxPage />)).not.toThrow();
   });
 
   it("survives a server render with budget props supplied", () => {
@@ -87,17 +64,5 @@ describe("DoxChat server-side render", () => {
     // renders the brain badge; both must be as server-safe as the default.
     expect(() => renderToString(<DoxChat brains={budget(0)} />)).not.toThrow();
     expect(() => renderToString(<DoxChat brains={budget(5)} />)).not.toThrow();
-  });
-
-  it("renders no reset time on the server, where the reader's zone is unknown", () => {
-    // Printing one here would hydrate against a different string in the
-    // browser (#418). The chip and the banner's "Back …" arrive after mount.
-    const idle = renderToString(<DoxChat brains={budget(5)} />);
-    expect(idle).toContain("gmt-hive-brain-badge");
-    expect(idle).not.toContain("gmt-hive-clock");
-
-    const spent = renderToString(<DoxChat brains={budget(0)} />);
-    expect(spent).toContain("questions for today.");
-    expect(spent).not.toContain("Back ");
   });
 });

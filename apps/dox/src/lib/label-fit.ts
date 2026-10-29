@@ -93,7 +93,7 @@ export function pickLabelLeft(
  *
  * `getBoundingClientRect().width` is the width after any transform on the
  * element or an ancestor, and a widget's numbered cards enter by scaling from
- * 92% (`widget-enter.ts`) just as the first render is fitting its labels. A
+ * 92% (`watchEnter`, `widgets/primitives/enter.ts`) just as the first render is fitting its labels. A
  * label measured at 92% fits where it will not once the card is full size, and
  * nothing refits when the entrance ends. `offsetWidth` ignores transforms; the
  * rect is the fallback for an element with no layout box of its own.

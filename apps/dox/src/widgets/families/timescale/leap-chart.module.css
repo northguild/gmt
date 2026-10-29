@@ -1,0 +1,491 @@
+/*
+ * The Leap Second Timeline's staircase: the y axis, the plot (a step line, risers, marks, a
+ * hatched continuous run, the counted band, the date's cursor and readouts, the ghost and the
+ * NO SIGNAL pill), the year axis and the chip rows. A place is `--at` / `--level` in percent.
+ * The widget root's container (`leap-second-timeline.module.css`) is what the narrow rule
+ * asks about. Amber belongs to the NO SIGNAL pill alone. Nothing here animates.
+ */
+
+.caption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.chart {
+  --leap-y-w: 2.6rem;
+  --leap-strip: 3.1rem;
+  --leap-plot-h: 21rem;
+
+  display: grid;
+  grid-template-columns: var(--leap-y-w) minmax(0, 1fr);
+  column-gap: var(--gmt-space-2);
+  min-inline-size: 0;
+
+  @container (inline-size < 34rem) {
+    --leap-y-w: 2rem;
+    --leap-plot-h: 17rem;
+  }
+}
+
+.yaxis {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  inset-block-start: var(--leap-strip);
+  block-size: calc(var(--leap-plot-h) - var(--leap-strip) - 0.6rem);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+}
+
+.ytick {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-end: var(--level, 0%);
+  translate: 0 50%;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.plot {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  block-size: var(--leap-plot-h);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-fill);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  overflow: hidden;
+}
+
+.field {
+  position: absolute;
+  inset-block: var(--leap-strip) 0.6rem;
+  inset-inline: 0;
+}
+
+.grid,
+.marks {
+  position: absolute;
+  inset: 0;
+}
+
+.gridline {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: var(--level, 0%);
+  block-size: 0;
+  border-block-start: 1px dashed color(from var(--gmt-ice-dim) srgb r g b / 40%);
+}
+
+.line {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.area {
+  fill: color(from var(--gmt-ice) srgb r g b / 10%);
+  stroke: none;
+}
+
+.step {
+  stroke: var(--gmt-ice);
+  stroke-width: 2px;
+  stroke-linejoin: miter;
+}
+
+/* The series colours, for everything that carries `data-series`. */
+.chart [data-series="1"] {
+  --series: var(--gmt-series-1);
+}
+
+.chart [data-series="2"] {
+  --series: var(--gmt-series-2);
+}
+
+.chart [data-series="3"] {
+  --series: var(--gmt-series-3);
+}
+
+.riser {
+  stroke: transparent;
+  stroke-width: 2px;
+
+  &[data-lit="true"] {
+    stroke: var(--series, var(--gmt-ice));
+    stroke-width: 4px;
+  }
+}
+
+/* A mark sits on the step line at its time and its new level: a small hollow dot,
+   larger and filled when a reading lights it. */
+.mark {
+  position: absolute;
+  inset-inline-start: var(--at, 0%);
+  inset-block-end: var(--level, 0%);
+  translate: -50% 50%;
+  box-sizing: border-box;
+  inline-size: 5px;
+  block-size: 5px;
+  border: 1px solid var(--gmt-ice);
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--gmt-surface);
+
+  &[data-lit="true"] {
+    inline-size: 9px;
+    block-size: 9px;
+    border: 2px solid var(--series, var(--gmt-cyan));
+    background: var(--series, var(--gmt-cyan));
+    box-shadow: 0 0 0 3px
+      color(from var(--series, var(--gmt-cyan)) srgb r g b / 30%);
+  }
+}
+
+/* A run on the axis, from `--from` to `--to`, hatched. */
+.span {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--from, 0%);
+  inline-size: calc(var(--to, 100%) - var(--from, 0%));
+  box-sizing: border-box;
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--hatch) 0,
+    var(--hatch) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+/* Continuous UTC: no more insertions. A pattern with a full dashed border, so it is a
+   pattern and a word and not an edge on one side. */
+.continuous {
+  --hatch: color(from var(--gmt-ice-dim) srgb r g b / 35%);
+
+  border: 1px dashed var(--gmt-ice-dim);
+}
+
+/* The counted span: a hatched, tinted window behind the line. */
+.band {
+  --hatch: color(from var(--series) srgb r g b / 28%);
+
+  border-block-end: 2px solid var(--series);
+}
+
+/* The date's cursor, full height, and the guide that carries its level back to the y axis. */
+.pin {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--at, 0%);
+  inline-size: 2px;
+  background: var(--series, var(--gmt-ice));
+}
+
+.guide {
+  position: absolute;
+  inset-inline-start: 0;
+  inline-size: var(--at, 0%);
+  inset-block-end: var(--level, 0%);
+  block-size: 0;
+  border-block-start: 2px dashed var(--series, var(--gmt-ice));
+}
+
+.dot {
+  position: absolute;
+  inset-inline-start: var(--at, 0%);
+  inset-block-end: var(--level, 0%);
+  translate: -50% 50%;
+  inline-size: 11px;
+  block-size: 11px;
+  box-sizing: border-box;
+  border: 2px solid var(--gmt-surface);
+  border-radius: 50%;
+  background: var(--series, var(--gmt-ice));
+  box-shadow: 0 0 0 3px
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 35%);
+}
+
+/* Readouts in the strip above the field: the date first, the count under it. */
+.tag {
+  position: absolute;
+  inset-block-start: 0.35rem;
+  inset-inline-start: var(--at, 0%);
+  box-sizing: border-box;
+  min-inline-size: 15ch;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--series, var(--gmt-border-strong));
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: center;
+  translate: 4px 0;
+
+  &[data-side="end"] {
+    translate: calc(-100% - 4px) 0;
+  }
+
+  &[data-side="mid"] {
+    translate: -50% 0;
+  }
+
+  /* `fit` places a readout inside the plot and sets `--px`. */
+  &[data-side="px"] {
+    inset-inline-start: var(--px, 0);
+    translate: 0 0;
+  }
+
+  @container (inline-size < 34rem) {
+    min-inline-size: 0;
+  }
+}
+
+.tagBand {
+  inset-block-start: 1.75rem;
+  min-inline-size: 0;
+}
+
+/* The second 60 that never happened: a dashed riser, crossed out. */
+.ghost {
+  position: absolute;
+  inset-inline-start: var(--at, 0%);
+  inset-block-end: var(--level, 0%);
+  inline-size: 0;
+  block-size: 0;
+
+  & i {
+    position: absolute;
+    inset-inline-start: -1px;
+    inset-block-end: 0;
+    inline-size: 3px;
+    block-size: 1.5rem;
+    background-image: repeating-linear-gradient(
+      to top,
+      var(--series) 0,
+      var(--series) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset-inline-start: 50%;
+      inset-block-start: 50%;
+      inline-size: 18px;
+      block-size: 3px;
+      translate: -50% -50%;
+      rotate: -40deg;
+      background: var(--series);
+      box-shadow: 0 0 0 2px var(--gmt-surface);
+    }
+  }
+
+  & b {
+    position: absolute;
+    inset-block-end: 1.7rem;
+    inset-inline-start: 6px;
+    padding: 2px var(--gmt-space-2);
+    border: 1px dashed var(--series);
+    border-radius: var(--gmt-radius-sm);
+    background: var(--gmt-surface);
+    font: 400 var(--gmt-text-xs) / 1.2 var(--gmt-font-mono);
+    color: var(--gmt-ice);
+    white-space: nowrap;
+  }
+
+  &[data-side="end"] b {
+    inset-inline: auto 6px;
+  }
+}
+
+/* NO SIGNAL: amber, bracketed, centred in the plot on an opaque plate. */
+.nosignal {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-start: 55%;
+  translate: -50% -50%;
+  max-inline-size: 92%;
+  box-sizing: border-box;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-signal-fill);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-signal-ink);
+  text-align: center;
+}
+
+/* The year axis and the chip rows hang under the plot's own column. */
+.axis,
+.row {
+  grid-column: 2;
+  position: relative;
+  min-inline-size: 0;
+}
+
+.axis {
+  block-size: 1.4rem;
+  margin-block-start: var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+}
+
+.tick {
+  position: absolute;
+  inset-inline-start: var(--at, 0%);
+  translate: -50% 0;
+  white-space: nowrap;
+}
+
+.row {
+  block-size: 1.6rem;
+}
+
+.flag {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: var(--at, 0%);
+  white-space: nowrap;
+
+  &[data-side="end"] {
+    translate: -100% 0;
+  }
+}
+
+.chip {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--series, var(--gmt-border-strong));
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2) var(--gmt-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+}
+
+/* The first legend entry: a plain riser, no series colour. */
+.plain {
+  display: inline-block;
+  box-sizing: border-box;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  flex: none;
+  border: 2px solid var(--gmt-ice);
+}
+
+/* The table's first and second cells: a line and a tag line that always keeps its height. */
+.cellLine,
+.cellTag {
+  display: block;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.cellTag {
+  min-block-size: 1.75rem;
+}
+
+@media (forced-colors: active) {
+  .plot,
+  .tag,
+  .chip,
+  .nosignal,
+  .ghost b,
+  .continuous,
+  .band {
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .step,
+  .riser[data-lit="true"] {
+    stroke: CanvasText;
+  }
+
+  .area {
+    fill: none;
+  }
+
+  .pin,
+  .dot,
+  .guide {
+    background: CanvasText;
+    border-color: CanvasText;
+  }
+
+  .mark,
+  .mark[data-lit="true"] {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .span {
+    background-image: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .plot,
+  .tag,
+  .chip {
+    border-color: var(--gmt-ice);
+  }
+
+  .gridline {
+    border-block-start-color: var(--gmt-ice-dim);
+  }
+
+  .nosignal {
+    border-color: var(--gmt-signal-ink);
+  }
+}

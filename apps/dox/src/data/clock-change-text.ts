@@ -99,7 +99,7 @@ export function partsHtml(
             : "strong" in part
               ? `<strong>${escapeText(part.strong)}</strong>`
               : "fn" in part
-                ? `<a class="gmt-clockcheck-help-fn" href="${escapeText(resolveHref(part.href))}"><code>${escapeText(part.fn)}</code></a>`
+                ? `<a href="${escapeText(resolveHref(part.href))}"><code>${escapeText(part.fn)}</code></a>`
                 : `<a href="${escapeText(resolveHref(part.href))}">${escapeText(part.link)}</a>`,
     )
     .join("");

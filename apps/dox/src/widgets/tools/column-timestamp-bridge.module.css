@@ -1,0 +1,106 @@
+/*
+ * Column Timestamp Bridge: what only this tool needs. The sections, preset, chips, fields,
+ * code frame and links are the kit's; the plate, the cards and the ladder are the family's.
+ * This sheet holds the layout of the form, the decode groups and the frame that gathers the
+ * plate, the four cards and the ladder.
+ *
+ * A panel that toggles `hidden` carries no layout of its own: the layout sits on an inner
+ * wrapper, and the panel names its own `[hidden]` rule, so a `display` here can never beat it.
+ * Amber is the sentinel's alone, and nothing here has a single-sided accent edge.
+ */
+
+.panel {
+  &[hidden] {
+    display: none;
+  }
+}
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.hint {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+/* The decode groups: borderless, with a quiet mono legend. */
+.decode {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.group {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-block-end: var(--gmt-space-2);
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* The frame: the plate, the four cards and the ladder. */
+.frame {
+  display: grid;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: linear-gradient(
+    var(--gmt-glass-tint),
+    var(--gmt-glass-tint-subtle)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+.stack {
+  display: grid;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+@media (forced-colors: active) {
+  .frame {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .legend,
+  .hint {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frame {
+    border-color: var(--gmt-ice);
+  }
+
+  .legend,
+  .hint {
+    color: var(--gmt-ice);
+  }
+}

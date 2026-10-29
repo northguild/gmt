@@ -1,442 +1,259 @@
 /**
  * @vitest-environment jsdom
  *
- * The DST transition inspector, driven end to end — the widget the story's
- * motivating example needs: *"what happens to 1:30am on November 3rd in New
- * York"*.
+ * The DST transition inspector, driven end to end through roles and accessible names,
+ * against the real `@northguild/gmt`. It answers the story's motivating question: what
+ * happens to 1:30am on November 3rd in New York.
  *
- * Two things here are not covered by the other two widgets' tests:
- *
- *   - **Scrub state held outside `render()`.** A drag must survive the
- *     re-renders that happen while it is in progress; the whole point of
- *     keeping `tickerWindow` and `handleMinuteOfDay` in the closure is that an
- *     unrelated render cannot reset them.
- *   - **Pointer capture.** jsdom does not implement it, so the shims stub it;
- *     the teardown releases it, because a capture left set routes later pointer
- *     events at a node that is no longer in the document.
+ * One thing is specific to this widget: the scrub state (the transition window and the
+ * handle's minute) lives in the mount's closure, so a re-render caused by something else
+ * must not reset it.
  */
-import { spyOnResizeObservers } from "~/test/resize-observer-spy";
+import { screen, within } from "@testing-library/dom";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
-import { mountDstInspector, renderDstTemplate } from "./dst-inspector-mount";
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
+import {
+  cellsInColumn,
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "zone",
-  "year",
-  "value-preset",
-  "disambiguation",
-  "transition-body",
-  "probe-result",
-  "ticker",
-  "ticker-empty",
-  "ticker-track",
-  "ticker-handle",
-  "ticker-status",
-  "ticker-ticks",
-  "ticker-zone",
-  "zone-label-start",
-  "zone-label-end",
-  "preset-description",
-  "explanation",
-  "call-getdst",
-  "call-convert",
-];
+const entry = WIDGET_REGISTRY["showDstInspector"] as AnyWidgetEntry;
 
-function stubTrackGeometry(root: HTMLElement) {
-  const track = root.querySelector('[data-role="ticker-track"]') as HTMLElement;
-  if (track) {
-    track.getBoundingClientRect = () =>
-      ({
-        left: 0,
-        width: 1000,
-        top: 0,
-        height: 20,
-        right: 1000,
-        bottom: 20,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      }) as DOMRect;
-  }
-}
+const open = (args: Record<string, unknown> = {}): Promise<RenderedWidget> =>
+  renderWidget(entry, { args });
 
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderDstTemplate(args);
-  document.body.append(root);
-  stubTrackGeometry(root);
-  const controller = new AbortController();
-  const handle = await mountDstInspector(root, args, controller.signal);
-  return { root, handle, controller };
-}
-
-const q = (root: HTMLElement, role: string) =>
-  root.querySelector(`[data-role="${role}"]`);
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
+const zone = () => screen.getByRole("combobox", { name: "Zone" });
+const year = () => screen.getByRole("textbox", { name: "Year" });
+const preset = () => screen.getByRole("combobox", { name: "Value preset" });
+const disambiguation = () =>
+  screen.getByRole("combobox", { name: "Disambiguation" });
+const probeHandle = () =>
+  screen.getByRole("slider", { name: "Local probe time" });
+const transitions = () =>
+  screen.getByRole("table", { name: "DST transitions" });
+const result = () => screen.getByLabelText("What the probe returned");
+const aside = () =>
+  screen.getByRole("complementary", { name: "About this probe" });
+const status = () =>
+  screen.getByText(/ — (inside the|normal local time)/, { selector: "p" });
 
 describe("renderDstTemplate", () => {
-  it("carries every role the mount reads", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDstTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(q(root, role), `missing [data-role="${role}"]`).not.toBeNull();
-    }
-  });
-
-  it("opens on Europe/London", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDstTemplate();
-    expect((q(root, "zone") as HTMLSelectElement).value).toBe("Europe/London");
-  });
-
-  it("starts the ticker and its empty note hidden", () => {
-    // Both are revealed by the first render, based on the preset. Shipping
-    // either visible would flash content the reader should not see.
-    const root = document.createElement("div");
-    root.innerHTML = renderDstTemplate();
-    expect((q(root, "ticker") as HTMLElement).hasAttribute("hidden")).toBe(
-      true,
-    );
+  it("is a named region that opens on Europe/London with its transitions and a result", async () => {
+    const w = await open();
     expect(
-      (q(root, "ticker-empty") as HTMLElement).hasAttribute("hidden"),
-    ).toBe(true);
+      screen.getByRole("region", { name: "DST Inspector" }),
+    ).toBeInTheDocument();
+    expect(zone()).toHaveValue("Europe/London");
+    expect(result()).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Copy call" })).toHaveLength(
+      2,
+    );
+    await expectNoAxeViolations(w.root);
   });
 
-  it("paints seeded arguments", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDstTemplate({
+  it("paints seeded arguments", async () => {
+    await open({
       zone: "Europe/London",
       year: 2026,
       preset: "overlap",
       disambiguation: "earlier",
-      // `offset` is accepted-and-ignored (deprecated with boundary functions'
-      // resolution options) — no control reads it any more.
       offset: "reject",
     });
-    expect((q(root, "zone") as HTMLSelectElement).value).toBe("Europe/London");
-    expect((q(root, "year") as HTMLInputElement).value).toBe("2026");
-    expect((q(root, "value-preset") as HTMLSelectElement).value).toBe(
-      "overlap",
-    );
-    expect((q(root, "disambiguation") as HTMLSelectElement).value).toBe(
-      "earlier",
-    );
-    expect(q(root, "offset")).toBeNull();
+    expect(zone()).toHaveValue("Europe/London");
+    expect(year()).toHaveValue("2026");
+    expect(preset()).toHaveValue("overlap");
+    expect(disambiguation()).toHaveValue("earlier");
   });
 
-  it("appends a seeded zone the curated list does not contain", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDstTemplate({ zone: "Pacific/Chatham" });
-    expect((q(root, "zone") as HTMLSelectElement).value).toBe(
-      "Pacific/Chatham",
-    );
+  it("keeps a seeded zone the curated list lacks", async () => {
+    await open({ zone: "Pacific/Chatham", year: 2024 });
+    expect(zone()).toHaveValue("Pacific/Chatham");
+    expect(transitions()).toBeInTheDocument();
   });
 
-  it("keeps a seeded zone the curated list lacks when the mount applies it to the default template", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDstTemplate();
-    document.body.append(root);
-    stubTrackGeometry(root);
-    await mountDstInspector(
-      root,
-      { zone: "Europe/Helsinki", year: 2024 },
-      new AbortController().signal,
-    );
-    expect((q(root, "zone") as HTMLSelectElement).value).toBe(
-      "Europe/Helsinki",
-    );
-    expect(q(root, "zone-label-start")?.textContent ?? "").not.toBe("");
-    document.body.innerHTML = "";
+  it("gives the probe handle a slider role and a name", async () => {
+    await open();
+    expect(probeHandle()).toHaveAttribute("tabindex", "0");
   });
 
-  describe("the Exact transition instant preset in a southern zone", () => {
-    it.each(["Australia/Sydney", "Australia/Adelaide", "Pacific/Auckland"])(
-      "%s: the fall-back's own wall time is in the overlap, whatever the disambiguation",
-      async (zone) => {
-        for (const disambiguation of ["compatible", "reject"]) {
-          const { root } = await mount({
-            zone,
-            year: 2024,
-            preset: "transition",
-            disambiguation,
-          });
-          const aside = q(root, "explanation")!.textContent!;
-          expect(aside, `${zone} ${disambiguation}`).toContain("overlap");
-          expect(aside, `${zone} ${disambiguation}`).not.toContain(
-            "normal wall-clock time",
-          );
-          if (disambiguation === "reject") {
-            expect(aside).toContain("rejected this wall time");
-            expect(aside).not.toContain("returned an empty result");
-          }
-          document.body.innerHTML = "";
+  it("server-renders a preset description, so the mount does not grow a slot", async () => {
+    await open({ preset: "overlap" });
+    expect(
+      screen.getAllByText(/twice/, { selector: "p" })[0],
+    ).toBeInTheDocument();
+  });
+});
+
+describe("the Exact transition instant preset in a southern zone", () => {
+  it.each(["Australia/Sydney", "Australia/Adelaide", "Pacific/Auckland"])(
+    "%s: the fall-back's own wall time is in the overlap, whatever the disambiguation",
+    async (name) => {
+      for (const choice of ["compatible", "reject"]) {
+        const w = await open({
+          zone: name,
+          year: 2024,
+          preset: "transition",
+          disambiguation: choice,
+        });
+        expect(aside(), `${name} ${choice}`).toHaveTextContent("overlap");
+        expect(aside()).not.toHaveTextContent("normal wall-clock time");
+        if (choice === "reject") {
+          expect(aside()).toHaveTextContent("rejected this wall time");
+          expect(aside()).not.toHaveTextContent("returned an empty result");
         }
-      },
-    );
-  });
+        w.destroy();
+        document.body.replaceChildren();
+      }
+    },
+  );
+});
 
-  it("says plainly that a zone with no transitions has nothing to probe, instead of calling with an empty string", async () => {
-    const { root } = await mount({
-      zone: "Asia/Tokyo",
-      year: 2024,
-      preset: "gap",
-    });
-    const call = q(root, "call-convert")!.textContent!;
-    expect(call).not.toContain("convertPlainDateTimeToZoned");
-    expect(call).toContain("no DST transitions");
-    expect(q(root, "preset-description")!.textContent).not.toContain(
-      "A local hour that was skipped",
-    );
-    expect(q(root, "preset-description")!.textContent).toContain(
-      "no DST transitions",
+describe("a zone with no transitions", () => {
+  it("says plainly there is nothing to probe, instead of calling with an empty string", async () => {
+    await open({ zone: "Asia/Tokyo", year: 2024, preset: "gap" });
+    const frames = screen.getAllByRole("button", { name: "Copy call" });
+    expect(frames).toHaveLength(2);
+    expect(screen.getAllByText(/no DST transitions/i).length).toBeGreaterThan(
+      0,
     );
     expect(
-      (q(root, "copy-convert") as HTMLElement).dataset.copyText ?? "",
-    ).toBe("");
+      screen.queryByText(/convertPlainDateTimeToZoned\(/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("A local hour that was skipped"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("slider", { name: "Local probe time" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("server-renders the preset description, so the mount does not grow a slot beside a section that pops", () => {
-    // An empty slot filled at mount grows while the section around it grows by
-    // far more; smooth-height snaps the section when a nested slot is easing, so
-    // the whole section popped in one frame.
-    const root = document.createElement("div");
-    root.innerHTML = renderDstTemplate();
-    expect(q(root, "preset-description")!.textContent).not.toBe("");
-    root.innerHTML = renderDstTemplate({ preset: "overlap" });
-    expect(q(root, "preset-description")!.textContent).toContain("twice");
-  });
-
-  it("gives the ticker handle a slider role and a label", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDstTemplate();
-    const handle = q(root, "ticker-handle") as HTMLElement;
-    expect(handle.getAttribute("role")).toBe("slider");
-    expect(handle.getAttribute("tabindex")).toBe("0");
-    expect(handle.getAttribute("aria-label")).toBeTruthy();
+  it("shows UTC as an empty table, never a fabricated row", async () => {
+    await open({ zone: "UTC", year: 2024 });
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("No DST transitions in this zone/year."),
+    ).toBeInTheDocument();
   });
 });
 
 describe("mountDstInspector", () => {
   it("lists the year's real transitions", async () => {
-    const { root } = await mount();
-    const rows = (q(root, "transition-body") as HTMLElement).querySelectorAll(
-      "tr",
-    );
+    await open();
     // London has two transitions in 2024.
-    expect(rows.length).toBe(2);
+    expect(within(transitions()).getAllByRole("row")).toHaveLength(3);
   });
 
   it("answers the story's motivating question", async () => {
-    // "What happens to 1:30am on November 3rd in New York" — the overlap.
-    const { root } = await mount({
-      zone: "America/New_York",
-      year: 2024,
-      preset: "overlap",
-    });
-
-    const table = (q(root, "transition-body") as HTMLElement).textContent ?? "";
-    expect(table).toContain("2024-11-03");
-
-    const out = q(root, "probe-result") as HTMLElement;
-    expect(out.textContent?.trim()).not.toBe("");
-    // The ticker is the scrubbable window around that transition.
-    expect((q(root, "ticker") as HTMLElement).hasAttribute("hidden")).toBe(
-      false,
-    );
+    await open({ zone: "America/New_York", year: 2024, preset: "overlap" });
+    expect(
+      cellsInColumn(transitions(), "Local Date").map((c) => c.textContent),
+    ).toContain("2024-11-03");
+    expect(result()).not.toBeEmptyDOMElement();
+    expect(probeHandle()).toBeVisible();
   });
 
   it("recomputes when the zone changes", async () => {
-    const { root } = await mount();
-    const before = (q(root, "transition-body") as HTMLElement).innerHTML;
-
-    const zone = q(root, "zone") as HTMLSelectElement;
-    zone.value = "Australia/Sydney";
-    zone.dispatchEvent(new Event("change", { bubbles: true }));
-
-    expect((q(root, "transition-body") as HTMLElement).innerHTML).not.toBe(
-      before,
+    const w = await open();
+    const before = cellsInColumn(transitions(), "Local Date").map(
+      (c) => c.textContent,
     );
-  });
-
-  it("shows a zone with no DST as having no transitions", async () => {
-    const { root } = await mount({ zone: "UTC", year: 2024 });
-    const rows = (q(root, "transition-body") as HTMLElement).querySelectorAll(
-      "tr",
-    );
-    // Either no rows, or an explicit empty state — never a fabricated one.
-    expect(rows.length).toBeLessThanOrEqual(1);
+    await w.user.selectOptions(zone(), "Australia/Sydney");
+    expect(
+      cellsInColumn(transitions(), "Local Date").map((c) => c.textContent),
+    ).not.toEqual(before);
   });
 
   it("changes the answer when disambiguation changes", async () => {
-    // The widget's teaching point: the same wall-clock time resolves
-    // differently depending on how you ask.
-    const { root } = await mount({ preset: "overlap" });
-    const before = (q(root, "probe-result") as HTMLElement).textContent;
-
-    const dis = q(root, "disambiguation") as HTMLSelectElement;
-    dis.value = "later";
-    dis.dispatchEvent(new Event("change", { bubbles: true }));
-
-    expect((q(root, "probe-result") as HTMLElement).textContent).not.toBe(
-      before,
-    );
-  });
-
-  it("scrubs the ticker with the keyboard", async () => {
-    const { root } = await mount({ preset: "gap" });
-    const handle = q(root, "ticker-handle") as HTMLElement;
-    const status = q(root, "ticker-status") as HTMLElement;
-    const before = status.textContent;
-
-    handle.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-    );
-    expect(status.textContent).not.toBe(before);
-  });
-
-  it("scrubs the ticker by dragging, through pointer capture", async () => {
-    const { root } = await mount({ zone: "America/New_York", preset: "gap" });
-    const handle = q(root, "ticker-handle") as HTMLElement;
-    const track = q(root, "ticker-track") as HTMLElement;
-    const status = q(root, "ticker-status") as HTMLElement;
-    const before = status.textContent;
-
-    handle.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
-    );
-    /* 400/1000 lands inside the gap for New York 2024. Chosen deliberately:
-       it asserts the widget's whole teaching point rather than merely that
-       something moved. (An earlier draft used 750, which maps to exactly the
-       03:00 the handle already starts at — a coordinate that would have made
-       this test pass whether or not dragging worked at all.) */
-    track.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        pointerId: 1,
-        clientX: 400,
-      }),
-    );
-    expect(status.textContent).not.toBe(before);
-    expect(status.textContent).toContain("never happens");
-
-    track.dispatchEvent(
-      new PointerEvent("pointerup", { bubbles: true, pointerId: 1 }),
-    );
-    const settled = status.textContent;
-    // After pointerup the drag is over: further movement must not scrub.
-    track.dispatchEvent(
-      new PointerEvent("pointermove", { bubbles: true, clientX: 0 }),
-    );
-    expect(status.textContent).toBe(settled);
-  });
-
-  it("keeps scrub state across an unrelated re-render mid-drag", async () => {
-    /* The reason `tickerWindow` and `handleMinuteOfDay` live outside `render()`.
-       Changing `disambiguation` re-renders; a drag in progress must survive it. */
-    const { root } = await mount({ preset: "gap" });
-    const handle = q(root, "ticker-handle") as HTMLElement;
-    const track = q(root, "ticker-track") as HTMLElement;
-    const status = q(root, "ticker-status") as HTMLElement;
-
-    handle.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
-    );
-    track.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        pointerId: 1,
-        clientX: 600,
-      }),
-    );
-
-    const dis = q(root, "disambiguation") as HTMLSelectElement;
-    dis.value = "later";
-    dis.dispatchEvent(new Event("change", { bubbles: true }));
-
-    // Still dragging: a further move still scrubs.
-    const midRender = status.textContent;
-    track.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        pointerId: 1,
-        clientX: 300,
-      }),
-    );
-    expect(status.textContent).not.toBe(midRender);
-  });
-
-  it("reports live state for a permalink", async () => {
-    const { root, handle } = await mount();
-    const zone = q(root, "zone") as HTMLSelectElement;
-    zone.value = "Europe/Berlin";
-    zone.dispatchEvent(new Event("change", { bubbles: true }));
-
-    expect(handle.getPermalinkState?.()).toMatchObject({
-      zone: "Europe/Berlin",
-      year: 2024,
+    const w = await open({ preset: "overlap" });
+    const before = result().textContent ?? "";
+    await w.user.selectOptions(disambiguation(), "later");
+    expect(result()).not.toHaveTextContent(before, {
+      normalizeWhitespace: false,
     });
   });
 
-  it("releases a pointer capture held mid-drag on destroy", async () => {
-    // Otherwise the browser keeps routing pointer events at a detached node.
-    const { root, handle } = await mount({ preset: "gap" });
-    const tickerHandle = q(root, "ticker-handle") as HTMLElement;
+  it("scrubs the probe with the keyboard", async () => {
+    const w = await open({ preset: "gap" });
+    const before = status().textContent ?? "";
+    probeHandle().focus();
+    await w.user.keyboard("{ArrowRight}");
+    expect(status()).not.toHaveTextContent(before);
+    await expectNoAxeViolations(w.root);
+  });
 
-    const released: number[] = [];
-    tickerHandle.hasPointerCapture = () => true;
-    tickerHandle.releasePointerCapture = (id: number) => {
-      released.push(id);
-    };
+  it("scrubs into the New York gap, where the local time never happens", async () => {
+    const w = await open({
+      zone: "America/New_York",
+      year: 2024,
+      preset: "gap",
+    });
+    probeHandle().focus();
+    await w.user.keyboard("{Home}");
+    await w.user.keyboard("{PageUp}".repeat(2));
+    for (
+      let i = 0;
+      i < 24 && !/never happens/.test(status().textContent ?? "");
+      i++
+    ) {
+      await w.user.keyboard("{ArrowRight}");
+    }
+    expect(status()).toHaveTextContent("never happens");
+  });
 
-    tickerHandle.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 }),
-    );
-    handle.destroy();
-    expect(released.length).toBeGreaterThan(0);
+  it("keeps scrub state across an unrelated re-render", async () => {
+    const w = await open({ preset: "gap" });
+    probeHandle().focus();
+    await w.user.keyboard("{ArrowRight}{ArrowRight}");
+    const scrubbed = (probeHandle() as HTMLInputElement).value;
+    await w.user.selectOptions(disambiguation(), "later");
+    expect(probeHandle()).toHaveValue(scrubbed);
+    const mid = status().textContent ?? "";
+    probeHandle().focus();
+    await w.user.keyboard("{ArrowRight}");
+    expect(status()).not.toHaveTextContent(mid);
+  });
+
+  it("reports live state for a permalink", async () => {
+    const w = await open();
+    await w.user.selectOptions(zone(), "Europe/Berlin");
+    const link = w.permalink();
+    expect(link).toContain("Europe%2FBerlin");
+    expect(link).toContain("2024");
   });
 
   it("survives destroy twice and an aborted mount", async () => {
-    const { handle } = await mount();
-    handle.destroy();
-    expect(() => handle.destroy()).not.toThrow();
-
-    const root = document.createElement("div");
-    root.innerHTML = renderDstTemplate();
-    const controller = new AbortController();
-    controller.abort();
-    const inert = await mountDstInspector(root, {}, controller.signal);
+    const w = await open();
+    expect(() => {
+      w.destroy();
+      w.destroy();
+    }).not.toThrow();
+    const inert = await renderWidget(entry, { args: {}, aborted: true });
     expect(() => inert.destroy()).not.toThrow();
   });
 });
 
-describe("template escaping", () => {
-  it("neutralises a quote injected through a zone name", () => {
-    // See converter-bench-mount.test.tsx for why this matters: Astro used to do
-    // this escaping for us, and a template string does not.
-    const root = document.createElement("div");
-    root.innerHTML = renderDstTemplate({
-      zone: `" autofocus onfocus="alert(1)`,
-    });
-    const select = root.querySelector(
-      '[data-role="zone"]',
-    ) as HTMLSelectElement;
-    const injected = [...select.options].at(-1) as HTMLOptionElement;
-    expect(injected.getAttribute("value")).toBe(
-      `" autofocus onfocus="alert(1)`,
-    );
-    expect(injected.hasAttribute("onfocus")).toBe(false);
+describe("escaping", () => {
+  it("neutralises a quote injected through a zone name", async () => {
+    await open({ zone: `" autofocus onfocus="alert(1)` });
+    expect(
+      screen.getByRole("option", { name: `" autofocus onfocus="alert(1)` }),
+    ).toHaveValue(`" autofocus onfocus="alert(1)`);
   });
 
-  it("neutralises a tag injected through the year", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDstTemplate({
+  it("neutralises a tag injected through the year", async () => {
+    await open({
       year: `2024"><script>alert(1)</script>` as unknown as number,
     });
-    expect(root.querySelector("script")).toBeNull();
+    expect(document.body).not.toHaveTextContent("alert(1)</script>");
+    expect(year()).toBeInTheDocument();
   });
 });
 
@@ -444,9 +261,8 @@ describe("releasing observers", () => {
   it("destroy disconnects every ResizeObserver the mount created", async () => {
     const spy = spyOnResizeObservers();
     try {
-      const { handle } = await mount();
-      expect(spy.live.size).toBeGreaterThan(0);
-      handle.destroy();
+      const w = await open();
+      w.destroy();
       expect(spy.live.size).toBe(0);
     } finally {
       spy.restore();

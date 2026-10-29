@@ -1,0 +1,20 @@
+/* modeIcon: sits on the text baseline beside the mode's name and takes the text colour. */
+.icon {
+  display: inline-block;
+  flex: none;
+  vertical-align: -3px;
+  margin-inline-end: var(--gmt-space-1);
+}
+
+@media (forced-colors: active) {
+  .icon {
+    forced-color-adjust: auto;
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .icon {
+    color: CanvasText;
+  }
+}

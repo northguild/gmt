@@ -1,0 +1,23 @@
+/* A phrase about a dated change has two forms, before and after. Both sit in one grid cell, so
+   the box is the longer form's and nothing moves when the tense flips. The form that is not true
+   now carries aria-hidden and is hidden here, so it is out of the accessibility tree too. */
+
+.slot {
+  display: inline-grid;
+  vertical-align: top;
+}
+
+.block {
+  display: grid;
+}
+
+.slot,
+.block {
+  & > [data-form] {
+    grid-area: 1 / 1;
+  }
+
+  & > [aria-hidden="true"] {
+    visibility: hidden;
+  }
+}

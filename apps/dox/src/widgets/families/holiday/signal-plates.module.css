@@ -1,0 +1,121 @@
+/* signalPlates: captioned results. A series is the bar along the bottom edge, never the
+   text colour. The sentinel plate is amber, in words and brackets. */
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+
+  @container (max-width: 30rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.plate {
+  --series: var(--gmt-series-1);
+
+  display: grid;
+  gap: 0.25rem;
+  align-content: start;
+  min-inline-size: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gmt-hairline);
+  border-block-end: 3px solid var(--series);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-state="signal"] {
+    border-color: var(--gmt-signal-border);
+    border-block-end-color: var(--gmt-signal-border);
+    background: var(--gmt-signal-fill);
+  }
+}
+
+.caption,
+.value {
+  display: grid;
+  margin: 0;
+}
+
+.caption {
+  color: var(--gmt-ice-dim);
+  font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shown,
+.ghost {
+  grid-area: 1 / 1;
+}
+
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.value {
+  min-inline-size: 14ch;
+  color: var(--gmt-ice);
+  font-size: clamp(1.25rem, 1.05rem + 1vw, 2rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow-x: auto;
+
+  .plate[data-state="signal"] & {
+    color: var(--gmt-signal-ink);
+    font-size: clamp(1rem, 0.9rem + 0.5vw, 1.375rem);
+  }
+
+  @container (max-width: 30rem) {
+    min-inline-size: 0;
+  }
+}
+
+.line {
+  min-block-size: 1lh;
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
+  overflow-wrap: anywhere;
+}
+
+@media (forced-colors: active) {
+  .plate {
+    border-color: CanvasText;
+    background: Canvas;
+
+    &[data-state="signal"] {
+      border-style: dashed;
+    }
+  }
+
+  .caption,
+  .value,
+  .line,
+  .plate[data-state="signal"] .value {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .plate {
+    border-color: var(--gmt-ice);
+  }
+
+  .caption {
+    color: var(--gmt-ice);
+  }
+}

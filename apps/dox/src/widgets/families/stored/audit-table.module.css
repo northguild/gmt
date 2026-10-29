@@ -1,0 +1,361 @@
+/* auditTable: a fixed table, so a new kind or a longer reading never moves a column. The Kind
+   column reserves the longest label in `ch`. Text is the body ink on the solid widget surface;
+   the selected row's tint is mixed into that surface, never stacked on a translucent one. */
+
+.box {
+  container-type: inline-size;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.table {
+  display: table;
+  table-layout: fixed;
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--gmt-surface-widget);
+  font-size: var(--gmt-text-sm);
+
+  & :is(th, td) {
+    inline-size: auto;
+    padding: var(--gmt-space-2);
+    color: var(--gmt-ice);
+    text-align: start;
+    vertical-align: top;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    border-block-end: 1px solid var(--gmt-hairline);
+  }
+
+  & thead th {
+    padding-block: var(--gmt-space-1);
+    font-size: var(--gmt-text-xs);
+    font-weight: 600;
+  }
+}
+
+/* The content-table rule gives a first cell `width: 1%`, which squeezes the Line column to its
+   padding in a fixed table. The Line column's own width is set on its header. */
+.colLine {
+  inline-size: 6rem;
+}
+
+.colStored {
+  inline-size: 24%;
+}
+
+.colKind {
+  /* The widest label, a badge's padding and its border. */
+  inline-size: calc(var(--kind-ch, 20) * 1ch + 2.25rem);
+}
+
+.row[data-selected="true"] td {
+  /* The border stays 1px as on every row, so selecting never moves the rows below. */
+  background: color-mix(
+    in srgb,
+    var(--gmt-series-1) 10%,
+    var(--gmt-surface-widget)
+  );
+  border-block-end-color: var(--gmt-series-1);
+  box-shadow: inset 0 -1px 0 var(--gmt-series-1);
+}
+
+.empty td {
+  color: var(--gmt-ice);
+  font-style: italic;
+}
+
+.stored {
+  padding: 0;
+  background: none;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+}
+
+/* The row's radio: the real input, with its bare number as the face. */
+.radio {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.input {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-inline-size: 1.75rem;
+  min-block-size: 1.75rem;
+  padding-inline: var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.input:checked + .face {
+  border-color: var(--gmt-selected-fill);
+  background: var(--gmt-selected-fill);
+  color: var(--gmt-selected-ink);
+}
+
+.input:focus-visible + .face {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+/* Kind badges. A shape and a pattern carry each kind as well as its colour. */
+.badge,
+.nosignal {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.badge[data-kind="valid"] {
+  border-color: var(--gmt-hairline);
+}
+
+/* nonexistent: the skipped hour, gold, dashed, hatched. */
+.badge[data-kind="nonexistent"] {
+  border: 1px dashed var(--gmt-dst-gold);
+  color: var(--gmt-dst-gold-ink);
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    color-mix(in srgb, var(--gmt-dst-gold) 28%, transparent) 4px 5px
+  );
+}
+
+/* ambiguous and valid-in-overlap: the repeated hour, a double purple edge. */
+.badge:is([data-kind="ambiguous"], [data-kind="validInOverlap"]) {
+  border: 3px double var(--gmt-dst-purple);
+  color: var(--gmt-dst-purple-ink);
+}
+
+.badge[data-kind="validInOverlap"] {
+  border-style: solid;
+  border-width: 1px;
+  box-shadow: 0 2px 0 var(--gmt-dst-purple);
+}
+
+/* offsetMismatch: a slashed break through the badge, the rule changed. */
+.badge[data-kind="offsetMismatch"] {
+  padding-inline-end: 1.6rem;
+  border-color: var(--gmt-ice);
+  background-image: linear-gradient(
+    115deg,
+    transparent 38%,
+    var(--gmt-ice) 38% 44%,
+    transparent 44% 56%,
+    var(--gmt-ice) 56% 62%,
+    transparent 62%
+  );
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: 1.2rem 100%;
+}
+
+/* The sentinel: a bracketed amber state, never a blank field. */
+.nosignal {
+  border-color: var(--gmt-signal-border);
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+}
+
+/* Readings: a value breaks only at a `<wbr>`, after the `T` and before the `.` of a fraction,
+   never inside a digit group. A token may also break between its name and its value when the
+   column is narrower than the whole token. */
+.tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.token {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+}
+
+.tokenName,
+.tokenValue {
+  color: var(--gmt-ice);
+}
+
+.tokenName {
+  white-space: nowrap;
+}
+
+.tokenValue {
+  white-space: normal;
+  overflow-wrap: normal;
+}
+
+.seg {
+  white-space: nowrap;
+}
+
+.sentence {
+  margin: var(--gmt-space-1) 0 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+}
+
+/* Narrow: each row becomes a labelled block, so no column is squeezed. */
+@container (inline-size < 46rem) {
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    inline-size: auto;
+  }
+
+  .table thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table tr {
+    padding-block: var(--gmt-space-2);
+
+    /* Every row has the same 1px frame; the selected one only recolours it. */
+    border: 1px solid transparent;
+    border-block-end-color: var(--gmt-hairline);
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
+  }
+
+  .table td {
+    padding: var(--gmt-space-1) var(--gmt-space-2);
+    border: 0;
+
+    &::before {
+      content: attr(data-label);
+      content: attr(data-label) / "";
+      display: block;
+      color: var(--gmt-ice);
+      font-size: var(--gmt-text-xs);
+    }
+
+    &:first-child::before {
+      content: none;
+    }
+  }
+
+  .row[data-selected="true"] {
+    border-color: var(--gmt-series-1);
+    background: color-mix(
+      in srgb,
+      var(--gmt-series-1) 10%,
+      var(--gmt-surface-widget)
+    );
+
+    & td {
+      /* The row carries the tint; the cell must not stack a second one. */
+      background: none;
+      box-shadow: none;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .table {
+    background: Canvas;
+
+    & :is(th, td) {
+      border-color: CanvasText;
+      color: CanvasText;
+    }
+  }
+
+  .row[data-selected="true"] td {
+    background: Canvas;
+    border-block-end: 3px solid Highlight;
+    box-shadow: none;
+  }
+
+  .face,
+  .badge,
+  .nosignal {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .input:checked + .face {
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .input:focus-visible + .face {
+    outline-color: Highlight;
+  }
+
+  .badge {
+    background-image: none;
+  }
+
+  .badge[data-kind="nonexistent"] {
+    border-style: dashed;
+  }
+
+  .badge:is([data-kind="ambiguous"], [data-kind="validInOverlap"]) {
+    border-style: double;
+  }
+
+  .badge[data-kind="offsetMismatch"] {
+    border-style: dotted;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .table :is(th, td) {
+    border-color: var(--gmt-ice);
+  }
+
+  .face,
+  .badge,
+  .nosignal {
+    border-color: var(--gmt-ice);
+  }
+
+  .input:focus-visible + .face {
+    outline-width: 3px;
+  }
+}

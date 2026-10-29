@@ -1,0 +1,233 @@
+/* The shared UTC timeline. Heights (px): four lanes of a 28px pin and a 2px gap; the axis 72px
+   above the plot's bottom; a tick of 5px (8px when labelled); a label under it, a day label
+   under that; the bracket 26px up with its label under it. */
+
+.box {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+
+  /* The plot (12rem), its caption (two lines), the padding and the gap. */
+  min-block-size: 16.75rem;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+
+  &[data-state="empty"] {
+    justify-content: center;
+  }
+}
+
+/* The pins hang from the top, the axis sits 72px above the plot's bottom, and the labels, the
+   bracket and its label take those 72px. */
+.plot {
+  position: relative;
+  flex: 1 1 auto;
+  min-block-size: 12rem;
+  margin-inline: 14px;
+}
+
+.axis {
+  position: absolute;
+  inset-inline: -14px;
+  inset-block-end: 72px;
+  block-size: 2px;
+  background: var(--gmt-border-strong);
+}
+
+.ticks {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 72px;
+}
+
+.marks {
+  position: absolute;
+  inset-inline: 0;
+  inset-block: 0 72px;
+}
+
+.tick {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: var(--x);
+  inline-size: 0;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset-block-start: 0;
+    inline-size: 1px;
+    block-size: 5px;
+    translate: -0.5px 0;
+    background: var(--gmt-border-strong);
+  }
+
+  &[data-major="1"]::before {
+    block-size: 8px;
+    background: var(--gmt-ice-dim);
+  }
+}
+
+.label {
+  position: absolute;
+  inset-block-start: 8px;
+  translate: -50% 0;
+  text-align: center;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--gmt-ice-dim);
+}
+
+.day {
+  display: block;
+  color: var(--gmt-ice-dim);
+}
+
+.mark {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--x);
+  inline-size: 0;
+
+  &[data-series="1"] {
+    --series: var(--gmt-series-1);
+  }
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"],
+  &[data-series="stated"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+
+  /* The stem from a pin down to the axis. */
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block: calc(var(--lane) * 30px + 28px) 0;
+    inline-size: 2px;
+    translate: -1px 0;
+    background: var(--series);
+  }
+}
+
+.pin {
+  position: absolute;
+  inset-block-start: calc(var(--lane) * 30px);
+  translate: -50% 0;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 2px solid var(--series);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+  line-height: 1;
+}
+
+.bracket {
+  position: absolute;
+  inset-block-end: 26px;
+  inset-inline: var(--from) calc(100% - var(--to));
+  block-size: 8px;
+  box-sizing: border-box;
+  border: 2px solid var(--gmt-ice-dim);
+  border-block-start-width: 0;
+  border-radius: 0 0 var(--gmt-radius-sm) var(--gmt-radius-sm);
+}
+
+.gap {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: 50%;
+  translate: -50% 1px;
+  white-space: nowrap;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+}
+
+.caption {
+  margin: 0;
+
+  /* The stated instant's caption is two lines in a narrow pane. */
+  min-block-size: 2lh;
+  text-align: center;
+  color: var(--gmt-ice-dim);
+}
+
+.value {
+  color: var(--gmt-ice);
+}
+
+.empty {
+  margin: 0;
+  align-self: center;
+  max-inline-size: 36ch;
+  text-align: center;
+  font-family: var(--gmt-font-body, inherit);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+@media (forced-colors: active) {
+  .box {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .axis,
+  .tick::before,
+  .mark::after {
+    background: CanvasText;
+  }
+
+  .pin {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .bracket {
+    border-color: CanvasText;
+  }
+
+  .label,
+  .day,
+  .gap,
+  .caption,
+  .value,
+  .empty {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .label,
+  .day,
+  .caption,
+  .empty {
+    color: var(--gmt-ice);
+  }
+
+  .bracket,
+  .axis {
+    border-color: var(--gmt-ice);
+  }
+}

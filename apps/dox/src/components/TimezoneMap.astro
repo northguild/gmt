@@ -26,7 +26,7 @@ const { title, caption } = Astro.props;
     </defs>
   </svg>
   {/* The map draws the time-zone boundaries, so its credit sits in the drawing's corner. */}
-  <div class="gmt-credited-frame">
+  <div class="gmt-credited-frame" data-gate="credited-frame">
     <div id="tz-map-host" class="gmt-chart gmt-glass"></div>
     <Fragment set:html={renderDataCreditsHtml([TZ_BOUNDARIES], { id: "tz-map-data-credits", placement: "corner" })} />
   </div>
@@ -56,9 +56,9 @@ const { title, caption } = Astro.props;
       btn.innerHTML = `
         <span class="gmt-clock-row1">
           <span class="gmt-clock-name">${tz.id}</span>
-          <span class="gmt-clock-offset" data-tz-field="offset"></span>
+          <span class="gmt-clock-offset" data-gate="live" data-tz-field="offset"></span>
         </span>
-        <span class="gmt-clock-time" data-tz-field="time"></span>
+        <span class="gmt-clock-time" data-gate="live" data-tz-field="time"></span>
       `;
       clockPanel.appendChild(btn);
     }

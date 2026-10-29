@@ -1,0 +1,123 @@
+/* The box a chat-rail widget is mounted into: the grow region around it, and the
+   host inside it. The widget's own styles come from its module; this only gives
+   it a box to fill. */
+
+/* The host's own height easing (smooth-height.ts pins the height and sets
+   data-growing while it eases). A widget's <gmt-grow> inside it wins while it
+   animates. */
+.grow {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  box-sizing: content-box;
+
+  &[data-growing] {
+    overflow-y: clip;
+  }
+
+  > * {
+    flex-shrink: 0;
+  }
+}
+
+.host {
+  display: block;
+
+  /* Painted but not yet wired: dim it and keep clicks off controls that would do
+     nothing yet. */
+  &[aria-busy="true"] {
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity var(--gmt-duration-fast) ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .host[aria-busy="true"] {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .host[aria-busy="true"] {
+    opacity: 1;
+  }
+}
+
+@media (forced-colors: active) {
+  .host[aria-busy="true"] {
+    opacity: 1;
+  }
+}
+
+/* The error a widget that failed to mount leaves in its place. */
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  color: var(--gmt-signal-ink);
+  background: var(--gmt-signal-fill);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  font-size: var(--gmt-text-sm);
+
+  & p {
+    margin: 0;
+  }
+}
+
+.marker {
+  flex: 0 0 auto;
+  letter-spacing: 0.08em;
+}
+
+.retry {
+  flex: 0 0 auto;
+  min-block-size: 1.5rem;
+  min-inline-size: 1.5rem;
+  margin-inline-start: auto;
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  font: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan-ink);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .error {
+    background: var(--gmt-surface-1);
+    border-color: var(--gmt-border-strong);
+  }
+
+  .retry {
+    border-color: var(--gmt-border-strong);
+  }
+}
+
+@media (forced-colors: active) {
+  .error {
+    color: CanvasText;
+    background: Canvas;
+    border-color: CanvasText;
+  }
+
+  .retry {
+    color: ButtonText;
+    background: ButtonFace;
+    border-color: ButtonText;
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+}

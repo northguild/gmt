@@ -151,22 +151,26 @@ export function ResetClock({
                 preset.zoned ? "Search zones…" : "Same in every zone"
               }
             />
-            {preset.zoned && (
-              <CommandList>
-                <CommandEmpty>No zone matches.</CommandEmpty>
-                {clock.zones.map((zone) => (
-                  <CommandItem
-                    key={zone}
-                    value={zone}
-                    onSelect={() => clock.setZone(zone)}
-                    data-current={zone === clock.zone ? "" : undefined}
-                    className="gmt-hive-clock-zone-option"
-                  >
-                    {zone}
-                  </CommandItem>
-                ))}
-              </CommandList>
-            )}
+            {/* Always rendered, so the input's `aria-controls` names a list that
+                exists; hidden, and empty, when the format ignores the zone. */}
+            <CommandList hidden={!preset.zoned}>
+              {preset.zoned && (
+                <>
+                  <CommandEmpty>No zone matches.</CommandEmpty>
+                  {clock.zones.map((zone) => (
+                    <CommandItem
+                      key={zone}
+                      value={zone}
+                      onSelect={() => clock.setZone(zone)}
+                      data-current={zone === clock.zone ? "" : undefined}
+                      className="gmt-hive-clock-zone-option"
+                    >
+                      {zone}
+                    </CommandItem>
+                  ))}
+                </>
+              )}
+            </CommandList>
           </Command>
         </section>
 

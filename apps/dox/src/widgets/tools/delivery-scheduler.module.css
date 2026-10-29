@@ -1,0 +1,50 @@
+/*
+ * Delivery Scheduler: what only this tool needs. The sections, preset, fields, code frame,
+ * output, links and aside are the kit's; the leg fieldsets, the view toggle, the summary
+ * card, the legend and the itinerary are the transport family's. This sheet lays out the
+ * form, and holds the two chart panels.
+ *
+ * The chart's own drawing (`.gmt-chart`, TanStack Charts' DOM) is styled by the named global
+ * sheet `gmt-charts.css`, because the library writes that DOM, not this widget.
+ *
+ * An accent edge is never a single side.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+/* The two chart panels share one box; the one not shown has `hidden`. */
+.charts {
+  min-inline-size: 0;
+  margin: 0 0 var(--gmt-space-3);
+}
+
+.panel {
+  min-inline-size: 0;
+  margin: 0;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .note {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .note {
+    color: var(--gmt-ice);
+  }
+}

@@ -1,0 +1,389 @@
+/* clockLadder: one drawing and eight rows, in pixels from the mount's `LADDER` constants, so
+   the stage keeps one height while the slider moves and only the lit part of the rail grows.
+   Nothing here is a verdict colour: amber is the sentinel slot's alone, and an accent edge is
+   never a single side. */
+
+.root {
+  container-type: inline-size;
+  min-inline-size: 0;
+}
+
+.figure {
+  min-inline-size: 0;
+}
+
+.stage {
+  position: relative;
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: 36rem;
+  block-size: var(--clad-h, 26rem);
+  min-block-size: var(--clad-h, 26rem);
+}
+
+.svg {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: block;
+  overflow: visible;
+}
+
+/* The rail and its second ticks. A lit tick is a second TAI has gained on UTC. */
+.track {
+  fill: var(--gmt-fill);
+  stroke: var(--gmt-border-strong);
+  stroke-width: 1;
+}
+
+.lit {
+  fill: color-mix(in srgb, var(--gmt-ice-dim) 30%, transparent);
+}
+
+.tick {
+  stroke: var(--gmt-ice-dim);
+  stroke-opacity: 0.45;
+  stroke-width: 1;
+  shape-rendering: crispedges;
+
+  &[data-lit="true"] {
+    stroke: var(--gmt-ice);
+    stroke-opacity: 0.9;
+  }
+
+  &[data-major="true"] {
+    stroke-width: 1.5;
+  }
+}
+
+.axis {
+  fill: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* UTC is the floor; TAI is the top rail. Both cross the whole drawing. */
+.baseline {
+  stroke: var(--gmt-ice);
+  stroke-width: 2;
+  fill: none;
+}
+
+.toprail {
+  stroke: var(--gmt-ice);
+  stroke-width: 3;
+  fill: none;
+}
+
+.leader {
+  stroke: var(--gmt-ice-dim);
+  stroke-width: 1;
+  fill: none;
+}
+
+.mark {
+  fill: var(--gmt-ice);
+  stroke: var(--gmt-surface);
+  stroke-width: 1.5;
+}
+
+/* A clock's row: mark and name, how it keeps time, its lead, then its reading. Every row has
+   the same box, so a changing value never moves a neighbour. */
+.row {
+  position: absolute;
+  inset-block-start: var(--clad-top, 0);
+  inset-inline-start: calc(var(--clad-w, 74px) + 4px);
+  box-sizing: border-box;
+  inline-size: calc(100% - var(--clad-w, 74px) - 4px);
+  max-inline-size: 28rem;
+  block-size: 44px;
+  margin-block-start: 2px;
+  padding: 3px var(--gmt-space-2);
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 6px;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+
+  /* "Your reading" is lit glass, a hatch and a bottom edge in the series colour. */
+  &[data-yours="true"] {
+    border-color: var(--gmt-series-1);
+    border-block-end-width: 3px;
+    background:
+      repeating-linear-gradient(
+        45deg,
+        color-mix(in srgb, var(--gmt-series-1) 22%, transparent) 0,
+        color-mix(in srgb, var(--gmt-series-1) 22%, transparent) 2px,
+        transparent 2px,
+        transparent 8px
+      ),
+      var(--gmt-surface);
+  }
+
+  /* A clock with no place on the scale is drawn dashed. It sits under the stage, in flow,
+     as one short line: its reading is in the hidden list and the figure's label. */
+  &[data-off="true"] {
+    position: relative;
+    inset-inline-start: auto;
+    inline-size: 100%;
+    block-size: 28px;
+    margin-block-start: 0;
+    grid-template-rows: auto;
+    border-style: dashed;
+
+    & .reading {
+      display: none;
+    }
+  }
+}
+
+/* Clocks with no place on the scale. The room is for the most rows any slider stop can put
+   here, so a drag never moves what is below. */
+.off {
+  display: none;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  margin-block-start: var(--gmt-space-3);
+  max-inline-size: 28rem;
+  min-block-size: calc(
+    1.5rem + var(--clad-off-n, 0) * (28px + var(--gmt-space-1))
+  );
+  align-content: start;
+
+  &[data-reserved="true"] {
+    display: flex;
+  }
+
+  &[data-empty="true"] .offTitle {
+    visibility: hidden;
+  }
+}
+
+.offTitle {
+  margin: 0;
+  block-size: 1.5rem;
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.08em;
+  line-height: 1.5rem;
+  text-transform: uppercase;
+}
+
+/* NO SIGNAL: amber, bracketed, in a slot of its own under the stage. The slot is always
+   there (invisible when the reading is not lost), so showing it moves nothing and it never
+   lies over a rung. */
+.noSignal {
+  display: block;
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: 36rem;
+  margin-block-start: var(--gmt-space-2);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background:
+    linear-gradient(var(--gmt-signal-fill), var(--gmt-signal-fill)),
+    var(--gmt-surface);
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  text-align: center;
+  visibility: hidden;
+
+  .root[data-lost="true"] & {
+    visibility: visible;
+  }
+}
+
+.key {
+  font-weight: 600;
+}
+
+.tie {
+  min-inline-size: 0;
+  overflow: hidden;
+  color: var(--gmt-ice);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lead {
+  justify-self: end;
+  padding: 0 6px;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface-2);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  min-inline-size: 5ch;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.reading {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The clock's mark. A solid outline climbs with TAI; a dashed one stays with UTC. The word
+   beside it says the same. */
+.glyph {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  inline-size: 20px;
+  block-size: 20px;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  color: var(--gmt-ice);
+}
+
+[data-tie="tai"] > .glyph {
+  border-color: var(--gmt-ice);
+  background: var(--gmt-fill-deep);
+}
+
+[data-tie="utc"] > .glyph {
+  border-color: var(--gmt-ice);
+  border-style: dashed;
+}
+
+/* A narrow ladder: the reading needs the row's width more than the tie does. */
+@container (inline-size < 21rem) {
+  .tie {
+    display: none;
+  }
+}
+
+/* The key under the ladder. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-4);
+  align-items: center;
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+
+  & p {
+    margin: 0;
+  }
+}
+
+.legendTitle {
+  flex-basis: 100%;
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-variant-caps: all-small-caps;
+  letter-spacing: var(--gmt-tracking-wider);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+
+  & .glyph {
+    flex: none;
+    inline-size: 16px;
+    block-size: 16px;
+  }
+}
+
+/* One sentence for each clock, read but not drawn. */
+.list {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .noSignal {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .svg * {
+    forced-color-adjust: none;
+  }
+
+  .track {
+    fill: Canvas;
+    stroke: CanvasText;
+  }
+
+  .lit {
+    stroke: none;
+    fill: GrayText;
+  }
+
+  .tick,
+  .baseline,
+  .toprail,
+  .leader {
+    stroke: CanvasText;
+  }
+
+  .axis,
+  .mark {
+    fill: CanvasText;
+  }
+
+  .row,
+  .glyph,
+  .lead {
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .row[data-yours="true"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      CanvasText 0,
+      CanvasText 1px,
+      transparent 1px,
+      transparent 8px
+    );
+  }
+}
+
+@media (prefers-contrast: more) {
+  .row,
+  .glyph,
+  .lead,
+  .track {
+    border-color: var(--gmt-ice);
+  }
+
+  .track {
+    stroke: var(--gmt-ice);
+  }
+
+  .tick {
+    stroke-opacity: 1;
+  }
+}

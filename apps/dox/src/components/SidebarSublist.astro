@@ -146,6 +146,7 @@ const industryIcon = (id: unknown): string | undefined => {
 	@layer starlight.core {
 		ul {
 			--sl-sidebar-item-padding-inline: 0.5rem;
+
 			list-style: none;
 			padding: 0;
 		}
@@ -167,7 +168,7 @@ const industryIcon = (id: unknown): string | undefined => {
 		}
 
 		.top-level > li + li {
-			margin-top: 0.75rem;
+			margin-block-start: 0.75rem;
 		}
 
 		summary {
@@ -179,18 +180,21 @@ const industryIcon = (id: unknown): string | undefined => {
 			cursor: pointer;
 			user-select: none;
 		}
+
 		summary::marker,
 		summary::-webkit-details-marker {
 			display: none;
 		}
 
 		.caret {
-			transition: transform 0.2s ease-in-out;
+			transition: transform var(--gmt-duration-med) ease-in-out;
 			flex-shrink: 0;
 		}
+
 		:global([dir='rtl']) .caret {
 			transform: rotateZ(180deg);
 		}
+
 		[open] > summary .caret {
 			transform: rotateZ(90deg);
 		}
@@ -205,13 +209,13 @@ const industryIcon = (id: unknown): string | undefined => {
 		}
 
 		a:hover,
-		a:focus {
+		a:focus-visible {
 			color: var(--sl-color-white);
 		}
 
 		[aria-current='page'],
 		[aria-current='page']:hover,
-		[aria-current='page']:focus {
+		[aria-current='page']:focus-visible {
 			font-weight: 600;
 			color: var(--sl-color-text-invert);
 			background-color: var(--sl-color-text-accent);
@@ -222,13 +226,15 @@ const industryIcon = (id: unknown): string | undefined => {
 			margin-inline-end: 0.25em;
 		}
 
-		@media (min-width: 50rem) {
+		@media (width >= 50rem) {
 			.top-level > li + li {
-				margin-top: 0.5rem;
+				margin-block-start: 0.5rem;
 			}
+
 			.large {
 				font-size: var(--sl-text-base);
 			}
+
 			a {
 				font-size: var(--sl-text-sm);
 			}

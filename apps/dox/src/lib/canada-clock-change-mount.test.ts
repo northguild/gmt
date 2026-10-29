@@ -5,6 +5,7 @@
  * The Worker's answer is built by the real Worker handler in this test runtime, so no 2026e
  * offset is asserted as something the runtime computed (a test runtime can carry older tz data).
  */
+import { screen, within } from "@testing-library/dom";
 import { canadaTense } from "./clock-change-tense.fixture";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { getUtcNow } from "@northguild/gmt/utc/get";
@@ -121,15 +122,13 @@ describe("the template", () => {
   });
 
   it("carries the Node probe and a copy button", () => {
-    const root = host();
-    expect(text(root.querySelector('[data-role="call-node-probe"]'))).toContain(
-      "America/Winnipeg",
-    );
+    host();
+    const frame = screen.getByRole("group", { name: "Node command" });
+    expect(frame).toHaveTextContent("America/Winnipeg");
+    expect(frame).toHaveTextContent("longOffset");
     expect(
-      root
-        .querySelector<HTMLElement>('[data-role="copy-node-probe"]')
-        ?.getAttribute("data-copy-text"),
-    ).toContain("longOffset");
+      within(frame).getByRole("button", { name: "Copy the command" }),
+    ).toBeInTheDocument();
   });
 });
 

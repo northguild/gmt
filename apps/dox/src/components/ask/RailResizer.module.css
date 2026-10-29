@@ -1,0 +1,80 @@
+/* The resize handle: no width of its own, so the layout is unchanged. Its hit
+   area straddles the rail's border, which lights up on hover, focus and drag.
+   The drag state is `data-resizing` on the handle itself, set by RailResizer. */
+.resizer {
+  position: relative;
+  flex: 0 0 0;
+  z-index: var(--gmt-z-raised);
+  cursor: col-resize;
+  touch-action: none;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -0.375rem;
+    inline-size: 0.75rem;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -1px;
+    inline-size: 3px;
+    background: transparent;
+    transition: background var(--gmt-duration-fast) var(--gmt-easing);
+  }
+
+  &:hover::after,
+  &:focus::after,
+  &[data-resizing]::after {
+    background: var(--gmt-cyan);
+  }
+
+  &:focus-visible {
+    outline-color: transparent;
+
+    &::after {
+      background: var(--gmt-cyan);
+      box-shadow: 0 0 0 2px var(--gmt-cyan-ink);
+    }
+  }
+}
+
+/* Below this width a side-by-side split leaves neither half usable: the rail
+   is a bottom sheet and there is nothing to drag. */
+@media (width <= 60rem) {
+  .resizer {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resizer::after {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .resizer:hover::after,
+  .resizer:focus::after,
+  .resizer[data-resizing]::after {
+    background: CanvasText;
+  }
+}
+
+@media (forced-colors: active) {
+  .resizer:hover::after,
+  .resizer:focus::after,
+  .resizer[data-resizing]::after,
+  .resizer:focus-visible::after {
+    background: Highlight;
+    box-shadow: none;
+  }
+
+  .resizer:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}

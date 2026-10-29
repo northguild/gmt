@@ -1,0 +1,38 @@
+/* hold: a region that keeps the size of the largest thing it can show. */
+
+.hold {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.live,
+.ghost {
+  grid-area: 1 / 1;
+  min-inline-size: 0;
+}
+
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* A sentence: the dim body text the widgets' hints use. */
+.text {
+  color: var(--gmt-ice-dim);
+  font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+@media (forced-colors: active) {
+  .text {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .text {
+    color: var(--gmt-ice);
+  }
+}

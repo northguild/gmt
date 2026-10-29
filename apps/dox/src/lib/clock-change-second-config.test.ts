@@ -7,11 +7,12 @@ import { plainText } from "./clock-change-tense";
 import { moroccoTense } from "./clock-change-tense.fixture";
 import { describe, expect, it } from "vitest";
 import { clocksHtml } from "./clock-change-clocks";
-import { helpCardHtml, helpMarkdown, helpText } from "./clock-change-help";
+import { serversCard } from "~/widgets/families/clockcheck/info-card";
+import { helpCard } from "~/widgets/families/clockcheck/help-card";
+import { helpMarkdown, helpText } from "./clock-change-help";
 import {
   browserCardHtml,
   probeInlineSource,
-  serversCardHtml,
   verdictHtml,
   type ProbeConfig,
   type VerdictText,
@@ -109,12 +110,12 @@ describe("clock-change-probe with a second config", () => {
   });
 
   it("renders the servers card under the config's prefix", () => {
-    const html = serversCardHtml({
+    const html = serversCard({
       idPrefix: "x",
       command: "node -e 1",
       expected: [["Casablanca", "+01:00"]],
       line: "Run this.",
-    });
+    }).value;
     expect(html).toContain('aria-labelledby="x-servers-title"');
     expect(html).not.toMatch(NOT_CANADA);
   });
@@ -167,8 +168,10 @@ const HELP: HelpCard = {
 
 describe("clock-change-help with a second config", () => {
   it("renders, and words, a card that is not Canada's", () => {
-    expect(helpCardHtml("x", HELP)).toContain('aria-labelledby="x-help-title"');
-    expect(helpCardHtml("x", HELP)).not.toMatch(NOT_CANADA);
+    expect(helpCard("x", HELP).value).toContain(
+      'aria-labelledby="x-help-title"',
+    );
+    expect(helpCard("x", HELP).value).not.toMatch(NOT_CANADA);
     expect(helpMarkdown(HELP)).not.toMatch(NOT_CANADA);
     expect(helpText(HELP)).not.toMatch(NOT_CANADA);
   });

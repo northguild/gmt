@@ -21,7 +21,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderIdTimestampDecoderTemplate();
+const html = renderIdTimestampDecoderTemplate("id-timestamp-decoder", {});
 ---
 
 {
@@ -40,7 +40,7 @@ const html = renderIdTimestampDecoderTemplate();
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("iddecode");
     document
-      .querySelectorAll<HTMLElement>(".gmt-id-timestamp-decoder")
+      .querySelectorAll<HTMLElement>('[data-widget="id-timestamp-decoder"]')
       .forEach((el) => {
         mountIdTimestampDecoder(el, seed, new AbortController().signal).catch(
           (error) => showUnavailable(el, error),

@@ -298,7 +298,7 @@ export function renderElapsedVsClockTemplate(
   const preset = ELAPSED_PRESETS.find((p) => p.id === presetId);
 
   return (
-    `<div class="gmt-elapsed-vs-clock gmt-widget not-content">` +
+    `<div class="gmt-elapsed-vs-clock gmt-widget not-content" data-widget="elapsed-vs-clock" role="region" aria-label="Elapsed vs. Clock Difference">` +
     `<div class="gmt-widget-card">` +
     // 1. The two readings
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
@@ -334,9 +334,9 @@ export function renderElapsedVsClockTemplate(
     // 2. The two rulers
     `<div class="gmt-widget-section gmt-widget-section--wide">` +
     `<h4>2. The same span, counted two ways</h4>` +
-    `<div class="gmt-gnss-frame" data-role="frame">` +
+    `<div class="gmt-gnss-frame" data-role="frame" data-gate="frame">` +
     `<div class="gmt-evc-eq" data-role="heroes" aria-hidden="true">${equationHtml(blankPlates())}</div>` +
-    `<div class="gmt-evc-figure" data-role="rulers" role="img" aria-label="">` +
+    `<div class="gmt-evc-figure" data-role="rulers" data-gate="drawn" role="img" aria-label="">` +
     `<div class="gmt-evc-dates" data-role="dates"></div>` +
     rulerRowHtml("clock", "UTC clock", 2) +
     tapeHtml("clock", 2) +
@@ -352,7 +352,7 @@ export function renderElapsedVsClockTemplate(
     `</div>` +
     `<p class="gmt-gnss-visually-hidden" data-role="summary" aria-live="polite"></p>` +
     `<h5 class="gmt-elapsed-list-title">The seconds inserted between the two</h5>` +
-    `<ul class="gmt-elapsed-list" data-role="insertions-list" tabindex="0" aria-label="Seconds inserted between the two"></ul>` +
+    `<ul class="gmt-elapsed-list" data-role="insertions-list" data-gate="drawn" tabindex="0" aria-label="Seconds inserted between the two"></ul>` +
     `</div>` +
     // 3. The calls
     `<div class="gmt-widget-section gmt-widget-section--wide">` +

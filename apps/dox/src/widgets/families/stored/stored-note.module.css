@@ -1,0 +1,23 @@
+/* storedNote: one muted-looking line that is not muted: the body ink on the widget surface. */
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+
+  & code {
+    padding: 0;
+    background: none;
+    color: var(--gmt-ice);
+    font-family: var(--gmt-font-mono);
+    font-size: var(--gmt-text-xs);
+  }
+}
+
+@media (forced-colors: active) {
+  .note,
+  .note code {
+    color: CanvasText;
+  }
+}

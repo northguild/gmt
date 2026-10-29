@@ -21,7 +21,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderStoredTimeAuditTemplate();
+const html = renderStoredTimeAuditTemplate("stored-time-audit", {});
 ---
 
 {
@@ -40,7 +40,7 @@ const html = renderStoredTimeAuditTemplate();
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("storedaudit");
     document
-      .querySelectorAll<HTMLElement>(".gmt-stored-time-audit")
+      .querySelectorAll<HTMLElement>('[data-widget="stored-time-audit"]')
       .forEach((el) => {
         mountStoredTimeAudit(el, seed, new AbortController().signal).catch(
           (error) => showUnavailable(el, error),

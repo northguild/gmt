@@ -212,13 +212,13 @@ export function renderZoneTooltip(
      the colour lives on the word inside. Same shape as `data-dst` below. */
   const dateLine =
     shift === "same"
-      ? `<span class="gmt-globe-tooltip-date">${reading.date}</span>`
-      : `<span class="gmt-globe-tooltip-date" data-shift="${shift}">` +
+      ? `<span class="gmt-globe-tooltip-date" data-gate="live">${reading.date}</span>`
+      : `<span class="gmt-globe-tooltip-date" data-gate="live" data-shift="${shift}">` +
         `<span class="gmt-globe-tooltip-shift">${dayShiftLabel(delta)}</span>` +
         ` · ${reading.date}</span>`;
   return (
     zone +
-    `<span class="gmt-globe-tooltip-time">${reading.time}</span>` +
+    `<span class="gmt-globe-tooltip-time" data-gate="live">${reading.time}</span>` +
     dateLine +
     skyLine +
     `<span class="gmt-globe-tooltip-meta" data-dst="${state}">` +

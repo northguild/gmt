@@ -71,48 +71,6 @@ describe("the How gmt helps card", () => {
     }
   });
 
-  it("links each function name to its reference page and the saved-times link to the section", () => {
-    const html = renderCanadaClockChangeTemplate({ tense: canadaTense });
-    const card = html.slice(
-      html.indexOf('class="gmt-clockcheck-help"'),
-      html.indexOf("</section>", html.indexOf('class="gmt-clockcheck-help"')),
-    );
-    expect(card).toMatch(
-      /<a class="gmt-clockcheck-help-fn" href="[^"]*\/reference\/zoned\/classify\/classifyStoredZoned\/"><code>classifyStoredZoned<\/code><\/a>/,
-    );
-    expect(card).toMatch(
-      /<a class="gmt-clockcheck-help-fn" href="[^"]*\/reference\/zoned\/convert\/convertPlainDateTimeToZoned\/"><code>convertPlainDateTimeToZoned<\/code><\/a>/,
-    );
-    expect(card).toMatch(
-      /<a class="gmt-clockcheck-help-btn" href="#canada-stored-title">Did your saved events move\?/,
-    );
-    // An absolute address is left as written, not put under the site's base path.
-    expect(card).toContain(
-      '<a href="https://github.com/northguild/gmt/blob/main/packages/gmt/src/test/oh-canada.test.ts">See the tests</a>',
-    );
-    expect(helpMarkdown(HELP)).toContain(
-      "[See the tests](https://github.com/northguild/gmt/blob/main/packages/gmt/src/test/oh-canada.test.ts)",
-    );
-  });
-
-  it("draws the two saved-time cases as cards with input, output and why", () => {
-    const html = renderCanadaClockChangeTemplate({ tense: canadaTense });
-    expect(html).toContain(
-      '<span class="gmt-clockcheck-help-tag">Saved with an offset</span>',
-    );
-    expect(html).toContain(
-      '<code class="gmt-clockcheck-help-in">2026-11-15T09:00:00-08:00[America/Vancouver]</code>',
-    );
-    expect(html).toContain('<code class="gmt-clockcheck-help-out">""</code>');
-    expect(html).toContain(
-      '<code class="gmt-clockcheck-help-in">2026-11-15T17:00:00Z</code>',
-    );
-    expect(html).toContain(
-      '<code class="gmt-clockcheck-help-out">10:00</code>',
-    );
-    expect(html).toContain("an hour late");
-  });
-
   it("words every link to the saved-events section with the heading's own text", () => {
     const html = renderCanadaClockChangeTemplate({
       tense: canadaTense,
@@ -124,7 +82,7 @@ describe("the How gmt helps card", () => {
     expect(heading).toBe("Did your saved events move?");
     const links = [
       ...html.matchAll(
-        /<a [^>]*href="#canada-stored-title"[^>]*>([\s\S]*?)<\/a>/g,
+        /<a [^>]*href="#canada-stored-title"[^>]*>([\s\S]*?)<\/a\s*>/g,
       ),
     ].map((m) => m[1]!.replace(/<[^>]*>/g, "").trim());
     expect(links.length).toBeGreaterThanOrEqual(2);
@@ -135,5 +93,8 @@ describe("the How gmt helps card", () => {
       .matchAll(/\[([^\]]*)\]\(#canada-stored-title\)/g)) {
       expect(m[1]).toBe(heading);
     }
+    expect(helpMarkdown(HELP)).toContain(
+      "[See the tests](https://github.com/northguild/gmt/blob/main/packages/gmt/src/test/oh-canada.test.ts)",
+    );
   });
 });

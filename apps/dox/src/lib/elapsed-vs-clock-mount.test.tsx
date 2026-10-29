@@ -313,7 +313,7 @@ describe("renderElapsedVsClockTemplate", () => {
     expect(widget.getAttribute("class")).toBe(
       "gmt-elapsed-vs-clock gmt-widget not-content",
     );
-    expect(widget.attributes).toHaveLength(1);
+    expect(widget.attributes).toHaveLength(4);
     const classes = [...root.querySelectorAll("[class]")].flatMap((e) =>
       e.getAttribute("class")!.split(/\s+/),
     );

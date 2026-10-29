@@ -23,12 +23,7 @@ import {
   showUnavailable,
   type MountFn,
 } from "./widget-mount";
-import {
-  escapeAttr,
-  escapeHtml,
-  wireCopyButtons,
-  zoneIdHtml,
-} from "./widget-ui";
+import { escapeAttr, escapeHtml, zoneIdHtml } from "./widget-ui";
 
 /** The two years a checker lists: the year its zones stop changing clocks, and the year after. */
 export function yearsOf(stopYear: number): readonly [number, number] {
@@ -186,13 +181,13 @@ export function keyPointsHtml(
         );
   };
   return (
-    `<section class="gmt-keypoints" aria-labelledby="${idPrefix}-keypoints-title">` +
+    `<section class="gmt-keypoints" data-gate="keypoints" aria-labelledby="${idPrefix}-keypoints-title">` +
     `<h2 id="${idPrefix}-keypoints-title">${escapeHtml(KEY_POINTS_HEADING)}</h2>` +
     `<div class="gmt-keypoints-grid">` +
     cards
       .map(
         (card) =>
-          `<div class="gmt-keypoints-card"${card.id ? ` id="${escapeAttr(card.id)}"` : ""}>` +
+          `<div class="gmt-keypoints-card" data-gate="keypoints-card"${card.id ? ` id="${escapeAttr(card.id)}"` : ""}>` +
           `<h3>${escapeHtml(card.heading)}</h3>` +
           card.blocks
             .map((block) =>
@@ -206,23 +201,6 @@ export function keyPointsHtml(
       .join("") +
     `</div></section>`
   );
-}
-
-/** Wires the copy buttons and the "Copied" announcement of the Node probe command. */
-export function wireCopy(root: HTMLElement, signal: AbortSignal): void {
-  wireCopyButtons(root);
-  const copyStatus = root.querySelector<HTMLElement>(
-    '[data-role="copy-status"]',
-  );
-  root
-    .querySelector<HTMLElement>('[data-role="copy-node-probe"]')
-    ?.addEventListener(
-      "click",
-      () => {
-        if (copyStatus) copyStatus.textContent = "Copied";
-      },
-      { signal },
-    );
 }
 
 const NO_LOCATION: Pick<Location, "href"> = { href: "https://dox.invalid/" };

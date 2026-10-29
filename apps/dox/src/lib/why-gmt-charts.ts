@@ -32,6 +32,7 @@ import {
   libraryComparisons,
   type LibraryComparison,
 } from "../data/library-comparison";
+import { chartTooltipMotion } from "./chart-motion";
 
 type TooltipOption = Parameters<typeof defineChart>[0]["tooltip"];
 
@@ -104,6 +105,7 @@ function withTooltip(
   return {
     tooltip: {
       use: extension,
+      ...chartTooltipMotion(),
       content: (points: readonly ChartPoint<unknown>[]) =>
         content(points[0]?.datum),
     } as TooltipOption,

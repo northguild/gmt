@@ -1,0 +1,10 @@
+/* The planner block on a docs page. The heading is an h2 that follows prose, so it keeps the
+ * space above it that the article's heading rhythm gave it before the cascade layers landed. */
+.block {
+  margin-block: 0;
+}
+
+/* Nested under the block so it outranks the shared chart-title margin whatever the sheet order. */
+.block .title {
+  margin-block-start: var(--gmt-space-8);
+}

@@ -2,8 +2,7 @@
 /**
  * Converter + format bench + regex tester widget.
  *
- * Three sections sharing the same card/section/controls/output chrome as
- * DstInspector.astro and IntervalVisualizer.astro (styles/gmt-widget.css):
+ * Three sections built from the component kit:
  * 1. Zone-to-zone conversion via convertZonedToZoned
  * 2. formatZonedToParts + formatRelativeZoned with locale switching
  * 3. Regex tester running input against all 22 exported regex consts
@@ -36,7 +35,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderConverterTemplate();
+const html = renderConverterTemplate("converter-bench");
 ---
 
 {
@@ -60,7 +59,7 @@ const html = renderConverterTemplate();
        see lib/widget-permalink.ts. Absent or malformed, this is `{}` and the
        widget opens on its defaults, exactly as before. */
     const seed = seedFromLocation("converter");
-    document.querySelectorAll<HTMLElement>(".gmt-converter").forEach((el) => {
+    document.querySelectorAll<HTMLElement>('[data-widget="converter-bench"]').forEach((el) => {
       mountConverterBench(el, seed, new AbortController().signal).catch((error) =>
         showUnavailable(el, error),
       );

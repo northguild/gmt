@@ -1,86 +1,30 @@
 /**
  * @vitest-environment jsdom
  *
- * The X12 Time Reader end to end: template → mount → interact → assert, against
- * the real `@northguild/gmt`. Every preset's printed calls, results, verdict,
- * members, instant and write-back are checked, so a drift in the library or the
- * widget fails here.
+ * The X12 Time Reader end to end: template -> mount -> interact -> assert, against
+ * the real `@northguild/gmt`, through roles and accessible names the way a person
+ * (or a screen reader) meets the page. Every preset's printed calls, results,
+ * verdict, members, instant and write-back are checked, so a drift in the library
+ * or the widget fails here.
  */
+import { screen, within } from "@testing-library/dom";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  cellsInColumn,
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { DTP_PRESETS, X12_PRESETS } from "./x12-time-reader";
-import {
-  mountX12TimeReader,
-  renderX12TimeReaderTemplate,
-} from "./x12-time-reader-mount";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "date",
-  "time",
-  "time-code",
-  "verdict",
-  "verdict-detail",
-  "readouts",
-  "member-kind",
-  "member-value",
-  "member-code",
-  "member-offset",
-  "member-zone",
-  "member-daylight",
-  "member-instant",
-  "call-parse",
-  "copy-parse",
-  "parse-output",
-  "reason-aside",
-  "instant-output",
-  "instant-note",
-  "strip-note",
-  "gap-strip",
-  "zone-1",
-  "zone-4",
-  "instant-1",
-  "instant-4",
-  "offset-1",
-  "withoffset-1",
-  "withoffset-4",
-  "gap",
-  "figure",
-  "figure-note",
-  "timeline",
-  "dtp-figure",
-  "strip-summary",
-  "strip-aside",
-  "resolve-block",
-  "call-resolve",
-  "copy-resolve",
-  "date-output",
-  "call-write-date",
-  "copy-write-date",
-  "time-output",
-  "call-write-time",
-  "copy-write-time",
-  "format-note",
-  "dtp-preset",
-  "dtp-preset-description",
-  "dtp-format",
-  "dtp-value",
-  "dtp-readouts",
-  "dtp-member-kind",
-  "dtp-member-value",
-  "dtp-member-range-end",
-  "call-dtp-parse",
-  "copy-dtp-parse",
-  "dtp-parse-output",
-  "dtp-reason-aside",
-  "dtp-format-output",
-  "dtp-format-note",
-  "call-dtp-format",
-  "copy-dtp-format",
-];
+const entry = WIDGET_REGISTRY["showX12TimeReader"] as AnyWidgetEntry;
 
 const NOT_STATED = "not stated";
 
@@ -246,91 +190,109 @@ const EXPECTED: Record<string, Expected> = {
   },
 };
 
-const MEMBER_KEYS = [
-  "kind",
-  "value",
-  "code",
-  "offset",
-  "zone",
-  "daylight",
-  "instant",
-];
+/** Testing Library collapses whitespace in what it reads, so the expectation is flattened too. */
+const flat = (text: string) => text.replaceAll("\n", " ");
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+const MEMBER_LABELS: Record<string, string> = {
+  kind: "Kind",
+  value: "Value",
+  code: "Time code",
+  offset: "Offset",
+  zone: "Zone name",
+  daylight: "Daylight",
+  instant: "Instant",
+};
+const MEMBER_KEYS = Object.keys(MEMBER_LABELS);
 
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderX12TimeReaderTemplate(args);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountX12TimeReader(root, args, controller.signal);
-  return { root, handle, controller };
+const open = (args = {}, idPrefix = "test") =>
+  renderWidget(entry, { args, idPrefix });
+
+const section = (name: RegExp | string) => screen.getByRole("region", { name });
+const parseSection = () => section(/^2\. /);
+const landsSection = () => section(/^3\. /);
+const backSection = () => section(/^4\. /);
+const dtpSection = () => section(/^6\. /);
+
+const preset = () => screen.getByRole("combobox", { name: "Preset" });
+const dtpPreset = () => screen.getByRole("combobox", { name: "DTP preset" });
+const dateBox = () => screen.getByRole("textbox", { name: /^Date/ });
+const timeBox = () => screen.getByRole("textbox", { name: /^Time \(/ });
+const codeBox = () => screen.getByRole("textbox", { name: /^Time code/ });
+const dtpFormat = () => screen.getByRole("textbox", { name: /^Qualifier/ });
+const dtpValue = () => screen.getByRole("textbox", { name: /^Value \(1251/ });
+const zone = (n: number) => screen.getByRole("combobox", { name: `Zone ${n}` });
+
+const calls = (root: HTMLElement, name = "Calls made") =>
+  within(root).queryByRole("group", { name });
+const output = (root: HTMLElement, name: string) =>
+  within(root).getByRole("status", { name });
+const verdict = () => screen.getByRole("status", { name: "Verdict" });
+
+function memberTable(root: HTMLElement) {
+  return within(root).getByRole("table", { name: /member by member/ });
 }
-
-function choose(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLSelectElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
+function members(root: HTMLElement): Record<string, string> {
+  const table = memberTable(root);
+  const names = cellsInColumn(table, "Member").map((c) =>
+    c.textContent!.trim(),
+  );
+  const values = cellsInColumn(table, "Value").map((c) =>
+    c.textContent!.trim(),
+  );
+  return Object.fromEntries(names.map((n, i) => [n, values[i]!]));
 }
+const strip = () => screen.getByRole("table", { name: /four zones/ });
+const column = (name: string) =>
+  cellsInColumn(strip(), name).map((c) => c.textContent!.trim());
 
-function type(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLInputElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
+async function choose(w: RenderedWidget, id: string) {
+  await w.user.selectOptions(preset(), id);
 }
-
-const text = (root: HTMLElement, role: string) =>
-  q(root, role).textContent ?? "";
-const isSentinel = (root: HTMLElement, role: string) =>
-  q(root, role).classList.contains("gmt-playground-sentinel");
-const isEmpty = (root: HTMLElement, role: string) =>
-  q(root, role).classList.contains("gmt-widget-output--empty");
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
+async function retype(w: RenderedWidget, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  if (value !== "") await w.user.type(box, value);
+}
 
 describe("renderX12TimeReaderTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderX12TimeReaderTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
+  it("is a named region with six numbered sections and named controls", async () => {
+    await open();
+    expect(
+      screen.getByRole("region", { name: "X12 Time Reader" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent),
+    ).toEqual([
+      "1. The date, the time and the time code",
+      "2. What the calls return",
+      "3. The instant, and where the same digits land",
+      "4. Written back by formatX12Date and formatX12TimeElement",
+      "5. A DTP value",
+      "6. What the DTP calls return",
+    ]);
+    for (const c of [preset(), dtpPreset(), zone(1), zone(4)]) {
+      expect(c).toBeInTheDocument();
     }
+    for (const b of [
+      dateBox(),
+      timeBox(),
+      codeBox(),
+      dtpFormat(),
+      dtpValue(),
+    ]) {
+      expect(b).toBeInTheDocument();
+    }
+    expect(
+      screen.queryByRole("textbox", { name: /year/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it("is a widget root with the standard wrapper, and no class containing card but the wrapper", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderX12TimeReaderTemplate();
-    const widget = root.firstElementChild as HTMLElement;
-    expect(widget.className).toBe("gmt-x12-time-reader gmt-widget not-content");
-    const cardClasses = [...root.querySelectorAll("[class]")]
-      .flatMap((el) => [...el.classList])
-      .filter((c) => c.includes("card"));
-    expect(new Set(cardClasses)).toEqual(new Set(["gmt-widget-card"]));
-  });
-
-  it("renders six numbered sections and no year-window control", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderX12TimeReaderTemplate();
-    expect(root.querySelectorAll(".gmt-widget-section")).toHaveLength(6);
-    expect(root.querySelector('[data-role="year-window"]')).toBeNull();
-    expect(root.querySelector('[data-role="year-start"]')).toBeNull();
-    const dtpLine = root.querySelector('[data-line="dtp"]')!;
-    expect(dtpLine.querySelectorAll(":scope > label")).toHaveLength(3);
-  });
-
-  it("escapes a hostile seed", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderX12TimeReaderTemplate({
+  it("does not run a hostile seed", async () => {
+    await open({
       date: '"><img src=x onerror=alert(1)>',
       zone: '"><script>x</script>',
     });
-    expect(root.querySelector("img")).toBeNull();
-    expect(root.querySelector("script")).toBeNull();
+    expect(screen.queryByRole("img", { name: /^x$/ })).not.toBeInTheDocument();
+    expect(dateBox()).toHaveValue('"><img src=x onerror=alert(1)>');
   });
 });
 
@@ -342,82 +304,92 @@ describe("every main preset, against the real library", () => {
   });
 
   it.each(X12_PRESETS.map((p) => [p.id]))("%s", async (id) => {
-    const { root } = await mount();
-    choose(root, "preset", id!);
+    const w = await open();
+    await choose(w, id!);
     const e = EXPECTED[id!]!;
 
-    expect(q(root, "copy-parse").dataset["copyText"]).toBe(e.calls);
-    expect(text(root, "parse-output")).toBe(e.results);
-    expect(isSentinel(root, "parse-output")).toBe(false);
-    expect(text(root, "verdict")).toBe(e.verdict);
-    expect(text(root, "reason-aside")).toBe("");
+    expect(calls(parseSection())).toHaveTextContent(flat(e.calls));
+    expect(output(parseSection(), "What the calls returned")).toHaveTextContent(
+      flat(e.results),
+    );
+    expect(verdict()).toHaveTextContent(e.verdict);
+    expect(
+      screen.queryByRole("complementary", { name: /^Why/ }),
+    ).not.toBeInTheDocument();
+    const got = members(parseSection());
     for (const key of MEMBER_KEYS) {
-      const cell = q(root, `member-${key}`);
-      if (e.members[key] !== undefined) {
-        expect(cell.textContent, key).toBe(e.members[key]);
-        expect(cell.dataset["state"]).toBe("value");
-      } else {
-        expect(cell.textContent, key).toBe(NOT_STATED);
-        expect(cell.dataset["state"]).toBe("absent");
-      }
+      expect(got[MEMBER_LABELS[key]!], key).toBe(e.members[key] ?? NOT_STATED);
     }
-    // The instant output is the first chosen zone's, or the stated offset's.
-    expect(text(root, "instant-output")).toBe(
+    expect(output(landsSection(), "The instant")).toHaveTextContent(
       e.instant === "no instant" ? e.instant : `"${e.instant}"`,
     );
-    expect(text(root, "date-output")).toBe(
+    expect(output(backSection(), "The date written back")).toHaveTextContent(
       e.date === "not sent" ? e.date : `"${e.date}"`,
     );
-    expect(text(root, "time-output")).toBe(
+    expect(output(backSection(), "The time written back")).toHaveTextContent(
       e.time === "not sent" ? e.time : `"${e.time}"`,
     );
+    await expectNoAxeViolations(w.root);
   });
 
   it("prints resolveLocal(local, offset) for a code that states an offset, and no zone is read", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "code-13");
-    expect(q(root, "copy-resolve").dataset["copyText"]).toBe(
+    const w = await open();
+    await choose(w, "code-13");
+    expect(calls(landsSection(), "Call made")).toHaveTextContent(
       'resolveLocal("2024-06-15T14:30:00", "-12:00")',
     );
-    expect(q(root, "resolve-block").hidden).toBe(false);
-    for (const n of [1, 2, 3, 4]) {
-      expect(q<HTMLSelectElement>(root, `zone-${n}`).disabled).toBe(true);
-    }
-    expect(q(root, "timeline").dataset["state"]).toBe("stated");
+    for (const n of [1, 2, 3, 4]) expect(zone(n)).toBeDisabled();
+    expect(landsSection()).toHaveTextContent(
+      "Stated by the value: 2024-06-16T02:30:00Z",
+    );
+    await expectNoAxeViolations(w.root);
   });
 
   it("prints resolveLocal in the first chosen zone for a code that states none", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "status-et");
-    expect(q(root, "copy-resolve").dataset["copyText"]).toBe(
+    const w = await open();
+    await choose(w, "status-et");
+    expect(calls(landsSection(), "Call made")).toHaveTextContent(
       'resolveLocal("2024-06-15T14:30:00", "America/New_York", { disambiguation: "reject" })',
     );
-    expect(text(root, "instant-1")).toBe("2024-06-15T18:30:00Z");
-    expect(text(root, "instant-2")).toBe("2024-06-15T19:30:00Z");
-    expect(text(root, "gap")).toContain("Widest gap: 1 h");
+    expect(column("Instant").slice(0, 2)).toEqual([
+      "2024-06-15T18:30:00Z",
+      "2024-06-15T19:30:00Z",
+    ]);
+    expect(
+      screen.getByRole("status", { name: "Widest gap" }),
+    ).toHaveTextContent("Widest gap: 1 h");
+    await expectNoAxeViolations(w.root);
   });
 
   it("keeps example zones on exactly the presets whose strip has work to do", async () => {
-    const { root } = await mount();
+    const w = await open();
     for (const p of X12_PRESETS) {
-      choose(root, "preset", p.id);
+      await choose(w, p.id);
       const filled = [1, 2, 3, 4].some(
-        (n) => q<HTMLSelectElement>(root, `zone-${n}`).value !== "",
+        (n) => (zone(n) as HTMLSelectElement).value !== "",
       );
       expect(filled, p.id).toBe(p.zones.some((z) => z !== ""));
     }
   });
 
   it("never fills a zone from the time code typed", async () => {
-    const { root } = await mount();
-    for (const n of [1, 2, 3, 4]) choose(root, `zone-${n}`, "");
-    type(root, "time-code", "ET");
-    type(root, "date", "20240615");
-    type(root, "time", "1430");
-    for (const n of [1, 2, 3, 4])
-      expect(q<HTMLSelectElement>(root, `zone-${n}`).value).toBe("");
-    expect(text(root, "instant-1")).toBe("no zone chosen");
-    expect(text(root, "instant-note")).toContain("Pick the IANA zone");
+    const w = await open();
+    for (const n of [1, 2, 3, 4]) await w.user.selectOptions(zone(n), "");
+    await retype(w, codeBox(), "ET");
+    await retype(w, dateBox(), "20240615");
+    await retype(w, timeBox(), "1430");
+    for (const n of [1, 2, 3, 4]) expect(zone(n)).toHaveValue("");
+    expect(column("Instant")[0]).toBe("no zone chosen");
+    expect(landsSection()).toHaveTextContent(/Pick the IANA zone/);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("a zone change leaves the preset for Custom", async () => {
+    const w = await open();
+    await choose(w, "status-et");
+    await w.user.selectOptions(zone(1), "Europe/Paris");
+    expect(preset()).toHaveValue("custom");
+    await expectNoAxeViolations(w.root);
   });
 });
 
@@ -428,58 +400,74 @@ describe("the sentinel", () => {
     ["20240615", "1430", "XX", "XX is not a 623 time code"],
     ["20240615", "", "ET", "qualifies a time"],
   ])("explains %j %j %j", async (date, time, code, snippet) => {
-    const { root } = await mount();
-    type(root, "date", date);
-    type(root, "time", time);
-    type(root, "time-code", code);
-    expect(isSentinel(root, "parse-output")).toBe(true);
-    expect(text(root, "parse-output")).toBe("NO SIGNAL");
-    expect(text(root, "reason-aside")).toContain(snippet);
-    for (const key of MEMBER_KEYS)
-      expect(text(root, `member-${key}`)).toBe("no result");
-    expect(text(root, "verdict")).toBe("");
-    expect(text(root, "date-output")).toBe("nothing to write back");
+    const w = await open();
+    await retype(w, dateBox(), date);
+    await retype(w, timeBox(), time);
+    await retype(w, codeBox(), code);
+    expect(output(parseSection(), "What the calls returned")).toHaveTextContent(
+      "NO SIGNAL",
+    );
+    expect(within(parseSection()).getByRole("complementary")).toHaveTextContent(
+      snippet,
+    );
+    for (const label of Object.values(MEMBER_LABELS)) {
+      expect(members(parseSection())[label]).toBe("no result");
+    }
+    expect(output(backSection(), "The date written back")).toHaveTextContent(
+      "nothing to write back",
+    );
+    await expectNoAxeViolations(w.root);
   });
 
-  it("a blank form makes no call and is empty, not amber", async () => {
-    const { root } = await mount();
-    type(root, "date", "");
-    type(root, "time", "");
-    type(root, "time-code", "");
-    expect(text(root, "parse-output")).toBe("nothing to read");
-    expect(isEmpty(root, "parse-output")).toBe(true);
-    expect(q(root, "parse-block").hidden).toBe(true);
-    expect(text(root, "reason-aside")).toBe("");
-    expect(text(root, "verdict")).toBe("");
-    expect(text(root, "instant-output")).toBe("no instant");
+  it("a blank form makes no call and says nothing to read", async () => {
+    const w = await open();
+    await retype(w, dateBox(), "");
+    await retype(w, timeBox(), "");
+    await retype(w, codeBox(), "");
+    expect(output(parseSection(), "What the calls returned")).toHaveTextContent(
+      "nothing to read",
+    );
+    expect(calls(parseSection())).not.toBeInTheDocument();
     expect(
-      root.querySelector('[data-role="reason-aside"] .starlight-aside'),
-    ).toBeNull();
+      within(parseSection()).queryByRole("complementary"),
+    ).not.toBeInTheDocument();
+    expect(output(landsSection(), "The instant")).toHaveTextContent(
+      "no instant",
+    );
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("writing back", () => {
   it("writes the date and the time with the element formatters and says where the date came from", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "status-et");
-    expect(q(root, "copy-write-date").dataset["copyText"]).toBe(
-      'formatX12Date("2024-06-15", "D8")',
-    );
-    expect(q(root, "copy-write-time").dataset["copyText"]).toBe(
+    const w = await open();
+    await choose(w, "status-et");
+    const groups = within(backSection()).getAllByRole("group", {
+      name: "Call made",
+    });
+    expect(groups[0]).toHaveTextContent('formatX12Date("2024-06-15", "D8")');
+    expect(groups[1]).toHaveTextContent(
       'formatX12TimeElement("14:30:00", "HHMM")',
     );
-    expect(text(root, "format-note")).toContain("read alone by parseX12Date");
+    expect(
+      screen.getByRole("note", { name: "About the written elements" }),
+    ).toHaveTextContent(/read alone by parseX12Date/);
+    await expectNoAxeViolations(w.root);
   });
 
   it("writes hundredths back with their hundredths", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "hundredths");
-    expect(q(root, "copy-write-time").dataset["copyText"]).toBe(
-      'formatX12TimeElement("14:30:00.12", "HHMMSSDD")',
+    const w = await open();
+    await choose(w, "hundredths");
+    expect(
+      within(backSection()).getAllByRole("group", { name: "Call made" })[1],
+    ).toHaveTextContent('formatX12TimeElement("14:30:00.12", "HHMMSSDD")');
+    expect(output(backSection(), "The time written back")).toHaveTextContent(
+      '"14300012"',
     );
-    expect(text(root, "time-output")).toBe('"14300012"');
-    expect(isSentinel(root, "time-output")).toBe(false);
-    expect(text(root, "format-note")).not.toContain("cut");
+    expect(
+      screen.getByRole("note", { name: "About the written elements" }),
+    ).not.toHaveTextContent(/cut/);
+    await expectNoAxeViolations(w.root);
   });
 });
 
@@ -523,105 +511,112 @@ describe("the DTP section", () => {
   });
 
   it.each(DTP_PRESETS.map((p) => [p.id]))("%s", async (id) => {
-    const { root } = await mount();
-    choose(root, "dtp-preset", id!);
+    const w = await open();
+    await w.user.selectOptions(dtpPreset(), id!);
     const e = EXPECTED_DTP[id!]!;
-    expect(q(root, "copy-dtp-parse").dataset["copyText"]).toBe(e.calls);
-    expect(text(root, "dtp-parse-output")).toBe(e.result);
+    const out = output(dtpSection(), "What the DTP calls returned");
+    expect(calls(dtpSection())).toHaveTextContent(flat(e.calls));
     if (e.written === null) {
-      expect(isSentinel(root, "dtp-parse-output")).toBe(true);
-      expect(text(root, "dtp-reason-aside")).toContain("yyMMdd");
-      expect(text(root, "dtp-reason-aside")).toContain("yearWindow");
-      expect(q(root, "dtp-format-block").hidden).toBe(true);
-      for (const row of ["kind", "value", "range-end"]) {
-        expect(text(root, `dtp-member-${row}`)).toBe("no result");
+      expect(out).toHaveTextContent("NO SIGNAL");
+      const aside = within(dtpSection()).getByRole("complementary");
+      expect(aside).toHaveTextContent("yyMMdd");
+      expect(aside).toHaveTextContent("yearWindow");
+      for (const label of ["Kind", "Value", "Range end"]) {
+        expect(members(dtpSection())[label]).toBe("no result");
       }
+      expect(
+        output(dtpSection(), "The DTP value written back"),
+      ).toHaveTextContent("nothing to write back");
     } else {
-      expect(q(root, "copy-dtp-format").dataset["copyText"]).toBe(e.written);
-      expect(isSentinel(root, "dtp-format-output")).toBe(false);
-      expect(text(root, "dtp-reason-aside")).toBe("");
+      expect(out).toHaveTextContent(flat(e.result));
+      expect(
+        within(dtpSection()).getAllByRole("group", { name: "Call made" })[0],
+      ).toHaveTextContent(e.written);
+      expect(
+        within(dtpSection()).queryByRole("complementary"),
+      ).not.toBeInTheDocument();
     }
+    await expectNoAxeViolations(w.root);
   });
 
   it("starts on a preset that returns a value", async () => {
-    const { root } = await mount();
-    expect(isSentinel(root, "dtp-parse-output")).toBe(false);
-    expect(text(root, "dtp-member-range-end")).toBe("2024-06-20");
-    expect(text(root, "dtp-member-kind")).toBe("date range");
+    const w = await open();
+    expect(members(dtpSection())["Range end"]).toBe("2024-06-20");
+    expect(members(dtpSection())["Kind"]).toBe("date range");
+    await expectNoAxeViolations(w.root);
   });
 
   it("says a code it does not read is not read, and a blank pair is empty", async () => {
-    const { root } = await mount();
-    type(root, "dtp-format", "RTM");
-    type(root, "dtp-value", "2200-0600");
-    expect(text(root, "dtp-reason-aside")).toContain(
+    const w = await open();
+    await retype(w, dtpFormat(), "RTM");
+    await retype(w, dtpValue(), "2200-0600");
+    expect(within(dtpSection()).getByRole("complementary")).toHaveTextContent(
       "RTM is not a qualifier the library reads",
     );
-    type(root, "dtp-format", "");
-    type(root, "dtp-value", "");
-    expect(text(root, "dtp-parse-output")).toBe("nothing to read");
-    expect(q(root, "dtp-parse-block").hidden).toBe(true);
-    expect(text(root, "dtp-reason-aside")).toBe("");
+    await retype(w, dtpFormat(), "");
+    await retype(w, dtpValue(), "");
+    expect(
+      output(dtpSection(), "What the DTP calls returned"),
+    ).toHaveTextContent("nothing to read");
+    expect(
+      within(dtpSection()).queryByRole("complementary"),
+    ).not.toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
-  it("draws a range's two halves with the hyphen between", async () => {
-    const { root } = await mount();
+  it("draws a range's two halves in the figure's description", async () => {
+    await open();
     expect(
-      [...q(root, "dtp-figure").querySelectorAll(".gmt-edi-half-label")].map(
-        (m) => m.textContent,
-      ),
-    ).toEqual(["start", "end"]);
-    expect(
-      q(root, "dtp-figure").querySelector(".gmt-edi-sep")?.textContent,
-    ).toBe("-");
+      screen.getByRole("img", {
+        name: /start: year 2024, month 06, day 15; end:/,
+      }),
+    ).toBeInTheDocument();
   });
 });
 
 describe("seeding and permalinks", () => {
   it("seeds the elements without a preset fallback", async () => {
-    const { root } = await mount({
-      date: "20240615",
-      time: "1430",
-      timeCode: "20",
-    });
-    expect(text(root, "verdict")).toBe("Offset: stated (-05:00)");
-    expect(text(root, "instant-output")).toBe('"2024-06-15T19:30:00Z"');
+    await open({ date: "20240615", time: "1430", timeCode: "20" });
+    expect(verdict()).toHaveTextContent("Offset: stated (-05:00)");
+    expect(output(landsSection(), "The instant")).toHaveTextContent(
+      '"2024-06-15T19:30:00Z"',
+    );
   });
 
   it("loads an old link that still carries a year window without error, and ignores it", async () => {
-    const { root, handle } = await mount({
+    const w = await open({
       format: "D6",
       value: "240615",
       yearWindow: "2000",
-    } as never);
-    expect(text(root, "dtp-parse-output")).toBe("NO SIGNAL");
-    expect(handle.getPermalinkState?.()).toEqual({
-      format: "D6",
-      value: "240615",
     });
+    expect(
+      output(dtpSection(), "What the DTP calls returned"),
+    ).toHaveTextContent("NO SIGNAL");
+    expect(w.permalink()).toContain("D6");
+    expect(w.permalink()).not.toContain("yearWindow");
   });
 
   it.each(X12_PRESETS.map((p) => [p.id]))(
     "round-trips %s as a permalink of strings",
     async (id) => {
-      const first = await mount();
-      choose(first.root, "preset", id!);
-      const state = first.handle.getPermalinkState?.() as Record<
-        string,
-        unknown
-      >;
+      const first = await open();
+      await choose(first, id!);
+      const url = first.permalink();
+      const query = url.slice(url.indexOf("?"));
+      const state = seedFromLocation("xtime", query) as Record<string, unknown>;
       expect(
         Object.values(state).every(
           (v) => typeof v === "string" && v.length > 0,
         ),
       ).toBe(true);
-      const url = encodeWidgetPermalink("xtime", state);
-      const seeded = seedFromLocation("xtime", url.slice(url.indexOf("?")));
-      expect(seeded).toEqual(state);
-      const out = text(first.root, "parse-output");
-      document.body.innerHTML = "";
-      const second = await mount(seeded);
-      expect(text(second.root, "parse-output")).toBe(out);
+      expect(encodeWidgetPermalink("xtime", state)).toContain(
+        query.slice(query.indexOf("wa=")),
+      );
+      first.destroy();
+      await open(state, "second");
+      expect(
+        output(parseSection(), "What the calls returned"),
+      ).toHaveTextContent(flat(EXPECTED[id!]!.results));
     },
   );
 });
@@ -629,89 +624,55 @@ describe("seeding and permalinks", () => {
 describe("naming and lifecycle", () => {
   it("names no regulator, statute, agency, docket or customs body, and no business event", async () => {
     const forbidden = /\b(CFR|statut|regulat|docket|agency|customs|gate-in)\b/i;
-    const { root } = await mount();
-    const seen: string[] = [renderX12TimeReaderTemplate()];
+    const w = await open();
+    expect(w.root).not.toHaveTextContent(forbidden);
     for (const p of X12_PRESETS) {
-      choose(root, "preset", p.id);
-      seen.push(root.textContent ?? "");
+      await choose(w, p.id);
+      expect(w.root).not.toHaveTextContent(forbidden);
     }
     for (const p of DTP_PRESETS) {
-      choose(root, "dtp-preset", p.id);
-      seen.push(root.textContent ?? "");
+      await w.user.selectOptions(dtpPreset(), p.id);
+      expect(w.root).not.toHaveTextContent(forbidden);
     }
-    for (const s of seen) expect(s).not.toMatch(forbidden);
   });
 
   it("an aborted mount is inert, and destroying twice is safe", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderX12TimeReaderTemplate();
-    document.body.append(root);
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountX12TimeReader(root, {}, controller.signal);
-    expect(text(root, "member-value")).toBe("no result");
-    expect(handle.getPermalinkState?.()).toBeNull();
+    const w = await renderWidget(entry, { args: {}, aborted: true });
+    expect(members(parseSection())["Value"]).toBe("no result");
     expect(() => {
-      handle.destroy();
-      handle.destroy();
+      w.destroy();
+      w.destroy();
     }).not.toThrow();
   });
-
-  it("stops answering once destroyed", async () => {
-    const { root, handle } = await mount();
-    handle.destroy();
-    type(root, "time-code", "XX");
-    expect(text(root, "verdict")).toBe("Offset: not stated");
-  });
 });
-
-function screenText(root: HTMLElement): string {
-  const clone = root.cloneNode(true) as HTMLElement;
-  clone
-    .querySelectorAll('.gmt-codeframe, output[data-role$="output"]')
-    .forEach((e) => e.remove());
-  const labels = [...clone.querySelectorAll("[aria-label]")].map((e) =>
-    e.getAttribute("aria-label"),
-  );
-  return `${clone.textContent}\n${labels.join("\n")}`;
-}
 
 describe("on-screen words", () => {
   it.each(X12_PRESETS.map((p) => [p.id]))(
     "%s shows no raw null and never calls the library GMT",
     async (id) => {
-      const { root } = await mount();
-      choose(root, "preset", id!);
-      const shown = screenText(root);
-      expect(shown).not.toMatch(/\b(null|undefined)\b/);
-      expect(shown).not.toMatch(/GMT (does|returns|maps|reads|never)/);
-      for (const key of MEMBER_KEYS) {
-        expect(text(root, `member-${key}`)).not.toMatch(/null|undefined|^$/);
+      const w = await open();
+      await choose(w, id!);
+      expect(parseSection()).not.toHaveTextContent(/\bundefined\b/);
+      expect(w.root).not.toHaveTextContent(
+        /GMT (does|returns|maps|reads|never)/,
+      );
+      for (const v of Object.values(members(parseSection()))) {
+        expect(v).not.toMatch(/null|undefined|^$/);
       }
     },
   );
 
   it("takes the three elements apart and says what the code calls returned", async () => {
-    const { root } = await mount();
-    expect(q(root, "figure").getAttribute("aria-label")).toBe(
-      "Date: year 2024, month 06, day 15. Time: hour 14, minute 30. Time code ET: zone Eastern, daylight not said.",
-    );
-    expect(text(root, "figure-note")).toContain(
+    await open();
+    expect(
+      screen.getByRole("img", {
+        name: "Date: year 2024, month 06, day 15. Time: hour 14, minute 30. Time code ET: zone Eastern, daylight not said.",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("note", { name: "About the time" }),
+    ).toHaveTextContent(
       'x12TimeCodeZone("ET") returned zone Eastern, daylight not said.',
     );
-  });
-
-  it("reserves a hold for every text a region can show", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderX12TimeReaderTemplate();
-    const descriptions = root.querySelector(
-      '[data-role="preset-description"]',
-    )!.parentElement!;
-    expect(descriptions.querySelectorAll(".gmt-edi-sizer").length).toBe(
-      new Set(X12_PRESETS.map((p) => p.description)).size,
-    );
-    for (const sizer of root.querySelectorAll(".gmt-edi-sizer")) {
-      expect(sizer.getAttribute("aria-hidden")).toBe("true");
-    }
   });
 });

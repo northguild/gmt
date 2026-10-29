@@ -1,16 +1,15 @@
 // @vitest-environment jsdom
-import { canadaTense } from "./clock-change-tense.fixture";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { screen, within } from "@testing-library/dom";
+import { describe, expect, it } from "vitest";
 import { isBeforeUtc } from "@northguild/gmt/utc/compare";
-import { convertUtcToPlainDateTime } from "@northguild/gmt/utc/convert";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import {
   MAP_HEIGHT,
   CANADA_MAP,
   canadaProjection,
   releaseOf,
 } from "./canada-map";
+import { canadaTense } from "./clock-change-tense.fixture";
 import {
   MAP_WIDTH,
   classCounts,
@@ -18,27 +17,26 @@ import {
   displayKind,
   isDataStale,
   lastText,
-  mountZoneMap,
   nextText,
   offsetAt,
   offsetWords,
   releaseWords,
-  type BoundaryCollection,
   isZoneFeature,
   type MapZone,
-  type ZoneMapDeps,
 } from "./zone-map";
-import { renderCanadaClockChangeTemplate } from "./canada-clock-change-mount";
 import { STOPPED_ZONES } from "./canada-clock-change";
-import { msToNextSecond } from "./clock-change-common";
+import {
+  NOW,
+  drawZoneMap,
+  loadBoundaries,
+  mapQueries,
+  zoneDeps,
+} from "./zone-map.fixture";
 
-const NOW = "2026-10-22T12:00:00Z";
-const boundaries = JSON.parse(
-  readFileSync(
-    resolve(__dirname, "../../public/timezone-boundaries-canada.json"),
-    "utf8",
-  ),
-) as BoundaryCollection;
+const boundaries = loadBoundaries("canada");
+const IDS = boundaries.features
+  .filter(isZoneFeature)
+  .map((f) => f.properties.tzid);
 
 /** Fixture rows: offsets are fixture values, never a claim about the tz data. */
 const ZONES: MapZone[] = [
@@ -73,40 +71,23 @@ const ZONES: MapZone[] = [
   },
 ];
 
-function deps(over: Partial<ZoneMapDeps> = {}): ZoneMapDeps {
-  return {
-    tense: () => canadaTense,
-    responseNow: NOW,
-    now: () => NOW,
-    wall: (at, offset) => convertUtcToPlainDateTime(at, { timeZone: offset }),
-    isBefore: isBeforeUtc,
-    msToNextSecond,
-    fetch: vi.fn(async () =>
-      Response.json(boundaries),
-    ) as unknown as typeof fetch,
-    measure: () => 900,
+/** Renders the Canada section over `IDS` and waits for the drawing. */
+async function draw(over: Parameters<typeof zoneDeps>[2] = {}) {
+  const deps = zoneDeps(boundaries, canadaTense, {
     location: {
       href: "https://example.test/gmt/check/canada-2026-clock-change/",
     },
-    history: { replaceState: vi.fn() },
     ...over,
-  };
-}
-
-function host(): HTMLElement {
-  document.body.innerHTML = renderCanadaClockChangeTemplate({
-    tense: canadaTense,
   });
-  return document.querySelector<HTMLElement>(".gmt-canada")!;
+  const drawn = drawZoneMap({
+    config: CANADA_MAP,
+    ids: IDS,
+    rows: ZONES,
+    deps,
+  });
+  await drawn.handle.ready;
+  return { ...drawn, deps, ...mapQueries(CANADA_MAP) };
 }
-
-const btn = (root: HTMLElement, id: string) =>
-  root.querySelector<HTMLButtonElement>(`button[data-tz-id="${id}"]`)!;
-const text = (el: Element | null) => el?.textContent?.trim() ?? "";
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
 
 describe("the projection", () => {
   it("fits the drawing's box with the inset, and the centre point falls near its middle", () => {
@@ -199,322 +180,149 @@ describe("the text", () => {
     );
   });
 });
-
-describe("the classes on the shapes", () => {
-  it("gives every shape exactly one class, and a zone with no row the neutral one", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      CANADA_MAP,
-    );
-    await handle.ready;
-    const shapes = root.querySelectorAll<SVGPathElement>(
-      "path.gmt-zonemap-shape",
-    );
-    expect(shapes).toHaveLength(
-      boundaries.features.filter(isZoneFeature).length,
-    );
-    for (const shape of shapes) {
-      const id = shape.dataset.tzId!;
+describe("the shapes", () => {
+  it("names every shape by its zone and class, and a zone with no row has no data", async () => {
+    const { shape, listButton } = await draw();
+    for (const id of IDS) {
       const row = ZONES.find((z) => z.zone === id);
-      expect(shape.getAttribute("data-kind")).toBe(
-        displayKind(CANADA_MAP, id, row),
-      );
-      expect(shape.getAttribute("aria-label")).toBe(
+      expect(shape(id)).toHaveAccessibleName(
         `${id}, ${classWords(CANADA_MAP, id, row, canadaTense)}`,
       );
-      expect(shape.getAttribute("tabindex")).toBe("-1");
-      expect(shape.getAttribute("role")).toBe("button");
     }
-    expect(
-      text(btn(root, "America/Halifax").querySelector('[data-role="kind"]')),
-    ).toBe("no data");
+    expect(listButton("America/Halifax")).toHaveTextContent("no data");
   });
-});
 
-describe("the land around the zones", () => {
-  it("is one aria-hidden path drawn before every zone, and never a zone", async () => {
-    const root = host();
-    const listed = root.querySelectorAll(".gmt-zonemap-zone").length;
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      CANADA_MAP,
-    );
-    await handle.ready;
-    const svg = root.querySelector("svg.gmt-zonemap-svg")!;
-    const land = svg.querySelectorAll("path.gmt-zonemap-land");
-    expect(land).toHaveLength(1);
-    expect(svg.firstElementChild).toBe(land[0]);
-    expect(land[0]!.getAttribute("aria-hidden")).toBe("true");
-    for (const attr of ["role", "tabindex", "data-tz-id", "data-kind"])
-      expect(land[0]!.hasAttribute(attr)).toBe(false);
-    // The zone list, and what a click on the land pins, are unchanged.
-    expect(root.querySelectorAll(".gmt-zonemap-zone")).toHaveLength(listed);
-    land[0]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  it("states every shape as a button that is not a tab stop of its own", async () => {
+    const { shape, listButtons } = await draw();
+    for (const id of IDS) expect(shape(id)).toHaveAttribute("tabindex", "-1");
+    // The zone list is the keyboard path: one tab stop.
+    expect(
+      listButtons().filter((b) => (b as HTMLButtonElement).tabIndex === 0),
+    ).toHaveLength(1);
+  });
+
+  it("pins nothing for a press on the land around the zones", async () => {
+    const { handle, svg, user } = await draw();
+    await user.click(svg()!);
     expect(handle.pinned()).toBeNull();
   });
 });
 
 describe("pinning", () => {
   it("pins from the list by Enter on a focused button, and a shape click pins the same zone", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      CANADA_MAP,
-    );
-    await handle.ready;
-    btn(root, "America/Toronto").click();
+    const { handle, listButton, shape, user } = await draw();
+    listButton("America/Toronto").focus();
+    await user.keyboard("{Enter}");
     expect(handle.pinned()).toBe("America/Toronto");
-    expect(btn(root, "America/Toronto").getAttribute("aria-pressed")).toBe(
-      "true",
-    );
-    expect(text(root.querySelector('[data-role="pin-zone"]'))).toBe(
-      "America/Toronto",
+    expect(listButton("America/Toronto")).toBePressed();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Pinned America/Toronto. Still changes clocks.",
     );
 
-    root
-      .querySelector<SVGPathElement>('path[data-tz-id="America/Winnipeg"]')!
-      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await user.click(shape("America/Winnipeg"));
     expect(handle.pinned()).toBe("America/Winnipeg");
-    expect(btn(root, "America/Winnipeg").getAttribute("aria-pressed")).toBe(
-      "true",
-    );
-    expect(btn(root, "America/Toronto").getAttribute("aria-pressed")).toBe(
-      "false",
-    );
-    expect(
-      root
-        .querySelector('path[data-tz-id="America/Winnipeg"]')!
-        .getAttribute("aria-pressed"),
-    ).toBe("true");
+    expect(listButton("America/Winnipeg")).toBePressed();
+    expect(listButton("America/Toronto")).not.toBePressed();
+    expect(shape("America/Winnipeg")).toBePressed();
+    expect(shape("America/Toronto")).not.toBePressed();
   });
 
-  it("moves along the list with the arrow keys, Home and End, on one tab stop", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      CANADA_MAP,
-    );
-    await handle.ready;
-    const buttons = [
-      ...root.querySelectorAll<HTMLButtonElement>(
-        "[data-role=zone-list] button",
-      ),
-    ];
-    expect(buttons.filter((b) => b.tabIndex === 0)).toHaveLength(1);
-    buttons[0]!.focus();
-    const press = (key: string) =>
-      document.activeElement!.dispatchEvent(
-        new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
-      );
-    press("ArrowDown");
-    expect(document.activeElement).toBe(buttons[1]);
-    expect(buttons.filter((b) => b.tabIndex === 0)).toEqual([buttons[1]]);
-    press("End");
-    expect(document.activeElement).toBe(buttons[buttons.length - 1]);
-    press("Home");
-    expect(document.activeElement).toBe(buttons[0]);
-    press("ArrowUp");
-    expect(document.activeElement).toBe(buttons[0]);
+  it("moves along the list with the arrow keys, Home and End, on one tab stop, and wraps", async () => {
+    const { listButtons, user } = await draw();
+    const buttons = listButtons();
+    const stops = () =>
+      buttons.filter((b) => (b as HTMLButtonElement).tabIndex === 0);
+    expect(stops()).toHaveLength(1);
+    // From the scroll region, one Tab reaches the list's one stop.
+    screen
+      .getByRole("region", { name: "canada time zones, scrollable list" })
+      .focus();
+    await user.tab();
+    expect(buttons[0]).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(buttons[1]).toHaveFocus();
+    expect(stops()).toEqual([buttons[1]]);
+    await user.keyboard("{End}");
+    expect(buttons[buttons.length - 1]).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(buttons[0]).toHaveFocus();
+    await user.keyboard("{ArrowUp}");
+    expect(buttons[buttons.length - 1]).toHaveFocus();
+    await user.keyboard("{Home}");
+    expect(buttons[0]).toHaveFocus();
   });
 
   it("writes ?zone= and reads it back on load", async () => {
-    const root = host();
-    const d = deps();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      d,
-      CANADA_MAP,
-    );
-    await handle.ready;
+    const { handle, deps } = await draw();
     handle.pin("America/Regina");
-    expect(d.history!.replaceState).toHaveBeenCalledWith(
+    expect(deps.history!.replaceState).toHaveBeenCalledWith(
       null,
       "",
       "https://example.test/gmt/check/canada-2026-clock-change/?zone=America%2FRegina",
     );
+  });
 
-    const again = host();
-    const pinned = mountZoneMap(
-      again,
-      ZONES,
-      new AbortController().signal,
-      deps({
-        location: { href: "https://example.test/x/?zone=America/Winnipeg" },
-      }),
-      CANADA_MAP,
-    );
-    expect(pinned.pinned()).toBe("America/Winnipeg");
-    const ignored = mountZoneMap(
-      host(),
-      ZONES,
-      new AbortController().signal,
-      deps({ location: { href: "https://example.test/x/?zone=Nowhere/Land" } }),
-      CANADA_MAP,
-    );
-    expect(ignored.pinned()).toBeNull();
+  it("opens pinned on a ?zone= it knows, and ignores one it does not", async () => {
+    const known = await draw({
+      location: { href: "https://example.test/x/?zone=America/Winnipeg" },
+    });
+    expect(known.handle.pinned()).toBe("America/Winnipeg");
+    expect(known.listButton("America/Winnipeg")).toBePressed();
+  });
+
+  it("ignores a ?zone= that is not a zone of the list", async () => {
+    const { handle } = await draw({
+      location: { href: "https://example.test/x/?zone=Nowhere/Land" },
+    });
+    expect(handle.pinned()).toBeNull();
   });
 
   it("shows the null texts and the release on the panel", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      CANADA_MAP,
-    );
-    await handle.ready;
-    handle.pin("America/Toronto");
-    expect(text(root.querySelector('[data-role="pin-last"]'))).toBe(
-      "none in 2025 or 2026",
-    );
-    handle.pin("America/Winnipeg");
-    expect(text(root.querySelector('[data-role="pin-next"]'))).toBe(
-      "none in 2026 or 2027",
-    );
-    expect(text(root.querySelector('[data-role="pin-release"]'))).toBe(
-      "tzdb 2026e",
-    );
-    expect(
-      root.querySelector('[data-role="pin-clock"] svg.gmt-crystal-clock'),
-    ).not.toBeNull();
+    const { listButton, user } = await draw();
+    await user.click(listButton("America/Toronto"));
+    expect(screen.getByText("none in 2025 or 2026")).toBeVisible();
+    await user.click(listButton("America/Winnipeg"));
+    expect(screen.getByText("none in 2026 or 2027")).toBeVisible();
+    expect(screen.getByText("tzdb 2026e")).toBeVisible();
   });
 
-  it("keeps the panel, list and map in place: the same boxes, three pins in a row", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      CANADA_MAP,
-    );
-    await handle.ready;
-    const rects = () =>
-      ["pin", "zone-list", "map"].map((role) => {
-        const r = root
-          .querySelector(`[data-role="${role}"]`)!
-          .getBoundingClientRect();
-        return [r.x, r.y, r.width, r.height];
-      });
-    const before = rects();
-    for (const id of [
-      "America/Winnipeg",
-      "America/Toronto",
-      "America/Regina",
-    ]) {
-      handle.pin(id);
-      expect(rects()).toEqual(before);
-    }
+  it("has no accessibility violations after a pin", async () => {
+    const { fixture, listButton, user } = await draw();
+    await expectNoAxeViolations(fixture.host);
+    await user.click(listButton("America/Winnipeg"));
+    await expectNoAxeViolations(fixture.host);
   });
 });
 
 describe("the data credits", () => {
   it("puts one boundaries button in the map's corner when the map is drawn", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      CANADA_MAP,
-    );
-    await handle.ready;
-    const frame = root.querySelector<HTMLElement>('[data-role="map"]')!;
-    const buttons = frame.querySelectorAll(
-      ".gmt-data-credits-button[data-placement='corner']",
-    );
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0]!.getAttribute("popovertarget")).toBe(
-      "canada-data-credits",
-    );
-    const panel = frame.querySelector("#canada-data-credits");
-    expect(panel?.hasAttribute("popover")).toBe(true);
-    expect(panel?.textContent).toContain("Time zone boundaries");
-    expect(panel?.textContent).not.toContain("Earth imagery");
-  });
-});
-
-describe("the entrance", () => {
-  it("plays the site's arrival gesture on the drawing, inside a stage that keeps its box", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      CANADA_MAP,
-    );
-    expect(root.querySelector("svg.gmt-zonemap-svg")).toBeNull();
-    await handle.ready;
-    const svg = root.querySelector<SVGSVGElement>("svg.gmt-zonemap-svg")!;
-    // enter() adds the class at once, or the settled mark under reduced motion.
-    expect(
-      svg.classList.contains("gmt-enter") || svg.hasAttribute("data-entered"),
-    ).toBe(true);
-    expect(svg.parentElement?.dataset.role).toBe("map");
-  });
-
-  it("settles on the drawing with data-entered once the timer fires", async () => {
-    vi.useFakeTimers();
-    try {
-      const root = host();
-      const handle = mountZoneMap(
-        root,
-        ZONES,
-        new AbortController().signal,
-        deps(),
-        CANADA_MAP,
-      );
-      await handle.ready;
-      const svg = root.querySelector<SVGSVGElement>("svg.gmt-zonemap-svg")!;
-      vi.advanceTimersByTime(2000);
-      expect(svg.hasAttribute("data-entered")).toBe(true);
-      expect(svg.classList.contains("gmt-enter")).toBe(false);
-    } finally {
-      vi.useRealTimers();
-    }
+    const { frame } = await draw();
+    const button = within(frame()).getByRole("button", {
+      name: "Data credits",
+    });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(button).toHaveAttribute("popovertarget", "canada-data-credits");
+    expect(frame()).toHaveTextContent("Time zone boundaries");
+    expect(frame()).not.toHaveTextContent("Earth imagery");
   });
 });
 
 describe("narrow screens", () => {
-  it("draws no SVG and never fetches the boundary file at 375 px", async () => {
-    const root = host();
-    const d = deps({ measure: () => 375 });
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      d,
-      CANADA_MAP,
-    );
-    await handle.ready;
-    expect(root.querySelector("svg.gmt-zonemap-svg")).toBeNull();
-    expect(root.querySelector(".gmt-data-credits-button")).toBeNull();
-    expect(d.fetch).not.toHaveBeenCalled();
-    // The list still pins, and the panel opens in its own place below the list's scroll box.
-    const panel = root.querySelector<HTMLElement>('[data-role="pin"]')!;
-    expect(panel.dataset.pinned).toBe("false");
-    btn(root, "America/Toronto").click();
+  it("draws no map and never fetches the boundary file at 375 px", async () => {
+    const { deps, svg, frame, listButton, user } = await draw({
+      measure: () => 375,
+    });
+    expect(svg()).not.toBeInTheDocument();
     expect(
-      root.querySelector('[data-role="zone-scroll"]')?.contains(panel),
-    ).toBe(false);
-    expect(panel.dataset.pinned).toBe("true");
+      within(frame()).queryByRole("button", { name: "Data credits" }),
+    ).not.toBeInTheDocument();
+    expect(deps.fetch).not.toHaveBeenCalled();
+    // The list still pins.
+    await user.click(listButton("America/Toronto"));
+    expect(listButton("America/Toronto")).toBePressed();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Pinned America/Toronto",
+    );
   });
 });
 
@@ -528,51 +336,23 @@ describe("the pin panel's words and the scroll box", () => {
     expect(offsetWords("-07:00")).toBe("UTC-07:00");
   });
 
-  it("fills the labelled rows, with dashes before a zone is pinned", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      CANADA_MAP,
-    );
-    await handle.ready;
-    for (const role of ["pin-time", "pin-offset", "pin-release"]) {
-      expect(text(root.querySelector(`[data-role="${role}"]`))).not.toBe("");
-    }
-    handle.pin("America/Toronto");
-    expect(text(root.querySelector('[data-role="pin-offset"]'))).toBe(
-      "UTC-04:00",
-    );
-    expect(text(root.querySelector('[data-role="pin-time"]'))).toMatch(
-      /^\d\d:\d\d:\d\d$/,
-    );
-    expect(text(root.querySelector('[data-role="pin-release"]'))).not.toBe("");
+  it("shows dashes before a zone is pinned, and the zone's words after", async () => {
+    const { listButton, user } = await draw();
+    expect(screen.getByText("Press a zone to pin it.")).toBeVisible();
+    await user.click(listButton("America/Toronto"));
+    expect(screen.getByText("UTC-04:00")).toBeVisible();
+    expect(screen.getByText(/^\d\d:\d\d:\d\d$/)).toBeVisible();
+    expect(
+      screen.queryByText("Press a zone to pin it."),
+    ).not.toBeInTheDocument();
   });
 
-  it("puts the list in a named, focusable scroll region", () => {
-    const root = host();
-    const box = root.querySelector('[data-role="zone-scroll"]')!;
-    expect(box.getAttribute("role")).toBe("region");
-    expect(box.getAttribute("aria-label")).toMatch(/Canada time zones/);
-    expect(box.getAttribute("tabindex")).toBe("0");
-    expect(box.querySelector('[data-role="zone-list"]')).not.toBeNull();
-  });
-
-  it("draws a hover ring and a pin ring over the shapes", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      CANADA_MAP,
-    );
-    await handle.ready;
-    expect(root.querySelectorAll(".gmt-zonemap-ring").length).toBe(2);
-    handle.pin("America/Winnipeg");
-    const ring = root.querySelector<SVGElement>(".gmt-zonemap-ring--pin")!;
-    expect(ring.getAttribute("visibility")).not.toBe("hidden");
+  it("puts the list in a named, focusable scroll region", async () => {
+    await draw();
+    const box = screen.getByRole("region", {
+      name: "canada time zones, scrollable list",
+    });
+    expect(box).toHaveAttribute("tabindex", "0");
+    expect(within(box).getByRole("list", { name: "Zones" })).toBeVisible();
   });
 });

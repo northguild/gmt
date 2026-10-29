@@ -1,0 +1,522 @@
+/* fuseBoard: the fuse timeline, its key and its chips. The label column and the row height
+   are set here and narrow with the frame the board sits in (the nearest container). Every
+   colour is a token; the receiver's own track is a full border in series 1, and the key
+   says in words what each pattern means. */
+
+.root {
+  --fuse-label-w: 9.5ch;
+  --fuse-gap: var(--gmt-space-3);
+  --fuse-row-h: 1.75rem;
+  --fuse-plane-start: calc(var(--fuse-label-w) + var(--fuse-gap));
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+
+  @container (inline-size < 30rem) {
+    --fuse-label-w: 9ch;
+    --fuse-gap: var(--gmt-space-2);
+    --fuse-row-h: 1.6rem;
+  }
+}
+
+.axis {
+  position: relative;
+  block-size: 1.1rem;
+  margin-inline-start: var(--fuse-plane-start);
+  color: var(--gmt-ice-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.year {
+  position: absolute;
+  inset-inline-start: calc(var(--at) * 1);
+  translate: -50% 0;
+  white-space: nowrap;
+
+  @container (inline-size < 30rem) {
+    &[data-major="false"] {
+      display: none;
+    }
+  }
+}
+
+/* The bottom padding is the pin heads' lane, below the last track. */
+.board {
+  position: relative;
+  min-inline-size: 0;
+  padding-block-end: 0.875rem;
+}
+
+.grid,
+.pins {
+  position: absolute;
+  inset-block: 0 0.875rem;
+  inset-inline: var(--fuse-plane-start) 0;
+  pointer-events: none;
+}
+
+.gridline {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--at);
+  inline-size: 1px;
+  background: var(--gmt-border);
+}
+
+.rows {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+/* The heading sits above the grid lines and the pins, on a flat surface. */
+.head {
+  position: relative;
+  z-index: var(--gmt-z-over);
+  box-sizing: border-box;
+  min-block-size: 1.4rem;
+  padding-block-start: var(--gmt-space-2);
+  background-color: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  &:first-child {
+    padding-block-start: 0;
+  }
+
+  @container (inline-size < 30rem) {
+    overflow: hidden;
+    letter-spacing: 0;
+  }
+}
+
+.row {
+  display: grid;
+  grid-template-columns: var(--fuse-label-w) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--fuse-gap);
+  block-size: var(--fuse-row-h);
+}
+
+.name {
+  overflow: hidden;
+  border-block-end: 2px solid transparent;
+  line-height: 1.3;
+  white-space: nowrap;
+
+  .row[data-yours="true"] & {
+    border-block-end-color: var(--gmt-series-1);
+    font-weight: 600;
+  }
+}
+
+.track {
+  position: relative;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  block-size: 1rem;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-fill-subtle);
+
+  .row[data-yours="true"] & {
+    border-color: var(--gmt-series-1);
+  }
+
+  /* The wire down the middle of a track: the fuse itself. */
+  &::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 50%;
+    block-size: 1px;
+    background-image: repeating-linear-gradient(
+      to right,
+      var(--gmt-border-strong) 0,
+      var(--gmt-border-strong) 3px,
+      transparent 3px,
+      transparent 6px
+    );
+  }
+}
+
+/* Before the counter's first week nothing was broadcast. */
+.pre {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: var(--to, 0%);
+  background-color: var(--gmt-surface-widget);
+  opacity: 0.85;
+}
+
+.tick {
+  position: absolute;
+  inset-block: 1px;
+  inset-inline-start: var(--at);
+  inline-size: 2px;
+  translate: -50% 0;
+  background: var(--gmt-ice-dim);
+
+  &[data-state="past"] {
+    opacity: 0.45;
+  }
+
+  /* The next wrap: taller than the track, wider, in the primary ink. */
+  &[data-state="next"] {
+    inset-block: -4px;
+    inline-size: 4px;
+    background: var(--gmt-ice);
+    box-shadow: 0 0 0 2px var(--gmt-surface-widget);
+  }
+}
+
+/* The window on the receiver's track. */
+.lit,
+.hatch {
+  position: absolute;
+  inset-block: -3px;
+  inset-inline-start: var(--from, 0%);
+  inline-size: calc(var(--to, 100%) - var(--from, 0%));
+  box-sizing: border-box;
+  border: 1px solid var(--gmt-series-1);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+.lit {
+  background-color: color-mix(in srgb, var(--gmt-series-1) 38%, transparent);
+}
+
+.hatch {
+  border-style: dashed;
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--gmt-series-1) 70%, transparent) 0,
+    color-mix(in srgb, var(--gmt-series-1) 70%, transparent) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+/* The fuse still to burn, from the check date to the spark. */
+.burn {
+  position: absolute;
+  inset-block-start: calc(50% - 2px);
+  inset-inline-start: var(--from, 0%);
+  inline-size: calc(var(--to, 100%) - var(--from, 0%));
+  block-size: 4px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--gmt-ice) 0,
+    var(--gmt-ice) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+/* The spark where the fuse burns out. */
+.spark {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: var(--at, 0%);
+  translate: -50% -50%;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+
+  & svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+    fill: var(--gmt-ice);
+    stroke: var(--gmt-surface-widget);
+    stroke-width: 1.2;
+    stroke-linejoin: round;
+    filter: drop-shadow(
+      0 0 4px color-mix(in srgb, var(--gmt-series-1) 90%, transparent)
+    );
+  }
+
+  & circle {
+    fill: var(--gmt-series-1);
+    stroke: none;
+  }
+}
+
+/* The check date and the reader's clock cross every track. */
+.pin,
+.today {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--at, 0%);
+  inline-size: 2px;
+  translate: -50% 0;
+}
+
+.pin {
+  background: var(--gmt-series-1);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 50%;
+    translate: -50% 60%;
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background: var(--gmt-series-1);
+  }
+}
+
+.today {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--gmt-ice) 0,
+    var(--gmt-ice) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+/* The marks as a list for a reader who cannot see the drawing. */
+.list {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- The key ---- */
+
+.key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-4);
+  min-block-size: 1.2rem;
+  margin: 0;
+  padding: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+  list-style: none;
+
+  & > li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gmt-space-2);
+
+    /* An entry with nothing to say keeps its place and goes unseen, so the key
+       wraps onto the same lines before the reading is drawn as after it. */
+    &[data-hidden="true"] {
+      visibility: hidden;
+    }
+  }
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 1.25rem;
+  block-size: 0.7rem;
+
+  &[data-kind="lit"] {
+    border: 1px solid var(--gmt-series-1);
+    border-radius: var(--gmt-radius-sm);
+    background-color: color-mix(in srgb, var(--gmt-series-1) 38%, transparent);
+  }
+
+  &[data-kind="hatch"] {
+    border: 1px dashed var(--gmt-series-1);
+    border-radius: var(--gmt-radius-sm);
+    background-image: repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--gmt-series-1) 70%, transparent) 0,
+      color-mix(in srgb, var(--gmt-series-1) 70%, transparent) 2px,
+      transparent 2px,
+      transparent 6px
+    );
+  }
+
+  &[data-kind="spark"] {
+    inline-size: 0.9rem;
+    block-size: 0.9rem;
+    overflow: visible;
+    fill: var(--gmt-ice);
+  }
+
+  &[data-kind="next"] {
+    inline-size: 4px;
+    block-size: 0.9rem;
+    background: var(--gmt-ice);
+  }
+
+  &[data-kind="pin"] {
+    inline-size: 2px;
+    block-size: 0.9rem;
+    background: var(--gmt-series-1);
+  }
+
+  &[data-kind="today"] {
+    inline-size: 2px;
+    block-size: 0.9rem;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      var(--gmt-ice) 0,
+      var(--gmt-ice) 3px,
+      transparent 3px,
+      transparent 6px
+    );
+  }
+}
+
+/* ---- The chips ---- */
+
+/* Five slots in a grid, always drawn, so the board is the same height for every reading.
+   An unused slot keeps its box and shows nothing. */
+.chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  min-inline-size: 0;
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+
+  &[data-blank="true"] {
+    visibility: hidden;
+  }
+
+  /* A chip's words wrap to a second line in a narrow frame; two lines are held there so
+     the row never grows. */
+  @container (inline-size < 24rem) {
+    min-block-size: calc(2lh + 6px);
+  }
+}
+
+@media (forced-colors: active) {
+  .gridline,
+  .tick,
+  .pin,
+  .pin::after,
+  .swatch[data-kind="next"],
+  .swatch[data-kind="pin"] {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .today,
+  .swatch[data-kind="today"] {
+    forced-color-adjust: none;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      CanvasText 0,
+      CanvasText 3px,
+      transparent 3px,
+      transparent 6px
+    );
+  }
+
+  .burn {
+    forced-color-adjust: none;
+    background-image: repeating-linear-gradient(
+      to right,
+      CanvasText 0,
+      CanvasText 4px,
+      transparent 4px,
+      transparent 8px
+    );
+  }
+
+  .head,
+  .pre {
+    background-color: Canvas;
+    color: CanvasText;
+    opacity: 1;
+  }
+
+  .track,
+  .lit,
+  .hatch,
+  .chip,
+  .swatch[data-kind="lit"],
+  .swatch[data-kind="hatch"] {
+    border-color: CanvasText;
+  }
+
+  .hatch,
+  .swatch[data-kind="hatch"] {
+    forced-color-adjust: none;
+    background-image: repeating-linear-gradient(
+      45deg,
+      CanvasText 0,
+      CanvasText 2px,
+      transparent 2px,
+      transparent 6px
+    );
+  }
+
+  .chip {
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .spark svg,
+  .swatch[data-kind="spark"] {
+    forced-color-adjust: none;
+    fill: CanvasText;
+    stroke: Canvas;
+    filter: none;
+  }
+
+  .spark circle {
+    fill: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .axis,
+  .year {
+    color: var(--gmt-ice);
+  }
+
+  .gridline {
+    background: var(--gmt-border-strong);
+  }
+
+  .tick[data-state="past"] {
+    opacity: 1;
+  }
+
+  .track,
+  .chip {
+    border-color: var(--gmt-ice);
+  }
+}

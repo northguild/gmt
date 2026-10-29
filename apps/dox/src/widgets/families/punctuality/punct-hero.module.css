@@ -1,0 +1,150 @@
+/* punctHero: a result plate that holds its box while a handle drags. */
+
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.root {
+  --series: var(--gmt-border-strong);
+
+  display: grid;
+  flex: 0 0 auto;
+  gap: var(--gmt-space-1);
+  align-content: start;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  margin: 0;
+  padding-block: var(--gmt-space-2);
+  padding-inline: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-block-end: 3px solid var(--series);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+
+  &[data-series="1"] {
+    --series: var(--gmt-series-1);
+  }
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+}
+
+/* The caption owns a full line of its own, so the value never rides up into the border. */
+.caption {
+  min-block-size: 1lh;
+  padding-block-start: var(--gmt-space-1);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-caps: all-small-caps;
+  letter-spacing: var(--gmt-tracking-wider);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.values,
+.line {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.value,
+.line > * {
+  grid-area: 1 / 1;
+}
+
+.value {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin: 0;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-display);
+  font-size: clamp(1.6rem, 7cqi, 2.4rem);
+  line-height: 1.15;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  & > svg {
+    inline-size: 1em;
+    block-size: 1em;
+  }
+}
+
+/* The reserved text: it takes the cell's width and none of the reader's eyes. */
+.ghost {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.values > .ghost {
+  font-family: var(--gmt-font-display);
+  font-size: clamp(1.6rem, 7cqi, 2.4rem);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.lines {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.line {
+  min-block-size: 1lh;
+  margin: 0;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.root[data-quiet="true"] .value {
+  font-size: var(--gmt-text-lg);
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .caption,
+  .value,
+  .line {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+  }
+}

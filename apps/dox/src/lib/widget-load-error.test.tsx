@@ -164,12 +164,12 @@ installJsdomShims();
 const MOUNTS: [string, () => string, MountFn<never>][] = [
   [
     "dwell ledger",
-    () => renderDwellLedgerTemplate(),
+    () => renderDwellLedgerTemplate("load-error"),
     mountDwellLedger as MountFn<never>,
   ],
   [
     "free time ledger",
-    () => renderFreeTimeLedgerTemplate(),
+    () => renderFreeTimeLedgerTemplate("load-error"),
     mountFreeTimeLedger as MountFn<never>,
   ],
   [
@@ -179,27 +179,27 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "DST inspector",
-    () => renderDstTemplate(),
+    () => renderDstTemplate("load-error"),
     mountDstInspector as MountFn<never>,
   ],
   [
     "interval visualizer",
-    () => renderIntervalTemplate(),
+    () => renderIntervalTemplate("load-error"),
     mountIntervalVisualizer as MountFn<never>,
   ],
   [
     "converter bench",
-    () => renderConverterTemplate(),
+    () => renderConverterTemplate("converter-bench"),
     mountConverterBench as MountFn<never>,
   ],
   [
     "delivery scheduler",
-    () => renderDeliverySchedulerTemplate(),
+    () => renderDeliverySchedulerTemplate("load-error"),
     mountDeliveryScheduler as MountFn<never>,
   ],
   [
     "connection checker",
-    () => renderConnectionCheckerTemplate(),
+    () => renderConnectionCheckerTemplate("test"),
     mountConnectionChecker as MountFn<never>,
   ],
   [
@@ -209,27 +209,27 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "crossing clock",
-    () => renderCrossingClockTemplate(),
+    () => renderCrossingClockTemplate("load-error"),
     mountCrossingClock as MountFn<never>,
   ],
   [
     "cutoff stack",
-    () => renderCutoffStackTemplate(),
+    () => renderCutoffStackTemplate("load-error"),
     mountCutoffStack as MountFn<never>,
   ],
   [
     "cutoff ruler",
-    () => renderCutoffRulerTemplate(),
+    () => renderCutoffRulerTemplate("test"),
     mountCutoffRuler as MountFn<never>,
   ],
   [
     "cutoff countdown",
-    () => renderCutoffCountdownTemplate(),
+    () => renderCutoffCountdownTemplate("test"),
     mountCutoffCountdown as MountFn<never>,
   ],
   [
     "punctuality board",
-    () => renderPunctualityBoardTemplate(),
+    () => renderPunctualityBoardTemplate("load-error"),
     mountPunctualityBoard as MountFn<never>,
   ],
   [
@@ -239,22 +239,22 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "departure board",
-    () => renderDepartureBoardTemplate(),
+    () => renderDepartureBoardTemplate("load-error"),
     mountDepartureBoard as MountFn<never>,
   ],
   [
     "dtm decoder",
-    () => renderDtmDecoderTemplate(),
+    () => renderDtmDecoderTemplate("dtm-decoder"),
     mountDtmDecoder as MountFn<never>,
   ],
   [
     "x12 time reader",
-    () => renderX12TimeReaderTemplate(),
+    () => renderX12TimeReaderTemplate("x12-time-reader"),
     mountX12TimeReader as MountFn<never>,
   ],
   [
     "demurrage clock",
-    () => renderDemurrageClockTemplate(),
+    () => renderDemurrageClockTemplate("load-error"),
     mountDemurrageClock as MountFn<never>,
   ],
   [
@@ -269,27 +269,27 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "journey split",
-    () => renderJourneySplitTemplate(),
+    () => renderJourneySplitTemplate("test"),
     mountJourneySplit as MountFn<never>,
   ],
   [
     "gnss week decoder",
-    () => renderGnssWeekDecoderTemplate(),
+    () => renderGnssWeekDecoderTemplate("test"),
     mountGnssWeekDecoder as MountFn<never>,
   ],
   [
     "satellite clock converter",
-    () => renderSatelliteClockConverterTemplate(),
+    () => renderSatelliteClockConverterTemplate("test"),
     mountSatelliteClockConverter as MountFn<never>,
   ],
   [
     "gnss rollover checker",
-    () => renderGnssRolloverCheckerTemplate(),
+    () => renderGnssRolloverCheckerTemplate("test"),
     mountGnssRolloverChecker as MountFn<never>,
   ],
   [
     "leap second timeline",
-    () => renderLeapSecondTimelineTemplate(),
+    () => renderLeapSecondTimelineTemplate("leap-second-timeline"),
     mountLeapSecondTimeline as MountFn<never>,
   ],
   [
@@ -299,12 +299,12 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "stored time audit",
-    () => renderStoredTimeAuditTemplate(),
+    () => renderStoredTimeAuditTemplate("test"),
     mountStoredTimeAudit as MountFn<never>,
   ],
   [
     "holiday rule builder",
-    () => renderHolidayRuleBuilderTemplate(),
+    () => renderHolidayRuleBuilderTemplate("test"),
     mountHolidayRuleBuilder as MountFn<never>,
   ],
   [
@@ -314,7 +314,7 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "moving feasts",
-    () => renderMovingFeastsTemplate(),
+    () => renderMovingFeastsTemplate("test"),
     mountMovingFeasts as MountFn<never>,
   ],
   [
@@ -329,22 +329,22 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "duration parser bench",
-    () => renderDurationParserBenchTemplate(),
+    () => renderDurationParserBenchTemplate("load-error"),
     mountDurationParserBench as MountFn<never>,
   ],
   [
     "id timestamp decoder",
-    () => renderIdTimestampDecoderTemplate(),
+    () => renderIdTimestampDecoderTemplate("id-timestamp-decoder"),
     mountIdTimestampDecoder as MountFn<never>,
   ],
   [
     "column timestamp bridge",
-    () => renderColumnTimestampBridgeTemplate(),
+    () => renderColumnTimestampBridgeTemplate("column-timestamp-bridge"),
     mountColumnTimestampBridge as MountFn<never>,
   ],
   [
     "cron in a zone",
-    () => renderCronInAZoneTemplate(),
+    () => renderCronInAZoneTemplate("cron-in-a-zone"),
     mountCronInAZone as MountFn<never>,
   ],
   [

@@ -1,41 +1,59 @@
 /**
- * DOX-C3b (#139) — the DST transition inspector, mountable.
+ * The DST transition inspector, mountable on its tool page and in the chat rail.
  *
- * The last and hardest of the three Tier 2 extractions, and the one the story's
- * motivating example needs: *"what happens to 1:30am on November 3rd in New
- * York"* is this widget.
+ * The question it answers: "what happens to 1:30am on November 3rd in New York".
+ * A zone and a year give the real transitions from `getDstTransitions`; a probe, picked
+ * by a preset or scrubbed along a strip, goes through `convertPlainDateTimeToZoned` with
+ * the chosen disambiguation, and the widget says what happened to that wall time.
  *
- * ## The scrub state, and why React never touches it
- *
- * `setupWidget` deliberately holds `activeTransition`, `tickerWindow`,
- * `handleMinuteOfDay` and `dragging` outside `render()`, so an unrelated
- * re-render cannot reset a drag in progress. That was flagged as the piece most
- * likely to break silently under React.
- *
- * It does not break, and not by luck: the mount contract puts this DOM outside
- * React entirely. `MountedWidget` renders an empty host, writes
- * `renderTemplate()` into it, and never renders inside it again — so there is no
- * React re-render for closure state to be lost across. The risk is removed
- * structurally rather than managed.
- *
- * ## Teardown
- *
- * Listeners are all bound inside the container and go when the host drops the
- * subtree. The one thing that outlives it is a pointer capture held mid-drag,
- * which `destroy()` releases explicitly — otherwise the browser keeps routing
- * pointer events to a detached node.
+ * Built on the component kit: `renderDstTemplate` writes the markup from builders only,
+ * with ids from `idScope(idPrefix)`, and `mount` finds its parts by those ids. The strip's
+ * thumb is the kit's `<gmt-handle>`, which owns the drag and the keyboard, so there is no
+ * pointer code here and nothing to release on teardown. The scrub state (`activeTransition`,
+ * `tickerWindow`, `handleMinuteOfDay`) lives in the mount's closure, outside `render()`, so
+ * an unrelated render cannot reset it. Every listener is delegated on the widget with the
+ * mount's `signal`.
  */
-import { codeFrameHtml } from "./code-frame";
+import { defineElements } from "~/widgets/define";
+import {
+  aside,
+  codeFrame,
+  field,
+  fieldGrid,
+  findWidget,
+  html,
+  idScope,
+  raw,
+  section,
+  select,
+  setHtml,
+  textInput,
+  widget,
+  type SafeHtml,
+} from "~/widgets/builders";
+import {
+  dstBadge,
+  dstTable,
+  type DstRow,
+} from "~/widgets/families/dst/dst-table";
+import {
+  dstTicker,
+  dstTickerEmpty,
+  dstTicks,
+  tickerIds,
+  type TickMark,
+} from "~/widgets/families/dst/dst-ticker";
+import { callOutput } from "~/widgets/families/gnss/call-output";
+import { grow } from "~/widgets/primitives/grow/grow";
+import type { GmtHandle } from "~/widgets/primitives/handle/handle";
+import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import { CURATED_TIMEZONES } from "./curated-timezones";
-import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
-import { onWidthChange } from "./label-fit";
 import {
   VALUE_PRESETS,
   buildValuePreset,
   buildZonedValueFromMinutes,
   classifyProbeResult,
   formatMinuteOfDay,
-  selectTickMinutes,
   getTickerWindow,
   isGap,
   isMinuteInZone,
@@ -44,31 +62,33 @@ import {
   localMinuteOfDayAtTransition,
   minuteToTickerPercent,
   probeContext,
-  tickerPercentToMinute,
+  selectTickMinutes,
   toPlainLocalDateTime,
-  zoneMidpointMinutes,
   transitionType,
+  zoneMidpointMinutes,
   type DstTransition,
   type ProbeClassification,
   type TickerWindow,
   type ValuePreset,
 } from "./dst-inspector";
 import { GMT_MODULES } from "./gmt-modules";
-import { renderResult } from "./playground-client";
-import {
-  codeSpan,
-  escapeAttr,
-  escapeHtml,
-  labelTextHtml,
-  renderAside,
-  renderCallLine,
-  setControlValue,
-  wireCopyButtons,
-} from "./widget-ui";
+import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { codeSpan } from "./widget-ui";
 
+const WIDGET_NAME = "dst-inspector";
 const DEFAULT_ZONE = "Europe/London";
 const DEFAULT_YEAR = 2024;
 const DISOPTIONS = ["compatible", "earlier", "later", "reject"] as const;
+const KEY_STEP_MINUTES = 5;
+const KEY_LARGE_STEP_MINUTES = 30;
+const TICKER_EMPTY_TEXT =
+  "This preset targets a single fixed value — nothing to scrub.";
+const NO_TRANSITIONS_TICKER_TEXT =
+  "Nothing to scrub: this zone has no DST transitions in this year.";
+
+/** The tick pitch the strip shows in full, and the sparser pitch it keeps when narrow. */
+const DENSE_TICK_PX = 960;
+const SPARSE_TICK_PX = 320;
 
 export interface DstArgs {
   zone?: string;
@@ -78,97 +98,112 @@ export interface DstArgs {
   offset?: string;
 }
 
-/** Astro renders `selected={true}` as a bare attribute and `false` as nothing. */
-function options(values: readonly string[], selected: string): string {
-  return values
-    .map(
-      (v) =>
-        `<option value="${escapeAttr(v)}"${v === selected ? " selected" : ""}>${escapeHtml(v)}</option>`,
-    )
-    .join("");
-}
+const PRESET_NOUN: Record<string, string> = {
+  normal: "normal time",
+  gap: "skipped hour",
+  overlap: "repeated hour",
+  transition: "transition instant",
+};
 
-export function renderDstTemplate(args: DstArgs = {}): string {
+// ---------------------------------------------------------------------------
+// Markup
+// ---------------------------------------------------------------------------
+
+export function renderDstTemplate(
+  idPrefix: string,
+  args: DstArgs = {},
+): string {
+  const id = idScope(idPrefix);
   const zone = args.zone ?? DEFAULT_ZONE;
   const year = args.year ?? DEFAULT_YEAR;
-  const preset = args.preset ?? "gap";
+  const presetType = args.preset ?? "gap";
   const dis = args.disambiguation ?? "compatible";
 
-  /* A seeded zone outside the curated twenty is appended rather than replacing
-     the list, so the reader can still pick anything the page normally offers
-     after Dox seeds an unusual one. */
-  const zones = CURATED_TIMEZONES.includes(
+  /* A seeded zone outside the curated list is appended rather than replacing the
+     list, so the reader can still pick anything the page normally offers. */
+  const zones: readonly string[] = CURATED_TIMEZONES.includes(
     zone as (typeof CURATED_TIMEZONES)[number],
   )
     ? CURATED_TIMEZONES
     : [...CURATED_TIMEZONES, zone];
 
-  const presetOptions = VALUE_PRESETS.map(
-    (p) =>
-      `<option value="${escapeAttr(p.type)}"${p.type === preset ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-  ).join("");
-
-  return (
-    `<div class="gmt-dst gmt-widget not-content">` +
-    `<div class="gmt-widget-card">` +
-    `<!-- Step 1 — find the transitions -->` +
-    `<div class="gmt-widget-section">` +
-    `<h4>1. Find transitions</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label">${labelTextHtml("Zone")}` +
-    `<select class="gmt-select" data-role="zone">${options(zones, zone)}</select>` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Year")}` +
-    `<input class="gmt-input" data-role="year" type="number" value="${escapeAttr(String(year))}" min="1900" max="2100" step="1">` +
-    `</label>` +
-    `</div>` +
-    codeFrameHtml("getdst") +
-    `<table class="gmt-dst-table" data-grow="slot">` +
-    `<thead><tr>` +
-    `<th>Type</th><th>Local Date</th><th>Local Hour</th><th>UTC Instant</th><th>Offset Before → After</th>` +
-    `</tr></thead>` +
-    `<tbody data-role="transition-body"></tbody>` +
-    `</table>` +
-    `</div>` +
-    `<!-- Step 2 — probe a moment -->` +
-    `<div class="gmt-widget-section">` +
-    `<h4>2. Probe a moment</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label">${labelTextHtml("Value preset")}` +
-    `<select class="gmt-select" data-role="value-preset">${presetOptions}</select>` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Disambiguation")}` +
-    `<select class="gmt-select" data-role="disambiguation">${options(DISOPTIONS, dis)}</select>` +
-    `</label>` +
-    `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(VALUE_PRESETS.find((p) => p.type === preset)?.description ?? "")}</p>` +
-    `<p class="gmt-widget-hint">Disambiguation: <code>compatible</code> takes the later instant in a gap and the earlier one in an overlap. <code>earlier</code> and <code>later</code> take that instant. <code>reject</code> gives no result.</p>` +
-    `<!-- Scrubbable local-time ticker (drag or arrow keys) -->` +
-    `<div class="gmt-dst-ticker" data-role="ticker" hidden>` +
-    `<div class="gmt-dst-ticker-status" data-role="ticker-status"></div>` +
-    `<div class="gmt-dst-ticker-track" data-role="ticker-track">` +
-    `<div class="gmt-dst-ticker-zone" data-role="ticker-zone"></div>` +
-    `<span class="gmt-dst-ticker-zone-label" data-role="zone-label-start"></span>` +
-    `<span class="gmt-dst-ticker-zone-label" data-role="zone-label-end"></span>` +
-    `<div class="gmt-handle gmt-dst-ticker-handle" data-role="ticker-handle" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="Local probe time"></div>` +
-    `</div>` +
-    `<div class="gmt-dst-ticker-ticks" data-role="ticker-ticks"></div>` +
-    `</div>` +
-    `<p class="gmt-dst-ticker-empty" data-role="ticker-empty" hidden>` +
-    `${TICKER_EMPTY_TEXT}` +
-    `</p>` +
-    codeFrameHtml("convert") +
-    `<output class="gmt-widget-output gmt-playground-live" data-role="probe-result">&nbsp;</output>` +
-    `<div data-role="explanation"></div>` +
-    `</div>` +
-    `</div>` +
-    `</div>`
+  const transitions = section(
+    { id: id("transitions"), heading: "1. Find transitions", level: 4 },
+    html`${fieldGrid(
+      html`${field({
+        id: id("zone"),
+        label: "Zone",
+        control: ({ id: cid }) =>
+          select({
+            id: cid,
+            value: zone,
+            options: zones.map((z) => ({ value: z, label: z })),
+          }),
+      })}${field({
+        id: id("year"),
+        label: "Year",
+        control: ({ id: cid }) =>
+          textInput({
+            id: cid,
+            value: String(year),
+            inputMode: "numeric",
+            autocomplete: "off",
+            spellcheck: false,
+          }),
+      })}`,
+    )}${grow(
+      html`<div id="${id("call-getdst")}">${callFrame("getDstTransitions call", "")}</div>`,
+    )}${grow(html`<div id="${id("table")}">${dstTable([])}</div>`)}`,
   );
+
+  const probe = section(
+    { id: id("probe"), heading: "2. Probe a moment", level: 4 },
+    html`${fieldGrid(
+      html`${preset({
+        id: id("preset"),
+        label: "Value preset",
+        value: presetType,
+        options: VALUE_PRESETS.map((p) => ({
+          value: p.type,
+          label: p.label,
+          description: p.description,
+        })),
+      })}${field({
+        id: id("disambiguation"),
+        label: "Disambiguation",
+        control: ({ id: cid }) =>
+          select({
+            id: cid,
+            value: dis,
+            options: DISOPTIONS.map((d) => ({ value: d, label: d })),
+          }),
+      })}`,
+    )}<p>Disambiguation: <code>compatible</code> takes the later instant in a gap and the earlier one in an overlap. <code>earlier</code> and <code>later</code> take that instant. <code>reject</code> gives no result.</p>${dstTicker({ id })}${dstTickerEmpty({ id }, TICKER_EMPTY_TEXT)}${grow(
+      html`<div id="${id("call-convert")}">${callFrame("convertPlainDateTimeToZoned call", "")}</div>`,
+    )}${grow(
+      html`<div id="${id("probe-result")}">${callOutput({ label: "What the probe returned", state: "empty", lines: [] })}</div>`,
+    )}${grow(html`<div id="${id("explanation")}"></div>`)}`,
+  );
+
+  return widget(
+    { name: WIDGET_NAME, label: "DST Inspector", scope: idPrefix },
+    html`${transitions}${probe}`,
+  ).toString();
 }
 
-const KEY_STEP_MINUTES = 5;
-const TICKER_EMPTY_TEXT =
-  "This preset targets a single fixed value — nothing to scrub.";
+function callFrame(label: string, plain: string, code?: SafeHtml): SafeHtml {
+  return codeFrame({
+    label,
+    copyLabel: "Copy call",
+    copyText: plain,
+    ...(code === undefined ? {} : { code }),
+    gate: "codeframe",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Library
+// ---------------------------------------------------------------------------
 
 async function loadModules() {
   const [getMod, convertMod] = await Promise.all([
@@ -188,315 +223,200 @@ async function loadModules() {
   };
 }
 
-// -----------------------------------------------------------------------
+type Modules = Awaited<ReturnType<typeof loadModules>>;
+
+// ---------------------------------------------------------------------------
 // Render helpers
-// -----------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
-function renderTransitionTable(
-  tbody: HTMLElement,
-  transitions: DstTransition[],
-  zone: string,
-) {
-  tbody.innerHTML = "";
-
-  if (transitions.length === 0) {
-    const tr = document.createElement("tr");
-    const td = document.createElement("td");
-    td.colSpan = 5;
-    td.className = "gmt-dst-empty-cell";
-    td.textContent = "No DST transitions in this zone/year.";
-    tr.appendChild(td);
-    tbody.appendChild(tr);
-    return;
-  }
-
-  for (const t of transitions) {
-    const tr = document.createElement("tr");
-    const type = transitionType(t);
-    tr.dataset.type = type;
-
-    const tdType = document.createElement("td");
-    const badge = document.createElement("span");
-    badge.className = `gmt-dst-badge gmt-dst-badge-${type}`;
-    badge.textContent = type === "gap" ? "Gap" : "Overlap";
-    tdType.appendChild(badge);
-    tr.appendChild(tdType);
-
-    const tdDate = document.createElement("td");
-    tdDate.textContent = localDateAtTransition(t, zone) ?? "—";
-    tr.appendChild(tdDate);
-
-    const tdHour = document.createElement("td");
-    const lm = localMinuteOfDayAtTransition(t, zone);
-    tdHour.textContent = Number.isNaN(lm) ? "—" : formatMinuteOfDay(lm);
-    tr.appendChild(tdHour);
-
-    const tdUtc = document.createElement("td");
-    tdUtc.className = "gmt-dst-mono";
-    tdUtc.textContent = t.instant;
-    tr.appendChild(tdUtc);
-
-    const tdOffset = document.createElement("td");
-    tdOffset.className = "gmt-dst-mono";
-    const arrow = document.createElement("span");
-    arrow.className = `gmt-dst-arrow--${type}`;
-    arrow.textContent = "→";
-    tdOffset.appendChild(document.createTextNode(`${t.offsetBefore} `));
-    tdOffset.appendChild(arrow);
-    tdOffset.appendChild(document.createTextNode(` ${t.offsetAfter}`));
-    tr.appendChild(tdOffset);
-
-    tbody.appendChild(tr);
-  }
+function rowsOf(transitions: DstTransition[], zone: string): DstRow[] {
+  return transitions.map((t) => {
+    const minute = localMinuteOfDayAtTransition(t, zone);
+    return {
+      kind: transitionType(t),
+      date: localDateAtTransition(t, zone) ?? "—",
+      hour: Number.isNaN(minute) ? "—" : formatMinuteOfDay(minute),
+      instant: t.instant,
+      before: t.offsetBefore,
+      after: t.offsetAfter,
+    };
+  });
 }
 
-function renderTicker(
-  tickerEl: HTMLElement,
-  emptyEl: HTMLElement | null,
-  window_: TickerWindow | null,
-  transition: DstTransition | null,
-  minuteOfDay: number | null,
-) {
-  if (!window_ || !transition || minuteOfDay === null) {
-    tickerEl.hidden = true;
-    if (emptyEl) emptyEl.hidden = false;
-    return;
-  }
-
-  tickerEl.hidden = false;
-  if (emptyEl) emptyEl.hidden = true;
-
-  const type = transitionType(transition);
-  const inZone = isMinuteInZone(minuteOfDay, window_);
-
-  const zoneEl = tickerEl.querySelector(
-    '[data-role="ticker-zone"]',
-  ) as HTMLElement | null;
-  if (zoneEl) {
-    zoneEl.className = `gmt-dst-ticker-zone gmt-dst-ticker-zone--${type}`;
-    const left = minuteToTickerPercent(window_.zoneStartMinutes, window_);
-    const right = minuteToTickerPercent(window_.zoneEndMinutes, window_);
-    zoneEl.style.left = `${left}%`;
-    zoneEl.style.width = `${right - left}%`;
-  }
-
-  const startLabel = tickerEl.querySelector(
-    '[data-role="zone-label-start"]',
-  ) as HTMLElement | null;
-  const endLabel = tickerEl.querySelector(
-    '[data-role="zone-label-end"]',
-  ) as HTMLElement | null;
-  if (startLabel) {
-    startLabel.textContent = formatMinuteOfDay(window_.zoneStartMinutes);
-    startLabel.style.left = `${minuteToTickerPercent(window_.zoneStartMinutes, window_)}%`;
-  }
-  if (endLabel) {
-    endLabel.textContent = formatMinuteOfDay(window_.zoneEndMinutes);
-    endLabel.style.left = `${minuteToTickerPercent(window_.zoneEndMinutes, window_)}%`;
-  }
-
-  const handle = tickerEl.querySelector(
-    '[data-role="ticker-handle"]',
-  ) as HTMLElement | null;
-  if (handle) {
-    handle.className = `gmt-handle gmt-dst-ticker-handle${inZone ? ` gmt-dst-ticker-handle--${type}` : ""}`;
-    handle.style.left = `${minuteToTickerPercent(minuteOfDay, window_)}%`;
-    handle.setAttribute("aria-valuemin", String(window_.windowStartMinutes));
-    handle.setAttribute("aria-valuemax", String(window_.windowEndMinutes));
-    handle.setAttribute("aria-valuenow", String(minuteOfDay));
-    handle.setAttribute("aria-valuetext", formatMinuteOfDay(minuteOfDay));
-  }
-
-  const ticksEl = tickerEl.querySelector(
-    '[data-role="ticker-ticks"]',
-  ) as HTMLElement | null;
-  if (ticksEl) {
-    ticksEl.innerHTML = "";
-    for (const m of selectTickMinutes(window_, ticksEl.clientWidth)) {
-      const tick = document.createElement("span");
-      tick.className = "gmt-dst-ticker-tick";
-      tick.textContent = formatMinuteOfDay(m);
-      tick.style.left = `${minuteToTickerPercent(m, window_)}%`;
-      ticksEl.appendChild(tick);
-    }
-  }
-
-  const statusEl = tickerEl.querySelector(
-    '[data-role="ticker-status"]',
-  ) as HTMLElement | null;
-  if (statusEl) {
-    statusEl.textContent = inZone
-      ? type === "gap"
-        ? `${formatMinuteOfDay(minuteOfDay)} — inside the gap, this local time never happens`
-        : `${formatMinuteOfDay(minuteOfDay)} — inside the overlap, this local time happens twice`
-      : `${formatMinuteOfDay(minuteOfDay)} — normal local time`;
-  }
+function statusText(
+  type: "gap" | "overlap",
+  inZone: boolean,
+  minute: number,
+): string {
+  const at = formatMinuteOfDay(minute);
+  if (!inZone) return `${at} — normal local time`;
+  return type === "gap"
+    ? `${at} — inside the gap, this local time never happens`
+    : `${at} — inside the overlap, this local time happens twice`;
 }
 
-const PRESET_NOUN: Record<string, string> = {
-  normal: "normal time",
-  gap: "skipped hour",
-  overlap: "repeated hour",
-  transition: "transition instant",
-};
-
-/** The probe call line when the zone has nothing to probe: a comment, and
- *  nothing for the copy button to copy. */
-function renderNoProbe(codeEl: HTMLElement | null, zone: string, year: number) {
-  if (!codeEl) return;
-  codeEl.textContent = `// no call: ${zone} has no DST transitions in ${year}`;
-  const copyBtn = codeEl
-    .closest(".gmt-codeframe")
-    ?.querySelector<HTMLElement>('[data-role^="copy-"]');
-  if (copyBtn) delete copyBtn.dataset.copyText;
-}
-
-function renderPresetDescription(el: HTMLElement, presetType: string) {
-  const info = VALUE_PRESETS.find((p) => p.type === presetType);
-  el.textContent = info?.description ?? "";
-}
-
-function renderProbeResult(
-  outputEl: HTMLElement,
-  probeTime: string,
-  result: string,
-  classification: ProbeClassification,
-) {
-  if (!probeTime) {
-    outputEl.textContent = "— No transitions for this zone/year.";
-    outputEl.classList.remove("gmt-playground-sentinel");
-    return;
-  }
-
-  if (result === "") {
-    renderResult(outputEl, classification.explanation, "sentinel");
-  } else {
-    renderResult(outputEl, result, "live");
-  }
-}
-
-/**
- * A single aside combining the plain-language explanation of the current
- * probe result with, when there's one, the deeper pedagogical point (the
- * gap/overlap span). One box instead of two or three.
- */
-function renderExplanationAside(
-  el: HTMLElement,
+/** The explanation, with the kind named by a badge and the span in words. */
+function explanationAside(
   classification: ProbeClassification,
   transitions: DstTransition[],
   presetType: string,
   zone: string,
-) {
+): SafeHtml {
   if (transitions.length === 0) {
-    renderAside(
-      el,
-      "note",
-      "Note",
-      "<p>No DST transitions in this zone and year, so there is nothing to probe.</p>",
+    return aside(
+      { label: "About this probe", tone: "note", title: "Note" },
+      html`<p>No DST transitions in this zone and year, so there is nothing to probe.</p>`,
     );
-    return;
   }
-
-  const typeLabel =
-    classification.type === "gap"
-      ? '<span class="gmt-dst-badge gmt-dst-badge-gap">Gap</span>'
-      : classification.type === "overlap"
-        ? '<span class="gmt-dst-badge gmt-dst-badge-overlap">Overlap</span>'
-        : "Normal";
-
-  // The badge names the kind; the explanation already names the time.
-  let content =
+  const lead =
     classification.type === "normal"
-      ? `<p>${classification.explanation}</p>`
-      : `<p>${typeLabel} ${classification.explanation}</p>`;
-  const type: "note" | "caution" = "note";
-  const title = "Note";
+      ? html`<p>${classification.explanation}</p>`
+      : html`<p>${dstBadge(classification.type)} ${classification.explanation}</p>`;
 
-  if (presetType === "gap") {
-    const gapTrans = transitions.find(isGap);
-    const win = gapTrans ? getTickerWindow(gapTrans, zone) : null;
-    if (gapTrans && win) {
-      const span = `${formatMinuteOfDay(win.zoneStartMinutes)}–${formatMinuteOfDay(win.zoneEndMinutes)}`;
-      content += `<p>No local time in <code>${span}</code> happens on that date. Try <code>"earlier"</code> or <code>"later"</code> to see how each resolves it.</p>`;
-    }
-  } else if (presetType === "overlap") {
-    const overlapTrans = transitions.find(isOverlap);
-    const win = overlapTrans ? getTickerWindow(overlapTrans, zone) : null;
-    if (overlapTrans && win) {
-      const span = `${formatMinuteOfDay(win.zoneStartMinutes)}–${formatMinuteOfDay(win.zoneEndMinutes)}`;
-      content += `<p>Every local time in <code>${span}</code> happens twice on that date. <code>"earlier"</code> picks the first occurrence, <code>"later"</code> picks the second.</p>`;
+  let span: SafeHtml | "" = "";
+  const kind =
+    presetType === "gap" ? "gap" : presetType === "overlap" ? "overlap" : null;
+  if (kind !== null) {
+    const found = transitions.find(kind === "gap" ? isGap : isOverlap);
+    const win = found ? getTickerWindow(found, zone) : null;
+    if (win) {
+      const range = `${formatMinuteOfDay(win.zoneStartMinutes)}–${formatMinuteOfDay(win.zoneEndMinutes)}`;
+      span =
+        kind === "gap"
+          ? html`<p>No local time in <code>${range}</code> happens on that date. Try <code>"earlier"</code> or <code>"later"</code> to see how each resolves it.</p>`
+          : html`<p>Every local time in <code>${range}</code> happens twice on that date. <code>"earlier"</code> picks the first occurrence, <code>"later"</code> picks the second.</p>`;
     }
   }
-
-  renderAside(el, type, title, content);
+  return aside(
+    { label: "About this probe", tone: "note", title: "Note" },
+    html`${lead}${span}`,
+  );
 }
 
-// -----------------------------------------------------------------------
-// Widget wiring
-// -----------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Wiring
+// ---------------------------------------------------------------------------
 
-function setupWidget(
-  container: HTMLElement,
-  getDstTransitions: (zone: string, year: number) => DstTransition[],
-  convertPlainDateTimeToZoned: (
-    value: string,
-    timeZone: string,
-    options?: { disambiguation?: string },
-  ) => string,
-): () => void {
-  const q = <T extends HTMLElement>(role: string) =>
-    container.querySelector(`[data-role="${role}"]`) as T | null;
+function setupWidget(root: HTMLElement, m: Modules, signal: AbortSignal) {
+  const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
+  const zoneEl = el<HTMLSelectElement>("zone");
+  const yearEl = el<HTMLInputElement>("year");
+  const presetEl = widgetEl.querySelector<GmtPreset>("gmt-preset")!;
+  const disEl = el<HTMLSelectElement>("disambiguation");
+  const tickerEl = el(tickerIds.root);
+  const tickerEmptyEl = el(tickerIds.empty);
+  const handleEl = el<GmtHandle>(tickerIds.handle);
 
-  const zoneEl = q<HTMLSelectElement>("zone");
-  const yearEl = q<HTMLInputElement>("year");
-  const presetEl = q<HTMLSelectElement>("value-preset");
-  const disEl = q<HTMLSelectElement>("disambiguation");
-  const tbodyEl = q("transition-body");
-  const outputEl = q("probe-result");
-  const tickerEl = q("ticker");
-  const tickerEmptyEl = q("ticker-empty");
-  const trackEl = q("ticker-track");
-  const handleEl = q("ticker-handle");
-
-  if (!zoneEl || !yearEl || !presetEl || !tbodyEl || !outputEl) return () => {};
-
-  // Scrub state — owned here so a drag isn't reset by an unrelated re-render.
+  // Scrub state, owned here so an unrelated render cannot reset it.
   let activeTransition: DstTransition | null = null;
   let tickerWindow: TickerWindow | null = null;
   let handleMinuteOfDay: number | null = null;
-  let dragging = false;
 
-  function render() {
-    const zone = zoneEl!.value;
-    const year = parseInt(yearEl!.value, 10);
-    const presetType = presetEl!.value;
-    const dis = disEl?.value ?? "compatible";
+  /** What the thumb reads aloud: the local time and what it is. */
+  handleEl.formatValue = (minute) => {
+    if (!activeTransition || !tickerWindow) return formatMinuteOfDay(minute);
+    const type = transitionType(activeTransition);
+    const inZone = isMinuteInZone(minute, tickerWindow);
+    const offset =
+      minute < tickerWindow.zoneStartMinutes
+        ? activeTransition.offsetBefore
+        : activeTransition.offsetAfter;
+    return `${statusText(type, inZone, minute)}, offset ${inZone ? `${activeTransition.offsetBefore} to ${activeTransition.offsetAfter}` : offset}`;
+  };
 
-    const transitions = getDstTransitions(zone, year);
+  function drawTicker(zone: string, transitions: DstTransition[]): void {
+    el(tickerIds.empty).textContent =
+      transitions.length === 0 ? NO_TRANSITIONS_TICKER_TEXT : TICKER_EMPTY_TEXT;
+    if (!tickerWindow || !activeTransition || handleMinuteOfDay === null) {
+      tickerEl.hidden = true;
+      tickerEmptyEl.hidden = false;
+      return;
+    }
+    tickerEl.hidden = false;
+    tickerEmptyEl.hidden = true;
+    void zone;
 
-    renderTransitionTable(tbodyEl!, transitions, zone);
-    renderCallLine(
-      q("call-getdst"),
-      "getDstTransitions",
-      `${codeSpan("str", `"${zone}"`)}, ${codeSpan("num", String(year))}`,
-      `"${zone}", ${year}`,
+    const win = tickerWindow;
+    const type = transitionType(activeTransition);
+    const inZone = isMinuteInZone(handleMinuteOfDay, win);
+
+    const band = el(tickerIds.band);
+    band.dataset["kind"] = type;
+    band.style.setProperty(
+      "--gmt-band-from",
+      String(minuteToTickerPercent(win.zoneStartMinutes, win)),
+    );
+    band.style.setProperty(
+      "--gmt-band-to",
+      String(minuteToTickerPercent(win.zoneEndMinutes, win)),
+    );
+    for (const [key, minute] of [
+      [tickerIds.start, win.zoneStartMinutes],
+      [tickerIds.end, win.zoneEndMinutes],
+    ] as const) {
+      const label = el(key);
+      label.textContent = formatMinuteOfDay(minute);
+      label.style.setProperty(
+        "--gmt-at",
+        String(minuteToTickerPercent(minute, win)),
+      );
+    }
+
+    // Bounds first, then the value, so the clamp sees the new window.
+    handleEl.setAttribute("min", String(win.windowStartMinutes));
+    handleEl.setAttribute("max", String(win.windowEndMinutes));
+    handleEl.setAttribute("step", String(KEY_STEP_MINUTES));
+    handleEl.setAttribute("large-step", String(KEY_LARGE_STEP_MINUTES));
+    handleEl.value = handleMinuteOfDay;
+    handleEl.dataset["zone"] = inZone ? type : "none";
+
+    const sparse = new Set(selectTickMinutes(win, SPARSE_TICK_PX));
+    const ticks: TickMark[] = selectTickMinutes(win, DENSE_TICK_PX).map(
+      (t) => ({
+        at: minuteToTickerPercent(t, win),
+        text: formatMinuteOfDay(t),
+        major: sparse.has(t),
+      }),
+    );
+    setHtml(el(tickerIds.ticks), dstTicks(ticks));
+    el(tickerIds.status).textContent = statusText(
+      type,
+      inZone,
+      handleMinuteOfDay,
+    );
+  }
+
+  function render(): void {
+    const zone = zoneEl.value;
+    const year = parseInt(yearEl.value, 10);
+    const presetType = presetEl.value;
+    const dis = disEl.value || "compatible";
+
+    const transitions = m.getDstTransitions(zone, year);
+    setHtml(el("table"), dstTable(rowsOf(transitions, zone)));
+    setHtml(
+      el("call-getdst"),
+      callFrame(
+        "getDstTransitions call",
+        `getDstTransitions("${zone}", ${year})`,
+        raw(
+          `${codeSpan("fn", "getDstTransitions")}(${codeSpan("str", `"${zone}"`)}, ${codeSpan("num", String(year))})`,
+        ),
+      ),
     );
 
-    const presetDescEl = q("preset-description");
-    if (presetDescEl) {
-      if (transitions.length === 0) {
-        presetDescEl.textContent = `${zone} has no DST transitions in ${year}, so there is no ${PRESET_NOUN[presetType] ?? "value"} to probe. Pick another zone or year.`;
-      } else {
-        renderPresetDescription(presetDescEl, presetType);
+    if (transitions.length === 0) {
+      const desc = presetEl.querySelector("p");
+      if (desc) {
+        desc.textContent = `${zone} has no DST transitions in ${year}, so there is no ${PRESET_NOUN[presetType] ?? "value"} to probe. Pick another zone or year.`;
       }
     }
 
-    // Scrubbable presets take their value from the ticker; fixed ones don't.
+    // Scrubbable presets take their value from the strip; fixed ones do not.
     const scrubbable =
       activeTransition !== null &&
       tickerWindow !== null &&
       handleMinuteOfDay !== null;
-
     const value = scrubbable
       ? buildZonedValueFromMinutes(
           zone,
@@ -505,47 +425,45 @@ function setupWidget(
         )
       : buildValuePreset(presetType as ValuePreset, zone, transitions);
 
-    // convertPlainDateTimeToZoned resolves the *wall time*, so the [zone] (and
-    // any offset the "transition" preset embeds) is stripped before the call —
-    // an offset would answer the ambiguity `disambiguation` exists to resolve.
+    // The call resolves the wall time, so the [zone] and any offset the "transition"
+    // preset embeds are stripped: an offset would answer the ambiguity `disambiguation`
+    // exists to resolve.
     const plainValue = value ? toPlainLocalDateTime(value) : "";
-
     const result = plainValue
-      ? convertPlainDateTimeToZoned(plainValue, zone, { disambiguation: dis })
+      ? m.convertPlainDateTimeToZoned(plainValue, zone, { disambiguation: dis })
       : "";
 
-    if (tickerEmptyEl) {
-      tickerEmptyEl.textContent =
-        transitions.length === 0
-          ? "Nothing to scrub: this zone has no DST transitions in this year."
-          : TICKER_EMPTY_TEXT;
-    }
-    if (tickerEl) {
-      renderTicker(
-        tickerEl,
-        tickerEmptyEl,
-        tickerWindow,
-        activeTransition,
-        handleMinuteOfDay,
-      );
-    }
+    drawTicker(zone, transitions);
 
     if (plainValue === "") {
-      /* No transition means no value to probe, so there is no call to show:
-         a call on "" would teach the sentinel, not the zone. */
-      renderNoProbe(q("call-convert"), zone, year);
+      /* No transition means no value to probe, so there is no call to show: a call on
+         "" would teach the sentinel, not the zone. */
+      setHtml(
+        el("call-convert"),
+        callFrame(
+          "convertPlainDateTimeToZoned call",
+          "",
+          raw(
+            `// no call: ${escapeText(zone)} has no DST transitions in ${year}`,
+          ),
+        ),
+      );
     } else {
-      renderCallLine(
-        q("call-convert"),
-        "convertPlainDateTimeToZoned",
-        `${codeSpan("str", `"${plainValue}"`)}, ${codeSpan("str", `"${zone}"`)}, { disambiguation: ${codeSpan("str", `"${dis}"`)} }`,
-        `"${plainValue}", "${zone}", { disambiguation: "${dis}" }`,
+      setHtml(
+        el("call-convert"),
+        callFrame(
+          "convertPlainDateTimeToZoned call",
+          `convertPlainDateTimeToZoned("${plainValue}", "${zone}", { disambiguation: "${dis}" })`,
+          raw(
+            `${codeSpan("fn", "convertPlainDateTimeToZoned")}(${codeSpan("str", `"${plainValue}"`)}, ${codeSpan("str", `"${zone}"`)}, { disambiguation: ${codeSpan("str", `"${dis}"`)} })`,
+          ),
+        ),
       );
     }
 
-    // Any probe can sit inside a transition's range, so classify against the
-    // transitions on its own date. A fixed preset is not assumed normal:
-    // southern zones' "Exact transition instant" is the start of the repeated hour.
+    // A probe can sit inside a transition's range, so classify against the transitions on
+    // its own date. A fixed preset is not assumed normal: a southern zone's "Exact
+    // transition instant" is the start of the repeated hour.
     const { onDate, probeHour } = probeContext(plainValue, transitions, zone);
     const classification = classifyProbeResult(
       result,
@@ -557,26 +475,37 @@ function setupWidget(
       },
     );
 
-    renderProbeResult(outputEl!, value, result, classification);
-
-    const explanationEl = q("explanation");
-    if (explanationEl) {
-      renderExplanationAside(
-        explanationEl,
-        classification,
-        transitions,
-        presetType,
-        zone,
-      );
-    }
+    setHtml(
+      el("probe-result"),
+      !value
+        ? callOutput({
+            label: "What the probe returned",
+            state: "empty",
+            lines: [
+              { text: "— No transitions for this zone/year.", lost: false },
+            ],
+          })
+        : callOutput({
+            label: "What the probe returned",
+            state: result === "" ? "sentinel" : "live",
+            lines:
+              result === ""
+                ? [{ text: "NO SIGNAL", lost: true }]
+                : [{ text: result, lost: false }],
+          }),
+    );
+    setHtml(
+      el("explanation"),
+      explanationAside(classification, transitions, presetType, zone),
+    );
   }
 
-  // Re-derive which transition the ticker scrubs, then render.
-  function resetAndRender() {
-    const zone = zoneEl!.value;
-    const year = parseInt(yearEl!.value, 10);
-    const presetType = presetEl!.value;
-    const transitions = getDstTransitions(zone, year);
+  /** Re-derive which transition the strip scrubs, then render. */
+  function resetAndRender(): void {
+    const zone = zoneEl.value;
+    const year = parseInt(yearEl.value, 10);
+    const presetType = presetEl.value;
+    const transitions = m.getDstTransitions(zone, year);
 
     activeTransition =
       presetType === "gap"
@@ -584,143 +513,84 @@ function setupWidget(
         : presetType === "overlap"
           ? (transitions.find(isOverlap) ?? null)
           : null;
-
     tickerWindow = activeTransition
       ? getTickerWindow(activeTransition, zone)
       : null;
-    // The handle starts in the middle of the skipped or repeated range. The
-    // transition's own local reading is the range's end for a gap, which is
-    // outside it: New York's 03:00 exists, 02:30 does not.
+    // The thumb starts in the middle of the skipped or repeated range: the transition's
+    // own local reading is the range's end for a gap, which is outside it.
     handleMinuteOfDay =
       activeTransition && tickerWindow
         ? zoneMidpointMinutes(tickerWindow)
         : null;
-
     if (handleMinuteOfDay !== null && Number.isNaN(handleMinuteOfDay)) {
       handleMinuteOfDay = null;
       tickerWindow = null;
     }
-
     render();
   }
 
-  function updateHandle(minute: number) {
-    handleMinuteOfDay = minute;
-    render();
-  }
-
-  zoneEl.addEventListener("change", resetAndRender);
-  yearEl.addEventListener("input", resetAndRender);
-  presetEl.addEventListener("change", resetAndRender);
-  disEl?.addEventListener("change", render);
-
-  // Pointer scrubbing
-  if (trackEl) {
-    trackEl.addEventListener("pointerdown", (e) => {
-      const target = e.target as HTMLElement;
-      if (target.dataset.role !== "ticker-handle" || !tickerWindow) return;
-      dragging = true;
-      target.setPointerCapture((e as PointerEvent).pointerId);
-    });
-
-    trackEl.addEventListener("pointermove", (e) => {
-      if (!dragging || !tickerWindow) return;
-      const rect = trackEl.getBoundingClientRect();
-      const pct =
-        (((e as PointerEvent).clientX - rect.left) / rect.width) * 100;
-      updateHandle(tickerPercentToMinute(pct, tickerWindow));
-    });
-
-    const stopDrag = () => {
-      dragging = false;
-    };
-    trackEl.addEventListener("pointerup", stopDrag);
-    trackEl.addEventListener("pointercancel", stopDrag);
-  }
-
-  // Keyboard scrubbing — the non-drag equivalent, required by DOX-B2b.
-  handleEl?.addEventListener("keydown", (e) => {
-    const ev = e as KeyboardEvent;
-    if (!tickerWindow || handleMinuteOfDay === null) return;
-
-    switch (ev.key) {
-      case "ArrowLeft":
-      case "ArrowDown":
-        updateHandle(
-          Math.max(
-            tickerWindow.windowStartMinutes,
-            handleMinuteOfDay - KEY_STEP_MINUTES,
-          ),
-        );
-        ev.preventDefault();
-        break;
-      case "ArrowRight":
-      case "ArrowUp":
-        updateHandle(
-          Math.min(
-            tickerWindow.windowEndMinutes,
-            handleMinuteOfDay + KEY_STEP_MINUTES,
-          ),
-        );
-        ev.preventDefault();
-        break;
-      case "Home":
-        updateHandle(tickerWindow.windowStartMinutes);
-        ev.preventDefault();
-        break;
-      case "End":
-        updateHandle(tickerWindow.windowEndMinutes);
-        ev.preventDefault();
-        break;
-    }
-  });
-
-  wireCopyButtons(container);
+  widgetEl.addEventListener(
+    "input",
+    (e) => {
+      if (e.target === handleEl) {
+        handleMinuteOfDay = handleEl.value;
+        render();
+      } else if (e.target === yearEl) {
+        resetAndRender();
+      }
+    },
+    { signal },
+  );
+  widgetEl.addEventListener(
+    "change",
+    (e) => {
+      if (e.target === zoneEl || e.target === presetEl) resetAndRender();
+      else if (e.target === disEl) render();
+    },
+    { signal },
+  );
 
   resetAndRender();
 
-  /* The tick labels are thinned to the track's measured width, so a width
-     change (rotation, the chat rail opening) re-picks them. The observer is
-     dropped once the widget leaves the document. */
-  return trackEl
-    ? onWidthChange(trackEl, () => {
-        if (!tickerEl?.hidden) render();
-      })
-    : () => {};
+  return () => ({
+    zone: zoneEl.value,
+    year: yearEl.value ? Number(yearEl.value) : undefined,
+    preset: presetEl.value,
+    disambiguation: disEl.value,
+    offset: undefined,
+  });
 }
 
-/** Write seeded arguments onto the controls. A zone the `<select>` has no
- *  option for is added, as the Dwell Ledger does; any other value the control
- *  does not offer is skipped, which leaves the control on its default rather
- *  than on an empty selection. */
-function applyArgs(root: HTMLElement, args: DstArgs): void {
-  const set = (
-    role: string,
-    value: string | number | undefined,
-    addMissingOption = false,
-  ) => {
-    if (value === undefined) return;
-    const el = root.querySelector(`[data-role="${role}"]`) as
-      | HTMLSelectElement
-      | HTMLInputElement
-      | null;
-    if (!el) return;
-    const next = String(value);
-    if (
-      !addMissingOption &&
-      el instanceof HTMLSelectElement &&
-      ![...el.options].some((o) => o.value === next)
-    ) {
-      return;
-    }
-    setControlValue(el, next);
-  };
+function escapeText(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
 
-  set("zone", args.zone, true);
-  set("year", args.year);
-  set("value-preset", args.preset);
-  set("disambiguation", args.disambiguation);
-  set("offset", args.offset);
+/** Write seeded arguments onto the controls. A zone the select has no option for is
+ *  added; any other value a control does not offer is skipped, which leaves it on its
+ *  default rather than on an empty selection. */
+function applyArgs(root: HTMLElement, args: DstArgs): void {
+  const { part: el } = findWidget(root, WIDGET_NAME);
+  const zoneEl = el<HTMLSelectElement>("zone");
+  if (args.zone !== undefined) {
+    if (![...zoneEl.options].some((o) => o.value === args.zone)) {
+      zoneEl.add(new Option(args.zone, args.zone));
+    }
+    zoneEl.value = args.zone;
+  }
+  if (args.year !== undefined)
+    el<HTMLInputElement>("year").value = String(args.year);
+  const presetEl = root.querySelector<GmtPreset>("gmt-preset");
+  if (args.preset !== undefined && presetEl) presetEl.value = args.preset;
+  const disEl = el<HTMLSelectElement>("disambiguation");
+  if (
+    args.disambiguation !== undefined &&
+    [...disEl.options].some((o) => o.value === args.disambiguation)
+  ) {
+    disEl.value = args.disambiguation;
+  }
 }
 
 export const mountDstInspector: MountFn<DstArgs> = async (
@@ -728,7 +598,8 @@ export const mountDstInspector: MountFn<DstArgs> = async (
   args,
   signal,
 ) => {
-  let modules: Awaited<ReturnType<typeof loadModules>>;
+  defineElements();
+  let modules: Modules;
   try {
     modules = await loadModules();
   } catch (cause) {
@@ -737,55 +608,10 @@ export const mountDstInspector: MountFn<DstArgs> = async (
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  /* Args are applied to the controls *before* setup, so `setupWidget`'s first
-     render reads the seeded values and there is no visible correction.
-     `renderDstTemplate` paints the same values when it is given them — which it
-     is from the chat rail, but not from a page bootstrap, where the seed comes
-     from `window.location` and Astro's frontmatter has no window. Applying them
-     here covers both entrances with one path. */
+  /* Args go onto the controls before setup, so its first render reads the seeded values
+     and there is no visible correction. A page bootstrap seeds from `window.location`,
+     which the template cannot see, so this one path covers both entrances. */
   applyArgs(root, args);
-  const disposeWidth = setupWidget(
-    root,
-    modules.getDstTransitions,
-    modules.convertPlainDateTimeToZoned,
-  );
-
-  return onceDestroy(
-    () => {
-      disposeWidth();
-      /* Release a capture held mid-drag. Listeners inside `root` go with the
-         subtree, but a pointer capture is held by the browser against the
-         element, and leaving one set routes subsequent pointer events to a node
-         that is no longer in the document. */
-      const handle = root.querySelector(
-        '[data-role="ticker-handle"]',
-      ) as HTMLElement | null;
-      if (handle?.hasPointerCapture) {
-        for (const id of [0, 1]) {
-          try {
-            if (handle.hasPointerCapture(id)) handle.releasePointerCapture(id);
-          } catch {
-            // Nothing captured under that id.
-          }
-        }
-      }
-    },
-    () => {
-      const v = (role: string) =>
-        (
-          root.querySelector(`[data-role="${role}"]`) as
-            | HTMLSelectElement
-            | HTMLInputElement
-            | null
-        )?.value;
-      const year = v("year");
-      return {
-        zone: v("zone"),
-        year: year ? Number(year) : undefined,
-        preset: v("value-preset"),
-        disambiguation: v("disambiguation"),
-        offset: v("offset"),
-      };
-    },
-  );
+  const permalink = setupWidget(root, modules, signal);
+  return onceDestroy(() => {}, permalink);
 };

@@ -15,7 +15,14 @@
  * Driven through `resolveWidget` rather than by importing the mount directly,
  * so the test enters by the same door a streamed tool call does.
  */
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { getNodeText } from "@testing-library/dom";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import {
@@ -30,24 +37,6 @@ import { MountedWidget } from "./MountedWidget";
 import { type AnyWidgetEntry, resolveWidget } from "./widget-registry";
 
 installJsdomShims();
-
-/** jsdom gives every element a zero-sized rect; the drag maths needs a real one. */
-function stubTrackGeometry(root: ParentNode) {
-  for (const track of root.querySelectorAll(".gmt-interval-track")) {
-    (track as HTMLElement).getBoundingClientRect = () =>
-      ({
-        left: 0,
-        width: 1000,
-        top: 0,
-        height: 20,
-        right: 1000,
-        bottom: 20,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      }) as DOMRect;
-  }
-}
 
 /**
  * Render a widget through the panel and resolve once `mount()` has finished.
@@ -96,11 +85,14 @@ async function mountEntry(
   let observer: MutationObserver | undefined;
   const failed = new Promise<never>((_resolve, reject) => {
     const check = () => {
-      const error = container.querySelector(".gmt-hive-widget-error");
+      const error = within(container).queryByRole("alert", {
+        name: `${entry.title} couldn\u2019t be shown`,
+      });
       if (error) {
+        const said = within(error).getByText(/couldn.t be shown\./);
         reject(
           new Error(
-            `widget "${entry.title}" failed to mount: ${error.textContent?.trim() ?? ""}`,
+            `widget "${entry.title}" failed to mount: ${getNodeText(said).trim()}`,
           ),
         );
       }
@@ -123,15 +115,13 @@ async function mountEntry(
     observer?.disconnect();
   }
 
-  // Flush whatever the mount scheduled, so every read after this is synchronous.
-  await act(async () => {});
+  // Let React settle whatever the mount scheduled, so every read after this is synchronous.
+  await waitFor(() => expect(container).not.toBeEmptyDOMElement());
 
-  return { container, view: within(container) };
+  return { container };
 }
 
-afterEach(() => {
-  document.body.innerHTML = "";
-});
+afterEach(cleanup);
 
 describe("the mount helper", () => {
   // A widget that cannot be shown must fail the test with its own message, straight away —
@@ -160,7 +150,7 @@ describe("the mount helper", () => {
 
 describe("a widget mounted in the panel", () => {
   it("is reachable and operable by keyboard, exactly as on its own page", async () => {
-    const { container, view } = await renderMounted(
+    await renderMounted(
       "showIntervalVisualizer",
       {
         aStart: "2024-01-01T00:00:00+00:00[UTC]",
@@ -170,37 +160,31 @@ describe("a widget mounted in the panel", () => {
       },
       "rail-1",
     );
-    stubTrackGeometry(container);
-
-    const input = view.getByLabelText("A start") as HTMLInputElement;
-    expect(input.value).not.toBe("");
+    const user = userEvent.setup();
+    const input = screen.getByRole("textbox", { name: "A start" });
+    expect(input).not.toHaveValue("");
 
     // Reachable: a real slider, in the tab order, with a name.
-    const handle = view.getByRole("slider", { name: "Interval A start" });
-    expect(handle.getAttribute("tabindex")).toBe("0");
+    const handle = screen.getByRole("slider", { name: "Interval A start" });
+    expect(handle).toHaveAttribute("tabindex", "0");
 
     handle.focus();
-    expect(document.activeElement).toBe(handle);
+    expect(handle).toHaveFocus();
 
     // Operable: the key actually moves the interval, through the panel.
-    const before = input.value;
-    await act(async () => {
-      handle.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-      );
-    });
-    expect(input.value).not.toBe(before);
+    const before = (input as HTMLInputElement).value;
+    await user.keyboard("{ArrowRight}");
+    expect(input).not.toHaveValue(before);
 
     // And the answer recomputed, so the keyboard drives the whole widget and
     // not just the control it touched.
-    const output = container.querySelector(
-      '[data-role="op-output-intersection"]',
-    ) as HTMLElement;
-    expect(output.textContent?.trim()).not.toBe("");
+    expect(
+      screen.getByRole("status", { name: "Intersection result" }),
+    ).not.toBeEmptyDOMElement();
   });
 
   it("keeps the converter's controls keyboard-operable in the panel", async () => {
-    const { container, view } = await renderMounted(
+    await renderMounted(
       "showConverterBench",
       {
         value: "2024-03-15T14:30:00.000-04:00[America/New_York]",
@@ -210,23 +194,22 @@ describe("a widget mounted in the panel", () => {
       "rail-2",
     );
 
-    const out = container.querySelector(
-      '[data-role="convert-result"]',
-    ) as HTMLElement;
-    expect(out.textContent).toContain("[Europe/London]");
+    const user = userEvent.setup();
+    const out = screen.getByRole("status", { name: "Converted value" });
+    expect(out).toHaveTextContent("[Europe/London]");
 
-    const select = view.getByLabelText("To") as HTMLSelectElement;
+    const select = screen.getByRole("combobox", { name: "To" });
     select.focus();
-    expect(document.activeElement).toBe(select);
+    expect(select).toHaveFocus();
 
     // Changing a select by keyboard fires `change`, not `input` — the mount
     // listens for both, and this is the half a pointer test never covers.
-    await act(async () => {
-      select.value = "Asia/Tokyo";
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    await user.selectOptions(select, "Asia/Tokyo");
 
-    expect(out.textContent).toContain("Asia/Tokyo");
+    // The answer is redrawn, so ask for it again rather than reading the old node.
+    expect(
+      screen.getByRole("status", { name: "Converted value" }),
+    ).toHaveTextContent("Asia/Tokyo");
   });
 });
 
@@ -286,11 +269,18 @@ function stubFetch(reply: "text" | { tool: string; input: unknown }) {
   return chat;
 }
 
-const card = (widget: string) =>
-  document.querySelector<HTMLButtonElement>(`button[data-widget="${widget}"]`)!;
-
 const starterFor = (widget: string) =>
   CHAT_STARTERS.find((s) => s.widget === widget)!;
+
+/** A starter card, found by its question: that is its accessible name. */
+const card = (widget: string) =>
+  screen.getByRole("button", { name: starterFor(widget).text });
+
+/** The title of the open widget, in its panel. */
+const panelTitle = (title: string) =>
+  within(screen.getByRole("complementary", { name: "Widget panel" })).getByText(
+    title,
+  );
 
 describe("the examples rail on /dox", () => {
   const original = window.matchMedia;
@@ -304,14 +294,19 @@ describe("the examples rail on /dox", () => {
     stubFetch("text");
     render(<DoxPage />);
 
-    expect(document.querySelector(".gmt-hive-starters")).toBeNull();
     const rail = screen.getByRole("complementary", { name: "Examples" });
     expect(within(rail).getAllByRole("button")).toHaveLength(
       CHAT_STARTERS.length,
     );
     for (const { label } of EXAMPLE_AREAS) {
-      expect(within(rail).getByRole("region", { name: label })).toBeTruthy();
+      expect(
+        within(rail).getByRole("region", { name: label }),
+      ).toBeInTheDocument();
     }
+    // No pill in the chat: the one button with this question is in the rail.
+    expect(
+      screen.getAllByRole("button", { name: starterFor("showGlobe").text }),
+    ).toHaveLength(1);
     // The accessible name is exactly the question; the chip is the description.
     const globe = starterFor("showGlobe");
     expect(
@@ -319,7 +314,7 @@ describe("the examples rail on /dox", () => {
         name: globe.text,
         description: "Zoned Earth",
       }),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 
   it("is reached by Tab, card by card, in order", async () => {
@@ -327,20 +322,18 @@ describe("the examples rail on /dox", () => {
     stubFetch("text");
     render(<DoxPage />);
     const user = userEvent.setup();
+    const rail = screen.getByRole("complementary", { name: "Examples" });
     const expected = startersByArea().flatMap((g) =>
-      g.starters.map((s) => s.widget),
+      g.starters.map((s) => within(rail).getByRole("button", { name: s.text })),
     );
 
-    const rail = screen.getByRole("complementary", { name: "Examples" });
-    const seen: string[] = [];
+    const seen: number[] = [];
     for (let i = 0; i < 80 && seen.length < expected.length; i++) {
       await user.tab();
-      const active = document.activeElement as HTMLElement | null;
-      if (active && rail.contains(active) && active.dataset.widget) {
-        seen.push(active.dataset.widget);
-      }
+      const at = expected.findIndex((c) => c.matches(":focus"));
+      if (at >= 0) seen.push(at);
     }
-    expect(seen).toEqual(expected);
+    expect(seen).toEqual(expected.map((_, at) => at));
   });
 
   it("opens a widget on Enter or Space, sends once, focuses the title, and returns focus on close", async () => {
@@ -352,43 +345,25 @@ describe("the examples rail on /dox", () => {
     // Enter on the converter card.
     card("showConverterBench").focus();
     await user.keyboard("{Enter}");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("complementary", { name: "Widget panel" }),
-      ).toBeTruthy(),
-    );
+    await screen.findByRole("complementary", { name: "Widget panel" });
     expect(chat).toHaveBeenCalledTimes(1);
     await waitFor(() =>
-      expect(document.activeElement?.textContent).toBe(
-        "Converter + format bench",
-      ),
+      expect(panelTitle("Converter + format bench")).toHaveFocus(),
     );
 
     // Closing brings the list back, focus on the card that opened it.
     await user.click(screen.getByRole("button", { name: "Close" }));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("complementary", { name: "Examples" }),
-      ).toBeTruthy(),
-    );
-    await waitFor(() =>
-      expect(document.activeElement).toBe(card("showConverterBench")),
-    );
+    await screen.findByRole("complementary", { name: "Examples" });
+    await waitFor(() => expect(card("showConverterBench")).toHaveFocus());
 
     // Space on the interval card.
     await waitFor(() => expect(chat).toHaveBeenCalledTimes(1));
     card("showIntervalVisualizer").focus();
     await user.keyboard(" ");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("complementary", { name: "Widget panel" }),
-      ).toBeTruthy(),
-    );
+    await screen.findByRole("complementary", { name: "Widget panel" });
     expect(chat).toHaveBeenCalledTimes(2);
     await waitFor(() =>
-      expect(document.activeElement?.textContent).toBe(
-        "Interval algebra visualizer",
-      ),
+      expect(panelTitle("Interval algebra visualizer")).toHaveFocus(),
     );
   });
 
@@ -401,30 +376,24 @@ describe("the examples rail on /dox", () => {
     // The bar is in the page from the start; CSS shows it before the first
     // message only on a short phone (gmt-hive.css).
     const first = screen.getByRole("button", { name });
-    expect(first.getAttribute("aria-expanded")).toBe("false");
+    expect(first).toHaveAttribute("aria-expanded", "false");
 
     card("showConverterBench").focus();
     await user.keyboard("{Enter}");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("complementary", { name: "Widget panel" }),
-      ).toBeTruthy(),
-    );
+    await screen.findByRole("complementary", { name: "Widget panel" });
     // No bar while a widget is open.
-    expect(screen.queryByRole("button", { name })).toBeNull();
+    expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Close" }));
     const bar = await screen.findByRole("button", { name });
-    expect(bar.getAttribute("aria-expanded")).toBe("false");
-    await waitFor(() => expect(document.activeElement).toBe(bar));
+    expect(bar).toHaveAttribute("aria-expanded", "false");
+    await waitFor(() => expect(bar).toHaveFocus());
 
     const rail = screen.getByRole("complementary", { name: "Examples" });
-    expect(rail.hasAttribute("data-collapsed")).toBe(true);
-    expect(bar.getAttribute("aria-controls")).toBe(rail.id);
+    expect(bar).toHaveAttribute("aria-controls", rail.id);
 
     await user.click(bar);
-    expect(bar.getAttribute("aria-expanded")).toBe("true");
-    expect(rail.hasAttribute("data-collapsed")).toBe(false);
+    expect(bar).toHaveAttribute("aria-expanded", "true");
   });
 
   it("never moves focus for a widget the model opens", async () => {
@@ -436,16 +405,8 @@ describe("the examples rail on /dox", () => {
 
     const box = screen.getByRole("textbox");
     await user.type(box, "Convert 2:30pm New York to Tokyo please{Enter}");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("complementary", { name: "Widget panel" }),
-      ).toBeTruthy(),
-    );
-    expect(document.activeElement).not.toBe(
-      screen.getByText("Converter + format bench", {
-        selector: ".gmt-hive-artifact-title",
-      }),
-    );
-    expect(document.activeElement).toBe(box);
+    await screen.findByRole("complementary", { name: "Widget panel" });
+    expect(panelTitle("Converter + format bench")).not.toHaveFocus();
+    expect(box).toHaveFocus();
   });
 });

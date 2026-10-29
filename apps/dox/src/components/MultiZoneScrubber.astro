@@ -11,15 +11,17 @@ interface Props {
   heading?: string;
   caption?: string;
 }
+import styles from "../widgets/tools/zone-planner-shell.module.css";
+
 const {
   heading = "Plan across zones",
   caption = "Pin the zones you care about and drag the slider — every clock moves together. When the slider crosses a daylight-saving boundary, the affected zone's offset changes and is flagged, not silently reflowed. Copy the link to share a proposed time.",
 } = Astro.props;
 ---
 
-<div class="gmt-scrubber-block" data-tools-fullbleed>
-  <h2 class="gmt-chart-title">{heading}</h2>
-  <div class="gmt-grow"><div id="scrubber-host"></div></div>
+<div class={styles.block} data-tools-fullbleed>
+  <h2 class:list={["gmt-chart-title", styles.title]}>{heading}</h2>
+  <div class="gmt-grow" data-gate="grow"><div id="scrubber-host"></div></div>
   <p class="gmt-globe-caption">{caption}</p>
 </div>
 

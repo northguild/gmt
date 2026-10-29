@@ -1,0 +1,65 @@
+/* countdownFace: a captioned readout and its ISO line. The readout holds its own width. */
+
+.root {
+  display: grid;
+  justify-items: start;
+  gap: 0.25rem;
+  min-inline-size: 0;
+  margin: 0;
+  padding: clamp(0.75rem, 0.5rem + 1vw, 1.25rem);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+
+  /* The reader's own clock is running: the border says so, and the caption does in words. */
+  &[data-live="true"] {
+    border-color: var(--gmt-spring);
+  }
+
+  /* A countdown's value is big. */
+  & gmt-readout {
+    font-size: clamp(1.25rem, 1rem + 1.5vw, 2.25rem);
+    max-inline-size: 100%;
+    overflow-x: auto;
+  }
+}
+
+.caption {
+  color: var(--gmt-ice-dim);
+  font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.iso {
+  min-block-size: 1.25em;
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .caption,
+  .iso {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+  }
+
+  .caption,
+  .iso {
+    color: var(--gmt-ice);
+  }
+}

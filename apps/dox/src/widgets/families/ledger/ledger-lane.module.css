@@ -1,0 +1,355 @@
+/* The ledger's frame, lane, bar, gate, axis and legend. Tokens only. Text sits on an opaque
+   `--gmt-surface` chip; a series colour goes on a mark, an edge or a swatch, never on text.
+   Nothing animates. Narrow rules are container queries on the frame, because the /dox rail
+   is narrow on a wide viewport. */
+
+.frame {
+  --gmt-ledger-label-w: 8.5rem;
+  --gmt-ledger-lane-h: 8.5rem;
+  --gmt-ledger-gate-h: 1.75rem;
+  --gmt-ledger-bar-h: 1.7rem;
+
+  container: ledger-frame / inline-size;
+  box-sizing: border-box;
+  padding-inline: calc(var(--gmt-space-3) + 4px);
+}
+
+.lane {
+  --series: var(--gmt-series-1);
+
+  display: grid;
+  grid-template-columns: var(--gmt-ledger-label-w) minmax(0, 1fr);
+  align-items: end;
+  column-gap: var(--gmt-space-2);
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+}
+
+.label {
+  /* Centred on the days, not on the gate's chip row above them. */
+  margin-block-end: calc(var(--gmt-ledger-lane-h) / 2);
+  translate: 0 50%;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  text-align: end;
+  overflow-wrap: anywhere;
+}
+
+.track {
+  --gate-h: 0rem;
+
+  position: relative;
+  min-inline-size: 0;
+  block-size: calc(var(--gate-h) + var(--gmt-ledger-lane-h));
+
+  &[data-gate-row="true"] {
+    --gate-h: var(--gmt-ledger-gate-h);
+  }
+}
+
+.days {
+  position: absolute;
+  inset: var(--gate-h) 0 0 0;
+  overflow: hidden;
+  border-radius: var(--gmt-radius-sm);
+  background-color: var(--gmt-fill-subtle);
+}
+
+@container ledger-frame (inline-size <= 30rem) {
+  .lane {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    row-gap: var(--gmt-space-1);
+  }
+
+  .label {
+    margin-block-end: 0;
+    translate: none;
+    text-align: start;
+  }
+
+  .axis,
+  .legend {
+    margin-inline-start: 0;
+  }
+}
+
+/* The half-open bar: a solid capped start edge, a dashed open end edge. An inverted bar is a
+   dashed neutral outline. The edges are drawings and take no pointer. */
+.bar {
+  position: absolute;
+  inset-block-end: 6px;
+  inset-inline-start: calc(var(--gmt-bar-from, 0) * 1%);
+  inline-size: calc((var(--gmt-bar-to, 0) - var(--gmt-bar-from, 0)) * 1%);
+  block-size: var(--gmt-ledger-bar-h);
+  min-inline-size: 2px;
+  box-sizing: border-box;
+  border-block-start: 1px solid var(--gmt-border-strong);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--series) 40%, transparent),
+    color-mix(in srgb, var(--series) 14%, transparent)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  pointer-events: none;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+  }
+
+  &::before {
+    inset-block: -2px 0;
+    inset-inline-start: -1px;
+    inline-size: 2px;
+    background: var(--series);
+    box-shadow: 0 0 6px var(--gmt-glow);
+  }
+
+  &::after {
+    inset-block: 0;
+    inset-inline-end: -1px;
+    inline-size: 0;
+    border-inline-start: 2px dashed var(--series);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+
+  &[data-invalid="true"] {
+    border: 1px dashed var(--gmt-border-strong);
+    background: var(--gmt-surface);
+    box-shadow: none;
+
+    &::before,
+    &::after {
+      content: none;
+    }
+  }
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+}
+
+/* The gate: the line runs the lane's full height and its chip sits in the row above the days. */
+.gate {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--gmt-gate-at, 0) * 1%);
+  inline-size: 0;
+  border-inline-start: 2px solid var(--gmt-ice);
+  pointer-events: none;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.gateChip {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 10px;
+  padding: 0 var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+}
+
+.gate[data-edge="end"] .gateChip {
+  inset-inline: auto 10px;
+}
+
+/* The axis and the legend start at the track's x. */
+.axis {
+  display: flex;
+  justify-content: space-between;
+  margin-inline-start: calc(var(--gmt-ledger-label-w) + var(--gmt-space-2));
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  margin-inline-start: calc(var(--gmt-ledger-label-w) + var(--gmt-space-2));
+  padding: 0;
+  list-style: none;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+}
+
+.swatch {
+  --series: var(--gmt-series-1);
+
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 0.9rem;
+  block-size: 0.9rem;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: 2px;
+
+  &[data-state="lit"] {
+    border-color: var(--series);
+    background: color-mix(in srgb, var(--series) 45%, transparent);
+  }
+
+  &[data-state="dim"] {
+    border-color: var(--series);
+    background: color-mix(in srgb, var(--series) 45%, transparent);
+    opacity: 0.45;
+  }
+
+  &[data-state="event"] {
+    border-color: var(--gmt-surface);
+    border-radius: 2px;
+    background: var(--gmt-ice);
+    rotate: 45deg;
+    scale: 0.8;
+  }
+
+  &[data-state="hatched"] {
+    border-color: var(--series);
+    background: repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--series) 70%, transparent) 0,
+      color-mix(in srgb, var(--series) 70%, transparent) 2px,
+      transparent 2px,
+      transparent 5px
+    );
+  }
+
+  &[data-state="closed"] {
+    background: repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--gmt-teal) 60%, transparent) 0,
+      color-mix(in srgb, var(--gmt-teal) 60%, transparent) 2px,
+      transparent 2px,
+      transparent 5px
+    );
+  }
+
+  &[data-state="plain"] {
+    border-style: dashed;
+    background: transparent;
+  }
+}
+
+@media (forced-colors: active) {
+  .days {
+    border: 1px solid CanvasText;
+    background: Canvas;
+  }
+
+  .label,
+  .axis {
+    color: CanvasText;
+  }
+
+  .bar {
+    border-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+
+    &::before {
+      background: Highlight;
+      box-shadow: none;
+    }
+
+    &::after {
+      border-color: Highlight;
+    }
+  }
+
+  .gate {
+    border-color: CanvasText;
+  }
+
+  .gateChip,
+  .legendItem {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .swatch {
+    border-color: CanvasText;
+
+    &[data-state="lit"],
+    &[data-state="dim"] {
+      background: Highlight;
+    }
+
+    &[data-state="event"] {
+      border-color: CanvasText;
+      background: CanvasText;
+    }
+
+    &[data-state="hatched"] {
+      background: repeating-linear-gradient(
+        45deg,
+        CanvasText 0,
+        CanvasText 2px,
+        transparent 2px,
+        transparent 5px
+      );
+    }
+
+    &[data-state="closed"] {
+      background: Canvas;
+      border-style: dashed;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .gate {
+    border-inline-start-width: 3px;
+  }
+
+  .gateChip,
+  .legendItem {
+    border-color: var(--gmt-ice);
+  }
+
+  .bar {
+    border-block-start-color: var(--gmt-ice);
+  }
+}

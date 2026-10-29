@@ -28,8 +28,8 @@ import {
 import { Streamdown } from "streamdown";
 // Streamdown's maths plugin leaves the KaTeX stylesheet to the app. Without it every
 // formula shows twice (HTML and MathML copies) and `\sqrt` svgs stretch across the page.
-// Imported here so it ships in the chat island's chunk, not on docs pages.
-import "katex/dist/katex.min.css";
+// gmt-ask-tailwind.css imports it (into the `vendor` layer), so it ships in the chat island's
+// chunk, not on docs pages.
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];

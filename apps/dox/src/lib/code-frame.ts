@@ -40,7 +40,7 @@ export const CHECK_ICON = '<polyline points="20 6 9 17 4 12"></polyline>';
  */
 export function codeFrameHtml(id: string): string {
   return (
-    `<div class="gmt-codeframe">` +
+    `<div class="gmt-codeframe" data-gate="codeframe">` +
     `<button class="gmt-icon-button gmt-codeframe-copy" type="button" title="Copy to clipboard" data-role="copy-${id}">` +
     `<svg data-role="copy-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">` +
     COPY_ICON +

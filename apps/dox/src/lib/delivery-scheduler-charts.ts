@@ -38,6 +38,7 @@ import {
   type ChartStation,
   type ChartTransition,
 } from "./delivery-scheduler";
+import { chartTooltipMotion } from "./chart-motion";
 
 /** The floor every chart text mark is held to — `--gmt-text-xs` (11.2px)
  *  reads too small; a mark's `fontSize` is a plain number, so it is set
@@ -138,6 +139,7 @@ export function tooltipRegistry(tooltip: Tooltip) {
       return {
         tooltip: {
           use: tooltip,
+          ...chartTooltipMotion(),
           content: (points: readonly { markId: string; datum: unknown }[]) => {
             const point = points[0];
             const content = point ? byMark.get(point.markId) : undefined;

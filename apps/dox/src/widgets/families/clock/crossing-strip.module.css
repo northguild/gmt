@@ -1,0 +1,209 @@
+/*
+ * crossingBar: the proportional strip. One compact bar, entry to exit; faint hour ticks give
+ * the scale, a marker stands only where the zone's offset changes. Shape carries the meaning
+ * (dashed for a skipped hour, doubled for a repeated one), and the DST purple ties the markers
+ * to the highlight on the clock faces. Never a verdict colour; amber is the sentinel's alone.
+ */
+
+.wrap {
+  container-type: inline-size;
+  padding-block-start: var(--gmt-space-2);
+  border-block-start: 1px solid var(--gmt-hairline-faint);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  overflow-x: auto;
+
+  /* Room below the bar for the elapsed-hour tick labels. */
+  padding-block-end: 1.25rem;
+}
+
+.end {
+  flex: 0 0 auto;
+  min-inline-size: 1ch;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.track {
+  position: relative;
+  flex: 1 1 auto;
+  min-inline-size: 6rem;
+  block-size: 0.5rem;
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+.tick {
+  position: absolute;
+  inset-block: -4px;
+  inline-size: 1px;
+  background: var(--gmt-border-strong);
+  translate: -50% 0;
+
+  &[data-labeled="true"] {
+    inset-block: -6px;
+
+    &::after {
+      content: attr(data-label);
+      position: absolute;
+      inset-block-start: calc(100% + 4px);
+      inset-inline-start: 50%;
+      translate: -50% 0;
+      font-family: var(--gmt-font-mono);
+      font-size: var(--gmt-text-xs);
+      line-height: 1;
+      color: var(--gmt-ice-dim);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+  }
+}
+
+.marker {
+  position: absolute;
+  inset-block: -4px;
+  inline-size: 5px;
+  translate: -50% 0;
+  background: transparent;
+
+  &[data-kind="skip"] {
+    border-inline: 1px dashed var(--gmt-dst-purple);
+  }
+
+  &[data-kind="repeat"] {
+    inline-size: 7px;
+    border-inline: 3px double var(--gmt-dst-purple);
+  }
+}
+
+/* The change list or the quiet line. One line is reserved so a reading arriving moves nothing. */
+.slot {
+  min-block-size: 1.5rem;
+  margin-block-start: var(--gmt-space-2);
+}
+
+.changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.change,
+.quiet {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+}
+
+.quiet {
+  color: var(--gmt-ice-dim);
+  font-style: italic;
+}
+
+.mark {
+  flex: 0 0 auto;
+  align-self: center;
+  inline-size: 0.85rem;
+  block-size: 0.85rem;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+
+  .change[data-kind="skip"] & {
+    border: 1px dashed var(--gmt-dst-purple);
+  }
+
+  .change[data-kind="repeat"] & {
+    border: 3px double var(--gmt-dst-purple);
+  }
+}
+
+/* The sentinel: amber words in a bracketed chip, in words. */
+.lost {
+  display: inline-block;
+  padding-inline: var(--gmt-space-2);
+  border: 1px solid var(--gmt-signal-border);
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+}
+
+/* The legend keeps one line while empty, so it appearing moves nothing below it. */
+.legend {
+  min-block-size: 1lh;
+  margin: var(--gmt-space-1) 0 0;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+@container (inline-size < 26rem) {
+  .bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--gmt-space-1);
+  }
+
+  .end {
+    text-align: center;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .track {
+    border-color: var(--gmt-ice);
+  }
+
+  .end,
+  .legend,
+  .quiet,
+  .tick[data-labeled="true"]::after {
+    color: var(--gmt-ice);
+  }
+}
+
+@media (forced-colors: active) {
+  .track {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .tick {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .tick[data-labeled="true"]::after,
+  .end,
+  .legend,
+  .quiet,
+  .change {
+    color: CanvasText;
+  }
+
+  .marker,
+  .mark {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+
+  .lost {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

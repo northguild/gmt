@@ -13,6 +13,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import userEvent from "@testing-library/user-event";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import type { BrainsInfo } from "~/lib/chat-types";
 import { DoxChat } from "./DoxChat";
 
@@ -65,33 +66,29 @@ describe("DoxChat while the Worker chooses a brain", () => {
       ),
     );
 
-    render(<DoxChat />);
+    render(
+      <main>
+        <DoxChat />
+      </main>,
+    );
     const user = userEvent.setup();
     await user.type(
       screen.getByRole("textbox"),
       "Show me what time it is in Tokyo right now.{Enter}",
     );
 
-    await waitFor(() =>
-      expect(
-        document.querySelector(".gmt-hive-pending")?.textContent,
-      ).toContain("Gemma 4 26B is busy"),
-    );
+    expect(await screen.findByText(/Gemma 4 26B is busy/)).toBeInTheDocument();
 
     await act(async () => {
       reply.release();
     });
 
-    await waitFor(() =>
-      expect(
-        document.querySelector(".gmt-hive-warning")?.textContent,
-      ).toContain("free allowance"),
-    );
+    const warning = await screen.findByText(/free allowance/);
+    expect(warning).toBeInTheDocument();
     // Transient parts never became a message: only the reader's question.
-    expect(
-      document.querySelectorAll('.gmt-hive-turn[data-role="assistant"]'),
-    ).toHaveLength(0);
-    expect(document.querySelector(".gmt-hive-pending")).toBeNull();
+    expect(screen.getAllByRole("article")).toHaveLength(1);
+    expect(screen.queryByText(/Gemma 4 26B is busy/)).not.toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
   it("hands the stream's usage part to the badge, and does not re-read it after the answer", async () => {
@@ -128,16 +125,19 @@ describe("DoxChat while the Worker chooses a brain", () => {
     const onUsage = vi.fn();
     const onUsed = vi.fn();
 
-    render(<DoxChat onUsage={onUsage} onUsed={onUsed} />);
+    render(
+      <main>
+        <DoxChat onUsage={onUsage} onUsed={onUsed} />
+      </main>,
+    );
     const user = userEvent.setup();
     await user.type(screen.getByRole("textbox"), "What is a DST gap?{Enter}");
 
     await waitFor(() => expect(onUsage).toHaveBeenCalledWith(info));
-    await waitFor(() =>
-      expect(
-        document.querySelectorAll('.gmt-hive-turn[data-role="assistant"]'),
-      ).toHaveLength(1),
-    );
+    expect(await screen.findByText("An answer.")).toBeInTheDocument();
+    // The reader's question and the answer.
+    expect(screen.getAllByRole("article")).toHaveLength(2);
     expect(onUsed).not.toHaveBeenCalled();
+    await expectNoAxeViolations(document.body);
   });
 });

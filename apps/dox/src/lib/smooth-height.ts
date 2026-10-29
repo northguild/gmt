@@ -325,6 +325,8 @@ function wrapSection(section: HTMLElement): void {
   inner.append(...section.childNodes);
   section.append(inner);
   section.classList.add("gmt-grow");
+  // The hook the height gate finds a growing section by, so it names no class.
+  section.dataset.gate = `${section.dataset.gate ?? ""} grow`.trim();
 }
 
 /**
@@ -360,6 +362,7 @@ export function smoothHeights(scope: ParentNode, signal?: AbortSignal): void {
     if (slot.parentElement?.classList.contains("gmt-grow-slot")) continue;
     const wrapper = document.createElement("div");
     wrapper.className = "gmt-grow gmt-grow-slot";
+    wrapper.dataset.gate = "grow";
     slot.before(wrapper);
     wrapper.append(slot);
     smoothHeight(wrapper, signal);

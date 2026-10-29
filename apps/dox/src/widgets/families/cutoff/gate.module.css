@@ -1,0 +1,60 @@
+/* cutoffGate and cutoffTransitionLine: vertical rules placed by `--gmt-at`. They fill the
+   height of the positioned track they sit in. A rule is a thin filled bar, not a border. */
+
+.gate,
+.transition {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--gmt-at) * 100% - var(--rule) / 2);
+  inline-size: var(--rule);
+}
+
+.gate {
+  --rule: 3px;
+
+  background: var(--gmt-cyan);
+}
+
+.transition {
+  --rule: 2px;
+  --ink: var(--gmt-dst-gold);
+
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--ink) 0 5px,
+    transparent 5px 9px
+  );
+
+  &[data-kind="overlap"] {
+    --ink: var(--gmt-dst-purple);
+
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--ink) 0 2px,
+      transparent 2px 5px
+    );
+  }
+}
+
+@media (forced-colors: active) {
+  .gate {
+    background: CanvasText;
+  }
+
+  .transition {
+    --ink: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .gate {
+    --rule: 4px;
+
+    background: var(--gmt-ice);
+  }
+
+  .transition {
+    --rule: 3px;
+    --ink: var(--gmt-ice);
+  }
+}

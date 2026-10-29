@@ -64,9 +64,9 @@ export function instantPiecesHtml(text: string): string {
     ? [m[1]!, m[2]!, m[3] ?? "", m[4] ?? "", ""]
     : [text, "", "", "", " data-word"];
   const piece = (s: string) =>
-    `<span class="gmt-gnss-nb"${attr}>${escapeHtml(s)}</span>`;
+    `<span class="gmt-gnss-nb" data-gate="instant"${attr}>${escapeHtml(s)}</span>`;
   // The value is a flex box, so the pieces share one inline wrapper.
-  return `<span>${piece(date)}<wbr>${piece(time)}<wbr>${piece(fraction)}<wbr>${piece(zone)}</span>`;
+  return `<span data-gate="instant">${piece(date)}<wbr>${piece(time)}<wbr>${piece(fraction)}<wbr>${piece(zone)}</span>`;
 }
 
 /** Escape text for safe use inside innerHTML. */
@@ -341,7 +341,7 @@ export function rangeFieldHtml(o: RangeFieldOptions): string {
   const ends = o.ends
     ? `<span class="gmt-range-ends" aria-hidden="true"><span>${escapeHtml(o.ends[0])}</span><span>${escapeHtml(o.ends[1])}</span></span>`
     : "";
-  return `<span class="gmt-range-field" style="--gmt-range-pct: ${pct}"><input class="gmt-range" type="range" data-role="${escapeAttr(o.role)}" min="${o.min}" max="${o.max}" step="${o.step}" value="${o.value}" aria-valuetext="${escapeAttr(o.valueText)}" style="--gmt-range-pct: ${pct}"${label}${disabled}><span class="gmt-range-chip" data-role="${escapeAttr(chipRole)}" aria-hidden="true">${escapeHtml(o.valueText)}</span>${ends}</span>`;
+  return `<span class="gmt-range-field" style="--gmt-range-pct: ${pct}"><input class="gmt-range" type="range" data-role="${escapeAttr(o.role)}" min="${o.min}" max="${o.max}" step="${o.step}" value="${o.value}" aria-valuetext="${escapeAttr(o.valueText)}" style="--gmt-range-pct: ${pct}"${label}${disabled}><span class="gmt-range-chip" data-gate="rider" data-role="${escapeAttr(chipRole)}" aria-hidden="true">${escapeHtml(o.valueText)}</span>${ends}</span>`;
 }
 
 /**

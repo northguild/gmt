@@ -1,0 +1,125 @@
+/*
+ * A leg's fieldset: a bevelled box in the leg's own series colour, with its number in the
+ * legend. The colour comes from `data-leg` (1 to 4) and is never the only mark: the number
+ * and the mode's name are text beside it. Corner brackets at two corners are two-sided
+ * (an L), never a single-edge stripe.
+ */
+
+.leg {
+  --leg-color: var(--gmt-series-1);
+  --leg-ink: var(--gmt-series-1-ink);
+
+  position: relative;
+  container-type: inline-size;
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+
+  &[data-leg="2"] {
+    --leg-color: var(--gmt-series-2);
+    --leg-ink: var(--gmt-series-2-ink);
+  }
+
+  &[data-leg="3"] {
+    --leg-color: var(--gmt-series-3);
+    --leg-ink: var(--gmt-series-3-ink);
+  }
+
+  &[data-leg="4"] {
+    --leg-color: var(--gmt-series-4);
+    --leg-ink: var(--gmt-series-4-ink);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+
+  /* The two corners: an L of two edges each, inside the box. */
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inline-size: 12px;
+    block-size: 12px;
+    border: 0 solid var(--leg-color);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  &::before {
+    inset-block-start: 3px;
+    inset-inline-start: 3px;
+    border-block-start-width: 2px;
+    border-inline-start-width: 2px;
+  }
+
+  &::after {
+    inset-block-end: 3px;
+    inset-inline-end: 3px;
+    border-block-end-width: 2px;
+    border-inline-end-width: 2px;
+  }
+
+  legend {
+    padding-inline: var(--gmt-space-1);
+    color: var(--gmt-ice-dim);
+    font-family: var(--gmt-font-mono);
+    font-size: var(--gmt-text-xs);
+    letter-spacing: var(--gmt-tracking-wide);
+    text-transform: uppercase;
+  }
+
+  select {
+    text-overflow: ellipsis;
+  }
+
+  @container (inline-size < 24rem) {
+    padding-inline: var(--gmt-space-2);
+
+    input {
+      font-size: var(--gmt-text-sm);
+      padding-inline: var(--gmt-space-1);
+    }
+  }
+}
+
+.number {
+  color: var(--leg-ink);
+  font-weight: 700;
+}
+
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+@media (forced-colors: active) {
+  .leg {
+    border-color: CanvasText;
+    background: Canvas;
+
+    &::before,
+    &::after {
+      border-color: CanvasText;
+    }
+
+    legend,
+    .number {
+      color: CanvasText;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .leg {
+    border-color: var(--gmt-ice);
+
+    legend {
+      color: var(--gmt-ice);
+    }
+  }
+}

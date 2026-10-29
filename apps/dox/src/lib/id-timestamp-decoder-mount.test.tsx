@@ -1,46 +1,58 @@
 /**
  * @vitest-environment jsdom
  *
- * The ID Timestamp Decoder end to end against the real `@northguild/gmt`.
- * Every preset's rows are literal values read once from a run of the built
- * library, and they agree with the slice's table. A drift in the library or in
- * the widget fails here.
+ * The ID Timestamp Decoder end to end against the real `@northguild/gmt`, through roles and
+ * accessible names the way a person (or a screen reader) meets the page. Every preset's
+ * rows are literal values read once from a run of the built library, and they agree with
+ * the slice's table. A drift in the library or in the widget fails here.
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { installJsdomShims } from "~/test/jsdom-shims";
-import { ID_PRESETS } from "./id-timestamp-decoder";
+import { screen, within } from "@testing-library/dom";
 import {
-  mountIdTimestampDecoder,
-  renderIdTimestampDecoderTemplate,
-} from "./id-timestamp-decoder-mount";
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  cellsInColumn,
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { FORMATS, ID_PRESETS } from "./id-timestamp-decoder";
+import { NO_SIGNAL_PILL } from "./id-timestamp-decoder-mount";
+import { SITE_BASE } from "./site";
+import { seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+const entry = WIDGET_REGISTRY["showIdTimestampDecoder"] as AnyWidgetEntry;
 
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderIdTimestampDecoderTemplate(args);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountIdTimestampDecoder(root, args, controller.signal);
-  return { root, handle, controller };
-}
+const open = (args: Record<string, unknown> = {}, idPrefix = "test") =>
+  renderWidget(entry, { args, idPrefix });
 
-function choose(root: HTMLElement, value: string) {
-  const el = q<HTMLSelectElement>(root, "preset");
-  el.value = value;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-}
+const preset = () => screen.getByRole("combobox", { name: "Preset" });
+const idBox = () => screen.getByRole("textbox", { name: "Identifier" });
+const epochBox = () => screen.getByRole("textbox", { name: "Epoch (Unix ms)" });
+const shiftBox = () =>
+  screen.getByRole("textbox", { name: "Bits below the timestamp" });
+const bitsBox = () =>
+  screen.getByRole("textbox", { name: "Timestamp bits (optional)" });
+const instantOut = () =>
+  screen.getByRole("status", { name: "Decoded instant" });
+const table = () =>
+  screen.getByRole("table", { name: "What each decoder reads" });
+const output = () => screen.getByLabelText("What the calls returned");
+const calls = () => screen.getByRole("group", { name: "Calls made" });
 
-function type(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLInputElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
+const returned = (fn: string) =>
+  cellsInColumn(table(), "Returned")[FORMATS.findIndex((f) => f.fn === fn)]!;
+
+/** Replaces what a text box holds, in one input event. */
+async function enter(w: RenderedWidget, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  if (value !== "") await w.user.paste(value);
 }
 
 const NOT = "not-called";
@@ -113,16 +125,52 @@ const RECORDED: Record<string, { hero: string; rows: Record<string, string> }> =
     },
   };
 
-const rowText = (root: HTMLElement, fn: string) => {
-  const tr = root.querySelector<HTMLElement>(`tr[data-fn="${fn}"]`)!;
-  const returned = tr.querySelectorAll("td")[2]!;
-  // The hold stacks hidden sizers; the live cell is the first child.
-  const live = returned.querySelector(".gmt-iddecode-cell")!;
-  return {
-    state: tr.dataset["state"]!,
-    text: (live.textContent ?? "").replace(/\s+/g, " ").trim(),
-  };
-};
+describe("the template", () => {
+  it("is a named region with three numbered sections and one row for each decoder", async () => {
+    await open();
+    expect(
+      screen.getByRole("region", { name: "ID Timestamp Decoder" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 4 })).toHaveLength(3);
+    expect(
+      screen.getByRole("heading", { name: "1. Paste an identifier" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "2. What each decoder reads" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "3. The calls" }),
+    ).toBeInTheDocument();
+    expect(within(table()).getAllByRole("row")).toHaveLength(
+      FORMATS.length + 1,
+    );
+  });
+
+  it("names every control", async () => {
+    await open();
+    expect(preset()).toBeInTheDocument();
+    expect(idBox()).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Snowflake layout" }),
+    ).toBeInTheDocument();
+    expect(epochBox()).toBeInTheDocument();
+    expect(shiftBox()).toBeInTheDocument();
+    expect(bitsBox()).toBeInTheDocument();
+    expect(idBox()).toHaveAttribute("maxlength", "96");
+  });
+
+  it("keeps two copies on one page apart", async () => {
+    const a = await open({}, "rail-a");
+    await open({ preset: "ksuid" }, "rail-b");
+    const boxes = screen.getAllByRole("textbox", { name: "Identifier" });
+    expect(boxes).toHaveLength(2);
+    expect(boxes[0]!.id).not.toBe(boxes[1]!.id);
+    const kept = (boxes[1] as HTMLInputElement).value;
+    await enter(a, boxes[0]!, "abc");
+    expect(boxes[0]).toHaveValue("abc");
+    expect(boxes[1]).toHaveValue(kept);
+  });
+});
 
 describe("presets against the real library", () => {
   it("records a result for every preset", () => {
@@ -133,111 +181,128 @@ describe("presets against the real library", () => {
 
   for (const p of ID_PRESETS) {
     it(`reads ${p.id}`, async () => {
-      const { root, handle } = await mount({ preset: p.id });
+      await open({ preset: p.id });
       const want = RECORDED[p.id]!;
-      expect(q(root, "hero-reading").dataset["state"]).toBe(want.hero);
+      if (want.hero === "none") {
+        expect(instantOut()).toHaveTextContent(NO_SIGNAL_PILL);
+      } else {
+        expect(instantOut()).not.toHaveTextContent(NO_SIGNAL_PILL);
+      }
       for (const [fn, text] of Object.entries(want.rows)) {
-        const got = rowText(root, fn);
         if (text === NOT) {
-          expect(got.state).toBe("not-called");
+          expect(
+            within(returned(fn)).queryByRole("code"),
+          ).not.toBeInTheDocument();
         } else {
-          expect(got.text.replace(/​/g, "")).toBe(text);
+          expect(within(returned(fn)).getByRole("code")).toHaveTextContent(
+            text,
+          );
         }
       }
-      // Exactly the rows the hero names read.
-      const read = [...root.querySelectorAll("tr[data-state='read']")].length;
-      expect(read).toBe(want.hero === "one" ? 1 : 0);
-      handle.destroy();
     });
   }
 });
 
 describe("behaviour", () => {
   it("opens on the default with only the version showing", async () => {
-    const { root } = await mount();
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("uuid-v7");
-    expect(q(root, "hero-version").hasAttribute("data-off")).toBe(false);
-    expect(q(root, "hero-pill").hasAttribute("data-off")).toBe(true);
+    await open();
+    expect(preset()).toHaveValue("uuid-v7");
+    expect(screen.getByText("v7")).toBeInTheDocument();
+    expect(instantOut()).not.toHaveTextContent(NO_SIGNAL_PILL);
+    expect(instantOut()).toHaveTextContent("2022-02-22T19:22:22Z");
   });
 
   it("shows NO SIGNAL only when every decoder returned its sentinel", async () => {
-    const { root } = await mount({ preset: "uuid-v4" });
-    expect(q(root, "hero-pill").hasAttribute("data-off")).toBe(false);
-    choose(root, "ulid");
-    expect(q(root, "hero-pill").hasAttribute("data-off")).toBe(true);
+    const w = await open({ preset: "uuid-v4" });
+    expect(instantOut()).toHaveTextContent(NO_SIGNAL_PILL);
+    await w.user.selectOptions(preset(), "ulid");
+    expect(instantOut()).not.toHaveTextContent(NO_SIGNAL_PILL);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("says the empty box is empty, and not NO SIGNAL", async () => {
+    const w = await open();
+    await w.user.clear(idBox());
+    expect(instantOut()).not.toHaveTextContent(NO_SIGNAL_PILL);
+    expect(instantOut()).toBeEmptyDOMElement();
+    expect(screen.getByText("Paste an identifier.")).toBeInTheDocument();
+    expect(output()).toHaveTextContent("Not read: there is no identifier.");
   });
 
   it("fills the inputs from a preset and switches to Your values on typing", async () => {
-    const { root } = await mount();
-    choose(root, "sf-1420070400000-22");
-    expect(q<HTMLInputElement>(root, "id").value).toBe("175928847299117063");
-    expect(q<HTMLInputElement>(root, "epoch").value).toBe("1420070400000");
-    expect(q<HTMLInputElement>(root, "shift").value).toBe("22");
-    type(root, "id", "175928847299117064");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    choose(root, "custom");
-    expect(q<HTMLInputElement>(root, "id").value).toBe("175928847299117064");
+    const w = await open();
+    await w.user.selectOptions(preset(), "sf-1420070400000-22");
+    expect(idBox()).toHaveValue("175928847299117063");
+    expect(epochBox()).toHaveValue("1420070400000");
+    expect(shiftBox()).toHaveValue("22");
+    await enter(w, idBox(), "175928847299117064");
+    expect(preset()).toHaveValue("custom");
+    await w.user.selectOptions(preset(), "custom");
+    expect(idBox()).toHaveValue("175928847299117064");
   });
 
   it("makes no Snowflake call without a layout, and says why", async () => {
-    const { root } = await mount({ id: "175928847299117063" });
-    const got = rowText(root, "fromSnowflake");
-    expect(got.state).toBe("not-called");
-    expect(got.text).toContain("Give an epoch and a shift");
+    await open({ id: "175928847299117063" });
+    expect(returned("fromSnowflake")).toHaveTextContent(
+      "Give an epoch and a shift",
+    );
   });
 
   it("makes no Snowflake call with an epoch but no shift", async () => {
-    const { root } = await mount({
-      id: "175928847299117063",
-      epochMs: "1420070400000",
-    });
-    const got = rowText(root, "fromSnowflake");
-    expect(got.state).toBe("not-called");
-    expect(got.text).toContain(
+    await open({ id: "175928847299117063", epochMs: "1420070400000" });
+    expect(returned("fromSnowflake")).toHaveTextContent(
       "Give an epoch and a shift: a Snowflake has no default layout.",
     );
   });
 
-  it("round trips through the permalink", async () => {
-    const { handle } = await mount({ preset: "ksuid" });
-    expect(handle.getPermalinkState?.()).toEqual({ preset: "ksuid" });
-    const custom = await mount({ id: "abc", epochMs: "1", shift: "2" });
-    expect(custom.handle.getPermalinkState?.()).toEqual({
+  it("prints the calls it made and what they returned", async () => {
+    const w = await open({ preset: "ulid" });
+    expect(calls()).toHaveTextContent("fromUlid(");
+    expect(output()).toHaveTextContent("2016-07-30T23:54:10.259Z");
+    expect(
+      screen.getByRole("link", { name: "fromUlid reference" }),
+    ).toHaveAttribute(
+      "href",
+      `${SITE_BASE}/reference/precision/identifiers/fromUlid/`,
+    );
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("keeps five rows while an identifier is typed", async () => {
+    const w = await open();
+    const before = within(table()).getAllByRole("row").length;
+    await enter(w, idBox(), "x".repeat(64));
+    expect(within(table()).getAllByRole("row")).toHaveLength(before);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("escapes what is typed", async () => {
+    const w = await open();
+    await enter(w, idBox(), '<img src=x onerror="1">');
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(calls()).toHaveTextContent(
+      'fromUlid("<img src=x onerror=\\"1\\">")',
+    );
+  });
+});
+
+describe("permalinks", () => {
+  it("round trips a preset", async () => {
+    const w = await open({ preset: "ksuid" });
+    const url = w.permalink();
+    expect(seedFromLocation("iddecode", url.slice(url.indexOf("?")))).toEqual({
+      preset: "ksuid",
+    });
+  });
+
+  it("round trips typed values", async () => {
+    const w = await open({ id: "abc", epochMs: "1", shift: "2" });
+    const url = w.permalink();
+    expect(seedFromLocation("iddecode", url.slice(url.indexOf("?")))).toEqual({
       id: "abc",
       epochMs: "1",
       shift: "2",
     });
-  });
-
-  it("keeps the regions and holds of the hold-still contract", async () => {
-    const { root } = await mount();
-    for (const role of [
-      "hero-reading",
-      "hero-value",
-      "hero-pill",
-      "hero-version",
-      "hero-reason",
-      "rows",
-      "ids-output",
-    ]) {
-      expect(q(root, role), role).toBeTruthy();
-    }
-    expect(root.querySelectorAll("tbody tr")).toHaveLength(5);
-    // Every body row cell that changes sits in a hold with a sizer.
-    for (const tr of root.querySelectorAll("tbody tr")) {
-      expect(tr.querySelectorAll(".gmt-ledger-hold").length).toBe(2);
-      expect(tr.querySelectorAll(".gmt-edi-sizer").length).toBeGreaterThan(1);
-    }
-    // Typing a 64 character id does not change the number of rows or holds.
-    const before = root.querySelectorAll(".gmt-ledger-hold").length;
-    type(root, "id", "x".repeat(64));
-    expect(root.querySelectorAll(".gmt-ledger-hold").length).toBe(before);
-  });
-
-  it("escapes what is typed", async () => {
-    const { root } = await mount();
-    type(root, "id", '<img src=x onerror="1">');
-    expect(root.querySelector("img")).toBeNull();
   });
 });
 

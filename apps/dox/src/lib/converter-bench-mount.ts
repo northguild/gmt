@@ -1,41 +1,51 @@
 /**
  * DOX-C3b (#139) — the converter + format bench + regex tester, mountable.
  *
- * The first of the three Tier 2 widgets to be extracted, and deliberately so:
  * 135 lines of stateless script, no drag, no keyboard handling, no state held
- * across renders. It sets the pattern the harder two follow.
+ * across renders.
  *
  * ## The shape
  *
- * `renderConverterTemplate()` returns the markup as a string;
+ * `renderConverterTemplate(idPrefix, args)` returns the markup as a string;
  * `mountConverterBench()` wires markup that is already there. One template,
  * two surfaces: `ConverterBench.astro` server-renders it through
  * `<Fragment set:html>`, and the chat rail assigns it to `root.innerHTML`. That
- * keeps the reference page's pre-JS readable markup — the alternative, having
- * the mount build its own DOM, would have turned server-rendered HTML into
- * client-generated HTML and broken this story's own byte-identical DoD line.
+ * keeps the reference page's pre-JS readable markup.
  *
- * The template is byte-checked against the built page by
- * `scripts/html-diff.mjs`, because a 0.2%-tolerance pixel diff cannot see a
- * dropped `selected` or a missing `data-role` — and every lookup below is a
- * null-tolerant `querySelector`, so a missing role makes a control inert rather
- * than throwing.
+ * The template is built from the component kit, with ids from `idScope(idPrefix)`.
+ * Every lookup goes through the widget's scope (`findWidget`) and throws on a
+ * missing element, which `mount` reports as a `WidgetLoadError`: a broken
+ * template is loud, never a control that silently does nothing. A bad input is the
+ * library's sentinel (`""` or `[]`), shown as NO SIGNAL and never as a blank box.
  */
-import { codeFrameHtml } from "./code-frame";
+import { defineElements } from "~/widgets/define";
+import {
+  badge,
+  codeFrame,
+  field,
+  fieldGrid,
+  findWidget,
+  html,
+  idScope,
+  raw,
+  section,
+  select,
+  setHtml,
+  srOnly,
+  textInput,
+  widget,
+  type SafeHtml,
+} from "~/widgets/builders";
+import { callOutput } from "~/widgets/families/gnss/call-output";
+import { grow } from "~/widgets/primitives/grow/grow";
+import styles from "~/widgets/tools/converter-bench.module.css";
 import { CONVERTER_LOCALES, CURATED_TIMEZONES } from "./curated-timezones";
 import { GMT_MODULES } from "./gmt-modules";
-import { renderResult } from "./playground-client";
-import {
-  codeSpan,
-  escapeAttr,
-  escapeHtml,
-  labelTextHtml,
-  renderCallLine,
-  setControlValue,
-  wireCopyButtons,
-} from "./widget-ui";
+import { codeSpan } from "./widget-ui";
 import { normaliseZonedInput } from "./zoned-input";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+
+const WIDGET_NAME = "converter-bench";
 
 /* London and Sydney sit in opposite hemispheres, so their clocks change in
    opposite seasons. On 15 March London is on GMT and Sydney on daylight time. */
@@ -52,90 +62,112 @@ export interface ConverterArgs {
   locale?: string;
 }
 
-/** Astro renders `selected={true}` as a bare attribute and `false` as nothing. */
-function options(values: readonly string[], selected: string): string {
-  return values
-    .map(
-      (v) =>
-        `<option value="${escapeAttr(v)}"${v === selected ? " selected" : ""}>${escapeHtml(v)}</option>`,
-    )
-    .join("");
+/** The `<option>`s of a native select, from a list of names. */
+function choices(
+  values: readonly string[],
+): { value: string; label: string }[] {
+  return values.map((v) => ({ value: v, label: v }));
 }
 
-export function renderConverterTemplate(args: ConverterArgs = {}): string {
+/** A list with the seeded value appended when the list does not hold it: the reader
+ *  can still pick anything the page normally offers after Dox seeds an unusual one. */
+function withSeed(values: readonly string[], seed: string): readonly string[] {
+  return values.includes(seed) ? values : [...values, seed];
+}
+
+/** The output slot before the library answers: one empty box that holds its height. */
+function emptyOutput(label: string): SafeHtml {
+  return callOutput({ label, state: "empty", lines: [] });
+}
+
+function outputOf(label: string, text: string, lost: boolean): SafeHtml {
+  return callOutput({
+    label,
+    state: lost ? "sentinel" : "live",
+    lines: [{ text, lost }],
+  });
+}
+
+function emptyFrame(label: string): SafeHtml {
+  return codeFrame({
+    label,
+    copyLabel: `Copy ${label.toLowerCase()}`,
+    copyText: "",
+    gate: "codeframe",
+  });
+}
+
+export function renderConverterTemplate(
+  idPrefix: string,
+  args: ConverterArgs = {},
+): string {
+  const id = idScope(idPrefix);
   const value = args.value ?? DEFAULT_VALUE;
   const from = args.from ?? DEFAULT_SOURCE_ZONE;
   const to = args.to ?? DEFAULT_TARGET_ZONE;
   const locale = args.locale ?? DEFAULT_LOCALE;
 
-  /* Seeded zones are appended when they are outside the curated twenty, rather
-     than replacing the list: the reader should still be able to pick anything
-     the page normally offers after Dox seeds an unusual zone. */
-  const zonesFrom = CURATED_TIMEZONES.includes(
-    from as (typeof CURATED_TIMEZONES)[number],
-  )
-    ? CURATED_TIMEZONES
-    : [...CURATED_TIMEZONES, from];
-  const zonesTo = CURATED_TIMEZONES.includes(
-    to as (typeof CURATED_TIMEZONES)[number],
-  )
-    ? CURATED_TIMEZONES
-    : [...CURATED_TIMEZONES, to];
-  const locales = CONVERTER_LOCALES.includes(
-    locale as (typeof CONVERTER_LOCALES)[number],
-  )
-    ? CONVERTER_LOCALES
-    : [...CONVERTER_LOCALES, locale];
+  const valueField = (key: string, text: string): SafeHtml =>
+    html`<div class="${styles.wide}">${field({
+      id: id(key),
+      label: "Input",
+      control: ({ id: cid }) =>
+        textInput({
+          id: cid,
+          value: text,
+          spellcheck: false,
+          autocomplete: "off",
+        }),
+    })}</div>`;
 
-  return (
-    `<div class="gmt-converter gmt-widget not-content">` +
-    `<div class="gmt-widget-card">` +
-    `<div class="gmt-widget-section">` +
-    `<h4>Zone conversion</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Input")}` +
-    `<input class="gmt-input" data-role="convert-value" type="text" value="${escapeAttr(value)}" spellcheck="false">` +
-    `</label>` +
-    `</div>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label">${labelTextHtml("From")}` +
-    `<select class="gmt-select" data-role="convert-source">${options(zonesFrom, from)}</select>` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("To")}` +
-    `<select class="gmt-select" data-role="convert-target">${options(zonesTo, to)}</select>` +
-    `</label>` +
-    `</div>` +
-    `<output class="gmt-widget-output" data-role="convert-result">&nbsp;</output>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>Format bench</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Input")}` +
-    `<input class="gmt-input" data-role="format-value" type="text" value="${escapeAttr(value)}" spellcheck="false">` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Locale")}` +
-    `<select class="gmt-select" data-role="format-locale">${options(locales, locale)}</select>` +
-    `</label>` +
-    `</div>` +
-    `<div class="gmt-converter-results">` +
-    `<div class="gmt-converter-result-row">${codeFrameHtml("format-parts")}` +
-    `<output class="gmt-widget-output" data-role="format-parts">&nbsp;</output></div>` +
-    `<div class="gmt-converter-result-row">${codeFrameHtml("format-relative")}` +
-    `<output class="gmt-widget-output" data-role="format-relative">&nbsp;</output></div>` +
-    `</div>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>Regex tester</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Input")}` +
-    `<input class="gmt-input" data-role="regex-input" type="text" value="${DEFAULT_REGEX_INPUT}" spellcheck="false">` +
-    `</label>` +
-    `</div>` +
-    `<div class="gmt-converter-chips" data-role="regex-results"></div>` +
-    `</div>` +
-    `</div>` +
-    `</div>`
+  const choice = (
+    key: string,
+    label: string,
+    list: readonly string[],
+    selected: string,
+  ): SafeHtml =>
+    field({
+      id: id(key),
+      label,
+      control: ({ id: cid }) =>
+        select({ id: cid, options: choices(list), value: selected }),
+    });
+
+  const convert = section(
+    { id: id("convert"), heading: "Zone conversion", level: 4 },
+    html`${fieldGrid(valueField("convert-value", value))}${fieldGrid(
+      html`${choice("convert-source", "From", withSeed(CURATED_TIMEZONES, from), from)}${choice("convert-target", "To", withSeed(CURATED_TIMEZONES, to), to)}`,
+    )}${grow(
+      html`<div id="${id("convert-result")}">${emptyOutput("Converted value")}</div>`,
+    )}`,
   );
+
+  const format = section(
+    { id: id("format"), heading: "Format bench", level: 4 },
+    html`${fieldGrid(
+      html`${valueField("format-value", value)}${choice("format-locale", "Locale", withSeed(CONVERTER_LOCALES, locale), locale)}`,
+    )}<div class="${styles.results}">
+      <div class="${styles.row}">
+        <div id="${id("call-format-parts")}">${emptyFrame("formatZonedToParts call")}</div>
+        ${grow(html`<div id="${id("format-parts")}">${emptyOutput("Format parts")}</div>`)}
+      </div>
+      <div class="${styles.row}">
+        <div id="${id("call-format-relative")}">${emptyFrame("formatRelativeZoned call")}</div>
+        ${grow(html`<div id="${id("format-relative")}">${emptyOutput("Relative format")}</div>`)}
+      </div>
+    </div>`,
+  );
+
+  const regex = section(
+    { id: id("regex"), heading: "Regex tester", level: 4 },
+    html`${fieldGrid(valueField("regex-input", DEFAULT_REGEX_INPUT))}
+      <ul class="${styles.chips}" id="${id("regex-results")}" aria-label="Regex results"></ul>`,
+  );
+
+  return widget(
+    { name: WIDGET_NAME, label: "Converter Bench", scope: idPrefix },
+    html`${convert}${format}${regex}`,
+  ).toString();
 }
 
 interface RegexConst {
@@ -171,6 +203,8 @@ async function loadModules() {
   };
 }
 
+type Modules = Awaited<ReturnType<typeof loadModules>>;
+
 function getRegexList(regexes: Record<string, RegExp>): RegexConst[] {
   const exclude = ["__esModule"];
   return Object.keys(regexes)
@@ -179,85 +213,152 @@ function getRegexList(regexes: Record<string, RegExp>): RegexConst[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function renderRegexChips(
-  container: HTMLElement,
-  input: string,
-  regexes: RegexConst[],
-): void {
-  container.innerHTML = "";
-  for (const { name, pattern } of regexes) {
+/** One chip per exported pattern. A match says so in words, so it never rests on colour. */
+function regexChips(input: string, regexes: RegexConst[]): SafeHtml {
+  return html`${regexes.map(({ name, pattern }) => {
     const match = pattern.test(input);
-    const chip = document.createElement("span");
-    chip.className = `gmt-converter-chip${match ? " gmt-converter-chip--match" : ""}`;
-    chip.title = match ? `${name} — match` : `${name} — no match`;
-    chip.textContent = name;
-    container.appendChild(chip);
-  }
+    return html`<li class="${styles.chip}">${badge({
+      text: match ? `${name} · match` : name,
+      tone: match ? "spring" : "neutral",
+      dim: !match,
+    })}${match ? "" : srOnly(" — no match")}</li>`;
+  })}`;
 }
 
-/** Recompute every section from the current control values. Pure read-then-write
- *  over the DOM: no state is held between calls, which is what makes this widget
- *  the easy one. */
-export async function run(
-  container: HTMLElement,
-  modules: Awaited<ReturnType<typeof loadModules>>,
-): Promise<void> {
-  const q = <T extends HTMLElement>(role: string) =>
-    container.querySelector(`[data-role="${role}"]`) as T | null;
+function callFrame(
+  label: string,
+  fn: string,
+  value: string,
+  locale: string,
+): SafeHtml {
+  const argsHtml = `${codeSpan("str", `"${value}"`)}, ${codeSpan("str", `"${locale}"`)}`;
+  return codeFrame({
+    label,
+    copyLabel: `Copy ${label.toLowerCase()}`,
+    copyText: `${fn}("${value}", "${locale}")`,
+    code: raw(`${codeSpan("fn", fn)}(${argsHtml})`),
+    gate: "codeframe",
+  });
+}
 
-  const convertVal = q<HTMLInputElement>("convert-value");
-  const convertTarget = q<HTMLSelectElement>("convert-target");
-  const convertOut = q("convert-result");
+interface Controller {
+  readState(): ConverterArgs;
+  apply(args: ConverterArgs): void;
+  run(): void;
+}
 
-  if (convertVal && convertTarget && convertOut) {
-    const result = modules.convertZonedToZoned(
+/** Wire the template at `root`. Throws a plain `Error` on a missing element. */
+function setupWidget(
+  root: HTMLElement,
+  modules: Modules,
+  signal: AbortSignal,
+): Controller {
+  const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
+  const convertVal = el<HTMLInputElement>("convert-value");
+  const convertSource = el<HTMLSelectElement>("convert-source");
+  const convertTarget = el<HTMLSelectElement>("convert-target");
+  const fmtVal = el<HTMLInputElement>("format-value");
+  const fmtLocale = el<HTMLSelectElement>("format-locale");
+  const regexInput = el<HTMLInputElement>("regex-input");
+  // Every slot the run writes: a missing one throws now, not on the first keystroke.
+  const slots = {
+    convert: el("convert-result"),
+    parts: el("format-parts"),
+    relative: el("format-relative"),
+    callParts: el("call-format-parts"),
+    callRelative: el("call-format-relative"),
+    chips: el("regex-results"),
+  };
+  const regexList = getRegexList(modules.regexes);
+
+  function run(): void {
+    const converted = modules.convertZonedToZoned(
       convertVal.value,
       convertTarget.value,
     );
-    renderResult(convertOut, result, result === "" ? "sentinel" : "live");
-  }
-
-  const fmtVal = q<HTMLInputElement>("format-value");
-  const fmtLocale = q<HTMLSelectElement>("format-locale");
-  const partsOut = q("format-parts");
-  const relOut = q("format-relative");
-
-  if (fmtVal && fmtLocale) {
-    const locale = fmtLocale.value;
-    const argsHtml = `${codeSpan("str", `"${fmtVal.value}"`)}, ${codeSpan("str", `"${locale}"`)}`;
-    const argsPlain = `"${fmtVal.value}", "${locale}"`;
-
-    if (partsOut) {
-      const parts = modules.formatZonedToParts(fmtVal.value, locale);
-      renderResult(partsOut, parts, parts.length === 0 ? "sentinel" : "live");
-      renderCallLine(
-        q("call-format-parts"),
-        "formatZonedToParts",
-        argsHtml,
-        argsPlain,
-      );
-    }
-    if (relOut) {
-      const rel = modules.formatRelativeZoned(fmtVal.value, locale);
-      renderResult(relOut, rel, rel === "" ? "sentinel" : "live");
-      renderCallLine(
-        q("call-format-relative"),
-        "formatRelativeZoned",
-        argsHtml,
-        argsPlain,
-      );
-    }
-  }
-
-  const regexInput = q<HTMLInputElement>("regex-input");
-  const regexResults = q("regex-results");
-  if (regexInput && regexResults) {
-    renderRegexChips(
-      regexResults,
-      regexInput.value,
-      getRegexList(modules.regexes),
+    setHtml(
+      slots.convert,
+      outputOf("Converted value", converted, converted === ""),
     );
+
+    const locale = fmtLocale.value;
+    const parts = modules.formatZonedToParts(fmtVal.value, locale);
+    setHtml(
+      slots.parts,
+      outputOf("Format parts", JSON.stringify(parts), parts.length === 0),
+    );
+    setHtml(
+      slots.callParts,
+      callFrame(
+        "formatZonedToParts call",
+        "formatZonedToParts",
+        fmtVal.value,
+        locale,
+      ),
+    );
+    const relative = modules.formatRelativeZoned(fmtVal.value, locale);
+    setHtml(
+      slots.relative,
+      outputOf("Relative format", relative, relative === ""),
+    );
+    setHtml(
+      slots.callRelative,
+      callFrame(
+        "formatRelativeZoned call",
+        "formatRelativeZoned",
+        fmtVal.value,
+        locale,
+      ),
+    );
+
+    setHtml(slots.chips, regexChips(regexInput.value, regexList));
   }
+
+  /** A zone seeded from a link or a call joins the list when it is not on it; a locale
+   *  the list lacks is refused, so a seed cannot invent a choice. */
+  function seedSelect(
+    sel: HTMLSelectElement,
+    value: string,
+    open: boolean,
+  ): void {
+    if (![...sel.options].some((o) => o.value === value)) {
+      if (!open) return;
+      sel.append(new Option(value, value));
+    }
+    sel.value = value;
+  }
+
+  widgetEl.addEventListener("input", run, { signal });
+  widgetEl.addEventListener("change", run, { signal });
+
+  return {
+    readState: () => ({
+      value: convertVal.value,
+      from: convertSource.value,
+      to: convertTarget.value,
+      locale: fmtLocale.value,
+    }),
+    apply(args) {
+      /* Applied before the first run: the template paints these when it is given them
+         (the chat rail), but a page bootstrap gets its seed from `window.location`, which
+         Astro's frontmatter cannot see. One path covers both entrances. Zoned text takes
+         the same normalisation as the interval visualizer (see zoned-input.ts). */
+      const value = args.value ? normaliseZonedInput(args.value) : undefined;
+      if (value !== undefined) {
+        convertVal.value = value;
+        fmtVal.value = value;
+      }
+      if (args.from !== undefined) seedSelect(convertSource, args.from, true);
+      if (args.to !== undefined) seedSelect(convertTarget, args.to, true);
+      if (args.locale !== undefined) seedSelect(fmtLocale, args.locale, false);
+    },
+    run,
+  };
+}
+
+/** Recompute every section from the current control values. */
+export function run(container: HTMLElement, modules: Modules): void {
+  setupWidget(container, modules, new AbortController().signal).run();
 }
 
 export const mountConverterBench: MountFn<ConverterArgs> = async (
@@ -265,7 +366,8 @@ export const mountConverterBench: MountFn<ConverterArgs> = async (
   args,
   signal,
 ) => {
-  let modules: Awaited<ReturnType<typeof loadModules>>;
+  defineElements();
+  let modules: Modules;
   try {
     modules = await loadModules();
   } catch (cause) {
@@ -274,53 +376,17 @@ export const mountConverterBench: MountFn<ConverterArgs> = async (
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  /* Applied before the first run, for the same reason as the DST inspector: the
-     template paints these when it is given them (the chat rail), but a page
-     bootstrap gets its seed from `window.location`, which Astro's frontmatter
-     cannot see. One path covers both entrances. */
-  const seed = (role: string, value: string | undefined) => {
-    if (value === undefined) return;
-    const el = root.querySelector(`[data-role="${role}"]`) as
-      | HTMLSelectElement
-      | HTMLInputElement
-      | null;
-    if (!el) return;
-    setControlValue(el, value);
-  };
-  /* Same normalisation as the interval visualizer, for the same reason: these
-     inputs are zoned, and a model asked to convert "2:30pm" has no zone for it.
-     See zoned-input.ts. */
-  const value = args.value ? normaliseZonedInput(args.value) : undefined;
-  seed("convert-value", value);
-  seed("format-value", value);
-  seed("convert-source", args.from);
-  seed("convert-target", args.to);
-  seed("format-locale", args.locale);
-
-  const rerun = () => void run(root, modules);
-  for (const input of root.querySelectorAll("select, input")) {
-    input.addEventListener("input", rerun);
-    input.addEventListener("change", rerun);
+  let controller: Controller;
+  try {
+    controller = setupWidget(root, modules, signal);
+  } catch (cause) {
+    throw new WidgetLoadError(cause);
   }
-
-  wireCopyButtons(root);
-  void run(root, modules);
+  controller.apply(args);
+  controller.run();
 
   return onceDestroy(
-    () => {
-      /* Listeners live on elements inside `root`, and the host drops that
-         subtree — see widget-mount.ts. `wireCopyButtons` is the one thing with
-         a timer, and it owns its own reset. */
-    },
-    () => {
-      const q = (role: string) =>
-        root.querySelector(`[data-role="${role}"]`) as HTMLInputElement | null;
-      return {
-        value: q("convert-value")?.value,
-        from: q("convert-source")?.value,
-        to: q("convert-target")?.value,
-        locale: q("format-locale")?.value,
-      };
-    },
+    () => {},
+    () => ({ ...controller.readState() }),
   );
 };

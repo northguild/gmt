@@ -32,7 +32,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderCutoffStackTemplate();
+const html = renderCutoffStackTemplate("cutoff-stack", {});
 ---
 
 {
@@ -50,7 +50,7 @@ const html = renderCutoffStackTemplate();
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("cutoffstack");
-    document.querySelectorAll<HTMLElement>(".gmt-cutoff-stack").forEach((el) => {
+    document.querySelectorAll<HTMLElement>('[data-widget="cutoff-stack"]').forEach((el) => {
       mountCutoffStack(el, seed, new AbortController().signal).catch((error) =>
         showUnavailable(el, error),
       );

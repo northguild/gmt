@@ -189,13 +189,13 @@ export function mountZoneClockList(
     row.innerHTML = `
       <span class="gmt-clock-row1">
         <span class="gmt-clock-name">${id}</span>
-        <span class="gmt-clock-dst" data-tz-field="dst"></span>
-        <span class="gmt-clock-offset" data-tz-field="offset"></span>
+        <span class="gmt-clock-dst" data-gate="live" data-tz-field="dst"></span>
+        <span class="gmt-clock-offset" data-gate="live" data-tz-field="offset"></span>
       </span>
-      <span class="gmt-clock-row2">
-        <span class="gmt-clock-shift" data-tz-field="shift"></span>
-        <span class="gmt-clock-date" data-tz-field="date"></span>
-        <span class="gmt-clock-time" data-tz-field="time"></span>
+      <span class="gmt-clock-row2" data-gate="live">
+        <span class="gmt-clock-shift" data-gate="live" data-tz-field="shift"></span>
+        <span class="gmt-clock-date" data-gate="live" data-tz-field="date"></span>
+        <span class="gmt-clock-time" data-gate="live" data-tz-field="time"></span>
       </span>`;
     return row;
   }

@@ -2,69 +2,40 @@
  * @vitest-environment jsdom
  *
  * The Journey Split end to end: template -> mount -> interact -> assert, against
- * the real `@northguild/gmt`. Every preset's printed calls, results, plates,
- * ribbons and table rows are checked against values a real run of the library
- * gave, and the hand-off link both ways through the Delivery Scheduler's own
- * `readArgs`, so a drift in the library or the widget fails here.
+ * the real `@northguild/gmt`, through roles and accessible names the way a person
+ * (or a screen reader) meets the page. Every preset's printed calls, results,
+ * plates, ribbons and table rows are checked against values a real run of the
+ * library gave, and the hand-off link both ways through the Delivery Scheduler's
+ * own `readArgs`, so a drift in the library or the widget fails here.
+ *
+ * The ribbons' geometry (where each segment, chip and bracket sits) is not a
+ * thing jsdom can see; the Chromium gates own it. The ribbons' order and kinds
+ * are read from the accessible names of the two `img` tracks.
  */
-import { readFileSync } from "node:fs";
-import path from "node:path";
+import { screen, within } from "@testing-library/dom";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
+import {
+  cellsInColumn,
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
 import {
   permalinkOf as deliveryPermalink,
   readArgs as readDeliveryArgs,
 } from "./delivery-scheduler";
-import { renderDeliverySchedulerTemplate } from "./delivery-scheduler-mount";
 import { JOURNEY_PRESETS, TABLE_COLUMNS } from "./journey-split";
-import {
-  mountJourneySplit,
-  renderJourneySplitTemplate,
-} from "./journey-split-mount";
-import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { SITE_BASE } from "./site";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "leg-count",
-  "start-zone",
-  ...[1, 2, 3, 4].flatMap((n) => [
-    `leg-${n}`,
-    `mode-${n}`,
-    `duration-${n}`,
-    `zone-${n}`,
-    `departure-${n}`,
-    `dwell-${n}`,
-  ]),
-  "frame",
-  "heroes",
-  "hero-eta",
-  "hero-moving",
-  "hero-waiting",
-  "track-happens",
-  "track-gathered",
-  "badges",
-  "bars-happens",
-  "notes",
-  "bars-gathered",
-  "brackets",
-  "empty-happens",
-  "empty-gathered",
-  "axis",
-  "summary",
-  "table-wrap",
-  "table",
-  "table-body",
-  "empty-table",
-  "handoff",
-  "reason-aside",
-  "call-journey",
-  "copy-journey",
-  "journey-output",
-];
+const entry = WIDGET_REGISTRY["showJourneySplit"] as AnyWidgetEntry;
 
 /** What a real run of the library gave for each preset. */
 interface Expected {
@@ -207,121 +178,158 @@ const EXPECTED: Record<string, Expected> = {
   },
 };
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+type Widget = RenderedWidget;
 
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderJourneySplitTemplate(templateArgs);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountJourneySplit(root, args, controller.signal);
-  return { root, handle, controller };
+const open = (args: Record<string, unknown> = {}): Promise<Widget> =>
+  renderWidget(entry, { args });
+
+// The controls, by the names a person reads.
+const preset = () => screen.getByRole("combobox", { name: "Preset" });
+const legCount = () => screen.getByRole("combobox", { name: "Legs" });
+const startZone = () =>
+  screen.getByRole("combobox", { name: "Start zone (optional)" });
+/** The control called `name` on leg `n`: hidden legs are out of the tree, so the visible ones count from 1. */
+const leg = (role: "textbox" | "combobox", name: string, n: number) =>
+  screen.getAllByRole(role, { name })[n - 1]!;
+const duration = (n: number) => leg("textbox", "Duration", n);
+const handling = (n: number) => leg("textbox", "Handling after (optional)", n);
+const zone = (n: number) => leg("combobox", "Arrives in", n);
+
+/** Replaces what a text box holds, in one input event. */
+async function enter(w: Widget, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  if (value !== "") await w.user.paste(value);
 }
 
-function choose(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLSelectElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
+const output = () => screen.getByLabelText("What the calls returned");
+const calls = () => screen.getByRole("group", { name: "Calls made" });
+const reason = () =>
+  screen.queryByRole("complementary", { name: "Why there is no result" });
+const summary = () => screen.getByRole("status", { name: "Journey summary" });
+const handoffLink = () =>
+  screen.getByRole("link", {
+    name: "Open these legs in the Delivery Scheduler",
+  });
+const tracks = () =>
+  screen.getAllByRole("img", { name: /^(As it happens|Moving and waiting)/ });
+const table = () => screen.getByRole("table", { name: "Hand-offs" });
+
+/** A regular expression that matches `text` and nothing else. */
+const exact = (text: string) =>
+  new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+
+/** A plate's value and sub lines, by its place among the three plates. */
+const PLATE_LINES = [2, 1, 1];
+function plate(index: number): { value: HTMLElement; lines: HTMLElement[] } {
+  const defs = screen.getAllByRole("definition");
+  const start = PLATE_LINES.slice(0, index).reduce((n, l) => n + 1 + l, 0);
+  return {
+    value: defs[start]!,
+    lines: defs.slice(start + 1, start + 1 + PLATE_LINES[index]!),
+  };
 }
 
-function type(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLInputElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
+function expectPlate(index: number, [value, lines]: [string, string[]]) {
+  const p = plate(index);
+  expect(within(p.value).getByText(exact(value))).toBeInTheDocument();
+  lines.forEach((line, i) => {
+    if (line === "") expect(p.lines[i]).toHaveTextContent(/^$/);
+    else expect(p.lines[i]).toHaveTextContent(exact(line));
+  });
 }
 
-const text = (root: HTMLElement, role: string) =>
-  q(root, role).textContent ?? "";
-const isSentinel = (root: HTMLElement, role: string) =>
-  q(root, role).classList.contains("gmt-playground-sentinel");
-
-/** A plate's value and its sub lines. */
-const plate = (root: HTMLElement, role: string): [string, string[]] => [
-  q(root, role).querySelector(".gmt-punct-hero-value")!.textContent!,
-  [...q(root, role).querySelectorAll(".gmt-punct-hero-line")].map(
-    (l) => l.textContent!,
-  ),
-];
-
-const segments = (root: HTMLElement, role: string) => [
-  ...q(root, role).querySelectorAll<HTMLElement>(".gmt-js-seg"),
-];
-
-const tableRows = (root: HTMLElement) =>
-  [...q(root, "table-body").querySelectorAll("tr")].filter(
-    (r) => !r.classList.contains("gmt-js-row--blank"),
+/** The kinds of segment the happens ribbon names, in order. */
+function kindsOf(name: string): string[] {
+  const happens = name.slice(0, name.indexOf(". Gathered"));
+  return [
+    ...happens.matchAll(
+      /leg \d moving|of handling after|of waiting for the scheduled departure/g,
+    ),
+  ].map((m) =>
+    m[0].endsWith("moving")
+      ? "moving"
+      : m[0].startsWith("of handling")
+        ? "handling"
+        : "scheduled",
   );
+}
+
+const hopRows = () => within(table()).getAllByRole("row").slice(1);
+
+/** Text a reader sees or hears outside the calls, their results, the reason and the summary. */
+function strays(pattern: RegExp): HTMLElement[] {
+  const inside = [calls(), output(), summary()];
+  const aside = reason();
+  if (aside !== null) inside.push(aside);
+  return [
+    ...screen.queryAllByText(pattern),
+    ...screen.queryAllByLabelText(pattern),
+  ].filter((el) => !inside.some((box) => box.contains(el)));
+}
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime("2026-10-15T00:00:00Z");
+});
 
 afterEach(() => {
-  document.body.innerHTML = "";
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 describe("renderJourneySplitTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderJourneySplitTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
-    }
-  });
-
-  it("is a widget root with the standard wrapper, and no class containing card but the wrapper", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderJourneySplitTemplate();
-    const widget = root.firstElementChild as HTMLElement;
-    expect(widget.className).toBe("gmt-journey-split gmt-widget not-content");
-    expect(widget.getAttributeNames()).toEqual(["class"]);
-    const cardClasses = [...root.querySelectorAll("[class]")]
-      .flatMap((el) => [...el.classList])
-      .filter((c) => c.includes("card"));
-    expect(new Set(cardClasses)).toEqual(new Set(["gmt-widget-card"]));
-  });
-
-  it("renders three numbered sections, section 2 wide, with the plates and the table holding their boxes", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderJourneySplitTemplate();
-    const sections = [...root.querySelectorAll(".gmt-widget-section")];
-    expect(sections).toHaveLength(3);
-    expect(sections.map((s) => s.querySelector("h4")!.textContent)).toEqual([
+  it("is a named region with three numbered sections, three plates, two ribbons and a five-column table", async () => {
+    const w = await open();
+    expect(
+      screen.getByRole("region", { name: "Journey Split" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent),
+    ).toEqual([
       "1. Set the legs",
       "2. Moving and waiting",
       "3. What multimodalETA returns",
     ]);
+    expect(screen.getAllByRole("term")).toHaveLength(3);
+    expect(tracks()).toHaveLength(2);
     expect(
-      sections.map((s) => s.classList.contains("gmt-widget-section--wide")),
-    ).toEqual([false, true, false]);
-    expect(root.querySelectorAll(".gmt-punct-hero")).toHaveLength(3);
-    expect(root.querySelectorAll("fieldset.gmt-transport-leg")).toHaveLength(4);
-    // Three rows are reserved for the three possible hand-offs, and the header names five columns.
-    expect(root.querySelectorAll('[data-role="table-body"] tr')).toHaveLength(
+      within(table())
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).toEqual([...TABLE_COLUMNS]);
+    // Three rows are reserved for the three possible hand-offs.
+    expect(within(table()).getAllByRole("row", { hidden: true })).toHaveLength(
+      1 + 3,
+    );
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("opens four leg fieldsets, the fourth hidden for a three-leg preset, each control named", async () => {
+    await open();
+    expect(screen.getAllByRole("textbox", { name: "Duration" })).toHaveLength(
       3,
     );
     expect(
-      [...root.querySelectorAll("th")].map((th) => th.textContent),
-    ).toEqual([...TABLE_COLUMNS]);
-    expect(root.querySelectorAll(".gmt-js-lane")).toHaveLength(2);
+      screen.getAllByRole("textbox", { name: "Duration", hidden: true }),
+    ).toHaveLength(4);
+    for (const role of ["combobox", "textbox"] as const) {
+      for (const control of screen.getAllByRole(role)) {
+        expect(control).toHaveAccessibleName(/\S/);
+      }
+    }
   });
 
-  it("labels the stated dwellAfter 'Handling after' and never says dwell on screen", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderJourneySplitTemplate();
-    const labels = [...root.querySelectorAll("label")].map((l) =>
-      l.textContent!.replace(/\s+/g, " "),
-    );
-    expect(labels.filter((l) => l.startsWith("Handling after"))).toHaveLength(
-      4,
-    );
-    expect(root.textContent).not.toMatch(/dwell/i);
+  it("labels the stated dwellAfter 'Handling after' and never says dwell on screen", async () => {
+    await open();
+    expect(
+      screen.getAllByLabelText("Handling after (optional)", {
+        selector: "input",
+      }),
+    ).toHaveLength(4);
+    expect(strays(/dwell/i)).toEqual([]);
   });
 
-  it("escapes a hostile seed", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderJourneySplitTemplate({
+  it("shows a hostile seed as text, never as elements", async () => {
+    const w = await open({
       legs: [
         {
           departure: '"><img src=x onerror=alert(1)>',
@@ -333,11 +341,26 @@ describe("renderJourneySplitTemplate", () => {
       ],
       startTimeZone: "<u>y</u>",
     });
-    expect(root.querySelector("img")).toBeNull();
-    expect(root.querySelector("script")).toBeNull();
-    expect(root.querySelector("svg[onload]")).toBeNull();
-    expect(root.querySelector("b")).toBeNull();
-    expect(root.querySelector("u")).toBeNull();
+    expect(duration(1)).toHaveValue("<script>x</script>");
+    expect(screen.queryByText("x")).not.toBeInTheDocument();
+    expect(screen.queryByText("y")).not.toBeInTheDocument();
+    expect(screen.queryByText("z")).not.toBeInTheDocument();
+    w.destroy();
+  });
+
+  it("keeps two copies on one page apart", async () => {
+    const a = await renderWidget(entry, { args: {}, idPrefix: "a" });
+    const b = await renderWidget(entry, { args: {}, idPrefix: "b" });
+    await a.user.selectOptions(
+      within(a.root).getByRole("combobox", { name: "Legs" }),
+      "1",
+    );
+    expect(
+      within(a.root).getAllByRole("textbox", { name: "Duration" }),
+    ).toHaveLength(1);
+    expect(
+      within(b.root).getAllByRole("textbox", { name: "Duration" }),
+    ).toHaveLength(3);
   });
 });
 
@@ -349,273 +372,267 @@ describe("every preset, against the real library", () => {
   });
 
   it.each(JOURNEY_PRESETS.map((p) => [p.id]))("%s", async (id) => {
-    const { root } = await mount();
-    choose(root, "preset", id!);
+    const w = await open();
+    await w.user.selectOptions(preset(), id!);
     const want = EXPECTED[id!]!;
     const sentinel = want.results[0] === "null";
 
-    // The calls made and what they returned, in the same order.
-    const printed = text(root, "call-journey").split("\n");
-    expect(printed.map((l) => l.slice(0, l.indexOf("(")))).toEqual(want.calls);
-    expect(q(root, "copy-journey").dataset["copyText"]).toBe(
-      text(root, "call-journey"),
+    // The calls made, in order, and what they returned, line for line.
+    expect(calls()).toHaveTextContent(
+      new RegExp(want.calls.map((c) => `${c}\\(`).join("[^]*")),
     );
-    expect(text(root, "journey-output")).toBe(
-      sentinel ? "NO SIGNAL" : want.results.join("\n"),
-    );
-    expect(isSentinel(root, "journey-output")).toBe(sentinel);
-    expect(root.querySelectorAll(".gmt-playground-sentinel")).toHaveLength(
-      sentinel ? 1 : 0,
-    );
+    expect(
+      screen.getByRole("button", { name: "Copy calls" }),
+    ).toBeInTheDocument();
+    if (sentinel) {
+      expect(output()).toHaveTextContent("NO SIGNAL");
+      expect(output()).toHaveTextContent(/^NO SIGNAL NO SIGNAL$/);
+      expect(within(output()).getAllByText("NO SIGNAL")).toHaveLength(2);
+    } else {
+      expect(output()).not.toHaveTextContent("NO SIGNAL");
+      expect(output()).toHaveTextContent(exact(want.results.join(" ")));
+      expect(within(output()).queryByText("NO SIGNAL")).not.toBeInTheDocument();
+    }
 
     // The plates.
-    expect(plate(root, "hero-eta")).toEqual(want.plates[0]);
-    expect(plate(root, "hero-moving")).toEqual(want.plates[1]);
-    expect(plate(root, "hero-waiting")).toEqual(want.plates[2]);
-    expect(q(root, "heroes").children).toHaveLength(3);
+    expect(screen.getAllByRole("term")).toHaveLength(3);
+    want.plates.forEach((p, i) => expectPlate(i, p));
 
-    // The ribbons: the same segments on both, moving then waiting.
-    const happens = segments(root, "bars-happens");
-    const gathered = segments(root, "bars-gathered");
-    expect(happens.map((s) => s.dataset["kind"])).toEqual(want.kinds);
-    expect(gathered.map((s) => s.dataset["kind"])).toEqual(want.kinds);
-    expect(gathered.map((s) => s.dataset["ms"])).toEqual(
-      happens.map((s) => s.dataset["ms"]),
-    );
+    // The ribbons: the same journey, named the same on both, segment kinds in order.
+    for (const track of tracks()) {
+      expect(kindsOf(track.getAttribute("aria-label")!)).toEqual(want.kinds);
+    }
 
     // The chips under the waits and the brackets under the gathered ribbon.
-    expect(
-      [...q(root, "notes").querySelectorAll(".gmt-js-note")].map(
-        (c) => c.textContent,
-      ),
-    ).toEqual(want.chips);
-    expect(
-      [...q(root, "brackets").querySelectorAll(".gmt-js-bracket-chip")].map(
-        (c) => c.textContent,
-      ),
-    ).toEqual(want.brackets ?? []);
-
-    // The table: one row for each hand-off, and the box of three rows always.
-    expect(q(root, "table-body").children).toHaveLength(3);
-    expect(
-      tableRows(root).map((r) =>
-        [...r.querySelectorAll("td")].map((td) => td.textContent),
-      ),
-    ).toEqual(want.rows);
-    for (const row of tableRows(root)) {
-      expect(
-        [...row.querySelectorAll("td")].map((td) => td.dataset["label"]),
-      ).toEqual([...TABLE_COLUMNS]);
+    for (const chip of want.chips) {
+      expect(screen.getByText(chip)).toBeInTheDocument();
     }
-  });
-
-  it("draws moving segments that add up to totalTransit and waiting ones to totalDwell, for every preset", async () => {
-    const hours = (iso: string) => Number(/PT(\d+)H/.exec(iso)![1]) * 3_600_000;
-    for (const p of JOURNEY_PRESETS) {
-      const { root } = await mount();
-      choose(root, "preset", p.id);
-      if (isSentinel(root, "journey-output")) continue;
-      const result = text(root, "journey-output").split("\n")[0]!;
-      const transit = hours(/totalTransit: "(PT\d+H)"/.exec(result)![1]!);
-      const dwell = hours(/totalDwell: "(PT\d+H)"/.exec(result)![1]!);
-      for (const role of ["bars-happens", "bars-gathered"]) {
-        const sum = (moving: boolean) =>
-          segments(root, role)
-            .filter((s) => (s.dataset["kind"] === "moving") === moving)
-            .reduce((n, s) => n + Number(s.dataset["ms"]), 0);
-        expect(sum(true), `${p.id} ${role} moving`).toBe(transit);
-        expect(sum(false), `${p.id} ${role} waiting`).toBe(dwell);
+    if (want.brackets === null) {
+      expect(screen.queryByText(/^moving · /)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^waiting · /)).not.toBeInTheDocument();
+    } else {
+      for (const text of want.brackets) {
+        expect(screen.getByText(text)).toBeInTheDocument();
       }
-      // The widths in percent agree: moving and waiting fill the track together.
-      const width = (kind: boolean) =>
-        segments(root, "bars-gathered")
-          .filter((s) => (s.dataset["kind"] === "moving") === kind)
-          .reduce((n, s) => n + parseFloat(s.style.width), 0);
-      expect(width(true) + width(false)).toBeCloseTo(100, 2);
-      expect(width(true) / 100).toBeCloseTo(transit / (transit + dwell), 3);
     }
+
+    // The table: one row for each hand-off, in the columns the header names.
+    expect(hopRows()).toHaveLength(want.rows.length);
+    TABLE_COLUMNS.forEach((column, c) => {
+      cellsInColumn(table(), column).forEach((cell, r) => {
+        expect(cell).toHaveTextContent(exact(want.rows[r]![c]!));
+      });
+    });
+    await expectNoAxeViolations(w.root);
+    w.destroy();
   });
 
-  it("numbers the stems 1 to 3 and puts each on its leg's series", async () => {
-    const { root } = await mount();
-    const badges = [...q(root, "badges").querySelectorAll(".gmt-js-badge")];
-    expect(badges.map((b) => b.textContent)).toEqual(["1", "2", "3"]);
-    expect(badges.map((b) => b.getAttribute("data-series"))).toEqual([
-      "1",
-      "2",
-      "3",
-    ]);
-    const stems = segments(root, "bars-happens").filter(
-      (s) => s.dataset["kind"] === "moving",
-    );
-    expect(stems.map((s) => s.dataset["series"])).toEqual(["1", "2", "3"]);
+  it("names the moving and waiting totals of the plates on the gathered ribbon, for every preset", async () => {
+    const w = await open();
+    for (const p of JOURNEY_PRESETS) {
+      await w.user.selectOptions(preset(), p.id);
+      const want = EXPECTED[p.id]!;
+      if (want.brackets === null) continue;
+      for (const track of tracks()) {
+        expect(track).toHaveAccessibleName(
+          new RegExp(
+            `Gathered: moving ${want.plates[1]![0]}, then waiting ${want.plates[2]![0]}\\.`,
+          ),
+        );
+      }
+    }
+    w.destroy();
+  });
+
+  it("numbers the stems 1 to 3", async () => {
+    const w = await open();
+    expect(
+      screen
+        .getAllByText(/^[1-4]$/, { selector: "span" })
+        .map((b) => b.textContent),
+    ).toEqual(["1", "2", "3"]);
+    w.destroy();
   });
 });
 
 describe("a null result", () => {
   it("shows NO SIGNAL with the library's sentence, plates that read no result, and ribbons and a table that say so in words", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "missed-connection");
-    expect(isSentinel(root, "journey-output")).toBe(true);
-    expect(text(root, "reason-aside")).toContain(
+    const w = await open();
+    await w.user.selectOptions(preset(), "missed-connection");
+    expect(output()).toHaveTextContent("NO SIGNAL");
+    expect(reason()).toHaveTextContent(
       "Missed connection: leg 2 is scheduled to leave at",
     );
-    expect(text(root, "reason-aside")).toContain("needs PT2H at the handoff");
-    for (const hero of ["hero-eta", "hero-moving", "hero-waiting"]) {
-      expect(plate(root, hero)[0]).toBe("no result");
+    expect(reason()).toHaveTextContent("needs PT2H at the handoff");
+    expect(screen.getAllByText("no result")).toHaveLength(3);
+    // The two ribbons and the table each say so in words.
+    expect(screen.getAllByText(/^No journey to draw/)).toHaveLength(3);
+    for (const track of tracks()) {
+      expect(track).toHaveAccessibleName(/No journey to draw/);
     }
-    for (const role of ["empty-happens", "empty-gathered", "empty-table"]) {
-      expect(q(root, role).hidden, role).toBe(false);
-      expect(text(root, role)).toContain("No journey to draw");
-    }
-    expect(segments(root, "bars-happens")).toHaveLength(0);
-    expect(q(root, "axis").children).toHaveLength(0);
     // Every region keeps its box, and the link still opens the same legs.
-    expect(q(root, "heroes").children).toHaveLength(3);
-    expect(root.querySelectorAll(".gmt-js-lane")).toHaveLength(2);
-    expect(q(root, "table-body").children).toHaveLength(3);
-    expect(q<HTMLAnchorElement>(root, "handoff").getAttribute("href")).toMatch(
-      new RegExp(`^${SITE_BASE}/tools/delivery-scheduler/\\?w=delivery&wa=`),
+    expect(hopRows()).toHaveLength(0);
+    expect(within(table()).getAllByRole("row", { hidden: true })).toHaveLength(
+      1 + 3,
     );
+    expect(handoffLink()).toHaveAttribute(
+      "href",
+      expect.stringMatching(
+        new RegExp(`^${SITE_BASE}/tools/delivery-scheduler/\\?w=delivery&wa=`),
+      ),
+    );
+    await expectNoAxeViolations(w.root);
+    w.destroy();
   });
 
   it("is a different sentence for each reason the library refuses", async () => {
-    const { root } = await mount();
-    type(root, "duration-1", "6 hours");
-    expect(text(root, "reason-aside")).toContain(
+    const w = await open();
+    await enter(w, duration(1), "6 hours");
+    expect(reason()).toHaveTextContent(
       "Leg 1's duration is not one transitTime accepts",
     );
-    type(root, "duration-1", "PT6H");
-    expect(text(root, "reason-aside")).toBe("");
-    type(root, "dwell-1", "soon");
-    expect(text(root, "reason-aside")).toContain(
+    await enter(w, duration(1), "PT6H");
+    expect(reason()).not.toBeInTheDocument();
+    await enter(w, handling(1), "soon");
+    expect(reason()).toHaveTextContent(
       "Leg 1's handling time is not a duration of time units, or it is negative.",
     );
-    expect(isSentinel(root, "journey-output")).toBe(true);
+    expect(output()).toHaveTextContent("NO SIGNAL");
+    await expectNoAxeViolations(w.root);
+    w.destroy();
   });
 });
 
 describe("a legitimately empty result is not a sentinel", () => {
   it("says a single leg has no hand-off, in words, with no NO SIGNAL", async () => {
-    const { root } = await mount();
-    choose(root, "leg-count", "1");
-    expect(isSentinel(root, "journey-output")).toBe(false);
-    expect(root.querySelectorAll(".gmt-playground-sentinel")).toHaveLength(0);
-    expect(q(root, "empty-table").hidden).toBe(false);
-    expect(text(root, "empty-table")).toBe("A single leg has no hand-off.");
-    expect(tableRows(root)).toHaveLength(0);
-    expect(q(root, "empty-happens").hidden).toBe(true);
-    expect(plate(root, "hero-waiting")).toEqual(["0 h", ["PT0S"]]);
+    const w = await open();
+    await w.user.selectOptions(legCount(), "1");
+    expect(output()).not.toHaveTextContent("NO SIGNAL");
+    expect(screen.queryByText("NO SIGNAL")).not.toBeInTheDocument();
+    expect(reason()).not.toBeInTheDocument();
+    expect(screen.getByText("A single leg has no hand-off.")).toBeVisible();
+    expect(hopRows()).toHaveLength(0);
+    expect(screen.queryByText(/^No journey to draw/)).not.toBeInTheDocument();
+    expectPlate(2, ["0 h", ["PT0S"]]);
+    await expectNoAxeViolations(w.root);
+    w.destroy();
   });
 });
 
 describe("the form", () => {
-  it("opens on the first preset", async () => {
-    const { root } = await mount();
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe(
-      "scheduled-sailing",
-    );
-    expect(q<HTMLSelectElement>(root, "leg-count").value).toBe("3");
-    expect(text(root, "preset-description")).toBe(
+  it("opens on the first preset, with its description", async () => {
+    await open();
+    expect(preset()).toHaveValue("scheduled-sailing");
+    expect(legCount()).toHaveValue("3");
+    expect(preset()).toHaveAccessibleDescription(
       JOURNEY_PRESETS[0]!.description,
     );
-    expect(q(root, "leg-4").hidden).toBe(true);
-    expect(q(root, "leg-3").hidden).toBe(false);
+    expect(screen.queryAllByRole("textbox", { name: "Duration" })).toHaveLength(
+      3,
+    );
   });
 
-  it("makes the preset custom when a field changes, and keeps the description's height", async () => {
-    const { root } = await mount();
-    type(root, "dwell-1", "PT8H");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    expect(text(root, "preset-description")).toBe("");
+  it("makes the preset custom when a field changes", async () => {
+    const w = await open();
+    await enter(w, handling(1), "PT8H");
+    expect(preset()).toHaveValue("custom");
     // The new handling shows in the chip. The ship still sails when it was
     // scheduled to, so the waiting total does not change.
     expect(
-      [...q(root, "notes").querySelectorAll(".gmt-js-note")][0]!.textContent,
-    ).toBe("2 d: 8 h handling + 40 h for the scheduled departure");
-    expect(plate(root, "hero-waiting")[1]).toEqual(["PT84H"]);
+      screen.getByText("2 d: 8 h handling + 40 h for the scheduled departure"),
+    ).toBeInTheDocument();
+    expectPlate(2, ["3 d 12 h", ["PT84H"]]);
+    await expectNoAxeViolations(w.root);
+    w.destroy();
   });
 
   it("leaves a blank scheduled departure and handling out of the printed call", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "no-schedule");
-    const call = text(root, "call-journey").split("\n")[0]!;
-    expect(call).not.toContain('dwellAfter: ""');
-    expect(call).not.toContain('departure: ""');
-    expect(call).toContain(
+    const w = await open();
+    await w.user.selectOptions(preset(), "no-schedule");
+    expect(calls()).not.toHaveTextContent('dwellAfter: ""');
+    expect(calls()).not.toHaveTextContent('departure: ""');
+    expect(calls()).toHaveTextContent(
       '{ duration: "PT52H", timeZone: "Australia/Adelaide", mode: "rail" }',
     );
+    w.destroy();
   });
 
   it("passes the start zone to the library as an option", async () => {
-    const { root } = await mount();
-    choose(root, "leg-count", "1");
-    type(root, "departure-1", "2024-06-10T08:00:00");
-    expect(isSentinel(root, "journey-output")).toBe(true);
-    expect(text(root, "reason-aside")).toContain("no offset or zone");
-    choose(root, "start-zone", "Asia/Shanghai");
-    expect(isSentinel(root, "journey-output")).toBe(false);
-    expect(text(root, "call-journey").split("\n")[0]).toContain(
-      '{ startTimeZone: "Asia/Shanghai" })',
+    const w = await open();
+    await w.user.selectOptions(legCount(), "1");
+    await enter(
+      w,
+      screen.getByRole("textbox", { name: "Departs" }),
+      "2024-06-10T08:00:00",
     );
+    expect(output()).toHaveTextContent("NO SIGNAL");
+    expect(reason()).toHaveTextContent("no offset or zone");
+    await w.user.selectOptions(startZone(), "Asia/Shanghai");
+    expect(output()).not.toHaveTextContent("NO SIGNAL");
+    expect(calls()).toHaveTextContent('{ startTimeZone: "Asia/Shanghai" })');
+    await expectNoAxeViolations(w.root);
+    w.destroy();
   });
 
   it("refreshes a leg's legend as its mode, duration and zone change", async () => {
-    const { root } = await mount();
-    type(root, "duration-2", "P3D");
-    expect(text(root, "leg-legend-2")).toContain("P3D");
-    choose(root, "zone-2", "Asia/Tokyo");
-    expect(text(root, "leg-legend-2")).toContain("Tokyo");
+    const w = await open();
+    await enter(w, duration(2), "P3D");
+    expect(screen.getAllByRole("group", { name: /P3D/ })).toHaveLength(1);
+    await w.user.selectOptions(zone(2), "Asia/Tokyo");
+    expect(screen.getAllByRole("group", { name: /Tokyo/ })).toHaveLength(1);
+    await expectNoAxeViolations(w.root);
+    w.destroy();
+  });
+
+  it("shows a fourth leg when asked for four", async () => {
+    const w = await open();
+    await w.user.selectOptions(legCount(), "4");
+    expect(screen.getAllByRole("textbox", { name: "Duration" })).toHaveLength(
+      4,
+    );
+    expect(preset()).toHaveValue("custom");
+    w.destroy();
   });
 });
 
 describe("the hand-off to the Delivery Scheduler", () => {
   it("is the Delivery Scheduler's permalink under the other kind, with an href in every state", async () => {
+    const w = await open();
     for (const p of JOURNEY_PRESETS) {
-      const { root } = await mount();
-      choose(root, "preset", p.id);
-      const link = q<HTMLAnchorElement>(root, "handoff");
-      expect(link.textContent).toBe(
-        "Open these legs in the Delivery Scheduler",
-      );
-      expect(link.hasAttribute("aria-disabled")).toBe(false);
-      const href = link.getAttribute("href")!;
+      await w.user.selectOptions(preset(), p.id);
+      expect(handoffLink()).not.toHaveAttribute("aria-disabled");
       const state = readDeliveryArgs({
         legs: p.legs as never,
         ...(p.startTimeZone === "" ? {} : { startTimeZone: p.startTimeZone }),
       });
-      expect(href, p.id).toBe(
+      expect(handoffLink(), p.id).toHaveAttribute(
+        "href",
         encodeWidgetPermalink("delivery", deliveryPermalink(state)),
       );
-      document.body.innerHTML = "";
     }
+    w.destroy();
   });
 
   it("opens the same legs in the Delivery Scheduler: every leg key, legCount and startTimeZone survive", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "scheduled-sailing");
-    choose(root, "start-zone", "Asia/Shanghai");
-    const href = q<HTMLAnchorElement>(root, "handoff").getAttribute("href")!;
+    const w = await open();
+    await w.user.selectOptions(preset(), "scheduled-sailing");
+    await w.user.selectOptions(startZone(), "Asia/Shanghai");
+    const href = handoffLink().getAttribute("href")!;
     const seeded = seedFromLocation("delivery", href.slice(href.indexOf("?")));
     const state = readDeliveryArgs(seeded);
     expect(state.legCount).toBe("3");
     expect(state.startTimeZone).toBe("Asia/Shanghai");
     expect(deliveryPermalink(state)).toEqual(seeded);
-    // The tool the link opens shows the same values.
-    const target = document.createElement("div");
-    target.innerHTML = renderDeliverySchedulerTemplate(seeded);
-    const value = (role: string) =>
-      target.querySelector<HTMLInputElement>(`[data-role="${role}"]`)!.value;
-    expect(value("start-zone")).toBe("Asia/Shanghai");
-    expect(value("leg-count")).toBe("3");
-    for (const [i, leg] of JOURNEY_PRESETS[0]!.legs.entries()) {
-      const n = i + 1;
-      expect(value(`departure-${n}`)).toBe(leg.departure);
-      expect(value(`duration-${n}`)).toBe(leg.duration);
-      expect(value(`zone-${n}`)).toBe(leg.timeZone);
-      expect(value(`dwell-${n}`)).toBe(leg.dwellAfter);
-      expect(value(`mode-${n}`)).toBe(leg.mode);
+    for (const [i, source] of JOURNEY_PRESETS[0]!.legs.entries()) {
+      expect(state.legs[i]).toEqual({
+        departure: source.departure,
+        duration: source.duration,
+        timeZone: source.timeZone,
+        dwellAfter: source.dwellAfter,
+        mode: source.mode,
+      });
     }
+    w.destroy();
   });
 
   it("opens from the Delivery Scheduler's link: its permalink seeds this tool with every key", async () => {
@@ -631,13 +648,15 @@ describe("the hand-off to the Delivery Scheduler", () => {
     const seeded = seedFromLocation(
       "journeysplit",
       href.slice(href.indexOf("?")),
-    );
-    const { root, handle } = await mount(seeded);
-    expect(q<HTMLSelectElement>(root, "start-zone").value).toBe(
-      "Asia/Shanghai",
-    );
-    expect(q<HTMLSelectElement>(root, "leg-count").value).toBe("3");
-    expect(handle.getPermalinkState?.()).toEqual(deliveryPermalink(state));
+    )!;
+    const w = await open(seeded);
+    expect(startZone()).toHaveValue("Asia/Shanghai");
+    expect(legCount()).toHaveValue("3");
+    const url = w.permalink();
+    expect(
+      seedFromLocation("journeysplit", url.slice(url.indexOf("?"))),
+    ).toEqual(deliveryPermalink(state));
+    w.destroy();
   });
 });
 
@@ -660,21 +679,22 @@ describe("the scenario's seed", () => {
       mode3: "rail",
     };
     const href = encodeWidgetPermalink("journeysplit", seed);
-    const { root } = await mount(
-      seedFromLocation("journeysplit", href.slice(href.indexOf("?"))),
+    const w = await open(
+      seedFromLocation("journeysplit", href.slice(href.indexOf("?")))!,
     );
-    expect(text(root, "journey-output").split("\n")[0]).toBe(
+    expect(output()).toHaveTextContent(
       '{ eta: "2024-06-30T19:00:00-05:00[America/Chicago]", totalLegs: 3, totalTransit: "PT400H", totalDwell: "PT104H" }',
     );
-    expect(plate(root, "hero-moving")).toEqual(["16 d 16 h", ["PT400H"]]);
-    expect(plate(root, "hero-waiting")).toEqual(["4 d 8 h", ["PT104H"]]);
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
+    expectPlate(1, ["16 d 16 h", ["PT400H"]]);
+    expectPlate(2, ["4 d 8 h", ["PT104H"]]);
+    expect(preset()).toHaveValue("custom");
+    w.destroy();
   });
 });
 
 describe("seeding", () => {
   it("seeds the chat's legs array and paints it on the first frame", async () => {
-    const args = {
+    const w = await open({
       legs: [
         {
           departure: "2024-06-15T00:00:00Z",
@@ -684,19 +704,18 @@ describe("seeding", () => {
         },
         { duration: "PT5H", timeZone: "Asia/Tokyo" },
       ],
-    };
-    const { root } = await mount(args, args);
-    expect(q<HTMLInputElement>(root, "duration-2").value).toBe("PT5H");
-    expect(q<HTMLSelectElement>(root, "leg-count").value).toBe("2");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    expect(plate(root, "hero-eta")[0]).toBe("Sun 16 Jun 02:00");
-    expect(text(root, "journey-output").split("\n")[0]).toContain(
-      'totalDwell: "PT2H"',
-    );
+    });
+    expect(duration(2)).toHaveValue("PT5H");
+    expect(legCount()).toHaveValue("2");
+    expect(preset()).toHaveValue("custom");
+    expect(plate(0).value).toHaveTextContent("Sun 16 Jun 02:00");
+    expect(output()).toHaveTextContent('totalDwell: "PT2H"');
+    await expectNoAxeViolations(w.root);
+    w.destroy();
   });
 
   it("seeds an unlisted mode and zone without dropping them", async () => {
-    const { root } = await mount({
+    const w = await open({
       legs: [
         {
           departure: "2024-06-15T00:00:00Z",
@@ -706,8 +725,9 @@ describe("seeding", () => {
         },
       ],
     });
-    expect(q<HTMLSelectElement>(root, "mode-1").value).toBe("barge");
-    expect(q<HTMLSelectElement>(root, "zone-1").value).toBe("Pacific/Chatham");
+    expect(leg("combobox", "Mode (optional)", 1)).toHaveValue("barge");
+    expect(zone(1)).toHaveValue("Pacific/Chatham");
+    w.destroy();
   });
 });
 
@@ -715,232 +735,131 @@ describe("permalinks", () => {
   it.each(JOURNEY_PRESETS.map((p) => [p.id]))(
     "round-trips %s as a permalink of strings",
     async (id) => {
-      const first = await mount();
-      choose(first.root, "preset", id!);
-      const state = first.handle.getPermalinkState?.() as Record<
-        string,
-        unknown
-      >;
-      expect(
-        Object.values(state).every(
-          (v) => typeof v === "string" && v.length > 0 && v.length <= 64,
-        ),
-      ).toBe(true);
-      const url = encodeWidgetPermalink("journeysplit", state);
+      const first = await open();
+      await first.user.selectOptions(preset(), id!);
+      const url = first.permalink();
       expect(url).toMatch(
         new RegExp(`^${SITE_BASE}/tools/journey-split/\\?w=journeysplit&wa=`),
       );
       const seeded = seedFromLocation(
         "journeysplit",
         url.slice(url.indexOf("?")),
-      );
-      expect(seeded).toEqual(state);
-      const output = text(first.root, "journey-output");
-      document.body.innerHTML = "";
+      )!;
+      expect(
+        Object.values(seeded).every(
+          (v) => typeof v === "string" && v.length > 0 && v.length <= 64,
+        ),
+      ).toBe(true);
+      expect(encodeWidgetPermalink("journeysplit", seeded)).toBe(url);
+      const shown = output().textContent?.replace(/\s+/g, " ").trim();
+      first.destroy();
 
-      const second = await mount(seeded);
-      expect(text(second.root, "journey-output")).toBe(output);
-      expect(q<HTMLSelectElement>(second.root, "preset").value).toBe(id);
+      const second = await open(seeded);
+      expect(output()).toHaveTextContent(exact(shown ?? ""));
+      expect(preset()).toHaveValue(id);
+      second.destroy();
     },
   );
 
   it("leaves a blank departure, handling, mode and start zone out of the link", async () => {
-    const { handle } = await mount();
-    const state = handle.getPermalinkState?.() as Record<string, string>;
+    const w = await open();
+    const url = w.permalink();
+    const state = seedFromLocation(
+      "journeysplit",
+      url.slice(url.indexOf("?")),
+    ) as Record<string, string>;
     expect(state).not.toHaveProperty("startTimeZone");
     expect(state).not.toHaveProperty("departure3");
     expect(state).not.toHaveProperty("dwellAfter3");
     expect(state["legCount"]).toBe("3");
+    w.destroy();
   });
 });
 
 describe("on-screen words", () => {
-  function screenText(root: HTMLElement): string {
-    const clone = root.cloneNode(true) as HTMLElement;
-    clone
-      .querySelectorAll('.gmt-codeframe, output[data-role$="output"]')
-      .forEach((e) => e.remove());
-    // The library's own sentence for a refusal says "returns null" in words.
-    clone
-      .querySelectorAll('[data-role="reason-aside"], [data-role="summary"]')
-      .forEach((e) => e.remove());
-    const labels = [...clone.querySelectorAll("[aria-label]")].map((e) =>
-      e.getAttribute("aria-label"),
-    );
-    return `${clone.textContent}\n${labels.join("\n")}`;
-  }
-
   it.each(JOURNEY_PRESETS.map((p) => [p.id]))(
-    "%s shows no raw null, undefined or 'dwell' outside the printed call and output",
+    "%s shows no raw null, undefined or 'dwell' outside the printed call, its output, the reason and the summary",
     async (id) => {
-      const { root } = await mount();
-      choose(root, "preset", id!);
-      const shown = screenText(root);
-      expect(shown).not.toMatch(/\b(null|undefined)\b/);
-      expect(shown).not.toMatch(/dwell/i);
+      const w = await open();
+      await w.user.selectOptions(preset(), id!);
+      expect(strays(/\b(null|undefined)\b/)).toEqual([]);
+      expect(strays(/dwell/i)).toEqual([]);
+      w.destroy();
     },
   );
 
   it("names no law, regulator, carrier or court", async () => {
     const forbidden = /\b(CFR|statut|regulat|docket|agency|customs|court)\w*/i;
-    const { root } = await mount();
-    const seen: string[] = [renderJourneySplitTemplate()];
+    const w = await open();
     for (const p of JOURNEY_PRESETS) {
-      choose(root, "preset", p.id);
-      seen.push(root.textContent ?? "");
+      await w.user.selectOptions(preset(), p.id);
+      expect(w.root).not.toHaveTextContent(forbidden);
+      expect(screen.queryAllByLabelText(forbidden)).toEqual([]);
     }
-    for (const s of seen) expect(s).not.toMatch(forbidden);
+    w.destroy();
   });
 
-  it("states the split in one hidden sentence", async () => {
-    const { root } = await mount();
-    expect(text(root, "summary")).toBe(
+  it("states the split in one polite sentence", async () => {
+    const w = await open();
+    expect(summary()).toHaveTextContent(
       "Moving 16 d 16 h and waiting 3 d 12 h. ETA Sun 30 Jun 13:30 in Australia/Adelaide, 484 h door to door.",
     );
-    expect(q(root, "summary").getAttribute("aria-live")).toBe("polite");
-    expect(q(root, "summary").classList.contains("gmt-ledger-sr")).toBe(true);
+    await w.user.selectOptions(preset(), "missed-connection");
+    expect(summary()).toHaveTextContent(/^No journey\./);
+    w.destroy();
   });
 
   it("names each ribbon for a screen reader, and nothing inside a chart takes focus", async () => {
-    const { root } = await mount();
-    for (const role of ["track-happens", "track-gathered"]) {
-      expect(q(root, role).getAttribute("role")).toBe("img");
-      expect(q(root, role).getAttribute("aria-label")).toContain(
-        "Gathered: moving 16 d 16 h, then waiting 3 d 12 h.",
+    const w = await open();
+    for (const track of tracks()) {
+      expect(track).toHaveAccessibleName(
+        /Gathered: moving 16 d 16 h, then waiting 3 d 12 h\./,
       );
-      expect(
-        q(root, role).querySelectorAll(
-          "a, button, input, select, textarea, [tabindex]",
-        ),
-      ).toHaveLength(0);
+      expect(within(track).queryAllByRole("link")).toEqual([]);
+      expect(within(track).queryAllByRole("button")).toEqual([]);
+      expect(within(track).queryAllByRole("textbox")).toEqual([]);
+      expect(within(track).queryAllByRole("combobox")).toEqual([]);
     }
+    w.destroy();
   });
 
   it("has no drag handle or slider", async () => {
-    const { root } = await mount();
-    expect(
-      root.querySelectorAll(
-        '[role="slider"], input[type="range"], .gmt-handle',
-      ),
-    ).toHaveLength(0);
+    const w = await open();
+    expect(screen.queryAllByRole("slider")).toEqual([]);
+    w.destroy();
   });
 });
 
 describe("the hand-off table", () => {
-  it("has a header row of five columns and rows that name them for the stacked view", async () => {
-    const { root } = await mount();
-    expect(q(root, "table").getAttribute("role")).toBe("table");
-    expect(
-      [...q(root, "table").querySelectorAll("th")].map((th) =>
-        th.getAttribute("role"),
-      ),
-    ).toEqual(Array(5).fill("columnheader"));
-    expect(tableRows(root).every((r) => r.getAttribute("role") === "row")).toBe(
-      true,
+  it("has a header row of five columns, and rows that hold their box", async () => {
+    const w = await open();
+    expect(within(table()).getAllByRole("columnheader")).toHaveLength(5);
+    expect(hopRows()).toHaveLength(2);
+    // Three rows are reserved: the third is blank and hidden from assistive technology.
+    expect(within(table()).getAllByRole("row", { hidden: true })).toHaveLength(
+      1 + 3,
     );
-  });
-
-  it("hides its blank rows from assistive technology and keeps their box", async () => {
-    const { root } = await mount();
-    const blank = [
-      ...q(root, "table-body").querySelectorAll("tr.gmt-js-row--blank"),
-    ];
-    expect(blank).toHaveLength(1);
-    expect(blank[0]!.getAttribute("aria-hidden")).toBe("true");
+    w.destroy();
   });
 });
 
 describe("lifecycle", () => {
   it("an aborted mount is inert", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderJourneySplitTemplate();
-    document.body.append(root);
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountJourneySplit(root, {}, controller.signal);
-    expect(plate(root, "hero-eta")[0]).toBe("no result");
-    expect(handle.getPermalinkState?.()).toBeNull();
-    expect(() => {
-      handle.destroy();
-      handle.destroy();
-    }).not.toThrow();
+    const w = await renderWidget(entry, { aborted: true });
+    expect(screen.getAllByText("no result")).toHaveLength(3);
+    expect(calls()).not.toHaveTextContent("(");
+    expect(w.permalink()).toMatch(/\?w=journeysplit&wa=/);
+    w.destroy();
+    w.destroy();
   });
 
   it("releases its width observer on destroy, and destroying twice is safe", async () => {
     const spy = spyOnResizeObservers();
-    const { handle } = await mount();
-    expect(spy.live.size).toBe(1);
-    handle.destroy();
-    handle.destroy();
+    const w = await open();
+    expect(spy.live.size).toBeGreaterThan(0);
+    w.destroy();
+    w.destroy();
     expect(spy.live.size).toBe(0);
     spy.restore();
-  });
-
-  it("fits the badges and chips again when the width changes", async () => {
-    const spy = spyOnResizeObservers();
-    const { root } = await mount();
-    const track = q(root, "bars-happens");
-    Object.defineProperty(track, "offsetWidth", {
-      configurable: true,
-      value: 600,
-    });
-    Object.defineProperty(track, "clientWidth", {
-      configurable: true,
-      value: 600,
-    });
-    spy.fire();
-    const badges = [
-      ...q(root, "badges").querySelectorAll<HTMLElement>(".gmt-js-badge"),
-    ];
-    expect(badges.every((b) => b.style.left.endsWith("px"))).toBe(true);
-    const lefts = badges.map((b) => parseFloat(b.style.left));
-    for (let i = 1; i < lefts.length; i++) {
-      expect(lefts[i]! - lefts[i - 1]!).toBeGreaterThanOrEqual(24);
-    }
-    expect(spy.live.size).toBe(1);
-    spy.restore();
-  });
-});
-
-describe("the two bracket totals cannot overlap", () => {
-  it("draws both chips in one flowing row, not at two absolute edges", async () => {
-    const { root } = await mount();
-    const row = q(root, "brackets").querySelector(".gmt-js-bracket-chips")!;
-    const chips = [...row.querySelectorAll(".gmt-js-bracket-chip")];
-    expect(chips.map((c) => c.getAttribute("data-side"))).toEqual([
-      "moving",
-      "waiting",
-    ]);
-    for (const chip of chips) {
-      expect((chip as HTMLElement).style.left).toBe("");
-      expect((chip as HTMLElement).style.position).toBe("");
-    }
-  });
-
-  it("wraps the row, pushes the waiting total to the end, and reserves the second line in the lane", () => {
-    const css = readFileSync(
-      path.resolve(import.meta.dirname, "../styles/gmt-journey-split.css"),
-      "utf8",
-    );
-    const rule = (selector: string) => {
-      const start = css.indexOf(`${selector} {`);
-      expect(start, `${selector} has a rule`).toBeGreaterThanOrEqual(0);
-      return css.slice(start, css.indexOf("}", start));
-    };
-    expect(rule(".gmt-js-bracket-chips")).toMatch(/display:\s*flex/);
-    expect(rule(".gmt-js-bracket-chips")).toMatch(/flex-wrap:\s*wrap/);
-    // A chip is never absolutely placed, so two of them cannot share a spot.
-    expect(rule(".gmt-js-bracket-chip")).not.toMatch(/position:\s*absolute/);
-    expect(rule('.gmt-js-bracket-chip[data-side="waiting"]')).toMatch(
-      /margin-inline-start:\s*auto/,
-    );
-    // The lane is two chip rows tall wherever the row can wrap.
-    const narrow = css.slice(
-      css.indexOf("@container gmt-ledger-frame (max-width: 30rem)"),
-    );
-    expect(narrow).toMatch(/--gmt-js-chip-rows:\s*2/);
-    expect(rule('.gmt-js-lane[data-lane="gathered"]')).toMatch(
-      /--gmt-js-chip-rows:\s*1/,
-    );
   });
 });

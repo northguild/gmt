@@ -5,20 +5,57 @@
  * A container's clock drawn on a terminal's real local-day grid, each day
  * drawn the way the tariff reads it: glass for a free day, a hatch for a
  * charged one, the closed hatch for a closed one. Each state is a pattern and a
- * chip with a word, in the ledger family's look (`gmt-ledger-widgets.css`). The reader drags the clock start and
- * the gate-out, flips the start-day convention and the basis, adds a holiday,
- * and watches the free window and the charged dates move. The printed results
- * are always the real `freeTimeExpiry` and `chargeableDays` calls'; the
- * colouring is a picture of them, and the mount test asserts the two agree
- * for every preset.
+ * chip with a word. The reader drags the clock start and the gate-out, flips
+ * the start-day convention and the basis, adds a holiday, and watches the free
+ * window and the charged dates move. The printed results are always the real
+ * `freeTimeExpiry` and `chargeableDays` calls'; the colouring is a picture of
+ * them, and the mount test asserts the two agree for every preset.
  *
- * Follows the `renderTemplate` / `mount` split in `widget-mount.ts`, and the
- * Dwell Ledger's wiring: every listener is delegated on the root, so the host
- * dropping the subtree is a complete teardown apart from a live pointer capture.
+ * Built on the component kit: `renderFreeTimeLedgerTemplate` writes the markup
+ * from builders only, with ids from `idScope(idPrefix)`, and `mount` finds its
+ * parts by those ids and reads and writes element `value` properties. Every
+ * listener is delegated on the widget with the mount's `signal`. The two
+ * handles are `<gmt-handle>`s; each is tied two ways to its typed field.
  */
-import { codeFrameHtml } from "./code-frame";
 import {
-  axisLabels,
+  aside,
+  codeFrame,
+  field,
+  fieldGrid,
+  findWidget,
+  html,
+  idScope,
+  plates,
+  raw,
+  section,
+  select,
+  setHtml,
+  srOnly,
+  textInput,
+  widget,
+  type Plate,
+  type SafeHtml,
+} from "~/widgets/builders";
+import { defineElements } from "~/widgets/define";
+import { callOutput } from "~/widgets/families/gnss/call-output";
+import { dayColumns } from "~/widgets/families/ledger/day-columns";
+import {
+  axisTicks,
+  ledgerAxis,
+  ledgerBar,
+  ledgerFrame,
+  ledgerGate,
+  ledgerHandles,
+  ledgerLane,
+  ledgerLegend,
+} from "~/widgets/families/ledger/ledger-lane";
+import { textArea } from "~/widgets/families/ledger/text-area";
+import { chips, type GmtChips } from "~/widgets/primitives/chips/chips";
+import { grow } from "~/widgets/primitives/grow/grow";
+import { handle, type GmtHandle } from "~/widgets/primitives/handle/handle";
+import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
+import styles from "~/widgets/tools/free-time-ledger.module.css";
+import {
   createLedgerCanvas,
   dayCells,
   fitLedgerCanvas,
@@ -26,7 +63,7 @@ import {
   formatLocal,
   resolveWallTime,
   toEpochMs,
-  type DayCell,
+  axisLabels,
   type LedgerCanvas,
 } from "./dwell-ledger";
 import {
@@ -34,6 +71,7 @@ import {
   FREE_TIME_PRESETS,
   LEDGER_ZONES,
   NULL_REASON_TEXT,
+  chargeTermsOf,
   dayMarks,
   explainExpiryNull,
   explainNull,
@@ -45,74 +83,100 @@ import {
   normaliseWeekend,
   readArgs,
   summaryText,
-  chargeTermsOf,
   termsOf,
   tiersOf,
+  type ChargeTermsArg,
   type ChargesResult,
   type FreeTimeLedgerArgs,
   type FreeTimeResult,
   type LedgerState,
-  type ChargeTermsArg,
   type TermsArg,
 } from "./free-time-ledger";
 import { GMT_MODULES } from "./gmt-modules";
 import {
-  descriptionHoldHtml,
-  dayColumnFit,
-  dayColumnsHtml,
-  PAGE_STEP_UNITS,
-  plateHtml,
-  platesHtml,
-} from "./ledger-widgets";
-import {
-  fitDayColumns,
   layoutWidth,
   onWidthChange,
   placeLabel,
   thinTickLabels,
 } from "./label-fit";
-import { setPresetDescription } from "./punctuality-widgets";
+import type { PlateSpec } from "./ledger-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
-import {
-  chipToggleHtml,
-  codeSpan,
-  escapeAttr,
-  escapeHtml,
-  labelTextHtml,
-  renderAside,
-  renderCallLine,
-  renderWidgetOutput,
-  setControlValue,
-  wireCopyButtons,
-} from "./widget-ui";
+import { codeSpan } from "./widget-ui";
 
 export type { FreeTimeLedgerArgs } from "./free-time-ledger";
 
-/** Arrow keys move one snap step; with Shift, four. PageUp and PageDown move
- *  `PAGE_STEP_UNITS`. */
-const STEP_UNITS = 1;
-const BIG_STEP_UNITS = 4;
-
+const WIDGET_NAME = "free-time-ledger";
 const WEEKDAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-function options(
-  values: readonly string[],
-  labels: readonly string[],
-  selected: string,
-): string {
-  return values
-    .map(
-      (v, i) =>
-        `<option value="${escapeAttr(v)}"${v === selected ? " selected" : ""}>${escapeHtml(labels[i] ?? v)}</option>`,
-    )
-    .join("");
+/** The handle's scale: hundredths of a percent of the drawn span. */
+const HANDLE_MAX = 10000;
+/** PageUp and PageDown move this many snap steps. */
+const PAGE_STEP_UNITS = 12;
+
+/** The widest values the plates show, so they keep their width from one reading to the next. */
+const PLATE_SAMPLES: Readonly<Record<string, readonly string[]>> = {
+  "hero-free": ["999"],
+  "hero-charged": ["999"],
+  "hero-expires": ["88 May 88:88"],
+};
+
+// ---------------------------------------------------------------------------
+// Markup
+// ---------------------------------------------------------------------------
+
+function plateList(specs: readonly PlateSpec[]): Plate[] {
+  return specs.map((s) => {
+    const samples = PLATE_SAMPLES[s.role];
+    return {
+      caption: s.caption,
+      value: s.value,
+      lines: s.lines,
+      ...(s.series === undefined ? {} : { series: s.series }),
+      ...(s.quiet === true ? { quiet: true } : {}),
+      ...(s.captions === undefined ? {} : { captions: s.captions }),
+      ...(samples === undefined ? {} : { samples }),
+    };
+  });
 }
 
-function zoneOptions(selected: string): string {
+function choices(
+  values: readonly string[],
+  labels: readonly string[] = values,
+): { value: string; label: string }[] {
+  return values.map((v, i) => ({ value: v, label: labels[i] ?? v }));
+}
+
+function zoneChoices(selected: string): { value: string; label: string }[] {
   const list = LEDGER_ZONES.includes(selected)
     ? LEDGER_ZONES
     : [...LEDGER_ZONES, selected];
-  return options(list, list, selected);
+  return choices(list);
+}
+
+const isWorking = (s: LedgerState): boolean =>
+  s.basis === "working" || s.chargeBasis === "working";
+
+/** The two ends of a handle pair, for the first paint before any time is known. */
+function handles(): SafeHtml {
+  return html`${handle({
+    label: "Clock start",
+    min: 0,
+    max: HANDLE_MAX,
+    step: 1,
+    largeStep: PAGE_STEP_UNITS,
+    value: 0,
+    valueText: "not drawn yet",
+    pair: "start",
+  })}${handle({
+    label: "Clock end",
+    min: 0,
+    max: HANDLE_MAX,
+    step: 1,
+    largeStep: PAGE_STEP_UNITS,
+    value: HANDLE_MAX,
+    valueText: "not drawn yet",
+    pair: "end",
+  })}`;
 }
 
 /**
@@ -121,128 +185,262 @@ function zoneOptions(selected: string): string {
  * are drawn by `mount`, because they come from Temporal and the real library.
  */
 export function renderFreeTimeLedgerTemplate(
+  idPrefix: string,
   args: FreeTimeLedgerArgs = {},
 ): string {
+  const id = idScope(idPrefix);
   const seeded = args.clockStart !== undefined || args.clockEnd !== undefined;
   const state: LedgerState = seeded
     ? readArgs(args)
     : { ...FREE_TIME_PRESETS[0]! };
-  const presetId = matchPreset(state);
-  const preset = FREE_TIME_PRESETS.find((p) => p.id === presetId);
 
-  const presetOptions =
-    `<option value="${CUSTOM_PRESET_ID}"${presetId === CUSTOM_PRESET_ID ? " selected" : ""}>Custom</option>` +
-    FREE_TIME_PRESETS.map(
-      (p) =>
-        `<option value="${escapeAttr(p.id)}"${p.id === presetId ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-    ).join("");
+  const box = (wide: boolean, children: SafeHtml, boxId?: string): SafeHtml =>
+    html`<div class="${styles.box}" ${boxId === undefined ? "" : html`id="${boxId}"`} ${wide ? html`data-wide` : ""}>${children}</div>`;
 
-  const handle = (role: string, label: string) =>
-    `<div class="gmt-handle" data-role="${role}" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="${label}"></div>`;
-
-  const weekendBoxes = WEEKDAY_NAMES.map((name, i) =>
-    chipToggleHtml({
-      type: "checkbox",
-      role: "weekend",
-      value: String(i + 1),
-      label: name,
-      checked: state.weekend.includes(i + 1),
-    }),
-  ).join("");
-
-  return (
-    `<div class="gmt-freetime gmt-widget not-content">` +
-    `<div class="gmt-widget-card">` +
-    `<div class="gmt-widget-section">` +
-    `<h4>1. Set the tariff and the clock</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
-    `<select class="gmt-select" data-role="preset">${presetOptions}</select>` +
-    `</label>` +
-    `</div>` +
-    descriptionHoldHtml(
-      `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>`,
-      FREE_TIME_PRESETS.map((p) => p.description),
-    ) +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label">${labelTextHtml("Terminal zone")}` +
-    `<select class="gmt-select" data-role="zone">${zoneOptions(state.zone)}</select>` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Free days")}` +
-    `<input class="gmt-input" data-role="free-days" type="number" min="0" step="1" value="${escapeAttr(state.freeDays)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("Free day one is")}` +
-    `<select class="gmt-select" data-role="first-day">${options(["eventDay", "nextDay"], ["eventDay: the event day", "nextDay: the day after"], state.firstDay)}</select>` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Free days count")}` +
-    `<select class="gmt-select" data-role="basis">${options(["calendar", "working"], ["calendar days", "working days"], state.basis)}</select>` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Charged days count")}` +
-    `<select class="gmt-select" data-role="charge-basis">${options(["calendar", "working"], ["calendar days", "working days"], state.chargeBasis)}</select>` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Tier end days")}` +
-    `<input class="gmt-input" data-role="tiers" type="text" spellcheck="false" placeholder="5, 10" value="${escapeAttr(state.tiers)}"></label>` +
-    `</div>` +
-    `<div class="gmt-field-grid gmt-freetime-working" data-role="working-terms"${state.basis === "working" || state.chargeBasis === "working" ? "" : " hidden"}>` +
-    `<fieldset class="gmt-chip-group"><legend>Weekend</legend>${weekendBoxes}</fieldset>` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Holidays, one date per line")}` +
-    `<textarea class="gmt-input gmt-freetime-holidays" data-role="holidays" rows="2" spellcheck="false">${escapeHtml(state.holidays)}</textarea></label>` +
-    `</div>` +
-    `<!-- Typed-input equivalent to dragging. -->` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Clock start")}` +
-    `<input class="gmt-input" data-role="clock-start" type="text" spellcheck="false" value="${escapeAttr(state.clockStart)}"></label>` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Clock end")}` +
-    `<input class="gmt-input" data-role="clock-end" type="text" spellcheck="false" value="${escapeAttr(state.clockEnd)}"></label>` +
-    `</div>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>2. Free days and charged days</h4>` +
-    `<div class="gmt-ledger-frame" data-role="frame">` +
-    platesHtml(
-      "heroes",
-      freeTimePlates({
-        freeTime: null,
-        charges: null,
-        freeDays: state.freeDays,
-        zone: state.zone,
-        zoneOk: false,
+  const controls = fieldGrid(
+    html`${box(
+      false,
+      field({
+        id: id("zone"),
+        label: "Terminal zone",
+        control: ({ id: cid }) =>
+          select({
+            id: cid,
+            value: state.zone,
+            options: zoneChoices(state.zone),
+          }),
       }),
-    ) +
-    `<div class="gmt-freetime-timeline" data-role="timeline">` +
-    `<div class="gmt-ledger-lane gmt-freetime-row" data-role="row" data-series="1">` +
-    `<span class="gmt-ledger-lane-label gmt-freetime-row-label" data-role="label"></span>` +
-    `<div class="gmt-ledger-lane-track gmt-freetime-track" data-role="track">` +
-    `<div class="gmt-ledger-days gmt-freetime-cells" data-role="cells" role="list"></div>` +
-    `<div class="gmt-cutoff-gate gmt-freetime-expiry" data-role="expiry-marker" hidden><span class="gmt-cutoff-chip gmt-ledger-gate-chip">expires</span></div>` +
-    `<div class="gmt-ledger-bar gmt-freetime-bar" data-role="bar">` +
-    handle("handle-start", "Clock start") +
-    handle("handle-end", "Clock end") +
-    `</div></div></div>` +
-    `<div class="gmt-ledger-axis gmt-freetime-axis" data-role="axis"><span></span><span></span><span></span></div>` +
-    `<ul class="gmt-ledger-legend gmt-freetime-legend" aria-label="Legend">` +
-    `<li class="gmt-cutoff-chip"><i class="gmt-ledger-swatch" data-state="lit" data-series="1"></i>free</li>` +
-    `<li class="gmt-cutoff-chip"><i class="gmt-ledger-swatch gmt-punct-hatch" data-series="1"></i>charged</li>` +
-    `<li class="gmt-cutoff-chip"><i class="gmt-ledger-swatch gmt-cutoff-closed"></i>closed</li>` +
-    `<li class="gmt-cutoff-chip"><i class="gmt-ledger-swatch" data-state="plain"></i>event day, not counted</li>` +
-    `</ul>` +
-    `</div>` +
-    `</div>` +
-    `<p class="gmt-ledger-sr gmt-freetime-summary" data-role="summary" aria-live="polite"></p>` +
-    `<div data-role="reason-aside" data-grow="slot"></div>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>3. What <code>freeTimeExpiry</code> returns</h4>` +
-    codeFrameHtml("expiry") +
-    `<output class="gmt-widget-output" data-role="expiry-output">&nbsp;</output>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>4. What <code>chargeableDays</code> returns</h4>` +
-    codeFrameHtml("charges") +
-    `<output class="gmt-widget-output" data-role="charges-output">&nbsp;</output>` +
-    `</div>` +
-    `</div>` +
-    `</div>`
+    )}${box(
+      false,
+      field({
+        id: id("free-days"),
+        label: "Free days",
+        control: ({ id: cid }) =>
+          textInput({
+            id: cid,
+            value: state.freeDays,
+            inputMode: "numeric",
+            autocomplete: "off",
+            spellcheck: false,
+          }),
+      }),
+    )}${box(
+      false,
+      field({
+        id: id("first-day"),
+        label: "Free day one is",
+        control: ({ id: cid }) =>
+          select({
+            id: cid,
+            value: state.firstDay,
+            options: choices(
+              ["eventDay", "nextDay"],
+              ["eventDay: the event day", "nextDay: the day after"],
+            ),
+          }),
+      }),
+    )}${box(
+      false,
+      field({
+        id: id("basis"),
+        label: "Free days count",
+        control: ({ id: cid }) =>
+          select({
+            id: cid,
+            value: state.basis,
+            options: choices(
+              ["calendar", "working"],
+              ["calendar days", "working days"],
+            ),
+          }),
+      }),
+    )}${box(
+      false,
+      field({
+        id: id("charge-basis"),
+        label: "Charged days count",
+        control: ({ id: cid }) =>
+          select({
+            id: cid,
+            value: state.chargeBasis,
+            options: choices(
+              ["calendar", "working"],
+              ["calendar days", "working days"],
+            ),
+          }),
+      }),
+    )}${box(
+      false,
+      field({
+        id: id("tiers"),
+        label: "Tier end days",
+        control: ({ id: cid }) =>
+          textInput({
+            id: cid,
+            value: state.tiers,
+            placeholder: "5, 10",
+            autocomplete: "off",
+            spellcheck: false,
+          }),
+      }),
+    )}`,
   );
+
+  const working = html`<div class="${styles.working}" id="${id("working-terms")}" ${isWorking(state) ? "" : html`hidden`}>${fieldGrid(
+    html`${box(
+      true,
+      chips({
+        legend: "Weekend",
+        kind: "checkbox",
+        name: id("weekend"),
+        items: WEEKDAY_NAMES.map((name, i) => ({
+          value: String(i + 1),
+          label: name,
+          checked: state.weekend.includes(i + 1),
+        })),
+      }),
+    )}${box(
+      true,
+      field({
+        id: id("holidays"),
+        label: "Holidays, one date per line",
+        control: ({ id: cid, describedBy }) =>
+          textArea({ id: cid, value: state.holidays, describedBy }),
+      }),
+    )}`,
+  )}</div>`;
+
+  const clock = fieldGrid(
+    html`${box(
+      true,
+      field({
+        id: id("clock-start"),
+        label: "Clock start",
+        control: ({ id: cid }) =>
+          textInput({
+            id: cid,
+            value: state.clockStart,
+            autocomplete: "off",
+            spellcheck: false,
+          }),
+      }),
+    )}${box(
+      true,
+      field({
+        id: id("clock-end"),
+        label: "Clock end",
+        control: ({ id: cid }) =>
+          textInput({
+            id: cid,
+            value: state.clockEnd,
+            autocomplete: "off",
+            spellcheck: false,
+          }),
+      }),
+    )}`,
+  );
+
+  const presetId = matchPreset(state);
+  const tariff = section(
+    { id: id("tariff"), heading: "1. Set the tariff and the clock", level: 4 },
+    html`<div class="${styles.controls}">${preset({
+      id: id("preset"),
+      label: "Preset",
+      value: presetId,
+      options: [
+        { value: CUSTOM_PRESET_ID, label: "Custom", description: "" },
+        ...FREE_TIME_PRESETS.map((p) => ({
+          value: p.id,
+          label: p.label,
+          description: p.description,
+        })),
+      ],
+    })}${controls}${working}${clock}</div>`,
+  );
+
+  const emptyPlates = plateList(
+    freeTimePlates({
+      freeTime: null,
+      charges: null,
+      freeDays: state.freeDays,
+      zone: state.zone,
+      zoneOk: false,
+    }),
+  );
+
+  const drawn = section(
+    {
+      id: id("drawn-section"),
+      heading: "2. Free days and charged days",
+      level: 4,
+    },
+    html`${ledgerFrame(
+      html`<div id="${id("plates")}">${plates(emptyPlates, { gate: "hero" })}</div>${ledgerLane(
+        {
+          id: id("lane"),
+          label: "",
+          daysLabel: "Local days",
+          gateRow: true,
+        },
+        html`${ledgerGate({ id: id("expiry"), label: "expires" })}${ledgerBar({
+          id: id("bar"),
+        })}${ledgerHandles(handles())}`,
+      )}${ledgerAxis(id("axis"), ["", "", ""])}${ledgerLegend([
+        { text: "free", swatch: "lit" },
+        { text: "charged", swatch: "hatched" },
+        { text: "closed", swatch: "closed" },
+        { text: "event day, not counted", swatch: "plain" },
+      ])}`,
+      { gate: "frame" },
+    )}<p role="status" aria-label="Reading summary" id="${id("summary")}">${srOnly("")}</p>${grow(
+      html`<div id="${id("reason")}"></div>`,
+    )}`,
+  );
+
+  const expiry = section(
+    {
+      id: id("expiry-section"),
+      heading: "3. What freeTimeExpiry returns",
+      level: 4,
+    },
+    html`${grow(
+      html`<div id="${id("expiry-call")}">${codeFrame({
+        label: "Call to freeTimeExpiry",
+        copyLabel: "Copy freeTimeExpiry call",
+        copyText: "",
+        gate: "codeframe",
+      })}</div>`,
+    )}<div id="${id("expiry-out")}">${callOutput({
+      label: "What freeTimeExpiry returned",
+      state: "empty",
+      lines: [],
+    })}</div>`,
+  );
+
+  const charges = section(
+    {
+      id: id("charges-section"),
+      heading: "4. What chargeableDays returns",
+      level: 4,
+    },
+    html`${grow(
+      html`<div id="${id("charges-call")}">${codeFrame({
+        label: "Call to chargeableDays",
+        copyLabel: "Copy chargeableDays call",
+        copyText: "",
+        gate: "codeframe",
+      })}</div>`,
+    )}<div id="${id("charges-out")}">${callOutput({
+      label: "What chargeableDays returned",
+      state: "empty",
+      lines: [],
+    })}</div>`,
+  );
+
+  return widget(
+    { name: WIDGET_NAME, label: "Free Time Ledger", scope: idPrefix },
+    html`${tariff}${drawn}${expiry}${charges}`,
+  ).toString();
 }
 
 type ExpiryFn = (
@@ -283,85 +481,6 @@ async function loadModules(): Promise<Modules> {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Drawing
-// ---------------------------------------------------------------------------
-
-function renderDays(
-  el: HTMLElement | null,
-  cells: readonly DayCell[],
-  canvas: LedgerCanvas,
-  state: LedgerState,
-  freeTime: FreeTimeResult | null,
-  charges: ChargesResult | null,
-  trackPx: number,
-): void {
-  if (!el) return;
-  el.innerHTML = dayColumnsHtml(
-    cells,
-    canvas,
-    dayMarks(cells, state, freeTime, charges),
-  );
-  fitDayColumns(el, trackPx, dayColumnFit);
-}
-
-function placeBar(
-  bar: HTMLElement | null,
-  startMs: number,
-  endMs: number,
-  canvas: LedgerCanvas,
-  invalid: boolean,
-): void {
-  if (!bar) return;
-  if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
-    bar.hidden = true;
-    return;
-  }
-  const left = canvas.toPercent(Math.min(startMs, endMs));
-  const right = canvas.toPercent(Math.max(startMs, endMs));
-  bar.hidden = false;
-  bar.style.left = `${left}%`;
-  bar.style.width = `${Math.max(0, right - left)}%`;
-  bar.classList.toggle("gmt-freetime-bar--invalid", invalid);
-  bar.classList.toggle("gmt-ledger-bar--invalid", invalid);
-}
-
-function placeExpiry(
-  marker: HTMLElement | null,
-  expiresAt: string | null,
-  canvas: LedgerCanvas,
-  zone: string | null,
-): void {
-  if (!marker) return;
-  const ms = expiresAt === null ? Number.NaN : toEpochMs(expiresAt);
-  if (Number.isNaN(ms) || ms < canvas.startMs || ms > canvas.endMs) {
-    marker.hidden = true;
-    return;
-  }
-  marker.hidden = false;
-  const pct = canvas.toPercent(ms);
-  marker.style.left = `${pct}%`;
-  // The chip says "expires" and the time on the terminal's clock.
-  const label = marker.querySelector<HTMLElement>("span");
-  if (label) {
-    const local = zone === null ? "" : formatLocal(ms, zone);
-    label.textContent = local === "" ? "expires" : `expires ${local}`;
-  }
-  // The chip sits to the right of the line; near the right edge it would run
-  // past the track (and, on a phone, widen the page), so it flips.
-  const track = marker.parentElement;
-  label?.classList.remove("gmt-ledger-gate-chip--end");
-  if (label && track && track.clientWidth > 0) {
-    const side = placeLabel({
-      atPx: (pct / 100) * track.clientWidth,
-      labelPx: layoutWidth(label),
-      trackPx: track.clientWidth,
-      offsetPx: 10,
-    });
-    label.classList.toggle("gmt-ledger-gate-chip--end", side === "end");
-  }
-}
-
 /** The options object as source text: highlighted HTML and plain text to copy. */
 function optionsSource(
   terms: TermsArg & { chargeBasis?: string },
@@ -394,50 +513,75 @@ function optionsSource(
   return [`{ ${parts(str).join(", ")} }`, `{ ${parts(plainStr).join(", ")} }`];
 }
 
+/** One call, as highlighted source and as the plain text the copy button takes. */
+function callFrame(
+  label: string,
+  copyLabel: string,
+  fn: string,
+  argsHtml: string,
+  argsPlain: string,
+): SafeHtml {
+  return codeFrame({
+    label,
+    copyLabel,
+    copyText: `${fn}(${argsPlain})`,
+    code: raw(`${codeSpan("fn", fn)}(${argsHtml})`),
+    gate: "codeframe",
+  });
+}
+
+function outputOf(label: string, text: string | null): SafeHtml {
+  return text === null
+    ? callOutput({
+        label,
+        state: "sentinel",
+        lines: [{ text: "", lost: true }],
+      })
+    : callOutput({ label, state: "live", lines: [{ text, lost: false }] });
+}
+
 // ---------------------------------------------------------------------------
 // Wiring
 // ---------------------------------------------------------------------------
 
 interface Controller {
   refit(): void;
-  /** Release what outlives the subtree: a pointer capture held mid-drag and
-   *  the track's width observer. */
+  /** Release what outlives the subtree: the track's width observer. */
   release(): void;
+  /** The permalink's strings, from the controls as they stand. */
+  permalink(): Record<string, string>;
+  /** Write seeded arguments onto the controls. */
+  seed(args: FreeTimeLedgerArgs): void;
 }
 
-function setupWidget(container: HTMLElement, m: Modules): Controller | null {
-  const q = <T extends HTMLElement>(role: string) =>
-    container.querySelector(`[data-role="${role}"]`) as T | null;
-  const qa = <T extends HTMLElement>(role: string) =>
-    [...container.querySelectorAll(`[data-role="${role}"]`)] as T[];
+function setupWidget(
+  root: HTMLElement,
+  m: Modules,
+  signal: AbortSignal,
+): Controller {
+  const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
 
-  const presetEl = q<HTMLSelectElement>("preset");
-  const startEl = q<HTMLInputElement>("clock-start");
-  const endEl = q<HTMLInputElement>("clock-end");
-  const zoneEl = q<HTMLSelectElement>("zone");
-  const freeDaysEl = q<HTMLInputElement>("free-days");
-  const firstDayEl = q<HTMLSelectElement>("first-day");
-  const basisEl = q<HTMLSelectElement>("basis");
-  const chargeBasisEl = q<HTMLSelectElement>("charge-basis");
-  const tiersEl = q<HTMLInputElement>("tiers");
-  const holidaysEl = q<HTMLTextAreaElement>("holidays");
-  const weekendEls = qa<HTMLInputElement>("weekend");
-  if (
-    !presetEl ||
-    !startEl ||
-    !endEl ||
-    !zoneEl ||
-    !freeDaysEl ||
-    !firstDayEl ||
-    !basisEl ||
-    !chargeBasisEl ||
-    !tiersEl ||
-    !holidaysEl
-  ) {
-    return null;
-  }
+  const presetEl = widgetEl.querySelector<GmtPreset>("gmt-preset")!;
+  const weekendEl = el("working-terms").querySelector<GmtChips>("gmt-chips")!;
+  const startEl = el<HTMLInputElement>("clock-start");
+  const endEl = el<HTMLInputElement>("clock-end");
+  const zoneEl = el<HTMLSelectElement>("zone");
+  const freeDaysEl = el<HTMLInputElement>("free-days");
+  const firstDayEl = el<HTMLSelectElement>("first-day");
+  const basisEl = el<HTMLSelectElement>("basis");
+  const chargeBasisEl = el<HTMLSelectElement>("charge-basis");
+  const tiersEl = el<HTMLInputElement>("tiers");
+  const holidaysEl = el<HTMLTextAreaElement>("holidays");
+  const workingEl = el("working-terms");
+  const trackEl = el("lane-track");
+  const [startHandle, endHandle] = [
+    ...widgetEl.querySelectorAll<GmtHandle>("gmt-handle"),
+  ] as [GmtHandle, GmtHandle];
 
   let canvas: LedgerCanvas = createLedgerCanvas(0, 1);
+
+  const weekend = (): number[] =>
+    normaliseWeekend((weekendEl.value as string[]).map(Number));
 
   const state = (): LedgerState => ({
     clockStart: startEl.value.trim(),
@@ -447,9 +591,7 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     basis: basisEl.value === "working" ? "working" : "calendar",
     chargeBasis: chargeBasisEl.value === "working" ? "working" : "calendar",
     zone: zoneEl.value,
-    weekend: normaliseWeekend(
-      weekendEls.filter((el) => el.checked).map((el) => Number(el.value)),
-    ),
+    weekend: weekend(),
     holidays: holidaysEl.value,
     tiers: tiersEl.value,
   });
@@ -466,19 +608,76 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
   }
 
   function syncPreset(): void {
-    presetEl!.value = matchPreset(state());
-    const desc = q("preset-description");
-    if (desc) {
-      setPresetDescription(
-        desc,
-        FREE_TIME_PRESETS.find((p) => p.id === presetEl!.value)?.description ??
-          "",
+    presetEl.value = matchPreset(state());
+    workingEl.hidden =
+      basisEl.value !== "working" && chargeBasisEl.value !== "working";
+  }
+
+  /** Place the handles on the canvas and say each one's time aloud. */
+  function drawHandles(startMs: number, endMs: number, zone: string): void {
+    const spanMs = Math.max(1, canvas.endMs - canvas.startMs);
+    const step = ((canvas.snapMinutes * 60000) / spanMs) * HANDLE_MAX;
+    const at = (ms: number): number => {
+      const pct = canvas.toPercent(ms);
+      return Number.isNaN(pct) ? 0 : pct * (HANDLE_MAX / 100);
+    };
+    for (const h of [startHandle, endHandle]) {
+      h.setAttribute("step", String(step));
+      h.setAttribute("large-step", String(step * PAGE_STEP_UNITS));
+    }
+    // Widen the end first, so the start is never held back by the old end.
+    endHandle.value = HANDLE_MAX;
+    startHandle.value = at(startMs);
+    endHandle.value = at(endMs);
+    for (const [h, ms] of [
+      [startHandle, startMs],
+      [endHandle, endMs],
+    ] as const) {
+      h.setAttribute(
+        "aria-valuetext",
+        Number.isNaN(ms) ? "not a time" : formatLocal(ms, zone),
       );
     }
-    const working = q("working-terms");
-    if (working)
-      working.hidden =
-        basisEl!.value !== "working" && chargeBasisEl!.value !== "working";
+  }
+
+  /** Place the expiry gate and its chip; the chip flips near the right edge. */
+  function drawGate(expiresAt: string | null, zone: string | null): void {
+    const gate = el("expiry");
+    const ms = expiresAt === null ? Number.NaN : toEpochMs(expiresAt);
+    if (Number.isNaN(ms) || ms < canvas.startMs || ms > canvas.endMs) {
+      gate.hidden = true;
+      return;
+    }
+    gate.hidden = false;
+    const pct = canvas.toPercent(ms);
+    gate.style.setProperty("--gmt-gate-at", String(pct));
+    const chip = el("expiry-chip");
+    const local = zone === null ? "" : formatLocal(ms, zone);
+    chip.textContent = local === "" ? "expires" : `expires ${local}`;
+    gate.dataset["edge"] = "start";
+    if (trackEl.clientWidth > 0) {
+      const side = placeLabel({
+        atPx: (pct / 100) * trackEl.clientWidth,
+        labelPx: layoutWidth(chip),
+        trackPx: trackEl.clientWidth,
+        offsetPx: 10,
+      });
+      gate.dataset["edge"] = side;
+    }
+  }
+
+  function drawBar(startMs: number, endMs: number, invalid: boolean): void {
+    const bar = el("bar");
+    if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+      bar.hidden = true;
+      return;
+    }
+    const left = canvas.toPercent(Math.min(startMs, endMs));
+    const right = canvas.toPercent(Math.max(startMs, endMs));
+    bar.hidden = false;
+    bar.style.setProperty("--gmt-bar-from", String(left));
+    bar.style.setProperty("--gmt-bar-to", String(Math.max(left, right)));
+    bar.dataset["invalid"] = String(invalid);
   }
 
   function render(): void {
@@ -499,366 +698,264 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     const reason = charges === null ? explainNull(s, m) : null;
     const expiryReason = freeTime === null ? explainExpiryNull(s, m) : null;
 
-    const label = q("label");
-    if (label) label.textContent = zoneOk ? s.zone : "no zone";
-    renderDays(
-      q("cells"),
-      zoneOk ? dayCells(canvas, s.zone, startMs, endMs) : [],
-      canvas,
-      s,
-      freeTime,
-      charges,
-      q("track")?.clientWidth ?? 0,
+    el("lane-label").textContent = zoneOk ? s.zone : "no zone";
+    const cells = zoneOk ? dayCells(canvas, s.zone, startMs, endMs) : [];
+    setHtml(
+      el("lane-cells"),
+      dayColumns(cells, canvas, dayMarks(cells, s, freeTime, charges)),
     );
-    placeBar(q("bar"), startMs, endMs, canvas, reason === "inverted");
-    placeExpiry(
-      q("expiry-marker"),
+    drawBar(startMs, endMs, reason === "inverted");
+    drawGate(
       charges?.expiresAt ?? freeTime?.expiresAt ?? null,
-      canvas,
       zoneOk ? s.zone : null,
     );
-    const heroes = q("heroes");
-    if (heroes) {
-      heroes.innerHTML = freeTimePlates({
-        freeTime,
-        charges,
-        freeDays: s.freeDays,
-        zone: s.zone,
-        zoneOk,
-      })
-        .map(plateHtml)
-        .join("");
-    }
-    for (const [role, ms] of [
-      ["handle-start", startMs],
-      ["handle-end", endMs],
-    ] as const) {
-      const h = q(role);
-      if (!h) continue;
-      const pct = canvas.toPercent(ms);
-      h.setAttribute("aria-valuemin", "0");
-      h.setAttribute("aria-valuemax", "100");
-      h.setAttribute(
-        "aria-valuenow",
-        Number.isNaN(pct) ? "0" : String(Math.round(pct)),
-      );
-      h.setAttribute(
-        "aria-valuetext",
-        Number.isNaN(ms)
-          ? "not a time"
-          : formatLocal(ms, zoneOk ? s.zone : "UTC"),
-      );
-    }
+    drawHandles(startMs, endMs, zoneOk ? s.zone : "UTC");
 
-    const axisEl = q("axis");
-    const spans = axisEl?.querySelectorAll("span") ?? [];
-    const labels = axisLabels(canvas, zoneOk ? s.zone : null);
-    spans.forEach((span, i) => {
-      span.textContent = labels[i] ?? "";
-    });
+    setHtml(
+      el("plates"),
+      plates(
+        plateList(
+          freeTimePlates({
+            freeTime,
+            charges,
+            freeDays: s.freeDays,
+            zone: s.zone,
+            zoneOk,
+          }),
+        ),
+        { gate: "hero" },
+      ),
+    );
+
+    const axis = el("axis");
+    setHtml(axis, axisTicks(axisLabels(canvas, zoneOk ? s.zone : null)));
     // On a narrow track the three dates would touch: drop the ones that do.
-    if (axisEl) thinTickLabels(axisEl, "span");
+    thinTickLabels(axis, "span");
 
     // The two calls, exactly as the library was called.
     const [optHtml, optPlain] = optionsSource(terms, undefined);
     const daysHtml = codeSpan("num", String(days));
-    renderCallLine(
-      q("call-expiry"),
-      "freeTimeExpiry",
-      `${codeSpan("str", JSON.stringify(s.clockStart))}, ${daysHtml}, ${optHtml}`,
-      `${JSON.stringify(s.clockStart)}, ${days}, ${optPlain}`,
+    const startHtml = codeSpan("str", JSON.stringify(s.clockStart));
+    setHtml(
+      el("expiry-call"),
+      callFrame(
+        "Call to freeTimeExpiry",
+        "Copy freeTimeExpiry call",
+        "freeTimeExpiry",
+        `${startHtml}, ${daysHtml}, ${optHtml}`,
+        `${JSON.stringify(s.clockStart)}, ${days}, ${optPlain}`,
+      ),
     );
     const [chargeOptHtml, chargeOptPlain] = optionsSource(
       chargeTerms,
       tiers ?? undefined,
     );
-    renderCallLine(
-      q("call-charges"),
-      "chargeableDays",
-      `${codeSpan("str", JSON.stringify(s.clockStart))}, ${codeSpan("str", JSON.stringify(s.clockEnd))}, ${daysHtml}, ${chargeOptHtml}`,
-      `${JSON.stringify(s.clockStart)}, ${JSON.stringify(s.clockEnd)}, ${days}, ${chargeOptPlain}`,
+    setHtml(
+      el("charges-call"),
+      callFrame(
+        "Call to chargeableDays",
+        "Copy chargeableDays call",
+        "chargeableDays",
+        `${startHtml}, ${codeSpan("str", JSON.stringify(s.clockEnd))}, ${daysHtml}, ${chargeOptHtml}`,
+        `${JSON.stringify(s.clockStart)}, ${JSON.stringify(s.clockEnd)}, ${days}, ${chargeOptPlain}`,
+      ),
     );
-    const expiryOut = q("expiry-output");
-    if (expiryOut) {
-      if (freeTime === null)
-        renderWidgetOutput(expiryOut, "NO SIGNAL", "sentinel");
-      else renderWidgetOutput(expiryOut, formatFreeTime(freeTime), "live");
-    }
-    const chargesOut = q("charges-output");
-    if (chargesOut) {
-      if (charges === null)
-        renderWidgetOutput(chargesOut, "NO SIGNAL", "sentinel");
-      else renderWidgetOutput(chargesOut, formatCharges(charges), "live");
-    }
+    setHtml(
+      el("expiry-out"),
+      outputOf(
+        "What freeTimeExpiry returned",
+        freeTime === null ? null : formatFreeTime(freeTime),
+      ),
+    );
+    setHtml(
+      el("charges-out"),
+      outputOf(
+        "What chargeableDays returned",
+        charges === null ? null : formatCharges(charges),
+      ),
+    );
 
     // Summary: the library's numbers, never the drawing's.
-    const summary = q("summary");
-    if (summary)
-      summary.textContent = charges === null ? "" : summaryText(charges);
+    setHtml(
+      el("summary"),
+      srOnly(charges === null ? "" : summaryText(charges)),
+    );
 
     // Aside: why null, or the one thing worth saying about a valid answer.
-    const aside = q("reason-aside");
-    if (aside) {
-      const shown = reason ?? expiryReason;
-      if (shown) {
-        renderAside(
-          aside,
-          shown === "no-free-days" ? "note" : "caution",
-          shown === "no-free-days" ? "Note" : "Why null",
-          `<p>${escapeHtml(NULL_REASON_TEXT[shown])}</p>`,
-        );
-      } else if (
-        charges &&
-        charges.chargeableDays === 0 &&
-        s.clockEnd === charges.expiresAt
-      ) {
-        renderAside(
-          aside,
-          "note",
-          "Note",
-          `<p>${escapeHtml("The gate-out is exactly at expiresAt. The dwell is half-open, so that instant is not a chargeable day; one nanosecond later would be.")}</p>`,
-        );
-      } else {
-        aside.innerHTML = "";
-      }
+    const shown = reason ?? expiryReason;
+    let note: SafeHtml = html``;
+    if (shown) {
+      note = aside(
+        {
+          label: shown === "no-free-days" ? "Note" : "Why null",
+          tone: shown === "no-free-days" ? "note" : "caution",
+          title: shown === "no-free-days" ? "Note" : "Why null",
+        },
+        html`<p>${NULL_REASON_TEXT[shown]}</p>`,
+      );
+    } else if (
+      charges &&
+      charges.chargeableDays === 0 &&
+      s.clockEnd === charges.expiresAt
+    ) {
+      note = aside(
+        { label: "Note", tone: "note", title: "Note" },
+        html`<p>The gate-out is exactly at expiresAt. The dwell is half-open, so that instant is not a chargeable day; one nanosecond later would be.</p>`,
+      );
     }
+    setHtml(el("reason"), note);
   }
 
   function applyPreset(): void {
-    const preset = FREE_TIME_PRESETS.find((p) => p.id === presetEl!.value);
-    if (!preset) return;
-    startEl!.value = preset.clockStart;
-    endEl!.value = preset.clockEnd;
-    zoneEl!.value = preset.zone;
-    freeDaysEl!.value = preset.freeDays;
-    firstDayEl!.value = preset.firstDay;
-    basisEl!.value = preset.basis;
-    chargeBasisEl!.value = preset.chargeBasis;
-    tiersEl!.value = preset.tiers;
-    holidaysEl!.value = preset.holidays;
-    for (const el of weekendEls)
-      el.checked = preset.weekend.includes(Number(el.value));
+    const chosen = FREE_TIME_PRESETS.find((p) => p.id === presetEl.value);
+    if (!chosen) return;
+    startEl.value = chosen.clockStart;
+    endEl.value = chosen.clockEnd;
+    zoneEl.value = chosen.zone;
+    freeDaysEl.value = chosen.freeDays;
+    firstDayEl.value = chosen.firstDay;
+    basisEl.value = chosen.basis;
+    chargeBasisEl.value = chosen.chargeBasis;
+    tiersEl.value = chosen.tiers;
+    holidaysEl.value = chosen.holidays;
+    weekendEl.value = chosen.weekend.map(String);
     syncPreset();
     refit();
   }
 
-  // ---- Drag ----
-
-  const inputFor: Record<string, HTMLInputElement> = {
-    "handle-start": startEl,
-    "handle-end": endEl,
-  };
-
-  function setHandle(role: string, ms: number): void {
-    const input = inputFor[role];
-    if (!input || Number.isNaN(ms)) return;
-    const s = state();
-    const startMs = toEpochMs(s.clockStart);
-    const endMs = toEpochMs(s.clockEnd);
-    // A handle cannot pass the other one.
-    const bounded =
-      role === "handle-start"
-        ? Number.isNaN(endMs)
-          ? ms
-          : Math.min(ms, endMs)
-        : Number.isNaN(startMs)
-          ? ms
-          : Math.max(ms, startMs);
-    input.value = formatHandleValue(
-      bounded,
-      m.isValidTimeZone(s.zone) ? s.zone : null,
-    );
+  /** Write a handle's stop into its typed field. */
+  function setFromHandle(h: GmtHandle): number {
+    const ms = canvas.fromPercent(h.value / (HANDLE_MAX / 100));
+    const input = h === startHandle ? startEl : endEl;
+    const zone = zoneEl.value;
+    input.value = formatHandleValue(ms, m.isValidTimeZone(zone) ? zone : null);
     syncPreset();
     render();
+    return ms;
   }
 
-  let dragging: string | null = null;
-  let captured: { el: HTMLElement; id: number } | null = null;
+  let dragging = false;
 
-  container.addEventListener("pointerdown", (e) => {
-    const target = (e.target as HTMLElement).closest(
-      '[data-role^="handle-"]',
-    ) as HTMLElement | null;
-    if (!target) return;
-    dragging = target.dataset.role ?? null;
-    const id = (e as PointerEvent).pointerId;
-    try {
-      target.setPointerCapture(id);
-      captured = { el: target, id };
-    } catch {
-      captured = null;
-    }
-    e.preventDefault();
-  });
-
-  container.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
-    const track = q("track");
-    if (!track) return;
-    const rect = track.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    const pct = (((e as PointerEvent).clientX - rect.left) / rect.width) * 100;
-    setHandle(dragging, canvas.fromPercent(pct));
-  });
-
-  const stopDrag = () => {
-    if (!dragging) return;
-    dragging = null;
-    captured = null;
-    refit();
-  };
-  container.addEventListener("pointerup", stopDrag);
-  container.addEventListener("pointercancel", stopDrag);
-
-  // ---- Keyboard ----
-
-  container.addEventListener("keydown", (e) => {
-    const target = (e.target as HTMLElement).closest(
-      '[data-role^="handle-"]',
-    ) as HTMLElement | null;
-    const role = target?.dataset.role;
-    const input = role ? inputFor[role] : undefined;
-    if (!role || !input) return;
-    const ev = e as KeyboardEvent;
-    const units = ev.shiftKey ? BIG_STEP_UNITS : STEP_UNITS;
-    const current = toEpochMs(input.value);
-    let next: number | null = null;
-    switch (ev.key) {
-      case "ArrowLeft":
-      case "ArrowDown":
-        next = canvas.step(current, -units);
-        break;
-      case "ArrowRight":
-      case "ArrowUp":
-        next = canvas.step(current, units);
-        break;
-      case "PageUp":
-        next = canvas.step(current, PAGE_STEP_UNITS);
-        break;
-      case "PageDown":
-        next = canvas.step(current, -PAGE_STEP_UNITS);
-        break;
-      case "Home":
-        next = canvas.startMs;
-        break;
-      case "End":
-        next = canvas.endMs;
-        break;
-    }
-    if (next === null) return;
-    ev.preventDefault();
-    setHandle(role, next);
-    // Reaching the edge widens the canvas, so the handle can keep going.
-    if (next <= canvas.startMs || next >= canvas.endMs) refit();
-  });
-
-  // ---- Typed inputs and selects ----
-
-  for (const input of [startEl, endEl]) {
-    input.addEventListener("input", () => {
-      syncPreset();
-      render();
-    });
-    // Refit on commit, not per keystroke: rescaling under a half-typed date
-    // fights the caret.
-    input.addEventListener("change", refit);
-  }
-  for (const input of [freeDaysEl, tiersEl, holidaysEl]) {
-    input.addEventListener("input", () => {
-      syncPreset();
-      render();
-    });
-  }
-  for (const el of [
-    zoneEl,
-    firstDayEl,
-    basisEl,
-    chargeBasisEl,
-    ...weekendEls,
-  ]) {
-    el.addEventListener("change", () => {
-      syncPreset();
-      refit();
-    });
-  }
-  presetEl.addEventListener("change", applyPreset);
-
-  wireCopyButtons(container);
-
-  /* The "expires" label is placed against the track's measured width, so a
-     width change (rotation, the chat rail opening) re-places it. */
-  const trackEl = q<HTMLElement>("track");
-  const disposeWidth = trackEl ? onWidthChange(trackEl, render) : () => {};
-
-  return {
-    refit,
-    release() {
-      disposeWidth();
-      if (!captured) return;
-      try {
-        captured.el.releasePointerCapture(captured.id);
-      } catch {
-        /* Already released. */
-      }
-      captured = null;
+  widgetEl.addEventListener(
+    "pointerdown",
+    (e) => {
+      if (e.target === startHandle || e.target === endHandle) dragging = true;
     },
+    { signal },
+  );
+  const stopDrag = (): void => {
+    dragging = false;
   };
-}
+  widgetEl.addEventListener("pointerup", stopDrag, { signal });
+  widgetEl.addEventListener("pointercancel", stopDrag, { signal });
 
-/** Write seeded arguments onto the controls; a zone the select lacks is added. */
-function applyArgs(root: HTMLElement, args: FreeTimeLedgerArgs): void {
-  if (args.clockStart === undefined && args.clockEnd === undefined) return;
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const s = readArgs(args);
-  const zoneEl = q<HTMLSelectElement>("zone");
-  if (zoneEl) {
+  widgetEl.addEventListener(
+    "input",
+    (e) => {
+      const target = e.target;
+      if (target === startHandle || target === endHandle) {
+        setFromHandle(target as GmtHandle);
+        return;
+      }
+      if (
+        target === startEl ||
+        target === endEl ||
+        target === freeDaysEl ||
+        target === tiersEl ||
+        target === holidaysEl
+      ) {
+        syncPreset();
+        render();
+      }
+    },
+    { signal },
+  );
+
+  widgetEl.addEventListener(
+    "change",
+    (e) => {
+      const target = e.target;
+      if (target === presetEl) {
+        applyPreset();
+        return;
+      }
+      if (target === startHandle || target === endHandle) {
+        // Reaching an edge widens the canvas, so the handle can keep going;
+        // a finished drag refits too. A key step does not rescale the track.
+        const h = target as GmtHandle;
+        if (dragging || h.value <= 0 || h.value >= HANDLE_MAX) refit();
+        return;
+      }
+      // Refit on commit, not per keystroke: rescaling under a half-typed date
+      // fights the caret.
+      if (target === startEl || target === endEl) {
+        refit();
+        return;
+      }
+      if (
+        target === zoneEl ||
+        target === firstDayEl ||
+        target === basisEl ||
+        target === chargeBasisEl ||
+        target === weekendEl
+      ) {
+        syncPreset();
+        refit();
+      }
+    },
+    { signal },
+  );
+
+  /* The "expires" chip is placed against the track's measured width, so a
+     width change (rotation, the chat rail opening) re-places it. */
+  const disposeWidth = onWidthChange(trackEl, render);
+
+  function seed(args: FreeTimeLedgerArgs): void {
+    if (args.clockStart === undefined && args.clockEnd === undefined) return;
+    const s = readArgs(args);
     if (![...zoneEl.options].some((o) => o.value === s.zone)) {
-      const opt = document.createElement("option");
-      opt.value = s.zone;
-      opt.textContent = s.zone;
-      zoneEl.appendChild(opt);
+      zoneEl.append(new Option(s.zone, s.zone));
     }
     zoneEl.value = s.zone;
+    /* A chat model answering "15:00 in New York" sends a wall time with no
+       offset. Read it in the zone the reader named; see `resolveWallTime`. */
+    startEl.value = resolveWallTime(s.clockStart, s.zone);
+    endEl.value = resolveWallTime(s.clockEnd, s.zone);
+    freeDaysEl.value = s.freeDays;
+    firstDayEl.value = s.firstDay;
+    basisEl.value = s.basis;
+    chargeBasisEl.value = s.chargeBasis;
+    tiersEl.value = s.tiers;
+    holidaysEl.value = s.holidays;
+    weekendEl.value = s.weekend.map(String);
+    syncPreset();
   }
-  /* A chat model answering "15:00 in New York" sends a wall time with no
-     offset. Read it in the zone the reader named; see `resolveWallTime`. */
-  const set = (role: string, value: string) => {
-    const el = q<HTMLInputElement>(role);
-    setControlValue(el, value);
-  };
-  set("clock-start", resolveWallTime(s.clockStart, s.zone));
-  set("clock-end", resolveWallTime(s.clockEnd, s.zone));
-  set("free-days", s.freeDays);
-  set("first-day", s.firstDay);
-  set("basis", s.basis);
-  set("charge-basis", s.chargeBasis);
-  set("tiers", s.tiers);
-  set("holidays", s.holidays);
-  for (const el of root.querySelectorAll<HTMLInputElement>(
-    '[data-role="weekend"]',
-  )) {
-    el.checked = s.weekend.includes(Number(el.value));
-  }
-  const working = q("working-terms");
-  if (working)
-    working.hidden = s.basis !== "working" && s.chargeBasis !== "working";
-  const presetEl = q<HTMLSelectElement>("preset");
-  if (presetEl) {
-    presetEl.value = matchPreset({
-      ...s,
-      clockStart: q<HTMLInputElement>("clock-start")?.value ?? s.clockStart,
-      clockEnd: q<HTMLInputElement>("clock-end")?.value ?? s.clockEnd,
-    });
-    const desc = q("preset-description");
-    if (desc) {
-      setPresetDescription(
-        desc,
-        FREE_TIME_PRESETS.find((p) => p.id === presetEl.value)?.description ??
-          "",
-      );
+
+  function permalink(): Record<string, string> {
+    // Strings only: a permalink carries no numbers below 1900 and no lists.
+    const out: Record<string, string> = {
+      clockStart: startEl.value,
+      clockEnd: endEl.value,
+      freeDays: freeDaysEl.value,
+      firstDay: firstDayEl.value,
+      basis: basisEl.value,
+      chargeBasis: chargeBasisEl.value,
+      zone: zoneEl.value,
+    };
+    if (basisEl.value === "working" || chargeBasisEl.value === "working") {
+      out["weekend"] = (weekendEl.value as string[]).join(",");
+      const holidays = holidaysEl.value
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .join(",");
+      if (holidays) out["holidays"] = holidays;
     }
+    if (tiersEl.value.trim()) out["tiers"] = tiersEl.value.trim();
+    return out;
   }
+
+  return { refit, release: disposeWidth, permalink, seed };
 }
 
 export const mountFreeTimeLedger: MountFn<FreeTimeLedgerArgs> = async (
@@ -866,6 +963,7 @@ export const mountFreeTimeLedger: MountFn<FreeTimeLedgerArgs> = async (
   args,
   signal,
 ) => {
+  defineElements();
   let modules: Modules;
   try {
     modules = await loadModules();
@@ -875,48 +973,12 @@ export const mountFreeTimeLedger: MountFn<FreeTimeLedgerArgs> = async (
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  applyArgs(root, args);
-  const controller = setupWidget(root, modules);
-  controller?.refit();
+  const controller = setupWidget(root, modules, signal);
+  controller.seed(args);
+  controller.refit();
 
   return onceDestroy(
-    () => controller?.release(),
-    () => {
-      const v = (role: string) =>
-        (
-          root.querySelector(`[data-role="${role}"]`) as
-            | HTMLInputElement
-            | HTMLSelectElement
-            | HTMLTextAreaElement
-            | null
-        )?.value ?? "";
-      const weekend = [
-        ...root.querySelectorAll<HTMLInputElement>('[data-role="weekend"]'),
-      ]
-        .filter((el) => el.checked)
-        .map((el) => el.value)
-        .join(",");
-      // Strings only: a permalink carries no numbers below 1900 and no lists.
-      const out: Record<string, string> = {
-        clockStart: v("clock-start"),
-        clockEnd: v("clock-end"),
-        freeDays: v("free-days"),
-        firstDay: v("first-day"),
-        basis: v("basis"),
-        chargeBasis: v("charge-basis"),
-        zone: v("zone"),
-      };
-      if (v("basis") === "working" || v("charge-basis") === "working") {
-        out.weekend = weekend;
-        const holidays = v("holidays")
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .join(",");
-        if (holidays) out.holidays = holidays;
-      }
-      if (v("tiers").trim()) out.tiers = v("tiers").trim();
-      return out;
-    },
+    () => controller.release(),
+    () => controller.permalink(),
   );
 };

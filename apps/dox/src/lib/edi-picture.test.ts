@@ -198,13 +198,13 @@ describe("timelineLayout", () => {
 describe("holdHtml", () => {
   it("stacks the live element and its sizers in the EDI hold by default", () => {
     expect(holdHtml("<p>live</p>", ["<p>a</p>", "<p>b</p>"])).toBe(
-      '<div class="gmt-edi-hold"><p>live</p><p>a</p><p>b</p></div>',
+      '<div class="gmt-edi-hold" data-gate="hold"><p>live</p><p>a</p><p>b</p></div>',
     );
   });
 
   it("takes another family's class and escapes it", () => {
     expect(holdHtml("<p>live</p>", [], "gmt-ledger-hold")).toBe(
-      '<div class="gmt-ledger-hold"><p>live</p></div>',
+      '<div class="gmt-ledger-hold" data-gate="hold"><p>live</p></div>',
     );
     expect(holdHtml("", [], '"><b>')).not.toContain("<b>");
   });

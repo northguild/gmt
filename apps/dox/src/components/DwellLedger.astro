@@ -26,15 +26,14 @@ import { renderDwellLedgerTemplate } from "../lib/dwell-ledger-mount";
  * must keep the prose column. Only the tools page opts in. On a reference
  * page the section grid simply fits fewer columns, which is what `auto-fit` is
  * for. The marker goes on a wrapper here rather than inside `renderTemplate()`
- * so the mount's markup stays byte-identical and `scripts/html-diff.mjs` sees
- * the widget itself as unchanged.
+ * so the widget's own markup is the same on a page and in the chat rail.
  */
 interface Props {
   fullbleed?: boolean;
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderDwellLedgerTemplate();
+const html = renderDwellLedgerTemplate("dwell-ledger", {});
 ---
 
 {
@@ -55,10 +54,12 @@ const html = renderDwellLedgerTemplate();
        lib/widget-permalink.ts. Absent or malformed, the widget opens on its
        first preset. */
     const seed = seedFromLocation("dwell");
-    document.querySelectorAll<HTMLElement>(".gmt-dwell").forEach((el) => {
-      mountDwellLedger(el, seed, new AbortController().signal).catch((error) =>
-        showUnavailable(el, error),
-      );
-    });
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="dwell-ledger"]')
+      .forEach((el) => {
+        mountDwellLedger(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
   }
 </script>

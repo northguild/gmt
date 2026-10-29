@@ -16,7 +16,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderMovingFeastsTemplate();
+const html = renderMovingFeastsTemplate("moving-feasts", {});
 ---
 
 {
@@ -34,10 +34,12 @@ const html = renderMovingFeastsTemplate();
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("feasts");
-    document.querySelectorAll<HTMLElement>(".gmt-moving-feasts").forEach((el) => {
-      mountMovingFeasts(el, seed, new AbortController().signal).catch((error) =>
-        showUnavailable(el, error),
-      );
-    });
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="moving-feasts"]')
+      .forEach((el) => {
+        mountMovingFeasts(el, seed, new AbortController().signal).catch((error) =>
+          showUnavailable(el, error),
+        );
+      });
   }
 </script>

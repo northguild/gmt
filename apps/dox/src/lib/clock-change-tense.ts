@@ -8,22 +8,16 @@
  *   hand-written comparison;
  * - the date and time words of a moment, written by the library (`formatZonedDateTime` for the
  *   local clock reading, `formatUtc` for UTC), never typed;
- * - the markup that holds both forms in one grid cell, so the box is the longer form's and nothing
- *   moves when the tense flips, and the one-timer binding that flips the forms when a moment
- *   passes while the page is open.
+ * - the one-timer binding that flips the forms when a moment passes while the page is open. The
+ *   markup that holds both forms in one cell is `tenseSlot` in `widgets/families/clockcheck/`.
  *
  * The library comes in as `TenseLib` (the page loads it lazily, `loadClockLib`), so this file
  * carries no polyfill. No region words live here.
  */
 import { SIGNAL_LOST } from "./clock-change-common";
 
-const escapeHtml = (text: string): string =>
-  text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-const escapeAttr = escapeHtml;
+/** Old markup: L15e removes this once the mounts use `tenseSlot` and `tensedSlot`. */
+export { slotHtml, tensedHtml } from "./clock-change-tense-old";
 
 export type Tense = "before" | "after";
 
@@ -198,49 +192,6 @@ export function tenseView(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Markup
-// ---------------------------------------------------------------------------
-
-/**
- * Both forms in one grid cell. The one that is not true now is `aria-hidden="true"` (the sheet
- * hides it with `visibility`), so it stays out of the accessibility tree and still sizes the box.
- * `block` is for a paragraph's worth of text; the default sits inside a line.
- */
-export function slotHtml(
-  key: string,
-  beforeHtml: string,
-  afterHtml: string,
-  current: Tense,
-  block = false,
-): string {
-  const hidden = ' aria-hidden="true"';
-  return (
-    `<span class="gmt-tense${block ? " gmt-tense--block" : ""}" data-moment="${escapeAttr(key)}">` +
-    `<span data-form="before"${current === "after" ? hidden : ""}>${beforeHtml}</span>` +
-    `<span data-form="after"${current === "before" ? hidden : ""}>${afterHtml}</span>` +
-    `</span>`
-  );
-}
-
-/** A phrase as HTML: plain text when it has one form, otherwise a slot. */
-export function tensedHtml(
-  phrase: Tensed,
-  view: TenseView,
-  block = false,
-): string {
-  if (phrase.key === null || phrase.before === phrase.after) {
-    return escapeHtml(phrase.before);
-  }
-  return slotHtml(
-    phrase.key,
-    escapeHtml(phrase.before),
-    escapeHtml(phrase.after),
-    view.tenseOf(phrase.key),
-    block,
-  );
-}
-
 /** A phrase as plain text, in the form that is true now (for an attribute or an announcement). */
 export function tensedPlain(phrase: Tensed, view: TenseView): string {
   return phrase.key === null ? phrase.before : phrase[view.tenseOf(phrase.key)];
@@ -248,9 +199,7 @@ export function tensedPlain(phrase: Tensed, view: TenseView): string {
 
 /** Shows the true form of every slot under `root` and hides the other from the accessibility tree. */
 export function syncTense(root: ParentNode, view: TenseView): void {
-  for (const slot of root.querySelectorAll<HTMLElement>(
-    ".gmt-tense[data-moment]",
-  )) {
+  for (const slot of root.querySelectorAll<HTMLElement>("[data-moment]")) {
     const current = view.tenseOf(slot.dataset.moment ?? "");
     for (const form of slot.querySelectorAll<HTMLElement>(
       ":scope > [data-form]",

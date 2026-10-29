@@ -1,0 +1,256 @@
+/*
+ * Duration Parser Bench parts: the Try buttons, the ten-field strip, the facts list and the
+ * cells a result sits in. Tokens only. Amber is the sentinel's alone (the bracketed chip); a
+ * round trip that returns a different duration is plain words with a full border, never amber.
+ * No cell has a coloured left edge as its only accent: a lit field has a full border and a tint.
+ */
+
+/* ---- Try buttons ---- */
+
+.tryGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+  margin: var(--gmt-space-3) 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-block-end: var(--gmt-space-1);
+  inline-size: 100%;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+}
+
+.tryButton {
+  appearance: none;
+  box-sizing: border-box;
+  min-block-size: var(--gmt-target-min);
+  min-inline-size: var(--gmt-target-min);
+  padding-block: 0.25rem;
+  padding-inline: var(--gmt-space-3);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-surface-2);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--gmt-motion-fast) var(--gmt-easing);
+
+  &:hover {
+    border-color: var(--gmt-cyan);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+/* ---- The ten fields: a fixed grid, so a value arriving never moves a neighbour ---- */
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--gmt-space-1);
+  margin: var(--gmt-space-3) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cell {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-1);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice-dim);
+
+  &[data-lit="true"] {
+    border-color: var(--gmt-series-1);
+    background: color-mix(
+      in srgb,
+      var(--gmt-series-1) 8%,
+      var(--gmt-surface-widget)
+    );
+    color: var(--gmt-ice);
+  }
+}
+
+.symbol {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* The value reserves ten tabular digits (`4294967295`): never clipped, never wider. */
+.value {
+  min-inline-size: 10ch;
+  text-align: center;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fieldName {
+  max-inline-size: 100%;
+  text-align: center;
+  font-size: var(--gmt-text-xs);
+  overflow-wrap: anywhere;
+}
+
+@container (inline-size >= 60rem) {
+  .strip {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+  }
+}
+
+@container (inline-size < 30rem) {
+  .strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container (inline-size < 20rem) {
+  .strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---- Compact form, round trip, words ---- */
+
+.facts {
+  display: grid;
+  gap: var(--gmt-space-2);
+  margin: 0 0 var(--gmt-space-3);
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+  align-items: baseline;
+}
+
+.term {
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+}
+
+.detail {
+  min-block-size: 1.5em;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.dim {
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+}
+
+.same {
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+}
+
+.different {
+  display: inline-block;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+}
+
+/* The sentinel: amber, bracketed, never blank. */
+.noSignal {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.result {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.written {
+  font-family: var(--gmt-font-mono);
+  overflow-wrap: anywhere;
+}
+
+.rowNote {
+  margin: var(--gmt-space-1) 0 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+  font-weight: 400;
+}
+
+@media (forced-colors: active) {
+  .tryButton,
+  .cell,
+  .different,
+  .noSignal {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .tryButton:focus-visible {
+    outline-color: Highlight;
+  }
+
+  .cell[data-lit="true"] {
+    border-color: Highlight;
+    border-width: 2px;
+  }
+
+  .noSignal {
+    border-style: dashed;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .tryButton,
+  .cell,
+  .different {
+    border-color: var(--gmt-ice);
+  }
+
+  .cell[data-lit="true"] {
+    border-width: 2px;
+  }
+
+  .term,
+  .dim,
+  .rowNote,
+  .legend,
+  .cell {
+    color: var(--gmt-ice);
+  }
+}
