@@ -23,12 +23,13 @@
 
 .gmt-journey-split {
   container: gmt-journey-split / inline-size;
+
   --gmt-js-badge-h: 1.8rem;
   --gmt-js-bar-h: 1.7rem;
   --gmt-js-gap: 0.6rem;
   --gmt-js-bracket-h: 0.7rem;
   --gmt-js-chip-h: 1.9rem;
-  --gmt-js-hatch: color(from var(--gmt-ice) srgb r g b / 0.55);
+  --gmt-js-hatch: color(from var(--gmt-ice) srgb r g b / 55%);
 }
 
 /* Leg colour and number, as the Delivery Scheduler sets them for its own root
@@ -37,14 +38,17 @@
   --leg-color: var(--gmt-series-1);
   --leg-ink: var(--gmt-series-1-ink);
 }
+
 .gmt-journey-split [data-leg="2"] {
   --leg-color: var(--gmt-series-2);
   --leg-ink: var(--gmt-series-2-ink);
 }
+
 .gmt-journey-split [data-leg="3"] {
   --leg-color: var(--gmt-series-3);
   --leg-ink: var(--gmt-series-3-ink);
 }
+
 .gmt-journey-split [data-leg="4"] {
   --leg-color: var(--gmt-series-4);
   --leg-ink: var(--gmt-series-4-ink);
@@ -55,14 +59,12 @@
 @container gmt-journey-split (max-width: 24rem) {
   .gmt-journey-split .gmt-widget-section,
   .gmt-journey-split .gmt-transport-leg {
-    padding-left: var(--gmt-space-2);
-    padding-right: var(--gmt-space-2);
+    padding-inline: var(--gmt-space-2);
   }
 
-  .gmt-journey-split input.gmt-input[type="text"] {
+  .gmt-journey-split .gmt-input[type="text"] {
     font-size: var(--gmt-text-sm);
-    padding-left: var(--gmt-space-1);
-    padding-right: var(--gmt-space-1);
+    padding-inline: var(--gmt-space-1);
   }
 }
 
@@ -91,7 +93,8 @@
     var(--gmt-js-bar-h) + var(--gmt-js-gap) + var(--gmt-js-bracket-h) +
       var(--gmt-js-gap) + var(--gmt-js-chip-rows) * var(--gmt-js-chip-h)
   );
-  margin-top: var(--gmt-space-2);
+
+  margin-block-start: var(--gmt-space-2);
 }
 
 @container gmt-ledger-frame (max-width: 56rem) {
@@ -113,8 +116,8 @@
 
 .gmt-js-badges {
   position: absolute;
-  inset: 0 0 auto 0;
-  height: var(--gmt-js-badge-h);
+  inset: 0 0 auto;
+  block-size: var(--gmt-js-badge-h);
 }
 
 /* The bars hold the segments over a faint wash, so an empty ribbon still shows
@@ -122,7 +125,7 @@
 .gmt-js-bars {
   position: absolute;
   inset: var(--gmt-js-badge-h) 0 auto 0;
-  height: var(--gmt-js-bar-h);
+  block-size: var(--gmt-js-bar-h);
   border-radius: var(--gmt-radius-sm);
   background-color: var(--gmt-fill-subtle);
 }
@@ -133,20 +136,19 @@
 
 .gmt-js-seg {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  min-width: 2px;
+  inset-block: 0;
+  min-inline-size: 2px;
   box-sizing: border-box;
 }
 
 /* Moving: a stem in the leg's series colour, with its bottom edge in that
    colour. Never a left-only edge. */
 .gmt-js-seg[data-kind="moving"] {
-  border-top: 1px solid var(--gmt-border-strong);
+  border-block-start: 1px solid var(--gmt-border-strong);
   background: linear-gradient(
     180deg,
-    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.5),
-    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.2)
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 50%),
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 20%)
   );
   box-shadow:
     inset 0 -3px 0 var(--series, var(--gmt-cyan)),
@@ -157,8 +159,9 @@
    wait for a scheduled departure is the dense one. */
 .gmt-journey-split .gmt-js-seg.gmt-punct-hatch {
   --hatch: var(--gmt-js-hatch);
-  border-top: 1px solid var(--gmt-border-strong);
-  border-bottom: 1px solid var(--gmt-border-strong);
+
+  border-block-start: 1px solid var(--gmt-border-strong);
+  border-block-end: 1px solid var(--gmt-border-strong);
 }
 
 .gmt-journey-split .gmt-js-seg[data-kind="scheduled"] {
@@ -175,7 +178,7 @@
    and the digit in the primary ink. */
 .gmt-js-badge {
   position: absolute;
-  top: 0;
+  inset-block-start: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -183,7 +186,7 @@
   inline-size: 24px;
   block-size: calc(var(--gmt-js-badge-h) - 0.3rem);
   border: 1px solid var(--gmt-border-strong);
-  border-bottom: 3px solid var(--series, var(--gmt-border-strong));
+  border-block-end: 3px solid var(--series, var(--gmt-border-strong));
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface);
@@ -197,13 +200,13 @@
 .gmt-js-notes {
   position: absolute;
   inset: calc(var(--gmt-js-badge-h) + var(--gmt-js-bar-h) + var(--gmt-js-gap)) 0
-    0 0;
+    0;
 }
 
 .gmt-js-note {
   position: absolute;
-  top: calc(var(--row, 0) * var(--gmt-js-note-row-h));
-  z-index: 1;
+  inset-block-start: calc(var(--row, 0) * var(--gmt-js-note-row-h));
+  z-index: var(--gmt-z-raised);
   inline-size: max-content;
   max-inline-size: 100%;
   translate: -50% 0;
@@ -214,7 +217,7 @@
    which sit on an opaque plate. */
 .gmt-js-leader {
   position: absolute;
-  top: calc(-1 * var(--gmt-js-gap));
+  inset-block-start: calc(-1 * var(--gmt-js-gap));
   inline-size: 1px;
   block-size: calc(
     var(--gmt-js-gap) + var(--row, 0) * var(--gmt-js-note-row-h)
@@ -225,16 +228,16 @@
 /* The brackets under the gathered ribbon, with the totals on chips beneath. */
 .gmt-js-brackets {
   position: absolute;
-  inset: calc(var(--gmt-js-bar-h) + var(--gmt-js-gap) / 2) 0 0 0;
+  inset: calc(var(--gmt-js-bar-h) + var(--gmt-js-gap) / 2) 0 0;
 }
 
 .gmt-js-bracket {
   position: absolute;
-  top: 0;
+  inset-block-start: 0;
   box-sizing: border-box;
   block-size: var(--gmt-js-bracket-h);
   border: 1px solid var(--gmt-ice);
-  border-top: 0;
+  border-block-start: 0;
 }
 
 /* The two totals sit in one flowing row: the moving total at the start, the
@@ -243,9 +246,8 @@
    (the lane reserves that line under the same width, so nothing below moves). */
 .gmt-js-bracket-chips {
   position: absolute;
-  top: calc(var(--gmt-js-bracket-h) + var(--gmt-js-gap) / 2);
-  left: 0;
-  right: 0;
+  inset-block-start: calc(var(--gmt-js-bracket-h) + var(--gmt-js-gap) / 2);
+  inset-inline: 0;
   display: flex;
   flex-wrap: wrap;
   gap: var(--gmt-space-1);
@@ -266,7 +268,7 @@
   position: absolute;
   inset: 0 var(--gmt-space-2) auto;
   margin: 0;
-  padding-top: 0.3rem;
+  padding-block-start: 0.3rem;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   line-height: 1.3;
@@ -292,7 +294,7 @@
 
 .gmt-js-tick {
   position: absolute;
-  top: 0;
+  inset-block-start: 0;
   translate: -50% 0;
   white-space: nowrap;
 }
@@ -331,10 +333,10 @@
 
 .gmt-js-table-wrap {
   position: relative;
-  margin-top: var(--gmt-space-3);
+  margin-block-start: var(--gmt-space-3);
   overflow-x: auto;
   border: 1px solid var(--gmt-border);
-  border-top-color: var(--gmt-border-strong);
+  border-block-start-color: var(--gmt-border-strong);
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
   background: var(--gmt-glass-tint-subtle);
@@ -352,28 +354,28 @@
 .gmt-js-table th,
 .gmt-js-table td {
   padding: var(--gmt-space-2);
-  border-bottom: 1px solid var(--gmt-border);
-  text-align: left;
+  border-block-end: 1px solid var(--gmt-border);
+  text-align: start;
   vertical-align: top;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
 .gmt-js-table :is(th, td):first-child {
-  padding-left: var(--gmt-space-3);
+  padding-inline-start: var(--gmt-space-3);
 }
 
 .gmt-js-table :is(th, td):last-child {
-  padding-right: var(--gmt-space-3);
+  padding-inline-end: var(--gmt-space-3);
 }
 
 .gmt-js-table tbody tr:last-child td {
-  border-bottom: 0;
+  border-block-end: 0;
 }
 
 .gmt-js-table th {
   background: var(--gmt-surface);
-  border-bottom-color: var(--gmt-border-strong);
+  border-block-end-color: var(--gmt-border-strong);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
@@ -394,7 +396,7 @@
 .gmt-js-empty--table {
   inset: calc(var(--gmt-text-xs) * 2.6 + var(--gmt-space-2)) var(--gmt-space-3)
     auto;
-  padding-top: 0;
+  padding-block-start: 0;
 }
 
 /* A narrow widget stacks each row as a block of "label: value" lines, the label
@@ -418,24 +420,24 @@
     inline-size: 1px;
     block-size: 1px;
     overflow: hidden;
-    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
     white-space: nowrap;
   }
 
   .gmt-js-table tbody tr {
     padding: var(--gmt-space-2) var(--gmt-space-3);
-    border-bottom: 1px solid var(--gmt-border);
+    border-block-end: 1px solid var(--gmt-border);
   }
 
   .gmt-js-table tbody tr:last-child {
-    border-bottom: 0;
+    border-block-end: 0;
   }
 
   .gmt-js-table td,
   .gmt-js-table :is(th, td):first-child,
   .gmt-js-table :is(th, td):last-child {
     padding: 2px 0;
-    border-bottom: 0;
+    border-block-end: 0;
   }
 
   .gmt-js-table td:first-child {

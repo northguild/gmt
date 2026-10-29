@@ -1,9 +1,9 @@
 /*
  * The /upstream/ page: the defect table and the filings tracker.
  *
- * A stylesheet rather than `<style>` blocks in the components, for the same reason
+ * A stylesheet rather than `\3c style>` blocks in the components, for the same reason
  * `gmt-dst-inspector.css` is one: the rules here exist to *override* `gmt-content.css`, and an
- * Astro scoped style cannot. Astro compiles `<style>` to `:where(.astro-hash)`, which adds no
+ * Astro scoped style cannot. Astro compiles `\3c style>` to `:where(.astro-hash)`, which adds no
  * specificity at all, so a one-class rule in a component loses to a site rule like
  * `.sl-markdown-content ul li` (0,1,2) and the override silently does nothing. Loaded after
  * `gmt-content.css` in `astro.config.mjs`, these win on order at equal specificity and read as
@@ -19,28 +19,28 @@
  * names the box so it outranks the box's own `table-layout: auto`.
  */
 .sl-markdown-content .gmt-ref-table > .gmt-defects {
-  min-width: 34rem;
+  min-inline-size: 34rem;
   table-layout: fixed;
   font-size: var(--sl-text-sm);
 }
 
 .sl-markdown-content .gmt-defects :is(th, td) {
   vertical-align: top;
-  text-align: left;
+  text-align: start;
   overflow-wrap: break-word;
 }
 
-.sl-markdown-content .gmt-defects :is(th, td).gmt-defects-what {
-  width: 50%;
+.sl-markdown-content .gmt-defects .gmt-defects-what {
+  inline-size: 50%;
   white-space: normal;
 }
 
-.sl-markdown-content .gmt-defects :is(th, td).gmt-defects-state {
-  width: 24%;
+.sl-markdown-content .gmt-defects .gmt-defects-state {
+  inline-size: 24%;
 }
 
-.sl-markdown-content .gmt-defects :is(th, td).gmt-defects-sent {
-  width: 26%;
+.sl-markdown-content .gmt-defects .gmt-defects-sent {
+  inline-size: 26%;
 }
 
 /*
@@ -49,7 +49,7 @@
  * check count and a guard row's reason) used to sit under it.
  */
 .sl-markdown-content .gmt-defects td p {
-  margin-top: 0.25rem;
+  margin-block-start: 0.25rem;
   color: var(--gmt-ice-dim);
   font-size: var(--sl-text-xs);
 }
@@ -83,7 +83,7 @@
  */
 .gmt-defects-badge--guard {
   display: inline-block;
-  max-width: 100%;
+  max-inline-size: 100%;
   box-sizing: border-box;
   padding: 0 var(--gmt-space-1);
   border: 1px solid var(--gmt-ice-dim-fill);
@@ -113,7 +113,6 @@
  */
 .sl-markdown-content .gmt-defects-refs li {
   margin: 0 0 0.15rem;
-  padding-left: 0;
   padding-inline-start: 0;
   white-space: nowrap;
 }
@@ -137,7 +136,7 @@
 /* ---- The filings tracker: what we sent ---- */
 
 .sl-markdown-content .gmt-upstream-table {
-  width: 100%;
+  inline-size: 100%;
   font-size: var(--sl-text-sm);
 }
 
@@ -146,7 +145,7 @@
 }
 
 .sl-markdown-content .gmt-upstream-table td p {
-  margin-top: 0.25rem;
+  margin-block-start: 0.25rem;
 }
 
 .gmt-upstream-badge {

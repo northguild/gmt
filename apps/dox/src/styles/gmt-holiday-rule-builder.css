@@ -25,7 +25,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 /* Number, name, kind and the three buttons. The name takes the slack; at a
@@ -51,18 +51,18 @@
 
 .gmt-hrb-name {
   flex: 1 1 10rem;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-hrb-kind {
   flex: 0 1 12rem;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-hrb-name .gmt-input,
 .gmt-hrb-kind .gmt-select {
-  width: 100%;
-  min-width: 0;
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .gmt-hrb-actions {
@@ -86,8 +86,8 @@
 
 .gmt-hrb-fields .gmt-input,
 .gmt-hrb-fields .gmt-select {
-  width: 100%;
-  min-width: 0;
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .gmt-hrb-wide {
@@ -106,7 +106,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 /* The result line holds the height of its longest text: two lines at 390 px.
@@ -135,7 +135,7 @@
 
 .gmt-hrb-yearrow .gmt-input {
   inline-size: 6ch;
-  min-width: 0;
+  min-inline-size: 0;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -179,10 +179,11 @@
   max-inline-size: 100%;
 }
 
-@media (max-width: 30rem) {
+@media (width <= 30rem) {
   .gmt-hrb-kind {
     flex-basis: 100%;
   }
+
   [data-role="hero-weekend"] .gmt-punct-hero-value {
     min-inline-size: 0;
     white-space: normal;
@@ -205,6 +206,7 @@
 .gmt-hrb-compare[aria-disabled="true"] {
   background: transparent;
   border-style: dashed;
+
   /* The hairline measured 1.2 to 1.5:1; this is the disabled-field edge. */
   border-color: color-mix(in srgb, var(--gmt-ice-dim) 65%, transparent);
   color: var(--gmt-ice);

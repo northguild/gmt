@@ -9,7 +9,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
-  margin-top: 0;
+  margin-block-start: 0;
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
@@ -20,14 +20,14 @@
 .gmt-select {
   font-family: var(--gmt-font-mono);
   font-size: 0.85rem;
-  height: 32px;
+  block-size: 32px;
   padding: var(--gmt-space-1) var(--gmt-space-2);
   background-color: var(--gmt-fill-subtle);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   color: var(--gmt-ice);
-  min-width: 140px;
+  min-inline-size: 140px;
   box-sizing: border-box;
   transition:
     background-color var(--gmt-duration-fast) var(--gmt-easing),
@@ -37,9 +37,10 @@
 
 .gmt-input:focus,
 .gmt-select:focus {
-  outline: none;
+  outline-color: transparent;
   background-color: var(--gmt-fill-2);
   border-color: var(--gmt-border-strong);
+
   /* Sonar ping: a hard 2px ring hugs the control while a second ring pulses
      outward and fades (@keyframes gmt-focus-sonar, gmt-primitives.css — shared
      with the header icon buttons and the CTA / pagination buttons). This
@@ -47,8 +48,8 @@
      prefers-reduced-motion (the global reset in gmt-controls.css collapses the
      animation to its first frame). */
   box-shadow:
-    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
-    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 95%),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 25%);
   animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
     1;
 }
@@ -57,26 +58,26 @@
    to match: the vertical bar's top end, the horizontal bar's bottom start, and the grip or
    corner square at the bottom end (the bars stop short of it). Scrollbar parts take `border-radius` here; `corner-shape`
    turns it into the bevel where a browser applies it to them. */
-textarea.gmt-input::-webkit-scrollbar-track:vertical,
-textarea.gmt-input::-webkit-scrollbar-thumb:vertical {
+.gmt-input::-webkit-scrollbar-track:vertical,
+.gmt-input::-webkit-scrollbar-thumb:vertical {
   border-start-end-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
 }
 
-textarea.gmt-input::-webkit-scrollbar-track:horizontal,
-textarea.gmt-input::-webkit-scrollbar-thumb:horizontal {
+.gmt-input::-webkit-scrollbar-track:horizontal,
+.gmt-input::-webkit-scrollbar-thumb:horizontal {
   border-end-start-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
 }
 
-textarea.gmt-input::-webkit-scrollbar-corner,
-textarea.gmt-input::-webkit-resizer {
+.gmt-input::-webkit-scrollbar-corner,
+.gmt-input::-webkit-resizer {
   border-end-end-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
 }
 
 .gmt-input[type="number"] {
-  min-width: 70px;
+  min-inline-size: 70px;
 }
 
 /* Not available. A disabled field reads as one at a glance: the quiet text
@@ -94,6 +95,7 @@ textarea.gmt-input::-webkit-resizer {
   border-color: color-mix(in srgb, var(--gmt-ice-dim) 65%, transparent);
   color: var(--gmt-ice-dim);
   cursor: not-allowed;
+
   /* Chromium's own `select:disabled` fades the whole control to 0.7, which put
      the text at 3.8:1 in the light theme. The text is information ("None"). */
   opacity: 1;
@@ -101,7 +103,7 @@ textarea.gmt-input::-webkit-resizer {
 
 .gmt-label-required {
   color: var(--gmt-signal-ink);
-  margin-left: 2px;
+  margin-inline-start: 2px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -115,8 +117,7 @@ textarea.gmt-input::-webkit-resizer {
 .gmt-field-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
-  column-gap: var(--gmt-space-3);
-  row-gap: var(--gmt-space-3);
+  gap: var(--gmt-space-3) var(--gmt-space-3);
   container: gmt-field-grid / inline-size;
 }
 
@@ -126,7 +127,7 @@ textarea.gmt-input::-webkit-resizer {
   grid-template-rows: subgrid;
   row-gap: var(--gmt-space-1);
   align-items: start;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 /* Start, not end: when one label's text wraps (its hint chip drops to a second
@@ -151,8 +152,8 @@ textarea.gmt-input::-webkit-resizer {
 .gmt-field-grid .gmt-select,
 .gmt-field-grid .gmt-range,
 .gmt-field-grid .gmt-range-field {
-  min-width: 0;
-  width: 100%;
+  min-inline-size: 0;
+  inline-size: 100%;
 }
 
 @container gmt-field-grid (min-width: 23rem) {
@@ -186,10 +187,12 @@ textarea.gmt-input::-webkit-resizer {
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
+
   /* The font's glyph box is taller than a line-height of 1, so a chip with no
      vertical padding draws its descenders (the "p" of "optional") over its own
      border. Two pixels above and below keep every glyph inside the border. */
   padding: 2px var(--gmt-space-1);
+
   /* Its borders and padding must not make a chipped label's text row taller
      than a plain one's, or the label tops in a field-grid row drift. */
   line-height: 1;
@@ -206,9 +209,10 @@ textarea.gmt-input::-webkit-resizer {
 .gmt-range-field {
   position: relative;
   display: block;
-  min-width: 0;
+  min-inline-size: 0;
+
   /* Room above the input for the value chip. */
-  padding-top: 1.5rem;
+  padding-block-start: 1.5rem;
 }
 
 .gmt-range {
@@ -216,10 +220,11 @@ textarea.gmt-input::-webkit-resizer {
     var(--gmt-range-thumb-w) / 2 + (100% - var(--gmt-range-thumb-w)) *
       var(--gmt-range-pct, 0) / 100
   );
+
   appearance: none;
   display: block;
-  width: 100%;
-  height: var(--gmt-range-hit-h);
+  inline-size: 100%;
+  block-size: var(--gmt-range-hit-h);
   margin: 0;
   background: transparent;
   cursor: grab;
@@ -230,11 +235,11 @@ textarea.gmt-input::-webkit-resizer {
 }
 
 .gmt-range:focus-visible {
-  outline: none;
+  outline-color: transparent;
 }
 
 .gmt-range::-webkit-slider-runnable-track {
-  height: var(--gmt-range-track-h);
+  block-size: var(--gmt-range-track-h);
   box-sizing: border-box;
   border: 1px solid var(--gmt-border-strong);
   border-radius: var(--gmt-radius-sm);
@@ -243,13 +248,13 @@ textarea.gmt-input::-webkit-resizer {
     color-mix(in srgb, var(--gmt-ink-fixed) 45%, transparent);
   background: linear-gradient(
     90deg,
-    color(from var(--gmt-cyan) srgb r g b / 0.4) var(--gmt-range-center),
+    color(from var(--gmt-cyan) srgb r g b / 40%) var(--gmt-range-center),
     var(--gmt-fill-deep) var(--gmt-range-center)
   );
 }
 
 .gmt-range::-moz-range-track {
-  height: var(--gmt-range-track-h);
+  block-size: var(--gmt-range-track-h);
   box-sizing: border-box;
   border: 1px solid var(--gmt-border-strong);
   border-radius: var(--gmt-radius-sm);
@@ -260,21 +265,22 @@ textarea.gmt-input::-webkit-resizer {
 }
 
 .gmt-range::-moz-range-progress {
-  height: var(--gmt-range-track-h);
+  block-size: var(--gmt-range-track-h);
   box-sizing: border-box;
   border: 1px solid var(--gmt-border-strong);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
-  background: color(from var(--gmt-cyan) srgb r g b / 0.4);
+  background: color(from var(--gmt-cyan) srgb r g b / 40%);
 }
 
 .gmt-range::-webkit-slider-thumb {
   --gmt-ridge: var(--gmt-cyan);
+
   appearance: none;
   box-sizing: border-box;
-  width: var(--gmt-range-thumb-w);
-  height: var(--gmt-range-thumb-h);
-  margin-top: calc(
+  inline-size: var(--gmt-range-thumb-w);
+  block-size: var(--gmt-range-thumb-h);
+  margin-block-start: calc(
     (var(--gmt-range-track-h) - 2px - var(--gmt-range-thumb-h)) / 2
   );
   border: 2px solid var(--gmt-cyan);
@@ -295,9 +301,10 @@ textarea.gmt-input::-webkit-resizer {
 
 .gmt-range::-moz-range-thumb {
   --gmt-ridge: var(--gmt-cyan);
+
   box-sizing: border-box;
-  width: var(--gmt-range-thumb-w);
-  height: var(--gmt-range-thumb-h);
+  inline-size: var(--gmt-range-thumb-w);
+  block-size: var(--gmt-range-thumb-h);
   border: 2px solid var(--gmt-cyan);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
@@ -315,15 +322,16 @@ textarea.gmt-input::-webkit-resizer {
 }
 
 .gmt-range:hover::-webkit-slider-thumb {
-  box-shadow: 0 0 10px color(from var(--gmt-cyan) srgb r g b / 0.55);
+  box-shadow: 0 0 10px color(from var(--gmt-cyan) srgb r g b / 55%);
 }
 
 .gmt-range:hover::-moz-range-thumb {
-  box-shadow: 0 0 10px color(from var(--gmt-cyan) srgb r g b / 0.55);
+  box-shadow: 0 0 10px color(from var(--gmt-cyan) srgb r g b / 55%);
 }
 
 .gmt-range:active::-webkit-slider-thumb {
   --gmt-ridge: var(--gmt-void);
+
   background:
     repeating-linear-gradient(
         90deg,
@@ -336,6 +344,7 @@ textarea.gmt-input::-webkit-resizer {
 
 .gmt-range:active::-moz-range-thumb {
   --gmt-ridge: var(--gmt-void);
+
   background:
     repeating-linear-gradient(
         90deg,
@@ -349,16 +358,16 @@ textarea.gmt-input::-webkit-resizer {
 /* The sonar ring rides the thumb (the input itself has no box to ring). */
 .gmt-range:focus-visible::-webkit-slider-thumb {
   box-shadow:
-    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
-    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 95%),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 25%);
   animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
     1;
 }
 
 .gmt-range:focus-visible::-moz-range-thumb {
   box-shadow:
-    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
-    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 95%),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 25%);
   animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
     1;
 }
@@ -374,6 +383,7 @@ textarea.gmt-input::-webkit-resizer {
 
 .gmt-range:disabled::-webkit-slider-thumb {
   --gmt-ridge: var(--gmt-ice-dim-fill);
+
   border-color: var(--gmt-ice-dim-fill);
   box-shadow: none;
   animation: none;
@@ -381,6 +391,7 @@ textarea.gmt-input::-webkit-resizer {
 
 .gmt-range:disabled::-moz-range-thumb {
   --gmt-ridge: var(--gmt-ice-dim-fill);
+
   border-color: var(--gmt-ice-dim-fill);
   box-shadow: none;
   animation: none;
@@ -393,17 +404,18 @@ textarea.gmt-input::-webkit-resizer {
 /* The value the reader is reading: follows the thumb, never animates. */
 .gmt-range-chip {
   position: absolute;
-  top: 0;
-  left: calc(
+  inset-block-start: 0;
+  inset-inline-start: calc(
     var(--gmt-range-thumb-w) / 2 + (100% - var(--gmt-range-thumb-w)) *
       var(--gmt-range-pct, 0) / 100
   );
+
   /* Shifted by pct% of its own width, not a fixed half: at the minimum its left
      edge sits at the thumb centre, at the maximum its right edge does, and in
      between it is centred on the thumb. It never leaves the field, so it
      cannot cause sideways scroll at either end. */
   translate: calc(var(--gmt-range-pct, 0) * -1%) 0;
-  max-width: calc(100% - var(--gmt-range-thumb-w));
+  max-inline-size: calc(100% - var(--gmt-range-thumb-w));
   padding: 0 var(--gmt-space-1);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
@@ -443,16 +455,17 @@ textarea.gmt-input::-webkit-resizer {
  * --------------------------------------------------------------------------- */
 
 .gmt-handle {
-  --gmt-ridge: currentColor;
+  --gmt-ridge: currentcolor;
+
   position: absolute;
-  top: 50%;
+  inset-block-start: 50%;
   translate: -50% -50%;
   box-sizing: border-box;
-  width: var(--gmt-handle-w);
-  height: var(--gmt-handle-h);
+  inline-size: var(--gmt-handle-w);
+  block-size: var(--gmt-handle-h);
   margin: 0;
   padding: 0;
-  border: 2px solid currentColor;
+  border: 2px solid currentcolor;
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background:
@@ -463,8 +476,8 @@ textarea.gmt-input::-webkit-resizer {
       )
       center / 7px 45% no-repeat,
     linear-gradient(
-      color-mix(in srgb, currentColor 16%, transparent),
-      color-mix(in srgb, currentColor 16%, transparent)
+      color-mix(in srgb, currentcolor 16%, transparent),
+      color-mix(in srgb, currentcolor 16%, transparent)
     ),
     var(--gmt-void);
   cursor: grab;
@@ -477,19 +490,20 @@ textarea.gmt-input::-webkit-resizer {
 .gmt-handle::before {
   content: "";
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--gmt-handle-hit);
-  height: var(--gmt-handle-hit);
+  inset-inline-start: 50%;
+  inset-block-start: 50%;
+  inline-size: var(--gmt-handle-hit);
+  block-size: var(--gmt-handle-hit);
   translate: -50% -50%;
 }
 
 .gmt-handle:hover {
-  box-shadow: 0 0 10px color-mix(in srgb, currentColor 55%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, currentcolor 55%, transparent);
 }
 
 .gmt-handle:active {
   --gmt-ridge: var(--gmt-void);
+
   cursor: grabbing;
   scale: 1.08;
   background:
@@ -499,17 +513,17 @@ textarea.gmt-input::-webkit-resizer {
         transparent 1px 3px
       )
       center / 7px 45% no-repeat,
-    currentColor;
+    currentcolor;
 }
 
 .gmt-handle:focus-visible {
   /* Two grips can sit within a hit area of each other; the focused one comes
      to the front so a neighbour never covers its ring or its centre. */
-  z-index: 1;
-  outline: none;
+  z-index: var(--gmt-z-raised);
+  outline-color: transparent;
   box-shadow:
-    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0.95),
-    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 0.25);
+    0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 95%),
+    0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 25%);
   animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
     1;
 }
@@ -522,6 +536,7 @@ textarea.gmt-input::-webkit-resizer {
 
 .gmt-chip-toggle {
   --toggle-accent: var(--gmt-cyan-ink);
+
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -550,7 +565,7 @@ textarea.gmt-input::-webkit-resizer {
   align-items: center;
   gap: var(--gmt-space-2);
   box-sizing: border-box;
-  min-height: 32px;
+  min-block-size: 32px;
   padding: 0 var(--gmt-space-3);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-sm);
@@ -566,7 +581,8 @@ textarea.gmt-input::-webkit-resizer {
     border-color var(--gmt-duration-fast) var(--gmt-easing);
 }
 
-.gmt-chip-toggle:hover .gmt-chip-toggle-face {
+.gmt-chip-toggle:hover .gmt-chip-toggle-face,
+.gmt-chip-toggle:has(input:focus-visible) .gmt-chip-toggle-face {
   background-color: var(--gmt-fill-strong);
 }
 
@@ -576,14 +592,15 @@ textarea.gmt-input::-webkit-resizer {
   flex: none;
   inline-size: 0.5rem;
   block-size: 0.5rem;
-  border: 1px solid currentColor;
+  border: 1px solid currentcolor;
   border-radius: 2px;
   corner-shape: bevel;
 }
 
 .gmt-chip-toggle input:checked + .gmt-chip-toggle-face {
   border-color: var(--toggle-accent);
-  background-color: color(from var(--toggle-accent) srgb r g b / 0.2);
+  background-color: color(from var(--toggle-accent) srgb r g b / 20%);
+
   /* Body ink, not the accent ink: on the tinted fill the accent ink measured
      5.93:1 (light) and 7.01:1 (dark). The state is carried by the accent
      border, the tint and the filled mark, not by the text colour. */
@@ -593,7 +610,7 @@ textarea.gmt-input::-webkit-resizer {
 .gmt-chip-toggle:not(.gmt-chip-toggle--switch)
   input:checked
   + .gmt-chip-toggle-face::before {
-  background: currentColor;
+  background: currentcolor;
 }
 
 .gmt-chip-toggle input:focus-visible + .gmt-chip-toggle-face {
@@ -637,7 +654,7 @@ textarea.gmt-input::-webkit-resizer {
 
 .gmt-chip-toggle input:checked + .gmt-chip-toggle-face .gmt-chip-toggle-track {
   border-color: var(--toggle-accent);
-  background: color(from var(--toggle-accent) srgb r g b / 0.2);
+  background: color(from var(--toggle-accent) srgb r g b / 20%);
 }
 
 .gmt-chip-toggle
@@ -655,12 +672,12 @@ textarea.gmt-input::-webkit-resizer {
   border: 0;
   padding: 0;
   margin: 0;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-chip-group > legend {
   padding: 0;
-  margin-bottom: var(--gmt-space-1);
+  margin-block-end: var(--gmt-space-1);
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
@@ -674,11 +691,12 @@ textarea.gmt-input::-webkit-resizer {
 
 .gmt-select {
   appearance: none;
+
   /* WebKit lets a select's widest <option> text spill out of its box, and on a
      phone the page then scrolls sideways; clip it to the box instead. */
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-right: 1.75rem;
+  padding-inline-end: 1.75rem;
   background-image:
     linear-gradient(45deg, transparent 50%, var(--gmt-ice-dim) 50%),
     linear-gradient(135deg, var(--gmt-ice-dim) 50%, transparent 50%);

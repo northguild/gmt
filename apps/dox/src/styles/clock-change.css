@@ -17,8 +17,8 @@
 .gmt-clockcheck-sr,
 .gmt-zonemap-sr {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inline-size: 1px;
+  block-size: 1px;
   margin: -1px;
   padding: 0;
   overflow: hidden;
@@ -31,20 +31,20 @@
 .sl-markdown-content .gmt-clockcheck-table {
   display: table;
   table-layout: auto;
-  width: 100%;
+  inline-size: 100%;
   overflow: visible;
   border-collapse: collapse;
 }
 
 /* Starlight gives a table's first column `width: 1%`; here it takes what the others leave. */
 .sl-markdown-content .gmt-clockcheck-table :is(th, td):first-child {
-  width: auto;
+  inline-size: auto;
   white-space: normal;
 }
 
 /* Place takes what the two short offset columns leave; the card can be as narrow as 18rem. */
 .gmt-clockcheck-table :is(th, td):nth-child(n + 2) {
-  width: 1%;
+  inline-size: 1%;
   white-space: nowrap;
 }
 
@@ -61,8 +61,8 @@
 
 .gmt-clockcheck-table :is(th, td) {
   padding: var(--gmt-space-2);
-  border-bottom: 1px solid var(--gmt-border);
-  text-align: left;
+  border-block-end: 1px solid var(--gmt-border);
+  text-align: start;
   font-size: 0.8125rem;
 }
 
@@ -85,19 +85,19 @@
     position: relative;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    border-bottom: 1px solid var(--gmt-border);
+    border-block-end: 1px solid var(--gmt-border);
   }
 
   .gmt-clockcheck-table thead tr {
-    border-bottom: 2px solid var(--gmt-border-strong);
+    border-block-end: 2px solid var(--gmt-border-strong);
   }
 
   .sl-markdown-content .gmt-clockcheck-table :is(th, td) {
     display: block;
-    width: auto;
-    min-width: 0;
+    inline-size: auto;
+    min-inline-size: 0;
     padding: var(--gmt-space-1) var(--gmt-space-2);
-    border-bottom: 0;
+    border-block-end: 0;
     white-space: normal;
   }
 
@@ -108,8 +108,8 @@
 
   .gmt-clockcheck-table thead th:first-child {
     position: absolute;
-    width: 1px;
-    height: 1px;
+    inline-size: 1px;
+    block-size: 1px;
     margin: -1px;
     padding: 0;
     overflow: hidden;
@@ -120,18 +120,23 @@
 
 .gmt-clockcheck-table thead th {
   vertical-align: bottom;
+
   /* The full text tier: Starlight tints a thead, and the muted tier measures under 7:1 on it. */
   color: var(--gmt-ice);
   font-weight: 600;
-  border-bottom: 2px solid var(--gmt-border-strong);
+  border-block-end: 2px solid var(--gmt-border-strong);
 }
 
-.gmt-clockcheck-table code:not(.gmt-clockcheck-zoneid) {
+.gmt-clockcheck-table code {
   white-space: nowrap;
 }
 
+.gmt-clockcheck-table .gmt-clockcheck-zoneid {
+  white-space: normal;
+}
+
 .gmt-clockcheck-num {
-  min-width: 0;
+  min-inline-size: 0;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -201,7 +206,7 @@
   display: grid;
   align-content: start;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-clockcheck-servers-body > * {
@@ -210,12 +215,12 @@
 
 /* The command scrolls inside its own block; the page never widens. */
 .gmt-clockcheck-servers .gmt-codeframe {
-  min-width: 0;
-  max-width: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
 .gmt-clockcheck-servers .gmt-codeframe-pre {
-  max-width: 100%;
+  max-inline-size: 100%;
   overflow-x: auto;
 }
 
@@ -241,7 +246,7 @@
 }
 
 .gmt-clockcheck-help > * {
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
 }
 
@@ -255,7 +260,7 @@
 }
 
 .gmt-clockcheck-help-lede {
-  max-width: 68ch;
+  max-inline-size: 68ch;
   color: var(--gmt-ice-dim);
 }
 
@@ -367,7 +372,7 @@
 }
 
 /* A link, drawn as the page's button: a full border and the bevel. */
-.gmt-clockcheck-help a.gmt-clockcheck-help-btn {
+.gmt-clockcheck-help .gmt-clockcheck-help-btn {
   display: inline-flex;
   align-items: center;
   gap: var(--gmt-space-2);
@@ -381,7 +386,7 @@
   color: var(--gmt-cyan-ink);
 }
 
-.gmt-clockcheck-help a.gmt-clockcheck-help-btn:is(:hover, :focus-visible) {
+.gmt-clockcheck-help .gmt-clockcheck-help-btn:is(:hover, :focus-visible) {
   background: var(--gmt-surface-2);
 }
 
@@ -416,7 +421,7 @@
   margin-inline-end: var(--gmt-space-2);
   border: 1px solid var(--clockcheck-stopped-chip);
   border-radius: 50%;
-  background: color(from var(--clockcheck-stopped-chip) srgb r g b / 0.45);
+  background: color(from var(--clockcheck-stopped-chip) srgb r g b / 45%);
 }
 
 .gmt-clockcheck-zoneid {
@@ -469,14 +474,15 @@
   block-size: 1.125rem;
   margin: auto;
   border-radius: 50%;
+
   /* A comet: a fading arc with a bright head, cut to a 2px ring. */
   background: conic-gradient(transparent 0 10%, var(--gmt-cyan-ink));
   mask: radial-gradient(
     farthest-side,
     transparent calc(100% - 2px),
-    #000 calc(100% - 2px)
+    #000000 calc(100% - 2px)
   );
-  animation: gmt-clockcheck-spin 0.8s linear infinite;
+  animation: gmt-clockcheck-spin var(--gmt-motion-spin-duration) linear infinite;
 }
 
 @keyframes gmt-clockcheck-spin {
@@ -503,7 +509,7 @@
 
 /* One line stays reserved, so a message arriving does not move what is below it. */
 .gmt-clockcheck-status {
-  min-height: 1.4em;
+  min-block-size: 1.4em;
   margin: 0;
   font-size: 0.8125rem;
   color: var(--gmt-ice-dim);
@@ -535,6 +541,7 @@
     var(--gmt-cyan) calc(var(--zonemap-sea-cyan) * 100%),
     var(--gmt-globe-casing)
   );
+
   /* The land no zone covers: a step above the sea and below the "never changes" fill (about 0.17
      of cyan once its alpha lies over the sea), with a hairline coast one step lighter. */
   --zonemap-land: color-mix(
@@ -566,6 +573,7 @@
 .gmt-widget {
   --clockcheck-ok: var(--gmt-spring-ink);
   --clockcheck-bad: var(--gmt-danger);
+
   /* Outside the map the same three states take a full-border chip in the same hues, written for
      the surface they sit on (the -ink variants flip with the theme). */
   --clockcheck-stopped-chip: var(--gmt-dst-purple-ink);
@@ -587,16 +595,17 @@
 }
 
 .gmt-zonemap-mapsec > * {
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
 }
 
 .gmt-zonemap-stage {
   display: grid;
+
   /* One column that can shrink: WebKit sizes an auto column to the drawing's intrinsic width and
      pushes the page sideways. */
   grid-template-columns: minmax(0, 1fr);
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
   padding: var(--gmt-space-3);
   border-color: var(--gmt-border-strong);
@@ -609,7 +618,7 @@
 @property --gmt-zonemap-row {
   syntax: "<length>";
   inherits: true;
-  initial-value: 0px;
+  initial-value: 0;
 }
 
 @container gmt-clockcheck (min-width: 62rem) {
@@ -622,6 +631,7 @@
       32cqw,
       28rem
     );
+
     /* The map's column is the frame's width plus the stage's padding and border. Each card is an
        inline-size container, so `max-content` would read the stage as empty and collapse it. */
     grid-template-columns:
@@ -706,13 +716,13 @@
 /* The face's box is square before any hand is drawn. */
 .gmt-clockcheck-face {
   grid-row: 1 / span 2;
-  width: 3rem;
-  height: 3rem;
+  inline-size: 3rem;
+  block-size: 3rem;
 }
 
 .gmt-clockcheck-clock p {
   margin: 0;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-clockcheck-clock-zone {
@@ -742,6 +752,7 @@
   min-block-size: 1.75rem;
   font-family: var(--gmt-font-mono);
   font-variant-numeric: tabular-nums;
+
   /* In a narrow column the offset drops under the time, whole; the time never splits. */
   white-space: normal;
 }
@@ -796,8 +807,8 @@
   }
 
   .gmt-clockcheck-face {
-    width: 2.25rem;
-    height: 2.25rem;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
   }
 
   .gmt-clockcheck-clock-hm {
@@ -841,8 +852,8 @@
   display: inline-block;
   flex: none;
   box-sizing: border-box;
-  width: 1.5rem;
-  height: 1rem;
+  inline-size: 1.5rem;
+  block-size: 1rem;
   vertical-align: middle;
   border: 1.5px solid var(--zonemap-none-edge);
   border-radius: var(--gmt-radius-sm);
@@ -870,9 +881,11 @@
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
   background: var(--zonemap-sea);
+
   /* The drawing's box is 800 by the config's height; a checker whose map is not 640 tall sets
      `--zonemap-map-height` on the map's frame in its markup, so the box is reserved before it draws. */
   aspect-ratio: 800 / var(--zonemap-map-height, 640);
+
   /* Stacked: the frame takes the width, but a tall drawing stops at 70% of the viewport's height. */
   inline-size: min(100%, calc(70vh * 800 / var(--zonemap-map-height, 640)));
   margin-inline: auto;
@@ -881,8 +894,8 @@
 
 .gmt-zonemap-svg {
   display: block;
-  width: 100%;
-  height: 100%;
+  inline-size: 100%;
+  block-size: 100%;
 }
 
 /* The land around the zones (Mali, France, the United States): drawn first, a decoration. */
@@ -910,11 +923,21 @@
 
 .gmt-zonemap-label {
   --zonemap-halo: color-mix(in srgb, var(--zonemap-sea) 85%, transparent);
+
   position: absolute;
+
   /* The anchor is the label's centre; the box is pushed back inside the frame, so a label never
      crosses its edge. `--lw` and `--lh` are the label's reserved size in px (zone-map-labels.ts). */
-  left: clamp(calc(var(--lw) / 2), var(--ax), calc(100% - var(--lw) / 2));
-  top: clamp(calc(var(--lh) / 2), var(--ay), calc(100% - var(--lh) / 2));
+  inset-inline-start: clamp(
+    calc(var(--lw) / 2),
+    var(--ax),
+    calc(100% - var(--lw) / 2)
+  );
+  inset-block-start: clamp(
+    calc(var(--lh) / 2),
+    var(--ay),
+    calc(100% - var(--lh) / 2)
+  );
   inline-size: var(--lw);
   block-size: var(--lh);
   transform: translate(-50%, -50%);
@@ -925,33 +948,26 @@
   text-align: center;
   white-space: nowrap;
   pointer-events: none;
+
   /* A passing label lies over a permanent one if they meet. */
-  z-index: 1;
-  text-shadow:
-    3px 0 0 var(--zonemap-halo),
-    2.77px 1.15px 0 var(--zonemap-halo),
-    2.12px 2.12px 0 var(--zonemap-halo),
-    1.15px 2.77px 0 var(--zonemap-halo),
-    0 3px 0 var(--zonemap-halo),
-    -1.15px 2.77px 0 var(--zonemap-halo),
-    -2.12px 2.12px 0 var(--zonemap-halo),
-    -2.77px 1.15px 0 var(--zonemap-halo),
-    -3px 0 0 var(--zonemap-halo),
-    -2.77px -1.15px 0 var(--zonemap-halo),
+  z-index: var(--gmt-z-raised);
+
+  --zonemap-halo-shadow:
+    3px 0 0 var(--zonemap-halo), 2.77px 1.15px 0 var(--zonemap-halo),
+    2.12px 2.12px 0 var(--zonemap-halo), 1.15px 2.77px 0 var(--zonemap-halo),
+    0 3px 0 var(--zonemap-halo), -1.15px 2.77px 0 var(--zonemap-halo),
+    -2.12px 2.12px 0 var(--zonemap-halo), -2.77px 1.15px 0 var(--zonemap-halo),
+    -3px 0 0 var(--zonemap-halo), -2.77px -1.15px 0 var(--zonemap-halo),
     -2.12px -2.12px 0 var(--zonemap-halo),
-    -1.15px -2.77px 0 var(--zonemap-halo),
-    -0 -3px 0 var(--zonemap-halo),
-    1.15px -2.77px 0 var(--zonemap-halo),
-    2.12px -2.12px 0 var(--zonemap-halo),
-    2.77px -1.15px 0 var(--zonemap-halo),
-    1.66px 0.69px 0 var(--zonemap-halo),
-    0.69px 1.66px 0 var(--zonemap-halo),
-    -0.69px 1.66px 0 var(--zonemap-halo),
-    -1.66px 0.69px 0 var(--zonemap-halo),
-    -1.66px -0.69px 0 var(--zonemap-halo),
-    -0.69px -1.66px 0 var(--zonemap-halo),
-    0.69px -1.66px 0 var(--zonemap-halo),
+    -1.15px -2.77px 0 var(--zonemap-halo), -0 -3px 0 var(--zonemap-halo),
+    1.15px -2.77px 0 var(--zonemap-halo), 2.12px -2.12px 0 var(--zonemap-halo),
+    2.77px -1.15px 0 var(--zonemap-halo), 1.66px 0.69px 0 var(--zonemap-halo),
+    0.69px 1.66px 0 var(--zonemap-halo), -0.69px 1.66px 0 var(--zonemap-halo),
+    -1.66px 0.69px 0 var(--zonemap-halo), -1.66px -0.69px 0 var(--zonemap-halo),
+    -0.69px -1.66px 0 var(--zonemap-halo), 0.69px -1.66px 0 var(--zonemap-halo),
     1.66px -0.69px 0 var(--zonemap-halo);
+
+  text-shadow: var(--zonemap-halo-shadow);
 }
 
 .gmt-zonemap-label[hidden] {
@@ -959,12 +975,12 @@
 }
 
 .gmt-zonemap-label.is-passing {
-  z-index: 2;
+  z-index: var(--gmt-z-over);
 }
 
 .gmt-zonemap-label-city {
   font-family: var(--gmt-font-display);
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 15px;
   text-transform: uppercase;
   color: var(--gmt-ice);
@@ -974,7 +990,7 @@
 .gmt-zonemap-label-offset {
   min-inline-size: 6ch;
   font-family: var(--gmt-font-mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 15px;
   font-variant-numeric: tabular-nums;
   color: var(--gmt-cyan-bright);
@@ -985,17 +1001,26 @@
   padding: 0;
   border: 0;
   background: none;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 15px;
   text-shadow: inherit;
+}
+
+/* The halo is decoration; raised contrast draws the label on the plain ground. */
+@media (prefers-contrast: more) {
+  .gmt-zonemap-label {
+    --zonemap-halo-shadow: none;
+  }
 }
 
 @media (forced-colors: active) {
   /* The halo is a text-shadow, which forced colours drop; opting out keeps it, in the system pair. */
   .gmt-zonemap-label {
     --zonemap-halo: Canvas;
+
     forced-color-adjust: none;
   }
+
   .gmt-zonemap-label-city,
   .gmt-zonemap-label-offset,
   .gmt-zonemap-label .gmt-playground-sentinel {
@@ -1010,8 +1035,8 @@
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
   cursor: pointer;
-  outline: none;
-  transition: fill 0.15s;
+  outline-color: transparent;
+  transition: fill var(--gmt-duration-quick);
 }
 
 .gmt-zonemap-shape[data-kind="changes-after"] {
@@ -1054,7 +1079,7 @@
 }
 
 .gmt-zonemap-ring--pin .gmt-zonemap-ring-casing {
-  stroke: color(from var(--gmt-globe-selected) srgb r g b / 0.3);
+  stroke: color(from var(--gmt-globe-selected) srgb r g b / 30%);
   stroke-width: 7;
 }
 
@@ -1072,7 +1097,7 @@
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
   cursor: pointer;
-  outline: none;
+  outline-color: transparent;
 }
 
 .gmt-zonemap-marker[data-kind="changes-after"] {
@@ -1083,7 +1108,8 @@
   stroke: var(--zonemap-stopped-edge);
 }
 
-.gmt-zonemap-marker:is(:hover, .is-active) {
+.gmt-zonemap-marker:is(:hover, .is-active),
+.gmt-zonemap-marker:is(:focus-visible, .is-active) {
   stroke: var(--gmt-cyan-bright);
 }
 
@@ -1117,7 +1143,7 @@
 .gmt-zonemap-zone-frame {
   display: grid;
   box-sizing: border-box;
-  min-width: 0;
+  min-inline-size: 0;
   padding: var(--gmt-space-1);
   border: 1px solid var(--gmt-border-strong);
   border-radius: var(--gmt-radius-md);
@@ -1128,10 +1154,9 @@
 
 .gmt-zonemap-zone-scroll {
   scroll-padding: 6px;
-  min-height: 0;
+  min-block-size: 0;
   max-block-size: min(60vh, 24rem);
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
@@ -1175,7 +1200,7 @@
     "offset"
     "kind";
   column-gap: var(--gmt-space-3);
-  width: 100%;
+  inline-size: 100%;
   margin: 0;
   padding: var(--gmt-space-2) var(--gmt-space-3);
   border: 1px solid var(--gmt-border-strong);
@@ -1185,11 +1210,11 @@
   color: inherit;
   font: inherit;
   font-size: 0.8125rem;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
+    border-color var(--gmt-duration-quick) ease,
+    background var(--gmt-duration-quick) ease;
 }
 
 /* The same two states as the home page's clock list (`gmt-clock-list.css`): cyan border and fill
@@ -1209,7 +1234,7 @@
 
 .gmt-zonemap-zone-id {
   grid-area: id;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 /* One segment of a zone id: never breaks inside, hyphen included. */
@@ -1229,21 +1254,22 @@
   display: flex;
   align-items: center;
   gap: var(--gmt-space-2);
+
   /* Two lines of the class label, so a card keeps its height whether the answer has come or not
      and whether the label wraps. */
-  min-height: 3.5em;
+  min-block-size: 3.5em;
   color: var(--gmt-ice-dim);
   font-size: 0.75rem;
 }
 
 .gmt-zonemap-zone-kind .gmt-zonemap-swatch {
-  width: 1.125rem;
-  height: 0.75rem;
+  inline-size: 1.125rem;
+  block-size: 0.75rem;
 }
 
 .gmt-zonemap-zone-offset {
   grid-area: offset;
-  text-align: left;
+  text-align: start;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1288,19 +1314,19 @@
 }
 
 .gmt-zonemap-pin-clock {
-  width: 5rem;
-  height: 5rem;
+  inline-size: 5rem;
+  block-size: 5rem;
 }
 
 .gmt-zonemap-pin-title {
   display: grid;
   gap: var(--gmt-space-1);
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
 }
 
 .gmt-zonemap-pin-titlerow {
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-zonemap-pin-title dd {
@@ -1324,8 +1350,8 @@
 }
 
 .gmt-zonemap-pin-title .gmt-zonemap-swatch {
-  width: 1.125rem;
-  height: 0.75rem;
+  inline-size: 1.125rem;
+  block-size: 0.75rem;
   margin-inline-end: var(--gmt-space-2);
 }
 
@@ -1333,7 +1359,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--gmt-space-3) var(--gmt-space-3);
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
   padding-block-start: var(--gmt-space-3);
   border-block-start: 1px solid var(--gmt-border);
@@ -1344,7 +1370,7 @@
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: var(--gmt-space-1);
-  min-width: 0;
+  min-inline-size: 0;
   font-size: 0.8125rem;
 }
 
@@ -1360,9 +1386,10 @@
 }
 
 .gmt-zonemap-pin-row dd {
-  min-width: 0;
-  min-height: 1.4em;
+  min-inline-size: 0;
+  min-block-size: 1.4em;
   margin: 0;
+
   /* A number, so a digit or sign set in a fallback font cannot grow the line box. */
   line-height: 1.4;
   font-variant-numeric: tabular-nums;
@@ -1371,7 +1398,7 @@
 
 /* Two lines held by the values that can wrap. */
 .gmt-zonemap-pin-row--wide dd {
-  min-height: 2.8em;
+  min-block-size: 2.8em;
 }
 
 /* From 40rem the panel runs across the checker: the clock, the zone and its class on the left, the
@@ -1394,7 +1421,7 @@
   }
 
   .gmt-zonemap-pin-row--wide dd {
-    min-height: 4.2em;
+    min-block-size: 4.2em;
   }
 }
 
@@ -1408,7 +1435,7 @@
 @container gmt-clockcheck (max-width: 519.98px) {
   .gmt-zonemap-pin {
     grid-template-columns: minmax(0, 1fr);
-    margin-top: var(--gmt-space-1);
+    margin-block-start: var(--gmt-space-1);
   }
 }
 
@@ -1494,6 +1521,7 @@
   .gmt-clockcheck-stored-body {
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   }
+
   .gmt-clockcheck-stored-form {
     position: sticky;
     inset-block-start: var(--gmt-space-4);
@@ -1505,7 +1533,7 @@
   display: grid;
   align-content: start;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-clockcheck-stored-form > *,
@@ -1600,7 +1628,8 @@
   font-weight: 600;
 }
 
-.gmt-clockcheck-btn--primary:hover:not(:disabled) {
+.gmt-clockcheck-btn--primary:hover:not(:disabled),
+.gmt-clockcheck-btn--primary:focus-visible:not(:disabled) {
   background: var(--gmt-fill-deep);
   border-color: var(--gmt-cyan);
 }
@@ -1611,7 +1640,8 @@
   color: var(--gmt-ice-dim);
 }
 
-.gmt-clockcheck-btn--ghost:hover {
+.gmt-clockcheck-btn--ghost:hover,
+.gmt-clockcheck-btn--ghost:focus-visible {
   border-color: var(--gmt-border-strong);
   color: var(--gmt-ice);
 }
@@ -1683,7 +1713,8 @@
 }
 
 .gmt-clockcheck-stored-results {
-  min-width: 0;
+  min-inline-size: 0;
+
   /* The prefilled example is checked on load: hold the room its rows fill when the browser's data is
      current (table, then cards, then narrow cards), so the page below does not jump when the answer
      arrives. The template sets --stored-rows to the example's line count. The base is what four
@@ -1722,7 +1753,7 @@
 .sl-markdown-content .gmt-clockcheck-stored-table {
   display: table;
   table-layout: auto;
-  width: 100%;
+  inline-size: 100%;
   margin: 0;
   overflow: visible;
   border-collapse: separate;
@@ -1744,12 +1775,12 @@
   color: var(--gmt-ice-dim);
   font-size: 0.75rem;
   font-weight: 600;
-  text-align: left;
+  text-align: start;
   white-space: nowrap;
 }
 
 .sl-markdown-content .gmt-clockcheck-stored-table td {
-  width: auto;
+  inline-size: auto;
   padding: var(--gmt-space-2) var(--gmt-space-3);
   border: 0;
   border-block: 1px solid var(--gmt-border);
@@ -1759,7 +1790,7 @@
 }
 
 .sl-markdown-content .gmt-clockcheck-stored-table td:first-child {
-  width: 1%;
+  inline-size: 1%;
   white-space: nowrap;
   border-inline-start: 1px solid var(--gmt-border);
   border-start-start-radius: var(--gmt-radius-md);
@@ -1776,12 +1807,20 @@
   max-inline-size: 22rem;
 }
 
-/* The whole value, wrapped: the zone at its end says which place the line is in. */
+/* The whole value, wrapped at its break points (`gmt-codebreak`, src/lib/code-break.ts): the zone
+   at its end says which place the line is in. A token with no break point stays whole and the
+   box scrolls sideways, never a word cut in two. */
 .gmt-clockcheck-stored-input code {
   display: block;
-  overflow-wrap: anywhere;
-  white-space: normal;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
   font-size: 0.75rem;
+}
+
+.gmt-clockcheck-stored-input .gmt-codebreak {
+  white-space: pre-wrap;
 }
 
 .gmt-clockcheck-stored-table .gmt-playground-sentinel {
@@ -1885,13 +1924,21 @@
     clip-path: inset(50%);
   }
 
-  .gmt-clockcheck-stored-table,
-  .gmt-clockcheck-stored-table tbody {
+  /* The base rule above names `.sl-markdown-content`, so these name it too: at one class
+     less, `display: table` would win and the "stacked" table would keep its table
+     sizing and its horizontal `border-spacing`. */
+  .sl-markdown-content .gmt-clockcheck-stored-table,
+  .sl-markdown-content .gmt-clockcheck-stored-table tbody {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    border-spacing: 0;
   }
 
   .gmt-clockcheck-stored-table tr {
     display: grid;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     gap: var(--gmt-space-1);
     margin-block-end: var(--gmt-space-2);
     padding: var(--gmt-space-2) var(--gmt-space-3);
@@ -1909,7 +1956,9 @@
   .sl-markdown-content .gmt-clockcheck-stored-table td:first-child,
   .sl-markdown-content .gmt-clockcheck-stored-table td:last-child {
     display: block;
-    width: auto;
+    inline-size: auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -1926,37 +1975,46 @@
     border-color: Highlight;
     box-shadow: 0 0 0 1px Highlight;
   }
+
   .gmt-zonemap-shape,
   .gmt-zonemap-marker {
     stroke: CanvasText;
   }
+
   /* Forced colours repaint a clear fill as Canvas, which would hide the shape under the disc. */
   .gmt-zonemap-marker {
     fill: none;
     pointer-events: all;
   }
+
   .gmt-zonemap-marker.is-pinned {
     stroke: Highlight;
   }
+
   .gmt-zonemap-ring-casing {
     stroke: Canvas;
   }
+
   .gmt-zonemap-ring--hover .gmt-zonemap-ring-ink,
   .gmt-zonemap-marker:is(:hover, .is-active),
   .gmt-zonemap-shape:focus-visible,
   .gmt-zonemap-marker:focus-visible {
     stroke: LinkText;
   }
+
   .gmt-zonemap-ring--pin .gmt-zonemap-ring-ink {
     stroke: Highlight;
   }
+
   .gmt-zonemap-zone-btn[aria-pressed="true"] {
     border-color: Highlight;
     box-shadow: 0 0 0 1px Highlight;
   }
+
   .gmt-zonemap-zone-btn:is(:hover, :focus-visible) {
     border-color: LinkText;
   }
+
   .gmt-zonemap-zone-scroll:focus-visible,
   .gmt-zonemap-zone-btn:focus-visible {
     outline-color: Highlight;
@@ -1976,7 +2034,7 @@
   border: 1px solid var(--gmt-cyan-ink);
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
-  background: color(from var(--gmt-cyan) srgb r g b / 0.07);
+  background: color(from var(--gmt-cyan) srgb r g b / 7%);
 }
 
 .gmt-clockcheck-minimums h4 {
@@ -2032,8 +2090,8 @@
 /* The line under the table that says why the blind rows are never judged. It takes the table's
    width (not the prose measure), and where it must wrap its lines are balanced, so no word is left
    alone on the last line. */
-.gmt-clockcheck-browser p.gmt-clockcheck-blind-note {
-  max-width: none;
+.gmt-clockcheck-browser .gmt-clockcheck-blind-note {
+  max-inline-size: none;
   text-wrap: balance;
 }
 
@@ -2075,7 +2133,7 @@
 
 .gmt-clockcheck-row > *,
 .gmt-clockcheck-stack > .gmt-widget-section {
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
 }
 
@@ -2101,7 +2159,7 @@
 .gmt-keypoints {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
 }
 
@@ -2150,7 +2208,7 @@
 }
 
 .gmt-keypoints-card > :last-child {
-  margin-bottom: 0;
+  margin-block-end: 0;
 }
 
 .gmt-keypoints-card code {
@@ -2186,7 +2244,7 @@
   border: 1px solid var(--gmt-cyan-ink);
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
-  background: color(from var(--gmt-cyan) srgb r g b / 0.07);
+  background: color(from var(--gmt-cyan) srgb r g b / 7%);
 }
 
 .gmt-clockcheck-servers h4 {
@@ -2212,7 +2270,7 @@
 
 /* Two years of rows, up to two changes each with their UTC lines, held before the answer arrives. */
 .gmt-clockcheck-group {
-  min-height: 16.25rem;
+  min-block-size: 16.25rem;
   margin: 0;
   padding: var(--gmt-space-3);
   border: 1px solid var(--gmt-border-strong);
@@ -2228,6 +2286,7 @@
 
 .gmt-clockcheck-changes {
   display: grid;
+
   /* One column that may be narrower than its widest line: a group in a 300px page is 1px short of
      a change's natural width, and the lines wrap at their spaces instead of widening the page. */
   grid-template-columns: minmax(0, 1fr);
@@ -2254,7 +2313,7 @@
 }
 
 .gmt-clockcheck-change-shift {
-  text-align: right;
+  text-align: end;
 }
 
 .gmt-clockcheck-change-utc {
@@ -2293,7 +2352,7 @@
 }
 
 .gmt-clockcheck-now-hint {
-  margin-top: var(--gmt-space-2);
+  margin-block-start: var(--gmt-space-2);
 }
 
 /* --- The zone list and the pin panel -------------------------------------- */
@@ -2333,6 +2392,7 @@
   .gmt-clockcheck-help {
     border-color: CanvasText;
   }
+
   .gmt-clockcheck-step,
   .gmt-clockcheck-stored-head,
   .gmt-clockcheck-badge,
@@ -2360,12 +2420,15 @@
   display: inline-grid;
   vertical-align: top;
 }
+
 .gmt-tense--block {
   display: grid;
 }
+
 .gmt-tense > [data-form] {
   grid-area: 1 / 1;
 }
+
 .gmt-tense > [data-form][aria-hidden="true"] {
   visibility: hidden;
 }

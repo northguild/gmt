@@ -31,12 +31,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-obs-holiday {
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-flow: row wrap;
   align-items: end;
 }
 
@@ -49,7 +48,7 @@
 
 .gmt-obs-holiday-fields .gmt-label {
   flex: 1 1 6rem;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-obs-column-head {
@@ -61,12 +60,12 @@
 
 .gmt-obs-column-pick {
   flex: 1 1 14rem;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-obs-column-pick .gmt-select {
-  width: 100%;
-  min-width: 0;
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .gmt-obs-num {
@@ -141,12 +140,12 @@
 /* The site's `th:first-child, td:first-child` rule sets `width: 1%` and
    `white-space: nowrap`; the doubled class out-ranks it whatever the order. */
 .gmt-observance-comparator .gmt-obs-table.gmt-obs-table th:first-child {
-  width: 8.5rem;
+  inline-size: 8.5rem;
   white-space: normal;
 }
 
 .gmt-observance-comparator .gmt-obs-table.gmt-obs-table td:first-child {
-  width: auto;
+  inline-size: auto;
   white-space: normal;
 }
 
@@ -156,7 +155,7 @@
   border-block-end: 1px solid var(--gmt-hairline-faint);
 }
 
-.gmt-observance-comparator .gmt-obs-table th.gmt-obs-year {
+.gmt-observance-comparator .gmt-obs-table .gmt-obs-year {
   font-size: var(--gmt-text-sm);
   border-block-end: 1px solid var(--gmt-hairline-faint);
 }
@@ -202,7 +201,7 @@
 }
 
 /* A disagreeing year: words (the line above) and a hatch, never colour alone. */
-.gmt-obs-table tr[data-disagree] th.gmt-obs-year {
+.gmt-obs-table tr[data-disagree] .gmt-obs-year {
   background: repeating-linear-gradient(
     135deg,
     transparent 0 5px,
@@ -246,7 +245,7 @@
 
 .gmt-obs-cell[aria-pressed="true"] {
   border-color: var(--gmt-series-1);
-  background: color(from var(--gmt-series-1) srgb r g b / 0.08);
+  background: color(from var(--gmt-series-1) srgb r g b / 8%);
 }
 
 .gmt-obs-hol {
@@ -293,7 +292,7 @@
   .gmt-observance-comparator .gmt-obs-table tbody,
   .gmt-observance-comparator .gmt-obs-table tr,
   .gmt-observance-comparator .gmt-obs-table td,
-  .gmt-observance-comparator .gmt-obs-table th.gmt-obs-year {
+  .gmt-observance-comparator .gmt-obs-table .gmt-obs-year {
     display: block;
     inline-size: auto;
   }
@@ -339,9 +338,9 @@
     corner-shape: bevel;
   }
 
-  .gmt-observance-comparator .gmt-obs-table.gmt-obs-table th.gmt-obs-year,
+  .gmt-observance-comparator .gmt-obs-table.gmt-obs-table .gmt-obs-year,
   .gmt-observance-comparator .gmt-obs-table.gmt-obs-table td {
-    width: auto;
+    inline-size: auto;
     border: 0;
   }
 
@@ -383,7 +382,7 @@
 .gmt-obs-cluster {
   display: grid;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-obs-cluster-name {
@@ -393,7 +392,7 @@
 }
 
 .gmt-obs-lane {
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-obs-lane-name {

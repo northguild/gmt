@@ -41,19 +41,19 @@
 
 .gmt-interval-row-label {
   flex: 0 0 auto;
-  width: var(--gmt-interval-label-w);
+  inline-size: var(--gmt-interval-label-w);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   text-transform: uppercase;
   color: var(--gmt-ice-dim);
-  text-align: right;
+  text-align: end;
 }
 
 .gmt-interval-track {
   position: relative;
   flex: 1 1 auto;
-  height: 22px;
+  block-size: 22px;
   background: var(--gmt-fill-subtle);
   border-radius: var(--gmt-radius-sm);
 }
@@ -74,19 +74,18 @@
 
 .gmt-interval-bar {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
+  inset-block: 2px;
   border-radius: var(--gmt-radius-sm);
   transition: background var(--gmt-duration-fast) var(--gmt-easing);
 }
 
 .gmt-interval-bar--a {
-  background: color(from var(--gmt-cyan) srgb r g b / 0.3);
+  background: color(from var(--gmt-cyan) srgb r g b / 30%);
   border: 1px solid var(--gmt-cyan);
 }
 
 .gmt-interval-bar--b {
-  background: color(from var(--gmt-teal) srgb r g b / 0.35);
+  background: color(from var(--gmt-teal) srgb r g b / 35%);
   border: 1px solid var(--gmt-teal);
 }
 
@@ -98,11 +97,11 @@
 /* The grip itself is the shared `.gmt-handle` (gmt-form-controls.css); its edge
    reads currentColor, so each bar's colour carries through. */
 .gmt-interval-bar > .gmt-handle:first-child {
-  left: 0;
+  inset-inline-start: 0;
 }
 
 .gmt-interval-bar > .gmt-handle:last-child {
-  left: 100%;
+  inset-inline-start: 100%;
 }
 
 .gmt-interval-bar--a > .gmt-handle {
@@ -130,28 +129,27 @@
 
 .gmt-interval-op-segment {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
+  inset-block: 2px;
   border-radius: var(--gmt-radius-sm);
 }
 
 .gmt-interval-track--intersection .gmt-interval-op-segment {
-  background: color(from var(--gmt-spring) srgb r g b / 0.35);
+  background: color(from var(--gmt-spring) srgb r g b / 35%);
   border: 1px solid var(--gmt-spring);
 }
 
 .gmt-interval-track--union .gmt-interval-op-segment {
-  background: color(from var(--gmt-dst-gold) srgb r g b / 0.3);
+  background: color(from var(--gmt-dst-gold) srgb r g b / 30%);
   border: 1px solid var(--gmt-dst-gold);
 }
 
 .gmt-interval-track--difference .gmt-interval-op-segment {
-  background: color(from var(--gmt-signal) srgb r g b / 0.3);
+  background: color(from var(--gmt-signal) srgb r g b / 30%);
   border: 1px solid var(--gmt-signal);
 }
 
 .gmt-interval-track--xor .gmt-interval-op-segment {
-  background: color(from var(--gmt-dst-purple) srgb r g b / 0.3);
+  background: color(from var(--gmt-dst-purple) srgb r g b / 30%);
   border: 1px solid var(--gmt-dst-purple);
 }
 

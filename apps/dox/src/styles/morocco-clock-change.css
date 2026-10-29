@@ -32,8 +32,7 @@
 .gmt-morocco-wrong-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: var(--gmt-space-3);
-  row-gap: 2px;
+  gap: 2px var(--gmt-space-3);
   margin: 0;
   padding: var(--gmt-space-2) var(--gmt-space-3);
   border: 1px solid var(--gmt-border-strong);
@@ -54,7 +53,7 @@
 .gmt-morocco-wrong-shift {
   grid-column: 2;
   grid-row: 1;
-  text-align: right;
+  text-align: end;
   white-space: nowrap;
 }
 
@@ -64,7 +63,7 @@
 
 .gmt-morocco-wrong-utc {
   grid-column: 2;
-  text-align: right;
+  text-align: end;
   font-size: 0.75rem;
   color: var(--gmt-ice-dim);
 }

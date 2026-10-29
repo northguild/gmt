@@ -19,18 +19,18 @@
   grid-template-rows: repeat(2, minmax(0, 1fr));
   grid-auto-columns: minmax(0, 1fr);
   gap: var(--gmt-space-2);
-  margin-top: var(--gmt-space-4);
+  margin-block-start: var(--gmt-space-4);
 }
 
 .gmt-clock-entry {
-  min-width: 0;
-  width: 100%;
+  min-inline-size: 0;
+  inline-size: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--gmt-space-1);
-  margin-top: 0;
+  margin-block-start: 0;
   padding: var(--gmt-space-2) var(--gmt-space-3);
   background: var(--gmt-fill-subtle);
   border: 1px solid var(--gmt-border);
@@ -38,11 +38,11 @@
   corner-shape: bevel;
   font: inherit;
   color: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
+    border-color var(--gmt-duration-quick) ease,
+    background var(--gmt-duration-quick) ease;
 }
 
 /* [aria-selected="true"] — the keyboard-browsed row (zone-clock-list.ts's
@@ -56,7 +56,7 @@
 .gmt-clock-entry[aria-selected="true"] {
   border-color: var(--gmt-cyan);
   background: var(--gmt-fill);
-  outline: none;
+  outline-color: transparent;
 }
 
 .gmt-clock-entry.selected {
@@ -70,7 +70,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: var(--gmt-space-2);
-  width: 100%;
+  inline-size: 100%;
 }
 
 .gmt-clock-name {
@@ -93,8 +93,8 @@
   display: flex;
   align-items: baseline;
   gap: var(--gmt-space-1);
-  width: 100%;
-  min-width: 0;
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .gmt-clock-date {
@@ -119,11 +119,12 @@
 .gmt-clock-dst {
   margin-inline-start: auto;
   padding: 0 0.3em;
-  border: 1px solid color(from var(--gmt-dst-gold) srgb r g b / 0.3);
+  border: 1px solid color(from var(--gmt-dst-gold) srgb r g b / 30%);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
-  background: color(from var(--gmt-dst-gold) srgb r g b / 0.15);
+  background: color(from var(--gmt-dst-gold) srgb r g b / 15%);
   color: var(--gmt-dst-gold-ink);
+
   /* --gmt-text-xs, not something smaller: the site holds a 12px floor for
      rendered text and `font-floor.test.ts` enforces it. */
   font-size: var(--gmt-text-xs);
@@ -190,8 +191,8 @@
    use for "+1d". */
 .gmt-clock-visually-hidden {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inline-size: 1px;
+  block-size: 1px;
   padding: 0;
   margin: -1px;
   overflow: hidden;

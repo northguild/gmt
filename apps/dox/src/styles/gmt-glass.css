@@ -12,26 +12,22 @@
 /* Header — stained glass wash, content visible behind */
 header {
   background: var(--gmt-fill-strong);
-  border-bottom: 1px solid var(--gmt-border);
-  backdrop-filter: blur(var(--gmt-blur));
-  -webkit-backdrop-filter: blur(var(--gmt-blur));
+  border-block-end: 1px solid var(--gmt-border);
+  backdrop-filter: var(--gmt-glass-blur);
 }
 
 /* Sidebar — subtle blue-tinted glass, content shows through */
-.sidebar-pane,
-#starlight__sidebar {
+.sidebar-pane {
   background: var(--gmt-fill);
-  backdrop-filter: blur(var(--gmt-blur));
-  -webkit-backdrop-filter: blur(var(--gmt-blur));
-  border-right: none;
+  backdrop-filter: var(--gmt-glass-blur);
+  border-inline-end: none;
 }
 
 /* Mobile "On this page" bar — same ice glass as the sidebar (fill comes from
    --sl-color-bg-nav; add the blur + cyan hairline to match). */
 mobile-starlight-toc nav {
-  border-top: 1px solid var(--gmt-border);
-  backdrop-filter: blur(var(--gmt-blur));
-  -webkit-backdrop-filter: blur(var(--gmt-blur));
+  border-block-start: 1px solid var(--gmt-border);
+  backdrop-filter: var(--gmt-glass-blur);
 }
 
 /* Code blocks — stained glass wash (--gmt-code-surface flips for light mode) */
@@ -40,8 +36,7 @@ mobile-starlight-toc nav {
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-lg);
   position: relative;
-  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-  -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  backdrop-filter: var(--gmt-glass-blur-saturate);
 }
 
 /* Expressive Code has no base --ec-codeBg from us; only light needs a nudge. */
@@ -55,15 +50,13 @@ mobile-starlight-toc nav {
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-lg);
   overflow: hidden;
-  backdrop-filter: blur(calc(var(--gmt-blur) * 0.5));
-  -webkit-backdrop-filter: blur(calc(var(--gmt-blur) * 0.5));
+  backdrop-filter: var(--gmt-glass-blur-half);
 }
 
 /* Table headers — deeper blue tint */
 .sl-markdown-content thead {
   background: var(--gmt-fill-deep);
-  backdrop-filter: blur(var(--gmt-blur));
-  -webkit-backdrop-filter: blur(var(--gmt-blur));
+  backdrop-filter: var(--gmt-glass-blur);
 }
 
 /* Alerts / Asides — stained glass wash */
@@ -72,8 +65,7 @@ mobile-starlight-toc nav {
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
-  backdrop-filter: blur(var(--gmt-blur));
-  -webkit-backdrop-filter: blur(var(--gmt-blur));
+  backdrop-filter: var(--gmt-glass-blur);
 }
 
 /* No callout draws a left-only accent. Starlight's note, tip, caution and danger
@@ -92,7 +84,9 @@ mobile-starlight-toc nav {
 }
 
 .sl-markdown-content details:not([open]):hover:not(:where(.not-content *)),
-.sl-markdown-content details:has(> summary:hover):not(:where(.not-content *)) {
+.sl-markdown-content details:has(> summary:hover):not(:where(.not-content *)),
+.sl-markdown-content
+  details:has(> summary:focus-visible):not(:where(.not-content *)) {
   border-color: var(--gmt-border-strong);
 }
 
@@ -129,8 +123,7 @@ mobile-starlight-toc nav {
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
-  backdrop-filter: blur(var(--gmt-blur));
-  -webkit-backdrop-filter: blur(var(--gmt-blur));
+  backdrop-filter: var(--gmt-glass-blur);
 }
 
 /* Search input — translucent glass fill */
@@ -161,6 +154,5 @@ site-search input:focus {
   background: var(--gmt-fill-deep);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-lg);
-  backdrop-filter: blur(var(--gmt-blur-heavy));
-  -webkit-backdrop-filter: blur(var(--gmt-blur-heavy));
+  backdrop-filter: var(--gmt-glass-blur-heavy);
 }

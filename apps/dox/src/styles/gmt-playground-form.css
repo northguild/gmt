@@ -37,8 +37,8 @@
  */
 .gmt-pf-expr {
   font-family: var(--gmt-font-mono);
-  width: 100%;
-  min-width: 0;
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .gmt-pf-opt {
@@ -55,14 +55,14 @@
    one row, each taking its part of it. */
 .gmt-field-grid .gmt-playground-form-units > .gmt-input {
   flex: 1 1 4rem;
-  width: auto;
-  min-width: 64px;
+  inline-size: auto;
+  min-inline-size: 64px;
 }
 
 .gmt-field-grid .gmt-playground-form-units > .gmt-select {
   flex: 1 1 6rem;
-  width: auto;
-  min-width: 0;
+  inline-size: auto;
+  min-inline-size: 0;
 }
 
 /* ---- Repeatable rows (list / intervals) ---- */
@@ -81,12 +81,12 @@
 .gmt-pf-row .gmt-input,
 .gmt-pf-row .gmt-select {
   flex: 1 1 auto;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-pf-remove {
   flex: 0 0 auto;
-  width: 32px;
+  inline-size: 32px;
   font-family: var(--gmt-font-mono);
   font-size: 1rem;
   line-height: 1;
@@ -101,7 +101,8 @@
     border-color var(--gmt-duration-fast) var(--gmt-easing);
 }
 
-.gmt-pf-remove:hover {
+.gmt-pf-remove:hover,
+.gmt-pf-remove:focus-visible {
   color: var(--gmt-signal-ink);
   border-color: var(--gmt-signal-border);
 }
@@ -124,7 +125,8 @@
     border-color var(--gmt-duration-fast) var(--gmt-easing);
 }
 
-.gmt-pf-add:hover {
+.gmt-pf-add:hover,
+.gmt-pf-add:focus-visible {
   background: var(--gmt-fill-subtle);
   border-color: var(--gmt-cyan);
 }

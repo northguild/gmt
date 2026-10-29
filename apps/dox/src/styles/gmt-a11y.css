@@ -2,9 +2,8 @@
  * GMT accessibility gates (DOX-D1) — overview.md §3 / DOX-D.md Definition of Done.
  *
  * "Everything gated behind prefers-reduced-motion, prefers-reduced-transparency,
- * and prefers-contrast." Reduced-motion lives with the rules it stops (the
- * gmt-controls.css global reset). This sheet owns the other two, plus a minimal
- * forced-colors pass.
+ * and prefers-contrast." Reduced motion is a token swap in gmt-tokens.css plus the
+ * blanket below. This sheet owns the other two, plus a minimal forced-colors pass.
  *
  * Loaded LAST so it always wins its ties.
  */
@@ -12,8 +11,23 @@
 /* =======================================================================
  * prefers-reduced-transparency
  * DoD: "drops to a near-opaque fill with the blur skipped entirely."
+ * Every blur reads a --gmt-glass-blur* token, so skipping it is a token swap. The
+ * rest of the block is the near-opaque fill.
  * ======================================================================= */
+/* stylelint-disable-next-line plugin/use-baseline -- prefers-reduced-transparency is not Baseline 2024; a browser without it keeps the translucent surface, which is the status quo */
 @media (prefers-reduced-transparency: reduce) {
+  :root,
+  .gmt-theme-dark,
+  ::backdrop {
+    --gmt-glass-blur: none;
+    --gmt-glass-blur-saturate: none;
+    --gmt-glass-blur-half: none;
+    --gmt-glass-blur-heavy: none;
+    --gmt-glass-blur-heavy-saturate: none;
+    --gmt-glass-blur-dim: none;
+    --gmt-glass-blur-heavy-dim: none;
+  }
+
   .gmt-glass,
   .gmt-glass-subtle,
   .gmt-glass-clear,
@@ -24,7 +38,6 @@
   .gmt-mistake,
   header,
   .sidebar-pane,
-  #starlight__sidebar,
   mobile-starlight-toc nav,
   .sl-markdown-content pre,
   .sl-markdown-content table,
@@ -47,8 +60,6 @@
   [role="tab"],
   .sl-markdown-content .tab > [role="tab"][aria-selected="true"],
   [data-theme="light"] site-search button[data-open-modal] {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
     background-color: var(--gmt-surface);
   }
 
@@ -59,9 +70,7 @@
 
   /* The modal scrim: no blur, a solid-enough dim instead of a see-through frost. */
   dialog::backdrop {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: color(from var(--gmt-void) srgb r g b / 0.92);
+    background: color(from var(--gmt-void) srgb r g b / 92%);
   }
 
   /* The globe's atmosphere glow and limb haze are translucent washes. */
@@ -70,6 +79,7 @@
   .gmt-theme-dark {
     --gmt-globe-atmosphere-alpha: 0;
     --gmt-globe-haze-alpha: 0;
+
     /* The glass tints are the see-through fills of panels, tables and tabs. */
     --gmt-glass-tint-subtle: var(--gmt-surface);
     --gmt-glass-tint: var(--gmt-surface);
@@ -92,16 +102,17 @@
     --gmt-glass-tint-subtle: var(--gmt-glass-tint);
     --gmt-globe-atmosphere-alpha: 0;
     --gmt-globe-haze-alpha: 0;
+
     /* The Earth imagery is a busy photograph behind every marker and label.
        Raised contrast gets the flat globe, which is also the one that never
        downloads the image. */
     --gmt-globe-imagery-alpha: 0;
-  }
 
-  *,
-  *::before,
-  *::after {
-    text-shadow: none !important;
+    /* Glow is decoration, never a contrast mechanism: every glow is a token. */
+    --gmt-text-glow-spring: none;
+    --gmt-text-glow-spring-soft: none;
+    --gmt-text-glow-signal: none;
+    --gmt-text-glow-cutoff: none;
   }
 
   /* Live values still need to read as "changed" without their glow — lean on
@@ -112,6 +123,23 @@
 
   :focus-visible {
     outline-width: 3px;
+  }
+}
+
+/* =======================================================================
+ * prefers-reduced-motion: reduce
+ * Durations come from --gmt-duration-* and --gmt-motion-*, which are 0s in this mode
+ * (gmt-tokens.css). This blanket covers third-party DOM the tokens do not reach (Starlight,
+ * Pagefind, chart libraries). It needs no priority flag: as the last layer it beats every layered
+ * rule, and a CSS Module reads the tokens.
+ * ======================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s;
+    animation-iteration-count: 1;
+    transition-duration: 0s;
   }
 }
 
@@ -288,6 +316,7 @@
     forced-color-adjust: none;
     border-color: ButtonText;
     background-color: Canvas;
+
     --gmt-ridge: ButtonText;
   }
 
@@ -295,6 +324,7 @@
     forced-color-adjust: none;
     border-color: ButtonText;
     background-color: Canvas;
+
     --gmt-ridge: ButtonText;
   }
 
@@ -330,6 +360,7 @@
     forced-color-adjust: none;
     border-color: ButtonText;
     background-color: Canvas;
+
     --gmt-ridge: ButtonText;
   }
 
@@ -486,7 +517,7 @@
 
   /* Delivery Scheduler (TRAN-9): the two chart views are TanStack Charts
      SVGs — their own forced-colours and reduced-transparency handling lives
-     in the shared gmt-charts.css (`.gmt-chart`, `.gmt-chart-toggle__button`)
+     in the shared gmt-charts.css (`.gmt-chart`, `.gmt-chart-toggle-button`)
      since it applies to every chart on the site, not just this widget's.
      Leg identity there survives forced colours through the number badge
      text (①②③④) alone, never colour alone. What remains widget-specific is
@@ -548,6 +579,7 @@
      are bordered plates, a solid mark is filled and a hollow one dashed, the
      gate is Highlight, the closed hatch becomes a dashed box (its "closed" chip
      stays), and arcs, stems and DST lines are CanvasText (the DST line dashed). */
+
   /* Text is always the system's CanvasText: the plates (chips, header strips,
      the hero, the reading cards) are left to forced-colour defaults, and only
      marks, edges and swatches opt out below. */
@@ -564,7 +596,6 @@
       .gmt-bl-date-stamp,
       .gmt-journey-split,
       .gmt-demurrage-clock,
-      .gmt-gnss-week-decoder,
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
@@ -595,7 +626,6 @@
       .gmt-bl-date-stamp,
       .gmt-journey-split,
       .gmt-demurrage-clock,
-      .gmt-gnss-week-decoder,
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
@@ -625,7 +655,6 @@
       .gmt-bl-date-stamp,
       .gmt-journey-split,
       .gmt-demurrage-clock,
-      .gmt-gnss-week-decoder,
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
@@ -633,7 +662,7 @@
       .gmt-stored-time-audit
     )
     .gmt-cutoff-stack-day,
-  div.gmt-cutoff-stack-day:nth-of-type(even) {
+  .gmt-cutoff-stack-day:nth-of-type(even) {
     background-color: Canvas;
   }
 
@@ -649,7 +678,6 @@
       .gmt-bl-date-stamp,
       .gmt-journey-split,
       .gmt-demurrage-clock,
-      .gmt-gnss-week-decoder,
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
@@ -675,7 +703,6 @@
       .gmt-bl-date-stamp,
       .gmt-journey-split,
       .gmt-demurrage-clock,
-      .gmt-gnss-week-decoder,
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
@@ -700,7 +727,6 @@
       .gmt-bl-date-stamp,
       .gmt-journey-split,
       .gmt-demurrage-clock,
-      .gmt-gnss-week-decoder,
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
@@ -725,7 +751,6 @@
       .gmt-bl-date-stamp,
       .gmt-journey-split,
       .gmt-demurrage-clock,
-      .gmt-gnss-week-decoder,
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
@@ -752,7 +777,6 @@
       .gmt-bl-date-stamp,
       .gmt-journey-split,
       .gmt-demurrage-clock,
-      .gmt-gnss-week-decoder,
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
@@ -778,7 +802,6 @@
       .gmt-bl-date-stamp,
       .gmt-journey-split,
       .gmt-demurrage-clock,
-      .gmt-gnss-week-decoder,
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
@@ -802,12 +825,12 @@
   }
 
   .gmt-cutoff-ruler-guide {
-    border-left-color: CanvasText;
+    border-inline-start-color: CanvasText;
   }
 
   .gmt-cutoff-ruler-transition-line {
     forced-color-adjust: none;
-    border-left: 2px dashed CanvasText;
+    border-inline-start: 2px dashed CanvasText;
   }
 
   :is(
@@ -823,7 +846,6 @@
       .gmt-bl-date-stamp,
       .gmt-journey-split,
       .gmt-demurrage-clock,
-      .gmt-gnss-week-decoder,
       .gmt-satellite-clock-converter,
       .gmt-gnss-rollover-checker,
       .gmt-leap-second-timeline,
@@ -869,7 +891,7 @@
   }
 
   .gmt-timetable-lane {
-    border-bottom-color: CanvasText;
+    border-block-end-color: CanvasText;
   }
 
   .gmt-timetable-lane::before {
@@ -923,11 +945,11 @@
       CanvasText 0 5px,
       Canvas 5px 9px
     );
-    height: 2px;
+    block-size: 2px;
   }
 
   .gmt-timetable-swatch--solid {
-    height: 2px;
+    block-size: 2px;
   }
 
   .gmt-timetable-etick[data-kind="twice"] {
@@ -955,7 +977,7 @@
 
   .gmt-timetable-bar--open::after {
     background: none;
-    border-right-color: CanvasText;
+    border-inline-end-color: CanvasText;
   }
 }
 
@@ -974,6 +996,7 @@
   .gmt-punct-hatch {
     forced-color-adjust: none;
     color: CanvasText;
+
     --hatch: CanvasText;
   }
 
@@ -988,7 +1011,7 @@
       Canvas;
   }
 
-  ul.gmt-eta-legend > li {
+  .gmt-eta-legend > li {
     padding: 0 var(--gmt-space-1);
     border: 1px solid CanvasText;
   }
@@ -1014,7 +1037,7 @@
 
   .gmt-punct-lane::before,
   .gmt-punct-bar-cell::before {
-    border-left-color: CanvasText;
+    border-inline-start-color: CanvasText;
     box-shadow: none;
   }
 
@@ -1034,7 +1057,7 @@
   }
 
   .gmt-punct-grid--compare .gmt-punct-bar-cell::after {
-    border-left-color: CanvasText;
+    border-inline-start-color: CanvasText;
   }
 
   /* A stem: solid CanvasText inside the band with a filled cap; the hatch
@@ -1183,7 +1206,7 @@
 
   .gmt-dep-bracket--to {
     background: none;
-    border-left-color: CanvasText;
+    border-inline-start-color: CanvasText;
   }
 
   .gmt-dep-tick--made,
@@ -1244,12 +1267,12 @@
 
   .gmt-ledger-day {
     forced-color-adjust: none;
-    border-left-color: CanvasText;
+    border-inline-start-color: CanvasText;
     background-color: Canvas;
     color: CanvasText;
   }
 
-  .gmt-ledger-days > div.gmt-ledger-day:nth-of-type(even) {
+  .gmt-ledger-days > .gmt-ledger-day:nth-of-type(even) {
     background-color: Canvas;
   }
 
@@ -1278,7 +1301,7 @@
   }
 
   .gmt-ledger-bar::after {
-    border-left-color: CanvasText;
+    border-inline-start-color: CanvasText;
   }
 
   .gmt-ledger-bar--invalid {
@@ -1299,7 +1322,7 @@
   /* The Demurrage Clock's lanes: a divider between clocks, and a dimmed clock
      drawn with a dashed edge, because opacity alone says nothing here. */
   .gmt-dem-lane {
-    border-top-color: CanvasText;
+    border-block-start-color: CanvasText;
   }
 
   .gmt-dem-lane[data-chosen="false"] .gmt-ledger-bar {
@@ -1359,6 +1382,7 @@
 
   .gmt-journey-split .gmt-js-seg.gmt-punct-hatch {
     --hatch: CanvasText;
+
     background-color: Canvas;
   }
 
@@ -1388,7 +1412,7 @@
 
   .gmt-js-table th,
   .gmt-js-table td {
-    border-bottom-color: CanvasText;
+    border-block-end-color: CanvasText;
   }
 }
 
@@ -1426,12 +1450,12 @@
   }
 
   .gmt-gnss-gap {
-    border-top-color: CanvasText;
+    border-block-start-color: CanvasText;
   }
 
   .gmt-gnss-table th,
   .gmt-gnss-table td {
-    border-bottom-color: CanvasText;
+    border-block-end-color: CanvasText;
   }
 }
 
@@ -1516,6 +1540,7 @@
   @container gmt-stored-table (max-width: 46rem) {
     .gmt-stored-time-audit .gmt-stored-row[data-selected] {
       border-color: Highlight;
+
       /* An outline takes no room, where a thicker border would. */
       outline: 1px solid Highlight;
       outline-offset: -2px;
@@ -1588,7 +1613,7 @@
   }
 
   .gmt-holiday-swatch[data-kind="moved-to"] {
-    border-bottom: 4px double CanvasText;
+    border-block-end: 4px double CanvasText;
   }
 
   .gmt-holiday-cell[data-kinds~="pick"],
@@ -1624,7 +1649,7 @@
     text-decoration-color: Highlight;
   }
 
-  .gmt-obs-table tr[data-disagree] th.gmt-obs-year {
+  .gmt-obs-table tr[data-disagree] .gmt-obs-year {
     background: repeating-linear-gradient(
       135deg,
       transparent 0 5px,
@@ -1821,6 +1846,7 @@
   @container gmt-iddecode-table (max-width: 46rem) {
     .gmt-id-timestamp-decoder .gmt-iddecode-row[data-state="read"] {
       border-color: Highlight;
+
       /* An outline takes no room, where a thicker border would. */
       outline: 1px solid Highlight;
       outline-offset: -2px;

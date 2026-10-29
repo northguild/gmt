@@ -38,6 +38,7 @@
   list-style: none;
   font-family: var(--gmt-font-mono);
   font-size: 0.85rem;
+
   /* A date comparison, not a finding: no success or error colour. */
   color: var(--gmt-ice);
 }
@@ -45,7 +46,7 @@
 /* A verdict line sits in a hold (gmt-ledger-hold) with a hidden sizer for every
    text it can show, so it is as tall as the tallest at any width. */
 .gmt-billing-verdicts > li {
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 /* The three deadline plates. Each takes its series colour from its lane's own
@@ -107,7 +108,7 @@
 }
 
 .gmt-billing-weekdays {
-  margin-bottom: var(--gmt-space-1);
+  margin-block-end: var(--gmt-space-1);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
@@ -121,7 +122,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-height: 3.6rem;
+  min-block-size: 3.6rem;
   padding: 3px 4px;
   background: var(--gmt-fill-subtle);
   border: 1px solid var(--gmt-border);
@@ -152,8 +153,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.1em;
-  height: 1.1em;
+  min-inline-size: 1.1em;
+  block-size: 1.1em;
   padding: 0 2px;
   border-radius: 2px;
   font-size: var(--gmt-text-xs);
@@ -191,14 +192,14 @@
    row. Bars sit below the day text, never behind it, so text contrast
    never depends on what is drawn under it. */
 .gmt-billing-lanes {
-  margin-top: auto;
+  margin-block-start: auto;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
 .gmt-billing-lane {
-  height: 4px;
+  block-size: 4px;
   border-radius: 2px;
   border-width: 2px;
   border-style: none;
@@ -230,15 +231,15 @@
 
 /* The deadline day: the bar ends in a filled cap. */
 .gmt-billing-lane--deadline.gmt-billing-lane--1 {
-  background: color(from var(--gmt-cyan) srgb r g b / 0.35);
+  background: color(from var(--gmt-cyan) srgb r g b / 35%);
 }
 
 .gmt-billing-lane--deadline.gmt-billing-lane--2 {
-  background: color(from var(--gmt-spring) srgb r g b / 0.35);
+  background: color(from var(--gmt-spring) srgb r g b / 35%);
 }
 
 .gmt-billing-lane--deadline.gmt-billing-lane--3 {
-  background: color(from var(--gmt-dst-purple) srgb r g b / 0.35);
+  background: color(from var(--gmt-dst-purple) srgb r g b / 35%);
 }
 
 .gmt-billing-gap {
@@ -286,7 +287,7 @@
 }
 
 .gmt-billing-legend .gmt-billing-lane {
-  width: 1.4rem;
+  inline-size: 1.4rem;
   visibility: visible;
 }
 
@@ -299,7 +300,7 @@
   }
 
   .gmt-billing-cell {
-    min-height: 3rem;
+    min-block-size: 3rem;
     font-size: var(--gmt-text-xs);
   }
 }

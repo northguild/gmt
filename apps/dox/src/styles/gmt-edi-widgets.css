@@ -116,7 +116,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-3);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-edi-pane {
@@ -290,13 +290,13 @@
   corner-shape: bevel;
   background: var(--gmt-fill-subtle);
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 /* The picture is the pane's main content, so its boxes are drawn larger than the
    table's text: a 0.9375rem (15px) face, a 12px mask (1.375rem and 15px for a single value). `ch` in a field's
    width is this face's. */
+
 /* The picture sits in the middle of the box it has reserved, so the room round it
    frames it. */
 .gmt-edi-hold > .gmt-edi-figure:not(.gmt-edi-sizer) {
@@ -307,7 +307,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-4);
-  min-width: 0;
+  min-inline-size: 0;
   font-family: var(--gmt-font-mono);
   font-size: 0.9375rem;
 }
@@ -349,7 +349,7 @@
 }
 
 .gmt-edi-hold .starlight-aside__content > * + * {
-  margin-top: var(--gmt-space-2);
+  margin-block-start: var(--gmt-space-2);
 }
 
 .gmt-edi-fig-empty {
@@ -368,17 +368,15 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-edi-parts {
-  column-gap: 4px;
-  row-gap: var(--gmt-space-2);
+  gap: var(--gmt-space-2) 4px;
 }
 
 .gmt-edi-taken {
-  column-gap: var(--gmt-space-4);
-  row-gap: var(--gmt-space-3);
+  gap: var(--gmt-space-3) var(--gmt-space-4);
 }
 
 .gmt-edi-part {
@@ -577,7 +575,7 @@
   flex-direction: column;
   gap: 2px;
   box-sizing: border-box;
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
   padding: var(--gmt-space-2) var(--gmt-space-3);
   border: 1px solid var(--gmt-border);
@@ -613,7 +611,7 @@
 }
 
 /* A sentinel inside a member cell keeps the cell's box: amber text, no plate. */
-.gmt-edi-row > dd.gmt-playground-sentinel {
+.gmt-edi-row > .gmt-playground-sentinel {
   display: block;
   padding: 0;
   border: 0;
@@ -630,7 +628,6 @@
   corner-shape: bevel;
   background: var(--gmt-surface);
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-base);
   line-height: 1.5;
@@ -668,12 +665,12 @@
 
 .gmt-edi-hold {
   display: grid;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-edi-hold > * {
   grid-area: 1 / 1;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-edi-sizer {
@@ -689,6 +686,7 @@
 
 .gmt-widget-output.gmt-edi-out {
   box-sizing: border-box;
+
   /* One result per line when a section prints several calls. */
   white-space: pre-wrap;
 }
@@ -723,7 +721,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-3);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 @container gmt-edi-section (min-width: 52rem) {
@@ -754,6 +752,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-2);
+
   /* The plot (12rem), its caption (two lines) and the padding and gap. */
   min-block-size: 16.75rem;
   padding: var(--gmt-space-3) var(--gmt-space-4);
@@ -844,15 +843,19 @@
 .gmt-edi-tl-mark[data-series="1"] {
   --series: var(--gmt-series-1);
 }
+
 .gmt-edi-tl-mark[data-series="2"] {
   --series: var(--gmt-series-2);
 }
+
 .gmt-edi-tl-mark[data-series="3"] {
   --series: var(--gmt-series-3);
 }
+
 .gmt-edi-tl-mark[data-series="4"] {
   --series: var(--gmt-series-4);
 }
+
 .gmt-edi-tl-mark[data-stated] {
   --series: var(--gmt-series-3);
 }
@@ -879,8 +882,7 @@
 .gmt-edi-tl-mark::after {
   content: "";
   position: absolute;
-  inset-block-start: calc(var(--lane) * 30px + 28px);
-  inset-block-end: 0;
+  inset-block: calc(var(--lane) * 30px + 28px) 0;
   inline-size: 2px;
   translate: -1px 0;
   background: var(--series);
@@ -889,8 +891,7 @@
 .gmt-edi-tl-bracket {
   position: absolute;
   inset-block-end: 26px;
-  inset-inline-start: var(--from);
-  inset-inline-end: calc(100% - var(--to));
+  inset-inline: var(--from) calc(100% - var(--to));
   block-size: 8px;
   box-sizing: border-box;
   border: 2px solid var(--gmt-ice-dim);
@@ -910,6 +911,7 @@
 
 .gmt-edi-tl-caption {
   margin: 0;
+
   /* The stated instant's caption is two lines in a narrow pane. */
   min-block-size: 2lh;
   text-align: center;
@@ -952,6 +954,7 @@
 .gmt-x12-time-reader {
   /* `2024-06-15T14:30:00.12-04:00` is 28 characters. */
   --gmt-strip-third: 28ch;
+
   /* `2024-06-15T18:30:00.12Z` is 23 characters. */
   --gmt-strip-instant: 23ch;
 }
@@ -959,6 +962,7 @@
 .gmt-dtm-decoder {
   /* `2024-06-15T18:30:00Z` is 20 characters. */
   --gmt-strip-instant: 20ch;
+
   /* `202406151430-0400` is 17 characters. */
   --gmt-strip-third: 17ch;
 }
@@ -978,9 +982,9 @@
 .gmt-dtm-head {
   display: grid;
   align-items: center;
-  column-gap: var(--gmt-space-3);
-  row-gap: var(--gmt-space-1);
-  min-width: 0;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  min-inline-size: 0;
+
   /* The reserved widths below are in ch, so they are measured in the cells' own
      font. */
   font-family: var(--gmt-font-mono);
@@ -1018,19 +1022,22 @@
 
 .gmt-dtm-row > .gmt-select {
   grid-area: select;
-  min-width: 0;
+  min-inline-size: 0;
   inline-size: 100%;
 }
 
 .gmt-dtm-row[data-series="1"] {
   --series: var(--gmt-series-1);
 }
+
 .gmt-dtm-row[data-series="2"] {
   --series: var(--gmt-series-2);
 }
+
 .gmt-dtm-row[data-series="3"] {
   --series: var(--gmt-series-3);
 }
+
 .gmt-dtm-row[data-series="4"] {
   --series: var(--gmt-series-4);
 }
@@ -1038,7 +1045,7 @@
 /* The three values: mono, tabular, `nowrap`, each in a reserved width. In the
    narrow layouts each carries its own small label. */
 .gmt-dtm-cell {
-  min-width: 0;
+  min-inline-size: 0;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: var(--gmt-ice);
@@ -1047,9 +1054,11 @@
 .gmt-dtm-cell[data-role^="instant-"] {
   grid-area: instant;
 }
+
 .gmt-dtm-cell[data-role^="offset-"] {
   grid-area: offset;
 }
+
 .gmt-dtm-cell[data-role^="as205-"],
 .gmt-dtm-cell[data-role^="withoffset-"] {
   grid-area: as205;
@@ -1191,7 +1200,8 @@
   cursor: not-allowed;
 }
 
-.gmt-epcis-event-reader .gmt-button[aria-disabled="true"]:hover {
+.gmt-epcis-event-reader .gmt-button[aria-disabled="true"]:hover,
+.gmt-epcis-event-reader .gmt-button[aria-disabled="true"]:focus-visible {
   color: var(--gmt-ice-dim);
   background: var(--gmt-fill-subtle);
 }
@@ -1221,7 +1231,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
-  min-width: 0;
+  min-inline-size: 0;
   font-family: var(--gmt-font-mono);
 }
 
@@ -1271,16 +1281,15 @@
 .gmt-epcis-day {
   position: absolute;
   inset-block: 0;
-  inset-inline-start: var(--from);
-  inset-inline-end: calc(100% - var(--to));
-  background-color: color(from var(--gmt-teal) srgb r g b / 0.05);
+  inset-inline: var(--from) calc(100% - var(--to));
+  background-color: color(from var(--gmt-teal) srgb r g b / 5%);
 }
 
 .gmt-epcis-day[data-lit="1"] {
   background-image: linear-gradient(
     180deg,
-    color(from var(--series) srgb r g b / 0.34),
-    color(from var(--series) srgb r g b / 0.12)
+    color(from var(--series) srgb r g b / 34%),
+    color(from var(--series) srgb r g b / 12%)
   );
   box-shadow: inset 0 -3px 0 var(--series);
 }
@@ -1305,8 +1314,7 @@
 }
 
 .gmt-epcis-tick[data-end="1"] > .gmt-epcis-tick-label {
-  inset-inline-start: auto;
-  inset-inline-end: 4px;
+  inset-inline: auto 4px;
 }
 
 /* The instant: one pin, a line the full height of the track, with a bevelled

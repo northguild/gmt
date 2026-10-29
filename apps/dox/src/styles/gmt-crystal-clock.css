@@ -35,8 +35,8 @@
 
 .gmt-crystal-clock {
   display: block;
-  width: 100%;
-  height: auto;
+  inline-size: 100%;
+  block-size: auto;
   overflow: visible;
 }
 
@@ -46,7 +46,7 @@
    the button the same box the bare svg used to be. */
 .gmt-crystal-clock-toggle {
   display: block;
-  width: 100%;
+  inline-size: 100%;
   padding: 0;
   margin: 0;
   border: none;
@@ -85,7 +85,7 @@
   stroke: var(--gmt-cyan-ink);
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
-  transition: stroke 150ms ease; /* the night light's fade; position never animates */
+  transition: stroke var(--gmt-duration-quick) ease; /* the night light's fade; position never animates */
 }
 
 /* The minute hand reaches further and is the thinner of the two — the
@@ -103,22 +103,23 @@
   stroke-width: 0.75;
   transform-box: view-box;
   transform-origin: 50px 50px;
+
   /* The hand sweeps; a reader who asks for less motion gets one step a second (below). */
   transition:
-    transform 1s linear,
-    stroke 150ms ease;
+    transform var(--gmt-duration-long) linear,
+    stroke var(--gmt-duration-quick) ease;
 }
 
 .gmt-crystal-clock-cap {
   fill: var(--gmt-cyan-ink);
-  transition: fill 150ms ease;
+  transition: fill var(--gmt-duration-quick) ease;
 }
 
 /* The night light's own flood. Transparent until `.gmt-crystal-clock--glow`
    is toggled on the root by `bindClockGlow`'s click handler. */
 .gmt-crystal-clock-glow {
   fill: transparent;
-  transition: fill 150ms ease;
+  transition: fill var(--gmt-duration-quick) ease;
 }
 
 /* Drawn for every state; shown only by the modifiers below. */
@@ -277,6 +278,7 @@
 /* prefers-reduced-transparency: the glass pane is exactly the translucency
    this preference asks to drop, and the hand shadow is a soft blur effect
    in the same spirit — both go. */
+/* stylelint-disable-next-line plugin/use-baseline -- prefers-reduced-transparency is not Baseline 2024; a browser without it keeps the translucent surface, which is the status quo */
 @media (prefers-reduced-transparency: reduce) {
   .gmt-crystal-clock-glass {
     display: none;

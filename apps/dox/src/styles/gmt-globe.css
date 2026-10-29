@@ -18,6 +18,7 @@
 
 .gmt-globe {
   margin: var(--gmt-space-6) 0;
+
   /* Named container so .gmt-globe-layout's stage+list breakpoint below can
      query the globe's own rendered width instead of the viewport's. This
      matters once the globe is embedded in a hero column: at half the
@@ -50,14 +51,16 @@
 
 .gmt-globe-stage {
   position: relative;
-  width: 100%;
+  inline-size: 100%;
+
   /* Capped by viewport height too — a wide column must not make the square
      taller than the fold. Note this cap was *not* what fixed the globe's
      clipped bottom (it made it worse on short viewports, by pulling the
      stage under the ~600px threshold at which a fixed 16px offset ate the
      sphere's 3% margin); the actual cause was Starlight markdown typography
      landing on the canvas — see .gmt-globe-canvas below. */
-  max-width: min(44rem, 70vh);
+  max-inline-size: min(44rem, 70vh);
+
   /* Centers the stage once its own max-width caps it below the width of
      whatever column it's sitting in (the embedded hero's single-column
      stack, or the standalone widget's own layout cell) — without this, a
@@ -66,14 +69,16 @@
   margin-inline: auto;
   aspect-ratio: 1;
   overflow: hidden;
+
   /* Globe.astro sets both `gmt-globe-stage` and `gmt-glass` on this element,
      picking up .gmt-glass's `padding: var(--gmt-space-4)` (gmt-primitives.css)
      along with the border/tint/blur it actually wants — that inset the canvas
      (width/height: 100% of the stage's own *content* box) a full space-4 in
      from the stage's edge on every side instead of letting it fill the stage.
      Zeroed here, after gmt-primitives.css in the customCss load order, so it
-     wins on equal specificity without needing !important. */
+     wins on equal specificity. */
   padding: 0;
+
   /* No visible border/background/blur here (or on ::before/::after below) —
      the globe should read as floating directly on the page, not boxed in a
      glass card, on every usage (homepage hero, standalone /tools/zoned-earth
@@ -87,7 +92,6 @@
   corner-shape: bevel;
   background: transparent;
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   touch-action: none;
 }
 
@@ -98,6 +102,7 @@
 
 .gmt-globe-canvas {
   display: block;
+
   /* Pinned to the stage's padding box rather than laid out in flow, so that
      nothing inherited can offset the canvas out of the square box measure()
      drew for. `inset: 0` and `width/height: 100%` both resolve against that
@@ -112,16 +117,18 @@
   position: absolute;
   inset: 0;
   margin: 0;
+
   /* Starlight's markdown.css gives every canvas `max-width: 100%`, which
      clamped the inline pixel width measure() set while the inline height
      stayed put — stretching a square raster. `not-content` already opts out
      of that rule; this makes the canvas immune wherever it is mounted. */
-  max-width: none;
+  max-inline-size: none;
+
   /* Fallback size before the engine's measure() sets the canvas's own inline
      width/height (which then takes over, matching the stage's actual pixel
      box + devicePixelRatio) — not dead, just overridden once JS runs. */
-  width: 100%;
-  height: 100%;
+  inline-size: 100%;
+  block-size: 100%;
   cursor: grab;
 }
 
@@ -145,8 +152,8 @@
 /* Zoom cluster --------------------------------------------------------- */
 .gmt-globe-zoom {
   position: absolute;
-  right: var(--gmt-space-2);
-  bottom: var(--gmt-space-2);
+  inset-inline-end: var(--gmt-space-2);
+  inset-block-end: var(--gmt-space-2);
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -155,6 +162,7 @@
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   overflow: hidden;
+
   /* The canvas is appended to the stage *after* this cluster (the renderer appends
       it to the host the template already populated), and both are absolutely
       positioned with `z-index: auto` — so tree order alone put the full-stage
@@ -164,7 +172,8 @@
       inside .gmt-globe's own stacking context (container-type: inline-size
       implies layout containment), so it can never climb over the sticky header
       or the chat rail's chrome. */
-  z-index: 3;
+  z-index: var(--gmt-z-float);
+
   /* Ambient chrome: hidden at rest so the globe reads as a clean object, and
      fade-scaled in only on pointer hover or keyboard focus (below).
      `pointer-events: none` while hidden so an invisible button can never take
@@ -175,8 +184,8 @@
   transform: scale(0.8);
   pointer-events: none;
   transition:
-    opacity 0.25s ease,
-    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity var(--gmt-duration-med) ease,
+    transform var(--gmt-duration-med) cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* `.gmt-globe-zoom-ready` is added by globe.ts's revealCanvas() once the globe's
@@ -209,8 +218,8 @@
 }
 
 .gmt-globe-zoom button {
-  width: 2rem;
-  height: 2rem;
+  inline-size: 2rem;
+  block-size: 2rem;
   display: grid;
   place-items: center;
   border: 0;
@@ -222,8 +231,8 @@
   background: var(--gmt-surface-2);
   cursor: pointer;
   transition:
-    color 0.15s ease,
-    background 0.15s ease;
+    color var(--gmt-duration-quick) ease,
+    background var(--gmt-duration-quick) ease;
 }
 
 .gmt-globe-zoom button:hover,
@@ -232,10 +241,11 @@
      base cyan only cleared 3.68:1 in light theme; cyan-ink clears 8.71:1. */
   color: var(--gmt-void);
   background: var(--gmt-cyan-ink);
-  outline: none;
+  outline-color: transparent;
 }
 
 /* On-globe tooltip --------------------------------------------------- */
+
 /* Composes .gmt-popover (gmt-primitives.css, class set in globe.ts) for the
    surface (background/border/radius/shadow) — only this widget's own layout
    (position/transform/gap/padding) and the one-off --gmt-shadow-sm (a lighter
@@ -249,11 +259,11 @@
   flex-direction: column;
   gap: 2px;
   padding: var(--gmt-space-2) var(--gmt-space-3);
-  min-width: 8rem;
+  min-inline-size: 8rem;
   box-shadow: var(--gmt-shadow-sm);
   font-family: var(--gmt-font-mono);
-  transition: opacity 0.12s ease;
-  z-index: 2;
+  transition: opacity var(--gmt-duration-fast) ease;
+  z-index: var(--gmt-z-over);
 }
 
 /* `globe.ts` hides the tooltip by setting `tooltip.hidden`, and an author
@@ -362,7 +372,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
-  margin-bottom: var(--gmt-space-3);
+  margin-block-end: var(--gmt-space-3);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice);
@@ -395,8 +405,9 @@
    only this widget's own positioning/scroll/list-reset stay here. */
 .gmt-combobox-list {
   position: absolute;
-  top: 100%;
-  left: 0;
+  inset-block-start: 100%;
+  inset-inline-start: 0;
+
   /* Not `right: 0`. Pinned to both edges the list is exactly as wide as its
      input, and an IANA id is longer than most inputs it sits under — in the
      Zone Planner's controls card, which is one grid track wide, every
@@ -404,16 +415,15 @@
      scrollbar. Sized to its content instead, with the input's width as the
      floor so it never looks detached, and a cap so the longest id cannot run
      it off a phone. Nothing scrolls sideways at any width. */
-  width: max-content;
-  min-width: 100%;
-  max-width: min(26rem, calc(100vw - 2rem));
-  z-index: 5;
+  inline-size: max-content;
+  min-inline-size: 100%;
+  max-inline-size: min(26rem, calc(100vw - 2rem));
+  z-index: var(--gmt-z-menu);
   margin: var(--gmt-space-1) 0 0;
   padding: 0;
   list-style: none;
-  max-height: 16rem;
-  overflow-x: hidden;
-  overflow-y: auto;
+  max-block-size: 16rem;
+  overflow: hidden auto;
   scroll-behavior: smooth;
 }
 
@@ -440,15 +450,16 @@
 .gmt-combobox-list .gmt-combobox-option::before {
   content: "";
   position: absolute;
-  left: var(--gmt-space-2);
-  top: 50%;
+  inset-inline-start: var(--gmt-space-2);
+  inset-block-start: 50%;
   transform: translateY(-50%);
-  width: 8px;
-  height: 1px;
+  inline-size: 8px;
+  block-size: 1px;
   background: var(--gmt-cyan);
   box-shadow: 0 0 6px var(--gmt-cyan);
 }
 
+/* stylelint-disable-next-line a11y/selector-pseudo-class-focus -- option takes no focus (focus stays on the input); keyboard path is aria-selected */
 .gmt-combobox-option[aria-selected="true"],
 .gmt-combobox-option:hover {
   background: var(--gmt-fill-strong);
@@ -456,6 +467,7 @@
 }
 
 /* Zone filters ------------------------------------------------------- */
+
 /* A settings gear that opens six switches over the two axes the clock rows
    already show — local day and DST state. A button disclosure
    (`aria-expanded` / `aria-controls`) over <fieldset>/<legend> and
@@ -465,6 +477,7 @@
    box that ate the button's width and a `::details-content` box that changed
    the row's height on open.
    Shut by default, which is also what lets zone-filter-ui.ts skip its scan. */
+
 /* The field and its filter addon. `align-items: stretch` is what makes the
    gear exactly as tall as the input without anyone naming a height — .gmt-field
    is sized by its own padding, so a hardcoded one would drift the moment that
@@ -473,6 +486,7 @@
 .gmt-globe-field-row {
   display: flex;
   align-items: stretch;
+
   /* `margin: 0` is load-bearing. This row sits inside `.sl-markdown-content`,
      whose prose rules give a `div` a `--sl-content-gap-y` top margin — the same
      trap the stage's `not-content` comment above records for the canvas. The
@@ -486,7 +500,8 @@
 
 .gmt-globe-field-row .gmt-field {
   flex: 1;
-  min-width: 0;
+  min-inline-size: 0;
+
   /* Squared where the addon meets it; the outer corners keep their bevel. */
   border-start-end-radius: 0;
   border-end-end-radius: 0;
@@ -506,10 +521,12 @@
 
 /* `list-style: none` plus the WebKit pseudo-element: between them they remove
    the disclosure triangle in every engine, leaving the gear to say it. */
+
 /* Surface comes from `.gmt-button`; this is placement only. The negative
    inline-start margin collapses the two 1px borders the field and the addon
    would otherwise both draw along their shared edge into the single line an
    attached control reads as. */
+
 /* Surface comes from `.gmt-button`; this is placement only. `align-self:
    stretch` is what makes it exactly the field's height, and the negative
    inline-start margin collapses the two 1px borders the field and the addon
@@ -529,16 +546,16 @@
   color: var(--gmt-ice-dim);
   cursor: pointer;
   transition:
-    color 0.15s ease,
-    background 0.15s ease,
-    border-color 0.15s ease;
+    color var(--gmt-duration-quick) ease,
+    background var(--gmt-duration-quick) ease,
+    border-color var(--gmt-duration-quick) ease;
 }
 
 .gmt-globe-filter-summary:hover,
 .gmt-globe-filter-summary:focus-visible {
   color: var(--gmt-cyan-ink);
   background: var(--gmt-fill);
-  outline: none;
+  outline-color: transparent;
 }
 
 .gmt-globe-filter-summary:focus-visible {
@@ -552,18 +569,19 @@
   color: var(--gmt-cyan-ink);
   background: var(--gmt-fill-strong);
   border-color: var(--gmt-cyan);
+
   /* Over the field, so the shared edge shows the addon's active border rather
      than the field's resting one. */
   position: relative;
-  z-index: 1;
+  z-index: var(--gmt-z-raised);
 }
 
 /* The gear is the only visible label, so its name lives here for the reader
    who cannot see it. */
 .gmt-globe-filter-summary-text {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inline-size: 1px;
+  block-size: 1px;
   padding: 0;
   margin: -1px;
   overflow: hidden;
@@ -584,7 +602,7 @@
   position: absolute;
   inset-block-start: calc(100% + var(--gmt-space-2));
   inset-inline-end: 0;
-  z-index: 4;
+  z-index: var(--gmt-z-pop);
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-3);
@@ -620,7 +638,7 @@
    into the flex line and the switches end up beside the label. */
 .gmt-globe-filter-group legend {
   padding: 0;
-  margin-bottom: var(--gmt-space-1);
+  margin-block-end: var(--gmt-space-1);
   color: var(--gmt-ice-dim);
 }
 
@@ -636,6 +654,7 @@
      the site's active colour; the semantic overrides below are the exceptions,
      not the rule. */
   --toggle-accent: var(--gmt-cyan-ink);
+
   display: inline-flex;
   align-items: center;
   gap: var(--gmt-space-1);
@@ -682,14 +701,15 @@
   inline-size: 1.75rem;
   block-size: 1rem;
   border: 1px solid var(--gmt-border-strong);
+
   /* Bevelled, not a pill: every other surface on this site is chamfered, and a
      rounded capsule was the one control arguing with it. */
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-fill-strong);
   transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
+    background var(--gmt-duration-quick) ease,
+    border-color var(--gmt-duration-quick) ease;
 }
 
 .gmt-globe-filter-track::after {
@@ -703,13 +723,13 @@
   corner-shape: bevel;
   background: var(--gmt-ice-dim);
   transition:
-    translate 0.15s ease,
-    background 0.15s ease;
+    translate var(--gmt-duration-quick) ease,
+    background var(--gmt-duration-quick) ease;
 }
 
 .gmt-globe-filter-toggle input:checked + .gmt-globe-filter-track {
   border-color: var(--toggle-accent);
-  background: color(from var(--toggle-accent) srgb r g b / 0.2);
+  background: color(from var(--toggle-accent) srgb r g b / 20%);
 }
 
 .gmt-globe-filter-toggle input:checked + .gmt-globe-filter-track::after {
@@ -732,7 +752,7 @@
 .gmt-globe-filter-icon {
   flex: none;
   color: var(--gmt-ice-dim);
-  transition: color 0.15s ease;
+  transition: color var(--gmt-duration-quick) ease;
 }
 
 .gmt-globe-filter-toggle:has(input:checked) .gmt-globe-filter-icon {
@@ -770,17 +790,18 @@
    not laid out by flex/gap. */
 .gmt-globe-clocks {
   position: relative;
+
   /* A fixed height, not max-height: the virtualizer mounts a single empty
      "sizer" div before its first render pass fills in the real total height,
      so a max-height (a ceiling on the content's own height, not a floor)
      would collapse the scroll viewport to ~0px at that instant — exactly
      when initGlobe's first scrollToIndex('center') reads the viewport size
      to centre the viewer's own zone. */
-  height: 24rem;
-  overflow-y: auto;
-  overflow-x: hidden;
+  block-size: 24rem;
+  overflow: hidden auto;
   scroll-behavior: smooth;
-  padding-right: var(--gmt-space-1);
+  padding-inline: var(--gmt-space-2) var(--gmt-space-1);
+
   /* Each .gmt-clock-entry is a <button> flush to this box's left edge
      (width: 100%, zero margin) — a focused one only gets its `outline`
      suppressed locally (see gmt-clock-list.css), not the global
@@ -791,12 +812,11 @@
      spurious horizontal one) then clips it. --gmt-space-2, not
      --gmt-space-1 like the right side: an exact 4px match to the ring's own
      spread would still land it right on the clip boundary. */
-  padding-left: var(--gmt-space-2);
 }
 
 .gmt-globe-clocks-sizer {
   position: relative;
-  width: 100%;
+  inline-size: 100%;
 }
 
 .gmt-globe-clocks:focus-visible {
@@ -809,19 +829,19 @@
    the scrollbar pseudo-elements, so border-radius does the bevel by hand. */
 .gmt-globe-clocks::-webkit-scrollbar-track:vertical,
 .gmt-combobox-list::-webkit-scrollbar-track:vertical {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-top-right-radius: var(--gmt-radius-lg);
-  border-bottom-right-radius: var(--gmt-radius-lg);
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-start-end-radius: var(--gmt-radius-lg);
+  border-end-end-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
 }
 
 .gmt-globe-clocks::-webkit-scrollbar-thumb:vertical,
 .gmt-combobox-list::-webkit-scrollbar-thumb:vertical {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-top-right-radius: var(--gmt-radius-lg);
-  border-bottom-right-radius: var(--gmt-radius-lg);
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-start-end-radius: var(--gmt-radius-lg);
+  border-end-end-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
 }
 
@@ -836,7 +856,7 @@
 
 @container gmt-globe (min-width: 40rem) {
   .gmt-globe-clocks {
-    height: 30rem;
+    block-size: 30rem;
   }
 }
 
@@ -876,7 +896,8 @@
 @container gmt-globe (min-width: 56rem) {
   .gmt-globe:not(.gmt-globe-embedded) .gmt-globe-layout {
     --gmt-globe-chrome: 25.5rem;
-    height: max(32rem, calc(100dvh - var(--gmt-globe-chrome)));
+
+    block-size: max(32rem, calc(100dvh - var(--gmt-globe-chrome)));
     align-items: stretch;
   }
 
@@ -886,19 +907,20 @@
     justify-content: center;
     container-type: size;
     container-name: gmt-globe-frame;
-    height: 100%;
-    min-height: 0;
+    block-size: 100%;
+    min-block-size: 0;
   }
 
   .gmt-globe:not(.gmt-globe-embedded) .gmt-globe-stage {
-    width: min(100cqw, 100cqh);
-    height: min(100cqw, 100cqh);
-    max-width: none;
+    inline-size: min(100cqw, 100cqh);
+    block-size: min(100cqw, 100cqh);
+    max-inline-size: none;
     flex: none;
   }
 
   /* `min-height: 0` down the chain, as in embedded mode: without it each box
      grows to fit the ~300-row list and the list never scrolls. */
+
   /* `margin-top: 0`: this column is a block after another inside
      `.sl-markdown-content`, so the flow rule gives it a top margin the stage
      beside it does not have. At a fixed list height that went unnoticed; at
@@ -906,15 +928,15 @@
   .gmt-globe:not(.gmt-globe-embedded) .gmt-globe-side {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    margin-top: 0;
+    block-size: 100%;
+    min-block-size: 0;
+    margin-block-start: 0;
   }
 
   .gmt-globe:not(.gmt-globe-embedded) .gmt-globe-clocks {
     flex: 1 1 auto;
-    height: auto;
-    min-height: 0;
+    block-size: auto;
+    min-block-size: 0;
   }
 }
 
@@ -933,12 +955,12 @@
 .gmt-globe-embedded {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  block-size: 100%;
+  min-block-size: 0;
   margin: 0;
 }
 
-@media (max-width: 99.9375rem) {
+@media (width <= 99.9375rem) {
   /* Higher specificity than the plain .gmt-globe-layout rule above, so this
      wins regardless of the container query's own state. A real flex column
      (not just a single-column grid track) so .gmt-globe-side/.gmt-globe-clocks
@@ -948,8 +970,8 @@
   .gmt-globe-embedded .gmt-globe-layout {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-height: 0;
+    block-size: 100%;
+    min-block-size: 0;
   }
 
   .gmt-globe-embedded .gmt-globe-stage {
@@ -980,28 +1002,27 @@
     display: flex;
     flex-direction: column;
     flex: 1 1 100%;
-    min-height: 0;
-    width: 100%;
-    max-height: 30rem;
+    min-block-size: 0;
+    inline-size: 100%;
+    max-block-size: 30rem;
   }
 
   .gmt-globe-embedded .gmt-globe-clocks {
     flex: 1 1 auto;
-    height: auto;
-    min-height: 0;
+    block-size: auto;
+    min-block-size: 0;
   }
 
   /* The search box sits in the bottom half of a fixed-height hero column —
      there's rarely enough room below it for the dropdown, so open upward
      instead of the standalone widget's default below-input placement. */
   .gmt-globe-embedded .gmt-combobox-list {
-    top: auto;
-    bottom: 100%;
+    inset-block: auto 100%;
     margin: 0 0 var(--gmt-space-1);
   }
 }
 
-@media (max-width: 79.9375rem) {
+@media (width <= 79.9375rem) {
   /* A definite height, not just the 30rem cap: below 80rem the hero has no
      definite height, so `.gmt-globe-side`'s size comes from its content. WebKit
      counts the scrolling `.gmt-globe-clocks` as 0px there (its min-height: 0
@@ -1010,11 +1031,11 @@
      30rem is what Chromium already renders, in every engine. */
   .gmt-globe-embedded .gmt-globe-side {
     flex: none;
-    height: 30rem;
+    block-size: 30rem;
   }
 }
 
-@media (min-width: 80rem) and (max-width: 99.9375rem) {
+@media (width >= 80rem) and (width <= 99.9375rem) {
   /* The 30rem cap above is load-bearing only below .gmt-herostage's own
      80rem breakpoint, where the hero has no definite height yet. From 80rem
      on, .gmt-herostage IS a fixed-height row (height: calc(100dvh - nav)),
@@ -1026,7 +1047,7 @@
      square stage leaves behind, same as the >=100rem side-by-side layout
      already does. */
   .gmt-globe-embedded .gmt-globe-side {
-    max-height: none;
+    max-block-size: none;
   }
 
   /* The column is one screen tall here, so a stage sized from the width
@@ -1035,7 +1056,7 @@
      hero's 2rem padding top and bottom; the side's search row is 5rem with
      its gap, and the layout gap 1rem. 4 + 5 + 1 + 11 = 21rem. */
   .gmt-globe-embedded .gmt-globe-stage {
-    max-width: min(
+    max-inline-size: min(
       44rem,
       70vh,
       calc(100dvh - var(--sl-nav-height, 4rem) - 21rem)
@@ -1043,7 +1064,7 @@
   }
 }
 
-@media (min-width: 100rem) {
+@media (width >= 100rem) {
   /* min-height: 0 at every link in this chain overrides the flex/grid
      default of min-height: auto (min-content) — without it, each box grows
      to fit the ~300-row zone list instead of respecting the hero's fixed
@@ -1052,8 +1073,8 @@
   .gmt-globe-embedded .gmt-globe-layout {
     grid-template-columns: minmax(0, 1fr) minmax(13rem, 20rem);
     flex: 1 1 auto;
-    height: 100%;
-    min-height: 0;
+    block-size: 100%;
+    min-block-size: 0;
     align-items: stretch;
   }
 
@@ -1076,28 +1097,28 @@
     justify-content: center;
     container-type: size;
     container-name: gmt-globe-frame;
-    height: 100%;
-    min-height: 0;
+    block-size: 100%;
+    min-block-size: 0;
   }
 
   .gmt-globe-embedded .gmt-globe-stage {
-    width: min(100cqw, 100cqh);
-    height: min(100cqw, 100cqh);
-    max-width: none;
+    inline-size: min(100cqw, 100cqh);
+    block-size: min(100cqw, 100cqh);
+    max-inline-size: none;
     flex: none;
   }
 
   .gmt-globe-embedded .gmt-globe-side {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-height: 0;
+    block-size: 100%;
+    min-block-size: 0;
   }
 
   .gmt-globe-embedded .gmt-globe-clocks {
     flex: 1 1 auto;
-    height: auto;
-    min-height: 0;
+    block-size: auto;
+    min-block-size: 0;
   }
 }
 
@@ -1106,7 +1127,7 @@
 }
 
 .gmt-globe-caption {
-  margin-top: var(--gmt-space-3);
+  margin-block-start: var(--gmt-space-3);
   font-size: 0.8rem;
   color: var(--gmt-ice-dim);
 }

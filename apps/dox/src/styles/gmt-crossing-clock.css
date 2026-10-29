@@ -35,25 +35,27 @@
     "et . xt"
     "em . xm"
     "ed . xd";
-  column-gap: var(--gmt-space-4);
-  row-gap: var(--gmt-space-1);
-  align-items: start;
-  justify-items: center;
+  gap: var(--gmt-space-1) var(--gmt-space-4);
+  place-items: start center;
   margin: var(--gmt-space-3) 0;
 }
 
 [data-role="entry-heading"] {
   grid-area: eh;
 }
+
 [data-role="entry-clock"] {
   grid-area: ef;
 }
+
 [data-role="entry-time"] {
   grid-area: et;
 }
+
 [data-role="entry-meta"] {
   grid-area: em;
 }
+
 [data-role="entry-date"] {
   grid-area: ed;
 }
@@ -61,15 +63,19 @@
 [data-role="exit-heading"] {
   grid-area: xh;
 }
+
 [data-role="exit-clock"] {
   grid-area: xf;
 }
+
 [data-role="exit-time"] {
   grid-area: xt;
 }
+
 [data-role="exit-meta"] {
   grid-area: xm;
 }
+
 [data-role="exit-date"] {
   grid-area: xd;
 }
@@ -83,7 +89,7 @@
 }
 
 .gmt-crossing-clock-face {
-  width: clamp(6rem, 20vw, 8.5rem);
+  inline-size: clamp(6rem, 20vw, 8.5rem);
   aspect-ratio: 1 / 1;
 }
 
@@ -100,6 +106,7 @@
   margin: 0;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-sm);
+
   /* Text, so the ink variant: --gmt-cyan is 3.68:1 on white in light mode. */
   color: var(--gmt-cyan-ink);
   white-space: nowrap;
@@ -159,11 +166,11 @@
   }
 
   [data-role="connector"] {
-    width: 100%;
+    inline-size: 100%;
   }
 
   .gmt-crossing-clock-face {
-    width: clamp(7rem, 40vw, 9rem);
+    inline-size: clamp(7rem, 40vw, 9rem);
   }
 }
 
@@ -179,14 +186,15 @@
  * --------------------------------------------------------------------------- */
 
 .gmt-crossing-strip-wrap {
-  padding-top: var(--gmt-space-2);
-  border-top: 1px solid var(--gmt-hairline-faint);
+  padding-block-start: var(--gmt-space-2);
+  border-block-start: 1px solid var(--gmt-hairline-faint);
 }
 
 .gmt-crossing-strip {
   display: flex;
   align-items: center;
   gap: var(--gmt-space-2);
+
   /* Room below the bar for the elapsed-hour tick labels. */
   padding-block-end: 1.25rem;
 }
@@ -227,8 +235,8 @@
 .gmt-crossing-strip-tick--labeled::after {
   content: attr(data-label);
   position: absolute;
-  top: calc(100% + 4px);
-  left: 50%;
+  inset-block-start: calc(100% + 4px);
+  inset-inline-start: 50%;
   transform: translateX(-50%);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
@@ -281,7 +289,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
-  margin-top: var(--gmt-space-2);
+  margin-block-start: var(--gmt-space-2);
 }
 
 .gmt-crossing-strip-change,

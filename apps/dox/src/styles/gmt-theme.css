@@ -28,6 +28,7 @@
   --sl-color-accent: var(--gmt-cyan);
   --sl-color-accent-high: var(--gmt-cyan-bright);
   --sl-color-accent-low: var(--gmt-teal);
+
   /* INT-58 fix loop: `<Badge>`'s "default" variant (`user-components/Badge.astro`)
      pairs white text with `--sl-color-accent-low` in dark mode and
      `--sl-color-accent-high` in light mode. Both happen to resolve to the
@@ -43,18 +44,19 @@
      reaches for it next. */
   --sl-badge-default-bg: #0b5d73;
   --sl-color-text: var(--gmt-ice);
+
   /* The ink tier: dark theme keeps the cyan, light theme takes the 8.71:1 ink.
      The bare cyan was 3.4:1 on the header's tint (the site title) and 3.68:1 on
      white (the current "On this page" entry). */
   --sl-color-text-accent: var(--gmt-cyan-ink);
   --sl-color-bg: var(--gmt-void);
+
   /* Match the sidebar's ice-glass wash (see gmt-glass.css) — used by the
      mobile "On this page" bar. */
-  --sl-color-bg-nav: color(from var(--gmt-teal) srgb r g b / 0.08);
+  --sl-color-bg-nav: color(from var(--gmt-teal) srgb r g b / 8%);
   --sl-color-bg-sidebar: var(--gmt-surface);
   --sl-color-hairline: var(--gmt-hairline);
-  --sl-color-hairline-shade: rgba(34, 211, 238, 0.08);
-
+  --sl-color-hairline-shade: rgb(34 211 238 / 8%);
   --sl-font: var(--gmt-font-mono);
   --sl-font-mono: var(--gmt-font-mono);
 }
@@ -69,5 +71,5 @@
 [data-theme="light"] {
   --sl-color-gray-3: #999999;
   --sl-color-gray-4: #cccccc;
-  --sl-color-hairline-shade: rgba(8, 145, 178, 0.08);
+  --sl-color-hairline-shade: rgb(8 145 178 / 8%);
 }

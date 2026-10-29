@@ -69,6 +69,6 @@
 }
 
 .gmt-freetime-holidays {
-  min-height: 2.6rem;
+  min-block-size: 2.6rem;
   resize: vertical;
 }

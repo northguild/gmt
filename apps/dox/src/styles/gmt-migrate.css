@@ -2,7 +2,7 @@
  * The /migrate/ and /compare/behaviour/ pages: the call-by-call tables, the difference cards and
  * the behaviour matrix.
  *
- * A stylesheet rather than component `<style>` blocks for the same reason `gmt-upstream.css` is
+ * A stylesheet rather than component `\3c style>` blocks for the same reason `gmt-upstream.css` is
  * one: Astro compiles a scoped style to `:where(.astro-hash)`, which adds no specificity, so a
  * one-class rule loses to site rules such as `.sl-markdown-content table`. Loaded after
  * `gmt-content.css`, these win on order. Every colour is a token.
@@ -13,12 +13,12 @@
 .sl-markdown-content
   .gmt-ref-table:not([data-layout="entries"])
   .gmt-migrate-table {
-  min-width: 40rem;
+  min-inline-size: 40rem;
   font-size: var(--sl-text-sm);
 }
 
 .sl-markdown-content .gmt-migrate-table :is(th, td) {
-  text-align: left;
+  text-align: start;
 }
 
 /* An import path wraps only after a `/` (src/lib/code-break.ts), so each piece stays whole.
@@ -29,7 +29,7 @@
   .gmt-ref-table:not([data-layout="entries"])
   .gmt-migrate-table:not(.gmt-matrix-table)
   :is(th, td):last-child {
-  min-width: 16rem;
+  min-inline-size: 16rem;
 }
 
 .sl-markdown-content .gmt-migrate-fn {
@@ -42,6 +42,7 @@
 .sl-markdown-content .gmt-migrate-module {
   font-family: var(--gmt-font-mono);
   font-size: var(--sl-text-xs);
+
   /* The full text tier: the muted gray tiers measure under 7:1 here. */
   color: var(--gmt-ice);
 }
@@ -101,7 +102,7 @@
   font-size: var(--sl-text-sm);
 }
 
-@media (max-width: 30rem) {
+@media (width <= 30rem) {
   .sl-markdown-content .gmt-diff-facts > div {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.1rem;

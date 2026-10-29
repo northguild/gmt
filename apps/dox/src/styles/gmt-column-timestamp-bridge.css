@@ -21,7 +21,7 @@
 
 /* A field hidden by the mode stays out of layout, whatever display it has. */
 .gmt-column-timestamp-bridge [hidden] {
-  display: none !important;
+  display: none;
 }
 
 /* ---------------------------------------------------------------------------
@@ -36,7 +36,7 @@
 .gmt-column-timestamp-bridge .gmt-colbridge-decode {
   display: grid;
   gap: var(--gmt-space-3);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-column-timestamp-bridge .gmt-colbridge-group {
@@ -65,7 +65,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-3);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-column-timestamp-bridge .gmt-colbridge-cap {
@@ -81,6 +81,7 @@
    while an instant shows. The bar's 3px is always in the padding. */
 .gmt-column-timestamp-bridge .gmt-colbridge-hero {
   --bar: transparent;
+
   align-items: stretch;
   inline-size: 100%;
   padding-block-end: calc(var(--gmt-space-2) + 3px);
@@ -106,8 +107,7 @@
   .gmt-colbridge-hero
   .gmt-ledger-hold
   > .gmt-colbridge-pill {
-  justify-self: start;
-  align-self: center;
+  place-self: center start;
 }
 
 .gmt-column-timestamp-bridge .gmt-colbridge-hero .gmt-widget-hint {
@@ -174,7 +174,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--gmt-space-3);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 @container (max-width: 40rem) {
@@ -185,9 +185,10 @@
 
 .gmt-column-timestamp-bridge .gmt-colbridge-card {
   --edge: var(--gmt-series-1);
+
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  min-inline-size: 0;
   box-sizing: border-box;
   border: 1px solid var(--gmt-border-strong);
   border-block-end: 3px solid var(--edge);
@@ -226,7 +227,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
-  min-width: 0;
+  min-inline-size: 0;
   padding: var(--gmt-space-2) var(--gmt-space-3);
 }
 
@@ -291,7 +292,7 @@
   display: flex;
   align-items: center;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-column-timestamp-bridge .gmt-colbridge-literal {
@@ -314,7 +315,7 @@
 .gmt-column-timestamp-bridge .gmt-colbridge-ladder {
   display: grid;
   gap: var(--gmt-space-1);
-  min-width: 0;
+  min-inline-size: 0;
   padding: var(--gmt-space-2) var(--gmt-space-3);
   border: 1px solid var(--gmt-border-strong);
   border-block-end-color: var(--gmt-series-1);
@@ -328,7 +329,7 @@
   grid-template-columns: 6rem minmax(0, 1fr);
   align-items: baseline;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-column-timestamp-bridge .gmt-colbridge-ladder-label {

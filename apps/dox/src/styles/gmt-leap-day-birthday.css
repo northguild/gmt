@@ -88,15 +88,15 @@
   font-style: italic;
 }
 
-.gmt-leap-day .gmt-leap-table.gmt-leap-table th.gmt-leap-col-year {
-  width: 5.5rem;
+.gmt-leap-day .gmt-leap-table.gmt-leap-table .gmt-leap-col-year {
+  inline-size: 5.5rem;
   white-space: normal;
 }
 
 /* The site's `.sl-markdown-content th:first-child, td:first-child` rule sets
    `width: 1%` and `white-space: nowrap`; the doubled class out-ranks it. */
 .gmt-leap-day .gmt-leap-table.gmt-leap-table td:first-child {
-  width: auto;
+  inline-size: auto;
   white-space: normal;
 }
 
@@ -144,8 +144,8 @@
 .gmt-leap-day td[data-verdict^="moved"] {
   background-image: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-series-2) srgb r g b / 0.3) 0,
-    color(from var(--gmt-series-2) srgb r g b / 0.3) 2px,
+    color(from var(--gmt-series-2) srgb r g b / 30%) 0,
+    color(from var(--gmt-series-2) srgb r g b / 30%) 2px,
     transparent 2px,
     transparent 8px
   );

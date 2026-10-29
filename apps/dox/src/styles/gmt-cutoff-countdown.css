@@ -26,7 +26,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-width: 100%;
+  max-inline-size: 100%;
   padding: var(--gmt-space-2) var(--gmt-space-3);
   border: 1px solid var(--gmt-border-strong);
   border-radius: var(--gmt-radius-md);
@@ -66,46 +66,45 @@
 }
 
 .gmt-cutoff-countdown-hero[data-live] .gmt-cutoff-countdown-hero-value {
-  text-shadow: 0 0 14px var(--gmt-glow);
+  text-shadow: var(--gmt-text-glow-cutoff);
 }
 
 /* The plot: the chip row, the track and the two pins share one box, so a
    percent is the same x in all three. */
 .gmt-cutoff-countdown-plot {
   position: relative;
-  padding-top: 2.2rem;
+  padding-block-start: 2.2rem;
 }
 
 .gmt-cutoff-countdown-chiprow {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1.6rem;
-  z-index: 2;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 1.6rem;
+  z-index: var(--gmt-z-over);
 }
 
 .gmt-cutoff-countdown-chiprow > .gmt-cutoff-chip {
   position: absolute;
-  top: 0;
+  inset-block-start: 0;
 }
 
 .gmt-cutoff-countdown-chiprow > .gmt-cutoff-chip--row2 {
-  top: 1.8rem;
+  inset-block-start: 1.8rem;
 }
 
 /* A narrow track drops one chip to a second row. */
 .gmt-cutoff-countdown-plot--tiers {
-  padding-top: 4rem;
+  padding-block-start: 4rem;
 }
 
 .gmt-cutoff-countdown-plot--tiers > .gmt-cutoff-countdown-chiprow {
-  height: 3.4rem;
+  block-size: 3.4rem;
 }
 
 .gmt-cutoff-countdown-track {
   position: relative;
-  height: 3.5rem;
+  block-size: 3.5rem;
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   box-shadow: inset 0 0 0 1px var(--gmt-border);
@@ -115,51 +114,47 @@
 /* Open: lit glass, clear at the window's start and brightening to the gate. */
 .gmt-cutoff-countdown-open {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
+  inset-block: 0;
+  inset-inline-start: 0;
   background: linear-gradient(
     90deg,
     transparent,
-    color(from var(--gmt-cyan) srgb r g b / 0.35)
+    color(from var(--gmt-cyan) srgb r g b / 35%)
   );
   box-shadow: inset 0 1px 0 var(--gmt-highlight);
 }
 
 .gmt-cutoff-countdown-closed {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  inset-block: 0;
 }
 
 .gmt-cutoff-countdown-track .gmt-cutoff-chip {
   position: absolute;
-  top: 50%;
+  inset-block-start: 50%;
   translate: 0 -50%;
 }
 
 /* The gate and the now pin run from the chip row to the foot of the track. */
 .gmt-cutoff-countdown-plot > .gmt-cutoff-gate {
-  top: 0;
-  bottom: 0;
+  inset-block: 0;
 }
 
 .gmt-cutoff-countdown-marker--now {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  margin-left: -1px;
+  inset-block: 0;
+  inline-size: 2px;
+  margin-inline-start: -1px;
   background: var(--gmt-ice);
 }
 
 .gmt-cutoff-countdown-marker--now::before {
   content: "";
   position: absolute;
-  top: -2px;
-  left: 50%;
-  width: 9px;
-  height: 9px;
+  inset-block-start: -2px;
+  inset-inline-start: 50%;
+  inline-size: 9px;
+  block-size: 9px;
   translate: -50% 0;
   border-radius: 3px;
   corner-shape: bevel;

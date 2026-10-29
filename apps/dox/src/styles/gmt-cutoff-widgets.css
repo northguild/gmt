@@ -42,7 +42,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-3);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-cutoff-calendar > .gmt-chip-toggle {
@@ -74,13 +74,13 @@
   gap: var(--gmt-space-2);
   padding: var(--gmt-space-3);
   border: 1px solid var(--gmt-border);
-  border-top-color: var(--gmt-border-strong);
+  border-block-start-color: var(--gmt-border-strong);
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
   background:
     radial-gradient(
       120% 100% at 0% 0%,
-      color(from var(--gmt-cyan) srgb r g b / 0.08),
+      color(from var(--gmt-cyan) srgb r g b / 8%),
       transparent 65%
     ),
     var(--gmt-glass-tint);
@@ -93,6 +93,7 @@
   /* Clipped, not scrollable: a classic scrollbar (WebKit) appearing for a value
      wider than the frame added 20px of height under the pointer. */
   overflow-x: clip;
+
   /* A handle's 44px hit area reaches 22px from its centre; the rail's inset and
      this padding keep it inside the frame, so a handle at either end never
      makes the frame scroll (or grow a scrollbar). */
@@ -116,7 +117,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -128,6 +128,7 @@
   --series: var(--gmt-series-1);
   --series-ink: var(--gmt-series-1-ink);
 }
+
 :is(
     .gmt-cutoff-stack,
     .gmt-cutoff-ruler,
@@ -141,7 +142,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -153,6 +153,7 @@
   --series: var(--gmt-series-2);
   --series-ink: var(--gmt-series-2-ink);
 }
+
 :is(
     .gmt-cutoff-stack,
     .gmt-cutoff-ruler,
@@ -166,7 +167,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -178,6 +178,7 @@
   --series: var(--gmt-series-3);
   --series-ink: var(--gmt-series-3-ink);
 }
+
 :is(
     .gmt-cutoff-stack,
     .gmt-cutoff-ruler,
@@ -191,7 +192,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -219,7 +219,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -230,9 +229,9 @@
   .gmt-cutoff-series-swatch {
   display: inline-block;
   flex: none;
-  width: 0.7rem;
-  height: 0.7rem;
-  margin-right: var(--gmt-space-2);
+  inline-size: 0.7rem;
+  block-size: 0.7rem;
+  margin-inline-end: var(--gmt-space-2);
   border-radius: 3px;
   corner-shape: bevel;
   background: var(--series, var(--gmt-ice-dim));
@@ -256,7 +255,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -295,7 +293,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -320,7 +317,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -344,7 +340,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -374,7 +369,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -386,15 +380,15 @@
   display: inline-block;
   flex: none;
   box-sizing: content-box;
-  width: 12px;
-  height: 12px;
+  inline-size: 12px;
+  block-size: 12px;
   border: 2px solid var(--gmt-surface);
   border-radius: 4px;
   corner-shape: bevel;
   background: var(--series, var(--gmt-ice));
   box-shadow:
-    0 0 0 3px color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.25),
-    0 0 12px color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.45);
+    0 0 0 3px color(from var(--series, var(--gmt-cyan)) srgb r g b / 25%),
+    0 0 12px color(from var(--series, var(--gmt-cyan)) srgb r g b / 45%);
 }
 
 :is(
@@ -409,7 +403,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -439,7 +432,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -449,8 +441,8 @@
   )
   .gmt-cutoff-gate {
   position: absolute;
-  width: 3px;
-  margin-left: -1.5px;
+  inline-size: 3px;
+  margin-inline-start: -1.5px;
   background: var(--gmt-cyan-bright);
   box-shadow:
     0 0 6px var(--gmt-glow),
@@ -469,7 +461,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -480,10 +471,10 @@
   .gmt-cutoff-gate::before {
   content: "";
   position: absolute;
-  top: -2px;
-  left: 50%;
-  width: 9px;
-  height: 9px;
+  inset-block-start: -2px;
+  inset-inline-start: 50%;
+  inline-size: 9px;
+  block-size: 9px;
   translate: -50% 0;
   border-radius: 3px;
   corner-shape: bevel;
@@ -509,7 +500,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -520,13 +510,13 @@
   .gmt-cutoff-closed {
   background:
     linear-gradient(
-      color(from var(--gmt-void) srgb r g b / 0.4),
-      color(from var(--gmt-void) srgb r g b / 0.4)
+      color(from var(--gmt-void) srgb r g b / 40%),
+      color(from var(--gmt-void) srgb r g b / 40%)
     ),
     repeating-linear-gradient(
       45deg,
-      color(from var(--gmt-teal) srgb r g b / 0.5) 0,
-      color(from var(--gmt-teal) srgb r g b / 0.5) 2px,
+      color(from var(--gmt-teal) srgb r g b / 50%) 0,
+      color(from var(--gmt-teal) srgb r g b / 50%) 2px,
       transparent 2px,
       transparent 8px
     );
@@ -540,7 +530,7 @@
 
 .gmt-cutoff-axis-tick {
   position: absolute;
-  top: 0;
+  inset-block-start: 0;
   transform: translateX(-2px);
   font-size: var(--gmt-text-xs);
   font-family: var(--gmt-font-mono);
@@ -552,7 +542,7 @@
 .gmt-cutoff-countdown-ticks,
 .gmt-punct-ticks {
   position: relative;
-  height: 1.2rem;
+  block-size: 1.2rem;
 }
 
 :is(
@@ -568,7 +558,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -577,7 +566,7 @@
     .gmt-cron-zone
   )
   .gmt-cutoff-axis-tick {
-  padding-top: 9px;
+  padding-block-start: 9px;
 }
 
 :is(
@@ -593,7 +582,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -604,10 +592,10 @@
   .gmt-cutoff-axis-tick::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 2px;
-  width: 1px;
-  height: 5px;
+  inset-block-start: 0;
+  inset-inline-start: 2px;
+  inline-size: 1px;
+  block-size: 5px;
   background: var(--gmt-border-strong);
 }
 
@@ -624,7 +612,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -649,7 +636,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -658,8 +644,8 @@
     .gmt-cron-zone
   )
   .gmt-cutoff-axis-tick--day::before {
-  width: 2px;
-  height: 8px;
+  inline-size: 2px;
+  block-size: 8px;
   background: var(--gmt-cyan-bright);
 }
 
@@ -675,7 +661,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -684,7 +669,7 @@
     .gmt-cron-zone
   )
   :is(.gmt-cutoff-countdown-ticks, .gmt-cutoff-ruler-ticks, .gmt-punct-ticks) {
-  height: 1.9rem;
+  block-size: 1.9rem;
 }
 
 /* ---------------------------------------------------------------------------
@@ -695,11 +680,11 @@
 
 :is(.gmt-cutoff-stack, .gmt-cutoff-ruler, .gmt-cutoff-countdown, .gmt-cron-zone)
   .gmt-cutoff-dst--overlap {
-  border-color: color(from var(--gmt-dst-purple) srgb r g b / 0.4);
+  border-color: color(from var(--gmt-dst-purple) srgb r g b / 40%);
   background:
     linear-gradient(
-      color(from var(--gmt-dst-purple) srgb r g b / 0.14),
-      color(from var(--gmt-dst-purple) srgb r g b / 0.14)
+      color(from var(--gmt-dst-purple) srgb r g b / 14%),
+      color(from var(--gmt-dst-purple) srgb r g b / 14%)
     ),
     var(--gmt-surface);
   color: var(--gmt-dst-purple-ink);
@@ -707,11 +692,11 @@
 
 :is(.gmt-cutoff-stack, .gmt-cutoff-ruler, .gmt-cutoff-countdown, .gmt-cron-zone)
   .gmt-cutoff-dst--gap {
-  border-color: color(from var(--gmt-dst-gold) srgb r g b / 0.4);
+  border-color: color(from var(--gmt-dst-gold) srgb r g b / 40%);
   background:
     linear-gradient(
-      color(from var(--gmt-dst-gold) srgb r g b / 0.14),
-      color(from var(--gmt-dst-gold) srgb r g b / 0.14)
+      color(from var(--gmt-dst-gold) srgb r g b / 14%),
+      color(from var(--gmt-dst-gold) srgb r g b / 14%)
     ),
     var(--gmt-surface);
   color: var(--gmt-dst-gold-ink);
@@ -724,8 +709,8 @@
 .gmt-cutoff-stack-departure-line,
 .gmt-cutoff-ruler-departure-line,
 .gmt-cutoff-countdown-departure-line {
-  padding-top: var(--gmt-space-1);
-  border-top: 2px solid var(--gmt-ice);
+  padding-block-start: var(--gmt-space-1);
+  border-block-start: 2px solid var(--gmt-ice);
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
 }
@@ -736,7 +721,7 @@
     .gmt-cutoff-ruler-departure-line,
     .gmt-cutoff-countdown-departure-line
   ) {
-  border-top: 1px solid var(--gmt-border);
+  border-block-start: 1px solid var(--gmt-border);
 }
 
 /* ---------------------------------------------------------------------------
@@ -749,11 +734,12 @@
   --gmt-stack-col-gap: var(--gmt-space-2);
   --gmt-stack-head: 2rem;
   --gmt-stack-foot: 2.4rem;
+
   position: relative;
-  min-width: 0;
-  min-height: calc(var(--gmt-stack-head) + var(--gmt-stack-foot) + 2rem);
-  padding-top: calc(var(--gmt-stack-head) + var(--gmt-space-2));
-  padding-bottom: var(--gmt-stack-foot);
+  min-inline-size: 0;
+  min-block-size: calc(var(--gmt-stack-head) + var(--gmt-stack-foot) + 2rem);
+  padding-block: calc(var(--gmt-stack-head) + var(--gmt-space-2))
+    var(--gmt-stack-foot);
 }
 
 /* A closed day also carries a "closed" chip under its header strip. */
@@ -763,10 +749,7 @@
 
 .gmt-cutoff-stack-days {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--gmt-stack-label-w) + var(--gmt-stack-col-gap));
-  right: 0;
+  inset: logical 0 calc(var(--gmt-stack-label-w) + var(--gmt-stack-col-gap)) 0 0;
 }
 
 /* Each day column is positioned and sized by its own real bounds
@@ -774,15 +757,14 @@
    DST day draws at its real proportional width, never a fixed share. */
 .gmt-cutoff-stack-day {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  inset-block: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--gmt-space-1);
   box-sizing: border-box;
-  border-left: 1px solid var(--gmt-border);
-  background-color: color(from var(--gmt-teal) srgb r g b / 0.04);
+  border-inline-start: 1px solid var(--gmt-border);
+  background-color: color(from var(--gmt-teal) srgb r g b / 4%);
   font-size: var(--gmt-text-xs);
   line-height: 1.2;
   overflow: hidden;
@@ -790,16 +772,16 @@
 
 /* Neighbouring days alternate in strength. A closed day also carries the
    closed hatch (its own `.gmt-cutoff-closed`) over the whole column. */
-div.gmt-cutoff-stack-day:nth-of-type(even) {
-  background-color: color(from var(--gmt-teal) srgb r g b / 0.09);
+.gmt-cutoff-stack-day:nth-of-type(even) {
+  background-color: color(from var(--gmt-teal) srgb r g b / 9%);
 }
 
 /* The header strip: an opaque plate holding the date. */
 .gmt-cutoff-stack-day-label {
   box-sizing: border-box;
-  width: 100%;
+  inline-size: 100%;
   padding: 3px var(--gmt-space-2);
-  border-bottom: 1px solid var(--gmt-border-strong);
+  border-block-end: 1px solid var(--gmt-border-strong);
   background: var(--gmt-surface);
   font-family: var(--gmt-font-mono);
   color: var(--gmt-ice);
@@ -808,7 +790,7 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
 }
 
 .gmt-cutoff-stack-day-closed {
-  margin-left: var(--gmt-space-1);
+  margin-inline-start: var(--gmt-space-1);
 }
 
 /* A column too narrow for "13 Jun · Thu" drops the weekday first, then the
@@ -821,18 +803,17 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
 
 /* The one departure gate, from under the headers to the foot, and its chip. */
 .gmt-cutoff-stack-days > .gmt-cutoff-gate {
-  top: var(--gmt-stack-head);
-  bottom: 0;
+  inset-block: var(--gmt-stack-head) 0;
 }
 
 .gmt-cutoff-stack-gate-chip {
   position: absolute;
-  bottom: var(--gmt-space-1);
-  margin-left: 10px;
+  inset-block-end: var(--gmt-space-1);
+  margin-inline-start: 10px;
 }
 
 .gmt-cutoff-stack-gate-chip--end {
-  margin-left: 0;
+  margin-inline-start: 0;
   translate: calc(-100% - 10px) 0;
 }
 
@@ -851,13 +832,13 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
 }
 
 .gmt-cutoff-stack-lane + .gmt-cutoff-stack-lane {
-  border-top: 1px solid var(--gmt-border);
+  border-block-start: 1px solid var(--gmt-border);
 }
 
 .gmt-cutoff-stack-lane-label {
   display: flex;
   align-items: center;
-  min-width: 0;
+  min-inline-size: 0;
   font-family: var(--gmt-font-mono);
   color: var(--gmt-ice);
   overflow-wrap: anywhere;
@@ -867,12 +848,12 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
    so a chip never lands on the arc or on the other marker. */
 .gmt-cutoff-stack-lane-track {
   position: relative;
-  height: 3.3rem;
+  block-size: 3.3rem;
 }
 
 .gmt-cutoff-stack-lane-track > .gmt-cutoff-mark {
   position: absolute;
-  top: 0.95rem;
+  inset-block-start: 0.95rem;
   translate: -50% -50%;
 }
 
@@ -881,7 +862,7 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
    the pre-fit position, a few pixels left of the marker. */
 .gmt-cutoff-stack-lane-time {
   position: absolute;
-  top: 1.85rem;
+  inset-block-start: 1.85rem;
 }
 
 /* The moved cut-off's arc: from the hollow marker to the solid one, dashes
@@ -889,8 +870,8 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
    screen pixels. */
 .gmt-cutoff-stack-arc {
   position: absolute;
-  top: 0;
-  height: 1.9rem;
+  inset-block-start: 0;
+  block-size: 1.9rem;
   overflow: visible;
   pointer-events: none;
 }
@@ -901,7 +882,7 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
   stroke-width: 2;
   stroke-dasharray: 4 4;
   vector-effect: non-scaling-stroke;
-  animation: gmt-cutoff-arc-flow 0.9s linear infinite;
+  animation: gmt-cutoff-arc-flow var(--gmt-motion-flow-duration) linear infinite;
 }
 
 @keyframes gmt-cutoff-arc-flow {
@@ -927,8 +908,8 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
   .gmt-cutoff-stack-lane-label {
     position: relative;
     justify-self: start;
-    max-width: 100%;
-    margin-top: var(--gmt-space-1);
+    max-inline-size: 100%;
+    margin-block-start: var(--gmt-space-1);
     padding: 2px var(--gmt-space-2);
     border: 1px solid var(--series, var(--gmt-border-strong));
     border-radius: var(--gmt-radius-sm);
@@ -939,7 +920,7 @@ div.gmt-cutoff-stack-day:nth-of-type(even) {
   }
 
   .gmt-cutoff-stack-lane-track {
-    height: 3.2rem;
+    block-size: 3.2rem;
   }
 }
 

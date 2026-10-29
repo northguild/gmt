@@ -75,15 +75,13 @@
    (gmt-content.css) sets `width: 1%` and `white-space: nowrap`, which in a fixed
    table squeezes the Line column to its padding. The doubled class out-ranks it
    whatever the load order. */
-.gmt-stored-time-audit
-  .gmt-stored-table.gmt-stored-table
-  th.gmt-stored-col-line {
-  width: 6rem;
+.gmt-stored-time-audit .gmt-stored-table.gmt-stored-table .gmt-stored-col-line {
+  inline-size: 6rem;
   white-space: normal;
 }
 
 .gmt-stored-time-audit .gmt-stored-table.gmt-stored-table td:first-child {
-  width: auto;
+  inline-size: auto;
   white-space: normal;
 }
 
@@ -104,7 +102,8 @@
 }
 
 .gmt-stored-time-audit .gmt-stored-row[data-selected] td {
-  background: color(from var(--gmt-series-1) srgb r g b / 0.08);
+  background: color(from var(--gmt-series-1) srgb r g b / 8%);
+
   /* The border stays 1px, as on every row, so selecting never moves the rows
      below. The second pixel of the rule is drawn inside the cell. */
   border-block-end-color: var(--gmt-series-1);
@@ -159,11 +158,11 @@
 .gmt-stored-time-audit .gmt-stored-badge[data-kind="nonexistent"] {
   border: 1px dashed var(--gmt-dst-gold);
   color: var(--gmt-dst-gold-ink);
-  background-color: color(from var(--gmt-dst-gold) srgb r g b / 0.12);
+  background-color: color(from var(--gmt-dst-gold) srgb r g b / 12%);
   background-image: repeating-linear-gradient(
     135deg,
     transparent 0 4px,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.28) 4px 5px
+    color(from var(--gmt-dst-gold) srgb r g b / 28%) 4px 5px
   );
 }
 
@@ -172,7 +171,7 @@
 .gmt-stored-time-audit .gmt-stored-badge[data-kind="validInOverlap"] {
   border: 3px double var(--gmt-dst-purple);
   color: var(--gmt-dst-purple-ink);
-  background-color: color(from var(--gmt-dst-purple) srgb r g b / 0.12);
+  background-color: color(from var(--gmt-dst-purple) srgb r g b / 12%);
 }
 
 .gmt-stored-time-audit .gmt-stored-badge[data-kind="validInOverlap"] {
@@ -221,6 +220,7 @@
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   font-variant-numeric: tabular-nums;
+
   /* Breaks only at the space between the name and the value, never inside one. */
   white-space: normal;
 }
@@ -232,6 +232,7 @@
 
 .gmt-stored-time-audit .gmt-stored-token-value {
   color: var(--gmt-ice);
+
   /* The value is made of nowrap `.gmt-stored-seg` spans joined by `<wbr>`, and the
      `<wbr>` points are the only places it can break. Chromium breaks after a hyphen
      whatever `word-break` says, so the segments, not this rule, keep the date whole.
@@ -269,6 +270,7 @@
 
   .gmt-stored-time-audit .gmt-stored-table tr {
     padding-block: var(--gmt-space-2);
+
     /* Every row has the same 1px frame; the selected one only recolours it,
        so selecting never changes a row's box. */
     border: 1px solid transparent;
@@ -297,11 +299,12 @@
 
   .gmt-stored-time-audit .gmt-stored-row[data-selected] {
     border-color: var(--gmt-series-1);
-    background: color(from var(--gmt-series-1) srgb r g b / 0.08);
+    background: color(from var(--gmt-series-1) srgb r g b / 8%);
   }
 
   .gmt-stored-time-audit .gmt-stored-row[data-selected] td {
     border: 0;
+
     /* The row carries the tint; the cell must not stack a second one. */
     background: none;
   }
@@ -375,7 +378,7 @@
   border: 1px solid var(--gmt-hairline);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
-  background: color(from var(--gmt-series-1) srgb r g b / 0.05);
+  background: color(from var(--gmt-series-1) srgb r g b / 5%);
 }
 
 .gmt-stored-time-audit .gmt-stored-tickrow {
@@ -398,17 +401,17 @@
 
 .gmt-stored-time-audit .gmt-stored-band[data-kind="gap"] {
   border: 1px dashed var(--gmt-dst-gold);
-  background-color: color(from var(--gmt-dst-gold) srgb r g b / 0.14);
+  background-color: color(from var(--gmt-dst-gold) srgb r g b / 14%);
   background-image: repeating-linear-gradient(
     135deg,
     transparent 0 4px,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.3) 4px 5px
+    color(from var(--gmt-dst-gold) srgb r g b / 30%) 4px 5px
   );
 }
 
 .gmt-stored-time-audit .gmt-stored-band[data-kind="overlap"] {
   border: 3px double var(--gmt-dst-purple);
-  background-color: color(from var(--gmt-dst-purple) srgb r g b / 0.16);
+  background-color: color(from var(--gmt-dst-purple) srgb r g b / 16%);
 }
 
 .gmt-stored-time-audit .gmt-stored-tick {
@@ -500,6 +503,7 @@
    readings, then the baseline. */
 .gmt-stored-time-audit .gmt-stored-track--exact {
   block-size: 8.5rem;
+
   --row: 1.75rem;
 }
 
@@ -520,8 +524,7 @@
 .gmt-stored-time-audit .gmt-stored-gate,
 .gmt-stored-time-audit .gmt-stored-markline {
   position: absolute;
-  inset-block-start: calc(var(--tier, 0) * var(--row) + 1.3rem);
-  inset-block-end: 0.25rem;
+  inset-block: calc(var(--tier, 0) * var(--row) + 1.3rem) 0.25rem;
   inset-inline-start: calc(var(--x) * 1%);
   inline-size: 2px;
   margin-inline-start: -1px;
@@ -598,11 +601,11 @@
 
 .gmt-stored-time-audit .gmt-stored-swatch[data-swatch="gap"] {
   border: 1px dashed var(--gmt-dst-gold);
-  background-color: color(from var(--gmt-dst-gold) srgb r g b / 0.2);
+  background-color: color(from var(--gmt-dst-gold) srgb r g b / 20%);
   background-image: repeating-linear-gradient(
     135deg,
     transparent 0 3px,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.4) 3px 4px
+    color(from var(--gmt-dst-gold) srgb r g b / 40%) 3px 4px
   );
 }
 

@@ -12,6 +12,7 @@
 .gmt-scrubber {
   margin: var(--gmt-space-6) 0;
   font-family: var(--gmt-font-mono);
+
   /* So this sheet's own @container rule below can react to the widget's
      rendered width rather than the viewport's — the same reasoning
      gmt-transport-widgets.css gives for its four widgets. */
@@ -34,7 +35,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: end;
   gap: var(--gmt-space-2);
-  margin-bottom: var(--gmt-space-2);
+  margin-block-end: var(--gmt-space-2);
 }
 
 /* `minmax(0, 1fr)` above, not `minmax(10rem, 1fr)`: a grid item's automatic
@@ -51,7 +52,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--gmt-space-2);
-  margin-bottom: var(--gmt-space-4);
+  margin-block-end: var(--gmt-space-4);
 }
 
 /* The zone field and its attached "+", built the way the globe's search field
@@ -69,7 +70,7 @@
 
 .gmt-scrubber-field-row .gmt-field {
   flex: 1;
-  min-width: 0;
+  min-inline-size: 0;
   border-start-end-radius: 0;
   border-end-end-radius: 0;
 }
@@ -95,7 +96,7 @@
 .gmt-scrubber-add-addon:focus-visible {
   color: var(--gmt-cyan-ink);
   background: var(--gmt-fill);
-  outline: none;
+  outline-color: transparent;
 }
 
 .gmt-scrubber-add-addon:focus-visible {
@@ -110,7 +111,7 @@
   background: var(--gmt-fill-strong);
   border-color: var(--gmt-cyan);
   position: relative;
-  z-index: 1;
+  z-index: var(--gmt-z-raised);
 }
 
 @container (max-width: 30rem) {
@@ -167,7 +168,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 
 .gmt-scrubber-slider {
   display: block;
-  width: 100%;
+  inline-size: 100%;
   margin: var(--gmt-space-4) 0 var(--gmt-space-2);
 }
 
@@ -175,7 +176,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
   text-align: center;
   font-size: 0.8rem;
   color: var(--gmt-cyan-ink);
-  margin-bottom: var(--gmt-space-4);
+  margin-block-end: var(--gmt-space-4);
 }
 
 /* One tile per pinned zone, as many across as the card is wide. The floor is
@@ -213,8 +214,8 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
    breakpoint. Capped so a lone pinned zone in a wide card does not render one
    enormous clock. */
 .gmt-scrubber-clock-face {
-  width: 100%;
-  max-width: 7rem;
+  inline-size: 100%;
+  max-inline-size: 7rem;
   line-height: 0;
 }
 
@@ -237,7 +238,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
    anyone who needs to know which `Europe/...` this is. */
 .gmt-scrubber-clock-zone {
   margin: 0;
-  max-width: 100%;
+  max-inline-size: 100%;
   font-size: var(--gmt-text-sm);
   color: var(--gmt-ice);
   overflow: hidden;
@@ -256,6 +257,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 .gmt-scrubber-clock[data-yours="true"] {
   border-color: var(--gmt-cyan-ink);
 }
+
 .gmt-scrubber-clock-yours {
   margin: 0;
   font-size: var(--gmt-text-xs);
@@ -275,16 +277,17 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
+  inline-size: 100%;
+  min-inline-size: 0;
   margin: 0;
+
   /* One text line plus the pill's border, whichever state is showing. */
-  min-height: calc(var(--gmt-text-xs) * 1.35 + 4px);
+  min-block-size: calc(var(--gmt-text-xs) * 1.35 + 4px);
 }
 
 .gmt-scrubber-dst,
 .gmt-scrubber-switch {
-  max-width: 100%;
+  max-inline-size: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -318,33 +321,33 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 /* The switch itself: the same gold, tinted, so a crossing reads as an event and
    the state beside it as a state. */
 .gmt-scrubber-switch {
-  background: color(from var(--gmt-dst-gold) srgb r g b / 0.15);
+  background: color(from var(--gmt-dst-gold) srgb r g b / 15%);
 }
 
 /* Marks on the slider's track at each shown zone's switch. Decorative: the tiles
    say the same in words. The thumb sits above them. */
 .gmt-scrubber .gmt-range {
   position: relative;
-  z-index: 1;
+  z-index: var(--gmt-z-raised);
 }
 
 .gmt-scrubber-marks {
   position: absolute;
   inset-inline: 0;
-  top: 1.5rem;
-  height: var(--gmt-range-hit-h);
+  inset-block-start: 1.5rem;
+  block-size: var(--gmt-range-hit-h);
   pointer-events: none;
 }
 
 .gmt-scrubber-mark {
   position: absolute;
-  top: 50%;
-  left: calc(
+  inset-block-start: 50%;
+  inset-inline-start: calc(
     var(--gmt-range-thumb-w) / 2 + (100% - var(--gmt-range-thumb-w)) *
       var(--gmt-mark-pct, 0) / 100
   );
-  width: 0.55rem;
-  height: 0.55rem;
+  inline-size: 0.55rem;
+  block-size: 0.55rem;
   box-sizing: border-box;
   translate: -50% -50%;
   rotate: 45deg;
@@ -361,7 +364,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
    message arriving (or going) never moves the controls below. */
 .gmt-scrubber-jump-status {
   margin: calc(var(--gmt-space-2) * -1) 0 var(--gmt-space-3);
-  min-height: calc(2 * 1.4em);
+  min-block-size: calc(2 * 1.4em);
   font-size: var(--gmt-text-xs);
   line-height: 1.4;
   color: var(--gmt-ice-dim);
@@ -369,12 +372,12 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 
 .gmt-scrubber-visually-hidden {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inline-size: 1px;
+  block-size: 1px;
   margin: -1px;
   padding: 0;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }
@@ -383,8 +386,8 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 .gmt-scrubber-remove {
   appearance: none;
   position: absolute;
-  top: var(--gmt-space-1);
-  right: var(--gmt-space-1);
+  inset-block-start: var(--gmt-space-1);
+  inset-inline-end: var(--gmt-space-1);
   border: 0;
   background: none;
   color: var(--gmt-ice-dim);
@@ -397,7 +400,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 .gmt-scrubber-remove:hover,
 .gmt-scrubber-remove:focus-visible {
   color: var(--gmt-signal-ink);
-  outline: none;
+  outline-color: transparent;
 }
 
 .gmt-scrubber .gmt-signal-lost {
@@ -405,7 +408,7 @@ input[data-role="anchor"]::-webkit-calendar-picker-indicator {
 }
 
 .gmt-scrubber-share {
-  margin-top: var(--gmt-space-4);
+  margin-block-start: var(--gmt-space-4);
   display: flex;
   gap: var(--gmt-space-2);
   align-items: center;

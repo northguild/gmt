@@ -44,20 +44,21 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-3);
-  min-width: 0;
+  min-inline-size: 0;
   padding: var(--gmt-space-3);
   border: 1px solid var(--gmt-border);
-  border-top-color: var(--gmt-border-strong);
+  border-block-start-color: var(--gmt-border-strong);
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
   background:
     radial-gradient(
       120% 100% at 0% 0%,
-      color(from var(--gmt-cyan) srgb r g b / 0.08),
+      color(from var(--gmt-cyan) srgb r g b / 8%),
       transparent 65%
     ),
     var(--gmt-glass-tint);
   box-shadow: inset 0 1px 0 var(--gmt-highlight);
+
   /* Clipped, not scrollable: a classic scrollbar appearing for a value wider
      than the frame would add height under the pointer. */
   overflow-x: clip;
@@ -87,7 +88,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-gnss-lane,
@@ -102,7 +103,7 @@
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   line-height: 1.2;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 /* A ruler row has no value column of its own: its marks carry their chips. */
@@ -129,7 +130,7 @@
 .gmt-gnss-track {
   position: relative;
   box-sizing: border-box;
-  min-width: 0;
+  min-inline-size: 0;
   block-size: 1.5rem;
   border: 1px solid var(--gmt-border-strong);
   border-radius: var(--gmt-radius-sm);
@@ -144,7 +145,7 @@
 .gmt-gnss-bar-row[data-series] .gmt-gnss-track {
   border-color: var(--series, var(--gmt-border-strong));
   background-color: color(
-    from var(--series, var(--gmt-ice-dim)) srgb r g b / 0.18
+    from var(--series, var(--gmt-ice-dim)) srgb r g b / 18%
   );
 }
 
@@ -169,7 +170,7 @@
   inset-inline-start: var(--from, 0%);
   inline-size: calc(var(--to, 100%) - var(--from, 0%));
   background-color: color(
-    from var(--series, var(--gmt-ice-dim)) srgb r g b / 0.3
+    from var(--series, var(--gmt-ice-dim)) srgb r g b / 30%
   );
 }
 
@@ -180,7 +181,7 @@
   inset-inline-start: var(--at, 0%);
   min-inline-size: 6px;
   translate: -50% 0;
-  background-color: color(from var(--series, var(--gmt-ice)) srgb r g b / 0.4);
+  background-color: color(from var(--series, var(--gmt-ice)) srgb r g b / 40%);
 }
 
 /* A vertical rule on a track: an insertion, an era boundary, a wrap. */
@@ -216,8 +217,8 @@
 .gmt-gnss-hatch {
   background-image: repeating-linear-gradient(
     45deg,
-    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 0.55)) 0,
-    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 0.55)) 2px,
+    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 55%)) 0,
+    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 55%)) 2px,
     transparent 2px,
     transparent 8px
   );
@@ -227,7 +228,7 @@
    `label-fit.ts`) sets `--at` and flips or hides a chip that would collide. */
 .gmt-gnss-flags {
   position: relative;
-  min-width: 0;
+  min-inline-size: 0;
   block-size: 1.6rem;
 }
 
@@ -252,7 +253,7 @@
   align-items: center;
   justify-content: center;
   padding-block-start: var(--gmt-space-1);
-  border-top: 1px dashed var(--gmt-border-strong);
+  border-block-start: 1px dashed var(--gmt-border-strong);
 }
 
 /* Lead bars: one bar per clock, from 0 to its lead, on one scale. The mount
@@ -264,7 +265,7 @@
   inline-size: var(--size, 0%);
   min-inline-size: 2px;
   background-color: color(
-    from var(--series, var(--gmt-ice-dim)) srgb r g b / 0.55
+    from var(--series, var(--gmt-ice-dim)) srgb r g b / 55%
   );
 }
 
@@ -302,8 +303,8 @@
    be its own container. */
 .gmt-gnss-table-box {
   container: gmt-gnss-table / inline-size;
-  min-width: 0;
-  max-width: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
   overflow-x: auto;
 }
 
@@ -311,10 +312,10 @@
   display: table;
   table-layout: fixed;
   inline-size: 100%;
-  max-width: 100%;
+  max-inline-size: 100%;
   overflow-x: auto;
   border: 1px solid var(--gmt-border);
-  border-top-color: var(--gmt-border-strong);
+  border-block-start-color: var(--gmt-border-strong);
   border-collapse: separate;
   border-spacing: 0;
   border-radius: var(--gmt-radius-md);
@@ -326,8 +327,8 @@
 
 .gmt-gnss-table :is(th, td) {
   padding: var(--gmt-space-2);
-  border-bottom: 1px solid var(--gmt-border);
-  text-align: left;
+  border-block-end: 1px solid var(--gmt-border);
+  text-align: start;
   vertical-align: baseline;
   font-family: var(--gmt-font-mono);
   font-weight: 400;
@@ -343,7 +344,7 @@
    each other, and the stacked rows' first cell shrinks the same way. The
    doubled class out-ranks it whatever the load order. */
 .gmt-gnss-table.gmt-gnss-table :is(th, td):first-child {
-  width: auto;
+  inline-size: auto;
   white-space: normal;
 }
 
@@ -358,8 +359,8 @@
 }
 
 .gmt-gnss-table thead th {
-  border-bottom-color: var(--gmt-border-strong);
-  border-bottom-width: 2px;
+  border-block-end-color: var(--gmt-border-strong);
+  border-block-end-width: 2px;
   background: var(--gmt-surface);
   font-family: inherit;
   font-size: var(--gmt-text-xs);
@@ -367,7 +368,7 @@
 }
 
 .gmt-gnss-table tbody tr:last-child :is(th, td) {
-  border-bottom: 0;
+  border-block-end: 0;
 }
 
 /* The row of the reading's own counter or clock: a hatch, a chip that says
@@ -376,12 +377,12 @@
    a pattern; no colour verdict. */
 .gmt-gnss-table tbody tr[data-reading] :is(th, td) {
   background-color: color(
-    from var(--series, var(--gmt-ice-dim)) srgb r g b / 0.1
+    from var(--series, var(--gmt-ice-dim)) srgb r g b / 10%
   );
   background-image: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-cyan-bright) srgb r g b / 0.16) 0,
-    color(from var(--gmt-cyan-bright) srgb r g b / 0.16) 2px,
+    color(from var(--gmt-cyan-bright) srgb r g b / 16%) 0,
+    color(from var(--gmt-cyan-bright) srgb r g b / 16%) 2px,
     transparent 2px,
     transparent 8px
   );
@@ -402,24 +403,24 @@
     inline-size: 1px;
     block-size: 1px;
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
   }
 
   .gmt-gnss-table tbody tr {
     padding-block: var(--gmt-space-1);
-    border-bottom: 1px solid var(--gmt-border);
+    border-block-end: 1px solid var(--gmt-border);
   }
 
   .gmt-gnss-table tbody tr:last-child {
-    border-bottom: 0;
+    border-block-end: 0;
   }
 
   .gmt-gnss-table tbody :is(th, td) {
     display: flex;
     justify-content: space-between;
     gap: var(--gmt-space-3);
-    border-bottom: 0;
-    text-align: right;
+    border-block-end: 0;
+    text-align: end;
   }
 
   .gmt-gnss-table tbody :is(th, td)[data-label]::before {
@@ -427,7 +428,7 @@
     content: attr(data-label) / "";
     flex: none;
     color: var(--gmt-ice-dim);
-    text-align: left;
+    text-align: start;
   }
 }
 
@@ -454,12 +455,12 @@
    never drawn, so the drawing's values are not a silent picture. */
 .gmt-gnss-visually-hidden {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inline-size: 1px;
+  block-size: 1px;
   margin: -1px;
   padding: 0;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }

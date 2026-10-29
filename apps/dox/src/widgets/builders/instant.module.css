@@ -1,0 +1,10 @@
+/* instant: each piece of an instant stays whole; the line breaks between pieces. */
+
+.piece {
+  white-space: nowrap;
+
+  &[data-word] {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

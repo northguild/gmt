@@ -21,7 +21,7 @@
   grid-template-columns: 3.5rem minmax(0, 1fr);
   grid-template-rows: 240px auto;
   column-gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-eta-yaxis {
@@ -30,7 +30,7 @@
 
 .gmt-eta-ytick {
   position: absolute;
-  right: 0;
+  inset-inline-end: 0;
   translate: 0 -50%;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
@@ -44,7 +44,7 @@
 .gmt-eta-area {
   position: relative;
   border: 1px solid var(--gmt-border);
-  border-top-color: var(--gmt-border-strong);
+  border-block-start-color: var(--gmt-border-strong);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-fill-subtle);
@@ -53,14 +53,14 @@
 
 .gmt-eta-xticks {
   grid-column: 2;
-  margin-top: var(--gmt-space-1);
+  margin-block-start: var(--gmt-space-1);
 }
 
 .gmt-eta-lines {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  inline-size: 100%;
+  block-size: 100%;
 }
 
 .gmt-eta-grid {
@@ -71,7 +71,7 @@
 /* The estimates' join line, in the first series at about 70%. */
 .gmt-eta-line {
   fill: none;
-  stroke: color(from var(--gmt-series-1) srgb r g b / 0.7);
+  stroke: color(from var(--gmt-series-1) srgb r g b / 70%);
   stroke-width: 1.5;
 }
 
@@ -93,15 +93,14 @@
    edges and a soft glow. Its words are under the plot. */
 .gmt-eta-band {
   position: absolute;
-  left: 0;
-  right: 0;
+  inset-inline: 0;
   box-sizing: border-box;
   border-block: 1px solid var(--gmt-cyan-bright);
   background: linear-gradient(
     180deg,
-    color(from var(--gmt-cyan) srgb r g b / 0.1),
-    color(from var(--gmt-cyan) srgb r g b / 0.22),
-    color(from var(--gmt-cyan) srgb r g b / 0.1)
+    color(from var(--gmt-cyan) srgb r g b / 10%),
+    color(from var(--gmt-cyan) srgb r g b / 22%),
+    color(from var(--gmt-cyan) srgb r g b / 10%)
   );
   box-shadow: 0 0 8px var(--gmt-glow);
 }
@@ -117,42 +116,42 @@
    and the plates use. The colour is the class's series, on marks and glyphs
    only, never on text. */
 :is(.gmt-eta-mark, .gmt-eta-glyph) {
-  width: 0.7rem;
-  height: 0.7rem;
+  inline-size: 0.7rem;
+  block-size: 0.7rem;
   color: var(--series, var(--gmt-ice));
 }
 
 :is(.gmt-eta-mark--act, .gmt-eta-glyph--act) {
-  background: currentColor;
+  background: currentcolor;
   rotate: 45deg;
 }
 
 :is(.gmt-eta-mark--pln, .gmt-eta-glyph--pln) {
-  background: currentColor;
+  background: currentcolor;
 }
 
 :is(.gmt-eta-mark--est, .gmt-eta-glyph--est) {
-  border: 2px solid currentColor;
+  border: 2px solid currentcolor;
   border-radius: 50%;
   background: var(--gmt-surface);
 }
 
 :is(.gmt-eta-mark--req, .gmt-eta-glyph--req) svg {
   display: block;
-  width: 100%;
-  height: 100%;
+  inline-size: 100%;
+  block-size: 100%;
   overflow: visible;
 }
 
 :is(.gmt-eta-mark--req, .gmt-eta-glyph--req) path {
-  fill: currentColor;
+  fill: currentcolor;
 }
 
 /* A plot mark: a 2px surface ring around it and the family's glow. */
 .gmt-eta-mark {
   box-shadow:
     0 0 0 2px var(--gmt-surface),
-    0 0 10px color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.45);
+    0 0 10px color(from var(--series, var(--gmt-cyan)) srgb r g b / 45%);
 }
 
 .gmt-eta-mark--req {
@@ -161,7 +160,7 @@
 
 .gmt-eta-mark--req svg {
   filter: drop-shadow(
-    0 0 4px color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.5)
+    0 0 4px color(from var(--series, var(--gmt-cyan)) srgb r g b / 50%)
   );
 }
 
@@ -182,20 +181,20 @@
 
 /* The best pick: a bright ring, a surface gap inside it, and the family glow. */
 .gmt-eta-ring {
-  width: 1.5rem;
-  height: 1.5rem;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
   border: 2px solid var(--gmt-cyan-bright);
   border-radius: 50%;
   box-shadow:
     inset 0 0 0 2px var(--gmt-surface),
-    0 0 0 3px color(from var(--gmt-cyan-bright) srgb r g b / 0.25),
-    0 0 12px color(from var(--gmt-cyan-bright) srgb r g b / 0.45);
+    0 0 0 3px color(from var(--gmt-cyan-bright) srgb r g b / 25%),
+    0 0 12px color(from var(--gmt-cyan-bright) srgb r g b / 45%);
 }
 
 /* The naive pick: a wider dashed ring, no glow. */
 .gmt-eta-ring--dashed {
-  width: 2rem;
-  height: 2rem;
+  inline-size: 2rem;
+  block-size: 2rem;
   border: 1.5px dashed var(--gmt-ice-dim);
   box-shadow: none;
 }
@@ -203,7 +202,7 @@
 /* The class chip inside a label keeps a hair of clear space from the words, so
    nothing measures its border as part of the text. */
 .gmt-eta-label .gmt-punct-chip {
-  margin-right: 2px;
+  margin-inline-end: 2px;
 }
 
 /* A label is a chip (`.gmt-cutoff-chip`, opaque and bevelled) that sits beside
@@ -213,8 +212,8 @@
 .gmt-eta-drift .gmt-eta-label.gmt-cutoff-chip {
   position: absolute;
   display: block;
-  width: max-content;
-  max-width: 9rem;
+  inline-size: max-content;
+  max-inline-size: 9rem;
   translate: var(--gmt-space-2) -50%;
   line-height: 1.5;
   white-space: normal;
@@ -252,11 +251,11 @@
   display: none;
 }
 
-ul.gmt-eta-legend > li {
+.gmt-eta-legend > li {
   display: inline-flex;
   align-items: center;
   gap: var(--gmt-space-1);
-  min-height: 0;
+  min-block-size: 0;
   margin: 0;
   padding: 0;
   font-family: var(--gmt-font-mono);
@@ -264,7 +263,7 @@ ul.gmt-eta-legend > li {
   color: var(--gmt-ice);
 }
 
-ul.gmt-eta-legend > li::before {
+.gmt-eta-legend > li::before {
   content: none;
 }
 
@@ -279,6 +278,6 @@ ul.gmt-eta-legend > li::before {
   }
 
   .gmt-eta-drift .gmt-eta-label.gmt-cutoff-chip {
-    max-width: 6.5rem;
+    max-inline-size: 6.5rem;
   }
 }

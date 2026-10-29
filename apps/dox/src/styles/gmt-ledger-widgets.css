@@ -53,6 +53,7 @@
   --gmt-ledger-lane-h: 8.5rem;
   --gmt-ledger-gate-h: 0rem;
   --gmt-ledger-bar-h: 1.7rem;
+
   container-type: inline-size;
 }
 
@@ -95,14 +96,14 @@
   font-size: var(--gmt-text-xs);
   line-height: 1.2;
   color: var(--gmt-ice);
-  text-align: right;
+  text-align: end;
   overflow-wrap: anywhere;
 }
 
 .gmt-ledger-lane-track {
   position: relative;
-  min-width: 0;
-  height: calc(var(--gmt-ledger-gate-h) + var(--gmt-ledger-lane-h));
+  min-inline-size: 0;
+  block-size: calc(var(--gmt-ledger-gate-h) + var(--gmt-ledger-lane-h));
 }
 
 @container gmt-ledger-frame (max-width: 30rem) {
@@ -115,7 +116,7 @@
   .gmt-ledger-lane-label {
     margin-block-end: 0;
     translate: none;
-    text-align: left;
+    text-align: start;
   }
 }
 
@@ -134,33 +135,33 @@
 
 .gmt-ledger-day {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  inset-block: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--gmt-space-1);
   box-sizing: border-box;
-  border-left: 1px solid var(--gmt-border);
+  border-inline-start: 1px solid var(--gmt-border);
+
   /* `background-color`, never the shorthand: a hatch lives in
      `background-image`, and the shorthand would wipe it. */
-  background-color: color(from var(--gmt-teal) srgb r g b / 0.04);
+  background-color: color(from var(--gmt-teal) srgb r g b / 4%);
   font-size: var(--gmt-text-xs);
   line-height: 1.2;
   overflow: hidden;
 }
 
 /* Neighbouring days alternate in strength. */
-.gmt-ledger-days > div.gmt-ledger-day:nth-of-type(even) {
-  background-color: color(from var(--gmt-teal) srgb r g b / 0.09);
+.gmt-ledger-days > .gmt-ledger-day:nth-of-type(even) {
+  background-color: color(from var(--gmt-teal) srgb r g b / 9%);
 }
 
 /* The header strip: an opaque plate holding the date. */
 .gmt-ledger-day-label {
   box-sizing: border-box;
-  width: 100%;
+  inline-size: 100%;
   padding: 3px var(--gmt-space-2);
-  border-bottom: 1px solid var(--gmt-border-strong);
+  border-block-end: 1px solid var(--gmt-border-strong);
   background: var(--gmt-surface);
   font-family: var(--gmt-font-mono);
   color: var(--gmt-ice);
@@ -194,8 +195,8 @@
 .gmt-ledger-days .gmt-ledger-day[data-state="lit"] {
   background-image: linear-gradient(
     180deg,
-    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.34),
-    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.12)
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 34%),
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 12%)
   );
   box-shadow:
     inset 0 -3px 0 var(--series, var(--gmt-cyan)),
@@ -206,7 +207,7 @@
    A tier differs by the density of the hatch and by its "tier n" chip, never by
    a coloured edge. */
 .gmt-ledger-days .gmt-ledger-day.gmt-punct-hatch {
-  --hatch: color(from var(--series, var(--gmt-cyan-bright)) srgb r g b / 0.55);
+  --hatch: color(from var(--series, var(--gmt-cyan-bright)) srgb r g b / 55%);
 }
 
 .gmt-ledger-days .gmt-ledger-day.gmt-punct-hatch[data-tier="2"] {
@@ -259,17 +260,18 @@
 
 .gmt-ledger-bar {
   position: absolute;
-  bottom: 6px;
-  height: var(--gmt-ledger-bar-h);
-  min-width: 2px;
+  inset-block-end: 6px;
+  block-size: var(--gmt-ledger-bar-h);
+  min-inline-size: 2px;
   box-sizing: border-box;
-  border-top: 1px solid var(--gmt-border-strong);
+  border-block-start: 1px solid var(--gmt-border-strong);
   background: linear-gradient(
     180deg,
-    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.4),
-    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.14)
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 40%),
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 14%)
   );
   box-shadow: inset 0 1px 0 var(--gmt-highlight);
+
   /* The handles on the bar read `currentColor` for their edge. */
   color: var(--gmt-ice);
 }
@@ -285,10 +287,9 @@
 .gmt-ledger-bar::before {
   content: "";
   position: absolute;
-  top: -2px;
-  bottom: 0;
-  left: -1px;
-  width: 2px;
+  inset-block: -2px 0;
+  inset-inline-start: -1px;
+  inline-size: 2px;
   background: var(--series, var(--gmt-cyan-bright));
   box-shadow: 0 0 6px var(--gmt-glow);
 }
@@ -296,11 +297,10 @@
 .gmt-ledger-bar::after {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  right: -1px;
-  width: 0;
-  border-left: 2px dashed var(--series, var(--gmt-cyan-bright));
+  inset-block: 0;
+  inset-inline-end: -1px;
+  inline-size: 0;
+  border-inline-start: 2px dashed var(--series, var(--gmt-cyan-bright));
 }
 
 .gmt-ledger-bar[hidden] {
@@ -319,11 +319,11 @@
 }
 
 .gmt-ledger-bar > .gmt-handle:first-child {
-  left: 0;
+  inset-inline-start: 0;
 }
 
 .gmt-ledger-bar > .gmt-handle:last-child {
-  left: 100%;
+  inset-inline-start: 100%;
 }
 
 /* ---------------------------------------------------------------------------
@@ -332,8 +332,7 @@
  * --------------------------------------------------------------------------- */
 
 .gmt-ledger-lane-track > .gmt-cutoff-gate {
-  top: 0;
-  bottom: 0;
+  inset-block: 0;
   pointer-events: none;
 }
 
@@ -343,13 +342,12 @@
 
 .gmt-ledger-gate-chip {
   position: absolute;
-  top: 0;
-  left: 10px;
+  inset-block-start: 0;
+  inset-inline-start: 10px;
 }
 
 .gmt-ledger-gate-chip--end {
-  left: auto;
-  right: 10px;
+  inset-inline: auto 10px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -359,7 +357,7 @@
 .gmt-ledger-axis {
   display: flex;
   justify-content: space-between;
-  margin-left: calc(var(--gmt-ledger-label-w) + var(--gmt-space-2));
+  margin-inline-start: calc(var(--gmt-ledger-label-w) + var(--gmt-space-2));
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice);
@@ -367,7 +365,7 @@
 
 /* The legend: a wrapped row of swatch and word. A swatch is a mark, so it may
    take a series colour or a hatch. Each entry sits on a chip. */
-ul.gmt-ledger-legend {
+.gmt-ledger-legend {
   display: flex;
   flex-wrap: wrap;
   gap: var(--gmt-space-1) var(--gmt-space-3);
@@ -376,12 +374,12 @@ ul.gmt-ledger-legend {
   list-style: none;
 }
 
-ul.gmt-ledger-legend > li {
+.gmt-ledger-legend > li {
   margin: 0;
   padding: 2px var(--gmt-space-2);
 }
 
-ul.gmt-ledger-legend > li::before {
+.gmt-ledger-legend > li::before {
   content: none;
 }
 
@@ -389,24 +387,24 @@ ul.gmt-ledger-legend > li::before {
   display: inline-block;
   flex: none;
   box-sizing: border-box;
-  width: 0.9rem;
-  height: 0.9rem;
+  inline-size: 0.9rem;
+  block-size: 0.9rem;
   border: 1px solid var(--gmt-border-strong);
   border-radius: 2px;
-  background-color: color(from var(--gmt-teal) srgb r g b / 0.09);
+  background-color: color(from var(--gmt-teal) srgb r g b / 9%);
 }
 
 .gmt-ledger-swatch[data-state="lit"] {
   background-image: linear-gradient(
     180deg,
-    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.5),
-    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.2)
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 50%),
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 20%)
   );
-  border-bottom: 3px solid var(--series, var(--gmt-cyan));
+  border-block-end: 3px solid var(--series, var(--gmt-cyan));
 }
 
 .gmt-ledger-swatch.gmt-punct-hatch {
-  --hatch: color(from var(--series, var(--gmt-cyan-bright)) srgb r g b / 0.7);
+  --hatch: color(from var(--series, var(--gmt-cyan-bright)) srgb r g b / 70%);
 }
 
 .gmt-ledger-swatch[data-state="plain"] {
@@ -415,8 +413,8 @@ ul.gmt-ledger-legend > li::before {
 
 @container gmt-ledger-frame (max-width: 30rem) {
   .gmt-ledger-axis,
-  ul.gmt-ledger-legend {
-    margin-left: 0;
+  .gmt-ledger-legend {
+    margin-inline-start: 0;
   }
 }
 
@@ -454,13 +452,13 @@ ul.gmt-ledger-legend > li::before {
 
 .gmt-ledger-hold {
   display: grid;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-ledger-hold > * {
   grid-area: 1 / 1;
   align-self: stretch;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 /* The live text fills the cell, so the element itself is as tall as the tallest
@@ -479,13 +477,13 @@ ul.gmt-ledger-legend > li::before {
 
 .gmt-ledger-sr {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inline-size: 1px;
+  block-size: 1px;
   margin: -1px;
   padding: 0;
   border: 0;
   overflow: hidden;
-  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 

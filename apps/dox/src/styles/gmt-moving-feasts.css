@@ -63,7 +63,7 @@
 
 .gmt-feasts-note--held > * {
   grid-area: 1 / 1;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-feasts-note[data-state="sentinel"] {
@@ -103,8 +103,8 @@
 .gmt-feasts-legend .gmt-holiday-swatch[data-series="2"] {
   background-image: repeating-linear-gradient(
     45deg,
-    color(from var(--series) srgb r g b / 0.6) 0,
-    color(from var(--series) srgb r g b / 0.6) 3px,
+    color(from var(--series) srgb r g b / 60%) 0,
+    color(from var(--series) srgb r g b / 60%) 3px,
     transparent 3px,
     transparent 7px
   );
@@ -114,15 +114,15 @@
   background-image:
     repeating-linear-gradient(
       45deg,
-      color(from var(--series) srgb r g b / 0.5) 0,
-      color(from var(--series) srgb r g b / 0.5) 2px,
+      color(from var(--series) srgb r g b / 50%) 0,
+      color(from var(--series) srgb r g b / 50%) 2px,
       transparent 2px,
       transparent 7px
     ),
     repeating-linear-gradient(
       -45deg,
-      color(from var(--series) srgb r g b / 0.5) 0,
-      color(from var(--series) srgb r g b / 0.5) 2px,
+      color(from var(--series) srgb r g b / 50%) 0,
+      color(from var(--series) srgb r g b / 50%) 2px,
       transparent 2px,
       transparent 7px
     );
@@ -136,10 +136,11 @@
 
 /* Narrow: the plates stack at the full width of the frame, so a longer date
    never widens one. The value may then shrink to what fits. */
-@media (max-width: 30rem) {
+@media (width <= 30rem) {
   .gmt-moving-feasts .gmt-punct-heroes > .gmt-punct-hero {
     flex: 1 1 100%;
   }
+
   .gmt-moving-feasts .gmt-punct-hero-value {
     min-inline-size: 0;
   }

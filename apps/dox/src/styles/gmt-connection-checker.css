@@ -19,10 +19,9 @@
    side padding. The floor, not 0.8rem: WebKit's mono face is wider, and at
    12.8px the string still overran by 5px (327 in a 322 box). */
 @container (max-width: 26rem) {
-  .gmt-connection input.gmt-input[type="text"] {
+  .gmt-connection .gmt-input[type="text"] {
     font-size: var(--gmt-text-xs);
-    padding-left: var(--gmt-space-1);
-    padding-right: var(--gmt-space-1);
+    padding-inline: var(--gmt-space-1);
   }
 }
 
@@ -44,7 +43,7 @@
    marker. Kind is carried by marker shape/border, never colour alone. */
 [data-role="handoff-strip"] {
   position: relative;
-  height: 1.6rem;
+  block-size: 1.6rem;
   margin: var(--gmt-space-2) 0;
   background: var(--gmt-fill-subtle);
   border: 1px solid var(--gmt-border);
@@ -53,20 +52,19 @@
 
 .gmt-connection-strip {
   position: relative;
-  width: 100%;
-  height: 100%;
+  inline-size: 100%;
+  block-size: 100%;
 }
 
 .gmt-connection-bar {
   position: absolute;
-  top: 25%;
-  bottom: 25%;
+  inset-block: 25%;
   min-inline-size: 3px;
   border: 1px dashed var(--gmt-spring);
   background-image: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-spring) srgb r g b / 0.3) 0,
-    color(from var(--gmt-spring) srgb r g b / 0.3) 2px,
+    color(from var(--gmt-spring) srgb r g b / 30%) 0,
+    color(from var(--gmt-spring) srgb r g b / 30%) 2px,
     transparent 2px,
     transparent 6px
   );
@@ -74,18 +72,17 @@
 
 .gmt-connection-mark {
   position: absolute;
-  top: -2px;
-  bottom: -2px;
-  border-left: 2px solid var(--gmt-cyan);
+  inset-block: -2px;
+  border-inline-start: 2px solid var(--gmt-cyan);
 }
 
 .gmt-connection-mark--departure {
-  border-left-style: dotted;
-  border-left-color: var(--gmt-ice-dim);
+  border-inline-start-style: dotted;
+  border-inline-start-color: var(--gmt-ice-dim);
 }
 
 .gmt-connection-mark--missed {
-  border-left-color: var(--gmt-dst-purple);
+  border-inline-start-color: var(--gmt-dst-purple);
 }
 
 /* Values the reader is reading never animate. */

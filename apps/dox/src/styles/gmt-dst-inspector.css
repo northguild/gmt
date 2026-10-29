@@ -15,15 +15,16 @@
  * --------------------------------------------------------------------------- */
 
 .gmt-dst-table {
-  width: 100%;
+  inline-size: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
 }
 
 .gmt-dst-table th {
-  text-align: left;
+  text-align: start;
   padding: var(--gmt-space-2) var(--gmt-space-3);
-  border-bottom: 2px solid var(--gmt-border);
+  border-block-end: 2px solid var(--gmt-border);
+
   /* --gmt-ice-dim measured 6.95:1 here in dark mode, under the 7:1 body-text
      target; the header is quiet enough from its size, case and weight. */
   color: var(--gmt-ice);
@@ -35,20 +36,23 @@
 
 .gmt-dst-table td {
   padding: var(--gmt-space-2) var(--gmt-space-3);
-  border-bottom: 1px solid var(--gmt-border);
+  border-block-end: 1px solid var(--gmt-border);
   vertical-align: middle;
 }
 
+/* stylelint-disable-next-line a11y/selector-pseudo-class-focus -- table rows hold no focusable content; hover wash only */
 .gmt-dst-table tbody tr:hover {
   background: var(--gmt-glass-tint-subtle);
 }
 
+/* stylelint-disable-next-line a11y/selector-pseudo-class-focus -- table rows hold no focusable content; hover wash only */
 .gmt-dst-table tbody tr[data-type="gap"]:hover {
-  background: color(from var(--gmt-dst-gold) srgb r g b / 0.08);
+  background: color(from var(--gmt-dst-gold) srgb r g b / 8%);
 }
 
+/* stylelint-disable-next-line a11y/selector-pseudo-class-focus -- table rows hold no focusable content; hover wash only */
 .gmt-dst-table tbody tr[data-type="overlap"]:hover {
-  background: color(from var(--gmt-dst-purple) srgb r g b / 0.08);
+  background: color(from var(--gmt-dst-purple) srgb r g b / 8%);
 }
 
 .gmt-dst-arrow--gap {
@@ -64,11 +68,11 @@
   font-size: 0.75rem;
 }
 
-.gmt-dst-empty-cell {
+.gmt-widget .gmt-dst-empty-cell {
   text-align: center;
   color: var(--gmt-ice-dim);
   font-style: italic;
-  padding: var(--gmt-space-4) !important;
+  padding: var(--gmt-space-4);
 }
 
 /* ---------------------------------------------------------------------------
@@ -90,18 +94,19 @@
    2.92:1 / 2.50:1 in light theme (INT-58 fix loop). Wash and border stay on
    the base hue — 3:1 is enough for a non-text fill/border. */
 .gmt-dst-badge-gap {
-  background: color(from var(--gmt-dst-gold) srgb r g b / 0.15);
+  background: color(from var(--gmt-dst-gold) srgb r g b / 15%);
   color: var(--gmt-dst-gold-ink);
-  border: 1px solid color(from var(--gmt-dst-gold) srgb r g b / 0.3);
+  border: 1px solid color(from var(--gmt-dst-gold) srgb r g b / 30%);
 }
 
 .gmt-dst-badge-overlap {
-  background: color(from var(--gmt-dst-purple) srgb r g b / 0.15);
+  background: color(from var(--gmt-dst-purple) srgb r g b / 15%);
+
   /* `--gmt-dst-purple-ink`, not `--gmt-purple-ink`: this badge's own dark
      value is broken as text (5.82:1 live), even though it's fine as the
      lane-3 billing badge's *fill* under void text (gmt-tokens.css). */
   color: var(--gmt-dst-purple-ink);
-  border: 1px solid color(from var(--gmt-dst-purple) srgb r g b / 0.3);
+  border: 1px solid color(from var(--gmt-dst-purple) srgb r g b / 30%);
 }
 
 /* ---------------------------------------------------------------------------
@@ -114,7 +119,7 @@
 }
 
 .gmt-dst-ticker-status {
-  margin-bottom: var(--gmt-space-2);
+  margin-block-end: var(--gmt-space-2);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
@@ -124,39 +129,38 @@
 
 .gmt-dst-ticker-track {
   position: relative;
-  height: 40px;
+  block-size: 40px;
   margin: 1.4em var(--gmt-space-3) 0;
-  border-bottom: 1px solid var(--gmt-border);
+  border-block-end: 1px solid var(--gmt-border);
 }
 
 .gmt-dst-ticker-zone {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  inset-block: 0;
   border-radius: var(--gmt-radius-sm);
 }
 
 .gmt-dst-ticker-zone--gap {
   background: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.18) 0 4px,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.05) 4px 8px
+    color(from var(--gmt-dst-gold) srgb r g b / 18%) 0 4px,
+    color(from var(--gmt-dst-gold) srgb r g b / 5%) 4px 8px
   );
-  border: 1px solid color(from var(--gmt-dst-gold) srgb r g b / 0.4);
+  border: 1px solid color(from var(--gmt-dst-gold) srgb r g b / 40%);
 }
 
 .gmt-dst-ticker-zone--overlap {
   background: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-dst-purple) srgb r g b / 0.18) 0 4px,
-    color(from var(--gmt-dst-purple) srgb r g b / 0.05) 4px 8px
+    color(from var(--gmt-dst-purple) srgb r g b / 18%) 0 4px,
+    color(from var(--gmt-dst-purple) srgb r g b / 5%) 4px 8px
   );
-  border: 1px solid color(from var(--gmt-dst-purple) srgb r g b / 0.4);
+  border: 1px solid color(from var(--gmt-dst-purple) srgb r g b / 40%);
 }
 
 .gmt-dst-ticker-zone-label {
   position: absolute;
-  top: -1.4em;
+  inset-block-start: -1.4em;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
@@ -169,24 +173,24 @@
    the probe sits in a gap / overlap: the edge and the glow both read
    currentColor. */
 .gmt-dst-ticker-handle {
-  top: 10px;
+  inset-block-start: 10px;
   translate: -50% 0;
   color: var(--gmt-cyan);
 }
 
 .gmt-dst-ticker-handle--gap {
   color: var(--gmt-dst-gold);
-  box-shadow: 0 0 8px color-mix(in srgb, currentColor 50%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, currentcolor 50%, transparent);
 }
 
 .gmt-dst-ticker-handle--overlap {
   color: var(--gmt-dst-purple);
-  box-shadow: 0 0 8px color-mix(in srgb, currentColor 50%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, currentcolor 50%, transparent);
 }
 
 .gmt-dst-ticker-ticks {
   position: relative;
-  height: 1.2em;
+  block-size: 1.2em;
   margin: var(--gmt-space-1) var(--gmt-space-3) 0;
 }
 
@@ -213,6 +217,7 @@
   border-color: var(--gmt-border);
 }
 
+/* stylelint-disable-next-line a11y/selector-pseudo-class-focus -- table rows hold no focusable content; hover wash only */
 [data-theme="light"] .gmt-dst-table tbody tr:hover {
-  background: color(from var(--gmt-void) srgb r g b / 0.3);
+  background: color(from var(--gmt-void) srgb r g b / 30%);
 }

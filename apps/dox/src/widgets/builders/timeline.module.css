@@ -1,0 +1,133 @@
+/* timeline: a lane, its marks and its axis. Position comes from `--gmt-at` (0 to 1) and
+   `--gmt-span`, read with `inset-inline-start`, so no transform places anything and
+   right-to-left mirrors itself. */
+
+.lane {
+  display: grid;
+  grid-template-columns: var(--gmt-timeline-label-w, 6rem) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.5rem;
+  min-inline-size: 0;
+
+  @container (inline-size < 30rem) {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.25rem;
+  }
+}
+
+.label {
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  text-align: end;
+  overflow-wrap: anywhere;
+
+  @container (inline-size < 30rem) {
+    text-align: start;
+  }
+}
+
+.track {
+  position: relative;
+  min-inline-size: 0;
+  block-size: var(--gmt-timeline-h, 2.5rem);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface-widget);
+}
+
+.mark {
+  --series: var(--gmt-series-1);
+
+  position: absolute;
+  inset-block: 0.25rem;
+  inset-inline-start: calc(var(--gmt-at) * 100%);
+  box-sizing: border-box;
+  border: 1px solid var(--series);
+  background: color-mix(in srgb, var(--series) 45%, transparent);
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+
+  &[data-kind="point"] {
+    inline-size: 0.5rem;
+    inset-inline-start: calc(var(--gmt-at) * 100% - 0.25rem);
+    border-radius: 2px;
+    background: var(--series);
+  }
+
+  &[data-kind="range"] {
+    inline-size: calc(var(--gmt-span) * 100%);
+    min-inline-size: 0.25rem;
+    border-radius: var(--gmt-radius-sm);
+    border-block-end-width: 3px;
+  }
+}
+
+.axis {
+  position: relative;
+  block-size: 1.25rem;
+  margin-inline-start: calc(var(--gmt-timeline-label-w, 6rem) + 0.5rem);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+
+  @container (inline-size < 30rem) {
+    margin-inline-start: 0;
+  }
+}
+
+.tick {
+  position: absolute;
+  inset-inline-start: calc(var(--gmt-at) * 100%);
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .track {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .mark {
+    border-color: CanvasText;
+    background: Canvas;
+
+    &[data-kind="point"] {
+      background: CanvasText;
+    }
+
+    &[data-series="2"] {
+      border-style: dashed;
+    }
+
+    &[data-series="3"] {
+      border-style: double;
+    }
+  }
+
+  .label,
+  .axis {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .track {
+    border-color: var(--gmt-ice);
+  }
+
+  .mark {
+    border-width: 2px;
+  }
+}

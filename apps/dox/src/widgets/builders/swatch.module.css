@@ -1,0 +1,53 @@
+/* swatch: a decorative series square. */
+
+.root {
+  --series: var(--gmt-series-1);
+
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 0.9rem;
+  block-size: 0.9rem;
+  border: 1px solid var(--series);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--series) 45%, transparent);
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+    background: Canvas;
+
+    &[data-series="2"] {
+      background: linear-gradient(CanvasText, CanvasText) center / 100% 2px
+        no-repeat;
+    }
+
+    &[data-series="3"] {
+      background: linear-gradient(CanvasText, CanvasText) center / 2px 100%
+        no-repeat;
+    }
+
+    &[data-series="4"] {
+      background: CanvasText;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-width: 2px;
+  }
+}

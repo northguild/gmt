@@ -14,9 +14,9 @@
  * `customCss`, so Vite code-splits it into the chat chunk and a page that
  * never opens the chat pays nothing for it.
  *
- * Unlayered on purpose, same as every other GMT sheet: unlayered rules beat
- * everything in `@layer utilities`, so these win against Tailwind without
- * specificity games.
+ * Imported by `chat.css` into the `gmt.chat` layer, which sorts after Tailwind's
+ * `utilities` layer, so these rules win against Tailwind without specificity
+ * games.
  */
 
 /* ------------------------------------------------------------------ *
@@ -33,16 +33,32 @@
      already changes at the desktop breakpoint, so the two never overlap. */
   position: fixed;
   inset: var(--sl-nav-height) 0 0 0;
+
   /* Starlight's prose rhythm reaches this element through the island's
      `display: contents` wrapper (so a `> * + *` reset upstream can't see it),
      and a margin on a fixed box shrinks it away from its inset edges. */
   margin: 0;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-block-size: 0;
   background: var(--gmt-void);
   color: var(--gmt-ice);
   isolation: isolate;
+
+  /* What covers the bottom of a scroller, one token per cover. The cover sizes
+     itself from the token and each scroller reads it for `scroll-padding-block`,
+     so a focused control is scrolled clear of the cover (SC 2.4.11) and the two
+     cannot drift apart. The licence line is one line of text, its padding and
+     its border; `0` where the line is hidden (below). */
+  --gmt-hive-cover-licence: calc(
+    2 * var(--gmt-space-2) + 1px + 1.4 * var(--gmt-text-xs)
+  );
+}
+
+@media (width <= 60rem) {
+  .gmt-hive-shell {
+    --gmt-hive-cover-licence: 0px;
+  }
 }
 
 /* The hex lattice. Purely atmospheric, so it's a background on a fixed,
@@ -52,7 +68,7 @@
   content: "";
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: var(--gmt-z-behind);
   pointer-events: none;
   opacity: 0.04;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='96' viewBox='0 0 56 96'%3E%3Cpath d='M28 0 L56 16 L56 48 L28 64 L0 48 L0 16 Z M28 64 L56 80 L56 112 M28 64 L0 80 L0 112' fill='none' stroke='%2300E5FF' stroke-width='1'/%3E%3C/svg%3E");
@@ -63,6 +79,7 @@
 /* The site already drops every blurred/decorative surface under this query
    (gmt-a11y.css) — the lattice follows the same rule rather than inventing
    its own exception. */
+/* stylelint-disable-next-line plugin/use-baseline -- prefers-reduced-transparency is not Baseline 2024; a browser without it keeps the translucent surface, which is the status quo */
 @media (prefers-reduced-transparency: reduce) {
   .gmt-hive-shell::before {
     display: none;
@@ -81,7 +98,7 @@
   gap: var(--gmt-space-3);
   flex: 0 0 auto;
   padding: var(--gmt-space-3) clamp(var(--gmt-space-3), 3vw, var(--gmt-space-6));
-  border-bottom: 1px solid var(--gmt-hairline);
+  border-block-end: 1px solid var(--gmt-hairline);
   font-size: var(--gmt-text-sm);
 }
 
@@ -89,7 +106,7 @@
   display: flex;
   align-items: center;
   gap: var(--gmt-space-3);
-  min-width: 0;
+  min-inline-size: 0;
   color: var(--gmt-ice-dim);
 }
 
@@ -100,7 +117,7 @@
    shifts the badge, and it truncates rather than pushing the badge off a
    narrow strip — an RFC 9557 string is long, and the badge cannot shrink. */
 .gmt-hive-now {
-  min-width: 0;
+  min-inline-size: 0;
   padding-inline-end: var(--gmt-space-3);
   border-inline-end: 1px solid var(--gmt-hairline);
   font-family: var(--gmt-font-mono);
@@ -145,7 +162,7 @@
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  min-height: 0;
+  min-block-size: 0;
 }
 
 /* ------------------------------------------------------------------ *
@@ -160,17 +177,20 @@
   display: flex;
   flex-direction: row;
   flex: 1 1 auto;
+
   /* Without this the transcript's own scroll container cannot shrink, and the
      composer is pushed off the bottom — the same failure the shell documents. */
-  min-height: 0;
+  min-block-size: 0;
 }
 
 /* The licence note, under the chat and the rail. One quiet line on a wide screen, wrapping on a
    phone; it never grows the body, which keeps `min-height: 0`. */
 .gmt-hive-licence {
   flex: 0 0 auto;
+  box-sizing: border-box;
+  min-block-size: var(--gmt-hive-cover-licence);
   padding: var(--gmt-space-2) clamp(var(--gmt-space-3), 3vw, var(--gmt-space-6));
-  border-top: 1px solid var(--gmt-hairline);
+  border-block-start: 1px solid var(--gmt-hairline);
   font-size: var(--gmt-text-xs);
   line-height: 1.4;
   color: var(--gmt-ice);
@@ -192,58 +212,17 @@
    needs no script. */
 .gmt-hive-rail {
   --gmt-hive-rail-min: clamp(22rem, 34vw, 34rem);
+
   flex: 0 0 var(--gmt-hive-rail-width, var(--gmt-hive-rail-min));
-  min-width: var(--gmt-hive-rail-min);
-  max-width: max(var(--gmt-hive-rail-min), min(50%, 100% - 28rem));
+  min-inline-size: var(--gmt-hive-rail-min);
+  max-inline-size: max(var(--gmt-hive-rail-min), min(50%, 100% - 28rem));
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-block-size: 0;
   overflow-y: auto;
+  scroll-padding-block-end: var(--gmt-hive-cover-licence);
   border-inline-start: 1px solid var(--gmt-border);
   background: var(--gmt-surface-1);
-}
-
-/* The resize handle: no width of its own, so the layout is unchanged. Its
-   hit area straddles the rail's border, which lights up on hover, focus and
-   drag. */
-.gmt-hive-resizer {
-  position: relative;
-  flex: 0 0 0;
-  z-index: 1;
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.gmt-hive-resizer::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: -0.375rem;
-  width: 0.75rem;
-}
-
-.gmt-hive-resizer::after {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: -1px;
-  width: 3px;
-  background: transparent;
-  transition: background var(--gmt-duration-fast) var(--gmt-easing);
-}
-
-.gmt-hive-resizer:hover::after,
-.gmt-hive-body[data-resizing] .gmt-hive-resizer::after {
-  background: var(--gmt-cyan);
-}
-
-.gmt-hive-resizer:focus-visible {
-  outline: none;
-}
-
-.gmt-hive-resizer:focus-visible::after {
-  background: var(--gmt-cyan);
-  box-shadow: 0 0 0 2px var(--gmt-cyan-ink);
 }
 
 /* While dragging, text in either pane must not select, and the cursor must not
@@ -260,19 +239,15 @@
 /* Below this width a side-by-side split leaves neither half usable, so the rail
    becomes a bottom sheet. It is already the second child, so DOM order gives
    the right stacking with no `order` juggling. */
-@media (max-width: 60rem) {
+@media (width <= 60rem) {
   .gmt-hive-body {
     flex-direction: column;
   }
 
-  .gmt-hive-resizer {
-    display: none;
-  }
-
   .gmt-hive-rail {
     flex: 0 0 55%;
-    min-width: 0;
-    max-width: none;
+    min-inline-size: 0;
+    max-inline-size: none;
     border-inline-start: none;
     border-block-start: 1px solid var(--gmt-border);
   }
@@ -290,7 +265,7 @@
 
   .gmt-hive-body[data-empty] .gmt-hive-rail {
     flex: 1 1 0;
-    min-height: 7rem;
+    min-block-size: 7rem;
   }
 
   .gmt-hive-body[data-empty] .gmt-hive-empty {
@@ -317,12 +292,12 @@
    below that the empty state overflows; 44rem keeps a margin. The empty
    state's padding also goes: without it the folded layout still ran 39px
    over at 320x568. */
-@media (max-width: 60rem) and (max-height: 44rem) {
+@media (width <= 60rem) and (height <= 44rem) {
   .gmt-hive-body[data-empty] .gmt-hive-rail[data-collapsed] {
     display: none;
   }
 
-  .gmt-hive-body[data-empty]:has(.gmt-hive-rail[data-collapsed])
+  :where(.gmt-hive-body)[data-empty]:has(.gmt-hive-rail[data-collapsed])
     .gmt-hive-chat {
     flex: 1 1 auto;
   }
@@ -345,15 +320,16 @@
    568x320). Below 35rem, the height at which the trimmed empty state stops
    fitting at 320px wide, the chat keeps a 30rem floor and the shell scrolls
    as a page instead. Focusing the composer scrolls it into view. */
-@media (max-width: 60rem) and (max-height: 35rem) {
+@media (width <= 60rem) and (height <= 35rem) {
   .gmt-hive-shell {
     overflow-y: auto;
     overscroll-behavior: contain;
+    scroll-padding-block-end: var(--gmt-hive-cover-licence);
   }
 
   .gmt-hive-body {
     flex: 1 0 auto;
-    min-height: 30rem;
+    min-block-size: 30rem;
   }
 }
 
@@ -378,7 +354,7 @@
   }
 }
 
-@media (max-width: 60rem) {
+@media (width <= 60rem) {
   @keyframes gmt-rail-slide {
     from {
       opacity: 0;
@@ -426,8 +402,8 @@
 .gmt-hive-artifact {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  height: 100%;
+  min-block-size: 0;
+  block-size: 100%;
   border: none;
   background: none;
 }
@@ -464,75 +440,18 @@
   cursor: pointer;
 }
 
-.gmt-hive-artifact-link:hover {
+.gmt-hive-artifact-link:hover,
+.gmt-hive-artifact-link:focus-visible {
   color: var(--gmt-cyan-ink);
   background: var(--gmt-accent-wash);
 }
 
 .gmt-hive-artifact-body {
   flex: 1 1 auto;
-  min-height: 0;
+  min-block-size: 0;
   overflow-y: auto;
+  scroll-padding-block-end: var(--gmt-hive-cover-licence);
   padding: var(--gmt-space-4);
-}
-
-/* The widget's own stylesheets are already loaded on this route via Starlight's
-   customCss (astro.config.mjs), so a mounted widget arrives fully styled. This
-   only gives it a box to fill. */
-.gmt-hive-widget-host {
-  display: block;
-}
-
-.gmt-hive-widget-error {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--gmt-space-2);
-  padding: var(--gmt-space-3) var(--gmt-space-4);
-  color: var(--gmt-signal-ink);
-  background: var(--gmt-signal-fill);
-  border: 1px solid var(--gmt-signal-border);
-  border-radius: var(--gmt-radius-md);
-  corner-shape: bevel;
-  font-size: var(--gmt-text-sm);
-}
-
-.gmt-hive-widget-error p {
-  margin: 0;
-}
-
-.gmt-hive-widget-error-marker {
-  flex: 0 0 auto;
-  letter-spacing: 0.08em;
-}
-
-.gmt-hive-widget-retry {
-  flex: 0 0 auto;
-  margin-inline-start: auto;
-  padding: var(--gmt-space-1) var(--gmt-space-3);
-  color: inherit;
-  background: transparent;
-  border: 1px solid var(--gmt-signal-border);
-  border-radius: var(--gmt-radius-md);
-  corner-shape: bevel;
-  font: inherit;
-  cursor: pointer;
-}
-
-/* The placeholder while the widget's chunk loads (MountedWidget). */
-.gmt-hive-widget-loading {
-  margin: 0;
-  padding: var(--gmt-space-3) var(--gmt-space-4);
-  color: var(--gmt-ice-dim);
-  font-size: var(--gmt-text-sm);
-}
-
-/* Painted but not yet wired (MountedWidget sets aria-busy until the mount has
-   loaded the library): dim it and keep clicks off controls that would do
-   nothing yet. */
-.gmt-hive-widget-host[aria-busy="true"] {
-  opacity: 0.6;
-  pointer-events: none;
-  transition: opacity var(--gmt-duration-fast) ease;
 }
 
 /* ---- Error boundary ----
@@ -545,7 +464,7 @@
   align-items: flex-start;
   gap: var(--gmt-space-2);
   margin: auto;
-  max-width: 32rem;
+  max-inline-size: 32rem;
   padding: var(--gmt-space-4);
   color: var(--gmt-signal-ink);
   background: var(--gmt-signal-fill);
@@ -576,7 +495,8 @@
   cursor: pointer;
 }
 
-.gmt-hive-boundary-reload:hover {
+.gmt-hive-boundary-reload:hover,
+.gmt-hive-boundary-reload:focus-visible {
   background: var(--gmt-signal-fill);
 }
 
@@ -635,14 +555,14 @@
    `overflow: auto` on its inner element at mount. */
 .gmt-hive-scroll {
   flex: 1 1 auto;
-  min-height: 0; /* without this a flex child refuses to shrink and the page scrolls instead */
+  min-block-size: 0; /* without this a flex child refuses to shrink and the page scrolls instead */
   overscroll-behavior: contain;
 }
 
 /* ---- Scrollbar ----
  * The app's scrollbar (gmt-controls.css) is a deliberately sharp-cornered slab:
  * 20px wide, square thumb, a 4px border of the track colour standing in for
- * inset padding. Those rules are global and unlayered, so the geometry already
+ * inset padding. Those rules are global, so the geometry already
  * reaches this element and only the corners need pinning (`border-radius: 0`,
  * against a UA/Tailwind default rounding them inside the island).
  *
@@ -654,6 +574,7 @@
  * the site gives a reader who is actually scrolling.
  */
 .gmt-hive-scroll > div {
+  scroll-padding-block-end: var(--gmt-hive-cover-licence);
   scrollbar-color: var(--gmt-scrollbar-thumb-hover) var(--gmt-scrollbar-track);
 }
 
@@ -664,9 +585,10 @@
   border-color: var(--gmt-scrollbar-track);
 }
 
+/* stylelint-disable-next-line a11y/selector-pseudo-class-focus -- scrollbar thumb cannot take focus */
 .gmt-hive-scroll ::-webkit-scrollbar-thumb:hover,
 .gmt-hive-scroll::-webkit-scrollbar-thumb:hover {
-  background: color(from var(--gmt-cyan) srgb r g b / 0.3);
+  background: color(from var(--gmt-cyan) srgb r g b / 30%);
 }
 
 .gmt-hive-scroll ::-webkit-scrollbar-track,
@@ -682,8 +604,8 @@
 .gmt-hive {
   container-type: inline-size;
   container-name: gmt-hive;
-  width: 100%;
-  min-height: 100%;
+  inline-size: 100%;
+  min-block-size: 100%;
   margin: 0 auto;
   padding: clamp(var(--gmt-space-4), 3vw, var(--gmt-space-8))
     clamp(var(--gmt-space-3), 3vw, var(--gmt-space-6));
@@ -698,16 +620,18 @@
 /* The whole alternation is `align-self` on a flex column plus `row-reverse` —
    no grid columns to juggle, and it behaves identically at every width, so
    there is no second layout to maintain for narrow screens. */
+
 /* One custom property carries the whole channel. Node fill, card border, card
    tint and the label all read from `--gmt-hive-role`, so recolouring a role — or
    adding a third one later — is a single declaration rather than a sweep. */
 .gmt-hive-turn {
   --gmt-hive-role: var(--gmt-cyan);
+
   display: flex;
   gap: var(--gmt-space-3);
   align-items: flex-start;
-  width: 100%;
-  max-width: 100%;
+  inline-size: 100%;
+  max-inline-size: 100%;
   align-self: flex-start;
 }
 
@@ -716,7 +640,9 @@
    there deliberately. Signal amber stays reserved for sentinel states. */
 .gmt-hive-turn[data-role="user"] {
   --gmt-hive-role: var(--gmt-spring);
+
   align-self: flex-end;
+
   /* Node to the right of the card — the human reads from the right side. */
   flex-direction: row-reverse;
 }
@@ -748,10 +674,11 @@
  */
 .gmt-hive-stage {
   --hex: clamp(2rem, 3.4cqi, 2.75rem);
+
   position: relative;
   display: grid;
   place-items: center;
-  width: var(--hex);
+  inline-size: var(--hex);
   aspect-ratio: 1 / 0.866;
   flex: 0 0 auto;
   perspective: 320px;
@@ -759,10 +686,11 @@
 
 .gmt-hive-node {
   grid-area: 1 / 1;
-  width: 100%;
-  height: 100%;
+  inline-size: 100%;
+  block-size: 100%;
   color: var(--gmt-hive-role);
   transform-style: preserve-3d;
+
   /* The resting state, and the only transform CSS owns. Entrance, the working
      spin, and the landing are all driven by `use-crystal-spin.ts` through the
      Web Animations API — CSS cannot stop an infinite spin *gracefully* (removing
@@ -777,7 +705,7 @@
    the glow is here. */
 .gmt-hive-node .gmt-dox-mark {
   filter: drop-shadow(
-    0 0 6px color(from var(--gmt-hive-role) srgb r g b / 0.5)
+    0 0 6px color(from var(--gmt-hive-role) srgb r g b / 50%)
   );
 }
 
@@ -785,8 +713,8 @@
    — a shadow on it would trace a rectangle. Hence a separate centred layer. */
 .gmt-hive-halo {
   grid-area: 1 / 1;
-  width: 46%;
-  height: 46%;
+  inline-size: 46%;
+  block-size: 46%;
   border-radius: 50%;
   opacity: 0;
   pointer-events: none;
@@ -800,11 +728,12 @@
 
 @keyframes gmt-hive-halo {
   0% {
-    box-shadow: 0 0 0 0 color(from var(--gmt-hive-role) srgb r g b / 0.55);
+    box-shadow: 0 0 0 0 color(from var(--gmt-hive-role) srgb r g b / 55%);
   }
+
   60%,
   100% {
-    box-shadow: 0 0 0 18px color(from var(--gmt-hive-role) srgb r g b / 0);
+    box-shadow: 0 0 0 18px color(from var(--gmt-hive-role) srgb r g b / 0%);
   }
 }
 
@@ -812,17 +741,17 @@
  * Chamfered glass — the site's existing panel language, not a chat bubble. */
 .gmt-hive-card {
   flex: 1 1 auto;
+
   /* min-width: 0 is load-bearing — without it a flex child refuses to shrink
      below its content's min-content width, which is exactly how a wide code
      block blows out the layout instead of scrolling inside its own box. */
-  min-width: 0;
-  background: color(from var(--gmt-hive-role) srgb r g b / 0.05);
-  border: 1px solid color(from var(--gmt-hive-role) srgb r g b / 0.22);
+  min-inline-size: 0;
+  background: color(from var(--gmt-hive-role) srgb r g b / 5%);
+  border: 1px solid color(from var(--gmt-hive-role) srgb r g b / 22%);
   border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
   padding: var(--gmt-space-4);
-  backdrop-filter: blur(var(--gmt-blur));
-  -webkit-backdrop-filter: blur(var(--gmt-blur));
+  backdrop-filter: var(--gmt-glass-blur);
 }
 
 /* A sheen travelling across the answer card while Dox is working. On the card
@@ -843,24 +772,26 @@
   background: linear-gradient(
     105deg,
     transparent 35%,
-    color(from var(--gmt-hive-role) srgb r g b / 0.09) 50%,
+    color(from var(--gmt-hive-role) srgb r g b / 9%) 50%,
     transparent 65%
   );
   background-size: 220% 100%;
-  animation: gmt-hive-sheen 2.2s var(--gmt-easing) infinite;
+  animation: gmt-hive-sheen var(--gmt-motion-sheen-duration) var(--gmt-easing)
+    infinite;
 }
 
 @keyframes gmt-hive-sheen {
   from {
     background-position: 120% 0;
   }
+
   to {
     background-position: -120% 0;
   }
 }
 
 .gmt-hive-label {
-  color: color(from var(--gmt-hive-role) srgb r g b / 0.75);
+  color: color(from var(--gmt-hive-role) srgb r g b / 75%);
 }
 
 /* ------------------------------------------------------------------ *
@@ -874,6 +805,7 @@
   gap: var(--gmt-space-4);
   padding: clamp(var(--gmt-space-6), 8vh, var(--gmt-space-12)) 0;
   text-align: center;
+
   /* Auto block margins centre it in the flex column rather than leaving it
      stranded at the top of a tall empty transcript. */
   margin-block: auto;
@@ -894,6 +826,7 @@
    to say on an idle page — spinning is reserved for "Dox is working". */
 .gmt-hive-hub .gmt-hive-node {
   --gmt-enter-transform: rotateX(10deg);
+
   animation: gmt-enter var(--gmt-enter-duration) var(--gmt-enter-easing) both;
 }
 
@@ -913,7 +846,7 @@
 .gmt-hive-prompt {
   font-size: clamp(1.1rem, 2.5cqi, 1.5rem);
   color: var(--gmt-ice);
-  max-width: 40ch;
+  max-inline-size: 40ch;
   line-height: 1.5;
 }
 
@@ -943,6 +876,7 @@
 .gmt-hive-user-text {
   margin: 0;
   white-space: pre-wrap;
+
   /* A long unbroken token (a 60-character function name) must wrap rather than
      widen the card. */
   overflow-wrap: anywhere;
@@ -963,8 +897,8 @@
 }
 
 .gmt-hive-pending svg {
-  width: 1em;
-  height: 1em;
+  inline-size: 1em;
+  block-size: 1em;
   flex: 0 0 auto;
   color: var(--gmt-hive-role);
 }
@@ -973,8 +907,8 @@
    node's pulse, at card scale. */
 .gmt-hive-scanline {
   display: block;
-  height: 1px;
-  margin-top: var(--gmt-space-3);
+  block-size: 1px;
+  margin-block-start: var(--gmt-space-3);
   background: linear-gradient(
     90deg,
     transparent,
@@ -983,13 +917,15 @@
   );
   background-size: 40% 100%;
   background-repeat: no-repeat;
-  animation: gmt-hive-scan 1.6s var(--gmt-easing) infinite;
+  animation: gmt-hive-scan var(--gmt-motion-scan-duration) var(--gmt-easing)
+    infinite;
 }
 
 @keyframes gmt-hive-scan {
   from {
     background-position: -40% 0;
   }
+
   to {
     background-position: 140% 0;
   }
@@ -1012,29 +948,26 @@
      and a static bar carry it, exactly as the global reduced-motion reset in
      gmt-controls.css leaves the sonar ping as a still ring. */
   .gmt-hive-stage[data-pending] .gmt-hive-halo {
-    box-shadow: 0 0 0 6px color(from var(--gmt-hive-role) srgb r g b / 0.25);
+    box-shadow: 0 0 0 6px color(from var(--gmt-hive-role) srgb r g b / 25%);
   }
 
   .gmt-hive-scanline {
-    background: color(from var(--gmt-hive-role) srgb r g b / 0.35);
+    background: color(from var(--gmt-hive-role) srgb r g b / 35%);
     background-size: auto;
   }
 }
 
 /* ---- Retrieval trace ---- */
 .gmt-hive-trace {
-  margin-bottom: var(--gmt-space-3);
-  padding-bottom: var(--gmt-space-2);
-  border-bottom: 1px solid var(--gmt-hairline);
+  margin-block-end: var(--gmt-space-3);
+  padding-block-end: var(--gmt-space-2);
+  border-block-end: 1px solid var(--gmt-hairline);
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
 }
 
-/* The trigger is `flex items-center` around an icon and a <p> (task.tsx). The
-   paragraph's UA margin is now zeroed for the whole island (gmt-ask.css), which
-   is what actually pulled the magnifier off the text's centre line; the rest of
-   this is HUD typography. */
-.gmt-hive-trace [data-slot="collapsible-trigger"] > div,
+/* The trigger is a `flex items-center` <button> around an icon and a <span>
+   title (task.tsx); the rest of this is HUD typography. */
 .gmt-hive-trace > button {
   gap: var(--gmt-space-2);
   font-family: var(--gmt-font-mono);
@@ -1044,18 +977,14 @@
 }
 
 .gmt-hive-trace svg {
-  width: 1em;
-  height: 1em;
+  inline-size: 1em;
+  block-size: 1em;
   flex: 0 0 auto;
 }
 
 /* Chevron to the end of the row rather than butted against the label. */
 .gmt-hive-trace svg:last-of-type {
   margin-inline-start: auto;
-}
-
-.gmt-hive-trace p {
-  font-size: inherit;
 }
 
 /* ---- Warnings ----
@@ -1106,7 +1035,8 @@
   cursor: pointer;
 }
 
-.gmt-hive-warning-retry:hover {
+.gmt-hive-warning-retry:hover,
+.gmt-hive-warning-retry:focus-visible {
   background: var(--gmt-signal-fill);
 }
 
@@ -1125,8 +1055,8 @@
 .gmt-hive-brains {
   position: relative;
   display: flex;
-  min-width: 0;
-  max-width: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
 /* The brain badge and the reset clock chip are one family in the composer's
@@ -1143,8 +1073,8 @@
   display: inline-flex;
   align-items: baseline;
   gap: var(--gmt-space-2);
-  min-width: 0;
-  max-width: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
   padding: var(--gmt-space-1) var(--gmt-space-3);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
@@ -1160,7 +1090,8 @@
     background var(--gmt-duration-fast) var(--gmt-easing);
 }
 
-.gmt-hive-brain-badge:hover {
+.gmt-hive-brain-badge:hover,
+.gmt-hive-brain-badge:focus-visible {
   color: var(--gmt-ice);
   background: var(--gmt-fill-strong);
 }
@@ -1180,9 +1111,9 @@
 
 /* Placement, stacking and dismissal belong to Radix's portalled menu (see
    BrainSelector.tsx) — this rule is purely the surface treatment layered over
-   ui/dropdown-menu.tsx's Tailwind chrome. Unlayered GMT rules beat
+   ui/dropdown-menu.tsx's Tailwind chrome. Rules in the `gmt.chat` layer beat
    `@layer utilities`, so `bg-popover`/`rounded-md`/`border` lose to these
-   without an `!important`; see the layer note at the top of this file.
+   without a priority flag; see the layer note at the top of this file.
 
    Nothing here positions the panel. Radix writes `position`/`transform` onto
    its own wrapper via floating-ui, and an `absolute` here would fight it.
@@ -1192,7 +1123,7 @@
    so it never inherits `.sl-markdown-content`'s list treatment in the first
    place. */
 .gmt-hive-brain-list {
-  min-width: 16rem;
+  min-inline-size: 16rem;
   padding: var(--gmt-space-1);
   background: var(--gmt-surface-2);
   border: 1px solid var(--gmt-border-strong);
@@ -1206,7 +1137,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--gmt-space-4);
-  width: 100%;
+  inline-size: 100%;
+
   /* The left inset is not decorative: ui/dropdown-menu.tsx absolutely positions
      the checked-state indicator at `left-2` inside this row, and a `padding`
      shorthand here would otherwise clobber the `pl-8` it relies on. */
@@ -1227,7 +1159,8 @@
    dropdown's. `--gmt-accent-wash` is the same flat tint the sidebar's active/
    hover nav rows use (gmt-shell.css `.sidebar-pane a:hover`) for exactly this:
    a row state that stays visually distinct from a bordered surface. */
-.gmt-hive-brain-option:hover {
+.gmt-hive-brain-option:hover,
+.gmt-hive-brain-option:focus-visible {
   background: var(--gmt-accent-wash);
 }
 
@@ -1266,7 +1199,7 @@
   display: flex;
   align-items: baseline;
   gap: var(--gmt-space-2);
-  margin-bottom: var(--gmt-space-3);
+  margin-block-end: var(--gmt-space-3);
   padding: var(--gmt-space-2) var(--gmt-space-3);
   font-size: var(--gmt-text-sm);
   color: var(--gmt-signal-ink);
@@ -1322,17 +1255,18 @@
 }
 
 .gmt-hive-clock-readout {
-  min-width: 0;
+  min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .gmt-hive-clock-panel {
+  scroll-padding-block: var(--gmt-space-3);
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-3);
-  width: min(24rem, calc(100vw - 2 * var(--gmt-space-3)));
+  inline-size: min(24rem, calc(100vw - 2 * var(--gmt-space-3)));
   padding: var(--gmt-space-3);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
@@ -1343,7 +1277,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
   padding: 0;
   border: 0;
@@ -1407,7 +1341,8 @@
 
 /* Same flat row wash as the brain options — a row state, not a nested panel. */
 .gmt-hive-clock-format:hover,
-.gmt-hive-clock-format[data-checked] {
+.gmt-hive-clock-format[data-checked],
+.gmt-hive-clock-format:has(input:focus-visible) {
   background: var(--gmt-accent-wash);
 }
 
@@ -1443,7 +1378,7 @@
 
 .gmt-hive-clock-zones:focus-within {
   border-color: var(--gmt-cyan);
-  box-shadow: 0 0 0 3px color(from var(--gmt-cyan) srgb r g b / 0.18);
+  box-shadow: 0 0 0 3px color(from var(--gmt-cyan) srgb r g b / 18%);
   animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
     1;
 }
@@ -1455,7 +1390,7 @@
 }
 
 .gmt-hive-clock-zones [data-slot="command-input-wrapper"] {
-  height: 2.5rem;
+  block-size: 2.5rem;
   gap: var(--gmt-space-2);
   padding-inline: var(--gmt-space-3);
   border-color: var(--gmt-hairline);
@@ -1471,7 +1406,7 @@
 /* Fills its row instead of overflowing it, and carries no chrome of its own —
    the box around it is the field. */
 .gmt-hive-clock-zones input[data-slot="command-input"] {
-  height: 100%;
+  block-size: 100%;
   padding: 0;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
@@ -1486,12 +1421,12 @@
    and two focus rings on one field is wrong regardless. */
 .gmt-hive-clock-zones input[data-slot="command-input"]:focus,
 .gmt-hive-clock-zones input[data-slot="command-input"]:focus-visible {
-  outline: none;
+  outline-color: transparent;
   box-shadow: none;
 }
 
 .gmt-hive-clock-zones [data-slot="command-list"] {
-  max-height: 9rem;
+  max-block-size: 9rem;
 }
 
 .gmt-hive-clock-zone-option {
@@ -1512,8 +1447,8 @@
    anywhere: a zoned call is longer than the panel is wide. */
 .gmt-hive-clock-call {
   display: block;
-  padding-top: var(--gmt-space-2);
-  border-top: 1px solid var(--gmt-hairline);
+  padding-block-start: var(--gmt-space-2);
+  border-block-start: 1px solid var(--gmt-hairline);
   color: var(--gmt-ice-dim);
   text-decoration: none;
   overflow-wrap: anywhere;
@@ -1541,15 +1476,16 @@
 .gmt-hive-composer {
   flex: 0 0 auto;
   padding: clamp(var(--gmt-space-3), 2vw, var(--gmt-space-6));
+
   /* Keep clear of the iOS home indicator. */
-  padding-bottom: max(
+  padding-block-end: max(
     clamp(var(--gmt-space-3), 2vw, var(--gmt-space-6)),
     env(safe-area-inset-bottom)
   );
 }
 
 .gmt-hive-composer-inner {
-  max-width: 64rem;
+  max-inline-size: 64rem;
   margin: 0 auto;
 }
 
@@ -1576,7 +1512,7 @@
   display: none;
 }
 
-@media (max-width: 60rem) {
+@media (width <= 60rem) {
   .gmt-hive-accuracy-note,
   .gmt-hive-licence {
     display: none;
@@ -1592,8 +1528,8 @@
 .gmt-hive-info {
   place-items: center;
   box-sizing: border-box;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  min-inline-size: 2.75rem;
+  min-block-size: 2.75rem;
   margin: 0;
   padding: 0;
   color: var(--gmt-cyan);
@@ -1608,12 +1544,13 @@
 }
 
 .gmt-hive-info svg {
-  width: 1.15rem;
-  height: 1.15rem;
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
 }
 
 .gmt-hive-info:hover,
-.gmt-hive-info:has(+ :popover-open) {
+.gmt-hive-info:has(+ :popover-open),
+.gmt-hive-info:focus-visible {
   background: var(--gmt-fill-strong);
   border-color: var(--gmt-border-strong);
 }
@@ -1623,8 +1560,8 @@
   inset: auto;
   margin: 0;
   box-sizing: border-box;
-  width: fit-content;
-  max-width: 24rem;
+  inline-size: fit-content;
+  max-inline-size: 24rem;
   padding: var(--gmt-space-3) var(--gmt-space-4);
   font-size: var(--gmt-text-xs);
   line-height: 1.5;
@@ -1636,8 +1573,7 @@
 @supports (top: anchor(top)) {
   .gmt-hive-info-panel[popover] {
     position-anchor: auto;
-    inset-inline-start: anchor(left);
-    inset-inline-end: 12px;
+    inset-inline: anchor(left) 12px;
     justify-self: start;
     inset-block-end: anchor(top);
     margin-block-end: var(--gmt-space-2);
@@ -1661,7 +1597,7 @@
 .gmt-hive-info-panel p + p {
   margin-block-start: var(--gmt-space-2);
   padding-block-start: var(--gmt-space-2);
-  border-top: 1px solid var(--gmt-hairline);
+  border-block-start: 1px solid var(--gmt-hairline);
 }
 
 .gmt-hive-info-panel code {
@@ -1707,7 +1643,7 @@
      Dox left and the human right, so once they stop spanning the full width
      the two columns and the diagonal gap between them appear on their own. */
   .gmt-hive-turn {
-    max-width: 62%;
+    max-inline-size: 62%;
   }
 }
 
@@ -1715,8 +1651,8 @@
  * Controls — the site's own button language, not shadcn's defaults.
  *
  * Everything below overrides a vendored component from outside it: these
- * sheets are unlayered and Tailwind's utilities sit in `@layer utilities`, so
- * an unlayered rule wins without specificity games and without editing
+ * sheets sit in the `gmt.chat` layer and Tailwind's utilities in `@layer utilities`, so
+ * a rule here wins without specificity games and without editing
  * anything under `components/ai-elements` or `components/ui`.
  * ------------------------------------------------------------------ */
 
@@ -1730,8 +1666,7 @@
   border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
   box-shadow: none;
-  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-  -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  backdrop-filter: var(--gmt-glass-blur-saturate);
   transition: border-color var(--gmt-duration-fast) var(--gmt-easing);
 }
 
@@ -1741,7 +1676,7 @@
    a second, brighter border rather than a focus ring. The ping is the same. */
 .gmt-hive-composer [data-slot="input-group"]:focus-within {
   border-color: var(--gmt-cyan);
-  box-shadow: 0 0 0 3px color(from var(--gmt-cyan) srgb r g b / 0.18);
+  box-shadow: 0 0 0 3px color(from var(--gmt-cyan) srgb r g b / 18%);
   animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
     1;
 }
@@ -1754,7 +1689,7 @@
    one and leaves the panel's. */
 .gmt-hive-composer textarea:focus,
 .gmt-hive-composer textarea:focus-visible {
-  outline: none;
+  outline-color: transparent;
   box-shadow: none;
 }
 
@@ -1774,19 +1709,21 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--gmt-space-3);
+
   /* Even top and bottom, replacing the stock `py-1.5 pb-3`, so the controls
      sit centred in their band. */
   padding-block: var(--gmt-space-2);
-  border-top: 1px solid var(--gmt-hairline);
+  border-block-start: 1px solid var(--gmt-hairline);
+
   /* An ice layer under the controls, so the bar reads as a panel and never as
      more of the text field. A faint cyan wash plus a highlight along the rule —
      the same cyan-at-low-alpha language as the composer's focus ring. */
   background: linear-gradient(
     180deg,
-    color(from var(--gmt-cyan) srgb r g b / 0.12),
-    color(from var(--gmt-cyan) srgb r g b / 0.05)
+    color(from var(--gmt-cyan) srgb r g b / 12%),
+    color(from var(--gmt-cyan) srgb r g b / 5%)
   );
-  box-shadow: inset 0 1px 0 color(from var(--gmt-cyan) srgb r g b / 0.22);
+  box-shadow: inset 0 1px 0 color(from var(--gmt-cyan) srgb r g b / 22%);
 }
 
 /* Wraps rather than squeezing Send out at phone width; `min-width: 0` lets the
@@ -1805,8 +1742,8 @@
 .gmt-hive-submit {
   /* Icon colour (PromptInputSubmit swaps an SVG icon by status, no visible
      label) — INT-58 fix loop reverted this from an earlier blanket sweep. */
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  min-inline-size: 2.75rem;
+  min-block-size: 2.75rem;
   background: var(--gmt-fill-strong);
   color: var(--gmt-cyan);
   border: 1px solid var(--gmt-border-strong);
@@ -1819,11 +1756,12 @@
 }
 
 .gmt-hive-submit svg {
-  width: 1.15rem;
-  height: 1.15rem;
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
 }
 
-.gmt-hive-submit:hover:not(:disabled) {
+.gmt-hive-submit:hover:not(:disabled),
+.gmt-hive-submit:focus-visible:not(:disabled) {
   color: var(--gmt-cyan-bright);
   background: var(--gmt-fill-deep);
   border-color: var(--gmt-cyan);
@@ -1836,6 +1774,7 @@
 
 /* Jump-to-latest. Dead code until the scroll container was fixed — `isAtBottom`
    could never be false — so it has never been themed. */
+
 /* Icon colour (a scroll-to-bottom arrow, no visible label) — INT-58 fix loop
    reverted both rules below from an earlier blanket sweep. */
 .gmt-hive-jump {
@@ -1846,7 +1785,8 @@
   corner-shape: bevel;
 }
 
-.gmt-hive-jump:hover {
+.gmt-hive-jump:hover,
+.gmt-hive-jump:focus-visible {
   color: var(--gmt-cyan-bright);
   background: var(--gmt-fill-strong);
   border-color: var(--gmt-cyan);
@@ -1861,7 +1801,7 @@
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  min-height: 0;
+  min-block-size: 0;
 }
 
 .gmt-hive-examples-header {
@@ -1902,8 +1842,9 @@
 /* The body scrolls inside the rail; the header stays put. */
 .gmt-hive-examples-body {
   flex: 1 1 auto;
-  min-height: 0;
+  min-block-size: 0;
   overflow-y: auto;
+  scroll-padding-block: var(--gmt-space-4) var(--gmt-hive-cover-licence);
   padding: var(--gmt-space-4);
   display: flex;
   flex-direction: column;
@@ -1925,6 +1866,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--gmt-ice-dim);
+
   /* The industry's glyph sits before the label on the same line, so the row stays one line tall. */
   display: flex;
   align-items: center;
@@ -1957,8 +1899,8 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--gmt-space-2);
-  width: 100%;
-  min-height: 2.75rem;
+  inline-size: 100%;
+  min-block-size: 2.75rem;
   padding: var(--gmt-space-3) var(--gmt-space-4);
   font: inherit;
   font-size: var(--gmt-text-sm);
@@ -2006,8 +1948,8 @@
   display: none;
   align-items: center;
   gap: var(--gmt-space-2);
-  width: 100%;
-  min-height: 2.75rem;
+  inline-size: 100%;
+  min-block-size: 2.75rem;
   margin-block-end: var(--gmt-space-2);
   padding: var(--gmt-space-2) var(--gmt-space-4);
   font-family: var(--gmt-font-mono);
@@ -2025,21 +1967,22 @@
     border-color var(--gmt-duration-fast) var(--gmt-easing);
 }
 
-@media (max-width: 60rem) {
+@media (width <= 60rem) {
   .gmt-hive-examples-bar {
     display: flex;
   }
 }
 
-.gmt-hive-examples-bar:hover {
+.gmt-hive-examples-bar:hover,
+.gmt-hive-examples-bar:focus-visible {
   background: var(--gmt-fill-strong);
   border-color: var(--gmt-border-strong);
 }
 
 .gmt-hive-examples-bar-chevron {
   margin-inline-start: auto;
-  width: 1rem;
-  height: 1rem;
+  inline-size: 1rem;
+  block-size: 1rem;
   transition: transform var(--gmt-duration-fast) var(--gmt-easing);
 }
 
@@ -2087,5 +2030,29 @@
   .gmt-hive-artifact-title:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 2px;
+  }
+}
+
+/* Raised contrast: the hairlines that separate the surfaces become the strong
+   border, and the glass fills go flat. Colour is never the only separator. */
+@media (prefers-contrast: more) {
+  .gmt-hive-rail,
+  .gmt-hive-licence {
+    border-color: var(--gmt-border-strong);
+  }
+
+  .gmt-hive-composer [data-slot="input-group"],
+  .gmt-hive-example,
+  .gmt-hive-examples-bar {
+    background: var(--gmt-surface-1);
+    border-color: var(--gmt-border-strong);
+    backdrop-filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .gmt-hive-rail,
+  .gmt-hive-licence {
+    border-color: CanvasText;
   }
 }

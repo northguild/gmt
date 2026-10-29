@@ -1,0 +1,67 @@
+/* badge: a short static label. The tone colours the border only; the ink is a
+   `-ink` token that holds 7:1 on the widget surface. */
+
+.root {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--gmt-badge-edge);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-badge-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  white-space: nowrap;
+
+  --gmt-badge-edge: var(--gmt-border-strong);
+  --gmt-badge-ink: var(--gmt-ice);
+
+  &[data-tone="cyan"] {
+    --gmt-badge-edge: var(--gmt-cyan);
+    --gmt-badge-ink: var(--gmt-cyan-ink);
+  }
+
+  &[data-tone="spring"] {
+    --gmt-badge-edge: var(--gmt-spring);
+    --gmt-badge-ink: var(--gmt-spring-ink);
+  }
+
+  &[data-tone="purple"] {
+    --gmt-badge-edge: var(--gmt-dst-purple);
+    --gmt-badge-ink: var(--gmt-purple-ink);
+  }
+
+  &[data-tone="danger"] {
+    --gmt-badge-edge: var(--gmt-danger);
+    --gmt-badge-ink: var(--gmt-danger-ink);
+  }
+
+  &[data-dim="true"] {
+    --gmt-badge-ink: var(--gmt-ice-dim);
+
+    border-color: var(--gmt-hairline);
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+
+    &[data-dim="true"] {
+      border-style: dashed;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root,
+  .root[data-dim="true"] {
+    border-color: var(--gmt-ice);
+    color: var(--gmt-ice);
+  }
+}

@@ -1,0 +1,80 @@
+/* aside: a note or a caution inside a widget. Full bevelled border and a tinted fill,
+   never a one-sided stripe (invariant 13). Amber stays reserved for the sentinel, so a
+   caution uses the danger hue. */
+
+.root {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.25rem 0.625rem;
+  align-items: start;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gmt-aside-edge);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: color-mix(
+    in srgb,
+    var(--gmt-aside-edge) 12%,
+    var(--gmt-surface-widget)
+  );
+  color: var(--gmt-ice);
+  font-size: clamp(0.875rem, 0.84rem + 0.2vw, 1rem);
+
+  --gmt-aside-edge: var(--gmt-cyan);
+
+  &[data-tone="caution"] {
+    --gmt-aside-edge: var(--gmt-danger);
+  }
+}
+
+.icon {
+  grid-row: 1 / span 2;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  margin-block-start: 0.125rem;
+  fill: var(--gmt-aside-edge);
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.body {
+  grid-column: 2;
+  min-inline-size: 0;
+}
+
+@container (inline-size < 16rem) {
+  .root {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .icon {
+    display: none;
+  }
+
+  .body {
+    grid-column: 1;
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    --gmt-aside-edge: CanvasText;
+
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .icon {
+    fill: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-width: 2px;
+    background: var(--gmt-surface-widget);
+  }
+}

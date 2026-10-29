@@ -7,9 +7,9 @@
  */
 
 .gmt-cutoff-stack-table {
-  width: 100%;
+  inline-size: 100%;
   border: 1px solid var(--gmt-border);
-  border-top-color: var(--gmt-border-strong);
+  border-block-start-color: var(--gmt-border-strong);
   border-collapse: separate;
   border-spacing: 0;
   border-radius: var(--gmt-radius-md);
@@ -23,27 +23,27 @@
 .gmt-cutoff-stack-table th,
 .gmt-cutoff-stack-table td {
   padding: var(--gmt-space-2);
-  border-bottom: 1px solid var(--gmt-border);
-  text-align: left;
+  border-block-end: 1px solid var(--gmt-border);
+  text-align: start;
   vertical-align: top;
 }
 
 /* Clear of the frame's bevelled corners. */
 .gmt-cutoff-stack-table :is(th, td):first-child {
-  padding-left: var(--gmt-space-3);
+  padding-inline-start: var(--gmt-space-3);
 }
 
 .gmt-cutoff-stack-table :is(th, td):last-child {
-  padding-right: var(--gmt-space-3);
+  padding-inline-end: var(--gmt-space-3);
 }
 
 .gmt-cutoff-stack-table tbody tr:last-child td {
-  border-bottom: 0;
+  border-block-end: 0;
 }
 
 .gmt-cutoff-stack-table th {
   background: var(--gmt-surface);
-  border-bottom-color: var(--gmt-border-strong);
+  border-block-end-color: var(--gmt-border-strong);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
@@ -73,8 +73,8 @@
 
   .gmt-cutoff-stack-table thead {
     position: absolute;
-    width: 1px;
-    height: 1px;
+    inline-size: 1px;
+    block-size: 1px;
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
@@ -82,18 +82,18 @@
 
   .gmt-cutoff-stack-table tbody tr {
     padding: var(--gmt-space-2) var(--gmt-space-3);
-    border-bottom: 1px solid var(--gmt-border);
+    border-block-end: 1px solid var(--gmt-border);
   }
 
   .gmt-cutoff-stack-table tbody tr:last-child {
-    border-bottom: 0;
+    border-block-end: 0;
   }
 
   .gmt-cutoff-stack-table td,
   .gmt-cutoff-stack-table :is(th, td):first-child,
   .gmt-cutoff-stack-table :is(th, td):last-child {
     padding: 2px 0;
-    border-bottom: 0;
+    border-block-end: 0;
     overflow-wrap: anywhere;
   }
 

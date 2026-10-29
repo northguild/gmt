@@ -27,7 +27,7 @@
   --ts-chart-tooltip-background: var(--gmt-surface);
   --ts-chart-tooltip-color: var(--gmt-ice);
   --ts-chart-tooltip-border: var(--gmt-border);
-  --ts-chart-tooltip-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --ts-chart-tooltip-shadow: 0 4px 16px rgb(0 0 0 / 35%);
 
   /* ---- Typography ---- */
   --ts-chart-font-family: var(--gmt-font-mono);
@@ -59,7 +59,7 @@
 
 /* Per-view prose after the chart: spaced like the paragraph that follows a chart container. */
 .gmt-chart-after {
-  margin-top: var(--gmt-space-6);
+  margin-block-start: var(--gmt-space-6);
 }
 
 /* ---- Embedded SVG chart ---- */
@@ -70,9 +70,9 @@
 
 .gmt-chart svg {
   display: block;
-  width: 100%;
-  height: auto;
-  max-width: 100%;
+  inline-size: 100%;
+  block-size: auto;
+  max-inline-size: 100%;
 }
 
 /* Bars — painted like the locale matrix tiles. The fill is a diagonal gradient
@@ -82,7 +82,7 @@
 .gmt-chart .ts-chart__bar-y rect {
   stroke: var(--gmt-border-strong);
   stroke-width: 1;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 25%));
 }
 
 /* A shaded bar segment — a module an industry draws on. Its edge is the text-safe ink of
@@ -97,7 +97,7 @@
 .gmt-chart .ts-chart__cell rect {
   stroke: var(--gmt-border-strong);
   stroke-width: 1;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 20%));
 }
 
 /* The key under the stacked industry chart: two swatches, each a mark with a full border.
@@ -153,12 +153,12 @@
 /* Each bar's counts in words, for a reader who cannot see the bars. */
 .gmt-chart-visually-hidden {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inline-size: 1px;
+  block-size: 1px;
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }
@@ -167,8 +167,8 @@
  * which makes some browsers drop the gradients. */
 .gmt-chart-defs {
   position: absolute;
-  width: 0;
-  height: 0;
+  inline-size: 0;
+  block-size: 0;
   overflow: hidden;
 }
 
@@ -185,7 +185,7 @@
   border: 1px solid var(--gmt-border-strong);
 }
 
-.gmt-chart-toggle__button {
+.gmt-chart-toggle-button {
   font-family: var(--gmt-font-mono);
   font-size: 0.75rem;
   padding: var(--gmt-space-1, 0.25rem) var(--gmt-space-3);
@@ -195,17 +195,17 @@
   cursor: pointer;
 }
 
-.gmt-chart-toggle__button + .gmt-chart-toggle__button {
+.gmt-chart-toggle-button + .gmt-chart-toggle-button {
   border-inline-start: 1px solid var(--gmt-border-strong);
 }
 
-.gmt-chart-toggle__button[aria-pressed="true"] {
+.gmt-chart-toggle-button[aria-pressed="true"] {
   color: var(--gmt-ice);
   background: color-mix(in srgb, var(--gmt-cyan) 18%, transparent);
   box-shadow: inset 0 -2px 0 var(--gmt-cyan);
 }
 
-.gmt-chart-toggle__button:focus-visible {
+.gmt-chart-toggle-button:focus-visible {
   outline: 2px solid var(--gmt-cyan);
   outline-offset: 2px;
 }
@@ -216,7 +216,7 @@
     stroke-dasharray: 4 3;
   }
 
-  .gmt-chart-toggle__button[aria-pressed="true"] {
+  .gmt-chart-toggle-button[aria-pressed="true"] {
     forced-color-adjust: none;
     background: Highlight;
     color: HighlightText;
@@ -231,8 +231,9 @@
   --ts-chart-tooltip-background: var(--gmt-surface-2);
   --ts-chart-tooltip-color: var(--gmt-ice);
   --ts-chart-tooltip-border: 1px solid var(--gmt-border-strong);
-  --ts-chart-tooltip-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --ts-chart-tooltip-shadow: 0 4px 16px rgb(0 0 0 / 45%);
   --ts-chart-tooltip-padding: var(--gmt-space-2) var(--gmt-space-3);
+
   font-family: var(--gmt-font-mono);
   font-size: 0.75rem;
 }
@@ -262,17 +263,9 @@
   font-family: var(--gmt-font-mono);
 }
 
-/* ---- Reduced motion ---- */
-
-@media (prefers-reduced-motion: reduce) {
-  .gmt-chart * {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
 /* ---- Reduced transparency ---- */
 
+/* stylelint-disable-next-line plugin/use-baseline -- prefers-reduced-transparency is not Baseline 2024; a browser without it keeps the translucent surface, which is the status quo */
 @media (prefers-reduced-transparency: reduce) {
   .gmt-chart {
     background: var(--gmt-surface);

@@ -21,8 +21,10 @@
 .gmt-demurrage-clock {
   /* The day labels and the odd-day chip row above the rail. */
   --gmt-dem-head-h: 2.9rem;
+
   /* The rail holds up to four rows of event chips above the diamonds. */
   --gmt-dem-rail-h: 8rem;
+
   /* A lane holds its label chip above and its bar or its reason below. */
   --gmt-dem-lane-h: 4.6rem;
   --gmt-ledger-gate-h: 0rem;
@@ -40,7 +42,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-3);
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
   padding: 0;
   border: 0;
@@ -48,7 +50,7 @@
 
 .gmt-dem-events > legend {
   padding: 0;
-  margin-bottom: var(--gmt-space-2);
+  margin-block-end: var(--gmt-space-2);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
@@ -61,17 +63,17 @@
 .gmt-dem-rail {
   position: absolute;
   inset: var(--gmt-dem-head-h) 0 auto 0;
-  height: var(--gmt-dem-rail-h);
+  block-size: var(--gmt-dem-rail-h);
 }
 
 /* An event owns no box: its diamond and its chip place themselves on the rail. */
 .gmt-dem-event {
-  height: 0;
+  block-size: 0;
 }
 
 .gmt-dem-diamond {
   position: absolute;
-  bottom: 0.5rem;
+  inset-block-end: 0.5rem;
   translate: -50% 0;
   rotate: 45deg;
 }
@@ -84,8 +86,8 @@
 
 .gmt-dem-event-chip {
   position: absolute;
-  top: 0;
-  z-index: 2;
+  inset-block-start: 0;
+  z-index: var(--gmt-z-over);
   gap: 0;
 }
 
@@ -103,22 +105,22 @@
 
 .gmt-dem-lanes {
   position: absolute;
-  inset: calc(var(--gmt-dem-head-h) + var(--gmt-dem-rail-h)) 0 0 0;
+  inset: calc(var(--gmt-dem-head-h) + var(--gmt-dem-rail-h)) 0 0;
   display: grid;
   grid-auto-rows: var(--gmt-dem-lane-h);
 }
 
 .gmt-dem-lane {
   position: relative;
-  min-width: 0;
-  border-top: 1px solid var(--gmt-border-strong);
+  min-inline-size: 0;
+  border-block-start: 1px solid var(--gmt-border-strong);
 }
 
 .gmt-dem-lane-label {
   position: absolute;
-  top: var(--gmt-space-1);
-  left: var(--gmt-space-1);
-  max-width: calc(100% - 2 * var(--gmt-space-1));
+  inset-block-start: var(--gmt-space-1);
+  inset-inline-start: var(--gmt-space-1);
+  max-inline-size: calc(100% - 2 * var(--gmt-space-1));
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -133,17 +135,17 @@
    may wrap on a narrow plot. */
 .gmt-dem-lane-why {
   position: absolute;
-  bottom: var(--gmt-space-1);
-  left: var(--gmt-space-1);
-  max-width: calc(100% - 2 * var(--gmt-space-1));
+  inset-block-end: var(--gmt-space-1);
+  inset-inline-start: var(--gmt-space-1);
+  max-inline-size: calc(100% - 2 * var(--gmt-space-1));
   white-space: normal;
 }
 
 .gmt-dem-empty {
   position: absolute;
-  top: calc(var(--gmt-dem-head-h) + var(--gmt-space-2));
-  left: var(--gmt-space-1);
-  max-width: calc(100% - 2 * var(--gmt-space-1));
+  inset-block-start: calc(var(--gmt-dem-head-h) + var(--gmt-space-2));
+  inset-inline-start: var(--gmt-space-1);
+  max-inline-size: calc(100% - 2 * var(--gmt-space-1));
   margin: 0;
   white-space: normal;
 }

@@ -1,0 +1,83 @@
+/*
+ * Content tables: the site-wide table recipe for `.sl-markdown-content`. It sits in `gmt.tools`,
+ * first, so a rule here (two parts) still beats a widget's own one-class table rule on
+ * specificity, and a widget sheet imported after it wins an equal-specificity tie.
+ */
+
+/* ---- Tables ----
+   Every table on the site sizes its columns to their content. A fixed layout with a `nowrap`
+   first column ran a sentence in the first cell across 1000px and squeezed the other columns
+   to a word a line.
+
+   A code token in a cell is never broken mid-word (`overflow-wrap: anywhere` printed `strin` /
+   `g` in a narrow column), at a hyphen (`"4-4-5"`, `2024-03-10`) or at a `.`. Code with no
+   break point stays on one line (`white-space: nowrap`). Code with break points wraps only at a
+   run of spaces and after a `/` that joins two names (`.gmt-codebreak`; the pieces are
+   `.gmt-cw`, see src/lib/code-break.ts). The prose around code wraps normally. When a token is
+   wider than its column the box scrolls sideways, so a table whose cells hold long code is laid
+   out as entries instead (see below). A long union in a reference Type cell is one span per
+   member (render-table.ts `typeSpans`), so that cell still wraps, between members. */
+.sl-markdown-content table {
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  overflow: auto;
+}
+
+/* Content tables size their columns to their text. A widget's table (inside `.not-content`)
+   owns its layout, and `:where()` adds no specificity, so a widget's `table-layout: fixed` wins
+   at one class and the rule above never reaches it. */
+.sl-markdown-content table:not(:where(.not-content *)) {
+  table-layout: auto;
+}
+
+.sl-markdown-content :is(th, td) {
+  vertical-align: top;
+  overflow-wrap: normal;
+}
+
+.sl-markdown-content :is(th, td) code {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* Code with break points (src/lib/code-break.ts) wraps at its spaces and after a `/` that joins
+   two names; each piece between is `.gmt-cw`, which stays whole. */
+.sl-markdown-content :is(th, td) .gmt-codebreak {
+  white-space: pre-wrap;
+}
+
+.sl-markdown-content .gmt-cw {
+  white-space: nowrap;
+}
+
+/* thead background handled by gmt-glass.css (translucent + backdrop-filter) */
+.sl-markdown-content th {
+  color: var(--gmt-cyan-ink);
+  font-family: var(--gmt-font-display);
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-wide);
+  font-size: 0.8rem;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border-block-end: 1px solid var(--gmt-hairline);
+  text-align: start;
+}
+
+.sl-markdown-content td {
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border-block-end: 1px solid var(--gmt-hairline);
+  color: var(--gmt-ice);
+}
+
+.sl-markdown-content tr:last-child td {
+  border-block-end: none;
+}
+
+.sl-markdown-content tr:hover td,
+.sl-markdown-content tr:has(:focus-visible) td {
+  background: var(--gmt-accent-wash);
+}

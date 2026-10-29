@@ -1,0 +1,73 @@
+/* <gmt-handle>: a draggable slider thumb on a track the widget lays out. */
+
+.track {
+  position: relative;
+  container-type: inline-size;
+  inline-size: 100%;
+  min-block-size: var(--gmt-target-min);
+}
+
+.root {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--gmt-handle-pct, 0) * 1%);
+  translate: -50% 0;
+  display: block;
+  inline-size: var(--gmt-target-min);
+  min-block-size: var(--gmt-target-min);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+
+  &:dir(rtl) {
+    translate: 50% 0;
+  }
+
+  /* The faceted bar; the box around it is the 24 px target. */
+  &::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline: calc((var(--gmt-target-min) - var(--gmt-handle-w)) / 2);
+    border: 2px solid var(--gmt-void);
+    border-radius: var(--gmt-radius-sm);
+    background: var(--gmt-cyan);
+    box-shadow: 0 0 0 1px var(--gmt-cyan);
+    transition: background-color var(--gmt-motion-fast) var(--gmt-easing);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    &::before {
+      border-color: ButtonText;
+      background: Highlight;
+      box-shadow: none;
+    }
+
+    &:focus-visible {
+      outline: 2px solid Highlight;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    &::before {
+      border-color: var(--gmt-ice);
+    }
+
+    &:focus-visible {
+      outline-width: 3px;
+    }
+  }
+}

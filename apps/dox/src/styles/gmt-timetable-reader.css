@@ -101,7 +101,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-3);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-timetable-pane {
@@ -112,8 +112,7 @@
   .gmt-timetable-split {
     display: grid;
     grid-template-columns: var(--tt-cols);
-    column-gap: var(--tt-seam);
-    row-gap: var(--gmt-space-3);
+    gap: var(--gmt-space-3) var(--tt-seam);
     align-items: start;
   }
 
@@ -199,6 +198,7 @@
    is whole. Their 28px hit squares tile lane to lane and never overlap. */
 .gmt-timetable-lanes {
   --gmt-handle-hit: 1.75rem;
+
   position: relative;
   margin-inline: calc(var(--gmt-handle-w) / 2 + 2px);
   user-select: none;
@@ -206,23 +206,23 @@
 
 .gmt-timetable-lane {
   position: relative;
-  z-index: 1;
+  z-index: var(--gmt-z-raised);
   block-size: 1.75rem;
-  border-bottom: 1px solid var(--gmt-hairline-faint);
+  border-block-end: 1px solid var(--gmt-hairline-faint);
 }
 
 .gmt-timetable-lane::before {
   content: "";
   position: absolute;
   inset-inline: 0;
-  top: 50%;
-  height: 1px;
-  background: color(from var(--series) srgb r g b / 0.35);
+  inset-block-start: 50%;
+  block-size: 1px;
+  background: color(from var(--series) srgb r g b / 35%);
 }
 
 .gmt-timetable-lane > .gmt-handle {
   color: var(--series);
-  z-index: 2;
+  z-index: var(--gmt-z-over);
 }
 
 /* The shaded hour. A repeated hour is a purple wash between two double edges;
@@ -236,13 +236,12 @@
 
 .gmt-timetable-band {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  inset-block: 0;
   box-sizing: border-box;
 }
 
 .gmt-timetable-band[data-kind="twice"] {
-  background-color: color(from var(--gmt-dst-purple) srgb r g b / 0.16);
+  background-color: color(from var(--gmt-dst-purple) srgb r g b / 16%);
   border-inline: 3px double var(--gmt-dst-purple);
 }
 
@@ -250,8 +249,8 @@
   background-color: transparent;
   background-image: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.18) 0 4px,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.05) 4px 8px
+    color(from var(--gmt-dst-gold) srgb r g b / 18%) 0 4px,
+    color(from var(--gmt-dst-gold) srgb r g b / 5%) 4px 8px
   );
   border-inline: 1px dashed var(--gmt-dst-gold);
 }
@@ -259,8 +258,8 @@
 /* Tags ride their handle on an opaque plate. */
 .gmt-timetable .gmt-timetable-lane .gmt-timetable-tag {
   position: absolute;
-  top: 50%;
-  z-index: 3;
+  inset-block-start: 50%;
+  z-index: var(--gmt-z-float);
   translate: 14px -50%;
 }
 
@@ -269,7 +268,7 @@
 }
 
 .gmt-timetable .gmt-timetable-lane .gmt-timetable-tag[data-pinned] {
-  left: 0;
+  inset-inline-start: 0;
   translate: 0 -50%;
 }
 
@@ -319,7 +318,7 @@
 
 .gmt-timetable-row {
   margin: 0;
-  min-width: 0;
+  min-inline-size: 0;
   padding: var(--gmt-space-1) var(--gmt-space-3) var(--gmt-space-3);
 }
 
@@ -372,7 +371,7 @@
    line changing as a handle enters or leaves a repeated hour moves nothing.
    Informational text: the full-strength ink, 12px. */
 .gmt-timetable-why-slot {
-  margin-top: var(--gmt-space-1);
+  margin-block-start: var(--gmt-space-1);
 }
 
 .gmt-timetable .gmt-timetable-why {
@@ -397,7 +396,7 @@
 
 .gmt-timetable-hold > * {
   grid-area: 1 / 1;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-timetable-sizer {
@@ -438,6 +437,7 @@
   flex-direction: column;
   overflow: clip;
   padding-inline: 10px;
+
   /* The frame holds its height with no row drawn: caption, two tick rows, two
      axis rows, the fan and the offset strip. */
   min-block-size: calc(
@@ -479,7 +479,7 @@
 
 .gmt-timetable-px {
   position: relative;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-timetable-pgutter {
@@ -494,15 +494,12 @@
 /* The printed clock's ticks sit above its axis, the exact clock's below its
    own, so the two read as one pair of rulers with the fan between them. */
 .gmt-timetable [data-role="wall-ticks"] .gmt-cutoff-axis-tick {
-  top: auto;
-  bottom: 0;
-  padding-top: 0;
-  padding-bottom: 9px;
+  inset-block: auto 0;
+  padding-block: 0 9px;
 }
 
 .gmt-timetable [data-role="wall-ticks"] .gmt-cutoff-axis-tick::before {
-  top: auto;
-  bottom: 0;
+  inset-block: auto 0;
 }
 
 .gmt-timetable-paxis .gmt-timetable-px {
@@ -511,24 +508,23 @@
 
 .gmt-timetable-axisline {
   position: absolute;
-  bottom: -1px;
-  height: 2px;
+  inset-block-end: -1px;
+  block-size: 2px;
   background: var(--gmt-border-strong);
 }
 
 .gmt-timetable-paxis--exact .gmt-timetable-axisline {
-  top: -1px;
-  bottom: auto;
+  inset-block: -1px auto;
 }
 
 /* The printed and exact marks: a bevelled square in the series colour with a
    surface ring, centred on its axis. */
 .gmt-timetable-sq {
   position: absolute;
-  z-index: 3;
+  z-index: var(--gmt-z-float);
   box-sizing: border-box;
-  width: 9px;
-  height: 9px;
+  inline-size: 9px;
+  block-size: 9px;
   border-radius: 2px;
   corner-shape: bevel;
   background: var(--series);
@@ -538,12 +534,12 @@
 }
 
 .gmt-timetable [data-role="wall-axis"] .gmt-timetable-sq {
-  bottom: 0;
+  inset-block-end: 0;
   translate: -50% 50%;
 }
 
 .gmt-timetable [data-role="exact-axis"] .gmt-timetable-sq {
-  top: 0;
+  inset-block-start: 0;
   translate: -50% -50%;
 }
 
@@ -556,13 +552,12 @@
 
 .gmt-timetable-wband {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  inset-block: 0;
   box-sizing: border-box;
 }
 
 .gmt-timetable-wband[data-kind="twice"] {
-  background-color: color(from var(--gmt-dst-purple) srgb r g b / 0.16);
+  background-color: color(from var(--gmt-dst-purple) srgb r g b / 16%);
   border-inline: 3px double var(--gmt-dst-purple);
 }
 
@@ -570,8 +565,8 @@
   background-color: transparent;
   background-image: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.18) 0 4px,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.05) 4px 8px
+    color(from var(--gmt-dst-gold) srgb r g b / 18%) 0 4px,
+    color(from var(--gmt-dst-gold) srgb r g b / 5%) 4px 8px
   );
   border-inline: 1px dashed var(--gmt-dst-gold);
 }
@@ -581,8 +576,8 @@
    no exact stretch, only the point where the clock jumps. */
 .gmt-timetable-eline {
   position: absolute;
-  top: 2px;
-  height: 3px;
+  inset-block-start: 2px;
+  block-size: 3px;
   border-radius: 2px;
 }
 
@@ -592,9 +587,9 @@
 
 .gmt-timetable-etick {
   position: absolute;
-  top: 0;
-  height: 0.6rem;
-  width: 0;
+  inset-block-start: 0;
+  block-size: 0.6rem;
+  inline-size: 0;
 }
 
 .gmt-timetable-etick[data-kind="twice"] {
@@ -607,20 +602,20 @@
 
 .gmt-timetable-fan {
   display: block;
-  width: 100%;
-  height: var(--tt-fan);
+  inline-size: 100%;
+  block-size: var(--tt-fan);
   overflow: visible;
 }
 
 .gmt-timetable-wedge[data-kind="twice"] {
-  fill: color(from var(--gmt-dst-purple) srgb r g b / 0.16);
+  fill: color(from var(--gmt-dst-purple) srgb r g b / 16%);
   stroke: var(--gmt-dst-purple);
   stroke-width: 1px;
   vector-effect: non-scaling-stroke;
 }
 
 .gmt-timetable-wedge[data-kind="skipped"] {
-  fill: color(from var(--gmt-dst-gold) srgb r g b / 0.14);
+  fill: color(from var(--gmt-dst-gold) srgb r g b / 14%);
   stroke: var(--gmt-dst-gold);
   stroke-width: 1px;
   stroke-dasharray: 4 3;
@@ -655,15 +650,15 @@
 
 .gmt-timetable-pcap-text {
   position: absolute;
-  left: 0;
-  top: 50%;
+  inset-inline-start: 0;
+  inset-block-start: 50%;
   translate: 0 -50%;
   white-space: nowrap;
 }
 
 .gmt-timetable-offset {
   position: absolute;
-  top: 50%;
+  inset-block-start: 50%;
   translate: 0 -50%;
 }
 
@@ -677,16 +672,16 @@
 
 .gmt-timetable-bar {
   position: absolute;
-  top: 50%;
+  inset-block-start: 50%;
   translate: 0 -50%;
   box-sizing: border-box;
-  height: 0.6rem;
-  min-width: 2px;
+  block-size: 0.6rem;
+  min-inline-size: 2px;
   border-radius: 3px;
   corner-shape: bevel;
   background: linear-gradient(
-    color(from var(--series) srgb r g b / 0.9),
-    color(from var(--series) srgb r g b / 0.5)
+    color(from var(--series) srgb r g b / 90%),
+    color(from var(--series) srgb r g b / 50%)
   );
   box-shadow: inset 0 1px 0 var(--gmt-highlight);
 }
@@ -696,26 +691,25 @@
 .gmt-timetable-bar::after {
   content: "";
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 4px;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: 4px;
   border-radius: 2px;
   corner-shape: bevel;
   background: var(--series);
 }
 
 .gmt-timetable-bar--open::after {
-  width: 0;
+  inline-size: 0;
   border-radius: 0;
   background: none;
-  border-right: 2px dashed var(--series);
+  border-inline-end: 2px dashed var(--series);
 }
 
 .gmt-timetable-arrival,
 .gmt-timetable-noinstant {
   position: absolute;
-  top: 50%;
+  inset-block-start: 50%;
   translate: 8px -50%;
 }
 
@@ -730,7 +724,7 @@
 }
 
 .gmt-timetable-noinstant {
-  left: 0;
+  inset-inline-start: 0;
   translate: 0 -50%;
 }
 
@@ -778,8 +772,8 @@
 .gmt-timetable-swatch {
   flex: none;
   box-sizing: border-box;
-  width: 1.5rem;
-  height: 0.6rem;
+  inline-size: 1.5rem;
+  block-size: 0.6rem;
 }
 
 .gmt-timetable-swatch--solid {
@@ -797,25 +791,25 @@
 }
 
 .gmt-timetable-swatch--bar {
-  height: 0.5rem;
+  block-size: 0.5rem;
   border-radius: 3px;
   corner-shape: bevel;
   background: linear-gradient(
-    color(from var(--gmt-ice-dim) srgb r g b / 0.9),
-    color(from var(--gmt-ice-dim) srgb r g b / 0.5)
+    color(from var(--gmt-ice-dim) srgb r g b / 90%),
+    color(from var(--gmt-ice-dim) srgb r g b / 50%)
   );
 }
 
 .gmt-timetable-swatch--twice {
-  background-color: color(from var(--gmt-dst-purple) srgb r g b / 0.16);
+  background-color: color(from var(--gmt-dst-purple) srgb r g b / 16%);
   border-inline: 3px double var(--gmt-dst-purple);
 }
 
 .gmt-timetable-swatch--skipped {
   background-image: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.18) 0 4px,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.05) 4px 8px
+    color(from var(--gmt-dst-gold) srgb r g b / 18%) 0 4px,
+    color(from var(--gmt-dst-gold) srgb r g b / 5%) 4px 8px
   );
   border-inline: 1px dashed var(--gmt-dst-gold);
 }
@@ -834,7 +828,7 @@
  * --------------------------------------------------------------------------- */
 
 .gmt-timetable-rows {
-  width: 100%;
+  inline-size: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
   margin: var(--gmt-space-2) 0;
@@ -849,13 +843,14 @@
 .gmt-timetable-rows th:first-child,
 .gmt-timetable-rows td:first-child {
   white-space: normal;
-  width: auto;
+  inline-size: auto;
 }
 
 .gmt-timetable-rows th {
-  text-align: left;
+  text-align: start;
   padding: var(--gmt-space-2) var(--gmt-space-3);
-  border-bottom: 2px solid var(--gmt-border);
+  border-block-end: 2px solid var(--gmt-border);
+
   /* --gmt-ice-dim measured 6.95:1 here in dark mode, under the 7:1 body-text
      target; the header is quiet enough from its size, case and weight. */
   color: var(--gmt-ice);
@@ -867,7 +862,7 @@
 
 .gmt-timetable-rows td {
   padding: var(--gmt-space-2) var(--gmt-space-3);
-  border-bottom: 1px solid var(--gmt-border);
+  border-block-end: 1px solid var(--gmt-border);
   vertical-align: middle;
   font-family: var(--gmt-font-mono);
   font-size: 0.75rem;
@@ -888,7 +883,7 @@
    still breaks after a slash. */
 .gmt-timetable-zone {
   display: inline-block;
-  max-width: 100%;
+  max-inline-size: 100%;
   vertical-align: top;
 }
 
@@ -912,7 +907,7 @@
   .gmt-timetable-rows {
     display: table;
     table-layout: fixed;
-    width: 100%;
+    inline-size: 100%;
   }
 
   .gmt-timetable-rows th,
@@ -921,12 +916,12 @@
   }
 
   .gmt-timetable-rows th:nth-child(1) {
-    width: 14.6rem;
+    inline-size: 14.6rem;
   }
 
   .gmt-timetable-rows th:nth-child(2),
   .gmt-timetable-rows th:nth-child(4) {
-    width: 12.4rem;
+    inline-size: 12.4rem;
   }
 }
 
@@ -937,16 +932,16 @@
   }
 
   .gmt-timetable-rows th:nth-child(1) {
-    width: 29%;
+    inline-size: 29%;
   }
 
   .gmt-timetable-rows th:nth-child(2),
   .gmt-timetable-rows th:nth-child(4) {
-    width: 25%;
+    inline-size: 25%;
   }
 
   .gmt-timetable-rows th:nth-child(3) {
-    width: 21%;
+    inline-size: 21%;
   }
 }
 
@@ -956,11 +951,11 @@
   display: flex;
   align-items: baseline;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-timetable .gmt-timetable-printed .gmt-cutoff-series-swatch {
-  margin-right: 0;
+  margin-inline-end: 0;
   align-self: center;
 }
 
@@ -970,7 +965,7 @@
 }
 
 .gmt-timetable-printed-text {
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 /* Leaves (exact) and Local arrival: the readable local HH:MM at normal size,
@@ -988,7 +983,7 @@
 
 .gmt-timetable-time-full {
   display: block;
-  margin-top: 2px;
+  margin-block-start: 2px;
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
 }
@@ -1016,12 +1011,12 @@
 @container gmt-timetable-pane (max-width: 47.24rem) {
   .gmt-timetable-rows thead {
     position: absolute;
-    width: 1px;
-    height: 1px;
+    inline-size: 1px;
+    block-size: 1px;
     margin: -1px;
     padding: 0;
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
   }
@@ -1030,7 +1025,7 @@
   .gmt-timetable-rows tbody,
   .gmt-timetable-rows tr {
     display: block;
-    width: 100%;
+    inline-size: 100%;
   }
 
   .gmt-timetable-rows tr {
@@ -1048,7 +1043,7 @@
     column-gap: var(--gmt-space-2);
     align-items: baseline;
     padding: var(--gmt-space-1) 0;
-    border-bottom: none;
+    border-block-end: none;
   }
 
   .gmt-timetable-rows td > * {
@@ -1056,7 +1051,7 @@
   }
 
   .gmt-timetable-rows td:not(:last-child) {
-    border-bottom: 1px dashed var(--gmt-border);
+    border-block-end: 1px dashed var(--gmt-border);
   }
 
   .gmt-timetable-rows td::before {
@@ -1074,7 +1069,7 @@
 
   .gmt-timetable-time,
   .gmt-timetable-time-full {
-    min-width: 0;
+    min-inline-size: 0;
   }
 }
 
@@ -1120,11 +1115,11 @@
 
 @container gmt-timetable-section (min-width: 76.25rem) {
   .gmt-timetable-rowset {
-    margin-top: -10.5px;
+    margin-block-start: -10.5px;
   }
 
   .gmt-timetable-rows {
-    margin-top: 0;
+    margin-block-start: 0;
   }
 
   @container gmt-timetable-pane (max-width: 41.49rem) {

@@ -19,28 +19,6 @@
   margin: var(--gmt-space-6) 0;
 }
 
-/* A widget root carries Starlight's `not-content` opt-out, which also drops
-   Starlight's own styling for everything inside it. The card's flex `gap`
-   replaces the sibling margins; what `gap` cannot replace is restored here at
-   zero specificity, so a widget's own sheet still wins. Tables scroll inside
-   themselves rather than widening the page, and their cells align to the first
-   baseline; a link inside a widget still reads as a link. */
-:where(.gmt-widget.not-content) table {
-  display: block;
-  overflow: auto;
-  border-spacing: 0;
-}
-
-:where(.gmt-widget.not-content) :is(th, td) {
-  vertical-align: baseline;
-}
-
-:where(.gmt-widget.not-content) a {
-  color: var(--gmt-cyan-ink);
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
-}
-
 /* The card is a bare grid, not a panel: each numbered section is its own card
    (below), and visual-design.md's "one layer of glass, never glass within
    glass" rules out a panel holding panels. So this element keeps its name and
@@ -86,7 +64,6 @@
   border: 0;
   border-radius: 0;
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 /* The section already blurs — inner code frames and output boxes must not stack
@@ -97,7 +74,6 @@
 .gmt-widget-card pre,
 .gmt-widget-card .gmt-widget-output {
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 /* Each numbered section is the card now — one hairline, bevel, one blur,
@@ -133,8 +109,7 @@
   border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
   background: var(--gmt-widget-card-bg);
-  backdrop-filter: blur(var(--gmt-blur));
-  -webkit-backdrop-filter: blur(var(--gmt-blur));
+  backdrop-filter: var(--gmt-glass-blur);
 }
 
 /* The numbered cards' shape, by role rather than by measurement.
@@ -167,6 +142,7 @@
  * tracks and every card takes one — card 1 beside card 2, then the code cards
  * in pairs. Nothing spans there, because a span only strands a card in a
  * half-empty row once there are too few tracks to share. */
+
 /* These two steps are also `.gmt-tool-grid`'s (dox.css), which lays the page's
    key point, intro and trailing text out on the same tracks so they line up
    with the cards. A `@container` condition cannot read a custom property, so
@@ -206,7 +182,7 @@
  * `z-index` applies without needing `position`. Keyed on the list being open so
  * no card sits permanently above its neighbours. */
 .gmt-widget-card > .gmt-widget-section:has(.gmt-combobox-list:not([hidden])) {
-  z-index: 2;
+  z-index: var(--gmt-z-over);
 }
 
 /* Widgets whose cards are peers rather than a pipeline opt out by giving their
@@ -221,6 +197,7 @@
    chart or ledger that a third of the width would crush, and the
    "What <fn> returns" code frame, whose call signatures wrap to mush in a
    20rem column. */
+
 /* Written as a child of the card with both classes, so it ties the card's
    `:first-child` and `:nth-child(2)` span rules from 80rem and wins on order;
    a bare class loses to them. */
@@ -246,7 +223,7 @@
 
 .gmt-label-small {
   flex: 0 0 auto;
-  min-width: 80px;
+  min-inline-size: 80px;
 }
 
 /* A caption under a control — plain text, deliberately no box or rule. */
@@ -290,18 +267,19 @@
   font-size: 0.85rem;
   line-height: 1.5;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .gmt-codeframe-copy {
   position: absolute;
-  top: var(--gmt-space-2);
-  right: var(--gmt-space-2);
+  inset-block-start: var(--gmt-space-2);
+  inset-inline-end: var(--gmt-space-2);
+
   /* .gmt-codeframe-pre gets backdrop-filter from the shared
      .sl-markdown-content pre rule, which creates its own stacking context —
      without a z-index here it paints over this button (same DOM-order stacking
      level) and swallows the click even though the button looks fine. */
-  z-index: 1;
+  z-index: var(--gmt-z-raised);
 }
 
 .gmt-codeframe-copy--copied {
@@ -338,7 +316,7 @@
 
 .gmt-playground-live {
   color: var(--gmt-spring-ink);
-  text-shadow: 0 0 8px color(from var(--gmt-spring-ink) srgb r g b / 0.4);
+  text-shadow: var(--gmt-text-glow-spring);
 }
 
 .gmt-playground-sentinel {
@@ -350,7 +328,7 @@
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   font-size: 0.8rem;
-  text-shadow: 0 0 6px color(from var(--gmt-signal-ink) srgb r g b / 0.3);
+  text-shadow: var(--gmt-text-glow-signal);
 }
 
 /* Genuine effect change, not a color override — the base rule's color/glow
@@ -369,16 +347,16 @@
   border: 1px solid var(--gmt-code-border);
   border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
-  min-height: 1.5em;
+  min-block-size: 1.5em;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .gmt-widget-output.gmt-playground-sentinel {
   color: var(--gmt-signal-ink);
   background: var(--gmt-signal-fill);
   border-color: var(--gmt-signal-border);
-  text-shadow: 0 0 6px color(from var(--gmt-signal-ink) srgb r g b / 0.3);
+  text-shadow: var(--gmt-text-glow-signal);
 }
 
 /* One call in a group refused while its neighbours answered: only that call's

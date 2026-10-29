@@ -34,6 +34,7 @@
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
+
   /* The widest label ("neither parser") is reserved, so the badge never resizes. */
   min-inline-size: 14ch;
   justify-content: center;
@@ -50,7 +51,7 @@
 .gmt-duration-bench .gmt-dbench-badge[data-parser="iso"],
 .gmt-duration-bench .gmt-dbench-badge[data-parser="human"] {
   border-color: var(--gmt-series-1);
-  background: color(from var(--gmt-series-1) srgb r g b / 0.08);
+  background: color(from var(--gmt-series-1) srgb r g b / 8%);
 }
 
 .gmt-duration-bench .gmt-dbench-badge[data-parser="none"] {
@@ -80,6 +81,7 @@
 
 .gmt-duration-bench .gmt-dbench-strip {
   display: grid;
+
   /* Ten cells in a row only when each can hold 10 tabular digits (about 5.5rem
      with padding); the narrower steps below pick the column count from the
      container, never the viewport. */
@@ -107,7 +109,7 @@
 
 .gmt-duration-bench .gmt-dbench-cell[data-lit] {
   border-color: var(--gmt-series-1);
-  background: color(from var(--gmt-series-1) srgb r g b / 0.08);
+  background: color(from var(--gmt-series-1) srgb r g b / 8%);
   color: var(--gmt-ice);
 }
 
@@ -247,7 +249,7 @@
    `width: 1%; white-space: nowrap`, which in a fixed table squeezes the first
    column. The doubled class out-ranks it whatever the load order. */
 .gmt-duration-bench .gmt-dbench-table.gmt-dbench-table :is(th, td):first-child {
-  width: auto;
+  inline-size: auto;
   white-space: normal;
 }
 
@@ -261,18 +263,23 @@
 .gmt-duration-bench .gmt-dbench-table--minute .gmt-dbench-col-written {
   inline-size: 20%;
 }
+
 .gmt-duration-bench .gmt-dbench-table--minute .gmt-dbench-col-human {
   inline-size: 18%;
 }
+
 .gmt-duration-bench .gmt-dbench-table--minute .gmt-dbench-col-iso {
   inline-size: 13%;
 }
+
 .gmt-duration-bench .gmt-dbench-table--minute .gmt-dbench-col-unit {
   inline-size: 11%;
 }
+
 .gmt-duration-bench .gmt-dbench-table--minute .gmt-dbench-col-compact {
   inline-size: 19%;
 }
+
 .gmt-duration-bench .gmt-dbench-table--minute .gmt-dbench-col-words {
   inline-size: 19%;
 }
@@ -280,12 +287,15 @@
 .gmt-duration-bench .gmt-dbench-table--laytime .gmt-dbench-col-written {
   inline-size: 16%;
 }
+
 .gmt-duration-bench .gmt-dbench-table--laytime .gmt-dbench-col-human {
   inline-size: 18%;
 }
+
 .gmt-duration-bench .gmt-dbench-table--laytime .gmt-dbench-col-compact {
   inline-size: 18%;
 }
+
 .gmt-duration-bench .gmt-dbench-table--laytime .gmt-dbench-col-hours-a,
 .gmt-duration-bench .gmt-dbench-table--laytime .gmt-dbench-col-hours-b {
   inline-size: 24%;
@@ -321,6 +331,7 @@
     display: block;
     inline-size: 100%;
     box-sizing: border-box;
+
     /* Clear of the table's bevelled corners, which clip a bare first letter. */
     padding: var(--gmt-space-3) var(--gmt-space-3) var(--gmt-space-2);
   }

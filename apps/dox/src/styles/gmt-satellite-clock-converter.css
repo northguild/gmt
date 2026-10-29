@@ -90,6 +90,7 @@
   font-family: var(--gmt-font-mono);
   font-size: 1.05rem;
   font-variant-numeric: tabular-nums;
+
   /* Plain text wraps between words; an instant's date, time, fraction and
      zone stay whole through their `.gmt-gnss-nb` spans. */
   white-space: normal;
@@ -123,7 +124,7 @@
  * --------------------------------------------------------------------------- */
 
 .gmt-satellite-clock-converter .gmt-clad {
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-satellite-clock-converter .gmt-clad-stage {
@@ -151,14 +152,14 @@
 }
 
 .gmt-satellite-clock-converter .gmt-clad-lit {
-  fill: color(from var(--gmt-ice-dim) srgb r g b / 0.3);
+  fill: color(from var(--gmt-ice-dim) srgb r g b / 30%);
 }
 
 .gmt-satellite-clock-converter .gmt-clad-tick {
   stroke: var(--gmt-ice-dim);
   stroke-opacity: 0.45;
   stroke-width: 1;
-  shape-rendering: crispEdges;
+  shape-rendering: crispedges;
 }
 
 .gmt-satellite-clock-converter .gmt-clad-tick.is-lit {
@@ -236,8 +237,8 @@
   background:
     repeating-linear-gradient(
       45deg,
-      color(from var(--series, var(--gmt-ice-dim)) srgb r g b / 0.22) 0,
-      color(from var(--series, var(--gmt-ice-dim)) srgb r g b / 0.22) 2px,
+      color(from var(--series, var(--gmt-ice-dim)) srgb r g b / 22%) 0,
+      color(from var(--series, var(--gmt-ice-dim)) srgb r g b / 22%) 2px,
       transparent 2px,
       transparent 8px
     ),
@@ -257,6 +258,7 @@
   gap: var(--gmt-space-1);
   margin-block-start: var(--gmt-space-3);
   max-inline-size: 28rem;
+
   /* The room for the most rows any slider stop can put here, so a drag never
      moves what is below. */
   min-block-size: calc(
@@ -484,7 +486,7 @@
 
 .gmt-satellite-clock-converter .gmt-clock-line {
   display: block;
-  min-width: 0;
+  min-inline-size: 0;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
@@ -492,6 +494,7 @@
 .gmt-satellite-clock-converter .gmt-clock-sub {
   color: var(--gmt-ice);
   font-size: 0.8125rem;
+
   /* "written as 2024-01-01T00:00:37" wraps to a second line in a narrow
      column; the second line is reserved, so a row keeps one height. */
   min-block-size: 2lh;
@@ -539,7 +542,8 @@
     :is(th, td)
     .gmt-clock-line {
     grid-column: 2;
-    text-align: right;
+    text-align: end;
+
     /* An instant with its clock name is 23 characters; at the 12px floor it
        fits the column in every engine, so a reading never wraps and a row
        holds one height whether it has a reading or none. */

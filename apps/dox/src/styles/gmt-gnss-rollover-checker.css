@@ -31,7 +31,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
   padding: 0;
   border: 0;
@@ -48,7 +48,7 @@
    line has words ("your receiver", "next to wrap"). */
 .gmt-gnss-rollover-checker .gmt-clock-line {
   display: block;
-  min-width: 0;
+  min-inline-size: 0;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
@@ -94,11 +94,11 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-gnss-rollover-checker .gmt-rollover-chip {
-  min-width: 0;
+  min-inline-size: 0;
   font-variant-numeric: tabular-nums;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -130,14 +130,14 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--gmt-space-4);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-fuse-aside {
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
   order: -1;
 }
 
@@ -146,11 +146,13 @@
     grid-template-columns: minmax(0, 1fr) 16rem;
     align-items: start;
   }
+
   .gmt-fuse-aside {
     order: 0;
     grid-column: 2;
     grid-row: 1 / span 3;
   }
+
   .gmt-fuse-layout > .gmt-fuse,
   .gmt-fuse-layout > .gmt-rollover-key,
   .gmt-fuse-layout > .gmt-rollover-chips {
@@ -173,7 +175,7 @@
   block-size: 1px;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
@@ -200,7 +202,7 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-fuse-cell > b {
@@ -235,6 +237,7 @@
   gap: var(--gmt-space-2);
   box-sizing: border-box;
   margin: 0;
+
   /* Two lines always, so a longer verdict never grows the column; the words
      start at the top, so one line or two does not move them. */
   align-items: flex-start;
@@ -254,7 +257,8 @@
 .gmt-fuse-badge-text {
   /* Fills the badge, so its box does not widen and narrow with the verdict. */
   flex: 1 1 0;
-  min-width: 0;
+  min-inline-size: 0;
+
   /* Two lines, so the text's own box is one height whether the verdict wraps. */
   min-block-size: 2lh;
   overflow-wrap: anywhere;
@@ -266,7 +270,7 @@
   inline-size: 1.25rem;
   block-size: 1.25rem;
   fill: none;
-  stroke: currentColor;
+  stroke: currentcolor;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -282,7 +286,7 @@
    the other way each time. The icon and the words carry it, not colour. */
 .gmt-fuse-badge[data-verdict="right"] {
   border-color: var(--gmt-series-1);
-  background-color: color(from var(--gmt-series-1) srgb r g b / 0.16);
+  background-color: color(from var(--gmt-series-1) srgb r g b / 16%);
 }
 
 .gmt-fuse-badge[data-verdict="early"],
@@ -291,8 +295,8 @@
   border-color: var(--gmt-ice);
   background-image: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-ice) srgb r g b / 0.16) 0,
-    color(from var(--gmt-ice) srgb r g b / 0.16) 2px,
+    color(from var(--gmt-ice) srgb r g b / 16%) 0,
+    color(from var(--gmt-ice) srgb r g b / 16%) 2px,
     transparent 2px,
     transparent 8px
   );
@@ -301,8 +305,8 @@
 .gmt-fuse-badge[data-verdict="late"] {
   background-image: repeating-linear-gradient(
     -45deg,
-    color(from var(--gmt-ice) srgb r g b / 0.16) 0,
-    color(from var(--gmt-ice) srgb r g b / 0.16) 2px,
+    color(from var(--gmt-ice) srgb r g b / 16%) 0,
+    color(from var(--gmt-ice) srgb r g b / 16%) 2px,
     transparent 2px,
     transparent 8px
   );
@@ -311,8 +315,7 @@
 /* The two quiet plates under the badge stack in the column. */
 .gmt-fuse-aside .gmt-punct-heroes {
   display: flex;
-  flex-direction: column;
-  flex-wrap: nowrap;
+  flex-flow: column nowrap;
   gap: var(--gmt-space-2);
 }
 
@@ -323,6 +326,7 @@
   .gmt-punct-hero-value {
   font-size: var(--gmt-text-base);
   line-height: 1.3;
+
   /* An instant wraps only at its T (the date and the time are unbreakable). */
   white-space: normal;
 }
@@ -344,10 +348,11 @@
 
 .gmt-fuse {
   --fuse-plane-start: calc(var(--fuse-label-w) + var(--fuse-gap));
+
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
-  min-width: 0;
+  min-inline-size: 0;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice);
@@ -372,7 +377,7 @@
    head never covers a year label or a heading. */
 .gmt-fuse-board {
   position: relative;
-  min-width: 0;
+  min-inline-size: 0;
   padding-block-end: 0.875rem;
 }
 
@@ -398,14 +403,14 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-fuse-head {
   /* Above the grid lines and the pins that cross the board, on the card's own
      surface, so the heading is read against a flat colour. */
   position: relative;
-  z-index: 2;
+  z-index: var(--gmt-z-over);
   background-color: var(--gmt-surface);
   min-block-size: 1.4rem;
   padding-block-start: var(--gmt-space-2);
@@ -445,7 +450,7 @@
 .gmt-fuse-track {
   position: relative;
   box-sizing: border-box;
-  min-width: 0;
+  min-inline-size: 0;
   block-size: 1rem;
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
@@ -520,13 +525,14 @@
 }
 
 .gmt-gnss-rollover-checker .gmt-fuse-lit {
-  background-color: color(from var(--gmt-series-1) srgb r g b / 0.38);
+  background-color: color(from var(--gmt-series-1) srgb r g b / 38%);
 }
 
 .gmt-gnss-rollover-checker .gmt-fuse-hatch {
   border-style: dashed;
   background-color: transparent;
-  --hatch: color(from var(--gmt-series-1) srgb r g b / 0.7);
+
+  --hatch: color(from var(--gmt-series-1) srgb r g b / 70%);
 }
 
 /* The fuse still to burn, from the check date to the spark. */
@@ -571,7 +577,7 @@
   stroke: var(--gmt-surface);
   stroke-width: 1.2;
   stroke-linejoin: round;
-  filter: drop-shadow(0 0 4px color(from var(--gmt-series-1) srgb r g b / 0.9));
+  filter: drop-shadow(0 0 4px color(from var(--gmt-series-1) srgb r g b / 90%));
 }
 
 .gmt-fuse-spark circle {
@@ -620,7 +626,7 @@
 .gmt-fuse-swatch[data-kind="lit"] {
   border: 1px solid var(--gmt-series-1);
   border-radius: var(--gmt-radius-sm);
-  background-color: color(from var(--gmt-series-1) srgb r g b / 0.38);
+  background-color: color(from var(--gmt-series-1) srgb r g b / 38%);
 }
 
 .gmt-fuse-swatch[data-kind="hatch"] {
@@ -628,8 +634,8 @@
   border-radius: var(--gmt-radius-sm);
   background-image: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-series-1) srgb r g b / 0.7) 0,
-    color(from var(--gmt-series-1) srgb r g b / 0.7) 2px,
+    color(from var(--gmt-series-1) srgb r g b / 70%) 0,
+    color(from var(--gmt-series-1) srgb r g b / 70%) 2px,
     transparent 2px,
     transparent 6px
   );
@@ -798,7 +804,7 @@
 
   .gmt-gnss-rollover-checker .gmt-gnss-table tbody :is(th, td) .gmt-clock-line {
     grid-column: 2;
-    text-align: right;
+    text-align: end;
   }
 }
 

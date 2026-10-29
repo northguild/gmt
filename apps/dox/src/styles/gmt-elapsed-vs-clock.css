@@ -53,6 +53,7 @@
   font-size: clamp(1.15rem, 2.4cqi, 1.5rem);
   white-space: nowrap;
   overflow-wrap: normal;
+
   /* The display face has no tabular figures, so a plate reserves the widest
      figure it prints, in em: a minus sign, ten digits and " s" is 11.6em when
      every digit is a 4, the widest. The count is a minus sign and two digits. */
@@ -165,7 +166,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
-  min-width: 0;
+  min-inline-size: 0;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   line-height: 1.2;
@@ -177,7 +178,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-1);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-elapsed-vs-clock .gmt-evc-ruler[data-role="track-elapsed"] {
@@ -195,7 +196,7 @@
 .gmt-elapsed-vs-clock .gmt-evc-dates {
   display: flex;
   align-items: stretch;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-elapsed-vs-clock .gmt-evc-strip {
@@ -213,14 +214,14 @@
   .gmt-evc-ruler[data-series]
   .gmt-evc-strip
   .gmt-evc-cell:not(.gmt-evc-cell--leap) {
-  background: color(from var(--series) srgb r g b / 0.12);
+  background: color(from var(--series) srgb r g b / 12%);
 }
 
 .gmt-elapsed-vs-clock .gmt-evc-run {
   display: flex;
   flex: 1 1 var(--b, 0);
   align-items: stretch;
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-elapsed-vs-clock .gmt-evc-cell {
@@ -231,7 +232,7 @@
   align-items: center;
   justify-content: center;
   gap: 1px;
-  min-width: 0;
+  min-inline-size: 0;
   box-sizing: border-box;
   border-inline-end: 1px solid var(--gmt-border-strong);
   text-align: center;
@@ -260,15 +261,16 @@
    is a second that really passed. */
 .gmt-elapsed-vs-clock .gmt-evc-strip .gmt-evc-cell--leap {
   --series: var(--gmt-series-3);
-  background-color: color(from var(--gmt-series-3) srgb r g b / 0.32);
+
+  background-color: color(from var(--gmt-series-3) srgb r g b / 32%);
   border-inline: 1px solid var(--gmt-series-3);
 }
 
 .gmt-elapsed-vs-clock .gmt-evc-ruler[data-series="1"] .gmt-evc-cell--leap {
   background-image: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-series-3) srgb r g b / 0.6) 0,
-    color(from var(--gmt-series-3) srgb r g b / 0.6) 2px,
+    color(from var(--gmt-series-3) srgb r g b / 60%) 0,
+    color(from var(--gmt-series-3) srgb r g b / 60%) 2px,
     transparent 2px,
     transparent 6px
   );
@@ -447,7 +449,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-elapsed-vs-clock .gmt-elapsed-group + .gmt-elapsed-group {

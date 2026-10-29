@@ -21,9 +21,11 @@
 .gmt-bl-date-stamp {
   /* The chip row above the lanes: the gate's chip sits in it. */
   --gmt-bl-gate-row-h: 1.9rem;
+
   /* A lane holds a date strip, a row of chips and a note below them. */
   --gmt-ledger-lane-h: 4.2rem;
   --gmt-ledger-gate-h: 0rem;
+
   /* Room for "America/New_York" beside its number badge. */
   --gmt-ledger-label-w: 11rem;
 }
@@ -35,7 +37,7 @@
 
 .gmt-bl-plot {
   position: relative;
-  padding-top: var(--gmt-bl-gate-row-h);
+  padding-block-start: var(--gmt-bl-gate-row-h);
 }
 
 .gmt-bl-lanes {
@@ -44,10 +46,11 @@
   gap: var(--gmt-space-1);
   margin: 0;
   padding: 0;
+
   /* Above the gate layer: the gate runs behind each day's opaque date strip and
      chips, so no glyph is drawn over the line. */
   position: relative;
-  z-index: 1;
+  z-index: var(--gmt-z-raised);
 }
 
 .gmt-bl-lane-label {
@@ -68,7 +71,7 @@
   min-inline-size: 1.4rem;
   padding: 0 var(--gmt-space-1);
   border: 1px solid var(--gmt-border-strong);
-  border-bottom: 3px solid var(--series, var(--gmt-border-strong));
+  border-block-end: 3px solid var(--series, var(--gmt-border-strong));
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface);
@@ -82,7 +85,7 @@
 @container gmt-ledger-frame (max-width: 30rem) {
   .gmt-bl-lane-label {
     position: relative;
-    z-index: 2;
+    z-index: var(--gmt-z-over);
     justify-self: start;
     justify-content: flex-start;
     padding: 2px var(--gmt-space-2);
@@ -93,7 +96,7 @@
   }
 
   .gmt-bl-gate-layer {
-    left: 0;
+    inset-inline-start: 0;
   }
 }
 
@@ -106,13 +109,12 @@
 .gmt-bl-gate-layer {
   position: absolute;
   inset: 0 0 0 calc(var(--gmt-ledger-label-w) + var(--gmt-space-2));
-  z-index: 0;
+  z-index: var(--gmt-z-base);
   pointer-events: none;
 }
 
 .gmt-bl-gate-layer > .gmt-cutoff-gate {
-  top: 0;
-  bottom: 0;
+  inset-block: 0;
 }
 
 .gmt-bl-gate-layer > .gmt-cutoff-gate[hidden] {
@@ -121,14 +123,14 @@
 
 .gmt-bl-gate-chip {
   position: absolute;
-  top: 0;
+  inset-block-start: 0;
 }
 
 .gmt-bl-gate-key {
   display: inline-block;
   flex: none;
-  width: 3px;
-  height: 0.9rem;
+  inline-size: 3px;
+  block-size: 0.9rem;
   margin-inline: 0.3rem;
   background: var(--gmt-cyan-bright);
   box-shadow: 0 0 6px var(--gmt-glow);
@@ -141,10 +143,10 @@
 
 .gmt-bl-note {
   position: absolute;
-  bottom: var(--gmt-space-1);
-  left: var(--gmt-space-1);
-  z-index: 2;
-  max-width: calc(100% - 2 * var(--gmt-space-1));
+  inset-block-end: var(--gmt-space-1);
+  inset-inline-start: var(--gmt-space-1);
+  z-index: var(--gmt-z-over);
+  max-inline-size: calc(100% - 2 * var(--gmt-space-1));
   white-space: normal;
 }
 
@@ -162,7 +164,7 @@
 .gmt-bl-lane[data-lane="0"] .gmt-ledger-days .gmt-ledger-day,
 .gmt-bl-lane[data-lane="0"]
   .gmt-ledger-days
-  > div.gmt-ledger-day:nth-of-type(even) {
+  > .gmt-ledger-day:nth-of-type(even) {
   background-color: transparent;
 }
 
@@ -183,7 +185,7 @@
  * --------------------------------------------------------------------------- */
 
 .gmt-bl-slider {
-  margin-top: var(--gmt-space-3);
+  margin-block-start: var(--gmt-space-3);
 }
 
 /* ---------------------------------------------------------------------------

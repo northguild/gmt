@@ -1,0 +1,96 @@
+/* <gmt-copy>: an icon button that copies text, and the live region that says what happened. */
+
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: clamp(0.8125rem, 0.78rem + 0.15vw, 0.9375rem);
+}
+
+.button {
+  appearance: none;
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  inline-size: 2rem;
+  block-size: 2rem;
+  min-inline-size: var(--gmt-target-min);
+  min-block-size: var(--gmt-target-min);
+  padding: 0;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface-2);
+  color: var(--gmt-ice);
+  cursor: pointer;
+  transition:
+    background-color var(--gmt-motion-fast) var(--gmt-easing),
+    border-color var(--gmt-motion-fast) var(--gmt-easing);
+
+  &:hover {
+    border-color: var(--gmt-cyan);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+
+  &[data-state="copied"] {
+    border-color: var(--gmt-selected-fill);
+    background: var(--gmt-selected-fill);
+    color: var(--gmt-selected-ink);
+  }
+
+  &[data-state="failed"] {
+    border-color: var(--gmt-danger);
+  }
+}
+
+.icon {
+  inline-size: 1rem;
+  block-size: 1rem;
+  pointer-events: none;
+}
+
+/* A small caption beside the button; it is also the live region. */
+.status {
+  min-inline-size: 5ch;
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .button {
+    border-color: ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+
+    &[data-state="copied"] {
+      border-color: Highlight;
+      background: Highlight;
+      color: HighlightText;
+    }
+
+    &:focus-visible {
+      outline: 2px solid Highlight;
+    }
+  }
+
+  .status {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .button {
+    border-color: var(--gmt-ice);
+
+    &:focus-visible {
+      outline-width: 3px;
+    }
+  }
+
+  .status {
+    color: var(--gmt-ice);
+  }
+}

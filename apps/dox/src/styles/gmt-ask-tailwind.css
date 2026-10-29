@@ -12,11 +12,16 @@
  * shorthand, which is the documented v4 opt-out.
  */
 
-@layer theme, base, components, utilities;
+/* The same order gmt.css declares, so it holds whichever sheet the browser sees first. */
+@layer starlight, theme, base, components, utilities, vendor, gmt.tokens, gmt.base, gmt.shell, gmt.content, gmt.controls, gmt.tools, gmt.chat, gmt.thirdparty, gmt.a11y;
 
 @import "tailwindcss/theme.css" layer(theme);
+
 /* preflight.css deliberately NOT imported. */
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+/* KaTeX's sheet, imported here instead of from message.tsx so it sits in the `vendor` layer. */
+@import "katex/dist/katex.min.css" layer(vendor);
 
 /*
  * Explicit sources only (`source(none)` above disables Tailwind's automatic
@@ -77,16 +82,12 @@
      deliberate panel — verified 2026-09-09 against the live page. */
   --card: var(--gmt-surface);
   --card-foreground: var(--gmt-ice);
-
   --popover: var(--gmt-surface-2);
   --popover-foreground: var(--gmt-ice);
-
   --primary: var(--gmt-cyan);
   --primary-foreground: var(--gmt-void);
-
   --secondary: var(--gmt-teal);
   --secondary-foreground: var(--gmt-void);
-
   --muted: var(--gmt-surface);
   --muted-foreground: var(--gmt-ice-dim);
 
@@ -102,7 +103,6 @@
      state (visual-design.md) and must not be reused for --destructive. */
   --destructive: var(--gmt-danger);
   --destructive-foreground: var(--gmt-void);
-
   --border: var(--gmt-border);
   --input: var(--gmt-border);
   --ring: var(--gmt-cyan);
@@ -115,7 +115,6 @@
      naked instead of chip-like. */
   --sidebar: var(--gmt-surface-2);
   --sidebar-foreground: var(--gmt-ice);
-
   --radius: var(--gmt-radius-md);
 }
 
@@ -151,6 +150,6 @@
   }
 
   .gmt-ask button {
-    appearance: button;
+    appearance: auto;
   }
 }

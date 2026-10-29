@@ -43,6 +43,7 @@
 /* The family hatch: "outside the tolerance" on a bar, the connection bar on a
    rail. It reads no text and carries no meaning a reader without colour vision
    would miss: the pattern is the signal and the words beside it say the rest. */
+
 /* 45 degrees, 2px on and 6px off, in `--hatch` (a cyan wash by default; a rail
    or a bar sets its own). It tints through `background-color`, never the
    shorthand. */
@@ -55,7 +56,6 @@
     .gmt-bl-date-stamp,
     .gmt-journey-split,
     .gmt-demurrage-clock,
-    .gmt-gnss-week-decoder,
     .gmt-satellite-clock-converter,
     .gmt-gnss-rollover-checker,
     .gmt-leap-second-timeline,
@@ -64,8 +64,8 @@
   .gmt-punct-hatch {
   background-image: repeating-linear-gradient(
     45deg,
-    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 0.55)) 0,
-    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 0.55)) 2px,
+    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 55%)) 0,
+    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 55%)) 2px,
     transparent 2px,
     transparent 8px
   );
@@ -108,10 +108,10 @@
    word plus a pattern, so the bottom edge is dashed. */
 .gmt-punct-tag {
   display: inline-block;
-  margin-right: 2px;
+  margin-inline-end: 2px;
   padding: 0 var(--gmt-space-1);
   border: 1px solid var(--gmt-border-strong);
-  border-bottom-style: dashed;
+  border-block-end-style: dashed;
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface);
@@ -165,8 +165,7 @@
   flex-direction: column;
   gap: 2px;
   box-sizing: border-box;
-  min-width: 0;
-  max-width: 100%;
+  min-inline-size: 0;
   max-inline-size: 100%;
   padding: var(--gmt-space-2) var(--gmt-space-3);
   border: 1px solid var(--gmt-border-strong);
@@ -174,9 +173,9 @@
   corner-shape: bevel;
   background: var(--gmt-surface);
   box-shadow: inset 0 1px 0 var(--gmt-highlight);
+
   /* The site's `[class*="card"]` glass must never reach a plate. */
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .gmt-punct-hero[hidden] {
@@ -186,7 +185,7 @@
 /* A 3px series bar along the bottom edge, inside the bevel. Never a left-only
    accent. */
 .gmt-punct-hero[data-series] {
-  padding-bottom: calc(var(--gmt-space-2) + 3px);
+  padding-block-end: calc(var(--gmt-space-2) + 3px);
   background:
     linear-gradient(
         var(--series, var(--gmt-border-strong)),
@@ -215,14 +214,15 @@
   font-size: clamp(1.6rem, 7cqi, 2.4rem);
   line-height: 1.15;
   color: var(--gmt-ice);
+
   /* A value never wraps and never changes its figures' width. */
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
 .gmt-punct-hero-value .gmt-cutoff-icon {
-  width: 1em;
-  height: 1em;
+  inline-size: 1em;
+  block-size: 1em;
 }
 
 /* The sub line is a fixed number of lines, one `.gmt-punct-hero-line` each; a
@@ -302,6 +302,7 @@
 [data-role="callout-naive"],
 [data-role="rate-naive"] {
   --lines: 1;
+
   min-block-size: calc(var(--lines) * 1lh + 2 * var(--gmt-space-1) + 2px);
 }
 
@@ -311,6 +312,7 @@
 [data-role="callout-best"],
 [data-role="band-label"] {
   --lines: 1;
+
   min-block-size: calc(var(--lines) * 1lh);
 }
 
@@ -381,9 +383,9 @@
    instead of being cut. */
 .gmt-punct-table {
   display: block;
-  max-width: 100%;
+  max-inline-size: 100%;
   overflow-x: auto;
-  width: 100%;
+  inline-size: 100%;
   border-collapse: collapse;
   font-size: var(--gmt-text-sm);
 }
@@ -391,8 +393,8 @@
 .gmt-punct-table th,
 .gmt-punct-table td {
   padding: var(--gmt-space-1) var(--gmt-space-2);
-  border-bottom: 1px solid var(--gmt-border);
-  text-align: left;
+  border-block-end: 1px solid var(--gmt-border);
+  text-align: start;
   vertical-align: baseline;
   white-space: nowrap;
 }
@@ -405,7 +407,7 @@
 }
 
 .gmt-punct-table thead th {
-  border-bottom-width: 2px;
+  border-block-end-width: 2px;
   font-size: var(--gmt-text-xs);
   font-weight: 600;
   color: var(--gmt-ice);
@@ -421,7 +423,7 @@
 :is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
   .gmt-punct-table {
   border: 1px solid var(--gmt-border);
-  border-top-color: var(--gmt-border-strong);
+  border-block-start-color: var(--gmt-border-strong);
   border-collapse: separate;
   border-spacing: 0;
   border-radius: var(--gmt-radius-md);
@@ -440,13 +442,13 @@
 :is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
   .gmt-punct-table
   :is(th, td):first-child {
-  padding-left: var(--gmt-space-3);
+  padding-inline-start: var(--gmt-space-3);
 }
 
 :is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
   .gmt-punct-table
   :is(th, td):last-child {
-  padding-right: var(--gmt-space-3);
+  padding-inline-end: var(--gmt-space-3);
 }
 
 :is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
@@ -454,7 +456,7 @@
   thead
   th {
   background: var(--gmt-surface);
-  border-bottom-color: var(--gmt-border-strong);
+  border-block-end-color: var(--gmt-border-strong);
 }
 
 :is(.gmt-punctuality-board, .gmt-eta-drift, .gmt-departure-board)
@@ -462,7 +464,7 @@
   tbody
   tr:last-child
   :is(th, td) {
-  border-bottom: 0;
+  border-block-end: 0;
 }
 
 /* Values the reader is reading never animate. */

@@ -14,6 +14,7 @@
 
 .gmt-cron-zone {
   container: gmt-cron / inline-size;
+
   --gmt-cron-gutter: 3rem;
 }
 
@@ -77,6 +78,7 @@
   font-size: var(--gmt-text-sm);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
+
   /* A field's text can run to every value; the row holds one line of it. */
   min-block-size: 1.3em;
 }
@@ -151,8 +153,7 @@
 
 .gmt-cron-zone .gmt-cron-plot {
   position: relative;
-  padding-inline-start: var(--gmt-cron-gutter);
-  padding-inline-end: var(--gmt-space-2);
+  padding-inline: var(--gmt-cron-gutter) var(--gmt-space-2);
   min-inline-size: 0;
 }
 
@@ -169,6 +170,7 @@
 
 .gmt-cron-zone .gmt-cron-axis-row {
   position: relative;
+
   /* A tick is its 9px mark gap plus a 14px line, so the next row's marks start
      below this row's digits instead of inside them. */
   block-size: 1.5rem;
@@ -178,7 +180,7 @@
   position: absolute;
   inset-inline-start: calc(-1 * var(--gmt-cron-gutter));
   inline-size: var(--gmt-cron-gutter);
-  top: 0;
+  inset-block-start: 0;
   font-size: var(--gmt-text-xs);
   line-height: 1.2;
   color: var(--gmt-ice-dim);
@@ -261,7 +263,7 @@
   position: relative;
   block-size: 3rem;
   border-block-end: 1px solid var(--gmt-hairline);
-  background: color(from var(--gmt-void) srgb r g b / 0.25);
+  background: color(from var(--gmt-void) srgb r g b / 25%);
 }
 
 .gmt-cron-zone .gmt-cron-marks {
@@ -303,8 +305,8 @@
   border-inline: 2px dashed var(--gmt-dst-gold-ink);
   background: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.6) 0,
-    color(from var(--gmt-dst-gold) srgb r g b / 0.6) 2px,
+    color(from var(--gmt-dst-gold) srgb r g b / 60%) 0,
+    color(from var(--gmt-dst-gold) srgb r g b / 60%) 2px,
     transparent 2px,
     transparent 5px
   );
@@ -323,13 +325,13 @@
   padding: 0;
   border: 0;
   overflow: hidden;
-  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
 .gmt-cron-zone .gmt-cron-count {
   position: absolute;
-  top: 0;
+  inset-block-start: 0;
   inset-inline-start: 8px;
   padding: 0 var(--gmt-space-1);
   border: 1px solid var(--gmt-border-strong);
@@ -346,8 +348,7 @@
 
 /* A mark near the right end puts its label on the stem's left, inside the track. */
 .gmt-cron-zone .gmt-cron-mark[data-end] .gmt-cron-count {
-  inset-inline-start: auto;
-  inset-inline-end: 8px;
+  inset-inline: auto 8px;
 }
 
 .gmt-cron-zone .gmt-cron-sentence {
@@ -413,12 +414,12 @@
 /* The site's `th:first-child, td:first-child` rule (gmt-content.css) sets
    `width: 1%; white-space: nowrap`; the doubled class out-ranks it. */
 .gmt-cron-zone .gmt-cron-table.gmt-cron-table :is(th, td):first-child {
-  width: 32%;
+  inline-size: 32%;
   white-space: normal;
 }
 
 .gmt-cron-zone .gmt-cron-table th:nth-child(2) {
-  width: 32%;
+  inline-size: 32%;
 }
 
 .gmt-cron-zone .gmt-cron-table td {
@@ -444,8 +445,8 @@
 .gmt-cron-zone .gmt-cron-table tr[data-only] > td {
   background: repeating-linear-gradient(
     45deg,
-    color(from var(--gmt-ice-dim) srgb r g b / 0.16) 0,
-    color(from var(--gmt-ice-dim) srgb r g b / 0.16) 2px,
+    color(from var(--gmt-ice-dim) srgb r g b / 16%) 0,
+    color(from var(--gmt-ice-dim) srgb r g b / 16%) 2px,
     transparent 2px,
     transparent 7px
   );

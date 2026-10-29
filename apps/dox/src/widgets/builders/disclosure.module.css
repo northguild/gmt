@@ -1,0 +1,89 @@
+/* disclosure: a button and the panel it shows. The panel floats under the button, so opening it
+   moves nothing around it. */
+
+.root {
+  position: relative;
+  display: inline-block;
+}
+
+.button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gmt-space-2);
+  min-inline-size: var(--gmt-target-min);
+  min-block-size: var(--gmt-target-min);
+  padding-inline: var(--gmt-space-2);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-2);
+  color: var(--gmt-ice);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--gmt-cyan);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+
+  &[aria-expanded="true"] {
+    border-color: var(--gmt-cyan);
+  }
+}
+
+.icon {
+  display: inline-flex;
+}
+
+.panel {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-end: 0;
+  z-index: var(--gmt-z-menu);
+  inline-size: max-content;
+  max-inline-size: min(22rem, 100vw - 2rem);
+  margin-block-start: var(--gmt-space-1);
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .button,
+  .panel {
+    border-color: ButtonText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .button:focus-visible {
+    outline-color: Highlight;
+  }
+
+  .button[aria-expanded="true"] {
+    border-color: Highlight;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .button,
+  .panel {
+    border-color: var(--gmt-ice);
+  }
+
+  .button:focus-visible {
+    outline-width: 3px;
+  }
+}

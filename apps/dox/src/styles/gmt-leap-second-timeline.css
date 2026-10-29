@@ -30,10 +30,11 @@
    rows hung under the plot's own column. */
 .gmt-leap-second-timeline .gmt-leap-chart {
   --leap-y-w: 2.6rem;
+
   display: grid;
   grid-template-columns: var(--leap-y-w) minmax(0, 1fr);
   column-gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-leap-second-timeline .gmt-leap-yaxis {
@@ -72,7 +73,7 @@
   grid-column: 2;
   grid-row: 1;
   box-sizing: border-box;
-  min-width: 0;
+  min-inline-size: 0;
   block-size: var(--leap-plot-h);
   border: 1px solid var(--gmt-border-strong);
   border-radius: var(--gmt-radius-sm);
@@ -103,7 +104,7 @@
   inset-inline: 0;
   inset-block-end: var(--level, 0%);
   block-size: 0;
-  border-top: 1px dashed color(from var(--gmt-ice-dim) srgb r g b / 0.4);
+  border-block-start: 1px dashed color(from var(--gmt-ice-dim) srgb r g b / 40%);
 }
 
 .gmt-leap-second-timeline .gmt-leap-line {
@@ -115,7 +116,7 @@
 }
 
 .gmt-leap-second-timeline .gmt-leap-area {
-  fill: color(from var(--gmt-ice) srgb r g b / 0.1);
+  fill: color(from var(--gmt-ice) srgb r g b / 10%);
   stroke: none;
 }
 
@@ -161,7 +162,7 @@
   block-size: 9px;
   border-width: 2px;
   box-shadow: 0 0 0 3px
-    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.3);
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 30%);
 }
 
 /* Continuous UTC: no more insertions. A hatched run with a full dashed
@@ -169,12 +170,14 @@
 .gmt-leap-second-timeline .gmt-leap-continuous {
   box-sizing: border-box;
   border: 1px dashed var(--gmt-ice-dim);
-  --hatch: color(from var(--gmt-ice-dim) srgb r g b / 0.35);
+
+  --hatch: color(from var(--gmt-ice-dim) srgb r g b / 35%);
 }
 
 /* The counted span: a hatched, tinted window behind the line. */
 .gmt-leap-second-timeline .gmt-leap-band {
-  --hatch: color(from var(--series) srgb r g b / 0.28);
+  --hatch: color(from var(--series) srgb r g b / 28%);
+
   box-sizing: border-box;
   border-block-end: 2px solid var(--series);
 }
@@ -203,7 +206,7 @@
   inline-size: var(--at, 0%);
   inset-block-end: var(--level, 0%);
   block-size: 0;
-  border-top: 2px dashed var(--series, var(--gmt-ice));
+  border-block-start: 2px dashed var(--series, var(--gmt-ice));
 }
 
 .gmt-leap-second-timeline .gmt-leap-dot {
@@ -218,7 +221,7 @@
   border-radius: 50%;
   background: var(--series, var(--gmt-ice));
   box-shadow: 0 0 0 3px
-    color(from var(--series, var(--gmt-cyan)) srgb r g b / 0.35);
+    color(from var(--series, var(--gmt-cyan)) srgb r g b / 35%);
 }
 
 /* Readouts in the strip above the field: the date row first, the count under. */
@@ -258,7 +261,7 @@
 
 /* `fit` places a readout inside the plot and sets `--px`. */
 .gmt-leap-second-timeline .gmt-leap-tag[data-side="px"] {
-  inset-inline-start: var(--px, 0px);
+  inset-inline-start: var(--px, 0);
   translate: 0 0;
 }
 
@@ -313,8 +316,7 @@
 }
 
 .gmt-leap-second-timeline .gmt-leap-ghost[data-side="end"] b {
-  inset-inline-start: auto;
-  inset-inline-end: 6px;
+  inset-inline: auto 6px;
 }
 
 /* NO SIGNAL: amber, bracketed, centred in the plot on an opaque plate. */
@@ -344,7 +346,7 @@
 
 .gmt-leap-second-timeline .gmt-leap-axis {
   position: relative;
-  min-width: 0;
+  min-inline-size: 0;
   block-size: 1.4rem;
   margin-block-start: var(--gmt-space-1);
   font-family: var(--gmt-font-mono);
@@ -433,7 +435,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gmt-space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .gmt-leap-second-timeline .gmt-leap-group + .gmt-leap-group {
@@ -481,7 +483,7 @@
 
 .gmt-leap-second-timeline .gmt-clock-line {
   display: block;
-  min-width: 0;
+  min-inline-size: 0;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
@@ -511,6 +513,6 @@
 
   .gmt-leap-second-timeline .gmt-gnss-table tbody :is(th, td) .gmt-clock-line {
     grid-column: 2;
-    text-align: right;
+    text-align: end;
   }
 }
