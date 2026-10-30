@@ -1,0 +1,244 @@
+/* The value taken apart. The picture is the pane's main content, so its boxes are drawn larger
+   than the table's text: a 0.9375rem face, and 1.375rem for a single value. `ch` in a field's
+   width is this face's. */
+
+.slot {
+  display: grid;
+  align-content: center;
+  min-inline-size: 0;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.9375rem;
+
+  &[data-scale="lg"] {
+    font-size: 1.375rem;
+
+    .caption,
+    .mask,
+    .bracketLabel {
+      font-size: 0.9375rem;
+    }
+  }
+}
+
+.empty {
+  margin: 0;
+  align-self: center;
+  margin-block: auto;
+  max-inline-size: 36ch;
+  text-align: center;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+.parts,
+.taken {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  min-inline-size: 0;
+}
+
+.parts {
+  gap: var(--gmt-space-2) 4px;
+}
+
+.taken {
+  gap: var(--gmt-space-3) var(--gmt-space-4);
+}
+
+.part {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+
+  /* A caption is centred under its box and may be wider than it: it never widens the part,
+     so the service characters stay beside their boxes. */
+  > .caption {
+    inline-size: 0;
+    min-inline-size: 100%;
+    text-align: center;
+    overflow: visible;
+  }
+
+  /* The segment tag and the function qualifier are shown as sent: a dashed edge says they are
+     not read. */
+  &[data-kind="tag"] .box,
+  &[data-kind="plain"] .box {
+    border-style: dashed;
+  }
+
+  &[data-kind="tag"] .box {
+    color: var(--gmt-ice-dim);
+  }
+}
+
+.box {
+  box-sizing: border-box;
+  display: block;
+  padding: 4px 8px;
+  border: 1px solid var(--gmt-border-strong);
+  border-block-end-width: 3px;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-size: inherit;
+  line-height: 1.4;
+  text-align: center;
+  white-space: nowrap;
+
+  /* A code that carries no offset says so in words, in a box with a dashed edge. */
+  &[data-none="true"] {
+    border-style: dashed;
+    background: none;
+    color: var(--gmt-ice-dim);
+    font-style: italic;
+  }
+}
+
+.punct {
+  padding: 4px 6px;
+  color: var(--gmt-ice);
+  line-height: 1.4;
+  white-space: pre;
+}
+
+.caption,
+.mask,
+.bracketLabel,
+.halfLabel {
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  line-height: 1.3;
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.half {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sep {
+  align-self: flex-start;
+  padding-block: calc(0.75rem * 1.3 + 2px + 4px);
+  color: var(--gmt-ice);
+}
+
+.groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+}
+
+.group,
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fields {
+  display: flex;
+  gap: 3px;
+}
+
+.field {
+  box-sizing: border-box;
+  inline-size: calc(var(--n) * 1ch + 18px);
+  align-items: stretch;
+  text-align: center;
+
+  .box {
+    inline-size: 100%;
+    border-block-end-color: var(--mark);
+  }
+}
+
+.group[data-group="date"],
+.field[data-group="date"] {
+  --mark: var(--gmt-series-1);
+}
+
+.group[data-group="time"],
+.field[data-group="time"] {
+  --mark: var(--gmt-series-2);
+}
+
+.group[data-group="offset"],
+.field[data-group="offset"] {
+  --mark: var(--gmt-series-3);
+}
+
+.group[data-group="neutral"],
+.field[data-group="neutral"],
+.group[data-group="none"],
+.field[data-group="none"] {
+  --mark: var(--gmt-border-strong);
+}
+
+/* The bracket: the sides and the bottom, drawn by a pseudo-element, in the group's mark; the
+   label under it is text. */
+.bracket {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+
+  &::before {
+    content: "";
+    align-self: stretch;
+    block-size: 7px;
+    border: 2px solid var(--mark);
+    border-block-start-width: 0;
+    border-radius: 0 0 var(--gmt-radius-sm) var(--gmt-radius-sm);
+    box-sizing: border-box;
+  }
+}
+
+@media (forced-colors: active) {
+  .box {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .caption,
+  .mask,
+  .bracketLabel,
+  .halfLabel,
+  .punct,
+  .sep,
+  .empty {
+    color: CanvasText;
+  }
+
+  .group,
+  .field {
+    --mark: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .caption,
+  .mask,
+  .bracketLabel,
+  .halfLabel,
+  .empty {
+    color: var(--gmt-ice);
+  }
+
+  .box {
+    border-color: var(--gmt-ice);
+  }
+}

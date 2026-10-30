@@ -27,33 +27,39 @@
  *
  * After the reset and after every step it records `getBoundingClientRect()` of:
  *
- *   - every `.gmt-punct-hero`;
- *   - the chart frame (`.gmt-punct-frame`, or the tool's own `frame`);
+ *   - every hero plate (`data-gate="hero"`);
+ *   - the chart frame (`data-gate="frame"`);
  *   - the dragged control;
  *   - every element in the control's section that comes before the control in
- *     the document, except the insides of the drawn charts (`.gmt-dep-stage`,
- *     `.gmt-eta-plot`, `.gmt-punct-rows`, `.gmt-punct-lane`, or the tool's own
- *     `drawn` list), whose marks move with the value by design (their
- *     containers are still measured).
+ *     the document, except the insides of the drawn parts (`data-gate="drawn"`
+ *     and the tool's other drawn parts), whose marks move with the value by
+ *     design (their containers are still measured).
  *
- * A `TOOLS` entry may carry optional fields; the older entries keep today's
- * behaviour by default:
+ * Controls are found by ARIA role and accessible name inside the widget root
+ * (`lib/locate.mjs`), never by a style class or a role attribute. The structural parts
+ * that have no role or name are `data-gate` hooks, listed in `context/dox/built.md`,
+ * "Gate hooks".
  *
- *   frame         the chart frame to record (default `.gmt-punct-frame`; the
- *                 ledger tools use `.gmt-ledger-frame`);
- *   drawn         the containers whose insides move by design (default: the
- *                 list above);
+ * A `TOOLS` entry may carry optional fields:
+ *
+ *   presetName    the accessible name of the preset select (default "Preset");
+ *   drawn         the parts whose insides move by design (default `["drawn"]`).
+ *                 `"hold"` stands for the first child of a hold (the kit's hold
+ *                 writes the live wrapper first), `"grid"` for a month grid;
+ *   track         the part a pointer drag runs along (a `data-gate` value), or
+ *                 null to drag along the control itself;
  *   scope         `"above"` (default) records what comes before the control in
  *                 its section; `"widget"` records every element in the widget
  *                 root, in every section, before and after the control, and the
  *                 control's ancestors too. The Timetable Reader needs it: a
  *                 handle in section 1 must not move the table or the output in
  *                 sections 2 and 3;
- *   riders        a selector for elements that ride the handle by design (the
- *                 range field's value chip follows the thumb). Their left moves;
- *                 their top, width and height are still compared, like a handle's;
- *   textBoxes     a selector for inline text boxes whose width is the width of
- *                 their text (the call frame's `<code>` and its coloured spans).
+ *   riders        true: the range field's value chip follows the thumb. Its left
+ *                 moves; its top, width and height are still compared, like a
+ *                 handle's;
+ *   textBoxes     the parts whose inline text boxes are as wide as their text:
+ *                 `"codeframe"` (the call frame's `<code>` and its coloured
+ *                 spans) and `"instant"` (an instant's unbreakable pieces).
  *                 The frame and its `<pre>` are still measured, so a line added
  *                 or a frame resized is a move; only a span's own width is not;
  *   pointerSteps  steps in each pointer sweep (default 20). 48 steps are 30
@@ -67,7 +73,7 @@
  *                 reader steps with the arrow keys, not a handle. The script
  *                 presses ArrowUp that many times, then ArrowDown back, and
  *                 compares after each press. There is no pointer pass;
- *   value         per control, the `data-role` of the field the handle edits.
+ *   value         per control, the role and name of the field the handle edits.
  *                 A ledger handle's `aria-valuenow` is its place on a canvas that
  *                 is refitted after each key, so the same number can mean
  *                 different times; the value it edits is its typed field, and
@@ -80,6 +86,8 @@
  *
  * A pass must also have checked something. The script fails when:
  *   - the page does not answer HTTP 200 or the widget root is missing;
+ *   - a drawn part or text box the row names matches nothing in the widget
+ *     (checked on the first preset), since a stale name exempts nothing;
  *   - a required control is missing or hidden (`handle-early` and
  *     `handle-compare` are optional: a preset may not show them);
  *   - a keyboard sweep or a pointer drag leaves the control's value where it
@@ -128,6 +136,8 @@ import {
 } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+import { identityScript } from "./lib/element-identity.mjs";
+import { control, controlLabel, gate, resolveMisses } from "./lib/locate.mjs";
 
 const GATE = "readout-still";
 const ENGINES = { chromium, webkit, firefox };
@@ -141,6 +151,8 @@ const BROWSERS = opt("browsers", "chromium,webkit").split(",");
 const WIDTHS = opt("widths", "1440,390").split(",").map(Number);
 const ONLY = opt("only", "").split(",").filter(Boolean);
 const KEYBOARD_ONLY = args.includes("--keyboard-only");
+/** `--resolve-only` loads each page once and checks that every locator finds what it names. */
+const RESOLVE_ONLY = args.includes("--resolve-only");
 /** `--all` prints every problem, one line per element, instead of the first six. */
 const ALL = args.includes("--all");
 if (!BROWSERS.every((b) => b in ENGINES)) {
@@ -155,88 +167,74 @@ if (!WIDTHS.length || WIDTHS.some((w) => !Number.isFinite(w) || w <= 0)) {
 }
 const FORCED_ROOTS = [360, 300];
 const POINTER_STEPS = 20;
-const DEFAULT_FRAME = ".gmt-punct-frame";
-const DEFAULT_DRAWN =
-  ".gmt-dep-stage, .gmt-eta-plot, .gmt-punct-rows, .gmt-punct-lane";
 const MAX_KEYS = 400;
 
-/** What may move inside a ledger tool: the insides of its tracks and the live
- *  wrapper of a hold, which is the hold's first child (`holdHtml` writes it
- *  first). */
-const LEDGER_DRAWN =
-  '[data-role="track"], [data-role="track-dwell"], [data-role="track-compare"], .gmt-ledger-hold > :first-child';
-
-/** What may move inside a GNSS or leap-second tool: the insides of its lanes,
- *  bars, strip, timeline and rulers, and a hold's live wrapper (`holdHtml`
- *  writes it first). */
-const GNSS_DRAWN =
-  '[data-role="lanes"], [data-role="bars"], [data-role="strip"], [data-role="plot"], [data-role="rulers"], .gmt-ledger-hold > :first-child';
-
-/** The range field's value chip rides the thumb by design. */
-const RANGE_CHIP = ".gmt-range-chip";
-
-/** The call frame's code and its coloured spans: boxes as wide as their text. */
-const CODE_TEXT = ".gmt-codeframe code, .gmt-codeframe code *";
-
-/** An instant's unbreakable date and time pieces, which are as wide as their
- *  digits inside a plate that holds its own width. */
-const INSTANT_TEXT = CODE_TEXT + ", .gmt-gnss-nb, .gmt-punct-hero-value > span";
-
-/** What may move inside a holiday tool: the insides of a month grid (its cells
- *  carry the marks of the year) and a hold's live wrapper. The grid's own box
- *  is still measured. */
-const HOLIDAY_DRAWN = ".gmt-holiday-grid, .gmt-ledger-hold > :first-child";
-
-/** What moves inside the cron lanes by design: the marks drawn at their
- *  instants, the axis labels, and a hold's live wrapper. The lanes' own boxes
- *  are still measured. */
-const CRON_DRAWN =
-  ".gmt-cron-marks, .gmt-cron-mark, .gmt-cron-axis, .gmt-ledger-hold > :first-child";
+/** The selector of each drawn part a tool names. `hold` is the live wrapper a hold writes
+ *  first; the others are marked where the mount draws them. */
+const DRAWN_PART = {
+  drawn: gate("drawn"),
+  grid: gate("grid"),
+  hold: `${gate("hold")} > :first-child`,
+};
+/** The selector of each kind of text box a tool names. */
+const TEXT_PART = {
+  codeframe: `${gate("codeframe")} code, ${gate("codeframe")} code *`,
+  instant: gate("instant"),
+};
+const PRESET = { role: "combobox", name: "Preset" };
 
 const TOOLS = [
   {
     slug: "departure-board",
-    root: ".gmt-departure-board",
+    root: '[data-widget="departure-board"]',
     presets: [
       "shuttle-headway",
       "ferry-list",
       "arrival-at-to",
       "fall-back-hourly",
     ],
-    controls: [{ sel: '[data-role="handle-after"]' }],
-    track: '[data-role="rail-stage"]',
+    controls: [
+      {
+        role: "slider",
+        name: "Arrival",
+        value: { role: "textbox", name: "Arrival" },
+      },
+    ],
+    track: "track",
   },
   {
     slug: "punctuality-board",
-    root: ".gmt-punctuality-board",
+    root: '[data-widget="punctuality-board"]',
     presets: ["fifteen-minute", "sixty-and-120", "day-based", "fall-back"],
     // The early and second-late handles appear only in presets that use them;
     // where a preset is known to show one (`requiredIn`) it is required.
     controls: [
-      { sel: '[data-role="handle-late"]' },
+      { role: "slider", name: "Late tolerance" },
       {
-        sel: '[data-role="handle-early"]',
+        role: "slider",
+        name: "Early tolerance",
         optional: true,
         requiredIn: ["day-based"],
       },
       {
-        sel: '[data-role="handle-compare"]',
+        role: "slider",
+        name: "Second late tolerance",
         optional: true,
         requiredIn: ["sixty-and-120"],
       },
     ],
-    track: '[data-role="tolerance-track"]',
+    track: "track",
   },
   {
     slug: "eta-drift",
-    root: ".gmt-eta-drift",
+    root: '[data-widget="eta-drift"]',
     presets: ["vessel-slide", "est-after-act", "req-beats-est", "one-estimate"],
-    controls: [{ sel: '[data-role="tolerance-slider"]' }],
+    controls: [{ role: "slider", name: "Drag the tolerance" }],
     track: null,
   },
   {
     slug: "timetable-reader",
-    root: ".gmt-timetable",
+    root: '[data-widget="timetable-reader"]',
     presets: [
       "fall-back",
       "offset-picks",
@@ -245,31 +243,31 @@ const TOOLS = [
       "berlin-fall-back",
     ],
     controls: [
-      { sel: '[data-role="handle-1"]' },
+      { role: "slider", name: "Row 1 printed time" },
       {
-        sel: '[data-role="handle-2"]',
+        role: "slider",
+        name: "Row 2 printed time",
         optional: true,
         requiredIn: ["fall-back", "offset-picks", "spring-forward"],
       },
       {
-        sel: '[data-role="handle-3"]',
+        role: "slider",
+        name: "Row 3 printed time",
         optional: true,
         requiredIn: ["fall-back", "spring-forward"],
       },
-      { sel: '[data-role="handle-4"]', optional: true },
+      { role: "slider", name: "Row 4 printed time", optional: true },
     ],
-    track: '[data-role="day-track"]',
+    track: "track",
     // The two-column band starts at a 1220px section (a 1902px viewport): 1920
     // is its lower edge, 2000 the middle.
     extraWidths: [1920, 2000],
-    frame: '[data-role="two-clocks"]',
     scope: "widget",
-    drawn: '[data-role="day-track"], [data-role="plot"], .gmt-timetable-live',
     pointerSteps: 48,
   },
   {
     slug: "free-time-ledger",
-    root: ".gmt-freetime",
+    root: '[data-widget="free-time-ledger"]',
     presets: [
       "friday-three-days",
       "read-as-next-day",
@@ -280,17 +278,24 @@ const TOOLS = [
       "no-free-time",
     ],
     controls: [
-      { sel: '[data-role="handle-start"]', value: "clock-start" },
-      { sel: '[data-role="handle-end"]', value: "clock-end" },
+      {
+        role: "slider",
+        name: "Clock start",
+        value: { role: "textbox", name: "Clock start" },
+      },
+      {
+        role: "slider",
+        name: "Clock end",
+        value: { role: "textbox", name: "Clock end" },
+      },
     ],
-    track: '[data-role="track"]',
-    frame: ".gmt-ledger-frame",
-    drawn: LEDGER_DRAWN,
+    track: "track",
+    drawn: ["drawn"],
     maxKeys: 60,
   },
   {
     slug: "dwell-ledger",
-    root: ".gmt-dwell",
+    root: '[data-widget="dwell-ledger"]',
     // "no-zone" returns null, so it is left out; every other preset returns a
     // value.
     presets: [
@@ -300,17 +305,24 @@ const TOOLS = [
       "london-vs-amsterdam",
     ],
     controls: [
-      { sel: '[data-role="handle-entry"]', value: "entry" },
-      { sel: '[data-role="handle-exit"]', value: "exit" },
+      {
+        role: "slider",
+        name: "Entry",
+        value: { role: "textbox", name: "Entry" },
+      },
+      {
+        role: "slider",
+        name: "Exit",
+        value: { role: "textbox", name: "Exit" },
+      },
     ],
-    track: '[data-role="track-dwell"]',
-    frame: ".gmt-ledger-frame",
-    drawn: LEDGER_DRAWN,
+    track: "track",
+    drawn: ["drawn"],
     maxKeys: 60,
   },
   {
     slug: "bl-date-stamp",
-    root: ".gmt-bl-date-stamp",
+    root: '[data-widget="bl-date-stamp"]',
     // "no-zone" returns no date, so it is left out; every other preset returns
     // a value.
     presets: [
@@ -320,85 +332,80 @@ const TOOLS = [
       "apia-deleted-day",
       "fixed-offset",
     ],
-    controls: [{ sel: '[data-role="moment-slider"]' }],
+    controls: [{ role: "slider", name: "Move the moment" }],
     track: null,
-    frame: ".gmt-ledger-frame",
     // The lanes' day columns and the gate move with the moment by design; the
     // plot is measured, and so is every plate above it.
-    drawn: '[data-role="plot"]',
   },
-  /* The GNSS and leap-second tools (MAR-16). Their frame is `.gmt-gnss-frame`;
+  /* The GNSS and leap-second tools (MAR-16). Their frame is the `frame` part;
      what moves with the value by design is what they draw: the lanes, the
      bars, the strip, the timeline and the rulers, and a hold's live wrapper.
      The ring's laps, hand and hub are drawn (they sit in `lanes`); the plates,
      the legend, the tables and the call frame are measured. */
   {
     slug: "gnss-week-decoder",
-    root: ".gmt-gnss-week-decoder",
+    root: '[data-widget="gnss-week-decoder"]',
     presets: ["galileo-2019", "lnav-2024", "same-reading-two-dates"],
     controls: [
-      { sel: '[data-role="week-slider"]', optional: true },
-      { sel: '[data-role="tow-slider"]', optional: true },
+      { role: "slider", name: "Slide the week", optional: true },
+      { role: "slider", name: "Slide the time of week", optional: true },
     ],
     track: null,
-    frame: ".gmt-gnss-frame",
     scope: "widget",
-    drawn: GNSS_DRAWN,
-    riders: RANGE_CHIP,
-    textBoxes: INSTANT_TEXT,
+    drawn: ["drawn"],
+    riders: true,
+    textBoxes: ["codeframe"],
   },
   {
     slug: "satellite-clock-converter",
-    root: ".gmt-satellite-clock-converter",
+    root: '[data-widget="satellite-clock-converter"]',
     presets: ["utc-2024", "galileo-first-instant", "beidou-reading"],
-    controls: [{ sel: '[data-role="moment-slider"]' }],
+    controls: [{ role: "slider", name: "Step through the leap seconds" }],
     track: null,
-    frame: ".gmt-gnss-frame",
     scope: "widget",
-    drawn: GNSS_DRAWN,
-    riders: RANGE_CHIP,
-    textBoxes: INSTANT_TEXT,
+    drawn: ["drawn"],
+    riders: true,
+    textBoxes: ["codeframe"],
   },
   {
     slug: "gnss-rollover-checker",
-    root: ".gmt-gnss-rollover-checker",
+    root: '[data-widget="gnss-rollover-checker"]',
     // The presets that check on a stated date: the slider is live only there.
     presets: ["navic-built-2020", "navic-fixed-era", "galileo-built-2024"],
-    controls: [{ sel: '[data-role="date-slider"]' }],
+    controls: [
+      { role: "slider", name: "Slide the date through the firmware's window" },
+    ],
     track: null,
-    frame: ".gmt-gnss-frame",
     scope: "widget",
-    drawn: GNSS_DRAWN,
-    riders: RANGE_CHIP,
-    textBoxes: INSTANT_TEXT,
+    drawn: ["drawn"],
+    riders: true,
+    textBoxes: ["codeframe"],
   },
   {
     slug: "leap-second-timeline",
-    root: ".gmt-leap-second-timeline",
+    root: '[data-widget="leap-second-timeline"]',
     presets: ["from-2000", "last-insertion", "after-the-table"],
-    controls: [{ sel: '[data-role="date-slider"]' }],
+    controls: [{ role: "slider", name: "Move the date" }],
     track: null,
-    frame: ".gmt-gnss-frame",
     scope: "widget",
-    drawn: GNSS_DRAWN,
-    riders: RANGE_CHIP,
-    textBoxes: CODE_TEXT,
+    drawn: [],
+    riders: true,
+    textBoxes: ["codeframe"],
   },
   {
     slug: "elapsed-vs-clock-difference",
-    root: ".gmt-elapsed-vs-clock",
+    root: '[data-widget="elapsed-vs-clock"]',
     presets: ["across-2016", "twenty-four-years", "no-insertions"],
-    controls: [{ sel: '[data-role="end-slider"]' }],
+    controls: [{ role: "slider", name: "Move the end" }],
     track: null,
-    frame: ".gmt-gnss-frame",
     scope: "widget",
-    drawn: GNSS_DRAWN + ", .gmt-elapsed-list",
-    riders: RANGE_CHIP,
-    textBoxes: CODE_TEXT,
+    drawn: ["drawn"],
+    riders: true,
+    textBoxes: ["codeframe"],
   },
   {
     slug: "holiday-rule-builder",
-    root: ".gmt-holiday-rule-builder",
+    root: '[data-widget="holiday-rule-builder"]',
     presets: [
       "chain",
       "closing",
@@ -410,56 +417,53 @@ const TOOLS = [
     // The year field, stepped 20 times each way. The twelve month grids hold
     // six week rows, so no year changes a box; the calendar output and the
     // year sentence hold the height of their longest text.
-    controls: [{ sel: '[data-role="year"]', step: 20 }],
+    controls: [{ role: "spinbutton", name: "Year", step: 20 }],
     track: null,
-    frame: ".gmt-holiday-frame",
     scope: "widget",
-    drawn: HOLIDAY_DRAWN + ", .gmt-hrb-rules",
-    textBoxes: CODE_TEXT,
+    drawn: ["drawn", "grid", "hold"],
+    textBoxes: ["codeframe"],
   },
   {
     slug: "observance-comparator",
-    root: ".gmt-observance-comparator",
+    root: '[data-widget="observance-comparator"]',
     presets: ["adjacent"],
     // The last year, stepped ten times each way: the plates and the table
     // header hold still. The table body reserves its rows, so its box holds
     // too; only the cells' text moves.
-    controls: [{ sel: '[data-role="to"]', step: 10 }],
+    controls: [{ role: "spinbutton", name: "Last year", step: 10 }],
     track: null,
-    frame: ".gmt-holiday-frame",
     scope: "widget",
-    drawn: HOLIDAY_DRAWN + ", .gmt-obs-table tbody, .gmt-obs-strip",
-    textBoxes: CODE_TEXT,
+    drawn: ["hold"],
+    textBoxes: ["codeframe"],
   },
   {
     slug: "moving-feasts",
-    root: ".gmt-moving-feasts",
+    root: '[data-widget="moving-feasts"]',
     presets: ["third-wednesday", "last-sunday-march", "fifth-friday"],
-    controls: [{ sel: '[data-role="year-slider"]' }],
+    controls: [{ role: "slider", name: "Year slider" }],
     track: null,
-    frame: ".gmt-holiday-frame",
     scope: "widget",
-    drawn: HOLIDAY_DRAWN,
-    riders: RANGE_CHIP,
-    textBoxes: CODE_TEXT,
+    drawn: ["grid", "hold"],
+    riders: true,
+    textBoxes: ["codeframe"],
   },
   {
     slug: "cron-in-a-zone",
-    root: ".gmt-cron-zone",
+    root: '[data-widget="cron-in-a-zone"]',
     presets: ["london-spring", "sydney-every-five"],
     // The year field, stepped three times each way. Every row, plate and tick
     // is laid out in every state and hidden with `data-off`, so no year changes
     // a box; the marks and the axis labels move inside their fixed lanes.
-    controls: [{ sel: '[data-role="year"]', step: 3 }],
+    presetName: "Try",
+    controls: [{ role: "spinbutton", name: "Year", step: 3 }],
     track: null,
-    frame: ".gmt-cron-frame",
     scope: "widget",
-    drawn: CRON_DRAWN,
-    textBoxes: CODE_TEXT,
+    drawn: [],
+    textBoxes: ["codeframe"],
   },
   {
     slug: "leap-day-birthday",
-    root: ".gmt-leap-day",
+    root: '[data-widget="leap-day-birthday"]',
     presets: [
       "leap-day-birth",
       "century",
@@ -472,15 +476,14 @@ const TOOLS = [
     // slot that comes and goes is hidden with `data-off`, so no year changes a
     // box; only the range chip rides its track.
     controls: [
-      { sel: '[data-role="year-slider"]' },
-      { sel: '[data-role="year"]', step: 3 },
+      { role: "slider", name: "Year slider" },
+      { role: "spinbutton", name: "Year", step: 3 },
     ],
     track: null,
-    frame: ".gmt-holiday-frame",
     scope: "widget",
-    drawn: ".gmt-ledger-hold > :first-child",
-    riders: RANGE_CHIP,
-    textBoxes: CODE_TEXT,
+    drawn: ["hold"],
+    riders: true,
+    textBoxes: ["codeframe"],
   },
 ];
 
@@ -496,12 +499,14 @@ const SITE_PAGES = TOOLS.map((t) => `/tools/${t.slug}/`);
 const PAGES_ARG = applyPageContract({ gate: GATE, pages: SITE_PAGES });
 /** The page, browser and width the measurement in progress belongs to, for its findings. */
 let current = { page: null, browser: null, width: null };
+/** The widget the measurement in progress belongs to, as a finding target when nothing finer is. */
+let currentWidget = "page";
 /** Page x browser x width cells the run reached and measured. */
 let cells = 0;
 
 /** One finding, tagged with the page, browser and width in progress. */
-function finding(rule, message, selector = null) {
-  recordFinding({ gate: GATE, rule, selector, message, ...current });
+function finding(rule, message, selector = null, target = currentWidget) {
+  recordFinding({ gate: GATE, rule, target, selector, message, ...current });
 }
 
 /**
@@ -540,7 +545,12 @@ function recordDragFindings(result, selector) {
     if (reported.has(id)) continue;
     reported.add(id);
     const stuck = /never moved|exposes no value/.test(p);
-    finding(stuck ? "value-not-moved" : "readout-moved", message, selector);
+    finding(
+      stuck ? "value-not-moved" : "readout-moved",
+      message,
+      selector,
+      stuck ? currentWidget : key.replace(/^[a-z]+:/, ""),
+    );
   }
 }
 
@@ -566,39 +576,43 @@ const rounded = (r) => ({
 });
 
 /** Runs in the page: the named rects, in document order. */
-function snapshotInPage({
-  controlSel,
-  frame,
-  drawn,
-  scope,
-  riders,
-  textBoxes,
-}) {
-  const control = document.querySelector(controlSel);
-  const section = control.closest(".gmt-widget-section");
+function snapshotInPage(
+  control,
+  { hero, frame, drawn, scope, riders, textBoxes },
+) {
+  const widget = control.closest("[data-widget]");
+  // The section is the control's ancestor two levels below the widget root (root > card >
+  // section), which is how every mount lays it out; no class names it.
+  let section = control;
+  while (
+    section.parentElement?.parentElement &&
+    section.parentElement.parentElement !== widget
+  ) {
+    section = section.parentElement;
+  }
   const out = [];
-  const label = (el) =>
-    `${el.tagName.toLowerCase()}${el.dataset.role ? `[${el.dataset.role}]` : ""}${
-      typeof el.className === "string" && el.className
-        ? "." + el.className.split(/\s+/).slice(0, 2).join(".")
-        : ""
-    }`;
+  // The name a problem carries is the element's identity (what a reader reads); the key two
+  // snapshots are matched by is its tag and role attribute, which an element that comes
+  // or goes elsewhere in the widget does not renumber (a nameless `generic[n]` would).
+  const label = (el) => window.__gmtIdentity(el);
+  const matchKey = (el) =>
+    `${el.tagName.toLowerCase()}${el.getAttribute("role") ? `[${el.getAttribute("role")}]` : ""}`;
   // Rects are taken from the widget root's corner, so the page scrolling to
   // keep a focused handle in view is not counted as a move.
-  const origin = control.closest(".gmt-widget").getBoundingClientRect();
+  const origin = widget.getBoundingClientRect();
   const add = (kind, el) => {
     const r = el.getBoundingClientRect();
     out.push({
       kind,
-      key: `${kind}:${label(el)}`,
+      key: `${kind}:${matchKey(el)}`,
+      name: `${kind}:${label(el)}`,
       left: r.left - origin.left,
       top: r.top - origin.top,
       width: r.width,
       height: r.height,
     });
   };
-  const widget = control.closest(".gmt-widget");
-  widget.querySelectorAll(".gmt-punct-hero").forEach((el) => add("hero", el));
+  widget.querySelectorAll(hero).forEach((el) => add("hero", el));
   add("frame", widget.querySelector(frame));
   add("control", control);
   const everything = scope === "widget";
@@ -617,32 +631,94 @@ function snapshotInPage({
     }
     const parent = el.parentElement?.closest(drawn);
     if (parent && within.contains(parent)) continue;
+    // The text inside a value chip rides the thumb with the chip, so only the chip is compared.
+    if (el.parentElement?.closest('[data-gate~="rider"]')) continue;
     if (el.getClientRects().length === 0) continue;
     if (el.closest("svg")) continue;
     if (textBoxes && el.matches(textBoxes)) continue;
     add(riders && el.matches(riders) ? "rider" : "above", el);
   }
+  // Every table cell of the widget, whatever its scope or whether it is a drawn chart's: a
+  // column that is narrower on one frame than the next shifts the readouts beside it, and the
+  // cell width is where that shows first. Compared by width on its own (see `diffCells`).
+  const tables = [...widget.querySelectorAll("table")];
+  for (const el of widget.querySelectorAll("th, td")) {
+    if (el.getClientRects().length === 0) continue;
+    const r = el.getBoundingClientRect();
+    const row = el.parentElement;
+    const table = el.closest("table");
+    out.push({
+      kind: "cell",
+      key: `cell:t${tables.indexOf(table)}r${row.rowIndex}c${[...row.children].indexOf(el)}`,
+      name: `cell:${label(el)}`,
+      left: r.left - origin.left,
+      top: r.top - origin.top,
+      width: r.width,
+      height: r.height,
+    });
+  }
   return out;
 }
 
-async function snapshot(page, controlSel, tool) {
+/** Cell widths that differ from the baseline by more than half a pixel. */
+function diffCells(base, now) {
+  const problems = [];
+  const later = new Map(now.map((c) => [c.key, c]));
+  for (const a of base) {
+    const b = later.get(a.key);
+    if (b && Math.abs(a.width - b.width) > 0.5) {
+      problems.push(
+        `${a.name}: {"width":${a.width.toFixed(1)}} -> {"width":${b.width.toFixed(1)}}`,
+      );
+    }
+  }
+  return problems;
+}
+
+async function snapshot(page, ctl, tool) {
   await page.evaluate(
     () =>
       new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
   );
-  return page.evaluate(snapshotInPage, {
-    controlSel,
-    frame: tool.frame ?? DEFAULT_FRAME,
-    drawn: tool.drawn ?? DEFAULT_DRAWN,
+  return ctl.evaluate(snapshotInPage, {
+    hero: gate("hero"),
+    frame: gate("frame"),
+    // A row with no drawn part matches nothing, and `:not(*)` is a selector that cannot match.
+    drawn:
+      (tool.drawn ?? ["drawn"]).map((p) => DRAWN_PART[p]).join(", ") ||
+      ":not(*)",
     scope: tool.scope ?? "above",
-    riders: tool.riders ?? null,
-    textBoxes: tool.textBoxes ?? null,
+    riders: tool.riders ? gate("rider") : null,
+    textBoxes: tool.textBoxes
+      ? tool.textBoxes.map((p) => TEXT_PART[p]).join(", ")
+      : null,
   });
 }
 
+/** The drawn and text parts a tool's row names that match nothing in its widget. A part
+ *  that matches nothing exempts nothing, so a stale name would hide a gap in the row. */
+async function namedPartsAbsent(page, tool) {
+  const named = [
+    ...(tool.drawn ?? ["drawn"]).map((p) => [`drawn:${p}`, DRAWN_PART[p]]),
+    ...(tool.textBoxes ?? []).map((p) => [`text:${p}`, TEXT_PART[p]]),
+  ];
+  const root = page.locator(tool.root).first();
+  const absent = [];
+  for (const [name, selector] of named) {
+    if (!selector) absent.push(`${name} (unknown part)`);
+    else if (!(await root.locator(selector).count())) absent.push(name);
+  }
+  return absent;
+}
+
 /** The differences between the baseline and a later snapshot, as strings. */
-function diffSnapshots(base, now, isHandle, pressed = false) {
-  const problems = [];
+function diffSnapshots(allBase, allNow, isHandle, pressed = false) {
+  const problems = diffCells(
+    allBase.filter((e) => e.kind === "cell"),
+    allNow.filter((e) => e.kind === "cell"),
+  );
+  const base = allBase.filter((e) => e.kind !== "cell");
+  const now = allNow.filter((e) => e.kind !== "cell");
   if (base.length !== now.length) {
     problems.push(`element count ${base.length} -> ${now.length}`);
     return problems;
@@ -650,7 +726,7 @@ function diffSnapshots(base, now, isHandle, pressed = false) {
   base.forEach((a, i) => {
     const b = now[i];
     if (a.key !== b.key) {
-      problems.push(`element ${i}: ${a.key} -> ${b.key}`);
+      problems.push(`element ${i}: ${a.name} -> ${b.name}`);
       return;
     }
     // A pressed handle grows 8% (its `:active` scale): its own box is skipped
@@ -663,34 +739,20 @@ function diffSnapshots(base, now, isHandle, pressed = false) {
         ? ["top", "width", "height"]
         : ["left", "top", "width", "height"];
     if (keys.some((k) => ra[k] !== rb[k])) {
-      problems.push(`${a.key}: ${JSON.stringify(ra)} -> ${JSON.stringify(rb)}`);
+      problems.push(
+        `${a.name}: ${JSON.stringify(ra)} -> ${JSON.stringify(rb)}`,
+      );
     }
   });
   return problems;
 }
 
-async function valueOf(page, sel, field) {
-  return page.evaluate(
-    ({ s, f }) => {
-      const el = document.querySelector(s);
-      /* A control may name the field it edits (a ledger handle: its typed
-       field), because its own `aria-valuenow` is a place on a canvas that is
-       refitted after each key. */
-      if (f) {
-        const named = document.querySelector(`[data-role="${f}"]`);
-        if (named) return named.value;
-      }
-      /* The Departure Board's handle reports its position on a rail that is
-       refitted after each key, so the same aria-valuenow can mean different
-       arrivals; the value it edits is the arrival field. */
-      if (el.getAttribute("data-role") === "handle-after") {
-        const field = document.querySelector('[data-role="after"]');
-        if (field) return field.value;
-      }
-      return el.getAttribute("aria-valuenow") ?? el.value;
-    },
-    { s: sel, f: field },
-  );
+async function valueOf(page, root, ctl, field) {
+  /* A control may name the field it edits (a ledger handle: its typed field, the Departure
+     Board's arrival field), because its own `aria-valuenow` is a place on a canvas that is
+     refitted after each key. */
+  if (field) return control(page, root, field).inputValue();
+  return ctl.evaluate((el) => el.getAttribute("aria-valuenow") ?? el.value);
 }
 
 async function run() {
@@ -722,6 +784,58 @@ async function run() {
     );
     console.log(`FAIL ${id}: ${message}`);
   };
+  if (RESOLVE_ONLY) {
+    const browser = await ENGINES.chromium.launch();
+    const context = await browser.newContext({
+      viewport: { width: 1440, height: 900 },
+      colorScheme: "dark",
+    });
+    await blockOffSite(context, BASE);
+    await context.addInitScript({ content: identityScript() });
+    const page = await context.newPage();
+    let missed = 0;
+    for (const tool of tools) {
+      const response = await page.goto(`${BASE}/tools/${tool.slug}/`, {
+        waitUntil: "networkidle",
+      });
+      const miss = [];
+      if (!response || response.status() !== 200)
+        miss.push(`the page answered HTTP ${response?.status() ?? "none"}`);
+      const asks = [
+        { name: `widget root ${tool.root}`, sel: tool.root, min: 1, max: 1 },
+        {
+          name: "preset select",
+          loc: control(
+            page,
+            tool.root,
+            tool.presetName
+              ? { role: "combobox", name: tool.presetName }
+              : PRESET,
+          ),
+          min: 1,
+          max: 1,
+        },
+        ...tool.controls.map((c) => ({
+          name: `control ${controlLabel(c)}`,
+          loc: control(page, tool.root, c),
+          min: c.optional ? 0 : 1,
+          max: 1,
+        })),
+        { name: "frame part", sel: gate("frame"), min: 1 },
+        ...(tool.track
+          ? [{ name: "track part", sel: gate(tool.track), min: 1 }]
+          : []),
+      ];
+      miss.push(...(await resolveMisses(page, asks)));
+      missed += miss.length;
+      console.log(
+        `${miss.length ? "FAIL" : "ok  "} resolve /tools/${tool.slug}/`,
+      );
+      for (const m of miss) console.log(`       ${m}`);
+    }
+    await browser.close();
+    process.exit(missed ? 1 : 0);
+  }
   for (const name of BROWSERS) {
     const browser = await ENGINES[name].launch();
     const variants = [
@@ -734,10 +848,12 @@ async function run() {
         viewport: { width: v.viewport, height: 900 },
       });
       await blockOffSite(context, BASE);
+      await context.addInitScript({ content: identityScript() });
       const page = await context.newPage();
       for (const tool of tools) {
         if (v.extra && !tool.extraWidths?.includes(v.viewport)) continue;
         const where = `${name} ${v.root ? `root${v.root}` : v.viewport} ${tool.slug}`;
+        currentWidget = `widget:${/data-widget="([^"]+)"/.exec(tool.root)?.[1] ?? tool.slug}`;
         current = {
           page: `/tools/${tool.slug}/`,
           browser: name,
@@ -769,24 +885,34 @@ async function run() {
               : ""),
         });
         for (const preset of tool.presets) {
-          await page.selectOption('[data-role="preset"]', preset);
+          await control(
+            page,
+            tool.root,
+            tool.presetName
+              ? { role: "combobox", name: tool.presetName }
+              : PRESET,
+          ).selectOption(preset);
           await page.waitForTimeout(1500);
           await settled(page, tool.root);
-          for (const {
-            sel,
-            optional,
-            requiredIn,
-            step,
-            value: field,
-          } of tool.controls) {
-            const visible = await page.evaluate((s) => {
-              const el = document.querySelector(s);
-              return (
-                !!el && !el.closest("[hidden]") && el.offsetParent !== null
+          if (preset === tool.presets[0]) {
+            const absent = await namedPartsAbsent(page, tool);
+            if (absent.length) {
+              fail(
+                where,
+                `the row names parts the widget does not draw: ${absent.join(", ")}`,
               );
-            }, sel);
-            const isHandle = !sel.includes("slider");
-            const id = `${where} ${preset} ${sel.match(/"(.+)"/)[1]}`;
+            }
+          }
+          for (const spec of tool.controls) {
+            const { optional, requiredIn, step, value: field } = spec;
+            const ctl = control(page, tool.root, spec);
+            // A hidden control is not in the accessibility tree, so it does not match.
+            const visible =
+              (await ctl.count()) > 0 && (await ctl.first().isVisible());
+            const isHandle = visible
+              ? await ctl.evaluate((el) => el.tagName !== "INPUT")
+              : false;
+            const id = `${where} ${preset} ${controlLabel(spec)}`;
             const presence = controlPresence({
               visible,
               optional: optional && !requiredIn?.includes(preset),
@@ -796,7 +922,7 @@ async function run() {
             if (!presence.proceed) continue;
             const result = { keyboard: 0, pointer: 0, problems: [] };
             const check = async (step, base, pressed = false) => {
-              const now = await snapshot(page, sel, tool);
+              const now = await snapshot(page, ctl, tool);
               for (const p of diffSnapshots(base, now, isHandle, pressed)) {
                 result.problems.push(`${step}: ${p}`);
               }
@@ -804,16 +930,16 @@ async function run() {
 
             if (step) {
               // A number field: step it up and back down, one key at a time.
-              await page.locator(sel).focus();
-              const base = await snapshot(page, sel, tool);
-              const start = await valueOf(page, sel, field);
+              await ctl.focus();
+              const base = await snapshot(page, ctl, tool);
+              const start = await valueOf(page, tool.root, ctl, field);
               const seen = { up: [], down: [] };
               for (const key of ["ArrowUp", "ArrowDown"]) {
                 for (let i = 0; i < step; i++) {
                   await page.keyboard.press(key);
                   await page.waitForTimeout(40);
-                  const value = await valueOf(page, sel, field);
-                  const now = await snapshot(page, sel, tool);
+                  const value = await valueOf(page, tool.root, ctl, field);
+                  const now = await snapshot(page, ctl, tool);
                   for (const p of diffSnapshots(base, now, false)) {
                     result.problems.push(
                       `${key} #${i + 1} (value ${value}): ${p}`,
@@ -837,7 +963,7 @@ async function run() {
               const ok = result.problems.length === 0;
               if (!ok) failures++;
               summary.push({ id, ...result, ok });
-              recordDragFindings(result, sel);
+              recordDragFindings(result, controlLabel(spec));
               console.log(
                 `${ok ? "ok  " : "FAIL"} ${id}: ${result.keyboard} keyboard steps, ${result.pointer} pointer steps` +
                   (ok ? "" : `, ${result.problems.length} problem(s)`),
@@ -851,16 +977,16 @@ async function run() {
             const maxKeys = tool.maxKeys ?? MAX_KEYS;
 
             // Keyboard: the whole range, there and back.
-            await page.locator(sel).focus();
+            await ctl.focus();
             await page.keyboard.press("Home");
-            const base = await snapshot(page, sel, tool);
-            const homeValue = await valueOf(page, sel, field);
+            const base = await snapshot(page, ctl, tool);
+            const homeValue = await valueOf(page, tool.root, ctl, field);
             const seen = { up: [], down: [] };
             for (const key of ["PageUp", "PageDown"]) {
-              let last = await valueOf(page, sel, field);
+              let last = await valueOf(page, tool.root, ctl, field);
               for (let i = 0; i < maxKeys; i++) {
                 await page.keyboard.press(key);
-                const value = await valueOf(page, sel, field);
+                const value = await valueOf(page, tool.root, ctl, field);
                 await check(`${key} #${i + 1} (value ${value})`, base);
                 result.keyboard++;
                 seen[key === "PageUp" ? "up" : "down"].push(value);
@@ -879,11 +1005,11 @@ async function run() {
 
             // Pointer: out to the far end of the track in 20 steps, and back.
             if (!KEYBOARD_ONLY) {
-              const box = await page.evaluate(
-                ({ s, t }) => {
-                  const c = document.querySelector(s).getBoundingClientRect();
+              const box = await ctl.evaluate(
+                (el, t) => {
+                  const c = el.getBoundingClientRect();
                   const tr = (
-                    t ? document.querySelector(t) : document.querySelector(s)
+                    t ? el.closest("[data-widget]").querySelector(t) : el
                   ).getBoundingClientRect();
                   return {
                     x: c.left + c.width / 2,
@@ -892,10 +1018,10 @@ async function run() {
                     right: tr.right,
                   };
                 },
-                { s: sel, t: tool.track },
+                tool.track ? gate(tool.track) : null,
               );
               const startX = isHandle ? box.x : box.left + 8;
-              const pointerStart = await valueOf(page, sel, field);
+              const pointerStart = await valueOf(page, tool.root, ctl, field);
               await page.mouse.move(startX, box.y);
               await page.mouse.down();
               const far = box.right - 2;
@@ -911,7 +1037,7 @@ async function run() {
               }
               for (const p of pointerMoveProblems({
                 start: pointerStart,
-                far: await valueOf(page, sel, field),
+                far: await valueOf(page, tool.root, ctl, field),
               })) {
                 result.problems.push(`pointer: ${p}`);
               }
@@ -926,7 +1052,7 @@ async function run() {
             const ok = result.problems.length === 0;
             if (!ok) failures++;
             summary.push({ id, ...result, ok });
-            recordDragFindings(result, sel);
+            recordDragFindings(result, controlLabel(spec));
             console.log(
               `${ok ? "ok  " : "FAIL"} ${id}: ${result.keyboard} keyboard steps, ${result.pointer} pointer steps` +
                 (ok ? "" : `, ${result.problems.length} problem(s)`),

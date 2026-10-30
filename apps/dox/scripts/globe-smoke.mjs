@@ -63,8 +63,19 @@ import { PNG } from "pngjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+import { gate, resolveMisses, widgetRoot } from "./lib/locate.mjs";
 
 const GATE = "globe-smoke";
+
+/* The parts of the globe a check reads: the widget root, the canvas inside its stage and its
+   pinned-zones listbox by tag and role, and the stage, tooltip and hero stage by the `data-gate`
+   hooks the mount puts on them. Never a class. */
+const GLOBE = widgetRoot("globe");
+const STAGE = gate("globe-stage");
+const CANVAS = `${GLOBE} ${STAGE} canvas`;
+const CLOCKS = '[role="listbox"][aria-label^="Pinned zones"]';
+const TOOLTIP = gate("globe-tooltip");
+const HERO_STAGE = gate("hero-stage");
 
 const DOX = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(DOX, "dist");
@@ -273,6 +284,7 @@ failures.push = (...messages) => {
       gate: GATE,
       rule: "globe-check-failed",
       page: target?.route ?? null,
+      target: "widget:globe",
       width: target?.width ?? null,
       browser: "chromium",
       message: String(message),
@@ -335,7 +347,7 @@ async function open(
   }
   await page.clock.install({ time: FIXED_INSTANT });
   await page.goto(`${base}/gmt${route}${query}`, { waitUntil: "networkidle" });
-  const stage = page.locator(".gmt-globe-stage").first();
+  const stage = page.locator(STAGE).first();
   if (waitForStage) {
     await stage.waitFor({ state: "visible", timeout: 15_000 });
     /* The globe mounts on an IntersectionObserver, reveals over a transition,
@@ -368,18 +380,20 @@ function diffRatio(a, b, file, threshold = PIXELMATCH_THRESHOLD) {
 }
 
 async function readState(page) {
-  return page.evaluate(() => {
-    const root = document.querySelector(".gmt-globe");
-    const canvas = root?.querySelector("canvas.gmt-globe-canvas") ?? null;
-    return {
-      renderer: canvas?.dataset?.renderer ?? null,
-      unavailable: root?.dataset?.state === "unavailable",
-      canvasSize: canvas ? [canvas.width, canvas.height] : null,
-      clockRows:
-        root?.querySelectorAll('[data-role="clocks"] [role="option"]').length ??
-        0,
-    };
-  });
+  return page.evaluate(
+    ({ globe, canvasSel, clocksSel }) => {
+      const root = document.querySelector(globe);
+      const canvas = root?.querySelector(canvasSel) ?? null;
+      return {
+        renderer: canvas?.dataset?.renderer ?? null,
+        unavailable: root?.dataset?.state === "unavailable",
+        canvasSize: canvas ? [canvas.width, canvas.height] : null,
+        clockRows:
+          root?.querySelectorAll(`${clocksSel} [role="option"]`).length ?? 0,
+      };
+    },
+    { globe: GLOBE, canvasSel: CANVAS, clocksSel: CLOCKS },
+  );
 }
 
 /**
@@ -406,7 +420,61 @@ function isBlank(png) {
   return varied < pixels / 5;
 }
 
+/**
+ * `--resolve-only`: load each selected page once and check that the globe's root, stage, canvas,
+ * clock list and the hero stage are where the checks look for them. Draws nothing and needs no GPU,
+ * so it runs in any Chromium.
+ */
+async function resolveOnly() {
+  const browser = await chromium.launch();
+  const { server, base } = await serve(DIST);
+  let failed = 0;
+  try {
+    for (const target of SELECTED) {
+      const page = await browser.newPage({
+        viewport: { width: target.width, height: target.height },
+      });
+      await blockOffSite(page, base);
+      const response = await page.goto(`${base}/gmt${target.route}`, {
+        waitUntil: "networkidle",
+      });
+      const miss = [];
+      if (response?.status() !== 200)
+        miss.push(`the page answered HTTP ${response?.status() ?? "none"}`);
+      else {
+        await page
+          .locator(STAGE)
+          .first()
+          .waitFor({ state: "attached", timeout: 15_000 })
+          .catch(() => {});
+        miss.push(
+          ...(await resolveMisses(page, [
+            { name: "globe root", sel: GLOBE, min: 1, max: 1 },
+            { name: "globe stage", sel: STAGE, min: 1, max: 1 },
+            { name: "globe canvas", sel: CANVAS, min: 1, max: 1 },
+            { name: "clock list", sel: CLOCKS, min: 1, max: 1 },
+            ...(target.darkHero
+              ? [{ name: "hero stage", sel: HERO_STAGE, min: 1, max: 1 }]
+              : []),
+          ])),
+        );
+      }
+      failed += miss.length ? 1 : 0;
+      console.log(
+        `${miss.length ? "FAIL" : "ok  "} resolve ${target.route} (${target.name})`,
+      );
+      for (const m of miss) console.log(`       ${m}`);
+      await page.close();
+    }
+  } finally {
+    server.close();
+    await browser.close();
+  }
+  process.exit(failed ? 1 : 0);
+}
+
 async function main() {
+  if (process.argv.includes("--resolve-only")) return resolveOnly();
   if (!existsSync(DIST)) {
     console.error("globe-smoke: no dist/ — run `pnpm build` first.");
     process.exit(1);
@@ -619,7 +687,7 @@ async function main() {
       still[withholdImagery ? "flat" : "shown"] = PNG.sync.read(
         await stage.screenshot({
           type: "png",
-          mask: [page.locator(".gmt-globe-tooltip")],
+          mask: [page.locator(TOOLTIP)],
         }),
       );
       await page.close();
@@ -658,7 +726,7 @@ async function main() {
       for (const problem of problems) {
         failures.push(`dark hero (${theme}): ${problem}`);
       }
-      computed[theme] = await page.evaluate(() => {
+      computed[theme] = await page.evaluate((heroSel) => {
         const properties = [
           "color",
           "background-color",
@@ -670,7 +738,7 @@ async function main() {
           "fill",
           "stroke",
         ];
-        const root = document.querySelector(".gmt-herostage");
+        const root = document.querySelector(heroSel);
         if (!root) return [];
         return [...root.querySelectorAll("*")]
           .filter((element) => element.tagName !== "CANVAS")
@@ -690,7 +758,7 @@ async function main() {
               ),
             };
           });
-      });
+      }, HERO_STAGE);
       await page.close();
     }
     const { dark, light } = computed;
@@ -800,10 +868,7 @@ async function main() {
     await page.goto(`${base}/gmt/tools/zoned-earth/`, {
       waitUntil: "networkidle",
     });
-    await page
-      .locator(".gmt-globe-stage")
-      .first()
-      .waitFor({ state: "visible" });
+    await page.locator(STAGE).first().waitFor({ state: "visible" });
     await page.waitForTimeout(2500);
     const state = await readState(page);
     check(
@@ -833,10 +898,10 @@ async function main() {
     );
     const box = await stage.boundingBox();
     const rotationOf = () =>
-      page.evaluate(() => {
-        const canvas = document.querySelector("canvas.gmt-globe-canvas");
+      page.evaluate((sel) => {
+        const canvas = document.querySelector(sel);
         return canvas ? canvas.getAttribute("data-probe-rotation") : null;
-      });
+      }, CANVAS);
 
     // Drag: the globe must move, and the page must not scroll under it.
     const before = await stage.screenshot({ type: "png" });
@@ -854,7 +919,7 @@ async function main() {
     );
 
     // Keyboard: the canvas is focusable and the arrow keys rotate it.
-    await page.locator("canvas.gmt-globe-canvas").first().focus();
+    await page.locator(CANVAS).first().focus();
     const beforeKey = await stage.screenshot({ type: "png" });
     for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowLeft");
     await page.waitForTimeout(900);

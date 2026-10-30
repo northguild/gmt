@@ -90,7 +90,7 @@ export function permalinkOf(state: ElapsedState): Record<string, string> {
 // Presets
 // ---------------------------------------------------------------------------
 
-export interface ElapsedPreset extends ElapsedState {
+interface ElapsedPreset extends ElapsedState {
   id: string;
   label: string;
   description: string;
@@ -557,21 +557,6 @@ export function rulerModel(
     leaps: leaps.length,
     compressed: pieces.some((p) => p.kind === "break"),
   };
-}
-
-/** Whether both endpoints can be placed on the rulers. */
-export function canDrawRulers(state: ElapsedState): boolean {
-  return drawMs(state.start) !== null && drawMs(state.end) !== null;
-}
-
-/** One call's result as printed, a bigint written with its `n`. */
-export function resultText(result: unknown): string {
-  return typeof result === "bigint" ? `${result}n` : JSON.stringify(result);
-}
-
-/** The results of a group's calls, one per line. */
-export function resultsText(calls: readonly EdiCall[]): string {
-  return calls.map((c) => resultText(c.result)).join("\n");
 }
 
 // ---------------------------------------------------------------------------

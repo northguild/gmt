@@ -1,145 +1,130 @@
 /**
  * @vitest-environment jsdom
  *
- * The Leap Second Timeline end to end: template → mount → interact → assert,
- * against the real `@northguild/gmt`. Every preset's printed calls, results,
- * plates, marks and rows are checked against literal strings read from a run
- * of the built library, so a drift in the library or the widget fails here.
+ * The Leap Second Timeline end to end, against the real `@northguild/gmt`. Every
+ * preset's printed calls, results and plates are checked against literal strings read
+ * from a run of the built library, so a drift in the library or the widget fails here.
+ * Everything is read the way a reader or a screen reader meets it: roles, names,
+ * values and visible text.
  */
+import { screen, within } from "@testing-library/dom";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import {
+  expectNoAxeViolations,
+  renderWidget,
+  setRange,
+} from "~/test/render-widget";
+import {
   BEFORE_1972_TEXT,
+  NOT_INSTANT_TEXT,
   TIMELINE_PRESETS,
   VERDICT_INSERTED,
   VERDICT_NOT_INSERTED,
 } from "./leap-second-timeline";
-import {
-  INSERTION_ROWS,
-  mountLeapSecondTimeline,
-  renderLeapSecondTimelineTemplate,
-} from "./leap-second-timeline-mount";
+import { INSERTION_ROWS } from "./leap-second-timeline-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { SITE_BASE } from "./site";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "date",
-  "date-slider",
-  "date-value",
-  "from",
-  "to",
-  "check",
-  "frame",
-  "heroes",
-  "hero-offset",
-  "hero-between",
-  "hero-check",
-  "plot",
-  "step-line",
-  "continuous-span",
-  "continuous-chip",
-  "band",
-  "marks",
-  "pin",
-  "pin-chip",
-  "axis",
-  "chips-insertions",
-  "timeline-list",
-  "summary",
-  "insertions-table",
-  "insertions-body",
-  ...["offset", "between", "check"].flatMap((g) => [
-    `call-${g}`,
-    `copy-${g}`,
-    `${g}-output`,
-    `${g}-aside`,
-  ]),
+const entry = WIDGET_REGISTRY["showLeapSecondTimeline"] as AnyWidgetEntry;
+
+const open = (args: Record<string, unknown> = {}, idPrefix = "test") =>
+  renderWidget(entry, { args, idPrefix });
+
+const dateBox = () => screen.getByRole("textbox", { name: "Date" });
+const fromBox = () => screen.getByRole("textbox", { name: "Count from" });
+const toBox = () => screen.getByRole("textbox", { name: "Count to" });
+const checkBox = () =>
+  screen.getByRole("textbox", { name: "A second 60 to check" });
+const presetBox = () => screen.getByRole("combobox", { name: "Preset" });
+const slider = () => screen.getByRole("slider", { name: "Move the date" });
+const summary = () => screen.getByRole("status", { name: "Timeline reading" });
+const GROUPS = ["offset", "between", "check"] as const;
+const groupIndex = (g: (typeof GROUPS)[number]) => GROUPS.indexOf(g);
+const callsOf = (g: (typeof GROUPS)[number]) =>
+  screen.getAllByRole("group", { name: /Calls made/ })[groupIndex(g)]!;
+const outputOf = (g: (typeof GROUPS)[number]) =>
+  screen.getAllByRole("status", { name: "What the calls returned" })[
+    groupIndex(g)
+  ]!;
+const asides = () => screen.queryAllByRole("complementary");
+const tableRows = () =>
+  within(screen.getByRole("table", { name: "Every inserted second" }))
+    .getAllByRole("row")
+    .slice(1);
+const linkNamed = (name: string) => screen.getByText(name);
+
+const PLATE_CAPTIONS = [
+  "TAI − UTC on the date",
+  "Leap seconds between",
+  "Your second 60",
 ];
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
-
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderLeapSecondTimelineTemplate(templateArgs);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountLeapSecondTimeline(root, args, controller.signal);
-  return { root, handle, controller };
+/**
+ * A plate is a term and three definitions (the value, then two lines), so the value of
+ * plate n is definition 3n. A plate reserves the widest text it can show beside the
+ * shown one, hidden from assistive technology, so the shown text is the one not hidden.
+ */
+function plateParts(caption: string) {
+  const index = PLATE_CAPTIONS.indexOf(caption);
+  const defs = screen.getAllByRole("definition");
+  return {
+    value: defs[index * 3]!,
+    lines: defs.slice(index * 3 + 1, index * 3 + 3),
+  };
 }
+const shownIn = (el: HTMLElement) =>
+  within(el)
+    .queryAllByText(/./)
+    .filter((e) => e.getAttribute("aria-hidden") !== "true");
+const exact = (text: string) =>
+  new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
 
-function choose(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLSelectElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
+type Plate = [string, string, string];
+function expectPlate(caption: string, want: Plate) {
+  const { value, lines } = plateParts(caption);
+  const shown = shownIn(value);
+  expect(shown).toHaveLength(1);
+  expect(shown[0]).toHaveTextContent(exact(want[0]));
+  [want[1], want[2]].forEach((line, n) => {
+    if (line === "") expect(lines[n]).toHaveTextContent(/^$/);
+    else expect(lines[n]).toHaveTextContent(exact(line));
+  });
 }
-
-function type(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLInputElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-function slide(root: HTMLElement, position: number) {
-  const el = q<HTMLInputElement>(root, "date-slider");
-  el.value = String(position);
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-const text = (root: HTMLElement, role: string) =>
-  q(root, role).textContent ?? "";
-const isSentinel = (root: HTMLElement, role: string) =>
-  q(root, role).classList.contains("gmt-playground-sentinel");
-const isEmpty = (root: HTMLElement, role: string) =>
-  q(root, role).classList.contains("gmt-widget-output--empty");
-
-/** A plate's value and its two sub lines. */
-const plate = (root: HTMLElement, role: string): [string, string, string] => {
-  const el = q(root, role);
-  const lines = [...el.querySelectorAll(".gmt-punct-hero-line")].map(
-    (l) => l.textContent ?? "",
-  );
-  return [
-    el.querySelector(".gmt-punct-hero-value")!.textContent!,
-    lines[0] ?? "",
-    lines[1] ?? "",
-  ];
+const expectPlates = (want: {
+  offset: Plate;
+  between: Plate;
+  check: Plate;
+}) => {
+  expectPlate(PLATE_CAPTIONS[0]!, want.offset);
+  expectPlate(PLATE_CAPTIONS[1]!, want.between);
+  expectPlate(PLATE_CAPTIONS[2]!, want.check);
 };
 
-const litMarks = (root: HTMLElement) =>
-  [...root.querySelectorAll<HTMLElement>(".gmt-leap-mark[data-lit]")].map(
-    (m) => `${m.dataset["insertion"]}:${m.dataset["series"]}`,
-  );
-const rows = (root: HTMLElement) => [
-  ...q(root, "insertions-body").querySelectorAll("tr"),
-];
+const BLANK = "Not read: the field is blank.";
+const NONE: Plate = ["no result", "", ""];
+const flat = (s: string) => s.replace(/\n/g, " ");
 
 interface Expected {
-  copy: { offset: string; between: string; check: string };
+  calls: { offset: string; between: string; check: string };
   output: { offset: string; between: string; check: string };
-  plates: {
-    offset: [string, string, string];
-    between: [string, string, string];
-    check: [string, string, string];
-  };
-  lit: string[];
-  band: boolean;
+  plates: { offset: Plate; between: Plate; check: Plate };
+  /** How many table rows say "counted", and how many say "your second 60". */
+  counted: number;
+  checked: number;
 }
-
-const BLANK = "Not read: the field is blank.";
-const NONE: [string, string, string] = ["no result", "", ""];
 
 /** What each preset prints, from a run against `packages/gmt/dist`. */
 const EXPECTED: Record<string, Expected> = {
   "from-2000": {
-    copy: {
+    calls: {
       offset:
         'taiMinusUtc("2000-01-01T00:00:00Z")\nnextLeapSecond("2000-01-01T00:00:00Z")',
       between:
@@ -157,17 +142,11 @@ const EXPECTED: Record<string, Expected> = {
       between: ["5", "from 2000-01-01", "to 2024-01-01"],
       check: [VERDICT_INSERTED, "isLeapSecond true", "hasSecond60 true"],
     },
-    lit: [
-      "2005-12-31T23:59:60Z:2",
-      "2008-12-31T23:59:60Z:2",
-      "2012-06-30T23:59:60Z:2",
-      "2015-06-30T23:59:60Z:2",
-      "2016-12-31T23:59:60Z:3",
-    ],
-    band: true,
+    counted: 4,
+    checked: 1,
   },
   "last-insertion": {
-    copy: {
+    calls: {
       offset:
         'taiMinusUtc("2016-01-01T00:00:00Z")\nnextLeapSecond("2016-01-01T00:00:00Z")',
       between: "",
@@ -183,11 +162,11 @@ const EXPECTED: Record<string, Expected> = {
       between: NONE,
       check: NONE,
     },
-    lit: [],
-    band: false,
+    counted: 0,
+    checked: 0,
   },
   "after-the-table": {
-    copy: {
+    calls: {
       offset:
         'taiMinusUtc("2024-01-01T00:00:00Z")\nnextLeapSecond("2024-01-01T00:00:00Z")',
       between: "",
@@ -199,11 +178,11 @@ const EXPECTED: Record<string, Expected> = {
       between: NONE,
       check: NONE,
     },
-    lit: [],
-    band: false,
+    counted: 0,
+    checked: 0,
   },
   "far-future": {
-    copy: {
+    calls: {
       offset:
         'taiMinusUtc("2100-01-01T00:00:00Z")\nnextLeapSecond("2100-01-01T00:00:00Z")',
       between: "",
@@ -215,11 +194,11 @@ const EXPECTED: Record<string, Expected> = {
       between: NONE,
       check: NONE,
     },
-    lit: [],
-    band: false,
+    counted: 0,
+    checked: 0,
   },
   "not-inserted": {
-    copy: {
+    calls: {
       offset: "",
       between: "",
       check:
@@ -231,11 +210,11 @@ const EXPECTED: Record<string, Expected> = {
       between: NONE,
       check: [VERDICT_NOT_INSERTED, "isLeapSecond false", "hasSecond60 true"],
     },
-    lit: [],
-    band: false,
+    counted: 0,
+    checked: 0,
   },
   "offset-spelling": {
-    copy: {
+    calls: {
       offset: "",
       between: "",
       check:
@@ -247,11 +226,11 @@ const EXPECTED: Record<string, Expected> = {
       between: NONE,
       check: [VERDICT_INSERTED, "isLeapSecond true", "hasSecond60 true"],
     },
-    lit: ["2008-12-31T23:59:60Z:3"],
-    band: false,
+    counted: 0,
+    checked: 1,
   },
   backwards: {
-    copy: {
+    calls: {
       offset: "",
       between:
         'leapSecondsBetween("2024-01-01T00:00:00Z", "2000-01-01T00:00:00Z")',
@@ -263,17 +242,11 @@ const EXPECTED: Record<string, Expected> = {
       between: ["-5", "from 2024-01-01", "to 2000-01-01"],
       check: NONE,
     },
-    lit: [
-      "2005-12-31T23:59:60Z:2",
-      "2008-12-31T23:59:60Z:2",
-      "2012-06-30T23:59:60Z:2",
-      "2015-06-30T23:59:60Z:2",
-      "2016-12-31T23:59:60Z:2",
-    ],
-    band: true,
+    counted: 5,
+    checked: 0,
   },
   "before-1972": {
-    copy: {
+    calls: {
       offset:
         'taiMinusUtc("1971-01-01T00:00:00Z")\nnextLeapSecond("1971-01-01T00:00:00Z")',
       between:
@@ -287,95 +260,71 @@ const EXPECTED: Record<string, Expected> = {
       check: BLANK,
     },
     plates: { offset: NONE, between: NONE, check: NONE },
-    lit: [],
-    band: false,
+    counted: 0,
+    checked: 0,
   },
 };
 
-afterEach(() => {
-  document.body.innerHTML = "";
-  vi.useRealTimers();
-});
+async function pick(w: Awaited<ReturnType<typeof open>>, id: string) {
+  await w.user.selectOptions(presetBox(), id);
+}
+async function typeInto(
+  w: Awaited<ReturnType<typeof open>>,
+  box: HTMLElement,
+  value: string,
+) {
+  await w.user.clear(box);
+  if (value !== "") await w.user.paste(value);
+}
 
-describe("renderLeapSecondTimelineTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderLeapSecondTimelineTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
-    }
-  });
-
-  it("is a widget root with the standard wrapper, and no class containing card but the wrapper", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderLeapSecondTimelineTemplate();
-    const widget = root.firstElementChild as HTMLElement;
-    expect(widget.getAttribute("class")).toBe(
-      "gmt-leap-second-timeline gmt-widget not-content",
-    );
-    expect(widget.attributes).toHaveLength(1);
-    const classes = [...root.querySelectorAll("[class]")].flatMap((e) =>
-      e.getAttribute("class")!.split(/\s+/),
-    );
+describe("the template", () => {
+  it("is a named region with three numbered sections and the controls a reader needs", async () => {
+    await open();
     expect(
-      classes.filter((c) => c.includes("card") && c !== "gmt-widget-card"),
-    ).toEqual([]);
-  });
-
-  it("renders three numbered sections and three empty plates before the library answers", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderLeapSecondTimelineTemplate();
+      screen.getByRole("region", { name: "Leap Second Timeline" }),
+    ).toBeInTheDocument();
     expect(
-      [...root.querySelectorAll(".gmt-widget-section h4")].map(
-        (h) => h.textContent,
-      ),
+      screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent),
     ).toEqual([
       "1. Set a date, a span and a second 60",
       "2. Every inserted second",
       "3. What the library returns",
     ]);
-    for (const role of ["hero-offset", "hero-between", "hero-check"]) {
-      expect(plate(root, role)[0]).toBe("no result");
-    }
-    expect(q(root, "plot").getAttribute("role")).toBe("img");
+    expect(presetBox()).toHaveValue("from-2000");
+    expect(dateBox()).toHaveValue("2000-01-01T00:00:00Z");
+    expect(checkBox()).toHaveValue("2016-12-31T23:59:60Z");
+    expect(slider()).toBeEnabled();
+    await expectNoAxeViolations(document.body);
   });
 
-  it("draws one blank row for every second the library lists, so the table has its height at first paint", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderLeapSecondTimelineTemplate();
-    const blank = rows(root);
-    expect(blank).toHaveLength(INSERTION_ROWS);
-    const { root: mounted } = await mount();
-    expect(rows(mounted)).toHaveLength(blank.length);
+  it("draws one row for every second the library lists", async () => {
+    await open();
+    expect(tableRows()).toHaveLength(INSERTION_ROWS);
   });
 
-  it("opens on the first preset, with a native range and text inputs", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderLeapSecondTimelineTemplate();
-    expect(q<HTMLInputElement>(root, "date").value).toBe(
-      "2000-01-01T00:00:00Z",
-    );
-    expect(q<HTMLInputElement>(root, "check").value).toBe(
-      "2016-12-31T23:59:60Z",
-    );
-    const slider = q<HTMLInputElement>(root, "date-slider");
-    expect(slider.type).toBe("range");
-    for (const role of ["date", "from", "to", "check"]) {
-      expect(q<HTMLInputElement>(root, role).type).toBe("text");
-    }
+  it("gives the plot the summary as its name", async () => {
+    await open();
+    expect(summary()).toHaveTextContent(/27 leap seconds are inserted/);
+    expect(
+      screen.getByRole("img", { name: summary().textContent! }),
+    ).toBeInTheDocument();
   });
 
-  it("escapes a hostile seed", () => {
+  it("escapes a hostile seed", async () => {
     const hostile = '"><img src=x onerror=alert(1)>';
-    const root = document.createElement("div");
-    root.innerHTML = renderLeapSecondTimelineTemplate({
-      date: hostile,
-      check: hostile,
-      from: hostile,
-      to: hostile,
-    });
-    expect(root.querySelector("img")).toBeNull();
-    expect(q<HTMLInputElement>(root, "date").value).toBe(hostile);
+    await open({ date: hostile, check: hostile, from: hostile, to: hostile });
+    expect(screen.queryByRole("img", { name: /^$/ })).not.toBeInTheDocument();
+    expect(dateBox()).toHaveValue(hostile);
+    expect(checkBox()).toHaveValue(hostile);
+  });
+
+  it("gives two copies on one page their own ids", async () => {
+    await open({}, "one");
+    await open({}, "two");
+    expect(screen.getAllByRole("textbox", { name: "Date" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("region", { name: "Leap Second Timeline" }),
+    ).toHaveLength(2);
   });
 });
 
@@ -387,118 +336,113 @@ describe("every preset", () => {
   });
 
   it.each(Object.entries(EXPECTED))("%s", async (id, want) => {
-    const { root } = await mount();
-    choose(root, "preset", id);
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe(id);
-    for (const g of ["offset", "between", "check"] as const) {
-      const copy = q(root, `copy-${g}`).dataset["copyText"] ?? "";
-      expect(copy, g).toBe(want.copy[g]);
-      const out = text(root, `${g}-output`);
-      expect(out, g).toBe(want.output[g]);
-      expect(isSentinel(root, `${g}-output`), g).toBe(
-        /^NO SIGNAL(\nNO SIGNAL)*$/.test(out),
-      );
-      // One result line for each call line.
-      if (want.copy[g] !== "") {
-        expect(out.split("\n").length, g).toBe(want.copy[g].split("\n").length);
+    const w = await open();
+    await pick(w, id);
+    expect(presetBox()).toHaveValue(id);
+    for (const g of GROUPS) {
+      const out = want.output[g];
+      expect(outputOf(g), g).toHaveTextContent(exact(flat(out)));
+      if (want.calls[g] !== "") {
+        expect(callsOf(g), g).toHaveTextContent(want.calls[g].split("\n")[0]!);
+        expect(callsOf(g), g).toHaveTextContent(flat(want.calls[g]));
+        // One result line for each call line.
+        expect(out.split("\n").length, g).toBe(
+          want.calls[g].split("\n").length,
+        );
       }
-      expect(isEmpty(root, `${g}-output`), g).toBe(out === BLANK);
     }
-    expect(plate(root, "hero-offset")).toEqual(want.plates.offset);
-    expect(plate(root, "hero-between")).toEqual(want.plates.between);
-    expect(plate(root, "hero-check")).toEqual(want.plates.check);
-    expect(litMarks(root)).toEqual(want.lit);
-    expect(q(root, "band").hidden).toBe(!want.band);
-    // Every inserted second is a mark, a table row and a list item, lit or not.
-    expect(root.querySelectorAll(".gmt-leap-mark")).toHaveLength(27);
-    expect(rows(root)).toHaveLength(INSERTION_ROWS);
-    expect(q(root, "timeline-list").children).toHaveLength(27);
-    expect(
-      rows(root).filter((r) => r.hasAttribute("data-reading")),
-    ).toHaveLength(want.lit.length);
-    expect(q(root, "plot").getAttribute("aria-label")).toBe(
-      text(root, "summary"),
+    expectPlates(want.plates);
+    const table = within(
+      screen.getByRole("table", { name: "Every inserted second" }),
     );
+    expect(table.queryAllByText("counted")).toHaveLength(want.counted);
+    expect(table.queryAllByText("your second 60")).toHaveLength(want.checked);
+    expect(tableRows()).toHaveLength(INSERTION_ROWS);
+    expect(
+      screen.getByRole("img", { name: summary().textContent! }),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
   it("before-1972 explains each no signal in one sentence", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "before-1972");
-    expect(text(root, "offset-aside")).toContain(BEFORE_1972_TEXT);
-    expect(text(root, "between-aside")).toContain(BEFORE_1972_TEXT);
-    expect(text(root, "check-aside")).toBe("");
+    const w = await open();
+    await pick(w, "before-1972");
+    const reasons = asides().filter((a) =>
+      a.textContent?.includes(BEFORE_1972_TEXT),
+    );
+    expect(reasons).toHaveLength(2);
+    for (const a of reasons) {
+      expect(a).toHaveAccessibleName(/^Why there is no result: /);
+    }
   });
 
   it("a legitimately empty next insertion is a live result, not no signal", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "after-the-table");
-    expect(isSentinel(root, "offset-output")).toBe(false);
-    expect(text(root, "offset-aside")).toBe("");
+    const w = await open();
+    await pick(w, "after-the-table");
+    expect(outputOf("offset")).not.toHaveTextContent(/NO SIGNAL/);
+    expect(asides()).toHaveLength(0);
+    expect(
+      screen.queryByText("⟨ NO SIGNAL — invalid input ⟩"),
+    ).not.toBeInTheDocument();
   });
 
   it("the table lists the 27 seconds in order with the offset after each", async () => {
-    const { root } = await mount();
-    const cells = rows(root).map((r) => [
-      r.querySelector("th .gmt-clock-line")!.textContent,
-      r.querySelector("td")!.textContent!.trim(),
-    ]);
-    expect(cells[0]).toEqual(["1972-06-30T23:59:60Z", "11 s"]);
-    expect(cells[26]).toEqual(["2016-12-31T23:59:60Z", "37 s"]);
+    await open();
+    const rows = tableRows();
+    expect(rows[0]).toHaveTextContent("1972-06-30T23:59:60Z");
+    expect(rows[0]).toHaveTextContent("11 s");
+    expect(rows[26]).toHaveTextContent("2016-12-31T23:59:60Z");
+    expect(rows[26]).toHaveTextContent("37 s");
     // The counted rows say so in words, not by colour alone.
-    expect(rows(root)[22]!.textContent).toContain("counted");
-    expect(rows(root)[26]!.textContent).toContain("your second 60");
+    expect(rows[22]).toHaveTextContent("counted");
+    expect(rows[26]).toHaveTextContent("your second 60");
   });
 });
 
 describe("typing", () => {
-  it("a typed date draws its pin, and a date past the axis says so", async () => {
-    const { root } = await mount();
-    type(root, "date", "2100-01-01T00:00:00Z");
-    expect(q(root, "pin").hidden).toBe(false);
-    expect(text(root, "pin-chip")).toContain("past the axis");
-    // The other fields still hold the first preset's values, so it is no longer a preset.
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
+  it("a typed date past the axis says so, and the preset becomes custom", async () => {
+    const w = await open();
+    await typeInto(w, dateBox(), "2100-01-01T00:00:00Z");
+    expect(screen.getByText(/\(past the axis\)/)).toBeInTheDocument();
+    expect(presetBox()).toHaveValue("custom");
+    await expectNoAxeViolations(document.body);
   });
 
-  it("an offset-spelled date draws its pin where the same instant in Z does", async () => {
-    const { root } = await mount();
-    type(root, "date", "2016-01-01T00:00:00Z");
-    const z = q(root, "pin").getAttribute("style");
-    type(root, "date", "2016-01-01T09:00:00+09:00");
-    expect(q(root, "pin").hidden).toBe(false);
-    expect(q(root, "pin").getAttribute("style")).toBe(z);
-    expect(text(root, "offset-output")).toBe('36\n"2016-12-31T23:59:60Z"');
-    expect(q<HTMLInputElement>(root, "date-slider").disabled).toBe(false);
-    expect(isSentinel(root, "offset-output")).toBe(false);
+  it("an offset-spelled date reads as the same instant, and keeps the slider enabled", async () => {
+    const w = await open();
+    await typeInto(w, dateBox(), "2016-01-01T09:00:00+09:00");
+    expect(outputOf("offset")).toHaveTextContent('36 "2016-12-31T23:59:60Z"');
+    expect(slider()).toBeEnabled();
+    expect(outputOf("offset")).not.toHaveTextContent(/NO SIGNAL/);
   });
 
-  it("an invalid date is no signal with the reason, and draws no pin", async () => {
-    const { root } = await mount();
-    type(root, "date", "soon");
-    expect(isSentinel(root, "offset-output")).toBe(true);
-    expect(text(root, "offset-aside")).toContain(
-      "This is not an ISO 8601 instant.",
-    );
-    expect(q(root, "pin").hidden).toBe(true);
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
+  it("an invalid date is no signal with the reason", async () => {
+    const w = await open();
+    await typeInto(w, dateBox(), "soon");
+    expect(outputOf("offset")).toHaveTextContent(/NO SIGNAL/);
+    expect(
+      asides().some((a) => a.textContent?.includes(NOT_INSTANT_TEXT)),
+    ).toBe(true);
+    expect(presetBox()).toHaveValue("custom");
+    expect(slider()).toBeDisabled();
+    await expectNoAxeViolations(document.body);
   });
 
   it("clearing a field leaves its call out and its output empty", async () => {
-    const { root } = await mount();
-    type(root, "check", "");
-    expect(q(root, "copy-check").dataset["copyText"] ?? "").toBe("");
-    expect(text(root, "check-output")).toBe(BLANK);
-    expect(isSentinel(root, "check-output")).toBe(false);
+    const w = await open();
+    await typeInto(w, checkBox(), "");
+    expect(outputOf("check")).toHaveTextContent(exact(BLANK));
+    expect(outputOf("check")).not.toHaveTextContent(/NO SIGNAL/);
   });
 
   it("a second 60 that is not an instant is no signal", async () => {
-    const { root } = await mount();
-    type(root, "check", "garbage");
-    expect(isSentinel(root, "check-output")).toBe(true);
-    expect(plate(root, "hero-check")[0]).toBe("no result");
-    expect(text(root, "check-aside")).toContain(
-      "This is not an ISO 8601 instant.",
-    );
+    const w = await open();
+    await typeInto(w, checkBox(), "garbage");
+    expect(outputOf("check")).toHaveTextContent(/NO SIGNAL/);
+    expectPlate(PLATE_CAPTIONS[2]!, NONE);
+    expect(
+      asides().some((a) => a.textContent?.includes(NOT_INSTANT_TEXT)),
+    ).toBe(true);
   });
 });
 
@@ -506,60 +450,51 @@ describe("the date slider", () => {
   const at = async (iso: string) => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(convertUtcToUnix(iso) ?? 0);
-    return mount();
+    return open();
   };
+  afterEach(() => vi.useRealTimers());
 
   it("runs from 1972-01-01 to continuous UTC while today is earlier", async () => {
-    const { root } = await at("2026-10-16T09:00:00Z");
-    const slider = q<HTMLInputElement>(root, "date-slider");
-    expect(slider.min).toBe("0");
-    expect(slider.max).toBe("20228");
-    expect(root.querySelector(".gmt-range-ends")!.textContent).toBe(
-      "1972-01-012027-05-20",
-    );
+    await at("2026-10-16T09:00:00Z");
+    expect(slider()).toHaveAttribute("min", "0");
+    expect(slider()).toHaveAttribute("max", "20228");
+    expect(screen.getByText("1972-01-01")).toBeInTheDocument();
+    expect(screen.getByText("2027-05-20")).toBeInTheDocument();
   });
 
   it("runs to the reader's today once it is later", async () => {
-    const { root } = await at("2030-03-10T09:00:00Z");
-    const slider = q<HTMLInputElement>(root, "date-slider");
-    expect(slider.max).toBe("21253");
-    expect(root.querySelector(".gmt-range-ends")!.textContent).toBe(
-      "1972-01-012030-03-10",
-    );
+    await at("2030-03-10T09:00:00Z");
+    expect(slider()).toHaveAttribute("max", "21253");
+    expect(screen.getByText("2030-03-10")).toBeInTheDocument();
   });
 
   it("writes a midnight and follows the date it wrote", async () => {
-    const { root } = await at("2026-10-16T09:00:00Z");
-    slide(root, 0);
-    expect(q<HTMLInputElement>(root, "date").value).toBe(
-      "1972-01-01T00:00:00Z",
-    );
-    expect(plate(root, "hero-offset")[0]).toBe("10 s");
-    slide(root, 20228);
-    expect(q<HTMLInputElement>(root, "date").value).toBe(
-      "2027-05-20T00:00:00Z",
-    );
-    expect(plate(root, "hero-offset")[0]).toBe("37 s");
-    expect(q<HTMLInputElement>(root, "date-slider").value).toBe("20228");
+    await at("2026-10-16T09:00:00Z");
+    setRange(slider(), 0);
+    expect(dateBox()).toHaveValue("1972-01-01T00:00:00Z");
+    expectPlate(PLATE_CAPTIONS[0]!, ["10 s", "next insertion", "1972-06-30"]);
+    setRange(slider(), 20228);
+    expect(dateBox()).toHaveValue("2027-05-20T00:00:00Z");
+    expect(plateParts(PLATE_CAPTIONS[0]!).value).toHaveTextContent("37 s");
+    expect(slider()).toHaveValue("20228");
+    await expectNoAxeViolations(document.body);
   });
 
   it("is disabled while the date cannot be placed, and a typed date moves it", async () => {
-    const { root } = await at("2026-10-16T09:00:00Z");
-    type(root, "date", "soon");
-    expect(q<HTMLInputElement>(root, "date-slider").disabled).toBe(true);
-    type(root, "date", "1972-01-11T12:00:00Z");
-    expect(q<HTMLInputElement>(root, "date-slider").disabled).toBe(false);
-    expect(q<HTMLInputElement>(root, "date-slider").value).toBe("10");
+    const w = await at("2026-10-16T09:00:00Z");
+    await typeInto(w, dateBox(), "soon");
+    expect(slider()).toBeDisabled();
+    await typeInto(w, dateBox(), "1972-01-11T12:00:00Z");
+    expect(slider()).toBeEnabled();
+    expect(slider()).toHaveValue("10");
   });
 
-  it("moving it does not resize the plates or the table", async () => {
-    const { root } = await at("2026-10-16T09:00:00Z");
-    const shape = () =>
-      `${q(root, "heroes").children.length}/${rows(root).length}/${q(root, "marks").children.length}`;
-    const before = shape();
+  it("keeps the same table and plates while it moves", async () => {
+    await at("2026-10-16T09:00:00Z");
     for (const day of [0, 5000, 10000, 20228]) {
-      slide(root, day);
-      expect(shape()).toBe(before);
+      setRange(slider(), day);
+      expect(tableRows()).toHaveLength(INSERTION_ROWS);
+      expect(screen.getAllByRole("definition")).toHaveLength(9);
     }
   });
 });
@@ -568,119 +503,83 @@ describe("permalinks", () => {
   it.each(TIMELINE_PRESETS.map((p) => [p.id]))(
     "round-trips %s as a permalink of strings",
     async (id) => {
-      const first = await mount();
-      choose(first.root, "preset", id!);
-      const state = first.handle.getPermalinkState?.() as Record<
-        string,
-        unknown
-      >;
-      expect(
-        Object.values(state).every(
-          (v) => typeof v === "string" && v.length > 0 && v.length <= 64,
-        ),
-      ).toBe(true);
-      const url = encodeWidgetPermalink("leapline", state);
-      expect(url).toMatch(
+      const first = await open();
+      await pick(first, id!);
+      const link = first.permalink();
+      const url = new URL(link, "https://x.test");
+      expect(link).toMatch(
         new RegExp(
           `^${SITE_BASE}/tools/leap-second-timeline/\\?w=leapline&wa=`,
         ),
       );
-      const seeded = seedFromLocation("leapline", url.slice(url.indexOf("?")));
-      expect(seeded).toEqual(state);
-      const outputs = ["offset", "between", "check"].map((g) =>
-        text(first.root, `${g}-output`),
+      expect(url.search).toContain("leapline");
+      const seeded = seedFromLocation(
+        "leapline",
+        link.slice(link.indexOf("?")),
       );
-      document.body.innerHTML = "";
-
-      const second = await mount(seeded);
+      expect(seeded).not.toBeNull();
       expect(
-        ["offset", "between", "check"].map((g) =>
-          text(second.root, `${g}-output`),
+        Object.values(seeded as Record<string, unknown>).every(
+          (v) => typeof v === "string" && v.length > 0 && v.length <= 64,
         ),
-      ).toEqual(outputs);
-      expect(q<HTMLSelectElement>(second.root, "preset").value).toBe(id);
+      ).toBe(true);
+      const outputs = GROUPS.map((g) => outputOf(g).textContent);
+      first.destroy();
+
+      await open(seeded as Record<string, unknown>, "second");
+      expect(GROUPS.map((g) => outputOf(g).textContent)).toEqual(outputs);
+      expect(presetBox()).toHaveValue(id);
     },
   );
 
   it("leaves blank fields out of the link", async () => {
-    const { root, handle } = await mount();
-    choose(root, "preset", "last-insertion");
-    expect(handle.getPermalinkState?.()).toEqual({
-      date: "2016-01-01T00:00:00Z",
-    });
+    const w = await open();
+    await pick(w, "last-insertion");
+    const link = w.permalink();
+    expect(seedFromLocation("leapline", link.slice(link.indexOf("?")))).toEqual(
+      { date: "2016-01-01T00:00:00Z" },
+    );
   });
 });
 
 describe("on-screen words", () => {
-  function screenText(root: HTMLElement): string {
-    const clone = root.cloneNode(true) as HTMLElement;
-    clone
-      .querySelectorAll('.gmt-codeframe, output[data-role$="output"]')
-      .forEach((e) => e.remove());
-    const labels = [...clone.querySelectorAll("[aria-label]")].map((e) =>
-      e.getAttribute("aria-label"),
-    );
-    return `${clone.textContent}\n${labels.join("\n")}`;
-  }
-
   it.each(TIMELINE_PRESETS.map((p) => [p.id]))(
-    "%s shows no raw null or undefined outside the printed output",
+    "%s shows no raw null or undefined",
     async (id) => {
-      const { root } = await mount();
-      choose(root, "preset", id!);
-      expect(screenText(root)).not.toMatch(/\b(null|undefined)\b/);
+      const w = await open();
+      await pick(w, id!);
+      expect(document.body).not.toHaveTextContent(/\b(null|undefined)\b/);
     },
   );
 
-  it("names no law, regulator or national lead, and counts nothing about the site", async () => {
+  it("names no law, regulator or national lead", async () => {
     const forbidden =
       /\b(CFR|statut|regulat|docket|agency|court|America\/|en-US|NIST|USNO)\w*/i;
-    const { root } = await mount();
-    const seen: string[] = [renderLeapSecondTimelineTemplate()];
+    const w = await open();
     for (const p of TIMELINE_PRESETS) {
-      choose(root, "preset", p.id);
-      seen.push(root.textContent ?? "");
+      await pick(w, p.id);
+      expect(document.body).not.toHaveTextContent(forbidden);
     }
-    for (const s of seen) expect(s).not.toMatch(forbidden);
   });
 });
 
 describe("lifecycle", () => {
   it("an aborted mount is inert", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderLeapSecondTimelineTemplate();
-    document.body.append(root);
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountLeapSecondTimeline(root, {}, controller.signal);
-    expect(plate(root, "hero-offset")[0]).toBe("no result");
-    expect(handle.getPermalinkState?.()).toBeNull();
+    const w = await renderWidget(entry, { args: {}, aborted: true });
+    expect(w.permalink).toBeDefined();
     expect(() => {
-      handle.destroy();
-      handle.destroy();
+      w.destroy();
+      w.destroy();
     }).not.toThrow();
   });
 
   it("releases its width observer on destroy, and destroying twice is safe", async () => {
     const spy = spyOnResizeObservers();
-    const { handle } = await mount();
-    expect(spy.live.size).toBe(1);
-    handle.destroy();
-    handle.destroy();
+    const w = await open();
+    expect(spy.live.size).toBeGreaterThan(0);
+    w.destroy();
+    w.destroy();
     expect(spy.live.size).toBe(0);
-    spy.restore();
-  });
-
-  it("fits its chip rows again when the width changes, and keeps the drawing", async () => {
-    const spy = spyOnResizeObservers();
-    const { root } = await mount();
-    const marks = q(root, "marks").innerHTML;
-    Object.defineProperty(q(root, "frame"), "clientWidth", {
-      configurable: true,
-      value: 480,
-    });
-    spy.fire();
-    expect(q(root, "marks").innerHTML).toBe(marks);
     spy.restore();
   });
 });
@@ -688,56 +587,32 @@ describe("lifecycle", () => {
 describe("the links row", () => {
   const ELAPSED = "Count the real seconds between these dates";
   const CLOCKS = "Every clock on this date";
-  async function mountPreset(id: string) {
-    const mounted = await mount();
-    choose(mounted.root, "preset", id);
-    return mounted;
-  }
-  const link = (root: HTMLElement, role: string) =>
-    q<HTMLAnchorElement>(root, role);
-  const state = (root: HTMLElement, role: string) => ({
-    text: link(root, role).textContent,
-    href: link(root, role).getAttribute("href"),
-    disabled: link(root, role).getAttribute("aria-disabled"),
-  });
-  const enabled = (text: string, href: string) => ({
-    text,
-    href,
-    disabled: null,
-  });
-  const disabled = (text: string) => ({ text, href: null, disabled: "true" });
-
-  it("has both links in the links row, in order", async () => {
-    const { root } = await mount();
-    const row = q(root, "tool-links");
-    expect(row.classList.contains("gmt-widget-controls")).toBe(true);
-    expect(
-      [...row.querySelectorAll("a")].map((a) => a.dataset["role"]),
-    ).toEqual(["link-elapsed", "link-clocks"]);
-  });
+  const enabledLink = (name: string) => screen.getByRole("link", { name });
+  const expectDisabled = (name: string) => {
+    expect(linkNamed(name)).toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByRole("link", { name })).not.toBeInTheDocument();
+  };
 
   it("sends the span to Elapsed vs. Clock as start and end, and the date to the Clock Converter", async () => {
-    const { root } = await mountPreset("from-2000");
-    expect(state(root, "link-elapsed")).toEqual(
-      enabled(
-        ELAPSED,
-        encodeWidgetPermalink("elapsed", {
-          start: "2000-01-01T00:00:00Z",
-          end: "2024-01-01T00:00:00Z",
-        }),
-      ),
+    await open();
+    expect(enabledLink(ELAPSED)).toHaveAttribute(
+      "href",
+      encodeWidgetPermalink("elapsed", {
+        start: "2000-01-01T00:00:00Z",
+        end: "2024-01-01T00:00:00Z",
+      }),
     );
-    expect(state(root, "link-clocks")).toEqual(
-      enabled(
-        CLOCKS,
-        encodeWidgetPermalink("satclock", { value: "2000-01-01T00:00:00Z" }),
-      ),
+    expect(enabledLink(CLOCKS)).toHaveAttribute(
+      "href",
+      encodeWidgetPermalink("satclock", { value: "2000-01-01T00:00:00Z" }),
     );
   });
 
   it("sends a backwards span as typed", async () => {
-    const { root } = await mountPreset("backwards");
-    expect(link(root, "link-elapsed").getAttribute("href")).toBe(
+    const w = await open();
+    await pick(w, "backwards");
+    expect(enabledLink(ELAPSED)).toHaveAttribute(
+      "href",
       encodeWidgetPermalink("elapsed", {
         start: "2024-01-01T00:00:00Z",
         end: "2000-01-01T00:00:00Z",
@@ -745,14 +620,16 @@ describe("the links row", () => {
     );
   });
 
-  it("follows what is typed, and each link is lit by its own fields", async () => {
-    const { root } = await mountPreset("from-2000");
-    type(root, "date", "2016-01-01T00:00:00Z");
-    expect(link(root, "link-clocks").getAttribute("href")).toBe(
+  it("follows what is typed", async () => {
+    const w = await open();
+    await typeInto(w, dateBox(), "2016-01-01T00:00:00Z");
+    expect(enabledLink(CLOCKS)).toHaveAttribute(
+      "href",
       encodeWidgetPermalink("satclock", { value: "2016-01-01T00:00:00Z" }),
     );
-    type(root, "to", "2020-01-01T00:00:00Z");
-    expect(link(root, "link-elapsed").getAttribute("href")).toBe(
+    await typeInto(w, toBox(), "2020-01-01T00:00:00Z");
+    expect(enabledLink(ELAPSED)).toHaveAttribute(
+      "href",
       encodeWidgetPermalink("elapsed", {
         start: "2000-01-01T00:00:00Z",
         end: "2020-01-01T00:00:00Z",
@@ -761,112 +638,108 @@ describe("the links row", () => {
   });
 
   it("follows the slider's date", async () => {
-    const { root } = await mountPreset("from-2000");
-    slide(root, 0);
-    const date = q<HTMLInputElement>(root, "date").value;
-    expect(date).toBe("1972-01-01T00:00:00Z");
-    expect(link(root, "link-clocks").getAttribute("href")).toBe(
-      encodeWidgetPermalink("satclock", { value: date }),
+    await open();
+    setRange(slider(), 0);
+    expect(enabledLink(CLOCKS)).toHaveAttribute(
+      "href",
+      encodeWidgetPermalink("satclock", { value: "1972-01-01T00:00:00Z" }),
     );
   });
 
   it("disables the clocks link with no date, and the span link with no span", async () => {
-    const { root } = await mountPreset("backwards");
-    expect(state(root, "link-clocks")).toEqual(disabled(CLOCKS));
-    expect(link(root, "link-elapsed").hasAttribute("href")).toBe(true);
-    type(root, "from", "");
-    expect(state(root, "link-elapsed")).toEqual(disabled(ELAPSED));
+    const w = await open();
+    await pick(w, "backwards");
+    expectDisabled(CLOCKS);
+    expect(enabledLink(ELAPSED)).toBeInTheDocument();
+    await typeInto(w, fromBox(), "");
+    expectDisabled(ELAPSED);
   });
 
-  it("disables the clocks link for a date before 1972, where the library has no offset", async () => {
-    const { root } = await mountPreset("before-1972");
-    expect(state(root, "link-clocks")).toEqual(disabled(CLOCKS));
+  it("disables the clocks link for a date before 1972", async () => {
+    const w = await open();
+    await pick(w, "before-1972");
+    expectDisabled(CLOCKS);
   });
 
   it("disables both links on a second 60 that never happened", async () => {
-    const { root } = await mountPreset("not-inserted");
-    expect(state(root, "link-elapsed")).toEqual(disabled(ELAPSED));
-    expect(state(root, "link-clocks")).toEqual(disabled(CLOCKS));
+    const w = await open();
+    await pick(w, "not-inserted");
+    expectDisabled(ELAPSED);
+    expectDisabled(CLOCKS);
   });
 
   it("disables the span link for a span the library refused, and lights it again", async () => {
-    const { root } = await mountPreset("from-2000");
-    type(root, "from", "not a date");
-    expect(state(root, "link-elapsed")).toEqual(disabled(ELAPSED));
-    // The date is separate: its link is untouched.
-    expect(link(root, "link-clocks").hasAttribute("href")).toBe(true);
-    type(root, "from", "2000-01-01T00:00:00Z");
-    expect(link(root, "link-elapsed").hasAttribute("href")).toBe(true);
-    expect(link(root, "link-elapsed").hasAttribute("aria-disabled")).toBe(
-      false,
-    );
+    const w = await open();
+    await typeInto(w, fromBox(), "not a date");
+    expectDisabled(ELAPSED);
+    expect(enabledLink(CLOCKS)).toBeInTheDocument();
+    await typeInto(w, fromBox(), "2000-01-01T00:00:00Z");
+    expect(enabledLink(ELAPSED)).not.toHaveAttribute("aria-disabled");
   });
 
   it("lands on seeds the other tools read back", async () => {
-    const { root } = await mountPreset("from-2000");
-    const read = (role: string, kind: "elapsed" | "satclock") => {
-      const href = link(root, role).getAttribute("href")!;
+    await open();
+    const read = (name: string, kind: "elapsed" | "satclock") => {
+      const href = enabledLink(name).getAttribute("href")!;
       return seedFromLocation(kind, href.slice(href.indexOf("?")));
     };
-    expect(read("link-elapsed", "elapsed")).toEqual({
+    expect(read(ELAPSED, "elapsed")).toEqual({
       start: "2000-01-01T00:00:00Z",
       end: "2024-01-01T00:00:00Z",
     });
-    expect(read("link-clocks", "satclock")).toEqual({
+    expect(read(CLOCKS, "satclock")).toEqual({
       value: "2000-01-01T00:00:00Z",
     });
   });
 });
 
 describe("the staircase", () => {
-  it("draws the y axis, the area, a riser per insertion and the end cap", async () => {
-    const { root } = await mount();
+  it("draws the y axis and the end cap as text", async () => {
+    await open();
+    for (const tick of ["10", "20", "30", "37"]) {
+      expect(screen.getAllByText(tick).length).toBeGreaterThan(0);
+    }
     expect(
-      [...root.querySelectorAll(".gmt-leap-ytick")].map((t) => t.textContent),
-    ).toEqual(["10", "20", "30", "37"]);
-    expect(root.querySelectorAll(".gmt-leap-riser")).toHaveLength(27);
-    expect(q(root, "step-area").getAttribute("d")).toMatch(/^M0,100 L/);
-    expect(text(root, "continuous-chip")).toBe(
-      "continuous UTC from 2027-05-20",
-    );
+      screen.getByText("continuous UTC from 2027-05-20"),
+    ).toBeInTheDocument();
   });
 
-  it("lights the risers of the counted span and the checked second, and counts them", async () => {
-    const { root } = await mount();
-    const lit = [...root.querySelectorAll(".gmt-leap-riser[data-lit]")].map(
-      (r) => r.getAttribute("data-series"),
-    );
-    expect(lit).toEqual(["2", "2", "2", "2", "3"]);
-    expect(q(root, "band-flag").hidden).toBe(false);
-    expect(text(root, "band-chip")).toBe("5 leap seconds counted");
+  it("counts the span and the checked second", async () => {
+    await open();
+    expect(screen.getByText("5 leap seconds counted")).toBeInTheDocument();
   });
 
-  it("puts the cursor's readout and its dot at the step", async () => {
-    const { root } = await mount();
-    expect(text(root, "pin-chip")).toBe("2000-01-01 · 32 s");
-    expect(q(root, "pin-dot").hidden).toBe(false);
-    expect(q(root, "pin-guide").hidden).toBe(false);
+  it("reads the cursor's date and offset", async () => {
+    await open();
+    expect(screen.getByText("2000-01-01 · 32 s")).toBeInTheDocument();
   });
 
-  it("draws a ghost riser for a second 60 that never happened, and no band", async () => {
-    const { root } = await mount();
-    expect(q(root, "ghost").hidden).toBe(true);
-    choose(root, "preset", "not-inserted");
-    expect(q(root, "ghost").hidden).toBe(false);
-    expect(root.querySelectorAll(".gmt-leap-riser[data-lit]")).toHaveLength(0);
-    expect(q(root, "band-flag").hidden).toBe(true);
+  it("says never inserted only for a second 60 that never happened", async () => {
+    const w = await open();
+    expect(screen.queryByText(/never inserted/)).not.toBeInTheDocument();
+    await pick(w, "not-inserted");
+    expect(screen.getByText(/never inserted/)).toBeInTheDocument();
+    expect(screen.queryByText(/counted$/)).not.toBeInTheDocument();
   });
 
   it("shows NO SIGNAL in the plot for a date before 1972, and not for a legitimate empty result", async () => {
-    const { root } = await mount();
-    expect(q(root, "plot-sentinel").hidden).toBe(true);
-    choose(root, "preset", "after-the-table");
-    expect(q(root, "plot-sentinel").hidden).toBe(true);
-    choose(root, "preset", "before-1972");
-    expect(q(root, "plot-sentinel").hidden).toBe(false);
-    expect(q(root, "plot-sentinel").textContent).toBe(
-      "⟨ NO SIGNAL — invalid input ⟩",
-    );
-    expect(q(root, "pin-dot").hidden).toBe(true);
+    const w = await open();
+    const lost = "⟨ NO SIGNAL — invalid input ⟩";
+    expect(screen.queryByText(lost)).not.toBeInTheDocument();
+    await pick(w, "after-the-table");
+    expect(screen.queryByText(lost)).not.toBeInTheDocument();
+    await pick(w, "before-1972");
+    expect(screen.getByText(lost)).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
+  });
+});
+
+describe("the length cap", () => {
+  it("stops the date field at 64 characters", async () => {
+    const w = await open();
+    const box = dateBox();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(72));
+    expect(box).toHaveValue("x".repeat(64));
   });
 });

@@ -22,7 +22,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderElapsedVsClockTemplate();
+const html = renderElapsedVsClockTemplate("elapsed-vs-clock").value;
 ---
 
 {
@@ -41,7 +41,7 @@ const html = renderElapsedVsClockTemplate();
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("elapsed");
     document
-      .querySelectorAll<HTMLElement>(".gmt-elapsed-vs-clock")
+      .querySelectorAll<HTMLElement>('[data-widget="elapsed-vs-clock"]')
       .forEach((el) => {
         mountElapsedVsClock(el, seed, new AbortController().signal).catch(
           (error) => showUnavailable(el, error),

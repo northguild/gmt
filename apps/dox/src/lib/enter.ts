@@ -12,10 +12,14 @@
  * No gmt import, no `dox-tools`, no `zod`, no `ai`.
  */
 
+/** The class that plays the entrance, and the property that carries its stagger. */
+export const ENTER_CLASS = "gmt-enter";
+const ENTER_DELAY_PROPERTY = "--gmt-enter-delay";
+
 /** Long enough for the 0.5s entrance plus a stagger to finish on a busy main thread. */
 const SETTLE_MS = 1500;
 
-export interface EnterOptions {
+interface EnterOptions {
   /** Start the entrance this many ms late, to stagger it after a sibling's. */
   delayMs?: number;
   /** Runs once the element has fully entered, or at once under reduced motion. */
@@ -37,7 +41,7 @@ export function enter(
   el: HTMLElement | SVGElement,
   options: EnterOptions = {},
 ): void {
-  if (el.hasAttribute("data-entered") || el.classList.contains("gmt-enter")) {
+  if (el.hasAttribute("data-entered") || el.classList.contains(ENTER_CLASS)) {
     return;
   }
   const { delayMs = 0, onEntered } = options;
@@ -49,8 +53,8 @@ export function enter(
     done = true;
     clearTimeout(fallback);
     el.removeEventListener("animationend", onEnd);
-    el.classList.remove("gmt-enter");
-    el.style.removeProperty("--gmt-enter-delay");
+    el.classList.remove(ENTER_CLASS);
+    el.style.removeProperty(ENTER_DELAY_PROPERTY);
     el.setAttribute("data-entered", "");
     onEntered?.();
   };
@@ -70,9 +74,9 @@ export function enter(
     return;
   }
 
-  el.style.setProperty("--gmt-enter-delay", `${delayMs}ms`);
+  el.style.setProperty(ENTER_DELAY_PROPERTY, `${delayMs}ms`);
   el.addEventListener("animationend", onEnd);
-  el.classList.add("gmt-enter");
+  el.classList.add(ENTER_CLASS);
   /* A timer as well: animationend does not fire for an element that is not
      rendered, or while the document timeline is paused, and onEntered may arm
      controls the reader needs. */

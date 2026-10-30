@@ -1,0 +1,198 @@
+/* countdown and verdictBadge. Both sit on the widget surface and set their own ink, so no
+   tool rule repairs them. The countdown's cells and the badge's two lines keep their boxes
+   while a reading ticks or a slider drags. */
+
+.count {
+  display: grid;
+  gap: 0.25rem;
+  min-inline-size: 0;
+  margin: 0;
+  padding: clamp(0.75rem, 0.5rem + 1vw, 1.25rem);
+  border: 1px solid var(--gmt-hairline);
+  border-block-end: 3px solid var(--gmt-series-1);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+}
+
+.caption {
+  color: var(--gmt-ice-dim);
+  font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* With no countdown the words stand where the cells go, so the box is as tall as with them. */
+.none {
+  min-block-size: 3.225rem;
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: clamp(1rem, 0.9rem + 0.5vw, 1.375rem);
+}
+
+.digits {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gmt-space-2);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  .count[data-past="true"] & {
+    color: var(--gmt-ice-dim);
+  }
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-inline-size: 0;
+
+  & > b {
+    min-inline-size: 2ch;
+    font-size: var(--gmt-text-xl);
+    font-weight: 500;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  &[data-unit="days"] > b {
+    min-inline-size: 5ch;
+    font-size: calc(var(--gmt-text-xl) * 1.25);
+  }
+
+  & > i {
+    color: var(--gmt-ice-dim);
+    font-size: var(--gmt-text-xs);
+    font-style: normal;
+    letter-spacing: var(--gmt-tracking-wider);
+    text-transform: uppercase;
+  }
+}
+
+/* The line and its samples share one cell: the box keeps the longest. */
+.lines {
+  display: grid;
+}
+
+.line,
+.ghost {
+  grid-area: 1 / 1;
+  min-block-size: 1lh;
+  color: var(--gmt-ice);
+  font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
+  overflow-wrap: anywhere;
+}
+
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.badge {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+  box-sizing: border-box;
+  min-block-size: calc(2lh + 2 * var(--gmt-space-2) + 2px);
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background-color: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+
+  /* Right: lit glass in the series colour. Early and late: a dashed edge and a hatch that
+     leans the other way each time. The icon and the words carry it, not colour. */
+  &[data-verdict="right"] {
+    border-color: var(--gmt-series-1);
+    background-color: color-mix(
+      in srgb,
+      var(--gmt-series-1) 16%,
+      var(--gmt-surface-widget)
+    );
+  }
+
+  &[data-verdict="early"],
+  &[data-verdict="late"] {
+    border-style: dashed;
+    border-color: var(--gmt-ice);
+    background-image: repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--gmt-ice) 16%, transparent) 0,
+      color-mix(in srgb, var(--gmt-ice) 16%, transparent) 2px,
+      transparent 2px,
+      transparent 8px
+    );
+  }
+
+  &[data-verdict="late"] {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--gmt-ice) 16%, transparent) 0,
+      color-mix(in srgb, var(--gmt-ice) 16%, transparent) 2px,
+      transparent 2px,
+      transparent 8px
+    );
+  }
+}
+
+.badgeText {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  min-block-size: 2lh;
+  overflow-wrap: anywhere;
+}
+
+.icon {
+  display: none;
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  &[data-shown] {
+    display: block;
+  }
+}
+
+@media (forced-colors: active) {
+  .count,
+  .badge {
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .badge[data-verdict="early"],
+  .badge[data-verdict="late"] {
+    background-image: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .caption,
+  .none,
+  .cell > i {
+    color: var(--gmt-ice);
+  }
+
+  .count,
+  .badge {
+    border-color: var(--gmt-ice);
+  }
+}

@@ -1,0 +1,139 @@
+/* dst-ticker: the strip a reader scrubs. Gold marks a skipped hour and purple a repeated one,
+   from the DST tokens; the status line says the same in words, so colour is never alone.
+   The track keeps its height and the label row reserves its box, so nothing moves while the
+   handle is dragged. */
+
+.ticker {
+  --tone: var(--gmt-dst-gold);
+  --ink: var(--gmt-dst-gold-ink);
+
+  container: dst-ticker / inline-size;
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.status {
+  margin: 0;
+  min-block-size: 1.5em;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track {
+  position: relative;
+  block-size: 40px;
+  border-block-end: 1px solid var(--gmt-border);
+}
+
+.handleHost {
+  position: absolute;
+  inset: 0;
+
+  & > div {
+    block-size: 100%;
+  }
+
+  & gmt-handle[data-zone="gap"]::before {
+    background: var(--gmt-dst-gold);
+    box-shadow: 0 0 0 1px var(--gmt-dst-gold);
+  }
+
+  & gmt-handle[data-zone="overlap"]::before {
+    background: var(--gmt-dst-purple);
+    box-shadow: 0 0 0 1px var(--gmt-dst-purple);
+  }
+}
+
+.band {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--gmt-band-from, 0) * 1%);
+  inline-size: calc((var(--gmt-band-to, 0) - var(--gmt-band-from, 0)) * 1%);
+  border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tone) 18%, transparent) 0 6px,
+    color-mix(in srgb, var(--tone) 5%, transparent) 6px 12px
+  );
+
+  &[data-kind="overlap"] {
+    --tone: var(--gmt-dst-purple);
+  }
+}
+
+.zoneLabel {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(var(--gmt-at, 0) * 1%);
+  translate: -50% 0;
+  padding-inline: 0.25rem;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+}
+
+.ticks {
+  position: relative;
+  block-size: 1.5em;
+}
+
+.tick {
+  position: absolute;
+  inset-inline-start: calc(var(--gmt-at, 0) * 1%);
+  translate: -50% 0;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+
+  &[data-rank="minor"] {
+    @container dst-ticker (inline-size < 30rem) {
+      display: none;
+    }
+  }
+}
+
+.empty {
+  margin: 0;
+  padding: var(--gmt-space-3);
+  background: var(--gmt-fill-deep);
+  color: var(--gmt-ice);
+  font-style: italic;
+}
+
+@media (forced-colors: active) {
+  .band {
+    border-color: CanvasText;
+    background: transparent;
+  }
+
+  .zoneLabel {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .track {
+    border-color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .band {
+    border-color: var(--ink);
+  }
+
+  .track {
+    border-color: var(--gmt-ice);
+  }
+}

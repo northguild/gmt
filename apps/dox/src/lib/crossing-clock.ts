@@ -21,11 +21,11 @@ import {
   type Crossing,
   type TransportLib,
 } from "./transport-widgets";
-import { escapeHtml } from "./widget-ui";
+import { codeSpan } from "./widget-ui";
 
 /** Fixed offsets, offered only here: the one widget that specifically
  *  teaches that a fixed offset observes no DST. */
-export const FIXED_OFFSET_ZONES: readonly string[] = ["+02:00", "-05:00"];
+const FIXED_OFFSET_ZONES: readonly string[] = ["+02:00", "-05:00"];
 
 export const CROSSING_ZONES: readonly string[] = [
   ...TRANSPORT_ZONES,
@@ -46,7 +46,7 @@ export interface CrossingClockArgs {
 
 export const CUSTOM_PRESET_ID = "custom";
 
-export interface CrossingPreset {
+interface CrossingPreset {
   id: string;
   label: string;
   description: string;
@@ -159,12 +159,7 @@ export function crossingCallSource(state: CrossingState): [string, string] {
     state.exit.trim(),
     state.targetZone.trim(),
   ];
-  const html = values
-    .map(
-      (v) =>
-        `<span class="gmt-code-str">${escapeHtml(JSON.stringify(v))}</span>`,
-    )
-    .join(", ");
+  const html = values.map((v) => codeSpan("str", JSON.stringify(v))).join(", ");
   const plain = values.map((v) => JSON.stringify(v)).join(", ");
   return [html, plain];
 }
@@ -240,7 +235,7 @@ export interface CrossingChangeMarker {
   label: string;
   /** The affected wall-clock hour, chronologically ordered (`from` is
    *  always the smaller reading) — the same pair the label's own
-   *  `HH:MM–HH:MM` is built from. Handed to `renderCrystalClock`'s
+   *  `HH:MM–HH:MM` is built from. Handed to the crystal clock's
    *  `highlight` option to draw the matching sector on the dial. */
   fromHour: number;
   fromMinute: number;
@@ -248,7 +243,7 @@ export interface CrossingChangeMarker {
   toMinute: number;
 }
 
-export interface CrossingStripTick {
+interface CrossingStripTick {
   /** 0–100, proportional position along the bar. */
   percent: number;
   /** Elapsed-hour label shown below the tick, e.g. `"2h"`. Null for the
@@ -499,7 +494,7 @@ export function isRepeatedReading(entry: ClockFace, exit: ClockFace): boolean {
 // Why null
 // ---------------------------------------------------------------------------
 
-export type CrossingNullReason =
+type CrossingNullReason =
   | "invalid-entry"
   | "invalid-exit"
   | "unknown-zone"

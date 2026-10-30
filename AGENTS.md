@@ -45,7 +45,7 @@ operation, in their own words:
   finished are **not** requests to push or open a PR. They are about the work,
   not about git.
 - Urgency is not a reason on its own. A bug being live in production is a reason
-  to *tell the user*, not to push a fix nobody asked for.
+  to _tell the user_, not to push a fix nobody asked for.
 - A "yes" to a different question is not a yes to this one.
 
 **Destructive and wide-reaching variants have to be asked for by name.**

@@ -25,7 +25,6 @@
  */
 
 import { CURATED_TIMEZONES } from "./curated-timezones";
-import { escapeAttr, escapeHtml } from "./widget-ui";
 
 export { callArgs, formatValue } from "./punctuality-widgets";
 export { zoneOptionsHtml } from "./transport-widgets";
@@ -35,7 +34,7 @@ export { zoneOptionsHtml } from "./transport-widgets";
 // ---------------------------------------------------------------------------
 
 /** A period or range: the start and the end, each a house value. */
-export interface Interval {
+interface Interval {
   start: string;
   end: string;
 }
@@ -45,7 +44,7 @@ export interface Interval {
 export type EdiHouse = string | Interval;
 
 /** The kinds of value a UN/EDIFACT 2379 code states, as the classifier names them. */
-export type EdifactKind =
+type EdifactKind =
   | "date"
   | "time"
   | "dateTime"
@@ -59,12 +58,7 @@ export interface EdifactClass {
 }
 
 /** The kinds of value an X12 1250 qualifier states, as the classifier names them. */
-export type X12Kind =
-  | "date"
-  | "time"
-  | "dateTime"
-  | "dateRange"
-  | "dateTimeRange";
+type X12Kind = "date" | "time" | "dateTime" | "dateRange" | "dateTimeRange";
 
 export interface X12Class {
   kind: X12Kind;
@@ -290,11 +284,6 @@ export function houseEnds(house: EdiHouse): string[] {
   return isInterval(house) ? [house.start, house.end] : [house];
 }
 
-/** The text of a house value for a table cell: the string, or `start / end`. */
-export function houseText(house: EdiHouse): string {
-  return isInterval(house) ? `${house.start} / ${house.end}` : house;
-}
-
 // ---------------------------------------------------------------------------
 // Zones
 // ---------------------------------------------------------------------------
@@ -385,23 +374,6 @@ export function durationText(iso: string): string {
   return parts.length > 0 ? parts.join(" ") : "0 h";
 }
 
-/** The text of a `<dd>` member row. */
-export type MemberRow<K extends string> = {
-  key: K;
-  role: string;
-  label: string;
-};
-
-/** The `<dl>` rows of a readout block, all always present. */
-export function readoutRowsHtml(rows: readonly MemberRow<string>[]): string {
-  return rows
-    .map(
-      (r) =>
-        `<div class="gmt-edi-row"><dt>${escapeHtml(r.label)}</dt><dd data-role="${escapeAttr(r.role)}" data-state="none">no result</dd></div>`,
-    )
-    .join("");
-}
-
 export const ABSENT_MEMBER_TEXT = "not stated";
 export const NO_RESULT_TEXT = "no result";
 
@@ -445,7 +417,7 @@ export const NO_RESULT_TITLE = "No result";
 // ---------------------------------------------------------------------------
 
 /** One zone slot of the strip, before a tool adds its own last column. */
-export interface ZoneResolution {
+interface ZoneResolution {
   zone: string;
   instant: string;
   /** The offset in force at the instant, `""` when there is no instant. */
@@ -515,9 +487,6 @@ export function widestGap(
 /** A stand-in as wide as the longest zone name in the pickers (30 characters), for
  *  the hidden sizers that reserve a region's height. It is not a zone. */
 export const LONGEST_ZONE = "Zonename/Wwwwwwwwwwwwwwwwwwwww";
-
-/** The width of a typical long zone name (22 characters), for a sizer. */
-export const SHORT_ZONE = "Zonename/Wwwwwwwwwwwww";
 
 export const GAP_PROMPT =
   "Choose two zones to see how far apart the answers are.";

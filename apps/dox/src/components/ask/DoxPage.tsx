@@ -70,6 +70,7 @@ export default function DoxPage() {
 
   const railId = useId();
   const chatRef = useRef<DoxChatHandle>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLButtonElement>(null);
   /* Has the reader sent anything? Drives the phone's "Examples" bar. */
   const [conversationStarted, setConversationStarted] = useState(false);
@@ -149,7 +150,7 @@ export default function DoxPage() {
     }
     document
       .getElementById(railId)
-      ?.querySelector<HTMLElement>(`button[data-widget="${tool}"]`)
+      ?.querySelector<HTMLElement>(`button[data-starter="${tool}"]`)
       ?.focus();
   }, [railWidget, conversationStarted, examplesOpen, railId]);
 
@@ -176,6 +177,7 @@ export default function DoxPage() {
         </div>
       </div>
       <div
+        ref={bodyRef}
         className="gmt-hive-body"
         data-empty={(!conversationStarted && !railWidget) || undefined}
       >
@@ -205,7 +207,7 @@ export default function DoxPage() {
             }
           />
         </ChatErrorBoundary>
-        <RailResizer railId={railId} />
+        <RailResizer railId={railId} container={bodyRef} />
         <ChatErrorBoundary
           label="widget rail"
           /* No reload offered here: the conversation behind this is intact and

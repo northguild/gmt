@@ -8,6 +8,8 @@
  */
 import { canadaTense, moroccoTense } from "./clock-change-tense.fixture";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import { within } from "@testing-library/dom";
+import { setHtml, type SafeHtml } from "~/widgets/builders";
 import { GMT_MODULES } from "./gmt-modules";
 import {
   mountBillingDeadlines,
@@ -88,12 +90,7 @@ import {
   mountIntervalVisualizer,
   renderIntervalTemplate,
 } from "./interval-visualizer-mount";
-import {
-  showUnavailable,
-  UNAVAILABLE_CLASS,
-  WidgetLoadError,
-  type MountFn,
-} from "./widget-mount";
+import { showUnavailable, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   mountGnssWeekDecoder,
   renderGnssWeekDecoderTemplate,
@@ -161,160 +158,160 @@ import {
 
 installJsdomShims();
 
-const MOUNTS: [string, () => string, MountFn<never>][] = [
+const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
   [
     "dwell ledger",
-    () => renderDwellLedgerTemplate(),
+    () => renderDwellLedgerTemplate("load-error"),
     mountDwellLedger as MountFn<never>,
   ],
   [
     "free time ledger",
-    () => renderFreeTimeLedgerTemplate(),
+    () => renderFreeTimeLedgerTemplate("load-error"),
     mountFreeTimeLedger as MountFn<never>,
   ],
   [
     "billing deadlines",
-    () => renderBillingDeadlinesTemplate(),
+    () => renderBillingDeadlinesTemplate("test"),
     mountBillingDeadlines as MountFn<never>,
   ],
   [
     "DST inspector",
-    () => renderDstTemplate(),
+    () => renderDstTemplate("load-error"),
     mountDstInspector as MountFn<never>,
   ],
   [
     "interval visualizer",
-    () => renderIntervalTemplate(),
+    () => renderIntervalTemplate("load-error"),
     mountIntervalVisualizer as MountFn<never>,
   ],
   [
     "converter bench",
-    () => renderConverterTemplate(),
+    () => renderConverterTemplate("converter-bench"),
     mountConverterBench as MountFn<never>,
   ],
   [
     "delivery scheduler",
-    () => renderDeliverySchedulerTemplate(),
+    () => renderDeliverySchedulerTemplate("load-error"),
     mountDeliveryScheduler as MountFn<never>,
   ],
   [
     "connection checker",
-    () => renderConnectionCheckerTemplate(),
+    () => renderConnectionCheckerTemplate("test"),
     mountConnectionChecker as MountFn<never>,
   ],
   [
     "timetable reader",
-    () => renderTimetableReaderTemplate(),
+    () => renderTimetableReaderTemplate("test"),
     mountTimetableReader as MountFn<never>,
   ],
   [
     "crossing clock",
-    () => renderCrossingClockTemplate(),
+    () => renderCrossingClockTemplate("load-error"),
     mountCrossingClock as MountFn<never>,
   ],
   [
     "cutoff stack",
-    () => renderCutoffStackTemplate(),
+    () => renderCutoffStackTemplate("load-error"),
     mountCutoffStack as MountFn<never>,
   ],
   [
     "cutoff ruler",
-    () => renderCutoffRulerTemplate(),
+    () => renderCutoffRulerTemplate("test"),
     mountCutoffRuler as MountFn<never>,
   ],
   [
     "cutoff countdown",
-    () => renderCutoffCountdownTemplate(),
+    () => renderCutoffCountdownTemplate("test"),
     mountCutoffCountdown as MountFn<never>,
   ],
   [
     "punctuality board",
-    () => renderPunctualityBoardTemplate(),
+    () => renderPunctualityBoardTemplate("load-error"),
     mountPunctualityBoard as MountFn<never>,
   ],
   [
     "eta drift chart",
-    () => renderEtaDriftTemplate(),
+    () => renderEtaDriftTemplate("test"),
     mountEtaDrift as MountFn<never>,
   ],
   [
     "departure board",
-    () => renderDepartureBoardTemplate(),
+    () => renderDepartureBoardTemplate("load-error"),
     mountDepartureBoard as MountFn<never>,
   ],
   [
     "dtm decoder",
-    () => renderDtmDecoderTemplate(),
+    () => renderDtmDecoderTemplate("dtm-decoder"),
     mountDtmDecoder as MountFn<never>,
   ],
   [
     "x12 time reader",
-    () => renderX12TimeReaderTemplate(),
+    () => renderX12TimeReaderTemplate("x12-time-reader"),
     mountX12TimeReader as MountFn<never>,
   ],
   [
     "demurrage clock",
-    () => renderDemurrageClockTemplate(),
+    () => renderDemurrageClockTemplate("load-error"),
     mountDemurrageClock as MountFn<never>,
   ],
   [
     "b/l date stamp",
-    () => renderBlDateStampTemplate(),
+    () => renderBlDateStampTemplate("test"),
     mountBlDateStamp as MountFn<never>,
   ],
   [
     "epcis event reader",
-    () => renderEpcisEventReaderTemplate(),
+    () => renderEpcisEventReaderTemplate("test"),
     mountEpcisEventReader as MountFn<never>,
   ],
   [
     "journey split",
-    () => renderJourneySplitTemplate(),
+    () => renderJourneySplitTemplate("test"),
     mountJourneySplit as MountFn<never>,
   ],
   [
     "gnss week decoder",
-    () => renderGnssWeekDecoderTemplate(),
+    () => renderGnssWeekDecoderTemplate("test"),
     mountGnssWeekDecoder as MountFn<never>,
   ],
   [
     "satellite clock converter",
-    () => renderSatelliteClockConverterTemplate(),
+    () => renderSatelliteClockConverterTemplate("test"),
     mountSatelliteClockConverter as MountFn<never>,
   ],
   [
     "gnss rollover checker",
-    () => renderGnssRolloverCheckerTemplate(),
+    () => renderGnssRolloverCheckerTemplate("test"),
     mountGnssRolloverChecker as MountFn<never>,
   ],
   [
     "leap second timeline",
-    () => renderLeapSecondTimelineTemplate(),
+    () => renderLeapSecondTimelineTemplate("leap-second-timeline"),
     mountLeapSecondTimeline as MountFn<never>,
   ],
   [
     "elapsed vs. clock difference",
-    () => renderElapsedVsClockTemplate(),
+    () => renderElapsedVsClockTemplate("test"),
     mountElapsedVsClock as MountFn<never>,
   ],
   [
     "stored time audit",
-    () => renderStoredTimeAuditTemplate(),
+    () => renderStoredTimeAuditTemplate("test"),
     mountStoredTimeAudit as MountFn<never>,
   ],
   [
     "holiday rule builder",
-    () => renderHolidayRuleBuilderTemplate(),
+    () => renderHolidayRuleBuilderTemplate("test"),
     mountHolidayRuleBuilder as MountFn<never>,
   ],
   [
     "observance comparator",
-    () => renderObservanceComparatorTemplate(),
+    () => renderObservanceComparatorTemplate("test"),
     mountObservanceComparator as MountFn<never>,
   ],
   [
     "moving feasts",
-    () => renderMovingFeastsTemplate(),
+    () => renderMovingFeastsTemplate("test"),
     mountMovingFeasts as MountFn<never>,
   ],
   [
@@ -329,27 +326,27 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "duration parser bench",
-    () => renderDurationParserBenchTemplate(),
+    () => renderDurationParserBenchTemplate("load-error"),
     mountDurationParserBench as MountFn<never>,
   ],
   [
     "id timestamp decoder",
-    () => renderIdTimestampDecoderTemplate(),
+    () => renderIdTimestampDecoderTemplate("id-timestamp-decoder"),
     mountIdTimestampDecoder as MountFn<never>,
   ],
   [
     "column timestamp bridge",
-    () => renderColumnTimestampBridgeTemplate(),
+    () => renderColumnTimestampBridgeTemplate("column-timestamp-bridge"),
     mountColumnTimestampBridge as MountFn<never>,
   ],
   [
     "cron in a zone",
-    () => renderCronInAZoneTemplate(),
+    () => renderCronInAZoneTemplate("cron-in-a-zone"),
     mountCronInAZone as MountFn<never>,
   ],
   [
     "leap-day birthday",
-    () => renderLeapDayBirthdayTemplate(),
+    () => renderLeapDayBirthdayTemplate("test"),
     mountLeapDayBirthday as MountFn<never>,
   ],
 ];
@@ -368,14 +365,13 @@ describe("a widget whose library fails to load", () => {
   afterEach(() => {
     Object.assign(GMT_MODULES, originals);
     vi.restoreAllMocks();
-    document.body.innerHTML = "";
   });
 
   it.each(MOUNTS)(
     "%s throws WidgetLoadError carrying the cause",
     async (_name, template, mount) => {
       const root = document.createElement("div");
-      root.innerHTML = template();
+      setHtml(root, template());
       document.body.append(root);
 
       const failure = await mount(
@@ -386,6 +382,7 @@ describe("a widget whose library fails to load", () => {
         () => null,
         (error: unknown) => error,
       );
+      root.remove();
       expect(failure).toBeInstanceOf(WidgetLoadError);
       expect((failure as Error).cause).toBe(offline);
     },
@@ -395,27 +392,32 @@ describe("a widget whose library fails to load", () => {
 describe("showUnavailable", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    document.body.innerHTML = "";
   });
 
-  it("marks the root, adds one notice with a reload link, and logs the cause", () => {
+  it("adds one notice with a reload link, keeps the content, and logs the cause", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const root = document.createElement("div");
-    root.innerHTML = "<div class='gmt-widget-card'>controls</div>";
+    const kept = document.createElement("button");
+    kept.textContent = "controls";
+    root.append(kept);
     document.body.append(root);
 
     const cause = new Error("offline");
     showUnavailable(root, cause);
     showUnavailable(root, cause);
 
-    expect(root.dataset.state).toBe("unavailable");
-    const notices = root.querySelectorAll(`.${UNAVAILABLE_CLASS}`);
+    const view = within(root);
+    const notices = view.getAllByRole("status");
     expect(notices).toHaveLength(1);
-    expect(notices[0].getAttribute("role")).toBe("status");
-    expect(notices[0].textContent).toContain("couldn’t load");
-    expect(notices[0].querySelector("a")?.getAttribute("href")).toBe("");
+    expect(notices[0]).toHaveTextContent("couldn\u2019t load");
+    // An empty href is the page reloading itself; aria-query does not count it as a link.
+    expect(within(notices[0]).getByText("Reload the page")).toHaveAttribute(
+      "href",
+      "",
+    );
     // The server-rendered content is kept, not replaced.
-    expect(root.querySelector(".gmt-widget-card")).not.toBeNull();
+    expect(view.getByRole("button", { name: "controls" })).toBeInTheDocument();
     expect(logged).toHaveBeenCalledWith("widget failed to load", cause);
+    root.remove();
   });
 });

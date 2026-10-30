@@ -33,9 +33,9 @@ export const UNITS = [
   "microsecond",
   "nanosecond",
 ] as const;
-export type Unit = (typeof UNITS)[number];
-export type Mode = "encode" | "decode";
-export type Int96Form = "record" | "bytes";
+type Unit = (typeof UNITS)[number];
+type Mode = "encode" | "decode";
+type Int96Form = "record" | "bytes";
 
 /** The text of the controls, all strings as typed (the mode and the unit are words). */
 export interface BridgeState {
@@ -115,7 +115,7 @@ export const CARDS: readonly { id: CardId; title: string }[] = [
   { id: "duration", title: "protobuf Duration" },
 ];
 
-export interface ReadBack {
+interface ReadBack {
   /** `local` is a zoneless Arrow read: a wall time, not an instant. */
   kind: "text" | "local";
   text: string;
@@ -164,8 +164,6 @@ export interface Reading {
 // ---------------------------------------------------------------------------
 // Presets, seeds and permalinks
 // ---------------------------------------------------------------------------
-
-export const DEFAULT_PRESET = BRIDGE_PRESETS[0]!;
 
 export function presetState(preset: { state: BridgeState }): BridgeState {
   return { ...preset.state };
@@ -399,7 +397,7 @@ function stringCard(
  * first: `toNanoseconds` returns `0n` for text it cannot read, which would
  * pass for the epoch, so it is called only on a valid instant.
  */
-export function readEncode(lib: ColumnBridgeLib, state: BridgeState): Reading {
+function readEncode(lib: ColumnBridgeLib, state: BridgeState): Reading {
   const calls: EdiCall[] = [];
   const push = <T extends EdiCall>(call: T): T => {
     calls.push(call);
@@ -612,7 +610,7 @@ export function readEncode(lib: ColumnBridgeLib, state: BridgeState): Reading {
 // ---------------------------------------------------------------------------
 
 /** Each filled fieldset makes one call; a field that fails its grammar makes none. */
-export function readDecode(lib: ColumnBridgeLib, state: BridgeState): Reading {
+function readDecode(lib: ColumnBridgeLib, state: BridgeState): Reading {
   const calls: EdiCall[] = [];
   const push = (call: EdiCall): EdiCall => {
     calls.push(call);

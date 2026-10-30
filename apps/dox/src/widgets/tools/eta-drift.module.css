@@ -1,0 +1,535 @@
+/*
+ * ETA Drift Chart: what only this tool needs. The sections, preset, chips, fields, range,
+ * table, code frames, call output and aside are the kit's, and the plates are the
+ * punctuality family's. This sheet lays out the controls, the callouts and the plot: x is
+ * when each record was recorded, y is the time it names (later at the top), at a fixed
+ * height, in an inner panel.
+ *
+ * A mark's shape carries its class: ACT a filled diamond, PLN a filled square, REQ a
+ * triangle, EST a hollow circle. Its series colour only repeats the class; the code on a
+ * chip and the word name it. The best pick has a bright ring, the naive pick a dashed one,
+ * and each says so in words. The tolerance band is lit glass with no text in it. Series
+ * colour is never text. Amber is the sentinel's alone, and an accent edge is never a single
+ * side.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.box {
+  min-inline-size: 0;
+}
+
+/* One event: a bevelled box, every field in its own grid. A hidden one keeps out of the
+   layout. */
+.event {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.eventLegend {
+  padding-inline: var(--gmt-space-1);
+  color: var(--gmt-ice);
+  font-weight: 600;
+}
+
+.callout {
+  min-block-size: 1lh;
+  margin: 0;
+  color: var(--gmt-ice);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.naive {
+  color: var(--gmt-ice-dim);
+}
+
+/* The sentinel: in words, bracketed, in the amber family. */
+.lost {
+  white-space: nowrap;
+  padding-inline: var(--gmt-space-1);
+  border: 1px solid var(--gmt-signal-border);
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+
+  &::before {
+    content: "\27e8\a0";
+  }
+
+  &::after {
+    content: "\a0\27e9";
+  }
+}
+
+/* The frame: the plates over the plot. It is the container the plot's layout reads. */
+.frame {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: linear-gradient(
+    var(--gmt-glass-tint),
+    var(--gmt-glass-tint-subtle)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+.heroes {
+  display: grid;
+  min-inline-size: 0;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.plot {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  grid-template-rows: 240px auto;
+  column-gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.yaxis {
+  position: relative;
+}
+
+.ytick {
+  position: absolute;
+  inset-inline-end: 0;
+  translate: 0 -50%;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+/* The inner panel: a bevelled frame with a brighter top edge and the inset highlight over
+   a faint fill. */
+.area {
+  position: relative;
+  border: 1px solid var(--gmt-border);
+  border-block-start-color: var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+.xticks {
+  position: relative;
+  grid-column: 2;
+  min-block-size: var(--gmt-target-min);
+  margin-block-start: var(--gmt-space-1);
+}
+
+.xtick {
+  position: absolute;
+  inset-block-start: 0;
+  translate: -50% 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+.lines {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.grid {
+  stroke: var(--gmt-hairline-faint);
+  stroke-width: 1;
+}
+
+/* The estimates' join line, in the first series at about 70%. */
+.join {
+  fill: none;
+  stroke: color(from var(--gmt-series-1) srgb r g b / 70%);
+  stroke-width: 1.5;
+}
+
+/* The chord stays a dashed ice line, with a soft glow line drawn under it. */
+.chord {
+  stroke: var(--gmt-ice);
+  stroke-width: 2;
+  stroke-dasharray: 6 3;
+}
+
+.glow {
+  fill: none;
+  stroke: var(--gmt-glow);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+/* The tolerance band: lit glass, brighter in the middle, with bright block edges and a
+   soft glow. Its words are under the plot. */
+.band {
+  position: absolute;
+  inset-inline: 0;
+  box-sizing: border-box;
+  border-block: 1px solid var(--gmt-cyan-bright);
+  background: linear-gradient(
+    180deg,
+    color(from var(--gmt-cyan) srgb r g b / 10%),
+    color(from var(--gmt-cyan) srgb r g b / 22%),
+    color(from var(--gmt-cyan) srgb r g b / 10%)
+  );
+  box-shadow: 0 0 8px var(--gmt-glow);
+}
+
+.mark,
+.ring {
+  position: absolute;
+  box-sizing: border-box;
+  translate: -50% -50%;
+}
+
+/* The shape, shared by a plot mark and the static glyph the legend, the table and the
+   plates use. The colour is the class's series, on marks and glyphs only, never on text. */
+.mark,
+.glyph {
+  inline-size: 0.7rem;
+  block-size: 0.7rem;
+  color: var(--series, var(--gmt-ice));
+
+  &[data-shape="ACT"] {
+    background: currentcolor;
+    rotate: 45deg;
+  }
+
+  &[data-shape="PLN"] {
+    background: currentcolor;
+  }
+
+  &[data-shape="EST"] {
+    border: 2px solid currentcolor;
+    border-radius: 50%;
+    background: var(--gmt-surface);
+  }
+
+  & svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+  }
+
+  & path {
+    fill: currentcolor;
+  }
+}
+
+/* A plot mark: a 2px surface ring around it and the family's glow. */
+.mark {
+  box-shadow:
+    0 0 0 2px var(--gmt-surface),
+    0 0 10px color(from var(--series, var(--gmt-cyan)) srgb r g b / 45%);
+
+  &[data-shape="REQ"] {
+    box-shadow: none;
+  }
+
+  &[data-shape="REQ"] svg {
+    filter: drop-shadow(
+      0 0 4px color(from var(--series, var(--gmt-cyan)) srgb r g b / 50%)
+    );
+  }
+
+  &[data-shape="REQ"] path {
+    stroke: var(--gmt-surface);
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+    paint-order: stroke;
+  }
+}
+
+/* The glyph: the same shape, inline and static. */
+.glyph {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  margin-inline: 0.15rem;
+}
+
+/* The best pick: a bright ring, a surface gap inside it, and the family glow. */
+.ring {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border: 2px solid var(--gmt-cyan-bright);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px var(--gmt-surface),
+    0 0 0 3px color(from var(--gmt-cyan-bright) srgb r g b / 25%),
+    0 0 12px color(from var(--gmt-cyan-bright) srgb r g b / 45%);
+
+  /* The naive pick: a wider dashed ring, no glow. */
+  &[data-pick="naive"] {
+    inline-size: 2rem;
+    block-size: 2rem;
+    border: 1.5px dashed var(--gmt-ice-dim);
+    box-shadow: none;
+  }
+}
+
+/* The class code: a bevelled chip, its border the class's series colour. */
+.code {
+  display: inline-block;
+  margin-inline-end: 2px;
+  padding: 0 var(--gmt-space-1);
+  border: 1px solid var(--series, var(--gmt-border-strong));
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+/* A label is an opaque bevelled chip that sits beside its mark until the mount measures it
+   and places it. A long label ("best available, naive") wraps to two short lines, which the
+   placer can fit beside a mark where one long line would not. */
+.label {
+  position: absolute;
+  display: block;
+  box-sizing: border-box;
+  inline-size: max-content;
+  max-inline-size: 9rem;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.5;
+  translate: var(--gmt-space-2) -50%;
+
+  &[data-placed] {
+    translate: none;
+  }
+}
+
+/* The series colours, on whatever carries a class. */
+:is(.mark, .glyph, .code, .legendItem)[data-series="1"] {
+  --series: var(--gmt-series-1);
+}
+
+:is(.mark, .glyph, .code, .legendItem)[data-series="2"] {
+  --series: var(--gmt-series-2);
+}
+
+:is(.mark, .glyph, .code, .legendItem)[data-series="3"] {
+  --series: var(--gmt-series-3);
+}
+
+:is(.mark, .glyph, .code, .legendItem)[data-series="4"] {
+  --series: var(--gmt-series-4);
+}
+
+.signal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gmt-space-2);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+/* The legend: one entry per class present, a glyph, the code chip and the word. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  min-block-size: 0;
+  margin: 0;
+  padding: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+
+  &::before {
+    content: none;
+  }
+}
+
+/* A narrow widget (a phone, the /dox rail) has a narrow plot: it grows taller and its labels
+   wrap narrower, so the measuring placer finds room for every chip clear of the marks, the
+   lines and the band's edges. */
+@container (max-width: 30rem) {
+  .plot {
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    grid-template-rows: 300px auto;
+    column-gap: var(--gmt-space-1);
+  }
+
+  .label {
+    max-inline-size: 6.5rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .frame,
+  .event {
+    border-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+  }
+
+  .lost,
+  .label,
+  .code {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  /* Shapes carry the class, rings and dashes carry the picks. Every glyph keeps its shape
+     in CanvasText, the estimate hollow on Canvas. */
+  .mark,
+  .glyph,
+  .ring,
+  .band {
+    forced-color-adjust: none;
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+
+  .mark {
+    box-shadow: 0 0 0 2px Canvas;
+  }
+
+  .glyph {
+    box-shadow: none;
+  }
+
+  :is(.mark, .glyph)[data-shape="ACT"],
+  :is(.mark, .glyph)[data-shape="PLN"] {
+    background: CanvasText;
+  }
+
+  :is(.mark, .glyph)[data-shape="EST"] {
+    background: Canvas;
+  }
+
+  :is(.mark, .glyph)[data-shape="REQ"] {
+    box-shadow: none;
+  }
+
+  :is(.mark, .glyph)[data-shape="REQ"] svg {
+    filter: none;
+  }
+
+  :is(.mark, .glyph)[data-shape="REQ"] path {
+    fill: CanvasText;
+    stroke: Canvas;
+  }
+
+  /* The best pick is a Highlight ring, the naive pick a dashed CanvasText one. */
+  .ring {
+    border-color: Highlight;
+    box-shadow: none;
+
+    &[data-pick="naive"] {
+      border-color: CanvasText;
+    }
+  }
+
+  /* Transparent, not Canvas: the band sits above the SVG, and an opaque fill would hide the
+     join line and the chord inside it. Its dashed edges mark it. */
+  .band {
+    background: transparent;
+    box-shadow: none;
+    border-block: 2px dashed CanvasText;
+  }
+
+  /* Painted as strokes, which forced colours would otherwise recolour or drop. */
+  .lines,
+  .grid,
+  .join,
+  .chord {
+    forced-color-adjust: none;
+    stroke: CanvasText;
+    color: CanvasText;
+  }
+
+  .join,
+  .chord {
+    stroke-width: 2;
+  }
+
+  /* The glow is decoration, and a wide stroke would hide the line it sits under. */
+  .glow {
+    display: none;
+  }
+
+  .legendItem {
+    padding: 0 var(--gmt-space-1);
+    border: 1px solid CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frame,
+  .event,
+  .area,
+  .label,
+  .code {
+    border-color: var(--gmt-ice);
+  }
+
+  .naive,
+  .signal {
+    color: var(--gmt-ice);
+  }
+
+  .ring[data-pick="naive"] {
+    border-color: var(--gmt-ice);
+  }
+}

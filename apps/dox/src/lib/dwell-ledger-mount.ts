@@ -1,21 +1,57 @@
 /**
- * The Dwell Ledger widget (TRAN-8), mountable on its tool page and in the chat
- * rail.
+ * The Dwell Ledger widget (TRAN-8), mountable on its tool page and in the chat rail.
  *
- * A dwell drawn on a zone's real local-day grid. The reader drags an entry and
- * an exit (or types them) and watches two numbers disagree: the elapsed bar,
- * which is hours, and the lit day columns, which are the local calendar days the
- * half-open dwell touched. Both sit in the ledger family's frame
- * (`gmt-ledger-widgets.css`) under two result plates. The printed result is always the real `dwellTime`
- * call's; the shading is a picture of it, and `dwell-ledger.test.ts` asserts
- * the two agree for every preset.
+ * A dwell drawn on a zone's real local-day grid. The reader drags an entry and an exit
+ * (or types them) and watches two numbers disagree: the elapsed bar, which is hours, and
+ * the lit day columns, which are the local calendar days the half-open dwell touched.
+ * Both sit in one frame under two result plates. The printed result is always the real
+ * `dwellTime` call's; the shading is a picture of it, and the tests assert the two agree
+ * for every preset.
  *
- * Follows the `renderTemplate` / `mount` split in `widget-mount.ts`: the markup
- * is a pure string so the page can server-render it and the rail can
- * string-mount it. Every listener is delegated on the root, so the host
- * dropping the subtree is a complete teardown apart from a live pointer capture.
+ * Built on the component kit: `renderDwellLedgerTemplate` writes the markup from builders
+ * only, with ids from `idScope(idPrefix)`, and `mount` finds its parts by those ids and
+ * reads and writes element `value` properties. The entry and exit are two `<gmt-handle>`s
+ * that bound each other, and each is tied two ways to its typed field: the field is the
+ * state. Every listener is delegated on the widget with the mount's `signal`, so the host
+ * dropping the subtree is a complete teardown.
  */
-import { codeFrameHtml } from "./code-frame";
+import { defineElements } from "~/widgets/define";
+import {
+  aside,
+  card,
+  codeFrame,
+  field,
+  fieldGrid,
+  findWidget,
+  html,
+  idScope,
+  plates,
+  raw,
+  section,
+  select,
+  setHtml,
+  srOnly,
+  textInput,
+  widget,
+  type Plate,
+  type SafeHtml,
+} from "~/widgets/builders";
+import {
+  dwellAxis,
+  dwellLane,
+  dwellTimeline,
+  laneIds,
+  type LaneName,
+} from "~/widgets/families/dwell/dwell-lane";
+import { callOutput } from "~/widgets/families/gnss/call-output";
+import { dayColumns } from "~/widgets/families/ledger/day-columns";
+import { grow } from "~/widgets/primitives/grow/grow";
+import {
+  handle,
+  handleTrack,
+  type GmtHandle,
+} from "~/widgets/primitives/handle/handle";
+import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import {
   CUSTOM_PRESET_ID,
   DWELL_PRESETS,
@@ -38,68 +74,79 @@ import {
   matchPreset,
   resolveWallTime,
   toEpochMs,
-  type DayCell,
   type DwellLedgerArgs,
   type DwellResult,
   type LedgerCanvas,
 } from "./dwell-ledger";
 import { GMT_MODULES } from "./gmt-modules";
-import {
-  descriptionHoldHtml,
-  dayColumnFit,
-  dayColumnsHtml,
-  hourDurationText,
-  PAGE_STEP_UNITS,
-  plateHtml,
-  platesHtml,
-} from "./ledger-widgets";
-import { fitDayColumns, onWidthChange, thinTickLabels } from "./label-fit";
-import { setPresetDescription } from "./punctuality-widgets";
+import { hourDurationText, type PlateSpec } from "./ledger-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
-import {
-  codeSpan,
-  escapeAttr,
-  escapeHtml,
-  labelTextHtml,
-  renderAside,
-  renderCallLine,
-  renderWidgetOutput,
-  wireCopyButtons,
-} from "./widget-ui";
+import { codeSpan } from "./widget-ui";
 
 export type { DwellLedgerArgs } from "./dwell-ledger";
 
-/** Arrow keys move one snap step; with Shift, four (an hour on a short canvas).
- *  PageUp and PageDown move `PAGE_STEP_UNITS`. */
-const STEP_UNITS = 1;
-const BIG_STEP_UNITS = 4;
+const WIDGET_NAME = "dwell-ledger";
 
-function zoneOptions(
-  zones: readonly string[],
-  selected: string,
-  noneLabel: string,
-): string {
-  const list =
-    selected === NO_ZONE || zones.includes(selected)
-      ? zones
-      : [...zones, selected];
-  return (
-    `<option value=""${selected === NO_ZONE ? " selected" : ""}>${escapeHtml(noneLabel)}</option>` +
-    list
-      .map(
-        (z) =>
-          `<option value="${escapeAttr(z)}"${z === selected ? " selected" : ""}>${escapeHtml(z)}</option>`,
-      )
-      .join("")
-  );
+/** PageUp and PageDown move this many snap steps: three hours on a quarter-hour canvas. */
+const PAGE_STEP_UNITS = 12;
+
+/** The widest values the plates show, so they keep their width from one dwell to the next. */
+const PLATE_SAMPLES: Readonly<Record<string, readonly string[]>> = {
+  "hero-elapsed": ["99 d 23 h 45 min"],
+  "hero-days": ["99"],
+};
+
+function plateList(specs: readonly PlateSpec[]): Plate[] {
+  return specs.map((s) => {
+    const samples = PLATE_SAMPLES[s.role];
+    return {
+      caption: s.caption,
+      value: s.value,
+      lines: s.lines,
+      ...(s.series === undefined ? {} : { series: s.series }),
+      ...(samples === undefined ? {} : { samples }),
+    };
+  });
 }
 
+/** The zones a select offers: the choice that means none, the list, and a seeded zone the list lacks. */
+function zoneChoices(
+  selected: string,
+  noneLabel: string,
+): { value: string; label: string }[] {
+  const list =
+    selected === NO_ZONE || LEDGER_ZONES.includes(selected)
+      ? LEDGER_ZONES
+      : [...LEDGER_ZONES, selected];
+  return [
+    { value: NO_ZONE, label: noneLabel },
+    ...list.map((z) => ({ value: z, label: z })),
+  ];
+}
+
+const PRESET_OPTIONS = [
+  { value: CUSTOM_PRESET_ID, label: "Custom", description: "" },
+  ...DWELL_PRESETS.map((p) => ({
+    value: p.id,
+    label: p.label,
+    description: p.description,
+  })),
+];
+
+// ---------------------------------------------------------------------------
+// Markup
+// ---------------------------------------------------------------------------
+
 /**
- * The widget's chrome, seeded with `args` so the first paint shows them.
- * With no args it shows the first preset. Day cells, the bar and the outputs are
- * drawn by `mount`, because they come from Temporal and the real library.
+ * The widget's chrome, seeded with `args` so the first paint shows them. With no args it
+ * shows the first preset. Day columns, the bar and the outputs are drawn by `mount`,
+ * because they come from Temporal and the real library.
  */
-export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
+export function renderDwellLedgerTemplate(
+  idPrefix: string,
+  args: DwellLedgerArgs = {},
+): SafeHtml {
+  const id = idScope(idPrefix);
   const seeded = args.entry !== undefined || args.exit !== undefined;
   const base = DWELL_PRESETS[0]!;
   const entry = seeded ? (args.entry ?? "") : base.entry;
@@ -108,89 +155,163 @@ export function renderDwellLedgerTemplate(args: DwellLedgerArgs = {}): string {
   const compareZone = seeded
     ? (args.compareZone ?? NO_ZONE)
     : (base.compareZone ?? NO_ZONE);
-  const presetId = matchPreset(entry, exit, zone, compareZone);
-  const preset = DWELL_PRESETS.find((p) => p.id === presetId);
 
-  const presetOptions =
-    `<option value="${CUSTOM_PRESET_ID}"${presetId === CUSTOM_PRESET_ID ? " selected" : ""}>Custom</option>` +
-    DWELL_PRESETS.map(
-      (p) =>
-        `<option value="${escapeAttr(p.id)}"${p.id === presetId ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-    ).join("");
+  const handles = handleTrack(
+    html`${handle({
+      id: id("handle-entry"),
+      label: "Entry",
+      min: 0,
+      max: 100,
+      step: 1,
+      largeStep: PAGE_STEP_UNITS,
+      value: 0,
+      valueText: "",
+      pair: "start",
+    })}${handle({
+      id: id("handle-exit"),
+      label: "Exit",
+      min: 0,
+      max: 100,
+      step: 1,
+      largeStep: PAGE_STEP_UNITS,
+      value: 100,
+      valueText: "",
+      pair: "end",
+    })}`,
+  );
 
-  const handle = (role: string, label: string) =>
-    `<div class="gmt-handle" data-role="${role}" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="${label}"></div>`;
+  const place = section(
+    {
+      id: id("place"),
+      heading: "1. Place a dwell on the local-day grid",
+      level: 4,
+    },
+    html`${preset({
+      id: id("preset"),
+      label: "Preset",
+      value: matchPreset(entry, exit, zone, compareZone),
+      options: PRESET_OPTIONS,
+    })}${fieldGrid(
+      html`${field({
+        id: id("zone"),
+        label: "Count days in",
+        control: ({ id: cid }) =>
+          select({
+            id: cid,
+            value: zone,
+            options: zoneChoices(zone, "(the entry's zone)"),
+          }),
+      })}${field({
+        id: id("compare"),
+        label: "Compare with",
+        control: ({ id: cid }) =>
+          select({
+            id: cid,
+            value: compareZone,
+            options: zoneChoices(compareZone, "(no comparison)"),
+          }),
+      })}`,
+    )}${card(
+      html`<div id="${id("plates")}">${plates(plateList(dwellPlates({ result: null, compare: null, zone: "", compareZone: "" }, hourDurationText)))}</div>${dwellTimeline(
+        html`${dwellLane({
+          id,
+          name: "dwell",
+          series: 1,
+          gate: "drawn track",
+          handles,
+        })}${dwellLane({
+          id,
+          name: "compare",
+          series: 2,
+          hidden: compareZone === NO_ZONE,
+          gate: "drawn",
+        })}${dwellAxis(id)}`,
+      )}`,
+      { gate: "frame" },
+    )}${fieldGrid(
+      html`${field({
+        id: id("entry"),
+        label: "Entry",
+        control: ({ id: cid }) =>
+          textInput({
+            id: cid,
+            value: entry,
+            autocomplete: "off",
+            spellcheck: false,
+          }),
+      })}${field({
+        id: id("exit"),
+        label: "Exit",
+        control: ({ id: cid }) =>
+          textInput({
+            id: cid,
+            value: exit,
+            autocomplete: "off",
+            spellcheck: false,
+          }),
+      })}`,
+    )}<p role="status" aria-label="Dwell summary" id="${id("summary")}">${srOnly("")}</p>${grow(html`<div id="${id("reason")}"></div>`)}`,
+  );
 
-  const row = (id: "dwell" | "compare", withHandles: boolean) =>
-    `<div class="gmt-ledger-lane gmt-dwell-row" data-role="row-${id}" data-series="${id === "dwell" ? 1 : 2}"${id === "compare" && compareZone === NO_ZONE ? " hidden" : ""}>` +
-    `<span class="gmt-ledger-lane-label gmt-dwell-row-label" data-role="label-${id}"></span>` +
-    `<div class="gmt-ledger-lane-track gmt-dwell-track" data-role="track-${id}">` +
-    `<div class="gmt-ledger-days gmt-dwell-cells" data-role="cells-${id}" role="list"></div>` +
-    `<div class="gmt-ledger-bar gmt-dwell-bar" data-role="${id === "dwell" ? "bar" : "bar-compare"}">` +
-    (withHandles
-      ? handle("handle-entry", "Entry") + handle("handle-exit", "Exit")
-      : "") +
-    `</div></div></div>`;
+  const returns = section(
+    {
+      id: id("returns"),
+      heading: "2. What dwellTime returns",
+      level: 4,
+    },
+    html`${grow(html`<div id="${id("dwell-call")}">${callFrame("Call made", "")}</div>`)}${grow(
+      html`<div id="${id("dwell-output")}">${callOutput({
+        label: "What dwellTime returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}<div id="${id("compare-result")}" ${compareZone === NO_ZONE ? html`hidden` : ""}>${grow(
+      html`<div id="${id("compare-call")}">${callFrame("Comparison call made", "")}</div>`,
+    )}${grow(
+      html`<div id="${id("compare-output")}">${callOutput({
+        label: "What dwellTime returned for the comparison zone",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}</div>`,
+  );
 
-  return (
-    `<div class="gmt-dwell gmt-widget not-content">` +
-    `<div class="gmt-widget-card">` +
-    `<div class="gmt-widget-section">` +
-    `<h4>1. Place a dwell on the local-day grid</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
-    `<select class="gmt-select" data-role="preset">${presetOptions}</select>` +
-    `</label>` +
-    `</div>` +
-    descriptionHoldHtml(
-      `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>`,
-      DWELL_PRESETS.map((p) => p.description),
-    ) +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label">${labelTextHtml("Count days in")}` +
-    `<select class="gmt-select" data-role="zone">${zoneOptions(LEDGER_ZONES, zone, "(the entry's zone)")}</select>` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Compare with")}` +
-    `<select class="gmt-select" data-role="compare-zone">${zoneOptions(LEDGER_ZONES, compareZone, "(no comparison)")}</select>` +
-    `</label>` +
-    `</div>` +
-    `<div class="gmt-ledger-frame" data-role="frame">` +
-    platesHtml(
-      "heroes",
-      dwellPlates(
-        { result: null, compare: null, zone: "", compareZone: "" },
-        hourDurationText,
-      ),
-    ) +
-    `<div class="gmt-dwell-timeline" data-role="timeline">` +
-    row("dwell", true) +
-    row("compare", false) +
-    `<div class="gmt-ledger-axis gmt-dwell-axis" data-role="axis"><span></span><span></span><span></span></div>` +
-    `</div>` +
-    `</div>` +
-    `<!-- Typed-input equivalent to dragging. -->` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Entry")}` +
-    `<input class="gmt-input" data-role="entry" type="text" spellcheck="false" value="${escapeAttr(entry)}"></label>` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Exit")}` +
-    `<input class="gmt-input" data-role="exit" type="text" spellcheck="false" value="${escapeAttr(exit)}"></label>` +
-    `</div>` +
-    `<p class="gmt-ledger-sr gmt-dwell-summary" data-role="summary" aria-live="polite"></p>` +
-    `<div data-role="reason-aside"></div>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>2. What <code>dwellTime</code> returns</h4>` +
-    codeFrameHtml("dwell") +
-    `<output class="gmt-widget-output" data-role="dwell-output">&nbsp;</output>` +
-    `<div class="gmt-dwell-compare-result" data-role="compare-result"${compareZone === NO_ZONE ? " hidden" : ""}>` +
-    codeFrameHtml("compare") +
-    `<output class="gmt-widget-output" data-role="compare-output">&nbsp;</output>` +
-    `</div>` +
-    `</div>` +
-    `</div>` +
-    `</div>`
+  return widget(
+    { name: WIDGET_NAME, label: "Dwell Ledger", scope: idPrefix },
+    html`${place}${returns}`,
   );
 }
+
+function callFrame(label: string, plain: string, code?: SafeHtml): SafeHtml {
+  return codeFrame({
+    label,
+    copyLabel: "Copy call",
+    copyText: plain,
+    ...(code === undefined ? {} : { code }),
+    gate: "codeframe",
+  });
+}
+
+/** `dwellTime("entry", "exit"[, "zone"])`, highlighted and plain. */
+function callOf(
+  entry: string,
+  exit: string,
+  zone: string,
+): { code: SafeHtml; plain: string } {
+  const parts = [entry, exit, ...(zone === NO_ZONE ? [] : [zone])].map((p) =>
+    JSON.stringify(p),
+  );
+  return {
+    code: raw(
+      `${codeSpan("fn", "dwellTime")}(${parts.map((p) => codeSpan("str", p)).join(", ")})`,
+    ),
+    plain: `dwellTime(${parts.join(", ")})`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Library
+// ---------------------------------------------------------------------------
 
 type DwellFn = (
   entry: string,
@@ -222,78 +343,55 @@ async function loadModules(): Promise<Modules> {
 }
 
 // ---------------------------------------------------------------------------
-// Drawing
-// ---------------------------------------------------------------------------
-
-function renderDays(
-  el: HTMLElement | null,
-  cells: readonly DayCell[],
-  canvas: LedgerCanvas,
-  series: 1 | 2,
-  shade: boolean,
-  trackPx: number,
-): void {
-  if (!el) return;
-  el.innerHTML = dayColumnsHtml(
-    cells,
-    canvas,
-    dwellMarks(cells, series, shade),
-  );
-  fitDayColumns(el, trackPx, dayColumnFit);
-}
-
-function placeBar(
-  bar: HTMLElement | null,
-  entryMs: number,
-  exitMs: number,
-  canvas: LedgerCanvas,
-  invalid: boolean,
-): void {
-  if (!bar) return;
-  if (Number.isNaN(entryMs) || Number.isNaN(exitMs)) {
-    bar.hidden = true;
-    return;
-  }
-  const left = canvas.toPercent(Math.min(entryMs, exitMs));
-  const right = canvas.toPercent(Math.max(entryMs, exitMs));
-  bar.hidden = false;
-  bar.style.left = `${left}%`;
-  bar.style.width = `${Math.max(0, right - left)}%`;
-  bar.classList.toggle("gmt-dwell-bar--invalid", invalid);
-  bar.classList.toggle("gmt-ledger-bar--invalid", invalid);
-}
-
-function callArgs(entry: string, exit: string, zone: string): [string, string] {
-  const parts = [entry, exit, ...(zone === NO_ZONE ? [] : [zone])];
-  return [
-    parts.map((p) => codeSpan("str", JSON.stringify(p))).join(", "),
-    parts.map((p) => JSON.stringify(p)).join(", "),
-  ];
-}
-
-// ---------------------------------------------------------------------------
 // Wiring
 // ---------------------------------------------------------------------------
 
-interface Controller {
-  refit(): void;
-  /** Release what outlives the subtree: a pointer capture held mid-drag and
-   *  the track's width observer. */
-  release(): void;
+/**
+ * The canvas widened to whole snap steps, so a handle's units are whole steps from the
+ * canvas's start and a drag lands on the quarter-hour (or the hour) and not on an offset
+ * of it. Widening by less than a step on each side changes nothing a reader can see.
+ */
+function aligned(canvas: LedgerCanvas): LedgerCanvas {
+  const step = canvas.snapMinutes * 60_000;
+  const widened = createLedgerCanvas(
+    Math.floor(canvas.startMs / step) * step,
+    Math.ceil(canvas.endMs / step) * step,
+  );
+  return widened.snapMinutes === canvas.snapMinutes ? widened : canvas;
 }
 
-function setupWidget(container: HTMLElement, m: Modules): Controller | null {
-  const q = <T extends HTMLElement>(role: string) =>
-    container.querySelector(`[data-role="${role}"]`) as T | null;
+function setupWidget(root: HTMLElement, m: Modules, signal: AbortSignal) {
+  const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
 
-  const presetEl = q<HTMLSelectElement>("preset");
-  const entryEl = q<HTMLInputElement>("entry");
-  const exitEl = q<HTMLInputElement>("exit");
-  const zoneEl = q<HTMLSelectElement>("zone");
-  const compareEl = q<HTMLSelectElement>("compare-zone");
-  if (!presetEl || !entryEl || !exitEl || !zoneEl || !compareEl) return null;
+  const presetEl = widgetEl.querySelector<GmtPreset>("gmt-preset")!;
+  const entryEl = el<HTMLInputElement>("entry");
+  const exitEl = el<HTMLInputElement>("exit");
+  const zoneEl = el<HTMLSelectElement>("zone");
+  const compareEl = el<HTMLSelectElement>("compare");
+  const entryHandle = el<GmtHandle>("handle-entry");
+  const exitHandle = el<GmtHandle>("handle-exit");
 
   let canvas: LedgerCanvas = createLedgerCanvas(0, 1);
+  /** What the handles read aloud: the typed times in the grid's zone. */
+  const view = { grid: null as string | null, entryMs: NaN, exitMs: NaN };
+  /** A pointer is down in the widget: a change then is the end of a drag. */
+  let pointerActive = false;
+
+  const snapMs = (): number => canvas.snapMinutes * 60_000;
+  const unitsOf = (ms: number): number =>
+    Number.isNaN(ms) ? 0 : (ms - canvas.startMs) / snapMs();
+  const msOf = (units: number): number => canvas.startMs + units * snapMs();
+  const maxUnits = (): number =>
+    Math.max(1, Math.round((canvas.endMs - canvas.startMs) / snapMs()));
+
+  entryHandle.formatValue = (n) =>
+    Number.isNaN(view.entryMs)
+      ? "not a time"
+      : formatLocal(msOf(n), view.grid ?? "UTC");
+  exitHandle.formatValue = (n) =>
+    Number.isNaN(view.exitMs)
+      ? "not a time"
+      : formatLocal(msOf(n), view.grid ?? "UTC");
 
   const state = () => {
     const entry = entryEl.value.trim();
@@ -310,6 +408,12 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
       grid: gridZone(entry, zone),
     };
   };
+  type State = ReturnType<typeof state>;
+
+  function syncPreset(): void {
+    const s = state();
+    presetEl.value = matchPreset(s.entry, s.exit, s.zone, s.compareZone);
+  }
 
   function refit(): void {
     const s = state();
@@ -318,20 +422,52 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
       s.compareZone === NO_ZONE ? null : gridZone("", s.compareZone),
     ].filter((z): z is string => z !== null);
     const fitted = fitLedgerCanvas(s.entryMs, s.exitMs, zones);
-    if (fitted) canvas = fitted;
+    if (fitted) canvas = aligned(fitted);
     render();
   }
 
-  function syncPreset(): void {
-    const s = state();
-    presetEl!.value = matchPreset(s.entry, s.exit, s.zone, s.compareZone);
-    const desc = q("preset-description");
-    if (desc) {
-      setPresetDescription(
-        desc,
-        DWELL_PRESETS.find((p) => p.id === presetEl!.value)?.description ?? "",
-      );
+  function drawRow(
+    name: LaneName,
+    grid: string | null,
+    label: string,
+    s: State,
+    series: 1 | 2,
+    shade: boolean,
+    invalid: boolean,
+  ): void {
+    const ids = laneIds(name);
+    el(ids.label).textContent = label;
+    const cells = grid ? dayCells(canvas, grid, s.entryMs, s.exitMs) : [];
+    setHtml(
+      el(ids.cells),
+      dayColumns(cells, canvas, dwellMarks(cells, series, shade)),
+    );
+    const bar = el(ids.bar);
+    if (Number.isNaN(s.entryMs) || Number.isNaN(s.exitMs)) {
+      bar.hidden = true;
+      return;
     }
+    const from = canvas.toPercent(Math.min(s.entryMs, s.exitMs));
+    const to = canvas.toPercent(Math.max(s.entryMs, s.exitMs));
+    bar.hidden = false;
+    bar.style.setProperty("--gmt-from", String(from));
+    bar.style.setProperty("--gmt-to", String(to));
+    bar.dataset["state"] = invalid ? "invalid" : "valid";
+  }
+
+  /** Put both handles on the typed times. Entry goes first to the start and exit
+   *  is set before it settles, so neither is held back by the other's old place. */
+  function drawHandles(s: State): void {
+    view.grid = s.grid;
+    view.entryMs = s.entryMs;
+    view.exitMs = s.exitMs;
+    for (const h of [entryHandle, exitHandle]) {
+      h.setAttribute("min", "0");
+      h.setAttribute("max", String(maxUnits()));
+    }
+    entryHandle.value = 0;
+    exitHandle.value = unitsOf(s.exitMs);
+    entryHandle.value = unitsOf(s.entryMs);
   }
 
   function render(): void {
@@ -343,324 +479,212 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
     );
     const reason =
       result === null ? explainNull(s.entry, s.exit, s.zone, m) : null;
+    const invalid = reason === "inverted";
 
-    // Primary row.
-    const label = q("label-dwell");
-    if (label) label.textContent = s.grid ?? "no zone";
-    const trackPx = q("track-dwell")?.clientWidth ?? 0;
-    renderDays(
-      q("cells-dwell"),
-      s.grid ? dayCells(canvas, s.grid, s.entryMs, s.exitMs) : [],
-      canvas,
+    drawRow(
+      "dwell",
+      s.grid,
+      s.grid ?? "no zone",
+      s,
       1,
       result !== null,
-      trackPx,
+      invalid,
     );
-    placeBar(q("bar"), s.entryMs, s.exitMs, canvas, reason === "inverted");
-    for (const [role, ms] of [
-      ["handle-entry", s.entryMs],
-      ["handle-exit", s.exitMs],
-    ] as const) {
-      const h = q(role);
-      if (!h) continue;
-      const pct = canvas.toPercent(ms);
-      h.setAttribute("aria-valuemin", "0");
-      h.setAttribute("aria-valuemax", "100");
-      h.setAttribute(
-        "aria-valuenow",
-        Number.isNaN(pct) ? "0" : String(Math.round(pct)),
-      );
-      h.setAttribute(
-        "aria-valuetext",
-        Number.isNaN(ms) ? "not a time" : formatLocal(ms, s.grid ?? "UTC"),
-      );
-    }
+    drawHandles(s);
 
-    // Axis.
-    const axisEl = q("axis");
-    const spans = axisEl?.querySelectorAll("span") ?? [];
     const labels = axisLabels(canvas, s.grid);
-    spans.forEach((span, i) => {
-      span.textContent = labels[i] ?? "";
-    });
-    // On a narrow track the three dates would touch: drop the ones that do.
-    if (axisEl) thinTickLabels(axisEl, "span");
+    el("axis-start").textContent = labels[0];
+    el("axis-mid").textContent = labels[1];
+    el("axis-end").textContent = labels[2];
 
-    // Primary result.
-    const [argsHtml, argsPlain] = callArgs(s.entry, s.exit, s.zone);
-    renderCallLine(q("call-dwell"), "dwellTime", argsHtml, argsPlain);
-    const out = q("dwell-output");
-    if (out) {
-      if (result === null) renderWidgetOutput(out, "NO SIGNAL", "sentinel");
-      else renderWidgetOutput(out, formatDwell(result), "live");
-    }
+    const call = callOf(s.entry, s.exit, s.zone);
+    setHtml(el("dwell-call"), callFrame("Call made", call.plain, call.code));
+    setHtml(
+      el("dwell-output"),
+      callOutput({
+        label: "What dwellTime returned",
+        state: result === null ? "sentinel" : "live",
+        lines:
+          result === null
+            ? [{ text: "NO SIGNAL", lost: true }]
+            : [{ text: formatDwell(result), lost: false }],
+      }),
+    );
 
-    // Comparison.
     const compareOn = s.compareZone !== NO_ZONE;
-    const compareRow = q("row-compare");
-    const compareBlock = q("compare-result");
-    if (compareRow) compareRow.hidden = !compareOn;
-    if (compareBlock) compareBlock.hidden = !compareOn;
+    el("compare-row").hidden = !compareOn;
+    el("compare-result").hidden = !compareOn;
     let compareResult: DwellResult | null = null;
     if (compareOn) {
       compareResult = m.dwellTime(s.entry, s.exit, s.compareZone);
-      const compareLabel = q("label-compare");
-      if (compareLabel) compareLabel.textContent = s.compareZone;
-      const compareGrid = gridZone("", s.compareZone);
-      renderDays(
-        q("cells-compare"),
-        compareGrid ? dayCells(canvas, compareGrid, s.entryMs, s.exitMs) : [],
-        canvas,
+      drawRow(
+        "compare",
+        gridZone("", s.compareZone),
+        s.compareZone,
+        s,
         2,
         compareResult !== null,
-        trackPx,
+        invalid,
       );
-      placeBar(
-        q("bar-compare"),
-        s.entryMs,
-        s.exitMs,
-        canvas,
-        reason === "inverted",
+      const c = callOf(s.entry, s.exit, s.compareZone);
+      setHtml(
+        el("compare-call"),
+        callFrame("Comparison call made", c.plain, c.code),
       );
-      const [cHtml, cPlain] = callArgs(s.entry, s.exit, s.compareZone);
-      renderCallLine(q("call-compare"), "dwellTime", cHtml, cPlain);
-      const cOut = q("compare-output");
-      if (cOut) {
-        if (compareResult === null)
-          renderWidgetOutput(cOut, "NO SIGNAL", "sentinel");
-        else renderWidgetOutput(cOut, formatDwell(compareResult), "live");
-      }
+      setHtml(
+        el("compare-output"),
+        callOutput({
+          label: "What dwellTime returned for the comparison zone",
+          state: compareResult === null ? "sentinel" : "live",
+          lines:
+            compareResult === null
+              ? [{ text: "NO SIGNAL", lost: true }]
+              : [{ text: formatDwell(compareResult), lost: false }],
+        }),
+      );
     }
 
-    const heroes = q("heroes");
-    if (heroes) {
-      heroes.innerHTML = dwellPlates(
-        {
-          result,
-          compare: compareResult,
-          zone: s.grid ?? "",
-          compareZone: compareOn ? s.compareZone : "",
-        },
-        hourDurationText,
-      )
-        .map(plateHtml)
-        .join("");
-    }
+    setHtml(
+      el("plates"),
+      plates(
+        plateList(
+          dwellPlates(
+            {
+              result,
+              compare: compareResult,
+              zone: s.grid ?? "",
+              compareZone: compareOn ? s.compareZone : "",
+            },
+            hourDurationText,
+          ),
+        ),
+      ),
+    );
 
     // Summary: the library's numbers, never the drawing's.
-    const summary = q("summary");
-    if (summary) {
-      if (result === null) {
-        summary.textContent = "";
-      } else {
-        const lines = [
-          `${result.duration} elapsed · ${dayCountText(result.calendarDays)} in ${s.grid ?? s.zone}`,
-        ];
-        if (compareResult) {
-          lines.push(
-            `${dayCountText(compareResult.calendarDays)} in ${s.compareZone}`,
-          );
-        }
-        summary.textContent = lines.join(" · ");
-      }
-    }
+    const summary: string[] =
+      result === null
+        ? []
+        : [
+            `${result.duration} elapsed · ${dayCountText(result.calendarDays)} in ${s.grid ?? s.zone}`,
+            ...(compareResult
+              ? [
+                  `${dayCountText(compareResult.calendarDays)} in ${s.compareZone}`,
+                ]
+              : []),
+          ];
+    setHtml(el("summary"), srOnly(summary.join(" · ")));
 
     // Aside: why null, or what an odd-length day means.
-    const aside = q("reason-aside");
-    if (aside) {
-      if (reason) {
-        renderAside(
-          aside,
-          "caution",
-          "Why null",
-          `<p>${escapeHtml(NULL_REASON_TEXT[reason])}</p>`,
-        );
-      } else if (result) {
-        const odd = s.grid
-          ? dayCells(canvas, s.grid, s.entryMs, s.exitMs).find(
-              (c) => c.touched && c.hours !== 24,
+    const odd =
+      result !== null && s.grid
+        ? dayCells(canvas, s.grid, s.entryMs, s.exitMs).find(
+            (c) => c.touched && c.hours !== 24,
+          )
+        : undefined;
+    setHtml(
+      el("reason"),
+      reason
+        ? aside(
+            { label: "Why no result", tone: "caution", title: "Why null" },
+            html`<p>${NULL_REASON_TEXT[reason]}</p>`,
+          )
+        : odd
+          ? aside(
+              { label: "About this day", tone: "note", title: "Note" },
+              html`<p>${`${formatDayLabel(odd.date)} had ${odd.hours} hours in ${s.grid}. It still counts as one day: the count is of local dates, not of 24-hour blocks.`}</p>`,
             )
-          : undefined;
-        if (odd) {
-          renderAside(
-            aside,
-            "note",
-            "Note",
-            `<p>${escapeHtml(`${formatDayLabel(odd.date)} had ${odd.hours} hours in ${s.grid}. It still counts as one day: the count is of local dates, not of 24-hour blocks.`)}</p>`,
-          );
-        } else {
-          aside.innerHTML = "";
-        }
-      } else {
-        aside.innerHTML = "";
-      }
-    }
+          : html``,
+    );
   }
 
   function applyPreset(): void {
-    const preset = DWELL_PRESETS.find((p) => p.id === presetEl!.value);
-    if (!preset) return;
-    entryEl!.value = preset.entry;
-    exitEl!.value = preset.exit;
-    zoneEl!.value = preset.zone;
-    compareEl!.value = preset.compareZone ?? NO_ZONE;
+    const chosen = DWELL_PRESETS.find((p) => p.id === presetEl.value);
+    if (!chosen) return;
+    entryEl.value = chosen.entry;
+    exitEl.value = chosen.exit;
+    zoneEl.value = chosen.zone;
+    compareEl.value = chosen.compareZone ?? NO_ZONE;
     syncPreset();
     refit();
   }
 
-  // ---- Drag ----
-
-  const inputFor: Record<string, HTMLInputElement> = {
-    "handle-entry": entryEl,
-    "handle-exit": exitEl,
-  };
-
-  function setHandle(role: string, ms: number): void {
-    const input = inputFor[role];
-    if (!input || Number.isNaN(ms)) return;
-    const s = state();
-    // A handle cannot pass the other one.
-    const bounded =
-      role === "handle-entry"
-        ? Number.isNaN(s.exitMs)
-          ? ms
-          : Math.min(ms, s.exitMs)
-        : Number.isNaN(s.entryMs)
-          ? ms
-          : Math.max(ms, s.entryMs);
-    input.value = formatHandleValue(bounded, s.grid);
+  /** A handle moved: its typed field takes the local time it landed on. */
+  function followHandle(h: GmtHandle): void {
+    const field = h === entryHandle ? entryEl : exitEl;
+    field.value = formatHandleValue(msOf(h.value), state().grid);
     syncPreset();
     render();
   }
 
-  let dragging: string | null = null;
-  /** The pointer's distance from the dragged edge when it took hold, in px. */
-  let grab = 0;
-  let captured: { el: HTMLElement; id: number } | null = null;
+  widgetEl.addEventListener(
+    "input",
+    (e) => {
+      const target = e.target;
+      if (target === entryHandle || target === exitHandle) {
+        followHandle(target as GmtHandle);
+        return;
+      }
+      if (target === entryEl || target === exitEl) {
+        syncPreset();
+        render();
+      }
+    },
+    { signal },
+  );
 
-  container.addEventListener("pointerdown", (e) => {
-    const target = (e.target as HTMLElement).closest(
-      '[data-role^="handle-"]',
-    ) as HTMLElement | null;
-    if (!target) return;
-    dragging = target.dataset.role ?? null;
-    // A grip leans out past its edge (gmt-dwell-ledger.css) and is taken hold of anywhere on it.
-    // Keep the pointer's distance from the edge, so the first move does not jump the edge to it.
-    const bar = target.parentElement?.getBoundingClientRect();
-    grab = bar
-      ? (dragging === "handle-entry" ? bar.left : bar.right) -
-        (e as PointerEvent).clientX
-      : 0;
-    const id = (e as PointerEvent).pointerId;
-    try {
-      target.setPointerCapture(id);
-      captured = { el: target, id };
-    } catch {
-      captured = null;
-    }
-    e.preventDefault();
-  });
+  widgetEl.addEventListener(
+    "change",
+    (e) => {
+      const target = e.target;
+      if (target === presetEl) {
+        applyPreset();
+        return;
+      }
+      // Refit on commit, not per keystroke: rescaling under a half-typed date
+      // fights the caret.
+      if (target === entryEl || target === exitEl) {
+        refit();
+        return;
+      }
+      if (target === zoneEl || target === compareEl) {
+        syncPreset();
+        refit();
+        return;
+      }
+      if (target === entryHandle || target === exitHandle) {
+        // The end of a drag refits; a key press does only at the canvas's edge, which
+        // widens the canvas so the handle can keep going.
+        const h = target as GmtHandle;
+        if (pointerActive || h.value <= 0 || h.value >= maxUnits()) refit();
+      }
+    },
+    { signal },
+  );
 
-  container.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
-    const track = q("track-dwell");
-    if (!track) return;
-    const rect = track.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    const pct =
-      (((e as PointerEvent).clientX + grab - rect.left) / rect.width) * 100;
-    setHandle(dragging, canvas.fromPercent(pct));
-  });
-
-  const stopDrag = () => {
-    if (!dragging) return;
-    dragging = null;
-    captured = null;
-    refit();
+  widgetEl.addEventListener(
+    "pointerdown",
+    () => {
+      pointerActive = true;
+    },
+    { signal },
+  );
+  const released = (): void => {
+    pointerActive = false;
   };
-  container.addEventListener("pointerup", stopDrag);
-  container.addEventListener("pointercancel", stopDrag);
-
-  // ---- Keyboard ----
-
-  container.addEventListener("keydown", (e) => {
-    const target = (e.target as HTMLElement).closest(
-      '[data-role^="handle-"]',
-    ) as HTMLElement | null;
-    const role = target?.dataset.role;
-    const input = role ? inputFor[role] : undefined;
-    if (!role || !input) return;
-    const ev = e as KeyboardEvent;
-    const units = ev.shiftKey ? BIG_STEP_UNITS : STEP_UNITS;
-    const current = toEpochMs(input.value);
-    let next: number | null = null;
-    switch (ev.key) {
-      case "ArrowLeft":
-      case "ArrowDown":
-        next = canvas.step(current, -units);
-        break;
-      case "ArrowRight":
-      case "ArrowUp":
-        next = canvas.step(current, units);
-        break;
-      case "PageUp":
-        next = canvas.step(current, PAGE_STEP_UNITS);
-        break;
-      case "PageDown":
-        next = canvas.step(current, -PAGE_STEP_UNITS);
-        break;
-      case "Home":
-        next = canvas.startMs;
-        break;
-      case "End":
-        next = canvas.endMs;
-        break;
-    }
-    if (next === null) return;
-    ev.preventDefault();
-    setHandle(role, next);
-    // Reaching the edge widens the canvas, so the handle can keep going.
-    if (next <= canvas.startMs || next >= canvas.endMs) refit();
-  });
-
-  // ---- Typed inputs and selects ----
-
-  for (const input of [entryEl, exitEl]) {
-    input.addEventListener("input", () => {
-      syncPreset();
-      render();
-    });
-    // Refit on commit, not per keystroke: rescaling under a half-typed date
-    // fights the caret.
-    input.addEventListener("change", refit);
-  }
-  for (const select of [zoneEl, compareEl]) {
-    select.addEventListener("change", () => {
-      syncPreset();
-      refit();
-    });
-  }
-  presetEl.addEventListener("change", applyPreset);
-
-  wireCopyButtons(container);
-
-  /* The day columns drop their weekday, then their label, against the track's
-     measured width, so a width change (rotation, the chat rail opening) re-fits
-     them. */
-  const trackEl = q<HTMLElement>("track-dwell");
-  const disposeWidth = trackEl ? onWidthChange(trackEl, render) : () => {};
+  widgetEl.addEventListener("pointerup", released, { signal });
+  widgetEl.addEventListener("pointercancel", released, { signal });
 
   return {
     refit,
-    release() {
-      disposeWidth();
-      if (!captured) return;
-      try {
-        captured.el.releasePointerCapture(captured.id);
-      } catch {
-        /* Already released. */
-      }
-      captured = null;
+    permalink(): Record<string, string> {
+      const out: Record<string, string> = {
+        entry: entryEl.value,
+        exit: exitEl.value,
+      };
+      if (zoneEl.value !== NO_ZONE) out["zone"] = zoneEl.value;
+      if (compareEl.value !== NO_ZONE) out["compareZone"] = compareEl.value;
+      return out;
     },
   };
 }
@@ -668,44 +692,26 @@ function setupWidget(container: HTMLElement, m: Modules): Controller | null {
 /** Write seeded arguments onto the controls; a zone the select lacks is added. */
 function applyArgs(root: HTMLElement, args: DwellLedgerArgs): void {
   if (args.entry === undefined && args.exit === undefined) return;
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
+  const { part: el } = findWidget(root, WIDGET_NAME);
   const zone = args.zone ?? NO_ZONE;
   const compareZone = args.compareZone ?? NO_ZONE;
-  const setSelect = (el: HTMLSelectElement | null, value: string) => {
-    if (!el) return;
-    if (![...el.options].some((o) => o.value === value)) {
-      const opt = document.createElement("option");
-      opt.value = value;
-      opt.textContent = value;
-      el.appendChild(opt);
+  const setSelect = (select: HTMLSelectElement, value: string): void => {
+    if (![...select.options].some((o) => o.value === value)) {
+      select.add(new Option(value, value));
     }
-    el.value = value;
+    select.value = value;
   };
-  setSelect(q<HTMLSelectElement>("zone"), zone);
-  setSelect(q<HTMLSelectElement>("compare-zone"), compareZone);
-  const entryEl = q<HTMLInputElement>("entry");
-  const exitEl = q<HTMLInputElement>("exit");
+  setSelect(el<HTMLSelectElement>("zone"), zone);
+  setSelect(el<HTMLSelectElement>("compare"), compareZone);
   /* A chat model answering "23:00 in New York" sends a wall time with no
      offset. Read it in the zone the reader named; see `resolveWallTime`. */
-  if (entryEl) entryEl.value = resolveWallTime(args.entry ?? "", zone);
-  if (exitEl) exitEl.value = resolveWallTime(args.exit ?? "", zone);
-  const presetEl = q<HTMLSelectElement>("preset");
-  if (presetEl && entryEl && exitEl) {
-    presetEl.value = matchPreset(
-      entryEl.value,
-      exitEl.value,
-      zone,
-      compareZone,
-    );
-    const desc = q("preset-description");
-    if (desc) {
-      setPresetDescription(
-        desc,
-        DWELL_PRESETS.find((p) => p.id === presetEl.value)?.description ?? "",
-      );
-    }
-  }
+  const entry = resolveWallTime(args.entry ?? "", zone);
+  const exit = resolveWallTime(args.exit ?? "", zone);
+  el<HTMLInputElement>("entry").value = entry;
+  el<HTMLInputElement>("exit").value = exit;
+  findWidget(root, WIDGET_NAME).el.querySelector<GmtPreset>(
+    "gmt-preset",
+  )!.value = matchPreset(entry, exit, zone, compareZone);
 }
 
 export const mountDwellLedger: MountFn<DwellLedgerArgs> = async (
@@ -713,6 +719,7 @@ export const mountDwellLedger: MountFn<DwellLedgerArgs> = async (
   args,
   signal,
 ) => {
+  defineElements();
   let modules: Modules;
   try {
     modules = await loadModules();
@@ -723,26 +730,11 @@ export const mountDwellLedger: MountFn<DwellLedgerArgs> = async (
   if (signal.aborted) return onceDestroy(() => {});
 
   applyArgs(root, args);
-  const controller = setupWidget(root, modules);
-  controller?.refit();
+  const controller = setupWidget(root, modules, signal);
+  controller.refit();
 
   return onceDestroy(
-    () => controller?.release(),
-    () => {
-      const v = (role: string) =>
-        (
-          root.querySelector(`[data-role="${role}"]`) as
-            | HTMLInputElement
-            | HTMLSelectElement
-            | null
-        )?.value ?? "";
-      const out: Record<string, string> = {
-        entry: v("entry"),
-        exit: v("exit"),
-      };
-      if (v("zone") !== NO_ZONE) out.zone = v("zone");
-      if (v("compare-zone") !== NO_ZONE) out.compareZone = v("compare-zone");
-      return out;
-    },
+    () => {},
+    () => controller.permalink(),
   );
 };

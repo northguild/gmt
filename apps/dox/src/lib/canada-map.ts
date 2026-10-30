@@ -60,9 +60,7 @@ export function canadaProjection(
  * Territories), Winnipeg in northern Manitoba and Inuvik in the far north, so the three western
  * labels sit in three bands; Toronto in the east of Ontario, away from Winnipeg's.
  */
-export const CANADA_ANCHORS: Readonly<
-  Record<string, readonly [number, number]>
-> = {
+const CANADA_ANCHORS: Readonly<Record<string, readonly [number, number]>> = {
   "America/Vancouver": [-122.8, 50.2],
   "America/Edmonton": [-114.5, 63.5],
   "America/Inuvik": [-126.3, 66.7],

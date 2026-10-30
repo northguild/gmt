@@ -1,0 +1,83 @@
+/*
+ * Cut-off Countdown: what only this tool needs. The sections, preset, fields, range, face,
+ * verdict, code frames and outputs are the kit's and the cutoff family's; this sheet places
+ * the axis legend and scale, the rule and summary lines, and the status the reader hears.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone, and an accent edge is never
+ * a single side.
+ */
+
+/* The words a screen reader hears when a reader finishes a change. They are never drawn: the
+   verdict, face and summary say the same thing to the eye. */
+.status {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The axis keeps its box before there is a window, so nothing moves when it fills. */
+.axis {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  min-block-size: var(--gmt-target-min);
+  align-items: center;
+}
+
+/* The scale lines up with the lane's track, past its label column, and the label column
+   collapses with the lane's own container query. */
+.scaleRow {
+  margin-inline-start: calc(var(--gmt-timeline-label-w, 6rem) + 0.5rem);
+  min-inline-size: 0;
+
+  @container (inline-size < 30rem) {
+    margin-inline-start: 0;
+  }
+}
+
+.rule,
+.summary {
+  margin: 0;
+  min-block-size: 1.5em;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+}
+
+.rule {
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface-widget);
+  font-family: var(--gmt-font-mono);
+  overflow-wrap: anywhere;
+}
+
+@media (forced-colors: active) {
+  .rule {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .summary {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .rule {
+    border-color: var(--gmt-ice);
+  }
+}

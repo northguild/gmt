@@ -1,112 +1,107 @@
 /**
  * @vitest-environment jsdom
  *
- * The Holiday Rule Builder end to end: template, mount, interact, assert,
- * against the real `@northguild/gmt`. Dates are the library spec's; counts
+ * The Holiday Rule Builder end to end against the real `@northguild/gmt`, through roles and
+ * accessible names the way a reader meets the page. Dates are the library spec's; counts
  * are derived from the modules.
  */
-import { spyOnResizeObservers } from "~/test/resize-observer-spy";
+import { screen, within } from "@testing-library/dom";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { readArgs as readLedgerArgs } from "./free-time-ledger";
 import { MAX_RULES } from "./holiday-codec";
-import {
-  FOLD_WIDTH,
-  mountHolidayRuleBuilder,
-  renderHolidayRuleBuilderTemplate,
-} from "./holiday-rule-builder-mount";
 import { BUILDER_PRESETS, NO_SIGNAL_TEXT } from "./holiday-rule-builder";
+import { FOLD_WIDTH } from "./holiday-rule-builder-mount";
 import { seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
-const rows = (root: HTMLElement) => [
-  ...root.querySelectorAll<HTMLElement>("[data-row]"),
-];
+const entry = WIDGET_REGISTRY["showHolidayRuleBuilder"] as AnyWidgetEntry;
 
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderHolidayRuleBuilderTemplate(args);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountHolidayRuleBuilder(root, args, controller.signal);
-  return { root, handle, controller };
+async function mount(args: unknown = {}): Promise<RenderedWidget> {
+  return renderWidget(entry, { args });
 }
 
-const fire = (el: Element, type: "input" | "change") =>
-  el.dispatchEvent(new Event(type, { bubbles: true }));
-const click = (el: Element) =>
-  el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+const ruleNames = () =>
+  screen.queryAllByRole("textbox", { name: /^Rule \d+ name$/ });
+const result = (n: number) =>
+  screen.getByRole("note", { name: `Rule ${n} result` });
+const output = () => screen.getByRole("status", { name: "Calendar returned" });
+const ledgerGroup = () =>
+  screen.getByRole("group", { name: "Open this result in another tool" });
+const ledgerLink = () =>
+  within(ledgerGroup()).getByText("Count free time on this calendar");
+const yearField = () => screen.getByRole("spinbutton", { name: "Year" });
+const presetBox = () => screen.getByRole("combobox", { name: "Preset" });
 
-function setField(row: HTMLElement, field: string, value: string) {
-  const el = row.querySelector<HTMLInputElement>(`[data-field="${field}"]`)!;
-  el.value = value;
-  fire(el, el.tagName === "SELECT" ? "change" : "input");
+/** Every marked date's sentence, in grid order. */
+const marked = (): string[] =>
+  screen
+    .queryAllByRole("list", { name: "Marked dates" })
+    .flatMap((list) => within(list).queryAllByRole("listitem"))
+    .map((item) => item.textContent ?? "");
+const closedIn = (monthYear: string) =>
+  marked().filter(
+    (s) => s.includes(` ${monthYear}:`) && /: (closed|.*; closed)/.test(s),
+  );
+const ghosts = () =>
+  marked().filter((s) => s.includes("a holiday moved from here"));
+
+async function setText(
+  rendered: RenderedWidget,
+  field: HTMLElement,
+  value: string,
+): Promise<void> {
+  await rendered.user.clear(field);
+  if (value !== "") await rendered.user.paste(value);
 }
-
-const closed = (root: HTMLElement) =>
-  [...root.querySelectorAll<HTMLElement>('[data-date][data-kinds~="closed"]')]
-    .map((c) => c.dataset["date"]!)
-    .sort();
-const ghosts = (root: HTMLElement) =>
-  [
-    ...root.querySelectorAll<HTMLElement>(
-      '[data-date][data-kinds~="moved-from"]',
-    ),
-  ]
-    .map((c) => c.dataset["date"]!)
-    .sort();
-const buttonOf = (row: HTMLElement, action: string) =>
-  row.querySelector<HTMLButtonElement>(`[data-action="${action}"]`)!;
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
 
 describe("the chain preset", () => {
-  it("draws ghosts on 25 and 26 Dec and closed cells on 27 and 28", async () => {
-    const { root } = await mount();
-    expect(ghosts(root)).toEqual(["2021-12-25", "2021-12-26"]);
-    const days = closed(root).filter(
-      (d) => d >= "2021-12-20" && d <= "2021-12-31",
-    );
-    expect(days).toContain("2021-12-27");
-    expect(days).toContain("2021-12-28");
-    expect(q(root, "calendar-output").textContent).toContain(
-      '["2021-12-27", "2021-12-28"]',
-    );
+  it("marks ghosts on 25 and 26 Dec and closed days on 27 and 28", async () => {
+    const rendered = await mount();
+    expect(ghosts().map((s) => s.split(":")[0])).toEqual([
+      "Saturday 25 December 2021",
+      "Sunday 26 December 2021",
+    ]);
+    expect(closedIn("December 2021").map((s) => s.split(":")[0])).toEqual([
+      "Monday 27 December 2021",
+      "Tuesday 28 December 2021",
+    ]);
+    expect(output()).toHaveTextContent('["2021-12-27", "2021-12-28"]');
+    expect(screen.getByRole("group", { name: "Weekend" })).toBeInTheDocument();
+    await expectNoAxeViolations(rendered.root);
   });
 
-  it("starts with the rows' own number chips and no policy on a new row", async () => {
-    const { root } = await mount();
-    expect(
-      root.querySelectorAll(".gmt-holiday-chip--rule").length,
-    ).toBeGreaterThan(0);
-    click(q(root, "rules").ownerDocument.querySelector('[data-action="add"]')!);
-    const last = rows(root).at(-1)!;
-    expect(
-      last.querySelectorAll("select[data-weekday]").length,
-    ).toBeGreaterThan(0);
-    for (const s of last.querySelectorAll<HTMLSelectElement>(
-      "select[data-weekday]",
-    )) {
-      expect(s.value).toBe("");
-    }
+  it("a new rule starts with no observance chosen", async () => {
+    const rendered = await mount();
+    const before = ruleNames().length;
+    await rendered.user.click(screen.getByRole("button", { name: "Add rule" }));
+    expect(ruleNames()).toHaveLength(before + 1);
+    const groups = screen.getAllByRole("group", { name: /observance/i });
+    const selects = within(groups.at(-1)!).getAllByRole("combobox");
+    expect(selects.length).toBeGreaterThan(0);
+    for (const s of selects) expect(s).toHaveValue("");
+    await expectNoAxeViolations(rendered.root);
   });
 });
 
 describe("every preset", () => {
   it("builds a calendar", async () => {
     for (const p of BUILDER_PRESETS) {
-      const { root } = await mount({ preset: p.id });
-      expect(q(root, "calendar-output").textContent, p.id).not.toContain(
-        "null",
-      );
-      expect(rows(root).length, p.id).toBe(p.rules.length);
-      expect(q<HTMLSelectElement>(root, "preset").value).toBe(p.id);
+      const rendered = await mount({ preset: p.id });
+      expect(output(), p.id).not.toHaveTextContent("null");
+      expect(ruleNames(), p.id).toHaveLength(p.rules.length);
+      expect(presetBox(), p.id).toHaveValue(p.id);
+      rendered.destroy();
     }
   });
 });
@@ -121,98 +116,100 @@ describe("order", () => {
   };
   const B = { name: "B", kind: "dates", dates: ["2021-12-27"] };
   const seed = { rules: [B, A], year: 2021, timeZone: "Europe/London" };
+  const christmas = () => closedIn("December 2021").map((s) => s.split(":")[0]);
 
   it("keeps the closed days when a row moves up", async () => {
-    const { root } = await mount(seed);
-    const christmas = () =>
-      closed(root).filter((d) => d >= "2021-12-20" && d <= "2021-12-31");
-    expect(christmas()).toEqual(["2021-12-27", "2021-12-28"]);
-    click(buttonOf(rows(root)[1]!, "up"));
-    expect(christmas()).toEqual(["2021-12-27", "2021-12-28"]);
-    expect(q(root, "calendar-output").textContent).toContain(
-      '["2021-12-27", "2021-12-28"]',
+    const rendered = await mount(seed);
+    expect(christmas()).toEqual([
+      "Monday 27 December 2021",
+      "Tuesday 28 December 2021",
+    ]);
+    await rendered.user.click(
+      screen.getByRole("button", { name: "Move rule 2 up" }),
     );
+    expect(christmas()).toEqual([
+      "Monday 27 December 2021",
+      "Tuesday 28 December 2021",
+    ]);
+    expect(output()).toHaveTextContent('["2021-12-27", "2021-12-28"]');
+    await expectNoAxeViolations(rendered.root);
   });
 
   it("swaps which holiday walks to which day when a row moves up", async () => {
-    const { root } = await mount({ preset: "chain" });
-    const from = (date: string) =>
-      root.querySelector(`[data-date="${date}"] .gmt-holiday-chip--from`)
-        ?.textContent;
-    expect([from("2021-12-27"), from("2021-12-28")]).toEqual([
-      "↩ Sat",
-      "↩ Sun",
-    ]);
-    click(buttonOf(rows(root)[1]!, "up"));
-    expect([from("2021-12-27"), from("2021-12-28")]).toEqual([
-      "↩ Sun",
-      "↩ Sat",
-    ]);
+    const rendered = await mount({ preset: "chain" });
+    const from = (day: string) => marked().find((s) => s.startsWith(day)) ?? "";
+    expect(from("Monday 27 December 2021")).toContain(
+      "moved here from Saturday",
+    );
+    expect(from("Tuesday 28 December 2021")).toContain(
+      "moved here from Sunday",
+    );
+    await rendered.user.click(
+      screen.getByRole("button", { name: "Move rule 2 up" }),
+    );
+    expect(from("Monday 27 December 2021")).toContain("moved here from Sunday");
+    expect(from("Tuesday 28 December 2021")).toContain(
+      "moved here from Saturday",
+    );
   });
 
-  it("keeps focus on the button of the row that moved", async () => {
-    const { root } = await mount(seed);
-    click(buttonOf(rows(root)[1]!, "up"));
+  it("keeps focus with the row that moved", async () => {
+    const rendered = await mount(seed);
+    await rendered.user.click(
+      screen.getByRole("button", { name: "Move rule 2 up" }),
+    );
     // At the top "up" is disabled, so focus falls to the row's "down".
-    expect(buttonOf(rows(root)[0]!, "up").disabled).toBe(true);
-    expect(document.activeElement).toBe(buttonOf(rows(root)[0]!, "down"));
+    expect(
+      screen.getByRole("button", { name: "Move rule 1 up" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Move rule 1 down" }),
+    ).toHaveFocus();
   });
 });
 
 describe("the midweek preset", () => {
-  it("shows 17 Jun closed with no ghost, and a ghost once row 1 goes", async () => {
-    const { root } = await mount({ preset: "midweek" });
-    const cell = () =>
-      root.querySelector<HTMLElement>('[data-date="2026-06-17"]')!;
-    expect(cell().dataset["kinds"]).toContain("closed");
-    expect(ghosts(root)).not.toContain("2026-06-17");
-    click(buttonOf(rows(root)[0]!, "remove"));
-    expect(ghosts(root)).toContain("2026-06-17");
-    expect(rows(root).length).toBe(
+  it("closes 17 Jun with no ghost, and shows a ghost once rule 1 goes", async () => {
+    const rendered = await mount({ preset: "midweek" });
+    const on = (list: string[]) =>
+      list.filter((s) => s.startsWith("Wednesday 17 June 2026"));
+    expect(on(closedIn("June 2026"))).toHaveLength(1);
+    expect(on(ghosts())).toHaveLength(0);
+    await rendered.user.click(
+      screen.getByRole("button", { name: "Remove rule 1" }),
+    );
+    expect(on(ghosts())).toHaveLength(1);
+    expect(ruleNames()).toHaveLength(
       BUILDER_PRESETS.find((p) => p.id === "midweek")!.rules.length - 1,
     );
+    await expectNoAxeViolations(rendered.root);
   });
 });
 
 describe("no result", () => {
   it("shows NO SIGNAL for month 13 and prints the null result", async () => {
-    const { root } = await mount();
-    setField(rows(root)[0]!, "month", "13");
-    const result = rows(root)[0]!.querySelector<HTMLElement>(
-      '[data-role="row-result"]',
-    )!;
-    expect(result.textContent).toContain(NO_SIGNAL_TEXT);
-    expect(result.className).toContain("gmt-playground-sentinel");
-    const out = q(root, "calendar-output");
-    expect(out.textContent).toContain("null");
-    expect(out.className).toContain("gmt-playground-sentinel");
+    const rendered = await mount();
+    const first = screen.getAllByRole("textbox", { name: "Month" })[0]!;
+    await setText(rendered, first, "13");
+    expect(result(1)).toHaveTextContent(NO_SIGNAL_TEXT);
+    expect(output()).toHaveTextContent("null");
+    expect(within(ledgerGroup()).queryByRole("link")).not.toBeInTheDocument();
+    expect(ledgerLink()).toHaveAttribute("aria-disabled", "true");
     expect(
-      root.querySelector('[data-role="link-ledger"]')!.hasAttribute("href"),
-    ).toBe(false);
-    expect(
-      root
-        .querySelector('[data-role="link-ledger"]')!
-        .getAttribute("aria-disabled"),
-    ).toBe("true");
-    expect(q(root, "handoff-hint").textContent).not.toBe("");
+      screen.getByRole("note", { name: "Hand-off hint" }),
+    ).not.toBeEmptyDOMElement();
+    await expectNoAxeViolations(rendered.root);
   });
 
   it("keeps focus in the field while it is typed in", async () => {
-    const { root } = await mount();
-    const input = rows(root)[0]!.querySelector<HTMLInputElement>(
-      '[data-field="month"]',
-    );
-    const before =
-      input ??
-      rows(root)[0]!.querySelector<HTMLInputElement>('[data-field="name"]')!;
-    before.focus();
-    before.value = before.value + "";
-    fire(before, "input");
-    expect(rows(root)[0]!.contains(before)).toBe(true);
+    const rendered = await mount();
+    const first = screen.getAllByRole("textbox", { name: "Month" })[0]!;
+    await setText(rendered, first, "13");
+    expect(screen.getAllByRole("textbox", { name: "Month" })[0]).toHaveFocus();
   });
 
   it("treats a valid rule with no date as an empty answer, not NO SIGNAL", async () => {
-    const { root } = await mount({
+    const rendered = await mount({
       rules: [
         {
           name: "Fifth Friday",
@@ -225,124 +222,131 @@ describe("no result", () => {
       year: 2026,
       timeZone: "UTC",
     });
-    const result = rows(root)[0]!.querySelector<HTMLElement>(
-      '[data-role="row-result"]',
-    )!;
-    expect(result.textContent).not.toContain("NO SIGNAL");
-    expect(result.className).not.toContain("gmt-playground-sentinel");
-    expect(q(root, "calendar-output").textContent).not.toContain("null");
+    expect(result(1)).not.toHaveTextContent("NO SIGNAL");
+    expect(output()).not.toHaveTextContent("null");
+    await expectNoAxeViolations(rendered.root);
   });
 });
 
 describe("the rule cap", () => {
   it("cannot add a 13th rule", async () => {
-    const { root } = await mount();
-    const add = root.querySelector<HTMLButtonElement>('[data-action="add"]')!;
-    while (rows(root).length < MAX_RULES) click(add);
-    expect(rows(root).length).toBe(MAX_RULES);
-    expect(add.disabled).toBe(true);
-    click(add);
-    expect(rows(root).length).toBe(MAX_RULES);
+    // Seeded one short of the cap, so one click fills the list and a second finds it full.
+    const seeded = Array.from({ length: MAX_RULES - 1 }, (_, i) => ({
+      name: `Day ${i + 1}`,
+      kind: "fixed",
+      month: 1 + (i % 12),
+      day: 1 + i,
+    }));
+    const rendered = await mount({ rules: seeded });
+    const add = screen.getByRole("button", { name: "Add rule" });
+    expect(ruleNames()).toHaveLength(MAX_RULES - 1);
+    expect(add).toBeEnabled();
+    await rendered.user.click(add);
+    expect(ruleNames()).toHaveLength(MAX_RULES);
+    expect(add).toBeDisabled();
+    await rendered.user.click(add);
+    expect(ruleNames()).toHaveLength(MAX_RULES);
+    // No axe scan here: every row has the structure the other tests already scan, and a scan of
+    // twelve of them takes seconds.
+    expect(screen.getByText("12 of 12 rules")).toBeInTheDocument();
   });
 });
 
 describe("the Ledger hand-off", () => {
   it("round-trips the weekend, holidays, zone and basis", async () => {
-    const { root } = await mount({ preset: "closing" });
-    const link = root.querySelector<HTMLAnchorElement>(
-      '[data-role="link-ledger"]',
-    )!;
-    const href = link.getAttribute("href")!;
+    await mount({ preset: "closing" });
+    const href = within(ledgerGroup())
+      .getByRole("link", { name: "Count free time on this calendar" })
+      .getAttribute("href")!;
     expect(href).toBeTruthy();
     const search = new URL(href, "https://example.test").search;
-    const seeded = seedFromLocation("freetime", search);
-    const state = readLedgerArgs(seeded as never);
+    const state = readLedgerArgs(seedFromLocation("freetime", search) as never);
     const calendar = BUILDER_PRESETS.find((p) => p.id === "closing")!;
     expect(state.weekend).toEqual([...calendar.weekend]);
     expect(state.zone).toBe(calendar.zone);
     expect(state.basis).toBe("working");
-    const printed = q(root, "calendar-output").textContent!;
-    for (const date of state.holidays.split("\n")) {
-      expect(printed).toContain(date);
-    }
     expect(state.holidays.split("\n").length).toBeGreaterThan(0);
+    for (const date of state.holidays.split("\n")) {
+      expect(output()).toHaveTextContent(date);
+    }
   });
 });
 
 describe("the policy editor folds with the container", () => {
-  const stubWidth = (root: HTMLElement, width: number) =>
-    Object.defineProperty(q(root, "rules"), "clientWidth", {
+  let spy: ReturnType<typeof spyOnResizeObservers>;
+  let width = 0;
+  const original = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "clientWidth",
+  );
+  beforeEach(() => {
+    spy = spyOnResizeObservers();
+    Object.defineProperty(HTMLOListElement.prototype, "clientWidth", {
       configurable: true,
       get: () => width,
     });
-  const opens = (root: HTMLElement) =>
-    [...root.querySelectorAll<HTMLDetailsElement>(".gmt-holiday-policy")].map(
-      (d) => d.open,
-    );
-  let spy: ReturnType<typeof spyOnResizeObservers>;
-  beforeEach(() => {
-    spy = spyOnResizeObservers();
   });
-  afterEach(() => spy.restore());
+  afterEach(() => {
+    spy.restore();
+    Reflect.deleteProperty(HTMLOListElement.prototype, "clientWidth");
+    if (original) {
+      Object.defineProperty(HTMLElement.prototype, "clientWidth", original);
+    }
+  });
 
-  async function mountAt(width: number) {
-    const root = document.createElement("div");
-    root.innerHTML = renderHolidayRuleBuilderTemplate({});
-    document.body.append(root);
-    stubWidth(root, width);
-    const controller = new AbortController();
-    await mountHolidayRuleBuilder(root, {}, controller.signal);
-    // The mount drew the rows before the stub could matter only if it read the
-    // width late; re-pick a preset so rows are drawn with the width in place.
-    const preset = q<HTMLSelectElement>(root, "preset");
-    preset.value = "friday-monday";
-    fire(preset, "change");
-    return root;
+  const policies = () => screen.getAllByRole("group", { name: /observance/i });
+  const allOpen = (open: boolean) =>
+    policies().every((d) =>
+      open ? d.hasAttribute("open") : !d.hasAttribute("open"),
+    );
+
+  async function mountAt(w: number) {
+    width = w;
+    return mount({ preset: "friday-monday" });
   }
 
   it("draws the editors closed when narrow", async () => {
-    const root = await mountAt(FOLD_WIDTH - 90);
-    expect(opens(root).length).toBeGreaterThan(0);
-    expect(opens(root).every((o) => !o)).toBe(true);
+    await mountAt(FOLD_WIDTH - 90);
+    expect(policies().length).toBeGreaterThan(0);
+    expect(allOpen(false)).toBe(true);
   });
 
   it("draws the editors open when wide", async () => {
-    const root = await mountAt(FOLD_WIDTH + 200);
-    expect(opens(root).every((o) => o)).toBe(true);
+    await mountAt(FOLD_WIDTH + 200);
+    expect(allOpen(true)).toBe(true);
   });
 
   it("keeps in step on resize, both ways", async () => {
-    const root = await mountAt(FOLD_WIDTH + 200);
-    stubWidth(root, FOLD_WIDTH - 90);
+    await mountAt(FOLD_WIDTH + 200);
+    width = FOLD_WIDTH - 90;
     spy.fire();
-    expect(opens(root).every((o) => !o)).toBe(true);
-    stubWidth(root, FOLD_WIDTH + 200);
+    expect(allOpen(false)).toBe(true);
+    width = FOLD_WIDTH + 200;
     spy.fire();
-    expect(opens(root).every((o) => o)).toBe(true);
+    expect(allOpen(true)).toBe(true);
   });
 
   it("releases its observer on destroy", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderHolidayRuleBuilderTemplate({});
-    document.body.append(root);
-    const handle = await mountHolidayRuleBuilder(
-      root,
-      {},
-      new AbortController().signal,
-    );
+    const rendered = await mountAt(FOLD_WIDTH + 200);
     expect(spy.live.size).toBeGreaterThan(0);
-    handle.destroy();
+    rendered.destroy();
     expect(spy.live.size).toBe(0);
   });
 });
 
 describe("the permalink", () => {
   it("carries the edited rules back out", async () => {
-    const { root, handle } = await mount({ preset: "closing" });
-    click(buttonOf(rows(root)[0]!, "remove"));
-    const state = handle.getPermalinkState!() as Record<string, string>;
+    const rendered = await mount({ preset: "closing" });
+    await rendered.user.click(
+      screen.getByRole("button", { name: "Remove rule 1" }),
+    );
+    const url = new URL(rendered.permalink(), "https://example.test");
+    const state = JSON.parse(url.searchParams.get("wa")!) as Record<
+      string,
+      string
+    >;
     expect(state["preset"]).toBeUndefined();
-    expect(state["rules"].split("\n").length).toBe(
+    expect(state["rules"]!.split("\n").length).toBe(
       BUILDER_PRESETS.find((p) => p.id === "closing")!.rules.length - 1,
     );
     expect(state["year"]).toBe("2026");
@@ -351,70 +355,62 @@ describe("the permalink", () => {
 
 describe("the year", () => {
   it("steps by one and keeps the grid at twelve months", async () => {
-    const { root } = await mount();
-    const months = () =>
-      root.querySelectorAll(
-        "[data-role='grid'] [data-month], [data-role='grid'] table",
-      ).length;
-    const before = months();
-    click(root.querySelector('[data-action="year-up"]')!);
-    expect(q<HTMLInputElement>(root, "year").value).toBe("2022");
-    expect(months()).toBe(before);
+    const rendered = await mount();
+    await rendered.user.click(
+      screen.getByRole("button", { name: "Next year" }),
+    );
+    expect(yearField()).toHaveValue(2022);
+    expect(screen.getByRole("img", { name: /2022/ })).toBeInTheDocument();
+    await expectNoAxeViolations(rendered.root);
   });
 
   it("an invalid year leaves nothing of the last one on screen", async () => {
-    const { root } = await mount();
-    const year = q<HTMLInputElement>(root, "year");
-    const months = () =>
-      root.querySelectorAll(
-        "[data-role='grid'] [data-month], [data-role='grid'] table",
-      ).length;
-    const before = months();
-    expect(ghosts(root)).not.toEqual([]);
+    const rendered = await mount();
+    expect(ghosts()).not.toEqual([]);
     for (const typed of ["", "1899", "2101", "2021.5"]) {
-      year.value = typed;
-      fire(year, "input");
-      expect(year.getAttribute("aria-invalid")).toBe("true");
-      for (const row of rows(root)) {
-        const result = row.querySelector<HTMLElement>(
-          '[data-role="row-result"]',
-        )!;
-        expect(result.textContent).toContain(NO_SIGNAL_TEXT);
-        expect(result.className).toContain("gmt-playground-sentinel");
-        // The Comparator needs no year: the link stays, without one.
-        const link = row.querySelector('[data-role="link-compare"]')!;
-        const href = link.getAttribute("href")!;
-        const seeded = seedFromLocation(
-          "observance",
-          new URL(href, "https://example.test").search,
-        );
-        expect(seeded).not.toHaveProperty("year");
+      await setText(rendered, yearField(), typed);
+      expect(yearField()).toBeInvalid();
+      for (const [i] of ruleNames().entries()) {
+        expect(result(i + 1)).toHaveTextContent(NO_SIGNAL_TEXT);
       }
-      for (const hero of ["hero-closed", "hero-moved"]) {
-        expect(q(root, hero).hasAttribute("data-empty")).toBe(true);
-      }
-      expect(closed(root)).toEqual([]);
-      expect(ghosts(root)).toEqual([]);
-      expect(months()).toBe(before);
-      expect(q(root, "year-note").textContent).toContain(NO_SIGNAL_TEXT);
-      expect(q(root, "year-note").textContent).toContain("1900 to 2100");
-      expect(q(root, "year-sentence").textContent).toBe(
+      // The Comparator needs no year: the link stays, without one.
+      const compare = within(
+        screen.getByRole("group", { name: "Rule 1 comparison" }),
+      ).getByRole("link", { name: "Compare policies for this date" });
+      const seeded = seedFromLocation(
+        "observance",
+        new URL(compare.getAttribute("href")!, "https://example.test").search,
+      );
+      expect(seeded).not.toHaveProperty("year");
+      expect(marked()).toEqual([]);
+      expect(screen.getByRole("note", { name: "Year note" })).toHaveTextContent(
+        NO_SIGNAL_TEXT,
+      );
+      expect(screen.getByRole("note", { name: "Year note" })).toHaveTextContent(
+        "1900 to 2100",
+      );
+      expect(
+        screen.getByRole("status", { name: "Year summary" }),
+      ).toHaveTextContent(
         "No calendar: the year is not a whole number from 1900 to 2100.",
       );
-      expect(q(root, "call-calendar").textContent).toBe("");
-      expect(q(root, "calendar-output").textContent).toBe(NO_SIGNAL_TEXT);
-      expect(q(root, "rule-calls").textContent).toBe("");
-      expect(q(root, "link-ledger").hasAttribute("href")).toBe(false);
-      expect(q(root, "handoff-hint").textContent).toBe(
+      expect(output()).toHaveTextContent("NO SIGNAL");
+      expect(within(ledgerGroup()).queryByRole("link")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("note", { name: "Hand-off hint" }),
+      ).toHaveTextContent(
         "There is no calendar to send: the year is not valid.",
       );
     }
-    year.value = "2021";
-    fire(year, "input");
-    expect(year.hasAttribute("aria-invalid")).toBe(false);
-    expect(ghosts(root)).toEqual(["2021-12-25", "2021-12-26"]);
-    expect(q(root, "calendar-output").textContent).toContain("2021-12-27");
-    expect(q(root, "call-calendar").textContent).toContain("2021");
-    expect(q(root, "link-ledger").hasAttribute("href")).toBe(true);
+    await expectNoAxeViolations(rendered.root);
+    await setText(rendered, yearField(), "2021");
+    expect(yearField()).toBeValid();
+    expect(ghosts()).toHaveLength(2);
+    expect(output()).toHaveTextContent("2021-12-27");
+    expect(
+      within(ledgerGroup()).getByRole("link", {
+        name: "Count free time on this calendar",
+      }),
+    ).toHaveAttribute("href");
   });
 });

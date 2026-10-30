@@ -131,6 +131,8 @@ export function ChatWarning({
   return (
     <div
       className="gmt-hive-warning"
+      // <output> only holds phrasing content and this block holds a <p>.
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="status"
       data-retryable={state.retryable ? "" : undefined}
     >

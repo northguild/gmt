@@ -171,32 +171,6 @@ export function isVisible(camera: Camera, lng: number, lat: number): boolean {
   return rotatePoint(camera, lng, lat, SCRATCH)[0] > 0;
 }
 
-/** The geographic point at the centre of the visible hemisphere. */
-export function cameraCentre(camera: Camera): [number, number] {
-  return [wrapLng(-camera.rotation[0]), -camera.rotation[1]];
-}
-
-/**
- * Unit vector for a geographic point in the *unrotated* frame.
- *
- * Its dot product with another such vector is the cosine of the angle between
- * the two points, which is how the day/night test avoids a distance call.
- */
-export function unitVector(lng: number, lat: number): [number, number, number] {
-  const lambda = lng * DEG;
-  const phi = lat * DEG;
-  const cosLat = Math.cos(phi);
-  return [cosLat * Math.cos(lambda), cosLat * Math.sin(lambda), Math.sin(phi)];
-}
-
-/** Dot product of two vectors from `unitVector`. */
-export function dot3(
-  a: readonly [number, number, number],
-  b: readonly [number, number, number],
-): number {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
 /** Normalise a longitude into `[-180, 180)`. */
 export function wrapLng(lng: number): number {
   return ((((lng + 180) % 360) + 360) % 360) - 180;

@@ -1,0 +1,121 @@
+/*
+ * Leap-Day Birthday: what only this tool needs. The sections, fields, preset, range, table,
+ * code frame and held lines are the kit's; the plates and the reserved date and word slots
+ * are the holiday family's. This sheet lays the controls out and sets the table's cells.
+ *
+ * Amber is the sentinel's alone: a plate or a cell with no result reads a bracketed NO
+ * SIGNAL, never a blank. A moved year is a word, a hatch and a bottom edge on its verdict,
+ * never a colour alone and never a left edge.
+ */
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A group that needs the whole row: the preset and the year slider. */
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.stack {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* The plates are read through the sentence below them, so they are hidden from a reader. */
+.plates {
+  min-inline-size: 0;
+}
+
+.slot {
+  min-inline-size: 0;
+}
+
+.rows {
+  min-inline-size: 0;
+}
+
+/* A date reserves the length of "+275760-09-13", in tabular figures with no wrap. */
+.date {
+  display: block;
+  min-inline-size: 13ch;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.word {
+  display: block;
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+}
+
+.policy {
+  display: grid;
+  gap: var(--gmt-space-1);
+}
+
+/* Every verdict has the same padding and a bottom edge, clear unless the year moved, so a
+   moved verdict only paints: its box and its word never shift. */
+.verdict {
+  display: block;
+  padding-inline: var(--gmt-space-1);
+  border-block-end: 2px solid transparent;
+}
+
+/* Moved: a hatch on the verdict, its word, and a coloured bottom edge. */
+.moved {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--gmt-series-2) 30%, transparent) 0,
+    color-mix(in srgb, var(--gmt-series-2) 30%, transparent) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+  border-block-end-color: var(--gmt-series-2);
+}
+
+.calls {
+  min-inline-size: 0;
+
+  & > summary {
+    min-block-size: var(--gmt-target-min);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: var(--gmt-cyan-ink);
+
+    &:focus-visible {
+      outline: 2px solid var(--gmt-cyan);
+      outline-offset: 2px;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .calls > summary {
+    color: LinkText;
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+
+  .moved {
+    background-image: none;
+    border-block-end-color: CanvasText;
+    border-block-end-style: double;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .moved {
+    border-block-end-width: 3px;
+  }
+}

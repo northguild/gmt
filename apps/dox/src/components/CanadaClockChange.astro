@@ -14,7 +14,7 @@ import {
 
 // Both tenses of every dated phrase are in the markup; the page flips to the true one at once.
 const tense = await loadCanadaTense();
-const html = renderCanadaClockChangeTemplate({ keyPoints: true, tense });
+const html = renderCanadaClockChangeTemplate({ keyPoints: true, tense }).value;
 ---
 
 <div data-tools-fullbleed set:html={html} />
@@ -25,7 +25,7 @@ const html = renderCanadaClockChangeTemplate({ keyPoints: true, tense });
   import { seedFromLocation } from "../lib/widget-permalink";
 
   if (typeof window !== "undefined") {
-    document.querySelectorAll<HTMLElement>(".gmt-canada").forEach((el) => {
+    document.querySelectorAll<HTMLElement>('[data-widget="canada-clock-change"]').forEach((el) => {
       // A link from the chat (`?w=canadaclock&wa=...`) arrives with its zone pinned.
       const { zone } = seedFromLocation("canadaclock");
       mountCanadaClockChange(el, new AbortController().signal, {

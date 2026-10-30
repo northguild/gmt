@@ -67,7 +67,7 @@ export function ExamplesPanel({
                       <button
                         type="button"
                         className="gmt-hive-example gmt-sonar-focus"
-                        data-widget={starter.widget}
+                        data-starter={starter.widget}
                         aria-labelledby={questionId}
                         aria-describedby={chipId}
                         onClick={() => onPick(starter)}

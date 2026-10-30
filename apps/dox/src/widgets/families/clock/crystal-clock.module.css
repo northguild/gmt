@@ -1,0 +1,264 @@
+/*
+ * The crystal clock: a shared analog dial. Geometry, including the glass pane's own
+ * gradients, clip path and filter, is `crystal-clock.ts` (those live in the SVG markup, since
+ * SVG paints them by `url(#id)`). Every stroke and fill here is a token.
+ *
+ * The markup is the same for every state: a repeat ring, a skip ring and a skip strike are
+ * always drawn, and `data-state` on the root shows or mutes them. The night light is a real
+ * `<button>` whose `aria-pressed` the toggle sets; `data-glow` on the svg carries the flood.
+ */
+
+.clock {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  overflow: visible;
+
+  /* The bezel: one hairline stroke, the weight of a card border. */
+  .edge {
+    fill: none;
+    stroke: var(--gmt-border-strong);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .tick {
+    stroke: var(--gmt-ice-dim);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+
+    &[data-major="true"] {
+      stroke: var(--gmt-ice);
+      stroke-width: 1.5;
+    }
+  }
+
+  /* `--gmt-cyan-ink` is the text-safe cyan: raw cyan misses the 7:1 floor on the light theme. */
+  .hand {
+    stroke: var(--gmt-cyan-ink);
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+    transition: stroke var(--gmt-motion-fast) ease;
+
+    &[data-hand="hour"] {
+      stroke-width: 1.75;
+    }
+
+    &[data-hand="minute"] {
+      stroke-width: 1.25;
+    }
+
+    &[data-hand="second"] {
+      stroke-width: 0.75;
+      transform-box: view-box;
+      transform-origin: 50px 50px;
+      transition:
+        transform var(--gmt-motion-grow) linear,
+        stroke var(--gmt-motion-fast) ease;
+    }
+  }
+
+  .cap {
+    fill: var(--gmt-cyan-ink);
+    transition: fill var(--gmt-motion-fast) ease;
+  }
+
+  /* The night light's flood: transparent until the face is lit. */
+  .glow {
+    fill: transparent;
+    transition: fill var(--gmt-motion-fast) ease;
+  }
+
+  /* Drawn for every state; shown only by the state rules below. */
+  .repeatRing,
+  .skipRing,
+  .skipMark {
+    display: none;
+  }
+
+  .highlight {
+    fill: none;
+    stroke: var(--gmt-dst-purple);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+
+    &[data-kind="skipped"] {
+      stroke-dasharray: 2.5 2;
+    }
+  }
+
+  /* Repeated: a dashed hairline just inside the bezel. */
+  &[data-state="repeated"] .repeatRing {
+    display: block;
+    fill: none;
+    stroke: var(--gmt-cyan);
+    stroke-width: 1;
+    stroke-dasharray: 2.5 2;
+    vector-effect: non-scaling-stroke;
+    transform-origin: 50px 50px;
+    transform: scale(0.92);
+  }
+
+  /* Skipped: a dashed ring and a strike mark a reading that never happened. */
+  &[data-state="skipped"] {
+    .skipRing {
+      display: block;
+      fill: none;
+      stroke: var(--gmt-ice-dim);
+      stroke-width: 1;
+      stroke-dasharray: 2 2;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .skipMark {
+      display: block;
+      stroke: var(--gmt-ice-dim);
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .hand,
+    .cap {
+      opacity: 0.4;
+    }
+  }
+
+  /* Naive: wall-clock arithmetic, not the library. Muted and dashed, never amber. */
+  &[data-state="naive"] {
+    .hand {
+      stroke: var(--gmt-ice-dim);
+      stroke-dasharray: 2 1.5;
+    }
+
+    .cap {
+      fill: var(--gmt-ice-dim);
+    }
+
+    .edge {
+      opacity: 0.6;
+    }
+  }
+
+  /* The night light. Last, and two selectors deep, so it wins a tie with a state. */
+  &[data-glow="true"] {
+    .glow {
+      fill: var(--gmt-cyan);
+    }
+
+    .edge,
+    .tick,
+    .repeatRing {
+      stroke: var(--gmt-ink-fixed);
+    }
+
+    .hand,
+    .cap {
+      stroke: var(--gmt-ink-fixed);
+      fill: var(--gmt-ink-fixed);
+      stroke-dasharray: none;
+      opacity: 1;
+    }
+
+    .highlight {
+      stroke-width: 1.75;
+      filter: drop-shadow(0 0 0.5px var(--gmt-ink-fixed));
+    }
+  }
+}
+
+/* A real button around the face, plain, and the same box the bare svg was. */
+.toggle {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 1.5rem;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+/* The glass pane and the hand shadow are the translucency this preference asks to drop. */
+/* stylelint-disable-next-line plugin/use-baseline -- prefers-reduced-transparency is not Baseline 2024; a browser without it keeps the translucent surface, which is the status quo */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    display: none;
+  }
+
+  .hands {
+    filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .clock {
+    .edge {
+      stroke: CanvasText;
+      stroke-width: 2;
+    }
+
+    .tick {
+      stroke: CanvasText;
+    }
+  }
+
+  .glass {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .glass,
+  .glow {
+    display: none;
+  }
+
+  .hands {
+    filter: none;
+  }
+
+  .clock {
+    .edge,
+    .tick,
+    .hand,
+    .repeatRing,
+    .skipRing,
+    .skipMark,
+    .highlight {
+      forced-color-adjust: none;
+      stroke: CanvasText;
+      filter: none;
+    }
+
+    .cap {
+      forced-color-adjust: none;
+      fill: CanvasText;
+    }
+
+    &[data-glow="true"] {
+      .edge,
+      .tick,
+      .hand,
+      .repeatRing {
+        stroke: CanvasText;
+      }
+
+      .cap {
+        fill: CanvasText;
+      }
+    }
+  }
+
+  .toggle:focus-visible {
+    outline-color: Highlight;
+  }
+}

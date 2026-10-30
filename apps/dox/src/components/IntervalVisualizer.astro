@@ -14,14 +14,10 @@
  * interval functions use internally) so those two cases render visibly
  * differently, per context/dox/reference/visual-design.md "Widget chrome".
  *
- * Shares its card/section/codeframe/output chrome with DstInspector.astro —
- * see styles/gmt-widget.css, lib/widget-ui.ts, components/CodeFrame.astro.
- *
  * **The markup and the wiring both live in `lib/interval-visualizer-mount.ts`.**
- * DOX-C3b mounts this same widget into the chat rail, and a rail cannot
- * instantiate an Astro component — so one `renderIntervalTemplate()` serves
- * both surfaces, and this page still server-renders it.
- * `scripts/html-diff.mjs` asserts the built markup is unchanged by that move.
+ * The chat rail mounts this same widget, and a rail cannot instantiate an Astro
+ * component, so one `renderIntervalTemplate()` serves both surfaces and this
+ * page server-renders it.
  */
 
 import { renderIntervalTemplate } from "../lib/interval-visualizer-mount";
@@ -46,7 +42,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderIntervalTemplate();
+const html = renderIntervalTemplate("interval-visualizer").value;
 ---
 
 {
@@ -70,10 +66,12 @@ const html = renderIntervalTemplate();
        see lib/widget-permalink.ts. Absent or malformed, this is `{}` and the
        widget opens on its defaults, exactly as before. */
     const seed = seedFromLocation("interval");
-    document.querySelectorAll<HTMLElement>(".gmt-interval").forEach((el) => {
-      mountIntervalVisualizer(el, seed, new AbortController().signal).catch((error) =>
-        showUnavailable(el, error),
-      );
-    });
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="interval-visualizer"]')
+      .forEach((el) => {
+        mountIntervalVisualizer(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
   }
 </script>

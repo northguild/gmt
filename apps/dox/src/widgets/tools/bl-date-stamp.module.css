@@ -1,0 +1,57 @@
+/*
+ * B/L Date Stamp: what only this tool needs. The sections, plates, fields, code frame and
+ * outputs are the kit's, the frame, axis, legend and day columns are the ledger family's, and
+ * the five lanes and the gate are `blPlot`. This sheet lays out the tool's field groups, widens
+ * the label column for a zone's name, and spaces the slider.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone.
+ */
+
+/* A field group. A wide group takes the whole row. */
+.box {
+  min-inline-size: 0;
+
+  &[data-wide] {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The stack of controls keeps a gap. */
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A zone's name ("America/Argentina/Buenos_Aires") is long: the label column is wider than the
+   ledger's default, and the axis and the legend, which read the same variable, line up with it. */
+.drawing {
+  --gmt-ledger-label-w: 11rem;
+
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+/* The slider sits under the chart. */
+.slider {
+  min-inline-size: 0;
+  margin-block-start: var(--gmt-space-3);
+}
+
+/* The announcer is a status line with nothing to see. */
+.summary {
+  margin: 0;
+}
+
+@media (forced-colors: active) {
+  .drawing {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .drawing {
+    gap: var(--gmt-space-3);
+  }
+}

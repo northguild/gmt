@@ -34,7 +34,6 @@ import {
   presetState,
   railAria,
   railEmptyText,
-  railHtml,
   railName,
   railsOf,
   tickLabelEnd,
@@ -599,16 +598,6 @@ describe("the day rails", () => {
     expect(tickLabelEnd(47.2)).toBe(true);
     expect(tickLabelEnd(66.67)).toBe(false);
     expect(tickLabelEnd(97.22)).toBe(true);
-    const html = railHtml({
-      role: "local",
-      name: "Local clock +02:00",
-      date: "2024-06-16",
-      layout: railsOf(RESULTS["next-day"]!).local,
-      pin: 50,
-      emptyText: "",
-      aria: "",
-    });
-    expect(html.match(/data-end="1"/g)).toHaveLength(2);
   });
 
   it("keeps a box and says why without a result", () => {
@@ -629,18 +618,6 @@ describe("the day rails", () => {
         presetState(preset("z-as-offset")),
       ),
     ).toMatch(/No local clock/);
-    const html = railHtml({
-      role: "local",
-      name: railName("local", null),
-      date: "no result",
-      layout: null,
-      pin: 50,
-      emptyText: railEmptyText("local", none, s),
-      aria: railAria("local", null, "", "words"),
-    });
-    expect(html).toContain('data-state="empty"');
-    expect(html).toContain("gmt-epcis-track--empty");
-    expect(html).toContain("Not stated");
   });
 
   it("names the clock and speaks the date", () => {
@@ -649,37 +626,6 @@ describe("the day rails", () => {
     expect(railAria("local", RESULTS["next-day"]!, "2024-06-16", "")).toBe(
       "Local clock +02:00: the event falls on 2024-06-16.",
     );
-  });
-
-  it("escapes what it interpolates, and gives a hold sizer no role", () => {
-    const html = railHtml(
-      {
-        role: "utc",
-        name: '"><img src=x>',
-        date: "<b>",
-        layout: null,
-        pin: 50,
-        emptyText: "<script>",
-        aria: '"><i>',
-      },
-      false,
-    );
-    expect(html).not.toContain("<img");
-    expect(html).not.toContain("<script>");
-    const sizer = railHtml(
-      {
-        role: "utc",
-        name: "UTC",
-        date: "x",
-        layout: null,
-        pin: 50,
-        emptyText: "y",
-        aria: "",
-      },
-      true,
-    );
-    expect(sizer).not.toContain("data-role");
-    expect(sizer).toContain('aria-hidden="true"');
   });
 });
 

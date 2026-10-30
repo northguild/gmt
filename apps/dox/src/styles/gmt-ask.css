@@ -2,10 +2,9 @@
  * DOX-C0 (#171) — chat island chrome and reading-surface theme.
  *
  * Imported from the island entry module, after gmt-ask-tailwind.css — never
- * added to `astro.config.mjs`'s `customCss`. Unlayered CSS always beats
- * `@layer utilities` regardless of import order, so nothing here depends on
- * that ordering; it's kept this way only so the island's two sheets travel
- * together. A page that never opens the chat loads neither.
+ * added to `astro.config.mjs`'s `customCss`. `chat.css` puts it in the
+ * `gmt.chat` layer, which sorts after `@layer utilities`, so nothing here
+ * depends on import order. A page that never opens the chat loads neither.
  *
  * Two jobs:
  *   1. Neutralize the GMT sheets' global element selectors inside `.gmt-ask` —
@@ -16,12 +15,14 @@
  *      written against (verified 2026-09-09 — only `table-wrapper` exists), so
  *      this themes `.gmt-ask-response` instead: the classname `<MessageResponse
  *      className="gmt-ask-response">` is given explicitly at every call site
- *      (see AskDoxProbe.tsx), the same seam DOX-C3a's link-hardening
+ *      (see DoxChat.tsx), the same seam DOX-C3a's link-hardening
  *      `components.a` override already needs.
  */
 
 /* ---------------------------------------------------------------------- */
+
 /* 1. Global-selector reset (design-system.md's six-group collision set)   */
+
 /* ---------------------------------------------------------------------- */
 
 /* gmt-shell.css sets font-family, font-weight, letter-spacing, color on
@@ -48,9 +49,8 @@
    one — visual-design.md §Overlays: "one layer of glass, never two." */
 .gmt-ask header {
   background: none;
-  border-bottom: none;
+  border-block-end: none;
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 /* gmt-glass.css / gmt-content.css style bare `dialog` and `[role="dialog"]`
@@ -62,7 +62,6 @@
   border: none;
   border-radius: 0;
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .gmt-ask ::selection {
@@ -83,14 +82,19 @@
    `.gmt-ask-response` is excluded: that subtree is rendered markdown and owns
    its own prose rhythm (section 2 below). */
 .gmt-ask
-  :is(p, h1, h2, h3, h4, h5, h6, ul, ol, pre, blockquote, figure, dl, dd):not(
-    :where(.gmt-ask-response, .gmt-ask-response *)
-  ) {
+  :is(p, h1, h2, h3, h4, h5, h6, ul, ol, pre, blockquote, figure, dl, dd) {
   margin: 0;
 }
 
+.gmt-ask-response
+  :is(p, h1, h2, h3, h4, h5, h6, ul, ol, pre, blockquote, figure, dl, dd) {
+  margin: revert-layer;
+}
+
 /* ---------------------------------------------------------------------- */
+
 /* 2. Reading surface — .gmt-ask-response (MessageResponse's className)    */
+
 /* ---------------------------------------------------------------------- */
 
 .gmt-ask-response {
@@ -104,8 +108,7 @@
   font-weight: 600;
   letter-spacing: var(--gmt-tracking-tight);
   color: var(--gmt-ice);
-  margin-top: var(--gmt-space-6);
-  margin-bottom: var(--gmt-space-2);
+  margin-block: var(--gmt-space-6) var(--gmt-space-2);
 }
 
 .gmt-ask-response h1 {
@@ -127,15 +130,16 @@
 .gmt-ask-response a {
   color: var(--gmt-cyan-ink);
   text-decoration: none;
-  border-bottom: 1px solid var(--gmt-teal);
+  border-block-end: 1px solid var(--gmt-teal);
   transition:
     color var(--gmt-duration-fast) var(--gmt-easing),
     border-color var(--gmt-duration-fast) var(--gmt-easing);
 }
 
-.gmt-ask-response a:hover {
+.gmt-ask-response a:hover,
+.gmt-ask-response a:focus-visible {
   color: var(--gmt-cyan-ink);
-  border-bottom-color: var(--gmt-cyan);
+  border-block-end-color: var(--gmt-cyan);
 }
 
 .gmt-ask-response :not(pre) > code {
@@ -174,12 +178,12 @@
 }
 
 .gmt-ask-response :is(ul, ol) {
-  padding-left: var(--gmt-space-6);
+  padding-inline-start: var(--gmt-space-6);
   margin: var(--gmt-space-2) 0;
 }
 
 .gmt-ask-response li {
-  margin-bottom: var(--gmt-space-1);
+  margin-block-end: var(--gmt-space-1);
 }
 
 /* Streamdown wraps every table in `[data-streamdown="table-wrapper"]` — the
@@ -191,7 +195,7 @@
 }
 
 .gmt-ask-response table {
-  width: 100%;
+  inline-size: 100%;
   border-collapse: separate;
   border-spacing: 0;
   border: 1px solid var(--gmt-hairline);
@@ -206,18 +210,18 @@
   font-size: var(--gmt-text-xs);
   letter-spacing: var(--gmt-tracking-wide);
   padding: var(--gmt-space-2) var(--gmt-space-3);
-  border-bottom: 1px solid var(--gmt-hairline);
-  text-align: left;
+  border-block-end: 1px solid var(--gmt-hairline);
+  text-align: start;
 }
 
 .gmt-ask-response td {
   padding: var(--gmt-space-2) var(--gmt-space-3);
-  border-bottom: 1px solid var(--gmt-hairline);
+  border-block-end: 1px solid var(--gmt-hairline);
   color: var(--gmt-ice);
 }
 
 .gmt-ask-response tr:last-child td {
-  border-bottom: none;
+  border-block-end: none;
 }
 
 /* DOX-C3a (#139) — code-block chrome.
@@ -271,8 +275,7 @@
   corner-shape: bevel;
   padding: 0;
   overflow-x: auto;
-  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-  -webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  backdrop-filter: var(--gmt-glass-blur-saturate);
 }
 
 /* One inset, on the <pre> — the body used to pad as well, putting every
@@ -290,11 +293,11 @@
   [data-streamdown="code-block"]
   > div:has(> [data-streamdown="code-block-actions"]) {
   position: absolute;
-  top: var(--gmt-space-2);
-  right: var(--gmt-space-2);
-  z-index: 1;
+  inset-block-start: var(--gmt-space-2);
+  inset-inline-end: var(--gmt-space-2);
+  z-index: var(--gmt-z-raised);
   margin: 0;
-  height: auto;
+  block-size: auto;
 }
 
 /* The pill's own border/background go: the button carries the chrome, exactly
@@ -304,7 +307,6 @@
   border: none;
   padding: 0;
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 /* Streamdown wraps tables in the same sticky action cluster. */

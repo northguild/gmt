@@ -24,7 +24,7 @@
   navigation: auto;
 }
 
-header.header {
+.header {
   view-transition-name: gmt-header;
 }
 

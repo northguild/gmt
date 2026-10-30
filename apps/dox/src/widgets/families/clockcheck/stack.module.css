@@ -1,0 +1,44 @@
+/* The checker page's frame. The stack is the query container for the whole page (the zone map
+   reads `gmt-clockcheck` too). One column below 48rem; above it each row is two columns. Cards in
+   a row stretch to one height. Rows and cards are separated by the site's spacing tokens. */
+
+.stack {
+  container: gmt-clockcheck / inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+
+  & > * {
+    min-inline-size: 0;
+    margin: 0;
+  }
+
+  & p {
+    max-inline-size: 70ch;
+  }
+}
+
+.row,
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--gmt-space-4);
+
+  & > * {
+    min-inline-size: 0;
+    margin: 0;
+  }
+}
+
+@container gmt-clockcheck (min-width: 48rem) {
+  .row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The browser card holds a table, so it gets 4/9 of the row rather than 2/5. */
+  .top {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+  }
+}

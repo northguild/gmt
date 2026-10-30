@@ -1,0 +1,345 @@
+/*
+ * monthGrid: one, two, three or four months to a row by the grid's own width. Every month
+ * draws six week rows, so a year change never changes its height. A mark is a pattern and a
+ * word, never a colour alone. Amber is the sentinel's alone and nothing here uses it.
+ */
+
+.grid {
+  container-type: inline-size;
+  position: relative;
+  min-inline-size: 0;
+}
+
+.months {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+
+  @container (min-width: 30rem) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @container (min-width: 46rem) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @container (min-width: 62rem) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.month {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+/* Two classes, so the content rule for headings does not win. */
+.month .name {
+  margin: 0 0 var(--gmt-space-1);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: none;
+  color: var(--gmt-ice);
+}
+
+.weekdays,
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.wd {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  text-align: center;
+  color: var(--gmt-ice-dim);
+}
+
+/* Three letters by default, one under a narrow grid. */
+.short {
+  display: none;
+}
+
+@container (max-width: 24rem) {
+  .long {
+    display: none;
+  }
+
+  .short {
+    display: inline;
+  }
+}
+
+/* The day number sits at the top; chips sit at the bottom. The cell keeps one height. */
+.cell {
+  --series: var(--gmt-series-1);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  box-sizing: border-box;
+  min-inline-size: 0;
+
+  /* Room for the day and three rows of chips, so a marked cell is never taller than a bare one. */
+  min-block-size: calc(
+    1.2 * var(--gmt-text-xs) + 3 * (1.3 * var(--gmt-text-xs) + 2px) + 2px +
+      6px + 4px
+  );
+  padding: 2px;
+  border: 1px solid var(--gmt-hairline-faint);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-fill-subtle);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+
+  &[data-blank] {
+    border-color: transparent;
+    background: none;
+  }
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+
+  /* The family hatch: 45 degrees, 2px on and 6px off. */
+  &[data-weekend] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--gmt-ice-dim) 35%, transparent) 0,
+      color-mix(in srgb, var(--gmt-ice-dim) 35%, transparent) 2px,
+      transparent 2px,
+      transparent 8px
+    );
+  }
+
+  &[data-kinds~="closed"] {
+    border-color: var(--gmt-cyan);
+    background-color: color-mix(in srgb, var(--gmt-cyan) 34%, transparent);
+  }
+
+  /* A ghost: a dashed outline and the date struck through. */
+  &[data-kinds~="moved-from"] {
+    border: 1px dashed var(--gmt-ice);
+    background-color: transparent;
+
+    & .day {
+      text-decoration: line-through;
+    }
+  }
+
+  /* A pick: a ring, and a series pattern. */
+  &[data-kinds~="pick"] {
+    outline: 2px solid var(--series);
+    outline-offset: -2px;
+    background-color: color-mix(in srgb, var(--series) 40%, transparent);
+
+    &[data-series="2"] {
+      background-color: transparent;
+      background-image: repeating-linear-gradient(
+        45deg,
+        color-mix(in srgb, var(--series) 60%, transparent) 0,
+        color-mix(in srgb, var(--series) 60%, transparent) 3px,
+        transparent 3px,
+        transparent 7px
+      );
+    }
+
+    &[data-series="3"] {
+      background-color: transparent;
+      background-image:
+        repeating-linear-gradient(
+          45deg,
+          color-mix(in srgb, var(--series) 50%, transparent) 0,
+          color-mix(in srgb, var(--series) 50%, transparent) 2px,
+          transparent 2px,
+          transparent 7px
+        ),
+        repeating-linear-gradient(
+          -45deg,
+          color-mix(in srgb, var(--series) 50%, transparent) 0,
+          color-mix(in srgb, var(--series) 50%, transparent) 2px,
+          transparent 2px,
+          transparent 7px
+        );
+    }
+
+    &[data-series="4"] {
+      background-color: transparent;
+      background-image: radial-gradient(
+        circle at 50% 50%,
+        color-mix(in srgb, var(--series) 70%, transparent) 0,
+        color-mix(in srgb, var(--series) 70%, transparent) 2px,
+        transparent 2px
+      );
+      background-size: 8px 8px;
+    }
+  }
+
+  /* Today takes an underline, which no mark uses. */
+  &[data-today] .day {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+.day {
+  white-space: nowrap;
+}
+
+/* A day outside the range a week strip was asked for: an open dashed outline and the muted ink.
+   It is not faded with `opacity`, which would take the day number under the 7:1 text floor. */
+.cell[data-outside] {
+  border-style: dashed;
+  border-color: var(--gmt-hairline);
+  background-color: transparent;
+  color: var(--gmt-ice-dim);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.chip {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 0 3px;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+
+  &[data-chip="from"] {
+    border-style: dashed;
+  }
+}
+
+/* A month with no marks says so in one line in the one-column layout. The line is reserved in
+   every month, so no month changes height with the marks. */
+.none {
+  display: none;
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+@container (max-width: 29.99rem) {
+  .none {
+    display: block;
+    visibility: hidden;
+  }
+
+  .month[data-empty="true"] > .none {
+    visibility: visible;
+  }
+}
+
+/* The list of marked dates is read out and never shown. */
+.marked {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+  list-style: none;
+}
+
+@media (forced-colors: active) {
+  .month .name,
+  .wd,
+  .none,
+  .cell,
+  .chip {
+    color: CanvasText;
+  }
+
+  .cell {
+    border-color: GrayText;
+    background: Canvas;
+
+    &[data-blank] {
+      border-color: transparent;
+    }
+
+    &[data-weekend] {
+      border-style: dotted;
+      background-image: none;
+    }
+
+    &[data-kinds~="closed"] {
+      border-color: Highlight;
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    &[data-kinds~="moved-from"] {
+      border-color: CanvasText;
+    }
+
+    &[data-kinds~="pick"] {
+      outline-color: Highlight;
+      background-image: none;
+      background-color: Canvas;
+    }
+
+    &[data-kinds~="pick"][data-series="2"] {
+      outline-style: dashed;
+    }
+
+    &[data-kinds~="pick"][data-series="3"] {
+      outline-style: double;
+    }
+  }
+
+  .chip {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .cell {
+    border-color: var(--gmt-ice);
+
+    &[data-blank] {
+      border-color: transparent;
+    }
+  }
+
+  .wd,
+  .none {
+    color: var(--gmt-ice);
+  }
+}

@@ -52,7 +52,7 @@ export function parseCallArgs(call: string): string[] {
 // Call assembly (shared: form playground client + build-reference generator)
 // ---------------------------------------------------------------------------
 
-export type PlaygroundArgKind =
+type PlaygroundArgKind =
   | "string"
   | "number"
   | "bigint"

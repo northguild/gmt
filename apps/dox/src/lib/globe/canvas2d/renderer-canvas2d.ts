@@ -103,7 +103,6 @@ export async function createCanvas2dRenderer(
   init: RendererInit,
 ): Promise<GlobeRenderer> {
   const canvas = document.createElement("canvas");
-  canvas.className = "gmt-globe-canvas";
   canvas.dataset.renderer = "canvas2d";
   canvas.tabIndex = 0;
   canvas.setAttribute("role", "img");

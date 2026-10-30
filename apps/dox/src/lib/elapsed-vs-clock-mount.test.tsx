@@ -1,124 +1,123 @@
 /**
  * @vitest-environment jsdom
  *
- * The Elapsed vs. Clock Difference tool end to end: template → mount → interact
- * → assert, against the real `@northguild/gmt`. Every preset's printed calls,
- * results, plates, rulers and list are checked against literal strings read
- * from a run of the built library, so a drift in the library or the widget
- * fails here.
+ * The Elapsed vs. Clock Difference tool end to end, against the real `@northguild/gmt`.
+ * Every preset's printed calls, results, plates, rulers and list are checked against
+ * literal strings read from a run of the built library, so a drift in the library or the
+ * widget fails here. Everything is read the way a reader or a screen reader meets it:
+ * roles, names, values and visible text.
  */
+import { screen, within } from "@testing-library/dom";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
+import {
+  expectNoAxeViolations,
+  renderWidget,
+  setRange,
+} from "~/test/render-widget";
 import {
   BEFORE_1972_TEXT,
   CLOCK_REFUSES_TEXT,
   ELAPSED_PRESETS,
   NOT_INSERTED_TEXT,
+  NOT_INSTANT_TEXT,
 } from "./elapsed-vs-clock";
-import {
-  mountElapsedVsClock,
-  renderElapsedVsClockTemplate,
-} from "./elapsed-vs-clock-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { SITE_BASE } from "./site";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "start",
-  "end",
-  "end-slider",
-  "end-value",
-  "frame",
-  "heroes",
-  "hero-clock",
-  "hero-elapsed",
-  "hero-count",
-  "rulers",
-  "track-clock",
-  "dates",
-  "span-clock",
-  "marks-clock",
-  "track-elapsed",
-  "span-elapsed",
-  "marks-elapsed",
-  "ends-low",
-  "ends-high",
-  "summary",
-  "insertions-list",
-  ...["clock", "elapsed", "count"].flatMap((g) => [
-    `call-${g}`,
-    `copy-${g}`,
-    `${g}-output`,
-    `${g}-aside`,
-  ]),
+const entry = WIDGET_REGISTRY["showElapsedVsClock"] as AnyWidgetEntry;
+
+const open = (args: Record<string, unknown> = {}, idPrefix = "test") =>
+  renderWidget(entry, { args, idPrefix });
+
+type Opened = Awaited<ReturnType<typeof open>>;
+
+const startBox = () => screen.getByRole("textbox", { name: "Start" });
+const endBox = () => screen.getByRole("textbox", { name: "End" });
+const presetBox = () => screen.getByRole("combobox", { name: "Preset" });
+const slider = () => screen.getByRole("slider", { name: "Move the end" });
+const summary = () => screen.getByRole("status", { name: "Reading summary" });
+const figure = () =>
+  screen.getByRole("img", { name: summary().textContent ?? "" });
+const insertions = () =>
+  screen.getByRole("list", { name: "Seconds inserted between the two" });
+const endsGroup = () =>
+  screen.getByRole("group", { name: "Where the span starts and ends" });
+
+const GROUPS = [
+  { id: "clock", heading: "Clock difference" },
+  { id: "elapsed", heading: "Seconds that passed" },
+  { id: "count", heading: "Leap seconds between" },
+] as const;
+type GroupId = (typeof GROUPS)[number]["id"];
+const headingOf = (g: GroupId) => GROUPS.find((x) => x.id === g)!.heading;
+const callsOf = (g: GroupId) =>
+  screen.getByRole("group", { name: `${headingOf(g)}: calls made` });
+const outputOf = (g: GroupId) =>
+  screen.getByRole("status", {
+    name: `${headingOf(g)}: what the calls returned`,
+  });
+const asideOf = (g: GroupId) =>
+  screen.queryByRole("complementary", {
+    name: `Why there is no result: ${headingOf(g).toLowerCase()}`,
+  });
+const linkNamed = (name: string) => screen.getByText(name);
+
+/** The plates in the order the sum shows them: clock difference, leap seconds, seconds that passed. */
+const PLATE_CAPTIONS = [
+  "Clock difference",
+  "Leap seconds between",
+  "Seconds that passed",
 ];
-
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
-
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderElapsedVsClockTemplate(args);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountElapsedVsClock(root, args, controller.signal);
-  return { root, handle, controller };
-}
-
-function choose(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLSelectElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function type(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLInputElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-function slide(root: HTMLElement, position: number) {
-  const el = q<HTMLInputElement>(root, "end-slider");
-  el.value = String(position);
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-const text = (root: HTMLElement, role: string) =>
-  q(root, role).textContent ?? "";
-const copy = (root: HTMLElement, group: string) =>
-  q(root, `copy-${group}`).dataset["copyText"] ?? "";
-const isSentinel = (root: HTMLElement, role: string) =>
-  q(root, role).classList.contains("gmt-playground-sentinel");
-
-/** A plate's value and its two sub lines. */
-const plate = (root: HTMLElement, role: string): [string, string, string] => {
-  const el = q(root, role);
-  const lines = [...el.querySelectorAll(".gmt-punct-hero-line")].map(
-    (l) => l.textContent ?? "",
-  );
-  return [
-    el.querySelector(".gmt-punct-hero-value")!.textContent!,
-    lines[0] ?? "",
-    lines[1] ?? "",
-  ];
-};
-
-const BLANK = "Not read: the field is blank.";
-const NO_SIGNAL = "NO SIGNAL";
-/** A pane where every line is NO SIGNAL is the amber box; a pane where only
- *  some are keeps its answers and sets those lines apart. */
-const ALL_NO_SIGNAL = /^NO SIGNAL(\nNO SIGNAL)*$/;
-const noSignalLines = (root: HTMLElement, role: string) =>
-  q(root, role).querySelectorAll(".gmt-result-nosignal").length;
-const lineCount = (s: string) => (s === "" ? 0 : s.split("\n").length);
 const CLOCK_LINES = ["read as UTC", "counts no inserted second"] as const;
 const ELAPSED_LINES = ["read through TAI", "counts every second"] as const;
+
+/**
+ * A plate is a term and three definitions (the value, then two lines), so the value of
+ * plate n is definition 3n. A plate reserves the widest text it can show beside the
+ * shown one, hidden from assistive technology, so the shown text is the one not hidden.
+ */
+function plateParts(caption: string) {
+  const index = PLATE_CAPTIONS.indexOf(caption);
+  const defs = screen.getAllByRole("definition");
+  return {
+    value: defs[index * 3]!,
+    lines: defs.slice(index * 3 + 1, index * 3 + 3),
+  };
+}
+const shownIn = (el: HTMLElement) =>
+  within(el)
+    .queryAllByText(/./)
+    .filter((e) => e.getAttribute("aria-hidden") !== "true");
+const exact = (text: string) =>
+  new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+const flat = (s: string) => s.replace(/\n/g, " ");
+
+type Plate = [string, string, string];
+function expectPlate(caption: string, want: Plate) {
+  const { value, lines } = plateParts(caption);
+  const shown = shownIn(value);
+  expect(shown).toHaveLength(1);
+  expect(shown[0]).toHaveTextContent(exact(want[0]));
+  [want[1], want[2]].forEach((line, n) => {
+    if (line === "") expect(lines[n]).toHaveTextContent(/^$/);
+    else expect(lines[n]).toHaveTextContent(exact(line));
+  });
+}
+
+const BLANK = "Not read: the field is blank.";
+const NONE_COUNTED = "No second was inserted between these two.";
+const RULER_NO_SIGNAL = "⟨ NO SIGNAL — invalid input ⟩";
+/** The elapsed ruler's inserted second, and the clock face's. */
+const ELAPSED_MARK = /^\+1( s)?$/;
+const CLOCK_MARK = /^(:60|\d\d:\d\d:60)$/;
 
 interface Expected {
   copy: { clock: string; elapsed: string; count: string };
@@ -129,8 +128,6 @@ interface Expected {
   list: string[];
   asides: [string, string, string];
 }
-
-const NONE_COUNTED = "No second was inserted between these two.";
 
 /** What each preset prints, from a run against `packages/gmt/dist`. */
 const EXPECTED: Record<string, Expected> = {
@@ -163,7 +160,7 @@ const EXPECTED: Record<string, Expected> = {
         'leapSecondsBetween("2016-12-31T23:59:60Z", "2017-01-01T00:00:00Z")',
     },
     output: {
-      clock: NO_SIGNAL,
+      clock: "NO SIGNAL",
       elapsed:
         '"2017-01-01T00:00:36 TAI"\n"2017-01-01T00:00:37 TAI"\n1000000000n',
       count: "1",
@@ -188,11 +185,7 @@ const EXPECTED: Record<string, Expected> = {
         '"2000-01-01T00:00:32 TAI"\n"2024-01-01T00:00:37 TAI"\n757382405000000000n',
       count: "5",
     },
-    plates: {
-      clock: "757382400 s",
-      elapsed: "757382405 s",
-      count: "5",
-    },
+    plates: { clock: "757382400 s", elapsed: "757382405 s", count: "5" },
     countLines: ["from 2000-01-01", "to 2024-01-01"],
     marks: 5,
     list: [
@@ -238,11 +231,7 @@ const EXPECTED: Record<string, Expected> = {
         '"2024-01-01T00:00:37 TAI"\n"2000-01-01T00:00:32 TAI"\n-757382405000000000n',
       count: "-5",
     },
-    plates: {
-      clock: "-757382400 s",
-      elapsed: "-757382405 s",
-      count: "-5",
-    },
+    plates: { clock: "-757382400 s", elapsed: "-757382405 s", count: "-5" },
     countLines: ["from 2024-01-01", "to 2000-01-01"],
     marks: 5,
     list: [
@@ -262,9 +251,9 @@ const EXPECTED: Record<string, Expected> = {
         'leapSecondsBetween("2017-12-31T23:59:60Z", "2018-01-01T00:00:00Z")',
     },
     output: {
-      clock: NO_SIGNAL,
+      clock: "NO SIGNAL",
       elapsed: 'NO SIGNAL\n"2018-01-01T00:00:37 TAI"',
-      count: NO_SIGNAL,
+      count: "NO SIGNAL",
     },
     plates: { clock: "no result", elapsed: "no result", count: "no result" },
     countLines: ["", ""],
@@ -282,7 +271,7 @@ const EXPECTED: Record<string, Expected> = {
     output: {
       clock: "1672531200000000000n",
       elapsed: 'NO SIGNAL\n"2024-01-01T00:00:37 TAI"',
-      count: NO_SIGNAL,
+      count: "NO SIGNAL",
     },
     plates: { clock: "1672531200 s", elapsed: "no result", count: "no result" },
     countLines: ["", ""],
@@ -292,76 +281,79 @@ const EXPECTED: Record<string, Expected> = {
   },
 };
 
+async function pick(w: Opened, id: string) {
+  await w.user.selectOptions(presetBox(), id);
+}
+async function typeInto(w: Opened, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  if (value !== "") await w.user.paste(value);
+}
+
 afterEach(() => {
-  document.body.innerHTML = "";
   vi.useRealTimers();
 });
 
-describe("renderElapsedVsClockTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderElapsedVsClockTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
-    }
-  });
-
-  it("is a widget root with the standard wrapper, and no class containing card but the wrapper", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderElapsedVsClockTemplate();
-    const widget = root.firstElementChild as HTMLElement;
-    expect(widget.getAttribute("class")).toBe(
-      "gmt-elapsed-vs-clock gmt-widget not-content",
-    );
-    expect(widget.attributes).toHaveLength(1);
-    const classes = [...root.querySelectorAll("[class]")].flatMap((e) =>
-      e.getAttribute("class")!.split(/\s+/),
-    );
+describe("the template", () => {
+  it("is a named region with three numbered sections and the controls a reader needs", async () => {
+    await open();
     expect(
-      classes.filter((c) => c.includes("card") && c !== "gmt-widget-card"),
-    ).toEqual([]);
-  });
-
-  it("renders three numbered sections and three empty plates before the library answers", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderElapsedVsClockTemplate();
+      screen.getByRole("region", { name: "Elapsed vs. Clock Difference" }),
+    ).toBeInTheDocument();
     expect(
-      [...root.querySelectorAll(".gmt-widget-section h4")].map(
-        (h) => h.textContent,
-      ),
+      screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent),
     ).toEqual([
       "1. Set a start and an end",
       "2. The same span, counted two ways",
       "3. What the library returns",
     ]);
-    for (const role of ["hero-clock", "hero-elapsed", "hero-count"]) {
-      expect(plate(root, role)[0]).toBe("no result");
-    }
-    expect(q(root, "rulers").getAttribute("role")).toBe("img");
+    expect(presetBox()).toHaveValue("across-2016");
+    expect(startBox()).toHaveValue("2016-12-31T23:59:59Z");
+    expect(endBox()).toHaveValue("2017-01-01T00:00:01Z");
+    expect(slider()).toBeEnabled();
+    await expectNoAxeViolations(document.body);
   });
 
-  it("opens on the first preset, with a native range and text inputs", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderElapsedVsClockTemplate();
-    expect(q<HTMLInputElement>(root, "start").value).toBe(
-      "2016-12-31T23:59:59Z",
-    );
-    expect(q<HTMLInputElement>(root, "end").value).toBe("2017-01-01T00:00:01Z");
-    expect(q<HTMLInputElement>(root, "end-slider").type).toBe("range");
-    for (const role of ["start", "end"]) {
-      expect(q<HTMLInputElement>(root, role).type).toBe("text");
+  it("describes both readings with the note on the second 60", async () => {
+    await open();
+    for (const box of [startBox(), endBox()]) {
+      expect(box).toHaveAccessibleDescription(
+        /A 23:59:60 is allowed on a day when a second was inserted/,
+      );
     }
   });
 
-  it("escapes a hostile seed", () => {
+  it("stops a typed start or end at 64 characters", async () => {
+    const w = await open();
+    for (const box of [startBox(), endBox()]) {
+      await w.user.clear(box);
+      await w.user.click(box);
+      await w.user.paste("2".repeat(80));
+      expect(box).toHaveValue("2".repeat(64));
+    }
+  });
+
+  it("names the rulers with the summary", async () => {
+    await open();
+    expect(summary()).toHaveTextContent(/The clock difference is 2 s/);
+    expect(figure()).toBeInTheDocument();
+  });
+
+  it("escapes a hostile seed", async () => {
     const hostile = '"><img src=x onerror=alert(1)>';
-    const root = document.createElement("div");
-    root.innerHTML = renderElapsedVsClockTemplate({
-      start: hostile,
-      end: hostile,
-    });
-    expect(root.querySelector("img")).toBeNull();
-    expect(q<HTMLInputElement>(root, "start").value).toBe(hostile);
+    await open({ start: hostile, end: hostile });
+    // Only the rulers' own figure is an image.
+    expect(screen.getAllByRole("img")).toHaveLength(1);
+    expect(startBox()).toHaveValue(hostile);
+    expect(endBox()).toHaveValue(hostile);
+  });
+
+  it("gives two copies on one page their own ids", async () => {
+    await open({}, "one");
+    await open({}, "two");
+    expect(screen.getAllByRole("textbox", { name: "Start" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("region", { name: "Elapsed vs. Clock Difference" }),
+    ).toHaveLength(2);
   });
 });
 
@@ -373,107 +365,103 @@ describe("every preset", () => {
   });
 
   it.each(Object.entries(EXPECTED))("%s", async (id, want) => {
-    const { root } = await mount();
-    choose(root, "preset", id);
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe(id);
-    for (const g of ["clock", "elapsed", "count"] as const) {
-      expect(copy(root, g), g).toBe(want.copy[g]);
-      const out = text(root, `${g}-output`);
-      expect(out, g).toBe(want.output[g]);
-      expect(isSentinel(root, `${g}-output`), g).toBe(ALL_NO_SIGNAL.test(out));
+    const w = await open();
+    await pick(w, id);
+    expect(presetBox()).toHaveValue(id);
+    for (const { id: g } of GROUPS) {
       // One result line for each call line, a refusal replacing only its own.
-      expect(lineCount(out), g).toBe(lineCount(want.copy[g]));
-      expect(noSignalLines(root, `${g}-output`), g).toBe(
-        out.split("\n").filter((l) => l === NO_SIGNAL).length -
-          (ALL_NO_SIGNAL.test(out) ? lineCount(out) : 0),
+      expect(callsOf(g), g).toHaveTextContent(flat(want.copy[g]));
+      expect(outputOf(g), g).toHaveTextContent(exact(flat(want.output[g])));
+      expect(want.output[g].split("\n").length, g).toBe(
+        want.copy[g].split("\n").length,
       );
     }
-    ["clock", "elapsed", "count"].forEach((g, i) => {
-      expect(text(root, `${g}-aside`), g).toContain(want.asides[i]!);
-      expect(text(root, `${g}-aside`) === "", g).toBe(want.asides[i] === "");
+    GROUPS.forEach(({ id: g }, i) => {
+      const reason = want.asides[i]!;
+      if (reason === "") expect(asideOf(g), g).not.toBeInTheDocument();
+      else expect(asideOf(g), g).toHaveTextContent(reason);
     });
-    expect(plate(root, "hero-clock")).toEqual([
+    expectPlate(PLATE_CAPTIONS[0]!, [
       want.plates.clock,
-      ...(want.plates.clock === "no result" ? ["", ""] : CLOCK_LINES),
+      ...(want.plates.clock === "no result"
+        ? (["", ""] as const)
+        : CLOCK_LINES),
     ]);
-    expect(plate(root, "hero-elapsed")).toEqual([
+    expectPlate(PLATE_CAPTIONS[1]!, [want.plates.count, ...want.countLines]);
+    expectPlate(PLATE_CAPTIONS[2]!, [
       want.plates.elapsed,
-      ...(want.plates.elapsed === "no result" ? ["", ""] : ELAPSED_LINES),
+      ...(want.plates.elapsed === "no result"
+        ? (["", ""] as const)
+        : ELAPSED_LINES),
     ]);
-    expect(plate(root, "hero-count")).toEqual([
-      want.plates.count,
-      ...want.countLines,
-    ]);
-    // Each counted second is a stretched cell on the clock face, a hatched
-    // "+1 s" cell on the elapsed ruler, and a gap on the clock tape.
+
+    // Each inserted second is a stretched cell on the clock face and a hatched "+1 s"
+    // cell on the elapsed ruler; a ruler with no value says so in brackets instead.
+    const clockNone = want.plates.clock === "no result";
+    const elapsedNone = want.plates.elapsed === "no result";
+    expect(screen.queryAllByText(CLOCK_MARK)).toHaveLength(
+      clockNone ? 0 : want.marks,
+    );
+    expect(screen.queryAllByText(ELAPSED_MARK)).toHaveLength(
+      elapsedNone ? 0 : want.marks,
+    );
+    expect(screen.queryAllByText(RULER_NO_SIGNAL)).toHaveLength(
+      Number(clockNone) + Number(elapsedNone),
+    );
+
     expect(
-      q(root, "marks-clock").querySelectorAll(".gmt-evc-cell--leap"),
-    ).toHaveLength(want.plates.clock === "no result" ? 0 : want.marks);
-    expect(
-      q(root, "marks-elapsed").querySelectorAll(".gmt-evc-cell--leap"),
-    ).toHaveLength(want.marks);
-    if (want.plates.clock !== "no result") {
-      expect(
-        q(root, "span-clock").querySelectorAll(".gmt-evc-cell--gap"),
-      ).toHaveLength(want.marks);
-    }
-    expect(
-      [...q(root, "insertions-list").children].map((li) => li.textContent),
+      within(insertions())
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
     ).toEqual(want.list);
-    expect(q(root, "marks-clock").textContent).toContain(
-      want.plates.clock === "no result" ? "NO SIGNAL" : "",
-    );
-    expect(q(root, "marks-elapsed").textContent).toContain(
-      want.plates.elapsed === "no result" ? "NO SIGNAL" : "",
-    );
-    expect(q(root, "rulers").getAttribute("role")).toBe("img");
-    expect(q(root, "rulers").getAttribute("aria-label")).toBe(
-      text(root, "summary"),
-    );
+    expect(figure()).toHaveAccessibleName(summary().textContent ?? "");
+    await expectNoAxeViolations(document.body);
   });
 
   it("the rulers' ends read earlier first, whichever way the span runs", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "backwards");
-    expect([text(root, "ends-low"), text(root, "ends-high")]).toEqual([
-      "2000-01-01",
-      "2024-01-01",
-    ]);
+    const w = await open();
+    await pick(w, "backwards");
+    expect(endsGroup()).toHaveTextContent(/2000-01-01.*2024-01-01/);
   });
 
   it("an empty list is a live answer and not a no signal", async () => {
-    const { root } = await mount();
-    choose(root, "preset", "no-insertions");
-    expect(isSentinel(root, "count-output")).toBe(false);
-    expect(text(root, "count-aside")).toBe("");
+    const w = await open();
+    await pick(w, "no-insertions");
+    expect(outputOf("count")).not.toHaveTextContent(/NO SIGNAL/);
+    expect(asideOf("count")).not.toBeInTheDocument();
+    expect(screen.queryByText(RULER_NO_SIGNAL)).not.toBeInTheDocument();
+    expect(insertions()).toHaveTextContent(NONE_COUNTED);
   });
 
   it("a blank field leaves every call out and every output empty", async () => {
-    const { root } = await mount();
-    type(root, "end", "");
-    for (const g of ["clock", "elapsed", "count"]) {
-      expect(copy(root, g)).toBe("");
-      expect(text(root, `${g}-output`)).toBe(BLANK);
-      expect(isSentinel(root, `${g}-output`)).toBe(false);
+    const w = await open();
+    await typeInto(w, endBox(), "");
+    for (const { id: g } of GROUPS) {
+      expect(outputOf(g)).toHaveTextContent(exact(BLANK));
+      expect(outputOf(g)).not.toHaveTextContent(/NO SIGNAL/);
+      expect(asideOf(g)).not.toBeInTheDocument();
     }
-    expect(text(root, "summary")).toBe("Give a start and an end to compare.");
+    expect(summary()).toHaveTextContent("Give a start and an end to compare.");
+    expect(screen.getAllByText("Give a start and an end.")).toHaveLength(2);
+    expect(screen.queryByText(RULER_NO_SIGNAL)).not.toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
   it("text that is not an instant is no signal with the reason", async () => {
-    const { root } = await mount();
-    type(root, "start", "soon");
-    for (const g of ["clock", "elapsed", "count"]) {
-      // The end still reads, so the elapsed group keeps its second answer.
-      expect(isSentinel(root, `${g}-output`), g).toBe(g !== "elapsed");
-      expect(text(root, `${g}-output`), g).toBe(
-        g === "elapsed" ? 'NO SIGNAL\n"2017-01-01T00:00:38 TAI"' : NO_SIGNAL,
-      );
-      expect(text(root, `${g}-aside`), g).toContain(
-        "This is not an ISO 8601 instant.",
-      );
+    const w = await open();
+    await typeInto(w, startBox(), "soon");
+    // The end still reads, so the elapsed group keeps its second answer.
+    expect(outputOf("clock")).toHaveTextContent(exact("NO SIGNAL"));
+    expect(outputOf("elapsed")).toHaveTextContent(
+      exact('NO SIGNAL "2017-01-01T00:00:38 TAI"'),
+    );
+    expect(outputOf("count")).toHaveTextContent(exact("NO SIGNAL"));
+    for (const { id: g } of GROUPS) {
+      expect(asideOf(g), g).toHaveTextContent(NOT_INSTANT_TEXT);
     }
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    expect(q<HTMLInputElement>(root, "end-slider").disabled).toBe(false);
+    expect(presetBox()).toHaveValue("custom");
+    expect(slider()).toBeEnabled();
+    await expectNoAxeViolations(document.body);
   });
 });
 
@@ -481,80 +469,67 @@ describe("the end slider", () => {
   const at = async (iso: string) => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(convertUtcToUnix(iso) ?? 0);
-    return mount();
+    return open();
   };
 
   it("runs from 1972-01-01 to continuous UTC while today is earlier", async () => {
-    const { root } = await at("2026-10-16T09:00:00Z");
-    const slider = q<HTMLInputElement>(root, "end-slider");
-    expect(slider.min).toBe("0");
-    expect(slider.max).toBe("20228");
-    expect(root.querySelector(".gmt-range-ends")!.textContent).toBe(
-      "1972-01-012027-05-20",
-    );
+    await at("2026-10-16T09:00:00Z");
+    expect(slider()).toHaveAttribute("min", "0");
+    expect(slider()).toHaveAttribute("max", "20228");
+    expect(screen.getByText("1972-01-01")).toBeInTheDocument();
+    expect(screen.getByText("2027-05-20")).toBeInTheDocument();
   });
 
   it("runs to the reader's today once it is later", async () => {
-    const { root } = await at("2030-03-10T09:00:00Z");
-    const slider = q<HTMLInputElement>(root, "end-slider");
-    expect(slider.max).toBe("21253");
-    expect(root.querySelector(".gmt-range-ends")!.textContent).toBe(
-      "1972-01-012030-03-10",
-    );
+    await at("2030-03-10T09:00:00Z");
+    expect(slider()).toHaveAttribute("max", "21253");
+    expect(screen.getByText("2030-03-10")).toBeInTheDocument();
   });
 
   it("writes a midnight into the end and reads the new span", async () => {
-    const { root } = await at("2026-10-16T09:00:00Z");
-    choose(root, "preset", "twenty-four-years");
-    slide(root, 20228);
-    expect(q<HTMLInputElement>(root, "end").value).toBe("2027-05-20T00:00:00Z");
-    expect(q<HTMLInputElement>(root, "start").value).toBe(
-      "2000-01-01T00:00:00Z",
-    );
-    expect(plate(root, "hero-count")[0]).toBe("5");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    slide(root, 10);
-    expect(q<HTMLInputElement>(root, "end").value).toBe("1972-01-11T00:00:00Z");
+    const w = await at("2026-10-16T09:00:00Z");
+    await pick(w, "twenty-four-years");
+    setRange(slider(), 20228);
+    expect(endBox()).toHaveValue("2027-05-20T00:00:00Z");
+    expect(startBox()).toHaveValue("2000-01-01T00:00:00Z");
+    expect(plateParts(PLATE_CAPTIONS[1]!).value).toHaveTextContent("5");
+    expect(presetBox()).toHaveValue("custom");
+    setRange(slider(), 10);
+    expect(endBox()).toHaveValue("1972-01-11T00:00:00Z");
     // The span now runs backwards from 2000, over every second inserted since 1972.
-    expect(plate(root, "hero-count")[0]).toBe("-22");
+    expect(plateParts(PLATE_CAPTIONS[1]!).value).toHaveTextContent("-22");
+    await expectNoAxeViolations(document.body);
   });
 
   it("is disabled while the end cannot be placed, and a typed end moves it", async () => {
-    const { root } = await at("2026-10-16T09:00:00Z");
-    type(root, "end", "soon");
-    expect(q<HTMLInputElement>(root, "end-slider").disabled).toBe(true);
-    type(root, "end", "1972-01-11T12:00:00Z");
-    expect(q<HTMLInputElement>(root, "end-slider").disabled).toBe(false);
-    expect(q<HTMLInputElement>(root, "end-slider").value).toBe("10");
+    const w = await at("2026-10-16T09:00:00Z");
+    await typeInto(w, endBox(), "soon");
+    expect(slider()).toBeDisabled();
+    await typeInto(w, endBox(), "1972-01-11T12:00:00Z");
+    expect(slider()).toBeEnabled();
+    expect(slider()).toHaveValue("10");
   });
 
-  it("moving it does not resize the plates, the rulers or the list", async () => {
-    const { root } = await at("2026-10-16T09:00:00Z");
-    const shape = () =>
-      `${q(root, "heroes").children.length}/${q(root, "rulers").children.length}/${q(root, "insertions-list").tagName}`;
-    const before = shape();
+  it("keeps the same plates and list while it moves", async () => {
+    await at("2026-10-16T09:00:00Z");
     for (const day of [0, 5000, 10000, 20228]) {
-      slide(root, day);
-      expect(shape()).toBe(before);
+      setRange(slider(), day);
+      expect(screen.getAllByRole("definition")).toHaveLength(9);
+      expect(insertions()).toBeInTheDocument();
     }
   });
 });
 
 describe("offset-spelled input", () => {
   it("draws the same marks as the Z spelling and prints the library's answers", async () => {
-    const { root } = await mount();
-    type(root, "start", "2016-12-31T23:59:59Z");
-    type(root, "end", "2017-01-01T00:00:01Z");
-    const z = q(root, "marks-clock").innerHTML;
-    type(root, "start", "2017-01-01T08:59:59+09:00");
-    type(root, "end", "2017-01-01T09:00:01+09:00");
-    expect(q(root, "marks-clock").innerHTML).toBe(z);
-    expect(
-      q(root, "marks-clock").querySelectorAll(".gmt-evc-cell--leap"),
-    ).toHaveLength(1);
-    expect(text(root, "clock-output")).toBe("2000000000n");
-    expect(text(root, "count-output")).toBe("1");
-    expect(q<HTMLInputElement>(root, "end-slider").disabled).toBe(false);
+    const w = await open();
+    await typeInto(w, startBox(), "2017-01-01T08:59:59+09:00");
+    await typeInto(w, endBox(), "2017-01-01T09:00:01+09:00");
+    expect(screen.getAllByText(CLOCK_MARK)).toHaveLength(1);
+    expect(screen.getAllByText(ELAPSED_MARK)).toHaveLength(1);
+    expect(outputOf("clock")).toHaveTextContent("2000000000n");
+    expect(outputOf("count")).toHaveTextContent(exact("1"));
+    expect(slider()).toBeEnabled();
   });
 });
 
@@ -562,123 +537,90 @@ describe("permalinks", () => {
   it.each(ELAPSED_PRESETS.map((p) => [p.id]))(
     "round-trips %s as a permalink of strings",
     async (id) => {
-      const first = await mount();
-      choose(first.root, "preset", id!);
-      const state = first.handle.getPermalinkState?.() as Record<
-        string,
-        unknown
-      >;
-      expect(Object.keys(state).sort()).toEqual(["end", "start"]);
-      expect(
-        Object.values(state).every(
-          (v) => typeof v === "string" && v.length >= 10 && v.length <= 64,
-        ),
-      ).toBe(true);
-      const url = encodeWidgetPermalink("elapsed", state);
-      expect(url).toMatch(
+      const first = await open();
+      await pick(first, id!);
+      const link = first.permalink();
+      expect(link).toMatch(
         new RegExp(
           `^${SITE_BASE}/tools/elapsed-vs-clock-difference/\\?w=elapsed&wa=`,
         ),
       );
-      const seeded = seedFromLocation("elapsed", url.slice(url.indexOf("?")));
-      expect(seeded).toEqual(state);
-      const outputs = ["clock", "elapsed", "count"].map((g) =>
-        text(first.root, `${g}-output`),
-      );
-      document.body.innerHTML = "";
-
-      const second = await mount(seeded);
+      const seeded = seedFromLocation("elapsed", link.slice(link.indexOf("?")));
+      expect(seeded).not.toBeNull();
+      expect(Object.keys(seeded as object).sort()).toEqual(["end", "start"]);
       expect(
-        ["clock", "elapsed", "count"].map((g) =>
-          text(second.root, `${g}-output`),
+        Object.values(seeded as Record<string, unknown>).every(
+          (v) => typeof v === "string" && v.length >= 10 && v.length <= 64,
         ),
-      ).toEqual(outputs);
-      expect(q<HTMLSelectElement>(second.root, "preset").value).toBe(id);
+      ).toBe(true);
+      const outputs = GROUPS.map((g) => outputOf(g.id).textContent);
+      first.destroy();
+
+      await open(seeded as Record<string, unknown>, "second");
+      expect(GROUPS.map((g) => outputOf(g.id).textContent)).toEqual(outputs);
+      expect(presetBox()).toHaveValue(id);
     },
   );
 });
 
 describe("on-screen words", () => {
-  function screenText(root: HTMLElement): string {
-    const clone = root.cloneNode(true) as HTMLElement;
-    clone
-      .querySelectorAll('.gmt-codeframe, output[data-role$="output"]')
-      .forEach((e) => e.remove());
-    const labels = [...clone.querySelectorAll("[aria-label]")].map((e) =>
-      e.getAttribute("aria-label"),
-    );
-    return `${clone.textContent}\n${labels.join("\n")}`;
-  }
-
   it.each(ELAPSED_PRESETS.map((p) => [p.id]))(
-    "%s shows no raw null or undefined outside the printed output",
+    "%s shows no raw null or undefined",
     async (id) => {
-      const { root } = await mount();
-      choose(root, "preset", id!);
-      expect(screenText(root)).not.toMatch(/\b(null|undefined)\b/);
+      const w = await open();
+      await pick(w, id!);
+      expect(document.body).not.toHaveTextContent(/\b(null|undefined)\b/);
     },
   );
 
   it("names no law, regulator or national lead", async () => {
     const forbidden =
       /\b(CFR|statut|regulat|docket|agency|court|America\/|en-US|NIST|USNO)\w*/i;
-    const { root } = await mount();
-    const seen: string[] = [renderElapsedVsClockTemplate()];
+    const w = await open();
     for (const p of ELAPSED_PRESETS) {
-      choose(root, "preset", p.id);
-      seen.push(root.textContent ?? "");
+      await pick(w, p.id);
+      expect(document.body).not.toHaveTextContent(forbidden);
     }
-    for (const s of seen) expect(s).not.toMatch(forbidden);
   });
 });
 
 describe("lifecycle", () => {
   it("an aborted mount is inert", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderElapsedVsClockTemplate();
-    document.body.append(root);
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountElapsedVsClock(root, {}, controller.signal);
-    expect(plate(root, "hero-clock")[0]).toBe("no result");
-    expect(handle.getPermalinkState?.()).toBeNull();
+    const w = await renderWidget(entry, { args: {}, aborted: true });
+    expect(w.permalink).toBeDefined();
+    expect(within(document.body).getAllByText("no result")).toHaveLength(3);
     expect(() => {
-      handle.destroy();
-      handle.destroy();
+      w.destroy();
+      w.destroy();
     }).not.toThrow();
   });
 
   it("releases its width observer on destroy, and destroying twice is safe", async () => {
     const spy = spyOnResizeObservers();
-    const { handle } = await mount();
-    expect(spy.live.size).toBe(1);
-    handle.destroy();
-    handle.destroy();
+    const w = await open();
+    expect(spy.live.size).toBeGreaterThan(0);
+    w.destroy();
+    w.destroy();
     expect(spy.live.size).toBe(0);
     spy.restore();
   });
 
   it("redraws when the width changes, and keeps every inserted second", async () => {
     const spy = spyOnResizeObservers();
-    const { root } = await mount();
-    choose(root, "preset", "twenty-four-years");
-    const leaps = () =>
-      q(root, "marks-clock").querySelectorAll(".gmt-evc-cell--leap").length;
-    expect(leaps()).toBe(5);
-    const marks = q(root, "marks-clock").innerHTML;
-    Object.defineProperty(q(root, "frame"), "clientWidth", {
-      configurable: true,
-      value: 600,
-    });
+    const w = await open();
+    await pick(w, "twenty-four-years");
+    expect(screen.getAllByText(ELAPSED_MARK)).toHaveLength(5);
+    const width = vi.spyOn(Element.prototype, "clientWidth", "get");
+    width.mockReturnValue(600);
     spy.fire();
-    expect(q(root, "marks-clock").innerHTML).toBe(marks);
-    expect(leaps()).toBe(5);
-    Object.defineProperty(q(root, "frame"), "clientWidth", {
-      configurable: true,
-      value: 300,
-    });
+    expect(screen.getAllByText(ELAPSED_MARK)).toHaveLength(5);
+    width.mockReturnValue(300);
     spy.fire();
-    expect(q(root, "marks-clock").textContent).toContain("5");
+    // Narrow, the five can share one cell, but the count is still there.
+    expect(screen.getAllByText(/^\+(1|5)( s)?$/).length).toBeGreaterThan(0);
+    expect(outputOf("count")).toHaveTextContent(exact("5"));
+    await expectNoAxeViolations(document.body);
+    width.mockRestore();
     spy.restore();
   });
 });
@@ -686,61 +628,45 @@ describe("lifecycle", () => {
 describe("the links row", () => {
   const TIMELINE = "See these dates on the timeline";
   const CLOCKS = "Every clock at the start";
-  async function mountPreset(id: string) {
-    const mounted = await mount();
-    choose(mounted.root, "preset", id);
-    return mounted;
-  }
-  const link = (root: HTMLElement, role: string) =>
-    q<HTMLAnchorElement>(root, role);
-  const state = (root: HTMLElement, role: string) => ({
-    text: link(root, role).textContent,
-    href: link(root, role).getAttribute("href"),
-    disabled: link(root, role).getAttribute("aria-disabled"),
-  });
-  const enabled = (text: string, href: string) => ({
-    text,
-    href,
-    disabled: null,
-  });
-  const disabled = (text: string) => ({ text, href: null, disabled: "true" });
+  const enabledLink = (name: string) => screen.getByRole("link", { name });
+  const expectDisabled = (name: string) => {
+    expect(linkNamed(name)).toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByRole("link", { name })).not.toBeInTheDocument();
+  };
 
-  it("has both links in the links row, in order", async () => {
-    const { root } = await mount();
-    const row = q(root, "tool-links");
-    expect(row.classList.contains("gmt-widget-controls")).toBe(true);
-    expect(
-      [...row.querySelectorAll("a")].map((a) => a.dataset["role"]),
-    ).toEqual(["link-timeline", "link-clocks"]);
+  it("has both links, in order", async () => {
+    await open();
+    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual([
+      TIMELINE,
+      CLOCKS,
+    ]);
   });
 
   it("sends the span to the timeline as from and to, and the start to the Clock Converter", async () => {
-    const { root } = await mountPreset("across-2016");
-    expect(state(root, "link-timeline")).toEqual(
-      enabled(
-        TIMELINE,
-        encodeWidgetPermalink("leapline", {
-          from: "2016-12-31T23:59:59Z",
-          to: "2017-01-01T00:00:01Z",
-        }),
-      ),
+    await open();
+    expect(enabledLink(TIMELINE)).toHaveAttribute(
+      "href",
+      encodeWidgetPermalink("leapline", {
+        from: "2016-12-31T23:59:59Z",
+        to: "2017-01-01T00:00:01Z",
+      }),
     );
-    expect(state(root, "link-clocks")).toEqual(
-      enabled(
-        CLOCKS,
-        encodeWidgetPermalink("satclock", { value: "2016-12-31T23:59:59Z" }),
-      ),
+    expect(enabledLink(CLOCKS)).toHaveAttribute(
+      "href",
+      encodeWidgetPermalink("satclock", { value: "2016-12-31T23:59:59Z" }),
     );
   });
 
   it("sends a leap second's own instant, and a span before 1972, which still reads a clock difference", async () => {
-    const leap = await mountPreset("start-is-the-leap-second");
-    expect(link(leap.root, "link-clocks").getAttribute("href")).toBe(
+    const w = await open();
+    await pick(w, "start-is-the-leap-second");
+    expect(enabledLink(CLOCKS)).toHaveAttribute(
+      "href",
       encodeWidgetPermalink("satclock", { value: "2016-12-31T23:59:60Z" }),
     );
-    document.body.innerHTML = "";
-    const early = await mountPreset("before-1972");
-    expect(link(early.root, "link-timeline").getAttribute("href")).toBe(
+    await pick(w, "before-1972");
+    expect(enabledLink(TIMELINE)).toHaveAttribute(
+      "href",
       encodeWidgetPermalink("leapline", {
         from: "1971-01-01T00:00:00Z",
         to: "2024-01-01T00:00:00Z",
@@ -749,65 +675,68 @@ describe("the links row", () => {
   });
 
   it("sends a backwards span as typed", async () => {
-    const { root } = await mountPreset("backwards");
-    expect(link(root, "link-timeline").getAttribute("href")).toBe(
+    const w = await open();
+    await pick(w, "backwards");
+    expect(enabledLink(TIMELINE)).toHaveAttribute(
+      "href",
       encodeWidgetPermalink("leapline", {
         from: "2024-01-01T00:00:00Z",
         to: "2000-01-01T00:00:00Z",
       }),
     );
-    expect(link(root, "link-clocks").getAttribute("href")).toBe(
+    expect(enabledLink(CLOCKS)).toHaveAttribute(
+      "href",
       encodeWidgetPermalink("satclock", { value: "2024-01-01T00:00:00Z" }),
     );
   });
 
   it("follows what is typed", async () => {
-    const { root } = await mountPreset("across-2016");
-    type(root, "start", "2020-01-01T00:00:00Z");
-    type(root, "end", "2024-01-01T00:00:00Z");
-    expect(link(root, "link-timeline").getAttribute("href")).toBe(
+    const w = await open();
+    await typeInto(w, startBox(), "2020-01-01T00:00:00Z");
+    await typeInto(w, endBox(), "2024-01-01T00:00:00Z");
+    expect(enabledLink(TIMELINE)).toHaveAttribute(
+      "href",
       encodeWidgetPermalink("leapline", {
         from: "2020-01-01T00:00:00Z",
         to: "2024-01-01T00:00:00Z",
       }),
     );
-    expect(link(root, "link-clocks").getAttribute("href")).toBe(
+    expect(enabledLink(CLOCKS)).toHaveAttribute(
+      "href",
       encodeWidgetPermalink("satclock", { value: "2020-01-01T00:00:00Z" }),
     );
   });
 
   it("disables both links, with no href, on a second 60 that never happened", async () => {
-    const { root } = await mountPreset("not-inserted");
-    expect(state(root, "link-timeline")).toEqual(disabled(TIMELINE));
-    expect(state(root, "link-clocks")).toEqual(disabled(CLOCKS));
+    const w = await open();
+    await pick(w, "not-inserted");
+    expectDisabled(TIMELINE);
+    expectDisabled(CLOCKS);
   });
 
   it("disables both links for blank fields, and lights them again for a reading", async () => {
-    const { root } = await mountPreset("across-2016");
-    type(root, "start", "");
-    type(root, "end", "");
-    expect(state(root, "link-timeline")).toEqual(disabled(TIMELINE));
-    expect(state(root, "link-clocks")).toEqual(disabled(CLOCKS));
-    type(root, "start", "2020-01-01T00:00:00Z");
-    type(root, "end", "2024-01-01T00:00:00Z");
-    expect(link(root, "link-timeline").hasAttribute("href")).toBe(true);
-    expect(link(root, "link-timeline").hasAttribute("aria-disabled")).toBe(
-      false,
-    );
-    expect(link(root, "link-clocks").hasAttribute("href")).toBe(true);
+    const w = await open();
+    await typeInto(w, startBox(), "");
+    await typeInto(w, endBox(), "");
+    expectDisabled(TIMELINE);
+    expectDisabled(CLOCKS);
+    await typeInto(w, startBox(), "2020-01-01T00:00:00Z");
+    await typeInto(w, endBox(), "2024-01-01T00:00:00Z");
+    expect(enabledLink(TIMELINE)).not.toHaveAttribute("aria-disabled");
+    expect(enabledLink(CLOCKS)).not.toHaveAttribute("aria-disabled");
   });
 
   it("lands on seeds the other tools read back", async () => {
-    const { root } = await mountPreset("across-2016");
-    const read = (role: string, kind: "leapline" | "satclock") => {
-      const href = link(root, role).getAttribute("href")!;
+    await open();
+    const read = (name: string, kind: "leapline" | "satclock") => {
+      const href = enabledLink(name).getAttribute("href")!;
       return seedFromLocation(kind, href.slice(href.indexOf("?")));
     };
-    expect(read("link-timeline", "leapline")).toEqual({
+    expect(read(TIMELINE, "leapline")).toEqual({
       from: "2016-12-31T23:59:59Z",
       to: "2017-01-01T00:00:01Z",
     });
-    expect(read("link-clocks", "satclock")).toEqual({
+    expect(read(CLOCKS, "satclock")).toEqual({
       value: "2016-12-31T23:59:59Z",
     });
   });

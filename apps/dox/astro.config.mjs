@@ -5,6 +5,7 @@ import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import { readdirSync } from "node:fs";
+import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { referenceSidebar } from "./src/generated/reference/sidebar.ts";
 import { industriesSidebar } from "./src/generated/industries-sidebar.ts";
@@ -16,6 +17,7 @@ import rehypeBaseLinks from "./src/lib/rehype-base-links.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
 import rehypeTableScroll from "./src/lib/rehype-table-scroll.ts";
 import { copyRedirects } from "./src/lib/copy-redirects.ts";
+import { pruneWidgetCss } from "./src/lib/prune-widget-css.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
 import { SITE_BASE, SITE_ORIGIN, withBase } from "./src/lib/site.ts";
@@ -81,6 +83,19 @@ export default defineConfig({
       proxy: devWorkerProxy(process.env.DOX_WORKER_PORT),
     },
     plugins: [tailwindcss()],
+    css: {
+      // Component kit (src/widgets): one CSS Module per component. Names are
+      // readable and stable (`gmt-range__thumb`), so html-diff stays legible and
+      // never churns on a content edit. `camelCaseOnly` gives `styles.thumb`.
+      modules: {
+        localsConvention: "camelCaseOnly",
+        generateScopedName: (
+          /** @type {string} */ local,
+          /** @type {string} */ file,
+        ) =>
+          `gmt-${basename(file.split("?")[0] ?? file, ".module.css")}__${local}`,
+      },
+    },
     // One dependency cache per dev server. Two `astro dev` processes sharing
     // node_modules/.vite re-optimise each other's deps, and the first server
     // then answers 504 "Outdated Optimize Dep" for every pre-bundled import
@@ -104,7 +119,8 @@ export default defineConfig({
       ],
     },
     build: {
-      cssTarget: ["chrome107", "edge107", "firefox104", "safari16"],
+      // Baseline 2024: the oldest of each engine that `npx browserslist "baseline 2024"` lists.
+      cssTarget: ["chrome130", "edge130", "firefox132", "safari18.2"],
       cssMinify: "esbuild",
     },
     resolve: {
@@ -119,6 +135,8 @@ export default defineConfig({
     gmtReferenceWatch(),
     // Build only: puts src/generated/_redirects at dist/_redirects, above outDir.
     copyRedirects(),
+    // Build only: drops a widget's stylesheet link from the pages that do not show the widget.
+    pruneWidgetCss(),
     react(),
     starlight({
       title: "@northguild/gmt",
@@ -304,73 +322,7 @@ export default defineConfig({
         SiteTitle: "./src/components/SiteTitle.astro",
       },
       customCss: [
-        "./src/styles/gmt-tokens.css", // palette + --gmt-* tokens, @font-face
-        "./src/styles/gmt-theme.css", // --gmt-* mapped onto Starlight's --sl-*
-        "./src/styles/gmt-primitives.css", // reusable .gmt-glass* / .gmt-icon-button
-        "./src/styles/gmt-glass.css", // glass treatment on Starlight elements
-        "./src/styles/gmt-shell.css", // typography + layout frame
-        "./src/styles/gmt-content.css", // .sl-markdown-content + EC + search
-        "./src/styles/gmt-controls.css", // buttons, focus, selection, scrollbar
-        "./src/styles/gmt-playground.css", // mistake component styles
-        "./src/styles/gmt-form-controls.css", // shared label/input/select styles
-        "./src/styles/gmt-widget.css", // shared teaching-widget chrome (card/section/codeframe/output)
-        "./src/styles/gmt-crystal-clock.css", // shared analog crystal clock face (TRAN-9)
-        "./src/styles/clock-change.css", // shared parts of the clock-change checkers (CORE-89)
-        "./src/styles/morocco-clock-change.css", // Morocco clock-change checker (CORE-89)
-        "./src/styles/gmt-dst-inspector.css", // DST Transition Inspector widget (DOX-B2b)
-        "./src/styles/gmt-interval-visualizer.css", // Interval Algebra Visualizer widget (DOX-B2c)
-        "./src/styles/gmt-billing-deadlines.css", // Billing Deadlines widget (INT-58)
-        "./src/styles/gmt-transport-widgets.css", // Transport widgets, shared (TRAN-9)
-        "./src/styles/gmt-delivery-scheduler.css", // Delivery Scheduler widget (TRAN-9)
-        "./src/styles/gmt-connection-checker.css", // Connection Checker widget (TRAN-9)
-        "./src/styles/gmt-timetable-reader.css", // Timetable Reader widget (TRAN-9)
-        "./src/styles/gmt-crossing-clock.css", // Crossing Clock widget (TRAN-9)
-        "./src/styles/gmt-cutoff-widgets.css", // Cut-off widgets, shared (TRAN-10)
-        "./src/styles/gmt-cutoff-stack.css", // Cut-off Stack widget (TRAN-10)
-        "./src/styles/gmt-cutoff-ruler.css", // Cut-off Ruler widget (TRAN-10)
-        "./src/styles/gmt-cutoff-countdown.css", // Cut-off Countdown widget (TRAN-10)
-        "./src/styles/gmt-punctuality-widgets.css", // Punctuality widgets, shared (TRAN-57)
-        "./src/styles/gmt-punctuality-board.css", // Punctuality Board widget (TRAN-57)
-        "./src/styles/gmt-eta-drift.css", // ETA Drift Chart widget (TRAN-57)
-        "./src/styles/gmt-departure-board.css", // Departure Board widget (TRAN-57)
-        "./src/styles/gmt-ledger-widgets.css", // Ledger family, shared: the tools that draw time on local days (after the departure board it reuses)
-        "./src/styles/gmt-holiday-widgets.css", // Holiday family, shared: month grid, marks, policy editor (CORE-54)
-        "./src/styles/gmt-holiday-rule-builder.css", // Holiday Rule Builder widget (CORE-54)
-        "./src/styles/gmt-observance-comparator.css", // Observance Comparator widget (CORE-54)
-        "./src/styles/gmt-moving-feasts.css", // Moving Feasts widget (CORE-54)
-        "./src/styles/gmt-dwell-ledger.css", // Dwell Ledger widget (TRAN-8)
-        "./src/styles/gmt-free-time-ledger.css", // Free Time Ledger widget (INT-12)
-        "./src/styles/gmt-demurrage-clock.css", // Demurrage Clock widget (INT-14)
-        "./src/styles/gmt-bl-date-stamp.css", // B/L Date Stamp widget (INT-14)
-        "./src/styles/gmt-journey-split.css", // Journey Split widget (INT-14)
-        "./src/styles/gmt-edi-widgets.css", // EDI timestamp widgets, shared (INT-15)
-        "./src/styles/gmt-gnss-widgets.css", // GNSS and leap-second widgets, shared (MAR-16)
-        "./src/styles/gmt-gnss-week-decoder.css", // GNSS Week Decoder widget (MAR-16)
-        "./src/styles/gmt-satellite-clock-converter.css", // Satellite Clock Converter widget (MAR-16)
-        "./src/styles/gmt-gnss-rollover-checker.css", // GNSS Rollover Checker widget (MAR-16)
-        "./src/styles/gmt-leap-second-timeline.css", // Leap Second Timeline widget (MAR-16)
-        "./src/styles/gmt-elapsed-vs-clock.css", // Elapsed vs. Clock Difference widget (MAR-16)
-        "./src/styles/gmt-stored-time-audit.css", // Stored Time Audit widget (CORE-83)
-        "./src/styles/gmt-duration-parser-bench.css", // Duration Parser Bench widget (CORE-85)
-        "./src/styles/gmt-id-timestamp-decoder.css", // ID Timestamp Decoder widget (CORE-56)
-        "./src/styles/gmt-column-timestamp-bridge.css", // Column Timestamp Bridge widget (CORE-56)
-        "./src/styles/gmt-cron-in-a-zone.css", // Cron in a Zone widget (CORE-84)
-        "./src/styles/gmt-leap-day-birthday.css", // Leap-Day Birthday widget (CORE-102)
-        "./src/styles/gmt-converter-bench.css", // Converter + format bench + regex tester widget
-        "./src/styles/gmt-playground-form.css", // form-control playground (POC, chore/136)
-        "./src/styles/gmt-charts.css", // chart theme variables + container styles
-        "./src/styles/gmt-clock-list.css", // shared .gmt-clock-* row recipe (map, globe)
-        "./src/styles/gmt-map.css", // timezone map layout
-        "./src/styles/gmt-globe.css", // DOX-E1a interactive globe
-        "./src/styles/gmt-scrubber.css", // DOX-E1b multi-zone time scrubber
-        "./src/styles/gmt-data-credits.css", // data-credits corner icon + popup (CORE-88)
-        "./src/styles/gmt-light.css", // floating [data-theme="light"] overrides
-        "./src/styles/gmt-reveal.css", // shared scroll-into-view stagger utility
-        "./src/styles/dox.css", // live component layout
-        "./src/styles/gmt-upstream.css", // /upstream/ defect table + filings tracker
-        "./src/styles/gmt-migrate.css", // /migrate/ call tables, difference cards, behaviour matrix
-        "./src/styles/gmt-view-transitions.css", // cross-document route transitions (static header/sidebar, content fade)
-        "./src/styles/gmt-a11y.css", // DOX-D1 prefers-reduced-transparency / -contrast / forced-colors — loaded last
+        "./src/styles/gmt.css", // layer order + every global sheet, each in its gmt.* layer
       ],
     }),
     // After starlight(): Starlight adds its own sitemap only when none is configured. /dox/ is

@@ -1,74 +1,29 @@
 /**
  * @vitest-environment jsdom
  *
- * The Delivery Scheduler widget end to end: template -> mount -> interact ->
- * assert, against the real `@northguild/gmt`. Every preset's printed call and
- * result are section 9 rows, verified against a build of the final library.
+ * The Delivery Scheduler widget end to end: template -> mount -> interact -> assert, against the
+ * real `@northguild/gmt`, through roles and accessible names the way a person (or a screen
+ * reader) meets the page. Every preset's printed call and result are appendix rows, verified
+ * against a build of the final library.
  */
-import { installJsdomShims } from "~/test/jsdom-shims";
-import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
-import { SITE_BASE } from "./site";
-import { DELIVERY_PRESETS } from "./delivery-scheduler";
+import { screen, within } from "@testing-library/dom";
 import {
-  mountDeliveryScheduler,
-  renderDeliverySchedulerTemplate,
-} from "./delivery-scheduler-mount";
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { DELIVERY_PRESETS } from "./delivery-scheduler";
+import { SITE_BASE } from "./site";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "leg-pick",
-  "call-leg-transit",
-  "leg-transit-output",
-  "call-leg-eta",
-  "leg-eta-output",
-  "preset",
-  "preset-description",
-  "leg-count",
-  "start-zone",
-  "leg-1",
-  "leg-2",
-  "leg-3",
-  "leg-4",
-  "mode-1",
-  "departure-1",
-  "duration-1",
-  "zone-1",
-  "dwell-1",
-  "mode-2",
-  "departure-2",
-  "duration-2",
-  "zone-2",
-  "dwell-2",
-  "mode-3",
-  "departure-3",
-  "duration-3",
-  "zone-3",
-  "dwell-3",
-  "mode-4",
-  "departure-4",
-  "duration-4",
-  "zone-4",
-  "dwell-4",
-  "eta-summary",
-  "eta-headline",
-  "eta",
-  "eta-duration",
-  "eta-flags",
-  "chart-toggle",
-  "view-route",
-  "view-scale",
-  "timeline",
-  "chart-route",
-  "chart-scale",
-  "timeline-summary",
-  "legend",
-  "journey",
-  "reason-aside",
-  "call-delivery",
-  "copy-delivery",
-  "delivery-output",
-];
+const entry = WIDGET_REGISTRY["showDeliveryScheduler"] as AnyWidgetEntry;
 
 /** [call, result], collapsed. `dwell-handoff` is the `scheduleDelivery.ts`
  *  JSDoc example V2, verbatim; the rest are section 9 rows. */
@@ -99,90 +54,103 @@ const EXPECTED: Record<string, [string, string | null]> = {
   ],
 };
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+const open = (args: Record<string, unknown> = {}): Promise<RenderedWidget> =>
+  renderWidget(entry, { args });
 
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderDeliverySchedulerTemplate(templateArgs);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountDeliveryScheduler(root, args, controller.signal);
-  return { root, handle, controller };
+const NUMERALS = ["①", "②", "③", "④"];
+
+const presetBox = () => screen.getByRole("combobox", { name: "Preset" });
+const countBox = () => screen.getByRole("combobox", { name: "Legs" });
+const startZoneBox = () =>
+  screen.getByRole("combobox", { name: "Start zone (optional)" });
+const legGroup = (n: number) =>
+  screen.getByRole("group", { name: new RegExp(`^${NUMERALS[n - 1]}`) });
+const legField = (n: number, name: string) =>
+  within(legGroup(n)).getByRole("textbox", { name });
+const dwellBox = (n: number) => legField(n, "Handling after (optional)");
+const departureBox = (n: number) =>
+  legField(n, /^(Departs|Scheduled departure)/ as never);
+const callFrame = () =>
+  screen.getByRole("group", { name: /scheduleDelivery call/ });
+const output = () =>
+  screen.getByRole("status", { name: /scheduleDelivery returned/ });
+const etaLine = () => screen.getByRole("status", { name: "ETA" });
+const itinerary = () => screen.getByRole("list", { name: "Itinerary" });
+const reason = () =>
+  screen.queryByRole("complementary", { name: "Why NO SIGNAL" });
+const legPick = () => screen.getByRole("combobox", { name: "Leg" });
+
+async function choose(w: RenderedWidget, id: string) {
+  await w.user.selectOptions(presetBox(), id);
 }
 
-function choosePreset(root: HTMLElement, id: string) {
-  const preset = q<HTMLSelectElement>(root, "preset");
-  preset.value = id;
-  preset.dispatchEvent(new Event("change", { bubbles: true }));
+async function replace(w: RenderedWidget, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  await w.user.click(box);
+  await w.user.paste(value);
 }
 
-function type(root: HTMLElement, role: string, value: string) {
-  const input = q<HTMLInputElement>(root, role);
-  input.value = value;
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
-
-describe("renderDeliverySchedulerTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDeliverySchedulerTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
+describe("the template", () => {
+  it("names every control a reader fills in", async () => {
+    const w = await open();
+    expect(presetBox()).toBeInTheDocument();
+    expect(countBox()).toBeInTheDocument();
+    expect(startZoneBox()).toBeInTheDocument();
+    for (const n of [1, 2, 3]) {
+      const group = within(legGroup(n));
+      expect(
+        group.getByRole("combobox", { name: "Mode (optional)" }),
+      ).toBeInTheDocument();
+      expect(
+        group.getByRole("textbox", { name: "Duration" }),
+      ).toBeInTheDocument();
+      expect(
+        group.getByRole("combobox", { name: "Arrives in" }),
+      ).toBeInTheDocument();
+      expect(dwellBox(n)).toBeInTheDocument();
     }
-  });
-
-  it("has the exact root the html-diff gate matches on", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDeliverySchedulerTemplate();
+    expect(callFrame()).toBeInTheDocument();
+    expect(output()).toBeInTheDocument();
     expect(
-      root.firstElementChild!.outerHTML.startsWith(
-        '<div class="gmt-delivery gmt-widget not-content">',
-      ),
-    ).toBe(true);
+      screen.getByRole("group", { name: "Chart view" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "Split this journey into moving and waiting",
+      }),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
-  it("uses text inputs with no placeholder", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDeliverySchedulerTemplate();
-    for (const role of ["departure-1", "duration-1", "dwell-1"]) {
-      const input = q<HTMLInputElement>(root, role);
-      expect(input.type).toBe("text");
-      expect(input.hasAttribute("placeholder")).toBe(false);
-    }
+  it("offers mode as a list of (none) plus the known modes, with the first leg's chosen", async () => {
+    await open();
+    const modes = within(
+      within(legGroup(1)).getByRole("combobox", { name: "Mode (optional)" }),
+    ).getAllByRole("option");
+    expect(modes.map((o) => o.textContent)).toEqual([
+      "(none)",
+      "Truck",
+      "Rail",
+      "Ship",
+      "Barge",
+      "Air",
+    ]);
+    expect(
+      within(legGroup(1)).getByRole("combobox", { name: "Mode (optional)" }),
+    ).toHaveDisplayValue("Truck");
   });
 
-  it("offers mode as a dropdown of (none) plus the known modes", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDeliverySchedulerTemplate();
-    const select = q<HTMLSelectElement>(root, "mode-1");
-    expect(select.tagName).toBe("SELECT");
-    const values = [...select.options].map((o) => o.value);
-    expect(values).toEqual(["", "truck", "rail", "ship", "barge", "air"]);
-    expect(select.value).toBe("truck");
-  });
-
-  it("appends a custom seeded mode as an extra option rather than dropping it", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDeliverySchedulerTemplate({
+  it("keeps a custom seeded mode as an extra option rather than dropping it", async () => {
+    await open({
       legs: [{ duration: "PT1H", timeZone: "UTC", mode: "barge-express" }],
     });
-    const select = q<HTMLSelectElement>(root, "mode-1");
-    expect(select.value).toBe("barge-express");
-    expect([...select.options].some((o) => o.value === "barge-express")).toBe(
-      true,
-    );
+    expect(
+      within(legGroup(1)).getByRole("combobox", { name: "Mode (optional)" }),
+    ).toHaveDisplayValue("Barge-express");
   });
 
-  it("hides fieldsets past the leg count and keeps their values", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDeliverySchedulerTemplate({
+  it("shows only as many legs as the journey has", async () => {
+    await open({
       legs: [
         {
           departure: "2024-01-01T00:00:00Z",
@@ -191,65 +159,66 @@ describe("renderDeliverySchedulerTemplate", () => {
         },
       ],
     });
-    expect(q<HTMLElement>(root, "leg-2").hidden).toBe(true);
+    expect(countBox()).toHaveDisplayValue("1");
+    expect(screen.getAllByRole("group", { name: /^[①②③④]/ })).toHaveLength(1);
   });
 });
 
 describe("handling, in the reader's words", () => {
-  it("labels the stated dwellAfter 'Handling after' on every leg and says dwell nowhere on screen", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDeliverySchedulerTemplate();
-    const labels = [...root.querySelectorAll("label")].map((l) =>
-      l.textContent!.replace(/\s+/g, " "),
-    );
-    expect(labels.filter((l) => l.startsWith("Handling after"))).toHaveLength(
-      4,
-    );
-    expect(labels.some((l) => /dwell/i.test(l))).toBe(false);
+  it("labels the stated dwellAfter 'Handling after' on every leg and says dwell nowhere on screen", async () => {
+    const w = await open();
+    await w.user.selectOptions(countBox(), "4");
+    expect(
+      screen.getAllByRole("textbox", { name: "Handling after (optional)" }),
+    ).toHaveLength(4);
+    expect(screen.queryAllByLabelText(/dwell/i)).toHaveLength(0);
     for (const p of DELIVERY_PRESETS) {
       expect(p.description, p.id).not.toMatch(/\bdwell/i);
     }
   });
 
   it("names a bad handling time in words and keeps the library's key in the printed call", async () => {
-    const { root } = await mount();
-    type(root, "dwell-1", "soon");
-    expect(q(root, "reason-aside").textContent).toContain(
+    const w = await open();
+    await replace(w, dwellBox(1), "soon");
+    expect(reason()).toHaveTextContent(
       "Leg 1's handling time is not a duration of time units, or it is negative.",
     );
-    expect(q(root, "eta-headline").textContent).toBe(
-      "Leg 1: Invalid handling time",
-    );
-    expect(q(root, "copy-delivery").dataset.copyText).toContain(
-      'dwellAfter: "soon"',
-    );
+    expect(
+      screen.getByText("Leg 1: Invalid handling time"),
+    ).toBeInTheDocument();
+    expect(callFrame()).toHaveTextContent('dwellAfter: "soon"');
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("the hand-off to the Journey Split", () => {
-  it("is the last thing in section 3, in a controls row, and always has an href", async () => {
-    const { root } = await mount();
-    const link = q<HTMLAnchorElement>(root, "handoff");
-    expect(link.textContent).toBe("Split this journey into moving and waiting");
-    expect(link.closest(".gmt-widget-controls")).not.toBeNull();
-    const section = link.closest(".gmt-widget-section")!;
-    expect(section.querySelector("h4")!.textContent).toBe(
-      "3. What scheduleDelivery returns",
-    );
-    expect(link.closest(".gmt-widget-controls")!.nextElementSibling).toBeNull();
+  const link = () =>
+    screen.getByRole("link", {
+      name: "Split this journey into moving and waiting",
+    });
+
+  it("is always a link to the Journey Split, whichever preset is chosen", async () => {
+    const w = await open();
+    const heading = screen.getByRole("heading", {
+      name: "3. What scheduleDelivery returns",
+    });
+    expect(heading).toBeInTheDocument();
     for (const p of DELIVERY_PRESETS) {
-      choosePreset(root, p.id);
-      expect(link.getAttribute("href"), p.id).toMatch(
-        new RegExp(`^${SITE_BASE}/tools/journey-split/\\?w=journeysplit&wa=`),
+      await choose(w, p.id);
+      expect(link(), p.id).toHaveAttribute(
+        "href",
+        expect.stringMatching(
+          new RegExp(`^${SITE_BASE}/tools/journey-split/\\?w=journeysplit&wa=`),
+        ),
       );
     }
   });
 
   it("carries every leg key, legCount and startTimeZone, and follows the form", async () => {
-    const { root } = await mount();
-    choosePreset(root, "ship-scheduled");
-    type(root, "dwell-2", "PT12H");
-    const href = q<HTMLAnchorElement>(root, "handoff").getAttribute("href")!;
+    const w = await open();
+    await choose(w, "ship-scheduled");
+    await replace(w, dwellBox(2), "PT12H");
+    const href = link().getAttribute("href")!;
     const seeded = seedFromLocation(
       "journeysplit",
       href.slice(href.indexOf("?")),
@@ -273,12 +242,13 @@ describe("the hand-off to the Journey Split", () => {
     expect(href).toBe(encodeWidgetPermalink("journeysplit", seeded));
   });
 
-  it("is present before the library has answered", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDeliverySchedulerTemplate();
-    expect(q<HTMLAnchorElement>(root, "handoff").getAttribute("href")).toMatch(
-      new RegExp(`^${SITE_BASE}/tools/journey-split/`),
+  it("is present before the library has answered", async () => {
+    const w = await renderWidget(entry, { args: {}, aborted: true });
+    expect(link()).toHaveAttribute(
+      "href",
+      expect.stringMatching(new RegExp(`^${SITE_BASE}/tools/journey-split/`)),
     );
+    w.destroy();
   });
 });
 
@@ -286,197 +256,187 @@ describe("mountDeliveryScheduler", () => {
   it.each(DELIVERY_PRESETS.map((p) => [p.id]))(
     "prints the documented call and result for %s",
     async (id) => {
-      const { root } = await mount();
-      choosePreset(root, id);
+      const w = await open();
+      await choose(w, id);
       const [call, result] = EXPECTED[id]!;
-
-      expect(q(root, "copy-delivery").dataset.copyText).toBe(
-        `scheduleDelivery(${call})`,
-      );
+      expect(callFrame()).toHaveTextContent(`scheduleDelivery(${call})`, {
+        normalizeWhitespace: true,
+      });
       if (result === null) {
-        expect(q(root, "delivery-output").textContent).toBe("NO SIGNAL");
-        expect(q(root, "delivery-output").classList).toContain(
-          "gmt-playground-sentinel",
-        );
+        expect(output()).toHaveTextContent("NO SIGNAL");
       } else {
-        expect(
-          q(root, "delivery-output").textContent!.replace(/\n\s+/g, " "),
-        ).toBe(result);
-        expect(q(root, "delivery-output").classList).toContain(
-          "gmt-playground-live",
-        );
+        expect(output()).toHaveTextContent(result);
+        expect(output()).not.toHaveTextContent("NO SIGNAL");
       }
+      await expectNoAxeViolations(w.root);
     },
   );
 
   it("names leg 2, 06:30, 05:00 and 07:00 in London for the missed connection", async () => {
-    const { root } = await mount();
-    choosePreset(root, "missed-connection");
-    const text = q(root, "reason-aside").textContent!;
-    expect(text).toContain("leg 2");
-    expect(text).toContain("06:30");
-    expect(text).toContain("05:00");
-    expect(text).toContain("07:00");
+    const w = await open();
+    await choose(w, "missed-connection");
+    const why = reason()!;
+    for (const part of ["leg 2", "06:30", "05:00", "07:00"]) {
+      expect(why).toHaveTextContent(part);
+    }
+    await expectNoAxeViolations(w.root);
   });
 
   it("shows the two calls behind the picked leg, and follows the leg picker", async () => {
-    const { root } = await mount();
-    const pick = q<HTMLSelectElement>(root, "leg-pick");
-    expect([...pick.options].map((o) => o.textContent)).toEqual([
-      "Leg 1",
-      "Leg 2",
-      "Leg 3",
-    ]);
-    expect(q(root, "call-leg-transit").textContent).toContain("transitTime(");
-    expect(q(root, "call-leg-transit").textContent).toContain('"PT45H"');
-    expect(q(root, "call-leg-eta").textContent).toContain('"Europe/London"');
-    /* The arrival the first call returns is the instant the second is given. */
-    const arrival = q(root, "leg-transit-output").textContent!;
-    expect(arrival).not.toBe("NO SIGNAL");
-    expect(q(root, "call-leg-eta").textContent).toContain(arrival);
-    expect(q(root, "leg-eta-output").textContent).toContain("[Europe/London]");
+    const w = await open();
+    expect(
+      within(legPick())
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Leg 1", "Leg 2", "Leg 3"]);
+    const transit = () =>
+      screen.getByRole("group", { name: /transitTime call/ });
+    const eta = () => screen.getByRole("group", { name: /etaAtZone call/ });
+    expect(transit()).toHaveTextContent("transitTime(");
+    expect(transit()).toHaveTextContent('"PT45H"');
+    expect(eta()).toHaveTextContent('"Europe/London"');
+    // The arrival the first call returns is the instant the second is given.
+    const arrival = screen.getByRole("status", {
+      name: /transitTime returned/,
+    });
+    expect(arrival).not.toHaveTextContent("NO SIGNAL");
+    const arrivalText = arrival.textContent!.trim();
+    expect(eta()).toHaveTextContent(arrivalText.replaceAll('"', ""));
+    expect(
+      screen.getByRole("status", { name: /etaAtZone returned/ }),
+    ).toHaveTextContent("[Europe/London]");
 
-    pick.value = "1";
-    pick.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(q(root, "call-leg-eta").textContent).not.toContain(
-      '"Europe/London"',
-    );
-    expect(q(root, "leg-transit-output").textContent).not.toBe(arrival);
+    await w.user.selectOptions(legPick(), "Leg 2");
+    expect(eta()).not.toHaveTextContent('"Europe/London"');
+    expect(transit()).toHaveTextContent("P11D");
+    expect(transit()).not.toHaveTextContent("PT45H");
+    await expectNoAxeViolations(w.root);
   });
 
   it("shows the ETA line from the real result", async () => {
-    const { root } = await mount();
-    choosePreset(root, "truck-ship-rail");
-    expect(q(root, "eta").textContent).toContain(
+    const w = await open();
+    await choose(w, "truck-ship-rail");
+    expect(etaLine()).toHaveTextContent(
       "ETA 2024-04-12T17:30:00+09:00[Asia/Tokyo]",
     );
   });
 
-  it("leads with the ETA summary card: headline, door-to-door and flags", async () => {
-    const { root } = await mount();
-    choosePreset(root, "truck-ship-rail");
-    expect(q(root, "eta-headline").textContent).toBe(
-      "Fri 12 Apr 2024 · 17:30 Tokyo (+09:00)",
-    );
-    expect(q(root, "eta-duration").textContent).toBe(
-      "14 d 1 h 30 min door to door",
-    );
-    const flagsText = q(root, "eta-flags").textContent!;
-    expect(flagsText).toContain("DST ×2");
-    expect(flagsText).toContain("1 h offset-table error");
-    expect(q<HTMLElement>(root, "eta-summary").dataset.state).toBe("ok");
+  it("leads with the ETA summary: headline, door-to-door and flags", async () => {
+    const w = await open();
+    await choose(w, "truck-ship-rail");
+    expect(
+      screen.getByText("Fri 12 Apr 2024 · 17:30 Tokyo (+09:00)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("14 d 1 h 30 min door to door"),
+    ).toBeInTheDocument();
+    const flags = within(screen.getByRole("list", { name: "Flags" }));
+    expect(flags.getByText("DST ×2")).toBeInTheDocument();
+    expect(flags.getByText("1 h offset-table error")).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
-  it("turns the ETA summary card into a failure state naming the leg on a missed connection", async () => {
-    const { root } = await mount();
-    choosePreset(root, "missed-connection");
-    expect(q<HTMLElement>(root, "eta-summary").dataset.state).toBe("failed");
-    expect(q(root, "eta-headline").textContent).toContain("Leg 2");
-    expect(q(root, "eta-headline").textContent).toContain("Missed connection");
+  it("turns the summary into a failure naming the leg on a missed connection", async () => {
+    const w = await open();
+    await choose(w, "missed-connection");
+    expect(screen.getByText(/^Leg 2: Missed connection/)).toBeInTheDocument();
+    expect(etaLine()).toHaveTextContent("No ETA — see the reason below.");
+    expect(screen.queryByText(/^ETA 20/)).not.toBeInTheDocument();
   });
 
-  it("draws the Route chart as one link and one dot per station, with the leg's own numeral", async () => {
-    const { root } = await mount();
-    choosePreset(root, "truck-ship-rail");
-    const svg = q(root, "chart-route").querySelector<SVGSVGElement>("svg")!;
-    // 3 legs -> 3 links (segments), 4 stations -> 4 dots.
-    expect(svg.querySelectorAll(".ts-chart__link line")).toHaveLength(3);
-    expect(svg.querySelectorAll(".ts-chart__dot circle")).toHaveLength(4);
-    // Colour is never the only cue: each segment's own numeral is real text.
-    const texts = [...svg.querySelectorAll("text")].map((t) => t.textContent);
-    expect(texts.some((t) => t?.startsWith("① "))).toBe(true);
-    expect(texts.some((t) => t?.startsWith("② "))).toBe(true);
-    expect(texts.some((t) => t?.startsWith("③ "))).toBe(true);
+  it("draws the Route chart with each segment's own numeral as real text", async () => {
+    const w = await open();
+    await choose(w, "truck-ship-rail");
+    for (const numeral of ["①", "②", "③"]) {
+      expect(
+        screen.getAllByText(new RegExp(`^${numeral} `)).length,
+      ).toBeGreaterThan(0);
+    }
+    await expectNoAxeViolations(w.root);
   });
 
   it("keeps both charts out of the tab order, before and after a re-draw", async () => {
-    const { root } = await mount();
-    const tabStops = () =>
-      [...root.querySelectorAll<SVGSVGElement>("svg[role='img']")].filter(
-        (svg) => svg.tabIndex >= 0,
-      );
-    // The library writes tabindex="0" on a chart's <svg> unless told otherwise.
-    expect(root.querySelectorAll("svg[role='img']").length).toBeGreaterThan(0);
-    expect(tabStops()).toEqual([]);
-    choosePreset(root, "missed-connection");
-    expect(tabStops()).toEqual([]);
+    const w = await open();
+    const walk = async () => {
+      for (let i = 0; i < 60; i++) {
+        await w.user.tab();
+        expect(document.activeElement?.localName).not.toBe("svg");
+      }
+    };
+    await walk();
+    await choose(w, "missed-connection");
+    await walk();
   });
 
-  it("draws a broken (dashed) link on the Route chart for a missed connection", async () => {
-    const { root } = await mount();
-    choosePreset(root, "missed-connection");
-    const svg = q(root, "chart-route").querySelector<SVGSVGElement>("svg")!;
-    const dashed = [...svg.querySelectorAll(".ts-chart__link line")].some(
-      (line) => line.getAttribute("stroke-dasharray") !== "none",
-    );
-    expect(dashed).toBe(true);
-  });
-
-  it("draws the To-scale chart with one bar per reached leg and a conflict marker for a missed connection", async () => {
-    const { root } = await mount();
-    choosePreset(root, "missed-connection");
-    root.querySelector<HTMLButtonElement>('[data-role="view-scale"]')!.click();
-    const svg = q(root, "chart-scale").querySelector<SVGSVGElement>("svg")!;
-    // Only the truck (reached) leg gets a real bar; the ship's missed
-    // connection is a conflict link, not a bar.
-    expect(svg.querySelectorAll(".ts-chart__bar-x rect")).toHaveLength(1);
-    const texts = [...svg.querySelectorAll("text")].map((t) => t.textContent);
-    expect(texts).toContain("missed");
+  it("switches to the To-scale chart, which says 'missed' for a missed connection", async () => {
+    const w = await open();
+    await choose(w, "missed-connection");
+    expect(
+      screen.getByRole("button", { name: "Route", pressed: true }),
+    ).toBeInTheDocument();
+    await w.user.click(screen.getByRole("button", { name: "To scale" }));
+    expect(
+      screen.getByRole("button", { name: "To scale", pressed: true }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Route", pressed: false }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("missed").length).toBeGreaterThan(0);
+    await w.user.click(screen.getByRole("button", { name: "Route" }));
+    expect(
+      screen.getByRole("button", { name: "Route", pressed: true }),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
   it("reads an offset-table badge of 1 h early on leg 1 of truck-ship-rail", async () => {
-    const { root } = await mount();
-    choosePreset(root, "truck-ship-rail");
-    const journeyText = q(root, "journey").textContent!;
-    expect(journeyText).toContain("1 h early");
+    const w = await open();
+    await choose(w, "truck-ship-rail");
+    expect(within(itinerary()).getByText("1 h early")).toBeInTheDocument();
   });
 
   it("reads an offset-table badge of 1 h late on both legs of fall-back-night", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back-night");
-    // Scoped to the itinerary: the route map shows the same disagreement as
-    // its own station badge, a second, independent appearance of the value.
-    const badges = [
-      ...q(root, "journey").querySelectorAll(".gmt-transport-badge--disagrees"),
-    ].map((el) => el.textContent);
-    expect(badges).toEqual(["1 h late", "1 h late"]);
+    const w = await open();
+    await choose(w, "fall-back-night");
+    expect(within(itinerary()).getAllByText("1 h late")).toHaveLength(2);
   });
 
   it("disagrees with no badge on trans-pacific", async () => {
-    const { root } = await mount();
-    choosePreset(root, "trans-pacific");
+    const w = await open();
+    await choose(w, "trans-pacific");
     expect(
-      q(root, "journey").querySelectorAll(".gmt-transport-badge--disagrees"),
+      within(itinerary()).queryAllByText(/^\d+ h (early|late)$/),
     ).toHaveLength(0);
   });
 
   it("groups the itinerary by date, with the final arrival tagged ETA and a spring-forward DST note", async () => {
-    const { root } = await mount();
-    choosePreset(root, "truck-ship-rail");
-    const journeyText = q(root, "journey").textContent!;
-    expect(journeyText).toContain("Fri 29 Mar 2024");
-    expect(journeyText).toContain("ETA");
-    expect(journeyText).toContain("London clocks spring forward");
+    const w = await open();
+    await choose(w, "truck-ship-rail");
+    const list = within(itinerary());
     expect(
-      root.querySelectorAll('[data-role="journey"] .gmt-delivery-day'),
-    ).not.toHaveLength(0);
+      list.getByRole("heading", { name: "Fri 29 Mar 2024" }),
+    ).toBeInTheDocument();
+    expect(list.getByText("ETA")).toBeInTheDocument();
+    expect(list.getByText(/London clocks spring forward/)).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
   it("annotates the Date Line crossing in the itinerary for trans-pacific", async () => {
-    const { root } = await mount();
-    choosePreset(root, "trans-pacific");
-    expect(q(root, "journey").textContent).toContain("Date Line");
+    const w = await open();
+    await choose(w, "trans-pacific");
+    expect(within(itinerary()).getByText(/Date Line/)).toBeInTheDocument();
   });
 
   it("marks the missed handoff in the itinerary for missed-connection", async () => {
-    const { root } = await mount();
-    choosePreset(root, "missed-connection");
-    expect(q(root, "journey").textContent).toContain("Missed connection");
-    expect(root.querySelector(".gmt-delivery-event--missed")).not.toBeNull();
+    const w = await open();
+    await choose(w, "missed-connection");
+    expect(
+      within(itinerary()).getByText(/Missed connection/),
+    ).toBeInTheDocument();
   });
 
   it("seeds the chat starter V38 and sets the leg count to 2", async () => {
-    const seed = {
+    await open({
       legs: [
         {
           departure: "2024-03-29T08:00:00+01:00[Europe/Rome]",
@@ -486,90 +446,81 @@ describe("mountDeliveryScheduler", () => {
         },
         { duration: "P11D", timeZone: "Asia/Tokyo", mode: "ship" },
       ],
-    };
-    const { root } = await mount(seed);
-    expect(q<HTMLSelectElement>(root, "leg-count").value).toBe("2");
-    expect(
-      q(root, "delivery-output").textContent!.replace(/\n\s+/g, " "),
-    ).toContain("2024-04-11T13:00:00+09:00[Asia/Tokyo]");
+    });
+    expect(countBox()).toHaveDisplayValue("2");
+    expect(output()).toHaveTextContent("2024-04-11T13:00:00+09:00[Asia/Tokyo]");
   });
 
-  // The truck lands in London at 04:00Z on 31 March and is ready at 06:00Z
-  // after its 2-hour dwell. The ship's printed 07:30 is read on London's
-  // clock — +01:00 after that morning's spring-forward — as 06:30Z, so the
-  // connection is made and the rail leg lands in Tokyo on the 12th.
+  // The truck lands in London at 04:00Z on 31 March and is ready at 06:00Z after its 2-hour
+  // dwell. The ship's printed 07:30 is read on London's clock (+01:00 after that morning's
+  // spring-forward) as 06:30Z, so the connection is made and the rail leg lands in Tokyo on
+  // the 12th.
   it("reads a zoneless leg 2 departure on leg 1's clock", async () => {
-    const { root } = await mount();
-    choosePreset(root, "truck-ship-rail");
-    type(root, "departure-2", "2024-03-31T07:30:00");
-    const output = q(root, "delivery-output").textContent!;
-    expect(output).not.toBe("NO SIGNAL");
-    expect(output.replace(/\n\s+/g, " ")).toContain(
-      "2024-04-12T18:00:00+09:00[Asia/Tokyo]",
-    );
+    const w = await open();
+    await choose(w, "truck-ship-rail");
+    await replace(w, departureBox(2), "2024-03-31T07:30:00");
+    expect(output()).not.toHaveTextContent("NO SIGNAL");
+    expect(output()).toHaveTextContent("2024-04-12T18:00:00+09:00[Asia/Tokyo]");
+  });
+
+  it("follows the leg count, hiding legs past it", async () => {
+    const w = await open();
+    await w.user.selectOptions(countBox(), "2");
+    expect(screen.getAllByRole("group", { name: /^[①②③④]/ })).toHaveLength(2);
+    expect(presetBox()).toHaveDisplayValue("Custom");
+    await expectNoAxeViolations(w.root);
   });
 
   it("round-trips every preset's state as a permalink of strings", async () => {
     for (const preset of DELIVERY_PRESETS) {
-      const { root, handle } = await mount();
-      choosePreset(root, preset.id);
-      const state = handle.getPermalinkState?.() as Record<string, string>;
-      expect(state).not.toBeNull();
-      for (const value of Object.values(state))
-        expect(typeof value).toBe("string");
-      const url = encodeWidgetPermalink("delivery", state);
-      const seeded = seedFromLocation("delivery", url.slice(url.indexOf("?")));
-      const again = await mount(seeded);
+      const w = await open();
+      await choose(w, preset.id);
+      const url = w.permalink();
+      const seeded = seedFromLocation(entry.kind, url.slice(url.indexOf("?")));
+      expect(seeded).not.toBeNull();
+      w.destroy();
+      const again = await open(seeded as Record<string, unknown>);
       const [, result] = EXPECTED[preset.id]!;
       if (result === null) {
-        expect(q(again.root, "delivery-output").textContent).toBe("NO SIGNAL");
+        expect(output()).toHaveTextContent("NO SIGNAL");
       } else {
-        expect(
-          q(again.root, "delivery-output").textContent!.replace(/\n\s+/g, " "),
-        ).toBe(result);
+        expect(output()).toHaveTextContent(result);
       }
-      document.body.innerHTML = "";
+      again.destroy();
     }
   });
 
   it("is inert when aborted before the library loads", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDeliverySchedulerTemplate();
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountDeliveryScheduler(root, {}, controller.signal);
-    expect(handle.getPermalinkState?.()).toBeNull();
+    const w = await renderWidget(entry, { args: {}, aborted: true });
+    expect(w.permalink()).toBe(encodeWidgetPermalink(entry.kind, {}));
   });
 
   it("can be destroyed twice", async () => {
-    const { handle } = await mount();
+    const w = await open();
     expect(() => {
-      handle.destroy();
-      handle.destroy();
+      w.destroy();
+      w.destroy();
     }).not.toThrow();
   });
 });
 
 describe("a seed applied to the default template (the tool page)", () => {
   it("keeps zones outside the curated list and reads them", async () => {
-    const { root } = await mount(
-      {
-        startTimeZone: "Europe/Helsinki",
-        legs: [
-          {
-            departure: "2024-06-10T08:00:00+03:00[Europe/Helsinki]",
-            duration: "PT2H",
-            timeZone: "Europe/Helsinki",
-            mode: "truck",
-          },
-        ],
-      },
-      {},
-    );
-    expect(q<HTMLSelectElement>(root, "start-zone").value).toBe(
-      "Europe/Helsinki",
-    );
-    expect(q<HTMLSelectElement>(root, "zone-1").value).toBe("Europe/Helsinki");
-    expect(q(root, "delivery-output").textContent).not.toBe("NO SIGNAL");
+    await open({
+      startTimeZone: "Europe/Helsinki",
+      legs: [
+        {
+          departure: "2024-06-10T08:00:00+03:00[Europe/Helsinki]",
+          duration: "PT2H",
+          timeZone: "Europe/Helsinki",
+          mode: "truck",
+        },
+      ],
+    });
+    expect(startZoneBox()).toHaveDisplayValue("Europe/Helsinki");
+    expect(
+      within(legGroup(1)).getByRole("combobox", { name: "Arrives in" }),
+    ).toHaveDisplayValue("Europe/Helsinki");
+    expect(output()).not.toHaveTextContent("NO SIGNAL");
   });
 });

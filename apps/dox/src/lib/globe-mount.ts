@@ -1,20 +1,29 @@
 /**
- * DOX-C3b (#139) — the globe's markup and wiring, for every surface that hosts it.
+ * The globe's markup and wiring, for every surface that hosts it.
  *
  * One template and one mount serve all three: the landing hero, `/tools/zoned-earth/`
  * and the `/dox` chat rail. A rail cannot instantiate an Astro component, which is
  * why the markup is a string here rather than in `Globe.astro`.
  *
  * Everything is container-scoped, never `document`-scoped, so two globes can live
- * in one document — one on the page and one in the rail.
+ * in one document: one on the page and one in the rail.
  */
 import {
-  EARTH_IMAGERY,
-  renderDataCreditsHtml,
-  TZ_BOUNDARIES,
-  watchDataCredits,
-} from "./data-credits";
-import { escapeHtml } from "./widget-ui";
+  dataCredits,
+  field,
+  findWidget,
+  html,
+  type SafeHtml,
+  widget,
+} from "~/widgets/builders";
+import { defineElements } from "~/widgets/define";
+import {
+  combobox,
+  type GmtCombobox,
+} from "~/widgets/primitives/combobox/combobox";
+import { listbox, type GmtListbox } from "~/widgets/primitives/listbox/listbox";
+import styles from "~/widgets/tools/globe.module.css";
+import { EARTH_IMAGERY, TZ_BOUNDARIES, watchDataCredits } from "./data-credits";
 import {
   onceDestroy,
   WidgetLoadError,
@@ -24,11 +33,11 @@ import {
 
 export interface GlobeArgs {
   /** The zone to select and centre on. The clock panel beside the globe lists
-   *  every plottable zone regardless — see `zone-clock-list.ts`. */
+   *  every plottable zone regardless; see `zone-clock-list.ts`. */
   zone?: string;
 }
 
-export interface GlobeTemplateOptions {
+interface GlobeTemplateOptions {
   /** Namespaces the ids below. Two globes in one document — one on the page and
    *  one in the chat rail — would otherwise collide on `globe-stage`. */
   idPrefix?: string;
@@ -43,117 +52,114 @@ const DEFAULT_HEADING = "Every zone, computed live by @northguild/gmt";
 const DEFAULT_CAPTION =
   "No hardcoded offset tables. No Date object. Every local time, UTC offset, and DST flag on this globe is computed in your browser by GMT's Zoned functions, and recomputed every second. Drag to spin, scroll to zoom, or search a zone to watch it work.";
 
+/** The widget's slug: the gates, `findWidget` and the chat registry read it. */
+export const GLOBE_WIDGET_NAME = "globe";
+
+/** The viewport width at and below which the hero stacks the globe above its zone list. */
+const EMBEDDED_STACKED = "(width <= 99.9375rem)";
+
 /**
  * The globe's chrome, for both surfaces.
  *
- * This used to render only the rail's copy while `Globe.astro` kept its own
- * template, and **the two had already drifted**: `mountGlobe` looks up
- * `[data-role="stage"]`, which the `.astro` markup never had, so mounting the
- * globe against a page's own markup would have silently produced an inert
- * widget. Both ids and data-roles are emitted now, and there is one template.
- *
- * The conditional attributes are the fiddly part and the reason this
- * consolidation was left until last: Astro renders `class:list` and an
- * `undefined` attribute value by omitting them entirely, and this markup sits
- * on the two pages the visual gate cares most about.
+ * A shell holds the region: the shell takes the page margin (or, embedded, fills the hero's
+ * column) and carries `data-tools-fullbleed` on the page so the content column widens. The
+ * region is the kit `widget()`, and the parts the mount needs are found with `findWidget`.
  */
 export function renderGlobeTemplate({
   idPrefix = "globe",
   heading = DEFAULT_HEADING,
   caption = DEFAULT_CAPTION,
   embedded = false,
-}: GlobeTemplateOptions = {}): string {
-  const stageId = `${idPrefix}-stage`;
-  const searchId = `${idPrefix}-zone-search`;
-  const clocksId = `${idPrefix}-clock-panel`;
+}: GlobeTemplateOptions = {}): SafeHtml {
+  const id = (local: string) => `${idPrefix}-${local}`;
 
-  /* Astro emits `class:list={{ x: cond }}` as a space-joined class list and
-     omits `data-tools-fullbleed={undefined}` altogether. Reproduced literally
-     so the built pages stay byte-identical. */
-  const rootClass = embedded ? "gmt-globe gmt-globe-embedded" : "gmt-globe";
-  const fullbleed = embedded ? "" : " data-tools-fullbleed";
+  const inner = html`<div class="${styles.root}" ${embedded ? html`data-embedded` : ""}>
+    ${embedded ? "" : html`<h2 class="${styles.title}">${heading}</h2>`}
+    <div class="${styles.layout}">
+      <div class="${styles.frame}">
+        <div class="${styles.stage}" id="${id("stage")}" data-gate="globe-stage">
+          <div class="${styles.zoom}" id="${id("zoom")}" data-gate="globe-zoom" role="group" aria-label="Globe controls">
+            <button type="button" data-globe-zoom="in" aria-label="Zoom in">+</button>
+            <button type="button" data-globe-zoom="out" aria-label="Zoom out">−</button>
+            <button type="button" data-globe-zoom="reset" aria-label="Reset zoom">⊙</button>
+            ${dataCredits({
+              credits: [TZ_BOUNDARIES, EARTH_IMAGERY],
+              id: id("data-credits"),
+              placement: "stack",
+            })}
+          </div>
+          <div class="${styles.tooltip}" id="${id("tooltip")}" data-gate="globe-tooltip" hidden></div>
+        </div>
+      </div>
+      <div class="${styles.side}">
+        <div class="${styles.search}">
+          ${field({
+            id: id("zone-search"),
+            label: "Find a zone",
+            control: ({ id: cid, describedBy }) =>
+              combobox({
+                id: cid,
+                describedBy,
+                label: "Find a zone",
+                items: [],
+                placeholder: "e.g. Asia/Tokyo",
+                placement: embedded ? "above" : "below",
+              }),
+          })}
+          <div class="${styles.filters}" id="${id("filters")}"></div>
+        </div>
+        ${listbox({
+          id: id("clocks"),
+          label: "Pinned zones — select one to focus the globe",
+          items: [],
+          className: styles.clocks,
+        })}
+      </div>
+    </div>
+    ${embedded ? "" : html`<p class="${styles.caption}">${caption}</p>`}
+  </div>`;
 
-  return (
-    `<div class="${rootClass}"${fullbleed}>` +
-    (embedded
-      ? ""
-      : `<h2 class="gmt-chart-title">${escapeHtml(heading)}</h2>`) +
-    `<div class="gmt-globe-layout">` +
-    `<div class="gmt-globe-frame">` +
-    /* `not-content` is Starlight's opt-out from its markdown typography
-       (every rule in its style/markdown.css carries
-       `:not(:where(.not-content *))`). Without it the canvas — a sibling of
-       the zoom cluster inside `.sl-markdown-content` — picked up
-       `margin-top: var(--sl-content-gap-y)` (1rem) plus `max-width: 100%`,
-       which pushed the square canvas 16px down inside the square
-       `overflow: hidden` stage and squashed its width. That clipped the
-       bottom of the globe on every viewport whose stage was under ~600px.
-       Scoped to the stage, not `.gmt-globe`: the root's own `<h2>` heading
-       and `<p>` caption *should* keep Starlight's content styling. */
-    `<div class="gmt-globe-stage gmt-glass not-content" id="${stageId}" data-role="stage">` +
-    `<div class="gmt-globe-zoom" role="group" aria-label="Globe controls">` +
-    `<button type="button" data-globe-zoom="in" aria-label="Zoom in">+</button>` +
-    `<button type="button" data-globe-zoom="out" aria-label="Zoom out">−</button>` +
-    `<button type="button" data-globe-zoom="reset" aria-label="Reset zoom">⊙</button>` +
-    /* The fourth button of the stack. The globe always draws both data sets, so it always
-       carries the credit; `idPrefix` keeps the popover id unique per mount. */
-    renderDataCreditsHtml([TZ_BOUNDARIES, EARTH_IMAGERY], {
-      id: `${idPrefix}-data-credits`,
-      placement: "stack",
-    }) +
-    `</div>` +
-    `</div>` +
-    `</div>` +
-    `<div class="gmt-globe-side">` +
-    `<div class="gmt-globe-search gmt-combobox">` +
-    `<label for="${searchId}">Find a zone</label>` +
-    /* Input and filter gear share one row so the gear is an addon on the
-       field, not a control floating beside it: `align-items: stretch` makes it
-       exactly the input's height without anyone hardcoding what that is.
-       `.gmt-combobox` above stays the positioning context for both the
-       typeahead list and the filter popup. */
-    `<div class="gmt-globe-field-row">` +
-    `<input type="search" id="${searchId}" class="gmt-field" placeholder="e.g. Asia/Tokyo" autocomplete="off" data-globe-search>` +
-    /* Empty, and filled by `zone-filter-ui.ts` once the globe has mounted:
-       which toggles are worth showing depends on live readings, and none of
-       them mean anything before there is a clock list to narrow.
-       A plain <div> with a button disclosure inside, not <details>: a <details>
-       in this row brought its own layout with it — a marker box that ate the
-       button's width, and a `::details-content` box that changed the row's
-       height when it opened. The dismissal behaviour a popup needs is
-       hand-written either way. */
-    `<div class="gmt-globe-filters" id="${idPrefix}-filters" data-role="filters"></div>` +
-    `</div>` +
-    `</div>` +
-    `<div class="gmt-globe-clocks" id="${clocksId}" data-role="clocks" role="listbox" aria-label="Pinned zones — select one to focus the globe" tabindex="0"></div>` +
-    `</div>` +
-    `</div>` +
-    (embedded
-      ? ""
-      : `<p class="gmt-globe-caption">${escapeHtml(caption)}</p>`) +
-    `</div>`
+  const region: SafeHtml = widget(
+    {
+      name: GLOBE_WIDGET_NAME,
+      label: embedded ? "Zoned Earth overview" : "Zoned Earth",
+      scope: idPrefix,
+    },
+    inner,
   );
+  return html`<div class="${styles.shell}" ${embedded ? html`data-embedded` : html`data-tools-fullbleed`}>${region}</div>`;
 }
 
 export const mountGlobe: MountFn<GlobeArgs> = async (root, args, signal) => {
   watchDataCredits();
-  const stage = root.querySelector<HTMLElement>('[data-role="stage"]');
-  const clockPanel = root.querySelector<HTMLElement>('[data-role="clocks"]');
-  if (!stage || !clockPanel) return onceDestroy(() => {});
+  defineElements();
+  const globe = findWidget(root, GLOBE_WIDGET_NAME);
+  const stage = globe.part("stage");
+  const clockPanel = globe.part<GmtListbox>("clocks");
+  const tooltip = globe.part("tooltip");
+  const zoom = globe.part("zoom");
+  const search = globe.el.querySelector<GmtCombobox>("gmt-combobox");
 
   let initGlobe: typeof import("./globe").initGlobe;
   try {
     ({ initGlobe } = await import("./globe"));
   } catch (error) {
     /* The chunk carries `@northguild/gmt`, so a failed import is the library
-       failing to load — the case `WidgetLoadError` exists to distinguish, and
+       failing to load: the case `WidgetLoadError` exists to distinguish, and
        the one a reload can fix. */
     throw new WidgetLoadError(error);
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  const filterPanel = root.querySelector<HTMLElement>('[data-role="filters"]');
-  const host = await initGlobe(stage, clockPanel, filterPanel);
+  const host = await initGlobe(
+    stage,
+    clockPanel,
+    globe.part<HTMLElement>("filters"),
+    {
+      tooltip,
+      zoom,
+    },
+  );
   // The import and the init are both awaited above; StrictMode's second pass
   // can have aborted in between, and the handle we just built is the one thing
   // that would leak (an rAF loop and a 1s clock interval) if we returned it.
@@ -162,41 +168,54 @@ export const mountGlobe: MountFn<GlobeArgs> = async (root, args, signal) => {
     return onceDestroy(() => {});
   }
 
-  const search = root.querySelector<HTMLInputElement>("[data-globe-search]");
-  let combobox: { destroy(): void } | undefined;
-
+  const wiring = new AbortController();
   if (search) {
-    const { createZoneCombobox } = await import("./zone-combobox");
-    if (signal.aborted) {
-      host.destroy();
-      return onceDestroy(() => {});
-    }
-    combobox = createZoneCombobox(
-      search,
-      host.getZones().map((zone) => zone.id),
-      (id) => host.focusZone(id),
-    );
+    search.items = host.getZones().map((zone) => zone.id);
     search.value = host.getSelected() ?? "";
+    search.addEventListener(
+      "change",
+      (event) => {
+        const zone = (event as CustomEvent<{ value: string }>).detail.value;
+        if (zone) host.focusZone(zone);
+      },
+      { signal: wiring.signal },
+    );
+    /* In the hero the search box sits in the bottom half of a fixed-height column when the
+       globe is stacked over its list, so its list opens upward there and downward beside it. */
+    if (globe.el.querySelector("[data-embedded]")) {
+      const stacked = globalThis.matchMedia?.(EMBEDDED_STACKED);
+      const place = () =>
+        search.setAttribute(
+          "data-placement",
+          stacked?.matches === false ? "below" : "above",
+        );
+      place();
+      stacked?.addEventListener("change", place, { signal: wiring.signal });
+    }
   }
 
   host.onSelect((reading) => {
     if (search) search.value = reading?.id ?? "";
   });
 
-  for (const button of root.querySelectorAll<HTMLButtonElement>(
+  for (const button of zoom.querySelectorAll<HTMLButtonElement>(
     "[data-globe-zoom]",
   )) {
-    button.addEventListener("click", () => {
-      const kind = button.dataset.globeZoom;
-      if (kind === "in") host.zoomBy(1.4);
-      else if (kind === "out") host.zoomBy(1 / 1.4);
-      else host.setZoom(1);
-    });
+    button.addEventListener(
+      "click",
+      () => {
+        const kind = button.dataset.globeZoom;
+        if (kind === "in") host.zoomBy(1.4);
+        else if (kind === "out") host.zoomBy(1 / 1.4);
+        else host.setZoom(1);
+      },
+      { signal: wiring.signal },
+    );
   }
 
   /* Seeded after wiring, so the selection lands on a live globe and the clock
      panel and search box follow it. `focusZone` selects as well as rotates, so
-     calling `selectZone` first only did the same work twice — and fired the
+     calling `selectZone` first only did the same work twice, and fired the
      selection callback twice with it. It returns early for a zone with no
      coordinate, so an invented zone degrades to "the globe stays where it was"
      rather than throwing; the registry rejects those first (see
@@ -205,10 +224,10 @@ export const mountGlobe: MountFn<GlobeArgs> = async (root, args, signal) => {
 
   return onceDestroy(
     () => {
-      combobox?.destroy();
+      wiring.abort();
       host.destroy();
     },
-    // The *live* selection, not the seeded one — the reader may have spun the
+    // The *live* selection, not the seeded one: the reader may have spun the
     // globe somewhere else, and that is the view worth linking to.
     () => ({ zone: host.getSelected() ?? args.zone }),
   ) satisfies WidgetHandle;

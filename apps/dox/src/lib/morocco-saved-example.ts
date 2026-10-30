@@ -15,13 +15,13 @@ import { withBase } from "./site";
 
 const ZONE = "Africa/Casablanca";
 
-export const SAVED_EXAMPLE = savedExample(
+const SAVED_EXAMPLE = savedExample(
   { zone: ZONE, offset: expectedOffset(ZONE), savedShiftMinutes: 60 },
   "2026-11-16T09:00:00",
 );
 
 /** What the textarea holds on load and after "Reset example". */
-export const STORED_EXAMPLE: string = MOROCCO_PRESET;
+const STORED_EXAMPLE: string = MOROCCO_PRESET;
 
 /** The saved-events section's settings for Morocco; the page and the chat add their `idPrefix`. */
 export const MOROCCO_STORED: Omit<StoredConfig, "idPrefix"> = {

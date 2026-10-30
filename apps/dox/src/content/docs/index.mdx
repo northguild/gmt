@@ -23,11 +23,12 @@ head:
     content: "GMT: date and time library for JavaScript, built on Temporal"
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
+import { CardGrid } from "@astrojs/starlight/components";
 import SectionHeading from "../../components/SectionHeading.astro";
 
 import { gmtVersion } from "~/generated/versions";
 import GridSection from "../../components/GridSection.astro";
+import HomeCard from "../../components/HomeCard.astro";
 import HeroGlobe from "../../components/HeroGlobe.astro";
 import ScrollReveal from "../../components/ScrollReveal.astro";
 import WhyDateAlternatives from "../../components/WhyDateAlternatives.astro";
@@ -61,50 +62,50 @@ the globe above is computed live in your browser and recomputed every second.
 
 <div data-reveal-group>
 <CardGrid>
-  <Card title="TC39 Temporal, not a homegrown type system" icon="star">
+  <HomeCard title="TC39 Temporal, not a homegrown type system" icon="star" tone="orange">
     Built directly on [TC39 Temporal](https://tc39.es/proposal-temporal/), the standard
     JavaScript date and time API. No `Date` object anywhere, enforced by three dedicated lint
     packages.
-  </Card>
+  </HomeCard>
 
-<Card title="Standard strings in, standard strings out" icon="document">
+<HomeCard title="Standard strings in, standard strings out" icon="document" tone="purple">
   Every function takes and returns [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html)
   strings, and every zoned value carries its [RFC 9557](https://www.rfc-editor.org/rfc/rfc9557)
   time-zone annotation. Formatters emit [RFC 3339](https://www.rfc-editor.org/rfc/rfc3339),
   [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) and [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110) HTTP dates.
-</Card>
+</HomeCard>
 
-<Card title="IANA zones, CLDR locales" icon="translate">
+<HomeCard title="IANA zones, CLDR locales" icon="translate" tone="green">
   Time zones are [IANA Time Zone Database](https://www.iana.org/time-zones) identifiers, never
   hardcoded offsets. Locales are BCP 47 tags, with week rules and wording from the
   [Unicode CLDR](https://cldr.unicode.org/) data your runtime ships.
-</Card>
+</HomeCard>
 
-<Card title="Explicit DST disambiguation" icon="setting">
+<HomeCard title="Explicit DST disambiguation" icon="setting" tone="red">
   Wall-clock times in a daylight-saving gap or overlap resolve with Temporal's own
   `disambiguation` options — `compatible`, `earlier`, `later` or `reject` — on construction
   *and* arithmetic, a control none of the other libraries expose.
-</Card>
+</HomeCard>
 
-<Card title="World calendars by the proposal" icon="seti:clock">
+<HomeCard title="World calendars by the proposal" icon="seti:clock" tone="blue">
   Hebrew, Islamic, Japanese, Buddhist, Persian, Ethiopic and more, with era codes and proleptic
   dates as the [Intl Era and Month Code proposal](https://github.com/tc39/proposal-intl-era-monthcode)
   defines them, across Temporal's whole date range.
-</Card>
+</HomeCard>
 
-<Card title="The formats freight actually sends" icon="random">
+<HomeCard title="The formats freight actually sends" icon="random" tone="ice">
   Freight mostly does not send ISO 8601. GMT reads and writes UN/EDIFACT `DTM` values, ANSI X12
   dates and time codes, and GS1 EPCIS 2.0 event times, each against the standard's own code
   list. A code either carries an offset or it does not, and GMT never invents one: an
   offsetless value stays a local time until you name the zone.
   [Read the guide](/guides/industries/intermodal-edi-timestamps/).
-</Card>
+</HomeCard>
 
-<Card title="Every standard, in one place" icon="open-book">
+<HomeCard title="Every standard, in one place" icon="open-book" tone="green" span="full">
   TC39 and ECMA-402, Temporal, the Intl proposals, ISO 8601, RFC 3339, RFC 9557, the IANA
   Time Zone Database, BCP 47, CLDR, RFC 5322, RFC 9110, UN/EDIFACT, ANSI X12, GS1 EPCIS, SQL-92
   and test262: what each one is, and what GMT uses it for. [Read The Standards](/guides/concepts/standards/).
-</Card>
+</HomeCard>
 </CardGrid>
 </div>
 
@@ -116,42 +117,42 @@ the globe above is computed live in your browser and recomputed every second.
 
 <div data-reveal-group>
 <CardGrid>
-<Card title="No borrowed test oracle" icon="magnifier">
+<HomeCard title="No borrowed test oracle" icon="magnifier" tone="orange">
   GMT's expected answers come from the standards themselves — Temporal, the
   RFCs, the official test262 suite — and from the Temporal built into Chrome,
   never from the polyfill GMT runs on or from another date library. That's how
   GMT catches the polyfill's own bugs: [see the fixes we've sent upstream](/upstream/).
-</Card>
+</HomeCard>
 
-<Card title={`~${executionRatio(combinedCompetitorExecutions())}× more CI test executions`} icon="rocket">
+<HomeCard title={`~${executionRatio(combinedCompetitorExecutions())}× more CI test executions`} icon="rocket" tone="purple">
   {formatCount(gmtStats.executions)} executions — {formatCount(gmtStats.tests)} tests across {gmtStats.timezones} timezones × {gmtStats.nodes.length} Node
   versions — against `Luxon`, `date-fns`, `Moment.js`, `Day.js`,
   `Spacetime`, and `@internationalized/date`’s combined {formatCount(combinedCompetitorExecutions())}.
-</Card>
+</HomeCard>
 
-<Card title="Correct at the edges" icon="puzzle">
+<HomeCard title="Correct at the edges" icon="puzzle" tone="green">
   A nanosecond before midnight stays on its day, the first and last instants Temporal can
   represent give exact answers, and daylight-saving rules hold to the end of the range. Each of
   these is a named test. [See the evidence](/guides/concepts/correct-at-the-edges/).
-</Card>
+</HomeCard>
 
-<Card title="Safeguards against invalid inputs" icon="padlock">
+<HomeCard title="Safeguards against invalid inputs" icon="padlock" tone="red">
   Temporal throws `RangeError` / `TypeError` on invalid data. GMT validates,
   normalizes, and prevents crashes, so your app stays robust.
-</Card>
+</HomeCard>
 
-<Card title="Nanoseconds, not milliseconds" icon="approve-check">
+<HomeCard title="Nanoseconds, not milliseconds" icon="approve-check" tone="blue">
   Temporal counts time in nanoseconds, and GMT keeps them exact as `bigint`, with a JSON-safe
   string form and exact converters for .NET ticks, Windows FILETIME, NTP and Postgres
   microseconds. `Luxon`, `date-fns`, `Moment.js`, `Day.js`, `Spacetime` and
   `@internationalized/date` all stop at the millisecond.
   [See `toNanoseconds`](/reference/precision/convert/toNanoseconds).
-</Card>
+</HomeCard>
 
-<Card title="Zero known bugs" icon="list-format">
+<HomeCard title="Zero known bugs" icon="list-format" tone="ice">
   None of the {formatCount(gmtStats.tests)} tests is skipped, focused or marked as expected to
   fail. A check in CI fails the build if one ever is, so a known bug can't ship switched off.
-</Card>
+</HomeCard>
 </CardGrid>
 </div>
 

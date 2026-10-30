@@ -1,0 +1,108 @@
+/* <gmt-readout>: a value that holds still. Every declared sample sits in the same
+   grid cell as the live value, so the box is as wide as the widest of them. */
+
+.root {
+  display: inline-grid;
+  max-inline-size: 100%;
+  padding-block: 0.25rem;
+  padding-inline: 0.625rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font-size: clamp(0.875rem, 0.82rem + 0.25vw, 1.0625rem);
+  font-variant-numeric: tabular-nums;
+
+  /* Wide, the box holds its widest sample on one line. In a column narrower than that the text
+     wraps at a space, or anywhere, inside the same cell the samples share, so the height is the
+     longest wrap's and does not change while a value does. The box never scrolls. */
+  overflow-wrap: anywhere;
+
+  &[data-state="sentinel"] {
+    border-color: var(--gmt-signal-border);
+    background: color-mix(
+      in srgb,
+      var(--gmt-signal) 8%,
+      var(--gmt-surface-widget)
+    );
+    color: var(--gmt-signal-ink);
+  }
+
+  &[data-state="empty"] {
+    color: var(--gmt-ice-dim);
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+.value,
+.ghost {
+  grid-area: 1 / 1;
+  min-block-size: var(--gmt-target-min);
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.value {
+  /* A value longer than every sample widens the box; none is clipped. */
+  min-inline-size: 0;
+}
+
+/* The reserved width: laid out, never painted, never read. */
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.announce {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Narrow column: the box shrinks to the column and its text wraps there. */
+@container (inline-size < 14rem) {
+  .root {
+    inline-size: 100%;
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+
+    &[data-state="sentinel"] {
+      border-style: dashed;
+      color: CanvasText;
+    }
+
+    &:focus-within {
+      outline: 2px solid Highlight;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+
+    &[data-state="sentinel"] {
+      border-color: var(--gmt-signal-ink);
+      border-width: 2px;
+    }
+
+    &[data-state="empty"] {
+      color: var(--gmt-ice);
+    }
+  }
+}

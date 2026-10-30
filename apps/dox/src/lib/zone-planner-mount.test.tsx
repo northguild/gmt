@@ -3,7 +3,15 @@
  *
  * The Zone Planner mounted as a chat-rail widget: template -> mount -> read.
  */
+import { screen, within } from "@testing-library/dom";
+import { WIDGET_REGISTRY } from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  expectNoAxeViolations,
+  renderWidget,
+  setRange,
+} from "~/test/render-widget";
+import { setHtml } from "~/widgets/builders";
 import { seedFromLocation } from "./widget-permalink";
 import { seededZones } from "./zone-planner";
 import {
@@ -14,15 +22,7 @@ import {
 installJsdomShims();
 
 const NY_SPRING = "2026-03-08T06:45:00Z";
-
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderZonePlannerTemplate();
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountZonePlanner(root, args, controller.signal);
-  return { root, handle, controller };
-}
+const planner = WIDGET_REGISTRY["showZonePlanner"]!;
 
 // The mount imports the scrubber on first use. Under a full parallel suite
 // that cold import alone can pass the 20 s test timeout, so load it once here
@@ -33,81 +33,88 @@ beforeAll(async () => {
 
 afterEach(() => {
   vi.useRealTimers();
-  document.body.innerHTML = "";
+  document.body.replaceChildren();
 });
 
 describe("mountZonePlanner", () => {
   it("pins the seeded zones in order, at the seeded time", async () => {
-    const { root } = await mount({
-      zones: ["America/New_York", "Europe/London", "Asia/Tokyo"],
-      time: NY_SPRING,
+    const w = await renderWidget(planner, {
+      args: {
+        zones: ["America/New_York", "Europe/London", "Asia/Tokyo"],
+        time: NY_SPRING,
+      },
     });
-    const rows = [...root.querySelectorAll<HTMLElement>("[data-zone-row]")];
-    expect(rows.map((r) => r.dataset.zoneRow)).toEqual([
-      "America/New_York",
-      "Europe/London",
-      "Asia/Tokyo",
+    const view = within(w.root);
+    const names = view
+      .getAllByRole("button", { name: /^Remove / })
+      .map((b) => b.getAttribute("aria-label"));
+    expect(names).toEqual([
+      "Remove America/New_York",
+      "Remove Europe/London",
+      "Remove Asia/Tokyo",
     ]);
-    expect(root.querySelector('[data-role="readout"]')!.textContent).toBe(
-      "Sun 8 Mar 2026, 06:45 UTC",
+    expect(view.getByText("Sun 8 Mar 2026, 06:45 UTC")).toBeVisible();
+    expect(view.getByRole("article", { name: "New York" })).toHaveTextContent(
+      "01:45",
     );
-    const ny = rows[0]!.querySelector('[data-field="time"]')!.textContent;
-    expect(ny).toBe("01:45");
+    await expectNoAxeViolations(w.root);
+    w.destroy();
   });
 
   it("does not rewrite the page's URL, which in the rail is /dox", async () => {
+    const w = await renderWidget(planner, {
+      args: { zones: ["Asia/Tokyo"], time: NY_SPRING },
+    });
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const replace = vi.spyOn(globalThis.history, "replaceState");
-    const { root } = await mount({ zones: ["Asia/Tokyo"], time: NY_SPRING });
-    const slider = root.querySelector<HTMLInputElement>(
-      '[data-role="slider"]',
-    )!;
-    slider.value = "60";
-    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    setRange(within(w.root).getByRole("slider"), 60);
     vi.advanceTimersByTime(1000);
     expect(replace).not.toHaveBeenCalled();
+    w.destroy();
   });
 
   it("points the share link at the planner's own page", async () => {
+    const w = await renderWidget(planner, {
+      args: { zones: ["Asia/Tokyo"], time: NY_SPRING },
+    });
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
     });
-    const { root } = await mount({ zones: ["Asia/Tokyo"], time: NY_SPRING });
-    root.querySelector<HTMLButtonElement>('[data-role="share"]')!.click();
+    await w.user.click(
+      within(w.root).getByRole("button", { name: "Copy shareable link" }),
+    );
     await vi.waitFor(() => expect(writeText).toHaveBeenCalled());
     const url = String((writeText.mock.calls[0] as unknown[])[0]);
     expect(new URL(url).pathname).toBe("/gmt/tools/zone-planner/");
     expect(url).toContain("tz=Asia%2FTokyo");
+    w.destroy();
   });
 
   it("hands back a permalink of strings that seeds the page the same way", async () => {
-    const { root, handle } = await mount({
-      zones: ["America/New_York", "Europe/London"],
-      time: NY_SPRING,
+    const w = await renderWidget(planner, {
+      args: { zones: ["America/New_York", "Europe/London"], time: NY_SPRING },
     });
-    const slider = root.querySelector<HTMLInputElement>(
-      '[data-role="slider"]',
-    )!;
-    slider.value = "15";
-    slider.dispatchEvent(new Event("input", { bubbles: true }));
-    const state = handle.getPermalinkState?.() as Record<string, string>;
-    expect(state).toEqual({
+    setRange(within(w.root).getByRole("slider"), 15);
+    const search = w.permalink().slice(w.permalink().indexOf("?"));
+    const wa = new URLSearchParams(search).get("wa")!;
+    expect(JSON.parse(wa)).toEqual({
       time: "2026-03-08T07:00:00Z",
       zone1: "America/New_York",
       zone2: "Europe/London",
     });
-    const search = `?w=planner&wa=${encodeURIComponent(JSON.stringify(state))}`;
     expect(seededZones(seedFromLocation("planner", search))).toEqual([
       "America/New_York",
       "Europe/London",
     ]);
+    w.destroy();
   });
 
   it("is inert when aborted before the planner loads", async () => {
     const root = document.createElement("div");
-    root.innerHTML = renderZonePlannerTemplate();
+    setHtml(root, renderZonePlannerTemplate());
+    document.body.append(root);
     const controller = new AbortController();
     controller.abort();
     const handle = await mountZonePlanner(
@@ -116,14 +123,14 @@ describe("mountZonePlanner", () => {
       controller.signal,
     );
     expect(handle.getPermalinkState?.()).toBeNull();
-    expect(root.querySelector("[data-zone-row]")).toBeNull();
+    expect(screen.queryAllByRole("article")).toHaveLength(0);
   });
 
   it("can be destroyed twice", async () => {
-    const { handle } = await mount({ zones: ["Asia/Tokyo"] });
+    const w = await renderWidget(planner, { args: { zones: ["Asia/Tokyo"] } });
     expect(() => {
-      handle.destroy();
-      handle.destroy();
+      w.destroy();
+      w.destroy();
     }).not.toThrow();
   });
 });

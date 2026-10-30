@@ -70,7 +70,7 @@ const KEY_ZOOM_FACTOR = 1.3;
 /** Degrees per arrow key press at zoom 1, scaled down as the globe zooms in. */
 const KEY_STEP_DEG = 12;
 
-export interface ControllerOptions {
+interface ControllerOptions {
   initialRotation: readonly [number, number];
   zoomRange?: readonly [number, number];
   /** Read on every step, so a preference change lands without a remount. */
@@ -78,7 +78,7 @@ export interface ControllerOptions {
 }
 
 /** What `pointerUp` decided the gesture was. */
-export interface PointerUpResult {
+interface PointerUpResult {
   /** A tap the caller should hit-test. False after a drag or a pinch. */
   tap: boolean;
   x: number;

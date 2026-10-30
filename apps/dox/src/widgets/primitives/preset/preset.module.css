@@ -1,0 +1,119 @@
+/* <gmt-preset>: a labelled native select with a description that never changes the height. */
+
+.root {
+  container-type: inline-size;
+  display: grid;
+  gap: 0.375rem;
+  font-size: clamp(0.8125rem, 0.78rem + 0.15vw, 0.9375rem);
+}
+
+.label {
+  color: var(--gmt-ice);
+  font-weight: 600;
+}
+
+.select {
+  appearance: none;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: var(--gmt-target-min);
+  padding-block: 0.375rem;
+  padding-inline: 0.625rem 2rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  background-color: var(--gmt-surface-2);
+
+  /* A chevron drawn from two gradients, so it takes the ink colour. */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--gmt-ice) 50%),
+    linear-gradient(135deg, var(--gmt-ice) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.125rem) 55%,
+    calc(100% - 0.8125rem) 55%;
+  background-size: 0.3125rem 0.3125rem;
+  background-repeat: no-repeat;
+  color: var(--gmt-ice);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--gmt-motion-fast) var(--gmt-easing);
+
+  &:dir(rtl) {
+    padding-inline: 2rem 0.625rem;
+    background-position:
+      1.125rem 55%,
+      0.8125rem 55%;
+  }
+
+  &:hover {
+    border-color: var(--gmt-cyan);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+/* The description and every other description share one cell: the tallest sets the height. */
+.hold {
+  display: grid;
+}
+
+.description,
+.ghost {
+  grid-area: 1 / 1;
+  margin: 0;
+  color: var(--gmt-ice-dim);
+}
+
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* A narrow column wraps descriptions more, which the ghosts already reserve; the select
+   just stops using the chevron's extra gutter. */
+@container (inline-size < 14rem) {
+  .select {
+    padding-inline-end: 1.75rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .select {
+    border-color: ButtonText;
+    background-color: Field;
+    background-image:
+      linear-gradient(45deg, transparent 50%, FieldText 50%),
+      linear-gradient(135deg, FieldText 50%, transparent 50%);
+    color: FieldText;
+
+    &:focus-visible {
+      outline: 2px solid Highlight;
+    }
+  }
+
+  .label,
+  .description {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .select {
+    border-color: var(--gmt-ice);
+
+    &:focus-visible {
+      outline-width: 3px;
+    }
+  }
+
+  .description {
+    color: var(--gmt-ice);
+  }
+}

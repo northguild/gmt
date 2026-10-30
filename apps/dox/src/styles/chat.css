@@ -1,0 +1,8 @@
+/*
+ * The chat island's own sheets, in the `gmt.chat` layer. `DoxChat.tsx` imports this file, so
+ * Vite code-splits it into the island's chunk. The layer order is declared in gmt-ask-tailwind.css
+ * (and gmt.css); `gmt.chat` sorts after Tailwind's `utilities`, so these rules win against
+ * `bg-popover` and friends without a priority flag.
+ */
+@import "./gmt-ask.css" layer(gmt.chat);
+@import "./gmt-hive.css" layer(gmt.chat);

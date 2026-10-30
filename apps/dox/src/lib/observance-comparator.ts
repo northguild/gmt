@@ -51,7 +51,7 @@ export const MAX_COLUMNS = 4;
 export const MAX_YEARS = 12;
 /** The zone every Comparator calendar uses: it has none of its own, and the
  *  Builder needs one on the hand-off. */
-export const COMPARATOR_ZONE = "UTC";
+const COMPARATOR_ZONE = "UTC";
 /** The container width under which a custom column's policy editor folds, in
  *  px (30rem), as the Builder's does. */
 export const FOLD_WIDTH = 480;
@@ -64,7 +64,7 @@ export const CUSTOM_OPTION = "custom";
 // Presets
 // ---------------------------------------------------------------------------
 
-export interface PolicyPreset {
+interface PolicyPreset {
   id: string;
   label: string;
   /** Policy text (`6<5 7>1`); `""` moves nothing. */
@@ -89,7 +89,7 @@ export const POLICY_PRESETS: readonly PolicyPreset[] = [
   },
 ];
 
-export interface ComparatorPreset {
+interface ComparatorPreset {
   id: string;
   label: string;
   description: string;
@@ -149,7 +149,7 @@ export const COMPARATOR_PRESETS: readonly ComparatorPreset[] = [
 // State: what the controls hold, as the text typed
 // ---------------------------------------------------------------------------
 
-export interface HolidayState {
+interface HolidayState {
   month: string;
   day: string;
 }
@@ -213,7 +213,7 @@ export function columnText(id: string): string {
 }
 
 /** The column id for a policy text: the preset with that policy, or custom. */
-export function columnIdOfText(text: string): string {
+function columnIdOfText(text: string): string {
   const parsed = parsePolicyText(text);
   if (parsed === null) return `${CUSTOM_PREFIX}${text}`;
   const normal = formatPolicyText(parsed);
@@ -240,7 +240,7 @@ const fixedRule = (
 });
 
 /** "25 Dec": the name a holiday gets, with no comma or semicolon in it. */
-export function holidayName(month: number, day: number): string {
+function holidayName(month: number, day: number): string {
   return `${day} ${monthName(month).slice(0, 3)}`;
 }
 
@@ -452,7 +452,7 @@ export function permalinkOf(state: ComparatorState): Record<string, unknown> {
 // The model: every cell, from library calls
 // ---------------------------------------------------------------------------
 
-export type CellState = "date" | "none" | "sentinel";
+type CellState = "date" | "none" | "sentinel";
 
 export interface HolidayCell {
   /** `date`: a date. `none`: a correct answer, no occurrence this year.
@@ -468,7 +468,7 @@ export interface HolidayCell {
   note: string;
 }
 
-export interface HolidayModel {
+interface HolidayModel {
   name: string;
   month: number;
   day: number;
@@ -541,7 +541,7 @@ export function yearSpan(
 }
 
 /** The holiday rules of a column: the holidays as `fixed` rules, in order. */
-export function columnRules(
+function columnRules(
   holidays: readonly HolidayModel[],
   column: ColumnModel,
 ): HolidayRule[] {
@@ -723,7 +723,7 @@ export function latestObserved(
   return best;
 }
 
-export interface Cluster {
+interface Cluster {
   from: string;
   to: string;
 }

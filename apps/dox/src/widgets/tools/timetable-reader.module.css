@@ -1,0 +1,844 @@
+/*
+ * Timetable Reader: what only this tool needs. The sections, preset, fields, table, badge,
+ * code frame, call output and aside are the kit's, and each row's printed time is a
+ * `<gmt-handle>`. This sheet lays out the day track, the four row frames and the two-clocks
+ * chart.
+ *
+ * Series colour sets `--series` from `data-series`; it marks a row and is never text. A
+ * repeated hour is purple (a double edge), a skipped hour is gold (a dashed edge): shape
+ * and words say the same thing. Amber is the sentinel's alone, and an accent edge is never
+ * a single side.
+ */
+
+[data-series="1"] {
+  --series: var(--gmt-series-1);
+}
+
+[data-series="2"] {
+  --series: var(--gmt-series-2);
+}
+
+[data-series="3"] {
+  --series: var(--gmt-series-3);
+}
+
+[data-series="4"] {
+  --series: var(--gmt-series-4);
+}
+
+.host {
+  container: tt-section / inline-size;
+  min-inline-size: 0;
+}
+
+.split,
+.pane,
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.pane {
+  container: tt-pane / inline-size;
+}
+
+@container tt-section (min-width: 76.25rem) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(28rem, 1fr) minmax(47.25rem, 1fr);
+    gap: var(--gmt-space-3) 1rem;
+    align-items: start;
+  }
+
+  /* The controls span both columns. */
+  .split > .controls {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The sentinel: in words, bracketed, in the amber family. */
+.lost {
+  padding-inline: var(--gmt-space-1);
+  white-space: nowrap;
+  border: 1px solid var(--gmt-signal-border);
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+
+  &::before {
+    content: "\27e8\a0";
+  }
+
+  &::after {
+    content: "\a0\27e9";
+  }
+}
+
+/* A chip: a small bevelled label in the mono face. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-block-size: 1.4rem;
+  padding-inline: var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+
+  &[data-kind="twice"] {
+    border: 3px double var(--gmt-dst-purple);
+  }
+
+  &[data-kind="skipped"] {
+    border: 1px dashed var(--gmt-dst-gold);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.chipDim {
+  color: var(--gmt-ice-dim);
+}
+
+/* ---------------------------------------------------------------------------
+ * The day track
+ * --------------------------------------------------------------------------- */
+
+.day {
+  padding-inline: calc(var(--gmt-space-3) + 4px);
+}
+
+.dayStatus {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  min-block-size: 1.6rem;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  color: var(--gmt-ice-dim);
+
+  & .chip {
+    white-space: normal;
+    text-align: end;
+  }
+}
+
+@container tt-pane (max-width: 34.74rem) {
+  .dayStatus {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-block-size: 3.4rem;
+
+    & .chip {
+      text-align: start;
+    }
+  }
+}
+
+/* The lanes are inset by half a handle (and 2px) so a handle at 00:00 or 23:55 is whole. */
+.lanes {
+  position: relative;
+  margin-inline: calc(var(--gmt-handle-w, 1rem) / 2 + 2px);
+  user-select: none;
+}
+
+.lane {
+  position: relative;
+  z-index: var(--gmt-z-raised);
+  block-size: 1.75rem;
+  border-block-end: 1px solid var(--gmt-hairline-faint);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 50%;
+    block-size: 1px;
+    background: color(from var(--series) srgb r g b / 35%);
+  }
+
+  /* The handle's bar takes the row's colour. */
+  & gmt-handle::before {
+    background: var(--series);
+  }
+}
+
+.handleBox {
+  position: absolute;
+  inset: 0;
+  z-index: var(--gmt-z-over);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* The shaded hour: a repeated hour is a purple wash between two double edges, a skipped
+   hour a gold hatch between two dashed edges. It holds no text; the chip names it. */
+.bands {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.band,
+.wband {
+  position: absolute;
+  inset-block: 0;
+  box-sizing: border-box;
+
+  &[data-kind="twice"] {
+    background-color: color(from var(--gmt-dst-purple) srgb r g b / 16%);
+    border-inline: 3px double var(--gmt-dst-purple);
+  }
+
+  &[data-kind="skipped"] {
+    background-color: transparent;
+    background-image: repeating-linear-gradient(
+      45deg,
+      color(from var(--gmt-dst-gold) srgb r g b / 18%) 0 4px,
+      color(from var(--gmt-dst-gold) srgb r g b / 5%) 4px 8px
+    );
+    border-inline: 1px dashed var(--gmt-dst-gold);
+  }
+}
+
+/* Tags ride their handle on an opaque plate. */
+.tag {
+  position: absolute;
+  inset-block-start: 50%;
+  z-index: var(--gmt-z-float);
+  translate: 14px -50%;
+  padding-inline: var(--gmt-space-1);
+  border: 1px solid var(--gmt-border);
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  white-space: nowrap;
+
+  &[data-side="end"] {
+    translate: calc(-100% - 14px) -50%;
+  }
+
+  &[data-pinned] {
+    inset-inline-start: 0;
+    translate: 0 -50%;
+  }
+
+  &[data-kind="twice"] {
+    border: 3px double var(--gmt-dst-purple);
+  }
+
+  &[data-kind="skipped"] {
+    border: 1px dashed var(--gmt-dst-gold);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.dayTicks {
+  position: relative;
+  block-size: 1.9rem;
+  margin-inline: calc(var(--gmt-handle-w, 1rem) / 2 + 2px);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.tick {
+  position: absolute;
+  inset-block-start: 0;
+  translate: -50% 0;
+  white-space: nowrap;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The four row frames
+ * --------------------------------------------------------------------------- */
+
+.rowset {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+}
+
+@container tt-pane (min-width: 26rem) {
+  .rowset {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container tt-pane (min-width: 45.5rem) {
+  .rowset {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container tt-section (min-width: 76.25rem) {
+  .rowset {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.row {
+  margin: 0;
+  min-inline-size: 0;
+  padding: var(--gmt-space-1) var(--gmt-space-3) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+}
+
+.rowLegend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  padding-inline: var(--gmt-space-1);
+  color: var(--gmt-ice);
+  font-weight: 600;
+}
+
+.offset {
+  min-inline-size: 0;
+}
+
+/* The reason an Offset select is, or is not, available. Its slot is held at the height of
+   the longest reason by a hidden sizer, so the line changing moves nothing. */
+.whySlot {
+  margin-block-start: var(--gmt-space-1);
+}
+
+.why {
+  display: block;
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  color: var(--gmt-ice);
+}
+
+/* ---------------------------------------------------------------------------
+ * Holding still: a hidden sizer takes the space of the tallest thing the cell can hold,
+ * and the live content sits over it in the same grid cell. The sizer's text is in `data-t`
+ * attributes drawn by `::before`, so it is never in the text of the page.
+ * --------------------------------------------------------------------------- */
+
+.hold {
+  display: grid;
+
+  & > * {
+    grid-area: 1 / 1;
+    min-inline-size: 0;
+  }
+}
+
+.sizer {
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+
+  &[data-t]::before {
+    content: attr(data-t);
+  }
+}
+
+.sizerBox {
+  display: block;
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.noteSizer {
+  display: block;
+}
+
+.live {
+  display: block;
+}
+
+/* ---------------------------------------------------------------------------
+ * The two-clocks chart
+ * --------------------------------------------------------------------------- */
+
+.chart {
+  --tt-gutter: 1.75rem;
+  --tt-axis: 1rem;
+  --tt-ticks: 1.9rem;
+  --tt-fan: 5.5rem;
+  --tt-cap: 1.75rem;
+  --tt-journey: 1.75rem;
+
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+@container tt-pane (max-width: 29.99rem) {
+  .chart {
+    --tt-fan: 4rem;
+    --tt-cap: 3.5rem;
+  }
+}
+
+.plotFrame {
+  min-inline-size: 0;
+}
+
+.plot {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+  padding-inline: 10px;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+
+  /* The frame holds its height with no row drawn. */
+  min-block-size: calc(
+    var(--tt-cap) + 2 * var(--tt-ticks) + 2 * var(--tt-axis) + var(--tt-fan) +
+      var(--tt-cap)
+  );
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.plotEmpty {
+  align-self: center;
+  margin-block: auto;
+}
+
+.pcap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  block-size: var(--tt-cap);
+  flex: none;
+}
+
+@container tt-pane (max-width: 29.99rem) {
+  .pcap {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+  }
+}
+
+.prow {
+  display: grid;
+  grid-template-columns: var(--tt-gutter) minmax(0, 1fr);
+  flex: none;
+}
+
+.px {
+  position: relative;
+  min-inline-size: 0;
+}
+
+.pgutter {
+  display: flex;
+  align-items: center;
+}
+
+.pticks .px {
+  block-size: var(--tt-ticks);
+}
+
+.pticks .tickWall {
+  inset-block: auto 0;
+  padding-block: 0 9px;
+}
+
+.paxis .px {
+  block-size: var(--tt-axis);
+}
+
+.axisline {
+  position: absolute;
+  inset-block-end: -1px;
+  block-size: 2px;
+  background: var(--gmt-border-strong);
+}
+
+.axisExact .axisline {
+  inset-block: -1px auto;
+}
+
+/* The printed and exact marks: a bevelled square in the series colour with a surface
+   ring, centred on its axis. */
+.sq {
+  position: absolute;
+  z-index: var(--gmt-z-float);
+  box-sizing: border-box;
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: 2px;
+  corner-shape: bevel;
+  background: var(--series);
+  box-shadow:
+    0 0 0 2px var(--gmt-surface),
+    inset 0 1px 0 var(--gmt-highlight);
+}
+
+.axisWall .sq {
+  inset-block-end: 0;
+  translate: -50% 50%;
+}
+
+.axisExact .sq {
+  inset-block-start: 0;
+  translate: -50% -50%;
+}
+
+/* A row that names no instant: hollow, dashed. */
+.hollow {
+  background: var(--gmt-surface);
+  border: 2px dashed var(--series);
+  box-shadow: none;
+}
+
+/* The repeated stretch on the exact axis: an underline from the earlier pass's start to the
+   later pass's end, and a tick at the change. */
+.eline {
+  position: absolute;
+  inset-block-start: 2px;
+  block-size: 3px;
+  border-radius: 2px;
+  background: var(--gmt-dst-purple);
+}
+
+.etick {
+  position: absolute;
+  inset-block-start: 0;
+  block-size: 0.6rem;
+  inline-size: 0;
+
+  &[data-kind="twice"] {
+    border-inline-end: 2px solid var(--gmt-dst-purple);
+  }
+
+  &[data-kind="skipped"] {
+    border-inline-end: 2px dashed var(--gmt-dst-gold);
+  }
+}
+
+.fan {
+  display: block;
+  inline-size: 100%;
+  block-size: var(--tt-fan);
+  overflow: visible;
+}
+
+.wedge {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1px;
+
+  &[data-kind="twice"] {
+    fill: color(from var(--gmt-dst-purple) srgb r g b / 16%);
+    stroke: var(--gmt-dst-purple);
+  }
+
+  &[data-kind="skipped"] {
+    fill: color(from var(--gmt-dst-gold) srgb r g b / 14%);
+    stroke: var(--gmt-dst-gold);
+    stroke-dasharray: 4 3;
+  }
+}
+
+.link {
+  stroke: var(--series);
+  stroke-width: 2px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.linkDashed {
+  stroke-dasharray: 5 4;
+}
+
+.poffsets {
+  position: relative;
+  block-size: var(--tt-cap);
+
+  & .px {
+    block-size: 100%;
+  }
+}
+
+@container tt-pane (max-width: 29.99rem) {
+  .poffsets {
+    block-size: 1.75rem;
+  }
+}
+
+.pcapText {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  white-space: nowrap;
+}
+
+.offsetChip {
+  position: absolute;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+}
+
+.pjourney .px {
+  block-size: var(--tt-journey);
+}
+
+.bar {
+  position: absolute;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  box-sizing: border-box;
+  block-size: 0.6rem;
+  min-inline-size: 2px;
+  border-radius: 3px;
+  corner-shape: bevel;
+  background: linear-gradient(
+    color(from var(--series) srgb r g b / 90%),
+    color(from var(--series) srgb r g b / 50%)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+
+  /* The bevelled cap at the arrival end. An open bar ends in a dashed line instead. */
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    inline-size: 4px;
+    border-radius: 2px;
+    corner-shape: bevel;
+    background: var(--series);
+  }
+}
+
+.barOpen::after {
+  inline-size: 0;
+  border-radius: 0;
+  background: none;
+  border-inline-end: 2px dashed var(--series);
+}
+
+.arrival,
+.noinstant {
+  position: absolute;
+  inset-block-start: 50%;
+  translate: 8px -50%;
+}
+
+.arrival[data-side="end"] {
+  translate: calc(-100% - 8px) -50%;
+}
+
+/* Neither side of the bar fits: the chip sits flush with the track's far edge. */
+.arrival[data-side="clamp"] {
+  translate: 0 -50%;
+}
+
+.noinstant {
+  inset-inline-start: 0;
+  translate: 0 -50%;
+}
+
+.chartCaption {
+  margin: 0;
+  min-block-size: 1lh;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  color: var(--gmt-ice-dim);
+}
+
+@container tt-pane (max-width: 29.99rem) {
+  .chartCaption {
+    min-block-size: 2lh;
+  }
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+}
+
+.lswatch {
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 1.5rem;
+  block-size: 0.6rem;
+
+  &[data-kind="solid"] {
+    background: linear-gradient(var(--gmt-ice-dim), var(--gmt-ice-dim)) center /
+      100% 2px no-repeat;
+  }
+
+  &[data-kind="dashed"] {
+    background: repeating-linear-gradient(
+        90deg,
+        var(--gmt-ice-dim) 0 5px,
+        transparent 5px 9px
+      )
+      center / 100% 2px no-repeat;
+  }
+
+  &[data-kind="bar"] {
+    block-size: 0.5rem;
+    border-radius: 3px;
+    corner-shape: bevel;
+    background: linear-gradient(
+      color(from var(--gmt-ice-dim) srgb r g b / 90%),
+      color(from var(--gmt-ice-dim) srgb r g b / 50%)
+    );
+  }
+
+  &[data-kind="twice"] {
+    background-color: color(from var(--gmt-dst-purple) srgb r g b / 16%);
+    border-inline: 3px double var(--gmt-dst-purple);
+  }
+
+  &[data-kind="skipped"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      color(from var(--gmt-dst-gold) srgb r g b / 18%) 0 4px,
+      color(from var(--gmt-dst-gold) srgb r g b / 5%) 4px 8px
+    );
+    border-inline: 1px dashed var(--gmt-dst-gold);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The table's cells
+ * --------------------------------------------------------------------------- */
+
+.note {
+  margin: 0;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.printed {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.rownum {
+  color: var(--gmt-ice);
+  font-weight: 700;
+}
+
+.printedText {
+  min-inline-size: 0;
+  font-family: var(--gmt-font-mono);
+}
+
+/* Leaves and Local arrival: the readable HH:MM at normal size, the full zoned value
+   beneath it in smaller, muted text. Neither breaks inside itself. */
+.time {
+  display: block;
+  white-space: nowrap;
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--gmt-ice);
+}
+
+.timeFull {
+  display: block;
+  margin-block-start: 2px;
+  white-space: nowrap;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--gmt-ice);
+}
+
+/* ---------------------------------------------------------------------------
+ * Accessibility
+ * --------------------------------------------------------------------------- */
+
+@media (forced-colors: active) {
+  .band,
+  .wband,
+  .tag,
+  .chip,
+  .lost {
+    border-color: CanvasText;
+  }
+
+  .sq,
+  .bar {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .hollow {
+    background: Canvas;
+    border-color: CanvasText;
+  }
+
+  .link,
+  .wedge {
+    stroke: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .chip,
+  .tag,
+  .row {
+    border-color: var(--gmt-ice);
+  }
+
+  .why,
+  .chartCaption,
+  .legend,
+  .plot,
+  .timeFull {
+    color: var(--gmt-ice);
+  }
+}

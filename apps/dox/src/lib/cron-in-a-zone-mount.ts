@@ -6,25 +6,54 @@
  * night of one clock change under both `cronRuns` policies, section 3 lists the
  * next twelve runs under each, and section 4 prints every call made.
  *
- * Follows the `renderTemplate` / `mount` split in `widget-mount.ts`. The template
- * holds every element the widget ever shows (every row, plate and tick is always
- * laid out and hidden with `data-off`), so nothing moves when a value changes;
- * `mount` only fills them from real calls. Every listener is delegated on the
- * root, so the host dropping the subtree is a complete teardown.
+ * Built on the component kit: `renderCronInAZoneTemplate` writes the chrome from
+ * builders only, with ids from `idScope(idPrefix)`, and `mount` fills each slot
+ * from real library calls with `setHtml`. Every slot whose height changes sits in
+ * a `<gmt-grow>`, and only the rows that exist are drawn. Every listener is
+ * delegated on the widget with the mount's `signal`.
  */
-import { codeFrameHtml } from "./code-frame";
+import { defineElements } from "~/widgets/define";
+import {
+  codeFrame,
+  field,
+  fieldGrid,
+  findWidget,
+  html,
+  idScope,
+  instant,
+  section,
+  select,
+  setHtml,
+  srOnly,
+  table,
+  textInput,
+  widget,
+  type Column,
+  type SafeHtml,
+} from "~/widgets/builders";
+import {
+  callOutput,
+  type CallOutputLine,
+} from "~/widgets/families/gnss/call-output";
+import { callLines, outputOf } from "~/widgets/families/gnss/call-lines";
+import {
+  cronFieldList,
+  cronNoSignal,
+  cronPlot,
+  kindCell,
+} from "~/widgets/families/timescale/cron-night";
+import { numberInput } from "~/widgets/families/timescale/number-input";
+import { grow } from "~/widgets/primitives/grow/grow";
+import styles from "~/widgets/tools/cron-in-a-zone.module.css";
 import { CURATED_TIMEZONES } from "./curated-timezones";
 import { loadCronLib } from "./cron-lib";
-import type { CronLib, CronLibPolicy, CronLibRun } from "./cron-lib";
+import type { CronLib, CronLibPolicy } from "./cron-lib";
 import {
   CRON_MAX_TEXT,
   CRON_PRESETS,
   CUSTOM_PRESET_ID,
   CUSTOM_PRESET_LABEL,
-  FIELD_LABELS,
-  KIND_WORD,
   LIST_ROWS,
-  NIGHT_HOURS,
   NO_RUNS_TEXT,
   NO_SIGNAL_NOTE,
   NO_SIGNAL_TEXT,
@@ -32,403 +61,277 @@ import {
   PARSE_PAGE,
   POLICIES,
   POLICY_LINE,
-  TOUCHED_ROWS,
   WEEKDAY_NOTE,
-  afterErrorText,
   cronView,
   noChangeOptionText,
-  noChangeText,
   permalinkOf,
-  plateText,
   presetIdOf,
   readArgs,
   resultText,
-  sentenceOf,
   stateOfPreset,
-  zoneErrorText,
   type CronInAZoneArgs,
   type CronState,
   type CronView,
   type ListRow,
-  type Mark,
   type TouchedRow,
 } from "./cron-in-a-zone";
-import { callArgs, formatValue } from "./edi-widgets";
-import { callSizer, holdHtml, outputSizer, sizerHtml } from "./edi-picture";
-import { renderCallResults, renderCalls } from "./edi-render";
 import { onWidthChange, thinTickLabels } from "./label-fit";
+import { formatValue } from "./punctuality-widgets";
 import { withBase } from "./site";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
-import {
-  escapeAttr,
-  escapeHtml,
-  instantPiecesHtml,
-  labelTextHtml,
-  setControlValue,
-  wireCopyButtons,
-} from "./widget-ui";
 
 export type { CronInAZoneArgs } from "./cron-in-a-zone";
 
-/** What a slot holds while it is laid out and hidden: the shape of a real row. */
-const SAMPLE_ROW: TouchedRow = {
-  local: "2024-03-31T01:30:00",
-  instant: "2024-03-31T01:00:00Z",
-  classification: "nonexistent",
-};
-const TICK_COUNT = NIGHT_HOURS + 1;
+const NBSP = "\u00a0";
+const WIDGET_NAME = "cron-in-a-zone";
 const NO_GRAMMAR_NIGHT_TEXT =
   "The line is outside the grammar, so there is nothing to draw.";
 
-const KIND_CLASS: Record<CronLibRun["classification"], string> = {
-  unique: "gmt-cutoff-chip--dim",
-  nonexistent: "gmt-cutoff-dst--gap",
-  ambiguous: "gmt-cutoff-dst--overlap",
-};
-
 // ---------------------------------------------------------------------------
-// Template
+// Markup
 // ---------------------------------------------------------------------------
 
-function zoneOptionsHtml(selected: string): string {
+/** The zones the page offers, with a seeded zone joined when the list does not hold it. */
+function zoneChoices(selected: string): { value: string; label: string }[] {
   const zones: readonly string[] = (
     CURATED_TIMEZONES as readonly string[]
   ).includes(selected)
     ? CURATED_TIMEZONES
     : [...CURATED_TIMEZONES, selected];
-  return zones
-    .map(
-      (z) =>
-        `<option value="${escapeAttr(z)}"${z === selected ? " selected" : ""}>${escapeHtml(z)}</option>`,
-    )
-    .join("");
+  return zones.map((z) => ({ value: z, label: z }));
 }
 
-function presetOptionsHtml(selected: string): string {
-  return (
-    CRON_PRESETS.map(
-      (p) =>
-        `<option value="${escapeAttr(p.id)}"${p.id === selected ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-    ).join("") +
-    `<option value="${CUSTOM_PRESET_ID}"${selected === CUSTOM_PRESET_ID ? " selected" : ""}>${CUSTOM_PRESET_LABEL}</option>`
-  );
-}
+const presetChoices = (): { value: string; label: string }[] => [
+  ...CRON_PRESETS.map((p) => ({ value: p.id, label: p.label })),
+  { value: CUSTOM_PRESET_ID, label: CUSTOM_PRESET_LABEL },
+];
 
-function fieldsHtml(): string {
-  const rows = FIELD_LABELS.map(
-    ([key, label]) =>
-      `<div class="gmt-cron-field" data-row="${key}">` +
-      `<dt>${escapeHtml(label)}</dt>` +
-      `<dd><code class="gmt-cron-values" data-role="field-${key}">&nbsp;</code>` +
-      `<span class="gmt-cutoff-chip gmt-cutoff-chip--dim gmt-cron-star" data-role="star-${key}" data-off>star</span></dd>` +
-      `</div>`,
-  ).join("");
-  return (
-    `<div class="gmt-cron-parsed">` +
-    `<dl class="gmt-cron-fields" data-role="fields" data-off>${rows}</dl>` +
-    `<p class="gmt-cron-nosignal" data-role="nosignal" data-off>` +
-    `<span class="gmt-cron-nosignal-pill">${NO_SIGNAL_TEXT}</span>` +
-    `<span class="gmt-cron-nosignal-note">${escapeHtml(NO_SIGNAL_NOTE)} <a href="${withBase(PARSE_PAGE)}">Read the grammar</a>.</span>` +
-    `</p>` +
-    `</div>` +
-    `<p class="gmt-widget-hint gmt-cron-weekday">${escapeHtml(WEEKDAY_NOTE)}</p>`
-  );
-}
+const RUN_COLUMNS: readonly Column<"local" | "instant" | "kind">[] = [
+  { key: "local", header: "Local", align: "start", numeric: false },
+  { key: "instant", header: "Instant", align: "start", numeric: false },
+  { key: "kind", header: "Kind", align: "start", numeric: false },
+];
 
-function legendHtml(): string {
-  const item = (kind: CronLibRun["classification"], words: string) =>
-    `<li class="gmt-cron-legend-item"><span class="gmt-cron-swatch gmt-cron-mark--${kind}" aria-hidden="true"><span class="gmt-cron-stem"></span></span>${escapeHtml(words)}</li>`;
-  return (
-    `<ul class="gmt-cron-legend" aria-label="Legend">` +
-    item("unique", "Solid line: an ordinary time") +
-    item("nonexistent", "Dashed line on hatching: a skipped time") +
-    item("ambiguous", "Double line: a repeated time") +
-    `</ul>`
-  );
-}
-
-function axisHtml(role: string, caption: string): string {
-  const ticks = Array.from({ length: TICK_COUNT }, (_, i) => {
-    const edge =
-      i === 0
-        ? " gmt-cron-tick--first"
-        : i === TICK_COUNT - 1
-          ? " gmt-cron-tick--last"
-          : "";
-    return `<span class="gmt-cutoff-axis-tick gmt-cron-tick${edge}" style="left:${(i / NIGHT_HOURS) * 100}%" data-off>00:00</span>`;
-  }).join("");
-  return (
-    `<div class="gmt-cron-axis-row"><span class="gmt-cron-axis-cap">${escapeHtml(caption)}</span>` +
-    `<div class="gmt-cron-axis" data-role="${role}">${ticks}</div></div>`
-  );
-}
-
-function laneHtml(policy: CronLibPolicy): string {
-  return (
-    `<div class="gmt-cron-lane" data-lane="${policy}">` +
-    `<div class="gmt-cron-lane-head">` +
-    `<div class="gmt-cron-lane-name"><code>${policy}</code><span class="gmt-cron-lane-line">${escapeHtml(POLICY_LINE[policy])}</span></div>` +
-    `<span class="gmt-cron-plate" data-role="plate-${policy}" data-off>${plateText(88)}</span>` +
-    `</div>` +
-    `<div class="gmt-cron-track" role="img" aria-label="${policy}" data-role="track-${policy}"><span class="gmt-cron-rule" data-role="rule-${policy}" data-off></span><div class="gmt-cron-marks" data-role="marks-${policy}"></div></div>` +
-    `</div>`
-  );
-}
-
-/** One table row in the shape of a real row, hidden until filled. */
-function sampleRowHtml(policy: CronLibPolicy): string {
-  return (
-    `<tr data-off>` +
-    `<td data-role="c-local">${instantPiecesHtml(SAMPLE_ROW.local)}</td>` +
-    `<td data-role="c-instant">${instantPiecesHtml(SAMPLE_ROW.instant)}</td>` +
-    `<td data-role="c-kind">${kindHtml(SAMPLE_ROW.classification, false, policy)}</td>` +
-    `</tr>`
-  );
-}
-
-/** A kind cell: the word, and the "only under" line, which a row hides unless it is one. */
-function kindHtml(
-  kind: CronLibRun["classification"],
-  only: boolean,
-  policy: CronLibPolicy,
-): string {
-  return (
-    `<span class="gmt-cutoff-chip ${KIND_CLASS[kind]}">${KIND_WORD[kind]}</span>` +
-    `<span class="gmt-cron-only"${only ? "" : " data-off"}>only under <code>${policy}</code></span>`
-  );
-}
-
-function noteRowHtml(): string {
-  return (
-    `<tr class="gmt-cron-note-row"><td colspan="3">` +
-    holdHtml(
-      `<span class="gmt-cron-note" data-role="note"></span>`,
-      [sizerHtml("span", "gmt-cron-note", escapeHtml(NO_TOUCHED_TEXT))],
-      "gmt-ledger-hold",
-    ) +
-    `</td></tr>`
-  );
-}
-
-function tableHtml(
-  role: string,
-  policy: CronLibPolicy,
+/** One policy's table of runs, with the note that sits under it when there is one. */
+function runTable(
   caption: string,
-  rows: number,
-): string {
-  return (
-    `<div class="gmt-cron-table-box">` +
-    `<table class="gmt-cron-table" data-role="${role}">` +
-    `<caption>${caption}</caption>` +
-    `<thead><tr><th scope="col">Local</th><th scope="col">Instant</th><th scope="col">Kind</th></tr></thead>` +
-    `<tbody>${sampleRowHtml(policy).repeat(rows)}${noteRowHtml()}</tbody>` +
-    `</table></div>`
-  );
+  rows: readonly (TouchedRow | ListRow)[],
+  note: string,
+): SafeHtml {
+  return html`<div class="${styles.cell}">${table({
+    caption,
+    columns: RUN_COLUMNS,
+    rows: rows.map((r) => ({
+      local: instant(r.local),
+      instant: instant(r.instant),
+      kind: kindCell(r.classification, "only" in r ? r.only : null),
+    })),
+  })}${note === "" ? "" : html`<p class="${styles.tableNote}">${note}</p>`}</div>`;
 }
 
-/** The widest expression the call lines print: every value of every field. */
-const WORST_FIELD = (n: number, from = 0) => ({
-  values: Array.from({ length: n }, (_, i) => from + i),
-  star: true,
-});
-const WORST_EXPRESSION = {
-  minute: WORST_FIELD(60),
-  hour: WORST_FIELD(24),
-  dayOfMonth: WORST_FIELD(31, 1),
-  month: WORST_FIELD(12, 1),
-  dayOfWeek: WORST_FIELD(7, 1),
-};
-const WORST_ZONE = "America/Argentina/ComodRivadavia";
-const WORST_RUNS = Array.from({ length: LIST_ROWS }, (_, i) => ({
-  local: "2024-03-31T01:30:00",
-  instant: `2024-03-31T01:${String(i).padStart(2, "0")}:00Z`,
-  classification: "nonexistent" as const,
-}));
-
-function printed(fn: string, args: readonly unknown[]): string {
-  return `${fn}(${callArgs(args)[1]})`;
+function touchedTables(view: CronView): SafeHtml {
+  const night = view.night;
+  if (night === null) return html``;
+  return html`${night.lanes.map((lane) =>
+    runTable(
+      `${lane.policy}, skipped or repeated times`,
+      lane.touched,
+      lane.more > 0
+        ? `and ${lane.more} more`
+        : lane.touched.length === 0
+          ? NO_TOUCHED_TEXT
+          : "",
+    ),
+  )}`;
 }
 
-const CALL_SIZER = [
-  printed("isValidTimeZone", [WORST_ZONE]),
-  printed("parseCronExpression", ["x".repeat(CRON_MAX_TEXT)]),
-  printed("getDstTransitions", [WORST_ZONE, 2100]),
-  ...[0, 1].map(() =>
-    printed("cronRuns", [
-      WORST_EXPRESSION,
-      WORST_ZONE,
-      { start: "2024-03-30T22:00:00Z", end: "2024-03-31T04:00:00Z" },
-      "daemonCatchUp",
-    ]),
-  ),
-  ...[0, 1].map(() =>
-    printed("cronRuns", [
-      WORST_EXPRESSION,
-      WORST_ZONE,
-      { after: "2024-03-30T22:00:00Z", count: LIST_ROWS },
-      "daemonCatchUp",
-    ]),
-  ),
-].join("\n");
-
-const OUTPUT_SIZER = [
-  "false",
-  formatValue(WORST_EXPRESSION),
-  formatValue([
-    {
-      instant: "2024-03-31T01:00:00Z",
-      offsetBefore: "+00:00",
-      offsetAfter: "+01:00",
-    },
-    {
-      instant: "2024-10-27T01:00:00Z",
-      offsetBefore: "+01:00",
-      offsetAfter: "+00:00",
-    },
-  ]),
-  ...[0, 1, 2, 3].map(() => resultText("cronRuns", WORST_RUNS, formatValue)),
-].join("\n");
-
-/** A one-line readout and the longest text it can show, in one cell. */
-function heldLine(
-  role: string,
-  className: string,
-  worst: readonly string[],
-): string {
-  return holdHtml(
-    `<p class="${className}" data-role="${role}">&nbsp;</p>`,
-    worst.map((t) => sizerHtml("p", className, escapeHtml(t))),
-    "gmt-ledger-hold",
-  );
+function listTables(view: CronView): SafeHtml {
+  const lists = view.lists;
+  if (lists === null) return html``;
+  return html`${POLICIES.map((policy, i) =>
+    runTable(
+      `${policy}, the next ${LIST_ROWS} runs`,
+      lists[i] ?? [],
+      (lists[i] ?? []).length === 0 ? NO_RUNS_TEXT : "",
+    ),
+  )}`;
 }
 
-/**
- * The widget's chrome, seeded with `args` so the first paint shows them. It holds
- * every element the widget shows; `mount` fills them from real library calls.
- */
-export function renderCronInAZoneTemplate(args: CronInAZoneArgs = {}): string {
+function fieldsSlot(view: CronView): SafeHtml {
+  if (view.fields !== null) return cronFieldList(view.fields);
+  if (view.parsed && view.expr === null) {
+    return cronNoSignal(
+      NO_SIGNAL_TEXT,
+      html`${NO_SIGNAL_NOTE} <a href="${withBase(PARSE_PAGE)}">Read the grammar</a>.`,
+    );
+  }
+  return html``;
+}
+
+function callFrameOf(view: CronView): SafeHtml {
+  const { code, plain } = callLines(view.calls);
+  return codeFrame({
+    label: "Calls made",
+    copyLabel: "Copy calls",
+    copyText: plain,
+    code,
+    gate: "codeframe",
+  });
+}
+
+/** What the calls returned. Runs print as their instants; a refused line is NO SIGNAL. */
+function outputSlot(view: CronView): SafeHtml {
+  const failed = view.parsed && view.expr === null;
+  const label = "What the calls returned";
+  if (view.calls.length === 0) {
+    return callOutput({ label, state: "empty", lines: [] });
+  }
+  if (failed) {
+    const out = outputOf("sentinel", view.calls);
+    return callOutput({ label, state: out.state, lines: out.lines });
+  }
+  const lines = view.calls.map((c): CallOutputLine => {
+    const text =
+      c.fn === "cronRuns" ? resultText(c.fn, c.result, formatValue) : c.result;
+    return {
+      text: typeof text === "string" ? text : formatValue(text),
+      lost: false,
+    };
+  });
+  return callOutput({ label, state: "live", lines });
+}
+
+/** The widget's chrome, seeded with `args` so the first paint shows them. */
+export function renderCronInAZoneTemplate(
+  idPrefix: string,
+  args: CronInAZoneArgs = {},
+): SafeHtml {
+  const id = idScope(idPrefix);
   const state = readArgs(args);
-  return (
-    `<div class="gmt-cron-zone gmt-widget not-content">` +
-    `<div class="gmt-widget-card">` +
-    // 1. The line
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>1. The line</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Cron line")}` +
-    `<input class="gmt-input gmt-cron-line" data-role="line" type="text" maxlength="${CRON_MAX_TEXT}" value="${escapeAttr(state.line)}" spellcheck="false" autocomplete="off" autocapitalize="off">` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Try")}` +
-    `<select class="gmt-select" data-role="preset">${presetOptionsHtml(presetIdOf(state))}</select>` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Time zone")}` +
-    `<select class="gmt-select" data-role="zone">${zoneOptionsHtml(state.zone)}</select>` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Year")}` +
-    `<input class="gmt-input" data-role="year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="${escapeAttr(state.year)}">` +
-    `</label>` +
-    `<label class="gmt-label">${labelTextHtml("Clock change")}` +
-    `<select class="gmt-select" data-role="change"><option value="${escapeAttr(state.change)}">&nbsp;</option></select>` +
-    `</label>` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Runs after", { optional: true })}` +
-    `<input class="gmt-input gmt-cron-line" data-role="after" type="text" maxlength="${CRON_MAX_TEXT}" value="${escapeAttr(state.after)}" placeholder="2024-03-31T01:00:00Z" spellcheck="false" autocomplete="off" autocapitalize="off">` +
-    `</label>` +
-    `</div>` +
-    heldLine("problem", "gmt-widget-hint gmt-cron-problem", [
-      zoneErrorText("z".repeat(CRON_MAX_TEXT)),
-      afterErrorText("x".repeat(CRON_MAX_TEXT)),
-    ]) +
-    `<p class="gmt-cron-sr" data-role="live" aria-live="polite"></p>` +
-    fieldsHtml() +
-    `</div>` +
-    // 2. The night of the change
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>2. The night of the change</h4>` +
-    heldLine("nightnote", "gmt-widget-hint gmt-cron-nightnote", [
-      noChangeText(2024),
-      NO_GRAMMAR_NIGHT_TEXT,
-    ]) +
-    `<div class="gmt-cron-frame" data-role="night-frame">` +
-    legendHtml() +
-    `<div class="gmt-cron-plot" data-role="plot">` +
-    `<div class="gmt-cron-chiprow"><span class="gmt-cutoff-chip gmt-cron-chip" data-role="chip" data-off>clock change, +00:00 → +01:00</span></div>` +
-    axisHtml("axis-utc", "UTC") +
-    axisHtml("axis-wall", "Wall") +
-    `<div class="gmt-cron-lanes">` +
-    POLICIES.map(laneHtml).join("") +
-    `</div>` +
-    `</div>` +
-    `</div>` +
-    heldLine("sentence", "gmt-cron-sentence", [sentenceOf(false, 88, 88)]) +
-    `<div class="gmt-cron-pair">` +
-    POLICIES.map((p) =>
-      tableHtml(
-        `touched-${p}`,
-        p,
-        `<code>${p}</code>, skipped or repeated times`,
-        TOUCHED_ROWS,
-      ),
-    ).join("") +
-    `</div>` +
-    `</div>` +
-    // 3. Next runs
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>3. Next runs</h4>` +
-    heldLine("after-used", "gmt-widget-hint gmt-cron-after", [
-      `Runs strictly after ${"x".repeat(CRON_MAX_TEXT)}.`,
-    ]) +
-    `<div class="gmt-cron-pair">` +
-    POLICIES.map((p) =>
-      tableHtml(
-        `list-${p}`,
-        p,
-        `<code>${p}</code>, the next ${LIST_ROWS} runs`,
-        LIST_ROWS,
-      ),
-    ).join("") +
-    `</div>` +
-    `</div>` +
-    // 4. The calls
-    `<div class="gmt-widget-section gmt-widget-section--wide gmt-cron-calls">` +
-    `<h4>4. The calls</h4>` +
-    holdHtml(
-      codeFrameHtml("cron"),
-      [callSizer(CALL_SIZER)],
-      "gmt-ledger-hold",
-    ) +
-    holdHtml(
-      `<output class="gmt-widget-output" data-role="cron-output">&nbsp;</output>`,
-      [outputSizer("gmt-widget-output", OUTPUT_SIZER)],
-      "gmt-ledger-hold",
-    ) +
-    `</div>` +
-    `</div>` +
-    `</div>`
+  const problem = id("problem");
+
+  const wide = (content: SafeHtml): SafeHtml =>
+    html`<div class="${styles.wide}">${content}</div>`;
+
+  const controls = fieldGrid(
+    html`${wide(
+      field({
+        id: id("line"),
+        label: "Cron line",
+        control: ({ id: cid }) =>
+          textInput({
+            id: cid,
+            value: state.line,
+            autocomplete: "off",
+            spellcheck: false,
+            maxLength: CRON_MAX_TEXT,
+            describedBy: problem,
+          }),
+      }),
+    )}${field({
+      id: id("preset"),
+      label: "Try",
+      control: ({ id: cid }) =>
+        select({ id: cid, options: presetChoices(), value: presetIdOf(state) }),
+    })}${field({
+      id: id("zone"),
+      label: "Time zone",
+      control: ({ id: cid }) =>
+        select({
+          id: cid,
+          options: zoneChoices(state.zone),
+          value: state.zone,
+          describedBy: problem,
+        }),
+    })}${field({
+      id: id("year"),
+      label: "Year",
+      control: ({ id: cid }) =>
+        numberInput({
+          id: cid,
+          value: state.year,
+          min: 1900,
+          max: 2100,
+          step: 1,
+          describedBy: problem,
+        }),
+    })}${field({
+      id: id("change"),
+      label: "Clock change",
+      control: ({ id: cid }) =>
+        select({
+          id: cid,
+          options: [{ value: state.change, label: NBSP }],
+          value: state.change,
+        }),
+    })}${wide(
+      field({
+        id: id("after"),
+        label: "Runs after (optional)",
+        control: ({ id: cid }) =>
+          textInput({
+            id: cid,
+            value: state.after,
+            placeholder: "2024-03-31T01:00:00Z",
+            autocomplete: "off",
+            spellcheck: false,
+            maxLength: CRON_MAX_TEXT,
+          }),
+      }),
+    )}`,
+  );
+
+  const line = section(
+    { id: id("line-section"), heading: "1. The line", level: 4 },
+    html`${controls}${grow(html`<p class="${styles.problem}" id="${problem}"></p>`)}
+      <p role="status" aria-label="Cron reading" id="${id("live")}">${srOnly("")}</p>
+      ${grow(html`<div id="${id("fields")}"></div>`)}
+      <p class="${styles.hint}">${WEEKDAY_NOTE}</p>`,
+  );
+
+  const night = section(
+    { id: id("night"), heading: "2. The night of the change", level: 4 },
+    html`${grow(html`<p class="${styles.hint}" id="${id("nightnote")}"></p>`)}
+      <div class="${styles.frame}" id="${id("frame")}" data-gate="frame">
+        ${grow(html`<div id="${id("plot")}"></div>`)}
+      </div>
+      ${grow(html`<p class="${styles.sentence}" id="${id("sentence")}"></p>`)}
+      ${grow(html`<div class="${styles.pair}" id="${id("touched")}"></div>`)}`,
+  );
+
+  const next = section(
+    { id: id("next"), heading: "3. Next runs", level: 4 },
+    html`${grow(html`<p class="${styles.hint}" id="${id("after-used")}"></p>`)}
+      ${grow(html`<div class="${styles.pair}" id="${id("lists")}"></div>`)}`,
+  );
+
+  const calls = section(
+    { id: id("calls"), heading: "4. The calls", level: 4 },
+    html`${grow(
+      html`<div id="${id("calls-slot")}">${codeFrame({
+        label: "Calls made",
+        copyLabel: "Copy calls",
+        copyText: "",
+        gate: "codeframe",
+      })}</div>`,
+    )}${grow(
+      html`<div id="${id("output-slot")}">${callOutput({
+        label: "What the calls returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}`,
+  );
+
+  return widget(
+    { name: WIDGET_NAME, label: "Cron in a Zone", scope: idPrefix },
+    html`${line}${night}${next}${calls}`,
   );
 }
 
 // ---------------------------------------------------------------------------
-// Drawing
+// Wiring
 // ---------------------------------------------------------------------------
-
-type Q = <T extends HTMLElement>(role: string) => T | null;
-
-const setOff = (el: Element | null, off: boolean) =>
-  el?.toggleAttribute("data-off", off);
-
-function drawProblem(q: Q, view: CronView): void {
-  const el = q("problem");
-  if (!el) return;
-  el.textContent =
-    view.zoneError ??
-    view.yearError ??
-    view.afterError ??
-    view.changeNote ??
-    " ";
-}
-
-/** One mount counter, so two widgets on a page never share a hint id. */
-let hintCount = 0;
 
 /**
  * The words a reader should hear when the answer changes: the problem, the
@@ -447,277 +350,193 @@ function liveText(view: CronView): string {
   return parts.filter((p): p is string => Boolean(p && p.trim())).join(" ");
 }
 
-function drawLive(q: Q, view: CronView): void {
-  const el = q("live");
-  if (!el) return;
-  const text = liveText(view);
-  if (el.textContent !== text) el.textContent = text;
+interface Controller {
+  readState(): CronState;
+  stop(): void;
 }
 
-function drawFields(q: Q, view: CronView): void {
-  setOff(q("fields"), view.fields === null);
-  setOff(q("nosignal"), !(view.parsed && view.expr === null));
-  for (const [key] of FIELD_LABELS) {
-    const row = view.fields?.find((f) => f.key === key);
-    const values = q(`field-${key}`);
-    if (values) values.textContent = row ? row.text : " ";
-    setOff(q(`star-${key}`), !row?.star);
-  }
-}
-
-function drawChange(q: Q, view: CronView, state: CronState): void {
-  const select = q<HTMLSelectElement>("change");
-  if (!select) return;
-  select.innerHTML = "";
-  const add = (value: string, label: string) => {
-    const opt = select.ownerDocument.createElement("option");
-    opt.value = value;
-    opt.textContent = label;
-    select.append(opt);
+function setupWidget(
+  root: HTMLElement,
+  lib: CronLib,
+  initial: CronState,
+  signal: AbortSignal,
+): Controller {
+  const { el: widgetEl, id, part: el } = findWidget(root, WIDGET_NAME);
+  const lineEl = el<HTMLInputElement>("line");
+  const presetEl = el<HTMLSelectElement>("preset");
+  const zoneEl = el<HTMLSelectElement>("zone");
+  const yearEl = el<HTMLInputElement>("year");
+  const changeEl = el<HTMLSelectElement>("change");
+  const afterEl = el<HTMLInputElement>("after");
+  const frameEl = el("frame");
+  // Every slot the render writes: a missing one throws now, not on the first keystroke.
+  const slots = {
+    problem: el("problem"),
+    live: el("live"),
+    fields: el("fields"),
+    nightnote: el("nightnote"),
+    plot: el("plot"),
+    sentence: el("sentence"),
+    touched: el("touched"),
+    afterUsed: el("after-used"),
+    lists: el("lists"),
+    calls: el("calls-slot"),
+    output: el("output-slot"),
   };
-  if (view.changes.length > 0) {
-    for (const c of view.changes) add(c.value, c.label);
-    select.disabled = false;
-    select.value = String(view.ordinal);
-  } else {
-    add(
-      "",
-      view.noChangeNote !== null
-        ? noChangeOptionText(state.year)
-        : "Needs a valid zone and year",
-    );
-    select.disabled = true;
-  }
-}
 
-function drawAxes(root: HTMLElement, view: CronView): void {
-  const night = view.night;
-  for (const [role, pick] of [
-    ["axis-utc", (t: { utc: string }) => t.utc],
-    ["axis-wall", (t: { wall: string }) => t.wall],
-  ] as const) {
-    const row = root.querySelector<HTMLElement>(`[data-role="${role}"]`);
-    if (!row) continue;
-    row.querySelectorAll<HTMLElement>(".gmt-cron-tick").forEach((tick, i) => {
-      const t = night?.ticks[i];
-      tick.textContent = t ? pick(t as { utc: string; wall: string }) : "00:00";
-      tick.toggleAttribute("data-off", !t);
-    });
-    thinTickLabels(row, ".gmt-cron-tick");
-  }
-}
-
-/** Past this share of the axis a mark's ×N label sits left of its stem. */
-const COUNT_FLIP_PCT = 90;
-
-function marksHtml(marks: readonly Mark[]): string {
-  return marks
-    .map(
-      (m) =>
-        `<span class="gmt-cron-mark gmt-cron-mark--${m.classification}" style="left:${m.pct}%" data-kind="${m.classification}"${m.pct > COUNT_FLIP_PCT ? " data-end" : ""}>` +
-        `<span class="gmt-cron-stem"></span>` +
-        (m.count > 1 ? `<span class="gmt-cron-count">×${m.count}</span>` : "") +
-        `</span>`,
-    )
-    .join("");
-}
-
-/** Fills a table's fixed rows; the rows past `rows.length` stay laid out and hidden. */
-function fillRows(
-  table: HTMLElement | null,
-  rows: readonly (TouchedRow | ListRow)[],
-  capacity: number,
-  policy: CronLibPolicy,
-): void {
-  if (!table) return;
-  const trs = [...table.querySelectorAll<HTMLElement>("tbody > tr")].slice(
-    0,
-    capacity,
-  );
-  trs.forEach((tr, i) => {
-    const row = rows[i];
-    tr.toggleAttribute("data-off", !row);
-    tr.toggleAttribute("data-only", Boolean(row && "only" in row && row.only));
-    const [local, instant, kind] = [...tr.children] as HTMLElement[];
-    const shown = row ?? SAMPLE_ROW;
-    if (local) local.innerHTML = instantPiecesHtml(shown.local);
-    if (instant) instant.innerHTML = instantPiecesHtml(shown.instant);
-    if (kind) {
-      kind.innerHTML = kindHtml(
-        shown.classification,
-        Boolean(row && "only" in row && row.only),
-        policy,
-      );
-    }
-  });
-}
-
-function setNote(table: HTMLElement | null, text: string): void {
-  const note = table?.querySelector<HTMLElement>('[data-role="note"]');
-  if (note) note.textContent = text;
-}
-
-function drawNight(root: HTMLElement, q: Q, view: CronView): void {
-  const night = view.night;
-  setOff(q("chip"), !night);
-  const chip = q("chip");
-  if (chip && night) chip.textContent = night.chip;
-  drawAxes(root, view);
-
-  const nightNote = q("nightnote");
-  if (nightNote) {
-    nightNote.textContent =
-      view.noChangeNote ??
-      (view.expr === null && view.parsed ? NO_GRAMMAR_NIGHT_TEXT : " ");
-  }
-
-  POLICIES.forEach((policy, i) => {
-    const lane = night?.lanes[i];
-    const plate = q(`plate-${policy}`);
-    if (plate && lane) plate.textContent = lane.plate;
-    setOff(plate, !lane);
-    const marks = q(`marks-${policy}`);
-    if (marks) marks.innerHTML = lane ? marksHtml(lane.marks) : "";
-    setOff(q(`rule-${policy}`), !night);
-    const track = q(`track-${policy}`);
-    if (track) {
-      track.setAttribute(
-        "aria-label",
-        lane ? `${policy}: ${lane.plate}` : `${policy}: nothing to draw`,
-      );
-    }
-    const table = q(`touched-${policy}`);
-    fillRows(table, lane?.touched ?? [], TOUCHED_ROWS, policy);
-    setNote(
-      table,
-      !lane
-        ? ""
-        : lane.more > 0
-          ? `and ${lane.more} more`
-          : lane.touched.length === 0
-            ? NO_TOUCHED_TEXT
-            : "",
-    );
-  });
-
-  const sentence = q("sentence");
-  if (sentence) sentence.textContent = night ? night.sentence : " ";
-}
-
-function drawLists(q: Q, view: CronView): void {
-  const after = q("after-used");
-  if (after) {
-    after.textContent = view.afterUsed
-      ? `Runs strictly after ${view.afterUsed}.`
-      : " ";
-  }
-  POLICIES.forEach((policy, i) => {
-    const rows = view.lists?.[i] ?? [];
-    const table = q(`list-${policy}`);
-    fillRows(table, rows, LIST_ROWS, policy);
-    setNote(table, view.lists && rows.length === 0 ? NO_RUNS_TEXT : "");
-  });
-}
-
-function drawCalls(q: Q, view: CronView): void {
-  renderCalls(q("call-cron"), view.calls);
-  const out = q("cron-output");
-  if (!out) return;
-  const shown = view.calls.map((c) => ({
-    ...c,
-    result:
-      c.fn === "cronRuns" ? resultText(c.fn, c.result, formatValue) : c.result,
-  }));
-  renderCallResults(out, shown, view.parsed && view.expr === null, (v) =>
-    typeof v === "string" ? v : formatValue(v),
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Wiring
-// ---------------------------------------------------------------------------
-
-function setupWidget(root: HTMLElement, lib: CronLib, initial: CronState) {
-  const q: Q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const line = q<HTMLInputElement>("line")!;
-  const zone = q<HTMLSelectElement>("zone")!;
-  const year = q<HTMLInputElement>("year")!;
-  const after = q<HTMLInputElement>("after")!;
-  const preset = q<HTMLSelectElement>("preset")!;
-  const change = q<HTMLSelectElement>("change")!;
   let changeAsked = initial.change;
-
-  /* The problem hint, tied to the three inputs that can cause it. */
-  const hint = q("problem");
-  if (hint) {
-    hint.id = `gmt-cron-problem-${++hintCount}`;
-    for (const el of [line, year, zone]) {
-      el.setAttribute("aria-describedby", hint.id);
-    }
-  }
+  let liveShown = "";
 
   const readState = (): CronState => ({
-    line: line.value,
-    zone: zone.value,
-    year: year.value,
+    line: lineEl.value,
+    zone: zoneEl.value,
+    year: yearEl.value,
     change: changeAsked,
-    after: after.value.trim(),
+    after: afterEl.value.trim(),
   });
 
   function apply(state: CronState): void {
-    line.value = state.line;
-    setControlValue(zone, state.zone);
-    year.value = state.year;
-    after.value = state.after;
+    lineEl.value = state.line;
+    if (![...zoneEl.options].some((o) => o.value === state.zone)) {
+      zoneEl.append(new Option(state.zone, state.zone));
+    }
+    zoneEl.value = state.zone;
+    yearEl.value = state.year;
+    afterEl.value = state.after;
     changeAsked = state.change;
+  }
+
+  /** Thin the axes' labels to what fits; the marks keep their places. */
+  function fit(): void {
+    for (const name of ["axis-utc", "axis-wall"]) {
+      const row = frameEl.querySelector<HTMLElement>(`[id="${id(name)}"]`);
+      if (row !== null) thinTickLabels(row, "[data-tick]");
+    }
+  }
+
+  function drawChange(view: CronView, state: CronState): void {
+    if (view.changes.length > 0) {
+      setHtml(
+        changeEl,
+        html`${view.changes.map(
+          (c) => html`<option value="${c.value}">${c.label}</option>`,
+        )}`,
+      );
+      changeEl.disabled = false;
+      changeEl.value = String(view.ordinal);
+    } else {
+      setHtml(
+        changeEl,
+        html`<option value="">${
+          view.noChangeNote !== null
+            ? noChangeOptionText(state.year)
+            : "Needs a valid zone and year"
+        }</option>`,
+      );
+      changeEl.disabled = true;
+    }
+  }
+
+  function drawNight(view: CronView): void {
+    const night = view.night;
+    slots.nightnote.textContent =
+      view.noChangeNote ??
+      (view.expr === null && view.parsed ? NO_GRAMMAR_NIGHT_TEXT : "");
+    setHtml(
+      slots.plot,
+      night === null
+        ? html``
+        : cronPlot({
+            chip: night.chip,
+            utc: {
+              id: id("axis-utc"),
+              caption: "UTC",
+              ticks: night.ticks.map((t) => ({
+                at: t.pct / 100,
+                label: t.utc,
+              })),
+            },
+            wall: {
+              id: id("axis-wall"),
+              caption: "Wall",
+              ticks: night.ticks.map((t) => ({
+                at: t.pct / 100,
+                label: t.wall,
+              })),
+            },
+            lanes: night.lanes.map((lane) => ({
+              policy: lane.policy as CronLibPolicy,
+              line: POLICY_LINE[lane.policy],
+              plate: lane.plate,
+              marks: lane.marks,
+            })),
+          }),
+    );
+    fit();
+    slots.sentence.textContent = night === null ? "" : night.sentence;
+    setHtml(slots.touched, touchedTables(view));
   }
 
   function render(): void {
     const state = readState();
     const view = cronView(lib, state);
-    preset.value = presetIdOf(state);
-    drawProblem(q, view);
-    drawLive(q, view);
-    drawFields(q, view);
-    drawChange(q, view, state);
-    drawNight(root, q, view);
-    drawLists(q, view);
-    drawCalls(q, view);
+    presetEl.value = presetIdOf(state);
+
+    slots.problem.textContent =
+      view.zoneError ??
+      view.yearError ??
+      view.afterError ??
+      view.changeNote ??
+      "";
+    const live = liveText(view);
+    if (live !== liveShown) {
+      liveShown = live;
+      setHtml(slots.live, srOnly(live));
+    }
+    setHtml(slots.fields, fieldsSlot(view));
+    drawChange(view, state);
+    drawNight(view);
+
+    slots.afterUsed.textContent = view.afterUsed
+      ? `Runs strictly after ${view.afterUsed}.`
+      : "";
+    setHtml(slots.lists, listTables(view));
+
+    setHtml(slots.calls, callFrameOf(view));
+    setHtml(slots.output, outputSlot(view));
   }
 
-  root.addEventListener("input", (e) => {
-    const role = (e.target as HTMLElement).dataset?.["role"];
-    if (role === "line" || role === "year" || role === "after") render();
-  });
-  root.addEventListener("change", (e) => {
-    const role = (e.target as HTMLElement).dataset?.["role"];
-    if (role === "preset") {
-      const hit = CRON_PRESETS.find((p) => p.id === preset.value);
-      if (!hit) return;
-      apply(stateOfPreset(hit));
-      render();
-    } else if (role === "zone" || role === "year") {
-      render();
-    } else if (role === "change") {
-      changeAsked = change.value;
-      render();
-    }
-  });
-  wireCopyButtons(root);
+  widgetEl.addEventListener(
+    "input",
+    (e) => {
+      const t = e.target;
+      if (t === lineEl || t === yearEl || t === afterEl) render();
+    },
+    { signal },
+  );
+  widgetEl.addEventListener(
+    "change",
+    (e) => {
+      const t = e.target;
+      if (t === presetEl) {
+        const hit = CRON_PRESETS.find((p) => p.id === presetEl.value);
+        if (!hit) return;
+        apply(stateOfPreset(hit));
+        render();
+      } else if (t === zoneEl || t === yearEl) {
+        render();
+      } else if (t === changeEl) {
+        changeAsked = changeEl.value;
+        render();
+      }
+    },
+    { signal },
+  );
 
   apply(initial);
   render();
 
-  const frame = q("night-frame");
-  const stop = frame
-    ? onWidthChange(frame, () => {
-        for (const role of ["axis-utc", "axis-wall"]) {
-          const row = q(role);
-          if (row) thinTickLabels(row, ".gmt-cron-tick");
-        }
-      })
-    : () => {};
+  const stop = onWidthChange(frameEl, fit);
   return { readState, stop };
 }
 
@@ -726,6 +545,7 @@ export const mountCronInAZone: MountFn<CronInAZoneArgs> = async (
   args,
   signal,
 ) => {
+  defineElements();
   let lib: CronLib;
   try {
     lib = await loadCronLib();
@@ -735,10 +555,15 @@ export const mountCronInAZone: MountFn<CronInAZoneArgs> = async (
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  const widget = setupWidget(root, lib, readArgs(args));
+  let controller: Controller;
+  try {
+    controller = setupWidget(root, lib, readArgs(args), signal);
+  } catch (cause) {
+    throw new WidgetLoadError(cause);
+  }
 
   return onceDestroy(
-    () => widget.stop(),
-    () => permalinkOf(widget.readState()),
+    () => controller.stop(),
+    () => permalinkOf(controller.readState()),
   );
 };

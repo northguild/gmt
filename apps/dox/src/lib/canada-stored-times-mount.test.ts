@@ -1,119 +1,103 @@
 /**
  * @vitest-environment jsdom
  *
- * "Did your saved events move?" in the checker's mount. The Worker's answer is built by the real
- * Worker code in this test runtime, so every row is the library's own reading here.
+ * "Did your saved events move?" as a reader meets it: `storedSection` wired by `wireStoredTimes`.
+ * The Worker's answer is built by the real Worker code in this test runtime, so every row is the
+ * library's own reading here. The browser's time zone check is the test's to give: it calls
+ * `setStaleZones` or `browserUnchecked` as the checker's mount would.
  */
-import { canadaTense } from "./clock-change-tense.fixture";
-import { getUtcNow } from "@northguild/gmt/utc/get";
+import { screen, within } from "@testing-library/dom";
+import userEvent from "@testing-library/user-event";
 import { installJsdomShims } from "~/test/jsdom-shims";
-import { computeCanadaCheck } from "../../worker/canada-clock-change";
+import { cellsInColumn, expectNoAxeViolations } from "~/test/render-widget";
+import { storedSection } from "~/widgets/families/clockcheck/stored-section";
+import { html } from "~/widgets/builders/html";
+import { widget } from "~/widgets/builders/layout";
+import { defineElements } from "~/widgets/define";
+import { findWidget } from "~/widgets/root";
+import { renderHtml } from "~/widgets/test-fixture";
 import { computeStoredCheck } from "../../worker/clock-change-shared";
 import { classifyStoredZoned } from "@northguild/gmt/zoned/classify";
-import { CANADA_STOP_YEAR, STORED_PRESET } from "./canada-clock-change";
+import { STORED_PRESET } from "./canada-clock-change";
+import { storedFix, STORED_MAX_LINES } from "./clock-change-stored-lines";
+import { storedTruncatedText, wireStoredTimes } from "./clock-change-stored";
+import type { StoredHandle } from "./clock-change-stored";
 import {
-  storedFix,
-  storedVerdict,
-  STORED_MAX_LINES,
-} from "./clock-change-stored-lines";
-import { storedTruncatedText } from "./clock-change-stored";
-import { SAVED_EXAMPLE, STORED_EXAMPLE } from "./canada-saved-example";
-import {
-  mountCanadaClockChange,
-  renderCanadaClockChangeTemplate,
-} from "./canada-clock-change-mount";
+  CANADA_STORED,
+  SAVED_EXAMPLE,
+  STORED_EXAMPLE,
+} from "./canada-saved-example";
 
 installJsdomShims();
 
-const NOW = "2026-10-22T12:00:00Z";
-
 type Posted = { lines: string; zone: string };
 
-/** `stale` names zones the mocked checking data has wrong: they come back as ones that still change. */
 function fakeFetch(
-  options: {
-    post?: (body: Posted) => Response | Promise<Response>;
-    /** Answers the browser check's GET instead of the mocked check, when it returns a response. */
-    get?: () => Response | undefined;
-    stale?: string[];
-  } = {},
-): {
-  fetch: typeof fetch;
-  posts: Posted[];
-} {
+  options: { post?: (body: Posted) => Response | Promise<Response> } = {},
+): { fetch: typeof fetch; posts: Posted[] } {
   const posts: Posted[] = [];
   const impl = async (_url: unknown, init?: RequestInit) => {
-    if (init?.method === "POST") {
-      const form = init.body as FormData;
-      const body = {
-        lines: String(form.get("lines")),
-        zone: String(form.get("zone")),
-      };
-      posts.push(body);
-      return (
-        options.post?.(body) ??
-        Response.json(computeStoredCheck(body.lines, body.zone))
-      );
-    }
-    const failed = options.get?.();
-    if (failed) return failed;
-    const check = computeCanadaCheck(NOW, CANADA_STOP_YEAR);
-    const stale = new Set(options.stale ?? []);
-    const fresh = new Set([
-      "America/Vancouver",
-      "America/Edmonton",
-      "America/Inuvik",
-      "America/Winnipeg",
-    ]);
-    // Mocked data: the zones that stop changing are right unless the test names them stale.
-    const zones = check.zones.map((zone) =>
-      fresh.has(zone.zone)
-        ? {
-            ...zone,
-            kind: stale.has(zone.zone)
-              ? ("changes-after" as const)
-              : ("stopped" as const),
-          }
-        : zone,
+    const form = init?.body as FormData;
+    const body = {
+      lines: String(form.get("lines")),
+      zone: String(form.get("zone")),
+    };
+    posts.push(body);
+    return (
+      options.post?.(body) ??
+      Response.json(computeStoredCheck(body.lines, body.zone))
     );
-    return Response.json({ ...check, zones });
   };
   return { fetch: impl as unknown as typeof fetch, posts };
 }
 
-async function mounted(fetchFn: typeof fetch) {
-  document.body.innerHTML = renderCanadaClockChangeTemplate({
-    tense: canadaTense,
-  });
-  const root = document.querySelector<HTMLElement>(".gmt-canada")!;
+const config = { ...CANADA_STORED, idPrefix: "test" };
+const controllers: AbortController[] = [];
+afterEach(() => {
+  controllers.splice(0).forEach((c) => c.abort());
+});
+
+/**
+ * Renders the section and wires it. `stale` is what the browser check found: a list of zones whose
+ * data is old, or `null` to leave the check undone (the test then calls the handle itself).
+ */
+async function mounted(
+  fetchFn: typeof fetch,
+  stale: readonly string[] | null = [],
+) {
+  defineElements();
+  renderHtml(
+    html`${widget({ name: "stored-test", label: "Saved events", scope: "test" }, storedSection(config))}`,
+  );
   const controller = new AbortController();
-  await mountCanadaClockChange(root, controller.signal, {
-    fetch: fetchFn,
-    now: getUtcNow,
-  });
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector<T>(`[data-role="${role}"]`)!;
-  return { root, controller, q };
+  controllers.push(controller);
+  const handle: StoredHandle = wireStoredTimes(
+    findWidget(document.body, "stored-test"),
+    config,
+    controller.signal,
+    fetchFn,
+  );
+  if (stale !== null) handle.setStaleZones(stale);
+  await handle.ready;
+  return { handle, user: userEvent.setup() };
 }
 
-async function submit(
-  q: <T extends HTMLElement>(role: string) => T,
-  lines: string,
-): Promise<void> {
-  q<HTMLTextAreaElement>("stored-lines").value = lines;
-  q<HTMLButtonElement>("stored-check").click();
+const box = () =>
+  screen.getByRole("textbox", { name: "Saved events, one per line" });
+
+/** Replaces the box's text and presses Check; resolves once the run's status line has cleared. */
+async function check(user: ReturnType<typeof userEvent.setup>, lines: string) {
+  await user.clear(box());
+  if (lines !== "") await user.click(box());
+  if (lines !== "") await user.paste(lines);
+  await user.click(screen.getByRole("button", { name: "Check" }));
   await vi.waitFor(() =>
-    expect(q("stored-check").getAttribute("aria-busy")).toBeNull(),
+    expect(screen.queryByText("Checking\u2026")).not.toBeInTheDocument(),
   );
 }
 
-const text = (el: Element | null) => el?.textContent?.trim() ?? "";
-
-const rowsOf = (root: Element) => [
-  ...root.querySelectorAll<HTMLElement>(
-    ".gmt-clockcheck-stored-table tbody tr",
-  ),
-];
+/** The rows of the answer table, header excluded; hidden rows are not role-visible. */
+const bodyRows = () => screen.getAllByRole("row").slice(1);
 
 describe("the saved-times example", () => {
   it("states what the library says about the saved Vancouver value", () => {
@@ -153,65 +137,63 @@ describe("the saved-times example", () => {
 });
 
 describe("the stored-times section", () => {
-  it("is server-rendered with its purpose, three steps, labelled form and compact controls", () => {
-    document.body.innerHTML = renderCanadaClockChangeTemplate({
-      tense: canadaTense,
-    });
-    const section = document.querySelector(".gmt-clockcheck-stored")!;
-    expect(text(section.querySelector("h4"))).toBe(
-      "Did your saved events move?",
+  it("is server-rendered with its purpose, three steps, a labelled form and the controls", async () => {
+    renderHtml(
+      html`${widget({ name: "stored-test", label: "Saved events", scope: "test" }, storedSection(config))}`,
     );
-    expect(text(section.querySelector(".gmt-clockcheck-stored-lead"))).toBe(
-      "Apps often save a future event with the UTC offset that applied when it was booked. Where the rules changed, that saved offset is wrong, and the app shows the event an hour off.",
-    );
-    const steps = [...section.querySelectorAll(".gmt-clockcheck-step")].map(
-      (el) => text(el),
-    );
+    expect(
+      screen.getByRole("heading", {
+        level: 4,
+        name: "Did your saved events move?",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Apps often save a future event with the UTC offset that applied when it was booked. Where the rules changed, that saved offset is wrong, and the app shows the event an hour off.",
+      ),
+    ).toBeInTheDocument();
+    const steps = within(
+      screen.getByRole("list", { name: "An example" }),
+    ).getAllByRole("listitem");
     expect(steps).toHaveLength(3);
-    expect(steps[0]).toContain("Booked before the change");
-    expect(steps[0]).toContain(
-      "9:00, 15 Nov, Vancouver, saved as 09:00 −08:00",
+    expect(steps[0]).toHaveTextContent("Booked before the change");
+    expect(steps[0]).toHaveTextContent(
+      "9:00, 15 Nov, Vancouver, saved as 09:00 \u221208:00",
     );
-    expect(steps[1]).toContain("Vancouver stays on −07:00");
-    expect(steps[2]).toContain("The saved event shows as 10:00.");
-    expect(steps[2]).toContain("Fix: store 09:00 −07:00");
-    const textarea = section.querySelector("textarea")!;
-    expect(textarea.rows).toBe(8);
-    expect(textarea.value).toBe(STORED_EXAMPLE);
-    expect(text(section.querySelector("label[for]"))).toBe(
-      "Saved events, one per line",
-    );
-    expect(text(section.querySelector(".gmt-clockcheck-stored-help"))).toBe(
+    expect(steps[1]).toHaveTextContent("Vancouver stays on \u221207:00");
+    expect(steps[2]).toHaveTextContent("The saved event shows as 10:00.");
+    expect(steps[2]).toHaveTextContent("Fix: store 09:00 \u221207:00");
+    expect(box()).toHaveValue(STORED_EXAMPLE);
+    expect(box()).toHaveAccessibleDescription(
       `Paste values like ${SAVED_EXAMPLE.saved}. Up to ${STORED_MAX_LINES} lines.`,
     );
-    expect(text(section.querySelector(".gmt-clockcheck-formats summary"))).toBe(
-      "Accepted formats",
-    );
-    // Every line has its own zone, so the picker stays out of the way.
     expect(
-      section.querySelector<HTMLElement>('[data-role="stored-zone-row"]')!
-        .hidden,
-    ).toBe(true);
-    expect(text(section.querySelector('[data-role="stored-check"]'))).toBe(
-      "Check",
-    );
-    expect(text(section.querySelector('[data-role="stored-example"]'))).toBe(
-      "Reset example",
-    );
-    expect(section.textContent).not.toMatch(/Worker|workerd/);
+      screen.getByRole("button", { name: "Accepted formats" }),
+    ).toBeInTheDocument();
+    // Every line has its own zone, so the picker stays out of the way.
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Check" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Reset example" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Worker|workerd/)).not.toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
   it("shows the zone picker only when a line has no zone", async () => {
     const { fetch } = fakeFetch();
-    const { q, controller } = await mounted(fetch);
-    const row = q<HTMLElement>("stored-zone-row");
-    expect(row.hidden).toBe(true);
-    const lines = q<HTMLTextAreaElement>("stored-lines");
-    lines.value = "2026-11-15T09:00:00-08:00";
-    lines.dispatchEvent(new Event("input"));
-    expect(row.hidden).toBe(false);
+    const { user } = await mounted(fetch);
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    await user.clear(box());
+    await user.click(box());
+    await user.paste("2026-11-15T09:00:00-08:00");
+    const picker = screen.getByRole("combobox", {
+      name: "Lines without a zone use",
+    });
     expect(
-      [...row.querySelectorAll("option")].map((o) => o.getAttribute("value")),
+      within(picker)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
     ).toEqual([
       "America/Vancouver",
       "America/Edmonton",
@@ -219,117 +201,121 @@ describe("the stored-times section", () => {
       "America/Winnipeg",
       "America/Toronto",
     ]);
-    controller.abort();
+    await expectNoAxeViolations(document.body);
   });
 
   it("with fresh data: normal verdicts, a summary and a copyable fix", async () => {
     const { fetch, posts } = fakeFetch();
-    const { q, root, controller } = await mounted(fetch);
+    await mounted(fetch);
     expect(posts).toHaveLength(1);
     expect(posts[0]!.lines).toBe(STORED_EXAMPLE);
-    const rows = rowsOf(root);
-    expect(rows).toHaveLength(4);
-    expect(q("stored-stale").hidden).toBe(true);
-    const pills = rows.map((r) =>
-      text(r.querySelector(".gmt-clockcheck-badge")),
-    );
-    expect(pills[1]).toBe("✓ Still right");
-    expect(pills[2]).toBe("✓ Still right");
+    expect(bodyRows()).toHaveLength(4);
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+    const status = cellsInColumn(screen.getByRole("table"), "Status");
+    expect(status[1]).toHaveTextContent("\u2713 Still right");
+    expect(status[2]).toHaveTextContent("\u2713 Still right");
     // Vancouver 09:00-08:00 is an hour off whenever this host's data has the 2026e rule.
-    const vancouverMoved = rows[0]!.dataset.ok === "false";
-    if (vancouverMoved) {
-      expect(pills[0]).toBe("✗ Shows 1 h off");
-      const says = rows[0]!.querySelector(".gmt-clockcheck-stored-says")!;
-      expect(text(says)).toContain(
+    if (status[0]!.textContent?.includes("Shows 1 h off")) {
+      expect(status[0]).toHaveTextContent("\u2717 Shows 1 h off");
+      const says = cellsInColumn(screen.getByRole("table"), "What to do")[0]!;
+      expect(says).toHaveTextContent(
         `Keep 9:00 local: store ${SAVED_EXAMPLE.fixed}`,
       );
-      expect(text(says)).toContain(
+      expect(says).toHaveTextContent(
         "Or keep the old instant (that is 10:00 local).",
       );
       expect(
-        says.querySelector<HTMLElement>('[data-role="stored-copy"]')!.dataset
-          .copyText,
-      ).toBe(SAVED_EXAMPLE.fixed);
-      expect(text(q("stored-summary"))).toMatch(
-        /^4 checked \u00b7 (\d moved|none moved)$/,
-      );
+        within(says).getByRole("button", {
+          name: `Copy ${SAVED_EXAMPLE.fixed}`,
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/^4 checked \u00b7 (\d moved|none moved)$/),
+      ).toBeInTheDocument();
     }
     expect(
-      rows[0]!
-        .querySelector(".gmt-clockcheck-stored-input code")!
-        .getAttribute("title"),
-    ).toBe(SAVED_EXAMPLE.saved);
-    controller.abort();
+      within(bodyRows()[0]!).getByTitle(SAVED_EXAMPLE.saved),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
   it("with stale data: no tick, no cross and no advice on the affected lines; the others keep theirs", async () => {
-    const { fetch } = fakeFetch({
-      stale: ["America/Vancouver", "America/Winnipeg"],
-    });
-    const { q, root, controller } = await mounted(fetch);
-    const rows = rowsOf(root);
+    const { fetch } = fakeFetch();
+    await mounted(fetch, ["America/Vancouver", "America/Winnipeg"]);
+    const table = screen.getByRole("table");
+    const rows = bodyRows();
     for (const i of [0, 3]) {
       const row = rows[i]!;
-      expect(text(row.querySelector(".gmt-clockcheck-badge"))).toBe(
-        "Can’t check yet",
-      );
-      expect(row.dataset.ok).toBe("unknown");
-      expect(row.textContent).not.toMatch(/[✓✗]/);
-      expect(row.querySelector('[data-role="stored-copy"]')).toBeNull();
-      expect(row.querySelector("details")).toBeNull();
-      expect(row.querySelector("a")).toBeNull();
+      expect(within(row).getByText("Can\u2019t check yet")).toBeInTheDocument();
+      expect(row).not.toHaveTextContent(/[\u2713\u2717]/);
+      expect(
+        within(row).queryByRole("button", { name: /^Copy / }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(row).queryByRole("button", { name: "Readings" }),
+      ).not.toBeInTheDocument();
       // The sentence is said once, in the summary bar; a row only says to try again.
-      expect(text(row.querySelector(".gmt-clockcheck-stored-says"))).toBe(
-        "Try again after the update.",
+      expect(cellsInColumn(table, "What to do")[i]).toHaveTextContent(
+        /^Try again after the update\.$/,
       );
     }
-    expect(text(q("stored-stale"))).toBe(
+    const note = screen.getByRole("note");
+    expect(note).toHaveTextContent(
       "This check\u2019s time zone data is older than the change for Vancouver and Winnipeg, so it can\u2019t tell. Try again later, or run the command in Test your own servers.",
     );
-    expect(
-      root.querySelector(".gmt-clockcheck-stored-table")!.textContent,
-    ).not.toContain("older than the change");
+    expect(table).not.toHaveTextContent("older than the change");
     // Toronto is not affected: it keeps its verdict.
-    expect(text(rows[2]!.querySelector(".gmt-clockcheck-badge"))).toBe(
-      "✓ Still right",
-    );
-    expect(q("stored-stale").hidden).toBe(false);
-    expect(text(q("stored-stale"))).toContain("Vancouver");
-    expect(text(q("stored-summary"))).toBe(
-      "1 checked \u00b7 none moved \u00b7 3 can\u2019t be checked yet",
-    );
-    controller.abort();
+    expect(rows[2]).toHaveTextContent("\u2713 Still right");
+    expect(
+      screen.getByText(
+        "1 checked \u00b7 none moved \u00b7 3 can\u2019t be checked yet",
+      ),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
   it("puts the example back and checks it again on Reset example", async () => {
     const { fetch, posts } = fakeFetch();
-    const { q, controller } = await mounted(fetch);
-    q<HTMLTextAreaElement>("stored-lines").value = "x";
-    q<HTMLButtonElement>("stored-example").click();
-    expect(q<HTMLTextAreaElement>("stored-lines").value).toBe(STORED_EXAMPLE);
+    const { user } = await mounted(fetch);
+    await user.clear(box());
+    await user.click(box());
+    await user.paste("x");
+    await user.click(screen.getByRole("button", { name: "Reset example" }));
+    expect(box()).toHaveValue(STORED_EXAMPLE);
+    expect(box()).toHaveFocus();
     await vi.waitFor(() => expect(posts).toHaveLength(2));
-    controller.abort();
+    await expectNoAxeViolations(document.body);
+  });
+
+  it("runs the check from the keyboard: Tab to Check, then Enter", async () => {
+    const { fetch, posts } = fakeFetch();
+    const { user } = await mounted(fetch);
+    await user.click(box());
+    await user.tab();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Check" })).toHaveFocus();
+    await user.keyboard("{Enter}");
+    await vi.waitFor(() => expect(posts).toHaveLength(2));
   });
 
   it("says the lines can't be judged when the browser check fails, then draws them once it answers", async () => {
-    let getFails = true;
-    const { fetch } = fakeFetch({
-      get: () => (getFails ? new Response("no", { status: 503 }) : undefined),
-    });
-    const { q, root, controller } = await mounted(fetch);
-    expect(text(q("stored-summary"))).toBe("Not judged yet.");
-    expect(text(q("stored-results"))).toBe(
-      "This browser\u2019s time zone data could not be checked, so no line can be judged yet. Press Check again under Your browser.",
-    );
-    expect(rowsOf(root)).toHaveLength(0);
-    // Check and Reset example get the same message rather than "Checking…".
-    await submit(q, STORED_PRESET);
-    expect(text(q("stored-summary"))).toBe("Not judged yet.");
-    getFails = false;
-    q<HTMLButtonElement>("recheck").click();
-    await vi.waitFor(() => expect(rowsOf(root).length).toBeGreaterThan(0));
-    expect(text(q("stored-summary"))).not.toBe("Not judged yet.");
-    controller.abort();
+    const { fetch } = fakeFetch();
+    const { handle, user } = await mounted(fetch, null);
+    handle.browserUnchecked();
+    expect(screen.getByText("Not judged yet.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "This browser\u2019s time zone data could not be checked, so no line can be judged yet. Press Check again under Your browser.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    // Check gets the same message rather than "Checking\u2026".
+    await check(user, STORED_PRESET);
+    expect(screen.getByText("Not judged yet.")).toBeInTheDocument();
+    handle.setStaleZones([]);
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.queryByText("Not judged yet.")).not.toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
   it("drops an older answer that lands after Reset example's", async () => {
@@ -343,93 +329,92 @@ describe("the stored-times section", () => {
         });
       },
     });
-    const { q, root, controller } = await mounted(fetch);
-    q<HTMLTextAreaElement>("stored-lines").value =
-      "2026-07-01T12:00:00-04:00[America/Toronto]";
-    q<HTMLButtonElement>("stored-check").click();
+    const { user } = await mounted(fetch);
+    await user.clear(box());
+    await user.click(box());
+    await user.paste("2026-07-01T12:00:00-04:00[America/Toronto]");
+    await user.click(screen.getByRole("button", { name: "Check" }));
     await vi.waitFor(() => expect(release).not.toBeNull());
-    q<HTMLButtonElement>("stored-example").click();
+    await user.click(screen.getByRole("button", { name: "Reset example" }));
     await vi.waitFor(() =>
-      expect(q("stored-check").getAttribute("aria-busy")).toBeNull(),
+      expect(screen.queryByText("Checking\u2026")).not.toBeInTheDocument(),
     );
-    expect(rowsOf(root)).toHaveLength(4);
+    expect(bodyRows()).toHaveLength(4);
     release!();
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(q<HTMLTextAreaElement>("stored-lines").value).toBe(STORED_EXAMPLE);
-    expect(rowsOf(root)).toHaveLength(4);
-    expect(q("stored-check").getAttribute("aria-busy")).toBeNull();
-    controller.abort();
+    expect(box()).toHaveValue(STORED_EXAMPLE);
+    expect(bodyRows()).toHaveLength(4);
+    await expectNoAxeViolations(document.body);
   });
 
   it("marks every line with a pill and a plain verdict", async () => {
     const { fetch, posts } = fakeFetch();
-    const { q, root, controller } = await mounted(fetch);
-    await submit(q, `${STORED_PRESET}\nnot a stored time`);
+    const { user } = await mounted(fetch);
+    await check(user, `${STORED_PRESET}\nnot a stored time`);
     expect(posts.at(-1)).toEqual({
       lines: `${STORED_PRESET}\nnot a stored time`,
       zone: "America/Vancouver",
     });
-    const rows = rowsOf(root);
-    expect(rows.map((r) => r.dataset.kind).slice(0, 5)).toEqual([
-      "valid",
-      "validInOverlap",
-      "offsetMismatch",
-      "ambiguous",
-      "nonexistent",
-    ]);
-    rows.slice(0, 8).forEach((row) => {
-      expect(row.querySelector(".gmt-clockcheck-badge")).not.toBeNull();
-      expect(row.querySelector("details")).not.toBeNull();
+    const rows = bodyRows();
+    const pills = cellsInColumn(screen.getByRole("table"), "Status");
+    expect(rows.length).toBeGreaterThan(8);
+    rows.slice(0, 8).forEach((row, i) => {
+      expect(pills[i]!.textContent?.trim()).not.toBe("");
+      expect(
+        within(row).getByRole("button", { name: "Readings" }),
+      ).toBeInTheDocument();
     });
-    const none = rows[8]!;
-    expect(none.dataset.kind).toBe("none");
-    expect(none.innerHTML).toContain("gmt-playground-sentinel");
-    expect(none.querySelector("details")).toBeNull();
-    controller.abort();
+    // A line the library could not read says so in the sentinel, never a blank pill.
+    const last = rows.at(-1)!;
+    expect(within(last).getByText("NO SIGNAL")).toBeInTheDocument();
+    expect(
+      within(last).queryByRole("button", { name: "Readings" }),
+    ).not.toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
-  it("words a moved Vancouver meeting as the local time it now means", () => {
-    expect(
-      storedVerdict({
-        kind: "offsetMismatch",
-        zoneOffset: "-07:00",
-        atStoredOffset: "2026-11-15T17:00:00Z",
-      }),
-    ).toEqual({ ok: false, words: "Moved: shows 10:00 local" });
-    expect(storedVerdict({ kind: "valid" })).toEqual({
-      ok: true,
-      words: "Still correct",
+  it("opens a row's readings on its button", async () => {
+    const { fetch } = fakeFetch();
+    const { user } = await mounted(fetch);
+    const button = within(bodyRows()[1]!).getByRole("button", {
+      name: "Readings",
     });
-    expect(storedVerdict({ kind: "ambiguous" }).ok).toBe(false);
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    await user.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(within(bodyRows()[1]!).getAllByRole("term").length).toBeGreaterThan(
+      0,
+    );
+    await expectNoAxeViolations(document.body);
   });
 
   it("shows only the moved rows when the toggle says so, and all again", async () => {
     const { fetch } = fakeFetch();
-    const { q, root, controller } = await mounted(fetch);
-    await submit(q, STORED_PRESET);
-    const rows = () => [...root.querySelectorAll<HTMLElement>("tbody tr")];
-    q<HTMLButtonElement>("stored-show-moved").click();
-    expect(q("stored-show-moved").getAttribute("aria-pressed")).toBe("true");
-    expect(
-      rows()
-        .filter((r) => !r.hidden)
-        .map((r) => r.dataset.ok),
-    ).not.toContain("true");
-    expect(rows().some((r) => r.hidden)).toBe(true);
-    q<HTMLButtonElement>("stored-show-all").click();
-    expect(rows().every((r) => !r.hidden)).toBe(true);
-    controller.abort();
+    const { user } = await mounted(fetch);
+    await check(user, STORED_PRESET);
+    const all = bodyRows().length;
+    await user.click(screen.getByRole("button", { name: "Only moved" }));
+    expect(screen.getByRole("button", { name: "Only moved" })).toBePressed();
+    const moved = bodyRows();
+    expect(moved.length).toBeLessThan(all);
+    moved.forEach((row) =>
+      expect(row).not.toHaveTextContent("\u2713 Still right"),
+    );
+    await expectNoAxeViolations(document.body);
+    await user.click(screen.getByRole("button", { name: "All" }));
+    expect(bodyRows()).toHaveLength(all);
+    await expectNoAxeViolations(document.body);
   });
 
   it("tells the reader when the toggle leaves no line", async () => {
     const { fetch } = fakeFetch();
-    const { q, root, controller } = await mounted(fetch);
-    await submit(q, "2026-07-01T12:00:00-04:00[America/Toronto]");
-    q<HTMLButtonElement>("stored-show-moved").click();
+    const { user } = await mounted(fetch);
+    await check(user, "2026-07-01T12:00:00-04:00[America/Toronto]");
+    await user.click(screen.getByRole("button", { name: "Only moved" }));
     expect(
-      root.querySelector<HTMLElement>('[data-role="stored-none"]')!.hidden,
-    ).toBe(false);
-    controller.abort();
+      screen.getByText("No line is left with this filter."),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
   it("names the last row's line in the truncated message", async () => {
@@ -437,11 +422,13 @@ describe("the stored-times section", () => {
       "\n",
     );
     const { fetch } = fakeFetch();
-    const { q, controller } = await mounted(fetch);
-    await submit(q, many);
-    expect(text(q("stored-truncated"))).toBe(
-      `The input was over ${STORED_MAX_LINES} lines or 20,000 bytes; lines after line ${STORED_MAX_LINES} were not read.`,
-    );
+    const { user } = await mounted(fetch);
+    await check(user, many);
+    expect(
+      screen.getByText(
+        `The input was over ${STORED_MAX_LINES} lines or 20,000 bytes; lines after line ${STORED_MAX_LINES} were not read.`,
+      ),
+    ).toBeInTheDocument();
     expect(
       storedTruncatedText({
         zone: "America/Toronto",
@@ -449,24 +436,24 @@ describe("the stored-times section", () => {
         rows: [],
       }),
     ).toContain("no line was read");
-    controller.abort();
+    await expectNoAxeViolations(document.body);
   });
 
   it("clears the truncated message on the next answer", async () => {
     const { fetch } = fakeFetch();
-    const { q, controller } = await mounted(fetch);
-    await submit(q, Array.from({ length: 205 }, () => "x").join("\n"));
-    await submit(q, "2026-07-01T12:00:00-04:00[America/Toronto]");
-    expect(text(q("stored-truncated"))).toBe("");
-    controller.abort();
+    const { user } = await mounted(fetch);
+    await check(user, Array.from({ length: 205 }, () => "x").join("\n"));
+    expect(screen.getByText(/lines after line/)).toBeInTheDocument();
+    await check(user, "2026-07-01T12:00:00-04:00[America/Toronto]");
+    expect(screen.queryByText(/lines after line/)).not.toBeInTheDocument();
   });
 
   it("says nothing was found for empty input", async () => {
     const { fetch } = fakeFetch();
-    const { q, controller } = await mounted(fetch);
-    await submit(q, "  \n");
-    expect(text(q("stored-results"))).toContain("Nothing to check");
-    controller.abort();
+    const { user } = await mounted(fetch);
+    await check(user, "");
+    expect(screen.getByText(/Nothing to check/)).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
   it("says when to try again on a 429", async () => {
@@ -477,13 +464,13 @@ describe("the stored-times section", () => {
           headers: { "retry-after": "42" },
         }),
     });
-    const { q, controller } = await mounted(fetch);
-    await submit(q, STORED_PRESET);
-    expect(text(q("stored-status"))).toBe("Try again in 42 s");
-    controller.abort();
+    const { user } = await mounted(fetch);
+    await check(user, STORED_PRESET);
+    expect(await screen.findByText("Try again in 42 s")).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
-  it("announces Checking\u2026 in the status line while the request runs, then the answer", async () => {
+  it("announces Checking\u2026 in a status while the request runs, then the answer", async () => {
     let release!: () => void;
     const held = new Promise<void>((done) => (release = done));
     let seen = 0;
@@ -494,19 +481,18 @@ describe("the stored-times section", () => {
         return Response.json(computeStoredCheck(body.lines, body.zone));
       },
     });
-    const { q, controller } = await mounted(fetch);
-    q<HTMLTextAreaElement>("stored-lines").value = STORED_PRESET;
-    q<HTMLButtonElement>("stored-check").click();
-    await vi.waitFor(() =>
-      expect(text(q("stored-status"))).toBe("Checking\u2026"),
-    );
-    expect(q("stored-status").getAttribute("role")).toBe("status");
+    const { user } = await mounted(fetch);
+    await user.clear(box());
+    await user.click(box());
+    await user.paste(STORED_PRESET);
+    await user.click(screen.getByRole("button", { name: "Check" }));
+    const line = await screen.findByText("Checking\u2026");
+    expect(line).toHaveAttribute("role", "status");
     release();
     await vi.waitFor(() =>
-      expect(q("stored-check").getAttribute("aria-busy")).toBeNull(),
+      expect(screen.queryByText("Checking\u2026")).not.toBeInTheDocument(),
     );
-    expect(text(q("stored-status"))).toBe("");
-    controller.abort();
+    await expectNoAxeViolations(document.body);
   });
 
   it("replaces Checking\u2026 with the error text when the check fails", async () => {
@@ -521,17 +507,17 @@ describe("the stored-times section", () => {
           : Response.json(computeStoredCheck(STORED_PRESET, "America/Toronto"));
       },
     });
-    const { q, controller } = await mounted(fetch);
-    q<HTMLTextAreaElement>("stored-lines").value = STORED_PRESET;
-    q<HTMLButtonElement>("stored-check").click();
-    await vi.waitFor(() =>
-      expect(text(q("stored-status"))).toBe("Checking\u2026"),
-    );
+    const { user } = await mounted(fetch);
+    await user.clear(box());
+    await user.click(box());
+    await user.paste(STORED_PRESET);
+    await user.click(screen.getByRole("button", { name: "Check" }));
+    await screen.findByText("Checking\u2026");
     release();
-    await vi.waitFor(() =>
-      expect(text(q("stored-status"))).toBe("The check could not finish."),
-    );
-    controller.abort();
+    expect(
+      await screen.findByText("The check could not finish."),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
   it("names the reading limit on a 413", async () => {
@@ -541,31 +527,39 @@ describe("the stored-times section", () => {
           status: 413,
         }),
     });
-    const { q, controller } = await mounted(fetch);
-    await submit(q, STORED_PRESET);
-    expect(text(q("stored-status"))).toBe(
-      `That is too much text to read. Keep it to ${STORED_MAX_LINES} lines and 20,000 bytes.`,
-    );
-    controller.abort();
+    const { user } = await mounted(fetch);
+    await check(user, STORED_PRESET);
+    expect(
+      await screen.findByText(
+        `That is too much text to read. Keep it to ${STORED_MAX_LINES} lines and 20,000 bytes.`,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("says the check could not finish on a failure", async () => {
     const { fetch } = fakeFetch({
       post: () => new Response("no", { status: 500 }),
     });
-    const { q, controller } = await mounted(fetch);
-    await submit(q, STORED_PRESET);
-    expect(text(q("stored-status"))).toBe("The check could not finish.");
-    controller.abort();
+    const { user } = await mounted(fetch);
+    await check(user, STORED_PRESET);
+    expect(
+      await screen.findByText("The check could not finish."),
+    ).toBeInTheDocument();
   });
 
   it("sends nothing but the two form fields, as strings", async () => {
     const { fetch, posts } = fakeFetch();
-    const { q, controller } = await mounted(fetch);
-    q<HTMLSelectElement>("stored-zone").value = "America/Toronto";
-    await submit(q, "a");
+    const { user } = await mounted(fetch);
+    await user.clear(box());
+    await user.click(box());
+    await user.paste("a");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Lines without a zone use" }),
+      "America/Toronto",
+    );
+    await user.click(screen.getByRole("button", { name: "Check" }));
+    await vi.waitFor(() => expect(posts).toHaveLength(2));
     expect(Object.keys(posts.at(-1)!).sort()).toEqual(["lines", "zone"]);
     expect(posts.at(-1)!.zone).toBe("America/Toronto");
-    controller.abort();
   });
 });

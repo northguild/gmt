@@ -31,7 +31,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderDtmDecoderTemplate();
+const html = renderDtmDecoderTemplate("dtm-decoder", {}).value;
 ---
 
 {
@@ -52,10 +52,12 @@ const html = renderDtmDecoderTemplate();
        lib/widget-permalink.ts. Absent or malformed, the widget opens on its
        first preset. */
     const seed = seedFromLocation("dtm");
-    document.querySelectorAll<HTMLElement>(".gmt-dtm-decoder").forEach((el) => {
-      mountDtmDecoder(el, seed, new AbortController().signal).catch(
-        (error) => showUnavailable(el, error),
-      );
-    });
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="dtm-decoder"]')
+      .forEach((el) => {
+        mountDtmDecoder(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
   }
 </script>

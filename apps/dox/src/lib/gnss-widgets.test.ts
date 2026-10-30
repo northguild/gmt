@@ -18,7 +18,6 @@ import {
   beforeFirstWeekText,
   counterSystem,
   durationSecondsText,
-  eraAt,
   eraStart,
   firstRefusedWeek,
   labelParts,
@@ -312,22 +311,6 @@ describe("eraStart", () => {
 
   it("is the sentinel for an era the library refuses", () => {
     expect(eraStart(lib, "GPS-LNAV", -1)).toBe("");
-  });
-});
-
-describe("eraAt", () => {
-  it("is the era utcToGnssWeek reports", () => {
-    expect(eraAt(lib, "GPS-LNAV", "2024-01-01T00:00:00Z")).toBe(2);
-    expect(eraAt(lib, "IRN-LNAV", "2024-01-01T00:00:00Z")).toBe(1);
-    expect(eraAt(lib, "GAL", "2024-01-01T00:00:00Z")).toBe(0);
-    expect(eraAt(lib, "GPS-LNAV", "2024-01-01T00:00:00Z")).toBe(
-      lib.utcToGnssWeek("GPS-LNAV", "2024-01-01T00:00:00Z")?.era,
-    );
-  });
-
-  it("is null before the counter's first week and for an invalid instant", () => {
-    expect(eraAt(lib, "GAL", "1999-08-21T23:59:46Z")).toBeNull();
-    expect(eraAt(lib, "GPS-LNAV", "invalid")).toBeNull();
   });
 });
 

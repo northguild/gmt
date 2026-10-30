@@ -1,0 +1,206 @@
+/* dwellLane: a labelled row of local days with the elapsed bar over them. The row's series
+   colour is a data attribute the builder writes. Position comes from custom properties
+   (`--gmt-from`, `--gmt-to`, in percent of the track), so right-to-left mirrors itself.
+   Amber is the sentinel's alone and nothing here uses it. */
+
+.timeline {
+  --label-w: 8.5rem;
+  --lane-h: 7.5rem;
+  --band-h: 1.7rem;
+  --band-gap: 6px;
+  --pad: 0.75rem;
+
+  container: dwell-timeline / inline-size;
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.lane {
+  --series: var(--gmt-series-1);
+
+  display: grid;
+  grid-template-columns: var(--label-w) minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--gmt-space-2);
+  min-inline-size: 0;
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.label {
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  overflow-wrap: anywhere;
+}
+
+/* The track keeps its height, so nothing moves while a handle is dragged. The handles lean
+   half their width past the track's edges, and the margin makes room for them. */
+.track {
+  position: relative;
+  box-sizing: border-box;
+  block-size: var(--lane-h);
+  margin-inline: var(--pad);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface-widget);
+}
+
+.cells {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+/* The elapsed bar: a gradient in the series colour, a solid closed edge where the dwell
+   starts and a dashed open edge where it ends. */
+.bar {
+  position: absolute;
+  inset-block-end: var(--band-gap);
+  inset-inline-start: calc(var(--gmt-from, 0) * 1%);
+  inline-size: calc((var(--gmt-to, 0) - var(--gmt-from, 0)) * 1%);
+  min-inline-size: 2px;
+  block-size: var(--band-h);
+  box-sizing: border-box;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--series) 40%, transparent),
+    color-mix(in srgb, var(--series) 14%, transparent)
+  );
+  pointer-events: none;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: 2px;
+    background: var(--series);
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    border-inline-end: 2px dashed var(--series);
+  }
+
+  /* An exit before the entry: the bar is drawn as an outline, not as a span of time. */
+  &[data-state="invalid"] {
+    background: transparent;
+    outline: 2px dashed var(--series);
+    outline-offset: -2px;
+  }
+}
+
+/* The handles sit over the bar. The band lets the pointer through to the days; only the
+   handles take it. */
+.handles {
+  position: absolute;
+  inset-block-end: var(--band-gap);
+  inset-inline: 0;
+  display: grid;
+  block-size: var(--band-h);
+  pointer-events: none;
+
+  & gmt-handle {
+    pointer-events: auto;
+  }
+}
+
+.axis {
+  display: flex;
+  justify-content: space-between;
+  margin-inline: calc(var(--label-w) + var(--gmt-space-2) + var(--pad))
+    var(--pad);
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+}
+
+/* Under 30rem the label sits over its track, and the axis follows the track's own edge. */
+@container dwell-timeline (inline-size < 30rem) {
+  .lane {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--gmt-space-1);
+  }
+
+  .label {
+    padding-inline: var(--pad);
+  }
+
+  .axis {
+    margin-inline: var(--pad);
+  }
+}
+
+/* Three dates would touch on a track this narrow: the middle one goes. */
+@container dwell-timeline (inline-size < 24rem) {
+  .mid {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .track {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .label,
+  .axis {
+    color: CanvasText;
+  }
+
+  .bar {
+    --series: Highlight;
+
+    background: transparent;
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+
+    &[data-state="invalid"] {
+      outline-style: dashed;
+    }
+
+    &::before {
+      background: Highlight;
+    }
+
+    &::after {
+      border-inline-end-color: Highlight;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .track {
+    border-color: var(--gmt-ice);
+  }
+
+  .axis {
+    color: var(--gmt-ice);
+  }
+
+  .bar::before {
+    inline-size: 4px;
+  }
+
+  .bar::after {
+    border-inline-end-width: 4px;
+  }
+}

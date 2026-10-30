@@ -44,7 +44,7 @@ export const NO_OFFSET_TEXT =
 export const NOT_INSERTED_TEXT =
   "No leap second was inserted at the end of that day.";
 /** Shown in the next-insertion line when the library lists none later. */
-export const NONE_AFTER_TEXT = "none after this date";
+const NONE_AFTER_TEXT = "none after this date";
 
 export const VERDICT_INSERTED = "inserted: a real leap second";
 export const VERDICT_NOT_INSERTED =
@@ -104,7 +104,7 @@ export function permalinkOf(state: TimelineState): Record<string, string> {
 // Presets
 // ---------------------------------------------------------------------------
 
-export interface TimelinePreset extends TimelineState {
+interface TimelinePreset extends TimelineState {
   id: string;
   label: string;
   description: string;
@@ -319,7 +319,7 @@ export function axisTicks(nowMs: number): { year: number; pct: number }[] {
 // ---------------------------------------------------------------------------
 
 /** One inserted second and the step it begins. */
-export interface Step {
+interface Step {
   /** The inserted second, `…T23:59:60Z`. */
   insertion: string;
   /** The first instant on the new offset. `""` if the library gave none. */
@@ -331,7 +331,7 @@ export interface Step {
 }
 
 /** What one date input reads, or why it does not. */
-export interface OffsetRead {
+interface OffsetRead {
   /** The calls made, empty when the date is blank. */
   calls: EdiCall[];
   /** TAI - UTC on the date, or `null`. */
@@ -342,7 +342,7 @@ export interface OffsetRead {
   reason: string;
 }
 
-export interface BetweenRead {
+interface BetweenRead {
   calls: EdiCall[];
   count: number | null;
   /** The counted insertions, named. Empty when the count is 0 or `null`. */
@@ -350,12 +350,12 @@ export interface BetweenRead {
   reason: string;
 }
 
-export type CheckVerdict =
+type CheckVerdict =
   | typeof VERDICT_INSERTED
   | typeof VERDICT_NOT_INSERTED
   | typeof VERDICT_VALID_INSTANT;
 
-export interface CheckRead {
+interface CheckRead {
   calls: EdiCall[];
   /** The verdict word, or `null` for NO SIGNAL. */
   verdict: CheckVerdict | null;
@@ -382,7 +382,7 @@ export interface TimelineRead {
  * insertion, an instant before 1972, or not an instant at all. The probes are
  * library calls; the sentences are fixed text.
  */
-export function noValueReason(lib: TimescaleLib, text: string): string {
+function noValueReason(lib: TimescaleLib, text: string): string {
   if (lacksOffset(lib, text)) return NO_OFFSET_TEXT;
   if (lib.hasSecond60(text) && !lib.isLeapSecond(text)) {
     return NOT_INSERTED_TEXT;

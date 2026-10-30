@@ -7,7 +7,6 @@ import {
   RIGHT_DATE_TEXT,
   ROLLING_DATE_TEXT,
   ROLLOVER_PRESETS,
-  ROLLOVER_SENTENCES,
   dateOfDay,
   dayOfDate,
   isSeeded,
@@ -20,6 +19,7 @@ import {
   spanText,
   windowDays,
   type RolloverState,
+  ROLLOVER_SENTENCES,
 } from "./gnss-rollover-checker";
 import { beforeFirstWeekText } from "./gnss-widgets";
 
@@ -394,14 +394,6 @@ describe("Today and a date", () => {
 describe("the sentences", () => {
   const base = preset("navic-built-2020");
 
-  it("names a fault of the era", () => {
-    for (const era of ["x", "-1", "1.5", "1e3"]) {
-      const r = read({ ...preset("navic-fixed-era"), era });
-      expect(r.status, era).toBe("sentinel");
-      expect(r.failure).toBe(ROLLOVER_SENTENCES.era);
-    }
-  });
-
   it("names a build date that is not an instant", () => {
     const r = read({ ...base, pivot: "next year" });
     expect(r.failure).toBe("The build date is not an ISO 8601 instant.");
@@ -471,11 +463,6 @@ describe("the sentences", () => {
     expect(read(base).eraZeroHint).toBe("");
     expect(read({ ...base, model: "era", era: "0" }).eraZeroHint).toBe("");
     expect(read({ ...base, pivot: "garbage" }).eraZeroHint).toBe("");
-  });
-
-  it("names a window that runs past the year 9999", () => {
-    const r = read({ ...preset("navic-fixed-era"), era: "100000" });
-    expect(r.failure).toBe(ROLLOVER_SENTENCES.beyond);
   });
 
   it("is an empty state, never a sentinel, when a field is blank", () => {

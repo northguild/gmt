@@ -1,0 +1,475 @@
+/*
+ * The interactive globe: its layout, stage, zoom cluster and on-globe tooltip. The globe
+ * itself is a <canvas> drawn by the engine in src/lib/globe/ (WebGPU, or canvas-2D where that
+ * is unavailable); either way it is the only canvas in the stage and is styled as `.stage > canvas`.
+ * The list rows are in clock-row.module.css and the filter panel in zone-filters.module.css.
+ *
+ * Container queries read the nearest container: `.root` for the layout, `.frame` (a size
+ * container, in the framed layouts) for the squared stage. `data-embedded` on `.root` is the
+ * hero variant; its breakpoints are the viewport's, because the hero is a fixed-height column.
+ *
+ * Reserved sizes, so nothing moves when script arrives or a value changes (cause 9 of #429):
+ *   stage     aspect-ratio 1, or min(100cqw, 100cqh) in the framed layouts
+ *   clocks    block-size 24rem (30rem from 40rem of width), or flex in the framed layouts
+ *   zoom      a fixed 2rem-per-button column, absolutely placed
+ *   search    the filter gear's box is reserved before the gear is drawn
+ */
+
+.shell {
+  margin-block: var(--gmt-space-6);
+  min-inline-size: 0;
+}
+
+.shell[data-embedded] {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  min-block-size: 0;
+  margin: 0;
+
+  & > [data-widget] {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-block-size: 0;
+  }
+}
+
+.root {
+  container-type: inline-size;
+  min-inline-size: 0;
+
+  &[data-embedded] {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    block-size: 100%;
+    min-block-size: 0;
+  }
+}
+
+.title {
+  margin: 0 0 var(--gmt-space-3);
+  font-family: var(--gmt-font-display);
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--gmt-cyan-ink);
+}
+
+.layout {
+  display: grid;
+  gap: var(--gmt-space-4);
+}
+
+@container (min-width: 40rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(13rem, 20rem);
+    align-items: start;
+  }
+}
+
+/* Structural only: invisible to layout until a framed layout needs a size container. */
+.frame {
+  display: contents;
+}
+
+.stage {
+  position: relative;
+  inline-size: 100%;
+  max-inline-size: min(44rem, 70vh);
+  margin-inline: auto;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  touch-action: none;
+
+  /* Pinned to the stage's padding box so nothing inherited can offset it out of the square
+     the engine measured; the inline size the engine sets takes over once script runs. */
+  & > canvas {
+    display: block;
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    max-inline-size: none;
+    inline-size: 100%;
+    block-size: 100%;
+    cursor: grab;
+
+    /* Drawn while hidden, then brought in by the shared entrance once the first frame is measured. */
+    &:not([data-entered]) {
+      opacity: 0;
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--gmt-cyan);
+      outline-offset: -2px;
+    }
+  }
+}
+
+/* Zoom cluster ---------------------------------------------------------- */
+
+.zoom {
+  position: absolute;
+  inset-inline-end: var(--gmt-space-2);
+  inset-block-end: var(--gmt-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--gmt-border);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  overflow: hidden;
+
+  /* Above the canvas, which is appended after this cluster, and above the tooltip, so a zone
+     near the corner cannot paint over the controls. */
+  z-index: var(--gmt-z-float);
+
+  /* Ambient chrome: hidden at rest, and shown on hover or focus once the globe is ready. The
+     buttons stay in the tab order; their focus is what reveals them. */
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+  transition:
+    opacity var(--gmt-duration-med) ease,
+    transform var(--gmt-duration-med) cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  & button {
+    inline-size: 2rem;
+    block-size: 2rem;
+    display: grid;
+    place-items: center;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--gmt-ice);
+    background: var(--gmt-surface-2);
+    cursor: pointer;
+    transition:
+      color var(--gmt-duration-quick) ease,
+      background var(--gmt-duration-quick) ease;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--gmt-void);
+      background: var(--gmt-cyan-ink);
+      outline-color: transparent;
+    }
+  }
+}
+
+/* `data-ready` is set once the globe's entrance has finished, or on a timer, so the controls
+   are never stuck unreachable. The stage's focus-within, not the cluster's: the canvas is
+   focusable, so a keyboard user sees the controls before reaching them. */
+:where(.stage:hover, .stage:focus-within) .zoom[data-ready] {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+/* Touch never hovers and a tap pans rather than focuses, so there the cluster is always on. */
+@media (hover: none) {
+  .zoom[data-ready] {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+}
+
+/* Tooltip --------------------------------------------------------------- */
+
+.tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 0.6rem));
+  pointer-events: none;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  min-inline-size: 8rem;
+  background: var(--gmt-surface-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  box-shadow: var(--gmt-shadow-sm);
+  font-family: var(--gmt-font-mono);
+  transition: opacity var(--gmt-duration-fast) ease;
+  z-index: var(--gmt-z-over);
+
+  /* An author `display` beats the UA's `[hidden]`, so say it again. */
+  &[hidden] {
+    display: none;
+  }
+
+  &[data-below] {
+    transform: translate(-50%, 0.6rem);
+  }
+}
+
+/* Side column ----------------------------------------------------------- */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* The field is the combobox with its label above; the gear sits beside the input. */
+.search {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--gmt-space-1);
+
+  & > :first-child {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+}
+
+/* Empty until script draws the gear into it. Its box is reserved up front so the field does
+   not narrow when the gear arrives. */
+.filters {
+  flex: none;
+  display: flex;
+  min-inline-size: 2.25rem;
+  min-block-size: 2.375rem;
+}
+
+.clocks {
+  block-size: 24rem;
+  padding: var(--gmt-space-1);
+  scroll-behavior: smooth;
+  overflow: hidden auto;
+}
+
+@container (min-width: 40rem) {
+  .clocks {
+    block-size: 30rem;
+  }
+}
+
+.caption {
+  margin: var(--gmt-space-3) 0 0;
+  font-size: 0.8rem;
+  color: var(--gmt-ice-dim);
+}
+
+/* Standalone, on a desktop pane -------------------------------------------
+   The page gives the globe the whole pane, so the layout takes a definite height: the
+   viewport less the chrome above the globe and the caption beneath it. The stage is squared
+   against its frame with min(100cqw, 100cqh), because aspect-ratio has no auto dimension left
+   once both are definite, and the list flexes to the same height. --gmt-globe-chrome is a sum
+   of other boxes' heights, so it errs large; the floor keeps a short window from squeezing
+   the globe, and past it the page scrolls. Never when embedded. */
+@container (min-width: 56rem) {
+  .root:not([data-embedded]) {
+    --gmt-globe-chrome: 25.5rem;
+
+    & .layout {
+      block-size: max(32rem, calc(100dvh - var(--gmt-globe-chrome)));
+      align-items: stretch;
+    }
+
+    & .frame {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      container-type: size;
+      block-size: 100%;
+      min-block-size: 0;
+    }
+
+    & .stage {
+      inline-size: min(100cqw, 100cqh);
+      block-size: min(100cqw, 100cqh);
+      max-inline-size: none;
+      flex: none;
+    }
+
+    & .side {
+      block-size: 100%;
+      min-block-size: 0;
+    }
+
+    & .clocks {
+      flex: 1 1 auto;
+      block-size: auto;
+      min-block-size: 0;
+    }
+  }
+}
+
+/* Embedded, in the hero ------------------------------------------------- */
+
+@media (width <= 99.9375rem) {
+  /* A flex column: the side flexes into whatever height the square stage leaves in the
+     hero's column. */
+  .root[data-embedded] .layout {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
+  .root[data-embedded] .stage {
+    flex: 0 0 auto;
+  }
+
+  /* A hard height cap: below the hero's 80rem breakpoint it has no explicit height, and the
+     list's virtualizer sizer (all ~300 zones tall) would otherwise set this box's height. */
+  .root[data-embedded] .side {
+    flex: 1 1 100%;
+    min-block-size: 0;
+    inline-size: 100%;
+    max-block-size: 30rem;
+  }
+
+  .root[data-embedded] .clocks {
+    flex: 1 1 auto;
+    block-size: auto;
+    min-block-size: 0;
+  }
+}
+
+@media (width <= 79.9375rem) {
+  /* A definite height: with none, WebKit counts the scrolling list as 0px and the side came
+     out search-box tall. */
+  .root[data-embedded] .side {
+    flex: none;
+    block-size: 30rem;
+  }
+}
+
+@media (width >= 80rem) and (width <= 99.9375rem) {
+  /* From 80rem the hero is a fixed-height row, so the side may fill what the stage leaves. */
+  .root[data-embedded] .side {
+    max-block-size: none;
+  }
+
+  /* One screen tall here: capped so the list keeps 11rem (the column is 100dvh less the nav
+     and the hero's padding; the search row is 5rem with its gap and the layout gap 1rem). */
+  .root[data-embedded] .stage {
+    max-inline-size: min(
+      44rem,
+      70vh,
+      calc(100dvh - var(--sl-nav-height, 4rem) - 21rem)
+    );
+  }
+}
+
+@media (width >= 100rem) {
+  .root[data-embedded] .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(13rem, 20rem);
+    flex: 1 1 auto;
+    block-size: 100%;
+    min-block-size: 0;
+    align-items: stretch;
+  }
+
+  /* A sized, contained frame lets the stage take min(cqw, cqh): the largest square that fits,
+     with a real derived height where plain percentages would leave aspect-ratio nothing to do. */
+  .root[data-embedded] .frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    container-type: size;
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
+  .root[data-embedded] .stage {
+    inline-size: min(100cqw, 100cqh);
+    block-size: min(100cqw, 100cqh);
+    max-inline-size: none;
+    flex: none;
+  }
+
+  .root[data-embedded] .side {
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
+  .root[data-embedded] .clocks {
+    flex: 1 1 auto;
+    block-size: auto;
+    min-block-size: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip,
+  .zoom {
+    transition: none;
+  }
+
+  .clocks {
+    scroll-behavior: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  .stage {
+    border-color: CanvasText;
+  }
+
+  .zoom {
+    background: CanvasText;
+    border-color: CanvasText;
+
+    & button {
+      color: ButtonText;
+      background: ButtonFace;
+
+      &:hover,
+      &:focus-visible {
+        color: HighlightText;
+        background: Highlight;
+      }
+    }
+  }
+
+  .tooltip {
+    background: Canvas;
+    border-color: CanvasText;
+    color: CanvasText;
+  }
+
+  .title,
+  .caption {
+    color: CanvasText;
+  }
+
+  .stage > canvas:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .stage > canvas:focus-visible {
+    outline-width: 3px;
+  }
+
+  .zoom button {
+    color: var(--gmt-ice);
+  }
+
+  .tooltip {
+    border-color: var(--gmt-ice);
+  }
+
+  .title,
+  .caption {
+    color: var(--gmt-ice);
+  }
+}

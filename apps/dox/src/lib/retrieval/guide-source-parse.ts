@@ -40,7 +40,7 @@ function extractTitle(frontmatter: string): string {
 /** Route for a guide or a top-level page: `…/content/docs/guides/a/b.mdx` →
  * `/guides/a/b/`, `…/content/docs/upstream.mdx` → `/upstream/`, and
  * `…/content/docs/index.mdx` → `/`. */
-export function routeForPath(globPath: string): string {
+function routeForPath(globPath: string): string {
   const rel = globPath
     .replace(/^.*\/content\/docs\//, "")
     .replace(/\.(mdx?|md)$/, "");

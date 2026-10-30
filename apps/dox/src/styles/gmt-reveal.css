@@ -17,55 +17,30 @@
  * extra, un-staggered block.
  */
 
-html.gmt-reveal-ready [data-reveal-group] > *:not(.card-grid),
-html.gmt-reveal-ready [data-reveal-group] > .card-grid > * {
+.gmt-reveal-ready [data-reveal-group] > *:not(.card-grid),
+.gmt-reveal-ready [data-reveal-group] > .card-grid > * {
   opacity: 0;
   transform: translateY(0.9rem);
   transition:
-    opacity 0.45s ease,
-    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity var(--gmt-duration-slow) ease,
+    transform var(--gmt-duration-slow) cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-html.gmt-reveal-ready [data-reveal-group].gmt-reveal-in > *:not(.card-grid),
-html.gmt-reveal-ready [data-reveal-group].gmt-reveal-in > .card-grid > * {
+.gmt-reveal-ready [data-reveal-group].gmt-reveal-in > *:not(.card-grid),
+.gmt-reveal-ready [data-reveal-group].gmt-reveal-in > .card-grid > * {
   opacity: 1;
   transform: translateY(0);
 }
 
-/* Stagger by source order. Capped at 8 — the longest group on the homepage
-   today (WhyDateAlternatives' 7-layer stack) fits; anything past 8 just
-   reveals alongside the 8th instead of extending the cascade further. */
-[data-reveal-group] > *:not(.card-grid):nth-child(1),
-[data-reveal-group] > .card-grid > *:nth-child(1) {
-  transition-delay: 0ms;
-}
-[data-reveal-group] > *:not(.card-grid):nth-child(2),
-[data-reveal-group] > .card-grid > *:nth-child(2) {
-  transition-delay: 70ms;
-}
-[data-reveal-group] > *:not(.card-grid):nth-child(3),
-[data-reveal-group] > .card-grid > *:nth-child(3) {
-  transition-delay: 140ms;
-}
-[data-reveal-group] > *:not(.card-grid):nth-child(4),
-[data-reveal-group] > .card-grid > *:nth-child(4) {
-  transition-delay: 210ms;
-}
-[data-reveal-group] > *:not(.card-grid):nth-child(5),
-[data-reveal-group] > .card-grid > *:nth-child(5) {
-  transition-delay: 280ms;
-}
-[data-reveal-group] > *:not(.card-grid):nth-child(6),
-[data-reveal-group] > .card-grid > *:nth-child(6) {
-  transition-delay: 350ms;
-}
-[data-reveal-group] > *:not(.card-grid):nth-child(7),
-[data-reveal-group] > .card-grid > *:nth-child(7) {
-  transition-delay: 420ms;
-}
-[data-reveal-group] > *:not(.card-grid):nth-child(n + 8),
-[data-reveal-group] > .card-grid > *:nth-child(n + 8) {
-  transition-delay: 490ms;
+/* Stagger by source order: scroll-reveal.ts writes each item's index in `--gmt-reveal-i` before
+   the group first shows. Capped at 7 steps — the longest group on the homepage (WhyDateAlternatives'
+   7-layer stack) fits; anything past that reveals alongside the last instead of extending the
+   cascade further. The stagger token is 0 under reduced motion. */
+[data-reveal-group] > *:not(.card-grid),
+[data-reveal-group] > .card-grid > * {
+  transition-delay: calc(
+    min(var(--gmt-reveal-i, 0), 7) * var(--gmt-motion-stagger)
+  );
 }
 
 @media (prefers-reduced-motion: reduce) {

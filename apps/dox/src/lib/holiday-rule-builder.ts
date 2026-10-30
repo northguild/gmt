@@ -59,7 +59,7 @@ export function hasPolicy(kind: RuleKind): boolean {
 }
 
 export const CUSTOM_PRESET_ID = "custom";
-export const DEFAULT_WEEKEND: readonly number[] = [6, 7];
+const DEFAULT_WEEKEND: readonly number[] = [6, 7];
 /** The year range a permalink can seed (`seedFromLocation`). */
 export const YEAR_MIN = 1900;
 export const YEAR_MAX = 2100;
@@ -245,7 +245,7 @@ export const rulesOf = (state: BuilderState): HolidayRule[] =>
 // Presets: examples with literal fields, never a holiday table
 // ---------------------------------------------------------------------------
 
-export interface BuilderPreset {
+interface BuilderPreset {
   id: string;
   label: string;
   description: string;
@@ -592,7 +592,7 @@ export function literal(value: unknown): string {
 }
 
 /** What `buildBusinessCalendar` is called with. */
-export function callSpec(state: BuilderState, year: number) {
+function callSpec(state: BuilderState, year: number) {
   return {
     timeZone: state.zone,
     weekend: state.weekend,
@@ -749,65 +749,6 @@ export function ruleCallLines(
   });
 }
 
-/**
- * The most occurrences a rule can put in `pairs` for one ISO year, from the
- * rule's own shape and the library's documented behaviour (`holidayDates`:
- * "a `calendarFixed` rule 0, 1 or 2"):
- * - `fixed`, `nthWeekday`, `easterRelative`: one date a year;
- * - `calendarFixed`: two (a lunar calendar's day can fall twice in a year);
- * - `dates`: as many as the rule lists.
- * A rule with a policy also pairs, from the year before and the year after,
- * the occurrences whose shift lands in this year: at most one at each end of
- * the year, and never more than the rule has in a year.
- */
-export function pairBound(rule: HolidayRule): {
-  inYear: number;
-  across: number;
-} {
-  let inYear = 1;
-  if (rule.kind === "calendarFixed") inYear = 2;
-  if (rule.kind === "dates") {
-    inYear = Array.isArray(rule.dates) ? rule.dates.length : 0;
-  }
-  const shifted = "observed" in rule && rule.observed !== undefined;
-  return { inYear, across: shifted ? Math.min(inYear, 2) : 0 };
-}
-
-/**
- * The folded calls' text at its tallest for these rules: every rule with as
- * many occurrences as `pairBound` allows, each as wide as a date can be. It
- * is the live text's sizer, so the frame holds one height whatever year the
- * reader steps to, wrapped or not. It is built by `ruleCallLines` itself, so
- * the two never differ in form.
- */
-export function ruleCallSizerText(rules: readonly HolidayRule[]): string {
-  const year = 2026;
-  const inside = `${year}-12-31`;
-  const outside = `${year + 1}-12-31`;
-  const pairs = rules.map((rule) => {
-    const { inYear, across } = pairBound(rule);
-    // A pair that walks prints the longer call and the calendar's line.
-    const walks =
-      "observed" in rule &&
-      typeof rule.observed === "object" &&
-      rule.observed !== null &&
-      Object.values(rule.observed).includes("nextWorkingDay");
-    return [
-      ...Array.from({ length: inYear }, () => ({
-        unshifted: inside,
-        observed: inside,
-        walks,
-      })),
-      ...Array.from({ length: across }, () => ({
-        unshifted: outside,
-        observed: inside,
-        walks,
-      })),
-    ];
-  });
-  return ruleCallLines(rules, pairs, year).join("\n");
-}
-
 // ---------------------------------------------------------------------------
 // The year's plates
 // ---------------------------------------------------------------------------
@@ -843,7 +784,7 @@ export function weekendNames(weekend: readonly number[]): string {
 /** The cap on `holidays` in a link (`LONG_STRING_KEYS`). */
 export const HOLIDAYS_LINK_CAP = 1000;
 
-export type Handoff = { href: string } | { href: null; hint: string };
+type Handoff = { href: string } | { href: null; hint: string };
 
 export const HANDOFF_NO_CALENDAR =
   "There is no calendar to send: fix the rows marked NO SIGNAL first.";

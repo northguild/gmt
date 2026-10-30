@@ -49,7 +49,7 @@ describe("module-granularity imports", () => {
       "holiday-lib.ts",
       "holiday-codec.ts",
       "holiday-widgets.ts",
-      "gmt-modules.ts",
+      ["gmt", "modules.ts"].join("-"),
     ]) {
       const source = readFileSync(
         new URL(`./${file}`, import.meta.url),

@@ -8,15 +8,20 @@ import {
 import { feature } from "topojson-client";
 
 import { Temporal } from "@js-temporal/polyfill";
-import type { ChartPoint } from "@tanstack/charts";
+import type { ChartPoint, ChartTooltipBodyTarget } from "@tanstack/charts";
 import { defineChart } from "@tanstack/charts";
-import { mountChart } from "@tanstack/charts/dom";
+import { mountChartRenderer } from "@tanstack/charts/renderer";
+import { createSvgChartRenderer } from "@tanstack/charts/svg/renderer";
 import { whenFocused } from "@tanstack/charts/focus/mark";
 import { geoShape } from "@tanstack/charts/geo";
 import { tooltip } from "@tanstack/charts/tooltip";
 import worldAtlas from "world-atlas/countries-110m.json";
 import { TIMEZONES } from "./timezones";
 import { withBase } from "./site";
+import { chartTooltipMotion } from "./chart-motion";
+import { findWidget, setHtml } from "~/widgets/builders";
+import { zoneMapTooltip } from "~/widgets/families/zones/zone-map-tooltip";
+import shell from "~/widgets/families/zones/zone-map-shell.module.css";
 
 type TopologyLike = Parameters<typeof feature>[0];
 
@@ -115,7 +120,7 @@ function buildDefinition(
       fill: "url(#gmt-map-land)",
       stroke: "var(--gmt-border-strong)",
       strokeWidth: 0.5,
-      className: "gmt-map-land",
+      className: shell["land"],
     }),
     ...(boundaries.length > 0
       ? [
@@ -127,7 +132,7 @@ function buildDefinition(
             stroke: "var(--gmt-cyan)",
             strokeOpacity: 0.5,
             strokeWidth: 0.75,
-            className: "gmt-timezone-polygon",
+            className: shell["polygon"],
           }),
         ]
       : []),
@@ -197,6 +202,7 @@ function buildDefinition(
     maxFocusDistance: 10,
     tooltip: {
       use: tooltip,
+      ...chartTooltipMotion(),
       sticky: true,
       content: (
         points: readonly ChartPoint<
@@ -209,15 +215,33 @@ function buildDefinition(
         if (datum.type !== "Point") return { rows: [] };
         const p = datum.properties;
         if (!p) return { rows: [] };
+        // The visible card is drawn by `onTooltipBodyChange` below; this content is what the
+        // library reads out as the card's accessible name.
         return {
-          rows: [
-            { label: p.name, value: `GMT${p.offset}` },
-            { label: stripMs(p.localTime), value: "" },
-          ],
+          title: p.name,
+          rows: [{ label: stripMs(p.localTime), value: `GMT${p.offset}` }],
         };
       },
     } as Parameters<typeof defineChart>[0]["tooltip"],
   });
+}
+
+/** Draw the hover card's body from the kit builder, so the library's swatch grid is not used. */
+function paintTooltipBody(
+  target: ChartTooltipBodyTarget<TimezoneDatum> | null,
+): void {
+  if (!target) return;
+  const datum = target.points[0]?.datum as TimezoneDatum | undefined;
+  const p = datum?.type === "Point" ? datum.properties : undefined;
+  if (!p) return;
+  setHtml(
+    target.element,
+    zoneMapTooltip({
+      name: p.name,
+      time: stripMs(p.localTime),
+      offset: p.offset,
+    }),
+  );
 }
 
 export interface TimezoneMapHost {
@@ -226,7 +250,7 @@ export interface TimezoneMapHost {
   destroy: () => void;
 }
 
-export async function initTimezoneMap(
+async function initTimezoneMap(
   host: HTMLElement,
   clockPanel: HTMLElement | null,
 ): Promise<TimezoneMapHost> {
@@ -235,12 +259,15 @@ export async function initTimezoneMap(
   const initialPoints = buildPoints();
   const initialDefinition = buildDefinition(initialPoints, boundaries);
 
-  const chartHost = mountChart(host, {
+  const renderer = createSvgChartRenderer<TimezoneDatum>();
+  const chartHost = mountChartRenderer<TimezoneDatum>(host, {
+    renderer,
     definition: initialDefinition as unknown as Parameters<
-      typeof mountChart<TimezoneDatum>
+      typeof mountChartRenderer<TimezoneDatum>
     >[1]["definition"],
     ariaLabel: "Live timezone world map",
     height: 400,
+    onTooltipBodyChange: paintTooltipBody,
   });
 
   function focusTimezone(id: string): void {
@@ -260,10 +287,12 @@ export async function initTimezoneMap(
     const definition = buildDefinition(points, boundaries);
     chartHost.update({
       definition: definition as unknown as Parameters<
-        typeof mountChart<TimezoneDatum>
+        typeof mountChartRenderer<TimezoneDatum>
       >[1]["definition"],
       height: 400,
       ariaLabel: "Live timezone world map",
+      renderer,
+      onTooltipBodyChange: paintTooltipBody,
     });
 
     if (clockPanel) {
@@ -292,11 +321,59 @@ export async function initTimezoneMap(
 
   return {
     update: (opts) =>
-      chartHost.update(opts as Parameters<typeof chartHost.update>[0]),
+      chartHost.update({
+        renderer,
+        onTooltipBodyChange: paintTooltipBody,
+        ...(opts as Omit<Parameters<typeof chartHost.update>[0], "renderer">),
+      }),
     focusTimezone,
     destroy: () => {
       clearInterval(interval);
       chartHost.destroy();
     },
   };
+}
+
+/**
+ * Mount the map shell `zoneMapShell` wrote: draw the chart, keep the clock panel ticking, and tie
+ * the panel to the map. Pressing a zone's button selects it on the map and marks it `aria-pressed`;
+ * pressing the map clears the mark.
+ */
+export async function mountTimezoneMap(
+  root: Element,
+  signal: AbortSignal,
+): Promise<TimezoneMapHost> {
+  const widget = findWidget(root, "timezone-map");
+  const host = widget.part("host");
+  const panel = widget.part("panel");
+  const buttons = [...panel.querySelectorAll<HTMLButtonElement>("button")];
+
+  function setSelected(id: string | null): void {
+    for (const button of buttons) {
+      button.setAttribute(
+        "aria-pressed",
+        String(button.dataset["tzId"] === id),
+      );
+    }
+  }
+
+  const map = await initTimezoneMap(host, panel);
+  if (signal.aborted) {
+    map.destroy();
+    return map;
+  }
+  panel.addEventListener(
+    "click",
+    (event) => {
+      const button = buttons.find((b) => b.contains(event.target as Node));
+      const id = button?.dataset["tzId"];
+      if (id === undefined) return;
+      map.focusTimezone(id);
+      setSelected(id);
+    },
+    { signal },
+  );
+  host.addEventListener("click", () => setSelected(null), { signal });
+  signal.addEventListener("abort", () => map.destroy(), { once: true });
+  return map;
 }

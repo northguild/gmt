@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+import { screen } from "@testing-library/dom";
+import { renderHtml } from "~/widgets/test-fixture";
 import type { ZoneReading } from "./zone-clock";
 import {
   dayDelta,
@@ -9,6 +12,7 @@ import {
   dstState,
   renderZoneTooltip,
 } from "./zone-readout";
+import { skyLabel } from "./zone-sky";
 
 function reading(over: Partial<ZoneReading> = {}): ZoneReading {
   return {
@@ -135,78 +139,80 @@ describe("dstBadge", () => {
 describe("renderZoneTooltip", () => {
   const TODAY = "2026-09-30";
 
-  it("puts the time, the date and the offset on their own spans", () => {
-    const html = renderZoneTooltip(reading(), TODAY);
-    expect(html).toContain(
-      '<span class="gmt-globe-tooltip-time">12:04:25</span>',
-    );
-    expect(html).toContain(
-      '<span class="gmt-globe-tooltip-date">2026-09-30</span>',
-    );
-    expect(html).toContain(
-      '<span class="gmt-globe-tooltip-offset">UTC+01:00</span>',
-    );
-    expect(html).toContain("in DST");
+  it("shows the zone, time, date, offset and DST wording", () => {
+    renderHtml(renderZoneTooltip(reading(), TODAY));
+    expect(screen.getByText("12:04:25")).toBeInTheDocument();
+    expect(screen.getByText("2026-09-30")).toBeInTheDocument();
+    expect(screen.getByText("UTC+01:00")).toBeInTheDocument();
+    expect(screen.getByText("in DST")).toBeInTheDocument();
   });
 
-  it("names the shift and tints the date when the day differs", () => {
-    const ahead = renderZoneTooltip(
-      reading({ id: "Asia/Tokyo", date: "2026-10-01" }),
-      TODAY,
+  it("names the shift when the day differs", () => {
+    renderHtml(
+      renderZoneTooltip(
+        reading({ id: "Asia/Tokyo", date: "2026-10-01" }),
+        TODAY,
+      ),
     );
-    expect(ahead).toContain('data-shift="next"');
-    expect(ahead).toContain("Tomorrow");
+    expect(screen.getByText("Tomorrow")).toBeInTheDocument();
+  });
 
-    const behind = renderZoneTooltip(
-      reading({ id: "Pacific/Midway", date: "2026-09-29" }),
-      TODAY,
+  it("names a day behind as Yesterday", () => {
+    renderHtml(
+      renderZoneTooltip(
+        reading({ id: "Pacific/Midway", date: "2026-09-29" }),
+        TODAY,
+      ),
     );
-    expect(behind).toContain('data-shift="prev"');
-    expect(behind).toContain("Yesterday");
+    expect(screen.getByText("Yesterday")).toBeInTheDocument();
   });
 
   it("says nothing about a shift on the viewer's own day", () => {
-    const html = renderZoneTooltip(reading(), TODAY);
-    expect(html).not.toContain("data-shift");
-    expect(html).not.toContain("Today");
+    renderHtml(renderZoneTooltip(reading(), TODAY));
+    expect(screen.queryByText("Today")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tomorrow")).not.toBeInTheDocument();
+    expect(screen.queryByText("Yesterday")).not.toBeInTheDocument();
   });
 
   it("suppresses the shift entirely when the viewer's date is unknown", () => {
-    const html = renderZoneTooltip(reading({ date: "2026-10-01" }), "");
-    expect(html).not.toContain("data-shift");
-    expect(html).toContain("2026-10-01");
+    renderHtml(renderZoneTooltip(reading({ date: "2026-10-01" }), ""));
+    expect(screen.queryByText("Tomorrow")).not.toBeInTheDocument();
+    expect(screen.getByText("2026-10-01")).toBeInTheDocument();
   });
 
-  it("states the DST condition in words, with no glyph", () => {
-    const none = renderZoneTooltip(
-      reading({ id: "Asia/Tokyo", observesDst: false, inDst: false }),
-      TODAY,
+  it("states the DST condition in words", () => {
+    renderHtml(
+      renderZoneTooltip(
+        reading({ id: "Asia/Tokyo", observesDst: false, inDst: false }),
+        TODAY,
+      ),
     );
-    expect(none).not.toContain("<svg");
-    expect(none).toContain("no DST");
-    expect(none).toContain('data-dst="none"');
+    expect(screen.getByText("no DST")).toBeInTheDocument();
+  });
 
-    const dst = renderZoneTooltip(reading(), TODAY);
-    expect(dst).not.toContain("<svg");
-    expect(dst).toContain('data-dst="dst"');
-    // The wording is what carries the colour, so it needs its own element.
-    expect(dst).toContain('<span class="gmt-globe-tooltip-dst">in DST</span>');
+  it("says in DST for a zone on summer time", () => {
+    renderHtml(renderZoneTooltip(reading(), TODAY));
+    expect(screen.getByText("in DST")).toBeInTheDocument();
+  });
+
+  it("says whether the sun is up when it is told", () => {
+    renderHtml(renderZoneTooltip(reading(), TODAY, "day"));
+    expect(screen.getByText(skyLabel("day"))).toBeInTheDocument();
   });
 
   it("renders the sentinel and no clock fields when the reading failed", () => {
-    const html = renderZoneTooltip(
-      reading({ ok: false, date: "", time: "", offset: "" }),
-      TODAY,
+    renderHtml(
+      renderZoneTooltip(
+        reading({ ok: false, date: "", time: "", offset: "" }),
+        TODAY,
+      ),
     );
-    expect(html).toContain("gmt-signal-lost");
-    expect(html).toContain("NO SIGNAL");
-    expect(html).not.toContain("gmt-globe-tooltip-time");
-    expect(html).not.toContain("gmt-globe-tooltip-offset");
+    expect(screen.getByText(/NO SIGNAL/)).toBeInTheDocument();
+    expect(screen.queryByText(/^UTC/)).not.toBeInTheDocument();
   });
 
   it("escapes the zone id", () => {
-    const html = renderZoneTooltip(reading({ id: "a<b>c" }), TODAY);
-    expect(html).toContain("a&lt;b&gt;c");
-    expect(html).not.toContain("a<b>c");
+    renderHtml(renderZoneTooltip(reading({ id: "a<b>c" }), TODAY));
+    expect(screen.getByText("a<b>c")).toBeInTheDocument();
   });
 });

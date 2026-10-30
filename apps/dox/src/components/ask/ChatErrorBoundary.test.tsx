@@ -13,7 +13,9 @@
  * fails mid-conversation, not on page load.
  */
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
 
 installJsdomShims();
@@ -36,50 +38,53 @@ const STALE_CHUNK =
   "Failed to fetch dynamically imported module: http://localhost:4321/node_modules/.vite/deps/highlighted-body-KPVGNVTW.js";
 
 describe("ChatErrorBoundary", () => {
-  it("renders its children when nothing is wrong", () => {
-    render(
+  it("renders its children when nothing is wrong", async () => {
+    const { container } = render(
       <ChatErrorBoundary label="transcript">
         <p>the conversation</p>
       </ChatErrorBoundary>,
     );
-    expect(screen.getByText("the conversation")).toBeTruthy();
+    expect(screen.getByText("the conversation")).toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 
-  it("catches a failed dynamic import instead of unmounting the tree", () => {
+  it("catches a failed dynamic import instead of unmounting the tree", async () => {
     // The exact failure behind the black screen.
-    render(
+    const { container } = render(
       <ChatErrorBoundary label="transcript">
         <Boom message={STALE_CHUNK} />
       </ChatErrorBoundary>,
     );
 
-    const alert = screen.getByRole("alert");
-    expect(alert.textContent).toContain("updated while this page was open");
-    expect(screen.getByRole("button", { name: /reload/i })).toBeTruthy();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "updated while this page was open",
+    );
+    expect(screen.getByRole("button", { name: /reload/i })).toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 
-  it("names a stale chunk specifically, rather than saying nothing useful", () => {
+  it("names a stale chunk specifically, rather than saying nothing useful", async () => {
     // A reader who is told the site updated knows reloading will help. A
     // generic "something went wrong" teaches them nothing.
-    render(
+    const { container } = render(
       <ChatErrorBoundary label="transcript">
         <Boom message={STALE_CHUNK} />
       </ChatErrorBoundary>,
     );
-    expect(screen.getByRole("alert").textContent).not.toMatch(
+    expect(screen.getByRole("alert")).not.toHaveTextContent(
       /^Something went wrong/,
     );
+    await expectNoAxeViolations(container);
   });
 
-  it("falls back to a generic message for an ordinary crash", () => {
-    render(
+  it("falls back to a generic message for an ordinary crash", async () => {
+    const { container } = render(
       <ChatErrorBoundary label="transcript">
         <Boom message="Cannot read properties of undefined" />
       </ChatErrorBoundary>,
     );
-    expect(screen.getByRole("alert").textContent).toContain(
-      "Something went wrong",
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Something went wrong");
+    await expectNoAxeViolations(container);
   });
 
   it("still logs the error, so a survivable failure is not an invisible one", () => {
@@ -94,10 +99,10 @@ describe("ChatErrorBoundary", () => {
     expect(logged).toBe(true);
   });
 
-  it("uses a caller's fallback when given one", () => {
+  it("uses a caller's fallback when given one", async () => {
     // The rail supplies its own, because reloading the page to fix a panel
     // would throw away the conversation behind it.
-    render(
+    const { container } = render(
       <ChatErrorBoundary
         label="widget rail"
         fallback={(_error, reset) => (
@@ -111,28 +116,41 @@ describe("ChatErrorBoundary", () => {
     );
     expect(
       screen.getByRole("button", { name: "Close the panel" }),
-    ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /reload/i })).toBeNull();
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /reload/i }),
+    ).not.toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 
-  it("can be reset by the caller so the panel recovers without a reload", () => {
-    function Fixture() {
-      return (
-        <ChatErrorBoundary
-          label="widget rail"
-          fallback={(_error, reset) => (
-            <button type="button" onClick={reset}>
-              Close the panel
-            </button>
-          )}
-        >
-          <p>rail contents</p>
-        </ChatErrorBoundary>
-      );
+  it("can be reset by the caller so the panel recovers without a reload", async () => {
+    const user = userEvent.setup();
+    // Fails on the first render only, as a transient fault would.
+    let failing = true;
+    function Flaky() {
+      if (failing) throw new Error("boom");
+      return <p>rail contents</p>;
     }
-    const { rerender } = render(<Fixture />);
-    expect(screen.getByText("rail contents")).toBeTruthy();
-    rerender(<Fixture />);
-    expect(screen.getByText("rail contents")).toBeTruthy();
+    const { container } = render(
+      <ChatErrorBoundary
+        label="widget rail"
+        fallback={(_error, reset) => (
+          <button type="button" onClick={reset}>
+            Close the panel
+          </button>
+        )}
+      >
+        <Flaky />
+      </ChatErrorBoundary>,
+    );
+    expect(screen.queryByText("rail contents")).not.toBeInTheDocument();
+
+    failing = false;
+    await user.click(screen.getByRole("button", { name: "Close the panel" }));
+    expect(screen.getByText("rail contents")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Close the panel" }),
+    ).not.toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 });

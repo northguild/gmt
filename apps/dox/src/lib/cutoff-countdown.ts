@@ -22,7 +22,7 @@ import {
 
 export const CUSTOM_PRESET_ID = "custom";
 
-export type CountdownMode = "pinned" | "live";
+type CountdownMode = "pinned" | "live";
 
 export interface CountdownState {
   cutoff: string;
@@ -38,7 +38,7 @@ export interface CutoffCountdownArgs {
   timeZone?: string;
 }
 
-export interface CountdownPreset {
+interface CountdownPreset {
   id: string;
   label: string;
   description: string;
@@ -183,7 +183,7 @@ export function collectCountdownFacts(
 
 export type VerdictKind = "none" | "on-time" | "closed" | "late";
 
-export interface Verdict {
+interface Verdict {
   kind: VerdictKind;
   text: string;
 }
@@ -220,7 +220,7 @@ export function verdict(facts: CountdownFacts): Verdict {
 // Why null
 // ---------------------------------------------------------------------------
 
-export type CountdownNullReason =
+type CountdownNullReason =
   | "no-cutoff"
   | "zoneless-now"
   | "zoneless-cutoff"

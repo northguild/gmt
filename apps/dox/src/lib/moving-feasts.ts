@@ -31,7 +31,7 @@ import { encodeWidgetPermalink } from "./widget-permalink";
 // The offsets, the series and the presets
 // ---------------------------------------------------------------------------
 
-export interface FeastOffset {
+interface FeastOffset {
   offset: number;
   label: string;
 }
@@ -47,9 +47,9 @@ export const FEAST_OFFSETS: readonly FeastOffset[] = [
   { offset: 50, label: "Easter +50 (Whit Monday)" },
 ];
 
-export const DEFAULT_OFFSETS: readonly number[] = [-2, 0, 1];
+const DEFAULT_OFFSETS: readonly number[] = [-2, 0, 1];
 
-export type Computus = "gregorian" | "julian";
+type Computus = "gregorian" | "julian";
 export type ComputusChoice = Computus | "both";
 export const COMPUTUS_CHOICES: readonly ComputusChoice[] = [
   "gregorian",
@@ -71,11 +71,9 @@ const BOTH_SERIES: SeriesNumber = 3;
 export const GRID_FROM = 2;
 export const GRID_TO = 6;
 /** The slider spans the reader's year plus or minus this. */
-export const SLIDER_SPAN = 100;
+const SLIDER_SPAN = 100;
 
-export const SECTION_TWO_HINT = "The year is the one in section 1.";
-
-export interface FeastPreset {
+interface FeastPreset {
   id: string;
   label: string;
   description: string;
@@ -332,7 +330,7 @@ const COUNT_WORDS = ["no", "one", "two", "three", "four", "five"];
 
 /** An ordinal as a phrase: `3` is "third", `-1` is "last", `-2` is
  *  "second-last". */
-export function ordinalWord(ordinal: string): string {
+function ordinalWord(ordinal: string): string {
   if (ordinal === "last") return "last";
   const n = Number(ordinal);
   if (n > 0) return POSITIVE_WORDS[n - 1] ?? ordinal;
@@ -341,7 +339,7 @@ export function ordinalWord(ordinal: string): string {
 }
 
 /** "−2", "0", "+1": the offset as the labels write it. */
-export function offsetText(offset: number): string {
+function offsetText(offset: number): string {
   if (offset === 0) return "0";
   return offset > 0 ? `+${offset}` : `−${-offset}`;
 }
@@ -354,7 +352,7 @@ function plural(count: number, word: string): string {
 // Section 1: Easter
 // ---------------------------------------------------------------------------
 
-export interface EasterPlates {
+interface EasterPlates {
   gregorian: string | null;
   julian: string | null;
   /** "35 days" or "same day"; `null` when either Easter is missing. */
@@ -386,7 +384,7 @@ export function easterPlates(lib: FeastsLib, year: number): EasterPlates {
   };
 }
 
-export function offsetLabel(offset: number): string {
+function offsetLabel(offset: number): string {
   return FEAST_OFFSETS.find((o) => o.offset === offset)?.label ?? "";
 }
 
@@ -396,7 +394,7 @@ export function seriesOf(choice: ComputusChoice): Computus[] {
 }
 
 /** The rule one toggled offset makes under one computus. */
-export function feastRule(offset: number, computus: Computus): HolidayRule {
+function feastRule(offset: number, computus: Computus): HolidayRule {
   const label = offsetLabel(offset);
   return computus === "julian"
     ? {
@@ -408,7 +406,7 @@ export function feastRule(offset: number, computus: Computus): HolidayRule {
     : { name: label, kind: "easterRelative", offsetDays: offset };
 }
 
-export interface FeastMarks {
+interface FeastMarks {
   marks: Record<string, CellMark>;
   /** Every returned date, in call order. */
   dates: string[];
@@ -496,8 +494,8 @@ export function gridMonths(
 }
 
 /** The lowest and highest ISO year the library takes. */
-export const YEAR_LOWEST = -271821;
-export const YEAR_HIGHEST = 275760;
+const YEAR_LOWEST = -271821;
+const YEAR_HIGHEST = 275760;
 
 /** Whether the library takes this year at all. Anything else is NO SIGNAL
  *  with an empty grid; a year inside is always answered from library calls. */
@@ -552,7 +550,7 @@ export function undrawnCount(
   return count;
 }
 
-export interface YearNoteInput {
+interface YearNoteInput {
   /** The year as typed. */
   year: string;
   taken: boolean;
@@ -625,7 +623,7 @@ export function yearNoteSizers(): string[] {
 // Section 2: ordinal weekdays
 // ---------------------------------------------------------------------------
 
-export interface NthModel {
+interface NthModel {
   /** The picked ordinal's date; `""` when the library has none. */
   date: string;
   /** Every occurrence of the weekday, ascending, with its ordinals. */
@@ -732,7 +730,7 @@ export const HINT_YEAR = `The Builder takes years ${YEAR_MIN} to ${YEAR_MAX}.`;
 export const HINT_NO_YEAR = "Type a year the library places first.";
 
 export const FEASTS_ZONE = "UTC";
-export const FEASTS_WEEKEND = "6,7";
+const FEASTS_WEEKEND = "6,7";
 
 /** The rules the toggles make: the Gregorian series, then the Julian one. */
 export function builderRules(state: FeastsState): HolidayRule[] {

@@ -1,0 +1,77 @@
+/*
+ * Cron in a Zone: what only this tool needs. The sections, fields, selects, tables, badges,
+ * code frames and call output are the kit's; the night's own pieces live in
+ * `families/timescale/cron-night.module.css`. This sheet lays out the wide inputs, the
+ * hints, the frame around the night and the pair of tables. The widget root is the
+ * container the pair asks about.
+ */
+
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.problem {
+  margin: 0;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.sentence {
+  margin: 0;
+  font-size: var(--gmt-text-sm);
+}
+
+/* The legend and the night, in one bordered frame. */
+.frame {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+  align-items: start;
+
+  @container (inline-size >= 40rem) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.cell {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.tableNote {
+  margin: 0;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+@media (forced-colors: active) {
+  .frame {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frame {
+    border-color: var(--gmt-ice);
+  }
+}

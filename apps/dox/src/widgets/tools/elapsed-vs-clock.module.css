@@ -1,0 +1,437 @@
+/*
+ * Elapsed vs. Clock Difference: what only this tool draws. The sections, fields, preset,
+ * range, plates, code frames, call output, asides and tool links are the kit's. This sheet
+ * holds the sum around the plates, the two vernier rulers with their tapes, the span's end
+ * dates, the legend and the list of inserted seconds.
+ *
+ * Amber belongs to the NO SIGNAL state alone. An accent edge is a bottom edge or a full
+ * border, never one side. Every surface is the opaque widget surface, so no tint stacks on
+ * another. Nothing here animates.
+ */
+
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.frame {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+}
+
+/* ---------------------------------------------------------------------------
+ * The sum: clock difference + leap seconds = seconds that passed. Three plates with their
+ * operators, in a grid whose columns hold still while the end is dragged. A narrow frame
+ * stacks it like a column addition, each operator in a gutter at the left of its plate.
+ * ------------------------------------------------------------------------- */
+
+.eq {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  column-gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.lead {
+  display: none;
+}
+
+.op {
+  align-self: center;
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xl);
+  line-height: 1;
+  color: var(--gmt-ice);
+  text-align: center;
+}
+
+@container (max-width: 56rem) {
+  .eq {
+    grid-template-columns: 1.4rem minmax(0, 1fr);
+    row-gap: var(--gmt-space-1);
+  }
+
+  .lead {
+    display: block;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The two rulers. Both draw the same cells at the same widths, so a cell on the clock face
+ * sits straight above the second it is on the elapsed ruler. Between them run two tapes: the
+ * clock difference counts the cells of the first and leaves a gap over each inserted second,
+ * and the elapsed tape fills every one. Each row is a flex of runs and breaks; a cell keeps
+ * its own basis, so every row lays out alike.
+ * ------------------------------------------------------------------------- */
+
+.figure {
+  min-inline-size: 0;
+}
+
+.drawing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+}
+
+.s1 {
+  --series: var(--gmt-series-1);
+}
+
+.s2 {
+  --series: var(--gmt-series-2);
+}
+
+.ruler {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+}
+
+.reverse {
+  flex-direction: column-reverse;
+}
+
+.name {
+  color: var(--gmt-ice);
+  font-variant-caps: all-small-caps;
+  letter-spacing: var(--gmt-tracking-wider);
+}
+
+.strip,
+.tapes,
+.dates {
+  display: flex;
+  align-items: stretch;
+  min-inline-size: 0;
+}
+
+.strip {
+  box-sizing: border-box;
+  block-size: 3.4rem;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  overflow: hidden;
+
+  & > :last-child > :last-child {
+    border-inline-end: 0;
+  }
+}
+
+.run {
+  display: flex;
+  flex: 1 1 var(--b, 0);
+  align-items: stretch;
+  min-inline-size: 0;
+}
+
+.cell {
+  position: relative;
+  display: flex;
+  flex: 1 1 var(--b, 0);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-inline-size: 0;
+  box-sizing: border-box;
+  border-inline-end: 1px solid var(--gmt-border-strong);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* A clock second takes a faint tint of its ruler's colour; the inserted second below
+   takes its own. The tint is mixed into the surface, so it is opaque. */
+.ruler .cell:not(.leap) {
+  background: color-mix(in srgb, var(--series) 12%, var(--gmt-surface-widget));
+}
+
+.time {
+  color: var(--gmt-ice);
+}
+
+.tag {
+  max-inline-size: 100%;
+  color: var(--gmt-ice);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: var(--gmt-text-xs);
+  line-height: 1.1;
+}
+
+/* The inserted second: its own colour, on both rulers, and stretched. On the clock face it
+   is a solid tint; below it is the same cell, hatched, because it is a second that really
+   passed. */
+.leap {
+  --series: var(--gmt-series-3);
+
+  background-color: color-mix(
+    in srgb,
+    var(--gmt-series-3) 32%,
+    var(--gmt-surface-widget)
+  );
+  border-inline: 1px solid var(--gmt-series-3);
+}
+
+.s1 .leap {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--gmt-series-3) 60%, transparent) 0,
+    color-mix(in srgb, var(--gmt-series-3) 60%, transparent) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+/* The count on a hatch keeps its own plate so the lines never cross a figure. */
+.s1 .leap .time {
+  padding-inline: var(--gmt-space-1);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface-widget);
+}
+
+/* A break: the seconds left out between two runs, slashed. Its width grows with how many
+   were left out. */
+.brk {
+  flex: 0 0 var(--w, 18px);
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    var(--gmt-ice) 38% 44%,
+    transparent 44% 56%,
+    var(--gmt-ice) 56% 62%,
+    transparent 62%
+  );
+}
+
+/* The tapes keep their height even when they cannot be drawn, so the figure holds still. */
+.tapes {
+  block-size: 0.6rem;
+}
+
+.empty {
+  opacity: 0.25;
+}
+
+.tape {
+  border-inline-end: 1px solid var(--gmt-surface-widget);
+  background: var(--series);
+}
+
+.gap {
+  background: transparent;
+  border: 1px dashed var(--gmt-series-3);
+}
+
+.tapes .brk {
+  background: linear-gradient(var(--series), var(--series)) center / 100% 2px
+    no-repeat;
+}
+
+/* The dates above the clock face, one over each run. */
+.dates {
+  min-block-size: 1.2em;
+
+  & .run {
+    justify-content: center;
+  }
+
+  & .brk {
+    background: none;
+  }
+}
+
+.date {
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+/* Nothing to draw: the sentinel, amber and bracketed, or a quiet hint. */
+.nosignal,
+.hint {
+  flex: 1 1 auto;
+  align-self: center;
+  padding-inline: var(--gmt-space-2);
+  text-align: center;
+}
+
+.nosignal {
+  color: var(--gmt-signal-ink);
+}
+
+.hint {
+  color: var(--gmt-ice);
+}
+
+/* Where the span starts and ends, hung under the rulers at opposite edges. */
+.ends {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--gmt-space-2);
+  min-block-size: 1.2em;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mid {
+  visibility: hidden;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.midShown {
+  visibility: visible;
+}
+
+@container (max-width: 32rem) {
+  .mid {
+    display: none;
+  }
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2) var(--gmt-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+}
+
+/* The list of inserted seconds keeps one height whatever the span, and scrolls when a long
+   span lists more than it shows. */
+.listTitle,
+.groupTitle {
+  margin: 0;
+}
+
+.listTitle {
+  margin-block-start: var(--gmt-space-3);
+}
+
+.list {
+  box-sizing: border-box;
+  block-size: calc(5 * 1.7em + 2 * var(--gmt-space-2));
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.7;
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan-bright);
+    outline-offset: 2px;
+  }
+}
+
+.note {
+  color: var(--gmt-ice);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+
+  & + & {
+    margin-block-start: var(--gmt-space-3);
+  }
+}
+
+@media (forced-colors: active) {
+  .frame,
+  .list,
+  .strip,
+  .cell {
+    border-color: CanvasText;
+  }
+
+  .frame,
+  .strip,
+  .cell,
+  .ruler .cell:not(.leap) {
+    background: Canvas;
+  }
+
+  /* Colour is gone: the inserted second is told by a double border and the hatch, the
+     tapes by fill against outline. */
+  .leap {
+    border-style: double;
+    border-inline-width: 3px;
+    background: Canvas;
+  }
+
+  .tape {
+    background: CanvasText;
+    border-inline-color: Canvas;
+  }
+
+  .gap {
+    background: Canvas;
+    border: 1px dashed CanvasText;
+  }
+
+  .brk {
+    background: linear-gradient(CanvasText, CanvasText) center / 2px 100%
+      no-repeat;
+  }
+
+  .tapes .brk {
+    background: linear-gradient(CanvasText, CanvasText) center / 100% 2px
+      no-repeat;
+  }
+
+  .nosignal {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frame,
+  .strip,
+  .list {
+    border-color: var(--gmt-ice);
+  }
+
+  .cell {
+    border-inline-end-color: var(--gmt-ice);
+  }
+}

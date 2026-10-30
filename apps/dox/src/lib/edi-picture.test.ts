@@ -11,16 +11,12 @@ import {
 import {
   cutValue,
   figureAria,
-  holdHtml,
   maskOf,
   partWord,
   probeFamily,
   shapeOf,
   picHalves,
-  plainHalves,
-  takenApartHtml,
   timelineAria,
-  timelineHtml,
   timelineLayout,
 } from "./edi-picture";
 
@@ -88,26 +84,9 @@ describe("shapeOf, read off the formatter's own output", () => {
   });
 });
 
-describe("takenApartHtml", () => {
+describe("figureAria", () => {
   const shape = shapeOf((a) => formatEdifactDateTime(a, "203"), "dateTime")!;
   const halves = picHalves(cutValue("202406151430", shape)!, false);
-
-  it("draws a box and a mask letter for each field, bracketed by group", () => {
-    const html = takenApartHtml(halves, "", "no offset");
-    expect(html.match(/gmt-edi-box"/g)).toHaveLength(5);
-    expect(html).toContain(">CCYY<");
-    expect(html).toContain('data-group="date"');
-    expect(html).toContain('data-group="time"');
-    expect(html).toContain("no offset");
-    expect(html).toContain(">date<");
-    expect(html).toContain(">time<");
-  });
-
-  it("escapes what a reader typed", () => {
-    const html = takenApartHtml(plainHalves('"><img src=x>'), "", "");
-    expect(html).not.toContain("<img");
-    expect(html).toContain('data-group="neutral"');
-  });
 
   it("says the same thing in words", () => {
     expect(figureAria("202406151430", "203", halves, "no offset")).toBe(
@@ -169,19 +148,6 @@ describe("timelineLayout", () => {
     expect(timelineLayout([])).toBeNull();
   });
 
-  it("draws numbered pins in their series, and a pin with no number for a stated instant", () => {
-    const layout = timelineLayout(inputs)!;
-    const html = timelineHtml(layout, { stated: false, gap: "15 h" });
-    expect(html).toContain('data-series="3"');
-    expect(html).toContain(">15 h<");
-    const stated = timelineHtml(timelineLayout([inputs[0]!])!, {
-      stated: true,
-      gap: "",
-    });
-    expect(stated).toContain("data-stated");
-    expect(stated).not.toContain("data-series");
-  });
-
   it("says each zone's instant in words", () => {
     expect(
       timelineAria(
@@ -192,20 +158,5 @@ describe("timelineLayout", () => {
     ).toBe(
       "A UTC timeline with 1 zone marked: 1, Europe/Berlin, 2024-06-15T12:30:00Z.",
     );
-  });
-});
-
-describe("holdHtml", () => {
-  it("stacks the live element and its sizers in the EDI hold by default", () => {
-    expect(holdHtml("<p>live</p>", ["<p>a</p>", "<p>b</p>"])).toBe(
-      '<div class="gmt-edi-hold"><p>live</p><p>a</p><p>b</p></div>',
-    );
-  });
-
-  it("takes another family's class and escapes it", () => {
-    expect(holdHtml("<p>live</p>", [], "gmt-ledger-hold")).toBe(
-      '<div class="gmt-ledger-hold"><p>live</p></div>',
-    );
-    expect(holdHtml("", [], '"><b>')).not.toContain("<b>");
   });
 });

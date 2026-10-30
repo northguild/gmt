@@ -1,0 +1,76 @@
+/*
+ * Demurrage Clock: what only this tool needs. The sections, plates, code frames and outputs
+ * are the kit's, and the frame, lane, days, plot and legend are the ledger family's. This
+ * sheet lays out the tool's controls and its six event rows.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone.
+ */
+
+/* The stack of controls keeps a gap. */
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* The events form: six rows that are always present, so the section keeps its height from one
+   preset to the next and the chart below never moves. */
+.events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: linear-gradient(
+    var(--gmt-glass-tint),
+    var(--gmt-glass-tint-subtle)
+  );
+
+  & > legend {
+    padding-inline: var(--gmt-space-2);
+    color: var(--gmt-ice);
+    font-family: var(--gmt-font-mono);
+    font-size: var(--gmt-text-xs);
+  }
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* The hand-off row: the link and its hint sit together and wrap on a narrow column. */
+.handoff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.hint {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+}
+
+@media (forced-colors: active) {
+  .events {
+    border-color: CanvasText;
+    background-color: Canvas;
+    background-image: none;
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .events {
+    border-color: var(--gmt-ice);
+  }
+}

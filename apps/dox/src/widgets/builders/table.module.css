@@ -1,0 +1,131 @@
+/* table: a captioned data table in a keyboard-scrollable region. Alignment and numeric
+   state arrive as classes on each cell, so nothing here counts children. */
+
+.wrap {
+  container-type: inline-size;
+  max-inline-size: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  background: var(--gmt-surface-widget);
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+.table {
+  /* Starlight's widget reset draws a content table as a block that scrolls itself. A table
+     box does not scroll, so `.wrap` is the region that does. */
+  display: table;
+  inline-size: 100%;
+  border-collapse: collapse;
+  color: var(--gmt-ice);
+  font-size: clamp(0.8125rem, 0.78rem + 0.2vw, 0.9375rem);
+}
+
+/* A fixed layout takes its column widths from the header row. */
+.fixed {
+  table-layout: fixed;
+}
+
+.caption {
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  color: var(--gmt-ice-dim);
+  font-weight: 600;
+  text-align: start;
+}
+
+.head,
+.cell {
+  padding-block: 0.375rem;
+  padding-inline: 0.75rem;
+  border-block-end: 1px solid var(--gmt-hairline);
+  vertical-align: top;
+
+  /* A long identifier or header breaks inside the box instead of widening the table past it. A
+     numeric cell keeps its figures together (`.numeric`). */
+  overflow-wrap: anywhere;
+}
+
+/* The content sheet keeps a table's code on one line (`white-space: nowrap`), so a long result
+   widens the table past its box. Inside a cell it wraps like the rest of the cell. */
+.cell code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.head {
+  color: var(--gmt-ice);
+  font-weight: 600;
+}
+
+.start {
+  text-align: start;
+}
+
+.end {
+  text-align: end;
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A header over figures is a phrase, not a figure: it wraps at its spaces. */
+.head.numeric {
+  white-space: normal;
+}
+
+/* Tight cells on a narrow table. */
+@container (inline-size < 24rem) {
+  .head,
+  .cell {
+    padding-inline: 0.5rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .wrap {
+    border-color: CanvasText;
+    background: Canvas;
+
+    &:focus-visible {
+      outline: 2px solid Highlight;
+    }
+  }
+
+  .table,
+  .caption,
+  .head {
+    color: CanvasText;
+  }
+
+  .head,
+  .cell {
+    border-block-end-color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .wrap {
+    border-color: var(--gmt-ice);
+
+    &:focus-visible {
+      outline-width: 3px;
+    }
+  }
+
+  .caption,
+  .head {
+    color: var(--gmt-ice);
+  }
+
+  .head,
+  .cell {
+    border-block-end-color: var(--gmt-ice);
+  }
+}

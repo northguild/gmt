@@ -297,7 +297,7 @@ export function matchPreset(state: DeliveryState): string {
 }
 
 /** The two calls behind one leg, with what each was given and what it returned. */
-export interface LegCalls {
+interface LegCalls {
   /** `transitTime`'s arguments: the instant the leg departs, and its duration. */
   departure: string;
   duration: string;
@@ -458,9 +458,9 @@ function legDurationText(iso: string): string {
 // mark/scale definitions; nothing chart-library-specific lives here.
 // ---------------------------------------------------------------------------
 
-export type ChartBadgeKind = "handling" | "wait" | "offset" | "missed";
+type ChartBadgeKind = "handling" | "wait" | "offset" | "missed";
 
-export interface ChartBadge {
+interface ChartBadge {
   kind: ChartBadgeKind;
   text: string;
 }
@@ -544,7 +544,7 @@ export interface ChartData {
  *  would otherwise reduce a 2.5-hour rail leg to a sliver a fraction of a
  *  pixel wide. The real duration always still comes from `durationText` and
  *  the tooltip; this only changes where the bar's far edge is *drawn*. */
-export const MIN_CHART_BAR_FRACTION = 0.03;
+const MIN_CHART_BAR_FRACTION = 0.03;
 
 /** The visual end position for a leg's bar: never earlier than the leg's
  *  real arrival, stretched forward when the leg is shorter than
@@ -564,9 +564,9 @@ export function visibleBarEndMs(
 // strict instant order.
 // ---------------------------------------------------------------------------
 
-export type ItineraryEventKind = "departure" | "arrival" | "handoff" | "dst";
+type ItineraryEventKind = "departure" | "arrival" | "handoff" | "dst";
 
-export interface OffsetCheck {
+interface OffsetCheck {
   agrees: boolean;
   badge: string;
   /** `HH:MM`, only when the reading disagrees. */
@@ -604,7 +604,7 @@ export interface ItineraryEvent {
   toOffset?: string;
 }
 
-export interface ItineraryGroup {
+interface ItineraryGroup {
   /** `YYYY-MM-DD`, this group's local date. */
   date: string;
   heading: string;

@@ -27,7 +27,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderDemurrageClockTemplate();
+const html = renderDemurrageClockTemplate("demurrage-clock").value;
 ---
 
 {
@@ -49,7 +49,7 @@ const html = renderDemurrageClockTemplate();
        first preset. */
     const seed = seedFromLocation("demclock");
     document
-      .querySelectorAll<HTMLElement>(".gmt-demurrage-clock")
+      .querySelectorAll<HTMLElement>('[data-widget="demurrage-clock"]')
       .forEach((el) => {
         mountDemurrageClock(el, seed, new AbortController().signal).catch(
           (error) => showUnavailable(el, error),

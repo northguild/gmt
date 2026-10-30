@@ -1,0 +1,68 @@
+/*
+ * Billing Deadlines: what only this tool needs. The sections, plates, aside, code frame and
+ * output are the kit's, and the strip and its key are the billing family's. This sheet lays
+ * out the tool's two field groups and its verdict and liability lines.
+ *
+ * Nothing here is a verdict colour: a date comparison is not a finding. Amber is the
+ * sentinel's alone, and an accent edge is never a single side.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A fieldset keeps its group's legend; the box has a full border, never one edge. */
+.group {
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: linear-gradient(
+    var(--gmt-glass-tint),
+    var(--gmt-glass-tint-subtle)
+  );
+
+  & > legend {
+    padding-inline: var(--gmt-space-2);
+    color: var(--gmt-ice);
+    font-family: var(--gmt-font-mono);
+    font-size: var(--gmt-text-xs);
+  }
+}
+
+/* The three plates sit in one named group so a reader hears them as a set. */
+.chain {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.verdicts {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+}
+
+@media (forced-colors: active) {
+  .group {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .group {
+    border-color: var(--gmt-ice);
+  }
+}

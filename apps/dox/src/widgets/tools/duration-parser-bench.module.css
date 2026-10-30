@@ -1,0 +1,109 @@
+/*
+ * Duration Parser Bench: what only this tool needs. The sections, fields, badge, tables, code
+ * frame and output are the kit's, and the strip, facts and Try buttons are the family's; this
+ * sheet lays out the parser row, the result and the refusal line.
+ *
+ * Amber is the sentinel's alone: a result no parser reads. Everything that is only a different
+ * answer is plain words. Nothing here moves while the reader types: the badge, the result and the
+ * refusal line each reserve their box.
+ */
+
+.parser {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--gmt-space-2);
+}
+
+/* The widest label ("neither parser") is reserved, so the badge never resizes. */
+.badgeSlot {
+  display: grid;
+  place-items: center stretch;
+  min-inline-size: 16ch;
+}
+
+.result {
+  display: block;
+  flex: 1 1 14rem;
+  box-sizing: border-box;
+  min-block-size: var(--gmt-target-min);
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  overflow-wrap: anywhere;
+
+  /* The reader's string was refused: the sentinel's amber, bracketed. */
+  &[data-state="sentinel"] {
+    border-color: var(--gmt-signal-border);
+    background: var(--gmt-signal-fill);
+    color: var(--gmt-signal-ink);
+  }
+}
+
+/* A line reserved while empty, so a refusal arriving does not move what follows. */
+.refusal {
+  min-block-size: 2.6em;
+  margin: var(--gmt-space-2) 0 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+}
+
+.chain {
+  margin: var(--gmt-space-1) 0 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+}
+
+.chainCode {
+  font-family: var(--gmt-font-mono);
+  overflow-wrap: anywhere;
+}
+
+/* A slot only holds what a draw writes into it. */
+.slot {
+  display: block;
+  min-inline-size: 0;
+}
+
+.stack {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.laytimeNote {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+}
+
+@media (forced-colors: active) {
+  .result {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+
+    &[data-state="sentinel"] {
+      border-style: dashed;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .result {
+    border-color: var(--gmt-ice);
+  }
+
+  .refusal,
+  .chain,
+  .laytimeNote {
+    color: var(--gmt-ice);
+  }
+}

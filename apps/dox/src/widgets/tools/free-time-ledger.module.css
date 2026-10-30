@@ -1,0 +1,60 @@
+/*
+ * Free Time Ledger: what only this tool needs. The sections, plates, chips, handles, code
+ * frames and outputs are the kit's, and the frame, lane, days, bar, gate, axis and legend are
+ * the ledger family's. This sheet lays out the tool's own field groups.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone.
+ */
+
+/* A field group hides with `hidden`; the kit's field has an author `display`, so the box
+   carries the rule. A wide group takes the whole row. */
+.box {
+  min-inline-size: 0;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &[data-wide] {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The stack of controls keeps a gap. */
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* The working-day terms (the weekend and the holidays) show only for a working-day count. */
+.working {
+  min-inline-size: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: linear-gradient(
+    var(--gmt-glass-tint),
+    var(--gmt-glass-tint-subtle)
+  );
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .working {
+    border-color: CanvasText;
+    background-color: Canvas;
+    background-image: none;
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .working {
+    border-color: var(--gmt-ice);
+  }
+}

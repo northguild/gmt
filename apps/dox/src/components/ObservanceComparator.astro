@@ -20,7 +20,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderObservanceComparatorTemplate();
+const html = renderObservanceComparatorTemplate("observance-comparator", {}).value;
 ---
 
 {
@@ -39,7 +39,7 @@ const html = renderObservanceComparatorTemplate();
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("observance");
     document
-      .querySelectorAll<HTMLElement>(".gmt-observance-comparator")
+      .querySelectorAll<HTMLElement>('[data-widget="observance-comparator"]')
       .forEach((el) => {
         mountObservanceComparator(el, seed, new AbortController().signal).catch(
           (error) => showUnavailable(el, error),

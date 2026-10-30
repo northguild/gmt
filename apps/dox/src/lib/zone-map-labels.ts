@@ -6,25 +6,21 @@
  * width, and the browser draws the halo.
  */
 
-/** City type size, in CSS px. */
-export const LABEL_CITY_PX = 12;
-/** Offset type size, in CSS px. */
-export const LABEL_OFFSET_PX = 12;
 /** Height of one label (the city line and the offset line), in CSS px. */
 export const LABEL_HEIGHT_PX = 30;
 /**
  * The offset line holds this many characters at least (`+00:00` is 6), so a new offset never
  * changes the label's width.
  */
-export const LABEL_OFFSET_CHARS = 6;
+const LABEL_OFFSET_CHARS = 6;
 /**
  * The widths of one character, in CSS px, an upper bound measured from the display face and the
  * mono face in a browser (the layout check compares the estimate with the real box).
  */
-export const CITY_CHAR_PX = 13.1;
-export const OFFSET_CHAR_PX = 7.4;
+const CITY_CHAR_PX = 13.1;
+const OFFSET_CHAR_PX = 7.4;
 /** Width of the amber `NO SIGNAL` mark with its brackets, in CSS px. */
-export const SIGNAL_LOST_PX = 92;
+const SIGNAL_LOST_PX = 92;
 
 /** The city part of an IANA id, with `_` as a space: `Africa/El_Aaiun` is `El Aaiun`. */
 export function cityOf(id: string): string {
@@ -45,54 +41,6 @@ export function labelSize(
     width: Math.ceil(Math.max(cityWidth, offsetWidth)),
     height: LABEL_HEIGHT_PX,
   };
-}
-
-export interface Box {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-
-/**
- * The box a label takes in a frame `frameWidth` CSS px wide, from its anchor `[x, y]` in the
- * drawing's own units (`viewWidth` wide). The box is centred on the anchor and pushed back inside
- * the frame, as the CSS does.
- */
-export function labelBox(
-  anchor: readonly [number, number],
-  size: { width: number; height: number },
-  viewWidth: number,
-  viewHeight: number,
-  frameWidth: number,
-): Box {
-  const scale = frameWidth / viewWidth;
-  const frameHeight = viewHeight * scale;
-  const clamp = (value: number, min: number, max: number) =>
-    Math.min(Math.max(value, min), Math.max(min, max));
-  const cx = clamp(
-    anchor[0] * scale,
-    size.width / 2,
-    frameWidth - size.width / 2,
-  );
-  const cy = clamp(
-    anchor[1] * scale,
-    size.height / 2,
-    frameHeight - size.height / 2,
-  );
-  return {
-    left: cx - size.width / 2,
-    top: cy - size.height / 2,
-    right: cx + size.width / 2,
-    bottom: cy + size.height / 2,
-  };
-}
-
-/** True when the two boxes share any area. */
-export function boxesIntersect(a: Box, b: Box): boolean {
-  return (
-    a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
-  );
 }
 
 type Point = readonly [number, number];

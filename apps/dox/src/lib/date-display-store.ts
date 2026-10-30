@@ -27,7 +27,7 @@ import {
   type ResetFormatId,
 } from "./reset-formats";
 
-export interface DateDisplayState {
+interface DateDisplayState {
   /** Which gmt-backed preset to render dates with. */
   formatId: ResetFormatId;
   /** IANA zone for zoned presets, or `null` for the reader's own. */

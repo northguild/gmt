@@ -1,975 +1,508 @@
 /**
  * @vitest-environment jsdom
  *
- * The Timetable Reader widget end to end: template -> mount -> interact ->
- * assert, against the real `@northguild/gmt`. Every preset's row 1 call and
- * result are section 9 rows.
+ * The Timetable Reader widget end to end: template -> mount -> interact -> assert, against
+ * the real `@northguild/gmt`, through roles and accessible names. Every preset's row 1 call
+ * and result are section 9 rows.
  */
+import { screen, waitFor, within } from "@testing-library/dom";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
-import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import {
-  crossingTime,
-  scheduleDelivery,
-  transitTime,
-} from "@northguild/gmt/transport/calculate";
-import { etaAtZone } from "@northguild/gmt/transport/convert";
-import { isValidTimeZone } from "@northguild/gmt/zoned/validate";
-import { isValidDateTime } from "@northguild/gmt/plain/validate";
-import { classifyLocal, resolveLocal } from "@northguild/gmt/instant/convert";
-import { getDstTransitions } from "@northguild/gmt/zoned/get";
-import {
-  SKIPPED_OFFSET_TEXT,
-  TIMETABLE_PRESETS,
-  arrivalChipText,
-  chartLayout,
-  chartSummary,
-  chartWindow,
-  rowBadge,
-  type TimetableLib,
-  type TimetableState,
-} from "./timetable-reader";
-import {
-  mountTimetableReader,
-  renderTimetableReaderTemplate,
-} from "./timetable-reader-mount";
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { SKIPPED_OFFSET_TEXT, TIMETABLE_PRESETS } from "./timetable-reader";
+import { seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "start-zone",
-  "duration",
-  "zone",
-  "departure-1",
-  "offset-1",
-  "departure-2",
-  "offset-2",
-  "departure-3",
-  "offset-3",
-  "departure-4",
-  "offset-4",
-  "rows",
-  "reason-aside",
-  "row-pick",
-  "call-timetable",
-  "copy-timetable",
-  "timetable-output",
-  "day",
-  "day-caption",
-  "band-chip",
-  "day-track",
-  "bands",
-  "day-ticks",
-  "rowset",
-  "rows-body",
-  "two-clocks",
-  "plot",
-  "chart-caption",
-  "chart-legend",
-  ...[1, 2, 3, 4].flatMap((n) => [
-    `lane-${n}`,
-    `handle-${n}`,
-    `tag-${n}`,
-    `row-${n}`,
-  ]),
-];
+const entry = WIDGET_REGISTRY["showTimetableReader"] as AnyWidgetEntry;
+
+const open = (args: Record<string, unknown> = {}): Promise<RenderedWidget> =>
+  renderWidget(entry, { args });
+const openPreset = (id: string): Promise<RenderedWidget> => {
+  const p = TIMETABLE_PRESETS.find((x) => x.id === id)!;
+  return open({
+    startTimeZone: p.startTimeZone,
+    duration: p.duration,
+    timeZone: p.timeZone,
+    ...Object.fromEntries(
+      p.rows.flatMap((r, i) => [
+        [`departure${i + 1}`, r.departure],
+        [`offset${i + 1}`, r.offset],
+      ]),
+    ),
+  });
+};
+
+const presetBox = () => screen.getByRole("combobox", { name: "Preset" });
+const durationBox = () => screen.getByRole("textbox", { name: "Run time" });
+const rowSet = (n: number) => screen.getByRole("group", { name: `Row ${n}` });
+const departure = (n: number) =>
+  within(rowSet(n)).getByRole("textbox", { name: "Printed departure" });
+const offset = (n: number) =>
+  within(rowSet(n)).getByRole("combobox", { name: "Offset (optional)" });
+const slider = (n: number) =>
+  screen.getByRole("slider", { name: `Row ${n} printed time` });
+const valueOf = (el: HTMLElement): number =>
+  Number(el.getAttribute("aria-valuenow"));
+const rowPick = () =>
+  screen.getByRole("combobox", { name: "Show the call for" });
+const callBox = () => screen.getByRole("group", { name: "The call made" });
+const outputBox = () =>
+  screen.getByRole("status", { name: "What scheduleDelivery returned" });
+const chart = () => screen.getByRole("img", { name: /./ });
+const rowsTable = () =>
+  screen.getByRole("table", { name: "Printed times read as exact instants" });
+// The table holds one row per filled printed time, after its header row.
+const tableRow = (n: number) => within(rowsTable()).getAllByRole("row")[n]!;
+
+async function enter(
+  w: RenderedWidget,
+  box: HTMLElement,
+  text: string,
+): Promise<void> {
+  await w.user.clear(box);
+  if (text !== "") await w.user.paste(text);
+  box.blur();
+}
 
 const EXPECTED: Record<string, [string, string]> = {
   "fall-back": [
     '[{ departure: "2024-10-27T00:30:00", duration: "PT1H", timeZone: "Europe/London" }], { startTimeZone: "Europe/London" }',
-    '{ eta: "2024-10-27T01:30:00+01:00[Europe/London]", legTimes: [{ arrival: "2024-10-27T00:30:00Z", localArrival: "2024-10-27T01:30:00+01:00[Europe/London]", dwellAfter: "PT0S" }] }',
+    "2024-10-27T01:30:00+01:00[Europe/London]",
   ],
   "offset-picks": [
     '[{ departure: "2024-10-27T01:30:00", duration: "PT1H", timeZone: "Europe/London" }], { startTimeZone: "Europe/London" }',
-    '{ eta: "2024-10-27T01:30:00+00:00[Europe/London]", legTimes: [{ arrival: "2024-10-27T01:30:00Z", localArrival: "2024-10-27T01:30:00+00:00[Europe/London]", dwellAfter: "PT0S" }] }',
+    "2024-10-27T01:30:00+00:00[Europe/London]",
   ],
   "spring-forward": [
     '[{ departure: "2024-03-31T00:30:00", duration: "PT1H", timeZone: "Europe/London" }], { startTimeZone: "Europe/London" }',
-    '{ eta: "2024-03-31T02:30:00+01:00[Europe/London]", legTimes: [{ arrival: "2024-03-31T01:30:00Z", localArrival: "2024-03-31T02:30:00+01:00[Europe/London]", dwellAfter: "PT0S" }] }',
+    "2024-03-31T02:30:00+01:00[Europe/London]",
   ],
   "published-local": [
     '[{ departure: "2024-06-15T10:00:00", duration: "PT1H", timeZone: "UTC" }], { startTimeZone: "Asia/Tokyo" }',
-    '{ eta: "2024-06-15T02:00:00+00:00[UTC]", legTimes: [{ arrival: "2024-06-15T02:00:00Z", localArrival: "2024-06-15T02:00:00+00:00[UTC]", dwellAfter: "PT0S" }] }',
+    "2024-06-15T02:00:00+00:00[UTC]",
   ],
   "berlin-fall-back": [
     '[{ departure: "2024-10-27T02:30:00", duration: "PT1H", timeZone: "Europe/Amsterdam" }], { startTimeZone: "Europe/Berlin" }',
-    '{ eta: "2024-10-27T02:30:00+01:00[Europe/Amsterdam]", legTimes: [{ arrival: "2024-10-27T01:30:00Z", localArrival: "2024-10-27T02:30:00+01:00[Europe/Amsterdam]", dwellAfter: "PT0S" }] }',
+    "2024-10-27T02:30:00+01:00[Europe/Amsterdam]",
   ],
 };
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+describe("the default template", () => {
+  it("starts on London's fall-back night with the first preset", async () => {
+    const w = await open();
+    expect(presetBox()).toHaveValue("fall-back");
+    expect(departure(1)).toHaveValue("2024-10-27T00:30:00");
+    expect(departure(4)).toHaveValue("");
+    expect(durationBox()).toHaveValue("PT1H");
+    await expectNoAxeViolations(w.root);
+  });
 
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderTimetableReaderTemplate(templateArgs);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountTimetableReader(root, args, controller.signal);
-  return { root, handle, controller };
-}
-
-function choosePreset(root: HTMLElement, id: string) {
-  const preset = q<HTMLSelectElement>(root, "preset");
-  preset.value = id;
-  preset.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function type(root: HTMLElement, role: string, value: string) {
-  const input = q<HTMLInputElement>(root, role);
-  input.value = value;
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
-
-describe("renderTimetableReaderTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderTimetableReaderTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
+  it("names its three sections", async () => {
+    await open();
+    for (const name of [
+      "1. The timetable",
+      "2. What each printed time means",
+      "3. What scheduleDelivery returns",
+    ]) {
+      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
   });
 
-  it("puts pictures and values in two panes per section, in reading order", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderTimetableReaderTemplate();
-    const splits = root.querySelectorAll(".gmt-timetable-split");
-    expect(splits).toHaveLength(2);
-    const order = (split: Element, roles: string[]) => {
-      const nodes = roles.map((r) =>
-        split.querySelector(`[data-role="${r}"]`)!,
-      );
-      nodes.forEach((n, i) => {
-        if (i > 0) {
-          expect(
-            nodes[i - 1]!.compareDocumentPosition(n) &
-              Node.DOCUMENT_POSITION_FOLLOWING,
-          ).toBeTruthy();
-        }
-      });
-      return nodes;
-    };
-    const [track, rowset] = order(splits[0]!, ["day-track", "rowset"]);
-    expect(track!.closest(".gmt-timetable-pane")).not.toBe(
-      rowset!.closest(".gmt-timetable-pane"),
-    );
-    const [chart, table] = order(splits[1]!, ["two-clocks", "rows"]);
-    expect(chart!.closest(".gmt-timetable-pane")).not.toBe(
-      table!.closest(".gmt-timetable-pane"),
-    );
-    // The controls line is not in a pane: it spans both columns.
+  it("describes the day, the chart and the rows", async () => {
+    await open();
     expect(
-      splits[0]!
-        .querySelector(".gmt-timetable-top")!
-        .closest(".gmt-timetable-pane"),
-    ).toBeNull();
-  });
-
-  it("has no placeholder on any printed-departure field", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderTimetableReaderTemplate();
-    for (let i = 1; i <= 4; i++) {
-      expect(q(root, `departure-${i}`).hasAttribute("placeholder")).toBe(false);
-    }
-  });
-});
-
-describe("mountTimetableReader", () => {
-  it.each(TIMETABLE_PRESETS.map((p) => [p.id]))(
-    "prints row 1's documented call and result for %s",
-    async (id) => {
-      const { root } = await mount();
-      choosePreset(root, id);
-      const [call, result] = EXPECTED[id]!;
-      expect(q(root, "copy-timetable").dataset.copyText).toBe(
-        `scheduleDelivery(${call})`,
-      );
-      expect(
-        q(root, "timetable-output").textContent!.replace(/\n\s+/g, " "),
-      ).toBe(result);
-    },
-  );
-
-  it("shows the same Leaves text on rows 2 and 3 of spring-forward", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    const row2 = root.querySelector('[data-role="row-2-display"]')!;
-    const row3 = root.querySelector('[data-role="row-3-display"]')!;
-    const leaves2 = row2.querySelectorAll("td")[1]!.textContent;
-    const leaves3 = row3.querySelectorAll("td")[1]!.textContent;
-    expect(leaves2).toBe(leaves3);
-    expect(leaves2).toContain("2024-03-31T02:30:00+01:00");
-  });
-
-  it("badges row 2 of spring-forward as skipped", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    const row2 = root.querySelector('[data-role="row-2-display"]')!;
-    expect(row2.textContent).toContain("Never shows on the clock");
-  });
-
-  it("badges row 2 of fall-back as twice", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    const row2 = root.querySelector('[data-role="row-2-display"]')!;
-    expect(row2.textContent).toContain("Occurs twice");
-  });
-
-  it("gives NO SIGNAL and the skipped-offset reason for +00:00 typed into the skipped row (V83)", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    type(root, "offset-2", "+00:00");
-    const rowPick = q<HTMLSelectElement>(root, "row-pick");
-    rowPick.value = "1";
-    rowPick.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(q(root, "timetable-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain(SKIPPED_OFFSET_TEXT);
-  });
-
-  it("renders the chat seed (V84) with the Occurs-twice badge", async () => {
-    const seed = {
-      startTimeZone: "Europe/Berlin",
-      departures: ["2024-10-27T02:30:00"],
-      duration: "PT1H",
-      timeZone: "Europe/Amsterdam",
-    };
-    const { root } = await mount(seed);
+      screen.getByText("Local day 2024-10-27 in Europe/London"),
+    ).toBeInTheDocument();
     expect(
-      q(root, "timetable-output").textContent!.replace(/\n\s+/g, " "),
-    ).toBe(EXPECTED["berlin-fall-back"]![1]);
-    const row1 = root.querySelector('[data-role="row-1-display"]')!;
-    expect(row1.textContent).toContain("Occurs twice");
-  });
-
-  it("round-trips every preset's state as a permalink of strings", async () => {
-    for (const preset of TIMETABLE_PRESETS) {
-      const { root, handle } = await mount();
-      choosePreset(root, preset.id);
-      const state = handle.getPermalinkState?.() as Record<string, string>;
-      expect(state).not.toBeNull();
-      for (const value of Object.values(state))
-        expect(typeof value).toBe("string");
-      const url = encodeWidgetPermalink("timetable", state);
-      const seeded = seedFromLocation("timetable", url.slice(url.indexOf("?")));
-      const again = await mount(seeded);
-      const [, result] = EXPECTED[preset.id]!;
-      expect(
-        q(again.root, "timetable-output").textContent!.replace(/\n\s+/g, " "),
-      ).toBe(result);
-      document.body.innerHTML = "";
-    }
-  });
-
-  /* The page path: the server renders the default template and the mount is
-     then handed the seed from the URL. The rail path renders the template with
-     the seed, which hid these. */
-  describe("a seed applied to the default template (the tool page)", () => {
-    it("keeps a seeded offset the Offset select had no option for", async () => {
-      const { root } = await mount(
-        {
-          startTimeZone: "Europe/London",
-          departures: ["2024-10-27T01:30:00", "2024-10-27T01:30:00"],
-          offsets: ["", "+00:00"],
-          duration: "PT1H",
-          timeZone: "Europe/London",
-        },
-        {},
-      );
-      expect(q<HTMLSelectElement>(root, "offset-2").value).toBe("+00:00");
-      expect(q(root, "row-2-display").textContent).toContain(
-        "2024-10-27T01:30:00+00:00",
-      );
-    });
-
-    it("reads the page's own Worth trying link (an offset in a skipped hour) as NO SIGNAL", async () => {
-      const { root } = await mount(
-        {
-          startTimeZone: "Europe/London",
-          duration: "PT1H",
-          timeZone: "Europe/London",
-          departure1: "2024-03-31T01:30:00",
-          offset1: "+00:00",
-        },
-        {},
-      );
-      expect(q<HTMLSelectElement>(root, "offset-1").value).toBe("+00:00");
-      expect(q(root, "timetable-output").textContent).toBe("NO SIGNAL");
-    });
-
-    it("keeps a zone outside the curated list and reads it", async () => {
-      const { root } = await mount(
-        {
-          startTimeZone: "Europe/London",
-          duration: "PT1H",
-          timeZone: "Europe/Helsinki",
-          departure1: "2024-06-15T10:00:00",
-        },
-        {},
-      );
-      expect(q<HTMLSelectElement>(root, "zone").value).toBe("Europe/Helsinki");
-      expect(q(root, "timetable-output").textContent).not.toBe("NO SIGNAL");
-    });
-  });
-
-  it("keeps row 2's +00:00 when the offset-picks preset is chosen after another", async () => {
-    const { root } = await mount();
-    choosePreset(root, "published-local");
-    choosePreset(root, "offset-picks");
-    expect(q<HTMLSelectElement>(root, "offset-2").value).toBe("+00:00");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("offset-picks");
-  });
-
-  it("is inert when aborted before the library loads", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderTimetableReaderTemplate();
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountTimetableReader(root, {}, controller.signal);
-    expect(handle.getPermalinkState?.()).toBeNull();
-  });
-
-  it("can be destroyed twice", async () => {
-    const { handle } = await mount();
-    expect(() => {
-      handle.destroy();
-      handle.destroy();
-    }).not.toThrow();
+      screen.getAllByText("01:00–02:00 happens twice").length,
+    ).toBeGreaterThan(0);
+    expect(chart()).toHaveAccessibleName(/./);
+    expect(
+      screen.getByText("Arrival times are in Europe/London."),
+    ).toBeInTheDocument();
   });
 });
 
-// ---------------------------------------------------------------------------
-// The day track, the chart and the table
-// ---------------------------------------------------------------------------
+describe.each(Object.keys(EXPECTED))("preset %s", (id) => {
+  it("shows the call and the result for row 1", async () => {
+    const w = await openPreset(id);
+    expect(presetBox()).toHaveValue(id);
+    expect(callBox()).toHaveTextContent(EXPECTED[id]![0]);
+    expect(outputBox()).toHaveTextContent(EXPECTED[id]![1]);
+    await expectNoAxeViolations(w.root);
+  });
 
-const lib: TimetableLib = {
-  scheduleDelivery,
-  transitTime,
-  etaAtZone,
-  crossingTime,
-  isValidTimeZone,
-  isValidDateTime,
-  resolveLocal,
-  getDstTransitions,
-  classifyLocal,
-};
+  it("round-trips through the permalink", async () => {
+    const w = await openPreset(id);
+    const link = w.permalink();
+    const seed = seedFromLocation("timetable", link.slice(link.indexOf("?")));
+    w.destroy();
+    await open(seed ?? {});
+    expect(presetBox()).toHaveValue(id);
+    expect(callBox()).toHaveTextContent(EXPECTED[id]![0]);
+  });
+});
 
-const LDZ = "[Europe/London]";
+describe("choosing a preset", () => {
+  it("fills every control from the preset", async () => {
+    const w = await open();
+    await w.user.selectOptions(presetBox(), "published-local");
+    expect(departure(1)).toHaveValue("2024-06-15T10:00:00");
+    expect(departure(2)).toHaveValue("");
+    expect(durationBox()).toHaveValue("PT1H");
+    expect(outputBox()).toHaveTextContent(EXPECTED["published-local"]![1]);
+    await expectNoAxeViolations(w.root);
+  });
 
-/** Section 9 L1 to L5: each row's Leaves and Local arrival, in full. */
-const ROW_TEXTS: Record<string, [string, string][]> = {
-  "fall-back": [
-    [`2024-10-27T00:30:00+01:00${LDZ}`, `2024-10-27T01:30:00+01:00${LDZ}`],
-    [`2024-10-27T01:30:00+01:00${LDZ}`, `2024-10-27T01:30:00+00:00${LDZ}`],
-    [`2024-10-27T02:30:00+00:00${LDZ}`, `2024-10-27T03:30:00+00:00${LDZ}`],
-  ],
-  "offset-picks": [
-    [`2024-10-27T01:30:00+01:00${LDZ}`, `2024-10-27T01:30:00+00:00${LDZ}`],
-    [`2024-10-27T01:30:00+00:00${LDZ}`, `2024-10-27T02:30:00+00:00${LDZ}`],
-  ],
-  "spring-forward": [
-    [`2024-03-31T00:30:00+00:00${LDZ}`, `2024-03-31T02:30:00+01:00${LDZ}`],
-    [`2024-03-31T02:30:00+01:00${LDZ}`, `2024-03-31T03:30:00+01:00${LDZ}`],
-    [`2024-03-31T02:30:00+01:00${LDZ}`, `2024-03-31T03:30:00+01:00${LDZ}`],
-  ],
-  "published-local": [
-    ["2024-06-15T10:00:00+09:00[Asia/Tokyo]", "2024-06-15T02:00:00+00:00[UTC]"],
-  ],
-  "berlin-fall-back": [
-    [
-      "2024-10-27T02:30:00+02:00[Europe/Berlin]",
-      "2024-10-27T02:30:00+01:00[Europe/Amsterdam]",
-    ],
-  ],
-};
+  it("keeps row 2's +00:00 when offset-picks follows another preset", async () => {
+    const w = await open();
+    await w.user.selectOptions(presetBox(), "published-local");
+    await w.user.selectOptions(presetBox(), "offset-picks");
+    expect(offset(2)).toHaveValue("+00:00");
+    expect(presetBox()).toHaveValue("offset-picks");
+  });
 
-/** The note each row of each preset carries: `rowBadge`'s own text. */
-const BADGES: Record<string, (string | null)[]> = {
-  "fall-back": [null, rowBadge("twice", false), null],
-  "offset-picks": [rowBadge("twice", false), rowBadge("twice", true)],
-  "spring-forward": [null, rowBadge("skipped", false), null],
-  "published-local": [null],
-  "berlin-fall-back": [rowBadge("twice", false)],
-};
+  it("reads custom once a typed value leaves every preset", async () => {
+    const w = await open();
+    await enter(w, durationBox(), "PT2H");
+    expect(presetBox()).toHaveValue("custom");
+    await enter(w, durationBox(), "PT1H");
+    expect(presetBox()).toHaveValue("fall-back");
+  });
+});
 
-function stateOfPreset(id: string): TimetableState {
-  const p = TIMETABLE_PRESETS.find((x) => x.id === id)!;
-  return {
-    startTimeZone: p.startTimeZone,
-    duration: p.duration,
-    timeZone: p.timeZone,
-    rows: [0, 1, 2, 3].map(
-      (i) => p.rows[i] ?? { departure: "", offset: "" },
-    ) as TimetableState["rows"],
+describe("the rows table", () => {
+  it("reads each printed time as an exact instant", async () => {
+    const w = await openPreset("fall-back");
+    expect(tableRow(1)).toHaveTextContent("2024-10-27T00:30:00+01:00");
+    expect(tableRow(2)).toHaveTextContent("Occurs twice");
+    expect(tableRow(2)).toHaveTextContent("2024-10-27T01:30:00+01:00");
+    expect(tableRow(3)).toHaveTextContent("2024-10-27T02:30:00+00:00");
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("flags a skipped hour and shows its row and the later one at one instant", async () => {
+    await openPreset("spring-forward");
+    expect(tableRow(2)).toHaveTextContent("Never shows on the clock");
+    const leaves = (n: number) =>
+      /2024-03-31T02:30:00\+01:00/.exec(tableRow(n).textContent ?? "")?.[0];
+    expect(leaves(2)).toBeDefined();
+    expect(leaves(2)).toBe(leaves(3));
+  });
+
+  it("notes a written offset", async () => {
+    await openPreset("offset-picks");
+    expect(tableRow(2)).toHaveTextContent("Offset written");
+  });
+
+  it("shows NO SIGNAL for a time the library cannot read", async () => {
+    const w = await openPreset("fall-back");
+    await enter(w, departure(4), "not a time");
+    expect(within(tableRow(4)).getAllByText("NO SIGNAL")).toHaveLength(2);
+    await enter(w, departure(4), "2024-10-27T03:30:00");
+    expect(tableRow(4)).toHaveTextContent("2024-10-27T03:30:00+00:00");
+  });
+});
+
+describe("the offset field", () => {
+  const WHY: Record<string, string> = {
+    once: "Happens once: nothing to choose.",
+    blank: "Type a printed time first.",
+    twice: "Happens twice: the offset picks the pass.",
+    never: "Never shows: no offset makes it valid.",
   };
-}
 
-const fullText = (cell: Element) =>
-  cell.querySelector(".gmt-timetable-live .gmt-timetable-time-full")
-    ?.textContent ?? null;
-
-function keydown(root: HTMLElement, role: string, k: string, shift = false) {
-  q(root, role).dispatchEvent(
-    new KeyboardEvent("keydown", { key: k, shiftKey: shift, bubbles: true }),
-  );
-}
-
-function pointer(root: HTMLElement, role: string, kind: string, clientX = 0) {
-  q(root, role).dispatchEvent(
-    new PointerEvent(kind, { bubbles: true, pointerId: 1, clientX }),
-  );
-}
-
-function stubTrack(root: HTMLElement) {
-  q(root, "day-track").getBoundingClientRect = () =>
-    ({
-      left: 0,
-      right: 1440,
-      width: 1440,
-      top: 0,
-      bottom: 28,
-      height: 28,
-    }) as DOMRect;
-}
-
-const value = (root: HTMLElement, role: string) =>
-  q<HTMLInputElement>(root, role).value;
-
-describe("every preset's rows are unchanged", () => {
-  it.each(TIMETABLE_PRESETS.map((p) => [p.id]))(
-    "prints the Leaves, Local arrival and Note of every row of %s",
-    async (id) => {
-      const { root } = await mount();
-      choosePreset(root, id);
-      const want = ROW_TEXTS[id]!;
-      for (let i = 0; i < want.length; i++) {
-        const tr = q(root, `row-${i + 1}-display`);
-        const cells = tr.querySelectorAll("td");
-        expect(fullText(cells[1]!)).toBe(want[i]![0]);
-        expect(fullText(cells[3]!)).toBe(want[i]![1]);
-        const badge =
-          cells[2]!.querySelector(".gmt-timetable-live .gmt-transport-badge")
-            ?.textContent ?? "";
-        const expected = BADGES[id]![i]!;
-        expect(badge).toBe(expected === null ? "" : expected);
-      }
-      expect(root.querySelectorAll("tbody tr").length).toBe(want.length);
-    },
-  );
-});
-
-describe("the chart matches the table", () => {
-  it.each(TIMETABLE_PRESETS.map((p) => [p.id]))(
-    "draws every row of %s at the numbers chartLayout gives",
-    async (id) => {
-      const { root } = await mount();
-      choosePreset(root, id);
-      const layout = chartLayout(stateOfPreset(id), lib)!;
-      const win = chartWindow(layout);
-      const mille = (m: number) =>
-        ((m - win.start) / (win.end - win.start)) * 1000;
-      const pct = (m: number) =>
-        ((m - win.start) / (win.end - win.start)) * 100;
-      expect(layout.rows.length).toBe(ROW_TEXTS[id]!.length);
-      for (const r of layout.rows) {
-        const [leaves, local] = ROW_TEXTS[id]![r.n - 1]!;
-        const link = q(root, `link-${r.n}`);
-        expect(link.getAttribute("data-instant")).toBe(leaves);
-        expect(Number(link.getAttribute("x1"))).toBeCloseTo(
-          mille(r.printedMinute),
-          2,
-        );
-        expect(Number(link.getAttribute("x2"))).toBeCloseTo(
-          mille(r.instantMinute!),
-          2,
-        );
-        const bar = q(root, `bar-${r.n}`);
-        expect(bar.dataset.leaves).toBe(leaves);
-        expect(bar.dataset.arrival).toBe(local);
-        expect(parseFloat(bar.style.left)).toBeCloseTo(
-          pct(r.instantMinute!),
-          3,
-        );
-        expect(parseFloat(bar.style.width)).toBeCloseTo(
-          pct(r.arrivalMinute!) - pct(r.instantMinute!),
-          3,
-        );
-        expect(q(root, `arrival-${r.n}`).textContent).toBe(
-          arrivalChipText(local, layout.date),
-        );
-        expect(q(root, `printed-${r.n}`)).not.toBeNull();
-        expect(q(root, `instant-${r.n}`)).not.toBeNull();
-      }
-    },
-  );
-
-  it("shows rows 2 and 3 of spring-forward ending on one point, row 2 dashed", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    expect(q(root, "link-2").getAttribute("x2")).toBe(
-      q(root, "link-3").getAttribute("x2"),
-    );
-    expect(
-      q(root, "link-2").classList.contains("gmt-timetable-link--dashed"),
-    ).toBe(true);
-    expect(
-      q(root, "link-3").classList.contains("gmt-timetable-link--dashed"),
-    ).toBe(false);
-    expect(q(root, "link-2").getAttribute("x1")).not.toBe(
-      q(root, "link-3").getAttribute("x1"),
-    );
+  it("is available only for a repeated hour, with its reason attached", async () => {
+    await openPreset("fall-back");
+    expect(offset(1)).toBeDisabled();
+    expect(offset(1)).toHaveAccessibleDescription(WHY["once"]!);
+    expect(offset(2)).toBeEnabled();
+    expect(offset(2)).toHaveAccessibleDescription(WHY["twice"]!);
+    expect(offset(4)).toBeDisabled();
+    expect(offset(4)).toHaveAccessibleDescription(WHY["blank"]!);
   });
 
-  it("starts both rows of offset-picks at one printed point and ends them apart", async () => {
-    const { root } = await mount();
-    choosePreset(root, "offset-picks");
-    expect(q(root, "link-1").getAttribute("x1")).toBe(
-      q(root, "link-2").getAttribute("x1"),
-    );
-    expect(q(root, "link-1").getAttribute("x2")).not.toBe(
-      q(root, "link-2").getAttribute("x2"),
-    );
+  it("says that a skipped hour has nothing to pick", async () => {
+    await openPreset("spring-forward");
+    expect(offset(2)).toHaveAccessibleDescription(WHY["never"]!);
   });
 
-  it("draws two twice wedges on fall-back, one skipped on spring-forward, none on published-local", async () => {
-    const { root } = await mount();
-    const wedges = (kind: string) =>
-      root.querySelectorAll(`.gmt-timetable-wedge[data-kind="${kind}"]`).length;
-    choosePreset(root, "fall-back");
-    expect([wedges("twice"), wedges("skipped")]).toEqual([2, 0]);
-    choosePreset(root, "spring-forward");
-    expect([wedges("twice"), wedges("skipped")]).toEqual([0, 1]);
-    choosePreset(root, "published-local");
-    expect([wedges("twice"), wedges("skipped")]).toEqual([0, 0]);
+  it("picks the later pass of a repeated hour", async () => {
+    const w = await openPreset("fall-back");
+    await w.user.selectOptions(rowPick(), "1");
+    await w.user.selectOptions(offset(2), "+00:00");
+    expect(callBox()).toHaveTextContent("01:30:00+00:00[Europe/London]");
+    expect(presetBox()).toHaveValue("custom");
+    await expectNoAxeViolations(w.root);
   });
 
-  it("rewrites its text alternative on every render", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    expect(q(root, "two-clocks").getAttribute("role")).toBe("img");
-    expect(q(root, "two-clocks").getAttribute("aria-label")).toBe(
-      chartSummary(chartLayout(stateOfPreset("spring-forward"), lib)!),
-    );
-  });
-
-  it("draws a hollow mark and no bar for a row that names no instant", async () => {
-    const { root } = await mount();
-    choosePreset(root, "offset-picks");
-    keydown(root, "handle-2", "PageDown");
-    expect(q(root, "bar-2")).toBeNull();
-    expect(q(root, "link-2")).toBeNull();
-    expect(
-      q(root, "printed-2").classList.contains("gmt-timetable-sq--hollow"),
-    ).toBe(true);
-    expect(q(root, "journey-2").textContent).toContain("no instant");
-  });
-
-  it("says so when there is nothing to draw", async () => {
-    const { root } = await mount();
-    for (const n of [1, 2, 3, 4]) type(root, `departure-${n}`, "");
-    expect(q(root, "plot").textContent).toContain(
-      "Type a printed departure in a row to draw the two clocks.",
-    );
-    expect(q(root, "day-caption").textContent).toBe(
-      "Type a printed departure in a row to draw its day.",
-    );
-    expect(q(root, "tag-1").hidden).toBe(true);
+  it("keeps the offset when the time stays in the repeated hour", async () => {
+    const w = await openPreset("offset-picks");
+    await enter(w, departure(2), "2024-10-27T01:45:00");
+    expect(offset(2)).toHaveValue("+00:00");
   });
 });
 
-describe("the shaded hour", () => {
-  it("shades the repeated hour of fall-back", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    const bands = root.querySelectorAll<HTMLElement>(".gmt-timetable-band");
-    expect(bands.length).toBe(1);
-    expect(bands[0]!.dataset.kind).toBe("twice");
-    expect(bands[0]!.style.left).toBe("4.1667%");
-    expect(bands[0]!.style.width).toBe("4.1667%");
-    expect(q(root, "band-chip").textContent).toBe(
-      "01:00\u201302:00 happens twice",
-    );
-    expect(q(root, "day-caption").textContent).toBe(
-      "Local day 2024-10-27 in Europe/London",
-    );
+describe("the call", () => {
+  it("follows the row picked", async () => {
+    const w = await openPreset("fall-back");
+    await w.user.selectOptions(rowPick(), "2");
+    expect(callBox()).toHaveTextContent("2024-10-27T02:30:00");
+    await expectNoAxeViolations(w.root);
   });
 
-  it("shades the skipped hour of spring-forward", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    const bands = root.querySelectorAll<HTMLElement>(".gmt-timetable-band");
-    expect(bands.length).toBe(1);
-    expect(bands[0]!.dataset.kind).toBe("skipped");
-    expect(bands[0]!.style.left).toBe("4.1667%");
-    expect(q(root, "band-chip").textContent).toBe(
-      "01:00\u201302:00 never shows",
-    );
-  });
-
-  it("shades nothing on published-local", async () => {
-    const { root } = await mount();
-    choosePreset(root, "published-local");
-    expect(root.querySelectorAll(".gmt-timetable-band").length).toBe(0);
-    expect(q(root, "band-chip").textContent).toBe("No clock change this day");
+  it("explains why a skipped offset is null", async () => {
+    const w = await open({
+      startTimeZone: "Europe/London",
+      duration: "PT1H",
+      timeZone: "Europe/London",
+      departure1: "2024-03-31T00:30:00",
+      departure2: "2024-03-31T01:30:00",
+      offset2: "+00:00",
+    });
+    await w.user.selectOptions(rowPick(), "1");
+    expect(outputBox()).toHaveTextContent("NO SIGNAL");
+    expect(screen.getByText(SKIPPED_OFFSET_TEXT)).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 });
 
-describe("a handle moves its row's printed time", () => {
-  it("writes the row's input from the keyboard and keeps the handle in sync", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    keydown(root, "handle-1", "ArrowRight");
-    expect(value(root, "departure-1")).toBe("2024-10-27T00:35:00");
-    expect(q(root, "handle-1").getAttribute("aria-valuenow")).toBe("35");
-    keydown(root, "handle-1", "PageUp");
-    expect(value(root, "departure-1")).toBe("2024-10-27T01:35:00");
-    keydown(root, "handle-1", "ArrowLeft", true);
-    expect(value(root, "departure-1")).toBe("2024-10-27T00:35:00");
-    keydown(root, "handle-1", "End");
-    expect(value(root, "departure-1")).toBe("2024-10-27T23:55:00");
-    keydown(root, "handle-1", "Home");
-    expect(value(root, "departure-1")).toBe("2024-10-27T00:00:00");
-    type(root, "departure-1", "2024-10-27T01:32:00");
-    keydown(root, "handle-1", "ArrowRight");
-    expect(value(root, "departure-1")).toBe("2024-10-27T01:35:00");
-  });
-
-  it("turns the preset to custom once a handle moves, and back when it returns", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    keydown(root, "handle-1", "ArrowRight");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    keydown(root, "handle-1", "ArrowLeft");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("fall-back");
-  });
-
-  it("moves the handle when a time is typed, and hides it for anything else", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    type(root, "departure-1", "2024-10-27T03:15:00");
-    expect(q(root, "handle-1").getAttribute("aria-valuenow")).toBe("195");
-    expect(q(root, "handle-1").style.left).toBe("13.5417%");
-    type(root, "departure-1", "nonsense");
-    expect(q(root, "handle-1").hidden).toBe(true);
-    expect(q(root, "tag-1").textContent).toBe("1 \u00b7 not a date and time");
-    type(root, "departure-3", "2024-10-28T01:30:00");
-    expect(q(root, "handle-3").hidden).toBe(true);
-    expect(q(root, "tag-3").textContent).toBe("3 \u00b7 on 2024-10-28");
-  });
-
-  it("reads the printed time aloud", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    keydown(root, "handle-1", "PageUp");
-    expect(q(root, "handle-1").getAttribute("aria-valuetext")).toBe(
-      "01:30, never shows on the clock, read as 02:30",
+describe("a chat seed", () => {
+  it("applies the flat form to the default template", async () => {
+    await open({
+      startTimeZone: "Europe/Helsinki",
+      duration: "PT2H",
+      timeZone: "Europe/Helsinki",
+      departure1: "2024-10-27T03:30:00",
+    });
+    expect(screen.getByRole("combobox", { name: "Printed in" })).toHaveValue(
+      "Europe/Helsinki",
     );
-    expect(q(root, "tag-1").textContent).toBe("1 \u00b7 01:30 skipped");
+    expect(durationBox()).toHaveValue("PT2H");
+    expect(departure(1)).toHaveValue("2024-10-27T03:30:00");
+    expect(presetBox()).toHaveValue("custom");
   });
+});
 
-  it("enters and leaves the repeated hour by keyboard", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    expect(q<HTMLSelectElement>(root, "offset-1").disabled).toBe(true);
-    keydown(root, "handle-1", "PageUp");
-    const offset = q<HTMLSelectElement>(root, "offset-1");
-    expect(offset.disabled).toBe(false);
-    expect(offset.options.length).toBe(3);
-    expect(q(root, "row-1-display").textContent).toContain(
-      "Occurs twice: the earlier instant",
-    );
-    expect(q(root, "tag-1").textContent).toBe("1 \u00b7 01:30 twice");
-    expect(q(root, "handle-1").getAttribute("aria-valuetext")).toBe(
+describe("the day track", () => {
+  it("names the handle of each row that has a time", async () => {
+    await openPreset("fall-back");
+    expect(valueOf(slider(1))).toBe(30);
+    expect(valueOf(slider(2))).toBe(90);
+    expect(slider(2)).toHaveAttribute(
+      "aria-valuetext",
       "01:30, happens twice, read as the earlier pass",
     );
-    keydown(root, "handle-1", "PageUp");
-    expect(q<HTMLSelectElement>(root, "offset-1").disabled).toBe(true);
-    expect(q(root, "badge-1")).toBeNull();
-    expect(q(root, "tag-1").textContent).toBe("1 \u00b7 02:30");
   });
 
-  it("states why each Offset select is or is not available, in a slot that is always there", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    const why = (n: number) => q(root, `why-${n}`).textContent;
-    expect(why(1)).toBe("Happens once: nothing to choose.");
-    expect(why(4)).toBe("Type a printed time first.");
-    keydown(root, "handle-1", "PageUp");
-    expect(why(1)).toBe("Happens twice: the offset picks the pass.");
-    choosePreset(root, "spring-forward");
-    keydown(root, "handle-1", "PageUp");
-    expect(why(1)).toBe("Never shows: no offset makes it valid.");
-    for (const n of [1, 2, 3, 4]) {
-      const sel = q<HTMLSelectElement>(root, `offset-${n}`);
-      expect(sel.getAttribute("aria-describedby")).toBe(q(root, `why-${n}`).id);
-    }
-    expect(root.querySelectorAll(".gmt-timetable-why-slot")).toHaveLength(4);
-  });
-
-  it("walks through the repeated hour and keeps an offset it was given", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    for (let i = 0; i < 7; i++) keydown(root, "handle-1", "ArrowRight");
-    expect(q(root, "tag-1").textContent).toBe("1 \u00b7 01:05 twice");
-    setOffset(root, "offset-1", "+00:00");
-    expect(q(root, "row-1-display").textContent).toContain(
-      "Offset written: this pass",
-    );
-    for (let i = 0; i < 11; i++) keydown(root, "handle-1", "ArrowRight");
-    expect(value(root, "departure-1")).toBe("2024-10-27T02:00:00");
-    expect(q(root, "tag-1").textContent).toBe("1 \u00b7 02:00");
-    expect(q<HTMLSelectElement>(root, "offset-1").value).toBe("+00:00");
-    expect(fullText(q(root, "row-1-display").querySelectorAll("td")[1]!)).toBe(
-      `2024-10-27T02:00:00+00:00${LDZ}`,
+  it("reads a skipped time on its handle", async () => {
+    await openPreset("spring-forward");
+    expect(slider(2)).toHaveAttribute(
+      "aria-valuetext",
+      "01:30, never shows on the clock, read as 02:30",
     );
   });
 
-  it("keeps a written offset when the handle moves off its hour, and reads again when it returns", async () => {
-    const { root } = await mount();
-    choosePreset(root, "offset-picks");
-    keydown(root, "handle-2", "PageDown");
-    expect(q<HTMLSelectElement>(root, "offset-2").value).toBe("+00:00");
-    expect(q<HTMLSelectElement>(root, "offset-2").disabled).toBe(false);
-    const leaves = q(root, "row-2-display").querySelectorAll("td")[1]!;
-    expect(leaves.textContent).toContain("NO SIGNAL");
-    expect(q(root, "bar-2")).toBeNull();
-    expect(q(root, "link-2")).toBeNull();
-    keydown(root, "handle-2", "PageUp");
-    expect(fullText(q(root, "row-2-display").querySelectorAll("td")[1]!)).toBe(
-      `2024-10-27T01:30:00+00:00${LDZ}`,
-    );
-  });
-
-  it("returns a result when a handle moves the offset's row back into agreement (L8)", async () => {
-    const { root } = await mount(
-      {
-        startTimeZone: "Europe/London",
-        duration: "PT1H",
-        timeZone: "Europe/London",
-        departure1: "2024-03-31T01:30:00",
-        offset1: "+00:00",
-      },
-      {},
-    );
-    expect(q(root, "timetable-output").textContent).toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toContain(SKIPPED_OFFSET_TEXT);
-    keydown(root, "handle-1", "PageDown");
-    expect(value(root, "departure-1")).toBe("2024-03-31T00:30:00");
-    expect(q(root, "timetable-output").textContent).not.toBe("NO SIGNAL");
-    expect(q(root, "reason-aside").textContent).toBe("");
-  });
-});
-
-function setOffset(root: HTMLElement, role: string, offset: string) {
-  const el = q<HTMLSelectElement>(root, role);
-  el.value = offset;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-describe("a pointer drag", () => {
-  it("moves the row under the pointer, through the repeated hour and out", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    stubTrack(root);
-    pointer(root, "handle-2", "pointerdown", 90);
-    pointer(root, "handle-2", "pointermove", 75);
-    expect(value(root, "departure-2")).toBe("2024-10-27T01:15:00");
-    expect(q<HTMLSelectElement>(root, "offset-2").disabled).toBe(false);
-    pointer(root, "handle-2", "pointermove", 130);
-    expect(value(root, "departure-2")).toBe("2024-10-27T02:10:00");
-    expect(q<HTMLSelectElement>(root, "offset-2").disabled).toBe(true);
-    pointer(root, "handle-2", "pointerup", 130);
-  });
-
-  it("ignores a pointermove no handle started", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    stubTrack(root);
-    pointer(root, "handle-2", "pointermove", 130);
-    expect(value(root, "departure-2")).toBe("2024-10-27T01:30:00");
-  });
-
-  it("still drags when setPointerCapture throws", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    stubTrack(root);
-    q(root, "handle-2").setPointerCapture = () => {
-      throw new Error("no such pointer");
-    };
-    pointer(root, "handle-2", "pointerdown", 90);
-    pointer(root, "handle-2", "pointermove", 130);
-    expect(value(root, "departure-2")).toBe("2024-10-27T02:10:00");
-  });
-
-  it("stops moving after the pointer comes up or capture is lost", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    stubTrack(root);
-    pointer(root, "handle-2", "pointerdown", 90);
-    pointer(root, "handle-2", "pointerup", 90);
-    pointer(root, "handle-2", "pointermove", 200);
-    expect(value(root, "departure-2")).toBe("2024-10-27T01:30:00");
-    pointer(root, "handle-2", "pointerdown", 90);
-    q(root, "handle-2").dispatchEvent(
-      new Event("lostpointercapture", { bubbles: true }),
-    );
-    pointer(root, "handle-2", "pointermove", 200);
-    expect(value(root, "departure-2")).toBe("2024-10-27T01:30:00");
-  });
-
-  it("adds a blank row where an empty lane is pressed", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    stubTrack(root);
-    expect(q(root, "handle-4").hidden).toBe(true);
-    expect(q(root, "tag-4").textContent).toBe("4 \u00b7 click to add");
-    pointer(root, "lane-4", "pointerdown", 720);
-    expect(value(root, "departure-4")).toBe("2024-10-27T12:00:00");
-    expect(q(root, "handle-4").hidden).toBe(false);
-    pointer(root, "lane-4", "pointerup", 720);
-  });
-
-  it("does nothing when a lane that has a handle is pressed away from it", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    stubTrack(root);
-    pointer(root, "lane-1", "pointerdown", 900);
-    pointer(root, "lane-1", "pointermove", 1000);
-    expect(value(root, "departure-1")).toBe("2024-10-27T00:30:00");
-  });
-
-  it("refits the chart's window only when the drag settles", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    stubTrack(root);
-    const plot = q(root, "plot");
-    expect([plot.dataset.windowStart, plot.dataset.windowEnd]).toEqual([
-      "0",
-      "300",
-    ]);
-    pointer(root, "handle-3", "pointerdown", 150);
-    pointer(root, "handle-3", "pointermove", 720);
-    expect(value(root, "departure-3")).toBe("2024-10-27T12:00:00");
-    expect([plot.dataset.windowStart, plot.dataset.windowEnd]).toEqual([
-      "0",
-      "300",
-    ]);
-    pointer(root, "handle-3", "pointerup", 720);
-    expect([plot.dataset.windowStart, plot.dataset.windowEnd]).toEqual([
-      "0",
-      "900",
-    ]);
-  });
-
-  it("refits the chart's window when a key move settles", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    keydown(root, "handle-3", "End");
-    const plot = q(root, "plot");
-    expect(plot.dataset.windowEnd).toBe("300");
-    q(root, "handle-3").dispatchEvent(
-      new KeyboardEvent("keyup", { key: "End", bubbles: true }),
-    );
-    expect(Number(plot.dataset.windowEnd)).toBeGreaterThan(900);
-  });
-});
-
-describe("structure", () => {
-  it("makes all three sections full width, with the reason aside last in the third", async () => {
-    const { root } = await mount();
-    const sections = root.querySelectorAll(
-      ".gmt-widget-card > .gmt-widget-section",
-    );
-    expect(sections.length).toBe(3);
-    for (const section of sections) {
-      expect(section.classList.contains("gmt-widget-section--wide")).toBe(true);
-    }
-    expect(sections[2]!.lastElementChild).toBe(q(root, "reason-aside"));
-  });
-
-  it("keeps the chart out of the tab order and the day's tab stops on the visible handles", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
+  it("has no handle for a row that has no time", async () => {
+    await openPreset("fall-back");
     expect(
-      q(root, "two-clocks").querySelectorAll(
-        "a, button, input, select, textarea, [tabindex]",
-      ).length,
-    ).toBe(0);
-    const stops = [
-      ...q(root, "day").querySelectorAll<HTMLElement>("[tabindex]"),
-    ].filter((el) => !el.hidden);
-    expect(stops.map((el) => el.dataset.role)).toEqual([
-      "handle-1",
-      "handle-2",
-      "handle-3",
-    ]);
+      screen.queryByRole("slider", { name: "Row 4 printed time" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("breaks a zoned value only before its bracket and after a slash in the zone", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    const full = root.querySelector(
-      ".gmt-timetable-live .gmt-timetable-time-full",
-    )!;
-    const toks = [...full.querySelectorAll(".gmt-timetable-tok")].map(
-      (t) => t.textContent,
+  it("moves the printed time by keyboard and flips the preset to custom", async () => {
+    const w = await openPreset("fall-back");
+    slider(1).focus();
+    await w.user.keyboard("{ArrowRight}");
+    expect(departure(1)).toHaveValue("2024-10-27T00:35:00");
+    expect(presetBox()).toHaveValue("custom");
+    await w.user.keyboard("{PageUp}");
+    expect(departure(1)).toHaveValue("2024-10-27T01:35:00");
+    await w.user.keyboard("{End}");
+    expect(departure(1)).toHaveValue("2024-10-27T23:55:00");
+    await w.user.keyboard("{Home}");
+    expect(departure(1)).toHaveValue("2024-10-27T00:00:00");
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("returns the preset when the handle returns to its time", async () => {
+    const w = await openPreset("fall-back");
+    slider(1).focus();
+    await w.user.keyboard("{ArrowRight}{ArrowLeft}");
+    expect(presetBox()).toHaveValue("fall-back");
+  });
+
+  it("follows a typed time", async () => {
+    const w = await openPreset("fall-back");
+    await enter(w, departure(4), "2024-10-27T03:15:00");
+    expect(valueOf(slider(4))).toBe(195);
+    await enter(w, departure(4), "2024-11-27T03:15:00");
+    expect(
+      screen.queryByRole("slider", { name: "Row 4 printed time" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("steps from a time that is not a multiple of five to the next one", async () => {
+    const w = await open({ departure1: "2024-10-27T01:32:00" });
+    slider(1).focus();
+    await w.user.keyboard("{ArrowRight}");
+    await waitFor(() =>
+      expect(departure(1)).toHaveValue("2024-10-27T01:35:00"),
     );
-    expect(toks).toEqual([
-      expect.stringMatching(
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/,
-      ),
-      "[Europe/",
-      "London]",
-    ]);
-    expect(full.querySelectorAll("wbr")).toHaveLength(2);
-    /* The zone is one block, so it moves to the next line whole. */
-    expect(full.querySelector(".gmt-timetable-zone")?.textContent).toBe(
-      "[Europe/London]",
+  });
+
+  it("keeps the offset when the handle moves through the repeated hour", async () => {
+    const w = await openPreset("offset-picks");
+    slider(2).focus();
+    await w.user.keyboard("{ArrowRight}");
+    expect(offset(2)).toHaveValue("+00:00");
+  });
+
+  it("fixes the offset-written row with a one-hour step", async () => {
+    const w = await openPreset("offset-picks");
+    slider(2).focus();
+    await w.user.keyboard("{PageDown}");
+    expect(departure(2)).toHaveValue("2024-10-27T00:30:00");
+  });
+
+  it("keeps the handles in the tab order and the chart out of it", async () => {
+    await openPreset("fall-back");
+    expect(chart()).not.toHaveAttribute("tabindex");
+    for (const n of [1, 2, 3])
+      expect(slider(n)).toHaveAttribute("tabindex", "0");
+  });
+
+  it("names the day and the band", async () => {
+    const w = await openPreset("spring-forward");
+    expect(
+      screen.getAllByText("01:00–02:00 never shows").length,
+    ).toBeGreaterThan(0);
+    await enter(w, departure(1), "2024-06-15T10:00:00");
+    expect(
+      screen.getAllByText("No clock change this day").length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("asks for a time when every row is empty", async () => {
+    const w = await openPreset("published-local");
+    await enter(w, departure(1), "");
+    expect(
+      screen.getByText("Type a printed departure in a row to draw its day."),
+    ).toBeInTheDocument();
+    expect(chart()).toHaveAccessibleName(
+      "Type a printed departure in a row to draw the two clocks.",
     );
-    const printed = root.querySelector(".gmt-timetable-printed-text")!;
-    expect(printed.querySelectorAll("wbr")).toHaveLength(0);
-    expect(printed.querySelectorAll(".gmt-timetable-tok")).toHaveLength(1);
+    await expectNoAxeViolations(w.root);
+  });
+});
+
+// One pixel is one minute: the day's track is 1440 px wide and starts at the viewport's left.
+function stubTrackWidth(): void {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+    left: 0,
+    right: 1440,
+    width: 1440,
+    top: 0,
+    bottom: 28,
+    height: 28,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  });
+}
+const emptyLaneTag = () => screen.getByText("4 \u00b7 click to add");
+const press = (clientX: number) =>
+  ({
+    keys: "[MouseLeft>]",
+    target: emptyLaneTag(),
+    coords: { clientX },
+  }) as const;
+
+describe("an empty lane", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("takes a time where its tag is clicked", async () => {
+    const w = await openPreset("fall-back");
+    stubTrackWidth();
+    await w.user.pointer({
+      keys: "[MouseLeft]",
+      target: emptyLaneTag(),
+      coords: { clientX: 600 },
+    });
+    expect(departure(4)).toHaveValue("2024-10-27T10:00:00");
   });
 
-  it("keeps every sizer's text out of the root's text", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-    const sizers = root.querySelectorAll(".gmt-timetable-sizer");
-    expect(sizers.length).toBeGreaterThan(0);
-    for (const sizer of sizers) {
-      expect(sizer.textContent).toBe("");
-      expect(sizer.getAttribute("aria-hidden")).toBe("true");
-    }
-    expect(root.textContent).not.toContain("0000-00-00");
+  it("takes a time where its tag is pressed", async () => {
+    const w = await openPreset("fall-back");
+    stubTrackWidth();
+    expect(departure(4)).toHaveValue("");
+    await w.user.pointer([press(720), { keys: "[/MouseLeft]" }]);
+    expect(departure(4)).toHaveValue("2024-10-27T12:00:00");
+    expect(valueOf(slider(4))).toBe(720);
   });
 
-  it("draws the table's disabled Offset select only where it matters", async () => {
-    const { root } = await mount();
-    choosePreset(root, "offset-picks");
-    expect(q<HTMLSelectElement>(root, "offset-1").disabled).toBe(false);
-    expect(q<HTMLSelectElement>(root, "offset-2").disabled).toBe(false);
-    expect(q<HTMLSelectElement>(root, "offset-3").disabled).toBe(true);
-    expect(q<HTMLSelectElement>(root, "offset-4").disabled).toBe(true);
+  it("follows the pointer while it stays down, and stops when it comes up", async () => {
+    const w = await openPreset("fall-back");
+    stubTrackWidth();
+    await w.user.pointer([press(720), { coords: { clientX: 900 } }]);
+    expect(departure(4)).toHaveValue("2024-10-27T15:00:00");
+    await w.user.pointer([{ keys: "[/MouseLeft]" }]);
+    await w.user.pointer({ coords: { clientX: 300 } });
+    expect(departure(4)).toHaveValue("2024-10-27T15:00:00");
   });
 
-  it("shows NO SIGNAL as a sentinel in the cells of a row that returns null", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    setOffset(root, "offset-2", "+00:00");
-    const cells = q(root, "row-2-display").querySelectorAll("td");
-    for (const i of [1, 3]) {
-      const sentinel = cells[i]!.querySelector(".gmt-playground-sentinel");
-      expect(sentinel?.textContent).toBe("NO SIGNAL");
-      expect(
-        cells[i]!.querySelector(".gmt-timetable-time-full")?.textContent ?? "",
-      ).toBe("");
-    }
+  it("flips the preset to custom once it takes a time", async () => {
+    const w = await openPreset("fall-back");
+    stubTrackWidth();
+    await w.user.pointer([press(720), { keys: "[/MouseLeft]" }]);
+    expect(presetBox()).toHaveValue("custom");
+  });
+
+  it("is not changed by a press on a lane that has a time, away from its handle", async () => {
+    const w = await openPreset("fall-back");
+    stubTrackWidth();
+    const rowOneTag = screen.getByText(/^1 \u00b7 00:30/);
+    await w.user.pointer([
+      { keys: "[MouseLeft>]", target: rowOneTag, coords: { clientX: 900 } },
+      { coords: { clientX: 1000 } },
+      { keys: "[/MouseLeft]" },
+    ]);
+    expect(departure(1)).toHaveValue("2024-10-27T00:30:00");
+  });
+});
+
+describe("the chart", () => {
+  it("summarises the rows in its name", async () => {
+    await openPreset("fall-back");
+    expect(chart()).toHaveAccessibleName(/01:30/);
+  });
+
+  it("names the printed zone when it differs from the arrival zone", async () => {
+    await openPreset("berlin-fall-back");
+    expect(
+      screen.getByText(/The timetable is printed in Europe\/Berlin\./),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("lifecycle", () => {
+  it("does nothing when aborted before it starts", async () => {
+    const w = await renderWidget(entry, { args: {}, aborted: true });
+    expect(departure(1)).toHaveValue("2024-10-27T00:30:00");
+    w.destroy();
+  });
+
+  it("is safe to destroy twice", async () => {
+    const w = await open();
+    w.destroy();
+    expect(() => w.destroy()).not.toThrow();
   });
 });

@@ -1,0 +1,65 @@
+/* textInput: a native text input, restyled. Tokens only; the focus ring is an outline so it
+   survives forced colours. The target is at least 24 by 24 px (SC 2.5.8). */
+
+.root {
+  appearance: none;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: var(--gmt-target-min);
+  padding-block: 0.375rem;
+  padding-inline: 0.625rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-surface-2);
+  color: var(--gmt-ice);
+  font: inherit;
+  font-family: var(--gmt-font-mono);
+  transition: border-color var(--gmt-motion-fast) var(--gmt-easing);
+
+  &::placeholder {
+    color: var(--gmt-ice-dim);
+    opacity: 1;
+  }
+
+  &:hover {
+    border-color: var(--gmt-cyan);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+
+  /* Dimmed by ink and a dashed muted border, never by `opacity`: opacity would fade the
+     border below the 3:1 non-text bar on either theme. */
+  &:disabled {
+    border-style: dashed;
+    border-color: var(--gmt-ice-dim);
+    color: var(--gmt-ice-dim);
+    cursor: not-allowed;
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: ButtonText;
+    background-color: Field;
+    color: FieldText;
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+
+    &:focus-visible {
+      outline-width: 3px;
+    }
+  }
+}

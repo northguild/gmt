@@ -12,24 +12,47 @@
  * a break, and every inserted second as its own cell. A native range moves the
  * end by day.
  *
- * Follows the `renderTemplate` / `mount` split in `widget-mount.ts`. Every
- * listener is delegated on the root, so the host dropping the subtree is a
- * complete teardown apart from the width observer. Every printed call and
- * result is the real one; the drawing only places them.
+ * Built on the component kit: `renderElapsedVsClockTemplate` writes the chrome from
+ * builders only, with ids from `idScope(idPrefix)`, and `mount` fills each slot from
+ * real library calls with `setHtml`. Every listener is delegated on the widget with
+ * the mount's `signal`. Every printed call and result is the real one; the drawing
+ * only places them. The ruler cells are this tool's own drawing, so their markup is
+ * built here and styled by its CSS Module.
  */
 import { getUnixNow } from "@northguild/gmt/unix/get";
-import { codeFrameHtml } from "./code-frame";
-import { renderCallResults, renderCalls } from "./edi-render";
-import { asideSizer, callSizer, holdHtml, outputSizer } from "./edi-picture";
+import { defineElements } from "~/widgets/define";
+import {
+  aside,
+  codeFrame,
+  field,
+  fieldGrid,
+  findWidget,
+  hint,
+  html,
+  idScope,
+  plates,
+  section,
+  setHtml,
+  srOnly,
+  swatch,
+  textInput,
+  toolLinks,
+  widget,
+  type Plate,
+  type SafeHtml,
+  type ToolLinkItem,
+} from "~/widgets/builders";
+import { callOutput } from "~/widgets/families/gnss/call-output";
+import { callLines, outputOf } from "~/widgets/families/gnss/call-lines";
+import { grow } from "~/widgets/primitives/grow/grow";
+import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
+import { range, type GmtRange } from "~/widgets/primitives/range/range";
+import styles from "~/widgets/tools/elapsed-vs-clock.module.css";
 import { NO_RESULT_TITLE } from "./edi-widgets";
 import {
-  BEFORE_1972_TEXT,
-  CLOCK_REFUSES_TEXT,
   CUSTOM_PRESET_ID,
   ELAPSED_LINKS,
   ELAPSED_PRESETS,
-  NOT_INSERTED_TEXT,
-  NOT_INSTANT_TEXT,
   blankPlates,
   elapsedHandoffs,
   elapsedPlates,
@@ -39,15 +62,14 @@ import {
   presetState,
   readArgs,
   readElapsed,
-  resultText,
   rulerModel,
   summaryText,
   type ElapsedRead,
+  type ElapsedState,
+  type ElapsedVsClockArgs,
   type RulerCell,
   type RulerModel,
   type RulerPiece,
-  type ElapsedState,
-  type ElapsedVsClockArgs,
 } from "./elapsed-vs-clock";
 import { onWidthChange } from "./label-fit";
 import {
@@ -56,32 +78,15 @@ import {
   sliderMax,
   sliderPosition,
 } from "./leap-second-timeline";
-import {
-  descriptionHoldHtml,
-  plateHtml,
-  type PlateSpec,
-} from "./ledger-widgets";
-import { setPresetDescription } from "./punctuality-widgets";
 import type { TimescaleLib } from "./timescale-lib";
 import { loadTimescaleLib } from "./timescale-lib";
 import { INTEGER_UTC_FROM } from "./timescale-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { handoffHref } from "./widget-permalink";
-import {
-  escapeAttr,
-  escapeHtml,
-  labelTextHtml,
-  rangeFieldHtml,
-  renderAside,
-  renderWidgetOutput,
-  setControlValue,
-  setToolLink,
-  syncRange,
-  toolLinksHtml,
-  wireCopyButtons,
-} from "./widget-ui";
 
 export type { ElapsedVsClockArgs } from "./elapsed-vs-clock";
+
+const WIDGET_NAME = "elapsed-vs-clock";
 
 /** The text of an output with nothing to read: a blank field makes no call. */
 const BLANK_TEXT = "Not read: the field is blank.";
@@ -90,21 +95,14 @@ const BLANK_TEXT = "Not read: the field is blank.";
 const NONE_COUNTED_TEXT = "No second was inserted between these two.";
 const NOT_READ_TEXT = "Not read: there is no count.";
 
-const LONG = "2016-12-31T23:59:60.000000000+09:00";
+const NO_SIGNAL_RULER = "⟨ NO SIGNAL — invalid input ⟩";
 
-/** The longest call each group prints, so its region holds one height. */
-const CALL_SIZERS = {
-  clock: `spanNs("${LONG}", "${LONG}")`,
-  elapsed: `toTAI("${LONG}")\ntoTAI("${LONG}")\nspanNs("2017-01-01T00:00:36Z", "2017-01-01T00:00:37Z")`,
-  count: `leapSecondsBetween("${LONG}", "${LONG}")`,
-} as const;
-
-const OUTPUT_SIZERS = {
-  clock: "-757382400000000000n",
-  elapsed:
-    '"2017-01-01T00:00:36 TAI"\n"2017-01-01T00:00:37 TAI"\n-757382405000000000n',
-  count: "-27",
-} as const;
+/** The widest value each plate prints, so the three keep their width while the end is dragged. */
+const PLATE_SAMPLES: Readonly<Record<string, readonly string[]>> = {
+  "hero-clock": ["-4444444444 s"],
+  "hero-elapsed": ["-4444444444 s"],
+  "hero-count": ["-44"],
+};
 
 const GROUPS = [
   { id: "clock", heading: "Clock difference", calls: "spanNs" },
@@ -116,78 +114,71 @@ const GROUPS = [
   { id: "count", heading: "Leap seconds between", calls: "leapSecondsBetween" },
 ] as const;
 
-type GroupId = (typeof GROUPS)[number]["id"];
+// ---------------------------------------------------------------------------
+// Markup
+// ---------------------------------------------------------------------------
 
-function presetOptionsHtml(presetId: string): string {
-  return (
-    `<option value="${CUSTOM_PRESET_ID}"${presetId === CUSTOM_PRESET_ID ? " selected" : ""}>Custom</option>` +
-    ELAPSED_PRESETS.map(
-      (p) =>
-        `<option value="${escapeAttr(p.id)}"${p.id === presetId ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-    ).join("")
-  );
-}
-
-function groupHtml(g: (typeof GROUPS)[number]): string {
-  const live = codeFrameHtml(g.id);
-  return (
-    `<div class="gmt-elapsed-group">` +
-    `<p class="gmt-widget-hint">${escapeHtml(g.heading)}: <code>${escapeHtml(g.calls)}</code></p>` +
-    holdHtml(live, [callSizer(CALL_SIZERS[g.id])], "gmt-ledger-hold") +
-    holdHtml(
-      `<output class="gmt-widget-output" data-role="${g.id}-output">&nbsp;</output>`,
-      [outputSizer("gmt-widget-output", OUTPUT_SIZERS[g.id])],
-      "gmt-ledger-hold",
-    ) +
-    holdHtml(
-      `<div data-role="${g.id}-aside"></div>`,
-      [
-        asideSizer(NO_RESULT_TITLE, [
-          CLOCK_REFUSES_TEXT,
-          BEFORE_1972_TEXT,
-          NOT_INSERTED_TEXT,
-          NOT_INSTANT_TEXT,
-        ]),
-      ],
-      "gmt-ledger-hold",
-    ) +
-    `</div>`
-  );
+function plateOf(spec: ReturnType<typeof blankPlates>[number]): Plate {
+  const samples = PLATE_SAMPLES[spec.role];
+  return {
+    caption: spec.caption,
+    value: spec.value,
+    lines: spec.lines,
+    ...(spec.series === undefined ? {} : { series: spec.series }),
+    ...(spec.quiet === true ? { quiet: true } : {}),
+    ...(spec.captions === undefined ? {} : { captions: spec.captions }),
+    ...(samples === undefined ? {} : { samples }),
+  };
 }
 
 /** The sum the three plates make, with its operators between them. */
-function equationHtml(plates: readonly PlateSpec[]): string {
-  const op = (sign: string) =>
-    `<span class="gmt-evc-op" aria-hidden="true">${sign}</span>`;
-  return (
-    `<span class="gmt-evc-op gmt-evc-op--lead" aria-hidden="true"></span>` +
-    plateHtml(plates[0]!) +
-    op("+") +
-    plateHtml(plates[1]!) +
-    op("=") +
-    plateHtml(plates[2]!)
-  );
+function equationOf(specs: ReturnType<typeof blankPlates>): SafeHtml {
+  const one = (i: number): SafeHtml =>
+    plates([plateOf(specs[i]!)], { gate: "hero" });
+  const op = (sign: string): SafeHtml =>
+    html`<span class="${styles.op}" aria-hidden="true">${sign}</span>`;
+  return html`<span class="${styles.lead}" aria-hidden="true"></span>${one(0)}${op("+")}${one(1)}${op("=")}${one(2)}`;
+}
+
+function linkItem(text: string, href: string | null): ToolLinkItem {
+  return href === null ? { text } : { text, href };
+}
+
+function linksOf(
+  handoffs: ReturnType<typeof elapsedHandoffs> | null,
+): SafeHtml {
+  return toolLinks({
+    label: "Other tools",
+    links: [
+      linkItem(
+        ELAPSED_LINKS[0].text,
+        handoffs?.timeline == null ? null : handoffHref(handoffs.timeline),
+      ),
+      linkItem(
+        ELAPSED_LINKS[1].text,
+        handoffs?.clocks == null ? null : handoffHref(handoffs.clocks),
+      ),
+    ],
+  });
 }
 
 /** The four rows of cells, plus the dates, that the rulers draw from one model. */
-type Row = "clock" | "tape-clock" | "tape-elapsed" | "elapsed" | "dates";
+type Row = "clock" | "tapeClock" | "tapeElapsed" | "elapsed" | "dates";
 
-const NO_SIGNAL_RULER = "⟨ NO SIGNAL — invalid input ⟩";
+const LEAP_MANY_PX = 76;
 
-function cellHtml(row: Row, c: RulerCell): string {
-  const b = `style="--b:${c.basis}px"${c.leap ? ` title="${escapeAttr(`${c.day} ${c.time}: the inserted second`)}"` : ""}`;
-  const lead = c.leap ? " gmt-evc-cell--leap" : "";
+/** A run narrower than this has no room for a date; the ends and the list carry it. */
+const DATE_MIN_PX = 80;
+
+function cellOf(row: Row, c: RulerCell): SafeHtml {
+  const titleAttr = c.leap
+    ? html`title="${c.day} ${c.time}: the inserted second"`
+    : "";
+  const lead = c.leap ? styles.leap : "";
   if (row === "clock") {
-    return (
-      `<div class="gmt-evc-cell${lead}" ${b}>` +
-      (c.label
-        ? `<span class="gmt-evc-time">${escapeHtml(c.compact ? ":60" : c.time)}</span>`
-        : "") +
-      (c.leap && !c.compact
-        ? `<span class="gmt-evc-tag">inserted second</span>`
-        : "") +
-      `</div>`
-    );
+    return html`<div class="${styles.cell} ${lead}" style="--b:${c.basis}px" ${titleAttr}
+      >${c.label ? html`<span class="${styles.time}">${c.compact ? ":60" : c.time}</span>` : ""}${c.leap && !c.compact ? html`<span class="${styles.tag}">inserted second</span>` : ""}</div
+    >`;
   }
   if (row === "elapsed") {
     const text = c.leap
@@ -197,39 +188,28 @@ function cellHtml(row: Row, c: RulerCell): string {
       : c.ordinal === null
         ? ""
         : String(c.ordinal);
-    return (
-      `<div class="gmt-evc-cell${lead}" ${b}>` +
-      (text === "" ? "" : `<span class="gmt-evc-time">${text}</span>`) +
-      `</div>`
-    );
+    return html`<div class="${styles.cell} ${lead}" style="--b:${c.basis}px" ${titleAttr}
+      >${text === "" ? "" : html`<span class="${styles.time}">${text}</span>`}</div
+    >`;
   }
-  const gap = row === "tape-clock" && c.leap ? " gmt-evc-cell--gap" : "";
-  return `<div class="gmt-evc-cell gmt-evc-tape${lead}${gap}" ${b}></div>`;
+  const gap = row === "tapeClock" && c.leap ? styles.gap : "";
+  return html`<div class="${styles.cell} ${styles.tape} ${lead} ${gap}" style="--b:${c.basis}px" ${titleAttr}></div>`;
 }
 
-function manyHtml(row: Row, count: number): string {
-  const b = `style="--b:${LEAP_MANY_PX}px"`;
+function manyOf(row: Row, count: number): SafeHtml {
   if (row === "clock") {
-    return (
-      `<div class="gmt-evc-cell gmt-evc-cell--leap" ${b}>` +
-      `<span class="gmt-evc-time">+${count}</span>` +
-      `<span class="gmt-evc-tag">inserted seconds</span></div>`
-    );
+    return html`<div class="${styles.cell} ${styles.leap}" style="--b:${LEAP_MANY_PX}px"
+      ><span class="${styles.time}">+${count}</span><span class="${styles.tag}">inserted seconds</span></div
+    >`;
   }
   if (row === "elapsed") {
-    return (
-      `<div class="gmt-evc-cell gmt-evc-cell--leap" ${b}>` +
-      `<span class="gmt-evc-time">+${count} s</span></div>`
-    );
+    return html`<div class="${styles.cell} ${styles.leap}" style="--b:${LEAP_MANY_PX}px"
+      ><span class="${styles.time}">+${count} s</span></div
+    >`;
   }
-  const gap = row === "tape-clock" ? " gmt-evc-cell--gap" : "";
-  return `<div class="gmt-evc-cell gmt-evc-tape gmt-evc-cell--leap${gap}" ${b}></div>`;
+  const gap = row === "tapeClock" ? styles.gap : "";
+  return html`<div class="${styles.cell} ${styles.tape} ${styles.leap} ${gap}" style="--b:${LEAP_MANY_PX}px"></div>`;
 }
-
-const LEAP_MANY_PX = 76;
-
-/** A run narrower than this has no room for a date; the ends and the list carry it. */
-const DATE_MIN_PX = 80;
 
 /** One date, or the two a run crosses, written short. */
 function dateText(cells: readonly RulerCell[]): string {
@@ -238,49 +218,65 @@ function dateText(cells: readonly RulerCell[]): string {
   return first === last ? first : `${first} → ${last.slice(5)}`;
 }
 
-function pieceHtml(row: Row, piece: RulerPiece): string {
+function pieceOf(row: Row, piece: RulerPiece): SafeHtml {
   if (piece.kind === "break") {
-    const label = `${piece.skipped} seconds not drawn`;
-    return `<div class="gmt-evc-break" style="--w:${piece.px}px" title="${escapeAttr(label)}"></div>`;
+    return html`<div class="${styles.brk}" style="--w:${piece.px}px" title="${piece.skipped} seconds not drawn"></div>`;
   }
   if (piece.kind === "many") {
-    return row === "dates"
-      ? `<div class="gmt-evc-run" style="--b:${LEAP_MANY_PX}px"></div>`
-      : `<div class="gmt-evc-run" style="--b:${LEAP_MANY_PX}px">${manyHtml(row, piece.count)}</div>`;
+    return html`<div class="${styles.run}" style="--b:${LEAP_MANY_PX}px"
+      >${row === "dates" ? "" : manyOf(row, piece.count)}</div
+    >`;
   }
   const px = piece.cells.reduce((n, c) => n + c.basis, 0);
   const inner =
     row === "dates"
       ? px >= DATE_MIN_PX
-        ? `<span class="gmt-evc-date">${escapeHtml(dateText(piece.cells))}</span>`
+        ? html`<span class="${styles.date}">${dateText(piece.cells)}</span>`
         : ""
-      : piece.cells.map((c) => cellHtml(row, c)).join("");
-  return `<div class="gmt-evc-run" style="--b:${px}px">${inner}</div>`;
+      : piece.cells.map((c) => cellOf(row, c));
+  return html`<div class="${styles.run}" style="--b:${px}px">${inner}</div>`;
 }
 
-function rowHtml(row: Row, model: RulerModel): string {
-  return model.pieces.map((p) => pieceHtml(row, p)).join("");
+function rowOf(row: Row, model: RulerModel): SafeHtml {
+  return html`${model.pieces.map((p) => pieceOf(row, p))}`;
 }
 
-function nosignalHtml(): string {
-  return `<span class="gmt-evc-nosignal">${NO_SIGNAL_RULER}</span>`;
+/** The whole drawing of the rulers: dates, clock face, two tapes, seconds that passed. */
+function rulersOf(
+  model: RulerModel | null,
+  clockOk: boolean,
+  elapsedOk: boolean,
+  blank: boolean,
+): SafeHtml {
+  const quiet = blank
+    ? html`<span class="${styles.hint}">Give a start and an end.</span>`
+    : html`<span class="${styles.nosignal}">${NO_SIGNAL_RULER}</span>`;
+  const strip = (ok: boolean, row: Row): SafeHtml =>
+    ok && model !== null ? rowOf(row, model) : quiet;
+  const tape = (ok: boolean, row: Row, series: string): SafeHtml =>
+    html`<div class="${styles.tapes} ${series} ${ok ? "" : styles.empty}"
+      >${ok && model !== null ? rowOf(row, model) : ""}</div
+    >`;
+  return html`<div class="${styles.dates}">${model === null ? "" : rowOf("dates", model)}</div
+    ><div class="${styles.ruler} ${styles.s2}"
+      ><span class="${styles.name}">UTC clock</span><div class="${styles.strip}">${strip(clockOk, "clock")}</div></div
+    >${tape(clockOk, "tapeClock", styles.s2!)}${tape(elapsedOk, "tapeElapsed", styles.s1!)}<div class="${styles.ruler} ${styles.s1} ${styles.reverse}"
+      ><span class="${styles.name}">Seconds that passed</span><div class="${styles.strip}">${strip(elapsedOk, "elapsed")}</div></div
+    >`;
 }
 
-function rulerRowHtml(
-  id: "clock" | "elapsed",
-  name: string,
-  series: 1 | 2,
-): string {
-  return (
-    `<div class="gmt-evc-ruler" data-series="${series}" data-role="track-${id}">` +
-    `<span class="gmt-evc-name">${escapeHtml(name)}</span>` +
-    `<div class="gmt-evc-strip" data-role="marks-${id}"></div>` +
-    `</div>`
-  );
+function endsOf(low: string, high: string, compressed: boolean): SafeHtml {
+  return html`<span>${low}</span><span class="${styles.mid} ${compressed ? styles.midShown : ""}" aria-hidden="true">not to scale between breaks</span><span>${high}</span>`;
 }
 
-function tapeHtml(id: "clock" | "elapsed", series: 1 | 2): string {
-  return `<div class="gmt-evc-tapes" data-series="${series}" data-role="span-${id}" hidden></div>`;
+function listOf(read: ElapsedRead): SafeHtml {
+  if (read.count === null) {
+    return html`<li class="${styles.note}">${NOT_READ_TEXT}</li>`;
+  }
+  if (read.counted.length === 0) {
+    return html`<li class="${styles.note}">${NONE_COUNTED_TEXT}</li>`;
+  }
+  return html`${read.counted.map((s) => html`<li><code>${s}</code></li>`)}`;
 }
 
 /**
@@ -289,79 +285,114 @@ function tapeHtml(id: "clock" | "elapsed", series: 1 | 2): string {
  * drawn by `mount`, because they come from the real library calls.
  */
 export function renderElapsedVsClockTemplate(
+  idPrefix: string,
   args: ElapsedVsClockArgs = {},
-): string {
+): SafeHtml {
+  const id = idScope(idPrefix);
   const state: ElapsedState = isSeeded(args)
     ? readArgs(args)
     : presetState(ELAPSED_PRESETS[0]!);
-  const presetId = matchPreset(state);
-  const preset = ELAPSED_PRESETS.find((p) => p.id === presetId);
+  const note = hint(
+    id("hint"),
+    "Both are UTC instants. A 23:59:60 is allowed on a day when a second was inserted.",
+  );
+  const text = (local: string, label: string, value: string): SafeHtml =>
+    field({
+      id: id(local),
+      label,
+      control: ({ id: cid }) =>
+        textInput({
+          id: cid,
+          value,
+          autocomplete: "off",
+          spellcheck: false,
+          maxLength: 64,
+          describedBy: note.id,
+        }),
+    });
 
-  return (
-    `<div class="gmt-elapsed-vs-clock gmt-widget not-content">` +
-    `<div class="gmt-widget-card">` +
-    // 1. The two readings
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>1. Set a start and an end</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
-    `<select class="gmt-select" data-role="preset">${presetOptionsHtml(presetId)}</select></label>` +
-    `</div>` +
-    descriptionHoldHtml(
-      `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>`,
-      ELAPSED_PRESETS.map((p) => p.description),
-    ) +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label">${labelTextHtml("Start")}` +
-    `<input class="gmt-input" data-role="start" type="text" maxlength="64" spellcheck="false" autocomplete="off" autocapitalize="off" value="${escapeAttr(state.start)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("End")}` +
-    `<input class="gmt-input" data-role="end" type="text" maxlength="64" spellcheck="false" autocomplete="off" autocapitalize="off" value="${escapeAttr(state.end)}"></label>` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Move the end")}` +
-    rangeFieldHtml({
-      role: "end-slider",
-      chipRole: "end-value",
-      min: 0,
-      max: 1,
-      step: 1,
-      value: 0,
-      valueText: "",
-      ends: [INTEGER_UTC_FROM.slice(0, 10), "latest"],
-    }) +
-    `</label>` +
-    `</div>` +
-    `<p class="gmt-widget-hint">Both are UTC instants. A <code>23:59:60</code> is allowed on a day when a second was inserted.</p>` +
-    `</div>` +
-    // 2. The two rulers
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>2. The same span, counted two ways</h4>` +
-    `<div class="gmt-gnss-frame" data-role="frame">` +
-    `<div class="gmt-evc-eq" data-role="heroes" aria-hidden="true">${equationHtml(blankPlates())}</div>` +
-    `<div class="gmt-evc-figure" data-role="rulers" role="img" aria-label="">` +
-    `<div class="gmt-evc-dates" data-role="dates"></div>` +
-    rulerRowHtml("clock", "UTC clock", 2) +
-    tapeHtml("clock", 2) +
-    tapeHtml("elapsed", 1) +
-    rulerRowHtml("elapsed", "Seconds that passed", 1) +
-    `<div class="gmt-evc-ends" aria-hidden="true"><span data-role="ends-low"></span><span class="gmt-evc-ends-mid">not to scale between breaks</span><span data-role="ends-high"></span></div>` +
-    `</div>` +
-    `<ul class="gmt-elapsed-legend" aria-label="Legend">` +
-    `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" data-series="2" aria-hidden="true"></i>counted by the clock</li>` +
-    `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" data-series="1" aria-hidden="true"></i>counted through TAI</li>` +
-    `<li class="gmt-cutoff-chip"><i class="gmt-cutoff-series-swatch" data-series="3" aria-hidden="true"></i>an inserted second</li>` +
-    `</ul>` +
-    `</div>` +
-    `<p class="gmt-gnss-visually-hidden" data-role="summary" aria-live="polite"></p>` +
-    `<h5 class="gmt-elapsed-list-title">The seconds inserted between the two</h5>` +
-    `<ul class="gmt-elapsed-list" data-role="insertions-list" tabindex="0" aria-label="Seconds inserted between the two"></ul>` +
-    `</div>` +
-    // 3. The calls
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>3. What the library returns</h4>` +
-    GROUPS.map(groupHtml).join("") +
-    toolLinksHtml(ELAPSED_LINKS) +
-    `</div>` +
-    `</div>` +
-    `</div>`
+  const readings = section(
+    { id: id("readings"), heading: "1. Set a start and an end", level: 4 },
+    html`${preset({
+      id: id("preset"),
+      label: "Preset",
+      value: matchPreset(state),
+      options: [
+        { value: CUSTOM_PRESET_ID, label: "Custom", description: "" },
+        ...ELAPSED_PRESETS.map((p) => ({
+          value: p.id,
+          label: p.label,
+          description: p.description,
+        })),
+      ],
+    })}${fieldGrid(
+      html`${text("start", "Start", state.start)}${text("end", "End", state.end)}<div class="${styles.wide}">${range(
+        {
+          id: id("end-slider"),
+          label: "Move the end",
+          min: 0,
+          max: 1,
+          step: 1,
+          value: 0,
+          valueText: "",
+          ends: [INTEGER_UTC_FROM.slice(0, 10), "latest"],
+        },
+      )}</div>`,
+    )}${note.html}`,
+  );
+
+  const rulers = section(
+    {
+      id: id("rulers"),
+      heading: "2. The same span, counted two ways",
+      level: 4,
+    },
+    html`<div class="${styles.frame}" id="${id("frame")}" data-gate="frame"
+        ><div class="${styles.eq}" id="${id("heroes")}">${equationOf(blankPlates())}</div
+        ><div class="${styles.figure}" id="${id("figure")}" data-gate="drawn" role="img" aria-label=""
+          ><div class="${styles.drawing}" id="${id("drawing")}">${rulersOf(null, false, false, true)}</div></div
+        ><div class="${styles.ends}" id="${id("ends")}" role="group" aria-label="Where the span starts and ends">${endsOf("", "", false)}</div
+        ><ul class="${styles.legend}" aria-label="Legend"
+          ><li class="${styles.legendItem}">${swatch({ series: 2 })}counted by the clock</li
+          ><li class="${styles.legendItem}">${swatch({ series: 1 })}counted through TAI</li
+          ><li class="${styles.legendItem}">${swatch({ series: 3 })}an inserted second</li></ul
+        ></div
+      ><p role="status" aria-label="Reading summary" id="${id("summary")}">${srOnly("")}</p
+      ><h5 class="${styles.listTitle}">The seconds inserted between the two</h5
+      ><ul class="${styles.list}" id="${id("list")}" data-gate="drawn" tabindex="0" aria-label="Seconds inserted between the two"></ul>`,
+  );
+
+  const calls = section(
+    { id: id("calls"), heading: "3. What the library returns", level: 4 },
+    html`${GROUPS.map(
+      (g) =>
+        html`<div class="${styles.group}">
+          <h5 class="${styles.groupTitle}">${g.heading}: <code>${g.calls}</code></h5>
+          ${grow(
+            html`<div id="${id(`${g.id}-calls`)}">${codeFrame({
+              label: `${g.heading}: calls made`,
+              copyLabel: `Copy ${g.heading.toLowerCase()} calls`,
+              copyText: "",
+              gate: "codeframe",
+            })}</div>`,
+          )}${grow(
+            html`<div id="${id(`${g.id}-output`)}">${callOutput({
+              label: `${g.heading}: what the calls returned`,
+              state: "empty",
+              lines: [],
+            })}</div>`,
+          )}${grow(html`<div id="${id(`${g.id}-reason`)}"></div>`)}
+        </div>`,
+    )}<div id="${id("links")}">${linksOf(null)}</div>`,
+  );
+
+  return widget(
+    {
+      name: WIDGET_NAME,
+      label: "Elapsed vs. Clock Difference",
+      scope: idPrefix,
+    },
+    html`${readings}${rulers}${calls}`,
   );
 }
 
@@ -377,13 +408,36 @@ interface Controller {
   release(): void;
 }
 
-function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const presetEl = q<HTMLSelectElement>("preset")!;
-  const startEl = q<HTMLInputElement>("start")!;
-  const endEl = q<HTMLInputElement>("end")!;
-  const sliderEl = q<HTMLInputElement>("end-slider")!;
+function setupWidget(
+  root: HTMLElement,
+  lib: TimescaleLib,
+  signal: AbortSignal,
+): Controller {
+  const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
+  const presetEl = widgetEl.querySelector<GmtPreset>("gmt-preset")!;
+  const sliderEl = widgetEl.querySelector<GmtRange>("gmt-range")!;
+  const startEl = el<HTMLInputElement>("start");
+  const endEl = el<HTMLInputElement>("end");
+  const frameEl = el("frame");
+  // Every slot the render writes: a missing one throws now, not on the first keystroke.
+  const slots = {
+    heroes: el("heroes"),
+    figure: el("figure"),
+    drawing: el("drawing"),
+    ends: el("ends"),
+    summary: el("summary"),
+    list: el("list"),
+    links: el("links"),
+  };
+  const groups = GROUPS.map((g) => ({
+    id: g.id,
+    heading: g.heading,
+    calls: el(`${g.id}-calls`),
+    output: el(`${g.id}-output`),
+    reason: el(`${g.id}-reason`),
+  }));
+
+  let spoken = "";
 
   const readState = (): ElapsedState => ({
     start: startEl.value,
@@ -391,207 +445,183 @@ function setupWidget(root: HTMLElement, lib: TimescaleLib): Controller {
   });
 
   function syncPreset(): void {
-    const id = matchPreset(readState());
-    presetEl.value = id;
-    const slot = q("preset-description");
-    if (slot) {
-      setPresetDescription(
-        slot,
-        ELAPSED_PRESETS.find((p) => p.id === id)?.description ?? "",
-      );
-    }
+    presetEl.value = matchPreset(readState());
   }
 
   /** The slider follows the reader's today, so its range is set on each draw. */
   function drawSlider(state: ElapsedState, now: number): void {
     const max = sliderMax(now);
-    sliderEl.max = String(max);
-    const ends = root.querySelectorAll<HTMLElement>(
-      ".gmt-range-field .gmt-range-ends > span",
-    );
-    if (ends[1]) ends[1].textContent = sliderDate(max).slice(0, 10);
+    sliderEl.max = max;
+    sliderEl.ends = [
+      INTEGER_UTC_FROM.slice(0, 10),
+      sliderDate(max).slice(0, 10),
+    ];
     const position = sliderPosition(state.end, now);
     sliderEl.disabled = position === null;
     if (position === null) {
-      syncRange(sliderEl, "no end");
+      sliderEl.formatValue = () => "no end";
       return;
     }
-    sliderEl.value = String(position);
-    syncRange(sliderEl, sliderDate(position).slice(0, 10));
+    sliderEl.value = position;
+    sliderEl.formatValue = (n) => sliderDate(n).slice(0, 10);
   }
 
   /** What the last draw was for, so a change of width can draw the rulers again. */
   let last: { state: ElapsedState; read: ElapsedRead } | null = null;
-  const frameEl = q<HTMLElement>("frame");
 
   function drawRulers(state: ElapsedState, read: ElapsedRead): void {
     last = { state, read };
     const blank = read.clockCalls.length === 0;
     const model: RulerModel | null = blank
       ? null
-      : rulerModel(state, read, frameEl?.clientWidth ?? 0);
+      : rulerModel(state, read, frameEl.clientWidth);
     const placed = model !== null;
-    const clockOk = placed && read.clock !== null;
-    const elapsedOk = placed && read.elapsed !== null;
+    setHtml(
+      slots.drawing,
+      rulersOf(
+        model,
+        placed && read.clock !== null,
+        placed && read.elapsed !== null,
+        blank,
+      ),
+    );
 
-    const fill = (role: string, html: string) => {
-      const el = q(role);
-      if (el) el.innerHTML = html;
-    };
-    const quiet = blank
-      ? `<span class="gmt-evc-hint">Give a start and an end.</span>`
-      : nosignalHtml();
-    fill("dates", model === null ? "" : rowHtml("dates", model));
-    fill("marks-clock", clockOk ? rowHtml("clock", model) : quiet);
-    fill("marks-elapsed", elapsedOk ? rowHtml("elapsed", model) : quiet);
-    fill("span-clock", clockOk ? rowHtml("tape-clock", model) : "");
-    fill("span-elapsed", elapsedOk ? rowHtml("tape-elapsed", model) : "");
-    const tapeClock = q("span-clock");
-    const tapeElapsed = q("span-elapsed");
-    // A tape that cannot be drawn keeps its height, so the figure holds still.
-    if (tapeClock) tapeClock.hidden = false;
-    if (tapeElapsed) tapeElapsed.hidden = false;
-    tapeClock?.toggleAttribute("data-empty", !clockOk);
-    tapeElapsed?.toggleAttribute("data-empty", !elapsedOk);
-    q("rulers")?.toggleAttribute("data-compressed", model?.compressed === true);
-
-    const low = q("ends-low");
-    const high = q("ends-high");
-    if (low && high) {
-      const a = drawMs(state.start);
-      const b = drawMs(state.end);
-      if (a === null || b === null) {
-        low.textContent = "";
-        high.textContent = "";
-      } else {
-        const first = a <= b ? state.start : state.end;
-        const second = a <= b ? state.end : state.start;
-        low.textContent = first.trim().slice(0, 10);
-        high.textContent = second.trim().slice(0, 10);
-      }
+    const a = drawMs(state.start);
+    const b = drawMs(state.end);
+    let low = "";
+    let high = "";
+    if (a !== null && b !== null) {
+      low = (a <= b ? state.start : state.end).trim().slice(0, 10);
+      high = (a <= b ? state.end : state.start).trim().slice(0, 10);
     }
-  }
-
-  function drawList(read: ElapsedRead): void {
-    const list = q("insertions-list");
-    if (!list) return;
-    if (read.count === null) {
-      list.innerHTML = `<li class="gmt-elapsed-list-note">${NOT_READ_TEXT}</li>`;
-    } else if (read.counted.length === 0) {
-      list.innerHTML = `<li class="gmt-elapsed-list-note">${NONE_COUNTED_TEXT}</li>`;
-    } else {
-      list.innerHTML = read.counted
-        .map((s) => `<li><code>${escapeHtml(s)}</code></li>`)
-        .join("");
-    }
+    setHtml(slots.ends, endsOf(low, high, model?.compressed === true));
   }
 
   function drawGroup(
-    id: GroupId,
+    g: (typeof groups)[number],
     calls: ElapsedRead["clockCalls"],
     ok: boolean,
     reason: string,
   ): void {
-    renderCalls(q(`call-${id}`), calls);
-    const out = q(`${id}-output`);
-    const aside = q(`${id}-aside`);
-    if (out) {
-      if (calls.length === 0) renderWidgetOutput(out, BLANK_TEXT, "empty");
-      else renderCallResults(out, calls, !ok, resultText);
+    const { code, plain } = callLines(calls);
+    setHtml(
+      g.calls,
+      codeFrame({
+        label: `${g.heading}: calls made`,
+        copyLabel: `Copy ${g.heading.toLowerCase()} calls`,
+        copyText: plain,
+        code,
+        gate: "codeframe",
+      }),
+    );
+    const label = `${g.heading}: what the calls returned`;
+    if (calls.length === 0) {
+      setHtml(
+        g.output,
+        callOutput({
+          label,
+          state: "empty",
+          lines: [{ text: BLANK_TEXT, lost: false }],
+        }),
+      );
+    } else {
+      const out = outputOf(ok ? "ok" : "sentinel", calls);
+      setHtml(
+        g.output,
+        callOutput({ label, state: out.state, lines: out.lines }),
+      );
     }
-    if (aside) {
-      if (calls.length > 0 && !ok && reason !== "") {
-        renderAside(
-          aside,
-          "caution",
-          NO_RESULT_TITLE,
-          `<p>${escapeHtml(reason)}</p>`,
-        );
-      } else aside.innerHTML = "";
-    }
+    setHtml(
+      g.reason,
+      calls.length > 0 && !ok && reason !== ""
+        ? aside(
+            {
+              label: `Why there is no result: ${g.heading.toLowerCase()}`,
+              tone: "caution",
+              title: NO_RESULT_TITLE,
+            },
+            html`<p>${reason}</p>`,
+          )
+        : html``,
+    );
   }
 
   function render(): void {
     const state = readState();
     const now = getUnixNow() ?? 0;
     const read = readElapsed(lib, state);
+    const text = summaryText(state, read);
 
-    const heroes = q("heroes");
-    if (heroes) {
-      heroes.innerHTML = equationHtml(elapsedPlates(read, state));
-    }
+    setHtml(slots.heroes, equationOf(elapsedPlates(read, state)));
     drawSlider(state, now);
     drawRulers(state, read);
-    drawList(read);
+    setHtml(slots.list, listOf(read));
 
-    drawGroup("clock", read.clockCalls, read.clock !== null, read.clockReason);
+    const [clockG, elapsedG, countG] = groups as [
+      (typeof groups)[number],
+      (typeof groups)[number],
+      (typeof groups)[number],
+    ];
+    drawGroup(clockG, read.clockCalls, read.clock !== null, read.clockReason);
     drawGroup(
-      "elapsed",
+      elapsedG,
       read.elapsedCalls,
       read.elapsed !== null,
       read.elapsedReason,
     );
-    drawGroup("count", read.countCalls, read.count !== null, read.countReason);
+    drawGroup(countG, read.countCalls, read.count !== null, read.countReason);
 
-    const handoffs = elapsedHandoffs(state, read);
-    setToolLink(q("link-timeline"), handoffHref(handoffs.timeline));
-    setToolLink(q("link-clocks"), handoffHref(handoffs.clocks));
-
-    const text = summaryText(state, read);
-    q("rulers")?.setAttribute("aria-label", text);
-    const summary = q("summary");
-    if (summary) summary.textContent = text;
+    setHtml(slots.links, linksOf(elapsedHandoffs(state, read)));
+    slots.figure.setAttribute("aria-label", text);
+    if (text !== spoken) {
+      spoken = text;
+      setHtml(slots.summary, srOnly(text));
+    }
   }
 
   function apply(state: ElapsedState): void {
-    setControlValue(startEl, state.start);
-    setControlValue(endEl, state.end);
+    startEl.value = state.start;
+    endEl.value = state.end;
   }
 
-  function applyPreset(): void {
-    const preset = ELAPSED_PRESETS.find((p) => p.id === presetEl.value);
-    if (!preset) return;
-    apply(presetState(preset));
-    syncPreset();
-    render();
-  }
-
-  root.addEventListener("input", (e) => {
-    const role = (e.target as HTMLElement).dataset?.["role"] ?? "";
-    if (role === "end-slider") {
-      setControlValue(endEl, sliderDate(Number(sliderEl.value)));
+  widgetEl.addEventListener(
+    "input",
+    (e) => {
+      const target = e.target;
+      if (target === sliderEl) {
+        endEl.value = sliderDate(sliderEl.value);
+        syncPreset();
+        render();
+      } else if (target === startEl || target === endEl) {
+        syncPreset();
+        render();
+      }
+    },
+    { signal },
+  );
+  widgetEl.addEventListener(
+    "change",
+    (e) => {
+      if (e.target !== presetEl) return;
+      const chosen = ELAPSED_PRESETS.find((p) => p.id === presetEl.value);
+      if (!chosen) return;
+      apply(presetState(chosen));
       syncPreset();
       render();
-    } else if (role === "start" || role === "end") {
-      syncPreset();
-      render();
-    }
-  });
-
-  root.addEventListener("change", (e) => {
-    const role = (e.target as HTMLElement).dataset?.["role"] ?? "";
-    if (role === "preset") applyPreset();
-  });
-
-  wireCopyButtons(root);
+    },
+    { signal },
+  );
 
   // A new width can change how many seconds the rulers have room to draw.
-  const disposeWidth = frameEl
-    ? onWidthChange(frameEl, () => {
-        if (last) drawRulers(last.state, last.read);
-      })
-    : () => {};
+  const release = onWidthChange(frameEl, () => {
+    if (last) drawRulers(last.state, last.read);
+  });
 
+  sliderEl.min = 0;
   syncPreset();
   render();
 
-  return {
-    readState,
-    apply,
-    render,
-    syncPreset,
-    release: disposeWidth,
-  };
+  return { readState, apply, render, syncPreset, release };
 }
 
 export const mountElapsedVsClock: MountFn<ElapsedVsClockArgs> = async (
@@ -599,6 +629,7 @@ export const mountElapsedVsClock: MountFn<ElapsedVsClockArgs> = async (
   args,
   signal,
 ) => {
+  defineElements();
   let lib: TimescaleLib;
   try {
     lib = await loadTimescaleLib();
@@ -608,15 +639,20 @@ export const mountElapsedVsClock: MountFn<ElapsedVsClockArgs> = async (
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  const widget = setupWidget(root, lib);
-  if (isSeeded(args)) {
-    widget.apply(readArgs(args));
-    widget.syncPreset();
-    widget.render();
+  let controller: Controller;
+  try {
+    controller = setupWidget(root, lib, signal);
+    if (isSeeded(args)) {
+      controller.apply(readArgs(args));
+      controller.syncPreset();
+      controller.render();
+    }
+  } catch (cause) {
+    throw new WidgetLoadError(cause);
   }
 
   return onceDestroy(
-    () => widget.release(),
-    () => permalinkOf(widget.readState()),
+    () => controller.release(),
+    () => permalinkOf(controller.readState()),
   );
 };

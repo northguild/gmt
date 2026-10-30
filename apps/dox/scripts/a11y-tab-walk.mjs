@@ -30,6 +30,7 @@ import {
   controlPresence,
   focusVisibleProblem,
   obscuredByProblem,
+  obscuredMessage,
   SEGMENT_CAP,
   tabWalkPages,
   tabWalkProblems,
@@ -51,32 +52,18 @@ function install() {
     'a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"]), [contenteditable]';
   const snaps = {};
 
-  // A path is an element's identity for the whole walk, so it is computed once: a sibling added
-  // later (a tooltip, a re-rendered row) must not turn the same control into a different one.
-  const paths = new WeakMap();
+  // An identity key is an element's name for the whole walk, so it is computed once: a sibling
+  // added later (a tooltip, a re-rendered row) must not turn the same control into another one.
+  // The readable CSS path of each key is kept for the `selector` field of a finding.
+  const keys = new WeakMap();
+  const cssMap = {};
   const pathOf = (el) => {
-    if (!paths.has(el)) paths.set(el, computePath(el));
-    return paths.get(el);
-  };
-  const computePath = (el) => {
-    const parts = [];
-    for (
-      let n = el;
-      n && n.nodeType === 1 && n !== document.documentElement;
-      n = n.parentElement
-    ) {
-      let s = n.localName;
-      if (n.id) {
-        parts.unshift(`${s}#${CSS.escape(n.id)}`);
-        break;
-      }
-      const same = [...n.parentElement.children].filter(
-        (c) => c.localName === s,
-      );
-      if (same.length > 1) s += `:nth-of-type(${same.indexOf(n) + 1})`;
-      parts.unshift(s);
+    if (!keys.has(el)) {
+      const key = window.__gmtIdentity(el);
+      keys.set(el, key);
+      cssMap[key] ??= window.__gmtCssPath(el);
     }
-    return parts.join(" > ");
+    return keys.get(el);
   };
 
   const snap = (el) => {
@@ -123,18 +110,16 @@ function install() {
     return r.width > 0 && r.height > 0;
   };
 
-  /** A short, readable name for an element: tag, id, first classes and data-role. */
-  const describe = (el) =>
-    el.localName +
-    (el.id ? `#${el.id}` : "") +
-    [...el.classList]
-      .slice(0, 2)
-      .map((c) => `.${c}`)
-      .join("") +
-    (el.dataset?.role ? `[data-role=${el.dataset.role}]` : "");
+  /** An element's identity key and its rect, rounded to 0.1 px. */
+  const describe = (el) => {
+    const r = el.getBoundingClientRect();
+    const n = (v) => Math.round(v * 10) / 10;
+    return `${window.__gmtIdentity(el)} (${n(r.left)}, ${n(r.top)}, ${n(r.width)} x ${n(r.height)})`;
+  };
 
   window.__tw = {
     pathOf,
+    cssMap,
     collect() {
       const all = [...document.querySelectorAll(SEL)].filter(eligible);
       // A radio group is one tab stop: the checked radio, else the first.
@@ -199,9 +184,57 @@ function install() {
                 r.left + r.width / 2,
                 r.top + r.height / 2,
               );
-              return { ok: !!hitOk(hit), by: hit ? describe(hit) : "nothing" };
+              if (!hit) return { ok: false, by: "nothing" };
+              const cs = getComputedStyle(hit);
+              const box = hit.getBoundingClientRect();
+              return {
+                ok: !!hitOk(hit),
+                by: describe(hit),
+                byRect: {
+                  left: box.left,
+                  top: box.top,
+                  width: box.width,
+                  height: box.height,
+                },
+                byDisplay: cs.display,
+                byPosition: cs.position,
+                byZIndex: cs.zIndex,
+              };
             });
+      const scroller = (() => {
+        for (let a = el.parentElement; a; a = a.parentElement) {
+          const oy = getComputedStyle(a).overflowY;
+          if (/(auto|scroll)/.test(oy) && a.scrollHeight > a.clientHeight)
+            return a;
+        }
+        return document.scrollingElement;
+      })();
+      const focusRect = el.getBoundingClientRect();
+      const scrollBox = scroller.getBoundingClientRect();
+      const detail = {
+        rect: {
+          left: focusRect.left,
+          top: focusRect.top,
+          width: focusRect.width,
+          height: focusRect.height,
+        },
+        container: {
+          identity: describe(scroller),
+          rect: {
+            left: scrollBox.left,
+            top: scrollBox.top,
+            width: scrollBox.width,
+            height: scrollBox.height,
+          },
+          scrollTop: scroller.scrollTop,
+          scrollPaddingBlock:
+            getComputedStyle(scroller).scrollPaddingBlock || "auto",
+        },
+        viewport: { width: innerWidth, height: innerHeight },
+        narrow: matchMedia("(max-width: 60rem)").matches,
+      };
       return {
+        detail,
         path,
         before: snaps[path] ?? null,
         after: snap(el),
@@ -246,9 +279,7 @@ function install() {
     },
     sliders() {
       const els = [
-        ...document.querySelectorAll(
-          'input[type="range"], [role="slider"], [data-role^="handle"]',
-        ),
+        ...document.querySelectorAll('input[type="range"], [role="slider"]'),
       ].filter(
         (el) =>
           !el.disabled && el.checkVisibility({ checkVisibilityCSS: true }),
@@ -278,6 +309,8 @@ function install() {
 /** One keyboard walk of the page as it stands; `label` prefixes the messages of a second state. */
 async function walkPage(page, { width, browserName, label }) {
   const found = [];
+  // `selector` holds an identity key here; it becomes `target`, and the readable CSS path
+  // (filled in below, once the walk has seen every key) becomes `selector`.
   const tag = (f) => ({ ...f, message: `${label}${f.message}` });
   await page.evaluate(install);
   await page.evaluate(() => {
@@ -348,22 +381,30 @@ async function walkPage(page, { width, browserName, label }) {
           }
         }
         let obscuredBy = obscuredByProblem(active.samples);
+        let coverSample =
+          active.samples.find((s) => !s.ok) ?? active.samples.at(-1);
+        let coverDetail = active.detail;
         if (obscuredBy) {
           // Look again after a beat, on the same focus: a layout still moving under the control
           // (a region easing to height) is not a control that stays covered.
           await page.waitForTimeout(300);
           const again = await page.evaluate(() => window.__tw.active());
-          obscuredBy =
-            again?.path === active.path
-              ? obscuredByProblem(again.samples)
-              : obscuredBy;
+          if (again?.path === active.path) {
+            obscuredBy = obscuredByProblem(again.samples);
+            coverSample =
+              again.samples.find((s) => !s.ok) ?? again.samples.at(-1);
+            coverDetail = again.detail;
+          }
         }
         if (obscuredBy) {
           found.push(
             tag({
               rule: "focus-obscured",
               selector: active.path,
-              message: `the centre of the focused control is covered by ${obscuredBy}`,
+              message: obscuredMessage(
+                `the centre of the focused control ${active.path}`,
+                { ...coverSample, ...coverDetail },
+              ),
             }),
           );
         }
@@ -395,7 +436,15 @@ async function walkPage(page, { width, browserName, label }) {
       await page.keyboard.press("Enter");
     await page.waitForTimeout(400);
   }
-  return { found, candidateCount: total };
+  const css = await page.evaluate(() => window.__tw.cssMap);
+  return {
+    found: found.map(({ selector, ...rest }) => ({
+      ...rest,
+      target: selector,
+      selector: css[selector] ?? null,
+    })),
+    candidateCount: total,
+  };
 }
 
 /** ArrowRight then ArrowLeft on each slider; a slider already at its far end is tried the other way. */
@@ -428,7 +477,11 @@ async function sliderPass(page, label) {
     })) {
       found.push({
         rule: "arrow-no-move",
-        selector: path,
+        target: path,
+        selector: await page.evaluate(
+          (k) => window.__tw.cssMap[k] ?? null,
+          path,
+        ),
         message: `${label}${message}`,
       });
     }
@@ -444,7 +497,12 @@ await sweep({
     found.push(...(await sliderPass(page, "")));
     if (pagePath === "/dox/") {
       const closed = await openRail(page);
-      if (closed) found.push({ rule: "rail-not-opened", message: closed });
+      if (closed)
+        found.push({
+          rule: "rail-not-opened",
+          target: "page",
+          message: closed,
+        });
       else {
         const second = await walkPage(page, {
           width,

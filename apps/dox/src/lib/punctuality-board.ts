@@ -26,7 +26,7 @@ import {
   type PunctualityTolerance,
 } from "./punctuality-widgets";
 
-export const MAX_ROWS = 6;
+const MAX_ROWS = 6;
 export const CUSTOM_PRESET_ID = "custom";
 
 /** What a switched-on tolerance starts at when the preset had none. */
@@ -56,7 +56,7 @@ export interface PunctualityBoardArgs {
   [key: string]: unknown;
 }
 
-export interface BoardPreset {
+interface BoardPreset {
   id: string;
   label: string;
   description: string;
@@ -334,7 +334,7 @@ export function permalinkOf(state: BoardState): Record<string, string> {
 // Facts: every figure is a library call
 // ---------------------------------------------------------------------------
 
-export interface RowFacts {
+interface RowFacts {
   deviation: string;
   classA: Punctuality | null;
   /** `null` unless the state compares. */
@@ -390,13 +390,13 @@ export function collectBoardFacts(
 // Why NO SIGNAL
 // ---------------------------------------------------------------------------
 
-export type BoardNullReasonKind =
+type BoardNullReasonKind =
   | "invalid-late"
   | "invalid-early"
   | "invalid-compare"
   | "invalid-row";
 
-export interface BoardNullReason {
+interface BoardNullReason {
   kind: BoardNullReasonKind;
   /** 1-based, for `invalid-row`. */
   row?: number;
@@ -484,12 +484,12 @@ export function axisMinutes(state: BoardState, facts: BoardFacts): number {
   return niceMinutes(1.2 * Math.max(...sizes));
 }
 
-export interface BarSpan {
+interface BarSpan {
   from: number;
   to: number;
 }
 
-export interface BarLayout {
+interface BarLayout {
   /** The part of the bar inside the on-time band. */
   inside: BarSpan | null;
   /** The part outside it, drawn hatched. */

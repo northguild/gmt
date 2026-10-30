@@ -1,0 +1,56 @@
+/* The marks of a clock-change checker: tick, cross, the sentinel and a zone id's segments. Amber
+   is the sentinel's alone. */
+
+.ok,
+.bad {
+  display: inline-block;
+  min-inline-size: 1.1em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ok {
+  color: var(--gmt-spring-ink);
+}
+
+.bad {
+  color: var(--gmt-danger-ink);
+}
+
+.sentinel {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gmt-signal-ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* A segment never breaks inside; the break opportunity is the `<wbr>` after each slash. */
+.segment {
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .ok,
+  .bad,
+  .sentinel {
+    color: CanvasText;
+  }
+
+  .sentinel {
+    border: 1px solid CanvasText;
+    padding-inline: 0.25em;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .ok {
+    color: var(--gmt-ice);
+  }
+
+  .bad,
+  .sentinel {
+    color: var(--gmt-ice);
+  }
+}

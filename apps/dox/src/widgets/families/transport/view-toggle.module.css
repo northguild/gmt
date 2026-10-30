@@ -1,0 +1,75 @@
+/* viewToggle: a row of native buttons, the pressed one filled. The pressed state is also
+   marked by a heavier border, so colour is never the only cue. Tokens only. */
+
+.root {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1);
+  margin-block-end: var(--gmt-space-3);
+}
+
+.button {
+  appearance: none;
+  box-sizing: border-box;
+  min-inline-size: var(--gmt-target-min);
+  min-block-size: var(--gmt-target-min);
+  padding-block: var(--gmt-space-1);
+  padding-inline: var(--gmt-space-3);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-surface-2);
+  color: var(--gmt-ice);
+  font: inherit;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--gmt-cyan);
+  }
+
+  &[aria-pressed="true"] {
+    border-width: 2px;
+    border-color: var(--gmt-cyan);
+    background-color: var(--gmt-fill-subtle);
+    color: var(--gmt-cyan-ink);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+@media (forced-colors: active) {
+  .button {
+    border-color: ButtonText;
+    background-color: ButtonFace;
+    color: ButtonText;
+
+    &[aria-pressed="true"] {
+      border-color: Highlight;
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .button {
+    border-color: var(--gmt-ice);
+
+    &[aria-pressed="true"] {
+      border-width: 3px;
+    }
+
+    &:focus-visible {
+      outline-width: 3px;
+    }
+  }
+}

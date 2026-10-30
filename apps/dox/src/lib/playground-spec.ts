@@ -21,7 +21,7 @@
  * it goes into the call verbatim, so the argument stays editable and live instead
  * of costing the function its whole widget.
  */
-export type PlaygroundFieldKind =
+type PlaygroundFieldKind =
   | "string"
   | "number"
   | "bigint"

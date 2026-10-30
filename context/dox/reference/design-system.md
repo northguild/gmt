@@ -5,9 +5,10 @@
 
 ## The stylesheet stack
 
-The theme is plain, **unlayered** CSS custom properties — no Tailwind, no `@layer` — which is
-what lets it beat Starlight's defaults. The core sheets load in this order via
-`starlight({ customCss })` in `apps/dox/astro.config.mjs`:
+The theme is plain CSS custom properties, with no Tailwind outside the chat island. One
+`customCss` entry, `src/styles/gmt.css`, sets the layer order and imports every sheet into a
+`gmt.*` layer, so a later layer beats Starlight's defaults without `!important`. The core
+sheets import in this order:
 
 | #   | File                 | Owns                                                                                                                           |
 | --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -20,9 +21,9 @@ what lets it beat Starlight's defaults. The core sheets load in this order via
 | 7   | `gmt-controls.css`   | CTA buttons, pagination, `:focus-visible`, `::selection`, scrollbars                                                           |
 | 8   | `gmt-light.css`      | Light overrides that are neither a palette re-tint nor adjacent to a base rule                                                 |
 
-Per-widget sheets (`gmt-widget.css`, `gmt-clock-list.css` — before `gmt-map.css`,
-`gmt-globe.css` and `gmt-scrubber.css`, which build on its row recipe — `gmt-dst-inspector.css`,
-…) load between 7 and 8; `dox.css` and `gmt-a11y.css` load after 8. The config has the full
+No shared widget sheet remains in the global cascade: the `not-content` restore, the syntax-token colours and the load-failure notice sit in `gmt-widget-reset.css`. A tool's own style is a CSS Module in
+`src/widgets/tools/`, and a family's in `src/widgets/families/`, so there is no per-tool global
+sheet; `dox.css` and `gmt-a11y.css` load after 8. The config has the full
 list.
 
 **The chat's sheets are not in `customCss`.** `gmt-ask-tailwind.css`, `gmt-ask.css` and
@@ -80,10 +81,13 @@ redefine them.
    same selector lives elsewhere.
 2. **No colour literals in rules.** One-off gradient stops are the only exception.
 3. **Widgets compose primitives** and never touch a Starlight-override sheet.
-4. **Respect the `customCss` order.** Moving a rule between files can change which of two
-   equal-specificity rules wins — verify with the visual gate below.
-5. **No `@layer` in the GMT sheets.** Tailwind's layers exist only inside the chat island, under
-   the constraints below.
+4. **Respect the layer order.** Which layer a rule sits in decides what it beats, not bundle
+   order. Moving a rule to another layer can change the winner — verify with the visual gate
+   below.
+5. **The layer order is fixed in `gmt.css`.** It reads `starlight, theme, base, components,
+   utilities, vendor, gmt.tokens, gmt.base, gmt.shell, gmt.content, gmt.controls, gmt.tools,
+   gmt.chat, gmt.thirdparty, gmt.a11y`. Unlayered rules beat every layer, so CSS Modules and
+   Astro component styles win over every global rule without `!important`.
 6. **An accent used as text uses its `-ink` theme-role token; the bright accent is for fills,
    borders and non-text only.** `--gmt-cyan`, `--gmt-cyan-bright`, `--gmt-spring`, `--gmt-signal`
    and `--gmt-dst-purple` are tuned to read well as a *fill* or a *border* against the page — a
@@ -106,10 +110,33 @@ redefine them.
    Pagefind's `--pagefind-ui-text`, shadcn's `--muted-foreground`), so the base value is the
    text-safe one and `--gmt-ice-dim-fill` keeps the dimmer value for the few non-text consumers.
 
+## Custom elements and CSS Modules
+
+The kit's custom elements (`gmt-range`, `gmt-handle`, `gmt-readout`, `gmt-preset`, `gmt-chips`,
+`gmt-copy`, `gmt-grow`) live in `src/widgets/primitives/<name>/`, each with its module and test.
+
+- **Light DOM, no shadow root.** Global tokens and Starlight theming must reach inside an
+  element, and a shadow root would block both.
+- **Module class names are stable.** Vite names them `gmt-<file>__<local>` with no hash, so a
+  name is predictable in the DOM. `localsConvention` is `camelCaseOnly`. Tests and gates never
+  select by these names; a global sheet never reaches them.
+- **Contrast.** Text is at least 7:1 in both themes, so text uses an `-ink` token. Interactive
+  parts need 3:1 against their surroundings.
+- **Forced colours.** An element sets no colour the system palette must replace. It draws its
+  focus ring with `outline`, never `box-shadow`, and keeps a visible border on thumbs and
+  tracks.
+- **`prefers-contrast` and reduced motion.** Borders and the ring strengthen under
+  `prefers-contrast: more`. Motion reads the duration tokens, which are 0 under
+  `prefers-reduced-motion: reduce`.
+- **Targets and focus.** Every control is at least 24 × 24 px, and `scroll-padding` keeps a
+  focused control clear of sticky chrome.
+- **Modern CSS only.** Use nesting, container queries on the widget root, logical properties,
+  `:focus-visible`, `:where()` and `:is()`, `clamp()`, `color-mix()`, and the motion and
+  z-index tokens. Stylelint enforces Baseline 2024.
+
 ## Form controls
 
-Every widget control composes the primitives in `gmt-form-controls.css`, and every template
-builds them through the helpers in `src/lib/widget-ui.ts`. A widget sheet only positions them;
+Every widget control composes the primitives and builders in `src/widgets/` (each with its own CSS Module), and every template builds them through those builders. A widget sheet only positions them;
 it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
 `gmt-tokens.css` (`--gmt-range-*`, `--gmt-handle-*`).
 
@@ -147,7 +174,7 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
   - **Trap: the global reduced-motion reset cannot reach the thumb.** `*, *::before,
     *::after` does not select `::-webkit-slider-thumb` or `::-moz-range-thumb`. The thumb's
     sonar animation and transitions are switched off in their own
-    `prefers-reduced-motion` block in `gmt-form-controls.css`.
+    `prefers-reduced-motion` block in `src/widgets/primitives/range/range.module.css`.
 - **`.gmt-handle`** gives a custom `role="slider"` handle the same grip.
   - The edge is `currentColor`, so a widget colours a handle by setting `color`.
   - `::before` is a fixed, centred 44×44 hit area and nothing else.
@@ -163,13 +190,13 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
   - A checked chip carries a filled mark and an accent border and tint, but its text stays
     `--gmt-ice`. `--gmt-cyan-ink` on the tinted fill measured 5.9:1 in light, under the 7:1
     floor. `--switch` adds a track and knob, for a standalone boolean.
-  - `.gmt-chip-group` is the fieldset for a row of chips: weekday sets, radio segments.
+  - `gmt-chips` is the element for a row of chips: weekday sets, radio segments. The `chips` element (`primitives/chips/chips.ts`) names the group.
 - **`.gmt-select`** is `appearance: none` with a chevron drawn in two gradients. An SVG data
   URI would need a colour literal. `.gmt-input` and `.gmt-select` set `background-color`,
   never the `background` shorthand, which would wipe the chevron. A select truncates with an
   ellipsis (`overflow: hidden; text-overflow: ellipsis`), because iOS WebKit otherwise sizes it
   to its longest option and widens the page.
-- **A disabled `.gmt-input` or `.gmt-select`** has one shared look in `gmt-form-controls.css`: the
+- **A disabled `.gmt-input` or `.gmt-select`** has one shared look in the `textInput` and `select` builders' CSS Modules: the
   `--gmt-ice-dim` text tier, a dashed border, a transparent fill and `cursor: not-allowed`.
   The border is `color-mix(in srgb, var(--gmt-ice-dim) 65%, transparent)`, not the widget
   hairline: the hairline measures 1.2 to 1.4:1, and an empty disabled field (the X12 Time
@@ -190,7 +217,7 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
 - **Every widget root carries `not-content`** and `container-type: inline-size`.
   - `not-content` removes Starlight's prose flow from the widget, which also drops Starlight's
     table scrolling, link styling and inherited line-heights.
-  - The zero-specificity `:where(.gmt-widget.not-content)` block in `gmt-widget.css` restores
+  - The zero-specificity `:where(.gmt-widget.not-content)` block in `gmt-widget-reset.css` restores
     table scrolling and link styling.
   - A widget that draws text into a fixed-height cell sets its own `line-height`.
   - Labels on a drawn axis or track are placed by measurement, never by a fixed step:
@@ -220,7 +247,7 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
   element, in any section including section 1. Never put it on a control or a popover host.
 - **One step budget.** Each frame a box covers `1 - exp(-dt / 50 ms)` of what is left (an ease-out
   with no duration, so a retarget never restarts it), and the boxes that move the page, together,
-  never move more than `STEP_BUDGET_PX` (40 px, under the 48 px gate) in a frame, however late the
+  never move more than `STEP_BUDGET_PX` (32 px, under the 48 px gate) in a frame, however late the
   frame is. A tall grow, or a slow frame, therefore lasts longer instead of jumping. A box inside a
   moving box does not move the page and takes the same scale as the box around it.
 - **Heights are read live, deepest box first.** A slot is pinned before the section around it reads
@@ -240,28 +267,23 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
 
 The site has one arrival gesture: a fade from 92% scale over 0.5 s on the spring curve, first
 performed by the globe. Five things use it: the globe canvas, the globe's zone list, the Crossing
-Clock's two faces, the `/dox` crystal, and every numbered card of a tool widget.
+Clock's two faces, the `/dox` crystal, and every card of a tool widget.
 A landmark visual that appears once its content is ready uses it, and so does each card of a
 teaching widget; nothing else does, and it never replays on a value change.
 
-- **Numbered cards** (`lib/widget-enter.ts`): `enterWidgetSections(scope)` calls `enter()` on each
-  `.gmt-widget-section` that is a direct child of a `.gmt-widget-card`, staggered 70 ms apart in
-  document order. The stagger restarts per card, so two widgets on one page do not compound. Head.astro
-  runs it over the document after `smoothHeights`, and `MountedWidget.tsx` runs it over the chat
-  rail's widget root, so a tool page and the rail behave alike. A section nested deeper (inside a
-  `.gmt-grow` wrapper) or outside any card does not enter. Only `transform` and `opacity` move, so
-  the entrance never changes a page's height and stays clear of `smoothHeight`'s height easing and
-  the height budget `grow:measure` asserts.
-- **First-paint hold.** A server-rendered card would paint visible and then drop out for its entrance
-  if `.gmt-enter` only arrived with the module script. `Head.astro` therefore runs a tiny inline
-  script that puts `gmt-enter-hold` on `<html>` before the first paint (not under reduced motion,
-  and not without JS), and `gmt-primitives.css` makes a direct-child numbered card that has not
-  entered transparent while the class is set. `releaseEntranceHold()` lifts it in the same task that
-  starts the entrances, so no frame can paint a card visible in between, and a 2 s timer lifts it if
-  the module script never runs.
+- **Cards** (`card()` in `builders/layout.ts`): a card carries a valueless `data-enter`, and
+  `card(children, { enter: n })` also writes `style="--gmt-enter-i: n"`, its index in the widget. The
+  stylesheet runs the entrance itself on `[data-enter]:not([data-enter="pending"])`, with the delay
+  `calc(var(--gmt-enter-i, 0) * var(--gmt-motion-stagger))` and `animation-fill-mode: backwards`. No
+  script is involved, so a server-rendered card's first paint is the animation's first frame, a page
+  without script shows the card, and a chat-rail widget that connects later enters the same way. The
+  index is written into the markup and never changed, because a delay that changes after the
+  animation starts makes it jump. Only `transform` and `opacity` move, so the entrance never changes
+  a page's height and stays clear of `<gmt-grow>`'s height easing.
 
 - **CSS** (`gmt-primitives.css`): the `gmt-enter` keyframes, the `.gmt-enter` class that plays
-  them, and `[data-enter="pending"]`, which hides an element held for its moment.
+  them, the `[data-enter]` rule above, and `[data-enter="pending"]`, which hides an element held
+  for its moment.
   `--gmt-enter-transform` keeps an element's own transform through the entrance (the crystal's
   `rotateX(10deg)`).
 - **JS** (`lib/enter.ts`):
@@ -275,14 +297,14 @@ teaching widget; nothing else does, and it never replays on a value change.
 - **Pure CSS use:** server-rendered markup that enters on first paint (the crystal) uses
   `animation: gmt-enter var(--gmt-enter-duration) var(--gmt-enter-easing) both` directly.
 - **Nothing hidden before script:** only `lib/enter.ts` sets the class or the pending attribute.
-- **Reduced motion:** `.gmt-enter` is `animation: none`; `enter()` marks the element entered at
+- **Reduced motion:** `.gmt-enter` and a card's `[data-enter]` are `animation: none`; `enter()` marks the element entered at
   once and runs `onEntered`, and `holdEntrance()` does not hold.
 - **Tokens** (`gmt-tokens.css`): `--gmt-enter-duration`, `--gmt-enter-easing`,
   `--gmt-enter-scale`.
 
 ## Drawn charts
 
-The recipes in `gmt-cutoff-widgets.css` are the pattern for every drawn transport chart: the
+The recipes in `widgets/families/cutoff/` are the pattern for every drawn transport chart: the
 three cut-off tools; the Departure Board, Punctuality Board and ETA Drift Chart, whose
 `.gmt-punct-frame` surface joins the same `:is()` lists; and the Timetable Reader, whose day
 track and two-clocks chart join them too. The ledgers, the B/L Date Stamp and the five GNSS
@@ -329,9 +351,9 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   For the Timetable Reader and the tools with `scope: "widget"` it measures every element in
   the widget; only the drawing itself may change.
 - **A cell whose content comes and goes holds its size with a hidden sizer** stacked in the
-  same grid cell (`.gmt-timetable-hold`, the Timetable Reader's note, time cells and output).
+  same grid cell (the Timetable Reader's `hold` in `tools/timetable-reader.module.css`, and `families/ids/hold.ts`, `families/edi/edi-hold.ts`, `families/holiday/held-text.ts`).
   - The hold is a one-cell grid. Its two children are the sizer and the live wrapper
-    (`.gmt-timetable-live`; for the result, the `<output>` itself), both in
+    (the live wrapper of the kit's hold, `data-gate="live"`; for the result, the `<output>` itself), both in
     `grid-area: 1 / 1`.
   - The sizer has the shape of the largest thing the cell can hold: the longest note, or a
     value with the same character counts and break points as a real one, so it wraps the same
@@ -352,7 +374,7 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   series 3, so the on-time band never reads as success. Late, early, made and missed are
   words and patterns.
 - **The GNSS and leap-second tools each have one signature drawing** on the shared
-  `.gmt-gnss-frame` (`gmt-gnss-widgets.css`, then each tool's own sheet):
+  GNSS frame (`widgets/families/gnss/`, then each tool's own module):
   - GNSS Week Decoder: an odometer ring, one lap per era, with era plates in the legend.
   - Satellite Clock Converter: a TAI ladder, eight clocks as rungs on one scale of seconds
     ahead of UTC with TAI as the top rail. Clocks off the drawn scale sit in a group of compact
@@ -370,8 +392,8 @@ and leap-second tools list their roots in the same sheets. All of them read as o
     is lit glass, a hatch and a chip, with any accent edge on the bottom. Nothing in a drawing is
     focusable, and nothing animates: the decoder ring turns to its new reading in one frame.
     Each drawing is `role="img"` with an `aria-label`
-    and a visually hidden list. Narrow rules are named container queries (`gmt-gnss-frame`,
-    `gmt-gnss-table`, a tool's own root).
+    and a visually hidden list. Narrow rules are named container queries (`gmt-gnss-frame`
+    and a tool's own root).
   - They hold still by reserving space: every region is as big as the
     tallest thing it can show (hidden sizers, fixed slot counts, a NO SIGNAL slot that is only
     made visible), and the server HTML hides the fields the initial state hides (built.md §

@@ -1,16 +1,10 @@
 /**
  * Shared client-side render helpers for the teaching widgets (DST Inspector,
- * Interval Visualizer). Pairs with the chrome in styles/gmt-widget.css and
- * the markup in components/CodeFrame.astro.
+ * Interval Visualizer).
  *
  * These run in the browser so they must have zero Node/TS-only dependencies.
  */
-
-/* Imported rather than redeclared. These are the same paths `CodeFrame.astro`
-   renders, and they used to be maintained in both files — the button swaps to
-   CHECK_ICON on copy and back again, so a drift between the two would show up
-   as the icon changing shape after the first click. */
-import { CHECK_ICON, COPY_ICON } from "./code-frame";
+import { codeToken } from "~/widgets/builders/code-token";
 
 // ---------------------------------------------------------------------------
 // Syntax-highlighted call lines
@@ -30,59 +24,9 @@ import { CHECK_ICON, COPY_ICON } from "./code-frame";
 export const ICON_STROKE =
   'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 
-/**
- * Lets every ISO instant in `root`'s hero values wrap only at its T, and before a
- * fraction of a second and the zone after it: the date, the time, the fraction
- * and the zone are each unbreakable and a `<wbr>` joins them. A hyphen is otherwise a
- * line-break opportunity, so a narrow plate would split the date itself; and a
- * nanosecond time with an offset (`T01:00:00.123456789+01:00`) is wider than a
- * phone's plate on its own.
- *
- * Every plain hero value gets the same seven elements whatever it holds, so a
- * readout that moves between an instant and a word (a NO SIGNAL, a duration)
- * while the reader drags never adds or removes a node. A value that is not an
- * instant keeps its own wrapping: its text sits in the first piece, marked
- * `data-word` so that it is not held unbreakable. An instant with no fraction
- * leaves the last two pieces empty: its zone stays with its time.
- */
-export function wrapInstantsAtT(root: ParentNode): void {
-  for (const el of root.querySelectorAll(".gmt-punct-hero-value")) {
-    if (el.children.length > 0) continue;
-    el.innerHTML = instantPiecesHtml(el.textContent ?? "");
-  }
-}
-
-/**
- * The pieces `wrapInstantsAtT` writes for one text, as markup: the date, the
- * time, the fraction and the zone as `nowrap` spans joined by `<wbr>`, or the
- * text whole as a `data-word` piece when it is not an instant. A table cell
- * that holds an instant uses it to break where the hero breaks.
- */
-export function instantPiecesHtml(text: string): string {
-  const m = /^(\d{4}-\d{2}-\d{2})(T[^.]*?)(?:(\.\d+)(.*))?$/.exec(text);
-  const [date, time, fraction, zone, attr] = m
-    ? [m[1]!, m[2]!, m[3] ?? "", m[4] ?? "", ""]
-    : [text, "", "", "", " data-word"];
-  const piece = (s: string) =>
-    `<span class="gmt-gnss-nb"${attr}>${escapeHtml(s)}</span>`;
-  // The value is a flex box, so the pieces share one inline wrapper.
-  return `<span>${piece(date)}<wbr>${piece(time)}<wbr>${piece(fraction)}<wbr>${piece(zone)}</span>`;
-}
-
 /** Escape text for safe use inside innerHTML. */
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-/**
- * A zone id as HTML with a break opportunity after each `/` and nowhere else. Each segment is
- * `nowrap` (`.gmt-zoneseg`), because a browser also breaks after a hyphen (`Blanc-Sablon`).
- */
-export function zoneIdHtml(zone: string): string {
-  return zone
-    .split("/")
-    .map((segment) => `<span class="gmt-zoneseg">${escapeHtml(segment)}</span>`)
-    .join("/<wbr>");
 }
 
 /**
@@ -112,87 +56,11 @@ export function escapeAttr(s: string): string {
 
 /**
  * Wrap text in a syntax-token span. Colors are sampled from this site's own
- * Shiki output (see gmt-widget.css) so a dynamically-built call line matches
+ * Shiki output (see gmt-widget-reset.css) so a dynamically-built call line matches
  * every static ```ts fence on the page exactly.
  */
 export function codeSpan(cls: "fn" | "str" | "num", text: string): string {
-  return `<span class="gmt-code-${cls}">${escapeHtml(text)}</span>`;
-}
-
-/**
- * Render a syntax-highlighted call line into a <code> element (emitted by
- * CodeFrame.astro) and stash the plain-text version on the enclosing
- * codeframe's copy button, so wireCopyButtons() has something to copy.
- */
-export function renderCallLine(
-  codeEl: HTMLElement | null,
-  fnName: string,
-  argsHtml: string,
-  argsPlain: string,
-): void {
-  if (!codeEl) return;
-  codeEl.innerHTML = `${codeSpan("fn", fnName)}(${argsHtml})`;
-
-  const frame = codeEl.closest(".gmt-codeframe");
-  const copyBtn = frame?.querySelector(
-    '[data-role^="copy-"]',
-  ) as HTMLButtonElement | null;
-  if (copyBtn) copyBtn.dataset.copyText = `${fnName}(${argsPlain})`;
-}
-
-/**
- * Empty a call line and its copy text. A block that hides must not keep the
- * last call it showed: a copy button or assistive technology can still reach it.
- */
-export function clearCallLine(codeEl: HTMLElement | null): void {
-  if (!codeEl) return;
-  codeEl.textContent = "";
-  const frame = codeEl.closest(".gmt-codeframe");
-  const copyBtn = frame?.querySelector(
-    '[data-role^="copy-"]',
-  ) as HTMLButtonElement | null;
-  if (copyBtn) delete copyBtn.dataset.copyText;
-}
-
-// ---------------------------------------------------------------------------
-// Copy buttons
-// ---------------------------------------------------------------------------
-
-/**
- * Wire every `[data-role^="copy-"]` button inside container: on click, copies
- * the plain text stashed by renderCallLine() to the clipboard and swaps the
- * icon to a checkmark for 1.5s. Call once per widget instance at setup —
- * CodeFrame.astro's buttons are static, only their dataset changes per render.
- */
-export function wireCopyButtons(container: HTMLElement): void {
-  container.querySelectorAll('[data-role^="copy-"]').forEach((btn) => {
-    let resetTimer: ReturnType<typeof setTimeout> | undefined;
-
-    btn.addEventListener("click", async () => {
-      const button = btn as HTMLButtonElement;
-      const text = button.dataset.copyText;
-      if (!text || !navigator.clipboard) return;
-
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch {
-        // Clipboard API unavailable or permission denied — nothing to fall back to.
-        return;
-      }
-
-      clearTimeout(resetTimer);
-      const icon = button.querySelector('[data-role="copy-icon"]');
-      if (icon) icon.innerHTML = CHECK_ICON;
-      button.classList.add("gmt-codeframe-copy--copied");
-      const original = button.title;
-      button.title = "Copied!";
-      resetTimer = setTimeout(() => {
-        if (icon) icon.innerHTML = COPY_ICON;
-        button.classList.remove("gmt-codeframe-copy--copied");
-        button.title = original;
-      }, 1500);
-    });
-  });
+  return codeToken(cls, text).toString();
 }
 
 // ---------------------------------------------------------------------------
@@ -200,33 +68,6 @@ export function wireCopyButtons(container: HTMLElement): void {
 // ---------------------------------------------------------------------------
 
 export type WidgetOutputState = "live" | "sentinel" | "empty";
-
-/**
- * Render a widget's result output in one of three states. The distinction
- * between "sentinel" and "empty" is load-bearing
- * (context/dox/reference/visual-design.md, "Widget chrome"): a function
- * returning [] because two intervals genuinely don't overlap
- * is a correct answer, not invalid input, and must never look like signal-lost.
- */
-export function renderWidgetOutput(
-  outputEl: HTMLElement,
-  text: string,
-  state: WidgetOutputState,
-): void {
-  outputEl.classList.remove(
-    "gmt-playground-live",
-    "gmt-playground-sentinel",
-    "gmt-widget-output--empty",
-  );
-  if (state === "live") {
-    outputEl.classList.add("gmt-playground-live");
-  } else if (state === "sentinel") {
-    outputEl.classList.add("gmt-playground-sentinel");
-  } else {
-    outputEl.classList.add("gmt-widget-output--empty");
-  }
-  outputEl.textContent = text;
-}
 
 // ---------------------------------------------------------------------------
 // The edge of the supported time range
@@ -247,120 +88,15 @@ export function isRangeError(error: unknown): boolean {
 export const RANGE_EDGE_TEXT =
   "⟨ NO SIGNAL — too near the limit of the supported time range to draw ⟩";
 
-/**
- * Run a chart's drawing step. A `RangeError` from placing a value at the edge
- * of the time range becomes the signal-lost notice in `el`, never an exception
- * out of an input handler; anything else is a real bug and is rethrown.
- */
-export function drawOrRangeEdge(el: HTMLElement, draw: () => void): void {
-  try {
-    draw();
-  } catch (error) {
-    if (!isRangeError(error)) throw error;
-    el.innerHTML = `<output class="gmt-widget-output gmt-playground-sentinel" data-role="range-edge">${escapeHtml(RANGE_EDGE_TEXT)}</output>`;
-  }
-}
-
 // ---------------------------------------------------------------------------
-// Starlight-matching asides
+// Control system — the range dragger and chip toggles
 // ---------------------------------------------------------------------------
-
-// Starlight's actual aside icon paths (@astrojs/starlight/components-internals/Icons),
-// so a widget's dynamic asides render identically to a real :::note/:::caution.
-const ICON_INFO =
-  '<path d="M12 11a1 1 0 0 0-1 1v4a1 1 0 0 0 2 0v-4a1 1 0 0 0-1-1Zm.38-3.92a1 1 0 0 0-.76 0 1 1 0 0 0-.33.21 1.15 1.15 0 0 0-.21.33 1 1 0 0 0 .21 1.09c.097.088.209.16.33.21A1 1 0 0 0 13 8a1.05 1.05 0 0 0-.29-.71 1 1 0 0 0-.33-.21ZM12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16.001A8 8 0 0 1 12 20Z"/>';
-const ICON_WARNING =
-  '<path d="M12 16a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10.67 1.47-8.05-14a3 3 0 0 0-5.24 0l-8 14A3 3 0 0 0 3.94 22h16.12a3 3 0 0 0 2.61-4.53Zm-1.73 2a1 1 0 0 1-.88.51H3.94a1 1 0 0 1-.88-.51 1 1 0 0 1 0-1l8-14a1 1 0 0 1 1.78 0l8.05 14a1 1 0 0 1 .05 1.02v-.02ZM12 8a1 1 0 0 0-1 1v4a1 1 0 0 0 2 0V9a1 1 0 0 0-1-1Z"/>';
-
-export type AsideType = "note" | "caution";
-
-/** Render a real Starlight aside (styled globally by gmt-glass.css / gmt-theme.css). */
-export function renderAside(
-  el: HTMLElement,
-  type: AsideType,
-  title: string,
-  contentHtml: string,
-): void {
-  const icon = type === "caution" ? ICON_WARNING : ICON_INFO;
-  el.innerHTML = `<aside aria-label="${title}" class="starlight-aside starlight-aside--${type}">
-    <p class="starlight-aside__title" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="starlight-aside__icon">${icon}</svg>${title}</p>
-    <div class="starlight-aside__content">${contentHtml}</div>
-  </aside>`;
-}
-
-// ---------------------------------------------------------------------------
-// Control system — field labels, the range dragger, chip toggles
-// (styled by styles/gmt-form-controls.css)
-// ---------------------------------------------------------------------------
-
-/**
- * The text of a `.gmt-label` inside a `.gmt-field-grid`: one span, so the
- * grid's subgrid row holds exactly one box. `optional` adds the hint chip that
- * replaces every "(optional)" in label text.
- */
-export function labelTextHtml(
-  text: string,
-  opts?: { optional?: boolean },
-): string {
-  const chip = opts?.optional
-    ? ' <span class="gmt-hint-chip">optional</span>'
-    : "";
-  return `<span class="gmt-label-text">${escapeHtml(text)}${chip}</span>`;
-}
-
-export interface RangeFieldOptions {
-  /** `data-role` of the input. */
-  role: string;
-  /** `data-role` of the chip; defaults to `${role}-value`. */
-  chipRole?: string;
-  min: number;
-  max: number;
-  step: number;
-  value: number;
-  /** Initial `aria-valuetext` and chip text. */
-  valueText: string;
-  ends?: readonly [string, string];
-  /** `aria-label`, for a range that is not inside a `<label>`. */
-  label?: string;
-  disabled?: boolean;
-}
 
 /** The fill position of a range as a unitless 0-100 number, clamped. */
 export function rangePct(value: number, min: number, max: number): number {
   if (!(max > min)) return 0;
   const pct = ((value - min) / (max - min)) * 100;
   return Math.min(100, Math.max(0, pct));
-}
-
-/** Markup for the faceted-grip dragger; the fill is correct before hydration. */
-export function rangeFieldHtml(o: RangeFieldOptions): string {
-  const pct = rangePct(o.value, o.min, o.max);
-  const chipRole = o.chipRole ?? `${o.role}-value`;
-  const label = o.label ? ` aria-label="${escapeAttr(o.label)}"` : "";
-  const disabled = o.disabled ? " disabled" : "";
-  const ends = o.ends
-    ? `<span class="gmt-range-ends" aria-hidden="true"><span>${escapeHtml(o.ends[0])}</span><span>${escapeHtml(o.ends[1])}</span></span>`
-    : "";
-  return `<span class="gmt-range-field" style="--gmt-range-pct: ${pct}"><input class="gmt-range" type="range" data-role="${escapeAttr(o.role)}" min="${o.min}" max="${o.max}" step="${o.step}" value="${o.value}" aria-valuetext="${escapeAttr(o.valueText)}" style="--gmt-range-pct: ${pct}"${label}${disabled}><span class="gmt-range-chip" data-role="${escapeAttr(chipRole)}" aria-hidden="true">${escapeHtml(o.valueText)}</span>${ends}</span>`;
-}
-
-/**
- * Sync a range's fill and chip to its current state: sets `--gmt-range-pct` on
- * the input and its closest `.gmt-range-field`, and, when `valueText` is given,
- * `aria-valuetext` and the chip's text. Call on every `input` event AND after
- * every value/min/max/disabled change the code makes itself.
- */
-export function syncRange(input: HTMLInputElement, valueText?: string): void {
-  const pct = String(
-    rangePct(Number(input.value), Number(input.min), Number(input.max)),
-  );
-  input.style.setProperty("--gmt-range-pct", pct);
-  const field = input.closest<HTMLElement>(".gmt-range-field");
-  field?.style.setProperty("--gmt-range-pct", pct);
-  if (valueText === undefined) return;
-  input.setAttribute("aria-valuetext", valueText);
-  const chip = field?.querySelector<HTMLElement>(".gmt-range-chip");
-  if (chip) chip.textContent = valueText;
 }
 
 /**
@@ -373,7 +109,7 @@ export function syncRange(input: HTMLInputElement, valueText?: string): void {
 const OPEN_LIST_ROLE =
   /^(?:zone|(?:[a-z]+-)+zone|zone-\d+|offset-\d+|days|convert-(?:source|target))$/;
 
-export function isOpenList(select: HTMLSelectElement): boolean {
+function isOpenList(select: HTMLSelectElement): boolean {
   return OPEN_LIST_ROLE.test(select.dataset["role"] ?? "");
 }
 
@@ -405,52 +141,6 @@ export function setControlValue(
     }
   }
   el.value = value;
-}
-
-/** A real checkbox / radio painted as a bevelled chip (`.gmt-chip-toggle`). */
-export function chipToggleHtml(o: {
-  type: "checkbox" | "radio";
-  role: string;
-  value: string;
-  label: string;
-  checked?: boolean;
-  name?: string;
-  switch?: boolean;
-  /** The input's accessible name where the visible label alone has no context, such as a bare row number. The visible label should stay inside it. */
-  ariaLabel?: string;
-}): string {
-  const name = o.name ? ` name="${escapeAttr(o.name)}"` : "";
-  const aria = o.ariaLabel ? ` aria-label="${escapeAttr(o.ariaLabel)}"` : "";
-  const checked = o.checked ? " checked" : "";
-  const track = o.switch ? '<span class="gmt-chip-toggle-track"></span>' : "";
-  const cls = o.switch
-    ? "gmt-chip-toggle gmt-chip-toggle--switch"
-    : "gmt-chip-toggle";
-  return `<label class="${cls}"><input type="${o.type}"${name}${aria} data-role="${escapeAttr(o.role)}" value="${escapeAttr(o.value)}"${checked}><span class="gmt-chip-toggle-face">${track}${escapeHtml(o.label)}</span></label>`;
-}
-
-/** One link to another tool: its `data-role` and its text. */
-export interface ToolLink {
-  role: string;
-  text: string;
-}
-
-/**
- * A row of links to other tools (`.gmt-widget-controls`). Each starts disabled,
- * as `aria-disabled` with no `href`, and `setToolLink` turns it on once the
- * widget has a result to send, so the row holds still whatever the state.
- */
-export function toolLinksHtml(links: readonly ToolLink[]): string {
-  return (
-    `<div class="gmt-widget-controls" data-role="tool-links">` +
-    links
-      .map(
-        (l) =>
-          `<a class="gmt-button gmt-button--pad" data-role="${escapeAttr(l.role)}" aria-disabled="true">${escapeHtml(l.text)}</a>`,
-      )
-      .join("") +
-    `</div>`
-  );
 }
 
 /** Point a tool link at `href`, or disable it (`null`: no `href`, `aria-disabled`). */

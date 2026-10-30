@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
-import { moroccoTense } from "./clock-change-tense.fixture";
-import { readFileSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 import { resolve } from "node:path";
+import { within } from "@testing-library/dom";
 import { geoPath } from "d3-geo";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { isBeforeUtc } from "@northguild/gmt/utc/compare";
-import { convertUtcToPlainDateTime } from "@northguild/gmt/utc/convert";
-import { msToNextSecond } from "./clock-change-common";
+import { describe, expect, it, vi } from "vitest";
+import { expectNoAxeViolations } from "~/test/render-widget";
+import { moroccoTense } from "./clock-change-tense.fixture";
 import {
   MAP_HEIGHT,
   MAP_MARKERS,
@@ -21,23 +20,22 @@ import {
   classWords,
   displayKind,
   largestPartPx,
-  mountZoneMap,
-  renderPinPanelHtml,
-  zoneListItemHtml,
-  type BoundaryCollection,
   isZoneFeature,
   type MapZone,
-  type ZoneMapDeps,
 } from "./zone-map";
+import {
+  drawZoneMap,
+  loadBoundaries,
+  mapQueries,
+  ringsOf,
+  zoneDeps,
+} from "./zone-map.fixture";
 
-const NOW = "2026-10-22T12:00:00Z";
 const FILE = resolve(
   __dirname,
   "../../public/timezone-boundaries-morocco.json",
 );
-const boundaries = JSON.parse(
-  readFileSync(FILE, "utf8"),
-) as BoundaryCollection & Record<string, unknown>;
+const boundaries = loadBoundaries("morocco");
 const IDS = regionZones.zones;
 
 /** Fixture rows: offsets are fixture values, never a claim about the tz data. */
@@ -49,38 +47,20 @@ const ZONES: MapZone[] = IDS.map((zone) => ({
   kind: "none" as const,
 }));
 
-function deps(over: Partial<ZoneMapDeps> = {}): ZoneMapDeps {
-  return {
-    tense: () => moroccoTense,
-    responseNow: NOW,
-    now: () => NOW,
-    wall: (at, offset) => convertUtcToPlainDateTime(at, { timeZone: offset }),
-    isBefore: isBeforeUtc,
-    msToNextSecond,
-    fetch: vi.fn(async () =>
-      Response.json(boundaries),
-    ) as unknown as typeof fetch,
-    measure: () => 900,
+async function draw(over: Parameters<typeof zoneDeps>[2] = {}) {
+  const deps = zoneDeps(boundaries, moroccoTense, {
     location: { href: "https://example.test/gmt/check/morocco/" },
-    history: { replaceState: vi.fn() },
     ...over,
-  };
+  });
+  const drawn = drawZoneMap({
+    config: MOROCCO_MAP,
+    ids: IDS,
+    rows: ZONES,
+    deps,
+  });
+  await drawn.handle.ready;
+  return { ...drawn, deps, ...mapQueries(MOROCCO_MAP) };
 }
-
-/** The map section as the checker's markup builds it, from the shared pieces. */
-function host(): HTMLElement {
-  document.body.innerHTML =
-    `<div class="gmt-morocco"><div data-role="map-section">` +
-    `<div class="gmt-zonemap-map gmt-theme-dark" data-role="map" data-credits-id="morocco-data-credits"></div>` +
-    `<div data-role="zone-scroll"><ul data-role="zone-list">${IDS.map(zoneListItemHtml).join("")}</ul></div>` +
-    `<div data-role="pin">${renderPinPanelHtml()}</div>` +
-    `</div></div>`;
-  return document.querySelector<HTMLElement>(".gmt-morocco")!;
-}
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
 
 describe("the boundary file", () => {
   it("has exactly one feature for every zone in the zone file, and no other", () => {
@@ -216,75 +196,31 @@ describe("the small-shape rings", () => {
     expect(size("Europe/Madrid")).toBeGreaterThan(12);
     expect(size("Africa/Casablanca")).toBeGreaterThan(12);
   });
-
   it("draws a ring only for the small zones, and pressing it pins its zone", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      MOROCCO_MAP,
-    );
-    await handle.ready;
-    const rings = [
-      ...root.querySelectorAll<SVGCircleElement>("circle.gmt-zonemap-marker"),
-    ];
-    const ids = rings.map((ring) => ring.dataset.tzId).sort();
-    expect(ids).toContain("Europe/Gibraltar");
-    expect(ids).toContain("Africa/Ceuta");
-    expect(ids).not.toContain("Europe/Madrid");
-    expect(ids).not.toContain("Africa/Casablanca");
-    for (const ring of rings) {
-      expect(ring.getAttribute("r")).toBe("6");
-      expect(ring.getAttribute("tabindex")).toBe("-1");
-      expect(ring.getAttribute("role")).toBe("button");
-      expect(ring.getAttribute("aria-label")).toBe(
-        `${ring.dataset.tzId}, ${classWords(
-          MOROCCO_MAP,
-          ring.dataset.tzId!,
-          ZONES.find((z) => z.zone === ring.dataset.tzId),
-          moroccoTense,
-        )}`,
+    const { handle, shape, listButton, user } = await draw();
+    const rings = ringsOf(MOROCCO_MAP, boundaries);
+    expect([...rings.keys()]).toContain("Europe/Gibraltar");
+    expect([...rings.keys()]).toContain("Africa/Ceuta");
+    expect([...rings.keys()]).not.toContain("Europe/Madrid");
+    expect([...rings.keys()]).not.toContain("Africa/Casablanca");
+    for (const id of rings.keys()) {
+      const row = ZONES.find((z) => z.zone === id);
+      expect(shape(id)).toHaveAccessibleName(
+        `${id}, ${classWords(MOROCCO_MAP, id, row, moroccoTense)}`,
       );
+      expect(shape(id)).toHaveAttribute("tabindex", "-1");
     }
-    root
-      .querySelector('circle[data-tz-id="Europe/Gibraltar"]')!
-      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await user.click(shape("Europe/Gibraltar"));
     expect(handle.pinned()).toBe("Europe/Gibraltar");
-    expect(
-      root
-        .querySelector('circle[data-tz-id="Europe/Gibraltar"]')!
-        .getAttribute("aria-pressed"),
-    ).toBe("true");
-    expect(
-      root
-        .querySelector('button[data-tz-id="Europe/Gibraltar"]')!
-        .getAttribute("aria-pressed"),
-    ).toBe("true");
-    // The ring is not a tab stop; the list is one.
-    expect(
-      root.querySelectorAll('[data-role="zone-list"] button[tabindex="0"]'),
-    ).toHaveLength(1);
+    expect(shape("Europe/Gibraltar")).toBePressed();
+    expect(listButton("Europe/Gibraltar")).toBePressed();
+    await expectNoAxeViolations(document.body);
   });
 
-  it("draws no two rings that touch, so a press cannot land on the wrong zone", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      MOROCCO_MAP,
-    );
-    await handle.ready;
-    const rings = [
-      ...root.querySelectorAll<SVGCircleElement>("circle.gmt-zonemap-marker"),
-    ].map((ring) => ({
-      id: ring.dataset.tzId!,
-      x: Number(ring.getAttribute("cx")),
-      y: Number(ring.getAttribute("cy")),
-      r: Number(ring.getAttribute("r")),
+  it("draws no two rings that touch, so a press cannot land on the wrong zone", () => {
+    const rings = [...ringsOf(MOROCCO_MAP, boundaries)].map(([id, ring]) => ({
+      id,
+      ...ring,
     }));
     expect(rings.length).toBeGreaterThanOrEqual(2);
     for (const [index, a] of rings.entries()) {
@@ -297,46 +233,33 @@ describe("the small-shape rings", () => {
   });
 
   it("draws the shapes of every zone in the file and the credits button in Morocco's own id", async () => {
-    const root = host();
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps(),
-      MOROCCO_MAP,
-    );
-    await handle.ready;
-    expect(root.querySelectorAll("path.gmt-zonemap-shape")).toHaveLength(
-      IDS.length,
-    );
-    expect(root.querySelector("#morocco-data-credits")).not.toBeNull();
+    const { svg, frame } = await draw();
+    for (const id of IDS) {
+      expect(
+        within(svg()!).getAllByRole("button", {
+          name: new RegExp(`^${id},`),
+        }).length,
+      ).toBeGreaterThan(0);
+    }
+    expect(
+      within(frame()).getByRole("button", { name: "Data credits" }),
+    ).toHaveAttribute("popovertarget", "morocco-data-credits");
   });
 });
 
 describe("a narrow section", () => {
   it("fetches nothing and still renders the list", async () => {
-    const root = host();
     const fetchSpy = vi.fn(() => {
       throw new Error("a narrow section must not fetch");
     });
-    const handle = mountZoneMap(
-      root,
-      ZONES,
-      new AbortController().signal,
-      deps({ measure: () => 375, fetch: fetchSpy as unknown as typeof fetch }),
-      MOROCCO_MAP,
-    );
-    await handle.ready;
+    const { svg, listButtons, listButton } = await draw({
+      measure: () => 375,
+      fetch: fetchSpy as unknown as typeof fetch,
+    });
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(root.querySelector("svg")).toBeNull();
-    expect(
-      root.querySelectorAll('[data-role="zone-list"] button'),
-    ).toHaveLength(IDS.length);
-    expect(
-      root.querySelector(
-        '[data-role="zone-list"] [data-tz-id="Africa/Casablanca"] [data-role="kind"]',
-      )?.textContent,
-    ).toBe(
+    expect(svg()).not.toBeInTheDocument();
+    expect(listButtons()).toHaveLength(IDS.length);
+    expect(listButton("Africa/Casablanca")).toHaveTextContent(
       "Stopped changing clocks on 20 September 2026 at 02:00 local time (01:00 UTC)",
     );
   });

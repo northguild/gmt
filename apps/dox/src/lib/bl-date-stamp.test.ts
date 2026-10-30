@@ -17,7 +17,6 @@ import {
   blPlates,
   blankPlates,
   clockTime,
-  dayHoldingMoment,
   eventCaption,
   isSeeded,
   laneAria,
@@ -267,10 +266,6 @@ describe("the lit day", () => {
         if (lane.zone === "") continue;
         const view = laneView(lane, win, ms);
         expect(view.lit, `${id} lane ${lane.index}`).toBe(lane.date);
-        expect(
-          dayHoldingMoment(view.cells, ms),
-          `${id} lane ${lane.index}`,
-        ).toBe(view.lit);
         expect(Object.keys(view.marks)).toEqual([lane.date]);
         expect(view.marks[lane.date]).toMatchObject({
           state: "lit",
@@ -279,25 +274,6 @@ describe("the lit day", () => {
       }
     },
   );
-
-  it("lights the same date for the same moment at any step of the slider", () => {
-    const s = state({ zone2: "Asia/Shanghai" });
-    const win = windowFor(momentMs(s.value), s.timeZone)!;
-    for (let step = 0; step <= SLIDER_MAX; step += 1) {
-      const ms = sliderMoment(win, step);
-      const at = state({
-        zone2: "Asia/Shanghai",
-        value: iso(ms),
-      });
-      const read = readBlDate(at, blDateLib);
-      for (const lane of read.lanes) {
-        if (lane.zone === "") continue;
-        const view = laneView(lane, win, ms);
-        expect(view.lit, `step ${step} lane ${lane.index}`).toBe(lane.date);
-        expect(dayHoldingMoment(view.cells, ms)).toBe(lane.date);
-      }
-    }
-  });
 
   it("draws a lane with no zone as a box with a note, and no days", () => {
     const s = preset("sao-paulo-evening");

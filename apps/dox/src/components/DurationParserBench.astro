@@ -22,7 +22,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderDurationParserBenchTemplate();
+const html = renderDurationParserBenchTemplate("duration-parser-bench").value;
 ---
 
 {
@@ -41,7 +41,7 @@ const html = renderDurationParserBenchTemplate();
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("durationbench");
     document
-      .querySelectorAll<HTMLElement>(".gmt-duration-bench")
+      .querySelectorAll<HTMLElement>('[data-widget="duration-parser-bench"]')
       .forEach((el) => {
         mountDurationParserBench(el, seed, new AbortController().signal).catch(
           (error) => showUnavailable(el, error),

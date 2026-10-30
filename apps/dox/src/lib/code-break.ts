@@ -86,11 +86,11 @@ export function codeBreakHtml(text: string): string {
     .join("");
 }
 
-export interface HastText {
+interface HastText {
   type: "text";
   value: string;
 }
-export interface HastElement {
+interface HastElement {
   type: "element";
   tagName: string;
   properties: Record<string, unknown>;

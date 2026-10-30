@@ -2,23 +2,24 @@
  * The zone map of a dated tz-change checker (CORE-88): one shape per IANA zone in one of three
  * classes, a zone list that pins the same zone by keyboard, and the pin panel.
  *
- * Plain DOM, no React. The server renders the list and the panel (the checker's mount module), so
- * both exist before this script runs; this module fills them from the Worker's `zones`, draws the
- * shapes when the section is wide enough, and wires the pin. Everything that belongs to one
- * checker (its ids, the boundary file, the projection, the stated classes) comes in as a
- * `ZoneMapConfig`.
+ * Plain DOM, no React. The page's template (`zoneMap`, `widgets/families/clockcheck/zone-map.ts`)
+ * writes the list and the panel, so both exist before this script runs; `wireZoneMap` fills them
+ * from the Worker's `zones`, draws the shapes when the section is wide enough, and wires the pin.
+ * Everything that belongs to one checker (its ids, the boundary file, the projection, the stated
+ * classes) comes in as a `ZoneMapConfig`. Every tag the script writes comes from a builder.
  *
- * **The list is the keyboard path.** One `<button>` per zone, a roving tab stop, arrow keys,
- * Home and End to move; Enter or Space pins. The shapes are `role="button"` with `tabindex="-1"`,
- * so a pointer reaches them and the Tab key does not walk 23 of them.
+ * **The list is the keyboard path.** One `<button>` per zone and a roving tab stop (`roving`): the
+ * arrow keys move (and wrap), Home and End jump; Enter or Space pins. The shapes are
+ * `role="button"` with `tabindex="-1"`, so a pointer reaches them and the Tab key does not walk 23
+ * of them.
  *
  * **Below 520 px of section width the map is not drawn and its file is not fetched.** The list
- * stays, and the pin panel opens below it, scrolled into view when a reader pins. The data-credits button belongs to the
- * drawing, so it is added when the map is drawn and a narrow section has none.
+ * stays, and the pin panel opens below it, scrolled into view when a reader pins. The data-credits
+ * button belongs to the drawing, so it is added when the map is drawn and a narrow section has none.
  */
 import { geoPath } from "d3-geo";
 import type { GeoPath, GeoProjection } from "d3-geo";
-import { NO_SIGNAL, changeText, wallHms } from "./clock-change-common";
+import { changeText, wallHms } from "./clock-change-common";
 import type { Change } from "./clock-change-common";
 import { updateCrystalClock } from "./crystal-clock";
 import {
@@ -30,8 +31,7 @@ import {
 } from "./data-credits";
 import { spokenOffset } from "./crossing-clock";
 import { enter } from "./enter";
-import { escapeAttr, escapeHtml, zoneIdHtml } from "./widget-ui";
-import { plainText, tensedHtml, tensedPlain } from "./clock-change-tense";
+import { plainText, tensedPlain } from "./clock-change-tense";
 import type { Tensed, TenseView } from "./clock-change-tense";
 import {
   LABEL_HEIGHT_PX,
@@ -39,12 +39,27 @@ import {
   labelSize,
   poleOfInaccessibility,
 } from "./zone-map-labels";
+import { html, setHtml, type FoundWidget } from "~/widgets/builders";
+import { noSignal, zoneId } from "~/widgets/families/clockcheck/marks";
+import { tensedSlot } from "~/widgets/families/clockcheck/tense-slot";
+import {
+  EMPTY,
+  PIN_PLACEHOLDER,
+  classSwatch,
+  labelLayer,
+  labelMarkup,
+  mapDrawing,
+  zoneListParts,
+  type PinField,
+} from "~/widgets/families/clockcheck/zone-map";
+import { roving } from "~/widgets/primitives/roving";
 
-const SVG_NS = "http://www.w3.org/2000/svg";
+export { PIN_PLACEHOLDER };
+
 /** The drawing's own coordinate box; the SVG scales to its container with `viewBox`. */
 export const MAP_WIDTH = 800;
 /** Below this width of the section the map is not drawn (CSS hides it at the same width). */
-export const NARROW_PX = 520;
+const NARROW_PX = 520;
 
 // ---------------------------------------------------------------------------
 // Projection
@@ -54,7 +69,7 @@ export const NARROW_PX = 520;
  * A zone's shape (`tzid`), or the one land feature (`land: "other"`): the coastline's land that no
  * zone of the region covers, written first and drawn under the zones.
  */
-export interface BoundaryFeature {
+interface BoundaryFeature {
   type: "Feature";
   properties: { tzid?: string; land?: string };
   geometry: { type: string; coordinates: unknown };
@@ -85,8 +100,6 @@ export interface MapZone {
   next: Change | null;
   kind: "stopped" | "changes-after" | "none";
 }
-
-export type ZoneRow = MapZone;
 
 /** Everything the map takes from the checker that mounts it. */
 export interface ZoneMapConfig {
@@ -175,7 +188,7 @@ export function displayKind(
 }
 
 /** The class words of a zone in both tenses, or "no data" when the server sent no row. */
-export function classPhraseOf(
+function classPhraseOf(
   config: ZoneMapConfig,
   id: string,
   zone: MapZone | undefined,
@@ -265,39 +278,6 @@ export function offsetWords(offset: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// The panel's markup (server-rendered, filled here)
-// ---------------------------------------------------------------------------
-
-export const PIN_PLACEHOLDER = "Press a zone to pin it.";
-/** What an empty row shows before a zone is pinned: a dash, never a blank. */
-const EMPTY = "\u2014";
-
-export function renderPinPanelHtml(): string {
-  const row = (role: string, label: string, text = EMPTY, extra = "") =>
-    `<div class="gmt-zonemap-pin-row${extra}"><dt>${label}</dt><dd data-role="${role}">${text}</dd></div>`;
-  const title = (role: string, label: string, text: string) =>
-    `<div class="gmt-zonemap-pin-titlerow"><dt class="gmt-zonemap-sr">${label}</dt><dd data-role="${role}">${text}</dd></div>`;
-  return (
-    // The one announcement: the pinned zone and its class, said when a zone is pinned. The ticking
-    // time below is plain text outside any live region.
-    `<p class="gmt-zonemap-sr" data-role="pin-announce" role="status"></p>` +
-    `<div class="gmt-zonemap-pin-head">` +
-    `<div class="gmt-zonemap-pin-clock" data-role="pin-clock" aria-hidden="true"></div>` +
-    `<dl class="gmt-zonemap-pin-title">` +
-    title("pin-zone", "Zone", PIN_PLACEHOLDER) +
-    title("pin-class", "Class", EMPTY) +
-    `</dl></div>` +
-    `<dl class="gmt-zonemap-pin-rows">` +
-    row("pin-time", "Local time") +
-    row("pin-offset", "UTC offset") +
-    row("pin-last", "Last change", EMPTY, " gmt-zonemap-pin-row--wide") +
-    row("pin-next", "Next change", EMPTY, " gmt-zonemap-pin-row--wide") +
-    row("pin-release", "Recorded in", EMPTY, " gmt-zonemap-pin-row--wide") +
-    `</dl>`
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Mount
 // ---------------------------------------------------------------------------
 
@@ -333,39 +313,121 @@ export interface ZoneMapHandle {
   ready: Promise<void>;
 }
 
-export function mountZoneMap(
-  root: HTMLElement,
+/** The fields of one list item the script fills. */
+interface ZoneMapFields {
+  kind: HTMLElement | null;
+  offset: HTMLElement | null;
+  swatch: HTMLElement | null;
+}
+
+/** The pin panel's readouts, and the announcement and the clock face's host. */
+type PinPart = PinField | "announce" | "clock";
+
+/**
+ * Where the script finds its parts: `wireZoneMap` reads them from the widget's ids.
+ */
+interface ZoneMapParts {
+  /** The section whose width decides whether the map is drawn. */
+  section: HTMLElement;
+  /** The frame the drawing goes in. */
+  frame: HTMLElement | null;
+  list: HTMLElement | null;
+  scroller: HTMLElement | null;
+  panel: HTMLElement | null;
+  /** The line above the clocks, shown when the server's data is older than the page's facts. */
+  notice: HTMLElement | null;
+  /** The credits button's id. */
+  creditsId: string;
+  /** The ids the pin panel's crystal clock takes. */
+  clockId: string;
+  buttons: HTMLButtonElement[];
+  fields(button: HTMLButtonElement, index: number): ZoneMapFields;
+  pin(part: PinPart): HTMLElement | null;
+  legendCounts(kind: string): readonly HTMLElement[];
+  /** The ids the drawing and its label layer take inside the frame. */
+  svgId: string;
+  labelsId: string;
+}
+
+const flag = (el: Element, on: boolean): void => {
+  (el as HTMLElement | SVGElement).dataset["active"] = String(on);
+};
+
+/** The one element a builder writes. */
+function elementOf(markup: ReturnType<typeof html>): HTMLElement {
+  const host = document.createElement("div");
+  setHtml(host, markup);
+  return host.firstElementChild as HTMLElement;
+}
+
+/**
+ * Wires the zone map `zoneMap` wrote. `widget` is the page's widget (`findWidget`); the ids of the
+ * map's parts come from its scope.
+ */
+export function wireZoneMap(
+  widget: FoundWidget,
   zones: MapZone[],
   signal: AbortSignal,
   deps: ZoneMapDeps,
   config: ZoneMapConfig,
 ): ZoneMapHandle {
-  const q = <T extends HTMLElement>(
-    selector: string,
-    within: ParentNode = root,
-  ) => within.querySelector<T>(selector);
-  const section = q<HTMLElement>('[data-role="map-section"]') ?? root;
-  const frame = q<HTMLElement>('[data-role="map"]');
-  const list = q<HTMLElement>('[data-role="zone-list"]');
-  const scroller = q<HTMLElement>('[data-role="zone-scroll"]');
-  const panel = q<HTMLElement>('[data-role="pin"]');
+  const find = (local: string): HTMLElement | null =>
+    widget.el.querySelector<HTMLElement>(
+      `[id="${CSS.escape(widget.id(local))}"]`,
+    );
+  const list = widget.part<HTMLElement>("zone-list");
+  const parts: ZoneMapParts = {
+    section: find("section") ?? widget.el,
+    frame: widget.part<HTMLElement>("map"),
+    list,
+    scroller: widget.part<HTMLElement>("zone-scroll"),
+    panel: widget.part<HTMLElement>("pin"),
+    notice: find("clocks-notice"),
+    creditsId: widget.id("data-credits"),
+    clockId: `${config.idPrefix}-pin`,
+    buttons: [...list.querySelectorAll<HTMLButtonElement>("button")],
+    fields: (_button, index) => {
+      const names = zoneListParts(index);
+      return {
+        kind: find(names.kind),
+        offset: find(names.offset),
+        swatch: find(names.swatch),
+      };
+    },
+    pin: (part) => find(`pin-${part}`),
+    legendCounts: (kind) => [
+      ...widget.el.querySelectorAll<HTMLElement>(
+        `[data-legend-count="${kind}"]`,
+      ),
+    ],
+    svgId: widget.id("map-svg"),
+    labelsId: widget.id("map-labels"),
+  };
+  return runZoneMap(parts, zones, signal, deps, config);
+}
+
+function runZoneMap(
+  parts: ZoneMapParts,
+  zones: MapZone[],
+  signal: AbortSignal,
+  deps: ZoneMapDeps,
+  config: ZoneMapConfig,
+): ZoneMapHandle {
+  const { section, frame, list, scroller, panel, buttons } = parts;
   const rows = new Map(zones.map((zone) => [zone.zone, zone]));
-  const buttons = list
-    ? [...list.querySelectorAll<HTMLButtonElement>("button[data-tz-id]")]
-    : [];
   const byId = new Map(
-    buttons.map((button) => [button.dataset.tzId ?? "", button]),
+    buttons.map((button) => [button.dataset["tzId"] ?? "", button]),
   );
   const measure = deps.measure ?? (() => section.getBoundingClientRect().width);
   let pinnedId: string | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let shapes = new Map<string, SVGPathElement>();
-  let rings = new Map<string, SVGCircleElement>();
+  let shapes = new Map<string, SVGElement>();
+  let rings = new Map<string, SVGElement>();
   let drawn = false;
   let fetching = false;
   // The place labels: an overlay on the drawing, one element per zone shown so far.
   let hoverId: string | null = null;
-  let labelLayer: HTMLElement | undefined;
+  let layer: HTMLElement | null = null;
   let labelAnchor: (id: string) => readonly [number, number] | null = () =>
     null;
   const labels = new Map<string, HTMLElement>();
@@ -376,43 +438,32 @@ export function mountZoneMap(
   });
 
   // --- the list ------------------------------------------------------------
-  for (const button of buttons) {
-    const id = button.dataset.tzId ?? "";
+  buttons.forEach((button, index) => {
+    const id = button.dataset["tzId"] ?? "";
     const zone = rows.get(id);
-    const kind = q<HTMLElement>('[data-role="kind"]', button);
-    const offset = q<HTMLElement>('[data-role="offset"]', button);
-    if (kind) {
-      kind.innerHTML = tensedHtml(
-        classPhraseOf(config, id, zone, deps.tense()),
-        deps.tense(),
+    const kind = displayKind(config, id, zone);
+    const fields = parts.fields(button, index);
+    if (fields.kind) {
+      setHtml(
+        fields.kind,
+        tensedSlot(classPhraseOf(config, id, zone, deps.tense()), deps.tense()),
       );
     }
-    if (offset) {
-      if (zone && zone.offset !== "") offset.textContent = zone.offset;
-      else offset.innerHTML = NO_SIGNAL;
+    if (fields.offset) {
+      if (zone && zone.offset !== "") fields.offset.textContent = zone.offset;
+      else setHtml(fields.offset, noSignal());
     }
-    button.dataset.kind = displayKind(config, id, zone);
-    const swatch = q<HTMLElement>('[data-role="swatch"]', button);
-    if (swatch) swatch.dataset.kind = displayKind(config, id, zone);
-  }
+    if (fields.swatch) fields.swatch.dataset["kind"] = kind;
+  });
 
   // The legend's counts, from the zones the list holds.
   const counts = classCounts(config, [...byId.keys()], rows);
   for (const [kind, count] of Object.entries(counts)) {
     // One copy per form of a two-form legend phrase.
-    for (const el of root.querySelectorAll<HTMLElement>(
-      `[data-role="legend-count"][data-kind="${kind}"]`,
-    ))
-      el.textContent = String(count);
+    for (const el of parts.legendCounts(kind)) el.textContent = String(count);
   }
   // One line above the live clocks when the server's data is older than tzdb 2026e.
-  const notice = q<HTMLElement>('[data-role="clocks-notice"]');
-  if (notice) notice.hidden = !isDataStale(config.stopped, zones);
-
-  function setRoving(active: HTMLButtonElement | undefined): void {
-    for (const button of buttons) button.tabIndex = button === active ? 0 : -1;
-  }
-  setRoving(buttons[0]);
+  if (parts.notice) parts.notice.hidden = !isDataStale(config.stopped, zones);
 
   /**
    * Scrolls the list's own box, never the page, until `el` is in view. An element taller than the
@@ -431,26 +482,14 @@ export function mountZoneMap(
     }
   }
 
+  // The APG roving tab stop: arrows wrap, Home and End jump, the stop follows focus and a click.
+  const stop = list
+    ? roving(list, { items: () => buttons, signal })
+    : undefined;
   list?.addEventListener(
-    "keydown",
+    "focusin",
     (event) => {
-      const target = (event.target as HTMLElement).closest<HTMLButtonElement>(
-        "button[data-tz-id]",
-      );
-      if (!target) return;
-      const index = buttons.indexOf(target);
-      let next = -1;
-      if (event.key === "ArrowDown" || event.key === "ArrowRight")
-        next = Math.min(index + 1, buttons.length - 1);
-      else if (event.key === "ArrowUp" || event.key === "ArrowLeft")
-        next = Math.max(index - 1, 0);
-      else if (event.key === "Home") next = 0;
-      else if (event.key === "End") next = buttons.length - 1;
-      if (next < 0) return;
-      event.preventDefault();
-      setRoving(buttons[next]);
-      buttons[next]!.focus({ preventScroll: true });
-      reveal(buttons[next]);
+      reveal((event.target as HTMLElement).closest<HTMLElement>("button"));
     },
     { signal },
   );
@@ -458,11 +497,11 @@ export function mountZoneMap(
     "click",
     (event) => {
       const target = (event.target as HTMLElement).closest<HTMLButtonElement>(
-        "button[data-tz-id]",
+        "button",
       );
       if (target) {
-        setRoving(target);
-        pin(target.dataset.tzId ?? "");
+        stop?.set(target);
+        pin(target.dataset["tzId"] ?? "");
       }
     },
     { signal },
@@ -472,17 +511,13 @@ export function mountZoneMap(
   function mirror(id: string | null): void {
     hoverId = id;
     refreshLabels();
-    for (const [key, shape] of shapes)
-      shape.classList.toggle("is-active", key === id);
-    for (const [key, marker] of rings)
-      marker.classList.toggle("is-active", key === id);
+    for (const [key, marker] of rings) flag(marker, key === id);
     drawRing(hoverRing, id);
-    for (const [key, button] of byId)
-      button.classList.toggle("is-active", key === id);
+    for (const [key, button] of byId) flag(button, key === id);
   }
   const idOf = (target: EventTarget | null): string | null =>
     (target as HTMLElement | null)?.closest?.<HTMLElement>("[data-tz-id]")
-      ?.dataset.tzId ?? null;
+      ?.dataset["tzId"] ?? null;
   for (const host of [list, frame]) {
     host?.addEventListener("pointerover", (e) => mirror(idOf(e.target)), {
       signal,
@@ -495,81 +530,69 @@ export function mountZoneMap(
   }
 
   // --- the panel -----------------------------------------------------------
-  const field = (role: string) =>
-    q<HTMLElement>(`[data-role="${role}"]`, panel ?? root);
+  const rest: PinPart[] = ["time", "offset", "last", "next", "release"];
+  const setText = (part: PinPart, value: string): void => {
+    const el = parts.pin(part);
+    if (el) el.textContent = value;
+  };
+  const setMarkup = (part: PinPart, value: ReturnType<typeof html>): void => {
+    const el = parts.pin(part);
+    if (el) setHtml(el, value);
+  };
 
   function drawPanel(): void {
     if (!panel) return;
     const zone = pinnedId === null ? undefined : rows.get(pinnedId);
-    const set = (role: string, value: string) => {
-      const el = field(role);
-      if (el) el.textContent = value;
-    };
-    const clock = field("pin-clock");
-    const announce = field("pin-announce");
-    if (announce) {
-      announce.textContent =
-        pinnedId === null
-          ? ""
-          : `Pinned ${pinnedId}. ${classWords(config, pinnedId, rows.get(pinnedId), deps.tense())}.`;
-    }
-    const rest = [
-      "pin-time",
-      "pin-offset",
-      "pin-last",
-      "pin-next",
-      "pin-release",
-    ];
-    const classEl = field("pin-class");
+    const clock = parts.pin("clock");
+    setText(
+      "announce",
+      pinnedId === null
+        ? ""
+        : `Pinned ${pinnedId}. ${classWords(config, pinnedId, rows.get(pinnedId), deps.tense())}.`,
+    );
     if (pinnedId === null) {
-      set("pin-zone", PIN_PLACEHOLDER);
-      if (classEl) classEl.textContent = EMPTY;
-      for (const role of rest) set(role, EMPTY);
-      if (clock) clock.innerHTML = "";
+      setText("zone", PIN_PLACEHOLDER);
+      setText("class", EMPTY);
+      for (const part of rest) setText(part, EMPTY);
+      if (clock) clock.replaceChildren();
       return;
     }
-    const zoneEl = field("pin-zone");
-    if (zoneEl) zoneEl.innerHTML = zoneIdHtml(pinnedId);
-    if (classEl) {
-      classEl.innerHTML =
-        `<span class="gmt-zonemap-swatch gmt-theme-dark" data-kind="${displayKind(config, pinnedId, zone)}" aria-hidden="true"></span>` +
-        tensedHtml(
-          classPhraseOf(config, pinnedId, zone, deps.tense()),
-          deps.tense(),
-        );
-    }
+    setMarkup("zone", zoneId(pinnedId));
+    setMarkup(
+      "class",
+      html`${classSwatch(displayKind(config, pinnedId, zone))}${tensedSlot(
+        classPhraseOf(config, pinnedId, zone, deps.tense()),
+        deps.tense(),
+      )}`,
+    );
     if (!zone) {
-      for (const role of rest) set(role, EMPTY);
-      if (clock) clock.innerHTML = "";
+      for (const part of rest) setText(part, EMPTY);
+      if (clock) clock.replaceChildren();
       return;
     }
     const at = deps.now();
     const offset = offsetAt(zone, at, deps.isBefore);
     const wall = offset === "" ? "" : deps.wall(at, offset);
     if (wall === "") {
-      for (const role of ["pin-time", "pin-offset"]) {
-        const el = field(role);
-        if (el) el.innerHTML = NO_SIGNAL;
-      }
-      if (clock) clock.innerHTML = "";
+      setMarkup("time", noSignal());
+      setMarkup("offset", noSignal());
+      if (clock) clock.replaceChildren();
     } else {
       drawTime(wall, offset);
     }
-    set("pin-last", lastText(zone, deps.responseNow));
-    set("pin-next", nextText(zone, deps.responseNow));
-    set("pin-release", releaseWords(config, pinnedId!));
+    setText("last", lastText(zone, deps.responseNow));
+    setText("next", nextText(zone, deps.responseNow));
+    setText("release", releaseWords(config, pinnedId));
   }
 
   /** The time and the face: the only parts that change every second. */
   function drawTime(wall: string, offset: string): void {
-    const timeEl = field("pin-time");
-    if (timeEl) timeEl.textContent = wallHms(wall);
-    const offsetEl = field("pin-offset");
-    if (offsetEl) offsetEl.textContent = offsetWords(offset);
-    const clock = field("pin-clock");
+    setText("time", wallHms(wall));
+    setText("offset", offsetWords(offset));
+    const clock = parts.pin("clock");
     if (clock && pinnedId !== null) {
       updateCrystalClock(clock, {
-        id: `${config.idPrefix}-pin`,
+        id: parts.clockId,
         hour: Number(wall.slice(11, 13)),
         minute: Number(wall.slice(14, 16)),
         second: Number(wallHms(wall).slice(6, 8)),
@@ -601,7 +624,7 @@ export function mountZoneMap(
    * a zone is pinned (`data-pinned`); the section has no map to fill that space.
    */
   function placePanel(): void {
-    if (panel) panel.dataset.pinned = String(pinnedId !== null);
+    if (panel) panel.dataset["pinned"] = String(pinnedId !== null);
   }
 
   function writeUrl(id: string): void {
@@ -619,13 +642,11 @@ export function mountZoneMap(
     pinnedId = id;
     for (const [key, button] of byId)
       button.setAttribute("aria-pressed", String(key === id));
-    for (const [key, shape] of shapes) {
-      shape.setAttribute("aria-pressed", String(key === id));
-      shape.classList.toggle("is-pinned", key === id);
-    }
-    for (const [key, marker] of rings) {
-      marker.setAttribute("aria-pressed", String(key === id));
-      marker.classList.toggle("is-pinned", key === id);
+    for (const group of [shapes, rings]) {
+      for (const [key, el] of group) {
+        el.setAttribute("aria-pressed", String(key === id));
+        (el as SVGElement).dataset["pinned"] = String(key === id);
+      }
     }
     drawRing(pinRing, id);
     refreshLabels();
@@ -633,6 +654,7 @@ export function mountZoneMap(
     placePanel();
     tick();
     const button = byId.get(id);
+    stop?.set(button!);
     reveal(button);
     // Narrow, the panel opens below the list, which may be off screen: bring it into view when the
     // reader pins (not when the page loads on a `?zone=` link).
@@ -646,21 +668,9 @@ export function mountZoneMap(
   // Hover and pin are drawn as paths on top of every shape, so a neighbour never paints over half
   // of the line. Each ring is a night casing under an ink line, the globe's own overlay rule: the
   // ink only has to clear the casing, whatever fill lies beneath.
-  let hoverRing: SVGGElement | undefined;
-  let pinRing: SVGGElement | undefined;
-  function makeRing(kind: "hover" | "pin"): SVGGElement {
-    const group = document.createElementNS(SVG_NS, "g");
-    group.setAttribute("class", `gmt-zonemap-ring gmt-zonemap-ring--${kind}`);
-    group.setAttribute("aria-hidden", "true");
-    for (const part of ["casing", "ink"]) {
-      const path = document.createElementNS(SVG_NS, "path");
-      path.setAttribute("class", `gmt-zonemap-ring-${part}`);
-      group.append(path);
-    }
-    group.setAttribute("visibility", "hidden");
-    return group;
-  }
-  function drawRing(ring: SVGGElement | undefined, id: string | null): void {
+  let hoverRing: SVGElement | null = null;
+  let pinRing: SVGElement | null = null;
+  function drawRing(ring: SVGElement | null, id: string | null): void {
     if (!ring) return;
     const shape = id === null ? undefined : shapes.get(id);
     const d = shape?.getAttribute("d") ?? null;
@@ -670,50 +680,6 @@ export function mountZoneMap(
     }
     for (const path of ring.children) path.setAttribute("d", d);
     ring.setAttribute("visibility", "visible");
-  }
-
-  // --- the small-shape rings -------------------------------------------------
-  /**
-   * A ring at the `zone.tab` coordinate of each zone whose largest drawn part is under
-   * `markerMinPx`. The test is on the largest part, not the whole shape: `Africa/Ceuta` is two
-   * specks (Ceuta and Melilla) that span far more than the threshold together.
-   */
-  function drawMarkers(
-    svg: SVGSVGElement,
-    boundaries: BoundaryCollection,
-    path: GeoPath,
-    projection: GeoProjection,
-  ): Map<string, SVGCircleElement> {
-    const made = new Map<string, SVGCircleElement>();
-    const minPx = config.markerMinPx;
-    if (minPx === undefined || !config.markers) return made;
-    for (const feature of boundaries.features) {
-      if (!isZoneFeature(feature)) continue;
-      const id = feature.properties.tzid;
-      const at = config.markers[id];
-      if (!byId.has(id) || !at || !shapes.has(id)) continue;
-      if (largestPartPx(feature, path) >= minPx) continue;
-      const point = projection([at[0], at[1]]);
-      if (!point) continue;
-      const zone = rows.get(id);
-      const ring = document.createElementNS(SVG_NS, "circle");
-      ring.setAttribute("class", "gmt-zonemap-marker");
-      ring.setAttribute("cx", point[0].toFixed(1));
-      ring.setAttribute("cy", point[1].toFixed(1));
-      ring.setAttribute("r", String(minPx / 2));
-      ring.setAttribute("data-kind", displayKind(config, id, zone));
-      ring.setAttribute("data-tz-id", id);
-      ring.setAttribute("role", "button");
-      ring.setAttribute("tabindex", "-1");
-      ring.setAttribute("aria-pressed", "false");
-      ring.setAttribute(
-        "aria-label",
-        `${id}, ${classWords(config, id, zone, deps.tense())}`,
-      );
-      svg.append(ring);
-      made.set(id, ring);
-    }
-    return made;
   }
 
   // --- the labels ------------------------------------------------------------
@@ -727,29 +693,22 @@ export function mountZoneMap(
     const offset = zone ? offsetAt(zone, deps.responseNow, deps.isBefore) : "";
     const city = cityOf(id);
     const size = labelSize(city, offset === "" ? null : offset);
-    const label = document.createElement("div");
-    label.className = "gmt-zonemap-label";
-    label.dataset.labelFor = id;
-    label.setAttribute("aria-hidden", "true");
-    label.style.setProperty(
-      "--ax",
-      `${((at[0] / MAP_WIDTH) * 100).toFixed(2)}%`,
+    return elementOf(
+      labelMarkup({
+        zone: id,
+        city,
+        offset: offset === "" ? null : offset,
+        ax: `${((at[0] / MAP_WIDTH) * 100).toFixed(2)}%`,
+        ay: `${((at[1] / config.height) * 100).toFixed(2)}%`,
+        width: size.width,
+        height: LABEL_HEIGHT_PX,
+      }),
     );
-    label.style.setProperty(
-      "--ay",
-      `${((at[1] / config.height) * 100).toFixed(2)}%`,
-    );
-    label.style.setProperty("--lw", `${size.width}px`);
-    label.style.setProperty("--lh", `${LABEL_HEIGHT_PX}px`);
-    label.innerHTML =
-      `<span class="gmt-zonemap-label-city">${escapeHtml(city)}</span>` +
-      `<span class="gmt-zonemap-label-offset">${offset === "" ? NO_SIGNAL : escapeHtml(offset)}</span>`;
-    return label;
   }
 
   /** Shows the permanent labels, the hovered or focused zone's, and the pinned zone's. */
   function refreshLabels(): void {
-    if (!labelLayer) return;
+    if (!layer) return;
     const permanent = new Set(config.labelled);
     const want = new Set(permanent);
     if (hoverId !== null) want.add(hoverId);
@@ -762,70 +721,115 @@ export function mountZoneMap(
         if (!at) continue;
         label = makeLabel(id, at);
         labels.set(id, label);
-        labelLayer.append(label);
+        layer.append(label);
       }
       label.hidden = false;
-      label.classList.toggle("is-passing", !permanent.has(id));
+      label.dataset["passing"] = String(!permanent.has(id));
     }
     for (const [id, label] of labels) if (!want.has(id)) label.hidden = true;
   }
 
   // --- the shapes ----------------------------------------------------------
+  /**
+   * A ring at the `zone.tab` coordinate of each zone whose largest drawn part is under
+   * `markerMinPx`. The test is on the largest part, not the whole shape: `Africa/Ceuta` is two
+   * specks (Ceuta and Melilla) that span far more than the threshold together.
+   */
+  function markersOf(
+    boundaries: BoundaryCollection,
+    path: GeoPath,
+    projection: GeoProjection,
+    drawnIds: ReadonlySet<string>,
+  ) {
+    const made: Parameters<typeof mapDrawing>[0]["markers"][number][] = [];
+    const minPx = config.markerMinPx;
+    if (minPx === undefined || !config.markers) return made;
+    for (const feature of boundaries.features) {
+      if (!isZoneFeature(feature)) continue;
+      const id = feature.properties.tzid;
+      const at = config.markers[id];
+      if (!byId.has(id) || !at || !drawnIds.has(id)) continue;
+      if (largestPartPx(feature, path) >= minPx) continue;
+      const point = projection([at[0], at[1]]);
+      if (!point) continue;
+      const zone = rows.get(id);
+      made.push({
+        id,
+        cx: point[0],
+        cy: point[1],
+        r: minPx / 2,
+        kind: displayKind(config, id, zone),
+        label: `${id}, ${classWords(config, id, zone, deps.tense())}`,
+      });
+    }
+    return made;
+  }
+
   function drawShapes(boundaries: BoundaryCollection): void {
     if (!frame || drawn) return;
     drawn = true;
     const projection = config.projection(boundaries, MAP_WIDTH, config.height);
     const path = geoPath(projection);
-    const svg = document.createElementNS(SVG_NS, "svg");
-    svg.setAttribute("class", "gmt-zonemap-svg");
-    svg.setAttribute("viewBox", `0 0 ${MAP_WIDTH} ${config.height}`);
-    svg.setAttribute("role", "group");
-    svg.setAttribute("aria-label", config.mapLabel);
-    svg.setAttribute("focusable", "false");
-    const next = new Map<string, SVGPathElement>();
-    const stopped: SVGPathElement[] = [];
+    const pathOf = (feature: BoundaryFeature): string | null =>
+      path(feature as unknown as Parameters<typeof path>[0]);
     // The land no zone covers is drawn first, under every shape: a decoration, not a zone. It is
-    // not in `shapes`, takes no pointer and is hidden from assistive technology.
+    // not a shape, takes no pointer and is hidden from assistive technology.
+    const land: string[] = [];
     for (const feature of boundaries.features) {
       if (feature.properties.land === undefined) continue;
-      const d = path(feature as unknown as Parameters<typeof path>[0]);
-      if (d === null) continue;
-      const land = document.createElementNS(SVG_NS, "path");
-      land.setAttribute("d", d);
-      land.setAttribute("class", "gmt-zonemap-land");
-      land.setAttribute("aria-hidden", "true");
-      svg.append(land);
+      const d = pathOf(feature);
+      if (d !== null) land.push(d);
     }
+    const plain: Parameters<typeof mapDrawing>[0]["shapes"][number][] = [];
+    const stopped: typeof plain = [];
     for (const feature of boundaries.features) {
       if (!isZoneFeature(feature)) continue;
       const id = feature.properties.tzid;
       if (!byId.has(id)) continue;
-      const d = path(feature as unknown as Parameters<typeof path>[0]);
+      const d = pathOf(feature);
       if (d === null) continue;
       const zone = rows.get(id);
-      const shape = document.createElementNS(SVG_NS, "path");
-      shape.setAttribute("d", d);
-      shape.setAttribute("class", "gmt-zonemap-shape");
-      shape.setAttribute("data-kind", displayKind(config, id, zone));
-      shape.setAttribute("data-tz-id", id);
-      shape.setAttribute("role", "button");
-      shape.setAttribute("tabindex", "-1");
-      shape.setAttribute("aria-pressed", "false");
-      shape.setAttribute(
-        "aria-label",
-        `${id}, ${classWords(config, id, zone, deps.tense())}`,
-      );
-      next.set(id, shape);
-      if (config.stopped.has(id)) stopped.push(shape);
-      else svg.append(shape);
+      const shape = {
+        id,
+        d,
+        kind: displayKind(config, id, zone),
+        label: `${id}, ${classWords(config, id, zone, deps.tense())}`,
+      };
+      (config.stopped.has(id) ? stopped : plain).push(shape);
     }
     // The zones that stop are drawn last, so no neighbour paints over any of their border.
-    for (const shape of stopped) svg.append(shape);
+    const ordered = [...plain, ...stopped];
+    setHtml(
+      frame,
+      html`${mapDrawing({
+        id: parts.svgId,
+        width: MAP_WIDTH,
+        height: config.height,
+        label: config.mapLabel,
+        land,
+        shapes: ordered,
+        markers: markersOf(
+          boundaries,
+          path,
+          projection,
+          new Set(ordered.map((shape) => shape.id)),
+        ),
+      })}${labelLayer(parts.labelsId)}`,
+    );
+    const inFrame = (id: string): HTMLElement | null =>
+      frame.querySelector<HTMLElement>(`[id="${CSS.escape(id)}"]`);
+    const svg = inFrame(parts.svgId) as SVGSVGElement | null;
+    if (!svg) return;
+    const next = new Map<string, SVGElement>();
+    const markers = new Map<string, SVGElement>();
+    for (const el of svg.querySelectorAll<SVGElement>("[data-tz-id]")) {
+      const id = el.dataset["tzId"] ?? "";
+      (el.tagName.toLowerCase() === "path" ? next : markers).set(id, el);
+    }
     shapes = next;
-    rings = drawMarkers(svg, boundaries, path, projection);
-    hoverRing = makeRing("hover");
-    pinRing = makeRing("pin");
-    svg.append(hoverRing, pinRing);
+    rings = markers;
+    hoverRing = svg.querySelector<SVGElement>('[data-ring="hover"]');
+    pinRing = svg.querySelector<SVGElement>('[data-ring="pin"]');
     svg.addEventListener(
       "click",
       (event) => {
@@ -845,12 +849,8 @@ export function mountZoneMap(
       },
       { signal },
     );
-    frame.append(svg);
     // The labels sit over the drawing in their own layer, so they take no pointer and move nothing.
-    labelLayer = document.createElement("div");
-    labelLayer.className = "gmt-zonemap-labels";
-    labelLayer.setAttribute("aria-hidden", "true");
-    frame.append(labelLayer);
+    layer = inFrame(parts.labelsId);
     const features = new Map(
       boundaries.features
         .filter(isZoneFeature)
@@ -883,7 +883,7 @@ export function mountZoneMap(
     frame.insertAdjacentHTML(
       "beforeend",
       renderDataCreditsHtml([TZ_BOUNDARIES, COASTLINES], {
-        id: frame.dataset.creditsId ?? `${config.idPrefix}-data-credits`,
+        id: parts.creditsId,
         placement: config.creditsCorner,
       }),
     );
@@ -964,7 +964,6 @@ export function mountZoneMap(
   }
   if (fromUrl !== null && byId.has(fromUrl)) {
     pin(fromUrl, false);
-    setRoving(byId.get(fromUrl));
   } else {
     placePanel();
   }
@@ -981,9 +980,11 @@ export function mountZoneMap(
         );
       }
     }
-    const announce = field("pin-announce");
-    if (announce && pinnedId !== null) {
-      announce.textContent = `Pinned ${pinnedId}. ${classWords(config, pinnedId, rows.get(pinnedId), view)}.`;
+    if (pinnedId !== null) {
+      setText(
+        "announce",
+        `Pinned ${pinnedId}. ${classWords(config, pinnedId, rows.get(pinnedId), view)}.`,
+      );
     }
   }
 
@@ -1024,7 +1025,7 @@ export function largestPartPx(feature: BoundaryFeature, path: GeoPath): number {
  * The rings of the feature's largest part (the polygon whose projected box takes the most of the
  * drawing's box), projected to drawing px. Empty when nothing of it lies in the box.
  */
-export function largestProjectedPart(
+function largestProjectedPart(
   feature: BoundaryFeature,
   projection: GeoProjection,
   height: number,
@@ -1058,16 +1059,4 @@ export function largestProjectedPart(
     }
   }
   return best;
-}
-
-/** One list item, server-rendered from the checker's zone list. */
-export function zoneListItemHtml(zone: string): string {
-  const id = escapeAttr(zone);
-  return (
-    `<li class="gmt-zonemap-zone"><button type="button" class="gmt-zonemap-zone-btn" data-tz-id="${id}" aria-pressed="false">` +
-    `<span class="gmt-zonemap-zone-id"><code>${zoneIdHtml(zone)}</code></span>` +
-    `<span class="gmt-zonemap-zone-kind"><span class="gmt-zonemap-swatch gmt-theme-dark" data-role="swatch" data-kind="no-data" aria-hidden="true"></span><span data-role="kind">no answer yet</span></span>` +
-    `<span class="gmt-zonemap-zone-offset" data-role="offset">${NO_SIGNAL}</span>` +
-    `</button></li>`
-  );
 }

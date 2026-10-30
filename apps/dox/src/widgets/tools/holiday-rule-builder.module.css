@@ -1,0 +1,100 @@
+/*
+ * Holiday Rule Builder: what only this tool needs. The sections, fields, chips, preset, code
+ * frames, output and links are the kit's; the rule rows, plates, grid, legend and held notes
+ * are the holiday family's. This sheet lays them out.
+ *
+ * Amber is the sentinel's alone, and an accent edge is never a single side.
+ */
+
+.stack {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.rules {
+  display: grid;
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-inline-size: 0;
+}
+
+.addrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-3);
+}
+
+.count,
+.hint {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+/* The plates are read through the sentence below them, so they are hidden from a reader. */
+.plates,
+.slot {
+  min-inline-size: 0;
+}
+
+.policy {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+}
+
+.policyLabel {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+.calls {
+  min-inline-size: 0;
+
+  & > summary {
+    min-block-size: var(--gmt-target-min);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: var(--gmt-cyan-ink);
+
+    &:focus-visible {
+      outline: 2px solid var(--gmt-cyan);
+      outline-offset: 2px;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .calls > summary {
+    color: LinkText;
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+
+  .count,
+  .hint,
+  .policyLabel {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .count,
+  .hint,
+  .policyLabel {
+    color: var(--gmt-ice);
+  }
+}

@@ -1,0 +1,106 @@
+/*
+ * GNSS Rollover Checker: what only this tool needs. The sections, fields, preset, chips,
+ * range, plates, code frame and links are the kit's; the fuse timeline, its key and chips,
+ * the countdown and the verdict badge, the line table and the call output are the GNSS
+ * family's. This sheet lays out the frame that holds the answers beside the timeline.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone, and an accent edge is
+ * never a single side.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+/* A field the form is not showing leaves the layout; the mount sets and clears `hidden`. */
+.wide[hidden] {
+  display: none;
+}
+
+/* The frame is the container the layout reads. Narrow, the answers come first and the
+   timeline follows; from 46rem the answers are a 16rem column beside it. */
+.frame {
+  --series: var(--gmt-series-1);
+
+  container-type: inline-size;
+  min-inline-size: 0;
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: linear-gradient(
+    var(--gmt-glass-tint),
+    var(--gmt-glass-tint-subtle)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+}
+
+.layout {
+  display: grid;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+}
+
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.drawing,
+.keySlot,
+.chipsSlot {
+  min-inline-size: 0;
+}
+
+@container (inline-size >= 46rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 16rem;
+    align-items: start;
+  }
+
+  .aside {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
+
+  .drawing,
+  .keySlot,
+  .chipsSlot {
+    grid-column: 1;
+  }
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+@media (forced-colors: active) {
+  .frame {
+    border-color: CanvasText;
+    background-color: Canvas;
+    background-image: none;
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frame {
+    border-color: var(--gmt-ice);
+    background-image: none;
+  }
+
+  .note {
+    color: var(--gmt-ice);
+  }
+}

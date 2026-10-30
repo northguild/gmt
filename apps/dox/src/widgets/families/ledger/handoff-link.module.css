@@ -1,0 +1,52 @@
+/* A link that wears the button's look. Tokens only; at least 24 x 24 px. */
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-block-size: 2.5rem;
+  padding: var(--gmt-space-2) var(--gmt-space-4);
+  border: 1px solid var(--gmt-cyan);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-cyan-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+
+  &[aria-disabled="true"] {
+    border-color: var(--gmt-border-strong);
+    color: var(--gmt-ice-dim);
+    cursor: not-allowed;
+  }
+}
+
+@media (forced-colors: active) {
+  .link {
+    border-color: LinkText;
+    background: Canvas;
+    color: LinkText;
+
+    &[aria-disabled="true"] {
+      border-color: GrayText;
+      color: GrayText;
+    }
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .link {
+    border-width: 2px;
+  }
+}

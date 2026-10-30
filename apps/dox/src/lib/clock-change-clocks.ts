@@ -4,16 +4,18 @@
  * zone (switching to the next offset once the next change has passed), so no named zone reaches
  * the browser's own time zone data.
  */
-import {
-  NO_SIGNAL,
-  SIGNAL_LOST,
-  msToNextSecond,
-  wallHms,
-} from "./clock-change-common";
+import { SIGNAL_LOST, msToNextSecond, wallHms } from "./clock-change-common";
 import type { Change } from "./clock-change-common";
 import { spokenOffset } from "./crossing-clock";
 import { updateCrystalClock } from "./crystal-clock";
-import { escapeAttr, escapeHtml, zoneIdHtml } from "./widget-ui";
+import { setHtml } from "~/widgets/builders/html";
+import type { FoundWidget } from "~/widgets/root";
+import {
+  CLOCK_PARTS,
+  clockNoSignal,
+  clockSlug,
+  clockTime,
+} from "~/widgets/families/clockcheck/clocks";
 
 /** A zone's row, as much of it as a clock needs. `MapZone` fits. */
 export interface ClockZone {
@@ -31,25 +33,7 @@ export interface ClockLib {
   isBeforeUtc(value1: string, value2: string): boolean;
 }
 
-function clockHtml(zone: string, stopped: ReadonlySet<string>): string {
-  return (
-    `<li class="gmt-clockcheck-clock" data-zone="${escapeAttr(zone)}" data-state="${stopped.has(zone) ? "stopped" : "changes"}">` +
-    `<div class="gmt-clockcheck-face" data-role="clock"></div>` +
-    `<p class="gmt-clockcheck-clock-zone"><code>${zoneIdHtml(zone)}</code></p>` +
-    `<p class="gmt-clockcheck-clock-time" data-role="clock-time">${NO_SIGNAL}</p>` +
-    `</li>`
-  );
-}
-
-/** The list of clocks, server-rendered with a NO SIGNAL readout each. `stopped` marks the zones that stop changing. */
-export function clocksHtml(
-  zones: readonly string[],
-  stopped: ReadonlySet<string>,
-): string {
-  return `<ul class="gmt-clockcheck-clocks" data-role="clocks">${zones.map((zone) => clockHtml(zone, stopped)).join("")}</ul>`;
-}
-
-export interface ClocksOptions {
+interface ClocksOptions {
   /** Namespaces the crystal clocks' ids. */
   idPrefix: string;
   lib: ClockLib;
@@ -60,7 +44,7 @@ export interface ClocksOptions {
   read: () => readonly ClockZone[] | null;
 }
 
-export interface ClocksHandle {
+interface ClocksHandle {
   /** Draws every clock now and schedules the next second. Call it when the answer arrives. */
   tick(): void;
 }
@@ -73,80 +57,83 @@ function offsetAt(lib: ClockLib, zone: ClockZone, at: string): string {
   return zone.offset;
 }
 
-function drawClock(
-  options: ClocksOptions,
-  item: HTMLElement,
-  zone: ClockZone | undefined,
-  at: string,
-): void {
-  const host = item.querySelector<HTMLElement>('[data-role="clock"]')!;
-  const readout = item.querySelector<HTMLElement>('[data-role="clock-time"]')!;
-  const id = item.dataset.zone ?? "";
-  const offset = zone ? offsetAt(options.lib, zone, at) : "";
-  const wall =
-    offset === ""
-      ? ""
-      : options.lib.convertUtcToPlainDateTime(at, { timeZone: offset });
-  if (wall === "") {
-    readout.innerHTML = NO_SIGNAL;
-    readout.title = SIGNAL_LOST;
-    return;
-  }
-  readout.removeAttribute("title");
-  const hour = Number(wall.slice(11, 13));
-  const minute = Number(wall.slice(14, 16));
-  // Two spans for the readout's two voices: "HH:MM:SS" and the offset. The readout is plain text
-  // (no live region), so the second ticking never reaches a screen reader.
-  readout.innerHTML = `<span class="gmt-clockcheck-clock-hm">${escapeHtml(wallHms(wall))}</span> <span class="gmt-clockcheck-clock-off">${escapeHtml(offset)}</span>`;
-  updateCrystalClock(host, {
-    id: `${options.idPrefix}-${id.replace(/[^A-Za-z0-9]/g, "-")}`,
-    hour,
-    minute,
-    second: Number(wallHms(wall).slice(6, 8)),
-    label: id,
-    sublabel: `${wall.slice(11, 16)}, ${spokenOffset(offset)}`,
-  });
+interface WireClocksOptions extends ClocksOptions {
+  /** The zones the list was built with, in order. */
+  zones: readonly string[];
+  /** The zone list whose pressed button picks a clock, or `null` when the page has none. */
+  zoneList: HTMLElement | null;
 }
 
-/** Wires the clocks under `root`: the one-second tick, and the highlight of the clock whose zone the list has pressed. */
-export function mountClocks(
-  root: HTMLElement,
-  options: ClocksOptions,
+/**
+ * Wires the clocks `clocks()` built inside `widget`: the one-second tick, and the highlight of the
+ * clock whose zone the list has pressed. A tick sets the face's hands and the time line's text
+ * only, so no box moves.
+ */
+export function wireClocks(
+  widget: FoundWidget,
+  options: WireClocksOptions,
 ): ClocksHandle {
-  const { signal } = options;
+  const { signal, zones: ids, zoneList } = options;
+  const items = ids.map((zone) => ({
+    zone,
+    item: widget.part(CLOCK_PARTS.item(zone)),
+    face: widget.part(CLOCK_PARTS.face(zone)),
+    time: widget.part(CLOCK_PARTS.time(zone)),
+  }));
   let timer: ReturnType<typeof setTimeout> | undefined;
+
+  function draw(
+    entry: (typeof items)[number],
+    zone: ClockZone | undefined,
+    at: string,
+  ): void {
+    const offset = zone ? offsetAt(options.lib, zone, at) : "";
+    const wall =
+      offset === ""
+        ? ""
+        : options.lib.convertUtcToPlainDateTime(at, { timeZone: offset });
+    if (wall === "") {
+      setHtml(entry.time, clockNoSignal());
+      entry.time.title = SIGNAL_LOST;
+      return;
+    }
+    entry.time.removeAttribute("title");
+    const hms = wallHms(wall);
+    setHtml(entry.time, clockTime(hms, offset));
+    updateCrystalClock(entry.face, {
+      id: `${options.idPrefix}-${clockSlug(entry.zone)}`,
+      hour: Number(wall.slice(11, 13)),
+      minute: Number(wall.slice(14, 16)),
+      second: Number(hms.slice(6, 8)),
+      label: entry.zone,
+      sublabel: `${wall.slice(11, 16)}, ${spokenOffset(offset)}`,
+    });
+  }
 
   function tick(): void {
     clearTimeout(timer);
-    const zones = options.read();
-    if (signal.aborted || zones === null) return;
+    const rows = options.read();
+    if (signal.aborted || rows === null) return;
     const at = options.now();
-    root
-      .querySelectorAll<HTMLElement>(".gmt-clockcheck-clock")
-      .forEach((item) => {
-        drawClock(
-          options,
-          item,
-          zones.find((z) => z.zone === item.dataset.zone),
-          at,
-        );
-      });
+    for (const entry of items)
+      draw(
+        entry,
+        rows.find((z) => z.zone === entry.zone),
+        at,
+      );
     timer = setTimeout(tick, msToNextSecond(at));
   }
   signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
 
   // The clock of the zone picked in the list takes a full highlight; the others stay as they are.
-  const zoneList = root.querySelector<HTMLElement>('[data-role="zone-list"]');
   const markPicked = (): void => {
     const picked = zoneList?.querySelector<HTMLElement>('[aria-pressed="true"]')
-      ?.dataset.tzId;
-    root
-      .querySelectorAll<HTMLElement>(".gmt-clockcheck-clock")
-      .forEach((item) => {
-        if (picked !== undefined && item.dataset.zone === picked)
-          item.dataset.picked = "true";
-        else delete item.dataset.picked;
-      });
+      ?.dataset["tzId"];
+    for (const { zone, item } of items) {
+      if (picked !== undefined && zone === picked)
+        item.dataset["picked"] = "true";
+      else delete item.dataset["picked"];
+    }
   };
   if (zoneList) {
     const watcher = new MutationObserver(markPicked);

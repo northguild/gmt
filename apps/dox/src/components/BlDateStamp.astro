@@ -26,7 +26,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderBlDateStampTemplate();
+const html = renderBlDateStampTemplate("bl-date-stamp", {}).value;
 ---
 
 {
@@ -48,7 +48,7 @@ const html = renderBlDateStampTemplate();
        first preset. */
     const seed = seedFromLocation("bldate");
     document
-      .querySelectorAll<HTMLElement>(".gmt-bl-date-stamp")
+      .querySelectorAll<HTMLElement>('[data-widget="bl-date-stamp"]')
       .forEach((el) => {
         mountBlDateStamp(el, seed, new AbortController().signal).catch(
           (error) => showUnavailable(el, error),

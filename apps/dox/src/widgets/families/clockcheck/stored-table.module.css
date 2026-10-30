@@ -1,0 +1,221 @@
+/* storedTable: one compact row per saved line. Narrow, each row is a small card and the header row
+   is kept for screen readers. Nothing is wider than the column (the 375 px page overflow fix):
+   every stacked box has min-inline-size 0 and max-inline-size 100%, and a long value scrolls in
+   its own box. The `stored` container is the answers column in the section's module. */
+
+.box {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.table {
+  display: table;
+  inline-size: 100%;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0 var(--gmt-space-1);
+  color: var(--gmt-ice);
+  font-size: 0.8125rem;
+
+  & thead th {
+    padding: 0 var(--gmt-space-3);
+    border: 0;
+    background: none;
+    color: var(--gmt-ice);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: start;
+    white-space: nowrap;
+  }
+
+  & td {
+    inline-size: auto;
+    padding: var(--gmt-space-2) var(--gmt-space-3);
+    border: 0;
+    border-block: 1px solid var(--gmt-border);
+    background: var(--gmt-surface-widget);
+    vertical-align: middle;
+  }
+
+  & td:first-child {
+    inline-size: 1%;
+    white-space: nowrap;
+    border-inline-start: 1px solid var(--gmt-border);
+    border-start-start-radius: var(--gmt-radius-md);
+    border-end-start-radius: var(--gmt-radius-md);
+  }
+
+  & td:last-child {
+    border-inline-end: 1px solid var(--gmt-border);
+    border-start-end-radius: var(--gmt-radius-md);
+    border-end-end-radius: var(--gmt-radius-md);
+  }
+
+  & tr[hidden] {
+    display: none;
+  }
+}
+
+/* The table's name is read, not shown: the summary above it says what it holds. */
+.caption {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.input {
+  max-inline-size: 22rem;
+
+  & code {
+    display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    background: none;
+    color: var(--gmt-ice);
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+}
+
+.says {
+  & p {
+    margin: 0;
+  }
+
+  & p + p,
+  & p + div {
+    margin-block-start: var(--gmt-space-1);
+  }
+}
+
+.fix {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-2);
+
+  & code {
+    overflow-wrap: anywhere;
+    background: none;
+    color: var(--gmt-ice);
+    font-size: 0.75rem;
+  }
+}
+
+.alt {
+  color: var(--gmt-ice);
+}
+
+/* The readings disclosure sits in the flow of its cell: its panel is not a floating menu here. */
+.readings {
+  display: block;
+
+  & > div {
+    position: static;
+    inline-size: auto;
+    max-inline-size: 100%;
+    margin-block-start: var(--gmt-space-1);
+    padding: var(--gmt-space-2);
+    box-sizing: border-box;
+  }
+}
+
+.dl {
+  display: grid;
+  gap: var(--gmt-space-1);
+  margin: 0;
+
+  & > div {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--gmt-space-2);
+  }
+
+  & dt,
+  & dd {
+    margin: 0;
+  }
+
+  & dd {
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  & code {
+    background: none;
+    color: var(--gmt-ice);
+  }
+}
+
+@container stored (inline-size < 48rem) {
+  .table thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table,
+  .table tbody {
+    display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    border-spacing: 0;
+  }
+
+  .table tr {
+    display: grid;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    gap: var(--gmt-space-1);
+    margin-block-end: var(--gmt-space-2);
+    padding: var(--gmt-space-2) var(--gmt-space-3);
+    border: 1px solid var(--gmt-border);
+    border-radius: var(--gmt-radius-md);
+    corner-shape: bevel;
+    background: var(--gmt-surface-widget);
+  }
+
+  .table tr[hidden] {
+    display: none;
+  }
+
+  .table td,
+  .table td:first-child,
+  .table td:last-child {
+    display: block;
+    inline-size: auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    white-space: normal;
+  }
+
+  .input {
+    max-inline-size: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .table td,
+  .table tr {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .table td,
+  .table tr {
+    border-color: var(--gmt-ice);
+  }
+}

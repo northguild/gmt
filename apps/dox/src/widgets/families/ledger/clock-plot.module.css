@@ -1,0 +1,254 @@
+/* The Demurrage Clock's plot: events rail over four clock lanes. Tokens only. Text sits on
+   an opaque `--gmt-surface` chip. A clock that is not the chosen one is dimmed on its bar;
+   its label stays at full contrast. Amber is the sentinel's alone and is not used here. */
+
+.plot {
+  --head: 2.9rem;
+  --rail-h: 8rem;
+  --lane-h: 4.6rem;
+
+  container: clock-plot / inline-size;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.rail {
+  position: absolute;
+  inset: var(--head) 0 auto 0;
+  block-size: var(--rail-h);
+}
+
+/* An event owns no box: its diamond and its chip place themselves on the rail. */
+.event {
+  block-size: 0;
+}
+
+.diamond {
+  position: absolute;
+  inset-inline-start: var(--at);
+  inset-block-end: 0.5rem;
+  translate: -50% 0;
+  rotate: 45deg;
+  box-sizing: content-box;
+  inline-size: 12px;
+  block-size: 12px;
+  border: 2px solid var(--gmt-surface);
+  border-radius: 4px;
+  corner-shape: bevel;
+  background: var(--gmt-ice);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gmt-cyan) 25%, transparent);
+}
+
+.chip {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(var(--at) + 12px);
+  z-index: var(--gmt-z-over);
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.time::before {
+  content: "\00a0·\00a0";
+}
+
+/* On a narrow plot a chip holds its word; the local time rides in the plates and the label. */
+@container clock-plot (inline-size <= 30rem) {
+  .time {
+    display: none;
+  }
+}
+
+.lanes {
+  position: absolute;
+  inset: calc(var(--head) + var(--rail-h)) 0 0;
+  display: grid;
+  grid-auto-rows: var(--lane-h);
+}
+
+.lane {
+  --series: var(--gmt-series-1);
+
+  position: relative;
+  min-inline-size: 0;
+  border-block-start: 1px solid var(--gmt-border-strong);
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+}
+
+.label {
+  position: absolute;
+  inset-block-start: var(--gmt-space-1);
+  inset-inline-start: var(--gmt-space-1);
+  max-inline-size: calc(100% - 2 * var(--gmt-space-1));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--series);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* The half-open bar: a solid capped start edge, a dashed open end edge. */
+.bar {
+  position: absolute;
+  inset-block-end: var(--gmt-space-2);
+  inset-inline-start: calc(var(--from) * 1%);
+  inline-size: calc((var(--to) - var(--from)) * 1%);
+  block-size: 1.7rem;
+  min-inline-size: 2px;
+  box-sizing: border-box;
+  border-block-start: 1px solid var(--gmt-border-strong);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--series) 40%, transparent),
+    color-mix(in srgb, var(--series) 14%, transparent)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset-block: -2px 0;
+    inset-inline-start: -1px;
+    inline-size: 2px;
+    background: var(--series);
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: -1px;
+    inline-size: 0;
+    border-inline-start: 2px dashed var(--series);
+  }
+}
+
+.lane[data-chosen="false"] .bar {
+  opacity: 0.45;
+}
+
+/* The reason a clock is null: a chip with a short sentence, which may wrap on a narrow plot. */
+.why {
+  position: absolute;
+  inset-block-end: var(--gmt-space-1);
+  inset-inline-start: var(--gmt-space-1);
+  max-inline-size: calc(100% - 2 * var(--gmt-space-1));
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  white-space: normal;
+}
+
+.empty {
+  position: absolute;
+  inset-block-start: calc(var(--head) + var(--gmt-space-2));
+  inset-inline-start: var(--gmt-space-1);
+  max-inline-size: calc(100% - 2 * var(--gmt-space-1));
+  margin: 0;
+  padding: 2px var(--gmt-space-2);
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: normal;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .diamond {
+    border-color: Canvas;
+    background: CanvasText;
+    box-shadow: none;
+  }
+
+  .chip,
+  .label,
+  .why,
+  .empty {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+  }
+
+  .lane {
+    border-block-start-color: CanvasText;
+  }
+
+  .bar {
+    border-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+
+    &::before {
+      background: Highlight;
+    }
+
+    &::after {
+      border-color: Highlight;
+    }
+  }
+
+  .lane[data-chosen="false"] .bar {
+    opacity: 1;
+    border-style: dashed;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .chip,
+  .why,
+  .label {
+    border-color: var(--gmt-ice);
+  }
+
+  .lane {
+    border-block-start-color: var(--gmt-ice);
+  }
+
+  .lane[data-chosen="false"] .bar {
+    opacity: 0.7;
+  }
+}

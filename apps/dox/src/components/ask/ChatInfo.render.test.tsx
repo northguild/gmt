@@ -9,50 +9,55 @@
 import { render, screen, within } from "@testing-library/react";
 import { gmtStats } from "~/data/gmt-stats";
 import { LICENCE_LINK_TEXT, LICENCE_URL } from "~/lib/licence";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import { ChatInfo } from "./ChatInfo";
 
+// The panel is `display: none` until opened, so its name is empty to the tree.
+const BUTTON = "About Dox's answers and licences";
+
 describe("the composer's info button", () => {
-  it("is a named button that opens its own popup", () => {
-    render(<ChatInfo />);
-    const button = screen.getByRole("button", {
-      name: "About Dox's answers and licences",
-    });
-    expect(button.getAttribute("type")).toBe("button");
-    const panelId = button.getAttribute("popovertarget");
-    expect(panelId).toBeTruthy();
-    const panel = document.getElementById(panelId ?? "");
-    expect(panel?.getAttribute("popover")).toBe("auto");
+  it("is a named button that opens its own popup", async () => {
+    const { container } = render(<ChatInfo />);
+    const button = screen.getByRole("button", { name: BUTTON });
+    const panel = screen.getByRole("region", { hidden: true });
+    expect(button).toHaveAttribute("type", "button");
+    expect(panel.id).not.toBe("");
+    expect(button).toHaveAttribute("popovertarget", panel.id);
+    expect(panel).toHaveAttribute("popover", "auto");
+    await expectNoAxeViolations(container);
   });
 
-  it("holds both the free-model note and the licence note", () => {
-    render(<ChatInfo />);
-    const button = screen.getByRole("button", {
-      name: "About Dox's answers and licences",
-    });
-    const panel = document.getElementById(
-      button.getAttribute("popovertarget") ?? "",
-    ) as HTMLElement;
-    expect(panel.textContent).toContain("can get things wrong");
-    expect(panel.textContent).toContain(
+  it("holds both the free-model note and the licence note", async () => {
+    const { container } = render(<ChatInfo />);
+    const panel = screen.getByRole("region", { hidden: true });
+    expect(panel).toHaveTextContent("can get things wrong");
+    expect(panel).toHaveTextContent(
       `checked by ${new Intl.NumberFormat("en-US").format(gmtStats.tests)} tests`,
     );
-    const link = within(panel).getByRole("link", {
-      name: LICENCE_LINK_TEXT,
-      hidden: true,
-    });
-    expect(link.getAttribute("href")).toBe(LICENCE_URL);
+    expect(
+      within(panel).getByRole("link", {
+        name: LICENCE_LINK_TEXT,
+        hidden: true,
+      }),
+    ).toHaveAttribute("href", LICENCE_URL);
+    await expectNoAxeViolations(container);
   });
 
-  it("gives each instance its own popup", () => {
-    render(
+  it("gives each instance its own popup", async () => {
+    const { container } = render(
       <>
         <ChatInfo />
         <ChatInfo />
       </>,
     );
-    const ids = screen
-      .getAllByRole("button", { name: "About Dox's answers and licences" })
-      .map((b) => b.getAttribute("popovertarget"));
-    expect(new Set(ids).size).toBe(2);
+    const buttons = screen.getAllByRole("button", { name: BUTTON });
+    const panels = screen.getAllByRole("region", { hidden: true });
+    expect(buttons).toHaveLength(2);
+    expect(panels).toHaveLength(2);
+    expect(panels[0]!.id).not.toBe(panels[1]!.id);
+    buttons.forEach((b, i) => {
+      expect(b).toHaveAttribute("popovertarget", panels[i]!.id);
+    });
+    await expectNoAxeViolations(container);
   });
 });

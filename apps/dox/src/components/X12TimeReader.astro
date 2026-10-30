@@ -32,7 +32,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderX12TimeReaderTemplate();
+const html = renderX12TimeReaderTemplate("x12-time-reader", {}).value;
 ---
 
 {
@@ -53,7 +53,7 @@ const html = renderX12TimeReaderTemplate();
        see lib/widget-permalink.ts. Absent or malformed, the widget opens on
        its first preset. */
     const seed = seedFromLocation("xtime");
-    document.querySelectorAll<HTMLElement>(".gmt-x12-time-reader").forEach((el) => {
+    document.querySelectorAll<HTMLElement>('[data-widget="x12-time-reader"]').forEach((el) => {
       mountX12TimeReader(el, seed, new AbortController().signal).catch(
         (error) => showUnavailable(el, error),
       );

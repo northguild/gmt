@@ -72,7 +72,7 @@ export function slotOffset(slot: UniformSlot): number {
   return UNIFORM_SLOTS.indexOf(slot) * SLOT_FLOATS * 4;
 }
 
-export interface UniformInput {
+interface UniformInput {
   /** Canvas size in device pixels. */
   widthDev: number;
   heightDev: number;

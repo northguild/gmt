@@ -8,7 +8,6 @@ import {
   NOT_INSTANT_TEXT,
   NO_OFFSET_TEXT,
   blankPlates,
-  canDrawRulers,
   elapsedPlates,
   isSeeded,
   matchPreset,
@@ -16,7 +15,6 @@ import {
   presetState,
   readArgs,
   readElapsed,
-  resultsText,
   rulerModel,
   summaryText,
 } from "./elapsed-vs-clock";
@@ -263,15 +261,6 @@ describe("plates and sentences", () => {
       ),
     ).toBe("Give a start and an end to compare.");
   });
-
-  it("writes results with the n of a bigint", () => {
-    const read = readElapsed(lib, presetState(ELAPSED_PRESETS[0]!));
-    expect(resultsText(read.clockCalls)).toBe("2000000000n");
-    expect(resultsText(read.elapsedCalls)).toBe(
-      '"2017-01-01T00:00:35 TAI"\n"2017-01-01T00:00:38 TAI"\n3000000000n',
-    );
-    expect(resultsText(read.countCalls)).toBe("1");
-  });
 });
 
 describe("the rulers", () => {
@@ -329,7 +318,6 @@ describe("the rulers", () => {
 
   it("draws nothing for an end it cannot place", () => {
     const state = { start: "garbage", end: "2024-01-01T00:00:00Z" };
-    expect(canDrawRulers(state)).toBe(false);
     expect(rulerModel(state, readElapsed(lib, state), 600)).toBeNull();
   });
 });

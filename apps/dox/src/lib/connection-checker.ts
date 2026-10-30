@@ -48,7 +48,7 @@ export interface ConnectionState {
 
 export const CUSTOM_PRESET_ID = "custom";
 
-export interface ConnectionPreset {
+interface ConnectionPreset {
   id: string;
   label: string;
   description: string;
@@ -189,7 +189,7 @@ export function permalinkOf(state: ConnectionState): Record<string, string> {
 // The verdict — from the library alone
 // ---------------------------------------------------------------------------
 
-export type VerdictKind = "made" | "missed" | "no-verdict";
+type VerdictKind = "made" | "missed" | "no-verdict";
 
 export interface Verdict {
   kind: VerdictKind;
@@ -249,7 +249,7 @@ export function verdict(
 // The naive check — "the times as printed"
 // ---------------------------------------------------------------------------
 
-export interface NaiveCheck {
+interface NaiveCheck {
   lands: string;
   ready: string;
   leaves: string;

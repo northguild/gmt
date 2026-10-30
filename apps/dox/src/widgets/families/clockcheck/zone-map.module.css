@@ -1,0 +1,868 @@
+/* The map section of a dated tz-change checker: the map and its legend, the zone list, the pin
+   panel and the slot of the live clocks. Amber is the sentinel's alone (marks.module.css). */
+
+/* The palette is the globe's own, flat and translucent, with no stripes or dots. The map frame and
+   every swatch are `gmt-theme-dark` islands (markup), so these tokens resolve to the dark theme's
+   values in both themes, exactly as the globe does:
+     never changes  -> the globe's land: cyan at the land alpha, a cyan stroke (globe.ts landStroke)
+     still changes  -> the DST colour: gold, as on the filter panel's DST switch
+     stops in 2026  -> the highlight: DST purple, the class that stands out most
+   The pinned zone is the globe's selection (green, full alpha, 2px) over its class fill. Every
+   class stroke holds 3:1 against the map background (canada-palette.test.ts). The alphas are
+   plain numbers so that test reads them. */
+.map,
+.swatch {
+  --zonemap-sea-cyan: 0.06;
+  --zonemap-land-cyan: 0.11;
+  --zonemap-land-edge-a: 0.22;
+  --zonemap-none-fill-a: 0.12;
+  --zonemap-none-edge-a: 0.5;
+  --zonemap-changes-fill-a: 0.18;
+  --zonemap-changes-edge-a: 0.6;
+  --zonemap-stopped-fill-a: 0.45;
+  --zonemap-sea: color-mix(
+    in srgb,
+    var(--gmt-cyan) calc(var(--zonemap-sea-cyan) * 100%),
+    var(--gmt-globe-casing)
+  );
+
+  /* The land no zone covers: a step above the sea and below the "never changes" fill. */
+  --zonemap-land: color-mix(
+    in srgb,
+    var(--gmt-cyan) calc(var(--zonemap-land-cyan) * 100%),
+    var(--gmt-globe-casing)
+  );
+  --zonemap-land-edge: color(
+    from var(--gmt-cyan) srgb r g b / var(--zonemap-land-edge-a)
+  );
+  --zonemap-none-fill: color(
+    from var(--gmt-cyan) srgb r g b / var(--zonemap-none-fill-a)
+  );
+  --zonemap-none-edge: color(
+    from var(--gmt-cyan) srgb r g b / var(--zonemap-none-edge-a)
+  );
+  --zonemap-changes-fill: color(
+    from var(--gmt-dst-gold) srgb r g b / var(--zonemap-changes-fill-a)
+  );
+  --zonemap-changes-edge: color(
+    from var(--gmt-dst-gold-ink) srgb r g b / var(--zonemap-changes-edge-a)
+  );
+  --zonemap-stopped-fill: color(
+    from var(--gmt-dst-purple) srgb r g b / var(--zonemap-stopped-fill-a)
+  );
+  --zonemap-stopped-edge: var(--gmt-dst-purple-ink);
+}
+
+/* --- The section: the map, the zone card and the live clocks ---------------- */
+
+/* Below 62rem they stack in that order, the map full width but never taller than 70% of the
+   viewport. From 62rem all three share one row of one height: the map's frame is
+   `--gmt-zonemap-row` tall at its drawing's own aspect, so its column is as wide as the drawing
+   needs and the sea never letterboxes, and the cards take the rest equally. Below 520px the map is
+   not drawn, and the panel opens below the list, outside its scroll box. Nothing scrolls sideways. */
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--gmt-space-4);
+
+  & > * {
+    min-inline-size: 0;
+    margin: 0;
+  }
+}
+
+/* The cards: the checker's own surface, so the map section reads as its neighbours do. */
+.stage,
+.pickCard {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  backdrop-filter: var(--gmt-glass-blur);
+
+  & h4 {
+    margin: 0 0 var(--gmt-space-2);
+  }
+}
+
+.stage {
+  display: grid;
+
+  /* One column that can shrink: WebKit sizes an auto column to the drawing's intrinsic width and
+     pushes the page sideways. */
+  grid-template-columns: minmax(0, 1fr);
+  padding: var(--gmt-space-3);
+  border-color: var(--gmt-border-strong);
+}
+
+.block {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.pickCard {
+  margin: 0;
+}
+
+.hint {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.clocksSlot {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+
+  & > * {
+    flex: 1 1 auto;
+  }
+}
+
+/* Registered, so the row's height is worked out once on the map section, against the checker's
+   width. Unregistered, `cqw` would be read on the map against the nearest container, the stage.
+   The initial value must not depend on a font size (`rem` voids the rule); the row rule always
+   sets it. */
+@property --gmt-zonemap-row {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@container gmt-clockcheck (min-width: 62rem) {
+  .section {
+    /* The row's height: a share of the checker's width, never under 22rem and never over 28rem, and
+       never so short that the frame falls under 400px wide (the labels need that much). Container
+       units, so the chat rail takes the same rule. */
+    --gmt-zonemap-row: clamp(
+      max(22rem, calc(400px * var(--zonemap-map-height, 640) / 800)),
+      32cqw,
+      28rem
+    );
+
+    /* The map's column is the frame's width plus the stage's padding and border. Each card is an
+       inline-size container, so `max-content` would read the stage as empty and collapse it. */
+    grid-template-columns:
+      calc(
+        var(--gmt-zonemap-row) * 800 / var(--zonemap-map-height, 640) + 2 *
+          var(--gmt-space-3) + 2px
+      )
+      minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .stage {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .pickCard {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .clocksSlot {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .pin {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .map {
+    inline-size: calc(
+      var(--gmt-zonemap-row) * 800 / var(--zonemap-map-height, 640)
+    );
+    margin-inline: 0;
+  }
+
+  /* The zone card is a column of the row: the list takes whatever height the row leaves. The
+     scroll box is laid over its frame, so its content adds nothing to the row's height. */
+  .pick {
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .zoneFrame {
+    position: relative;
+  }
+
+  .zoneScroll {
+    position: absolute;
+    inset: var(--gmt-space-1);
+    max-block-size: none;
+  }
+}
+
+/* Below 520px the map and its legend are not drawn; the list stays. */
+@container gmt-clockcheck (max-width: 519.98px) {
+  .stage,
+  .map {
+    display: none;
+  }
+
+  /* Until a zone is pinned there is no map to give the panel's space a purpose, so it is not drawn
+     at all: the first paint is already the narrow layout and nothing shrinks when the script runs.
+     The mount sets `data-pinned` on the first pin. */
+  .pin:not([data-pinned="true"]) {
+    display: none;
+  }
+
+  .pin {
+    grid-template-columns: minmax(0, 1fr);
+    margin-block-start: var(--gmt-space-1);
+  }
+}
+
+/* --- The map and its legend ----------------------------------------------- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-4);
+  margin: var(--gmt-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.75rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+}
+
+/* The same flat fill and stroke mark the legend, a list card and the pin panel. */
+.swatch {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 1.5rem;
+  block-size: 1rem;
+  vertical-align: middle;
+  border: 1.5px solid var(--zonemap-none-edge);
+  border-radius: var(--gmt-radius-sm);
+  background:
+    linear-gradient(var(--zonemap-none-fill), var(--zonemap-none-fill)),
+    var(--zonemap-sea);
+
+  &[data-kind="stopped"] {
+    border-color: var(--zonemap-stopped-edge);
+    background:
+      linear-gradient(var(--zonemap-stopped-fill), var(--zonemap-stopped-fill)),
+      var(--zonemap-sea);
+  }
+
+  &[data-kind="changes-after"] {
+    border-color: var(--zonemap-changes-edge);
+    background:
+      linear-gradient(var(--zonemap-changes-fill), var(--zonemap-changes-fill)),
+      var(--zonemap-sea);
+  }
+}
+
+.map {
+  position: relative;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--zonemap-sea);
+
+  /* The drawing's box is 800 by the config's height; the section sets `--zonemap-map-height`, so
+     the box is reserved before it draws. */
+  aspect-ratio: 800 / var(--zonemap-map-height, 640);
+
+  /* Stacked: the frame takes the width, but a tall drawing stops at 70% of the viewport's height. */
+  inline-size: min(100%, calc(70vh * 800 / var(--zonemap-map-height, 640)));
+  margin-inline: auto;
+  overflow: hidden;
+}
+
+.svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/* The land around the zones (Mali, France, the United States): drawn first, a decoration. */
+.land {
+  fill: var(--zonemap-land);
+  stroke: var(--zonemap-land-edge);
+  stroke-width: 0.75;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* --- Place labels ---------------------------------------------------------- */
+
+/* The map is a dark island, so these colours are the same in both themes. The layer lies over the
+   drawing and takes no pointer, so a label never steals a click from a shape or a ring. A label's
+   type is a fixed 12px at every frame width; only its position scales, as a share of the frame. */
+.labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.label {
+  --zonemap-halo: color-mix(in srgb, var(--zonemap-sea) 85%, transparent);
+
+  position: absolute;
+
+  /* The anchor is the label's centre; the box is pushed back inside the frame, so a label never
+     crosses its edge. `--lw` and `--lh` are the label's reserved size in px (zone-map-labels.ts). */
+  inset-inline-start: clamp(
+    calc(var(--lw) / 2),
+    var(--ax),
+    calc(100% - var(--lw) / 2)
+  );
+  inset-block-start: clamp(
+    calc(var(--lh) / 2),
+    var(--ay),
+    calc(100% - var(--lh) / 2)
+  );
+  inline-size: var(--lw);
+  block-size: var(--lh);
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+
+  /* A passing label lies over a permanent one if they meet. */
+  z-index: var(--gmt-z-raised);
+
+  --zonemap-halo-shadow:
+    3px 0 0 var(--zonemap-halo), 2.77px 1.15px 0 var(--zonemap-halo),
+    2.12px 2.12px 0 var(--zonemap-halo), 1.15px 2.77px 0 var(--zonemap-halo),
+    0 3px 0 var(--zonemap-halo), -1.15px 2.77px 0 var(--zonemap-halo),
+    -2.12px 2.12px 0 var(--zonemap-halo), -2.77px 1.15px 0 var(--zonemap-halo),
+    -3px 0 0 var(--zonemap-halo), -2.77px -1.15px 0 var(--zonemap-halo),
+    -2.12px -2.12px 0 var(--zonemap-halo),
+    -1.15px -2.77px 0 var(--zonemap-halo), -0 -3px 0 var(--zonemap-halo),
+    1.15px -2.77px 0 var(--zonemap-halo), 2.12px -2.12px 0 var(--zonemap-halo),
+    2.77px -1.15px 0 var(--zonemap-halo), 1.66px 0.69px 0 var(--zonemap-halo),
+    0.69px 1.66px 0 var(--zonemap-halo), -0.69px 1.66px 0 var(--zonemap-halo),
+    -1.66px 0.69px 0 var(--zonemap-halo), -1.66px -0.69px 0 var(--zonemap-halo),
+    -0.69px -1.66px 0 var(--zonemap-halo), 0.69px -1.66px 0 var(--zonemap-halo),
+    1.66px -0.69px 0 var(--zonemap-halo);
+
+  text-shadow: var(--zonemap-halo-shadow);
+
+  &[hidden] {
+    display: none;
+  }
+
+  &[data-passing="true"] {
+    z-index: var(--gmt-z-over);
+  }
+}
+
+.labelCity {
+  font-family: var(--gmt-font-display);
+  font-size: 0.75rem;
+  line-height: 15px;
+  text-transform: uppercase;
+  color: var(--gmt-ice);
+}
+
+/* The offset line holds six characters at least, tabular, so a new offset never moves the city. */
+.labelOffset {
+  min-inline-size: 6ch;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.75rem;
+  line-height: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--gmt-cyan-bright);
+}
+
+/* --- Shapes, rings and markers --------------------------------------------- */
+
+.shape {
+  fill: var(--zonemap-none-fill);
+  stroke: var(--zonemap-none-edge);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  outline-color: transparent;
+  transition: fill var(--gmt-duration-quick);
+
+  &[data-kind="changes-after"] {
+    fill: var(--zonemap-changes-fill);
+    stroke: var(--zonemap-changes-edge);
+  }
+
+  &[data-kind="stopped"] {
+    fill: var(--zonemap-stopped-fill);
+    stroke: var(--zonemap-stopped-edge);
+    stroke-width: 1.5;
+  }
+
+  /* A light lift on hover: the fill gains alpha and the ring draws the edge in the bright cyan. */
+  &:hover {
+    filter: brightness(1.35);
+  }
+
+  /* A focused shape is a thinner, dashed ice line, so selected and focused never look alike. */
+  &:focus-visible {
+    stroke: var(--gmt-ice);
+    stroke-width: 2;
+    stroke-dasharray: 6 3;
+  }
+}
+
+/* Hover and pin are rings on top of the shapes, so a neighbour never paints over half of a line.
+   Hover is a bright cyan edge. The pinned zone is exactly the globe's selection: green at full
+   alpha, 2px, with a soft glow under it; the class fill stays visible beneath. */
+.ring {
+  pointer-events: none;
+
+  & path {
+    fill: none;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  &[data-ring="hover"] .ringInk {
+    stroke: var(--gmt-cyan-bright);
+    stroke-width: 1.5;
+  }
+
+  &[data-ring="pin"] .ringCasing {
+    stroke: color(from var(--gmt-globe-selected) srgb r g b / 30%);
+    stroke-width: 7;
+  }
+
+  &[data-ring="pin"] .ringInk {
+    stroke: var(--gmt-globe-selected);
+    stroke-width: 2;
+  }
+}
+
+.ringCasing {
+  stroke: none;
+}
+
+/* The ring on a shape too small to press (Gibraltar, Ceuta): a clear disc with the class edge, so
+   a pointer reaches it; the keyboard path is the list. The pinned and hovered states follow the
+   shapes'. */
+.marker {
+  fill: transparent;
+  stroke: var(--zonemap-none-edge);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  outline-color: transparent;
+
+  &[data-kind="changes-after"] {
+    stroke: var(--zonemap-changes-edge);
+  }
+
+  &[data-kind="stopped"] {
+    stroke: var(--zonemap-stopped-edge);
+  }
+
+  &:hover,
+  &[data-active="true"] {
+    stroke: var(--gmt-cyan-bright);
+  }
+
+  &[data-pinned="true"] {
+    stroke: var(--gmt-globe-selected);
+    stroke-width: 2;
+  }
+
+  &:focus-visible {
+    stroke: var(--gmt-ice);
+    stroke-width: 2;
+    stroke-dasharray: 6 3;
+  }
+}
+
+/* --- The zone list ---------------------------------------------------------- */
+
+/* The list is one column; a scroll box holds it. */
+.pick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+}
+
+/* The frame carries the border, the fill and a little padding, so a card cut off at the scroll
+   box's edge is drawn against the frame's own fill and never against its border line. */
+.zoneFrame {
+  display: grid;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  padding: var(--gmt-space-1);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  overflow: clip;
+}
+
+.zoneScroll {
+  /* A focused card is scrolled clear of the box's edge on both axes (SC 2.4.11). */
+  scroll-padding: 6px;
+  scroll-padding-block: var(--gmt-space-4);
+  min-block-size: 0;
+  max-block-size: min(60vh, 24rem);
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan-bright);
+    outline-offset: -2px;
+  }
+}
+
+/* Padding so a focused card's 2px outline and its 2px offset are drawn inside the scroll box on all
+   four sides, first and last card included. */
+.zoneList {
+  display: grid;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+}
+
+.zone {
+  margin: 0;
+}
+
+.zoneButton {
+  appearance: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "id"
+    "offset"
+    "kind";
+  column-gap: var(--gmt-space-3);
+  inline-size: 100%;
+  min-block-size: 1.5rem;
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-2);
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color var(--gmt-duration-quick) ease,
+    background var(--gmt-duration-quick) ease;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan-bright);
+    outline-offset: 2px;
+  }
+
+  /* The same two states as the home page's clock list: cyan border and fill for hover and focus, a
+     green border with a 1px green ring for the pinned zone. The pinned zone comes last so it keeps
+     its green while hovered. */
+  &:hover,
+  &:focus-visible,
+  &[data-active="true"] {
+    border-color: var(--gmt-cyan);
+    background: var(--gmt-fill);
+  }
+
+  &[aria-pressed="true"] {
+    border-color: var(--gmt-spring);
+    background: var(--gmt-fill);
+    box-shadow: 0 0 0 1px var(--gmt-spring);
+  }
+}
+
+.zoneId {
+  grid-area: id;
+  min-inline-size: 0;
+
+  /* The id gives way to the offset in a narrow column, and breaks only at the `<wbr>` after each
+     `/`, never inside a segment. */
+  & code {
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+}
+
+.zoneKind {
+  grid-area: kind;
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+
+  /* Two lines of the class label, so a card keeps its height whether the answer has come or not
+     and whether the label wraps. */
+  min-block-size: 3.5em;
+  color: var(--gmt-ice-dim);
+  font-size: 0.75rem;
+
+  & .swatch {
+    inline-size: 1.125rem;
+    block-size: 0.75rem;
+  }
+}
+
+.zoneOffset {
+  grid-area: offset;
+  text-align: start;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* --- The pin panel: one fixed size ------------------------------------------ */
+
+/* A head (the clock beside the zone and its class) and five readouts on one rhythm: a label over a
+   value, an even gap between every pair. The last three values hold two lines and the time and
+   offset sit side by side, so the panel is the same box for every zone and the list beside it is
+   exactly as tall. */
+.pin {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  align-content: start;
+  box-sizing: border-box;
+  text-align: start;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pinHead {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  align-items: center;
+  min-block-size: 5rem;
+}
+
+.pinClock {
+  inline-size: 5rem;
+  block-size: 5rem;
+}
+
+.pinTitle {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  margin: 0;
+
+  & dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+  }
+
+  & .swatch {
+    inline-size: 1.125rem;
+    block-size: 0.75rem;
+    margin-inline-end: var(--gmt-space-2);
+  }
+}
+
+.pinTitleRow {
+  min-inline-size: 0;
+}
+
+.pinZone {
+  /* Breaks only at the `<wbr>` after a `/`. */
+  overflow-wrap: normal;
+  min-block-size: 2.8em;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.875rem;
+  color: var(--gmt-cyan-bright);
+}
+
+.pinClass {
+  min-block-size: 2.8em;
+  font-size: 0.8125rem;
+}
+
+.pinRows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  margin: 0;
+  padding-block-start: var(--gmt-space-3);
+  border-block-start: 1px solid var(--gmt-border);
+}
+
+.pinRow,
+.pinRowWide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  font-size: 0.8125rem;
+
+  & dt {
+    color: var(--gmt-ice-dim);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  & dd {
+    min-inline-size: 0;
+    min-block-size: 1.4em;
+    margin: 0;
+
+    /* A number, so a digit or sign set in a fallback font cannot grow the line box. */
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+}
+
+.pinRowWide {
+  grid-column: 1 / -1;
+
+  /* Two lines held by the values that can wrap. */
+  & dd {
+    min-block-size: 2.8em;
+  }
+}
+
+/* From 40rem the panel runs across the checker: the clock, the zone and its class on the left, the
+   five readouts in three columns on the right. The long values hold three lines, so the panel is
+   one box for every zone. */
+@container gmt-clockcheck (min-width: 40rem) {
+  .pin {
+    grid-template-columns: minmax(14rem, 5fr) minmax(0, 8fr);
+    align-items: start;
+  }
+
+  .pinRows {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding-block-start: 0;
+    border-block-start: 0;
+  }
+
+  .pinRowWide {
+    grid-column: auto;
+
+    & dd {
+      min-block-size: 4.2em;
+    }
+  }
+}
+
+/* --- Raised contrast and forced colours -------------------------------------- */
+
+/* The halo is decoration; raised contrast draws the label on the plain ground. */
+@media (prefers-contrast: more) {
+  .label {
+    --zonemap-halo-shadow: none;
+  }
+
+  .shape,
+  .marker {
+    stroke-width: 2;
+  }
+
+  .zoneButton,
+  .zoneFrame,
+  .pin {
+    border-color: CanvasText;
+  }
+
+  .legend,
+  .hint,
+  .zoneKind,
+  .pinRow dt,
+  .pinRowWide dt {
+    color: var(--gmt-ice);
+  }
+}
+
+@media (forced-colors: active) {
+  /* The halo is a text-shadow, which forced colours drop; opting out keeps it, in the system pair. */
+  .label {
+    --zonemap-halo: Canvas;
+
+    forced-color-adjust: none;
+  }
+
+  .labelCity,
+  .labelOffset {
+    color: CanvasText;
+  }
+
+  /* The class of a zone is a pattern as well as a colour, and forced colours repaints the fills as
+     one flat Canvas. Repaint each in system colours so the three classes stay apart: hatch, solid,
+     dots. */
+  .swatch,
+  .shape[data-kind="changes-after"] {
+    forced-color-adjust: none;
+  }
+
+  .swatch {
+    border-color: CanvasText;
+    background-color: Canvas;
+
+    &[data-kind="stopped"] {
+      background-image: repeating-linear-gradient(
+        45deg,
+        CanvasText 0 1.5px,
+        transparent 1.5px 5px
+      );
+    }
+
+    &[data-kind="changes-after"] {
+      background: CanvasText;
+    }
+
+    &[data-kind="none"] {
+      background-image: radial-gradient(CanvasText 1.2px, transparent 1.6px);
+      background-size: 5px 5px;
+    }
+  }
+
+  .shape[data-kind="changes-after"] {
+    fill: CanvasText;
+  }
+
+  .zoneButton[aria-pressed="true"] {
+    border-color: Highlight;
+    outline: 2px solid Highlight;
+  }
+
+  .ring[data-ring="pin"] .ringInk,
+  .marker[data-pinned="true"] {
+    stroke: Highlight;
+  }
+}

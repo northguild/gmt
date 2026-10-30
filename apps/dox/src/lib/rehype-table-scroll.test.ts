@@ -1,4 +1,5 @@
-import rehypeTableScroll from "./rehype-table-scroll";
+import { CODE_BREAK_CLASS } from "./code-break";
+import rehypeTableScroll, { BOX_CLASS } from "./rehype-table-scroll";
 
 type Node = {
   type: string;
@@ -28,7 +29,7 @@ describe("rehypeTableScroll", () => {
       {
         type: "element",
         tagName: "div",
-        properties: { className: ["gmt-ref-table"], dataKind: "content" },
+        properties: { className: [BOX_CLASS], dataKind: "content" },
         children: [t],
       },
     ]);
@@ -46,7 +47,7 @@ describe("rehypeTableScroll", () => {
     expect(aside.children?.[0]).toBe(p);
     expect(aside.children?.[1]).toMatchObject({
       tagName: "div",
-      properties: { className: ["gmt-ref-table"] },
+      properties: { className: [BOX_CLASS] },
       children: [t],
     });
   });
@@ -56,7 +57,7 @@ describe("rehypeTableScroll", () => {
     const existing: Node = {
       type: "element",
       tagName: "div",
-      properties: { className: ["gmt-ref-table"], dataKind: "notes" },
+      properties: { className: [BOX_CLASS], dataKind: "notes" },
       children: [t],
     };
     run({ type: "root", children: [existing] });
@@ -106,7 +107,7 @@ describe("rehypeTableScroll code break points", () => {
     const t = cellTable("import { a } from");
     run({ type: "root", children: [t] });
     const code = firstCode(t);
-    expect(code.properties?.className).toEqual(["gmt-codebreak"]);
+    expect(code.properties).toEqual({ className: [CODE_BREAK_CLASS] });
     expect(code.children?.filter((c) => c.tagName === "span")).toHaveLength(5);
   });
 
@@ -127,16 +128,16 @@ describe("rehypeTableScroll code break points", () => {
 
   it("processes a table that is already in a box", () => {
     const t = cellTable("a b");
-    const existing = el("div", [t], { className: ["gmt-ref-table"] });
+    const existing = el("div", [t], { className: [BOX_CLASS] });
     run({ type: "root", children: [existing] });
-    expect(firstCode(t).properties?.className).toEqual(["gmt-codebreak"]);
+    expect(firstCode(t).properties).toEqual({ className: [CODE_BREAK_CLASS] });
   });
 
   it("processes a table inside an MDX element", () => {
     const t = cellTable("a b");
     const jsx: Node = { type: "mdxJsxFlowElement", children: [t] };
     run({ type: "root", children: [jsx] });
-    expect(firstCode(t).properties?.className).toEqual(["gmt-codebreak"]);
+    expect(firstCode(t).properties).toEqual({ className: [CODE_BREAK_CLASS] });
   });
 });
 
@@ -164,7 +165,7 @@ describe("rehypeTableScroll entries marker", () => {
       children: [m, el("p", [text("between")]), t],
     });
     expect(tree.children![2].properties).toEqual({
-      className: ["gmt-ref-table"],
+      className: [BOX_CLASS],
       dataKind: "content",
     });
     expect(tree.children![0]).toBe(m);
@@ -178,10 +179,66 @@ describe("rehypeTableScroll entries marker", () => {
     });
     expect(tree.children![1].properties).not.toHaveProperty("dataLayout");
   });
+});
 
-  it("does not label a table without the marker", () => {
+describe("rehypeTableScroll column labels", () => {
+  const headCells = (t: Node) => t.children![0].children![0].children!;
+  const bodyCells = (t: Node) => t.children![1].children![0].children!;
+
+  it("names each cell's column after its header in a two-column table", () => {
     const t = cellTable("x");
     run({ type: "root", children: [t] });
-    expect(t.children![1].children![0].children![0].properties).toEqual({});
+    expect(headCells(t).map((c) => c.properties?.dataCol)).toEqual([
+      "Call",
+      "Result",
+    ]);
+    expect(bodyCells(t).map((c) => c.properties?.dataCol)).toEqual([
+      "Call",
+      "Result",
+    ]);
+  });
+
+  it("names the columns of a three-column table, without a marker", () => {
+    const t = el("table", [
+      el("thead", [
+        el("tr", [
+          el("th", [text("Option")]),
+          el("th", [el("code", [text("Type")])]),
+          el("th", [text("Default")]),
+        ]),
+      ]),
+      el("tbody", [
+        el("tr", [
+          el("td", [text("a")]),
+          el("td", [text("b")]),
+          el("td", [text("c")]),
+        ]),
+      ]),
+    ]);
+    run({ type: "root", children: [t] });
+    expect(bodyCells(t).map((c) => c.properties?.dataCol)).toEqual([
+      "Option",
+      "Type",
+      "Default",
+    ]);
+  });
+
+  it("names the columns of a table already in a box", () => {
+    const t = cellTable("x");
+    run({
+      type: "root",
+      children: [el("div", [t], { className: [BOX_CLASS] })],
+    });
+    expect(bodyCells(t).map((c) => c.properties?.dataCol)).toEqual([
+      "Call",
+      "Result",
+    ]);
+  });
+
+  it("keeps a column name a cell already carries", () => {
+    const t = cellTable("x");
+    bodyCells(t)[1].properties = { dataCol: "Own" };
+    run({ type: "root", children: [t] });
+    expect(bodyCells(t)[1].properties?.dataCol).toBe("Own");
   });
 });

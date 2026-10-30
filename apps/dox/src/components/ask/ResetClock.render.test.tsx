@@ -6,18 +6,14 @@
  * cover the rules as pure functions; this covers that they reach the DOM, and
  * that the reader's picks reach the shared date display store.
  */
-import {
-  act,
-  fireEvent,
-  render,
-  renderHook,
-  screen,
-} from "@testing-library/react";
+import { act, render, renderHook, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { dateDisplayStore, resetDateDisplay } from "~/lib/date-display-store";
 import { ResetClock } from "./ResetClock";
 import type { BrainsInfo } from "./use-brains";
 import { useResetClock, type ResetClockState } from "./use-reset-clock";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import { expectNoAxeViolations } from "~/test/render-widget";
 
 installJsdomShims();
 
@@ -73,8 +69,9 @@ function clockState(overrides: Partial<ResetClockState> = {}): ResetClockState {
   };
 }
 
-function openPanel() {
-  fireEvent.click(screen.getByRole("button", { name: /reset/i }));
+async function openPanel(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: /reset/i }));
+  return screen.findByRole("dialog", { name: "Quota resets" });
 }
 
 describe("ResetClock", () => {
@@ -87,49 +84,54 @@ describe("ResetClock", () => {
         clock={clockState({ ready: false })}
       />,
     );
-    expect(container.innerHTML).toBe("");
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("renders nothing without a budget to read", () => {
     const { container } = render(
       <ResetClock info={null} selectedBrainId={null} clock={clockState()} />,
     );
-    expect(container.innerHTML).toBe("");
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it("shows the reader's own reset in their zone and chosen format", () => {
-    render(
+  it("shows the reader's own reset in their zone and chosen format", async () => {
+    const { container } = render(
       <ResetClock info={INFO} selectedBrainId={null} clock={clockState()} />,
     );
     // Pacific midnight is 4 PM the same day in Tokyo.
-    expect(
-      screen.getByRole("button", { name: /reset/i }).textContent,
-    ).toContain("today at 4:00 PM");
+    const chip = screen.getByRole("button", { name: /reset/i });
+    expect(chip).toHaveTextContent("today at 4:00 PM");
+    expect(chip).toHaveAccessibleName(/today at 4:00 PM/);
+    await expectNoAxeViolations(container);
   });
 
-  it("lists every reset in the panel, each on its own clock", () => {
+  it("lists every reset in the panel, each on its own clock", async () => {
+    const user = userEvent.setup();
     render(
       <ResetClock info={INFO} selectedBrainId={null} clock={clockState()} />,
     );
-    openPanel();
-    const panel = screen.getByRole("dialog", { name: "Quota resets" });
+    const panel = await openPanel(user);
     // Gemini and the visitor at Pacific midnight (4 PM Tokyo), Workers AI at
     // UTC midnight (9 AM Tokyo).
-    expect(panel.textContent).toContain("Your questions");
-    expect(panel.textContent).toContain("today at 4:00 PM");
-    expect(panel.textContent).toContain("Workers AI");
-    expect(panel.textContent).toContain("today at 9:00 AM");
+    expect(panel).toHaveTextContent("Your questions");
+    expect(panel).toHaveTextContent("today at 4:00 PM");
+    expect(panel).toHaveTextContent("Workers AI");
+    expect(panel).toHaveTextContent("today at 9:00 AM");
+    await expectNoAxeViolations(panel);
   });
 
-  it("reports a format pick", () => {
+  it("reports a format pick", async () => {
+    const user = userEvent.setup();
     const clock = clockState();
     render(<ResetClock info={INFO} selectedBrainId={null} clock={clock} />);
-    openPanel();
-    fireEvent.click(screen.getByRole("radio", { name: /ISO 8601 zoned/ }));
+    const panel = await openPanel(user);
+    await user.click(screen.getByRole("radio", { name: /ISO 8601 zoned/ }));
     expect(clock.setFormatId).toHaveBeenCalledWith("iso-zoned");
+    await expectNoAxeViolations(panel);
   });
 
-  it("disables the zone search for a format the zone cannot change", () => {
+  it("disables the zone search for a format the zone cannot change", async () => {
+    const user = userEvent.setup();
     render(
       <ResetClock
         info={INFO}
@@ -137,24 +139,27 @@ describe("ResetClock", () => {
         clock={clockState({ formatId: "unix-ms" })}
       />,
     );
-    openPanel();
-    const search = screen.getByPlaceholderText("Same in every zone");
-    expect((search as HTMLInputElement).disabled).toBe(true);
+    const panel = await openPanel(user);
+    expect(screen.getByPlaceholderText("Same in every zone")).toBeDisabled();
+    await expectNoAxeViolations(panel);
   });
 
-  it("links the live call to its reference page, in a new tab", () => {
+  it("links the live call to its reference page, in a new tab", async () => {
+    const user = userEvent.setup();
     render(
       <ResetClock info={INFO} selectedBrainId={null} clock={clockState()} />,
     );
-    openPanel();
+    const panel = await openPanel(user);
     const link = screen.getByRole("link", { name: /formatCalendarUtc/ });
-    expect(link.getAttribute("href")).toBe(
+    expect(link).toHaveAttribute(
+      "href",
       "/gmt/reference/utc/format/formatCalendarUtc",
     );
-    expect(link.getAttribute("target")).toBe("_blank");
-    expect(link.textContent).toContain(
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveTextContent(
       'formatCalendarUtc(resetsAt, "en-US", { timeZone: "Asia/Tokyo" })',
     );
+    await expectNoAxeViolations(panel);
   });
 });
 

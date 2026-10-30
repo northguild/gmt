@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Files the nightly gate sweep's findings as `bug` issues. A thin shell around the pure decision
+ * Files the weekly gate sweep's findings as `dox-gate` issues. A thin shell around the pure decision
  * in `./issue-plan.mjs`, shaped like `scripts/canary-report.mjs`: it reads the `summary.json` each
  * sweep leg wrote, asks the planner what to do against the open `dox-gate` issues and runs that
  * through the GitHub CLI.
@@ -28,10 +28,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { realGh } from "../../../../scripts/canary-report.mjs";
 import {
-  BUG_LABEL,
   DRY_RUN_LABEL,
   GATE_LABEL,
-  ISSUE_TYPE,
   flakyRows,
   planIssueActions,
 } from "./issue-plan.mjs";
@@ -42,15 +40,14 @@ const USAGE =
 /** What `gh label create` gets for each label; an existing label is never edited. */
 export const LABEL_SPECS = {
   [GATE_LABEL]: {
-    description: "Opened by the nightly Dox gate sweep",
+    description: "Opened by the weekly Dox gate sweep",
     color: "b60205",
   },
   [DRY_RUN_LABEL]: {
     description:
-      "Opened by a forced dry run of the nightly Dox gate sweep; close once checked",
+      "Opened by a forced dry run of the weekly Dox gate sweep; close once checked",
     color: "c5def5",
   },
-  [BUG_LABEL]: { description: "Something isn't working", color: "d73a4a" },
 };
 
 /**
@@ -157,8 +154,6 @@ export function runActions(gh, actions) {
           "create",
           "--title",
           action.title,
-          "--type",
-          ISSUE_TYPE,
           ...action.labels.flatMap((l) => ["--label", l]),
           "--body-file",
           "-",
@@ -278,7 +273,7 @@ export function main(argv, { env, gh, stdout, stderr }) {
   const { files, print, dryRun, legs } = parsed;
   if (!print && env.GITHUB_ACTIONS !== "true") {
     stderr(
-      "file-issues: run with --print locally; issues are filed by the nightly workflow\n",
+      "file-issues: run with --print locally; issues are filed by the weekly workflow\n",
     );
     return 2;
   }

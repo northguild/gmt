@@ -1,12 +1,24 @@
 /**
  * @vitest-environment jsdom
  *
- * Leap-Day Birthday end to end. The loader hands the widget the real library
- * wrapped in a recorder, so the printed calls can be checked against the calls
- * that ran.
+ * Leap-Day Birthday end to end, through roles and accessible names the way a reader meets
+ * the page. The loader hands the widget the real library wrapped in a recorder, so the
+ * printed calls can be checked against the calls that ran.
  */
 import { vi } from "vitest";
+import { screen, within } from "@testing-library/dom";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  expectNoAxeViolations,
+  renderWidget,
+  setRange,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { NO_SIGNAL_SHORT } from "./leap-day-birthday-mount";
 import type { MonthDayLib } from "./month-day-lib";
 import { monthDayLib } from "~/test/month-day-lib";
 
@@ -25,165 +37,173 @@ vi.mock("./month-day-lib", () => ({
   },
 }));
 
-const { mountLeapDayBirthday, renderLeapDayBirthdayTemplate } =
-  await import("./leap-day-birthday-mount");
 const { LEAP_PRESETS, ROW_COUNT } = await import("./leap-day-birthday");
 
 installJsdomShims();
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
-const fire = (el: Element, type: "input" | "change") =>
-  el.dispatchEvent(new Event(type, { bubbles: true }));
-const text = (el: Element | null) =>
-  (el?.textContent ?? "").replace(/\s+/gu, " ").trim();
-const plate = (root: HTMLElement, role: string) =>
-  text(q(root, `${role}-text`));
-const rows = (root: HTMLElement) => [
-  ...root.querySelectorAll<HTMLTableRowElement>("tbody tr"),
-];
-const cell = (row: HTMLElement, i: number) =>
-  text(row.querySelectorAll("td")[i]!.querySelector(".gmt-leap-date"));
-const verdict = (row: HTMLElement) =>
-  row.querySelectorAll("td")[2]!.dataset["verdict"];
+const entry = WIDGET_REGISTRY["showLeapDayBirthday"] as AnyWidgetEntry;
 
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderLeapDayBirthdayTemplate(args);
-  document.body.append(root);
-  const handle = await mountLeapDayBirthday(
-    root,
-    args,
-    new AbortController().signal,
-  );
-  return { root, handle };
+async function mount(args: unknown = {}): Promise<RenderedWidget> {
+  return renderWidget(entry, { args });
 }
 
-function set(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLInputElement | HTMLSelectElement>(root, role);
-  el.value = value;
-  fire(el, role === "locale" || role === "preset" ? "change" : "input");
-}
+// The year is a number field the reader steps with the arrow keys: a spin button.
+const field = (name: string) =>
+  screen.getByRole(name === "Year" ? "spinbutton" : "textbox", { name });
+const preset = () => screen.getByRole("combobox", { name: "Preset" });
+const table = () =>
+  screen.getByRole("table", { name: "The date in eight consecutive years" });
+const bodyRows = () => within(table()).getAllByRole("row").slice(1);
+const cellsOf = (row: HTMLElement) => within(row).getAllByRole("cell");
+const summary = () => screen.getByRole("status", { name: "Summary" });
+const reason = () => screen.getByRole("note", { name: "Reason" });
+const calls = () =>
+  screen.getByRole("group", { name: "Calls made", hidden: true });
 
-beforeEach(() => {
-  recorded.length = 0;
-});
-afterEach(() => {
-  document.body.innerHTML = "";
-});
+/**
+ * A cell holds the live text and, hidden from a reader, a ghost of each text it may show so
+ * the column keeps its width. A cell that reads NO SIGNAL therefore matches the text twice.
+ */
+const isSignal = (cell: HTMLElement) =>
+  within(cell).queryAllByText(NO_SIGNAL_SHORT).length > 1;
+
+async function type(
+  rendered: RenderedWidget,
+  name: string,
+  value: string,
+): Promise<void> {
+  const el = field(name);
+  await rendered.user.clear(el);
+  await rendered.user.paste(value);
+}
 
 describe("the plates and the rows", () => {
   it("29 February in 2023 reads 28 February, moved earlier, with the naive column refused", async () => {
-    const { root } = await mount({ value: "--02-29", year: 2023 });
-    expect(plate(root, "stored")).toBe("--02-29");
-    expect(plate(root, "reads")).toBe("February 29");
-    expect(plate(root, "in-year")).toBe("2023-02-28");
-    const first = rows(root)[0]!;
-    expect(cell(first, 1)).toBe("2023-02-28");
-    expect(verdict(first)).toBe("moved earlier");
-    expect(cell(first, 3)).toContain("NO SIGNAL");
-    expect(cell(first, 4)).toBe("2023-03-01");
-    expect(verdict(rows(root)[1]!)).toBe("kept");
+    const rendered = await mount({ value: "--02-29", year: 2023 });
+    expect(summary()).toHaveTextContent("Stored as --02-29");
+    expect(summary()).toHaveTextContent("2023: 2023-02-28, moved earlier");
+    const first = bodyRows()[0]!;
+    const cells = within(first).getAllByRole("cell");
+    expect(within(first).getByRole("rowheader")).toHaveTextContent("2023");
+    expect(cells[0]).toHaveTextContent("2023-02-28");
+    expect(isSignal(cells[0]!)).toBe(false);
+    expect(isSignal(cells[2]!)).toBe(true);
+    expect(cells[3]).toHaveTextContent("2023-03-01");
+    expect(summary()).toHaveTextContent("2024: 2024-02-29, kept");
+    await expectNoAxeViolations(rendered.root);
   });
 
-  it("always draws eight rows with five cells, in every state", async () => {
-    const { root } = await mount();
-    for (const preset of LEAP_PRESETS) {
-      set(root, "preset", preset.id);
-      expect(rows(root)).toHaveLength(ROW_COUNT);
-      for (const row of rows(root)) {
-        expect(row.querySelectorAll("td")).toHaveLength(5);
-      }
+  it("always draws eight rows with the same cells, in every state", async () => {
+    const rendered = await mount();
+    for (const p of LEAP_PRESETS) {
+      await rendered.user.selectOptions(preset(), p.id);
+      expect(bodyRows()).toHaveLength(ROW_COUNT);
+      for (const row of bodyRows()) expect(cellsOf(row)).toHaveLength(4);
+      await expectNoAxeViolations(rendered.root);
     }
-    set(root, "year", "x");
-    expect(rows(root)).toHaveLength(ROW_COUNT);
+    await type(rendered, "Year", "x");
+    expect(bodyRows()).toHaveLength(ROW_COUNT);
+    await expectNoAxeViolations(rendered.root);
   });
 
   it("clicks every preset and keeps the preset menu in step", async () => {
-    const { root } = await mount();
-    for (const preset of LEAP_PRESETS) {
-      set(root, "preset", preset.id);
-      expect(q<HTMLSelectElement>(root, "preset").value).toBe(preset.id);
-      expect(q<HTMLInputElement>(root, "value").value).toBe(preset.value);
+    const rendered = await mount();
+    for (const p of LEAP_PRESETS) {
+      await rendered.user.selectOptions(preset(), p.id);
+      expect(preset()).toHaveValue(p.id);
+      expect(field("Birthday or yearly date")).toHaveValue(p.value);
     }
-    set(root, "value", "12-25");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
+    await type(rendered, "Birthday or yearly date", "12-25");
+    expect(preset()).toHaveValue("custom");
+    await expectNoAxeViolations(rendered.root);
   });
 
   it("a typed year moves the slider and the rows", async () => {
-    const { root } = await mount({ value: "--02-29", year: 2023 });
-    set(root, "year", "2096");
-    expect(q<HTMLInputElement>(root, "year-slider").value).toBe("2096");
-    expect(rows(root)[0]!.querySelectorAll("td")[0]!.textContent).toBe("2096");
-    expect(verdict(rows(root)[0]!)).toBe("kept");
-    const moved = rows(root).filter((r) => verdict(r) === "moved earlier");
-    expect(
-      moved.map((r) => r.querySelectorAll("td")[0]!.textContent),
-    ).toContain("2100");
+    const rendered = await mount({ value: "--02-29", year: 2023 });
+    await type(rendered, "Year", "2096");
+    expect(screen.getByRole("slider", { name: "Year slider" })).toHaveValue(
+      "2096",
+    );
+    expect(within(bodyRows()[0]!).getByRole("rowheader")).toHaveTextContent(
+      "2096",
+    );
+    expect(summary()).toHaveTextContent("2096: 2096-02-29, kept");
+    expect(summary()).toHaveTextContent("2100: 2100-02-28, moved earlier");
+    await expectNoAxeViolations(rendered.root);
+  });
+
+  it("dragging the slider moves the year field and the rows", async () => {
+    const rendered = await mount({ value: "--02-29", year: 2023 });
+    setRange(screen.getByRole("slider", { name: "Year slider" }), 2100);
+    expect(field("Year")).toHaveValue(2100);
+    expect(summary()).toHaveTextContent("2100: 2100-02-28, moved earlier");
+    await expectNoAxeViolations(rendered.root);
   });
 });
 
 describe("NO SIGNAL against an empty result", () => {
-  it("a value no reader accepts is NO SIGNAL on every plate and cell", async () => {
-    const { root } = await mount({ value: "--02-30" });
-    for (const role of ["stored", "reads", "in-year"]) {
-      expect(q(root, role).hasAttribute("data-signal")).toBe(true);
-      expect(plate(root, role)).toContain("NO SIGNAL");
-    }
-    for (const row of rows(root)) {
-      expect(cell(row, 1)).toContain("NO SIGNAL");
-      expect(verdict(row)).toBe("no date");
-    }
-    expect(text(q(root, "reason"))).toContain("NO SIGNAL");
+  it("a value no reader accepts is NO SIGNAL on every cell, with the reason", async () => {
+    const rendered = await mount({ value: "--02-30" });
+    expect(summary()).toHaveTextContent("NO SIGNAL");
+    for (const row of bodyRows()) expect(isSignal(cellsOf(row)[0]!)).toBe(true);
+    expect(reason()).toHaveTextContent("NO SIGNAL");
+    await expectNoAxeViolations(rendered.root);
   });
 
-  it("a year the library cannot place is NO SIGNAL while the stored plate still reads", async () => {
-    const { root } = await mount({ value: "--12-25" });
-    set(root, "year", "2024.5");
-    expect(plate(root, "stored")).toBe("--12-25");
-    expect(q(root, "in-year").hasAttribute("data-signal")).toBe(true);
-    for (const row of rows(root)) expect(verdict(row)).toBe("no date");
+  it("a year the library cannot place is NO SIGNAL while the stored date still reads", async () => {
+    const rendered = await mount({ value: "--12-25" });
+    await type(rendered, "Year", "2024.5");
+    expect(summary()).toHaveTextContent("Stored as --12-25");
+    for (const row of bodyRows()) expect(isSignal(cellsOf(row)[0]!)).toBe(true);
+    await expectNoAxeViolations(rendered.root);
   });
 
   it("a kept date is a correct answer and is never NO SIGNAL", async () => {
-    const { root } = await mount({ value: "12-25", year: 2025 });
-    expect(q(root, "in-year").hasAttribute("data-signal")).toBe(false);
-    expect(plate(root, "in-year")).toBe("2025-12-25");
-    expect(verdict(rows(root)[0]!)).toBe("kept");
-    expect(cell(rows(root)[0]!, 3)).toBe("2025-12-25");
+    const rendered = await mount({ value: "12-25", year: 2025 });
+    const first = bodyRows()[0]!;
+    expect(summary()).toHaveTextContent("2025: 2025-12-25, kept");
+    expect(summary()).not.toHaveTextContent("NO SIGNAL");
+    for (const cell of cellsOf(first)) expect(isSignal(cell)).toBe(false);
+    expect(cellsOf(first)[2]).toHaveTextContent("2025-12-25");
+    await expectNoAxeViolations(rendered.root);
   });
 });
 
 describe("the printed calls", () => {
   it("print the library calls that ran, in the order they ran", async () => {
-    const { root } = await mount({ value: "--02-29", year: 2023 });
+    const rendered = await mount({ value: "--02-29", year: 2023 });
     recorded.length = 0;
-    set(root, "year", "2023");
-    // One render ran: its calls are the recorder's, in order. The printed
-    // frame is the readers, the locale form and the first row's calls; the
-    // later rows' calls follow the first row's in the recorder.
-    const lines = (q(root, "calls").textContent ?? "").split("\n");
+    await type(rendered, "Year", "2023");
+    // The last render's calls are the recorder's tail; the printed frame is the
+    // readers, the locale form and the first row's calls, in that order.
+    const lines = (calls().textContent ?? "").split("\n").filter(Boolean);
     const parsed = lines.map((l) => {
       const m = /^(\w+)\((.*)\); \/\/ /u.exec(l);
       return {
-        name: m![1]!, // The arguments are printed as source, options objects included.
+        name: m![1]!,
         args: new Function(`return [${m![2]!}]`)() as unknown[],
       };
     });
     expect(parsed[0]!.name).toBe("isValidMonthDay");
-    expect(parsed.map((c) => c.name)).toEqual(
-      recorded.slice(0, parsed.length).map((c) => c.name),
-    );
+    // Rows share one draw, so the printed lines are the first row's share of the
+    // recorder: every one ran, in the order they ran, with the arguments it printed.
+    let from = 0;
     for (const [i, call] of parsed.entries()) {
-      expect(call.args, lines[i]).toEqual(recorded[i]!.args);
+      const at = recorded.findIndex(
+        (c, k) =>
+          k >= from &&
+          c.name === call.name &&
+          JSON.stringify(c.args) === JSON.stringify(call.args),
+      );
+      expect(at, lines[i]).toBeGreaterThanOrEqual(from);
+      from = at + 1;
     }
+    await expectNoAxeViolations(rendered.root);
   });
 
   it("print every call of the first row only", async () => {
-    const { root } = await mount({ value: "--02-29", year: 2023 });
-    const lines = (q(root, "calls").textContent ?? "").split("\n");
+    await mount({ value: "--02-29", year: 2023 });
+    const lines = (calls().textContent ?? "").split("\n");
     expect(lines.filter((l) => l.startsWith("monthDayToDate("))).toHaveLength(
       1,
     );
@@ -192,25 +212,43 @@ describe("the printed calls", () => {
 
 describe("permalink state", () => {
   it("is the preset while the controls match one and the three strings otherwise", async () => {
-    const { root, handle } = await mount();
-    expect(handle.getPermalinkState?.()).toEqual({ preset: "leap-day-birth" });
-    set(root, "value", "--02-29");
-    set(root, "year", "2023");
-    set(root, "locale", "fr-FR");
-    expect(handle.getPermalinkState?.()).toEqual({
-      value: "--02-29",
-      year: "2023",
-      locale: "fr-FR",
-    });
+    const rendered = await mount();
+    expect(decodeURIComponent(rendered.permalink())).toContain(
+      '"preset":"leap-day-birth"',
+    );
+    await type(rendered, "Birthday or yearly date", "--02-29");
+    await type(rendered, "Year", "2023");
+    await rendered.user.selectOptions(
+      screen.getByRole("combobox", { name: "Locale" }),
+      "fr-FR",
+    );
+    const link = decodeURIComponent(rendered.permalink());
+    expect(link).toContain("--02-29");
+    expect(link).toContain("2023");
+    expect(link).toContain("fr-FR");
+    expect(link).not.toContain("preset");
   });
 
   it("reopens the state a link names, an unknown locale included", async () => {
-    const { root } = await mount({
+    const rendered = await mount({
       value: "--02-29",
       year: "2023",
       locale: "xx-YY",
     });
-    expect(q<HTMLSelectElement>(root, "locale").value).toBe("xx-YY");
-    expect(q<HTMLInputElement>(root, "year").value).toBe("2023");
+    expect(screen.getByRole("combobox", { name: "Locale" })).toHaveValue(
+      "xx-YY",
+    );
+    expect(field("Year")).toHaveValue(2023);
+    await expectNoAxeViolations(rendered.root);
+  });
+});
+
+describe("the length cap", () => {
+  it("stops the birthday field at 64 characters", async () => {
+    const w = await mount();
+    const box = field("Birthday or yearly date");
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(72));
+    expect(box).toHaveValue("x".repeat(64));
   });
 });

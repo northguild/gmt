@@ -349,22 +349,19 @@ describe("renderResult", () => {
   it("renders the empty state quietly and says what it means", () => {
     const el = document.createElement("output");
     renderResult(el, null, "empty");
-    expect(el.textContent).toBe("null — empty, or invalid input");
-    expect(el.classList.contains("gmt-widget-output--empty")).toBe(true);
-    expect(el.classList.contains("gmt-playground-live")).toBe(false);
+    expect(el).toHaveTextContent("null — empty, or invalid input");
     renderResult(el, [], "empty");
-    expect(el.textContent).toBe("[] — empty, or invalid input");
+    expect(el).toHaveTextContent("[] — empty, or invalid input");
   });
 
   it("renders a live value and stringifies objects", () => {
     const el = document.createElement("output");
     renderResult(el, "hi", "live");
-    expect(el.textContent).toBe("hi");
-    expect(el.classList.contains("gmt-playground-live")).toBe(true);
+    expect(el).toHaveTextContent("hi");
     renderResult(el, [1, 2, 3], "live");
-    expect(el.textContent).toBe("[1,2,3]");
+    expect(el).toHaveTextContent("[1,2,3]");
     renderResult(el, 1710072000123456789n, "live");
-    expect(el.textContent).toBe("1710072000123456789");
+    expect(el).toHaveTextContent("1710072000123456789");
   });
 });
 
@@ -392,15 +389,13 @@ describe("PlaygroundForm run() flow", () => {
       classifyPlaygroundResult(result, { returnType: "number" }),
     );
 
-    expect(outputEl.textContent).toBe("26.5");
-    expect(outputEl.classList.contains("gmt-playground-live")).toBe(true);
+    expect(outputEl).toHaveTextContent("26.5");
   });
 
   it("renders NO SIGNAL when the call throws", () => {
     const outputEl = document.createElement("output");
     renderResult(outputEl, "", "sentinel");
-    expect(outputEl.textContent).toBe("NO SIGNAL");
-    expect(outputEl.classList.contains("gmt-playground-sentinel")).toBe(true);
+    expect(outputEl).toHaveTextContent("⟨ NO SIGNAL — invalid input ⟩");
   });
 });
 

@@ -26,8 +26,8 @@ import type { EdiCall } from "./edi-widgets";
 /** The permalink's cap on a string value (`widget-permalink.ts`). */
 export const CRON_MAX_TEXT = 64;
 /** Hours either side of the clock change that the night window covers. */
-export const NIGHT_HALF_HOURS = 3;
-export const NIGHT_HOURS = NIGHT_HALF_HOURS * 2;
+const NIGHT_HALF_HOURS = 3;
+const NIGHT_HOURS = NIGHT_HALF_HOURS * 2;
 /** Rows each touched-runs table reserves before it says "and N more". */
 export const TOUCHED_ROWS = 8;
 /** Runs each next-runs list asks for, and the rows it reserves. */
@@ -68,7 +68,7 @@ export const FIELD_LABELS = [
 // Presets, seed and permalink
 // ---------------------------------------------------------------------------
 
-export interface CronPreset {
+interface CronPreset {
   id: string;
   label: string;
   line: string;
@@ -155,7 +155,7 @@ export const CRON_PRESETS: readonly CronPreset[] = [
   },
 ];
 
-export const DEFAULT_PRESET = CRON_PRESETS[0]!;
+const DEFAULT_PRESET = CRON_PRESETS[0]!;
 export const CUSTOM_PRESET_ID = "custom";
 export const CUSTOM_PRESET_LABEL = "Your values";
 
@@ -272,7 +272,7 @@ export interface FieldRow {
   star: boolean;
 }
 
-export function fieldRows(expr: CronLibExpression): FieldRow[] {
+function fieldRows(expr: CronLibExpression): FieldRow[] {
   return FIELD_LABELS.map(([key, label]) => ({
     key,
     label,
@@ -285,7 +285,7 @@ export function fieldRows(expr: CronLibExpression): FieldRow[] {
 // Views
 // ---------------------------------------------------------------------------
 
-export interface Tick {
+interface Tick {
   pct: number;
   utc: string;
   wall: string;
@@ -304,7 +304,7 @@ export interface TouchedRow {
   classification: CronLibRun["classification"];
 }
 
-export interface Lane {
+interface Lane {
   policy: CronLibPolicy;
   runs: CronLibRun[];
   marks: Mark[];
@@ -314,7 +314,7 @@ export interface Lane {
   more: number;
 }
 
-export interface Night {
+interface Night {
   transition: CronLibTransition;
   start: string;
   end: string;
@@ -333,7 +333,7 @@ export interface ListRow {
   only: CronLibPolicy | null;
 }
 
-export interface ChangeOption {
+interface ChangeOption {
   value: string;
   label: string;
 }
@@ -359,23 +359,23 @@ export interface CronView {
   calls: EdiCall[];
 }
 
-export const zoneErrorText = (zone: string): string =>
+const zoneErrorText = (zone: string): string =>
   `${zone} is not a time zone this browser knows.`;
-export const yearErrorText = "Enter a year from 1900 to 2100.";
-export const afterErrorText = (after: string): string =>
+const yearErrorText = "Enter a year from 1900 to 2100.";
+const afterErrorText = (after: string): string =>
   `${after} is not an instant. Write one like 2024-03-31T01:00:00Z.`;
-export const noChangeText = (year: number): string =>
+const noChangeText = (year: number): string =>
   `This zone has no clock change in ${year}, so both rules give the same runs.`;
 export const noChangeOptionText = (year: number | string): string =>
   `No clock change in ${year}`;
-export const plateText = (n: number): string =>
+const plateText = (n: number): string =>
   `${n} ${n === 1 ? "run" : "runs"} in these ${NIGHT_HOURS} hours`;
 
-export function changeLabel(t: CronLibTransition): string {
+function changeLabel(t: CronLibTransition): string {
   return `${t.instant.slice(0, 10)} ${t.instant.slice(11, 16)}Z, ${t.offsetBefore} → ${t.offsetAfter}`;
 }
 
-export function chipText(t: CronLibTransition): string {
+function chipText(t: CronLibTransition): string {
   return `clock change, ${t.offsetBefore} → ${t.offsetAfter}`;
 }
 
@@ -448,11 +448,7 @@ const sameRuns = (a: readonly CronLibRun[], b: readonly CronLibRun[]) =>
       r.classification === b[i]!.classification,
   );
 
-export function sentenceOf(
-  same: boolean,
-  crontab: number,
-  daemon: number,
-): string {
+function sentenceOf(same: boolean, crontab: number, daemon: number): string {
   return same
     ? "Both rules give the same runs on this night."
     : `The rules differ on this night: ${crontab} ${crontab === 1 ? "run" : "runs"} under crontabMatch, ${daemon} under daemonCatchUp.`;

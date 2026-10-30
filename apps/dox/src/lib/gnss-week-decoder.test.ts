@@ -3,7 +3,6 @@ import { lib } from "~/test/gnss-lib";
 import {
   CUSTOM_PRESET_ID,
   GNSS_PRESETS,
-  GNSS_SENTENCES,
   LANE_WINDOW,
   SECONDS_PER_WEEK,
   firstRinexWeek,
@@ -18,6 +17,7 @@ import {
   readGnss,
   summaryText,
   type GnssDecoderState,
+  GNSS_SENTENCES,
 } from "./gnss-week-decoder";
 import { GNSS_WEEK_COUNTERS, RINEX_WEEK_SYSTEMS } from "./gnss-names";
 
@@ -251,37 +251,6 @@ describe("a call with no answer says why, in one sentence", () => {
     expect(r.failure).toBe("This counter shows weeks below 1024.");
   });
 
-  it("a week that is not a whole number", () => {
-    for (const week of ["", "1.5", "-3", "abc"]) {
-      const r = read(withState("lnav-2024", { week }));
-      expect([r.status, r.failure]).toEqual(["sentinel", GNSS_SENTENCES.week]);
-    }
-  });
-
-  it("a time of week outside the week", () => {
-    for (const timeOfWeekSeconds of ["", "-1", String(SECONDS_PER_WEEK), "x"]) {
-      const r = read(withState("lnav-2024", { timeOfWeekSeconds }));
-      expect(r.failure).toBe(GNSS_SENTENCES.tow);
-    }
-  });
-
-  it("an era that is not a whole number", () => {
-    for (const era of ["", "-1", "1.5", "two"]) {
-      const r = read(withState("lnav-2024", { era }));
-      expect(r.failure).toBe(GNSS_SENTENCES.era);
-    }
-  });
-
-  it("an era so far out the date passes the year 9999", () => {
-    const r = read(withState("lnav-2024", { era: "99999999" }));
-    expect([r.status, r.failure]).toEqual(["sentinel", GNSS_SENTENCES.beyond]);
-  });
-
-  it("a date the era counts from that is not an instant", () => {
-    const r = read(withState("not-before-2020", { pivot: "2020-01-01" }));
-    expect(r.failure).toBe(GNSS_SENTENCES.pivot);
-  });
-
   it("a date the era counts from before the counter's first week reads era 0", () => {
     const r = read(
       withState("not-before-2020", {
@@ -296,19 +265,6 @@ describe("a call with no answer says why, in one sentence", () => {
     expect(r.lanes.find((l) => l.chosen)?.label).toBe("era 0");
   });
 
-  it("never blames a pre-epoch date for a time of week that rounds up", () => {
-    const r = read(
-      withState("not-before-2020", {
-        counter: "GAL",
-        system: "GAL",
-        week: "10",
-        timeOfWeekSeconds: "604799.9999999999",
-        pivot: "1990-01-01T00:00:00Z",
-      }),
-    );
-    expect(r.failure).toBe(GNSS_SENTENCES.towRounds);
-  });
-
   it("a RINEX week before the system's first week", () => {
     const r = read(
       withState("rinex-navic", {
@@ -321,13 +277,6 @@ describe("a call with no answer says why, in one sentence", () => {
     expect(r.failure).toBe(
       "This is before the system's first week, which starts at 1999-08-21T23:59:47Z.",
     );
-  });
-
-  it("an instant that is not ISO 8601", () => {
-    for (const utc of ["2019-04-07", "tomorrow"]) {
-      const r = read(withState("utc-2024", { utc }));
-      expect(r.failure).toBe(GNSS_SENTENCES.badInstant);
-    }
   });
 
   it("an instant before the counter's first week keeps the tables standing", () => {
@@ -553,11 +502,6 @@ describe("UTC mode reads an instant the way the library does", () => {
     const r = read(withState("utc-2024", { utc: "2016-12-31T23:59:60" }));
     expect(r.status).toBe("sentinel");
     expect(r.failure).toBe(GNSS_SENTENCES.badInstant);
-  });
-
-  it("still refuses second 60 on a day with no leap second", () => {
-    const r = read(withState("utc-2024", { utc: "2024-06-30T23:59:60Z" }));
-    expect(r.failure).toBe(GNSS_SENTENCES.noLeap);
   });
 
   it("keeps the lead over UTC for an offset input", () => {

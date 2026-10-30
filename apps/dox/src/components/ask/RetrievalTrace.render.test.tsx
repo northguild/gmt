@@ -2,7 +2,8 @@
  * @vitest-environment jsdom
  */
 import type React from "react";
-import { fireEvent, render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { BRAINS } from "~/lib/chat-constants";
 import {
   describeAttempts,
@@ -11,19 +12,18 @@ import {
   RetrievalTrace,
 } from "./RetrievalTrace";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import { expectNoAxeViolations } from "~/test/render-widget";
 
 installJsdomShims();
 
 /** The trace is collapsed by default and Radix unmounts closed content, so
- * every row assertion opens it first. */
-function renderOpen(ui: React.ReactElement) {
+ * every row assertion opens it first, as a reader does: with its button. */
+async function renderOpen(ui: React.ReactElement) {
   const result = render(ui);
-  // `TaskTrigger` renders `asChild`, so the trigger is the div carrying the
-  // Radix state attribute, not a <button>.
-  const trigger = result.container.querySelector(
-    "[data-slot='collapsible-trigger']",
-  );
-  if (trigger) fireEvent.click(trigger);
+  const trigger = screen.getByRole("button", { name: /^Searched \d+ chunks/ });
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await userEvent.setup().click(trigger);
+  expect(trigger).toHaveAttribute("aria-expanded", "true");
   return result;
 }
 
@@ -80,15 +80,19 @@ describe("RetrievalTrace timings", () => {
     );
   });
 
-  it("renders nothing extra when the Worker sent no timings", () => {
-    const { container } = renderOpen(<RetrievalTrace data={base} />);
-    expect(container.querySelector("[data-role='timings']")).toBeNull();
-    expect(container.querySelector("[data-role='attempts']")).toBeNull();
-    expect(container.querySelector("[data-role='tool']")).toBeNull();
+  it("renders nothing extra when the Worker sent no timings", async () => {
+    const { container } = await renderOpen(<RetrievalTrace data={base} />);
+    expect(screen.getByText("dwellTime")).toBeInTheDocument();
+    expect(screen.queryByText(/ledger \d|total \d/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/answered|spent/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Widget:|No widget called/),
+    ).not.toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 
-  it("renders the timing, attempt and tool rows once they arrive", () => {
-    const { container } = renderOpen(
+  it("renders the timing, attempt and tool rows once they arrive", async () => {
+    const { container } = await renderOpen(
       <RetrievalTrace
         data={{
           ...base,
@@ -106,23 +110,19 @@ describe("RetrievalTrace timings", () => {
         }}
       />,
     );
+    expect(screen.getByText(/ledger 1 ms/)).toHaveTextContent("total 4.0 s");
     expect(
-      container.querySelector("[data-role='timings']")?.textContent,
-    ).toContain("total 4.0 s");
-    expect(container.querySelector("[data-role='attempts']")?.textContent).toBe(
-      `${BRAINS[0].label} answered 900 ms`,
-    );
-    expect(container.querySelector("[data-role='tool']")?.textContent).toBe(
-      "Widget: showGlobe",
-    );
+      screen.getByText(`${BRAINS[0].label} answered 900 ms`),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Widget: showGlobe")).toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 
-  it("says plainly when the answer finished without a widget", () => {
-    const { container } = renderOpen(
+  it("says plainly when the answer finished without a widget", async () => {
+    const { container } = await renderOpen(
       <RetrievalTrace data={{ ...base, toolCalled: null }} />,
     );
-    expect(container.querySelector("[data-role='tool']")?.textContent).toBe(
-      "No widget called.",
-    );
+    expect(screen.getByText("No widget called.")).toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 });

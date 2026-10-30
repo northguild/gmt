@@ -1,6 +1,6 @@
 import { gmtStats } from "../data/gmt-stats";
 
-export interface TimezoneInfo {
+interface TimezoneInfo {
   id: string;
   name: string;
   lat: number;
@@ -32,7 +32,7 @@ export const TIMEZONE_COORDINATES: Record<
   "Pacific/Apia": { lat: -13.83, lng: -171.77 },
 };
 
-export function timezoneCoordinates(id: string): { lat: number; lng: number } {
+function timezoneCoordinates(id: string): { lat: number; lng: number } {
   const coords = TIMEZONE_COORDINATES[id];
   if (!coords) {
     throw new Error(

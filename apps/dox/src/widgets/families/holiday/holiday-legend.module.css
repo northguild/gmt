@@ -1,0 +1,148 @@
+/* holidayLegend: a swatch in each mark's pattern, and its word. */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 2px var(--gmt-space-2);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.swatch {
+  --series: var(--gmt-series-1);
+
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 1rem;
+  block-size: 1rem;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: 2px;
+  background-color: var(--gmt-fill-subtle);
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+
+  /* The family hatch: 45 degrees, 2px on and 6px off. */
+  &[data-kind="weekend"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--gmt-ice-dim) 35%, transparent) 0,
+      color-mix(in srgb, var(--gmt-ice-dim) 35%, transparent) 2px,
+      transparent 2px,
+      transparent 8px
+    );
+  }
+
+  &[data-kind="closed"] {
+    border-color: var(--gmt-cyan);
+    background-color: color-mix(in srgb, var(--gmt-cyan) 34%, transparent);
+  }
+
+  &[data-kind="moved-from"] {
+    border: 1px dashed var(--gmt-ice);
+    background-color: transparent;
+  }
+
+  &[data-kind="moved-to"] {
+    border: 1px solid var(--gmt-cyan);
+    border-block-end: 4px double var(--gmt-ice);
+    background-color: color-mix(in srgb, var(--gmt-cyan) 34%, transparent);
+  }
+
+  &[data-kind="pick"] {
+    outline: 2px solid var(--series);
+    outline-offset: -2px;
+    background-color: color-mix(in srgb, var(--series) 40%, transparent);
+  }
+
+  /* A series is a pattern as well as a colour: solid, hatched, crosshatched. */
+  &[data-kind="pick"][data-series="2"] {
+    background-color: transparent;
+    background-image: repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--series) 60%, transparent) 0,
+      color-mix(in srgb, var(--series) 60%, transparent) 3px,
+      transparent 3px,
+      transparent 7px
+    );
+  }
+
+  &[data-kind="pick"][data-series="3"] {
+    background-color: transparent;
+    background-image:
+      repeating-linear-gradient(
+        45deg,
+        color-mix(in srgb, var(--series) 50%, transparent) 0,
+        color-mix(in srgb, var(--series) 50%, transparent) 2px,
+        transparent 2px,
+        transparent 7px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        color-mix(in srgb, var(--series) 50%, transparent) 0,
+        color-mix(in srgb, var(--series) 50%, transparent) 2px,
+        transparent 2px,
+        transparent 7px
+      );
+  }
+}
+
+@media (forced-colors: active) {
+  .item {
+    color: CanvasText;
+  }
+
+  .swatch {
+    border-color: CanvasText;
+    background-color: Canvas;
+
+    &[data-kind="closed"],
+    &[data-kind="moved-to"] {
+      background-color: Highlight;
+    }
+
+    &[data-kind="weekend"] {
+      border-style: dotted;
+    }
+
+    &[data-kind="pick"] {
+      outline-color: Highlight;
+    }
+
+    &[data-kind="pick"][data-series="2"] {
+      border-style: dashed;
+    }
+
+    &[data-kind="pick"][data-series="3"] {
+      border-style: double;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .swatch {
+    border-color: var(--gmt-ice);
+  }
+}

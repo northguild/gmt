@@ -3,7 +3,7 @@
  *
  * Pin several IANA zones, drag one slider, and every pinned clock moves
  * together. When the slider crosses a DST transition for a pinned zone, that
- * zone's offset visibly changes and a "bite" badge flags it — never a silent
+ * zone's offset visibly changes and a clock-change pill names it — never a silent
  * reflow. The pinned-zones-plus-time configuration encodes into the URL so it
  * can be copied and shared to propose a meeting time.
  *
@@ -12,8 +12,11 @@
  * the "jump to a DST boundary" preset. The `@js-temporal/polyfill` rides along
  * in this lazy-loaded chunk, never on a page's critical path.
  *
- * Entry point: `initScrubber(host)` — host element in, matching the widget
- * mount pattern so DOX-C3a's `/dox` rail can adopt it unchanged.
+ * Entry point: `initScrubber(root, options)`. `root` holds the markup
+ * `renderScrubberTemplate` wrote (`widgets/families/zones/zone-planner-template`), which a
+ * docs page server-renders and the `/dox` rail renders into its own host. This module is the
+ * heavy half: it loads lazily, so the polyfill and the coordinate table stay out of both
+ * pages' first download.
  */
 
 import {
@@ -31,13 +34,23 @@ import {
 import { roundUnix } from "@northguild/gmt/unix/calculate";
 import { getSystemTimeZone } from "@northguild/gmt/zoned/get";
 
-import { COORDINATES_BY_ID } from "./globe-zones";
-import { bindClockGlow, renderCrystalClock } from "./crystal-clock";
+import { defineElements } from "~/widgets/define";
+import { findWidget, html, setHtml, type SafeHtml } from "~/widgets/builders";
+import { zoneTile } from "~/widgets/families/zones/zone-tile";
+import {
+  SLIDER_RANGE_MIN,
+  SLIDER_STEP_MIN,
+  formatShift,
+} from "~/widgets/families/zones/zone-planner-template";
+import type { GmtCombobox } from "~/widgets/primitives/combobox/combobox";
+import type { GmtCopy } from "~/widgets/primitives/copy/copy";
+import type { GmtRange } from "~/widgets/primitives/range/range";
+import type { GmtReadout } from "~/widgets/primitives/readout/readout";
+import styles from "~/widgets/tools/multi-zone-scrubber.module.css";
+import { bindClockGlow, updateCrystalClock } from "./crystal-clock";
 import { formatDayLabel } from "./dwell-ledger";
-import { enter } from "./enter";
+import { COORDINATES_BY_ID } from "./globe-zones";
 import { readZoneAt } from "./zone-clock";
-import { createZoneCombobox } from "./zone-combobox";
-import { settledAnnouncer } from "./punctuality-widgets";
 import {
   crossedSwitch,
   dstStatus,
@@ -46,7 +59,6 @@ import {
   type DstSwitch,
 } from "./scrubber-dst";
 import { MAX_SEEDED_ZONES } from "./zone-planner";
-import { rangeFieldHtml, syncRange } from "./widget-ui";
 
 export interface ScrubberHost {
   destroy: () => void;
@@ -177,13 +189,6 @@ export function openingPins(systemZone: string): {
     yours: first,
   };
 }
-const SLIDER_RANGE_MIN = 36 * 60; // ±36 h
-/** The granularity of everything the reader can move: the slider's step, the
- *  reference-time field's own step, and what a seeded or restored anchor is
- *  rounded to. Named once and derived everywhere — the field used to carry its
- *  own hardcoded `step="900"`, which is the same number said twice and the
- *  usual way two steppers end up disagreeing. */
-const SLIDER_STEP_MIN = 5;
 /** ISO weekday order: `parseDayOfWeekFromUtc` returns 1 (Mon) … 7 (Sun). */
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = [
@@ -266,16 +271,6 @@ function anchorZoned(effectiveMs: number): string {
   return toUtc(effectiveMs).replace("Z", "+00:00[UTC]");
 }
 
-/** Earliest offset change strictly after `fromMs` among the given zones, from
- *  the library's transition list (`scrubber-dst.ts`). */
-export function nextTransition(
-  zones: readonly string[],
-  fromMs: number,
-): { zone: string; instantMs: number } | null {
-  const next = nextSwitch(zones, fromMs);
-  return next ? { zone: next.zone, instantMs: next.instantMs } : null;
-}
-
 function formatReadout(effectiveMs: number): string {
   const utc = toUtc(effectiveMs);
   const weekday = WEEKDAYS[(parseDayOfWeekFromUtc(utc) ?? 1) - 1];
@@ -285,15 +280,7 @@ function formatReadout(effectiveMs: number): string {
   return `${weekday} ${day} ${month} ${year}, ${parseHourFromUtc(utc)}:${parseMinuteFromUtc(utc)} UTC`;
 }
 
-/** The slider's shift as a signed, worded offset: `+1 h 15 min`, `−45 min`, `0 min`. */
-export function formatShift(minutes: number): string {
-  if (minutes === 0) return "0 min";
-  const sign = minutes < 0 ? "\u2212" : "+";
-  const abs = Math.abs(minutes);
-  const h = Math.floor(abs / 60);
-  const m = abs % 60;
-  return `${sign}${[h ? `${h} h` : "", m ? `${m} min` : ""].filter(Boolean).join(" ")}`;
-}
+export { formatShift };
 
 function roundToStep(ms: number): number {
   const stepMs = SLIDER_STEP_MIN * 60_000;
@@ -324,13 +311,35 @@ function formatInstantShort(utc: string): string {
   return `${weekday} ${Number(parseDayFromUtc(utc))} ${month}, ${parseHourFromUtc(utc)}:${parseMinuteFromUtc(utc)} UTC`;
 }
 
+/** How long the scrub must rest before the planner says what changed. The slider speaks its
+ *  own value on every step, so a live region rewritten on the same steps would talk over it. */
+const SETTLE_MS = 500;
+
+/** The `HH:MM` and the parts of a tile, found once when the tiles are built. */
+interface TileParts {
+  zone: string;
+  face: HTMLElement;
+  time: HTMLElement;
+  date: HTMLElement;
+  offset: HTMLElement;
+  dst: HTMLElement;
+  change: HTMLElement;
+  remove: HTMLElement;
+}
+
+/**
+ * Mounts the planner into `root`, which holds the markup `renderScrubberTemplate` wrote (a
+ * docs page server-renders it; the chat rail renders it into its own host).
+ */
 export async function initScrubber(
-  host: HTMLElement,
+  root: HTMLElement,
   options: ScrubberOptions = {},
 ): Promise<ScrubberHost> {
+  defineElements();
+  const { el: widgetEl, id, part } = findWidget(root, "multi-zone-scrubber");
   const parsed = decodeState(globalThis.location?.search ?? "");
-  const seededPins = (options.pinned ?? []).filter((id) =>
-    COORDINATES_BY_ID.has(id),
+  const seededPins = (options.pinned ?? []).filter((zone) =>
+    COORDINATES_BY_ID.has(zone),
   );
   const seededMs = options.time === undefined ? null : fromUtc(options.time);
   const syncUrl = options.syncUrl ?? true;
@@ -355,97 +364,36 @@ export async function initScrubber(
     offsetMin: 0,
   };
 
-  /** The `HH:MM` each zone's dial is currently drawn at, so it is only redrawn
-      when that reading moves. */
-  const lastFace = new Map<string, string>();
-  const clockGlow = new AbortController();
+  const controller = new AbortController();
+  const { signal } = controller;
   let urlTimer: ReturnType<typeof setTimeout> | undefined;
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
 
-  host.classList.add("gmt-scrubber", "gmt-widget", "not-content");
-  /* The two numbered cards of the shared widget grid (styles/gmt-widget.css):
-     card 1 takes the input, card 2 draws the answer. Card 2 is the chart card,
-     so it takes the rest of the row on a wide pane — which is what gives the
-     clock faces room to sit several across instead of in a list. */
-  host.innerHTML = `
-    <div class="gmt-widget-card">
-    <div class="gmt-widget-section">
-    <h4>1. Pin the zones and pick a time</h4>
-    <div class="gmt-scrubber-controls">
-      <label>Reference time (UTC)
-        <input type="datetime-local" class="gmt-field" data-role="anchor" step="${SLIDER_STEP_MIN * 60}" />
-      </label>
-      <div class="gmt-combobox">
-        <label for="scrubber-add">Add a zone</label>
-        <div class="gmt-scrubber-field-row">
-          <input type="search" id="scrubber-add" class="gmt-field" placeholder="e.g. Australia/Sydney"
-            autocomplete="off" data-role="add" />
-          <button type="button" class="gmt-button gmt-scrubber-add-addon" data-role="add-open"
-            aria-expanded="false" aria-label="Browse every zone">+</button>
-        </div>
-      </div>
-    </div>
-    <div class="gmt-scrubber-actions">
-      <button type="button" class="gmt-button" data-role="dst-preset">
-        Jump to the next DST transition
-      </button>
-      <button type="button" class="gmt-button" data-role="reset"
-        title="Set the reference time to now, rounded forward to the next 5 minutes">
-        Reset to today
-      </button>
-    </div>
-    <p class="gmt-scrubber-jump-status" data-role="jump-status"></p>
-    <p class="gmt-scrubber-visually-hidden" role="status" aria-live="polite" data-role="live"></p>
-    <div class="gmt-scrubber-slider">${rangeFieldHtml({
-      role: "slider",
-      min: -SLIDER_RANGE_MIN,
-      max: SLIDER_RANGE_MIN,
-      step: SLIDER_STEP_MIN,
-      value: 0,
-      valueText: formatShift(0),
-      ends: [formatShift(-SLIDER_RANGE_MIN), formatShift(SLIDER_RANGE_MIN)],
-      label: `Shift every pinned clock, in ${SLIDER_STEP_MIN}-minute steps`,
-    })}</div>
-    <p class="gmt-scrubber-readout" data-role="readout" aria-live="polite"></p>
-    <div class="gmt-scrubber-share">
-      <button type="button" class="gmt-button" data-role="share">Copy shareable link</button>
-      <span data-role="share-status" aria-live="polite"></span>
-    </div>
-    </div>
-    <div class="gmt-widget-section">
-    <h4>2. Every pinned clock</h4>
-    <div class="gmt-scrubber-rows" data-role="rows"></div>
-    </div>
-    </div>`;
+  const anchorInput = part<HTMLInputElement>("anchor");
+  const jumpButton = part<HTMLButtonElement>("jump");
+  const resetButton = part<HTMLButtonElement>("reset");
+  const jumpStatus = part("jump-status");
+  const liveRegion = part("live");
+  const marks = part("marks");
+  const rows = part("rows");
+  const combobox = widgetEl.querySelector<GmtCombobox>("gmt-combobox")!;
+  const rangeEl = widgetEl.querySelector<GmtRange>("gmt-range")!;
+  const readoutEl = widgetEl.querySelector<GmtReadout>("gmt-readout")!;
+  const copyEl = widgetEl.querySelector<GmtCopy>("gmt-copy")!;
 
-  const anchorInput = host.querySelector<HTMLInputElement>(
-    "[data-role='anchor']",
-  )!;
-  const slider = host.querySelector<HTMLInputElement>("[data-role='slider']")!;
-  const readout = host.querySelector<HTMLElement>("[data-role='readout']")!;
-  const rows = host.querySelector<HTMLElement>("[data-role='rows']")!;
-  const addInput = host.querySelector<HTMLInputElement>("[data-role='add']")!;
-  const shareButton = host.querySelector<HTMLElement>("[data-role='share']")!;
-  const shareStatus = host.querySelector<HTMLElement>(
-    "[data-role='share-status']",
-  )!;
-  const presetButton = host.querySelector<HTMLButtonElement>(
-    "[data-role='dst-preset']",
-  )!;
-  const resetButton = host.querySelector<HTMLButtonElement>(
-    "[data-role='reset']",
-  )!;
-  const jumpStatus = host.querySelector<HTMLElement>(
-    "[data-role='jump-status']",
-  )!;
-  const announcer = settledAnnouncer(
-    host.querySelector<HTMLElement>("[data-role='live']"),
-  );
-  /* Marks on the slider's track at every switch the shown zones make within its
-     range. Decorative: each tile says the same in words. */
-  const marks = document.createElement("span");
-  marks.className = "gmt-scrubber-marks";
-  marks.setAttribute("aria-hidden", "true");
-  host.querySelector(".gmt-range-field")?.append(marks);
+  /* The choices come at mount, not in the template: the coordinate table stays out of the
+     markup, and so out of the chat's first download. */
+  combobox.items = [...COORDINATES_BY_ID.keys()];
+  rangeEl.formatValue = formatShift;
+
+  /** Said once the scrub settles. `read` runs when the timer ends, not when it starts. */
+  function say(read: () => string): void {
+    if (settleTimer !== undefined) clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      settleTimer = undefined;
+      liveRegion.textContent = read();
+    }, SETTLE_MS);
+  }
 
   function effectiveMs(): number {
     return state.anchorMs + state.offsetMin * 60_000;
@@ -454,8 +402,7 @@ export async function initScrubber(
   function syncControls(): void {
     // `<input type="datetime-local">` wants `YYYY-MM-DDTHH:MM`.
     anchorInput.value = toUtc(state.anchorMs).slice(0, 16);
-    slider.value = String(state.offsetMin);
-    syncRange(slider, formatShift(state.offsetMin));
+    rangeEl.value = state.offsetMin;
   }
 
   function scheduleUrl(): void {
@@ -467,43 +414,41 @@ export async function initScrubber(
     }, 250);
   }
 
-  /** Rebuild card structure — only when the pinned set changes. */
+  /** The `HH:MM` each zone's dial is currently drawn at, so it is only redrawn
+   *  when that reading moves. */
+  const lastFace = new Map<string, string>();
+  let tiles: TileParts[] = [];
+
+  /** Rebuild the tiles — only when the pinned set changes. */
   function buildRows(): void {
-    rows.innerHTML = "";
     lastFace.clear();
-    for (const id of state.pinned) {
-      const row = document.createElement("div");
-      row.className = "gmt-scrubber-clock";
-      row.dataset.switched = "false";
-      row.dataset.zoneRow = id;
-      const yours = id === state.yours;
-      if (yours) row.dataset.yours = "true";
-      row.innerHTML =
-        `<div class="gmt-scrubber-clock-face" data-field="face"></div>` +
-        `<p class="gmt-scrubber-clock-time" data-field="time">&nbsp;</p>` +
-        `<p class="gmt-scrubber-clock-date" data-field="date">&nbsp;</p>` +
-        `<p class="gmt-scrubber-clock-zone" title="${escapeHtml(id)}">${escapeHtml(shortZone(id))}</p>` +
-        `<p class="gmt-scrubber-clock-offset" data-field="offset">&nbsp;</p>` +
-        `<p class="gmt-scrubber-dst-slot"><span class="gmt-scrubber-dst" data-field="dst" data-state="none"></span></p>` +
-        `<p class="gmt-scrubber-switch-slot"><span class="gmt-scrubber-switch" data-field="switch"></span></p>` +
-        (yours
-          ? `<p class="gmt-scrubber-clock-yours" data-field="yours">Your time zone</p>`
-          : "") +
-        `<button type="button" class="gmt-scrubber-remove" data-role="remove" ` +
-        `aria-label="Remove ${escapeHtml(id)}${yours ? " (your time zone)" : ""}">✕</button>`;
-      row
-        .querySelector<HTMLElement>("[data-role='remove']")
-        ?.addEventListener("click", () => {
-          state.pinned = state.pinned.filter((z) => z !== id);
-          lastFace.delete(id);
-          buildRows();
-          render();
-        });
-      rows.appendChild(row);
-    }
+    setHtml(
+      rows,
+      html`${state.pinned.map((zone, index) =>
+        zoneTile({
+          id: (local) => id(`z${index}-${local}`),
+          zone,
+          name: shortZone(zone),
+          yours: zone === state.yours,
+        }),
+      )}`,
+    );
+    tiles = state.pinned.map((zone, index) => {
+      const at = (local: string) => part(`z${index}-${local}`);
+      return {
+        zone,
+        face: at("face"),
+        time: at("time"),
+        date: at("date"),
+        offset: at("offset"),
+        dst: at("dst"),
+        change: at("change"),
+        remove: at("remove"),
+      };
+    });
   }
 
-  /** Refresh values in the existing rows: the reading, the DST state at this
+  /** Refresh values in the existing tiles: the reading, the DST state at this
    *  instant, and the switch the scrub has crossed since the reference time.
    *  Returns the sentence about each crossed switch, for the settled
    *  announcement. */
@@ -512,49 +457,34 @@ export async function initScrubber(
     const anchor = anchorZoned(instantMs);
     const instant = toUtc(instantMs);
     const crossings: string[] = [];
-    for (const id of state.pinned) {
-      const row = rows.querySelector<HTMLElement>(`[data-zone-row="${id}"]`);
-      if (!row) continue;
-      const reading = readZoneAt(id, anchor);
-      const timeEl = row.querySelector<HTMLElement>("[data-field='time']");
-      const offsetEl = row.querySelector<HTMLElement>("[data-field='offset']");
+    tiles.forEach((tile, index) => {
+      const zone = tile.zone;
+      const reading = readZoneAt(zone, anchor);
       const currentOffset = reading.ok
         ? reading.offset
-        : getTimeZoneOffset(id, instant);
+        : getTimeZoneOffset(zone, instant);
 
-      const dateEl = row.querySelector<HTMLElement>("[data-field='date']");
-      const faceEl = row.querySelector<HTMLElement>("[data-field='face']");
+      tile.time.textContent = reading.ok ? hhmm(reading.time) : "⟨ NO SIGNAL ⟩";
+      tile.time.dataset["state"] = reading.ok ? "live" : "lost";
+      tile.date.textContent = reading.ok ? formatDayLabel(reading.date) : "";
 
-      if (timeEl) {
-        timeEl.textContent = reading.ok ? hhmm(reading.time) : "⟨ NO SIGNAL ⟩";
-        timeEl.classList.toggle("gmt-signal-lost", !reading.ok);
-      }
-      if (dateEl) {
-        dateEl.textContent = reading.ok ? formatDayLabel(reading.date) : "";
-      }
-      /* The dial is an SVG string, so it is rebuilt rather than mutated — but
-         only when the minute it shows actually changes. A drag steps in whole
-         whole-minute increments, so this is at most one rebuild per step per
-         clock, and none at all for the many input events that land inside the
-         same step. */
-      if (faceEl) {
-        const stamp = reading.ok ? hhmm(reading.time) : "";
-        if (lastFace.get(id) !== stamp) {
-          lastFace.set(id, stamp);
-          const appearing = !faceEl.firstElementChild;
-          if (stamp === "") {
-            faceEl.innerHTML = "";
-          } else {
-            const [hh, mm] = stamp.split(":");
-            faceEl.innerHTML = renderCrystalClock({
-              id: `scrubber-${id.replace(/[^a-zA-Z0-9]/g, "-")}`,
-              hour: Number(hh),
-              minute: Number(mm),
-              label: `${shortZone(id)} clock`,
-              sublabel: `${stamp}, ${formatDayLabel(reading.date)}`,
-            });
-            if (appearing) enter(faceEl);
-          }
+      /* The dial is drawn once and then only its hands and name move, and only when the minute
+         it shows changes: a drag steps in whole-minute increments, so there is at most one
+         update per step per clock, and none for the many input events inside one step. */
+      const stamp = reading.ok ? hhmm(reading.time) : "";
+      if (lastFace.get(zone) !== stamp) {
+        lastFace.set(zone, stamp);
+        if (stamp === "") {
+          tile.face.replaceChildren();
+        } else {
+          const [hh, mm] = stamp.split(":");
+          updateCrystalClock(tile.face, {
+            id: id(`z${index}-clock`),
+            hour: Number(hh),
+            minute: Number(mm),
+            label: `${shortZone(zone)} clock`,
+            sublabel: `${stamp}, ${formatDayLabel(reading.date)}`,
+          });
         }
       }
 
@@ -562,51 +492,42 @@ export async function initScrubber(
          own year. The tile always says it in words (never colour alone); only a
          zone actually in DST draws the pill. */
       const status = reading.ok
-        ? dstStatus(id, Number(reading.date.slice(0, 4)), reading.inDst)
+        ? dstStatus(zone, Number(reading.date.slice(0, 4)), reading.inDst)
         : null;
-      if (offsetEl) {
-        offsetEl.textContent = currentOffset ? `UTC${currentOffset}` : "";
-      }
-      const dstEl = row.querySelector<HTMLElement>("[data-field='dst']");
-      if (dstEl) {
-        dstEl.dataset["state"] = status ?? "lost";
-        dstEl.textContent =
-          status === "dst"
-            ? "DST"
-            : status === "standard"
-              ? "Standard time"
-              : status === "none"
-                ? "No DST"
-                : "";
-        dstEl.title =
-          status === "dst"
-            ? "Daylight saving time is in effect at this instant"
-            : status === "standard"
-              ? "Standard time at this instant; this zone changes its clocks this year"
-              : status === "none"
-                ? "This zone keeps one offset all year"
-                : "";
-      }
+      tile.offset.textContent = currentOffset ? `UTC${currentOffset}` : "";
+      tile.dst.dataset["state"] = status ?? "lost";
+      tile.dst.textContent =
+        status === "dst"
+          ? "DST"
+          : status === "standard"
+            ? "Standard time"
+            : status === "none"
+              ? "No DST"
+              : "";
+      tile.dst.title =
+        status === "dst"
+          ? "Daylight saving time is in effect at this instant"
+          : status === "standard"
+            ? "Standard time at this instant; this zone changes its clocks this year"
+            : status === "none"
+              ? "This zone keeps one offset all year"
+              : "";
 
       /* The switch the scrub has crossed since the reference time, from the
          library's transition list for this zone: named, with its size, and the
          new offset is the offset line above it. It shows for as long as the
          scrub stays past it, and goes when the scrub comes back. */
       const crossed = reading.ok
-        ? crossedSwitch(id, state.anchorMs, instantMs)
+        ? crossedSwitch(zone, state.anchorMs, instantMs)
         : null;
-      const switchEl = row.querySelector<HTMLElement>("[data-field='switch']");
-      if (switchEl) {
-        switchEl.textContent = crossed ? switchLabel(crossed) : "";
-        switchEl.title = crossed ? switchTitle(crossed) : "";
-      }
-      row.dataset["switched"] = crossed ? "true" : "false";
+      tile.change.textContent = crossed ? switchLabel(crossed) : "";
+      tile.change.title = crossed ? switchTitle(crossed) : "";
       if (crossed) {
         crossings.push(
-          `${shortZone(id)}: ${switchLabel(crossed).toLowerCase()}, now UTC${currentOffset}${status === "dst" ? ", daylight saving time" : ""}`,
+          `${shortZone(zone)}: ${switchLabel(crossed).toLowerCase()}, now UTC${currentOffset}${status === "dst" ? ", daylight saving time" : ""}`,
         );
       }
-    }
+    });
     return crossings.join(". ");
   }
 
@@ -628,8 +549,8 @@ export async function initScrubber(
     const key = `${state.anchorMs}|${state.pinned.join(",")}`;
     if (key === lastMarksKey) return;
     lastMarksKey = key;
-    marks.replaceChildren();
     const seen = new Set<string>();
+    const list: SafeHtml[] = [];
     for (const s of switchesInWindow(
       state.pinned,
       state.anchorMs,
@@ -641,12 +562,11 @@ export async function initScrubber(
       seen.add(dedupe);
       const minutes = (s.instantMs - state.anchorMs) / 60_000;
       const pct = ((minutes + SLIDER_RANGE_MIN) / (2 * SLIDER_RANGE_MIN)) * 100;
-      const mark = document.createElement("span");
-      mark.className = "gmt-scrubber-mark";
-      mark.dataset["kind"] = kind;
-      mark.style.setProperty("--gmt-mark-pct", String(pct));
-      marks.append(mark);
+      list.push(
+        html`<span class="${styles.mark}" data-kind="${kind}" style="--gmt-mark-pct: ${String(pct)}"></span>`,
+      );
     }
+    setHtml(marks, html`${list}`);
   }
 
   /** The button is only for a switch there is to go to. */
@@ -662,7 +582,7 @@ export async function initScrubber(
       : effectiveMs();
   function updateJumpState(): void {
     const next = nextSwitch(state.pinned, jumpAfterMs());
-    presetButton.disabled = next === null;
+    jumpButton.disabled = next === null;
     if (next === null) {
       jumpStatus.textContent =
         "None of the shown zones changes its clocks in the next two years.";
@@ -673,16 +593,23 @@ export async function initScrubber(
     }
   }
 
+  /** The link "Copy shareable link" puts on the clipboard. */
+  function shareUrl(): string {
+    return `${globalThis.location?.origin ?? ""}${
+      options.sharePath ?? globalThis.location?.pathname ?? ""
+    }${encodeState(state.pinned, effectiveMs())}`;
+  }
+
   function render(): void {
-    readout.textContent = formatReadout(effectiveMs());
+    readoutEl.value = formatReadout(effectiveMs());
     const crossings = updateRows();
     renderMarks();
     updateJumpState();
-    /* Said once the scrub settles, and only when it changed: the slider speaks
-       its own value on every step. */
+    copyEl.text = shareUrl();
+    /* Said once the scrub settles, and only when it changed. */
     if (crossings !== lastCrossings) {
       lastCrossings = crossings;
-      announcer.say(
+      say(
         () =>
           crossings ||
           "No clock change between the reference time and this time.",
@@ -692,116 +619,122 @@ export async function initScrubber(
   }
 
   // --- events ---------------------------------------------------------
-  slider.addEventListener("input", () => {
-    state.offsetMin = Number(slider.value);
-    syncRange(slider, formatShift(state.offsetMin));
-    render();
-  });
-
-  anchorInput.addEventListener("change", () => {
-    const ms = fromUtc(`${anchorInput.value}:00Z`);
-    if (ms !== null) {
-      state.anchorMs = ms;
-      state.offsetMin = 0;
-      syncControls();
+  rangeEl.addEventListener(
+    "input",
+    () => {
+      state.offsetMin = rangeEl.value;
       render();
-    }
-  });
+    },
+    { signal },
+  );
 
-  /* The attached "+" opens the same list the typeahead shows, so the whole set
-     is browsable without knowing an id to type. It mirrors the list's open
-     state for its own styling and for assistive tech; the input keeps the
-     `aria-expanded` that names the listbox. */
-  const addOpen = host.querySelector<HTMLElement>("[data-role='add-open']");
-  const combobox = createZoneCombobox(
-    addInput,
-    [...COORDINATES_BY_ID.keys()],
-    (value) => {
-      if (!state.pinned.includes(value)) {
-        state.pinned = [...state.pinned, value];
-        addInput.value = "";
-        buildRows();
+  anchorInput.addEventListener(
+    "change",
+    () => {
+      const ms = fromUtc(`${anchorInput.value}:00Z`);
+      if (ms !== null) {
+        state.anchorMs = ms;
+        state.offsetMin = 0;
+        syncControls();
         render();
       }
     },
-    (open) => addOpen?.setAttribute("aria-expanded", String(open)),
+    { signal },
   );
-  /* Pressing the button must not take focus from the input: the blur would
-     start the list's close timer, and a press longer than that shuts the list
-     just before the click reopens it. */
-  addOpen?.addEventListener("mousedown", (event) => event.preventDefault());
-  addOpen?.addEventListener("click", () => combobox.toggle());
+
+  /* The combobox says `change` when a zone is picked or an exact id is typed and entered. The
+     text input's own `change` bubbles through it too, with no `detail`: ignored. */
+  combobox.addEventListener(
+    "change",
+    (event) => {
+      if (!(event instanceof CustomEvent)) return;
+      const value: unknown = event.detail?.value;
+      if (typeof value !== "string" || state.pinned.includes(value)) return;
+      state.pinned = [...state.pinned, value];
+      combobox.value = "";
+      buildRows();
+      render();
+    },
+    { signal },
+  );
+
+  rows.addEventListener(
+    "click",
+    (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const tile = tiles.find((t) => t.remove.contains(target));
+      if (!tile) return;
+      state.pinned = state.pinned.filter((zone) => zone !== tile.zone);
+      buildRows();
+      render();
+    },
+    { signal },
+  );
 
   /* The earliest switch after the scrubbed instant among the shown zones,
      whichever way it goes. Pressing again goes on to the next one, searching after
      the switch it landed on (see `lastJump`), so a switch of another zone that
      falls inside the landing hour is still named. */
-  presetButton.addEventListener("click", () => {
-    const next = nextSwitch(state.pinned, jumpAfterMs());
-    if (!next) {
-      updateJumpState();
-      return;
-    }
-    state.anchorMs = roundToStep(next.instantMs - JUMP_LEAD_MIN * 60_000);
-    state.offsetMin = JUMP_SHIFT_MIN;
-    lastJump = { switchMs: next.instantMs, landedMs: effectiveMs() };
-    reasonShown = false;
-    syncControls();
-    render();
-    const city = shortZone(next.zone);
-    const what =
-      next.shiftMin > 0
-        ? `${city} springs forward ${formatShift(next.shiftMin)}`
-        : `${city} falls back ${formatShift(next.shiftMin)}`;
-    jumpStatus.textContent = `${what} at ${formatInstantShort(next.instant)}. Showing one hour after it.`;
-    jumpStatus.title = switchTitle(next);
-    lastCrossings = jumpStatus.textContent;
-    announcer.say(() => jumpStatus.textContent ?? "");
-  });
+  jumpButton.addEventListener(
+    "click",
+    () => {
+      const next = nextSwitch(state.pinned, jumpAfterMs());
+      if (!next) {
+        updateJumpState();
+        return;
+      }
+      state.anchorMs = roundToStep(next.instantMs - JUMP_LEAD_MIN * 60_000);
+      state.offsetMin = JUMP_SHIFT_MIN;
+      lastJump = { switchMs: next.instantMs, landedMs: effectiveMs() };
+      reasonShown = false;
+      syncControls();
+      render();
+      const city = shortZone(next.zone);
+      const what =
+        next.shiftMin > 0
+          ? `${city} springs forward ${formatShift(next.shiftMin)}`
+          : `${city} falls back ${formatShift(next.shiftMin)}`;
+      const text = `${what} at ${formatInstantShort(next.instant)}. Showing one hour after it.`;
+      jumpStatus.textContent = text;
+      lastCrossings = text;
+      say(() => text);
+    },
+    { signal },
+  );
 
   /* Back to the opening reference time: now, rounded forward, taken at the
      press. The link then carries that concrete time, so what it opens on is
      what the reader sees. */
-  resetButton.addEventListener("click", () => {
-    state.anchorMs = nowRounded();
-    state.offsetMin = 0;
-    syncControls();
-    render();
-    jumpStatus.textContent = `Reset to now, rounded forward to ${formatInstantShort(toUtc(state.anchorMs))}.`;
-    jumpStatus.title = "";
-    reasonShown = false;
-    lastCrossings = "";
-    announcer.say(() => jumpStatus.textContent ?? "");
-  });
-
-  shareButton.addEventListener("click", async () => {
-    const url = `${globalThis.location?.origin ?? ""}${
-      options.sharePath ?? globalThis.location?.pathname ?? ""
-    }${encodeState(state.pinned, effectiveMs())}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      shareStatus.textContent = "Link copied.";
-    } catch {
-      shareStatus.textContent = url;
-    }
-  });
+  resetButton.addEventListener(
+    "click",
+    () => {
+      state.anchorMs = nowRounded();
+      state.offsetMin = 0;
+      syncControls();
+      render();
+      const text = `Reset to now, rounded forward to ${formatInstantShort(toUtc(state.anchorMs))}.`;
+      jumpStatus.textContent = text;
+      reasonShown = false;
+      lastCrossings = "";
+      say(() => text);
+    },
+    { signal },
+  );
 
   syncControls();
   buildRows();
   render();
-  /* The night-light easter egg every crystal face on the site shares. Bound on
-     the host, so faces built later by `buildRows` are covered too. */
-  bindClockGlow(host, clockGlow.signal);
+  /* The night-light easter egg every crystal face on the site shares. Bound on the widget, so
+     faces built later by `buildRows` are covered too. */
+  bindClockGlow(widgetEl, signal);
 
   return {
     getState: () => ({ pinned: [...state.pinned], time: toUtc(effectiveMs()) }),
     destroy() {
       if (urlTimer) clearTimeout(urlTimer);
-      announcer.cancel();
-      combobox.destroy();
-      clockGlow.abort();
-      host.innerHTML = "";
-      host.classList.remove("gmt-scrubber", "gmt-widget", "not-content");
+      if (settleTimer) clearTimeout(settleTimer);
+      controller.abort();
     },
   };
 }
@@ -816,18 +749,4 @@ function shortZone(id: string): string {
  *  caption names a minute, so the seconds are noise in both. */
 function hhmm(time: string): string {
   return time.slice(0, 5);
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      })[c] as string,
-  );
 }

@@ -4,7 +4,7 @@
  * The `[data-theme="light"]` rules that aren't a simple palette re-tint (those
  * are token-value swaps in gmt-tokens.css) and don't sit next to a base rule
  * elsewhere (scrollbar → gmt-controls.css, Pagefind → gmt-content.css,
- * --ec-codeBg → gmt-glass.css). Loaded last so it always wins its ties.
+ * --ec-codeBg → gmt-glass.css). It sits in the `gmt.thirdparty` layer, after the content and tools layers.
  *
  * A rule here that can reach inside a dark island (`.gmt-theme-dark`, see
  * gmt-tokens.css — the landing hero) excludes it, since the island keeps the
@@ -13,6 +13,7 @@
  */
 
 /* ---- Light mode UI components ---- */
+
 /* Search bar - target Starlight's actual search input */
 [data-theme="light"] header input[type="search"],
 [data-theme="light"] header input[type="text"],
@@ -21,6 +22,16 @@
   background-color: var(--gmt-void);
   color: var(--gmt-ice);
   border-color: var(--gmt-hairline);
+}
+
+/* The Pagefind field keeps its own fill and clear button (gmt-content.css); the rules above
+   and below reach them too, from a later layer, so these two put them back. */
+[data-theme="light"] site-search .pagefind-ui__search-input[type] {
+  background-color: var(--gmt-glass-tint-subtle);
+}
+
+[data-theme="light"] site-search dialog .pagefind-ui__search-clear {
+  color: var(--gmt-ice-dim);
 }
 
 [data-theme="light"] header input::placeholder,
@@ -39,25 +50,27 @@
  * the way the dark pill does. (Mobile keeps the transparent icon-button look
  * from the max-width block above.)
  */
-@media (min-width: 50rem) {
+@media (width >= 50rem) {
   /* Icon, "Search" label and ⌘K hint all in primary blue, both themes
      (Starlight defaults them to muted gray). */
   site-search button[data-open-modal] {
     color: var(--gmt-cyan-ink);
   }
 
-  site-search button[data-open-modal]:hover {
+  site-search button[data-open-modal]:hover,
+  site-search button[data-open-modal]:focus-visible {
     color: var(--gmt-cyan-ink);
   }
 
   [data-theme="light"] site-search button[data-open-modal] {
-    background: color(from var(--gmt-void) srgb r g b / 0.6);
-    border-color: color(from var(--gmt-cyan) srgb r g b / 0.3);
-    backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+    background: color(from var(--gmt-void) srgb r g b / 60%);
+    border-color: color(from var(--gmt-cyan) srgb r g b / 30%);
+    backdrop-filter: var(--gmt-glass-blur-saturate);
   }
 
-  [data-theme="light"] site-search button[data-open-modal]:hover {
-    border-color: color(from var(--gmt-cyan) srgb r g b / 0.5);
+  [data-theme="light"] site-search button[data-open-modal]:hover,
+  [data-theme="light"] site-search button[data-open-modal]:focus-visible {
+    border-color: color(from var(--gmt-cyan) srgb r g b / 50%);
   }
 }
 
@@ -106,13 +119,13 @@ site-search button[data-open-modal] > kbd {
 
 /* Main CTA buttons (Install, etc.) — glass effect in light mode */
 [data-theme="light"]
-  :is(#starlight__main, main)
-  a.sl-link-button.primary:not(:where(.gmt-theme-dark *)) {
+  main
+  .sl-link-button.primary:not(:where(.gmt-theme-dark *)) {
   background: var(--gmt-fill-strong);
   border: 1px solid var(--gmt-border);
   color: var(--gmt-cyan-ink);
   corner-shape: bevel;
-  backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  backdrop-filter: var(--gmt-glass-blur-saturate);
 }
 
 /* Light mode: links go primary cyan across hero, banner, page header, and main
@@ -129,9 +142,7 @@ site-search button[data-open-modal] > kbd {
   a:not(:where(.gmt-theme-dark *)),
 [data-theme="light"]
   main
-  a:not(.sidebar-pane a):not(#starlight__sidebar a):not([role="tab"]):not(
-    :where(.gmt-theme-dark *)
-  ) {
+  a:not(.sidebar-pane a, [role="tab"], :where(.gmt-theme-dark *)) {
   color: var(--gmt-cyan-ink);
 }
 
@@ -142,7 +153,7 @@ site-search button[data-open-modal] > kbd {
 .comparison-card .title,
 .card .title,
 [class*="card"] .title {
-  color: var(--gmt-ice) !important;
+  color: var(--gmt-ice);
 }
 
 /* Comparison card icons — match card border color */
@@ -159,7 +170,7 @@ site-search button[data-open-modal] > kbd {
 
 a[rel="prev"] .link-title,
 a[rel="next"] .link-title {
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 
 /* Inner-page navigation and content rendered by Starlight components.
@@ -173,13 +184,9 @@ a[rel="next"] .link-title {
    leaf link (not caught by this selector) was already 7.14:1 with the same
    background, confirming the badge's own white text is correct once this
    rule stops overriding it. */
-[data-theme="light"] #starlight__sidebar summary,
-[data-theme="light"] #starlight__sidebar summary .group-label,
-[data-theme="light"]
-  #starlight__sidebar
-  summary
-  .group-label
-  > span:not(.sl-badge) {
+[data-theme="light"] .sidebar-pane summary,
+[data-theme="light"] .sidebar-pane summary .group-label,
+[data-theme="light"] .sidebar-pane summary .group-label > :not(.sl-badge) {
   color: var(--gmt-ice);
 }
 
@@ -198,6 +205,9 @@ a[rel="next"] .link-title {
 /* prev/next title color flips via --gmt-pagination-title (gmt-tokens.css). */
 
 /* TOC hover — light mode uses dark text instead of white */
-[data-theme="light"] nav[aria-labelledby="starlight__on-this-page"] a:hover {
+[data-theme="light"] nav[aria-labelledby="starlight__on-this-page"] a:hover,
+[data-theme="light"]
+  nav[aria-labelledby="starlight__on-this-page"]
+  a:focus-visible {
   color: var(--gmt-ice);
 }

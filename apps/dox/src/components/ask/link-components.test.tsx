@@ -18,6 +18,7 @@ import { referenceRoutes } from "~/generated/reference/route-manifest";
 import { MessageResponse } from "../ai-elements/message";
 import { createLinkComponents } from "./link-components";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import { expectNoAxeViolations } from "~/test/render-widget";
 
 installJsdomShims();
 
@@ -49,67 +50,75 @@ describe("the rendered link-hardening path", () => {
     expect(referenceRoutes.has(HALLUCINATED)).toBe(false);
   });
 
-  it("degrades a hallucinated reference path to plain text, not a link", () => {
+  it("degrades a hallucinated reference path to plain text, not a link", async () => {
     const { container } = renderAnswer(
       `Use [notAReal](${HALLUCINATED}) for that.`,
     );
 
     // The words survive — the reader still gets a readable sentence.
-    expect(container.textContent).toContain("notAReal");
+    expect(screen.getByText(/notAReal/)).toBeInTheDocument();
     // But nothing points at a page that would 404.
-    expect(container.querySelector(`a[href="${HALLUCINATED}"]`)).toBeNull();
-    expect(screen.queryByRole("link", { name: "notAReal" })).toBeNull();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 
-  it("still renders a real reference path as a working link", () => {
-    renderAnswer(`See [convert](${REAL}).`);
+  it("still renders a real reference path as a working link", async () => {
+    const { container } = renderAnswer(`See [convert](${REAL}).`);
 
-    const link = screen.getByRole("link", { name: "convert" });
-    expect(link.getAttribute("href")).toBe(`/gmt${REAL}`);
+    expect(screen.getByRole("link", { name: "convert" })).toHaveAttribute(
+      "href",
+      `/gmt${REAL}`,
+    );
+    await expectNoAxeViolations(container);
   });
 
-  it("keeps both behaviours straight inside one answer", () => {
+  it("keeps both behaviours straight inside one answer", async () => {
     const { container } = renderAnswer(
       `Real: [good](${REAL}). Invented: [bad](${HALLUCINATED}).`,
     );
 
-    expect(screen.getByRole("link", { name: "good" })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "bad" })).toBeNull();
-    expect(container.textContent).toContain("bad");
+    expect(screen.getByRole("link", { name: "good" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "bad" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Invented: bad/)).toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 
-  it("promotes a route retrieved this session even though the manifest omits it", () => {
+  it("promotes a route retrieved this session even though the manifest omits it", async () => {
     // The manifest holds only /reference/*; a guide URL reaches the client
     // solely through the retrieval trace. See chat-types.ts.
     const guide = "/guides/concepts/dst-disambiguation/";
     expect(referenceRoutes.has(guide)).toBe(false);
 
-    renderAnswer(`Read [the guide](${guide}).`, [guide]);
-    expect(
-      screen.getByRole("link", { name: "the guide" }).getAttribute("href"),
-    ).toBe(`/gmt${guide}`);
+    const { container } = renderAnswer(`Read [the guide](${guide}).`, [guide]);
+    expect(screen.getByRole("link", { name: "the guide" })).toHaveAttribute(
+      "href",
+      `/gmt${guide}`,
+    );
+    await expectNoAxeViolations(container);
   });
 
-  it("opens an allowlisted off-site link in a new tab, and a site link in the same tab", () => {
-    renderAnswer(
+  it("opens an allowlisted off-site link in a new tab, and a site link in the same tab", async () => {
+    const { container } = renderAnswer(
       `See [the source](https://github.com/northguild/gmt) and [convert](${REAL}).`,
     );
 
     const github = screen.getByRole("link", { name: "the source" });
-    expect(github.getAttribute("target")).toBe("_blank");
-    expect(github.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(github).toHaveAttribute("target", "_blank");
+    expect(github).toHaveAttribute("rel", "noopener noreferrer");
 
     const site = screen.getByRole("link", { name: "convert" });
-    expect(site.getAttribute("target")).toBeNull();
-    expect(site.getAttribute("rel")).toBeNull();
+    expect(site).not.toHaveAttribute("target");
+    expect(site).not.toHaveAttribute("rel");
+    await expectNoAxeViolations(container);
   });
 
-  it("degrades an off-site link to an origin that is not allowlisted", () => {
+  it("degrades an off-site link to an origin that is not allowlisted", async () => {
     const { container } = renderAnswer(
       "Try [this tool](https://evil.example.com/gmt).",
     );
 
-    expect(container.textContent).toContain("this tool");
-    expect(screen.queryByRole("link", { name: "this tool" })).toBeNull();
+    expect(screen.getByText(/this tool/)).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 });

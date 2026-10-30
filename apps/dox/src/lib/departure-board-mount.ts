@@ -2,26 +2,73 @@
  * The Departure Board widget (TRAN-57), mountable on its tool page and in the
  * chat rail.
  *
- * A timetable on a time rail with the arrival as a draggable marker and the
- * minimum connection as a hatched bar: the departure `nextDeparture` says the
- * arrival can make, beside the naive pick with no connection time. The printed
- * results are always the real calls'; the rail is a picture of them.
+ * A timetable on a time rail with the arrival as a draggable marker and the minimum
+ * connection as a hatched bar: the departure `nextDeparture` says the arrival can make,
+ * beside the naive pick with no connection time. The printed results are always the real
+ * calls'; the rail is a picture of them.
  *
- * `""` means two things. A correct empty answer (no departure qualifies) is
- * drawn as empty with a note; an invalid input is drawn as NO SIGNAL with its
- * reason. `departureNullReason` decides which, by probing the library.
+ * `""` means two things. A correct empty answer (no departure qualifies) is drawn as empty
+ * with a note; an invalid input is drawn as NO SIGNAL with its reason. `departureNullReason`
+ * decides which, by probing the library.
  *
- * The arrival handle has three ways in: pointer drag, keyboard (Arrow,
- * Shift+Arrow, PageUp, PageDown, Home, End) and the typed arrival field. The
- * rail never rescales while the handle is dragged or a key is held; it refits
- * on `pointerup` (or a lost capture), on a handle key's `keyup` or a blur, on a
- * typed value's `change`, on a preset and on a seed. The verdict is not a live
- * region; a visually hidden status line reads it once a change settles.
+ * Built on the component kit: `renderDepartureBoardTemplate` writes the markup from builders
+ * only, with ids from `idScope(idPrefix)`, and `mount` finds its parts by those ids and
+ * reads and writes element `value` properties.
+ *
+ * The arrival has three ways in: pointer drag and keyboard on its `<gmt-handle>`, and the
+ * typed arrival field the handle writes. The rail never rescales while the handle is
+ * dragged; it refits when the handle's value commits (`change`), on a typed value's
+ * `change`, on a preset and on a seed. The verdict is not a live region; a visually hidden
+ * status line reads it once a change settles.
  */
-import { codeFrameHtml } from "./code-frame";
+import { defineElements } from "~/widgets/define";
 import {
-  DEPARTURE_PRESETS,
+  aside,
+  codeFrame,
+  field,
+  fieldGrid,
+  findWidget,
+  hint,
+  html,
+  idScope,
+  raw,
+  section,
+  select,
+  setHtml,
+  srOnly,
+  textInput,
+  toolLinks,
+  widget,
+  type SafeHtml,
+} from "~/widgets/builders";
+import { callOutput } from "~/widgets/families/gnss/call-output";
+import {
+  setSelectValue,
+  zoneChoices,
+} from "~/widgets/families/cutoff/zone-choices";
+import {
+  departureRail,
+  departureStage,
+  departureTicks,
+  type RailLabel,
+  type RailMarks,
+} from "~/widgets/families/punctuality/departure-rail";
+import {
+  punctHero,
+  punctHeroStrip,
+} from "~/widgets/families/punctuality/punct-hero";
+import { chips, type GmtChips } from "~/widgets/primitives/chips/chips";
+import { grow } from "~/widgets/primitives/grow/grow";
+import {
+  handle,
+  handleTrack,
+  type GmtHandle,
+} from "~/widgets/primitives/handle/handle";
+import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
+import styles from "~/widgets/tools/departure-board.module.css";
+import {
   CUSTOM_PRESET_ID,
+  DEPARTURE_PRESETS,
   MAX_DEPARTURES,
   collectDepartureFacts,
   departureIconMode,
@@ -46,42 +93,29 @@ import {
   type RailWindow,
 } from "./departure-board";
 import { onWidthChange, thinTickLabels } from "./label-fit";
-import { transportIcon } from "./transport-icons";
 import { loadPunctualityLib } from "./punctuality-lib";
 import {
-  TRANSPORT_ZONES,
+  SETTLE_MS,
   callArgs,
   epochMs,
   minuteTicks,
-  nextInstanceId,
-  heroLinesHtml,
-  setPresetDescription,
-  settledAnnouncer,
   placeLabels,
-  type Rect,
   toleranceText,
   writeLike,
   writtenLabel,
   writtenTime,
   zoneOf,
-  zoneOptionsHtml,
   type PunctualityLib,
+  type Rect,
 } from "./punctuality-widgets";
+import { transportIcon } from "./transport-icons";
 import { encodeWidgetPermalink } from "./widget-permalink";
-import { onceDestroy, WidgetLoadError } from "./widget-mount";
-import {
-  chipToggleHtml,
-  escapeAttr,
-  escapeHtml,
-  labelTextHtml,
-  renderAside,
-  renderCallLine,
-  renderWidgetOutput,
-  wireCopyButtons,
-} from "./widget-ui";
+import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { codeSpan, setToolLink } from "./widget-ui";
 
 export type { DepartureBoardArgs } from "./departure-board";
 
+const WIDGET_NAME = "departure-board";
 const MINUTE_MS = 60_000;
 
 /** Where each kind of rail label is centred, as a percent of the rail's height:
@@ -90,134 +124,210 @@ const ROW_TOP = 11;
 const ROW_MADE = 80;
 const ROW_CONN = 92;
 
-function presetOptionsHtml(presetId: string): string {
-  return (
-    `<option value="${CUSTOM_PRESET_ID}"${presetId === CUSTOM_PRESET_ID ? " selected" : ""}>Custom</option>` +
-    DEPARTURE_PRESETS.map(
-      (p) =>
-        `<option value="${escapeAttr(p.id)}"${p.id === presetId ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-    ).join("")
-  );
-}
+/** The widest readings the plate shows, so it keeps its width while the handle drags. */
+const HERO_SAMPLES = ["00:00", "none"];
+const HERO_LINE_SAMPLES: readonly (readonly string[])[] = [
+  ["wait 23 h 59 min after arrival", "no departure left"],
+  ["PT23H59M"],
+];
+
+// ---------------------------------------------------------------------------
+// Markup
+// ---------------------------------------------------------------------------
 
 /**
- * `renderDepartureBoardTemplate(args = {})`: the widget's chrome, seeded so the
- * first paint shows the arrival and the timetable. Seeded when `args.departures`,
- * `args.headway`, `args.form` or `args.preset` is defined, else the first
- * preset. The rail and the results are drawn by `mount`, because they come from
- * the real library.
+ * `renderDepartureBoardTemplate(idPrefix, args = {})`: the widget's chrome, seeded so the
+ * first paint shows the arrival and the timetable. The rail and the results are drawn by
+ * `mount`, because they come from the real library.
  */
 export function renderDepartureBoardTemplate(
+  idPrefix: string,
   args: DepartureBoardArgs = {},
-): string {
+): SafeHtml {
+  const id = idScope(idPrefix);
   const s = initialState(args);
   const presetId = matchPreset(s);
-  const preset = DEPARTURE_PRESETS.find((p) => p.id === presetId);
-  const uid = nextInstanceId();
   const count = visibleCount(s);
+  const textField = (
+    local: string,
+    label: string,
+    value: string,
+    hintOf?: ReturnType<typeof hint>,
+    hidden = false,
+  ) =>
+    html`<div class="${styles.box}" id="${id(`${local}-box`)}" ${hidden ? html`hidden` : ""}>${field(
+      {
+        id: id(local),
+        label,
+        ...(hintOf === undefined ? {} : { hint: hintOf }),
+        control: ({ id: cid, describedBy }) =>
+          textInput({
+            id: cid,
+            value,
+            autocomplete: "off",
+            spellcheck: false,
+            ...(describedBy === undefined ? {} : { describedBy }),
+          }),
+      },
+    )}</div>`;
 
-  const radio = (value: "list" | "headway", label: string) =>
-    chipToggleHtml({
-      type: "radio",
-      name: `form-${uid}`,
-      role: "form",
-      value,
-      label,
-      checked: s.form === value,
-    });
-  const countOptions = Array.from({ length: MAX_DEPARTURES }, (_, i) => i + 1)
-    .map(
-      (n) =>
-        `<option value="${n}"${n === count ? " selected" : ""}>${n}</option>`,
-    )
-    .join("");
-  const slots = Array.from({ length: MAX_DEPARTURES }, (_, i) => {
-    const n = i + 1;
-    return (
-      `<label class="gmt-label" data-role="departure-field-${n}"${n > count ? " hidden" : ""}>${labelTextHtml(`Departure ${n}`)}` +
-      `<input class="gmt-input" data-role="departure-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(s.departures[i] ?? "")}"></label>`
-    );
-  }).join("");
+  const listFields = html`<div class="${styles.fields}" id="${id("list-fields")}" ${s.form === "list" ? "" : html`hidden`}>${fieldGrid(
+    html`<div class="${styles.box}">${field({
+      id: id("departure-count"),
+      label: "Departures",
+      control: ({ id: cid }) =>
+        select({
+          id: cid,
+          value: String(count),
+          options: Array.from({ length: MAX_DEPARTURES }, (_, i) => ({
+            value: String(i + 1),
+            label: String(i + 1),
+          })),
+        }),
+    })}</div>${Array.from({ length: MAX_DEPARTURES }, (_, i) =>
+      textField(
+        `departure-${i + 1}`,
+        `Departure ${i + 1}`,
+        s.departures[i] ?? "",
+        undefined,
+        i + 1 > count,
+      ),
+    )}`,
+  )}</div>`;
+  const headwayFields = html`<div class="${styles.fields}" id="${id("headway-fields")}" ${s.form === "headway" ? "" : html`hidden`}>${fieldGrid(
+    html`${textField("headway", "Every", s.headway)}${textField("from", "From", s.from)}${textField("to", "To, excluded", s.to)}`,
+  )}</div>`;
 
-  return (
-    `<div class="gmt-departure-board gmt-widget not-content">` +
-    `<div class="gmt-widget-card">` +
-    `<div class="gmt-widget-section">` +
-    `<h4>1. The arrival and the timetable</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
-    `<select class="gmt-select" data-role="preset">${presetOptionsHtml(presetId)}</select></label>` +
-    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
-    `</div>` +
-    `<fieldset class="gmt-chip-group"><legend>Timetable</legend>` +
-    radio("list", "A list of departures") +
-    radio("headway", "Every N minutes") +
-    `</fieldset>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Arrival")}` +
-    `<input class="gmt-input" data-role="after" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(s.after)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("Minimum connection", { optional: true })}` +
-    `<input class="gmt-input" data-role="minimum-connection" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(s.minimumConnection)}"></label>` +
-    `</div>` +
-    // One slot round the two timetable forms: switching between a list and a
-    // headway eases the swap instead of moving the page in one frame.
-    `<div data-role="timetable-fields" data-grow="slot">` +
-    `<div class="gmt-field-grid" data-role="list-fields"${s.form === "list" ? "" : " hidden"}>` +
-    `<label class="gmt-label">${labelTextHtml("Departures")}` +
-    `<select class="gmt-select" data-role="departure-count">${countOptions}</select></label>` +
-    slots +
-    `</div>` +
-    `<div class="gmt-field-grid" data-role="headway-fields"${s.form === "headway" ? "" : " hidden"}>` +
-    `<label class="gmt-label">${labelTextHtml("Every")}` +
-    `<input class="gmt-input" data-role="headway" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(s.headway)}"></label>` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("From")}` +
-    `<input class="gmt-input" data-role="from" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(s.from)}"></label>` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("To, excluded")}` +
-    `<input class="gmt-input" data-role="to" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(s.to)}"></label>` +
-    `</div>` +
-    `</div>` +
-    `<p class="gmt-widget-hint">Every time needs its offset: 2024-06-15T10:05:00+03:00, or a zoned string written with its offset.</p>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>2. The departure you can make</h4>` +
-    `<p class="gmt-transport-verdict" data-role="verdict"></p>` +
-    // Not live: a drag rewrites the verdict every step, on top of the handle's
-    // own aria-valuetext. This is read out once the change settles.
-    `<p class="gmt-transport-visually-hidden" role="status" aria-live="polite" data-role="verdict-live"></p>` +
-    `<p class="gmt-punct-naive" data-role="naive-line"></p>` +
-    `<div class="gmt-punct-frame">` +
-    `<div class="gmt-punct-heroes" data-role="rail-heroes" data-grow="slot" aria-hidden="true"></div>` +
-    `<div class="gmt-dep-stage" data-role="rail-stage">` +
-    `<div class="gmt-dep-rail" data-role="departure-rail" role="img" aria-labelledby="rail-summary-${uid}"></div>` +
-    `<div class="gmt-handle" data-role="handle-after" tabindex="0" role="slider" aria-orientation="horizontal" aria-label="Arrival"></div>` +
-    `</div>` +
-    `<div class="gmt-punct-ticks gmt-dep-ticks" data-role="rail-ticks" aria-hidden="true"></div>` +
-    `</div>` +
-    `<p class="gmt-widget-hint" id="rail-summary-${uid}" data-role="rail-summary"></p>` +
-    `<div class="gmt-transport-reason" data-role="reason-aside" data-grow="slot"></div>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>3. What <code>nextDeparture</code> returns</h4>` +
-    codeFrameHtml("made") +
-    `<output class="gmt-widget-output" data-role="made-output">&nbsp;</output>` +
-    codeFrameHtml("naive") +
-    `<output class="gmt-widget-output" data-role="naive-output">&nbsp;</output>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>4. Send it on</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label">${labelTextHtml("Onward leg duration")}` +
-    `<input class="gmt-input" data-role="onward-duration" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(s.onwardDuration)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("Destination clock")}` +
-    `<select class="gmt-select" data-role="onward-zone">${zoneOptionsHtml(TRANSPORT_ZONES, s.onwardZone, "(not given)")}</select></label>` +
-    `<label class="gmt-label">${labelTextHtml("Mode", { optional: true })}` +
-    `<input class="gmt-input" data-role="onward-mode" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(s.onwardMode)}"></label>` +
-    `</div>` +
-    `<div class="gmt-widget-controls"><a class="gmt-button gmt-button--pad" data-role="handoff" aria-disabled="true">Send to Delivery Scheduler</a></div>` +
-    `<p class="gmt-widget-hint" data-role="handoff-hint"></p>` +
-    `</div>` +
-    `</div>` +
-    `</div>`
+  const offsetHint = hint(
+    id("offset-hint"),
+    "Every time needs its offset: 2024-06-15T10:05:00+03:00, or a zoned string written with its offset.",
+  );
+  const pick = section(
+    { id: id("pick"), heading: "1. The arrival and the timetable", level: 4 },
+    html`<div class="${styles.controls}">${preset({
+      id: id("preset"),
+      label: "Preset",
+      value: presetId,
+      options: [
+        { value: CUSTOM_PRESET_ID, label: "Custom", description: "" },
+        ...DEPARTURE_PRESETS.map((p) => ({
+          value: p.id,
+          label: p.label,
+          description: p.description,
+        })),
+      ],
+    })}${chips({
+      legend: "Timetable",
+      kind: "radio",
+      name: id("form"),
+      items: [
+        {
+          value: "list",
+          label: "A list of departures",
+          checked: s.form === "list",
+        },
+        {
+          value: "headway",
+          label: "Every N minutes",
+          checked: s.form === "headway",
+        },
+      ],
+    })}${fieldGrid(
+      html`${textField("after", "Arrival", s.after, offsetHint)}${textField("minimum-connection", "Minimum connection", s.minimumConnection)}`,
+    )}${grow(html`<div>${listFields}${headwayFields}</div>`)}</div>`,
+  );
+
+  const summary = hint(id("summary"), "");
+  const stage = departureStage({
+    railId: id("rail"),
+    ticksId: id("ticks"),
+    summaryId: id("summary"),
+    handleBoxId: id("handle-box"),
+    gate: "drawn track",
+    handle: handleTrack(
+      handle({
+        id: id("handle-after"),
+        label: "Arrival",
+        min: 0,
+        max: 1,
+        step: 1,
+        largeStep: 10,
+        value: 0,
+        valueText: "Arrival",
+      }),
+    ),
+  });
+  const read = section(
+    { id: id("read"), heading: "2. The departure you can make", level: 4 },
+    html`${grow(html`<p class="${styles.verdict}" id="${id("verdict")}" hidden></p>`)}
+      <div role="status" aria-live="polite" aria-label="Departure status" id="${id("live")}">${srOnly("")}</div>
+      ${grow(html`<p class="${styles.naive}" id="${id("naive-line")}" hidden></p>`)}
+      ${grow(
+        html`<div class="${styles.frame}" data-gate="frame">
+        ${grow(html`<div class="${styles.heroes}" id="${id("heroes")}"></div>`)}${stage}
+      </div>`,
+      )}
+      ${grow(summary.html)}
+      ${grow(html`<div id="${id("reason")}"></div>`)}`,
+  );
+
+  const calls = section(
+    { id: id("calls"), heading: "3. What nextDeparture returns", level: 4 },
+    html`${grow(
+      html`<div id="${id("made-slot")}">${codeFrame({
+        label: "The call made",
+        copyLabel: "Copy call",
+        copyText: "",
+        gate: "codeframe",
+      })}</div>`,
+    )}${grow(
+      html`<div id="${id("made-output-slot")}">${callOutput({
+        label: "What nextDeparture returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}${grow(
+      html`<div id="${id("naive-slot")}">${codeFrame({
+        label: "The naive call, with no connection time",
+        copyLabel: "Copy naive call",
+        copyText: "",
+      })}</div>`,
+    )}${grow(
+      html`<div id="${id("naive-output-slot")}">${callOutput({
+        label: "What the naive call returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}`,
+  );
+
+  const send = section(
+    { id: id("send"), heading: "4. Send it on", level: 4 },
+    html`<div class="${styles.controls}">${fieldGrid(
+      html`${textField("onward-duration", "Onward leg duration", s.onwardDuration)}<div class="${styles.box}">${field(
+        {
+          id: id("onward-zone"),
+          label: "Destination clock",
+          control: ({ id: cid }) =>
+            select({
+              id: cid,
+              value: s.onwardZone,
+              options: [
+                { value: "", label: "(not given)" },
+                ...zoneChoices(s.onwardZone),
+              ],
+            }),
+        },
+      )}</div>${textField("onward-mode", "Mode", s.onwardMode)}`,
+    )}<div id="${id("handoff")}">${toolLinks({
+      label: "Send this departure on",
+      links: [{ text: "Send to Delivery Scheduler" }],
+    })}</div>${hint(id("handoff-hint"), "").html}</div>`,
+  );
+
+  return widget(
+    { name: WIDGET_NAME, label: "Departure Board", scope: idPrefix },
+    html`${pick}${read}${calls}${send}`,
   );
 }
 
@@ -225,152 +335,139 @@ export function renderDepartureBoardTemplate(
 // Wiring
 // ---------------------------------------------------------------------------
 
-/** The keys that move the arrival: a key coming up after one of these refits. */
-const HANDLE_KEYS = new Set([
-  "ArrowRight",
-  "ArrowUp",
-  "ArrowLeft",
-  "ArrowDown",
-  "PageUp",
-  "PageDown",
-  "Home",
-  "End",
-]);
-
-/** Write the state onto the controls. The page server-renders the first
- *  preset, so a permalink or chat seed has to reach the controls here. */
-function writeSeed(root: HTMLElement, s: DepartureState): void {
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const set = (role: string, value: string) => {
-    const el = q<HTMLInputElement>(role);
-    if (el) el.value = value;
-  };
-  set("after", s.after);
-  set("minimum-connection", s.minimumConnection);
-  set("headway", s.headway);
-  set("from", s.from);
-  set("to", s.to);
-  set("onward-duration", s.onwardDuration);
-  set("onward-mode", s.onwardMode);
-  const count = q<HTMLSelectElement>("departure-count");
-  if (count) count.value = String(visibleCount(s));
-  s.departures.forEach((d, i) => set(`departure-${i + 1}`, d));
-  root.querySelectorAll<HTMLInputElement>('[data-role="form"]').forEach((r) => {
-    r.checked = r.value === s.form;
-  });
-  const zone = q<HTMLSelectElement>("onward-zone");
-  if (zone) {
-    if (
-      s.onwardZone !== "" &&
-      ![...zone.options].some((o) => o.value === s.onwardZone)
-    ) {
-      const opt = document.createElement("option");
-      opt.value = s.onwardZone;
-      opt.textContent = s.onwardZone;
-      zone.appendChild(opt);
-    }
-    zone.value = s.onwardZone;
-  }
-}
-
 interface Controller {
-  release(): void;
   destroy(): void;
   state(): DepartureState;
 }
 
-function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const presetEl = q<HTMLSelectElement>("preset");
-  const afterEl = q<HTMLInputElement>("after");
-  const stage = q<HTMLElement>("rail-stage");
-  const handle = q<HTMLElement>("handle-after");
-  const rail = q<HTMLElement>("departure-rail");
-  if (!presetEl || !afterEl || !stage || !handle || !rail) {
-    return { release() {}, destroy() {}, state: () => initialState({}) };
+const clamp = (n: number, lo: number, hi: number): number =>
+  Math.min(hi, Math.max(lo, n));
+const r2 = (n: number): number => Math.round(n * 100) / 100;
+
+const instantOf = (text: string): number | null => {
+  if (text === "") return null;
+  try {
+    return epochMs(text);
+  } catch {
+    return null;
   }
+};
+
+function setupWidget(
+  root: HTMLElement,
+  lib: PunctualityLib,
+  start: DepartureState,
+  signal: AbortSignal,
+): Controller {
+  const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
+  const presetEl = widgetEl.querySelector<GmtPreset>("gmt-preset")!;
+  const formEl = widgetEl.querySelector<GmtChips>("gmt-chips")!;
+  const afterEl = el<HTMLInputElement>("after");
+  const connEl = el<HTMLInputElement>("minimum-connection");
+  const countEl = el<HTMLSelectElement>("departure-count");
+  const departureEls = Array.from({ length: MAX_DEPARTURES }, (_, i) =>
+    el<HTMLInputElement>(`departure-${i + 1}`),
+  );
+  const headwayEl = el<HTMLInputElement>("headway");
+  const fromEl = el<HTMLInputElement>("from");
+  const toEl = el<HTMLInputElement>("to");
+  const durationEl = el<HTMLInputElement>("onward-duration");
+  const zoneEl = el<HTMLSelectElement>("onward-zone");
+  const modeEl = el<HTMLInputElement>("onward-mode");
+  const handleEl = el<GmtHandle>("handle-after");
+  const handleBox = el("handle-box");
+  const rail = el("rail");
+  const ticksEl = el("ticks");
+
+  /** Write the state onto the controls: a permalink or chat seed reaches them here. */
+  function writeSeed(s: DepartureState): void {
+    afterEl.value = s.after;
+    connEl.value = s.minimumConnection;
+    headwayEl.value = s.headway;
+    fromEl.value = s.from;
+    toEl.value = s.to;
+    durationEl.value = s.onwardDuration;
+    modeEl.value = s.onwardMode;
+    countEl.value = String(visibleCount(s));
+    s.departures.forEach((d, i) => {
+      departureEls[i]!.value = d;
+    });
+    formEl.value = s.form;
+    setSelectValue(zoneEl, s.onwardZone);
+  }
+
   let win: RailWindow | null = null;
   let destroyed = false;
-  const announcer = settledAnnouncer(q("verdict-live"));
-  /** Read the verdict out once, when the change that made it has settled. */
-  const announce = (): void =>
-    announcer.say(() => q("verdict")?.textContent ?? "");
 
-  const val = (role: string) =>
-    q<HTMLInputElement | HTMLSelectElement>(role)?.value ?? "";
+  const formOf = (): "list" | "headway" => {
+    const v = formEl.value;
+    return (Array.isArray(v) ? v[0] : v) === "headway" ? "headway" : "list";
+  };
 
   const state = (): DepartureState => ({
-    form:
-      (
-        root.querySelector(
-          '[data-role="form"]:checked',
-        ) as HTMLInputElement | null
-      )?.value === "headway"
-        ? "headway"
-        : "list",
+    form: formOf(),
     after: afterEl.value,
-    minimumConnection: val("minimum-connection"),
-    departureCount: val("departure-count"),
-    departures: Array.from({ length: MAX_DEPARTURES }, (_, i) =>
-      val(`departure-${i + 1}`),
-    ),
-    headway: val("headway"),
-    from: val("from"),
-    to: val("to"),
-    onwardDuration: val("onward-duration"),
-    onwardZone: val("onward-zone"),
-    onwardMode: val("onward-mode"),
+    minimumConnection: connEl.value,
+    departureCount: countEl.value,
+    departures: departureEls.map((d) => d.value),
+    headway: headwayEl.value,
+    from: fromEl.value,
+    to: toEl.value,
+    onwardDuration: durationEl.value,
+    onwardZone: zoneEl.value,
+    onwardMode: modeEl.value,
   });
 
-  function syncPreset(): void {
-    presetEl!.value = matchPreset(state());
-    const desc = q("preset-description");
-    if (desc) {
-      setPresetDescription(
-        desc,
-        DEPARTURE_PRESETS.find((p) => p.id === presetEl!.value)?.description ??
-          "",
-      );
-    }
-  }
+  // The verdict is read out once, when the change that made it has settled.
+  let liveText = "";
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const cancelAnnounce = (): void => {
+    if (timer !== undefined) clearTimeout(timer);
+    timer = undefined;
+  };
+  const announce = (): void => {
+    cancelAnnounce();
+    timer = setTimeout(() => {
+      timer = undefined;
+      if (!destroyed) setHtml(el("live"), srOnly(liveText));
+    }, SETTLE_MS);
+  };
 
+  const syncPreset = (): void => {
+    presetEl.value = matchPreset(state());
+  };
+
+  /** Put each label on a spot clear of every mark, the window's edges and the handle. */
   function placeAll(): void {
-    const w = rail!.clientWidth;
-    const h = rail!.clientHeight;
+    const w = rail.clientWidth;
+    const h = rail.clientHeight;
     if (w === 0 || h === 0) return;
-    const labels = [...rail!.querySelectorAll<HTMLElement>(".gmt-dep-label")];
-    const boxes = labels.map((el) => {
-      el.classList.remove("gmt-dep-label--placed");
+    const labels = [...rail.querySelectorAll<HTMLElement>("[data-label]")];
+    const boxes = labels.map((label) => {
+      delete label.dataset["placed"];
       return {
-        x: (Number(el.dataset.x ?? 0) / 100) * w,
-        y: (Number(el.dataset.y ?? 0) / 100) * h,
-        w: el.offsetWidth,
-        h: el.offsetHeight,
+        x: (Number(label.dataset["x"] ?? 0) / 100) * w,
+        y: (Number(label.dataset["y"] ?? 0) / 100) * h,
+        w: label.offsetWidth,
+        h: label.offsetHeight,
       };
     });
-    // Nothing but a label may sit on the rule, the connection bar, a tick, the
-    // made gate, a window edge, the closed stretch, the naive marker or the
-    // handle's 44px hit square.
-    const origin = rail!.getBoundingClientRect();
-    const rectOf = (el: Element, minSize = 0): Rect => {
-      const r = el.getBoundingClientRect();
+    const origin = rail.getBoundingClientRect();
+    const rectOf = (node: Element, minSize = 0): Rect => {
+      const r = node.getBoundingClientRect();
       const cx = r.left - origin.left + r.width / 2;
       const cy = r.top - origin.top + r.height / 2;
       const rw = Math.max(r.width, minSize);
       const rh = Math.max(r.height, minSize);
       return { left: cx - rw / 2, top: cy - rh / 2, w: rw, h: rh };
     };
-    const blocked: Rect[] = [
-      ...rail!.querySelectorAll(
-        ".gmt-dep-line, .gmt-dep-conn, .gmt-dep-run, .gmt-dep-tick, .gmt-dep-naive, .gmt-dep-bracket, .gmt-dep-beyond",
-      ),
-    ].map((el) => rectOf(el, 3));
-    // The service window is lit glass a chip may sit on, but never across its
-    // top or bottom edge.
-    for (const el of rail!.querySelectorAll(".gmt-dep-window")) {
-      const r = el.getBoundingClientRect();
+    const blocked: Rect[] = [...rail.querySelectorAll("[data-block]")].map(
+      (m) => rectOf(m, 3),
+    );
+    // The service window is lit glass a chip may sit on, but never across its top or
+    // bottom edge.
+    for (const win of rail.querySelectorAll("[data-window]")) {
+      const r = win.getBoundingClientRect();
       const left = r.left - origin.left;
       const top = r.top - origin.top;
       blocked.push(
@@ -378,62 +475,52 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
         { left, top: top + r.height - 2, w: r.width, h: 3 },
       );
     }
-    if (!handle!.hidden) blocked.push(rectOf(handle!, 44));
+    if (!handleBox.hidden) blocked.push(rectOf(handleEl, 44));
     placeLabels(boxes, w, h, { markPx: 0, blocked }).forEach((p, i) => {
-      const el = labels[i]!;
-      // When nothing is clear the placer falls back to its first choice, which
-      // may hang past the rail; a label always stays inside it.
-      const left = Math.max(0, Math.min(p.left, w - boxes[i]!.w));
-      const top = Math.max(0, Math.min(p.top, h - boxes[i]!.h));
-      el.style.left = `${left}px`;
-      el.style.top = `${top}px`;
-      el.classList.add("gmt-dep-label--placed");
+      const label = labels[i]!;
+      // When nothing is clear the placer falls back to its first choice, which may hang
+      // past the rail; a label always stays inside it.
+      label.style.left = `${Math.max(0, Math.min(p.left, w - boxes[i]!.w))}px`;
+      label.style.top = `${Math.max(0, Math.min(p.top, h - boxes[i]!.h))}px`;
+      label.dataset["placed"] = "true";
     });
   }
 
   function drawRail(s: DepartureState, facts: DepartureFacts): void {
-    const ticksEl = q("rail-ticks");
     const after = s.after.trim();
     let afterMs: number;
     try {
       afterMs = epochMs(after);
     } catch {
-      rail!.innerHTML = "";
-      if (ticksEl) ticksEl.innerHTML = "";
-      handle!.hidden = true;
+      setHtml(rail, html``);
+      setHtml(ticksEl, html``);
+      handleBox.hidden = true;
       return;
     }
     if (win === null) win = railWindow(s);
     if (win === null) return;
     const span = win.endMs - win.startMs;
-    const pct = (ms: number) =>
-      Math.min(100, Math.max(0, ((ms - win!.startMs) / span) * 100));
-    const r2 = (n: number) => Math.round(n * 100) / 100;
+    const pct = (ms: number): number =>
+      clamp(((ms - win!.startMs) / span) * 100, 0, 100);
     const zone = zoneOf(after) || "UTC";
 
     const thresholdText = thresholdOf(after, s.minimumConnection);
-    let thresholdMs: number | null = null;
-    try {
-      thresholdMs = thresholdText === "" ? null : epochMs(thresholdText);
-    } catch {
-      thresholdMs = null;
-    }
+    const thresholdMs = instantOf(thresholdText);
     const { ticks, dense } = railDepartures(s, win);
-
-    const lineHtml = `<span class="gmt-dep-line"></span>`;
-    // The window and the closed stretch past it paint under everything else.
-    let under = "";
-    let html = "";
-    const labels: { role: string; ms: number; y: number; text: string }[] = [];
+    const labels: RailLabel[] = [];
+    const at = (ms: number, y: number, text: string, dim = false): void => {
+      labels.push({ text, x: pct(ms), y, ...(dim ? { dim } : {}) });
+    };
+    let conn: RailMarks["conn"];
+    let run: RailMarks["run"];
+    let windowSpan: RailMarks["window"];
+    let beyond: RailMarks["beyond"];
+    let from: number | undefined;
+    let to: number | undefined;
 
     if (thresholdMs !== null && thresholdMs > afterMs) {
-      html += `<span class="gmt-dep-conn gmt-punct-hatch" style="left:${r2(pct(afterMs))}%;width:${r2(pct(thresholdMs) - pct(afterMs))}%"></span>`;
-      labels.push({
-        role: "conn",
-        ms: afterMs,
-        y: ROW_CONN,
-        text: `${toleranceText(s.minimumConnection)} to connect`,
-      });
+      conn = { left: pct(afterMs), width: pct(thresholdMs) - pct(afterMs) };
+      at(afterMs, ROW_CONN, `${toleranceText(s.minimumConnection)} to connect`);
     }
     if (dense) {
       const row = timetableOf(s) as {
@@ -449,180 +536,156 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
       } catch {
         /* the whole window */
       }
-      html += `<span class="gmt-dep-run gmt-punct-hatch" style="left:${r2(pct(a))}%;width:${r2(pct(b) - pct(a))}%"></span>`;
-      labels.push({
-        role: "run",
-        ms: (a + b) / 2,
-        y: ROW_TOP,
-        text: `every ${toleranceText(row.headway)}`,
-      });
-    } else {
-      for (const ms of ticks) {
-        html += `<span class="gmt-dep-tick" style="left:${r2(pct(ms))}%"></span>`;
-      }
+      run = { left: pct(a), width: pct(b) - pct(a) };
+      at((a + b) / 2, ROW_TOP, `every ${toleranceText(row.headway)}`);
     }
     if (s.form === "headway") {
       try {
-        const from = epochMs(s.from.trim());
-        const to = epochMs(s.to.trim());
-        if (to > from) {
-          const a = Math.max(from, win.startMs);
-          const b = Math.min(to, win.endMs);
-          if (b > a) {
-            under += `<span class="gmt-dep-window" style="left:${r2(pct(a))}%;width:${r2(pct(b) - pct(a))}%"></span>`;
-          }
+        const f = epochMs(s.from.trim());
+        const t = epochMs(s.to.trim());
+        if (t > f) {
+          const a = Math.max(f, win.startMs);
+          const b = Math.min(t, win.endMs);
+          if (b > a) windowSpan = { left: pct(a), width: pct(b) - pct(a) };
         }
-        if (to >= win.startMs && to < win.endMs) {
-          under += `<span class="gmt-dep-beyond gmt-cutoff-closed" style="left:${r2(pct(to))}%;width:${r2(100 - pct(to))}%"></span>`;
+        if (t >= win.startMs && t < win.endMs) {
+          beyond = { left: pct(t), width: 100 - pct(t) };
         }
-        if (from >= win.startMs && from <= win.endMs) {
-          html += `<span class="gmt-dep-bracket gmt-dep-bracket--from" style="left:${r2(pct(from))}%"></span>`;
-          labels.push({ role: "from", ms: from, y: ROW_TOP, text: "from" });
+        if (f >= win.startMs && f <= win.endMs) {
+          from = pct(f);
+          at(f, ROW_TOP, "from");
         }
-        if (to >= win.startMs && to <= win.endMs) {
-          html += `<span class="gmt-dep-bracket gmt-dep-bracket--to" style="left:${r2(pct(to))}%"></span>`;
-          labels.push({ role: "to", ms: to, y: ROW_TOP, text: "to, excluded" });
+        if (t >= win.startMs && t <= win.endMs) {
+          to = pct(t);
+          at(t, ROW_TOP, "to, excluded");
         }
       } catch {
         /* no brackets */
       }
     }
-    const instantOf = (text: string): number | null => {
-      try {
-        return text === "" ? null : epochMs(text);
-      } catch {
-        return null;
-      }
-    };
     const madeMs = instantOf(facts.made);
     const naiveMs = instantOf(facts.naive);
-    if (naiveMs !== null) {
-      html += `<span class="gmt-dep-naive" data-role="rail-naive" style="left:${r2(pct(naiveMs))}%"></span>`;
-    }
-    if (madeMs !== null) {
-      html += `<span class="gmt-dep-tick gmt-dep-tick--made" data-role="rail-made" style="left:${r2(pct(madeMs))}%"></span>`;
-    }
     if (madeMs !== null && naiveMs !== null && madeMs === naiveMs) {
-      labels.push({
-        role: "made",
-        ms: madeMs,
-        y: ROW_MADE,
-        text: `made: ${writtenTime(facts.made)}, naive`,
-      });
+      at(madeMs, ROW_MADE, `made: ${writtenTime(facts.made)}, naive`);
     } else {
-      if (madeMs !== null) {
-        labels.push({
-          role: "made",
-          ms: madeMs,
-          y: ROW_MADE,
-          text: `made: ${writtenTime(facts.made)}`,
-        });
-      }
-      if (naiveMs !== null) {
-        labels.push({ role: "naive", ms: naiveMs, y: ROW_MADE, text: "naive" });
-      }
+      if (madeMs !== null)
+        at(madeMs, ROW_MADE, `made: ${writtenTime(facts.made)}`);
+      if (naiveMs !== null) at(naiveMs, ROW_MADE, "naive", true);
     }
-    for (const l of labels) {
-      const y = l.y;
-      const dim = l.role === "naive" ? " gmt-cutoff-chip--dim" : "";
-      html += `<span class="gmt-dep-label gmt-cutoff-chip${dim}" data-role="rail-label-${l.role}" data-x="${r2(pct(l.ms))}" data-y="${y}" style="left:${r2(pct(l.ms))}%;top:${y}%">${escapeHtml(l.text)}</span>`;
-    }
-    rail!.innerHTML = lineHtml + under + html;
-
-    if (ticksEl) {
-      const step = railTickStep(span);
-      ticksEl.innerHTML = minuteTicks(win.startMs, win.endMs, zone, step)
-        .map(
-          (t) =>
-            `<span class="gmt-cutoff-axis-tick gmt-punct-tick--mid" style="left:${r2(pct(t.ms))}%">${escapeHtml(t.label)}</span>`,
-        )
-        .join("");
-      thinTickLabels(ticksEl);
-    }
-
-    // The handle.
-    handle!.hidden = false;
-    handle!.style.left = `${r2(pct(afterMs))}%`;
-    handle!.setAttribute("aria-valuemin", "0");
-    handle!.setAttribute("aria-valuemax", String(Math.round(span / MINUTE_MS)));
-    handle!.setAttribute(
-      "aria-valuenow",
-      String(
-        Math.round(
-          (Math.min(win.endMs, Math.max(win.startMs, afterMs)) - win.startMs) /
-            MINUTE_MS,
+    const marks: RailMarks = {
+      ticks: dense ? [] : ticks.map(pct),
+      labels,
+      ...(conn === undefined ? {} : { conn }),
+      ...(run === undefined ? {} : { run }),
+      ...(windowSpan === undefined ? {} : { window: windowSpan }),
+      ...(beyond === undefined ? {} : { beyond }),
+      ...(from === undefined ? {} : { from }),
+      ...(to === undefined ? {} : { to }),
+      ...(naiveMs === null ? {} : { naive: pct(naiveMs) }),
+      ...(madeMs === null ? {} : { made: pct(madeMs) }),
+    };
+    setHtml(rail, departureRail(marks));
+    setHtml(
+      ticksEl,
+      departureTicks(
+        minuteTicks(win.startMs, win.endMs, zone, railTickStep(span)).map(
+          (t) => ({
+            at: r2(pct(t.ms)),
+            label: t.label,
+          }),
         ),
       ),
     );
-    handle!.setAttribute(
-      "aria-valuetext",
-      `Arrival ${writtenLabel(after) || after}`,
+    thinTickLabels(ticksEl, "[data-tick]");
+
+    // The handle: its range is the rail, in whole minutes.
+    handleBox.hidden = false;
+    const max = Math.round(span / MINUTE_MS);
+    const current = Math.round(
+      (clamp(afterMs, win.startMs, win.endMs) - win.startMs) / MINUTE_MS,
     );
+    const startMs = win.startMs;
+    handleEl.setAttribute("min", "0");
+    handleEl.setAttribute("max", String(max));
+    handleEl.setAttribute("step", "1");
+    handleEl.setAttribute("large-step", "10");
+    handleEl.formatValue = (n) => {
+      const m = Math.round(n);
+      const written =
+        m === current
+          ? writtenLabel(after) || after
+          : writtenLabel(
+              writeLike(afterEl.value.trim(), startMs + m * MINUTE_MS),
+            );
+      return `Arrival ${written}`;
+    };
+    handleEl.value = current;
     placeAll();
   }
 
-  /** The departure made, large, on a plate. Every value is the library's: the
-   *  wait is `scheduleDeviation` from the arrival to the departure. On a correct
-   *  empty answer it reads "none"; on invalid input it is hidden and the
-   *  outputs carry NO SIGNAL. */
-  function drawHeroes(
+  /** The departure made, large, on a plate. Every value is the library's: the wait is
+   *  `scheduleDeviation` from the arrival to the departure. On a correct empty answer it
+   *  reads "none"; on invalid input it is hidden and the outputs carry NO SIGNAL. */
+  function drawHero(
     s: DepartureState,
     facts: DepartureFacts,
-    empty: boolean,
-    invalid: boolean,
+    wait: string,
+    showHero: boolean,
   ): void {
-    const heroes = q("rail-heroes");
-    if (!heroes) return;
-    const showHero = !invalid && (facts.made !== "" || empty);
-    heroes.hidden = !showHero;
-    let hero = heroes.querySelector<HTMLElement>('[data-role="rail-hero"]');
-    if (!hero) {
-      hero = document.createElement("div");
-      hero.className = "gmt-punct-hero";
-      hero.dataset.series = "1";
-      hero.dataset.role = "rail-hero";
-      heroes.append(hero);
-    }
-    hero.hidden = !showHero;
     if (!showHero) {
-      hero.innerHTML = "";
+      setHtml(el("heroes"), html``);
       return;
     }
     if (facts.made === "") {
-      hero.innerHTML =
-        `<span class="gmt-punct-hero-cap">departure made</span>` +
-        `<span class="gmt-punct-hero-value">none</span>` +
-        heroLinesHtml([{ text: "no departure left" }, { text: "" }]);
+      setHtml(
+        el("heroes"),
+        punctHeroStrip(
+          punctHero({
+            caption: "departure made",
+            value: "none",
+            reserveIcon: true,
+            samples: HERO_SAMPLES,
+            lines: ["no departure left", ""],
+            lineSamples: HERO_LINE_SAMPLES,
+            series: 1,
+            gate: "hero",
+          }),
+        ),
+      );
       return;
     }
-    const wait = departureWait(s.after, facts.made, lib);
     const mode = departureIconMode(s.onwardMode);
-    const icon =
-      mode === null
-        ? ""
-        : transportIcon(mode, { className: "gmt-cutoff-icon", size: 24 });
-    hero.innerHTML =
-      `<span class="gmt-punct-hero-cap">departure made</span>` +
-      `<span class="gmt-punct-hero-value">${icon}${escapeHtml(writtenTime(facts.made))}</span>` +
-      (wait === ""
-        ? ""
-        : heroLinesHtml([
-            { text: `wait ${toleranceText(wait)} after arrival` },
-            { text: wait, sep: " · " },
-          ]));
+    setHtml(
+      el("heroes"),
+      punctHeroStrip(
+        punctHero({
+          caption: "departure made",
+          value: writtenTime(facts.made),
+          ...(mode === null
+            ? {}
+            : { icon: raw(transportIcon(mode, { size: 24 })) }),
+          reserveIcon: true,
+          samples: HERO_SAMPLES,
+          lines:
+            wait === ""
+              ? ["", ""]
+              : [`wait ${toleranceText(wait)} after arrival`, wait],
+          lineSamples: HERO_LINE_SAMPLES,
+          series: 1,
+          gate: "hero",
+        }),
+      ),
+    );
   }
 
   function render(): void {
     if (destroyed) return;
     const s = state();
-    for (let n = 1; n <= MAX_DEPARTURES; n++) {
-      const f = q(`departure-field-${n}`);
-      if (f) f.hidden = n > visibleCount(s);
-    }
-    const listFields = q("list-fields");
-    if (listFields) listFields.hidden = s.form !== "list";
-    const headwayFields = q("headway-fields");
-    if (headwayFields) headwayFields.hidden = s.form !== "headway";
+    s.departures.forEach((_, i) => {
+      el(`departure-${i + 1}-box`).hidden = i + 1 > visibleCount(s);
+    });
+    el("list-fields").hidden = s.form !== "list";
+    el("headway-fields").hidden = s.form !== "headway";
 
     const facts = collectDepartureFacts(s, lib);
     const reason = departureNullReason(s, facts, lib);
@@ -636,115 +699,147 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     );
     const naiveInvalid = naiveReason !== null && !isEmptyReason(naiveReason);
 
-    // Verdict and naive line.
-    const verdict = q("verdict");
-    if (verdict) {
-      verdict.textContent =
-        facts.made !== ""
-          ? `You make the ${writtenTime(facts.made)}.`
-          : empty
-            ? "No departure you can make."
-            : "";
-    }
-    const naiveLine = q("naive-line");
-    if (naiveLine) {
-      let line = "";
-      if (!invalid && !naiveInvalid) {
-        if (facts.made === facts.naive) {
-          line =
-            facts.made !== ""
-              ? "The connection time changes nothing here."
-              : "";
-        } else {
-          line =
-            facts.naive !== ""
-              ? `Naive, with no connection time: the ${writtenTime(facts.naive)}.`
-              : "Naive, with no connection time: no departure.";
-        }
-      }
-      naiveLine.hidden = line === "";
-      naiveLine.textContent = line;
-    }
+    const verdictText =
+      facts.made !== ""
+        ? `You make the ${writtenTime(facts.made)}.`
+        : empty
+          ? "No departure you can make."
+          : "";
+    const verdict = el("verdict");
+    verdict.textContent = verdictText;
+    verdict.hidden = verdictText === "";
+    liveText = verdictText;
 
+    let line = "";
+    if (!invalid && !naiveInvalid) {
+      if (facts.made === facts.naive) {
+        line =
+          facts.made !== "" ? "The connection time changes nothing here." : "";
+      } else {
+        line =
+          facts.naive !== ""
+            ? `Naive, with no connection time: the ${writtenTime(facts.naive)}.`
+            : "Naive, with no connection time: no departure.";
+      }
+    }
+    const naiveLine = el("naive-line");
+    naiveLine.textContent = line;
+    naiveLine.hidden = line === "";
+
+    const wait =
+      facts.made === "" ? "" : departureWait(s.after, facts.made, lib);
     drawRail(s, facts);
-    drawHeroes(s, facts, empty, invalid);
+    drawHero(s, facts, wait, !invalid && (facts.made !== "" || empty));
 
-    const summary = q("rail-summary");
-    if (summary) {
-      const threshold = thresholdOf(s.after.trim(), s.minimumConnection);
-      summary.textContent = [
-        s.after.trim() === ""
-          ? "No arrival."
-          : `Arrival ${writtenLabel(s.after.trim()) || s.after.trim()}.`,
-        threshold === ""
-          ? ""
-          : `A departure must be at or after ${writtenLabel(threshold)}.`,
-        facts.made !== ""
-          ? `Made: ${writtenLabel(facts.made)}.`
-          : invalid
-            ? "No signal."
-            : "No departure you can make.",
-        facts.naive !== "" && facts.naive !== facts.made
-          ? `Naive, no connection time: ${writtenLabel(facts.naive)}.`
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-    }
+    const threshold = thresholdOf(s.after.trim(), s.minimumConnection);
+    el("summary").textContent = [
+      s.after.trim() === ""
+        ? "No arrival."
+        : `Arrival ${writtenLabel(s.after.trim()) || s.after.trim()}.`,
+      threshold === ""
+        ? ""
+        : `A departure must be at or after ${writtenLabel(threshold)}.`,
+      facts.made !== ""
+        ? `Made: ${writtenLabel(facts.made)}.`
+        : invalid
+          ? "No signal."
+          : "No departure you can make.",
+      wait === "" ? "" : `Wait: ${toleranceText(wait)} after arrival.`,
+      facts.naive !== "" && facts.naive !== facts.made
+        ? `Naive, no connection time: ${writtenLabel(facts.naive)}.`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
-    const aside = q("reason-aside");
-    if (aside) {
-      if (reason === null) aside.innerHTML = "";
-      else {
-        renderAside(
-          aside,
-          empty ? "note" : "caution",
-          empty ? "Why empty" : "Why NO SIGNAL",
-          `<p>${escapeHtml(departureReasonText(reason))}</p>`,
-        );
-      }
-    }
+    setHtml(
+      el("reason"),
+      reason === null
+        ? html``
+        : aside(
+            {
+              label: empty ? "Why empty" : "Why NO SIGNAL",
+              tone: empty ? "note" : "caution",
+              title: empty ? "Why empty" : "Why NO SIGNAL",
+            },
+            html`<p>${departureReasonText(reason)}</p>`,
+          ),
+    );
 
     // What nextDeparture returns.
     const timetable = timetableOf(s);
     const options = optionsOf(s);
-    const [madeHtml, madePlain] = callArgs(
-      options
-        ? [s.after.trim(), timetable, options]
-        : [s.after.trim(), timetable],
-    );
-    renderCallLine(q("call-made"), "nextDeparture", madeHtml, madePlain);
-    const [naiveHtml, naivePlain] = callArgs([s.after.trim(), timetable]);
-    renderCallLine(q("call-naive"), "nextDeparture", naiveHtml, naivePlain);
-    const show = (out: HTMLElement | null, value: string, bad: boolean) => {
-      if (!out) return;
-      if (value !== "") renderWidgetOutput(out, JSON.stringify(value), "live");
-      else if (bad) renderWidgetOutput(out, "NO SIGNAL", "sentinel");
-      else renderWidgetOutput(out, '""', "empty");
+    const frame = (
+      label: string,
+      copyLabel: string,
+      callList: readonly unknown[],
+      gate?: string,
+    ): SafeHtml => {
+      const [argsHtml, plain] = callArgs(callList);
+      return codeFrame({
+        label,
+        copyLabel,
+        copyText: `nextDeparture(${plain})`,
+        code: raw(`${codeSpan("fn", "nextDeparture")}(${argsHtml})`),
+        ...(gate === undefined ? {} : { gate }),
+      });
     };
-    show(q("made-output"), facts.made, invalid);
-    show(q("naive-output"), facts.naive, naiveInvalid);
+    setHtml(
+      el("made-slot"),
+      frame(
+        "The call made",
+        "Copy call",
+        options
+          ? [s.after.trim(), timetable, options]
+          : [s.after.trim(), timetable],
+        "codeframe",
+      ),
+    );
+    setHtml(
+      el("naive-slot"),
+      frame("The naive call, with no connection time", "Copy naive call", [
+        s.after.trim(),
+        timetable,
+      ]),
+    );
+    const out = (label: string, value: string, bad: boolean): SafeHtml =>
+      value !== ""
+        ? callOutput({
+            label,
+            state: "live",
+            lines: [{ text: JSON.stringify(value), lost: false }],
+          })
+        : bad
+          ? callOutput({
+              label,
+              state: "sentinel",
+              lines: [{ text: "NO SIGNAL", lost: true }],
+            })
+          : callOutput({
+              label,
+              state: "empty",
+              lines: [{ text: '""', lost: false }],
+            });
+    setHtml(
+      el("made-output-slot"),
+      out("What nextDeparture returned", facts.made, invalid),
+    );
+    setHtml(
+      el("naive-output-slot"),
+      out("What the naive call returned", facts.naive, naiveInvalid),
+    );
 
     // Send it on.
-    const link = q<HTMLAnchorElement>("handoff");
-    const hint = q("handoff-hint");
     const args = handoffArgs(s, facts.made);
-    if (link) {
-      if (args) {
-        link.setAttribute("href", encodeWidgetPermalink("delivery", args));
-        link.removeAttribute("aria-disabled");
-      } else {
-        link.removeAttribute("href");
-        link.setAttribute("aria-disabled", "true");
-      }
-    }
-    if (hint) {
-      hint.textContent = args
-        ? ""
-        : facts.made === ""
-          ? "No departure to send."
-          : "Give the onward leg's duration and destination clock.";
-    }
+    setToolLink(
+      el("handoff").querySelector("a"),
+      args === null ? null : encodeWidgetPermalink("delivery", args),
+    );
+    el("handoff-hint").textContent = args
+      ? ""
+      : facts.made === ""
+        ? "No departure to send."
+        : "Give the onward leg's duration and destination clock.";
   }
 
   function refit(): void {
@@ -753,242 +848,132 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
   }
 
   function applyPreset(): void {
-    const preset = DEPARTURE_PRESETS.find((p) => p.id === presetEl!.value);
-    if (!preset) return;
+    const chosen = DEPARTURE_PRESETS.find((p) => p.id === presetEl.value);
+    if (!chosen) return;
     // `readArgs` is the one place a preset becomes a state.
-    const next = initialState({ preset: preset.id });
-    writeSeed(root, next);
+    writeSeed(initialState({ preset: chosen.id }));
     syncPreset();
     refit();
   }
 
-  // ---- The handle ----
-
+  /** The handle moved the arrival: snap to a whole minute and write it in the field's own
+   *  notation (a bracketed zone, an offset or Z). */
   function setAfter(ms: number): void {
     if (win === null) return;
     const snapped =
-      Math.round(Math.min(win.endMs, Math.max(win.startMs, ms)) / MINUTE_MS) *
-      MINUTE_MS;
-    const text = writeLike(afterEl!.value.trim(), snapped);
+      Math.round(clamp(ms, win.startMs, win.endMs) / MINUTE_MS) * MINUTE_MS;
+    const text = writeLike(afterEl.value.trim(), snapped);
     if (text === "") return;
-    afterEl!.value = text;
+    afterEl.value = text;
     syncPreset();
     render();
     announce();
   }
 
-  let dragging = false;
-  let captured: { el: HTMLElement; id: number } | null = null;
-  /** A handle key moved the arrival and its key has not been released yet. */
-  let keyMoved = false;
+  const typed: readonly EventTarget[] = [
+    afterEl,
+    connEl,
+    headwayEl,
+    fromEl,
+    toEl,
+    durationEl,
+    modeEl,
+    ...departureEls,
+  ];
 
-  root.addEventListener("pointerdown", (e) => {
-    if (destroyed) return;
-    const target = (e.target as HTMLElement).closest<HTMLElement>(
-      '[data-role="handle-after"]',
-    );
-    if (!target) return;
-    dragging = true;
-    const id = (e as PointerEvent).pointerId;
-    try {
-      target.setPointerCapture(id);
-      captured = { el: target, id };
-    } catch {
-      captured = null;
-    }
-    e.preventDefault();
-  });
+  widgetEl.addEventListener(
+    "input",
+    (e) => {
+      if (destroyed) return;
+      if (e.target === handleEl) {
+        if (win !== null) setAfter(win.startMs + handleEl.value * MINUTE_MS);
+        return;
+      }
+      if (e.target !== null && typed.includes(e.target)) {
+        syncPreset();
+        render();
+        announce();
+      }
+    },
+    { signal },
+  );
 
-  root.addEventListener("pointermove", (e) => {
-    if (destroyed || !dragging || win === null) return;
-    const rect = stage.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    const fraction = ((e as PointerEvent).clientX - rect.left) / rect.width;
-    setAfter(win.startMs + fraction * (win.endMs - win.startMs));
-  });
+  widgetEl.addEventListener(
+    "change",
+    (e) => {
+      if (destroyed) return;
+      const target = e.target;
+      if (target === presetEl) {
+        applyPreset();
+        announce();
+      } else if (target === handleEl) {
+        refit();
+        announce();
+      } else if (
+        target === formEl ||
+        target === countEl ||
+        (target !== null && typed.includes(target))
+      ) {
+        syncPreset();
+        refit();
+        announce();
+      } else if (target === zoneEl) {
+        syncPreset();
+        render();
+      }
+    },
+    { signal },
+  );
 
-  const stopDrag = (): void => {
-    if (!dragging) return;
-    dragging = false;
-    captured = null;
-    refit();
-  };
-  root.addEventListener("pointerup", stopDrag);
-  root.addEventListener("pointercancel", stopDrag);
-  // A capture that was lost, or never taken (`setPointerCapture` threw), leaves
-  // the release to land outside `root`: the document sees it, the root does not.
-  root.addEventListener("lostpointercapture", stopDrag);
-  const doc = root.ownerDocument;
-  doc.addEventListener("pointerup", stopDrag);
-  doc.addEventListener("pointercancel", stopDrag);
-
-  root.addEventListener("keydown", (e) => {
-    if (destroyed || win === null) return;
-    const target = (e.target as HTMLElement).closest<HTMLElement>(
-      '[data-role="handle-after"]',
-    );
-    if (!target) return;
-    const ev = e as KeyboardEvent;
-    let now: number;
-    try {
-      now = epochMs(afterEl.value.trim());
-    } catch {
-      return;
-    }
-    let next: number | null = null;
-    switch (ev.key) {
-      case "ArrowRight":
-      case "ArrowUp":
-        next = now + MINUTE_MS * (ev.shiftKey ? 10 : 1);
-        break;
-      case "ArrowLeft":
-      case "ArrowDown":
-        next = now - MINUTE_MS * (ev.shiftKey ? 10 : 1);
-        break;
-      case "PageUp":
-        next = now + MINUTE_MS * 10;
-        break;
-      case "PageDown":
-        next = now - MINUTE_MS * 10;
-        break;
-      case "Home":
-        next = win.startMs;
-        break;
-      case "End":
-        next = win.endMs;
-        break;
-    }
-    if (next === null) return;
-    ev.preventDefault();
-    keyMoved = true;
-    setAfter(next);
-  });
-
-  // The rail never rescales while a key is held; the key coming up (or the
-  // handle losing focus) refits it, as a pointer coming up does, so the arrival
-  // can be moved on past the edge the same way from the keyboard.
-  const keyDone = (): void => {
-    if (!keyMoved) return;
-    keyMoved = false;
-    refit();
-  };
-  root.addEventListener("keyup", (e) => {
-    if (destroyed || !HANDLE_KEYS.has((e as KeyboardEvent).key)) return;
-    keyDone();
-  });
-  root.addEventListener("focusout", (e) => {
-    if (destroyed) return;
-    if ((e.target as HTMLElement).closest?.('[data-role="handle-after"]'))
-      keyDone();
-  });
-
-  // ---- Typed fields, the form chips and the preset ----
-
-  const TEXT_ROLES = new Set([
-    "after",
-    "minimum-connection",
-    "headway",
-    "from",
-    "to",
-    "onward-duration",
-    "onward-mode",
-  ]);
-  const isTyped = (role: string) =>
-    TEXT_ROLES.has(role) || /^departure-\d$/.test(role);
-
-  root.addEventListener("input", (e) => {
-    if (destroyed) return;
-    const role = (e.target as HTMLElement).dataset?.role ?? "";
-    if (isTyped(role)) {
-      syncPreset();
-      render();
-      announce();
-    }
-  });
-
-  root.addEventListener("change", (e) => {
-    if (destroyed) return;
-    const role = (e.target as HTMLElement).dataset?.role ?? "";
-    if (role === "preset") {
-      applyPreset();
-      announce();
-    } else if (isTyped(role) || role === "form" || role === "departure-count") {
-      syncPreset();
-      refit();
-      announce();
-    } else if (role === "onward-zone") {
-      syncPreset();
-      render();
-    }
-  });
-
-  wireCopyButtons(root);
+  writeSeed(start);
   syncPreset();
   refit();
+
   const refitText = (): void => {
     if (destroyed) return;
     placeAll();
-    const ticks = q("rail-ticks");
-    if (ticks) thinTickLabels(ticks);
+    thinTickLabels(ticksEl, "[data-tick]");
   };
   const stopWidthWatch = onWidthChange(rail, refitText);
-  // Text measured before the web fonts swap in is the wrong width: fit again
-  // once they have loaded.
+  // Text measured before the web fonts swap in is the wrong width: fit again once they load.
   const fonts = typeof document !== "undefined" ? document.fonts : undefined;
   if (fonts) {
     void fonts.ready.then(refitText);
-    fonts.addEventListener?.("loadingdone", refitText);
+    fonts.addEventListener?.("loadingdone", refitText, { signal });
   }
+  const stop = (): void => {
+    destroyed = true;
+    stopWidthWatch();
+    cancelAnnounce();
+  };
+  signal.addEventListener("abort", stop);
 
   return {
     state,
-    release() {
-      if (!captured) return;
-      try {
-        captured.el.releasePointerCapture(captured.id);
-      } catch {
-        /* Already released. */
-      }
-      captured = null;
-    },
     destroy() {
-      destroyed = true;
-      stopWidthWatch();
-      announcer.cancel();
-      fonts?.removeEventListener?.("loadingdone", refitText);
-      doc.removeEventListener("pointerup", stopDrag);
-      doc.removeEventListener("pointercancel", stopDrag);
+      signal.removeEventListener("abort", stop);
+      stop();
     },
   };
 }
 
-export const mountDepartureBoard = async (
-  root: HTMLElement,
-  args: DepartureBoardArgs,
-  signal: AbortSignal,
+export const mountDepartureBoard: MountFn<DepartureBoardArgs> = async (
+  root,
+  args,
+  signal,
 ) => {
+  defineElements();
   let lib: PunctualityLib;
   try {
     lib = await loadPunctualityLib();
   } catch (cause) {
-    throw new WidgetLoadError(cause);
+    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  writeSeed(root, initialState(args));
-  const controller = setupWidget(root, lib);
-  const onAbort = () => {
-    controller.release();
-    controller.destroy();
-  };
-  signal.addEventListener("abort", onAbort);
-
+  const controller = setupWidget(root, lib, initialState(args), signal);
   return onceDestroy(
-    () => {
-      signal.removeEventListener("abort", onAbort);
-      controller.release();
-      controller.destroy();
-    },
+    () => controller.destroy(),
     () => permalinkOf(controller.state()),
   );
 };

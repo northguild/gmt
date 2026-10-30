@@ -1,0 +1,35 @@
+/*
+ * Stored Time Audit: what only this tool needs. The sections, the preset, the field, the
+ * aside, the code frame, the output and the links are the kit's, and the table and the two
+ * lanes are the stored family's. This sheet frames the figure and keeps its box.
+ *
+ * Text is the body ink on the solid widget surface. Amber is the sentinel's alone.
+ */
+
+.frame {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+}
+
+/* The reason slot and the truncation note hold no text when there is nothing to say. */
+.slot {
+  min-inline-size: 0;
+}
+
+@media (forced-colors: active) {
+  .frame {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frame {
+    border-color: var(--gmt-ice);
+  }
+}

@@ -1,0 +1,287 @@
+/* storedSection: the lead, the three steps, and the form beside the answers. Steps are full
+   bordered cards, never a one-sided accent; amber stays the sentinel's. Container queries read
+   the checker's width; the answers column is its own `stored` container, so the table stacks by
+   the room it has. */
+
+.lead {
+  max-inline-size: 60ch;
+  margin: 0;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: grid;
+  align-content: start;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  font-size: 0.875rem;
+
+  & code {
+    white-space: nowrap;
+  }
+}
+
+.rule {
+  border-color: color-mix(in srgb, var(--gmt-dst-purple-ink) 55%, transparent);
+}
+
+.now {
+  border-color: color-mix(in srgb, var(--gmt-dst-gold-ink) 55%, transparent);
+}
+
+.stepHead {
+  color: var(--gmt-ice);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+  align-items: start;
+  min-inline-size: 0;
+}
+
+@container (min-width: 48rem) {
+  .steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* The form is a sticky column beside the answers only where there is room for both. */
+@container (min-width: 72rem) {
+  .body {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+
+  .form {
+    position: sticky;
+    inset-block-start: var(--gmt-space-4);
+  }
+}
+
+.form,
+.out {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.out {
+  container: stored / inline-size;
+  align-content: start;
+}
+
+.lines {
+  appearance: none;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 8rem;
+  padding: var(--gmt-space-2);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-surface-2);
+  color: var(--gmt-ice);
+  font: inherit;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8125rem;
+  resize: vertical;
+
+  &:hover {
+    border-color: var(--gmt-cyan);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+/* The formats panel sits in the flow, so opening it never floats over the textarea. */
+.formats {
+  display: block;
+
+  & > div {
+    position: static;
+    inline-size: auto;
+    max-inline-size: 100%;
+    margin-block-start: var(--gmt-space-1);
+    padding: var(--gmt-space-2);
+    box-sizing: border-box;
+  }
+}
+
+.formatsText {
+  margin: 0;
+  font-size: 0.8125rem;
+
+  & code {
+    overflow-wrap: anywhere;
+    font-size: 0.75rem;
+  }
+}
+
+.zoneRow[hidden] {
+  display: none;
+}
+
+/* The status and truncated lines keep their height empty or full, so an answer moves nothing. */
+.status {
+  min-block-size: 1.5em;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmt-space-2) var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.summary {
+  flex: 1 1 12rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+@container stored (inline-size < 48rem) {
+  .summary {
+    flex: 1 1 100%;
+    min-block-size: 3em;
+  }
+}
+
+.stale {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.8125rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.toggle {
+  display: inline-flex;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  overflow: hidden;
+}
+
+.toggleButton {
+  appearance: none;
+  min-inline-size: var(--gmt-target-min);
+  min-block-size: var(--gmt-target-min);
+  padding-inline: var(--gmt-space-3);
+  border: 0;
+  background: var(--gmt-surface-2);
+  color: var(--gmt-ice);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+
+  &[aria-pressed="true"] {
+    background: var(--gmt-selected-fill);
+    color: var(--gmt-selected-ink);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: -2px;
+  }
+}
+
+.placeholder {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: 0.8125rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* The prefilled example is checked on load: hold the room its rows fill when the browser's data is
+   current (table, then cards, then narrow cards), so the page below does not jump when the answer
+   arrives. `--stored-rows` is the example's line count. The base is what four rows fill; each row
+   beyond four adds one row's height at that layout. */
+.results {
+  min-inline-size: 0;
+  min-block-size: calc(27rem + (var(--stored-rows, 4) - 4) * 4.75rem);
+}
+
+@container stored (inline-size < 48rem) {
+  .results {
+    min-block-size: calc(40.5rem + (var(--stored-rows, 4) - 4) * 8.75rem);
+  }
+}
+
+@container stored (inline-size < 30rem) {
+  .results {
+    min-block-size: calc(48rem + (var(--stored-rows, 4) - 4) * 11.2rem);
+  }
+}
+
+@media (forced-colors: active) {
+  .step,
+  .toggle,
+  .lines {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .toggleButton {
+    background: ButtonFace;
+    color: ButtonText;
+
+    &[aria-pressed="true"] {
+      background: Highlight;
+      color: HighlightText;
+    }
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+
+  .lines:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .step,
+  .toggle,
+  .lines {
+    border-color: var(--gmt-ice);
+  }
+
+  .lines:focus-visible,
+  .toggleButton:focus-visible {
+    outline-width: 3px;
+  }
+}

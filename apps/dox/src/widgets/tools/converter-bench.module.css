@@ -1,0 +1,60 @@
+/*
+ * Converter Bench: what only this tool needs. The sections, fields, selects, code frames and
+ * badges are the kit's; this sheet lays out the wide input, the grouped format results and
+ * the regex chips.
+ */
+
+/* A typed input takes the whole row of the field grid. */
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+/* The grouped format results: one bordered block, a call over its output. */
+.results {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+}
+
+.row {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+/* The regex chips wrap; each is a list item holding a badge. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+}
+
+.chip {
+  margin: 0;
+  padding: 0;
+}
+
+@media (forced-colors: active) {
+  .results {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .results {
+    border-color: var(--gmt-ice);
+  }
+}

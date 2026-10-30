@@ -1,0 +1,448 @@
+/*
+ * journey-ribbons: two lanes on one scale, the chips under the waits, the brackets under the
+ * gathered ribbon, the axis and the legend.
+ *
+ * Each lane has a fixed height, so the chart has the same box in every state. The row of chips
+ * under the waits reserves one row for each possible hand-off (three), and a row is as tall as
+ * the chip's wrapped text: one line when the frame is wide, two when it is narrower and three
+ * when the label sits above the lane (under 30rem). The height depends on the width and never
+ * on the preset. A segment is placed by percentages of the journey's length.
+ *
+ * Nothing here is a verdict colour, and no accent is a single left edge.
+ */
+
+.lane {
+  --badge-h: 1.8rem;
+  --bar-h: 1.7rem;
+  --gap: 0.6rem;
+  --bracket-h: 0.7rem;
+  --chip-h: 1.9rem;
+  --note-row-h: var(--chip-h);
+  --chip-rows: 1;
+
+  display: grid;
+  grid-template-columns: var(--ribbon-label-w, 8.5rem) minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--gmt-space-2);
+  min-inline-size: 0;
+
+  &[data-lane="happens"] {
+    --lane-h: calc(
+      var(--badge-h) + var(--bar-h) + var(--gap) + 3 * var(--note-row-h)
+    );
+  }
+
+  &[data-lane="gathered"] {
+    --lane-h: calc(
+      var(--bar-h) + var(--gap) + var(--bracket-h) + var(--gap) +
+        var(--chip-rows) * var(--chip-h)
+    );
+
+    margin-block-start: var(--gmt-space-2);
+  }
+
+  @container (inline-size < 56rem) {
+    --note-row-h: 3.4rem;
+  }
+
+  @container (inline-size < 30rem) {
+    --note-row-h: 4.9rem;
+
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    row-gap: var(--gmt-space-1);
+
+    &[data-lane="gathered"] {
+      /* Two totals of about 16 characters each do not share a line this narrow. */
+      --chip-rows: 2;
+    }
+  }
+}
+
+.label {
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  text-align: end;
+  overflow-wrap: anywhere;
+
+  @container (inline-size < 30rem) {
+    text-align: start;
+  }
+}
+
+.track {
+  position: relative;
+  min-inline-size: 0;
+  block-size: var(--lane-h);
+}
+
+.layer {
+  position: absolute;
+  inset-inline: 0;
+
+  &[data-layer="badges"] {
+    inset-block: 0 auto;
+    block-size: var(--badge-h);
+  }
+
+  /* The bars hold the segments over a faint wash, so an empty ribbon still shows its box. */
+  &[data-layer="bars"] {
+    inset-block: var(--badge-h) auto;
+    block-size: var(--bar-h);
+    border-radius: var(--gmt-radius-sm);
+    background-color: var(--gmt-fill-subtle);
+  }
+
+  :where(.lane[data-lane="gathered"]) &[data-layer="bars"] {
+    inset-block-start: 0;
+  }
+
+  &[data-layer="notes"],
+  &[data-layer="leaders"] {
+    inset-block: calc(var(--badge-h) + var(--bar-h) + var(--gap)) 0;
+  }
+
+  &[data-layer="brackets"] {
+    inset-block: calc(var(--bar-h) + var(--gap) / 2) 0;
+  }
+
+  &[data-layer="empty"] {
+    inset-block: 0;
+    pointer-events: none;
+  }
+}
+
+/* The marks that carry a leg's series colour. */
+.seg,
+.badge,
+.swatch {
+  --series: var(--gmt-series-1);
+  --hatch: color(from var(--gmt-ice) srgb r g b / 55%);
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+}
+
+.seg {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--at);
+  inline-size: var(--span);
+  min-inline-size: 2px;
+  box-sizing: border-box;
+
+  /* Moving: a stem in the leg's series colour, with its bottom edge in that colour. */
+  &[data-kind="moving"] {
+    border-block-start: 1px solid var(--gmt-border-strong);
+    background: linear-gradient(
+      180deg,
+      color(from var(--series) srgb r g b / 50%),
+      color(from var(--series) srgb r g b / 20%)
+    );
+    box-shadow:
+      inset 0 -3px 0 var(--series),
+      inset 0 1px 0 var(--gmt-highlight);
+  }
+
+  /* Waiting: a hatch in a neutral ink. Handling is the open hatch; the wait for a scheduled
+     departure is the dense one. */
+  &[data-kind="handling"],
+  &[data-kind="scheduled"] {
+    border-block: 1px solid var(--gmt-border-strong);
+  }
+
+  &[data-kind="handling"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--hatch) 0,
+      var(--hatch) 2px,
+      transparent 2px,
+      transparent 8px
+    );
+  }
+
+  &[data-kind="scheduled"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--hatch) 0,
+      var(--hatch) 3px,
+      transparent 3px,
+      transparent 5px
+    );
+  }
+}
+
+/* The number badge over a stem: the leg's series on its bottom edge, the digit in the primary ink. */
+.badge {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(var(--at) - 12px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 24px;
+  block-size: calc(var(--badge-h) - 0.3rem);
+  border: 1px solid var(--gmt-border-strong);
+  border-block-end: 3px solid var(--series);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1;
+  color: var(--gmt-ice);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+/* A chip under a wait: it may wrap, and it sits on an opaque plate so a leader passes behind it. */
+.note {
+  position: absolute;
+  inset-block-start: calc(var(--row, 0) * var(--note-row-h));
+  inset-inline-start: var(--at);
+  z-index: var(--gmt-z-raised);
+  inline-size: max-content;
+  max-inline-size: 100%;
+  translate: -50% 0;
+  white-space: normal;
+}
+
+/* A thin line from a wait down to its chip. */
+.leader {
+  position: absolute;
+  inset-block-start: calc(-1 * var(--gap));
+  inset-inline-start: var(--at);
+  inline-size: 1px;
+  block-size: calc(var(--gap) + var(--row, 0) * var(--note-row-h));
+  background: var(--gmt-border-strong);
+}
+
+.bracket {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: var(--at);
+  inline-size: var(--span);
+  box-sizing: border-box;
+  block-size: var(--bracket-h);
+  border: 1px solid var(--gmt-ice);
+  border-block-start: 0;
+}
+
+/* The two totals sit in one flowing row: the moving total at the start, the waiting total at
+   the end. When the frame is too narrow for both on one line the waiting total wraps to a second
+   line, which the lane reserves under the same width. */
+.totals {
+  position: absolute;
+  inset-block-start: calc(var(--bracket-h) + var(--gap) / 2);
+  inset-inline: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1);
+  align-items: flex-start;
+
+  .chip {
+    max-inline-size: 100%;
+  }
+
+  .chip[data-side="waiting"] {
+    margin-inline-start: auto;
+  }
+}
+
+/* What a ribbon says when it has nothing to draw: it sits on the bar's row, in the primary ink. */
+.empty {
+  position: absolute;
+  inset-inline: var(--gmt-space-2);
+  inset-block-start: 0;
+  margin: 0;
+  padding-block-start: 0.3rem;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  color: var(--gmt-ice);
+
+  .lane[data-lane="happens"] & {
+    inset-block-start: var(--badge-h);
+  }
+}
+
+.axis {
+  position: relative;
+  block-size: 1.4rem;
+  margin-inline-start: calc(var(--ribbon-label-w, 8.5rem) + var(--gmt-space-2));
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+
+  @container (inline-size < 30rem) {
+    margin-inline-start: 0;
+  }
+}
+
+.tick {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: var(--at);
+  translate: -50% 0;
+  white-space: nowrap;
+
+  &:first-child {
+    translate: 0 0;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  margin-inline-start: calc(var(--ribbon-label-w, 8.5rem) + var(--gmt-space-2));
+  padding: 0;
+  list-style: none;
+
+  @container (inline-size < 30rem) {
+    margin-inline-start: 0;
+  }
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 0.9rem;
+  block-size: 0.9rem;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: 2px;
+
+  &[data-kind="moving"] {
+    background-image: linear-gradient(
+      180deg,
+      color(from var(--series) srgb r g b / 50%),
+      color(from var(--series) srgb r g b / 20%)
+    );
+    border-block-end: 3px solid var(--series);
+  }
+
+  &[data-kind="handling"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--hatch) 0,
+      var(--hatch) 2px,
+      transparent 2px,
+      transparent 8px
+    );
+  }
+
+  &[data-kind="scheduled"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--hatch) 0,
+      var(--hatch) 3px,
+      transparent 3px,
+      transparent 5px
+    );
+  }
+}
+
+@media (forced-colors: active) {
+  .layer[data-layer="bars"] {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+    background: Canvas;
+  }
+
+  .seg {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+
+    &[data-kind="moving"] {
+      background: Highlight;
+      box-shadow: none;
+    }
+
+    &[data-kind="handling"],
+    &[data-kind="scheduled"] {
+      --hatch: CanvasText;
+
+      background-color: Canvas;
+    }
+  }
+
+  .swatch {
+    --hatch: CanvasText;
+
+    forced-color-adjust: none;
+    border-color: CanvasText;
+
+    &[data-kind="moving"] {
+      background: Highlight;
+    }
+  }
+
+  .badge,
+  .bracket,
+  .chip {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .leader {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .label,
+  .axis,
+  .empty {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .seg,
+  .badge,
+  .chip,
+  .swatch {
+    --hatch: var(--gmt-ice);
+
+    border-color: var(--gmt-ice);
+  }
+
+  .leader {
+    background: var(--gmt-ice);
+  }
+}

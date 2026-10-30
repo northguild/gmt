@@ -135,8 +135,6 @@ export type Classified = NonNullable<
   ReturnType<StoredTimeLib["classifyStoredZoned"]>
 >;
 
-export type StoredKind = Classified["kind"] | null;
-
 export interface AuditLine {
   value: string;
   result: Classified | null;

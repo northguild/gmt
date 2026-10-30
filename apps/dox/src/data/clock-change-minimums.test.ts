@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CANADA_MINIMUMS } from "./canada-runtime-minimums";
-import {
-  minimumsCardHtml,
-  minimumsMarkdown,
-  type MinimumsText,
-} from "./clock-change-minimums";
+import { minimumsMarkdown, type MinimumsText } from "./clock-change-minimums";
 import { MOROCCO_MINIMUMS } from "./morocco-runtime-minimums";
 
 const cards: [string, MinimumsText][] = [
@@ -48,15 +44,6 @@ describe.each(cards)("the %s Upgrade to at least card", (_name, text) => {
       for (const source of row.sources) expect(md).toContain(source.href);
     }
     expect(md.trimEnd().endsWith(text.note)).toBe(true);
-  });
-  it("renders the card with the shared classes, a heading id and every row", () => {
-    const html = minimumsCardHtml("x", text);
-    expect(html).toContain('class="gmt-clockcheck-minimums"');
-    expect(html).toContain('aria-labelledby="x-minimums-title"');
-    expect(html).toContain('id="x-minimums-title"');
-    expect(html).toContain('class="gmt-clockcheck-minimums-list"');
-    expect(html).toContain('class="gmt-clockcheck-minimums-note"');
-    expect(html.match(/<li>/g)).toHaveLength(text.rows.length);
   });
 });
 

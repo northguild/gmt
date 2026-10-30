@@ -31,7 +31,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderCutoffRulerTemplate();
+const html = renderCutoffRulerTemplate("cutoff-ruler", {}).value;
 ---
 
 {
@@ -49,7 +49,7 @@ const html = renderCutoffRulerTemplate();
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("cutoffruler");
-    document.querySelectorAll<HTMLElement>(".gmt-cutoff-ruler").forEach((el) => {
+    document.querySelectorAll<HTMLElement>('[data-widget="cutoff-ruler"]').forEach((el) => {
       mountCutoffRuler(el, seed, new AbortController().signal).catch((error) =>
         showUnavailable(el, error),
       );

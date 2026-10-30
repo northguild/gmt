@@ -18,7 +18,6 @@ import {
   presetState,
   readArgs,
   readInput,
-  toolHref,
   yearRow,
   type LeapState,
 } from "./leap-day-birthday";
@@ -322,12 +321,6 @@ describe("arguments and the permalink", () => {
     );
     expect(isSeeded({})).toBe(false);
     expect(isSeeded({ value: "--02-29" })).toBe(true);
-  });
-
-  it("builds a page link that the registry would read back", () => {
-    const href = toolHref("--02-29", 2023);
-    expect(href).toContain("/tools/leap-day-birthday/");
-    expect(href).toContain("w=leapday");
   });
 
   it("the chat schema takes what the page can send", () => {

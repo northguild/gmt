@@ -47,14 +47,15 @@ export function ChatInfo() {
       >
         <InfoIcon aria-hidden="true" />
       </button>
-      <div
+      <section
         id={panelId}
         popover="auto"
+        aria-label="Fine print"
         className="gmt-hive-info-panel gmt-popover"
       >
         <AccuracyNote />
         <LicenceNote />
-      </div>
+      </section>
     </>
   );
 }

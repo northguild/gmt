@@ -1,0 +1,122 @@
+/* gnssLane: a slot holds a row (name or track, then the instant) over a row of flags.
+   Container queries read the frame the slot sits in. */
+
+.slot {
+  --gmt-timeline-label-w: 10ch;
+
+  display: grid;
+  gap: 0.25rem;
+  min-inline-size: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+
+  /* A lane that begins after a gap is set off by a dashed top edge. */
+  &[data-gap="true"] {
+    border-block-start: 1px dashed var(--gmt-border-strong);
+  }
+
+  /* The reading's own lane: a full border and a tint. */
+  &[data-chosen="true"] {
+    border-color: var(--gmt-series-1);
+    background: color-mix(in srgb, var(--gmt-series-1) 12%, transparent);
+  }
+
+  &[data-blank="true"] {
+    visibility: hidden;
+  }
+
+  &[data-form="track"] {
+    border-color: transparent;
+    padding-inline: 0;
+  }
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  min-inline-size: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+
+  @container (inline-size < 34rem) {
+    .slot[data-form="track"] & {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+.name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.value {
+  justify-self: end;
+  max-inline-size: 100%;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: end;
+
+  .slot[data-form="track"] & {
+    white-space: nowrap;
+  }
+
+  .slot[data-empty="true"] & {
+    color: var(--gmt-ice-dim);
+  }
+}
+
+/* Flags keep their row's height when empty. */
+.flags {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  min-inline-size: 0;
+  min-block-size: 1.5rem;
+  overflow: hidden;
+}
+
+@media (forced-colors: active) {
+  .slot {
+    border-color: CanvasText;
+
+    &[data-chosen="true"] {
+      border-width: 2px;
+    }
+  }
+
+  .name,
+  .value {
+    color: CanvasText;
+  }
+
+  .value {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .slot {
+    border-color: var(--gmt-ice);
+  }
+
+  .value {
+    border-color: var(--gmt-ice);
+  }
+}

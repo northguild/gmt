@@ -68,6 +68,7 @@ const failing = {
           gate: "a11y-axe",
           rule: "color-contrast",
           page: "/x/",
+          target: "page",
           selector: "#a",
           browser: "chromium",
           width: 390,
@@ -113,8 +114,10 @@ describe("parseArgs", () => {
 
 describe("the gh argument lists", () => {
   it("creates only the missing labels, with their descriptions and colours", () => {
-    const { gh, calls } = fakeGh(() => JSON.stringify([{ name: "bug" }]));
-    ensureLabels(gh, ["bug", "dox-gate"]);
+    const { gh, calls } = fakeGh(() =>
+      JSON.stringify([{ name: "enhancement" }]),
+    );
+    ensureLabels(gh, ["enhancement", "dox-gate"]);
     expect(calls.map((c) => c.args)).toEqual([
       ["label", "list", "--json", "name", "--limit", "1000"],
       [
@@ -122,7 +125,7 @@ describe("the gh argument lists", () => {
         "create",
         "dox-gate",
         "--description",
-        "Opened by the nightly Dox gate sweep",
+        "Opened by the weekly Dox gate sweep",
         "--color",
         "b60205",
       ],
@@ -146,14 +149,14 @@ describe("the gh argument lists", () => {
     ]);
   });
 
-  it("opens with the Bug type and the labels, and comments with the body on stdin", () => {
+  it("opens with the labels and no issue type, and comments with the body on stdin", () => {
     const { gh, calls } = fakeGh();
     const results = runActions(gh, [
       {
         kind: "open",
         key: "k",
         title: "T",
-        labels: ["bug", "dox-gate"],
+        labels: ["dox-gate"],
         body: "B",
       },
       { kind: "comment", key: "k", issue: 12, body: "C" },
@@ -166,10 +169,6 @@ describe("the gh argument lists", () => {
           "create",
           "--title",
           "T",
-          "--type",
-          "Bug",
-          "--label",
-          "bug",
           "--label",
           "dox-gate",
           "--body-file",
@@ -233,10 +232,10 @@ describe("readJobs", () => {
   });
 });
 
-describe("the nightly workflow", () => {
+describe("the weekly workflow", () => {
   const yml = readFileSync(
     new URL(
-      "../../../../.github/workflows/dox-gates-nightly.yml",
+      "../../../../.github/workflows/dox-gates-weekly.yml",
       import.meta.url,
     ),
     "utf8",
@@ -281,7 +280,7 @@ describe("main", () => {
     expect(calls.map((c) => c.args[0] + " " + c.args[1])).toEqual([
       "issue list",
     ]);
-    expect(out.join("")).toContain("open  a11y-axe:color-contrast:/x/:#a");
+    expect(out.join("")).toContain("open  a11y-axe:color-contrast:/x/:page");
     expect(out.join("")).toContain("open  dry-run:synthetic:/:body  [dry run]");
     expect(out.join("")).toContain("2 actions planned (not run)");
   });
@@ -295,11 +294,10 @@ describe("main", () => {
       "issue list",
       "label list",
       "label create",
-      "label create",
       "issue create",
     ]);
     expect(calls.at(-1)!.input!.split("\n")[0]).toBe(
-      marker("a11y-axe:color-contrast:/x/:#a"),
+      marker("a11y-axe:color-contrast:/x/:page"),
     );
   });
 
@@ -459,7 +457,7 @@ describe("main", () => {
     expect(main([summaryFile("chromium-1", failing)], local)).toBe(2);
     expect(calls).toHaveLength(0);
     expect(err.join("")).toContain(
-      "run with --print locally; issues are filed by the nightly workflow",
+      "run with --print locally; issues are filed by the weekly workflow",
     );
     expect(main(["--print", summaryFile("chromium-1", failing)], local)).toBe(
       0,

@@ -1,0 +1,34 @@
+/*
+ * The family hatch: "outside the tolerance" on a bar and the connection bar on a rail. It
+ * reads no text and carries no meaning a reader without colour vision would miss: the
+ * pattern is the signal and the words beside it say the rest. 45 degrees, 2px on and 6px
+ * off, in `--hatch`; a bar or a rail sets its own colour.
+ */
+
+.hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 55%)) 0,
+    var(--hatch, color(from var(--gmt-cyan-bright) srgb r g b / 55%)) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+}
+
+@media (forced-colors: active) {
+  .hatch {
+    background-image: repeating-linear-gradient(
+      45deg,
+      CanvasText 0,
+      CanvasText 2px,
+      transparent 2px,
+      transparent 8px
+    );
+  }
+}
+
+@media (prefers-contrast: more) {
+  .hatch {
+    --hatch: var(--gmt-ice);
+  }
+}

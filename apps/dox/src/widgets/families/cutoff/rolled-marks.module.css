@@ -1,0 +1,68 @@
+/* rolledMark and rolledArc: a hollow marker and a dashed arc on a lane's track. Both are placed
+   by `--gmt-at` and `--gmt-span` (0 to 1) with logical properties, so right-to-left mirrors them. */
+
+.hollow,
+.arc {
+  --series: var(--gmt-series-1);
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+}
+
+.hollow {
+  position: absolute;
+  inset-block: 0.25rem;
+  inset-inline-start: calc(var(--gmt-at) * 100% - 0.25rem);
+  box-sizing: border-box;
+  inline-size: 0.5rem;
+  border: 2px solid var(--series);
+  border-radius: 2px;
+  background: transparent;
+}
+
+.arc {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--gmt-at) * 100%);
+  inline-size: calc(var(--gmt-span) * 100%);
+  block-size: 100%;
+  overflow: visible;
+  pointer-events: none;
+
+  path {
+    fill: none;
+    stroke: var(--series);
+    stroke-width: 2;
+    stroke-dasharray: 4 3;
+    vector-effect: non-scaling-stroke;
+  }
+}
+
+@media (forced-colors: active) {
+  .hollow {
+    border-color: CanvasText;
+  }
+
+  .arc path {
+    stroke: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .hollow {
+    border-color: var(--gmt-ice);
+  }
+
+  .arc path {
+    stroke: var(--gmt-ice);
+  }
+}

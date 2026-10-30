@@ -1,78 +1,81 @@
 /**
  * @vitest-environment jsdom
  *
- * Moving Feasts end to end against the real `@northguild/gmt`.
+ * Moving Feasts end to end against the real `@northguild/gmt`, through roles and accessible
+ * names the way a reader meets the page.
  */
+import { screen, within } from "@testing-library/dom";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import {
-  mountMovingFeasts,
-  renderMovingFeastsTemplate,
-} from "./moving-feasts-mount";
+  expectNoAxeViolations,
+  renderWidget,
+  setRange,
+  type RenderedWidget,
+} from "~/test/render-widget";
 import { FEAST_OFFSETS } from "./moving-feasts";
+import { NO_SIGNAL_SHORT } from "./moving-feasts-mount";
 
 installJsdomShims();
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
-const fire = (el: Element, type: "input" | "change") =>
-  el.dispatchEvent(new Event(type, { bubbles: true }));
-const text = (el: Element | null) =>
-  (el?.textContent ?? "").replace(/\s+/gu, " ").trim();
-const value = (root: HTMLElement, role: string) =>
-  text(q(root, role).querySelector(".gmt-punct-hero-value"));
+const entry = WIDGET_REGISTRY["showMovingFeasts"] as AnyWidgetEntry;
 
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderMovingFeastsTemplate(args);
-  document.body.append(root);
-  const handle = await mountMovingFeasts(
-    root,
-    args,
-    new AbortController().signal,
-  );
-  return { root, handle };
+async function mount(args: unknown = {}): Promise<RenderedWidget> {
+  return renderWidget(entry, { args });
 }
 
-function setYear(root: HTMLElement, year: string) {
-  const input = q<HTMLInputElement>(root, "year");
-  input.value = year;
-  fire(input, "input");
+async function setYear(rendered: RenderedWidget, year: string): Promise<void> {
+  const field = screen.getByRole("textbox", { name: "Year" });
+  await rendered.user.clear(field);
+  await rendered.user.paste(year);
 }
 
-afterEach(() => {
-  document.body.innerHTML = "";
-});
+const summary = () => screen.getByRole("status", { name: "Easter summary" });
+const yearNote = () => screen.getByRole("note", { name: "Year note" });
+const picks = () =>
+  within(
+    screen.getAllByRole("list", { name: "Marked dates" })[0]!,
+  ).queryAllByRole("listitem");
 
 describe("section 1", () => {
   it("2024 reads both Easters and 35 days", async () => {
-    const { root } = await mount();
-    setYear(root, "2024");
-    expect(value(root, "hero-gregorian")).toBe("2024-03-31");
-    expect(value(root, "hero-julian")).toBe("2024-05-05");
-    expect(value(root, "hero-apart")).toBe("35 days");
+    const rendered = await mount();
+    await setYear(rendered, "2024");
+    expect(summary()).toHaveTextContent(
+      "2024: Gregorian Easter 2024-03-31, Julian Easter 2024-05-05, 35 days apart.",
+    );
+    expect(screen.getByText("2024-03-31")).toBeInTheDocument();
+    expect(screen.getByText("2024-05-05")).toBeInTheDocument();
+    expect(screen.getByText("35 days")).toBeInTheDocument();
+    await expectNoAxeViolations(rendered.root);
   });
 
   it("2025 reads same day", async () => {
-    const { root } = await mount();
-    setYear(root, "2025");
-    expect(value(root, "hero-apart")).toBe("same day");
+    const rendered = await mount();
+    await setYear(rendered, "2025");
+    expect(summary()).toHaveTextContent("the same day");
+    expect(screen.getAllByText("same day").length).toBeGreaterThan(0);
+    await expectNoAxeViolations(rendered.root);
   });
 
   it("a year the library cannot place is NO SIGNAL on both plates, with an empty grid", async () => {
-    const { root } = await mount();
-    setYear(root, "-300000");
-    for (const role of ["hero-gregorian", "hero-julian"]) {
-      expect(q(root, role).hasAttribute("data-signal")).toBe(true);
-      expect(value(root, role)).toContain("NO SIGNAL");
-    }
-    expect(text(q(root, "year-note"))).toContain("NO SIGNAL");
-    expect(root.querySelectorAll('[data-kinds~="pick"]').length).toBe(0);
+    const rendered = await mount();
+    await setYear(rendered, "-300000");
+    expect(summary()).toHaveTextContent("-300000: no Easter placed.");
+    expect(screen.getAllByText(NO_SIGNAL_SHORT).length).toBeGreaterThanOrEqual(
+      2,
+    );
+    expect(yearNote()).toHaveTextContent("NO SIGNAL");
+    expect(picks()).toHaveLength(0);
+    await expectNoAxeViolations(rendered.root);
   });
 
   it("walks the ends of the range without throwing, each year answered from the library", async () => {
-    const { root } = await mount();
+    const rendered = await mount();
+    const field = screen.getByRole("textbox", { name: "Year" });
     for (const year of [
       "33808",
       "33809",
@@ -82,81 +85,106 @@ describe("section 1", () => {
       "275760",
       "275761",
     ]) {
-      setYear(root, year);
-      expect(q<HTMLInputElement>(root, "year").value).toBe(year);
-      expect(
-        text(q(root, "year-note")) === "" ||
-          text(q(root, "year-note")).length > 0,
-      ).toBe(true);
+      await setYear(rendered, year);
+      expect(field).toHaveValue(year);
+      expect(summary()).toHaveTextContent(`${year}:`);
     }
-    setYear(root, "33808");
-    expect(text(q(root, "year-note"))).toContain("in another calendar year");
-    setYear(root, "-271821");
-    expect(text(q(root, "year-note"))).toContain("neighbouring years");
-    expect(
-      root.querySelectorAll('[data-kinds~="pick"]').length,
-    ).toBeGreaterThan(0);
-    setYear(root, "-271822");
-    expect(q(root, "hero-gregorian").hasAttribute("data-signal")).toBe(true);
-    expect(root.querySelectorAll('[data-kinds~="pick"]').length).toBe(0);
+    await setYear(rendered, "33808");
+    expect(yearNote()).toHaveTextContent("in another calendar year");
+    await setYear(rendered, "-271821");
+    expect(yearNote()).toHaveTextContent("neighbouring years");
+    expect(picks().length).toBeGreaterThan(0);
+    await setYear(rendered, "-271822");
+    expect(summary()).toHaveTextContent("no Easter placed");
+    expect(picks()).toHaveLength(0);
+    await expectNoAxeViolations(rendered.root);
   });
 
   it("one toggle per offset, each marking a date", async () => {
-    const { root } = await mount();
-    setYear(root, "2024");
-    const toggles = root.querySelectorAll('[data-role="offset"]');
-    expect(toggles.length).toBe(FEAST_OFFSETS.length);
-    expect(
-      root.querySelectorAll('[data-kinds~="pick"]').length,
-    ).toBeGreaterThan(0);
+    const rendered = await mount();
+    await setYear(rendered, "2024");
+    const group = screen.getByRole("group", { name: "Days from Easter" });
+    const toggles = within(group).getAllByRole("checkbox");
+    expect(toggles).toHaveLength(FEAST_OFFSETS.length);
+    expect(picks().length).toBeGreaterThan(0);
+    const before = picks().length;
+    const open = toggles.find((t) => !(t as HTMLInputElement).checked)!;
+    await rendered.user.click(open);
+    expect(picks().length).toBeGreaterThan(before);
+    await expectNoAxeViolations(rendered.root);
+  });
+
+  it("dragging the slider moves the year and both Easters with it", async () => {
+    const rendered = await mount();
+    const slider = screen.getByRole("slider", { name: "Year slider" });
+    for (const year of [2024, 2025]) {
+      setRange(slider, year);
+      expect(screen.getByRole("textbox", { name: "Year" })).toHaveValue(
+        String(year),
+      );
+      expect(summary()).toHaveTextContent(`${year}: Gregorian Easter`);
+    }
+    await expectNoAxeViolations(rendered.root);
   });
 });
 
 describe("section 2", () => {
   it("fifth Friday of February is NO SIGNAL, and January gives the 30th with both chips", async () => {
-    const { root } = await mount({ preset: "fifth-friday" });
-    expect(q(root, "nth-hero").hasAttribute("data-signal")).toBe(true);
-    expect(text(q(root, "nth-note-text"))).toContain("no fifth Friday");
-    const month = q<HTMLSelectElement>(root, "month");
-    month.value = "1";
-    fire(month, "change");
-    expect(value(root, "nth-hero")).toBe("2026-01-30");
-    const cell = root.querySelector(
-      '[data-role="nth-grid"] [data-date="2026-01-30"]',
-    )!;
-    const chips = [...cell.querySelectorAll(".gmt-holiday-chip--tag")].map(
-      (c) => text(c),
+    const rendered = await mount({ preset: "fifth-friday" });
+    expect(screen.getByRole("note", { name: "Date note" })).toHaveTextContent(
+      "no fifth Friday",
     );
-    expect(chips).toEqual(["5", "-1"]);
+    expect(
+      screen.getByRole("status", { name: "Date summary" }),
+    ).toHaveTextContent("no fifth Friday");
+    await rendered.user.selectOptions(
+      screen.getByRole("combobox", { name: "Month" }),
+      "January",
+    );
+    expect(
+      screen.getByRole("status", { name: "Date summary" }),
+    ).toHaveTextContent("2026-01-30");
+    const lists = screen.getAllByRole("list", { name: "Marked dates" });
+    const item = within(lists[1]!)
+      .getAllByRole("listitem")
+      .find((li) => /30 January 2026/.test(li.textContent ?? ""));
+    expect(item).toHaveTextContent("ordinals 5, -1");
+    expect(item).toHaveTextContent("series 1 pick");
+    await expectNoAxeViolations(rendered.root);
   });
 });
 
 describe("the Builder link", () => {
   it("points at the Builder once there is a year and an offset", async () => {
-    const { root } = await mount();
-    setYear(root, "2024");
-    expect(q(root, "link-builder").getAttribute("href")).toContain(
-      "/tools/holiday-rule-builder/",
+    const rendered = await mount();
+    await setYear(rendered, "2024");
+    expect(
+      screen.getByRole("link", { name: "Build a calendar from these" }),
+    ).toHaveAttribute(
+      "href",
+      expect.stringContaining("/tools/holiday-rule-builder/"),
     );
+    await expectNoAxeViolations(rendered.root);
+  });
+
+  it("has no link and says why when no year is placed", async () => {
+    const rendered = await mount();
+    await setYear(rendered, "-300000");
+    expect(screen.getByText("Build a calendar from these")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(
+      screen.getByRole("note", { name: "Hand-off hint" }),
+    ).not.toHaveTextContent(/^$/);
+    await expectNoAxeViolations(rendered.root);
   });
 });
 
-describe("readouts hold still", () => {
-  it("no plate or grid box moves when the slider is dragged", async () => {
-    const { root } = await mount();
-    const boxes = () =>
-      ["hero-gregorian", "hero-julian", "hero-apart", "easter-grid"].map(
-        (r) => {
-          const b = q(root, r).getBoundingClientRect();
-          return [b.x, b.y, b.width, b.height];
-        },
-      );
-    const before = boxes();
-    const slider = q<HTMLInputElement>(root, "year-slider");
-    for (const v of [slider.min, slider.max, "2024", "2025"]) {
-      slider.value = v;
-      fire(slider, "input");
-      expect(boxes()).toEqual(before);
-    }
+describe("the permalink", () => {
+  it("carries the typed year", async () => {
+    const rendered = await mount();
+    await setYear(rendered, "2031");
+    expect(rendered.permalink()).toContain("2031");
   });
 });

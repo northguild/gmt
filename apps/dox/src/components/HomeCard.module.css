@@ -1,0 +1,91 @@
+/* A home-page card. The tone sets the icon's border and fill; the card has a full border, never a
+   single coloured edge. */
+
+.root {
+  --home-card-edge: var(--sl-color-purple);
+  --home-card-fill: var(--sl-color-purple-low);
+
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, calc(0.125rem + 1vw), 1rem);
+  border: 1px solid var(--sl-color-gray-5);
+  background-color: var(--sl-color-black);
+  padding: clamp(1rem, calc(0.125rem + 3vw), 2.5rem);
+
+  &[data-tone="orange"] {
+    --home-card-edge: var(--sl-color-orange);
+    --home-card-fill: var(--sl-color-orange-low);
+  }
+
+  &[data-tone="green"] {
+    --home-card-edge: var(--sl-color-green);
+    --home-card-fill: var(--sl-color-green-low);
+  }
+
+  &[data-tone="red"] {
+    --home-card-edge: var(--sl-color-red);
+    --home-card-fill: var(--sl-color-red-low);
+  }
+
+  &[data-tone="blue"] {
+    --home-card-edge: var(--sl-color-blue);
+    --home-card-fill: var(--sl-color-blue-low);
+  }
+
+  /* --gmt-ice flips with the theme (ice blue in dark, near-black in light), so the icon stays
+     legible in both. */
+  &[data-tone="ice"] {
+    --home-card-edge: var(--gmt-ice);
+    --home-card-fill: color-mix(in srgb, var(--gmt-ice) 12%, transparent);
+  }
+
+  &[data-span="full"] {
+    grid-column: 1 / -1;
+  }
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--sl-text-h4);
+  color: var(--sl-color-white);
+  line-height: var(--sl-line-height-headings);
+}
+
+.icon {
+  flex-shrink: 0;
+  border: 1px solid var(--home-card-edge);
+  background-color: var(--home-card-fill);
+  padding: 0.2em;
+  border-radius: 0.25rem;
+}
+
+.body {
+  margin: 0;
+  font-size: clamp(var(--sl-text-sm), calc(0.5rem + 1vw), var(--sl-text-body));
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+    background-color: Canvas;
+  }
+
+  .icon {
+    border-color: CanvasText;
+    background-color: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+  }
+
+  .icon {
+    border-color: var(--gmt-ice);
+  }
+}

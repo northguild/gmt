@@ -1,0 +1,383 @@
+/*
+ * Cron in a Zone's night: the legend, the two axes, a lane of marks for each policy, the
+ * parsed fields and the sentinel pill. A mark's place is `--gmt-at` (0 to 1), read with
+ * `inset-inline-start`. The widget root's container (`cron-in-a-zone.module.css`) is what
+ * the narrow rules below ask about.
+ */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2) var(--gmt-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+}
+
+.swatch {
+  position: relative;
+  display: inline-block;
+  inline-size: 1.2rem;
+  block-size: 1rem;
+  flex: none;
+}
+
+.stem {
+  position: absolute;
+  inset-block: 6px;
+  inset-inline-start: 50%;
+  box-sizing: border-box;
+  translate: -50% 0;
+}
+
+.mark .stem {
+  inset-inline-start: 0;
+}
+
+/* The three drawings. Each has a different outline as well as a different colour. */
+:is(.mark, .swatch)[data-kind="unique"] .stem {
+  inline-size: 3px;
+  background: var(--gmt-series-1);
+}
+
+:is(.mark, .swatch)[data-kind="nonexistent"] .stem {
+  inline-size: 9px;
+  border-inline: 2px dashed var(--gmt-dst-gold-ink);
+  background: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-dst-gold) srgb r g b / 60%) 0,
+    color(from var(--gmt-dst-gold) srgb r g b / 60%) 2px,
+    transparent 2px,
+    transparent 5px
+  );
+}
+
+:is(.mark, .swatch)[data-kind="ambiguous"] .stem {
+  inline-size: 8px;
+  border-inline: 2px solid var(--gmt-dst-purple-ink);
+}
+
+/* ------------------------------------------------------------------ plot */
+
+.plot {
+  --gmt-cron-gutter: 3rem;
+
+  position: relative;
+  padding-inline: var(--gmt-cron-gutter) var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.chipRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  block-size: 1.9rem;
+}
+
+.lanes {
+  position: relative;
+  display: grid;
+  gap: var(--gmt-space-3);
+  margin-block-start: var(--gmt-space-2);
+}
+
+/* ------------------------------------------------------------------ axes */
+
+.axisRow {
+  position: relative;
+
+  /* A tick is its mark gap plus a line of digits, so the next row's marks start below
+     this row's digits and not inside them. */
+  block-size: 1.5rem;
+}
+
+.axisCap {
+  position: absolute;
+  inset-inline-start: calc(-1 * var(--gmt-cron-gutter));
+  inline-size: var(--gmt-cron-gutter);
+  inset-block-start: 0;
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+}
+
+.axis {
+  position: relative;
+  block-size: 100%;
+}
+
+.tick {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(var(--gmt-at) * 100%);
+  translate: -50% 0;
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+
+  &[data-edge="first"] {
+    translate: 0 0;
+  }
+
+  &[data-edge="last"] {
+    translate: -100% 0;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* ----------------------------------------------------------------- lanes */
+
+.lane {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+}
+
+.head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--gmt-space-3);
+
+  @container (inline-size < 30rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.name {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+
+  & code {
+    justify-self: start;
+    font-size: var(--gmt-text-sm);
+  }
+}
+
+.rule {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+/* Paired with the name at the opposite edge; holds the width of its longest text. */
+.plate {
+  display: inline-flex;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  min-inline-size: 25ch;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+
+  @container (inline-size < 30rem) {
+    justify-self: start;
+    justify-content: flex-start;
+  }
+}
+
+.track {
+  position: relative;
+  block-size: 3rem;
+  border-block-end: 1px solid var(--gmt-hairline);
+  background: color(from var(--gmt-void) srgb r g b / 25%);
+}
+
+.marks {
+  position: absolute;
+  inset: 0;
+}
+
+/* One vertical rule at the change, on each lane. */
+.change {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 50%;
+  inline-size: 2px;
+  translate: -1px 0;
+  background: var(--gmt-ice);
+}
+
+.mark {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--gmt-at) * 100%);
+  inline-size: 0;
+}
+
+.count {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 8px;
+  padding: 0 var(--gmt-space-1);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+
+  /* A mark near the right end puts its label on the stem's left, inside the track. */
+  &[data-end] {
+    inset-inline: auto 8px;
+  }
+}
+
+/* ---------------------------------------------------------------- fields */
+
+.fields {
+  display: grid;
+  margin: 0;
+  align-content: start;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  padding-block: var(--gmt-space-1);
+  border-block-end: 1px solid var(--gmt-hairline-faint);
+
+  @container (inline-size < 30rem) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+
+.fieldName {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+.fieldValue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.values {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------ the sentinel */
+
+.noSignal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  margin: 0;
+}
+
+.pill {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.note {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+/* A run the other rule does not give says so in words, on a hatched strip. */
+.only {
+  display: block;
+  margin-block-start: var(--gmt-space-1);
+  padding: 1px var(--gmt-space-1);
+  background: repeating-linear-gradient(
+    45deg,
+    color(from var(--gmt-ice-dim) srgb r g b / 16%) 0,
+    color(from var(--gmt-ice-dim) srgb r g b / 16%) 2px,
+    transparent 2px,
+    transparent 7px
+  );
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+@media (forced-colors: active) {
+  .track {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .change {
+    background: CanvasText;
+  }
+
+  :is(.mark, .swatch)[data-kind] .stem {
+    background: CanvasText;
+    border-color: CanvasText;
+  }
+
+  .plate,
+  .count {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .pill {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .track {
+    border-color: var(--gmt-ice);
+  }
+
+  .plate,
+  .count {
+    border-color: var(--gmt-ice);
+  }
+
+  .pill {
+    border-color: var(--gmt-signal-ink);
+  }
+}

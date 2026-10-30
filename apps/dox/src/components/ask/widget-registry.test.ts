@@ -160,32 +160,24 @@ describe("resolveWidget", () => {
       ).toBe(false);
     });
 
-    it("renders a host the mount looks up", async () => {
+    it("renders the widget root the mount looks up", async () => {
       const loaded = await WIDGET_REGISTRY.showZonePlanner!.load();
-      expect(loaded.renderTemplate("probe", {} as never)).toContain(
-        'data-role="planner-host"',
+      expect(loaded.renderTemplate("probe", {} as never).value).toContain(
+        'data-widget="multi-zone-scrubber"',
       );
     });
   });
 
-  it("produces markup carrying every role its mount looks up", async () => {
-    // `mountGlobe` uses null-tolerant lookups, so a missing data-role would not
-    // throw — it would silently make a control inert.
-    const entry = WIDGET_REGISTRY.showGlobe;
-    expect(entry).toBeDefined();
-    const loaded = await entry?.load();
-    const html = loaded?.renderTemplate("probe", {} as never) ?? "";
-    for (const role of [
-      'data-role="stage"',
-      'data-role="clocks"',
-      'data-role="filters"',
-      "data-globe-search",
-      "data-globe-zoom",
-    ]) {
-      expect(html).toContain(role);
-    }
+  it("renders the globe parts its mount finds, under the caller's id prefix", async () => {
+    // `mountGlobe` finds each part by id under the widget root, so a part the
+    // template forgets would make a control inert rather than throw.
+    const loaded = await WIDGET_REGISTRY.showGlobe!.load();
+    const markup = loaded.renderTemplate("probe", {} as never).value;
+    expect(markup).toContain('data-widget="globe"');
     // The id prefix is what stops a rail globe colliding with one on the page.
-    expect(html).toContain('id="probe-stage"');
+    for (const part of ["stage", "zoom", "tooltip", "clocks", "filters"]) {
+      expect(markup).toContain(`id="probe-${part}"`);
+    }
   });
 });
 

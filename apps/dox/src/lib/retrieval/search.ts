@@ -1,7 +1,7 @@
 import MiniSearch from "minisearch";
 import type { RetrievalChunk } from "./types";
 
-export interface SearchOptions {
+interface SearchOptions {
   /** The namespace to bias toward, e.g. the current reference page's
    * namespace ("zoned") or a guide's top-level directory. A bias, not a
    * filter — DOX-C1's DoD requires a cross-namespace question to still

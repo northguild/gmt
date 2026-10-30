@@ -10,9 +10,45 @@
  * zone's offset between the two ends and disagrees when a DST transition
  * does.
  *
- * Follows the Connection Checker's split: every listener is delegated on the
- * root, so the host dropping the subtree is a complete teardown.
+ * Built on the component kit: `renderCrossingClockTemplate` writes the markup
+ * from builders only, with ids from `idScope(idPrefix)`, and `mount` finds its
+ * parts by those ids and reads and writes element `value` properties. Every
+ * listener is delegated on the widget with the mount's `signal`. The two faces
+ * and the strip are the clock family's (`widgets/families/clock`).
  */
+import { defineElements } from "~/widgets/define";
+import {
+  aside,
+  badge,
+  codeFrame,
+  field,
+  fieldGrid,
+  findWidget,
+  html,
+  idScope,
+  raw,
+  section,
+  select,
+  setHtml,
+  textInput,
+  widget,
+  type SafeHtml,
+} from "~/widgets/builders";
+import { callOutput } from "~/widgets/families/gnss/call-output";
+import { crossingConnector } from "~/widgets/families/clock/crossing-connector";
+import {
+  crossingBar,
+  type CrossingBarView,
+} from "~/widgets/families/clock/crossing-strip";
+import {
+  bindClockToggle,
+  crystalClock,
+  type CrystalClockHighlight,
+  type CrystalClockState,
+} from "~/widgets/families/clock/crystal-clock";
+import { grow } from "~/widgets/primitives/grow/grow";
+import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
+import styles from "~/widgets/tools/crossing-clock.module.css";
 import { resolveWallTime } from "./dwell-ledger";
 import {
   CROSSING_PRESETS,
@@ -32,135 +68,182 @@ import {
   readArgs,
   spokenOffset,
   type ClockFace,
-  type CrossingChangeMarker,
   type CrossingClockArgs,
   type CrossingState,
 } from "./crossing-clock";
-import { codeFrameHtml } from "./code-frame";
-import {
-  bindClockGlow,
-  renderCrystalClock,
-  type CrystalClockHighlight,
-  type CrystalClockState,
-} from "./crystal-clock";
 import { enter } from "./enter";
 import { loadTransportLib } from "./transport-lib";
 import {
   formatCrossing,
   minutesText,
-  zoneOptionsHtml,
   type TransportLib,
 } from "./transport-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
-import {
-  escapeAttr,
-  escapeHtml,
-  isRangeError,
-  RANGE_EDGE_TEXT,
-  labelTextHtml,
-  renderAside,
-  renderCallLine,
-  renderWidgetOutput,
-  setControlValue,
-  wireCopyButtons,
-} from "./widget-ui";
+import { codeSpan, isRangeError, RANGE_EDGE_TEXT } from "./widget-ui";
 
 export type { CrossingClockArgs } from "./crossing-clock";
 
-function presetOptions(presetId: string): string {
-  return (
-    `<option value="${CUSTOM_PRESET_ID}"${presetId === CUSTOM_PRESET_ID ? " selected" : ""}>Custom</option>` +
-    CROSSING_PRESETS.map(
-      (p) =>
-        `<option value="${escapeAttr(p.id)}"${p.id === presetId ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-    ).join("")
-  );
+const NBSP = " ";
+const WIDGET_NAME = "crossing-clock";
+
+type Side = "entry" | "exit";
+
+/** The face's grid area for each of the five rows, by side. */
+const AREAS: Record<Side, readonly string[]> = {
+  entry: ["eh", "ef", "et", "em", "ed"],
+  exit: ["xh", "xf", "xt", "xm", "xd"],
+};
+
+// ---------------------------------------------------------------------------
+// Markup
+// ---------------------------------------------------------------------------
+
+/**
+ * One clock column, as five direct children of the grid. They are empty until
+ * the library loads: the same "skeleton first, then filled" shape every other
+ * computed value in this widget follows.
+ */
+function clockPanel(
+  id: (local: string) => string,
+  side: Side,
+  heading: string,
+): SafeHtml {
+  const [h, f, t, m, d] = AREAS[side] as [
+    string,
+    string,
+    string,
+    string,
+    string,
+  ];
+  return html`<p class="${styles.heading}" data-area="${h}">${heading}</p
+    ><div class="${styles.face}" data-area="${f}" id="${id(`${side}-clock`)}"></div
+    ><p class="${styles.time}" data-area="${t}" id="${id(`${side}-time`)}">${NBSP}</p
+    ><p class="${styles.meta}" data-area="${m}" id="${id(`${side}-meta`)}">${NBSP}</p
+    ><p class="${styles.date}" data-area="${d}" id="${id(`${side}-date`)}">${NBSP}</p>`;
 }
 
-/** The static shell of one clock column: an empty face host the mount fills
- *  with a crystal clock SVG, plus the large-mono time, the offset/zone and
- *  the local date `render()` sets below it. Empty until the library loads,
- *  the same "skeleton first, then filled" shape every other computed value
- *  in this widget follows.
- *
- *  Emits five direct children rather than a wrapping panel div: `.gmt-
- *  crossing-clocks` is a five-row grid (owner review — entry and exit were
- *  drifting out of vertical alignment when their columns were independent
- *  flex boxes), and each element's own `data-role` is what
- *  `gmt-crossing-clock.css` uses to place it in that grid's named areas, so
- *  the connector can sit centred on just the face row without needing to
- *  match a whole column's height. */
-function clockPanelHtml(prefix: "entry" | "exit", heading: string): string {
-  return (
-    `<p class="gmt-crossing-clock-heading" data-role="${prefix}-heading">${escapeHtml(heading)}</p>` +
-    `<div class="gmt-crossing-clock-face" data-role="${prefix}-clock"></div>` +
-    `<p class="gmt-crossing-clock-time" data-role="${prefix}-time">&nbsp;</p>` +
-    `<p class="gmt-crossing-clock-meta" data-role="${prefix}-meta">&nbsp;</p>` +
-    `<p class="gmt-crossing-clock-date" data-role="${prefix}-date">&nbsp;</p>`
-  );
+/** The zones to pick from: the curated list, and a seeded zone outside it. */
+function zoneChoices(selected: string): { value: string; label: string }[] {
+  const list =
+    selected === "" || CROSSING_ZONES.includes(selected)
+      ? CROSSING_ZONES
+      : [...CROSSING_ZONES, selected];
+  return list.map((z) => ({ value: z, label: z }));
 }
 
+function noCall(): SafeHtml {
+  return codeFrame({
+    label: "Call made",
+    copyLabel: "Copy call",
+    copyText: "",
+    gate: "codeframe",
+  });
+}
+
+function callFrame(state: CrossingState): SafeHtml {
+  const [argsHtml, plain] = crossingCallSource(state);
+  return codeFrame({
+    label: "Call made",
+    copyLabel: "Copy call",
+    copyText: `crossingTime(${plain})`,
+    code: raw(`${codeSpan("fn", "crossingTime")}(${argsHtml})`),
+    gate: "codeframe",
+  });
+}
+
+/**
+ * The widget's chrome, seeded with `args` so the first paint shows them. With
+ * no args it shows the first preset. The faces, the strip and the call are
+ * drawn by `mount`, because they come from the real library call.
+ */
 export function renderCrossingClockTemplate(
+  idPrefix: string,
   args: CrossingClockArgs = {},
-): string {
+): SafeHtml {
+  const id = idScope(idPrefix);
   const seeded = args.entry !== undefined;
   const state: CrossingState = seeded
     ? readArgs(args)
     : { ...CROSSING_PRESETS[0]!.state };
   const presetId = matchPreset(state);
-  const preset = CROSSING_PRESETS.find((p) => p.id === presetId);
 
-  const text = (role: string, label: string, value: string) =>
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml(label)}` +
-    `<input class="gmt-input" data-role="${role}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(value)}"></label>`;
+  const box = (wide: boolean, content: SafeHtml): SafeHtml =>
+    html`<div class="${styles.box}" ${wide ? html`data-wide` : ""}>${content}</div>`;
 
-  return (
-    `<div class="gmt-crossing gmt-widget not-content">` +
-    `<div class="gmt-widget-card">` +
-    `<div class="gmt-widget-section">` +
-    `<h4>1. Log the crossing</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
-    `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select></label>` +
-    `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-field-grid gmt-crossing-fields">` +
-    text("entry", "Entry", state.entry) +
-    text("exit", "Exit", state.exit) +
-    `<label class="gmt-label">${labelTextHtml("Read on the clock of")}` +
-    `<select class="gmt-select" data-role="target-zone">${zoneOptionsHtml(CROSSING_ZONES, state.targetZone)}</select></label>` +
-    `</div>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>2. Elapsed, and what the clocks say</h4>` +
-    `<div class="gmt-crossing-clocks">` +
-    clockPanelHtml("entry", "Entry") +
-    `<div class="gmt-crossing-connector" data-role="connector">` +
-    `<p class="gmt-transport-verdict" data-role="elapsed" aria-live="polite">&nbsp;</p>` +
-    `<div class="gmt-crossing-connector-line" aria-hidden="true"></div>` +
-    `<p class="gmt-transport-verdict-detail" data-role="naive">&nbsp;</p>` +
-    `</div>` +
-    clockPanelHtml("exit", "Exit") +
-    `</div>` +
-    `<div class="gmt-crossing-strip-wrap">` +
-    `<div class="gmt-crossing-strip" data-role="ruler" role="img" aria-labelledby="crossing-ruler-summary">` +
-    `<span class="gmt-crossing-strip-end" data-role="strip-entry-label">&nbsp;</span>` +
-    `<div class="gmt-crossing-strip-track" data-role="strip-track"></div>` +
-    `<span class="gmt-crossing-strip-end" data-role="strip-exit-label">&nbsp;</span>` +
-    `</div>` +
-    `<div class="gmt-crossing-strip-changes" data-role="strip-changes"></div>` +
-    `<p class="gmt-transport-visually-hidden" id="crossing-ruler-summary" data-role="ruler-summary"></p>` +
-    `<p class="gmt-widget-hint" data-role="legend"></p>` +
-    `</div>` +
-    `<div class="gmt-transport-reason" data-role="reason-aside" data-grow="slot"></div>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>3. What <code>crossingTime</code> returns</h4>` +
-    codeFrameHtml("crossing") +
-    `<output class="gmt-widget-output" data-role="crossing-output">&nbsp;</output>` +
-    `</div>` +
-    `</div>` +
-    `</div>`
+  const text = (local: string, label: string, value: string): SafeHtml =>
+    box(
+      true,
+      field({
+        id: id(local),
+        label,
+        control: ({ id: cid }) =>
+          textInput({
+            id: cid,
+            value,
+            autocomplete: "off",
+            spellcheck: false,
+          }),
+      }),
+    );
+
+  const log = section(
+    { id: id("log"), heading: "1. Log the crossing", level: 4 },
+    html`${preset({
+      id: id("preset"),
+      label: "Preset",
+      value: presetId,
+      options: [
+        { value: CUSTOM_PRESET_ID, label: "Custom", description: "" },
+        ...CROSSING_PRESETS.map((p) => ({
+          value: p.id,
+          label: p.label,
+          description: p.description,
+        })),
+      ],
+    })}${fieldGrid(
+      html`${text("entry", "Entry", state.entry)}${text("exit", "Exit", state.exit)}${box(
+        false,
+        field({
+          id: id("target-zone"),
+          label: "Read on the clock of",
+          control: ({ id: cid }) =>
+            select({
+              id: cid,
+              value: state.targetZone,
+              options: zoneChoices(state.targetZone),
+            }),
+        }),
+      )}`,
+    )}`,
+  );
+
+  const read = section(
+    {
+      id: id("read"),
+      heading: "2. Elapsed, and what the clocks say",
+      level: 4,
+    },
+    html`<div class="${styles.clocks}">${clockPanel(id, "entry", "Entry")}${crossingConnector({ elapsedId: id("elapsed"), naiveId: id("naive"), area: "co" })}${clockPanel(id, "exit", "Exit")}</div>${grow(html`<div id="${id("strip")}">${crossingBar({ kind: "blank" })}</div>`)}${grow(html`<div id="${id("reason")}"></div>`)}`,
+  );
+
+  const call = section(
+    {
+      id: id("call"),
+      heading: "3. What crossingTime returns",
+      level: 4,
+    },
+    html`${grow(html`<div id="${id("call-slot")}">${noCall()}</div>`)}${grow(
+      html`<div id="${id("output-slot")}">${callOutput({
+        label: "What the call returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}`,
+  );
+
+  return widget(
+    { name: WIDGET_NAME, label: "Crossing Clock", scope: idPrefix },
+    html`${log}${read}${call}`,
   );
 }
 
@@ -168,245 +251,145 @@ export function renderCrossingClockTemplate(
 // Wiring
 // ---------------------------------------------------------------------------
 
-const CHANGE_LEGEND_TEXT: Record<CrossingChangeMarker["kind"], string> = {
-  skip: "Purple dashed marker: an hour the clock never showed (matches the clock face highlight).",
-  repeat:
-    "Purple doubled marker: an hour the clock showed twice (matches the clock face highlight).",
-};
-
-function pct(n: number): string {
-  return `${Math.round(n * 100) / 100}%`;
-}
-
-/** Fills the proportional strip — entry/exit end labels, faint unlabelled
- *  hour ticks and a marker at every DST transition, on the bar itself —
- *  plus the change list beneath it (or the quiet "no change" line), a
- *  legend limited to the kinds that actually occur, and the visually
- *  hidden summary that is the bar's accessible name. Every value comes
- *  from `crossingStrip`, itself read from the real `crossingTime` result;
- *  nothing here is computed. */
-function renderStrip(
-  q: <T extends HTMLElement>(role: string) => T | null,
-  strip: ReturnType<typeof crossingStrip>,
-): void {
-  const entryLabelEl = q("strip-entry-label");
-  if (entryLabelEl) entryLabelEl.textContent = strip.entryLabel;
-  const exitLabelEl = q("strip-exit-label");
-  if (exitLabelEl) exitLabelEl.textContent = strip.exitLabel;
-
-  const trackEl = q("strip-track");
-  if (trackEl) {
-    const ticks = strip.ticks
-      .map((t) =>
-        t.label
-          ? `<span class="gmt-crossing-strip-tick gmt-crossing-strip-tick--labeled" data-label="${escapeHtml(t.label)}" style="left:${pct(t.percent)}"></span>`
-          : `<span class="gmt-crossing-strip-tick" style="left:${pct(t.percent)}"></span>`,
-      )
-      .join("");
-    const markers = strip.changes
-      .map(
-        (c, i) =>
-          `<span class="gmt-crossing-strip-marker gmt-crossing-strip-marker--${c.kind}" data-role="strip-marker-${i}" style="left:${pct(c.percent)}"></span>`,
-      )
-      .join("");
-    trackEl.innerHTML = ticks + markers;
-  }
-
-  const changesEl = q("strip-changes");
-  if (changesEl) {
-    changesEl.innerHTML = strip.changes.length
-      ? strip.changes
-          .map(
-            (c, i) =>
-              `<p class="gmt-crossing-strip-change gmt-crossing-strip-change--${c.kind}" data-role="strip-change-${i}">` +
-              `<span class="gmt-crossing-strip-change-mark" aria-hidden="true"></span>` +
-              `${escapeHtml(c.label)}</p>`,
-          )
-          .join("")
-      : `<p class="gmt-crossing-strip-quiet" data-role="strip-quiet">No clock change during the crossing — every hour showed once.</p>`;
-  }
-
-  const legendEl = q("legend");
-  if (legendEl) {
-    const kinds = Array.from(new Set(strip.changes.map((c) => c.kind)));
-    legendEl.textContent = kinds.map((k) => CHANGE_LEGEND_TEXT[k]).join(" ");
-  }
-
-  const summaryEl = q("ruler-summary");
-  if (summaryEl) summaryEl.textContent = strip.summary;
-}
-
-function clearStrip(
-  q: <T extends HTMLElement>(role: string) => T | null,
-): void {
-  const entryLabelEl = q("strip-entry-label");
-  if (entryLabelEl) entryLabelEl.textContent = "";
-  const exitLabelEl = q("strip-exit-label");
-  if (exitLabelEl) exitLabelEl.textContent = "";
-  const trackEl = q("strip-track");
-  if (trackEl) trackEl.innerHTML = "";
-  const changesEl = q("strip-changes");
-  if (changesEl) changesEl.innerHTML = "";
-  const legendEl = q("legend");
-  if (legendEl) legendEl.textContent = "";
-  const summaryEl = q("ruler-summary");
-  if (summaryEl) summaryEl.textContent = "";
-}
-
-/** Fills one clock panel: the crystal-clock SVG, the large-mono time, the
- *  offset/zone line and the local date — every value read out of `face`,
- *  which `crossingClockFace` already read out of `crossingTime`'s own
- *  string. Nothing here is computed. `highlight`, when the crossing has a
- *  DST change in it, draws that hour on the dial too — both clocks read
- *  the same `targetZone`, so both get it (the owner's call: the lesson
- *  reads clearest when it shows on the clock the reader is looking at,
- *  entry or exit, not only one of them). */
-function renderClockPanel(
-  q: <T extends HTMLElement>(role: string) => T | null,
-  prefix: "entry" | "exit",
+/** Draws one clock panel from `face`, which `crossingClockFace` already read out of the library's own string. */
+function drawPanel(
+  part: <T extends HTMLElement>(local: string) => T,
+  side: Side,
   heading: string,
   face: ClockFace,
   clockState: CrystalClockState,
   highlight: CrystalClockHighlight | undefined,
 ): void {
-  const faceEl = q(`${prefix}-clock`);
-  if (faceEl) {
-    /* The face arrives with the site's entrance (lib/enter.ts) when it first
-       appears, the exit clock a beat after the entry clock. A re-render with
-       new values replaces the dial in place and does not replay it. */
-    const appearing = !faceEl.firstElementChild;
-    faceEl.innerHTML = renderCrystalClock({
-      id: prefix,
+  const faceEl = part(`${side}-clock`);
+  /* The face arrives with the site's entrance (lib/enter.ts) when it first appears, the exit
+     clock a beat after the entry clock. A re-render with new values replaces the dial in place
+     and does not replay it. */
+  const appearing = !faceEl.hasChildNodes();
+  setHtml(
+    faceEl,
+    crystalClock({
+      id: side,
       hour: face.hour,
       minute: face.minute,
       label: `${heading} clock`,
       sublabel: `${face.timeLabel}, ${spokenOffset(face.offset)}, ${face.zoneLabel}`,
       state: clockState,
       highlight,
-    });
-    if (appearing) enter(faceEl, { delayMs: prefix === "exit" ? 80 : 0 });
-  }
-  const timeEl = q(`${prefix}-time`);
-  if (timeEl) timeEl.textContent = face.timeLabel;
-  const metaEl = q(`${prefix}-meta`);
-  if (metaEl) metaEl.textContent = `${face.offset} · ${face.zoneLabel}`;
-  const dateEl = q(`${prefix}-date`);
-  if (dateEl) dateEl.textContent = face.dateLabel;
+    }),
+  );
+  if (appearing) enter(faceEl, { delayMs: side === "exit" ? 80 : 0 });
+  part(`${side}-time`).textContent = face.timeLabel;
+  part(`${side}-meta`).textContent = `${face.offset} · ${face.zoneLabel}`;
+  part(`${side}-date`).textContent = face.dateLabel;
 }
 
-function clearClockPanel(
-  q: <T extends HTMLElement>(role: string) => T | null,
-  prefix: "entry" | "exit",
+function clearPanel(
+  part: <T extends HTMLElement>(local: string) => T,
+  side: Side,
 ): void {
-  const faceEl = q(`${prefix}-clock`);
-  if (faceEl) {
-    faceEl.innerHTML = "";
-    // Emptied, so the next face to appear enters again.
-    faceEl.removeAttribute("data-entered");
-  }
+  const faceEl = part(`${side}-clock`);
+  setHtml(faceEl, html``);
+  // Emptied, so the next face to appear enters again.
+  faceEl.removeAttribute("data-entered");
   for (const suffix of ["time", "meta", "date"] as const) {
-    const el = q(`${prefix}-${suffix}`);
-    if (el) el.textContent = "";
+    part(`${side}-${suffix}`).textContent = NBSP;
   }
 }
 
-function setupWidget(root: HTMLElement, lib: TransportLib): void {
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
+interface Controller {
+  readState(): CrossingState;
+  apply(state: CrossingState): void;
+  render(): void;
+  syncPreset(): void;
+}
 
-  const presetEl = q<HTMLSelectElement>("preset");
-  const entryEl = q<HTMLInputElement>("entry");
-  const exitEl = q<HTMLInputElement>("exit");
-  const targetZoneEl = q<HTMLSelectElement>("target-zone");
-  if (!presetEl || !entryEl || !exitEl || !targetZoneEl) return;
+function setupWidget(
+  root: HTMLElement,
+  lib: TransportLib,
+  signal: AbortSignal,
+): Controller {
+  const { el: widgetEl, part } = findWidget(root, WIDGET_NAME);
 
-  function state(): CrossingState {
+  const presetEl = widgetEl.querySelector<GmtPreset>("gmt-preset")!;
+  const entryEl = part<HTMLInputElement>("entry");
+  const exitEl = part<HTMLInputElement>("exit");
+  const zoneEl = part<HTMLSelectElement>("target-zone");
+
+  function readState(): CrossingState {
     return {
-      entry: entryEl!.value.trim(),
-      exit: exitEl!.value.trim(),
-      targetZone: targetZoneEl!.value.trim(),
+      entry: entryEl.value.trim(),
+      exit: exitEl.value.trim(),
+      targetZone: zoneEl.value.trim(),
     };
   }
 
   function syncPreset(): void {
-    presetEl!.value = matchPreset(state());
-    const desc = q("preset-description");
-    if (desc) {
-      desc.textContent =
-        CROSSING_PRESETS.find((p) => p.id === presetEl!.value)?.description ??
-        "";
-    }
+    presetEl.value = matchPreset(readState());
   }
 
   function render(): void {
-    const s = state();
+    const s = readState();
     const result = lib.crossingTime(s.entry, s.exit, s.targetZone);
 
-    const [callHtml, callPlain] = crossingCallSource(s);
-    renderCallLine(q("call-crossing"), "crossingTime", callHtml, callPlain);
+    setHtml(part("call-slot"), callFrame(s));
+    setHtml(
+      part("output-slot"),
+      callOutput({
+        label: "What the call returned",
+        state: result === null ? "sentinel" : "live",
+        lines: [
+          result === null
+            ? { text: "", lost: true }
+            : { text: formatCrossing(result), lost: false },
+        ],
+      }),
+    );
 
-    const out = q("crossing-output");
-    if (out) {
-      if (result === null) renderWidgetOutput(out, "NO SIGNAL", "sentinel");
-      else renderWidgetOutput(out, formatCrossing(result), "live");
-    }
-
-    const elapsedEl = q("elapsed");
-    const naiveEl = q("naive");
-    const aside = q("reason-aside");
+    const elapsedEl = part("elapsed");
+    const naiveEl = part("naive");
 
     if (result === null) {
-      if (elapsedEl) elapsedEl.textContent = "";
-      if (naiveEl) naiveEl.textContent = "";
-      clearStrip(q);
-      clearClockPanel(q, "entry");
-      clearClockPanel(q, "exit");
-      if (aside) {
-        const reason = explainNull(s.entry, s.exit, s.targetZone, lib);
-        renderAside(
-          aside,
-          "caution",
-          "Why null",
-          `<p>${escapeHtml(reason ? NULL_REASON_TEXT[reason] : "The crossing could not be read.")}</p>`,
-        );
-      }
+      elapsedEl.textContent = NBSP;
+      setHtml(naiveEl, html`${NBSP}`);
+      setHtml(part("strip"), crossingBar({ kind: "blank" }));
+      clearPanel(part, "entry");
+      clearPanel(part, "exit");
+      const reason = explainNull(s.entry, s.exit, s.targetZone, lib);
+      setHtml(
+        part("reason"),
+        aside(
+          { label: "Why null", tone: "caution", title: "Why null" },
+          html`<p>${reason ? NULL_REASON_TEXT[reason] : "The crossing could not be read."}</p>`,
+        ),
+      );
       return;
     }
 
-    if (aside) aside.innerHTML = "";
+    setHtml(part("reason"), html``);
 
     const naiveMinutes = naiveWallDifference(result);
     const elapsedMinutes = durationMinutes(result.duration);
     const disagrees = Math.round(naiveMinutes - elapsedMinutes) !== 0;
-    if (elapsedEl) {
-      elapsedEl.textContent = `${result.duration} elapsed — ${minutesText(elapsedMinutes)}`;
-    }
-    if (naiveEl) {
-      naiveEl.textContent = `Naive: ${naiveText(elapsedMinutes, naiveMinutes)}`;
-      if (disagrees) {
-        naiveEl.insertAdjacentHTML(
-          "beforeend",
-          ` <span class="gmt-transport-badge gmt-transport-badge--disagrees" data-role="naive-disagrees">disagrees</span>`,
-        );
-      }
-    }
+    elapsedEl.textContent = `${result.duration} elapsed — ${minutesText(elapsedMinutes)}`;
+    setHtml(
+      naiveEl,
+      html`Naive: ${naiveText(elapsedMinutes, naiveMinutes)}${disagrees ? html` ${badge({ text: "disagrees", tone: "danger" })}` : ""}`,
+    );
 
     const entryFace = crossingClockFace(result.enter);
     const exitFace = crossingClockFace(result.exit);
     const repeated = isRepeatedReading(entryFace, exitFace);
 
-    /* A crossing at the very edge of the supported range has zoned strings
-       that cannot be placed on a bar: say so, and keep the clocks. */
+    /* A crossing at the very edge of the supported range has zoned strings that cannot be
+       placed on a bar: say so, and keep the clocks. */
     let strip: ReturnType<typeof crossingStrip> | null = null;
     try {
       strip = crossingStrip(result, s.targetZone);
     } catch (error) {
       if (!isRangeError(error)) throw error;
     }
-    // Both clocks read the same targetZone, so a change found anywhere in
-    // the crossing shows on both — see renderClockPanel's own comment.
-    // Only the first change draws (a highlight is one hour, not a list);
-    // realistic crossings have at most one in practice.
+    // Both clocks read the same targetZone, so a change found anywhere in the crossing shows on
+    // both. Only the first change draws (a highlight is one hour, not a list).
     const firstChange = strip?.changes[0];
     const highlight: CrystalClockHighlight | undefined = firstChange
       ? {
@@ -418,95 +401,65 @@ function setupWidget(root: HTMLElement, lib: TransportLib): void {
         }
       : undefined;
 
-    renderClockPanel(
-      q,
-      "entry",
-      "Entry",
-      entryFace,
-      repeated ? "repeated" : "normal",
-      highlight,
-    );
-    renderClockPanel(
-      q,
-      "exit",
-      "Exit",
-      exitFace,
-      repeated ? "repeated" : "normal",
-      highlight,
-    );
+    const faceState: CrystalClockState = repeated ? "repeated" : "normal";
+    drawPanel(part, "entry", "Entry", entryFace, faceState, highlight);
+    drawPanel(part, "exit", "Exit", exitFace, faceState, highlight);
 
-    if (strip) {
-      renderStrip(q, strip);
-    } else {
-      clearStrip(q);
-      const changesEl = q("strip-changes");
-      if (changesEl) {
-        changesEl.innerHTML = `<output class="gmt-widget-output gmt-playground-sentinel" data-role="range-edge">${escapeHtml(RANGE_EDGE_TEXT)}</output>`;
+    const view: CrossingBarView =
+      strip === null
+        ? { kind: "edge", text: RANGE_EDGE_TEXT }
+        : { kind: "drawn", strip };
+    setHtml(part("strip"), crossingBar(view));
+  }
+
+  function apply(state: CrossingState): void {
+    entryEl.value = state.entry;
+    exitEl.value = state.exit;
+    zoneEl.value = state.targetZone;
+  }
+
+  widgetEl.addEventListener(
+    "input",
+    (e) => {
+      if (e.target === entryEl || e.target === exitEl) {
+        syncPreset();
+        render();
       }
-    }
-  }
+    },
+    { signal },
+  );
 
-  function applyPreset(): void {
-    const preset = CROSSING_PRESETS.find((p) => p.id === presetEl!.value);
-    if (!preset) return;
-    entryEl!.value = preset.state.entry;
-    exitEl!.value = preset.state.exit;
-    targetZoneEl!.value = preset.state.targetZone;
-    syncPreset();
-    render();
-  }
+  widgetEl.addEventListener(
+    "change",
+    (e) => {
+      if (e.target === presetEl) {
+        const chosen = CROSSING_PRESETS.find((p) => p.id === presetEl.value);
+        if (!chosen) return;
+        apply(chosen.state);
+        syncPreset();
+        render();
+        return;
+      }
+      if (e.target === zoneEl) {
+        syncPreset();
+        render();
+      }
+    },
+    { signal },
+  );
 
-  root.addEventListener("input", (e) => {
-    const target = e.target as HTMLElement;
-    if (target === entryEl || target === exitEl) {
-      syncPreset();
-      render();
-    }
-  });
-
-  root.addEventListener("change", (e) => {
-    const target = e.target as HTMLElement;
-    if (target === presetEl) {
-      applyPreset();
-      return;
-    }
-    if (target === targetZoneEl) {
-      syncPreset();
-      render();
-    }
-  });
-
-  wireCopyButtons(root);
+  bindClockToggle(widgetEl, signal);
+  syncPreset();
   render();
+
+  return { readState, apply, render, syncPreset };
 }
 
-function applyArgs(root: HTMLElement, args: CrossingClockArgs): void {
-  if (args.entry === undefined) return;
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const s = readArgs(args);
-  const zone = s.targetZone.trim();
-  const set = (role: string, value: string) => {
-    const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    setControlValue(el, value);
-  };
-  set("entry", zone === "" ? s.entry : resolveWallTime(s.entry, zone));
-  set("exit", zone === "" ? s.exit : resolveWallTime(s.exit, zone));
-  set("target-zone", zone);
-  const presetEl = q<HTMLSelectElement>("preset");
-  if (presetEl) {
-    const matched = matchPreset({
-      entry: q<HTMLInputElement>("entry")?.value ?? "",
-      exit: q<HTMLInputElement>("exit")?.value ?? "",
-      targetZone: zone,
-    });
-    presetEl.value = matched;
-    const desc = q("preset-description");
-    if (desc) {
-      desc.textContent =
-        CROSSING_PRESETS.find((p) => p.id === matched)?.description ?? "";
-    }
-  }
+/** A zone the picker does not list is added, so a seeded zone is kept. */
+function ensureZone(zoneEl: HTMLSelectElement, zone: string): void {
+  if (zone === "") return;
+  const known = Array.from(zoneEl.options).some((o) => o.value === zone);
+  if (!known) zoneEl.add(new Option(zone, zone));
 }
 
 export const mountCrossingClock: MountFn<CrossingClockArgs> = async (
@@ -514,34 +467,31 @@ export const mountCrossingClock: MountFn<CrossingClockArgs> = async (
   args,
   signal,
 ) => {
+  defineElements();
   let lib: TransportLib;
   try {
     lib = await loadTransportLib();
   } catch (cause) {
-    throw new WidgetLoadError(cause);
+    // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
+    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  applyArgs(root, args);
-  setupWidget(root, lib);
-  // The night-light toggle (crystal-clock.ts): delegated once here, not
-  // rebound in render(), because it survives every re-render whether the
-  // clock panels it's watching for exist yet or not.
-  bindClockGlow(root, signal);
+  const { part } = findWidget(root, WIDGET_NAME);
+  if (args.entry !== undefined) {
+    const s = readArgs(args);
+    const zone = s.targetZone.trim();
+    ensureZone(part<HTMLSelectElement>("target-zone"), zone);
+    part<HTMLInputElement>("entry").value =
+      zone === "" ? s.entry : resolveWallTime(s.entry, zone);
+    part<HTMLInputElement>("exit").value =
+      zone === "" ? s.exit : resolveWallTime(s.exit, zone);
+    part<HTMLSelectElement>("target-zone").value = zone;
+  }
+  const controller = setupWidget(root, lib, signal);
 
   return onceDestroy(
     () => {},
-    () => {
-      const q = <T extends HTMLElement>(role: string) =>
-        root.querySelector(`[data-role="${role}"]`) as T | null;
-      const entryEl = q<HTMLInputElement>("entry");
-      if (!entryEl) return null;
-      const state: CrossingState = {
-        entry: entryEl.value,
-        exit: q<HTMLInputElement>("exit")?.value ?? "",
-        targetZone: q<HTMLSelectElement>("target-zone")?.value ?? "",
-      };
-      return permalinkOf(state);
-    },
+    () => permalinkOf(controller.readState()),
   );
 };

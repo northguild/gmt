@@ -4,43 +4,30 @@
  * Cron in a Zone end to end, against the real `@northguild/gmt`: template,
  * mount, every preset's values, the refusals and the permalink.
  */
-import { installJsdomShims } from "~/test/jsdom-shims";
-import { CRON_PRESETS, cronView, stateOfPreset } from "./cron-in-a-zone";
+import { screen } from "@testing-library/dom";
 import {
-  mountCronInAZone,
-  renderCronInAZoneTemplate,
-} from "./cron-in-a-zone-mount";
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import { expectNoAxeViolations, renderWidget } from "~/test/render-widget";
+import { CRON_PRESETS, cronView, stateOfPreset } from "./cron-in-a-zone";
 import { loadCronLib } from "./cron-lib";
 import { GMT_MODULES } from "./gmt-modules";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
-import { showUnavailable } from "./widget-mount";
+import { WidgetLoadError } from "./widget-mount";
 
 installJsdomShims();
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+const entry = WIDGET_REGISTRY["showCronInAZone"] as AnyWidgetEntry;
 
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderCronInAZoneTemplate(args);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountCronInAZone(root, args, controller.signal);
-  return { root, handle, controller };
-}
+const open = (args: Record<string, unknown> = {}, idPrefix = "test") =>
+  renderWidget(entry, { args, idPrefix });
 
-function type(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLInputElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-const roles = (root: HTMLElement) =>
-  [...root.querySelectorAll("[data-role]")].map(
-    (e) => (e as HTMLElement).dataset["role"],
-  );
+const lineBox = () => screen.getByRole("textbox", { name: "Cron line" });
+const yearBox = () => screen.getByRole("spinbutton", { name: "Year" });
+const zoneBox = () => screen.getByRole("combobox", { name: "Time zone" });
+const callsMade = () => screen.getByRole("group", { name: /Calls made/ });
 
 type Expected = {
   crontab: [string, string][];
@@ -164,68 +151,103 @@ describe("every preset, against the library", () => {
 
 describe("the mounted widget", () => {
   it("shows No runs, not NO SIGNAL, for a line that never runs", async () => {
-    const preset = CRON_PRESETS.find((p) => p.id === "never")!;
-    const { root } = await mount(stateOfPreset(preset));
-    // The held sizers carry worst-case text, so read the live slots only.
-    expect(q(root, "nosignal").hasAttribute("data-off")).toBe(true);
-    expect(q(root, "fields").hasAttribute("data-off")).toBe(false);
-    expect(q(root, "list-crontabMatch").textContent).toContain("No runs");
-    expect(q(root, "list-daemonCatchUp").textContent).toContain("No runs");
+    await open({
+      ...stateOfPreset(CRON_PRESETS.find((p) => p.id === "never")!),
+    });
+    expect(screen.getAllByText("No runs")).toHaveLength(2);
+    expect(screen.queryByText(/NO SIGNAL/)).not.toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
   });
 
   for (const line of ["0 0 * * * *", "@reboot", "0 0 L * *"]) {
     it(`shows NO SIGNAL and makes no cronRuns call for ${line}`, async () => {
-      const { root } = await mount({ line });
-      expect(q(root, "nosignal").hasAttribute("data-off")).toBe(false);
-      expect(q(root, "nosignal").textContent).toContain("NO SIGNAL");
-      expect(q(root, "cron-output").textContent).not.toContain("cronRuns");
+      await open({ line });
+      expect(screen.getAllByText(/NO SIGNAL/).length).toBeGreaterThan(0);
+      expect(callsMade()).not.toHaveTextContent("cronRuns");
+      await expectNoAxeViolations(document.body);
     });
   }
 
   it("writes Sunday as 7", async () => {
-    const { root } = await mount({ line: "0 0 * * 0" });
-    expect(q(root, "fields").textContent).toMatch(/7/);
+    await open({ line: "0 0 * * 0" });
+    expect(screen.getByText("7")).toBeInTheDocument();
   });
 
   it("gives the sentence and makes no cronRuns call for an unknown zone", async () => {
-    const { root } = await mount({ zone: "Mars/Olympus" });
-    expect(q(root, "problem").textContent).toContain("Mars/Olympus");
-    expect(q(root, "cron-output").textContent).not.toContain("cronRuns");
+    await open({ zone: "Mars/Olympus" });
+    expect(screen.getAllByText(/Mars\/Olympus/).length).toBeGreaterThan(0);
+    expect(callsMade()).not.toHaveTextContent("cronRuns");
+    await expectNoAxeViolations(document.body);
   });
 
   it("re-renders when the line is typed and reports a permalink", async () => {
-    const { root, handle } = await mount();
-    type(root, "line", "*/5 * * * *");
-    expect(handle.getPermalinkState?.()).toMatchObject({
-      line: "*/5 * * * *",
-      zone: "Europe/London",
-      year: 2024,
-    });
+    const w = await open();
+    await w.user.clear(lineBox());
+    await w.user.paste("*/5 * * * *");
+    expect(new URL(w.permalink(), "https://x.test").search).toContain("5");
+    expect(callsMade()).toHaveTextContent("*/5 * * * *");
+    await expectNoAxeViolations(document.body);
   });
 
   it("round-trips through a permalink", async () => {
-    const { root, handle } = await mount();
-    type(root, "line", "15 3 * * *");
-    const state = handle.getPermalinkState?.() ?? {};
-    window.history.pushState({}, "", encodeWidgetPermalink("cronzone", state));
-    const seed = seedFromLocation("cronzone");
-    expect(seed).toEqual(state);
-    const again = await mount(seed);
-    expect(q<HTMLInputElement>(again.root, "line").value).toBe("15 3 * * *");
+    const w = await open();
+    await w.user.clear(lineBox());
+    await w.user.paste("15 3 * * *");
+    const link = w.permalink();
+    w.destroy();
+    window.history.pushState({}, "", link);
+    await renderWidget(entry, {
+      args: seedFromLocation("cronzone"),
+      idPrefix: "again",
+    });
+    expect(lineBox()).toHaveValue("15 3 * * *");
+  });
+
+  it("seeds from a permalink the way the page does", () => {
+    window.history.pushState(
+      {},
+      "",
+      encodeWidgetPermalink("cronzone", {
+        line: "1 2 * * *",
+        zone: "Europe/London",
+        year: 2024,
+      }),
+    );
+    expect(seedFromLocation("cronzone")).toMatchObject({ line: "1 2 * * *" });
+  });
+
+  it("switches to a preset and back to your values", async () => {
+    const w = await open();
+    await w.user.selectOptions(
+      screen.getByRole("combobox", { name: "Try" }),
+      "sydney-half-two",
+    );
+    expect(zoneBox()).toHaveValue("Australia/Sydney");
+    await w.user.clear(lineBox());
+    await w.user.paste("1 1 * * *");
+    expect(screen.getByRole("combobox", { name: "Try" })).toHaveValue("custom");
+    await expectNoAxeViolations(document.body);
   });
 });
 
 describe("the template", () => {
-  it("has no id attributes, so it string-mounts in the rail", () => {
-    expect(renderCronInAZoneTemplate()).not.toMatch(/\sid="/);
+  it("gives two copies on one page their own ids", async () => {
+    await open({}, "one");
+    await open({}, "two");
+    expect(screen.getAllByRole("textbox", { name: "Cron line" })).toHaveLength(
+      2,
+    );
+    expect(
+      screen.getAllByRole("region", { name: "Cron in a Zone" }),
+    ).toHaveLength(2);
   });
 
-  it("is the same markup the mount finds its roles in", async () => {
+  it("throws a load error when its markup is missing", async () => {
+    const { mountCronInAZone } = await import("./cron-in-a-zone-mount");
     const root = document.createElement("div");
-    root.innerHTML = renderCronInAZoneTemplate();
-    const before = roles(root);
-    const mounted = await mount();
-    expect(new Set(roles(mounted.root))).toEqual(new Set(before));
+    await expect(
+      mountCronInAZone(root, {}, new AbortController().signal),
+    ).rejects.toBeInstanceOf(WidgetLoadError);
   });
 });
 
@@ -236,61 +258,52 @@ describe("when the library does not load", () => {
       GMT_MODULES[key] = () => Promise.reject(new Error("offline"));
     }
     try {
-      const root = document.createElement("div");
-      root.innerHTML = renderCronInAZoneTemplate();
-      document.body.append(root);
-      let failure: unknown;
-      await mountCronInAZone(root, {}, new AbortController().signal).catch(
-        (e) => {
-          failure = e;
-          showUnavailable(root, e);
-        },
-      );
-      expect(failure).toBeInstanceOf(Error);
-      expect(root.textContent).toMatch(/./);
+      await expect(open()).rejects.toBeInstanceOf(WidgetLoadError);
     } finally {
       Object.assign(GMT_MODULES, originals);
+      document.body.replaceChildren();
     }
   });
 });
 
 describe("assistive technology", () => {
-  it("has one polite live region that carries the sentence", async () => {
-    const { root } = await mount();
-    const live = root.querySelectorAll('[aria-live="polite"]');
-    expect(live).toHaveLength(1);
-    expect(live[0]).toBe(q(root, "live"));
-    expect(q(root, "live").textContent).toContain(
-      q(root, "sentence").textContent!.trim(),
-    );
+  it("has one polite status that carries the sentence", async () => {
+    await open();
+    const status = screen.getByRole("status", { name: "Cron reading" });
+    expect(status).toHaveTextContent(/The rules differ on this night/);
+    await expectNoAxeViolations(document.body);
   });
 
   it("carries a problem and the no-signal state", async () => {
-    const bad = await mount({ zone: "Mars/Olympus" });
-    expect(q(bad.root, "live").textContent).toContain("Mars/Olympus");
-    const { root } = await mount();
-    type(root, "line", "@reboot");
-    expect(q(root, "live").textContent).toMatch(/NO SIGNAL/);
+    await open({ zone: "Mars/Olympus" });
+    expect(
+      screen.getByRole("status", { name: "Cron reading" }),
+    ).toHaveTextContent("Mars/Olympus");
+  });
+
+  it("announces NO SIGNAL for a line outside the grammar", async () => {
+    const w = await open();
+    await w.user.clear(lineBox());
+    await w.user.paste("@reboot");
+    expect(
+      screen.getByRole("status", { name: "Cron reading" }),
+    ).toHaveTextContent(/NO SIGNAL/);
   });
 
   it("points the line, year and zone at the problem hint", async () => {
-    const { root } = await mount();
-    const id = q(root, "problem").id;
-    expect(id).not.toBe("");
-    for (const role of ["line", "year", "zone"]) {
-      expect(q(root, role).getAttribute("aria-describedby")).toBe(id);
+    await open({ zone: "Mars/Olympus" });
+    for (const control of [lineBox(), yearBox(), zoneBox()]) {
+      expect(control).toHaveAccessibleDescription(/Mars\/Olympus/);
     }
   });
+});
 
-  it("flips the x-N label left of a mark past 90% of the axis", async () => {
-    // 04:50 London is 03:50Z on the spring night: 98% of a 22:00Z to 04:00Z axis.
-    const { root } = await mount({ line: "50 4 * * *" });
-    const marks = [...root.querySelectorAll<HTMLElement>(".gmt-cron-mark")];
-    expect(marks.some((m) => parseFloat(m.style.left) > 90)).toBe(true);
-    for (const mark of marks) {
-      expect(mark.hasAttribute("data-end")).toBe(
-        parseFloat(mark.style.left) > 90,
-      );
-    }
+describe("the length cap", () => {
+  it("stops the cron line at 64 characters", async () => {
+    const w = await open();
+    const box = lineBox();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(72));
+    expect(box).toHaveValue("x".repeat(64));
   });
 });

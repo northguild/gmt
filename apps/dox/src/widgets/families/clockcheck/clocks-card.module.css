@@ -1,0 +1,74 @@
+/* The live-clocks card. The card grows with the map's row; from 62rem the clocks share the extra
+   height instead of leaving it empty. Full borders only: no left-edge accent. */
+
+section:has(> .body) {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.list {
+  display: grid;
+  min-inline-size: 0;
+
+  & > ul {
+    align-content: start;
+  }
+}
+
+.notice {
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: 0.8125rem;
+}
+
+@container gmt-clockcheck (min-width: 62rem) {
+  .body {
+    block-size: 100%;
+  }
+
+  .list {
+    flex: 1 1 auto;
+
+    & > ul {
+      grid-auto-rows: minmax(3.75rem, 1fr);
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .notice {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .hint {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .notice {
+    border-color: CanvasText;
+  }
+
+  .hint {
+    color: CanvasText;
+  }
+}

@@ -87,7 +87,7 @@ export interface RolloverState {
 /** Seed arguments: the permalink's flat string keys, or a chat call's. */
 export type GnssRolloverCheckerArgs = Record<string, unknown>;
 
-export interface RolloverPreset {
+interface RolloverPreset {
   id: string;
   label: string;
   description: string;
@@ -312,7 +312,7 @@ export function permalinkOf(state: RolloverState): Record<string, string> {
 // Words for a duration the library returned
 // ---------------------------------------------------------------------------
 
-export interface Span {
+interface Span {
   negative: boolean;
   days: number;
   hours: number;
@@ -349,7 +349,7 @@ export function spanText(span: Span): string {
 }
 
 /** "4419 days": the whole days of a span, for the table. */
-export function wholeDaysText(span: Span): string {
+function wholeDaysText(span: Span): string {
   return `${span.days} ${span.days === 1 ? "day" : "days"}`;
 }
 
@@ -372,7 +372,7 @@ export const ROLLOVER_SENTENCES = SENTENCES;
 
 /** The line by the result when a build date comes before the counter's first
  *  week: the library reads it as era 0. */
-export function eraZeroHintText(counter: string, first: string): string {
+function eraZeroHintText(counter: string, first: string): string {
   return `Build date before ${counter}'s first week (${first}): read as era 0.`;
 }
 
@@ -436,12 +436,12 @@ export interface Strip {
 
 /** The timeline runs from before the first satellite week to past the last
  *  first wrap of any counter. These two instants are drawing, not data. */
-export const FUSE_AXIS_START = "1980-01-01T00:00:00Z";
-export const FUSE_AXIS_END = "2170-01-01T00:00:00Z";
+const FUSE_AXIS_START = "1980-01-01T00:00:00Z";
+const FUSE_AXIS_END = "2170-01-01T00:00:00Z";
 
 /** A wrap of one counter on its track. `next` is the first one after the
  *  check instant; `past` ones have gone. */
-export interface FuseWrap {
+interface FuseWrap {
   at: string;
   pos: number;
   state: "past" | "next" | "later";
@@ -460,7 +460,7 @@ export interface FuseTrack {
 }
 
 /** Counters of one width, drawn together. */
-export interface FuseGroup {
+interface FuseGroup {
   bits: number;
   label: string;
   tracks: FuseTrack[];
@@ -480,7 +480,7 @@ export interface FuseYear {
 }
 
 /** The share, 0 to 100, an instant is along the timeline. Unclamped. */
-export function axisPos(instant: string): number | null {
+function axisPos(instant: string): number | null {
   const a = toEpochMs(FUSE_AXIS_START);
   const b = toEpochMs(FUSE_AXIS_END);
   const x = toEpochMs(instant);
@@ -677,19 +677,8 @@ export function platesOf(
   ];
 }
 
-/** The lines a plate can show, for the holds. */
-export function plateLines(): string[] {
-  return [
-    "the right date",
-    "a date 49751 days 23 h 59 min 56 s early",
-    "one counter period after the build date's reading",
-    "until it reports an early date",
-    "since it began reporting an early date",
-  ];
-}
-
 /** `^\d+$` as a safe integer. */
-export const wholeNumber = (text: string): number | null => {
+const wholeNumber = (text: string): number | null => {
   const t = text.trim();
   if (!/^\d+$/.test(t)) return null;
   const n = Number(t);

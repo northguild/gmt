@@ -1,0 +1,101 @@
+/* Layout builders: widget, card, section, fieldGrid, field, hint. One opaque surface
+   (--gmt-surface-widget) so nested cards never stack alpha (cause 6). Module rules are
+   unlayered, so they beat every layered global sheet. */
+
+.widget {
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  inline-size: 100%;
+  min-inline-size: 0;
+  color: var(--gmt-ice);
+  font-size: clamp(0.9375rem, 0.9rem + 0.2vw, 1.0625rem);
+  line-height: 1.5;
+}
+
+.card,
+.section {
+  display: grid;
+
+  /* One column that may shrink below its content: an implicit `auto` column grows to the
+     widest unwrapped line (a code frame), widens the page and scrolls it sideways. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+  min-inline-size: 0;
+  padding: clamp(0.75rem, 0.5rem + 1vw, 1.25rem);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+}
+
+.heading {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: clamp(1rem, 0.95rem + 0.3vw, 1.25rem);
+  line-height: 1.25;
+}
+
+/* Controls flow into as many columns as fit, from the widget's own width. */
+.grid {
+  display: grid;
+  gap: 0.75rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+}
+
+@container (inline-size < 22rem) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.field {
+  display: grid;
+  gap: 0.375rem;
+  align-content: start;
+  min-inline-size: 0;
+}
+
+.label {
+  color: var(--gmt-ice);
+  font-size: clamp(0.8125rem, 0.78rem + 0.15vw, 0.9375rem);
+  font-weight: 600;
+}
+
+.hint {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
+}
+
+@media (forced-colors: active) {
+  .card,
+  .section {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .widget,
+  .heading,
+  .label {
+    color: CanvasText;
+  }
+
+  .hint {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .card,
+  .section {
+    border-color: var(--gmt-ice);
+  }
+
+  .hint {
+    color: var(--gmt-ice);
+  }
+}

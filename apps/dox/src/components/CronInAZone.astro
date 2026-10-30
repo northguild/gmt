@@ -21,7 +21,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderCronInAZoneTemplate();
+const html = renderCronInAZoneTemplate("cron-in-a-zone").value;
 ---
 
 {
@@ -40,7 +40,7 @@ const html = renderCronInAZoneTemplate();
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("cronzone");
     document
-      .querySelectorAll<HTMLElement>(".gmt-cron-zone")
+      .querySelectorAll<HTMLElement>('[data-widget="cron-in-a-zone"]')
       .forEach((el) => {
         mountCronInAZone(el, seed, new AbortController().signal).catch(
           (error) => showUnavailable(el, error),

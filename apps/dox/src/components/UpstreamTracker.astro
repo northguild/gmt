@@ -2,7 +2,7 @@
 /**
  * The /upstream/ tracker: one table per repository, built from `upstream-filings.ts` — the live
  * refresh when GitHub is reachable, the committed snapshot otherwise. Nothing is fetched in the
- * browser. Sentences come from `lib/upstream-summary.ts`, styles from `styles/gmt-upstream.css`.
+ * browser. Sentences come from `lib/upstream-summary.ts`, styles in its `<style>` block.
  */
 import { filingRepos, filingsForRepo } from "../data/upstream-filings";
 import { UPSTREAM_COLUMNS as COLUMNS } from "../lib/upstream-status";
@@ -38,3 +38,30 @@ import UpstreamTrackerSummary from "./UpstreamTrackerSummary.astro";
 }
 
 <UpstreamTrackerLegend />
+
+<style is:global>
+/* ---- The filings tracker: what we sent ---- */
+
+.sl-markdown-content .gmt-upstream-table {
+  inline-size: 100%;
+  font-size: var(--sl-text-sm);
+}
+
+.sl-markdown-content .gmt-upstream-table td {
+  vertical-align: top;
+}
+
+.sl-markdown-content .gmt-upstream-table td p {
+  margin-block-start: 0.25rem;
+}
+
+.gmt-upstream-badge {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* `--gmt-cyan-ink` for the same reason as `.gmt-defects-badge--ok`. */
+.gmt-upstream-badge--ok {
+  color: var(--gmt-cyan-ink);
+}
+</style>

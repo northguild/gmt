@@ -1,0 +1,78 @@
+/* codeFrame: a code line with a copy button. The code scrolls on its own line and never wraps. */
+
+.root {
+  position: relative;
+  min-inline-size: 0;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-code-surface);
+}
+
+.copy {
+  position: absolute;
+  inset-block-start: 0.25rem;
+  inset-inline-end: 0.25rem;
+
+  /* `.sl-markdown-content pre` is positioned, so the later `pre` would paint over this. */
+  z-index: var(--gmt-z-raised);
+}
+
+.pre {
+  margin: 0;
+  padding-block: 0.75rem;
+
+  /* leaves room for the copy button */
+  padding-inline: 1rem 3rem;
+  overflow-x: auto;
+  color: var(--gmt-ice);
+
+  /* The strut and the code share one font, so a late-loading face cannot change the line height. */
+  font-family: var(--sl-font-mono, var(--gmt-font-mono));
+  font-size: clamp(0.8125rem, 0.78rem + 0.2vw, 0.9375rem);
+  line-height: 1.5;
+  white-space: pre;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: -2px;
+  }
+}
+
+.code {
+  display: block;
+  min-block-size: calc(var(--min-lines, 1) * 1lh);
+  font-family: var(--sl-font-mono, var(--gmt-font-mono));
+  font-variant-ligatures: none;
+}
+
+@container (inline-size < 20rem) {
+  .pre {
+    padding-inline-end: 2.75rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .pre {
+    color: CanvasText;
+
+    &:focus-visible {
+      outline: 2px solid Highlight;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+  }
+
+  .pre:focus-visible {
+    outline-width: 3px;
+  }
+}

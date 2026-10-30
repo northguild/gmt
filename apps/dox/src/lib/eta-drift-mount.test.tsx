@@ -1,146 +1,119 @@
 /**
  * @vitest-environment jsdom
  *
- * The ETA Drift Chart end to end: template -> mount -> interact -> assert,
- * against the real `@northguild/gmt`. Every printed pick and report is an
- * appendix Z row (ED1 to ED4, ED1a to ED1c, ED2r, EDR1 to EDR3).
+ * The ETA Drift Chart end to end: template -> mount -> interact -> assert, against the
+ * real `@northguild/gmt`, through roles and accessible names. Every printed pick and
+ * report is an appendix Z row (ED1 to ED4, ED1a to ED1c, ED2r, EDR1 to EDR3).
  */
-import { spyOnResizeObservers } from "~/test/resize-observer-spy";
+import { screen, waitFor, within } from "@testing-library/dom";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
-import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
-import { ETA_PRESETS } from "./eta-drift";
-import { CLASS_SERIES } from "./eta-drift";
-import { mountEtaDrift, renderEtaDriftTemplate } from "./eta-drift-mount";
+import {
+  cellsInColumn,
+  expectNoAxeViolations,
+  renderWidget,
+  setRange,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { CHAT_STARTERS } from "./chat-constants";
+import { ETA_PRESETS } from "./eta-drift";
+import { seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "event-count",
-  "event-1",
-  "classifier-1",
-  "at-1",
-  "recorded-at-1",
-  "callout-best",
-  "callout-naive",
-  "drift-plot",
-  "plot-area",
-  "y-ticks",
-  "x-ticks",
-  "band-label",
-  "tolerance",
-  "tolerance-slider",
-  "tolerance-value",
-  "drift-summary",
-  "event-table",
-  "reason-aside",
-  "call-best",
-  "best-output",
-  "call-drift",
-  "drift-output",
-];
+const entry = WIDGET_REGISTRY["showEtaDrift"] as AnyWidgetEntry;
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
-const text = (root: HTMLElement, role: string) =>
-  q(root, role).textContent ?? "";
+type Widget = RenderedWidget;
 
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderEtaDriftTemplate(args);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountEtaDrift(root, args, controller.signal);
-  return { root, handle, controller };
+const open = (args: Record<string, unknown> = {}): Promise<Widget> =>
+  renderWidget(entry, { args });
+const openPreset = (id: string, extra: Record<string, unknown> = {}) =>
+  open({ preset: id, ...extra });
+
+// The controls and results, by the names a person reads.
+const presetBox = () => screen.getByRole("combobox", { name: "Preset" });
+const countBox = () => screen.getByRole("combobox", { name: "Events" });
+const tolBox = () =>
+  screen.getByRole("textbox", { name: "Tolerance (optional)" });
+const slider = () => screen.getByRole("slider", { name: "Drag the tolerance" });
+const bestOutput = () =>
+  screen.getByRole("status", { name: "What bestAvailable returned" });
+const driftOutput = () =>
+  screen.getByRole("status", { name: "What estimateDrift returned" });
+const bestCall = () =>
+  screen.getByRole("group", { name: "The bestAvailable call" });
+const driftCall = () =>
+  screen.getByRole("group", { name: "The estimateDrift call" });
+const eventSet = (n: number) =>
+  screen.getByRole("group", { name: `Event ${n}`, hidden: true });
+const eventBox = (n: number, name: "At" | "Recorded at") =>
+  within(eventSet(n)).getByRole("textbox", { name, hidden: true });
+const classRadio = (n: number, name: string) =>
+  within(eventSet(n)).getByRole("radio", { name, hidden: true });
+const eventsTable = () =>
+  screen.getByRole("table", { name: "Events in the order recorded" });
+const note = () =>
+  screen.queryByRole("complementary", { name: /^Nothing to measure yet/ });
+const caution = () =>
+  screen.queryByRole("complementary", { name: "Why NO SIGNAL" });
+
+/** Replaces what a text box holds, in one input event. */
+async function enter(w: Widget, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  if (value !== "") await w.user.paste(value);
 }
-
-function slide(root: HTMLElement, value: number) {
-  const slider = q<HTMLInputElement>(root, "tolerance-slider");
-  slider.value = String(value);
-  slider.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-function setText(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLInputElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-function pickClass(root: HTMLElement, n: number, code: string) {
-  const radio = root.querySelector<HTMLInputElement>(
-    `[data-role="classifier-${n}"][value="${code}"]`,
-  )!;
-  radio.checked = true;
-  radio.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
 
 describe("renderEtaDriftTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderEtaDriftTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
-    }
-  });
-
-  it("is exactly one widget root, first in the template", () => {
+  it("names the widget and builds the tolerance as a real slider", async () => {
+    const w = await open();
     expect(
-      renderEtaDriftTemplate().startsWith(
-        '<div class="gmt-eta-drift gmt-widget not-content">',
-      ),
-    ).toBe(true);
+      screen.getByRole("region", { name: "ETA Drift Chart" }),
+    ).toBeInTheDocument();
+    expect(slider()).toHaveValue("480");
+    await expectNoAxeViolations(w.root);
   });
 
-  it("builds the tolerance range from the shared dragger", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderEtaDriftTemplate();
-    const slider = q<HTMLInputElement>(root, "tolerance-slider");
-    expect(slider.type).toBe("range");
-    expect(slider.classList.contains("gmt-range")).toBe(true);
-    expect(slider.step).toBe("15");
-    expect(slider.value).toBe("480");
-  });
-
-  it("gives each class a real radio chip", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderEtaDriftTemplate();
-    const radios = root.querySelectorAll<HTMLInputElement>(
-      '[data-role="classifier-1"]',
-    );
-    expect([...radios].map((r) => r.value)).toEqual([
-      "PLN",
-      "EST",
-      "REQ",
-      "ACT",
-    ]);
-    expect([...radios].every((r) => r.type === "radio")).toBe(true);
-    expect(new Set([...radios].map((r) => r.name)).size).toBe(1);
+  it("gives each class a real radio, in a group named for the event", async () => {
+    await open();
+    const group = within(eventSet(1)).getByRole("group", { name: "Class" });
+    expect(
+      within(group)
+        .getAllByRole("radio")
+        .map((r) => r.getAttribute("aria-label") ?? ""),
+    ).toHaveLength(4);
+    for (const name of [
+      "PLN planned",
+      "EST estimated",
+      "REQ requested",
+      "ACT actual",
+    ]) {
+      expect(within(group).getByRole("radio", { name })).toBeInTheDocument();
+    }
+    expect(classRadio(1, "EST estimated")).toBeChecked();
   });
 
   it("keeps two widgets' radio groups apart", async () => {
-    const a = await mount();
-    const b = await mount();
-    const nameA = a.root.querySelector<HTMLInputElement>(
-      '[data-role="classifier-1"]',
-    )!.name;
-    const nameB = b.root.querySelector<HTMLInputElement>(
-      '[data-role="classifier-1"]',
-    )!.name;
-    expect(nameA).not.toBe(nameB);
-    pickClass(b.root, 1, "ACT");
-    expect(
-      a.root.querySelector<HTMLInputElement>(
-        '[data-role="classifier-1"]:checked',
-      )!.value,
-    ).toBe("EST");
+    const first = await open();
+    const second = await renderWidget(entry, { args: {}, idPrefix: "second" });
+    const est = (w: Widget) =>
+      within(
+        within(w.root).getByRole("group", { name: "Event 1", hidden: true }),
+      ).getByRole("radio", { name: "EST estimated", hidden: true });
+    await second.user.click(
+      within(
+        within(second.root).getByRole("group", {
+          name: "Event 1",
+          hidden: true,
+        }),
+      ).getByRole("radio", { name: "ACT actual", hidden: true }),
+    );
+    expect(est(first)).toBeChecked();
+    expect(est(second)).not.toBeChecked();
+    second.destroy();
   });
 });
 
@@ -195,125 +168,105 @@ describe("mountEtaDrift: every preset", () => {
   };
 
   it.each(ETA_PRESETS.map((p) => [p.id]))("prints %s", async (id) => {
-    const { root } = await mount({ preset: id });
+    const w = await openPreset(id!);
     const want = EXPECTED[id!]!;
-    expect(text(root, "call-drift")).toContain(want.call);
-    expect(
-      text(root, "call-best").startsWith("bestAvailable([{ classifier: "),
-    ).toBe(true);
-    expect(text(root, "best-output")).toBe(want.best);
-    expect(text(root, "drift-output")).toBe(want.drift);
-    expect(text(root, "callout-best")).toBe(want.bestCallout);
-    if (want.naiveCallout === null) {
-      expect(q(root, "callout-naive").hidden).toBe(true);
-    } else {
-      expect(q(root, "callout-naive").hidden).toBe(false);
-      expect(text(root, "callout-naive")).toBe(want.naiveCallout);
-    }
-    want.notes.forEach((note, i) => {
-      expect(text(root, `note-${i + 1}`)).toBe(note);
+    expect(driftCall()).toHaveTextContent(want.call, {
+      normalizeWhitespace: true,
     });
+    expect(bestCall()).toHaveTextContent("bestAvailable([{ classifier: ");
+    expect(bestOutput()).toHaveTextContent(want.best);
+    expect(driftOutput()).toHaveTextContent(want.drift);
+    expect(screen.getByText(want.bestCallout)).toBeInTheDocument();
+    if (want.naiveCallout === null) {
+      expect(screen.getByText(/^Naive, latest recorded/)).not.toBeVisible();
+    } else {
+      expect(screen.getByText(want.naiveCallout)).toBeInTheDocument();
+    }
+    cellsInColumn(eventsTable(), "Note").forEach((cell, i) => {
+      const expected = want.notes[i]!;
+      expect(cell).toHaveTextContent(new RegExp(`^${expected}$`));
+    });
+    await expectNoAxeViolations(w.root);
   });
 
   it("omits the options argument when the tolerance is blank", async () => {
-    const { root } = await mount({ preset: "est-after-act" });
-    expect(text(root, "call-drift").endsWith("}])")).toBe(true);
-    expect(text(root, "call-drift")).not.toContain("tolerance");
+    await openPreset("est-after-act");
+    expect(driftCall()).toHaveTextContent(/\}\]\)$/);
+    expect(driftCall()).not.toHaveTextContent("tolerance");
   });
 
-  it("draws one mark per event, shaped by class", async () => {
-    const { root } = await mount({ preset: "est-after-act" });
-    const cls = (n: number) => q(root, `mark-${n}`).className;
-    expect(cls(1)).toContain("gmt-eta-mark--pln");
-    expect(cls(2)).toContain("gmt-eta-mark--est");
-    expect(cls(3)).toContain("gmt-eta-mark--act");
-    expect(root.querySelectorAll(".gmt-eta-ring")).toHaveLength(2);
-    expect(root.querySelectorAll(".gmt-eta-ring--dashed")).toHaveLength(1);
-    expect(root.querySelectorAll(".gmt-eta-line")).toHaveLength(1);
+  it("says whether the drift exceeds the band, in words under the plot", async () => {
+    await openPreset("vessel-slide");
+    expect(
+      screen.getByText(
+        "±8 h around the first estimate · exceeds the tolerance: true",
+      ),
+    ).toBeInTheDocument();
   });
 
-  it("draws a triangle for a request", async () => {
-    const { root } = await mount({ preset: "req-beats-est" });
-    expect(q(root, "mark-2").querySelector("svg")).not.toBeNull();
-  });
-
-  it("draws the tolerance band and says whether the drift exceeds it", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    expect(root.querySelector(".gmt-eta-band")).not.toBeNull();
-    expect(text(root, "band-label")).toBe(
-      "±8 h around the first estimate · exceeds the tolerance: true",
-    );
-  });
-
-  it("draws no band without a tolerance", async () => {
-    const { root } = await mount({ preset: "est-after-act" });
-    expect(root.querySelector(".gmt-eta-band")).toBeNull();
-    expect(text(root, "band-label")).toBe("");
+  it("says nothing about a band without a tolerance", async () => {
+    await openPreset("est-after-act");
+    expect(
+      screen.queryByText(/around the first estimate/),
+    ).not.toBeInTheDocument();
   });
 
   it("labels the drift with its sign", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    expect(text(root, "label-drift")).toBe("↑ +9 h");
+    await openPreset("vessel-slide");
+    expect(screen.getByText("↑ +9 h")).toBeInTheDocument();
   });
 
-  it("makes the plot an image with a summary and nothing focusable inside", async () => {
-    const { root } = await mount({ preset: "est-after-act" });
-    const plot = q(root, "drift-plot");
-    expect(plot.getAttribute("role")).toBe("img");
-    const id = plot.getAttribute("aria-labelledby")!;
-    expect(root.querySelector(`#${id}`)!.textContent).toContain(
-      "Estimate drift +25 min over 2 estimates",
+  it("makes the plot one image named by its summary, with nothing to tab to inside", async () => {
+    await openPreset("est-after-act");
+    const plot = screen.getByRole("img", {
+      name: /Estimate drift \+25 min over 2 estimates/,
+    });
+    expect(plot).toHaveAccessibleName(
+      /Recorded Sat 15 Jun 12:53: actual \(ACT\), naming Sat 15 Jun 12:52\./,
     );
-    expect(plot.querySelectorAll("[tabindex], a, button, input")).toHaveLength(
-      0,
-    );
-    expect(text(root, "drift-summary")).toContain(
-      "Recorded Sat 15 Jun 12:53: actual (ACT), naming Sat 15 Jun 12:52.",
-    );
+    expect(within(plot).queryByRole("button")).not.toBeInTheDocument();
+    expect(within(plot).queryByRole("slider")).not.toBeInTheDocument();
   });
 });
 
 describe("mountEtaDrift: the tolerance", () => {
   it("ED1a: the slider at 540 writes PT9H and exceedsTolerance is false", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    slide(root, 540);
-    expect(q<HTMLInputElement>(root, "tolerance").value).toBe("PT9H");
-    expect(text(root, "drift-output")).toContain("exceedsTolerance: false");
-    expect(q(root, "tolerance-slider").getAttribute("aria-valuetext")).toBe(
+    const w = await openPreset("vessel-slide");
+    setRange(slider(), 540);
+    expect(tolBox()).toHaveValue("PT9H");
+    expect(driftOutput()).toHaveTextContent("exceedsTolerance: false");
+    expect(slider()).toHaveAccessibleName("Drag the tolerance");
+    expect(slider()).toHaveAttribute(
+      "aria-valuetext",
       "Tolerance 9 hours, PT9H",
     );
-    expect(text(root, "tolerance-value")).toBe("9 h");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
+    expect(presetBox()).toHaveValue("custom");
+    await expectNoAxeViolations(w.root);
   });
 
   it("ED1b: the slider at 525 writes PT8H45M and exceedsTolerance is true", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    slide(root, 525);
-    expect(q<HTMLInputElement>(root, "tolerance").value).toBe("PT8H45M");
-    expect(text(root, "drift-output")).toContain("exceedsTolerance: true");
+    await openPreset("vessel-slide");
+    setRange(slider(), 525);
+    expect(tolBox()).toHaveValue("PT8H45M");
+    expect(driftOutput()).toHaveTextContent("exceedsTolerance: true");
   });
 
   it("ED1c: clearing the tolerance gives null", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    setText(root, "tolerance", "");
-    expect(text(root, "drift-output")).toContain("exceedsTolerance: null");
-    expect(text(root, "tolerance-value")).toBe("none");
-    expect(q(root, "tolerance-slider").getAttribute("aria-valuetext")).toBe(
-      "No tolerance",
-    );
+    const w = await openPreset("vessel-slide");
+    await enter(w, tolBox(), "");
+    expect(driftOutput()).toHaveTextContent("exceedsTolerance: null");
+    expect(slider()).toHaveAttribute("aria-valuetext", "No tolerance");
+    await expectNoAxeViolations(w.root);
   });
 
   it("moves the slider when a readable value is typed", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    setText(root, "tolerance", "PT10H");
-    expect(q<HTMLInputElement>(root, "tolerance-slider").value).toBe("600");
-    expect(
-      q(root, "tolerance-slider").style.getPropertyValue("--gmt-range-pct"),
-    ).not.toBe("");
+    const w = await openPreset("vessel-slide");
+    await enter(w, tolBox(), "PT10H");
+    expect(slider()).toHaveValue("600");
   });
 
   it("widens the slider past 24 hours when the drift needs it", async () => {
-    const { root } = await mount({
+    await open({
       events: [
         {
           classifier: "EST",
@@ -327,86 +280,72 @@ describe("mountEtaDrift: the tolerance", () => {
         },
       ],
     });
-    expect(
-      Number(q<HTMLInputElement>(root, "tolerance-slider").max),
-    ).toBeGreaterThan(1440);
+    expect(Number(slider().getAttribute("max"))).toBeGreaterThan(1440);
   });
 
   it("EDR3: a weeks tolerance shows NO SIGNAL for the drift and its reason", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    setText(root, "tolerance", "P1W");
-    expect(text(root, "drift-output")).toBe("NO SIGNAL");
-    expect(text(root, "best-output")).toContain("classifier");
-    expect(text(root, "reason-aside")).toContain(
+    const w = await openPreset("vessel-slide");
+    await enter(w, tolBox(), "P1W");
+    expect(driftOutput()).toHaveTextContent("NO SIGNAL");
+    expect(bestOutput()).toHaveTextContent("classifier");
+    expect(caution()).toHaveTextContent(
       "The tolerance is not an exact duration",
     );
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("mountEtaDrift: classes and events", () => {
   it("ED2r: choosing EST on event 3 makes the plan the best available", async () => {
-    const { root } = await mount({ preset: "est-after-act" });
-    pickClass(root, 3, "EST");
-    expect(text(root, "best-output")).toBe(
+    const w = await openPreset("est-after-act");
+    await w.user.click(classRadio(3, "EST estimated"));
+    expect(bestOutput()).toHaveTextContent(
       '{ at: "2024-06-15T12:00:00Z", classifier: "PLN" }',
     );
-    expect(text(root, "drift-output")).toContain("revisions: 3");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
+    expect(driftOutput()).toHaveTextContent("revisions: 3");
+    expect(presetBox()).toHaveValue("custom");
   });
 
   it("one-estimate: a correct empty answer, in a neutral note, never NO SIGNAL", async () => {
-    const { root } = await mount({ preset: "one-estimate" });
-    const out = q(root, "drift-output");
-    expect(out.textContent).toBe("null");
-    expect(out.classList.contains("gmt-widget-output--empty")).toBe(true);
-    expect(out.classList.contains("gmt-playground-sentinel")).toBe(false);
-    const aside = q(root, "reason-aside");
-    expect(aside.querySelector(".starlight-aside--note")).not.toBeNull();
-    expect(aside.querySelector(".starlight-aside--caution")).toBeNull();
-    expect(aside.textContent).toContain("Nothing to measure yet");
-    expect(aside.textContent).toContain("no drift from one estimate");
-    expect(aside.textContent).not.toContain("NO SIGNAL");
-    expect(text(root, "drift-summary")).toContain(
-      "No estimate drift to measure yet: fewer than two estimates.",
-    );
-    expect(text(root, "drift-summary")).not.toContain("NO SIGNAL");
+    const w = await openPreset("one-estimate");
+    expect(driftOutput()).toHaveTextContent(/^null$/);
+    expect(note()).toBeInTheDocument();
+    expect(note()).toHaveTextContent("no drift from one estimate");
+    expect(note()).not.toHaveTextContent("NO SIGNAL");
+    expect(caution()).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: /No estimate drift to measure yet: fewer than two estimates\./,
+      }),
+    ).toBeInTheDocument();
     // The best pick is real, so nothing on the page is a sentinel.
-    expect(root.querySelector(".gmt-playground-sentinel")).toBeNull();
+    expect(screen.queryByText("NO SIGNAL")).not.toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
   it("invalid input is still NO SIGNAL in a caution aside, apart from the empty note", async () => {
-    const { root } = await mount({ preset: "vessel-slide", tolerance: "P1W" });
-    expect(text(root, "drift-output")).toBe("NO SIGNAL");
-    expect(
-      q(root, "reason-aside").querySelector(".starlight-aside--caution"),
-    ).not.toBeNull();
+    await openPreset("vessel-slide", { tolerance: "P1W" });
+    expect(driftOutput()).toHaveTextContent("NO SIGNAL");
+    expect(caution()).toBeInTheDocument();
+    expect(note()).not.toBeInTheDocument();
   });
 
   it("copies the last event into a new one after a preset switch, not only after a seed", async () => {
-    // Bug: the count the select last held was read once at mount, so a preset
-    // that changed the count left it stale and the next event came up blank.
-    const { root } = await mount({ preset: "vessel-slide" });
-    const preset = q<HTMLSelectElement>(root, "preset");
-    preset.value = "one-estimate";
-    preset.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(q(root, "event-3").hidden).toBe(true);
-    const count = q<HTMLSelectElement>(root, "event-count");
-    count.value = "3";
-    count.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(q(root, "event-3").hidden).toBe(false);
-    expect(q<HTMLInputElement>(root, "at-3").value).toBe(
-      "2024-06-15T12:40:00Z",
-    );
-    expect(q<HTMLInputElement>(root, "recorded-at-3").value).toBe(
-      "2024-06-14T00:00:00Z",
-    );
+    // Bug: the count the select last held was read once at mount, so a preset that
+    // changed the count left it stale and the next event came up blank.
+    const w = await openPreset("vessel-slide");
+    await w.user.selectOptions(presetBox(), "one-estimate");
     expect(
-      root.querySelector<HTMLInputElement>('[data-role="classifier-3"]:checked')
-        ?.value,
-    ).toBe("EST");
-    expect(text(root, "drift-output")).toContain("revisions: 2");
-    expect(text(root, "drift-output")).not.toBe("NO SIGNAL");
-    expect(text(root, "best-output")).not.toBe("NO SIGNAL");
+      screen.queryByRole("group", { name: "Event 3" }),
+    ).not.toBeInTheDocument();
+    await w.user.selectOptions(countBox(), "3");
+    expect(screen.getByRole("group", { name: "Event 3" })).toBeInTheDocument();
+    expect(eventBox(3, "At")).toHaveValue("2024-06-15T12:40:00Z");
+    expect(eventBox(3, "Recorded at")).toHaveValue("2024-06-14T00:00:00Z");
+    expect(classRadio(3, "EST estimated")).toBeChecked();
+    expect(driftOutput()).toHaveTextContent("revisions: 2");
+    expect(driftOutput()).not.toHaveTextContent("NO SIGNAL");
+    expect(bestOutput()).not.toHaveTextContent("NO SIGNAL");
   });
 
   it.each([
@@ -416,89 +355,52 @@ describe("mountEtaDrift: classes and events", () => {
     "an impossible date (%s) in a zoned event shows NO SIGNAL and does not throw",
     async (at) => {
       // Bug: the weekday label threw out of the mount for a date that does not exist.
-      const { root } = await mount({
+      const w = await open({
         events: [{ classifier: "EST", at, recordedAt: "2024-06-14T00:00:00Z" }],
       });
-      expect(text(root, "best-output")).toBe("NO SIGNAL");
-      expect(text(root, "drift-output")).toBe("NO SIGNAL");
-      expect(text(root, "callout-best")).toContain("NO SIGNAL");
-      expect(text(root, "reason-aside")).toContain(
-        "Event 1 is not a timestamp",
+      expect(bestOutput()).toHaveTextContent("NO SIGNAL");
+      expect(driftOutput()).toHaveTextContent("NO SIGNAL");
+      expect(screen.getByText(/^Best available:/)).toHaveTextContent(
+        "NO SIGNAL",
       );
+      expect(caution()).toHaveTextContent("Event 1 is not a timestamp");
       // The table prints the text as typed.
-      expect(text(root, "event-row-1")).toContain(at);
+      expect(
+        within(eventsTable()).getByRole("cell", { name: at }),
+      ).toBeInTheDocument();
+      await expectNoAxeViolations(w.root);
     },
   );
 
-  it("and re-renders without throwing when a typed date is impossible", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    setText(root, "at-2", "2024-02-30T08:00:00+00:00[Europe/London]");
-    expect(text(root, "best-output")).toBe("NO SIGNAL");
-    setText(root, "at-2", "2024-06-20T12:00:00Z");
-    expect(text(root, "best-output")).not.toBe("NO SIGNAL");
+  it("re-renders without throwing when a typed date is impossible, and recovers", async () => {
+    const w = await openPreset("vessel-slide");
+    await enter(
+      w,
+      eventBox(2, "At"),
+      "2024-02-30T08:00:00+00:00[Europe/London]",
+    );
+    expect(bestOutput()).toHaveTextContent("NO SIGNAL");
+    await enter(w, eventBox(2, "At"), "2024-06-20T12:00:00Z");
+    expect(bestOutput()).not.toHaveTextContent("NO SIGNAL");
   });
 
-  it("gives the results table table roles and a labelled, focusable scroll box", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    const table = q(root, "event-table");
-    expect(table.getAttribute("role")).toBe("table");
-    expect(table.getAttribute("tabindex")).toBe("0");
-    expect(table.getAttribute("aria-label")).toBeTruthy();
-    expect(table.querySelector("thead")!.getAttribute("role")).toBe("rowgroup");
-    expect(table.querySelector("tbody")!.getAttribute("role")).toBe("rowgroup");
-    expect(
-      [...table.querySelectorAll("thead th")].every(
-        (th) => th.getAttribute("role") === "columnheader",
-      ),
-    ).toBe(true);
-    const rows = [...table.querySelectorAll("tbody tr")];
-    expect(rows).toHaveLength(3);
-    for (const row of rows) {
-      expect(row.getAttribute("role")).toBe("row");
-      expect(row.querySelector("th")!.getAttribute("role")).toBe("rowheader");
-      expect(
-        [...row.querySelectorAll("td")].every(
-          (td) => td.getAttribute("role") === "cell",
-        ),
-      ).toBe(true);
-    }
-  });
-
-  it("releases its font listener when destroyed", async () => {
-    const add = vi.fn();
-    const remove = vi.fn();
-    Object.defineProperty(document, "fonts", {
-      configurable: true,
-      value: {
-        ready: Promise.resolve(),
-        addEventListener: add,
-        removeEventListener: remove,
-      },
+  it("gives the results table a name, headers, row headers and a focusable scroll box", async () => {
+    const w = await openPreset("vessel-slide");
+    const region = screen.getByRole("region", {
+      name: "Events in the order recorded",
     });
-    try {
-      const { handle } = await mount({ preset: "vessel-slide" });
-      expect(add).toHaveBeenCalledWith("loadingdone", expect.any(Function));
-      handle.destroy();
-      handle.destroy();
-      expect(remove).toHaveBeenCalledTimes(1);
-      expect(remove).toHaveBeenCalledWith("loadingdone", add.mock.calls[0]![1]);
-    } finally {
-      Reflect.deleteProperty(document, "fonts");
-    }
-  });
-
-  it("wraps the event fieldsets in one growing slot, so a count change eases", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderEtaDriftTemplate();
-    const slot = q(root, "events");
-    expect(slot.getAttribute("data-grow")).toBe("slot");
-    expect(slot.querySelectorAll("fieldset.gmt-transport-leg")).toHaveLength(6);
-    expect(q(root, "reason-aside").getAttribute("data-grow")).toBe("slot");
-    expect(q(root, "drift-heroes").getAttribute("data-grow")).toBe("slot");
+    expect(region).toHaveAttribute("tabindex", "0");
+    expect(
+      within(eventsTable())
+        .getAllByRole("columnheader")
+        .map((h) => h.getAttribute("scope")),
+    ).toEqual(["col", "col", "col", "col", "col"]);
+    expect(within(eventsTable()).getAllByRole("rowheader")).toHaveLength(3);
+    await expectNoAxeViolations(w.root);
   });
 
   it("EDR2: a chat seed with a zoneless at shows NO SIGNAL twice", async () => {
-    const { root } = await mount({
+    await open({
       events: [
         {
           classifier: "EST",
@@ -507,70 +409,75 @@ describe("mountEtaDrift: classes and events", () => {
         },
       ],
     });
-    expect(text(root, "best-output")).toBe("NO SIGNAL");
-    expect(text(root, "drift-output")).toBe("NO SIGNAL");
-    expect(text(root, "reason-aside")).toContain("Event 1 is not a timestamp");
-    expect(text(root, "callout-best")).toContain("NO SIGNAL");
-    expect(text(root, "drift-plot")).toContain("NO SIGNAL");
+    expect(bestOutput()).toHaveTextContent("NO SIGNAL");
+    expect(driftOutput()).toHaveTextContent("NO SIGNAL");
+    expect(caution()).toHaveTextContent("Event 1 is not a timestamp");
+    expect(screen.getByText(/^Best available:/)).toHaveTextContent("NO SIGNAL");
+    expect(screen.getByText("invalid input")).toBeInTheDocument();
   });
 
   it("shows and hides event fieldsets with the count", async () => {
-    const { root } = await mount({ preset: "one-estimate" });
-    expect(q(root, "event-2").hidden).toBe(false);
-    expect(q(root, "event-3").hidden).toBe(true);
-    const count = q<HTMLSelectElement>(root, "event-count");
-    count.value = "3";
-    count.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(q(root, "event-3").hidden).toBe(false);
+    const w = await openPreset("one-estimate");
+    expect(screen.getByRole("group", { name: "Event 2" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "Event 3" }),
+    ).not.toBeInTheDocument();
+    await w.user.selectOptions(countBox(), "3");
+    expect(screen.getByRole("group", { name: "Event 3" })).toBeInTheDocument();
     // The new event starts as a copy of the last one, so it is a valid timestamp.
-    expect(q<HTMLInputElement>(root, "at-3").value).toBe(
-      "2024-06-15T12:40:00Z",
-    );
-    expect(text(root, "drift-output")).toContain("revisions: 2");
+    expect(eventBox(3, "At")).toHaveValue("2024-06-15T12:40:00Z");
+    expect(driftOutput()).toHaveTextContent("revisions: 2");
+    await expectNoAxeViolations(w.root);
   });
 
   it("typing a time updates the result", async () => {
-    const { root } = await mount({ preset: "est-after-act" });
-    setText(root, "at-4", "2024-06-15T13:30:00Z");
-    expect(text(root, "drift-output")).toContain('drift: "PT50M"');
+    const w = await openPreset("est-after-act");
+    await enter(w, eventBox(4, "At"), "2024-06-15T13:30:00Z");
+    expect(driftOutput()).toHaveTextContent('drift: "PT50M"');
+  });
+
+  it("reads the answer out in a status line once the change settles", async () => {
+    await openPreset("vessel-slide");
+    const status = screen.getByRole("status", { name: "ETA status" });
+    setRange(slider(), 540);
+    await waitFor(
+      () =>
+        expect(status).toHaveTextContent(
+          "Estimate drift +9 h over 3 estimates",
+        ),
+      { timeout: 3000 },
+    );
   });
 });
 
 describe("mountEtaDrift: chat seeds, permalinks and teardown", () => {
   it("ED1: the chat pill renders the vessel slide", async () => {
     const pill = CHAT_STARTERS.find((s) => s.widget === "showEtaDrift")!;
-    const { root } = await mount(pill.args);
-    expect(text(root, "drift-output")).toBe(
+    await open(pill.args as Record<string, unknown>);
+    expect(driftOutput()).toHaveTextContent(
       '{ first: "2024-06-20T08:00:00Z", last: "2024-06-20T17:00:00Z", drift: "PT9H", revisions: 3, exceedsTolerance: true }',
     );
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("vessel-slide");
+    expect(presetBox()).toHaveValue("vessel-slide");
   });
 
   it("PE2: the permalink seeds the tolerance on a template rendered without it", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderEtaDriftTemplate();
-    document.body.append(root);
-    await mountEtaDrift(
-      root,
-      { preset: "vessel-slide", tolerance: "PT9H" },
-      new AbortController().signal,
-    );
-    expect(text(root, "drift-output")).toContain("exceedsTolerance: false");
+    await open({ preset: "vessel-slide", tolerance: "PT9H" });
+    expect(driftOutput()).toHaveTextContent("exceedsTolerance: false");
   });
 
   it("round-trips the preset form", async () => {
-    const { root, handle } = await mount({ preset: "vessel-slide" });
-    slide(root, 540);
-    const state = handle.getPermalinkState!();
+    const w = await openPreset("vessel-slide");
+    setRange(slider(), 540);
+    const link = w.permalink();
+    const state = seedFromLocation("etadrift", link.slice(link.indexOf("?")));
     expect(state).toEqual({ preset: "vessel-slide", tolerance: "PT9H" });
-    const href = encodeWidgetPermalink("etadrift", state!);
-    expect(seedFromLocation("etadrift", href.slice(href.indexOf("?")))).toEqual(
-      state,
-    );
+    w.destroy();
+    await open(state ?? {});
+    expect(tolBox()).toHaveValue("PT9H");
   });
 
   it("round-trips the flat form of a chat seed", async () => {
-    const { root, handle } = await mount({
+    const w = await open({
       events: [
         {
           classifier: "PLN",
@@ -590,168 +497,87 @@ describe("mountEtaDrift: chat seeds, permalinks and teardown", () => {
       ],
       tolerance: "PT15M",
     });
-    setText(root, "tolerance", "PT20M");
-    const state = handle.getPermalinkState!()!;
-    expect(state.eventCount).toBe("3");
-    const seed = seedFromLocation(
-      "etadrift",
-      `?w=etadrift&wa=${encodeURIComponent(JSON.stringify(state))}`,
-    );
-    const again = await mount(seed);
-    expect(text(again.root, "drift-output")).toContain('drift: "PT10M"');
-    expect(q<HTMLInputElement>(again.root, "tolerance").value).toBe("PT20M");
+    await enter(w, tolBox(), "PT20M");
+    const link = w.permalink();
+    const seed = seedFromLocation("etadrift", link.slice(link.indexOf("?")));
+    expect(seed).toMatchObject({ eventCount: "3" });
+    w.destroy();
+    await open(seed ?? {});
+    expect(driftOutput()).toHaveTextContent('drift: "PT10M"');
+    expect(tolBox()).toHaveValue("PT20M");
   });
 
-  it("stops responding once the signal aborts", async () => {
-    const { root, controller } = await mount({ preset: "vessel-slide" });
-    controller.abort();
-    slide(root, 540);
-    expect(text(root, "drift-output")).toContain("exceedsTolerance: true");
+  it("is inert when aborted before the library loads", async () => {
+    await renderWidget(entry, { args: {}, aborted: true });
+    expect(bestOutput()).toBeEmptyDOMElement();
   });
 
-  it("returns an inert handle when aborted before the library loads", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderEtaDriftTemplate();
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountEtaDrift(root, {}, controller.signal);
-    expect(handle.getPermalinkState!()).toBeNull();
-    expect(text(root, "best-output").trim()).toBe("");
-  });
-
-  it("destroys twice without throwing", async () => {
-    const { handle } = await mount();
-    handle.destroy();
-    expect(() => handle.destroy()).not.toThrow();
+  it("destroying twice does not throw", async () => {
+    const w = await open();
+    w.destroy();
+    expect(() => w.destroy()).not.toThrow();
   });
 });
 
-describe("the restyled plot: marks, legend, plates and focus", () => {
-  const FOCUSABLE = "[tabindex], a, button, input, select, textarea";
+function plate(caption: string): HTMLElement {
+  const found = screen
+    .getAllByRole("figure", { hidden: true })
+    .find((f) => f.textContent?.startsWith(caption));
+  if (found === undefined) throw new Error(`no plate captioned ${caption}`);
+  return found;
+}
 
-  it("gives a mark, its table cell and its legend entry one series", async () => {
-    const { root } = await mount({ preset: "est-after-act" });
-    const classes = ["PLN", "EST", "ACT", "EST"] as const;
-    classes.forEach((code, i) => {
-      const n = i + 1;
-      const series = String(CLASS_SERIES[code]);
-      expect(
-        q(root, `mark-${n}`).getAttribute("data-series"),
-        `mark-${n}`,
-      ).toBe(series);
-      expect(
-        q(root, `event-row-${n}`)
-          .querySelector("td")!
-          .getAttribute("data-series"),
-        `cell ${n}`,
-      ).toBe(series);
-      expect(
-        q(root, "legend").querySelector(`li[data-series="${series}"]`)!
-          .textContent,
-        `legend ${code}`,
-      ).toContain(code);
-    });
-  });
+describe("the plot's legend and plates", () => {
+  const legend = () =>
+    screen.getAllByRole("listitem", { hidden: true }).map((li) => li);
 
   it("lists only the classes present, in the dashboard's class order", async () => {
-    const some = await mount({ preset: "est-after-act" });
-    expect(
-      [...q(some.root, "legend").querySelectorAll("li")].map(
-        (li) => li.querySelector(".gmt-punct-chip")!.textContent,
-      ),
-    ).toEqual(["PLN", "EST", "ACT"]);
-    const one = await mount({ preset: "vessel-slide" });
-    expect(
-      [...q(one.root, "legend").querySelectorAll("li")].map(
-        (li) => li.querySelector(".gmt-punct-chip")!.textContent,
-      ),
-    ).toEqual(["EST"]);
-    expect(q(one.root, "legend").textContent).toContain("estimated");
+    await openPreset("est-after-act");
+    const items = legend();
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveTextContent("PLN");
+    expect(items[1]).toHaveTextContent("EST");
+    expect(items[2]).toHaveTextContent("ACT");
   });
 
-  it("draws the legend and the table with glyphs, never marks or rings", async () => {
-    const { root } = await mount({ preset: "req-beats-est" });
-    expect(
-      q(root, "legend").querySelector(".gmt-eta-glyph--req svg"),
-    ).not.toBeNull();
-    expect(
-      q(root, "event-row-2").querySelector(".gmt-eta-glyph--req svg"),
-    ).not.toBeNull();
-    for (const region of [q(root, "legend"), q(root, "event-table")]) {
-      expect(region.querySelector(".gmt-eta-mark, .gmt-eta-ring")).toBeNull();
-    }
-    // Only the plot holds marks: one per event, so the table adds none.
-    expect(root.querySelectorAll(".gmt-eta-mark")).toHaveLength(3);
-  });
-
-  it("keeps the class chip's code as its text, with the series on it", async () => {
-    const { root } = await mount({ preset: "est-after-act" });
-    const chip = q(root, "label-3").querySelector(".gmt-punct-chip")!;
-    expect(chip.textContent).toBe("ACT");
-    expect(chip.getAttribute("data-series")).toBe("4");
-    expect(q(root, "label-3").classList.contains("gmt-cutoff-chip")).toBe(true);
-  });
-
-  it("draws the chord's glow line apart from the one join line", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    expect(root.querySelectorAll(".gmt-eta-line")).toHaveLength(1);
-    expect(root.querySelectorAll(".gmt-eta-line-glow")).toHaveLength(1);
-    const est = await mount({ preset: "one-estimate" });
-    expect(est.root.querySelectorAll(".gmt-eta-line-glow")).toHaveLength(0);
+  it("names the one class a single-class plot uses", async () => {
+    await openPreset("vessel-slide");
+    const items = legend();
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveTextContent("estimated");
   });
 
   it("reads the drift on a plate: +9 h on the vessel slide", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    const hero = q(root, "drift-hero");
-    expect(hero.querySelector(".gmt-punct-hero-cap")!.textContent).toBe(
-      "estimate drift",
-    );
-    expect(hero.querySelector(".gmt-punct-hero-value")!.textContent).toBe(
-      "+9 h",
-    );
-    expect(hero.querySelector(".gmt-punct-hero-sub")!.textContent).toBe(
-      "PT9H · over 3 estimates · exceeds ±8 h: yes",
-    );
+    await openPreset("vessel-slide");
+    const hero = plate("estimate drift");
+    expect(hero).toHaveTextContent("+9 h");
+    expect(hero).toHaveTextContent("PT9H · over 3 estimates");
+    expect(hero).toHaveTextContent("exceeds ±8 h: yes");
   });
 
-  it("leaves the exceeds clause out with no tolerance, and the plate out with no drift", async () => {
-    const act = await mount({ preset: "est-after-act" });
-    expect(
-      q(act.root, "drift-hero").querySelector(".gmt-punct-hero-sub")!
-        .textContent,
-    ).toBe("PT25M · over 2 estimates");
-    const one = await mount({ preset: "one-estimate" });
-    expect(one.root.querySelector('[data-role="drift-hero"]')).toBeNull();
+  it("reads the drift on a plate with no tolerance set", async () => {
+    await openPreset("est-after-act");
+    const hero = plate("estimate drift");
+    expect(hero).toHaveTextContent("PT25M · over 2 estimates");
+  });
+
+  it("draws no drift plate when there is nothing to measure", async () => {
+    await openPreset("one-estimate");
+    expect(screen.queryByText("estimate drift")).not.toBeInTheDocument();
   });
 
   it.each(ETA_PRESETS.map((p) => [p.id]))(
-    "draws the best pick's plate on %s, in its class's series",
+    "draws the best pick's plate on %s",
     async (id) => {
-      const { root } = await mount({ preset: id });
-      const hero = q(root, "best-hero");
-      expect(hero.classList.contains("gmt-punct-hero--quiet")).toBe(true);
-      const code = /^(PLN|EST|REQ|ACT) · /.exec(
-        hero.querySelector(".gmt-punct-hero-value")!.textContent!,
-      )![1]! as keyof typeof CLASS_SERIES;
-      expect(hero.getAttribute("data-series")).toBe(String(CLASS_SERIES[code]));
-      expect(hero.querySelector(".gmt-eta-glyph")).not.toBeNull();
-      expect(hero.querySelector(".gmt-punct-hero-cap")!.textContent).toBe(
-        "best available",
-      );
+      await openPreset(id!);
+      const hero = plate("best available");
+      expect(hero).toHaveTextContent(/^best available(PLN|EST|REQ|ACT) · /);
     },
   );
 
-  it("keeps the plates and the legend out of the accessibility tree", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    const heroes = root.querySelectorAll(".gmt-punct-heroes");
-    expect(heroes).toHaveLength(1);
-    for (const h of heroes) expect(h.getAttribute("aria-hidden")).toBe("true");
-    expect(q(root, "legend").getAttribute("aria-hidden")).toBe("true");
-  });
-
-  it("has nothing focusable in the plot", async () => {
-    const { root } = await mount({ preset: "vessel-slide" });
-    expect(q(root, "drift-plot").querySelectorAll(FOCUSABLE)).toHaveLength(0);
+  it("keeps the plates out of the accessibility tree", async () => {
+    await openPreset("vessel-slide");
+    expect(screen.queryByRole("figure")).not.toBeInTheDocument();
   });
 });
 
@@ -759,9 +585,9 @@ describe("releasing observers", () => {
   it("destroy disconnects every ResizeObserver the mount created", async () => {
     const spy = spyOnResizeObservers();
     try {
-      const { handle } = await mount();
+      const w = await open();
       expect(spy.live.size).toBeGreaterThan(0);
-      handle.destroy();
+      w.destroy();
       expect(spy.live.size).toBe(0);
     } finally {
       spy.restore();

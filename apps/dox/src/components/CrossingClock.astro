@@ -33,7 +33,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderCrossingClockTemplate();
+const html = renderCrossingClockTemplate("crossing-clock", {}).value;
 ---
 
 {
@@ -51,10 +51,12 @@ const html = renderCrossingClockTemplate();
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("crossing");
-    document.querySelectorAll<HTMLElement>(".gmt-crossing").forEach((el) => {
-      mountCrossingClock(el, seed, new AbortController().signal).catch(
-        (error) => showUnavailable(el, error),
-      );
-    });
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="crossing-clock"]')
+      .forEach((el) => {
+        mountCrossingClock(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
   }
 </script>

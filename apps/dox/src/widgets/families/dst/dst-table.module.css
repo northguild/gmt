@@ -1,0 +1,67 @@
+/* dstBadge and dstTable: the transition kind in words, tinted by the DST tokens. The tint
+   washes the badge and the ink holds the 7:1 floor on it; the colour never carries the
+   meaning alone because the badge says Gap or Overlap. */
+
+.badge {
+  --tone: var(--gmt-dst-gold);
+  --ink: var(--gmt-dst-gold-ink);
+
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent);
+  border-radius: var(--gmt-radius-sm);
+  background: color-mix(in srgb, var(--tone) 15%, var(--gmt-surface-widget));
+  color: var(--ink);
+  font-size: var(--gmt-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  &[data-kind="overlap"] {
+    --tone: var(--gmt-dst-purple);
+    --ink: var(--gmt-dst-purple-ink);
+  }
+}
+
+.mono {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+}
+
+.arrow {
+  color: var(--gmt-dst-gold-ink);
+  font-weight: 700;
+
+  &[data-kind="overlap"] {
+    color: var(--gmt-dst-purple-ink);
+  }
+}
+
+.empty {
+  margin: 0;
+  padding: var(--gmt-space-3);
+  color: var(--gmt-fill-deep);
+  font-style: italic;
+  text-align: center;
+}
+
+@media (forced-colors: active) {
+  .badge {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .arrow {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .badge {
+    border-color: var(--ink);
+    background: var(--gmt-surface-widget);
+  }
+}

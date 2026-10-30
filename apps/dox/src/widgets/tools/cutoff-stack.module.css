@@ -1,0 +1,97 @@
+/*
+ * Cut-off Stack: what only this tool needs. The sections, preset, fields, groups, lanes,
+ * marks, bands, gate, scale, table, code frame and output are the kit's and the cutoff
+ * family's; this sheet places the legend, the summary, the table cell text and the sentinel.
+ *
+ * Amber is the sentinel's alone, and an accent edge is never a single side.
+ */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  min-block-size: var(--gmt-target-min);
+  align-items: center;
+}
+
+/* The scale lines up with the lane's track, past its label column; the label column collapses
+   with the lane's own container query. */
+.scaleRow {
+  margin-inline-start: calc(var(--gmt-timeline-label-w, 6rem) + 0.5rem);
+  min-inline-size: 0;
+
+  @container (inline-size < 30rem) {
+    margin-inline-start: 0;
+  }
+}
+
+.summary {
+  margin: 0;
+  min-block-size: 1.5em;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+}
+
+/* A table cell wraps inside its column, whatever the table's own no-wrap rule says. */
+.text {
+  display: block;
+  min-inline-size: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.sub {
+  display: block;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+}
+
+.name {
+  display: flex;
+  gap: var(--gmt-space-2);
+  align-items: center;
+}
+
+/* The sentinel: in words, bracketed, in the amber family. */
+.lost {
+  display: inline-block;
+  margin: 0;
+  padding-inline: var(--gmt-space-1);
+  border: 1px solid var(--gmt-signal-border);
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+
+  &::before {
+    content: "\27e8\a0";
+  }
+
+  &::after {
+    content: "\a0\27e9";
+  }
+}
+
+@media (forced-colors: active) {
+  .lost {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .summary,
+  .sub {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .lost {
+    border-color: var(--gmt-ice);
+  }
+
+  .sub {
+    color: var(--gmt-ice);
+  }
+}

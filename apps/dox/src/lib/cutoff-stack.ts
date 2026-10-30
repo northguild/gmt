@@ -83,7 +83,7 @@ export interface CutoffStackArgs {
   atLocalTime4?: string;
 }
 
-export interface StackPreset {
+interface StackPreset {
   id: string;
   label: string;
   description: string;
@@ -513,7 +513,7 @@ export function axisDatesOf(
 /** `rollDate(date, "following", calendar) !== date`, per axis date — a
  *  library call that never moves a business day. `{}` with no calendar, or
  *  when the calendar does not resolve at all. */
-export function closedDaysOf(
+function closedDaysOf(
   dates: readonly string[],
   calendar: CutoffCalendar | undefined,
   lib: CutoffLib,
@@ -597,7 +597,7 @@ export function collectStackFacts(
 // Why null
 // ---------------------------------------------------------------------------
 
-export type StackNullReason =
+type StackNullReason =
   | "invalid-zone"
   | "calendar-without-roll"
   | "roll-without-calendar"
@@ -627,7 +627,7 @@ const STACK_NULL_TEMPLATE: Record<StackNullReason, string> = {
     'Cut-off {n} lands on a local time the clock skipped that day. cutoffAt never shifts a skipped time: it returns "", and one failed entry makes the whole stack [].',
 };
 
-export interface StackNull {
+interface StackNull {
   reason: StackNullReason;
   n?: number;
 }

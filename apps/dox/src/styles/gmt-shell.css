@@ -35,7 +35,7 @@ h6 {
 h1:not([data-page-title]) {
   font-weight: 700;
   letter-spacing: var(--gmt-tracking-wide);
-  font-size: 32px;
+  font-size: 2rem;
 }
 
 /* Homepage hero title ("@northguild/gmt") ------------------------------
@@ -58,7 +58,7 @@ h1[data-page-title] {
   font-size: var(--sl-text-h1);
 }
 
-@media (max-width: 26rem) {
+@media (width <= 26rem) {
   h1[data-page-title] {
     font-size: 1.5rem;
   }
@@ -67,6 +67,12 @@ h1[data-page-title] {
 /* ---- Starlight layout shell ---- */
 .page {
   background-color: var(--gmt-void);
+}
+
+/* Starlight's last-updated line and the licence note sit on this surface, not on whatever
+   paints behind them, so their contrast depends on one opaque token (cause 5). */
+footer {
+  background-color: var(--gmt-surface-page);
 }
 
 /* Content width. Starlight's default is 45rem; at 50rem the column still
@@ -89,19 +95,19 @@ h1[data-page-title] {
  * width, the pane takes everything between the two sidebars, and the content
  * centres in it. Header.astro lines the search box up with the result, so
  * change the two together. */
-@media (min-width: 72rem) {
+@media (width >= 72rem) {
   .right-sidebar-container {
-    width: var(--sl-sidebar-width);
+    inline-size: var(--sl-sidebar-width);
   }
 
   :root[data-has-sidebar][data-has-toc] .main-pane {
     --sl-content-margin-inline: auto;
-    width: calc(100% - var(--sl-sidebar-width));
+
+    inline-size: calc(100% - var(--sl-sidebar-width));
   }
 }
 
-.sidebar-pane,
-#starlight__sidebar {
+.sidebar-pane {
   /* background handled by gmt-glass.css (translucent + backdrop-filter) */
   border-color: var(--gmt-hairline);
 }
@@ -120,9 +126,9 @@ h1[data-page-title] {
  * default `.sidebar-pane a` behavior — nothing here forces `nowrap`) is the
  * one-rule fix that holds regardless of which nav section happens to be
  * expanded or how long a future label gets. */
-@media (min-width: 50rem) {
+@media (width >= 50rem) {
   .sidebar-pane {
-    width: var(--sl-sidebar-width);
+    inline-size: var(--sl-sidebar-width);
   }
 }
 
@@ -133,7 +139,8 @@ h1[data-page-title] {
 }
 
 .sidebar-pane a[aria-current="page"],
-.sidebar-pane a:hover {
+.sidebar-pane a:hover,
+.sidebar-pane a:focus-visible {
   color: var(--gmt-cyan-ink);
   background: var(--gmt-accent-wash);
 }
@@ -221,7 +228,7 @@ h1[data-page-title] {
 
 header {
   /* background handled by gmt-glass.css (translucent + backdrop-filter) */
-  border-bottom: 1px solid var(--gmt-hairline);
+  border-block-end: 1px solid var(--gmt-hairline);
 }
 
 .site-title {
@@ -236,18 +243,22 @@ header {
 .gmt-title-long {
   display: none;
 }
-@media (min-width: 50rem) {
+
+@media (width >= 50rem) {
   .gmt-title-long {
     display: inline;
   }
+
   .gmt-title-short {
     display: none;
   }
 }
+
 @media print {
   .gmt-title-long {
     display: inline;
   }
+
   .gmt-title-short {
     display: none;
   }

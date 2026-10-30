@@ -8,22 +8,13 @@
  *   hand-written comparison;
  * - the date and time words of a moment, written by the library (`formatZonedDateTime` for the
  *   local clock reading, `formatUtc` for UTC), never typed;
- * - the markup that holds both forms in one grid cell, so the box is the longer form's and nothing
- *   moves when the tense flips, and the one-timer binding that flips the forms when a moment
- *   passes while the page is open.
+ * - the one-timer binding that flips the forms when a moment passes while the page is open. The
+ *   markup that holds both forms in one cell is `tenseSlot` in `widgets/families/clockcheck/`.
  *
  * The library comes in as `TenseLib` (the page loads it lazily, `loadClockLib`), so this file
  * carries no polyfill. No region words live here.
  */
 import { SIGNAL_LOST } from "./clock-change-common";
-
-const escapeHtml = (text: string): string =>
-  text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-const escapeAttr = escapeHtml;
 
 export type Tense = "before" | "after";
 
@@ -34,7 +25,7 @@ export interface Moment {
 }
 
 /** A moment in words: `20 September 2026 at 02:00` on the local clock, and `01:00` in UTC. */
-export interface MomentWords {
+interface MomentWords {
   local: string;
   utc: string;
 }
@@ -122,7 +113,7 @@ export function momentWords(lib: TenseLib, moment: Moment): MomentWords | null {
  * A moment as the end of a phrase: `20 September 2026 at 02:00 local time`, with ` (01:00 UTC)`
  * when `withUtc`. The signal-lost mark when the library could not write the moment, never a blank.
  */
-export function whenText(words: MomentWords | null, withUtc: boolean): string {
+function whenText(words: MomentWords | null, withUtc: boolean): string {
   if (words === null) return SIGNAL_LOST;
   return withUtc
     ? `${words.local} local time (${words.utc} UTC)`
@@ -130,7 +121,7 @@ export function whenText(words: MomentWords | null, withUtc: boolean): string {
 }
 
 /** The three classes of a zone on a checker's map. */
-export type ClassKind = "stopped" | "changes-after" | "none";
+type ClassKind = "stopped" | "changes-after" | "none";
 
 /**
  * The words of a map class in both forms. The class of the zones that stop names its change: the
@@ -198,59 +189,14 @@ export function tenseView(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Markup
-// ---------------------------------------------------------------------------
-
-/**
- * Both forms in one grid cell. The one that is not true now is `aria-hidden="true"` (the sheet
- * hides it with `visibility`), so it stays out of the accessibility tree and still sizes the box.
- * `block` is for a paragraph's worth of text; the default sits inside a line.
- */
-export function slotHtml(
-  key: string,
-  beforeHtml: string,
-  afterHtml: string,
-  current: Tense,
-  block = false,
-): string {
-  const hidden = ' aria-hidden="true"';
-  return (
-    `<span class="gmt-tense${block ? " gmt-tense--block" : ""}" data-moment="${escapeAttr(key)}">` +
-    `<span data-form="before"${current === "after" ? hidden : ""}>${beforeHtml}</span>` +
-    `<span data-form="after"${current === "before" ? hidden : ""}>${afterHtml}</span>` +
-    `</span>`
-  );
-}
-
-/** A phrase as HTML: plain text when it has one form, otherwise a slot. */
-export function tensedHtml(
-  phrase: Tensed,
-  view: TenseView,
-  block = false,
-): string {
-  if (phrase.key === null || phrase.before === phrase.after) {
-    return escapeHtml(phrase.before);
-  }
-  return slotHtml(
-    phrase.key,
-    escapeHtml(phrase.before),
-    escapeHtml(phrase.after),
-    view.tenseOf(phrase.key),
-    block,
-  );
-}
-
 /** A phrase as plain text, in the form that is true now (for an attribute or an announcement). */
 export function tensedPlain(phrase: Tensed, view: TenseView): string {
   return phrase.key === null ? phrase.before : phrase[view.tenseOf(phrase.key)];
 }
 
 /** Shows the true form of every slot under `root` and hides the other from the accessibility tree. */
-export function syncTense(root: ParentNode, view: TenseView): void {
-  for (const slot of root.querySelectorAll<HTMLElement>(
-    ".gmt-tense[data-moment]",
-  )) {
+function syncTense(root: ParentNode, view: TenseView): void {
+  for (const slot of root.querySelectorAll<HTMLElement>("[data-moment]")) {
     const current = view.tenseOf(slot.dataset.moment ?? "");
     for (const form of slot.querySelectorAll<HTMLElement>(
       ":scope > [data-form]",
@@ -268,12 +214,12 @@ export function syncTense(root: ParentNode, view: TenseView): void {
 /** The longest a timer can wait (a 32-bit signed count of milliseconds). */
 const MAX_DELAY_MS = 2 ** 31 - 1;
 
-export interface TenseBinding {
+interface TenseBinding {
   /** The view at the page's clock, as of the last sync. */
   view(): TenseView;
 }
 
-export interface TenseBindingOptions {
+interface TenseBindingOptions {
   lib: TenseLib;
   moments: Readonly<Record<string, Moment>>;
   /** The page's clock, a UTC instant. */

@@ -38,6 +38,7 @@ import {
   type ChartStation,
   type ChartTransition,
 } from "./delivery-scheduler";
+import { chartTooltipMotion } from "./chart-motion";
 
 /** The floor every chart text mark is held to — `--gmt-text-xs` (11.2px)
  *  reads too small; a mark's `fontSize` is a plain number, so it is set
@@ -57,12 +58,12 @@ const LEG_INKS = [
   "var(--gmt-purple-ink)",
   "var(--gmt-severity-high-ink)",
 ] as const;
-export const LEG_NUMERALS = ["①", "②", "③", "④"] as const;
+const LEG_NUMERALS = ["①", "②", "③", "④"] as const;
 
-export function legColor(index: number): string {
+function legColor(index: number): string {
   return LEG_COLORS[index % LEG_COLORS.length]!;
 }
-export function legInk(index: number): string {
+function legInk(index: number): string {
   return LEG_INKS[index % LEG_INKS.length]!;
 }
 function legNumeral(index: number): string {
@@ -121,7 +122,7 @@ type TooltipOption = Parameters<typeof defineChart>[0]["tooltip"];
  * recorded under it; the one chart-level `content` looks up the focused
  * point's `markId`.
  */
-export function tooltipRegistry(tooltip: Tooltip) {
+function tooltipRegistry(tooltip: Tooltip) {
   const byMark = new Map<string, (datum: unknown) => ChartTooltipContent>();
   return {
     /** Mark options that give the mark `id` and show `content` on focus. */
@@ -138,6 +139,7 @@ export function tooltipRegistry(tooltip: Tooltip) {
       return {
         tooltip: {
           use: tooltip,
+          ...chartTooltipMotion(),
           content: (points: readonly { markId: string; datum: unknown }[]) => {
             const point = points[0];
             const content = point ? byMark.get(point.markId) : undefined;
@@ -153,7 +155,7 @@ function badgeRows(station: ChartStation): ChartTooltipRow[] {
   return station.badges.map((b) => ({ label: b.kind, value: b.text }));
 }
 
-export function stationTooltip(
+function stationTooltip(
   station: ChartStation | undefined,
 ): ChartTooltipContent {
   if (!station) return { rows: [] };
@@ -168,7 +170,7 @@ export function stationTooltip(
   };
 }
 
-export function legTooltip(leg: ChartLeg | undefined): ChartTooltipContent {
+function legTooltip(leg: ChartLeg | undefined): ChartTooltipContent {
   if (!leg) return { rows: [] };
   return {
     title: `${legNumeral(leg.legIndex)} ${leg.mode ?? "Leg"}`,
@@ -181,7 +183,7 @@ export function legTooltip(leg: ChartLeg | undefined): ChartTooltipContent {
   };
 }
 
-export function transitionTooltip(
+function transitionTooltip(
   t: ChartTransition | undefined,
 ): ChartTooltipContent {
   if (!t) return { rows: [] };
@@ -198,7 +200,7 @@ export function transitionTooltip(
 // duration text says how long the leg took.
 // ---------------------------------------------------------------------------
 
-export interface RouteChartOptions {
+interface RouteChartOptions {
   tooltip?: ChartTooltipExtension;
   /** Narrow container: drop city/date/badge text, keep the time and the
    *  segment's own duration — the rest is in the tooltip, on focus or
@@ -431,7 +433,7 @@ export function buildRouteChartDefinition(
 // duration.
 // ---------------------------------------------------------------------------
 
-export interface ScaleChartOptions {
+interface ScaleChartOptions {
   tooltip?: ChartTooltipExtension;
   /** The zone the x-axis's own tick labels are read in — always named in
    *  the axis label too, since the axis runs on exact instants and no
@@ -450,15 +452,15 @@ export interface ScaleChartOptions {
  *  12px text this widget's charts are held to (§ font-size floor), plus
  *  its own padding — not a round-number guess, so the total never runs
  *  short of what the axis and the annotation row actually paint. */
-export const LANE_HEIGHT = 36;
-export const BAR_THICKNESS = 16;
+const LANE_HEIGHT = 36;
+const BAR_THICKNESS = 16;
 /** The shared DST / Date Line annotation row, one line of 12px text plus
  *  the padding between it and the plot below. */
-export const SCALE_CHART_TOP = 28;
+const SCALE_CHART_TOP = 28;
 /** Below the plot: the tick marks (6px) + a gap (4px) + one line of 12px
  *  tick-label text + a gap (4px) + one line of 12px axis-label text + a
  *  bottom pad (6px). */
-export const SCALE_CHART_BOTTOM = 6 + 4 + 12 + 4 + 12 + 6;
+const SCALE_CHART_BOTTOM = 6 + 4 + 12 + 4 + 12 + 6;
 
 export function laneChartHeight(legCount: number): number {
   return SCALE_CHART_TOP + legCount * LANE_HEIGHT + SCALE_CHART_BOTTOM;
@@ -469,8 +471,8 @@ export function laneChartHeight(legCount: number): number {
  *  journey's last leg there is no bar to its right to absorb an overflow —
  *  only this fixed margin. `left` is the y-axis's own lane labels
  *  ("① Truck", …). */
-export const CHART_MARGIN_LEFT = 88;
-export const CHART_MARGIN_RIGHT = 110;
+const CHART_MARGIN_LEFT = 88;
+const CHART_MARGIN_RIGHT = 110;
 
 /** A leg's own y-axis lane label. `extraText`, when given (a bar with room
  *  for its duration label on neither side), folds that duration straight

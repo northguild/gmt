@@ -1,0 +1,26 @@
+/*
+ * The only Starlight `customCss` entry (astro.config.mjs). Its first statement fixes the
+ * cascade order for the whole site: Starlight's own layers first, then Tailwind's four (named
+ * here so they sort before `gmt` on every page, /dox/ included), then the `gmt.*` layers.
+ * A CSS Module is unlayered and so beats every layer below.
+ *
+ * `gmt.thirdparty` holds rules for DOM we do not render (Starlight, Pagefind, chart and map
+ * library output). Stylelint covers it like every other sheet.
+ */
+@layer starlight, theme, base, components, utilities, vendor, gmt.tokens, gmt.base, gmt.shell, gmt.content, gmt.controls, gmt.tools, gmt.chat, gmt.thirdparty, gmt.a11y;
+
+@import "./gmt-tokens.css" layer(gmt.tokens); /* palette + --gmt-* tokens, @font-face */
+@import "./gmt-theme.css" layer(gmt.tokens); /* --gmt-* mapped onto Starlight's --sl-* */
+@import "./gmt-primitives.css" layer(gmt.base); /* reusable .gmt-glass* / .gmt-icon-button */
+@import "./gmt-widget-reset.css" layer(gmt.base); /* zero-specificity `not-content` restore inside a widget */
+@import "./gmt-glass.css" layer(gmt.shell); /* glass treatment on Starlight elements */
+@import "./gmt-shell.css" layer(gmt.shell); /* typography + layout frame */
+@import "./gmt-content.css" layer(gmt.content); /* .sl-markdown-content + EC + search */
+@import "./gmt-controls.css" layer(gmt.controls); /* buttons, focus, selection, scrollbar */
+@import "./gmt-content-tables.css" layer(gmt.tools); /* the content table recipe, first in the tools layer */
+@import "./gmt-charts.css" layer(gmt.thirdparty); /* chart theme variables + container styles */
+@import "./gmt-light.css" layer(gmt.thirdparty); /* floating [data-theme="light"] overrides */
+@import "./gmt-reveal.css" layer(gmt.shell); /* shared scroll-into-view stagger utility */
+@import "./dox.css" layer(gmt.tools); /* live component layout */
+@import "./gmt-view-transitions.css" layer(gmt.shell); /* cross-document route transitions (static header/sidebar, content fade) */
+@import "./gmt-a11y.css" layer(gmt.a11y); /* DOX-D1 prefers-reduced-transparency / -contrast / forced-colors — loaded last */

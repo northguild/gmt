@@ -18,8 +18,6 @@ const SONAR_SELECTOR = [
   ".expressive-code .copy button",
   ".sl-link-button",
   ".pagination-links a",
-  ".gmt-input",
-  ".gmt-select",
   '.sl-markdown-content .tab > [role="tab"]',
   // Streamdown's own controls inside the chat island (copy, fullscreen) — they
   // borrow .gmt-icon-button's look in gmt-primitives.css, so they get the

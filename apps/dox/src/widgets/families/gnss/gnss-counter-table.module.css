@@ -1,0 +1,144 @@
+/* gnssCounterTable: a fixed-layout table that fills its box (cause 1: a block table keeps its
+   rows as wide as their content, and the content-table rule squeezes the first column).
+   The box is the container the stacked layout queries, because a table cannot be its own. */
+
+.box {
+  container-type: inline-size;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-x: auto;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+.table {
+  display: table;
+  table-layout: fixed;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  border: 1px solid var(--gmt-hairline);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  font-size: var(--gmt-text-sm);
+
+  & :is(th, td) {
+    inline-size: auto;
+    padding: 0.5rem;
+    border-block-end: 1px solid var(--gmt-hairline);
+    color: var(--gmt-ice);
+    font-family: var(--gmt-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+    text-align: start;
+    vertical-align: baseline;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* Clear of the bevelled corners. */
+  & :is(th, td):first-child {
+    padding-inline-start: 0.75rem;
+  }
+
+  & :is(th, td):last-child {
+    padding-inline-end: 0.75rem;
+  }
+
+  & thead th {
+    border-block-end: 2px solid var(--gmt-border-strong);
+    background: var(--gmt-surface-2);
+    font-family: inherit;
+    font-size: var(--gmt-text-xs);
+    font-weight: 600;
+  }
+
+  & tbody tr:last-child :is(th, td) {
+    border-block-end: 0;
+  }
+
+  /* The reading's own row: a tint and a hatch, with the words "(your reading)" beside them. */
+  & tbody tr[data-reading="true"] :is(th, td) {
+    background-color: color-mix(in srgb, var(--gmt-series-1) 10%, transparent);
+    background-image: repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--gmt-cyan-bright) 16%, transparent) 0,
+      color-mix(in srgb, var(--gmt-cyan-bright) 16%, transparent) 2px,
+      transparent 2px,
+      transparent 8px
+    );
+  }
+}
+
+/* Under a narrow box the table becomes stacked rows: the header row is read but not drawn,
+   and each cell shows its column's name from `data-label`. */
+@container (inline-size < 34rem) {
+  .table,
+  .table tbody,
+  .table tr {
+    display: block;
+  }
+
+  .table thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table tbody tr {
+    padding-block: 0.25rem;
+    border-block-end: 1px solid var(--gmt-hairline);
+
+    &:last-child {
+      border-block-end: 0;
+    }
+  }
+
+  .table tbody :is(th, td) {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-block-end: 0;
+    text-align: end;
+
+    &::before {
+      content: attr(data-label);
+      color: var(--gmt-ice-dim);
+      text-align: start;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .table {
+    border-color: CanvasText;
+    background: Canvas;
+
+    & :is(th, td) {
+      border-color: CanvasText;
+      color: CanvasText;
+    }
+
+    & tbody tr[data-reading="true"] :is(th, td) {
+      background-image: none;
+      border-block-end: 2px solid Highlight;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .table {
+    border-color: var(--gmt-ice);
+
+    & :is(th, td) {
+      border-color: var(--gmt-ice);
+    }
+  }
+}

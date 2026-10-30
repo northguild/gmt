@@ -1,0 +1,25 @@
+/* hold: one grid cell for the live content and every ghost. The column is definite, so a
+   ghost's unwrapped width never sizes the cell and the live text wraps where the ghost does. */
+
+.root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-inline-size: 0;
+}
+
+.live,
+.ghost {
+  grid-area: 1 / 1;
+  min-inline-size: 0;
+}
+
+.ghost {
+  display: block;
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+
+  &::before {
+    content: attr(data-sample);
+  }
+}

@@ -1,0 +1,61 @@
+/* <gmt-listbox>: one tab stop, the active option painted by a data attribute the element sets. */
+
+.root {
+  display: block;
+  overflow-y: auto;
+  min-inline-size: 0;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+.option {
+  display: block;
+  min-block-size: var(--gmt-target-min);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  cursor: pointer;
+
+  &[data-active="true"] {
+    outline: 2px solid var(--gmt-cyan-ink);
+    outline-offset: -2px;
+  }
+
+  &[aria-selected="true"] {
+    background: var(--gmt-selected-fill);
+    color: var(--gmt-selected-ink);
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .root:focus-visible,
+  .option[data-active="true"] {
+    outline-color: Highlight;
+  }
+
+  .option[aria-selected="true"] {
+    background: Highlight;
+    color: HighlightText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+  }
+
+  .option[data-active="true"] {
+    outline-width: 3px;
+  }
+}

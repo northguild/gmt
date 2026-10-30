@@ -1,0 +1,78 @@
+/*
+ * Moving Feasts: what only this tool needs. The sections, fields, chips, range, preset, code
+ * frame and links are the kit's; the plates, grids, legend and held notes are the holiday
+ * family's. This sheet lays the controls out and sets the sentences and the calls disclosure.
+ *
+ * Amber is the sentinel's alone, and an accent edge is never a single side.
+ */
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A group that needs the whole row: the year slider and the chip groups. */
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.stack {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* The plates are read through the sentence below them, so they are hidden from a reader. */
+.plates {
+  min-inline-size: 0;
+}
+
+.slot {
+  min-inline-size: 0;
+}
+
+.hint {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+.calls {
+  min-inline-size: 0;
+
+  & > summary {
+    min-block-size: var(--gmt-target-min);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: var(--gmt-cyan-ink);
+
+    &:focus-visible {
+      outline: 2px solid var(--gmt-cyan);
+      outline-offset: 2px;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .calls > summary {
+    color: LinkText;
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+
+  .hint {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .hint {
+    color: var(--gmt-ice);
+  }
+}

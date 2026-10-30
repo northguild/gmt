@@ -1,0 +1,67 @@
+/* button and buttonRow: a native button restyled, and the row that holds a few.
+   Tokens only; the target is at least 24 by 24 px (SC 2.5.8). */
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.button {
+  appearance: none;
+  box-sizing: border-box;
+  min-inline-size: var(--gmt-target-min);
+  min-block-size: var(--gmt-target-min);
+  padding-block: 0.5rem;
+  padding-inline: 0.875rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  background-color: var(--gmt-surface-2);
+  color: var(--gmt-ice);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color var(--gmt-motion-fast) var(--gmt-easing),
+    border-color var(--gmt-motion-fast) var(--gmt-easing);
+
+  &:hover {
+    border-color: var(--gmt-cyan);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+@media (forced-colors: active) {
+  .button {
+    border-color: ButtonText;
+    background-color: ButtonFace;
+    color: ButtonText;
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+
+    &:disabled {
+      border-color: GrayText;
+      color: GrayText;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .button {
+    border-color: var(--gmt-ice);
+
+    &:focus-visible {
+      outline-width: 3px;
+    }
+  }
+}

@@ -38,12 +38,13 @@ import { chromium, firefox, webkit } from "@playwright/test";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+import { gate, resolveMisses } from "./lib/locate.mjs";
 
 const GATE = "data-credits-check";
 
 const GLOBE = {
   stack: true,
-  frame: ".gmt-globe-stage",
+  frame: gate("globe-stage"),
   id: "globe-data-credits",
 };
 const TARGETS = [
@@ -52,17 +53,17 @@ const TARGETS = [
   {
     path: "/why-gmt/",
     slug: "why-gmt-map",
-    frame: ".gmt-credited-frame",
+    frame: gate("credited-frame"),
     id: "tz-map-data-credits",
     // What the drawing paints: land, and the zone dots.
-    drawn: ".gmt-credited-frame svg path, .gmt-credited-frame svg circle",
+    drawn: `${gate("credited-frame")} svg path, ${gate("credited-frame")} svg circle`,
   },
   {
     path: "/check/canada-2026-clock-change/",
     slug: "canada-map",
-    frame: ".gmt-zonemap-map",
+    frame: gate("map-frame"),
     id: "canada-data-credits",
-    drawn: ".gmt-zonemap-shape",
+    drawn: gate("map-shape"),
     labels: ["Time zone boundaries", "Coastlines"],
     // Drawn by the client from a width of 520 px of section; narrower, there is no map to credit.
     absentBelow: 520,
@@ -71,9 +72,9 @@ const TARGETS = [
   {
     path: "/check/morocco-2026-clock-change/",
     slug: "morocco-map",
-    frame: ".gmt-morocco .gmt-zonemap-map",
+    frame: `[data-widget="morocco-clock-change"] ${gate("map-frame")}`,
     id: "morocco-data-credits",
-    drawn: ".gmt-morocco .gmt-zonemap-shape",
+    drawn: `[data-widget="morocco-clock-change"] ${gate("map-shape")}`,
     labels: ["Time zone boundaries", "Coastlines"],
     absentBelow: 520,
     stubWorker: true,
@@ -138,6 +139,7 @@ const fail = (msg) => {
         ? "overlap"
         : "credits-check",
     page: cell?.[3] ?? null,
+    target: "page",
     browser: cell?.[1] ?? null,
     width: cell ? Number(cell[2]) : null,
     message: cell?.[4] ?? msg,
@@ -246,10 +248,10 @@ async function accessibleExpanded(page, button, engine) {
 }
 
 /** Runs in the page: the panel's and every control button's rects, and what holds focus. */
-function geometry({ id, stack }) {
+function geometry({ id, stack, zoom }) {
   const button = document.querySelector(`[popovertarget="${id}"]`);
   const panel = document.getElementById(id);
-  const group = button.closest(".gmt-globe-zoom");
+  const group = button.closest(zoom);
   const controls =
     stack && group ? [...group.querySelectorAll("button")] : [button];
   return {
@@ -297,6 +299,62 @@ function paintedUnder({ id, drawn }) {
 const intersects = (a, b) =>
   a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 
+/* `--resolve-only`: load each page once and check that every hook this gate measures by is on it. */
+if (args.includes("--resolve-only")) {
+  const browser = await chromium.launch();
+  let missed = 0;
+  for (const target of SELECTED) {
+    const context = await browser.newContext({ viewport: VIEWPORTS[0] });
+    await blockOffSite(context, base);
+    const page = await context.newPage();
+    if (target.stubWorker) {
+      await page.route(
+        `**/api/${target.api ?? "canada"}-clock-change`,
+        (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            headers: { "cache-control": "no-store" },
+            body: JSON.stringify(target.stub ?? STUB),
+          }),
+      );
+    }
+    const res = await page.goto(base + target.path, { waitUntil: "load" });
+    const miss = [];
+    if (!res || res.status() !== 200) {
+      miss.push(`the page answered HTTP ${res?.status() ?? "none"}`);
+    } else {
+      if (target.stubWorker) {
+        await page.locator(gate("map-section")).scrollIntoViewIfNeeded();
+        await page.waitForTimeout(2000);
+      }
+      miss.push(
+        ...(await resolveMisses(page, [
+          { name: "frame", sel: target.frame, min: 1, max: 1 },
+          {
+            name: "credits button",
+            sel: `[popovertarget="${target.id}"]`,
+            min: 1,
+            max: 1,
+          },
+          ...(target.drawn
+            ? [{ name: "drawn shapes", sel: target.drawn, min: 1 }]
+            : []),
+          ...(target.stack
+            ? [{ name: "zoom group", sel: gate("globe-zoom"), min: 1, max: 1 }]
+            : []),
+        ])),
+      );
+    }
+    missed += miss.length;
+    console.log(`${miss.length ? "FAIL" : "ok  "} resolve ${target.path}`);
+    for (const m of miss) console.log(`       ${m}`);
+    await context.close();
+  }
+  await browser.close();
+  process.exit(missed ? 1 : 0);
+}
+
 for (const name of browsers) {
   const browser = await engines[name].launch();
   for (const viewport of VIEWPORTS) {
@@ -326,13 +384,11 @@ for (const name of browsers) {
       const button = page.locator(`[popovertarget="${target.id}"]`);
       if (target.stubWorker) {
         // The map is drawn lazily, when it nears the viewport, and only from 520 px of section.
-        await page.locator(".gmt-zonemap-mapsec").scrollIntoViewIfNeeded();
+        await page.locator(gate("map-section")).scrollIntoViewIfNeeded();
         await page.waitForTimeout(2000);
         const width = await page.evaluate(
-          () =>
-            document
-              .querySelector(".gmt-zonemap-mapsec")
-              .getBoundingClientRect().width,
+          (sel) => document.querySelector(sel).getBoundingClientRect().width,
+          gate("map-section"),
         );
         const found = await button.count();
         if (width < target.absentBelow) {
@@ -444,7 +500,10 @@ for (const name of browsers) {
         );
 
       await page.waitForTimeout(500); // the stack's fade-in and the panel's own transition settle
-      const g = await page.evaluate(geometry, target);
+      const g = await page.evaluate(geometry, {
+        ...target,
+        zoom: gate("globe-zoom"),
+      });
       if (target.stack) {
         if (g.groupLabel !== "Globe controls" || g.groupRole !== "group")
           fail(

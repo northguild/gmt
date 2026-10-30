@@ -1,217 +1,257 @@
 /**
  * @vitest-environment jsdom
  *
- * The Duration Parser Bench end to end: template, mount, interact, assert,
- * against the real `@northguild/gmt`.
+ * The Duration Parser Bench end to end: template, mount, interact, assert, against the real
+ * `@northguild/gmt`, through roles and accessible names.
  */
+import { screen, within } from "@testing-library/dom";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  cellsInColumn,
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
 import { GMT_MODULES } from "./gmt-modules";
-import { showUnavailable } from "./widget-mount";
+import { showUnavailable, WidgetLoadError } from "./widget-mount";
 import {
   CELL_NO_SIGNAL,
   RESULT_NO_SIGNAL,
   SAME_DURATION_TEXT,
   mountDurationParserBench,
-  renderDurationParserBenchTemplate,
 } from "./duration-parser-bench-mount";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+const entry = WIDGET_REGISTRY["showDurationParserBench"] as AnyWidgetEntry;
 
-async function mount(args = {}) {
-  const root = document.createElement("div");
-  root.innerHTML = renderDurationParserBenchTemplate(args);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountDurationParserBench(root, args, controller.signal);
-  return { root, handle, controller };
-}
+const open = (args: Record<string, unknown> = {}): Promise<RenderedWidget> =>
+  renderWidget(entry, { args });
 
-function type(root: HTMLElement, value: string) {
-  const el = q<HTMLInputElement>(root, "text");
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-function pick(root: HTMLElement, locale: string) {
-  const el = q<HTMLSelectElement>(root, "locale");
-  el.value = locale;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-const roles = (root: HTMLElement) =>
-  [...root.querySelectorAll("[data-role]")].map(
-    (e) => (e as HTMLElement).dataset["role"],
+const textBox = () =>
+  screen.getByRole("textbox", { name: "Duration string" }) as HTMLInputElement;
+const localeBox = () =>
+  screen.getByRole("combobox", { name: "Locale" }) as HTMLSelectElement;
+const result = () => screen.getByRole("status", { name: "Parsed duration" });
+const minuteTable = () =>
+  screen.getByRole("table", {
+    name: "Seven spellings of a minute, a month and a millisecond",
+  });
+const laytimeTable = () => screen.getByRole("table", { name: /^Rotterdam/ });
+const callsOutput = () =>
+  screen.getByRole("status", { name: "What the calls returned" });
+const fields = () =>
+  within(screen.getByRole("list", { name: "Duration fields" })).getAllByRole(
+    "listitem",
   );
+/** The value beside a term in the facts list, paired by position. */
+const fact = (term: string) => {
+  const terms = screen.getAllByRole("term");
+  const at = terms.findIndex((t) => within(t).queryByText(term) !== null);
+  return screen.getAllByRole("definition")[at]!;
+};
 
-const words = (root: HTMLElement) =>
-  [...root.querySelectorAll('[data-role="words-cell"]')].map(
-    (c) => c.textContent,
-  );
+/** Replaces what the text box holds, in one input event. */
+async function enter(w: RenderedWidget, value: string) {
+  await w.user.clear(textBox());
+  if (value !== "") await w.user.paste(value);
+}
+
+const textsOf = (cells: HTMLElement[]) =>
+  cells.map((c) => c.textContent?.trim() ?? "");
 
 describe("the template", () => {
-  it("holds three sections, a real text input with maxlength 64 and the Try buttons", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDurationParserBenchTemplate();
-    expect(root.querySelectorAll(".gmt-widget-section")).toHaveLength(3);
-    const input = q<HTMLInputElement>(root, "text");
-    expect(input.tagName).toBe("INPUT");
-    expect(input.getAttribute("maxlength")).toBe("64");
-    expect(input.value).toBe("2h 30m");
-    expect(q(root, "locale").tagName).toBe("SELECT");
-    expect(root.querySelectorAll('button[data-role="try"]')).toHaveLength(8);
-    expect(root.querySelectorAll(".gmt-dbench-cell")).toHaveLength(10);
+  it("holds a real text input with maxlength 64, a locale, eight Try buttons and ten fields", async () => {
+    await open();
+    const input = textBox();
+    expect(input).toHaveAttribute("maxlength", "64");
+    expect(input).toHaveValue("2h 30m");
+    expect(localeBox()).toBeInTheDocument();
+    const group = screen.getByRole("group", { name: "Try" });
+    expect(within(group).getAllByRole("button")).toHaveLength(8);
+    expect(fields()).toHaveLength(10);
+    for (const name of [
+      "1. Your string",
+      "2. What it reads as",
+      "3. Minute or month, day or 24 hours",
+    ]) {
+      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+    }
   });
 
-  it("is seeded: the text and a locale outside the list", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderDurationParserBenchTemplate({
-      text: "1m",
-      locale: "xx-YY",
-    });
-    expect(q<HTMLInputElement>(root, "text").value).toBe("1m");
-    expect(q<HTMLSelectElement>(root, "locale").value).toBe("xx-YY");
+  it("is seeded: the text and a locale outside the list", async () => {
+    await open({ text: "1m", locale: "xx-YY" });
+    expect(textBox()).toHaveValue("1m");
+    expect(localeBox()).toHaveValue("xx-YY");
   });
 
-  it("has the same elements before and after mount", async () => {
-    const before = document.createElement("div");
-    before.innerHTML = renderDurationParserBenchTemplate();
-    const { root } = await mount();
-    const names = new Set(roles(root));
-    for (const r of roles(before)) expect(names.has(r)).toBe(true);
+  it("writes the same parts before the mount as after", async () => {
+    const names = [
+      "Parsed duration",
+      "Calls made",
+      "What the calls returned",
+      "Duration fields",
+    ];
+    const early = await renderWidget(entry, { args: {}, aborted: true });
+    for (const name of names) {
+      expect(screen.getAllByLabelText(name).length).toBeGreaterThan(0);
+    }
+    early.destroy();
+    await open();
+    for (const name of names) {
+      expect(screen.getAllByLabelText(name).length).toBeGreaterThan(0);
+    }
   });
 });
 
 describe("mount", () => {
   it("reads the default string and fills both tables", async () => {
-    const { root } = await mount();
-    expect(q(root, "parser").dataset["parser"]).toBe("human");
-    expect(q(root, "result").textContent).toBe("PT2H30M");
-    expect(q(root, "compact").textContent).toBe("2h 30m");
-    expect(q(root, "roundtrip").textContent).toBe(SAME_DURATION_TEXT);
-    expect(root.querySelectorAll('[data-role="rows-minute"] tr')).toHaveLength(
-      7,
-    );
+    await open();
+    expect(result()).toHaveTextContent("PT2H30M");
+    expect(screen.getByText("human")).toBeInTheDocument();
+    expect(fact("Compact form")).toHaveTextContent("2h 30m");
+    expect(fact("Round trip")).toHaveTextContent(SAME_DURATION_TEXT);
+    expect(cellsInColumn(minuteTable(), "parseDuration")).toHaveLength(7);
     expect(
-      [...root.querySelectorAll('[data-role="hours-cell"]')].map(
-        (c) => c.textContent,
+      textsOf(
+        cellsInColumn(laytimeTable(), "Hours from Fri 27 Mar 2026 12:00"),
       ),
-    ).toEqual(["71", "73", "72", "72"]);
+    ).toEqual(["71", "72"]);
     expect(
-      root.querySelector(".gmt-dbench-laytime-note a")?.getAttribute("href"),
-    ).toMatch(/bimco\.org/);
+      textsOf(
+        cellsInColumn(laytimeTable(), "Hours from Fri 23 Oct 2026 12:00"),
+      ),
+    ).toEqual(["73", "72"]);
+    expect(
+      screen.getByRole("link", { name: /BIMCO|laytime|Laytime/i }),
+    ).toHaveAttribute("href", expect.stringMatching(/bimco\.org/));
+    await expectNoAxeViolations(document.body);
   });
 
   it("shows P1M's human cell as a sentinel and its ISO cell as P1M", async () => {
-    const { root } = await mount();
-    const last = root.querySelectorAll('[data-role="rows-minute"] tr')[6]!;
-    const cells = last.querySelectorAll("td");
-    expect(cells[1]!.textContent).toBe(CELL_NO_SIGNAL);
-    expect(cells[2]!.textContent).toBe("P1M");
-    expect(cells[3]!.textContent).toBe("month");
+    await open();
+    const table = minuteTable();
+    const human = cellsInColumn(table, "parseHumanDuration");
+    const iso = cellsInColumn(table, "parseDuration");
+    const unit = cellsInColumn(table, "Unit");
+    expect(human[6]).toHaveTextContent(CELL_NO_SIGNAL);
+    expect(iso[6]).toHaveTextContent("P1M");
+    expect(unit[6]).toHaveTextContent("month");
   });
 
   it("re-draws section 2 when the reader types, and lights the fields", async () => {
-    const { root } = await mount();
-    type(root, "1.5h");
-    expect(q(root, "result").textContent).toBe("PT1H30M");
-    const lit = [...root.querySelectorAll(".gmt-dbench-cell[data-lit]")].map(
-      (c) => (c as HTMLElement).dataset["field"],
-    );
-    expect(lit).toEqual(["hours", "minutes"]);
-    expect(q(root, "call-bench").textContent).toContain(
+    const w = await open();
+    await enter(w, "1.5h");
+    expect(result()).toHaveTextContent("PT1H30M");
+    const item = (name: string) =>
+      fields().find((f) => within(f).queryByText(name) !== null);
+    expect(item("hours")).toHaveTextContent("1");
+    expect(item("minutes")).toHaveTextContent("30");
+    expect(item("years")).toHaveTextContent("y0years");
+    expect(screen.getByRole("group", { name: "Calls made" })).toHaveTextContent(
       'parseHumanDuration("1.5h")',
     );
+    await expectNoAxeViolations(document.body);
   });
 
   it("keeps a leading space and shows a sentinel, not a blank", async () => {
-    const { root } = await mount();
-    type(root, " 2h");
-    expect(q<HTMLInputElement>(root, "text").value).toBe(" 2h");
-    expect(q(root, "parser").dataset["parser"]).toBe("none");
-    expect(q(root, "result").textContent).toBe(RESULT_NO_SIGNAL);
-    expect(
-      q(root, "result").classList.contains("gmt-playground-sentinel"),
-    ).toBe(true);
-    expect(q(root, "refusal").textContent).toMatch(/Neither parser reads it/);
-    expect(q(root, "compact").textContent).toBe("not called");
-    expect(q(root, "bench-output").textContent).toBe("NO SIGNAL\nNO SIGNAL");
+    const w = await open();
+    await enter(w, " 2h");
+    expect(textBox().value).toBe(" 2h");
+    expect(screen.getByText("neither parser")).toBeInTheDocument();
+    expect(result()).toHaveTextContent(RESULT_NO_SIGNAL);
+    expect(screen.getByText(/Neither parser reads it/)).toBeInTheDocument();
+    expect(fact("Compact form")).toHaveTextContent("not called");
+    expect(callsOutput().textContent?.match(/NO SIGNAL/g)).toHaveLength(2);
+    await expectNoAxeViolations(document.body);
   });
 
   it("does not call a valid human string a failure for the ISO parser", async () => {
-    const { root } = await mount();
-    expect(q(root, "bench-output").textContent).not.toContain("NO SIGNAL");
+    await open();
+    expect(callsOutput()).not.toHaveTextContent(/NO SIGNAL/);
   });
 
   it("fills the field from a Try button and runs the call", async () => {
-    const { root } = await mount();
-    root.querySelector<HTMLButtonElement>('button[data-try="PT90M"]')!.click();
-    expect(q<HTMLInputElement>(root, "text").value).toBe("PT90M");
-    expect(q(root, "parser").dataset["parser"]).toBe("iso");
-    expect(q(root, "compact").textContent).toBe("90m");
+    const w = await open();
+    await w.user.click(screen.getByRole("button", { name: "PT90M" }));
+    expect(textBox()).toHaveValue("PT90M");
+    expect(screen.getByText("ISO 8601")).toBeInTheDocument();
+    expect(fact("Compact form")).toHaveTextContent("90m");
+    await expectNoAxeViolations(document.body);
   });
 
   it("re-draws only the formatDuration cells on a locale change", async () => {
-    const { root } = await mount();
-    const humanCells = [
-      ...root.querySelectorAll('[data-role="rows-minute"] td:nth-child(2)'),
-    ];
-    const before = words(root);
-    const readout = q(root, "result").textContent;
-    pick(root, "de-DE");
-    expect(words(root)).not.toEqual(before);
-    expect(q(root, "result").textContent).toBe(readout);
+    const w = await open();
+    const table = minuteTable();
+    const humanCells = cellsInColumn(table, "parseHumanDuration");
+    const before = textsOf(cellsInColumn(table, "formatDuration"));
+    await w.user.selectOptions(localeBox(), "de-DE");
+    expect(textsOf(cellsInColumn(minuteTable(), "formatDuration"))).not.toEqual(
+      before,
+    );
+    expect(result()).toHaveTextContent("PT2H30M");
     // The other cells are the same nodes: they were not re-drawn.
-    expect([
-      ...root.querySelectorAll('[data-role="rows-minute"] td:nth-child(2)'),
-    ]).toEqual(humanCells);
+    const after = cellsInColumn(minuteTable(), "parseHumanDuration");
+    after.forEach((cell, i) => expect(cell).toBe(humanCells[i]));
+    await expectNoAxeViolations(document.body);
   });
+});
 
+describe("permalinks", () => {
   it("round-trips the text, with spaces and commas, through a permalink", async () => {
-    const { handle, root } = await mount();
-    type(root, "2h, and 30m");
-    pick(root, "de-DE");
-    const state = handle.getPermalinkState?.() ?? {};
-    expect(state).toEqual({ text: "2h, and 30m", locale: "de-DE" });
-    const url = encodeWidgetPermalink("durationbench", state);
-    window.history.pushState({}, "", url);
-    const seed = seedFromLocation("durationbench");
+    const w = await open();
+    await enter(w, "2h, and 30m");
+    await w.user.selectOptions(localeBox(), "de-DE");
+    const url = w.permalink();
+    const state = { text: "2h, and 30m", locale: "de-DE" };
+    expect(encodeWidgetPermalink("durationbench", state)).toBe(url);
+    const seed = seedFromLocation("durationbench", url.slice(url.indexOf("?")));
     expect(seed).toEqual(state);
-    const again = await mount(seed);
-    expect(q<HTMLInputElement>(again.root, "text").value).toBe("2h, and 30m");
-    expect(q<HTMLSelectElement>(again.root, "locale").value).toBe("de-DE");
-    expect(q(again.root, "result").textContent).toBe("PT2H30M");
+    w.destroy();
+
+    await open(seed ?? {});
+    expect(textBox()).toHaveValue("2h, and 30m");
+    expect(localeBox()).toHaveValue("de-DE");
+    expect(result()).toHaveTextContent("PT2H30M");
   });
 });
 
 describe("when the library does not load", () => {
   it("rejects with a load error the host turns into the unavailable notice", async () => {
     const originals = { ...GMT_MODULES };
-    for (const key of Object.keys(GMT_MODULES)) {
-      GMT_MODULES[key] = () => Promise.reject(new Error("offline"));
-    }
     try {
-      const root = document.createElement("div");
-      root.innerHTML = renderDurationParserBenchTemplate();
-      document.body.append(root);
-      let failure: unknown;
-      await mountDurationParserBench(
-        root,
+      const shown = await renderWidget(entry, { args: {}, aborted: true });
+      for (const key of Object.keys(GMT_MODULES)) {
+        GMT_MODULES[key] = () => Promise.reject(new Error("offline"));
+      }
+      const failure = await mountDurationParserBench(
+        shown.root,
         {},
         new AbortController().signal,
-      ).catch((e) => {
-        failure = e;
-        showUnavailable(root, e);
-      });
-      expect(failure).toBeInstanceOf(Error);
-      expect(root.textContent).toMatch(/./);
+      ).then(
+        () => null,
+        (e: unknown) => e,
+      );
+      expect(failure).toBeInstanceOf(WidgetLoadError);
+      showUnavailable(shown.root, failure);
+      expect(shown.root).not.toBeEmptyDOMElement();
     } finally {
       Object.assign(GMT_MODULES, originals);
     }
+  });
+});
+
+describe("the length cap", () => {
+  it("stops the duration string at 64 characters", async () => {
+    const w = await open();
+    const box = textBox();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(72));
+    expect(box).toHaveValue("x".repeat(64));
   });
 });

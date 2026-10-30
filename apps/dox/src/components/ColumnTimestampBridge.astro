@@ -21,7 +21,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderColumnTimestampBridgeTemplate();
+const html = renderColumnTimestampBridgeTemplate("column-timestamp-bridge", {}).value;
 ---
 
 {
@@ -40,7 +40,7 @@ const html = renderColumnTimestampBridgeTemplate();
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("colbridge");
     document
-      .querySelectorAll<HTMLElement>(".gmt-column-timestamp-bridge")
+      .querySelectorAll<HTMLElement>('[data-widget="column-timestamp-bridge"]')
       .forEach((el) => {
         mountColumnTimestampBridge(el, seed, new AbortController().signal).catch(
           (error) => showUnavailable(el, error),

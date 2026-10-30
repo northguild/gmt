@@ -1,0 +1,190 @@
+/* <gmt-chips>: native radios, checkboxes or switches painted as chips. The input stays
+   real and covers its chip, so IME, autofill, mobile keyboards and screen readers see it. */
+
+.root {
+  container-type: inline-size;
+  display: block;
+  font-size: clamp(0.8125rem, 0.78rem + 0.15vw, 0.9375rem);
+}
+
+.set {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-block-end: 0.375rem;
+  color: var(--gmt-ice);
+  font-weight: 600;
+}
+
+.items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.input {
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.face {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  min-block-size: 2rem;
+  min-inline-size: var(--gmt-target-min);
+  padding-block: 0.25rem;
+  padding-inline: 0.75rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface-2);
+  color: var(--gmt-ice);
+  line-height: 1.2;
+  transition:
+    background-color var(--gmt-motion-fast) var(--gmt-easing),
+    border-color var(--gmt-motion-fast) var(--gmt-easing);
+
+  /* The mark: a square for a checkbox, a disc for a radio. */
+  &::before {
+    content: "";
+    flex: none;
+    box-sizing: border-box;
+    inline-size: 0.625rem;
+    block-size: 0.625rem;
+    border: 1px solid currentcolor;
+    border-radius: 2px;
+  }
+}
+
+.chip:hover .face,
+.chip:focus .face {
+  border-color: var(--gmt-cyan);
+}
+
+/* Selected: solid accent, with its own ink (cause 8). Not a tint, not the page ink. */
+:checked + .face {
+  border-color: var(--gmt-selected-fill);
+  background: var(--gmt-selected-fill);
+  color: var(--gmt-selected-ink);
+
+  &::before {
+    background: currentcolor;
+  }
+}
+
+.radioFace::before {
+  border-radius: 50%;
+}
+
+/* A switch swaps the mark for a track and a thumb. */
+.switchFace {
+  &::before {
+    inline-size: 1.75rem;
+    block-size: 1rem;
+    border-radius: 0.5rem;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: calc(0.75rem + 0.1875rem);
+    inline-size: 0.625rem;
+    block-size: 0.625rem;
+    translate: 0 -50%;
+    border-radius: 50%;
+    background: currentcolor;
+    transition: inset-inline-start var(--gmt-motion-fast) var(--gmt-easing);
+  }
+}
+
+:checked + .switchFace {
+  &::before {
+    background: transparent;
+  }
+
+  &::after {
+    inset-inline-start: calc(0.75rem + 1.0625rem);
+  }
+}
+
+.input:focus-visible + .face {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+.input:disabled + .face {
+  opacity: 0.55;
+}
+
+/* A narrow column stacks the chips so none is cut off. */
+@container (inline-size < 16rem) {
+  .items {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (forced-colors: active) {
+  .legend {
+    color: CanvasText;
+  }
+
+  .face {
+    border-color: ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  .input:checked + .face {
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .input:focus-visible + .face {
+    outline: 2px solid Highlight;
+  }
+
+  .input:disabled + .face {
+    opacity: 1;
+    border-style: dashed;
+    color: GrayText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .face {
+    border-color: var(--gmt-ice);
+  }
+
+  .input:checked + .face {
+    border-width: 2px;
+  }
+
+  .input:focus-visible + .face {
+    outline-width: 3px;
+  }
+}

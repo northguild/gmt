@@ -1,0 +1,88 @@
+/* Nothing here may move while an answer arrives: every row is complete but its last cell, which
+   holds the height of its one line. A full border and a tinted fill: no one-sided accent, and no
+   colour carries a verdict. */
+
+.list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px var(--gmt-space-3);
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.zone,
+.when,
+.utc,
+.present {
+  white-space: nowrap;
+}
+
+.shift {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.when {
+  grid-column: 1;
+}
+
+.utc {
+  grid-column: 2;
+  text-align: end;
+  font-size: 0.75rem;
+  color: var(--gmt-ice-dim);
+}
+
+.by,
+.present {
+  grid-column: 1 / -1;
+}
+
+.by {
+  color: var(--gmt-ice-dim);
+}
+
+/* The answer's cell holds one line before and after it arrives. */
+.present {
+  min-block-size: 1lh;
+}
+
+@media (forced-colors: active) {
+  .row {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .utc,
+  .by {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .row {
+    border-color: CanvasText;
+  }
+
+  .utc,
+  .by {
+    color: CanvasText;
+  }
+}

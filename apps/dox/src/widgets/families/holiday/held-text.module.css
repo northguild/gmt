@@ -1,0 +1,46 @@
+/* heldText: the live line and every text it can say in one grid cell. */
+
+.held {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.text,
+.ghost {
+  grid-area: 1 / 1;
+  min-block-size: 2lh;
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.text {
+  color: var(--gmt-ice);
+
+  &[data-state="sentinel"] {
+    color: var(--gmt-signal-ink);
+  }
+}
+
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (forced-colors: active) {
+  .text {
+    color: CanvasText;
+
+    &[data-state="sentinel"] {
+      color: CanvasText;
+      font-weight: 700;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .text[data-state="sentinel"] {
+    font-weight: 700;
+  }
+}

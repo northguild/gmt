@@ -4,7 +4,9 @@
  * theme, run a few at a time.
  *
  * A gate supplies `check({ page, path, width, browserName })`, which returns findings as
- * `{ rule, selector?, message }`. This module adds the page, browser, width and theme, writes each
+ * `{ rule, target, selector?, message }`: `target` is the element's identity key
+ * (`window.__gmtIdentity`, installed in every page here) or `page`, and `selector` the readable CSS
+ * path (`window.__gmtCssPath`). This module adds the page, browser, width and theme, writes each
  * through `recordFinding`, prints one line per cell, counts the cells it measured, and ends the run:
  * exit 0 when nothing failed, 1 for any finding or when nothing was measured.
  *
@@ -17,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import { blockOffSite, emptyRunProblem } from "../gate-checks.mjs";
 import { applyPageContract } from "../gates/contract.mjs";
 import { recordFinding, recordMeasured } from "../gates/findings.mjs";
+import { identityScript } from "./element-identity.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DIST_SITE = path.join(HERE, "../../dist/gmt");
@@ -90,7 +93,7 @@ export function parseSweep({ gate, pages, defaults }) {
 }
 
 /**
- * `load`, then fonts, then two animation frames, then every `.gmt-grow` region at rest: the page
+ * `load`, then fonts, then two animation frames, then every `[data-growing]` region at rest: the page
  * is as it will be for the reader. A region still easing to its height (`data-growing`, a JS frame
  * loop and not a CSS animation) is clipped at a stale height, so the text after it sits over it
  * and a target-size or focus-obscured reading is of a layout nobody rests on. The loop releases
@@ -102,7 +105,7 @@ export async function settle(page) {
     await new Promise((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(resolve)),
     );
-    const growing = () => document.querySelector(".gmt-grow[data-growing]");
+    const growing = () => document.querySelector("[data-growing]");
     // Done when none has been easing for a whole 500 ms: a region the widget mounts a beat late
     // starts its ease only then, so the first quiet frame is not the end.
     const until = performance.now() + 10000;
@@ -161,9 +164,9 @@ export async function settleTransitions(page, limit = 600) {
  * rail without waiting on the model. Returns a reason when the rail did not open, else null.
  */
 export async function openRail(page) {
-  const card = page.locator("[data-widget]").first();
+  const card = page.locator("[data-starter]").first();
   if ((await card.count()) === 0)
-    return "no example card (a [data-widget] button) on the page";
+    return "no example card (a [data-starter] button) on the page";
   await card.click();
   try {
     await page
@@ -217,12 +220,14 @@ export async function sweep({
               localStorage.setItem("starlight-theme", t);
             } catch {}
           }, theme);
+          await context.addInitScript({ content: identityScript() });
           await blockOffSite(context, base);
           const page = await context.newPage();
           const res = await page.goto(base + cell.path, { waitUntil: "load" });
           if (!res || res.status() !== 200) {
             found.push({
               rule: "http-status",
+              target: "page",
               message: `the page answered HTTP ${res ? res.status() : "none"}, not 200`,
             });
           } else {
@@ -241,6 +246,7 @@ export async function sweep({
         } catch (error) {
           found.push({
             rule: "check-crashed",
+            target: "page",
             message: `the check crashed: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
           });
         } finally {
@@ -253,6 +259,7 @@ export async function sweep({
             gate,
             rule: f.rule,
             page: cell.path,
+            target: f.target,
             selector: f.selector ?? null,
             browser: browserName,
             width: cell.width,

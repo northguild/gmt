@@ -32,6 +32,7 @@ import { chromium, firefox, webkit } from "@playwright/test";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordLabelled, recordMeasured } from "./gates/findings.mjs";
+import { control, gate, resolveMisses } from "./lib/locate.mjs";
 
 const GATE = "canada-stored-still";
 import {
@@ -84,28 +85,64 @@ const fail = (message) => {
   recordLabelled({ gate: GATE, page: PATH, message });
 };
 
+/** The stored-times section, and its controls by role and exact accessible name. */
+const STORED = gate("stored");
+const CONTROLS = {
+  lines: { role: "textbox", name: "Saved events, one per line" },
+  check: { role: "button", name: "Check" },
+  example: { role: "button", name: "Reset example" },
+  moved: { role: "button", name: "Only moved" },
+};
+const rows = (page) => page.locator(`${gate("stored-table")} tbody tr`);
+/** The cards of the page: its sections, the key-point cards, the pin panel, the map block, the clocks. */
+const CARD_PARTS = gate(
+  "browser",
+  "pickcard",
+  "clocks",
+  "stored",
+  "keypoints-card",
+  "changes",
+  "transitions",
+  "map-pin",
+  "map-block",
+  "clock",
+);
+
 async function snapshot(page) {
-  return page.evaluate(() => {
-    const box = (el) => {
-      const r = el.getBoundingClientRect();
-      // In document coordinates: the harness scrolls (a pressed control is brought into view), and
-      // that is not the form moving. A real shift of the layout still changes these.
-      return [r.x + scrollX, r.y + scrollY, r.width, r.height].map(
-        (n) => Math.round(n * 100) / 100,
-      );
-    };
-    const section = document.querySelector(".gmt-clockcheck-stored");
-    const pick = (selector) => box(section.querySelector(selector));
-    return {
-      heading: pick("h4"),
-      textarea: pick("textarea"),
-      steps: pick(".gmt-clockcheck-steps"),
-      check: pick('[data-role="stored-check"]'),
-      example: pick('[data-role="stored-example"]'),
-      head: pick(".gmt-clockcheck-stored-head"),
-      toggle: pick(".gmt-clockcheck-seg"),
-    };
-  });
+  // The two buttons are found by role and name, then measured in the page.
+  const check = await control(page, STORED, CONTROLS.check).elementHandle();
+  const example = await control(page, STORED, CONTROLS.example).elementHandle();
+  return page.evaluate(
+    (sel) => {
+      const box = (el) => {
+        const r = el.getBoundingClientRect();
+        // In document coordinates: the harness scrolls (a pressed control is brought into view), and
+        // that is not the form moving. A real shift of the layout still changes these.
+        return [r.x + scrollX, r.y + scrollY, r.width, r.height].map(
+          (n) => Math.round(n * 100) / 100,
+        );
+      };
+      const section = document.querySelector(sel.stored);
+      const pick = (selector) => box(section.querySelector(selector));
+      return {
+        heading: pick("h4"),
+        textarea: pick("textarea"),
+        steps: pick(sel.steps),
+        check: box(sel.check),
+        example: box(sel.example),
+        head: pick(sel.head),
+        toggle: pick(sel.toggle),
+      };
+    },
+    {
+      stored: STORED,
+      steps: gate("stored-steps"),
+      head: gate("stored-head"),
+      toggle: gate("stored-toggle"),
+      check,
+      example,
+    },
+  );
 }
 
 function same(label, before, after) {
@@ -118,30 +155,29 @@ function same(label, before, after) {
 
 /** Page-absolute rects of every card on the page, in order, and the page's own height. */
 async function cardRects(page) {
-  return page.evaluate((rootSelector) => {
-    const root = document.querySelector(rootSelector);
-    const cards = [
-      ...root.querySelectorAll(
-        "section.gmt-widget-section, .gmt-keypoints-card, .gmt-zonemap-pin, .gmt-zonemap-map-block, .gmt-clockcheck-clock",
-      ),
-    ];
-    return {
-      height: document.documentElement.scrollHeight,
-      cards: cards.map((card, index) => {
-        const r = card.getBoundingClientRect();
-        const name =
-          card.querySelector("h2, h3, h4")?.textContent?.trim() ||
-          card.dataset.zone ||
-          card.className;
-        return {
-          key: `${index} ${name}`,
-          rect: [r.x + scrollX, r.y + scrollY, r.width, r.height].map(
-            (n) => Math.round(n * 100) / 100,
-          ),
-        };
-      }),
-    };
-  }, ROOT_SELECTOR);
+  return page.evaluate(
+    ({ rootSelector, parts }) => {
+      const root = document.querySelector(rootSelector);
+      const cards = [...root.querySelectorAll(parts)];
+      return {
+        height: document.documentElement.scrollHeight,
+        cards: cards.map((card, index) => {
+          const r = card.getBoundingClientRect();
+          const name =
+            card.querySelector("h2, h3, h4")?.textContent?.trim() ||
+            card.dataset.zone ||
+            card.dataset.gate;
+          return {
+            key: `${index} ${name}`,
+            rect: [r.x + scrollX, r.y + scrollY, r.width, r.height].map(
+              (n) => Math.round(n * 100) / 100,
+            ),
+          };
+        }),
+      };
+    },
+    { rootSelector: ROOT_SELECTOR, parts: CARD_PARTS },
+  );
 }
 
 /** The GET held until a snapshot is taken, then answered with `status`: nothing may move. */
@@ -212,6 +248,43 @@ async function errorAnswerStill(browser, name, width, status) {
   }
 }
 
+/* `--resolve-only`: load the page once and check that every hook this gate measures by is on it. */
+if (args.includes("--resolve-only")) {
+  const browser = await chromium.launch();
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+  });
+  await blockOffSite(context, BASE);
+  const page = await context.newPage();
+  await routeWorker(page, REGION, { getFixture: GET_FIXTURE });
+  const response = await page.goto(`${BASE}${PATH}`, { waitUntil: "load" });
+  const miss = [];
+  if (!response || response.status() !== 200)
+    miss.push(`the page answered HTTP ${response?.status() ?? "none"}`);
+  else {
+    await waitForState(page, ["ready"]);
+    miss.push(
+      ...(await resolveMisses(page, [
+        { name: "stored section", sel: STORED, min: 1, max: 1 },
+        { name: "steps", sel: gate("stored-steps"), min: 1, max: 1 },
+        { name: "head", sel: gate("stored-head"), min: 1, max: 1 },
+        { name: "toggle", sel: gate("stored-toggle"), min: 1, max: 1 },
+        { name: "table", sel: gate("stored-table"), min: 1, max: 1 },
+        ...Object.entries(CONTROLS).map(([key, spec]) => ({
+          name: `control ${key}`,
+          loc: control(page, STORED, spec),
+          min: 1,
+          max: 1,
+        })),
+      ])),
+    );
+  }
+  console.log(`${miss.length ? "FAIL" : "ok  "} resolve ${PATH}`);
+  for (const m of miss) console.log(`       ${m}`);
+  await browser.close();
+  process.exit(miss.length ? 1 : 0);
+}
+
 for (const name of BROWSERS) {
   const launcher = LAUNCHERS[name];
   const browser = await launcher.launch();
@@ -240,8 +313,8 @@ for (const name of BROWSERS) {
         // is already on screen; a press before that is a native form submit (a reload). The mount
         // binds them before it asks the Worker, so `data-state="ready"` means they are bound.
         await waitForState(page, ["ready"]);
-        await page.click('[data-role="stored-example"]');
-        if ((await page.inputValue('[data-role="stored-lines"]')) === "") {
+        await control(page, STORED, CONTROLS.example).click();
+        if ((await control(page, STORED, CONTROLS.lines).inputValue()) === "") {
           throw new Error(
             "the page is ready but the stored-times handlers are not bound (Example filled nothing)",
           );
@@ -249,22 +322,18 @@ for (const name of BROWSERS) {
         const before = await snapshot(page);
 
         // Keyboard only: Tab from the textarea (past the formats disclosure) to Check, then Enter.
-        await page.focus('[data-role="stored-lines"]');
+        await control(page, STORED, CONTROLS.lines).focus();
         for (let i = 0; i < 2; i += 1) {
           await page.keyboard.press(name === "webkit" ? "Alt+Tab" : "Tab");
         }
         await page.keyboard.press("Enter");
-        await page.waitForSelector(".gmt-clockcheck-stored-table tbody tr");
-        const rows = await page
-          .locator(".gmt-clockcheck-stored-table tbody tr")
-          .count();
-        if (rows !== 6) fail(`${label}: expected 6 result rows, saw ${rows}`);
+        await rows(page).first().waitFor();
+        const count = await rows(page).count();
+        if (count !== 6) fail(`${label}: expected 6 result rows, saw ${count}`);
         same(`${label} after the answer`, before, await snapshot(page));
 
-        await page.click('[data-role="stored-show-moved"]');
-        const shown = await page
-          .locator(".gmt-clockcheck-stored-table tbody tr:visible")
-          .count();
+        await control(page, STORED, CONTROLS.moved).click();
+        const shown = await rows(page).filter({ visible: true }).count();
         if (shown !== 3)
           fail(`${label}: "Only moved" should leave 3 rows, saw ${shown}`);
         same(`${label} after the toggle`, before, await snapshot(page));
@@ -279,7 +348,7 @@ for (const name of BROWSERS) {
           );
         }
         if (failures.length === failuresBefore) {
-          console.log(`${label}: form held still, ${rows} rows`);
+          console.log(`${label}: form held still, ${count} rows`);
         }
       } catch (error) {
         fail(

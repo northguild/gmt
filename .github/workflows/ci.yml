@@ -30,7 +30,7 @@ jobs:
   # tests with `contains(fromJSON(...), '<id>')`. `build_lint`, `tests` and `gmt_tests` say
   # whether a matrix job has anything to do. `dox_changed` says whether a pull request changed a
   # file under apps/dox/ or pnpm-lock.yaml (a Playwright or axe-core bump), which the advisory
-  # `dox-gates` job waits for. The nightly sweep's change check reads the same two paths.
+  # `dox-gates` job waits for.
   #
   # The matrix jobs are required status checks. A matrix job skipped by a job-level `if`
   # reports one check under its unexpanded name ("Tests (Node ${{ matrix.node-version }})"),
@@ -276,7 +276,7 @@ jobs:
           fi
 
   # The Dox browser gates on the pages the PR changed, in Chromium. Advisory: it is not a required
-  # check until the owner makes it one. `main` is covered by the nightly sweep, not by this job.
+  # check until the owner makes it one. `main` is covered by the weekly sweep, not by this job.
   # `--against` is the merge base `determine-affected` computes, so both see the same diff.
   dox-gates:
     name: Dox gates (changed pages, Chromium)

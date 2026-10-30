@@ -1,0 +1,86 @@
+/* Cards stacked, left of the browser card. The panel style of the other cards: a full 1px border
+   and the site's bevel. `margin: 0` beats the flow spacing Starlight puts between siblings. */
+
+.points {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.title {
+  margin: 0 0 var(--gmt-space-2);
+  font-size: 1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--gmt-space-3);
+}
+
+.card {
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+
+  & p,
+  & ol {
+    margin: 0 0 var(--gmt-space-2);
+  }
+
+  & ol {
+    padding-inline-start: 1.25rem;
+  }
+
+  & li {
+    margin: 0 0 var(--gmt-space-1);
+  }
+
+  & > :last-child {
+    margin-block-end: 0;
+  }
+
+  & code {
+    overflow-wrap: anywhere;
+    font-size: 0.75rem;
+  }
+
+  & a {
+    color: var(--gmt-cyan-ink);
+    text-underline-offset: 0.15em;
+  }
+}
+
+.heading {
+  margin: 0 0 var(--gmt-space-2);
+  font-size: 0.875rem;
+  color: var(--gmt-cyan-ink);
+}
+
+@media (forced-colors: active) {
+  .card {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .heading {
+    color: CanvasText;
+  }
+
+  .card a {
+    color: LinkText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .card {
+    border-color: CanvasText;
+  }
+}

@@ -1,0 +1,62 @@
+/*
+ * The connector between the Crossing Clock's two faces: the real elapsed time above a line,
+ * the naive reading below it, in words. Neither is a verdict colour; amber is the sentinel's.
+ */
+
+.connector {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  inline-size: 100%;
+  text-align: center;
+}
+
+.elapsed,
+.naive {
+  display: block;
+  margin: 0;
+  min-block-size: 2lh;
+  overflow-wrap: anywhere;
+}
+
+.elapsed {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-md);
+  color: var(--gmt-ice);
+}
+
+.naive {
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+.line {
+  inline-size: 100%;
+  block-size: 1px;
+  background: var(--gmt-border-strong);
+}
+
+@media (prefers-contrast: more) {
+  .naive {
+    color: var(--gmt-ice);
+  }
+
+  .line {
+    background: var(--gmt-ice);
+  }
+}
+
+@media (forced-colors: active) {
+  .elapsed,
+  .naive {
+    color: CanvasText;
+  }
+
+  .line {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+}

@@ -1,0 +1,22 @@
+/* weekStrip: whole weeks stacked under one weekday header. The cells are month-grid's. */
+
+.strip {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  min-inline-size: 0;
+}
+
+.weeks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}

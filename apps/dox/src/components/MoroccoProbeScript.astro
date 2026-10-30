@@ -2,8 +2,9 @@
 /**
  * The pre-paint fill of the Morocco page's "Your browser" card (CORE-89). It sits at the end of the
  * page text, so the browser has parsed the whole page when it runs and no paint shows the page cut
- * off; the card is filled before the first paint of the verdict. `clock-change-probe.ts`
- * explains what it does.
+ * off; the card is filled before the first paint of the verdict. It finds the card's parts by the
+ * ids `probeCard` writes (`<idPrefix>-browser-*`, listed once in `probe-ids.ts`), so the markup and
+ * the script cannot drift. The mount's `fillProbe` then leaves an already-filled card alone.
  */
 import { moroccoProbe } from "../lib/morocco-clock-change";
 import { probeInlineSource } from "../lib/clock-change-probe";

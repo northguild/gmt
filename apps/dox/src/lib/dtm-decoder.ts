@@ -74,7 +74,7 @@ export interface DtmState {
   zones: [string, string, string, string];
 }
 
-export type DtmSplit =
+type DtmSplit =
   | {
       kind: "segment";
       qualifier: string;
@@ -167,7 +167,7 @@ export function effective(state: DtmState): {
 // Presets
 // ---------------------------------------------------------------------------
 
-export interface DtmPreset {
+interface DtmPreset {
   id: string;
   label: string;
   description: string;
@@ -368,7 +368,7 @@ export function permalinkOf(state: DtmState): Record<string, string> {
 // Reading: classify the code, then call the parser of its kind
 // ---------------------------------------------------------------------------
 
-export type DtmWhy =
+type DtmWhy =
   | "blank-value"
   | "no-format"
   | "unread-code"
@@ -428,9 +428,7 @@ export function readDtm(state: DtmState, lib: EdiLib): DtmRead {
 }
 
 /** The pair `toOffsetInstant` returned for an offset date-time, else `null`. */
-export function pairOf(
-  read: DtmRead,
-): { instant: string; offset: string } | null {
+function pairOf(read: DtmRead): { instant: string; offset: string } | null {
   const r = read.pair?.result;
   return r === null || r === undefined
     ? null
@@ -440,12 +438,6 @@ export function pairOf(
 // ---------------------------------------------------------------------------
 // What the value states
 // ---------------------------------------------------------------------------
-
-export type OffsetVerdict = "stated" | "not-stated";
-
-export function offsetVerdict(read: DtmRead): OffsetVerdict {
-  return pairOf(read) === null ? "not-stated" : "stated";
-}
 
 /** The verdict plate's words. */
 export function verdictText(read: DtmRead): string {
@@ -473,7 +465,7 @@ export function detailText(read: DtmRead): string {
     : (DETAIL[read.classified.kind] ?? "");
 }
 
-export type MemberKey = "kind" | "value" | "periodEnd" | "instant" | "offset";
+type MemberKey = "kind" | "value" | "periodEnd" | "instant" | "offset";
 
 export const MEMBER_ROWS: readonly {
   key: MemberKey;
@@ -558,7 +550,7 @@ export function timelineEmptyText(read: DtmRead | null): string {
   return "A date or a time alone names no instant: nothing to place.";
 }
 
-export interface GapRow {
+interface GapRow {
   zone: string;
   /** The first end resolved in the zone, `""` when it did not resolve. */
   instant: string;
@@ -626,7 +618,7 @@ export const REASON_TEXT: Record<
 };
 
 /** Why a state is the sentinel, decided from the calls that were made. */
-export function whyNot(state: DtmState, read: DtmRead, lib: EdiLib): DtmWhy {
+function whyNot(state: DtmState, read: DtmRead, lib: EdiLib): DtmWhy {
   const { value, format, split } = effective(state);
   if (value === "") return "blank-value";
   if (format === "") return "no-format";
@@ -695,7 +687,7 @@ export function splitText(state: DtmState): string {
 // Writing back
 // ---------------------------------------------------------------------------
 
-export interface WriteBack {
+interface WriteBack {
   /** The formatter's call: the kind's formatter, a period's start and end as two arguments. */
   call: EdiCall;
   output: string;
@@ -740,7 +732,7 @@ export function writeBack(read: DtmRead, lib: EdiLib): WriteBack | null {
 
 /** A segment's three components as sent: the text between the service
  *  characters, with a release character still in it. */
-export interface SegmentSpans {
+interface SegmentSpans {
   qualifier: string;
   value: string;
   format: string;
@@ -754,7 +746,7 @@ export interface SegmentSpans {
  * service characters as `splitDtm`; `null` for anything that is not a `DTM+`
  * segment.
  */
-export function segmentSpans(raw: string): SegmentSpans | null {
+function segmentSpans(raw: string): SegmentSpans | null {
   const input = raw.trim();
   if (!input.startsWith("DTM+")) return null;
   const parts: string[] = [""];
@@ -812,7 +804,7 @@ export function dtmParts(state: DtmState): PicPart[] {
   ];
 }
 
-export interface DtmFigure {
+interface DtmFigure {
   halves: PicHalf[];
   separator: string;
   /** `no offset` when the code carries none, else `""`. */
@@ -868,7 +860,7 @@ export function dtmFigure(
 }
 
 // ---------------------------------------------------------------------------
-// Every text a region can show, for the height it reserves (`holdHtml`)
+// Every text a region can show, for the height it reserves (`families/edi/edi-hold.ts`)
 // ---------------------------------------------------------------------------
 
 /** The kinds, to run the pure text functions over. Never shown; only measured. */

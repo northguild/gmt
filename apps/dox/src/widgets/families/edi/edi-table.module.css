@@ -1,0 +1,69 @@
+/* The members table and the zone strip. A cell reserves the width of its longest value in `ch`
+   (`--w`), so a longer answer never widens its column; a value never wraps. */
+
+.member {
+  display: inline-block;
+  min-inline-size: 12ch;
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+
+  /* A member the value does not state, or no result at all, is quieter than a value. */
+  &[data-state="absent"],
+  &[data-state="none"] {
+    color: var(--gmt-ice-dim);
+  }
+}
+
+.cell {
+  display: inline-block;
+  min-inline-size: var(--w);
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.number {
+  margin-inline-start: var(--gmt-space-2);
+  font-family: var(--gmt-font-mono);
+}
+
+.zoneLabel {
+  display: block;
+}
+
+/* The sentinel: amber words in a bracketed chip. */
+.lost {
+  padding-inline: var(--gmt-space-1);
+  border: 1px solid var(--gmt-signal-border);
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+
+  &::before {
+    content: "\27e8\a0";
+  }
+
+  &::after {
+    content: "\a0\27e9";
+  }
+}
+
+@media (forced-colors: active) {
+  .lost {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .member[data-state="absent"],
+  .member[data-state="none"] {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .member[data-state="absent"],
+  .member[data-state="none"] {
+    color: var(--gmt-ice);
+  }
+}

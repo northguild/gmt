@@ -662,7 +662,7 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
 }
 
 /** Per-draw parameters for the coverage pass. */
-export const LAYER_STRUCT_WGSL = /* wgsl */ `
+const LAYER_STRUCT_WGSL = /* wgsl */ `
 struct Layer {
   /** One-hot channel this layer writes: land fill, land stroke, region fill,
    *  region stroke. */

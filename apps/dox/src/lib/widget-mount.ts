@@ -78,7 +78,7 @@ export const UNAVAILABLE_CLASS = "gmt-widget-unavailable";
  *
  * For the `.astro` shells, which have no React to render an error state: they
  * call this from the `.catch` on their mount. It marks the root
- * `data-state="unavailable"` (gmt-widget.css dims and disables whatever is
+ * `data-state="unavailable"` (gmt-widget-reset.css dims and disables whatever is
  * already there) and adds one notice with a reload link, which is the only
  * retry a static page has. Idempotent — a second failure adds no second notice.
  */

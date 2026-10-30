@@ -1,0 +1,98 @@
+/* The servers and minimums cards: an info alert. A full cyan border, the site's bevel and a faint
+   cyan wash, the icon beside the text. Never a left-edge accent. */
+
+.card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-cyan-ink);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+
+  & p {
+    margin: 0;
+    font-size: 0.8125rem;
+  }
+
+  & a {
+    color: var(--gmt-cyan-ink);
+    text-underline-offset: 0.15em;
+  }
+}
+
+.icon {
+  flex: none;
+  margin-block-start: 0.1rem;
+  color: var(--gmt-cyan-ink);
+}
+
+.body {
+  display: grid;
+  align-content: start;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+
+  & > * {
+    margin: 0;
+  }
+}
+
+.title {
+  font-size: 0.9375rem;
+  color: var(--gmt-cyan-ink);
+}
+
+.expected {
+  color: var(--gmt-ice-dim);
+}
+
+.list {
+  display: grid;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+
+  & code {
+    overflow-wrap: anywhere;
+    font-size: 0.75rem;
+  }
+}
+
+.source {
+  display: block;
+  color: var(--gmt-ice-dim);
+}
+
+.note {
+  color: var(--gmt-ice-dim);
+}
+
+@media (forced-colors: active) {
+  .card {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .icon,
+  .title,
+  .card a {
+    color: LinkText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .card {
+    border-color: var(--gmt-ice);
+  }
+
+  .expected,
+  .source,
+  .note {
+    color: var(--gmt-ice);
+  }
+}

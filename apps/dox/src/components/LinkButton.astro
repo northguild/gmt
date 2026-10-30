@@ -38,19 +38,19 @@ const {
 			text-decoration: none;
 		}
 
-		button.sl-link-button {
+		.sl-link-button {
 			background: none;
 			cursor: pointer;
 		}
 
 		.sl-link-button.primary {
 			/* glass primary — toned down, translucent teal with glow */
-			background: color(from var(--gmt-teal) srgb r g b / 0.15);
-			border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.35);
+			background: color(from var(--gmt-teal) srgb r g b / 15%);
+			border: 1px solid color(from var(--gmt-cyan) srgb r g b / 35%);
 			color: var(--gmt-cyan-ink);
 			box-shadow:
-				0 0 8px color(from var(--gmt-cyan) srgb r g b / 0.1),
-				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.06);
+				0 0 8px color(from var(--gmt-cyan) srgb r g b / 10%),
+				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 6%);
 			transition:
 				background var(--gmt-duration-fast) var(--gmt-easing),
 				border-color var(--gmt-duration-fast) var(--gmt-easing),
@@ -58,26 +58,24 @@ const {
 				color var(--gmt-duration-fast) var(--gmt-easing);
 		}
 
-		@supports (backdrop-filter: blur(1px)) {
-			.sl-link-button.primary {
-				backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-				-webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-			}
+		.sl-link-button.primary {
+			backdrop-filter: var(--gmt-glass-blur-saturate);
 		}
 
-		.sl-link-button.primary:hover {
-			background: color(from var(--gmt-teal) srgb r g b / 0.25);
-			border-color: color(from var(--gmt-cyan) srgb r g b / 0.55);
+		.sl-link-button.primary:hover, .sl-link-button.primary:focus-visible {
+			background: color(from var(--gmt-teal) srgb r g b / 25%);
+			border-color: color(from var(--gmt-cyan) srgb r g b / 55%);
 			color: var(--gmt-cyan-ink);
 			box-shadow:
-				0 0 16px color(from var(--gmt-cyan) srgb r g b / 0.2),
-				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.1);
+				0 0 16px color(from var(--gmt-cyan) srgb r g b / 20%),
+				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 10%);
 		}
 
 		.sl-link-button.secondary {
 			border-color: inherit;
 			color: var(--sl-color-white);
 		}
+
 		.sl-link-button.minimal {
 			color: var(--sl-color-white);
 			padding-inline: 0;
@@ -86,12 +84,12 @@ const {
 		/* ---- GMT glass button variants ---- */
 		.sl-link-button.cta {
 			/* stained glass wash — subtle teal tint */
-			background: color(from var(--gmt-teal) srgb r g b / 0.12);
-			border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.35);
+			background: color(from var(--gmt-teal) srgb r g b / 12%);
+			border: 1px solid color(from var(--gmt-cyan) srgb r g b / 35%);
 			color: var(--gmt-cyan-ink);
 			box-shadow:
-				0 0 12px color(from var(--gmt-cyan) srgb r g b / 0.15),
-				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.08);
+				0 0 12px color(from var(--gmt-cyan) srgb r g b / 15%),
+				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 8%);
 			transition:
 				background var(--gmt-duration-fast) var(--gmt-easing),
 				border-color var(--gmt-duration-fast) var(--gmt-easing),
@@ -99,27 +97,24 @@ const {
 				color var(--gmt-duration-fast) var(--gmt-easing);
 		}
 
-		@supports (backdrop-filter: blur(1px)) {
-			.sl-link-button.cta {
-				backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-				-webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-			}
+		.sl-link-button.cta {
+			backdrop-filter: var(--gmt-glass-blur-saturate);
 		}
 
-		.sl-link-button.cta:hover {
-			background: color(from var(--gmt-teal) srgb r g b / 0.2);
-			border-color: color(from var(--gmt-cyan) srgb r g b / 0.6);
+		.sl-link-button.cta:hover, .sl-link-button.cta:focus-visible {
+			background: color(from var(--gmt-teal) srgb r g b / 20%);
+			border-color: color(from var(--gmt-cyan) srgb r g b / 60%);
 			color: var(--gmt-cyan-ink);
 			box-shadow:
-				0 0 20px color(from var(--gmt-cyan) srgb r g b / 0.3),
-				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.12);
+				0 0 20px color(from var(--gmt-cyan) srgb r g b / 30%),
+				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 12%);
 		}
 
 		.sl-link-button.ghost {
 			/* subtle ghost — 0.5px border, transparent fill, primary's accent text
 			 * color (theme-aware: bright cyan in dark, deep teal in light) */
 			background: transparent;
-			border: 0.5px solid color(from var(--gmt-cyan) srgb r g b / 0.25);
+			border: 0.5px solid color(from var(--gmt-cyan) srgb r g b / 25%);
 			color: var(--gmt-cyan-ink);
 			transition:
 				background var(--gmt-duration-fast) var(--gmt-easing),
@@ -128,32 +123,29 @@ const {
 				color var(--gmt-duration-fast) var(--gmt-easing);
 		}
 
-		.sl-link-button.ghost:hover {
+		.sl-link-button.ghost:hover, .sl-link-button.ghost:focus-visible {
 			/*
 			 * Hovered ghost ≈ resting primary: an ice wash (theme-aware — icy in
 			 * dark, a dark tint in light), the primary button's hover glow, and
 			 * primary's *default* border so ghost stays subordinate to primary.
 			 */
-			background: color(from var(--gmt-ice) srgb r g b / 0.1);
-			border: 1px solid color(from var(--gmt-cyan) srgb r g b / 0.35);
+			background: color(from var(--gmt-ice) srgb r g b / 10%);
+			border: 1px solid color(from var(--gmt-cyan) srgb r g b / 35%);
 			color: var(--gmt-cyan-ink);
 			box-shadow:
-				0 0 16px color(from var(--gmt-cyan) srgb r g b / 0.2),
-				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 0.1);
+				0 0 16px color(from var(--gmt-cyan) srgb r g b / 20%),
+				inset 0 1px 0 color(from var(--gmt-ice) srgb r g b / 10%);
 		}
 
-		@supports (backdrop-filter: blur(1px)) {
-			.sl-link-button.ghost:hover {
-				backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-				-webkit-backdrop-filter: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
-			}
+		.sl-link-button.ghost:hover, .sl-link-button.ghost:focus-visible {
+			backdrop-filter: var(--gmt-glass-blur-saturate);
 		}
 
 		.sl-link-button :global(svg) {
 			flex-shrink: 0;
 		}
 
-		@media (min-width: 50rem) {
+		@media (width >= 50rem) {
 			.sl-link-button {
 				font-size: var(--sl-text-base);
 				padding: 0.9375rem 1.25rem;
@@ -163,6 +155,7 @@ const {
 		:global(.sl-markdown-content) .sl-link-button {
 			margin-inline-end: 1rem;
 		}
+
 		:global(.sl-markdown-content) .sl-link-button:not(:where(p *)) {
 			margin-block: 1rem;
 		}

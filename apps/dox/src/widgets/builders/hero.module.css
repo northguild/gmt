@@ -1,0 +1,92 @@
+/* hero: a captioned headline value. It owns its caption ink on the widget surface (cause 7),
+   so no tool-level rule has to repair it. The value reserves the width of its samples. */
+
+.root {
+  display: grid;
+  gap: 0.25rem;
+  min-inline-size: 0;
+  margin: 0;
+  padding: clamp(0.75rem, 0.5rem + 1vw, 1.25rem);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+
+  &[data-tone="sentinel"] {
+    border-color: var(--gmt-signal-border);
+    background: color-mix(
+      in srgb,
+      var(--gmt-signal) 8%,
+      var(--gmt-surface-widget)
+    );
+  }
+}
+
+.caption {
+  color: var(--gmt-ice-dim);
+  font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.values {
+  display: grid;
+}
+
+.value,
+.ghost {
+  grid-area: 1 / 1;
+  margin: 0;
+  font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2.5rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.value {
+  color: var(--gmt-ice);
+}
+
+.root[data-tone="sentinel"] .value {
+  color: var(--gmt-signal-ink);
+  font-size: clamp(1rem, 0.9rem + 0.6vw, 1.5rem);
+}
+
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* A narrow card gives the value its own scroll rather than wrap and change height. */
+@container (inline-size < 18rem) {
+  .values {
+    overflow-x: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+    background: Canvas;
+
+    &[data-tone="sentinel"] {
+      border-style: dashed;
+    }
+  }
+
+  .caption,
+  .value,
+  .root[data-tone="sentinel"] .value {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+  }
+
+  .caption {
+    color: var(--gmt-ice);
+  }
+}

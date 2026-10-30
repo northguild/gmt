@@ -10,7 +10,7 @@
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import type { BrainProvider } from "./chat-constants";
 
-export interface QuotaReset {
+interface QuotaReset {
   id: "visitor" | BrainProvider;
   label: string;
   /** ISO instant the allowance refills. */

@@ -1,31 +1,40 @@
 /**
  * @vitest-environment jsdom
  *
- * The GNSS Rollover Checker end to end: template -> mount -> interact ->
- * assert, against the real `@northguild/gmt`. Values are from a run of the
- * built library, so a drift in the library or the widget fails here.
+ * The GNSS Rollover Checker end to end: template -> mount -> interact -> assert, against the
+ * real `@northguild/gmt`, through roles, names, states and visible text the way a person (or
+ * a screen reader) meets the page. Values are from a run of the built library, so a drift in
+ * the library or the widget fails here.
  */
+import { screen, within } from "@testing-library/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { installJsdomShims } from "~/test/jsdom-shims";
-import { lib } from "~/test/gnss-lib";
 import {
-  EMPTY_TEXTS,
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
+import { lib } from "~/test/gnss-lib";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  cellsInColumn,
+  expectNoAxeViolations,
+  renderWidget,
+  setRange,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import {
   ROLLOVER_PRESETS,
-  ROLLOVER_SENTENCES,
   ROLLING_DATE_TEXT,
   readRollover,
   windowDays,
+  ROLLOVER_SENTENCES,
 } from "./gnss-rollover-checker";
-import {
-  mountGnssRolloverChecker,
-  renderGnssRolloverCheckerTemplate,
-} from "./gnss-rollover-checker-mount";
-import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { SITE_BASE } from "./site";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
 const NOW = "2026-10-15T00:00:00Z";
+const entry = WIDGET_REGISTRY["showGnssRolloverChecker"] as AnyWidgetEntry;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
@@ -33,44 +42,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  document.body.innerHTML = "";
   vi.useRealTimers();
 });
-
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "counter",
-  "model-pivot",
-  "model-era",
-  "pivot",
-  "era",
-  "now-today",
-  "now-date",
-  "date",
-  "date-slider",
-  "date-value",
-  "frame",
-  "heroes",
-  "hero-reports",
-  "hero-wrong-from",
-  "hero-left",
-  "strip",
-  "strip-track",
-  "strip-list",
-  "strip-rows",
-  "verdict",
-  "verdict-text",
-  "summary",
-  "reason-aside",
-  "counters-table",
-  "counters-body",
-  "era-zero-hint",
-  "rolling-row",
-  "call-rollover",
-  "copy-rollover",
-  "rollover-output",
-];
 
 const COUNTERS = [
   "GPS-LNAV",
@@ -156,920 +129,486 @@ const EXPECTED: Record<
   },
 };
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+type Widget = RenderedWidget;
 
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderGnssRolloverCheckerTemplate(templateArgs);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountGnssRolloverChecker(root, args, controller.signal);
-  return { root, handle, controller };
-}
+const open = (args: Record<string, unknown> = {}): Promise<Widget> =>
+  renderWidget(entry, { args });
 
-function choose(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLSelectElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function type(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLInputElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-function pick(root: HTMLElement, role: string) {
-  const el = q<HTMLInputElement>(root, role);
-  el.checked = true;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function slide(root: HTMLElement, day: number) {
-  const el = q<HTMLInputElement>(root, "date-slider");
-  el.value = String(day);
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-const text = (root: HTMLElement, role: string) =>
-  q(root, role).textContent ?? "";
-const isSentinel = (root: HTMLElement) =>
-  q(root, "rollover-output").classList.contains("gmt-playground-sentinel");
-const plateValue = (root: HTMLElement, role: string) =>
-  q(root, role).querySelector(".gmt-punct-hero-value")!.textContent!;
-const rows = (root: HTMLElement) => [
-  ...root.querySelectorAll<HTMLElement>('[data-role="counters-body"] tr'),
-];
-const cells = (row: HTMLElement) =>
-  [...row.children].map((c) => {
-    const lines = [...c.querySelectorAll(".gmt-clock-line")];
-    const parts = lines.length > 0 ? lines : [c];
-    return parts
-      .map((l) => l.textContent!.replace(/\s+/g, " ").trim())
-      .filter((t) => t !== "")
-      .join(" ");
+// The controls, by the names a person reads.
+const preset = () => screen.getByRole("combobox", { name: "Preset" });
+const counter = () => screen.getByRole("combobox", { name: "Counter" });
+const pivotBox = () =>
+  screen.getByRole("textbox", { name: "Built on or after (UTC instant)" });
+const eraBox = () =>
+  screen.getByRole("textbox", { name: "Era the firmware assumes" });
+const dateBox = () =>
+  screen.getByRole("textbox", { name: "Date to check (UTC instant)" });
+const slider = () =>
+  screen.getByRole("slider", {
+    name: "Slide the date through the firmware's window",
   });
-const chips = (root: HTMLElement) => [
-  ...root.querySelectorAll<HTMLElement>('[data-role="strip-chip"]'),
-];
+const radio = (name: string) => screen.getByRole("radio", { name });
+
+async function enter(w: Widget, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  if (value !== "") await w.user.paste(value);
+}
+
+const output = () => screen.getByLabelText("What the calls returned");
+const calls = () => screen.getByRole("group", { name: "Calls made" });
+const reason = () =>
+  screen.queryByRole("complementary", { name: "Why there is no result" });
+const status = () => screen.getByRole("status", { name: "Reading summary" });
+const countdown = () => screen.getByRole("figure");
+const marks = () => screen.getByRole("list", { name: "Marks on the timeline" });
+const fuse = () => screen.getByRole("img", { name: /Fuse timeline|No window/ });
+
+const table = () =>
+  screen.getByRole("table", { name: "When each counter next wraps" });
+const bodyRows = () =>
+  within(table())
+    .getAllByRole("row")
+    .filter((r) => within(r).queryAllByRole("columnheader").length === 0);
+const rowOf = (name: string) =>
+  bodyRows().find((r) =>
+    within(r).queryByRole("rowheader", { name: new RegExp(`^${name}\\b`) }),
+  )!;
+
+/** The shown definitions of the two plates: reports value and line, wrong-from value and line. */
+const defs = () => screen.getAllByRole("definition");
 
 describe("renderGnssRolloverCheckerTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderGnssRolloverCheckerTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
-    }
-  });
-
-  it("is a widget root with the standard wrapper, and no class containing card but the wrapper", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderGnssRolloverCheckerTemplate();
-    const widget = root.firstElementChild as HTMLElement;
-    expect(widget.className).toBe(
-      "gmt-gnss-rollover-checker gmt-widget not-content",
-    );
-    const cardClasses = [...root.querySelectorAll("[class]")]
-      .flatMap((el) => [...el.classList])
-      .filter((c) => c.includes("card"));
-    expect(new Set(cardClasses)).toEqual(new Set(["gmt-widget-card"]));
-  });
-
-  it("renders four numbered sections, 2 and 3 wide, with three plates, five chip slots and eight rows", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderGnssRolloverCheckerTemplate();
-    const sections = [...root.querySelectorAll(".gmt-widget-section")];
-    expect(sections.map((s) => s.querySelector("h4")!.textContent)).toEqual([
+  it("is a named region with four numbered sections and the controls a person needs", async () => {
+    await open();
+    expect(
+      screen.getByRole("region", { name: "GNSS Rollover Checker" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent),
+    ).toEqual([
       "1. Describe the receiver",
       "2. Where the firmware goes wrong",
       "3. When each counter next wraps",
       "4. What the library returns",
     ]);
-    expect(
-      sections.map((s) => s.classList.contains("gmt-widget-section--wide")),
-    ).toEqual([false, true, true, false]);
-    expect(root.querySelectorAll(".gmt-punct-hero")).toHaveLength(3);
-    expect(chips(root)).toHaveLength(5);
-    expect(rows(root).map((r) => r.dataset["row"])).toEqual(COUNTERS);
+    expect(screen.getAllByRole("combobox")).toHaveLength(2);
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
+    expect(screen.getAllByRole("radio")).toHaveLength(4);
+    expect(screen.getAllByRole("slider")).toHaveLength(1);
+    await expectNoAxeViolations(document.body);
   });
 
-  it("limits every typed field to 64 characters", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderGnssRolloverCheckerTemplate();
-    for (const role of ["pivot", "era", "date"]) {
-      expect(q<HTMLInputElement>(root, role).maxLength, role).toBe(64);
-    }
-  });
-
-  it("escapes a hostile seed", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderGnssRolloverCheckerTemplate({
-      firmwareNotBefore: '"><img src=x onerror=alert(1)><script>x</script>',
-    });
-    expect(root.querySelector("img")).toBeNull();
-    expect(root.querySelector("script")).toBeNull();
+  it("opens on the first preset, checked on a date, with all eight counters", async () => {
+    await open();
+    expect(preset()).toHaveValue(ROLLOVER_PRESETS[0]!.id);
+    expect(radio("Build date")).toBeChecked();
+    expect(radio("A date")).toBeChecked();
+    expect(bodyRows()).toHaveLength(8);
+    COUNTERS.forEach((c, i) =>
+      expect(within(bodyRows()[i]!).getByRole("rowheader")).toHaveTextContent(
+        new RegExp(`^${c}`),
+      ),
+    );
   });
 });
 
-describe("every preset, against the real library", () => {
+describe("the presets", () => {
   it("has an expectation for every preset", () => {
     expect(Object.keys(EXPECTED).sort()).toEqual(
       ROLLOVER_PRESETS.map((p) => p.id).sort(),
     );
   });
 
-  it.each(ROLLOVER_PRESETS.map((p) => [p.id]))("%s", async (id) => {
-    const { root } = await mount();
-    choose(root, "preset", id!);
-    const want = EXPECTED[id!]!;
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe(id);
-    expect(isSentinel(root)).toBe(false);
-    expect(plateValue(root, "hero-reports")).toBe(want.reported);
-    expect(text(root, "hero-reports")).toContain(want.verdict);
-    expect(plateValue(root, "hero-wrong-from")).toBe(want.wrongFrom);
-    expect(plateValue(root, "hero-left")).toBe(want.left);
-    expect(rows(root)).toHaveLength(8);
-    expect(text(root, "reason-aside")).toBe("");
-    expect(text(root, "call-rollover")).toContain("utcToGnssWeek");
-    // One result line for each call line.
-    expect(text(root, "rollover-output").split("\n")).toHaveLength(
-      text(root, "call-rollover").split("\n").length,
-    );
+  it.each(ROLLOVER_PRESETS.map((p) => p.id))("reads %s", async (id) => {
+    const w = await open();
+    await w.user.selectOptions(preset(), id);
+    const e = EXPECTED[id]!;
+    expect(defs()[0]).toHaveTextContent(e.reported);
+    expect(defs()[1]).toHaveTextContent(e.verdict);
+    expect(defs()[2]).toHaveTextContent(e.wrongFrom);
+    expect(countdown()).toHaveTextContent(e.left.replace(/^past by /, ""));
+    expect(status()).toHaveTextContent(/./);
+    expect(reason()).not.toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("names the verdict in words for every reading", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "navic-built-2020");
+    expect(screen.getByText("Reports the right date")).toBeInTheDocument();
+    await w.user.selectOptions(preset(), "navic-built-2020-after-wrap");
+    expect(
+      screen.getByText("Reports a date 7168 days early"),
+    ).toBeInTheDocument();
+    await w.user.selectOptions(preset(), "firmware-ahead");
+    expect(
+      screen.getByText("Reports a date 7168 days late"),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("captions the countdown Past by once the window has closed", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "navic-built-2020");
+    expect(countdown()).toHaveTextContent(/^Time left/);
+    await w.user.selectOptions(preset(), "navic-built-2020-after-wrap");
+    expect(countdown()).toHaveTextContent(/^Past by/);
+    await expectNoAxeViolations(w.root);
   });
 });
 
-describe("the table", () => {
-  it("lists all eight counters, lights the receiver's own and tags the next to wrap", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    expect(rows(root).map((r) => r.dataset["row"])).toEqual(COUNTERS);
-    const lit = rows(root).filter((r) => r.hasAttribute("data-reading"));
-    expect(lit.map((r) => r.dataset["row"])).toEqual(["IRN-LNAV"]);
-    expect(lit[0]!.getAttribute("data-series")).toBe("1");
-    const byName = (n: string) =>
-      cells(rows(root).find((r) => r.dataset["row"] === n)!);
-    expect(byName("IRN-LNAV")).toEqual([
-      "IRN-LNAV your receiver · next to wrap",
-      "weeks below 1024",
-      "2038-11-20T23:59:42Z",
-      "4419 days",
-    ]);
-    expect(byName("GPS-LNAV")[0]).toBe("GPS-LNAV next to wrap");
-    expect(byName("GAL")).toEqual([
-      "GAL",
-      "weeks below 4096",
-      "2078-02-19T23:59:42Z",
-      expect.stringMatching(/^\d+ days$/),
-    ]);
-    expect(byName("BDT")[2]).toBe("2163-01-01T23:59:56Z");
-    expect(byName("GPS-CNAV")[1]).toBe("weeks below 8192");
+describe("the table of counters", () => {
+  it("lists all eight, marking the receiver's own and the next to wrap", async () => {
+    await open({ preset: "navic-built-2020" });
+    expect(bodyRows()).toHaveLength(8);
+    expect(rowOf("IRN-LNAV")).toHaveTextContent("your receiver");
+    expect(rowOf("GPS-LNAV")).toHaveTextContent("next to wrap");
+    expect(rowOf("GAL")).toHaveTextContent("weeks below 4096");
+    expect(rowOf("BDT")).toHaveTextContent("2163-01-01T23:59:56Z");
+  });
+
+  it("says the rolling row's words under the table", async () => {
+    await open({ preset: "navic-built-2020" });
+    expect(screen.getByText(/^rolling reads /)).toBeInTheDocument();
   });
 
   it("keeps all eight rows when the reading goes to NO SIGNAL", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    type(root, "date", "garbage");
-    expect(rows(root).map((r) => r.dataset["row"])).toEqual(COUNTERS);
-  });
-
-  it("says the rolling receiver can only be pinned by a live clock", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    expect(text(root, "rolling-row")).toBe(ROLLING_DATE_TEXT);
-    pick(root, "now-today");
-    expect(text(root, "rolling-row")).toContain("rolling reads");
-  });
-});
-
-describe("the strip", () => {
-  it("is a labelled image with a hidden list of its marks, and nothing inside takes focus", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    const drawing = q(root, "strip");
-    expect(drawing.getAttribute("role")).toBe("img");
-    const label = drawing.getAttribute("aria-label")!;
-    expect(label).toContain("Fuse timeline of the IRN-LNAV counter");
-    expect(label).toContain(
-      "The firmware reads right from 2020-01-01T00:00:00Z to 2039-08-17T00:00:00Z, then reports one counter period early to 2059-04-02T00:00:00Z.",
-    );
-    expect(label).toContain("This counter next wraps at 2038-11-20T23:59:42Z.");
-    const items = [...q(root, "strip-list").querySelectorAll("li")].map(
-      (li) => li.textContent,
-    );
-    expect(items).toContain("build date: 2020-01-01T00:00:00Z");
-    expect(items).toContain("wrong from: 2039-08-17T00:00:00Z");
-    expect(items).toContain("check date: 2026-10-15T00:00:00Z");
-    expect(
-      drawing.querySelectorAll("a, button, input, select, [tabindex]"),
-    ).toHaveLength(0);
-  });
-
-  it("lights the window to the wrong date, hatches the rest, and pins the check date", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    const lit = q<HTMLElement>(root, "strip-lit");
-    const hatch = q<HTMLElement>(root, "strip-hatch");
-    expect(lit.hidden).toBe(false);
-    expect(hatch.hidden).toBe(false);
-    expect(hatch.classList.contains("gmt-gnss-hatch")).toBe(true);
-    expect(hatch.style.getPropertyValue("--from")).toBe(
-      lit.style.getPropertyValue("--to"),
-    );
-    expect(q<HTMLElement>(root, "strip-pin").hidden).toBe(false);
-    // In a date mode the reader's clock is still marked, so the window can be
-    // read against now; the clock is pinned to the same day as the check here.
-    expect(q<HTMLElement>(root, "strip-today").hidden).toBe(false);
-    expect(text(root, "strip-key-hatch")).toBe(
-      "reports one counter period early",
-    );
-  });
-
-  it("draws a today mark, not a pin, when checking today", async () => {
-    const { root } = await mount({ preset: "today" });
-    expect(q<HTMLElement>(root, "strip-today").hidden).toBe(false);
-    expect(q<HTMLElement>(root, "strip-pin").hidden).toBe(true);
-  });
-
-  it("always has five chip slots, and fills only the marks it has", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    expect(chips(root)).toHaveLength(5);
-    const filled = chips(root).filter((c) => !c.hasAttribute("data-blank"));
-    expect(filled.length).toBeGreaterThanOrEqual(3);
-    expect(filled[0]!.textContent).toBe("build date 2020-01-01T00:00:00Z");
-    type(root, "pivot", "garbage");
-    expect(chips(root)).toHaveLength(5);
-    expect(chips(root).every((c) => c.hasAttribute("data-blank"))).toBe(true);
-  });
-
-  it("says a mark outside the window is outside", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    type(root, "date", "2200-01-01T00:00:00Z");
-    expect(text(root, "strip-list")).toContain("(outside the timeline drawn)");
-    expect(q<HTMLElement>(root, "strip-pin").hidden).toBe(true);
+    const w = await open();
+    await enter(w, pivotBox(), "nonsense");
+    expect(bodyRows()).toHaveLength(8);
+    expect(cellsInColumn(table(), "Counter")).toHaveLength(8);
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("the fuse timeline", () => {
-  const rowsOf = (root: HTMLElement) => [
-    ...root.querySelectorAll<HTMLElement>(".gmt-fuse-row"),
-  ];
-
-  it("draws a skeleton of eight rows and three width headings before the library loads", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderGnssRolloverCheckerTemplate();
-    expect(rowsOf(root)).toHaveLength(8);
-    expect(root.querySelectorAll(".gmt-fuse-head")).toHaveLength(3);
-    expect(root.querySelectorAll(".gmt-fuse-year").length).toBeGreaterThan(5);
+  it("is one named image that says the reading in words", async () => {
+    await open({ preset: "navic-built-2020" });
+    expect(fuse()).toHaveAccessibleName(
+      /^Fuse timeline of the IRN-LNAV counter/,
+    );
   });
 
-  it("draws one track per counter, grouped by width, with the receiver's own marked", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    expect(rowsOf(root).map((r) => r.dataset["counter"])).toEqual([
-      "GPS-LNAV",
-      "QZS-LNAV",
-      "IRN-LNAV",
-      "GAL",
-      "GPS-CNAV",
-      "BDT",
-      "QZS-CNAV",
-      "IRN-L1NV",
-    ]);
-    expect(
-      [...root.querySelectorAll(".gmt-fuse-head")].map((h) => h.textContent),
-    ).toEqual([
-      "10-bit counters, weeks below 1024",
-      "12-bit counters, weeks below 4096",
-      "13-bit counters, weeks below 8192",
-    ]);
-    expect(
-      rowsOf(root)
-        .filter((r) => r.hasAttribute("data-yours"))
-        .map((r) => r.dataset["counter"]),
-    ).toEqual(["IRN-LNAV"]);
+  it("lists five marks, the first the build date", async () => {
+    await open({ preset: "navic-built-2020" });
+    const items = within(marks()).getAllByRole("listitem");
+    expect(items).toHaveLength(5);
+    expect(items[0]).toHaveTextContent("build date 2020-01-01T00:00:00Z");
   });
 
-  it("emphasises every counter's next wrap and puts the window on the receiver's track", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    const next = root.querySelectorAll('.gmt-fuse-tick[data-state="next"]');
-    expect(next).toHaveLength(8);
-    const own = rowsOf(root).find((r) => r.dataset["counter"] === "IRN-LNAV")!;
-    for (const role of [
-      "strip-lit",
-      "strip-hatch",
-      "strip-spark",
-      "strip-fuse",
-    ]) {
-      expect(own.contains(q(root, role)), role).toBe(true);
+  it("explains its parts in a key", async () => {
+    await open({ preset: "navic-built-2020" });
+    const key = screen.getByRole("list", { name: "Key to the timeline" });
+    expect(key).toHaveTextContent("reads the right date");
+    expect(key).toHaveTextContent("wrong from");
+    expect(key).toHaveTextContent("next wrap");
+  });
+});
+
+describe("NO SIGNAL", () => {
+  it.each([
+    ["pivot", ROLLOVER_SENTENCES.pivot],
+    ["date", ROLLOVER_SENTENCES.date],
+    ["era", ROLLOVER_SENTENCES.era],
+  ])("says why, in words, for a bad %s", async (field, sentence) => {
+    const w = await open();
+    if (field === "pivot") {
+      await enter(w, pivotBox(), "nonsense");
+    } else if (field === "era") {
+      await w.user.click(radio("Fixed era"));
+      await enter(w, eraBox(), "x");
+    } else {
+      await w.user.click(radio("A date"));
+      await enter(w, dateBox(), "nonsense");
     }
-    type(root, "date", "2030-01-01T00:00:00Z");
+    expect(reason()).toHaveTextContent(sentence);
+    expect(output()).toHaveTextContent(/NO SIGNAL/);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("is not NO SIGNAL for a blank field, which only asks for the value", async () => {
+    const w = await open();
+    await enter(w, pivotBox(), "");
+    expect(reason()).not.toBeInTheDocument();
     expect(
-      root.querySelectorAll('.gmt-fuse-tick[data-state="past"]').length,
-    ).toBeGreaterThan(0);
-    expect(q<HTMLElement>(root, "strip-fuse").hidden).toBe(false);
-  });
-
-  it("keeps the window on the track of a newly chosen counter", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    choose(root, "counter", "GAL");
-    const own = rowsOf(root).find((r) => r.dataset["counter"] === "GAL")!;
-    expect(own.contains(q(root, "strip-lit"))).toBe(true);
-    expect(own.hasAttribute("data-yours")).toBe(true);
-    expect(
-      rowsOf(root).filter((r) => r.hasAttribute("data-yours")),
-    ).toHaveLength(1);
-  });
-
-  it("burns out the fuse once the check date is past the wrong-from date", async () => {
-    const { root } = await mount({ preset: "navic-built-2020-after-wrap" });
-    expect(q<HTMLElement>(root, "strip-fuse").hidden).toBe(true);
-  });
-});
-
-describe("the countdown and the badge", () => {
-  it("shows days, hours, minutes and seconds in fixed cells, and the words as text", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    const cells = [...q(root, "hero-left").querySelectorAll(".gmt-fuse-cell")];
-    expect(cells.map((c) => c.getAttribute("data-unit"))).toEqual([
-      "days",
-      "h",
-      "min",
-      "s",
-    ]);
-    expect(cells[0]!.querySelector("b")!.textContent).toBe("4689");
-    expect(plateValue(root, "hero-left")).toBe("4689 days");
-  });
-
-  it("counts past the date with a Past by caption", async () => {
-    const { root } = await mount({ preset: "navic-built-2020-after-wrap" });
-    const hero = q(root, "hero-left");
-    expect(hero.hasAttribute("data-past")).toBe(true);
-    expect(hero.querySelector(".gmt-punct-hero-cap")!.textContent).toBe(
-      "Past by",
-    );
-  });
-
-  it("says the verdict in a badge", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    expect(q(root, "verdict").getAttribute("data-verdict")).toBe("right");
-    expect(text(root, "verdict-text")).toBe("Reports the right date");
-    choose(root, "preset", "navic-built-2020-after-wrap");
-    expect(q(root, "verdict").getAttribute("data-verdict")).toBe("early");
-    expect(text(root, "verdict-text")).toBe("Reports a date 7168 days early");
-    choose(root, "preset", "firmware-ahead");
-    expect(q(root, "verdict").getAttribute("data-verdict")).toBe("late");
-  });
-
-  it("shows no result in the badge and an empty countdown under a sentinel", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    type(root, "pivot", "garbage");
-    expect(q(root, "verdict").getAttribute("data-verdict")).toBe("none");
-    expect(text(root, "verdict-text")).toBe("no result");
-    expect(q(root, "hero-left").hasAttribute("data-empty")).toBe(true);
-    expect(q(root, "hero-left").querySelector(".gmt-fuse-digits")).toBeNull();
-  });
-});
-
-describe("the plates", () => {
-  it("say what a correct and a failed receiver report", async () => {
-    const { root } = await mount({ preset: "navic-built-2020-after-wrap" });
-    expect(text(root, "hero-reports")).toContain("a date 7168 days early");
-    expect(text(root, "hero-left")).toContain(
-      "since it began reporting an early date",
-    );
-  });
-
-  it("read no result under a sentinel", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    type(root, "pivot", "garbage");
-    expect(
-      [...root.querySelectorAll(".gmt-punct-hero")].every((p) =>
-        p.hasAttribute("data-empty"),
-      ),
-    ).toBe(true);
-  });
-});
-
-describe("the era 0 hint", () => {
-  it("says a build date before the first week is read as era 0, in a held line", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    const hint = q(root, "era-zero-hint");
-    expect((hint.textContent ?? "").trim()).toBe("");
-    type(root, "pivot", "1970-01-01T00:00:00Z");
-    expect(isSentinel(root)).toBe(false);
-    expect(hint.textContent).toMatch(
-      /^Build date before .+'s first week \(.+\): read as era 0\.$/,
-    );
-    type(root, "pivot", "2020-01-01T00:00:00Z");
-    expect((hint.textContent ?? "").trim()).toBe("");
-    // The line sits in a hold sized by the longest hint it can show.
-    expect(hint.closest(".gmt-ledger-hold")).not.toBeNull();
-  });
-});
-
-describe("the sentinel sentences", () => {
-  it("are different sentences for different faults, each a NO SIGNAL", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    const sentences = new Set<string>();
-    type(root, "pivot", "garbage");
-    expect(isSentinel(root)).toBe(true);
-    expect(text(root, "rollover-output")).toBe("NO SIGNAL");
-    expect(text(root, "reason-aside")).toContain(ROLLOVER_SENTENCES.pivot);
-    sentences.add(text(root, "reason-aside"));
-    type(root, "pivot", "2020-01-01T00:00:00Z");
-
-    type(root, "date", "garbage");
-    expect(isSentinel(root)).toBe(true);
-    expect(text(root, "reason-aside")).toContain(ROLLOVER_SENTENCES.date);
-    sentences.add(text(root, "reason-aside"));
-
-    type(root, "date", "2016-12-31T23:59:60Z");
-    expect(isSentinel(root)).toBe(true);
-    expect(text(root, "reason-aside")).toContain(
-      ROLLOVER_SENTENCES.secondSixty,
-    );
-    sentences.add(text(root, "reason-aside"));
-
-    type(root, "date", NOW);
-    pick(root, "model-era");
-    type(root, "era", "abc");
-    expect(isSentinel(root)).toBe(true);
-    expect(text(root, "reason-aside")).toContain(ROLLOVER_SENTENCES.era);
-    sentences.add(text(root, "reason-aside"));
-    expect(sentences.size).toBe(4);
-  });
-
-  it("a blank field is an empty state, never amber", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    type(root, "pivot", "");
-    expect(isSentinel(root)).toBe(false);
-    expect(text(root, "rollover-output").trim()).toBe("");
-    expect(text(root, "reason-aside")).toContain(EMPTY_TEXTS.pivot);
-    expect(root.querySelector(".gmt-playground-sentinel")).toBeNull();
-    type(root, "pivot", "2020-01-01T00:00:00Z");
-    type(root, "date", "");
-    expect(isSentinel(root)).toBe(false);
-    expect(text(root, "reason-aside")).toContain(EMPTY_TEXTS.date);
-    expect(rows(root)).toHaveLength(8);
-  });
-
-  it("names a date past the year 9999, not a date before the first week", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    pick(root, "now-date");
-    type(root, "date", "9999-12-31T23:00:00-05:00");
-    expect(isSentinel(root)).toBe(true);
-    expect(text(root, "reason-aside")).toContain(
-      ROLLOVER_SENTENCES.dateAfter9999,
-    );
-  });
-
-  it("a correct wrong-date answer is a result, not a NO SIGNAL", async () => {
-    const { root } = await mount({ preset: "navic-built-2020-after-wrap" });
-    expect(isSentinel(root)).toBe(false);
-    expect(text(root, "reason-aside")).toBe("");
+      screen.getByText("Type the build date to check a receiver."),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("the form", () => {
-  it("opens on the first preset", async () => {
-    const { root } = await mount();
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("navic-built-2020");
-    expect(q<HTMLSelectElement>(root, "counter").value).toBe("IRN-LNAV");
-    expect(q<HTMLInputElement>(root, "pivot").value).toBe(
-      "2020-01-01T00:00:00Z",
-    );
+  it("shows Custom when a field no longer matches a preset", async () => {
+    const w = await open();
+    await enter(w, pivotBox(), "2021-02-03T00:00:00Z");
+    expect(preset()).toHaveValue("custom");
+    await w.user.selectOptions(preset(), "navic-built-2020");
+    expect(pivotBox()).toHaveValue("2020-01-01T00:00:00Z");
   });
 
-  it("makes the preset custom when a field changes, and back when it matches", async () => {
-    const { root } = await mount();
-    type(root, "pivot", "2021-01-01T00:00:00Z");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    type(root, "pivot", "2020-01-01T00:00:00Z");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("navic-built-2020");
-    choose(root, "counter", "GAL");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
+  it("shows the build date field or the era field, not both", async () => {
+    const w = await open();
+    expect(pivotBox()).toBeVisible();
+    expect(
+      screen.queryByRole("textbox", { name: "Era the firmware assumes" }),
+    ).not.toBeInTheDocument();
+    await w.user.click(radio("Fixed era"));
+    expect(eraBox()).toBeVisible();
+    expect(
+      screen.queryByRole("textbox", {
+        name: "Built on or after (UTC instant)",
+      }),
+    ).not.toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
-  it("shows the build date or the era by how the firmware counts", async () => {
-    const { root } = await mount();
-    const field = (n: string) =>
-      root.querySelector<HTMLElement>(`[data-field="${n}"]`)!;
-    expect(field("pivot").hidden).toBe(false);
-    expect(field("era").hidden).toBe(true);
-    pick(root, "model-era");
-    expect(field("pivot").hidden).toBe(true);
-    expect(field("era").hidden).toBe(false);
+  it("carries the instant being watched into the date field when switching to a date", async () => {
+    const w = await open({ preset: "today" });
+    await w.user.click(radio("A date"));
+    expect(dateBox()).toHaveValue(NOW);
+    await expectNoAxeViolations(w.root);
   });
 
-  it("shows the date and the slider only when checking a date", async () => {
-    const { root } = await mount();
-    const field = (n: string) =>
-      root.querySelector<HTMLElement>(`[data-field="${n}"]`)!;
-    expect(field("date").hidden).toBe(false);
-    expect(field("date-slider").hidden).toBe(false);
-    pick(root, "now-today");
-    expect(field("date").hidden).toBe(true);
-    expect(field("date-slider").hidden).toBe(true);
-    expect(q<HTMLInputElement>(root, "date-slider").disabled).toBe(true);
-  });
-
-  it("carries the moment being watched into the date when switching to a date", async () => {
-    vi.setSystemTime("2026-11-02T03:04:05Z");
-    const { root } = await mount({ preset: "today" });
-    pick(root, "now-date");
-    expect(q<HTMLInputElement>(root, "date").value).toBe(
-      "2026-11-02T03:04:05Z",
-    );
-    expect(plateValue(root, "hero-reports")).toBe("2026-11-02T03:04:05Z");
-  });
-
-  it("checks an era the firmware fixes", async () => {
-    const { root } = await mount({ preset: "navic-fixed-era" });
-    expect(q<HTMLInputElement>(root, "model-era").checked).toBe(true);
-    type(root, "era", "2");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    expect(isSentinel(root)).toBe(false);
-    expect(plateValue(root, "hero-wrong-from")).not.toBe(
-      EXPECTED["navic-fixed-era"]!.wrongFrom,
-    );
+  it("changes the counter", async () => {
+    const w = await open();
+    await w.user.selectOptions(counter(), "GAL");
+    expect(preset()).toHaveValue("custom");
+    expect(rowOf("GAL")).toHaveTextContent("your receiver");
+    await expectNoAxeViolations(w.root);
   });
 });
 
-describe("the slider", () => {
-  it("spans the firmware's window by day and follows a whole-day date", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    const slider = q<HTMLInputElement>(root, "date-slider");
+describe("the date slider", () => {
+  it("is offered only when a date is checked", async () => {
+    const w = await open({ preset: "today" });
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+    await w.user.click(radio("A date"));
+    expect(slider()).toBeEnabled();
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("writes the day it stops on into the date field and reads it back", async () => {
+    const w = await open({ preset: "navic-built-2020" });
+    await w.user.click(radio("A date"));
     const read = readRollover(
       lib,
-      ROLLOVER_PRESETS.find((p) => p.id === "navic-built-2020")!.state,
+      {
+        counter: "IRN-LNAV",
+        model: "pivot",
+        pivot: "2020-01-01T00:00:00Z",
+        era: "0",
+        nowMode: "date",
+        date: NOW,
+      },
       NOW,
     );
     const days = windowDays(lib, read)!;
-    expect(slider.disabled).toBe(false);
-    expect(Number(slider.min)).toBe(0);
-    expect(Number(slider.max)).toBe(days);
-    const toToday = lib.diffUtcAsDuration("2020-01-01T00:00:00Z", NOW, "days");
-    expect(toToday).toBe(`P${slider.value}D`);
-    expect(text(root, "date-value")).toBe(NOW);
+    expect(slider()).toHaveAttribute("max", String(days));
+    setRange(slider(), 10);
+    expect(dateBox()).toHaveValue("2020-01-11T00:00:00Z");
+    expect(slider()).toHaveValue("10");
+    await expectNoAxeViolations(w.root);
   });
 
-  it("writes the day's date into the field and reads it", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    slide(root, 0);
-    expect(q<HTMLInputElement>(root, "date").value).toBe(
-      "2020-01-01T00:00:00Z",
-    );
-    expect(plateValue(root, "hero-reports")).toBe("2020-01-01T00:00:00Z");
-    expect(text(root, "date-value")).toBe("2020-01-01T00:00:00Z");
-    const max = Number(q<HTMLInputElement>(root, "date-slider").max);
-    slide(root, max);
-    const date = q<HTMLInputElement>(root, "date").value;
-    expect(lib.diffUtcAsDuration("2020-01-01T00:00:00Z", date, "days")).toBe(
-      `P${max}D`,
-    );
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-  });
-
-  it("has a typed equivalent and leaves the slider for a date that is not a whole day", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    slide(root, 5);
-    type(root, "date", "2030-05-05T05:05:05Z");
-    expect(q<HTMLInputElement>(root, "date-slider").value).toBe("5");
-    type(root, "date", "2020-01-11T00:00:00Z");
-    expect(q<HTMLInputElement>(root, "date-slider").value).toBe("10");
-  });
-
-  it("is a native range, labelled, and is off when there is no window", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    const slider = q<HTMLInputElement>(root, "date-slider");
-    expect(slider.type).toBe("range");
-    expect(slider.closest("label")!.textContent).toContain(
-      "Slide the date through the firmware's window",
-    );
-    type(root, "pivot", "garbage");
-    expect(slider.disabled).toBe(true);
+  it("moves with a typed date, its typed equivalent", async () => {
+    const w = await open({ preset: "navic-built-2020" });
+    await w.user.click(radio("A date"));
+    await enter(w, dateBox(), "2020-01-21T00:00:00Z");
+    expect(slider()).toHaveValue("20");
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("the live clock", () => {
-  it("counts down once a second in Today mode and stops when a date is chosen", async () => {
-    const { root, handle } = await mount({ preset: "today" });
-    expect(plateValue(root, "hero-left")).toBe("27654 days");
+  it("ticks once a second in Today mode and stops for a date", async () => {
+    const w = await open({ preset: "today" });
     expect(vi.getTimerCount()).toBe(1);
-    vi.advanceTimersByTime(1000);
-    expect(plateValue(root, "hero-left")).toBe("27653 days 23 h 59 min 59 s");
-    pick(root, "now-date");
+    await w.user.click(radio("A date"));
     expect(vi.getTimerCount()).toBe(0);
-    const frozen = plateValue(root, "hero-left");
-    vi.advanceTimersByTime(5000);
-    expect(plateValue(root, "hero-left")).toBe(frozen);
-    pick(root, "now-today");
+    await w.user.click(radio("Today"));
     expect(vi.getTimerCount()).toBe(1);
-    handle.destroy();
-    expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("keeps the ticking instant out of the live sentence", async () => {
-    const { root } = await mount({ preset: "today" });
-    const summary = q(root, "summary");
-    const before = summary.textContent ?? "";
-    expect(before).not.toBe("");
-    expect(before).not.toContain("2026-10-15T00:00:00Z");
-    const watch = new MutationObserver(() => {});
-    watch.observe(summary, {
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
+  it("keeps the announcement still between ticks", async () => {
+    await open({ preset: "today" });
+    const before = status().textContent ?? "";
     vi.advanceTimersByTime(3000);
-    expect(summary.textContent).toBe(before);
-    expect(watch.takeRecords()).toHaveLength(0);
-    watch.disconnect();
+    expect(status()).toHaveTextContent(before, { normalizeWhitespace: false });
+    expect(status()).toHaveTextContent(
+      /^Today, a GAL receiver reports the right date\./,
+    );
   });
 
-  it("speaks again in Today mode when the verdict changes", async () => {
-    const { root } = await mount({ preset: "today" });
-    const summary = q(root, "summary");
-    const before = summary.textContent;
-    choose(root, "counter", "GPS-LNAV");
-    expect(summary.textContent).not.toBe(before);
+  it("speaks again when the verdict changes", async () => {
+    const w = await open({ preset: "today" });
+    const before = status().textContent ?? "";
+    await w.user.selectOptions(preset(), "navic-built-2020-after-wrap");
+    expect(status()).not.toHaveTextContent(before, {
+      normalizeWhitespace: false,
+    });
   });
 
-  it("still states the date in a pinned-date reading", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    expect(q(root, "summary").textContent).toContain("2039-08-17T00:00:00Z");
-  });
-
-  it("never starts a clock for a pinned date", async () => {
-    await mount({ preset: "navic-built-2020" });
-    expect(vi.getTimerCount()).toBe(0);
+  it("states the date for a pinned date", async () => {
+    await open({ preset: "navic-built-2020-after-wrap" });
+    expect(status()).toHaveTextContent(/2040/);
   });
 });
 
 describe("seeding and permalinks", () => {
   it("seeds a chat call's values and paints them on the first frame", async () => {
-    const seed = {
-      counter: "GAL",
-      firmwareNotBefore: "2024-01-01T00:00:00Z",
-      date: NOW,
-    };
-    const template = renderGnssRolloverCheckerTemplate(seed);
-    expect(template).toContain('value="2024-01-01T00:00:00Z"');
-    const { root } = await mount(seed);
-    expect(q<HTMLSelectElement>(root, "counter").value).toBe("GAL");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe(
-      "galileo-built-2024",
-    );
-    expect(plateValue(root, "hero-wrong-from")).toBe(
-      EXPECTED["galileo-built-2024"]!.wrongFrom,
-    );
-  });
-
-  it("seeds an era", async () => {
-    const { root } = await mount({
-      counter: "GPS-LNAV",
-      firmwareEra: "2",
-      date: NOW,
-    });
-    expect(q<HTMLInputElement>(root, "model-era").checked).toBe(true);
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe(
-      "gps-lnav-fixed-era",
-    );
+    await open({ counter: "GAL", firmwareNotBefore: "2024-01-01T00:00:00Z" });
+    expect(counter()).toHaveValue("GAL");
+    expect(pivotBox()).toHaveValue("2024-01-01T00:00:00Z");
   });
 
   it.each(ROLLOVER_PRESETS.map((p) => [p.id]))(
-    "round-trips %s as a permalink of one string",
+    "round-trips %s as a permalink",
     async (id) => {
-      const first = await mount();
-      choose(first.root, "preset", id!);
-      const state = first.handle.getPermalinkState?.() as Record<
-        string,
-        unknown
-      >;
-      expect(state).toEqual({ preset: id });
-      const url = encodeWidgetPermalink("rollover", state);
+      const first = await open();
+      await first.user.selectOptions(preset(), id!);
+      const url = first.permalink();
       expect(url).toMatch(
         new RegExp(
           `^${SITE_BASE}/tools/gnss-rollover-checker/\\?w=rollover&wa=`,
         ),
       );
-      const seeded = seedFromLocation("rollover", url.slice(url.indexOf("?")));
-      expect(seeded).toEqual(state);
-      const output = text(first.root, "rollover-output");
-      const reason = text(first.root, "reason-aside");
-      document.body.innerHTML = "";
+      const seeded = seedFromLocation("rollover", url.slice(url.indexOf("?")))!;
+      expect(encodeWidgetPermalink("rollover", seeded)).toBe(url);
+      const sentinel = reason() !== null;
+      first.destroy();
 
-      const second = await mount(seeded);
-      expect(text(second.root, "rollover-output")).toBe(output);
-      expect(text(second.root, "reason-aside")).toBe(reason);
-      expect(q<HTMLSelectElement>(second.root, "preset").value).toBe(id);
+      const second = await open(seeded);
+      expect(preset()).toHaveValue(id);
+      expect(reason() !== null).toBe(sentinel);
+      expect(second.permalink()).toBe(url);
     },
   );
 
-  it("writes a custom check as the counter, the firmware key and the date, all strings of at most 64", async () => {
-    const { root, handle } = await mount();
-    type(root, "pivot", "2021-01-01T00:00:00Z");
-    const state = handle.getPermalinkState?.() as Record<string, string>;
-    expect(state).toEqual({
-      counter: "IRN-LNAV",
-      firmwareNotBefore: "2021-01-01T00:00:00Z",
-      date: NOW,
+  it("writes a custom check with its date", async () => {
+    const w = await open();
+    await w.user.selectOptions(counter(), "GAL");
+    await enter(w, pivotBox(), "2023-03-03T00:00:00Z");
+    await w.user.click(radio("A date"));
+    await enter(w, dateBox(), "2030-01-01T00:00:00Z");
+    const url = w.permalink();
+    expect(seedFromLocation("rollover", url.slice(url.indexOf("?")))).toEqual({
+      counter: "GAL",
+      firmwareNotBefore: "2023-03-03T00:00:00Z",
+      date: "2030-01-01T00:00:00Z",
     });
-    for (const v of Object.values(state)) {
-      expect(typeof v).toBe("string");
-      expect(v.length).toBeLessThanOrEqual(64);
-    }
-    const url = encodeWidgetPermalink("rollover", state);
-    expect(seedFromLocation("rollover", url.slice(url.indexOf("?")))).toEqual(
-      state,
-    );
   });
 
-  it("writes no date for a check of today, and an era in place of a build date", async () => {
-    const { root, handle } = await mount({ preset: "today" });
-    pick(root, "model-era");
-    type(root, "era", "1");
-    expect(handle.getPermalinkState?.()).toEqual({
-      counter: "GAL",
-      firmwareEra: "1",
-    });
+  it("writes a fixed era for today without a date", async () => {
+    const w = await open();
+    await w.user.click(radio("A date"));
+    await w.user.click(radio("Today"));
+    await w.user.click(radio("Fixed era"));
+    await enter(w, eraBox(), "3");
+    const url = w.permalink();
+    const seeded = seedFromLocation("rollover", url.slice(url.indexOf("?")))!;
+    expect(seeded["firmwareEra"]).toBe("3");
+    expect(seeded["date"]).toBeUndefined();
   });
 });
 
 describe("on-screen words", () => {
-  function screenText(root: HTMLElement): string {
-    const clone = root.cloneNode(true) as HTMLElement;
-    clone
-      .querySelectorAll('.gmt-codeframe, output[data-role$="output"]')
-      .forEach((e) => e.remove());
-    const labels = [...clone.querySelectorAll("[aria-label]")].map((e) =>
-      e.getAttribute("aria-label"),
-    );
-    return `${clone.textContent}\n${labels.join("\n")}`;
-  }
-
-  it.each(ROLLOVER_PRESETS.map((p) => [p.id]))(
-    "%s shows no raw null, no GPS-only wording, and names no body, zone or country",
-    async (id) => {
-      const { root } = await mount();
-      choose(root, "preset", id!);
-      const shown = screenText(root);
-      expect(shown).not.toMatch(/\bnull\b|undefined|NaN/);
-      expect(shown).not.toMatch(/GPS rollover|GPS week rollover/i);
-      expect(shown).not.toMatch(/UTC\+3|Moscow|MSK|New_York|en-US|\bGMT\b/);
-      expect(shown).not.toMatch(/GLONASS/);
-    },
-  );
-
-  it("states the reading in one hidden live sentence", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    const summary = q(root, "summary");
-    expect(summary.getAttribute("aria-live")).toBe("polite");
-    expect(summary.textContent).toContain("IRN-LNAV receiver reports");
-    expect(summary.textContent).toContain("2039-08-17T00:00:00Z");
+  it("never says null or names a system's own jargon", async () => {
+    const w = await open();
+    for (const id of ROLLOVER_PRESETS.map((p) => p.id)) {
+      await w.user.selectOptions(preset(), id);
+      const text = w.root.textContent ?? "";
+      expect(text).not.toMatch(/\bnull\b|GPS rollover|GLONASS|Moscow|UTC\+3/);
+    }
   });
 
-  it("uses real controls", async () => {
-    const { root } = await mount();
-    expect(root.querySelectorAll("select")).toHaveLength(2);
-    expect(root.querySelectorAll('input[type="text"]')).toHaveLength(3);
-    expect(root.querySelectorAll('input[type="range"]')).toHaveLength(1);
-    expect(root.querySelectorAll('input[type="radio"]')).toHaveLength(4);
+  it("shows the calls the reading made", async () => {
+    await open({ preset: "navic-built-2020" });
+    for (const name of [
+      "utcToGnssWeek",
+      "gnssWeekToUtc",
+      "diffUtcAsDuration",
+      "areUtcEqual",
+    ]) {
+      expect(calls()).toHaveTextContent(name);
+    }
   });
 
-  it("prints the calls it made", async () => {
-    const { root } = await mount({ preset: "today" });
-    const calls = text(root, "call-rollover");
-    expect(calls).toContain("utcToGnssWeek");
-    expect(calls).toContain("gnssWeekToUtc");
-    expect(calls).toContain("diffUtcAsDuration");
-    expect(calls).toContain("areUtcEqual");
-    expect(calls).toContain('"rolling"');
+  it("shows the rolling read when today is checked", async () => {
+    await open({ preset: "today" });
+    expect(calls()).toHaveTextContent(/rolling/);
+  });
+
+  it("says the rolling row is the device's own clock when a date is checked", async () => {
+    const w = await open({ preset: "navic-built-2020" });
+    await w.user.click(radio("A date"));
+    expect(screen.getByText(ROLLING_DATE_TEXT)).toBeInTheDocument();
   });
 });
 
 describe("lifecycle", () => {
-  it("an aborted mount is inert", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderGnssRolloverCheckerTemplate();
-    document.body.append(root);
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountGnssRolloverChecker(root, {}, controller.signal);
-    expect(text(root, "rollover-output")).toBe("\u00a0");
+  it("an aborted mount is inert and runs no timer", async () => {
+    const w = await renderWidget(entry, { aborted: true });
     expect(vi.getTimerCount()).toBe(0);
-    handle.destroy();
-    handle.destroy();
+    w.destroy();
+    w.destroy();
+  });
+
+  it("clears the timer on destroy", async () => {
+    const w = await open({ preset: "today" });
+    expect(vi.getTimerCount()).toBe(1);
+    w.destroy();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("two checkers on one page keep separate controls", async () => {
+    const a = await renderWidget(entry, { idPrefix: "a" });
+    const b = await renderWidget(entry, { idPrefix: "b" });
+    await a.user.selectOptions(
+      within(a.root).getByRole("combobox", { name: "Preset" }),
+      "galileo-built-2024",
+    );
+    expect(
+      within(b.root).getByRole("combobox", { name: "Preset" }),
+    ).toHaveValue(ROLLOVER_PRESETS[0]!.id);
   });
 });
 
 describe("the links row", () => {
   const ERAS = "See every era of this reading";
-  const link = (root: HTMLElement) => q<HTMLAnchorElement>(root, "link-eras");
-  const state = (root: HTMLElement) => ({
-    text: link(root).textContent,
-    href: link(root).getAttribute("href"),
-    disabled: link(root).getAttribute("aria-disabled"),
-  });
-  const disabled = { text: ERAS, href: null, disabled: "true" };
 
-  /** The week and time of week the counter broadcasts at `utc`, from the library. */
-  function broadcast(counter: string, utc: string) {
-    const w = lib.utcToGnssWeek(counter as never, utc)!;
-    return {
-      week: String(w.week),
-      timeOfWeekSeconds: String(w.timeOfWeekSeconds),
-    };
-  }
-
-  it("has the one link in the links row", async () => {
-    const { root } = await mount();
-    const row = q(root, "tool-links");
-    expect(row.classList.contains("gmt-widget-controls")).toBe(true);
-    expect(
-      [...row.querySelectorAll("a")].map((a) => a.dataset["role"]),
-    ).toEqual(["link-eras"]);
-  });
-
-  it("sends the broadcast week and time of week and the build date to the Week Decoder", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    expect(state(root)).toEqual({
-      text: ERAS,
-      href: encodeWidgetPermalink("gnssweek", {
-        mode: "broadcast",
-        counter: "IRN-LNAV",
-        ...broadcast("IRN-LNAV", NOW),
-        rolloverNotBefore: "2020-01-01T00:00:00Z",
-      }),
-      disabled: null,
-    });
+  it("sends the reading to the Week Decoder with the firmware's own form", async () => {
+    await open({ preset: "navic-built-2020" });
+    const href = screen.getByRole("link", { name: ERAS }).getAttribute("href")!;
+    const seeded = seedFromLocation("gnssweek", href.slice(href.indexOf("?")))!;
+    expect(seeded["mode"]).toBe("broadcast");
+    expect(seeded["counter"]).toBe("IRN-LNAV");
+    expect(seeded["rolloverNotBefore"]).toBe("2020-01-01T00:00:00Z");
   });
 
   it("sends a fixed era as rolloverEra", async () => {
-    const { root } = await mount({ preset: "gps-lnav-fixed-era" });
-    expect(link(root).getAttribute("href")).toBe(
-      encodeWidgetPermalink("gnssweek", {
-        mode: "broadcast",
-        counter: "GPS-LNAV",
-        ...broadcast("GPS-LNAV", NOW),
-        rolloverEra: "2",
-      }),
-    );
+    await open({ preset: "navic-fixed-era" });
+    const href = screen.getByRole("link", { name: ERAS }).getAttribute("href")!;
+    const seeded = seedFromLocation("gnssweek", href.slice(href.indexOf("?")))!;
+    expect(seeded["rolloverEra"]).toBe("1");
   });
 
-  it("sends the week the receiver broadcasts, which is the true week after the window ends", async () => {
-    const { root } = await mount({ preset: "navic-built-2020-after-wrap" });
-    expect(link(root).getAttribute("href")).toBe(
-      encodeWidgetPermalink("gnssweek", {
-        mode: "broadcast",
-        counter: "IRN-LNAV",
-        ...broadcast("IRN-LNAV", "2040-01-01T00:00:00Z"),
-        rolloverNotBefore: "2020-01-01T00:00:00Z",
-      }),
-    );
+  it("is disabled on NO SIGNAL and lights again for a reading", async () => {
+    const w = await open();
+    await enter(w, pivotBox(), "nonsense");
+    expect(screen.queryByRole("link", { name: ERAS })).not.toBeInTheDocument();
+    expect(screen.getByText(ERAS)).toHaveAttribute("aria-disabled", "true");
+    await enter(w, pivotBox(), "2020-01-01T00:00:00Z");
+    expect(screen.getByRole("link", { name: ERAS })).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
+});
 
-  it("follows the slider's date", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    slide(root, 0);
-    expect(link(root).getAttribute("href")).toBe(
-      encodeWidgetPermalink("gnssweek", {
-        mode: "broadcast",
-        counter: "IRN-LNAV",
-        ...broadcast("IRN-LNAV", "2020-01-01T00:00:00Z"),
-        rolloverNotBefore: "2020-01-01T00:00:00Z",
-      }),
-    );
-  });
-
-  it("is disabled, with no href, on NO SIGNAL and lit again by a good reading", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    expect(link(root).hasAttribute("href")).toBe(true);
-    type(root, "pivot", "garbage");
-    expect(state(root)).toEqual(disabled);
-    type(root, "pivot", "2020-01-01T00:00:00Z");
-    type(root, "date", "2016-12-31T23:59:60Z");
-    expect(state(root)).toEqual(disabled);
-    type(root, "date", NOW);
-    expect(link(root).hasAttribute("href")).toBe(true);
-    expect(link(root).hasAttribute("aria-disabled")).toBe(false);
-    pick(root, "model-era");
-    type(root, "era", "abc");
-    expect(state(root)).toEqual(disabled);
-  });
-
-  it("is disabled for a blank field", async () => {
-    const { root } = await mount({ preset: "navic-built-2020" });
-    type(root, "date", "");
-    expect(state(root)).toEqual(disabled);
-  });
-
-  it("lands on a seed the Week Decoder reads back as the reading's own", async () => {
-    const { root } = await mount({ preset: "galileo-built-2024" });
-    const href = link(root).getAttribute("href")!;
-    const seed = seedFromLocation("gnssweek", href.slice(href.indexOf("?")));
-    expect(seed).toEqual({
-      mode: "broadcast",
-      counter: "GAL",
-      ...broadcast("GAL", NOW),
-      rolloverNotBefore: "2024-01-01T00:00:00Z",
-    });
+describe("the length cap", () => {
+  it("stops the date field at 64 characters", async () => {
+    const w = await open();
+    const box = dateBox();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(72));
+    expect(box).toHaveValue("x".repeat(64));
   });
 });

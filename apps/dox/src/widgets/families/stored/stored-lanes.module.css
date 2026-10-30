@@ -1,0 +1,428 @@
+/* storedFigure: the two lanes and the legend. Every lane has a reserved height, so a gap, an
+   overlap, a since strip and a line with nothing to draw are the same size. Text is the body
+   ink on the solid widget surface; a series colour is only ever a border, a bar or a pattern. */
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-4);
+  container: stored-figure / inline-size;
+  min-inline-size: 0;
+}
+
+.lane {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+}
+
+.laneName {
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+}
+
+.trackClock,
+.trackExact {
+  position: relative;
+  min-inline-size: 0;
+  block-size: 8.5rem;
+  background: var(--gmt-surface-widget);
+}
+
+.trackExact {
+  --row: 1.75rem;
+}
+
+/* The zone's clock: chip row, the day, tick labels, the stored pin. */
+.chiprow,
+.tickrow,
+.pinrow {
+  position: absolute;
+  inset-inline: 0;
+  block-size: 1.6rem;
+}
+
+.chiprow {
+  inset-block-start: 0;
+}
+
+.daytrack {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 2.2rem;
+  block-size: 1.6rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: color-mix(
+    in srgb,
+    var(--gmt-series-1) 6%,
+    var(--gmt-surface-widget)
+  );
+}
+
+.tickrow {
+  inset-block-start: 4rem;
+  block-size: 1.2rem;
+}
+
+.pinrow {
+  inset-block-start: 5.6rem;
+}
+
+.band {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--x) * 1%);
+  inline-size: calc(var(--w) * 1%);
+  min-inline-size: 3px;
+  box-sizing: border-box;
+
+  &[data-kind="gap"] {
+    border: 1px dashed var(--gmt-dst-gold);
+    background-color: color-mix(
+      in srgb,
+      var(--gmt-dst-gold) 16%,
+      var(--gmt-surface-widget)
+    );
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 4px,
+      color-mix(in srgb, var(--gmt-dst-gold) 40%, transparent) 4px 5px
+    );
+  }
+
+  &[data-kind="overlap"] {
+    border: 3px double var(--gmt-dst-purple);
+    background-color: color-mix(
+      in srgb,
+      var(--gmt-dst-purple) 16%,
+      var(--gmt-surface-widget)
+    );
+  }
+}
+
+.tick {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: calc(var(--x) * 1%);
+  block-size: 0.4rem;
+  inline-size: 1px;
+  background: var(--gmt-ice);
+}
+
+.pin {
+  position: absolute;
+  inset-block: -0.25rem;
+  inset-inline-start: calc(var(--x) * 1%);
+  inline-size: 2px;
+  translate: -50% 0;
+  background: var(--gmt-series-1);
+}
+
+.ticklabel {
+  position: absolute;
+  inset-block-start: 0.2rem;
+  inset-inline-start: calc(var(--x) * 1%);
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Chips and labels hang from their point by an anchor. */
+.chiprow .chip,
+.pinrow .chip {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(var(--x) * 1%);
+}
+
+[data-anchor="start"] {
+  translate: 0 0;
+}
+
+[data-anchor="mid"] {
+  translate: -50% 0;
+}
+
+[data-anchor="end"] {
+  translate: -100% 0;
+}
+
+.chip {
+  --series: var(--gmt-border-strong);
+
+  display: inline-block;
+  box-sizing: border-box;
+  min-block-size: 1.5rem;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--series);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+
+  &[data-kind="gap"] {
+    --series: var(--gmt-dst-gold);
+  }
+
+  &[data-kind="overlap"] {
+    --series: var(--gmt-dst-purple);
+  }
+
+  &:is([data-kind="pin"], [data-kind="gate"]) {
+    --series: var(--gmt-series-1);
+  }
+
+  &[data-kind="mark"][data-series="1"] {
+    --series: var(--gmt-series-1);
+  }
+
+  &[data-kind="mark"][data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-kind="mark"][data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+}
+
+/* The since strip's two plates: what the zone says now against what was stored. */
+.plates {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gmt-space-2);
+}
+
+.plate {
+  --series: var(--gmt-series-1);
+
+  display: inline-block;
+  box-sizing: border-box;
+  min-block-size: 1.5rem;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--series);
+  border-block-end-width: 3px;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+}
+
+/* The exact timeline: four rows, one for the clock change and three for readings. */
+.baseline {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0.5rem;
+  block-size: 2px;
+  background: var(--gmt-ice);
+}
+
+.trackExact .chip {
+  position: absolute;
+  inset-block-start: calc(var(--tier, 0) * var(--row));
+  inset-inline-start: calc(var(--x) * 1%);
+}
+
+.gate,
+.markline {
+  position: absolute;
+  inset-block: calc(var(--tier, 0) * var(--row) + 1.3rem) 0.25rem;
+  inset-inline-start: calc(var(--x) * 1%);
+  inline-size: 2px;
+  translate: -50% 0;
+  background: var(--series, var(--gmt-ice));
+}
+
+.gate {
+  &[data-kind="gap"] {
+    --series: var(--gmt-dst-gold);
+  }
+
+  &[data-kind="overlap"] {
+    --series: var(--gmt-dst-purple);
+  }
+
+  &[data-kind="since"] {
+    --series: var(--gmt-series-1);
+  }
+}
+
+.markline {
+  &[data-series="1"] {
+    --series: var(--gmt-series-1);
+  }
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+}
+
+/* The time not drawn: two slashes across the baseline. */
+.break {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: calc(var(--x) * 1%);
+  inline-size: calc(var(--w) * 1%);
+  block-size: 1rem;
+  background-color: var(--gmt-surface-widget);
+  background-image: linear-gradient(
+    115deg,
+    transparent 38%,
+    var(--gmt-ice) 38% 44%,
+    transparent 44% 56%,
+    var(--gmt-ice) 56% 62%,
+    transparent 62%
+  );
+}
+
+/* The legend: five items always. One that does not apply is hidden but keeps its place. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+  min-block-size: 1.5rem;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+
+  &[data-off="true"] {
+    visibility: hidden;
+  }
+}
+
+.swatch {
+  display: inline-block;
+  inline-size: 0.9rem;
+  block-size: 0.7rem;
+  box-sizing: border-box;
+  border: 1px solid var(--gmt-ice);
+
+  &[data-swatch="gap"] {
+    border: 1px dashed var(--gmt-dst-gold);
+    background-color: color-mix(
+      in srgb,
+      var(--gmt-dst-gold) 20%,
+      var(--gmt-surface-widget)
+    );
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 3px,
+      color-mix(in srgb, var(--gmt-dst-gold) 50%, transparent) 3px 4px
+    );
+  }
+
+  &[data-swatch="overlap"] {
+    border: 3px double var(--gmt-dst-purple);
+  }
+
+  &[data-swatch="gate"] {
+    inline-size: 2px;
+    border: 0;
+    background: var(--gmt-series-1);
+  }
+
+  &[data-swatch="mark"] {
+    border: 0;
+    border-block-end: 2px solid var(--gmt-series-2);
+  }
+
+  &[data-swatch="break"] {
+    border: 0;
+    background-image: linear-gradient(
+      115deg,
+      transparent 38%,
+      var(--gmt-ice) 38% 44%,
+      transparent 44% 56%,
+      var(--gmt-ice) 56% 62%,
+      transparent 62%
+    );
+  }
+}
+
+/* Narrow: chips may need a second line, so the lanes take a little more height. */
+@container stored-figure (inline-size < 30rem) {
+  .trackClock,
+  .trackExact {
+    block-size: 9.5rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .trackClock,
+  .trackExact,
+  .daytrack,
+  .chip,
+  .plate {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .band {
+    background-image: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+  }
+
+  .pin,
+  .gate,
+  .markline,
+  .baseline,
+  .tick {
+    background: CanvasText;
+  }
+
+  .break {
+    background-color: Canvas;
+    background-image: none;
+    border-block: 2px dotted CanvasText;
+  }
+
+  .swatch {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .laneName,
+  .ticklabel,
+  .legendItem {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .chip,
+  .plate,
+  .daytrack {
+    border-color: var(--gmt-ice);
+  }
+
+  .pin,
+  .gate,
+  .markline {
+    inline-size: 3px;
+  }
+}

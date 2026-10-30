@@ -10,13 +10,55 @@
  * `observedDate` calls. Everything on screen is a library call
  * (`attributeRules`, `marksFromAttribution`); the widget computes no date.
  *
- * Follows the `renderTemplate` / `mount` split in `widget-mount.ts`. Every
- * listener is delegated on the root. Typing in a field redraws the matrix only,
- * so focus and IME composition stay in the field; picking a cell moves the
- * selection in place and redraws the detail only.
+ * Built on the component kit: `renderObservanceComparatorTemplate` writes the markup from
+ * builders only, with ids from `idScope(idPrefix)`, and `mount` finds its parts by those ids
+ * and delegates every listener on the widget with the mount's `signal`. Typing in a field
+ * redraws the matrix and the detail, never the field lists, so focus and IME composition
+ * stay in the field; picking a cell redraws the matrix and puts focus back on its button.
  */
-import { codeFrameHtml } from "./code-frame";
-import { callSizer, holdHtml, textSizers } from "./edi-picture";
+import { defineElements } from "~/widgets/define";
+import {
+  button,
+  codeFrame,
+  field,
+  findWidget,
+  html,
+  idScope,
+  section,
+  select,
+  setHtml,
+  srOnly,
+  textInput,
+  toolLinks,
+  widget,
+  type SafeHtml,
+} from "~/widgets/builders";
+import {
+  compareMatrix,
+  type MatrixBlock,
+  type MatrixColumn,
+  type MatrixRow,
+} from "~/widgets/families/holiday/compare-matrix";
+import { heldText, type HeldState } from "~/widgets/families/holiday/held-text";
+import { holidayFrame } from "~/widgets/families/holiday/holiday-frame";
+import {
+  holidayLegend,
+  kindItems,
+} from "~/widgets/families/holiday/holiday-legend";
+import {
+  policyEditor,
+  policySelectId,
+} from "~/widgets/families/holiday/policy-editor";
+import {
+  signalPlates,
+  type SignalPlate,
+} from "~/widgets/families/holiday/signal-plates";
+import { weekStrip } from "~/widgets/families/holiday/week-strip";
+import { yearStepper } from "~/widgets/families/holiday/year-stepper";
+import { chips, type GmtChips } from "~/widgets/primitives/chips/chips";
+import { grow } from "~/widgets/primitives/grow/grow";
+import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
+import styles from "~/widgets/tools/observance-comparator.module.css";
 import { formatPolicyText, parsePolicyText } from "./holiday-codec";
 import { loadHolidayLib, type HolidayLib } from "./holiday-lib";
 import {
@@ -27,19 +69,11 @@ import {
   shortDate,
 } from "./holiday-rule-builder";
 import {
-  legendHtml,
-  policyEditorHtml,
   policySummary,
   policyTextFromSelects,
   weekdayShort,
-  weekRowsHtml,
 } from "./holiday-widgets";
 import { onWidthChange } from "./label-fit";
-import {
-  descriptionHoldHtml,
-  plateHtml,
-  type PlateSpec,
-} from "./ledger-widgets";
 import {
   COMPARATOR_LINKS,
   COMPARATOR_PRESETS,
@@ -75,43 +109,33 @@ import {
   type ObservanceComparatorArgs,
   type YearRow,
 } from "./observance-comparator";
-import { setPresetDescription } from "./punctuality-widgets";
+import { setToolLink } from "./widget-ui";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
-import {
-  chipToggleHtml,
-  escapeAttr,
-  escapeHtml,
-  labelTextHtml,
-  setToolLink,
-  toolLinksHtml,
-  wireCopyButtons,
-} from "./widget-ui";
 
 export type { ObservanceComparatorArgs } from "./observance-comparator";
-export { FOLD_WIDTH };
+export { FOLD_WIDTH, formatPolicyText };
 
+const WIDGET_NAME = "observance-comparator";
 const CUSTOM_PRESET = "custom";
 const HINT_HANDOFF = "Fix the holiday dates and the policy first.";
 const AGREE = "policies agree";
 const DISAGREE = "policies disagree";
 const NOTHING = "nothing to compare";
 
-// Three holidays that each walk: two lines apiece, the longest the calls print.
-const CALL_SIZER =
-  '// calendar: "UTC", weekend [6, 7], every holiday that does not walk\n' +
-  'observedDate("2021-12-26", { 6: "nextWorkingDay", 7: "nextWorkingDay" }, calendar); // "2021-12-28"\n' +
-  '// calendar: "UTC", weekend [6, 7], every holiday that does not walk, and the walks of holidays 1 to 1\n' +
-  'observedDate("2021-12-26", { 6: "nextWorkingDay", 7: "nextWorkingDay" }, calendar); // "2021-12-28"\n' +
-  '// calendar: "UTC", weekend [6, 7], every holiday that does not walk, and the walks of holidays 1 to 2\n' +
-  'observedDate("2021-12-26", { 6: "nextWorkingDay", 7: "nextWorkingDay" }, calendar); // "2021-12-28"';
-
 const SPAN_NOTES = [
   NO_YEARS_REASON,
+  `${NO_SIGNAL_TEXT}: ${NO_YEARS_REASON}`,
   `More than ${MAX_YEARS} years: showing the first ${MAX_YEARS}.`,
   `${MAX_YEARS} years`,
 ];
-
-let counter = 0;
+const HOLIDAY_NOTE_SIZERS = [
+  `${NO_SIGNAL_TEXT}: holidays 1, 2, 3 are not a date on the calendar (a month from 1 to 12 and a day that month has).`,
+];
+const COLUMN_NOTE_SIZERS = [
+  COMPARATOR_PRESETS.map((p) => presetColumnsNote(presetState(p))).sort(
+    (a, b) => b.length - a.length,
+  )[0] ?? "",
+];
 
 // ---------------------------------------------------------------------------
 // Markup
@@ -127,253 +151,201 @@ function labelOfId(id: string): string {
   return POLICY_PRESETS.find((p) => p.id === id)?.label ?? id;
 }
 
-const numberField = (
-  field: string,
-  label: string,
-  value: string,
-  extra = "",
-): string =>
-  `<label class="gmt-label">${labelTextHtml(label)}` +
-  `<input class="gmt-input" data-field="${field}" type="number" step="1" inputmode="numeric" ${extra} value="${escapeAttr(value)}"></label>`;
+const holidayId = (id: (l: string) => string, i: number, part: string) =>
+  id(`h${i}-${part}`);
+const columnId = (id: (l: string) => string, j: number, part: string) =>
+  id(`c${j}-${part}`);
 
-function holidaysHtml(state: ComparatorState): string {
-  const button = (action: string, glyph: string, name: string, off = false) =>
-    `<button type="button" class="gmt-button gmt-obs-btn" data-action="${action}" aria-label="${escapeAttr(name)}"${off ? " disabled" : ""}>${glyph}</button>`;
-  return state.holidays
-    .map(
-      (h, i) =>
-        `<li class="gmt-holiday-card gmt-obs-holiday" data-holiday="${i}">` +
-        `<span class="gmt-obs-num" aria-hidden="true">${i + 1}</span>` +
-        `<div class="gmt-obs-holiday-fields">` +
-        numberField(
-          "month",
-          `Holiday ${i + 1} month`,
-          h.month,
-          'min="1" max="12"',
-        ) +
-        numberField("day", `Holiday ${i + 1} day`, h.day, 'min="1" max="31"') +
-        `</div>` +
-        button(
-          "remove-holiday",
-          "×",
-          `Remove holiday ${i + 1}`,
-          state.holidays.length <= 1,
-        ) +
-        `</li>`,
-    )
-    .join("");
+function holidaysHtml(
+  state: ComparatorState,
+  id: (local: string) => string,
+): SafeHtml {
+  return html`${state.holidays.map(
+    (h, i) =>
+      html`<li class="${styles.item}">
+        <div class="${styles.head}">
+          <span class="${styles.number}" aria-hidden="true">${String(i + 1)}</span>
+          <div class="${styles.fields}">${field({
+            id: holidayId(id, i, "month"),
+            label: `Holiday ${i + 1} month`,
+            control: ({ id: cid }) =>
+              textInput({
+                id: cid,
+                value: h.month,
+                inputMode: "numeric",
+                autocomplete: "off",
+                spellcheck: false,
+              }),
+          })}${field({
+            id: holidayId(id, i, "day"),
+            label: `Holiday ${i + 1} day`,
+            control: ({ id: cid }) =>
+              textInput({
+                id: cid,
+                value: h.day,
+                inputMode: "numeric",
+                autocomplete: "off",
+                spellcheck: false,
+              }),
+          })}</div>${button({
+            id: holidayId(id, i, "remove"),
+            label: `Remove holiday ${i + 1}`,
+          })}
+        </div>
+      </li>`,
+  )}`;
 }
 
 function columnsHtml(
   state: ComparatorState,
-  uid: string,
+  id: (local: string) => string,
   folded: boolean,
-): string {
-  return state.columns
-    .map((id, j) => {
-      const custom = id.startsWith(CUSTOM_PREFIX);
-      const options =
-        POLICY_PRESETS.map(
-          (p) =>
-            `<option value="${escapeAttr(p.id)}"${p.id === id ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-        ).join("") +
-        `<option value="${CUSTOM_OPTION}"${custom ? " selected" : ""}>Custom policy</option>`;
-      const editor = custom
-        ? `<div class="gmt-obs-editor"><span class="gmt-label-text">Observance when a holiday falls on a weekday (blank: none)</span>` +
-          policyEditorHtml({
-            idPrefix: `${uid}-c${j}`,
-            policy: parsePolicyText(columnText(id)) ?? {},
+): SafeHtml {
+  return html`${state.columns.map((colId, j) => {
+    const custom = colId.startsWith(CUSTOM_PREFIX);
+    const editor = custom
+      ? html`<div class="${styles.policy}"
+          ><span class="${styles.policyLabel}"
+            >Observance when a holiday falls on a weekday (blank: none)</span
+          >${policyEditor({
+            id: columnId(id, j, "p"),
+            policy: parsePolicyText(columnText(colId)) ?? {},
+            label: `Column ${j + 1} observance`,
             folded,
-          }) +
-          `</div>`
-        : "";
-      return (
-        `<li class="gmt-holiday-card gmt-obs-column" data-column="${j}" data-series="${(j % 4) + 1}">` +
-        `<div class="gmt-obs-column-head">` +
-        `<span class="gmt-obs-num" aria-hidden="true">${j + 1}</span>` +
-        `<label class="gmt-label gmt-obs-column-pick">${labelTextHtml(`Column ${j + 1} policy`)}` +
-        `<select class="gmt-select" data-field="col-preset">${options}</select></label>` +
-        `<button type="button" class="gmt-button gmt-obs-btn" data-action="remove-column" aria-label="${escapeAttr(`Remove column ${j + 1}`)}"${state.columns.length <= MIN_COLUMNS ? " disabled" : ""}>×</button>` +
-        `</div>` +
-        editor +
-        `</li>`
-      );
-    })
-    .join("");
-}
-
-/** One holiday inside a cell: two lines, the second always there. */
-function blockHtml(name: string, cell: HolidayCell, index: number): string {
-  const hidden = (text: string) =>
-    `<span class="gmt-holiday-visually-hidden">${escapeHtml(text)}</span>`;
-  if (cell.state === "sentinel") {
-    return (
-      `<span class="gmt-obs-hol gmt-obs-nosignal" data-holiday="${index}" data-state="sentinel">` +
-      hidden(`${name}: `) +
-      `<span class="gmt-obs-l1">⟨ NO SIGNAL —</span> ` +
-      `<span class="gmt-obs-l2">invalid input ⟩</span></span>`
-    );
-  }
-  return (
-    `<span class="gmt-obs-hol" data-holiday="${index}" data-state="${cell.state}"` +
-    (cell.note === "" ? "" : ` title="${escapeAttr(cell.note)}"`) +
-    `>` +
-    hidden(`${name}: `) +
-    `<span class="gmt-obs-l1">${escapeHtml(cell.line1)}</span> ` +
-    `<span class="gmt-obs-l2">${cell.line2 === "" ? "&nbsp;" : escapeHtml(cell.line2)}</span>` +
-    (cell.note === "" ? "" : hidden(cell.note)) +
-    `</span>`
-  );
-}
-
-const blankBlock = (index: number): string =>
-  `<span class="gmt-obs-hol" data-holiday="${index}" data-state="blank"><span class="gmt-obs-l1">&nbsp;</span> <span class="gmt-obs-l2">&nbsp;</span></span>`;
-
-function headCell(
-  column: { label: string; reason: string },
-  j: number,
-  selected: boolean,
-): string {
-  return (
-    `<th scope="col" data-col="${j}">` +
-    `<button type="button" class="gmt-obs-colbtn" data-action="pick-col" data-col="${j}" aria-pressed="${selected}">${escapeHtml(column.label)}</button>` +
-    (column.reason === ""
-      ? ""
-      : `<span class="gmt-obs-reason gmt-obs-nosignal">${escapeHtml(`${NO_SIGNAL_TEXT}: ${column.reason}.`)}</span>`) +
-    `</th>`
-  );
+          })}</div
+        >`
+      : "";
+    return html`<li class="${styles.item}" data-series="${String((j % 4) + 1)}">
+      <div class="${styles.head}">
+        <span class="${styles.number}" aria-hidden="true">${String(j + 1)}</span>
+        <div class="${styles.pick}">${field({
+          id: columnId(id, j, "preset"),
+          label: `Column ${j + 1} policy`,
+          control: ({ id: cid }) =>
+            select({
+              id: cid,
+              value: custom ? CUSTOM_OPTION : colId,
+              options: [
+                ...POLICY_PRESETS.map((p) => ({ value: p.id, label: p.label })),
+                { value: CUSTOM_OPTION, label: "Custom policy" },
+              ],
+            }),
+        })}</div>${button({
+          id: columnId(id, j, "remove"),
+          label: `Remove column ${j + 1}`,
+        })}
+      </div>${editor}
+    </li>`;
+  })}`;
 }
 
 function agreeWord(row: YearRow): string {
   return row.disagree ? DISAGREE : row.reference < 0 ? NOTHING : AGREE;
 }
 
-function realRowHtml(
-  model: ComparatorModel,
-  row: YearRow,
-  selected: { year: number | null; column: number },
-): string {
-  const on = row.year === selected.year;
-  const cells = model.columns.map((column, j) => {
-    const pressed = on && j === selected.column;
-    return (
-      `<td data-label="${escapeAttr(column.label)}">` +
-      `<button type="button" class="gmt-obs-cell" data-action="pick-cell" data-year="${row.year}" data-col="${j}" aria-pressed="${pressed}">` +
-      model.holidays
-        .map((h, i) => blockHtml(h.name, row.cells[j]![i]!, i))
-        .join("") +
-      `</button></td>`
-    );
-  });
-  return (
-    `<tr data-year="${row.year}"${row.disagree ? ' data-disagree="true"' : ""}${on ? " data-selected" : ""}>` +
-    `<th scope="row" class="gmt-obs-year">` +
-    `<button type="button" class="gmt-obs-yearbtn" data-action="pick-year" data-year="${row.year}" aria-pressed="${on}">${row.year}</button>` +
-    `<span class="gmt-obs-agree">${agreeWord(row)}</span></th>` +
-    cells.join("") +
-    `</tr>`
-  );
+function blockOf(name: string, cell: HolidayCell): MatrixBlock {
+  return {
+    name,
+    state: cell.state,
+    line1: cell.line1,
+    line2: cell.line2,
+    note: cell.note,
+  };
 }
 
-function placeholderRowHtml(
-  labels: readonly string[],
-  holidays: number,
-): string {
-  const blocks = Array.from({ length: holidays }, (_, i) => blankBlock(i)).join(
-    "",
-  );
-  return (
-    `<tr data-placeholder aria-hidden="true" inert>` +
-    `<th scope="row" class="gmt-obs-year"><span class="gmt-obs-yearbtn">&nbsp;</span><span class="gmt-obs-agree">&nbsp;</span></th>` +
-    labels
-      .map(
-        (label) =>
-          `<td data-label="${escapeAttr(label)}"><span class="gmt-obs-cell">${blocks}</span></td>`,
-      )
-      .join("") +
-    `</tr>`
-  );
-}
-
-/**
- * The matrix: a native table, always `MAX_YEARS` body rows. A span shorter than
- * that is padded with hidden rows of the same structure, so stepping `to` never
- * changes the table's height or moves what sits under it.
- */
-export function matrixHtml(
+/** The matrix, drawn from the model, or as a header over hidden rows without one. */
+function matrixOf(
+  id: (local: string) => string,
   state: ComparatorState,
   model: ComparatorModel | null,
-): string {
-  const columns: { label: string; reason: string }[] =
-    model?.columns ??
-    state.columns.map((id) => ({ label: labelOfId(id), reason: "" }));
-  const holidays = model?.holidays.length ?? state.holidays.length;
-  const labels = columns.map((c) => c.label);
-  const selYear = model ? selectedYear(model, state) : null;
-  const selCol = model ? selectedColumn(model, state) : 0;
-  const real = (model?.rows ?? []).map((row) =>
-    realRowHtml(model!, row, { year: selYear, column: selCol }),
-  );
-  const pad = Array.from({ length: Math.max(0, MAX_YEARS - real.length) }, () =>
-    placeholderRowHtml(labels, holidays),
-  );
+): SafeHtml {
+  const columns: MatrixColumn[] =
+    model?.columns.map((c) => ({
+      label: c.label,
+      reason: c.reason === "" ? "" : `${NO_SIGNAL_TEXT}: ${c.reason}.`,
+    })) ??
+    state.columns.map((colId) => ({ label: labelOfId(colId), reason: "" }));
+  const rows: MatrixRow[] = (model?.rows ?? []).map((row) => ({
+    year: row.year,
+    disagree: row.disagree,
+    word: agreeWord(row),
+    cells: row.cells.map((cell) =>
+      cell.map((c, i) => blockOf(model!.holidays[i]?.name ?? "", c)),
+    ),
+  }));
   const names = model
     ? model.holidays.map((h) => h.name).join(", ")
     : "the holidays";
-  return (
-    `<table class="gmt-obs-table" data-role="matrix">` +
-    `<caption>Observed dates of ${escapeHtml(names)}, one row per year and one column per policy</caption>` +
-    `<thead><tr><th scope="col" class="gmt-obs-corner">Year</th>` +
-    columns
-      .map((c, j) => headCell(c, j, model !== null && j === selCol))
-      .join("") +
-    `</tr></thead>` +
-    `<tbody>${real.join("")}${pad.join("")}</tbody></table>`
-  );
+  return compareMatrix({
+    id: id("matrix"),
+    caption: `Observed dates of ${names}, one row per year and one column per policy`,
+    columns,
+    rows,
+    bodyRows: MAX_YEARS,
+    holidays: model?.holidays.length ?? state.holidays.length,
+    selectedYear: model ? selectedYear(model, state) : null,
+    selectedColumn: model ? selectedColumn(model, state) : 0,
+  });
 }
 
-function plates(
+function platesOf(
   model: ComparatorModel | null,
   row: YearRow | undefined,
-): PlateSpec[] {
+): SafeHtml {
   const latest = row ? latestObserved(row) : null;
-  return [
+  const list: SignalPlate[] = [
     {
-      role: "hero-disagree",
       caption: "Columns that disagree",
       value:
         row === undefined || model === null
           ? null
           : `${row.differing.length} of ${model.columns.length}`,
-      lines: [
+      line:
         row === undefined || row.reference < 0
-          ? "nothing to compare"
+          ? NOTHING
           : `differ from column ${row.reference + 1}`,
-      ],
       series: 1,
+      samples: [`${MAX_COLUMNS} of ${MAX_COLUMNS}`],
     },
     {
-      role: "hero-latest",
       caption: "Latest observed day",
       value:
         row === undefined || latest === null
           ? null
           : shortDate(latest.date, row.year),
-      lines: [latest === null ? "no date" : `in column ${latest.column + 1}`],
+      line: latest === null ? "no date" : `in column ${latest.column + 1}`,
       series: 2,
+      samples: ["Wed 31 Dec 2099"],
     },
+  ];
+  return signalPlates(list);
+}
+
+function holdOf(
+  label: string,
+  text: string,
+  state: HeldState,
+  sizers: readonly string[],
+): SafeHtml {
+  return heldText({ label, text, state, sizers, gate: "hold" });
+}
+
+function presetOptions(): {
+  value: string;
+  label: string;
+  description: string;
+}[] {
+  return [
+    { value: CUSTOM_PRESET, label: "Custom", description: "" },
+    ...COMPARATOR_PRESETS.map((p) => ({
+      value: p.id,
+      label: p.label,
+      description: p.description,
+    })),
   ];
 }
 
-function presetOptionsHtml(id: string): string {
-  return (
-    `<option value="${CUSTOM_PRESET}"${id === "" ? " selected" : ""}>Custom</option>` +
-    COMPARATOR_PRESETS.map(
-      (p) =>
-        `<option value="${escapeAttr(p.id)}"${p.id === id ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-    ).join("")
-  );
-}
+const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
 /**
  * The widget's chrome, seeded with `args` so the first paint shows them. With
@@ -381,109 +353,117 @@ function presetOptionsHtml(id: string): string {
  * hidden rows; `mount` fills it from the library.
  */
 export function renderObservanceComparatorTemplate(
+  idPrefix: string,
   args: ObservanceComparatorArgs = {},
-): string {
-  const uid = `gmt-obs-${++counter}`;
+): SafeHtml {
+  const id = idScope(idPrefix);
   const state = isSeeded(args)
     ? readArgs(args)
     : presetState(COMPARATOR_PRESETS[0]!);
   const presetId = matchPreset(state);
-  const preset = COMPARATOR_PRESETS.find((p) => p.id === presetId);
   const presetNote = presetColumnsNote(state);
-  const weekendBoxes = [1, 2, 3, 4, 5, 6, 7]
-    .map((d) =>
-      chipToggleHtml({
-        type: "checkbox",
-        role: "weekend",
+
+  const inputs = section(
+    { id: id("inputs"), heading: "1. Holidays, years and policies", level: 3 },
+    html`<div class="${styles.stack}">${preset({
+      id: id("preset"),
+      label: "Preset",
+      value: presetId === "" ? CUSTOM_PRESET : presetId,
+      options: presetOptions(),
+    })}${holidayFrame(
+      html`<h4 class="${styles.subhead}">Holidays</h4
+        >${grow(html`<ol class="${styles.list}" id="${id("holidays")}" aria-label="Holidays">${holidaysHtml(state, id)}</ol>`)}<div class="${styles.addrow}">${button(
+          {
+            id: id("add-holiday"),
+            label: "Add holiday",
+          },
+        )}<span class="${styles.count}" id="${id("holiday-count")}"
+          >${String(state.holidays.length)} of ${String(MAX_HOLIDAYS)} holidays</span
+        ></div
+        ><div id="${id("holiday-note")}">${holdOf("Holiday note", "", "ok", HOLIDAY_NOTE_SIZERS)}</div>`,
+      { gate: "frame" },
+    )}<div class="${styles.addrow}">${yearStepper({
+      id: id("from"),
+      label: "First year",
+      value: state.from,
+      min: YEAR_MIN,
+      max: YEAR_MAX,
+      prevLabel: "Earlier first year",
+      nextLabel: "Later first year",
+    })}${yearStepper({
+      id: id("to"),
+      label: "Last year",
+      value: state.to,
+      min: YEAR_MIN,
+      max: YEAR_MAX,
+      prevLabel: "Earlier last year",
+      nextLabel: "Later last year",
+    })}</div>${chips({
+      legend: "Weekend",
+      kind: "checkbox",
+      name: id("weekend-chip"),
+      items: WEEKDAYS.map((d) => ({
         value: String(d),
         label: weekdayShort(d),
         checked: state.weekend.includes(d),
-      }),
-    )
-    .join("");
+      })),
+    })}<div id="${id("span-note")}">${holdOf("Span note", "", "ok", SPAN_NOTES)}</div>${holidayFrame(
+      html`<h4 class="${styles.subhead}">Policy columns</h4
+        >${grow(html`<ol class="${styles.list}" id="${id("columns")}" aria-label="Policy columns">${columnsHtml(state, id, false)}</ol>`)}<div class="${styles.addrow}">${button(
+          {
+            id: id("add-column"),
+            label: "Add column",
+          },
+        )}<span class="${styles.count}" id="${id("column-count")}"
+          >${String(state.columns.length)} of ${String(MAX_COLUMNS)} columns</span
+        ></div
+        ><div id="${id("column-note")}">${holdOf("Column note", presetNote, "note", COLUMN_NOTE_SIZERS)}</div>`,
+      { gate: "frame" },
+    )}</div>`,
+  );
 
-  return (
-    `<div class="gmt-observance-comparator gmt-widget not-content" data-uid="${uid}">` +
-    `<div class="gmt-widget-card">` +
-    // 1. Inputs
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>1. Holidays, years and policies</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
-    `<select class="gmt-select" data-role="preset">${presetOptionsHtml(presetId)}</select></label>` +
-    `</div>` +
-    descriptionHoldHtml(
-      `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>`,
-      COMPARATOR_PRESETS.map((p) => p.description),
-    ) +
-    `<div class="gmt-holiday-frame">` +
-    `<h5 class="gmt-obs-subhead">Holidays</h5>` +
-    `<ol class="gmt-obs-list" data-role="holidays" data-grow="slot">${holidaysHtml(state)}</ol>` +
-    `<div class="gmt-obs-addrow"><button type="button" class="gmt-button gmt-button--pad" data-action="add-holiday"${state.holidays.length >= MAX_HOLIDAYS ? " disabled" : ""}>Add holiday</button>` +
-    `<span class="gmt-widget-hint" data-role="holiday-count">${state.holidays.length} of ${MAX_HOLIDAYS} holidays</span></div>` +
-    `<p class="gmt-widget-hint" data-role="holiday-note" data-state="sentinel" hidden></p>` +
-    `</div>` +
-    `<div class="gmt-field-grid gmt-obs-years">` +
-    numberField(
-      "from",
-      "First year",
-      state.from,
-      `min="${YEAR_MIN}" max="${YEAR_MAX}"`,
-    ).replace('class="gmt-input"', 'class="gmt-input" data-role="from"') +
-    numberField(
-      "to",
-      "Last year",
-      state.to,
-      `min="${YEAR_MIN}" max="${YEAR_MAX}"`,
-    ).replace('class="gmt-input"', 'class="gmt-input" data-role="to"') +
-    `<fieldset class="gmt-chip-group gmt-field-wide"><legend>Weekend</legend>${weekendBoxes}</fieldset>` +
-    `</div>` +
-    holdHtml(
-      `<p class="gmt-widget-hint" data-role="span-note"></p>`,
-      textSizers("p", "gmt-widget-hint", SPAN_NOTES),
-      "gmt-ledger-hold",
-    ) +
-    `<div class="gmt-holiday-frame" data-role="columns-frame">` +
-    `<h5 class="gmt-obs-subhead">Policy columns</h5>` +
-    `<ol class="gmt-obs-list" data-role="columns">${columnsHtml(state, uid, false)}</ol>` +
-    `<div class="gmt-obs-addrow"><button type="button" class="gmt-button gmt-button--pad" data-action="add-column"${state.columns.length >= MAX_COLUMNS ? " disabled" : ""}>Add column</button>` +
-    `<span class="gmt-widget-hint" data-role="column-count">${state.columns.length} of ${MAX_COLUMNS} columns</span></div>` +
-    `<p class="gmt-widget-hint" data-role="column-note"${presetNote === "" ? " hidden" : ""}>${escapeHtml(presetNote)}</p>` +
-    `</div>` +
-    `</div>` +
-    // 2. The matrix
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>2. Where each holiday is observed</h4>` +
-    `<div class="gmt-obs-table-box" data-role="matrix-box">${matrixHtml(state, null)}</div>` +
-    `<p class="gmt-widget-hint">Pick a cell to see that year's weeks. A row marked "${DISAGREE}" has at least two columns that put a holiday on different days.</p>` +
-    `</div>` +
-    // 3. The year
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>3. The year</h4>` +
-    `<div class="gmt-holiday-frame">` +
-    `<div class="gmt-punct-heroes gmt-obs-heroes" data-role="heroes" aria-hidden="true">${plates(null, undefined).map(plateHtml).join("")}</div>` +
-    `<p class="gmt-ledger-sr" data-role="year-sentence" aria-live="polite"></p>` +
-    `<div class="gmt-obs-strip" data-role="strip"></div>` +
-    legendHtml() +
-    `</div>` +
-    `</div>` +
-    // 4. The call
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>4. The call</h4>` +
-    holdHtml(
-      codeFrameHtml("observed"),
-      [callSizer(CALL_SIZER)],
-      "gmt-ledger-hold",
-    ) +
-    toolLinksHtml(COMPARATOR_LINKS) +
-    holdHtml(
-      `<p class="gmt-widget-hint" data-role="handoff-hint"></p>`,
-      textSizers("p", "gmt-widget-hint", [HINT_HANDOFF]),
-      "gmt-ledger-hold",
-    ) +
-    `</div>` +
-    `</div>` +
-    `</div>`
+  const matrix = section(
+    {
+      id: id("matrix-section"),
+      heading: "2. Where each holiday is observed",
+      level: 3,
+    },
+    html`<div class="${styles.stack}">${grow(html`<div id="${id("matrix-box")}">${matrixOf(id, state, null)}</div>`)}<p class="${styles.hint}">Pick a cell to see that year's weeks. A row marked "${DISAGREE}" has at least two columns that put a holiday on different days.</p></div
+    >`,
+  );
+
+  const year = section(
+    { id: id("year-section"), heading: "3. The year", level: 3 },
+    holidayFrame(
+      html`<div class="${styles.plates}" aria-hidden="true" id="${id("plates")}">${platesOf(null, undefined)}</div
+        ><p role="status" aria-label="Year summary" id="${id("year-sentence")}">${srOnly("")}</p
+        >${grow(html`<div class="${styles.strip}" id="${id("strip")}"></div>`)}${holidayLegend(
+          { label: "Marks", items: kindItems() },
+        )}`,
+      { gate: "frame" },
+    ),
+  );
+
+  const call = section(
+    { id: id("call-section"), heading: "4. The call", level: 3 },
+    html`<div class="${styles.stack}">${grow(
+      html`<div class="${styles.slot}" id="${id("call")}">${codeFrame({
+        label: "observedDate calls",
+        copyLabel: "Copy calls",
+        copyText: "",
+        gate: "codeframe",
+      })}</div>`,
+    )}${grow(
+      html`<div id="${id("links")}">${toolLinks({
+        label: "Open this column in another tool",
+        links: COMPARATOR_LINKS.map((l) => ({ text: l.text })),
+      })}</div>`,
+    )}<div id="${id("handoff")}">${holdOf("Hand-off hint", "", "ok", [HINT_HANDOFF])}</div></div>`,
+  );
+
+  return widget(
+    { name: WIDGET_NAME, label: "Observance Comparator", scope: idPrefix },
+    html`${inputs}${matrix}${year}${call}`,
   );
 }
 
@@ -497,19 +477,22 @@ interface Controller {
   release(): void;
 }
 
-function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const uid = root.dataset["uid"] ?? `gmt-obs-${++counter}`;
-  const presetEl = q<HTMLSelectElement>("preset")!;
-  const holidaysEl = q<HTMLElement>("holidays")!;
-  const columnsEl = q<HTMLElement>("columns")!;
-  const fromEl = q<HTMLInputElement>("from")!;
-  const toEl = q<HTMLInputElement>("to")!;
-  const matrixBox = q<HTMLElement>("matrix-box")!;
-  const weekendEls = [
-    ...root.querySelectorAll<HTMLInputElement>('[data-role="weekend"]'),
-  ];
+function setupWidget(
+  root: HTMLElement,
+  lib: HolidayLib,
+  signal: AbortSignal,
+): Controller {
+  const { el: widgetEl, id, part: el } = findWidget(root, WIDGET_NAME);
+  const presetEl = el("preset").closest<GmtPreset>("gmt-preset")!;
+  const holidaysEl = el("holidays");
+  const columnsEl = el("columns");
+  const fromEl = el<HTMLInputElement>("from");
+  const toEl = el<HTMLInputElement>("to");
+  const addHoliday = el<HTMLButtonElement>("add-holiday");
+  const addColumn = el<HTMLButtonElement>("add-column");
+  const weekendEl = widgetEl.querySelector<GmtChips>(
+    `gmt-chips:has([name="${CSS.escape(id("weekend-chip"))}"])`,
+  )!;
 
   let state: ComparatorState = presetState(COMPARATOR_PRESETS[0]!);
   let model: ComparatorModel | null = null;
@@ -522,110 +505,93 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
 
   function applyFold(): void {
     folded = narrow();
-    for (const d of columnsEl.querySelectorAll<HTMLDetailsElement>(
-      ".gmt-holiday-policy",
-    )) {
-      d.open = !folded;
-    }
+    for (const d of columnsEl.querySelectorAll("details")) d.open = !folded;
   }
 
   function syncControls(): void {
     fromEl.value = state.from;
     toEl.value = state.to;
-    for (const el of weekendEls) {
-      el.checked = state.weekend.includes(Number(el.value));
-    }
+    weekendEl.value = state.weekend.map(String);
   }
 
-  function syncPreset(): void {
-    const id = matchPreset(state);
-    presetEl.value = id === "" ? CUSTOM_PRESET : id;
-    const slot = q("preset-description");
-    if (slot) {
-      setPresetDescription(
-        slot,
-        COMPARATOR_PRESETS.find((p) => p.id === id)?.description ?? "",
-      );
+  function renderHolidays(): void {
+    setHtml(holidaysEl, holidaysHtml(state, id));
+    addHoliday.disabled = state.holidays.length >= MAX_HOLIDAYS;
+    for (const b of holidaysEl.querySelectorAll("button")) {
+      b.disabled = state.holidays.length <= 1;
     }
-  }
-
-  function renderHolidays(focusLast = false): void {
-    holidaysEl.innerHTML = holidaysHtml(state);
-    root.querySelector<HTMLButtonElement>(
-      '[data-action="add-holiday"]',
-    )!.disabled = state.holidays.length >= MAX_HOLIDAYS;
-    q("holiday-count")!.textContent =
+    el("holiday-count").textContent =
       `${state.holidays.length} of ${MAX_HOLIDAYS} holidays`;
-    if (focusLast) {
-      holidaysEl
-        .querySelector<HTMLElement>(
-          `[data-holiday="${state.holidays.length - 1}"] input`,
-        )
-        ?.focus();
-    }
   }
 
-  /** Next row's remove button, else the previous one's, else the add button. */
-  function refocusAfterRemoveHoliday(removed: number): void {
-    for (const at of [removed, removed - 1]) {
-      const btn = holidaysEl.querySelector<HTMLButtonElement>(
-        `[data-holiday="${at}"] [data-action="remove-holiday"]`,
-      );
-      if (btn && !btn.disabled) {
-        btn.focus();
-        return;
-      }
-    }
-    root
-      .querySelector<HTMLButtonElement>('[data-action="add-holiday"]')
-      ?.focus();
-  }
-
-  function renderColumns(focus?: { column: number; sel: string }): void {
+  function renderColumns(): void {
     folded = narrow();
-    columnsEl.innerHTML = columnsHtml(state, uid, folded);
-    root.querySelector<HTMLButtonElement>(
-      '[data-action="add-column"]',
-    )!.disabled = state.columns.length >= MAX_COLUMNS;
-    q("column-count")!.textContent =
-      `${state.columns.length} of ${MAX_COLUMNS} columns`;
-    const note = q("column-note")!;
-    note.textContent = presetColumnsNote(state);
-    note.hidden = note.textContent === "";
-    if (focus) {
-      const li = columnsEl.querySelector<HTMLElement>(
-        `[data-column="${Math.min(focus.column, state.columns.length - 1)}"]`,
-      );
-      li?.querySelector<HTMLElement>(focus.sel)?.focus();
+    setHtml(columnsEl, columnsHtml(state, id, folded));
+    addColumn.disabled = state.columns.length >= MAX_COLUMNS;
+    for (const b of columnsEl.querySelectorAll("button")) {
+      b.disabled = state.columns.length <= MIN_COLUMNS;
     }
+    el("column-count").textContent =
+      `${state.columns.length} of ${MAX_COLUMNS} columns`;
+    const note = presetColumnsNote(state);
+    setHtml(
+      el("column-note"),
+      holdOf("Column note", note, "note", COLUMN_NOTE_SIZERS),
+    );
+  }
+
+  function focusId(local: string): void {
+    const target = widgetEl.querySelector<HTMLElement>(
+      `[id="${CSS.escape(id(local))}"]`,
+    );
+    if (target && !(target as HTMLButtonElement).disabled) target.focus();
   }
 
   function recompute(): void {
-    syncPreset();
+    presetEl.value =
+      matchPreset(state) === "" ? CUSTOM_PRESET : matchPreset(state);
     model = compare(lib, state);
-    const span = q("span-note");
-    if (span) {
-      if (model.years === null) {
-        span.textContent = `${NO_SIGNAL_TEXT}: ${NO_YEARS_REASON}`;
-        span.dataset["state"] = "sentinel";
-      } else {
-        span.textContent = model.clamped
-          ? `More than ${MAX_YEARS} years: showing the first ${MAX_YEARS}.`
-          : `${model.years.length} ${model.years.length === 1 ? "year" : "years"}`;
-        span.dataset["state"] = model.clamped ? "note" : "ok";
-      }
+    if (model.years === null) {
+      setHtml(
+        el("span-note"),
+        holdOf(
+          "Span note",
+          `${NO_SIGNAL_TEXT}: ${NO_YEARS_REASON}`,
+          "sentinel",
+          SPAN_NOTES,
+        ),
+      );
+    } else {
+      setHtml(
+        el("span-note"),
+        holdOf(
+          "Span note",
+          model.clamped
+            ? `More than ${MAX_YEARS} years: showing the first ${MAX_YEARS}.`
+            : `${model.years.length} ${model.years.length === 1 ? "year" : "years"}`,
+          model.clamped ? "note" : "ok",
+          SPAN_NOTES,
+        ),
+      );
     }
-    const note = q("holiday-note");
-    if (note) {
-      const bad = model.holidays.flatMap((h, i) => (h.valid ? [] : [i + 1]));
-      note.hidden = bad.length === 0;
-      note.textContent =
-        bad.length === 0
-          ? ""
-          : `${NO_SIGNAL_TEXT}: ${bad.length === 1 ? `holiday ${bad[0]} is` : `holidays ${bad.join(", ")} are`} not a date on the calendar (a month from 1 to 12 and a day that month has).`;
-    }
-    matrixBox.innerHTML = matrixHtml(state, model);
+    const bad = model.holidays.flatMap((h, i) => (h.valid ? [] : [i + 1]));
+    setHtml(
+      el("holiday-note"),
+      bad.length === 0
+        ? holdOf("Holiday note", "", "ok", HOLIDAY_NOTE_SIZERS)
+        : holdOf(
+            "Holiday note",
+            `${NO_SIGNAL_TEXT}: ${bad.length === 1 ? `holiday ${bad[0]} is` : `holidays ${bad.join(", ")} are`} not a date on the calendar (a month from 1 to 12 and a day that month has).`,
+            "sentinel",
+            HOLIDAY_NOTE_SIZERS,
+          ),
+    );
+    drawMatrix();
     drawDetail();
+  }
+
+  function drawMatrix(): void {
+    setHtml(el("matrix-box"), matrixOf(id, state, model));
   }
 
   function selection(): { year: number | null; column: number; row?: YearRow } {
@@ -638,100 +604,55 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
     };
   }
 
-  /** Moves the pressed state in the table, without drawing it again. */
-  function markSelection(): void {
-    const { year, column } = selection();
-    for (const tr of matrixBox.querySelectorAll<HTMLElement>("tr[data-year]")) {
-      const on = Number(tr.dataset["year"]) === year;
-      if (on) tr.setAttribute("data-selected", "");
-      else tr.removeAttribute("data-selected");
-      tr.querySelector("[data-action='pick-year']")?.setAttribute(
-        "aria-pressed",
-        String(on),
-      );
-      for (const b of tr.querySelectorAll<HTMLElement>(
-        "[data-action='pick-cell']",
-      )) {
-        b.setAttribute(
-          "aria-pressed",
-          String(on && Number(b.dataset["col"]) === column),
-        );
-      }
-    }
-    for (const b of matrixBox.querySelectorAll<HTMLElement>(
-      "[data-action='pick-col']",
-    )) {
-      b.setAttribute(
-        "aria-pressed",
-        String(Number(b.dataset["col"]) === column),
-      );
-    }
-  }
-
-  function laneHtml(
+  function laneOf(
     column: ColumnModel,
     j: number,
     row: YearRow,
     cluster: { from: string; to: string },
-  ): string {
+  ): SafeHtml {
     const attribution = row.attributions[j] ?? null;
-    const name = `<p class="gmt-obs-lane-name">${j + 1}. ${escapeHtml(column.label)}</p>`;
+    const name = html`<p class="${styles.laneName}">${String(j + 1)}. ${column.label}</p>`;
     if (attribution === null) {
-      return (
-        `<div class="gmt-obs-lane" data-col="${j}" data-state="sentinel">${name}` +
-        `<p class="gmt-obs-nosignal gmt-obs-lane-none">${escapeHtml(NO_SIGNAL_TEXT)}</p></div>`
-      );
+      return html`<div class="${styles.lane}">${name}<p class="${styles.laneNone}">${NO_SIGNAL_TEXT}</p></div>`;
     }
-    return (
-      `<div class="gmt-obs-lane" data-col="${j}">${name}` +
-      weekRowsHtml(
-        cluster.from,
-        cluster.to,
-        laneMarks(lib, attribution, row.year),
-        state.weekend,
-      ) +
-      `</div>`
-    );
+    return html`<div class="${styles.lane}">${name}${weekStrip({
+      from: cluster.from,
+      to: cluster.to,
+      marks: laneMarks(lib, attribution, row.year),
+      weekend: state.weekend,
+    })}</div>`;
   }
 
   function drawDetail(): void {
     const { year, column, row } = selection();
-    const heroes = q("heroes");
-    if (heroes) heroes.innerHTML = plates(model, row).map(plateHtml).join("");
+    setHtml(el("plates"), platesOf(model, row));
 
-    const strip = q("strip");
-    if (strip) {
-      if (model === null || row === undefined) {
-        strip.innerHTML = "";
-      } else {
-        const clusters = clusterDates(row.attributions.flatMap(laneDates));
-        strip.innerHTML = clusters
-          .map(
-            (c, i) =>
-              `<section class="gmt-obs-cluster" data-cluster="${i}">` +
-              `<h5 class="gmt-obs-cluster-name">${escapeHtml(`${shortDate(c.from, row.year)} to ${shortDate(c.to, row.year)}`)}</h5>` +
-              model!.columns
-                .map((col, j) => laneHtml(col, j, row, c))
-                .join("") +
-              `</section>`,
-          )
-          .join("");
-      }
+    if (model === null || row === undefined) {
+      setHtml(el("strip"), html``);
+    } else {
+      const m = model;
+      const clusters = clusterDates(row.attributions.flatMap(laneDates));
+      setHtml(
+        el("strip"),
+        html`${clusters.map(
+          (c) =>
+            html`<div class="${styles.cluster}"
+              ><h4 class="${styles.clusterName}">${`${shortDate(c.from, row.year)} to ${shortDate(c.to, row.year)}`}</h4
+              ><div class="${styles.lanes}">${m.columns.map((col, j) => laneOf(col, j, row, c))}</div></div
+            >`,
+        )}`,
+      );
     }
 
-    const sentence = q("year-sentence");
-    if (sentence) {
-      sentence.textContent =
+    setHtml(
+      el("year-sentence"),
+      srOnly(
         row === undefined || model === null
           ? "No year to show."
-          : `${row.year}: ${agreeWord(row)}. Showing ${model.columns[column]?.label ?? ""}.`;
-    }
-
-    // The call and the hand-off.
-    const code = q("call-observed");
-    const copy = root.querySelector<HTMLButtonElement>(
-      '[data-role="copy-observed"]',
+          : `${row.year}: ${agreeWord(row)}. Showing ${model.columns[column]?.label ?? ""}.`,
+      ),
     );
+
     const text =
       model === null || row === undefined
         ? ""
@@ -739,139 +660,199 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
             `// ${model.columns[column]?.label ?? ""}, ${row.year}`,
             ...callLines(model, row, column),
           ].join("\n");
-    if (code) code.textContent = text;
-    if (copy) copy.dataset["copyText"] = text;
+    setHtml(
+      el("call"),
+      codeFrame({
+        label: "observedDate calls",
+        copyLabel: "Copy calls",
+        copyText: text,
+        code: html`${text}`,
+        gate: "codeframe",
+      }),
+    );
 
     const href = builderHandoffHref(state, model?.columns[column], year);
-    setToolLink(q("link-builder"), href);
-    const hint = q("handoff-hint");
-    if (hint) hint.textContent = href === null ? HINT_HANDOFF : "";
-    markSelection();
+    setToolLink(el("links").querySelector("a"), href);
+    setHtml(
+      el("handoff"),
+      holdOf("Hand-off hint", href === null ? HINT_HANDOFF : "", "ok", [
+        HINT_HANDOFF,
+      ]),
+    );
   }
 
   // --- state changes -------------------------------------------------------
 
-  const indexOf = (el: HTMLElement, attr: string): number => {
-    const li = el.closest<HTMLElement>(`[${attr}]`);
-    return li ? Number(li.getAttribute(attr)) : -1;
+  /** Reads `h<i>-<part>` or `c<j>-<part>` off a control's id. */
+  const located = (
+    target: EventTarget | null,
+  ): { kind: "h" | "c"; index: number; key: string } | null => {
+    if (!(target instanceof HTMLElement)) return null;
+    const prefix = id("");
+    if (!target.id.startsWith(prefix)) return null;
+    const m = /^(h|c)(\d+)-(.+)$/u.exec(target.id.slice(prefix.length));
+    return m
+      ? { kind: m[1] as "h" | "c", index: Number(m[2]), key: m[3]! }
+      : null;
   };
 
-  function setColumnPolicy(el: HTMLSelectElement, j: number): void {
-    const details = el.closest<HTMLElement>(".gmt-holiday-policy");
-    if (!details || j < 0) return;
+  function setColumnPolicy(j: number): void {
     const values: Record<number, string> = {};
-    for (const s of details.querySelectorAll<HTMLSelectElement>("select")) {
-      values[Number(s.dataset["weekday"])] = s.value;
+    for (const d of WEEKDAYS) {
+      values[d] = el<HTMLSelectElement>(policySelectId(`c${j}-p`, d)).value;
     }
     const text = policyTextFromSelects(values);
     state.columns[j] = `${CUSTOM_PREFIX}${text}`;
-    const summary = details.querySelector(".gmt-holiday-policy-summary");
-    if (summary) {
+    const summary = el(`c${j}-p`).querySelector("summary");
+    if (summary)
       summary.textContent = policySummary(parsePolicyText(text) ?? {});
-    }
     recompute();
   }
 
   function onField(e: Event): void {
-    const el = e.target as HTMLElement;
-    const role = el.dataset?.["role"];
-    const field = el.dataset?.["field"];
-    if (role === "preset") {
+    const target = e.target;
+    if (target === presetEl) {
       if (e.type !== "change") return;
-      const preset = COMPARATOR_PRESETS.find(
-        (p) => p.id === (el as HTMLSelectElement).value,
-      );
-      if (!preset) return;
-      apply(presetState(preset));
-    } else if (role === "from" || role === "to") {
-      state[role] = (el as HTMLInputElement).value;
+      const chosen = COMPARATOR_PRESETS.find((p) => p.id === presetEl.value);
+      if (chosen) apply(presetState(chosen));
+      return;
+    }
+    if (target === fromEl || target === toEl) {
+      state[target === fromEl ? "from" : "to"] = (
+        target as HTMLInputElement
+      ).value;
       recompute();
-    } else if (role === "weekend") {
+      return;
+    }
+    if (target === weekendEl) {
       state.weekend = normaliseWeekend(
-        weekendEls.filter((c) => c.checked).map((c) => Number(c.value)),
+        (weekendEl.value as string[]).map(Number),
       );
       recompute();
-    } else if (field === "month" || field === "day") {
-      const h = state.holidays[indexOf(el, "data-holiday")];
+      return;
+    }
+    const found = located(target);
+    if (found === null) return;
+    if (found.kind === "h" && (found.key === "month" || found.key === "day")) {
+      const h = state.holidays[found.index];
       if (!h) return;
-      h[field] = (el as HTMLInputElement).value;
+      h[found.key] = (target as HTMLInputElement).value;
       recompute();
-    } else if (el.dataset?.["weekday"] !== undefined) {
-      setColumnPolicy(el as HTMLSelectElement, indexOf(el, "data-column"));
-    } else if (field === "col-preset") {
+    } else if (found.kind === "c" && /^p-\d$/u.test(found.key)) {
+      setColumnPolicy(found.index);
+    } else if (found.kind === "c" && found.key === "preset") {
       if (e.type !== "change") return;
-      const j = indexOf(el, "data-column");
-      const value = (el as HTMLSelectElement).value;
-      if (j < 0) return;
-      state.columns[j] = value === CUSTOM_OPTION ? CUSTOM_PREFIX : value;
-      state.presetColumns = state.presetColumns.filter((i) => i !== j);
+      const value = (target as HTMLSelectElement).value;
+      state.columns[found.index] =
+        value === CUSTOM_OPTION ? CUSTOM_PREFIX : value;
+      state.presetColumns = state.presetColumns.filter(
+        (i) => i !== found.index,
+      );
       state.column = -1;
-      renderColumns({ column: j, sel: '[data-field="col-preset"]' });
+      renderColumns();
+      focusId(`c${found.index}-preset`);
       recompute();
     }
   }
 
-  root.addEventListener("input", onField);
-  root.addEventListener("change", onField);
-  root.addEventListener("click", (e) => {
-    const button = (e.target as HTMLElement).closest<HTMLButtonElement>(
-      "[data-action]",
-    );
-    if (!button || !root.contains(button) || button.disabled) return;
-    switch (button.dataset["action"]) {
-      case "pick-cell":
-        state.year = button.dataset["year"]!;
-        state.column = Number(button.dataset["col"]);
-        drawDetail();
-        break;
-      case "pick-year":
-        state.year = button.dataset["year"]!;
-        drawDetail();
-        break;
-      case "pick-col":
-        state.column = Number(button.dataset["col"]);
-        drawDetail();
-        break;
-      case "add-holiday":
-        if (state.holidays.length >= MAX_HOLIDAYS) break;
-        state.holidays.push({ month: "", day: "" });
-        renderHolidays(true);
+  widgetEl.addEventListener("input", onField, { signal });
+  widgetEl.addEventListener("change", onField, { signal });
+  widgetEl.addEventListener(
+    "click",
+    (e) => {
+      const target = e.target;
+      const picked =
+        target instanceof HTMLElement
+          ? target.closest<HTMLButtonElement>("button")
+          : null;
+      if (picked === null || picked.disabled) return;
+      for (const [input, key] of [
+        [fromEl, "from"],
+        [toEl, "to"],
+      ] as const) {
+        const step =
+          picked.id === `${input.id}-prev`
+            ? -1
+            : picked.id === `${input.id}-next`
+              ? 1
+              : 0;
+        if (step === 0) continue;
+        const now = Number(state[key]);
+        const next = Math.min(
+          YEAR_MAX,
+          Math.max(YEAR_MIN, (Number.isInteger(now) ? now : YEAR_MIN) + step),
+        );
+        state[key] = String(next);
+        input.value = state[key];
         recompute();
-        break;
-      case "remove-holiday": {
-        const i = indexOf(button, "data-holiday");
-        if (i < 0 || state.holidays.length <= 1) break;
-        state.holidays.splice(i, 1);
-        renderHolidays();
-        refocusAfterRemoveHoliday(i);
-        recompute();
-        break;
+        return;
       }
-      case "add-column": {
-        if (state.columns.length >= MAX_COLUMNS) break;
+      if (picked.id.startsWith(id("matrix-"))) {
+        const tail = picked.id.slice(id("matrix-").length);
+        const m = /^(col|year|cell)-(.+)$/u.exec(tail);
+        if (m === null) return;
+        if (m[1] === "col") state.column = Number(picked.dataset["col"]);
+        else if (m[1] === "year") state.year = picked.dataset["year"]!;
+        else {
+          state.year = picked.dataset["year"]!;
+          state.column = Number(picked.dataset["col"]);
+        }
+        drawMatrix();
+        drawDetail();
+        widgetEl
+          .querySelector<HTMLElement>(`[id="${CSS.escape(picked.id)}"]`)
+          ?.focus();
+        return;
+      }
+      if (picked === addHoliday) {
+        if (state.holidays.length >= MAX_HOLIDAYS) return;
+        state.holidays.push({ month: "", day: "" });
+        renderHolidays();
+        focusId(`h${state.holidays.length - 1}-month`);
+        recompute();
+        return;
+      }
+      if (picked === addColumn) {
+        if (state.columns.length >= MAX_COLUMNS) return;
         const unused = POLICY_PRESETS.find(
           (p) => !state.columns.includes(p.id),
         );
         state.columns.push(unused ? unused.id : POLICY_PRESETS[0]!.id);
-        renderColumns({ column: state.columns.length - 1, sel: "select" });
+        renderColumns();
+        focusId(`c${state.columns.length - 1}-preset`);
         recompute();
-        break;
+        return;
       }
-      case "remove-column": {
-        const j = indexOf(button, "data-column");
-        if (j < 0 || state.columns.length <= MIN_COLUMNS) break;
-        state.columns.splice(j, 1);
+      const found = located(picked);
+      if (found === null || found.key !== "remove") return;
+      if (found.kind === "h") {
+        if (state.holidays.length <= 1) return;
+        state.holidays.splice(found.index, 1);
+        renderHolidays();
+        // The next row's remove button, else the previous one's, else the add button.
+        const at = [found.index, found.index - 1].find((i) => {
+          const b = widgetEl.querySelector<HTMLButtonElement>(
+            `[id="${CSS.escape(holidayId(id, i, "remove"))}"]`,
+          );
+          return b !== null && !b.disabled;
+        });
+        if (at === undefined) addHoliday.focus();
+        else focusId(`h${at}-remove`);
+        recompute();
+      } else {
+        if (state.columns.length <= MIN_COLUMNS) return;
+        state.columns.splice(found.index, 1);
         state.presetColumns = state.presetColumns
-          .filter((i) => i !== j)
-          .map((i) => (i > j ? i - 1 : i));
+          .filter((i) => i !== found.index)
+          .map((i) => (i > found.index ? i - 1 : i));
         state.column = -1;
-        renderColumns({ column: j, sel: '[data-field="col-preset"]' });
+        renderColumns();
+        focusId(`c${Math.min(found.index, state.columns.length - 1)}-preset`);
         recompute();
-        break;
       }
-    }
-  });
-  wireCopyButtons(root);
+    },
+    { signal },
+  );
 
   const disposeWidth = onWidthChange(columnsEl, () => {
     if (narrow() !== folded) applyFold();
@@ -897,6 +878,7 @@ function setupWidget(root: HTMLElement, lib: HolidayLib): Controller {
 export const mountObservanceComparator: MountFn<
   ObservanceComparatorArgs
 > = async (root, args, signal) => {
+  defineElements();
   let lib: HolidayLib;
   try {
     lib = await loadHolidayLib();
@@ -906,7 +888,7 @@ export const mountObservanceComparator: MountFn<
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  const widget = setupWidget(root, lib);
+  const widget = setupWidget(root, lib, signal);
   if (isSeeded(args)) widget.apply(readArgs(args));
 
   return onceDestroy(
@@ -914,5 +896,3 @@ export const mountObservanceComparator: MountFn<
     () => permalinkOf(widget.readState()),
   );
 };
-
-export { formatPolicyText };

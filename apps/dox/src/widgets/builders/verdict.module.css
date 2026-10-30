@@ -1,0 +1,62 @@
+/* verdict: the answer line. A full bevelled border and a tinted fill; the tone
+   shows as a heavier bottom edge, never a left stripe (invariant 13). */
+
+.root {
+  --gmt-verdict-edge: var(--gmt-border-strong);
+
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--gmt-verdict-edge);
+  border-block-end-width: 3px;
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: color-mix(
+    in srgb,
+    var(--gmt-verdict-edge) 10%,
+    var(--gmt-surface-widget)
+  );
+  color: var(--gmt-ice);
+  overflow-wrap: anywhere;
+
+  &[data-tone="good"] {
+    --gmt-verdict-edge: var(--gmt-spring);
+  }
+
+  &[data-tone="bad"] {
+    --gmt-verdict-edge: var(--gmt-danger);
+  }
+}
+
+.title {
+  font-weight: 700;
+}
+
+.detail {
+  color: var(--gmt-ice-dim);
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+
+    &[data-tone="bad"] {
+      border-style: double;
+    }
+  }
+
+  .detail {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+  }
+
+  .detail {
+    color: var(--gmt-ice);
+  }
+}

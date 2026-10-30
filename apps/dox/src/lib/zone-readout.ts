@@ -28,7 +28,8 @@
  * touch the polyfill.
  */
 
-import { escapeHtml } from "./widget-ui";
+import type { SafeHtml } from "~/widgets/builders";
+import { zoneTooltip } from "~/widgets/families/zones/zone-tooltip";
 import type { SkyState } from "./zone-sky";
 import { SKY_ICON_PATHS, skyLabel } from "./zone-sky";
 import type { ZoneReading } from "./zone-clock";
@@ -174,55 +175,37 @@ export function dstLabel(state: DstState): string {
 }
 
 /**
- * The globe tooltip's full inner HTML.
+ * The globe tooltip's body, built from the kit's `zoneTooltip`.
  *
- * Built here rather than in `globe.ts` so it can be tested at all: the globe
- * cannot mount under jsdom (no canvas, no WebGPU), so every assertion about
- * what the tooltip says has to run against a pure string builder.
+ * Kept here, beside the wording helpers it reads, so the words can be tested without a globe:
+ * the globe cannot mount under jsdom (no canvas, no WebGPU).
  *
  * `viewerDate` is the viewer's own local `YYYY-MM-DD`; pass `""` to suppress
- * the day-shift line entirely.
+ * the day-shift line entirely. `sky` says whether the sun is up where the zone is, read from
+ * the same subsolar point the globe draws its terminator from; omit it for a zone with no
+ * coordinate.
  */
 export function renderZoneTooltip(
   reading: ZoneReading,
   viewerDate: string,
   sky?: SkyState,
-): string {
-  const zone = `<span class="gmt-globe-tooltip-zone">${escapeHtml(reading.id)}</span>`;
-  if (!reading.ok) {
-    return (
-      zone +
-      `<span class="gmt-signal-lost">⟨ NO SIGNAL — zone unavailable ⟩</span>`
-    );
-  }
+): SafeHtml {
+  if (!reading.ok) return zoneTooltip({ zone: reading.id });
   const delta = viewerDate ? dayDelta(reading.date, viewerDate) : 0;
   const shift = viewerDate ? dayShift(reading.date, viewerDate) : "same";
   const state = dstState(reading);
-  /* Whether the sun is up where this zone is — the globe is already drawing it
-     as the terminator behind the tooltip, and both read the same subsolar
-     point, so the words and the picture cannot disagree. Omitted when the
-     caller has no coordinate for the zone. */
-  const skyLine = sky
-    ? `<span class="gmt-globe-tooltip-sky" data-sky="${sky}">` +
-      `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">${SKY_ICON_PATHS[sky]}</svg>` +
-      `<span>${skyLabel(sky)}</span></span>`
-    : "";
-  /* `data-shift` rather than a modifier class: the direction is a state hook
-     for tests and future styling, not something this sheet paints by itself —
-     the colour lives on the word inside. Same shape as `data-dst` below. */
-  const dateLine =
-    shift === "same"
-      ? `<span class="gmt-globe-tooltip-date">${reading.date}</span>`
-      : `<span class="gmt-globe-tooltip-date" data-shift="${shift}">` +
-        `<span class="gmt-globe-tooltip-shift">${dayShiftLabel(delta)}</span>` +
-        ` · ${reading.date}</span>`;
-  return (
-    zone +
-    `<span class="gmt-globe-tooltip-time">${reading.time}</span>` +
-    dateLine +
-    skyLine +
-    `<span class="gmt-globe-tooltip-meta" data-dst="${state}">` +
-    `<span class="gmt-globe-tooltip-offset">UTC${reading.offset}</span>` +
-    ` · <span class="gmt-globe-tooltip-dst">${dstLabel(state)}</span></span>`
-  );
+  return zoneTooltip({
+    zone: reading.id,
+    clock: {
+      time: reading.time,
+      date: reading.date,
+      ...(shift === "same" ? {} : { shift: dayShiftLabel(delta) }),
+      ...(sky
+        ? { sky: { label: skyLabel(sky), icon: SKY_ICON_PATHS[sky] } }
+        : {}),
+      offset: reading.offset,
+      dst: dstLabel(state),
+      onDst: state === "dst",
+    },
+  });
 }

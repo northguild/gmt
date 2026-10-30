@@ -23,6 +23,7 @@
 
   /* ---- Six named roles (overview.md §3) ---- */
   --gmt-void: #03080c;
+
   /* Near-black that does NOT flip with the theme (the light theme redefines
      `--gmt-void` as white). For marks that must stay black in both themes:
      the clock's night-light ticks and hands, shadows. */
@@ -48,6 +49,7 @@
   --gmt-logo-field-lit: #67e8f9; /* Cyan bright */
   --gmt-logo-glyph: #ffffff;
   --gmt-cyan-bright: #67e8f9; /* h3 / hover accent (was --mg-cyan-glow) */
+
   /* Muted text. Overwhelmingly a TEXT colour: captions, hints, table headers,
      the sidebar's idle links, Starlight's `--sl-color-gray-2`, Pagefind's
      `--pagefind-ui-text` and shadcn's `--muted-foreground` all resolve through
@@ -60,14 +62,9 @@
      value for the non-text consumers (a wash or hatch, never a `color:`). */
   --gmt-ice-dim: #98b2be; /* muted text (was --mg-ice-dim) */
   --gmt-ice-dim-fill: #7a9baa; /* pre-INT-58 muted value, non-text only */
-  --gmt-hairline: rgba(34, 211, 238, 0.18); /* border hairline */
-  --gmt-accent-wash: rgba(
-    34,
-    211,
-    238,
-    0.06
-  ); /* sidebar-active / row-hover tint */
-  --gmt-selection: rgba(34, 211, 238, 0.3); /* ::selection background */
+  --gmt-hairline: rgb(34 211 238 / 18%); /* border hairline */
+  --gmt-accent-wash: rgb(34 211 238 / 6%); /* sidebar-active / row-hover tint */
+  --gmt-selection: rgb(34 211 238 / 30%); /* ::selection background */
 
   /* ---- Glass tokens (blur/saturate/brightness only — fills use relative colors) ----
    *
@@ -89,15 +86,24 @@
    * --gmt-caret        blocky terminal caret colour for text controls.
    * --gmt-motion-sonar-duration        one focus-ring "ping" — the ring races
    *                    out from the border and fades, once, on focus. No loop.
-   *                    gmt-form-controls.css .gmt-input:focus / .gmt-select:focus.
-   * --gmt-motion-sonar-loop-duration   one cycle of the LOOPING ping variant
-   *                    (.gmt-sonar-loop) — ping + a beat of stillness before the
-   *                    next emit. Not wired to a control today; kept for a future
-   *                    standing "look here" pulse.
+   * --gmt-motion-sonar-loop-duration   one cycle of a looping pulse: the /dox/
+   *                    composer halo (gmt-hive.css).
    */
   --gmt-caret: var(--gmt-cyan);
   --gmt-motion-sonar-duration: 1.2s;
   --gmt-motion-sonar-loop-duration: 2s;
+
+  /* ---- Glass blur (DOX-D1) ----
+   * Every `backdrop-filter` reads one of these, so reduced transparency is a
+   * token swap in gmt-a11y.css (they become `none` there) and no rule needs
+   * a priority flag. One name per blur recipe the sheets use today.
+   */
+  --gmt-glass-blur: blur(var(--gmt-blur));
+  --gmt-glass-blur-saturate: blur(var(--gmt-blur)) saturate(var(--gmt-saturate));
+  --gmt-glass-blur-half: blur(calc(var(--gmt-blur) * 0.5));
+  --gmt-glass-blur-heavy: blur(var(--gmt-blur-heavy));
+  --gmt-glass-blur-dim: blur(var(--gmt-blur)) saturate(var(--gmt-saturate))
+    brightness(var(--gmt-brightness));
 
   /*
    * Ice-glass fill tiers, so surfaces don't stack tint on tint:
@@ -111,9 +117,9 @@
    * --gmt-teal is muted (#0e7490) in dark and bright (#22d3ee) in light, so
    * light gets a little more alpha to compensate (see the light block below).
    */
-  --gmt-glass-tint: color(from var(--gmt-teal) srgb r g b / 0.1);
-  --gmt-glass-tint-subtle: color(from var(--gmt-teal) srgb r g b / 0.035);
-  --gmt-glass-scrim: color(from var(--gmt-teal) srgb r g b / 0.08);
+  --gmt-glass-tint: color(from var(--gmt-teal) srgb r g b / 10%);
+  --gmt-glass-tint-subtle: color(from var(--gmt-teal) srgb r g b / 3.5%);
+  --gmt-glass-scrim: color(from var(--gmt-teal) srgb r g b / 8%);
 
   /*
    * ---- Glass fill / border / glow scale ----
@@ -128,22 +134,19 @@
    * --gmt-fill-* scale is raw and matches the old inline calls exactly. Don't
    * merge the two sets.
    */
-  --gmt-fill-subtle: color(from var(--gmt-teal) srgb r g b / 0.06);
-  --gmt-fill: color(from var(--gmt-teal) srgb r g b / 0.08);
-  --gmt-fill-2: color(from var(--gmt-teal) srgb r g b / 0.1);
-  --gmt-fill-strong: color(from var(--gmt-teal) srgb r g b / 0.12);
-  --gmt-fill-deep: color(from var(--gmt-teal) srgb r g b / 0.15);
-
-  --gmt-border: color(from var(--gmt-cyan) srgb r g b / 0.18);
-  --gmt-border-strong: color(from var(--gmt-cyan) srgb r g b / 0.35);
-  --gmt-hairline-faint: color(from var(--gmt-cyan) srgb r g b / 0.08);
-
-  --gmt-glow: color(from var(--gmt-cyan) srgb r g b / 0.15);
-  --gmt-highlight: color(from var(--gmt-ice) srgb r g b / 0.08);
-  --gmt-highlight-faint: color(from var(--gmt-ice) srgb r g b / 0.06);
-
-  --gmt-signal-fill: color(from var(--gmt-signal) srgb r g b / 0.08);
-  --gmt-signal-border: color(from var(--gmt-signal) srgb r g b / 0.35);
+  --gmt-fill-subtle: color(from var(--gmt-teal) srgb r g b / 6%);
+  --gmt-fill: color(from var(--gmt-teal) srgb r g b / 8%);
+  --gmt-fill-2: color(from var(--gmt-teal) srgb r g b / 10%);
+  --gmt-fill-strong: color(from var(--gmt-teal) srgb r g b / 12%);
+  --gmt-fill-deep: color(from var(--gmt-teal) srgb r g b / 15%);
+  --gmt-border: color(from var(--gmt-cyan) srgb r g b / 18%);
+  --gmt-border-strong: color(from var(--gmt-cyan) srgb r g b / 35%);
+  --gmt-hairline-faint: color(from var(--gmt-cyan) srgb r g b / 8%);
+  --gmt-glow: color(from var(--gmt-cyan) srgb r g b / 15%);
+  --gmt-highlight: color(from var(--gmt-ice) srgb r g b / 8%);
+  --gmt-highlight-faint: color(from var(--gmt-ice) srgb r g b / 6%);
+  --gmt-signal-fill: color(from var(--gmt-signal) srgb r g b / 8%);
+  --gmt-signal-border: color(from var(--gmt-signal) srgb r g b / 35%);
 
   /* Day-shift washes — the card background for a zone whose local day is not
      the viewer's (zone-clock-list.ts, the globe's tooltip).
@@ -163,15 +166,14 @@
      contrast bug; measure again if you do.
      No light-theme block: `--gmt-dst-purple` re-tints itself below, so these
      follow it (design-system.md maintenance rule 1). */
-  --gmt-day-prev-wash: color(from var(--gmt-dst-purple) srgb r g b / 0.12);
-  --gmt-day-next-wash: color(from var(--gmt-dst-purple) srgb r g b / 0.06);
-
-  --gmt-severity-critical: var(--gmt-cyan);
+  --gmt-day-prev-wash: color(from var(--gmt-dst-purple) srgb r g b / 12%);
+  --gmt-day-next-wash: color(from var(--gmt-dst-purple) srgb r g b / 6%);
   --gmt-severity-high: var(--gmt-teal);
   --gmt-severity-medium: var(--gmt-ice);
 
-  /* INT-58 fix loop: `.gmt-mistake-badge` pairs `color: var(--gmt-void)` with
-     one of the three severity fills above. `--gmt-severity-medium` (ice)
+  /* The mistake badge (`widgets/tools/mistake.module.css`) pairs `color: var(--gmt-void)` with
+     one of three severity fills: cyan (critical), teal (high) or ice
+     (medium, `--gmt-severity-medium`). `--gmt-severity-medium` (ice)
      already clears 7:1 in both themes (16.00:1 dark, 17.40:1 light) and needs
      no variant. The other two do not:
        critical (cyan)  dark 11.13:1 (fine) — light only 3.68:1
@@ -187,7 +189,7 @@
   --gmt-severity-critical-ink: var(--gmt-cyan-ink);
   --gmt-severity-high-ink: #15add6;
 
-  /* `.gmt-dst-badge-gap` (gmt-dst-inspector.css) pairs `--gmt-dst-gold` as TEXT
+  /* The Gap badge (`dstBadge`, `widgets/families/dst/dst-table.module.css`) pairs `--gmt-dst-gold` as TEXT
      against its own low-alpha wash sitting on the DST table's 6%-alpha cyan
      tint over the page — not a flat swatch. Measured live on
      `/tools/dst-inspector/` with full alpha compositing (getComputedStyle,
@@ -198,7 +200,7 @@
      not hold on the actual page. Retuned further: 7.42:1 live. */
   --gmt-dst-gold-ink: var(--gmt-dst-gold);
 
-  /* `.gmt-dst-badge-overlap` has the same shape with `--gmt-dst-purple`, but
+  /* The Overlap badge has the same shape with `--gmt-dst-purple`, but
      could not reuse `--gmt-purple-ink`: that token's dark value is an alias
      onto the unmodified base purple (correct for its own job — void/white
      text on a *solid* purple fill, the billing lane-3 badge — measured
@@ -212,14 +214,14 @@
 
   /* Scrollbar — was hard-coded rgba(14,116,144,…) literals. Deep-teal, fixed
      (not palette-derived); the light block re-tints track/thumb to cyan. */
-  --gmt-scrollbar-track: rgba(14, 116, 144, 0.08);
-  --gmt-scrollbar-thumb: rgba(14, 116, 144, 0.08);
-  --gmt-scrollbar-thumb-hover: rgba(14, 116, 144, 0.15);
+  --gmt-scrollbar-track: rgb(14 116 144 / 8%);
+  --gmt-scrollbar-thumb: rgb(14 116 144 / 8%);
+  --gmt-scrollbar-thumb-hover: rgb(14 116 144 / 15%);
 
   /* ---- Typography ---- */
   --gmt-font-mono:
-    ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
-  --gmt-font-display: "Michroma", var(--gmt-font-mono);
+    ui-monospace, "SF Mono", "Cascadia Code", menlo, consolas, monospace;
+  --gmt-font-display: "Michroma", "Display Fallback", var(--gmt-font-mono);
 
   /* ---- Spacing ---- */
   --gmt-space-1: 4px;
@@ -236,30 +238,78 @@
   --gmt-tracking-wider: 0.18em;
 
   /* ---- Timing ---- */
+
+  /* Every transition and animation duration in the sheets reads one of these. Each is 0s
+     under `prefers-reduced-motion: reduce` (the block after the Component kit), which is
+     what stops motion, not a priority-flag blanket. */
   --gmt-duration-fast: 120ms;
+  --gmt-duration-quick: 150ms;
   --gmt-duration-med: 240ms;
+  --gmt-duration-slow: 450ms;
   --gmt-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --gmt-motion-spin-duration: 0.8s;
+  --gmt-motion-scan-duration: 1.6s;
+  --gmt-motion-sheen-duration: 2.2s;
+
   /* The arrival gesture (.gmt-enter, lib/enter.ts): the globe's fade from 92%
      scale on a spring curve, shared by every landmark visual. */
   --gmt-enter-duration: 0.5s;
   --gmt-enter-easing: cubic-bezier(0.16, 1, 0.3, 1);
   --gmt-enter-scale: 0.92;
 
+  /* ---- Component kit (src/widgets) ----
+   * Read only by the kit's CSS Modules until the widgets move onto it.
+   * --gmt-surface-widget   ONE opaque surface for every card and section. It is
+   *                        today's single tint layer (--gmt-glass-tint-subtle,
+   *                        teal at 3.5%) composited over --gmt-void, so nested
+   *                        cards no longer stack alpha (cause 6). Light: today's
+   *                        0.5 white wash over a white page is white.
+   * --gmt-selected-fill / -ink   a selected chip: solid accent, and the ink on it
+   *                        (cause 8). Dark 11:1+, light 8:1+, both measured.
+   * --gmt-target-min       WCAG 2.2 SC 2.5.8, in CSS px, never rem.
+   * --gmt-motion-fast / -grow   durations for the kit. Reduced motion sets both
+   *                        to 0, so nothing in the kit animates for those readers.
+   * --gmt-motion-stagger   the delay between one entering card or revealed item
+   *                        and the next. Reduced motion sets it to 0. */
+  --gmt-surface-widget: color-mix(
+    in srgb,
+    var(--gmt-teal) 3.5%,
+    var(--gmt-void)
+  );
+  --gmt-selected-fill: var(--gmt-cyan-ink);
+  --gmt-selected-ink: var(--gmt-void);
+  --gmt-target-min: 24px;
+  --gmt-motion-fast: var(--gmt-duration-fast);
+  --gmt-motion-grow: var(--gmt-duration-med);
+  --gmt-motion-stagger: 70ms;
+
+  /* ---- Stacking ----
+   * One scale for every `z-index` in the sheets. Gaps are deliberate: a layer that
+   * must sit between two others takes the name of the nearest one.
+   */
+  --gmt-z-behind: -1;
+  --gmt-z-base: 0;
+  --gmt-z-raised: 1;
+  --gmt-z-over: 2;
+  --gmt-z-float: 3;
+  --gmt-z-menu: 5;
+  --gmt-z-sticky: 10;
+  --gmt-z-navbar: var(--sl-z-index-navbar);
+
+  /* ---- Page surface ----
+   * The opaque ground behind the footer: today's page colour, so the footer's
+   * text contrast depends on this token alone (cause 5).
+   */
+  --gmt-surface-page: color-mix(in srgb, var(--gmt-void) 100%, transparent);
+
   /* ---- Radii ---- */
   --gmt-radius-sm: 4px;
   --gmt-radius-md: 8px;
   --gmt-radius-lg: 16px;
 
-  /* ---- Control dimensions (gmt-form-controls.css) ----
-   * Not colours, so they do not change per theme. The range thumb width is read
-   * by the Cut-off Countdown axis so the thumb and its "now" marker align. */
-  --gmt-range-hit-h: 28px;
-  --gmt-range-track-h: 10px;
-  --gmt-range-thumb-w: 16px;
-  --gmt-range-thumb-h: 26px;
+  /* ---- Control dimensions ----
+   * The width of a drag handle. Not a colour, so it does not change per theme. */
   --gmt-handle-w: 14px;
-  --gmt-handle-h: 24px;
-  --gmt-handle-hit: 44px;
 
   /* ---- Type scale ----
    * Consolidates the font-sizes widget sheets had been inventing independently
@@ -283,18 +333,18 @@
   /* ---- Shadow ---- *
    * Plain black, not palette-derived (a drop shadow, not a glow) — the two
    * literal box-shadow values already in use, named. */
-  --gmt-shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.45);
-  --gmt-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --gmt-shadow-sm: 0 4px 16px rgb(0 0 0 / 45%);
+  --gmt-shadow-md: 0 8px 24px rgb(0 0 0 / 50%);
 
-  /* ---- Syntax highlight (CodeFrame, gmt-widget.css) ----
+  /* ---- Syntax highlight (call lines, gmt-widget-reset.css) ----
    * Sampled from this site's actual Shiki output for exact-match highlighting
    * with real code fences. Theme-role tokens (a genuine dark/light hue swap, not
-   * a re-tint), so gmt-widget.css needs no [data-theme="light"] block for them. */
+   * a re-tint), so gmt-widget-reset.css needs no [data-theme="light"] block for them. */
   --gmt-syntax-fn: #82aaff;
   --gmt-syntax-str: #ecc48d;
   --gmt-syntax-num: #f78c6c;
 
-  /* ---- Globe (gmt-globe.css) ----
+  /* ---- Globe (`widgets/tools/globe.module.css` and the zone families) ----
    * The day/night terminator needs a night tint that stays dark in every
    * theme — --gmt-void is a background *role* token that flips to white
    * under [data-theme="light"], so reusing it here made the night side
@@ -305,6 +355,7 @@
    * against the light theme's pale one — darkened below by strengthening
    * these, not by changing --gmt-cyan/--gmt-teal themselves. */
   --gmt-globe-night: #03080c;
+
   /* How opaque the night tint is over the base ocean/land wash beneath it —
      theme-tunable because the math differs a lot by theme: blending a dark
      color at a fixed alpha over dark theme's near-black base stays dark
@@ -314,6 +365,7 @@
   --gmt-globe-night-alpha: 0.5;
   --gmt-globe-ocean-alpha: 0.05;
   --gmt-globe-land-alpha: 0.12;
+
   /* City-light dots on the night hemisphere only (globe.ts) — a bright,
      saturated yellow rather than --gmt-dst-gold (tuned instead for badges
      against a page background, in each theme): the dots need to read
@@ -321,6 +373,7 @@
      same bright value works for that in both themes since night is dark in
      both. */
   --gmt-globe-gold: #fde047;
+
   /* Day-hemisphere brightening wash (globe/shading.ts, painted right after
      the base ocean fill, in the same pass as the night wash). In dark theme,
      the day side's low oceanAlpha above reads as barely distinguishable from the
@@ -336,15 +389,18 @@
      dayFactor() in globe/shading.ts), so the sphere reads as lit from the
      real sun's side. */
   --gmt-globe-day-alpha: 0.26;
+
   /* Atmosphere: a glow ring just outside the sphere, strongest on the limb
      facing the sun and faint on the night limb, and a thin haze rim just
      inside the lit limb that fades out through twilight. Decoration only —
      gmt-a11y.css zeroes both under reduced transparency and raised contrast. */
   --gmt-globe-atmosphere-alpha: 0.42;
   --gmt-globe-haze-alpha: 0.2;
+
   /* Graticule (lat/long grid line) stroke alpha — theme-tuned like the
      fills above, not a fixed literal in globe.ts's draw call. */
   --gmt-globe-grid-alpha: 0.18;
+
   /* Earth imagery (#293): how opaque the Blue Marble photograph is where the
      WebGPU globe draws it, in place of the ocean and land washes above. 0
      turns it off and skips the download. The light theme does that (see its
@@ -352,14 +408,17 @@
      colours, where a photograph behind the markers and labels costs contrast
      they need. The canvas-2D fallback never draws it. */
   --gmt-globe-imagery-alpha: 1;
+
   /* How much of the vector land — the cyan fill and coastline — stays on
      top of the imagery, 0..1. 0 is the plain photograph; higher lays the
      cyan land over it. Experimental (#293). */
   --gmt-globe-vector-overlay: 1;
+
   /* How far the imagery is recoloured onto the globe's own ramp — near-black,
      teal, cyan, ice — by brightness, 0..1. 0 keeps the photograph's colours;
      1 is the cyan "hologram" Earth. Experimental (#293). */
   --gmt-globe-imagery-duotone: 1;
+
   /* The globe's overlay — markers, labels, the selected zone's outline —
      and the casing drawn under every piece of it, on every globe, in both
      renderers. The backdrop behind a marker runs from night-side black to the
@@ -390,10 +449,7 @@
   --gmt-code-border: var(--gmt-hairline); /* inline <code> + <kbd> border */
   --gmt-sidebar-link: var(--gmt-ice-dim); /* idle sidebar entry */
   --gmt-pagination-title: var(--gmt-cyan-bright); /* prev/next page title */
-  /* .gmt-widget-card (gmt-widget.css): dark reuses the teal glass tint, but
-     that reads as almost the same flat pale-blue as the page background in
-     light mode — light gets its own value (a white wash) instead of a re-tint. */
-  --gmt-widget-card-bg: var(--gmt-glass-tint-subtle);
+
   /* DOX-C0 (#171): shadcn's --destructive needs a genuine error/danger red.
      --gmt-signal (amber) is reserved exclusively for the "no signal" sentinel
      state (visual-design.md) and must not be reused here. No role in the six
@@ -405,7 +461,7 @@
      lane badge's numeral) rather than a fill or a border. `--gmt-spring` and
      `--gmt-signal` read fine against the near-black dark-theme page — this
      site shipped with dozens of `color: var(--gmt-spring/--gmt-signal)`
-     call sites (gmt-widget.css, gmt-hive.css, gmt-scrubber.css, …) — but the
+     call sites (gmt-hive.css, widget modules, …) — but the
      light theme's re-tint (#16a34a, #ea580c) only reaches ~3.3:1 and ~3.6:1
      against the near-white page, well under this site's 7:1 body-text floor
      (context/dox/reference/verification-and-risks.md). Re-tinting
@@ -420,7 +476,11 @@
   --gmt-purple-ink: var(--gmt-dst-purple);
   --gmt-signal-ink: var(--gmt-signal);
 
-  /* Series 1-4: the Delivery Scheduler's four leg pairs, named once so a series
+  /* `--gmt-danger` is a border and fill hue (6.99:1 on the widget surface); text
+     reads this lighter ink, 10.2:1. */
+  --gmt-danger-ink: #fca5a5;
+
+  /* Series 1-4: the four series colours, named once so a series
      colour means the same on every chart. Marks, stems, edges, swatches only. */
   --gmt-series-1: var(--gmt-cyan);
   --gmt-series-1-ink: var(--gmt-cyan-ink);
@@ -436,7 +496,7 @@
      (the same problem — light-theme #0e7490 only reaches ~5:1) now reads
      `--gmt-cyan-ink` — links, buttons, `LinkButton.astro`, pagination,
      search, the menu button, combobox options, the sidebar current link,
-     markdown tabs, the scrubber offset, and the hive submit/jump/starter/
+     markdown tabs, and the hive submit/jump/starter/
      artifact-link/brain-option. One token covers both: `--gmt-cyan-ink`
      already clears 7:1 against every light-theme surface `--gmt-cyan-bright`
      sits on (7.37:1 against `#ececec`, the darkest tested), so a second,
@@ -444,6 +504,27 @@
      Fills, borders, outlines, focus rings and strokes — a focus ring is
      non-text and stays ≥3:1 (`--gmt-cyan` on `#f5f5f5` measures 3.38:1) —
      keep the bright token; only `color:` moved. */
+}
+
+/* Motion tokens collapse under reduced motion. A top-level rule, not nested in the block
+   above, so the token sheet stays one flat list of declarations. */
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  .gmt-theme-dark {
+    --gmt-motion-fast: 0s;
+    --gmt-motion-grow: 0s;
+    --gmt-motion-stagger: 0s;
+    --gmt-duration-fast: 0s;
+    --gmt-duration-quick: 0s;
+    --gmt-duration-med: 0s;
+    --gmt-duration-slow: 0s;
+    --gmt-motion-sonar-duration: 0s;
+    --gmt-motion-sonar-loop-duration: 0s;
+    --gmt-motion-spin-duration: 0s;
+    --gmt-motion-scan-duration: 0s;
+    --gmt-motion-sheen-duration: 0s;
+    --gmt-enter-duration: 0s;
+  }
 }
 
 /* An island is dark whatever the page's own scheme, so native controls and
@@ -457,6 +538,7 @@
 }
 
 /* ---- Font imports (self-hosted, no CDN) ---- */
+
 /*
  * The file is vendored into `public/fonts/`, taken from the `@fontsource/michroma`
  * package (v5.3.0, `files/michroma-latin-400-normal.woff2`), so it has a stable,
@@ -465,11 +547,25 @@
  * mono fallback on each navigation. The package itself is not a dependency: one
  * committed file needs no install step, and re-vendoring is a deliberate act.
  */
+
+/* Fallback face for the swap above. Measured in Chromium at 100px against the vendored Michroma
+   file (Menlo and Courier New advance 0.6em): Michroma is 1.59x as wide on digits, 1.29x on
+   "12:34:56", 1.42x on capitals ("GMT UTC TAI NORTHGUILD") and 1.19x on mixed-case words.
+   130% sits between the capitals and the words, where headings live. No ascent-override. */
 @font-face {
-  font-family: "Michroma";
+  font-family: "Display Fallback";
+  src:
+    local("Menlo"), local("Consolas"), local("DejaVu Sans Mono"),
+    local("Courier New");
+  size-adjust: 130%;
+}
+
+@font-face {
+  font-family: Michroma;
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+
   /* The site's base (`SITE_BASE`, "/gmt") is written out: the dev server does not add it to a
      CSS url(), so a bare "/fonts/..." is a 404 there. The build leaves this path as written. */
   src: url("/gmt/fonts/michroma-latin-400-normal.woff2") format("woff2");
@@ -481,6 +577,7 @@
      more against the header surfaces; the glyph reaches 5.36:1 on the body parts. */
   --gmt-logo-body: #045268; /* light --gmt-cyan-ink */
   --gmt-logo-body-lit: #0e7490;
+
   /* ---- Color palette (inverted for light background) ---- */
   --gmt-void: #ffffff;
   --gmt-surface: #f5f5f5;
@@ -490,6 +587,7 @@
   --gmt-cyan-bright: #0e7490;
   --gmt-spring: #16a34a;
   --gmt-ice: #1a1a1a;
+
   /* Muted text, light theme. 7.02:1 or more on every surface it sits on (the
      lowest is the tinted widget card behind the interval rows, `#d2ebf1`), and
      8.0:1 on `--gmt-surface`. 22.6 lightness points (CIE L*) above `--gmt-ice`. */
@@ -498,18 +596,13 @@
   --gmt-signal: #ea580c;
   --gmt-dst-gold: #d97706;
   --gmt-dst-purple: #a78bfa;
-  --gmt-accent-wash: rgba(
-    8,
-    145,
-    178,
-    0.06
-  ); /* sidebar-active / row-hover tint */
-  --gmt-selection: rgba(8, 145, 178, 0.3); /* ::selection background */
+  --gmt-accent-wash: rgb(8 145 178 / 6%); /* sidebar-active / row-hover tint */
+  --gmt-selection: rgb(8 145 178 / 30%); /* ::selection background */
 
   /* Bright #22d3ee teal here — a little more alpha to match dark's read. */
-  --gmt-glass-tint: color(from var(--gmt-teal) srgb r g b / 0.16);
-  --gmt-glass-tint-subtle: color(from var(--gmt-teal) srgb r g b / 0.045);
-  --gmt-glass-scrim: color(from var(--gmt-teal) srgb r g b / 0.1);
+  --gmt-glass-tint: color(from var(--gmt-teal) srgb r g b / 16%);
+  --gmt-glass-tint-subtle: color(from var(--gmt-teal) srgb r g b / 4.5%);
+  --gmt-glass-scrim: color(from var(--gmt-teal) srgb r g b / 10%);
 
   /* The darkening `brightness` is a dark-mode contrast device (glass over the
      near-black void). Over a white light-mode page it only muddies the glass, so
@@ -528,6 +621,7 @@
   --gmt-pagination-title: var(--gmt-ice);
 
   /* ---- Syntax highlight (light values) ---- */
+
   /* --gmt-syntax-fn and --gmt-syntax-str measured 5.96:1 and
      5.95:1 against white — below the 7:1 code-frame floor. Darkened, same
      hue, to 7.71:1 and 7.84:1 (WCAG relative-luminance formula). Dark theme
@@ -537,8 +631,9 @@
   --gmt-syntax-fn: #315192;
   --gmt-syntax-str: #7d403f;
   --gmt-syntax-num: var(--gmt-signal-ink);
-
-  --gmt-widget-card-bg: color(from var(--gmt-void) srgb r g b / 0.5);
+  --gmt-surface-widget: var(
+    --gmt-void
+  ); /* the 0.5 white wash, over the white page */
 
   /* DOX-C0 (#171): a darker, more saturated red reads correctly against the
      light background — the dark-mode value is tuned for a near-black one. */
@@ -568,6 +663,7 @@
   --gmt-spring-ink: #0a5626;
   --gmt-purple-ink: #4a1de6;
   --gmt-signal-ink: #8a3407;
+  --gmt-danger-ink: #991b1b; /* 8.31:1 on #ffffff */
 
   /* `--gmt-severity-high-ink`'s dark value (above, in :root) is also broken
      (3.75:1) — not an alias, its own value in both themes. Light: teal's own
@@ -593,6 +689,7 @@
   /* ---- Globe (light values) ---- */
   --gmt-globe-ocean-alpha: 0.2;
   --gmt-globe-land-alpha: 0.32;
+
   /* A deep navy, darkened further from an earlier `#123a5c` — at the shared
      0.5 alpha, that blended with the pale day-side base into a flat,
      unattractive grey-blue instead of reading as night (0.5 of a mid-navy
@@ -602,16 +699,19 @@
      together are what actually reads as a dark sky now. */
   --gmt-globe-night: #08182b;
   --gmt-globe-night-alpha: 0.8;
+
   /* Day already reads bright against the light theme's pale page — a small
      top-up, not the dark-theme fix this token exists for. */
   --gmt-globe-day-alpha: 0.12;
   --gmt-globe-atmosphere-alpha: 0.36;
   --gmt-globe-haze-alpha: 0.24;
+
   /* Dark theme's 0.18 all but disappears against this theme's much more
      opaque night wash (0.8 alpha navy, above) and barely registers on the
      pale day side either — raised well past the dark-theme value so the
      grid actually reads on both hemispheres. */
   --gmt-globe-grid-alpha: 0.45;
+
   /* No Earth imagery in this theme. The Blue Marble is a dark photograph:
      floating on this pale page it read as a hole punched in it, its glow as a
      smudge, and labels near the limb carried dark halos out onto white. A

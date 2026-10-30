@@ -1,0 +1,51 @@
+/* textArea: a native multi-line field, restyled like the kit's text input. Tokens only; the
+   focus ring is an outline so it survives forced colours. */
+
+.root {
+  appearance: none;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 2.6rem;
+  padding-block: 0.375rem;
+  padding-inline: 0.625rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-surface-2);
+  color: var(--gmt-ice);
+  font: inherit;
+  font-family: var(--gmt-font-mono);
+  resize: vertical;
+
+  &:hover {
+    border-color: var(--gmt-cyan);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: ButtonText;
+    background-color: Field;
+    color: FieldText;
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+
+    &:focus-visible {
+      outline-width: 3px;
+    }
+  }
+}

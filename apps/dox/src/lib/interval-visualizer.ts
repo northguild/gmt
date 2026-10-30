@@ -56,56 +56,6 @@ function toInstant(iso: string): Temporal.Instant {
 
 const START_MS = Temporal.Instant.from(TIMELINE_START).epochMilliseconds;
 const END_MS = Temporal.Instant.from(TIMELINE_END).epochMilliseconds;
-const SPAN_MS = END_MS - START_MS;
-
-/**
- * Map a zoned ISO instant to a 0-100 position on the fixed 2024 timeline.
- * Clamped to the window. Returns NaN for unparseable input (never throws).
- */
-export function instantToPercent(iso: string): number {
-  try {
-    const ms = toInstant(iso).epochMilliseconds;
-    return Math.max(0, Math.min(100, ((ms - START_MS) / SPAN_MS) * 100));
-  } catch {
-    return NaN;
-  }
-}
-
-/**
- * Map a 0-100 timeline position back to a zoned ISO instant, snapped to the
- * nearest stepMinutes (default: whole days) and clamped to the window.
- */
-export function percentToInstant(percent: number, stepMinutes = 1440): string {
-  const clampedPct = Math.max(0, Math.min(100, percent));
-  const rawMs = START_MS + (clampedPct / 100) * SPAN_MS;
-  const stepMs = stepMinutes * 60 * 1000;
-  const snappedMs = Math.round(rawMs / stepMs) * stepMs;
-  const clampedMs = Math.max(START_MS, Math.min(END_MS, snappedMs));
-  return Temporal.Instant.fromEpochMilliseconds(clampedMs)
-    .toZonedDateTimeISO(ZONE)
-    .toString();
-}
-
-/**
- * Step a zoned ISO instant by a whole number of days (negative to go back),
- * clamped to the timeline window. Returns the input unchanged if unparseable.
- */
-export function stepInstant(iso: string, deltaDays: number): string {
-  try {
-    const instant = toInstant(iso);
-    const stepped = instant.add({ hours: deltaDays * 24 });
-    const clampedMs = Math.max(
-      START_MS,
-      Math.min(END_MS, stepped.epochMilliseconds),
-    );
-    return Temporal.Instant.fromEpochMilliseconds(clampedMs)
-      .toZonedDateTimeISO(ZONE)
-      .toString();
-  } catch {
-    return iso;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Data-fitted timeline scale
 // ---------------------------------------------------------------------------
@@ -311,7 +261,7 @@ export type RelationshipPreset =
   | "identical"
   | "adjacent";
 
-export interface RelationshipPresetInfo {
+interface RelationshipPresetInfo {
   type: RelationshipPreset;
   label: string;
   description: string;
@@ -401,7 +351,7 @@ export function buildRelationshipPreset(preset: RelationshipPreset): {
 // asserts a specific numeric result. Used to drive the explanation aside.
 // ---------------------------------------------------------------------------
 
-export type RelationshipKind =
+type RelationshipKind =
   | "invalid"
   | "identical"
   | "disjoint"

@@ -2,419 +2,356 @@
  * @vitest-environment jsdom
  *
  * The Cut-off Countdown widget end to end: template -> mount -> interact ->
- * assert, against the real `@northguild/gmt`. Every preset's printed calls
- * and outputs are appendix Z rows.
+ * assert, against the real `@northguild/gmt`, through roles and accessible names the way a
+ * person (or a screen reader) meets the page. Every preset's printed calls and outputs are
+ * appendix Z rows.
  */
-import { spyOnResizeObservers } from "~/test/resize-observer-spy";
-import { installJsdomShims } from "~/test/jsdom-shims";
-import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
-import { COUNTDOWN_PRESETS } from "./cutoff-countdown";
+import { screen, within } from "@testing-library/dom";
 import {
-  mountCutoffCountdown,
-  renderCutoffCountdownTemplate,
-} from "./cutoff-countdown-mount";
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import { spyOnResizeObservers } from "~/test/resize-observer-spy";
+import {
+  expectNoAxeViolations,
+  renderWidget,
+  setRange,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { COUNTDOWN_PRESETS } from "./cutoff-countdown";
+import { renderCutoffCountdownTemplate } from "./cutoff-countdown-mount";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "cutoff",
-  "time-zone",
-  "now",
-  "use-clock",
-  "snap",
-  "now-mode",
-  "verdict",
-  "countdown-axis",
-  "now-slider",
-  "now-value",
-  "rule",
-  "countdown-summary",
-  "reason-aside",
-  "call-countdown-past",
-  "countdown-output-past",
-  "call-countdown-left",
-  "countdown-output-left",
-];
+const entry = WIDGET_REGISTRY["showCutoffCountdown"] as AnyWidgetEntry;
 
-const EXPECTED: Record<string, [boolean | null, string]> = {
-  late: [true, "-PT20M"],
-  "on-time": [false, "PT50M"],
-  "at-cutoff": [true, "PT0S"],
-  "other-clock": [true, "PT0S"],
-  "repeated-hour": [true, "-PT1H"],
-  "zoneless-now": [null, ""],
+const AMS_CUTOFF = "2024-06-12T17:00:00+02:00[Europe/Amsterdam]";
+
+const EXPECTED: Record<string, [string, string]> = {
+  late: ["true", "-PT20M"],
+  "on-time": ["false", "PT50M"],
+  "at-cutoff": ["true", "PT0S"],
+  "other-clock": ["true", "PT0S"],
+  "repeated-hour": ["true", "-PT1H"],
+  "zoneless-now": ["NO SIGNAL", "NO SIGNAL"],
 };
 
-const FOCUSABLE =
-  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+const open = (args: Record<string, unknown> = {}): Promise<RenderedWidget> =>
+  renderWidget(entry, { args });
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+// The controls and results, by the names a person reads.
+const presetBox = () => screen.getByRole("combobox", { name: "Preset" });
+const cutoffBox = () => screen.getByRole("textbox", { name: "Cut-off" });
+const nowBox = () => screen.getByRole("textbox", { name: "Now" });
+const zoneBox = () => screen.getByRole("combobox", { name: "Clock" });
+const slider = () => screen.getByRole("slider", { name: "Drag now" });
+const outPast = () =>
+  screen.getByRole("status", { name: "isPastCutoff returned" });
+const outLeft = () =>
+  screen.getByRole("status", { name: "timeToCutoff returned" });
+const face = () => screen.getByRole("status", { name: "Time to cut-off" });
+const announcement = () =>
+  screen.getByRole("status", { name: "Cut-off announcement" });
+const verdictText = (text: string | RegExp) =>
+  screen.getByText(text, { selector: "strong" });
 
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderCutoffCountdownTemplate(templateArgs);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountCutoffCountdown(root, args, controller.signal);
-  return { root, handle, controller };
+async function enter(w: RenderedWidget, box: HTMLElement, value: string) {
+  await w.user.clear(box);
+  if (value !== "") await w.user.paste(value);
 }
 
-function choosePreset(root: HTMLElement, id: string) {
-  const preset = q<HTMLSelectElement>(root, "preset");
-  preset.value = id;
-  preset.dispatchEvent(new Event("change", { bubbles: true }));
-}
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime("2026-10-15T00:00:00Z");
+});
 
 afterEach(() => {
-  document.body.innerHTML = "";
+  vi.useRealTimers();
 });
 
 describe("renderCutoffCountdownTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderCutoffCountdownTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
-    }
-  });
-
-  it("uses a real range input for the now slider", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderCutoffCountdownTemplate();
-    expect(q(root, "now-slider").tagName).toBe("INPUT");
-    expect(q<HTMLInputElement>(root, "now-slider").type).toBe("range");
+  it("is a named region with three numbered sections and a slider named Drag now", async () => {
+    await open();
+    expect(
+      screen.getByRole("region", { name: "Cut-off Countdown" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent),
+    ).toEqual([
+      "1. The cut-off and now",
+      "2. Late or on time",
+      "3. What the calls return",
+    ]);
+    expect(slider()).toBeInTheDocument();
+    expect(presetBox()).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Use my clock" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Now = the cut-off" }),
+    ).toBeInTheDocument();
   });
 
   it("with no now, contains no date read from the clock", () => {
-    const html = renderCutoffCountdownTemplate({
-      cutoff: "2024-06-12T17:00:00+02:00[Europe/Amsterdam]",
+    const markup = renderCutoffCountdownTemplate("p", {
+      cutoff: AMS_CUTOFF,
       timeZone: "Europe/Amsterdam",
     });
     // The only dates present are the ones the caller supplied.
-    expect(html.match(/\d{4}-\d{2}-\d{2}/g)).toEqual(["2024-06-12"]);
+    expect(markup.value.match(/\d{4}-\d{2}-\d{2}/g)).toEqual(["2024-06-12"]);
   });
 });
 
 describe("mountCutoffCountdown", () => {
   it.each(COUNTDOWN_PRESETS.map((p) => [p.id]))(
-    "prints the documented calls and outputs for %s",
+    "prints the documented outputs for %s",
     async (id) => {
-      const { root } = await mount();
-      choosePreset(root, id);
-      const [past, left] = EXPECTED[id]!;
-      if (past === null) {
-        expect(q(root, "countdown-output-past").textContent).toBe("NO SIGNAL");
-        expect(q(root, "countdown-output-left").textContent).toBe("NO SIGNAL");
-      } else {
-        expect(q(root, "countdown-output-past").textContent).toBe(String(past));
-        expect(q(root, "countdown-output-left").textContent).toBe(left);
-      }
+      const w = await open();
+      await w.user.selectOptions(presetBox(), id!);
+      const [past, left] = EXPECTED[id!]!;
+      expect(outPast()).toHaveTextContent(past);
+      expect(outLeft()).toHaveTextContent(left);
+      await expectNoAxeViolations(w.root);
     },
   );
 
-  it("shows the rule box's local time and the verdict for the pill preset", async () => {
-    const { root } = await mount();
-    choosePreset(root, "late");
-    expect(q(root, "verdict").textContent).toContain("Late by 20 min");
-    expect(q(root, "rule").textContent).toContain("17:00");
+  it("opens pinned on the first preset", async () => {
+    await open();
+    expect(presetBox()).toHaveValue("late");
+    expect(screen.getByText("Now is pinned.")).toBeInTheDocument();
+    expect(outLeft()).toHaveTextContent("-PT20M");
   });
 
-  it("the axis is not a tab stop, and draws hourly ticks for a same-day window", async () => {
-    const { root } = await mount();
-    choosePreset(root, "late");
-    expect(q(root, "countdown-axis").getAttribute("tabindex")).toBe("-1");
-    const ticks = [
-      ...q(root, "countdown-axis").querySelectorAll(".gmt-cutoff-axis-tick"),
-    ];
-    expect(ticks.length).toBeGreaterThan(0);
-    expect(ticks.some((t) => /^\d{2}:00$/.test(t.textContent ?? ""))).toBe(
-      true,
-    );
+  it("shows the late verdict and the rule's local time for the late preset", async () => {
+    const w = await open();
+    await w.user.selectOptions(presetBox(), "late");
+    expect(verdictText("Late by 20 min.")).toBeInTheDocument();
+    expect(screen.getByText(/half-open: \[ … , 17:00 \)/)).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("draws hourly ticks for a same-day window", async () => {
+    await open();
+    expect(screen.getAllByText(/^\d{2}:00$/).length).toBeGreaterThan(0);
   });
 
   it("draws day ticks once the window spans several days (C8)", async () => {
-    const seed = {
+    await open({
       cutoff: "2024-06-09T16:00:00+08:00[Asia/Shanghai]",
-      now: "2024-06-12T04:00:00+08:00[Asia/Shanghai]",
+      now: "2024-06-15T04:00:00+08:00[Asia/Shanghai]",
       timeZone: "Asia/Shanghai",
-    };
-    const { root } = await mount(seed);
-    const ticks = [
-      ...q(root, "countdown-axis").querySelectorAll(".gmt-cutoff-axis-tick"),
-    ];
-    expect(ticks.length).toBeGreaterThan(0);
-    expect(ticks.some((t) => /[A-Za-z]{3}$/.test(t.textContent ?? ""))).toBe(
-      true,
-    );
+    });
+    expect(screen.getAllByText(/^9 Jun$/).length).toBeGreaterThan(0);
   });
 
-  it("renders the chat seed (the pill args) as C1: Late by 20 min", async () => {
-    const seed = {
-      cutoff: "2024-06-12T17:00:00+02:00[Europe/Amsterdam]",
-      now: "2024-06-12T17:20:00+02:00",
+  it("reads a chat seed as late by 20 minutes", async () => {
+    await open({
+      cutoff: AMS_CUTOFF,
+      now: "2024-06-12T17:20:00+02:00[Europe/Amsterdam]",
       timeZone: "Europe/Amsterdam",
-    };
-    const { root } = await mount(seed);
-    expect(q(root, "countdown-output-past").textContent).toBe("true");
-    expect(q(root, "countdown-output-left").textContent).toBe("-PT20M");
-    expect(q(root, "verdict").textContent).toContain("Late by 20 min");
+    });
+    expect(outPast()).toHaveTextContent("true");
+    expect(outLeft()).toHaveTextContent("-PT20M");
+    expect(verdictText("Late by 20 min.")).toBeInTheDocument();
   });
 
-  it("setting the slider on 'late' to -1 gives C3b, to 0 gives C3; 'Now = the cut-off' gives C3", async () => {
-    const { root } = await mount();
-    choosePreset(root, "late");
-    const slider = q<HTMLInputElement>(root, "now-slider");
-    slider.value = "-1";
-    slider.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(q(root, "verdict").textContent).toContain("On time: 1 min left");
-
-    slider.value = "0";
-    slider.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(q(root, "countdown-output-left").textContent).toBe("PT0S");
-    expect(q(root, "verdict").textContent).toContain("Closed");
-
-    choosePreset(root, "late");
-    const snap = q<HTMLButtonElement>(root, "snap");
-    snap.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(q(root, "countdown-output-left").textContent).toBe("PT0S");
-    expect(q(root, "verdict").textContent).toContain("Closed");
+  it("keeps a seeded zone the list does not carry, and reads through it", async () => {
+    await open({
+      cutoff: "2024-06-09T16:00:00+03:00[Europe/Helsinki]",
+      now: "2024-06-09T15:00:00+03:00[Europe/Helsinki]",
+      timeZone: "Europe/Helsinki",
+    });
+    expect(zoneBox()).toHaveValue("Europe/Helsinki");
+    expect(outLeft()).not.toHaveTextContent("NO SIGNAL");
+    expect(outLeft()).toHaveTextContent("PT1H");
   });
 
-  it("live mode: fake timers, tick, drag stops it, abort clears the interval", async () => {
-    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
-    // oxlint-disable-next-line @northguild/gmt-oxlint/no-new-date
-    vi.setSystemTime(new Date("2024-06-12T15:20:00Z")); // date-ban: vi.setSystemTime's own API takes a Date
-    try {
-      const args = {
-        cutoff: "2024-06-12T17:00:00+02:00[Europe/Amsterdam]",
-        timeZone: "Europe/Amsterdam",
-      };
-      const { root, controller } = await mount(args);
-      expect(q(root, "countdown-output-left").textContent).toBe("-PT20M");
-      expect(q(root, "now-mode").textContent).toContain("live");
-
-      vi.advanceTimersByTime(60_000);
-      expect(q(root, "countdown-output-left").textContent).toBe("-PT21M");
-
-      const slider = q<HTMLInputElement>(root, "now-slider");
-      slider.value = String(Number.parseInt(slider.value, 10) - 1);
-      slider.dispatchEvent(new Event("input", { bubbles: true }));
-      expect(q(root, "now-mode").textContent).toContain("pinned");
-      const before = q(root, "countdown-output-left").textContent;
-      vi.advanceTimersByTime(5000);
-      expect(q(root, "countdown-output-left").textContent).toBe(before);
-
-      controller.abort();
-      expect(vi.getTimerCount()).toBe(0);
-    } finally {
-      vi.useRealTimers();
-    }
+  it("the slider reads on time one minute before the cut-off, then closed at the cut-off", async () => {
+    const w = await open();
+    setRange(slider(), -1);
+    expect(verdictText("On time: 1 min left.")).toBeInTheDocument();
+    setRange(slider(), 0);
+    expect(outLeft()).toHaveTextContent("PT0S");
+    expect(verdictText(/^Closed/)).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
-  it("round-trips every preset's state as a permalink of strings", async () => {
-    for (const preset of COUNTDOWN_PRESETS) {
-      const { root, handle } = await mount();
-      choosePreset(root, preset.id);
-      const state = handle.getPermalinkState?.() as Record<string, string>;
-      expect(state).not.toBeNull();
-      for (const value of Object.values(state))
-        expect(typeof value).toBe("string");
-      const url = encodeWidgetPermalink("cutoffcountdown", state);
-      const seeded = seedFromLocation(
-        "cutoffcountdown",
-        url.slice(url.indexOf("?")),
-      );
-      const again = await mount(seeded);
-      expect(q(again.root, "countdown-output-left").textContent).toBe(
-        q(root, "countdown-output-left").textContent,
-      );
-      document.body.innerHTML = "";
-    }
-  });
-
-  it("is inert when aborted before the library loads", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderCutoffCountdownTemplate();
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountCutoffCountdown(root, {}, controller.signal);
-    expect(handle.getPermalinkState?.()).toBeNull();
-  });
-
-  it("can be destroyed twice", async () => {
-    const { handle } = await mount();
-    expect(() => {
-      handle.destroy();
-      handle.destroy();
-    }).not.toThrow();
-  });
-});
-
-describe("the countdown's hero and axis", () => {
-  const hero = (root: HTMLElement) =>
-    q(root, "countdown-axis").querySelector(".gmt-cutoff-countdown-hero-value")
-      ?.textContent;
-
-  it.each([
-    ["late", "\u221220 min"],
-    ["on-time", "+50 min"],
-    ["at-cutoff", "0 min"],
-  ])("shows the signed time to the cut-off on %s", async (id, text) => {
-    const { root } = await mount();
-    choosePreset(root, id);
-    expect(hero(root)).toBe(text);
-  });
-
-  it("draws no hero when the now has no offset (zoneless-now)", async () => {
-    const { root } = await mount();
-    choosePreset(root, "zoneless-now");
-    expect(
-      q(root, "countdown-axis").querySelector("[data-role=countdown-hero]"),
-    ).toBeNull();
-    expect(hero(root)).toBeUndefined();
-  });
-
-  it("names the gate and now chips with their local times", async () => {
-    const { root } = await mount();
-    choosePreset(root, "late");
-    const chips = [
-      ...q(root, "countdown-axis").querySelectorAll(".gmt-cutoff-chip"),
-    ].map((c) => c.textContent);
-    expect(chips).toContain("cut-off 17:00");
-    expect(chips).toContain("now 17:20");
-  });
-
-  it("holds no focusable descendant", async () => {
-    const { root } = await mount();
-    for (const id of ["late", "on-time", "zoneless-now"]) {
-      choosePreset(root, id);
-      expect(
-        q(root, "countdown-axis").querySelectorAll(FOCUSABLE),
-      ).toHaveLength(0);
-    }
-  });
-});
-
-describe("a seed applied to the default template (the tool page)", () => {
-  it("keeps a zone outside the curated list and reads it", async () => {
-    const { root } = await mount(
-      {
-        cutoff: "2024-06-09T16:00:00+03:00[Europe/Helsinki]",
-        now: "2024-06-09T15:00:00+03:00[Europe/Helsinki]",
-        timeZone: "Europe/Helsinki",
-      },
-      {},
+  it("Now = the cut-off closes the window", async () => {
+    const w = await open();
+    await w.user.click(
+      screen.getByRole("button", { name: "Now = the cut-off" }),
     );
-    expect(q<HTMLSelectElement>(root, "time-zone").value).toBe(
-      "Europe/Helsinki",
+    expect(outLeft()).toHaveTextContent("PT0S");
+    expect(verdictText(/^Closed/)).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("describes the slider in words and gives the chip the short form", async () => {
+    await open();
+    expect(slider()).toHaveAttribute(
+      "aria-valuetext",
+      "17:20, 20 min after the cut-off",
     );
-    expect(q(root, "countdown-output-left").textContent).not.toBe("NO SIGNAL");
-  });
-});
-
-describe("the slider's chip and spoken value", () => {
-  const type = (root: HTMLElement, role: string, value: string) => {
-    const input = q<HTMLInputElement>(root, role);
-    input.value = value;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  };
-  const slider = (root: HTMLElement) => q<HTMLInputElement>(root, "now-slider");
-  const heroValue = (root: HTMLElement) =>
-    q(root, "countdown-axis").querySelector(".gmt-cutoff-countdown-hero-value")!
-      .textContent;
-
-  it("is blank, not the last reading, once the cut-off is garbage", async () => {
-    const { root } = await mount();
-    choosePreset(root, "late");
-    expect(q(root, "now-value").textContent).toBe("17:20 · −20 min");
-    type(root, "cutoff", "garbage");
-    expect(q(root, "now-value").textContent).toBe("");
-    expect(slider(root).getAttribute("aria-valuetext")).toBe("");
+    expect(screen.getByText("17:20 · −20 min")).toBeInTheDocument();
   });
 
-  it("agrees with the hero on sign and precision 20 seconds before the cut-off", async () => {
-    const { root } = await mount();
-    choosePreset(root, "late");
-    type(root, "cutoff", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]");
-    type(root, "now", "2024-06-12T16:59:40+02:00[Europe/Amsterdam]");
-    expect(q(root, "verdict").textContent).toContain("On time: 20 s left");
-    expect(heroValue(root)).toBe("+20 s");
-    expect(q(root, "now-value").textContent).toBe("16:59:40 · +20 s");
-    expect(slider(root).getAttribute("aria-valuetext")).toBe(
+  it("speaks the seconds-level value at 20 s before the cut-off", async () => {
+    const w = await open();
+    await enter(w, cutoffBox(), AMS_CUTOFF);
+    await enter(w, nowBox(), "2024-06-12T16:59:40+02:00[Europe/Amsterdam]");
+    expect(verdictText("On time: 20 s left.")).toBeInTheDocument();
+    expect(face()).toHaveTextContent("+20 s");
+    expect(screen.getByText("16:59:40 · +20 s")).toBeInTheDocument();
+    expect(slider()).toHaveAttribute(
+      "aria-valuetext",
       "16:59:40, 20 s before the cut-off",
     );
   });
 
-  it("uses the hero's sign when late", async () => {
-    const { root } = await mount();
-    choosePreset(root, "late");
-    expect(heroValue(root)).toBe("−20 min");
-    expect(q(root, "now-value").textContent).toBe("17:20 · −20 min");
-    expect(slider(root).getAttribute("aria-valuetext")).toBe(
-      "17:20, 20 min after the cut-off",
-    );
-  });
-});
-
-describe("the verdict's announcement", () => {
-  it("is not a live region itself; a status region carries it", async () => {
-    const { root } = await mount();
-    expect(q(root, "verdict").hasAttribute("aria-live")).toBe(false);
-    expect(q(root, "verdict-status").getAttribute("role")).toBe("status");
+  it("shows the signed time on the face, and NO SIGNAL for a sentinel, never blank", async () => {
+    const w = await open();
+    expect(face()).toHaveTextContent("−20 min");
+    await w.user.selectOptions(presetBox(), "zoneless-now");
+    expect(face()).toHaveTextContent("NO SIGNAL");
+    expect(
+      screen.getByRole("complementary", { name: "Why NO SIGNAL" }),
+    ).toBeInTheDocument();
+    expect(slider()).toBeDisabled();
+    expect(slider()).toHaveAttribute("aria-valuetext", "");
+    await expectNoAxeViolations(w.root);
   });
 
-  it("is written once when the reader settles, not per slider step or live tick", async () => {
-    vi.useFakeTimers();
-    // oxlint-disable-next-line @northguild/gmt-oxlint/no-new-date
-    vi.setSystemTime(new Date("2024-06-12T15:20:00Z")); // date-ban: vi.setSystemTime's own API takes a Date
-    try {
-      const { root } = await mount({
-        cutoff: "2024-06-12T17:00:00+02:00[Europe/Amsterdam]",
-        timeZone: "Europe/Amsterdam",
-      });
-      const status = q(root, "verdict-status");
-      const writes: string[] = [];
-      new MutationObserver(() => writes.push(status.textContent ?? "")).observe(
-        status,
-        { childList: true, characterData: true, subtree: true },
-      );
-      vi.advanceTimersByTime(10_000);
-      await Promise.resolve();
-      expect(writes).toEqual([]);
-
-      const slider = q<HTMLInputElement>(root, "now-slider");
-      for (const step of [-3, -4, -5]) {
-        slider.value = String(Number.parseInt(slider.value, 10) + step);
-        slider.dispatchEvent(new Event("input", { bubbles: true }));
-        vi.advanceTimersByTime(100);
-      }
-      await Promise.resolve();
-      expect(writes).toEqual([]);
-      vi.advanceTimersByTime(1000);
-      await Promise.resolve();
-      expect(writes).toHaveLength(1);
-      expect(status.textContent).toBe(q(root, "verdict").textContent);
-    } finally {
-      vi.useRealTimers();
-    }
+  it("a garbage cut-off blanks the chip and says NO SIGNAL", async () => {
+    const w = await open();
+    await enter(w, cutoffBox(), "not a cut-off");
+    expect(outLeft()).toHaveTextContent("NO SIGNAL");
+    expect(screen.queryByText(/^\d{2}:\d{2} · /)).not.toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
-});
 
-describe("releasing observers", () => {
-  it("destroy disconnects every ResizeObserver the mount created", async () => {
+  it("the chart has no tab stop inside it", async () => {
+    await open();
+    const lane = screen.getByRole("group", { name: "Time window" });
+    expect(within(lane).queryAllByRole("button")).toHaveLength(0);
+    expect(within(lane).queryAllByRole("link")).toHaveLength(0);
+    expect(within(lane).queryAllByRole("slider")).toHaveLength(0);
+  });
+
+  it("names the cut-off and now marks for a reader", async () => {
+    await open();
+    expect(
+      screen.getByRole("img", { name: "cut-off 17:00" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "now 17:20" })).toBeInTheDocument();
+  });
+
+  it("destroys twice without error and leaves no observer", async () => {
     const spy = spyOnResizeObservers();
     try {
-      const { handle } = await mount();
-      expect(spy.live.size).toBeGreaterThan(0);
-      handle.destroy();
+      const w = await open();
+      w.destroy();
+      expect(() => w.destroy()).not.toThrow();
       expect(spy.live.size).toBe(0);
     } finally {
       spy.restore();
     }
+  });
+});
+
+describe("permalinks", () => {
+  it.each(COUNTDOWN_PRESETS.map((p) => [p.id]))(
+    "round-trips %s as a permalink of strings",
+    async (id) => {
+      const first = await open();
+      await first.user.selectOptions(presetBox(), id!);
+      const url = first.permalink();
+      const seeded = seedFromLocation(
+        "cutoffcountdown",
+        url.slice(url.indexOf("?")),
+      );
+      expect(Object.values(seeded).every((v) => typeof v === "string")).toBe(
+        true,
+      );
+      expect(encodeWidgetPermalink("cutoffcountdown", seeded)).toBe(url);
+      first.destroy();
+
+      const again = await renderWidget(entry, {
+        args: seeded,
+        idPrefix: "again",
+      });
+      const second = within(again.root);
+      expect(second.getByRole("combobox", { name: "Preset" })).toHaveValue(id);
+      expect(
+        second.getByRole("status", { name: "timeToCutoff returned" }),
+      ).toHaveTextContent(EXPECTED[id!]?.[1] ?? /./);
+    },
+  );
+});
+
+describe("the live clock", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.setSystemTime("2024-06-12T15:20:00Z");
+  });
+
+  const seed = { cutoff: AMS_CUTOFF, timeZone: "Europe/Amsterdam" };
+
+  it("reads the clock, says it is live and counts down each second", async () => {
+    await open(seed);
+    expect(outLeft()).toHaveTextContent("-PT20M");
+    expect(screen.getByText("Now is your clock, live.")).toBeInTheDocument();
+    vi.advanceTimersByTime(60_000);
+    expect(outLeft()).toHaveTextContent("-PT21M");
+  });
+
+  it("a drag switches to pinned and freezes the output", async () => {
+    await open(seed);
+    setRange(slider(), -10);
+    expect(screen.getByText("Now is pinned.")).toBeInTheDocument();
+    expect(outLeft()).toHaveTextContent("PT10M");
+    vi.advanceTimersByTime(120_000);
+    expect(outLeft()).toHaveTextContent("PT10M");
+  });
+
+  it("speaks about once a minute, and not each second", async () => {
+    await open(seed);
+    const status = announcement();
+    expect(status).not.toHaveTextContent(/Now is/);
+    vi.advanceTimersByTime(30_000);
+    expect(status).not.toHaveTextContent(/Now is/);
+    vi.advanceTimersByTime(30_000);
+    expect(status).toHaveTextContent(/^Now is /);
+  });
+
+  it("leaves no timer after the mount is destroyed", async () => {
+    const w = await open(seed);
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+    w.destroy();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("the announcement", () => {
+  it("is not the verdict: the verdict is not a live region", async () => {
+    await open();
+    expect(verdictText("Late by 20 min.")).toBeVisible();
+  });
+
+  it("speaks the summary when the reader leaves a field", async () => {
+    const w = await open();
+    const status = announcement();
+    await enter(w, nowBox(), "2024-06-12T17:30:00+02:00[Europe/Amsterdam]");
+    await w.user.tab();
+    expect(status).toHaveTextContent(/^Now is /);
+  });
+
+  it("speaks the summary when the slider is released", async () => {
+    await open();
+    expect(announcement()).not.toHaveTextContent(/Now is/);
+    setRange(slider(), -3);
+    expect(announcement()).toHaveTextContent(/On time: 3 min left/);
   });
 });

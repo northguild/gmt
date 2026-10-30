@@ -5,9 +5,10 @@
  * Every figure comes from `data/behaviour-matrix.json`, which `scripts/behaviour-matrix/run.mjs`
  * writes. Each library row carries the anchor `m1-date-fns` so the `/migrate/` pages can link to
  * it. The verdict is a word, never colour alone. The Markdown twin is `renderBehaviourMatrix` in
- * `src/lib/mdx-jsx.ts`. Styles live in `src/styles/gmt-migrate.css`.
+ * `src/lib/mdx-jsx.ts`. Styles are in its `<style>` block.
  */
 import { codeBreakClass, codeBreakHtml } from "../lib/code-break";
+import "./migrate-table.css";
 import { codeSpans, matrixView } from "../lib/migrate-view";
 
 const cases = matrixView();
@@ -83,3 +84,24 @@ const columns = (reference: string): string[] => [
     </section>
   ))
 }
+
+<style is:global>
+/* ---- Behaviour matrix ---- */
+
+.gmt-matrix-meta {
+  color: var(--gmt-ice);
+}
+
+/* A result that varies with the host zone shows one host per line. */
+.gmt-matrix-line {
+  display: block;
+}
+
+.gmt-matrix-line + .gmt-matrix-line {
+  margin-block-start: 0.25rem;
+}
+
+.gmt-matrix-table tbody tr:target {
+  background: var(--gmt-fill-strong);
+}
+</style>

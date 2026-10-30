@@ -3,19 +3,18 @@
  *
  * The inline script of the "Your browser" card and the module read the same verdict. The script
  * runs while the page is parsed so the card is final before first paint; the module then takes
- * over and must leave an unchanged card alone.
+ * over and must leave an unchanged card alone. Both are run here on a freshly rendered Canada card
+ * and must leave it reading the same.
  */
-import { canadaTense } from "./clock-change-tense.fixture";
+import { screen } from "@testing-library/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { installJsdomShims } from "~/test/jsdom-shims";
-import { TABLE_ZONES, canadaProbe } from "./canada-clock-change";
+import { cellsInColumn } from "~/test/render-widget";
+import { widget } from "~/widgets/builders/layout";
+import { fillProbe, probeCard } from "~/widgets/families/clockcheck/probe-card";
+import { findWidget } from "~/widgets/root";
+import { renderHtml } from "~/widgets/test-fixture";
+import { canadaVerdict, TABLE_ZONES, canadaProbe } from "./canada-clock-change";
 import { probeInlineSource } from "./clock-change-probe";
-import {
-  mountCanadaClockChange,
-  renderCanadaClockChangeTemplate,
-} from "./canada-clock-change-mount";
-
-installJsdomShims();
 
 const realFormat = Intl.DateTimeFormat;
 
@@ -30,144 +29,122 @@ function stubOffsets(
   ) {
     if (unreadable && options?.timeZoneName === "longOffset")
       throw new RangeError("longOffset");
-    const real = new realFormat(locale, options);
     const zone = options?.timeZone ?? "";
     if (zone in offsets) {
       return {
         formatToParts: () => [
           { type: "timeZoneName", value: `GMT${offsets[zone]}` },
         ],
-        format: () => `GMT${offsets[zone]}`,
       };
     }
-    return real;
+    return new realFormat(locale, options);
   } as unknown as typeof Intl.DateTimeFormat;
   vi.stubGlobal("Intl", { ...Intl, DateTimeFormat: Wrapped });
 }
 
 const fresh = Object.fromEntries(TABLE_ZONES.map((f) => [f.zone, f.offset]));
-const stale = Object.fromEntries(
-  TABLE_ZONES.map((f) => [f.zone, shift(f.offset)]),
-);
 function shift(offset: string): string {
   const hours = Number(offset.slice(1, 3)) + 1;
   return `${offset[0]}${String(hours).padStart(2, "0")}${offset.slice(3)}`;
 }
+const stale = Object.fromEntries(
+  TABLE_ZONES.map((f) => [f.zone, shift(f.offset)]),
+);
 const partly = {
   ...fresh,
   [TABLE_ZONES[1]!.zone]: stale[TABLE_ZONES[1]!.zone]!,
 };
 
-function render(): { root: HTMLElement; card: HTMLElement } {
-  document.body.innerHTML = renderCanadaClockChangeTemplate({
-    tense: canadaTense,
-  });
-  const root = document.querySelector<HTMLElement>(".gmt-canada")!;
-  return {
-    root,
-    card: root.querySelector<HTMLElement>(".gmt-clockcheck-browser")!,
-  };
+function render() {
+  const config = canadaProbe("canada");
+  const fixture = renderHtml(
+    widget(
+      { name: "canada", label: "Canada", scope: "canada" },
+      probeCard(config, canadaVerdict("page")),
+    ),
+  );
+  return { config, fixture, found: findWidget(fixture.host, "canada") };
 }
 
-function runInline(_card: HTMLElement): void {
-  // The page runs the same source from CanadaProbeScript.astro, once the whole page is parsed.
+/** The page runs the same source from CanadaProbeScript.astro, once the whole page is parsed. */
+function runInline(): void {
   new Function("document", probeInlineSource(canadaProbe("canada")))(document);
 }
 
-const snapshot = (card: HTMLElement) => ({
-  state: card.querySelector<HTMLElement>('[data-role="verdict"]')!.dataset
-    .state,
-  cells: [...card.querySelectorAll('[data-role="browser"]')].map((c) =>
-    c.textContent?.trim(),
-  ),
-  // Only the shown variant counts: the page also carries the other variants, hidden.
-  places:
-    card.querySelector<HTMLElement>('[data-role="verdict"]')!.dataset.state ===
-    "bad"
-      ? (card.querySelector('[data-role="wrong-places"]')?.textContent ?? null)
-      : null,
-});
-
-/** What the module alone draws for the same browser, on markup the script never touched. */
-async function moduleOnly(): Promise<ReturnType<typeof snapshot>> {
-  document.body.innerHTML = renderCanadaClockChangeTemplate({
-    tense: canadaTense,
-  });
-  const root = document.querySelector<HTMLElement>(".gmt-canada")!;
-  const ac = new AbortController();
-  void mountCanadaClockChange(root, ac.signal, {
-    fetch: (() => new Promise(() => {})) as unknown as typeof fetch,
-  });
-  await vi.waitFor(() =>
-    expect(
-      root.querySelector<HTMLElement>('[data-role="verdict"]')!.dataset.state,
-    ).not.toBe("pending"),
+/** The browser column, as a reader sees it. */
+function cells(): (string | undefined)[] {
+  return cellsInColumn(screen.getByRole("table"), /^Yours/).map((cell) =>
+    cell.textContent?.replace(/\s+/g, " ").trim(),
   );
-  const out = snapshot(
-    root.querySelector<HTMLElement>(".gmt-clockcheck-browser")!,
-  );
-  ac.abort();
-  return out;
 }
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const WRONG = /old time zone data for/i;
+
 describe("the inline probe and the module agree", () => {
-  const cases: [string, () => void, string][] = [
-    ["a browser with the new rules", () => stubOffsets(fresh), "ok"],
-    ["a browser with the old rules", () => stubOffsets(stale), "bad"],
-    ["a browser that is wrong for one place", () => stubOffsets(partly), "bad"],
+  const cases: [string, () => void, RegExp][] = [
+    [
+      "a browser with the new rules",
+      () => stubOffsets(fresh),
+      /has the new rules for all four places/,
+    ],
+    ["a browser with the old rules", () => stubOffsets(stale), WRONG],
+    ["a browser that is wrong for one place", () => stubOffsets(partly), WRONG],
     [
       "a browser that cannot read the zones",
       () => stubOffsets({}, true),
-      "unreadable",
+      /cannot read these zones/,
     ],
   ];
-  it.each(cases)("%s", async (_name, setup, state) => {
+
+  it.each(cases)("%s", (_name, setup, sentence) => {
     setup();
-    const { card } = render();
-    const pending = snapshot(card);
-    expect(pending.state).toBe("pending");
-    runInline(card);
-    const inline = snapshot(card);
-    expect(inline.state).toBe(state);
-    expect(inline.cells.some((c) => c === "NO SIGNAL")).toBe(
-      state === "unreadable",
-    );
-    expect(inline).toEqual(await moduleOnly());
+    const first = render();
+    expect(screen.getByText(/Checking your browser/)).toBeVisible();
+    runInline();
+    expect(screen.getByText(sentence)).toBeVisible();
+    expect(screen.getByText(/Checking your browser/)).not.toBeVisible();
+    const inline = cells();
+
+    // The module alone, on a card the script never touched, ends on the same words and cells.
+    first.fixture.host.remove();
+    const again = render();
+    fillProbe(again.found, again.config);
+    expect(screen.getByText(sentence)).toBeVisible();
+    expect(cells()).toEqual(inline);
+  });
+
+  it("says NO SIGNAL in every cell when the zones cannot be read", () => {
+    stubOffsets({}, true);
+    render();
+    runInline();
+    for (const cell of cells()) expect(cell).toBe("NO SIGNAL");
   });
 
   it("names exactly the wrong places in the chips", () => {
     stubOffsets(partly);
-    const { card } = render();
-    runInline(card);
-    expect(snapshot(card).places).toBe("Edmonton");
+    const one = render();
+    runInline();
+    expect(screen.getByText(WRONG)).toHaveTextContent(/for Edmonton\./);
+    one.fixture.host.remove();
     stubOffsets(stale);
-    const again = render();
-    runInline(again.card);
-    expect(snapshot(again.card).places).toBe(
-      "Vancouver, Edmonton, Inuvik and Winnipeg",
+    render();
+    runInline();
+    expect(screen.getByText(WRONG)).toHaveTextContent(
+      "for Vancouver, Edmonton, Inuvik and Winnipeg.",
     );
   });
 
-  it("is not drawn again when the module finds the card already right", async () => {
+  it("is not drawn again when the module finds the card already right", () => {
     stubOffsets(stale);
-    const { root, card } = render();
-    runInline(card);
-    const verdict = card.querySelector('[data-role="verdict"]')!;
-    const first = verdict.firstElementChild;
-    const ac = new AbortController();
-    void mountCanadaClockChange(root, ac.signal, {
-      fetch: (() => new Promise(() => {})) as unknown as typeof fetch,
-    });
-    await vi.waitFor(() =>
-      expect(root.querySelector('[data-role="clocks"]')).not.toBeNull(),
-    );
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(verdict.firstElementChild).toBe(first);
-    ac.abort();
+    const { found, config } = render();
+    runInline();
+    const cell = cellsInColumn(screen.getByRole("table"), /^Yours/)[0];
+    fillProbe(found, config);
+    expect(cellsInColumn(screen.getByRole("table"), /^Yours/)[0]).toBe(cell);
   });
 
   it("carries its config from the same constants as the module", () => {

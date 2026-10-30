@@ -1,16 +1,65 @@
 /**
- * The Cut-off Stack widget (TRAN-10), mountable on its tool page and in the
- * chat rail.
+ * The Cut-off Stack widget (TRAN-10), mountable on its tool page and in the chat rail.
  *
- * A sailing's whole stack of cut-offs, computed by `cutoffSchedule` against
- * one departure, earliest first, with closed days shaded and each rolled
- * cut-off drawn where it landed and where `cutoffAt` with no calendar would
- * have put it.
+ * A sailing's whole stack of cut-offs, computed by `cutoffSchedule` against one departure,
+ * earliest first, with closed days shaded and each rolled cut-off drawn where it landed and
+ * where `cutoffAt` with no calendar would have put it.
  *
- * Follows the Free Time Ledger's split: every listener is delegated on the
- * root, so the host dropping the subtree is a complete teardown.
+ * Built on the component kit: `renderCutoffStackTemplate` writes the markup from builders only,
+ * with ids from `idScope(idPrefix)`, and `mount` finds its parts by those ids. The drawn parts
+ * are placed by `--gmt-at` fractions of one axis, so nothing is measured and nothing observes a
+ * resize. Every listener is delegated on the root and tied to the mount's signal.
  */
 import { Temporal } from "@js-temporal/polyfill";
+import { defineElements } from "~/widgets/define";
+import {
+  aside,
+  badge,
+  codeFrame,
+  field,
+  fieldGrid,
+  findWidget,
+  html,
+  idScope,
+  lane,
+  mark,
+  section,
+  select,
+  setHtml,
+  swatch,
+  textInput,
+  widget,
+  type SafeHtml,
+  type TimelineSeries,
+} from "~/widgets/builders";
+import {
+  cutoffBands,
+  cutoffScale,
+  type Band,
+  type ScaleTick,
+} from "~/widgets/families/cutoff/bands";
+import { cutoffGate } from "~/widgets/families/cutoff/gate";
+import { paintCalls } from "~/widgets/families/cutoff/paint-calls";
+import { paintOutput } from "~/widgets/families/cutoff/paint-output";
+import { rolledArc, rolledMark } from "~/widgets/families/cutoff/rolled-marks";
+import {
+  closedDaysFieldset,
+  cutoffFieldset,
+} from "~/widgets/families/cutoff/stack-fieldsets";
+import {
+  setSelectValue,
+  zoneChoices,
+} from "~/widgets/families/cutoff/zone-choices";
+import { callOutput } from "~/widgets/families/gnss/call-output";
+import {
+  handoffEmpty,
+  handoffRows,
+  handoffTable,
+} from "~/widgets/families/transport/handoff-table";
+import type { GmtChips } from "~/widgets/primitives/chips/chips";
+import { grow } from "~/widgets/primitives/grow/grow";
+import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
+import styles from "~/widgets/tools/cutoff-stack.module.css";
 import {
   CUSTOM_PRESET_ID,
   MAX_CUTOFFS,
@@ -31,162 +80,146 @@ import {
   type StackRow,
   type StackState,
 } from "./cutoff-stack";
+import { loadCutoffLib } from "./cutoff-lib";
 import {
-  ROLL_OPTIONS,
   WEEKDAYS,
-  TRANSPORT_ZONES,
-  zoneOptionsHtml,
-  callSource,
   dayTickLabel,
   durationText,
   epochMs,
   formatStack,
   localLabel,
-  localParts,
   weekdayTickLabel,
+  type CutoffLib,
 } from "./cutoff-widgets";
-import { codeFrameHtml } from "./code-frame";
-import { loadCutoffLib } from "./cutoff-lib";
-import {
-  layoutWidth,
-  onWidthChange,
-  pickLabelLeft,
-  placeLabel,
-} from "./label-fit";
-import type { CutoffLib } from "./cutoff-widgets";
-import { transportIcon } from "./transport-icons";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
-import {
-  chipToggleHtml,
-  escapeAttr,
-  escapeHtml,
-  labelTextHtml,
-  renderAside,
-  renderCallLine,
-  renderWidgetOutput,
-  setControlValue,
-  wireCopyButtons,
-} from "./widget-ui";
 
 export type { CutoffStackArgs } from "./cutoff-stack";
 
-function presetOptionsHtml(presetId: string): string {
-  return (
-    `<option value="${CUSTOM_PRESET_ID}"${presetId === CUSTOM_PRESET_ID ? " selected" : ""}>Custom</option>` +
-    STACK_PRESETS.map(
-      (p) =>
-        `<option value="${escapeAttr(p.id)}"${p.id === presetId ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-    ).join("")
-  );
+const WIDGET_NAME = "cutoff-stack";
+const NBSP = "\u00a0";
+const CUTOFF_NUMBERS = [1, 2, 3, 4] as const;
+const TABLE_COLUMNS = [
+  "Cut-off",
+  "Rule",
+  "Closes",
+  "Before departure",
+  "Moved",
+] as const;
+
+// ---------------------------------------------------------------------------
+// Markup
+// ---------------------------------------------------------------------------
+
+/** The word a drawn surface shows when there is nothing to draw. */
+function noSignal(): SafeHtml {
+  return html`<p class="${styles.lost}">NO SIGNAL</p>`;
 }
 
-function cutoffFieldset(n: number, c: CutoffFields): string {
-  return (
-    `<fieldset class="gmt-transport-leg gmt-cutoff-fieldset" data-role="cutoff-${n}">` +
-    `<legend>Cut-off ${n}</legend>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label">${labelTextHtml("Name")}` +
-    `<input class="gmt-input" data-role="name-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(c.name)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("Offset")}` +
-    `<input class="gmt-input" data-role="offset-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(c.offset)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("At local time", { optional: true })}` +
-    `<input class="gmt-input" data-role="at-local-time-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(c.atLocalTime)}"></label>` +
-    `</div>` +
-    `</fieldset>`
-  );
-}
+const seriesOf = (row: StackRow): TimelineSeries =>
+  Math.min(4, Math.max(1, row.series)) as TimelineSeries;
 
-function closedDaysFieldset(state: StackState): string {
-  const weekdayBoxes = WEEKDAYS.map((w) =>
-    chipToggleHtml({
-      type: "checkbox",
-      role: `weekday-${w.value}`,
-      value: String(w.value),
-      label: w.label,
-      checked: state.weekend.includes(w.value),
-    }),
-  ).join("");
-  const rollOptions =
-    `<option value=""${state.roll === "" ? " selected" : ""}>(not given)</option>` +
-    ROLL_OPTIONS.map(
-      (r) =>
-        `<option value="${escapeAttr(r)}"${r === state.roll ? " selected" : ""}>${escapeHtml(r)}</option>`,
-    ).join("");
-  return (
-    `<fieldset class="gmt-transport-leg gmt-cutoff-calendar" data-role="closed-days">` +
-    `<legend>Closed days</legend>` +
-    chipToggleHtml({
-      type: "checkbox",
-      role: "calendar",
-      value: "calendar",
-      label: "Use a business calendar",
-      checked: state.calendar,
-      switch: true,
-    }) +
-    `<fieldset class="gmt-chip-group"><legend>Weekend</legend>${weekdayBoxes}</fieldset>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Holidays")}` +
-    `<input class="gmt-input" data-role="holidays" type="text" spellcheck="false" autocomplete="off" placeholder="2024-05-09, 2024-12-25" value="${escapeAttr(state.holidays)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("Roll a closed-day cut-off")}` +
-    `<select class="gmt-select" data-role="roll">${rollOptions}</select></label>` +
-    `</div>` +
-    `<p class="gmt-widget-hint">ISO dates, separated by commas</p>` +
-    `<p class="gmt-widget-hint">A roll moves a cut-off off a closed day: <code>preceding</code> back to the last open day, <code>following</code> on to the next. The two <code>modified</code> forms turn round when that would leave the month. <code>none</code> leaves it where it is.</p>` +
-    `<p class="gmt-widget-hint">There is no default: a calendar without a roll, or a roll without a calendar, returns [].</p>` +
-    `</fieldset>`
-  );
-}
-
-/** `renderCutoffStackTemplate(args = {})` (seeded when `args.anchor` or
+/** `renderCutoffStackTemplate(idPrefix, args = {})` (seeded when `args.anchor` or
  *  `args.cutoffs` or `args.name1` is defined, else the first preset). */
-export function renderCutoffStackTemplate(args: CutoffStackArgs = {}): string {
+export function renderCutoffStackTemplate(
+  idPrefix: string,
+  args: CutoffStackArgs = {},
+): SafeHtml {
+  const id = idScope(idPrefix);
   const flat = args as unknown as Record<string, unknown>;
   const seeded =
     args.anchor !== undefined ||
     args.cutoffs !== undefined ||
-    flat.name1 !== undefined;
+    flat["name1"] !== undefined;
   const state: StackState = seeded
     ? readArgs(args)
     : presetState(STACK_PRESETS[0]!);
   const presetId = matchPreset(state);
-  const preset = STACK_PRESETS.find((p) => p.id === presetId);
 
-  return (
-    `<div class="gmt-cutoff-stack gmt-widget not-content">` +
-    `<div class="gmt-widget-card">` +
-    `<div class="gmt-widget-section">` +
-    `<h4>1. The sailing and its cut-offs</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
-    `<select class="gmt-select" data-role="preset">${presetOptionsHtml(presetId)}</select></label>` +
-    `</div>` +
-    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Departs")}` +
-    `<input class="gmt-input" data-role="anchor" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(state.anchor)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("Terminal clock")}` +
-    `<select class="gmt-select" data-role="time-zone">${zoneOptionsHtml(TRANSPORT_ZONES, state.timeZone)}</select></label>` +
-    `</div>` +
-    [1, 2, 3, 4].map((n) => cutoffFieldset(n, state.cutoffs[n - 1]!)).join("") +
-    closedDaysFieldset(state) +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>2. When each cut-off closes</h4>` +
-    `<div class="gmt-cutoff-stack-timeline" data-role="stack-timeline" role="img" aria-labelledby="stack-summary" tabindex="-1"></div>` +
-    `<p class="gmt-widget-hint" id="stack-summary" data-role="stack-summary"></p>` +
-    `<table class="gmt-cutoff-stack-table" data-role="stack-table" role="table">` +
-    `<thead role="rowgroup"><tr role="row"><th role="columnheader">Cut-off</th><th role="columnheader">Rule</th><th role="columnheader">Closes</th><th role="columnheader">Before departure</th><th role="columnheader">Moved</th></tr></thead>` +
-    `<tbody data-role="stack-table-body" role="rowgroup"></tbody>` +
-    `</table>` +
-    `<div class="gmt-transport-reason" data-role="reason-aside" data-grow="slot"></div>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>3. What <code>cutoffSchedule</code> returns</h4>` +
-    codeFrameHtml("stack") +
-    `<output class="gmt-widget-output" data-role="stack-output">&nbsp;</output>` +
-    `</div>` +
-    `</div>` +
-    `</div>`
+  const pick = section(
+    { id: id("pick"), heading: "1. The sailing and its cut-offs", level: 4 },
+    html`${preset({
+      id: id("preset"),
+      label: "Preset",
+      value: presetId,
+      options: [
+        { value: CUSTOM_PRESET_ID, label: "Custom", description: "" },
+        ...STACK_PRESETS.map((p) => ({
+          value: p.id,
+          label: p.label,
+          description: p.description,
+        })),
+      ],
+    })}${fieldGrid(
+      html`${field({
+        id: id("anchor"),
+        label: "Departs",
+        control: ({ id: cid }) =>
+          textInput({
+            id: cid,
+            value: state.anchor,
+            autocomplete: "off",
+            spellcheck: false,
+          }),
+      })}${field({
+        id: id("zone"),
+        label: "Terminal clock",
+        control: ({ id: cid }) =>
+          select({
+            id: cid,
+            value: state.timeZone,
+            options: zoneChoices(state.timeZone),
+          }),
+      })}`,
+    )}${CUTOFF_NUMBERS.map((n) =>
+      cutoffFieldset({ id, n, values: state.cutoffs[n - 1]! }),
+    )}${closedDaysFieldset({
+      id,
+      values: {
+        calendar: state.calendar,
+        weekend: state.weekend,
+        holidays: state.holidays,
+        roll: state.roll,
+      },
+    })}`,
+  );
+
+  const read = section(
+    { id: id("read"), heading: "2. When each cut-off closes", level: 4 },
+    html`${grow(html`<div id="${id("timeline")}"></div>`)}${grow(
+      html`<p class="${styles.summary}" id="${id("summary")}">${NBSP}</p>`,
+    )}${grow(
+      handoffTable({
+        caption: "The cut-off stack",
+        columns: TABLE_COLUMNS,
+        rows: [],
+        reserve: 1,
+        bodyId: id("table-body"),
+        emptyId: id("table-empty"),
+      }),
+    )}${grow(html`<div id="${id("reason")}"></div>`)}`,
+  );
+
+  const calls = section(
+    { id: id("calls"), heading: "3. What cutoffSchedule returns", level: 4 },
+    html`${grow(
+      html`<div id="${id("call-stack")}">${codeFrame({
+        label: "cutoffSchedule call",
+        copyLabel: "Copy cutoffSchedule call",
+        copyText: "",
+        gate: "codeframe",
+      })}</div>`,
+    )}${grow(
+      html`<div id="${id("out-stack")}">${callOutput({
+        label: "cutoffSchedule returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}`,
+  );
+
+  return widget(
+    { name: WIDGET_NAME, label: "Cut-off Stack", scope: idPrefix },
+    html`${pick}${read}${calls}`,
   );
 }
 
@@ -217,10 +250,9 @@ interface DayBound {
 }
 
 /**
- * Each axis date's real local-day bounds, from the polyfill's own
- * `startOfDay()` chained day by day — the same boundary `dwellTime`'s own
- * grid uses, so a 23- or 25-hour DST day is one column at its real width,
- * never a day arithmetic of this widget's own. `[]` when `dates` is empty or
+ * Each axis date's real local-day bounds, from the polyfill's own `startOfDay()` chained day by
+ * day, the same boundary `dwellTime`'s own grid uses, so a 23- or 25-hour DST day is one column
+ * at its real width, never a day arithmetic of this widget's own. `[]` when `dates` is empty or
  * the zone does not resolve.
  */
 function dayBoundsFor(dates: readonly string[], zone: string): DayBound[] {
@@ -245,195 +277,123 @@ function dayBoundsFor(dates: readonly string[], zone: string): DayBound[] {
   }
 }
 
-/** A column narrower than this shows no date label; its `title` still names
- *  it. Mirrors the Free Time Ledger's own narrow-cell threshold. */
+/** A column narrower than this share of the axis draws no word in it; one narrower than
+ *  `MIN_WEEKDAY_PERCENT` drops the weekday from its label. */
 const MIN_LABEL_PERCENT = 9;
+const MIN_WEEKDAY_PERCENT = 14;
 
-function renderTimeline(
-  el: HTMLElement,
+/** The days' own reading: every closed day named, so the shading is not the only carrier. */
+function closedDaysText(facts: StackFacts, timeZone: string): string {
+  const closed = Object.entries(facts.closedDays)
+    .filter(([, shut]) => shut)
+    .map(([date]) => {
+      const day = Temporal.PlainDate.from(date).toZonedDateTime({
+        timeZone,
+        plainTime: "12:00",
+      });
+      return `${weekdayTickLabel(day)} ${dayTickLabel(day)}`;
+    });
+  return closed.length === 0 ? "" : `Closed days: ${closed.join(", ")}.`;
+}
+
+function timelineOf(
   facts: StackFacts,
   timeZone: string,
-): void {
+  hasEntries: boolean,
+): SafeHtml {
+  if (facts.rows.length === 0) return hasEntries ? noSignal() : html``;
   const dates = axisDatesOf(
     facts.rows.map((r) => ({ at: r.at, unrolled: r.unrolled })),
     facts.departure,
   );
   const bounds = dayBoundsFor(dates, timeZone);
-  if (bounds.length === 0) {
-    el.innerHTML = "";
-    return;
-  }
+  if (bounds.length === 0) return html``;
   const axisStartMs = bounds[0]!.startMs;
   const axisEndMs = bounds[bounds.length - 1]!.endMs;
   const span = Math.max(1, axisEndMs - axisStartMs);
-  const pct = (ms: number) => ((ms - axisStartMs) / span) * 100;
+  const pct = (ms: number) => (ms - axisStartMs) / span;
 
   const departureMs = facts.departure ? epochMs(facts.departure) : null;
-  const departurePct = departureMs !== null ? pct(departureMs) : null;
 
-  let anyClosedLabel = false;
-  const columns = bounds
-    .map((b) => {
-      const closed = facts.closedDays[b.date] ?? false;
-      const widthPct = ((b.endMs - b.startMs) / span) * 100;
-      const dayStart = Temporal.Instant.fromEpochMilliseconds(
-        b.startMs,
-      ).toZonedDateTimeISO(timeZone);
-      const dateLabel = dayTickLabel(dayStart);
-      const weekday = weekdayTickLabel(dayStart);
-      const showLabel = widthPct >= MIN_LABEL_PERCENT;
-      if (closed && showLabel) anyClosedLabel = true;
-      return (
-        `<div class="gmt-cutoff-stack-day${closed ? " gmt-cutoff-stack-day--closed gmt-cutoff-closed" : ""}" ` +
-        `style="left:${pct(b.startMs)}%;width:${widthPct}%" title="${escapeAttr(`${weekday} ${dateLabel}`)}${closed ? " (closed)" : ""}">` +
-        (showLabel
-          ? `<span class="gmt-cutoff-stack-day-label">${escapeHtml(dateLabel)}` +
-            `<span class="gmt-cutoff-stack-day-weekday"> · ${escapeHtml(weekday)}</span></span>`
-          : "") +
-        (closed && showLabel
-          ? `<span class="gmt-cutoff-chip gmt-cutoff-stack-day-closed">closed</span>`
-          : "") +
-        `</div>`
-      );
-    })
-    .join("");
+  const closedBands = (withWords: boolean): Band[] =>
+    bounds
+      .filter((b) => facts.closedDays[b.date] === true)
+      .map((b) => {
+        const width = (b.endMs - b.startMs) / span;
+        return {
+          kind: "closed",
+          from: pct(b.startMs),
+          to: pct(b.endMs),
+          ...(withWords && width * 100 >= MIN_LABEL_PERCENT
+            ? { word: "closed" }
+            : {}),
+        };
+      });
 
-  // The one departure gate, drawn once in the days layer, and its chip.
+  const ticks: ScaleTick[] = bounds.map((b, i) => {
+    const width = ((b.endMs - b.startMs) / span) * 100;
+    const dayStart = Temporal.Instant.fromEpochMilliseconds(
+      b.startMs,
+    ).toZonedDateTimeISO(timeZone);
+    const date = dayTickLabel(dayStart);
+    const label =
+      width >= MIN_WEEKDAY_PERCENT
+        ? `${date} · ${weekdayTickLabel(dayStart)}`
+        : date;
+    return {
+      at: (pct(b.startMs) + pct(b.endMs)) / 2,
+      label,
+      // Narrow columns thin themselves to every other label; a narrow box drops the rest.
+      rank:
+        width < MIN_LABEL_PERCENT || (bounds.length > 4 && i % 2 === 1) ? 1 : 0,
+      day: true,
+    };
+  });
+
   const gate =
-    departurePct === null
+    departureMs === null
       ? ""
-      : `<span class="gmt-cutoff-gate" style="left:${departurePct}%"></span>` +
-        `<span class="gmt-cutoff-chip gmt-cutoff-stack-gate-chip" style="left:${departurePct}%">` +
-        transportIcon("ship", { className: "gmt-cutoff-icon", size: 14 }) +
-        `<span>departs ${escapeHtml(localParts(facts.departure).time)}</span></span>`;
+      : cutoffGate({
+          label: `departure ${localLabel(facts.departure)}`,
+          at: pct(departureMs),
+        });
 
-  const lanes = facts.rows
-    .map((row) => {
-      const atMs = epochMs(row.at);
-      const atPct = pct(atMs);
-      const solid = `<span class="gmt-cutoff-mark gmt-cutoff-stack-marker gmt-cutoff-stack-marker--solid" style="left:${atPct}%" title="${escapeAttr(localLabel(row.at))}"></span>`;
-      let hollow = "";
-      let arc = "";
-      if (row.moved && row.unrolled !== undefined) {
-        const unrolledPct = pct(epochMs(row.unrolled));
-        hollow = `<span class="gmt-cutoff-mark gmt-cutoff-mark--hollow gmt-cutoff-stack-marker gmt-cutoff-stack-marker--hollow" style="left:${unrolledPct}%" title="${escapeAttr(`moved from ${localLabel(row.unrolled)}`)}"></span>`;
-        const delta = Math.abs(unrolledPct - atPct);
-        // Skip the arc when the two markers all but coincide.
-        if (delta > 1.5) {
-          // The path runs from the hollow marker to the solid one, so the
-          // dashes flow that way.
-          const d =
-            unrolledPct <= atPct
-              ? "M 0 50 Q 50 -30 100 50"
-              : "M 100 50 Q 50 -30 0 50";
-          arc =
-            `<svg class="gmt-cutoff-stack-arc" aria-hidden="true" focusable="false" ` +
-            `viewBox="0 0 100 100" preserveAspectRatio="none" ` +
-            `style="left:${Math.min(unrolledPct, atPct)}%;width:${delta}%">` +
-            `<path d="${d}"></path></svg>`;
-        }
-      }
-      return (
-        `<div class="gmt-cutoff-stack-lane" data-series="${row.series}">` +
-        `<span class="gmt-cutoff-stack-lane-label"><span class="gmt-cutoff-series-swatch" aria-hidden="true"></span><span>${escapeHtml(row.name)}</span></span>` +
-        `<div class="gmt-cutoff-stack-lane-track">` +
-        arc +
-        hollow +
-        solid +
-        `<span class="gmt-cutoff-chip gmt-cutoff-stack-lane-time" data-x="${atPct}" style="left:calc(${atPct}% - 7px)">${escapeHtml(localLabel(row.at))}${row.moved ? " · moved" : ""}</span>` +
-        `</div>` +
-        `</div>`
-      );
-    })
-    .join("");
+  const lanes = facts.rows.map((row, i) => {
+    const atPct = pct(epochMs(row.at));
+    const series = seriesOf(row);
+    const movedFrom =
+      row.moved && row.unrolled !== undefined ? row.unrolled : undefined;
+    const rolled =
+      movedFrom === undefined
+        ? ""
+        : html`${rolledArc({
+            from: pct(epochMs(movedFrom)),
+            to: atPct,
+            series,
+          })}${rolledMark({
+            label: `${row.name} without the calendar: ${localLabel(movedFrom)}`,
+            at: pct(epochMs(movedFrom)),
+            series,
+          })}`;
+    return lane(
+      { label: row.name },
+      html`${cutoffBands(closedBands(i === 0))}${rolled}${mark({
+        label: `${row.name} closes ${localLabel(row.at)}${movedFrom === undefined ? "" : `, moved from ${localLabel(movedFrom)}`}`,
+        at: atPct,
+        series,
+      })}${gate}`,
+    );
+  });
 
-  const departureLine = facts.departure
-    ? `<div class="gmt-cutoff-stack-departure-line">Departs ${escapeHtml(localLabel(facts.departure))} (${escapeHtml(timeZone)})</div>`
-    : "";
-
-  el.innerHTML =
-    `<div class="gmt-cutoff-stack-plot${anyClosedLabel ? " gmt-cutoff-stack-plot--closed" : ""}">` +
-    `<div class="gmt-cutoff-stack-days">${columns}${gate}</div>` +
-    `<div class="gmt-cutoff-stack-lanes">${lanes}</div>` +
-    `</div>` +
-    departureLine;
-  fitStackTimeline(el);
+  return html`<div class="${styles.legend}">${badge({
+    text: `Departs ${localLabel(facts.departure)} (${timeZone})`,
+    tone: "cyan",
+  })}</div>${lanes}<div class="${styles.scaleRow}">${cutoffScale(ticks)}</div>`;
 }
 
-/** Drop day labels their column cannot hold, and flip a lane's time chip to
- *  the other side of its marker when it would run past the track or cross the
- *  departure gate. Measured, so it re-runs when the width changes. */
-function fitStackTimeline(el: HTMLElement): void {
-  for (const day of el.querySelectorAll<HTMLElement>(".gmt-cutoff-stack-day")) {
-    day.classList.remove(
-      "gmt-cutoff-stack-day--narrow",
-      "gmt-cutoff-stack-day--short",
-    );
-    const label = day.querySelector<HTMLElement>(".gmt-cutoff-stack-day-label");
-    const closed = day.querySelector<HTMLElement>(
-      ".gmt-cutoff-stack-day-closed",
-    );
-    if (closed) closed.hidden = false;
-    if (!label || day.clientWidth === 0) continue;
-    const overflows = () => label.scrollWidth > label.clientWidth + 0.5;
-    // Too narrow for "13 Jun · Thu": drop the weekday, then the label.
-    if (overflows()) day.classList.add("gmt-cutoff-stack-day--short");
-    if (overflows()) {
-      day.classList.add("gmt-cutoff-stack-day--narrow");
-    } else if (closed && closed.offsetWidth + 6 > day.clientWidth) {
-      closed.hidden = true;
-    }
-  }
-  const days = el.querySelector<HTMLElement>(".gmt-cutoff-stack-days");
-  const gate = days?.querySelector<HTMLElement>(".gmt-cutoff-gate") ?? null;
-  const trackPx = days?.clientWidth ?? 0;
-  const gatePx =
-    gate && trackPx > 0 ? (parseFloat(gate.style.left) / 100) * trackPx : NaN;
-  const gateChip = days?.querySelector<HTMLElement>(
-    ".gmt-cutoff-stack-gate-chip",
-  );
-  if (gateChip && trackPx > 0 && !Number.isNaN(gatePx)) {
-    gateChip.classList.remove("gmt-cutoff-stack-gate-chip--end");
-    const side = placeLabel({
-      atPx: gatePx,
-      labelPx: layoutWidth(gateChip),
-      trackPx,
-      offsetPx: 10,
-    });
-    gateChip.classList.toggle(
-      "gmt-cutoff-stack-gate-chip--end",
-      side === "end",
-    );
-  }
-  for (const track of el.querySelectorAll<HTMLElement>(
-    ".gmt-cutoff-stack-lane-track",
-  )) {
-    const time = track.querySelector<HTMLElement>(
-      ".gmt-cutoff-stack-lane-time",
-    );
-    if (!time || track.clientWidth === 0) continue;
-    const w = track.clientWidth;
-    const at = (parseFloat(time.dataset.x ?? "0") / 100) * w;
-    const labelPx = layoutWidth(time);
-    // Hanging from just left of the marker; else just right of it; else
-    // tucked against the departure gate's left side.
-    const left = pickLabelLeft(
-      [
-        at - 7,
-        at + 7 - labelPx,
-        ...(Number.isNaN(gatePx) ? [] : [gatePx - 8 - labelPx]),
-      ],
-      labelPx,
-      w,
-      Number.isNaN(gatePx) ? [] : [gatePx],
-    );
-    time.style.left = `${left}px`;
-  }
-}
-
-function summaryText(facts: StackFacts): string {
+function summaryText(facts: StackFacts, timeZone: string): string {
   if (facts.rows.length === 0) return "";
-  return facts.rows
+  const rows = facts.rows
     .map((row) => {
       const moved =
         row.unrolled === undefined
@@ -441,227 +401,227 @@ function summaryText(facts: StackFacts): string {
           : row.moved
             ? `, moved from ${localLabel(row.unrolled)}`
             : ", not moved";
-      const before = beforeDepartureText(row);
-      return `${row.name} closes ${localLabel(row.at)}, ${before}${moved}.`;
+      return `${row.name} closes ${localLabel(row.at)}, ${beforeDepartureText(row)}${moved}.`;
     })
     .join(" ");
+  const closed = closedDaysText(facts, timeZone);
+  return closed === "" ? rows : `${rows} ${closed}`;
 }
 
-function renderTable(el: HTMLElement, facts: StackFacts): void {
-  // `data-label` feeds the stacked narrow layout's `::before` labels; neither it
-  // nor the generated text changes a cell's `textContent`.
-  el.innerHTML = facts.rows
-    .map(
-      (row) =>
-        `<tr role="row">` +
-        `<td role="cell"><span class="gmt-cutoff-series-swatch" data-series="${row.series}" aria-hidden="true"></span>${escapeHtml(row.name)}</td>` +
-        `<td role="cell" data-label="Rule">${escapeHtml(ruleText(row))}</td>` +
-        `<td role="cell" data-label="Closes">${escapeHtml(localLabel(row.at))}<br><span class="gmt-widget-hint">${escapeHtml(row.at)}</span></td>` +
-        `<td role="cell" data-label="Before departure">${escapeHtml(beforeDepartureText(row))}<br><span class="gmt-widget-hint">${escapeHtml(row.beforeDeparture)}</span></td>` +
-        `<td role="cell" data-label="Moved">${escapeHtml(movedText(row))}</td>` +
-        `</tr>`,
-    )
-    .join("");
+/** The cells of a table row: a name with its series swatch, then the rule, close, lead and move. */
+function cellsOf(row: StackRow): SafeHtml[] {
+  const text = (value: string, sub?: string): SafeHtml =>
+    html`<span class="${styles.text}">${value}${sub === undefined ? "" : html`<span class="${styles.sub}">${sub}</span>`}</span>`;
+  return [
+    html`<span class="${styles.name}">${swatch({ series: seriesOf(row) })}${text(row.name)}</span>`,
+    text(ruleText(row)),
+    text(localLabel(row.at), row.at),
+    text(beforeDepartureText(row), row.beforeDeparture),
+    text(movedText(row)),
+  ];
 }
 
 // ---------------------------------------------------------------------------
 // Wiring
 // ---------------------------------------------------------------------------
 
-function setupWidget(root: HTMLElement, lib: CutoffLib): () => void {
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
+function setupWidget(
+  root: HTMLElement,
+  lib: CutoffLib,
+  signal: AbortSignal,
+): {
+  readState(): StackState;
+  apply(args: CutoffStackArgs): void;
+  start(): void;
+} {
+  const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
+  const presetEl = widgetEl.querySelector<GmtPreset>("gmt-preset")!;
+  const anchorEl = el<HTMLInputElement>("anchor");
+  const zoneEl = el<HTMLSelectElement>("zone");
+  const calendarEl = el<HTMLInputElement>("calendar");
+  const weekendEl = widgetEl.querySelector<GmtChips>("gmt-chips")!;
+  const holidaysEl = el<HTMLInputElement>("holidays");
+  const rollEl = el<HTMLSelectElement>("roll");
+  const cutoffEls = CUTOFF_NUMBERS.map((n) => ({
+    name: el<HTMLInputElement>(`name-${n}`),
+    offset: el<HTMLInputElement>(`offset-${n}`),
+    at: el<HTMLInputElement>(`at-${n}`),
+  }));
 
-  const presetEl = q<HTMLSelectElement>("preset");
-  const anchorEl = q<HTMLInputElement>("anchor");
-  const timeZoneEl = q<HTMLSelectElement>("time-zone");
-  const calendarEl = q<HTMLInputElement>("calendar");
-  const holidaysEl = q<HTMLInputElement>("holidays");
-  const rollEl = q<HTMLSelectElement>("roll");
-  if (
-    !presetEl ||
-    !anchorEl ||
-    !timeZoneEl ||
-    !calendarEl ||
-    !holidaysEl ||
-    !rollEl
-  ) {
-    return () => {};
-  }
-
-  function state(): StackState {
-    const cutoffs = [1, 2, 3, 4].map((n) => ({
-      name: q<HTMLInputElement>(`name-${n}`)?.value.trim() ?? "",
-      offset: q<HTMLInputElement>(`offset-${n}`)?.value.trim() ?? "",
-      atLocalTime:
-        q<HTMLInputElement>(`at-local-time-${n}`)?.value.trim() ?? "",
-    })) as [CutoffFields, CutoffFields, CutoffFields, CutoffFields];
-    const weekend = WEEKDAYS.filter(
-      (w) => q<HTMLInputElement>(`weekday-${w.value}`)?.checked,
+  const weekendValue = (): number[] =>
+    WEEKDAYS.filter((w) =>
+      (weekendEl.value as string[]).includes(String(w.value)),
     ).map((w) => w.value);
+
+  function readState(): StackState {
+    const cutoffs = cutoffEls.map((c) => ({
+      name: c.name.value.trim(),
+      offset: c.offset.value.trim(),
+      atLocalTime: c.at.value.trim(),
+    })) as [CutoffFields, CutoffFields, CutoffFields, CutoffFields];
     return {
-      anchor: anchorEl!.value.trim(),
-      timeZone: timeZoneEl!.value.trim(),
+      anchor: anchorEl.value.trim(),
+      timeZone: zoneEl.value.trim(),
       cutoffCount: String(MAX_CUTOFFS),
       cutoffs,
-      calendar: calendarEl!.checked,
-      weekend,
-      holidays: holidaysEl!.value.trim(),
-      roll: rollEl!.value.trim(),
+      calendar: calendarEl.checked,
+      weekend: weekendValue(),
+      holidays: holidaysEl.value.trim(),
+      roll: rollEl.value.trim(),
     };
   }
 
+  function writeState(s: StackState): void {
+    anchorEl.value = s.anchor;
+    setSelectValue(zoneEl, s.timeZone);
+    cutoffEls.forEach((c, i) => {
+      const f = s.cutoffs[i]!;
+      c.name.value = f.name;
+      c.offset.value = f.offset;
+      c.at.value = f.atLocalTime;
+    });
+    calendarEl.checked = s.calendar;
+    weekendEl.value = s.weekend.map(String);
+    holidaysEl.value = s.holidays;
+    setSelectValue(rollEl, s.roll);
+  }
+
   function syncPreset(): void {
-    presetEl!.value = matchPreset(state());
-    const desc = q("preset-description");
-    if (desc) {
-      desc.textContent =
-        STACK_PRESETS.find((p) => p.id === presetEl!.value)?.description ?? "";
+    presetEl.value = matchPreset(readState());
+  }
+
+  function draw(slot: HTMLElement, make: () => SafeHtml): void {
+    try {
+      setHtml(slot, make());
+    } catch {
+      // An instant at the edge of the supported range cannot be placed on an axis.
+      setHtml(slot, noSignal());
     }
   }
 
   function render(): void {
-    const s = state();
+    const s = readState();
     const entries = entriesOf(s);
     const options = optionsOf(s);
     const facts = collectStackFacts(s, lib);
+    const timeZone = s.timeZone.trim();
 
-    const [callHtml, callPlain] = callSource("cutoffSchedule", [
-      s.anchor.trim(),
-      entries,
-      options,
+    paintCalls(el("call-stack"), [
+      {
+        fn: "cutoffSchedule",
+        args: [s.anchor, entries, options],
+        result: facts.result,
+      },
     ]);
-    renderCallLine(q("call-stack"), "cutoffSchedule", callHtml, callPlain);
+    paintOutput(
+      el("out-stack"),
+      entries.length === 0
+        ? {
+            label: "cutoffSchedule returned",
+            state: "empty",
+            lines: [{ text: formatStack([]), lost: false }],
+          }
+        : facts.result.length === 0
+          ? {
+              label: "cutoffSchedule returned",
+              state: "sentinel",
+              lines: [{ text: "NO SIGNAL", lost: true }],
+            }
+          : {
+              label: "cutoffSchedule returned",
+              state: "live",
+              lines: [{ text: formatStack(facts.result), lost: false }],
+            },
+    );
 
-    const out = q("stack-output");
-    if (out) {
-      if (entries.length === 0) {
-        renderWidgetOutput(out, formatStack([]), "empty");
-      } else if (facts.result.length === 0) {
-        renderWidgetOutput(out, "NO SIGNAL", "sentinel");
-      } else {
-        renderWidgetOutput(out, formatStack(facts.result), "live");
-      }
-    }
+    draw(el("timeline"), () => timelineOf(facts, timeZone, entries.length > 0));
+    el("summary").textContent = summaryText(facts, timeZone) || NBSP;
+    setHtml(
+      el("table-body"),
+      handoffRows(
+        TABLE_COLUMNS,
+        facts.rows.map(cellsOf),
+        Math.max(1, facts.rows.length),
+      ),
+    );
+    setHtml(
+      el("table-empty"),
+      handoffEmpty(facts.rows.length === 0 ? "No cut-off to list." : ""),
+    );
 
-    const timeline = q<HTMLElement>("stack-timeline");
-    if (timeline) renderTimeline(timeline, facts, s.timeZone.trim());
-    const summary = q("stack-summary");
-    if (summary) summary.textContent = summaryText(facts);
-    const table = q<HTMLElement>("stack-table-body");
-    if (table) renderTable(table, facts);
-
-    const aside = q("reason-aside");
-    if (aside) {
-      if (entries.length === 0) {
-        renderAside(aside, "note", "Note", `<p>An empty list returns [].</p>`);
-      } else if (facts.result.length === 0) {
-        const reason = stackNullReason(s, facts, lib);
-        renderAside(
-          aside,
-          "caution",
-          "Why NO SIGNAL",
-          `<p>${escapeHtml(reason ? stackNullText(reason) : "The stack could not be computed.")}</p>`,
-        );
-      } else {
-        aside.innerHTML = "";
-      }
+    const reason = el("reason");
+    if (entries.length === 0) {
+      setHtml(
+        reason,
+        aside(
+          { label: "Note", tone: "note", title: "Note" },
+          html`<p>An empty list returns [].</p>`,
+        ),
+      );
+    } else if (facts.result.length === 0) {
+      const why = stackNullReason(s, facts, lib);
+      setHtml(
+        reason,
+        aside(
+          {
+            label: "Why NO SIGNAL",
+            tone: "caution",
+            title: "Why NO SIGNAL",
+          },
+          html`<p>${why ? stackNullText(why) : "The stack could not be computed."}</p>`,
+        ),
+      );
+    } else {
+      setHtml(reason, html``);
     }
   }
 
   function applyPreset(): void {
-    const preset = STACK_PRESETS.find((p) => p.id === presetEl!.value);
-    if (!preset) return;
-    const s = presetState(preset);
-    anchorEl!.value = s.anchor;
-    timeZoneEl!.value = s.timeZone;
-    for (let i = 0; i < MAX_CUTOFFS; i++) {
-      const c = s.cutoffs[i]!;
-      const n = i + 1;
-      const nameEl = q<HTMLInputElement>(`name-${n}`);
-      const offsetEl = q<HTMLInputElement>(`offset-${n}`);
-      const atLocalTimeEl = q<HTMLInputElement>(`at-local-time-${n}`);
-      if (nameEl) nameEl.value = c.name;
-      if (offsetEl) offsetEl.value = c.offset;
-      if (atLocalTimeEl) atLocalTimeEl.value = c.atLocalTime;
-    }
-    calendarEl!.checked = s.calendar;
-    for (const w of WEEKDAYS) {
-      const el = q<HTMLInputElement>(`weekday-${w.value}`);
-      if (el) el.checked = s.weekend.includes(w.value);
-    }
-    holidaysEl!.value = s.holidays;
-    rollEl!.value = s.roll;
+    const chosen = STACK_PRESETS.find((p) => p.id === presetEl.value);
+    if (!chosen) return;
+    writeState(presetState(chosen));
     syncPreset();
     render();
   }
 
-  root.addEventListener("input", (e) => {
-    const target = e.target as HTMLElement;
-    if (target === presetEl) return;
-    syncPreset();
-    render();
-  });
-  root.addEventListener("change", (e) => {
-    const target = e.target as HTMLElement;
-    if (target === presetEl) {
-      applyPreset();
-      return;
-    }
-    syncPreset();
-    render();
-  });
+  widgetEl.addEventListener(
+    "input",
+    (e) => {
+      if (e.target === presetEl) return;
+      syncPreset();
+      render();
+    },
+    { signal },
+  );
+  widgetEl.addEventListener(
+    "change",
+    (e) => {
+      if (e.target === presetEl) {
+        applyPreset();
+        return;
+      }
+      syncPreset();
+      render();
+    },
+    { signal },
+  );
 
-  wireCopyButtons(root);
-  render();
-  const timelineEl = q<HTMLElement>("stack-timeline");
-  return timelineEl
-    ? onWidthChange(timelineEl, () => fitStackTimeline(timelineEl))
-    : () => {};
-}
-
-function applyArgs(root: HTMLElement, args: CutoffStackArgs): void {
-  const flat = args as unknown as Record<string, unknown>;
-  if (
-    args.anchor === undefined &&
-    args.cutoffs === undefined &&
-    flat.name1 === undefined
-  ) {
-    return;
-  }
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const s = readArgs(args);
-  const set = (role: string, value: string) => {
-    const el = q<HTMLInputElement | HTMLSelectElement>(role);
-    setControlValue(el, value);
+  return {
+    readState,
+    apply(args) {
+      const flat = args as unknown as Record<string, unknown>;
+      if (
+        args.anchor === undefined &&
+        args.cutoffs === undefined &&
+        flat["name1"] === undefined
+      ) {
+        return;
+      }
+      writeState(readArgs(args));
+      syncPreset();
+    },
+    start: render,
   };
-  set("anchor", s.anchor);
-  set("time-zone", s.timeZone);
-  for (let i = 0; i < MAX_CUTOFFS; i++) {
-    const c = s.cutoffs[i]!;
-    const n = i + 1;
-    set(`name-${n}`, c.name);
-    set(`offset-${n}`, c.offset);
-    set(`at-local-time-${n}`, c.atLocalTime);
-  }
-  const calendarEl = q<HTMLInputElement>("calendar");
-  if (calendarEl) calendarEl.checked = s.calendar;
-  for (const w of WEEKDAYS) {
-    const el = q<HTMLInputElement>(`weekday-${w.value}`);
-    if (el) el.checked = s.weekend.includes(w.value);
-  }
-  set("holidays", s.holidays);
-  set("roll", s.roll);
-  const presetEl = q<HTMLSelectElement>("preset");
-  if (presetEl) {
-    presetEl.value = matchPreset(s);
-    const desc = q("preset-description");
-    if (desc) {
-      desc.textContent =
-        STACK_PRESETS.find((p) => p.id === presetEl.value)?.description ?? "";
-    }
-  }
 }
 
 export const mountCutoffStack: MountFn<CutoffStackArgs> = async (
@@ -669,40 +629,21 @@ export const mountCutoffStack: MountFn<CutoffStackArgs> = async (
   args,
   signal,
 ) => {
+  defineElements();
   let lib: CutoffLib;
   try {
     lib = await loadCutoffLib();
   } catch (cause) {
-    throw new WidgetLoadError(cause);
+    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  applyArgs(root, args);
-  const disposeWidget = setupWidget(root, lib);
+  const controller = setupWidget(root, lib, signal);
+  controller.apply(args);
+  controller.start();
 
-  return onceDestroy(disposeWidget, () => {
-    const q = <T extends HTMLElement>(role: string) =>
-      root.querySelector(`[data-role="${role}"]`) as T | null;
-    const anchorEl = q<HTMLInputElement>("anchor");
-    if (!anchorEl) return null;
-    const cutoffs = [1, 2, 3, 4].map((n) => ({
-      name: q<HTMLInputElement>(`name-${n}`)?.value ?? "",
-      offset: q<HTMLInputElement>(`offset-${n}`)?.value ?? "",
-      atLocalTime: q<HTMLInputElement>(`at-local-time-${n}`)?.value ?? "",
-    })) as [CutoffFields, CutoffFields, CutoffFields, CutoffFields];
-    const weekend = WEEKDAYS.filter(
-      (w) => q<HTMLInputElement>(`weekday-${w.value}`)?.checked,
-    ).map((w) => w.value);
-    const state: StackState = {
-      anchor: anchorEl.value,
-      timeZone: q<HTMLSelectElement>("time-zone")?.value ?? "",
-      cutoffCount: String(MAX_CUTOFFS),
-      cutoffs,
-      calendar: q<HTMLInputElement>("calendar")?.checked ?? false,
-      weekend,
-      holidays: q<HTMLInputElement>("holidays")?.value ?? "",
-      roll: q<HTMLSelectElement>("roll")?.value ?? "",
-    };
-    return permalinkOf(state);
-  });
+  return onceDestroy(
+    () => {},
+    () => permalinkOf(controller.readState()),
+  );
 };

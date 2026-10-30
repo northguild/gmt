@@ -13,8 +13,6 @@ import {
   GAP_PROMPT,
   X12_FUNCTIONS,
   formatClassified,
-  houseEnds,
-  houseText,
   isInterval,
   isSentinel,
   KIND_WORDS,
@@ -172,13 +170,6 @@ describe("the kind to function maps", () => {
     expect(
       parseClassified(lib, X12_FUNCTIONS[c.kind], "143045", c.format).result,
     ).toBe("");
-  });
-
-  it("give the ends and the text of a house value", () => {
-    expect(houseEnds("2024-06-15")).toEqual(["2024-06-15"]);
-    expect(houseEnds({ start: "a", end: "b" })).toEqual(["a", "b"]);
-    expect(houseText({ start: "a", end: "b" })).toBe("a / b");
-    expect(houseText("a")).toBe("a");
   });
 });
 

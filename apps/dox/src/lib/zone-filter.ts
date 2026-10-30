@@ -152,7 +152,7 @@ export function showToggle(count: number, checked: boolean): boolean {
  * rows already draw. Direction is the whole idea: yesterday points back,
  * tomorrow points forward, today is a mark on the spot.
  */
-export const DAY_ICON_PATHS: Readonly<Record<DayShift, string>> = {
+const DAY_ICON_PATHS: Readonly<Record<DayShift, string>> = {
   prev: `<g ${ICON_STROKE}><path d="M19 12H5"/><path d="m11 6-6 6 6 6"/></g>`,
   same: `<g ${ICON_STROKE}><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></g>`,
   next: `<g ${ICON_STROKE}><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></g>`,
@@ -169,7 +169,7 @@ export const DAY_ICON_PATHS: Readonly<Record<DayShift, string>> = {
  * actually is; a plain clock is the standard offset; a struck-through clock is
  * a zone with no DST rules to shift.
  */
-export const DST_FILTER_ICON_PATHS: Readonly<Record<DstState, string>> = {
+const DST_FILTER_ICON_PATHS: Readonly<Record<DstState, string>> = {
   dst: `<g ${ICON_STROKE}><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 1.5"/><path d="m17.5 5.5 2.5-2M20 3v3h-3"/></g>`,
   standard: `<g ${ICON_STROKE}><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 1.5"/></g>`,
   none: `<g ${ICON_STROKE}><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 1.5"/><path d="m6.5 17.5 11-11"/></g>`,

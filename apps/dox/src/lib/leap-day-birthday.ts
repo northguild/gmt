@@ -20,7 +20,6 @@
 import type { MonthDayLib } from "./month-day-lib";
 import { NO_SIGNAL_TEXT, literal } from "./holiday-rule-builder";
 import { readersYear, sliderRange, yearNumber } from "./moving-feasts";
-import { encodeWidgetPermalink } from "./widget-permalink";
 
 export { readersYear, sliderRange, yearNumber };
 
@@ -207,15 +206,6 @@ export function permalinkOf(
   const preset = matchPreset(state, thisYear);
   if (preset !== CUSTOM_PRESET_ID) return { preset };
   return { value: state.value, year: state.year, locale: state.locale };
-}
-
-/** A link to the tool for a month-day and a year, as the page writes them. */
-export function toolHref(value: string, year: number, locale?: string): string {
-  return encodeWidgetPermalink("leapday", {
-    value,
-    year: String(year),
-    ...(locale === undefined ? {} : { locale }),
-  });
 }
 
 // ---------------------------------------------------------------------------

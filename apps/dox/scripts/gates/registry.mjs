@@ -3,7 +3,7 @@
  *
  *   id            the name on the screen, in `--only`, and in the log file names
  *   script        the file in `apps/dox/scripts/` that runs it
- *   tier          `pr`, `nightly` or `local`; tiers nest (`--tier pr` < `nightly` < `local`)
+ *   tier          `pr`, `weekly` or `local`; tiers nest (`--tier pr` < `weekly` < `local`)
  *   browsers      the engines the gate can run in; a requested browser outside it is dropped
  *   fullBrowsers  under `--all`, the browsers that get every page (the others get the sample);
  *                 null means all of them
@@ -33,7 +33,7 @@ export const SAMPLE = [
   "/dox/",
 ];
 
-export const TIERS = ["pr", "nightly", "local"];
+export const TIERS = ["pr", "weekly", "local"];
 
 const ENGINES = ["chromium", "webkit", "firefox"];
 
@@ -41,7 +41,7 @@ const ENGINES = ["chromium", "webkit", "firefox"];
  * @typedef {object} Gate
  * @property {string} id
  * @property {string} script
- * @property {"pr" | "nightly" | "local"} tier
+ * @property {"pr" | "weekly" | "local"} tier
  * @property {string[]} browsers
  * @property {string[] | null} fullBrowsers
  * @property {boolean} themes
@@ -133,7 +133,7 @@ export const GATES = [
   {
     id: "canada-clock-still",
     script: "canada-clock-still.mjs",
-    tier: "nightly",
+    tier: "weekly",
     browsers: ENGINES,
     fullBrowsers: null,
     themes: false,
@@ -142,7 +142,7 @@ export const GATES = [
   {
     id: "canada-stored-still",
     script: "canada-stored-still.mjs",
-    tier: "nightly",
+    tier: "weekly",
     browsers: ENGINES,
     fullBrowsers: null,
     themes: false,
@@ -151,7 +151,7 @@ export const GATES = [
   {
     id: "table-fit",
     script: "table-fit.mjs",
-    tier: "nightly",
+    tier: "weekly",
     browsers: ENGINES,
     fullBrowsers: null,
     themes: false,

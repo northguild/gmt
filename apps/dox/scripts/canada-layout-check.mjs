@@ -35,6 +35,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordLabelled, recordMeasured } from "./gates/findings.mjs";
+import { gate, resolveMisses } from "./lib/locate.mjs";
 
 const GATE = "canada-layout-check";
 
@@ -71,16 +72,16 @@ const FIXTURE = FIXTURE_FILE ? readFileSync(FIXTURE_FILE, "utf8") : null;
 const ROW_MAX = 640;
 
 const CARDS = {
-  keypoints: ".gmt-keypoints",
-  browser: ".gmt-clockcheck-browser",
-  map: ".gmt-zonemap-stage",
-  pick: `.gmt-clockcheck-pickcard`,
-  clocks: `.gmt-clockcheck-nowsec`,
-  servers: ".gmt-clockcheck-servers",
-  minimums: ".gmt-clockcheck-minimums",
+  keypoints: gate("keypoints"),
+  browser: gate("browser"),
+  map: gate("map-stage"),
+  pick: gate("pickcard"),
+  clocks: gate("clocks"),
+  servers: gate("servers"),
+  minimums: gate("minimums"),
   changes: `section[aria-labelledby=${WORD}-changes-title]`,
-  help: ".gmt-clockcheck-help",
-  stored: ".gmt-clockcheck-stored",
+  help: gate("help"),
+  stored: gate("stored"),
 };
 
 /* The most empty space a card of the map row may leave under its content, in px. */
@@ -92,6 +93,61 @@ const fail = (message) => {
   failures.push(message);
   recordLabelled({ gate: GATE, page: PATH, message });
 };
+
+/* `--resolve-only`: load the page once and check that every hook this gate measures by is on it. */
+if (args.includes("--resolve-only")) {
+  const browser = await chromium.launch();
+  const page = await (
+    await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  ).newPage();
+  await blockOffSite(page, BASE);
+  if (FIXTURE !== null) {
+    await page.route(`**/api/${WORD}-clock-change`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "cache-control": "no-store" },
+        body: FIXTURE,
+      }),
+    );
+  }
+  const response = await page.goto(`${BASE}${PATH}`, { waitUntil: "load" });
+  const miss = [];
+  if (!response || response.status() !== 200)
+    miss.push(`the page answered HTTP ${response?.status() ?? "none"}`);
+  else {
+    await page.waitForTimeout(3000);
+    await page.locator(gate("map-section")).scrollIntoViewIfNeeded();
+    await page
+      .waitForSelector(gate("map-svg"), { timeout: 15000 })
+      .catch(() => {});
+    miss.push(
+      ...(await resolveMisses(page, [
+        { name: "card stack", sel: gate("stack"), min: 1, max: 1 },
+        { name: "map frame", sel: gate("map-frame"), min: 1, max: 1 },
+        /* The map draws once a Worker answer arrives; with no --fixture it stays undrawn. */
+        {
+          name: "map drawing",
+          sel: gate("map-svg"),
+          min: FIXTURE === null ? 0 : 1,
+          max: 1,
+        },
+        { name: "map pin panel", sel: gate("map-pin"), min: 1, max: 1 },
+        { name: "probe table", sel: gate("probe-table"), min: 1 },
+        ...Object.entries(CARDS).map(([key, sel]) => ({
+          name: `card ${key}`,
+          sel,
+          min: 1,
+          max: 1,
+        })),
+      ])),
+    );
+  }
+  console.log(`${miss.length ? "FAIL" : "ok  "} resolve ${PATH}`);
+  for (const m of miss) console.log(`       ${m}`);
+  await browser.close();
+  process.exit(miss.length ? 1 : 0);
+}
 
 for (const engineName of ENGINES) {
   const browser = await LAUNCHERS[engineName].launch();
@@ -121,13 +177,13 @@ for (const engineName of ENGINES) {
       await page.goto(`${BASE}${PATH}`, { waitUntil: "load" });
       await page.waitForTimeout(3000);
       /* The map draws when it scrolls into view; the check needs its frame, labels and card heights. */
-      await page.locator(".gmt-zonemap-mapsec").scrollIntoViewIfNeeded();
+      await page.locator(gate("map-section")).scrollIntoViewIfNeeded();
       await page
-        .waitForSelector(".gmt-zonemap-svg", { timeout: 15000 })
+        .waitForSelector(gate("map-svg"), { timeout: 15000 })
         .catch(() => {});
       await page.waitForTimeout(500);
       const data = await page.evaluate(
-        ({ cards }) => {
+        ({ cards, part }) => {
           const rect = (selector) => {
             const el = document.querySelector(selector);
             if (!el || el.offsetParent === null) return null;
@@ -139,7 +195,7 @@ for (const engineName of ENGINES) {
               bottom: b.bottom + scrollY,
             };
           };
-          const stack = rect(".gmt-clockcheck-stack");
+          const stack = rect(part.stack);
           /* Where a card's content ends: the lowest text or drawing that its overflow boxes do not clip. */
           const contentBottom = (card) => {
             let lowest = -Infinity;
@@ -183,9 +239,7 @@ for (const engineName of ENGINES) {
             }
             /* The drawing, and the pin panel: a bordered box that holds its size for every zone, so
              what it reserves inside is not empty card space. */
-            for (const el of card.querySelectorAll(
-              "svg.gmt-zonemap-svg, .gmt-zonemap-pin",
-            ))
+            for (const el of card.querySelectorAll(`${part.svg}, ${part.pin}`))
               consider(el);
             return lowest;
           };
@@ -195,14 +249,14 @@ for (const engineName of ENGINES) {
             const pad = parseFloat(getComputedStyle(el).paddingBottom) || 0;
             return el.getBoundingClientRect().bottom - pad - contentBottom(el);
           };
-          const mapFrame = document.querySelector(".gmt-zonemap-map");
-          const svg = mapFrame?.querySelector("svg.gmt-zonemap-svg");
+          const mapFrame = document.querySelector(part.frame);
+          const svg = mapFrame?.querySelector(part.svg);
           const frame =
             mapFrame && mapFrame.offsetParent !== null
               ? mapFrame.getBoundingClientRect()
               : null;
           const view = svg?.getAttribute("viewBox")?.split(" ").map(Number);
-          const labels = [...document.querySelectorAll(".gmt-zonemap-label")]
+          const labels = [...document.querySelectorAll(part.label)]
             .filter((l) => !l.hidden && l.offsetParent !== null)
             .map((l) => {
               const b = l.getBoundingClientRect();
@@ -222,10 +276,10 @@ for (const engineName of ENGINES) {
               };
             });
           /* Each probe table against the card that holds it: it must fit, with nothing clipped. */
-          const tables = [...document.querySelectorAll(".gmt-clockcheck-table")]
+          const tables = [...document.querySelectorAll(part.table)]
             .filter((t) => t.offsetParent !== null)
             .map((t) => {
-              const card = t.closest(".gmt-widget-section") ?? t.parentElement;
+              const card = t.closest("section") ?? t.parentElement;
               const c = card.getBoundingClientRect();
               const cs = getComputedStyle(card);
               const b = t.getBoundingClientRect();
@@ -233,7 +287,7 @@ for (const engineName of ENGINES) {
               const inset = (border, pad) =>
                 parseFloat(cs[border]) + parseFloat(cs[pad]);
               return {
-                card: card.className,
+                card: card.dataset.gate ?? card.localName,
                 left:
                   b.left - (c.left + inset("borderLeftWidth", "paddingLeft")),
                 right:
@@ -274,7 +328,17 @@ for (const engineName of ENGINES) {
             ),
           };
         },
-        { cards: CARDS },
+        {
+          cards: CARDS,
+          part: {
+            stack: gate("stack"),
+            svg: gate("map-svg"),
+            pin: gate("map-pin"),
+            frame: gate("map-frame"),
+            label: gate("map-label"),
+            table: gate("probe-table"),
+          },
+        },
       );
       const tag = `${engineName} ${width}px ${theme}`;
       measured += 1;
@@ -282,9 +346,7 @@ for (const engineName of ENGINES) {
       const present = Object.entries(data.rects).filter(([, r]) => r);
       /* A renamed class or a page that did not render leaves nothing to measure: a fail, not a pass. */
       if (!data.stack)
-        fail(
-          `${tag}: the card stack (.gmt-clockcheck-stack) is not on the page`,
-        );
+        fail(`${tag}: the card stack (the stack gate hook) is not on the page`);
       if (present.length === 0) fail(`${tag}: no card found on the page`);
       for (const [name, r] of present) {
         if (!data.stack) break;
@@ -386,7 +448,7 @@ for (const engineName of ENGINES) {
       if (SHOTS) {
         mkdirSync(SHOTS, { recursive: true });
         await page
-          .locator(`.gmt-clockcheck-stack`)
+          .locator(gate("stack"))
           .screenshot({ path: `${SHOTS}/${theme}-${width}.png` });
       }
       console.log(`${tag}: ${present.length} cards checked`);

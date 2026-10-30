@@ -33,7 +33,7 @@ export interface DstSwitch {
 }
 
 /** What a tile says about DST at the scrubbed instant. */
-export type DstStatus = "dst" | "standard" | "none";
+type DstStatus = "dst" | "standard" | "none";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -152,7 +152,7 @@ export function dstStatus(
  * every zone that has DST at all; a list of zones that keep one offset returns
  * `null`.
  */
-export const YEARS_AHEAD = 2;
+const YEARS_AHEAD = 2;
 
 export function nextSwitch(
   zones: readonly string[],

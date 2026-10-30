@@ -8,10 +8,43 @@
  * against a tolerance the reader drags. The printed results are always the real
  * calls'; the marks, rings and band are a picture of them.
  *
- * Follows the `renderTemplate` / `mount` split in `widget-mount.ts`. The
- * tolerance has three ways in: the range, the typed field, and a seed.
+ * Built on the component kit: `renderEtaDriftTemplate` writes the markup from builders
+ * only, with ids from `idScope(idPrefix)`, and `mount` finds its parts by those ids and
+ * reads and writes element `value` properties. The tolerance has three ways in: the
+ * `<gmt-range>`, the typed field, and a seed. A visually hidden status line reads the
+ * answer once a change settles.
  */
-import { codeFrameHtml } from "./code-frame";
+import { defineElements } from "~/widgets/define";
+import {
+  aside,
+  codeFrame,
+  field,
+  fieldGrid,
+  findWidget,
+  gateAttr,
+  hint,
+  html,
+  idScope,
+  raw,
+  section,
+  select,
+  setHtml,
+  srOnly,
+  table,
+  textInput,
+  widget,
+  type SafeHtml,
+} from "~/widgets/builders";
+import { callOutput } from "~/widgets/families/gnss/call-output";
+import {
+  punctHero,
+  punctHeroStrip,
+} from "~/widgets/families/punctuality/punct-hero";
+import { chips, type GmtChips } from "~/widgets/primitives/chips/chips";
+import { grow } from "~/widgets/primitives/grow/grow";
+import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
+import { range, type GmtRange } from "~/widgets/primitives/range/range";
+import styles from "~/widgets/tools/eta-drift.module.css";
 import {
   CLASS_SERIES,
   ETA_PRESETS,
@@ -39,180 +72,77 @@ import {
 import { onWidthChange, thinTickLabels } from "./label-fit";
 import { loadPunctualityLib } from "./punctuality-lib";
 import {
+  SETTLE_MS,
   TIMESTAMP_CLASSES,
   callArgs,
   epochMs,
   formatValue,
   isoToMinutes,
   minutesToIso,
-  nextInstanceId,
-  heroLinesHtml,
-  setPresetDescription,
   niceMinutes,
   placeLabels,
-  type Rect,
   signedText,
   spokenMinutes,
   toleranceText,
   writtenLabel,
   type PunctualityLib,
+  type Rect,
   type TimestampClass,
 } from "./punctuality-widgets";
-import { onceDestroy, WidgetLoadError } from "./widget-mount";
-import {
-  chipToggleHtml,
-  escapeAttr,
-  escapeHtml,
-  labelTextHtml,
-  rangeFieldHtml,
-  renderAside,
-  renderCallLine,
-  renderWidgetOutput,
-  syncRange,
-  wireCopyButtons,
-} from "./widget-ui";
+import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { codeSpan } from "./widget-ui";
 
 export type { EtaDriftArgs } from "./eta-drift";
 
-const SENTINEL = '<span class="gmt-playground-sentinel">NO SIGNAL</span>';
+const WIDGET_NAME = "eta-drift";
 
-function presetOptionsHtml(presetId: string): string {
-  return (
-    `<option value="${CUSTOM_PRESET_ID}"${presetId === CUSTOM_PRESET_ID ? " selected" : ""}>Custom</option>` +
-    ETA_PRESETS.map(
-      (p) =>
-        `<option value="${escapeAttr(p.id)}"${p.id === presetId ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-    ).join("")
-  );
-}
-
-function sliderMax(drift: { drift: string } | null): number {
-  const m = drift === null ? null : isoToMinutes(drift.drift);
-  return Math.max(1440, niceMinutes(1.5 * Math.abs(m ?? 0)));
-}
-
-function eventFieldsetHtml(s: DriftState, n: number, uid: number): string {
-  const e = s.events[n - 1]!;
-  // The word beside the code: PLN, EST, REQ and ACT mean nothing to a reader
-  // who has not met them, and the chart's legend names only the classes in use.
-  const chips = TIMESTAMP_CLASSES.map(({ code, label }) =>
-    chipToggleHtml({
-      type: "radio",
-      name: `classifier-${n}-${uid}`,
-      role: `classifier-${n}`,
-      value: code,
-      label: `${code} ${label}`,
-      checked: e.classifier === code,
-    }),
-  ).join("");
-  return (
-    `<fieldset class="gmt-transport-leg" data-role="event-${n}"${n > visibleCount(s) ? " hidden" : ""}>` +
-    `<legend>Event ${n}</legend>` +
-    `<fieldset class="gmt-chip-group"><legend>Class</legend>${chips}</fieldset>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label">${labelTextHtml("At")}` +
-    `<input class="gmt-input" data-role="at-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(e.at)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("Recorded at")}` +
-    `<input class="gmt-input" data-role="recorded-at-${n}" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(e.recordedAt)}"></label>` +
-    `</div>` +
-    `</fieldset>`
-  );
-}
-
-/**
- * `renderEtaDriftTemplate(args = {})`: the widget's chrome, seeded so the first
- * paint shows the events and the tolerance. Seeded when `args.events`,
- * `args.classifier1` or `args.preset` is defined, else the first preset. The
- * plot, callouts and results are drawn by `mount`, because they come from the
- * real library.
- */
-export function renderEtaDriftTemplate(args: EtaDriftArgs = {}): string {
-  const s = initialState(args);
-  const presetId = matchPreset(s);
-  const preset = ETA_PRESETS.find((p) => p.id === presetId);
-  const uid = nextInstanceId();
-  const count = visibleCount(s);
-  const tolMin = isoToMinutes(s.tolerance);
-  const max = 1440;
-
-  const countOptions = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1)
-    .map(
-      (n) =>
-        `<option value="${n}"${n === count ? " selected" : ""}>${n}</option>`,
-    )
-    .join("");
-
-  return (
-    `<div class="gmt-eta-drift gmt-widget not-content">` +
-    `<div class="gmt-widget-card">` +
-    `<div class="gmt-widget-section">` +
-    `<h4>1. The timestamps</h4>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label gmt-field-wide">${labelTextHtml("Preset")}` +
-    `<select class="gmt-select" data-role="preset">${presetOptionsHtml(presetId)}</select></label>` +
-    `<label class="gmt-label">${labelTextHtml("Events")}` +
-    `<select class="gmt-select" data-role="event-count">${countOptions}</select></label>` +
-    `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>` +
-    `</div>` +
-    // One slot round every event, so showing or hiding one eases instead of
-    // moving the page by a whole fieldset in a frame.
-    `<div data-role="events" data-grow="slot">` +
-    Array.from({ length: MAX_EVENTS }, (_, i) =>
-      eventFieldsetHtml(s, i + 1, uid),
-    ).join("") +
-    `</div>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>2. Which time, and how far it moved</h4>` +
-    `<p class="gmt-punct-callout" data-role="callout-best"></p>` +
-    `<p class="gmt-punct-callout gmt-punct-naive" data-role="callout-naive"></p>` +
-    `<div class="gmt-punct-frame">` +
-    `<div class="gmt-punct-heroes" data-role="drift-heroes" data-grow="slot" aria-hidden="true"></div>` +
-    `<div class="gmt-eta-plot" data-role="drift-plot" role="img" aria-labelledby="drift-summary-${uid}">` +
-    `<div class="gmt-eta-yaxis" data-role="y-ticks"></div>` +
-    `<div class="gmt-eta-area" data-role="plot-area"></div>` +
-    `<div class="gmt-punct-ticks gmt-eta-xticks" data-role="x-ticks"></div>` +
-    `</div>` +
-    `<ul class="gmt-eta-legend" data-role="legend" aria-hidden="true"></ul>` +
-    `<p class="gmt-punct-callout" data-role="band-label"></p>` +
-    `</div>` +
-    `<p class="gmt-widget-hint">Across: when each record was recorded. Up: the time it names, later at the top.</p>` +
-    `<div class="gmt-field-grid">` +
-    `<label class="gmt-label">${labelTextHtml("Tolerance", { optional: true })}` +
-    `<input class="gmt-input" data-role="tolerance" type="text" spellcheck="false" autocomplete="off" value="${escapeAttr(s.tolerance)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("Drag the tolerance")}` +
-    rangeFieldHtml({
-      role: "tolerance-slider",
-      chipRole: "tolerance-value",
-      min: 0,
-      max,
-      step: 15,
-      value:
-        tolMin === null ? 0 : Math.min(max, Math.max(0, Math.round(tolMin))),
-      valueText: tolMin === null ? "none" : toleranceText(s.tolerance),
-      ends: ["0", "24 h"],
-    }) +
-    `</label>` +
-    `</div>` +
-    `<p class="gmt-widget-hint" id="drift-summary-${uid}" data-role="drift-summary"></p>` +
-    `<table class="gmt-punct-table" data-role="event-table" role="table" tabindex="0" aria-label="Events in the order recorded"></table>` +
-    `<div class="gmt-transport-reason" data-role="reason-aside" data-grow="slot"></div>` +
-    `</div>` +
-    `<div class="gmt-widget-section">` +
-    `<h4>3. What the calls return</h4>` +
-    codeFrameHtml("best") +
-    `<output class="gmt-widget-output" data-role="best-output">&nbsp;</output>` +
-    codeFrameHtml("drift") +
-    `<output class="gmt-widget-output" data-role="drift-output">&nbsp;</output>` +
-    `</div>` +
-    `</div>` +
-    `</div>`
-  );
-}
+/** The widest readings the plates show, so they keep their width while the slider drags. */
+const HERO_SAMPLES = ["+23 h 59 min"];
+const HERO_LINE_SAMPLES: readonly (readonly string[])[] = [
+  ["PT23H59M · over 6 estimates"],
+  ["exceeds ±23 h 59 min: yes"],
+];
 
 // ---------------------------------------------------------------------------
-// Drawing helpers
+// Markup
 // ---------------------------------------------------------------------------
+
+const seriesOf = (code: string): 1 | 2 | 3 | 4 | null =>
+  Object.hasOwn(CLASS_SERIES, code)
+    ? CLASS_SERIES[code as TimestampClass]
+    : null;
+
+const seriesAttr = (code: string): SafeHtml => {
+  const n = seriesOf(code);
+  return n === null ? html`` : html`data-series="${n}"`;
+};
+
+/** A class code on a chip whose border is the class's series colour. */
+const codeChip = (code: string): SafeHtml =>
+  html`<span class="${styles.code}" ${seriesAttr(code)}>${code || "?"}</span>`;
+
+/** The class's shape, inline and static: the plot mark's twin for the legend, the table.
+ *  Decorative; the code beside it names the class. */
+function glyph(code: string): SafeHtml {
+  if (seriesOf(code) === null) return html``;
+  return html`<span class="${styles.glyph}" data-shape="${code}" ${seriesAttr(code)} aria-hidden="true">${
+    code === "REQ"
+      ? raw(
+          `<svg viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M5 1.2 9.4 9H.6Z"/></svg>`,
+        )
+      : ""
+  }</span>`;
+}
+
+function markOf(code: string, left: number, top: number): SafeHtml {
+  return html`<span class="${styles.mark}" data-shape="${code}" data-block="true" ${seriesAttr(code)} style="left: ${left}%; top: ${top}%">${
+    code === "REQ"
+      ? raw(
+          `<svg viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M5 1.2 9.4 9H.6Z"/></svg>`,
+        )
+      : ""
+  }</span>`;
+}
 
 const labelOf = (text: string): string => writtenLabel(text) || text;
 
@@ -220,116 +150,299 @@ function classWord(code: string): string {
   return TIMESTAMP_CLASSES.find((c) => c.code === code)?.label ?? code;
 }
 
-/** A class's series, or `null` for a blank or unknown class. */
-const seriesOf = (code: string): number | null =>
-  Object.hasOwn(CLASS_SERIES, code)
-    ? CLASS_SERIES[code as TimestampClass]
-    : null;
-
-const seriesAttr = (code: string): string => {
-  const n = seriesOf(code);
-  return n === null ? "" : ` data-series="${n}"`;
-};
-
-/** A class code on a chip whose border is the class's series colour. */
-const chip = (code: string): string =>
-  `<span class="gmt-punct-chip"${seriesAttr(code)}>${escapeHtml(code || "?")}</span>`;
-
-/** The class's shape, inline and static: the plot mark's twin for the legend,
- *  the table and the plates. Decorative; the code beside it names the class. */
-function glyphHtml(code: string): string {
-  if (seriesOf(code) === null) return "";
-  const inner =
-    code === "REQ"
-      ? `<svg viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M5 1.2 9.4 9H.6Z"/></svg>`
-      : "";
-  return `<span class="gmt-eta-glyph gmt-eta-glyph--${escapeAttr(code.toLowerCase())}" aria-hidden="true">${inner}</span>`;
+function sliderMax(drift: { drift: string } | null): number {
+  const m = drift === null ? null : isoToMinutes(drift.drift);
+  return Math.max(1440, niceMinutes(1.5 * Math.abs(m ?? 0)));
 }
 
-function markHtml(code: string, left: number, top: number, n: number): string {
-  const cls = code.toLowerCase();
-  const inner =
-    code === "REQ"
-      ? `<svg viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M5 1.2 9.4 9H.6Z" fill="currentColor"/></svg>`
-      : "";
-  return `<span class="gmt-eta-mark gmt-eta-mark--${escapeAttr(cls)}"${seriesAttr(code)} data-role="mark-${n}" style="left:${left}%;top:${top}%">${inner}</span>`;
+/** What the slider reads aloud and in its chip, from the typed tolerance. */
+function toleranceReading(text: string): string {
+  const t = text.trim();
+  const m = isoToMinutes(t);
+  const readable = m !== null && m >= 0;
+  return readable
+    ? `Tolerance ${spokenMinutes(m)}, ${t}`
+    : t === ""
+      ? "No tolerance"
+      : "Tolerance is not a duration";
 }
+
+/**
+ * `renderEtaDriftTemplate(idPrefix, args = {})`: the widget's chrome, seeded so the first
+ * paint shows the events and the tolerance. Seeded when `args.events`, `args.classifier1`
+ * or `args.preset` is defined, else the first preset. The plot, callouts and results are
+ * drawn by `mount`, because they come from the real library.
+ */
+export function renderEtaDriftTemplate(
+  idPrefix: string,
+  args: EtaDriftArgs = {},
+): SafeHtml {
+  const id = idScope(idPrefix);
+  const s = initialState(args);
+  const presetId = matchPreset(s);
+  const count = visibleCount(s);
+  const tolMin = isoToMinutes(s.tolerance);
+  const max = 1440;
+
+  const textField = (local: string, label: string, value: string): SafeHtml =>
+    html`<div class="${styles.box}">${field({
+      id: id(local),
+      label,
+      control: ({ id: cid, describedBy }) =>
+        textInput({
+          id: cid,
+          value,
+          autocomplete: "off",
+          spellcheck: false,
+          ...(describedBy === undefined ? {} : { describedBy }),
+        }),
+    })}</div>`;
+
+  const eventSet = (n: number): SafeHtml => {
+    const e = s.events[n - 1]!;
+    return html`<fieldset class="${styles.event}" id="${id(`event-${n}`)}" ${n > count ? html`hidden` : ""}>
+      <legend class="${styles.eventLegend}">Event ${n}</legend>
+      ${chips({
+        legend: "Class",
+        kind: "radio",
+        name: id(`classifier-${n}`),
+        items: TIMESTAMP_CLASSES.map(({ code, label }) => ({
+          value: code,
+          label: `${code} ${label}`,
+          checked: e.classifier === code,
+        })),
+      })}${fieldGrid(
+        html`${textField(`at-${n}`, "At", e.at)}${textField(`recorded-at-${n}`, "Recorded at", e.recordedAt)}`,
+      )}</fieldset>`;
+  };
+
+  const pick = section(
+    { id: id("pick"), heading: "1. The timestamps", level: 4 },
+    html`<div class="${styles.controls}">${fieldGrid(
+      html`${preset({
+        id: id("preset"),
+        label: "Preset",
+        value: presetId,
+        options: [
+          { value: CUSTOM_PRESET_ID, label: "Custom", description: "" },
+          ...ETA_PRESETS.map((p) => ({
+            value: p.id,
+            label: p.label,
+            description: p.description,
+          })),
+        ],
+      })}<div class="${styles.box}">${field({
+        id: id("event-count"),
+        label: "Events",
+        control: ({ id: cid }) =>
+          select({
+            id: cid,
+            value: String(count),
+            options: Array.from({ length: MAX_EVENTS }, (_, i) => ({
+              value: String(i + 1),
+              label: String(i + 1),
+            })),
+          }),
+      })}</div>`,
+    )}${grow(
+      html`<div class="${styles.controls}">${Array.from(
+        { length: MAX_EVENTS },
+        (_, i) => eventSet(i + 1),
+      )}</div>`,
+    )}</div>`,
+  );
+
+  const summary = hint(id("summary"), "");
+  const read = section(
+    {
+      id: id("read"),
+      heading: "2. Which time, and how far it moved",
+      level: 4,
+    },
+    html`${grow(html`<p class="${styles.callout}" id="${id("callout-best")}"></p>`)}
+      ${grow(html`<p class="${styles.callout} ${styles.naive}" id="${id("callout-naive")}" hidden></p>`)}
+      <div role="status" aria-live="polite" aria-label="ETA status" id="${id("live")}">${srOnly("")}</div>
+      ${grow(
+        html`<div class="${styles.frame}" data-gate="frame">
+        ${grow(html`<div class="${styles.heroes}" id="${id("heroes")}"></div>`)}
+        <div class="${styles.plot}" id="${id("plot")}" role="img" aria-labelledby="${id("summary")}" ${gateAttr("drawn")}>
+          <div class="${styles.yaxis}" id="${id("y-ticks")}"></div>
+          <div class="${styles.area}" id="${id("area")}"></div>
+          <div class="${styles.xticks}" id="${id("x-ticks")}"></div>
+        </div>
+        <ul class="${styles.legend}" id="${id("legend")}" aria-hidden="true"></ul>
+        <p class="${styles.callout}" id="${id("band-label")}"></p>
+      </div>`,
+      )}
+      ${hint(id("axes"), "Across: when each record was recorded. Up: the time it names, later at the top.").html}
+      ${fieldGrid(
+        html`${textField("tolerance", "Tolerance (optional)", s.tolerance)}<div class="${styles.box}">${range(
+          {
+            id: id("slider"),
+            label: "Drag the tolerance",
+            min: 0,
+            max,
+            step: 15,
+            value:
+              tolMin === null
+                ? 0
+                : Math.min(max, Math.max(0, Math.round(tolMin))),
+            valueText: toleranceReading(s.tolerance),
+            ends: ["0", "24 h"],
+          },
+        )}</div>`,
+      )}
+      ${grow(summary.html)}
+      ${grow(html`<div id="${id("table-slot")}">${eventsTable([])}</div>`)}
+      ${grow(html`<div id="${id("reason")}"></div>`)}`,
+  );
+
+  const calls = section(
+    { id: id("calls"), heading: "3. What the calls return", level: 4 },
+    html`${grow(
+      html`<div id="${id("best-slot")}">${codeFrame({
+        label: "The bestAvailable call",
+        copyLabel: "Copy bestAvailable call",
+        copyText: "",
+      })}</div>`,
+    )}${grow(
+      html`<div id="${id("best-output-slot")}">${callOutput({
+        label: "What bestAvailable returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}${grow(
+      html`<div id="${id("drift-slot")}">${codeFrame({
+        label: "The estimateDrift call",
+        copyLabel: "Copy estimateDrift call",
+        copyText: "",
+      })}</div>`,
+    )}${grow(
+      html`<div id="${id("drift-output-slot")}">${callOutput({
+        label: "What estimateDrift returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}`,
+  );
+
+  return widget(
+    { name: WIDGET_NAME, label: "ETA Drift Chart", scope: idPrefix },
+    html`${pick}${read}${calls}`,
+  );
+}
+
+interface EventRow {
+  n: number;
+  class: SafeHtml;
+  at: string;
+  recorded: string;
+  note: string;
+}
+
+function eventsTable(rows: readonly EventRow[]): SafeHtml {
+  return table({
+    caption: "Events in the order recorded",
+    columns: [
+      { key: "n", header: "#", align: "start", numeric: true },
+      { key: "class", header: "Class", align: "start", numeric: false },
+      { key: "at", header: "At", align: "start", numeric: false },
+      { key: "recorded", header: "Recorded", align: "start", numeric: false },
+      { key: "note", header: "Note", align: "start", numeric: false },
+    ],
+    rowHeader: "n",
+    rows,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Wiring
+// ---------------------------------------------------------------------------
 
 interface Controller {
   destroy(): void;
   state(): DriftState;
 }
 
-function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const presetEl = q<HTMLSelectElement>("preset");
-  const countEl = q<HTMLSelectElement>("event-count");
-  const tolEl = q<HTMLInputElement>("tolerance");
-  const sliderEl = q<HTMLInputElement>("tolerance-slider");
-  const area = q("plot-area");
-  if (!presetEl || !countEl || !tolEl || !sliderEl || !area) {
-    return { destroy() {}, state: () => initialState({}) };
-  }
+const r2 = (n: number): number => Math.round(n * 100) / 100;
+
+function setupWidget(
+  root: HTMLElement,
+  lib: PunctualityLib,
+  start: DriftState,
+  signal: AbortSignal,
+): Controller {
+  const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
+  const presetEl = widgetEl.querySelector<GmtPreset>("gmt-preset")!;
+  const rangeEl = widgetEl.querySelector<GmtRange>("gmt-range")!;
+  const countEl = el<HTMLSelectElement>("event-count");
+  const tolEl = el<HTMLInputElement>("tolerance");
+  const area = el("area");
+  const atEls = Array.from({ length: MAX_EVENTS }, (_, i) =>
+    el<HTMLInputElement>(`at-${i + 1}`),
+  );
+  const recEls = Array.from({ length: MAX_EVENTS }, (_, i) =>
+    el<HTMLInputElement>(`recorded-at-${i + 1}`),
+  );
+  const classEls = Array.from({ length: MAX_EVENTS }, (_, i) =>
+    el(`event-${i + 1}`).querySelector<GmtChips>("gmt-chips")!,
+  );
   let destroyed = false;
 
-  const classifierOf = (n: number): string =>
-    (
-      root.querySelector(
-        `[data-role="classifier-${n}"]:checked`,
-      ) as HTMLInputElement | null
-    )?.value ?? "";
+  const classifierOf = (n: number): string => {
+    const v = classEls[n - 1]!.value;
+    return Array.isArray(v) ? (v[0] ?? "") : v;
+  };
 
   const state = (): DriftState => ({
     eventCount: countEl.value,
     events: Array.from({ length: MAX_EVENTS }, (_, i) => ({
       classifier: classifierOf(i + 1) as never,
-      at: q<HTMLInputElement>(`at-${i + 1}`)?.value ?? "",
-      recordedAt: q<HTMLInputElement>(`recorded-at-${i + 1}`)?.value ?? "",
+      at: atEls[i]!.value,
+      recordedAt: recEls[i]!.value,
     })),
     tolerance: tolEl.value,
   });
 
-  function syncPreset(): void {
-    presetEl!.value = matchPreset(state());
-    const desc = q("preset-description");
-    if (desc) {
-      setPresetDescription(
-        desc,
-        ETA_PRESETS.find((p) => p.id === presetEl!.value)?.description ?? "",
-      );
-    }
+  /** Write the state onto the controls: a permalink or chat seed reaches them here. */
+  function writeSeed(s: DriftState): void {
+    countEl.value = String(visibleCount(s));
+    s.events.forEach((e, i) => {
+      classEls[i]!.value = e.classifier;
+      atEls[i]!.value = e.at;
+      recEls[i]!.value = e.recordedAt;
+    });
+    tolEl.value = s.tolerance;
   }
+
+  // The answer is read out once, when the change that made it has settled.
+  let liveText = "";
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const cancelAnnounce = (): void => {
+    if (timer !== undefined) clearTimeout(timer);
+    timer = undefined;
+  };
+  const announce = (): void => {
+    cancelAnnounce();
+    timer = setTimeout(() => {
+      timer = undefined;
+      if (!destroyed) setHtml(el("live"), srOnly(liveText));
+    }, SETTLE_MS);
+  };
+
+  function syncPreset(): void {
+    presetEl.value = matchPreset(state());
+  }
+
+  rangeEl.formatValue = () => toleranceReading(tolEl.value);
 
   function syncSlider(facts: DriftFacts): void {
     const max = sliderMax(facts.drift);
-    const m = isoToMinutes(tolEl!.value.trim());
-    sliderEl!.max = String(max);
-    sliderEl!.disabled = false;
+    const m = isoToMinutes(tolEl.value.trim());
     const readable = m !== null && m >= 0;
-    sliderEl!.value = String(readable ? Math.min(max, Math.round(m)) : 0);
-    syncRange(sliderEl!);
-    const text = tolEl!.value.trim();
-    sliderEl!.setAttribute(
-      "aria-valuetext",
-      readable
-        ? `Tolerance ${spokenMinutes(m)}, ${text}`
-        : text === ""
-          ? "No tolerance"
-          : "Tolerance is not a duration",
-    );
-    const chipEl = q("tolerance-value");
-    if (chipEl) {
-      chipEl.textContent = readable
-        ? toleranceText(text)
-        : text === ""
-          ? "none"
-          : "?";
-    }
-    const ends = sliderEl!
-      .closest(".gmt-range-field")
-      ?.querySelectorAll<HTMLElement>(".gmt-range-ends span");
-    if (ends && ends.length === 2) ends[1]!.textContent = `${max / 60} h`;
+    rangeEl.max = max;
+    rangeEl.ends = ["0", `${max / 60} h`];
+    rangeEl.value = readable ? Math.min(max, Math.round(m)) : 0;
   }
 
   /** The segments drawn in the plot, in percent of its size. */
@@ -338,23 +451,23 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
   let drawnBandEdges: number[] = [];
 
   function placeAll(): void {
-    const w = area!.clientWidth;
-    const h = area!.clientHeight;
+    const w = area.clientWidth;
+    const h = area.clientHeight;
     if (w === 0 || h === 0) return;
-    const labels = [...area!.querySelectorAll<HTMLElement>(".gmt-eta-label")];
-    const boxes = labels.map((el) => {
-      el.classList.remove("gmt-eta-label--placed");
-      const ax = Number(el.dataset.x ?? 0);
-      const ay = Number(el.dataset.y ?? 0);
+    const labels = [...area.querySelectorAll<HTMLElement>("[data-label]")];
+    const boxes = labels.map((label) => {
+      delete label.dataset["placed"];
+      const ax = Number(label.dataset["x"] ?? 0);
+      const ay = Number(label.dataset["y"] ?? 0);
       return {
         x: (ax / 100) * w,
         y: (ay / 100) * h,
-        w: el.offsetWidth,
-        h: el.offsetHeight,
+        w: label.offsetWidth,
+        h: label.offsetHeight,
       };
     });
-    // The join line, the chord and the band's two edges are drawn in percent;
-    // the placer works in px.
+    // The join line, the chord and the band's two edges are drawn in percent; the placer
+    // works in px.
     const lines = drawnLines.map((l) => ({
       x1: (l.x1 / 100) * w,
       y1: (l.y1 / 100) * h,
@@ -362,25 +475,25 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
       y2: (l.y2 / 100) * h,
     }));
     // Every mark and both rings are obstacles, at their rendered size plus 2px.
-    const origin = area!.getBoundingClientRect();
-    const blocked = [
-      ...area!.querySelectorAll(".gmt-eta-mark, .gmt-eta-ring"),
-    ].map((el): Rect => {
-      const r = el.getBoundingClientRect();
-      return {
-        left: r.left - origin.left - 1,
-        top: r.top - origin.top - 1,
-        w: r.width + 2,
-        h: r.height + 2,
-      };
-    });
-    // A chip may cross the join line when nothing else fits (it is opaque), but
-    // never a band edge: both edges are also thin full-width obstacles.
+    const origin = area.getBoundingClientRect();
+    const blocked = [...area.querySelectorAll("[data-block]")].map(
+      (node): Rect => {
+        const r = node.getBoundingClientRect();
+        return {
+          left: r.left - origin.left - 1,
+          top: r.top - origin.top - 1,
+          w: r.width + 2,
+          h: r.height + 2,
+        };
+      },
+    );
+    // A chip may cross the join line when nothing else fits (it is opaque), but never a
+    // band edge: both edges are also thin full-width obstacles.
     for (const l of drawnBandEdges) {
       blocked.push({ left: 0, top: (l / 100) * h - 1, w, h: 2 });
     }
-    // The placer is greedy, first come first placed: the biggest chip goes
-    // first, so the small ones fill the gaps around it.
+    // The placer is greedy, first come first placed: the biggest chip goes first, so the
+    // small ones fill the gaps around it.
     const order = boxes
       .map((_, i) => i)
       .sort((a, b) => boxes[b]!.w * boxes[b]!.h - boxes[a]!.w * boxes[a]!.h);
@@ -391,46 +504,43 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
       { markPx: 34, lines, blocked },
     );
     order.forEach((i, k) => {
-      const el = labels[i]!;
-      // When nothing is clear the placer falls back to its first choice, which
-      // may hang past the plot; a label always stays inside it.
+      const label = labels[i]!;
+      // When nothing is clear the placer falls back to its first choice, which may hang
+      // past the plot; a label always stays inside it.
       const left = Math.max(0, Math.min(placed[k]!.left, w - boxes[i]!.w));
       const top = Math.max(0, Math.min(placed[k]!.top, h - boxes[i]!.h));
-      el.style.left = `${left}px`;
-      el.style.top = `${top}px`;
-      el.classList.add("gmt-eta-label--placed");
+      label.style.left = `${left}px`;
+      label.style.top = `${top}px`;
+      label.dataset["placed"] = "true";
     });
   }
 
   function drawPlot(s: DriftState, facts: DriftFacts): void {
-    const yEl = q("y-ticks");
-    const xEl = q("x-ticks");
-    const bandLabel = q("band-label");
-    const legendEl = q("legend");
-    const clear = (html: string) => {
-      area!.innerHTML = html;
-      if (yEl) yEl.innerHTML = "";
-      if (xEl) xEl.innerHTML = "";
-      if (bandLabel) bandLabel.textContent = "";
-      if (legendEl) legendEl.innerHTML = "";
+    const clear = (inner: SafeHtml): void => {
+      setHtml(area, inner);
+      setHtml(el("y-ticks"), html``);
+      setHtml(el("x-ticks"), html``);
+      el("band-label").textContent = "";
+      setHtml(el("legend"), html``);
       drawnLines = [];
       drawnBandEdges = [];
     };
     if (facts.best === null) {
-      clear(`<span class="gmt-eta-signal">${SENTINEL} invalid input</span>`);
+      clear(
+        html`<span class="${styles.signal}"><span class="${styles.lost}">NO SIGNAL</span> invalid input</span>`,
+      );
       return;
     }
     const band = toleranceBand(facts.drift, s.tolerance);
     const win = plotWindow(facts.events, band);
     if (win === null) {
-      clear("");
+      clear(html``);
       return;
     }
     const zone = plotZone(facts.events);
     const px = (ms: number) => ((ms - win.xMin) / (win.xMax - win.xMin)) * 100;
     const py = (ms: number) =>
       100 - ((ms - win.yMin) / (win.yMax - win.yMin)) * 100;
-    const r2 = (n: number) => Math.round(n * 100) / 100;
 
     const points = facts.events.map((e) => {
       try {
@@ -457,28 +567,27 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
       const b = ests[i]!.p!;
       drawnLines.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y });
     }
-    if (facts.drift !== null && ests.length >= 2) {
+    const drifted = facts.drift !== null && ests.length >= 2;
+    if (drifted) {
       const a = ests[0]!.p!;
       const b = ests.at(-1)!.p!;
       drawnLines.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y });
     }
     const yt = yTicks(win, zone);
-    const lines =
-      yt
-        .map(
-          (t) =>
-            `<line class="gmt-eta-grid" x1="0" x2="100" y1="${r2(py(t.ms))}" y2="${r2(py(t.ms))}" vector-effect="non-scaling-stroke"/>`,
-        )
-        .join("") +
-      (ests.length >= 2
-        ? `<polyline class="gmt-eta-line" points="${ests.map(({ p }) => `${p!.x},${p!.y}`).join(" ")}" vector-effect="non-scaling-stroke"/>`
-        : "") +
-      (facts.drift !== null && ests.length >= 2
-        ? `<polyline class="gmt-eta-line-glow" points="${ests[0]!.p!.x},${ests[0]!.p!.y} ${ests.at(-1)!.p!.x},${ests.at(-1)!.p!.y}" vector-effect="non-scaling-stroke"/>`
-        : "") +
-      (facts.drift !== null && ests.length >= 2
-        ? `<line class="gmt-eta-chord" x1="${ests[0]!.p!.x}" y1="${ests[0]!.p!.y}" x2="${ests.at(-1)!.p!.x}" y2="${ests.at(-1)!.p!.y}" vector-effect="non-scaling-stroke"/>`
-        : "");
+    const first = ests[0]?.p;
+    const last = ests.at(-1)?.p;
+    const svg = html`<svg class="${styles.lines}" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">${yt.map(
+      (t) =>
+        html`<line class="${styles.grid}" x1="0" x2="100" y1="${r2(py(t.ms))}" y2="${r2(py(t.ms))}" vector-effect="non-scaling-stroke"/>`,
+    )}${
+      ests.length >= 2
+        ? html`<polyline class="${styles.join}" points="${ests.map(({ p }) => `${p!.x},${p!.y}`).join(" ")}" vector-effect="non-scaling-stroke"/>`
+        : ""
+    }${
+      drifted && first && last
+        ? html`<polyline class="${styles.glow}" points="${first.x},${first.y} ${last.x},${last.y}" vector-effect="non-scaling-stroke"/><line class="${styles.chord}" x1="${first.x}" y1="${first.y}" x2="${last.x}" y2="${last.y}" vector-effect="non-scaling-stroke"/>`
+        : ""
+    }</svg>`;
 
     drawnBandEdges = [];
     if (band) {
@@ -488,108 +597,120 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
         drawnBandEdges.push(py(ms));
       }
     }
+    const bandEl = band
+      ? html`<span class="${styles.band}" style="top: ${r2(py(band.highMs))}%; height: ${r2(py(band.lowMs) - py(band.highMs))}%"></span>`
+      : html``;
 
-    const bandHtml = band
-      ? `<span class="gmt-eta-band" style="top:${r2(py(band.highMs))}%;height:${r2(py(band.lowMs) - py(band.highMs))}%"></span>`
-      : "";
-
-    let marks = "";
-    let labels = "";
+    const marks: SafeHtml[] = [];
+    const labels: SafeHtml[] = [];
     facts.events.forEach((e, i) => {
       const p = points[i];
       if (!p) return;
-      marks += markHtml(e.classifier, p.x, p.y, i + 1);
+      marks.push(markOf(e.classifier, p.x, p.y));
       const isBest = i === bestIdx;
       const isNaive = i === naiveIdx;
       if (isBest) {
-        marks += `<span class="gmt-eta-ring" style="left:${p.x}%;top:${p.y}%"></span>`;
+        marks.push(
+          html`<span class="${styles.ring}" data-block="true" style="left: ${p.x}%; top: ${p.y}%"></span>`,
+        );
       }
       if (isNaive) {
-        marks += `<span class="gmt-eta-ring gmt-eta-ring--dashed" style="left:${p.x}%;top:${p.y}%"></span>`;
+        marks.push(
+          html`<span class="${styles.ring}" data-pick="naive" data-block="true" style="left: ${p.x}%; top: ${p.y}%"></span>`,
+        );
       }
       const words = [isBest ? "best available" : "", isNaive ? "naive" : ""]
         .filter(Boolean)
         .join(", ");
-      labels += `<span class="gmt-eta-label gmt-cutoff-chip" data-role="label-${i + 1}" data-x="${p.x}" data-y="${p.y}" style="left:${p.x}%;top:${p.y}%">${chip(e.classifier)}${words ? ` ${escapeHtml(words)}` : ""}</span>`;
+      labels.push(
+        html`<span class="${styles.label}" data-label="true" data-x="${p.x}" data-y="${p.y}" style="left: ${p.x}%; top: ${p.y}%">${codeChip(e.classifier)}${words ? html` ${words}` : ""}</span>`,
+      );
     });
-    if (facts.drift !== null && ests.length >= 2) {
-      const a = ests[0]!.p!;
-      const b = ests.at(-1)!.p!;
+    if (facts.drift !== null && drifted && first && last) {
       const arrow =
         facts.drift.drift === "PT0S"
           ? "→"
           : facts.drift.drift.startsWith("-")
             ? "↓"
             : "↑";
-      labels += `<span class="gmt-eta-label gmt-cutoff-chip" data-role="label-drift" data-x="${r2((a.x + b.x) / 2)}" data-y="${r2((a.y + b.y) / 2)}" style="left:${r2((a.x + b.x) / 2)}%;top:${r2((a.y + b.y) / 2)}%">${arrow} ${escapeHtml(signedText(facts.drift.drift))}</span>`;
+      const mx = r2((first.x + last.x) / 2);
+      const my = r2((first.y + last.y) / 2);
+      labels.push(
+        html`<span class="${styles.label}" data-label="true" data-x="${mx}" data-y="${my}" style="left: ${mx}%; top: ${my}%">${arrow} ${signedText(facts.drift.drift)}</span>`,
+      );
     }
 
-    area!.innerHTML = `<svg class="gmt-eta-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">${lines}</svg>${bandHtml}${marks}${labels}`;
-    if (yEl) {
-      yEl.innerHTML = yt
-        .map(
-          (t) =>
-            `<span class="gmt-eta-ytick" style="top:${r2(py(t.ms))}%">${escapeHtml(t.label)}</span>`,
-        )
-        .join("");
-    }
-    if (xEl) {
-      xEl.innerHTML = xTicks(win, zone)
-        .map(
-          (t) =>
-            `<span class="gmt-cutoff-axis-tick gmt-punct-tick--mid" style="left:${r2(px(t.ms))}%">${escapeHtml(t.label)}</span>`,
-        )
-        .join("");
-      thinTickLabels(xEl);
-    }
-    if (bandLabel) {
-      bandLabel.textContent = band
-        ? `±${toleranceText(s.tolerance)} around the first estimate · exceeds the tolerance: ${String(facts.drift?.exceedsTolerance)}`
-        : "";
-    }
-    if (legendEl) {
-      const present = new Set(facts.events.map((e) => e.classifier as string));
-      legendEl.innerHTML = TIMESTAMP_CLASSES.filter((c) => present.has(c.code))
-        .map(
-          (c) =>
-            `<li data-series="${CLASS_SERIES[c.code]}">${glyphHtml(c.code)}${chip(c.code)}<span class="gmt-eta-legend-word">${escapeHtml(c.label)}</span></li>`,
-        )
-        .join("");
-    }
+    setHtml(area, html`${svg}${bandEl}${marks}${labels}`);
+    setHtml(
+      el("y-ticks"),
+      html`${yt.map(
+        (t) =>
+          html`<span class="${styles.ytick}" style="top: ${r2(py(t.ms))}%">${t.label}</span>`,
+      )}`,
+    );
+    setHtml(
+      el("x-ticks"),
+      html`${xTicks(win, zone).map(
+        (t) =>
+          html`<span class="${styles.xtick}" data-tick="true" style="left: ${r2(px(t.ms))}%">${t.label}</span>`,
+      )}`,
+    );
+    thinTickLabels(el("x-ticks"), "[data-tick]");
+    el("band-label").textContent = band
+      ? `±${toleranceText(s.tolerance)} around the first estimate · exceeds the tolerance: ${String(facts.drift?.exceedsTolerance)}`
+      : "";
+    const present = new Set(facts.events.map((e) => e.classifier as string));
+    setHtml(
+      el("legend"),
+      html`${TIMESTAMP_CLASSES.filter((c) => present.has(c.code)).map(
+        (c) =>
+          html`<li class="${styles.legendItem}" ${seriesAttr(c.code)}>${glyph(c.code)}${codeChip(c.code)}<span>${c.label}</span></li>`,
+      )}`,
+    );
     placeAll();
   }
 
-  /** The result plates above the plot: the drift `estimateDrift` returned and
-   *  the pick `bestAvailable` made, large. Every value is the library's. */
+  /** The result plates above the plot: the drift `estimateDrift` returned and the pick
+   *  `bestAvailable` made, large. Every value is the library's. */
   function drawHeroes(s: DriftState, facts: DriftFacts): void {
-    const heroes = q("drift-heroes");
-    if (!heroes) return;
-    let html = "";
+    const plates: SafeHtml[] = [];
     if (facts.drift !== null) {
       const tolerance = s.tolerance.trim();
       const exceeds =
         facts.drift.exceedsTolerance === null
           ? ""
           : `exceeds ±${toleranceText(tolerance)}: ${facts.drift.exceedsTolerance ? "yes" : "no"}`;
-      html +=
-        `<div class="gmt-punct-hero" data-role="drift-hero">` +
-        `<span class="gmt-punct-hero-cap">estimate drift</span>` +
-        `<span class="gmt-punct-hero-value">${escapeHtml(signedText(facts.drift.drift))}</span>` +
-        heroLinesHtml([
-          {
-            text: `${facts.drift.drift} · over ${facts.drift.revisions} estimates`,
-          },
-          { text: exceeds, sep: " · " },
-        ]) +
-        `</div>`;
+      plates.push(
+        punctHero({
+          caption: "estimate drift",
+          value: signedText(facts.drift.drift),
+          samples: HERO_SAMPLES,
+          lines: [
+            `${facts.drift.drift} · over ${facts.drift.revisions} estimates`,
+            exceeds,
+          ],
+          lineSamples: HERO_LINE_SAMPLES,
+          series: 1,
+          gate: "hero",
+        }),
+      );
     }
     if (facts.best !== null) {
-      html +=
-        `<div class="gmt-punct-hero gmt-punct-hero--quiet"${seriesAttr(facts.best.classifier)} data-role="best-hero">` +
-        `<span class="gmt-punct-hero-cap">${glyphHtml(facts.best.classifier)}best available</span>` +
-        `<span class="gmt-punct-hero-value">${escapeHtml(`${facts.best.classifier} · ${labelOf(facts.best.at)}`)}</span></div>`;
+      const n = seriesOf(facts.best.classifier);
+      plates.push(
+        punctHero({
+          caption: "best available",
+          value: `${facts.best.classifier} · ${labelOf(facts.best.at)}`,
+          quiet: true,
+          ...(n === null ? {} : { series: n }),
+          gate: "hero",
+        }),
+      );
     }
-    heroes.innerHTML = html;
+    setHtml(
+      el("heroes"),
+      plates.length === 0 ? html`` : punctHeroStrip(html`${plates}`),
+    );
   }
 
   function render(): void {
@@ -600,36 +721,30 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
     // Fewer than two estimates is a correct empty answer, not invalid input.
     const empty = isEmptyDriftReason(reason);
     const count = visibleCount(s);
-    for (let n = 1; n <= MAX_EVENTS; n++) {
-      const set = q(`event-${n}`);
-      if (set) set.hidden = n > count;
-    }
+    for (let n = 1; n <= MAX_EVENTS; n++) el(`event-${n}`).hidden = n > count;
 
     // Callouts.
-    const best = q("callout-best");
-    const naive = q("callout-naive");
     const bestIdx = indexOfPick(facts.events, facts.best);
     const naiveIdx = facts.naive?.index ?? null;
-    if (best) {
-      best.innerHTML =
-        facts.best === null
-          ? `Best available: ${SENTINEL}`
-          : bestIdx !== null && bestIdx === naiveIdx
-            ? escapeHtml(
-                `Best available and the latest recorded are the same event: ${facts.best.classifier}, ${labelOf(facts.best.at)} (bestAvailable)`,
-              )
-            : escapeHtml(
-                `Best available: ${facts.best.classifier}, ${labelOf(facts.best.at)} (bestAvailable)`,
-              );
-    }
-    if (naive) {
-      const same = bestIdx !== null && bestIdx === naiveIdx;
-      naive.hidden = same || facts.naive === null;
-      naive.textContent =
-        facts.naive === null
-          ? ""
-          : `Naive, latest recorded: ${facts.naive.event.classifier}, ${labelOf(facts.naive.event.at)}`;
-    }
+    const same = bestIdx !== null && bestIdx === naiveIdx;
+    const bestText =
+      facts.best === null
+        ? ""
+        : same
+          ? `Best available and the latest recorded are the same event: ${facts.best.classifier}, ${labelOf(facts.best.at)} (bestAvailable)`
+          : `Best available: ${facts.best.classifier}, ${labelOf(facts.best.at)} (bestAvailable)`;
+    setHtml(
+      el("callout-best"),
+      facts.best === null
+        ? html`Best available: <span class="${styles.lost}">NO SIGNAL</span>`
+        : html`${bestText}`,
+    );
+    const naive = el("callout-naive");
+    naive.hidden = same || facts.naive === null;
+    naive.textContent =
+      facts.naive === null
+        ? ""
+        : `Naive, latest recorded: ${facts.naive.event.classifier}, ${labelOf(facts.naive.event.at)}`;
 
     drawPlot(s, facts);
     drawHeroes(s, facts);
@@ -658,87 +773,135 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
       }
       return out.join(", ");
     };
-    const summary = q("drift-summary");
-    if (summary) {
-      const sentences = order.map(
-        ({ e }) =>
-          `Recorded ${labelOf(e.recordedAt)}: ${classWord(e.classifier)} (${e.classifier || "no class"}), naming ${labelOf(e.at)}.`,
-      );
-      sentences.push(
-        facts.drift === null
-          ? empty
-            ? "No estimate drift to measure yet: fewer than two estimates."
-            : "No estimate drift: NO SIGNAL."
-          : `Estimate drift ${signedText(facts.drift.drift)} over ${facts.drift.revisions} estimates${facts.drift.exceedsTolerance === null ? "" : `; exceeds the tolerance: ${facts.drift.exceedsTolerance}`}.`,
-      );
-      summary.textContent = sentences.join(" ");
-    }
-    const table = q("event-table");
-    if (table) {
-      table.innerHTML =
-        `<thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">#</th><th role="columnheader" scope="col">Class</th><th role="columnheader" scope="col">At</th><th role="columnheader" scope="col">Recorded</th><th role="columnheader" scope="col">Note</th></tr></thead><tbody role="rowgroup">` +
-        facts.events
-          .map(
-            (e, i) =>
-              `<tr role="row" data-role="event-row-${i + 1}"><th role="rowheader" scope="row">${i + 1}</th><td role="cell"${seriesAttr(e.classifier)}>${glyphHtml(e.classifier)}${chip(e.classifier)}</td><td role="cell">${escapeHtml(labelOf(e.at))}</td><td role="cell">${escapeHtml(labelOf(e.recordedAt))}</td><td role="cell" data-role="note-${i + 1}">${escapeHtml(notes(i))}</td></tr>`,
-          )
-          .join("") +
-        `</tbody>`;
-    }
+    const sentences = order.map(
+      ({ e }) =>
+        `Recorded ${labelOf(e.recordedAt)}: ${classWord(e.classifier)} (${e.classifier || "no class"}), naming ${labelOf(e.at)}.`,
+    );
+    const driftSentence =
+      facts.drift === null
+        ? empty
+          ? "No estimate drift to measure yet: fewer than two estimates."
+          : "No estimate drift: NO SIGNAL."
+        : `Estimate drift ${signedText(facts.drift.drift)} over ${facts.drift.revisions} estimates${facts.drift.exceedsTolerance === null ? "" : `; exceeds the tolerance: ${facts.drift.exceedsTolerance}`}.`;
+    sentences.push(driftSentence);
+    el("summary").textContent = sentences.join(" ");
+    liveText = [bestText || "Best available: NO SIGNAL.", driftSentence].join(
+      ". ",
+    );
 
-    const aside = q("reason-aside");
-    if (aside) {
-      if (reason) {
-        renderAside(
-          aside,
-          empty ? "note" : "caution",
-          empty ? "Nothing to measure yet" : "Why NO SIGNAL",
-          `<p>${escapeHtml(driftReasonText(reason))}</p>`,
-        );
-      } else {
-        aside.innerHTML = "";
-      }
-    }
+    setHtml(
+      el("table-slot"),
+      eventsTable(
+        facts.events.map((e, i) => ({
+          n: i + 1,
+          class: html`${glyph(e.classifier)}${codeChip(e.classifier)}`,
+          at: labelOf(e.at),
+          recorded: labelOf(e.recordedAt),
+          note: notes(i),
+        })),
+      ),
+    );
+
+    setHtml(
+      el("reason"),
+      reason
+        ? aside(
+            {
+              label: empty ? "Nothing to measure yet" : "Why NO SIGNAL",
+              tone: empty ? "note" : "caution",
+              title: empty ? "Nothing to measure yet" : "Why NO SIGNAL",
+            },
+            html`<p>${driftReasonText(reason)}</p>`,
+          )
+        : html``,
+    );
 
     // What the calls return.
-    const [bestHtml, bestPlain] = callArgs([facts.events]);
-    renderCallLine(q("call-best"), "bestAvailable", bestHtml, bestPlain);
+    const frame = (
+      label: string,
+      copyLabel: string,
+      fn: string,
+      callList: readonly unknown[],
+    ): SafeHtml => {
+      const [argsHtml, plain] = callArgs(callList);
+      return codeFrame({
+        label,
+        copyLabel,
+        copyText: `${fn}(${plain})`,
+        code: raw(`${codeSpan("fn", fn)}(${argsHtml})`),
+      });
+    };
     const tolerance = s.tolerance.trim();
-    const [driftHtml, driftPlain] = callArgs(
-      tolerance ? [facts.events, { tolerance }] : [facts.events],
+    setHtml(
+      el("best-slot"),
+      frame(
+        "The bestAvailable call",
+        "Copy bestAvailable call",
+        "bestAvailable",
+        [facts.events],
+      ),
     );
-    renderCallLine(q("call-drift"), "estimateDrift", driftHtml, driftPlain);
-    const bestOut = q("best-output");
-    if (bestOut) {
-      if (facts.best === null)
-        renderWidgetOutput(bestOut, "NO SIGNAL", "sentinel");
-      else renderWidgetOutput(bestOut, formatValue(facts.best), "live");
-    }
-    const driftOut = q("drift-output");
-    if (driftOut) {
-      if (facts.drift !== null)
-        renderWidgetOutput(driftOut, formatValue(facts.drift), "live");
-      else if (empty) renderWidgetOutput(driftOut, "null", "empty");
-      else renderWidgetOutput(driftOut, "NO SIGNAL", "sentinel");
-    }
+    setHtml(
+      el("drift-slot"),
+      frame(
+        "The estimateDrift call",
+        "Copy estimateDrift call",
+        "estimateDrift",
+        tolerance ? [facts.events, { tolerance }] : [facts.events],
+      ),
+    );
+    setHtml(
+      el("best-output-slot"),
+      facts.best === null
+        ? callOutput({
+            label: "What bestAvailable returned",
+            state: "sentinel",
+            lines: [{ text: "NO SIGNAL", lost: true }],
+          })
+        : callOutput({
+            label: "What bestAvailable returned",
+            state: "live",
+            lines: [{ text: formatValue(facts.best), lost: false }],
+          }),
+    );
+    setHtml(
+      el("drift-output-slot"),
+      facts.drift !== null
+        ? callOutput({
+            label: "What estimateDrift returned",
+            state: "live",
+            lines: [{ text: formatValue(facts.drift), lost: false }],
+          })
+        : empty
+          ? callOutput({
+              label: "What estimateDrift returned",
+              state: "empty",
+              lines: [{ text: "null", lost: false }],
+            })
+          : callOutput({
+              label: "What estimateDrift returned",
+              state: "sentinel",
+              lines: [{ text: "NO SIGNAL", lost: true }],
+            }),
+    );
   }
 
   /** How many events were visible before the Events select last changed. */
-  let lastCount = visibleCount(state());
+  let lastCount = visibleCount(start);
 
   function applyPreset(): void {
-    const preset = ETA_PRESETS.find((p) => p.id === presetEl!.value);
-    if (!preset) return;
-    writeSeed(root, presetState(preset));
-    // The preset sets the visible count: the next change of the Events select
-    // copies from the events that were showing now, not before the preset.
+    const chosen = ETA_PRESETS.find((p) => p.id === presetEl.value);
+    if (!chosen) return;
+    writeSeed(presetState(chosen));
+    // The preset sets the visible count: the next change of the Events select copies from
+    // the events that were showing now, not before the preset.
     lastCount = visibleCount(state());
     syncPreset();
     render();
   }
 
-  /** Showing another event copies the last visible one into a blank slot, so
-   *  a new event starts as a valid timestamp the reader can then edit. */
+  /** Showing another event copies the last visible one into a blank slot, so a new event
+   *  starts as a valid timestamp the reader can then edit. */
   function fillNewEvents(previous: number): void {
     const s = state();
     const count = visibleCount(s);
@@ -748,125 +911,112 @@ function setupWidget(root: HTMLElement, lib: PunctualityLib): Controller {
         e.classifier === ("" as never) && e.at === "" && e.recordedAt === "";
       const from = s.events[n - 2];
       if (!blank || !from) continue;
-      root
-        .querySelectorAll<HTMLInputElement>(`[data-role="classifier-${n}"]`)
-        .forEach((r) => {
-          r.checked = r.value === (from.classifier || "EST");
-        });
-      const at = q<HTMLInputElement>(`at-${n}`);
-      if (at) at.value = from.at;
-      const rec = q<HTMLInputElement>(`recorded-at-${n}`);
-      if (rec) rec.value = from.recordedAt;
+      classEls[n - 1]!.value = from.classifier || "EST";
+      atEls[n - 1]!.value = from.at;
+      recEls[n - 1]!.value = from.recordedAt;
     }
   }
 
-  root.addEventListener("input", (e) => {
-    if (destroyed) return;
-    const target = e.target as HTMLElement;
-    if (target === sliderEl) {
-      tolEl.value = minutesToIso(Number.parseInt(sliderEl.value, 10) || 0);
-      syncPreset();
-      render();
-      return;
-    }
-    const role = target.dataset?.role ?? "";
-    if (role === "tolerance" || /^(at|recorded-at)-\d$/.test(role)) {
-      syncPreset();
-      render();
-    }
-  });
+  const typed: readonly EventTarget[] = [tolEl, ...atEls, ...recEls];
 
-  root.addEventListener("change", (e) => {
-    if (destroyed) return;
-    const target = e.target as HTMLElement;
-    const role = target.dataset?.role ?? "";
-    if (target === presetEl) {
-      applyPreset();
-    } else if (target === countEl) {
-      fillNewEvents(lastCount);
-      lastCount = visibleCount(state());
-      syncPreset();
-      render();
-    } else if (/^classifier-\d$/.test(role)) {
-      syncPreset();
-      render();
-    }
-  });
+  widgetEl.addEventListener(
+    "input",
+    (e) => {
+      if (destroyed) return;
+      if (e.target === rangeEl) {
+        tolEl.value = minutesToIso(Math.round(rangeEl.value));
+        syncPreset();
+        render();
+        announce();
+        return;
+      }
+      if (e.target !== null && typed.includes(e.target)) {
+        syncPreset();
+        render();
+        announce();
+      }
+    },
+    { signal },
+  );
 
-  wireCopyButtons(root);
+  widgetEl.addEventListener(
+    "change",
+    (e) => {
+      if (destroyed) return;
+      const target = e.target;
+      if (target === presetEl) {
+        applyPreset();
+        announce();
+      } else if (target === countEl) {
+        fillNewEvents(lastCount);
+        lastCount = visibleCount(state());
+        syncPreset();
+        render();
+        announce();
+      } else if (
+        target !== null &&
+        (classEls as readonly EventTarget[]).includes(target)
+      ) {
+        syncPreset();
+        render();
+        announce();
+      }
+    },
+    { signal },
+  );
+
+  writeSeed(start);
+  lastCount = visibleCount(state());
   syncPreset();
   render();
+  liveText = "";
+
   const refitText = (): void => {
     if (destroyed) return;
     placeAll();
-    const xEl = q("x-ticks");
-    if (xEl) thinTickLabels(xEl);
+    thinTickLabels(el("x-ticks"), "[data-tick]");
   };
   const stopWidthWatch = onWidthChange(area, refitText);
-  // Text measured before the web fonts swap in is the wrong width: fit again
-  // once they have loaded.
+  // Text measured before the web fonts swap in is the wrong width: fit again once they
+  // have loaded.
   const fonts = typeof document !== "undefined" ? document.fonts : undefined;
   if (fonts) {
     void fonts.ready.then(refitText);
-    fonts.addEventListener?.("loadingdone", refitText);
+    fonts.addEventListener?.("loadingdone", refitText, { signal });
   }
+  const stop = (): void => {
+    destroyed = true;
+    stopWidthWatch();
+    cancelAnnounce();
+  };
+  signal.addEventListener("abort", stop);
 
   return {
     state,
     destroy() {
-      destroyed = true;
-      stopWidthWatch();
-      fonts?.removeEventListener?.("loadingdone", refitText);
+      signal.removeEventListener("abort", stop);
+      stop();
     },
   };
 }
 
-/** Write the state onto the controls: the page server-renders the first preset,
- *  so a permalink or chat seed has to reach the controls here. */
-function writeSeed(root: HTMLElement, s: DriftState): void {
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const count = q<HTMLSelectElement>("event-count");
-  if (count) count.value = String(visibleCount(s));
-  s.events.forEach((e, i) => {
-    const n = i + 1;
-    root
-      .querySelectorAll<HTMLInputElement>(`[data-role="classifier-${n}"]`)
-      .forEach((r) => {
-        r.checked = r.value === e.classifier;
-      });
-    const at = q<HTMLInputElement>(`at-${n}`);
-    if (at) at.value = e.at;
-    const rec = q<HTMLInputElement>(`recorded-at-${n}`);
-    if (rec) rec.value = e.recordedAt;
-  });
-  const tol = q<HTMLInputElement>("tolerance");
-  if (tol) tol.value = s.tolerance;
-}
-
-export const mountEtaDrift = async (
-  root: HTMLElement,
-  args: EtaDriftArgs,
-  signal: AbortSignal,
+export const mountEtaDrift: MountFn<EtaDriftArgs> = async (
+  root,
+  args,
+  signal,
 ) => {
+  defineElements();
   let lib: PunctualityLib;
   try {
     lib = await loadPunctualityLib();
   } catch (cause) {
-    throw new WidgetLoadError(cause);
+    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
   }
   if (signal.aborted) return onceDestroy(() => {});
 
-  writeSeed(root, initialState(args));
-  const controller = setupWidget(root, lib);
-  const onAbort = () => controller.destroy();
-  signal.addEventListener("abort", onAbort);
-
+  const controller = setupWidget(root, lib, initialState(args), signal);
   return onceDestroy(
-    () => {
-      signal.removeEventListener("abort", onAbort);
-      controller.destroy();
-    },
+    () => controller.destroy(),
     () => permalinkOf(controller.state()),
   );
 };

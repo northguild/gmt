@@ -1,0 +1,21 @@
+/* loading: one quiet line while a widget's chunk loads. */
+
+.root {
+  display: block;
+  margin: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    color: var(--gmt-ice);
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    color: CanvasText;
+  }
+}

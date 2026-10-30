@@ -544,6 +544,175 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
 ## Tier 2 · Widget platform
 
+**Component kit.** A widget is an Astro shell, a pure `renderTemplate` built from the kit, and a
+`mount`. The kit is nine custom elements and a set of builders. The builders sit in
+`src/widgets/builders`, re-exported from `builders/index.ts`: the layout set (`widget`, `card`,
+`section`, `fieldGrid`, `field`, `hint`), `aside`, `badge`, `button`, `buttonRow`, `chartKey`,
+`codeFrame`, `dataCredits`, `disclosure`, `hero`, `instant`, `loading`, `plates`, `select`,
+`srOnly`, `switchField`, `swatch`, `table`, `textInput`, `toolLinks`, `verdict` and the timeline
+pieces (`axis`, `lane`, `mark`, `tick`). The `html`, `raw` and `idScope` helpers escape and
+scope. The elements sit in `src/widgets/primitives/<name>/`: `gmt-range`, `gmt-handle`,
+`gmt-readout`, `gmt-preset`, `gmt-chips`, `gmt-copy`, `gmt-grow`, `gmt-listbox` and
+`gmt-combobox`. A builder takes its accessible name as a required argument, so a piece without a
+label does not compile. Family pieces, shared by the tools of one family, live in
+`src/widgets/families/<family>/`. A tool's own layout is a CSS Module in `src/widgets/tools/`.
+
+**Global sheets.** Only what styles the site is global, each in its `gmt.*` layer: `gmt-tokens.css`,
+`gmt-theme.css`, `gmt-light.css`, `gmt-primitives.css`, `gmt-glass.css`, `gmt-shell.css`,
+`gmt-content.css` with `gmt-content-tables.css`, `gmt-controls.css`, `gmt-reveal.css`,
+`gmt-view-transitions.css`, `dox.css`, `gmt-a11y.css` (site rules), the chat sheets
+(`chat.css`, `gmt-ask.css`, `gmt-ask-tailwind.css`, `gmt-hive.css`) and `gmt-widget-reset.css`
+(the `not-content` restore, the syntax-token colours and the load-failure notice). The
+`gmt.thirdparty` layer holds the sheets for DOM we do not render: `gmt-charts.css`, the map
+tooltip shell, and the Pagefind and Starlight overrides. Every element we render is styled by a CSS
+Module or a component `<style>` block. Content tables carry `data-col` (written by
+`src/lib/rehype-table-scroll.ts`), so a stacked label reads `attr(data-col)` and no column name is
+typed in CSS. The reveal stagger is `--gmt-reveal-i`, set by `scroll-reveal.ts`.
+- **Finding a part.** `widget()` writes `data-widget` and `data-scope` on the root.
+  `findWidget(root, name)` (`src/widgets/root.ts`, re-exported by the builders) returns the root
+  and `part(local)`, which finds the part whose id the template wrote with `idScope`, and throws
+  naming the part when it is missing.
+- **Optional fields.** The label of an optional field ends in "(optional)", written by the caller
+  in the label text (`At local time (optional)`); the kit has no separate chip. A required field
+  has no marker.
+- **Text fields.** `textInput` is always `type="text"`. `inputMode` picks the mobile keyboard,
+  and `autocomplete`, `spellcheck: false` and `maxLength` quiet the browser where it would mangle
+  a code or a timestamp; the tool's parser, not the control, judges the value. A native
+  `number`, `date` or `datetime-local` control appears only where the platform's stepper or
+  picker is the point, and lives in the family that needs it: `numberInput`
+  (`families/timescale/number-input.ts`, a year), `dateInput`
+  (`families/ledger/date-input.ts`, a calendar date; a value the control refuses leaves it empty
+  and the mount keeps the refused string) and `utcDatetimeInput`
+  (`families/zones/utc-datetime-input.ts`). `textArea` (`families/ledger/text-area.ts`) is the
+  native multi-line field.
+- **Tool links.** `toolLinks` writes a named group of links to other tools. Each link starts
+  without an `href` and with `aria-disabled="true"`; `setToolLink` (`src/lib/widget-ui.ts`)
+  gives it one when the widget has a result to send. In a test, `linkTarget(link)`
+  (`src/test/render-widget.ts`) follows an in-page link to the element its fragment names, or
+  returns `null` for a dead link.
+- **Copy.** `copy()` writes `<gmt-copy>`: a native button and a polite status that says "Copied"
+  or "Copy failed". With `reveal: true`, for text shown nowhere else on the page (a share link),
+  a failed copy shows the text in the status, and it stays until the next click, so the reader
+  can select it and copy it by hand (`src/widgets/primitives/copy/copy.ts`).
+- **Combobox.** `combobox()` takes `placement: "above" | "below"` (default `below`). `above` is
+  for a box in the lower half of a fixed-height column, where the list has no room below it.
+- **Registration.** `defineElements()` runs on the first line of each `mountX()`, never at module
+  top level, because SSR and node tests have no `customElements`. Each element extends a base
+  that falls back to an empty class when `globalThis.HTMLElement` is missing. Each connection
+  owns one `AbortController`, so a double connect or a removed element leaves no listener.
+- **CSS Modules.** `generateScopedName` in `astro.config.mjs` names a class
+  `gmt-<file>__<local>`. The name has no hash, so it is the same in every build and readable in
+  the DOM. Tests do not rely on it.
+- **Layer order.** `src/styles/gmt.css` declares `starlight, theme, base, components,
+  utilities, vendor, gmt.tokens, gmt.base, gmt.shell, gmt.content, gmt.controls, gmt.tools,
+  gmt.chat, gmt.thirdparty, gmt.a11y`. Unlayered rules win over every layer, so CSS Modules and
+  Astro component styles beat every global rule. Modules need no `!important`.
+- **Browser target.** Baseline 2024. `build.cssTarget` is `chrome130`, `edge130`, `firefox132`
+  and `safari18.2`, the oldest engines `browserslist "baseline 2024"` lists. Stylelint's
+  `use-baseline` rule holds the CSS to the same line.
+
+**Widget tests.** A widget test follows Testing Library guidance. It finds things by role, label
+or text and asserts what a person sees.
+- **Helpers.** `src/test/render-widget.ts` is the only place that touches the DOM by hand:
+  `renderWidget`, `setRange` (the one sanctioned direct input event), `expectNoAxeViolations` and
+  `flushWidget`. `userEvent` drives clicks and keys.
+- **Every component test runs `expectNoAxeViolations`.** `src/widgets/axe-guard.test.ts` fails
+  a kit test that does not.
+- **Lint rules.** The oxlint plugin `dox-test` bans `dispatchEvent`, class queries, `data-role`
+  and `gmt-` house classes in tests. The plugin `dox-src` bans hand-typed markup, `nth-*`
+  selectors, module-level instance counters and element registration at import time. Stylelint
+  bans `!important`, id selectors, colour literals in modules and shared module classes.
+- **Legacy lists only shrink.** `lint/legacy-test-files.mjs`, `lint/legacy-src-files.mjs` and
+  the `LEGACY_FILES` list in `stylelint.config.mjs` name files by path, with no globs. A
+  migrated file leaves the list and never returns.
+- **Measured in Chromium.** `color-contrast` and `target-size` are off in `expectNoAxeViolations`,
+  because jsdom has no layout. The `a11y-axe` and `contrast-measure` gates measure them.
+
+**Widget roots and element identity.** Every widget root carries `data-widget="<mount name>"`,
+`role="region"` and an `aria-label` that is the tool page's title (the playground's is
+`<function> playground`, the globe's "Zoned Earth", the zone planner's "Zone Planner"). The
+`/dox` starter pills use `data-starter`, so `data-widget` names widgets only. Gates find a widget
+by `[data-widget="…"]`, never by a `.gmt-*` class. A finding's `target` is the element's identity
+key from `scripts/lib/element-identity.mjs`: `widget:<slug> › role "name"`, with digit runs
+collapsed, a name cut at 60 characters and `[n]` only on true repeats. The name is an author's
+(`aria-label`, a label, a fieldset's legend, a table's caption, a figure's figcaption) or the text
+of a role that ARIA names from content (a button, link or heading); any other element is keyed
+with no text, so a month, weekday or verdict cannot move the key (a sibling inserted before an
+unnamed one shifts its `[n]`). It never reads an id, a class or an `nth-*` position, so a `useId`
+change or a class rename leaves the weekly issue's key alone. `recordFinding` throws without a
+`target`. A Canada script's labelled message names no element, so `recordLabelled` keys it
+`page › <slug of the message with its numbers stripped>`: two failures on one page keep two
+issues, and the same failure measured at other sizes keeps one.
+
+**How gates find a control or a part.** No gate script names a style class or a `data-role`: the
+component kit hashes class names, so a class is a style detail. A control is found by
+`getByRole(role, { name, exact: true })` inside `[data-widget="…"]` (`scripts/lib/locate.mjs`). A
+structural part with no role or name (a chart frame, a drawn region, a drag track, a zone of a
+card, the wall-clock text a screenshot masks) carries a `data-gate` hook, a space-separated list
+of part names, found with `gate("part")`. The hooks are in the table below. A new mount puts
+`data-gate` only on a part a gate measures and no role describes. Each gate with a
+`--resolve-only` flag loads its pages and checks that every control and part it needs is there,
+so a rename shows as a missing locator before it shows as a measurement.
+
+**Gate diagnostics (`DOX-G1`, #430).** A gate that cannot measure says so; it never reports a
+number it did not measure.
+
+- `emulation-not-applied`: `contrast-measure` waits for `prefers-*` and forced-colour emulation to
+  take effect, and a timeout is this finding, not a contrast failure.
+- `layout-moved-during-measure`: `contrast-measure` collects the glyph rects again after its
+  screenshots. A rect that moved more than 0.5 px fails the cell and drops its contrast findings,
+  because they were measured on stale geometry. The message gives the largest shift.
+- `focus-obscured` names the cover, the scroller and the viewport. The `/dox/` scrollers set
+  `scroll-padding-block`, so focus lands clear of the sticky bars.
+- A load jump names the frame, the deepest resized element and the font state. Each widget
+  reserves its size, or sits in `<gmt-grow>`, and the fallback font is metric-matched.
+- Every card and section sits on one opaque `--gmt-surface-widget`, so stacked tints cannot drop
+  contrast below 7:1. The footer has its own opaque surface.
+- Local checks run Chromium on macOS. Firefox and WebKit run weekly in CI; the footer contrast
+  on Linux shows only there, and a weekly finding is fixed in the product, never waived.
+
+**Gate hooks.** Every builder and primitive in the kit takes an optional `gate` string and writes
+it with `gateAttr()` (`src/widgets/builders/gate.ts`); a few templates write `data-gate`
+literally. One element may carry several names (`drawn track`). The table lists every hook a gate
+script reads. `scripts/lib/locate.mjs` and `scripts/readout-still.mjs` point here and keep no
+list of their own. A widget root is `data-widget="<tool slug>"` (`widget()` in
+`src/widgets/builders/layout.ts` writes it); in a test, `findWidget(root, name).part(local)`
+(`src/widgets/root.ts`) reaches a part by its scoped id.
+
+| Hook                                                        | What it marks                                                                                                    | Read by                                                           |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `frame`                                                     | The frame around a tool's drawing (a card, or the tool's own frame)                                              | `readout-still`                                                   |
+| `hero`                                                      | A hero plate row (`plates`, `instantHero`, `fuseStatus`): the result that must hold still                        | `readout-still`                                                   |
+| `drawn`                                                     | A drawn part whose marks move with the value: a lane, plot, axis or ledger row. Its box is measured; its insides are not | `readout-still`                                                   |
+| `track`                                                     | The lane a pointer drag runs along (`ledgerLane`, `gnssLane`, the punctuality tolerance track, `drawn track`)    | `readout-still` (`track`)                                         |
+| `rider`                                                     | The value chip a `<gmt-range>` draws on its thumb (`range()` writes it on every range)                           | `readout-still` (rows with `riders: true`: its left may move)     |
+| `hold`                                                      | A hold: a live wrapper (its first child) over hidden sizers, so the height is the longest text                   | `readout-still`                                                   |
+| `grid`                                                      | A month grid (`monthGrid` writes it by default)                                                                  | `readout-still`                                                   |
+| `codeframe`                                                 | The call code frame (`codeFrame`'s `gate` option)                                                                | `readout-still` (its text boxes are as wide as their text)        |
+| `instant`                                                   | One piece of a written-out instant (`instant`)                                                                   | `readout-still` (same)                                            |
+| `live`                                                      | Text or drawing that follows the wall clock: clock rows, the planner's readout and marks, a tooltip's time       | `visual-snapshot` (masked)                                        |
+| `live-face`                                                 | The analogue dial of a zone tile                                                                                 | `visual-snapshot` (masked and hidden)                             |
+| `grow`                                                      | A result region that eases to its height (`grow`'s `gate`, `MountedWidget`)                                      | `grow-measure` (at rest at the end)                               |
+| `globe-stage`                                               | The globe's drawing stage                                                                                        | `globe-smoke`, `data-credits-check`, `visual-snapshot`            |
+| `globe-zoom`                                                | The globe's zoom button group                                                                                    | `data-credits-check`                                              |
+| `globe-tooltip`                                             | The globe's tooltip                                                                                              | `globe-smoke`                                                     |
+| `hero-stage`                                                | The home page's hero globe stage                                                                                 | `globe-smoke`                                                     |
+| `credited-frame`                                            | The `/why-gmt/` map frame that carries the data credit                                                           | `data-credits-check`                                              |
+| `keypoints`, `keypoints-card`                               | The key-points section of a clock-change page, and each card in it                                               | `canada-layout-check`, `canada-stored-still` (cards)              |
+| `browser`, `probe-table`                                    | The browser-probe card, and its table of probe results                                                           | `canada-layout-check`, `canada-stored-still` (`browser`)          |
+| `map-stage`, `pickcard`, `map-block`                        | The map row's stage, the pin panel, and the map block                                                            | `canada-layout-check`, `canada-stored-still`                      |
+| `map-section`, `map-frame`, `map-svg`, `map-shape`, `map-label` | The map's section, its frame, the drawing, the zone shapes, and the labels laid over it                      | `canada-layout-check`, `canada-clock-still`, `data-credits-check`, `contrast-measure` (`map-label`, `map-section`, `map-svg`) |
+| `map-pin`, `pin-cell`, `pin-zone`                           | The pin, a cell of the pin panel, and its zone cell                                                              | `canada-layout-check`, `canada-clock-still`                       |
+| `clocks`, `clock`, `clock-time`                             | The live-clocks card, one clock, and its time text                                                               | `canada-layout-check`, `canada-clock-still`, `canada-stored-still` |
+| `servers`, `minimums`, `help`, `stack`                      | The servers card, the minimum-versions card, the help card, and the page's card stack                            | `canada-layout-check`                                             |
+| `changes`, `transitions`                                    | The changes list and the transitions table of a clock-change page                                                | `canada-stored-still`                                             |
+| `stored`                                                    | The stored-times section                                                                                         | `canada-layout-check`, `canada-stored-still`                      |
+| `stored-form`                                               | The form of that section                                                                                         | `canada-clock-still`                                              |
+| `stored-steps`, `stored-head`, `stored-toggle`, `stored-table` | The worked steps, the heading row, the show/hide toggle, and the results table of that section                | `canada-stored-still`                                             |
+
+Shared hooks come first, then the globe, then the clock-change pages.
+
+
 `DOX-B1a`, `B2a`–`B2d`
 
 - **Playground on every example.** The generator renders the first `@example` as a static
@@ -581,8 +750,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     playground seeds from it, and a two-key object seeds amount `1` in the first listed unit.
 - **Sentinel-aware output everywhere.** `""` / `null` / `false` / `[]` from invalid input
   renders as `⟨ NO SIGNAL ⟩` in amber, and a correct empty result is shown distinctly
-  (`renderWidgetOutput` in `src/lib/widget-ui.ts`). In the playground,
-  `classifyPlaygroundResult` (`src/lib/playground-client.ts`) makes that call for every
+  (the `readout` element's sentinel state, `SENTINEL_TEXT` in
+  `src/widgets/primitives/readout/readout.ts`, and `NO_RESULT` in `builders/plates.ts`). In the
+  playground, `playgroundResult` (`src/widgets/tools/playground-result.ts`) sets `data-state` to
+  `live`, `sentinel` or `empty`, and `classifyPlaygroundResult` (`src/lib/playground-client.ts`) makes that call for every
   form. The generator classifies `object | null` returns as `object`, from the TypeScript
   type flags rather than the printed type. `null` is the sentinel for every kind unless the
   function is in `NULL_IS_EMPTY` (`scripts/build-utils/null-is-empty.ts`), the interval
@@ -612,21 +783,20 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   template with `<Fragment set:html>`, and the `/dox` rail string-mounts the same markup.
   The Timetable Reader's rules:
   - **Three full-width sections, stacked:** the timetable, what each printed time means, and
-    the call. Each carries `gmt-widget-section--wide`, because a day track and a chart need
-    the whole row.
+    the call. Each is a wide `section` builder, because a day track and a chart need the whole row.
   - **Pictures left, values right, from a 76.25rem section.** Sections 1 and 2 each hold a
-    `.gmt-timetable-split` of two `.gmt-timetable-pane`s (track and frames; chart and table),
+    split of two panes (track and frames; chart and table; `timetable-reader.module.css`),
     in DOM order. From `w` = 76.25rem (a 1902px viewport) a split is a two-column grid,
     `minmax(28rem, 1fr) minmax(47.25rem, 1fr)` with a 1rem gap, held in `--tt-cols` on the
     root so both sections share one seam (separate cards, so not a subgrid). 47.25rem is the
     table's minimum; 28rem is the legibility floor of the track and chart. Every pane is a
-    container named `gmt-timetable-pane`, so each breakpoint under the band is written once
+    container (`tt-pane`, inside the `tt-section` container), so each breakpoint under the band is written once
     against the pane and holds stacked and split alike. Under the band the layout is the
     stacked one.
   - **One local-day track, a handle per row.** The track is the local calendar day of the
     first row that holds a valid time, 00:00 to 24:00 on the "Printed in" clock. Each row
-    has its own lane and its own handle, built on the Interval Visualizer's `.gmt-handle`
-    pattern: a `role="slider"` `div`, with pointer and key listeners delegated on the root.
+    has its own lane and its own handle, a `gmt-handle`
+    (`primitives/handle/handle.ts`): a `role="slider"` element, with pointer and key listeners delegated on the root.
     An empty lane reads "click to add", and a press on it adds the row and carries on as a
     drag. All four lanes are always drawn, because two rows can print one time, and a lane
     that came and went would jump section 1.
@@ -683,28 +853,29 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   comparing `cutoffAt` with and without the calendar, never from arithmetic. The Countdown
   reads the clock only after mount and only in live mode; presets, permalinks with a `now`
   and the page's default are pinned.
-  Their charts share one recipe sheet, `gmt-cutoff-widgets.css`. The three TRAN-57 tools and
-  the Timetable Reader's day track and two-clocks chart join it, so the sheet lists seven
-  roots:
+  Their charts share the `families/cutoff/` modules (`bands`, `gate`, `rolled-marks`,
+  `countdown-face`, `stack-fieldsets`, each with its own `.module.css`). The three TRAN-57 tools
+  and the Timetable Reader's day track and two-clocks chart draw from the same kit, in these
+  parts:
   - **The surface:** bevelled tint-and-hairline chart panels with no `backdrop-filter`
     (never glass within glass).
   - **The DST colours:** purple (`--gmt-dst-purple`) marks a repeated hour and gold
     (`--gmt-dst-gold`) a skipped one. This is the DST Inspector's pair, and the charts of
-    this sheet that draw a clock change follow it: the Cut-off Ruler and the Timetable
-    Reader. In this sheet gold has no other meaning. Purple is also series 3, so a DST mark
+    these charts that draw a clock change follow it: the Cut-off Ruler and the Timetable
+    Reader. In these charts gold has no other meaning. Purple is also series 3, so a DST mark
     differs from a series mark in form as well: the Ruler's DST mark is dashed, vertical and
     labelled beside solid horizontal stems, and the Timetable Reader's band is a translucent
     region between its own edges (double for a repeated hour, dashed with a hatch for a
-    skipped one) under a chip that names it, beside solid numbered marks. Tools outside this
-    sheet do not all use the pair: the Crossing Clock marks both kinds in purple, with the
+    skipped one) under a chip that names it, beside solid numbered marks. Tools outside
+    these charts do not all use the pair: the Crossing Clock marks both kinds in purple, with the
     same double and dashed edges, and the Dwell Ledger and the Free Time Ledger flag a 23- or
     25-hour day in gold either way.
-  - **The marks:** `.gmt-cutoff-mark`, a glowing bevelled marker, with a hollow, dashed
-    variant for an unrolled position; and `.gmt-cutoff-gate`, a bright line for a cut-off
+  - **The marks:** the cut-off mark (`families/cutoff/rolled-marks.ts`), a glowing bevelled marker, with a hollow, dashed
+    variant for an unrolled position; and the gate (`families/cutoff/gate.ts`), a bright line for a cut-off
     or departure.
-  - **The text plates:** `.gmt-cutoff-chip`, an opaque `--gmt-surface` plate that every
+  - **The text plates:** the label plate, an opaque `--gmt-surface` plate that every
     label inside a chart sits on, so no glyph touches a gradient, hatch or line.
-  - **The `.gmt-cutoff-closed` hatch:** a teal hatch under a void veil, plus a "closed"
+  - **The closed hatch:** a teal hatch under a void veil, plus a "closed"
     chip, shared by the Countdown and the Stack.
 
   Each reading or cut-off carries `data-series="1"…"4"`, which sets `--series` from the
@@ -804,7 +975,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   Both import `edi-widgets.ts` and load through `edi-lib.ts`. They share the two-pane split
   (pictures left, values right, one seam, stacked below a derived boundary), the member grid, the
   zone table, the timeline, the verdict plate and the holds that reserve every region's height
-  (`gmt-edi-widgets.css`, `edi-picture.ts`, `edi-render.ts`), and the zone code (`widestGap`, in
+  (the `edi-figure` and `edi-timeline` builders and their CSS Modules, with `edi-picture.ts` and `edi-render.ts` holding the pure helpers), and the zone code (`widestGap`, in
   `edi-widgets.ts`), and they print every call made, one a line, with the same
   `formatValue`/`callArgs`. Their rules:
   - **Nothing derives a zone from a place, a zone name, an abbreviation or a time code**,
@@ -819,7 +990,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `zone` is empty with no fallback to a preset.
   - **Every region is present in every state, and holds still.** A region whose text varies
     (a description, a note, a verdict, the picture, an aside, an output, a call frame) draws every
-    text it can show, hidden, in the same grid cell (`.gmt-edi-hold`), so its height is the
+    text it can show, hidden, in the same grid cell (`families/edi/edi-hold.ts`), so its height is the
     tallest text's at any width; a region that does not apply shows its empty state in the same
     box. A test and a bounding-box script across every preset enforce it.
   - **On-screen text never calls the library `GMT`** (`GMT` is also a zone literal that resolves
@@ -852,7 +1023,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     value comes back in the form it was sent, tenths and hundredths of a second included, so
     nothing is cut and there is no note.
 - **The ledger family and the INT-14 tools.** The Dwell Ledger and the Free Time Ledger share
-  one sheet, `gmt-ledger-widgets.css`, and one module, `ledger-widgets.ts`: glass day columns
+  one family folder, `widgets/families/ledger/`, and one module, `ledger-widgets.ts`: glass day columns
   placed by each day's real bounds, pinned result plates (`platesHtml`; a `quiet` plate holds a
   secondary result at the smaller size), the lane, the half-open bar, the gate and its chip, and
   the legend. A column drops its weekday, then its label, as it narrows (`dayColumnFit`). It also
@@ -879,7 +1050,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `scheduleDelivery`'s per-leg times, as two ribbons on one scale. The first shows the legs as
     they happen, moving solid and waiting hatched; the second gathers the same segments into
     moving and waiting. Plates hold the ETA, the moving total and the waiting total. Its leg
-    fields are the Delivery Scheduler's (`leg-form.ts`, which labels `dwellAfter` "Handling
+    fields are the Delivery Scheduler's (`widgets/families/transport/leg-fieldset.ts`, which labels `dwellAfter` "Handling
     after"), and the two tools link to each other with the same leg keys.
 
   `ledger-lib.ts` loads the B/L Date Stamp's and the Demurrage Clock's functions. The Journey
@@ -902,8 +1073,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - A grid cell carries five mark kinds, each a word and a pattern, never a colour alone: closed,
     weekend, moved-from (a ghost), moved-to and pick. A month always draws six week rows, and a
     cell reserves three chip rows, so a year change never resizes the grid.
-  - `gmt-holiday-widgets.css` holds the family frame (`.gmt-holiday-frame`), grid, marks and
-    policy editor; each tool has its own sheet. No string names a country, a statute or a body.
+  - The family's modules are in `src/widgets/families/holiday/` (`holiday-frame`, `month-grid`,
+    `week-strip`, `policy-editor`, `rule-card`, `compare-matrix`, `signal-plates`, `held-text`,
+    `reserved-text`, `year-stepper`, `holiday-legend`), each with its own `.module.css`. No string names a country, a statute or a body.
   - **Holiday Rule Builder** (`/tools/holiday-rule-builder/`, `holidays`): an ordered list of up to
     `MAX_RULES` (12) rule rows of the five kinds, a weekend, a zone and a year. A row shows the
     days it closes; plates count the year, twelve month grids draw it and the printed
@@ -941,10 +1113,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   table of library rules. Shared modules: `gnss-names.ts` (counters, RINEX systems, the six
   systems, modes, in RINEX tokens), `gnss-widgets.ts` (eras, leads, durations, the no-reading
   texts) and `timescale-widgets.ts` (the insertions, and the two dates the site holds,
-  `INTEGER_UTC_FROM` 1972-01-01 and `CONTINUOUS_UTC_FROM`). `gmt-gnss-widgets.css` holds the
-  family's frame (`.gmt-gnss-frame`), lanes, rulers, peer tables and hatched "your reading" row;
-  the plates, chip and series come from the punctuality and cut-off sheets, which list the five
-  roots. Each tool also has its own sheet. Each has one signature drawing, `role="img"` with an
+  `INTEGER_UTC_FROM` 1972-01-01 and `CONTINUOUS_UTC_FROM`). `widgets/families/gnss/` holds the
+  family's frame, lanes, rulers, peer tables and hatched "your reading" row; the plates, chip
+  and series come from the punctuality and cut-off families. Each tool also has its own module.
+  Each has one signature drawing, `role="img"` with an
   aria-label and a visually hidden list:
   - **GNSS Week Decoder** (`/tools/gnss-week-decoder/`): an odometer ring. The counter's weeks
     run round a circle, one lap per era (era 0 outside, four lap slots), each lap with its era
@@ -989,8 +1161,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       hold sized by the 64-character Snowflake call and the widest instant. The table is
       fixed-layout, with a doubled class on the first column (as the Stored Time Audit) and a
       labelled stacked layout below `46rem`.
-    - **`instantPiecesHtml` (`widget-ui.ts`)** is the text-to-pieces half of `wrapInstantsAtT`,
-      so a returned instant breaks only after a `T` or before a fraction.
+    - **The `instant` builder (`builders/instant.ts`)** breaks a returned instant only after a
+      `T` or before a fraction.
     - **The loader is `identifier-lib.ts`**, the pattern of `stored-time-lib.ts`; the Column
       Timestamp Bridge follows it (`column-bridge-lib.ts`) and has its own `BRIDGE_LINKS`, whose
       first link is back to this tool, as `ID_LINKS`' first link is to the Bridge.
@@ -1067,13 +1239,14 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       once the table is parsed, so the verdict and the Yours column are final before first paint.
       `stored-results` and the zone-kind label reserve their height so the late fill moves nothing.
       The page lists it in `mdx-jsx.ts`'s dropped components.
-    - **Narrow fallback.** Below 520 px of section width (`@container gmt-zonemap-map`) the map and
+    - **Narrow fallback.** Below 520 px of section width (a container query in `families/clockcheck/zone-map.module.css`) the map and
       legend are hidden, the boundary file is not fetched, and the panel stays below the list, outside its
       scroll box, and scrolls into view when a reader pins.
-      Zone ids go through `zoneIdHtml` (`widget-ui.ts`): a `<wbr>` after each `/`, each segment
-      `nowrap` (`.gmt-zoneseg`, so `Blanc-Sablon` never splits at its hyphen), and no
-      `overflow-wrap: anywhere` on an id. A two-form legend phrase carries its count inside each
-      form (`legendHtml`), so the count flows after the last word; `zone-map.ts` sets every copy. The file is fetched once, when the map nears the viewport.
+      Zone ids carry a `<wbr>` after each `/` and keep each segment on one line (so
+      `Blanc-Sablon` never splits at its hyphen), and no `overflow-wrap: anywhere` on an id. A
+      two-form legend phrase carries its count inside each form (`legendCount` in
+      `families/clockcheck/zone-map.ts`), so the count flows after the last word; `lib/zone-map.ts`
+      sets every copy. The file is fetched once, when the map nears the viewport.
     - **In the chat** (`mountCanadaClockChangeWidget`). The rail mounts the same markup with
       the same markup with ids namespaced by `idPrefix`; the map's data-credits button takes
       `<idPrefix>-data-credits` (below). The rail is narrow, so the zone list is the map and there
@@ -1136,7 +1309,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         in one of eight runs under load (`ERR_SOCKET_NOT_CONNECTED`), and the page then never
         reached `ready`.
       - **The saved-times results reserve follows the example's row count.** The template sets
-        `--stored-rows` on `.gmt-clockcheck-stored-results` (`presetRows`, the preset's non-empty
+        `--stored-rows` on the stored section's results (`presetRows`, the preset's non-empty
         lines). The reserve is a base for four rows plus a per-row step, one pair per container
         tier: 27rem + 4.75rem a row (table), 40.5rem + 8.75rem (cards), 48rem + 11.2rem (narrow
         cards; WebKit lays the narrow cards out about 15 px taller than Chromium). Canada's four
@@ -1145,7 +1318,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       - **The status line says "Checking…" while a request runs** (`role="status"`, in the
         row held for it), and holds the answer or error text after. A screen reader hears it; the
         spinner on the button is CSS and `aria-busy` alone is not announced.
-      - **The status line has its own row.** `.gmt-clockcheck-actions > .gmt-clockcheck-status`
+      - **The status line has its own row.** the status line in `families/clockcheck/stored-section.module.css`
         takes the full row under Check again (`flex: 1 1 100%`, one line reserved), at every
         width. Beside the button it wrapped under it at 375 px once a message arrived and the
         card grew 35 px. `canada-stored-still.mjs` holds the GET until it has recorded every
@@ -1159,7 +1332,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       - **Function names in the page text** only in key-points step 3 (`classifyStoredZoned`,
         `convertPlainDateTimeToZoned`) and the How gmt helps card, each linked to its reference
         page. The stored section links nowhere to the audit; the Related list names it.
-    - **The How gmt helps card** (`HELP` in `data/canada-key-points.ts`, drawn by `helpCardHtml` in `lib/clock-change-help.ts`).
+    - **The How gmt helps card** (`HELP` in `data/canada-key-points.ts`, drawn by `helpCard` in `src/widgets/families/clockcheck/help-card.ts`).
       Shaped like the home page's fault cards: a lede, a Verified strip (the tests run on the
       newest release of each supported Node, the hosted server is checked daily) with an absolute
       link to `oh-canada.test.ts`, which `withBase` leaves alone, then one case card per kind of
@@ -1168,11 +1341,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       does not stretch to the taller list beside it. `canada-help-card.test.ts` runs its claims
       against the real library using values no tzdb release changes.
     - **The Upgrade to at least card** is shared: `data/clock-change-minimums.ts` holds the types, the
-      `MinimumsText` shape (heading, intro, footer, note, rows) and `minimumsCardHtml`,
-      `minimumsItemsHtml` and `minimumsMarkdown`; each checker keeps only its words and rows
-      (`data/canada-runtime-minimums.ts` exports `CANADA_MINIMUMS`). Its classes are
-      `gmt-clockcheck-minimums*`, styled in `clock-change.css`. The card ends with `note`,
-      one plain line (a `<p class="gmt-clockcheck-minimums-note">` after the footer, and the last line of
+      `MinimumsText` shape (heading, intro, footer, note, rows) and `minimumsMarkdown`; the card is
+      `minimumsCard` in `families/clockcheck/info-card.ts`; each checker keeps only its words and rows
+      (`data/canada-runtime-minimums.ts` exports `CANADA_MINIMUMS`). Its style is
+      `info-card.module.css`. The card ends with `note`,
+      one plain line (a paragraph after the footer, and the last line of
       `minimumsMarkdown`): gmt uses the time-zone rules of the device it runs on, and a device
       without the October 2026 update gets the four zones wrong from 1 November 2026. It names no
       function. Every sentence on the page reads true before and after 1 November 2026: no "will",
@@ -1180,21 +1353,20 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **Clock-change checker parts** (shared by every dated tz-change checker; Canada is the first
     user). A checker is a config over these modules, never a copy of them. Nothing in a shared
     file names a checker: each has a second-config test (`clock-change-second-config.test.ts`,
-    id prefix `x`, no "canada" in the output) that holds that line. Classes are
-    `gmt-clockcheck-*` (probe, clocks, servers, help, stored) and `gmt-zonemap-*` (map, pin panel,
-    list); a checker keeps `gmt-<name>-*` only for its own layout. The shared sheet is
-    `styles/clock-change.css` (tokens `--zonemap-*`); a checker's sheet holds only its own rules.
-    Canada has no sheet of its own (`canada-clock-change.css` is gone); Morocco's holds the
-    `gmt-morocco-wrong*` rules and its 29rem header-note query. Card-level classes (stack, row,
-    key points, servers, groups, changes, pick card, clocks) are `gmt-clockcheck-*`; only the root
-    `gmt-canada` / `gmt-morocco` stays per region.
+    id prefix `x`, no "canada" in the output) that holds that line. The shared markup and style are the
+    modules in `src/widgets/families/clockcheck/`, each with its own `.module.css`:
+    `checker-page` (the page frame and `classLegend`), `probe-card`, `info-card` (`serversCard`,
+    `minimumsCard`), `help-card`, `key-points`, `clocks-card`, `clocks`, `change-list`,
+    `stored-section`, `stored-table`, `tense-slot`, `zone-map`, `marks`, `stack` and
+    `wrong-list`. The map tokens are `--zonemap-*`. A checker keeps only its own words, rows and
+    layout.
     - **Years live once.** Each region states a `stopYear` (`CANADA_STOP_YEAR`,
       `MOROCCO_STOP_YEAR`); the years of the 2026 and 2027 groups come from `yearsOf(stopYear)`
       (`clock-change-mount.ts`). A map zone's `kind` is `"stopped" | "changes-after" | "none"`
       (`displayKind` adds `"no-data"` for a zone without a row; `classText(kind, id, view)` gives the visible
       words). The Worker's `mapZone(zone, now, stopYear)` reads `CheckEndpoint.stopYear`.
     - `lib/clock-change-mount.ts`: the one shared mount module: `loadClockLib`, `ask`,
-      `keyPointsHtml`, `transitionGroupHtml`, `wireCopy` and `clockChangeWidget(mountPage)` (the
+      `yearsOf`, `loadTenseView`, `wallText` and `clockChangeWidget(mountPage)` (the
       chat wrapper). Listed as heavy in `widget-graph.test.ts`. Both region mounts are configs over it.
     - `clock-change-common.ts` `ProbeFact {zone, offset, release}`: Canada's former `tzdb2026e`
       and Morocco's `MOROCCO_EXPECTED` are the one field `offset`
@@ -1206,7 +1378,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       both Workers return; `worker/clock-change-shared.test.ts` runs a demo endpoint through 405,
       HEAD, 413, 429, 400 and 200.
     - **The table in a narrow card.** The zone id carries a `<wbr>` after each `/`. In a card under
-      21rem (`@container (max-width: 21rem)` in `clock-change.css`; the natural table is 313 px at
+      21rem (a container query in `families/clockcheck/probe-card.module.css`; the natural table is 313 px at
       its narrowest) the probe table **stacks**: each row is a two-column grid with the place and
       zone id across the full width and the two offsets side by side under it, the header row is
       the same two columns and the "Place" head is visually hidden. No word breaks and nothing
@@ -1216,22 +1388,22 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       `canada-layout-check.mjs` (`--engine webkit` too) fails a probe table wider than its card's
       content box, or a cell that holds more than its own box.
     - **The live clocks in a narrow card.** The clocks card is 260 px wide at a 1366 px viewport
-      (checker 1018 px, map column 466 px). Below 16rem (`@container (max-width: 16rem)` in
-      `clock-change.css`) the face, the time and the offset shrink so the offset stays beside the
+      (checker 1018 px, map column 466 px). Below 16rem (a container query in
+      `families/clockcheck/clocks.module.css`) the face, the time and the offset shrink so the offset stays beside the
       time. Without that the offset dropped under the time, five clocks grew by about 21 px each
       and the map card beside them stretched with 109 px empty. `canada-layout-check.mjs` fails
       "map card leaves N px empty"; run it across 1300 to 1440 px when the clocks change.
-    - **The changes list wraps.** `.gmt-clockcheck-changes` is `grid-template-columns:
-      minmax(0, 1fr)`, and only `.gmt-clockcheck-change-when` keeps `white-space: nowrap`; the
+    - **The changes list wraps.** The list in `families/clockcheck/change-list.module.css` is `grid-template-columns:
+      minmax(0, 1fr)`, and only the "when" cell keeps `white-space: nowrap`; the
       shift and UTC text wrap. At a 300 px page the nowrap text was 1 px wider than its card.
     - `lib/clock-change-common.ts`: `Change`, offset and wall-time helpers, `changeText`, the
       NO SIGNAL / tick / cross marks and `nodeProbeCommand`. One place for the words and checks
       the Worker and the page must agree on.
     - `lib/clock-change-probe.ts`: `ProbeConfig {idPrefix, zones, instants}`, `VerdictText`,
-      `browserCardHtml`, `probeInlineSource(config)`, `serversCardHtml`. The inline script finds its
+      `expectedAt`, `readBrowserOffset`, `probeInlineSource(config)`; the cards are `probeCard` and `serversCard`. The inline script finds its
       card by id `#<idPrefix>-browser`, so a second checker on the same site cannot be filled by
       the first one's script.
-    - `lib/clock-change-clocks.ts`: `clocksHtml(zones, stopped)`, `mountClocks`. One `setTimeout`
+    - `lib/clock-change-clocks.ts`: `wireClocks`; the markup is `clocks` in `families/clockcheck/clocks.ts`. One `setTimeout`
       per second; the zone's next change switches the offset.
     - `lib/clock-change-stored-lines.ts`: the pure line rules the Worker and the page share
       (`capStoredInput`, `completeStoredLine`, the badge and fix text). `STORED_MAX_LINES = 25;`
@@ -1248,22 +1420,23 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         `tenseView(lib, MOROCCO_MOMENTS, now)`.
       - **Canada is conditional until 1 November 2026.** `CANADA_MOMENTS` holds one moment per zone and
         `REGION_KEY` (the latest, Vancouver's). Each tensed phrase is written in both forms in one
-        grid cell (`slotHtml`, `.gmt-tense`, the inactive form `aria-hidden` and `visibility:hidden`,
+        grid cell (`tenseSlot` in `families/clockcheck/tense-slot.ts`, the inactive form `aria-hidden` and `visibility:hidden`,
         so the box never moves); `bindTense` sets the forms and one timer for the nearest moment still
         ahead, and `onChange` calls `map.retense()`. Key-point paragraphs with a tensed part are
         written whole in both forms (`KeyPart {tense, before, after, dated}`; `dated` is the wording
         for text that runs no code). A new region with a future change reuses all of this.
-      - The page and the chat read the words with `loadXTense()` (async, `loadTenseView`), so the
+      - The page and the chat read the words with `loadTenseView`, so the
         server render and the chat's `renderTemplate` state what is true now.
     - `lib/clock-change-stored.ts`: `StoredConfig {idPrefix, endpoint, zones, preset, example}`,
-      `storedSectionHtml`, `mountStoredTimes`. The endpoint goes through `withBase`.
-    - `lib/clock-change-help.ts` and `data/clock-change-text.ts`: the Key points and How gmt helps
-      cards as data (`KeyCard`, `HelpCard`) with one renderer each for HTML, text and Markdown.
+      `wireStoredTimes`; the markup is `storedSection` in `families/clockcheck/stored-section.ts`. The endpoint goes through `withBase`.
+    - `data/clock-change-text.ts` (`KeyCard`, `HelpCard`) and `lib/clock-change-help.ts`
+      (`helpMarkdown`): the Key points and How gmt helps cards as data. The HTML is `keyPoints` and
+      `helpCard` in `families/clockcheck/`.
     - `lib/zone-map.ts`: `ZoneMapConfig {idPrefix, height, boundariesUrl, projection, stopped,
       classText, releaseOf, releaseRange, mapLabel, markerMinPx?, markers?}` and
-      `mountZoneMap(root, zones, signal, deps, config)`, which returns `retense()` for the words that follow a clock (`deps.tense`). It finds its parts by `data-role`, never
+      `wireZoneMap(root, zones, signal, deps, config)`, which returns `retense()` for the words that follow a clock (`deps.tense`). It finds its parts by `data-role`, never
       by class, so a checker may restyle them. A map taller or shorter than 640 sets
-      `--zonemap-map-height` on the `.gmt-zonemap-mapsec` in the markup, so the box and the row's
+      `--zonemap-map-height` on the map section in the markup, so the box and the row's
       height are reserved before the drawing arrives. `markerMinPx` and `markers` draw a ring on a zone whose largest
       drawn part is smaller than the threshold (see the Morocco map below).
     - `worker/clock-change-shared.ts`: `CheckEndpoint {prefix, policy, storedZones, compute}` and
@@ -1281,7 +1454,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         that no zone covers (the United States and Greenland on Canada's map; none inside Morocco's
         box, see its zone rule below), because land outside the list reads as sea. It is the difference, never all the land, so no coastline is
         stored twice (Canada's file goes over 400 KB otherwise). `zone-map.ts` draws it first as
-        one `aria-hidden`, `pointer-events: none` path (`gmt-zonemap-land`); it is not a zone, so
+        one `aria-hidden`, `pointer-events: none` path (drawn by `families/clockcheck/zone-map.ts`); it is not a zone, so
         every walk over the features goes through `isZoneFeature`, and `canadaProjection` fits to
         `zonesOnly(...)` so it never changes Canada's scale.
       - **`land_frame` covers the whole drawn box,** the longitude/latitude bounds of the box's
@@ -1295,8 +1468,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         step lighter,** from the existing tokens (`--zonemap-land*`); every class stroke keeps 3:1
         against it (`canada-palette.test.ts`). Both maps' credits list "Coastlines" after "Time
         zone boundaries" (`COASTLINES` in `data-credits.ts`).
-    - **Place labels** (`lib/zone-map-labels.ts`, "Place labels" in `clock-change.css`). Labels are
-      HTML over the drawing (`div.gmt-zonemap-labels`, `aria-hidden`, `pointer-events: none`), not
+    - **Place labels** (`lib/zone-map-labels.ts`, `labelLayer` in `families/clockcheck/zone-map.ts`). Labels are
+      HTML over the drawing (an `aria-hidden` layer, `pointer-events: none`), not
       SVG text, so the type stays 12px at every frame width and the sea halo is a `text-shadow`
       (3px at 85% of the sea, 4.5:1 or better in both themes; forced colours draw CanvasText on a
       Canvas halo).
@@ -1368,7 +1541,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **Morocco 2026 clock-change checker** (`/check/morocco-2026-clock-change/`, core): the second
     user of the shared parts; `MoroccoClockChange.astro` and `MoroccoProbeScript.astro` are the
     Canada pair with `idPrefix: "morocco"`, and `lib/morocco-clock-change-mount.ts` is a config
-    over them (root `gmt-morocco`, own rules only in `styles/morocco-clock-change.css`). The rows
+    over them (its own layout is `tools/` CSS Modules and the shared `families/clockcheck/` modules). The rows
     are: Key points and the browser card; the map section (map, legend, pin panel, two clocks);
     the servers card and the **Upgrade to at least** card; **Clock changes your data gets wrong**
     and the help card; the 2026 and 2027 clock changes; saved events. A test fixes that order.
@@ -1424,13 +1597,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     the runtime's tzdb. Results are drawn at mount only; the `values` permalink key is exempt
     from the 64-character cap (`LONG_STRING_KEYS`, 1000).
     - **Readings wrap only at set points.** A reading breaks directly after a `T` that precedes
-      a digit, or before the `.` of a fraction. Each segment is a nowrap `.gmt-stored-seg` span,
-      joined by `<wbr>`. The 33-character worst-case reading cannot fit whole beside the Line and
+      a digit, or before the `.` of a fraction. Each segment is a nowrap span,
+      joined by `<wbr>` (`families/stored/audit-table.ts`). The 33-character worst-case reading cannot fit whole beside the Line and
       Kind columns, so a token as a whole is not nowrap, and it can also break between its name
       and its value.
-    - **The table needs a box of at least 736 px.** The `@container gmt-stored-table` breakpoint
-      is 46rem (mirrored in `gmt-a11y.css`); a narrower box gets the labelled stacked layout.
-    - **The Line column's width is set with a doubled class**, which out-ranks
+    - **The table needs a box of at least 736 px.** The container breakpoint in
+      `families/stored/audit-table.module.css` is 46rem; a narrower box gets the labelled stacked layout.
+    - **The Line column's width is set in the module**, and out-ranks
       `gmt-content.css`'s `th:first-child { width: 1% }`.
     - **The reason slot reserves its box**, so selecting another line never moves section 3.
     - **In the stacked layout the selected-row `td` has `background: none`.** The row already
@@ -1458,12 +1631,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       number written in the widget. `P3D` is 71 and 73 hours, `PT72H` is 72 and 72; the test
       asserts what the library returns. The note cites BIMCO Laytime Definitions 2013, no. 8
       (a laytime day is 24 consecutive hours).
-    - **Layout is fixed.** Both tables are `table-layout: fixed` with a doubled-class override
-      of `gmt-content.css`'s `th:first-child { width: 1% }`; below 46rem (`@container
-      gmt-dbench-table`, mirrored in `gmt-a11y.css`) each row stacks into a labelled block. A
+    - **Layout is fixed.** Both tables are `table-layout: fixed` and override
+      `gmt-content.css`'s `th:first-child { width: 1% }` (`families/duration/bench-parts.module.css`); below 46rem (a container query in that module) each row stacks into a labelled block. A
       locale change re-draws only the `formatDuration` cells of table A, and typing re-draws
       section 2 only. The ten-cell strip picks its
-      columns from the container, not the viewport (`@container gmt-dbench`: 10 from 60rem, 5 by
+      columns from the container, not the viewport (a container query in `families/duration/bench-parts.module.css`: 10 from 60rem, 5 by
       default, 3 to 30rem, 2 to 20rem), so every value keeps room for 10 tabular digits
       (`min-inline-size: 10ch`) and nothing is clipped or ellipsised; a `title` tooltip is no
       help on touch. Labels wrap rather than truncate. Below 46rem the stacked table's
@@ -1653,7 +1825,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   left controls that looked live and did nothing. Every `.astro` shell — every teaching
   widget, the globe, the scrubber and the timezone map — catches its mount and calls
   `showUnavailable(root, error)`: `data-state="unavailable"` dims and disables the
-  server-rendered markup (`gmt-widget.css`), and one amber notice offers a reload.
+  server-rendered markup (`gmt-widget-reset.css`), and one amber notice offers a reload.
   `widget-load-error.test.tsx` runs every library-backed mount against a `GMT_MODULES`
   whose imports all reject.
   - **Trap: the notice covers a failed gmt import, not a failed page script.** The shell's
@@ -1663,23 +1835,17 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     mount is never called and nothing catches: the server-rendered markup stays, inert, with
     no notice. A dev server that answers `504 (Outdated Optimize Dep)` does exactly this
     (§ Tier 6, Runbooks).
-- **One control system for every widget.** `gmt-form-controls.css` holds the primitives:
-  - the field grid with subgrid label rows, and the `optional` hint chip;
-  - the faceted-grip `.gmt-range` with its fill, value chip and end labels;
-  - `.gmt-handle` for custom `role="slider"` handles;
-  - bevelled `.gmt-chip-toggle`s in a `.gmt-chip-group`;
-  - the chevron `.gmt-select`, and `.gmt-button--pad`;
-  - one disabled look for `.gmt-input` and `.gmt-select`.
-
-  Templates build them with `labelTextHtml`, `rangeFieldHtml`, `syncRange` and
-  `chipToggleHtml` from `widget-ui.ts`. Every teaching widget, the multi-zone scrubber and
-  `PlaygroundForm.astro` use them, so a new tool composes these and adds no control CSS of its
-  own. Rules and traps:
+- **One control system for every widget.** The controls are the kit's elements and builders
+  (§ Tier 2, Component kit): `range` (a native `input type="range"` in `gmt-range`, with its
+  fill, value chip and end labels), `handle` (`gmt-handle`, a `role="slider"` element), `chips`
+  (`gmt-chips`, bevelled toggles), `select`, `button`, `textInput` and `field` (the label, the
+  "(optional)" text, the hint and the field grid). Their styles are CSS Modules beside each builder; no global form sheet exists. A new tool composes these and adds no
+  control CSS of its own. Rules and traps:
   [reference/design-system.md § Form controls](reference/design-system.md#form-controls).
   - **Every widget root carries `not-content`** and `container-type: inline-size`, so
     Starlight's prose spacing never reaches widget internals.
-  - **A disabled `.gmt-input` or `.gmt-select` has one shared style**
-    (`gmt-form-controls.css`): dimmer text, a dashed border, no fill and a not-allowed
+  - **A disabled input or select has one shared style**
+    (the `textInput` and `select` CSS Modules): dimmer text, a dashed border, no fill and a not-allowed
     cursor, with no opacity. Forced colours restate it as `GrayText` (`gmt-a11y.css`). A
     widget sets `disabled` and styles nothing itself, so the state looks the same in every
     tool. The tools that disable such a control are:
@@ -1691,11 +1857,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     - the Timetable Reader: a row's Offset select while the printed time has one reading and
       the row holds no offset.
 
-    A disabled range (`.gmt-range`, the Cut-off Countdown's and the ETA Drift Chart's
+    A disabled range (`gmt-range`, the Cut-off Countdown's and the ETA Drift Chart's
     sliders) is a different control with its own rules.
   - **The Cut-off Countdown's axis is inset by half a thumb width.** Its "now" marker and the
     range thumb then share an x. One property, `--gmt-countdown-inset`, sets the inset for
-    both the axis and the drag field. It is defined on `.gmt-cutoff-countdown` because the
+    both the axis and the drag field. It is defined on the countdown's root (`tools/cutoff-countdown.module.css`) because the
     drag label is a sibling of the axis, not a child. Any padding or border added to the
     axis or track goes into it.
   - **Axis and track labels are fitted by measurement**, through `label-fit.ts` and the DST
@@ -1719,10 +1885,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Trap: a second class name containing "card" turns into glass within glass.**
   `[class*="card"]` rules in `gmt-glass.css`, `gmt-a11y.css` and `gmt-light.css` give any such
   element a 16px bevel, a fill and a backdrop blur. Every widget wraps its sections in
-  `.gmt-widget-card` on purpose: that wrapper is the widget's one layer of glass. The trap is a
+  the `card` builder on purpose: that wrapper is the widget's one layer of glass. The trap is a
   part inside it, such as a readout, a plate or a row, whose class also holds the substring: it
   becomes a second blurred panel inside the first. Name widget parts without it, or override all
-  three rules on purpose, as `.gmt-cutoff-ruler-card` does.
+  three rules on purpose, as the Cut-off Ruler's card does (`tools/cutoff-ruler.module.css`).
 - **Trap: an element with an author `display` ignores `hidden`.** A chip or plate that a
   fit pass hides needs its own `[hidden] { display: none }`. Without it, `placeLabel` and
   `thinTickLabels` hide nothing.
@@ -1738,21 +1904,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   its `th`s, and gives every long value a break point (`<wbr>`), because a fixed column
   cannot grow. The Timetable Reader's table does this, and wraps each part of a value in a
   `nowrap` token so the only breaks are the ones it placed.
-- **Trap: `.gmt-widget-section--wide` works only as a child selector.** The rule is
-  `.gmt-widget-card > .gmt-widget-section.gmt-widget-section--wide`. From 80rem a bare
-  `.gmt-widget-section--wide` loses to the card's span rules (`span 2`, and the
-  `:first-child` and `:nth-child(2)` rules), so the section does not take the whole row.
-  The longer selector ties the two positional rules and wins on order.
-- **Trap: an unnamed `@container` query on anything inside a `.gmt-field-grid` resolves to
-  the grid.** The grid is a container itself (`gmt-field-grid`), so a width rule for a label
+- **Trap: an unnamed `@container` query on anything inside the field grid resolves to
+  the grid.** The `fieldGrid` builder's grid is a container itself, so a width rule for a label
   or a control in it reads the grid's width, not the section's. Name the section and query
-  it by name, as the Timetable Reader does (`gmt-timetable-section`).
+  it by name, as the Timetable Reader does (`tt-section`).
 - **The prose list dash stays out of widgets.** `gmt-content.css` gives a list item on a content
   page a dash (`::before`), left padding and a bottom margin, and every one of those rules skips
   a list inside a `.gmt-widget` (`ul:not(:where(.gmt-widget *))`). A widget's legend, verdict
   row or key draws no dash and needs no reset. `content-list-rule.test.ts` guards it.
 - **Trap: the live wrapper in a hold cell must stretch.** A cell that holds its size stacks
-  a hidden sizer and a live wrapper in one grid cell (`.gmt-timetable-hold`). The wrapper
+  a hidden sizer and a live wrapper in one grid cell (`families/ids/hold.ts`, `families/edi/edi-hold.ts`, `families/holiday/held-text.ts`). The wrapper
   keeps the grid's default stretch, so its box is always the sizer's size. If it is aligned
   to the start instead, its height goes from 0 to the content's each time a note or a value
   appears, and `readout:still`, which measures the wrapper, reports it as a resize.
@@ -1769,7 +1930,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   in test files as well as source. Use `Temporal.Instant.from(…).epochMilliseconds`.
 - **Result regions ease through `.gmt-grow`.** Sections after the first, and elements marked
   `data-grow="slot"`, change height smoothly: one shared observer and a frame loop with one step
-  budget (40 px a frame in total, however late the frame) keep every step under the 48 px gate,
+  budget (32 px a frame in total, however late the frame) keep every step under the 48 px gate,
   where a CSS transition would double its step on a dropped frame, and the markup is wrapped at runtime so a reader without JS sees the server
   render. Section 1, the controls, is never wrapped, so popovers and focus rings do not clip.
   A list inside section 1 whose row count follows a preset (the Holiday Rule Builder's rules,
@@ -1886,11 +2047,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `themes`, `needs`, plus `args`, `base`, `browserArg`, `pages`); `select.mjs` turns the changed
     files and the import graph (`graph.mjs`) into the pages to check; `screen.mjs` prints the result.
     Tiers nest: `pr` (contrast-measure, grow-measure, readout-still, data-credits-check,
-    canada-layout-check) is inside `nightly` (adds canada-clock-still, canada-stored-still and
+    canada-layout-check) is inside `weekly` (adds canada-clock-still, canada-stored-still and
     table-fit), which
     is inside `local` (adds globe-smoke, html-diff and visual-diff, the three that need a GPU or a
     baseline).
-  - **`table-fit`** (`scripts/table-fit.mjs`, tier `nightly`, all three engines) opens every built page
+  - **`table-fit`** (`scripts/table-fit.mjs`, tier `weekly`, all three engines) opens every built page
     that holds a `<table` (`listTablePages` in `scripts/lib/table-pages.mjs`, read from `dist`, never a
     fixed count) at 1440 x 900 with every `<details>` open and every tab panel shown, and fails when a
     table's scroll box (the table or its nearest `overflow-x` ancestor) is wider than it shows. A
@@ -1906,7 +2067,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **The PR job.** `dox-gates` in `.github/workflows/ci.yml` ("Dox gates (changed pages, Chromium)")
     runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22: `gates --tier pr
     --browsers chromium --themes dark,light --against origin/<base>`, so the `pr` tier only, on the
-    pages the diff selects; the nightly covers the rest (Firefox, WebKit, the clock-still gates). The
+    pages the diff selects; the weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). The
     runner appends its screen to `$GITHUB_STEP_SUMMARY` in a fenced `text` block
     (`gates/step-summary.mjs`); a failed job uploads `apps/dox/.gates/` (without `vite-cache/`) as the
     `dox-gates-<run id>` artifact. It is **advisory**: the owner makes it a required check after about
@@ -1962,11 +2123,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **Corner brackets:** two L-shaped corners, top left and bottom right, on a few frames only
   (when one is right: [visual-design.md § Panels](reference/visual-design.md#panels)).
   `.gmt-brackets` (`gmt-primitives.css`, cyan) is on the home page's hero stage and on each
-  `GridSection.astro` panel of the home page and `/why-gmt`. The transport tools share a
-  second rule in `gmt-transport-widgets.css`, in the frame's own colour (`--leg-color`, else
-  `--series`): it lists `.gmt-delivery-leg-fieldset` (the Delivery Scheduler's legs) and
-  `.gmt-transport-leg--brackets` (the Timetable Reader's rows), so both tools draw the same
-  frame from one rule.
+  `GridSection.astro` panel of the home page and `/why-gmt`. The transport tools draw the same
+  frame in the frame's own colour (`--leg-color`, else `--series`) from
+  `families/transport/leg-fieldset.module.css` (the Delivery Scheduler's legs and the Timetable
+  Reader's rows).
 - **Focus:** a 2px cyan ring plus `gmt-focus-sonar`, one outward ping on focus
   (`.gmt-sonar-loop` is the unused looping form). The rotating conic border was removed —
   its rings read unevenly on wide, short controls.
@@ -1994,7 +2154,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **The control stack.** `renderGlobeTemplate` (`src/lib/globe-mount.ts`, shared by
     `Globe.astro` and the rail) draws one `role="group"` named "Globe controls" in the stage's
     bottom-right corner: `+`, `−`, `⊙` and the data-credits info button, in that tab order, all
-    native `<button>`s of one size and one look (`.gmt-globe-zoom button`). Every globe draws the
+    native `<button>`s of one size and one look (`tools/globe.module.css`; `data-gate="globe-zoom"`). Every globe draws the
     boundaries and the imagery, so every globe carries the button; there is no option to drop it.
     Its popover id is `<idPrefix>-data-credits`, unique per mount. See *Data credits* below.
   - **The split.** `globe/` knows nothing about time: it draws a planet, takes markers,
@@ -2139,10 +2299,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       (`gmt-light.css`, the selection and scrollbar rules in `gmt-controls.css`) excludes it
       with `:not(:where(.gmt-theme-dark *))`, which adds no specificity; and a dark-only
       rule the hero needs (`.sl-link-button.secondary`) names the island beside
-      `[data-theme="dark"]`. `globe-stage.test.ts` pins the dark counterparts, the selector
-      lists and the `gmt-a11y.css` blocks. The exclusions and the dark-only rule are not
-      listed anywhere a unit test can read them; `pnpm globe:smoke` checks them, with the
-      rest, by comparing the computed colours of every element in the hero across the two
+      `[data-theme="dark"]`. No unit test reads those rules; `pnpm globe:smoke` checks them by
+      comparing the computed colours of every element in the hero across the two
       themes.
     - **Legibility, on every globe.** A cyan dot that reads on the ocean vanishes over the
       Sahara, and an outline over ice — and before #293's review the flat globe had the
@@ -2166,7 +2324,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       zeroes it under `prefers-contrast: more` and `forced-colors: active`: a busy photograph
       behind the markers costs contrast that mode asked for, and a canvas is not repainted
       in the system palette. At 0 the image is never downloaded. Reduced transparency keeps
-      it; the photograph is opaque. `globe-stage.test.ts` pins both switches.
+      it; the photograph is opaque. `pnpm globe:smoke` checks both switches.
     - **The smoke.** Parity between the renderers runs with the image withheld at the
       network, so it compares the vector layers alone and doubles as the failed-load check.
       In the dark theme, with the image allowed, it must be requested once and change the
@@ -2350,16 +2508,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     panel, so the Astro shells and the plain-DOM mounts (the chat) render the same markup. `id` is
     unique per mount. Placements are `stack` and `corner`.
   - **Globe: the fourth button of the stack** (`stack`). `+`, `−`, `⊙`, `ⓘ` in one group named
-    "Globe controls"; the stack's own rule (`.gmt-globe-zoom button`, `gmt-globe.css`) sizes and
+    "Globe controls"; the stack's own rule (`tools/globe.module.css`) sizes and
     colours the button, so it matches its siblings in size, bevel, hover and focus fill, and tab
     order, and it fades in with them. Credits: boundaries and Earth imagery, on `/`,
     `/tools/zoned-earth/` and the chat's `globe` widget alike.
   - **Maps with no button stack: a glass square in the corner** (`corner`). The same 2rem square
     as the stack's buttons (`--gmt-surface-2` fill, `--gmt-border` edge, bevel), bottom-right of
     the drawing, where the land and the zone dots do not reach. Credits: boundaries only.
-    `TimezoneMap.astro` (`/why-gmt/`) renders it in its HTML, in `.gmt-credited-frame` beside the
+    `TimezoneMap.astro` (`/why-gmt/`) renders it in its HTML, in the credited frame (`data-gate="credited-frame"`) beside the
     chart host (which the chart code empties); the zone map (`zone-map.ts`) adds it to
-    `.gmt-zonemap-map` when it draws the shapes, so a section narrower than 520 px, where no map is
+    the zone map shell's frame (`zoneMapShell`, `families/zones/zone-map-shell.module.css`) when it draws the shapes, so a section narrower than 520 px, where no map is
     drawn and no file is fetched, has no credit. The chat's `canadaclock` widget follows the same
     rule; the map frame's `data-credits-id` carries its `idPrefix`-based id.
   - **`aria-expanded` is kept by script.** WebKit's accessibility tree does not report a
@@ -3035,7 +3193,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   build or a gate that exited 2.
   - `--plan` prints the selection and exits without running a gate; it builds only when `dist` is
     missing. `--only <gate,...>`, `--pages <path,...>` (replaces the diff selection),
-    `--browsers`, `--themes`, `--tier pr|nightly|local` (default `local`), `--shard i/n` (every
+    `--browsers`, `--themes`, `--tier pr|weekly|local` (default `local`), `--shard i/n` (every
     n-th page of each gate's sorted list), `--no-build` (needs `dist/gmt/index.html`) and `--json`
     (the summary as JSON) narrow or reshape a run. `--against <ref>` is the diff base (default
     `origin/main`, else `main`).
@@ -3078,20 +3236,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
   Re-run the `rsync` and the site build of `$SP/after` after any change. Firefox does not
   launch on the author's machine; record it as blocked and do not bypass the sandbox.
-- **The nightly gate sweep** (`.github/workflows/dox-gates-nightly.yml`). Every page, three browsers,
-  both themes, filed as `bug` issues.
-  - **Triggers.** A daily cron (`23 4 * * *`) that skips when nothing changed, a Sunday cron
-    (`41 4 * * 0`) that always runs, and `workflow_dispatch` with `force` (run anyway) and
-    `force_finding` (also file one `[dry run]` issue). The weekly run is recognised by
-    `github.event.schedule`, never by a computed date.
-  - **Skip rule.** Job `decide` (`actions: read`) takes the newest finished `main` run of the
-    workflow that filed its findings (its `Report to issues` job succeeded, or it skipped the night
-    and ended `success`) and runs the sweep when `git diff --name-only <sha> HEAD -- apps/dox/
-    pnpm-lock.yaml` is not empty, when there is no such run or its commit is not in the history, or
-    when a listing or the diff fails (fail open, with the reason in the summary). A run whose report
-    job failed is never the baseline, so its findings are swept and filed again the next night. The
-    rule is the pure `shouldRun` in `apps/dox/scripts/gates/nightly-decide.mjs`, which the step calls.
-  - **Legs.** `pnpm --filter dox gates --all --tier nightly --browsers <b> --themes dark,light
+- **The weekly gate sweep** (`.github/workflows/dox-gates-weekly.yml`). Every page, three browsers,
+  both themes, filed as `dox-gate` issues.
+  - **Triggers.** A Sunday cron (`41 4 * * 0`) and `workflow_dispatch` with `force_finding` (also
+    file one `[dry run]` issue). The sweep always runs: there is no skip rule. The workflow stays
+    disabled until the owner says to enable it; Claude never enables it, and dispatches a run only
+    when asked.
+  - **Legs.** `pnpm --filter dox gates --all --tier weekly --browsers <b> --themes dark,light
     --retries 1 --shard i/n`, `timeout-minutes: 90`, `fail-fast: false`. `--shard` splits each
     gate's sorted page list round-robin, not the gates, so every leg of a browser runs every gate
     on its share of the pages. Under `--all`, Chromium gets every page of every gate; WebKit and
@@ -3111,7 +3262,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **Report.** Job `report` (`issues: write`) downloads the newest `dox-gates-<leg>-<run id>` artifact of
     each leg (`summary.json`, `*.ndjson`) and runs `apps/dox/scripts/gates/file-issues.mjs --legs <all
     twelve>`. Only `FAIL` rows file; `FLAKY` (failed, passed on the retry) is listed in the step
-    summary. The key is `<gate>:<rule>:<page>:<selector>` (selector trimmed, whitespace collapsed);
+    summary. The key is `<gate>:<rule>:<page>:<target>`; the target is the element's identity key (see
+    "Element identity" below), never a class or an `nth` position;
     browsers, widths and themes are not in it, so one issue tables every place the finding was seen.
     A leg with no readable `summary.json` is sorted by its job in the run's job list (`gh api
     …/runs/<id>/jobs`, read only when a summary is missing): if its `Check the summary was written`
@@ -3122,8 +3274,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     step passed (`if-no-files-found: warn`), so the check step is the only signal that separates
     them. If the job list cannot be read, the leg is filed as could-not-run, saying the cause is
     unknown. A `FAIL` with no structured finding files `<gate>:unstructured:all:` with its log tail.
-  - **Issues.** Labels `bug` and `dox-gate` (created when missing, with `dox-gate-dry-run`), issue type
-    `Bug`, first body line `<!-- dox-gate key="…" -->` (`"`, `>` and `--` in a key are written as
+  - **Issues.** Label `dox-gate` only (created when missing, with `dox-gate-dry-run`), and no issue
+    type; first body line `<!-- dox-gate key="…" -->` (`"`, `>` and `--` in a key are written as
     entities). An open `dox-gate` issue whose first line equals the marker gets a comment on the
     lowest-numbered match; otherwise a new issue opens. **Flood guard:** more than 10 new issues in one
     run opens none and files one `dox-gate:flood` issue listing every held-back key (a comment if it
@@ -3133,13 +3285,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     plans against the live open-issue list, prints one line per action (`open  <key>  <title>` or
     `comment #123  <key>`) and a count, and files nothing; it needs `gh` signed in. Outside GitHub
     Actions (`GITHUB_ACTIONS` not `true`) it only plans: without `--print` it exits 2 with "run with
-    --print locally; issues are filed by the nightly workflow". A summary path that is unreadable (without
+    --print locally; issues are filed by the weekly workflow". A summary path that is unreadable (without
     `--legs`) or has no leg folder is also exit 2, before any `gh` call; with `--legs`, the legs with no
     summary are the `--legs` entries with no readable summary, including when no summary arrived at
     all. Locally (no `GITHUB_RUN_ID`) there is no job list, so they plan as could-not-run. Use a summary with
     no `FAIL` row, since a local `--all` summary's hundred findings plan as one flood issue. In CI,
     dispatch with `force_finding`: one `[dry run]` issue appears (key `dry-run:synthetic:/:body`,
-    label `dox-gate-dry-run` instead of `bug`), and a second dispatch comments on it.
+    label `dox-gate-dry-run` instead of `dox-gate`), and a second dispatch comments on it.
 - **Local dev:** `pnpm dox:dev` (site + chat Worker) or `pnpm dox:dev:site` (site only), both at `http://localhost:4321/gmt/`.
   A warm start is ~10 s: the gmt dev build (`build:dev`) rebuilds `dist/` in place in ~5 s, every `generate` step
   skips when its inputs are unchanged, and `upstream refresh` makes no network calls
@@ -3203,12 +3355,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **the `dox-gates` PR job** (`ci.yml`, "The PR job"): a run passes in under 15 minutes (record
     the time in the "The PR job" bullet), and a PR that touches nothing under `apps/dox/` or
     `pnpm-lock.yaml` shows the job as skipped;
-  - **the nightly gate sweep** (`dox-gates-nightly.yml`, "The nightly gate sweep"), which can only be
+  - **the weekly gate sweep** (`dox-gates-weekly.yml`, "The weekly gate sweep"), which can only be
     dispatched once the file is on `main`:
     - a `force_finding` dispatch finishes every leg, Firefox included, and files one `[dry run]`
       issue with the marker on line 1; a second dispatch comments on it;
-    - a scheduled run with nothing changed shows the skip line in `decide`, and `sweep` and `report`
-      are skipped;
     - every leg finishes inside its 90 minutes; record the slowest leg's time in the runbook entry.
 
 ---

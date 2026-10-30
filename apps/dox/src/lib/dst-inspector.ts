@@ -201,25 +201,6 @@ export function minuteToTickerPercent(
 }
 
 /**
- * Map a 0-100 ticker position back to a local minute-of-day, snapped to the
- * nearest step and clamped to the window.
- */
-export function tickerPercentToMinute(
-  percent: number,
-  window: TickerWindow,
-  stepMinutes = 5,
-): number {
-  const span = window.windowEndMinutes - window.windowStartMinutes;
-  const clampedPct = Math.max(0, Math.min(100, percent));
-  const raw = window.windowStartMinutes + (clampedPct / 100) * span;
-  const snapped = Math.round(raw / stepMinutes) * stepMinutes;
-  return Math.max(
-    window.windowStartMinutes,
-    Math.min(window.windowEndMinutes, snapped),
-  );
-}
-
-/**
  * Tick spacing that keeps a ticker to a handful of readable labels.
  */
 export function getTickerTickStepMinutes(window: TickerWindow): number {
@@ -425,7 +406,7 @@ export type ValuePreset = "normal" | "gap" | "overlap" | "transition";
 /**
  * Metadata about a value preset for display purposes.
  */
-export interface ValuePresetInfo {
+interface ValuePresetInfo {
   /** The preset type identifier */
   type: ValuePreset;
   /** Display label for the dropdown */

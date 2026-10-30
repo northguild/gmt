@@ -16,7 +16,6 @@ import {
   minuteToTickerPercent,
   parseOffsetMinutes,
   probeContext,
-  tickerPercentToMinute,
   toPlainLocalDateTime,
   transitionType,
   type DstTransition,
@@ -237,10 +236,10 @@ describe("isMinuteInZone", () => {
 });
 
 // ---------------------------------------------------------------------------
-// minuteToTickerPercent / tickerPercentToMinute
+// minuteToTickerPercent
 // ---------------------------------------------------------------------------
 
-describe("minuteToTickerPercent / tickerPercentToMinute", () => {
+describe("minuteToTickerPercent", () => {
   const window: TickerWindow = {
     zoneStartMinutes: 120,
     zoneEndMinutes: 180,
@@ -257,21 +256,6 @@ describe("minuteToTickerPercent / tickerPercentToMinute", () => {
   it("clamps out-of-range minutes", () => {
     expect(minuteToTickerPercent(0, window)).toBe(0);
     expect(minuteToTickerPercent(1439, window)).toBe(100);
-  });
-
-  it("round-trips the window bounds", () => {
-    expect(tickerPercentToMinute(0, window)).toBe(90);
-    expect(tickerPercentToMinute(100, window)).toBe(210);
-  });
-
-  it("snaps to the nearest step", () => {
-    // 51% of a 120-minute window from 90 = 151.2 → snaps to 150
-    expect(tickerPercentToMinute(51, window)).toBe(150);
-  });
-
-  it("clamps out-of-range percentages", () => {
-    expect(tickerPercentToMinute(-20, window)).toBe(90);
-    expect(tickerPercentToMinute(150, window)).toBe(210);
   });
 });
 

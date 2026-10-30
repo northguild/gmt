@@ -1,12 +1,15 @@
 /**
  * @vitest-environment jsdom
  *
- * The Canada 2026 clock-change checker as a chat widget (CORE-88): the credits id of the map,
- * the pinned zone, the permalink state, and a URL the chat keeps for itself.
+ * The Canada 2026 clock-change checker as a chat widget (CORE-88): the copy's headings, the pinned
+ * zone, the permalink state, and a URL the chat keeps for itself.
  */
+import { within } from "@testing-library/dom";
 import { canadaTense } from "./clock-change-tense.fixture";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import { expectNoAxeViolations } from "~/test/render-widget";
+import { setHtml, type SafeHtml } from "~/widgets/builders";
 import { handleCanadaClockChange } from "../../worker/canada-clock-change";
 import { resetRateLimitState } from "../../worker/rate-limit";
 import type { CanadaCheck } from "./canada-clock-change";
@@ -31,38 +34,37 @@ async function workerAnswer(): Promise<CanadaCheck> {
   return (await response.json()) as CanadaCheck;
 }
 
+const roots: HTMLElement[] = [];
+
+function place(markup: SafeHtml): HTMLElement {
+  const root = document.createElement("div");
+  document.body.append(root);
+  roots.push(root);
+  setHtml(root, markup);
+  return root;
+}
+
 function widgetRoot(): HTMLElement {
-  document.body.innerHTML = renderCanadaClockChangeWidgetTemplate(
-    "rail-1",
-    canadaTense,
-  );
-  return document.querySelector<HTMLElement>(".gmt-canada")!;
+  return place(renderCanadaClockChangeWidgetTemplate("rail-1", canadaTense));
 }
 
 describe("the chat template", () => {
-  it("names the map's credits id after the prefix, so two copies cannot collide", () => {
+  it("is the page's cards without the Key points, and a copy of it has no accessibility violations", async () => {
     const root = widgetRoot();
     expect(
-      root.querySelector("[data-role='map']")?.getAttribute("data-credits-id"),
-    ).toBe("rail-1-data-credits");
-  });
-
-  it("prefixes the heading ids so a second copy cannot collide", () => {
-    const root = widgetRoot();
-    expect(root.querySelector("#rail-1-probe-title")).not.toBeNull();
-    expect(root.querySelector("#canada-probe-title")).toBeNull();
+      within(root).getByRole("region", { name: "Your browser" }),
+    ).toBeInTheDocument();
+    expect(
+      within(root).queryByRole("region", { name: "Key points" }),
+    ).not.toBeInTheDocument();
+    await expectNoAxeViolations(root);
   });
 
   it("renders no credits button in the markup: the map adds its own when it is drawn", () => {
-    document.body.innerHTML = renderCanadaClockChangeTemplate({
-      tense: canadaTense,
-    });
-    expect(document.querySelector(".gmt-data-credits-button")).toBeNull();
+    const page = place(renderCanadaClockChangeTemplate({ tense: canadaTense }));
     expect(
-      document
-        .querySelector("[data-role='map']")
-        ?.getAttribute("data-credits-id"),
-    ).toBe("canada-data-credits");
+      within(page).queryByRole("button", { name: "Data credits" }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -81,13 +83,25 @@ describe("the chat mount", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
-    document.body.innerHTML = "";
+    for (const root of roots.splice(0)) root.remove();
   });
 
+  const zoneButtons = (root: HTMLElement) =>
+    within(within(root).getByRole("list", { name: "Zones" })).getAllByRole(
+      "button",
+    );
+
   const pressed = (root: HTMLElement) =>
-    root.querySelector<HTMLElement>(
-      '.gmt-zonemap-zone-btn[aria-pressed="true"]',
-    )?.dataset.tzId ?? null;
+    zoneButtons(root).filter((b) => b.getAttribute("aria-pressed") === "true");
+
+  /** Waits until exactly the named zone is pinned in the list. */
+  const expectPinned = (root: HTMLElement, zone: string) =>
+    vi.waitFor(() => {
+      expect(pressed(root)).toHaveLength(1);
+      expect(pressed(root)[0]).toHaveAccessibleName(
+        expect.stringContaining(zone),
+      );
+    });
 
   it("pins the zone it was given in the list, and says so in its permalink state", async () => {
     const root = widgetRoot();
@@ -97,7 +111,7 @@ describe("the chat mount", () => {
       { zone: "America/Winnipeg" },
       controller.signal,
     );
-    await vi.waitFor(() => expect(pressed(root)).toBe("America/Winnipeg"));
+    await expectPinned(root, "America/Winnipeg");
     expect(handle.getPermalinkState?.()).toEqual({ zone: "America/Winnipeg" });
     handle.destroy();
     handle.destroy();
@@ -112,11 +126,9 @@ describe("the chat mount", () => {
       controller.signal,
     );
     await vi.waitFor(() =>
-      expect(
-        root.querySelector('[data-role="legend-count"]')?.textContent,
-      ).not.toBe("\u2013"),
+      expect(zoneButtons(root)[0]).not.toHaveTextContent("no answer yet"),
     );
-    expect(pressed(root)).toBeNull();
+    expect(pressed(root)).toHaveLength(0);
     expect(handle.getPermalinkState?.()).toBeNull();
     handle.destroy();
   });
@@ -130,7 +142,7 @@ describe("the chat mount", () => {
       { zone: "America/Winnipeg" },
       controller.signal,
     );
-    await vi.waitFor(() => expect(pressed(root)).toBe("America/Winnipeg"));
+    await expectPinned(root, "America/Winnipeg");
     expect(window.location.href).toBe(before);
     handle.destroy();
   });

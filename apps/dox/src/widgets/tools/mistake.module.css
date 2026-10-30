@@ -1,0 +1,118 @@
+/* Mistake: a titled card with the wrong code and the right code side by side, each with a
+   live playground. Tokens only. A severity badge pairs void text with the -ink severity
+   fills, which clear the 7:1 text floor in both themes. */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-4);
+  margin-block: var(--gmt-space-6);
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-3);
+}
+
+.title {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: 1rem;
+}
+
+.badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  color: var(--gmt-void);
+  font-size: var(--gmt-text-xs);
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-wider);
+  text-transform: uppercase;
+}
+
+.critical {
+  background: var(--gmt-severity-critical-ink);
+}
+
+.high {
+  background: var(--gmt-severity-high-ink);
+}
+
+.medium {
+  background: var(--gmt-severity-medium);
+}
+
+.description {
+  margin: 0;
+  color: var(--gmt-ice);
+  line-height: 1.6;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+}
+
+/* A grid item sizes to its content unless told it may shrink; a long code line would
+   otherwise push the whole page wide. */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.sideTitle {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+}
+
+.wrongTitle {
+  color: var(--gmt-signal-ink);
+}
+
+.rightTitle {
+  color: var(--gmt-spring-ink);
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .badge {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .title,
+  .description,
+  .wrongTitle,
+  .rightTitle {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice);
+  }
+}

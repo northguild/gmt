@@ -1,0 +1,47 @@
+/* <gmt-grow>: eases height changes in a result region. At rest it is height: auto.
+   smooth-height.ts pins the height and sets data-growing while it eases (a frame loop,
+   not a CSS transition: a late frame must not move the box further). */
+
+.root {
+  display: flex;
+  flex-direction: column;
+
+  /* a flex item may shrink below its content while easing down */
+  min-block-size: 0;
+
+  /* the inline height is the inner box's; padding and border sit outside it */
+  box-sizing: content-box;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &[data-growing] {
+    /* block axis only: glows and focus rings still spill sideways. overflow-y, because
+       overflow-block is not in the Baseline 2024 target (Safari 18.2). */
+    overflow-y: clip;
+  }
+
+  > * {
+    flex-shrink: 0;
+  }
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+
+@media (forced-colors: active) {
+  .root[data-growing] {
+    /* the clip is the only paint; forced colours change none of it */
+    overflow-y: clip;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root[data-growing] {
+    overflow-y: clip;
+  }
+}

@@ -8,7 +8,7 @@
  */
 
 /** A horizontal extent in px, in any one coordinate space. */
-export interface Span {
+interface Span {
   left: number;
   right: number;
 }
@@ -32,7 +32,7 @@ export function thinSpans(
   });
 }
 
-export interface PlaceOptions {
+interface PlaceOptions {
   /** x of the thing the label belongs to (a marker), in px from the track's left. */
   atPx: number;
   labelPx: number;
@@ -63,25 +63,6 @@ export function placeLabel(o: PlaceOptions): "start" | "end" {
   return "start";
 }
 
-/**
- * The first candidate left edge at which a label of `labelPx` stays inside the
- * track and clear of every blocker (a rule it must not be struck through by).
- * Falls back to the first candidate when none is clear.
- */
-export function pickLabelLeft(
-  candidates: readonly number[],
-  labelPx: number,
-  trackPx: number,
-  blockers: readonly number[] = [],
-  gap = 2,
-): number {
-  const clear = (left: number) =>
-    left >= -0.5 &&
-    left + labelPx <= trackPx + 0.5 &&
-    !blockers.some((b) => b > left - gap && b < left + labelPx + gap);
-  return candidates.find(clear) ?? candidates[0] ?? 0;
-}
-
 // ---------------------------------------------------------------------------
 // DOM helpers (measure, then toggle). Both skip an element with no layout, so
 // jsdom and a hidden widget keep every label.
@@ -93,7 +74,7 @@ export function pickLabelLeft(
  *
  * `getBoundingClientRect().width` is the width after any transform on the
  * element or an ancestor, and a widget's numbered cards enter by scaling from
- * 92% (`widget-enter.ts`) just as the first render is fitting its labels. A
+ * 92% (the entrance in `styles/gmt-primitives.css`) just as the first render is fitting its labels. A
  * label measured at 92% fits where it will not once the card is full size, and
  * nothing refits when the entrance ends. `offsetWidth` ignores transforms; the
  * rect is the fallback for an element with no layout box of its own.
@@ -106,7 +87,7 @@ export function layoutWidth(el: HTMLElement): number {
  *  run past the row's edge. Re-measures from scratch each call. */
 export function thinTickLabels(
   row: HTMLElement,
-  selector = ".gmt-cutoff-axis-tick",
+  selector: string,
   gap = 8,
 ): void {
   const ticks = [...row.querySelectorAll<HTMLElement>(selector)];
@@ -127,45 +108,6 @@ export function thinTickLabels(
   thinSpans(spans, gap, row.clientWidth).forEach((keep, i) => {
     ticks[i]!.hidden = !keep;
   });
-}
-
-/**
- * Sets the fit class on each day column of a ledger row from the column's
- * measured width. `classify` is the tool's rule (`dayColumnFit`); a column
- * `short` loses its weekday and a column `narrow` loses its label and chips.
- * A column's width is its inline `width` in percent of `trackPx`, so the pass
- * needs no layout of its own. With `trackPx` 0 (jsdom, a hidden widget) every
- * column keeps everything.
- *
- * A chip is the one part a width rule cannot judge, because its word sets its
- * width. So a column that keeps its chips is then measured: when its chip row
- * reaches past the column's inner edge, the column takes `--bare` and drops its
- * chips, which the column would otherwise cut mid-word. The pattern and the
- * `aria-label` still say the state.
- */
-export function fitDayColumns(
-  days: HTMLElement,
-  trackPx: number,
-  classify: (widthPx: number) => "full" | "short" | "narrow",
-  base = "gmt-ledger-day",
-): void {
-  const columns = [...days.querySelectorAll<HTMLElement>(`.${base}`)];
-  for (const day of columns) {
-    const widthPx = (parseFloat(day.style.width) / 100) * trackPx;
-    const fit = classify(widthPx);
-    day.classList.toggle(`${base}--short`, fit === "short");
-    day.classList.toggle(`${base}--narrow`, fit === "narrow");
-    day.classList.remove(`${base}--bare`);
-  }
-  if (!(trackPx > 0)) return;
-  // Measured after every class is set, so the reads share one layout.
-  const cut = columns.map((day) => {
-    if (day.classList.contains(`${base}--narrow`)) return false;
-    const chips = day.querySelector<HTMLElement>(`.${base}-chips`);
-    if (chips === null) return false;
-    return chips.offsetLeft + chips.scrollWidth > day.clientWidth + 0.5;
-  });
-  columns.forEach((day, i) => day.classList.toggle(`${base}--bare`, cut[i]!));
 }
 
 /**

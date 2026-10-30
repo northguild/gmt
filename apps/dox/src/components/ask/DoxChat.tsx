@@ -15,8 +15,7 @@
  * never opens the chat downloads neither.
  */
 import "../../styles/gmt-ask-tailwind.css";
-import "../../styles/gmt-ask.css";
-import "../../styles/gmt-hive.css";
+import "../../styles/chat.css";
 
 import { useChat } from "@ai-sdk/react";
 import {
@@ -614,12 +613,12 @@ export function DoxChat({
               <article className="gmt-hive-turn" data-role="assistant">
                 <HiveNode role="assistant" pending />
                 <div className="gmt-hive-card" data-pending="">
-                  <p className="gmt-hive-pending" role="status">
+                  <output className="gmt-hive-pending">
                     {/* Same icon the retrieval trace uses, so "searching" and
                         the trace it resolves into read as one step. */}
                     <SearchIcon aria-hidden="true" />
                     {progress ?? "Searching corpus\u2026"}
-                  </p>
+                  </output>
                   <span className="gmt-hive-scanline" aria-hidden="true" />
                 </div>
               </article>
@@ -641,7 +640,7 @@ export function DoxChat({
         <div className="gmt-hive-composer-inner">
           {aboveComposer}
           {outOfBudget && (
-            <p className="gmt-hive-exhausted" role="status">
+            <output className="gmt-hive-exhausted">
               <span className="gmt-hive-exhausted-marker" aria-hidden="true">
                 ⟨ · ⟩
               </span>
@@ -649,7 +648,7 @@ export function DoxChat({
                 ? `You have used your ${brains?.visitor.limit} questions for today.`
                 : "Dox has used its free allowance for today."}
               {comesBackAt && ` Back ${comesBackAt}.`}
-            </p>
+            </output>
           )}
           <PromptInput
             onSubmit={(message, event) => {

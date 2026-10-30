@@ -1,0 +1,120 @@
+/*
+ * Cut-off Ruler: what only this tool needs. The sections, preset, fields, lanes, marks, bands,
+ * gate, scale, cards, code frames and outputs are the kit's and the cutoff family's; this sheet
+ * places the legend, the reading cards and the sentinel line.
+ *
+ * Amber is the sentinel's alone, and an accent edge is never a single side.
+ */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  min-block-size: var(--gmt-target-min);
+  align-items: center;
+}
+
+/* The scale lines up with the lane's track, past its label column, and the label column
+   collapses with the lane's own container query. */
+.scaleRow {
+  margin-inline-start: calc(var(--gmt-timeline-label-w, 6rem) + 0.5rem);
+  min-inline-size: 0;
+
+  @container (inline-size < 30rem) {
+    margin-inline-start: 0;
+  }
+}
+
+.summary {
+  margin: 0;
+  min-block-size: 1.5em;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+}
+
+.readings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  min-inline-size: 0;
+}
+
+.head {
+  display: flex;
+  gap: var(--gmt-space-2);
+  align-items: center;
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+  font-weight: 600;
+}
+
+.time {
+  margin: var(--gmt-space-2) 0 0;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.meta,
+.gloss {
+  margin: var(--gmt-space-1) 0 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* The sentinel: in words, bracketed, in the amber family. */
+.lost {
+  display: inline-block;
+  margin: 0;
+  padding-inline: var(--gmt-space-1);
+  border: 1px solid var(--gmt-signal-border);
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+
+  &::before {
+    content: "\27e8\a0";
+  }
+
+  &::after {
+    content: "\a0\27e9";
+  }
+}
+
+@media (forced-colors: active) {
+  .lost {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .summary,
+  .head,
+  .time,
+  .meta,
+  .gloss {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .lost {
+    border-color: var(--gmt-ice);
+  }
+}

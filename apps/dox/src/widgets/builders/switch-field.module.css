@@ -1,0 +1,150 @@
+/* switchField: a native checkbox painted as a track and a thumb. The input covers the row and
+   is invisible, so IME, focus and the screen reader's role all stay native. */
+
+.root {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  min-block-size: var(--gmt-target-min);
+  padding-block: var(--gmt-space-1);
+  color: var(--gmt-ice);
+  cursor: pointer;
+
+  --switch-accent: var(--gmt-cyan-ink);
+
+  &[data-tone="purple"] {
+    --switch-accent: var(--gmt-dst-purple-ink);
+  }
+
+  &[data-tone="gold"] {
+    --switch-accent: var(--gmt-dst-gold-ink);
+  }
+
+  /* An author `display` beats the UA's [hidden] rule, so say it. */
+  &[hidden] {
+    display: none;
+  }
+}
+
+.input {
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.track {
+  position: relative;
+  flex: none;
+  inline-size: 2rem;
+  block-size: 1.125rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: 999px;
+  background: var(--gmt-surface-2);
+  transition: background-color var(--gmt-motion-fast) var(--gmt-easing);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 0.125rem;
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    border-radius: 50%;
+    background: var(--gmt-ice);
+    translate: 0 -50%;
+    transition: inset-inline-start var(--gmt-motion-fast) var(--gmt-easing);
+  }
+}
+
+:where(.input:checked) ~ .track {
+  border-color: var(--switch-accent);
+  background: color-mix(
+    in srgb,
+    var(--switch-accent) 40%,
+    var(--gmt-surface-2)
+  );
+
+  &::after {
+    inset-inline-start: calc(100% - 0.875rem);
+  }
+}
+
+.input:focus-visible ~ .track {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+.input:disabled ~ .track,
+.input:disabled ~ .text {
+  opacity: 0.6;
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--switch-accent);
+}
+
+.text {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.detail {
+  flex: none;
+  color: var(--gmt-ice-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (forced-colors: active) {
+  .track {
+    border-color: ButtonText;
+    background: Canvas;
+
+    &::after {
+      background: ButtonText;
+    }
+  }
+
+  :where(.input:checked) ~ .track {
+    border-color: Highlight;
+    background: Highlight;
+
+    &::after {
+      background: HighlightText;
+    }
+  }
+
+  .input:focus-visible ~ .track {
+    outline-color: Highlight;
+  }
+
+  .icon,
+  .detail {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .track {
+    border-color: var(--gmt-ice);
+  }
+
+  .input:focus-visible ~ .track {
+    outline-width: 3px;
+  }
+
+  .detail {
+    color: var(--gmt-ice);
+  }
+}

@@ -10,12 +10,13 @@
  * The time-zone shapes are timezone-boundary-builder's, derived from OpenStreetMap, offered under the
  * ODbL 1.0 (§4.2–4.3: notice; §4.4: share-alike). The wording follows its README § Licenses at the pinned release.
  */
-import { escapeAttr } from "./widget-ui";
+import {
+  dataCredits,
+  type DataCredit,
+  type DataCreditsPlacement,
+} from "~/widgets/builders";
 
-export interface DataCredit {
-  readonly label: string;
-  readonly parts: readonly (string | { text: string; href: string })[];
-}
+export type { DataCredit, DataCreditsPlacement };
 
 /** The timezone-boundary-builder release the boundary files come from (see `built.md` § Boundary data). */
 export const TBB_TAG = "2026e";
@@ -63,21 +64,6 @@ export const EARTH_IMAGERY: DataCredit = {
   parts: ["NASA Earth Observatory (Blue Marble Next Generation)."],
 };
 
-const ICON =
-  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" focusable="false">' +
-  '<circle cx="12" cy="12" r="9.25"/><path d="M12 11v5.5"/><circle cx="12" cy="7.75" r=".5" fill="currentColor"/></svg>';
-
-function renderPart(part: DataCredit["parts"][number]): string {
-  if (typeof part === "string") return escapeAttr(part);
-  return `<a href="${escapeAttr(part.href)}" rel="noopener">${escapeAttr(part.text)}</a>`;
-}
-
-/** `stack`: the button is one of a control stack and takes the stack's button styling.
- *  `corner`: a glass square in the drawing's bottom-end corner; the popup opens above it.
- *  `corner-start`: the same square in the top-start corner, for a drawing whose land fills the
- *  bottom-end one; the popup opens below it. */
-export type DataCreditsPlacement = "stack" | "corner" | "corner-start";
-
 /**
  * The info button and its popover, as one string. `""` for an empty list, so a drawing with
  * nothing to credit gets no button. `id` must be unique in the document: two mounts of one drawing
@@ -87,19 +73,7 @@ export function renderDataCreditsHtml(
   credits: readonly DataCredit[],
   opts: { id: string; placement: DataCreditsPlacement },
 ): string {
-  if (credits.length === 0) return "";
-  const id = escapeAttr(opts.id);
-  const placement = escapeAttr(opts.placement);
-  const rows = credits
-    .map(
-      (c) =>
-        `<dt>${escapeAttr(c.label)}</dt><dd>${c.parts.map(renderPart).join("")}</dd>`,
-    )
-    .join("");
-  return (
-    `<button type="button" class="gmt-data-credits-button" data-placement="${placement}" popovertarget="${id}" aria-label="Data credits" aria-expanded="false">${ICON}</button>` +
-    `<div id="${id}" class="gmt-data-credits-panel gmt-glass" data-placement="${placement}" popover><dl>${rows}</dl></div>`
-  );
+  return dataCredits({ credits, ...opts }).toString();
 }
 
 let watching = false;
@@ -121,7 +95,7 @@ export function watchDataCredits(): void {
       const panel = event.target;
       if (
         !(panel instanceof HTMLElement) ||
-        !panel.classList.contains("gmt-data-credits-panel")
+        !panel.hasAttribute("data-credits-panel")
       )
         return;
       const open = (event as ToggleEvent).newState === "open";

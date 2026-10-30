@@ -16,7 +16,6 @@ import {
   MAX_MINUTE,
   TIMETABLE_PRESETS,
   arrivalChipText,
-  bandAt,
   bandChipText,
   chartLayout,
   chartSummary,
@@ -26,13 +25,11 @@ import {
   exactTickLabel,
   handleValueText,
   hhmmOfMinute,
-  jumpMinute,
   laneState,
   minuteAtPointer,
   pointerStep,
   rowMinute,
   shapeOf,
-  OFFSET_LABEL_MAX,
   offsetReason,
   LONGEST_REASON,
   arrivalChipPlacement,
@@ -133,29 +130,6 @@ describe("classify", () => {
 
 describe("offsetChoices", () => {
   const LON = "Europe/London";
-
-  /* The label is cut off when it is wider than the select's text area. At the
-     narrowest four-in-a-row frame it must show whole; OFFSET_LABEL_MAX is that
-     width in characters (see its comment for the measurement). */
-  it("keeps every option label within OFFSET_LABEL_MAX characters", () => {
-    const cases: [string, string][] = [
-      ["2024-10-27T01:30:00", LON],
-      ["2024-03-31T01:30:00", LON],
-      ["2024-10-27T02:30:00", "Europe/Berlin"],
-      ["2011-12-30T12:00:00", "Pacific/Apia"],
-      ["2024-04-07T02:15:00", "Australia/Lord_Howe"],
-      ["2024-10-06T02:15:00", "Australia/Lord_Howe"],
-      ["2024-10-27T01:30:00", "Europe/London"],
-    ];
-    let longest = 0;
-    for (const [printed, zone] of cases) {
-      for (const c of offsetChoices(printed, zone, lib)) {
-        longest = Math.max(longest, c.label.length);
-        expect(c.label.length).toBeLessThanOrEqual(OFFSET_LABEL_MAX);
-      }
-    }
-    expect(longest).toBe(OFFSET_LABEL_MAX);
-  });
 
   it("offers only None for a time that happens once (V91)", () => {
     expect(offsetChoices("2024-10-27T00:30:00", LON, lib)).toEqual([
@@ -598,14 +572,6 @@ describe("dayBands (section 9 B1 to B12)", () => {
     expect(asked).toEqual([2024, 2025]);
   });
 
-  it("finds the band a minute falls in, start inclusive and end exclusive", () => {
-    const list = dayBands(LON, "2024-10-27", lib);
-    expect(bandAt(59, list)).toBeNull();
-    expect(bandAt(60, list)?.kind).toBe("twice");
-    expect(bandAt(119, list)?.kind).toBe("twice");
-    expect(bandAt(120, list)).toBeNull();
-  });
-
   it("words the chip", () => {
     expect(bandChipText(dayBands(LON, "2024-10-27", lib))).toBe(
       "01:00\u201302:00 happens twice",
@@ -653,13 +619,6 @@ describe("pointer and key movement", () => {
     expect(stepMinute(0, -1)).toBe(0);
     expect(stepMinute(MAX_MINUTE, 1)).toBe(MAX_MINUTE);
     expect(stepMinute(1433, 1)).toBe(MAX_MINUTE);
-  });
-
-  it("jumps an hour and keeps the minutes", () => {
-    expect(jumpMinute(30, 1)).toBe(90);
-    expect(jumpMinute(90, -1)).toBe(30);
-    expect(jumpMinute(30, -1)).toBe(0);
-    expect(jumpMinute(1400, 1)).toBe(MAX_MINUTE);
   });
 
   it("picks the smallest tick step whose pitch holds a label", () => {

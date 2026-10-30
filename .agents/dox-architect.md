@@ -30,6 +30,8 @@ work is scoped against what is already built.
 
 ## What you must hold
 
+- **Specs name kit pieces.** A spec lists the builders and elements a widget uses. A piece the
+  kit lacks is specced as a kit addition with its APG pattern, never as widget markup.
 - **This is not `packages/gmt` work.** Library changes go through the library pipeline
   (`architect` → `tdd-dev` / `tester` / `gmt-reviewer` / `finalizer`). Say so and hand off.
 - **Generate, don't maintain.** `apps/dox/scripts/build-reference.ts` walks

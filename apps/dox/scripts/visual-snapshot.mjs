@@ -46,6 +46,7 @@ import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
+import { gate, resolveMisses } from "./lib/locate.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 
 const GATE = "visual-diff";
@@ -194,6 +195,57 @@ const PAGES_ARG = applyPageContract({
   pages: [...new Set(PAGES.map((p) => p.path))],
 });
 
+/* Pages that draw wall-clock text, and so must carry the `live` hook the masks above find. */
+const LIVE_PAGES = new Set([
+  "/",
+  "/tools/zoned-earth/",
+  "/tools/zone-planner/",
+]);
+
+/* `--resolve-only`: each page answers 200, the live pages carry `live` and the stage a canvas mask
+   needs, and the two interaction triggers (search, mobile menu) are there. */
+if (args.includes("--resolve-only")) {
+  if (!EXTERNAL_BASE) {
+    console.error("visual-snapshot: --resolve-only needs --base <url>.");
+    process.exit(2);
+  }
+  const browser = await chromium.launch();
+  const page = await (await browser.newContext()).newPage();
+  await blockOffSite(page, BASE_URL);
+  let failed = 0;
+  for (const p of PAGES.filter(
+    (q) => !PAGES_ARG || PAGES_ARG.includes(q.path),
+  )) {
+    const response = await page.goto(`${BASE_URL}${p.path}`, {
+      waitUntil: "networkidle",
+    });
+    if (LIVE_PAGES.has(p.path))
+      await page
+        .waitForSelector(gate("live"), { state: "attached", timeout: 10_000 })
+        .catch(() => {});
+    const miss = [];
+    if (response?.status() !== 200)
+      miss.push(`the page answered HTTP ${response?.status() ?? "none"}`);
+    else {
+      const asks = [];
+      if (LIVE_PAGES.has(p.path))
+        asks.push({ name: "live regions", sel: gate("live"), min: 1 });
+      if (p.path === "/")
+        asks.push({
+          name: "search trigger",
+          sel: "[data-open-modal]",
+          min: 1,
+        });
+      miss.push(...(await resolveMisses(page, asks)));
+    }
+    failed += miss.length ? 1 : 0;
+    console.log(`${miss.length ? "FAIL" : "ok  "} resolve ${p.path}`);
+    for (const m of miss) console.log(`       ${m}`);
+  }
+  await browser.close();
+  process.exit(failed ? 1 : 0);
+}
+
 if (label === "diff") {
   await diffSnapshots();
   // Exit with whatever diffSnapshots set (0 if all identical, 1 if any
@@ -215,7 +267,7 @@ const VIEWPORTS = [
 ];
 
 // The globe's clock readouts re-render every second (see src/lib/globe.ts's
-// `setInterval(tickClocks, 1000)` and zone-clock-list.ts's `.gmt-clock-time`),
+// `setInterval(tickClocks, 1000)` and zone-clock-list.ts's clock rows),
 // so home/zoned-earth are never byte-identical run to run on their own —
 // confirmed by diffing two builds with no code change between them, where
 // only this text differed pixel-for-pixel. Masking it is what makes the
@@ -239,45 +291,23 @@ const VIEWPORTS = [
  * pins the clock and drives a real GPU — neither of which this harness can do.
  */
 const LIVE_CLOCK_SELECTORS = [
-  ".gmt-clock-time",
-  ".gmt-clock-date",
-  ".gmt-clock-shift",
-  /* The row that holds all three. The masks follow each text's own box, whose
-     width changes with the text ("Today" against "Tomorrow", "9:05" against
-     "10:05"), so the edges of the smaller boxes differ between captures; this
-     one is a fixed width. */
-  ".gmt-clock-row2",
-  /* A zone's DST badge and offset are read at "now", so a clock change between
-     two captures moves them. */
-  ".gmt-clock-dst",
-  ".gmt-clock-offset",
-  ".gmt-globe-tooltip-time",
-  ".gmt-globe-tooltip-date",
-  ".gmt-globe-stage canvas",
-  /* The Zone Planner opens on now rounded forward to five minutes, and
-     everything it draws is a function of that reference time: the datetime
-     field, each pinned clock (dial, time, date, offset, DST badge, crossed
-     switch), the readout, the jump status and the clock-change marks on the
-     slider track, which sit at an offset from the reference time. */
-  '.gmt-scrubber [data-role="anchor"]',
-  ".gmt-scrubber-clock-face",
-  /* The dial draws past its container on a narrow screen, so its own box is
-     masked too. */
-  ".gmt-scrubber-clock-face svg",
-  ".gmt-scrubber-clock-time",
-  ".gmt-scrubber-clock-date",
-  ".gmt-scrubber-clock-offset",
-  ".gmt-scrubber-dst",
-  ".gmt-scrubber-switch",
-  ".gmt-scrubber-readout",
-  ".gmt-scrubber-jump-status",
-  ".gmt-scrubber-marks",
+  /* Every region whose text or drawing is a function of the wall clock carries the `live` token
+     of `data-gate` (the clock rows, the globe tooltip's time and date, a zone's DST badge and
+     offset, and everything the Zone Planner draws from its reference time: the datetime field,
+     each pinned clock, the readout, the jump status and the marks on the slider track). The row
+     that holds a clock's three texts is masked as well as the texts, because the masks follow each
+     text's own box, whose width changes with the text ("Today" against "Tomorrow"), so the edges
+     of the smaller boxes differ between captures; the row is a fixed width. */
+  gate("live"),
+  /* The dial draws past its container on a narrow screen, so its own box is masked too. */
+  `${gate("live-face")} svg`,
+  gate("globe-stage") + " canvas",
 ];
 
 /* The planner's own dial (the "Your time zone" one in particular) is drawn above
    Playwright's mask overlay, so its hands show through and move with the clock.
    Hidden in the capture as well as masked; `visibility` keeps its box. */
-const LIVE_CLOCK_HIDE_CSS = ".gmt-scrubber-clock-face { visibility: hidden; }";
+const LIVE_CLOCK_HIDE_CSS = `${gate("live-face")} { visibility: hidden; }`;
 
 // Confirms both that something is listening on PORT and that it's actually serving
 // THIS worktree's build, not a stray daemon left running by another worktree or an
@@ -396,6 +426,7 @@ function recordSnapshotFinding(name, line) {
         ? "snapshot-error"
         : "pixel-diff",
     page: page?.path ?? null,
+    target: "page",
     selector: name,
     browser: "chromium",
     width: m ? (m[3] === "desktop" ? 1440 : 390) : null,

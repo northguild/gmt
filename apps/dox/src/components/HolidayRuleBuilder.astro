@@ -22,7 +22,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderHolidayRuleBuilderTemplate();
+const html = renderHolidayRuleBuilderTemplate("holiday-rule-builder", {}).value;
 ---
 
 {
@@ -41,7 +41,7 @@ const html = renderHolidayRuleBuilderTemplate();
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("holidays");
     document
-      .querySelectorAll<HTMLElement>(".gmt-holiday-rule-builder")
+      .querySelectorAll<HTMLElement>(`[data-widget="holiday-rule-builder"]`)
       .forEach((el) => {
         mountHolidayRuleBuilder(el, seed, new AbortController().signal).catch(
           (error) => showUnavailable(el, error),

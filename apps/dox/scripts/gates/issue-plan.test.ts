@@ -14,12 +14,15 @@ import {
   planIssueActions,
 } from "./issue-plan.mjs";
 
+const TARGET = 'widget:foo › slider "Week #"';
+
 /** The shapes the runner's `summary.json` holds, reduced to what the planner reads. */
 const finding = (over: Record<string, unknown> = {}) => ({
   kind: "finding",
   gate: "a11y-axe",
   rule: "color-contrast",
   page: "/tools/foo/",
+  target: TARGET,
   selector: "#a > b",
   browser: "chromium",
   width: 390,
@@ -69,9 +72,10 @@ describe("planIssueActions", () => {
     const [a] = actions as any[];
     expect(a.kind).toBe("open");
     expect(a.title).toBe("Dox gate: color-contrast on /tools/foo/ (a11y-axe)");
-    expect(a.labels).toEqual(["bug", "dox-gate"]);
+    expect(a.labels).toEqual(["dox-gate"]);
+    expect(a.labels).not.toContain("bug");
     expect(a.body.split("\n")[0]).toBe(
-      marker("a11y-axe:color-contrast:/tools/foo/:#a > b"),
+      marker(`a11y-axe:color-contrast:/tools/foo/:${TARGET}`),
     );
     expect(a.body).toContain(
       "pnpm --filter dox gates --only a11y-axe --pages /tools/foo/ --browsers chromium",
@@ -81,7 +85,7 @@ describe("planIssueActions", () => {
   });
 
   it("comments on the lowest-numbered open issue that matches", () => {
-    const key = "a11y-axe:color-contrast:/tools/foo/:#a > b";
+    const key = `a11y-axe:color-contrast:/tools/foo/:${TARGET}`;
     const open = [
       issue(40, `${marker(key)}\nbody`),
       issue(12, `${marker(key)}\nbody`),
@@ -98,7 +102,7 @@ describe("planIssueActions", () => {
   });
 
   it("does not match a marker on line 2, or an issue without the dox-gate label", () => {
-    const key = "a11y-axe:color-contrast:/tools/foo/:#a > b";
+    const key = `a11y-axe:color-contrast:/tools/foo/:${TARGET}`;
     expect(matches(issue(1, `intro\n${marker(key)}`), key)).toBe(false);
     expect(matches(issue(1, marker(key), ["bug"]), key)).toBe(false);
     expect(matches(issue(1, `${marker(key)}\nx`), key)).toBe(true);
@@ -141,23 +145,33 @@ describe("planIssueActions", () => {
     expect(actions[0].body).toContain("| webkit-1 | webkit | 390 | dark |");
   });
 
-  it("trims and collapses the selector in the key", () => {
+  it("keys on the target and ignores the selector", () => {
     expect(keyOf(finding({ selector: "  #a   >\n b " }) as any)).toBe(
-      "a11y-axe:color-contrast:/tools/foo/:#a > b",
+      `a11y-axe:color-contrast:/tools/foo/:${TARGET}`,
     );
     const entries = collect([
       leg("chromium-1", [
         failRow([
           finding({ selector: "#a  > b" }),
-          finding({ selector: "#a >   b" }),
+          finding({ selector: "div:nth-of-type(3) > b" }),
         ]),
       ]),
     ]);
     expect(entries).toHaveLength(1);
+    expect(
+      collect([
+        leg("chromium-1", [
+          failRow([
+            finding(),
+            finding({ target: 'widget:foo › slider "End"' }),
+          ]),
+        ]),
+      ]),
+    ).toHaveLength(2);
   });
 
   it("escapes quotes and dashes of a selector in the marker so line 1 stays one comment", () => {
-    const line = marker('a:r:/:a[rel="x"] > b -- c');
+    const line = marker('a:r:/:widget:x › button "Go"[2] > b -- c');
     expect(line.startsWith('<!-- dox-gate key="')).toBe(true);
     expect(line.endsWith('" -->')).toBe(true);
     expect(line.slice(4, -3)).not.toContain("-->");
@@ -170,11 +184,11 @@ describe("planIssueActions", () => {
       [],
       context,
     ) as any[];
-    expect(a.title).toBe("Dox nightly could not run the firefox-2 leg");
+    expect(a.title).toBe("Dox weekly could not run the firefox-2 leg");
     expect(a.body.split("\n")[0]).toBe(
       marker("dox-gate:could-not-run:firefox-2"),
     );
-    expect(a.labels).toEqual(["bug", "dox-gate"]);
+    expect(a.labels).toEqual(["dox-gate"]);
     expect(a.body).toContain("did not say how the leg ended");
     expect(a.body).toContain("lost its upload");
   });
@@ -191,7 +205,7 @@ describe("planIssueActions", () => {
     expect(actions).toHaveLength(1);
     const [a] = actions;
     expect(a.kind).toBe("open");
-    expect(a.title).toBe("Dox nightly: leg findings did not reach the report");
+    expect(a.title).toBe("Dox weekly: leg findings did not reach the report");
     expect(a.body.split("\n")[0]).toBe(marker(NOT_UPLOADED_KEY));
     expect(a.body).toContain(`\`${UPLOAD_STEP}\``);
     expect(a.body).toContain(`\`${DOWNLOAD_STEP}\``);
@@ -229,7 +243,7 @@ describe("planIssueActions", () => {
     expect(a.body.split("\n")[0]).toBe(
       marker("dox-gate:could-not-run:chromium-1"),
     );
-    expect(a.title).toBe("Dox nightly could not run the chromium-1 leg");
+    expect(a.title).toBe("Dox weekly could not run the chromium-1 leg");
     expect(a.body).toContain("wrote no summary.json");
     expect(a.body).toContain("Its job ended `failure`");
     expect(a.body).toContain(`\`${GATES}\` (\`failure\`)`);
@@ -324,7 +338,7 @@ describe("planIssueActions", () => {
     expect(flood).toHaveLength(1);
     expect(flood[0].kind).toBe("open");
     expect(flood[0].body.split("\n")[0]).toBe(marker(FLOOD_KEY));
-    expect(flood[0].body).toContain("a11y-axe:color-contrast:/p10/:#a > b");
+    expect(flood[0].body).toContain(`a11y-axe:color-contrast:/p10/:${TARGET}`);
     expect(flood[0].body).toContain("/p0/");
   });
 
@@ -332,7 +346,7 @@ describe("planIssueActions", () => {
     const rows = Array.from({ length: 12 }, (_, i) =>
       finding({ page: `/p${i}/` }),
     );
-    const known = "a11y-axe:color-contrast:/p0/:#a > b";
+    const known = `a11y-axe:color-contrast:/p0/:${TARGET}`;
     const actions = planIssueActions(
       [leg("chromium-1", [failRow(rows)])],
       [issue(3, marker(FLOOD_KEY)), issue(4, marker(known))],

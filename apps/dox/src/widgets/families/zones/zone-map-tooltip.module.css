@@ -1,0 +1,47 @@
+.root {
+  display: grid;
+  gap: var(--gmt-space-1);
+  justify-items: start;
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-ice);
+}
+
+.name {
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-2);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.time {
+  font-size: 0.8rem;
+  color: var(--gmt-cyan-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.offset {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-spring-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (forced-colors: active) {
+  .root,
+  .time,
+  .offset {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .time,
+  .offset {
+    color: var(--gmt-ice);
+  }
+}

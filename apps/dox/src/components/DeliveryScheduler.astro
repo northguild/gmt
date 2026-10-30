@@ -34,7 +34,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderDeliverySchedulerTemplate();
+const html = renderDeliverySchedulerTemplate("delivery-scheduler", {}).value;
 ---
 
 {
@@ -52,10 +52,12 @@ const html = renderDeliverySchedulerTemplate();
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("delivery");
-    document.querySelectorAll<HTMLElement>(".gmt-delivery").forEach((el) => {
-      mountDeliveryScheduler(el, seed, new AbortController().signal).catch(
-        (error) => showUnavailable(el, error),
-      );
-    });
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="delivery-scheduler"]')
+      .forEach((el) => {
+        mountDeliveryScheduler(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
   }
 </script>

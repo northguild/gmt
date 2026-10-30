@@ -1,0 +1,219 @@
+/* <gmt-range>: a native range input with a value chip riding the thumb.
+   Tokens only. Module rules are unlayered, so they beat every layered global sheet. */
+
+.root {
+  container-type: inline-size;
+  position: relative;
+  display: grid;
+  inline-size: 100%;
+
+  /* Room for the chip, so it never pushes a neighbour. */
+  padding-block-start: 1.75rem;
+  font-size: clamp(0.8125rem, 0.78rem + 0.15vw, 0.9375rem);
+}
+
+.input {
+  appearance: none;
+  margin: 0;
+  inline-size: 100%;
+  block-size: 1.75rem;
+  min-block-size: var(--gmt-target-min);
+  background: transparent;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+
+  &::-webkit-slider-runnable-track {
+    block-size: 0.625rem;
+    border: 1px solid var(--gmt-hairline);
+    border-radius: var(--gmt-radius-sm);
+    background: linear-gradient(
+      to right,
+      var(--gmt-cyan) calc(var(--gmt-range-pct, 0) * 1%),
+      color-mix(in srgb, var(--gmt-ice) 22%, transparent) 0
+    );
+  }
+
+  &:dir(rtl)::-webkit-slider-runnable-track {
+    background: linear-gradient(
+      to left,
+      var(--gmt-cyan) calc(var(--gmt-range-pct, 0) * 1%),
+      color-mix(in srgb, var(--gmt-ice) 22%, transparent) 0
+    );
+  }
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    inline-size: 1.5rem;
+    block-size: 1.75rem;
+    translate: 0 -0.6875rem;
+    border: 2px solid var(--gmt-void);
+    border-radius: var(--gmt-radius-sm);
+    background: var(--gmt-cyan);
+    box-shadow: 0 0 0 1px var(--gmt-cyan);
+    transition: background-color var(--gmt-motion-fast) var(--gmt-easing);
+  }
+
+  &::-moz-range-track {
+    block-size: 0.625rem;
+    border: 1px solid var(--gmt-hairline);
+    border-radius: var(--gmt-radius-sm);
+    background: color-mix(in srgb, var(--gmt-ice) 22%, transparent);
+  }
+
+  &::-moz-range-progress {
+    block-size: 0.625rem;
+    border-radius: var(--gmt-radius-sm);
+    background: var(--gmt-cyan);
+  }
+
+  &::-moz-range-thumb {
+    inline-size: 1.5rem;
+    block-size: 1.75rem;
+    box-sizing: border-box;
+    border: 2px solid var(--gmt-void);
+    border-radius: var(--gmt-radius-sm);
+    background: var(--gmt-cyan);
+    box-shadow: 0 0 0 1px var(--gmt-cyan);
+    transition: background-color var(--gmt-motion-fast) var(--gmt-easing);
+  }
+}
+
+.chip {
+  position: absolute;
+  display: inline-grid;
+
+  /* An absolute box is as wide as the room right of its left edge when its text is wider, so
+     near the track's end the chip shrank. It is as wide as its widest reading instead. */
+  inline-size: max-content;
+  inset-block-start: 0;
+
+  /* The thumb's centre: the track is the width less one thumb. */
+  inset-inline-start: calc(
+    (100% - 1.5rem) * var(--gmt-range-pct, 0) / 100 + 0.75rem
+  );
+  translate: -50% 0;
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface-2);
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+
+  &:dir(rtl) {
+    translate: 50% 0;
+  }
+}
+
+/* The live text and a hidden sample of each end's text share one cell, so the chip is as wide as
+   the widest reading and does not resize while the thumb moves. */
+.chip > * {
+  grid-area: 1 / 1;
+  text-align: center;
+}
+
+.chip > [data-sample] {
+  block-size: 0;
+  overflow: hidden;
+  visibility: hidden;
+
+  &::after {
+    content: attr(data-sample);
+  }
+}
+
+.ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--gmt-ice-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Too narrow for the end labels: the chip and the thumb already say the value. */
+@container (inline-size < 12rem) {
+  .ends {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .input {
+    &::-webkit-slider-runnable-track {
+      border-color: ButtonText;
+      background: ButtonFace;
+    }
+
+    &::-webkit-slider-thumb {
+      border-color: ButtonText;
+      background: Highlight;
+      box-shadow: none;
+    }
+
+    &::-moz-range-track {
+      border-color: ButtonText;
+      background: ButtonFace;
+    }
+
+    &::-moz-range-progress {
+      background: Highlight;
+    }
+
+    &::-moz-range-thumb {
+      border-color: ButtonText;
+      background: Highlight;
+      box-shadow: none;
+    }
+
+    &:focus-visible {
+      outline: 2px solid Highlight;
+    }
+
+    &:disabled {
+      opacity: 1;
+    }
+  }
+
+  .chip {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .ends {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .input {
+    &:focus-visible {
+      outline-width: 3px;
+    }
+
+    &::-webkit-slider-runnable-track,
+    &::-moz-range-track {
+      border-color: var(--gmt-ice);
+    }
+  }
+
+  .chip {
+    border-color: var(--gmt-ice);
+  }
+
+  .ends {
+    color: var(--gmt-ice);
+  }
+}

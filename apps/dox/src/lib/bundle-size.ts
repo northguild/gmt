@@ -9,7 +9,7 @@ import corpus from "../generated/reference/gmt-corpus.json";
 
 type Measured = { minified: number; gzipped: number; budget: number | null };
 
-export type BundleRow = {
+type BundleRow = {
   name: string;
   importLine: string;
   minified: number;
@@ -21,7 +21,7 @@ export type BundleRow = {
 };
 
 /** Bytes as kB with one decimal. */
-export const kb = (bytes: number): string => (bytes / 1000).toFixed(1);
+const kb = (bytes: number): string => (bytes / 1000).toFixed(1);
 
 /** The import that loads one entry: the package, the polyfill, or one function by its module. */
 function importOf(name: string): string {

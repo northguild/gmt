@@ -1,0 +1,180 @@
+/* gnssRing: the odometer ring. SVG classes cannot use a container query, so the drawing just
+   fills its box (up to 21.25rem) and the frame decides how wide that box is. */
+
+.ring {
+  inline-size: 100%;
+  max-inline-size: 21.25rem;
+  justify-self: center;
+
+  & svg {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    overflow: visible;
+  }
+}
+
+.tick {
+  stroke: var(--gmt-border-strong);
+  stroke-width: 1;
+
+  &[data-major="true"] {
+    stroke: var(--gmt-ice-dim);
+    stroke-width: 1.5;
+  }
+}
+
+.tickLabel {
+  fill: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.spin {
+  transform-origin: 170px 170px;
+  transform: rotate(var(--turn, 0deg));
+}
+
+.hand line {
+  stroke: var(--gmt-series-1);
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+
+.track {
+  fill: none;
+  stroke: var(--gmt-border-strong);
+  stroke-width: 12;
+  opacity: 0.3;
+}
+
+.fill {
+  fill: none;
+  stroke: var(--gmt-series-1);
+  stroke-width: 12;
+}
+
+.dot {
+  fill: var(--gmt-surface);
+  stroke: var(--gmt-ice-dim);
+  stroke-width: 1.5;
+}
+
+.todayMark {
+  stroke: var(--gmt-ice);
+  stroke-width: 2.5;
+}
+
+.eraPlate {
+  fill: var(--gmt-surface);
+}
+
+.era {
+  fill: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8125rem;
+}
+
+.lap {
+  &[data-gap="true"] .track {
+    stroke-dasharray: 2 4;
+  }
+
+  &[data-chosen="true"] {
+    & .track {
+      stroke: var(--gmt-series-1);
+      opacity: 0.3;
+    }
+
+    & .dot {
+      fill: var(--gmt-series-1);
+      stroke: var(--gmt-surface);
+      stroke-width: 2;
+      filter: drop-shadow(0 0 4px var(--gmt-series-1));
+    }
+
+    & .era {
+      font-weight: 700;
+    }
+  }
+
+  &[data-empty="true"] .dot {
+    display: none;
+  }
+}
+
+.cap {
+  fill: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: var(--gmt-tracking-wider);
+}
+
+.week {
+  fill: var(--gmt-ice);
+  font-family: var(--gmt-font-display);
+  font-size: 1.625rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sub {
+  fill: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Signal lost: faint laps, no hand, and the amber words in the hub. */
+.ring:is([data-state="lost"], [data-state="idle"]) .lap {
+  opacity: 0.55;
+}
+
+.ring[data-state="lost"] :is(.cap, .week) {
+  fill: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8125rem;
+}
+
+@media (forced-colors: active) {
+  .ring svg {
+    forced-color-adjust: none;
+  }
+
+  .tick,
+  .track,
+  .hand line,
+  .todayMark {
+    stroke: CanvasText;
+  }
+
+  .fill {
+    stroke: Highlight;
+  }
+
+  .tickLabel,
+  .cap,
+  .week,
+  .sub,
+  .era,
+  .ring[data-state="lost"] :is(.cap, .week) {
+    fill: CanvasText;
+    stroke: none;
+  }
+
+  .dot {
+    fill: Canvas;
+    stroke: CanvasText;
+  }
+
+  .lap[data-chosen="true"] .dot {
+    fill: Highlight;
+    filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .track {
+    opacity: 0.6;
+  }
+}

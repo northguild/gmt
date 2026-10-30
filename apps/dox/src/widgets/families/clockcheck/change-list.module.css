@@ -1,0 +1,101 @@
+/* The clock-change lists: a card for each zone, a line for each year. Full borders only. */
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: 0.8125rem;
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Two years of rows, up to two changes each with their UTC lines, held before the answer arrives. */
+.group {
+  min-block-size: 16.25rem;
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.title {
+  margin: 0 0 var(--gmt-space-2);
+  font-size: 0.8125rem;
+}
+
+/* One column that may be narrower than its widest line: a group in a 300px page is 1px short of a
+   change's natural width, and the lines wrap at their spaces instead of widening the page. */
+.changes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  & > li {
+    margin: 0;
+    font-size: 0.8125rem;
+  }
+}
+
+.change {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--gmt-space-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.when {
+  white-space: nowrap;
+}
+
+.shift {
+  text-align: end;
+}
+
+.utc {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  color: var(--gmt-ice-dim);
+}
+
+.none {
+  color: var(--gmt-ice-dim);
+}
+
+@media (forced-colors: active) {
+  .group {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .utc,
+  .none,
+  .note {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .group {
+    border-color: CanvasText;
+  }
+
+  .utc,
+  .none {
+    color: CanvasText;
+  }
+
+  .note {
+    color: CanvasText;
+  }
+}

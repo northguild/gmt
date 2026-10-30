@@ -1,0 +1,234 @@
+/* The "Your browser" card: the verdict on top (a full border that takes the answer's colour), the
+   kit table under it, and the button row. Nothing here moves when the answer arrives: the inline
+   script picks one of four finished answers before first paint. Full borders only. */
+
+.verdict {
+  display: grid;
+  gap: var(--gmt-space-2);
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+  font-size: 0.9375rem;
+  font-weight: 600;
+
+  &[data-state="ok"] {
+    border-color: var(--gmt-spring-ink);
+  }
+
+  &[data-state="bad"] {
+    border-color: var(--gmt-danger);
+  }
+}
+
+.variant {
+  display: grid;
+  gap: var(--gmt-space-2);
+
+  &[hidden] {
+    display: none;
+  }
+
+  & p {
+    margin: 0;
+  }
+}
+
+.more {
+  font-size: 0.875rem;
+  font-weight: 400;
+
+  & a {
+    color: var(--gmt-cyan-ink);
+  }
+}
+
+/* The table is the kit's. Its columns: Place takes what the two short offset columns leave, and
+   the notes in the headers wrap in a narrow card. Under 21rem the cells tighten so the table fits
+   the card without a sideways scroll. */
+.probe {
+  min-inline-size: 0;
+
+  & table :is(th, td) {
+    font-size: 0.8125rem;
+  }
+
+  & table th:not(:first-child) {
+    inline-size: 1%;
+  }
+
+  & table thead th {
+    white-space: normal;
+    vertical-align: bottom;
+    color: var(--gmt-ice);
+  }
+
+  & table code {
+    white-space: nowrap;
+  }
+
+  & table caption {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@container (inline-size < 21rem) {
+  .probe table :is(th, td) {
+    padding-inline: var(--gmt-space-1);
+  }
+}
+
+.city {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+
+  /* A small round purple dot marks a place whose clocks stop changing. */
+  &::before {
+    content: "";
+    display: inline-block;
+    box-sizing: border-box;
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    margin-inline-end: var(--gmt-space-2);
+    border: 1px solid var(--gmt-dst-purple-ink);
+    border-radius: 50%;
+    background: color(from var(--gmt-dst-purple-ink) srgb r g b / 45%);
+  }
+}
+
+.zoneid {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gmt-ice-dim);
+  font-size: 0.75rem;
+  white-space: normal;
+}
+
+.when {
+  display: block;
+  color: var(--gmt-ice-dim);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.blindNote {
+  margin: 0;
+  max-inline-size: none;
+  color: var(--gmt-ice-dim);
+  font-size: 0.8125rem;
+  text-wrap: balance;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-3);
+
+  /* A check in flight: the button keeps its size and its name, and a ring turns where the label
+     was. No text appears beside it, so nothing moves. */
+  & button {
+    position: relative;
+  }
+
+  & button[aria-busy="true"] {
+    color: transparent;
+    cursor: progress;
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      inline-size: 1.125rem;
+      block-size: 1.125rem;
+      margin: auto;
+      border-radius: 50%;
+      background: conic-gradient(transparent 0 10%, var(--gmt-cyan-ink));
+      mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - 2px),
+        var(--gmt-surface) calc(100% - 2px)
+      );
+      animation: spin var(--gmt-motion-spin-duration) linear infinite;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* One line stays reserved, so a message arriving moves nothing below it. It has its own row at every
+   width: beside the button it would wrap under it once a longer message ("The check could not
+   finish.") no longer fits a narrow card, and the card would grow by a line. */
+.status {
+  flex: 1 0 100%;
+  min-block-size: 1lh;
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: 0.8125rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actions button[aria-busy="true"]::after {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .verdict {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .verdict[data-state="ok"],
+  .verdict[data-state="bad"] {
+    border-color: Highlight;
+  }
+
+  .more a {
+    color: LinkText;
+  }
+
+  .city::before {
+    border-color: CanvasText;
+    background: CanvasText;
+  }
+
+  .zoneid,
+  .when,
+  .blindNote,
+  .status {
+    color: CanvasText;
+  }
+
+  .actions button[aria-busy="true"]::after {
+    display: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .verdict {
+    border-color: var(--gmt-ice);
+  }
+
+  .zoneid,
+  .when,
+  .blindNote,
+  .status {
+    color: var(--gmt-ice);
+  }
+}

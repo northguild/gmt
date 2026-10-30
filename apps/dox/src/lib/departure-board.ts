@@ -30,7 +30,7 @@ import type { TransportMode } from "./transport-icons";
 export const MAX_DEPARTURES = 6;
 export const CUSTOM_PRESET_ID = "custom";
 
-export type BoardForm = "list" | "headway";
+type BoardForm = "list" | "headway";
 
 export interface DepartureState {
   form: BoardForm;
@@ -66,7 +66,7 @@ export interface DepartureBoardArgs {
 
 type Timetable = readonly string[] | Headway;
 
-export interface DeparturePreset {
+interface DeparturePreset {
   id: string;
   label: string;
   description: string;
@@ -434,7 +434,7 @@ export function departureIconMode(mode: string): TransportMode | null {
 // Why ""
 // ---------------------------------------------------------------------------
 
-export type DepartureReasonKind =
+type DepartureReasonKind =
   | "no-arrival"
   | "invalid-after"
   | "invalid-connection"
@@ -448,14 +448,14 @@ export type DepartureReasonKind =
   | "after-window";
 
 /** Why an arrival is not a moment the library reads. */
-export type MomentFault =
+type MomentFault =
   | "not-a-moment"
   | "no-offset"
   | "zone-without-offset"
   | "impossible-date"
   | "zone-mismatch";
 
-export interface DepartureReason {
+interface DepartureReason {
   kind: DepartureReasonKind;
   /** For `invalid-after`: the true reason, found by reading the text. */
   fault?: MomentFault;
@@ -500,7 +500,7 @@ const MOMENT_PATTERN =
  * text. Only called after the probe said `""`, so some fault exists; this names
  * the one the text shows. Diagnosis for the reader, never a result.
  */
-export function momentFault(text: string): MomentFault {
+function momentFault(text: string): MomentFault {
   const m = MOMENT_PATTERN.exec(text);
   if (!m) return "not-a-moment";
   const [, offset, zone] = m;
@@ -692,9 +692,9 @@ export function railWindow(state: DepartureState): RailWindow | null {
 }
 
 /** The most departure ticks the rail draws before it draws a patterned run. */
-export const MAX_RAIL_TICKS = 60;
+const MAX_RAIL_TICKS = 60;
 
-export interface RailDepartures {
+interface RailDepartures {
   /** Departures to draw as ticks, in ms, inside the window. */
   ticks: number[];
   /** Set when a headway is too short to draw tick by tick. */

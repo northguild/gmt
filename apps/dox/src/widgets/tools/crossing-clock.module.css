@@ -1,0 +1,159 @@
+/*
+ * Crossing Clock: what only this tool needs. The sections, preset, fields, code frame and
+ * aside are the kit's; the faces and the strip are the clock family's. This sheet lays the two
+ * faces out around the connector and styles the readings under them.
+ *
+ * A five-row grid, not two independent columns: every row is shared by both columns, so
+ * the headings, faces, times, offsets and dates line up exactly, and the connector, placed in
+ * the face row alone, centres on that row's height. Nothing here is a verdict colour. Amber is
+ * the sentinel's alone.
+ */
+
+/* A field group's box: a wide one takes the whole row (a full zoned string shows unclipped). */
+.box {
+  min-inline-size: 0;
+
+  &[data-wide] {
+    grid-column: 1 / -1;
+  }
+}
+
+.clocks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, 11rem) minmax(0, 1fr);
+  grid-template-areas:
+    "eh . xh"
+    "ef co xf"
+    "et . xt"
+    "em . xm"
+    "ed . xd";
+  gap: var(--gmt-space-1) var(--gmt-space-4);
+  place-items: start center;
+  margin-block: var(--gmt-space-3);
+  min-inline-size: 0;
+
+  [data-area="eh"] {
+    grid-area: eh;
+  }
+
+  [data-area="ef"] {
+    grid-area: ef;
+  }
+
+  [data-area="et"] {
+    grid-area: et;
+  }
+
+  [data-area="em"] {
+    grid-area: em;
+  }
+
+  [data-area="ed"] {
+    grid-area: ed;
+  }
+
+  [data-area="xh"] {
+    grid-area: xh;
+  }
+
+  [data-area="xf"] {
+    grid-area: xf;
+  }
+
+  [data-area="xt"] {
+    grid-area: xt;
+  }
+
+  [data-area="xm"] {
+    grid-area: xm;
+  }
+
+  [data-area="xd"] {
+    grid-area: xd;
+  }
+
+  [data-area="co"] {
+    grid-area: co;
+  }
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+/* The face host keeps its square before the face arrives, so the page does not move. */
+.face {
+  inline-size: clamp(6rem, 20cqi, 8.5rem);
+  aspect-ratio: 1 / 1;
+}
+
+.time {
+  margin: 0;
+  min-block-size: 1lh;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xl, 1.5rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+}
+
+/* Text, so the ink variant: raw cyan misses 7:1 on the light theme. */
+.meta {
+  margin: 0;
+  min-block-size: 1lh;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-cyan-ink);
+  white-space: nowrap;
+}
+
+.date {
+  margin: 0;
+  min-block-size: 1lh;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+@container (inline-size < 30rem) {
+  .clocks {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "eh"
+      "ef"
+      "et"
+      "em"
+      "ed"
+      "co"
+      "xh"
+      "xf"
+      "xt"
+      "xm"
+      "xd";
+  }
+
+  .face {
+    inline-size: clamp(7rem, 40cqi, 9rem);
+  }
+}
+
+@media (prefers-contrast: more) {
+  .heading,
+  .date {
+    color: var(--gmt-ice);
+  }
+}
+
+@media (forced-colors: active) {
+  .heading,
+  .time,
+  .meta,
+  .date {
+    color: CanvasText;
+  }
+}

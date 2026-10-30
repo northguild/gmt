@@ -1,0 +1,176 @@
+/*
+ * handoffTable: a bevelled frame, a header row on an opaque surface and hairline rows. It keeps
+ * the height of its reserved rows in every state. The wrapper scrolls sideways when the container
+ * is a little too narrow for the columns; it never clips them. The first and last cells keep
+ * clear of the bevelled corners. Rows are grid rows of equal columns, so the header and the body
+ * line up without a native table's layout.
+ */
+
+.wrap {
+  position: relative;
+  overflow-x: auto;
+  border: 1px solid var(--gmt-border);
+  border-block-start-color: var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-glass-tint-subtle);
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+.table {
+  min-inline-size: 40rem;
+  font-size: var(--gmt-text-sm);
+
+  @container (inline-size < 34rem) {
+    min-inline-size: 0;
+  }
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-block-end: 1px solid var(--gmt-border);
+
+  &[data-blank] {
+    visibility: hidden;
+  }
+
+  &:last-child {
+    border-block-end: 0;
+  }
+}
+
+.heading,
+.cell {
+  min-inline-size: 0;
+  padding: var(--gmt-space-2);
+  text-align: start;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  &:first-child {
+    padding-inline-start: var(--gmt-space-3);
+  }
+
+  &:last-child {
+    padding-inline-end: var(--gmt-space-3);
+  }
+}
+
+.head .row {
+  background: var(--gmt-surface);
+  border-block-end-color: var(--gmt-border-strong);
+}
+
+.heading {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.cell {
+  color: var(--gmt-ice);
+}
+
+/* The words for a table with no row to show sit over the reserved rows. */
+.slot {
+  position: absolute;
+  inset-inline: var(--gmt-space-3);
+  inset-block-start: calc(var(--gmt-text-xs) * 2.6 + var(--gmt-space-2));
+}
+
+.empty {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  color: var(--gmt-ice);
+}
+
+/* A narrow container stacks each row as "label: value" lines, the label from `data-label`. The
+   header row stays for assistive technology, hidden from sight. */
+@container (inline-size < 34rem) {
+  .head {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .row {
+    display: block;
+    padding: var(--gmt-space-2) var(--gmt-space-3);
+  }
+
+  .cell {
+    display: block;
+    padding: 2px 0;
+
+    &:first-child,
+    &:last-child {
+      padding-inline: 0;
+    }
+
+    &:first-child {
+      font-weight: 700;
+    }
+
+    &[data-label]::before {
+      content: attr(data-label) ": " / "";
+      font-family: var(--gmt-font-mono);
+      font-size: var(--gmt-text-xs);
+      text-transform: uppercase;
+      letter-spacing: var(--gmt-tracking-wide);
+      color: var(--gmt-ice-dim);
+    }
+
+    &:first-child::before {
+      content: none;
+    }
+  }
+
+  .slot {
+    inset-block-start: var(--gmt-space-2);
+  }
+}
+
+@media (forced-colors: active) {
+  .wrap {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .row {
+    border-block-end-color: CanvasText;
+  }
+
+  .heading,
+  .cell,
+  .empty {
+    color: CanvasText;
+  }
+
+  .wrap:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .wrap,
+  .row {
+    border-color: var(--gmt-ice);
+  }
+
+  .heading {
+    color: var(--gmt-ice);
+  }
+}

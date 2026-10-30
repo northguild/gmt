@@ -24,7 +24,7 @@
 
 import { Temporal } from "@js-temporal/polyfill";
 import { CURATED_TIMEZONES } from "./curated-timezones";
-import { escapeAttr, escapeHtml } from "./widget-ui";
+import { codeSpan, escapeAttr, escapeHtml } from "./widget-ui";
 
 // ---------------------------------------------------------------------------
 // Zones
@@ -84,7 +84,7 @@ export interface ScheduleLeg {
   destination?: string;
 }
 
-export interface LegTime {
+interface LegTime {
   arrival: string;
   localArrival: string;
   dwellAfter: string;
@@ -160,7 +160,7 @@ export function legObject(f: LegFields): ScheduleLeg {
 
 /**
  * The call's arguments as source text: `[{ … }, { … }]`, then
- * `, { startTimeZone: "…" }` only when given — for `renderCallLine`. `plain`
+ * `, { startTimeZone: "…" }` only when given — for the call line. `plain`
  * is exactly the JSDoc spelling, so V2's and V4's calls equal the library's
  * own documented call text verbatim.
  */
@@ -179,8 +179,7 @@ export function scheduleCallSource(
     if (leg.mode !== undefined) entries.push(`mode: ${str(leg.mode)}`);
     return `{ ${entries.join(", ")} }`;
   };
-  const htmlStr = (s: string) =>
-    `<span class="gmt-code-str">${escapeHtml(JSON.stringify(s))}</span>`;
+  const htmlStr = (s: string) => codeSpan("str", JSON.stringify(s));
   const plainStr = (s: string) => JSON.stringify(s);
 
   const legsHtml = `[${legs.map((l) => legHtml(l, htmlStr)).join(", ")}]`;
@@ -363,7 +362,7 @@ export type NullReason =
   | "invalid-dwell"
   | "out-of-range";
 
-export interface Diagnosis {
+interface Diagnosis {
   /** The failing leg's 0-based index, or `-1` for `invalid-start-zone`. */
   leg: number;
   reason: NullReason;
@@ -634,7 +633,7 @@ export function collectJourneyFacts(
 // The naive offset-table reading
 // ---------------------------------------------------------------------------
 
-export interface OffsetReading {
+interface OffsetReading {
   wall: string;
   offset: string;
   /** Naive wall clock minus the library's wall clock, in minutes. */
@@ -689,10 +688,7 @@ export function offsetTableReading(
  * local-arrival text: the naive wall clock minus the library's, in minutes,
  * from each side's `YYYY-MM-DDTHH:MM` text.
  */
-export function offsetTableDelta(
-  naiveWall: string,
-  libraryWall: string,
-): number {
+function offsetTableDelta(naiveWall: string, libraryWall: string): number {
   const naive = Temporal.PlainDateTime.from(naiveWall.slice(0, 16));
   const real = Temporal.PlainDateTime.from(libraryWall.slice(0, 16));
   return naive.since(real, { largestUnit: "minutes" }).total("minutes");

@@ -57,6 +57,17 @@ Full list: `context/dox/reference/verification-and-risks.md`.
 - **Judged:** read one long changed page top to bottom in both themes ("maximal chrome,
   disciplined content surface"). For a new interaction pattern that no gate knows (a new kind
   of handle, a dialog), do one keyboard pass by hand and say what you pressed.
+- **Widget UI:**
+  - `pnpm lint` is clean, with Stylelint and both local oxlint plugins (`dox-src`, `dox-test`)
+    inside it.
+  - `rg -n 'nth-(of-type|child)|!important' apps/dox/src` returns nothing new. Compare it with
+    the legacy lists.
+  - No new sheet appears in `src/styles/gmt.css` or `customCss`.
+  - Every touched widget's test file is off the legacy lists.
+  - Every touched widget test follows Testing Library: it queries by role, label or text, drives
+    the widget with `userEvent` and the `src/test/render-widget.ts` helpers (`renderWidget`,
+    `setRange`), asserts what a person or assistive technology perceives (never a class, a
+    `data-role`, an id, a style or the markup), and runs `expectNoAxeViolations`.
 - **Card accents:** no card, callout, row or result block has a left-border-only accent. Grep the
   changed styles for `border-left`, `border-inline-start`, left `inset` box-shadows and left
   `::before` stripes, and confirm on screenshots. An accent edge must be a bottom border or part

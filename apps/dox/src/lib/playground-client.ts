@@ -6,7 +6,8 @@
 
 import type { CallField } from "./playground-parsers";
 import type { ChoiceSeed, ChoiceSeeds } from "./playground-spec";
-import { renderWidgetOutput, type WidgetOutputState } from "./widget-ui";
+import { SENTINEL_TEXT } from "~/widgets/primitives/readout/readout";
+import type { WidgetOutputState } from "./widget-ui";
 
 export function evaluateArg(raw: string): unknown {
   const t = raw.trim();
@@ -34,7 +35,7 @@ export function sentinelFor(
   return "";
 }
 
-export interface ResultShape {
+interface ResultShape {
   returnType: string;
   allowEmptyArray?: boolean;
   nullIsEmpty?: boolean;
@@ -66,7 +67,11 @@ export function classifyPlaygroundResult(
   return "live";
 }
 
-/** Render a result in one of the three output states. */
+/**
+ * Render a result in one of the three output states. The words carry the state: the
+ * sentinel is the bracketed NO SIGNAL notice, and an empty answer says it is empty. The
+ * element's `data-state` is set for the stylesheet.
+ */
 export function renderResult(
   outputEl: HTMLElement,
   value: unknown,
@@ -74,13 +79,14 @@ export function renderResult(
 ): void {
   const text =
     state === "sentinel"
-      ? "NO SIGNAL"
+      ? SENTINEL_TEXT
       : state === "empty"
         ? `${Array.isArray(value) ? "[]" : "null"} — empty, or invalid input`
         : typeof value === "object"
           ? JSON.stringify(value)
           : String(value);
-  renderWidgetOutput(outputEl, text, state);
+  outputEl.dataset["state"] = state;
+  outputEl.textContent = text;
 }
 
 /** One form control as the seed loader sees it: read its value, overwrite it. */

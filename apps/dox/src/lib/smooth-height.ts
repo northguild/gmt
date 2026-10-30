@@ -1,8 +1,8 @@
 /**
- * Eases height changes in a tool's result regions, through one primitive:
- * `.gmt-grow` (styles/gmt-primitives.css).
+ * Eases height changes in a tool's result regions: a `<gmt-grow>`
+ * (`widgets/primitives/grow`) and the chat's mounted widget.
  *
- * A `.gmt-grow` element (the *outer*) has exactly one element child (the
+ * An eased element (the *outer*) has exactly one element child (the
  * *inner*). At rest the outer is `height: auto`, with no inline height and no
  * `data-growing`. When the inner's height changes, `smoothHeight` pins the outer
  * at its old height with `data-growing` on (which clips it), and a frame loop
@@ -31,7 +31,7 @@
 
 /** The most the boxes in motion move, in total, in one frame. The page-level
  *  gate is 48 px; the rest is room for a reflow that is not eased. */
-export const STEP_BUDGET_PX = 40;
+export const STEP_BUDGET_PX = 32;
 /** Time constant of the ease: each frame covers `1 - exp(-dt / tau)` of what is left. */
 export const FOLLOW_TAU_MS = 50;
 /** A box within this many px of its target is released. */
@@ -149,7 +149,7 @@ function explainedByInside(s: GrowState): number {
   let total = 0;
   for (const other of moving) {
     if (other === s || !s.outer.contains(other.outer)) continue;
-    const owner = other.outer.parentElement?.closest(".gmt-grow[data-growing]");
+    const owner = other.outer.parentElement?.closest("[data-growing]");
     if (owner === s.outer || !s.outer.contains(owner ?? null)) {
       total += other.lastStep;
     }
@@ -159,7 +159,7 @@ function explainedByInside(s: GrowState): number {
 
 /** True when no moving box contains `s`: only then does its step move the page. */
 function isOutermost(s: GrowState): boolean {
-  return !s.outer.parentElement?.closest(".gmt-grow[data-growing]");
+  return !s.outer.parentElement?.closest("[data-growing]");
 }
 
 function schedule(): void {
@@ -317,56 +317,4 @@ export function smoothHeight(outer: HTMLElement, signal?: AbortSignal): void {
   observer ??= new ResizeObserver(onResize);
   states.set(inner, state);
   observer.observe(inner);
-}
-
-function wrapSection(section: HTMLElement): void {
-  const inner = document.createElement("div");
-  inner.className = "gmt-grow-inner";
-  inner.append(...section.childNodes);
-  section.append(inner);
-  section.classList.add("gmt-grow");
-}
-
-/**
- * Wraps and attaches every growable region under `scope`:
- *
- * - each widget section after the first (section 1 holds the controls, whose
- *   popovers must not clip), unless `data-grow="off"`;
- * - each `[data-grow="slot"]` inside a widget card, in any section;
- * - each other `.gmt-grow` already in the markup (a static host).
- *
- * Idempotent, keeps node identity, and does nothing without `ResizeObserver`,
- * so a reader without it sees the page as it was.
- */
-export function smoothHeights(scope: ParentNode, signal?: AbortSignal): void {
-  if (typeof ResizeObserver === "undefined") return;
-
-  for (const card of scope.querySelectorAll<HTMLElement>(".gmt-widget-card")) {
-    const sections = card.querySelectorAll<HTMLElement>(
-      ":scope > .gmt-widget-section",
-    );
-    sections.forEach((section, i) => {
-      if (i === 0 || section.dataset["grow"] === "off") return;
-      if (section.classList.contains("gmt-grow")) return;
-      wrapSection(section);
-      smoothHeight(section, signal);
-    });
-  }
-
-  /* After the sections, so a slot in a wrapped section lands in its inner box. */
-  for (const slot of scope.querySelectorAll<HTMLElement>(
-    '.gmt-widget-card [data-grow="slot"]',
-  )) {
-    if (slot.parentElement?.classList.contains("gmt-grow-slot")) continue;
-    const wrapper = document.createElement("div");
-    wrapper.className = "gmt-grow gmt-grow-slot";
-    slot.before(wrapper);
-    wrapper.append(slot);
-    smoothHeight(wrapper, signal);
-  }
-
-  for (const host of scope.querySelectorAll<HTMLElement>(".gmt-grow")) {
-    if (attached.has(host) || host.matches(".gmt-widget-section")) continue;
-    smoothHeight(host, signal);
-  }
 }

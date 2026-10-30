@@ -29,7 +29,7 @@ import {
   type TransportLib,
 } from "./transport-widgets";
 
-export interface DstTransition {
+interface DstTransition {
   instant: string;
   offsetBefore: string;
   offsetAfter: string;
@@ -49,7 +49,7 @@ export const MAX_ROWS = 4;
 /** One row of the printed timetable, as the DOM holds it: a printed wall
  *  time, and an optional offset that picks a pass of a repeated hour. A row
  *  with a blank `departure` is skipped everywhere. */
-export interface TimetableRow {
+interface TimetableRow {
   departure: string;
   offset: string;
 }
@@ -92,7 +92,7 @@ function padRows(
   return out as [TimetableRow, TimetableRow, TimetableRow, TimetableRow];
 }
 
-export interface TimetablePreset {
+interface TimetablePreset {
   id: string;
   label: string;
   description: string;
@@ -269,7 +269,7 @@ export function permalinkOf(state: TimetableState): Record<string, string> {
 // What a printed time means — one classifyLocal call, then the two resolutions
 // ---------------------------------------------------------------------------
 
-export type RowClass = "once" | "twice" | "skipped" | "invalid";
+type RowClass = "once" | "twice" | "skipped" | "invalid";
 
 /**
  * Whether `printed` (a bare wall time, `zone`'s own printed departure with no
@@ -305,22 +305,6 @@ function offsetOf(text: string): string {
   const m = /([+-]\d{2}:\d{2})(?:\[|$)/.exec(text);
   return m ? m[1]! : "";
 }
-
-/**
- * The longest an Offset option label may be, in characters.
- *
- * The select's text is cut off when it is wider than its text area, and the
- * narrowest four-in-a-row frame is the tightest place (the compact band, a
- * 45.5rem = 728px section): the frame is 176px, its fieldset padding takes 16
- * and the fieldset border 2, so the select is 158px; its own padding (8 left,
- * 28 right for the arrow) and 1px borders leave 120px of text. The control is
- * 12px there, and a monospace advance is 0.6em = 7.2px, so 120 / 7.2 = 16.7:
- * 16 characters. Measured in Chromium at 1440 (select 165.5px at a 758px
- * section): "-04:00 (earlier)" is 115px. Wider frames use the 13.6px size, where
- * 16 characters need 131px and the select is never under 176px (the field
- * grid's own 11rem column floor).
- */
-export const OFFSET_LABEL_MAX = 16;
 
 /** One choice for a row's Offset field: the value written into the departure,
  *  and what it means in words. */
@@ -512,8 +496,7 @@ export function rowResult(
 // instant, arrival, classification and band edge they place is a library call.
 // ---------------------------------------------------------------------------
 
-export const STEP_MINUTES = 5;
-export const BIG_STEP_MINUTES = 60;
+const STEP_MINUTES = 5;
 export const MAX_MINUTE = 1435;
 
 const pad2 = (n: number): string => String(n).padStart(2, "0");
@@ -560,7 +543,7 @@ export function withMinute(date: string, minute: number): string {
   return `${date}T${hhmmOfMinute(minute)}:00`;
 }
 
-export type LaneState =
+type LaneState =
   | { state: "blank" }
   | { state: "invalid" }
   | { state: "off"; date: string }
@@ -672,16 +655,6 @@ export function dayBands(
   return out;
 }
 
-/** The band `minute` falls in, or `null`. */
-export function bandAt(
-  minute: number,
-  bands: readonly DayBand[],
-): DayBand | null {
-  return (
-    bands.find((b) => minute >= b.startMinute && minute < b.endMinute) ?? null
-  );
-}
-
 /** The words for a day's bands, used by the track's chip and the chart's. */
 export function bandChipText(bands: readonly DayBand[]): string {
   if (bands.length === 0) return "No clock change this day";
@@ -727,11 +700,6 @@ export function stepMinute(minute: number, direction: 1 | -1): number {
       ? Math.floor(minute / STEP_MINUTES) * STEP_MINUTES + STEP_MINUTES
       : Math.ceil(minute / STEP_MINUTES) * STEP_MINUTES - STEP_MINUTES;
   return clampMinute(next);
-}
-
-/** An hour later or earlier, keeping the minutes, clamped. */
-export function jumpMinute(minute: number, direction: 1 | -1): number {
-  return clampMinute(minute + direction * BIG_STEP_MINUTES);
 }
 
 /** The smallest hour step whose pitch is at least `labelPx`, else 12. */
@@ -790,7 +758,7 @@ export function arrivalChipText(iso: string, date: string): string {
 // The two-clocks chart
 // ---------------------------------------------------------------------------
 
-export interface ChartRow {
+interface ChartRow {
   /** 1 to 4. */
   n: number;
   printedMinute: number;
@@ -806,7 +774,7 @@ export interface ChartRow {
   dashed: boolean;
 }
 
-export interface ChartFan {
+interface ChartFan {
   kind: "twice" | "skipped";
   wallStart: number;
   wallEnd: number;
@@ -815,7 +783,7 @@ export interface ChartFan {
   exact: number[];
 }
 
-export interface OffsetSegment {
+interface OffsetSegment {
   from: number;
   to: number;
   offset: string;
@@ -857,7 +825,7 @@ export function rowFacts(
 
 /** Values that depend only on the zone and date (or the run time), kept by the
  *  mount so a moving handle never recomputes them. */
-export interface ChartMemo {
+interface ChartMemo {
   bands: Map<string, DayBand[]>;
   day: Map<string, { start: string; minutes: number } | null>;
   tail: Map<string, number>;

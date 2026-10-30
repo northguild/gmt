@@ -1,0 +1,41 @@
+/* reservedText: the live text and every text it can say in one grid cell. */
+
+.held {
+  display: inline-grid;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.shown,
+.ghost {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+}
+
+.shown {
+  &[data-state="signal"] {
+    color: var(--gmt-signal-ink);
+  }
+
+  &[data-state="off"] {
+    visibility: hidden;
+  }
+}
+
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (forced-colors: active) {
+  .shown[data-state="signal"] {
+    color: CanvasText;
+    font-weight: 700;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .shown[data-state="signal"] {
+    font-weight: 700;
+  }
+}

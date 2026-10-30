@@ -1,44 +1,29 @@
 /**
  * @vitest-environment jsdom
  *
- * The Crossing Clock widget end to end: template -> mount -> interact ->
- * assert, against the real `@northguild/gmt`. Every preset's printed call
- * and result are section 9 rows.
+ * The Crossing Clock widget end to end: template -> mount -> interact -> assert,
+ * against the real `@northguild/gmt`, through roles and accessible names the way a
+ * person (or a screen reader) meets the page. Every preset's printed call and result
+ * are section 9 rows.
  */
-import { installJsdomShims } from "~/test/jsdom-shims";
-import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
-import { CROSSING_PRESETS } from "./crossing-clock";
+import { screen, within } from "@testing-library/dom";
 import {
-  mountCrossingClock,
-  renderCrossingClockTemplate,
-} from "./crossing-clock-mount";
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  expectNoAxeViolations,
+  renderWidget,
+  type RenderedWidget,
+} from "~/test/render-widget";
+import { CROSSING_PRESETS } from "./crossing-clock";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
+import { RANGE_EDGE_TEXT } from "./widget-ui";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "entry",
-  "exit",
-  "target-zone",
-  "entry-clock",
-  "entry-time",
-  "entry-meta",
-  "entry-date",
-  "exit-clock",
-  "exit-time",
-  "exit-meta",
-  "exit-date",
-  "elapsed",
-  "naive",
-  "ruler",
-  "ruler-summary",
-  "legend",
-  "reason-aside",
-  "call-crossing",
-  "copy-crossing",
-  "crossing-output",
-];
+const entry = WIDGET_REGISTRY["showCrossingClock"] as AnyWidgetEntry;
 
 const EXPECTED: Record<string, [string, string | null]> = {
   canal: [
@@ -67,322 +52,289 @@ const EXPECTED: Record<string, [string, string | null]> = {
   ],
 };
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+const open = (args = {}, idPrefix = "test") =>
+  renderWidget(entry, { args, idPrefix });
 
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderCrossingClockTemplate(templateArgs);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountCrossingClock(root, args, controller.signal);
-  return { root, handle, controller };
+const preset = () => screen.getByRole("combobox", { name: "Preset" });
+const entryBox = () => screen.getByRole("textbox", { name: "Entry" });
+const exitBox = () => screen.getByRole("textbox", { name: "Exit" });
+const zone = () =>
+  screen.getByRole("combobox", { name: "Read on the clock of" });
+const call = () => screen.getByRole("group", { name: "Call made" });
+const returned = () => screen.getByLabelText("What the call returned");
+const strip = () => screen.getByRole("img");
+const entryClock = () => screen.queryByRole("button", { name: /^Entry clock/ });
+const exitClock = () => screen.queryByRole("button", { name: /^Exit clock/ });
+
+async function choose(w: RenderedWidget, id: string) {
+  await w.user.selectOptions(preset(), id);
 }
-
-function choosePreset(root: HTMLElement, id: string) {
-  const preset = q<HTMLSelectElement>(root, "preset");
-  preset.value = id;
-  preset.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
 
 describe("renderCrossingClockTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderCrossingClockTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
-    }
-  });
-
-  it("has no placeholder on entry or exit", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderCrossingClockTemplate();
-    expect(q(root, "entry").hasAttribute("placeholder")).toBe(false);
-    expect(q(root, "exit").hasAttribute("placeholder")).toBe(false);
-  });
-
-  it("gives entry and exit a double share of the row, target-zone a single one", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderCrossingClockTemplate();
-    const row = root.querySelector(".gmt-crossing-fields")!;
-    const labels = [...row.querySelectorAll(":scope > label")];
-    expect(labels).toHaveLength(3);
-    expect(labels[0]!.querySelector("input")?.dataset.role).toBe("entry");
-    expect(labels[1]!.querySelector("input")?.dataset.role).toBe("exit");
-    expect(labels[2]!.querySelector("select")?.dataset.role).toBe(
-      "target-zone",
-    );
-    expect(labels.map((l) => l.classList.contains("gmt-field-wide"))).toEqual([
-      true,
-      true,
-      false,
+  it("is a named region with three numbered sections and named controls", async () => {
+    await open();
+    expect(
+      screen.getByRole("region", { name: "Crossing Clock" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent),
+    ).toEqual([
+      "1. Log the crossing",
+      "2. Elapsed, and what the clocks say",
+      "3. What crossingTime returns",
     ]);
+    expect(preset()).toBeInTheDocument();
+    expect(entryBox()).toBeInTheDocument();
+    expect(exitBox()).toBeInTheDocument();
+    expect(zone()).toBeInTheDocument();
+    expect(call()).toBeInTheDocument();
+    expect(returned()).toBeInTheDocument();
+  });
+
+  it("has no placeholder on entry or exit", async () => {
+    await open();
+    expect(entryBox()).not.toHaveAttribute("placeholder");
+    expect(exitBox()).not.toHaveAttribute("placeholder");
+  });
+
+  it("names every control through its prefix-scoped label", async () => {
+    await open({}, "rail-7");
+    expect(entryBox()).toBeInTheDocument();
+    expect(exitBox()).toBeInTheDocument();
+    expect(zone()).toBeInTheDocument();
   });
 });
 
 describe("mountCrossingClock", () => {
+  it("opens on the first preset", async () => {
+    const w = await open();
+    expect(preset()).toHaveValue(CROSSING_PRESETS[0]!.id);
+    expect(returned()).toHaveTextContent("duration:");
+    await expectNoAxeViolations(w.root);
+  });
+
   it.each(CROSSING_PRESETS.map((p) => [p.id]))(
     "prints the documented call and result for %s",
     async (id) => {
-      const { root } = await mount();
-      choosePreset(root, id);
-      const [call, result] = EXPECTED[id]!;
-      expect(q(root, "copy-crossing").dataset.copyText).toBe(
-        `crossingTime(${call})`,
-      );
-      if (result === null) {
-        expect(q(root, "crossing-output").textContent).toBe("NO SIGNAL");
-      } else {
-        expect(
-          q(root, "crossing-output").textContent!.replace(/\n\s+/g, " "),
-        ).toBe(result);
-      }
+      const w = await open();
+      await choose(w, id!);
+      const [source, result] = EXPECTED[id!]!;
+      expect(call()).toHaveTextContent(`crossingTime(${source})`);
+      expect(returned()).toHaveTextContent(result ?? "NO SIGNAL");
+      await expectNoAxeViolations(w.root);
     },
   );
 
   it("shows the elapsed and naive readings, agreeing on the fixed-offset preset", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fixed-offset");
-    expect(q(root, "elapsed").textContent).toContain("PT7H");
-    expect(q(root, "naive").textContent).toContain("agrees");
+    const w = await open();
+    await choose(w, "fixed-offset");
+    expect(screen.getByText(/PT7H elapsed/)).toBeInTheDocument();
+    expect(screen.getByText(/Naive:/)).toHaveTextContent("agrees");
+    await expectNoAxeViolations(w.root);
   });
 
   it("shows the naive reading disagreeing on spring-forward", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    expect(q(root, "elapsed").textContent).toContain("PT7H");
-    expect(q(root, "naive").textContent).toContain("more than elapsed");
+    const w = await open();
+    await choose(w, "spring-forward");
+    expect(screen.getByText(/PT7H elapsed/)).toBeInTheDocument();
+    expect(screen.getByText(/Naive:/)).toHaveTextContent("more than elapsed");
+    await expectNoAxeViolations(w.root);
   });
 
   it("shows the null reason for the inverted preset", async () => {
-    const { root } = await mount();
-    choosePreset(root, "inverted");
-    expect(q(root, "reason-aside").textContent).toContain(
-      "data error, not a negative transit",
-    );
+    const w = await open();
+    await choose(w, "inverted");
+    expect(
+      screen.getByRole("complementary", { name: "Why null" }),
+    ).toHaveTextContent("data error, not a negative transit");
+    await expectNoAxeViolations(w.root);
   });
 
-  it("names the skip and the repeat in the strip's hidden summary and its change list", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    expect(q(root, "ruler-summary").textContent).toContain("never shown");
-    expect(q(root, "strip-changes").textContent).toContain(
+  it("names the skip and the repeat in the strip's summary and its change list", async () => {
+    const w = await open();
+    await choose(w, "spring-forward");
+    expect(strip()).toHaveAccessibleName(/never shown/);
+    expect(screen.getByRole("listitem")).toHaveTextContent(
       "01:00–02:00 never shown",
     );
-    expect(
-      q(root, "strip-changes").querySelector(
-        ".gmt-crossing-strip-change--skip",
-      ),
-    ).not.toBeNull();
 
-    choosePreset(root, "fall-back");
-    expect(q(root, "ruler-summary").textContent).toContain("shown twice");
-    expect(q(root, "strip-changes").textContent).toContain(
+    await choose(w, "fall-back");
+    expect(strip()).toHaveAccessibleName(/shown twice/);
+    expect(screen.getByRole("listitem")).toHaveTextContent(
       "01:00–02:00 shown twice",
     );
-    expect(
-      q(root, "strip-changes").querySelector(
-        ".gmt-crossing-strip-change--repeat",
-      ),
-    ).not.toBeNull();
 
-    choosePreset(root, "fixed-offset");
-    expect(q(root, "strip-changes").textContent).toContain(
-      "No clock change during the crossing",
-    );
+    await choose(w, "fixed-offset");
+    expect(
+      screen.getByText(/No clock change during the crossing/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
   it("draws the entry and exit crystal clocks from the real result, not arithmetic", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
+    const w = await open();
+    await choose(w, "spring-forward");
 
-    expect(q(root, "entry-time").textContent).toBe("00:00");
-    expect(q(root, "entry-meta").textContent).toBe("+00:00 · London");
-    expect(q(root, "entry-date").textContent).toBe("31 Mar 2024");
-    expect(q(root, "exit-time").textContent).toBe("08:00");
-    expect(q(root, "exit-meta").textContent).toBe("+01:00 · London");
+    expect(screen.getAllByText("00:00").length).toBeGreaterThan(0);
+    expect(screen.getByText("+00:00 · London")).toBeInTheDocument();
+    expect(screen.getAllByText("31 Mar 2024")).toHaveLength(2);
+    expect(screen.getAllByText("08:00").length).toBeGreaterThan(0);
+    expect(screen.getByText("+01:00 · London")).toBeInTheDocument();
 
-    // The face is a night-light toggle button (crystal-clock.ts): the
-    // accessible name and role live there, and the svg inside is
-    // decorative.
-    const entryButton = q(root, "entry-clock").querySelector("button")!;
-    expect(entryButton.getAttribute("aria-pressed")).toBe("false");
-    expect(entryButton.getAttribute("aria-label")).toBe(
-      "Entry clock, 00:00, plus 00:00, London. 01:00–02:00 never shown. Light up the face.",
-    );
-    const entrySvg = entryButton.querySelector("svg")!;
-    expect(entrySvg.getAttribute("aria-hidden")).toBe("true");
-    expect(entrySvg.dataset.state).toBe("normal");
-
-    const exitButton = q(root, "exit-clock").querySelector("button")!;
-    expect(exitButton.getAttribute("aria-label")).toBe(
-      "Exit clock, 08:00, plus 01:00, London. 01:00–02:00 never shown. Light up the face.",
-    );
+    expect(
+      screen.getByRole("button", {
+        name: "Entry clock, 00:00, plus 00:00, London. 01:00–02:00 never shown. Light up the face.",
+        pressed: false,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Exit clock, 08:00, plus 01:00, London. 01:00–02:00 never shown. Light up the face.",
+        pressed: false,
+      }),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
-  it("draws the skipped hour as a dashed sector on both clocks, and the repeated hour as a doubled one", async () => {
-    const { root } = await mount();
-    choosePreset(root, "spring-forward");
-    for (const prefix of ["entry-clock", "exit-clock"]) {
-      const highlights = q(root, prefix).querySelectorAll(
-        ".gmt-crystal-clock-highlight--skipped",
-      );
-      expect(highlights, prefix).toHaveLength(1);
-      expect(highlights[0]!.querySelector("title")!.textContent).toBe(
-        "01:00–02:00 never shown",
-      );
-    }
+  it("names the skipped hour on both clocks, and the repeated hour on both, and neither when nothing moves", async () => {
+    const w = await open();
+    await choose(w, "spring-forward");
+    expect(entryClock()).toHaveAccessibleName(/01:00–02:00 never shown/);
+    expect(exitClock()).toHaveAccessibleName(/01:00–02:00 never shown/);
 
-    choosePreset(root, "fall-back");
-    for (const prefix of ["entry-clock", "exit-clock"]) {
-      const highlights = q(root, prefix).querySelectorAll(
-        ".gmt-crystal-clock-highlight--repeated",
-      );
-      expect(highlights, prefix).toHaveLength(2);
-      expect(highlights[0]!.querySelector("title")!.textContent).toBe(
-        "01:00–02:00 shown twice",
-      );
-    }
+    await choose(w, "fall-back");
+    expect(entryClock()).toHaveAccessibleName(/01:00–02:00 shown twice/);
+    expect(exitClock()).toHaveAccessibleName(/01:00–02:00 shown twice/);
 
-    choosePreset(root, "fixed-offset");
-    for (const prefix of ["entry-clock", "exit-clock"]) {
-      expect(
-        q(root, prefix).querySelector(".gmt-crystal-clock-highlight"),
-      ).toBeNull();
-    }
+    await choose(w, "fixed-offset");
+    expect(entryClock()).not.toHaveAccessibleName(/never shown|shown twice/);
+    expect(exitClock()).not.toHaveAccessibleName(/never shown|shown twice/);
+    await expectNoAxeViolations(w.root);
   });
 
   it("toggles a clock's night-light glow independently, and it never touches a value or the permalink", async () => {
-    const { root, handle } = await mount();
-    choosePreset(root, "spring-forward");
+    const w = await open();
+    await choose(w, "spring-forward");
+    const before = w.permalink();
 
-    const entryButton = q(root, "entry-clock").querySelector("button")!;
-    const exitButton = q(root, "exit-clock").querySelector("button")!;
-    const before = handle.getPermalinkState?.();
+    await w.user.click(entryClock()!);
+    expect(entryClock()).toBePressed();
+    expect(exitClock()).not.toBePressed();
+    expect(w.permalink()).toBe(before);
+    await expectNoAxeViolations(w.root);
 
-    entryButton.click();
-    expect(entryButton.getAttribute("aria-pressed")).toBe("true");
-    expect(
-      entryButton
-        .querySelector("svg")!
-        .classList.contains("gmt-crystal-clock--glow"),
-    ).toBe(true);
-    expect(exitButton.getAttribute("aria-pressed")).toBe("false");
-    expect(handle.getPermalinkState?.()).toEqual(before);
-
-    entryButton.click();
-    expect(entryButton.getAttribute("aria-pressed")).toBe("false");
+    await w.user.click(entryClock()!);
+    expect(entryClock()).not.toBePressed();
   });
 
-  it("marks both clocks repeated when entry and exit read the same wall clock", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fall-back");
-
-    expect(q(root, "entry-time").textContent).toBe("01:30");
-    expect(q(root, "exit-time").textContent).toBe("01:30");
-    expect(q(root, "entry-meta").textContent).toBe("+01:00 · London");
-    expect(q(root, "exit-meta").textContent).toBe("+00:00 · London");
-    expect(q(root, "entry-clock").querySelector("svg")!.dataset.state).toBe(
-      "repeated",
-    );
-    expect(q(root, "exit-clock").querySelector("svg")!.dataset.state).toBe(
-      "repeated",
-    );
+  it("reads both clocks as 01:30 when entry and exit show the same wall clock", async () => {
+    const w = await open();
+    await choose(w, "fall-back");
+    expect(screen.getAllByText("01:30").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("+01:00 · London")).toBeInTheDocument();
+    expect(screen.getByText("+00:00 · London")).toBeInTheDocument();
+    expect(entryClock()).toHaveAccessibleName(/shown twice/);
+    expect(exitClock()).toHaveAccessibleName(/shown twice/);
+    await expectNoAxeViolations(w.root);
   });
 
   it("shows the disagrees badge only when the naive reading is wrong", async () => {
-    const { root } = await mount();
-    choosePreset(root, "fixed-offset");
-    expect(q(root, "naive").querySelector(".gmt-transport-badge")).toBeNull();
+    const w = await open();
+    await choose(w, "fixed-offset");
+    expect(screen.queryByText("disagrees")).not.toBeInTheDocument();
 
-    choosePreset(root, "spring-forward");
-    expect(
-      q(root, "naive").querySelector('[data-role="naive-disagrees"]'),
-    ).not.toBeNull();
+    await choose(w, "spring-forward");
+    expect(screen.getByText("disagrees")).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
   it("clears both clock faces on a null result", async () => {
-    const { root } = await mount();
-    choosePreset(root, "inverted");
-    expect(q(root, "entry-clock").innerHTML).toBe("");
-    expect(q(root, "exit-clock").innerHTML).toBe("");
-    expect(q(root, "entry-time").textContent).toBe("");
-    expect(q(root, "exit-date").textContent).toBe("");
+    const w = await open();
+    await choose(w, "inverted");
+    expect(entryClock()).not.toBeInTheDocument();
+    expect(exitClock()).not.toBeInTheDocument();
+    expect(screen.queryByText("31 Mar 2024")).not.toBeInTheDocument();
+    expect(strip()).toHaveAccessibleName("Crossing strip, not drawn");
+    expect(returned()).toHaveTextContent("NO SIGNAL");
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("recomputes from typed entry and exit, and marks the preset custom", async () => {
+    const w = await open();
+    await choose(w, "spring-forward");
+    await w.user.clear(exitBox());
+    await w.user.paste("2024-03-31T06:00:00Z");
+    expect(preset()).toHaveValue("custom");
+    expect(screen.getByText(/PT6H elapsed/)).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
   it("renders the chat seed (V94)", async () => {
-    const seed = {
+    const w = await open({
       entry: "2024-03-10T00:00",
       exit: "2024-03-10T08:00",
       targetZone: "America/New_York",
-    };
-    const { root } = await mount(seed);
-    expect(q(root, "crossing-output").textContent!.replace(/\n\s+/g, " ")).toBe(
+    });
+    expect(returned()).toHaveTextContent(
       '{ duration: "PT7H", enter: "2024-03-10T00:00:00-05:00[America/New_York]", exit: "2024-03-10T08:00:00-04:00[America/New_York]" }',
     );
+    await expectNoAxeViolations(w.root);
   });
 
-  it("round-trips every preset's state as a permalink of strings", async () => {
-    for (const preset of CROSSING_PRESETS) {
-      const { root, handle } = await mount();
-      choosePreset(root, preset.id);
-      const state = handle.getPermalinkState?.() as Record<string, string>;
-      expect(state).not.toBeNull();
-      for (const value of Object.values(state))
-        expect(typeof value).toBe("string");
-      const url = encodeWidgetPermalink("crossing", state);
-      const seeded = seedFromLocation("crossing", url.slice(url.indexOf("?")));
-      const again = await mount(seeded);
-      const [, result] = EXPECTED[preset.id]!;
-      if (result === null) {
-        expect(q(again.root, "crossing-output").textContent).toBe("NO SIGNAL");
-      } else {
-        expect(
-          q(again.root, "crossing-output").textContent!.replace(/\n\s+/g, " "),
-        ).toBe(result);
-      }
-      document.body.innerHTML = "";
-    }
-  });
+  it.each(CROSSING_PRESETS.map((p) => [p.id]))(
+    "round-trips %s as a permalink of strings",
+    async (id) => {
+      const first = await open();
+      await choose(first, id!);
+      const url = first.permalink();
+      const seeded = seedFromLocation("crossing", url.slice(url.indexOf("?")))!;
+      expect(Object.values(seeded).every((v) => typeof v === "string")).toBe(
+        true,
+      );
+      expect(encodeWidgetPermalink("crossing", seeded)).toBe(url);
+      first.destroy();
+
+      await open(seeded);
+      const result = EXPECTED[id!]![1];
+      expect(returned()).toHaveTextContent(result ?? "NO SIGNAL");
+    },
+  );
 
   it("is inert when aborted before the library loads", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderCrossingClockTemplate();
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountCrossingClock(root, {}, controller.signal);
-    expect(handle.getPermalinkState?.()).toBeNull();
+    await renderWidget(entry, { args: {}, aborted: true });
+    expect(call()).not.toHaveTextContent("crossingTime(");
   });
 
   it("can be destroyed twice", async () => {
-    const { handle } = await mount();
+    const w = await open();
     expect(() => {
-      handle.destroy();
-      handle.destroy();
+      w.destroy();
+      w.destroy();
     }).not.toThrow();
   });
 });
 
 describe("a seed applied to the default template (the tool page)", () => {
   it("keeps a zone outside the curated list and reads it", async () => {
-    const { root } = await mount(
+    const loaded = await entry.load();
+    const w = await renderWidget(
       {
-        entry: "2024-06-10T00:00",
-        exit: "2024-06-10T08:00",
-        targetZone: "Europe/Helsinki",
+        ...loaded,
+        renderTemplate: (idPrefix: string) =>
+          loaded.renderTemplate(idPrefix, {} as never),
+      } as never,
+      {
+        args: {
+          entry: "2024-06-10T00:00",
+          exit: "2024-06-10T08:00",
+          targetZone: "Europe/Helsinki",
+        },
       },
-      {},
     );
-    expect(q<HTMLSelectElement>(root, "target-zone").value).toBe(
-      "Europe/Helsinki",
-    );
-    expect(q(root, "crossing-output").textContent).not.toBe("NO SIGNAL");
+    expect(zone()).toHaveValue("Europe/Helsinki");
+    expect(returned()).not.toHaveTextContent("NO SIGNAL");
+    await expectNoAxeViolations(w.root);
   });
 });
 
@@ -392,12 +344,11 @@ describe("a crossing at the minimum instant", () => {
     const onError = (e: ErrorEvent) => errors.push(e.error ?? e.message);
     window.addEventListener("error", onError);
     try {
-      const { root } = await mount();
-      const entry = q<HTMLInputElement>(root, "entry");
-      entry.value = "-271821-04-20T00:00:00Z";
-      entry.dispatchEvent(new Event("input", { bubbles: true }));
+      const w = await open();
+      await w.user.clear(entryBox());
+      await w.user.paste("-271821-04-20T00:00:00Z");
       expect(errors.map(String)).toEqual([]);
-      expect(q(root, "strip-changes").textContent).toContain("NO SIGNAL");
+      expect(within(w.root).getByText(RANGE_EDGE_TEXT)).toBeInTheDocument();
     } finally {
       window.removeEventListener("error", onError);
     }

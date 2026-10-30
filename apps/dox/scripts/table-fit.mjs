@@ -13,8 +13,9 @@
  * item that holds it can grow with it). With `table-layout: fixed` its box stays in the column and
  * the content spills out of its cells: its own `scrollWidth` is measured against its `clientWidth`.
  * A table that is not drawn (`display: none` at this width) is not measured.
- * A failure names the widest piece that cannot break (`.gmt-cw`, `code:not(.gmt-codebreak)`,
- * `.gmt-nobreak`), which is what to give a break point or move to the entries layout.
+ * A failure names the widest piece that cannot break (an element that holds its words together
+ * with `white-space: nowrap` or `pre`, or a code element that does not wrap at its spaces), which is
+ * what to give a break point or move to the entries layout.
  *
  * Usage (from apps/dox, after a build):
  *   node scripts/table-fit.mjs [--base http://127.0.0.1:48291/gmt] [--browsers chromium,webkit]
@@ -164,9 +165,16 @@ function measureTables() {
     const { overflow, boxWidth } = measure(table);
     let widest = null;
     if (overflow > 1) {
-      for (const piece of table.querySelectorAll(
-        ".gmt-cw, code:not(.gmt-codebreak), .gmt-nobreak",
-      )) {
+      // A piece that cannot break is read from its computed style, not from a class: an element
+      // that holds its words together (`nowrap`, `pre`), or a code element that does not wrap
+      // at its spaces (`pre-wrap`, which the break-pointed code uses).
+      for (const piece of table.querySelectorAll("code, code *, span, a")) {
+        const ws = getComputedStyle(piece).whiteSpace;
+        const holds =
+          ws === "nowrap" ||
+          ws === "pre" ||
+          (piece.matches("code") && ws !== "pre-wrap");
+        if (!holds) continue;
         const w = piece.getBoundingClientRect().width;
         if (!widest || w > widest.width) {
           widest = {
@@ -232,6 +240,7 @@ for (const browserName of browsers) {
             gate: GATE,
             rule: "table-scrolls",
             page: pagePath,
+            target: `table "${t.headers.join(" | ")}"`,
             browser: browserName,
             width,
             message,
@@ -247,6 +256,7 @@ for (const browserName of browsers) {
           gate: GATE,
           rule: "check-crashed",
           page: pagePath,
+          target: "page",
           browser: browserName,
           width,
           message,

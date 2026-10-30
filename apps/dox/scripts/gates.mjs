@@ -5,7 +5,7 @@
  *
  *     pnpm --filter dox gates [--all] [--against <ref>] [--only <gate,...>] [--pages <path,...>]
  *                             [--browsers chromium,webkit] [--themes dark,light]
- *                             [--tier pr|nightly|local] [--retries 1] [--shard <i>/<n>]
+ *                             [--tier pr|weekly|local] [--retries 1] [--shard <i>/<n>]
  *                             [--baseline <path to base apps/dox>] [--no-build] [--plan] [--json]
  *
  * In order: lock (`.gates/lock`), early exit when no file the site depends on changed, build
@@ -67,7 +67,7 @@ function usage(message) {
   if (message) console.error(`gates: ${message}`);
   console.error(
     "usage: pnpm --filter dox gates [--all] [--against <ref>] [--only <gate,...>] [--pages <path,...>]\n" +
-      "                               [--browsers chromium,webkit] [--themes dark,light] [--tier pr|nightly|local]\n" +
+      "                               [--browsers chromium,webkit] [--themes dark,light] [--tier pr|weekly|local]\n" +
       "                               [--retries 1] [--shard <i>/<n>] [--baseline <path>] [--no-build] [--plan] [--json]",
   );
   process.exit(2);

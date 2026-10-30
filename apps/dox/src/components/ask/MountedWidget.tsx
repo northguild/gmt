@@ -9,16 +9,11 @@
  * lost across.
  */
 import { useEffect, useRef, useState } from "react";
-import { smoothHeight, smoothHeights } from "~/lib/smooth-height";
-import { enterWidgetSections } from "~/lib/widget-enter";
+import { smoothHeight } from "~/lib/smooth-height";
 import { WidgetLoadError, type WidgetHandle } from "~/lib/widget-mount";
+import { loading, setHtml } from "~/widgets/builders";
+import styles from "./MountedWidget.module.css";
 import type { AnyWidgetEntry } from "./widget-registry";
-
-/** The registry's titles are literals, but the placeholder is `innerHTML`, so
- * escape rather than rely on that. */
-function escapeText(text: string): string {
-  return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-}
 
 export function MountedWidget({
   entry,
@@ -33,7 +28,7 @@ export function MountedWidget({
   onHandle?: (handle: WidgetHandle | null) => void;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
-  /* The `.gmt-grow` box around the host: the Loading → template → mount swaps
+  /* The grow box around the host: the Loading → template → mount swaps
      slide in height instead of popping. */
   const outerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<{
@@ -65,7 +60,7 @@ export function MountedWidget({
     /* Attached before the first write, so the seed is the empty host and the
        placeholder eases in. Without ResizeObserver this changes nothing. */
     if (outerRef.current) smoothHeight(outerRef.current, controller.signal);
-    root.innerHTML = `<p class="gmt-hive-widget-loading" role="status">Loading ${escapeText(entry.title)}\u2026</p>`;
+    setHtml(root, loading({ title: entry.title }));
 
     void (async () => {
       try {
@@ -81,12 +76,10 @@ export function MountedWidget({
 
         const { mount, renderTemplate } = await entry.load();
         if (cancelled) return;
-        root.innerHTML = renderTemplate(idPrefix, args as never);
-        /* The widget's result sections ease the way they do on a tool page. A
+        /* The template's own <gmt-grow> regions ease themselves when they
+           connect, and its cards enter from the stylesheet, as on a tool page. A
            nested grow wins over the host's while it animates. */
-        smoothHeights(root, controller.signal);
-        /* …and each numbered card arrives the way it does on a tool page. */
-        enterWidgetSections(root);
+        setHtml(root, renderTemplate(idPrefix, args as never));
 
         const mounted = await mount(root, args as never, controller.signal);
         if (cancelled) {
@@ -157,12 +150,8 @@ export function MountedWidget({
   /* `suppressHydrationWarning` because this subtree is written by `mount()`,
      not by React — the server renders it empty and the client fills it. */
   return (
-    <div className="gmt-grow" ref={outerRef}>
-      <div
-        className="gmt-hive-widget-host"
-        ref={ref}
-        suppressHydrationWarning
-      />
+    <div className={styles.grow} data-gate="grow" ref={outerRef}>
+      <div className={styles.host} ref={ref} suppressHydrationWarning />
     </div>
   );
 }
@@ -185,19 +174,21 @@ export function WidgetError({
   onRetry?: () => void;
 }) {
   return (
-    <div className="gmt-hive-widget-error" role="status">
-      <span className="gmt-hive-widget-error-marker" aria-hidden="true">
+    // An alert: the reader asked for this widget and it did not appear.
+    // <output> only holds phrasing content and this block holds a <p>.
+    <div
+      className={styles.error}
+      role="alert"
+      aria-label={`${title} couldn\u2019t be shown`}
+    >
+      <span className={styles.marker} aria-hidden="true">
         ⟨ ! ⟩
       </span>
       <p>
         <strong>{title}</strong> couldn&rsquo;t be shown. {message}
       </p>
       {onRetry && (
-        <button
-          type="button"
-          className="gmt-hive-widget-retry gmt-sonar-focus"
-          onClick={onRetry}
-        >
+        <button type="button" className={styles.retry} onClick={onRetry}>
           Try again
         </button>
       )}

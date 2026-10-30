@@ -1,0 +1,46 @@
+/* The globe's filter panel: a gear beside the search field and the popup it opens. */
+
+.root {
+  align-self: stretch;
+  display: flex;
+}
+
+.gear {
+  align-self: stretch;
+  inline-size: 2.25rem;
+  padding: 0;
+  color: var(--gmt-ice-dim);
+
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    color: var(--gmt-cyan-ink);
+  }
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 14rem;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+}
+
+/* A fieldset for grouping only; its own border and padding would draw a second box. */
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-block-end: var(--gmt-space-1);
+  color: var(--gmt-ice-dim);
+}

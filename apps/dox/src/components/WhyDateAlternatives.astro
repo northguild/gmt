@@ -79,7 +79,7 @@ const stack: Layer[] = [
 
   .why-date-lede {
     margin: 0;
-    max-width: 68ch;
+    max-inline-size: 68ch;
     color: var(--gmt-ice-dim);
     line-height: 1.6;
   }
@@ -159,12 +159,12 @@ const stack: Layer[] = [
 
   .why-date-layer--wraps,
   .why-date-layer--gmt {
-    margin-left: var(--gmt-space-6);
+    margin-inline-start: var(--gmt-space-6);
   }
 
   .why-date-layer--standard,
   .why-date-layer--gmt {
-    border-color: color(from var(--gmt-spring) srgb r g b / 0.35);
+    border-color: color(from var(--gmt-spring) srgb r g b / 35%);
   }
 
   .why-date-layer--standard .why-date-layer-name,
@@ -195,7 +195,7 @@ const stack: Layer[] = [
 
     .why-date-layer--wraps,
     .why-date-layer--gmt {
-      margin-left: var(--gmt-space-4);
+      margin-inline-start: var(--gmt-space-4);
     }
   }
 </style>

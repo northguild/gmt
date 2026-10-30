@@ -1,57 +1,39 @@
 /**
  * @vitest-environment jsdom
  *
- * The Satellite Clock Converter end to end: template -> mount -> interact ->
- * assert, against the real `@northguild/gmt`. Values are from a run of the
- * built library, so a drift in the library or the widget fails here.
+ * The Satellite Clock Converter end to end: template -> mount -> interact -> assert,
+ * against the real `@northguild/gmt`, through roles and accessible names the way a person
+ * (or a screen reader) meets the page. Values are from a run of the built library, so a
+ * drift in the library or the widget fails here.
  */
-import { afterEach, describe, expect, it } from "vitest";
-import { installJsdomShims } from "~/test/jsdom-shims";
+import { screen, within } from "@testing-library/dom";
+import {
+  WIDGET_REGISTRY,
+  type AnyWidgetEntry,
+} from "~/components/ask/widget-registry";
 import { lib } from "~/test/gnss-lib";
+import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  cellsInColumn,
+  expectNoAxeViolations,
+  renderWidget,
+  setRange,
+  type RenderedWidget,
+} from "~/test/render-widget";
 import {
   CLOCK_PRESETS,
   GLO_NOTE,
   IRN_NOTE,
+  PLATE_NO_SIGNAL,
   SENTENCES,
   sliderPositions,
 } from "./satellite-clock-converter";
-import {
-  mountSatelliteClockConverter,
-  renderSatelliteClockConverterTemplate,
-} from "./satellite-clock-converter-mount";
-import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { SITE_BASE } from "./site";
+import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
 
-const REQUIRED_ROLES = [
-  "preset",
-  "preset-description",
-  "value",
-  "moment-slider",
-  "moment-value",
-  "frame",
-  "heroes",
-  "hero-utc",
-  "hero-tai",
-  "hero-next",
-  "bars",
-  "ladder",
-  "ladder-svg",
-  "ladder-legend",
-  "ladder-off",
-  "bar-list",
-  "summary",
-  "reason-aside",
-  "clocks-table",
-  "clocks-body",
-  "footnote",
-  "glo-note",
-  "irn-note",
-  "call-clocks",
-  "copy-clocks",
-  "clocks-output",
-];
+const entry = WIDGET_REGISTRY["showSatelliteClockConverter"] as AnyWidgetEntry;
 
 const CLOCKS = ["UTC", "TAI", "GPS", "GAL", "BDT", "QZS", "GLO", "IRN"];
 
@@ -67,121 +49,120 @@ const UTC: Record<string, string | null> = {
   "wrong-token": null,
 };
 
-const q = <T extends HTMLElement = HTMLElement>(
-  root: HTMLElement,
-  role: string,
-) => root.querySelector(`[data-role="${role}"]`) as T;
+type Widget = RenderedWidget;
 
-async function mount(args = {}, templateArgs = args) {
-  const root = document.createElement("div");
-  root.innerHTML = renderSatelliteClockConverterTemplate(templateArgs);
-  document.body.append(root);
-  const controller = new AbortController();
-  const handle = await mountSatelliteClockConverter(
-    root,
-    args,
-    controller.signal,
+const open = (args: Record<string, unknown> = {}): Promise<Widget> =>
+  renderWidget(entry, { args });
+
+// The controls, by the names a person reads.
+const preset = () => screen.getByRole("combobox", { name: "Preset" });
+const valueBox = () =>
+  screen.getByRole("textbox", { name: /^A time on any clock/ });
+const slider = () =>
+  screen.getByRole("slider", { name: "Step through the leap seconds" });
+
+/** Replaces what the text box holds, in one input event. */
+async function enter(w: Widget, value: string) {
+  await w.user.clear(valueBox());
+  if (value !== "") await w.user.paste(value);
+}
+
+const output = () => screen.getByLabelText("What the calls returned");
+const calls = () => screen.getByRole("group", { name: "Calls made" });
+const reason = () =>
+  screen.queryByRole("complementary", { name: "Why there is no result" });
+const status = () => screen.getByRole("status", { name: "Reading summary" });
+const footnote = () => screen.getByText(/^BDT: before this system/);
+
+const TABLE = "The same instant on every clock";
+const table = () => screen.getByRole("table", { name: TABLE });
+const bodyRows = () =>
+  within(table())
+    .getAllByRole("row")
+    .filter((r) => within(r).queryAllByRole("columnheader").length === 0);
+const rowOf = (key: string) =>
+  bodyRows().find((r) =>
+    within(r).queryByRole("rowheader", { name: new RegExp(`^${key}\\b`) }),
+  )!;
+/** The row headers, one per clock, in order: each names its clock in the first word. */
+const expectClocks = () => {
+  const names = cellsInColumn(table(), "Clock");
+  expect(names).toHaveLength(CLOCKS.length);
+  names.forEach((cell, i) =>
+    expect(cell).toHaveTextContent(new RegExp(`^${CLOCKS[i]}\\b`)),
   );
-  return { root, handle, controller };
+};
+const ownRows = () =>
+  bodyRows().filter((r) => within(r).queryByText(/your reading/) !== null);
+
+const ladder = () => screen.getByRole("img");
+
+const PLATE_CAPTIONS = ["UTC", "TAI − UTC", "Next change"];
+
+/**
+ * A plate is a term and three definitions (the value, then two lines), so the value of
+ * plate n is definition 3n. A plate reserves the widest text it can show beside the shown
+ * one, hidden from assistive technology, so the shown text is the one not hidden.
+ */
+function plateParts(caption: string) {
+  const index = PLATE_CAPTIONS.indexOf(caption);
+  const defs = screen.getAllByRole("definition");
+  return {
+    value: defs[index * 3]!,
+    lines: defs.slice(index * 3 + 1, index * 3 + 3),
+  };
+}
+const shownIn = (el: HTMLElement) =>
+  within(el)
+    .getAllByText(/./)
+    .filter((e) => e.getAttribute("aria-hidden") !== "true");
+const exact = (text: string) =>
+  new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+
+function expectPlate(caption: string, value: string) {
+  const shown = shownIn(plateParts(caption).value);
+  expect(shown).toHaveLength(1);
+  expect(shown[0]).toHaveTextContent(exact(value));
 }
 
-function choose(root: HTMLElement, role: string, value: string) {
-  const el = q<HTMLSelectElement>(root, role);
-  el.value = value;
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function type(root: HTMLElement, value: string) {
-  const el = q<HTMLInputElement>(root, "value");
-  el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-function slide(root: HTMLElement, index: number) {
-  const el = q<HTMLInputElement>(root, "moment-slider");
-  el.value = String(index);
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-const text = (root: HTMLElement, role: string) =>
-  q(root, role).textContent ?? "";
-const isSentinel = (root: HTMLElement, role: string) =>
-  q(root, role).classList.contains("gmt-playground-sentinel");
-const plateValue = (root: HTMLElement, role: string) =>
-  q(root, role).querySelector(".gmt-punct-hero-value")!.textContent!;
-const rows = (root: HTMLElement) => [
-  ...root.querySelectorAll<HTMLElement>('[data-role="clocks-body"] tr'),
-];
-const cells = (row: HTMLElement) =>
-  [...row.children].map((c) => {
-    const lines = [...c.querySelectorAll(".gmt-clock-line")];
-    const parts = lines.length > 0 ? lines : [c];
-    return parts
-      .map((l) => l.textContent!.replace(/\s+/g, " ").trim())
-      .filter((t) => t !== "")
-      .join(" ");
-  });
-const barRows = (root: HTMLElement) => [
-  ...root.querySelectorAll<HTMLElement>('[data-role="bar-row"]'),
-];
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
+/** The text of the two lines under a plate's value that is not hidden. */
+const plateLine = (caption: string, n: 0 | 1) => plateParts(caption).lines[n]!;
 
 describe("renderSatelliteClockConverterTemplate", () => {
-  it("carries every role the mount looks up", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderSatelliteClockConverterTemplate();
-    for (const role of REQUIRED_ROLES) {
-      expect(root.querySelector(`[data-role="${role}"]`), role).not.toBeNull();
-    }
-  });
-
-  it("is a widget root with the standard wrapper, and no class containing card but the wrapper", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderSatelliteClockConverterTemplate();
-    const widget = root.firstElementChild as HTMLElement;
-    expect(widget.className).toBe(
-      "gmt-satellite-clock-converter gmt-widget not-content",
-    );
-    const cardClasses = [...root.querySelectorAll("[class]")]
-      .flatMap((el) => [...el.classList])
-      .filter((c) => c.includes("card"));
-    expect(new Set(cardClasses)).toEqual(new Set(["gmt-widget-card"]));
-  });
-
-  it("renders four numbered sections, 2 and 3 wide, with three plates, a ladder of eight clocks and eight rows", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderSatelliteClockConverterTemplate();
-    const sections = [...root.querySelectorAll(".gmt-widget-section")];
-    expect(sections.map((s) => s.querySelector("h4")!.textContent)).toEqual([
+  it("is a named region with four numbered sections, three plates, a ladder of eight clocks and eight rows", async () => {
+    await open();
+    expect(
+      screen.getByRole("region", { name: "Satellite Clock Converter" }),
+    ).toBeInTheDocument();
+    const headings = screen.getAllByRole("heading", { level: 4 });
+    [
       "1. Say what a clock reads",
       "2. How far each clock is from UTC",
       "3. The same instant on every clock",
       "4. What the library returns",
-    ]);
-    expect(
-      sections.map((s) => s.classList.contains("gmt-widget-section--wide")),
-    ).toEqual([false, true, true, false]);
-    expect(root.querySelectorAll(".gmt-punct-hero")).toHaveLength(3);
-    expect(barRows(root)).toHaveLength(8);
-    expect(rows(root).map((r) => r.dataset["row"])).toEqual(CLOCKS);
+    ].forEach((name, i) => expect(headings[i]).toHaveTextContent(name));
+    expect(headings).toHaveLength(4);
+    expect(screen.getAllByRole("term")).toHaveLength(3);
+    expectClocks();
+    expect(ladder()).toBeInTheDocument();
   });
 
-  it("limits the value to 64 characters", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderSatelliteClockConverterTemplate();
-    expect(q<HTMLInputElement>(root, "value").maxLength).toBe(64);
+  it("limits the value to 64 characters and names every control", async () => {
+    await open();
+    expect(valueBox()).toHaveAttribute("maxlength", "64");
+    for (const role of ["combobox", "textbox", "slider"] as const) {
+      for (const control of screen.getAllByRole(role)) {
+        expect(control).toHaveAccessibleName(/\S/);
+      }
+    }
   });
 
-  it("escapes a hostile seed", () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderSatelliteClockConverterTemplate({
-      value: '"><img src=x onerror=alert(1)><script>x</script>',
-    });
-    expect(root.querySelector("img")).toBeNull();
-    expect(root.querySelector("script")).toBeNull();
+  it("shows a hostile seed as text, never as elements", async () => {
+    await open({ value: '"><img src=x onerror=alert(1)><script>x</script>' });
+    expect(screen.queryByRole("img", { name: /^x$/ })).not.toBeInTheDocument();
+    expect(valueBox()).toHaveValue(
+      '"><img src=x onerror=alert(1)><script>x</script>',
+    );
   });
 });
 
@@ -193,124 +174,43 @@ describe("every preset, against the real library", () => {
   });
 
   it.each(CLOCK_PRESETS.map((p) => [p.id]))("%s", async (id) => {
-    const { root } = await mount();
-    choose(root, "preset", id!);
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe(id);
-    expect(root.querySelectorAll(".gmt-punct-hero")).toHaveLength(3);
-    expect(barRows(root)).toHaveLength(8);
-    expect(rows(root)).toHaveLength(8);
-    // One result line for each call line; a refusal replaces only its own.
-    const calls = text(root, "call-clocks");
-    const lines = text(root, "clocks-output").split("\n");
-    if (calls !== "") expect(lines).toHaveLength(calls.split("\n").length);
+    const w = await open();
+    await w.user.selectOptions(preset(), id!);
+    expect(preset()).toHaveValue(id);
+    expect(screen.getAllByRole("term")).toHaveLength(3);
+    expect(bodyRows()).toHaveLength(8);
     if (UTC[id!] === null) {
-      expect(isSentinel(root, "clocks-output")).toBe(true);
-      expect(text(root, "clocks-output")).toBe(
-        lines.map(() => "NO SIGNAL").join("\n"),
-      );
-      expect(
-        root.querySelector('[data-role="reason-aside"] p')!.textContent,
-      ).not.toBe("");
-      return;
+      expect(output()).toHaveTextContent(/^NO SIGNAL( NO SIGNAL)*$/);
+      expect(reason()).toHaveTextContent(/\S/);
+    } else {
+      expect(output()).not.toHaveTextContent(/NO SIGNAL/);
+      expectPlate("UTC", UTC[id!]!);
+      expect(reason()).not.toBeInTheDocument();
+      expect(calls()).toHaveTextContent("utcToGnss");
     }
-    expect(isSentinel(root, "clocks-output")).toBe(false);
-    expect(plateValue(root, "hero-utc")).toBe(UTC[id!]);
-    expect(text(root, "reason-aside")).toBe("");
-    expect(text(root, "call-clocks")).toContain("utcToGnss");
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("the table", () => {
   it("reads the start of 2024 on every clock", async () => {
-    const { root } = await mount({ preset: "utc-2024" });
-    expect(rows(root).map(cells)).toEqual([
-      ["UTC your reading", "2024-01-01T00:00:00Z", "the reference"],
-      ["TAI", "2024-01-01T00:00:37 TAI", "37 s"],
-      ["GPS", "2024-01-01T00:00:18 GPS", "18 s"],
-      ["GAL", "2024-01-01T00:00:18 GAL", "18 s"],
-      ["BDT", "2024-01-01T00:00:04 BDT", "4 s"],
-      ["QZS", "2024-01-01T00:00:18 QZS", "18 s"],
-      ["GLO", "2024-01-01T00:00:00 GLO", "0 s"],
-      ["IRN derived", "2024-01-01T00:00:18 IRN", "18 s"],
-    ]);
-  });
-
-  it("marks the reader's own clock as lit, in the table and the ladder", async () => {
-    const { root } = await mount({ preset: "beidou-reading" });
-    const lit = rows(root).filter((r) => r.hasAttribute("data-reading"));
-    expect(lit.map((r) => r.dataset["row"])).toEqual(["BDT"]);
-    expect(lit[0]!.getAttribute("data-series")).toBe("1");
-    expect(
-      barRows(root)
-        .filter((r) => r.hasAttribute("data-series"))
-        .map((r) => r.dataset["row"]),
-    ).toEqual(["BDT"]);
-  });
-
-  it("says written as under a reading the library spells differently", async () => {
-    const { root } = await mount({ value: "2024-01-01T00:00:00+01:00" });
-    expect(cells(rows(root)[0]!)[1]).toBe(
-      "2024-01-01T00:00:00+01:00 written as 2023-12-31T23:00:00Z",
+    const w = await open({ preset: "utc-2024" });
+    const readings = [
+      "2024-01-01T00:00:00Z",
+      "2024-01-01T00:00:37 TAI",
+      "2024-01-01T00:00:18 GPS",
+      "2024-01-01T00:00:18 GAL",
+      "2024-01-01T00:00:04 BDT",
+      "2024-01-01T00:00:18 QZS",
+      "2024-01-01T00:00:00 GLO",
+      "2024-01-01T00:00:18 IRN",
+    ];
+    const cells = cellsInColumn(table(), "Reading");
+    readings.forEach((reading, i) =>
+      expect(cells[i]).toHaveTextContent(new RegExp(`^${reading}`)),
     );
-    type(root, "2024-01-01T00:00:00Z");
-    expect(cells(rows(root)[0]!)[1]).toBe("2024-01-01T00:00:00Z");
-  });
-
-  it("says no result for a clock that has not started, and why under the table", async () => {
-    const { root } = await mount({ preset: "before-beidou" });
-    const bdt = rows(root).find((r) => r.dataset["row"] === "BDT")!;
-    expect(cells(bdt)).toEqual(["BDT", "no result", "no result"]);
-    expect(text(root, "footnote")).toBe(
-      "BDT: before this system's first instant.",
-    );
-    // A correct "no result" row is not a NO SIGNAL for the whole reading.
-    expect(isSentinel(root, "clocks-output")).toBe(false);
-  });
-
-  it("says inside an inserted second where a duration cannot be taken", async () => {
-    const { root } = await mount({ preset: "inside-leap-second" });
-    const gps = rows(root).find((r) => r.dataset["row"] === "GPS")!;
-    expect(cells(gps)).toEqual([
-      "GPS",
-      "2017-01-01T00:00:17 GPS",
-      "inside an inserted second",
-    ]);
-    expect(plateValue(root, "hero-tai")).toBe("36 s");
-  });
-
-  it("keeps all eight rows, in order, when the reading goes to NO SIGNAL", async () => {
-    const { root } = await mount({ preset: "utc-2024" });
-    type(root, "garbage");
-    expect(isSentinel(root, "clocks-output")).toBe(true);
-    expect(rows(root).map((r) => r.dataset["row"])).toEqual(CLOCKS);
-    expect(barRows(root)).toHaveLength(8);
-    expect(text(root, "reason-aside")).toContain(SENTENCES.notAnInstant);
-  });
-
-  it("states the two page notes at all times", async () => {
-    const { root } = await mount({ preset: "wrong-token" });
-    expect(text(root, "glo-note")).toBe(GLO_NOTE);
-    expect(text(root, "irn-note")).toBe(IRN_NOTE);
-  });
-});
-
-describe("the ladder", () => {
-  const rowOf = (root: HTMLElement, key: string) =>
-    barRows(root).find((r) => r.dataset["row"] === key)!;
-
-  it("puts each clock at its lead on one scale, sharing a rung where leads match", async () => {
-    const { root } = await mount({ preset: "utc-2024" });
-    const top = (key: string) => parseFloat(rowOf(root, key).style.top);
-    expect(top("TAI")).toBeLessThan(top("GPS"));
-    expect(top("GPS")).toBeLessThan(top("BDT"));
-    expect(top("BDT")).toBeLessThan(top("UTC"));
-    // One mark per rung: 37, 18, 4 and 0.
-    expect(root.querySelectorAll(".gmt-clad-mark")).toHaveLength(4);
-    expect(root.querySelector(".gmt-clad-toprail")).not.toBeNull();
-    const chips = barRows(root).map(
-      (r) => r.querySelector('[data-role="bar-value"]')!.textContent,
-    );
-    expect(chips).toEqual([
+    const leads = cellsInColumn(table(), "Ahead of UTC");
+    [
       "the reference",
       "37 s",
       "18 s",
@@ -319,404 +219,423 @@ describe("the ladder", () => {
       "18 s",
       "0 s",
       "18 s",
-    ]);
+    ].forEach((lead, i) => expect(leads[i]).toHaveTextContent(exact(lead)));
+    expect(rowOf("UTC")).toHaveTextContent("your reading");
+    expect(rowOf("IRN")).toHaveTextContent("derived");
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("names the reader's own clock", async () => {
+    const w = await open({ preset: "beidou-reading" });
+    expect(ownRows()).toEqual([rowOf("BDT")]);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("says written as under a reading the library spells differently", async () => {
+    const w = await open({ value: "2024-01-01T00:00:00+01:00" });
+    expect(rowOf("UTC")).toHaveTextContent(
+      "2024-01-01T00:00:00+01:00 written as 2023-12-31T23:00:00Z",
+    );
+    await enter(w, "2024-01-01T00:00:00Z");
+    expect(rowOf("UTC")).not.toHaveTextContent("written as");
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("says no result for a clock that has not started, and why under the table", async () => {
+    const w = await open({ preset: "before-beidou" });
+    expect(rowOf("BDT")).toHaveTextContent(/^BDT\s*no result\s*no result$/);
+    expect(footnote()).toHaveTextContent(
+      "BDT: before this system's first instant.",
+    );
+    // A correct "no result" row is not a NO SIGNAL for the whole reading.
+    expect(output()).not.toHaveTextContent(/NO SIGNAL/);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("says inside an inserted second where a duration cannot be taken", async () => {
+    const w = await open({ preset: "inside-leap-second" });
+    expect(rowOf("GPS")).toHaveTextContent(
+      /^GPS\s*2017-01-01T00:00:17 GPS\s*inside an inserted second$/,
+    );
+    expectPlate("TAI − UTC", "36 s");
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("keeps all eight rows, in order, when the reading goes to NO SIGNAL", async () => {
+    const w = await open({ preset: "utc-2024" });
+    await enter(w, "garbage");
+    expect(output()).toHaveTextContent(/NO SIGNAL/);
+    expectClocks();
+    expect(reason()).toHaveTextContent(SENTENCES.notAnInstant);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("states the two page notes at all times", async () => {
+    await open({ preset: "wrong-token" });
+    expect(screen.getByText(GLO_NOTE)).toBeInTheDocument();
+    expect(screen.getByText(IRN_NOTE)).toBeInTheDocument();
+  });
+});
+
+describe("the ladder", () => {
+  const sentences = () =>
+    screen.getAllByText(/^[A-Z]{3}: /, { selector: "li" });
+
+  it("is one labelled image that says each clock's lead, with a list of sentences beside it", async () => {
+    const w = await open({ preset: "utc-2024" });
+    const figure = screen.getByRole("img", {
+      name: /Ladder of 8 clocks on one scale of seconds ahead of UTC/,
+    });
+    expect(figure).toHaveAccessibleName(
+      /GPS, GAL, QZS and IRN 18 s ahead of UTC/,
+    );
+    expect(sentences()).toHaveLength(8);
+    expect(within(figure).queryByRole("link")).not.toBeInTheDocument();
+    expect(within(figure).queryByRole("button")).not.toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("says each clock's lead as a chip beside its rung", async () => {
+    await open({ preset: "utc-2024" });
+    const figure = ladder();
+    for (const chip of ["the reference", "37 s", "18 s", "4 s", "0 s"]) {
+      expect(within(figure).getAllByText(chip).length).toBeGreaterThan(0);
+    }
+    expect(within(figure).getAllByText("18 s")).toHaveLength(4);
   });
 
   it("says which clocks are tied to TAI and which follow UTC, from the library", async () => {
-    const { root } = await mount({ preset: "utc-2024" });
-    const tie = (key: string) =>
-      rowOf(root, key).querySelector('[data-role="bar-tie"]')!.textContent;
-    expect(tie("UTC")).toBe("baseline");
-    expect(tie("TAI")).toBe("top rail");
-    for (const key of ["GPS", "GAL", "BDT", "QZS", "IRN"]) {
-      expect(tie(key)).toBe("tied to TAI");
-    }
-    expect(tie("GLO")).toBe("follows UTC");
-  });
-
-  it("keeps the stage the same height from one reading to the next", async () => {
-    const { root } = await mount({ preset: "utc-2024" });
-    const height = () => q(root, "ladder").style.getPropertyValue("--clad-h");
-    const before = height();
-    type(root, "2006-01-01T00:00:00Z");
-    expect(height()).toBe(before);
-    slide(root, 0);
-    expect(height()).toBe(before);
+    await open({ preset: "utc-2024" });
+    const figure = ladder();
+    expect(within(figure).getByText("baseline")).toBeInTheDocument();
+    expect(within(figure).getByText("top rail")).toBeInTheDocument();
+    expect(within(figure).getAllByText("tied to TAI")).toHaveLength(5);
+    expect(within(figure).getByText("follows UTC")).toBeInTheDocument();
   });
 
   it("puts a clock with no reading off the scale, and says so", async () => {
-    const { root } = await mount({ preset: "before-beidou" });
-    const bdt = rowOf(root, "BDT");
-    expect(bdt.hasAttribute("data-off")).toBe(true);
-    const group = q(root, "ladder-off");
-    expect(group.hidden).toBe(false);
-    expect(group.textContent).toContain("No place on the scale");
-    expect(bdt.parentElement).toBe(group);
-    expect(rowOf(root, "GPS").parentElement).toBe(q(root, "ladder"));
-    expect(bdt.style.top).toBe("");
-    expect(bdt.querySelector('[data-role="bar-reading"]')!.textContent).toBe(
-      "before its first instant",
-    );
+    const w = await open({ preset: "before-beidou" });
+    const figure = ladder();
+    expect(
+      within(figure).getByText("No place on the scale"),
+    ).toBeInTheDocument();
+    expect(
+      within(figure).getByText("before its first instant"),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 
-  it("reserves the off group's room for the worst slider stop, so a drag never moves it", async () => {
-    const { root } = await mount({ preset: "utc-2024" });
-    const group = q(root, "ladder-off");
-    const reserved = () => group.style.getPropertyValue("--clad-off-n");
-    const before = reserved();
+  it("moves clocks on and off the scale as the slider steps through the stops", async () => {
+    const w = await open({ preset: "utc-2024" });
     // Before 1980 the five TAI-tied clocks are off the scale.
-    expect(Number(before)).toBeGreaterThanOrEqual(5);
-    expect(group.hidden).toBe(false);
-    const offCount = () => group.querySelectorAll("[data-role=bar-row]").length;
-    slide(root, 0);
+    const offCount = () =>
+      within(ladder()).queryAllByText("before its first instant").length;
+    setRange(slider(), 0);
     const early = offCount();
-    expect(early).toBeGreaterThan(0);
-    slide(root, 20);
+    expect(early).toBeGreaterThanOrEqual(5);
+    setRange(slider(), 20);
     expect(offCount()).not.toBe(early);
-    expect(reserved()).toBe(before);
-    expect(group.hidden).toBe(false);
+    await expectNoAxeViolations(w.root);
   });
 
-  it("is a labelled image with a hidden list, and nothing inside takes focus", async () => {
-    const { root } = await mount({ preset: "utc-2024" });
-    const drawing = q(root, "bars");
-    expect(drawing.getAttribute("role")).toBe("img");
-    expect(drawing.getAttribute("aria-label")).toContain(
-      "Ladder of 8 clocks on one scale of seconds ahead of UTC",
-    );
-    expect(drawing.getAttribute("aria-label")).toContain(
-      "GPS, GAL, QZS and IRN 18 s ahead of UTC",
-    );
-    expect(q(root, "bar-list").querySelectorAll("li")).toHaveLength(8);
-    // The list sits beside the drawing, not inside the role="img" element.
-    expect(drawing.contains(q(root, "bar-list"))).toBe(false);
-    expect(q(root, "bar-list").closest('[role="img"]')).toBeNull();
+  it("reads an inserted second in words, and a bad token is not a ladder", async () => {
+    const w = await open({ preset: "inside-leap-second" });
+    expect(ladder()).toHaveAccessibleName(/inserted/);
+    await w.user.selectOptions(preset(), "wrong-token");
     expect(
-      drawing.querySelectorAll("a, button, input, select, [tabindex]"),
-    ).toHaveLength(0);
-  });
-
-  it("reads each preset in words, and a bad token is not a ladder", async () => {
-    const inside = await mount({ preset: "inside-leap-second" });
-    expect(q(inside.root, "bars").getAttribute("aria-label")).toContain(
-      "inserted",
-    );
+      screen.queryByRole("img", { name: /Ladder of 8/ }),
+    ).not.toBeInTheDocument();
     expect(
-      q(inside.root, "ladder-off").querySelectorAll("[data-row]"),
-    ).toHaveLength(6);
-    const bad = await mount({ preset: "wrong-token" });
-    expect(q(bad.root, "ladder-sentinel").hidden).toBe(false);
-    expect(q(bad.root, "ladder-sentinel").textContent).toBe(
-      "⟨ NO SIGNAL — invalid input ⟩",
-    );
-    expect(q(bad.root, "heroes").textContent).toContain("⟨ NO SIGNAL ⟩");
-    expect(q(inside.root, "ladder-sentinel").hidden).toBe(true);
-    const blank = await mount({ value: "" });
-    expect(q(blank.root, "ladder-sentinel").hidden).toBe(true);
-    expect(q(blank.root, "heroes").textContent).not.toContain("NO SIGNAL");
-    expect(q(bad.root, "bars").getAttribute("aria-label")).not.toContain(
-      "Ladder of 8",
-    );
+      screen.getByText("⟨ NO SIGNAL — invalid input ⟩"),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("the plates", () => {
   it("read UTC, TAI minus UTC and the next change", async () => {
-    const { root } = await mount({ preset: "galileo-first-instant" });
-    expect(plateValue(root, "hero-utc")).toBe("1999-08-21T23:59:47Z");
-    expect(plateValue(root, "hero-tai")).toBe("32 s");
-    expect(plateValue(root, "hero-next")).toBe("2005-12-31T23:59:60Z");
+    await open({ preset: "galileo-first-instant" });
+    expectPlate("UTC", "1999-08-21T23:59:47Z");
+    expectPlate("TAI − UTC", "32 s");
+    expectPlate("Next change", "2005-12-31T23:59:60Z");
   });
 
   it("say none after this instant as a result, not a no-signal", async () => {
-    const { root } = await mount({ preset: "utc-2024" });
-    expect(plateValue(root, "hero-next")).toBe("none after this instant");
-    expect(q(root, "hero-next").hasAttribute("data-empty")).toBe(false);
-    expect(text(root, "hero-next")).toContain("these gaps stay as they are");
+    const w = await open({ preset: "utc-2024" });
+    expectPlate("Next change", "none after this instant");
+    expect(plateLine("Next change", 0)).toHaveTextContent(
+      "these gaps stay as they are",
+    );
+    expect(within(w.root).queryByText(PLATE_NO_SIGNAL)).not.toBeInTheDocument();
   });
 
-  it("all read no result under a sentinel", async () => {
-    const { root } = await mount({ preset: "wrong-token" });
-    expect(
-      [...root.querySelectorAll(".gmt-punct-hero")].every((p) =>
-        p.hasAttribute("data-empty"),
-      ),
-    ).toBe(true);
+  it("all say NO SIGNAL in words under a sentinel", async () => {
+    await open({ preset: "wrong-token" });
+    for (const caption of PLATE_CAPTIONS) expectPlate(caption, PLATE_NO_SIGNAL);
+  });
+
+  it("read no result for a blank value", async () => {
+    const w = await open({ preset: "utc-2024" });
+    await enter(w, "");
+    for (const caption of PLATE_CAPTIONS) expectPlate(caption, "no result");
+    expect(screen.queryByText(PLATE_NO_SIGNAL)).not.toBeInTheDocument();
   });
 });
 
 describe("the sentinel sentences", () => {
   it("are four different sentences for four different faults", async () => {
-    const { root } = await mount({ preset: "utc-2024" });
-    const sentences = new Set<string>();
-    for (const value of [
+    const w = await open({ preset: "utc-2024" });
+    const faults = [
       "2024-01-01T00:00:37 UTC",
       "2017-12-31T23:59:60Z",
       "1990-01-01T00:00:00 GAL",
       "garbage",
-    ]) {
-      type(root, value);
-      expect(isSentinel(root, "clocks-output"), value).toBe(true);
-      sentences.add(text(root, "reason-aside"));
+    ];
+    const seen: string[] = [];
+    for (const value of faults) {
+      await enter(w, value);
+      expect(output(), value).toHaveTextContent(/NO SIGNAL/);
+      const sentence = Object.values(SENTENCES).find(
+        (s) => within(reason()!).queryByText(s) !== null,
+      );
+      expect(sentence, value).toBeDefined();
+      seen.push(sentence!);
     }
-    expect(sentences.size).toBe(4);
+    expect(new Set(seen).size).toBe(4);
+    await expectNoAxeViolations(w.root);
   });
 
   it("an empty value is an empty state, never amber", async () => {
-    const { root } = await mount({ preset: "utc-2024" });
-    type(root, "");
-    expect(isSentinel(root, "clocks-output")).toBe(false);
-    expect(text(root, "clocks-output").trim()).toBe("");
-    expect(text(root, "reason-aside")).toBe("");
-    expect(text(root, "call-clocks")).not.toContain("utcToGnss");
-    expect(rows(root)).toHaveLength(8);
+    const w = await open({ preset: "utc-2024" });
+    await enter(w, "");
+    expect(output()).not.toHaveTextContent(/NO SIGNAL/);
+    expect(reason()).not.toBeInTheDocument();
+    expect(calls()).not.toHaveTextContent("utcToGnss");
+    expect(bodyRows()).toHaveLength(8);
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("the form", () => {
   it("opens on the first preset", async () => {
-    const { root } = await mount();
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("utc-2024");
-    expect(q<HTMLInputElement>(root, "value").value).toBe(
-      "2024-01-01T00:00:00Z",
-    );
+    await open();
+    expect(preset()).toHaveValue("utc-2024");
+    expect(valueBox()).toHaveValue("2024-01-01T00:00:00Z");
   });
 
   it("makes the preset custom when the value changes, and back when it matches", async () => {
-    const { root } = await mount();
-    type(root, "2030-05-05T05:05:05Z");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("custom");
-    type(root, "2024-01-01T00:00:04 BDT");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("beidou-reading");
+    const w = await open();
+    await enter(w, "2030-05-05T05:05:05Z");
+    expect(preset()).toHaveValue("custom");
+    await enter(w, "2024-01-01T00:00:04 BDT");
+    expect(preset()).toHaveValue("beidou-reading");
   });
 
   it("reads the clock from the token after the space", async () => {
-    const { root } = await mount();
-    type(root, "2024-01-01T00:00:18 GPS");
-    expect(plateValue(root, "hero-utc")).toBe("2024-01-01T00:00:00Z");
-    expect(text(root, "hero-utc")).toContain("read from GPS");
-    expect(
-      rows(root)
-        .filter((r) => r.hasAttribute("data-reading"))
-        .map((r) => r.dataset["row"]),
-    ).toEqual(["GPS"]);
+    const w = await open();
+    await enter(w, "2024-01-01T00:00:18 GPS");
+    expectPlate("UTC", "2024-01-01T00:00:00Z");
+    expect(plateLine("UTC", 0)).toHaveTextContent("read from GPS");
+    expect(ownRows()).toEqual([rowOf("GPS")]);
   });
 });
 
 describe("the slider", () => {
   it("has one more stop than there are inserted seconds, and starts on the latest", async () => {
-    const { root } = await mount();
-    const slider = q<HTMLInputElement>(root, "moment-slider");
+    await open();
     const stops = sliderPositions(lib);
-    expect(Number(slider.min)).toBe(0);
-    expect(Number(slider.max)).toBe(stops.length - 1);
-    expect(slider.value).toBe(String(stops.length - 1));
-    expect(text(root, "moment-value")).toBe(stops.at(-1));
+    expect(slider()).toHaveAttribute("min", "0");
+    expect(slider()).toHaveAttribute("max", String(stops.length - 1));
+    expect(slider()).toHaveValue(String(stops.length - 1));
     expect(stops[0]).toBe("1972-01-01T00:00:00Z");
   });
 
   it("writes the stop's UTC instant into the value and reads it", async () => {
-    const { root } = await mount();
+    const w = await open();
     const stops = sliderPositions(lib);
-    slide(root, 0);
-    expect(q<HTMLInputElement>(root, "value").value).toBe(stops[0]);
-    expect(plateValue(root, "hero-tai")).toBe("10 s");
-    expect(text(root, "moment-value")).toBe(stops[0]);
+    setRange(slider(), 0);
+    expect(valueBox()).toHaveValue(stops[0]);
+    expectPlate("TAI − UTC", "10 s");
     // Before any satellite clock began, they have no result and the footnote says so.
-    expect(text(root, "footnote")).toContain(
-      "before this system's first instant",
-    );
-    slide(root, stops.length - 1);
-    expect(q<HTMLInputElement>(root, "value").value).toBe(stops.at(-1));
-    expect(plateValue(root, "hero-tai")).toBe("37 s");
+    expect(
+      screen.getAllByText(/before this system.s first instant/).length,
+    ).toBeGreaterThan(0);
+    setRange(slider(), stops.length - 1);
+    expect(valueBox()).toHaveValue(stops.at(-1));
+    expectPlate("TAI − UTC", "37 s");
+    await expectNoAxeViolations(w.root);
   });
 
   it("has a typed equivalent and follows a typed stop", async () => {
-    const { root } = await mount();
+    const w = await open();
     const stops = sliderPositions(lib);
-    type(root, stops[3]!);
-    expect(q<HTMLInputElement>(root, "moment-slider").value).toBe("3");
-    expect(text(root, "moment-value")).toBe(stops[3]);
+    await enter(w, stops[3]!);
+    expect(slider()).toHaveValue("3");
   });
 
   it("leaves the slider where it is for a value that is not a stop", async () => {
-    const { root } = await mount();
-    slide(root, 5);
-    type(root, "2030-05-05T05:05:05Z");
-    expect(q<HTMLInputElement>(root, "moment-slider").value).toBe("5");
-  });
-
-  it("is a native range, labelled", async () => {
-    const { root } = await mount();
-    const slider = q<HTMLInputElement>(root, "moment-slider");
-    expect(slider.type).toBe("range");
-    expect(slider.closest("label")!.textContent).toContain(
-      "Step through the leap seconds",
-    );
+    const w = await open();
+    setRange(slider(), 5);
+    await enter(w, "2030-05-05T05:05:05Z");
+    expect(slider()).toHaveValue("5");
+    await expectNoAxeViolations(w.root);
   });
 });
 
 describe("seeding and permalinks", () => {
   it("seeds a chat call's value and paints it on the first frame", async () => {
-    const template = renderSatelliteClockConverterTemplate({
-      value: "2026-01-01T00:00:37 TAI",
-    });
-    expect(template).toContain('value="2026-01-01T00:00:37 TAI"');
-    const { root } = await mount({ value: "2026-01-01T00:00:37 TAI" });
-    expect(plateValue(root, "hero-utc")).toBe("2026-01-01T00:00:00Z");
-    expect(q<HTMLSelectElement>(root, "preset").value).toBe("tai-reading");
+    await open({ value: "2026-01-01T00:00:37 TAI" });
+    expect(valueBox()).toHaveValue("2026-01-01T00:00:37 TAI");
+    expectPlate("UTC", "2026-01-01T00:00:00Z");
+    expect(preset()).toHaveValue("tai-reading");
   });
 
   it.each(CLOCK_PRESETS.map((p) => [p.id]))(
     "round-trips %s as a permalink of one string",
     async (id) => {
-      const first = await mount();
-      choose(first.root, "preset", id!);
-      const state = first.handle.getPermalinkState?.() as Record<
-        string,
-        unknown
-      >;
-      expect(Object.keys(state)).toEqual(["value"]);
-      expect(typeof state["value"]).toBe("string");
-      expect((state["value"] as string).length).toBeLessThanOrEqual(64);
-      const url = encodeWidgetPermalink("satclock", state);
+      const first = await open();
+      await first.user.selectOptions(preset(), id!);
+      const url = first.permalink();
       expect(url).toMatch(
         new RegExp(
           `^${SITE_BASE}/tools/satellite-clock-converter/\\?w=satclock&wa=`,
         ),
       );
-      const seeded = seedFromLocation("satclock", url.slice(url.indexOf("?")));
-      expect(seeded).toEqual(state);
-      const output = text(first.root, "clocks-output");
-      const reason = text(first.root, "reason-aside");
-      document.body.innerHTML = "";
+      const seeded = seedFromLocation("satclock", url.slice(url.indexOf("?")))!;
+      expect(Object.keys(seeded)).toEqual(["value"]);
+      expect(typeof seeded["value"]).toBe("string");
+      expect((seeded["value"] as string).length).toBeLessThanOrEqual(64);
+      expect(encodeWidgetPermalink("satclock", seeded)).toBe(url);
+      const sentinel = reason() !== null;
+      first.destroy();
 
-      const second = await mount(seeded);
-      expect(text(second.root, "clocks-output")).toBe(output);
-      expect(text(second.root, "reason-aside")).toBe(reason);
-      expect(q<HTMLSelectElement>(second.root, "preset").value).toBe(id);
+      const second = await open(seeded);
+      expect(reason() !== null).toBe(sentinel);
+      expect(preset()).toHaveValue(id);
+      expect(second.permalink()).toBe(url);
     },
   );
 
   it("writes a custom value as typed", async () => {
-    const { root, handle } = await mount();
-    type(root, "2030-05-05T05:05:05Z");
-    expect(handle.getPermalinkState?.()).toEqual({
+    const w = await open();
+    await enter(w, "2030-05-05T05:05:05Z");
+    const url = w.permalink();
+    expect(seedFromLocation("satclock", url.slice(url.indexOf("?")))).toEqual({
       value: "2030-05-05T05:05:05Z",
     });
   });
 });
 
 describe("on-screen words", () => {
-  function screenText(root: HTMLElement): string {
-    const clone = root.cloneNode(true) as HTMLElement;
-    clone
-      .querySelectorAll('.gmt-codeframe, output[data-role$="output"]')
-      .forEach((e) => e.remove());
-    const labels = [...clone.querySelectorAll("[aria-label]")].map((e) =>
-      e.getAttribute("aria-label"),
-    );
-    return `${clone.textContent}\n${labels.join("\n")}`;
-  }
+  /** What a reader sees or hears, bar the calls and what they returned and the GLO note. */
+  const regions = () => [
+    table(),
+    ladder(),
+    status(),
+    screen.getAllByRole("term")[0]!,
+  ];
 
   it.each(CLOCK_PRESETS.map((p) => [p.id]))(
     "%s shows no raw null or undefined and names no body, zone or country",
     async (id) => {
-      const { root } = await mount();
-      choose(root, "preset", id!);
-      const shown = screenText(root);
-      expect(shown).not.toMatch(/\bnull\b|undefined|NaN/);
-      expect(shown).not.toMatch(/UTC\+3|Moscow|MSK|New_York|en-US|\bGMT\b/);
+      const w = await open();
+      await w.user.selectOptions(preset(), id!);
+      for (const region of regions()) {
+        expect(region).not.toHaveTextContent(/\bnull\b|undefined|NaN/);
+        expect(region).not.toHaveTextContent(
+          /UTC\+3|Moscow|MSK|New_York|en-US|\bGMT\b|GLONASS/,
+        );
+      }
+      expect(ladder()).not.toHaveAccessibleName(/\bnull\b|undefined|NaN/);
       // GLONASS appears only in the one note that says what GLO is.
-      expect(shown.replace(GLO_NOTE, "")).not.toMatch(/GLONASS/);
+      expect(screen.getAllByText(/GLONASS/)).toHaveLength(1);
     },
   );
 
-  it("states the reading in one hidden live sentence", async () => {
-    const { root } = await mount({ preset: "beidou-reading" });
-    const summary = q(root, "summary");
-    expect(summary.getAttribute("aria-live")).toBe("polite");
-    expect(summary.textContent).toContain("UTC 2024-01-01T00:00:00Z");
-    expect(summary.textContent).toContain("TAI − UTC 37 s");
+  it("states the reading in one live sentence", async () => {
+    await open({ preset: "beidou-reading" });
+    expect(status()).toHaveTextContent("UTC 2024-01-01T00:00:00Z");
+    expect(status()).toHaveTextContent("TAI − UTC 37 s");
   });
 
   it("uses real controls", async () => {
-    const { root } = await mount();
-    expect(root.querySelectorAll("select")).toHaveLength(1);
-    expect(root.querySelectorAll('input[type="text"]')).toHaveLength(1);
-    expect(root.querySelectorAll('input[type="range"]')).toHaveLength(1);
+    await open();
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
+    expect(screen.getAllByRole("textbox")).toHaveLength(1);
+    expect(screen.getAllByRole("slider")).toHaveLength(1);
   });
 
   it("prints the calls it made", async () => {
-    const { root } = await mount({ preset: "beidou-reading" });
-    const calls = text(root, "call-clocks");
-    expect(calls).toContain("gnssToUtc");
-    expect(calls).toContain("toTAI");
-    expect(calls).toContain("taiMinusUtc");
-    expect(calls).toContain("nextLeapSecond");
+    await open({ preset: "beidou-reading" });
+    for (const name of [
+      "gnssToUtc",
+      "toTAI",
+      "taiMinusUtc",
+      "nextLeapSecond",
+    ]) {
+      expect(calls()).toHaveTextContent(name);
+    }
   });
 });
 
 describe("lifecycle", () => {
   it("an aborted mount is inert", async () => {
-    const root = document.createElement("div");
-    root.innerHTML = renderSatelliteClockConverterTemplate();
-    document.body.append(root);
-    const controller = new AbortController();
-    controller.abort();
-    const handle = await mountSatelliteClockConverter(
-      root,
-      {},
-      controller.signal,
+    const w = await renderWidget(entry, { aborted: true });
+    expect(output()).not.toHaveTextContent(/NO SIGNAL/);
+    w.destroy();
+    w.destroy();
+  });
+
+  it("two converters on one page keep separate controls", async () => {
+    const a = await renderWidget(entry, { idPrefix: "a" });
+    const b = await renderWidget(entry, { idPrefix: "b" });
+    await a.user.selectOptions(
+      within(a.root).getByRole("combobox", { name: "Preset" }),
+      "beidou-reading",
     );
-    expect(text(root, "clocks-output")).toBe(" ");
-    handle.destroy();
-    handle.destroy();
+    expect(
+      within(a.root).getByRole("combobox", { name: "Preset" }),
+    ).toHaveValue("beidou-reading");
+    expect(
+      within(b.root).getByRole("combobox", { name: "Preset" }),
+    ).toHaveValue("utc-2024");
   });
 });
 
 describe("the links row", () => {
   const WEEKS = "This moment as a week on every counter";
   const TIMELINE = "Why these gaps grew";
-  const link = (root: HTMLElement, role: string) =>
-    q<HTMLAnchorElement>(root, role);
-  const state = (root: HTMLElement, role: string) => ({
-    text: link(root, role).textContent,
-    href: link(root, role).getAttribute("href"),
-    disabled: link(root, role).getAttribute("aria-disabled"),
-  });
-  const enabled = (text: string, href: string) => ({
-    text,
-    href,
-    disabled: null,
-  });
-  const disabled = (text: string) => ({ text, href: null, disabled: "true" });
+  const isOpen = (name: string) =>
+    screen.queryByRole("link", { name }) !== null;
+  const href = (name: string) =>
+    screen.getByRole("link", { name }).getAttribute("href");
+  const closed = (name: string) => {
+    const el = screen.getByText(name);
+    return {
+      disabled: el.getAttribute("aria-disabled"),
+      href: el.getAttribute("href"),
+    };
+  };
 
-  it("has both links in the links row, in order", async () => {
-    const { root } = await mount();
-    const row = q(root, "tool-links");
-    expect(row.classList.contains("gmt-widget-controls")).toBe(true);
-    expect(
-      [...row.querySelectorAll("a")].map((a) => a.dataset["role"]),
-    ).toEqual(["link-weeks", "link-timeline"]);
+  it("has both links in a named group, in order", async () => {
+    await open();
+    const group = screen.getByRole("group", { name: "Other tools" });
+    const links = within(group).getAllByRole("link");
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveTextContent(WEEKS);
+    expect(links[1]).toHaveTextContent(TIMELINE);
   });
 
   it("sends the UTC instant to the Week Decoder in UTC mode and to the timeline as its date", async () => {
-    const { root } = await mount();
-    expect(state(root, "link-weeks")).toEqual(
-      enabled(
-        WEEKS,
-        encodeWidgetPermalink("gnssweek", {
-          mode: "utc",
-          utc: "2024-01-01T00:00:00Z",
-        }),
-      ),
+    await open();
+    expect(href(WEEKS)).toBe(
+      encodeWidgetPermalink("gnssweek", {
+        mode: "utc",
+        utc: "2024-01-01T00:00:00Z",
+      }),
     );
-    expect(state(root, "link-timeline")).toEqual(
-      enabled(
-        TIMELINE,
-        encodeWidgetPermalink("leapline", { date: "2024-01-01T00:00:00Z" }),
-      ),
+    expect(href(TIMELINE)).toBe(
+      encodeWidgetPermalink("leapline", { date: "2024-01-01T00:00:00Z" }),
     );
   });
 
@@ -726,21 +645,21 @@ describe("the links row", () => {
       "beidou-reading",
       "galileo-first-instant",
     ]) {
-      const { root } = await mount({ preset: id });
+      const w = await open({ preset: id });
       const utc = UTC[id]!;
-      expect(link(root, "link-weeks").getAttribute("href")).toBe(
+      expect(href(WEEKS)).toBe(
         encodeWidgetPermalink("gnssweek", { mode: "utc", utc }),
       );
-      expect(link(root, "link-timeline").getAttribute("href")).toBe(
+      expect(href(TIMELINE)).toBe(
         encodeWidgetPermalink("leapline", { date: utc }),
       );
-      document.body.innerHTML = "";
+      w.destroy();
     }
   });
 
   it("sends a leap second's own instant", async () => {
-    const { root } = await mount({ preset: "inside-leap-second" });
-    expect(link(root, "link-weeks").getAttribute("href")).toBe(
+    await open({ preset: "inside-leap-second" });
+    expect(href(WEEKS)).toBe(
       encodeWidgetPermalink("gnssweek", {
         mode: "utc",
         utc: "2016-12-31T23:59:60Z",
@@ -749,13 +668,13 @@ describe("the links row", () => {
   });
 
   it("follows the slider to the stop's instant", async () => {
-    const { root } = await mount();
+    await open();
     const stops = sliderPositions(lib);
-    slide(root, 0);
-    expect(link(root, "link-weeks").getAttribute("href")).toBe(
+    setRange(slider(), 0);
+    expect(href(WEEKS)).toBe(
       encodeWidgetPermalink("gnssweek", { mode: "utc", utc: stops[0] }),
     );
-    expect(link(root, "link-timeline").getAttribute("href")).toBe(
+    expect(href(TIMELINE)).toBe(
       encodeWidgetPermalink("leapline", { date: stops[0] }),
     );
   });
@@ -763,34 +682,46 @@ describe("the links row", () => {
   it.each(["no-leap-second-that-day", "wrong-token"])(
     "disables both links, with no href, on NO SIGNAL (%s)",
     async (id) => {
-      const { root } = await mount({ preset: id });
-      expect(state(root, "link-weeks")).toEqual(disabled(WEEKS));
-      expect(state(root, "link-timeline")).toEqual(disabled(TIMELINE));
+      await open({ preset: id });
+      for (const name of [WEEKS, TIMELINE]) {
+        expect(isOpen(name)).toBe(false);
+        expect(closed(name)).toEqual({ disabled: "true", href: null });
+      }
     },
   );
 
   it("disables both links for a blank value, and lights them again for a reading", async () => {
-    const { root } = await mount();
-    type(root, "");
-    expect(state(root, "link-weeks")).toEqual(disabled(WEEKS));
-    expect(state(root, "link-timeline")).toEqual(disabled(TIMELINE));
-    type(root, "2024-01-01T00:00:00Z");
-    expect(link(root, "link-weeks").hasAttribute("href")).toBe(true);
-    expect(link(root, "link-weeks").hasAttribute("aria-disabled")).toBe(false);
+    const w = await open();
+    await enter(w, "");
+    expect(isOpen(WEEKS)).toBe(false);
+    expect(isOpen(TIMELINE)).toBe(false);
+    await enter(w, "2024-01-01T00:00:00Z");
+    expect(isOpen(WEEKS)).toBe(true);
+    expect(isOpen(TIMELINE)).toBe(true);
   });
 
   it("lands on seeds the other tools read back", async () => {
-    const { root } = await mount();
-    const read = (role: string, kind: "gnssweek" | "leapline") => {
-      const href = link(root, role).getAttribute("href")!;
-      return seedFromLocation(kind, href.slice(href.indexOf("?")));
+    await open();
+    const read = (name: string, kind: "gnssweek" | "leapline") => {
+      const target = href(name)!;
+      return seedFromLocation(kind, target.slice(target.indexOf("?")));
     };
-    expect(read("link-weeks", "gnssweek")).toEqual({
+    expect(read(WEEKS, "gnssweek")).toEqual({
       mode: "utc",
       utc: "2024-01-01T00:00:00Z",
     });
-    expect(read("link-timeline", "leapline")).toEqual({
+    expect(read(TIMELINE, "leapline")).toEqual({
       date: "2024-01-01T00:00:00Z",
     });
+  });
+});
+
+describe("the length cap", () => {
+  it("stops the time field at 64 characters", async () => {
+    const w = await open();
+    const box = valueBox();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(72));
+    expect(box).toHaveValue("x".repeat(64));
   });
 });

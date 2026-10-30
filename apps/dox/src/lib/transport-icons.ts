@@ -5,7 +5,7 @@
  *
  * One consistent set: 24x24 viewBox, stroke-based (`fill="none"`,
  * `stroke="currentColor"`, 2px stroke, round caps/joins — the same weight
- * `code-frame.ts`'s copy/check glyphs use), legible at 16px. Each export
+ * the copy/check glyphs in `widgets/builders/code-frame.ts` use), legible at 16px. Each export
  * below is the icon's *inner* markup only, with no `<svg>` wrapper of its
  * own, so it drops straight into `src/components/Icon.astro`'s
  * `BuiltInIcons` dictionary (that component supplies the wrapper and its
@@ -58,7 +58,7 @@ function iconKeyFor(mode: string): string {
   return Object.hasOwn(TRANSPORT_ICON_PATHS, key) ? key : FALLBACK_ICON_KEY;
 }
 
-export interface TransportIconOptions {
+interface TransportIconOptions {
   /** Accessible name. Omitted (the default): the icon is decorative
    *  (`aria-hidden="true"`), for use beside text that already says the mode. */
   label?: string;
