@@ -162,7 +162,7 @@ describe("affected: which checks a change runs", () => {
     },
     {
       name: "a Dox stylesheet runs the format check with the Dox checks",
-      changes: [{ path: "apps/dox/src/styles/gmt-migrate.css", status: "M" }],
+      changes: [{ path: "apps/dox/src/styles/gmt-content.css", status: "M" }],
       checks: [
         "format",
         "markers",

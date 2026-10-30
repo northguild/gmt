@@ -648,6 +648,23 @@ of part names, found with `gate("part")`. The hooks are in the table below. A ne
 `--resolve-only` flag loads its pages and checks that every control and part it needs is there,
 so a rename shows as a missing locator before it shows as a measurement.
 
+**Gate diagnostics (`DOX-G1`, #430).** A gate that cannot measure says so; it never reports a
+number it did not measure.
+
+- `emulation-not-applied`: `contrast-measure` waits for `prefers-*` and forced-colour emulation to
+  take effect, and a timeout is this finding, not a contrast failure.
+- `layout-moved-during-measure`: `contrast-measure` collects the glyph rects again after its
+  screenshots. A rect that moved more than 0.5 px fails the cell and drops its contrast findings,
+  because they were measured on stale geometry. The message gives the largest shift.
+- `focus-obscured` names the cover, the scroller and the viewport. The `/dox/` scrollers set
+  `scroll-padding-block`, so focus lands clear of the sticky bars.
+- A load jump names the frame, the deepest resized element and the font state. Each widget
+  reserves its size, or sits in `<gmt-grow>`, and the fallback font is metric-matched.
+- Every card and section sits on one opaque `--gmt-surface-widget`, so stacked tints cannot drop
+  contrast below 7:1. The footer has its own opaque surface.
+- Local checks run Chromium on macOS. Firefox and WebKit run weekly in CI; the footer contrast
+  on Linux shows only there, and a weekly finding is fixed in the product, never waived.
+
 **Gate hooks.** Every builder and primitive in the kit takes an optional `gate` string and writes
 it with `gateAttr()` (`src/widgets/builders/gate.ts`); a few templates write `data-gate`
 literally. One element may carry several names (`drawn track`). The table lists every hook a gate
