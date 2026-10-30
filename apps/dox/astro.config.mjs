@@ -17,6 +17,7 @@ import rehypeBaseLinks from "./src/lib/rehype-base-links.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
 import rehypeTableScroll from "./src/lib/rehype-table-scroll.ts";
 import { copyRedirects } from "./src/lib/copy-redirects.ts";
+import { pruneWidgetCss } from "./src/lib/prune-widget-css.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
 import { SITE_BASE, SITE_ORIGIN, withBase } from "./src/lib/site.ts";
@@ -134,6 +135,8 @@ export default defineConfig({
     gmtReferenceWatch(),
     // Build only: puts src/generated/_redirects at dist/_redirects, above outDir.
     copyRedirects(),
+    // Build only: drops a widget's stylesheet link from the pages that do not show the widget.
+    pruneWidgetCss(),
     react(),
     starlight({
       title: "@northguild/gmt",

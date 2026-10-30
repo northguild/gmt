@@ -2,7 +2,7 @@
 /**
  * The interactive globe, as an Astro island.
  *
- * Renders static chrome (heading, caption, empty stage and clock panel) so the
+ * Renders static chrome (heading, caption, empty stage and clock list) so the
  * page reads before any script runs, then an `IntersectionObserver` lazy-imports
  * the mount module once the stage nears the viewport.
  *
@@ -41,11 +41,15 @@ renderCount += 1;
 const prefix = idPrefix ?? (renderCount === 1 ? "globe" : `globe-${renderCount}`);
 ---
 
-<Fragment set:html={renderGlobeTemplate({ heading, caption, embedded, idPrefix: prefix })} />
+<Fragment set:html={renderGlobeTemplate({ heading, caption, embedded, idPrefix: prefix }).value} />
 
 <script>
-  import { mountGlobe } from "../lib/globe-mount";
+  import { findWidget } from "../widgets/builders";
   import { showUnavailable } from "../lib/widget-mount";
+
+  /* Neither the mount nor its stylesheet is imported here: both load with the
+     `import()` in `start`, once the stage is near the viewport. */
+  const GLOBE_WIDGET_NAME = "globe";
 
   /* Deferred until the stage is near the viewport: the mount pulls the globe
      engine, a renderer and the Temporal polyfill, and this component sits on the
@@ -56,18 +60,22 @@ const prefix = idPrefix ?? (renderCount === 1 ? "globe" : `globe-${renderCount}`
   /* Every globe on the page, not just the first. The previous version used
      `document.querySelector`, so a second instance rendered its chrome and then
      silently never came to life. */
-  for (const root of document.querySelectorAll<HTMLElement>(".gmt-globe")) {
-    const stage = root.querySelector<HTMLElement>('[data-role="stage"]');
+  for (const root of document.querySelectorAll<HTMLElement>(
+    '[data-widget="globe"]',
+  )) {
+    const stage = findWidget(root, GLOBE_WIDGET_NAME).part("stage");
     // The chat rail mounts its own copies; skip anything already claimed.
-    if (!stage || root.dataset[MOUNTED]) continue;
+    if (root.dataset[MOUNTED]) continue;
     root.dataset[MOUNTED] = "pending";
 
     const start = () => {
       if (root.dataset[MOUNTED] === "done") return;
       root.dataset[MOUNTED] = "done";
-      mountGlobe(root, {}, new AbortController().signal).catch((error) =>
-        showUnavailable(root, error),
-      );
+      import("../lib/globe-mount")
+        .then(({ mountGlobe }) =>
+          mountGlobe(root, {}, new AbortController().signal),
+        )
+        .catch((error) => showUnavailable(root, error));
     };
 
     if ("IntersectionObserver" in window) {
