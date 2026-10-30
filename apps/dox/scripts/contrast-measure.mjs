@@ -68,6 +68,7 @@ import {
 } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+import { settle } from "./lib/a11y-sweep.mjs";
 import { identityScript } from "./lib/element-identity.mjs";
 import { gate, presetSelect } from "./lib/locate.mjs";
 
@@ -423,14 +424,16 @@ svg text, svg tspan { fill: transparent !important; stroke: none !important; }
 ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; }`;
 
 /**
- * Every declared font face loaded before anything is read. A face the page has not drawn yet
- * loads on first use, which changes line heights between two reads of the same layout.
+ * The page as the reader rests on it before anything is read: every declared font face loaded
+ * (a face not yet drawn loads on first use) and every region a widget mounts a beat late at its
+ * final height. A text block that grows by a line height between two reads of one layout is
+ * the failure this prevents.
  */
 async function settleFonts(page) {
   await page.evaluate(async () => {
     await Promise.all([...document.fonts].map((f) => f.load().catch(() => {})));
-    await document.fonts.ready;
   });
+  await settle(page);
 }
 
 async function setup(page, theme, p) {
@@ -550,6 +553,11 @@ async function shoot(page, data, withChrome) {
 }
 
 async function measureState(page, rows, ctx) {
+  // The first full-page screenshot resizes the viewport, and Chromium on Linux re-resolves a
+  // text run's font metrics when it does: a text range is 2 px shorter afterwards, though the
+  // element's box is the same. One throwaway screenshot first, so the rects are read in the
+  // state every later screenshot sees.
+  await page.screenshot({ fullPage: true });
   const data = await page.evaluate(collect);
   const vp = page.viewportSize();
   await page.evaluate(() => {
