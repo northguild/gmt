@@ -498,6 +498,7 @@ function setupWidget(
         negative: false,
         delta: noSignal(),
         word: "",
+        ...(s.compareOn ? { second: "" } : {}),
         ...naiveOpt,
       });
     }
@@ -509,12 +510,13 @@ function setupWidget(
     });
     const insideRaw =
       layout.inside ?? (layout.outside === null ? { from: 0, to: 0 } : null);
-    const second =
-      s.compareOn && f.classA !== null
-        ? f.classB === null
+    const second = s.compareOn
+      ? f.classA === null
+        ? ""
+        : f.classB === null
           ? "no signal"
           : `${wordOf(f.classB)} under ${toleranceText(s.compareLate)}`
-        : undefined;
+      : undefined;
     return punctRow({
       label,
       inside: insideRaw === null ? null : span(insideRaw.from, insideRaw.to),
