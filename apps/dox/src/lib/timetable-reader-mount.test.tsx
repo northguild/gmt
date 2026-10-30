@@ -404,6 +404,81 @@ describe("the day track", () => {
   });
 });
 
+// One pixel is one minute: the day's track is 1440 px wide and starts at the viewport's left.
+function stubTrackWidth(): void {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+    left: 0,
+    right: 1440,
+    width: 1440,
+    top: 0,
+    bottom: 28,
+    height: 28,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  });
+}
+const emptyLaneTag = () => screen.getByText("4 \u00b7 click to add");
+const press = (clientX: number) =>
+  ({
+    keys: "[MouseLeft>]",
+    target: emptyLaneTag(),
+    coords: { clientX },
+  }) as const;
+
+describe("an empty lane", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("takes a time where its tag is clicked", async () => {
+    const w = await openPreset("fall-back");
+    stubTrackWidth();
+    await w.user.pointer({
+      keys: "[MouseLeft]",
+      target: emptyLaneTag(),
+      coords: { clientX: 600 },
+    });
+    expect(departure(4)).toHaveValue("2024-10-27T10:00:00");
+  });
+
+  it("takes a time where its tag is pressed", async () => {
+    const w = await openPreset("fall-back");
+    stubTrackWidth();
+    expect(departure(4)).toHaveValue("");
+    await w.user.pointer([press(720), { keys: "[/MouseLeft]" }]);
+    expect(departure(4)).toHaveValue("2024-10-27T12:00:00");
+    expect(valueOf(slider(4))).toBe(720);
+  });
+
+  it("follows the pointer while it stays down, and stops when it comes up", async () => {
+    const w = await openPreset("fall-back");
+    stubTrackWidth();
+    await w.user.pointer([press(720), { coords: { clientX: 900 } }]);
+    expect(departure(4)).toHaveValue("2024-10-27T15:00:00");
+    await w.user.pointer([{ keys: "[/MouseLeft]" }]);
+    await w.user.pointer({ coords: { clientX: 300 } });
+    expect(departure(4)).toHaveValue("2024-10-27T15:00:00");
+  });
+
+  it("flips the preset to custom once it takes a time", async () => {
+    const w = await openPreset("fall-back");
+    stubTrackWidth();
+    await w.user.pointer([press(720), { keys: "[/MouseLeft]" }]);
+    expect(presetBox()).toHaveValue("custom");
+  });
+
+  it("is not changed by a press on a lane that has a time, away from its handle", async () => {
+    const w = await openPreset("fall-back");
+    stubTrackWidth();
+    const rowOneTag = screen.getByText(/^1 \u00b7 00:30/);
+    await w.user.pointer([
+      { keys: "[MouseLeft>]", target: rowOneTag, coords: { clientX: 900 } },
+      { coords: { clientX: 1000 } },
+      { keys: "[/MouseLeft]" },
+    ]);
+    expect(departure(1)).toHaveValue("2024-10-27T00:30:00");
+  });
+});
+
 describe("the chart", () => {
   it("summarises the rows in its name", async () => {
     await openPreset("fall-back");

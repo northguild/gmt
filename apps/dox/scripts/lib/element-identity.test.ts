@@ -34,10 +34,8 @@ describe("identityOf", () => {
 
   it("falls back to the landmark, and then to page", () => {
     expect(identityOf(q("nav a"))).toBe('navigation "Main menu" › link "Docs"');
-    expect(identityOf(q("time"))).toBe('contentinfo › time "Oct #, #"');
-    expect(identityOf(q("#outside"))).toBe(
-      'main › paragraph "Plain paragraph"',
-    );
+    expect(identityOf(q("time"))).toBe("contentinfo › time");
+    expect(identityOf(q("#outside"))).toBe("main › paragraph");
     expect(identityOf(document.body)).toBe("page");
     expect(identityOf(document.documentElement)).toBe("page");
   });
@@ -63,6 +61,33 @@ describe("identityOf", () => {
     expect(identityOf(cells[0])).toBe("widget:demo › cell[1]");
     expect(identityOf(cells[1])).toBe("widget:demo › cell[2]");
     expect(identityOf(q("span"))).toBe('widget:demo › group "Start" › generic');
+  });
+
+  it("names a fieldset, table and figure from their legend, caption and figcaption", () => {
+    document.body.innerHTML = `<main><div data-widget="w">
+      <fieldset><legend>Departure 12</legend><input type="text" aria-label="t" /></fieldset>
+      <table><caption>Offsets</caption><tbody><tr><td>x</td></tr></tbody></table>
+      <figure><img src="a.png" /><figcaption>Chart of week 5</figcaption></figure>
+      </div></main>`;
+    expect(identityOf(q("fieldset"))).toBe('widget:w › group "Departure #"');
+    expect(identityOf(q("table"))).toBe('widget:w › table "Offsets"');
+    expect(identityOf(q("figure"))).toBe('widget:w › figure "Chart of week #"');
+  });
+
+  it("keys an unnamed element with no text, so live words cannot move it", () => {
+    document.body.innerHTML = `<main><div data-widget="w">
+      <time>Thu 29 Oct</time><p>Verdict: fits</p><p>Second</p></div></main>`;
+    const keys = () =>
+      [...document.querySelectorAll("time, p")].map(identityOf);
+    const before = keys();
+    expect(before).toEqual([
+      "widget:w › time",
+      "widget:w › paragraph[1]",
+      "widget:w › paragraph[2]",
+    ]);
+    q("time").textContent = "Fri 30 Oct";
+    q("p").textContent = "Verdict: does not fit";
+    expect(keys()).toEqual(before);
   });
 
   it("does not move when a different sibling is inserted before", () => {

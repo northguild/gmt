@@ -634,9 +634,15 @@ or text and asserts what a person sees.
 `/dox` starter pills use `data-starter`, so `data-widget` names widgets only. Gates find a widget
 by `[data-widget="…"]`, never by a `.gmt-*` class. A finding's `target` is the element's identity
 key from `scripts/lib/element-identity.mjs`: `widget:<slug> › role "name"`, with digit runs
-collapsed, a name cut at 60 characters and `[n]` only on true repeats. It never reads an id, a
-class or an `nth-*` position, so a sibling insert, a `useId` change or a class rename leaves the
-weekly issue's key alone. `recordFinding` throws without a `target`.
+collapsed, a name cut at 60 characters and `[n]` only on true repeats. The name is an author's
+(`aria-label`, a label, a fieldset's legend, a table's caption, a figure's figcaption) or the text
+of a role that ARIA names from content (a button, link or heading); any other element is keyed
+with no text, so a month, weekday or verdict cannot move the key (a sibling inserted before an
+unnamed one shifts its `[n]`). It never reads an id, a class or an `nth-*` position, so a `useId`
+change or a class rename leaves the weekly issue's key alone. `recordFinding` throws without a
+`target`. A Canada script's labelled message names no element, so `recordLabelled` keys it
+`page › <slug of the message with its numbers stripped>`: two failures on one page keep two
+issues, and the same failure measured at other sizes keeps one.
 
 **How gates find a control or a part.** No gate script names a style class or a `data-role`: the
 component kit hashes class names, so a class is a style detail. A control is found by
@@ -1017,7 +1023,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     value comes back in the form it was sent, tenths and hundredths of a second included, so
     nothing is cut and there is no note.
 - **The ledger family and the INT-14 tools.** The Dwell Ledger and the Free Time Ledger share
-  one sheet, `gmt-ledger-widgets.css`, and one module, `ledger-widgets.ts`: glass day columns
+  one family folder, `widgets/families/ledger/`, and one module, `ledger-widgets.ts`: glass day columns
   placed by each day's real bounds, pinned result plates (`platesHtml`; a `quiet` plate holds a
   secondary result at the smaller size), the lane, the half-open bar, the gate and its chip, and
   the legend. A column drops its weekday, then its label, as it narrows (`dayColumnFit`). It also
@@ -1044,7 +1050,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     `scheduleDelivery`'s per-leg times, as two ribbons on one scale. The first shows the legs as
     they happen, moving solid and waiting hatched; the second gathers the same segments into
     moving and waiting. Plates hold the ETA, the moving total and the waiting total. Its leg
-    fields are the Delivery Scheduler's (`leg-form.ts`, which labels `dwellAfter` "Handling
+    fields are the Delivery Scheduler's (`widgets/families/transport/leg-fieldset.ts`, which labels `dwellAfter` "Handling
     after"), and the two tools link to each other with the same leg keys.
 
   `ledger-lib.ts` loads the B/L Date Stamp's and the Demurrage Clock's functions. The Journey
@@ -1107,10 +1113,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
   table of library rules. Shared modules: `gnss-names.ts` (counters, RINEX systems, the six
   systems, modes, in RINEX tokens), `gnss-widgets.ts` (eras, leads, durations, the no-reading
   texts) and `timescale-widgets.ts` (the insertions, and the two dates the site holds,
-  `INTEGER_UTC_FROM` 1972-01-01 and `CONTINUOUS_UTC_FROM`). `gmt-gnss-widgets.css` holds the
-  family's frame (`.gmt-gnss-frame`), lanes, rulers, peer tables and hatched "your reading" row;
-  the plates, chip and series come from the punctuality and cut-off sheets, which list the five
-  roots. Each tool also has its own sheet. Each has one signature drawing, `role="img"` with an
+  `INTEGER_UTC_FROM` 1972-01-01 and `CONTINUOUS_UTC_FROM`). `widgets/families/gnss/` holds the
+  family's frame, lanes, rulers, peer tables and hatched "your reading" row; the plates, chip
+  and series come from the punctuality and cut-off families. Each tool also has its own module.
+  Each has one signature drawing, `role="img"` with an
   aria-label and a visually hidden list:
   - **GNSS Week Decoder** (`/tools/gnss-week-decoder/`): an odometer ring. The counter's weeks
     run round a circle, one lap per era (era 0 outside, four lap slots), each lap with its era
@@ -2293,10 +2299,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
       (`gmt-light.css`, the selection and scrollbar rules in `gmt-controls.css`) excludes it
       with `:not(:where(.gmt-theme-dark *))`, which adds no specificity; and a dark-only
       rule the hero needs (`.sl-link-button.secondary`) names the island beside
-      `[data-theme="dark"]`. `globe-stage.test.ts` pins the dark counterparts, the selector
-      lists and the `gmt-a11y.css` blocks. The exclusions and the dark-only rule are not
-      listed anywhere a unit test can read them; `pnpm globe:smoke` checks them, with the
-      rest, by comparing the computed colours of every element in the hero across the two
+      `[data-theme="dark"]`. No unit test reads those rules; `pnpm globe:smoke` checks them by
+      comparing the computed colours of every element in the hero across the two
       themes.
     - **Legibility, on every globe.** A cyan dot that reads on the ocean vanishes over the
       Sahara, and an outline over ice — and before #293's review the flat globe had the
@@ -2320,7 +2324,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
       zeroes it under `prefers-contrast: more` and `forced-colors: active`: a busy photograph
       behind the markers costs contrast that mode asked for, and a canvas is not repainted
       in the system palette. At 0 the image is never downloaded. Reduced transparency keeps
-      it; the photograph is opaque. `globe-stage.test.ts` pins both switches.
+      it; the photograph is opaque. `pnpm globe:smoke` checks both switches.
     - **The smoke.** Parity between the renderers runs with the image withheld at the
       network, so it compares the vector layers alone and doubles as the failed-load check.
       In the dark theme, with the image allowed, it must be requested once and change the

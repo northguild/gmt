@@ -57,16 +57,37 @@ export function recordMeasured(gate, n) {
 }
 
 /**
+ * A short stable slug of a message with its numbers stripped, so the same failure keeps one key
+ * whatever it measured (`moved 3px` and `moved 7px`) and two different failures on one page
+ * keep two.
+ */
+function slugOf(text) {
+  return text
+    .toLowerCase()
+    .replace(/\d+(?:\.\d+)?/g, "")
+    .replace(/[^a-z]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48)
+    .replace(/-+$/, "");
+}
+
+/**
  * A failure message of the form `<browser> <width>px[ <theme>]: <text>`, which the three Canada
  * scripts write, as a finding. The cell comes from the label and the rule from the text, so the
  * script's own wording does not have to change.
+ *
+ * These scripts name no element, so the target is `page › <slug>` with the slug taken from the
+ * message with its numbers stripped. Without it every failure on a page that maps to one rule
+ * (two different `check-failed` messages, a card and a readout that both `moved`) would share
+ * one key and one issue. A caller that has an element passes its own `target`.
  */
-export function recordLabelled({ gate, page, message, target = "page" }) {
+export function recordLabelled({ gate, page, message, target }) {
   const cell =
     /^(?:(chromium|webkit|firefox) )?(\d+)px(?: (dark|light))?(?: [^:]*)?: (.*)$/s.exec(
       message,
     );
   const text = cell ? cell[4] : message;
+  const slug = slugOf(text);
   recordFinding({
     gate,
     rule: /HTTP/.test(text)
@@ -79,7 +100,7 @@ export function recordLabelled({ gate, page, message, target = "page" }) {
             ? "sideways-scroll"
             : "check-failed",
     page,
-    target,
+    target: target ?? (slug ? `page › ${slug}` : "page"),
     browser: cell?.[1] ?? null,
     width: cell ? Number(cell[2]) : null,
     theme: cell?.[3] ?? null,

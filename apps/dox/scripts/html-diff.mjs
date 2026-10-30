@@ -239,7 +239,7 @@ function widgetFinding(p, rule, message) {
  * on whitespace even when nothing about the page has changed.
  *
  * The hashes have to go too: touching a module changes the hash of every chunk
- * that imports it, so extracting `CodeFrame`'s markup into a `.ts` renamed
+ * that imports it, so extracting a component's markup into a `.ts` renamed
  * `PlaygroundForm…js` on three pages that were otherwise byte-identical. Only
  * the hash segment is masked, not the base name — swapping a page from one
  * script to a genuinely different one still shows up.

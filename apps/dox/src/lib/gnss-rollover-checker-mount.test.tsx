@@ -213,7 +213,13 @@ describe("renderGnssRolloverCheckerTemplate", () => {
 });
 
 describe("the presets", () => {
-  it.each(Object.keys(EXPECTED))("reads %s", async (id) => {
+  it("has an expectation for every preset", () => {
+    expect(Object.keys(EXPECTED).sort()).toEqual(
+      ROLLOVER_PRESETS.map((p) => p.id).sort(),
+    );
+  });
+
+  it.each(ROLLOVER_PRESETS.map((p) => p.id))("reads %s", async (id) => {
     const w = await open();
     await w.user.selectOptions(preset(), id);
     const e = EXPECTED[id]!;

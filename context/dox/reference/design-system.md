@@ -304,7 +304,7 @@ teaching widget; nothing else does, and it never replays on a value change.
 
 ## Drawn charts
 
-The recipes in `gmt-cutoff-widgets.css` are the pattern for every drawn transport chart: the
+The recipes in `widgets/families/cutoff/` are the pattern for every drawn transport chart: the
 three cut-off tools; the Departure Board, Punctuality Board and ETA Drift Chart, whose
 `.gmt-punct-frame` surface joins the same `:is()` lists; and the Timetable Reader, whose day
 track and two-clocks chart join them too. The ledgers, the B/L Date Stamp and the five GNSS
@@ -374,7 +374,7 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   series 3, so the on-time band never reads as success. Late, early, made and missed are
   words and patterns.
 - **The GNSS and leap-second tools each have one signature drawing** on the shared
-  `.gmt-gnss-frame` (`gmt-gnss-widgets.css`, then each tool's own sheet):
+  the shared GNSS frame (`widgets/families/gnss/`, then each tool's own module):
   - GNSS Week Decoder: an odometer ring, one lap per era, with era plates in the legend.
   - Satellite Clock Converter: a TAI ladder, eight clocks as rungs on one scale of seconds
     ahead of UTC with TAI as the top rail. Clocks off the drawn scale sit in a group of compact

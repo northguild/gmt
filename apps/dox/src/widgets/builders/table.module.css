@@ -16,17 +16,17 @@
 }
 
 .table {
+  /* Starlight's widget reset draws a content table as a block that scrolls itself. A table
+     box does not scroll, so `.wrap` is the region that does. */
+  display: table;
   inline-size: 100%;
   border-collapse: collapse;
   color: var(--gmt-ice);
   font-size: clamp(0.8125rem, 0.78rem + 0.2vw, 0.9375rem);
 }
 
-/* A fixed layout takes its column widths from the header row. Starlight draws a content table
-   as a block, which would leave the anonymous table inside it on the automatic layout, so this
-   one states `display: table`. */
+/* A fixed layout takes its column widths from the header row. */
 .fixed {
-  display: table;
   table-layout: fixed;
 }
 

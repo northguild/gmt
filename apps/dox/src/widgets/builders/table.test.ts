@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { screen, within } from "@testing-library/dom";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../test-fixture";
@@ -64,6 +66,24 @@ describe("table", () => {
       "tabindex",
       "0",
     );
+  });
+
+  // jsdom applies no CSS modules, so the sheet is read as text. The widget reset draws a content
+  // table as `display: block; overflow: auto`, which would scroll the table and leave the
+  // focusable region with nothing to scroll.
+  it("lays its table out as a table box so the region is what scrolls", () => {
+    const css = readFileSync(
+      join(import.meta.dirname, "table.module.css"),
+      "utf8",
+    );
+    const rule = (selector: string) =>
+      css.match(
+        new RegExp(`^${selector.replace(".", "\\.")} \\{([^}]*)\\}`, "m"),
+      )?.[1] ?? "";
+    expect(rule(".table")).toMatch(/display:\s*table;/);
+    expect(rule(".table")).not.toMatch(/overflow/);
+    expect(rule(".wrap")).toMatch(/overflow-x:\s*auto;/);
+    expect(rule(".fixed")).toMatch(/table-layout:\s*fixed;/);
   });
 
   it("has no axe violations", async () => {

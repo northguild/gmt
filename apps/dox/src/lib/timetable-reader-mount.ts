@@ -18,7 +18,7 @@
  * call and its result.
  *
  * A handle changes a row's printed time and never its offset. The typed departure field is
- * the handle's typed equivalent, and a click on an empty lane adds a time at the pointer.
+ * the handle's typed equivalent, and a press on an empty lane adds a time at the pointer.
  * Nothing moves while a handle moves: heights are fixed, and a cell whose content comes and
  * goes holds its size with a hidden sizer.
  */
@@ -1022,27 +1022,65 @@ function setupWidget(
     { signal },
   );
 
-  /* A click on the empty lane of a row with no time adds one at the pointer. */
+  /* The empty lane of a row with no time takes one where it is pressed, and the new time then
+     follows the pointer until it comes up: a press-and-drag, as a handle already gives a row
+     that has a time. The handle box is hidden on an empty lane, so a press never lands on a
+     handle there; a lane that has a time ignores a press away from its handle. */
+  const emptyLaneAt = (target: EventTarget | null): number => {
+    const i = laneEls.findIndex((l) => l.contains(target as Node | null));
+    return i >= 0 && departureEls[i]!.value.trim() === "" ? i : -1;
+  };
+  const minuteAt = (clientX: number): number | null => {
+    const rect = lanesEl.getBoundingClientRect();
+    if (!(rect.width > 0)) return null;
+    return minuteAtPointer(
+      clientX,
+      rect.left,
+      rect.width,
+      pointerStep(rect.width),
+    );
+  };
+  let laneDrag: number | null = null;
+  const endLaneDrag = (): void => {
+    if (laneDrag === null) return;
+    laneDrag = null;
+    if (!destroyed) render();
+  };
+
   widgetEl.addEventListener(
-    "click",
+    "pointerdown",
     (e) => {
       if (destroyed) return;
-      const i = laneEls.findIndex((l) => l === e.target);
-      if (i < 0 || departureEls[i]!.value.trim() !== "") return;
+      const i = emptyLaneAt(e.target);
+      if (i < 0) return;
       const date = trackDate(state(), lib);
-      const rect = lanesEl.getBoundingClientRect();
-      if (date === null || !(rect.width > 0)) return;
-      const minute = minuteAtPointer(
-        (e as MouseEvent).clientX,
-        rect.left,
-        rect.width,
-        pointerStep(rect.width),
-      );
+      const minute = minuteAt((e as PointerEvent).clientX);
+      if (date === null || minute === null) return;
+      laneDrag = i;
       moveRow(i, minute, date);
-      render();
+      try {
+        laneEls[i]!.setPointerCapture((e as PointerEvent).pointerId);
+      } catch {
+        /* Capture can throw (a pointer that is already gone); the drag still follows the
+           events that bubble to the widget. */
+      }
     },
     { signal },
   );
+  widgetEl.addEventListener(
+    "pointermove",
+    (e) => {
+      if (destroyed || laneDrag === null) return;
+      const date = trackDate(state(), lib);
+      const minute = minuteAt((e as PointerEvent).clientX);
+      if (date === null || minute === null) return;
+      moveRow(laneDrag, minute, date);
+    },
+    { signal },
+  );
+  for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
+    widgetEl.addEventListener(type, endLaneDrag, { signal });
+  }
 
   if (start !== null) writeSeed(start);
   syncPreset();

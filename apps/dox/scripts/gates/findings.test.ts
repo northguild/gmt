@@ -121,10 +121,47 @@ describe("recordFinding and recordMeasured", () => {
     });
     expect(b).toMatchObject({
       rule: "check-failed",
-      target: "page",
+      target: "page › no-cell-here",
       browser: null,
       width: null,
       message: "no cell here",
     });
+  });
+
+  it("gives different failures on one page different targets", () => {
+    process.env.GATE_REPORT = file;
+    const page = "/p/";
+    for (const message of [
+      "chromium 375px: the map is drawn at 375px",
+      "chromium 375px: the pin panel is not open below the zone list",
+      "chromium 375px: Berlin card moved 3px",
+      "chromium 375px: Berlin readout moved 3px",
+    ])
+      recordLabelled({ gate: "canada-clock-still", page, message });
+    const lines_ = lines();
+    expect(lines_.map((l) => l.rule)).toEqual([
+      "check-failed",
+      "check-failed",
+      "moved",
+      "moved",
+    ]);
+    expect(new Set(lines_.map((l) => l.target)).size).toBe(4);
+  });
+
+  it("keeps one target for the same failure measured with other numbers", () => {
+    process.env.GATE_REPORT = file;
+    recordLabelled({
+      gate: "g",
+      page: "/p/",
+      message: "chromium 375px: Berlin card moved 3.5px",
+    });
+    recordLabelled({
+      gate: "g",
+      page: "/p/",
+      message: "webkit 1280px dark: Berlin card moved 12px",
+    });
+    const [a, b] = lines();
+    expect(a.target).toBe("page › berlin-card-moved-px");
+    expect(b.target).toBe(a.target);
   });
 });

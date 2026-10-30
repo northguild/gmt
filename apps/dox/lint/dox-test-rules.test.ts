@@ -45,7 +45,21 @@ describe("dox-test/no-dispatch-event", () => {
     expect(
       run(rule, [["MemberExpression", member(id("fireEvent"), "click")]]),
     ).toHaveLength(1);
-    for (const ctor of ["Event", "KeyboardEvent"]) {
+    for (const ctor of [
+      "Event",
+      "KeyboardEvent",
+      "MouseEvent",
+      "PointerEvent",
+      "InputEvent",
+      "FocusEvent",
+      "WheelEvent",
+      "TouchEvent",
+      "ClipboardEvent",
+      "DragEvent",
+      "CompositionEvent",
+      "UIEvent",
+      "CustomEvent",
+    ]) {
       expect(
         run(rule, [
           ["NewExpression", { type: "NewExpression", callee: id(ctor) }],
@@ -81,6 +95,15 @@ describe("dox-test/no-class-query", () => {
     expect(
       run(rule, [call(member(id("el"), "closest"), str("li.row"))]),
     ).toHaveLength(1);
+  });
+  it("does not read a dot inside an attribute value or quotes as a class", () => {
+    const q = (sel: string) =>
+      run(rule, [call(member(id("el"), "querySelector"), str(sel))]);
+    expect(q("a[href$='.pdf']")).toEqual([]);
+    expect(q("[aria-label='v1.2']")).toEqual([]);
+    expect(q('[title="a.b"]')).toEqual([]);
+    expect(q("a[href$='.pdf'].file")).toHaveLength(1);
+    expect(q("[aria-label='v1.2'] .card")).toHaveLength(1);
   });
 });
 

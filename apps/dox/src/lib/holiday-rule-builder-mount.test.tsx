@@ -230,15 +230,26 @@ describe("no result", () => {
 
 describe("the rule cap", () => {
   it("cannot add a 13th rule", async () => {
-    const rendered = await mount();
+    // Seeded one short of the cap, so one click fills the list and a second finds it full.
+    const seeded = Array.from({ length: MAX_RULES - 1 }, (_, i) => ({
+      name: `Day ${i + 1}`,
+      kind: "fixed",
+      month: 1 + (i % 12),
+      day: 1 + i,
+    }));
+    const rendered = await mount({ rules: seeded });
     const add = screen.getByRole("button", { name: "Add rule" });
-    while (ruleNames().length < MAX_RULES) await rendered.user.click(add);
+    expect(ruleNames()).toHaveLength(MAX_RULES - 1);
+    expect(add).toBeEnabled();
+    await rendered.user.click(add);
     expect(ruleNames()).toHaveLength(MAX_RULES);
     expect(add).toBeDisabled();
     await rendered.user.click(add);
     expect(ruleNames()).toHaveLength(MAX_RULES);
-    await expectNoAxeViolations(rendered.root);
-  }, 60_000);
+    // No axe scan here: every row has the structure the other tests already scan, and a scan of
+    // twelve of them takes seconds.
+    expect(screen.getByText("12 of 12 rules")).toBeInTheDocument();
+  });
 });
 
 describe("the Ledger hand-off", () => {

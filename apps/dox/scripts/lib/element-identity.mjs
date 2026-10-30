@@ -7,8 +7,17 @@
  * `nth-*` position or a tag name outside the role table. So a sibling insert, a React `useId`
  * change or a class rename does not move it, and the weekly sweep keeps one issue per finding.
  *
+ * The name is an author-written one (`aria-label`, a label, a fieldset's legend, a table's
+ * caption, a figure's figcaption, `alt`, `title`), or the text of a role that ARIA names from
+ * its content (a button, a link, a heading, a header cell and the like). An element still
+ * unnamed is keyed with no text at all: its widget or landmark, its role and `[n]`. Live text
+ * (a month, a weekday, a zone abbreviation, a verdict) changes with the calendar, so a key
+ * built from it would drift and open a new issue for the same finding. The trade-off is that
+ * `[n]` counts same-role unnamed siblings, so inserting one before another shifts the keys
+ * after it; that is rarer than the calendar, and a named sibling is never counted.
+ *
  *   widget:gnss-week-decoder › slider "Week"
- *   contentinfo › time "Oct #, #"
+ *   contentinfo › time
  *   page
  *
  * Each export is self-contained, with no closure over module scope and no imports: a gate
@@ -55,6 +64,29 @@ export function identityOf(el) {
     Object.assign(st, fresh());
   }
 
+  const CAPTION_OF = {
+    fieldset: "legend",
+    table: "caption",
+    figure: "figcaption",
+  };
+  // The roles whose name ARIA takes from their text. Every other role is named only by what an
+  // author wrote for it (a label, a legend, a caption), never by text that is data.
+  const NAME_FROM_CONTENT = new Set([
+    "button",
+    "link",
+    "heading",
+    "tab",
+    "menuitem",
+    "option",
+    "checkbox",
+    "radio",
+    "switch",
+    "treeitem",
+    "columnheader",
+    "rowheader",
+    "term",
+  ]);
+
   const clean = (text) => text.replace(/\s+/g, " ").trim();
 
   /** The first `HEAD` characters of an element's text; a big container is never read whole. */
@@ -88,6 +120,14 @@ export function identityOf(el) {
     if (label && label.trim()) return clean(label);
     if (e.labels && e.labels.length > 0) {
       const text = clean([...e.labels].map(head).join(" "));
+      if (text) return text;
+    }
+    // HTML-AAM: a fieldset, table and figure are named by their first legend, caption and
+    // figcaption child.
+    const captionTag = CAPTION_OF[e.localName];
+    if (captionTag) {
+      const child = [...e.children].find((c) => c.localName === captionTag);
+      const text = child ? clean(head(child)) : "";
       if (text) return text;
     }
     const alt = e.getAttribute("alt");
@@ -189,7 +229,9 @@ export function identityOf(el) {
   };
 
   const nameOf = (e) =>
-    (accessibleName(e) || head(e)).replace(/\d+/g, "#").slice(0, NAME_CAP);
+    (accessibleName(e) || (NAME_FROM_CONTENT.has(roleOf(e)) ? head(e) : ""))
+      .replace(/\d+/g, "#")
+      .slice(0, NAME_CAP);
 
   const quoted = (role, name) => (name ? `${role} "${name}"` : role);
 

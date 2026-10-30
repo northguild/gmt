@@ -77,6 +77,23 @@ const MODULE_CALLS = new Set([
   "importMock",
 ]);
 
+/** Every event constructor a test could use to build an event by hand. */
+const SYNTHETIC_EVENTS = new Set([
+  "Event",
+  "UIEvent",
+  "CustomEvent",
+  "KeyboardEvent",
+  "MouseEvent",
+  "PointerEvent",
+  "InputEvent",
+  "FocusEvent",
+  "WheelEvent",
+  "TouchEvent",
+  "ClipboardEvent",
+  "DragEvent",
+  "CompositionEvent",
+]);
+
 const noDispatchEvent = {
   meta: {
     type: "problem",
@@ -102,13 +119,31 @@ const noDispatchEvent = {
       },
       NewExpression(node) {
         const name = nameOf(node.callee);
-        if (name === "Event" || name === "KeyboardEvent") {
+        if (SYNTHETIC_EVENTS.has(name ?? "")) {
           context.report({ node, message });
         }
       },
     };
   },
 };
+
+/**
+ * Whether a selector names a class: a `.` outside every `[...]` and quoted string. A dot inside
+ * an attribute value (`a[href$='.pdf']`, `[aria-label='v1.2']`) is text, not a class.
+ */
+function hasClassDot(selector) {
+  let depth = 0;
+  let quote = null;
+  for (const ch of selector) {
+    if (quote) {
+      if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") quote = ch;
+    else if (ch === "[") depth++;
+    else if (ch === "]") depth = Math.max(0, depth - 1);
+    else if (ch === "." && depth === 0) return true;
+  }
+  return false;
+}
 
 const SELECTOR_CALLS = new Set([
   "querySelector",
@@ -142,7 +177,7 @@ const noClassQuery = {
         const text = textOf(node.arguments[0]);
         if (
           text !== undefined &&
-          (text.includes(".") || text.includes("[data-"))
+          (hasClassDot(text) || text.includes("[data-"))
         ) {
           context.report({ node, message });
         }
