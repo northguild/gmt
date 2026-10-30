@@ -80,7 +80,9 @@ These bind every change.
      no class shared across widgets.
    - State is a class or `data-*` attribute that the builder or `mount` sets.
    - Tests follow Testing Library: `screen` queries by role, label or text, `userEvent`,
-     jest-dom, and the `src/test/render-widget.ts` helpers only.
+     jest-dom, and the `src/test/render-widget.ts` helpers only (`renderWidget`, `setRange`,
+     `expectNoAxeViolations`). A test asserts what a person or assistive technology perceives,
+     and never a class, a `data-role`, an id, a style or the markup.
 
    **Accessibility is the component's job.** Each element owns its role, name, states and its
    WAI-ARIA APG keyboard model, and a builder does not compile without a label. Targets are

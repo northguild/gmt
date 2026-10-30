@@ -21,9 +21,9 @@ sheets import in this order:
 | 7   | `gmt-controls.css`   | CTA buttons, pagination, `:focus-visible`, `::selection`, scrollbars                                                           |
 | 8   | `gmt-light.css`      | Light overrides that are neither a palette re-tint nor adjacent to a base rule                                                 |
 
-Per-widget sheets (`gmt-widget.css`, `gmt-clock-list.css` — before `gmt-map.css`,
-`gmt-globe.css` and `gmt-scrubber.css`, which build on its row recipe — `gmt-dst-inspector.css`,
-…) load between 7 and 8; `dox.css` and `gmt-a11y.css` load after 8. The config has the full
+No shared widget sheet remains in the global cascade: the `not-content` restore, the syntax-token colours and the load-failure notice sit in `gmt-widget-reset.css`. A tool's own style is a CSS Module in
+`src/widgets/tools/`, and a family's in `src/widgets/families/`, so there is no per-tool global
+sheet; `dox.css` and `gmt-a11y.css` load after 8. The config has the full
 list.
 
 **The chat's sheets are not in `customCss`.** `gmt-ask-tailwind.css`, `gmt-ask.css` and
@@ -136,8 +136,7 @@ The kit's custom elements (`gmt-range`, `gmt-handle`, `gmt-readout`, `gmt-preset
 
 ## Form controls
 
-Every widget control composes the primitives in `gmt-form-controls.css`, and every template
-builds them through the helpers in `src/lib/widget-ui.ts`. A widget sheet only positions them;
+Every widget control composes the primitives and builders in `src/widgets/` (each with its own CSS Module), and every template builds them through those builders. A widget sheet only positions them;
 it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
 `gmt-tokens.css` (`--gmt-range-*`, `--gmt-handle-*`).
 
@@ -175,7 +174,7 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
   - **Trap: the global reduced-motion reset cannot reach the thumb.** `*, *::before,
     *::after` does not select `::-webkit-slider-thumb` or `::-moz-range-thumb`. The thumb's
     sonar animation and transitions are switched off in their own
-    `prefers-reduced-motion` block in `gmt-form-controls.css`.
+    `prefers-reduced-motion` block in `src/widgets/primitives/range/range.module.css`.
 - **`.gmt-handle`** gives a custom `role="slider"` handle the same grip.
   - The edge is `currentColor`, so a widget colours a handle by setting `color`.
   - `::before` is a fixed, centred 44×44 hit area and nothing else.
@@ -191,13 +190,13 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
   - A checked chip carries a filled mark and an accent border and tint, but its text stays
     `--gmt-ice`. `--gmt-cyan-ink` on the tinted fill measured 5.9:1 in light, under the 7:1
     floor. `--switch` adds a track and knob, for a standalone boolean.
-  - `.gmt-chip-group` is the fieldset for a row of chips: weekday sets, radio segments.
+  - `gmt-chips` is the element for a row of chips: weekday sets, radio segments. The `chips` element (`primitives/chips/chips.ts`) names the group.
 - **`.gmt-select`** is `appearance: none` with a chevron drawn in two gradients. An SVG data
   URI would need a colour literal. `.gmt-input` and `.gmt-select` set `background-color`,
   never the `background` shorthand, which would wipe the chevron. A select truncates with an
   ellipsis (`overflow: hidden; text-overflow: ellipsis`), because iOS WebKit otherwise sizes it
   to its longest option and widens the page.
-- **A disabled `.gmt-input` or `.gmt-select`** has one shared look in `gmt-form-controls.css`: the
+- **A disabled `.gmt-input` or `.gmt-select`** has one shared look in the `textInput` and `select` builders' CSS Modules: the
   `--gmt-ice-dim` text tier, a dashed border, a transparent fill and `cursor: not-allowed`.
   The border is `color-mix(in srgb, var(--gmt-ice-dim) 65%, transparent)`, not the widget
   hairline: the hairline measures 1.2 to 1.4:1, and an empty disabled field (the X12 Time
@@ -218,7 +217,7 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
 - **Every widget root carries `not-content`** and `container-type: inline-size`.
   - `not-content` removes Starlight's prose flow from the widget, which also drops Starlight's
     table scrolling, link styling and inherited line-heights.
-  - The zero-specificity `:where(.gmt-widget.not-content)` block in `gmt-widget.css` restores
+  - The zero-specificity `:where(.gmt-widget.not-content)` block in `gmt-widget-reset.css` restores
     table scrolling and link styling.
   - A widget that draws text into a fixed-height cell sets its own `line-height`.
   - Labels on a drawn axis or track are placed by measurement, never by a fixed step:
@@ -248,7 +247,7 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
   element, in any section including section 1. Never put it on a control or a popover host.
 - **One step budget.** Each frame a box covers `1 - exp(-dt / 50 ms)` of what is left (an ease-out
   with no duration, so a retarget never restarts it), and the boxes that move the page, together,
-  never move more than `STEP_BUDGET_PX` (40 px, under the 48 px gate) in a frame, however late the
+  never move more than `STEP_BUDGET_PX` (32 px, under the 48 px gate) in a frame, however late the
   frame is. A tall grow, or a slow frame, therefore lasts longer instead of jumping. A box inside a
   moving box does not move the page and takes the same scale as the box around it.
 - **Heights are read live, deepest box first.** A slot is pinned before the section around it reads
@@ -352,9 +351,9 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   For the Timetable Reader and the tools with `scope: "widget"` it measures every element in
   the widget; only the drawing itself may change.
 - **A cell whose content comes and goes holds its size with a hidden sizer** stacked in the
-  same grid cell (`.gmt-timetable-hold`, the Timetable Reader's note, time cells and output).
+  same grid cell (the Timetable Reader's `hold` in `tools/timetable-reader.module.css`, and `families/ids/hold.ts`, `families/edi/edi-hold.ts`, `families/holiday/held-text.ts`).
   - The hold is a one-cell grid. Its two children are the sizer and the live wrapper
-    (`.gmt-timetable-live`; for the result, the `<output>` itself), both in
+    (the live wrapper of the kit's hold, `data-gate="live"`; for the result, the `<output>` itself), both in
     `grid-area: 1 / 1`.
   - The sizer has the shape of the largest thing the cell can hold: the longest note, or a
     value with the same character counts and break points as a real one, so it wraps the same
@@ -393,8 +392,8 @@ and leap-second tools list their roots in the same sheets. All of them read as o
     is lit glass, a hatch and a chip, with any accent edge on the bottom. Nothing in a drawing is
     focusable, and nothing animates: the decoder ring turns to its new reading in one frame.
     Each drawing is `role="img"` with an `aria-label`
-    and a visually hidden list. Narrow rules are named container queries (`gmt-gnss-frame`,
-    `gmt-gnss-table`, a tool's own root).
+    and a visually hidden list. Narrow rules are named container queries (`gmt-gnss-frame`
+    and a tool's own root).
   - They hold still by reserving space: every region is as big as the
     tallest thing it can show (hidden sizers, fixed slot counts, a NO SIGNAL slot that is only
     made visible), and the server HTML hides the fields the initial state hides (built.md §

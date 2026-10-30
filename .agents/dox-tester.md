@@ -64,6 +64,10 @@ Full list: `context/dox/reference/verification-and-risks.md`.
     the legacy lists.
   - No new sheet appears in `src/styles/gmt.css` or `customCss`.
   - Every touched widget's test file is off the legacy lists.
+  - Every touched widget test follows Testing Library: it queries by role, label or text, drives
+    the widget with `userEvent` and the `src/test/render-widget.ts` helpers (`renderWidget`,
+    `setRange`), asserts what a person or assistive technology perceives (never a class, a
+    `data-role`, an id, a style or the markup), and runs `expectNoAxeViolations`.
 - **Card accents:** no card, callout, row or result block has a left-border-only accent. Grep the
   changed styles for `border-left`, `border-inline-start`, left `inset` box-shadows and left
   `::before` stripes, and confirm on screenshots. An accent edge must be a bottom border or part
