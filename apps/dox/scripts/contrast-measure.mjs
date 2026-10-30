@@ -422,6 +422,17 @@ const HIDE_TEXT = `*, *::before, *::after { -webkit-text-fill-color: transparent
 svg text, svg tspan { fill: transparent !important; stroke: none !important; }
 ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; }`;
 
+/**
+ * Every declared font face loaded before anything is read. A face the page has not drawn yet
+ * loads on first use, which changes line heights between two reads of the same layout.
+ */
+async function settleFonts(page) {
+  await page.evaluate(async () => {
+    await Promise.all([...document.fonts].map((f) => f.load().catch(() => {})));
+    await document.fonts.ready;
+  });
+}
+
 async function setup(page, theme, p) {
   await page.addInitScript((t) => {
     try {
@@ -438,6 +449,7 @@ async function setup(page, theme, p) {
     theme,
   );
   await drawMap(page);
+  await settleFonts(page);
   await page.waitForTimeout(500);
 }
 
@@ -777,6 +789,7 @@ for (const p of PAGES) {
             theme,
           );
           await drawMap(page);
+          await settleFonts(page);
           await page.waitForTimeout(400);
         }
         await applyState(page, st);
