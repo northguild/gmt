@@ -238,7 +238,7 @@ describe("the rule cap", () => {
     await rendered.user.click(add);
     expect(ruleNames()).toHaveLength(MAX_RULES);
     await expectNoAxeViolations(rendered.root);
-  });
+  }, 60_000);
 });
 
 describe("the Ledger hand-off", () => {

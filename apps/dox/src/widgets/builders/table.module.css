@@ -75,6 +75,11 @@
   white-space: nowrap;
 }
 
+/* A header over figures is a phrase, not a figure: it wraps at its spaces. */
+.head.numeric {
+  white-space: normal;
+}
+
 /* Tight cells on a narrow table. */
 @container (inline-size < 24rem) {
   .head,
