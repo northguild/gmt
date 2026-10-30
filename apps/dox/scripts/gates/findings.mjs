@@ -80,6 +80,8 @@ function slugOf(text) {
  * message with its numbers stripped. Without it every failure on a page that maps to one rule
  * (two different `check-failed` messages, a card and a readout that both `moved`) would share
  * one key and one issue. A caller that has an element passes its own `target`.
+ *
+ * @param {{ gate: string, page: string, message: string, target?: string }} finding
  */
 export function recordLabelled({ gate, page, message, target }) {
   const cell =

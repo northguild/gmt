@@ -374,7 +374,7 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   series 3, so the on-time band never reads as success. Late, early, made and missed are
   words and patterns.
 - **The GNSS and leap-second tools each have one signature drawing** on the shared
-  the shared GNSS frame (`widgets/families/gnss/`, then each tool's own module):
+  GNSS frame (`widgets/families/gnss/`, then each tool's own module):
   - GNSS Week Decoder: an odometer ring, one lap per era, with era plates in the legend.
   - Satellite Clock Converter: a TAI ladder, eight clocks as rungs on one scale of seconds
     ahead of UTC with TAI as the top rail. Clocks off the drawn scale sit in a group of compact
