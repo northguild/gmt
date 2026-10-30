@@ -67,12 +67,12 @@ import { gate, resolveMisses, widgetRoot } from "./lib/locate.mjs";
 
 const GATE = "globe-smoke";
 
-/* The parts of the globe a check reads: the widget root, its canvas and its pinned-zones listbox
-   by tag and role, and the stage, tooltip and hero stage by the `data-gate` hooks the mount puts
-   on them. Never a class. */
+/* The parts of the globe a check reads: the widget root, the canvas inside its stage and its
+   pinned-zones listbox by tag and role, and the stage, tooltip and hero stage by the `data-gate`
+   hooks the mount puts on them. Never a class. */
 const GLOBE = widgetRoot("globe");
 const STAGE = gate("globe-stage");
-const CANVAS = `${GLOBE} canvas`;
+const CANVAS = `${GLOBE} ${STAGE} canvas`;
 const CLOCKS = '[role="listbox"][aria-label^="Pinned zones"]';
 const TOOLTIP = gate("globe-tooltip");
 const HERO_STAGE = gate("hero-stage");

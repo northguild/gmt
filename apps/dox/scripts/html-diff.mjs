@@ -200,6 +200,10 @@ const PAGES = [
     path: "tools/leap-day-birthday",
     widget: "leap-day-birthday",
   },
+  /* Content pages with a table: no widget, so the whole page is compared. They police the
+     `data-col` the table plugin writes on every cell (src/lib/rehype-table-scroll.ts). */
+  { path: "reference/zoned/get/getTimeZoneOffset" },
+  { path: "guides/core-date-operations/comparisons" },
 ];
 
 const slug = (p) => p.replaceAll("/", "_") + ".html";
@@ -221,7 +225,7 @@ function widgetFinding(p, rule, message) {
     rule,
     page: sitePath(p),
     target: `widget:${p.path.split("/").pop()}`,
-    selector: p.widget,
+    selector: p.widget ?? "main",
     message,
   });
 }
@@ -348,6 +352,22 @@ for (const p of SELECTED) {
   const afterRaw = renamed(
     readFileSync(`dist/gmt/${p.path}/index.html`, "utf8"),
   );
+
+  if (p.widget === undefined) {
+    const bp = normalise(beforeRaw);
+    const ap = normalise(afterRaw);
+    if (bp !== ap) {
+      widgetChanged += 1;
+      console.log(`✗ ${p.path} — page markup changed`);
+      console.log(firstDivergence(bp, ap));
+      widgetFinding(
+        p,
+        "page-markup-changed",
+        firstDivergence(bp, ap).replace(/\s+/g, " ").trim(),
+      );
+    } else console.log(`✓ ${p.path}`);
+    continue;
+  }
 
   const beforeWidget = widgetSubtree(beforeRaw, p.widget);
   const afterWidget = widgetSubtree(afterRaw, p.widget);

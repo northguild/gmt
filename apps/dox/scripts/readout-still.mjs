@@ -37,15 +37,15 @@
  *
  * Controls are found by ARIA role and accessible name inside the widget root
  * (`lib/locate.mjs`), never by a style class or a role attribute. The structural parts
- * that have no role or name are the `data-gate` hooks of
- * `context/dox/specs/gate-stability/03-locators.md`.
+ * that have no role or name are `data-gate` hooks, listed in `context/dox/built.md`,
+ * "Gate hooks".
  *
  * A `TOOLS` entry may carry optional fields:
  *
  *   presetName    the accessible name of the preset select (default "Preset");
  *   drawn         the parts whose insides move by design (default `["drawn"]`).
- *                 `"hold"` stands for the first child of a hold (`holdHtml` writes
- *                 the live wrapper first), `"grid"` for a month grid;
+ *                 `"hold"` stands for the first child of a hold (the kit's hold
+ *                 writes the live wrapper first), `"grid"` for a month grid;
  *   track         the part a pointer drag runs along (a `data-gate` value), or
  *                 null to drag along the control itself;
  *   scope         `"above"` (default) records what comes before the control in
@@ -86,6 +86,8 @@
  *
  * A pass must also have checked something. The script fails when:
  *   - the page does not answer HTTP 200 or the widget root is missing;
+ *   - a drawn part or text box the row names matches nothing in the widget
+ *     (checked on the first preset), since a stale name exempts nothing;
  *   - a required control is missing or hidden (`handle-early` and
  *     `handle-compare` are optional: a preset may not show them);
  *   - a keyboard sweep or a pointer drag leaves the control's value where it
@@ -167,8 +169,8 @@ const FORCED_ROOTS = [360, 300];
 const POINTER_STEPS = 20;
 const MAX_KEYS = 400;
 
-/** The selector of each drawn part a tool names. `hold` is the live wrapper `holdHtml` writes
- *  first in a hold; the others are marked where the mount draws them. */
+/** The selector of each drawn part a tool names. `hold` is the live wrapper a hold writes
+ *  first; the others are marked where the mount draws them. */
 const DRAWN_PART = {
   drawn: gate("drawn"),
   grid: gate("grid"),
@@ -288,7 +290,7 @@ const TOOLS = [
       },
     ],
     track: "track",
-    drawn: ["drawn", "hold"],
+    drawn: ["drawn"],
     maxKeys: 60,
   },
   {
@@ -315,7 +317,7 @@ const TOOLS = [
       },
     ],
     track: "track",
-    drawn: ["drawn", "hold"],
+    drawn: ["drawn"],
     maxKeys: 60,
   },
   {
@@ -350,9 +352,9 @@ const TOOLS = [
     ],
     track: null,
     scope: "widget",
-    drawn: ["drawn", "hold"],
+    drawn: ["drawn"],
     riders: true,
-    textBoxes: ["codeframe", "instant"],
+    textBoxes: ["codeframe"],
   },
   {
     slug: "satellite-clock-converter",
@@ -361,9 +363,9 @@ const TOOLS = [
     controls: [{ role: "slider", name: "Step through the leap seconds" }],
     track: null,
     scope: "widget",
-    drawn: ["drawn", "hold"],
+    drawn: ["drawn"],
     riders: true,
-    textBoxes: ["codeframe", "instant"],
+    textBoxes: ["codeframe"],
   },
   {
     slug: "gnss-rollover-checker",
@@ -375,9 +377,9 @@ const TOOLS = [
     ],
     track: null,
     scope: "widget",
-    drawn: ["drawn", "hold"],
+    drawn: ["drawn"],
     riders: true,
-    textBoxes: ["codeframe", "instant"],
+    textBoxes: ["codeframe"],
   },
   {
     slug: "leap-second-timeline",
@@ -386,7 +388,7 @@ const TOOLS = [
     controls: [{ role: "slider", name: "Move the date" }],
     track: null,
     scope: "widget",
-    drawn: ["drawn", "hold"],
+    drawn: [],
     riders: true,
     textBoxes: ["codeframe"],
   },
@@ -397,7 +399,7 @@ const TOOLS = [
     controls: [{ role: "slider", name: "Move the end" }],
     track: null,
     scope: "widget",
-    drawn: ["drawn", "hold"],
+    drawn: ["drawn"],
     riders: true,
     textBoxes: ["codeframe"],
   },
@@ -431,7 +433,7 @@ const TOOLS = [
     controls: [{ role: "spinbutton", name: "Last year", step: 10 }],
     track: null,
     scope: "widget",
-    drawn: ["drawn", "grid", "hold"],
+    drawn: ["hold"],
     textBoxes: ["codeframe"],
   },
   {
@@ -441,7 +443,7 @@ const TOOLS = [
     controls: [{ role: "slider", name: "Year slider" }],
     track: null,
     scope: "widget",
-    drawn: ["drawn", "grid", "hold"],
+    drawn: ["grid", "hold"],
     riders: true,
     textBoxes: ["codeframe"],
   },
@@ -456,7 +458,7 @@ const TOOLS = [
     controls: [{ role: "spinbutton", name: "Year", step: 3 }],
     track: null,
     scope: "widget",
-    drawn: ["drawn", "hold"],
+    drawn: [],
     textBoxes: ["codeframe"],
   },
   {
@@ -629,6 +631,8 @@ function snapshotInPage(
     }
     const parent = el.parentElement?.closest(drawn);
     if (parent && within.contains(parent)) continue;
+    // The text inside a value chip rides the thumb with the chip, so only the chip is compared.
+    if (el.parentElement?.closest('[data-gate~="rider"]')) continue;
     if (el.getClientRects().length === 0) continue;
     if (el.closest("svg")) continue;
     if (textBoxes && el.matches(textBoxes)) continue;
@@ -679,13 +683,32 @@ async function snapshot(page, ctl, tool) {
   return ctl.evaluate(snapshotInPage, {
     hero: gate("hero"),
     frame: gate("frame"),
-    drawn: (tool.drawn ?? ["drawn"]).map((p) => DRAWN_PART[p]).join(", "),
+    // A row with no drawn part matches nothing, and `:not(*)` is a selector that cannot match.
+    drawn:
+      (tool.drawn ?? ["drawn"]).map((p) => DRAWN_PART[p]).join(", ") ||
+      ":not(*)",
     scope: tool.scope ?? "above",
     riders: tool.riders ? gate("rider") : null,
     textBoxes: tool.textBoxes
       ? tool.textBoxes.map((p) => TEXT_PART[p]).join(", ")
       : null,
   });
+}
+
+/** The drawn and text parts a tool's row names that match nothing in its widget. A part
+ *  that matches nothing exempts nothing, so a stale name would hide a gap in the row. */
+async function namedPartsAbsent(page, tool) {
+  const named = [
+    ...(tool.drawn ?? ["drawn"]).map((p) => [`drawn:${p}`, DRAWN_PART[p]]),
+    ...(tool.textBoxes ?? []).map((p) => [`text:${p}`, TEXT_PART[p]]),
+  ];
+  const root = page.locator(tool.root).first();
+  const absent = [];
+  for (const [name, selector] of named) {
+    if (!selector) absent.push(`${name} (unknown part)`);
+    else if (!(await root.locator(selector).count())) absent.push(name);
+  }
+  return absent;
 }
 
 /** The differences between the baseline and a later snapshot, as strings. */
@@ -871,6 +894,15 @@ async function run() {
           ).selectOption(preset);
           await page.waitForTimeout(1500);
           await settled(page, tool.root);
+          if (preset === tool.presets[0]) {
+            const absent = await namedPartsAbsent(page, tool);
+            if (absent.length) {
+              fail(
+                where,
+                `the row names parts the widget does not draw: ${absent.join(", ")}`,
+              );
+            }
+          }
           for (const spec of tool.controls) {
             const { optional, requiredIn, step, value: field } = spec;
             const ctl = control(page, tool.root, spec);

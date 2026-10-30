@@ -78,7 +78,7 @@ describe("the built site's data credits", () => {
     const html = readFileSync(resolve(root, "gmt", "index.html"), "utf8");
     const stack =
       html.match(
-        /<div class="gmt-globe-zoom"[^>]*>[\s\S]*?<\/dl><\/div>/,
+        /<div [^>]*data-gate="globe-zoom"[^>]*>[\s\S]*?<\/dl><\/div>/,
       )?.[0] ?? "";
     expect(stack).toContain('aria-label="Globe controls"');
     const buttons = [

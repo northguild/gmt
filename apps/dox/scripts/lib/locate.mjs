@@ -7,8 +7,8 @@
  *   control does not match, which is what "not shown in this preset" means.
  * - A structural part that has no role or name (a chart frame, a drawn region the readout
  *   comparison skips, the track a handle runs along): `gate(...parts)`, the `data-gate` hook the
- *   mount puts on it. The parts and why each exists are listed in
- *   `context/dox/specs/gate-stability/03-locators.md`.
+ *   mount puts on it. The hooks, what each marks and which gate reads it are in
+ *   `context/dox/built.md`, "Gate hooks".
  *
  * A class name is a style detail; the component kit renames it, and the gate must not notice.
  */
