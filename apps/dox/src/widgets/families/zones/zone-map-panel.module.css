@@ -1,0 +1,124 @@
+/* The timezone map's clock panel: two rows of zone buttons that grow into columns. */
+
+.panel {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+}
+
+.entry {
+  appearance: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gmt-space-1);
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: var(--gmt-target-min);
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color var(--gmt-motion-fast) var(--gmt-easing),
+    background var(--gmt-motion-fast) var(--gmt-easing);
+
+  &:hover {
+    border-color: var(--gmt-cyan);
+    background: var(--gmt-fill);
+  }
+
+  &:focus-visible {
+    border-color: var(--gmt-cyan);
+    background: var(--gmt-fill);
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+
+  &[aria-pressed="true"] {
+    border-color: var(--gmt-spring);
+    background: var(--gmt-fill);
+    box-shadow: 0 0 0 1px var(--gmt-spring);
+  }
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--gmt-space-2);
+  inline-size: 100%;
+}
+
+.name {
+  overflow: hidden;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offset {
+  color: var(--gmt-spring-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.time {
+  color: var(--gmt-cyan-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .entry {
+    border-color: ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+
+    &:hover,
+    &:focus-visible {
+      border-color: Highlight;
+    }
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+
+    &[aria-pressed="true"] {
+      border-color: Highlight;
+      box-shadow: none;
+      outline: 2px solid Highlight;
+    }
+  }
+
+  .name,
+  .offset,
+  .time {
+    color: ButtonText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .entry {
+    border-color: var(--gmt-ice);
+
+    &:focus-visible {
+      outline-width: 3px;
+    }
+  }
+}

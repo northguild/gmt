@@ -1,6 +1,6 @@
 /* plates: a row of captioned results. The series colour is the bar along the bottom
    edge and never the text. Caption and value reserve their widest text in one grid
-   cell, so the row holds still while a value changes (invariant 14). */
+   cell, so the row holds still while a value changes (invariant 14). A value never scrolls. */
 
 .root {
   display: grid;
@@ -48,6 +48,10 @@
   grid-area: 1 / 1;
 }
 
+.shown {
+  font-size: var(--shown-size, 1em);
+}
+
 .ghost {
   visibility: hidden;
   pointer-events: none;
@@ -65,20 +69,31 @@
   font-size: clamp(1.25rem, 1.05rem + 1vw, 2rem);
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
-  white-space: nowrap;
-  overflow-x: auto;
+
+  /* A value wraps only when the column is narrower than its widest sample. The samples share
+     this cell, so the cell is as tall as the longest wrap and nothing moves when the value
+     changes. A scroll box here would need a tab stop and a name for every plate. */
+  overflow-wrap: anywhere;
 
   .plate[data-quiet="true"] & {
     font-size: clamp(1rem, 0.9rem + 0.5vw, 1.375rem);
   }
 
+  /* The cell keeps the live reading's line, so a plate that has no sample to reserve (and a
+     live value that is not wider than the empty one) does not change height when it fills. */
+  min-block-size: 1lh;
+
+  /* Only the words shrink when the plate is empty. The cell and its reserved samples stay at
+     the live size, so filling the plate never makes it taller or wraps the reserved width. */
   .plate[data-state="empty"] & {
+    --shown-size: clamp(1rem, 0.9rem + 0.5vw, 1.375rem);
+
     color: var(--gmt-ice-dim);
-    font-size: clamp(1rem, 0.9rem + 0.5vw, 1.375rem);
   }
 }
 
 .line {
+  display: grid;
   min-block-size: 1lh;
   margin: 0;
   color: var(--gmt-ice);

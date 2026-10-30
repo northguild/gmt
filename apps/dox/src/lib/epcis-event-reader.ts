@@ -25,7 +25,6 @@ import { Temporal } from "@js-temporal/polyfill";
 import type { PicField, PicHalf } from "./edi-picture";
 import { callArgs, formatValue, runCall, type EdiCall } from "./edi-widgets";
 import type { EpcisLib } from "./edi-lib";
-import { escapeAttr, escapeHtml } from "./widget-ui";
 
 export const CUSTOM_PRESET_ID = "custom";
 
@@ -50,7 +49,7 @@ export interface EpcisState {
 }
 
 /** The event object the library is called with. A blank offset leaves the member out. */
-export interface EpcisEvent {
+interface EpcisEvent {
   eventTime: string;
   eventTimeZoneOffset?: string;
 }
@@ -108,7 +107,7 @@ export function eventOf(state: EpcisState): EpcisEvent {
 // Presets
 // ---------------------------------------------------------------------------
 
-export interface EpcisPreset {
+interface EpcisPreset {
   id: string;
   label: string;
   description: string;
@@ -210,22 +209,22 @@ export function matchPreset(state: EpcisState): string {
 // ---------------------------------------------------------------------------
 
 /** What `parseEpcisEvent` returns. */
-export interface EpcisResult {
+interface EpcisResult {
   instant: string;
   offset: string;
   local: string;
 }
 
 /** What `formatEpcisEvent` returns. */
-export interface EpcisWritten {
+interface EpcisWritten {
   eventTime: string;
   eventTimeZoneOffset: string;
 }
 
-export type Sameness = "same" | "next" | "before";
+type Sameness = "same" | "next" | "before";
 
 /** The two dates and the words that compare them. */
-export interface DateRead {
+interface DateRead {
   /** The UTC date, `""` when the library returned none. */
   utcDate: string;
   /** The date on the local clock, `""` when the library returned none. */
@@ -358,7 +357,7 @@ export function detailText(read: EpcisRead): string {
   return read.event.eventTime.endsWith("Z") ? DETAIL_Z : DETAIL_OWN;
 }
 
-export type MemberKey = "instant" | "offset" | "local";
+type MemberKey = "instant" | "offset" | "local";
 
 export const MEMBER_ROWS: readonly {
   key: MemberKey;
@@ -401,7 +400,7 @@ export function datesWords(dates: DateRead | null): string {
 
 /** The most characters a refused field shows in its one box. The whole text is
  *  in the picture's spoken line. */
-export const REFUSED_BOX_CHARS = 24;
+const REFUSED_BOX_CHARS = 24;
 
 const field = (
   text: string,
@@ -437,7 +436,7 @@ const shown = (text: string): string =>
     ? `${text.slice(0, REFUSED_BOX_CHARS - 1)}…`
     : text;
 
-export interface EpcisFigure {
+interface EpcisFigure {
   halves: PicHalf[];
   /** The picture's spoken line. */
   aria: string;
@@ -493,7 +492,7 @@ export function epcisFigure(state: EpcisState, lib: EpcisLib): EpcisFigure {
 // Written back
 // ---------------------------------------------------------------------------
 
-export interface WriteBack {
+interface WriteBack {
   call: EdiCall;
   /** `null` when the library returned its sentinel. */
   written: EpcisWritten | null;
@@ -560,7 +559,7 @@ export const RAIL_HALF_HOURS = 36;
 const HOUR_MS = 3_600_000;
 
 /** One day on a rail, as a span of the rail in percent. */
-export interface RailDay {
+interface RailDay {
   from: number;
   to: number;
   /** Whether the instant falls in this day. */
@@ -575,7 +574,7 @@ export interface RailLayout {
   ticks: number[];
 }
 
-export interface Rails {
+interface Rails {
   /** Where the pin sits, in percent: the instant is the window's centre. */
   pin: number;
   utc: RailLayout;
@@ -684,50 +683,8 @@ export function tickLabelEnd(at: number): boolean {
   return at > 70 || (at > 32 && at < 50);
 }
 
-function railDaysHtml(layout: RailLayout, pin: number): string {
-  const fixed = (n: number): string => escapeAttr(n.toFixed(3));
-  const days = layout.days
-    .map(
-      (d) =>
-        `<span class="gmt-epcis-day" data-lit="${d.lit ? "1" : "0"}" style="--from:${fixed(d.from)}%;--to:${fixed(d.to)}%"></span>`,
-    )
-    .join("");
-  const ticks = layout.ticks
-    .map(
-      (at) =>
-        `<span class="gmt-epcis-tick" data-end="${tickLabelEnd(at) ? "1" : "0"}" style="--x:${fixed(at)}%"><span class="gmt-epcis-tick-label">00:00</span></span>`,
-    )
-    .join("");
-  return (
-    days +
-    ticks +
-    `<span class="gmt-epcis-pin" style="--x:${fixed(pin)}%"></span>`
-  );
-}
-
-/**
- * One rail's markup: the clock's name pinned to the left, its date to the right,
- * and the track under them. With no layout the track keeps its box and holds the
- * words. The sizers of the hold build the same markup.
- */
-export function railHtml(spec: RailSpec, sizer = false): string {
-  const track =
-    spec.layout === null
-      ? `<div class="gmt-epcis-track gmt-epcis-track--empty"><p class="gmt-epcis-rail-empty">${escapeHtml(spec.emptyText)}</p></div>`
-      : `<div class="gmt-epcis-track">${railDaysHtml(spec.layout, spec.pin)}</div>`;
-  const attrs = sizer
-    ? ` aria-hidden="true" data-pagefind-ignore`
-    : ` role="img" aria-label="${escapeAttr(spec.aria)}"`;
-  return (
-    `<div class="gmt-epcis-rail gmt-epcis-rail--${spec.role}${sizer ? " gmt-edi-sizer" : ""}"${sizer ? "" : ` data-role="rail-${spec.role}"`} data-state="${spec.layout === null ? "empty" : "value"}"${attrs}>` +
-    `<div class="gmt-epcis-rail-head"><span class="gmt-epcis-rail-name">${escapeHtml(spec.name)}</span><span class="gmt-epcis-rail-date">${escapeHtml(spec.date)}</span></div>` +
-    track +
-    `</div>`
-  );
-}
-
 // ---------------------------------------------------------------------------
-// Every text a region can show, for the height it reserves (`holdHtml`)
+// Every text a region can show, for the height the widget reserves
 // ---------------------------------------------------------------------------
 
 /**

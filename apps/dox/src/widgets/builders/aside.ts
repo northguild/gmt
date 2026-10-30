@@ -3,7 +3,7 @@
  * (https://www.w3.org/WAI/ARIA/apg/patterns/landmarks/examples/complementary.html).
  *
  * The two icon paths are Starlight's own (`@astrojs/starlight` Icons), as in
- * `renderAside`, so a widget's aside matches a real `:::note`.
+ * a real `:::note`, so a widget's aside matches it.
  */
 import { gateAttr, type GateOption } from "./gate";
 import { html, raw, type SafeHtml } from "./html";

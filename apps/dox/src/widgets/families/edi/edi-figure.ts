@@ -29,7 +29,7 @@ export interface FigureValue {
 }
 
 /** What the figure draws: words when there is nothing to take apart, or a value. */
-export type FigureSpec =
+type FigureSpec =
   | { kind: "empty"; text: string }
   | ({ kind: "value"; aria: string } & FigureValue);
 
@@ -95,7 +95,7 @@ function none(closing: string): SafeHtml {
 }
 
 /** The segment's parts as boxes with their captions beneath and the service characters between. */
-export function partsRow(parts: readonly PicPart[]): SafeHtml {
+function partsRow(parts: readonly PicPart[]): SafeHtml {
   return html`<span class="${styles.parts}"
     >${parts.map(
       (p) =>
@@ -112,7 +112,7 @@ export function partsRow(parts: readonly PicPart[]): SafeHtml {
  * holds the same shape every time; `separator` is what the standard sends between a period's
  * halves.
  */
-export function takenApart(
+function takenApart(
   halves: readonly PicHalf[],
   separator: string,
   closing: string,
@@ -146,7 +146,7 @@ export function figureContent(spec: FigureSpec): SafeHtml {
   >`;
 }
 
-export interface EdiFigureOptions {
+interface EdiFigureOptions {
   id: string;
   spec: FigureSpec;
   /** The tallest pictures the region draws, built from literal fields (a layout reservation). */

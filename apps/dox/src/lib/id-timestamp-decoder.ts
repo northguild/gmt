@@ -51,7 +51,7 @@ export const FORMATS = [
   { format: "Snowflake", fn: "fromSnowflake" },
 ] as const;
 
-export type FormatWord = (typeof FORMATS)[number]["format"];
+type FormatWord = (typeof FORMATS)[number]["format"];
 
 /** The text of the five controls. All strings, as they are typed. */
 export interface IdDecoderState {
@@ -86,7 +86,7 @@ export interface IdRow {
 // Presets
 // ---------------------------------------------------------------------------
 
-export interface IdPreset {
+interface IdPreset {
   id: string;
   label: string;
   description: string;
@@ -209,7 +209,7 @@ export const ID_PRESETS: readonly IdPreset[] = [
   },
 ];
 
-export const DEFAULT_PRESET = ID_PRESETS[0]!;
+const DEFAULT_PRESET = ID_PRESETS[0]!;
 
 export function presetState(preset: IdPreset): IdDecoderState {
   return { ...preset.state };
@@ -280,7 +280,7 @@ export function permalinkOf(state: IdDecoderState): Record<string, string> {
 
 const WHOLE_NUMBER = /^-?\d{1,16}$/;
 
-export type LayoutRead =
+type LayoutRead =
   | { kind: "layout"; layout: SnowflakeLayout }
   | { kind: "none"; why: string };
 

@@ -61,17 +61,8 @@ export function msToNextSecond(now: string): number {
   return Math.max(50, Math.ceil(1000 - millis));
 }
 
-/** Old markup: L15e removes this once the mount uses `noSignal` from the clockcheck family. */
-/** The sentinel a cell or readout shows for a value that could not be read, never a blank. */
-export const NO_SIGNAL = `<span class="gmt-playground-sentinel">NO SIGNAL</span>`;
-
 /** The sentinel as a tooltip on a readout that has lost its signal. */
 export const SIGNAL_LOST = "⟨ NO SIGNAL — invalid input ⟩";
-
-/** Old markup: L15e removes this once the mount uses `markOk` and `markBad` from the clockcheck family. */
-/** The verdict's and the cells' marks. The glyph is the icon; the words beside it carry the meaning. */
-export const MARK_OK = `<span class="gmt-clockcheck-mark gmt-clockcheck-mark--ok" aria-hidden="true">\u2713</span>`;
-export const MARK_BAD = `<span class="gmt-clockcheck-mark gmt-clockcheck-mark--bad" aria-hidden="true">\u2717</span>`;
 
 /** The "Test your own servers" card's words: one source for the page, the `.md` twin and the llms files. */
 export const SERVERS_TITLE = "Test your own servers";

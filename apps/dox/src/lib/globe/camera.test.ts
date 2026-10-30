@@ -8,18 +8,15 @@
  * hand-rolled expectation would only prove the maths matches itself.
  */
 
-import { geoDistance, geoOrthographic } from "d3-geo";
+import { geoOrthographic } from "d3-geo";
 import {
-  cameraCentre,
   clampLat,
   createCamera,
-  dot3,
   isVisible,
   project,
   shortestAngle,
   sunDirection,
   syncCamera,
-  unitVector,
   unproject,
   wrapLng,
 } from "./camera";
@@ -116,22 +113,6 @@ describe("project", () => {
 });
 
 describe("isVisible", () => {
-  it("is true exactly within a quarter turn of the view centre", () => {
-    for (const rotation of ROTATIONS) {
-      const { camera } = pair(rotation);
-      const centre = cameraCentre(camera);
-      for (const [lng, lat] of POINTS) {
-        const turn = geoDistance([lng, lat], centre);
-        // Points sitting exactly on the horizon are the one ambiguous case;
-        // the convention for those is asserted on its own below.
-        if (Math.abs(turn - Math.PI / 2) < 1e-9) continue;
-        expect(isVisible(camera, lng, lat), `${rotation} / ${lng},${lat}`).toBe(
-          turn < Math.PI / 2,
-        );
-      }
-    }
-  });
-
   /* A point *exactly* on the horizon has no stable answer and is not worth
      pinning one to: the test is `rotated.x > 0`, and at a quarter turn that x is
      `cos(π/2)`, which in doubles is 6e-17 rather than 0. Whether it lands
@@ -216,42 +197,6 @@ describe("syncCamera", () => {
   });
 });
 
-describe("unitVector / dot3", () => {
-  it("is a unit vector for any lng/lat", () => {
-    for (const [lng, lat] of POINTS) {
-      const [x, y, z] = unitVector(lng, lat);
-      expect(x * x + y * y + z * z).toBeCloseTo(1, 10);
-    }
-  });
-
-  it("matches cos(geoDistance(...)) to 9 places", () => {
-    const cases: [[number, number], [number, number]][] = [
-      [
-        [-73.99, 40.73],
-        [139.69, 35.68],
-      ],
-      [
-        [0, 51.5],
-        [2.35, 48.85],
-      ],
-      [
-        [10, 20],
-        [-170, -20],
-      ],
-      [
-        [0, 0],
-        [0, 0],
-      ],
-    ];
-    for (const [a, b] of cases) {
-      expect(dot3(unitVector(...a), unitVector(...b))).toBeCloseTo(
-        Math.cos(geoDistance(a, b)),
-        9,
-      );
-    }
-  });
-});
-
 describe("sunDirection", () => {
   it("points straight at the viewer when the sun is behind the camera", () => {
     const { camera } = pair([-20, -40]);
@@ -260,18 +205,6 @@ describe("sunDirection", () => {
     expect(sun[0]).toBeCloseTo(0, 9);
     expect(sun[1]).toBeCloseTo(0, 9);
     expect(sun[2]).toBeCloseTo(1, 9);
-  });
-
-  it("is a unit vector, and its depth is the cosine to the view centre", () => {
-    const { camera } = pair([-10, -15]);
-    for (const [lng, lat] of POINTS) {
-      const sun = sunDirection(camera, lng, lat);
-      expect(Math.hypot(sun[0], sun[1], sun[2])).toBeCloseTo(1, 9);
-      expect(sun[2]).toBeCloseTo(
-        Math.cos(geoDistance([lng, lat], cameraCentre(camera))),
-        9,
-      );
-    }
   });
 
   it("puts a sun to the geographic east on the right of the screen", () => {

@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/dom";
 import { html } from "../../builders/html";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../../test-fixture";
 import { callOutput } from "../gnss/call-output";
 import { paintOutput } from "./paint-output";
 
 describe("paintOutput", () => {
-  const empty = html`<div>${callOutput({ label: "Returned", state: "empty", lines: [] })}</div>`;
+  const empty = html`<div>
+    ${callOutput({ label: "Returned", state: "empty", lines: [] })}
+  </div>`;
 
   it("writes the result into the output without replacing it", () => {
     const { host } = renderHtml(empty);
@@ -18,6 +21,23 @@ describe("paintOutput", () => {
     });
     expect(screen.getByRole("status", { name: "Returned" })).toBe(output);
     expect(output).toHaveTextContent("PT50M");
+  });
+
+  it("has no axe violations empty, live or lost", async () => {
+    const { host } = renderHtml(empty);
+    await expectNoAxeViolations(host);
+    paintOutput(host, {
+      label: "Returned",
+      state: "live",
+      lines: [{ text: "PT50M", lost: false }],
+    });
+    await expectNoAxeViolations(host);
+    paintOutput(host, {
+      label: "Returned",
+      state: "sentinel",
+      lines: [{ text: "", lost: true }],
+    });
+    await expectNoAxeViolations(host);
   });
 
   it("says NO SIGNAL in words for a sentinel", () => {

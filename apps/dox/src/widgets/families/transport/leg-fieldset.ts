@@ -25,7 +25,7 @@ import styles from "./leg-fieldset.module.css";
 const NUMERALS = ["①", "②", "③", "④"] as const;
 
 /** The name of a mode on screen: the tag with its first letter in capitals. */
-export function modeLabel(mode: string): string {
+function modeLabel(mode: string): string {
   return mode.length === 0 ? mode : mode[0]!.toUpperCase() + mode.slice(1);
 }
 
@@ -66,7 +66,7 @@ export function setChoice(
   el.value = value;
 }
 
-export interface LegHeaderFields {
+interface LegHeaderFields {
   mode: string;
   duration: string;
   timeZone: string;
@@ -87,7 +87,7 @@ export function legHeader(n: number, leg: LegHeaderFields): SafeHtml {
   return html`<span class="${styles.number}" data-leg="${n}">${NUMERALS[(n - 1) % NUMERALS.length]}</span> ${modeIcon(mode)}${mode === "" ? "Leg" : modeLabel(mode)}${tail.length === 0 ? "" : ` · ${tail.join(" ")}`}`;
 }
 
-export interface LegFieldsetOptions {
+interface LegFieldsetOptions {
   /** The widget's id scope: the fieldset and its fields take ids from it. */
   id: (local: string) => string;
   /** The leg's number, from 1. */

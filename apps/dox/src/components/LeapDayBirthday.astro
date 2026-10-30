@@ -17,7 +17,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderLeapDayBirthdayTemplate();
+const html = renderLeapDayBirthdayTemplate("leap-day-birthday", {}).value;
 ---
 
 {
@@ -35,10 +35,12 @@ const html = renderLeapDayBirthdayTemplate();
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("leapday");
-    document.querySelectorAll<HTMLElement>(".gmt-leap-day").forEach((el) => {
-      mountLeapDayBirthday(el, seed, new AbortController().signal).catch((error) =>
-        showUnavailable(el, error),
-      );
-    });
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="leap-day-birthday"]')
+      .forEach((el) => {
+        mountLeapDayBirthday(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
   }
 </script>

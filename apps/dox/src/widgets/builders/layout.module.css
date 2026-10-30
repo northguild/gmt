@@ -5,6 +5,7 @@
 .widget {
   container-type: inline-size;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   inline-size: 100%;
   min-inline-size: 0;
@@ -16,6 +17,10 @@
 .card,
 .section {
   display: grid;
+
+  /* One column that may shrink below its content: an implicit `auto` column grows to the
+     widest unwrapped line (a code frame), widens the page and scrolls it sideways. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
   min-inline-size: 0;
   padding: clamp(0.75rem, 0.5rem + 1vw, 1.25rem);

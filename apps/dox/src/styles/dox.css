@@ -1,7 +1,7 @@
 /* Misc page-level layout for live components */
 
 /* HUD dashboard layout for sidebar-less pages (/, /why-gmt, and any future
- * splash-template page) — see memories/dash-hud-plan.md. Starlight caps
+ * splash-template page). Starlight caps
  * sidebar-less pages at --sl-content-width: 67.5rem and centers them, which
  * reads as too much dead margin at wide viewports for a dashboard feel.
  *
@@ -39,8 +39,8 @@ html:not([data-has-sidebar]) .sl-container {
  * override above, these pages KEEP the Starlight sidebar (nav consistency),
  * so `html:not([data-has-sidebar])` doesn't apply — the content column
  * widens to fill the space right of the sidebar, via a self-declaring marker
- * (`data-tools-fullbleed` on the widget's own root, set by Globe.astro /
- * MultiZoneScrubber.astro) rather than a route string, so any future
+ * (`data-tools-fullbleed` on the widget's own root, set by MultiZoneScrubber.astro,
+ * ConverterBench.astro and the other wide tools) rather than a route string, so any future
  * full-bleed tool opts in the same way.
  *
  * On a sidebar+TOC page, `.main-pane` and `.right-sidebar-container` are
@@ -95,21 +95,13 @@ html:not([data-has-sidebar]) .sl-container {
 }
 
 /* The page around a tool — see ToolLayout.astro. The key point, the intro, the
- * widget and the trailing text on one grid, where they used to be three blocks
- * of full-width prose with a widget between them.
+ * widget and the trailing text sit on one grid.
  *
- * The container is the wrapper and the grid is its child, the same split as
- * `.gmt-widget` and `.gmt-widget-card`: an element cannot query its own size,
- * so the thing being measured and the thing being laid out have to be two boxes.
- *
- * THE TIERS BELOW ARE THE WIDGET'S, AND MUST STAY THEM. The widget takes the
- * whole row, so `.gmt-widget` is exactly as wide as this grid; with the same
- * gap and the same 60rem and 80rem steps as `.gmt-widget-card`
- * (gmt-widget.css), the two resolve to the same four tracks at every width.
- * That is what puts the key point over the controls card and the intro over the
- * chart card. A `@container` condition cannot read a custom property, so the two
- * sheets cannot share the numbers as a variable — change one and change the
- * other, or the columns stop lining up. */
+ * The container is the wrapper and the grid is its child: an element cannot
+ * query its own size, so the thing being measured and the thing being laid out
+ * have to be two boxes. The widget takes the whole row, and the key point and
+ * the intro sit over its first cards on two tracks from 60rem and four from
+ * 80rem. */
 .gmt-tool-layout {
   container-type: inline-size;
 }
@@ -155,9 +147,9 @@ html:not([data-has-sidebar]) .sl-container {
 }
 
 /* Inside this grid the gap owns the rhythm. The widget's own vertical margin
-   (gmt-widget.css) would open a second, larger space above and below its cards
+   (gmt-widget-reset.css) would open a second, larger space above and below its cards
    and break the even spacing between the rows. */
-.gmt-tool-grid .gmt-widget {
+.gmt-tool-grid [data-widget] {
   margin: 0;
 }
 
@@ -181,7 +173,7 @@ html:not([data-has-sidebar]) .sl-container {
 /* The intro and the trailing text are cards in position and padding only: no
    border and no fill, so they sit on the grid with the bordered cards without
    competing with them, and their text starts where the text inside those cards
-   starts. The padding is `.gmt-widget-section`'s. */
+   starts. The padding matches the kit's section (widgets/builders/layout.module.css). */
 .gmt-tool-intro,
 .gmt-tool-after {
   padding: var(--gmt-space-4);
@@ -228,19 +220,6 @@ html:not([data-has-sidebar]) .sl-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
   gap: var(--gmt-space-8, 3rem);
-}
-
-/* Starlight's Card colours cards by grid position: 1 orange, 3 green, 4 red, 5 blue, and every
- * other position the default purple. The home sections hold six and seven cards, so purple would
- * repeat at cards 2 and 6, and the sixth card takes the theme's ice colour instead. --gmt-ice
- * flips with the theme (ice blue in dark, near-black in light), so the icon stays legible in
- * both. Starlight's rules sit in its components layer, so this rule in `gmt.shell` wins on its
- * own. A seventh card is position 4n + 3, so it takes Starlight's green and needs no rule
- * here. An odd last card spans both columns of a two-column grid: see the gmt-grid-section
- * container query below. */
-.gmt-home-grid .card:nth-child(6n) {
-  --sl-card-border: var(--gmt-ice);
-  --sl-card-bg: color-mix(in srgb, var(--gmt-ice) 12%, transparent);
 }
 
 .gmt-why-grid {
@@ -315,8 +294,7 @@ html:not([data-has-sidebar]) .sl-container {
  * itself is far narrower than 50rem, so the second card column overflows
  * into the neighboring section. Forcing single-column by default and only
  * opting back into 2 columns once the section itself has room fixes it at
- * the root (same class of bug, and the same container-query fix, as
- * .gmt-globe-layout in gmt-globe.css). */
+ * the root. */
 .gmt-grid-section {
   container-type: inline-size;
   container-name: gmt-grid-section;
@@ -329,11 +307,5 @@ html:not([data-has-sidebar]) .sl-container {
 @container gmt-grid-section (min-width: 40rem) {
   .gmt-grid-section .card-grid {
     grid-template-columns: 1fr 1fr;
-  }
-
-  /* An odd last card would sit alone in the left column. It is the pointer card, so a full-width
-   * closing row reads as intended, and the rule needs no change when a card is added. */
-  .gmt-grid-section .card-grid > .card:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
   }
 }

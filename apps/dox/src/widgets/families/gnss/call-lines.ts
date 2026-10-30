@@ -14,7 +14,7 @@ import { codeSpan } from "~/lib/widget-ui";
 import { raw, type SafeHtml } from "../../builders/html";
 import type { CallOutputLine } from "./call-output";
 
-export interface CallLines {
+interface CallLines {
   code: SafeHtml;
   plain: string;
 }

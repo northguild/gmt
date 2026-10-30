@@ -1,0 +1,204 @@
+/*
+ * Observance Comparator: what only this tool needs. The sections, fields, preset, chips,
+ * year steppers, buttons, code frame and links are the kit's; the matrix, plates, week
+ * strips, legend, policy editor and held lines are the holiday family's. This sheet lays
+ * out the holiday and column lists and the detail's clusters and lanes.
+ *
+ * Amber is the sentinel's alone. A list card is a full bevelled border with an accent on
+ * its bottom edge, never a coloured left edge. A button that cannot act is dashed, so it is
+ * not told apart by colour alone.
+ */
+
+.stack {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.subhead {
+  margin: 0;
+  font-size: var(--gmt-text-sm);
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+.list {
+  display: grid;
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-inline-size: 0;
+}
+
+.item {
+  display: grid;
+  gap: var(--gmt-space-2);
+  box-sizing: border-box;
+  min-inline-size: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-block-end: 2px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+
+  &[data-series="1"] {
+    border-block-end-color: var(--gmt-series-1);
+  }
+
+  &[data-series="2"] {
+    border-block-end-color: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    border-block-end-color: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    border-block-end-color: var(--gmt-series-4);
+  }
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--gmt-space-2);
+}
+
+.number {
+  flex: none;
+  align-self: center;
+  inline-size: 2ch;
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  color: var(--gmt-ice);
+}
+
+.fields {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+
+  & > * {
+    flex: 1 1 6rem;
+    min-inline-size: 0;
+  }
+}
+
+.pick {
+  flex: 1 1 14rem;
+  min-inline-size: 0;
+}
+
+.policy {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+}
+
+.policyLabel {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+.addrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-3);
+}
+
+.count,
+.hint {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+.plates,
+.slot {
+  min-inline-size: 0;
+}
+
+/* One cluster of weeks: its dates as a heading, then a lane per column. */
+.strip {
+  display: grid;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+}
+
+.cluster {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.clusterName {
+  margin: 0;
+  font-size: var(--gmt-text-sm);
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+.lanes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.lane {
+  display: grid;
+  align-content: start;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+}
+
+.laneName {
+  margin: 0;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+}
+
+.laneNone {
+  margin: 0;
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+}
+
+@media (forced-colors: active) {
+  .item {
+    border-color: CanvasText;
+  }
+
+  .count,
+  .hint,
+  .policyLabel {
+    color: CanvasText;
+  }
+
+  .laneNone {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .count,
+  .hint,
+  .policyLabel {
+    color: var(--gmt-ice);
+  }
+}

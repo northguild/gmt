@@ -3,6 +3,7 @@ import { screen, within } from "@testing-library/dom";
 import { describe, expect, it } from "vitest";
 import type { LoadedWidget } from "~/components/ask/widget-registry";
 import { onceDestroy } from "~/lib/widget-mount";
+import { html } from "~/widgets/builders";
 import {
   cellsInColumn,
   expectNoAxeViolations,
@@ -13,7 +14,7 @@ import {
 
 const fixture: LoadedWidget<never> = {
   renderTemplate: () =>
-    `<label>Level <input type="range" min="0" max="10" value="1"></label>
+    html`<label>Level <input type="range" min="0" max="10" value="1"></label>
      <button type="button">Go</button><p role="status"></p>`,
   mount: async (root) => {
     const view = within(root);
@@ -27,12 +28,12 @@ const fixture: LoadedWidget<never> = {
 
 const scoped: LoadedWidget<never> = {
   renderTemplate: (idPrefix) =>
-    `<p role="status" id="${idPrefix}-out">scope ${idPrefix}</p>`,
+    html`<p role="status" id="${idPrefix}-out">scope ${idPrefix}</p>`,
   mount: async () => onceDestroy(() => {}),
 };
 
 const leaky: LoadedWidget<never> = {
-  renderTemplate: () => "<p>x</p>",
+  renderTemplate: () => html`<p>x</p>`,
   mount: async () => {
     window.addEventListener("resize", () => {});
     return onceDestroy(() => {});
@@ -40,7 +41,7 @@ const leaky: LoadedWidget<never> = {
 };
 
 const tidy: LoadedWidget<never> = {
-  renderTemplate: () => "<p>x</p>",
+  renderTemplate: () => html`<p>x</p>`,
   mount: async (_root, _args, signal) => {
     window.addEventListener("resize", () => {}, { signal });
     return onceDestroy(() => {});
@@ -110,7 +111,7 @@ describe("expectNoAxeViolations", () => {
 
   it("fails a button with no name", async () => {
     const w = await renderWidget({
-      renderTemplate: () => `<button type="button"></button>`,
+      renderTemplate: () => html`<button type="button"></button>`,
       mount: async () => onceDestroy(() => {}),
     });
     const failure = await expectNoAxeViolations(w.root).catch(
@@ -124,7 +125,7 @@ describe("expectNoAxeViolations", () => {
 describe("cellsInColumn", () => {
   const grid: LoadedWidget<never> = {
     renderTemplate: () =>
-      `<table aria-label="Counters">
+      html`<table aria-label="Counters">
          <thead><tr><th scope="col">Counter</th><th scope="col">Week</th></tr></thead>
          <tbody>
            <tr><th scope="row">GPS</th><td>1</td></tr>

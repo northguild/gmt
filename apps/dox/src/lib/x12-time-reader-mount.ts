@@ -35,6 +35,7 @@ import {
   srOnly,
   textInput,
   widget,
+  type SafeHtml,
 } from "~/widgets/builders";
 import {
   callFrameContent,
@@ -236,7 +237,7 @@ const presetOptions = (
 export function renderX12TimeReaderTemplate(
   idPrefix: string,
   args: X12TimeReaderArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const seeded = isSeeded(args);
   const read = readArgs(args);
@@ -252,6 +253,7 @@ export function renderX12TimeReaderTemplate(
     label: string,
     value: string,
     optional = false,
+    maxLength = 64,
   ) =>
     field({
       id: id(local),
@@ -262,6 +264,7 @@ export function renderX12TimeReaderTemplate(
           value,
           autocomplete: "off",
           spellcheck: false,
+          maxLength,
           describedBy,
         }),
     });
@@ -278,7 +281,7 @@ export function renderX12TimeReaderTemplate(
       value: matchPreset(main),
       options: presetOptions(X12_PRESETS),
     })}${fieldGrid(
-      html`${input("date", "Date (373)", main.date, true)}${input("time", "Time (337)", main.time, true)}${input("time-code", "Time code (623)", main.timeCode, true)}`,
+      html`${input("date", "Date (373)", main.date, true)}${input("time", "Time (337)", main.time, true)}${input("time-code", "Time code (623)", main.timeCode, true, 8)}`,
     )}<p class="${styles.note}">Element 373 is CCYYMMDD. Element 337 is HHMM, HHMMSS, HHMMSSD or HHMMSSDD. Any of the three may be empty, and an empty element is left out of the call.</p></div>`,
   );
 
@@ -417,7 +420,7 @@ export function renderX12TimeReaderTemplate(
       value: matchDtpPreset(dtp),
       options: presetOptions(DTP_PRESETS),
     })}${fieldGrid(
-      html`${input("dtp-format", "Qualifier (1250)", dtp.format)}${input("dtp-value", "Value (1251)", dtp.value)}`,
+      html`${input("dtp-format", "Qualifier (1250)", dtp.format, false, 8)}${input("dtp-value", "Value (1251)", dtp.value)}`,
     )}<p class="${styles.note}">A DTP segment carries a 1250 qualifier and an element 1251 value. It carries no time code, and no 1250 code states an offset.</p></div>`,
   );
 
@@ -473,7 +476,7 @@ export function renderX12TimeReaderTemplate(
   return widget(
     { name: WIDGET_NAME, label: "X12 Time Reader", scope: idPrefix },
     html`${elements}${returns}${lands}${back}${dtpControls}${dtpReturns}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

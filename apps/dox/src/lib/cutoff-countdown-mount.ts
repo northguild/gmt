@@ -213,7 +213,7 @@ function axisOf(
 export function renderCutoffCountdownTemplate(
   idPrefix: string,
   args: CutoffCountdownArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const seeded = args.cutoff !== undefined;
   const state: CountdownState = seeded
@@ -285,7 +285,6 @@ export function renderCutoffCountdownTemplate(
         iso: "",
         samples: [FACE_SAMPLE],
         live,
-        gate: "face",
       },
     )}<div class="${styles.axis}" id="${id("axis-slot")}">${blankAxis()}</div>${range(
       {
@@ -298,7 +297,6 @@ export function renderCutoffCountdownTemplate(
         valueText: "",
         ends: [NBSP, NBSP],
         disabled: true,
-        gate: "slider",
       },
     )}${grow(html`<p class="${styles.rule}" id="${id("rule")}">${NBSP}</p>`)}${grow(
       html`<p class="${styles.summary}" id="${id("summary")}">${NBSP}</p>`,
@@ -339,7 +337,7 @@ export function renderCutoffCountdownTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Cut-off Countdown", scope: idPrefix },
     html`${pick}${read}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

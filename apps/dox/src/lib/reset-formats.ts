@@ -57,7 +57,7 @@ export type ResetFormatId =
   | "unix-ms"
   | "unix-s";
 
-export interface ResetFormat {
+interface ResetFormat {
   id: ResetFormatId;
   label: string;
   /** The gmt function behind this preset, as the reader would import it. */

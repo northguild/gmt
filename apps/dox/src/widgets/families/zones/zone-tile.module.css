@@ -1,0 +1,201 @@
+/* zoneTile: one pinned zone's clock. A plain panel inside the widget's own card (one layer of
+   glass only): a hairline and the subtle fill group a dial with its captions. Tokens only. */
+
+.tile {
+  display: grid;
+  justify-items: center;
+  gap: var(--gmt-space-1);
+  position: relative;
+  padding-block: var(--gmt-space-3) var(--gmt-space-2);
+  padding-inline: var(--gmt-space-2);
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  min-inline-size: 0;
+
+  /* The reader's own zone: said in words under the clock, and a full border on the tile.
+     Never a one-sided accent, and never amber (that is the sentinel's). */
+  &[data-yours] {
+    border-color: var(--gmt-cyan-ink);
+  }
+}
+
+/* The dial sizes itself from the tile, so it shrinks with the column. Capped so a lone
+   pinned zone in a wide card does not draw one enormous clock. */
+.face {
+  inline-size: 100%;
+  max-inline-size: 7rem;
+  line-height: 0;
+}
+
+.time {
+  margin: 0;
+  color: var(--gmt-spring-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: 1.35rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &[data-state="lost"] {
+    color: var(--gmt-signal-ink);
+  }
+}
+
+.date {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+}
+
+/* The city is the tile's name; the full IANA id stays in the tooltip. */
+.name {
+  margin: 0;
+  max-inline-size: 100%;
+  overflow: hidden;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offset {
+  margin: 0;
+  color: var(--gmt-cyan-ink);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.yours {
+  margin: 0;
+  color: var(--gmt-cyan-ink);
+  font-size: var(--gmt-text-xs);
+}
+
+/* Both slots hold one text line plus the pill's border whichever state is showing. */
+.slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: calc(var(--gmt-text-xs) * 1.35 + 4px);
+  margin: 0;
+}
+
+.dst,
+.change {
+  max-inline-size: 100%;
+  overflow: hidden;
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.dst {
+  &[data-state="standard"],
+  &[data-state="none"] {
+    color: var(--gmt-ice-dim);
+  }
+
+  /* Only a zone actually in DST draws the pill, in the gold the home page's clock list uses.
+     The words are always said, so colour is never the only channel. */
+  &[data-state="dst"] {
+    padding-inline: 0.45em;
+    border: 1px solid var(--gmt-dst-gold);
+    border-radius: 999px;
+    corner-shape: bevel;
+    color: var(--gmt-dst-gold-ink);
+    font-weight: 600;
+  }
+}
+
+/* The switch the scrub has crossed: the same gold, tinted, so a crossing reads as an event and
+   the state beside it as a state. */
+.change {
+  padding-inline: 0.45em;
+  border: 1px solid var(--gmt-dst-gold);
+  border-radius: 999px;
+  corner-shape: bevel;
+  background: color(from var(--gmt-dst-gold) srgb r g b / 15%);
+  color: var(--gmt-dst-gold-ink);
+  font-weight: 600;
+}
+
+/* Tucked into the tile's corner so it never competes with the reading. */
+.remove {
+  appearance: none;
+  position: absolute;
+  inset-block-start: var(--gmt-space-1);
+  inset-inline-end: var(--gmt-space-1);
+  display: grid;
+  place-items: center;
+  min-inline-size: var(--gmt-target-min);
+  min-block-size: var(--gmt-target-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gmt-ice-dim);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+
+  &:hover {
+    color: var(--gmt-signal-ink);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+    color: var(--gmt-signal-ink);
+  }
+}
+
+@media (forced-colors: active) {
+  .tile,
+  .dst[data-state="dst"],
+  .change {
+    border-color: CanvasText;
+  }
+
+  .time,
+  .date,
+  .name,
+  .offset,
+  .yours,
+  .dst,
+  .change,
+  .remove {
+    color: CanvasText;
+  }
+
+  .remove:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .tile {
+    border-color: var(--gmt-ice);
+  }
+
+  .dst[data-state="standard"],
+  .dst[data-state="none"],
+  .remove {
+    color: var(--gmt-ice);
+  }
+
+  .remove:focus-visible {
+    outline-width: 3px;
+  }
+}

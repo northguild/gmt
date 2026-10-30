@@ -337,7 +337,7 @@ export const EXAMPLE_AREAS = [
   { id: "gnss", label: "GNSS" },
 ] as const;
 
-export type ExampleArea = (typeof EXAMPLE_AREAS)[number]["id"];
+type ExampleArea = (typeof EXAMPLE_AREAS)[number]["id"];
 
 /**
  * The example cards in the widget rail.

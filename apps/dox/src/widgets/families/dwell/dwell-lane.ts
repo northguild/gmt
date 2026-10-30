@@ -19,7 +19,7 @@ import styles from "./dwell-lane.module.css";
 /** The ids a lane writes, derived from the widget's `idScope`. */
 export type LaneName = "dwell" | "compare";
 
-export interface DwellLaneOptions {
+interface DwellLaneOptions {
   /** The widget's `idScope(idPrefix)`. */
   id: (local: string) => string;
   name: LaneName;

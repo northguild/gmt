@@ -1,5 +1,5 @@
 /**
- * plates: a row of captioned results (the old `plateHtml` / `platesHtml`).
+ * plates: a row of captioned results.
  *
  * A `<dl>`: each plate is a `<div>` holding a term (the caption) and its
  * definitions (the value, then the sub lines), so every number is read with its
@@ -37,6 +37,12 @@ export interface Plate {
   captions?: readonly string[];
   /** The widest values it can show, to reserve their width. */
   samples?: readonly string[];
+  /**
+   * For each line, the longest texts it can show, to reserve their wrap. A line whose words
+   * change with the reading (`read from GAL` against `as typed`) would otherwise wrap in a
+   * narrow plate for one reading and not for the next. A line with nothing listed is not held.
+   */
+  lineSamples?: readonly (readonly string[] | undefined)[];
 }
 
 function ghosts(list: readonly string[], cls: string): SafeHtml[] {
@@ -59,7 +65,9 @@ function plate(p: Plate): SafeHtml {
       ><span class="${styles.shown}">${empty ? NO_RESULT : p.value}</span
       >${ghosts(p.samples ?? [], styles.ghost!)}</dd
     >${p.lines.map(
-      (text) => html`<dd class="${styles.line}">${empty ? "" : text}</dd>`,
+      (text, i) =>
+        html`<dd class="${styles.line}"><span class="${styles.shown}">${empty ? "" : text}</span
+          >${ghosts(p.lineSamples?.[i] ?? [], styles.ghost!)}</dd>`,
     )}</div
   >`;
 }

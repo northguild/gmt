@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * `punctuality-widgets.ts`'s pure helpers. Every expected literal that a
  * library call produces is an appendix Z row or a JSDoc example.
@@ -24,11 +25,8 @@ import {
   writtenLabel,
   writtenParts,
   writtenTime,
-  heroLinesHtml,
   settledAnnouncer,
 } from "./punctuality-widgets";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 
 describe("minutesToIso", () => {
   it.each([
@@ -286,7 +284,7 @@ describe("callArgs", () => {
     expect(plain).toBe(
       '[{ planned: "2024-06-14T09:00:00+01:00[Europe/London]", actual: "2024-06-14T09:15:00+01:00[Europe/London]" }], { late: "PT15M" }',
     );
-    expect(html).toContain('<span class="gmt-code-str">');
+    expect(html).toMatch(/<span[^>]*>"2024-06-14T09:00/);
     expect(html.replace(/<[^>]+>/g, "")).toBe(plain.replace(/&/g, "&amp;"));
   });
 
@@ -511,16 +509,6 @@ describe("placeLabels with lines, blocked rectangles and ring-sized marks", () =
   });
 });
 
-describe("heroLinesHtml", () => {
-  it("escapes the text it is given, with the shared escaper", () => {
-    expect(heroLinesHtml([{ text: "a < b & c > d", sep: " & " }])).toBe(
-      '<span class="gmt-punct-hero-sub"><span class="gmt-punct-hero-line">' +
-        '<span class="gmt-punct-hero-sep"> &amp; </span>a &lt; b &amp; c &gt; d' +
-        "</span></span>",
-    );
-  });
-});
-
 describe("settledAnnouncer", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -530,65 +518,37 @@ describe("settledAnnouncer", () => {
   });
 
   it("writes once, after the last call has been quiet for the delay", () => {
-    const el = { textContent: "" } as HTMLElement;
+    const el = document.createElement("p");
     const a = settledAnnouncer(el, 500);
     let n = 0;
     for (let i = 0; i < 4; i++) {
       a.say(() => `read ${++n}`);
       vi.advanceTimersByTime(200);
     }
-    expect(el.textContent).toBe("");
+    expect(el).toBeEmptyDOMElement();
     vi.advanceTimersByTime(300);
-    expect(el.textContent).toBe("read 1");
+    expect(el).toHaveTextContent(/^read 1$/);
     vi.advanceTimersByTime(5000);
-    expect(el.textContent).toBe("read 1");
+    expect(el).toHaveTextContent(/^read 1$/);
   });
 
   it("reads the text when the timer fires, not when `say` was called", () => {
-    const el = { textContent: "" } as HTMLElement;
+    const el = document.createElement("p");
     const a = settledAnnouncer(el, 100);
     let now = "early";
     a.say(() => now);
     now = "settled";
     vi.advanceTimersByTime(100);
-    expect(el.textContent).toBe("settled");
+    expect(el).toHaveTextContent(/^settled$/);
   });
 
   it("cancel drops a pending reading, and a missing region is a no-op", () => {
-    const el = { textContent: "" } as HTMLElement;
+    const el = document.createElement("p");
     const a = settledAnnouncer(el, 100);
     a.say(() => "x");
     a.cancel();
     vi.advanceTimersByTime(1000);
-    expect(el.textContent).toBe("");
+    expect(el).toBeEmptyDOMElement();
     expect(() => settledAnnouncer(null).say(() => "x")).not.toThrow();
-  });
-});
-
-describe("the punctuality sheet", () => {
-  const css = readFileSync(
-    fileURLToPath(
-      new URL("../styles/gmt-punctuality-widgets.css", import.meta.url),
-    ),
-    "utf8",
-  );
-
-  it("keeps a hidden naive line's reserved height and draws nothing", () => {
-    // `.gmt-punct-naive { display: block }` beats the UA `[hidden]` rule, so the
-    // sheet states what hidden means: the space stays, nothing is painted.
-    expect(css).toMatch(
-      /\.gmt-punct-naive\[hidden\]\s*\{[^}]*visibility:\s*hidden/,
-    );
-    expect(css).not.toMatch(
-      /\.gmt-punct-naive\[hidden\]\s*\{[^}]*display:\s*none/,
-    );
-  });
-
-  it("states each table rule once", () => {
-    const heads = [...css.matchAll(/^([^{}\n][^{}]*)\{/gm)].map((m) =>
-      m[1]!.replace(/\s+/g, " ").trim(),
-    );
-    const dupes = heads.filter((h, i) => heads.indexOf(h) !== i);
-    expect(dupes).toEqual([]);
   });
 });

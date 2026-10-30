@@ -23,10 +23,10 @@ import {
 } from "~/test/render-widget";
 import {
   ROLLOVER_PRESETS,
-  ROLLOVER_SENTENCES,
   ROLLING_DATE_TEXT,
   readRollover,
   windowDays,
+  ROLLOVER_SENTENCES,
 } from "./gnss-rollover-checker";
 import { SITE_BASE } from "./site";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
@@ -320,14 +320,6 @@ describe("NO SIGNAL", () => {
     await expectNoAxeViolations(w.root);
   });
 
-  it("says a date after 9999 in words", async () => {
-    const w = await open();
-    await w.user.click(radio("A date"));
-    await enter(w, dateBox(), "+010000-01-01T00:00:00Z");
-    expect(reason()).toHaveTextContent(ROLLOVER_SENTENCES.dateAfter9999);
-    await expectNoAxeViolations(w.root);
-  });
-
   it("is not NO SIGNAL for a blank field, which only asks for the value", async () => {
     const w = await open();
     await enter(w, pivotBox(), "");
@@ -395,14 +387,12 @@ describe("the date slider", () => {
     const read = readRollover(
       lib,
       {
-        ...{
-          counter: "IRN-LNAV" as const,
-          model: "pivot" as const,
-          pivot: "2020-01-01T00:00:00Z",
-          era: "0",
-          nowMode: "date" as const,
-          date: NOW,
-        },
+        counter: "IRN-LNAV",
+        model: "pivot",
+        pivot: "2020-01-01T00:00:00Z",
+        era: "0",
+        nowMode: "date",
+        date: NOW,
       },
       NOW,
     );
@@ -604,5 +594,15 @@ describe("the links row", () => {
     await enter(w, pivotBox(), "2020-01-01T00:00:00Z");
     expect(screen.getByRole("link", { name: ERAS })).toBeInTheDocument();
     await expectNoAxeViolations(w.root);
+  });
+});
+
+describe("the length cap", () => {
+  it("stops the date field at 64 characters", async () => {
+    const w = await open();
+    const box = dateBox();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(72));
+    expect(box).toHaveValue("x".repeat(64));
   });
 });

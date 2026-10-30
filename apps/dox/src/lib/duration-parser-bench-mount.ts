@@ -202,7 +202,7 @@ const callFrame = (code?: SafeHtml, copyText = ""): SafeHtml =>
 export function renderDurationParserBenchTemplate(
   idPrefix: string,
   args: DurationParserBenchArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state = readArgs(args);
 
@@ -281,7 +281,7 @@ export function renderDurationParserBenchTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Duration Parser Bench", scope: idPrefix },
     html`${yourString}${reads}${tables}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

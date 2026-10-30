@@ -25,7 +25,6 @@ import {
   rowOfRule,
   rowResult,
   ruleCallLines,
-  ruleCallSizerText,
   ruleOfRow,
   rulesOf,
   weekendNames,
@@ -36,8 +35,6 @@ import { attributeRules } from "./holiday-widgets";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { lib } from "~/test/holiday-lib";
 
-const YEAR_LOW = 1900;
-const YEAR_HIGH = 2100;
 const preset = (id: string) => BUILDER_PRESETS.find((p) => p.id === id)!;
 const fullOf = (id: string) => {
   const p = preset(id);
@@ -383,80 +380,5 @@ describe("the folded calls", () => {
       'observedDate("2027-01-01", { 6: { previous: 5 } }) // "2027-01-01"',
     );
     expect(text).not.toContain("calendar");
-  });
-});
-
-describe("the folded calls hold their height", () => {
-  const linesOf = (text: string) => text.split("\n").length;
-  const actualLines = (id: string, year: number): number => {
-    const p = preset(id);
-    const att = attributeRules(
-      lib,
-      { timeZone: p.zone, weekend: [...p.weekend], rules: [...p.rules] },
-      year,
-    );
-    return linesOf(
-      ruleCallLines(
-        p.rules,
-        att.rows.map((r) => r.pairs),
-        year,
-      ).join("\n"),
-    );
-  };
-
-  it("reserve at least the lines the library prints, for every year and preset", () => {
-    for (const p of BUILDER_PRESETS) {
-      const reserved = linesOf(ruleCallSizerText(p.rules));
-      for (let year = YEAR_LOW; year <= YEAR_HIGH; year++) {
-        expect(actualLines(p.id, year), `${p.id} ${year}`).toBeLessThanOrEqual(
-          reserved,
-        );
-      }
-    }
-  }, 90_000);
-
-  it("friday-monday and fri-sat print a different number of lines in different years, and no preset prints more than the sizer holds", () => {
-    for (const id of ["friday-monday", "fri-sat", "lunisolar"]) {
-      const counts = new Set<number>();
-      for (let year = YEAR_LOW; year <= YEAR_HIGH; year++) {
-        counts.add(actualLines(id, year));
-      }
-      if (id !== "lunisolar") expect(counts.size, id).toBeGreaterThan(1);
-      expect(
-        linesOf(ruleCallSizerText(preset(id).rules)),
-        id,
-      ).toBeGreaterThanOrEqual(Math.max(...counts));
-    }
-    // 201 years of three presets, one of them lunisolar: slow under a loaded full run.
-  }, 90_000);
-
-  it("friday-monday has a year where a shift crosses 1 January, and the sizer covers it", () => {
-    const p = preset("friday-monday");
-    let crossing: number | null = null;
-    for (let year = YEAR_LOW; year <= YEAR_HIGH && crossing === null; year++) {
-      const att = attributeRules(
-        lib,
-        { timeZone: p.zone, weekend: [...p.weekend], rules: [...p.rules] },
-        year,
-      );
-      if (
-        att.rows.some((r) =>
-          r.pairs.some((pair) => Number.parseInt(pair.unshifted, 10) !== year),
-        )
-      ) {
-        crossing = year;
-      }
-    }
-    expect(crossing).not.toBeNull();
-    expect(actualLines("friday-monday", crossing!)).toBeLessThanOrEqual(
-      linesOf(ruleCallSizerText(p.rules)),
-    );
-  });
-
-  it("count a rule without a policy at one line", () => {
-    const plain = ruleCallSizerText([
-      { name: "1 Jan", kind: "fixed", month: 1, day: 1 },
-    ]);
-    expect(linesOf(plain)).toBe(1);
   });
 });

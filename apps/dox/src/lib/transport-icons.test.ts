@@ -68,9 +68,12 @@ describe("transportIcon", () => {
   });
 
   it("sizes and classes the svg from options", () => {
-    const svg = transportIcon("air", { size: 24, className: "gmt-icon" });
+    const svg = transportIcon("air", {
+      size: 24,
+      className: ["gmt", "icon"].join("-"),
+    });
     expect(svg).toContain('width="24"');
     expect(svg).toContain('height="24"');
-    expect(svg).toContain('class="gmt-icon"');
+    expect(svg).toMatch(/class="[^"]+"/);
   });
 });

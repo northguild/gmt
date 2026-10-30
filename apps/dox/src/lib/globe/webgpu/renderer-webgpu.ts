@@ -130,7 +130,6 @@ export async function createWebgpuRenderer(
   /* The canvas is created only now. `getContext("webgpu")` claims an element for
      good, so a failure before this point leaves the fallback a clean one. */
   const canvas = document.createElement("canvas");
-  canvas.className = "gmt-globe-canvas";
   canvas.dataset.renderer = "webgpu";
   canvas.tabIndex = 0;
   canvas.setAttribute("role", "img");

@@ -212,7 +212,7 @@ const outputView = (label: string, read: ClockRead | null): SafeHtml => {
 export function renderDemurrageClockTemplate(
   idPrefix: string,
   args: DemurrageClockArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state: DemurrageState = isSeeded(args)
     ? readArgs(args)
@@ -247,6 +247,7 @@ export function renderDemurrageClockTemplate(
           value: row.at,
           autocomplete: "off",
           spellcheck: false,
+          maxLength: 64,
         }),
     })}</div>`;
   });
@@ -361,13 +362,13 @@ export function renderDemurrageClockTemplate(
         copyText: "",
         gate: "codeframe",
       })}</div>`,
-    )}<div id="${id("out")}">${outputView("What the calls returned", null)}</div>`,
+    )}${grow(html`<div id="${id("out")}">${outputView("What the calls returned", null)}</div>`)}`,
   );
 
   return widget(
     { name: WIDGET_NAME, label: "Demurrage Clock", scope: idPrefix },
     html`${tariff}${drawn}${returns}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

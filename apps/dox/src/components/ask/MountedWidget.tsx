@@ -11,7 +11,7 @@
 import { useEffect, useRef, useState } from "react";
 import { smoothHeight } from "~/lib/smooth-height";
 import { WidgetLoadError, type WidgetHandle } from "~/lib/widget-mount";
-import { loading, raw, setHtml } from "~/widgets/builders";
+import { loading, setHtml } from "~/widgets/builders";
 import styles from "./MountedWidget.module.css";
 import type { AnyWidgetEntry } from "./widget-registry";
 
@@ -79,10 +79,7 @@ export function MountedWidget({
         /* The template's own <gmt-grow> regions ease themselves when they
            connect, and its cards enter from the stylesheet, as on a tool page. A
            nested grow wins over the host's while it animates. */
-        // Interim: an unmigrated entry still returns a string. When the registry
-        // type is SafeHtml, delete the `typeof` line and pass `rendered` as is.
-        const rendered = renderTemplate(idPrefix, args as never);
-        setHtml(root, typeof rendered === "string" ? raw(rendered) : rendered);
+        setHtml(root, renderTemplate(idPrefix, args as never));
 
         const mounted = await mount(root, args as never, controller.signal);
         if (cancelled) {

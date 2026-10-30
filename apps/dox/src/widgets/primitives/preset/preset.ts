@@ -9,20 +9,20 @@
  * height is that of the tallest and a preset never moves what is below it.
  *
  * Re-emits the select's `input`/`change` from the host with `detail.value` (the
- * option value). Replaces `descriptionHoldHtml` and `setPresetDescription`.
+ * option value).
  */
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
 import { KitElement, relay } from "../base";
 import styles from "./preset.module.css";
 
-export interface PresetOption {
+interface PresetOption {
   value: string;
   label: string;
   description: string;
 }
 
-export interface PresetOptions extends GateOption {
+interface PresetOptions extends GateOption {
   id: string;
   /** The visible label and the select's name. Required. */
   label: string;

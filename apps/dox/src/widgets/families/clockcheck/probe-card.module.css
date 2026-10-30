@@ -171,9 +171,12 @@
   }
 }
 
-/* One line stays reserved, so a message arriving moves nothing below it. */
+/* One line stays reserved, so a message arriving moves nothing below it. It has its own row at every
+   width: beside the button it would wrap under it once a longer message ("The check could not
+   finish.") no longer fits a narrow card, and the card would grow by a line. */
 .status {
-  min-block-size: 1.4em;
+  flex: 1 0 100%;
+  min-block-size: 1lh;
   margin: 0;
   color: var(--gmt-ice-dim);
   font-size: 0.8125rem;

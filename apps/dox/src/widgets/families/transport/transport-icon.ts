@@ -12,7 +12,7 @@ import styles from "./transport-icon.module.css";
 
 const FALLBACK_KEY = "generic";
 
-export interface ModeIconOptions {
+interface ModeIconOptions {
   /** The icon's accessible name. Left out, the icon is `aria-hidden`. */
   label?: string;
   /** Width and height in CSS pixels. */

@@ -35,7 +35,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderFreeTimeLedgerTemplate("free-time-ledger");
+const html = renderFreeTimeLedgerTemplate("free-time-ledger").value;
 ---
 
 {

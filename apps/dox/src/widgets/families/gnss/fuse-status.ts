@@ -17,7 +17,7 @@ import styles from "./fuse-status.module.css";
 const NBSP = " ";
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 
-export interface CountdownOptions {
+interface CountdownOptions {
   /** The countdown in parts, or `null` while there is none. */
   parts: Countdown | null;
   /** The library's words for it ("4419 days 23 h 59 min 42 s"). */
@@ -54,7 +54,7 @@ export function countdown(o: CountdownOptions): SafeHtml {
 
 export type Verdict = "right" | "early" | "late" | "none";
 
-export interface VerdictBadgeOptions {
+interface VerdictBadgeOptions {
   verdict: Verdict;
   /** What the receiver reports, in words; empty keeps the badge's two lines. */
   text: string;

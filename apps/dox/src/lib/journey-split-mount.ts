@@ -193,7 +193,7 @@ function reasonOf(read: JourneyRead): SafeHtml {
 export function renderJourneySplitTemplate(
   idPrefix: string,
   args: JourneySplitArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state: DeliveryState = isSeeded(args)
     ? readArgs(args)
@@ -318,7 +318,7 @@ export function renderJourneySplitTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Journey Split", scope: idPrefix },
     html`${legs}${split}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -12,7 +12,7 @@ import { gateAttr } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./edi-hold.module.css";
 
-export interface HoldOptions {
+interface HoldOptions {
   /** The live element's id; the mount finds it by this. */
   id: string;
   /**
@@ -42,7 +42,7 @@ export function hold(o: HoldOptions): SafeHtml {
   >`;
 }
 
-export interface HoldTextOptions {
+interface HoldTextOptions {
   id: string;
   role: "status" | "note";
   label: string;

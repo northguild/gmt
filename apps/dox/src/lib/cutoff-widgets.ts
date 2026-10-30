@@ -24,7 +24,7 @@
 
 import { Temporal } from "@js-temporal/polyfill";
 import { isZonelessDeparture } from "./transport-widgets";
-import { escapeHtml } from "./widget-ui";
+import { codeSpan } from "./widget-ui";
 
 export {
   TRANSPORT_ZONES,
@@ -213,7 +213,7 @@ export function monthTickLabel(z: Temporal.ZonedDateTime): string {
   return `${MONTH_LABELS[z.month - 1]} ${z.year}`;
 }
 
-export interface AxisTick {
+interface AxisTick {
   ms: number;
   label: string;
 }
@@ -352,7 +352,7 @@ function renderValue(value: unknown, str: (s: string) => string): string {
 }
 
 /**
- * `[html, plain]` for `renderCallLine`, in the JSDoc spelling: unquoted keys,
+ * `[html, plain]` for the call line, in the JSDoc spelling: unquoted keys,
  * double-quoted strings, numbers and arrays bare, key order always the
  * JSDoc's (an entry is `name, offset, atLocalTime`; options are `timeZone,
  * atLocalTime, calendar, roll`; a calendar is `weekend, holidays, timeZone`).
@@ -366,8 +366,7 @@ export function callSource(
   args: readonly unknown[],
 ): [string, string] {
   void fn;
-  const htmlStr = (s: string) =>
-    `<span class="gmt-code-str">${escapeHtml(JSON.stringify(s))}</span>`;
+  const htmlStr = (s: string) => codeSpan("str", JSON.stringify(s));
   const plainStr = (s: string) => JSON.stringify(s);
   const html = args.map((a) => renderValue(a, htmlStr)).join(", ");
   const plain = args.map((a) => renderValue(a, plainStr)).join(", ");

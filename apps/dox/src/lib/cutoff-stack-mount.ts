@@ -96,7 +96,7 @@ import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 export type { CutoffStackArgs } from "./cutoff-stack";
 
 const WIDGET_NAME = "cutoff-stack";
-const NBSP = " ";
+const NBSP = "\u00a0";
 const CUTOFF_NUMBERS = [1, 2, 3, 4] as const;
 const TABLE_COLUMNS = [
   "Cut-off",
@@ -123,7 +123,7 @@ const seriesOf = (row: StackRow): TimelineSeries =>
 export function renderCutoffStackTemplate(
   idPrefix: string,
   args: CutoffStackArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const flat = args as unknown as Record<string, unknown>;
   const seeded =
@@ -220,7 +220,7 @@ export function renderCutoffStackTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Cut-off Stack", scope: idPrefix },
     html`${pick}${read}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

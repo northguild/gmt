@@ -1,13 +1,12 @@
 /**
  * @vitest-environment jsdom
  */
-import { screen, within } from "@testing-library/dom";
+import { screen } from "@testing-library/dom";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import {
   cronAxis,
   cronFieldList,
   cronLane,
-  cronLegend,
   cronNoSignal,
   cronPlot,
   kindCell,
@@ -20,23 +19,6 @@ let page: Fixture;
 const show = (markup: SafeHtml): void => {
   page = renderHtml(html`<div>${markup}</div>`);
 };
-
-describe("cronLegend", () => {
-  it("names the three drawings in words", async () => {
-    show(cronLegend());
-    const list = screen.getByRole("list", { name: "Legend" });
-    expect(
-      within(list)
-        .getAllByRole("listitem")
-        .map((li) => li.textContent),
-    ).toEqual([
-      "Solid line: an ordinary time",
-      "Dashed line on hatching: a skipped time",
-      "Double line: a repeated time",
-    ]);
-    await expectNoAxeViolations(page.host);
-  });
-});
 
 describe("cronAxis", () => {
   it("draws every tick label and hides the row from a reader", () => {

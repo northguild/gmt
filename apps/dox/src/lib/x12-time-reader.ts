@@ -114,7 +114,7 @@ export function mainBlank(state: X12State): boolean {
 // Presets: the main section
 // ---------------------------------------------------------------------------
 
-export interface X12Preset {
+interface X12Preset {
   id: string;
   label: string;
   description: string;
@@ -305,7 +305,7 @@ export function matchPreset(state: X12State): string {
 // Presets: the DTP section
 // ---------------------------------------------------------------------------
 
-export interface DtpPreset {
+interface DtpPreset {
   id: string;
   label: string;
   description: string;
@@ -434,9 +434,9 @@ export function permalinkOf(
 // ---------------------------------------------------------------------------
 
 /** The element parse the main section made. */
-export type MainKind = "dateAndTime" | "date" | "time";
+type MainKind = "dateAndTime" | "date" | "time";
 
-export interface X12Read {
+interface X12Read {
   date: string;
   time: string;
   code: string;
@@ -575,7 +575,7 @@ export function ok(read: X12Read): boolean {
 // What the parser returned: the members and the verdict
 // ---------------------------------------------------------------------------
 
-export type MemberKey =
+type MemberKey =
   | "kind"
   | "value"
   | "code"
@@ -637,7 +637,7 @@ export function memberText(read: X12Read, key: MemberKey): string | null {
   }
 }
 
-export interface Verdict {
+interface Verdict {
   verdict: string;
   detail: string;
 }
@@ -733,7 +733,7 @@ export function stripNote(read: X12Read | null): string {
   return STRIP_NOTE_ALONE;
 }
 
-export interface XGapRow {
+interface XGapRow {
   zone: string;
   instant: string;
   offset: string;
@@ -766,7 +766,7 @@ export function gapRows(
   });
 }
 
-export interface InstantPlan {
+interface InstantPlan {
   /** What the output slot shows. */
   kind: "stated" | "resolve" | "none";
   /** The note under it. */
@@ -820,17 +820,14 @@ export function instantPlan(
 // Why the sentinel: the main section
 // ---------------------------------------------------------------------------
 
-export type X12Why =
+type X12Why =
   | "bad-date"
   | "bad-time"
   | "not-a-code"
   | "needs-time"
   | "bad-combination";
 
-export const REASON_TEXT: Record<
-  X12Why,
-  (context: { timeCode: string }) => string
-> = {
+const REASON_TEXT: Record<X12Why, (context: { timeCode: string }) => string> = {
   "bad-date": () =>
     "The date is not a CCYYMMDD date: it has a four-digit year and names a day that exists. A two-digit year is not read.",
   "bad-time": () =>
@@ -847,7 +844,7 @@ export const REASON_TEXT: Record<
  * element at a time, never by a list of codes held here. Not called for a blank
  * section (`mainBlank`): nothing typed makes no call.
  */
-export function whyNot(read: X12Read, lib: EdiLib): X12Why {
+function whyNot(read: X12Read, lib: EdiLib): X12Why {
   if (read.code !== "" && read.codeClass === null) return "not-a-code";
   if (read.time === "" && read.code !== "") return "needs-time";
   if (read.date !== "" && isSentinel(lib.parseX12Date(read.date, "D8"))) {
@@ -867,7 +864,7 @@ export function sentinelText(read: X12Read, lib: EdiLib): string {
 // Writing back: the date and the time, one element each
 // ---------------------------------------------------------------------------
 
-export interface ElementWrite {
+interface ElementWrite {
   /** The formatter's call. */
   call: EdiCall;
   output: string;
@@ -924,7 +921,7 @@ export function writeTime(read: X12Read, lib: EdiLib): ElementWrite | null {
 // The DTP section
 // ---------------------------------------------------------------------------
 
-export interface DtpRead {
+interface DtpRead {
   value: string;
   format: string;
   classify: EdiCall | null;
@@ -969,7 +966,7 @@ export function readDtp(state: DtpState, lib: EdiLib): DtpRead {
   return read;
 }
 
-export type DtpMemberKey = "kind" | "value" | "rangeEnd";
+type DtpMemberKey = "kind" | "value" | "rangeEnd";
 
 /** No 1250 code carries an offset, so there is no instant, offset or zone row. */
 export const DTP_MEMBER_ROWS: readonly {
@@ -995,9 +992,9 @@ export function dtpMemberText(read: DtpRead, key: DtpMemberKey): string | null {
   }
 }
 
-export type DtpWhy = "blank-value" | "no-format" | "unread-code" | "bad-value";
+type DtpWhy = "blank-value" | "no-format" | "unread-code" | "bad-value";
 
-export const DTP_REASON_TEXT: Record<
+const DTP_REASON_TEXT: Record<
   Exclude<DtpWhy, "unread-code">,
   (context: { format: string }) => string
 > = {
@@ -1017,7 +1014,7 @@ export function dtpSentinelText(read: DtpRead): string {
   return DTP_REASON_TEXT["bad-value"]({ format: read.format });
 }
 
-export interface DtpWriteBack {
+interface DtpWriteBack {
   call: EdiCall;
   output: string;
   note: string;
@@ -1051,7 +1048,7 @@ export function dtpWriteBack(read: DtpRead, lib: EdiLib): DtpWriteBack | null {
 const DIGITS = /^\d+$/;
 
 /** What the code calls returned, in words. */
-export function timeCodeWords(read: X12Read): string {
+function timeCodeWords(read: X12Read): string {
   if (read.code === "") return "";
   if (read.codeClass === null) return "not a 623 time code";
   if (read.codeClass.kind === "offset") return `offset ${read.offset}`;
@@ -1066,7 +1063,7 @@ export function timeCodeWords(read: X12Read): string {
   return `zone ${read.zone.zone}, ${daylight}`;
 }
 
-export interface ElementFigure {
+interface ElementFigure {
   halves: PicHalf[];
   aria: string;
   /** Words under the picture: what the code calls returned, and what the last
@@ -1234,7 +1231,7 @@ export function dtpParts(state: DtpState): PicPart[] {
   ];
 }
 
-export interface DtpFigure {
+interface DtpFigure {
   halves: PicHalf[];
   separator: string;
   closing: string;
@@ -1290,7 +1287,7 @@ export function timelineEmptyText(read: X12Read | null): string {
 }
 
 // ---------------------------------------------------------------------------
-// Every text a region can show, for the height it reserves (`holdHtml`)
+// Every text a region can show, for the height it reserves (`families/edi/edi-hold.ts`)
 // ---------------------------------------------------------------------------
 
 /** The texts each X12 Time Reader region can show. */

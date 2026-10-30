@@ -8,7 +8,7 @@
  */
 
 import { convertUtcToUnix } from "@northguild/gmt";
-import { antisolarPoint, subsolarPoint, wrapLongitude } from "./sun";
+import { subsolarPoint, wrapLongitude } from "./sun";
 
 /** UTC instant string -> epoch ms. No `Date`: that is banned repo-wide. */
 function ms(utc: string): number {
@@ -50,16 +50,6 @@ describe("subsolarPoint", () => {
     const onePm = subsolarPoint(ms("2026-03-20T13:00:00Z")).lng;
     expect(wrapLongitude(noon - onePm)).toBeGreaterThan(14);
     expect(wrapLongitude(noon - onePm)).toBeLessThan(16);
-  });
-});
-
-describe("antisolarPoint", () => {
-  it("is the antipode of the subsolar point", () => {
-    const when = ms("2026-08-01T09:17:00Z");
-    const sun = subsolarPoint(when);
-    const night = antisolarPoint(when);
-    expect(night.lat).toBeCloseTo(-sun.lat, 6);
-    expect(Math.abs(wrapLongitude(night.lng - sun.lng))).toBeCloseTo(180, 4);
   });
 });
 

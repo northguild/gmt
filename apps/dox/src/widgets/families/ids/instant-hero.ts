@@ -19,14 +19,14 @@ import styles from "./instant-hero.module.css";
 
 export const NO_SIGNAL_PILL = "⟨ NO SIGNAL ⟩";
 
-export interface ChipSlot {
+interface ChipSlot {
   /** The chip's words; empty for none. */
   text: string;
   /** The widest chip, to reserve its box. */
   sample: string;
 }
 
-export interface CallSlot {
+interface CallSlot {
   /** The call and what it returned, as highlighted markup; null for none. */
   line: SafeHtml | null;
   /** The longest line it can show, as plain text. */

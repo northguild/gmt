@@ -23,7 +23,7 @@ import styles from "./cron-night.module.css";
 type Kind = CronLibRun["classification"];
 
 /** Past this share of the axis a mark's `×N` label sits left of its stem. */
-export const COUNT_FLIP_PCT = 90;
+const COUNT_FLIP_PCT = 90;
 
 const KIND_TONE: Record<Kind, BadgeTone> = {
   unique: "neutral",
@@ -31,20 +31,7 @@ const KIND_TONE: Record<Kind, BadgeTone> = {
   ambiguous: "purple",
 };
 
-const LEGEND: readonly { kind: Kind; words: string }[] = [
-  { kind: "unique", words: "Solid line: an ordinary time" },
-  { kind: "nonexistent", words: "Dashed line on hatching: a skipped time" },
-  { kind: "ambiguous", words: "Double line: a repeated time" },
-];
-
-export function cronLegend(): SafeHtml {
-  return html`<ul class="${styles.legend}" aria-label="Legend">${LEGEND.map(
-    (l) =>
-      html`<li class="${styles.legendItem}"><span class="${styles.swatch}" data-kind="${l.kind}" aria-hidden="true"><span class="${styles.stem}"></span></span>${l.words}</li>`,
-  )}</ul>`;
-}
-
-export interface CronAxisOptions {
+interface CronAxisOptions {
   /** The axis row's id, so the mount can thin its labels to fit. */
   id: string;
   caption: string;
@@ -60,14 +47,14 @@ export function cronAxis(o: CronAxisOptions): SafeHtml {
     )}</div></div>`;
 }
 
-export function cronMarks(marks: readonly Mark[]): SafeHtml {
+function cronMarks(marks: readonly Mark[]): SafeHtml {
   return html`${marks.map(
     (m) =>
       html`<span class="${styles.mark}" data-gate="drawn" data-kind="${m.classification}" style="--gmt-at: ${unit(m.pct / 100)}"><span class="${styles.stem}"></span>${m.count > 1 ? html`<span class="${styles.count}" ${m.pct > COUNT_FLIP_PCT ? html`data-end` : ""}>×${m.count}</span>` : ""}</span>`,
   )}`;
 }
 
-export interface CronLaneOptions {
+interface CronLaneOptions {
   policy: CronLibPolicy;
   /** The one-line rule the policy follows. */
   line: string;
@@ -89,7 +76,7 @@ export function cronLane(o: CronLaneOptions): SafeHtml {
   </div>`;
 }
 
-export interface CronPlotOptions {
+interface CronPlotOptions {
   /** The change in words, such as `clock change, +00:00 → +01:00`. */
   chip: string;
   utc: CronAxisOptions;

@@ -7,8 +7,8 @@
  * into startOfZoned, showing how disambiguation/offset options resolve (or
  * reject) the result.
  *
- * Shares its card/section/codeframe/output chrome with IntervalVisualizer.astro
- * — see styles/gmt-widget.css, lib/widget-ui.ts, components/CodeFrame.astro.
+ * Shares its card/section/output chrome with IntervalVisualizer.astro
+ * through the widget kit (src/widgets).
  *
  * **The markup and the wiring both live in `lib/dst-inspector-mount.ts`.**
  * DOX-C3b mounts this same widget into the chat rail, and a rail cannot
@@ -37,7 +37,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderDstTemplate("dst-inspector", {});
+const html = renderDstTemplate("dst-inspector", {}).value;
 ---
 
 {

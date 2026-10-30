@@ -22,10 +22,10 @@
  *
  * ## Why Popover + cmdk, not the site's zone combobox or a Radix menu
  *
- * `lib/zone-combobox.ts` (the globe's and the scrubber's) absolutely positions
- * its list *below* the input, and its styles are code-split into the globe's
- * sheet. In a popover opening upward from the bottom of the viewport that list
- * would fall out of view. cmdk renders its list inline and scrolls it. A Radix
+ * The kit's `<gmt-combobox>` (the globe's and the planner's) floats its list
+ * outside the flow, above or below the input. Inside a popover that already
+ * floats at the bottom of the viewport, a second floating layer has nowhere
+ * safe to go. cmdk renders its list inline and scrolls it. A Radix
  * *menu* was ruled out too: its typeahead swallows the keystrokes a zone search
  * needs.
  */

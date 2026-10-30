@@ -17,9 +17,9 @@ import { html, type SafeHtml } from "../../builders/html";
 import { KitElement } from "../base";
 import styles from "./chips.module.css";
 
-export type ChipsKind = "radio" | "checkbox" | "switch";
+type ChipsKind = "radio" | "checkbox" | "switch";
 
-export interface ChipItem {
+interface ChipItem {
   value: string;
   label: string;
   checked?: boolean;
@@ -28,7 +28,7 @@ export interface ChipItem {
   ariaLabel?: string;
 }
 
-export interface ChipsOptions extends GateOption {
+interface ChipsOptions extends GateOption {
   /** The group's name (the `<legend>`). Required. */
   legend: string;
   kind: ChipsKind;

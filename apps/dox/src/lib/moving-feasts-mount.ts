@@ -216,7 +216,7 @@ function offsetItems(state: FeastsState): {
 export function renderMovingFeastsTemplate(
   idPrefix: string,
   args: MovingFeastsArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state = isSeeded(args)
     ? readArgs(args)
@@ -384,7 +384,7 @@ export function renderMovingFeastsTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Moving Feasts", scope: idPrefix },
     html`${easter}${nth}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

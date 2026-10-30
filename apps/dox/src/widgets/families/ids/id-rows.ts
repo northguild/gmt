@@ -12,7 +12,7 @@ import { html, type HtmlValue, type SafeHtml } from "../../builders/html";
 import { hold, type Ghost } from "./hold";
 import styles from "./id-rows.module.css";
 
-export type IdRowState = "pending" | "read" | "sentinel" | "not-called";
+type IdRowState = "pending" | "read" | "sentinel" | "not-called";
 
 export interface IdRowView {
   fn: string;
@@ -24,7 +24,7 @@ export interface IdRowView {
   returned: HtmlValue;
 }
 
-export interface IdRowsOptions extends GateOption {
+interface IdRowsOptions extends GateOption {
   /** The table's name. Required. */
   caption: string;
   rows: readonly IdRowView[];

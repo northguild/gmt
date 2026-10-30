@@ -15,7 +15,7 @@ import { html, raw, type SafeHtml } from "../../builders/html";
 import { srOnly } from "../../builders/sr-only";
 import styles from "./gnss-counter-table.module.css";
 
-export interface GnssCounterRow {
+interface GnssCounterRow {
   /** The counter or system. */
   name: string;
   /** This row is the reading's own. */
@@ -24,7 +24,7 @@ export interface GnssCounterRow {
   cells: readonly string[];
 }
 
-export interface GnssCounterTableOptions {
+interface GnssCounterTableOptions {
   /** The table's name. Required. */
   caption: string;
   /** Every column header, the row header's first. */

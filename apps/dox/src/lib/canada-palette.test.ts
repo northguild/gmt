@@ -47,7 +47,9 @@ describe("the servers card and the key points on the text surfaces", () => {
     }
     expect(KEY_POINTS).toHaveLength(2);
     expect(md).toContain("[Test your own servers](#canada-servers-title)");
-    expect(md).toContain("[Did your saved events move?](#canada-stored-title)");
+    expect(md).toContain(
+      "[Did your saved events move?](#canada-stored-heading)",
+    );
     expect(md).toContain("For developers: three checks");
   });
 });

@@ -16,10 +16,12 @@ import {
   gmtLibraryComparison,
   type LibraryComparison,
 } from "../data/library-comparison";
+import { raw } from "~/widgets/builders/html";
+import { nobreak } from "~/widgets/builders/nobreak";
 import { escapeHtml, inlineCodeHtml } from "./inline-code-html";
 
 /** One table cell: plain text, optionally set in code or linked. */
-export interface Cell {
+interface Cell {
   text: string;
   code?: boolean;
   href?: string;
@@ -27,7 +29,7 @@ export interface Cell {
   nobreak?: boolean;
 }
 
-export interface CompareTable {
+interface CompareTable {
   head: string[];
   /** The first cell of every row is its row header. */
   rows: Cell[][];
@@ -46,9 +48,7 @@ export function cellHtml(cell: Cell): string {
   const inner = cell.code
     ? `<code>${escapeHtml(cell.text)}</code>`
     : inlineCodeHtml(cell.text);
-  const body = cell.nobreak
-    ? `<span class="gmt-nobreak">${inner}</span>`
-    : inner;
+  const body = cell.nobreak ? nobreak(raw(inner)).toString() : inner;
   return cell.href ? `<a href="${escapeHtml(cell.href)}">${body}</a>` : body;
 }
 
@@ -234,7 +234,7 @@ export function differsTable(): CompareTable {
 }
 
 /** What each library covers: the capability comparison with the four libraries checked. */
-export function coversTable(): CompareTable {
+function coversTable(): CompareTable {
   const row = (capability: string, also: string): Cell[] => [
     plain(capability),
     plain("Yes"),

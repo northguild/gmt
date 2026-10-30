@@ -1,10 +1,5 @@
-import { convertUnixToUtc, convertUtcToUnix } from "@northguild/gmt";
-import {
-  decodeState,
-  encodeState,
-  formatShift,
-  nextTransition,
-} from "./multi-zone-scrubber";
+import { convertUtcToUnix } from "@northguild/gmt";
+import { decodeState, encodeState, formatShift } from "./multi-zone-scrubber";
 import { offsetAt, readZoneAt, readZoneNow } from "./zone-clock";
 
 /** UTC instant string -> epoch ms. */
@@ -104,15 +99,10 @@ describe("encodeState / decodeState", () => {
 });
 
 // ---------------------------------------------------------------------------
-// nextTransition — powers the "jump to a DST boundary" preset
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
 // The demonstrated permalink linked from zone-planner.mdx and
 // scenarios/recurring-meeting-dst.mdx — pins New York/London/Tokyo, landing
 // 15 minutes before New York's 2026 spring-forward. Keeps the docs' claim
-// honest: if this ever stops decoding to the intended pins/instant, or
-// nextTransition from that instant stops finding the New York boundary, the
+// honest: if this ever stops decoding to the intended pins/instant, the
 // "drag forward and watch it bite" instructions in both docs would be wrong.
 // ---------------------------------------------------------------------------
 
@@ -128,34 +118,6 @@ describe("the demonstrated DST scenario permalink", () => {
       "Asia/Tokyo",
     ]);
     expect(decoded.effectiveMs).toBe(ms("2026-03-08T06:45:00Z"));
-  });
-
-  it("finds New York's spring-forward as the next transition from that instant", () => {
-    const decoded = decodeState(query);
-    const result = nextTransition(
-      decoded.pinned ?? [],
-      decoded.effectiveMs ?? 0,
-    );
-    expect(result?.zone).toBe("America/New_York");
-    expect(
-      convertUnixToUtc(result?.instantMs ?? 0, { epochUnit: "milliseconds" }),
-    ).toBe("2026-03-08T07:00:00Z");
-  });
-});
-
-describe("nextTransition", () => {
-  it("finds the US spring-forward as the next transition from Jan 2026", () => {
-    const from = ms("2026-01-01T00:00:00Z");
-    const result = nextTransition(["America/New_York", "Asia/Tokyo"], from);
-    expect(result?.zone).toBe("America/New_York");
-    expect(
-      convertUnixToUtc(result?.instantMs ?? 0, { epochUnit: "milliseconds" }),
-    ).toBe("2026-03-08T07:00:00Z");
-  });
-
-  it("returns null when no pinned zone observes DST", () => {
-    const from = ms("2026-01-01T00:00:00Z");
-    expect(nextTransition(["Asia/Tokyo", "UTC"], from)).toBeNull();
   });
 });
 

@@ -1,7 +1,8 @@
 /*
  * Content tables: the site-wide table recipe for `.sl-markdown-content`. It sits in `gmt.tools`,
- * first, so a rule here (two parts) still beats a widget's own one-class table rule on
- * specificity, and a widget sheet imported after it wins an equal-specificity tie.
+ * first, so a rule here (two parts) still beats a one-class table rule in a later sheet of
+ * the same layer on specificity, and such a sheet wins an equal-specificity tie. A widget's
+ * CSS Module is unlayered and beats both.
  */
 
 /* ---- Tables ----
@@ -80,4 +81,321 @@
 .sl-markdown-content tr:hover td,
 .sl-markdown-content tr:has(:focus-visible) td {
   background: var(--gmt-accent-wash);
+}
+
+/* ---- Generated reference tables (Options, Members, Parameters) ----
+   The generator wraps each one in `<div class="gmt-ref-table" data-kind="options|members|parameters">`.
+   The same box holds every Markdown table (`data-kind="content"`, src/lib/rehype-table-scroll.ts),
+   so a table fills its column; the rules keyed on the Options, Members and Parameters kinds leave
+   those tables alone.
+
+   The wrapper is the box: it draws the border and the glass, scrolls sideways when a cell is
+   wider than the column, and is the container the layout asks its width of. The table inside
+   is bare. `src/lib/ref-table.ts` makes the wrapper focusable and named when it scrolls.
+
+   Two layouts. The wrapper's own width chooses, not the viewport's: the article column is 530px
+   wide at a 1200px viewport and 770px at 1440px:
+   - Table. Name and Type take what they need; Description keeps a floor, so a sentence is never
+     set a word to a line.
+   - Entries. Each row is a small entry: name, then Type (and Default) with their labels on the
+     same line when they fit, then the Description under them at the full width. No row is wider
+     than the screen and nothing scrolls. The header row stays for assistive technology and is
+     hidden from sight.
+   An Options table has four columns, so it is always entries. Members and Parameters have three
+   columns of short cells and read better as a table down to 34rem. */
+.gmt-ref-table {
+  container: gmt-ref / inline-size;
+  position: relative;
+  background: var(--gmt-fill-subtle);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  overflow-x: auto;
+  backdrop-filter: var(--gmt-glass-blur-half);
+}
+
+.gmt-ref-table > table {
+  display: table;
+  table-layout: auto;
+  inline-size: 100%;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  backdrop-filter: none;
+}
+
+/* The Description, the last column, keeps a floor in table form. A table the author wrote in a
+   behaviour note (`data-kind="notes"`) has no Description column and keeps its natural widths. */
+.gmt-ref-table:is(
+    [data-kind="options"],
+    [data-kind="members"],
+    [data-kind="parameters"]
+  )
+  tr
+  > :last-child {
+  min-inline-size: 14rem;
+}
+
+/* A /compare table whose first column is a sentence, not a short name: the columns share the
+   width in fixed proportions. */
+.gmt-compare--prose :is(th, td):first-child {
+  inline-size: 14%;
+}
+
+.gmt-compare--covers :is(th, td):first-child {
+  inline-size: 58%;
+}
+
+.gmt-compare--covers :is(th, td)[data-col="GMT"] {
+  inline-size: 8%;
+}
+
+.gmt-compare--prose :is(th, td) {
+  text-align: start;
+}
+
+/* A date in a compare table never breaks after its hyphen, not even to fit a narrow column. */
+.gmt-compare .gmt-nobreak {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+/* The "Where GMT differs" table: topic, GMT's side, the others' side. */
+.gmt-compare--differs :is(th, td)[data-col="GMT"] {
+  inline-size: 30%;
+}
+
+/* The sideways-scroll cue. `data-overflow` and `data-scroll` come from src/lib/ref-table.ts:
+   the edge that has more fades out. */
+.gmt-ref-table[data-overflow] {
+  --gmt-ref-fade-start: 0px;
+  --gmt-ref-fade-end: 0px;
+
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    var(--gmt-void) var(--gmt-ref-fade-start),
+    var(--gmt-void) calc(100% - var(--gmt-ref-fade-end)),
+    transparent
+  );
+}
+
+.gmt-ref-table[data-scroll="start"] {
+  --gmt-ref-fade-end: var(--gmt-space-8);
+}
+
+.gmt-ref-table[data-scroll="middle"] {
+  --gmt-ref-fade-start: var(--gmt-space-8);
+  --gmt-ref-fade-end: var(--gmt-space-8);
+}
+
+.gmt-ref-table[data-scroll="end"] {
+  --gmt-ref-fade-start: var(--gmt-space-8);
+}
+
+.gmt-ref-table-hint {
+  margin: 0 0 var(--gmt-space-1);
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-align: end;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-ref-table-hint + .gmt-ref-table {
+  margin-block-start: 0;
+}
+
+/* Entries. An Options table has four columns, and its Description needs about 450px to read well:
+   about 900px for the table, wider than the article column ever is (it tops out near 800px).
+   So an Options table is always a list of entries. Members and Parameters have three columns of
+   short cells and read better as a table; they become entries when the wrapper is 34rem or
+   narrower, which is the 390px phone and the 1200px viewport's 530px column. The declarations
+   are the same in both places because CSS cannot take a width from a variable. */
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  :is(table, tbody) {
+  display: block;
+}
+
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"]) thead {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  backdrop-filter: none;
+}
+
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"]) tr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gmt-space-1) var(--gmt-space-6);
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border-block-end: 1px solid var(--gmt-hairline);
+}
+
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  tbody
+  tr:last-child {
+  border-block-end: 0;
+}
+
+/* The wash goes on the entry, not on each cell, so the gap between cells is washed too. */
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"]) tr:hover,
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  tr:has(:focus-visible) {
+  background: var(--gmt-accent-wash);
+}
+
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  tr:hover
+  :is(th, td),
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  tr:has(:focus-visible)
+  :is(th, td) {
+  background: transparent;
+}
+
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  tbody
+  :is(th, td) {
+  display: block;
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  inline-size: auto;
+  padding: 0;
+  border: 0;
+}
+
+.gmt-ref-table[data-kind="options"] td:last-child {
+  flex: 1 1 100%;
+  min-inline-size: 0;
+}
+
+/* A cell that is a label and a value: the label is the column's name, which the build writes on
+   the cell in `data-col` (src/lib/rehype-table-scroll.ts). The first cell is the title and the
+   last is the description, so neither has one. */
+.gmt-ref-table[data-kind="options"]
+  :where(td)[data-col]:not(:first-child, :last-child)::before {
+  content: attr(data-col);
+  content: attr(data-col) / "";
+  margin-inline-end: var(--gmt-space-2);
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+/* A table laid out as entries (`data-layout="entries"`) takes the Options entry for its rows: a
+   table opts in where it is built (a component's `data-layout`, or a marker comment on the line
+   above a Markdown table; src/lib/rehype-table-scroll.ts). Its first cell is the entry's title, on a
+   line of its own; every other cell is a labelled fact (the label is the column header the cell
+   names in `data-col`), and an empty cell is not drawn. Used for a table whose cells are long
+   code, or that has too many columns to fit the article column. */
+.gmt-ref-table[data-layout="entries"] tbody :is(th, td):first-child {
+  flex: 1 1 100%;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  letter-spacing: normal;
+  color: var(--gmt-ice);
+}
+
+.gmt-ref-table[data-layout="entries"]
+  tbody
+  :is(th, td):not(:first-child)::before {
+  content: attr(data-col);
+  content: attr(data-col) / "";
+  margin-inline-end: var(--gmt-space-2);
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xs);
+  font-weight: 600;
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-ref-table[data-layout="entries"] tbody :is(th, td):empty {
+  display: none;
+}
+
+@container gmt-ref (max-width: 34rem) {
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    :is(table, tbody) {
+    display: block;
+  }
+
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"]) thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    backdrop-filter: none;
+  }
+
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"]) tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--gmt-space-1) var(--gmt-space-6);
+    padding: var(--gmt-space-3) var(--gmt-space-4);
+    border-block-end: 1px solid var(--gmt-hairline);
+  }
+
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    tbody
+    tr:last-child {
+    border-block-end: 0;
+  }
+
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"]) tr:hover,
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    tr:has(:focus-visible) {
+    background: var(--gmt-accent-wash);
+  }
+
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    tr:hover
+    td,
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    tr:has(:focus-visible)
+    td {
+    background: transparent;
+  }
+
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"]) td {
+    display: block;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    inline-size: auto;
+    padding: 0;
+    border: 0;
+  }
+
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    td:last-child {
+    flex: 1 1 100%;
+    min-inline-size: 0;
+  }
+
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    :where(td)[data-col]:not(:first-child, :last-child)::before {
+    content: attr(data-col);
+    content: attr(data-col) / "";
+    margin-inline-end: var(--gmt-space-2);
+    font-family: var(--gmt-font-display);
+    font-size: var(--gmt-text-xs);
+    font-weight: 600;
+    letter-spacing: var(--gmt-tracking-wide);
+    text-transform: uppercase;
+    color: var(--gmt-ice-dim);
+  }
 }

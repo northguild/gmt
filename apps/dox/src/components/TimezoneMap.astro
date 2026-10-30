@@ -1,5 +1,7 @@
 ---
 import { renderDataCreditsHtml, TZ_BOUNDARIES } from "../lib/data-credits";
+import { TIMEZONES } from "../lib/timezones";
+import { zoneMapShell } from "../widgets/families/zones/zone-map-shell";
 
 interface Props {
   title?: string;
@@ -7,85 +9,33 @@ interface Props {
 }
 
 const { title, caption } = Astro.props;
+/* The map draws the time-zone boundaries, so its credit sits in the drawing's corner. */
+const markup = zoneMapShell({
+  idPrefix: "timezone-map",
+  zones: TIMEZONES,
+  title,
+  caption,
+  credits: renderDataCreditsHtml([TZ_BOUNDARIES], {
+    id: "tz-map-data-credits",
+    placement: "corner",
+  }),
+}).value;
 ---
 
-<div class="gmt-timezone-map">
-  {title && <h3 class="gmt-chart-title">{title}</h3>}
-  {/* Map fills, referenced by timezone-map.ts. Same recipe as the locale matrix:
-      a cyan diagonal fade on each land tile, over a faint radial ocean. */}
-  <svg class="gmt-chart-defs" aria-hidden="true" focusable="false">
-    <defs>
-      <radialGradient id="gmt-map-ocean" cx="0.5" cy="0.45" r="0.6">
-        <stop offset="0" style="stop-color: var(--gmt-cyan); stop-opacity: 0.1" />
-        <stop offset="1" style="stop-color: var(--gmt-cyan); stop-opacity: 0.02" />
-      </radialGradient>
-      <linearGradient id="gmt-map-land" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" style="stop-color: var(--gmt-cyan); stop-opacity: 0.42" />
-        <stop offset="1" style="stop-color: var(--gmt-cyan); stop-opacity: 0.22" />
-      </linearGradient>
-    </defs>
-  </svg>
-  {/* The map draws the time-zone boundaries, so its credit sits in the drawing's corner. */}
-  <div class="gmt-credited-frame" data-gate="credited-frame">
-    <div id="tz-map-host" class="gmt-chart gmt-glass"></div>
-    <Fragment set:html={renderDataCreditsHtml([TZ_BOUNDARIES], { id: "tz-map-data-credits", placement: "corner" })} />
-  </div>
-  <div id="tz-clock-panel" class="gmt-clock-panel"></div>
-  {caption && <p class="gmt-chart-caption">{caption}</p>}
-</div>
+<Fragment set:html={markup} />
 
 <script>
   import { watchDataCredits } from "../lib/data-credits";
-  import { initTimezoneMap } from "../lib/timezone-map";
-  import { TIMEZONES } from "../lib/timezones";
+  import { mountTimezoneMap } from "../lib/timezone-map";
   import { showUnavailable } from "../lib/widget-mount";
 
   watchDataCredits();
 
-  const host = document.getElementById("tz-map-host");
-  const clockPanel = document.getElementById("tz-clock-panel");
-
-  if (host && clockPanel) {
-    clockPanel.innerHTML = "";
-
-    for (const tz of TIMEZONES) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "gmt-clock-entry";
-      btn.dataset.tzId = tz.id;
-      btn.innerHTML = `
-        <span class="gmt-clock-row1">
-          <span class="gmt-clock-name">${tz.id}</span>
-          <span class="gmt-clock-offset" data-gate="live" data-tz-field="offset"></span>
-        </span>
-        <span class="gmt-clock-time" data-gate="live" data-tz-field="time"></span>
-      `;
-      clockPanel.appendChild(btn);
-    }
-
-    const setSelected = (id: string | null) => {
-      const buttons = clockPanel.querySelectorAll<HTMLElement>("[data-tz-id]");
-      buttons.forEach((b) => {
-        if (b.dataset.tzId === id) b.classList.add("selected");
-        else b.classList.remove("selected");
-      });
-    };
-
-    initTimezoneMap(host, clockPanel)
-      .then((mapHost) => {
-        clockPanel.addEventListener("click", (event) => {
-          const target = event.target as HTMLElement | null;
-          const btn = target?.closest<HTMLElement>("[data-tz-id]");
-          if (!btn) return;
-          const id = btn.dataset.tzId;
-          if (!id) return;
-          mapHost.focusTimezone(id);
-          setSelected(id);
-        });
-        host.addEventListener("click", () => {
-          setSelected(null);
-        });
-      })
-      .catch((error) => showUnavailable(host, error));
-  }
+  document
+    .querySelectorAll<HTMLElement>('[data-widget="timezone-map"]')
+    .forEach((el) => {
+      mountTimezoneMap(el, new AbortController().signal).catch((error) =>
+        showUnavailable(el, error),
+      );
+    });
 </script>

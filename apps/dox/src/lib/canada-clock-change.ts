@@ -18,11 +18,13 @@ import { helpMarkdown } from "./clock-change-help";
 import type {
   ProbeConfig,
   ProbeInstant,
+  VerdictPlace,
   VerdictText,
 } from "./clock-change-probe";
 import { REGION_KEY, classPhrase } from "./clock-change-tense";
 import type { Moment, Tensed, TenseView } from "./clock-change-tense";
 import type { MapZone } from "./zone-map";
+import { withBase } from "./site";
 
 /** The instant every probe row is read at: a Monday noon UTC, after all five changes took effect. */
 export const PROBE_INSTANT = "2026-11-02T12:00:00Z";
@@ -155,21 +157,33 @@ export function canadaProbe(idPrefix: string): ProbeConfig {
   };
 }
 
+/**
+ * Where "For developers" points. The page has the Key points card, so the link stays on the page;
+ * the chat copy has none, so it opens that section of the checker page.
+ */
+function developersHref(where: VerdictPlace): string {
+  return where === "page"
+    ? "#canada-developers"
+    : `${withBase("/check/canada-2026-clock-change/")}#canada-developers`;
+}
+
 /** The "Your browser" card's words. The HTML fields are written here, never by a reader. */
-export const CANADA_VERDICT: VerdictText = {
-  title: "Your browser",
-  correctNote: "tzdb 2026e",
-  yoursNote: "2 Nov 2026",
-  checking: "Checking your browser&hellip;",
-  right: "Your browser has the new rules for all four places.",
-  wrongBefore: "Your browser has old time zone data for ",
-  wrongAfter: ". From 1 November 2026 it shows their time an hour wrong.",
-  more: [
-    "<strong>For you:</strong> update your browser. If it is already up to date, its maker has not shipped the fix yet. Check again after the next update.",
-    '<strong>For developers:</strong> your users&rsquo; browsers can be the same. See step 2 under <a href="#canada-developers">For developers</a>.',
-  ],
-  unknown: "Your browser cannot read these zones.",
-};
+export function canadaVerdict(where: VerdictPlace): VerdictText {
+  return {
+    title: "Your browser",
+    correctNote: "tzdb 2026e",
+    yoursNote: "2 Nov 2026",
+    checking: "Checking your browser&hellip;",
+    right: "Your browser has the new rules for all four places.",
+    wrongBefore: "Your browser has old time zone data for ",
+    wrongAfter: ". From 1 November 2026 it shows their time an hour wrong.",
+    more: [
+      "<strong>For you:</strong> update your browser. If it is already up to date, its maker has not shipped the fix yet. Check again after the next update.",
+      `<strong>For developers:</strong> your users&rsquo; browsers can be the same. See step 2 under <a href="${developersHref(where)}">For developers</a>.`,
+    ],
+    unknown: "Your browser cannot read these zones.",
+  };
+}
 
 /**
  * The moment each stopped zone does not turn its clocks back: 1 November 2026 at 02:00 local time,

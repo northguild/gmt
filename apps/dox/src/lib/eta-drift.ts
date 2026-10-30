@@ -59,7 +59,7 @@ export interface EtaDriftArgs {
   [key: string]: unknown;
 }
 
-export interface DriftPreset {
+interface DriftPreset {
   id: string;
   label: string;
   description: string;
@@ -293,7 +293,7 @@ export function permalinkOf(state: DriftState): Record<string, string> {
 // The naive pick
 // ---------------------------------------------------------------------------
 
-export interface Pick {
+interface Pick {
   index: number;
   event: TimestampEvent;
 }
@@ -381,13 +381,13 @@ export function collectDriftFacts(
 // Why NO SIGNAL
 // ---------------------------------------------------------------------------
 
-export type DriftNullReasonKind =
+type DriftNullReasonKind =
   | "invalid-event"
   | "invalid-tolerance"
   | "one-estimate"
   | "no-estimate";
 
-export interface DriftNullReason {
+interface DriftNullReason {
   kind: DriftNullReasonKind;
   /** 1-based, for `invalid-event`. */
   event?: number;
@@ -454,7 +454,7 @@ export function driftReasonText(reason: DriftNullReason): string {
 // Drawing
 // ---------------------------------------------------------------------------
 
-export interface PlotWindow {
+interface PlotWindow {
   xMin: number;
   xMax: number;
   yMin: number;
@@ -528,7 +528,7 @@ export function yTickStep(spanMs: number): number {
   return steps.find((s) => minutes / s <= 4) ?? 525600;
 }
 
-export interface PlotTick {
+interface PlotTick {
   ms: number;
   label: string;
 }

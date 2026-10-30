@@ -152,7 +152,7 @@ function tableOf(rows: readonly AuditRow[], group: string): SafeHtml {
 export function renderStoredTimeAuditTemplate(
   idPrefix: string,
   args: StoredTimeAuditArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state: AuditState = isSeeded(args)
     ? readArgs(args)
@@ -199,27 +199,28 @@ export function renderStoredTimeAuditTemplate(
       heading: "3. The rules behind the selected line",
       level: 4,
     },
-    html`<div class="${styles.frame}" id="${id("figure")}">${emptyFigure()}</div
-      >${grow(html`<div id="${id("reason")}"></div>`)}${grow(
-        html`<div id="${id("calls-slot")}">${codeFrame({
-          label: "Call made",
-          copyLabel: "Copy call",
-          copyText: "",
-          gate: "codeframe",
-        })}</div>`,
-      )}${grow(
-        html`<div id="${id("output-slot")}">${callOutput({
-          label: "What classifyStoredZoned returned",
-          state: "empty",
-          lines: [],
-        })}</div>`,
-      )}<div id="${id("links")}">${linksOf(null)}</div>`,
+    html`${grow(
+      html`<div class="${styles.frame}" id="${id("figure")}">${emptyFigure()}</div>`,
+    )}${grow(html`<div id="${id("reason")}"></div>`)}${grow(
+      html`<div id="${id("calls-slot")}">${codeFrame({
+        label: "Call made",
+        copyLabel: "Copy call",
+        copyText: "",
+        gate: "codeframe",
+      })}</div>`,
+    )}${grow(
+      html`<div id="${id("output-slot")}">${callOutput({
+        label: "What classifyStoredZoned returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}${grow(html`<div id="${id("links")}">${linksOf(null)}</div>`)}`,
   );
 
   return widget(
     { name: WIDGET_NAME, label: "Stored Time Audit", scope: idPrefix },
     html`${paste}${lines}${rules}`,
-  ).toString();
+  );
 }
 
 function linksOf(line: AuditLine | null): SafeHtml {

@@ -220,18 +220,6 @@ describe("MountedWidget", () => {
     await expectNoAxeViolations(container);
   });
 
-  it("still shows a template an unmigrated entry returns as a plain string", async () => {
-    const { entry } = spyEntry({
-      load: async () => ({
-        renderTemplate: () => `<p role="note">Legacy</p>`,
-        mount: async () => ({ destroy: () => {} }),
-      }),
-    });
-    render(<MountedWidget entry={entry} args={{}} idPrefix="t" />);
-    await flushWidget();
-    expect(screen.getByRole("note")).toHaveTextContent("Legacy");
-  });
-
   it("names the error by the widget that failed", async () => {
     const { entry } = spyEntry({ validate: async () => "Bad input." });
     const { container } = render(

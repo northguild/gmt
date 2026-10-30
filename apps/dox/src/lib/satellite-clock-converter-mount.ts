@@ -61,7 +61,7 @@ import { range, type GmtRange } from "~/widgets/primitives/range/range";
 import styles from "~/widgets/tools/satellite-clock-converter.module.css";
 import { NO_RESULT_TITLE } from "./edi-widgets";
 import { loadGnssLib, type GnssLib } from "./gnss-lib";
-import type { GnssSystem } from "./gnss-names";
+import { GNSS_SYSTEMS, type GnssSystem } from "./gnss-names";
 import {
   CLOCK_LINKS,
   CLOCK_PRESETS,
@@ -82,6 +82,7 @@ import {
   ladderLayout,
   ladderSpan,
   matchPreset,
+  BEFORE_1972_NOTE,
   offReserve,
   permalinkOf,
   platesOf,
@@ -104,7 +105,13 @@ import { handoffHref } from "./widget-permalink";
 
 export type { SatelliteClockConverterArgs } from "./satellite-clock-converter";
 
-const NBSP = " ";
+const NBSP = "\u00a0";
+
+/**
+ * The most calls one reading makes: the conversion in, `toTAI`, the UTC spelled back, one for
+ * each satellite clock, then the TAI lead and the next leap second.
+ */
+const MAX_CALLS = GNSS_SYSTEMS.length + 4;
 const WIDGET_NAME = "satellite-clock-converter";
 
 const TABLE_COLUMNS = ["Clock", "Reading", "Ahead of UTC"];
@@ -121,10 +128,18 @@ const PLATE_SAMPLES: Readonly<Record<string, readonly string[]>> = {
 // ---------------------------------------------------------------------------
 
 /** The plates of a reading. Under a sentinel each says NO SIGNAL in words. */
+/** Each plate's lines whose words change with the reading: the longest one a line can print (every clock's name is three letters). */
+const PLATE_LINE_SAMPLES: Readonly<
+  Record<string, readonly (readonly string[] | undefined)[]>
+> = {
+  "hero-utc": [["read from GAL"]],
+};
+
 function plateList(read: ClockRead | null): Plate[] {
   const lost = read?.status === "sentinel";
   return (read?.plates ?? platesOf(null)).map((s) => {
     const samples = PLATE_SAMPLES[s.role];
+    const lineSamples = PLATE_LINE_SAMPLES[s.role];
     return {
       caption: s.caption,
       value: lost ? PLATE_NO_SIGNAL : s.value,
@@ -133,6 +148,7 @@ function plateList(read: ClockRead | null): Plate[] {
       ...(s.quiet === true ? { quiet: true } : {}),
       ...(s.captions === undefined ? {} : { captions: s.captions }),
       ...(samples === undefined ? {} : { samples }),
+      ...(lineSamples === undefined ? {} : { lineSamples }),
     };
   });
 }
@@ -231,7 +247,7 @@ function reasonOf(read: ClockRead): SafeHtml {
 export function renderSatelliteClockConverterTemplate(
   idPrefix: string,
   args: SatelliteClockConverterArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state: ClockState = isSeeded(args)
     ? readArgs(args)
@@ -266,6 +282,7 @@ export function renderSatelliteClockConverterTemplate(
             value: state.value,
             autocomplete: "off",
             spellcheck: false,
+            maxLength: MAX_VALUE_LENGTH,
             ...(describedBy === undefined ? {} : { describedBy }),
           }),
       })}</div
@@ -284,13 +301,15 @@ export function renderSatelliteClockConverterTemplate(
 
   const read = section(
     { id: id("read"), heading: "2. How far each clock is from UTC", level: 4 },
-    html`<div class="${styles.frame}" data-gate="frame">
+    html`${grow(
+      html`<div class="${styles.frame}" data-gate="frame">
         <div class="${styles.board}">
           <div class="${styles.platesSlot}" id="${id("plates")}">${plates(plateList(null))}</div>
           <div class="${styles.ladderSlot}" id="${id("ladder")}">${ladderOf(blank, { span: 0, reserve: 0, ties: {} })}</div>
           <div class="${styles.legendSlot}">${clockLegend()}</div>
         </div>
-      </div>
+      </div>`,
+    )}
       <p role="status" aria-label="Reading summary" id="${id("summary")}">${srOnly("")}</p>
       ${grow(html`<div id="${id("reason")}"></div>`)}`,
   );
@@ -301,8 +320,10 @@ export function renderSatelliteClockConverterTemplate(
       heading: "3. The same instant on every clock",
       level: 4,
     },
-    html`<div id="${id("table")}">${tableOf(blank)}</div>
-      ${grow(html`<p class="${styles.note}" id="${id("footnote")}">${NBSP}</p>`)}
+    html`${grow(html`<div id="${id("table")}">${tableOf(blank)}</div>`)}
+      ${grow(html`<p class="${styles.note} ${styles.held}"
+        ><span id="${id("footnote")}">${NBSP}</span
+        ><span class="${styles.ghost}" aria-hidden="true">${BEFORE_1972_NOTE}</span></p>`)}
       <p class="${styles.note}">${GLO_NOTE}</p>
       <p class="${styles.note}">${IRN_NOTE}</p>`,
   );
@@ -315,14 +336,16 @@ export function renderSatelliteClockConverterTemplate(
         copyLabel: "Copy calls",
         copyText: "",
         gate: "codeframe",
+        minLines: MAX_CALLS,
       })}</div>`,
     )}${grow(
       html`<div id="${id("output-slot")}">${callOutput({
         label: "What the calls returned",
         state: "empty",
         lines: [],
+        minLines: MAX_CALLS,
       })}</div>`,
-    )}<div id="${id("links")}">${linksOf(blank)}</div>`,
+    )}${grow(html`<div id="${id("links")}">${linksOf(blank)}</div>`)}`,
   );
 
   return widget(
@@ -332,7 +355,7 @@ export function renderSatelliteClockConverterTemplate(
       scope: idPrefix,
     },
     html`${pick}${read}${every}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -355,7 +378,6 @@ function setupWidget(
   const presetEl = widgetEl.querySelector<GmtPreset>("gmt-preset")!;
   const sliderEl = widgetEl.querySelector<GmtRange>("gmt-range")!;
   const valueEl = el<HTMLInputElement>("value");
-  valueEl.maxLength = MAX_VALUE_LENGTH;
 
   const positions = sliderPositions(lib);
   // How long the ladder gets, which clocks climb it and how many it leaves off the scale,
@@ -409,6 +431,7 @@ function setupWidget(
         copyText: plain,
         code,
         gate: "codeframe",
+        minLines: MAX_CALLS,
       }),
     );
     const out = outputOf(read.status, read.calls);
@@ -418,6 +441,7 @@ function setupWidget(
         label: "What the calls returned",
         state: out.state,
         lines: out.lines,
+        minLines: MAX_CALLS,
       }),
     );
 

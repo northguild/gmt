@@ -30,7 +30,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderPunctualityBoardTemplate("punctuality-board", {});
+const html = renderPunctualityBoardTemplate("punctuality-board", {}).value;
 ---
 
 {

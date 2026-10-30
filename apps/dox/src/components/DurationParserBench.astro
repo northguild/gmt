@@ -22,7 +22,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderDurationParserBenchTemplate("duration-parser-bench");
+const html = renderDurationParserBenchTemplate("duration-parser-bench").value;
 ---
 
 {

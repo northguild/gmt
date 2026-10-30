@@ -6,7 +6,7 @@
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./handoff-link.module.css";
 
-export interface HandoffLinkOptions {
+interface HandoffLinkOptions {
   id: string;
   label: string;
   href?: string | undefined;

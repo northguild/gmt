@@ -94,7 +94,7 @@ function expectPlate(caption: string, want: Plate) {
   expect(shown).toHaveLength(1);
   expect(shown[0]).toHaveTextContent(exact(want[0]));
   [want[1], want[2]].forEach((line, n) => {
-    if (line === "") expect(lines[n]).toBeEmptyDOMElement();
+    if (line === "") expect(lines[n]).toHaveTextContent(/^$/);
     else expect(lines[n]).toHaveTextContent(exact(line));
   });
 }
@@ -731,5 +731,15 @@ describe("the staircase", () => {
     await pick(w, "before-1972");
     expect(screen.getByText(lost)).toBeInTheDocument();
     await expectNoAxeViolations(document.body);
+  });
+});
+
+describe("the length cap", () => {
+  it("stops the date field at 64 characters", async () => {
+    const w = await open();
+    const box = dateBox();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(72));
+    expect(box).toHaveValue("x".repeat(64));
   });
 });

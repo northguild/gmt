@@ -12,7 +12,7 @@
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./interval-bar.module.css";
 
-export interface IntervalBarOptions {
+interface IntervalBarOptions {
   /** What the bar says to a screen reader. Required. */
   label: string;
   /** Left edge, 0 to 1. */
@@ -25,11 +25,11 @@ export interface IntervalBarOptions {
 }
 
 /** The narrowest a bar is drawn, as a share of the lane, so a one-instant interval stays visible. */
-export const MIN_BAR_SPAN = 0.005;
+const MIN_BAR_SPAN = 0.005;
 
 /** The custom properties that carry a bar's position and width, for a test to read. */
-export const BAR_AT_PROPERTY = "--gmt-at";
-export const BAR_SPAN_PROPERTY = "--gmt-span";
+const BAR_AT_PROPERTY = "--gmt-at";
+const BAR_SPAN_PROPERTY = "--gmt-span";
 
 const unit = (n: number): string =>
   Number.isFinite(n) ? String(Math.min(1, Math.max(0, n))) : "0";

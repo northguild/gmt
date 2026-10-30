@@ -75,7 +75,7 @@ export function moroccoKeyPoints(when: string): KeyCard[] {
               "Your saved events: appointments, bookings and shifts your app saved before you updated may be an hour off. Find them with ",
               {
                 link: "Did your saved events move?",
-                href: "#morocco-stored-title",
+                href: "#morocco-stored-heading",
               },
               " below, or ",
               { code: "classifyStoredZoned" },
@@ -144,6 +144,6 @@ export const MOROCCO_HELP: HelpCard = {
   cta: {
     lead: "To check your saved events without writing code:",
     link: "Did your saved events move?",
-    href: "#morocco-stored-title",
+    href: "#morocco-stored-heading",
   },
 };

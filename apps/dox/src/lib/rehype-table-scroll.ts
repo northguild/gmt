@@ -10,12 +10,12 @@
  *
  * A table already in the box (one the generator wrote) is not boxed again, but it is processed:
  * every cell `code` that has break points gets them (src/lib/code-break.ts), so a long token
- * wraps at a space or after a `/` and never inside a word.
+ * wraps at a space or after a `/` and never inside a word, and every cell is labelled.
  *
  * A table opts into the entries layout (gmt-content.css) with an MDX comment that reads
  * `table: entries`, on its own line directly above it. The comment reaches this plugin as an
- * `mdxFlowExpression` node beside the table; the plugin sets `data-layout="entries"` on the box,
- * names each body cell's column in `data-col`, and removes the comment. A paragraph between the
+ * `mdxFlowExpression` node beside the table; the plugin sets `data-layout="entries"` on the box and
+ * removes the comment. Every cell of every table names its column in `data-col`. A paragraph between the
  * comment and the table cancels it.
  */
 import { CODE_BREAK_CLASS, codeBreakHast, codeBreakPieces } from "./code-break";
@@ -28,7 +28,8 @@ interface HastNode {
   children?: HastNode[];
 }
 
-const BOX_CLASS = "gmt-ref-table";
+/** The class on the scroll box a table sits in. */
+export const BOX_CLASS = "gmt-ref-table";
 const ENTRIES_MARKER = /^\/\*\s*table:\s*entries\s*\*\/$/;
 
 function isBox(node: HastNode): boolean {
@@ -96,12 +97,15 @@ function headers(table: HastNode): string[] {
     .map((cell) => textOf(cell).trim());
 }
 
-/** Names each body cell's column on `data-col`, for the label the entries layout prints. */
+/**
+ * Names each cell's column on `data-col`: the text of its column's header. A stylesheet prints it
+ * as a label (entries layout, reference tables on a phone) or selects a column by it.
+ */
 function labelCells(table: HastNode): void {
   const names = headers(table);
   const visitRows = (node: HastNode): void => {
     for (const child of node.children ?? []) {
-      if (isElement(child, "tbody")) visitRows(child);
+      if (isElement(child, "thead", "tbody", "tfoot")) visitRows(child);
       else if (isElement(child, "tr")) {
         let column = 0;
         for (const cell of child.children ?? []) {
@@ -127,7 +131,6 @@ function boxTables(node: HastNode): void {
     const child = children[i];
     if (isElement(child, "table")) {
       const marker = markerAbove(children, i);
-      if (marker >= 0) labelCells(child);
       children[i] = box(child, marker >= 0);
       if (marker >= 0) {
         children.splice(marker, 1);
@@ -164,8 +167,10 @@ function breakCode(node: HastNode, inCell: boolean): void {
 
 function breakTables(node: HastNode): void {
   for (const child of node.children ?? []) {
-    if (isElement(child, "table")) breakCode(child, false);
-    else breakTables(child);
+    if (isElement(child, "table")) {
+      labelCells(child);
+      breakCode(child, false);
+    } else breakTables(child);
   }
 }
 

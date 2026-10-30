@@ -168,10 +168,25 @@
   min-inline-size: 0;
 }
 
+/* The note and a hidden copy of its longest text share one cell, so the block keeps the height of
+   the two-line reading when the note is empty or short. */
 .note {
+  display: grid;
   margin: 0;
   color: var(--gmt-ice-dim);
   font-size: var(--gmt-text-sm);
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.noteGhost {
+  visibility: hidden;
+
+  &::after {
+    content: attr(data-sample);
+  }
 }
 
 @media (forced-colors: active) {

@@ -28,7 +28,7 @@ export const tickerIds = {
   empty: "ticker-empty",
 } as const;
 
-export interface DstTickerOptions {
+interface DstTickerOptions {
   /** The widget's `idScope(idPrefix)`. */
   id: (local: string) => string;
 }

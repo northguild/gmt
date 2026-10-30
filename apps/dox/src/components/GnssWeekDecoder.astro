@@ -25,7 +25,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderGnssWeekDecoderTemplate("gnss-week-decoder", {});
+const html = renderGnssWeekDecoderTemplate("gnss-week-decoder", {}).value;
 ---
 
 {

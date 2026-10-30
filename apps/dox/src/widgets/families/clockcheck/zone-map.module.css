@@ -83,7 +83,7 @@
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-lg);
   corner-shape: bevel;
-  background: var(--gmt-widget-card-bg);
+  background: var(--gmt-surface-widget);
   backdrop-filter: var(--gmt-glass-blur);
 
   & h4 {
@@ -208,7 +208,8 @@
 
 /* Below 520px the map and its legend are not drawn; the list stays. */
 @container gmt-clockcheck (max-width: 519.98px) {
-  .stage {
+  .stage,
+  .map {
     display: none;
   }
 

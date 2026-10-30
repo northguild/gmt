@@ -87,7 +87,7 @@ describe("stripMdx layout wrappers", () => {
   // The home page's shape: a layout `<div>` round a `<CardGrid>` whose cards are indented, one
   // card nested two deep and one at the margin.
   const body = [
-    '<div class="gmt-home-grid">',
+    '<div class="layout">',
     "",
     "<div data-reveal-group>",
     "<CardGrid>",

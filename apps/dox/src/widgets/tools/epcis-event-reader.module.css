@@ -1,0 +1,95 @@
+/*
+ * EPCIS Event Reader: what only this tool needs. The sections, tables, code frames, verdict and
+ * asides are the kit's and the EDI family's; this sheet places them. The two bands sit side by
+ * side where the widget is wide and one under the other where it is not. The widget root is
+ * the container.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A band: two panes, a column each when there is room for both. */
+.split,
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+@container (inline-size >= 67.75rem) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(28rem, 1fr) minmax(38.75rem, 1fr);
+    column-gap: var(--gmt-space-4);
+    align-items: stretch;
+  }
+}
+
+/* The box a picture sits in; it takes the pane's spare height so the two bottoms line up. */
+.panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-4);
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
+  line-height: 1.5;
+}
+
+/* The written-back value and its call share a line when the section is wide. */
+.written {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  align-items: stretch;
+  min-inline-size: 0;
+}
+
+@container (inline-size >= 52rem) {
+  .written {
+    grid-template-columns: minmax(16rem, 2fr) minmax(0, 3fr);
+  }
+}
+
+.handoff {
+  display: flex;
+  margin-block-start: var(--gmt-space-3);
+}
+
+@media (forced-colors: active) {
+  .panel {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .note {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .panel {
+    border-color: var(--gmt-ice);
+  }
+
+  .note {
+    color: var(--gmt-ice);
+  }
+}

@@ -724,3 +724,14 @@ describe("the library under the widget", () => {
     );
   });
 });
+
+describe("the length cap", () => {
+  it("stops the format code at 8 characters", async () => {
+    const w = await open();
+    await retype(w, input(), "240615");
+    const box = format();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(16));
+    expect(box).toHaveValue("x".repeat(8));
+  });
+});

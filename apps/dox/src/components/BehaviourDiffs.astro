@@ -5,7 +5,7 @@
  * One card per case: the input, what the library returns, what Temporal returns, the clause that
  * decides it, any open upstream issue and a link to the full matrix row. A library that matches
  * Temporal in every case prints one sentence saying so. The Markdown twin is
- * `renderBehaviourDiffs` in `src/lib/mdx-jsx.ts`. Styles live in `src/styles/gmt-migrate.css`.
+ * `renderBehaviourDiffs` in `src/lib/mdx-jsx.ts`. Styles are in its `<style>` block.
  */
 import { diffViews, libraryProp } from "../lib/migrate-view";
 import { withBase } from "../lib/site";
@@ -57,3 +57,67 @@ const diffs = diffViews(libraryProp(Astro.props.library, "BehaviourDiffs"));
     ))
   }
 </ul>
+
+<style is:global>
+/* ---- Difference cards ---- */
+
+.gmt-diffs {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.gmt-diff {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md, 0.5rem);
+  background: var(--gmt-fill);
+}
+
+.gmt-diff-title {
+  margin: 0 0 0.5rem;
+  font-size: var(--sl-text-base);
+}
+
+.gmt-diff-id {
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-diff-facts {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.gmt-diff-facts > div {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.gmt-diff-facts dt {
+  color: var(--gmt-ice);
+  font-weight: 600;
+}
+
+.gmt-diff-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.gmt-diff-links {
+  margin: 0.6rem 0 0;
+  font-size: var(--sl-text-sm);
+}
+
+@media (width <= 30rem) {
+  .gmt-diff-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+}
+</style>

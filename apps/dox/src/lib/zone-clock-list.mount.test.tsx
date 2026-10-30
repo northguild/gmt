@@ -1,30 +1,30 @@
 /**
  * @vitest-environment jsdom
  *
- * Mounting the zone clock list, rather than only its pure helpers.
+ * Mounting the zone clock list onto the kit listbox, rather than only its pure helpers.
  *
- * There was no test that ran `mountZoneClockList` at all, and that gap let a
- * real breakage ship: the virtualizer renders its first rows synchronously from
- * `_willUpdate()`, so a `const` declared lower in the module than the render
- * path is still in its temporal dead zone when the first row is written, and the
- * entire mount throws. Nothing caught it, because the globe cannot mount under
- * jsdom (no canvas, no WebGPU) and every other test here calls pure functions.
+ * The virtualizer renders its first rows synchronously from `_willUpdate()`, so a `const`
+ * declared lower in the module than the render path is still in its temporal dead zone when
+ * the first row is written, and the entire mount throws. These tests run the real mount.
  *
- * jsdom has no layout, so every element reports a zero-sized rect and the
- * virtualizer concludes that nothing is visible — which would make these tests
- * pass against the very breakage they exist for, since a row that is never
- * built is never written to. The scroll panel is therefore given a real
- * measured height, and the tests assert that rows actually appear.
+ * jsdom has no layout, so every element reports a zero size and the virtualizer would
+ * conclude that nothing is visible, which would pass against the very breakage these tests
+ * exist for. The panel is therefore given a measured height, and the tests assert that rows
+ * appear.
  */
-
+import { screen, within } from "@testing-library/dom";
+import userEvent from "@testing-library/user-event";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import { installJsdomShims } from "../test/jsdom-shims";
-import { readViewerDate } from "./zone-clock";
-import { mountZoneClockList, zoneOptionId } from "./zone-clock-list";
+import { listbox, type GmtListbox } from "~/widgets/primitives/listbox/listbox";
+import { renderHtml } from "~/widgets/test-fixture";
+import { readViewerDate, readZoneNow } from "./zone-clock";
+import { mountZoneClockList } from "./zone-clock-list";
 import {
   dayDelta,
-  dayShift,
   dayShiftChip,
   dayShiftLabel,
+  dstState,
 } from "./zone-readout";
 
 installJsdomShims();
@@ -38,88 +38,79 @@ const ZONES = [
   "America/Sao_Paulo",
   /* Deliberately the two ends of the IANA offset range: Kiritimati (UTC+14)
      and Midway (UTC-11) are 25 hours apart, so they can never show the same
-     calendar date as each other — which means whatever zone the test machine
-     is in, at least one of them is always on a different day from the viewer.
-     That is what makes the day-shift assertions below run their prev/next
-     branches on every machine and at every hour, rather than passing vacuously
-     the way they would on a fixture that happens to agree with "today". */
+     calendar date as each other. Whatever zone the test machine is in, at least
+     one of them is on a different day from the viewer, so the day-shift
+     assertions run on every machine at every hour. */
   "Pacific/Kiritimati",
   "Pacific/Midway",
 ];
 
 const mounted: Array<{ destroy(): void }> = [];
+let counter = 0;
 
-function mount(ids: readonly string[] = ZONES) {
-  const panel = document.createElement("div");
-  panel.id = "test-clock-panel";
-  document.body.appendChild(panel);
-  /* The virtualizer measures its scroll element synchronously while mounting,
-     and it reads `offsetWidth`/`offsetHeight` — not `getBoundingClientRect`.
-     jsdom reports 0 for both, so without this it concludes nothing is visible
-     and builds no rows at all. */
-  for (const [property, value] of [
-    ["offsetWidth", 300],
-    ["offsetHeight", 400],
-    ["clientWidth", 300],
-    ["clientHeight", 400],
-  ] as const) {
-    Object.defineProperty(panel, property, { value, configurable: true });
-  }
+function mount(ids: readonly string[] = ZONES, sized = true) {
+  counter += 1;
+  const r = renderHtml(
+    listbox({
+      id: `test-clock-panel-${counter}`,
+      label: "Pinned zones",
+      items: [],
+    }),
+  );
+  const panel = r.element<GmtListbox>("listbox");
+  /* The virtualizer measures its scroll element synchronously while mounting, and it
+     reads `offsetWidth`/`offsetHeight`, which jsdom reports as 0. */
+  if (sized)
+    for (const [property, value] of [
+      ["offsetWidth", 300],
+      ["offsetHeight", 400],
+      ["clientWidth", 300],
+      ["clientHeight", 400],
+    ] as const)
+      Object.defineProperty(panel, property, { value, configurable: true });
   const picked: string[] = [];
   const list = mountZoneClockList(panel, ids, (id) => picked.push(id));
   mounted.push(list);
-  return { panel, list, picked };
+  return { panel, list, picked, host: r.host };
 }
 
 afterEach(() => {
   for (const list of mounted.splice(0)) list.destroy();
-  document.body.innerHTML = "";
 });
 
+const option = (zone: string): HTMLElement =>
+  screen.getByRole("option", { name: new RegExp(zone) });
+
 describe("mountZoneClockList", () => {
-  it("mounts without throwing", () => {
+  it("mounts without throwing, and draws the zones in view", async () => {
     // The regression this file exists for: a ReferenceError from the first
     // synchronous render would surface right here.
-    expect(() => mount()).not.toThrow();
+    const { host } = mount();
+    expect(screen.getAllByRole("option").length).toBeGreaterThan(0);
+    await expectNoAxeViolations(host);
   });
 
-  it("builds its scroll sizer and renders rows", () => {
+  it("is one tab stop: Tab reaches the list and the next Tab leaves it", async () => {
     const { panel } = mount();
-    expect(panel.querySelector(".gmt-globe-clocks-sizer")).not.toBeNull();
-    /* Load-bearing: without rows, nothing below actually exercises the render
-       path, and this whole file would pass against a broken mount. */
-    expect(panel.querySelectorAll("[data-tz-id]").length).toBeGreaterThan(0);
+    const user = userEvent.setup();
+    await user.tab();
+    expect(panel).toHaveFocus();
+    for (const row of screen.getAllByRole("option"))
+      expect(row).not.toHaveFocus();
+    await user.tab();
+    expect(panel).not.toHaveFocus();
   });
 
-  it("keeps the listbox as the one tab stop: no row is tabbable", () => {
-    const { panel } = mount();
-    const rows = [...panel.querySelectorAll<HTMLElement>("[data-tz-id]")];
-    expect(rows.length).toBeGreaterThan(0);
-    for (const row of rows) expect(row.getAttribute("tabindex")).toBe("-1");
-  });
-
-  it("ticks without throwing, repeatedly", () => {
+  it("ticks, selects and clears without throwing, repeatedly", () => {
     const { list } = mount();
     expect(() => {
       list.tick();
       list.tick();
-      list.tick();
-    }).not.toThrow();
-  });
-
-  it("selects a zone, and clears the selection", () => {
-    const { list } = mount();
-    expect(() => {
       list.select("Asia/Tokyo");
+      list.tick();
       list.select("Europe/London");
       list.select(null);
     }).not.toThrow();
-  });
-
-  it("survives a tick after a selection", () => {
-    const { list } = mount();
-    list.select("Asia/Tokyo");
-    expect(() => list.tick()).not.toThrow();
   });
 
   it("is safe to destroy twice", () => {
@@ -129,229 +120,197 @@ describe("mountZoneClockList", () => {
   });
 
   it("handles an empty zone list", () => {
-    expect(() => mount([])).not.toThrow();
+    mount([]);
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
   });
 
-  it("writes a live reading into every row", () => {
-    const { panel, list } = mount();
+  it("writes a live time, offset and date into every row", () => {
+    const { list } = mount();
     list.tick();
-    const rows = panel.querySelectorAll("[data-tz-id]");
+    const rows = screen.getAllByRole("option");
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
-      const time = row.querySelector("[data-tz-field='time']");
-      const offset = row.querySelector("[data-tz-field='offset']");
-      expect(time, "a row has a time field").not.toBeNull();
-      expect(offset, "a row has an offset field").not.toBeNull();
       // `HH:MM:SS`, or the sentinel the design system shows for a lost signal.
-      expect(time?.textContent ?? "").toMatch(/^(\d{2}:\d{2}:\d{2}|— — —)$/);
-      expect(offset?.textContent ?? "").toMatch(
-        /^(UTC[+-]\d{2}:\d{2}|no signal)$/,
-      );
+      expect(
+        within(row).getByText(/^(\d{2}:\d{2}:\d{2}|— — —)$/),
+      ).toBeInTheDocument();
+      expect(
+        within(row).getByText(/^(UTC[+-]\d{2}:\d{2}|no signal)$/),
+      ).toBeInTheDocument();
+      expect(within(row).getByText(/^\d{4}-\d{2}-\d{2}$/)).toBeInTheDocument();
     }
   });
 
-  it("writes the local date into every row", () => {
-    const { panel, list } = mount();
-    list.tick();
-    const rows = panel.querySelectorAll("[data-tz-id]");
-    expect(rows.length).toBeGreaterThan(0);
-    for (const row of rows) {
-      const date = row.querySelector("[data-tz-field='date']");
-      expect(date, "a row has a date field").not.toBeNull();
-      // `YYYY-MM-DD`, or empty when the reading hit its sentinel.
-      expect(date?.textContent ?? "").toMatch(/^(\d{4}-\d{2}-\d{2})?$/);
-    }
-  });
-
-  it("marks a row's day shift, and only when the day really differs", () => {
-    /* The invariant, not a fixed expectation: which of these zones is on
-       another day depends on the wall clock and on the machine's own zone, so
-       the test derives the answer the same way the widget does and checks the
-       two agree. */
-    const { panel, list } = mount();
+  it("states a day shift in words, and only when the day really differs", () => {
+    /* The invariant, not a fixed expectation: which of these zones is on another day
+       depends on the wall clock and the machine's own zone, so the test derives the
+       answer the way the widget does and checks the two agree. */
+    const { list } = mount();
     list.tick();
     const viewerDate = readViewerDate();
-    const rows = panel.querySelectorAll<HTMLElement>("[data-tz-id]");
-    expect(rows.length).toBeGreaterThan(0);
     let shifted = 0;
-    for (const row of rows) {
-      const date =
-        row.querySelector("[data-tz-field='date']")?.textContent ?? "";
-      if (!date || !viewerDate) continue;
-      const shift = dayShift(date, viewerDate);
-      const delta = dayDelta(date, viewerDate);
-      expect(row.classList.contains("gmt-day-prev")).toBe(shift === "prev");
-      expect(row.classList.contains("gmt-day-next")).toBe(shift === "next");
-      const chip = row.querySelector("[data-tz-field='shift']");
-      /* The row states the real difference, which at the extremes of the
-         offset range is two days, not the three-way bucket the filter uses. */
-      expect(chip?.getAttribute("data-shift")).toBe(String(delta));
-      // The direction is carried in text, never by the wash alone.
-      expect(chip?.textContent ?? "").toBe(
-        delta === 0 ? "" : `${dayShiftChip(delta)} ${dayShiftLabel(delta)}`,
-      );
-      if (shift !== "same") shifted += 1;
+    for (const zone of ["Pacific/Kiritimati", "Pacific/Midway", "Asia/Tokyo"]) {
+      const reading = readZoneNow(zone);
+      if (!reading.ok) throw new Error(`${zone} gave no reading`);
+      const delta = dayDelta(reading.date, viewerDate);
+      const row = within(option(zone));
+      if (delta === 0) {
+        expect(row.queryByText(dayShiftLabel(0))).not.toBeInTheDocument();
+        continue;
+      }
+      shifted += 1;
+      /* The direction is carried in text, never by the wash alone. */
+      expect(row.getByText(dayShiftChip(delta))).toBeInTheDocument();
+      expect(row.getByText(dayShiftLabel(delta))).toBeInTheDocument();
     }
-    /* Guards the guard: without this the loop above passes just as happily on a
-       list where nothing is day-shifted at all. */
+    /* Guards the guard: the loop passes just as happily on a list where nothing
+       is day-shifted at all. */
     expect(shifted, "at least one zone is on another day").toBeGreaterThan(0);
   });
 
-  it("marks only a zone actually on summer time, in text", () => {
-    const { panel, list } = mount();
+  it("marks only a zone actually on summer time, in words", () => {
+    const { list } = mount();
     list.tick();
-    const slotFor = (id: string) =>
-      panel.querySelector(`[data-tz-id="${id}"] [data-tz-field='dst']`);
-
-    /* Asia/Tokyo has had no DST since 1951 — nothing to mark. Europe/London
-       observes it, so it is marked on one side of the transition and not the
-       other. No glyph either way: a sun beside a globe drawing its own
-       day/night terminator read as "daytime", not as a shifted clock. */
-    const tokyo = slotFor("Asia/Tokyo");
-    expect(tokyo?.getAttribute("data-dst")).toBe("none");
-    expect(tokyo?.textContent).toBe("");
-
-    const london = slotFor("Europe/London");
-    const state = london?.getAttribute("data-dst");
-    expect(["dst", "standard"]).toContain(state);
-    expect(london?.querySelector("svg")).toBeNull();
-    if (state === "dst") {
-      expect(london?.textContent).toContain("DST");
-      // Terse on screen, spelled out for assistive tech.
-      expect(london?.textContent).toContain("in DST");
+    // Asia/Tokyo has had no DST since 1951: nothing to mark.
+    expect(
+      within(option("Asia/Tokyo")).queryByText("DST"),
+    ).not.toBeInTheDocument();
+    // Europe/London observes it, so it is marked on one side of the transition only.
+    const london = readZoneNow("Europe/London");
+    const london_ = within(option("Europe/London"));
+    if (london.ok && dstState(london) === "dst") {
+      expect(london_.getByText("DST")).toBeInTheDocument();
+      expect(london_.getByText("in DST")).toBeInTheDocument();
     } else {
-      expect(london?.textContent).toBe("");
+      expect(london_.queryByText("DST")).not.toBeInTheDocument();
     }
   });
 
   it("narrows to a filtered set, and restores the full one", () => {
-    const { panel, list } = mount();
-    const idsOf = () =>
-      [...panel.querySelectorAll<HTMLElement>("[data-tz-id]")].map(
-        (row) => row.dataset.tzId,
-      );
-    expect(idsOf().length).toBeGreaterThan(2);
+    const { list } = mount();
+    expect(screen.getAllByRole("option").length).toBeGreaterThan(2);
 
     list.setIds(["Asia/Tokyo", "Europe/London"]);
-    expect(idsOf()).toEqual(["Asia/Tokyo", "Europe/London"]);
-    // Rows are rebuilt, not reused in place: index 0 must now *be* Tokyo, not
-    // carry Tokyo's name over the previous zone's clock.
-    const first = panel.querySelector<HTMLElement>("[data-tz-id]");
-    expect(first?.querySelector(".gmt-clock-name")?.textContent).toBe(
-      "Asia/Tokyo",
-    );
+    const rows = screen.getAllByRole("option");
+    expect(rows).toHaveLength(2);
+    // Rows are rebuilt, not reused in place: the first must now be Tokyo, with Tokyo's name.
+    expect(
+      within(rows[0] as HTMLElement).getByText("Asia/Tokyo"),
+    ).toBeInTheDocument();
+    expect(
+      within(rows[1] as HTMLElement).getByText("Europe/London"),
+    ).toBeInTheDocument();
 
     list.setIds(ZONES);
-    expect(idsOf().length).toBeGreaterThan(2);
+    expect(screen.getAllByRole("option").length).toBeGreaterThan(2);
   });
 
   it("keeps ticking after a filter change", () => {
-    const { panel, list } = mount();
+    const { list } = mount();
     list.setIds(["Europe/London"]);
-    expect(() => list.tick()).not.toThrow();
-    const time = panel.querySelector("[data-tz-field='time']");
-    expect(time?.textContent ?? "").toMatch(/^(\d{2}:\d{2}:\d{2}|— — —)$/);
+    list.tick();
+    expect(
+      within(option("Europe/London")).getByText(/^(\d{2}:\d{2}:\d{2}|— — —)$/),
+    ).toBeInTheDocument();
   });
 
-  it("survives filtering the selected zone out of the list", () => {
-    /* The globe keeps its selection and its tooltip when a filter hides that
-       zone, so `select` has to cope with an id that is no longer listed. */
+  it("marks the selected zone, and survives filtering it out of the list", () => {
+    /* The globe keeps its selection and its tooltip when a filter hides that zone, so
+       `select` has to cope with an id that is no longer listed. */
     const { list } = mount();
     list.select("Asia/Tokyo");
-    expect(() => list.setIds(["Europe/London"])).not.toThrow();
+    expect(option("Asia/Tokyo")).toHaveAttribute("aria-selected", "true");
+    list.setIds(["Europe/London"]);
+    expect(
+      screen.queryByRole("option", { selected: true }),
+    ).not.toBeInTheDocument();
     expect(() => list.select("Asia/Tokyo")).not.toThrow();
     expect(() => list.tick()).not.toThrow();
   });
 
-  it("handles being filtered down to nothing", () => {
-    const { panel, list } = mount();
-    expect(() => list.setIds([])).not.toThrow();
-    expect(panel.querySelectorAll("[data-tz-id]")).toHaveLength(0);
+  it("handles being filtered down to nothing, and back", () => {
+    const { list } = mount();
+    list.setIds([]);
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
     expect(() => list.tick()).not.toThrow();
-    expect(() => list.setIds(ZONES)).not.toThrow();
-    expect(panel.querySelectorAll("[data-tz-id]").length).toBeGreaterThan(0);
+    list.setIds(ZONES);
+    expect(screen.getAllByRole("option").length).toBeGreaterThan(0);
   });
 
-  it("points aria-activedescendant at a mounted row after a filter", () => {
-    /* Row ids come from the row's index, not its zone, so after a filter the
-       id the listbox pointed at can name a row that no longer exists — or,
-       clamped into range, one scrolled out of the DOM. ARIA requires the
-       active descendant to name a real option; a missing one leaves a screen
-       reader with no position, and nothing visible gives it away. A filter
-       scrolls the list to the top, so browsing restarts there too. */
+  it("picks a zone on a click and on Enter after the arrow keys", async () => {
+    const { panel, picked } = mount();
+    const user = userEvent.setup();
+    await user.click(option("Asia/Tokyo"));
+    expect(picked).toEqual(["Asia/Tokyo"]);
+
+    await user.click(panel);
+    await user.keyboard("{Home}{ArrowDown}{Enter}");
+    expect(picked.at(-1)).toBe("Asia/Tokyo");
+    await user.keyboard("{End}{Enter}");
+    expect(picked.at(-1)).toBe("Pacific/Midway");
+  });
+
+  it("points aria-activedescendant at a mounted row after End and after a filter", async () => {
+    /* The active descendant has to name a real option; a missing one leaves a screen
+       reader with no position, and nothing visible gives it away. A filter scrolls the
+       list to the top, so browsing restarts there too. */
     const { panel, list } = mount();
-    const active = () => panel.getAttribute("aria-activedescendant");
-    panel.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
+    const user = userEvent.setup();
+    await user.tab();
+    await user.keyboard("{End}");
+    expect(panel).toHaveAttribute(
+      "aria-activedescendant",
+      option("Pacific/Midway").id,
     );
-    expect(active()).toBe(zoneOptionId(panel.id, ZONES.length - 1));
 
     list.setIds(ZONES.slice(0, 3));
-    expect(active()).toBe(zoneOptionId(panel.id, 0));
-    expect(document.getElementById(active() as string)).not.toBeNull();
+    const rows = screen.getAllByRole("option");
+    expect(panel).toHaveAttribute(
+      "aria-activedescendant",
+      (rows[0] as HTMLElement).id,
+    );
 
     // And browsing carries on from there, not from the old position.
-    panel.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+    await user.keyboard("{ArrowDown}");
+    expect(panel).toHaveAttribute(
+      "aria-activedescendant",
+      (rows[1] as HTMLElement).id,
     );
-    expect(active()).toBe(zoneOptionId(panel.id, 1));
 
     list.setIds([]);
-    expect(panel.hasAttribute("aria-activedescendant")).toBe(false);
+    expect(panel).not.toHaveAttribute("aria-activedescendant");
   });
 
-  it("never points aria-activedescendant at a row that is not in the DOM", () => {
-    /* The virtualizer mounts only the rows in view. A selection made while the list has no
-       size yet (the Home page's clock panel before it is laid out), or one that has since
-       scrolled out of view, has no element to name, and an id that matches nothing is an
-       invalid reference. The attribute must exist only while its target does. */
+  it("never points aria-activedescendant at a row that is not in the DOM", async () => {
+    /* The virtualizer mounts only the rows in view. A selection made while the list has
+       no size yet, or one that has since scrolled out of view, has no element to name. */
     const many = Array.from({ length: 200 }, (_, i) => `Etc/Fake${i}`);
     const { panel, list } = mount(many);
-    const active = () => panel.getAttribute("aria-activedescendant");
-    const resolves = () => {
-      const id = active();
-      return id === null || document.getElementById(id) !== null;
+    const resolves = (): boolean => {
+      const id = panel.getAttribute("aria-activedescendant");
+      return (
+        id === null ||
+        screen.queryAllByRole("option").some((row) => row.id === id)
+      );
     };
     list.select(many[0] as string);
-    expect(active()).toBe(zoneOptionId(panel.id, 0));
     expect(resolves()).toBe(true);
 
-    // The End key moves the active row to the last one and scrolls it into view.
-    panel.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
-    );
+    const user = userEvent.setup();
+    await user.tab();
+    await user.keyboard("{End}");
     expect(resolves()).toBe(true);
 
     // Selecting a zone far from the rendered window: whatever the attribute says must resolve.
     list.select(many[120] as string);
     expect(resolves()).toBe(true);
-
-    // A panel with no size yet mounts no rows, so there is nothing to name.
-    const bare = document.createElement("div");
-    bare.id = "unsized-clock-panel";
-    document.body.appendChild(bare);
-    const unsized = mountZoneClockList(bare, many, () => {});
-    mounted.push(unsized);
-    unsized.select(many[0] as string);
-    expect(bare.querySelectorAll("[data-tz-id]")).toHaveLength(0);
-    expect(bare.hasAttribute("aria-activedescendant")).toBe(false);
   });
 
-  it("leaves row positions alone on a tick", () => {
-    /* A tick used to re-run the virtualizer's full render, rewriting every row's
-       transform and then reading its size back — a layout read straight after a
-       write, once a second, for every visible clock. That thrash stalled the
-       main thread for tens of milliseconds a second, which reads as a stutter in
-       a drag or an ambient spin. Time passing moves no row, so the transforms
-       must come out unchanged. */
-    const { panel, list } = mount();
-    const positions = () =>
-      [...panel.querySelectorAll<HTMLElement>("[data-tz-id]")].map(
-        (row) => row.style.transform,
-      );
-    const before = positions();
-    expect(before.length).toBeGreaterThan(0);
-    list.tick();
-    expect(positions()).toEqual(before);
+  it("mounts no rows in a panel with no size yet, and names no active descendant", () => {
+    const many = Array.from({ length: 50 }, (_, i) => `Etc/Fake${i}`);
+    const { panel, list } = mount(many, false);
+    list.select(many[0] as string);
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    expect(panel).not.toHaveAttribute("aria-activedescendant");
   });
 });

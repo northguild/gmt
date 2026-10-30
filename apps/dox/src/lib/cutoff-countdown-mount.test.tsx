@@ -100,7 +100,7 @@ describe("renderCutoffCountdownTemplate", () => {
       timeZone: "Europe/Amsterdam",
     });
     // The only dates present are the ones the caller supplied.
-    expect(markup.match(/\d{4}-\d{2}-\d{2}/g)).toEqual(["2024-06-12"]);
+    expect(markup.value.match(/\d{4}-\d{2}-\d{2}/g)).toEqual(["2024-06-12"]);
   });
 });
 

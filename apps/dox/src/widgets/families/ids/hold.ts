@@ -15,7 +15,7 @@ import styles from "./hold.module.css";
 
 export type Ghost = string | SafeHtml;
 
-export interface HoldOptions {
+interface HoldOptions {
   /** A class from the caller's module that gives a ghost the live content's type. */
   ghostClass?: string;
 }

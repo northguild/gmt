@@ -101,7 +101,7 @@ import {
   type GnssWeekDecoderArgs,
   type Lane,
 } from "./gnss-week-decoder";
-import { counterSystem } from "./gnss-widgets";
+import { BEFORE_FIRST_WEEK_NOTE, counterSystem } from "./gnss-widgets";
 import type { PlateSpec } from "./ledger-widgets";
 import type { EdiCall } from "./edi-widgets";
 import { callArgs, formatValue } from "./punctuality-widgets";
@@ -438,7 +438,7 @@ function reasonOf(read: GnssRead | null): SafeHtml {
 export function renderGnssWeekDecoderTemplate(
   idPrefix: string,
   args: GnssWeekDecoderArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state: GnssDecoderState = isSeeded(args)
     ? readArgs(args)
@@ -639,7 +639,7 @@ export function renderGnssWeekDecoderTemplate(
       level: 4,
     },
     html`<div class="${styles.tables}" id="${id("tables")}">${counterTables(null)}</div>
-      ${grow(html`<p class="${styles.note}" id="${id("footnote")}">${NBSP}</p>`)}`,
+      ${grow(html`<p class="${styles.note}"><span id="${id("footnote")}">${NBSP}</span><span class="${styles.noteGhost}" aria-hidden="true" data-sample="No reading: ${BEFORE_FIRST_WEEK_NOTE}."></span></p>`)}`,
   );
 
   const calls = section(
@@ -657,13 +657,13 @@ export function renderGnssWeekDecoderTemplate(
         state: "empty",
         lines: [],
       })}</div>`,
-    )}<div id="${id("links")}">${linksOf(null)}</div>`,
+    )}${grow(html`<div id="${id("links")}">${linksOf(null)}</div>`)}`,
   );
 
   return widget(
     { name: WIDGET_NAME, label: "GNSS Week Decoder", scope: idPrefix },
     html`${pick}${read}${every}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

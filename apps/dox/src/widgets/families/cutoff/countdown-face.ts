@@ -14,7 +14,7 @@ import { html, type SafeHtml } from "../../builders/html";
 import { readout } from "../../primitives/readout/readout";
 import styles from "./countdown-face.module.css";
 
-export interface CountdownFaceOptions {
+interface CountdownFaceOptions {
   /** The figure's id; the ISO line is `<id>-iso`. */
   id: string;
   /** What the value is, such as "Time to cut-off". Required. */

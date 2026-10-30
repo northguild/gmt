@@ -24,12 +24,12 @@ import { Temporal } from "@js-temporal/polyfill";
 const REFERENCE_YEAR = 2025;
 const MINUTES_PER_NANOSECOND = 1 / 60_000_000_000;
 
-export interface ZoneOffset {
+interface ZoneOffset {
   zoneId: string;
   minutes: number;
 }
 
-export interface ZoneOffsetRange {
+interface ZoneOffsetRange {
   min: ZoneOffset;
   max: ZoneOffset;
 }

@@ -23,6 +23,11 @@ export interface CodeFrameOptions extends GateOption {
   copyLabel?: string;
   code?: SafeHtml;
   scrollable?: boolean;
+  /**
+   * The most lines the mount will ever fill. The frame holds that many lines of height, so a
+   * call list that grows or shrinks with a drag never moves what sits below it.
+   */
+  minLines?: number;
 }
 
 export function codeFrame(o: CodeFrameOptions): SafeHtml {
@@ -30,7 +35,7 @@ export function codeFrame(o: CodeFrameOptions): SafeHtml {
     ><span class="${styles.copy}"
       >${copy({ label: o.copyLabel ?? "Copy", text: o.copyText })}</span
     ><pre class="${styles.pre}" ${(o.scrollable ?? true) ? html`tabindex="0"` : ""}
-      ><code class="${styles.code}">${o.code ?? ""}</code></pre
+      ><code class="${styles.code}" ${o.minLines === undefined ? "" : html`style="--min-lines: ${String(Math.max(1, Math.floor(o.minLines)))}"`}>${o.code ?? ""}</code></pre
     ></div
   >`;
 }

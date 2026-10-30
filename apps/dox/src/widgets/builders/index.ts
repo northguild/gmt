@@ -5,7 +5,19 @@
 export { aside, type AsideOptions } from "./aside";
 export { badge, type BadgeOptions, type BadgeTone } from "./badge";
 export { button, buttonRow, type ButtonOptions } from "./button";
+export {
+  chartKey,
+  chartSummary,
+  type ChartKeyItem,
+  type ChartKeyKind,
+} from "./chart-key";
 export { codeFrame, type CodeFrameOptions } from "./code-frame";
+export {
+  dataCredits,
+  type DataCredit,
+  type DataCreditsOptions,
+  type DataCreditsPlacement,
+} from "./data-credits";
 export {
   disclosure,
   wireDisclosure,
@@ -25,6 +37,7 @@ export {
   type HtmlValue,
 } from "./html";
 export { idScope } from "./ids";
+export { nobreak } from "./nobreak";
 export { instant } from "./instant";
 export {
   card,

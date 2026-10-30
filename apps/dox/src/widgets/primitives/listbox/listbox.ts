@@ -21,12 +21,12 @@ import { html, type SafeHtml } from "../../builders/html";
 import { KitElement, type KitDetail } from "../base";
 import styles from "./listbox.module.css";
 
-export interface ListboxItem {
+interface ListboxItem {
   value: string;
   label: string;
 }
 
-export interface ListboxOptions extends GateOption {
+interface ListboxOptions extends GateOption {
   /** The element's id; `aria-activedescendant` and a combobox's `aria-controls` point at it. */
   id: string;
   /** The listbox's accessible name. Required. */
@@ -38,7 +38,7 @@ export interface ListboxOptions extends GateOption {
   className?: string;
 }
 
-export interface ListboxOptionOptions {
+interface ListboxOptionOptions {
   /** The option's id; build it with `listboxOptionId`. */
   id: string;
   index: number;
@@ -88,7 +88,7 @@ export function listbox(o: ListboxOptions): SafeHtml {
 }
 
 /** How far PageDown and PageUp move. */
-export const LISTBOX_PAGE = 10;
+const LISTBOX_PAGE = 10;
 
 /** The index a navigation key moves to, or `current` for any other key. Pure. */
 export function nextIndex(key: string, current: number, count: number): number {

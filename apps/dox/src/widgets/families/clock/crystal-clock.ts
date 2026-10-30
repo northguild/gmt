@@ -279,7 +279,7 @@ export function crystalClock(opts: CrystalClockOptions): SafeHtml {
     ? html`aria-hidden="true"`
     : html`role="img" aria-label="${name}"`;
 
-  const svg = html`<svg class="${styles.clock} gmt-crystal-clock" data-state="${state}" data-clock-id="${id}" data-glow="false" viewBox="${CLOCK_VIEWBOX}" ${sizeAttr} ${a11y} focusable="false">
+  const svg = html`<svg class="${styles.clock}" data-state="${state}" data-clock-id="${id}" data-glow="false" viewBox="${CLOCK_VIEWBOX}" ${sizeAttr} ${a11y} focusable="false">
     <defs>
       <clipPath id="${clipId}"><polygon points="${CLOCK_OUTER}" /></clipPath>
       <linearGradient id="${tintId}" x1="0.5" y1="0" x2="0.5" y2="1">

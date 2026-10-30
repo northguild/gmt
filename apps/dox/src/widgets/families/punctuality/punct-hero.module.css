@@ -90,6 +90,12 @@
     inline-size: 1em;
     block-size: 1em;
   }
+
+  /* The text fills the row, so its box is the plate's width and not the width of its figures. */
+  & > span {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
 }
 
 /* The reserved text: it takes the cell's width and none of the reader's eyes. */

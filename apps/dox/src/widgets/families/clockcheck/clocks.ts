@@ -13,7 +13,7 @@ import { idScope } from "../../builders/ids";
 import { noSignal, zoneId } from "./marks";
 import styles from "./clocks.module.css";
 
-export interface ClocksConfig {
+interface ClocksConfig {
   /** Namespaces every id. */
   idPrefix: string;
   zones: readonly string[];

@@ -30,14 +30,14 @@ import type {
 export type RolloverEra = number | "rolling" | { notBefore: string };
 
 /** A week, time of week and era on one broadcast counter. */
-export interface GnssWeek {
+interface GnssWeek {
   week: number;
   timeOfWeekSeconds: number;
   era: number;
 }
 
 /** A RINEX navigation-file week: continuous, so it has no era. */
-export interface RinexWeek {
+interface RinexWeek {
   week: number;
   timeOfWeekSeconds: number;
 }

@@ -16,13 +16,13 @@ import { textInput } from "../../builders/text-input";
 import { chips } from "../../primitives/chips/chips";
 import styles from "./stack-fieldsets.module.css";
 
-export interface CutoffFieldValues {
+interface CutoffFieldValues {
   name: string;
   offset: string;
   atLocalTime: string;
 }
 
-export interface CutoffFieldsetOptions {
+interface CutoffFieldsetOptions {
   /** The widget's id scope; the parts take `name-1`, `offset-1`, `at-1` from it. */
   id: (local: string) => string;
   /** The cut-off's number, from 1. */
@@ -52,7 +52,7 @@ export function cutoffFieldset(o: CutoffFieldsetOptions): SafeHtml {
   </fieldset>`;
 }
 
-export interface ClosedDaysValues {
+interface ClosedDaysValues {
   calendar: boolean;
   /** ISO weekday numbers, 1 (Monday) to 7 (Sunday). */
   weekend: readonly number[];
@@ -60,7 +60,7 @@ export interface ClosedDaysValues {
   roll: string;
 }
 
-export interface ClosedDaysOptions {
+interface ClosedDaysOptions {
   id: (local: string) => string;
   values: ClosedDaysValues;
 }

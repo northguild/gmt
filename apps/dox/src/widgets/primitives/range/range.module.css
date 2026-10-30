@@ -89,6 +89,11 @@
 
 .chip {
   position: absolute;
+  display: inline-grid;
+
+  /* An absolute box is as wide as the room right of its left edge when its text is wider, so
+     near the track's end the chip shrank. It is as wide as its widest reading instead. */
+  inline-size: max-content;
   inset-block-start: 0;
 
   /* The thumb's centre: the track is the width less one thumb. */
@@ -108,6 +113,23 @@
 
   &:dir(rtl) {
     translate: 50% 0;
+  }
+}
+
+/* The live text and a hidden sample of each end's text share one cell, so the chip is as wide as
+   the widest reading and does not resize while the thumb moves. */
+.chip > * {
+  grid-area: 1 / 1;
+  text-align: center;
+}
+
+.chip > [data-sample] {
+  block-size: 0;
+  overflow: hidden;
+  visibility: hidden;
+
+  &::after {
+    content: attr(data-sample);
   }
 }
 

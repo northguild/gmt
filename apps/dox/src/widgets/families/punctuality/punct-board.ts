@@ -36,7 +36,7 @@ export function punctNaive(content: HtmlValue): SafeHtml {
   return html`<p class="${styles.naive}">${content}</p>`;
 }
 
-export interface PunctBoardOptions {
+interface PunctBoardOptions {
   id: string;
   /** The id of the paragraph that sums the arrivals up. */
   summaryId: string;
@@ -67,7 +67,7 @@ export function punctBoard(o: PunctBoardOptions): SafeHtml {
   >`;
 }
 
-export interface PunctLaneOptions extends GateOption {
+interface PunctLaneOptions extends GateOption {
   /** 1 for the first tolerance, 3 for the second. */
   series: 1 | 3;
   /** The lane's own id, so the mount can show and hide it. */
@@ -115,7 +115,7 @@ export interface BarSpan {
   width: number;
 }
 
-export interface PunctRowOptions {
+interface PunctRowOptions {
   label: string;
   /** The stem; `null` draws none (no deviation). */
   inside: BarSpan | null;
@@ -186,7 +186,7 @@ export function punctRow(o: PunctRowOptions): SafeHtml {
   >`;
 }
 
-export interface PunctTick {
+interface PunctTick {
   /** Where the label hangs from, in percent of the row. */
   at: number;
   label: string;

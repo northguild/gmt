@@ -31,7 +31,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderDtmDecoderTemplate("dtm-decoder", {});
+const html = renderDtmDecoderTemplate("dtm-decoder", {}).value;
 ---
 
 {

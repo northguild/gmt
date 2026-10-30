@@ -35,7 +35,7 @@ const TONES: Record<ReturnType<typeof storedBadge>["tone"], BadgeTone> = {
   none: "neutral",
 };
 
-export interface StoredTableOptions {
+interface StoredTableOptions {
   idPrefix: string;
   rows: readonly StoredRow[];
   /** `readingsOf` from the audit module, which loads on the first answer. */

@@ -9,7 +9,7 @@
  */
 import type { BridgeState } from "./column-timestamp-bridge";
 
-export interface BridgePreset {
+interface BridgePreset {
   id: string;
   label: string;
   description: string;

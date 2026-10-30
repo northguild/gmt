@@ -11,7 +11,7 @@ import styles from "./crossing-connector.module.css";
 
 const NBSP = " ";
 
-export interface CrossingConnectorOptions {
+interface CrossingConnectorOptions {
   elapsedId: string;
   naiveId: string;
   /** The `data-area` the host grid places this in. */

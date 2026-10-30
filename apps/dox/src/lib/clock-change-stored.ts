@@ -22,11 +22,11 @@ import {
 } from "./clock-change-stored-lines";
 import type { StoredCheck, StoredRow } from "./clock-change-stored-lines";
 
-export const STORED_UNCHECKED_TEXT =
+const STORED_UNCHECKED_TEXT =
   "This browser’s time zone data could not be checked, so no line can be judged yet. Press Check again under Your browser.";
 
 /** The worked example at the top of the section: one saved value, its new rule and its fix. */
-export interface SavedExample {
+interface SavedExample {
   city: string;
   /** `09:00`, the local time the meeting was booked for. */
   wallHm: string;
@@ -43,7 +43,7 @@ export interface SavedExample {
 }
 
 /** What a region states once about its worked example: the zone, its offset now, and the old one. */
-export interface SavedFact {
+interface SavedFact {
   zone: string;
   /** The offset the place has now: the reference fact, `+HH:mm`. */
   offset: string;
@@ -52,7 +52,7 @@ export interface SavedFact {
 }
 
 /** A `SavedExample` with the zone it is for, the value that keeps the local time, and the date it shows on. */
-export interface SavedExampleValues extends SavedExample {
+interface SavedExampleValues extends SavedExample {
   zone: string;
   /** The value that keeps the local time. */
   fixed: string;
@@ -176,7 +176,7 @@ export interface StoredConfig {
   example: SavedExample;
 }
 
-export const STORED_BYTES_TEXT = STORED_MAX_BYTES.toLocaleString("en-US");
+const STORED_BYTES_TEXT = STORED_MAX_BYTES.toLocaleString("en-US");
 
 /** How many rows the prefilled example's answer holds: its non-empty lines, up to the line limit. */
 export function presetRows(preset: string): number {
@@ -184,10 +184,10 @@ export function presetRows(preset: string): number {
   return Math.min(lines.length, STORED_MAX_LINES);
 }
 
-export type AuditModule = typeof import("./stored-time-audit");
+type AuditModule = typeof import("./stored-time-audit");
 
 /** The readings are a pure helper; it loads on the first answer, not with the page. */
-export async function loadAuditWords(): Promise<AuditModule> {
+async function loadAuditWords(): Promise<AuditModule> {
   return import("./stored-time-audit");
 }
 
@@ -206,7 +206,7 @@ type StoredAnswer =
   | { kind: "too-large" }
   | { kind: "failed" };
 
-export async function askStored(
+async function askStored(
   endpoint: string,
   fetchFn: typeof fetch,
   form: FormData,
@@ -237,7 +237,7 @@ export async function askStored(
  * The summary's words: how many of the lines this check can judge moved. A line in a zone the data
  * is stale for is counted apart, never as moved or as right.
  */
-export function storedSummaryText(
+function storedSummaryText(
   rows: readonly StoredRow[],
   staleZones: ReadonlySet<string> = new Set(),
 ): string {
@@ -462,6 +462,3 @@ export function wireStoredTimes(
   handle.ready = run();
   return handle;
 }
-
-/** Old markup: L15e removes these once the mounts use `storedSection` and `wireStoredTimes`. */
-export { mountStoredTimes, storedSectionHtml } from "./clock-change-stored-old";

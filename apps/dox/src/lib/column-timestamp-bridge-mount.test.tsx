@@ -683,3 +683,13 @@ describe("module content", () => {
     }
   });
 });
+
+describe("the length cap", () => {
+  it("stops the instant field at 96 characters", async () => {
+    const w = await open();
+    const box = valueBox();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(104));
+    expect(box).toHaveValue("x".repeat(96));
+  });
+});

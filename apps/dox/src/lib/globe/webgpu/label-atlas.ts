@@ -24,7 +24,7 @@ import { LABEL_HALO_CSS } from "../casing";
  * The rectangle covers the glyph box plus the halo round it, so the quad is
  * drawn `marginCss` up and left of where the text itself starts.
  */
-export interface LabelRect {
+interface LabelRect {
   /** Texture coordinates, 0..1. */
   u0: number;
   v0: number;

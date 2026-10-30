@@ -18,7 +18,7 @@ import styles from "./edi-table.module.css";
 
 type IdOf = (local: string) => string;
 
-export interface MemberRowSpec {
+interface MemberRowSpec {
   key: string;
   label: string;
 }
@@ -27,7 +27,7 @@ export interface MemberRowSpec {
 export const NO_MEMBER = "no result";
 
 /** What a member cell is: a value, a member the value does not state, or no result at all. */
-export type MemberState = "value" | "absent" | "none";
+type MemberState = "value" | "absent" | "none";
 
 /** The members a parser returned: every row is always present. */
 export function memberTable(o: {
@@ -39,7 +39,6 @@ export function memberTable(o: {
 }): SafeHtml {
   return table({
     caption: o.caption,
-    gate: "readouts",
     rowHeader: "name",
     columns: [
       { key: "name", header: "Member", align: "start", numeric: false },
@@ -62,7 +61,7 @@ export function setMember(
   cell.dataset["state"] = state;
 }
 
-export interface ZoneStripOptions {
+interface ZoneStripOptions {
   id: IdOf;
   /** The table's name. */
   caption: string;
@@ -97,7 +96,6 @@ function cell(id: string, width: number): SafeHtml {
 export function zoneStrip(o: ZoneStripOptions): SafeHtml {
   return table({
     caption: o.caption,
-    gate: "gap-strip",
     rowHeader: "n",
     columns: [
       { key: "n", header: "Row", align: "start", numeric: true },

@@ -281,7 +281,7 @@ function resultLines(
 // ---------------------------------------------------------------------------
 
 /** The widget's chrome. The preset's values fill the fields; `mount` draws what the calls return. */
-export function renderIntervalTemplate(idPrefix: string): string {
+export function renderIntervalTemplate(idPrefix: string): SafeHtml {
   const id = idScope(idPrefix);
   const first = RELATIONSHIP_PRESETS[0]!;
   const initial = buildRelationshipPreset(first.type);
@@ -369,7 +369,7 @@ export function renderIntervalTemplate(idPrefix: string): string {
   return widget(
     { name: WIDGET_NAME, label: "Interval Visualizer", scope: idPrefix },
     html`${place}${compare}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

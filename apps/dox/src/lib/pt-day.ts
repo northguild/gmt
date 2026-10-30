@@ -22,7 +22,7 @@ import { convertZonedToUnix } from "@northguild/gmt/zoned/convert";
 /** Google resets RPD quotas at midnight in this zone. That is the provider's
  * stated reset, so each Gemini brain's own quota stays on it. The visitor cap
  * is Dox's own and uses `VISITOR_CAP_TIME_ZONE`. */
-export const QUOTA_TIME_ZONE = "America/Los_Angeles";
+const QUOTA_TIME_ZONE = "America/Los_Angeles";
 
 /** The clock of Dox's per-visitor daily cap: UTC days, for the cap's day key
  * and its reset. */
@@ -42,11 +42,6 @@ export function dayKey(nowMs: number, timeZone: string): string {
   // stable bucket instead of propagating an empty key.
   if (zoned === "") return "unknown";
   return zoned.slice(0, 10);
-}
-
-/** The Pacific calendar date for an instant — see `dayKey`. */
-export function ptDayKey(nowMs: number): string {
-  return dayKey(nowMs, QUOTA_TIME_ZONE);
 }
 
 /**

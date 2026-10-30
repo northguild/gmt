@@ -3,10 +3,12 @@ import {
   CUSTOM_PRESET_ID,
   MAX_STRIP_CELLS,
   billingPlates,
-  verdictSizerTexts,
   callSource,
   datesOf,
+  dayCellLabel,
+  dayParts,
   dayStrip,
+  gapLabel,
   explainNull,
   formatDeadlines,
   matchPreset,
@@ -507,9 +509,68 @@ describe("billingPlates", () => {
   });
 });
 
-describe("verdictSizerTexts", () => {
-  it("holds the three texts each kind can show", () => {
-    expect(verdictSizerTexts("issued")).toHaveLength(3);
-    expect(verdictSizerTexts("requested")).toHaveLength(3);
+describe("dayParts", () => {
+  it.each([
+    ["2026-03-01", "Sun", 1, "Mar", 2026],
+    ["2026-03-31", "Tue", 31, "Mar", 2026],
+    ["2024-02-29", "Thu", 29, "Feb", 2024],
+    ["9999-12-01", "Wed", 1, "Dec", 9999],
+    ["+010000-01-30", "Sun", 30, "Jan", 10000],
+    ["-000001-01-30", "Sat", 30, "Jan", -1],
+    ["-000002-12-01", "Tue", 1, "Dec", -2],
+  ])("reads %s as %s %i %s %i", (iso, weekday, day, month, year) => {
+    expect(dayParts(iso)).toEqual({ weekday, day, month, year });
+  });
+});
+
+describe("dayCellLabel and gapLabel", () => {
+  const day = (over: Partial<DayStripDay>): DayStripDay => ({
+    kind: "day",
+    date: "2026-03-31",
+    padding: false,
+    marks: [],
+    lanes: [],
+    ...over,
+  });
+
+  it("names a bare day by its date alone", () => {
+    expect(dayCellLabel(day({}))).toBe("Tue 31 Mar 2026");
+  });
+
+  it("names the marks, then each lane, with its deadline said in words", () => {
+    expect(
+      dayCellLabel(
+        day({
+          marks: ["invoice"],
+          lanes: [
+            { lane: 1, state: "deadline", day: 30 },
+            { lane: 2, state: "zero", day: 0 },
+          ],
+        }),
+      ),
+    ).toBe(
+      "Tue 31 Mar 2026: invoice issued; issue window day 30, invoice deadline; dispute window day 0",
+    );
+  });
+
+  it("names a day inside a window by its ordinal", () => {
+    expect(
+      dayCellLabel(day({ lanes: [{ lane: 3, state: "in", day: 4 }] })),
+    ).toBe("Tue 31 Mar 2026: resolution window day 4");
+  });
+
+  it("labels a day in a negative year with that year's weekday", () => {
+    expect(dayCellLabel(day({ date: "-000001-01-30" }))).toBe("Sat 30 Jan -1");
+  });
+
+  it("says how many days a gap row leaves out", () => {
+    expect(
+      gapLabel({
+        kind: "gap",
+        from: "2026-06-01",
+        to: "2030-01-01",
+        days: 1310,
+      }),
+    ).toBe("2026-06-01 to 2030-01-01: 1310 days not drawn");
   });
 });

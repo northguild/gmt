@@ -248,7 +248,7 @@ function blankView(now: number): LeapChartView {
 export function renderLeapSecondTimelineTemplate(
   idPrefix: string,
   args: LeapSecondTimelineArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state: TimelineState = isSeeded(args)
     ? readArgs(args)
@@ -266,6 +266,7 @@ export function renderLeapSecondTimelineTemplate(
           value,
           autocomplete: "off",
           spellcheck: false,
+          maxLength: 64,
         }),
     });
 
@@ -307,12 +308,14 @@ export function renderLeapSecondTimelineTemplate(
 
   const timeline = section(
     { id: id("timeline"), heading: "2. Every inserted second", level: 4 },
-    html`<div class="${styles.frame}" id="${id("frame")}" data-gate="frame">${leapCaption()}<div id="${id("chart")}">${leapChart(
-      blankView(0),
-      id,
-    )}</div>${leapLegend()}<div id="${id("plates")}">${plates(plateList(blankPlates()), { gate: "hero" })}</div></div>
+    html`${grow(
+      html`<div class="${styles.frame}" id="${id("frame")}" data-gate="frame">${leapCaption()}<div id="${id("chart")}">${leapChart(
+        blankView(0),
+        id,
+      )}</div>${leapLegend()}<div id="${id("plates")}">${plates(plateList(blankPlates()), { gate: "hero" })}</div></div>`,
+    )}
       <p role="status" aria-label="Timeline reading" id="${id("summary")}">${srOnly("")}</p>
-      <div id="${id("table")}">${tableOf(null, new Set())}</div>`,
+      ${grow(html`<div id="${id("table")}">${tableOf(null, new Set())}</div>`)}`,
   );
 
   const calls = section(
@@ -336,13 +339,13 @@ export function renderLeapSecondTimelineTemplate(
             })}</div>`,
           )}${grow(html`<div id="${id(`${g.id}-reason`)}"></div>`)}
         </div>`,
-    )}<div id="${id("links")}">${linksOf(null)}</div>`,
+    )}${grow(html`<div id="${id("links")}">${linksOf(null)}</div>`)}`,
   );
 
   return widget(
     { name: WIDGET_NAME, label: "Leap Second Timeline", scope: idPrefix },
     html`${dates}${timeline}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -526,7 +529,6 @@ function setupWidget(
     output: el(`${g.id}-output`),
     reason: el(`${g.id}-reason`),
   }));
-  for (const input of [dateEl, checkEl, fromEl, toEl]) input.maxLength = 64;
 
   let lastView: LeapChartView | null = null;
   let spoken = "";

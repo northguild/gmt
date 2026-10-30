@@ -31,6 +31,26 @@ describe("table", () => {
     expect(within(t).getByRole("cell", { name: "+01:00" })).toBeInTheDocument();
   });
 
+  it("keeps its headers and cells when the columns are laid out once", () => {
+    renderHtml(
+      table({
+        caption: "Calls",
+        columns: [
+          { key: "a", header: "Year", align: "start", numeric: false },
+          { key: "b", header: "Result", align: "end", numeric: true },
+        ],
+        rows: [{ a: "2024", b: "yes" }],
+        layout: "fixed",
+        widths: ["34%"],
+      }),
+    );
+    const t = screen.getByRole("table", { name: "Calls" });
+    expect(
+      within(t).getByRole("columnheader", { name: "Result" }),
+    ).toBeInTheDocument();
+    expect(within(t).getByRole("cell", { name: "yes" })).toBeInTheDocument();
+  });
+
   it("escapes cell text", () => {
     renderHtml(markup());
     expect(

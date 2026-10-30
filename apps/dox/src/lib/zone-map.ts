@@ -59,7 +59,7 @@ export { PIN_PLACEHOLDER };
 /** The drawing's own coordinate box; the SVG scales to its container with `viewBox`. */
 export const MAP_WIDTH = 800;
 /** Below this width of the section the map is not drawn (CSS hides it at the same width). */
-export const NARROW_PX = 520;
+const NARROW_PX = 520;
 
 // ---------------------------------------------------------------------------
 // Projection
@@ -69,7 +69,7 @@ export const NARROW_PX = 520;
  * A zone's shape (`tzid`), or the one land feature (`land: "other"`): the coastline's land that no
  * zone of the region covers, written first and drawn under the zones.
  */
-export interface BoundaryFeature {
+interface BoundaryFeature {
   type: "Feature";
   properties: { tzid?: string; land?: string };
   geometry: { type: string; coordinates: unknown };
@@ -100,8 +100,6 @@ export interface MapZone {
   next: Change | null;
   kind: "stopped" | "changes-after" | "none";
 }
-
-export type ZoneRow = MapZone;
 
 /** Everything the map takes from the checker that mounts it. */
 export interface ZoneMapConfig {
@@ -190,7 +188,7 @@ export function displayKind(
 }
 
 /** The class words of a zone in both tenses, or "no data" when the server sent no row. */
-export function classPhraseOf(
+function classPhraseOf(
   config: ZoneMapConfig,
   id: string,
   zone: MapZone | undefined,
@@ -316,20 +314,19 @@ export interface ZoneMapHandle {
 }
 
 /** The fields of one list item the script fills. */
-export interface ZoneMapFields {
+interface ZoneMapFields {
   kind: HTMLElement | null;
   offset: HTMLElement | null;
   swatch: HTMLElement | null;
 }
 
 /** The pin panel's readouts, and the announcement and the clock face's host. */
-export type PinPart = PinField | "announce" | "clock";
+type PinPart = PinField | "announce" | "clock";
 
 /**
- * Where the script finds its parts. `wireZoneMap` reads them from the widget's ids; the old mounts
- * read them from `data-role` (`zone-map-legacy.ts`). The behaviour below is the same for both.
+ * Where the script finds its parts: `wireZoneMap` reads them from the widget's ids.
  */
-export interface ZoneMapParts {
+interface ZoneMapParts {
   /** The section whose width decides whether the map is drawn. */
   section: HTMLElement;
   /** The frame the drawing goes in. */
@@ -409,7 +406,7 @@ export function wireZoneMap(
   return runZoneMap(parts, zones, signal, deps, config);
 }
 
-export function runZoneMap(
+function runZoneMap(
   parts: ZoneMapParts,
   zones: MapZone[],
   signal: AbortSignal,
@@ -1028,7 +1025,7 @@ export function largestPartPx(feature: BoundaryFeature, path: GeoPath): number {
  * The rings of the feature's largest part (the polygon whose projected box takes the most of the
  * drawing's box), projected to drawing px. Empty when nothing of it lies in the box.
  */
-export function largestProjectedPart(
+function largestProjectedPart(
   feature: BoundaryFeature,
   projection: GeoProjection,
   height: number,
@@ -1063,10 +1060,3 @@ export function largestProjectedPart(
   }
   return best;
 }
-
-// The old mounts' markup and mount, until they use `zoneMap` and `wireZoneMap`.
-export {
-  mountZoneMap,
-  renderPinPanelHtml,
-  zoneListItemHtml,
-} from "./zone-map-legacy";

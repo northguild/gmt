@@ -8,6 +8,7 @@
 import { screen, within } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { html } from "~/widgets/builders";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "~/widgets/test-fixture";
 import {
   CLOCK_OUTER,
@@ -131,6 +132,19 @@ describe("the night-light toggle", () => {
     await user.keyboard(" ");
     expect(entry).toBePressed();
     controller.abort();
+  });
+
+  it("has no axe violations as a button, pressed, or as an image", async () => {
+    const user = userEvent.setup();
+    const fx = renderHtml(pair());
+    const controller = new AbortController();
+    bindClockToggle(fx.host, controller.signal);
+    await expectNoAxeViolations(fx.host);
+    await user.click(within(fx.host).getByRole("button", { name: /^Entry/ }));
+    await expectNoAxeViolations(fx.host);
+    controller.abort();
+    const still = renderHtml(crystalClock({ ...base, glowable: false }));
+    await expectNoAxeViolations(still.host);
   });
 
   it("stops listening on abort", async () => {

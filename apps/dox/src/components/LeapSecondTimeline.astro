@@ -22,7 +22,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderLeapSecondTimelineTemplate("leap-second-timeline");
+const html = renderLeapSecondTimelineTemplate("leap-second-timeline").value;
 ---
 
 {

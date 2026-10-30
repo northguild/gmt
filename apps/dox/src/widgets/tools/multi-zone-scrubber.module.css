@@ -1,0 +1,87 @@
+/* The Zone Planner: what only this tool needs. The sections, fields, buttons, slider, readout,
+   combobox and copy button are the kit's; this sheet lays out the status line, the marks over
+   the slider's track, the share row and the grid of tiles. Tokens only. */
+
+/* The status under the two buttons holds two lines, so a message arriving (or going) never
+   moves the controls below it. */
+.jumpStatus {
+  margin: 0;
+  min-block-size: calc(2 * 1.4em);
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+}
+
+/* The marks sit behind the range (they come first in the markup), so the thumb is above them. */
+.slider {
+  position: relative;
+  inline-size: 100%;
+}
+
+/* A diamond on the track at each shown zone's clock change. Decorative: each tile says the
+   same in words. The track is the range's chip row (1.75rem) down, one input tall. */
+.marks {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 1.75rem;
+  block-size: 1.75rem;
+  pointer-events: none;
+}
+
+.mark {
+  position: absolute;
+  inset-block-start: 50%;
+
+  /* The thumb's centre: the track is the width less one thumb (1.5rem). */
+  inset-inline-start: calc(
+    (100% - 1.5rem) * var(--gmt-mark-pct, 0) / 100 + 0.75rem
+  );
+  inline-size: 0.55rem;
+  block-size: 0.55rem;
+  box-sizing: border-box;
+  translate: -50% -50%;
+  rotate: 45deg;
+  border: 1px solid var(--gmt-dst-gold);
+  corner-shape: bevel;
+  background: transparent;
+
+  &[data-kind="back"] {
+    background: var(--gmt-dst-gold);
+  }
+}
+
+.share {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+}
+
+/* One tile per pinned zone, as many across as the card is wide. The floor is the dial's legible
+   size plus its captions; `auto-fit` fits three across a wide pane and one on a phone without a
+   breakpoint per count. The track is capped at 14rem rather than `1fr`: left to stretch, three
+   zones in a wide card became three enormous tiles with a small dial adrift in each. */
+.rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 14rem));
+  justify-content: start;
+  gap: var(--gmt-space-3);
+}
+
+@media (forced-colors: active) {
+  .mark {
+    border-color: CanvasText;
+
+    &[data-kind="back"] {
+      background: CanvasText;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .jumpStatus,
+  .share {
+    color: var(--gmt-ice);
+  }
+}

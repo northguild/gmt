@@ -6,7 +6,7 @@
  */
 import { TRANSPORT_ZONES } from "~/lib/cutoff-widgets";
 
-export interface ZoneChoice {
+interface ZoneChoice {
   value: string;
   label: string;
 }

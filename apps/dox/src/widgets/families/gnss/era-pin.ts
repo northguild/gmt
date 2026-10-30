@@ -9,7 +9,7 @@
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./era-pin.module.css";
 
-export interface EraPinOptions {
+interface EraPinOptions {
   /** The reading's own era. */
   chosen: boolean;
   /** The library gave this era no instant. */

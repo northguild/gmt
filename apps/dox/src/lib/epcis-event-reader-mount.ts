@@ -14,31 +14,57 @@
  * (`epcisNullText`, decided by the library's validators). A state with no
  * library call behind it renders as empty, never amber.
  *
- * Follows the DTM Decoder's split: every listener is delegated on the root, so
- * the host dropping the subtree is a complete teardown. Nothing in the
- * server-rendered template holds a result.
+ * Built on the component kit: `renderEpcisEventReaderTemplate` writes the markup
+ * from builders only, with ids from `idScope(idPrefix)`. `mount` finds its parts
+ * by those ids, reads and writes element `value` properties, and listens once on
+ * the widget with the mount's `signal`, so the host dropping the subtree is a
+ * complete teardown. Nothing in the server-rendered template holds a result.
  */
-import { codeFrameHtml } from "./code-frame";
+import { defineElements } from "~/widgets/define";
+import {
+  field,
+  fieldGrid,
+  findWidget,
+  html,
+  idScope,
+  section,
+  setHtml,
+  textInput,
+  widget,
+  type SafeHtml,
+} from "~/widgets/builders";
+import {
+  callFrameContent,
+  callFrameHold,
+  outputOf,
+  emptyOutput,
+  lostOutput,
+  outputContent,
+  outputHold,
+  valueOutput,
+} from "~/widgets/families/edi/edi-call";
+import {
+  ediFigure,
+  figureContent,
+  type FigureValue,
+} from "~/widgets/families/edi/edi-figure";
+import { holdText } from "~/widgets/families/edi/edi-hold";
+import { memberTable, setMember } from "~/widgets/families/edi/edi-table";
+import {
+  asideContent,
+  asideHold,
+  verdictContent,
+  verdictHold,
+} from "~/widgets/families/edi/edi-view";
+import { epcisRail, railContent } from "~/widgets/families/edi/epcis-rail";
+import { handoffLink } from "~/widgets/families/ledger/handoff-link";
+import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
+import styles from "~/widgets/tools/epcis-event-reader.module.css";
 import { loadEpcisLib } from "./edi-lib";
-import {
-  asideSizer,
-  callOutputSizer,
-  callSizer,
-  figureSizer,
-  holdHtml,
-  lit,
-  outputSizer,
-  takenApartHtml,
-  textSizers,
-} from "./edi-picture";
-import { callResultsText, drawFigure, renderCalls } from "./edi-render";
-import {
-  NO_RESULT_TEXT,
-  NO_RESULT_TITLE,
-  readoutOf,
-  readoutRowsHtml,
-} from "./edi-widgets";
 import type { EpcisLib } from "./edi-lib";
+import { lit } from "./edi-picture";
+import { callResultsText } from "./edi-render";
+import { NO_RESULT_TEXT, readoutOf } from "./edi-widgets";
 import {
   CUSTOM_PRESET_ID,
   DATE_ROWS,
@@ -64,7 +90,6 @@ import {
   presetState,
   railAria,
   railEmptyText,
-  railHtml,
   railName,
   railsOf,
   readArgs,
@@ -77,41 +102,48 @@ import {
   type RailRole,
   type RailSpec,
 } from "./epcis-event-reader";
-import { setPresetDescription } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { encodeWidgetPermalink } from "./widget-permalink";
-import {
-  clearCallLine,
-  escapeAttr,
-  escapeHtml,
-  labelTextHtml,
-  renderAside,
-  renderWidgetOutput,
-  setControlValue,
-  wireCopyButtons,
-} from "./widget-ui";
 
 export type { EpcisEventReaderArgs } from "./epcis-event-reader";
 
-/** The options of the preset `<select>`. Custom first, unselected unless no
- *  preset matches. */
-function presetOptions(presetId: string): string {
-  return (
-    `<option value="${CUSTOM_PRESET_ID}"${presetId === CUSTOM_PRESET_ID ? " selected" : ""}>Custom</option>` +
-    EPCIS_PRESETS.map(
-      (p) =>
-        `<option value="${escapeAttr(p.id)}"${p.id === presetId ? " selected" : ""}>${escapeHtml(p.label)}</option>`,
-    ).join("")
-  );
+const WIDGET_NAME = "epcis-event-reader";
+const EMPTY_FIGURE =
+  "Type an eventTime and an eventTimeZoneOffset to take them apart.";
+const ROLES: readonly RailRole[] = ["utc", "local"];
+
+/** The tallest picture the figure draws: the widest event time and an offset. */
+const RESERVED_FIGURES: readonly FigureValue[] = [
+  {
+    halves: [
+      { label: "eventTime", fields: cutEventTime(WIDEST_EVENT.eventTime) },
+      {
+        label: "eventTimeZoneOffset",
+        fields: [lit(WIDEST_EVENT.eventTimeZoneOffset, "±hh:mm", "offset")],
+      },
+    ],
+    separator: "",
+    closing: "",
+  },
+];
+
+/** What a rail shows with nothing to draw. */
+function emptyRail(role: RailRole, emptyText: string): RailSpec {
+  return {
+    role,
+    name: railName(role, null),
+    date: NO_RESULT_TEXT,
+    layout: null,
+    pin: 50,
+    emptyText,
+    aria: railAria(role, null, "", emptyText),
+  };
 }
 
-/**
- * The sizers of one rail's hold: the rail in every empty state, and the rail
- * with the widest name and date and the most days a rail draws.
- */
-function railSizers(role: RailRole, empties: readonly string[]): string[] {
+/** The rail at its widest name, date and day count, then every empty sentence. */
+function railReserve(role: RailRole, empties: readonly string[]): RailSpec[] {
   const rails = railsOf(WIDEST_RESULT);
-  const widest = railHtml(
+  return [
     {
       role,
       name: railName(role, WIDEST_RESULT),
@@ -121,23 +153,8 @@ function railSizers(role: RailRole, empties: readonly string[]): string[] {
       emptyText: "",
       aria: "",
     },
-    true,
-  );
-  const empty = [...new Set(empties)].map((emptyText) =>
-    railHtml(
-      {
-        role,
-        name: railName(role, null),
-        date: NO_RESULT_TEXT,
-        layout: null,
-        pin: rails.pin,
-        emptyText,
-        aria: "",
-      },
-      true,
-    ),
-  );
-  return [widest, ...empty];
+    ...[...new Set(empties)].map((text) => emptyRail(role, text)),
+  ];
 }
 
 /**
@@ -146,153 +163,169 @@ function railSizers(role: RailRole, empties: readonly string[]): string[] {
  * come from the real library calls.
  */
 export function renderEpcisEventReaderTemplate(
+  idPrefix: string,
   args: EpcisEventReaderArgs = {},
-): string {
+): SafeHtml {
+  const id = idScope(idPrefix);
   const state: EpcisState = isSeeded(args)
     ? readArgs(args)
     : presetState(EPCIS_PRESETS[0]!);
   const presetId = matchPreset(state);
-  const preset = EPCIS_PRESETS.find((p) => p.id === presetId);
-
   const t = epcisTexts();
-  const hint = "gmt-widget-hint";
-  const widestTime = cutEventTime(WIDEST_EVENT.eventTime);
-  const figures = figureSizer([
-    {
-      halves: [
-        { label: "eventTime", fields: widestTime },
-        {
-          label: "eventTimeZoneOffset",
-          fields: [lit(WIDEST_EVENT.eventTimeZoneOffset, "±hh:mm", "offset")],
-        },
-      ],
-      separator: "",
-      closing: "",
-    },
-  ]);
 
-  return (
-    `<div class="gmt-epcis-event-reader gmt-widget not-content">` +
-    `<div class="gmt-widget-card">` +
-    // 1. The event's two fields
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>1. The event's two fields</h4>` +
-    `<div class="gmt-field-grid gmt-edi-top">` +
-    `<label class="gmt-label gmt-edi-preset">${labelTextHtml("Preset")}` +
-    `<select class="gmt-select" data-role="preset">${presetOptions(presetId)}</select>` +
-    `</label>` +
-    `<label class="gmt-label gmt-edi-main">${labelTextHtml("eventTime")}` +
-    `<input class="gmt-input" data-role="event-time" type="text" maxlength="${EVENT_TIME_MAX}" spellcheck="false" autocomplete="off" autocapitalize="off" value="${escapeAttr(state.eventTime)}"></label>` +
-    `<label class="gmt-label">${labelTextHtml("eventTimeZoneOffset")}` +
-    `<input class="gmt-input" data-role="offset" type="text" maxlength="${OFFSET_MAX}" spellcheck="false" autocomplete="off" autocapitalize="off" value="${escapeAttr(state.eventTimeZoneOffset)}"></label>` +
-    `</div>` +
-    holdHtml(
-      `<p class="gmt-widget-hint" data-role="preset-description" data-grow="slot">${escapeHtml(preset?.description ?? "")}</p>`,
-      textSizers("p", hint, t.descriptions),
-    ) +
-    `</div>` +
-    // 2. What the event states
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>2. What the event states</h4>` +
-    `<div class="gmt-edi-split">` +
-    `<div class="gmt-edi-pane">` +
-    `<div class="gmt-edi-panel">` +
-    holdHtml(
-      `<div class="gmt-edi-figure" data-role="figure" role="img" aria-label=""></div>`,
-      [figures],
-    ) +
-    `<p class="gmt-widget-hint">The tool cuts each field only to draw it. The library reads each field whole.</p>` +
-    holdHtml(
-      `<div data-role="reason-aside"></div>`,
-      t.nulls.map((n) => asideSizer(NO_RESULT_TITLE, [n])),
-    ) +
-    `</div>` +
-    holdHtml(
-      `<div class="gmt-edi-call" data-role="parse-block">${codeFrameHtml("parse")}</div>`,
-      [callSizer(t.parseCall)],
-    ) +
-    `</div>` +
-    `<div class="gmt-edi-pane">` +
-    holdHtml(
-      `<p class="gmt-edi-verdict" data-role="verdict" aria-live="polite"></p>`,
-      textSizers("p", "gmt-edi-verdict", t.verdicts),
-    ) +
-    holdHtml(
-      `<p class="gmt-edi-detail" data-role="verdict-detail"></p>`,
-      textSizers("p", "gmt-edi-detail", t.details),
-    ) +
-    `<dl class="gmt-edi-readouts gmt-epcis-members" data-role="readouts">${readoutRowsHtml(MEMBER_ROWS)}</dl>` +
-    holdHtml(
-      `<output class="gmt-widget-output gmt-edi-out" data-role="parse-output">&nbsp;</output>`,
-      [outputSizer("gmt-widget-output gmt-edi-out", t.parseOutput)],
-    ) +
-    `</div>` +
-    `</div>` +
-    `</div>` +
-    // 3. The same moment on two clocks
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>3. The same moment on two clocks</h4>` +
-    `<div class="gmt-edi-split">` +
-    `<div class="gmt-edi-pane">` +
-    `<div class="gmt-edi-panel gmt-epcis-rails">` +
-    (["utc", "local"] as const)
-      .map((role) =>
-        holdHtml(
-          railHtml({
-            role,
-            name: railName(role, null),
-            date: NO_RESULT_TEXT,
-            layout: null,
-            pin: 50,
-            emptyText: "Nothing to place yet.",
-            aria: "",
+  const fields = section(
+    { id: id("fields"), heading: "1. The event's two fields", level: 4 },
+    html`<div class="${styles.controls}">${preset({
+      id: id("preset"),
+      label: "Preset",
+      value: presetId,
+      options: [
+        { value: CUSTOM_PRESET_ID, label: "Custom", description: "" },
+        ...EPCIS_PRESETS.map((p) => ({
+          value: p.id,
+          label: p.label,
+          description: p.description,
+        })),
+      ],
+    })}${fieldGrid(
+      html`${field({
+        id: id("event-time"),
+        label: "eventTime",
+        control: ({ id: cid, describedBy }) =>
+          textInput({
+            id: cid,
+            value: state.eventTime,
+            autocomplete: "off",
+            spellcheck: false,
+            maxLength: EVENT_TIME_MAX,
+            describedBy,
           }),
-          railSizers(role, t.railEmpty),
-        ),
-      )
-      .join("") +
-    `</div>` +
-    `</div>` +
-    `<div class="gmt-edi-pane">` +
-    `<dl class="gmt-edi-readouts gmt-epcis-dates" data-role="dates">${readoutRowsHtml(DATE_ROWS)}</dl>` +
-    holdHtml(
-      `<p class="gmt-edi-verdict gmt-edi-verdict--long" data-role="words"></p>`,
-      textSizers("p", "gmt-edi-verdict gmt-edi-verdict--long", t.words),
-    ) +
-    holdHtml(`<div data-role="dates-aside"></div>`, [
-      asideSizer(NO_RESULT_TITLE, [t.datesNull]),
-    ]) +
-    holdHtml(
-      `<div class="gmt-edi-call" data-role="dates-block" hidden>` +
-        codeFrameHtml("dates") +
-        `<output class="gmt-widget-output gmt-edi-out" data-role="dates-output">&nbsp;</output>` +
-        `</div>`,
-      [callOutputSizer(t.dateCalls, t.dateOutput)],
-    ) +
-    `</div>` +
-    `</div>` +
-    `</div>` +
-    // 4. Written back
-    `<div class="gmt-widget-section gmt-widget-section--wide">` +
-    `<h4>4. Written back by formatEpcisEvent</h4>` +
-    `<div class="gmt-edi-written">` +
-    holdHtml(
-      `<output class="gmt-widget-output gmt-edi-out" data-role="format-output">&nbsp;</output>`,
-      [outputSizer("gmt-widget-output gmt-edi-out", t.formatOutput)],
-    ) +
-    holdHtml(
-      `<div class="gmt-edi-call" data-role="format-block" hidden>${codeFrameHtml("format")}</div>`,
-      [callSizer(t.formatCall)],
-    ) +
-    `</div>` +
-    holdHtml(
-      `<p class="gmt-widget-hint" data-role="format-note" data-grow="slot"></p>`,
-      textSizers("p", hint, t.writeNotes),
-    ) +
-    `<div class="gmt-widget-controls"><a class="gmt-button gmt-button--pad" data-role="handoff" aria-disabled="true">${escapeHtml(HANDOFF_LABEL)}</a></div>` +
-    `</div>` +
-    `</div>` +
-    `</div>`
+      })}${field({
+        id: id("offset"),
+        label: "eventTimeZoneOffset",
+        control: ({ id: cid, describedBy }) =>
+          textInput({
+            id: cid,
+            value: state.eventTimeZoneOffset,
+            autocomplete: "off",
+            spellcheck: false,
+            maxLength: OFFSET_MAX,
+            describedBy,
+          }),
+      })}`,
+    )}</div>`,
+  );
+
+  const states = section(
+    { id: id("states"), heading: "2. What the event states", level: 4 },
+    html`<div class="${styles.split}">
+      <div class="${styles.pane}">
+        <div class="${styles.panel}">${ediFigure({
+          id: id("figure"),
+          spec: { kind: "empty", text: EMPTY_FIGURE },
+          reserve: RESERVED_FIGURES,
+        })}<p class="${styles.note}">The tool cuts each field only to draw it. The library reads each field whole.</p>${asideHold(
+          {
+            id: id("reason"),
+            paragraphs: [],
+            reasons: t.nulls,
+          },
+        )}</div>
+        ${callFrameHold({
+          id: id("parse-call"),
+          spec: { label: "Call made", calls: [] },
+          samples: [t.parseCall],
+        })}
+      </div>
+      <div class="${styles.pane}">${verdictHold({
+        id: id("verdict"),
+        titles: t.verdicts,
+        details: t.details,
+      })}${memberTable({
+        id,
+        caption: "What the parser returned, member by member",
+        prefix: "member",
+        rows: MEMBER_ROWS.map((r) => ({ key: r.key, label: r.label })),
+      })}${outputHold({
+        id: id("parse-output"),
+        label: "What the call returned",
+        state: emptyOutput("nothing to read"),
+        samples: [t.parseOutput],
+      })}</div>
+    </div>`,
+  );
+
+  const clocks = section(
+    { id: id("clocks"), heading: "3. The same moment on two clocks", level: 4 },
+    html`<div class="${styles.split}">
+      <div class="${styles.pane}">
+        <div class="${styles.panel}">${ROLES.map((role) =>
+          epcisRail({
+            id: id(`rail-${role}`),
+            spec: emptyRail(role, "Nothing to place yet."),
+            reserve: railReserve(role, t.railEmpty),
+          }),
+        )}</div>
+      </div>
+      <div class="${styles.pane}">${memberTable({
+        id,
+        caption: "The date on each clock, as the library returned it",
+        prefix: "date",
+        rows: DATE_ROWS.map((r) => ({ key: r.key, label: r.label })),
+      })}${holdText({
+        id: id("words"),
+        role: "status",
+        label: "The two dates compared",
+        text: "",
+        samples: t.words,
+      })}${asideHold({
+        id: id("dates-aside"),
+        paragraphs: [],
+        reasons: [t.datesNull],
+      })}${callFrameHold({
+        id: id("dates-call"),
+        spec: { label: "Calls made", calls: [] },
+        samples: [t.dateCalls],
+      })}${outputHold({
+        id: id("dates-output"),
+        label: "What the calls returned",
+        state: emptyOutput("no dates to compare"),
+        samples: [t.dateOutput],
+      })}</div>
+    </div>`,
+  );
+
+  const back = section(
+    {
+      id: id("back"),
+      heading: "4. Written back by formatEpcisEvent",
+      level: 4,
+    },
+    html`<div class="${styles.written}">${outputHold({
+      id: id("format-output"),
+      label: "The value written back",
+      state: emptyOutput("no value to write back"),
+      samples: [t.formatOutput],
+    })}${callFrameHold({
+      id: id("format-call"),
+      spec: { label: "Call made", calls: [] },
+      samples: [t.formatCall],
+    })}</div>${holdText({
+      id: id("format-note"),
+      role: "note",
+      label: "About the written value",
+      text: "",
+      samples: t.writeNotes,
+    })}<div class="${styles.handoff}">${handoffLink({
+      id: id("handoff"),
+      label: HANDOFF_LABEL,
+      describedBy: id("format-note"),
+    })}</div>`,
+  );
+
+  return widget(
+    { name: WIDGET_NAME, label: "EPCIS Event Reader", scope: idPrefix },
+    html`${fields}${states}${clocks}${back}`,
   );
 }
 
@@ -300,12 +333,22 @@ export function renderEpcisEventReaderTemplate(
 // Wiring
 // ---------------------------------------------------------------------------
 
-function setupWidget(root: HTMLElement, lib: EpcisLib, signal: AbortSignal) {
-  const q = <T extends HTMLElement>(role: string) =>
-    root.querySelector(`[data-role="${role}"]`) as T | null;
-  const presetEl = q<HTMLSelectElement>("preset")!;
-  const timeEl = q<HTMLInputElement>("event-time")!;
-  const offsetEl = q<HTMLInputElement>("offset")!;
+interface Controller {
+  readState(): EpcisState;
+  apply(s: EpcisState): void;
+  render(): void;
+  syncPreset(s: EpcisState): void;
+}
+
+function setupWidget(
+  root: HTMLElement,
+  lib: EpcisLib,
+  signal: AbortSignal,
+): Controller {
+  const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
+  const presetEl = widgetEl.querySelector<GmtPreset>("gmt-preset")!;
+  const timeEl = el<HTMLInputElement>("event-time");
+  const offsetEl = el<HTMLInputElement>("offset");
 
   let destroyed = false;
   signal.addEventListener("abort", () => {
@@ -318,42 +361,28 @@ function setupWidget(root: HTMLElement, lib: EpcisLib, signal: AbortSignal) {
   });
 
   function syncPreset(s: EpcisState): void {
-    const id = matchPreset(s);
-    presetEl.value = id;
-    const slot = q("preset-description");
-    if (slot) {
-      setPresetDescription(
-        slot,
-        EPCIS_PRESETS.find((p) => p.id === id)?.description ?? "",
-      );
-    }
-  }
-
-  /** Replaces the live rail of a role (the hold's sizers carry no `data-role`). */
-  function drawRail(spec: RailSpec): void {
-    const live = q(`rail-${spec.role}`);
-    if (!live) return;
-    const holder = root.ownerDocument.createElement("div");
-    holder.innerHTML = railHtml(spec);
-    live.replaceWith(holder.firstElementChild!);
+    presetEl.value = matchPreset(s);
   }
 
   function renderRails(s: EpcisState, read: EpcisRead): void {
     const rails =
       read.result !== null && read.dates !== null ? railsOf(read.result) : null;
-    for (const role of ["utc", "local"] as const) {
+    for (const role of ROLES) {
       const date = role === "utc" ? read.dates?.utcDate : read.dates?.localDate;
       const drawn = rails !== null && date !== undefined && date !== "";
       const emptyText = drawn ? "" : railEmptyText(role, read, s);
-      drawRail({
-        role,
-        name: railName(role, read.result),
-        date: drawn ? date : NO_RESULT_TEXT,
-        layout: drawn ? rails[role] : null,
-        pin: rails?.pin ?? 50,
-        emptyText,
-        aria: railAria(role, read.result, drawn ? date : "", emptyText),
-      });
+      setHtml(
+        el(`rail-${role}`),
+        railContent({
+          role,
+          name: railName(role, read.result),
+          date: drawn ? date : NO_RESULT_TEXT,
+          layout: drawn ? rails[role] : null,
+          pin: rails?.pin ?? 50,
+          emptyText,
+          aria: railAria(role, read.result, drawn ? date : "", emptyText),
+        }),
+      );
     }
   }
 
@@ -363,191 +392,161 @@ function setupWidget(root: HTMLElement, lib: EpcisLib, signal: AbortSignal) {
     const read = readEpcis(s, lib);
 
     // Section 2: the parse call.
-    const parseBlock = q("parse-block");
-    if (parseBlock) parseBlock.hidden = read.parse === null;
-    const out = q("parse-output");
-    if (read.parse === null) {
-      if (out) renderWidgetOutput(out, "nothing to read", "empty");
-      clearCallLine(q("call-parse"));
-    } else {
-      renderCalls(q("call-parse"), [read.parse]);
-      if (out) {
-        if (read.result === null) {
-          renderWidgetOutput(out, "NO SIGNAL", "sentinel");
-        } else {
-          renderWidgetOutput(out, callResultsText([read.parse]), "live");
-        }
-      }
-    }
-    const verdict = q("verdict");
-    if (verdict) verdict.textContent = verdictText(read, s);
-    const detail = q("verdict-detail");
-    if (detail) detail.textContent = detailText(read);
+    setHtml(
+      el("parse-call"),
+      callFrameContent({
+        label: "Call made",
+        calls: read.parse === null ? [] : [read.parse],
+      }),
+    );
+    setHtml(
+      el("parse-output"),
+      outputContent(
+        "What the call returned",
+        read.parse === null
+          ? emptyOutput("nothing to read")
+          : read.result === null
+            ? lostOutput()
+            : valueOutput(callResultsText([read.parse])),
+      ),
+    );
+    setHtml(
+      el("verdict"),
+      verdictContent(verdictText(read, s), detailText(read)),
+    );
     for (const row of MEMBER_ROWS) {
-      const cell = q(row.role);
-      if (!cell) continue;
       const r = readoutOf(memberText(read, row.key), read.result !== null);
-      cell.textContent = r.text;
-      cell.dataset["state"] = r.state;
+      setMember(el(row.role), r.text, r.state);
     }
 
     // The two fields taken apart.
-    const figure = q("figure");
-    if (figure) {
-      if (read.blank) {
-        drawFigure(figure, {
-          kind: "empty",
-          text: "Type an eventTime and an eventTimeZoneOffset to take them apart.",
-        });
-      } else {
-        const fig = epcisFigure(s, lib);
-        figure.dataset["state"] = "value";
-        figure.dataset["scale"] = "md";
-        figure.innerHTML = takenApartHtml(fig.halves, "", "");
-        figure.setAttribute("aria-label", fig.aria);
-      }
+    if (read.blank) {
+      setHtml(
+        el("figure"),
+        figureContent({ kind: "empty", text: EMPTY_FIGURE }),
+      );
+    } else {
+      const fig = epcisFigure(s, lib);
+      setHtml(
+        el("figure"),
+        figureContent({
+          kind: "value",
+          halves: fig.halves,
+          separator: "",
+          closing: "",
+          aria: fig.aria,
+        }),
+      );
     }
-    const aside = q("reason-aside");
-    if (aside) {
-      if (!read.blank && read.result === null) {
-        renderAside(
-          aside,
-          "caution",
-          NO_RESULT_TITLE,
-          `<p>${escapeHtml(epcisNullText(s, lib))}</p>`,
-        );
-      } else {
-        aside.innerHTML = "";
-      }
-    }
+    setHtml(
+      el("reason"),
+      asideContent(
+        !read.blank && read.result === null ? [epcisNullText(s, lib)] : [],
+      ),
+    );
 
     // Section 3: the two dates on two rails.
     renderRails(s, read);
     for (const row of DATE_ROWS) {
-      const cell = q(row.role);
-      if (!cell) continue;
       const text =
         row.key === "utc" ? read.dates?.utcDate : read.dates?.localDate;
       const r = readoutOf(
         text === undefined || text === "" ? null : text,
         read.dates !== null,
       );
-      cell.textContent = r.text;
-      cell.dataset["state"] = r.state;
+      setMember(el(row.role), r.text, r.state);
     }
-    const words = q("words");
-    if (words) words.textContent = datesWords(read.dates);
-    const datesBlock = q("dates-block");
-    const datesOut = q("dates-output");
-    const datesAside = q("dates-aside");
-    if (datesBlock) datesBlock.hidden = read.dates === null;
-    if (read.dates === null) {
-      clearCallLine(q("call-dates"));
-      if (datesOut)
-        renderWidgetOutput(datesOut, "no dates to compare", "empty");
-      if (datesAside) datesAside.innerHTML = "";
-    } else {
-      renderCalls(q("call-dates"), read.dates.calls);
-      if (datesOut) {
-        if (read.dates.sameness === null) {
-          renderWidgetOutput(datesOut, "NO SIGNAL", "sentinel");
-        } else {
-          renderWidgetOutput(
-            datesOut,
-            callResultsText(read.dates.calls),
-            "live",
-          );
-        }
-      }
-      if (datesAside) {
-        if (read.dates.sameness === null) {
-          renderAside(
-            datesAside,
-            "caution",
-            NO_RESULT_TITLE,
-            `<p>${escapeHtml(DATES_NULL_TEXT)}</p>`,
-          );
-        } else {
-          datesAside.innerHTML = "";
-        }
-      }
-    }
+    el("words").textContent = datesWords(read.dates);
+    const dates = read.dates;
+    setHtml(
+      el("dates-call"),
+      callFrameContent({
+        label: "Calls made",
+        calls: dates === null ? [] : dates.calls,
+      }),
+    );
+    setHtml(
+      el("dates-output"),
+      outputContent(
+        "What the calls returned",
+        dates === null
+          ? emptyOutput("no dates to compare")
+          : outputOf(dates.sameness === null ? "sentinel" : "ok", dates.calls),
+      ),
+    );
+    setHtml(
+      el("dates-aside"),
+      asideContent(
+        dates !== null && dates.sameness === null ? [DATES_NULL_TEXT] : [],
+      ),
+    );
 
     // Section 4: written back, and the hand-off.
     const written = writeBack(read, lib);
-    const fmtOut = q("format-output");
-    const fmtNote = q("format-note");
-    const fmtBlock = q("format-block");
-    if (fmtBlock) fmtBlock.hidden = written === null;
-    if (written === null) {
-      clearCallLine(q("call-format"));
-      if (fmtOut) renderWidgetOutput(fmtOut, "no value to write back", "empty");
-      if (fmtNote) fmtNote.textContent = "";
-    } else {
-      renderCalls(q("call-format"), [written.call]);
-      if (fmtOut) {
-        if (written.written === null) {
-          renderWidgetOutput(fmtOut, "NO SIGNAL", "sentinel");
-        } else {
-          renderWidgetOutput(fmtOut, callResultsText([written.call]), "live");
-        }
-      }
-      if (fmtNote) fmtNote.textContent = written.note;
-    }
-    const link = q<HTMLAnchorElement>("handoff");
+    setHtml(
+      el("format-call"),
+      callFrameContent({
+        label: "Call made",
+        calls: written === null ? [] : [written.call],
+      }),
+    );
+    setHtml(
+      el("format-output"),
+      outputContent(
+        "The value written back",
+        written === null
+          ? emptyOutput("no value to write back")
+          : written.written === null
+            ? lostOutput()
+            : valueOutput(callResultsText([written.call])),
+      ),
+    );
+    el("format-note").textContent = written === null ? "" : written.note;
+    const link = el<HTMLAnchorElement>("handoff");
     const handoff = handoffArgs(read);
-    if (link) {
-      if (handoff !== null) {
-        link.setAttribute("href", encodeWidgetPermalink("bldate", handoff));
-        link.removeAttribute("aria-disabled");
-      } else {
-        link.removeAttribute("href");
-        link.setAttribute("aria-disabled", "true");
-      }
+    if (handoff !== null) {
+      link.setAttribute("href", encodeWidgetPermalink("bldate", handoff));
+      link.removeAttribute("aria-disabled");
+    } else {
+      link.removeAttribute("href");
+      link.setAttribute("aria-disabled", "true");
     }
   }
 
   /** Write a whole state onto the controls. */
   function apply(s: EpcisState): void {
-    setControlValue(timeEl, s.eventTime);
-    setControlValue(offsetEl, s.eventTimeZoneOffset);
+    timeEl.value = s.eventTime;
+    offsetEl.value = s.eventTimeZoneOffset;
   }
 
-  function applyPreset(): void {
-    const preset = EPCIS_PRESETS.find((p) => p.id === presetEl.value);
-    if (!preset) return;
-    apply(presetState(preset));
-    syncPreset(readState());
-    render();
-  }
+  widgetEl.addEventListener(
+    "input",
+    (e) => {
+      if (destroyed) return;
+      if (e.target !== timeEl && e.target !== offsetEl) return;
+      syncPreset(readState());
+      render();
+    },
+    { signal },
+  );
 
-  root.addEventListener("input", (e) => {
-    if (destroyed) return;
-    const role = (e.target as HTMLElement).dataset?.["role"] ?? "";
-    if (role !== "event-time" && role !== "offset") return;
-    syncPreset(readState());
-    render();
-  });
+  widgetEl.addEventListener(
+    "change",
+    (e) => {
+      if (destroyed || e.target !== presetEl) return;
+      const chosen = EPCIS_PRESETS.find((p) => p.id === presetEl.value);
+      if (!chosen) return;
+      apply(presetState(chosen));
+      syncPreset(readState());
+      render();
+    },
+    { signal },
+  );
 
-  root.addEventListener("change", (e) => {
-    if (destroyed) return;
-    const role = (e.target as HTMLElement).dataset?.["role"] ?? "";
-    if (role === "preset") applyPreset();
-  });
-
-  wireCopyButtons(root);
   syncPreset(readState());
   render();
 
-  return {
-    readState,
-    apply,
-    render,
-    syncPreset,
-    destroy: () => {
-      destroyed = true;
-    },
-  };
+  return { readState, apply, render, syncPreset };
 }
 
 export const mountEpcisEventReader: MountFn<EpcisEventReaderArgs> = async (
@@ -555,6 +554,7 @@ export const mountEpcisEventReader: MountFn<EpcisEventReaderArgs> = async (
   args,
   signal,
 ) => {
+  defineElements();
   let lib: EpcisLib;
   try {
     lib = await loadEpcisLib();
@@ -572,7 +572,7 @@ export const mountEpcisEventReader: MountFn<EpcisEventReaderArgs> = async (
   }
 
   return onceDestroy(
-    () => widget.destroy(),
+    () => {},
     () => permalinkOf(widget.readState()),
   );
 };

@@ -78,7 +78,7 @@ export const NO_HANDOFF_TEXT = "A single leg has no hand-off.";
 // Presets
 // ---------------------------------------------------------------------------
 
-export interface JourneyPreset {
+interface JourneyPreset {
   id: string;
   label: string;
   description: string;
@@ -280,10 +280,10 @@ export interface Hop {
   beyondMs: number;
 }
 
-export type SegmentKind = "moving" | "handling" | "scheduled";
+type SegmentKind = "moving" | "handling" | "scheduled";
 
 /** A stretch of the journey, where its two instants fall. */
-export interface Segment {
+interface Segment {
   kind: SegmentKind;
   /** A moving segment's leg, or the leg before a wait; 1-based. */
   leg: number;
@@ -434,7 +434,7 @@ export interface Placed extends Segment {
   toMs: number;
 }
 
-export interface Ribbons {
+interface Ribbons {
   /** The length of the journey: first departure to last arrival. */
   spanMs: number;
   /** "As it happens": each segment where its instants fall. */
@@ -490,7 +490,7 @@ export function layoutRibbons(segments: readonly Segment[]): Ribbons {
   return { spanMs: end - origin, happens, gathered };
 }
 
-export interface AxisTick {
+interface AxisTick {
   /** Where the tick sits, in ms from the first departure. */
   ms: number;
   label: string;
@@ -583,7 +583,7 @@ export function waitChipText(hop: Hop): string {
 }
 
 /** The last leg's zone: the clock the ETA is read on. */
-export function etaZone(read: JourneyRead): string {
+function etaZone(read: JourneyRead): string {
   return read.legs[read.legs.length - 1]?.timeZone ?? "";
 }
 

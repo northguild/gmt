@@ -161,7 +161,7 @@ export interface LoadedWidget<Args> {
    * namespaces any `id` the markup needs, so a widget in the rail cannot
    * collide with the same widget on the page behind it.
    */
-  renderTemplate: (idPrefix: string, args: Args) => SafeHtml | string;
+  renderTemplate: (idPrefix: string, args: Args) => SafeHtml;
   mount: MountFn<Args>;
 }
 
@@ -365,8 +365,8 @@ const billingEntry = defineWidget<BillingDeadlinesArgs>({
      control value. No zones to check, so no `validate`. */
   load: () =>
     import("~/lib/billing-deadlines-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) =>
-        m.renderBillingDeadlinesTemplate(args),
+      renderTemplate: (idPrefix, args) =>
+        m.renderBillingDeadlinesTemplate(idPrefix, args),
       mount: m.mountBillingDeadlines,
     })),
 });
@@ -437,8 +437,8 @@ const timetableEntry = defineWidget<TimetableReaderArgs>({
   },
   load: () =>
     import("~/lib/timetable-reader-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) =>
-        m.renderTimetableReaderTemplate(args),
+      renderTemplate: (idPrefix, args) =>
+        m.renderTimetableReaderTemplate(idPrefix, args),
       mount: m.mountTimetableReader,
     })),
   validate: ({ startTimeZone, timeZone }) =>
@@ -574,7 +574,8 @@ const etaDriftEntry = defineWidget<EtaDriftArgs>({
      measure yet" note, not NO SIGNAL. */
   load: () =>
     import("~/lib/eta-drift-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) => m.renderEtaDriftTemplate(args),
+      renderTemplate: (idPrefix, args) =>
+        m.renderEtaDriftTemplate(idPrefix, args),
       mount: m.mountEtaDrift,
     })),
 });
@@ -695,7 +696,8 @@ const blDateEntry = defineWidget<BlDateStampArgs>({
      NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
   load: () =>
     import("~/lib/bl-date-stamp-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) => m.renderBlDateStampTemplate(args),
+      renderTemplate: (idPrefix, args) =>
+        m.renderBlDateStampTemplate(idPrefix, args),
       mount: m.mountBlDateStamp,
     })),
 });
@@ -718,8 +720,8 @@ const epcisEntry = defineWidget<EpcisEventReaderArgs>({
      it here would hide the lesson. */
   load: () =>
     import("~/lib/epcis-event-reader-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) =>
-        m.renderEpcisEventReaderTemplate(args),
+      renderTemplate: (idPrefix, args) =>
+        m.renderEpcisEventReaderTemplate(idPrefix, args),
       mount: m.mountEpcisEventReader,
     })),
 });
@@ -852,7 +854,8 @@ const elapsedEntry = defineWidget<ElapsedVsClockArgs>({
   /* Seeded in the template and again by the mount: every argument is a control value. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason, so refusing it here would hide the lesson. */
   load: () =>
     import("~/lib/elapsed-vs-clock-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) => m.renderElapsedVsClockTemplate(args),
+      renderTemplate: (idPrefix, args) =>
+        m.renderElapsedVsClockTemplate(idPrefix, args),
       mount: m.mountElapsedVsClock,
     })),
 });
@@ -915,8 +918,8 @@ const observanceEntry = defineWidget<ObservanceComparatorArgs>({
   /* Seeded in the template and again by the mount: every argument is a control value, and a policy the library does not read is a column's own NO SIGNAL. There is deliberately no `validate`. */
   load: () =>
     import("~/lib/observance-comparator-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) =>
-        m.renderObservanceComparatorTemplate(args),
+      renderTemplate: (idPrefix, args) =>
+        m.renderObservanceComparatorTemplate(idPrefix, args),
       mount: m.mountObservanceComparator,
     })),
 });
@@ -1113,8 +1116,8 @@ const leapDayEntry = defineWidget<LeapDayArgs>({
      "Reads as" plate could not explain to the reader. */
   load: () =>
     import("~/lib/leap-day-birthday-mount").then((m) => ({
-      renderTemplate: (_idPrefix, args) =>
-        m.renderLeapDayBirthdayTemplate(args),
+      renderTemplate: (idPrefix, args) =>
+        m.renderLeapDayBirthdayTemplate(idPrefix, args),
       mount: m.mountLeapDayBirthday,
     })),
   validate: ({ locale }) => {
@@ -1142,9 +1145,10 @@ const plannerEntry = defineWidget<ZonePlannerArgs>({
           reason: "The widget was asked for with arguments that don't fit.",
         };
   },
-  /* Seeded after mount, like the globe: the planner builds its own chrome from
-     the pinned zones and the time, so there is nothing to paint in the
-     template. */
+  /* Seeded after mount, like the globe: the template is the planner's chrome,
+     and the pinned zones, the time and every value follow at mount. The template
+     is the light half (no polyfill, no coordinate table); the wiring loads with
+     the mount. */
   load: () =>
     import("~/lib/zone-planner-mount").then((m) => ({
       renderTemplate: (idPrefix) => m.renderZonePlannerTemplate({ idPrefix }),

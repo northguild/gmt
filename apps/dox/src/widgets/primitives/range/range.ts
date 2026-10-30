@@ -4,7 +4,7 @@
  * Pattern: WAI-ARIA APG Slider, https://www.w3.org/WAI/ARIA/apg/patterns/slider/
  * The native input owns the role, the name, the keys (arrows, PageUp/PageDown,
  * Home/End) and the value; this element adds the fill, the chip and
- * `aria-valuetext` from `formatValue`. Replaces `rangeFieldHtml`/`syncRange`.
+ * `aria-valuetext` from `formatValue`.
  *
  * The builder writes the initial state, so the server render and the first client
  * render match. The mount reads and writes `value`, never inner nodes. The
@@ -16,7 +16,7 @@ import { html, type SafeHtml } from "../../builders/html";
 import { KitElement, num, relay } from "../base";
 import styles from "./range.module.css";
 
-export interface RangeOptions extends GateOption {
+interface RangeOptions extends GateOption {
   /** The input's id, so a `<label for>` or a test can reach it. */
   id: string;
   /** The accessible name. Required. */
@@ -52,7 +52,10 @@ export function range(o: RangeOptions): SafeHtml {
       value="${o.value}"
       aria-valuetext="${o.valueText}"
       ${o.disabled ? html`disabled` : ""}
-    /><span class="${styles.chip}" aria-hidden="true">${o.valueText}</span
+    /><span class="${styles.chip}" data-gate="rider" aria-hidden="true"
+      ><span data-live>${o.valueText}</span
+      ><span data-sample="${o.min}"></span
+      ><span data-sample="${o.max}"></span></span
     >${
       o.ends
         ? html`<span class="${styles.ends}" aria-hidden="true"
@@ -146,9 +149,19 @@ export class GmtRange extends KitElement {
     );
     const text = this.#format(value);
     input.setAttribute("aria-valuetext", text);
-    // The chip is the input's next sibling, written by `range()`.
+    // The chip is the input's next sibling, written by `range()`. It holds the live text and a
+    // hidden sample of each end's text, so its width is the widest reading and holds still.
     const chip = input.nextElementSibling;
-    if (chip) chip.textContent = text;
+    const live = chip?.querySelector("[data-live]");
+    if (live) live.textContent = text;
+    const samples = chip?.querySelectorAll("[data-sample]");
+    if (samples?.length === 2) {
+      samples[0]!.setAttribute("data-sample", this.#format(num(input.min, 0)));
+      samples[1]!.setAttribute(
+        "data-sample",
+        this.#format(num(input.max, 100)),
+      );
+    }
   }
 
   protected wire(signal: AbortSignal): void {

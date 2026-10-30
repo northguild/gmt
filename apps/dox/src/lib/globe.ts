@@ -55,6 +55,8 @@ import {
 } from "./zone-filter";
 import { type ZoneFilterUi, mountZoneFilters } from "./zone-filter-ui";
 import { LABEL_ALPHA, MINOR_MARKER_ALPHA } from "./globe-inks";
+import { setHtml } from "~/widgets/builders";
+import type { GmtListbox } from "~/widgets/primitives/listbox/listbox";
 import { renderZoneTooltip } from "./zone-readout";
 import { skyAt } from "./zone-sky";
 import { mountZoneClockList } from "./zone-clock-list";
@@ -107,10 +109,19 @@ const BOUNDARIES_URL = withBase("/timezone-boundaries-globe.json");
  */
 const IMAGERY_URL = withBase("/earth-blue-marble.webp");
 
+/** The two elements the template draws inside the stage, which the engine does not own. */
+export interface GlobeParts {
+  /** The hover card; hidden until a zone is selected. */
+  tooltip: HTMLElement;
+  /** The zoom cluster, armed once the globe has entered; absent when the host has none. */
+  zoom: HTMLElement | null;
+}
+
 export async function initGlobe(
   host: HTMLElement,
-  clockPanel: HTMLElement | null,
+  clockPanel: GmtListbox | null,
   filterPanel: HTMLElement | null = null,
+  parts: GlobeParts,
 ): Promise<GlobeHost> {
   const reduceMotionQuery = globalThis.matchMedia?.(
     "(prefers-reduced-motion: reduce)",
@@ -131,13 +142,13 @@ export async function initGlobe(
 
   let theme = readTheme(host);
 
-  const tooltip = document.createElement("div");
-  tooltip.className = "gmt-globe-tooltip gmt-popover";
-  tooltip.dataset.gate = "globe-tooltip";
+  const { tooltip, zoom: zoomControls } = parts;
   tooltip.hidden = true;
-  host.appendChild(tooltip);
-
-  const zoomControls = host.querySelector<HTMLElement>(".gmt-globe-zoom");
+  /* The template owns the card, so a teardown empties and hides it rather than removing it. */
+  function clearTooltip(): void {
+    tooltip.hidden = true;
+    tooltip.replaceChildren();
+  }
 
   /* The clock list is mounted before the renderer starts, deliberately. It is the
      usable fallback if no renderer can start at all, and the previous code
@@ -169,7 +180,7 @@ export async function initGlobe(
       imageryUrl: IMAGERY_URL,
     })) as GlobeEngineWithHitTest;
   } catch (error) {
-    tooltip.remove();
+    clearTooltip();
     zoneClockList?.destroy();
     throw error;
   }
@@ -481,7 +492,7 @@ export async function initGlobe(
     tooltip.hidden = false;
     const at = COORDINATES_BY_ID.get(selectedId);
     const sky = at ? skyAt(at.lat, at.lng, nowMs()) : undefined;
-    tooltip.innerHTML = renderZoneTooltip(selectedReading, viewerDate, sky);
+    setHtml(tooltip, renderZoneTooltip(selectedReading, viewerDate, sky));
   }
 
   function positionTooltip(): void {
@@ -502,7 +513,7 @@ export async function initGlobe(
       width - tooltip.offsetWidth / 2 - pad,
     );
     const flip = at.y - tooltip.offsetHeight - 16 < 0;
-    tooltip.classList.toggle("gmt-globe-tooltip-below", flip);
+    tooltip.toggleAttribute("data-below", flip);
     tooltip.style.left = `${x}px`;
     tooltip.style.top = `${at.y + (flip ? 12 : 0)}px`;
   }
@@ -607,7 +618,7 @@ export async function initGlobe(
       zoneClockList?.destroy();
       filterUi?.destroy();
       engine.destroy();
-      tooltip.remove();
+      clearTooltip();
     },
   };
 }
@@ -617,7 +628,7 @@ export async function initGlobe(
  *
  * The canvas is drawn while still hidden, so the shared entrance (`enter()`,
  * `.gmt-enter`) is the viewer's first sight of the globe rather than a raw
- * pop-in. The `gmt-globe-zoom-ready` class does not itself show the zoom
+ * pop-in. The `data-ready` attribute does not itself show the zoom
  * controls — they fade in on hover or focus — it arms them, so they cannot
  * flash into view mid-reveal because the pointer happened to be over the
  * stage. `enter()` arms them at once under reduced motion, and its timer arms
@@ -628,13 +639,11 @@ function revealCanvas(
   host: HTMLElement,
   zoomControls: HTMLElement | null,
 ): void {
-  const canvas = host.querySelector<HTMLCanvasElement>(
-    "canvas.gmt-globe-canvas",
-  );
+  const canvas = host.querySelector<HTMLCanvasElement>(":scope > canvas");
   if (!canvas) return;
   requestAnimationFrame(() => {
     enter(canvas, {
-      onEntered: () => zoomControls?.classList.add("gmt-globe-zoom-ready"),
+      onEntered: () => zoomControls?.setAttribute("data-ready", ""),
     });
   });
 }

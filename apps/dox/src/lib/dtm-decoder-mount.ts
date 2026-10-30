@@ -33,6 +33,7 @@ import {
   srOnly,
   textInput,
   widget,
+  type SafeHtml,
 } from "~/widgets/builders";
 import {
   callFrameContent,
@@ -203,7 +204,7 @@ const NO_ZONE = "no zone chosen";
 export function renderDtmDecoderTemplate(
   idPrefix: string,
   args: DtmDecoderArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const seeded = args.input !== undefined;
   const state: DtmState = seeded
@@ -238,6 +239,7 @@ export function renderDtmDecoderTemplate(
             value: state.input,
             autocomplete: "off",
             spellcheck: false,
+            maxLength: 64,
             describedBy,
           }),
       })}</div>${field({
@@ -249,6 +251,7 @@ export function renderDtmDecoderTemplate(
             value: shownFormat,
             autocomplete: "off",
             spellcheck: false,
+            maxLength: 8,
             describedBy,
           }),
       })}`,
@@ -382,7 +385,7 @@ export function renderDtmDecoderTemplate(
   return widget(
     { name: WIDGET_NAME, label: "DTM Decoder", scope: idPrefix },
     html`${paste}${states}${lands}${back}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

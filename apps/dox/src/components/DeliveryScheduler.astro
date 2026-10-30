@@ -34,7 +34,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderDeliverySchedulerTemplate("delivery-scheduler", {});
+const html = renderDeliverySchedulerTemplate("delivery-scheduler", {}).value;
 ---
 
 {

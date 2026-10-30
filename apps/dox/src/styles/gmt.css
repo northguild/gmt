@@ -17,63 +17,10 @@
 @import "./gmt-shell.css" layer(gmt.shell); /* typography + layout frame */
 @import "./gmt-content.css" layer(gmt.content); /* .sl-markdown-content + EC + search */
 @import "./gmt-controls.css" layer(gmt.controls); /* buttons, focus, selection, scrollbar */
-@import "./gmt-playground.css" layer(gmt.content); /* mistake component styles */
-@import "./gmt-form-controls.css" layer(gmt.tools); /* shared label/input/select styles */
-@import "./gmt-widget.css" layer(gmt.tools); /* shared teaching-widget chrome (card/section/codeframe/output) */
 @import "./gmt-content-tables.css" layer(gmt.tools); /* the content table recipe, first in the tools layer */
-@import "./gmt-crystal-clock.css" layer(gmt.tools); /* shared analog crystal clock face (TRAN-9) */
-@import "./clock-change.css" layer(gmt.tools); /* shared parts of the clock-change checkers (CORE-89) */
-@import "./morocco-clock-change.css" layer(gmt.tools); /* Morocco clock-change checker (CORE-89) */
-@import "./gmt-dst-inspector.css" layer(gmt.tools); /* DST Transition Inspector widget (DOX-B2b) */
-@import "./gmt-interval-visualizer.css" layer(gmt.tools); /* Interval Algebra Visualizer widget (DOX-B2c) */
-@import "./gmt-billing-deadlines.css" layer(gmt.tools); /* Billing Deadlines widget (INT-58) */
-@import "./gmt-transport-widgets.css" layer(gmt.tools); /* Transport widgets, shared (TRAN-9) */
-@import "./gmt-delivery-scheduler.css" layer(gmt.tools); /* Delivery Scheduler widget (TRAN-9) */
-@import "./gmt-connection-checker.css" layer(gmt.tools); /* Connection Checker widget (TRAN-9) */
-@import "./gmt-timetable-reader.css" layer(gmt.tools); /* Timetable Reader widget (TRAN-9) */
-@import "./gmt-crossing-clock.css" layer(gmt.tools); /* Crossing Clock widget (TRAN-9) */
-@import "./gmt-cutoff-widgets.css" layer(gmt.tools); /* Cut-off widgets, shared (TRAN-10) */
-@import "./gmt-cutoff-stack.css" layer(gmt.tools); /* Cut-off Stack widget (TRAN-10) */
-@import "./gmt-cutoff-ruler.css" layer(gmt.tools); /* Cut-off Ruler widget (TRAN-10) */
-@import "./gmt-cutoff-countdown.css" layer(gmt.tools); /* Cut-off Countdown widget (TRAN-10) */
-@import "./gmt-punctuality-widgets.css" layer(gmt.tools); /* Punctuality widgets, shared (TRAN-57) */
-@import "./gmt-punctuality-board.css" layer(gmt.tools); /* Punctuality Board widget (TRAN-57) */
-@import "./gmt-eta-drift.css" layer(gmt.tools); /* ETA Drift Chart widget (TRAN-57) */
-@import "./gmt-departure-board.css" layer(gmt.tools); /* Departure Board widget (TRAN-57) */
-@import "./gmt-ledger-widgets.css" layer(gmt.tools); /* Ledger family, shared: the tools that draw time on local days (after the departure board it reuses) */
-@import "./gmt-holiday-widgets.css" layer(gmt.tools); /* Holiday family, shared: month grid, marks, policy editor (CORE-54) */
-@import "./gmt-holiday-rule-builder.css" layer(gmt.tools); /* Holiday Rule Builder widget (CORE-54) */
-@import "./gmt-observance-comparator.css" layer(gmt.tools); /* Observance Comparator widget (CORE-54) */
-@import "./gmt-moving-feasts.css" layer(gmt.tools); /* Moving Feasts widget (CORE-54) */
-@import "./gmt-dwell-ledger.css" layer(gmt.tools); /* Dwell Ledger widget (TRAN-8) */
-@import "./gmt-free-time-ledger.css" layer(gmt.tools); /* Free Time Ledger widget (INT-12) */
-@import "./gmt-demurrage-clock.css" layer(gmt.tools); /* Demurrage Clock widget (INT-14) */
-@import "./gmt-bl-date-stamp.css" layer(gmt.tools); /* B/L Date Stamp widget (INT-14) */
-@import "./gmt-journey-split.css" layer(gmt.tools); /* Journey Split widget (INT-14) */
-@import "./gmt-edi-widgets.css" layer(gmt.tools); /* EDI timestamp widgets, shared (INT-15) */
-@import "./gmt-gnss-widgets.css" layer(gmt.tools); /* GNSS and leap-second widgets, shared (MAR-16) */
-@import "./gmt-satellite-clock-converter.css" layer(gmt.tools); /* Satellite Clock Converter widget (MAR-16) */
-@import "./gmt-gnss-rollover-checker.css" layer(gmt.tools); /* GNSS Rollover Checker widget (MAR-16) */
-@import "./gmt-leap-second-timeline.css" layer(gmt.tools); /* Leap Second Timeline widget (MAR-16) */
-@import "./gmt-elapsed-vs-clock.css" layer(gmt.tools); /* Elapsed vs. Clock Difference widget (MAR-16) */
-@import "./gmt-stored-time-audit.css" layer(gmt.tools); /* Stored Time Audit widget (CORE-83) */
-@import "./gmt-duration-parser-bench.css" layer(gmt.tools); /* Duration Parser Bench widget (CORE-85) */
-@import "./gmt-id-timestamp-decoder.css" layer(gmt.tools); /* ID Timestamp Decoder widget (CORE-56) */
-@import "./gmt-column-timestamp-bridge.css" layer(gmt.tools); /* Column Timestamp Bridge widget (CORE-56) */
-@import "./gmt-cron-in-a-zone.css" layer(gmt.tools); /* Cron in a Zone widget (CORE-84) */
-@import "./gmt-leap-day-birthday.css" layer(gmt.tools); /* Leap-Day Birthday widget (CORE-102) */
-@import "./gmt-converter-bench.css" layer(gmt.tools); /* Converter + format bench + regex tester widget */
-@import "./gmt-playground-form.css" layer(gmt.tools); /* form-control playground (POC, chore/136) */
-@import "./gmt-charts.css" layer(gmt.content); /* chart theme variables + container styles */
-@import "./gmt-clock-list.css" layer(gmt.tools); /* shared .gmt-clock-* row recipe (map, globe) */
-@import "./gmt-map.css" layer(gmt.tools); /* timezone map layout */
-@import "./gmt-globe.css" layer(gmt.tools); /* DOX-E1a interactive globe */
-@import "./gmt-scrubber.css" layer(gmt.tools); /* DOX-E1b multi-zone time scrubber */
-@import "./gmt-data-credits.css" layer(gmt.tools); /* data-credits corner icon + popup (CORE-88) */
+@import "./gmt-charts.css" layer(gmt.thirdparty); /* chart theme variables + container styles */
 @import "./gmt-light.css" layer(gmt.thirdparty); /* floating [data-theme="light"] overrides */
 @import "./gmt-reveal.css" layer(gmt.shell); /* shared scroll-into-view stagger utility */
 @import "./dox.css" layer(gmt.tools); /* live component layout */
-@import "./gmt-upstream.css" layer(gmt.content); /* /upstream/ defect table + filings tracker */
-@import "./gmt-migrate.css" layer(gmt.content); /* /migrate/ call tables, difference cards, behaviour matrix */
 @import "./gmt-view-transitions.css" layer(gmt.shell); /* cross-document route transitions (static header/sidebar, content fade) */
 @import "./gmt-a11y.css" layer(gmt.a11y); /* DOX-D1 prefers-reduced-transparency / -contrast / forced-colors — loaded last */

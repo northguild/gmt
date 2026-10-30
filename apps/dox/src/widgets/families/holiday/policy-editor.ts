@@ -24,7 +24,7 @@ import styles from "./policy-editor.module.css";
 
 const ISO_WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
-export interface PolicyEditorOptions {
+interface PolicyEditorOptions {
   /** The details' id; each select's id is `${id}-${weekday}`. */
   id: string;
   policy: ObservancePolicy;

@@ -21,7 +21,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderColumnTimestampBridgeTemplate("column-timestamp-bridge", {});
+const html = renderColumnTimestampBridgeTemplate("column-timestamp-bridge", {}).value;
 ---
 
 {

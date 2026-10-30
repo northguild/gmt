@@ -19,12 +19,14 @@ export interface CallOutputOptions {
   label: string;
   state: "live" | "sentinel" | "empty";
   lines: readonly CallOutputLine[];
+  /** The most lines the mount will fill; the output holds that height so a drag never moves what follows. */
+  minLines?: number;
 }
 
 export const CALL_OUTPUT_LOST = "NO SIGNAL";
 
 export function callOutput(o: CallOutputOptions): SafeHtml {
-  return html`<output class="${styles.output}" aria-label="${o.label}" aria-live="off" data-state="${o.state}" tabindex="0"
+  return html`<output class="${styles.output}" aria-label="${o.label}" aria-live="off" data-state="${o.state}" tabindex="0" ${o.minLines === undefined ? "" : html`style="--min-lines: ${String(Math.max(1, Math.floor(o.minLines)))}"`}
     >${o.lines.map(
       (l, i) =>
         html`${i === 0 ? "" : "\n"}${

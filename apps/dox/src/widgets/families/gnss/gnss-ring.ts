@@ -45,7 +45,7 @@ export interface GnssRingOptions {
 }
 
 const C = 170;
-export const RING_RADII = [112, 94, 76, 58] as const;
+const RING_RADII = [112, 94, 76, 58] as const;
 /** The plate under a lap's era label: room for the longest label at 13px mono. */
 const ERA_PLATE_W = 52;
 const TICK_FROM = 122;

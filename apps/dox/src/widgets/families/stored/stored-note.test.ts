@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/dom";
 import { html } from "../../builders/html";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../../test-fixture";
 import { storedNote } from "./stored-note";
 
@@ -9,6 +10,13 @@ describe("storedNote", () => {
     renderHtml(storedNote(html`Use <code>process.versions.tz</code> here.`));
     expect(screen.getByText(/Use/)).toBeInTheDocument();
     expect(screen.getByText("process.versions.tz")).toBeInTheDocument();
+  });
+
+  it("has no axe violations", async () => {
+    const { host } = renderHtml(
+      storedNote(html`Use <code>process.versions.tz</code> here.`),
+    );
+    await expectNoAxeViolations(host);
   });
 
   it("escapes text it is given", () => {

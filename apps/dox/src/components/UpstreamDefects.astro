@@ -6,9 +6,7 @@
  * joined by `gmtGuard`, so a defect's paper trail follows it without anyone maintaining a second
  * list. The table sits in the site's table box (`.gmt-ref-table`), which scrolls it sideways on a
  * narrow screen; `src/lib/ref-table.ts` makes the box a focusable, named region while it
- * overflows, so the arrow keys reach the columns that are off screen. Styles live in
- * `src/styles/gmt-upstream.css` — see its header for why they cannot be a scoped `<style>` block
- * here.
+ * overflows, so the arrow keys reach the columns that are off screen. Styles are in its `<style>` block.
  */
 import { compatGroups } from "../data/temporal-compat";
 import { filings } from "../data/upstream-filings";
@@ -37,3 +35,127 @@ const filingsFor = (defects: readonly string[]) =>
     </tbody>
   </table>
 </div>
+
+<style is:global>
+/* ---- The defect table: what GMT works around ---- */
+
+/*
+ * The table sits in the site's table box (`.gmt-ref-table`, gmt-content.css), which draws the
+ * border and scrolls it sideways. Its first column is prose rather than a short label, so the
+ * columns share the width in fixed proportions instead of sizing to their content. The selector
+ * names the box so it outranks the box's own `table-layout: auto`.
+ */
+.sl-markdown-content .gmt-ref-table > .gmt-defects {
+  min-inline-size: 34rem;
+  table-layout: fixed;
+  font-size: var(--sl-text-sm);
+}
+
+.sl-markdown-content .gmt-defects :is(th, td) {
+  vertical-align: top;
+  text-align: start;
+  overflow-wrap: break-word;
+}
+
+.sl-markdown-content .gmt-defects .gmt-defects-what {
+  inline-size: 50%;
+  white-space: normal;
+}
+
+.sl-markdown-content .gmt-defects .gmt-defects-state {
+  inline-size: 24%;
+}
+
+.sl-markdown-content .gmt-defects .gmt-defects-sent {
+  inline-size: 26%;
+}
+
+/*
+ * `--gmt-ice-dim` is the muted text tier that holds the 7:1 floor. `--sl-color-gray-3` measured
+ * 4.39:1 on the dark page and 2.49:1 in the light cell, so every line here (the description, the
+ * check count and a guard row's reason) used to sit under it.
+ */
+.sl-markdown-content .gmt-defects td p {
+  margin-block-start: 0.25rem;
+  color: var(--gmt-ice-dim);
+  font-size: var(--sl-text-xs);
+}
+
+.gmt-defects-badge {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/*
+ * `--gmt-cyan-ink`, the house accent for text. Starlight's `--sl-color-green` measured 1.69:1 in
+ * the light cell, far under the 7:1 floor; cyan-ink clears it in both themes. The `✓` carries the
+ * meaning, so the badge does not rely on its colour.
+ */
+.gmt-defects-badge--ok {
+  color: var(--gmt-cyan-ink);
+}
+
+/*
+ * "Kept on purpose": every check passes only because the installed polyfill cannot show the bug
+ * yet, so the badge claims neither "needed" (green) nor "fixed". It is a full bevelled border on
+ * all four sides with ice text, never a one-sided accent.
+ *
+ * The label is wider than the state cell's content box at the table's 34rem minimum, so it wraps
+ * between words inside its own border. The column widths come from `table-layout: fixed` and the
+ * percentages above, so a taller row never moves a column.
+ *
+ * Border: `--gmt-border-strong` measures 2.19:1 on the dark page and 1.54:1 on the light one,
+ * short of the 3:1 non-text bar (WCAG 2.2 SC 1.4.11). `--gmt-ice-dim-fill` is the first token that
+ * clears it in both themes (6.80:1 dark, 5.74:1 light).
+ */
+.gmt-defects-badge--guard {
+  display: inline-block;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+  padding: 0 var(--gmt-space-1);
+  border: 1px solid var(--gmt-ice-dim-fill);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  color: var(--gmt-ice);
+  white-space: normal;
+}
+
+/* A short reference such as `tc39 #3292` reads as one token, so it never splits at its space. */
+.gmt-defects-reason a {
+  white-space: nowrap;
+}
+
+.sl-markdown-content .gmt-defects-refs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * `gmt-content.css` gives every list item in the content area an indent and a small bar for a
+ * bullet. Both go here: a reference like `polyfill #369` is already close to the width of its
+ * column, and the indent alone was enough to clip it. `padding-inline-start` is named as well as
+ * `padding-left`, because the site sets the logical property and the physical one does not
+ * override it on its own.
+ */
+.sl-markdown-content .gmt-defects-refs li {
+  margin: 0 0 0.15rem;
+  padding-inline-start: 0;
+  white-space: nowrap;
+}
+
+.sl-markdown-content .gmt-defects-refs li::before {
+  display: none;
+  content: none;
+}
+
+.gmt-defects-none {
+  color: var(--sl-color-gray-4);
+}
+
+.gmt-upstream-links,
+.gmt-upstream-muted {
+  color: var(--gmt-ice-dim);
+  font-size: var(--sl-text-xs);
+}
+</style>

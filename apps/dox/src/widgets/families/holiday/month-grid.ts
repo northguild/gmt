@@ -65,7 +65,7 @@ const MONTH_SHORT = [
 ] as const;
 
 /** How a week strip's cell differs from a month's: it names its month, and may lie outside. */
-export interface CellExtras {
+interface CellExtras {
   withMonth?: boolean;
   outside?: boolean;
 }
@@ -110,7 +110,10 @@ export function cell(
 }
 
 /** The list of every marked date, in a list a reader can step through. */
-export function markedList(dates: readonly string[], o: MonthGridOptions): SafeHtml {
+export function markedList(
+  dates: readonly string[],
+  o: MonthGridOptions,
+): SafeHtml {
   const items = dates.flatMap((date) => {
     const mark = o.marks[date];
     if (!isMarked(mark)) return [];

@@ -15,7 +15,7 @@ import {
 } from "~/lib/holiday-widgets";
 import styles from "./holiday-legend.module.css";
 
-export interface LegendItem {
+interface LegendItem {
   /** A mark kind, drawn in that mark's pattern. */
   kind: MarkKind;
   /** The series of a picked date; only a `pick` has one. */
@@ -24,7 +24,7 @@ export interface LegendItem {
   label?: string;
 }
 
-export interface HolidayLegendOptions {
+interface HolidayLegendOptions {
   /** The list's accessible name. Required. */
   label: string;
   items: readonly LegendItem[];

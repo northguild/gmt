@@ -10,7 +10,7 @@ import { html, type SafeHtml } from "../../builders/html";
 import { unit } from "../../builders/timeline";
 import styles from "./gate.module.css";
 
-export interface CutoffGateOptions {
+interface CutoffGateOptions {
   /** What it says to a screen reader, such as "cut-off 17:00". Required. */
   label: string;
   /** Position on the axis, 0 to 1. */
@@ -21,7 +21,7 @@ export function cutoffGate(o: CutoffGateOptions): SafeHtml {
   return html`<span class="${styles.gate}" role="img" aria-label="${o.label}" style="--gmt-at: ${unit(o.at)}"></span>`;
 }
 
-export interface CutoffTransitionLineOptions {
+interface CutoffTransitionLineOptions {
   /** The clock change in words, such as "go back 1 h". Required. */
   label: string;
   at: number;

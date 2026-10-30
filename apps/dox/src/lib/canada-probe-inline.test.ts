@@ -13,11 +13,7 @@ import { widget } from "~/widgets/builders/layout";
 import { fillProbe, probeCard } from "~/widgets/families/clockcheck/probe-card";
 import { findWidget } from "~/widgets/root";
 import { renderHtml } from "~/widgets/test-fixture";
-import {
-  CANADA_VERDICT,
-  TABLE_ZONES,
-  canadaProbe,
-} from "./canada-clock-change";
+import { canadaVerdict, TABLE_ZONES, canadaProbe } from "./canada-clock-change";
 import { probeInlineSource } from "./clock-change-probe";
 
 const realFormat = Intl.DateTimeFormat;
@@ -64,7 +60,7 @@ function render() {
   const fixture = renderHtml(
     widget(
       { name: "canada", label: "Canada", scope: "canada" },
-      probeCard(config, CANADA_VERDICT),
+      probeCard(config, canadaVerdict("page")),
     ),
   );
   return { config, fixture, found: findWidget(fixture.host, "canada") };

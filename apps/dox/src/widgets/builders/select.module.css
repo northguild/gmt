@@ -45,8 +45,12 @@
     outline-offset: 2px;
   }
 
+  /* Dimmed by ink and a dashed muted border, never by `opacity`: opacity would fade the
+     border below the 3:1 non-text bar on either theme. */
   &:disabled {
-    opacity: 0.6;
+    border-style: dashed;
+    border-color: var(--gmt-ice-dim);
+    color: var(--gmt-ice-dim);
     cursor: not-allowed;
   }
 }

@@ -185,12 +185,6 @@ starlight-menu-button button:focus-visible {
   backdrop-filter: var(--gmt-glass-blur-saturate);
 }
 
-/* Expressive Code's built-in "Copied!" tooltip popover is suppressed in
-   gmt-primitives.css; the EC copy button instead swaps its mask icon to a
-   checkmark and tints spring green, matching the playground's
-   .gmt-codeframe-copy. --ec-frm-tooltipSuccess* are left at EC defaults so
-   any future opt-in still has sensible colors. */
-
 /* ---- Keyboard focus ----
  *
  * overview.md §3: "Focus must be more visible than default, never less." A 2px
@@ -226,8 +220,7 @@ starlight-menu-button button:focus-visible {
 /* overview.md §3 "Controls": a blocky terminal caret on text fields. */
 textarea,
 input:not([type="checkbox"], [type="radio"], [type="range"]),
-[contenteditable],
-.gmt-input {
+[contenteditable] {
   caret-color: var(--gmt-caret);
 }
 
@@ -241,8 +234,7 @@ input:not([type="checkbox"], [type="radio"], [type="range"]),
    an already cyan-tinted field, which drops selected text below a readable
    contrast for low-vision readers. Use a solid, opaque, high-contrast selection
    inside inputs instead — brand hue, but legible. */
-.gmt-input::selection,
-.gmt-select::selection,
+
 input::selection,
 textarea::selection {
   background: var(--gmt-cyan);
@@ -252,8 +244,7 @@ textarea::selection {
 /* Light mode: --gmt-void is white, so flip selected text to the dark ice value
    for contrast against the (mid-tone) cyan. Not inside a dark island, which
    keeps the dark theme; the exclusion adds no specificity. */
-[data-theme="light"] .gmt-input:not(:where(.gmt-theme-dark *))::selection,
-[data-theme="light"] .gmt-select:not(:where(.gmt-theme-dark *))::selection,
+
 [data-theme="light"] input:not(:where(.gmt-theme-dark *))::selection,
 [data-theme="light"] textarea:not(:where(.gmt-theme-dark *))::selection {
   color: var(--gmt-ice);

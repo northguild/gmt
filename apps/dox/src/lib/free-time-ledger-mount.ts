@@ -187,7 +187,7 @@ function handles(): SafeHtml {
 export function renderFreeTimeLedgerTemplate(
   idPrefix: string,
   args: FreeTimeLedgerArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const seeded = args.clockStart !== undefined || args.clockEnd !== undefined;
   const state: LedgerState = seeded
@@ -410,11 +410,13 @@ export function renderFreeTimeLedgerTemplate(
         copyText: "",
         gate: "codeframe",
       })}</div>`,
-    )}<div id="${id("expiry-out")}">${callOutput({
-      label: "What freeTimeExpiry returned",
-      state: "empty",
-      lines: [],
-    })}</div>`,
+    )}${grow(
+      html`<div id="${id("expiry-out")}">${callOutput({
+        label: "What freeTimeExpiry returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}`,
   );
 
   const charges = section(
@@ -430,17 +432,19 @@ export function renderFreeTimeLedgerTemplate(
         copyText: "",
         gate: "codeframe",
       })}</div>`,
-    )}<div id="${id("charges-out")}">${callOutput({
-      label: "What chargeableDays returned",
-      state: "empty",
-      lines: [],
-    })}</div>`,
+    )}${grow(
+      html`<div id="${id("charges-out")}">${callOutput({
+        label: "What chargeableDays returned",
+        state: "empty",
+        lines: [],
+      })}</div>`,
+    )}`,
   );
 
   return widget(
     { name: WIDGET_NAME, label: "Free Time Ledger", scope: idPrefix },
     html`${tariff}${drawn}${expiry}${charges}`,
-  ).toString();
+  );
 }
 
 type ExpiryFn = (

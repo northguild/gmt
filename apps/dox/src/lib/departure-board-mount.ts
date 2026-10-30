@@ -143,7 +143,7 @@ const HERO_LINE_SAMPLES: readonly (readonly string[])[] = [
 export function renderDepartureBoardTemplate(
   idPrefix: string,
   args: DepartureBoardArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const s = initialState(args);
   const presetId = matchPreset(s);
@@ -259,13 +259,15 @@ export function renderDepartureBoardTemplate(
   });
   const read = section(
     { id: id("read"), heading: "2. The departure you can make", level: 4 },
-    html`<p class="${styles.verdict}" id="${id("verdict")}" hidden></p>
+    html`${grow(html`<p class="${styles.verdict}" id="${id("verdict")}" hidden></p>`)}
       <div role="status" aria-live="polite" aria-label="Departure status" id="${id("live")}">${srOnly("")}</div>
-      <p class="${styles.naive}" id="${id("naive-line")}" hidden></p>
-      <div class="${styles.frame}" data-gate="frame">
+      ${grow(html`<p class="${styles.naive}" id="${id("naive-line")}" hidden></p>`)}
+      ${grow(
+        html`<div class="${styles.frame}" data-gate="frame">
         ${grow(html`<div class="${styles.heroes}" id="${id("heroes")}"></div>`)}${stage}
-      </div>
-      ${summary.html}
+      </div>`,
+      )}
+      ${grow(summary.html)}
       ${grow(html`<div id="${id("reason")}"></div>`)}`,
   );
 
@@ -326,7 +328,7 @@ export function renderDepartureBoardTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Departure Board", scope: idPrefix },
     html`${pick}${read}${calls}${send}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -641,6 +643,7 @@ function setupWidget(
           punctHero({
             caption: "departure made",
             value: "none",
+            reserveIcon: true,
             samples: HERO_SAMPLES,
             lines: ["no departure left", ""],
             lineSamples: HERO_LINE_SAMPLES,
@@ -661,6 +664,7 @@ function setupWidget(
           ...(mode === null
             ? {}
             : { icon: raw(transportIcon(mode, { size: 24 })) }),
+          reserveIcon: true,
           samples: HERO_SAMPLES,
           lines:
             wait === ""

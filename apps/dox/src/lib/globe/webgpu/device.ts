@@ -18,7 +18,7 @@
  */
 
 /** Verified defaults, so a device is never asked for more than it must give. */
-export interface DeviceBundle {
+interface DeviceBundle {
   device: GPUDevice;
   /** The format a canvas on this adapter prefers — `bgra8unorm` on Apple silicon. */
   canvasFormat: GPUTextureFormat;

@@ -417,7 +417,7 @@
   /* A chip's words wrap to a second line in a narrow frame; two lines are held there so
      the row never grows. */
   @container (inline-size < 24rem) {
-    min-block-size: calc(2lh + 6px);
+    min-block-size: calc(2lh + 2 * var(--gmt-space-1) + 2px);
   }
 }
 

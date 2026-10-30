@@ -37,13 +37,34 @@ describe("textInput", () => {
     expect(box).toHaveAttribute("inputmode", "numeric");
     expect(box).toHaveAttribute("autocomplete", "off");
     expect(box).toHaveAttribute("spellcheck", "false");
+    expect(box).toHaveAttribute("autocapitalize", "off");
     expect(box).toHaveAttribute("placeholder", "e.g. 2300");
+  });
+
+  it("takes no more characters than its maxLength", async () => {
+    renderHtml(markup({ maxLength: 4 }));
+    const box = screen.getByRole("textbox", { name: "Week" });
+    await userEvent.setup().type(box, "230045");
+    expect(box).toHaveValue("2300");
+  });
+
+  it("refuses a maxLength that is not a whole number from 1", () => {
+    for (const maxLength of [0, -1, 2.5, Number.NaN]) {
+      expect(() => markup({ maxLength })).toThrow(RangeError);
+    }
   });
 
   it("leaves the browser's defaults when asked for none", () => {
     renderHtml(markup());
     const box = screen.getByRole("textbox", { name: "Week" });
-    for (const name of ["inputmode", "autocomplete", "spellcheck", "value"]) {
+    for (const name of [
+      "inputmode",
+      "autocomplete",
+      "spellcheck",
+      "autocapitalize",
+      "maxlength",
+      "value",
+    ]) {
       expect(box).not.toHaveAttribute(name);
     }
   });

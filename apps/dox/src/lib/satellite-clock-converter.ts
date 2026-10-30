@@ -49,7 +49,7 @@ export const CUSTOM_PRESET_ID = "custom";
 export const MAX_VALUE_LENGTH = 64;
 
 /** The clock tokens after the space: TAI, then the six systems. */
-export const CLOCK_TOKENS = ["TAI", ...GNSS_SYSTEMS] as const;
+const CLOCK_TOKENS = ["TAI", ...GNSS_SYSTEMS] as const;
 
 /** A row of the table: UTC, TAI or one system. */
 export type ClockKey = "UTC" | "TAI" | GnssSystem;
@@ -74,14 +74,8 @@ export const BEFORE_1972_PLATE = {
   line: "no inserted seconds yet",
 } as const;
 
-/** Every footnote the table can show: the page reserves room for the longest. */
-export const FOOTNOTES_RESERVED: readonly string[] = [
-  BEFORE_1972_NOTE,
-  `TAI, GPS, GAL, BDT, QZS, GLO, IRN: ${BEFORE_FIRST_INSTANT_NOTE}.`,
-];
-
 /** The chip beside UTC: it is the line the others are measured from. */
-export const REFERENCE_TEXT = "the reference";
+const REFERENCE_TEXT = "the reference";
 
 export const GLO_NOTE =
   "GLO is GLONASS time as RINEX and the BIPM report it, in UTC's own hours.";
@@ -89,9 +83,9 @@ export const IRN_NOTE =
   "No international body states NavIC's offset; the library derives it from the NavIC epoch.";
 
 /** The tag on the NavIC row. */
-export const DERIVED_TAG = "derived";
+const DERIVED_TAG = "derived";
 
-export const EMPTY_TEXT =
+const EMPTY_TEXT =
   "Type a time on any clock, or pick a preset, to see it on all of them.";
 
 const TOKEN_LIST = `${CLOCK_TOKENS.slice(0, -1).join(", ")} or ${CLOCK_TOKENS.at(-1)}`;
@@ -118,7 +112,7 @@ export interface ClockState {
 /** Seed arguments: the permalink's flat string key, or a chat call's `value`. */
 export type SatelliteClockConverterArgs = Record<string, unknown>;
 
-export interface ClockPreset {
+interface ClockPreset {
   id: string;
   label: string;
   description: string;
@@ -260,7 +254,7 @@ export function sliderPositions(
 // ---------------------------------------------------------------------------
 
 /** How far a clock is ahead of UTC, in the form the row and the bar draw. */
-export type ClockLead =
+type ClockLead =
   | { kind: "seconds"; seconds: string }
   | { kind: "inside" }
   | { kind: "reference" }
@@ -309,7 +303,7 @@ export interface ClockRead {
 }
 
 /** The lead as words. */
-export function leadWords(lead: ClockLead): string {
+function leadWords(lead: ClockLead): string {
   switch (lead.kind) {
     case "seconds":
       return `${lead.seconds} s`;
@@ -627,7 +621,7 @@ export const LADDER = {
 /** How a clock keeps time against the others, as the library shows it. */
 export type ClockTie = "tai" | "utc" | null;
 
-export const TIE_TEXT = {
+const TIE_TEXT = {
   tai: "tied to TAI",
   utc: "follows UTC",
 } as const;
@@ -713,7 +707,7 @@ export function ladderSpan(
 }
 
 /** One rung: the clocks that stand the same number of seconds from UTC. */
-export interface LadderRung {
+interface LadderRung {
   seconds: number;
   keys: ClockKey[];
 }
@@ -771,7 +765,7 @@ export const LADDER_NO_SIGNAL = "⟨ NO SIGNAL — invalid input ⟩";
 export const PLATE_NO_SIGNAL = "⟨ NO SIGNAL ⟩";
 
 /** A placed rung: where it stands on the rail, and where its rows sit. */
-export interface PlacedRung extends LadderRung {
+interface PlacedRung extends LadderRung {
   /** The rung's own height, from the ladder's top. */
   y: number;
   /** The top of its block of rows. A crowded block is moved off `y`. */

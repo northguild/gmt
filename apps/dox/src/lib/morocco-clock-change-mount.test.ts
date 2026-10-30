@@ -5,16 +5,23 @@
  * answer is built by the real Worker code at three fixed instants, so no offset is asserted as
  * something this runtime computed.
  */
+import { within } from "@testing-library/dom";
+import userEvent from "@testing-library/user-event";
+import axe from "axe-core";
 import { canadaTense, moroccoTense } from "./clock-change-tense.fixture";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import {
+  cellsInColumn,
+  expectNoAxeViolations,
+  linkTarget,
+} from "~/test/render-widget";
+import { setHtml, type SafeHtml } from "~/widgets/builders";
 import { handleCanadaClockChange } from "../../worker/canada-clock-change";
 import { resetRateLimitState } from "../../worker/rate-limit";
 import { computeMoroccoCheck } from "../../worker/morocco-clock-change";
 import {
   MOROCCO_PROBE,
   MOROCCO_STOP_YEAR,
-  MOROCCO_VERDICT,
-  moroccoProbe,
   presentText,
   type MoroccoCheck,
 } from "./morocco-clock-change";
@@ -28,7 +35,6 @@ import {
   renderCanadaClockChangeTemplate,
   renderCanadaClockChangeWidgetTemplate,
 } from "./canada-clock-change-mount";
-import { fillBrowserCard } from "./clock-change-probe";
 
 installJsdomShims();
 
@@ -44,66 +50,132 @@ function fetching(body: MoroccoCheck): typeof fetch {
   ) as unknown as typeof fetch;
 }
 
-function host(): HTMLElement {
-  document.body.innerHTML = renderMoroccoClockChangeTemplate({
-    keyPoints: true,
-    tense: moroccoTense,
-  });
-  return document.querySelector<HTMLElement>(".gmt-morocco")!;
+const roots: HTMLElement[] = [];
+
+function place(markup: SafeHtml): HTMLElement {
+  const root = document.createElement("div");
+  document.body.append(root);
+  roots.push(root);
+  setHtml(root, markup);
+  return root;
 }
+
+/** The page, with the Key points. */
+const host = (): HTMLElement =>
+  place(
+    renderMoroccoClockChangeTemplate({ keyPoints: true, tense: moroccoTense }),
+  );
+
+afterEach(() => {
+  for (const root of roots.splice(0)) root.remove();
+});
+
+const flat = (el: Element | null) =>
+  (el?.textContent ?? "").replace(/\s+/g, " ").trim();
 
 const FORBIDDEN = /\bwill\b|\bis due\b|\bupcoming\b/i;
 
-/** The text a reader sees before the Worker answers: the template with its scripts, attributes and the form of each tensed phrase that is not true now removed. */
-function staticText(root: HTMLElement): string {
-  const clone = root.cloneNode(true) as HTMLElement;
-  clone
-    .querySelectorAll('script,style,svg,[hidden],[aria-hidden="true"]')
-    .forEach((el) => el.remove());
-  return clone.textContent ?? "";
+/** What a reader sees before the Worker answers: the own text of every element that is shown. */
+function visibleText(root: HTMLElement): string {
+  return within(root)
+    .queryAllByText(/\S/, { ignore: "script,style,svg" })
+    .filter((el) => {
+      try {
+        expect(el).toBeVisible();
+        return true;
+      } catch {
+        return false;
+      }
+    })
+    .map((el) => el.textContent)
+    .join(" ");
 }
+
+/** Fails when two ids in the container are the same: the page's and the chat's copy must not share one. */
+async function expectUniqueIds(container: HTMLElement): Promise<void> {
+  const results = await axe.run(container, {
+    runOnly: { type: "rule", values: ["duplicate-id", "duplicate-id-aria"] },
+  });
+  expect(results.violations.map((v) => v.id)).toEqual([]);
+}
+
+const wrongSection = (root: HTMLElement) =>
+  within(root).getByRole("region", {
+    name: "Clock changes your data gets wrong",
+  });
 
 describe("the template", () => {
   it("renders the verdict row and the blind row for each zone", () => {
     const root = host();
-    expect(root.querySelectorAll("tr[data-zone]")).toHaveLength(2);
-    expect(root.querySelectorAll("tr[data-blind-zone]")).toHaveLength(2);
-    expect(root.querySelector(".gmt-clockcheck-blind-note")).not.toBeNull();
+    const card = within(root).getByRole("region", { name: "Your browser" });
+    const table = within(card).getByRole("table");
+    expect(cellsInColumn(table, "Place")).toHaveLength(4);
+    expect(
+      within(card).getByText(/Old and new data agree here/),
+    ).toBeInTheDocument();
   });
 
   it("never mentions Canada", () => {
-    expect(host().innerHTML).not.toMatch(/canada/i);
+    expect(host()).not.toHaveTextContent(/canada/i);
     expect(
+      place(renderMoroccoClockChangeWidgetTemplate("rail-1", moroccoTense)),
+    ).not.toHaveTextContent(/canada/i);
+  });
+
+  it("links What to do to the Key points card: in place on the page, at the page from the chat", () => {
+    const page = host();
+    const here = within(page).getByRole("link", {
+      name: "What to do",
+      hidden: true,
+    });
+    expect(linkTarget(here)).toHaveTextContent("What to do");
+    const chat = place(
       renderMoroccoClockChangeWidgetTemplate("rail-1", moroccoTense),
-    ).not.toMatch(/canada/i);
+    );
+    expect(
+      within(chat).getByRole("link", { name: "What to do", hidden: true }),
+    ).toHaveAttribute(
+      "href",
+      "/gmt/check/morocco-2026-clock-change/#morocco-developers",
+    );
+  });
+
+  it("leaves no dead in-page link on the page", () => {
+    const page = host();
+    const local = within(page)
+      .getAllByRole("link", { hidden: true })
+      .filter((link) => link.getAttribute("href")?.startsWith("#"));
+    expect(local.length).toBeGreaterThan(0);
+    for (const link of local) expect(linkTarget(link)).not.toBeNull();
   });
 
   it("puts the cards in reading order: servers, minimums, changes", () => {
-    const html = renderMoroccoClockChangeTemplate({
-      tense: moroccoTense,
-      keyPoints: true,
-    });
-    const order = [
-      "morocco-keypoints-title",
-      "morocco-probe-title",
-      "morocco-map-title",
-      "morocco-clocks-title",
-      "morocco-servers-title",
-      "morocco-minimums-title",
-      "morocco-changes-title",
-      "morocco-help-title",
-      "morocco-stored-title",
-    ].map((id) => html.indexOf(`id="${id}"`));
-    expect(order.every((at) => at >= 0)).toBe(true);
-    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    const root = host();
+    const headings = within(root)
+      .getAllByRole("heading")
+      .map((h) => h.textContent?.trim());
+    const wanted = [
+      "Key points",
+      "Your browser",
+      "Live clocks",
+      "Clock changes your data gets wrong",
+      "How gmt helps",
+      "Clock changes in 2026 and 2027",
+      "Did your saved events move?",
+    ];
+    const at = wanted.map((name) =>
+      headings.findIndex((h) => h?.startsWith(name)),
+    );
+    expect(at.every((i) => i >= 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+  });
+
+  it("has no accessibility violations", async () => {
+    await expectNoAxeViolations(host());
   });
 });
 
 describe("the mount", () => {
-  afterEach(() => {
-    document.body.innerHTML = "";
-  });
-
   it.each(INSTANTS)(
     "holds static text that is true before and after any date (%s)",
     async (now) => {
@@ -115,10 +187,10 @@ describe("the mount", () => {
       });
       await vi.waitFor(() =>
         expect(
-          root.querySelector('[data-role="present"]')?.textContent,
-        ).toMatch(/This server/),
+          within(wrongSection(root)).getAllByText(/This server/).length,
+        ).toBeGreaterThan(0),
       );
-      expect(staticText(root)).not.toMatch(FORBIDDEN);
+      expect(visibleText(root)).not.toMatch(FORBIDDEN);
       controller.abort();
     },
   );
@@ -131,23 +203,26 @@ describe("the mount", () => {
       fetch: fetching(check),
       now: () => INSTANTS[0]!,
     });
+    const rows = within(wrongSection(root)).getAllByRole("listitem");
+    expect(rows).toHaveLength(check.changes.length);
     // Each row says it in the words of its own change: "still" only for a 2026b one.
     await vi.waitFor(() => {
-      for (const row of check.changes) {
-        expect(
-          root.querySelector(
-            `.gmt-morocco-wrong-row[data-zone="${row.zone}"][data-at="${row.at}"] [data-role="present"]`,
-          )?.textContent,
-        ).toBe(presentText(row));
+      for (const change of check.changes) {
+        const row = rows.find(
+          (item) =>
+            item.textContent?.includes(change.zone) === true &&
+            item.textContent.includes(change.at),
+        )!;
+        expect(row).toHaveTextContent(presentText(change));
+        expect(row).not.toHaveTextContent("NO SIGNAL");
       }
     });
-    expect(root.querySelectorAll(".gmt-morocco-wrong-row")).toHaveLength(
-      check.changes.length,
-    );
+    await expectNoAxeViolations(root);
     controller.abort();
   });
 
-  it("announces Checking\u2026 in the status line while the check runs, then clears it", async () => {
+  it("announces Checking… in the status line while the check runs, then clears it", async () => {
+    const user = userEvent.setup();
     const root = host();
     const controller = new AbortController();
     const check = computeMoroccoCheck(INSTANTS[0]!, MOROCCO_STOP_YEAR);
@@ -164,13 +239,11 @@ describe("the mount", () => {
       fetch: fetchFn as unknown as typeof fetch,
       now: () => INSTANTS[0]!,
     });
-    const status = root.querySelector('[data-role="status"]');
-    root.querySelector<HTMLButtonElement>('[data-role="recheck"]')!.click();
-    await vi.waitFor(() =>
-      expect(status?.textContent?.trim()).toBe("Checking\u2026"),
-    );
+    const status = within(root).getByRole("status", { name: "Check status" });
+    await user.click(within(root).getByRole("button", { name: "Check again" }));
+    await vi.waitFor(() => expect(status).toHaveTextContent("Checking…"));
     release();
-    await vi.waitFor(() => expect(status?.textContent?.trim()).toBe(""));
+    await vi.waitFor(() => expect(status).toHaveTextContent(/^$/));
     controller.abort();
   });
 });
@@ -178,10 +251,9 @@ describe("the mount", () => {
 describe("the verdict", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    document.body.innerHTML = "";
   });
 
-  /** A browser that answers `before` for instants up to the verdict and `after` for the verdict. */
+  /** A browser that answers `blind` for every instant but the verdict's, and `verdict` there. */
   function stubBrowser(blind: string, verdict: string) {
     const verdictMs = MOROCCO_PROBE.find((p) => p.role === "verdict")!.epochMs;
     const real = Intl.DateTimeFormat;
@@ -203,78 +275,97 @@ describe("the verdict", () => {
     } as unknown as typeof Intl.DateTimeFormat);
   }
 
-  it("comes from the verdict row alone: +00:00 at the blind instant and +01:00 at the verdict is wrong", () => {
-    document.body.innerHTML = renderMoroccoClockChangeTemplate({
-      tense: moroccoTense,
+  /** The finished answer the verdict card shows: hidden ones are not in the role tree. */
+  const shownLine = (root: HTMLElement) =>
+    flat(
+      within(within(root).getByRole("status", { name: "Verdict" }))
+        .getAllByRole("paragraph")
+        .find((p) => /Your browser (has|cannot)/.test(p.textContent ?? ""))!,
+    );
+
+  async function mountPending(root: HTMLElement) {
+    const controller = new AbortController();
+    void mountMoroccoClockChange(root, controller.signal, {
+      fetch: vi.fn(() => new Promise(() => {})) as unknown as typeof fetch,
     });
+    return controller;
+  }
+
+  it("comes from the verdict row alone: +00:00 at the blind instant and +01:00 at the verdict is wrong", async () => {
+    const root = host();
     stubBrowser("", "+01:00");
-    fillBrowserCard(document.body, moroccoProbe("morocco"), MOROCCO_VERDICT);
-    const verdict = document.querySelector<HTMLElement>(
-      '[data-role="verdict"]',
-    )!;
-    expect(verdict.dataset.state).toBe("bad");
+    const controller = await mountPending(root);
+    await vi.waitFor(() =>
+      expect(shownLine(root)).toMatch(
+        /^✗ Your browser has old time zone data for/,
+      ),
+    );
+    controller.abort();
   });
 
-  it("is right when the verdict row is +00:00 even if the blind row differs", () => {
-    document.body.innerHTML = renderMoroccoClockChangeTemplate({
-      tense: moroccoTense,
-    });
+  it("is right when the verdict row is +00:00 even if the blind row differs", async () => {
+    const root = host();
     stubBrowser("+01:00", "");
-    fillBrowserCard(document.body, moroccoProbe("morocco"), MOROCCO_VERDICT);
-    const verdict = document.querySelector<HTMLElement>(
-      '[data-role="verdict"]',
-    )!;
-    expect(verdict.dataset.state).toBe("ok");
-    const blind = document.querySelector<HTMLElement>(
-      'tr[data-blind-zone="Africa/Casablanca"] [data-role="browser-blind"]',
-    )!;
-    expect(blind.textContent).toMatch(/01:00/);
-    expect(blind.textContent).not.toMatch(/[✓✗]/);
+    const controller = await mountPending(root);
+    await vi.waitFor(() =>
+      expect(shownLine(root)).toMatch(
+        /^✓ Your browser has the new rules for both places\./,
+      ),
+    );
+    const table = within(root).getByRole("table", { name: /offsets by place/ });
+    const casablancaBlind = cellsInColumn(table, /^Yours/)[2]!;
+    expect(casablancaBlind).toHaveTextContent("01:00");
+    expect(casablancaBlind).not.toHaveTextContent(/[✓✗]/);
+    await expectNoAxeViolations(root);
+    controller.abort();
   });
 });
 
 describe("unique ids per mounted instance", () => {
-  const ids = () => [...document.querySelectorAll("[id]")].map((el) => el.id);
-  const duplicates = () => {
-    const seen = new Set<string>();
-    return ids().filter((id) => (seen.has(id) ? true : (seen.add(id), false)));
-  };
-  afterEach(() => {
-    document.body.innerHTML = "";
-  });
+  /** The map draws after the answer: wait for the list to leave "no answer yet". */
+  const drawn = (root: HTMLElement) =>
+    vi.waitFor(() =>
+      expect(
+        within(within(root).getByRole("list", { name: "Zones" })).getAllByRole(
+          "button",
+        )[0],
+      ).not.toHaveTextContent("no answer yet"),
+    );
 
   it("gives a Morocco page and a Morocco widget no id in common, after both mount", async () => {
-    document.body.innerHTML =
+    const page = place(
       renderMoroccoClockChangeTemplate({
         tense: moroccoTense,
         keyPoints: true,
-      }) + renderMoroccoClockChangeWidgetTemplate("rail-1", moroccoTense);
-    const [page, widget] = [
-      ...document.querySelectorAll<HTMLElement>(".gmt-morocco"),
-    ];
+      }),
+    );
+    const widget = place(
+      renderMoroccoClockChangeWidgetTemplate("rail-1", moroccoTense),
+    );
     const check = computeMoroccoCheck(INSTANTS[0]!, MOROCCO_STOP_YEAR);
     const controller = new AbortController();
-    for (const root of [page!, widget!]) {
+    for (const root of [page, widget]) {
       await mountMoroccoClockChange(root, controller.signal, {
         fetch: fetching(check),
         now: () => INSTANTS[0]!,
       });
     }
-    await vi.waitFor(() =>
-      expect(
-        widget!.querySelector('[data-role="present"]')?.textContent,
-      ).toMatch(/This server/),
-    );
-    expect(duplicates()).toEqual([]);
+    await drawn(widget);
+    await expectUniqueIds(document.body);
     controller.abort();
   });
 
   it("gives a Canada page and a Canada widget no id in common, after both mount", async () => {
     resetRateLimitState();
-    document.body.innerHTML =
-      renderCanadaClockChangeTemplate({ tense: canadaTense, keyPoints: true }) +
-      renderCanadaClockChangeWidgetTemplate("rail-1", canadaTense);
-    const roots = [...document.querySelectorAll<HTMLElement>(".gmt-canada")];
+    const roots = [
+      place(
+        renderCanadaClockChangeTemplate({
+          tense: canadaTense,
+          keyPoints: true,
+        }),
+      ),
+      place(renderCanadaClockChangeWidgetTemplate("rail-1", canadaTense)),
+    ];
     const response = await handleCanadaClockChange(
       new Request("https://northguild.dev/gmt/api/canada-clock-change", {
         headers: { "cf-connecting-ip": "4.4.4.4" },
@@ -293,19 +384,8 @@ describe("unique ids per mounted instance", () => {
         now: () => INSTANTS[0]!,
       });
     }
-    await vi.waitFor(() =>
-      expect(
-        roots.every(
-          (root) =>
-            root.querySelector('[data-role="legend-count"]')?.textContent !==
-            "\u2013",
-        ),
-      ).toBe(true),
-    );
-    expect(document.querySelectorAll("svg defs [id]").length).toBeGreaterThan(
-      0,
-    );
-    expect(duplicates()).toEqual([]);
+    for (const root of roots) await drawn(root);
+    await expectUniqueIds(document.body);
     controller.abort();
   });
 });

@@ -24,9 +24,9 @@ export const PIN_PLACEHOLDER = "Press a zone to pin it.";
 /** What an empty readout shows before a zone is pinned: a dash, never a blank. */
 export const EMPTY = "—";
 /** The words a zone with no row from the server carries. */
-export const NO_ANSWER = "no answer yet";
+const NO_ANSWER = "no answer yet";
 
-export type ZoneClass = "stopped" | "changes-after" | "none";
+type ZoneClass = "stopped" | "changes-after" | "none";
 
 /** The three classes, in the order the legend lists them. */
 export const ZONE_CLASSES: readonly ZoneClass[] = [
@@ -57,7 +57,7 @@ export function legendCount(kind: ZoneClass): SafeHtml {
   return html`<span data-legend-count="${kind}">${EMPTY}</span>`;
 }
 
-export interface LegendItem {
+interface LegendItem {
   kind: ZoneClass;
   /** The class words, the count already inside them (`legendCount`). */
   text: HtmlValue;
@@ -77,7 +77,7 @@ export function zoneLegend(
   </ul>`;
 }
 
-export interface ZoneListItemOptions {
+interface ZoneListItemOptions {
   idPrefix: string;
   /** Position in the list: the ids of the fields the mount fills. */
   index: number;
@@ -85,7 +85,7 @@ export interface ZoneListItemOptions {
 }
 
 /** One list item: the zone id, its offset and its class, in a button that pins the zone. */
-export function zoneListItem(options: ZoneListItemOptions): SafeHtml {
+function zoneListItem(options: ZoneListItemOptions): SafeHtml {
   const id = idScope(options.idPrefix);
   const parts = zoneListParts(options.index);
   return html`<li class="${styles.zone}">
@@ -118,7 +118,7 @@ export function zoneListParts(index: number): {
 }
 
 /** The readouts of the pin panel, by the local id the mount reads them by. */
-export const PIN_FIELDS = [
+const PIN_FIELDS = [
   "zone",
   "class",
   "time",
@@ -133,7 +133,7 @@ export type PinField = (typeof PIN_FIELDS)[number];
  * The pin panel: the clock beside the zone and its class, and five readouts. One announcement says
  * the pin (a polite status); the ticking time is plain text outside any live region.
  */
-export function pinPanel(idPrefix: string): SafeHtml {
+function pinPanel(idPrefix: string): SafeHtml {
   const id = idScope(`${idPrefix}-pin`);
   const title = (
     field: PinField,
@@ -170,7 +170,7 @@ export function pinPanel(idPrefix: string): SafeHtml {
 // The section
 // ---------------------------------------------------------------------------
 
-export interface ZoneMapOptions {
+interface ZoneMapOptions {
   idPrefix: string;
   /** The zones of the list, in reading order. */
   zones: readonly string[];
@@ -253,7 +253,7 @@ export function zoneMap(options: ZoneMapOptions): SafeHtml {
 // The drawing
 // ---------------------------------------------------------------------------
 
-export interface DrawnShape {
+interface DrawnShape {
   id: string;
   /** The path's `d`. */
   d: string;
@@ -262,7 +262,7 @@ export interface DrawnShape {
   label: string;
 }
 
-export interface DrawnMarker {
+interface DrawnMarker {
   id: string;
   cx: number;
   cy: number;
@@ -271,7 +271,7 @@ export interface DrawnMarker {
   label: string;
 }
 
-export interface MapDrawingOptions {
+interface MapDrawingOptions {
   /** The svg's id, so the mount finds it. */
   id: string;
   width: number;
@@ -348,7 +348,7 @@ export function labelLayer(id: string): SafeHtml {
   return html`<div class="${styles.labels}" id="${id}" aria-hidden="true"></div>`;
 }
 
-export interface LabelOptions {
+interface LabelOptions {
   zone: string;
   city: string;
   /** The offset the list shows, or `null` for the NO SIGNAL mark. */

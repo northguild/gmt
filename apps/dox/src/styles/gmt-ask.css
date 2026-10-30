@@ -15,7 +15,7 @@
  *      written against (verified 2026-09-09 — only `table-wrapper` exists), so
  *      this themes `.gmt-ask-response` instead: the classname `<MessageResponse
  *      className="gmt-ask-response">` is given explicitly at every call site
- *      (see AskDoxProbe.tsx), the same seam DOX-C3a's link-hardening
+ *      (see DoxChat.tsx), the same seam DOX-C3a's link-hardening
  *      `components.a` override already needs.
  */
 

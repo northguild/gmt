@@ -17,30 +17,15 @@
  */
 
 import { Temporal } from "@js-temporal/polyfill";
-import {
-  formatDayLabel,
-  toEpochMs,
-  type DayCell,
-  type LedgerCanvas,
-} from "./dwell-ledger";
-import { holdHtml, textSizers } from "./edi-picture";
-import { heroLinesHtml } from "./punctuality-widgets";
+import { formatDayLabel, toEpochMs } from "./dwell-ledger";
 import { FIXED_OFFSET_ZONES, TRANSPORT_ZONES } from "./transport-widgets";
-import { escapeAttr, escapeHtml } from "./widget-ui";
-
-/**
- * A ledger handle moves one snap unit on an arrow key, four with Shift, and
- * this many on PageUp and PageDown. The handle has no far end: the canvas
- * widens when a handle reaches its edge.
- */
-export const PAGE_STEP_UNITS = 12;
 
 // ---------------------------------------------------------------------------
 // Day columns
 // ---------------------------------------------------------------------------
 
 /** How a column is drawn: lit glass, the family hatch, the closed hatch, or bare. */
-export type DayState = "lit" | "hatched" | "closed" | "plain";
+type DayState = "lit" | "hatched" | "closed" | "plain";
 
 /** One of the site's four series colours. */
 export type SeriesNumber = 1 | 2 | 3 | 4;
@@ -59,23 +44,6 @@ export interface DayMark {
   kind?: string;
 }
 
-/** A column narrower than this shows no weekday, then no label (px). */
-export const DAY_FIT_SHORT_PX = 108;
-export const DAY_FIT_NARROW_PX = 62;
-
-/**
- * How much of a column's label fits. `short` drops the weekday, `narrow` drops
- * the whole label and every chip (the `aria-label` still names the day).
- * `widthPx` is the column's measured width; 0 or less means "not measured" and
- * everything is kept.
- */
-export function dayColumnFit(widthPx: number): "full" | "short" | "narrow" {
-  if (!(widthPx > 0)) return "full";
-  if (widthPx < DAY_FIT_NARROW_PX) return "narrow";
-  if (widthPx < DAY_FIT_SHORT_PX) return "short";
-  return "full";
-}
-
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 /** `{ date: "15 Jun", weekday: "Sat" }` for a `YYYY-MM-DD` date. */
@@ -86,93 +54,6 @@ export function dayLabelParts(date: string): { date: string; weekday: string } {
   } catch {
     return { date, weekday: "" };
   }
-}
-
-/** The mark for a date no tool described: a bare column. */
-const PLAIN: DayMark = { state: "plain" };
-
-function chipHtml(className: string, text: string, attrs = ""): string {
-  return `<span class="gmt-cutoff-chip ${className}"${attrs}>${escapeHtml(text)}</span>`;
-}
-
-/**
- * The markup for a row of day columns.
- *
- * `cells` are `dayCells` results. Each column is placed and sized by its day's
- * real bounds on `canvas`, so a 23- or 25-hour day is narrower or wider. A
- * column that falls outside the canvas is left out. `states` maps a date to its
- * mark; a date with no mark is a bare column.
- *
- * Each column is `role="listitem"` and carries `data-date`, `data-hours`,
- * `data-state` and an `aria-label` that says the date, an odd length and the
- * state in words. The visible label and chips are `aria-hidden`: the label says
- * it all.
- */
-export function dayColumnsHtml(
-  cells: readonly DayCell[],
-  canvas: Pick<LedgerCanvas, "toPercent">,
-  states: Readonly<Record<string, DayMark | undefined>>,
-): string {
-  return cells
-    .map((cell) => {
-      const left = canvas.toPercent(cell.startMs);
-      const right = canvas.toPercent(cell.endMs);
-      const width = Math.max(0, right - left);
-      if (!(width > 0)) return "";
-      const mark = states[cell.date] ?? PLAIN;
-      const parts = dayLabelParts(cell.date);
-      const odd = cell.hours !== 24;
-      const word = mark.aria ?? mark.chip ?? "";
-      const aria =
-        `${parts.date}${parts.weekday === "" ? "" : ` ${parts.weekday}`}` +
-        `${odd ? `, ${cell.hours} hours` : ""}` +
-        `${mark.tier === undefined ? "" : `, tier ${mark.tier}`}` +
-        `${word === "" ? "" : `, ${word}`}`;
-      const classes = [
-        "gmt-ledger-day",
-        mark.state === "hatched" ? "gmt-punct-hatch" : "",
-        mark.state === "closed" ? "gmt-cutoff-closed" : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-      const chips = [
-        mark.chip === undefined || mark.chip === ""
-          ? ""
-          : chipHtml("gmt-ledger-chip", mark.chip),
-        mark.tier === undefined
-          ? ""
-          : chipHtml("gmt-ledger-chip", `tier ${mark.tier}`),
-        odd
-          ? chipHtml(
-              "gmt-ledger-odd",
-              `${cell.hours} h`,
-              ` data-dst="${cell.hours < 24 ? "short" : "long"}"`,
-            )
-          : "",
-      ].join("");
-      return (
-        `<div class="${classes}" role="listitem"` +
-        ` data-date="${escapeAttr(cell.date)}" data-hours="${cell.hours}" data-state="${mark.state}"` +
-        (mark.kind === undefined
-          ? ""
-          : ` data-kind="${escapeAttr(mark.kind)}"`) +
-        (mark.tier === undefined ? "" : ` data-tier="${mark.tier}"`) +
-        (mark.series === undefined ? "" : ` data-series="${mark.series}"`) +
-        ` style="left:${left}%;width:${width}%"` +
-        ` aria-label="${escapeAttr(aria)}" title="${escapeAttr(aria)}">` +
-        `<span class="gmt-ledger-day-label" aria-hidden="true">` +
-        `<span class="gmt-ledger-day-date">${escapeHtml(parts.date)}</span>` +
-        (parts.weekday === ""
-          ? ""
-          : `<span class="gmt-ledger-day-weekday"> · ${escapeHtml(parts.weekday)}</span>`) +
-        `</span>` +
-        (chips === ""
-          ? ""
-          : `<span class="gmt-ledger-day-chips" aria-hidden="true">${chips}</span>`) +
-        `</div>`
-      );
-    })
-    .join("");
 }
 
 // ---------------------------------------------------------------------------
@@ -199,64 +80,6 @@ export interface PlateSpec {
    *  so a long caption that wraps on a narrow plate wraps for every preset and
    *  never makes the plate taller or wider than the others. */
   captions?: readonly string[];
-}
-
-/**
- * One result plate: a caption, a value and fixed sub lines, in the markup of
- * `.gmt-punct-hero` (gmt-punctuality-widgets.css). A plate with no result keeps
- * its box and reads "no result" in the muted ink, with blank lines.
- */
-export function plateHtml(p: PlateSpec): string {
-  const empty = p.value === null;
-  return (
-    `<div class="gmt-punct-hero${p.quiet === true ? " gmt-punct-hero--quiet" : ""}" data-gate="hero" data-role="${escapeAttr(p.role)}"` +
-    (p.series === undefined ? "" : ` data-series="${p.series}"`) +
-    (empty ? " data-empty" : "") +
-    `>` +
-    captionHtml(p) +
-    `<span class="gmt-punct-hero-value">${empty ? `<span class="gmt-punct-hero-none" data-gate="instant">${escapeHtml(NO_RESULT)}</span>` : escapeHtml(p.value!)}</span>` +
-    heroLinesHtml(p.lines.map((text) => ({ text: empty ? "" : text }))) +
-    `</div>`
-  );
-}
-
-/** The caption: one `<span>`, or that span in a hold with a hidden sizer for each
- *  caption the plate can show. */
-function captionHtml(p: PlateSpec): string {
-  const live = `<span class="gmt-punct-hero-cap">${escapeHtml(p.caption)}</span>`;
-  if (p.captions === undefined) return live;
-  const sizers = [...new Set([p.caption, ...p.captions])].map(
-    (text) =>
-      `<span class="gmt-punct-hero-cap gmt-edi-sizer" aria-hidden="true" data-pagefind-ignore>${escapeHtml(text)}</span>`,
-  );
-  return holdHtml(live, sizers, "gmt-ledger-hold");
-}
-
-/**
- * A tool's preset description, held to the tallest description it can show at
- * whatever width it is laid out (`holdHtml`), so choosing another preset never
- * moves the controls and plates below it. The live paragraph is the only one a
- * reader reaches; the sizers are hidden.
- */
-export function descriptionHoldHtml(
-  live: string,
-  descriptions: readonly string[],
-): string {
-  return holdHtml(
-    live,
-    textSizers("p", "gmt-widget-hint", descriptions),
-    "gmt-ledger-hold",
-  );
-}
-
-/** The pinned row that holds a tool's plates. `aria-hidden`: a visually hidden
- *  sentence says the same numbers. */
-export function platesHtml(role: string, plates: readonly PlateSpec[]): string {
-  return (
-    `<div class="gmt-punct-heroes" data-role="${escapeAttr(role)}" aria-hidden="true">` +
-    plates.map(plateHtml).join("") +
-    `</div>`
-  );
 }
 
 // ---------------------------------------------------------------------------

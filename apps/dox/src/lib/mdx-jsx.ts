@@ -433,6 +433,7 @@ export function renderMdxComponents(body: string): string {
     "Fragment",
     "CardGrid",
     "Card",
+    "HomeCard",
   ]) {
     out = replaceElements(out, wrapper, (props, children) => {
       // A template-literal title's `${expr}` becomes `{expr}`, which `stripMdx` replaces with the figure.

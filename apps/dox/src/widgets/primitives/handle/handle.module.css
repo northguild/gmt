@@ -36,6 +36,29 @@
     transition: background-color var(--gmt-motion-fast) var(--gmt-easing);
   }
 
+  /* A pair: the start handle's box lies before its value and the end handle's after it, so
+     two handles on the same or nearby values never cover one another (SC 2.5.8). The bar
+     stays on the value; only the 24 px box leans outward. */
+  &[pair="start"] {
+    translate: -100% 0;
+
+    &:dir(rtl) {
+      translate: 100% 0;
+    }
+
+    &::before {
+      inset-inline: calc(var(--gmt-target-min) - var(--gmt-handle-w)) 0;
+    }
+  }
+
+  &[pair="end"] {
+    translate: 0 0;
+
+    &::before {
+      inset-inline: 0 calc(var(--gmt-target-min) - var(--gmt-handle-w));
+    }
+  }
+
   &:active {
     cursor: grabbing;
   }

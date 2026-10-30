@@ -19,11 +19,7 @@ import { renderHtml } from "~/widgets/test-fixture";
 import { computeStoredCheck } from "../../worker/clock-change-shared";
 import { classifyStoredZoned } from "@northguild/gmt/zoned/classify";
 import { STORED_PRESET } from "./canada-clock-change";
-import {
-  storedFix,
-  storedVerdict,
-  STORED_MAX_LINES,
-} from "./clock-change-stored-lines";
+import { storedFix, STORED_MAX_LINES } from "./clock-change-stored-lines";
 import { storedTruncatedText, wireStoredTimes } from "./clock-change-stored";
 import type { StoredHandle } from "./clock-change-stored";
 import {
@@ -390,21 +386,6 @@ describe("the stored-times section", () => {
       0,
     );
     await expectNoAxeViolations(document.body);
-  });
-
-  it("words a moved Vancouver meeting as the local time it now means", () => {
-    expect(
-      storedVerdict({
-        kind: "offsetMismatch",
-        zoneOffset: "-07:00",
-        atStoredOffset: "2026-11-15T17:00:00Z",
-      }),
-    ).toEqual({ ok: false, words: "Moved: shows 10:00 local" });
-    expect(storedVerdict({ kind: "valid" })).toEqual({
-      ok: true,
-      words: "Still correct",
-    });
-    expect(storedVerdict({ kind: "ambiguous" }).ok).toBe(false);
   });
 
   it("shows only the moved rows when the toggle says so, and all again", async () => {

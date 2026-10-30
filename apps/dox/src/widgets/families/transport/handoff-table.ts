@@ -15,7 +15,7 @@ import styles from "./handoff-table.module.css";
 
 const NBSP = " ";
 
-export interface HandoffTableOptions {
+interface HandoffTableOptions {
   /** The table's name, read by the region and the table. Required. */
   caption: string;
   columns: readonly string[];

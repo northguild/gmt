@@ -146,8 +146,8 @@ const gradients: BarGradient[] = [
           data-gmt-chart={panel.chart}
           set:html={panel.svg}
         />
-        {panel.legend && <div class="gmt-chart-key" set:html={panel.legend} />}
-        {panel.summary && <div set:html={panel.summary} />}
+        {panel.legend && <Fragment set:html={panel.legend} />}
+        {panel.summary && <Fragment set:html={panel.summary} />}
         {panel.caption && <p class="gmt-chart-caption">{panel.caption}</p>}
         {afterSlots[index] && (
           <div class="gmt-chart-after" set:html={afterSlots[index]} />

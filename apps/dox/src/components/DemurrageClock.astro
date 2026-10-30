@@ -27,7 +27,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderDemurrageClockTemplate("demurrage-clock");
+const html = renderDemurrageClockTemplate("demurrage-clock").value;
 ---
 
 {

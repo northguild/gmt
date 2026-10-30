@@ -12,6 +12,7 @@
  */
 import type { ChartDefinition, ChartPoint } from "@tanstack/charts";
 import { barX, barY, defineChart, stack } from "@tanstack/charts";
+import { chartKey, chartSummary } from "~/widgets/builders";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import type {
@@ -25,7 +26,6 @@ import {
   formatCount,
   gmtStats,
   industryFunctions,
-  industryNamespaces,
   type IndustryLayerCount,
 } from "../data/gmt-stats";
 import {
@@ -45,7 +45,7 @@ const shareFormat = new Intl.NumberFormat(undefined, {
 // Gradients
 // ---------------------------------------------------------------------------
 
-export type BarHue = "spring" | "signal" | "cyan";
+type BarHue = "spring" | "signal" | "cyan";
 
 export interface BarGradient {
   id: string;
@@ -116,7 +116,7 @@ function withTooltip(
 // CI executions per library
 // ---------------------------------------------------------------------------
 
-export interface CiExecutionRow {
+interface CiExecutionRow {
   library: string;
   value: number;
   comparison: LibraryComparison;
@@ -151,7 +151,7 @@ export function ciSuiteRows(
  * GMT rides the standard (spring green); every legacy library shares the fault
  * colour (signal orange) used by the "alternatives inherit it" diagram.
  */
-export function ciHue(comparison: LibraryComparison): BarHue {
+function ciHue(comparison: LibraryComparison): BarHue {
   return comparison.isSubject ? "spring" : "signal";
 }
 
@@ -187,11 +187,11 @@ export function ciExecutionTooltip(
   };
 }
 
-export function ciExecutionsDefinition(tooltip?: ChartTooltipExtension) {
+function ciExecutionsDefinition(tooltip?: ChartTooltipExtension) {
   return ciBarsDefinition(ciExecutionRows(), tooltip);
 }
 
-export function ciSuiteDefinition(tooltip?: ChartTooltipExtension) {
+function ciSuiteDefinition(tooltip?: ChartTooltipExtension) {
   return ciBarsDefinition(ciSuiteRows(), tooltip);
 }
 
@@ -232,7 +232,7 @@ function ciBarsDefinition(
 // Public functions by namespace, and by industry layer
 // ---------------------------------------------------------------------------
 
-export interface NamespaceRow {
+interface NamespaceRow {
   namespace: string;
   count: number;
 }
@@ -245,9 +245,6 @@ export const NAMESPACE_COUNTS: readonly NamespaceRow[] = [
   ...coreNamespaces,
   { namespace: "regex", count: gmtStats.patterns },
 ];
-
-/** Functions in the namespace each industry owns, largest first. */
-export const INDUSTRY_COUNTS: readonly NamespaceRow[] = industryNamespaces;
 
 /** `regex` exports patterns, not functions, so it sits outside the total. */
 export const CORE_FUNCTION_TOTAL = coreFunctions;
@@ -328,7 +325,7 @@ export function industryTooltip(
 export const OWN_SERIES = "own";
 
 /** One segment of one industry's bar. */
-export interface IndustrySegment {
+interface IndustrySegment {
   /** The industry's label: the bar's place on the x axis. */
   industry: string;
   layer: IndustryLayerCount;
@@ -384,7 +381,7 @@ function seriesOrder(segments: readonly IndustrySegment[]): string[] {
  * Each industry's own functions in the solid spring gradient, with the modules it draws on
  * stacked above in the hatched tint of the same hue.
  */
-export function industryStackDefinition(tooltip?: ChartTooltipExtension) {
+function industryStackDefinition(tooltip?: ChartTooltipExtension) {
   const segments = industrySegments();
   return defineChart({
     marks: [
@@ -421,23 +418,15 @@ export function industryStackDefinition(tooltip?: ChartTooltipExtension) {
   });
 }
 
-/** Escapes the few characters that matter in the text of an HTML element. */
-const escapeHtml = (text: string): string =>
-  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
 /**
  * The key under the chart. A solid swatch and a hatched swatch are marks; the words carry the
  * meaning.
  */
 export function industryLegend(): string {
-  const item = (modifier: string, words: string) =>
-    `<li><span class="gmt-chart-swatch gmt-chart-swatch--${modifier}" aria-hidden="true"></span><span>${escapeHtml(words)}</span></li>`;
-  return [
-    `<ul class="gmt-chart-legend" aria-label="Key">`,
-    item("own", "the industry's own functions"),
-    item("shared", "a shared layer it draws on"),
-    `</ul>`,
-  ].join("");
+  return chartKey([
+    { kind: "own", words: "the industry's own functions" },
+    { kind: "shared", words: "a shared layer it draws on" },
+  ]).toString();
 }
 
 /**
@@ -457,9 +446,9 @@ export function industrySummary(
           `draws on ${drawn.module}, ${formatCount(drawn.count)} functions (${drawnOnOwner(drawn.module, layers)})`,
       ),
     ];
-    return `<li>${escapeHtml(`${layer.label}: ${parts.join("; ")}.`)}</li>`;
+    return `${layer.label}: ${parts.join("; ")}.`;
   });
-  return `<ul class="gmt-chart-visually-hidden">${items.join("")}</ul>`;
+  return chartSummary(items).toString();
 }
 
 /** Both API-surface views share one bar definition, so they differ in rows, hue and tooltip. */
@@ -503,7 +492,7 @@ function apiSurfaceDefinition(
   });
 }
 
-export function namespaceDefinition(tooltip?: ChartTooltipExtension) {
+function namespaceDefinition(tooltip?: ChartTooltipExtension) {
   return apiSurfaceDefinition(
     NAMESPACE_COUNTS,
     "cyan",
@@ -513,7 +502,7 @@ export function namespaceDefinition(tooltip?: ChartTooltipExtension) {
 }
 
 /** The stacked "By industry" chart: see `industryStackDefinition`. */
-export function industryDefinition(tooltip?: ChartTooltipExtension) {
+function industryDefinition(tooltip?: ChartTooltipExtension) {
   return industryStackDefinition(tooltip);
 }
 
@@ -527,7 +516,7 @@ export type BarChartId =
   | "namespaces"
   | "industries";
 
-export interface BarChart {
+interface BarChart {
   ariaLabel: string;
   idPrefix: string;
   width: number;

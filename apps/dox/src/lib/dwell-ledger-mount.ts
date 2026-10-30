@@ -145,7 +145,7 @@ const PRESET_OPTIONS = [
 export function renderDwellLedgerTemplate(
   idPrefix: string,
   args: DwellLedgerArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const seeded = args.entry !== undefined || args.exit !== undefined;
   const base = DWELL_PRESETS[0]!;
@@ -279,7 +279,7 @@ export function renderDwellLedgerTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Dwell Ledger", scope: idPrefix },
     html`${place}${returns}`,
-  ).toString();
+  );
 }
 
 function callFrame(label: string, plain: string, code?: SafeHtml): SafeHtml {

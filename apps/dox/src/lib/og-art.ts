@@ -27,7 +27,7 @@ const DESCRIPTION_MAX = 180;
  * A description cut to at most `max` characters at a word boundary, with `…` where it was cut.
  * A text that fits is returned as it is.
  */
-export function cutDescription(text: string, max = DESCRIPTION_MAX): string {
+function cutDescription(text: string, max = DESCRIPTION_MAX): string {
   const flat = text.replace(/\s+/g, " ").trim();
   if (flat.length <= max) return flat;
   const room = flat.slice(0, max - 1);

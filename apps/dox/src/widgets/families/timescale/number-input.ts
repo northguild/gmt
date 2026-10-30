@@ -8,7 +8,7 @@
 import { gateAttr, html, type GateOption, type SafeHtml } from "../../builders";
 import styles from "../../builders/text-input.module.css";
 
-export interface NumberInputOptions extends GateOption {
+interface NumberInputOptions extends GateOption {
   id: string;
   value: string;
   min: number;

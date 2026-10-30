@@ -45,10 +45,7 @@ import { writtenParts } from "./punctuality-widgets";
 // The library's names
 // ---------------------------------------------------------------------------
 
-/** The three events `bolTimestamp` reads, in the order the form lists them. */
-export const BL_EVENTS = ["shippedOnBoard", "received", "issue"] as const;
-
-export interface EventOption {
+interface EventOption {
   value: string;
   label: string;
 }
@@ -81,9 +78,9 @@ export function eventCaption(event: string): string {
 export const CUSTOM_PRESET_ID = "custom";
 
 /** The moment the slider's window is 72 hours wide around (36 hours each side). */
-export const WINDOW_HALF_HOURS = 36;
+const WINDOW_HALF_HOURS = 36;
 /** The slider's step, in minutes. It is the canvas's snap. */
-export const SLIDER_STEP_MINUTES = 15;
+const SLIDER_STEP_MINUTES = 15;
 /** The slider's positions: 72 hours in quarter-hours. */
 export const SLIDER_STEPS = (2 * WINDOW_HALF_HOURS * 60) / SLIDER_STEP_MINUTES;
 /**
@@ -178,7 +175,7 @@ export function permalinkOf(state: BlDateState): Record<string, string> {
 // Presets
 // ---------------------------------------------------------------------------
 
-export interface BlDatePreset {
+interface BlDatePreset {
   id: string;
   label: string;
   description: string;
@@ -305,15 +302,13 @@ export function matchPreset(state: BlDateState): string {
 // ---------------------------------------------------------------------------
 
 /** How the UTC date sits against the B/L date, in the words the plate shows. */
-export type Sameness = "same date" | "one day later" | "one day earlier";
+type Sameness = "same date" | "one day later" | "one day earlier";
 
 /** How a date sits against the latest date allowed. */
-export type LatestWords =
-  | "after the latest date"
-  | "on or before the latest date";
+type LatestWords = "after the latest date" | "on or before the latest date";
 
 /** One lane's reading: the zone, the `bolTimestamp` call made for it, and its date. */
-export interface LaneRead {
+interface LaneRead {
   /** 0 is UTC, 1 the place, 2 to 4 the other calendars. */
   index: number;
   /** The zone the lane is read in. `""` for a lane with no zone. */
@@ -324,7 +319,7 @@ export interface LaneRead {
   date: string;
 }
 
-export interface LatestRead {
+interface LatestRead {
   /** The latest date as typed. `""` when there is none. */
   value: string;
   /** What `isValidDate` said, or `null` when there is no latest date. */
@@ -335,7 +330,7 @@ export interface LatestRead {
   utc: LatestWords | null;
 }
 
-export interface BlRead {
+interface BlRead {
   /** The five lanes, in order: UTC, the place, then the other calendars. */
   lanes: LaneRead[];
   /** The B/L date, `""` when the library returned none. */
@@ -569,12 +564,12 @@ export function laneLabel(lane: LaneRead): string {
 }
 
 /** The series (1 to 4) of a lane, or `undefined` for the UTC lane. */
-export function laneSeries(index: number): SeriesNumber | undefined {
+function laneSeries(index: number): SeriesNumber | undefined {
   return index >= 1 && index <= 4 ? (index as SeriesNumber) : undefined;
 }
 
 /** What one lane draws: its day columns, the lit day and a note, if any. */
-export interface LaneView {
+interface LaneView {
   index: number;
   label: string;
   series: SeriesNumber | undefined;
@@ -626,14 +621,6 @@ export function laneView(
     lit,
     note,
   };
-}
-
-/** The date of the day the moment falls in, from the drawn columns. */
-export function dayHoldingMoment(
-  cells: readonly DayCell[],
-  ms: number,
-): string | null {
-  return cells.find((c) => c.startMs <= ms && ms < c.endMs)?.date ?? null;
 }
 
 /** The sentence a lane's list item carries for a screen reader. */

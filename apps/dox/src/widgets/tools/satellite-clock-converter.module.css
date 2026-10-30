@@ -78,6 +78,21 @@
   font-size: var(--gmt-text-sm);
 }
 
+/* The footnote holds the room of its longest sentence, so a reading that adds or drops one
+   never moves the notes below. */
+.held {
+  display: grid;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @media (forced-colors: active) {
   .frame {
     border-color: CanvasText;

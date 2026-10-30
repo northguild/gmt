@@ -16,7 +16,7 @@ import { pickFunctions } from "./gmt-pick";
 import { WidgetLoadError } from "./widget-mount";
 
 /** One field of a parsed cron line, as the library returns it. */
-export interface CronLibField {
+interface CronLibField {
   values: readonly number[];
   star: boolean;
 }
@@ -39,7 +39,7 @@ export interface CronLibRun {
   classification: "unique" | "ambiguous" | "nonexistent";
 }
 
-export type CronLibWindow =
+type CronLibWindow =
   | { start: string; end: string }
   | { after: string; count: number };
 

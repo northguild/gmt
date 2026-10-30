@@ -17,7 +17,7 @@ import styles from "./edi-call.module.css";
 
 export { callLines, outputOf };
 
-export interface CallFrameSpec {
+interface CallFrameSpec {
   /** The frame's name. */
   label: string;
   copyLabel?: string;
@@ -42,7 +42,7 @@ function frameGhost(text: string): SafeHtml {
   return html`<pre class="${styles.frameGhost}"><code>${text}</code></pre>`;
 }
 
-export interface CallFrameHoldOptions {
+interface CallFrameHoldOptions {
   id: string;
   spec: CallFrameSpec;
   /** Every call text the region can show, as plain text. */
@@ -81,7 +81,7 @@ function outputGhost(lines: readonly string[]): SafeHtml {
   return html`<div class="${styles.outputGhost}">${lines.join("\n")}</div>`;
 }
 
-export interface OutputHoldOptions {
+interface OutputHoldOptions {
   id: string;
   label: string;
   state: CallOutputState;

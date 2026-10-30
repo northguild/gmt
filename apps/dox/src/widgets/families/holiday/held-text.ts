@@ -12,7 +12,7 @@ import styles from "./held-text.module.css";
 
 export type HeldState = "ok" | "note" | "sentinel";
 
-export interface HeldTextOptions {
+interface HeldTextOptions {
   /** The text shown now. */
   text: string;
   state: HeldState;

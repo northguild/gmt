@@ -18,7 +18,7 @@
  */
 
 /** A link to a page that shows the problem in use. */
-export interface OverviewLink {
+interface OverviewLink {
   label: string;
   /** A site path with a trailing slash: `/tools/free-time-ledger/`. */
   href: string;
@@ -38,7 +38,7 @@ export interface PainPoint {
   see: readonly OverviewLink[];
 }
 
-export interface IndustryOverview {
+interface IndustryOverview {
   /** What the industry is, in plain words. */
   about: string;
   /** Three to five problems. */

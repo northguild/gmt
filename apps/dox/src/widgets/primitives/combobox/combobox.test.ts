@@ -8,7 +8,7 @@ import { combobox, type GmtCombobox } from "./combobox";
 
 const zones = ["Africa/Cairo", "Asia/Tokyo", "Asia/Seoul", "Europe/Paris"];
 
-function draw(browse = false) {
+function draw(browse = false, placement?: "above" | "below") {
   return renderHtml(
     field({
       id: "zone",
@@ -20,12 +20,27 @@ function draw(browse = false) {
           items: zones,
           placeholder: "e.g. Asia/Tokyo",
           ...(browse ? { browseLabel: "Browse every zone" } : {}),
+          ...(placement ? { placement } : {}),
         }),
     }),
   );
 }
 
 describe("the combobox element", () => {
+  it("opens, narrows and chooses the same when it is set to open above the input", async () => {
+    const r = draw(false, "above");
+    const user = userEvent.setup();
+    await user.tab();
+    expect(screen.getAllByRole("option")).toHaveLength(4);
+    await user.keyboard("seo");
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByRole("combobox", { name: "Find a zone" })).toHaveValue(
+      "Asia/Seoul",
+    );
+    await expectNoAxeViolations(r.host);
+  });
+
   it("is named by its label and opens with every choice on focus", async () => {
     draw();
     const user = userEvent.setup();

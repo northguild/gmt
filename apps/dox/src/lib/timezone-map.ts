@@ -19,8 +19,9 @@ import worldAtlas from "world-atlas/countries-110m.json";
 import { TIMEZONES } from "./timezones";
 import { withBase } from "./site";
 import { chartTooltipMotion } from "./chart-motion";
-import { setHtml } from "~/widgets/builders";
+import { findWidget, setHtml } from "~/widgets/builders";
 import { zoneMapTooltip } from "~/widgets/families/zones/zone-map-tooltip";
+import shell from "~/widgets/families/zones/zone-map-shell.module.css";
 
 type TopologyLike = Parameters<typeof feature>[0];
 
@@ -119,7 +120,7 @@ function buildDefinition(
       fill: "url(#gmt-map-land)",
       stroke: "var(--gmt-border-strong)",
       strokeWidth: 0.5,
-      className: "gmt-map-land",
+      className: shell["land"],
     }),
     ...(boundaries.length > 0
       ? [
@@ -131,7 +132,7 @@ function buildDefinition(
             stroke: "var(--gmt-cyan)",
             strokeOpacity: 0.5,
             strokeWidth: 0.75,
-            className: "gmt-timezone-polygon",
+            className: shell["polygon"],
           }),
         ]
       : []),
@@ -249,7 +250,7 @@ export interface TimezoneMapHost {
   destroy: () => void;
 }
 
-export async function initTimezoneMap(
+async function initTimezoneMap(
   host: HTMLElement,
   clockPanel: HTMLElement | null,
 ): Promise<TimezoneMapHost> {
@@ -331,4 +332,48 @@ export async function initTimezoneMap(
       chartHost.destroy();
     },
   };
+}
+
+/**
+ * Mount the map shell `zoneMapShell` wrote: draw the chart, keep the clock panel ticking, and tie
+ * the panel to the map. Pressing a zone's button selects it on the map and marks it `aria-pressed`;
+ * pressing the map clears the mark.
+ */
+export async function mountTimezoneMap(
+  root: Element,
+  signal: AbortSignal,
+): Promise<TimezoneMapHost> {
+  const widget = findWidget(root, "timezone-map");
+  const host = widget.part("host");
+  const panel = widget.part("panel");
+  const buttons = [...panel.querySelectorAll<HTMLButtonElement>("button")];
+
+  function setSelected(id: string | null): void {
+    for (const button of buttons) {
+      button.setAttribute(
+        "aria-pressed",
+        String(button.dataset["tzId"] === id),
+      );
+    }
+  }
+
+  const map = await initTimezoneMap(host, panel);
+  if (signal.aborted) {
+    map.destroy();
+    return map;
+  }
+  panel.addEventListener(
+    "click",
+    (event) => {
+      const button = buttons.find((b) => b.contains(event.target as Node));
+      const id = button?.dataset["tzId"];
+      if (id === undefined) return;
+      map.focusTimezone(id);
+      setSelected(id);
+    },
+    { signal },
+  );
+  host.addEventListener("click", () => setSelected(null), { signal });
+  signal.addEventListener("abort", () => map.destroy(), { once: true });
+  return map;
 }

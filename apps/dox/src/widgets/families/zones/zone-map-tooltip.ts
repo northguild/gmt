@@ -6,7 +6,7 @@
 import { html, type SafeHtml } from "~/widgets/builders";
 import styles from "./zone-map-tooltip.module.css";
 
-export interface ZoneMapTooltipOptions {
+interface ZoneMapTooltipOptions {
   /** The zone's display name, such as `Asia/Tokyo`. */
   name: string;
   /** The local time with no fraction of a second, such as `2027-03-08T07:00:00`. */

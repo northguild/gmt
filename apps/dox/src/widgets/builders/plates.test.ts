@@ -53,6 +53,24 @@ describe("plates", () => {
     );
   });
 
+  it("reserves the widest text of a line, hidden from assistive technology", () => {
+    renderHtml(
+      plates([
+        {
+          caption: "UTC",
+          value: "1",
+          lines: ["as typed", ""],
+          lineSamples: [["read from GAL"]],
+        },
+      ]),
+    );
+    expect(screen.getByText("as typed")).toBeVisible();
+    expect(screen.getByText("read from GAL")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
+
   it("escapes text", () => {
     renderHtml(plates([{ caption: "<b>", value: "&", lines: ["<i>"] }]));
     expect(screen.getByText("<b>")).toBeInTheDocument();

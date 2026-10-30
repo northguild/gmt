@@ -119,7 +119,7 @@ const GUARDS = [
 ] as const;
 
 /** The links under the calls: the sibling tool and each function's page. */
-export const BRIDGE_LINKS = [
+const BRIDGE_LINKS = [
   { text: "ID Timestamp Decoder", href: "/tools/id-timestamp-decoder/" },
   {
     text: "fromNanoseconds reference",
@@ -307,7 +307,7 @@ const TEXT_KEYS = [
 export function renderColumnTimestampBridgeTemplate(
   idPrefix: string,
   args: ColumnTimestampBridgeArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state: BridgeState = isSeeded(args)
     ? readArgs(args)
@@ -331,6 +331,7 @@ export function renderColumnTimestampBridgeTemplate(
           value: state[key],
           autocomplete: "off",
           spellcheck: false,
+          maxLength: VALUE_MAX_CHARS,
           describedBy,
         }),
     });
@@ -421,11 +422,13 @@ export function renderColumnTimestampBridgeTemplate(
 
   const read = section(
     { id: id("read"), heading: "2. How each form stores it", level: 4 },
-    html`<div class="${styles.frame}" data-gate="frame">
+    html`${grow(
+      html`<div class="${styles.frame}" data-gate="frame">
       <div class="${styles.panel}" id="${id("hero-panel")}" ${!encode ? html`hidden` : ""}><div id="${id("hero")}">${plateOf(null)}</div></div>
       <div class="${styles.cards}" id="${id("cards")}">${cardsOf(id, null)}</div>
       <div class="${styles.panel}" id="${id("ladder-panel")}" ${!encode ? html`hidden` : ""}><div id="${id("ladder")}">${ladderOf(null)}</div></div>
     </div>`,
+    )}`,
   );
 
   const calls = section(
@@ -438,13 +441,13 @@ export function renderColumnTimestampBridgeTemplate(
         state: "empty",
         lines: [],
       })}</div>`,
-    )}<div id="${id("links")}">${linksOf()}</div>`,
+    )}${grow(html`<div id="${id("links")}">${linksOf()}</div>`)}`,
   );
 
   return widget(
     { name: WIDGET_NAME, label: "Column Timestamp Bridge", scope: idPrefix },
     html`${pick}${read}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -476,8 +479,6 @@ function setupWidget(
   const texts = Object.fromEntries(
     TEXT_KEYS.map((key) => {
       const input = el<HTMLInputElement>(key);
-      // The kit's text input has no length option: the limit is a property.
-      input.maxLength = VALUE_MAX_CHARS;
       return [key, input];
     }),
   ) as Record<(typeof TEXT_KEYS)[number], HTMLInputElement>;

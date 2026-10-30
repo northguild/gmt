@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import { roving } from "./roving";
 
 function item(name: string): HTMLLIElement {
@@ -54,6 +55,16 @@ describe("roving", () => {
     await user.keyboard("{End}");
     expect(screen.getByRole("button", { name: "Pacific" })).toHaveFocus();
     expect(buttons().map((b) => b.tabIndex)).toEqual([-1, -1, 0]);
+  });
+
+  it("has no axe violations at rest or after a key press", async () => {
+    const user = userEvent.setup();
+    const root = list();
+    roving(root, { items: buttons, signal: controller.signal });
+    await expectNoAxeViolations(root);
+    buttons()[0]!.focus();
+    await user.keyboard("{ArrowDown}");
+    await expectNoAxeViolations(root);
   });
 
   it("follows a click and leaves Enter to the button", async () => {

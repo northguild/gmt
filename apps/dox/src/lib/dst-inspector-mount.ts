@@ -112,7 +112,7 @@ const PRESET_NOUN: Record<string, string> = {
 export function renderDstTemplate(
   idPrefix: string,
   args: DstArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const zone = args.zone ?? DEFAULT_ZONE;
   const year = args.year ?? DEFAULT_YEAR;
@@ -178,7 +178,9 @@ export function renderDstTemplate(
             options: DISOPTIONS.map((d) => ({ value: d, label: d })),
           }),
       })}`,
-    )}<p>Disambiguation: <code>compatible</code> takes the later instant in a gap and the earlier one in an overlap. <code>earlier</code> and <code>later</code> take that instant. <code>reject</code> gives no result.</p>${dstTicker({ id })}${dstTickerEmpty({ id }, TICKER_EMPTY_TEXT)}${grow(
+    )}<p>Disambiguation: <code>compatible</code> takes the later instant in a gap and the earlier one in an overlap. <code>earlier</code> and <code>later</code> take that instant. <code>reject</code> gives no result.</p>${grow(
+      html`${dstTicker({ id })}${dstTickerEmpty({ id }, TICKER_EMPTY_TEXT)}`,
+    )}${grow(
       html`<div id="${id("call-convert")}">${callFrame("convertPlainDateTimeToZoned call", "")}</div>`,
     )}${grow(
       html`<div id="${id("probe-result")}">${callOutput({ label: "What the probe returned", state: "empty", lines: [] })}</div>`,
@@ -188,7 +190,7 @@ export function renderDstTemplate(
   return widget(
     { name: WIDGET_NAME, label: "DST Inspector", scope: idPrefix },
     html`${transitions}${probe}`,
-  ).toString();
+  );
 }
 
 function callFrame(label: string, plain: string, code?: SafeHtml): SafeHtml {

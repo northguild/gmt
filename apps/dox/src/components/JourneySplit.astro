@@ -26,7 +26,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderJourneySplitTemplate("journey-split", {});
+const html = renderJourneySplitTemplate("journey-split", {}).value;
 ---
 
 {

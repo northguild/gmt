@@ -2,6 +2,12 @@
 
 .output {
   display: block;
+  box-sizing: border-box;
+
+  /* The lines, the padding either side and the 1px border either side. */
+  min-block-size: calc(
+    var(--min-lines, 0) * 1lh + 2 * var(--gmt-space-3) + 2px
+  );
   min-inline-size: 0;
   max-inline-size: 100%;
   overflow-x: auto;
@@ -24,6 +30,7 @@
 
 /* The sentinel: amber words in a bracketed chip. */
 .lost {
+  white-space: nowrap;
   padding-inline: var(--gmt-space-1);
   border: 1px solid var(--gmt-signal-border);
   background: var(--gmt-signal-fill);

@@ -36,7 +36,7 @@ export const NO_ZONE = "";
 
 export const CUSTOM_PRESET_ID = "custom";
 
-export interface DwellPreset {
+interface DwellPreset {
   id: string;
   label: string;
   description: string;
@@ -399,7 +399,7 @@ export function formatHandleValue(ms: number, zone: string | null): string {
 // Why null
 // ---------------------------------------------------------------------------
 
-export type NullReason =
+type NullReason =
   | "invalid-entry"
   | "invalid-exit"
   | "unknown-zone"
@@ -418,7 +418,7 @@ export const NULL_REASON_TEXT: Record<NullReason, string> = {
     "The exit is before the entry. An inverted dwell is a data error, not a negative stay.",
 };
 
-export interface NullValidators {
+interface NullValidators {
   isValidInstant(value: string): boolean;
   isValidTimeZone(value: string): boolean;
   isValidZonedDateTime(value: string): boolean;

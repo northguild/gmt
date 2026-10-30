@@ -14,7 +14,7 @@ import styles from "./rolled-marks.module.css";
 /** Closer than this share of the axis, the arc is left out: the two markers all but touch. */
 export const MIN_ARC_SPAN = 0.015;
 
-export interface RolledMarkOptions {
+interface RolledMarkOptions {
   /** What it says to a screen reader, such as "gate-in without the calendar: Sat 15 Jun 17:00". Required. */
   label: string;
   at: number;
@@ -25,7 +25,7 @@ export function rolledMark(o: RolledMarkOptions): SafeHtml {
   return html`<span class="${styles.hollow}" role="img" aria-label="${o.label}" data-series="${o.series}" style="--gmt-at: ${unit(o.at)}"></span>`;
 }
 
-export interface RolledArcOptions {
+interface RolledArcOptions {
   /** Where the cut-off would have been, 0 to 1. */
   from: number;
   /** Where the calendar put it, 0 to 1. */

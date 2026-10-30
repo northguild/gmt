@@ -89,7 +89,7 @@ import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 export type { CutoffRulerArgs } from "./cutoff-ruler";
 
 const WIDGET_NAME = "cutoff-ruler";
-const NBSP = " ";
+const NBSP = "\u00a0";
 const HOUR_MS = 3_600_000;
 
 /** The series each reading is drawn in, in the lane, the close-up and its card: calendar 1,
@@ -135,7 +135,7 @@ function headingText(days: string): string {
 export function renderCutoffRulerTemplate(
   idPrefix: string,
   args: CutoffRulerArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const seeded = args.anchor !== undefined || args.days !== undefined;
   const state: RulerState = seeded
@@ -237,7 +237,7 @@ export function renderCutoffRulerTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Cut-off Ruler", scope: idPrefix },
     html`${pick}${read}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

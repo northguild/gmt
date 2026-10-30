@@ -20,7 +20,7 @@ const UNIX_EPOCH_JD = 2_440_587.5;
 /** Julian date of J2000.0. */
 const J2000_JD = 2_451_545.0;
 
-export interface LatLng {
+interface LatLng {
   lat: number;
   lng: number;
 }
@@ -63,12 +63,6 @@ export function subsolarPoint(instantMs: number): LatLng {
   const gmst = (280.460_618_37 + 360.985_647_366_29 * n) % 360;
 
   return { lat: declination, lng: wrapLongitude(rightAscension - gmst) };
-}
-
-/** The anti-solar point — centre of the night hemisphere. */
-export function antisolarPoint(instantMs: number): LatLng {
-  const sun = subsolarPoint(instantMs);
-  return { lat: -sun.lat, lng: wrapLongitude(sun.lng + 180) };
 }
 
 /** Normalise a longitude to the half-open interval [-180, 180). */

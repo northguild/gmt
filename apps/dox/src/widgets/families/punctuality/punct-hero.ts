@@ -18,12 +18,17 @@ import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./punct-hero.module.css";
 
-export interface PunctHeroOptions extends GateOption {
+interface PunctHeroOptions extends GateOption {
   /** What the value is. Required. */
   caption: string;
   value: string;
   /** A small picture before the value (a transport icon). */
   icon?: SafeHtml;
+  /**
+   * Keep the icon's room when there is no icon, so the value's box is the same whether the
+   * picture is shown or not (a plate whose icon comes and goes with the value).
+   */
+  reserveIcon?: boolean;
   /** The widest values it will show, to reserve their width. */
   samples?: readonly string[];
   /** The sub lines, top to bottom. An empty string keeps the line's box. */
@@ -35,6 +40,9 @@ export interface PunctHeroOptions extends GateOption {
   quiet?: boolean;
 }
 
+/** An icon's box with nothing drawn in it. */
+const EMPTY_ICON = html`<svg aria-hidden="true" focusable="false"></svg>`;
+
 export function punctHero(o: PunctHeroOptions): SafeHtml {
   const lines = o.lines ?? [];
   return html`<figure
@@ -44,7 +52,7 @@ export function punctHero(o: PunctHeroOptions): SafeHtml {
     ${gateAttr(o.gate)}
     ><figcaption class="${styles.caption}">${o.caption}</figcaption
     ><div class="${styles.values}"
-      ><p class="${styles.value}">${o.icon ?? ""}<span>${o.value}</span></p
+      ><p class="${styles.value}">${o.icon ?? (o.reserveIcon === true ? EMPTY_ICON : "")}<span>${o.value}</span></p
       >${(o.samples ?? []).map(
         (sample) =>
           html`<span class="${styles.ghost}" aria-hidden="true">${sample}</span>`,

@@ -28,13 +28,13 @@ export type HeadEntry = {
 export const TITLE_SUFFIX = " · GMT";
 
 /** The name of the site in a breadcrumb and a share card. */
-export const SITE_NAME = "GMT";
+const SITE_NAME = "GMT";
 
 /** Where the source of the package lives. */
-export const CODE_REPOSITORY = "https://github.com/northguild/gmt";
+const CODE_REPOSITORY = "https://github.com/northguild/gmt";
 
 /** The share image's size in pixels (`og:image:width`, `og:image:height`). */
-export const OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
+const OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 
 /** The namespaces' reference pages get an image each; a function's page shares its namespace's. */
 const REFERENCE_NAMESPACE = /^(reference\/[^/]+)(?:\/|$)/;
@@ -66,7 +66,7 @@ export function isHomeId(id: string): boolean {
 }
 
 /** What `hasEntry` finds for an id: the title of the docs page that has it. */
-export type EntryRef = { title: string };
+type EntryRef = { title: string };
 
 export type HeadInput = {
   /** The route id: `""` for the home page, else the slug (`guides/concepts/plain-vs-zoned`). */

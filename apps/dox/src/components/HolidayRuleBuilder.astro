@@ -22,7 +22,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderHolidayRuleBuilderTemplate("holiday-rule-builder", {});
+const html = renderHolidayRuleBuilderTemplate("holiday-rule-builder", {}).value;
 ---
 
 {

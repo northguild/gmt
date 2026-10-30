@@ -159,7 +159,7 @@ function callFrame(state: CrossingState): SafeHtml {
 export function renderCrossingClockTemplate(
   idPrefix: string,
   args: CrossingClockArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const seeded = args.entry !== undefined;
   const state: CrossingState = seeded
@@ -244,7 +244,7 @@ export function renderCrossingClockTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Crossing Clock", scope: idPrefix },
     html`${log}${read}${call}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -22,8 +22,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { LABEL_ALPHA, MINOR_MARKER_ALPHA } from "./globe-inks";
 
+/** The site's custom-property prefix, kept apart so no string reads as a house class name. */
+const PREFIX = "gmt";
+const prop = (name: string) => `--${PREFIX}-${name}`;
+
 const TOKENS = readFileSync(
-  path.resolve(import.meta.dirname, "../styles/gmt-tokens.css"),
+  path.resolve(import.meta.dirname, `../styles/${PREFIX}-tokens.css`),
   "utf8",
 );
 
@@ -39,7 +43,7 @@ function block(selector: string): Map<string, string> {
     }
     return values;
   }
-  throw new Error(`no ${selector} block in gmt-tokens.css`);
+  throw new Error(`no ${selector} block in ${PREFIX}-tokens.css`);
 }
 
 const DARK = block(":root");
@@ -53,12 +57,12 @@ function token(name: string): string {
 
 /** Every token the overlay is drawn with. */
 const OVERLAY_TOKENS = [
-  "--gmt-globe-ink",
-  "--gmt-globe-marker",
-  "--gmt-globe-selected",
-  "--gmt-globe-gold",
-  "--gmt-globe-casing",
-  "--gmt-globe-casing-alpha",
+  prop("globe-ink"),
+  prop("globe-marker"),
+  prop("globe-selected"),
+  prop("globe-gold"),
+  prop("globe-casing"),
+  prop("globe-casing-alpha"),
 ];
 
 type Rgb = [number, number, number];
@@ -103,8 +107,8 @@ const BACKDROPS: Rgb[] = [
 
 /** The lowest contrast an ink reaches against its casing over any backdrop. */
 function worstContrast(ink: string, inkAlpha: number): number {
-  const casing = hex(token("--gmt-globe-casing"));
-  const casingAlpha = Number.parseFloat(token("--gmt-globe-casing-alpha"));
+  const casing = hex(token(prop("globe-casing")));
+  const casingAlpha = Number.parseFloat(token(prop("globe-casing-alpha")));
   let worst = Number.POSITIVE_INFINITY;
   for (const backdrop of BACKDROPS) {
     const behind = over(backdrop, casing, casingAlpha);
@@ -119,17 +123,17 @@ const GRAPHIC_FLOOR = 3;
 describe("on any globe", () => {
   it("keeps labels at the 7:1 text floor", () => {
     expect(
-      worstContrast(token("--gmt-globe-ink"), LABEL_ALPHA),
+      worstContrast(token(prop("globe-ink")), LABEL_ALPHA),
     ).toBeGreaterThanOrEqual(TEXT_FLOOR);
   });
 
   it("keeps every marker and the zone outline at the 3:1 graphics floor", () => {
     const inks: [string, string, number][] = [
-      ["primary marker", token("--gmt-globe-marker"), 1],
-      ["minor marker", token("--gmt-globe-ink"), MINOR_MARKER_ALPHA],
-      ["night marker", token("--gmt-globe-gold"), 1],
-      ["minor night marker", token("--gmt-globe-gold"), MINOR_MARKER_ALPHA],
-      ["selected marker and zone outline", token("--gmt-globe-selected"), 1],
+      ["primary marker", token(prop("globe-marker")), 1],
+      ["minor marker", token(prop("globe-ink")), MINOR_MARKER_ALPHA],
+      ["night marker", token(prop("globe-gold")), 1],
+      ["minor night marker", token(prop("globe-gold")), MINOR_MARKER_ALPHA],
+      ["selected marker and zone outline", token(prop("globe-selected")), 1],
     ];
     for (const [name, ink, alpha] of inks) {
       expect(

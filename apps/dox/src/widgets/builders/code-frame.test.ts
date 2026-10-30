@@ -32,6 +32,21 @@ describe("codeFrame", () => {
     expect(document.activeElement?.tagName).toBe("PRE");
   });
 
+  it("is the same group when it holds room for more lines", async () => {
+    const fx = renderHtml(
+      codeFrame({
+        label: "Live call",
+        copyText: "now()",
+        code: html`now()`,
+        minLines: 12,
+      }),
+    );
+    expect(screen.getByRole("group", { name: "Live call" })).toHaveTextContent(
+      "now()",
+    );
+    await expectNoAxeViolations(fx.host);
+  });
+
   it("has no axe violations", async () => {
     const fx = renderHtml(markup());
     await expectNoAxeViolations(fx.host);

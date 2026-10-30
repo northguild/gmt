@@ -1,5 +1,5 @@
 /**
- * The only DOM helpers a widget test may use (slice 7). The `dox-test/*` lint rules ban
+ * The only DOM helpers a widget test may use. The `dox-test/*` lint rules ban
  * everything this file does by hand: `dispatchEvent`, `new Event`, and so on. This file
  * is exempt through an `overrides` entry in `oxlint.config.mts`, not through comments.
  *
@@ -312,4 +312,16 @@ export function cellsInColumn(
     if (!cell) throw new Error(`a body row has no cell in column ${index + 1}`);
     return cell;
   });
+}
+
+/**
+ * Where an in-page link lands: the element its `#fragment` names in the link's document, or
+ * `null` when nothing has that id, which is a dead link. Throws for a link that leaves the page.
+ */
+export function linkTarget(link: HTMLElement): HTMLElement | null {
+  const href = link.getAttribute("href") ?? "";
+  if (!href.startsWith("#") || href.length < 2) {
+    throw new Error(`linkTarget takes an in-page link; got href "${href}".`);
+  }
+  return link.ownerDocument.getElementById(decodeURIComponent(href.slice(1)));
 }

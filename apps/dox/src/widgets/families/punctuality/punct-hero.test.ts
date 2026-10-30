@@ -36,6 +36,16 @@ describe("punctHero", () => {
     await expectNoAxeViolations(host);
   });
 
+  it("says the same with or without room for an icon", async () => {
+    const { host } = renderHtml(
+      punctHero({ caption: "departure", value: "none", reserveIcon: true }),
+    );
+    const figure = screen.getByRole("figure");
+    expect(figure).toHaveTextContent("none");
+    expect(within(figure).queryByRole("img")).not.toBeInTheDocument();
+    await expectNoAxeViolations(host);
+  });
+
   it("passes axe on a plain plate", async () => {
     const { host } = renderHtml(
       punctHero({ caption: "departure made", value: "10:05", series: 1 }),

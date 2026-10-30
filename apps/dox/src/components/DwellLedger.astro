@@ -33,7 +33,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderDwellLedgerTemplate("dwell-ledger", {});
+const html = renderDwellLedgerTemplate("dwell-ledger", {}).value;
 ---
 
 {

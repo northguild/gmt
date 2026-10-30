@@ -42,7 +42,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderIntervalTemplate("interval-visualizer");
+const html = renderIntervalTemplate("interval-visualizer").value;
 ---
 
 {

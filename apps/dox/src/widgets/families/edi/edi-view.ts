@@ -15,7 +15,7 @@ const longest = (xs: readonly string[]): string =>
   xs.reduce((a, b) => (b.length > a.length ? b : a), "");
 
 /** Why there is no result: one or more sentences under the shared title. */
-export function reasonAside(paragraphs: readonly string[]): SafeHtml {
+function reasonAside(paragraphs: readonly string[]): SafeHtml {
   return aside(
     {
       label: "Why there is no result",
@@ -26,7 +26,7 @@ export function reasonAside(paragraphs: readonly string[]): SafeHtml {
   );
 }
 
-export interface AsideHoldOptions {
+interface AsideHoldOptions {
   id: string;
   /** What is shown now, or nothing. */
   paragraphs: readonly string[];
@@ -53,7 +53,7 @@ export function asideContent(paragraphs: readonly string[]): SafeHtml {
   return paragraphs.length === 0 ? html`` : reasonAside(paragraphs);
 }
 
-export interface VerdictHoldOptions {
+interface VerdictHoldOptions {
   id: string;
   titles: readonly string[];
   details: readonly string[];

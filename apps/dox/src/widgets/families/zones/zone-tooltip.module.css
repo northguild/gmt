@@ -1,0 +1,106 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--gmt-font-mono);
+}
+
+.zone {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+}
+
+/* Time is blue, offset green and DST gold, the same roles as the clock list beside the globe.
+   All -ink tokens: this is text, and the bright base tokens clear the 3:1 fill bar only. */
+.time {
+  font-size: 0.95rem;
+  color: var(--gmt-cyan-ink);
+}
+
+/* No wrap: "Tomorrow · 2026-10-01" is wider than the card's minimum, and a wrapped date reads
+   as two. The card grows to fit instead. */
+.date {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+/* The word carries the day shift alone; a wash under it would cost more contrast than it is
+   worth on this surface. */
+.shift {
+  font-weight: 600;
+  color: var(--gmt-dst-purple-ink);
+}
+
+/* Not colour-coded on purpose: gold is the site's DST colour and the canvas's night marker,
+   and every other hue has a job here. The glyph and the word carry it. */
+.sky {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.sky svg {
+  flex: none;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.offset {
+  color: var(--gmt-spring-ink);
+}
+
+.dst {
+  color: var(--gmt-ice-dim);
+}
+
+.dstOn {
+  color: var(--gmt-dst-gold-ink);
+  font-weight: 600;
+}
+
+.lost {
+  color: var(--gmt-signal-ink);
+}
+
+@media (forced-colors: active) {
+  .zone,
+  .time,
+  .date,
+  .shift,
+  .sky,
+  .meta,
+  .offset,
+  .dst,
+  .dstOn,
+  .lost {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .time,
+  .date,
+  .sky,
+  .meta,
+  .offset,
+  .dst,
+  .dstOn,
+  .shift {
+    color: var(--gmt-ice);
+  }
+
+  .lost {
+    color: var(--gmt-signal-ink);
+  }
+}

@@ -5,10 +5,8 @@
  * markdown inside a reply is typeset). This sheet owns *structure* — the
  * lattice, the crystal role markers, and the full-bleed shell.
  *
- * The dotted filaments that used to run between turns were removed at the
- * user's request (2026-09-10) — they read as clutter rather than structure. The
- * alternation alone carries the conversation. `HiveConnector.tsx` went with
- * them; git history has it if it is ever wanted back. The dock (DOX-C3a phase 2) reuses this sheet as-is.
+ * No line joins the turns: the alternation alone carries the conversation. The
+ * dock (DOX-C3a phase 2) reuses this sheet as-is.
  *
  * Imported from the island entry module, never from `astro.config.mjs`'s
  * `customCss`, so Vite code-splits it into the chat chunk and a page that
@@ -599,8 +597,8 @@
 /* Container queries, not media queries. The same transcript renders full-width
    on /dox, narrow on a phone, and narrow *inside a small dock on a wide
    monitor* — only the container's own width distinguishes those, so a viewport
-   query would get the dock case wrong. Matches the existing convention in
-   gmt-globe.css / dox.css. */
+   query would get the dock case wrong. Matches the convention in dox.css and
+   the widget modules. */
 .gmt-hive {
   container-type: inline-size;
   container-name: gmt-hive;
@@ -1177,7 +1175,7 @@
 
 /* A brain that is out today reads as unavailable rather than merely dimmed —
    it stays selectable, because picking it simply falls through to one that has
-   budget (see brains.ts) rather than failing. */
+   budget (see components/ask/use-brains.ts) rather than failing. */
 .gmt-hive-brain-option[data-brain-state="spent"],
 .gmt-hive-brain-option[data-brain-state="unavailable"] {
   color: var(--gmt-ice-dim);
@@ -1772,11 +1770,8 @@
   opacity: 0.4;
 }
 
-/* Jump-to-latest. Dead code until the scroll container was fixed — `isAtBottom`
-   could never be false — so it has never been themed. */
-
-/* Icon colour (a scroll-to-bottom arrow, no visible label) — INT-58 fix loop
-   reverted both rules below from an earlier blanket sweep. */
+/* Jump-to-latest. Its icon colour (a scroll-to-bottom arrow, no visible label)
+   stays the bright cyan on both rules below. */
 .gmt-hive-jump {
   background: var(--gmt-surface-2);
   color: var(--gmt-cyan);

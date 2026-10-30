@@ -19,14 +19,19 @@
  */
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, type HtmlValue, type SafeHtml } from "../../builders/html";
+import { grow } from "../../primitives/grow/grow";
 import { handleTrack } from "../../primitives/handle/handle";
 import styles from "./ledger-lane.module.css";
 
+/** In a `<gmt-grow>`: the plates, the lane and the legend are written at mount, so the frame
+ *  eases to its height and does not push the page. */
 export function ledgerFrame(children: HtmlValue, o: GateOption = {}): SafeHtml {
-  return html`<div class="${styles.frame}" ${gateAttr(o.gate)}>${children}</div>`;
+  return grow(
+    html`<div class="${styles.frame}" ${gateAttr(o.gate)}>${children}</div>`,
+  );
 }
 
-export interface LedgerLaneOptions {
+interface LedgerLaneOptions {
   /** Scope for the lane's parts: `<id>-label`, `<id>-track`, `<id>-cells`. */
   id: string;
   /** The label beside the track, such as the zone's name. */
@@ -56,7 +61,7 @@ export function ledgerLane(
   >`;
 }
 
-export interface LedgerBarOptions {
+interface LedgerBarOptions {
   id: string;
 }
 
@@ -64,7 +69,7 @@ export function ledgerBar(o: LedgerBarOptions): SafeHtml {
   return html`<div class="${styles.bar}" id="${o.id}" data-invalid="false" aria-hidden="true" hidden></div>`;
 }
 
-export interface LedgerGateOptions {
+interface LedgerGateOptions {
   id: string;
   /** The chip's first text, before the local time. */
   label: string;
@@ -91,15 +96,9 @@ export function axisTicks(labels: readonly string[]): SafeHtml {
   return html`${labels.map((text) => html`<span>${text}</span>`)}`;
 }
 
-export type LedgerSwatch =
-  | "lit"
-  | "dim"
-  | "hatched"
-  | "closed"
-  | "plain"
-  | "event";
+type LedgerSwatch = "lit" | "dim" | "hatched" | "closed" | "plain" | "event";
 
-export interface LedgerLegendItem {
+interface LedgerLegendItem {
   text: string;
   swatch: LedgerSwatch;
 }

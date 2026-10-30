@@ -26,6 +26,14 @@ export interface TableOptions<K extends string> extends GateOption {
   rows: readonly Record<K, HtmlValue>[];
   /** The column whose cells are row headers. */
   rowHeader?: K;
+  /**
+   * `"fixed"` lays the columns out once, from the header row, so a cell's text (or a header that
+   * changes with a drag) never moves a column edge. Columns share the width equally unless
+   * `widths` states them. The default sizes every column from its content.
+   */
+  layout?: "auto" | "fixed";
+  /** With a fixed layout, one width for each column (`"34%"`); the others share what is left. */
+  widths?: readonly (string | null)[];
 }
 
 export function table<K extends string>(o: TableOptions<K>): SafeHtml {
@@ -36,10 +44,21 @@ export function table<K extends string>(o: TableOptions<K>): SafeHtml {
     ]
       .filter(Boolean)
       .join(" ");
+  const fixed = o.layout === "fixed";
+  const cols = fixed
+    ? html`<colgroup
+        >${o.columns.map((_, i) => {
+          const width = o.widths?.[i] ?? null;
+          return width === null
+            ? html`<col />`
+            : html`<col width="${width}" />`;
+        })}</colgroup
+      >`
+    : html``;
   return html`<div class="${styles.wrap}" role="region" ${gateAttr(o.gate)} aria-label="${o.caption}" tabindex="0"
-    ><table class="${styles.table}"
+    ><table class="${fixed ? `${styles.table} ${styles.fixed}` : styles.table}"
       ><caption class="${styles.caption}">${o.caption}</caption
-      ><thead
+      >${cols}<thead
         ><tr>${o.columns.map(
           (c) =>
             html`<th class="${styles.head} ${cls(c)}" scope="col">${c.header}</th>`,

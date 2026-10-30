@@ -61,7 +61,7 @@ export interface BillingState {
 
 export const CUSTOM_PRESET_ID = "custom";
 
-export interface BillingPreset extends BillingState {
+interface BillingPreset extends BillingState {
   id: string;
   label: string;
   description: string;
@@ -329,7 +329,7 @@ export function formatDeadlines(r: BillingDeadlines): string {
   );
 }
 
-export type VerdictKind = "issued" | "requested";
+type VerdictKind = "issued" | "requested";
 
 /**
  * The only verdict strings the widget shows. Date comparisons, never a
@@ -350,25 +350,12 @@ export function verdictText(
   return `Request received ${isoOf(date!)}: ${value ? "on or before" : "after"} the deadline`;
 }
 
-/**
- * Every verdict line a kind can show, for the hidden sizers that keep the line's
- * height the same from one preset to the next. A date in the line is always ten
- * characters, so one stand-in date sizes them all.
- */
-export function verdictSizerTexts(kind: VerdictKind): string[] {
-  return [
-    verdictText(kind, "2026-03-31", true),
-    verdictText(kind, "2026-03-31", false),
-    verdictText(kind, undefined, null),
-  ];
-}
-
 // ---------------------------------------------------------------------------
 // The plates
 // ---------------------------------------------------------------------------
 
 /** What a plate reads when the library holds no date for its deadline. */
-export const NOT_SET = "not set";
+const NOT_SET = "not set";
 
 /**
  * The three deadline plates, numbered as the lanes are. A plate's value is the
@@ -430,10 +417,10 @@ export function billingPlates(
 // The day strip
 // ---------------------------------------------------------------------------
 
-export type MarkKind = "anchor" | "invoice" | "request";
-export type LaneState = "zero" | "in" | "deadline";
+type MarkKind = "anchor" | "invoice" | "request";
+type LaneState = "zero" | "in" | "deadline";
 
-export interface LaneCellState {
+interface LaneCellState {
   lane: 1 | 2 | 3;
   state: LaneState;
   /** Day ordinal within the lane's own window, for the cell's label. */
@@ -449,7 +436,7 @@ export interface DayStripDay {
   lanes: LaneCellState[];
 }
 
-export interface DayStripGap {
+interface DayStripGap {
   kind: "gap";
   from: string;
   to: string;
@@ -664,9 +651,9 @@ export function dayStrip(
 // Why null
 // ---------------------------------------------------------------------------
 
-export type WindowField = "issueDays" | "disputeDays" | "resolutionDays";
+type WindowField = "issueDays" | "disputeDays" | "resolutionDays";
 
-export type NullReason =
+type NullReason =
   | "invalid-anchor"
   | "invalid-invoice"
   | "invalid-request"
@@ -678,7 +665,7 @@ export type NullReason =
   | "agreed-before-request"
   | "out-of-range";
 
-export interface NullExplanation {
+interface NullExplanation {
   reason: NullReason;
   /** Which window, when `reason` is `missing-window` or `invalid-window`. */
   field?: WindowField;
@@ -713,7 +700,7 @@ export function nullReasonText(explanation: NullExplanation): string {
     : template;
 }
 
-export interface NullValidators {
+interface NullValidators {
   isValidDate(value: string): boolean;
 }
 
@@ -794,4 +781,98 @@ export function explainNull(
   if (isOutOfRange(state)) return { reason: "out-of-range" };
 
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// The strip's words
+// ---------------------------------------------------------------------------
+
+/* Fixed English names, not Intl: the strip never asks the browser's locale, the same rule
+   `interval-visualizer.ts` and `free-time-ledger-mount.ts` follow. */
+export const WEEKDAY_NAMES = [
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+  "Sun",
+] as const;
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+export const MARK_LETTER: Record<MarkKind, string> = {
+  anchor: "A",
+  invoice: "I",
+  request: "R",
+};
+const MARK_LABEL: Record<MarkKind, string> = {
+  anchor: "anchor",
+  invoice: "invoice issued",
+  request: "dispute request received",
+};
+const LANE_NAME: Record<1 | 2 | 3, string> = {
+  1: "issue window",
+  2: "dispute window",
+  3: "resolution window",
+};
+const LANE_DEADLINE_NAME: Record<1 | 2 | 3, string> = {
+  1: "invoice deadline",
+  2: "dispute deadline",
+  3: "resolution deadline",
+};
+
+/**
+ * The parts of a canonical ISO date (`2026-03-01`, `+010000-01-30`, `-000001-01-30`): the
+ * weekday, the day, the month name and the year. `Temporal` reads every form the library
+ * emits, so a year outside 0000 to 9999 and a negative year get the right weekday and month.
+ */
+export function dayParts(iso: string): {
+  weekday: string;
+  day: number;
+  month: string;
+  year: number;
+} {
+  const date = Temporal.PlainDate.from(iso);
+  return {
+    weekday: WEEKDAY_NAMES[date.dayOfWeek - 1]!,
+    day: date.day,
+    month: MONTH_NAMES[date.month - 1]!,
+    year: date.year,
+  };
+}
+
+/** What a screen reader hears for one day of the strip: its date, then each mark and lane it holds. */
+export function dayCellLabel(item: DayStripDay): string {
+  const { weekday, day, month, year } = dayParts(item.date);
+  const dateLabel = `${weekday} ${day} ${month} ${year}`;
+  const parts: string[] = [];
+  for (const mark of item.marks) parts.push(MARK_LABEL[mark]);
+  for (const lane of item.lanes) {
+    const state =
+      lane.state === "deadline"
+        ? `day ${lane.day}, ${LANE_DEADLINE_NAME[lane.lane]}`
+        : lane.state === "zero"
+          ? "day 0"
+          : `day ${lane.day}`;
+    parts.push(`${LANE_NAME[lane.lane]} ${state}`);
+  }
+  return parts.length > 0 ? `${dateLabel}: ${parts.join("; ")}` : dateLabel;
+}
+
+/** What a screen reader hears for a run of weeks the strip leaves out. */
+export function gapLabel(item: DayStripGap): string {
+  return `${item.from} to ${item.to}: ${item.days} days not drawn`;
 }

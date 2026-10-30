@@ -91,7 +91,7 @@ import { encodeWidgetPermalink } from "./widget-permalink";
 /** The chart draws a picture and its summary text says the same thing: nothing
  *  in it is a control, so the chart takes no place in the tab order. The library
  *  writes `tabindex="0"` on the `<svg>` unless it is told otherwise. */
-export const CHART_TAB_INDEX = -1;
+const CHART_TAB_INDEX = -1;
 
 export type { DeliverySchedulerArgs } from "./delivery-scheduler";
 
@@ -148,7 +148,7 @@ function linksOf(state: DeliveryState): SafeHtml {
 export function renderDeliverySchedulerTemplate(
   idPrefix: string,
   args: DeliverySchedulerArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state: DeliveryState = isSeeded(args)
     ? readArgs(args)
@@ -224,10 +224,12 @@ export function renderDeliverySchedulerTemplate(
           { id: id("view-scale"), label: "To scale", pressed: false },
         ],
       },
-    )}<div class="${styles.charts}">
+    )}${grow(
+      html`<div class="${styles.charts}">
         <div class="${styles.panel}" id="${id("panel-route")}">${chartHost(id("chart-route"))}</div>
         <div class="${styles.panel}" id="${id("panel-scale")}" hidden>${chartHost(id("chart-scale"))}</div>
-      </div>
+      </div>`,
+    )}
       <p id="${id("timeline-summary")}">${srOnly("")}</p>
       ${deliveryLegend()}${grow(
         html`<div id="${id("journey-slot")}">${itineraryList("Itinerary", null)}</div>`,
@@ -253,7 +255,7 @@ export function renderDeliverySchedulerTemplate(
         state: "empty",
         lines: [],
       })}</div>`,
-    )}<div id="${id("links")}">${linksOf(state)}</div>`,
+    )}${grow(html`<div id="${id("links")}">${linksOf(state)}</div>`)}`,
   );
 
   const perLeg = section(
@@ -308,7 +310,7 @@ export function renderDeliverySchedulerTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Delivery Scheduler", scope: idPrefix },
     html`${build}${read}${returns}${perLeg}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

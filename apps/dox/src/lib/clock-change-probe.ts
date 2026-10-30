@@ -6,15 +6,7 @@
  * Each checker passes its own `ProbeConfig` (its id prefix, zones, instant and wording); nothing
  * here knows which checker it serves.
  */
-import {
-  MARK_BAD,
-  MARK_OK,
-  NO_SIGNAL,
-  cityOf,
-  offsetFromIntl,
-  signedOffset,
-} from "./clock-change-common";
-import { escapeAttr, escapeHtml, zoneIdHtml } from "./widget-ui";
+import { cityOf, offsetFromIntl } from "./clock-change-common";
 import { markBad, markOk, noSignal } from "~/widgets/families/clockcheck/marks";
 
 /** One instant a browser is asked about. `verdict` decides the verdict; `blind` is shown only. */
@@ -28,7 +20,7 @@ export interface ProbeInstant {
  * The offset a zone must give, per instant role. `verdict` is the offset at the verdict instant;
  * `blind` is the offset at the blind instant and is needed only when the probe has one.
  */
-export interface ExpectedOffsets {
+interface ExpectedOffsets {
   verdict: string;
   blind?: string;
 }
@@ -62,6 +54,9 @@ export interface ProbeConfig {
 }
 
 /** The words of the card, per checker. The HTML fields are written by the checker, never by a reader. */
+/** Where a checker is drawn: its own page, or the chat rail, which has no Key points card. */
+export type VerdictPlace = "page" | "chat";
+
 export interface VerdictText {
   /** The card's heading. */
   title: string;
@@ -123,140 +118,6 @@ const MONTHS = [
 export function dateLabel(iso: string): string {
   const [year = "", month = "1", day = "1"] = iso.slice(0, 10).split("-");
   return `${Number(day)} ${MONTHS[Number(month) - 1] ?? ""} ${year}`;
-}
-
-/** Old markup: L15e removes this once the mount uses findWidget. */
-/** The id prefix a rendered browser card carries: its `<prefix>-browser` id, less the suffix. */
-export function idPrefixOf(root: ParentNode, fallback: string): string {
-  const id = root.querySelector<HTMLElement>(".gmt-clockcheck-browser")?.id;
-  return id?.endsWith("-browser") ? id.slice(0, -"-browser".length) : fallback;
-}
-
-/** Old markup: L15e removes this once the mount uses placesChips. */
-/** City names as the page's code chips, joined "A, B and C". */
-export function placesHtml(cities: readonly string[]): string {
-  const chips = cities.map((city) => `<code>${escapeHtml(city)}</code>`);
-  if (chips.length < 2) return chips.join("");
-  return `${chips.slice(0, -1).join(", ")} and ${chips[chips.length - 1]}`;
-}
-
-/** Old markup: L15e removes this once the mount uses probeCard. */
-/**
- * The verdict, as lines of plain words: what is wrong, what a reader does, and what a developer
- * does. The places are code chips. All correct is one line.
- */
-export function verdictHtml(
-  wrong: readonly string[],
-  text: VerdictText,
-): string {
-  if (wrong.length === 0) {
-    return `<p class="gmt-clockcheck-verdict-line">${MARK_OK} ${text.right}</p>`;
-  }
-  return (
-    `<p class="gmt-clockcheck-verdict-line">${MARK_BAD} ${text.wrongBefore}<span data-role="wrong-places">${placesHtml(wrong)}</span>${text.wrongAfter}</p>` +
-    text.more
-      .map((line) => `<p class="gmt-clockcheck-verdict-more">${line}</p>`)
-      .join("")
-  );
-}
-
-/** Old markup: L15e removes this once the mount uses probeCard. */
-/** The line the verdict shows when the browser cannot read the zones at all. */
-export function unreadableHtml(text: VerdictText): string {
-  return `<p class="gmt-clockcheck-verdict-line">${NO_SIGNAL} ${text.unknown}</p>`;
-}
-
-function probeRowHtml(fact: ProbeZone, when?: string): string {
-  const zone = escapeAttr(fact.zone);
-  return (
-    `<tr role="row" data-zone="${zone}" data-state="stopped">` +
-    `<th role="rowheader" scope="row" data-label="Place"><span class="gmt-clockcheck-city">${escapeHtml(cityOf(fact.zone))}</span><code class="gmt-clockcheck-zoneid">${zoneIdHtml(fact.zone)}</code>${when === undefined ? "" : `<small class="gmt-clockcheck-when">${escapeHtml(when)}</small>`}</th>` +
-    `<td role="cell" data-label="Correct" class="gmt-clockcheck-num">${escapeHtml(signedOffset(fact.expected.verdict))}</td>` +
-    `<td role="cell" data-label="Yours" class="gmt-clockcheck-num" data-role="browser">${NO_SIGNAL}</td>` +
-    `</tr>`
-  );
-}
-
-/**
- * A blind row: the same place at an instant that is shown and never judged, so both cells are
- * plain offsets. Its attribute is `data-blind-zone`, so a lookup of `tr[data-zone]` finds only the
- * verdict rows.
- */
-function blindRowHtml(
-  fact: ProbeZone,
-  instant: ProbeInstant,
-  expected: string,
-): string {
-  return (
-    `<tr role="row" data-blind-zone="${escapeAttr(fact.zone)}" data-state="stopped">` +
-    `<th role="rowheader" scope="row" data-label="Place"><span class="gmt-clockcheck-city">${escapeHtml(cityOf(fact.zone))}</span><code class="gmt-clockcheck-zoneid">${zoneIdHtml(fact.zone)}</code><small class="gmt-clockcheck-when">${escapeHtml(dateLabel(instant.iso))}</small></th>` +
-    `<td role="cell" data-label="Correct" class="gmt-clockcheck-num">${escapeHtml(signedOffset(expected))}</td>` +
-    `<td role="cell" data-label="Yours" class="gmt-clockcheck-num" data-role="browser-blind">${NO_SIGNAL}</td>` +
-    `</tr>`
-  );
-}
-
-/** The verdict's four finished variants, all server-rendered; `data-state` shows one (see the CSS). */
-function verdictShellHtml(config: ProbeConfig, text: VerdictText): string {
-  const cities = config.zones.map((fact) => cityOf(fact.zone));
-  return (
-    `<div class="gmt-clockcheck-verdict" data-role="verdict" data-state="pending" role="status">` +
-    `<div class="gmt-clockcheck-variant" data-variant="pending"><p class="gmt-clockcheck-verdict-line">${text.checking}</p></div>` +
-    `<div class="gmt-clockcheck-variant" data-variant="ok">${verdictHtml([], text)}</div>` +
-    `<div class="gmt-clockcheck-variant" data-variant="bad">${verdictHtml(cities, text)}</div>` +
-    `<div class="gmt-clockcheck-variant" data-variant="unreadable">${unreadableHtml(text)}</div>` +
-    `</div>`
-  );
-}
-
-/**
- * The rows: one per place at the verdict instant, then, when the probe has blind instants, one per
- * place at each of them. A probe with only a verdict instant renders exactly the plain rows.
- */
-function tableRowsHtml(config: ProbeConfig): string {
-  const blind = blindInstants(config);
-  if (blind.length === 0)
-    return config.zones.map((f) => probeRowHtml(f)).join("");
-  const verdict = verdictInstant(config);
-  return (
-    config.zones.map((f) => probeRowHtml(f, dateLabel(verdict.iso))).join("") +
-    blind
-      .flatMap((instant) =>
-        config.zones.map((f) =>
-          blindRowHtml(f, instant, expectedAt(f, "blind")),
-        ),
-      )
-      .join("")
-  );
-}
-
-/** Old markup: L15e removes this once the mount uses probeCard. */
-/**
- * "Your browser": the verdict, then one row per place with the right offset beside the browser's,
- * then the button that reads it again. One card, so the answer and its evidence sit together.
- */
-export function browserCardHtml(
-  config: ProbeConfig,
-  text: VerdictText,
-): string {
-  const titleId = `${config.idPrefix}-probe-title`;
-  return (
-    `<section class="gmt-widget-section gmt-clockcheck-browser" data-gate="browser" id="${escapeAttr(config.idPrefix)}-browser" aria-labelledby="${titleId}">` +
-    `<h4 id="${titleId}">${escapeHtml(text.title)}</h4>` +
-    verdictShellHtml(config, text) +
-    `<table class="gmt-clockcheck-table" data-gate="probe-table" role="table">` +
-    `<thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Place</th><th role="columnheader" scope="col">Correct<small class="gmt-clockcheck-th-note">${escapeHtml(text.correctNote)}</small></th>` +
-    `<th role="columnheader" scope="col">Yours<small class="gmt-clockcheck-th-note">${escapeHtml(text.yoursNote)}</small></th></tr></thead>` +
-    `<tbody role="rowgroup">${tableRowsHtml(config)}</tbody></table>` +
-    (blindInstants(config).length > 0 && text.blindNote
-      ? `<p class="gmt-clockcheck-blind-note">${escapeHtml(text.blindNote)}</p>`
-      : "") +
-    `<div class="gmt-clockcheck-actions">` +
-    `<button class="gmt-button gmt-button--pad" type="button" data-role="recheck">Check again</button>` +
-    `<p class="gmt-clockcheck-status" data-role="status" role="status"></p>` +
-    `</div>` +
-    `</section>`
-  );
 }
 
 /**
@@ -366,70 +227,4 @@ export function probeInlineSource(config: ProbeConfig): string {
   mo.observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener("DOMContentLoaded", function () { fill(); mo.disconnect(); });
 })(${JSON.stringify(data).replace(/</g, "\\u003c")});`;
-}
-
-/** Old markup: L15e removes this once the mount uses fillProbe. */
-/**
- * Fills the card from this browser's readings: the Yours cells and the verdict. On the page the
- * inline script has already done it (`data-sig` holds its readings), and the same readings are not
- * drawn again.
- */
-export function fillBrowserCard(
-  root: ParentNode,
-  config: ProbeConfig,
-  text: VerdictText,
-): void {
-  const epochMs = verdictInstant(config).epochMs;
-  const readings = new Map<string, BrowserReading>();
-  const wrong: string[] = [];
-  let unread = 0;
-  const sig: string[] = [];
-  for (const fact of config.zones) {
-    const reading = readBrowserOffset(fact.zone, epochMs);
-    readings.set(fact.zone, reading);
-    if (reading.kind === "offset") {
-      if (reading.offset !== fact.expected.verdict)
-        wrong.push(cityOf(fact.zone));
-    } else {
-      unread += 1;
-    }
-    sig.push(reading.kind === "offset" ? reading.offset : "?");
-  }
-  const blind = blindInstants(config)[0];
-  const blindReadings = new Map<string, BrowserReading>();
-  if (blind !== undefined) {
-    for (const fact of config.zones) {
-      const reading = readBrowserOffset(fact.zone, blind.epochMs);
-      blindReadings.set(fact.zone, reading);
-      sig.push(reading.kind === "offset" ? reading.offset : "?");
-    }
-  }
-  const verdict = root.querySelector<HTMLElement>('[data-role="verdict"]');
-  if (!verdict || verdict.dataset.sig === sig.join(",")) return;
-  for (const fact of config.zones) {
-    const reading = readings.get(fact.zone)!;
-    const cell = (
-      root.querySelector<HTMLElement>(`tr[data-zone="${fact.zone}"]`) ?? root
-    ).querySelector<HTMLElement>('[data-role="browser"]');
-    if (!cell) continue;
-    cell.innerHTML =
-      reading.kind === "offset"
-        ? `${reading.offset === fact.expected.verdict ? MARK_OK : MARK_BAD} ${escapeHtml(signedOffset(reading.offset))}`
-        : NO_SIGNAL;
-  }
-  for (const [zone, reading] of blindReadings) {
-    const cell = root
-      .querySelector<HTMLElement>(`tr[data-blind-zone="${zone}"]`)
-      ?.querySelector<HTMLElement>('[data-role="browser-blind"]');
-    if (cell)
-      cell.innerHTML =
-        reading.kind === "offset"
-          ? escapeHtml(signedOffset(reading.offset))
-          : NO_SIGNAL;
-  }
-  verdict.innerHTML =
-    unread > 0 ? unreadableHtml(text) : verdictHtml(wrong, text);
-  verdict.dataset.state =
-    unread > 0 ? "unreadable" : wrong.length === 0 ? "ok" : "bad";
-  verdict.dataset.sig = sig.join(",");
 }

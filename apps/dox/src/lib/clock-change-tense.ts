@@ -16,9 +16,6 @@
  */
 import { SIGNAL_LOST } from "./clock-change-common";
 
-/** Old markup: L15e removes this once the mounts use `tenseSlot` and `tensedSlot`. */
-export { slotHtml, tensedHtml } from "./clock-change-tense-old";
-
 export type Tense = "before" | "after";
 
 /** One change of clocks: the UTC instant it takes effect, and the UTC offset in force just before it. */
@@ -28,7 +25,7 @@ export interface Moment {
 }
 
 /** A moment in words: `20 September 2026 at 02:00` on the local clock, and `01:00` in UTC. */
-export interface MomentWords {
+interface MomentWords {
   local: string;
   utc: string;
 }
@@ -116,7 +113,7 @@ export function momentWords(lib: TenseLib, moment: Moment): MomentWords | null {
  * A moment as the end of a phrase: `20 September 2026 at 02:00 local time`, with ` (01:00 UTC)`
  * when `withUtc`. The signal-lost mark when the library could not write the moment, never a blank.
  */
-export function whenText(words: MomentWords | null, withUtc: boolean): string {
+function whenText(words: MomentWords | null, withUtc: boolean): string {
   if (words === null) return SIGNAL_LOST;
   return withUtc
     ? `${words.local} local time (${words.utc} UTC)`
@@ -124,7 +121,7 @@ export function whenText(words: MomentWords | null, withUtc: boolean): string {
 }
 
 /** The three classes of a zone on a checker's map. */
-export type ClassKind = "stopped" | "changes-after" | "none";
+type ClassKind = "stopped" | "changes-after" | "none";
 
 /**
  * The words of a map class in both forms. The class of the zones that stop names its change: the
@@ -198,7 +195,7 @@ export function tensedPlain(phrase: Tensed, view: TenseView): string {
 }
 
 /** Shows the true form of every slot under `root` and hides the other from the accessibility tree. */
-export function syncTense(root: ParentNode, view: TenseView): void {
+function syncTense(root: ParentNode, view: TenseView): void {
   for (const slot of root.querySelectorAll<HTMLElement>("[data-moment]")) {
     const current = view.tenseOf(slot.dataset.moment ?? "");
     for (const form of slot.querySelectorAll<HTMLElement>(
@@ -217,12 +214,12 @@ export function syncTense(root: ParentNode, view: TenseView): void {
 /** The longest a timer can wait (a 32-bit signed count of milliseconds). */
 const MAX_DELAY_MS = 2 ** 31 - 1;
 
-export interface TenseBinding {
+interface TenseBinding {
   /** The view at the page's clock, as of the last sync. */
   view(): TenseView;
 }
 
-export interface TenseBindingOptions {
+interface TenseBindingOptions {
   lib: TenseLib;
   moments: Readonly<Record<string, Moment>>;
   /** The page's clock, a UTC instant. */

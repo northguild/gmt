@@ -14,12 +14,12 @@
 
 /** The class that plays the entrance, and the property that carries its stagger. */
 export const ENTER_CLASS = "gmt-enter";
-export const ENTER_DELAY_PROPERTY = "--gmt-enter-delay";
+const ENTER_DELAY_PROPERTY = "--gmt-enter-delay";
 
 /** Long enough for the 0.5s entrance plus a stagger to finish on a busy main thread. */
 const SETTLE_MS = 1500;
 
-export interface EnterOptions {
+interface EnterOptions {
   /** Start the entrance this many ms late, to stagger it after a sibling's. */
   delayMs?: number;
   /** Runs once the element has fully entered, or at once under reduced motion. */

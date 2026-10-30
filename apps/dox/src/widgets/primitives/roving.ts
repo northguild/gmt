@@ -14,13 +14,13 @@
  * No gmt import, no DOM beyond the elements it is given.
  */
 
-export interface RovingOptions {
+interface RovingOptions {
   /** The controls in reading order, read at each key press. */
   items: () => readonly HTMLElement[];
   signal: AbortSignal;
 }
 
-export interface Roving {
+interface Roving {
   /** Make `item` the one tab stop, and move focus to it when `focus` is true. */
   set(item: HTMLElement, focus?: boolean): void;
   /** The item that is the tab stop now, or `null` for an empty list. */

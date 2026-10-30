@@ -17,7 +17,7 @@ import type { DurationBenchLib } from "./duration-bench-lib";
 /** The permalink's cap on a string value (`widget-permalink.ts`). */
 export const BENCH_MAX_TEXT = 64;
 export const BENCH_DEFAULT_TEXT = "2h 30m";
-export const BENCH_DEFAULT_LOCALE = "en";
+const BENCH_DEFAULT_LOCALE = "en";
 
 /** Seed arguments: the chat tool's input and a permalink's strings. */
 export interface DurationParserBenchArgs {
@@ -71,7 +71,7 @@ export const TRY_STRINGS = [
 // The ten duration fields
 // ---------------------------------------------------------------------------
 
-export interface DurationField {
+interface DurationField {
   /** The `getDurationUnit` unit name. */
   field: string;
   /** The singular word, for a sentence. */
@@ -102,7 +102,7 @@ export const NO_SPELLING_TEXT = "no spelling";
 // ---------------------------------------------------------------------------
 
 /** Which parser accepted the string. */
-export type Parser = "iso" | "human" | "none";
+type Parser = "iso" | "human" | "none";
 
 /** The sentence under a string neither parser reads. Static: chosen by what the calls returned. */
 export const REFUSAL_TEXT =
@@ -116,14 +116,14 @@ export const PARSER_LABEL: Record<Exclude<Parser, "none">, string> = {
 /** The chain a caller who takes either form writes. */
 export const CHAIN_TEXT = "parseDuration(s) || parseHumanDuration(s)";
 
-export interface UnitCell extends DurationField {
+interface UnitCell extends DurationField {
   /** `getDurationUnit(iso, field)`, or `null` when there was no duration to read. */
   value: number | null;
   lit: boolean;
 }
 
 /** One call the bench made, with its return as the library gave it. */
-export interface BenchCall {
+interface BenchCall {
   fn: string;
   /** Every argument is a string. */
   args: string[];
@@ -131,14 +131,8 @@ export interface BenchCall {
 }
 
 /** The five printed calls, in order. A call the bench did not make is `null`. */
-export const CALL_IDS = [
-  "iso",
-  "human",
-  "compact",
-  "roundtrip",
-  "words",
-] as const;
-export type CallId = (typeof CALL_IDS)[number];
+const CALL_IDS = ["iso", "human", "compact", "roundtrip", "words"] as const;
+type CallId = (typeof CALL_IDS)[number];
 
 export interface BenchView {
   parser: Parser;
@@ -159,7 +153,7 @@ export interface BenchView {
 }
 
 /** The first non-zero field of `iso`, as its singular word, or `null`. */
-export function unitWord(lib: DurationBenchLib, iso: string): string | null {
+function unitWord(lib: DurationBenchLib, iso: string): string | null {
   if (iso === "") return null;
   for (const f of DURATION_FIELDS) {
     const v = lib.getDurationUnit(iso, f.field);
@@ -241,7 +235,7 @@ export function benchView(
 // Section 3, table A: minute or month
 // ---------------------------------------------------------------------------
 
-export interface MinuteOrMonthSeed {
+interface MinuteOrMonthSeed {
   written: string;
   /** The unit the note names: the field `getDurationUnit` finds non-zero, as a word. */
   unit: string;
@@ -287,7 +281,7 @@ export const MINUTE_OR_MONTH_ROWS: readonly MinuteOrMonthSeed[] = [
   },
 ];
 
-export interface MinuteOrMonthRow extends MinuteOrMonthSeed {
+interface MinuteOrMonthRow extends MinuteOrMonthSeed {
   /** `parseHumanDuration(written)`. */
   human: string;
   /** `parseDuration(written)`. */
@@ -323,7 +317,7 @@ export function minuteOrMonthRows(
 // Section 3, table B: laytime
 // ---------------------------------------------------------------------------
 
-export interface LaytimeStart {
+interface LaytimeStart {
   /** The column heading. */
   label: string;
   /** The zoned start time the hours are measured from. */
@@ -344,7 +338,7 @@ export const LAYTIME_STARTS: readonly LaytimeStart[] = [
 ];
 
 /** The two strings the laytime table parses. */
-export const LAYTIME_WRITTEN = ["3 days", "72h"] as const;
+const LAYTIME_WRITTEN = ["3 days", "72h"] as const;
 
 export const BIMCO_URL =
   "https://www.bimco.org/media/qy2neqim/laytime-definitions-for-charter-parties-2013-v2.pdf";
@@ -358,7 +352,7 @@ export const LAYTIME_NOTE = {
   rest: ", no. 8, defines a laytime DAY as twenty-four (24) consecutive hours. `3 days` is `P3D`, three calendar days, so across a clock change it is the hours above. `72h` is `PT72H`, 72 hours in every zone.",
 } as const;
 
-export interface LaytimeRow {
+interface LaytimeRow {
   written: string;
   /** `parseHumanDuration(written)`. */
   human: string;

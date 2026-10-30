@@ -16,7 +16,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderMovingFeastsTemplate("moving-feasts", {});
+const html = renderMovingFeastsTemplate("moving-feasts", {}).value;
 ---
 
 {

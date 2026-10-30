@@ -1,0 +1,185 @@
+/* The globe's clock-list row. It is a kit listbox option, so the kit paints the active
+   outline and aria-selected; this sheet gives the row its card, the two lines and the
+   day-shift wash. The row is placed by the virtualizer (a translate set from script). */
+
+.sizer {
+  position: relative;
+  inline-size: 100%;
+}
+
+.row[role="option"] {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background-color: var(--gmt-fill-subtle);
+  color: var(--gmt-ice);
+  transition:
+    border-color var(--gmt-motion-fast) var(--gmt-easing),
+    background-color var(--gmt-motion-fast) var(--gmt-easing);
+
+  &:hover,
+  &:focus,
+  &[data-active="true"] {
+    border-color: var(--gmt-cyan);
+    background-color: var(--gmt-fill);
+  }
+
+  /* The zone driving the globe. Its border and ring belong to this state alone; the day
+     shift paints a background image, so the two never collide. */
+  &[aria-selected="true"] {
+    border-color: var(--gmt-spring);
+    background-color: var(--gmt-fill);
+    box-shadow: 0 0 0 1px var(--gmt-spring);
+    color: var(--gmt-ice);
+  }
+
+  /* A translucent wash as a one-colour gradient, never the background colour. Forced
+     colours drop it, and the "+1d" chip then carries the direction. */
+  &[data-day="prev"] {
+    background-image: linear-gradient(
+      var(--gmt-day-prev-wash),
+      var(--gmt-day-prev-wash)
+    );
+  }
+
+  &[data-day="next"] {
+    background-image: linear-gradient(
+      var(--gmt-day-next-wash),
+      var(--gmt-day-next-wash)
+    );
+  }
+}
+
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gmt-space-1);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.name,
+.offset,
+.date,
+.shift,
+.dst {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+}
+
+.name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--gmt-ice);
+}
+
+.offset {
+  color: var(--gmt-spring-ink);
+
+  &[data-lost] {
+    color: var(--gmt-signal-ink);
+  }
+}
+
+.date {
+  /* On the day-shift wash and the hover fill the dim ink falls under 7:1; the full ink holds. */
+  color: var(--gmt-ice);
+}
+
+.time {
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8rem;
+  color: var(--gmt-cyan-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The "+1d" chip, in the purple of the wash behind it. The text names the direction, so
+   the wash is never the only channel. */
+.shift {
+  font-weight: 600;
+  color: var(--gmt-dst-purple-ink);
+
+  &:empty {
+    display: none;
+  }
+}
+
+/* The DST mark: three letters in the site's daylight-saving gold. A zone not on summer
+   time has none, and the empty box goes away. */
+.dst {
+  margin-inline-start: auto;
+  padding: 0 0.3em;
+  border: 1px solid color(from var(--gmt-dst-gold) srgb r g b / 30%);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: color(from var(--gmt-dst-gold) srgb r g b / 15%);
+  color: var(--gmt-dst-gold-ink);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+
+  &:empty {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .row[role="option"] {
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+
+    &:hover,
+    &:focus,
+    &[data-active="true"] {
+      border-color: Highlight;
+    }
+
+    &[aria-selected="true"] {
+      border-color: Highlight;
+      outline: 2px solid Highlight;
+      outline-offset: -3px;
+    }
+  }
+
+  .name,
+  .offset,
+  .date,
+  .time,
+  .shift {
+    color: CanvasText;
+  }
+
+  .dst {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .row[role="option"] {
+    border-color: var(--gmt-ice);
+
+    &[aria-selected="true"] {
+      border-width: 2px;
+    }
+
+    &[data-active="true"] {
+      outline-width: 3px;
+    }
+  }
+}

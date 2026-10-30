@@ -1,0 +1,44 @@
+/* The timezone map: its spacing, and the two layers the chart library marks with a class name. */
+
+.shell {
+  margin-block: var(--gmt-space-6);
+}
+
+.host {
+  & svg {
+    max-inline-size: 100%;
+  }
+}
+
+/* The positioning context for the data-credit button's corner placement. */
+.creditedFrame {
+  position: relative;
+}
+
+.panel {
+  margin-block-start: var(--gmt-space-4);
+}
+
+/* One shadow on the whole land layer, not one per country path: the map redraws every second. */
+.land {
+  filter: drop-shadow(
+    0 1px 2px color-mix(in srgb, var(--gmt-ink-fixed) 25%, transparent)
+  );
+}
+
+.polygon {
+  opacity: 1;
+  cursor: pointer;
+  transition: opacity var(--gmt-motion-fast) ease;
+}
+
+/* stylelint-disable-next-line a11y/selector-pseudo-class-focus -- SVG path from the map library takes no focus; the zone panel is the keyboard path */
+.polygon:hover {
+  filter: brightness(1.5);
+}
+
+@media (forced-colors: active) {
+  .land {
+    filter: none;
+  }
+}

@@ -8,14 +8,14 @@
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./view-toggle.module.css";
 
-export interface ViewToggleView {
+interface ViewToggleView {
   /** The id the button takes, so the mount can find it. */
   id: string;
   label: string;
   pressed: boolean;
 }
 
-export interface ViewToggleOptions {
+interface ViewToggleOptions {
   /** The group's accessible name, such as "Chart view". Required. */
   label: string;
   views: readonly ViewToggleView[];

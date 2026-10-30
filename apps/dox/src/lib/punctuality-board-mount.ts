@@ -112,8 +112,8 @@ const WIDGET_NAME = "punctuality-board";
 /** The widest readings the hero plates show, so they keep their width while a handle drags. */
 const HERO_SAMPLES = ["6 of 6"];
 const HERO_LINE_SAMPLES: readonly (readonly string[])[] = [
-  ["second late tolerance", "late tolerance 24 h"],
-  ["early 24 h", "24 h early 24 h"],
+  ["second late tolerance", "late tolerance 23 h 59 min"],
+  ["early 23 h 59 min"],
 ];
 
 const wordOf = (c: Punctuality | null): string =>
@@ -165,7 +165,7 @@ function handleOf(
 export function renderPunctualityBoardTemplate(
   idPrefix: string,
   args: PunctualityBoardArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state = initialState(args);
   const presetId = matchPreset(state);
@@ -269,9 +269,11 @@ export function renderPunctualityBoardTemplate(
     { id: id("read"), heading: "2. Late, early or on time", level: 4 },
     html`${grow(html`<div class="${styles.rates}" id="${id("rate")}"></div>`)}
       <div role="status" aria-live="polite" aria-label="Rate summary" id="${id("live")}">${srOnly("")}</div>
-      <div class="${styles.frame}" data-gate="frame">
-        ${grow(html`<div id="${id("heroes")}"></div>`)}${board}${summary.html}
-      </div>
+      ${grow(
+        html`<div class="${styles.frame}" data-gate="frame">
+          ${grow(html`<div id="${id("heroes")}"></div>`)}${board}${summary.html}
+        </div>`,
+      )}
       ${grow(html`<div id="${id("reason")}"></div>`)}`,
   );
 
@@ -296,7 +298,7 @@ export function renderPunctualityBoardTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Punctuality Board", scope: idPrefix },
     html`${pick}${read}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -625,7 +627,11 @@ function setupWidget(
             toleranceText(s.compareLate.trim()),
             earlyLine,
           ],
-          lineSamples: [["second late tolerance"], ["24 h"], ["early 24 h"]],
+          lineSamples: [
+            ["second late tolerance"],
+            ["23 h 59 min"],
+            ["early 23 h 59 min"],
+          ],
           series: 3,
           gate: "hero",
         }),
@@ -761,6 +767,8 @@ function setupWidget(
         table<Key>({
           caption: "The calls and what each returned",
           rowHeader: "arrival",
+          layout: "fixed",
+          widths: ["34%"],
           columns: [
             col("arrival", "Arrival"),
             col("deviation", "scheduleDeviation"),

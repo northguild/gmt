@@ -31,7 +31,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderEpcisEventReaderTemplate();
+const html = renderEpcisEventReaderTemplate("epcis-event-reader", {}).value;
 ---
 
 {
@@ -53,7 +53,7 @@ const html = renderEpcisEventReaderTemplate();
        first preset. */
     const seed = seedFromLocation("epcis");
     document
-      .querySelectorAll<HTMLElement>(".gmt-epcis-event-reader")
+      .querySelectorAll<HTMLElement>('[data-widget="epcis-event-reader"]')
       .forEach((el) => {
         mountEpcisEventReader(el, seed, new AbortController().signal).catch(
           (error) => showUnavailable(el, error),

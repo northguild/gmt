@@ -12,81 +12,8 @@ import {
   formatInstant,
   formatInterval,
   formatIntervalList,
-  instantToPercent,
-  percentToInstant,
-  stepInstant,
   type ZonedInterval,
 } from "../lib/interval-visualizer";
-
-// ---------------------------------------------------------------------------
-// instantToPercent / percentToInstant
-// ---------------------------------------------------------------------------
-
-describe("instantToPercent", () => {
-  it("maps the timeline start to 0%", () => {
-    expect(instantToPercent(TIMELINE_START)).toBe(0);
-  });
-
-  it("maps the timeline end to 100%", () => {
-    expect(instantToPercent(TIMELINE_END)).toBe(100);
-  });
-
-  it("maps a midyear date to roughly 50%", () => {
-    expect(instantToPercent("2024-07-02T00:00:00+00:00[UTC]")).toBeCloseTo(
-      50,
-      0,
-    );
-  });
-
-  it("clamps values outside the window", () => {
-    expect(instantToPercent("2023-01-01T00:00:00+00:00[UTC]")).toBe(0);
-    expect(instantToPercent("2025-01-01T00:00:00+00:00[UTC]")).toBe(100);
-  });
-
-  it("returns NaN for unparseable input", () => {
-    expect(instantToPercent("not a date")).toBeNaN();
-  });
-});
-
-describe("percentToInstant", () => {
-  it("round-trips 0% and 100% to the timeline bounds", () => {
-    expect(percentToInstant(0)).toBe(TIMELINE_START);
-    expect(percentToInstant(100)).toBe(TIMELINE_END);
-  });
-
-  it("clamps out-of-range percentages", () => {
-    expect(percentToInstant(-50)).toBe(TIMELINE_START);
-    expect(percentToInstant(150)).toBe(TIMELINE_END);
-  });
-
-  it("snaps to whole days by default", () => {
-    const result = percentToInstant(33);
-    expect(result).toMatch(/T00:00:00\+00:00\[UTC\]$/);
-  });
-});
-
-describe("stepInstant", () => {
-  it("steps forward and backward by whole days", () => {
-    expect(stepInstant("2024-06-15T00:00:00+00:00[UTC]", 1)).toBe(
-      "2024-06-16T00:00:00+00:00[UTC]",
-    );
-    expect(stepInstant("2024-06-15T00:00:00+00:00[UTC]", -1)).toBe(
-      "2024-06-14T00:00:00+00:00[UTC]",
-    );
-  });
-
-  it("clamps at the timeline end", () => {
-    expect(stepInstant(TIMELINE_END, 30)).toBe(TIMELINE_END);
-  });
-
-  it("clamps at the timeline start", () => {
-    expect(stepInstant(TIMELINE_START, -30)).toBe(TIMELINE_START);
-  });
-
-  it("returns the input unchanged for unparseable input", () => {
-    expect(stepInstant("garbage", 1)).toBe("garbage");
-  });
-});
 
 // ---------------------------------------------------------------------------
 // RELATIONSHIP_PRESETS / buildRelationshipPreset
@@ -110,15 +37,15 @@ describe("buildRelationshipPreset", () => {
     "'%s' produces two intervals whose endpoints parse and whose starts precede their ends",
     (type) => {
       const { aStart, aEnd, bStart, bEnd } = buildRelationshipPreset(type);
-      expect(instantToPercent(aStart)).not.toBeNaN();
-      expect(instantToPercent(aEnd)).not.toBeNaN();
-      expect(instantToPercent(bStart)).not.toBeNaN();
-      expect(instantToPercent(bEnd)).not.toBeNaN();
-      expect(instantToPercent(aStart)).toBeLessThanOrEqual(
-        instantToPercent(aEnd),
+      expect(FIXED_YEAR_SCALE.toPercent(aStart)).not.toBeNaN();
+      expect(FIXED_YEAR_SCALE.toPercent(aEnd)).not.toBeNaN();
+      expect(FIXED_YEAR_SCALE.toPercent(bStart)).not.toBeNaN();
+      expect(FIXED_YEAR_SCALE.toPercent(bEnd)).not.toBeNaN();
+      expect(FIXED_YEAR_SCALE.toPercent(aStart)).toBeLessThanOrEqual(
+        FIXED_YEAR_SCALE.toPercent(aEnd),
       );
-      expect(instantToPercent(bStart)).toBeLessThanOrEqual(
-        instantToPercent(bEnd),
+      expect(FIXED_YEAR_SCALE.toPercent(bStart)).toBeLessThanOrEqual(
+        FIXED_YEAR_SCALE.toPercent(bEnd),
       );
     },
   );
@@ -316,14 +243,6 @@ describe("zoned strings without an explicit offset", () => {
   const NO_OFFSET = "2024-03-01T09:00:00[UTC]";
   const WITH_OFFSET = "2024-03-01T09:00:00+00:00[UTC]";
 
-  it("places a zone-only value at the same point as its offset-bearing twin", () => {
-    expect(instantToPercent(NO_OFFSET)).toBeCloseTo(
-      instantToPercent(WITH_OFFSET),
-      10,
-    );
-    expect(Number.isNaN(instantToPercent(NO_OFFSET))).toBe(false);
-  });
-
   it("classifies a relationship built from zone-only values", () => {
     expect(
       classifyRelationship(
@@ -359,7 +278,7 @@ describe("zoned strings without an explicit offset", () => {
   });
 
   it("still reports unparseable input as invalid", () => {
-    expect(Number.isNaN(instantToPercent("not a date"))).toBe(true);
+    expect(Number.isNaN(FIXED_YEAR_SCALE.toPercent("not a date"))).toBe(true);
     expect(
       classifyRelationship(
         { start: "nonsense", end: "also nonsense" },
@@ -371,9 +290,8 @@ describe("zoned strings without an explicit offset", () => {
     ).toBe("invalid");
   });
 
-  it("formats and steps a zone-only value", () => {
+  it("formats a zone-only value", () => {
     expect(formatInstant(NO_OFFSET)).toBe(formatInstant(WITH_OFFSET));
-    expect(stepInstant(NO_OFFSET, 1)).toBe(stepInstant(WITH_OFFSET, 1));
   });
 });
 
@@ -382,22 +300,6 @@ describe("zoned strings without an explicit offset", () => {
 // ---------------------------------------------------------------------------
 
 describe("FIXED_YEAR_SCALE", () => {
-  /* This canvas is what the five relationship presets are composed against, and
-     what the three reference pages render. It has to stay exactly where the old
-     module-level constants put it — a drift of even a fraction of a percent
-     moves every bar on every built page. */
-  it("agrees with the standalone helpers to the last digit", () => {
-    for (const preset of RELATIONSHIP_PRESETS) {
-      const v = buildRelationshipPreset(preset.type);
-      for (const key of ["aStart", "aEnd", "bStart", "bEnd"] as const) {
-        expect(
-          FIXED_YEAR_SCALE.toPercent(v[key]),
-          `${preset.type}.${key}`,
-        ).toBe(instantToPercent(v[key]));
-      }
-    }
-  });
-
   it("reproduces the axis labels the template ships with", () => {
     // The template's static markup reads Jan 2024 / Jul / Dec. If this ever
     // disagrees, the built pages change the moment the axis is rendered.
@@ -423,7 +325,8 @@ describe("fitTimelineScale", () => {
      calendar year, so on the fixed canvas all four handles land on one pixel. */
   it("turns a three-hour span into a readable one, not a sliver", () => {
     expect(
-      instantToPercent(MEETINGS[1]!) - instantToPercent(MEETINGS[0]!),
+      FIXED_YEAR_SCALE.toPercent(MEETINGS[1]!) -
+        FIXED_YEAR_SCALE.toPercent(MEETINGS[0]!),
     ).toBeLessThan(0.05);
 
     const fitted = fitTimelineScale(MEETINGS)!;

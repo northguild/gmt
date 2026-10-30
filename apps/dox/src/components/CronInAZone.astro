@@ -21,7 +21,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderCronInAZoneTemplate("cron-in-a-zone");
+const html = renderCronInAZoneTemplate("cron-in-a-zone").value;
 ---
 
 {

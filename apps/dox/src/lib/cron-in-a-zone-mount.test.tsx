@@ -297,3 +297,13 @@ describe("assistive technology", () => {
     }
   });
 });
+
+describe("the length cap", () => {
+  it("stops the cron line at 64 characters", async () => {
+    const w = await open();
+    const box = lineBox();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(72));
+    expect(box).toHaveValue("x".repeat(64));
+  });
+});

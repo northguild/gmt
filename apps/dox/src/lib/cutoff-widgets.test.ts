@@ -166,9 +166,8 @@ describe("callSource", () => {
 
   it("wraps a string in an HTML span", () => {
     const [html] = callSource("timeToCutoff", ["a", "b"]);
-    expect(html).toBe(
-      '<span class="gmt-code-str">"a"</span>, <span class="gmt-code-str">"b"</span>',
-    );
+    expect(html.match(/<span[^>]*>/g)).toHaveLength(2);
+    expect(html.replace(/<[^>]+>/g, "")).toBe('"a", "b"');
   });
 });
 

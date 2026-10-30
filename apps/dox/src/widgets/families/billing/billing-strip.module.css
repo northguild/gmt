@@ -1,0 +1,230 @@
+/*
+ * The Billing Deadlines strip: a 7-column ISO week grid, the three lanes under each day's date,
+ * the marks and deadline badges, and the key. Container-queried on the calendar, because the
+ * /dox rail is narrow on a wide viewport.
+ *
+ * Colour is never the only signal: each lane carries a series colour and a border style (lane 1
+ * solid, lane 2 dashed, lane 3 dotted), a deadline day carries its lane's number, and a mark is
+ * a letter. Nothing here is a verdict colour; amber is the sentinel's alone. Values the reader
+ * is reading never animate.
+ */
+
+.calendar {
+  container: billing-calendar / inline-size;
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+}
+
+.weekdays,
+.strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(2.5rem, 1fr));
+  gap: 2px;
+}
+
+.weekdays {
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  min-block-size: 3.6rem;
+  padding: 3px 4px;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-fill-subtle);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  overflow: hidden;
+
+  /* A cell outside the real span keeps its place and draws nothing. */
+  &[data-padding] {
+    border-color: transparent;
+    background: none;
+  }
+}
+
+.date {
+  white-space: nowrap;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-inline-size: 1.1em;
+  block-size: 1.1em;
+  padding-inline: 2px;
+  border-radius: 2px;
+  background: var(--gmt-ice);
+  color: var(--gmt-void);
+  font-size: var(--gmt-text-xs);
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+
+  /* The "-ink" tokens: the base hues clear only about 2.7 to 3.7:1 against light-theme badge
+     text. A lane bar keeps the base hue, since a border needs 3:1. */
+  &[data-kind="deadline"][data-lane="1"] {
+    background: var(--gmt-cyan-ink);
+  }
+
+  &[data-kind="deadline"][data-lane="2"] {
+    background: var(--gmt-spring-ink);
+  }
+
+  &[data-kind="deadline"][data-lane="3"] {
+    background: var(--gmt-purple-ink);
+  }
+}
+
+/* Three lane slots under the day, always three, so a date without a given lane still holds its
+   column and the absence reads once you have read a row. The bars sit below the text, never
+   behind it. */
+.lanes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-block-start: auto;
+}
+
+.lane {
+  --series: var(--gmt-series-1);
+
+  box-sizing: border-box;
+  block-size: 4px;
+  border: 2px solid var(--series);
+  border-radius: 2px;
+  background: none;
+
+  &[data-lane="2"] {
+    --series: var(--gmt-series-2);
+
+    border-style: dashed;
+  }
+
+  &[data-lane="3"] {
+    --series: var(--gmt-series-3);
+
+    border-style: dotted;
+  }
+
+  &[data-state="none"] {
+    visibility: hidden;
+  }
+
+  /* The deadline day: the bar ends in a filled cap. */
+  &[data-state="deadline"] {
+    background: color-mix(in srgb, var(--series) 35%, transparent);
+  }
+}
+
+.gap {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gmt-space-2);
+  border: 1px dashed var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-style: italic;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  list-style: none;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-1);
+}
+
+/* A lane's sample in the key is a short bar, drawn whole. */
+.legend .lane {
+  inline-size: 1.4rem;
+}
+
+@container billing-calendar (inline-size <= 26rem) {
+  .weekdays,
+  .strip {
+    grid-template-columns: repeat(7, minmax(1.8rem, 1fr));
+  }
+
+  .cell {
+    min-block-size: 3rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .cell,
+  .gap {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .cell[data-padding] {
+    border-color: Canvas;
+  }
+
+  /* Gradients and tints drop under forced colours, so the border style keeps the lanes apart
+     and a deadline's cap is Highlight. */
+  .lane {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background: Canvas;
+
+    &[data-state="in"],
+    &[data-state="deadline"] {
+      background: Highlight;
+    }
+  }
+
+  /* An inverted pair (CanvasText fill, Canvas glyph) is readable in every palette. */
+  .badge {
+    forced-color-adjust: none;
+    background: CanvasText;
+    color: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .cell,
+  .gap {
+    border-color: var(--gmt-ice);
+  }
+
+  .cell[data-padding] {
+    border-color: transparent;
+  }
+}

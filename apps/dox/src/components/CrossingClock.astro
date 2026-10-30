@@ -33,7 +33,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderCrossingClockTemplate("crossing-clock", {});
+const html = renderCrossingClockTemplate("crossing-clock", {}).value;
 ---
 
 {

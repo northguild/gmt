@@ -31,7 +31,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderCutoffRulerTemplate("cutoff-ruler", {});
+const html = renderCutoffRulerTemplate("cutoff-ruler", {}).value;
 ---
 
 {

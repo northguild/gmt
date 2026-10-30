@@ -107,7 +107,14 @@ import { handoffHref } from "./widget-permalink";
 
 export type { GnssRolloverCheckerArgs } from "./gnss-rollover-checker";
 
-const NBSP = " ";
+const NBSP = "\u00a0";
+
+/**
+ * The most calls one reading makes: three for each counter's next wrap, then the true reading,
+ * the firmware's reading, three window ends, two judgements, the countdown, and the rolling
+ * receiver with its two judgements. The code and its results hold this many lines.
+ */
+const MAX_CALLS = GNSS_WEEK_COUNTERS.length * 3 + 11;
 const WIDGET_NAME = "gnss-rollover-checker";
 
 const TABLE_COLUMNS = ["Counter", "Width", "Next wrap", "Time left"];
@@ -267,7 +274,7 @@ function reasonOf(read: RolloverRead | null): SafeHtml {
 export function renderGnssRolloverCheckerTemplate(
   idPrefix: string,
   args: GnssRolloverCheckerArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state: RolloverState = isSeeded(args)
     ? readArgs(args)
@@ -322,6 +329,7 @@ export function renderGnssRolloverCheckerTemplate(
               value: state.pivot,
               autocomplete: "off",
               spellcheck: false,
+              maxLength: MAX_VALUE_LENGTH,
               ...(describedBy === undefined ? {} : { describedBy }),
             }),
         },
@@ -336,6 +344,7 @@ export function renderGnssRolloverCheckerTemplate(
               value: state.era,
               autocomplete: "off",
               spellcheck: false,
+              maxLength: MAX_VALUE_LENGTH,
               inputMode: "numeric",
               ...(describedBy === undefined ? {} : { describedBy }),
             }),
@@ -360,6 +369,7 @@ export function renderGnssRolloverCheckerTemplate(
               value: state.date,
               autocomplete: "off",
               spellcheck: false,
+              maxLength: MAX_VALUE_LENGTH,
               ...(describedBy === undefined ? {} : { describedBy }),
             }),
         },
@@ -417,12 +427,14 @@ export function renderGnssRolloverCheckerTemplate(
         copyLabel: "Copy calls",
         copyText: "",
         gate: "codeframe",
+        minLines: MAX_CALLS,
       })}</div>`,
     )}${grow(
       html`<div id="${id("output-slot")}">${callOutput({
         label: "What the calls returned",
         state: "empty",
         lines: [],
+        minLines: MAX_CALLS,
       })}</div>`,
     )}<div id="${id("links")}">${linksOf(null)}</div>`,
   );
@@ -434,7 +446,7 @@ export function renderGnssRolloverCheckerTemplate(
       scope: idPrefix,
     },
     html`${pick}${read}${every}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -467,9 +479,6 @@ function setupWidget(
   const pivotEl = el<HTMLInputElement>("pivot");
   const eraEl = el<HTMLInputElement>("era");
   const dateEl = el<HTMLInputElement>("date");
-  for (const input of [pivotEl, eraEl, dateEl]) {
-    input.maxLength = MAX_VALUE_LENGTH;
-  }
 
   let last: RolloverRead | null = null;
   let lastNow = "";
@@ -572,6 +581,7 @@ function setupWidget(
         copyText: plain,
         code,
         gate: "codeframe",
+        minLines: MAX_CALLS,
       }),
     );
     const out = outputOf(read.status, calls);
@@ -581,6 +591,7 @@ function setupWidget(
         label: "What the calls returned",
         state: out.state,
         lines: out.lines,
+        minLines: MAX_CALLS,
       }),
     );
 

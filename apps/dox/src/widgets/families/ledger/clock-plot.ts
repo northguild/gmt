@@ -76,7 +76,7 @@ export function clockLanes(lanes: readonly ClockLaneView[]): SafeHtml {
   )}`;
 }
 
-export interface ClockPlotOptions {
+interface ClockPlotOptions {
   id: string;
   /** The text for the empty state, or "" when the plot has events. */
   empty: string;

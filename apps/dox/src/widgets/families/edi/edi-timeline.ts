@@ -19,7 +19,7 @@ import { html, type SafeHtml } from "../../builders/html";
 import styles from "./edi-timeline.module.css";
 
 /** What the timeline draws. */
-export type TimelineSpec =
+type TimelineSpec =
   | { kind: "empty"; text: string }
   | { kind: "stated"; instant: string }
   | {

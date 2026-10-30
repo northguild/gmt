@@ -3,11 +3,7 @@
  * twin, the llms files and tests. The card's words are the checker's own (`HelpCard`); the page's
  * markup is the `helpCard` builder in `widgets/families/clockcheck`.
  */
-import {
-  HELP_HEADING,
-  partsMarkdown,
-  partsText,
-} from "../data/clock-change-text";
+import { HELP_HEADING, partsMarkdown } from "../data/clock-change-text";
 import type { HelpCard } from "../data/clock-change-text";
 
 /** The help card as Markdown, for the `.md` twin and the llms files. */
@@ -33,22 +29,4 @@ export function helpMarkdown(card: HelpCard): string {
   }
   lines.push(`${card.cta.lead} [${card.cta.link}](${card.cta.href})`, "");
   return lines.join("\n");
-}
-
-/** The whole help card as plain text, for a test to search. */
-export function helpText(card: HelpCard): string {
-  return [
-    HELP_HEADING,
-    partsText(card.lede),
-    partsText(card.verified),
-    card.intro,
-    ...card.cases.flatMap((c) => [
-      c.tag,
-      c.input,
-      c.output,
-      c.outputNote ?? "",
-      partsText(c.why),
-    ]),
-    `${card.cta.lead} ${card.cta.link}`,
-  ].join("\n");
 }

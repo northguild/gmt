@@ -1,0 +1,167 @@
+/* dataCredits: the info button on a drawing and its popup of sources (CORE-88).
+   The popup is closed by default; native `popover` does Escape, outside click and focus return.
+
+   stack         the fourth button of the globe's control stack. The globe module's zoom
+                 rule sizes and colours it, so it matches its siblings.
+   corner        a glass square in the drawing's bottom-end corner; the frame is the positioning
+                 context.
+   corner-start  the same square in the top-start corner, for a drawing whose land fills the
+                 bottom-end one. */
+
+.button {
+  box-sizing: border-box;
+  inline-size: 2rem;
+  block-size: 2rem;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--gmt-ice);
+  background: var(--gmt-surface-2);
+  transition:
+    color var(--gmt-duration-quick) ease,
+    background var(--gmt-duration-quick) ease;
+
+  & svg {
+    display: block;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  &:hover,
+  &:focus-visible,
+  &:has(+ :popover-open) {
+    color: var(--gmt-void);
+    background: var(--gmt-cyan-ink);
+    outline-color: transparent;
+  }
+
+  &[data-placement="corner"],
+  &[data-placement="corner-start"] {
+    position: absolute;
+    z-index: var(--gmt-z-float);
+    border: 1px solid var(--gmt-border);
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
+  }
+
+  &[data-placement="corner"] {
+    inset-inline-end: var(--gmt-space-2);
+    inset-block-end: var(--gmt-space-2);
+  }
+
+  &[data-placement="corner-start"] {
+    inset-inline-start: var(--gmt-space-2);
+    inset-block-start: var(--gmt-space-2);
+  }
+}
+
+/* The popup is top-layer, so nothing clips it. It opens beside the stack (to the left of its
+   button), above the corner button or below the corner-start one, never over any, and stays
+   12px inside the viewport: the far inset and `justify-self` shrink it to the room there is. */
+.panel[popover] {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  overflow: visible;
+  box-sizing: border-box;
+  inline-size: fit-content;
+  max-inline-size: 22rem;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.5;
+  color: var(--gmt-ice-dim);
+
+  & dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--gmt-space-1) var(--gmt-space-3);
+    margin: 0;
+  }
+
+  & dt {
+    color: var(--gmt-ice);
+  }
+
+  & dd {
+    margin: 0;
+  }
+}
+
+@supports (top: anchor(top)) {
+  .panel[popover] {
+    position-anchor: auto;
+    inset-inline-start: 12px;
+    justify-self: end;
+    position-try-fallbacks: flip-block;
+
+    &[data-placement="stack"] {
+      inset-inline-end: anchor(left);
+      margin-inline-end: var(--gmt-space-2);
+      inset-block-end: anchor(bottom);
+    }
+
+    &[data-placement="corner"] {
+      inset-inline-end: anchor(right);
+      inset-block-end: anchor(top);
+      margin-block-end: var(--gmt-space-2);
+    }
+
+    &[data-placement="corner-start"] {
+      inset-inline: anchor(left) 12px;
+      justify-self: start;
+      inset-block-start: anchor(bottom);
+      margin-block-start: var(--gmt-space-2);
+    }
+  }
+}
+
+/* No anchor positioning: pin to the viewport's bottom edge. */
+@supports not (top: anchor(top)) {
+  .panel[popover] {
+    inset-inline: 12px;
+    inset-block-end: calc(12px + env(safe-area-inset-bottom, 0px));
+    margin-inline: auto;
+  }
+}
+
+@media (width <= 30rem) {
+  .panel dl {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (forced-colors: active) {
+  .button {
+    color: ButtonText;
+    background: ButtonFace;
+    border-color: ButtonText;
+
+    &:focus-visible {
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
+  }
+
+  .panel[popover] {
+    color: CanvasText;
+    border: 1px solid CanvasText;
+
+    & a {
+      color: LinkText;
+    }
+  }
+}
+
+@media (prefers-contrast: more) {
+  .button {
+    color: var(--gmt-ice);
+    border: 1px solid var(--gmt-ice);
+  }
+
+  .panel[popover] {
+    color: var(--gmt-ice);
+    border: 1px solid var(--gmt-ice);
+  }
+}

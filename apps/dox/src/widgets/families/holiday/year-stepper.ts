@@ -6,7 +6,7 @@
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./year-stepper.module.css";
 
-export interface YearStepperOptions {
+interface YearStepperOptions {
   id: string;
   label: string;
   value: string;

@@ -29,7 +29,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderCutoffCountdownTemplate("cutoff-countdown", {});
+const html = renderCutoffCountdownTemplate("cutoff-countdown", {}).value;
 ---
 
 {

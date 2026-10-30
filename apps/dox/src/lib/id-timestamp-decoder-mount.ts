@@ -86,7 +86,7 @@ const STATUS_NOT_READ = "Not read";
 const EMPTY_OUTPUT_TEXT = "Not read: there is no identifier.";
 
 /** The links under the calls: the sibling tool, the bench and each function's page. */
-export const ID_LINKS = [
+const ID_LINKS = [
   {
     text: "Column Timestamp Bridge",
     href: "/tools/column-timestamp-bridge/",
@@ -240,7 +240,7 @@ function framesOf(copyText: string, code?: SafeHtml): SafeHtml {
 export function renderIdTimestampDecoderTemplate(
   idPrefix: string,
   args: IdTimestampDecoderArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state: IdDecoderState = isSeeded(args)
     ? readArgs(args)
@@ -257,6 +257,7 @@ export function renderIdTimestampDecoderTemplate(
           inputMode: "numeric",
           autocomplete: "off",
           spellcheck: false,
+          maxLength: 17,
           describedBy,
         }),
     });
@@ -285,6 +286,7 @@ export function renderIdTimestampDecoderTemplate(
             value: state.id,
             autocomplete: "off",
             spellcheck: false,
+            maxLength: ID_MAX_CHARS,
             describedBy,
           }),
       }),
@@ -295,10 +297,12 @@ export function renderIdTimestampDecoderTemplate(
 
   const read = section(
     { id: id("read"), heading: "2. What each decoder reads", level: 4 },
-    html`<div class="${styles.frame}" data-gate="frame">
+    html`${grow(
+      html`<div class="${styles.frame}" data-gate="frame">
       <div id="${id("hero")}">${plateOf(null)}</div>
       <div id="${id("table")}">${tableOf(null)}</div>
     </div>`,
+    )}`,
   );
 
   const calls = section(
@@ -311,13 +315,13 @@ export function renderIdTimestampDecoderTemplate(
         state: "empty",
         lines: [],
       })}</div>`,
-    )}<div id="${id("links")}">${linksOf()}</div>`,
+    )}${grow(html`<div id="${id("links")}">${linksOf()}</div>`)}`,
   );
 
   return widget(
     { name: WIDGET_NAME, label: "ID Timestamp Decoder", scope: idPrefix },
     html`${pick}${read}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -342,9 +346,6 @@ function setupWidget(
   const epochEl = el<HTMLInputElement>("epoch");
   const shiftEl = el<HTMLInputElement>("shift");
   const bitsEl = el<HTMLInputElement>("bits");
-  // The kit's text input has no length option: the limits are properties.
-  idEl.maxLength = ID_MAX_CHARS;
-  for (const e of [epochEl, shiftEl, bitsEl]) e.maxLength = 17;
 
   const typed: readonly EventTarget[] = [idEl, epochEl, shiftEl, bitsEl];
 

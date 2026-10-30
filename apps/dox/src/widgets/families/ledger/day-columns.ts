@@ -17,7 +17,7 @@ import { dayLabelParts, type DayMark } from "~/lib/ledger-widgets";
 import type { DayCell } from "~/lib/dwell-ledger";
 import styles from "./day-columns.module.css";
 
-export interface DayCanvas {
+interface DayCanvas {
   toPercent(ms: number): number;
 }
 

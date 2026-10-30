@@ -16,7 +16,7 @@ import { lane, mark } from "../../builders/timeline";
 import { eraPin } from "./era-pin";
 import styles from "./gnss-lane.module.css";
 
-export type GnssLaneForm = "ring" | "track";
+type GnssLaneForm = "ring" | "track";
 
 export interface GnssLaneOptions {
   form: GnssLaneForm;

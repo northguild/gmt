@@ -15,7 +15,7 @@ import { html, raw, type SafeHtml } from "../../builders/html";
 import { srOnly } from "../../builders/sr-only";
 import styles from "./gnss-line-table.module.css";
 
-export interface LineCell {
+interface LineCell {
   text: string;
   /** The note under it; empty keeps the line's height. */
   sub: string;
@@ -30,7 +30,7 @@ export interface LineRow {
   cells: readonly LineCell[];
 }
 
-export interface GnssLineTableOptions {
+interface GnssLineTableOptions {
   /** The table's name. Required. */
   caption: string;
   /** Every column header, the row header's first. */
@@ -45,7 +45,7 @@ function lines(cell: LineCell): SafeHtml {
 }
 
 /** The two lines of a cell with nothing in them. */
-export const BLANK_LINE_CELL: LineCell = { text: "", sub: "" };
+const BLANK_LINE_CELL: LineCell = { text: "", sub: "" };
 
 export function gnssLineTable(o: GnssLineTableOptions): SafeHtml {
   const [first = "", ...rest] = o.columns;

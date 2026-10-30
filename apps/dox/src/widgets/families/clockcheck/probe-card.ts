@@ -148,7 +148,6 @@ export function probeCard(config: ProbeConfig, text: VerdictText): SafeHtml {
       {
         id: id(PROBE_PARTS.recheck),
         label: "Check again",
-        gate: "recheck",
       },
     )}<p
       class="${styles.status}"

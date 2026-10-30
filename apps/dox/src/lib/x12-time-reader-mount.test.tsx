@@ -676,3 +676,13 @@ describe("on-screen words", () => {
     );
   });
 });
+
+describe("the length cap", () => {
+  it("stops the time code at 8 characters", async () => {
+    const w = await open();
+    const box = screen.getByRole("textbox", { name: /^Time code/ });
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(16));
+    expect(box).toHaveValue("x".repeat(8));
+  });
+});

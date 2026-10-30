@@ -1,0 +1,245 @@
+/* blPlot: five lanes of local days in a column, and one gate layer over their tracks. Tokens
+   only. The plot keeps one box whatever the lanes hold. Nothing here is a verdict colour; amber
+   is the sentinel's alone. The label column's width is the ledger frame's
+   `--gmt-ledger-label-w`, so the axis and the legend line up with the tracks. */
+
+.plot {
+  --gmt-bl-gate-row-h: 1.9rem;
+  --gmt-bl-lane-h: 4.2rem;
+
+  position: relative;
+  padding-block-start: var(--gmt-bl-gate-row-h);
+}
+
+.lanes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: 0;
+
+  /* Above the gate layer: the gate runs behind each day's opaque date strip and chips, so no
+     glyph is drawn over the line. */
+  position: relative;
+  z-index: var(--gmt-z-raised);
+}
+
+.lane {
+  --series: var(--gmt-border-strong);
+
+  display: grid;
+  grid-template-columns: var(--gmt-ledger-label-w) minmax(0, 1fr);
+  align-items: end;
+  column-gap: var(--gmt-space-2);
+  list-style: none;
+
+  &[data-series="1"] {
+    --series: var(--gmt-series-1);
+  }
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  &[data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  &[data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gmt-space-1);
+  margin-block-end: calc(var(--gmt-bl-lane-h) / 2);
+  translate: 0 50%;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  text-align: end;
+  overflow-wrap: anywhere;
+}
+
+/* The number badge: a mark that carries the lane's series on its bottom edge, never a
+   left-only accent, and the digit in the primary ink. */
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-inline-size: 1.4rem;
+  padding: 0 var(--gmt-space-1);
+  border: 1px solid var(--gmt-border-strong);
+  border-block-end: 3px solid var(--series);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-style: normal;
+  line-height: 1.2;
+  color: var(--gmt-ice);
+}
+
+.track {
+  position: relative;
+  min-inline-size: 0;
+  block-size: var(--gmt-bl-lane-h);
+}
+
+.days {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--gmt-radius-sm);
+  background-color: var(--gmt-fill-subtle);
+}
+
+/* A lane's note: "no zone chosen", or "its days are not drawn". It keeps to the lane's box and
+   may wrap on a narrow plot. */
+.note {
+  position: absolute;
+  inset-block-end: var(--gmt-space-1);
+  inset-inline-start: var(--gmt-space-1);
+  z-index: var(--gmt-z-over);
+  box-sizing: border-box;
+  max-inline-size: calc(100% - 2 * var(--gmt-space-1));
+  padding: 0 var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: normal;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* The UTC lane is hollow and dashed. Its days have no wash, its box is a dashed outline, and
+   its lit day is a dashed outline too, with no fill. */
+:where(.lane)[data-lane="0"] {
+  & .days {
+    background-color: transparent;
+    outline: 1px dashed var(--gmt-border-strong);
+    outline-offset: -1px;
+  }
+
+  & .days > :where([role="listitem"]) {
+    background-color: transparent;
+  }
+
+  & .days > [data-state="lit"] {
+    background-image: none;
+    box-shadow: none;
+    outline: 2px dashed var(--gmt-ice);
+    outline-offset: -3px;
+  }
+}
+
+/* The gate: one line at the moment, over every lane, with a chip in the row above them. The
+   layer starts at the tracks' left edge, so a percentage of it is a percentage of a track. */
+.gateLayer {
+  position: absolute;
+  inset: 0 0 0 calc(var(--gmt-ledger-label-w) + var(--gmt-space-2));
+  z-index: var(--gmt-z-base);
+  pointer-events: none;
+}
+
+.gate {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--gmt-gate-at, 0) * 1%);
+  inline-size: 0;
+  border-inline-start: 2px solid var(--gmt-ice);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.chip {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 10px;
+  padding: 0 var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+}
+
+.gate[data-edge="end"] .chip {
+  inset-inline: auto 10px;
+}
+
+/* Under 30rem the label sits above its lane, where the gate line would cross it. The label
+   then sits on a chip, so no glyph is drawn over the line. */
+@container ledger-frame (inline-size <= 30rem) {
+  .lane {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    row-gap: var(--gmt-space-1);
+  }
+
+  .label {
+    position: relative;
+    z-index: var(--gmt-z-over);
+    justify-self: start;
+    justify-content: flex-start;
+    margin-block-end: 0;
+    translate: none;
+    padding: 2px var(--gmt-space-2);
+    border: 1px solid var(--gmt-border-strong);
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
+    background: var(--gmt-surface);
+    text-align: start;
+  }
+
+  .gateLayer {
+    inset-inline-start: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .days {
+    border: 1px solid CanvasText;
+    background: Canvas;
+  }
+
+  .label,
+  .gate {
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+
+  .badge,
+  .note,
+  .chip {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .gate {
+    border-inline-start-width: 3px;
+  }
+
+  .badge,
+  .note,
+  .chip {
+    border-color: var(--gmt-ice);
+  }
+}

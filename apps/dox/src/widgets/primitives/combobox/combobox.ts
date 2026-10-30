@@ -26,7 +26,7 @@ import {
 } from "../listbox/listbox";
 import styles from "./combobox.module.css";
 
-export interface ComboboxOptions extends GateOption {
+interface ComboboxOptions extends GateOption {
   /** The input's id; the field's `<label for>` points at it. */
   id: string;
   /** The field's label text; the popup list is named from it. Required. */
@@ -38,13 +38,18 @@ export interface ComboboxOptions extends GateOption {
   describedBy?: string | undefined;
   /** Adds a button with this name that opens and shuts the full list. */
   browseLabel?: string;
+  /**
+   * Which side of the input the list opens on. `above` is for a box that sits in the lower
+   * half of a fixed-height column, where there is no room below it. Default `below`.
+   */
+  placement?: "above" | "below";
 }
 
-export const listId = (id: string): string => `${id}-list`;
+const listId = (id: string): string => `${id}-list`;
 
 export function combobox(o: ComboboxOptions): SafeHtml {
   const list = listId(o.id);
-  return html`<gmt-combobox class="${styles.root}" ${gateAttr(o.gate)}
+  return html`<gmt-combobox class="${styles.root}" data-placement="${o.placement ?? "below"}" ${gateAttr(o.gate)}
     ><div class="${styles.bar}"
       ><input
         class="${styles.input}"

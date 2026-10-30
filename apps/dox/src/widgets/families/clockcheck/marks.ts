@@ -14,7 +14,7 @@ import { html, raw, type SafeHtml } from "../../builders/html";
 import styles from "./marks.module.css";
 
 /** The sentinel's words. A tooltip on a readout that has lost its signal is `SIGNAL_LOST`. */
-export const NO_SIGNAL_TEXT = "NO SIGNAL";
+const NO_SIGNAL_TEXT = "NO SIGNAL";
 
 export const markOk = (): SafeHtml =>
   html`<span class="${styles.ok}" aria-hidden="true">✓</span>`;

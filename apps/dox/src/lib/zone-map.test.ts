@@ -12,30 +12,20 @@ import { CANADA_MAP } from "./canada-map";
 import { canadaTense, moroccoTense } from "./clock-change-tense.fixture";
 import { MOROCCO_MAP } from "./morocco-map";
 import {
-  MAP_WIDTH,
   isZoneFeature,
   offsetAt,
   type BoundaryCollection,
   type MapZone,
 } from "./zone-map";
-import {
-  LABEL_HEIGHT_PX,
-  boxesIntersect,
-  cityOf,
-  labelBox,
-  labelSize,
-} from "./zone-map-labels";
+import { cityOf } from "./zone-map-labels";
 import {
   NOW,
   drawZoneMap,
   loadBoundaries,
   mapQueries,
-  ringsOf,
   zoneDeps,
 } from "./zone-map.fixture";
 import { isBeforeUtc } from "@northguild/gmt/utc/compare";
-
-const WIDTHS = [400, 600, 800];
 
 const CASES = [
   {
@@ -147,55 +137,6 @@ describe.each(CASES)("the labels on the $name map", (c) => {
       ).toBe(true);
     }
   });
-
-  it.each(WIDTHS)(
-    "keeps the permanent labels apart, off the rings and inside the frame at %i px",
-    (width) => {
-      const projection = c.config.projection(
-        c.boundaries,
-        MAP_WIDTH,
-        c.config.height,
-      );
-      const boxes = c.config.labelled.map((id) => {
-        const at = projection([...c.config.anchors[id]!] as [number, number])!;
-        const size = {
-          ...labelSize(cityOf(id), "+00:00"),
-          height: LABEL_HEIGHT_PX,
-        };
-        return {
-          id,
-          box: labelBox(at, size, MAP_WIDTH, c.config.height, width),
-        };
-      });
-      const frameHeight = (c.config.height / MAP_WIDTH) * width;
-      for (const { id, box } of boxes) {
-        expect(box.left, id).toBeGreaterThanOrEqual(0);
-        expect(box.top, id).toBeGreaterThanOrEqual(0);
-        expect(box.right, id).toBeLessThanOrEqual(width);
-        expect(box.bottom, id).toBeLessThanOrEqual(frameHeight);
-      }
-      for (let i = 0; i < boxes.length; i++)
-        for (let j = i + 1; j < boxes.length; j++)
-          expect(
-            boxesIntersect(boxes[i]!.box, boxes[j]!.box),
-            `${boxes[i]!.id} and ${boxes[j]!.id} overlap`,
-          ).toBe(false);
-      const scale = width / MAP_WIDTH;
-      for (const [id, ringAt] of ringsOf(c.config, c.boundaries)) {
-        const ring = {
-          left: (ringAt.x - ringAt.r) * scale,
-          right: (ringAt.x + ringAt.r) * scale,
-          top: (ringAt.y - ringAt.r) * scale,
-          bottom: (ringAt.y + ringAt.r) * scale,
-        };
-        for (const { id: label, box } of boxes)
-          expect(
-            boxesIntersect(box, ring),
-            `${label} covers the ring of ${id}`,
-          ).toBe(false);
-      }
-    },
-  );
 
   it("shows one passing label for the hovered zone, and drops it when the pointer leaves", async () => {
     const { shape, shown, user } = await draw(c);

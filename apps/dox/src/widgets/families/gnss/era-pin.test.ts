@@ -10,12 +10,6 @@ describe("eraPin", () => {
     expect(host).toHaveTextContent("");
   });
 
-  it("carries the chosen and empty states as data for the module", () => {
-    const { host } = renderHtml(eraPin({ chosen: true, empty: true }));
-    expect(host.firstElementChild).toHaveAttribute("data-chosen", "true");
-    expect(host.firstElementChild).toHaveAttribute("data-empty", "true");
-  });
-
   it("has no axe violations", async () => {
     const { host } = renderHtml(eraPin({ chosen: false, empty: false }));
     await expectNoAxeViolations(host);

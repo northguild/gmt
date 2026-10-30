@@ -17,11 +17,13 @@ import { helpMarkdown } from "./clock-change-help";
 import type {
   ProbeConfig,
   ProbeInstant,
+  VerdictPlace,
   VerdictText,
 } from "./clock-change-probe";
 import { REGION_KEY, classPhrase } from "./clock-change-tense";
 import type { Moment, Tensed, TenseView } from "./clock-change-tense";
 import type { MapZone } from "./zone-map";
+import { withBase } from "./site";
 
 /**
  * The two zones that stop changing their clocks, from tzdb 2026c (`africa`: `Zone
@@ -44,7 +46,7 @@ export const MOROCCO_STOPPED: ReadonlySet<string> = new Set(MOROCCO_ZONES);
  * UTC instant. The words of the date and time are the library's (`momentWords`); a test pins the
  * instant to the library.
  */
-export const MOROCCO_STOP_MOMENT: Moment = {
+const MOROCCO_STOP_MOMENT: Moment = {
   at: "2026-09-20T01:00:00Z",
   from: "+01:00",
 };
@@ -97,7 +99,7 @@ export function expectedOffset(zone: string): string {
 }
 
 /** A clock change the page states, and the tzdb release that recorded it. */
-export interface StatedChange {
+interface StatedChange {
   at: string;
   from: string;
   to: string;
@@ -140,7 +142,7 @@ export const MOROCCO_STORED_ZONES = MOROCCO_ZONES;
 export const MOROCCO_RATE_LIMIT = { max: 20, windowSeconds: 60 } as const;
 
 /** A probe row: one zone at one instant. */
-export interface MoroccoProbeRow {
+interface MoroccoProbeRow {
   zone: string;
   instant: string;
   role: ProbeInstant["role"];
@@ -149,12 +151,12 @@ export interface MoroccoProbeRow {
 }
 
 /** A stated change in one zone, with whether this runtime's data has it. */
-export interface MoroccoChangeRow extends StatedChange {
+interface MoroccoChangeRow extends StatedChange {
   zone: string;
   present: boolean;
 }
 
-export interface MoroccoTransitionRow {
+interface MoroccoTransitionRow {
   zone: string;
   year: number;
   changes: Change[];
@@ -183,24 +185,36 @@ export function moroccoProbe(idPrefix: string): ProbeConfig {
   };
 }
 
+/**
+ * Where "What to do" points. The page has the Key points card, so the link stays on the page;
+ * the chat copy has none, so it opens that section of the checker page.
+ */
+function developersHref(where: VerdictPlace): string {
+  return where === "page"
+    ? "#morocco-developers"
+    : `${withBase("/check/morocco-2026-clock-change/")}#morocco-developers`;
+}
+
 /** The "Your browser" card's words. The HTML fields are written here, never by a reader. */
-export const MOROCCO_VERDICT: VerdictText = {
-  title: "Your browser",
-  correctNote: "tzdb 2026c or later",
-  yoursNote: "your data",
-  checking: "Checking your browser&hellip;",
-  right: "Your browser has the new rules for both places.",
-  wrongBefore: "Your browser has old time zone data for ",
-  wrongAfter:
-    ". It shows them an hour ahead for most of the year, and right only in the weeks the old rules gave +00:00.",
-  more: [
-    "<strong>For you:</strong> update your browser. If it is already up to date, its maker has not shipped the fix yet. Check again after the next update.",
-    '<strong>For developers:</strong> your users&rsquo; browsers can be the same. See step 2 under <a href="#morocco-developers">For developers</a>.',
-  ],
-  unknown: "Your browser cannot read these zones.",
-  blindNote:
-    "Old and new data agree here, so a check during these weeks cannot tell.",
-};
+export function moroccoVerdict(where: VerdictPlace): VerdictText {
+  return {
+    title: "Your browser",
+    correctNote: "tzdb 2026c or later",
+    yoursNote: "your data",
+    checking: "Checking your browser&hellip;",
+    right: "Your browser has the new rules for both places.",
+    wrongBefore: "Your browser has old time zone data for ",
+    wrongAfter:
+      ". It shows them an hour ahead for most of the year, and right only in the weeks the old rules gave +00:00.",
+    more: [
+      "<strong>For you:</strong> update your browser. If it is already up to date, its maker has not shipped the fix yet. Check again after the next update.",
+      `<strong>For developers:</strong> your users&rsquo; browsers can be the same. See step 2 under <a href="${developersHref(where)}">What to do</a> in Key points.`,
+    ],
+    unknown: "Your browser cannot read these zones.",
+    blindNote:
+      "Old and new data agree here, so a check during these weeks cannot tell.",
+  };
+}
 
 /**
  * The one-line Node probe the page offers for the reader's own runtime: each city's offset at the

@@ -25,7 +25,7 @@ export type AuditKind =
   | "ambiguous"
   | "nonexistent";
 
-export interface AuditToken {
+interface AuditToken {
   name: string;
   value: string;
 }
@@ -46,7 +46,7 @@ export interface AuditRow {
   sentence: string;
 }
 
-export interface AuditTableOptions {
+interface AuditTableOptions {
   /** The table's name. Required. */
   caption: string;
   /** The radios' shared name. */

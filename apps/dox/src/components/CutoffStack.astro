@@ -32,7 +32,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderCutoffStackTemplate("cutoff-stack", {});
+const html = renderCutoffStackTemplate("cutoff-stack", {}).value;
 ---
 
 {

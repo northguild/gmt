@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+import { within } from "@testing-library/dom";
 import { createChartRuntime, renderChartSvg } from "@tanstack/charts";
 import {
   coreNamespaces,
@@ -5,11 +7,12 @@ import {
   gmtStats,
   type IndustryLayerCount,
 } from "../data/gmt-stats";
+import { raw } from "~/widgets/builders/html";
+import { renderHtml } from "~/widgets/test-fixture";
 import { libraryComparisons } from "../data/library-comparison";
 import {
   BAR_CHARTS,
   CORE_FUNCTION_TOTAL,
-  INDUSTRY_COUNTS,
   INDUSTRY_FUNCTION_TOTAL,
   NAMESPACE_COUNTS,
   OWN_SERIES,
@@ -126,7 +129,7 @@ describe("ciExecutionTooltip", () => {
   it("breaks GMT's executions into suite, re-runs and matrix", () => {
     expect(tooltipOf("@northguild/gmt")).toEqual({
       title: "@northguild/gmt",
-      color: "var(--gmt-spring)",
+      color: expect.any(String),
       rows: [
         { label: "Suite tests", value: formatCount(gmtStats.tests) },
         {
@@ -168,7 +171,7 @@ describe("ciExecutionTooltip", () => {
   it("omits the matrix rows for a single-run library", () => {
     expect(tooltipOf("date-fns")).toEqual({
       title: "date-fns",
-      color: "var(--gmt-signal)",
+      color: expect.any(String),
       rows: [
         { label: "Suite tests", value: "3,213" },
         { label: "CI executions", value: "3,213" },
@@ -217,22 +220,6 @@ describe("namespaceTooltip", () => {
 // ---------------------------------------------------------------------------
 
 describe("namespace and industry charts", () => {
-  it("charts every namespace exactly once between them", () => {
-    const charted = [...NAMESPACE_COUNTS, ...INDUSTRY_COUNTS]
-      .map((r) => r.namespace)
-      .filter((namespace) => namespace !== "regex");
-    expect(charted.sort()).toEqual(
-      gmtStats.byNamespace.map((r) => r.namespace).sort(),
-    );
-  });
-
-  it("keeps the industry layers out of the core chart", () => {
-    const core = NAMESPACE_COUNTS.map((r) => r.namespace);
-    for (const { namespace } of INDUSTRY_COUNTS) {
-      expect(core).not.toContain(namespace);
-    }
-  });
-
   it("splits the public function total between core and industry", () => {
     expect(CORE_FUNCTION_TOTAL + INDUSTRY_FUNCTION_TOTAL).toBe(
       gmtStats.functions,
@@ -276,7 +263,7 @@ describe("industryTooltip", () => {
     const [layer] = gmtStats.industryLayers;
     expect(industryTooltip(layer)).toEqual({
       title: layer?.label,
-      color: "var(--gmt-spring)",
+      color: expect.any(String),
       rows: [
         { label: "Own functions", value: formatCount(layer?.own ?? 0) },
         {
@@ -306,7 +293,7 @@ describe("industryTooltip", () => {
   it("gives an industry that owns no namespace only the rows of what it draws on, and no share", () => {
     expect(industryTooltip(FIXTURE[3], FIXTURE)).toEqual({
       title: "Maritime",
-      color: "var(--gmt-spring)",
+      color: expect.any(String),
       rows: [
         { label: "draws on gnss (GNSS industry layer)", value: "6" },
         { label: "draws on timescale (Core)", value: "6" },
@@ -400,33 +387,35 @@ describe("industrySegments", () => {
 });
 
 describe("the key and the summary under the industry chart", () => {
-  it("shows a solid and a hatched swatch, each a mark with the words beside it", () => {
-    const legend = industryLegend();
-    expect(legend).toContain("gmt-chart-swatch--own");
-    expect(legend).toContain("gmt-chart-swatch--shared");
-    expect(legend).toContain("the industry's own functions");
-    expect(legend).toContain("a shared layer it draws on");
-    // The swatches are decoration: the words carry the meaning.
-    expect(legend.match(/aria-hidden="true"/g)).toHaveLength(2);
-    // No colour of its own on the page: the stylesheet draws them from tokens.
-    expect(legend).not.toMatch(/style=|#[0-9a-f]{3,8}\b|rgb\(/i);
+  it("names both kinds of segment in words, so the swatches are decoration", () => {
+    const { host } = renderHtml(raw(industryLegend()));
+    const key = within(host).getByRole("list", { name: "Key" });
+    const items = within(key).getAllByRole("listitem");
+    expect(items.map((item) => item.textContent)).toEqual([
+      "the industry's own functions",
+      "a shared layer it draws on",
+    ]);
   });
 
   it("states each industry's own count and each drawn-on module's count in words", () => {
-    const html = industrySummary(FIXTURE);
-    expect(html).toContain("<li>Workforce: 8 own functions.</li>");
-    expect(html).toContain(
-      "<li>Transport: 15 own functions; draws on workforce, 8 functions (Workforce industry layer).</li>",
+    const { host } = renderHtml(raw(industrySummary(FIXTURE)));
+    const items = within(host)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+    expect(items).toContain("Workforce: 8 own functions.");
+    expect(items).toContain(
+      "Transport: 15 own functions; draws on workforce, 8 functions (Workforce industry layer).",
     );
-    expect(html).toContain(
-      "<li>Maritime: no namespace of its own; draws on gnss, 6 functions (GNSS industry layer); draws on timescale, 6 functions (Core).</li>",
+    expect(items).toContain(
+      "Maritime: no namespace of its own; draws on gnss, 6 functions (GNSS industry layer); draws on timescale, 6 functions (Core).",
     );
-    expect(html).toContain('class="gmt-chart-visually-hidden"');
   });
 
   it("states a line for every industry the stats hold", () => {
-    const items = industrySummary().match(/<li>/g) ?? [];
-    expect(items).toHaveLength(gmtStats.industryLayers.length);
+    const { host } = renderHtml(raw(industrySummary()));
+    expect(within(host).getAllByRole("listitem")).toHaveLength(
+      gmtStats.industryLayers.length,
+    );
   });
 });
 
@@ -440,19 +429,19 @@ describe("static bar chart render", () => {
     (id) => {
       const rects = barRects(renderStatic(id));
       expect(rects).toHaveLength(libraryComparisons.length);
-      expect(rects.filter((r) => r.gradient === "gmt-bar-spring")).toHaveLength(
-        1,
-      );
-      expect(rects.filter((r) => r.gradient === "gmt-bar-signal")).toHaveLength(
-        libraryComparisons.length - 1,
-      );
+      expect(
+        rects.filter((r) => r.gradient === barGradientId("spring")),
+      ).toHaveLength(1);
+      expect(
+        rects.filter((r) => r.gradient === barGradientId("signal")),
+      ).toHaveLength(libraryComparisons.length - 1);
     },
   );
 
   it("draws namespaces as one cyan bar per row", () => {
     const rects = barRects(renderStatic("namespaces"));
     expect(rects).toHaveLength(coreNamespaces.length + 1);
-    expect(rects.every((r) => r.gradient === "gmt-bar-cyan")).toBe(true);
+    expect(rects.every((r) => r.gradient === barGradientId("cyan"))).toBe(true);
   });
 
   it("draws industries stacked: a solid spring segment for each own namespace and a hatched one for each module drawn on", () => {

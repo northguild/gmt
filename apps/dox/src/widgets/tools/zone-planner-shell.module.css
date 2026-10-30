@@ -8,3 +8,10 @@
 .block .title {
   margin-block-start: var(--gmt-space-8);
 }
+
+/* The note under the planner, in the globe's caption style. */
+.caption {
+  margin: var(--gmt-space-3) 0 0;
+  font-size: 0.8rem;
+  color: var(--gmt-ice-dim);
+}

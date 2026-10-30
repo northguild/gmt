@@ -2,6 +2,7 @@
 
 .root {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: start;
   gap: 0.25rem;
   min-inline-size: 0;
@@ -21,7 +22,6 @@
   & gmt-readout {
     font-size: clamp(1.25rem, 1rem + 1.5vw, 2.25rem);
     max-inline-size: 100%;
-    overflow-x: auto;
   }
 }
 
@@ -38,7 +38,7 @@
   color: var(--gmt-ice-dim);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-sm);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 @media (forced-colors: active) {

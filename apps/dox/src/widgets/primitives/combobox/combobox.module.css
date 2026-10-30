@@ -90,6 +90,12 @@
   }
 }
 
+/* Opens upward for a box with no room below it. */
+.root[data-placement="above"] .popup {
+  inset-block: auto 100%;
+  margin-block: 0 var(--gmt-space-1);
+}
+
 .list {
   max-block-size: 16rem;
   box-shadow: 0 4px 16px color-mix(in srgb, var(--gmt-void) 45%, transparent);

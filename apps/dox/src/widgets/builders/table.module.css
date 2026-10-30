@@ -22,6 +22,14 @@
   font-size: clamp(0.8125rem, 0.78rem + 0.2vw, 0.9375rem);
 }
 
+/* A fixed layout takes its column widths from the header row. Starlight draws a content table
+   as a block, which would leave the anonymous table inside it on the automatic layout, so this
+   one states `display: table`. */
+.fixed {
+  display: table;
+  table-layout: fixed;
+}
+
 .caption {
   padding-block: 0.5rem;
   padding-inline: 0.75rem;
@@ -36,12 +44,22 @@
   padding-inline: 0.75rem;
   border-block-end: 1px solid var(--gmt-hairline);
   vertical-align: top;
+
+  /* A long identifier or header breaks inside the box instead of widening the table past it. A
+     numeric cell keeps its figures together (`.numeric`). */
+  overflow-wrap: anywhere;
+}
+
+/* The content sheet keeps a table's code on one line (`white-space: nowrap`), so a long result
+   widens the table past its box. Inside a cell it wraps like the rest of the cell. */
+.cell code {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .head {
-  color: var(--gmt-ice-dim);
+  color: var(--gmt-ice);
   font-weight: 600;
-  white-space: nowrap;
 }
 
 .start {

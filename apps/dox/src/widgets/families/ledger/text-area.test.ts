@@ -15,6 +15,14 @@ describe("textArea", () => {
     );
   });
 
+  it("turns off spell check, autofill and automatic capitals for machine text", () => {
+    renderHtml(html`<label for="t">Holidays</label>${textArea({ id: "t" })}`);
+    const box = screen.getByRole("textbox", { name: "Holidays" });
+    expect(box).toHaveAttribute("spellcheck", "false");
+    expect(box).toHaveAttribute("autocomplete", "off");
+    expect(box).toHaveAttribute("autocapitalize", "off");
+  });
+
   it("escapes its value", () => {
     renderHtml(
       html`<label for="t">Holidays</label>${textArea({ id: "t", value: "</textarea><b>x" })}`,

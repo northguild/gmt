@@ -9,7 +9,6 @@
  * library or the widget fails here.
  */
 import { screen, within } from "@testing-library/dom";
-import { raw } from "~/widgets/builders";
 import { renderHtml } from "~/widgets/test-fixture";
 import {
   WIDGET_REGISTRY,
@@ -280,8 +279,7 @@ function expectPlates(want: string[]) {
 }
 
 function template(args?: Record<string, unknown>): HTMLElement {
-  return renderHtml(raw(renderDemurrageClockTemplate("demurrage-clock", args)))
-    .host;
+  return renderHtml(renderDemurrageClockTemplate("demurrage-clock", args)).host;
 }
 
 afterEach(() => {
@@ -759,5 +757,15 @@ describe("lifecycle", () => {
     } finally {
       spy.restore();
     }
+  });
+});
+
+describe("the length cap", () => {
+  it("stops an event instant at 64 characters", async () => {
+    const w = await open();
+    const box = screen.getByRole("textbox", { name: "Instant 1" });
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(72));
+    expect(box).toHaveValue("x".repeat(64));
   });
 });

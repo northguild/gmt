@@ -5,7 +5,6 @@ import {
   BEFORE_1972_PLATE,
   BEFORE_FIRST_INSTANT_NOTE,
   CLOCK_KEYS,
-  FOOTNOTES_RESERVED,
   CLOCK_PRESETS,
   CUSTOM_PRESET_ID,
   DEFAULT_PRESET,
@@ -522,18 +521,6 @@ describe("each sentence, in order", () => {
     expect(read("1972-01-01T00:00:00Z").plates[2]!.value).not.toBe(
       BEFORE_1972_PLATE.value,
     );
-  });
-
-  it("no footnote is longer than the longest one the page reserves", () => {
-    const longest = Math.max(...FOOTNOTES_RESERVED.map((t) => t.length));
-    for (const value of [
-      "1971-06-01T00:00:00Z",
-      "1990-01-01T00:00:00Z",
-      "2004-01-01T00:00:00Z",
-      "2024-01-01T00:00:00Z",
-    ]) {
-      expect(read(value).footnote.length).toBeLessThanOrEqual(longest);
-    }
   });
 
   it("a sentinel is never the legitimate 'none after this instant'", () => {

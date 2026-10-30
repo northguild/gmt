@@ -31,9 +31,9 @@ describe("fetchChunks", () => {
     const fetchImpl = vi.fn(
       async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
     );
-    const chunks = await fetchChunks("https://gmt-dox.example/", { fetchImpl });
+    const chunks = await fetchChunks("https://dox.example/", { fetchImpl });
     expect(fetchImpl).toHaveBeenCalledWith(
-      "https://gmt-dox.example/gmt/retrieval-chunks.json",
+      "https://dox.example/gmt/retrieval-chunks.json",
     );
     expect(chunks).toEqual(SAMPLE);
   });
@@ -44,18 +44,18 @@ describe("fetchChunks", () => {
         new Response("nope", { status: 500, statusText: "Server Error" }),
     );
     await expect(
-      fetchChunks("https://gmt-dox.example", { fetchImpl }),
+      fetchChunks("https://dox.example", { fetchImpl }),
     ).rejects.toThrow(/500/);
   });
 
   it("serves a cache hit without calling fetch", async () => {
     const cache = mockCache();
     await cache.put(
-      new Request("https://gmt-dox.example/gmt/retrieval-chunks.json"),
+      new Request("https://dox.example/gmt/retrieval-chunks.json"),
       new Response(JSON.stringify(SAMPLE)),
     );
     const fetchImpl = vi.fn();
-    const chunks = await fetchChunks("https://gmt-dox.example", {
+    const chunks = await fetchChunks("https://dox.example", {
       fetchImpl,
       cache,
     });
@@ -68,7 +68,7 @@ describe("fetchChunks", () => {
     const fetchImpl = vi.fn(
       async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
     );
-    await fetchChunks("https://gmt-dox.example", {
+    await fetchChunks("https://dox.example", {
       fetchImpl,
       cache,
       cacheTtlSeconds: 60,
@@ -86,9 +86,9 @@ describe("fetchChunks", () => {
     let now = 1_000_000;
     const options = { fetchImpl, cache, cacheTtlSeconds: 60, now: () => now };
 
-    const first = await fetchChunks("https://gmt-dox.example", options);
+    const first = await fetchChunks("https://dox.example", options);
     now += 59_000;
-    const second = await fetchChunks("https://gmt-dox.example", options);
+    const second = await fetchChunks("https://dox.example", options);
 
     // Same object, not merely equal: `search.ts` keys its index on identity.
     expect(second).toBe(first);
@@ -104,9 +104,9 @@ describe("fetchChunks", () => {
     let now = 1_000_000;
     const options = { fetchImpl, cache, cacheTtlSeconds: 60, now: () => now };
 
-    const first = await fetchChunks("https://gmt-dox.example", options);
+    const first = await fetchChunks("https://dox.example", options);
     now += 60_001;
-    const second = await fetchChunks("https://gmt-dox.example", options);
+    const second = await fetchChunks("https://dox.example", options);
 
     expect(second).not.toBe(first);
     expect(second).toEqual(first);
@@ -123,9 +123,9 @@ describe("fetchChunks", () => {
     let now = Number.POSITIVE_INFINITY;
     const options = { fetchImpl, cacheTtlSeconds: 60, now: () => now };
 
-    await fetchChunks("https://gmt-dox.example", options);
+    await fetchChunks("https://dox.example", options);
     now = 1_000_000;
-    await fetchChunks("https://gmt-dox.example", options);
+    await fetchChunks("https://dox.example", options);
 
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
@@ -134,7 +134,7 @@ describe("fetchChunks", () => {
     const fetchImpl = vi.fn(
       async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
     );
-    await fetchChunks("https://gmt-dox.example", { fetchImpl });
+    await fetchChunks("https://dox.example", { fetchImpl });
     await fetchChunks("http://localhost:8787", { fetchImpl });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });

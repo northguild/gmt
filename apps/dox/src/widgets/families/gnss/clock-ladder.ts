@@ -45,7 +45,7 @@ export interface ClockLadderRow {
   title: string;
 }
 
-export interface ClockLadderOptions extends GateOption {
+interface ClockLadderOptions extends GateOption {
   /** The ladder in words: the figure's name. Required. */
   label: string;
   layout: LadderLayout;

@@ -29,7 +29,7 @@ import {
   type LocalParts,
 } from "./cutoff-widgets";
 import { placeLabel } from "./label-fit";
-import { escapeHtml } from "./widget-ui";
+import { codeSpan } from "./widget-ui";
 
 export {
   TRANSPORT_ZONES,
@@ -198,15 +198,6 @@ export function spokenMinutes(minutes: number): string {
   const unit = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   if (h === 0) return unit(m, "minute");
   return m === 0 ? unit(h, "hour") : `${unit(h, "hour")} ${unit(m, "minute")}`;
-}
-
-let instanceCount = 0;
-
-/** A number for each template rendered, so two widgets on one page (a tool page
- *  and the chat rail) never share a radio `name` or an `id`. */
-export function nextInstanceId(): number {
-  instanceCount += 1;
-  return instanceCount;
 }
 
 const NICE_MINUTES = [
@@ -385,8 +376,7 @@ export function formatValue(value: unknown): string {
 
 /** `[html, plain]` for `renderCallLine`: the arguments of a real call. */
 export function callArgs(args: readonly unknown[]): [string, string] {
-  const htmlStr = (s: string) =>
-    `<span class="gmt-code-str">${escapeHtml(JSON.stringify(s))}</span>`;
+  const htmlStr = (s: string) => codeSpan("str", JSON.stringify(s));
   return [
     args.map((a) => renderValue(a, htmlStr)).join(", "),
     args.map((a) => renderValue(a, (s) => JSON.stringify(s))).join(", "),
@@ -477,7 +467,7 @@ export interface LabelBox {
   h: number;
 }
 
-export interface PlacedLabel {
+interface PlacedLabel {
   left: number;
   top: number;
 }
@@ -489,14 +479,14 @@ export interface Rect {
   h: number;
 }
 
-export interface Segment {
+interface Segment {
   x1: number;
   y1: number;
   x2: number;
   y2: number;
 }
 
-export interface PlaceOptions {
+interface PlaceOptions {
   /** The size of the mark (and its ring) at every anchor; `0` when the anchors
    *  are not marks. A label never covers one. Default 14. */
   markPx?: number;
@@ -670,48 +660,4 @@ export function settledAnnouncer(
     },
     cancel,
   };
-}
-
-/**
- * Writes a preset's description into its slot. Dragging a handle makes the
- * state "custom", which has no description; the slot then keeps the height it
- * had, so nothing below it (the frame under the pointer) moves. Choosing a
- * preset again lets the slot size itself.
- */
-export function setPresetDescription(slot: HTMLElement, text: string): void {
-  if (text === "") {
-    const height = slot.getBoundingClientRect().height;
-    if (slot.style.minBlockSize === "" && height > 0) {
-      slot.style.minBlockSize = `${height}px`;
-    }
-  } else {
-    slot.style.minBlockSize = "";
-  }
-  slot.textContent = text;
-}
-
-/**
- * A plate's sub line as fixed lines, one `<span>` per line, so it never wraps
- * and an empty line still holds its height. `sep` is the text that joins a
- * line to the one before it when the lines are read as one (the plate's
- * `textContent` stays one sentence); it is hidden by CSS.
- */
-export function heroLinesHtml(
-  lines: readonly { text: string; sep?: string }[],
-): string {
-  return (
-    `<span class="gmt-punct-hero-sub">` +
-    lines
-      .map(
-        (l) =>
-          `<span class="gmt-punct-hero-line">` +
-          (l.sep && l.text !== ""
-            ? `<span class="gmt-punct-hero-sep">${escapeHtml(l.sep)}</span>`
-            : "") +
-          escapeHtml(l.text) +
-          `</span>`,
-      )
-      .join("") +
-    `</span>`
-  );
 }

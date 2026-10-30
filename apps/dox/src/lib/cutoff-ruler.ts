@@ -37,7 +37,7 @@ export interface CutoffRulerArgs {
   atLocalTime?: string;
 }
 
-export interface RulerPreset {
+interface RulerPreset {
   id: string;
   label: string;
   description: string;
@@ -158,9 +158,9 @@ export function permalinkOf(state: RulerState): Record<string, string> {
 // The three readings
 // ---------------------------------------------------------------------------
 
-export type RulerReadingKey = "calendar" | "exact" | "pinned";
+type RulerReadingKey = "calendar" | "exact" | "pinned";
 
-export interface RulerCallSpec {
+interface RulerCallSpec {
   key: RulerReadingKey;
   label: string;
   offset: string;
@@ -239,7 +239,7 @@ export function collectRulerFacts(
 // Why null
 // ---------------------------------------------------------------------------
 
-export type RulerNullReason =
+type RulerNullReason =
   | "invalid-zone"
   | "zoneless-anchor"
   | "invalid-anchor"
@@ -301,7 +301,7 @@ export function rulerNullReason(
 // The DST transition between the readings and the departure — for drawing
 // ---------------------------------------------------------------------------
 
-export interface RulerTransition {
+interface RulerTransition {
   /** The transition instant, as an ISO instant string. */
   instant: string;
   before: string;

@@ -6,22 +6,30 @@
  * the failure) goes to a polite live region this element owns, so it is spoken and
  * is never the only signal: the icon and colour change too. A missing Clipboard
  * API and a rejected write both end in "Copy failed", not silence. The message
- * clears after 1.5 s. Replaces `wireCopyButtons`.
+ * clears after 1.5 s. With `reveal`, for text shown nowhere else on the page (a share
+ * link), a failure also shows the text, and it stays until the next click, so it can be
+ * selected and copied by hand.
  */
-import { CHECK_ICON, COPY_ICON } from "~/lib/code-frame";
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, raw, type SafeHtml } from "../../builders/html";
 import { KitElement } from "../base";
 import styles from "./copy.module.css";
 
+/** Clipboard icon paths, the inside of the `<svg>`, so both states share one wrapper. */
+const COPY_ICON =
+  '<rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
+const CHECK_ICON = '<polyline points="20 6 9 17 4 12"></polyline>';
+
 export const COPIED_TEXT = "Copied";
 export const FAILED_TEXT = "Copy failed";
 
-export interface CopyOptions extends GateOption {
+interface CopyOptions extends GateOption {
   /** The button's accessible name, such as "Copy call". Required. */
   label: string;
   /** What is copied. */
   text: string;
+  /** The text is shown nowhere else on the page: a failed copy shows it, to copy by hand. */
+  reveal?: boolean;
 }
 
 const svg = (paths: string): SafeHtml =>
@@ -38,7 +46,7 @@ const svg = (paths: string): SafeHtml =>
   >`;
 
 export function copy(o: CopyOptions): SafeHtml {
-  return html`<gmt-copy class="${styles.root}" text="${o.text}" ${gateAttr(o.gate)}
+  return html`<gmt-copy class="${styles.root}" text="${o.text}" ${o.reveal ? "data-reveal" : ""} ${gateAttr(o.gate)}
     ><button class="${styles.button}" type="button" aria-label="${o.label}">${svg(COPY_ICON)}</button
     ><span class="${styles.status}" role="status"></span></gmt-copy
   >`;
@@ -68,10 +76,17 @@ export class GmtCopy extends KitElement {
     button.dataset["state"] = state;
     const icon = button.querySelector("svg");
     if (icon) icon.innerHTML = state === "copied" ? CHECK_ICON : COPY_ICON;
+    const reveal = state === "failed" && this.hasAttribute("data-reveal");
     status.textContent =
-      state === "copied" ? COPIED_TEXT : state === "failed" ? FAILED_TEXT : "";
+      state === "copied"
+        ? COPIED_TEXT
+        : state === "failed"
+          ? reveal
+            ? `${FAILED_TEXT}. Copy it from here: ${this.text}`
+            : FAILED_TEXT
+          : "";
     clearTimeout(this.#timer);
-    if (state !== "idle")
+    if (state !== "idle" && !reveal)
       this.#timer = setTimeout(() => this.#show("idle"), 1500);
   }
 

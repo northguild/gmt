@@ -29,6 +29,37 @@ describe("the copy element", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(FAILED_TEXT);
   });
 
+  it("shows text that is on screen nowhere else when the copy fails, and keeps it there", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      // setup() installs its own clipboard, so the refusing one goes in after it.
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      clipboard(vi.fn().mockRejectedValue(new Error("denied")));
+      renderHtml(
+        copy({
+          label: "Copy link",
+          text: "https://x.test/a?b=1",
+          reveal: true,
+        }),
+      );
+      await user.click(screen.getByRole("button", { name: "Copy link" }));
+      const status = await screen.findByRole("status");
+      await vi.waitFor(() => expect(status).toHaveTextContent(FAILED_TEXT));
+      expect(status).toHaveTextContent("https://x.test/a?b=1");
+      await vi.advanceTimersByTimeAsync(1600);
+      expect(status).toHaveTextContent("https://x.test/a?b=1");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a failure short when the text is already on screen", async () => {
+    clipboard(vi.fn().mockRejectedValue(new Error("denied")));
+    renderHtml(copy({ label: "Copy call", text: "now()" }));
+    await userEvent.click(screen.getByRole("button", { name: "Copy call" }));
+    expect(await screen.findByRole("status")).not.toHaveTextContent("now()");
+  });
+
   it("resets after a moment", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {

@@ -139,13 +139,6 @@ export function completeStoredLine(line: string, zone: string): string | null {
   return null;
 }
 
-/** One checked line in plain words: still correct, or moved and by how much. */
-export interface StoredVerdict {
-  ok: boolean;
-  /** "Still correct", or "Moved: ..." with the plain reason. */
-  words: string;
-}
-
 /** `HH:MM` and the day shift of a UTC instant (`...THH:mm...Z`) read at a `±hh:mm` offset. */
 function localOf(
   instant: string,
@@ -163,45 +156,6 @@ function localOf(
   const inDay = total - days * 1440;
   const pad = (n: number) => String(n).padStart(2, "0");
   return { hm: `${pad(Math.floor(inDay / 60))}:${pad(inDay % 60)}`, days };
-}
-
-/**
- * What the server's classification means for a reader: a time that still names the moment it was
- * saved for is "Still correct"; a stored offset the zone no longer has is read at the zone's own
- * offset, which is the local time it now means. Pure.
- */
-export function storedVerdict(result: {
-  kind: string;
-  zoneOffset?: string;
-  atStoredOffset?: string;
-}): StoredVerdict {
-  switch (result.kind) {
-    case "valid":
-    case "validInOverlap":
-      return { ok: true, words: "Still correct" };
-    case "offsetMismatch": {
-      const local =
-        result.atStoredOffset !== undefined && result.zoneOffset !== undefined
-          ? localOf(result.atStoredOffset, result.zoneOffset)
-          : null;
-      if (local === null)
-        return {
-          ok: false,
-          words: "Moved: the saved offset is no longer the zone's",
-        };
-      const day =
-        local.days === 0
-          ? ""
-          : local.days > 0
-            ? " the next day"
-            : " the day before";
-      return { ok: false, words: `Moved: shows ${local.hm} local${day}` };
-    }
-    case "ambiguous":
-      return { ok: false, words: "Moved: this time happens twice" };
-    default:
-      return { ok: false, words: "Moved: this time no longer exists" };
-  }
 }
 
 /** One checked line for the "Did your saved events move?" table: the Result and the What to do cells. */

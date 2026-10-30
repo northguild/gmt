@@ -245,3 +245,13 @@ describe("when the library does not load", () => {
     }
   });
 });
+
+describe("the length cap", () => {
+  it("stops the duration string at 64 characters", async () => {
+    const w = await open();
+    const box = textBox();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(72));
+    expect(box).toHaveValue("x".repeat(64));
+  });
+});

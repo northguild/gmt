@@ -38,7 +38,7 @@ const infoIcon = (): SafeHtml =>
     <circle cx="12" cy="7.6" r="1.1" fill="currentColor" />
   </svg>`;
 
-export interface ServersCardOptions {
+interface ServersCardOptions {
   idPrefix: string;
   /** The Node command, from `nodeProbeCommand`. */
   command: string;

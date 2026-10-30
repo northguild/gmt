@@ -81,11 +81,10 @@ export function moroccoProjection(
  * degrees away from the other (Gibraltar north, Ceuta south), which leaves a gap between them.
  * A ring marks "a zone is here", not a survey point, and the shapes themselves are not moved.
  */
-export const MARKER_NUDGE: Readonly<Record<string, readonly [number, number]>> =
-  {
-    "Europe/Gibraltar": [0, 0.12],
-    "Africa/Ceuta": [0, -0.12],
-  };
+const MARKER_NUDGE: Readonly<Record<string, readonly [number, number]>> = {
+  "Europe/Gibraltar": [0, 0.12],
+  "Africa/Ceuta": [0, -0.12],
+};
 
 /**
  * Where the small-shape rings go: the `zone.tab` coordinate of each zone, written by the script,
@@ -103,9 +102,7 @@ export const MAP_MARKERS: Readonly<Record<string, readonly [number, number]>> =
  * Where the two permanent labels sit, `[lon, lat]`, each inside its zone's land: Casablanca in
  * Morocco's interior, El Aaiun in the north of Western Sahara's drawn part, away from the coast.
  */
-export const MOROCCO_ANCHORS: Readonly<
-  Record<string, readonly [number, number]>
-> = {
+const MOROCCO_ANCHORS: Readonly<Record<string, readonly [number, number]>> = {
   "Africa/Casablanca": [-6.5, 32],
   "Africa/El_Aaiun": [-13.5, 25],
 };

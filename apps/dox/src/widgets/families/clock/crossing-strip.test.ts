@@ -6,6 +6,7 @@
  */
 import { screen } from "@testing-library/dom";
 import type { CrossingStrip } from "~/lib/crossing-clock";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "~/widgets/test-fixture";
 import { crossingBar } from "./crossing-strip";
 
@@ -76,6 +77,18 @@ describe("crossingBar", () => {
   it("shows the sentinel in words at the edge of the range", () => {
     renderHtml(crossingBar({ kind: "edge", text: "⟨ NO SIGNAL — edge ⟩" }));
     expect(screen.getByRole("status")).toHaveTextContent("NO SIGNAL");
+  });
+
+  it("has no axe violations drawn, quiet, blank or at the edge", async () => {
+    for (const view of [
+      { kind: "drawn", strip: DRAWN },
+      { kind: "drawn", strip: QUIET },
+      { kind: "blank" },
+      { kind: "edge", text: "⟨ NO SIGNAL — edge ⟩" },
+    ] as const) {
+      const fx = renderHtml(crossingBar(view));
+      await expectNoAxeViolations(fx.host);
+    }
   });
 
   it("escapes a label rather than reading it as markup", () => {

@@ -48,7 +48,7 @@ export function valueAt(
   return Math.min(max, Math.max(min, value));
 }
 
-export interface HandleOptions extends GateOption {
+interface HandleOptions extends GateOption {
   /** The accessible name. Required. */
   label: string;
   id?: string;
@@ -118,9 +118,21 @@ export class GmtHandle extends KitElement {
   get value(): number {
     return this.#clamp(num(this.getAttribute("aria-valuenow"), this.min));
   }
-  /** Set from code (a typed field, a preset). Re-renders; emits nothing. */
+  /**
+   * Set from code (a typed field, a preset). Re-renders; emits nothing. The value is snapped to
+   * `step` from `min`, as a drag snaps it, so an arrow key always lands on a value it can come back to.
+   */
   set value(next: number) {
-    this.setAttribute("aria-valuenow", String(this.#clamp(next)));
+    const step = this.step;
+    const snapped =
+      step > 0 && Number.isFinite(next)
+        ? Number(
+            (this.min + Math.round((next - this.min) / step) * step).toFixed(
+              10,
+            ),
+          )
+        : next;
+    this.setAttribute("aria-valuenow", String(this.#clamp(snapped)));
     this.#render();
   }
 

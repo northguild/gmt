@@ -4,7 +4,7 @@
  * The `[data-theme="light"]` rules that aren't a simple palette re-tint (those
  * are token-value swaps in gmt-tokens.css) and don't sit next to a base rule
  * elsewhere (scrollbar → gmt-controls.css, Pagefind → gmt-content.css,
- * --ec-codeBg → gmt-glass.css). Loaded last so it always wins its ties.
+ * --ec-codeBg → gmt-glass.css). It sits in the `gmt.thirdparty` layer, after the content and tools layers.
  *
  * A rule here that can reach inside a dark island (`.gmt-theme-dark`, see
  * gmt-tokens.css — the landing hero) excludes it, since the island keeps the
@@ -26,7 +26,7 @@
 
 /* The Pagefind field keeps its own fill and clear button (gmt-content.css); the rules above
    and below reach them too, from a later layer, so these two put them back. */
-[data-theme="light"] site-search .pagefind-ui__search-input {
+[data-theme="light"] site-search .pagefind-ui__search-input[type] {
   background-color: var(--gmt-glass-tint-subtle);
 }
 

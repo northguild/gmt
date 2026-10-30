@@ -1,4 +1,9 @@
-import { codeBreakHast, codeBreakHtml, codeBreakPieces } from "./code-break";
+import {
+  CODE_PIECE_CLASS,
+  codeBreakHast,
+  codeBreakHtml,
+  codeBreakPieces,
+} from "./code-break";
 
 describe("codeBreakPieces", () => {
   it("keeps a date whole", () => {
@@ -61,7 +66,7 @@ describe("codeBreakPieces", () => {
   it("keeps a run of spaces as text between pieces", () => {
     expect(codeBreakPieces("a  b")).toEqual(["a", "b"]);
     expect(codeBreakHtml("a  b")).toBe(
-      '<span class="gmt-cw">a</span>  <span class="gmt-cw">b</span>',
+      `<span class="${CODE_PIECE_CLASS}">a</span>  <span class="${CODE_PIECE_CLASS}">b</span>`,
     );
   });
 
@@ -79,13 +84,13 @@ describe("codeBreakHtml", () => {
 
   it("joins slash pieces with a wbr", () => {
     expect(codeBreakHtml("Europe/Berlin")).toBe(
-      '<span class="gmt-cw">Europe/</span><wbr><span class="gmt-cw">Berlin</span>',
+      `<span class="${CODE_PIECE_CLASS}">Europe/</span><wbr><span class="${CODE_PIECE_CLASS}">Berlin</span>`,
     );
   });
 
   it("escapes each piece", () => {
     expect(codeBreakHtml("a<b c")).toBe(
-      '<span class="gmt-cw">a&lt;b</span> <span class="gmt-cw">c</span>',
+      `<span class="${CODE_PIECE_CLASS}">a&lt;b</span> <span class="${CODE_PIECE_CLASS}">c</span>`,
     );
   });
 });

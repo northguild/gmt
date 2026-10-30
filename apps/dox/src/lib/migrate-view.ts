@@ -24,7 +24,7 @@ import {
 } from "../data/behaviour-matrix";
 import { mapFor, type MapRow } from "../data/migration-maps";
 
-export interface GmtFunctionLink {
+interface GmtFunctionLink {
   name: string;
   url: string;
   /** The import path of the module that holds it, e.g. `@northguild/gmt/plain/calculate`. */
@@ -32,7 +32,7 @@ export interface GmtFunctionLink {
 }
 
 /** One function's link and module. Throws when the name is not exactly one function. */
-export function gmtFunction(name: string): GmtFunctionLink {
+function gmtFunction(name: string): GmtFunctionLink {
   const found = corpus.filter(
     (entry) => entry.kind === "function" && entry.name === name,
   );
@@ -47,7 +47,7 @@ export function gmtFunction(name: string): GmtFunctionLink {
   };
 }
 
-export const isLibraryId = (value: unknown): value is LibraryId =>
+const isLibraryId = (value: unknown): value is LibraryId =>
   typeof value === "string" &&
   matrix.libraries.some((library) => library.id === value);
 
@@ -58,7 +58,7 @@ export function libraryProp(value: string | undefined, tag: string): LibraryId {
   return value;
 }
 
-export interface MapRowView {
+interface MapRowView {
   theirs: string;
   gmt: GmtFunctionLink[];
   note?: string;
@@ -83,7 +83,7 @@ export function mapView(library: LibraryId, part: "rows" | "more") {
   };
 }
 
-export interface DiffView {
+interface DiffView {
   id: string;
   title: string;
   input: string;
@@ -98,18 +98,18 @@ export interface DiffView {
 }
 
 /** What Temporal returned for a case, or the stated result for a case with no Temporal call. */
-export const temporalText = (matrixCase: MatrixCase): string =>
+const temporalText = (matrixCase: MatrixCase): string =>
   matrixCase.temporal?.returns ?? matrixCase.expected ?? "";
 
 /** What Temporal's column is called: the case's reference is Temporal, or a stated result. */
-export const referenceName = (matrixCase: MatrixCase): string =>
+const referenceName = (matrixCase: MatrixCase): string =>
   matrixCase.temporal === null ? "the stated result" : "Temporal";
 
 /**
  * What a library row returned, one entry per line. A row that varies with the host zone has one
  * entry per host, so the reader sees which host gives which answer.
  */
-export const rowResultLines = (row: LibraryRow): string[] => {
+const rowResultLines = (row: LibraryRow): string[] => {
   if (row.verdict === "unsupported") return [row.reason ?? ""];
   if (row.verdict === "varies" || (row.hosts && row.hosts.length > 0)) {
     return (row.hosts ?? []).map(
@@ -120,8 +120,7 @@ export const rowResultLines = (row: LibraryRow): string[] => {
 };
 
 /** What a library row returned, as one line. */
-export const rowResult = (row: LibraryRow): string =>
-  rowResultLines(row).join(", ");
+const rowResult = (row: LibraryRow): string => rowResultLines(row).join(", ");
 
 export function diffViews(library: LibraryId): DiffView[] {
   return diffsFor(library).map(({ case: matrixCase, row }) => ({
@@ -139,7 +138,7 @@ export function diffViews(library: LibraryId): DiffView[] {
   }));
 }
 
-export interface MatrixRowView {
+interface MatrixRowView {
   anchor: string | null;
   who: string;
   call: string;
@@ -149,7 +148,7 @@ export interface MatrixRowView {
   issues: { text: string; url: string }[];
 }
 
-export interface MatrixCaseView {
+interface MatrixCaseView {
   id: string;
   anchor: string;
   title: string;

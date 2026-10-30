@@ -22,7 +22,7 @@ import { hold } from "./hold";
 import { NO_SIGNAL_PILL } from "./instant-hero";
 import styles from "./format-card.module.css";
 
-export type CardSeries = 1 | 2 | 3 | 4;
+type CardSeries = 1 | 2 | 3 | 4;
 
 export interface FormatCardOptions {
   /** The heading's id; the section is named by it. Required. */
@@ -127,12 +127,12 @@ export function formatCard(o: FormatCardOptions): SafeHtml {
   </section>`;
 }
 
-export interface LadderRowView {
+interface LadderRowView {
   label: string;
   text: string;
 }
 
-export interface PrecisionLadderOptions {
+interface PrecisionLadderOptions {
   /** The group's name. Required. */
   label: string;
   rows: readonly LadderRowView[];

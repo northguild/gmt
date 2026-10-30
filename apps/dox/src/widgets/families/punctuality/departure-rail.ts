@@ -21,7 +21,7 @@ import hatch from "./punct-hatch.module.css";
 import styles from "./departure-rail.module.css";
 
 /** A span along the rail, in percent of its width. */
-export interface RailSpan {
+interface RailSpan {
   left: number;
   width: number;
 }
@@ -111,7 +111,7 @@ export function departureRail(m: RailMarks): SafeHtml {
     )}`;
 }
 
-export interface DepartureStageOptions extends GateOption {
+interface DepartureStageOptions extends GateOption {
   /** Ids the mount writes into. */
   railId: string;
   ticksId: string;

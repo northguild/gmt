@@ -2,7 +2,6 @@ import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import {
   layoutWidth,
   onWidthChange,
-  pickLabelLeft,
   placeLabel,
   thinSpans,
   thinTickLabels,
@@ -88,28 +87,6 @@ describe("placeLabel", () => {
   });
 });
 
-describe("pickLabelLeft", () => {
-  it("takes the first candidate that fits", () => {
-    expect(pickLabelLeft([20, 200], 100, 400)).toBe(20);
-  });
-
-  it("skips a candidate a blocker would strike through", () => {
-    expect(pickLabelLeft([20, 136, 300], 100, 400, [60])).toBe(136);
-  });
-
-  it("skips a candidate that runs past the track", () => {
-    expect(pickLabelLeft([350, 280], 100, 400)).toBe(280);
-  });
-
-  it("falls back to the first candidate when none is clear", () => {
-    expect(pickLabelLeft([20, 40], 100, 100, [50])).toBe(20);
-  });
-
-  it("returns 0 for no candidates", () => {
-    expect(pickLabelLeft([], 100, 400)).toBe(0);
-  });
-});
-
 describe("onWidthChange", () => {
   it("calls back on a width change and returns a disposer that disconnects", () => {
     const spy = spyOnResizeObservers();
@@ -186,7 +163,7 @@ describe("thinTickLabels while an entrance scales the row", () => {
     // at 92% the room is 7.8px, so an uncorrected fit hides ticks that fit.
     const lefts = [0, 48.5, 97, 145.5];
     const full = row(1, 200, lefts, 40);
-    thinTickLabels(full.el);
+    thinTickLabels(full.el, "[data-tick]");
     expect(full.ticks.map((t) => t.hidden)).toEqual([
       false,
       false,
@@ -194,7 +171,7 @@ describe("thinTickLabels while an entrance scales the row", () => {
       false,
     ]);
     const scaled = row(0.92, 200, lefts, 40);
-    thinTickLabels(scaled.el);
+    thinTickLabels(scaled.el, "[data-tick]");
     expect(scaled.ticks.map((t) => t.hidden)).toEqual(
       full.ticks.map((t) => t.hidden),
     );
@@ -203,9 +180,9 @@ describe("thinTickLabels while an entrance scales the row", () => {
   it("hides the same ticks at 92% when they do collide", () => {
     const lefts = [0, 45, 90, 135];
     const full = row(1, 200, lefts, 40);
-    thinTickLabels(full.el);
+    thinTickLabels(full.el, "[data-tick]");
     const scaled = row(0.92, 200, lefts, 40);
-    thinTickLabels(scaled.el);
+    thinTickLabels(scaled.el, "[data-tick]");
     expect(full.ticks.some((t) => t.hidden)).toBe(true);
     expect(scaled.ticks.map((t) => t.hidden)).toEqual(
       full.ticks.map((t) => t.hidden),
@@ -214,7 +191,7 @@ describe("thinTickLabels while an entrance scales the row", () => {
 
   it("keeps a tick that fits and drops one past the row's edge at 92%", () => {
     const scaled = row(0.92, 200, [0, 170], 40);
-    thinTickLabels(scaled.el);
+    thinTickLabels(scaled.el, "[data-tick]");
     expect(scaled.ticks.map((t) => t.hidden)).toEqual([false, true]);
   });
 });

@@ -19,8 +19,8 @@
 import { html, type HtmlValue, type SafeHtml } from "../../builders/html";
 import styles from "./journey-ribbons.module.css";
 
-export type RibbonKind = "moving" | "handling" | "scheduled";
-export type RibbonSeries = 1 | 2 | 3 | 4;
+type RibbonKind = "moving" | "handling" | "scheduled";
+type RibbonSeries = 1 | 2 | 3 | 4;
 
 /** `value` as a percent of `span`, to four places: the number the style writes. */
 export function pct(value: number, span: number): number {
@@ -36,9 +36,9 @@ export interface RibbonSegment {
   toMs: number;
 }
 
-export type LaneVariant = "happens" | "gathered";
+type LaneVariant = "happens" | "gathered";
 
-export interface JourneyLaneOptions {
+interface JourneyLaneOptions {
   /** The track's id, so the widget can watch its width. */
   id: string;
   /** The visible label beside the track. */
@@ -58,13 +58,7 @@ export function journeyLane(o: JourneyLaneOptions): SafeHtml {
   >`;
 }
 
-export type LayerKind =
-  | "badges"
-  | "bars"
-  | "notes"
-  | "leaders"
-  | "brackets"
-  | "empty";
+type LayerKind = "badges" | "bars" | "notes" | "leaders" | "brackets" | "empty";
 
 /** A drawn layer of a track. The widget redraws its content with `setHtml`. */
 export function layer(
@@ -125,7 +119,7 @@ export function noteChips(notes: readonly RibbonNote[]): SafeHtml {
   )}`;
 }
 
-export interface RibbonBrackets {
+interface RibbonBrackets {
   /** Where the moving time ends, as a percent of the journey. */
   movingEnd: number;
   movingText: string;
@@ -147,7 +141,7 @@ export function ribbonEmpty(text: string): SafeHtml {
   return text === "" ? html`` : html`<p class="${styles.empty}">${text}</p>`;
 }
 
-export interface RibbonTick {
+interface RibbonTick {
   /** Position, as a percent of the journey. */
   at: number;
   label: string;
@@ -161,7 +155,7 @@ export function ribbonAxis(id: string, ticks: readonly RibbonTick[]): SafeHtml {
   )}</div>`;
 }
 
-export interface LegendItem {
+interface LegendItem {
   kind: RibbonKind;
   text: string;
 }

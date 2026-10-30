@@ -108,9 +108,7 @@ export function sanitizeUserText(raw: string): string {
     .trim();
 }
 
-export type UserTextCheck =
-  | { ok: true; text: string }
-  | { ok: false; reason: string };
+type UserTextCheck = { ok: true; text: string } | { ok: false; reason: string };
 
 /**
  * Sanitise, then apply this app's limits. Returns the cleaned text on success

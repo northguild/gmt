@@ -34,7 +34,7 @@ const NBSP = " ";
 
 const clampPct = (n: number): number => Math.min(100, Math.max(0, n));
 
-export interface FuseBoardOptions {
+interface FuseBoardOptions {
   /** The drawing's name: the reading in words. Required. */
   label: string;
   years: readonly FuseYear[];
@@ -140,7 +140,7 @@ export function fuseBoard(
   >`;
 }
 
-export interface FuseKeyOptions {
+interface FuseKeyOptions {
   /** There is a window to explain. When not, its two entries keep their place unseen. */
   window: boolean;
 }

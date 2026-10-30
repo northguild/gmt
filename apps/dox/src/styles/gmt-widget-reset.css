@@ -10,18 +10,65 @@
    zero specificity, so a widget's own sheet still wins. Tables scroll inside
    themselves rather than widening the page, and their cells align to the first
    baseline; a link inside a widget still reads as a link. */
-:where(.gmt-widget.not-content) table {
+:where([data-widget].not-content) table {
   display: block;
   overflow: auto;
   border-spacing: 0;
 }
 
-:where(.gmt-widget.not-content) :is(th, td) {
+:where([data-widget].not-content) :is(th, td) {
   vertical-align: baseline;
 }
 
-:where(.gmt-widget.not-content) a {
+:where([data-widget].not-content) a {
   color: var(--gmt-cyan-ink);
   text-decoration: underline;
   text-underline-offset: 0.15em;
+}
+
+/* Space between a widget and the prose around it. */
+[data-widget] {
+  margin-block: var(--gmt-space-6);
+}
+
+/* Syntax-token colours for the call lines the mounts build (codeSpan in lib/widget-ui.ts);
+   the values are the site's own Shiki output. */
+.gmt-code-fn {
+  color: var(--gmt-syntax-fn);
+}
+
+.gmt-code-str {
+  color: var(--gmt-syntax-str);
+}
+
+.gmt-code-num {
+  color: var(--gmt-syntax-num);
+}
+
+/* ---------------------------------------------------------------------------
+ * Unavailable — the library failed to load (showUnavailable, lib/widget-mount.ts)
+ *
+ * Everything the server rendered stays visible for reading, dimmed and inert,
+ * so nothing invites a click that would do nothing. The notice uses the amber
+ * signal treatment, the same as the chat rail's widget error.
+ * --------------------------------------------------------------------------- */
+
+[data-state="unavailable"] > :not(.gmt-widget-unavailable) {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.gmt-widget-unavailable {
+  margin: 0 0 var(--gmt-space-3);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  color: var(--gmt-signal-ink);
+  background: var(--gmt-signal-fill);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-widget-unavailable a {
+  color: inherit;
 }

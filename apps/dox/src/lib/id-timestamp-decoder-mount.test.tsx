@@ -323,3 +323,13 @@ describe("module content", () => {
     }
   });
 });
+
+describe("the length cap", () => {
+  it("stops the epoch field at 17 characters", async () => {
+    const w = await open();
+    const box = epochBox();
+    await w.user.clear(box);
+    await w.user.type(box, "x".repeat(25));
+    expect(box).toHaveValue("x".repeat(17));
+  });
+});

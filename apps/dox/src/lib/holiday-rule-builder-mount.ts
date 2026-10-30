@@ -311,7 +311,7 @@ function kindFields(row: RowState, rowId: string): SafeHtml {
 }
 
 /** One rule row: a full bevelled card, never a coloured left edge. */
-export function ruleRowHtml(
+function ruleRowHtml(
   row: RowState,
   index: number,
   total: number,
@@ -443,7 +443,7 @@ function weekendChips(
 export function renderHolidayRuleBuilderTemplate(
   idPrefix: string,
   args: HolidayRuleBuilderArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state = isSeeded(args)
     ? readArgs(args)
@@ -505,12 +505,14 @@ export function renderHolidayRuleBuilderTemplate(
 
   const call = section(
     { id: id("call-section"), heading: "3. The call", level: 3 },
-    html`<div class="${styles.stack}"><div id="${id("call")}">${codeFrame({
-      label: "buildBusinessCalendar call",
-      copyLabel: "Copy call",
-      copyText: "",
-      gate: "codeframe",
-    })}</div>${grow(
+    html`<div class="${styles.stack}">${grow(
+      html`<div id="${id("call")}">${codeFrame({
+        label: "buildBusinessCalendar call",
+        copyLabel: "Copy call",
+        copyText: "",
+        gate: "codeframe",
+      })}</div>`,
+    )}${grow(
       html`<div class="${styles.slot}" id="${id("output")}">${callOutput({
         label: "Calendar returned",
         state: "empty",
@@ -525,16 +527,18 @@ export function renderHolidayRuleBuilderTemplate(
           copyText: "",
         })}</div>`,
       )}</details
-    ><div id="${id("ledger")}">${toolLinks({
-      label: "Open this result in another tool",
-      links: BUILDER_LINKS.map((l) => ({ text: l.text })),
-    })}</div><div id="${id("hint")}">${noteOf(id("hint-text"), "Hand-off hint", "", "ok", HINT_SIZERS, "hold")}</div></div>`,
+    >${grow(
+      html`<div id="${id("ledger")}">${toolLinks({
+        label: "Open this result in another tool",
+        links: BUILDER_LINKS.map((l) => ({ text: l.text })),
+      })}</div>`,
+    )}<div id="${id("hint")}">${noteOf(id("hint-text"), "Hand-off hint", "", "ok", HINT_SIZERS, "hold")}</div></div>`,
   );
 
   return widget(
     { name: WIDGET_NAME, label: "Holiday Rule Builder", scope: idPrefix },
     html`${rules}${yearSection}${call}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

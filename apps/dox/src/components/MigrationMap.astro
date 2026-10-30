@@ -4,10 +4,10 @@
  *
  * The rows are `data/migration-maps.ts`; each GMT name links to its reference page and shows the
  * module to import it from. `part="more"` prints the shorter table of further calls. The
- * Markdown twin of this table is `renderMigrationMap` in `src/lib/mdx-jsx.ts`. Styles live in
- * `src/styles/gmt-migrate.css`.
+ * Markdown twin of this table is `renderMigrationMap` in `src/lib/mdx-jsx.ts`. Styles are in its `<style>` block.
  */
 import { codeBreakHtml } from "../lib/code-break";
+import "./migrate-table.css";
 import { codeSpans, libraryProp, mapView } from "../lib/migrate-view";
 import { withBase } from "../lib/site";
 
@@ -76,3 +76,20 @@ const columns = [view.heading, "GMT", "Note"];
     </tbody>
   </table>
 </div>
+
+<style is:global>
+.gmt-migrate-fn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-block-end: 0.35rem;
+}
+
+.gmt-migrate-module {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--sl-text-xs);
+
+  /* The full text tier: the muted gray tiers measure under 7:1 here. */
+  color: var(--gmt-ice);
+}
+</style>

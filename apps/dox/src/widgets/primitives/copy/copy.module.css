@@ -59,6 +59,18 @@
   white-space: nowrap;
 }
 
+/* A revealed share link is long: the caption wraps under the button and breaks anywhere. */
+.root[data-reveal] {
+  flex-wrap: wrap;
+
+  & .status {
+    min-inline-size: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    user-select: text;
+  }
+}
+
 @media (forced-colors: active) {
   .button {
     border-color: ButtonText;

@@ -206,9 +206,17 @@
 
 .rowNote {
   margin: var(--gmt-space-1) 0 0;
+  line-height: 1.5;
   color: var(--gmt-ice-dim);
   font-size: var(--gmt-text-xs);
   font-weight: 400;
+}
+
+/* The note's inline code shares the note's face and line height, so a late-loading mono face
+   cannot change the line it sits on. */
+.rowNote code {
+  font-family: var(--gmt-font-mono);
+  line-height: 1;
 }
 
 @media (forced-colors: active) {

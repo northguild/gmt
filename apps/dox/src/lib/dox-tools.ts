@@ -31,7 +31,7 @@ import {
  * honest place for it and the site making its own argument. See
  * `widget-registry.ts`.
  */
-export const zoneSchema = z
+const zoneSchema = z
   .string()
   .min(1)
   .max(64)
@@ -41,7 +41,7 @@ export const zoneSchema = z
   );
 
 /** An ISO-8601 local or zoned date-time, as the widgets' inputs accept. */
-export const dateTimeSchema = z.string().min(4).max(64);
+const dateTimeSchema = z.string().min(4).max(64);
 
 /**
  * An ISO 8601 duration, as `scheduleDelivery` and `crossingTime` read a
@@ -49,7 +49,7 @@ export const dateTimeSchema = z.string().min(4).max(64);
  * invalid duration is the widget's sentinel to show, not a reason to refuse
  * the call before it reaches the library.
  */
-export const durationSchema = z.string().min(3).max(32);
+const durationSchema = z.string().min(3).max(32);
 
 /**
  * An ISO date, as `billingTimeline` reads `anchorOn` and the other billing
@@ -57,7 +57,7 @@ export const durationSchema = z.string().min(3).max(32);
  * sentinel to show, not a reason to refuse the call before it reaches the
  * library.
  */
-export const plainDateSchema = z.string().min(10).max(64);
+const plainDateSchema = z.string().min(10).max(64);
 
 /**
  * One zone, not a list.
@@ -338,7 +338,7 @@ export const showZonePlannerInput = z.object({
  * the library does not read is the widget's sentinel to show, never a schema
  * failure.
  */
-export const ediCodeSchema = z.string().min(1).max(8);
+const ediCodeSchema = z.string().min(1).max(8);
 
 /**
  * The DTM Decoder: a UN/EDIFACT `DTM` segment, or a value and its 2379 format
@@ -417,7 +417,7 @@ export const showDemurrageClockInput = z.object({
  * the library does not read is not a reason to refuse the call: the B/L Date
  * Stamp shows its own `NO SIGNAL`, with the reason, which is the lesson.
  */
-export const placeSchema = z
+const placeSchema = z
   .string()
   .min(1)
   .max(64)
@@ -1077,20 +1077,6 @@ export const showLeapDayBirthdayInput = z.object({
     ),
 });
 
-/**
- * What a tool returns to the model.
- *
- * The widget is rendered on the client from `part.input`; this output exists so
- * the tool call reaches a *terminal* state. That is not a nicety — see
- * `worker/tools.ts` for the concrete failure it avoids on the reader's second
- * question.
- */
-export const toolOutput = z.object({
-  ok: z.boolean(),
-  widget: z.string(),
-  note: z.string().optional(),
-});
-
 export type DoxToolName =
   | "showGlobe"
   | "showDstInspector"
@@ -1132,49 +1118,6 @@ export type DoxToolName =
   | "showMoroccoClockChange"
   | "showCronInAZone"
   | "showLeapDayBirthday";
-
-export const DOX_TOOL_INPUTS = {
-  showGlobe: showGlobeInput,
-  showDstInspector: showDstInspectorInput,
-  showIntervalVisualizer: showIntervalVisualizerInput,
-  showConverterBench: showConverterBenchInput,
-  showDwellLedger: showDwellLedgerInput,
-  showFreeTimeLedger: showFreeTimeLedgerInput,
-  showBillingDeadlines: showBillingDeadlinesInput,
-  showDeliveryScheduler: showDeliverySchedulerInput,
-  showConnectionChecker: showConnectionCheckerInput,
-  showTimetableReader: showTimetableReaderInput,
-  showCrossingClock: showCrossingClockInput,
-  showCutoffStack: showCutoffStackInput,
-  showCutoffRuler: showCutoffRulerInput,
-  showCutoffCountdown: showCutoffCountdownInput,
-  showPunctualityBoard: showPunctualityBoardInput,
-  showEtaDrift: showEtaDriftInput,
-  showDepartureBoard: showDepartureBoardInput,
-  showZonePlanner: showZonePlannerInput,
-  showDtmDecoder: showDtmDecoderInput,
-  showX12TimeReader: showX12TimeReaderInput,
-  showDemurrageClock: showDemurrageClockInput,
-  showBlDateStamp: showBlDateStampInput,
-  showEpcisEventReader: showEpcisEventReaderInput,
-  showJourneySplit: showJourneySplitInput,
-  showGnssWeekDecoder: showGnssWeekDecoderInput,
-  showSatelliteClockConverter: showSatelliteClockConverterInput,
-  showGnssRolloverChecker: showGnssRolloverCheckerInput,
-  showLeapSecondTimeline: showLeapSecondTimelineInput,
-  showElapsedVsClock: showElapsedVsClockInput,
-  showStoredTimeAudit: showStoredTimeAuditInput,
-  showHolidayRuleBuilder: showHolidayRuleBuilderInput,
-  showObservanceComparator: showObservanceComparatorInput,
-  showMovingFeasts: showMovingFeastsInput,
-  showCanadaClockChange: showCanadaClockChangeInput,
-  showDurationParserBench: showDurationParserBenchInput,
-  showIdTimestampDecoder: showIdTimestampDecoderInput,
-  showColumnTimestampBridge: showColumnTimestampBridgeInput,
-  showMoroccoClockChange: showMoroccoClockChangeInput,
-  showCronInAZone: showCronInAZoneInput,
-  showLeapDayBirthday: showLeapDayBirthdayInput,
-} as const;
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1695,8 +1638,6 @@ export const ENABLED_TOOL_NAMES = [
   "showCronInAZone",
   "showLeapDayBirthday",
 ] as const satisfies readonly DoxToolName[];
-
-export type EnabledToolName = (typeof ENABLED_TOOL_NAMES)[number];
 
 /** Prompt copy for the offered tools only. */
 export const ENABLED_TOOL_DOCS = DOX_TOOL_DOCS.filter((doc) =>

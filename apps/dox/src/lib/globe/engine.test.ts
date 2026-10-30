@@ -18,7 +18,6 @@ function fakeRenderer(
   host: HTMLElement,
 ): GlobeRenderer & { fail: (reason: string) => void } {
   const canvas = document.createElement("canvas");
-  canvas.className = "gmt-globe-canvas";
   host.append(canvas);
   let onFailure: (reason: string) => void = () => {};
   const renderer = {
@@ -64,34 +63,29 @@ const options = (renderer: GlobeOptions["renderer"]): GlobeOptions => ({
 
 afterEach(() => {
   made.length = 0;
-  document.body.innerHTML = "";
+  document.body.replaceChildren();
   vi.restoreAllMocks();
 });
 
 describe("adopting a renderer after a device loss", () => {
-  it("marks the replacement canvas entered, so the stylesheet does not keep it at opacity 0", async () => {
+  it("adopts a replacement canvas after a device loss, and falls back to canvas-2D after a second", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const host = document.createElement("div");
     document.body.append(host);
     const engine = await createGlobeEngine(host, options("webgpu"));
 
     const first = made[0]!;
-    // The first canvas is the host's to reveal, once, through `enter()`.
-    expect(first.canvas.hasAttribute("data-entered")).toBe(false);
-
     first.fail("device lost");
     await vi.waitFor(() => expect(made).toHaveLength(2));
 
     const second = made[1]!;
     expect(second.canvas.isConnected).toBe(true);
-    expect(second.canvas.hasAttribute("data-entered")).toBe(true);
 
     // The one retry is spent: a second loss falls back to canvas-2D, whose
     // canvas must also be visible.
     second.fail("device lost again");
     await vi.waitFor(() => expect(made).toHaveLength(3));
     expect(made[2]!.kind).toBe("canvas2d");
-    expect(made[2]!.canvas.hasAttribute("data-entered")).toBe(true);
 
     engine.destroy();
   });

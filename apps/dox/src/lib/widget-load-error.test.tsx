@@ -8,6 +8,8 @@
  */
 import { canadaTense, moroccoTense } from "./clock-change-tense.fixture";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import { within } from "@testing-library/dom";
+import { setHtml, type SafeHtml } from "~/widgets/builders";
 import { GMT_MODULES } from "./gmt-modules";
 import {
   mountBillingDeadlines,
@@ -88,12 +90,7 @@ import {
   mountIntervalVisualizer,
   renderIntervalTemplate,
 } from "./interval-visualizer-mount";
-import {
-  showUnavailable,
-  UNAVAILABLE_CLASS,
-  WidgetLoadError,
-  type MountFn,
-} from "./widget-mount";
+import { showUnavailable, WidgetLoadError, type MountFn } from "./widget-mount";
 import {
   mountGnssWeekDecoder,
   renderGnssWeekDecoderTemplate,
@@ -161,7 +158,7 @@ import {
 
 installJsdomShims();
 
-const MOUNTS: [string, () => string, MountFn<never>][] = [
+const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
   [
     "dwell ledger",
     () => renderDwellLedgerTemplate("load-error"),
@@ -174,7 +171,7 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "billing deadlines",
-    () => renderBillingDeadlinesTemplate(),
+    () => renderBillingDeadlinesTemplate("test"),
     mountBillingDeadlines as MountFn<never>,
   ],
   [
@@ -204,7 +201,7 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "timetable reader",
-    () => renderTimetableReaderTemplate(),
+    () => renderTimetableReaderTemplate("test"),
     mountTimetableReader as MountFn<never>,
   ],
   [
@@ -234,7 +231,7 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "eta drift chart",
-    () => renderEtaDriftTemplate(),
+    () => renderEtaDriftTemplate("test"),
     mountEtaDrift as MountFn<never>,
   ],
   [
@@ -259,12 +256,12 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "b/l date stamp",
-    () => renderBlDateStampTemplate(),
+    () => renderBlDateStampTemplate("test"),
     mountBlDateStamp as MountFn<never>,
   ],
   [
     "epcis event reader",
-    () => renderEpcisEventReaderTemplate(),
+    () => renderEpcisEventReaderTemplate("test"),
     mountEpcisEventReader as MountFn<never>,
   ],
   [
@@ -294,7 +291,7 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "elapsed vs. clock difference",
-    () => renderElapsedVsClockTemplate(),
+    () => renderElapsedVsClockTemplate("test"),
     mountElapsedVsClock as MountFn<never>,
   ],
   [
@@ -309,7 +306,7 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "observance comparator",
-    () => renderObservanceComparatorTemplate(),
+    () => renderObservanceComparatorTemplate("test"),
     mountObservanceComparator as MountFn<never>,
   ],
   [
@@ -349,7 +346,7 @@ const MOUNTS: [string, () => string, MountFn<never>][] = [
   ],
   [
     "leap-day birthday",
-    () => renderLeapDayBirthdayTemplate(),
+    () => renderLeapDayBirthdayTemplate("test"),
     mountLeapDayBirthday as MountFn<never>,
   ],
 ];
@@ -368,14 +365,13 @@ describe("a widget whose library fails to load", () => {
   afterEach(() => {
     Object.assign(GMT_MODULES, originals);
     vi.restoreAllMocks();
-    document.body.innerHTML = "";
   });
 
   it.each(MOUNTS)(
     "%s throws WidgetLoadError carrying the cause",
     async (_name, template, mount) => {
       const root = document.createElement("div");
-      root.innerHTML = template();
+      setHtml(root, template());
       document.body.append(root);
 
       const failure = await mount(
@@ -386,6 +382,7 @@ describe("a widget whose library fails to load", () => {
         () => null,
         (error: unknown) => error,
       );
+      root.remove();
       expect(failure).toBeInstanceOf(WidgetLoadError);
       expect((failure as Error).cause).toBe(offline);
     },
@@ -395,27 +392,32 @@ describe("a widget whose library fails to load", () => {
 describe("showUnavailable", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    document.body.innerHTML = "";
   });
 
-  it("marks the root, adds one notice with a reload link, and logs the cause", () => {
+  it("adds one notice with a reload link, keeps the content, and logs the cause", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const root = document.createElement("div");
-    root.innerHTML = "<div class='gmt-widget-card'>controls</div>";
+    const kept = document.createElement("button");
+    kept.textContent = "controls";
+    root.append(kept);
     document.body.append(root);
 
     const cause = new Error("offline");
     showUnavailable(root, cause);
     showUnavailable(root, cause);
 
-    expect(root.dataset.state).toBe("unavailable");
-    const notices = root.querySelectorAll(`.${UNAVAILABLE_CLASS}`);
+    const view = within(root);
+    const notices = view.getAllByRole("status");
     expect(notices).toHaveLength(1);
-    expect(notices[0].getAttribute("role")).toBe("status");
-    expect(notices[0].textContent).toContain("couldn’t load");
-    expect(notices[0].querySelector("a")?.getAttribute("href")).toBe("");
+    expect(notices[0]).toHaveTextContent("couldn\u2019t load");
+    // An empty href is the page reloading itself; aria-query does not count it as a link.
+    expect(within(notices[0]).getByText("Reload the page")).toHaveAttribute(
+      "href",
+      "",
+    );
     // The server-rendered content is kept, not replaced.
-    expect(root.querySelector(".gmt-widget-card")).not.toBeNull();
+    expect(view.getByRole("button", { name: "controls" })).toBeInTheDocument();
     expect(logged).toHaveBeenCalledWith("widget failed to load", cause);
+    root.remove();
   });
 });

@@ -16,7 +16,7 @@
 
 import declared from "../data/industries.json";
 
-export interface IndustryTag {
+interface IndustryTag {
   id: string;
   /** The word on the tag. */
   label: string;
@@ -30,7 +30,7 @@ export interface IndustryTag {
 }
 
 /** One entry of `src/data/industries.json`. */
-export interface IndustryDeclaration extends IndustryTag {
+interface IndustryDeclaration extends IndustryTag {
   guide: string;
   /** The namespace the industry owns (`@northguild/gmt/<id>`), when it has one.
    *  Equal to `id`. */

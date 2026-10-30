@@ -12,7 +12,11 @@
   color: var(--gmt-ice);
   font-size: clamp(0.875rem, 0.82rem + 0.25vw, 1.0625rem);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+
+  /* Wide, the box holds its widest sample on one line. In a column narrower than that the text
+     wraps at a space, or anywhere, inside the same cell the samples share, so the height is the
+     longest wrap's and does not change while a value does. The box never scrolls. */
+  overflow-wrap: anywhere;
 
   &[data-state="sentinel"] {
     border-color: var(--gmt-signal-border);
@@ -64,12 +68,10 @@
   white-space: nowrap;
 }
 
-/* Narrow column: the box may shrink to the column and the value scrolls its own line
-   rather than wrap, which would change the height mid-drag. */
+/* Narrow column: the box shrinks to the column and its text wraps there. */
 @container (inline-size < 14rem) {
   .root {
     inline-size: 100%;
-    overflow-x: auto;
   }
 }
 

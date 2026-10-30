@@ -79,7 +79,7 @@ export function canadaKeyPoints(when: string): KeyCard[] {
               "Your saved events: appointments, bookings and shifts your app saved before you updated may be an hour off in these places. Find them with ",
               {
                 link: "Did your saved events move?",
-                href: "#canada-stored-title",
+                href: "#canada-stored-heading",
               },
               " below, or ",
               { code: "classifyStoredZoned" },
@@ -149,6 +149,6 @@ export const HELP: HelpCard = {
   cta: {
     lead: "To check your saved events without writing code:",
     link: "Did your saved events move?",
-    href: "#canada-stored-title",
+    href: "#canada-stored-heading",
   },
 };

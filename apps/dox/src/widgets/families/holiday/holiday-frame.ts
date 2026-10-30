@@ -5,8 +5,12 @@
  */
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
+import { grow } from "../../primitives/grow/grow";
 import styles from "./holiday-frame.module.css";
 
+/** In a `<gmt-grow>`: the mount fills the plates and the grid, so the frame eases to its height. */
 export function holidayFrame(children: SafeHtml, o: GateOption = {}): SafeHtml {
-  return html`<div class="${styles.frame}" ${gateAttr(o.gate)}>${children}</div>`;
+  return grow(
+    html`<div class="${styles.frame}" ${gateAttr(o.gate)}>${children}</div>`,
+  );
 }

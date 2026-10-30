@@ -39,24 +39,6 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 			padding-block: var(--gmt-herostage-pad);
 		}
 
-		/* The band. Painted with a border-image outset 100vmax to either side,
-		   so it runs the full width of the window from inside the content column
-		   without adding to the page's scrollable width. The tokens resolve on
-		   this element, which is the island, so they are the dark values. In the
-		   dark theme the page is already dark and no band is needed. */
-		:global([data-theme='light']) .gmt-herostage {
-			/* The same dark, under the gradient: a border-image is invisible to a contrast
-			   checker, which read the page's white behind the light text (axe `color-contrast`,
-			   114 findings). The gradient paints over this, so the band looks as it did. */
-			background-color: var(--gmt-void);
-			border-image: linear-gradient(
-					180deg,
-					var(--gmt-void),
-					color-mix(in srgb, var(--gmt-cyan) 6%, var(--gmt-void))
-				)
-				fill 0 / / 0 100vmax;
-		}
-
 		.gmt-herostage-copy {
 			display: flex;
 			align-items: center;
@@ -136,6 +118,29 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 
 		.gmt-herostage::after {
 			inset-block-end: calc((var(--gmt-herostage-pad) - 12px) / 2);
+		}
+	}
+</style>
+
+<style is:global>
+	/* Global because it keys on the page's theme attribute, outside this component. */
+	@layer starlight.core {
+		/* The band. Painted with a border-image outset 100vmax to either side,
+		   so it runs the full width of the window from inside the content column
+		   without adding to the page's scrollable width. The tokens resolve on
+		   this element, which is the island, so they are the dark values. In the
+		   dark theme the page is already dark and no band is needed. */
+		[data-theme='light'] .gmt-herostage {
+			/* The same dark, under the gradient: a border-image is invisible to a contrast
+			   checker, which read the page's white behind the light text (axe `color-contrast`,
+			   114 findings). The gradient paints over this, so the band looks as it did. */
+			background-color: var(--gmt-void);
+			border-image: linear-gradient(
+					180deg,
+					var(--gmt-void),
+					color-mix(in srgb, var(--gmt-cyan) 6%, var(--gmt-void))
+				)
+				fill 0 / / 0 100vmax;
 		}
 	}
 </style>

@@ -15,7 +15,7 @@ import { codeSpan } from "~/lib/widget-ui";
 import { raw, type SafeHtml } from "../../builders/html";
 import { CALL_OUTPUT_LOST, type CallOutputLine } from "../gnss/call-output";
 
-export interface CallLines {
+interface CallLines {
   code: SafeHtml;
   plain: string;
 }
@@ -37,7 +37,7 @@ export function callLines(calls: readonly EdiCall[]): CallLines {
 const refused = (call: EdiCall): boolean =>
   call.result === null || call.result === "";
 
-export interface CallOutputState {
+interface CallOutputState {
   state: "live" | "sentinel" | "empty";
   lines: CallOutputLine[];
 }

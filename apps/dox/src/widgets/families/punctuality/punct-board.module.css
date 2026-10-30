@@ -322,7 +322,9 @@
 
 .textLine {
   display: block;
-  min-block-size: 1lh;
+
+  /* A word in a tag is a line plus the tag's 1px border either side; a plain word holds the same. */
+  min-block-size: calc(1lh + 2px);
 }
 
 .rowNaive {
@@ -391,6 +393,7 @@
 }
 
 .lost {
+  white-space: nowrap;
   color: var(--gmt-signal-ink);
   font-family: var(--gmt-font-mono);
   font-weight: 700;
@@ -399,25 +402,13 @@
 
 /* ---- The calls table: columns never move with the values ---- */
 
-/* The kit's table sizes its columns from their content, so a header that changes with a
-   drag (`classifyPunctuality, late 15 min`) moves every column. A fixed layout takes the
-   widths from the first row's cells and the rule below, so a value never does. */
+/* The table is the kit's fixed layout (`layout: "fixed"`), so a header that changes with a drag
+   (`classifyPunctuality, late 15 min`) moves no column. */
 .calls {
   min-inline-size: 0;
 
-  & table {
-    table-layout: fixed;
-    inline-size: 100%;
-  }
-
   & :is(th, td) {
-    overflow-wrap: anywhere;
-    vertical-align: top;
     font-variant-numeric: tabular-nums;
-  }
-
-  & :is(th, td):first-child {
-    inline-size: 34%;
   }
 }
 

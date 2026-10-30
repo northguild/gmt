@@ -100,7 +100,7 @@ function emptyFrame(label: string): SafeHtml {
 export function renderConverterTemplate(
   idPrefix: string,
   args: ConverterArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const value = args.value ?? DEFAULT_VALUE;
   const from = args.from ?? DEFAULT_SOURCE_ZONE;
@@ -148,11 +148,11 @@ export function renderConverterTemplate(
       html`${valueField("format-value", value)}${choice("format-locale", "Locale", withSeed(CONVERTER_LOCALES, locale), locale)}`,
     )}<div class="${styles.results}">
       <div class="${styles.row}">
-        <div id="${id("call-format-parts")}">${emptyFrame("formatZonedToParts call")}</div>
+        ${grow(html`<div id="${id("call-format-parts")}">${emptyFrame("formatZonedToParts call")}</div>`)}
         ${grow(html`<div id="${id("format-parts")}">${emptyOutput("Format parts")}</div>`)}
       </div>
       <div class="${styles.row}">
-        <div id="${id("call-format-relative")}">${emptyFrame("formatRelativeZoned call")}</div>
+        ${grow(html`<div id="${id("call-format-relative")}">${emptyFrame("formatRelativeZoned call")}</div>`)}
         ${grow(html`<div id="${id("format-relative")}">${emptyOutput("Relative format")}</div>`)}
       </div>
     </div>`,
@@ -160,14 +160,15 @@ export function renderConverterTemplate(
 
   const regex = section(
     { id: id("regex"), heading: "Regex tester", level: 4 },
-    html`${fieldGrid(valueField("regex-input", DEFAULT_REGEX_INPUT))}
-      <ul class="${styles.chips}" id="${id("regex-results")}" aria-label="Regex results"></ul>`,
+    html`${fieldGrid(valueField("regex-input", DEFAULT_REGEX_INPUT))}${grow(
+      html`<ul class="${styles.chips}" id="${id("regex-results")}" aria-label="Regex results"></ul>`,
+    )}`,
   );
 
   return widget(
     { name: WIDGET_NAME, label: "Converter Bench", scope: idPrefix },
     html`${convert}${format}${regex}`,
-  ).toString();
+  );
 }
 
 interface RegexConst {

@@ -71,7 +71,7 @@ import { RANGE_EDGE_TEXT, codeSpan, isRangeError } from "./widget-ui";
 export type { ConnectionCheckerArgs } from "./connection-checker";
 
 const WIDGET_NAME = "connection-checker";
-const NBSP = " ";
+const NBSP = "\u00a0";
 const HANDLING_LABEL = "Handling time (minimum connect time)";
 const NAIVE_TITLE = "The times as printed";
 
@@ -146,7 +146,7 @@ function stripOf(
   const spanMs = Math.max(1, endMs - startMs);
   const at = (ms: number) => (ms - startMs) / spanMs;
   return lane(
-    { label: "Handoff", gate: "strip" },
+    { label: "Handoff" },
     html`${mark({ label: `Arrives ${arrival}`, at: at(arrivalMs), series: 1 })}${mark(
       {
         label: `Handling until ready ${v.readyLocal ?? ""}`,
@@ -162,8 +162,7 @@ function stripOf(
   );
 }
 
-const blankStrip = (): SafeHtml =>
-  lane({ label: "Handoff", gate: "strip" }, html``);
+const blankStrip = (): SafeHtml => lane({ label: "Handoff" }, html``);
 
 /** The strip, or the signal-lost notice when a value is too near the limit of the time range. */
 const rangeEdge = (): SafeHtml =>
@@ -185,7 +184,7 @@ function reasonOf(text: string | null): SafeHtml {
 export function renderConnectionCheckerTemplate(
   idPrefix: string,
   args: ConnectionCheckerArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const seeded = args.inboundDeparture !== undefined;
   const state: ConnectionState = seeded
@@ -321,7 +320,7 @@ export function renderConnectionCheckerTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Connection Checker", scope: idPrefix },
     html`${handoff}${made}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------

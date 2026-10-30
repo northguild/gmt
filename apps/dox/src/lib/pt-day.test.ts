@@ -2,7 +2,6 @@ import {
   dayKey,
   nextMidnightMs,
   nextPtMidnightMs,
-  ptDayKey,
   secondsUntilMidnight,
   secondsUntilVisitorReset,
   VISITOR_CAP_TIME_ZONE,
@@ -43,26 +42,11 @@ describe("the UTC clock (Workers AI)", () => {
     // 2026-06-16T00:30Z is the 16th in UTC but still 17:30 PDT on the 15th.
     const earlyUtc = convertUtcToUnix("2026-06-16T00:30:00Z")!;
     expect(dayKey(earlyUtc, "UTC")).toBe("2026-06-16");
-    expect(ptDayKey(earlyUtc)).toBe("2026-06-15");
-  });
-});
-
-describe("ptDayKey", () => {
-  it("buckets by the Pacific calendar date, not the UTC one", () => {
-    // 2026-06-15T03:00Z is still 2026-06-14 in Los Angeles (20:00 PDT).
-    const lateEveningPacific = convertUtcToUnix("2026-06-15T03:00:00Z")!;
-    expect(ptDayKey(lateEveningPacific)).toBe("2026-06-14");
-  });
-
-  it("rolls over at Pacific midnight, not UTC midnight", () => {
-    const justBefore = convertUtcToUnix("2026-06-15T06:59:00Z")!; // 23:59 PDT on the 14th
-    const justAfter = convertUtcToUnix("2026-06-15T07:01:00Z")!; // 00:01 PDT on the 15th
-    expect(ptDayKey(justBefore)).toBe("2026-06-14");
-    expect(ptDayKey(justAfter)).toBe("2026-06-15");
+    expect(dayKey(earlyUtc, "America/Los_Angeles")).toBe("2026-06-15");
   });
 
   it("does not throw on a nonsense clock", () => {
-    expect(ptDayKey(Number.NaN)).toBe("unknown");
+    expect(dayKey(Number.NaN, "UTC")).toBe("unknown");
   });
 });
 
@@ -103,7 +87,7 @@ describe("the visitor cap's clock", () => {
     // 2026-06-16T00:30Z is the 16th in UTC but still the 15th in Pacific.
     const earlyUtc = convertUtcToUnix("2026-06-16T00:30:00Z")!;
     expect(visitorDayKey(earlyUtc)).toBe("2026-06-16");
-    expect(ptDayKey(earlyUtc)).toBe("2026-06-15");
+    expect(dayKey(earlyUtc, "America/Los_Angeles")).toBe("2026-06-15");
   });
 
   it("rolls over at UTC midnight", () => {

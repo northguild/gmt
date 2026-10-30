@@ -9,7 +9,7 @@
  * `locale-families.test.ts` polices.
  */
 
-export interface LocaleFamilyInfo {
+interface LocaleFamilyInfo {
   family: string;
   name: string;
 }

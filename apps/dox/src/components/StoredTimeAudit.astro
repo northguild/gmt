@@ -21,7 +21,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderStoredTimeAuditTemplate("stored-time-audit", {});
+const html = renderStoredTimeAuditTemplate("stored-time-audit", {}).value;
 ---
 
 {

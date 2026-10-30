@@ -19,7 +19,7 @@ export const NOT_CALLED_TEXT = "not called";
 export const SAME_DURATION_TEXT = "returns the same duration";
 export const DIFFERENT_DURATION_TEXT = "returns a different duration";
 
-export interface BoundedTextInputOptions {
+interface BoundedTextInputOptions {
   /** The id `field()` hands the control. */
   id: string;
   value: string;
@@ -28,24 +28,19 @@ export interface BoundedTextInputOptions {
   describedBy?: string | undefined;
 }
 
-/**
- * The kit's text input with a `maxlength`. The kit's input has no length option, so the
- * attribute is written onto its markup; the number is typed, never read from text.
- */
+/** The kit's text input with a `maxlength`; the number is typed, never read from text. */
 export function boundedTextInput(o: BoundedTextInputOptions): SafeHtml {
-  const input = textInput({
+  return textInput({
     id: o.id,
     value: o.value,
     autocomplete: "off",
     spellcheck: false,
+    maxLength: Math.trunc(o.max),
     describedBy: o.describedBy,
-  }).toString();
-  return raw(
-    input.replace("<input", `<input maxlength="${Math.trunc(o.max)}"`),
-  );
+  });
 }
 
-export interface TryButtonsOptions {
+interface TryButtonsOptions {
   /** The group's visible name. */
   label: string;
   /** What each button writes into the box; also what it says. */
@@ -77,7 +72,7 @@ export interface StripCell {
   title: string;
 }
 
-export interface UnitStripOptions {
+interface UnitStripOptions {
   /** The list's name. */
   label: string;
   /** What a unit with no spelling shows in place of a symbol. */
@@ -99,7 +94,7 @@ export function unitStrip(o: UnitStripOptions): SafeHtml {
   >`;
 }
 
-export interface Fact {
+interface Fact {
   label: string;
   value: SafeHtml;
 }
@@ -145,7 +140,7 @@ export function slotBox(id: string, content: SafeHtml): SafeHtml {
   return html`<span id="${id}">${content}</span>`;
 }
 
-export interface ResultOutputOptions {
+interface ResultOutputOptions {
   id: string;
   /** The output's accessible name. */
   label: string;

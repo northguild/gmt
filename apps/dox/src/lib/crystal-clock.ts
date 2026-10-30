@@ -35,11 +35,6 @@ export {
   type HandAngles,
 } from "~/widgets/families/clock/crystal-clock";
 
-/** The face as markup text, for a caller that builds its rows from strings. */
-export function renderCrystalClock(opts: CrystalClockOptions): string {
-  return crystalClock(opts).toString();
-}
-
 /** Wires the night-light toggle for every face inside `root`, present or future. */
 export function bindClockGlow(root: HTMLElement, signal: AbortSignal): void {
   bindClockToggle(root, signal);

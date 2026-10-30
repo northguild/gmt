@@ -34,7 +34,7 @@ import {
 } from "./triangulate";
 import type { LngLat, PolygonRings } from "./types";
 
-export interface LandGeometry {
+interface LandGeometry {
   /** Triangles for the fill, in lng/lat. */
   mesh: Mesh;
   /** Segment pairs for the outline: `[lngA, latA, lngB, latB, …]`. */

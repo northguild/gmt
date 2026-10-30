@@ -28,7 +28,7 @@ import styles from "./readout.module.css";
 
 export const SENTINEL_TEXT = "⟨ NO SIGNAL — invalid input ⟩";
 
-export interface ReadoutOptions extends GateOption {
+interface ReadoutOptions extends GateOption {
   /** The accessible name of the value. Required. */
   label: string;
   /** The initial value; an empty string starts as the sentinel. */

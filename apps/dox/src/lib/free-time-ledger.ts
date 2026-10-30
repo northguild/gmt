@@ -19,8 +19,8 @@ import { CURATED_TIMEZONES } from "./curated-timezones";
 import { formatLocal, toEpochMs, type DayCell } from "./dwell-ledger";
 import type { DayMark, PlateSpec } from "./ledger-widgets";
 
-export type FirstDay = "eventDay" | "nextDay";
-export type Basis = "calendar" | "working";
+type FirstDay = "eventDay" | "nextDay";
+type Basis = "calendar" | "working";
 
 /**
  * Seed arguments. The chat tool sends typed values; a permalink can only carry
@@ -64,9 +64,9 @@ export interface LedgerState {
 
 export const LEDGER_ZONES: readonly string[] = CURATED_TIMEZONES;
 export const CUSTOM_PRESET_ID = "custom";
-export const DEFAULT_WEEKEND: readonly number[] = [6, 7];
+const DEFAULT_WEEKEND: readonly number[] = [6, 7];
 
-export interface FreeTimePreset extends LedgerState {
+interface FreeTimePreset extends LedgerState {
   id: string;
   label: string;
   description: string;
@@ -283,7 +283,7 @@ export function matchPreset(state: LedgerState): string {
 // The library's arguments
 // ---------------------------------------------------------------------------
 
-export interface BusinessCalendarArg {
+interface BusinessCalendarArg {
   weekend: number[];
   holidays: string[];
   timeZone: string;
@@ -366,7 +366,7 @@ export interface FreeTimeResult {
   expiresAt: string;
 }
 
-export interface TierBandResult {
+interface TierBandResult {
   from: number;
   to: number | null;
   days: number;
@@ -381,7 +381,7 @@ export interface ChargesResult {
 }
 
 /** How the tariff reads one local day of the dwell. */
-export type CellState = "event" | "free" | "closed" | "chargeable" | "none";
+type CellState = "event" | "free" | "closed" | "chargeable" | "none";
 
 /** True when `date` is a weekend day or holiday of the working-day calendar. */
 export function isClosedDate(
@@ -591,7 +591,7 @@ export function freeTimePlates(args: {
 // Why null
 // ---------------------------------------------------------------------------
 
-export type NullReason =
+type NullReason =
   | "invalid-start"
   | "invalid-end"
   | "unknown-zone"
@@ -618,7 +618,7 @@ export const NULL_REASON_TEXT: Record<NullReason, string> = {
     "With no free days there is no last free day to name, so freeTimeExpiry returns null. chargeableDays still charges every day.",
 };
 
-export interface NullValidators {
+interface NullValidators {
   isValidInstant(value: string): boolean;
   isValidTimeZone(value: string): boolean;
   isValidBusinessCalendar(value: unknown): boolean;

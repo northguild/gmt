@@ -66,7 +66,7 @@ describe("helpCard", () => {
     );
     expect(
       screen.getByRole("link", { name: /Did your saved events move\?/ }),
-    ).toHaveAttribute("href", "#canada-stored-title");
+    ).toHaveAttribute("href", "#canada-stored-heading");
   });
 
   it("keeps one card's heading id apart from another's", () => {

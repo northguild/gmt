@@ -10,7 +10,7 @@ import { html, type SafeHtml } from "../../builders/html";
 import { table, type Column } from "../../builders/table";
 import styles from "./dst-table.module.css";
 
-export type DstKind = "gap" | "overlap";
+type DstKind = "gap" | "overlap";
 
 export interface DstRow {
   kind: DstKind;

@@ -14,7 +14,7 @@ import {
 
 // The change is past: its date and time are written once, by the library, at build time.
 const tense = await loadMoroccoTense();
-const html = renderMoroccoClockChangeTemplate({ keyPoints: true, tense });
+const html = renderMoroccoClockChangeTemplate({ keyPoints: true, tense }).value;
 ---
 
 <div data-tools-fullbleed set:html={html} />
@@ -25,7 +25,7 @@ const html = renderMoroccoClockChangeTemplate({ keyPoints: true, tense });
   import { seedFromLocation } from "../lib/widget-permalink";
 
   if (typeof window !== "undefined") {
-    document.querySelectorAll<HTMLElement>(".gmt-morocco").forEach((el) => {
+    document.querySelectorAll<HTMLElement>('[data-widget="morocco-clock-change"]').forEach((el) => {
       // A link from the chat (`?w=moroccoclock&wa=...`) arrives with its zone pinned.
       const { zone } = seedFromLocation("moroccoclock");
       mountMoroccoClockChange(el, new AbortController().signal, {

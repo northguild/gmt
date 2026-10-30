@@ -32,7 +32,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderConnectionCheckerTemplate("connection-checker", {});
+const html = renderConnectionCheckerTemplate("connection-checker", {}).value;
 ---
 
 {

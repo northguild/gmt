@@ -6,7 +6,7 @@
  * that never opens the chat never loads it. See design-system.md "Tailwind in the
  * chat island".
  *
- * Preflight is deliberately omitted (option 1 below): Tailwind's reset targets
+ * Preflight is deliberately omitted: Tailwind's reset targets
  * `*`, `html`, `body` and headings and would wreck the docs site outside the
  * island. Layers are imported individually instead of via the `"tailwindcss"`
  * shorthand, which is the documented v4 opt-out.

@@ -34,7 +34,7 @@ export interface LeapMark {
   series: LeapSeries;
 }
 
-export interface LeapChip {
+interface LeapChip {
   at: number;
   text: string;
   series: 2 | 3;

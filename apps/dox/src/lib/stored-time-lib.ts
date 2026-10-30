@@ -17,7 +17,7 @@ import { pickFunctions } from "./gmt-pick";
 import { WidgetLoadError } from "./widget-mount";
 
 /** One clock change, as `getDstTransitions` returns it. */
-export interface StoredTimeTransition {
+interface StoredTimeTransition {
   instant: string;
   offsetBefore: string;
   offsetAfter: string;

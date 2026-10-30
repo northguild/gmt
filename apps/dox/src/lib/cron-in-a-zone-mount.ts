@@ -82,7 +82,7 @@ import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 
 export type { CronInAZoneArgs } from "./cron-in-a-zone";
 
-const NBSP = " ";
+const NBSP = "\u00a0";
 const WIDGET_NAME = "cron-in-a-zone";
 const NO_GRAMMAR_NIGHT_TEXT =
   "The line is outside the grammar, so there is nothing to draw.";
@@ -205,7 +205,7 @@ function outputSlot(view: CronView): SafeHtml {
 export function renderCronInAZoneTemplate(
   idPrefix: string,
   args: CronInAZoneArgs = {},
-): string {
+): SafeHtml {
   const id = idScope(idPrefix);
   const state = readArgs(args);
   const problem = id("problem");
@@ -224,6 +224,7 @@ export function renderCronInAZoneTemplate(
             value: state.line,
             autocomplete: "off",
             spellcheck: false,
+            maxLength: CRON_MAX_TEXT,
             describedBy: problem,
           }),
       }),
@@ -274,6 +275,7 @@ export function renderCronInAZoneTemplate(
             placeholder: "2024-03-31T01:00:00Z",
             autocomplete: "off",
             spellcheck: false,
+            maxLength: CRON_MAX_TEXT,
           }),
       }),
     )}`,
@@ -324,7 +326,7 @@ export function renderCronInAZoneTemplate(
   return widget(
     { name: WIDGET_NAME, label: "Cron in a Zone", scope: idPrefix },
     html`${line}${night}${next}${calls}`,
-  ).toString();
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -381,8 +383,6 @@ function setupWidget(
     calls: el("calls-slot"),
     output: el("output-slot"),
   };
-  lineEl.maxLength = CRON_MAX_TEXT;
-  afterEl.maxLength = CRON_MAX_TEXT;
 
   let changeAsked = initial.change;
   let liveShown = "";

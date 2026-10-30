@@ -1,0 +1,302 @@
+/*
+ * compareMatrix: a fixed table, so a new date never moves a column. A disagreeing year is
+ * marked by its word and a hatch, never by colour alone. Amber is the sentinel's alone, and
+ * an accent edge is never a single side.
+ */
+
+.table {
+  container-type: inline-size;
+  display: table;
+  table-layout: fixed;
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+
+  & th {
+    padding: var(--gmt-space-1) var(--gmt-space-2);
+    text-align: start;
+    font-weight: 500;
+    font-size: var(--gmt-text-xs);
+    vertical-align: top;
+    border-block-end: 1px solid var(--gmt-hairline);
+  }
+
+  & td {
+    padding: 0;
+    vertical-align: top;
+    border-block-end: 1px solid var(--gmt-hairline-faint);
+  }
+
+  & [data-disagree] .year {
+    background: repeating-linear-gradient(
+      135deg,
+      transparent 0 5px,
+      var(--gmt-hairline) 5px 6px
+    );
+  }
+
+  & [data-disagree] .agree {
+    font-weight: 600;
+  }
+
+  & tbody tr[data-placeholder] {
+    visibility: hidden;
+  }
+}
+
+/* A visible caption would repeat the section heading; it names the table for a reader. */
+.caption {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.corner {
+  inline-size: 8.5rem;
+}
+
+.year {
+  inline-size: 8.5rem;
+  border-block-end: 1px solid var(--gmt-hairline-faint);
+  font-size: var(--gmt-text-sm);
+}
+
+.colButton,
+.yearButton {
+  appearance: none;
+  display: inline-block;
+  min-block-size: var(--gmt-target-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gmt-ice);
+  font: inherit;
+  font-weight: 600;
+  line-height: var(--gmt-target-min);
+  text-align: start;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+.colButton[aria-pressed="true"],
+.yearButton[aria-pressed="true"] {
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--gmt-series-1);
+}
+
+.yearButton {
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.agree {
+  display: block;
+  font-size: var(--gmt-text-xs);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.reason {
+  display: block;
+  margin-block-start: var(--gmt-space-1);
+  padding: var(--gmt-space-1);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+  font-weight: 400;
+}
+
+.cell {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-1);
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: var(--gmt-target-min);
+  margin: 0;
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: none;
+  color: var(--gmt-ice);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+
+  &[aria-pressed="true"] {
+    border-color: var(--gmt-series-1);
+    background: color-mix(in srgb, var(--gmt-series-1) 10%, transparent);
+  }
+}
+
+.hol {
+  display: block;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &[data-state="sentinel"] {
+    padding: 0 var(--gmt-space-1);
+    border: 1px solid var(--gmt-signal-border);
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
+    background: var(--gmt-signal-fill);
+    color: var(--gmt-signal-ink);
+    white-space: normal;
+  }
+}
+
+.line1,
+.line2 {
+  display: block;
+}
+
+.line2 {
+  font-size: var(--gmt-text-xs);
+}
+
+/* Narrow: each year becomes a labelled card, so no column is squeezed. */
+@container (max-width: 34rem) {
+  .table,
+  .table tbody,
+  .table tr,
+  .table td,
+  .table .year {
+    display: block;
+    inline-size: auto;
+  }
+
+  .table thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+
+    /* The column buttons stay in the Tab order, so the header they sit in is seen while
+       one has focus: it opens in flow above the cards and closes when focus leaves. */
+    &:focus-within {
+      position: static;
+      inline-size: auto;
+      block-size: auto;
+      overflow: visible;
+      display: block;
+      margin-block-end: var(--gmt-space-2);
+    }
+
+    &:focus-within tr {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--gmt-space-1);
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    &:focus-within th {
+      display: block;
+      inline-size: auto;
+    }
+  }
+
+  .table tbody tr {
+    margin-block-end: var(--gmt-space-2);
+    padding-block: var(--gmt-space-2);
+    border: 1px solid var(--gmt-hairline);
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
+
+    &[data-placeholder] {
+      display: none;
+    }
+  }
+
+  .table .year,
+  .table td {
+    border: 0;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    content: attr(data-label) / "";
+    display: block;
+    padding-inline: var(--gmt-space-2);
+    font-size: var(--gmt-text-xs);
+  }
+
+  .hol {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (forced-colors: active) {
+  .table,
+  .colButton,
+  .yearButton,
+  .cell {
+    color: CanvasText;
+  }
+
+  .colButton:focus-visible,
+  .yearButton:focus-visible,
+  .cell:focus-visible {
+    outline-color: Highlight;
+  }
+
+  .cell[aria-pressed="true"] {
+    border-color: Highlight;
+    border-width: 2px;
+    background: Canvas;
+  }
+
+  .colButton[aria-pressed="true"],
+  .yearButton[aria-pressed="true"] {
+    text-decoration-color: Highlight;
+  }
+
+  .table [data-disagree] .year {
+    background: none;
+    border-style: dashed;
+  }
+
+  .reason,
+  .hol[data-state="sentinel"] {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+    font-weight: 700;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .agree {
+    color: var(--gmt-ice);
+  }
+
+  .cell[aria-pressed="true"] {
+    border-width: 2px;
+  }
+
+  .reason,
+  .hol[data-state="sentinel"] {
+    font-weight: 700;
+  }
+}

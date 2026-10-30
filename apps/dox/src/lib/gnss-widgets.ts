@@ -35,7 +35,7 @@ export function counterSystem<C extends GnssWeekCounter>(
 }
 
 /** A scale string split at its one space. */
-export interface LabelParts {
+interface LabelParts {
   /** `YYYY-MM-DDTHH:MM:SS[.f]`, as the library wrote it. */
   dateTime: string;
   /** The scale's token: `GPS`, `GAL`, `BDT`, `QZS`, `GLO`, `IRN` or `TAI`. */
@@ -74,7 +74,7 @@ export function asZ(lib: GnssLib, value: string): string {
 // ---------------------------------------------------------------------------
 
 /** What `leadOverUtc` found, one shape for every outcome. */
-export type Lead =
+type Lead =
   | {
       kind: "lead";
       /** The library's duration for `utc` to the label, `"PT18S"`. */
@@ -177,16 +177,6 @@ export function eraStart(
   era: number,
 ): string {
   return lib.gnssWeekToUtc(counter, 0, 0, era);
-}
-
-/** The era an instant falls in on a counter: the `era` of `utcToGnssWeek`.
- *  `null` before the counter's first week and on invalid input. */
-export function eraAt(
-  lib: GnssLib,
-  counter: GnssWeekCounter,
-  instant: string,
-): number | null {
-  return lib.utcToGnssWeek(counter, instant)?.era ?? null;
 }
 
 /**

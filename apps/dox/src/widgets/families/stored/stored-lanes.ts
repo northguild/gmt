@@ -28,7 +28,7 @@ export const LEGEND: readonly { id: LegendId; text: string }[] = [
 ];
 
 /** The most readings the exact lane has a row for. */
-export const MARK_TIERS = 3;
+const MARK_TIERS = 3;
 
 /** A position as the style value: two decimals at most. */
 function pct(n: number): string {
@@ -63,14 +63,14 @@ function chip(o: ChipOptions): SafeHtml {
   >`;
 }
 
-export interface DayTick {
+interface DayTick {
   /** Along the day, 0 to 100. */
   x: number;
   /** The drawn label, such as `06:00`. */
   label: string;
 }
 
-export interface DayClockOptions {
+interface DayClockOptions {
   kind: "gap" | "overlap";
   /** The band's chip, such as the skipped hour's range. */
   bandText: string;
@@ -115,7 +115,7 @@ export function dayClock(o: DayClockOptions): SafeHtml {
     >`;
 }
 
-export interface SinceClockOptions {
+interface SinceClockOptions {
   /** What the zone says now, such as `Zone offset since 2016-03-27: +03:00`. */
   zone: string;
   /** What was stored, such as `Stored offset: +02:00`. */
@@ -144,7 +144,7 @@ export interface ExactGate {
   text: string;
 }
 
-export interface ExactTrackOptions {
+interface ExactTrackOptions {
   gate: ExactGate | null;
   /** The time between the clock change and the readings is not drawn to scale. */
   broken: boolean;
@@ -180,7 +180,7 @@ export function exactTrack(o: ExactTrackOptions): SafeHtml {
   })}`;
 }
 
-export interface StoredFigureOptions {
+interface StoredFigureOptions {
   /** The whole figure in one sentence: the group's accessible name. */
   label: string;
   /** `dayClock`, `sinceClock` or nothing. */

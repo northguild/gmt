@@ -5,13 +5,12 @@
  * the clock family, the face as a string, the delegated toggle and the in-place update. The
  * face itself is tested in `widgets/families/clock/crystal-clock.test.ts`.
  */
-import { screen, within } from "@testing-library/dom";
+import { within } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import {
   CLOCK_OUTER,
   bindClockGlow,
   handAngles,
-  renderCrystalClock,
   updateCrystalClock,
 } from "./crystal-clock";
 
@@ -22,15 +21,6 @@ const base = {
   label: "Entry clock",
   sublabel: "01:30, minus 04:00, New York",
 };
-
-/** The face, written into a host the way a string-building caller does. */
-function host(markup: string): HTMLElement {
-  const el = document.createElement("div");
-  document.body.append(el);
-  // The markup is `renderCrystalClock`'s own output: builder text, escaped at its source.
-  el.insertAdjacentHTML("beforeend", markup);
-  return el;
-}
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -46,34 +36,15 @@ describe("the re-exported geometry", () => {
   });
 });
 
-describe("renderCrystalClock", () => {
-  it("gives the face as a toggle button named for its time and zone", () => {
-    host(renderCrystalClock(base));
-    expect(
-      screen.getByRole("button", {
-        name: "Entry clock, 01:30, minus 04:00, New York. Light up the face.",
-        pressed: false,
-      }),
-    ).toBeInTheDocument();
-  });
-
-  it("gives a named image with glowable: false", () => {
-    host(renderCrystalClock({ ...base, glowable: false }));
-    expect(
-      screen.getByRole("img", {
-        name: "Entry clock, 01:30, minus 04:00, New York",
-      }),
-    ).toBeInTheDocument();
-  });
-});
-
 describe("bindClockGlow", () => {
   it("toggles each face on its own and stops on abort", async () => {
     const user = userEvent.setup();
-    const root = host(
-      renderCrystalClock(base) +
-        renderCrystalClock({ ...base, id: "exit", label: "Exit clock" }),
-    );
+    const root = document.createElement("div");
+    document.body.append(root);
+    const entryHost = root.appendChild(document.createElement("div"));
+    const exitHost = root.appendChild(document.createElement("div"));
+    updateCrystalClock(entryHost, base);
+    updateCrystalClock(exitHost, { ...base, id: "exit", label: "Exit clock" });
     const controller = new AbortController();
     bindClockGlow(root, controller.signal);
     const entry = within(root).getByRole("button", { name: /^Entry clock/ });

@@ -116,8 +116,10 @@ mobile-starlight-toc nav {
   border-color: var(--gmt-signal-border);
 }
 
-/* Cards — subtle blue-tinted glass */
-[class*="card"],
+/* Cards — subtle blue-tinted glass. A kit class is `gmt-<file>__<name>` (astro.config.mjs), so
+   a module file called `help-card` puts "card" in the name of every class it declares. The
+   `__` keeps this rule to Starlight's own cards; a kit surface styles itself. */
+[class*="card"]:not([class*="__"]),
 .comparison-card {
   background: var(--gmt-fill-subtle);
   border: 1px solid var(--gmt-border);

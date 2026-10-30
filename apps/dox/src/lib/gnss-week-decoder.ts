@@ -79,7 +79,7 @@ export const MODE_LABELS: Record<GnssDecoderMode, string> = {
 };
 
 /** What a lane reads when the counter has not been picked. */
-export const PICK_COUNTER_TEXT = "Pick a counter to see its eras";
+const PICK_COUNTER_TEXT = "Pick a counter to see its eras";
 
 // ---------------------------------------------------------------------------
 // State
@@ -102,7 +102,7 @@ export interface GnssDecoderState {
 /** Seed arguments: the permalink's flat string keys, or a chat call's numbers. */
 export type GnssWeekDecoderArgs = Record<string, unknown>;
 
-export interface GnssPreset {
+interface GnssPreset {
   id: string;
   label: string;
   description: string;
@@ -290,7 +290,7 @@ export const GNSS_PRESETS: readonly GnssPreset[] = [
   },
 ];
 
-export const DEFAULT_PRESET = GNSS_PRESETS[0]!;
+const DEFAULT_PRESET = GNSS_PRESETS[0]!;
 
 /** The fields a mode reads, for matching a preset and writing a permalink. */
 function usedFields(s: GnssDecoderState): string[] {
@@ -472,7 +472,7 @@ export interface Lane {
   sentence: string;
 }
 
-export interface CounterRow {
+interface CounterRow {
   counter: GnssWeekCounter;
   week: string;
   timeOfWeek: string;
@@ -483,7 +483,7 @@ export interface CounterRow {
   none: boolean;
 }
 
-export interface RinexRow {
+interface RinexRow {
   system: RinexWeekSystem;
   week: string;
   timeOfWeek: string;
@@ -492,7 +492,7 @@ export interface RinexRow {
 }
 
 /** What the controls not in use hold, so a change of mode continues from the same moment. */
-export interface Carry {
+interface Carry {
   utc: string | null;
   week: string | null;
   timeOfWeekSeconds: string | null;
@@ -530,7 +530,7 @@ export interface GnssRead {
 }
 
 /** `^\d+$` as a safe integer. */
-export function wholeNumber(text: string): number | null {
+function wholeNumber(text: string): number | null {
   const t = text.trim();
   if (!/^\d+$/.test(t)) return null;
   const n = Number(t);
@@ -538,7 +538,7 @@ export function wholeNumber(text: string): number | null {
 }
 
 /** A finite number in `[0, SECONDS_PER_WEEK)`. */
-export function timeOfWeek(text: string): number | null {
+function timeOfWeek(text: string): number | null {
   const t = text.trim();
   if (t === "" || !/^\d+(?:\.\d+)?$/.test(t)) return null;
   const n = Number(t);
@@ -604,7 +604,7 @@ export const GNSS_SENTENCES = SENTENCES;
 export const LANE_WINDOW = 4;
 
 /** The sentence for a RINEX week before the system's first week. */
-export function rinexBeforeFirstText(firstInstant: string): string {
+function rinexBeforeFirstText(firstInstant: string): string {
   return `This is before the system's first week, which starts at ${firstInstant}.`;
 }
 
@@ -613,7 +613,7 @@ const pad = (n: number, min: number) => Math.max(n, min);
 const secondsLine = (n: string) => `time of week ${n} s`;
 
 /** "ahead of UTC by 18 s", "behind UTC by 2 s", or the empty-style words. */
-export function leadText(duration: string): string {
+function leadText(duration: string): string {
   const seconds = durationSecondsText(duration);
   if (seconds === null) return "";
   if (seconds.startsWith("-")) return `behind UTC by ${seconds.slice(1)} s`;
@@ -623,17 +623,17 @@ export function leadText(duration: string): string {
 /** The `Z` spelling of an instant written with an offset, or `null` when the
  *  library spells it as typed. Asked of TAI and back, the way the Satellite
  *  Clock Converter spells a UTC value, so a second 60 survives. */
-export function utcWrittenAs(lib: GnssLib, utc: string): string | null {
+function utcWrittenAs(lib: GnssLib, utc: string): string | null {
   const tai = lib.toTAI(utc);
   if (tai === "") return null;
   const back = lib.fromTAI(tai);
   return back === "" || back === utc ? null : back;
 }
 
-export const INSIDE_SECOND_TEXT = "inside an inserted second";
+const INSIDE_SECOND_TEXT = "inside an inserted second";
 
 /** The plates' captions the system plate can show, for its hold. */
-export function systemCaptions(): string[] {
+function systemCaptions(): string[] {
   return RINEX_WEEK_SYSTEMS.map((s) => `${s} time`);
 }
 
@@ -686,19 +686,6 @@ export function platesOf(
       quiet: true,
     },
   ];
-}
-
-/** Every text a plate's sub line can show, for the holds. */
-export function plateTexts(): {
-  eraLines: string[];
-  leads: string[];
-  rinex: string[];
-} {
-  return {
-    eraLines: ["era 12", "era 12 · nearest today", "continuous count"],
-    leads: ["ahead of UTC by 18 s", "behind UTC by 18 s", INSIDE_SECOND_TEXT],
-    rinex: [secondsLine("604799.999999999")],
-  };
 }
 
 /** The pin position of a reading on a counter's lane: its week as a share of

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/dom";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../../test-fixture";
 import { html } from "../../builders/html";
 import { MIN_ARC_SPAN, rolledArc, rolledMark } from "./rolled-marks";
@@ -18,6 +19,15 @@ describe("rolledMark", () => {
         name: "gate-in without the calendar: Sat 15 Jun 17:00",
       }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("rolled marks and arcs", () => {
+  it("have no axe violations", async () => {
+    const fx = renderHtml(
+      html`${rolledMark({ label: "gate-in without the calendar", at: 0.4, series: 1 })}${rolledArc({ from: 0.2, to: 0.6, series: 2 })}`,
+    );
+    await expectNoAxeViolations(fx.host);
   });
 });
 

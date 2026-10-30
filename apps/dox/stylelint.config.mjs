@@ -143,23 +143,8 @@ const LEGACY_FILES = [
   "src/components/Header.astro",
   "src/components/LinkButton.astro",
   "src/components/SidebarSublist.astro",
-  "src/styles/dox.css",
   "src/styles/gmt-a11y.css",
-  "src/styles/gmt-bl-date-stamp.css",
-  "src/styles/gmt-content.css",
-  "src/styles/gmt-cron-in-a-zone.css",
-  "src/styles/gmt-cutoff-widgets.css",
-  "src/styles/gmt-elapsed-vs-clock.css",
-  "src/styles/gmt-form-controls.css",
-  "src/styles/gmt-gnss-rollover-checker.css",
-  "src/styles/gmt-leap-day-birthday.css",
-  "src/styles/gmt-ledger-widgets.css",
-  "src/styles/gmt-migrate.css",
   "src/styles/gmt-primitives.css",
-  "src/styles/gmt-reveal.css",
-  "src/styles/gmt-satellite-clock-converter.css",
-  "src/styles/gmt-timetable-reader.css",
-  "src/styles/gmt-widget.css",
 ];
 
 /** Colour comes from tokens in a module: no literal, and no negative margin nudge. */

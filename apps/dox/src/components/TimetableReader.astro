@@ -33,7 +33,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderTimetableReaderTemplate();
+const html = renderTimetableReaderTemplate("timetable-reader", {}).value;
 ---
 
 {
@@ -51,10 +51,12 @@ const html = renderTimetableReaderTemplate();
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("timetable");
-    document.querySelectorAll<HTMLElement>(".gmt-timetable").forEach((el) => {
-      mountTimetableReader(el, seed, new AbortController().signal).catch(
-        (error) => showUnavailable(el, error),
-      );
-    });
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="timetable-reader"]')
+      .forEach((el) => {
+        mountTimetableReader(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
   }
 </script>

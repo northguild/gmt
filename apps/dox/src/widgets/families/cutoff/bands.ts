@@ -15,7 +15,7 @@ import { html, type SafeHtml } from "../../builders/html";
 import { unit } from "../../builders/timeline";
 import styles from "./bands.module.css";
 
-export type BandKind = "open" | "closed" | "hour" | "overlap";
+type BandKind = "open" | "closed" | "hour" | "overlap";
 
 export interface Band {
   kind: BandKind;

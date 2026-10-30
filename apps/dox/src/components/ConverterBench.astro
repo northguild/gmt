@@ -35,7 +35,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderConverterTemplate("converter-bench");
+const html = renderConverterTemplate("converter-bench").value;
 ---
 
 {

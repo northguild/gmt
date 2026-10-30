@@ -10,7 +10,7 @@
  * idempotent, then calls `wire(signal)` to attach listeners with `{ signal }`.
  * `disconnectedCallback` aborts, so a moved element re-wires cleanly.
  */
-export const Base = (globalThis.HTMLElement ?? class {}) as typeof HTMLElement;
+const Base = (globalThis.HTMLElement ?? class {}) as typeof HTMLElement;
 
 export abstract class KitElement extends Base {
   #controller: AbortController | undefined;

@@ -13,6 +13,9 @@
   position: absolute;
   inset-block-start: 0.25rem;
   inset-inline-end: 0.25rem;
+
+  /* `.sl-markdown-content pre` is positioned, so the later `pre` would paint over this. */
+  z-index: var(--gmt-z-raised);
 }
 
 .pre {
@@ -23,6 +26,9 @@
   padding-inline: 1rem 3rem;
   overflow-x: auto;
   color: var(--gmt-ice);
+
+  /* The strut and the code share one font, so a late-loading face cannot change the line height. */
+  font-family: var(--sl-font-mono, var(--gmt-font-mono));
   font-size: clamp(0.8125rem, 0.78rem + 0.2vw, 0.9375rem);
   line-height: 1.5;
   white-space: pre;
@@ -34,6 +40,8 @@
 }
 
 .code {
+  display: block;
+  min-block-size: calc(var(--min-lines, 1) * 1lh);
   font-family: var(--sl-font-mono, var(--gmt-font-mono));
   font-variant-ligatures: none;
 }

@@ -32,7 +32,7 @@ interface Props {
 }
 
 const { fullbleed = false } = Astro.props;
-const html = renderX12TimeReaderTemplate("x12-time-reader", {});
+const html = renderX12TimeReaderTemplate("x12-time-reader", {}).value;
 ---
 
 {

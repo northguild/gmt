@@ -58,7 +58,7 @@ function iconKeyFor(mode: string): string {
   return Object.hasOwn(TRANSPORT_ICON_PATHS, key) ? key : FALLBACK_ICON_KEY;
 }
 
-export interface TransportIconOptions {
+interface TransportIconOptions {
   /** Accessible name. Omitted (the default): the icon is decorative
    *  (`aria-hidden="true"`), for use beside text that already says the mode. */
   label?: string;

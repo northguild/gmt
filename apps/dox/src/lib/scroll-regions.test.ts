@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
+import { screen } from "@testing-library/dom";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 // jsdom has no layout and no ResizeObserver: each box's size is set by hand, and a stand-in
-// observer records what is watched so a test can report a resize.
-const watched = new Set<Element>();
+// observer lets a test report a resize.
 let report: (targets: Element[]) => void = () => {};
 
 beforeAll(() => {
@@ -13,19 +14,15 @@ beforeAll(() => {
       constructor(callback: (entries: { target: Element }[]) => void) {
         report = (targets) => callback(targets.map((target) => ({ target })));
       }
-      observe(el: Element) {
-        watched.add(el);
-      }
-      unobserve(el: Element) {
-        watched.delete(el);
-      }
+      observe() {}
+      unobserve() {}
       disconnect() {}
     },
   );
 });
 
 afterEach(() => {
-  document.body.innerHTML = "";
+  document.body.replaceChildren();
 });
 
 const { mountScrollRegions } = await import("./scroll-regions");
@@ -43,9 +40,27 @@ function size(el: Element, width: number, height = 50): void {
   }
 }
 
-function mount(html: string, width: number, height?: number): HTMLElement {
-  document.body.innerHTML = html;
-  const box = document.querySelector<HTMLElement>("pre, table")!;
+function el(
+  tag: string,
+  attrs: Record<string, string> = {},
+  ...children: (Node | string)[]
+): HTMLElement {
+  const node = document.createElement(tag);
+  for (const [name, value] of Object.entries(attrs)) {
+    node.setAttribute(name, value);
+  }
+  node.append(...children);
+  return node;
+}
+
+const codeBlock = (text = "x", attrs: Record<string, string> = {}) =>
+  el("pre", attrs, el("code", {}, text));
+const table = (text = "x", ...before: Node[]) =>
+  el("table", {}, ...before, el("tr", {}, el("td", {}, text)));
+
+/** Puts `box` on the page at the given content size and wires it. */
+function mount(box: HTMLElement, width: number, height?: number): HTMLElement {
+  document.body.replaceChildren(box);
   size(box, width, height);
   mountScrollRegions(document);
   return box;
@@ -55,104 +70,106 @@ function mount(html: string, width: number, height?: number): HTMLElement {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("mountScrollRegions", () => {
-  it("makes a code block that overflows a named, focusable region", () => {
-    const pre = mount("<pre><code>x</code></pre>", 300);
-    expect(pre.getAttribute("tabindex")).toBe("0");
-    expect(pre.getAttribute("role")).toBe("region");
-    expect(pre.getAttribute("aria-label")).toBe("Code, scrolls sideways");
-    expect(pre.dataset.scrollRegion).toBe("tabindex role aria-label");
+  it("makes a code block that overflows a named region the keyboard can reach", async () => {
+    mount(codeBlock(), 300);
+    const region = screen.getByRole("region", {
+      name: "Code, scrolls sideways",
+    });
+    await userEvent.tab();
+    expect(region).toHaveFocus();
   });
 
-  it("leaves a box that fits alone", () => {
-    const pre = mount("<pre><code>x</code></pre>", 100);
-    expect(pre.hasAttribute("tabindex")).toBe(false);
-    expect(pre.hasAttribute("role")).toBe(false);
-    expect("scrollRegion" in pre.dataset).toBe(false);
+  it("leaves a box that fits alone", async () => {
+    mount(codeBlock(), 100);
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    await userEvent.tab();
+    expect(document.body).toHaveFocus();
   });
 
   it("says which way it scrolls", () => {
-    expect(mount("<pre>x</pre>", 100, 300).getAttribute("aria-label")).toBe(
-      "Code, scrolls up and down",
-    );
-    expect(mount("<pre>x</pre>", 300, 300).getAttribute("aria-label")).toBe(
-      "Code, scrolls in both directions",
-    );
+    mount(codeBlock(), 100, 300);
+    expect(
+      screen.getByRole("region", { name: "Code, scrolls up and down" }),
+    ).toBeInTheDocument();
+    mount(codeBlock(), 300, 300);
+    expect(
+      screen.getByRole("region", { name: "Code, scrolls in both directions" }),
+    ).toBeInTheDocument();
   });
 
-  it("keeps a table's own role, and names it only when it has no name", () => {
-    const table = mount("<table><tr><td>x</td></tr></table>", 300);
-    expect(table.hasAttribute("role")).toBe(false);
-    expect(table.getAttribute("tabindex")).toBe("0");
-    expect(table.getAttribute("aria-label")).toBe("Scrolls sideways");
+  it("keeps a table's own role, and names it only when it has no name", async () => {
+    mount(table(), 300);
+    const plain = screen.getByRole("table", { name: "Scrolls sideways" });
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    await userEvent.tab();
+    expect(plain).toHaveFocus();
 
-    const captioned = mount(
-      "<table><caption>Offsets</caption><tr><td>x</td></tr></table>",
-      300,
-    );
-    expect(captioned.hasAttribute("role")).toBe(false);
-    expect(captioned.hasAttribute("aria-label")).toBe(false);
-    expect(captioned.dataset.scrollRegion).toBe("tabindex");
+    mount(table("x", el("caption", {}, "Offsets")), 300);
+    const captioned = screen.getByRole("table", { name: "Offsets" });
+    await userEvent.tab();
+    expect(captioned).toHaveFocus();
   });
 
   it("removes only what it added when the box fits again", () => {
-    const pre = mount('<pre aria-label="Example" tabindex="-1">x</pre>', 300);
-    expect(pre.getAttribute("aria-label")).toBe("Example");
-    expect(pre.getAttribute("tabindex")).toBe("-1");
-    expect(pre.dataset.scrollRegion).toBe("role");
+    const pre = mount(
+      codeBlock("x", { "aria-label": "Example", tabindex: "-1" }),
+      300,
+    );
+    expect(screen.getByRole("region", { name: "Example" })).toBe(pre);
+    expect(pre).toHaveAttribute("tabindex", "-1");
 
     size(pre, 100);
     report([pre]);
-    expect(pre.getAttribute("aria-label")).toBe("Example");
-    expect(pre.getAttribute("tabindex")).toBe("-1");
-    expect(pre.hasAttribute("role")).toBe(false);
-    expect("scrollRegion" in pre.dataset).toBe(false);
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(pre).toHaveAttribute("aria-label", "Example");
+    expect(pre).toHaveAttribute("tabindex", "-1");
   });
 
   it("re-reads a box when its content resizes, and relabels it", () => {
-    const pre = mount("<pre><code>x</code></pre>", 300);
-    const code = pre.querySelector("code")!;
-    expect(watched.has(code)).toBe(true);
+    const pre = mount(codeBlock(), 300);
+    expect(
+      screen.getByRole("region", { name: "Code, scrolls sideways" }),
+    ).toBeInTheDocument();
     size(pre, 300, 300);
-    report([code]);
-    expect(pre.getAttribute("aria-label")).toBe(
-      "Code, scrolls in both directions",
-    );
+    report([pre]);
+    expect(
+      screen.getByRole("region", { name: "Code, scrolls in both directions" }),
+    ).toBeInTheDocument();
   });
 
-  it("wires a table a widget renders after the mount", async () => {
-    document.body.innerHTML = '<div class="gmt-widget"></div>';
+  it("wires a table a widget renders after the mount, and the one that replaces it", async () => {
+    const widget = el("section", { "aria-label": "Widget" });
+    document.body.replaceChildren(widget);
     mountScrollRegions(document);
-    const widget = document.querySelector(".gmt-widget")!;
-    widget.innerHTML = "<table><tr><td>x</td></tr></table>";
-    const table = widget.querySelector("table")!;
-    size(table, 300);
-    await settle();
-    expect(table.getAttribute("tabindex")).toBe("0");
-    expect(watched.has(table)).toBe(true);
 
-    // A re-render replaces it: the old one is let go, the new one wired.
-    widget.innerHTML = "<table><tr><td>y</td></tr></table>";
-    const next = widget.querySelector("table")!;
-    size(next, 300);
+    const first = table("x");
+    size(first, 300);
+    widget.replaceChildren(first);
     await settle();
-    expect(watched.has(table)).toBe(false);
-    expect(watched.has(next)).toBe(true);
-    expect(next.getAttribute("tabindex")).toBe("0");
+    expect(screen.getByRole("table", { name: "Scrolls sideways" })).toBe(first);
+
+    const next = table("y");
+    size(next, 300);
+    widget.replaceChildren(next);
+    await settle();
+    expect(screen.getByRole("table", { name: "Scrolls sideways" })).toBe(next);
+    expect(screen.getAllByRole("table")).toHaveLength(1);
   });
 
   it("re-reads a wired box whose content is replaced", async () => {
-    const pre = mount("<pre><code>x</code></pre>", 100);
-    expect(pre.hasAttribute("tabindex")).toBe(false);
-    pre.innerHTML = "<code>a much longer line</code>";
+    const pre = mount(codeBlock(), 100);
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
     size(pre, 300);
+    pre.replaceChildren(el("code", {}, "a much longer line"));
     await settle();
-    expect(pre.getAttribute("tabindex")).toBe("0");
-    expect(watched.has(pre.querySelector("code")!)).toBe(true);
+    expect(
+      screen.getByRole("region", { name: "Code, scrolls sideways" }),
+    ).toBeInTheDocument();
   });
 
   it("is safe to call twice", () => {
-    const pre = mount("<pre>x</pre>", 300);
+    mount(codeBlock(), 300);
     mountScrollRegions(document);
-    expect(pre.dataset.scrollRegion).toBe("tabindex role aria-label");
+    expect(screen.getAllByRole("region")).toHaveLength(1);
   });
 });
