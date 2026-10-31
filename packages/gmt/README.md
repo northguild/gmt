@@ -7,29 +7,56 @@
 [Docs](https://northguild.dev/gmt/) · [API reference](https://northguild.dev/gmt/reference/) · [Tools](https://northguild.dev/gmt/tools/) · [Discord](https://discord.gg/TdvQdP3t5a)
 
 ```typescript
-import { resolveLocal } from "@northguild/gmt";
+import {
+  addDate,
+  diffDate,
+  endOfDate,
+  formatDate,
+  isBeforeDate,
+  startOfDate,
+  subtractDate,
+} from "@northguild/gmt";
 
-// 02:30 on 31 March 2024 did not happen in Berlin: the clocks jumped from 02:00 to 03:00.
-new Date("2024-03-31T02:30:00").toISOString(); // "2024-03-31T01:30:00.000Z" on a machine in Berlin, "2024-03-30T17:30:00.000Z" on one in Tokyo
-resolveLocal("2024-03-31T02:30:00", "Europe/Berlin", { disambiguation: "reject" }); // "" — the same on every machine
+addDate("2024-01-31", { months: 1 }); // "2024-02-29"
+subtractDate("2024-03-31", { days: 7 }); // "2024-03-24"
+diffDate("2024-01-01", "2024-03-15", "days"); // 74
+startOfDate("2024-03-15", "month"); // "2024-03-01"
+endOfDate("2024-03-15", "month"); // "2024-03-31"
+isBeforeDate("2024-03-15", "2024-04-01"); // true
+formatDate("2024-03-15", "en-US", { dateStyle: "long" }); // "March 15, 2024"
 ```
 
-- **69,631 tests, run 2,088,930 times in CI.** Every test runs in 10 time zones on 3 Node versions.
-- **63× the CI test runs** of the six libraries below, combined.
+`Date` in `addDate` names the type, not a catch-all. Each kind of time has its own set of functions: a date, a time of day, a date and time, a zoned time, a UTC instant and a Unix timestamp. Each takes and returns only its own kind, so what you pass in tells you what you get back.
+
+```typescript
+import { addDate, addDateTime, addTime, addUnix, addUtc, addZoned } from "@northguild/gmt";
+
+addDate("2024-03-15", { days: 30 }); // "2024-04-14"
+addTime("22:30:00", { hours: 3 }); // "01:30:00"
+addDateTime("2024-03-15T22:30:00", { hours: 3 }); // "2024-03-16T01:30:00"
+addZoned("2024-03-15T22:30:00+01:00[Europe/Berlin]", { hours: 3 }); // "2024-03-16T01:30:00+01:00[Europe/Berlin]"
+addUtc("2024-03-15T22:30:00Z", { hours: 3 }); // "2024-03-16T01:30:00Z"
+addUnix(1710541800000, { hours: 3 }); // 1710552600000
+```
+
+The same pattern holds for every operation: `diff`, `startOf`, `endOf`, `format`, `isBefore` and the rest, for each type.
+
+Time zones and daylight saving time stay just as direct:
+
+```typescript
+import { addZoned, resolveLocal } from "@northguild/gmt";
+
+// Berlin's clocks jump from 02:00 to 03:00 on 31 March 2024, so a day and 24 hours are not the same.
+addZoned("2024-03-30T12:00:00+01:00[Europe/Berlin]", { days: 1 }); // "2024-03-31T12:00:00+02:00[Europe/Berlin]"
+addZoned("2024-03-30T12:00:00+01:00[Europe/Berlin]", { hours: 24 }); // "2024-03-31T13:00:00+02:00[Europe/Berlin]"
+// 02:30 that night never happened. You choose what to get, and "reject" returns "".
+resolveLocal("2024-03-31T02:30:00", "Europe/Berlin", { disambiguation: "reject" }); // ""
+```
+
 - **714 functions, to the nanosecond**, tested in 17 locales.
 - **Never throws.** ISO 8601 strings in. Invalid input returns `""`, `null`, `false` or `[]`.
 
-| Library                   | Tests      | CI test runs  | Built on  |
-| ------------------------- | ---------- | ------------- | --------- |
-| **`@northguild/gmt`**     | **69,631** | **2,088,930** | Temporal  |
-| Spacetime                 | 6,086      | 12,172        | `Date`    |
-| Moment.js                 | 3,901      | 11,703        | `Date`    |
-| date-fns                  | 3,213      | 3,213         | `Date`    |
-| Luxon                     | 1,222      | 4,888         | `Date`    |
-| Day.js                    | 794        | 1,034         | `Date`    |
-| `@internationalized/date` | 386        | 386           | own types |
-
-The other libraries were measured from 2026-08-22 to 2026-09-09, each by running its own test suite. [The full comparison and the method](https://northguild.dev/gmt/compare/).
+The latest test counts, CI volume and the comparison with Luxon, date-fns, Moment.js, Day.js, Spacetime and `@internationalized/date` are on the [Why GMT](https://northguild.dev/gmt/why-gmt/) page. The full comparison and the method are on the [compare](https://northguild.dev/gmt/compare/) page.
 
 Moving from another library: [date-fns](https://northguild.dev/gmt/migrate/date-fns/) · [Luxon](https://northguild.dev/gmt/migrate/luxon/) · [Day.js](https://northguild.dev/gmt/migrate/dayjs/) · [Moment.js](https://northguild.dev/gmt/migrate/moment/) · [`@internationalized/date`](https://northguild.dev/gmt/migrate/internationalized-date/).
 
@@ -44,12 +71,11 @@ To ban `Date` in your own code, add a lint plugin: [ESLint](https://github.com/n
 ## Use
 
 ```typescript
-import { addBusinessDays, addDate, addZoned, convertUtcToZoned } from "@northguild/gmt";
+import { addBusinessDays, convertUtcToZoned, isBusinessDay } from "@northguild/gmt";
 
-addDate("2024-01-31", { months: 1 }); // "2024-02-29"
 addBusinessDays("2024-03-15", 1); // "2024-03-18"
+isBusinessDay("2024-03-16"); // false
 convertUtcToZoned("2024-06-15T12:00:00Z", "Asia/Tokyo"); // "2024-06-15T21:00:00+09:00[Asia/Tokyo]"
-addZoned("2024-10-06T01:30:00+10:00[Australia/Sydney]", { hours: 1 }); // "2024-10-06T03:30:00+11:00[Australia/Sydney]"
 ```
 
 Every function has a reference page with a live playground:

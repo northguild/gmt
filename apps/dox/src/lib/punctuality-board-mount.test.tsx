@@ -251,6 +251,16 @@ describe("mountPunctualityBoard: the late tolerance handle", () => {
     expect(lateBox()).toHaveValue(minutesToIso(31));
   });
 
+  it("draws a tolerance past a week at the edge of the axis, and keeps what was typed", async () => {
+    const w = await openPreset("fifteen-minute");
+    await enter(w, lateBox(), "PT5000H");
+    const slider = lateSlider();
+    expect(slider).toHaveAttribute("aria-valuemax", "10080");
+    expect(slider).toHaveValue(10080);
+    expect(lateBox()).toHaveValue("PT5000H");
+    expect(screen.getByText(/^6 of 6 on time/)).toBeInTheDocument();
+  });
+
   it("PageUp and PageDown move ten steps", async () => {
     const w = await openPreset("fifteen-minute");
     await press(w, lateSlider(), "{PageUp}");
@@ -350,6 +360,38 @@ describe("mountPunctualityBoard: the second tolerance", () => {
     expect(
       screen.getByRole("textbox", { name: "Second late tolerance" }),
     ).toHaveValue(minutesToIso(110));
+  });
+});
+
+describe("mountPunctualityBoard: a deviation past the axis", () => {
+  const day = (d: number) =>
+    `2024-06-${String(14 + d).padStart(2, "0")}T09:00:00+01:00${LONDON}`;
+
+  it("marks a bar cut at the edge of the axis, for a 10-day and a 30-day delay, and not one inside the week", async () => {
+    await open({
+      pairs: pairs(
+        [at("09:00"), day(10)],
+        [at("09:00"), `2024-07-14T09:00:00+01:00${LONDON}`],
+        [at("09:00"), at("09:05")],
+      ),
+      late: "PT15M",
+    });
+    const [tenDays, thirtyDays, inside] = rows();
+    expect(tenDays).toHaveTextContent("+240 h");
+    expect(within(tenDays!).getByText("»")).toBeInTheDocument();
+    expect(thirtyDays).toHaveTextContent("+720 h");
+    expect(within(thirtyDays!).getByText("»")).toBeInTheDocument();
+    expect(within(inside!).queryByText("»")).not.toBeInTheDocument();
+  });
+
+  it("marks an early bar cut at the edge on its own side", async () => {
+    await open({
+      pairs: pairs([day(10), at("09:00")], [at("09:00"), at("09:05")]),
+      late: "PT15M",
+    });
+    const [far, inside] = rows();
+    expect(within(far!).getByText("«")).toBeInTheDocument();
+    expect(within(inside!).queryByText("«")).not.toBeInTheDocument();
   });
 });
 

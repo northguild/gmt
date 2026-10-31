@@ -2,9 +2,12 @@
  * The Holiday Rule Builder's pure module against the real library. Expected
  * dates are the library spec's; counts are derived, never literal.
  */
+import type { HolidayRule } from "@northguild/gmt";
 import { MAX_RULES, parseRuleLine } from "./holiday-codec";
 import {
   BUILDER_PRESETS,
+  YEAR_MAX,
+  YEAR_MIN,
   CUSTOM_PRESET_ID,
   HANDOFF_NO_CALENDAR,
   HANDOFF_TOO_LONG,
@@ -24,6 +27,8 @@ import {
   readArgs,
   rowOfRule,
   rowResult,
+  ruleCallExtent,
+  ruleCallExtentJob,
   ruleCallLines,
   ruleOfRow,
   rulesOf,
@@ -31,7 +36,7 @@ import {
   yearOf,
 } from "./holiday-rule-builder";
 import { readArgs as readLedgerArgs } from "./free-time-ledger";
-import { attributeRules } from "./holiday-widgets";
+import { attributeRows, attributeRules } from "./holiday-widgets";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 import { lib } from "~/test/holiday-lib";
 
@@ -380,5 +385,101 @@ describe("the folded calls", () => {
       'observedDate("2027-01-01", { 6: { previous: 5 } }) // "2027-01-01"',
     );
     expect(text).not.toContain("calendar");
+  });
+
+  /** A small deterministic generator (mulberry32), so a failure replays. */
+  const seeded = (seed: number): (() => number) => {
+    let a = seed;
+    return () => {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  };
+
+  /** A rule line of every kind, with a policy that walks, shifts or does neither. */
+  const ruleLineOf = (random: () => number, index: number): string => {
+    const int = (low: number, high: number): number =>
+      low + Math.floor(random() * (high - low + 1));
+    const pick = <T>(items: readonly T[]): T =>
+      items[int(0, items.length - 1)]!;
+    const policies = ["", "6<5 7>1", "6<5 7w", "6>1 7w", "7w", "5<4 6<5 7>1"];
+    const month = String(int(1, 12)).padStart(2, "0");
+    const day = String(int(1, 28)).padStart(2, "0");
+    const name = `Rule ${index}`;
+    switch (pick(["f", "n", "e", "d"] as const)) {
+      case "f":
+        return `${name};f;${month}-${day};${pick(policies)}`;
+      case "n":
+        return `${name};n;${int(1, 12)};${int(1, 7)};${pick(["1", "2", "3", "4", "5", "-1", "-2", "last"])}`;
+      case "e":
+        return `${name};e;${int(-60, 60)}${random() < 0.3 ? ";j" : ""}`;
+      default:
+        return `${name};d;${Array.from({ length: int(1, 4) }, () => `${int(1990, 2030)}-${month}-${day}`).join(",")}`;
+    }
+  };
+
+  const printedIn =
+    (rules: readonly HolidayRule[], zone: string, weekend: number[]) =>
+    (year: number): string[] =>
+      ruleCallLines(
+        rules,
+        attributeRows(
+          lib,
+          { timeZone: zone, weekend, rules: [...rules] },
+          year,
+        ).map((r) => r.pairs),
+        year,
+      )
+        .join("\n")
+        .split("\n");
+
+  it("reserves at least what the calls print in any year the field accepts", () => {
+    const random = seeded(20261031);
+    const sets: { rules: HolidayRule[]; zone: string; weekend: number[] }[] =
+      BUILDER_PRESETS.map((p) => ({
+        weekend: [...p.weekend],
+        zone: p.zone,
+        rules: [...p.rules],
+      }));
+    for (let n = 0; n < 12; n++) {
+      sets.push({
+        weekend: random() < 0.5 ? [6, 7] : [5, 6],
+        zone: random() < 0.5 ? "UTC" : "Europe/London",
+        rules: Array.from(
+          { length: 1 + Math.floor(random() * MAX_RULES) },
+          (_, i) => parseRuleLine(ruleLineOf(random, i + 1))!,
+        ),
+      });
+    }
+    for (const set of sets) {
+      const printed = printedIn(set.rules, set.zone, set.weekend);
+      const reserve = ruleCallExtent(printed);
+      for (let year = YEAR_MIN; year <= YEAR_MAX; year++) {
+        const lines = printed(year);
+        expect(lines.length).toBeLessThanOrEqual(reserve.lines);
+        for (const line of lines) {
+          expect(line.length).toBeLessThanOrEqual(reserve.widest.length);
+        }
+      }
+    }
+  });
+
+  it("gives the same answer in slices as whole, and the year in view comes first", () => {
+    const rules = ["A;f;12-26;6<5 7w", "B;d;2021-12-27,2022-01-03"].map(
+      (line) => parseRuleLine(line)!,
+    );
+    const printed = printedIn(rules, "UTC", [6, 7]);
+    const whole = ruleCallExtent(printed);
+    const job = ruleCallExtentJob(printed, 2026);
+    let steps = 0;
+    while (!job.step(0.0001)) steps++;
+    expect(job.extent()).toEqual(whole);
+    expect(steps).toBeGreaterThan(1);
+    const seen: number[] = [];
+    ruleCallExtentJob((year) => (seen.push(year), ["x"]), 2026).step(1e9);
+    expect(seen[0]).toBe(2026);
+    expect(new Set(seen).size).toBe(YEAR_MAX - YEAR_MIN + 1);
   });
 });

@@ -35,9 +35,15 @@ import {
   thresholdOf,
   timetableOf,
   visibleCount,
+  widestMadeShape,
+  shapeWithDigit,
   type DepartureState,
 } from "./departure-board";
-import { epochMs, type PunctualityLib } from "./punctuality-widgets";
+import {
+  epochMs,
+  writtenTime,
+  type PunctualityLib,
+} from "./punctuality-widgets";
 
 const lib: PunctualityLib = {
   scheduleDeviation,
@@ -713,5 +719,84 @@ describe("departureIconMode", () => {
     expect(departureIconMode("  ")).toBeNull();
     expect(departureIconMode("hovercraft")).toBeNull();
     expect(departureIconMode("toString")).toBeNull();
+  });
+});
+
+describe("widestMadeShape", () => {
+  const listOf = (...departures: string[]): DepartureState =>
+    readArgs({ after: "2024-06-15T09:00:00+03:00", departures });
+
+  it("is the minute shape for a timetable of whole minutes", () => {
+    expect(
+      widestMadeShape(
+        listOf("2024-06-15T10:05:00+03:00", "2024-06-15T11:35+03:00"),
+      ),
+    ).toBe("00:00");
+  });
+
+  it("carries the seconds and the fraction a departure is written with", () => {
+    expect(
+      widestMadeShape(
+        listOf("2024-06-15T10:05:00+03:00", "2024-06-15T10:05:30.123+03:00"),
+      ),
+    ).toBe("00:00:00.000");
+  });
+
+  it("is null when no departure is written", () => {
+    expect(widestMadeShape(listOf("not a time"))).toBeNull();
+  });
+
+  it("takes a headway's start, and the longest fraction when the headway has seconds", () => {
+    const base = readArgs({
+      after: "2024-06-15T09:00:00+03:00",
+      from: "2024-06-15T08:00:00+03:00",
+      to: "2024-06-15T12:00:00+03:00",
+      headway: "PT30M",
+    });
+    expect(widestMadeShape(base)).toBe("00:00");
+    expect(widestMadeShape({ ...base, headway: "PT90S" })).toBe(
+      "00:00:00.000000000",
+    );
+  });
+
+  it("has a digit variant for every digit, same shape", () => {
+    expect(shapeWithDigit("00:00:00.000", 7)).toBe("77:77:77.777");
+  });
+
+  it("is at least as wide as every departure the library can make, wherever the arrival is", () => {
+    const states = [
+      listOf(
+        "2024-06-15T10:05:30.123+03:00",
+        "2024-06-15T11:00:00+03:00",
+        "2024-06-15T12:15:59+03:00",
+      ),
+      readArgs({
+        after: "2024-06-15T09:00:00+03:00",
+        from: "2024-06-15T08:00:00.5+03:00",
+        to: "2024-06-15T12:00:00+03:00",
+        headway: "PT7M13.25S",
+      }),
+      readArgs({
+        after: "2024-06-15T09:00:00+03:00",
+        from: "2024-06-15T08:00:00+03:00",
+        to: "2024-06-15T12:00:00+03:00",
+        headway: "PT20M",
+      }),
+    ];
+    for (const state of states) {
+      const shape = widestMadeShape(state)!;
+      for (let minute = 0; minute < 24 * 60; minute += 7) {
+        const hh = String(Math.floor(minute / 60)).padStart(2, "0");
+        const mm = String(minute % 60).padStart(2, "0");
+        const made = lib.nextDeparture(
+          `2024-06-15T${hh}:${mm}:00+03:00`,
+          timetableOf(state),
+        );
+        if (made === "") continue;
+        expect(writtenTime(made).length, made).toBeLessThanOrEqual(
+          shape.length,
+        );
+      }
+    }
   });
 });

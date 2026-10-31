@@ -357,14 +357,14 @@ Run `pnpm compat` and read its output before concluding a workaround is unnecess
 ## Reviewing the READMEs
 
 `README.md` is the GitHub landing page and `packages/gmt/README.md` is the npm landing page.
-They are one page, kept as two identical files: four fact lines, one comparison table, the
+They are one page, kept as two identical files: two fact bullets, a line that links the Why GMT and compare pages, the
 install command, a sample, the namespace links and the agent prompt. npm and GitHub serve the
 committed bytes, so a wrong line stays wrong for every reader until someone fixes the file.
 Check all six on every review.
 
 | Check                           | It passes when                                                                                                                                                                          | How you check it                                                                                                                                                                                                                                                                      |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Figures**                     | Every figure in both READMEs matches the generated stats, and the comparison table has one row per library in `apps/dox/src/data/library-measurements.json`                             | `node scripts/stats.mjs check` passes. Then read the four fact lines and the comparison table, number by number, against `apps/dox/src/data/gmt-stats.json` and `library-measurements.json`. Count the rows: GMT's first, then one for each library in the JSON, by tests, most first |
+| **Figures**                     | The function and locale counts in both READMEs match the generated stats, the READMEs hold no test count, and the opening line names the libraries in `apps/dox/src/data/library-measurements.json`                             | `node scripts/stats.mjs check` passes. Then read the fact bullets against `apps/dox/src/data/gmt-stats.json`, and confirm the Why GMT and compare links are there |
 | **Sample**                      | Every result in the sample block is what the function returns                                                                                                                           | `node scripts/api-surface.mjs check` passes; it needs the built library. Then run one sampled call yourself against `packages/gmt/dist` and compare the result with the line                                                                                                          |
 | **Namespace links**             | There is one `/reference/<namespace>/` link for every namespace that exports functions and for no other, and the "By industry:" line links each declared industry's page, not a reference page | `stats check` guards the set of links and the "By industry:" line. Confirm each link names a page the docs site serves                                                                                                                                                                |
 | **Agent prompt**                | The fenced block in both READMEs and in `CONTRIBUTING.md` equals `AGENT_PROMPT` in `apps/dox/src/lib/agent-prompt.ts`                                                                   | Read each block against the constant. The Dox test `apps/dox/src/lib/agent-prompt.test.ts` guards the same thing                                                                                                                                                                      |
@@ -372,11 +372,11 @@ Check all six on every review.
 | **No per-function section**     | Neither README holds a section for one function or one feature                                                                                                                          | Read the headings. That content belongs in a docs guide under `apps/dox/src/content/docs/guides/` and in the generated reference                                                                                                                                                      |
 
 A stale figure, a wrong sample result or a missing namespace is a finding, not a note. So is a
-missing or extra table row, a prompt that differs, two files that differ, or a per-function
+prompt that differs, two files that differ, or a per-function
 section. `tdd-dev` does not edit READMEs, so a README finding goes to
 [`finalizer`](./finalizer.md) through the main session.
 
-**Report the age of the other libraries' snapshot.** Their figures are a dated snapshot. Each
+**Report the age of the other libraries' snapshot.** Their figures, which the Dox site shows, are a dated snapshot. Each
 has a `measuredOn` date in `library-measurements.json`, and nothing measures them again
 automatically. Give each date and how long ago it was. Age alone is not a finding. The owner
 decides when to re-measure.

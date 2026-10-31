@@ -52,6 +52,15 @@
   font-size: var(--shown-size, 1em);
 }
 
+/* A blank line still holds a text line box, so it is the height of one with text: a bare
+   `min-block-size` rounds differently from a text line by up to 1/64 px, and the page below
+   moves. A no-break space comes from the text's own face, where a zero-width space falls back
+   to another one whose line box is 1/64 px shorter. The empty alternative text keeps a screen
+   reader from announcing the space. */
+.shown:empty::before {
+  content: "\a0" / "";
+}
+
 .ghost {
   visibility: hidden;
   pointer-events: none;

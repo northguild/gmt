@@ -306,6 +306,26 @@
   box-shadow: none;
 }
 
+/* A deviation past the end of the axis is drawn only to the edge. This mark sits just outside
+   the cap, in the margin the cell already keeps, so it takes no room and moves nothing. */
+.clip {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 100%;
+  translate: 0 -50%;
+  margin-inline-start: 6px;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1;
+  pointer-events: none;
+
+  &[data-negative="true"] {
+    inset-inline: auto 100%;
+    margin-inline: 0 6px;
+  }
+}
+
 /* A row's text is a fixed set of one-line blocks. A line never wraps, so dragging a tolerance
    changes the words and never the row's height. */
 .rowText {
@@ -384,6 +404,7 @@
   corner-shape: bevel;
   background: color-mix(in srgb, var(--gmt-cyan) 6%, var(--gmt-surface-widget));
   color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 

@@ -749,6 +749,62 @@ export function ruleCallLines(
   });
 }
 
+/**
+ * The most lines, and the widest line, the rule-call frame prints in any year the year field
+ * accepts, so the frame holds that height and overflows the same way while the year steps. It is
+ * exact because it is the maximum of the real output: `linesIn(year)` prints the calls for that
+ * year, and this takes the largest over every year from `YEAR_MIN` to `YEAR_MAX`. The width is
+ * in characters, which is exact in the monospace face the frame uses.
+ *
+ * Printing 201 years of up to twelve rules takes tens of milliseconds, so it is a job the mount
+ * runs in slices (`step`) between the reader's keystrokes; `ruleCallExtent` runs it whole.
+ */
+export function ruleCallExtentJob(
+  linesIn: (year: number) => readonly string[],
+  firstYear: number = YEAR_MIN,
+): {
+  /** Prints years until `budgetMs` has passed; `true` once every year is done. */
+  step(budgetMs: number): boolean;
+  /** The largest so far, which is the answer once `step` says it is done. */
+  extent(): { lines: number; widest: string };
+} {
+  // The year in view first, so the likeliest answer is in before the rest.
+  const all = Array.from(
+    { length: YEAR_MAX - YEAR_MIN + 1 },
+    (_, i) => YEAR_MIN + i,
+  );
+  const years = all.includes(firstYear)
+    ? [firstYear, ...all.filter((y) => y !== firstYear)]
+    : all;
+  let next = 0;
+  let lines = 1;
+  let widest = "";
+  return {
+    step(budgetMs) {
+      const until = performance.now() + budgetMs;
+      while (next < years.length && performance.now() < until) {
+        const printed = linesIn(years[next++]!).join("\n").split("\n");
+        lines = Math.max(lines, printed.length);
+        for (const line of printed) {
+          if (line.length > widest.length) widest = line;
+        }
+      }
+      return next >= years.length;
+    },
+    extent: () => ({ lines, widest }),
+  };
+}
+
+/** `ruleCallExtentJob` run to the end. */
+export function ruleCallExtent(linesIn: (year: number) => readonly string[]): {
+  lines: number;
+  widest: string;
+} {
+  const job = ruleCallExtentJob(linesIn);
+  job.step(Number.POSITIVE_INFINITY);
+  return job.extent();
+}
+
 // ---------------------------------------------------------------------------
 // The year's plates
 // ---------------------------------------------------------------------------

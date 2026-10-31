@@ -148,6 +148,7 @@ export function leapChart(
             ? ""
             : html`<span
               class="${styles.guide}"
+              data-gate="moving"
               data-series="1"
               style="--at: ${pct(v.dot.at)}; --level: ${pct(v.dot.level)}"
             ></span>`
@@ -176,6 +177,7 @@ export function leapChart(
             ? ""
             : html`<span
               class="${styles.dot}"
+              data-gate="moving"
               data-series="1"
               style="--at: ${pct(v.dot.at)}; --level: ${pct(v.dot.level)}"
             ></span>`
@@ -185,6 +187,7 @@ export function leapChart(
           ? ""
           : html`<span
             class="${styles.pin}"
+            data-gate="moving"
             data-series="1"
             style="--at: ${pct(v.pin.at)}"
           ></span>`
@@ -194,6 +197,7 @@ export function leapChart(
           : html`<span
             class="${styles.tag}"
             id="${id(LEAP_PARTS.pinFlag)}"
+            data-gate="moving"
             data-series="1"
             data-side="${v.pinFlag.side}"
             style="--at: ${pct(v.pinFlag.at)}"

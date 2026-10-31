@@ -16,6 +16,9 @@
 .plate {
   --series: var(--gmt-series-1);
 
+  /* The live value's size; the sentinel's smaller one holds the same height. */
+  --value-live: clamp(1.25rem, 1.05rem + 1vw, 2rem);
+
   display: grid;
   gap: 0.25rem;
   align-content: start;
@@ -60,21 +63,36 @@
   grid-area: 1 / 1;
 }
 
+/* A blank value or line still holds a text line box, so it is the height of one with text:
+   a bare `min-block-size` rounds differently from a text line by up to 1/64 px. A no-break
+   space comes from the text's own face, where a zero-width space falls back to another one
+   whose line box is 1/64 px shorter. */
+.shown:empty::before {
+  content: "\a0" / "";
+}
+
 .ghost {
   visibility: hidden;
   pointer-events: none;
 }
 
+/* The value's ghosts are set in the live size in either state, so the cell is as wide as the
+   widest live value and a plate going from a date to the sentinel does not change its width. */
+.value .ghost {
+  font-size: var(--value-live);
+}
+
 .value {
   min-inline-size: 14ch;
   color: var(--gmt-ice);
-  font-size: clamp(1.25rem, 1.05rem + 1vw, 2rem);
+  font-size: var(--value-live);
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
   white-space: nowrap;
   overflow-x: auto;
 
   .plate[data-state="signal"] & {
+    min-block-size: calc(1.15 * var(--value-live));
     color: var(--gmt-signal-ink);
     font-size: clamp(1rem, 0.9rem + 0.5vw, 1.375rem);
   }
@@ -85,6 +103,7 @@
 }
 
 .line {
+  display: grid;
   min-block-size: 1lh;
   margin: 0;
   color: var(--gmt-ice);

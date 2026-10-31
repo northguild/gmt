@@ -173,13 +173,17 @@ describe("mountDepartureBoard: every preset", () => {
   it.each(DEPARTURE_PRESETS.map((p) => [p.id]))("prints %s", async (id) => {
     const w = await openPreset(id!);
     const want = EXPECTED[id!]!;
-    expect(screen.getByText(want.verdict)).toBeInTheDocument();
+    expect(
+      screen.getByRole("note", { name: "Departure verdict" }),
+    ).toHaveTextContent(want.verdict);
     if (want.naive === "") {
       expect(
-        screen.queryByText(/^Naive, with no connection time/),
+        screen.queryByRole("note", { name: "Naive departure" }),
       ).not.toBeInTheDocument();
     } else {
-      expect(screen.getByText(want.naive)).toBeInTheDocument();
+      expect(
+        screen.getByRole("note", { name: "Naive departure" }),
+      ).toHaveTextContent(want.naive);
     }
     expect(madeOutput()).toHaveTextContent(want.made);
     expect(naiveOutput()).toHaveTextContent(want.naiveOut);
@@ -247,8 +251,8 @@ describe("mountDepartureBoard: every preset", () => {
     await openPreset("ferry-list", { minimumConnection: "none" });
     expect(screen.getByText("made: 10:30, naive")).toBeInTheDocument();
     expect(
-      screen.getByText("The connection time changes nothing here."),
-    ).toBeInTheDocument();
+      screen.getByRole("note", { name: "Naive departure" }),
+    ).toHaveTextContent("The connection time changes nothing here.");
   });
 
   it("adds the wait to the rail's text, since the plate is hidden from assistive technology", async () => {
@@ -290,8 +294,8 @@ describe("mountDepartureBoard: the empty answer is not a sentinel", () => {
     await enter(w, connBox(), "");
     expect(screen.getByText("You make the 10:30.")).toBeInTheDocument();
     expect(
-      screen.getByText("The connection time changes nothing here."),
-    ).toBeInTheDocument();
+      screen.getByRole("note", { name: "Naive departure" }),
+    ).toHaveTextContent("The connection time changes nothing here.");
   });
 });
 
@@ -302,9 +306,11 @@ describe("mountDepartureBoard: NO SIGNAL", () => {
     expect(madeOutput()).toHaveTextContent("NO SIGNAL");
     expect(caution()).toHaveTextContent("The arrival has no offset");
     expect(note()).not.toBeInTheDocument();
-    expect(screen.queryByText(/^You make the/)).not.toBeInTheDocument();
     expect(
-      screen.queryByText(/^Naive, with no connection time/),
+      screen.queryByRole("note", { name: "Departure verdict" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("note", { name: "Naive departure" }),
     ).not.toBeInTheDocument();
     await expectNoAxeViolations(w.root);
   });
@@ -546,8 +552,8 @@ describe("mountDepartureBoard: chat seeds, permalinks and teardown", () => {
     await open(pill.args as Record<string, unknown>);
     expect(screen.getByText("You make the 13:00.")).toBeInTheDocument();
     expect(
-      screen.getByText("Naive, with no connection time: the 10:30."),
-    ).toBeInTheDocument();
+      screen.getByRole("note", { name: "Naive departure" }),
+    ).toHaveTextContent("Naive, with no connection time: the 10:30.");
   });
 
   it("PD2: the preset seed fills a template rendered without it", async () => {

@@ -29,6 +29,7 @@
   --gmt-ledger-label-w: 11rem;
 
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--gmt-space-2);
   min-inline-size: 0;
 }

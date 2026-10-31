@@ -96,6 +96,19 @@ const PLATE_SAMPLES: Readonly<Record<string, readonly string[]>> = {
   "hero-days": ["99"],
 };
 
+/**
+ * The lines of the days plate at their widest: the zone line as it reads, and the comparison
+ * line with the most days it can count. Both wrap in a narrow plate, and the day count is the
+ * only part that changes while a handle drags, so the lines hold the room of the widest count.
+ */
+function daysLineSamples(
+  lines: readonly string[],
+): (readonly string[] | undefined)[] {
+  return lines.map((line) =>
+    line === "" ? undefined : [line.replace(/^\d+(?= in )/, "99")],
+  );
+}
+
 function plateList(specs: readonly PlateSpec[]): Plate[] {
   return specs.map((s) => {
     const samples = PLATE_SAMPLES[s.role];
@@ -105,6 +118,9 @@ function plateList(specs: readonly PlateSpec[]): Plate[] {
       lines: s.lines,
       ...(s.series === undefined ? {} : { series: s.series }),
       ...(samples === undefined ? {} : { samples }),
+      ...(s.role === "hero-days"
+        ? { lineSamples: daysLineSamples(s.lines) }
+        : {}),
     };
   });
 }

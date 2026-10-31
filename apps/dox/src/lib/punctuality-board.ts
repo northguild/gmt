@@ -15,6 +15,7 @@
 import {
   isoToMinutes,
   niceMinutes,
+  WIDEST_AXIS_MINUTES,
   wallAsUtc,
   writtenLabel,
   writtenParts,
@@ -468,7 +469,7 @@ function axisField(text: string): number {
 /**
  * The half-length `R` of the axis, in minutes: the axis runs from `-R` to `+R`,
  * centred on the plan. `niceMinutes(1.2 × the largest of the valid
- * deviations, the tolerances in play and 5)`. Drawing only.
+ * deviations, the tolerances in play and 5)`, at most `WIDEST_AXIS_MINUTES`. Drawing only.
  */
 export function axisMinutes(state: BoardState, facts: BoardFacts): number {
   const sizes = [
@@ -481,7 +482,11 @@ export function axisMinutes(state: BoardState, facts: BoardFacts): number {
       return m === null ? 0 : Math.abs(m);
     }),
   ];
-  return niceMinutes(1.2 * Math.max(...sizes));
+  // Capped at a week, so the longest tolerance a handle can set (and so the longest the
+  // readouts must hold room for) is exact. The cap covers the deviations too: a longer typed
+  // tolerance, or an arrival more than a week off, is drawn at the edge, and a bar cut there
+  // carries an end mark so it does not read as exactly a week.
+  return Math.min(niceMinutes(1.2 * Math.max(...sizes)), WIDEST_AXIS_MINUTES);
 }
 
 interface BarSpan {

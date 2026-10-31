@@ -42,6 +42,7 @@
   corner-shape: bevel;
   background: var(--gmt-glass-tint);
   color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
   min-block-size: var(--gmt-target-min);
 
@@ -56,8 +57,8 @@
   margin: 0;
   color: var(--gmt-ice-dim);
 
-  /* Two lines, the most it takes on a narrow page; empty, it keeps the room unseen. */
-  min-block-size: 2lh;
+  /* The box holds the tallest sentence it can show, at whatever width the page has. */
+  font-variant-numeric: tabular-nums;
 
   &[hidden] {
     display: block;

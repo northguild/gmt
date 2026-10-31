@@ -49,8 +49,11 @@ Full list: `context/dox/reference/verification-and-risks.md`.
 - **Generator:** the `startOfZoned` spot-check line by line; `getDstTransitions`'s multi-line
   example; `weekOfYear.ts`'s two pages; route manifest equals the page set; the count test
   fails when a function is added without re-extraction (verify by adding one, then revert).
-- **Measured:** `pnpm --filter dox gates` on the branch: the Tab walk, axe, the media
-  preferences, contrast, growth and readouts. Quote the screen. Open a gate's log only for a
+- **Measured:** on every Dox story, run `pnpm --filter dox gates --browsers chromium,firefox,webkit --themes dark,light`
+  on the branch (it selects the pages the branch changes): the Tab walk, axe, the media
+  preferences, contrast, growth and readouts. PR CI checks changed pages in Chromium only, so
+  this is the only three-browser check before merge. Quote the screen. A browser that will not
+  launch is "not verified", never a pass. Open a gate's log only for a
   FAIL it names. A FLAKY line is rerun once with `--only <gate>` before it is reported.
   `visual:diff` and `html-diff` run through `gates --baseline <base apps/dox>`, built as the
   built.md runbook "A gate baseline" describes.

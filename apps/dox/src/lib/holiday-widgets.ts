@@ -180,6 +180,19 @@ export function attributeRules(
     rules,
     years: { from: year, to: year },
   });
+  return { full, rows: attributeRows(lib, spec, year) };
+}
+
+/**
+ * The `rows` of `attributeRules` alone, for a caller that never reads `full` (it is the
+ * costliest call, and building a calendar for it is wasted work when only the pairs are drawn).
+ */
+export function attributeRows(
+  lib: HolidayLib,
+  spec: AttributionSpec,
+  year: number,
+): RuleAttribution[] {
+  const { timeZone, weekend, rules } = spec;
   const placed: string[] = [];
   const allPairs = rules.map((rule): RulePair[] => {
     const policy = policyOf(rule);
@@ -214,14 +227,13 @@ export function attributeRules(
       if (pair.observed !== "") placed.push(pair.observed);
     }
   });
-  const rows = rules.map((rule, i): RuleAttribution => ({
+  return rules.map((rule, i): RuleAttribution => ({
     valid: lib.isValidHolidayRule(rule),
     pairs: allPairs[i]!.filter(
       ({ unshifted, observed }) =>
         yearOf(unshifted) === year || yearOf(observed) === year,
     ),
   }));
-  return { full, rows };
 }
 
 // ---------------------------------------------------------------------------

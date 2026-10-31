@@ -483,7 +483,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   holds each library's name, measured facts (tests, CI executions, Node versions, time-zone
   and locale test files, public API) and provenance (version, repository, commit, command, CI
   configuration, `measuredOn`, note). `src/data/library-comparison.ts` reads it for every dox
-  page, chart and card, and `scripts/stats.mjs` reads it for the READMEs' comparison table. A
+  page, chart and card, and `scripts/stats.mjs` reads it for the library names the READMEs' opening line must list. A
   re-measurement is an edit to that file only: `pnpm stats:sync` then writes the READMEs, and
   the site renders from it.
 - **`agent-prompt.test.ts` keeps `AGENT_PROMPT` (`src/lib/agent-prompt.ts`) equal to the
@@ -714,6 +714,7 @@ list of their own. A widget root is `data-widget="<tool slug>"` (`widget()` in
 | `frame`                                                     | The frame around a tool's drawing (a card, or the tool's own frame)                                              | `readout-still`                                                   |
 | `hero`                                                      | A hero plate row (`plates`, `instantHero`, `fuseStatus`): the result that must hold still                        | `readout-still`                                                   |
 | `drawn`                                                     | A drawn part whose marks move with the value: a lane, plot, axis or ledger row. Its box is measured; its insides are not | `readout-still`                                                   |
+| `moving`                                                    | A part whose own box moves with the value by design: the leap-second chart's date cursor (guide, dot, pin and date tag, not the band's tag). `readout-still` leaves its box and insides out of the comparison| `readout-still` (`moving`)                                        |
 | `track`                                                     | The lane a pointer drag runs along (`ledgerLane`, `gnssLane`, the punctuality tolerance track, `drawn track`)    | `readout-still` (`track`)                                         |
 | `rider`                                                     | The value chip a `<gmt-range>` draws on its thumb (`range()` writes it on every range)                           | `readout-still` (rows with `riders: true`: its left may move)     |
 | `hold`                                                      | A hold: a live wrapper (its first child) over hidden sizers, so the height is the longest text                   | `readout-still`                                                   |
@@ -3272,6 +3273,15 @@ Shared hooks come first, then the globe, then the clock-change pages.
     file one `[dry run]` issue). The sweep always runs: there is no skip rule. The workflow stays
     disabled until the owner says to enable it; Claude never enables it, and dispatches a run only
     when asked.
+  - **Run it locally.** `/dox-full-sweep` runs `pnpm --filter dox gates --all --tier weekly
+    --browsers chromium,firefox,webkit --themes dark,light` on request, warns first that it takes
+    2 to 3 hours on a laptop, prints a findings summary and files no issues. It runs the
+    weekly-tier gates only: `globe-smoke`, `html-diff` and `visual-diff` are tier `local` and
+    stay out (the diff gates also need `--baseline`). A gate with `fullBrowsers` gets every page
+    in those browsers and the sample pages in the others; a gate whose `browsers` leave out an
+    engine is dropped for it. The runner builds the Dox site first unless `--no-build` is passed.
+    On every Dox story, `dox-tester` runs the same command without `--all` on the pages the branch changes, in three
+    browsers, and quotes the result; the PR job checks those pages in Chromium only.
   - **Legs.** `pnpm --filter dox gates --all --tier weekly --browsers <b> --themes dark,light
     --retries 1 --shard i/n`, `timeout-minutes: 90`, `fail-fast: false`. `--shard` splits each
     gate's sorted page list round-robin, not the gates, so every leg of a browser runs every gate

@@ -34,6 +34,7 @@ are fixed upstream, not edited here.
 | `/plain-english` | ISO 24495-1 plain-language rules for prose a person reads, not runs |
 | `/update-readme` | Syncs the landing-page READMEs' figures, sample, namespaces and prompt |
 | `/tanstack-intent` | Keeps `packages/gmt/skills/` in sync with source changes |
+| `/dox-full-sweep` | On request: runs the weekly-tier Dox gates with `--all` in three browsers and both themes (every page in each gate's full browsers, sample pages elsewhere; local-tier gates excluded; 2 to 3 hours on a laptop), prints a findings summary, files no issues |
 | `/optimize` | Runs agent-optimizer and skill-optimizer; short summary of this branch's findings |
 | `/agent-optimizer` | Audits AGENTS.md, context/, personas and symlinks; reports token usage |
 | `/skill-optimizer` | Audits skills for size, progressive disclosure and trigger collisions |

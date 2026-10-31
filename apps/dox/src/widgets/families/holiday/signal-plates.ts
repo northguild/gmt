@@ -22,6 +22,8 @@ export interface SignalPlate {
   value: string | null;
   /** A line under the value; blank when there is no signal. */
   line: string;
+  /** The longest lines the plate can show, so its height holds when the line wraps. */
+  lineSamples?: readonly string[];
   series: 1 | 2 | 3;
   /** The widest values the plate can show. */
   samples: readonly string[];
@@ -40,7 +42,13 @@ function plate(p: SignalPlate): SafeHtml {
         (sample) =>
           html`<span class="${styles.ghost}" aria-hidden="true">${sample}</span>`,
       )}</dd
-    ><dd class="${styles.line}">${lost ? "" : p.line}</dd></div
+    ><dd class="${styles.line}"
+      ><span class="${styles.shown}">${lost ? "" : p.line}</span
+      >${(p.lineSamples ?? []).map(
+        (sample) =>
+          html`<span class="${styles.ghost}" aria-hidden="true">${sample}</span>`,
+      )}</dd
+    ></div
   >`;
 }
 

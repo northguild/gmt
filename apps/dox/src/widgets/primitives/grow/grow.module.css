@@ -9,6 +9,10 @@
   /* a flex item may shrink below its content while easing down */
   min-block-size: 0;
 
+  /* and below its widest line: a long unbroken line (a code frame) scrolls inside its own box
+     and does not widen the column, which slid controls under the fixed right sidebar */
+  min-inline-size: 0;
+
   /* the inline height is the inner box's; padding and border sit outside it */
   box-sizing: content-box;
 
@@ -31,6 +35,7 @@
   display: flex;
   flex-direction: column;
   gap: inherit;
+  min-inline-size: 0;
 }
 
 @media (forced-colors: active) {
