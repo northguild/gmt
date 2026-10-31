@@ -10,9 +10,9 @@
  * node_modules, and with it loaded `rail-keyboard.test.tsx` fails (`rejects.toThrow(text)`
  * received an empty message). Test files must not import either one.
  *
- * It does not register Testing Library's React `cleanup`: `@testing-library/react`
- * registers `afterEach(cleanup)` itself on import when `globals` is true, and
- * `@testing-library/dom` has no cleanup to register.
+ * It also runs Testing Library's React `cleanup` (`react-cleanup.ts`), which the package
+ * registers only for the first file each worker loads. Running it twice in that first file is
+ * harmless: the second run finds nothing mounted.
  */
 import type * as JestDomMatchers from "@testing-library/jest-dom/matchers";
 import { afterEach, vi } from "vitest";
@@ -41,7 +41,9 @@ if (typeof document !== "undefined") {
   configure({ asyncUtilTimeout: 5_000 });
   const { destroyLiveWidgets } = await import("./live-widgets");
   const { resetDom } = await import("./reset-dom");
-  afterEach(() => {
+  const { cleanupReact } = await import("./react-cleanup");
+  afterEach(async () => {
+    await cleanupReact();
     destroyLiveWidgets();
     resetDom();
   });

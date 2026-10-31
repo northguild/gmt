@@ -646,7 +646,11 @@ splits them into two projects.
   `vi.stubEnv`. In a jsdom file it also destroys the widgets `renderWidget` mounted and calls
   `resetDom` (`reset-dom.ts`): the body's children and attributes, the root element's
   attributes, the title, the location, both storages, cookies and a `navigator.clipboard` a test
-  defined. Testing Library's `cleanup` unmounts React roots. `document.head` is left alone.
+  defined. `document.head` is left alone. It also runs Testing Library's React `cleanup` in
+  every file that loaded the package (`react-cleanup.ts`): the package registers it only for the
+  first file each worker loads, so later files would keep their components mounted. The setup
+  never imports the package itself: its async wrapper waits on a `setTimeout(0)` that fake
+  timers never fire, which hangs a `user-event` file that renders no React.
 - **What a test must undo.** Anything else it creates: a `<style>` or `<meta>` in `head`, a
   `window` or `document` listener, a custom element, a module-level singleton. A direct
   assignment to a global (`globalThis.x = …`, `Intl.X = …`, `process.env.X = …`) is undone in a
