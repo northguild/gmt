@@ -1,7 +1,7 @@
 import { Temporal } from "../../internal/temporal";
 
 export function mockTemporalNowPlainTimeISOThrow() {
-  vi.spyOn(Temporal.Now, "plainTimeISO").mockImplementation(() => {
+  vi.spyOn(Temporal.Now, "zonedDateTimeISO").mockImplementation(() => {
     throw new Error("simulated failure");
   });
 }

@@ -21,6 +21,13 @@ export {
   isTransitionSearchCompatNeeded,
   isZIgnoreExactCompatNeeded,
 } from "./capabilities";
+export {
+  nowInstant,
+  nowPlainDateISO,
+  nowPlainDateTimeISO,
+  nowPlainTimeISO,
+  nowZonedDateTimeISO,
+} from "./clock";
 export { monthDayFrom, yearMonthFrom } from "./isoCalendarFrom";
 export { calendarFieldsOf } from "./calendarFields";
 export {

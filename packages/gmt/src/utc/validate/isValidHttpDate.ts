@@ -18,7 +18,7 @@ import { parseHttpDate } from "../parse/parseHttpDate";
  * - HTTP-date is case-sensitive and fixed-width, and its zone is the literal `GMT`: a numeric
  *   offset is false.
  * - **An rfc850-date reads the clock.** Its two-digit year is read against the current instant
- *   (`Temporal.Now.instant()`), as `parseHttpDate` describes, so the same string can change its
+ *   (`nowInstant()`), as `parseHttpDate` describes, so the same string can change its
  *   answer decades apart; if the clock cannot be read the answer is false. The other two formats
  *   never read the clock.
  * - A value that is not a string, a `String` object included, returns `false`. A `true` result

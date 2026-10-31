@@ -2334,7 +2334,7 @@ describe("fixture checks", () => {
   it.each`
     broken                             | edit
     ${"a clock that ignores the time"} | ${clockIgnored}
-    ${"a lost sub-millisecond tail"}   | ${(t: string) => t.replace("carried = BigInt(now % 1e6);", "")}
+    ${"a lost sub-millisecond tail"}   | ${(t: string) => t.replace("carried = floorTail(now);", "")}
   `("a shim with $broken is a problem", ({ edit }) => {
     const context = realm(true);
     const { shim, error } = loadShim(context, edit(source));

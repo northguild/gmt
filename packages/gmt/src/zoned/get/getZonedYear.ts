@@ -4,7 +4,7 @@ import { isoYearString } from "../../internal/isoYearString";
 /**
  * Return the current year for the specified IANA timeZone.
  *
- * - Uses Temporal.Now.zonedDateTimeISO to get the current time.
+ * - Uses nowZonedDateTimeISO() to get the current time.
  * - Validation is performed on the timezone.
  * - The year is zero-padded to 4 digits. A year outside 0000–9999 is written with a sign and six
  *   digits (`+010000`, `-000005`), as Temporal writes it at the head of a date.

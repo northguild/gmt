@@ -1,14 +1,14 @@
-import { Temporal } from "../../internal/temporal";
 import {
   resolveUnixEpochUnitOptions,
   toUnixEpoch,
 } from "../../internal/unixEpochValue";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
+import { nowInstant } from "../../internal/temporalCompat";
 
 /**
  * Return the current Unix timestamp in either seconds or milliseconds.
  *
- * - Uses Temporal.Now.instant() to get current time.
+ * - Uses nowInstant() to get current time.
  * - An explicit `undefined` is the same as omitted. Options outside the type, an unknown
  *   `epochUnit` or a non-object such as a bare `"seconds"`, return null.
  * - Options whose `epochUnit` throws when read, such as a getter or a `Proxy`, also return null.
@@ -41,7 +41,7 @@ export function getUnixNow(options?: unknown): number | null {
       return null;
     }
 
-    return toUnixEpoch(Temporal.Now.instant(), epochUnit);
+    return toUnixEpoch(nowInstant(), epochUnit);
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

@@ -1,10 +1,10 @@
-import { Temporal } from "./temporal";
 import type { GnssSystem, GnssWeek, GnssWeekCounter } from "../types/gnss";
 import { NANOSECONDS_PER_SECOND, NANOSECONDS_PER_WEEK } from "./foreignEpochs";
 import { GNSS_TIME_SCALES, scaleLabelOfUtc } from "./gnssTimeScales";
 import { isObject } from "./isObject";
 import { LEAP_SECOND_STEPS, taiOfUtc } from "./leapSeconds";
 import { parseUtcReading } from "./utcReading";
+import { nowInstant } from "./temporalCompat";
 
 /** The scale a week counter counts on, and after how many weeks it wraps. */
 export interface GnssWeekCounterSpec {
@@ -130,7 +130,7 @@ export function weeksSince(
 /**
  * The era that puts a week within half a counter period of the current one:
  * `Fnow − M/2 < F ≤ Fnow + M/2`, clamped at era 0 (a GMT rule, after the rolling two-digit-year
- * window). Reads `Temporal.Now.instant()` once; call it inside `try`, as the clock read can throw.
+ * window). Reads `nowInstant()` once; call it inside `try`, as the clock read can throw.
  *
  * @param counter the week counter
  * @param week the week number the counter shows
@@ -139,7 +139,7 @@ export function weeksSince(
 function rollingEra(counter: GnssWeekCounter, week: bigint): bigint | null {
   const { system, modulus } = GNSS_WEEK_COUNTERS[counter];
   const now = scaleLabelOfUtc(system, {
-    epochNanoseconds: Temporal.Now.instant().epochNanoseconds,
+    epochNanoseconds: nowInstant().epochNanoseconds,
     secondSixty: false,
   });
   if (now === null) {
@@ -197,7 +197,7 @@ function pivotEra(
  * The era a week number belongs to.
  *
  * - An integer from 0 is the era itself.
- * - `"rolling"` reads `Temporal.Now.instant()` once and picks the era within half a counter
+ * - `"rolling"` reads `nowInstant()` once and picks the era within half a counter
  *   period of the current week, clamped at era 0. Call it inside `try`: the clock read can throw.
  * - `{ notBefore }` reads `notBefore` once and picks the earliest occurrence at or after it, so a
  *   pivot before the counter's epoch gives era 0; other keys are ignored. It never reads the clock.

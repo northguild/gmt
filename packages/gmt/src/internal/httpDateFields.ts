@@ -3,6 +3,7 @@ import {
   ENGLISH_MONTH_NAMES,
   ENGLISH_WEEKDAY_NAMES,
 } from "./englishCalendarNames";
+import { nowInstant } from "./temporalCompat";
 
 /** Date-time fields read from an RFC 9110 HTTP-date, before calendar validation. */
 export interface HttpDateFields {
@@ -55,7 +56,7 @@ function resolveTwoDigitYear(
   twoDigits: number,
   fields: Omit<HttpDateFields, "dayOfWeek" | "year">,
 ): number {
-  const limit = Temporal.Now.instant()
+  const limit = nowInstant()
     .toZonedDateTimeISO("UTC")
     .add({ years: 50 })
     .toPlainDateTime();
@@ -73,7 +74,7 @@ function resolveTwoDigitYear(
  *
  * - Shape checks only: the calendar date and the day of week are left to the
  *   caller (`Temporal.PlainDateTime.from` with `overflow: "reject"`).
- * - An `rfc850-date` reads the clock (`Temporal.Now.instant`) to place its
+ * - An `rfc850-date` reads the clock (`nowInstant()`) to place its
  *   two-digit year; that call throws if the clock cannot be read.
  *
  * @param value candidate obsolete HTTP-date

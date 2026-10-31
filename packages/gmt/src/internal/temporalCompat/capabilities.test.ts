@@ -380,7 +380,7 @@ describe("isCalendarArithmeticCompatNeeded", () => {
 
 describe("repro split", () => {
   // DefectId (D1-D8, D10-D20) is the type the shipped probes can ask about; the canary-only
-  // groups are ZonedDefectId (zoned.*) and BoundedWorkDefectId (D9).
+  // groups are ZonedDefectId (zoned.*) and BoundedWorkDefectId (D9, D21).
   const probeDefects = new Set([
     "D1",
     "D2",
@@ -412,7 +412,7 @@ describe("repro split", () => {
     expect(expected.every((repro) => probes.has(repro))).toBe(true);
   });
 
-  it("holds no zoned.* or D9 repro in probeRepros", () => {
+  it("holds no zoned.*, D9 or D21 repro in probeRepros", () => {
     const canaryOnly = probeRepros.filter(
       (repro) => !probeDefects.has(repro.defect),
     );

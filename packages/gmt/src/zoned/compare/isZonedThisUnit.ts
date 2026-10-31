@@ -6,6 +6,7 @@ import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveLocale } from "../../internal/resolveLocale";
+import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Return true when `value`'s local calendar day falls in the same `unit` as
@@ -59,7 +60,7 @@ export function isZonedThisUnit(
 
     try {
       const zonedDateTime = zonedDateTimeFrom(value);
-      const today = Temporal.Now.zonedDateTimeISO(zonedDateTime.timeZoneId)
+      const today = nowZonedDateTimeISO(zonedDateTime.timeZoneId)
         .toPlainDate()
         .toString();
       const valueDate = zonedDateTime.toPlainDate().toString();

@@ -3,7 +3,7 @@ import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
 /**
  * Return the current week of year for the specified IANA timeZone.
  *
- * - Uses Temporal.Now.zonedDateTimeISO to get the current time.
+ * - Uses nowZonedDateTimeISO() to get the current time.
  * - Uses Temporal.PlainDate.weekOfYear for ISO week number.
  * - Validation is performed on the timezone.
  *

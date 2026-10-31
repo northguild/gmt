@@ -6,6 +6,7 @@ import { isValidUtc } from "../../utc/validate";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
 import { isValidZonedDateTime } from "../validate";
 import { isObject } from "../../internal/isObject";
+import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Options for `formatRelativeZoned`: how the phrase is worded, the unit it counts in, how the
@@ -130,7 +131,7 @@ function resolveZonedReference(
 ): Temporal.ZonedDateTime {
   if (reference === undefined) {
     // "now" in value's own zone — keeps the calendar context consistent.
-    return Temporal.Now.zonedDateTimeISO(timeZoneId);
+    return nowZonedDateTimeISO(timeZoneId);
   }
   if (typeof reference === "string") {
     // UTC string → place into value's zone for a consistent calendar anchor.

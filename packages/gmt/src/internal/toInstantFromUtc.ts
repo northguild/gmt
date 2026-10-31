@@ -1,4 +1,5 @@
 import { Temporal } from "./temporal";
+import { nowInstant } from "./temporalCompat";
 
 // Convert a UTC ISO datetime string to a Temporal.Instant.
 // Returns null on failure (caller should have already validated with isValidUtc).
@@ -24,7 +25,7 @@ export function toReferenceInstantFromUtc(
 ): Temporal.Instant | null {
   if (reference) return toInstantFromUtc(reference);
   try {
-    return Temporal.Now.instant();
+    return nowInstant();
   } catch {
     return null;
   }

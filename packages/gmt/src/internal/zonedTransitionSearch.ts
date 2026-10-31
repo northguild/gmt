@@ -1,4 +1,3 @@
-import { Temporal } from "./temporal";
 import {
   MAX_EPOCH_NANOSECONDS,
   MIN_EPOCH_NANOSECONDS,
@@ -10,6 +9,7 @@ import {
   offsetAt,
   transitionBetween,
 } from "./zonedWallClock";
+import { nowInstant } from "./temporalCompat";
 
 /*
  * ---------------------------------------------------------------------------------------------
@@ -236,7 +236,7 @@ function spanAround(
 }
 
 function currentEpochNanoseconds(): bigint {
-  return Temporal.Now.instant().epochNanoseconds;
+  return nowInstant().epochNanoseconds;
 }
 
 /**
