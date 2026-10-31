@@ -3,7 +3,7 @@
 **Scope:** Let the core string validators and the two EPCIS validators (27 functions) take a value
 of any type. A value typed `unknown` narrows to `string` when the result is `true`. Types, JSDoc
 and tests change. One result changes: `isValidTimeZone` now returns `false` for a
-`Temporal.ZonedDateTime` whose `toString` gives a zone id. A `patch`. Phase 2 drops `null` from
+`Temporal.ZonedDateTime` whose `toString` gives a zone id. A `minor` (D3). Phase 2 drops `null` from
 the return type of every call that cannot fail. Phase 3 splits the gmt and Dox test suites into an
 isolated and a shared Vitest project. A clock workaround (D21) keeps the clock readers from
 reading a millisecond early.
@@ -115,14 +115,15 @@ checklist say when a file is shared and how to undo global state.
 
 ## Decisions
 
-- **D1.** Scope is the 11 validators in the original issue, 11 more core single-string validators
-  with the same gap, and the 3 duration-unit predicates.
-- **D1b.** The 2 EPCIS validators are in, the only string-only validators outside the core
-  namespaces. The total is 27.
+- **D1.** Scope is 27 functions: the 11 validators in the original issue, 11 more core
+  single-string validators, the 3 duration-unit predicates and the 2 EPCIS validators.
 - **D2.** One Dox page per overload set. `## Signature` lists every overload; the parameter table
   and the playground come from the first (`string`) overload.
-- **D3.** The changeset is `patch`: the types now say what the JSDoc and the runtime already did,
-  and the `isValidTimeZone` change is a bug fix.
+- **D3.** One changeset covers every phase and the clock workaround. It is `minor` with a
+  **Breaking changes** section, as the changeset rule asks for a changed signature. Two type-level
+  uses stop compiling: `Parameters<typeof fn>` reads the last overload's `unknown` (all 29
+  functions), and an argument typed `any` now narrows to `string` in the 24 string validators. The
+  `isValidTimeZone` change is a bug fix.
 - **D4.** Three overloads, not two: only an argument typed `unknown` narrows. A pair with only a
   `string` and an `unknown` overload typed an invalid `string | null` as `null` on a `false`
   result. The middle overload takes `{} | null | undefined | void`, so `string | void` gets a plain
@@ -131,7 +132,6 @@ checklist say when a file is shared and how to undo global state.
   `unknown` overload second that keeps `| null`.
 - **D6.** Phase 2 covers `getUnixNow` and `x12TimeCodeZone`. `getDayOfWeek` and `getWeekOfYear`
   keep `null`, because the host may have no usable time zone.
-- **D7.** One `patch` changeset covers every phase and the clock workaround.
 - **D8.** The 24 string validators share one overload shape: `string` first, `{} | null |
   undefined | void` second, the `unknown` predicate last, then a hidden `unknown` implementation.
   The JSDoc sits on the first overload only. The three duration-unit predicates take one

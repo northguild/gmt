@@ -252,7 +252,7 @@ export function shimProblems(shim) {
     const min = lastInstant([-8.64e15 + 1, -8.64e15]);
     if (min !== "-8639999999999999999999") {
       problems.push(
-        `Now.instant() at the first millisecond gave ${min}, expected -8639999999999999999999 (a negative sub-millisecond tail)`,
+        `Now.instant() at the first millisecond gave ${min}, expected -8639999999999999999999 (the previous reading's floored tail of 1 ns, inside the range)`,
       );
     }
   };
