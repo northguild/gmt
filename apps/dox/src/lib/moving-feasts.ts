@@ -361,6 +361,12 @@ interface EasterPlates {
   side: string;
 }
 
+/** The two sentences the Apart plate's line can say, which side the Julian date falls on. */
+export const APART_SIDES = [
+  "Julian after Gregorian",
+  "Julian before Gregorian",
+] as const;
+
 /** The two Easter Sundays and the distance between them, all from the library.
  *  `""` from the library becomes `null`: NO SIGNAL. */
 export function easterPlates(lib: FeastsLib, year: number): EasterPlates {
@@ -380,7 +386,7 @@ export function easterPlates(lib: FeastsLib, year: number): EasterPlates {
     gregorian,
     julian,
     apart: `${count} ${plural(count, "day")}`,
-    side: days > 0 ? "Julian after Gregorian" : "Julian before Gregorian",
+    side: days > 0 ? APART_SIDES[0] : APART_SIDES[1],
   };
 }
 
@@ -708,6 +714,46 @@ export function nthNoteSizers(): string[] {
     }
   }
   return [...texts].sort((a, b) => b.length - a.length).slice(0, 4);
+}
+
+/** The `count` longest of `words`, each word once. */
+function longestWords(words: readonly string[], count: number): string[] {
+  return [...new Set(words)]
+    .sort((a, b) => b.length - a.length)
+    .slice(0, count);
+}
+
+/**
+ * The lines under the Date plate that can be the widest, for the room the plate
+ * reserves. A line is an ordinal word, a weekday, a month and the year as typed,
+ * and each part sets its own width, so the samples are every combination of the
+ * three longest of each word with the year at both ends of the library's range,
+ * written with the sign the field takes ("-271821", "+275760"). Letter count
+ * ranks the words only roughly (an "m" is wider than an "i"), so three of each are
+ * kept and the widest line is among them in any face.
+ */
+export function nthLineSamples(): string[] {
+  const ordinals = longestWords(ORDINAL_VALUES.map(ordinalWord), 3);
+  const weekdays = longestWords(
+    Array.from({ length: 7 }, (_, d) => weekdayLong(d + 1)),
+    3,
+  );
+  const months = longestWords(
+    Array.from({ length: 12 }, (_, m) => monthName(m + 1)),
+    3,
+  );
+  const years = [String(YEAR_LOWEST), `+${YEAR_HIGHEST}`];
+  const texts: string[] = [];
+  for (const year of years) {
+    for (const ordinal of ordinals) {
+      for (const weekday of weekdays) {
+        for (const month of months) {
+          texts.push(`${ordinal} ${weekday} of ${month} ${year}`);
+        }
+      }
+    }
+  }
+  return texts;
 }
 
 /** The line under the Date plate: what was asked, from the inputs. */

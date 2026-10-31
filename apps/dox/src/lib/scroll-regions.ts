@@ -22,7 +22,9 @@
  *
  * Plain DOM, no framework. The state is re-read when the box or its content changes size. A box
  * a widget renders after the mount, or renders again, is picked up by a `MutationObserver` on
- * the root, so the order of the mount scripts does not matter.
+ * the root, so the order of the mount scripts does not matter. A box is read a second time
+ * after the next frame, and when a `<details>` around it opens, because the first read of a box
+ * the browser has not laid out yet can say it fits.
  */
 
 const CANDIDATES = "pre, table";
@@ -95,6 +97,20 @@ function resizeObserver(): ResizeObserver | null {
   return resize;
 }
 
+/**
+ * Reads the box now, and again after the next frame. A box inserted inside a closed
+ * `<details>` (or any subtree the browser has not laid out yet) can report a content width of 0
+ * on its first read, and the box does not resize afterwards, so no observer would report it.
+ * The second read is after the browser has laid the box out.
+ */
+function read(box: HTMLElement): void {
+  update(box);
+  if (typeof requestAnimationFrame === "undefined") return;
+  requestAnimationFrame(() => {
+    if (box.isConnected) update(box);
+  });
+}
+
 function isWired(box: HTMLElement): boolean {
   return "scrollRegionWired" in box.dataset;
 }
@@ -106,7 +122,7 @@ function wire(box: HTMLElement): void {
   observer?.observe(box);
   // Content that grows without the box resizing (a table body filled after mount).
   for (const child of Array.from(box.children)) observer?.observe(child);
-  update(box);
+  read(box);
 }
 
 function unwire(box: HTMLElement): void {
@@ -137,11 +153,13 @@ function onMutations(records: MutationRecord[]): void {
       if (parentBox) resize?.observe(node);
       for (const box of boxesIn(node)) wire(box);
     }
-    if (parentBox) update(parentBox);
+    if (parentBox) read(parentBox);
   }
 }
 
 let mutations: MutationObserver | undefined;
+/** The roots that already listen for `toggle`. */
+const toggled = new WeakSet<object>();
 
 /**
  * Wires every scrolling code block and table under `root`, now and as widgets add them. Safe to
@@ -152,4 +170,17 @@ export function mountScrollRegions(root: ParentNode = document): void {
   if (typeof MutationObserver === "undefined") return;
   mutations ??= new MutationObserver(onMutations);
   mutations.observe(root, { childList: true, subtree: true });
+  // Opening a `<details>` lays out the boxes inside it, which may now overflow. The event does
+  // not bubble, so it is caught on the way down.
+  if (root instanceof Node && !toggled.has(root)) {
+    toggled.add(root);
+    root.addEventListener(
+      "toggle",
+      (event) => {
+        if (!(event.target instanceof Element)) return;
+        for (const box of boxesIn(event.target)) if (isWired(box)) read(box);
+      },
+      true,
+    );
+  }
 }

@@ -251,6 +251,16 @@ describe("mountPunctualityBoard: the late tolerance handle", () => {
     expect(lateBox()).toHaveValue(minutesToIso(31));
   });
 
+  it("draws a tolerance past a week at the edge of the axis, and keeps what was typed", async () => {
+    const w = await openPreset("fifteen-minute");
+    await enter(w, lateBox(), "PT5000H");
+    const slider = lateSlider();
+    expect(slider).toHaveAttribute("aria-valuemax", "10080");
+    expect(slider).toHaveValue(10080);
+    expect(lateBox()).toHaveValue("PT5000H");
+    expect(screen.getByText(/^6 of 6 on time/)).toBeInTheDocument();
+  });
+
   it("PageUp and PageDown move ten steps", async () => {
     const w = await openPreset("fifteen-minute");
     await press(w, lateSlider(), "{PageUp}");

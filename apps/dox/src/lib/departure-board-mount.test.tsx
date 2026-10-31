@@ -173,7 +173,9 @@ describe("mountDepartureBoard: every preset", () => {
   it.each(DEPARTURE_PRESETS.map((p) => [p.id]))("prints %s", async (id) => {
     const w = await openPreset(id!);
     const want = EXPECTED[id!]!;
-    expect(screen.getByText(want.verdict)).toBeInTheDocument();
+    expect(
+      screen.getByRole("note", { name: "Departure verdict" }),
+    ).toHaveTextContent(want.verdict);
     if (want.naive === "") {
       expect(
         screen.queryByText(/^Naive, with no connection time/),
@@ -302,7 +304,9 @@ describe("mountDepartureBoard: NO SIGNAL", () => {
     expect(madeOutput()).toHaveTextContent("NO SIGNAL");
     expect(caution()).toHaveTextContent("The arrival has no offset");
     expect(note()).not.toBeInTheDocument();
-    expect(screen.queryByText(/^You make the/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("note", { name: "Departure verdict" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByText(/^Naive, with no connection time/),
     ).not.toBeInTheDocument();

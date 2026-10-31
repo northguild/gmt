@@ -73,6 +73,7 @@ import {
   isSeeded,
   matchPreset,
   nthModel,
+  nthLineSamples,
   nthNoteSizers,
   nthSentence,
   permalinkOf,
@@ -86,6 +87,7 @@ import {
   yearNoteSizers,
   yearNumber,
   yearTaken,
+  APART_SIDES,
   HINT_NO_OFFSET,
   HINT_NO_YEAR,
   HINT_TOO_MANY,
@@ -114,6 +116,7 @@ const CHIP_HINT =
 
 /** The widest a date and a distance read, so the plates keep their width between years. */
 const DATE_SAMPLES = ["-271821-04-19", "+275760-04-19"] as const;
+const NTH_LINE_SAMPLES = nthLineSamples();
 const APART_SAMPLES = ["88 days", "same day"] as const;
 
 // ---------------------------------------------------------------------------
@@ -175,6 +178,7 @@ function easterPlatesOf(plates: ReturnType<typeof easterPlates>): SafeHtml {
       caption: "Apart",
       value: plates.apart,
       line: plates.side,
+      lineSamples: APART_SIDES,
       series: 3,
       samples: APART_SAMPLES,
     },
@@ -184,7 +188,14 @@ function easterPlatesOf(plates: ReturnType<typeof easterPlates>): SafeHtml {
 
 function nthPlateOf(date: string | null, line: string): SafeHtml {
   return signalPlates([
-    { caption: "Date", value: date, line, series: 1, samples: DATE_SAMPLES },
+    {
+      caption: "Date",
+      value: date,
+      line,
+      lineSamples: NTH_LINE_SAMPLES,
+      series: 1,
+      samples: DATE_SAMPLES,
+    },
   ]);
 }
 

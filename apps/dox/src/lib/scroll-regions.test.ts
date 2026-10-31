@@ -167,6 +167,51 @@ describe("mountScrollRegions", () => {
     ).toBeInTheDocument();
   });
 
+  it("labels a box whose first read said it fits, once the browser has laid it out", async () => {
+    const widget = el("section", { "aria-label": "Widget" });
+    document.body.replaceChildren(widget);
+    mountScrollRegions(document);
+
+    // A box in a closed `<details>` reports a content width of 0 until it is laid out.
+    const pre = codeBlock("a much longer line");
+    let reads = 0;
+    Object.defineProperties(pre, {
+      scrollWidth: { configurable: true, get: () => (reads++ === 0 ? 0 : 300) },
+      clientWidth: { configurable: true, get: () => 100 },
+      scrollHeight: { configurable: true, get: () => 50 },
+      clientHeight: { configurable: true, get: () => 100 },
+    });
+    widget.replaceChildren(pre);
+    await settle();
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    expect(
+      screen.getByRole("region", { name: "Code, scrolls sideways" }),
+    ).toBeInTheDocument();
+  });
+
+  it("reads the boxes inside a details when it opens, with no frame to fall back on", async () => {
+    // The second read after a frame would find the new size too, so the frame never comes:
+    // only opening the details can have labelled the box.
+    const frame = globalThis.requestAnimationFrame;
+    vi.stubGlobal("requestAnimationFrame", () => 0);
+    try {
+      const pre = codeBlock("a much longer line");
+      const details = el("details", {}, el("summary", {}, "Calls"), pre);
+      document.body.replaceChildren(details);
+      size(pre, 100);
+      mountScrollRegions(document);
+      expect(screen.queryByRole("region")).not.toBeInTheDocument();
+      size(pre, 300);
+      await userEvent.click(screen.getByText("Calls"));
+      await settle();
+      expect(
+        screen.getByRole("region", { name: "Code, scrolls sideways" }),
+      ).toBeInTheDocument();
+    } finally {
+      vi.stubGlobal("requestAnimationFrame", frame);
+    }
+  });
+
   it("is safe to call twice", () => {
     mount(codeBlock(), 300);
     mountScrollRegions(document);

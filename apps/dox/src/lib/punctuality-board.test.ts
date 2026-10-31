@@ -505,6 +505,11 @@ describe("axisMinutes", () => {
     const state = stateOf("fifteen-minute", { late: "PT1H30M" });
     expect(axisMinutes(state, collectBoardFacts(state, lib))).toBe(120);
   });
+
+  it("stops at a week, however long the tolerance a field holds", () => {
+    const state = stateOf("fifteen-minute", { late: "PT5000H" });
+    expect(axisMinutes(state, collectBoardFacts(state, lib))).toBe(10080);
+  });
 });
 
 describe("barLayout", () => {

@@ -198,17 +198,17 @@ describe("mountEtaDrift: every preset", () => {
   it("says whether the drift exceeds the band, in words under the plot", async () => {
     await openPreset("vessel-slide");
     expect(
-      screen.getByText(
-        "±8 h around the first estimate · exceeds the tolerance: true",
-      ),
-    ).toBeInTheDocument();
+      screen.getByRole("note", { name: "Tolerance band" }),
+    ).toHaveTextContent(
+      "±8 h around the first estimate · exceeds the tolerance: true",
+    );
   });
 
   it("says nothing about a band without a tolerance", async () => {
     await openPreset("est-after-act");
     expect(
-      screen.queryByText(/around the first estimate/),
-    ).not.toBeInTheDocument();
+      screen.getByRole("note", { name: "Tolerance band" }),
+    ).toBeEmptyDOMElement();
   });
 
   it("labels the drift with its sign", async () => {

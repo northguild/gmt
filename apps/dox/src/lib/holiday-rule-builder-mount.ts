@@ -84,6 +84,7 @@ import {
   readArgs,
   rowResult,
   rulesOf,
+  ruleCallExtentJob,
   ruleCallLines,
   weekendNames,
   yearOf,
@@ -94,6 +95,7 @@ import {
   type RuleKind,
 } from "./holiday-rule-builder";
 import {
+  attributeRows,
   attributeRules,
   marksFromAttribution,
   monthName,
@@ -114,6 +116,9 @@ export type { HolidayRuleBuilderArgs } from "./holiday-rule-builder";
 export const FOLD_WIDTH = 480;
 
 const WIDGET_NAME = "holiday-rule-builder";
+
+/** How long one slice of the rule-call extent job may run before the page gets a turn. */
+const RULE_CALL_SLICE_MS = 4;
 
 const HINT_ORDER =
   "Swap the two rows: the order decides which day each holiday lands on.";
@@ -562,12 +567,20 @@ const isFieldKey = (key: string): key is FieldKey =>
   (FIELD_KEYS as readonly string[]).includes(key);
 
 /** The call as the reader would write it, one highlighted-free line. */
-function callFrame(label: string, copyLabel: string, text: string): SafeHtml {
+function callFrame(
+  label: string,
+  copyLabel: string,
+  text: string,
+  reserve?: { lines: number; widest: string },
+): SafeHtml {
   return codeFrame({
     label,
     copyLabel,
     copyText: text,
     code: html`${text}`,
+    ...(reserve === undefined
+      ? {}
+      : { minLines: reserve.lines, sizer: reserve.widest }),
     ...(label === "buildBusinessCalendar call" ? { gate: "codeframe" } : {}),
   });
 }
@@ -615,6 +628,19 @@ function setupWidget(
   let state: BuilderState = presetState(BUILDER_PRESETS[0]!);
   let folded = false;
   let lastYear = yearOf(state) ?? BUILDER_PRESETS[0]!.year;
+  /** The lines the rule-call frame holds, kept for the draws that have no year. */
+  let ruleCallReserve: ReturnType<typeof ruleCallExtent> = {
+    lines: 1,
+    widest: "",
+  };
+  let ruleCallReserveKey = "";
+  /** A smaller answer found while the reader is in the widget; it waits for them to leave. */
+  let ruleCallPending: typeof ruleCallReserve | null = null;
+  let ruleCallText = "";
+  let ruleCallJob: ReturnType<typeof setTimeout> | undefined;
+  signal.addEventListener("abort", () => clearTimeout(ruleCallJob), {
+    once: true,
+  });
 
   const narrow = (): boolean => {
     const width = rulesEl.clientWidth;
@@ -730,7 +756,11 @@ function setupWidget(
       }),
     );
     setHtml(el("output"), outputOf("sentinel", NO_SIGNAL_TEXT));
-    setHtml(el("rule-calls"), callFrame("Rule calls", "Copy rule calls", ""));
+    ruleCallText = "";
+    setHtml(
+      el("rule-calls"),
+      callFrame("Rule calls", "Copy rule calls", "", ruleCallReserve),
+    );
     setToolLink(ledgerLink, null);
     setHtml(
       el("hint"),
@@ -799,6 +829,90 @@ function setupWidget(
     );
   }
 
+  /**
+   * Finds how tall and wide the rule calls print in any year, a few milliseconds at a time
+   * between keystrokes, and redraws the frame once when the answer is larger than the room
+   * it has. It starts again only when the rules, the zone or the weekend change.
+   */
+  function reserveRuleCalls(
+    rules: ReturnType<typeof rulesOf>,
+    year: number,
+  ): void {
+    const key = JSON.stringify([rules, state.zone, state.weekend]);
+    if (key === ruleCallReserveKey) return;
+    ruleCallReserveKey = key;
+    ruleCallPending = null;
+    clearTimeout(ruleCallJob);
+    const spec = { timeZone: state.zone, weekend: state.weekend, rules };
+    const job = ruleCallExtentJob(
+      (y) =>
+        ruleCallLines(
+          rules,
+          attributeRows(lib, spec, y).map((r) => r.pairs),
+          y,
+        ),
+      year,
+    );
+    const slice = (): void => {
+      if (signal.aborted) return;
+      const done = job.step(RULE_CALL_SLICE_MS);
+      const found = job.extent();
+      // Until the last year is in, the room only grows; the end is the exact answer.
+      const next = done
+        ? found
+        : {
+            lines: Math.max(found.lines, ruleCallReserve.lines),
+            widest:
+              found.widest.length > ruleCallReserve.widest.length
+                ? found.widest
+                : ruleCallReserve.widest,
+          };
+      // A smaller answer would pull the page up under a reader who is dragging or typing, so it
+      // waits until they leave the widget.
+      if (
+        next.lines < ruleCallReserve.lines &&
+        widgetEl.contains(document.activeElement)
+      ) {
+        ruleCallPending = done ? next : null;
+      } else {
+        ruleCallPending = null;
+        const changed =
+          next.lines !== ruleCallReserve.lines ||
+          next.widest !== ruleCallReserve.widest;
+        ruleCallReserve = next;
+        if (changed) redrawRuleCalls();
+      }
+      if (!done) ruleCallJob = setTimeout(slice, 0);
+    };
+    ruleCallJob = setTimeout(slice, 0);
+  }
+
+  widgetEl.addEventListener(
+    "focusout",
+    (event) => {
+      if (
+        ruleCallPending === null ||
+        widgetEl.contains(event.relatedTarget as Node | null)
+      ) {
+        return;
+      }
+      ruleCallReserve = ruleCallPending;
+      ruleCallPending = null;
+      redrawRuleCalls();
+    },
+    { signal },
+  );
+
+  /** Draws the rule-call frame again with the room it now reserves, unless a reader is in it. */
+  function redrawRuleCalls(): void {
+    const frame = el("rule-calls");
+    if (frame.contains(document.activeElement)) return;
+    setHtml(
+      frame,
+      callFrame("Rule calls", "Copy rule calls", ruleCallText, ruleCallReserve),
+    );
+  }
+
   function drawCall(
     rules: ReturnType<typeof rulesOf>,
     attribution: Attribution,
@@ -833,9 +947,11 @@ function setupWidget(
       attribution.rows.map((r) => r.pairs),
       year,
     ).join("\n");
+    reserveRuleCalls(rules, year);
+    ruleCallText = lines;
     setHtml(
       el("rule-calls"),
-      callFrame("Rule calls", "Copy rule calls", lines),
+      callFrame("Rule calls", "Copy rule calls", lines, ruleCallReserve),
     );
     const handoff = ledgerHandoff(full, state.zone, state.weekend);
     setToolLink(ledgerLink, handoff.href);

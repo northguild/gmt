@@ -41,9 +41,22 @@
 
 .code {
   display: block;
-  min-block-size: calc(var(--min-lines, 1) * 1lh);
+
+  /* Each line box of text rounds to 1/64 px and `1lh` does not, so N lines can come out a few
+     hundredths above or below N x 1lh. A reserved frame adds a pixel (`--min-extra`) so every
+     fill is exactly the minimum and the box stays the same height for all of them. */
+  min-block-size: calc(var(--min-lines, 1) * 1lh + var(--min-extra, 0px));
   font-family: var(--sl-font-mono, var(--gmt-font-mono));
   font-variant-ligatures: none;
+}
+
+/* Takes the width of the widest line and no height, and paints nothing. */
+.sizer {
+  display: block;
+  inline-size: max-content;
+  block-size: 0;
+  overflow: hidden;
+  visibility: hidden;
 }
 
 @container (inline-size < 20rem) {

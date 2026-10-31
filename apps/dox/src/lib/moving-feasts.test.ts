@@ -19,7 +19,9 @@ import {
   gridMonths,
   matchPreset,
   nthModel,
+  nthLineSamples,
   nthNoteSizers,
+  nthSentence,
   ORDINAL_VALUES,
   permalinkOf,
   presetState,
@@ -30,6 +32,7 @@ import {
   yearNote,
   yearOfDate,
   yearTaken,
+  APART_SIDES,
 } from "./moving-feasts";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";
 
@@ -71,6 +74,13 @@ describe("the Easter plates", () => {
     expect(plates.julian).toBe("2024-05-05");
     expect(plates.apart).toBe("35 days");
     expect(plates.side).toBe("Julian after Gregorian");
+  });
+
+  it("every year says its side with a sentence the plate reserves room for", () => {
+    for (let year = 1583; year <= 2200; year += 1) {
+      const { side } = easterPlates(lib, year);
+      if (side !== "") expect(APART_SIDES).toContain(side);
+    }
   });
 
   it("2025: the same day, and the library says so", () => {
@@ -368,6 +378,31 @@ describe("the printed calls' sizer", () => {
         );
         for (const line of lines) {
           expect(line.length, line).toBeLessThanOrEqual(widest);
+        }
+      }
+    }
+  });
+});
+
+describe("the Date plate's line samples", () => {
+  it("carry the year at both ends of the library's range, as the field writes it", () => {
+    const samples = nthLineSamples();
+    expect(samples.some((t) => t.endsWith(" -271821"))).toBe(true);
+    expect(samples.some((t) => t.endsWith(" +275760"))).toBe(true);
+  });
+
+  it("hold the longest word of every part, so no sentence is wider than a sample part by part", () => {
+    const samples = nthLineSamples();
+    const parts = (t: string) => /^(.+) (\S+) of (\S+) (\S+)$/.exec(t)!;
+    const longest = (pick: number) =>
+      Math.max(...samples.map((t) => parts(t)[pick]!.length));
+    for (const ordinal of ORDINAL_VALUES) {
+      for (let weekday = 1; weekday <= 7; weekday++) {
+        for (let month = 1; month <= 12; month++) {
+          const m = parts(nthSentence("-271821", month, weekday, ordinal));
+          expect(m[1]!.length).toBeLessThanOrEqual(longest(1));
+          expect(m[2]!.length).toBeLessThanOrEqual(longest(2));
+          expect(m[3]!.length).toBeLessThanOrEqual(longest(3));
         }
       }
     }

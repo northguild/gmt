@@ -384,6 +384,7 @@
   corner-shape: bevel;
   background: color-mix(in srgb, var(--gmt-cyan) 6%, var(--gmt-surface-widget));
   color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 

@@ -41,6 +41,7 @@ import {
   widget,
   type SafeHtml,
 } from "~/widgets/builders";
+import { hold } from "~/widgets/families/edi/edi-hold";
 import { callOutput } from "~/widgets/families/gnss/call-output";
 import {
   setSelectValue,
@@ -84,9 +85,11 @@ import {
   railDepartures,
   railTickStep,
   railWindow,
+  shapeWithDigit,
   thresholdOf,
   timetableOf,
   visibleCount,
+  widestMadeShape,
   type DepartureBoardArgs,
   type DepartureFacts,
   type DepartureState,
@@ -126,6 +129,23 @@ const ROW_CONN = 92;
 
 /** The widest readings the plate shows, so it keeps its width while the handle drags. */
 const HERO_SAMPLES = ["00:00", "none"];
+
+/** The verdict at its widest for this timetable: the widest time it can write. */
+const madeGhostText = (s: DepartureState): string => {
+  const shape = widestMadeShape(s);
+  return shape === null ? "" : `You make the ${shape}.`;
+};
+
+/** The plate's value samples: the widest time in every digit, and "none". */
+const heroSamples = (s: DepartureState): string[] => {
+  const shape = widestMadeShape(s);
+  return [
+    ...(shape === null
+      ? HERO_SAMPLES.slice(0, 1)
+      : Array.from({ length: 10 }, (_, d) => shapeWithDigit(shape, d))),
+    "none",
+  ];
+};
 const HERO_LINE_SAMPLES: readonly (readonly string[])[] = [
   ["wait 23 h 59 min after arrival", "no departure left"],
   ["PT23H59M"],
@@ -259,7 +279,20 @@ export function renderDepartureBoardTemplate(
   });
   const read = section(
     { id: id("read"), heading: "2. The departure you can make", level: 4 },
-    html`${grow(html`<p class="${styles.verdict}" id="${id("verdict")}" hidden></p>`)}
+    html`${grow(
+      html`<div class="${styles.verdict}" id="${id("verdict-box")}" hidden>${hold(
+        {
+          id: id("verdict"),
+          role: "note",
+          label: "Departure verdict",
+          content: html``,
+          ghosts: [
+            html`<span id="${id("verdict-ghost-made")}">${madeGhostText(s)}</span>`,
+            html`No departure you can make.`,
+          ],
+        },
+      )}</div>`,
+    )}
       <div role="status" aria-live="polite" aria-label="Departure status" id="${id("live")}">${srOnly("")}</div>
       ${grow(html`<p class="${styles.naive}" id="${id("naive-line")}" hidden></p>`)}
       ${grow(
@@ -644,7 +677,7 @@ function setupWidget(
             caption: "departure made",
             value: "none",
             reserveIcon: true,
-            samples: HERO_SAMPLES,
+            samples: heroSamples(s),
             lines: ["no departure left", ""],
             lineSamples: HERO_LINE_SAMPLES,
             series: 1,
@@ -665,7 +698,7 @@ function setupWidget(
             ? {}
             : { icon: raw(transportIcon(mode, { size: 24 })) }),
           reserveIcon: true,
-          samples: HERO_SAMPLES,
+          samples: heroSamples(s),
           lines:
             wait === ""
               ? ["", ""]
@@ -707,7 +740,8 @@ function setupWidget(
           : "";
     const verdict = el("verdict");
     verdict.textContent = verdictText;
-    verdict.hidden = verdictText === "";
+    el("verdict-box").hidden = verdictText === "";
+    el("verdict-ghost-made").textContent = madeGhostText(s);
     liveText = verdictText;
 
     let line = "";

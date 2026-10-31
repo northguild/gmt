@@ -35,6 +35,7 @@ import {
   widget,
   type SafeHtml,
 } from "~/widgets/builders";
+import { hold } from "~/widgets/families/edi/edi-hold";
 import { callOutput } from "~/widgets/families/gnss/call-output";
 import {
   punctHero,
@@ -91,6 +92,11 @@ import {
 } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { codeSpan } from "./widget-ui";
+
+/** The longest band label a tolerance can write: the widest tolerance a handle reaches, and
+ *  the longer of the two answers. It holds the label's room while the tolerance changes. */
+const BAND_LABEL_LONGEST =
+  "±23 h 59 min around the first estimate · exceeds the tolerance: false";
 
 export type { EtaDriftArgs } from "./eta-drift";
 
@@ -271,7 +277,13 @@ export function renderEtaDriftTemplate(
           <div class="${styles.xticks}" id="${id("x-ticks")}"></div>
         </div>
         <ul class="${styles.legend}" id="${id("legend")}" aria-hidden="true"></ul>
-        <p class="${styles.callout}" id="${id("band-label")}"></p>
+        <div class="${styles.callout}">${hold({
+          id: id("band-label"),
+          role: "note",
+          label: "Tolerance band",
+          content: html``,
+          ghosts: [html`${BAND_LABEL_LONGEST}`],
+        })}</div>
       </div>`,
       )}
       ${hint(id("axes"), "Across: when each record was recorded. Up: the time it names, later at the top.").html}

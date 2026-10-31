@@ -22,11 +22,41 @@
   }
 }
 
+/* The arrivals in words, in the dim body text the hints use. */
+.summary {
+  min-inline-size: 0;
+  color: var(--gmt-ice-dim);
+  font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
+}
+
+@media (forced-colors: active) {
+  .summary {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .summary {
+    color: var(--gmt-ice);
+  }
+}
+
 /* The rate lines, one under another. */
 .rates {
   display: grid;
   gap: var(--gmt-space-2);
   min-inline-size: 0;
+}
+
+/* The rate ghost: every block of lines it can show shares one cell, so it is as tall as the
+   tallest. */
+.rateGhost {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.rateGhostBlock {
+  grid-area: 1 / 1;
 }
 
 /* The frame: the plates over the board. It is the container the board's layout reads. */

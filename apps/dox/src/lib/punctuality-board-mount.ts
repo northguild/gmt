@@ -38,6 +38,7 @@ import {
   widget,
   type SafeHtml,
 } from "~/widgets/builders";
+import { hold } from "~/widgets/families/edi/edi-hold";
 import {
   callOutput,
   type CallOutputLine,
@@ -91,6 +92,7 @@ import { loadPunctualityLib } from "./punctuality-lib";
 import {
   PUNCTUALITY_LABELS,
   SETTLE_MS,
+  WIDEST_AXIS_MINUTES,
   callArgs,
   formatValue,
   isoToMinutes,
@@ -109,12 +111,26 @@ export type { PunctualityBoardArgs } from "./punctuality-board";
 
 const WIDGET_NAME = "punctuality-board";
 
-/** The widest readings the hero plates show, so they keep their width while a handle drags. */
-const HERO_SAMPLES = ["6 of 6"];
-const HERO_LINE_SAMPLES: readonly (readonly string[])[] = [
-  ["second late tolerance", "late tolerance 23 h 59 min"],
-  ["early 23 h 59 min"],
-];
+/**
+ * The widest readings the hero plates show, so they keep their width while a handle drags.
+ * The count is a single digit, and the display face's tabular figures are not all the same
+ * width on every platform (a 4 reads wider than a 6 under some hinting), so each digit gets its
+ * own sample and the plate is as wide as the widest of them.
+ */
+const HERO_SAMPLES = Array.from({ length: 10 }, (_, d) => `${d} of ${d}`);
+
+/**
+ * The tolerance lengths a readout must have room for, as ISO text: the widest any handle
+ * reaches, and what the field holds now. `toleranceText` writes hours and minutes with
+ * tabular digits, so among the lengths a handle sets (0 to `WIDEST_AXIS_MINUTES`, the most the
+ * axis ever spans) the widest has the most digits and both units: the last whole hour below the
+ * reach, with 59 minutes. The typed text comes too, since a drag replaces it and it can be
+ * any text. Two entries always, so a template can hold one ghost for each.
+ */
+function widestIsos(typed: string): [string, string] {
+  const hours = Math.floor(WIDEST_AXIS_MINUTES / 60);
+  return [minutesToIso((hours - 1) * 60 + 59), typed];
+}
 
 const wordOf = (c: Punctuality | null): string =>
   c === null ? "" : PUNCTUALITY_LABELS[c];
@@ -220,7 +236,20 @@ export function renderPunctualityBoardTemplate(
     })}</div>`,
   );
 
-  const summary = hint(id("summary"), "");
+  // The summary sentence grows and shrinks with the words and the tolerances, so it sits in a
+  // hold: the ghost line is the longest the arrivals can say, written by `mount` on every draw.
+  const summary = html`<div class="${styles.summary}"
+    >${hold({
+      id: id("summary"),
+      role: "note",
+      label: "Arrivals in words",
+      content: html``,
+      ghosts: [
+        html`<span id="${id("summary-ghost-a")}"></span>`,
+        html`<span id="${id("summary-ghost-b")}"></span>`,
+      ],
+    })}</div
+  >`;
   const board = punctBoard({
     id: id("board"),
     summaryId: id("summary"),
@@ -267,11 +296,19 @@ export function renderPunctualityBoardTemplate(
 
   const read = section(
     { id: id("read"), heading: "2. Late, early or on time", level: 4 },
-    html`${grow(html`<div class="${styles.rates}" id="${id("rate")}"></div>`)}
+    html`${grow(
+      hold({
+        id: id("rate"),
+        content: html``,
+        ghosts: [
+          html`<div class="${styles.rateGhost}" id="${id("rate-ghost")}"></div>`,
+        ],
+      }),
+    )}
       <div role="status" aria-live="polite" aria-label="Rate summary" id="${id("live")}">${srOnly("")}</div>
       ${grow(
         html`<div class="${styles.frame}" data-gate="frame">
-          ${grow(html`<div id="${id("heroes")}"></div>`)}${board}${summary.html}
+          ${grow(html`<div id="${id("heroes")}"></div>`)}${board}${summary}
         </div>`,
       )}
       ${grow(html`<div id="${id("reason")}"></div>`)}`,
@@ -351,6 +388,30 @@ function summaryText(s: BoardState, facts: BoardFacts): string {
       return `${head}: ${signedText(f.deviation)}, ${f.classA === null ? "NO SIGNAL" : wordOf(f.classA)}.${second}`;
     })
     .join(" ");
+}
+
+/** The longest `summaryText` these arrivals can say under any tolerance, once for each
+ *  length `widestIsos` names: every verdict at its widest ("NO SIGNAL") and the second
+ *  tolerance's clause at that length. Nothing a handle drags changes the rows' own text, so
+ *  that stays as it is. It reserves the height, so the text below the summary stays put. */
+function longestSummaryTexts(
+  s: BoardState,
+  facts: BoardFacts,
+): [string, string] {
+  const [a, b] = widestIsos(s.compareLate.trim());
+  const text = (iso: string): string =>
+    s.rows
+      .map((r, i) => {
+        const f = facts.rows[i]!;
+        const head = `Arrival ${i + 1}, due ${rowTimeText(r.planned)}, came at ${rowTimeText(r.actual)}`;
+        if (f.deviation === "") return `${head}: NO SIGNAL.`;
+        const second = s.compareOn
+          ? ` Under ${toleranceText(iso)}: NO SIGNAL.`
+          : "";
+        return `${head}: ${signedText(f.deviation)}, NO SIGNAL.${second}`;
+      })
+      .join(" ");
+  return [text(a), text(b)];
 }
 
 // ---------------------------------------------------------------------------
@@ -597,7 +658,40 @@ function setupWidget(
       );
     }
     liveText = texts.join(" ");
-    setHtml(el("rate"), html`${lines}`);
+    setHtml(el("rate"), html`<div class="${styles.rates}">${lines}</div>`);
+    // The ghost says the same lines at the widest tolerances (`widestIsos`), so the lines below
+    // hold still while a handle drags the tolerance through shorter and longer words. Every
+    // choice of late, second late and early length is one whole block of lines, and the blocks
+    // share one cell, so the box takes the height of the tallest block (stacking them would
+    // make it depend on the typed text).
+    const ghostBlocks: SafeHtml[] = [];
+    for (const early of earlyText === null ? [null] : widestIsos(earlyText)) {
+      for (const late of widestIsos(s.late.trim())) {
+        for (const compare of s.compareOn
+          ? widestIsos(s.compareLate.trim())
+          : [null]) {
+          const block: SafeHtml[] = [
+            punctRate(rateLine({ onTime: 99, total: 99 }, late, early)),
+          ];
+          if (compare !== null) {
+            block.push(
+              punctRate(rateLine({ onTime: 99, total: 99 }, compare, early)),
+            );
+          }
+          if (facts.showNaive) {
+            block.push(
+              punctNaive(
+                html`Read off the wall clocks (naive): ${"99 of 99 on time"}`,
+              ),
+            );
+          }
+          ghostBlocks.push(
+            html`<div class="${styles.rates} ${styles.rateGhostBlock}">${block}</div>`,
+          );
+        }
+      }
+    }
+    setHtml(el("rate-ghost"), html`${ghostBlocks}`);
 
     // The result plates above the board: the library's own rates, large.
     const earlyLine =
@@ -612,7 +706,17 @@ function setupWidget(
           value: `${facts.rateA.onTime} of ${facts.rateA.total}`,
           samples: HERO_SAMPLES,
           lines: [`late tolerance ${toleranceText(s.late.trim())}`, earlyLine],
-          lineSamples: HERO_LINE_SAMPLES,
+          lineSamples: [
+            [
+              "second late tolerance",
+              ...widestIsos(s.late.trim()).map(
+                (iso) => `late tolerance ${toleranceText(iso)}`,
+              ),
+            ],
+            widestIsos(s.early.trim()).map(
+              (iso) => `early ${toleranceText(iso)}`,
+            ),
+          ],
           series: 1,
           gate: "hero",
         }),
@@ -631,8 +735,10 @@ function setupWidget(
           ],
           lineSamples: [
             ["second late tolerance"],
-            ["23 h 59 min"],
-            ["early 23 h 59 min"],
+            widestIsos(s.compareLate.trim()).map(toleranceText),
+            widestIsos(s.early.trim()).map(
+              (iso) => `early ${toleranceText(iso)}`,
+            ),
           ],
           series: 3,
           gate: "hero",
@@ -706,6 +812,9 @@ function setupWidget(
     fitBands();
 
     el("summary").textContent = summaryText(s, facts);
+    const [ghostA, ghostB] = longestSummaryTexts(s, facts);
+    el("summary-ghost-a").textContent = ghostA;
+    el("summary-ghost-b").textContent = ghostB;
     setHtml(
       el("reason"),
       reason === null

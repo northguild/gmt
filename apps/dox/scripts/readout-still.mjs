@@ -46,6 +46,9 @@
  *   drawn         the parts whose insides move by design (default `["drawn"]`).
  *                 `"hold"` stands for the first child of a hold (the kit's hold
  *                 writes the live wrapper first), `"grid"` for a month grid;
+ *   moving        the parts whose own box moves with the value by design (a chart's
+ *                 date cursor, each part carrying `data-gate="moving"`); they and their
+ *                 insides are left out of the comparison;
  *   track         the part a pointer drag runs along (a `data-gate` value), or
  *                 null to drag along the control itself;
  *   scope         `"above"` (default) records what comes before the control in
@@ -175,6 +178,16 @@ const DRAWN_PART = {
   drawn: gate("drawn"),
   grid: gate("grid"),
   hold: `${gate("hold")} > :first-child`,
+};
+/** The selector of each part a tool names as moving by design: its own box moves with the
+ *  slider and it is left out of the comparison, with everything inside it. It is a
+ *  `data-gate="moving"` hook (see "Gate hooks" in context/dox/built.md). */
+const MOVING_PART = {
+  // The leap-second chart's date cursor: the horizontal guide, the dot, the vertical pin and
+  // the date tag (the leap-chart builder marks these four, not the band's own tag). The cursor
+  // encodes the slider date by position, so it moves with the slider by design; the staircase,
+  // marks, tick labels and axis stay measured.
+  cursor: gate("moving"),
 };
 /** The selector of each kind of text box a tool names. */
 const TEXT_PART = {
@@ -389,6 +402,7 @@ const TOOLS = [
     track: null,
     scope: "widget",
     drawn: [],
+    moving: ["cursor"],
     riders: true,
     textBoxes: ["codeframe"],
   },
@@ -578,7 +592,7 @@ const rounded = (r) => ({
 /** Runs in the page: the named rects, in document order. */
 function snapshotInPage(
   control,
-  { hero, frame, drawn, scope, riders, textBoxes },
+  { hero, frame, drawn, moving, scope, riders, textBoxes },
 ) {
   const widget = control.closest("[data-widget]");
   // The section is the control's ancestor two levels below the widget root (root > card >
@@ -629,6 +643,7 @@ function snapshotInPage(
         continue;
       }
     }
+    if (el.closest(moving)) continue;
     const parent = el.parentElement?.closest(drawn);
     if (parent && within.contains(parent)) continue;
     // The text inside a value chip rides the thumb with the chip, so only the chip is compared.
@@ -687,6 +702,8 @@ async function snapshot(page, ctl, tool) {
     drawn:
       (tool.drawn ?? ["drawn"]).map((p) => DRAWN_PART[p]).join(", ") ||
       ":not(*)",
+    moving:
+      (tool.moving ?? []).map((p) => MOVING_PART[p]).join(", ") || ":not(*)",
     scope: tool.scope ?? "above",
     riders: tool.riders ? gate("rider") : null,
     textBoxes: tool.textBoxes
@@ -700,6 +717,7 @@ async function snapshot(page, ctl, tool) {
 async function namedPartsAbsent(page, tool) {
   const named = [
     ...(tool.drawn ?? ["drawn"]).map((p) => [`drawn:${p}`, DRAWN_PART[p]]),
+    ...(tool.moving ?? []).map((p) => [`moving:${p}`, MOVING_PART[p]]),
     ...(tool.textBoxes ?? []).map((p) => [`text:${p}`, TEXT_PART[p]]),
   ];
   const root = page.locator(tool.root).first();
@@ -1005,6 +1023,12 @@ async function run() {
 
             // Pointer: out to the far end of the track in 20 steps, and back.
             if (!KEYBOARD_ONLY) {
+              // The pointer is placed by viewport coordinates, so the control has to be
+              // in the viewport: a preset that puts it below the fold would otherwise
+              // be dragged at nothing.
+              await ctl.evaluate((el) =>
+                el.scrollIntoView({ block: "center", inline: "nearest" }),
+              );
               const box = await ctl.evaluate(
                 (el, t) => {
                   const c = el.getBoundingClientRect();

@@ -181,10 +181,13 @@
   inset-inline: auto 10px;
 }
 
-/* The axis and the legend start at the track's x. */
+/* The axis and the legend start at the track's x. A label never wraps: `thinTickLabels` drops the
+   ones that do not fit, so the axis is one line high however narrow the root is. */
 .axis {
   display: flex;
   justify-content: space-between;
+  min-block-size: 1lh;
+  white-space: nowrap;
   margin-inline-start: calc(var(--gmt-ledger-label-w) + var(--gmt-space-2));
   color: var(--gmt-ice);
   font-family: var(--gmt-font-mono);

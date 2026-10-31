@@ -205,6 +205,10 @@ const NICE_MINUTES = [
   4320, 5760, 7200, 10080,
 ] as const;
 
+/** The longest half-axis the Punctuality Board draws: the last step of `NICE_MINUTES`, a week.
+ *  A handle's range is the axis, so this is also the most a handle can set. */
+export const WIDEST_AXIS_MINUTES = 10080;
+
 /** The smallest axis length in `NICE_MINUTES` that is at least `m`, else `m`
  *  rounded up to whole days. Drawing only. */
 export function niceMinutes(m: number): number {

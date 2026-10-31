@@ -22,6 +22,7 @@ import {
   writeLike,
   writtenLabel,
   writtenParts,
+  writtenTime,
   type Headway,
   type PunctualityLib,
 } from "./punctuality-widgets";
@@ -748,4 +749,38 @@ export function railDepartures(
 export function railTickStep(spanMs: number): number {
   const steps = [5, 10, 15, 20, 30, 60, 120, 180, 360, 720, 1440];
   return steps.find((s) => spanMs / MINUTE_MS / s <= 8) ?? 2880;
+}
+
+/** The most fractional digits a time takes (Temporal's nanosecond). */
+const MAX_FRACTION_DIGITS = 9;
+
+/**
+ * The widest time the board can write for a departure the arrival can make, as a shape in
+ * zeros (`"00:00"`, `"00:00:00"`, `"00:00:00.000000000"`), or `null` when the timetable has
+ * none. `writtenTime` shows seconds and a fraction only when they are not zero, so the
+ * shape is the readings' own: a departure made is one of the list's entries, or
+ * `from + k × headway`, which keeps `from`'s shape unless the headway itself has a seconds
+ * part, and then can end in any fraction. Every digit of a readout is tabular, so the longer
+ * shape is the wider one and these are the room a verdict and a plate must hold. Drawing only.
+ */
+export function widestMadeShape(state: DepartureState): string | null {
+  const shapeOf = (time: string): string => time.replace(/\d/g, "0");
+  const times: string[] =
+    state.form === "list"
+      ? (timetableOf(state) as readonly string[])
+          .map(writtenTime)
+          .filter((time) => time !== "")
+      : [writtenTime(t(state.from))].filter((time) => time !== "");
+  const shapes = times.map(shapeOf);
+  if (state.form === "headway" && /S\s*$/i.test(t(state.headway))) {
+    shapes.push(shapeOf(`00:00:00.${"0".repeat(MAX_FRACTION_DIGITS)}`));
+  }
+  if (shapes.length === 0) return null;
+  return shapes.reduce((a, b) => (b.length > a.length ? b : a));
+}
+
+/** `shape` with every digit set to `digit`: the plate's samples are one per digit, since
+ *  tabular digits are not the same width in every face and hinting. */
+export function shapeWithDigit(shape: string, digit: number): string {
+  return shape.replace(/0/g, String(digit));
 }
