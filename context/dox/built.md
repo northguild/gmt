@@ -630,6 +630,30 @@ or text and asserts what a person sees.
 - **Measured in Chromium.** `color-contrast` and `target-size` are off in `expectNoAxeViolations`,
   because jsdom has no layout. The `a11y-axe` and `contrast-measure` gates measure them.
 
+#### Test isolation
+
+Most files run with `isolate: false`, sharing one worker module graph and one jsdom; the config
+splits them into two projects.
+- **What makes a file isolated.** `src/test/isolation.ts` reads each test file's source. A file that
+  calls `vi.mock`, `vi.doMock`, `vi.stubGlobal` or `vi.stubEnv` itself runs in the `isolated`
+  project; every other file runs in `shared`. A helper that stubs a global for you
+  (`resize-observer-spy.ts`) does not isolate the file: the setup undoes the stub. The scan reads
+  the split once, at start, so in watch mode restart Vitest after adding a `vi.mock`.
+  `src/test/isolation.test.ts` asks Vitest for the real project of every file and checks it
+  against the scan.
+- **What the shared setup resets.** `src/test/setup-dom.ts` runs after every test, in node and
+  jsdom files alike: it restores spies (`vi.restoreAllMocks`), fake timers, `vi.stubGlobal` and
+  `vi.stubEnv`. In a jsdom file it also destroys the widgets `renderWidget` mounted and calls
+  `resetDom` (`reset-dom.ts`): the body's children and attributes, the root element's
+  attributes, the title, the location, both storages, cookies and a `navigator.clipboard` a test
+  defined. Testing Library's `cleanup` unmounts React roots. `document.head` is left alone.
+- **What a test must undo.** Anything else it creates: a `<style>` or `<meta>` in `head`, a
+  `window` or `document` listener, a custom element, a module-level singleton. A direct
+  assignment to a global (`globalThis.x = …`, `Intl.X = …`, `process.env.X = …`) is undone in a
+  `finally` block, or use `vi.stubGlobal`. `src/test/leak-guard.ts` fails a file that ends with a
+  changed global, `Intl` member, environment variable or `window`/`document` listener; the message
+  names each one. When the state is a leak in a module, fix the module.
+
 **Widget roots and element identity.** Every widget root carries `data-widget="<mount name>"`,
 `role="region"` and an `aria-label` that is the tool page's title (the playground's is
 `<function> playground`, the globe's "Zoned Earth", the zone planner's "Zone Planner"). The

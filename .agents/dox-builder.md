@@ -83,6 +83,7 @@ These bind every change.
      jest-dom, and the `src/test/render-widget.ts` helpers only (`renderWidget`, `setRange`,
      `expectNoAxeViolations`). A test asserts what a person or assistive technology perceives,
      and never a class, a `data-role`, an id, a style or the markup.
+   - A test file shares its worker with others, so it undoes any global state the setup does not reset: [Test isolation](../context/dox/built.md#test-isolation).
 
    **Accessibility is the component's job.** Each element owns its role, name, states and its
    WAI-ARIA APG keyboard model, and a builder does not compile without a label. Targets are
