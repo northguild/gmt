@@ -231,24 +231,49 @@ function returnTypeLength(rest: string): number {
   return rest.length;
 }
 
+/** One declared header of a function: its parameter list and return annotation. */
+type Header = { params: string[]; returnType: string; isOverload: boolean };
+
+/** Every `export function <name>(` or `export const <name> =` header in `source`, in file order. */
+function headersOf(source: string, name: string): Header[] {
+  const pattern = new RegExp(
+    `export (?:function ${name}\\s*|const ${name}\\s*=\\s*)(<[^(]*>)?\\(`,
+    "g",
+  );
+  return [...source.matchAll(pattern)].map((header) => {
+    const open = header.index + header[0].length - 1;
+    const close = closeBracket(source, open);
+    const colon = /^\s*:\s*/.exec(source.slice(close));
+    if (!colon) throw new Error(`noThrow: no return type for ${name}`);
+    const rest = source.slice(close + colon[0].length);
+    const length = returnTypeLength(rest);
+    return {
+      params: splitTopLevel(source.slice(open + 1, close - 1), ","),
+      returnType: rest.slice(0, length),
+      isOverload: rest[length] === ";",
+    };
+  });
+}
+
 /**
- * The signature of `name` as declared in `source`. For an overloaded function this is the first
- * overload, the one written first in the file: `readSignature` probes that one, and the rest
- * are widenings of it.
+ * The signature of `name` as declared in `source`. The parameters come from the first overload,
+ * which `readSignature` probes (the rest are widenings of it). The return type is the union over
+ * every overload, so a nullable `unknown` overload makes the function nullable. The
+ * implementation signature is never read: a caller cannot call it.
  */
 export function signatureOf(source: string, name: string): Signature {
-  const header = new RegExp(
-    `export (?:function ${name}\\s*|const ${name}\\s*=\\s*)(<[^(]*>)?\\(`,
-  ).exec(source);
-  if (!header) throw new Error(`noThrow: no signature for ${name}`);
-  const open = header.index + header[0].length - 1;
-  const close = closeBracket(source, open);
-  const params = splitTopLevel(source.slice(open + 1, close - 1), ",");
-  const colon = /^\s*:\s*/.exec(source.slice(close));
-  if (!colon) throw new Error(`noThrow: no return type for ${name}`);
-  const rest = source.slice(close + colon[0].length);
+  const headers = headersOf(source, name);
+  if (headers.length === 0)
+    throw new Error(`noThrow: no signature for ${name}`);
+  const overloads = headers.filter((header) => header.isOverload);
+  const declaredHeaders = overloads.length > 0 ? overloads : headers;
+  const returns = declaredHeaders.map((header) => classify(header.returnType));
+  const params = declaredHeaders[0].params;
   return {
-    declared: classify(rest.slice(0, returnTypeLength(rest))),
+    declared: {
+      kinds: [...new Set(returns.flatMap((declared) => declared.kinds))],
+      nullable: returns.some((declared) => declared.nullable),
+    },
     arity: params.length,
     required: params.map(
       (param) =>

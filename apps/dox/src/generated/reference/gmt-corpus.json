@@ -4766,7 +4766,7 @@
     "namespace": "intermodal",
     "module": "parse",
     "kind": "function",
-    "signature": "x12TimeCodeZone(timeCode: X12ZoneTimeCode): X12NamedZone | null",
+    "signature": "x12TimeCodeZone(timeCode: X12ZoneTimeCode): X12NamedZone\nx12TimeCodeZone(timeCode: unknown): X12NamedZone | null",
     "description": "Read the zone an X12 time code (data element 623) names.",
     "sourcePath": "packages/gmt/src/intermodal/parse/x12TimeCodeZone.ts",
     "examples": [
@@ -22872,7 +22872,7 @@
     "namespace": "unix",
     "module": "get",
     "kind": "function",
-    "signature": "getUnixNow(options?: { epochUnit?: UnixUnit; }): number | null",
+    "signature": "getUnixNow(options?: { epochUnit?: UnixUnit; }): number\ngetUnixNow(options?: unknown): number | null",
     "description": "Return the current Unix timestamp in either seconds or milliseconds.",
     "sourcePath": "packages/gmt/src/unix/get/getUnixNow.ts",
     "examples": [
@@ -22885,11 +22885,11 @@
         "result": "1700000000"
       },
       {
-        "call": "getUnixNow({ epochUnit: \"minutes\" as never })",
-        "result": "null"
+        "call": "getUnixNow({ epochUnit: \"minutes\" })",
+        "result": "null (not a UnixUnit)"
       },
       {
-        "call": "getUnixNow(\"seconds\" as never)",
+        "call": "getUnixNow(\"seconds\")",
         "result": "null (options must be an object)"
       }
     ]

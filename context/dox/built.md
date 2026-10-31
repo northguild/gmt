@@ -187,8 +187,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     union aliases, so a string match cannot see `Overflow`.
     - Duplicate type names (also by case), an unannotated return, and a generic public
       function stop the generator too. An overloaded public function gets one page that
-      lists every overload, and stops the generator only if its overloads name different
-      public types.
+      lists every overload, and stops the generator only if a later overload names a public
+      type the first overload does not.
     - Anchors come from `github-slugger`, one slugger per page fed every heading in order,
       so they match what Starlight emits. The generator stops if a rendered page's headings
       differ from the list the anchors were computed from.

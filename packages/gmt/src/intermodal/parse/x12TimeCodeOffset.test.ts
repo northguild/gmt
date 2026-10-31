@@ -132,7 +132,7 @@ describe("x12TimeCodeOffset", () => {
       (row) => {
         const offset = "offset" in row ? row.offset : "";
         expect(x12TimeCodeOffset(row.timeCode as never)).toBe(offset);
-        expect(x12TimeCodeZone(row.timeCode as never)).toBeNull();
+        expect(x12TimeCodeZone(row.timeCode)).toBeNull();
       },
     );
 

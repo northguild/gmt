@@ -273,7 +273,55 @@ describe("buildTypeUsage", () => {
         export function f(a: Alpha | Beta): string { return ""; }
       `),
     ).toThrow(
-      /overloads of a public function must reach the same public types, so one page can list them: ns\/mod\/f\./,
+      /a later overload of a public function must reach only public types its first overload reaches, so one page can list them: ns\/mod\/f\./,
+    );
+  });
+
+  it("accepts a later overload that reaches a subset of the first overload's types", () => {
+    const usage = usageOf(`
+      export interface Alpha { a: string }
+      export interface Beta { b: string }
+      export function f(a: Alpha): Beta;
+      export function f(a: unknown): Beta | null;
+      export function f(a: unknown): Beta | null { return null; }
+    `);
+    expect([...usage.direct.keys()]).toEqual(["ns/mod/f"]);
+  });
+
+  it("accepts a later overload that reaches no public type", () => {
+    const usage = usageOf(`
+      export interface Alpha { a: string }
+      export function f(a: Alpha): string;
+      export function f(a: unknown): string | null;
+      export function f(a: unknown): string | null { return null; }
+    `);
+    expect([...usage.direct.keys()]).toEqual(["ns/mod/f"]);
+  });
+
+  it("throws when a later overload reaches a superset of the first overload's types", () => {
+    expect(() =>
+      usageOf(`
+        export interface Alpha { a: string }
+        export interface Beta { b: string }
+        export function f(a: Alpha): string;
+        export function f(a: Alpha | Beta): string;
+        export function f(a: unknown): string { return ""; }
+      `),
+    ).toThrow(
+      /a later overload of a public function must reach only public types its first overload reaches, so one page can list them: ns\/mod\/f\./,
+    );
+  });
+
+  it("throws when a later overload reaches a type the first overload does not", () => {
+    expect(() =>
+      usageOf(`
+        export interface Alpha { a: string }
+        export function f(a: string): string;
+        export function f(a: Alpha): string;
+        export function f(a: unknown): string { return ""; }
+      `),
+    ).toThrow(
+      /a later overload of a public function must reach only public types its first overload reaches, so one page can list them: ns\/mod\/f\./,
     );
   });
 

@@ -21,7 +21,7 @@ import type {
   StoredRow,
 } from "../src/lib/clock-change-stored-lines";
 import type { MapZone } from "../src/lib/zone-map";
-import { getUnixNowMs } from "./clock";
+import { getUnixNow } from "@northguild/gmt/unix/get";
 import { checkRateLimit, clientIdFromRequest } from "./rate-limit";
 
 /**
@@ -157,7 +157,7 @@ export function rateLimited(
 ): Response | null {
   const limit = checkRateLimit(
     `${prefix}:${clientIdFromRequest(request)}`,
-    getUnixNowMs(),
+    getUnixNow(),
     {
       max: policy.max,
       windowSeconds: policy.windowSeconds,

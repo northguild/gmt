@@ -15,7 +15,7 @@ import type { StoredCheck } from "../src/lib/clock-change-stored-lines";
 import { handleCanadaClockChange } from "./canada-clock-change";
 import { handleMoroccoClockChange } from "./morocco-clock-change";
 import { checkRateLimit, resetRateLimitState } from "./rate-limit";
-import { getUnixNowMs } from "./clock";
+import { getUnixNow } from "@northguild/gmt/unix/get";
 
 const NOW = "2026-10-25T12:00:00Z";
 const URL = "https://northguild.dev/gmt/api/morocco-clock-change";
@@ -121,11 +121,11 @@ describe("GET /gmt/api/morocco-clock-change", () => {
     expect(Number(refused.headers.get("retry-after"))).toBeGreaterThan(0);
     const policy = { max: 20, windowSeconds: 60 };
     expect(
-      checkRateLimit("morocco:4.4.4.4", getUnixNowMs(), policy).allowed,
+      checkRateLimit("morocco:4.4.4.4", getUnixNow(), policy).allowed,
     ).toBe(false);
-    expect(
-      checkRateLimit("canada:4.4.4.4", getUnixNowMs(), policy).allowed,
-    ).toBe(true);
+    expect(checkRateLimit("canada:4.4.4.4", getUnixNow(), policy).allowed).toBe(
+      true,
+    );
   });
 
   it("answers 429 with retry-after on the 21st GET from one client", async () => {

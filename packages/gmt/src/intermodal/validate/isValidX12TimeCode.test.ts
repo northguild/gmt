@@ -8,7 +8,7 @@ import { isValidX12TimeCode } from "./isValidX12TimeCode";
 function isRead(timeCode: unknown): boolean {
   return (
     x12TimeCodeOffset(timeCode as never) !== "" ||
-    x12TimeCodeZone(timeCode as never) !== null
+    x12TimeCodeZone(timeCode) !== null
   );
 }
 

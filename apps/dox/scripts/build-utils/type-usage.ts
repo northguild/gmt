@@ -140,12 +140,13 @@ function listed(names: readonly string[]): string {
  * Throws, with one aggregated message each, on: two public types sharing a name, also when
  * the names differ only by case (they would share one page or one anchor); a public function
  * with no return annotation (an inferred return names no type to walk); a generic public
- * function; and an overload set whose signatures reach different public types.
+ * function; and an overload set where a later overload reaches a public type its first overload
+ * does not.
  *
- * Overloads naming the same public types share one page, so a type on that page belongs to
- * every signature listed there and the page stays truthful. Overloads naming different types
- * would leave the page unable to say which signature a type belongs to. The implementation
- * signature is never walked: callers cannot see it.
+ * The page and the graph come from the first overload. A later overload may reach a subset of
+ * its types (a widening to `unknown` reaches none), so every type on the page is true for the
+ * whole set. A later overload naming a type the first does not would leave that type off the
+ * page. The implementation signature is never walked: callers cannot see it.
  */
 export function buildTypeUsage(
   checker: ts.TypeChecker,
@@ -192,16 +193,12 @@ export function buildTypeUsage(
   const mismatched: string[] = [];
   const unannotated: string[] = [];
   const shapes = new Map<string, FunctionShape>();
-  /** Every public type a signature names, parameters then return, as a sorted key. */
-  const reachKey = (shape: FunctionShape): string =>
-    [
-      ...new Set([
-        ...shape.params.flatMap((p) => typeReferences(checker, p, index)),
-        ...typeReferences(checker, shape.returns, index),
-      ]),
-    ]
-      .sort()
-      .join("\u0000");
+  /** Every public type a signature names, parameters then return. */
+  const reachOf = (shape: FunctionShape): Set<string> =>
+    new Set([
+      ...shape.params.flatMap((p) => typeReferences(checker, p, index)),
+      ...typeReferences(checker, shape.returns, index),
+    ]);
   for (const [key, group] of groups) {
     // The implementation signature is invisible to callers: never documented, never walked.
     const visible =
@@ -216,7 +213,14 @@ export function buildTypeUsage(
       continue;
     }
     if (all.some((shape) => !shape.returns)) unannotated.push(key);
-    if (new Set(all.map(reachKey)).size > 1) mismatched.push(key);
+    const first = reachOf(all[0]);
+    if (
+      all
+        .slice(1)
+        .some((shape) => [...reachOf(shape)].some((t) => !first.has(t)))
+    ) {
+      mismatched.push(key);
+    }
     shapes.set(key, all[0]);
   }
   if (unannotated.length > 0) {
@@ -231,7 +235,7 @@ export function buildTypeUsage(
   }
   if (mismatched.length > 0) {
     throw new Error(
-      `[reference] the overloads of a public function must reach the same public types, so one page can list them: ${listed(mismatched)}.`,
+      `[reference] a later overload of a public function must reach only public types its first overload reaches, so one page can list them: ${listed(mismatched)}.`,
     );
   }
 

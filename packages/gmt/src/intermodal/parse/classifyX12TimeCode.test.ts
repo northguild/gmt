@@ -70,9 +70,7 @@ describe("classifyX12TimeCode", () => {
         expect(x12TimeCodeOffset(timeCode as never) !== "").toBe(
           kind === "offset",
         );
-        expect(x12TimeCodeZone(timeCode as never) !== null).toBe(
-          kind === "zone",
-        );
+        expect(x12TimeCodeZone(timeCode) !== null).toBe(kind === "zone");
       },
     );
 

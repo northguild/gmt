@@ -9,27 +9,31 @@ import type { UnixUnit } from "../validate/isValidUnixUnit";
  * Return the current Unix timestamp in either seconds or milliseconds.
  *
  * - Uses Temporal.Now.instant() to get current time.
- * - An explicit `undefined` is the same as omitted. An unknown `epochUnit`, or a non-object
- *   `options` (such as a bare `"seconds"` string), returns null.
+ * - An explicit `undefined` is the same as omitted. Options outside the type, an unknown
+ *   `epochUnit` or a non-object such as a bare `"seconds"`, return null.
+ * - Options whose `epochUnit` throws when read, such as a getter or a `Proxy`, also return null.
  *
  * @param options optional: the unit of the result
- * @returns the current unix timestamp, or null on invalid options
+ * @returns the current Unix timestamp; null for options outside the type or options that throw
+ *   when read
  *
  * @example getUnixNow() // 1700000000000
  * @example getUnixNow({ epochUnit: "seconds" }) // 1700000000
- * @example getUnixNow({ epochUnit: "minutes" as never }) // null
- * @example getUnixNow("seconds" as never) // null (options must be an object)
+ * @example getUnixNow({ epochUnit: "minutes" }) // null (not a UnixUnit)
+ * @example getUnixNow("seconds") // null (options must be an object)
  */
 export function getUnixNow(options?: {
   /**
    * The unit of the returned epoch: `"seconds"` or `"milliseconds"`, singular or plural. Seconds
-   * floor toward −∞, as POSIX `time_t` counts whole elapsed seconds. Any other value returns
-   * `null`.
+   * floor toward −∞, as POSIX `time_t` counts whole elapsed seconds. Any other value is outside
+   * the type and returns `null`.
    *
    * @defaultValue `"milliseconds"`
    */
   epochUnit?: UnixUnit;
-}): number | null {
+}): number;
+export function getUnixNow(options?: unknown): number | null;
+export function getUnixNow(options?: unknown): number | null {
   try {
     const epochUnit = resolveUnixEpochUnitOptions(options);
 
@@ -37,11 +41,7 @@ export function getUnixNow(options?: {
       return null;
     }
 
-    try {
-      return toUnixEpoch(Temporal.Now.instant(), epochUnit);
-    } catch {
-      return null;
-    }
+    return toUnixEpoch(Temporal.Now.instant(), epochUnit);
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

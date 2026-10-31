@@ -99,6 +99,77 @@ describe("signatureOf", () => {
     expect(signature.types).toEqual(["string"]);
   });
 
+  it("ORs nullability across every overload and keeps the parameters of the first", () => {
+    const source = [
+      'export function h(o?: { u?: "a" }): number;',
+      "export function h(o?: unknown): number | null;",
+      "export function h(o?: unknown): number | null {",
+      "  return o === undefined ? 1 : null;",
+      "}",
+    ].join("\n");
+    const signature = signatureOf(source, "h");
+    expect(signature.declared).toEqual({ kinds: ["number"], nullable: true });
+    expect(signature.types).toEqual(['{ u?: "a" }']);
+    expect(signature.required).toEqual([false]);
+  });
+
+  it("ORs nullability when the first overload returns an object type", () => {
+    const source = [
+      'export function k(c: "A"): { z: string };',
+      "export function k(c: unknown): { z: string } | null;",
+      "export function k(c: unknown): { z: string } | null {",
+      "  return c === 'A' ? { z: 'z' } : null;",
+      "}",
+    ].join("\n");
+    expect(signatureOf(source, "k").declared).toEqual({
+      kinds: ["object"],
+      nullable: true,
+    });
+  });
+
+  it("is nullable when only the first overload is nullable, whatever the order", () => {
+    const source = [
+      "export function p(a: unknown): number | null;",
+      "export function p(a: string): number;",
+      "export function p(a: unknown): number | null {",
+      "  return typeof a === 'string' ? 1 : null;",
+      "}",
+    ].join("\n");
+    expect(signatureOf(source, "p").declared).toEqual({
+      kinds: ["number"],
+      nullable: true,
+    });
+  });
+
+  it("unions the kinds of the overloads, first overload first, without repeats", () => {
+    const source = [
+      "export function q(a: string): number;",
+      "export function q(a: number): string | null;",
+      "export function q(a: boolean): number;",
+      "export function q(a: unknown): number | string | null {",
+      "  return null;",
+      "}",
+    ].join("\n");
+    expect(signatureOf(source, "q").declared).toEqual({
+      kinds: ["number", "string"],
+      nullable: true,
+    });
+  });
+
+  it("does not read the implementation signature", () => {
+    const source = [
+      "export function m(a: string): string;",
+      "export function m(a: unknown): string;",
+      "export function m(a: unknown): unknown {",
+      "  return a;",
+      "}",
+    ].join("\n");
+    expect(signatureOf(source, "m").declared).toEqual({
+      kinds: ["string"],
+      nullable: false,
+    });
+  });
+
   it("reads an object return type whose members end in semicolons", () => {
     const source =
       "export function g(value: string): { a: string; b: number } {\n  return { a: value, b: 1 };\n}";

@@ -43,6 +43,11 @@ const X12_TIME_CODE_ZONE: Readonly<Record<X12ZoneTimeCode, X12NamedZone>> = {
   TT: { zone: "Atlantic", daylight: null },
 };
 
+/** Whether `code` is an own key of the table: `"toString"` and `"__proto__"` are not codes. */
+function isZoneTimeCode(code: unknown): code is X12ZoneTimeCode {
+  return typeof code === "string" && Object.hasOwn(X12_TIME_CODE_ZONE, code);
+}
+
 /**
  * Read the zone an X12 time code (data element 623) names.
  *
@@ -82,10 +87,11 @@ const X12_TIME_CODE_ZONE: Readonly<Record<X12ZoneTimeCode, X12NamedZone>> = {
  * - **For a code that arrives as a string**, call `classifyX12TimeCode` first: its `"zone"`
  *   result carries the code narrowed to this function's parameter.
  * - Matching is exact: two characters, upper case, no padding. Each call returns a new object.
- *   Returns `null` for a code that is not one of the 56 and for a non-string.
+ *   Returns `null` for a value outside `X12ZoneTimeCode`: an offset code, a string that is not
+ *   one of the 56, or a non-string.
  *
  * @param timeCode X12 data element 623 time code (e.g. "ES")
- * @returns `{ zone, daylight }`, or null on invalid input
+ * @returns `{ zone, daylight }`; null only for a value outside X12ZoneTimeCode
  *
  * @example x12TimeCodeZone("ES") // { zone: "Eastern", daylight: false }
  * @example x12TimeCodeZone("ED") // { zone: "Eastern", daylight: true }
@@ -98,15 +104,10 @@ const X12_TIME_CODE_ZONE: Readonly<Record<X12ZoneTimeCode, X12NamedZone>> = {
  * @example x12TimeCodeZone("EST") // null (not a 623 code)
  * @example x12TimeCodeZone("et") // null (matching is exact)
  */
-export function x12TimeCodeZone(
-  timeCode: X12ZoneTimeCode,
-): X12NamedZone | null {
-  if (
-    typeof timeCode !== "string" ||
-    !Object.hasOwn(X12_TIME_CODE_ZONE, timeCode)
-  ) {
-    return null;
-  }
+export function x12TimeCodeZone(timeCode: X12ZoneTimeCode): X12NamedZone;
+export function x12TimeCodeZone(timeCode: unknown): X12NamedZone | null;
+export function x12TimeCodeZone(timeCode: unknown): X12NamedZone | null {
+  if (!isZoneTimeCode(timeCode)) return null;
   // A copy, so a caller cannot change the table through a result.
   return { ...X12_TIME_CODE_ZONE[timeCode] };
 }
