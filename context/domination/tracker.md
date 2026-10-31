@@ -109,8 +109,8 @@ ending with the core validators that take any value, ahead of the remaining real
 | 34  | CORE-85  | Core       | Human duration strings:<br>`parseHumanDuration`, `formatHumanDuration`                                   | —          | #325  | —       | Done        |
 | 35  | CORE-79  | Core       | `Position` input type                                                                                    | —          | #314  | —       | Done        |
 | 36  | CORE-102 | Core       | Month-day (`--MM-DD`) and year-month (`YYYY-MM`)<br>values: validate, parse, format, compare, arithmetic | —          | #416  | —       | Done        |
-| 37  | CORE-103 | Core       | Core validators take `unknown`<br>and narrow it to `string`; calls that cannot fail drop `null`          | —          | #432  | Cut     | In Progress |
-| 38  | CORE-104 | Core       | Lengths of time counted from now:<br>seconds, epoch, HTTP date, seconds until                            | —          | #433  | —       | Not started |
+| 37  | CORE-103 | Core       | Core validators take `unknown`<br>and narrow it to `string`; calls that cannot fail drop `null`          | —          | #432  | —       | Done        |
+| 38  | CORE-104 | Core       | Lengths of time counted from now:<br>seconds, epoch, HTTP date, seconds until                            | —          | #433  | Cut     | Not started |
 | 39  | SPA-46   | Space      | TAI64 / TAI64N / TAI64NA text labels                                                                     | —          | #227  | —       | Not started |
 | 40  | SPA-47   | Space      | `toTT` + `toTCG`                                                                                         | —          | #228  | —       | Not started |
 | 41  | SPA-49   | Space      | Two-part Julian Date + MJD + J2000                                                                       | SPA-47     | #230  | —       | Not started |

@@ -2,7 +2,7 @@
 "@northguild/gmt": patch
 ---
 
-The core string validators now accept a value of any type (Story CORE-103). A value typed `unknown`, such as a function argument or the output of a schema check, needed a cast before you could ask whether it is valid. The functions already returned `false` for a value that is not a string, so for 26 of the 27 only the types change.
+The core string validators now accept a value of any type. A value typed `unknown`, such as a function argument or the output of a schema check, needed a cast before you could ask whether it is valid. The functions already returned `false` for a value that is not a string, so for 26 of the 27 only the types change.
 
 One result changes: `isValidTimeZone` returned `true` for a `Temporal.ZonedDateTime` whose `toString` gives a zone id. It now returns `false` for every value that is not a string.
 
@@ -23,3 +23,5 @@ if (isValidDate(input)) {
 Two functions whose typed calls cannot fail now return a plain value. `getUnixNow()` returns `number`, so `addUnix(getUnixNow(), { years: 1 })` compiles with no null check, and `x12TimeCodeZone` returns `X12NamedZone` for an `X12ZoneTimeCode`. A value outside the parameter type, such as a `string` variable, a value typed `unknown` or a misspelt unit, still compiles and returns `number | null` or `X12NamedZone | null`. The runtime is unchanged.
 
 The validator change covers 27 functions: `isValidDate`, `isValidDateTime`, `isValidTime`, `isValidYearMonth`, `isValidMonthDay`, `isValidCalendarDate`, `isValidIsoDateLike`, `isValidSqlDateTime`, `isValidDateDurationUnit`, `isValidDateTimeDurationUnit`, `isValidTimeDurationUnit`, `isValidZonedDateTime`, `isValidTimeZone`, `isValidCalendarZonedDateTime`, `isValidRfc2822DateTime`, `isValidRfc3339DateTime`, `isValidInstant`, `isValidInt64NanosecondDateTime`, `isValidInt64NanosecondInstant`, `isValidNanoPattern`, `isValidUtc`, `isValidHttpDate`, `isValidUtcTimestamp`, `isValidDuration`, `isValidUtcOffset`, `isValidEpcisEventTime` and `isValidEpcisTimeZoneOffset`.
+
+The clock functions no longer return a moment one millisecond early. After a test faked a clock set before 1970, the polyfill's next reading of the real clock could land one millisecond before `Date.now()`, so a test that then faked a 2027 clock could see the last millisecond of 2026. Every function that reads the clock now checks its reading against `Date.now()` and corrects a one-millisecond shortfall. A native `Temporal` and a fixed polyfill are not affected. The defect is filed as [tc39/proposal-temporal#3335](https://github.com/tc39/proposal-temporal/issues/3335).
