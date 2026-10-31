@@ -1,8 +1,8 @@
 {
-  "measuredAt": "2026-10-31T05:03:33Z",
+  "measuredAt": "2026-10-31T07:37:30Z",
   "node": "v26.12.1",
   "esbuild": "0.28.2",
-  "commit": "4ce902695e13eae1126942647fc6157c10061f22",
+  "commit": "908a054b953a66d9792d0781c9b59f82c435c5e0",
   "dirty": true,
   "floor": "polyfill",
   "entries": {

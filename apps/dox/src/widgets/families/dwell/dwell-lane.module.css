@@ -12,6 +12,10 @@
 
   container: dwell-timeline / inline-size;
   display: grid;
+
+  /* The one column is the timeline's width and no wider. An `auto` column grows to the lane's
+     min-content width, which changes with the handles and the labels, and the lanes with it. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--gmt-space-2);
   min-inline-size: 0;
 }

@@ -425,9 +425,11 @@ describe("the folded calls", () => {
     (year: number): string[] =>
       ruleCallLines(
         rules,
-        attributeRows(lib, { timeZone: zone, weekend, rules }, year).map(
-          (r) => r.pairs,
-        ),
+        attributeRows(
+          lib,
+          { timeZone: zone, weekend, rules: [...rules] },
+          year,
+        ).map((r) => r.pairs),
         year,
       )
         .join("\n")

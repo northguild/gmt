@@ -136,6 +136,12 @@ const madeGhostText = (s: DepartureState): string => {
   return shape === null ? "" : `You make the ${shape}.`;
 };
 
+/** The naive line at its widest for this timetable: the widest time it can write. */
+const naiveGhostText = (s: DepartureState): string => {
+  const shape = widestMadeShape(s);
+  return `Naive, with no connection time: ${shape === null ? "no departure" : `the ${shape}`}.`;
+};
+
 /** The plate's value samples: the widest time in every digit, and "none". */
 const heroSamples = (s: DepartureState): string[] => {
   const shape = widestMadeShape(s);
@@ -294,7 +300,21 @@ export function renderDepartureBoardTemplate(
       )}</div>`,
     )}
       <div role="status" aria-live="polite" aria-label="Departure status" id="${id("live")}">${srOnly("")}</div>
-      ${grow(html`<p class="${styles.naive}" id="${id("naive-line")}" hidden></p>`)}
+      ${grow(
+        html`<div class="${styles.naive}" id="${id("naive-box")}" hidden>${hold(
+          {
+            id: id("naive-line"),
+            role: "note",
+            label: "Naive departure",
+            content: html``,
+            ghosts: [
+              html`The connection time changes nothing here.`,
+              html`<span id="${id("naive-ghost")}">${naiveGhostText(s)}</span>`,
+              html`Naive, with no connection time: no departure.`,
+            ],
+          },
+        )}</div>`,
+      )}
       ${grow(
         html`<div class="${styles.frame}" data-gate="frame">
         ${grow(html`<div class="${styles.heroes}" id="${id("heroes")}"></div>`)}${stage}
@@ -756,9 +776,9 @@ function setupWidget(
             : "Naive, with no connection time: no departure.";
       }
     }
-    const naiveLine = el("naive-line");
-    naiveLine.textContent = line;
-    naiveLine.hidden = line === "";
+    el("naive-line").textContent = line;
+    el("naive-box").hidden = line === "";
+    el("naive-ghost").textContent = naiveGhostText(s);
 
     const wait =
       facts.made === "" ? "" : departureWait(s.after, facts.made, lib);

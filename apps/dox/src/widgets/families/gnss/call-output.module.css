@@ -10,7 +10,10 @@
   );
   min-inline-size: 0;
   max-inline-size: 100%;
-  overflow-x: auto;
+
+  /* Always a scroll track, never `auto`: a classic scrollbar adds its thickness only while a
+     line overflows, so the box would gain and lose a line's height as the text changes length. */
+  overflow-x: scroll;
   padding: var(--gmt-space-3);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);

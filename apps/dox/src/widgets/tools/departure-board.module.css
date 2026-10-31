@@ -57,10 +57,8 @@
   margin: 0;
   color: var(--gmt-ice-dim);
 
-  /* Two lines, the most it takes on a narrow page; empty, it keeps the room unseen. Two line
-     boxes of text round to 1/64 px each and `2lh` does not, so they differ by a hundredth or
-     two; the extra pixel makes the empty box and every filled one the same height. */
-  min-block-size: calc(2lh + 1px);
+  /* The box holds the tallest sentence it can show, at whatever width the page has. */
+  font-variant-numeric: tabular-nums;
 
   &[hidden] {
     display: block;

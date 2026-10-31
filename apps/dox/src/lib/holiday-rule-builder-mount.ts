@@ -84,6 +84,7 @@ import {
   readArgs,
   rowResult,
   rulesOf,
+  ruleCallExtent,
   ruleCallExtentJob,
   ruleCallLines,
   weekendNames,
