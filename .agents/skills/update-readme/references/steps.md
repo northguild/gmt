@@ -38,7 +38,7 @@ Then write the figures:
 pnpm stats:sync
 ```
 
-It rewrites the digits of every figure in both READMEs: the fact lines, each row of the comparison table and the days the other libraries were measured. It pads the table's columns and regenerates `apps/dox/src/data/gmt-stats.json`. It writes nothing else. Never edit a figure by hand afterwards.
+It rewrites the digits of every figure in both READMEs: the functions and locales in the fact bullet. It regenerates `apps/dox/src/data/gmt-stats.json`. It writes nothing else. Never edit a figure by hand afterwards.
 
 ## 4. Run the two checks
 
@@ -54,7 +54,7 @@ Fix what they report:
 | A figure is stale                                                                                          | Run `pnpm stats:sync` again. If it stays stale, the source is wrong, not the README                |
 | A guarded line matched nothing                                                                             | Someone reworded the line. Restore its wording, or update its rule in `scripts/stats.mjs`          |
 | A namespace has no link, a link names a namespace that exports no function, or a link is on the wrong line | Go to step 5                                                                                       |
-| The comparison table has a row to add, delete or move, or the count word is wrong                          | Go to step 8                                                                                       |
+| The opening line or the "latest test counts" sentence names a library wrongly, or a typed count appears  | Go to step 8. Delete a typed test or CI run count                                                  |
 | The two files differ                                                                                       | Copy the edited file over the other: `cp README.md packages/gmt/README.md`                         |
 | A sample result is wrong, or a sampled import does not resolve                                             | Go to step 6                                                                                       |
 | A link names no page                                                                                       | Correct the link. Every `/reference/<namespace>/` link must name a page of the generated reference |
@@ -70,7 +70,7 @@ Only a namespace that exports functions has a link. `regex` and `types` have non
 
 ## 6. Hand edit: a sampled function changed
 
-This applies when the story renames or removes a function the sample or the DST example shows, or changes what it returns. The `new Date()` line in the DST example is not checked: if you change it, run it under `TZ=Europe/Berlin` and `TZ=Asia/Tokyo` and paste both results.
+This applies when the story renames or removes a function the sample or the DST example shows, or changes what it returns.
 
 1. Build the library if you have not: `pnpm --filter @northguild/gmt build`.
 2. Run the call for real and print its result. From `packages/gmt`, the package name resolves to the built library:
@@ -94,16 +94,13 @@ This applies when the story renames or removes a function the sample or the DST 
 3. Copy the root file over the package file: `cp README.md packages/gmt/README.md`.
 4. Run the guard: `pnpm --filter @gmt/dox exec vitest run src/lib/agent-prompt.test.ts`.
 
-## 8. Hand edit: a library added, removed or re-ordered in the comparison table
+## 8. Hand edit: a library added or removed
 
-`apps/dox/src/data/library-measurements.json` holds one entry per library. The table follows it.
+`apps/dox/src/data/library-measurements.json` holds one entry per library. The opening line's "in place of" list must name exactly those libraries.
 
-1. **A library added:** add its row by hand. Write its name in the first column as the JSON's `name` gives it, and fill the "Built on" cell. Leave the figures for the sync.
-2. **A library removed:** delete its row.
-3. **Either of those:** correct the count word in the fact lines ("six") to the number of libraries in the JSON.
-4. **A re-measurement that changes the order:** move the rows. GMT's row is first. The others follow by tests, most first.
-5. Run `pnpm stats:sync`. It fills the figures, updates the measured-on days in the sentence under the table and pads the columns.
-6. Run `node scripts/stats.mjs check` again.
+1. **A library added:** add its name to the "in place of" list in the opening line, and to the line that points at the Why GMT page.
+2. **A library removed:** delete its name from both.
+3. Run `node scripts/stats.mjs check` again.
 
 ## 9. Namespace READMEs
 

@@ -61,15 +61,14 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
       A gap is not yours to fill with site copy: report it to the main session, so `tdd-dev` writes it
       from the implementation.
    4. **Make sure the READMEs are up to date.** `README.md` and `packages/gmt/README.md`
-      are one short landing page, kept as two identical files. It holds four fact lines,
-      one comparison table, the install command, a sample, the namespace links and the
+      are one short landing page, kept as two identical files. It holds two fact bullets,
+      a line that links the Why GMT and compare pages, the install command, a sample, the namespace links and the
       agent prompt. Do this on every story, after item 3. The checks read the regenerated
       corpus and the built library.
 
       - **Run `pnpm stats:sync`.** It rewrites the digits of every published figure in
-        both READMEs: the fact lines (tests, CI test runs, time zones, Node versions, the
-        multiple, functions, locales), each row of the comparison table, and the days the
-        other libraries were measured. It also pads the table's columns. It writes nothing
+        both READMEs: the fact bullet with the function and locale counts. The READMEs hold
+        no test count, CI test run count or comparison table. It writes nothing
         else. GMT's figures come from the repository and count `packages/gmt`'s suite
         only. The other libraries' figures come from
         `apps/dox/src/data/library-measurements.json`. It also regenerates
@@ -78,8 +77,8 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
         README. Never type any of these numbers by hand.
       - **Run `node scripts/stats.mjs check` and `node scripts/api-surface.mjs check`, and
         fix what they report.** `stats check` fails when a figure is stale, when a guarded
-        line was reworded so its figure is no longer checked, when the comparison table's
-        rows or the namespace links are wrong, or when the two files differ.
+        line was reworded so its figure is no longer checked, when the opening line or the Why GMT sentence names the wrong libraries,
+        when a README types a test or CI run count, or when the namespace links are wrong, or when the two files differ.
         `api-surface check` runs every `call // result` line of the sample against the
         built library. `sync` fixes a stale figure. Everything else needs a hand edit, and
         `check` says which.
@@ -87,11 +86,9 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
         its `/reference/<namespace>/` link on the line of namespace links, whoever owns
         it; the "By industry:" line links each industry's page (`/industries/<id>/`)
         and changes only when an industry is declared or removed.
-      - **`library-measurements.json` gains or loses a library:** add or delete its row
-        in the comparison table, and correct the count word in the fact lines ("six").
-        **A re-measurement changes the order of the rows:** move them. GMT's row is first,
-        then the others by tests, most first. Then run `pnpm stats:sync` to fill the
-        figures and pad the columns.
+      - **`library-measurements.json` gains or loses a library:** add or remove its name
+        in the opening line's "in place of" list and in the line that links the Why GMT
+        page.
       - **The story renames or removes a function shown in the sample, or changes its
         result:** update the sample. Paste each result from a real call against the built
         library. Never type a result from memory.
@@ -104,7 +101,7 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
       - **The two files are identical.** Edit one and copy it to the other:
         `cp README.md packages/gmt/README.md`.
       - **Report the `measuredOn` date of each other library's figures**, read from
-        `library-measurements.json`. Those figures are a dated snapshot and nothing
+        `library-measurements.json`. Those figures, which the Dox site shows, are a dated snapshot and nothing
         measures them again automatically. The owner decides when to re-measure.
 
 5. **Draft a commit message for the owner** with `/commit-message` — scoped to the story (e.g. `feat(domination): CCSDS time codes (SPA-52, #233)`). Output it; never run `git commit`.

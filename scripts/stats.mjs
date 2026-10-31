@@ -15,7 +15,7 @@
  * GMT's figures describe `packages/gmt` and nothing else. The repo also holds `apps/dox`'s and
  * `packages/gmt-oxlint`'s suites, but those test the docs site and a lint plugin — folding them
  * into a claim about the date library would inflate it with tests that never touch the shipped
- * API. The comparison table puts GMT beside other libraries' own suites, so the subject has to
+ * API. The site's comparison sets GMT beside other libraries' own suites, so the subject has to
  * be the library's own suite too.
  *
  * Sources of truth, none of them a number typed in this script:
@@ -37,19 +37,16 @@
  * The docs site renders its figures: `sync` writes `apps/dox/src/data/gmt-stats.json`, and
  * every dox page, chart and comparison imports from it, so dox copy holds no GMT number to
  * rewrite. A README cannot do that — npm and GitHub serve the committed bytes — so its numbers
- * live in the file. `README.md` and `packages/gmt/README.md` are one text, byte for byte, which
- * this script also checks, and in each of them it guards:
+ * live in the file. The READMEs hold no test count or CI test run count: they send readers to the
+ * Why GMT page for those. `README.md` and `packages/gmt/README.md` are one text, byte for byte,
+ * which this script also checks, and in each of them it guards:
  *
  *   the opening         the other libraries it names, which are exactly the measured ones
  *   paragraph
- *   the fact lines      tests, CI test runs, time zones and Node versions; the multiple of
- *                       GMT's CI test runs over the other libraries' combined, and the count of
- *                       those libraries, spelled as a word; functions and locales
- *   the comparison      GMT's row, and one row per other library, found by the library's name
- *   table               in the first column. The rows are GMT's, then exactly the measured
- *                       libraries, by tests, most first
- *   the sentence        the earliest and the latest day a library was measured
- *   under the table
+ *   the comparison      the sentence that sends readers to the Why GMT page names exactly the
+ *   sentence            measured libraries
+ *   typed counts        no test count and no CI test run count appears anywhere in the text
+ *   the fact line       functions and locales
  *   the namespace       one `/reference/<namespace>/` link per namespace that exports a
  *   links               function, each labelled with its namespace, on a line of their
  *                       own; and a "By industry:" line that links each declared
@@ -62,12 +59,9 @@
  *      silently stops matching otherwise, and a guard that quietly guards nothing is worse
  *      than no guard.
  *   2. A replacement may only change digits. After each substitution the non-numeric skeleton
- *      of the match must be byte-identical, so a rule can never mangle prose. The one other
- *      thing `sync` writes is the padding of the comparison table, so that a figure which
- *      gains a digit leaves the columns lined up.
- *   3. Anything else is reported for a person and never rewritten: a library to name, a count
- *      spelled as a word, a row to add, remove or move, a namespace link to add, remove or
- *      relabel, a line the two READMEs do not share. `check` fails on it, and `sync` lists it as
+ *      of the match must be byte-identical, so a rule can never mangle prose.
+ *   3. Anything else is reported for a person and never rewritten: a library to name, a
+ *      namespace link to add, remove or relabel, a line the two READMEs do not share. `check` fails on it, and `sync` lists it as
  *      needing an edit by hand.
  */
 
@@ -104,26 +98,6 @@ const REFERENCE = "https://northguild.dev/gmt/reference/";
 const INDUSTRY_PAGES = "https://northguild.dev/gmt/industries/";
 /** How the line that links the industries' pages starts. */
 const INDUSTRY_LINE = "By industry:";
-/**
- * A count the READMEs spell as a word, by its value. A count past the end is reported, not
- * guessed.
- */
-const COUNT_WORDS = [
-  "zero",
-  "one",
-  "two",
-  "three",
-  "four",
-  "five",
-  "six",
-  "seven",
-  "eight",
-  "nine",
-  "ten",
-  "eleven",
-  "twelve",
-];
-
 // ---------------------------------------------------------------- sources of truth
 
 /** Vitest's own entry point, run on the current Node. */
@@ -523,53 +497,10 @@ const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 function ruleSet(f) {
   return [
     {
-      label: "tests and CI test runs",
-      files: READMES,
-      find: /(- \*\*)([\d,]+)( tests, run )([\d,]+)( times in CI\.\*\* Every test runs in )(\d+)( time zones on )(\d+)( Node versions\.)/g,
-      values: [
-        n(f.tests),
-        n(f.executions),
-        String(f.timezones),
-        String(f.nodeCount),
-      ],
-    },
-    {
-      // Written without a thousands separator, as the site writes the same multiple.
-      label: "multiple of the other libraries' CI test runs",
-      files: READMES,
-      find: /(- \*\*)(\d+)(× the CI test runs\*\* of the )/g,
-      values: [String(f.executionMultiple)],
-    },
-    {
       label: "functions and locales",
       files: READMES,
       find: /(- \*\*)([\d,]+)( functions, to the nanosecond\*\*, tested in )(\d+)( locales\.)/g,
       values: [n(f.functions), String(f.locales)],
-    },
-    {
-      label: "comparison table — GMT's row",
-      files: READMES,
-      find: /^(\| \*\*`@northguild\/gmt`\*\* +\| \*\*)([\d,]+)(\*\* +\| \*\*)([\d,]+)(\*\* +\|)/gm,
-      values: [n(f.tests), n(f.executions)],
-    },
-    // One row per measured library, found by its name in the first column.
-    ...f.others.map((library) => ({
-      label: `comparison table — ${library.name}'s row`,
-      files: READMES,
-      find: new RegExp(
-        `^(\\| \`?${escapeRegExp(library.name)}\`? +\\| )([\\d,]+)( +\\| )([\\d,]+)( +\\|)`,
-        "gm",
-      ),
-      values: [n(library.tests), n(library.executions)],
-      missing:
-        `the comparison table has no row for ${library.name}, which ${MEASUREMENTS} lists. ` +
-        `Add the row by hand, then run: pnpm stats:sync`,
-    })),
-    {
-      label: "days the other libraries were measured",
-      files: READMES,
-      find: /(The other libraries were measured from )(\d{4}-\d{2}-\d{2})( to )(\d{4}-\d{2}-\d{2})(,)/g,
-      values: [f.measuredFrom, f.measuredTo],
     },
   ];
 }
@@ -615,24 +546,6 @@ function applyRule(rule, text, file) {
 
 // ---------------------------------------------------------------- checks a person fixes
 
-/** The comparison table: the header row that starts `| Library`, and the rows under it. */
-function comparisonTable(text) {
-  const lines = text.split("\n");
-  const start = lines.findIndex((line) => /^\| Library +\|/.test(line));
-  if (start === -1) return null;
-  let end = start;
-  while (end < lines.length && lines[end].startsWith("|")) end++;
-  return { lines, start, end };
-}
-
-/** One table row's cells, unpadded. */
-const cellsOf = (line) =>
-  line
-    .split("|")
-    .slice(1, -1)
-    .map((cell) => cell.trim());
-/** A cell of the row under the header: dashes, with a colon where the column is aligned. */
-const isDelimiterCell = (cell) => /^:?-+:?$/.test(cell);
 /** A first-column cell as a library's name: `**\`@northguild/gmt\`**` is `@northguild/gmt`. */
 const rowName = (cell) => cell.replace(/[*`]/g, "");
 
@@ -684,86 +597,54 @@ function openingNamesProblems(text, f) {
   ];
 }
 
-/** The fact line's count of other libraries must be the number the measurements file lists. */
-function libraryCountProblems(text, f) {
-  const count = f.others.length;
-  const word = COUNT_WORDS[count];
-  if (word === undefined) {
+/**
+ * The sentence that replaced the comparison table ("The latest test counts, CI volume and the
+ * comparison with A, B and C are on …") names the measured libraries, each by its name, and no
+ * other.
+ */
+function comparisonNamesProblems(text, f) {
+  const list = text.match(
+    /^The latest test counts.*? comparison with (.+?) are on /m,
+  )?.[1];
+  if (list === undefined) {
     return [
-      `${MEASUREMENTS} lists ${count} libraries, and COUNT_WORDS in scripts/stats.mjs has no word for ${count}. Add it there`,
+      'no line starting "The latest test counts" has a "comparison with …" list of the other libraries — it was reworded, ' +
+        "so the names are no longer checked. Update comparisonNamesProblems in scripts/stats.mjs",
     ];
   }
-  const written = [
-    ...text.matchAll(
-      /× the CI test runs\*\* of the (\S+) libraries below, combined\./g,
-    ),
-  ].map((m) => m[1]);
-  if (written.length === 0) {
-    return [
-      `no fact line says how many libraries the multiple is over ("of the ${word} libraries below, combined.") — ` +
-        `the line was reworded, so the count is no longer checked. Update libraryCountProblems in scripts/stats.mjs`,
-    ];
-  }
-  return written
-    .filter((found) => found !== word)
-    .map(
-      (found) =>
-        `the fact line says "the ${found} libraries below", and ${MEASUREMENTS} lists ${count}. ` +
-        `Write "${word}", and give the comparison table one row for each`,
-    );
+  const named = list.split(/,? and |, /).map((name) => rowName(name).trim());
+  const measured = f.others.map((l) => l.name);
+  return [
+    ...measured
+      .filter((name) => !named.includes(name))
+      .map(
+        (name) =>
+          `the "The latest test counts" sentence does not name ${name}, which ${MEASUREMENTS} lists. Add it to the "comparison with" list`,
+      ),
+    ...named
+      .filter((name) => !measured.includes(name))
+      .map(
+        (name) =>
+          `the "The latest test counts" sentence names ${name}, and ${MEASUREMENTS} lists no library of that name. Take it out of the "comparison with" list`,
+      ),
+  ];
 }
 
 /**
- * The comparison table holds GMT's row first, then the measured libraries and no other, by
- * tests with the most first. A measured library with no row is its digit rule's to report.
+ * The READMEs hold no test count and no CI test run count: those figures live on the Why GMT
+ * page, which reads them from the generated stats.
  */
-function tableRowProblems(text, f) {
-  const table = comparisonTable(text);
-  if (!table) {
-    return [
-      "no table has a header row that starts `| Library` — the comparison table was reworded, " +
-        "so its rows are no longer checked. Update comparisonTable in scripts/stats.mjs",
-    ];
-  }
-  const names = table.lines
-    .slice(table.start + 1, table.end)
-    .map(cellsOf)
-    .filter((cells) => !cells.every(isDelimiterCell))
-    .map((cells) => rowName(cells[0] ?? ""));
-  const measured = new Map(f.others.map((l) => [l.name, l]));
-  const problems = [];
-
-  if (names[0] !== "@northguild/gmt") {
-    problems.push(
-      "the comparison table's first row is not `@northguild/gmt`'s. Move GMT's row to the top",
+function typedCountProblems(text) {
+  return text
+    .split("\n")
+    .flatMap((line, i) =>
+      [
+        ...line.matchAll(/\d[\d,]*\s+tests\b|CI test runs?\b|times in CI\b/gi),
+      ].map(
+        (m) =>
+          `line ${i + 1} has "${m[0]}", a typed test or CI run count. Delete it: the READMEs link to the Why GMT page for those figures`,
+      ),
     );
-  }
-  const others = names.filter((name) => name !== "@northguild/gmt");
-  for (const name of new Set(others)) {
-    if (!measured.has(name)) {
-      problems.push(
-        `the comparison table has a row for ${name}, and ${MEASUREMENTS} lists no library of that name. ` +
-          `Delete the row, or add its measurement to that file`,
-      );
-    } else if (others.filter((other) => other === name).length > 1) {
-      problems.push(
-        `the comparison table has more than one row for ${name}. Keep one`,
-      );
-    }
-  }
-  const tests = others
-    .filter((name) => measured.has(name))
-    .map((name) => measured.get(name).tests);
-  if (tests.some((count, i) => i > 0 && count > tests[i - 1])) {
-    const order = [...f.others]
-      .sort((a, b) => b.tests - a.tests)
-      .map((l) => `${l.name} (${n(l.tests)})`);
-    problems.push(
-      `the comparison table's rows are out of order. After GMT's row they go by tests, most first: ${order.join(", ")}. ` +
-        `Reorder the rows by hand; sync does not move a row`,
-    );
-  }
-  return problems;
 }
 
 /**
@@ -892,14 +773,14 @@ function proseChecks(f) {
       read: (text) => openingNamesProblems(text, f),
     },
     {
-      label: "count of the other libraries",
+      label: "libraries the comparison sentence names",
       files: READMES,
-      read: (text) => libraryCountProblems(text, f),
+      read: (text) => comparisonNamesProblems(text, f),
     },
     {
-      label: "comparison table rows",
+      label: "typed test and CI run counts",
       files: READMES,
-      read: (text) => tableRowProblems(text, f),
+      read: (text) => typedCountProblems(text),
     },
     {
       label: "namespace links",
@@ -907,45 +788,6 @@ function proseChecks(f) {
       read: (text) => namespaceLinkProblems(text, f),
     },
   ];
-}
-
-/**
- * Pad the comparison table's cells so its columns line up; a figure that gained or lost a digit
- * leaves them ragged. Changes spaces and the dashes of the delimiter row, and throws if it
- * would change anything else.
- */
-function alignComparisonTable(text, file) {
-  const table = comparisonTable(text);
-  if (!table) return text;
-  const { lines, start, end } = table;
-  const rows = lines.slice(start, end).map(cellsOf);
-  const isDelimiterRow = (row) => row.every(isDelimiterCell);
-  const width = (column) =>
-    Math.max(
-      3,
-      ...rows
-        .filter((row) => !isDelimiterRow(row))
-        .map((row) => (row[column] ?? "").length),
-    );
-  const aligned = rows.map((row) => {
-    const cells = row.map((cell, column) =>
-      isDelimiterRow(row)
-        ? `${cell.startsWith(":") ? ":" : ""}${"-".repeat(width(column) - cell.replace(/-/g, "").length)}${cell.endsWith(":") ? ":" : ""}`
-        : cell.padEnd(width(column)),
-    );
-    return `| ${cells.join(" | ")} |`;
-  });
-
-  const unpadded = (line) => line.replace(/[ -]+/g, "");
-  if (
-    aligned.map(unpadded).join("\n") !==
-    lines.slice(start, end).map(unpadded).join("\n")
-  ) {
-    throw new Error(
-      `${file}: aligning the comparison table would change more than its padding — fix alignComparisonTable, not the file`,
-    );
-  }
-  return [...lines.slice(0, start), ...aligned, ...lines.slice(end)].join("\n");
 }
 
 /**
@@ -1017,13 +859,7 @@ function evaluate(f) {
     }
   }
 
-  // Padding is not a figure: `sync` writes it, and `check` does not fail on it.
-  for (const file of READMES) {
-    edits.set(file, alignComparisonTable(textOf(file), file));
-  }
-
-  // The two READMEs are one text. A difference that `sync` removes (a stale figure, ragged
-  // padding) is drift; one that it leaves needs a person.
+  // The two READMEs are one text. A difference that `sync` removes (a stale figure) is drift; one that it leaves needs a person.
   const left = firstDifference(textOf(ROOT_README), textOf(PKG_README));
   const onDisk = firstDifference(
     readFileSync(ROOT_README, "utf8"),
@@ -1032,7 +868,7 @@ function evaluate(f) {
   if (left) {
     prose.push(`${left}. Make the two files the same by hand`);
   } else if (onDisk) {
-    drift.push(`${onDisk} — a figure or table padding, which sync writes`);
+    drift.push(`${onDisk} — a figure, which sync writes`);
   }
 
   // The dox data file is compared by value, not bytes, so reformatting it is not drift.
