@@ -93,20 +93,18 @@ import {
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { codeSpan } from "./widget-ui";
 
-/** The longest band label a tolerance can write: the widest tolerance a handle reaches, and
- *  the longer of the two answers. It holds the label's room while the tolerance changes. */
-const BAND_LABEL_LONGEST =
-  "±23 h 59 min around the first estimate · exceeds the tolerance: false";
-
 export type { EtaDriftArgs } from "./eta-drift";
 
 const WIDGET_NAME = "eta-drift";
 
 /** The widest readings the plates show, so they keep their width while the slider drags. */
 const HERO_SAMPLES = ["+23 h 59 min"];
-const HERO_LINE_SAMPLES: readonly (readonly string[])[] = [
+
+/** The lines under the drift plate at their widest: `widest` is the longest tolerance the
+ *  control can show (`widestTolerance`), and "yes" is longer than "no". */
+const heroLineSamples = (widest: string): readonly (readonly string[])[] => [
   ["PT23H59M · over 6 estimates"],
-  ["exceeds ±23 h 59 min: yes"],
+  [`exceeds ±${widest}: yes`],
 ];
 
 // ---------------------------------------------------------------------------
@@ -156,10 +154,39 @@ function classWord(code: string): string {
   return TIMESTAMP_CLASSES.find((c) => c.code === code)?.label ?? code;
 }
 
-function sliderMax(drift: { drift: string } | null): number {
+export function sliderMax(drift: { drift: string } | null): number {
   const m = drift === null ? null : isoToMinutes(drift.drift);
   return Math.max(1440, niceMinutes(1.5 * Math.abs(m ?? 0)));
 }
+
+/**
+ * The tolerance, as the band label and the exceeds line write it, that takes the most room: the
+ * longer of what the handle can reach (the slider's maximum, which grows with the drift) and
+ * what is typed, since a typed tolerance has no cap and a drag replaces it. Digits are
+ * tabular, so the widest reach is its whole hours with 59 minutes, the most digits and both
+ * units that any length up to the maximum writes.
+ */
+export function widestTolerance(
+  sliderMaxMinutes: number,
+  typed: string,
+): string {
+  const reach = toleranceText(
+    minutesToIso(Math.floor(sliderMaxMinutes / 60) * 60 + 59),
+  );
+  const written = toleranceText(typed);
+  return written.length > reach.length ? written : reach;
+}
+
+/** The band label for a tolerance text: `exceeds the tolerance: false` is the longest answer
+ *  ("true" and "null" are shorter). */
+export const bandLabelFor = (tolerance: string, exceeds: string): string =>
+  `±${tolerance} around the first estimate · exceeds the tolerance: ${exceeds}`;
+
+/** The band label's reserved room: the label at the widest tolerance the control can show. */
+export const widestBandLabel = (
+  sliderMaxMinutes: number,
+  typed: string,
+): string => bandLabelFor(widestTolerance(sliderMaxMinutes, typed), "false");
 
 /** What the slider reads aloud and in its chip, from the typed tolerance. */
 function toleranceReading(text: string): string {
@@ -282,7 +309,9 @@ export function renderEtaDriftTemplate(
           role: "note",
           label: "Tolerance band",
           content: html``,
-          ghosts: [html`${BAND_LABEL_LONGEST}`],
+          ghosts: [
+            html`<span id="${id("band-ghost")}">${widestBandLabel(sliderMax(null), s.tolerance)}</span>`,
+          ],
         })}</div>
       </div>`,
       )}
@@ -669,8 +698,16 @@ function setupWidget(
     );
     thinTickLabels(el("x-ticks"), "[data-tick]");
     el("band-label").textContent = band
-      ? `±${toleranceText(s.tolerance)} around the first estimate · exceeds the tolerance: ${String(facts.drift?.exceedsTolerance)}`
+      ? bandLabelFor(
+          toleranceText(s.tolerance),
+          String(facts.drift?.exceedsTolerance),
+        )
       : "";
+    // The slider reaches further as the drift grows, so the room is set again here.
+    el("band-ghost").textContent = widestBandLabel(
+      sliderMax(facts.drift),
+      s.tolerance,
+    );
     const present = new Set(facts.events.map((e) => e.classifier as string));
     setHtml(
       el("legend"),
@@ -701,7 +738,9 @@ function setupWidget(
             `${facts.drift.drift} · over ${facts.drift.revisions} estimates`,
             exceeds,
           ],
-          lineSamples: HERO_LINE_SAMPLES,
+          lineSamples: heroLineSamples(
+            widestTolerance(sliderMax(facts.drift), tolerance),
+          ),
           series: 1,
           gate: "hero",
         }),

@@ -586,6 +586,8 @@ function setupWidget(
           ? null
           : span(layout.outside.from, layout.outside.to),
       negative: dev < 0,
+      // The axis stops at a week (`axisMinutes`), so a longer deviation is drawn to the edge.
+      clipped: Math.abs(dev) > half,
       delta: signedText(f.deviation),
       word:
         f.classA === null

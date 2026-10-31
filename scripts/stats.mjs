@@ -639,7 +639,9 @@ function typedCountProblems(text) {
     .split("\n")
     .flatMap((line, i) =>
       [
-        ...line.matchAll(/\d[\d,]*\s+tests\b|CI test runs?\b|times in CI\b/gi),
+        ...line.matchAll(
+          /\d[\d,.\u00a0\u202f ]*(?:\+|k\b|m\b|million\b|thousand\b)?\s*test(?:s|\s+cases?|\s+runs?)\b|CI test runs?\b|times in CI\b/gi,
+        ),
       ].map(
         (m) =>
           `line ${i + 1} has "${m[0]}", a typed test or CI run count. Delete it: the READMEs link to the Why GMT page for those figures`,
@@ -761,7 +763,7 @@ function namespaceLinkProblems(text, f) {
 }
 
 /**
- * What a digit rule cannot hold: a list of names, a count spelled as a word, the rows a table
+ * What a digit rule cannot hold: a list of names, a typed test or CI run count, the rows a table
  * has and their order, a set of links. `read` takes one file's text and returns a message for
  * each thing a person has to edit. `sync` rewrites none of it.
  */

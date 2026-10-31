@@ -21,6 +21,12 @@ import {
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { CHAT_STARTERS } from "./chat-constants";
 import { ETA_PRESETS } from "./eta-drift";
+import {
+  bandLabelFor,
+  sliderMax,
+  widestBandLabel,
+} from "./eta-drift-mount";
+import { minutesToIso, toleranceText } from "./punctuality-widgets";
 import { seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
@@ -592,5 +598,39 @@ describe("releasing observers", () => {
     } finally {
       spy.restore();
     }
+  });
+});
+
+describe("the room the band label holds", () => {
+  it("holds a day's worth when the drift is small and the tolerance short", () => {
+    expect(widestBandLabel(sliderMax(null), "PT15M")).toBe(
+      "±24 h 59 min around the first estimate · exceeds the tolerance: false",
+    );
+  });
+
+  it("holds the slider's whole reach once a drift of 100 h pushes it past a day", () => {
+    const max = sliderMax({ drift: "PT100H" });
+    expect(max).toBeGreaterThan(6000);
+    const label = widestBandLabel(max, "PT15M");
+    expect(label).toContain(`±${Math.floor(max / 60)} h 59 min`);
+    // Every length the handle can stop at fits: none is longer than what is held.
+    for (let m = 0; m <= max; m += 15) {
+      const written = bandLabelFor(toleranceText(minutesToIso(m)), "false");
+      expect(written.length).toBeLessThanOrEqual(label.length);
+    }
+  });
+
+  it("holds a typed tolerance that has no cap", () => {
+    expect(widestBandLabel(sliderMax(null), "PT100H59M")).toContain(
+      "±100 h 59 min around the first estimate",
+    );
+  });
+
+  it("holds the longer of the slider's reach and the typed tolerance", () => {
+    const max = sliderMax({ drift: "PT100H" });
+    expect(widestBandLabel(max, "PT100H59M")).toContain(
+      `±${Math.floor(max / 60)} h 59 min`,
+    );
+    expect(widestBandLabel(max, "PT5000H59M")).toContain("±5000 h 59 min");
   });
 });

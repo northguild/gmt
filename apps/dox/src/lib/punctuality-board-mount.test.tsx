@@ -363,6 +363,38 @@ describe("mountPunctualityBoard: the second tolerance", () => {
   });
 });
 
+describe("mountPunctualityBoard: a deviation past the axis", () => {
+  const day = (d: number) =>
+    `2024-06-${String(14 + d).padStart(2, "0")}T09:00:00+01:00${LONDON}`;
+
+  it("marks a bar cut at the edge of the axis, for a 10-day and a 30-day delay, and not one inside the week", async () => {
+    await open({
+      pairs: pairs(
+        [at("09:00"), day(10)],
+        [at("09:00"), `2024-07-14T09:00:00+01:00${LONDON}`],
+        [at("09:00"), at("09:05")],
+      ),
+      late: "PT15M",
+    });
+    const [tenDays, thirtyDays, inside] = rows();
+    expect(tenDays).toHaveTextContent("+240 h");
+    expect(within(tenDays!).getByText("»")).toBeInTheDocument();
+    expect(thirtyDays).toHaveTextContent("+720 h");
+    expect(within(thirtyDays!).getByText("»")).toBeInTheDocument();
+    expect(within(inside!).queryByText("»")).not.toBeInTheDocument();
+  });
+
+  it("marks an early bar cut at the edge on its own side", async () => {
+    await open({
+      pairs: pairs([day(10), at("09:00")], [at("09:00"), at("09:05")]),
+      late: "PT15M",
+    });
+    const [far, inside] = rows();
+    expect(within(far!).getByText("«")).toBeInTheDocument();
+    expect(within(inside!).queryByText("«")).not.toBeInTheDocument();
+  });
+});
+
 describe("mountPunctualityBoard: NO SIGNAL", () => {
   it("PBR1: a weeks tolerance shows NO SIGNAL and why", async () => {
     const w = await openPreset("fifteen-minute");

@@ -122,6 +122,9 @@ interface PunctRowOptions {
   outside: BarSpan | null;
   /** The deviation is negative: the gradient and the cap flip to the left. */
   negative: boolean;
+  /** The deviation lies past the end of the axis, so the bar is drawn only as far as the edge
+   *  and a mark there says it goes on. The delta text states the true value. */
+  clipped?: boolean;
   /** The deviation in words, or a NO SIGNAL span. */
   delta: HtmlValue;
   /** The class word: a tag for late or early, else plain. */
@@ -166,6 +169,14 @@ export function punctRow(o: PunctRowOptions): SafeHtml {
               data-end="true"
               style="${box(o.outside)}"
             ></span>`
+      }${
+        o.clipped === true
+          ? html`<span
+              class="${styles.clip}"
+              data-negative="${String(o.negative)}"
+              >${o.negative ? "«" : "»"}</span
+            >`
+          : ""
       }</span
     ><span class="${styles.rowText}"
       ><span class="${styles.textLine}">${o.delta}</span

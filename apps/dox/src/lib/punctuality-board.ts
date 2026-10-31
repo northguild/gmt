@@ -483,7 +483,9 @@ export function axisMinutes(state: BoardState, facts: BoardFacts): number {
     }),
   ];
   // Capped at a week, so the longest tolerance a handle can set (and so the longest the
-  // readouts must hold room for) is exact: a longer typed tolerance is drawn at the edge.
+  // readouts must hold room for) is exact. The cap covers the deviations too: a longer typed
+  // tolerance, or an arrival more than a week off, is drawn at the edge, and a bar cut there
+  // carries an end mark so it does not read as exactly a week.
   return Math.min(niceMinutes(1.2 * Math.max(...sizes)), WIDEST_AXIS_MINUTES);
 }
 
