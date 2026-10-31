@@ -21,11 +21,7 @@ import {
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { CHAT_STARTERS } from "./chat-constants";
 import { ETA_PRESETS } from "./eta-drift";
-import {
-  bandLabelFor,
-  sliderMax,
-  widestBandLabel,
-} from "./eta-drift-mount";
+import { bandLabelFor, sliderMax, widestBandLabel } from "./eta-drift-mount";
 import { minutesToIso, toleranceText } from "./punctuality-widgets";
 import { seedFromLocation } from "./widget-permalink";
 
