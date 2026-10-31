@@ -21,7 +21,8 @@ import { parseCalendarDateValue } from "../../internal";
  *   `isValidDateTime` require: basic format (`20241003`), a space or lower-case `t` separator, a
  *   UTC offset or designator and a leap second (second `60`) return false, although
  *   `Temporal.PlainDate.from` reads all but the designator.
- * - Returns false for non-strings or empty strings.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`. An empty string returns `false`.
  *
  * Compatibility: since 1.16.0 the string is RFC 9557, and a date-time is read as its date (earlier
  * releases returned false). Earlier releases accepted calendar-native
@@ -29,7 +30,7 @@ import { parseCalendarDateValue } from "../../internal";
  * a `;era=` string or a six-digit unsigned year now returns false, and any other such string is
  * read as the ISO date its digits spell.
  *
- * @param value ISO PlainDate string, optionally calendar-annotated
+ * @param value any value; a string is checked as an ISO PlainDate, optionally calendar-annotated
  * @returns boolean indicating validity
  *
  * @example isValidCalendarDate("2024-10-03") // true
@@ -46,8 +47,14 @@ import { parseCalendarDateValue } from "../../internal";
  * @example isValidCalendarDate("2024-10-03[u-ca=chinese]") // false (not supported by GMT)
  * @example isValidCalendarDate("0006-10-03[u-ca=japanese;era=reiwa]") // false (not RFC 9557)
  * @example isValidCalendarDate("invalid") // false
+ * @example isValidCalendarDate(null) // false
  */
-export function isValidCalendarDate(value: string): boolean {
+export function isValidCalendarDate(value: string): boolean;
+export function isValidCalendarDate(
+  value: {} | null | undefined | void,
+): boolean;
+export function isValidCalendarDate(value: unknown): value is string;
+export function isValidCalendarDate(value: unknown): boolean {
   if (typeof value !== "string" || value.length === 0) {
     return false;
   }

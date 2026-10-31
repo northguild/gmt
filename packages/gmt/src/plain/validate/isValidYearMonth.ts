@@ -14,9 +14,10 @@ import { plainYearMonthOf } from "../../internal/inputChecks";
  * - The calendar must be `iso8601`, in any case (`[u-ca=ISO8601]` is accepted); any other
  *   calendar is refused.
  * - Rejects a time, a `Z` and an offset.
- * - Returns false for anything that is not a string.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value ISO year-month string
+ * @param value any value; a string is checked as an ISO year-month
  * @returns boolean indicating validity
  *
  * @example isValidYearMonth("2026-10") // true
@@ -28,7 +29,11 @@ import { plainYearMonthOf } from "../../internal/inputChecks";
  * @example isValidYearMonth("2026-10-01") // false (a date, not a year-month)
  * @example isValidYearMonth("2026-10[u-ca=gregory]") // false (only iso8601)
  * @example isValidYearMonth("") // false
+ * @example isValidYearMonth(null) // false
  */
-export function isValidYearMonth(value: string): boolean {
+export function isValidYearMonth(value: string): boolean;
+export function isValidYearMonth(value: {} | null | undefined | void): boolean;
+export function isValidYearMonth(value: unknown): value is string;
+export function isValidYearMonth(value: unknown): boolean {
   return plainYearMonthOf(value) !== null;
 }

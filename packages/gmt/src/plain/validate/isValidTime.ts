@@ -9,8 +9,10 @@ import { isTimeString } from "../../internal/inputChecks";
  *   unknown critical one (`[!foo=bar]`) is rejected.
  * - Rejects leap seconds (e.g., "23:59:60").
  * - Rejects invalid times (e.g., "24:00:00", "23:60:00").
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value ISO PlainTime string
+ * @param value any value; a string is checked as an ISO PlainTime
  * @returns boolean indicating validity
  *
  * @example isValidTime("12:34:56") // true
@@ -19,7 +21,11 @@ import { isTimeString } from "../../internal/inputChecks";
  * @example isValidTime("12:34:56[!foo=bar]") // false (unknown critical annotation)
  * @example isValidTime("23:60:00") // false (invalid minute)
  * @example isValidTime("23:59:60") // false (leap second)
+ * @example isValidTime(null) // false
  */
-export function isValidTime(value: string): boolean {
-  return isTimeString(value);
+export function isValidTime(value: string): boolean;
+export function isValidTime(value: {} | null | undefined | void): boolean;
+export function isValidTime(value: unknown): value is string;
+export function isValidTime(value: unknown): boolean {
+  return typeof value === "string" && isTimeString(value);
 }

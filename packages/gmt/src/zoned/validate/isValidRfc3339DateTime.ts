@@ -15,9 +15,11 @@ import { parseRfc3339 } from "../parse/parseRfc3339";
  *   seconds because Temporal would read one as `:59`.
  * - False for GMT's own zoned strings, which carry a bracketed zone (`...+00:00[UTC]`): that
  *   annotation is not RFC 3339. Check those with `isValidZonedDateTime`.
- * - False for a non-string. Read the value with `parseRfc3339`; write one with `formatRfc3339`.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
+ * - Read the value with `parseRfc3339`; write one with `formatRfc3339`.
  *
- * @param value candidate RFC 3339 date-time string
+ * @param value any value; a string is checked as an RFC 3339 date-time
  * @returns boolean indicating validity
  *
  * @example isValidRfc3339DateTime("2024-03-15T14:30:00-04:00") // true
@@ -29,7 +31,13 @@ import { parseRfc3339 } from "../parse/parseRfc3339";
  * @example isValidRfc3339DateTime("2024-03-15T14:30:00") // false (no offset)
  * @example isValidRfc3339DateTime("2024-03-15T14:30:00+00:00[UTC]") // false (bracketed zone: use isValidZonedDateTime)
  * @example isValidRfc3339DateTime("not a date") // false
+ * @example isValidRfc3339DateTime(null) // false
  */
-export function isValidRfc3339DateTime(value: string): boolean {
-  return parseRfc3339(value) !== "";
+export function isValidRfc3339DateTime(value: string): boolean;
+export function isValidRfc3339DateTime(
+  value: {} | null | undefined | void,
+): boolean;
+export function isValidRfc3339DateTime(value: unknown): value is string;
+export function isValidRfc3339DateTime(value: unknown): boolean {
+  return typeof value === "string" && parseRfc3339(value) !== "";
 }

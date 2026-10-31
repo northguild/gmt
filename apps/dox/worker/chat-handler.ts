@@ -1,4 +1,5 @@
 import { convertUnixToUtc, sortUtc } from "@northguild/gmt";
+import { getUnixNow } from "@northguild/gmt/unix/get";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -22,7 +23,6 @@ import {
   type StatusData,
 } from "../src/lib/chat-types";
 import { observeOutput, Stopwatch } from "./timing";
-import { getUnixNowMs } from "./clock";
 import { mapUpstreamError } from "./error-mapping";
 import { namespaceFromPageContext } from "./namespace-from-page";
 import { checkRateLimit, clientIdFromRequest } from "./rate-limit";
@@ -152,7 +152,7 @@ export function createChatHandler(deps: ChatHandlerDeps) {
     searchChunksImpl = searchChunks,
     fetchImpl,
     cache,
-    now = getUnixNowMs,
+    now = getUnixNow,
     startTimeoutMs,
   } = deps;
 

@@ -1,4 +1,5 @@
 import { isValidCalendarDate } from "./isValidCalendarDate";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 
 describe("isValidCalendarDate", () => {
   it.each`
@@ -153,16 +154,70 @@ describe("isValidCalendarDate", () => {
       expect(isValidCalendarDate(value)).toBe(true);
     },
   );
+});
 
-  it.each`
-    value
-    ${null}
-    ${undefined}
-    ${123}
-  `(
-    "returns false for non-string input: $value",
-    ({ value }: { value: unknown }) => {
-      expect(isValidCalendarDate(value as string)).toBe(false);
-    },
-  );
+describe("isValidCalendarDate with any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidCalendarDate(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string typed unknown, as for a string", () => {
+    expect(isValidCalendarDate(arrives("2024-10-03"))).toBe(true);
+    expect(isValidCalendarDate("2024-10-03")).toBe(true);
+  });
+});
+
+describe("isValidCalendarDate types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("2024-10-03");
+    if (isValidCalendarDate(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidCalendarDate(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "invalid";
+    if (!isValidCalendarDate(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidCalendarDate(input)).toBe(false);
+  });
+
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidCalendarDate(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("2024-10-03")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidCalendarDate(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("2024-10-03")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "2024-10-03", 1, "invalid"].map(arrives);
+    const kept = values.filter(isValidCalendarDate);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["2024-10-03"]);
+  });
 });

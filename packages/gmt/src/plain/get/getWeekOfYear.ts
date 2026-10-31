@@ -1,10 +1,11 @@
 import { Temporal } from "../../internal/temporal";
 import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Get the ISO week number of the current date.
  *
- * - Uses Temporal.Now.plainDateTimeISO to get current date in system timezone.
+ * - Uses nowPlainDateTimeISO() to get current date in system timezone.
  * - Uses Temporal.PlainDate.weekOfYear for ISO week number.
  * - Returns null when system timezone is unavailable.
  *
@@ -20,7 +21,7 @@ export function getWeekOfYear(): number | null {
   }
 
   try {
-    const now = Temporal.Now.plainDateTimeISO(timeZone);
+    const now = nowPlainDateTimeISO(timeZone);
     const date = Temporal.PlainDate.from({
       year: now.year,
       month: now.month,

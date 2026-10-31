@@ -694,7 +694,7 @@ describe("formatRelativeTime", () => {
   // Temporal failures — internal errors must not throw, must return ""
   // ---------------------------------------------------------------------------
   describe("Temporal failures", () => {
-    it("returns '' when Temporal.Now.plainTimeISO throws (no reference provided)", () => {
+    it("returns '' when Temporal.Now.zonedDateTimeISO throws (no reference provided)", () => {
       mockTemporalNowPlainTimeISOThrow();
       expect(formatRelativeTime("11:30:00", MustTestLocales.enUS)).toBe("");
     });

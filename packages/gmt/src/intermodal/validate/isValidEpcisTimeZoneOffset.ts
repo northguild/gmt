@@ -15,12 +15,14 @@ import { epcisTimeZoneOffset } from "../../regex";
  * - **The pattern is the whole rule for a string.** Every value it matches is an offset Temporal
  *   reads, so this validator and `epcisTimeZoneOffset.test` agree on every string; the validator
  *   adds only the answer false for a non-string.
+ * - A value that is not a string, a `String` object included, returns false. A true result
+ *   narrows an `unknown` value to `string`.
  * - `Z`, `+0200`, `+02`, an offset with seconds and an offset past `14:00` are false.
  * - `-00:00` is true: the GS1 pattern matches it. `parseEpcisEvent` returns it as `+00:00`.
  * - It need not agree with an offset written in the event's `eventTime`. Check that field with
  *   `isValidEpcisEventTime`, or both with `isValidEpcisEvent`.
  *
- * @param value candidate EPCIS `eventTimeZoneOffset` string
+ * @param value any value; a string is checked as an EPCIS `eventTimeZoneOffset`
  * @returns boolean indicating validity
  *
  * @example isValidEpcisTimeZoneOffset("-05:00") // true
@@ -29,8 +31,14 @@ import { epcisTimeZoneOffset } from "../../regex";
  * @example isValidEpcisTimeZoneOffset("Z") // false (a designator, not an offset)
  * @example isValidEpcisTimeZoneOffset("+0200") // false (no colon)
  * @example isValidEpcisTimeZoneOffset("+05:30:00") // false (seconds)
+ * @example isValidEpcisTimeZoneOffset(null) // false
  */
-export function isValidEpcisTimeZoneOffset(value: string): boolean {
+export function isValidEpcisTimeZoneOffset(value: string): boolean;
+export function isValidEpcisTimeZoneOffset(
+  value: {} | null | undefined | void,
+): boolean;
+export function isValidEpcisTimeZoneOffset(value: unknown): value is string;
+export function isValidEpcisTimeZoneOffset(value: unknown): boolean {
   // `parseEpcisEvent` reads the offset through Temporal after the pattern, so this does too. No
   // string the pattern matches fails that read: it is here so the two cannot drift.
   return (

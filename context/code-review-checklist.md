@@ -31,6 +31,7 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 - [ ] No two tests in a file share a full name, and a string-only placeholder in a title is written `'$value'` so an empty string prints `''`, a quoted placeholder never holds a non-string, and a title column never hides two rows with the same inputs ([test-name standards](./testing-standards/references/index.md#test-name-standards))
 - [ ] Full locale matrix covered for any locale-aware function (17 locales via `MustTestLocales`)
 - [ ] Error paths tested using pre-built mocks from `packages/gmt/src/test/mocks` (imported relatively, e.g. `../../test/mocks`)
+- [ ] Module-level state a test changes (a cache, a registry) is reset in the test or `setupTests.ts`; `vi.spyOn` is used over `vi.mock` where it works ([shared modules](./testing-standards/references/index.md#shared-modules-and-isolated-files))
 - [ ] `expectOneOfIcu` / `expectDateTimeEqual` / `expectOneOfDateTimeIcu` (from `src/test/icuVariants.ts`) used only for verified CLDR wording variants
 - [ ] Timezone coverage uses `battleTestTimeZones` / `MustTestDstTimeZones` — no hand-copied literal zone tables — plus the probe-zone transition rows for boundary functions (see [testing standards](./testing-standards/references/index.md#zoned-and-unix-functions-must-use-the-battle-test-timezone-fixtures))
 - [ ] Edge cases covered: invalid input, empty arrays, boundary values (leap years, DST transitions, midnight, etc.)

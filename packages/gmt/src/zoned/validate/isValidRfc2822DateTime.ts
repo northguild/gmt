@@ -17,9 +17,11 @@ import { parseRfc2822 } from "../parse/parseRfc2822";
  * - False for an hour above 23, a minute above 59, zone minutes above 59 and an offset of 24
  *   hours or more, all of which the pattern matches. False for a second of 60: GMT rejects leap
  *   seconds.
- * - False for a non-string. Read the value with `parseRfc2822`; write one with `formatRfc2822`.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
+ * - Read the value with `parseRfc2822`; write one with `formatRfc2822`.
  *
- * @param value candidate RFC 5322 date-time string
+ * @param value any value; a string is checked as an RFC 5322 date-time
  * @returns boolean indicating validity
  *
  * @example isValidRfc2822DateTime("Fri, 15 Mar 2024 14:30:00 -0400") // true
@@ -30,7 +32,13 @@ import { parseRfc2822 } from "../parse/parseRfc2822";
  * @example isValidRfc2822DateTime("Fri, 15 Mar 2024 14:30:00 -0460") // false (zone minutes above 59; the rfc2822DateTime pattern matches it)
  * @example isValidRfc2822DateTime("Fri, 15 Mar 2024 14:30:00") // false (no zone)
  * @example isValidRfc2822DateTime("not a date") // false
+ * @example isValidRfc2822DateTime(null) // false
  */
-export function isValidRfc2822DateTime(value: string): boolean {
-  return parseRfc2822(value) !== "";
+export function isValidRfc2822DateTime(value: string): boolean;
+export function isValidRfc2822DateTime(
+  value: {} | null | undefined | void,
+): boolean;
+export function isValidRfc2822DateTime(value: unknown): value is string;
+export function isValidRfc2822DateTime(value: unknown): boolean {
+  return typeof value === "string" && parseRfc2822(value) !== "";
 }

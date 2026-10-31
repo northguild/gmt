@@ -1,11 +1,11 @@
-import { Temporal } from "../../internal/temporal";
 import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import { isoYearString } from "../../internal/isoYearString";
+import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Return the current year as a zero-padded string in the system timeZone.
  *
- * - Uses Temporal.Now.zonedDateTimeISO to get current year in system timezone.
+ * - Uses nowZonedDateTimeISO() to get current year in system timezone.
  * - Returns zero-padded string (e.g., "2024").
  * - A year outside 0000–9999 is written with a sign and six digits (`+010000`, `-000005`), as
  *   Temporal writes it at the head of a date.
@@ -21,7 +21,7 @@ export function getYear(): string {
   if (!timeZone) return "";
 
   try {
-    return isoYearString(Temporal.Now.zonedDateTimeISO(timeZone).year);
+    return isoYearString(nowZonedDateTimeISO(timeZone).year);
   } catch {
     return "";
   }

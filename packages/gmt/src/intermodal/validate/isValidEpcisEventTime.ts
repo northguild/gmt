@@ -20,9 +20,10 @@ import { epcisEventTime } from "../../regex";
  *   none of which the pattern matches.
  * - An event also needs an `eventTimeZoneOffset`: check it with `isValidEpcisTimeZoneOffset`, or
  *   both fields with `isValidEpcisEvent`. Read an event with `parseEpcisEvent`.
- * - False for a non-string.
+ * - A value that is not a string, a `String` object included, returns false. A true result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value candidate EPCIS `eventTime` string
+ * @param value any value; a string is checked as an EPCIS `eventTime`
  * @returns boolean indicating validity
  *
  * @example isValidEpcisEventTime("2024-06-15T14:30:00Z") // true
@@ -32,8 +33,14 @@ import { epcisEventTime } from "../../regex";
  * @example isValidEpcisEventTime("2024-06-15T14:30:00.1234567891Z") // false (finer than a nanosecond; the epcisEventTime pattern matches it)
  * @example isValidEpcisEventTime("2024-06-15T14:30Z") // false (seconds are required)
  * @example isValidEpcisEventTime("2024-06-15T14:30:00") // false (Z or an offset is required)
+ * @example isValidEpcisEventTime(null) // false
  */
-export function isValidEpcisEventTime(value: string): boolean {
+export function isValidEpcisEventTime(value: string): boolean;
+export function isValidEpcisEventTime(
+  value: {} | null | undefined | void,
+): boolean;
+export function isValidEpcisEventTime(value: unknown): value is string;
+export function isValidEpcisEventTime(value: unknown): boolean {
   if (typeof value !== "string" || !epcisEventTime.test(value)) {
     return false;
   }

@@ -1,10 +1,10 @@
-import { Temporal } from "../../internal/temporal";
 import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Return the current millisecond using the system timeZone.
  *
- * - Uses Temporal.Now.plainDateTimeISO to get current millisecond in system timezone.
+ * - Uses nowPlainDateTimeISO() to get current millisecond in system timezone.
  * - Returns zero-padded string to 3 digits (e.g., "123").
  * - Returns "" when system timezone is unavailable.
  *
@@ -20,7 +20,7 @@ export function getMillisecond(): string {
   }
 
   try {
-    const now = Temporal.Now.plainDateTimeISO(timeZone);
+    const now = nowPlainDateTimeISO(timeZone);
     return (now.millisecond ?? 0).toString().padStart(3, "0");
   } catch {
     return "";

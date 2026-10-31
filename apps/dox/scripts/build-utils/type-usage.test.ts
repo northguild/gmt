@@ -241,17 +241,98 @@ describe("buildTypeUsage", () => {
   it("throws on a generic public function", () => {
     expect(() =>
       usageOf(`export function f<T>(a: T): T { return a; }`),
-    ).toThrow(/must not be overloaded or generic: ns\/mod\/f\./);
+    ).toThrow(/public functions must not be generic: ns\/mod\/f\./);
   });
 
-  it("throws on an overloaded public function", () => {
+  it("throws on an overload set with a generic overload", () => {
     expect(() =>
       usageOf(`
         export function f(a: string): string;
-        export function f(a: number): number;
-        export function f(a: string | number): string | number { return a; }
+        export function f<T>(a: T): T;
+        export function f(a: unknown): unknown { return a; }
       `),
-    ).toThrow(/must not be overloaded or generic: ns\/mod\/f\./);
+    ).toThrow(/public functions must not be generic: ns\/mod\/f\./);
+  });
+
+  it("accepts string and unknown overloads and graphs the function once", () => {
+    const usage = usageOf(`
+      export function f(a: string): boolean;
+      export function f(a: unknown): a is string;
+      export function f(a: unknown): boolean { return typeof a === "string"; }
+    `);
+    expect([...usage.direct.keys()]).toEqual(["ns/mod/f"]);
+  });
+
+  it("throws when overloads name different public types", () => {
+    expect(() =>
+      usageOf(`
+        export interface Alpha { a: string }
+        export interface Beta { b: string }
+        export function f(a: Alpha): string;
+        export function f(a: Beta): string;
+        export function f(a: Alpha | Beta): string { return ""; }
+      `),
+    ).toThrow(
+      /a later overload of a public function must reach only public types its first overload reaches, so one page can list them: ns\/mod\/f\./,
+    );
+  });
+
+  it("accepts a later overload that reaches a subset of the first overload's types", () => {
+    const usage = usageOf(`
+      export interface Alpha { a: string }
+      export interface Beta { b: string }
+      export function f(a: Alpha): Beta;
+      export function f(a: unknown): Beta | null;
+      export function f(a: unknown): Beta | null { return null; }
+    `);
+    expect([...usage.direct.keys()]).toEqual(["ns/mod/f"]);
+  });
+
+  it("accepts a later overload that reaches no public type", () => {
+    const usage = usageOf(`
+      export interface Alpha { a: string }
+      export function f(a: Alpha): string;
+      export function f(a: unknown): string | null;
+      export function f(a: unknown): string | null { return null; }
+    `);
+    expect([...usage.direct.keys()]).toEqual(["ns/mod/f"]);
+  });
+
+  it("throws when a later overload reaches a superset of the first overload's types", () => {
+    expect(() =>
+      usageOf(`
+        export interface Alpha { a: string }
+        export interface Beta { b: string }
+        export function f(a: Alpha): string;
+        export function f(a: Alpha | Beta): string;
+        export function f(a: unknown): string { return ""; }
+      `),
+    ).toThrow(
+      /a later overload of a public function must reach only public types its first overload reaches, so one page can list them: ns\/mod\/f\./,
+    );
+  });
+
+  it("throws when a later overload reaches a type the first overload does not", () => {
+    expect(() =>
+      usageOf(`
+        export interface Alpha { a: string }
+        export function f(a: string): string;
+        export function f(a: Alpha): string;
+        export function f(a: unknown): string { return ""; }
+      `),
+    ).toThrow(
+      /a later overload of a public function must reach only public types its first overload reaches, so one page can list them: ns\/mod\/f\./,
+    );
+  });
+
+  it("throws on an overload that does not annotate its return type", () => {
+    expect(() =>
+      usageOf(`
+        export function f(a: string): boolean;
+        export function f(a: unknown);
+        export function f(a: unknown): boolean { return true; }
+      `),
+    ).toThrow(/must annotate their return type: ns\/mod\/f\./);
   });
 });
 

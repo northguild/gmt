@@ -56,7 +56,7 @@ export function classifyX12TimeCode(timeCode: string): X12TimeCodeClass | null {
   if (x12TimeCodeOffset(timeCode as X12OffsetTimeCode) !== "") {
     return { kind: "offset", timeCode: timeCode as X12OffsetTimeCode };
   }
-  if (x12TimeCodeZone(timeCode as X12ZoneTimeCode) !== null) {
+  if (x12TimeCodeZone(timeCode) !== null) {
     return { kind: "zone", timeCode: timeCode as X12ZoneTimeCode };
   }
   return null;

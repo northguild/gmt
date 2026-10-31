@@ -259,10 +259,13 @@ const comparable = (v, call) =>
  * `at:` (`hasDaylightSaving`'s reference instant). Such a call never reaches the clock.
  */
 const PINS_REFERENCE = /\b(?:reference|at)\s*:/;
+const READS_CLOCK =
+  /\bTemporal\.Now\b|\bnow(?:Instant|ZonedDateTimeISO|PlainDateTimeISO|PlainDateISO|PlainTimeISO)\s*\(/;
 const readsClockCache = new Map();
 /**
- * A public function reads the clock when its source calls `Temporal.Now` — a `get/` accessor, a
- * relative or calendar formatter, a now-relative predicate. `parse/` is excluded: `parseHttpDate` reads
+ * A public function reads the clock when its source calls `Temporal.Now` or one of the clock
+ * readers in `internal/temporalCompat` (`nowInstant()`, `nowZonedDateTimeISO()` and the rest) — a
+ * `get/` accessor, a relative or calendar formatter, a now-relative predicate. `parse/` is excluded: `parseHttpDate` reads
  * the clock only to window an obsolete two-digit year, and its documented results do not move.
  * `isValidHttpDate` is excluded for the same reason: it calls that parser, and its source names
  * `Temporal.Now` only in the JSDoc that says so.
@@ -273,9 +276,7 @@ function readsClock(entry) {
   if (!readsClockCache.has(entry.sourcePath)) {
     readsClockCache.set(
       entry.sourcePath,
-      /\bTemporal\.Now\b/.test(
-        readFileSync(join(ROOT, entry.sourcePath), "utf8"),
-      ),
+      READS_CLOCK.test(readFileSync(join(ROOT, entry.sourcePath), "utf8")),
     );
   }
   return readsClockCache.get(entry.sourcePath);

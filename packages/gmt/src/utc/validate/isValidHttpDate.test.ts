@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
 import { httpDate } from "../../regex";
-import { NON_STRINGS } from "../../test/ediCodes";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import { parseHttpDate } from "../parse/parseHttpDate";
 import { isValidHttpDate } from "./isValidHttpDate";
@@ -130,8 +130,80 @@ describe("isValidHttpDate", () => {
 
   it("returns false for an argument that is not a string, as parseHttpDate returns ''", () => {
     for (const [kind, make] of NON_STRINGS) {
-      expect(isValidHttpDate(make() as never), kind).toBe(false);
+      expect(isValidHttpDate(make()), kind).toBe(false);
       expect(parseHttpDate(make() as never), kind).toBe("");
     }
+  });
+});
+
+describe("isValidHttpDate accepts any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidHttpDate(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string through both overloads", () => {
+    expect(isValidHttpDate(arrives("Fri, 15 Mar 2024 14:30:00 GMT"))).toBe(
+      true,
+    );
+    expect(isValidHttpDate("Fri, 15 Mar 2024 14:30:00 GMT")).toBe(true);
+  });
+});
+
+describe("isValidHttpDate types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("Fri, 15 Mar 2024 14:30:00 GMT");
+    if (isValidHttpDate(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidHttpDate(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "not valid";
+    if (!isValidHttpDate(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidHttpDate(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidHttpDate(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("Fri, 15 Mar 2024 14:30:00 GMT")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidHttpDate(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("Fri, 15 Mar 2024 14:30:00 GMT")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "Fri, 15 Mar 2024 14:30:00 GMT", 1, "nope"].map(
+      arrives,
+    );
+    const kept = values.filter(isValidHttpDate);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["Fri, 15 Mar 2024 14:30:00 GMT"]);
   });
 });

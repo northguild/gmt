@@ -1,5 +1,5 @@
-import { Temporal } from "./temporal";
 import { isObject } from "./isObject";
+import { nowInstant } from "./temporalCompat";
 
 /** `TwoDigitYearOptions.yearWindow` as a number: the first year of the window, 0–9900. */
 const MIN_YEAR_WINDOW_START = 0;
@@ -15,7 +15,7 @@ const ROLLING_YEARS_BEFORE_NOW = 50;
  * - An integer from 0 to 9900 is a fixed window starting in that year.
  * - `"rolling"` (exact match) is the hundred years around today: 50 years before the current UTC
  *   calendar year to 49 after it. The year is read once, from
- *   `Temporal.Now.instant().toZonedDateTimeISO("UTC").year`, so the window moves at the UTC new
+ *   `nowInstant().toZonedDateTimeISO("UTC").year`, so the window moves at the UTC new
  *   year, not mid-year: year granularity is a **GMT rule**. RFC 9110 §5.6.7 applies the same
  *   50-year idea to an `rfc850-date` two-digit year, at day granularity; `internal/httpDateFields.ts`
  *   implements that rule for HTTP dates and is not affected by this one.
@@ -42,8 +42,7 @@ export function readYearWindowStart(options: unknown): number | null {
   const { yearWindow } = options as { yearWindow?: unknown };
   if (yearWindow === "rolling") {
     return (
-      Temporal.Now.instant().toZonedDateTimeISO("UTC").year -
-      ROLLING_YEARS_BEFORE_NOW
+      nowInstant().toZonedDateTimeISO("UTC").year - ROLLING_YEARS_BEFORE_NOW
     );
   }
   if (

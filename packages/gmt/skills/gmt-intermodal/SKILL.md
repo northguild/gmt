@@ -156,6 +156,8 @@ and EPCIS timestamps. The time zone rules it builds on are in the
     and `isValidX12TimeCode` check a code alone. `isValidEpcisEvent` is
     `isValidEpcisEventTime` and `isValidEpcisTimeZoneOffset` together: the
     `epcisEventTime` regex matches `2024-02-30`, the validator does not.
+    Both take a value of any type and return `false` for a non-string, so a
+    field typed `unknown` needs no cast.
 5. **Read the docs site.** This skill is a routing pointer. The map of the
    docs is `https://northguild.dev/gmt/llms.txt`, and each page
    has a `.md` twin that holds its text. The JSDoc ships in the installed

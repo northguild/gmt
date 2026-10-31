@@ -4,6 +4,7 @@ import { isValidTimeZone } from "../zoned/validate/isValidTimeZone";
 import { instantFrom } from "./instantNanoseconds";
 import { formatUtcOffset, parseUtcOffsetNanoseconds } from "./utcOffsetString";
 import { wallClockAtOffset } from "./wallClockAtOffset";
+import { nowInstant, nowZonedDateTimeISO } from "./temporalCompat";
 
 const NANOSECONDS_PER_MINUTE = 60_000_000_000n;
 
@@ -158,8 +159,8 @@ export function frameWallClock(
  */
 export function frameNowWallClock(frame: ZoneFrame): Temporal.PlainDateTime {
   return frame.shiftNanoseconds === 0n
-    ? Temporal.Now.zonedDateTimeISO(frame.timeZone).toPlainDateTime()
-    : wallClockAtOffset(Temporal.Now.instant(), frameOffsetNanoseconds(frame));
+    ? nowZonedDateTimeISO(frame.timeZone).toPlainDateTime()
+    : wallClockAtOffset(nowInstant(), frameOffsetNanoseconds(frame));
 }
 
 /**

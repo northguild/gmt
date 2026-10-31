@@ -1,5 +1,6 @@
 import { formatNanoseconds } from "../format/formatNanoseconds";
 import { parseNanoseconds } from "../parse/parseNanoseconds";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { isValidNanoPattern } from "./isValidNanoPattern";
 
 describe("isValidNanoPattern", () => {
@@ -34,19 +35,6 @@ describe("isValidNanoPattern", () => {
     expect(isValidNanoPattern(value)).toBe(false);
   });
 
-  it.each`
-    value
-    ${null}
-    ${undefined}
-    ${123}
-    ${1710072000123456789n}
-    ${true}
-    ${[]}
-    ${{}}
-  `("returns false when $value is non-string input", ({ value }) => {
-    expect(isValidNanoPattern(value as unknown as string)).toBe(false);
-  });
-
   it('accepts "-0", because parseNanoseconds does — the two must never disagree', () => {
     // Not what formatNanoseconds emits for 0n (that is "0"), but the grammar admits it and
     // BigInt has no negative zero, so it round-trips to the same value. The validator's
@@ -75,5 +63,73 @@ describe("isValidNanoPattern", () => {
 
     expect(isValidNanoPattern(formatted)).toBe(true);
     expect(parseNanoseconds(formatted)).toBe(value);
+  });
+
+  // The bigint row (20240615n) is the input a caller is most likely to pass by mistake: the
+  // validator asks about the decimal string form, and a bigint is not one.
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidNanoPattern(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true through both overloads for a valid string", () => {
+    expect(isValidNanoPattern("1710072000123456789")).toBe(true);
+    expect(isValidNanoPattern(arrives("1710072000123456789"))).toBe(true);
+  });
+});
+
+describe("isValidNanoPattern types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("1710072000123456789");
+    if (isValidNanoPattern(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidNanoPattern(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "17x";
+    if (!isValidNanoPattern(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidNanoPattern(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidNanoPattern(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("1710072000123456789")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidNanoPattern(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("1710072000123456789")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "1710072000123456789", 1, "17x"].map(arrives);
+    const kept = values.filter(isValidNanoPattern);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["1710072000123456789"]);
   });
 });

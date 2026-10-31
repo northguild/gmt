@@ -5,6 +5,7 @@ import {
   parseInstantNanoseconds,
   zoneFrame,
 } from "../../internal";
+import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Check whether a timeZone observes daylight saving time at a reference instant.
@@ -74,9 +75,7 @@ export function hasDaylightSaving(
   try {
     const at = options?.at;
     if (at === undefined) {
-      return observesDaylightTime(
-        Temporal.Now.zonedDateTimeISO(frame.timeZone),
-      );
+      return observesDaylightTime(nowZonedDateTimeISO(frame.timeZone));
     }
 
     const epochNanoseconds = parseInstantNanoseconds(at);

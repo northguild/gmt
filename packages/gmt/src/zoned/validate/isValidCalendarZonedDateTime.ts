@@ -25,13 +25,15 @@ import { parseCalendarZonedValue } from "../../internal";
  * - Rejects leap seconds, which `Temporal.ZonedDateTime.from` otherwise clamps to `:59`.
  * - Delegates the date, time, offset, zone and annotation checks to `Temporal.ZonedDateTime.from`
  *   (via `parseCalendarZonedValue`).
- * - Returns false for non-strings or empty strings.
+ * - Returns false for an empty string.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
  * Compatibility: since 1.16.0 the string is RFC 9557. Earlier releases accepted calendar-native
  * digits, `;era=`, the calendar annotation before the zone, and the ids `gregorian`, `taiwan`,
  * `islamic-tabular` and `ethiopic-amete-alem`.
  *
- * @param value candidate zoned datetime string, optionally calendar-annotated
+ * @param value any value; a string is checked as a zoned datetime, optionally calendar-annotated
  * @returns boolean indicating validity
  *
  * @example isValidCalendarZonedDateTime("2024-10-03T14:30:45+02:00[Africa/Johannesburg]") // true
@@ -43,8 +45,14 @@ import { parseCalendarZonedValue } from "../../internal";
  * @example isValidCalendarZonedDateTime("2024-06-30T23:59:60+00:00[UTC]") // false (leap second)
  * @example isValidCalendarZonedDateTime("2024-02-24 14:30:00+02:00[Africa/Johannesburg][u-ca=hebrew]") // false (space separator)
  * @example isValidCalendarZonedDateTime("invalid") // false
+ * @example isValidCalendarZonedDateTime(null) // false
  */
-export function isValidCalendarZonedDateTime(value: string): boolean {
+export function isValidCalendarZonedDateTime(value: string): boolean;
+export function isValidCalendarZonedDateTime(
+  value: {} | null | undefined | void,
+): boolean;
+export function isValidCalendarZonedDateTime(value: unknown): value is string;
+export function isValidCalendarZonedDateTime(value: unknown): boolean {
   if (typeof value !== "string" || value.length === 0) {
     return false;
   }

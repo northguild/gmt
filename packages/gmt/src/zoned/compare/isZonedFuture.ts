@@ -1,12 +1,13 @@
 import { Temporal } from "../../internal/temporal";
 import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
+import { nowInstant } from "../../internal/temporalCompat";
 
 /**
  * Return true when `value` represents an instant strictly after now.
  *
  * - Unlike the plain `isFuture`, which compares calendar days, this compares
- *   the exact instant `value` represents against `Temporal.Now.instant()` —
+ *   the exact instant `value` represents against `nowInstant()` —
  *   `value` carries a full time-of-day, not just a date.
  * - `value === now` (to the precision available) returns false — "future"
  *   means strictly after, not on-or-after.
@@ -26,7 +27,7 @@ export function isZonedFuture(value: string): boolean {
 
   try {
     const instant = zonedDateTimeFrom(value).toInstant();
-    return Temporal.Instant.compare(instant, Temporal.Now.instant()) === 1;
+    return Temporal.Instant.compare(instant, nowInstant()) === 1;
   } catch {
     return false;
   }

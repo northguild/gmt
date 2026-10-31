@@ -15,33 +15,11 @@ import type {
 } from "../types/edi";
 import type { X12DateTimePeriodKind } from "../internal/ediGrammar";
 import type { EdifactDtmKind } from "../internal/ediGrammar";
-import { hostileProxy, revokedProxy } from "./hostileValues";
 
 /**
  * The code tables the EDI tests share, written by hand from UNTDID data element 2379 and X12
  * data element 1250 and never read from the code under test.
  */
-
-/**
- * Values that are not strings, each named for the failure message. Built per use: a Proxy that
- * throws on every trap reaches the catch path, where the others stop at the `typeof` guard.
- */
-export const NON_STRINGS: [string, () => unknown][] = [
-  ["null", () => null],
-  ["undefined", () => undefined],
-  ["a number", () => 20240615],
-  ["a boolean", () => true],
-  ["an array holding a string", () => ["20240615"]],
-  ["an object", () => ({})],
-  // `typeof` is "object": a String object is not a string, although it reads as one.
-  ["a String object", () => new String("20240615")],
-  ["a bigint", () => 20240615n],
-  // A symbol throws a TypeError when it is read as a string.
-  ["a symbol", () => Symbol("20240615")],
-  ["a function", () => () => "20240615"],
-  ["a Proxy that throws on any trap", hostileProxy],
-  ["a revoked Proxy", revokedProxy],
-];
 
 /**
  * The kind of value each supported 2379 code states, from its mask: `102` is `CCYYMMDD`, a date;

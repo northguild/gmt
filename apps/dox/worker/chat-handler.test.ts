@@ -26,13 +26,13 @@ import type { VocabularySkill } from "./select-vocabulary";
 import type { BrainsInfo } from "../src/lib/chat-types";
 import { APICallError } from "ai";
 import { convertUnixToUtc, convertUtcToUnix } from "@northguild/gmt";
-import { getUnixNowMs } from "./clock";
+import { getUnixNow } from "@northguild/gmt/unix/get";
 
 /** The ledger's bucket for "now" on the brain's own clock: Gemini resets at
  * Pacific midnight, Workers AI at UTC midnight. Tests assert against real keys
  * rather than reimplementing the rule. */
 const brainDay = (brain: Brain) =>
-  dayKey(getUnixNowMs(), BRAIN_PROVIDERS[brain.provider].resetTimeZone);
+  dayKey(getUnixNow(), BRAIN_PROVIDERS[brain.provider].resetTimeZone);
 
 const SAMPLE_CHUNKS: RetrievalChunk[] = [
   {
@@ -784,7 +784,7 @@ describe("brains, budgets and failover", () => {
     // This is the whole point of the feature: one model's daily allowance
     // running out must not take Dox down, because the allowance is per model.
     const usage = fakeUsage();
-    await markBrain(usage, BRAINS[0], "spent", getUnixNowMs());
+    await markBrain(usage, BRAINS[0], "spent", getUnixNow());
 
     const { asked, resolveModel } = spyResolver();
     const handler = makeHandler({ resolveModel, usage });
@@ -813,7 +813,7 @@ describe("brains, budgets and failover", () => {
        the back read as Dox ignoring the reader. A spent brain refuses fast,
        so honouring the pick costs one refusal. */
     const usage = fakeUsage();
-    await markBrain(usage, BRAINS[2], "spent", getUnixNowMs());
+    await markBrain(usage, BRAINS[2], "spent", getUnixNow());
 
     const asked: string[] = [];
     const resolveModel = (brainId: string) => {
@@ -1066,7 +1066,7 @@ describe("brains, budgets and failover", () => {
     const usage = fakeUsage();
     const hash = await hashVisitor("9.9.9.9");
     for (let i = 0; i < VISITOR_DAILY_MAX; i++) {
-      await recordRequest(usage, BRAINS[0], hash, getUnixNowMs());
+      await recordRequest(usage, BRAINS[0], hash, getUnixNow());
     }
 
     const { asked, resolveModel } = spyResolver();
@@ -1103,7 +1103,7 @@ describe("brains, budgets and failover", () => {
     const usage = fakeUsage();
     const hash = await hashVisitor("9.9.9.9");
     for (let i = 0; i < VISITOR_DAILY_MAX * 2; i++) {
-      await recordRequest(usage, BRAINS[0], hash, getUnixNowMs());
+      await recordRequest(usage, BRAINS[0], hash, getUnixNow());
     }
 
     const { asked, resolveModel } = spyResolver();
@@ -1370,7 +1370,7 @@ describe("brains, budgets and failover", () => {
       { brainId: BRAINS[1].id, ms: expect.any(Number), outcome: "answered" },
     ]);
     // A busy minute is not a spent day: the next request tries it again.
-    const snapshot = await readUsage(usage, BRAINS, "x", getUnixNowMs());
+    const snapshot = await readUsage(usage, BRAINS, "x", getUnixNow());
     expect(snapshot.states[BRAINS[0].id] ?? "ok").toBe("ok");
   });
 

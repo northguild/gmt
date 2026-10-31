@@ -2,7 +2,7 @@ import path from "node:path";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig, mergeConfig, type Plugin } from "vitest/config";
 import { REPO_FILES, repoFile, sourceTree } from "./src/test/sourceTree.ts";
-import base from "./vitest.config.ts";
+import { baseConfig as base, testInclude } from "./vitest.config.ts";
 
 // The same suite in Chromium, Firefox and WebKit. By default the polyfill's specifier resolves to the
 // native-Temporal shim, so each browser runs on its own engine. `GMT_TEMPORAL=polyfill` removes
@@ -70,6 +70,7 @@ export default mergeConfig(
         : [],
     },
     test: {
+      include: testInclude,
       env: native ? { GMT_NATIVE_TEMPORAL: "1" } : {},
       // A test that starts a bounded worker needs room for the worker's first, cold load of GMT
       // on top of its 10 s limit (`src/test/boundedChild.browser.ts`).

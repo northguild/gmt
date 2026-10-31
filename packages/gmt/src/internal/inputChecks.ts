@@ -19,14 +19,19 @@ import type { RollConvention } from "../types";
  * The check behind `isValidTimeZone`: an IANA name or a UTC offset to the minute. A pass is
  * remembered, so a repeat builds nothing.
  *
- * @param timeZone the candidate
+ * @param timeZone the candidate; a value that is not a string is not a zone
  * @returns whether it names a zone
  *
  * @example isZoneId("Europe/London") // true
  * @example isZoneId("Not/AZone") // false
  */
 export function isZoneId(timeZone: unknown): boolean {
-  if (typeof timeZone === "string" && isRememberedZone(timeZone)) {
+  // Temporal also reads a ZonedDateTime as a zone identifier; a value that is not a string is
+  // not an identifier.
+  if (typeof timeZone !== "string") {
+    return false;
+  }
+  if (isRememberedZone(timeZone)) {
     return true;
   }
   try {
@@ -40,15 +45,12 @@ export function isZoneId(timeZone: unknown): boolean {
       hour: 0,
       minute: 0,
       second: 0,
-      timeZone: timeZone as string,
+      timeZone,
     });
-    if (!timeZoneLike.test(timeZone as string)) {
+    if (!timeZoneLike.test(timeZone)) {
       return false;
     }
     // Only a pass is stored, so hostile strings cannot grow the set.
-    if (typeof timeZone !== "string") {
-      return true;
-    }
     rememberZone(timeZone);
     return true;
   } catch {

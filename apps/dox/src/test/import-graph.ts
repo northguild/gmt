@@ -77,8 +77,21 @@ const FROM =
 const SIDE_EFFECT = /^\s*import\s+["']([^"']+)["']/gm;
 const DYNAMIC = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
 
+/* Source does not change during a run, so each file is read and scanned once and each
+   specifier resolved once. The graph walks visit the same files from every entry point. */
+const importCache = new Map<string, ImportRef[]>();
+const resolveCache = new Map<string, string | null>();
+
 /** Every import in a source file, with how it is imported. */
 export function importsOf(file: string): ImportRef[] {
+  const cached = importCache.get(file);
+  if (cached) return cached;
+  const refs = scanImports(file);
+  importCache.set(file, refs);
+  return refs;
+}
+
+function scanImports(file: string): ImportRef[] {
   if (!CODE.some((ext) => file.endsWith(ext))) return [];
   const source = stripComments(readFileSync(file, "utf8"));
   const refs: ImportRef[] = [];
@@ -102,6 +115,15 @@ export function resolveLocal(
   fromFile: string,
   specifier: string,
 ): string | null {
+  const key = `${specifier.startsWith(".") ? path.dirname(fromFile) : ""}\0${specifier}`;
+  const cached = resolveCache.get(key);
+  if (cached !== undefined) return cached;
+  const resolved = resolveUncached(fromFile, specifier);
+  resolveCache.set(key, resolved);
+  return resolved;
+}
+
+function resolveUncached(fromFile: string, specifier: string): string | null {
   let base: string;
   if (specifier.startsWith("~/")) {
     base = path.join(SRC, specifier.slice(2));

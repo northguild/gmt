@@ -166,7 +166,7 @@ export function shimProblems(shim) {
   };
 
   const checkSubMillisecondTail = () => {
-    const expected = "2024-03-10T12:00:00.8000008Z"; // the tail is the previous call's ms % 1e6
+    const expected = "2024-03-10T12:00:00.8000008Z"; // the tail is the previous call's ms mod 1e6, floored
     try {
       setClock(1710072000800); // 2024-03-10T12:00:00.800Z
       Temporal.Now.instant();
@@ -239,7 +239,9 @@ export function shimProblems(shim) {
     }
   };
 
-  // The clock is clamped to the Instant range after the carried tail is added.
+  // The clock is clamped to the Instant range after the carried tail is added. The tail is a
+  // floored modulo, never negative, so at the first millisecond the reading stays inside the range
+  // and carries the previous reading's tail of 1 ns.
   const checkClamp = () => {
     const max = lastInstant([8.64e15 - 1, 8.64e15]);
     if (max !== "8640000000000000000000") {
@@ -248,9 +250,9 @@ export function shimProblems(shim) {
       );
     }
     const min = lastInstant([-8.64e15 + 1, -8.64e15]);
-    if (min !== "-8640000000000000000000") {
+    if (min !== "-8639999999999999999999") {
       problems.push(
-        `Now.instant() at the first millisecond gave ${min}, expected -8640000000000000000000 (no clamp)`,
+        `Now.instant() at the first millisecond gave ${min}, expected -8639999999999999999999 (the previous reading's floored tail of 1 ns, inside the range)`,
       );
     }
   };

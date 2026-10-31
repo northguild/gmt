@@ -18,12 +18,14 @@ import { parseHttpDate } from "../parse/parseHttpDate";
  * - HTTP-date is case-sensitive and fixed-width, and its zone is the literal `GMT`: a numeric
  *   offset is false.
  * - **An rfc850-date reads the clock.** Its two-digit year is read against the current instant
- *   (`Temporal.Now.instant()`), as `parseHttpDate` describes, so the same string can change its
+ *   (`nowInstant()`), as `parseHttpDate` describes, so the same string can change its
  *   answer decades apart; if the clock cannot be read the answer is false. The other two formats
  *   never read the clock.
- * - False for a non-string. Read the value with `parseHttpDate`; write one with `formatHttpDate`.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
+ * - Read the value with `parseHttpDate`; write one with `formatHttpDate`.
  *
- * @param value candidate RFC 9110 HTTP-date string
+ * @param value any value; a string is checked as an RFC 9110 HTTP-date
  * @returns boolean indicating validity
  *
  * @example isValidHttpDate("Fri, 15 Mar 2024 14:30:00 GMT") // true
@@ -33,7 +35,11 @@ import { parseHttpDate } from "../parse/parseHttpDate";
  * @example isValidHttpDate("Fri, 15 Mar 2024 24:00:00 GMT") // false (hour 24; the httpDate pattern matches it)
  * @example isValidHttpDate("Fri, 15 Mar 2024 14:30:00 -0400") // false (not an HTTP-date)
  * @example isValidHttpDate("not a date") // false
+ * @example isValidHttpDate(null) // false
  */
-export function isValidHttpDate(value: string): boolean {
-  return parseHttpDate(value) !== "";
+export function isValidHttpDate(value: string): boolean;
+export function isValidHttpDate(value: {} | null | undefined | void): boolean;
+export function isValidHttpDate(value: unknown): value is string;
+export function isValidHttpDate(value: unknown): boolean {
+  return typeof value === "string" && parseHttpDate(value) !== "";
 }

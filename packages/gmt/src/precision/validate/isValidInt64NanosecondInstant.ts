@@ -11,9 +11,11 @@ import { fitsInt64, parseInstantNanoseconds } from "../../internal";
  * for them.
  *
  * - Accepts exactly the instant strings `isValidInstant` accepts, then applies the range.
- * - Returns `false` for non-strings and empty strings.
+ * - An empty string returns `false`.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param isoString candidate ISO 8601 instant string
+ * @param isoString any value; a string is checked as an ISO 8601 instant string
  * @returns boolean indicating whether it is an instant and its nanosecond count fits an `int64`
  *
  * @example isValidInt64NanosecondInstant("2024-01-01T00:00:00Z") // true
@@ -22,7 +24,18 @@ import { fitsInt64, parseInstantNanoseconds } from "../../internal";
  * @example isValidInt64NanosecondInstant("2262-04-11T23:47:16.854775808Z") // false — one past
  * @example isValidInt64NanosecondInstant("+010000-01-01T00:00:00Z") // false — a valid instant, too far
  * @example isValidInt64NanosecondInstant("2024-01-01T00:00:00") // false — no offset
+ * @example isValidInt64NanosecondInstant(null) // false
  */
-export function isValidInt64NanosecondInstant(isoString: string): boolean {
-  return fitsInt64(parseInstantNanoseconds(isoString));
+export function isValidInt64NanosecondInstant(isoString: string): boolean;
+export function isValidInt64NanosecondInstant(
+  isoString: {} | null | undefined | void,
+): boolean;
+export function isValidInt64NanosecondInstant(
+  isoString: unknown,
+): isoString is string;
+export function isValidInt64NanosecondInstant(isoString: unknown): boolean {
+  return (
+    typeof isoString === "string" &&
+    fitsInt64(parseInstantNanoseconds(isoString))
+  );
 }

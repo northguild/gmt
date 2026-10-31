@@ -1,5 +1,5 @@
 {
-  "checked": "2026-10-24T05:49:34.209962175Z",
+  "checked": "2026-10-31T10:33:02.782769979Z",
   "filings": [
     {
       "repo": "js-temporal/temporal-polyfill",
@@ -332,6 +332,29 @@
       "maintainerComments": 0,
       "createdAt": "2026-10-21",
       "updatedAt": "2026-10-21",
+      "closedAt": null,
+      "mergedAt": null
+    },
+    {
+      "repo": "tc39/proposal-temporal",
+      "number": 3335,
+      "kind": "issue",
+      "work": "report",
+      "title": "Polyfill: Temporal.Now reads a millisecond before Date.now() after a pre-1970 clock reading",
+      "url": "https://github.com/tc39/proposal-temporal/issues/3335",
+      "summary": "After the clock reads a date before 1970, the next Temporal.Now reading can land a millisecond before Date.now(), so a 2027 clock can read as the last millisecond of 2026. The polyfill carries the previous reading's milliseconds modulo a million as a sub-millisecond part, and the remainder keeps its minus sign. Fake timers in tests hit this whenever they set a pre-1970 date. The issue proposes a floor modulo.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D21",
+      "gmtNote": null,
+      "state": "open",
+      "draft": false,
+      "reviewDecision": null,
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-10-31",
+      "updatedAt": "2026-10-31",
       "closedAt": null,
       "mergedAt": null
     }

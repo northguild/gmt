@@ -18,8 +18,10 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * - Rejects leap seconds (e.g., "2024-12-31T23:59:60Z").
  * - Uses Temporal.Instant.from for validation.
  * - Requires a time component — date-only strings ("2024-01-01Z") are rejected.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value input UTC datetime string (ISO 8601)
+ * @param value any value; a string is checked as an ISO 8601 UTC datetime
  * @returns boolean indicating whether the input is a valid UTC datetime
  *
  * @example isValidUtc("2024-03-17T14:30:45Z") // true
@@ -29,8 +31,16 @@ import { utcDateTime } from "../../regex/utc-date-time";
  * @example isValidUtc("2024-03-17T14:30:45Z[!foo=bar]") // false — unknown critical annotation
  * @example isValidUtc("2024-12-31T23:59:60Z") // false
  * @example isValidUtc("invalid") // false
+ * @example isValidUtc(null) // false
  */
-export function isValidUtc(value: string): boolean {
+export function isValidUtc(value: string): boolean;
+export function isValidUtc(value: {} | null | undefined | void): boolean;
+export function isValidUtc(value: unknown): value is string;
+export function isValidUtc(value: unknown): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+
   const body = isoStringBody(value);
 
   if (hasSecond60(body)) {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { LoadedWidget } from "~/components/ask/widget-registry";
 import { onceDestroy } from "~/lib/widget-mount";
 import { html } from "~/widgets/builders";
@@ -32,10 +32,19 @@ const scoped: LoadedWidget<never> = {
   mount: async () => onceDestroy(() => {}),
 };
 
+// The listener `leaky` never removes, which this file removes itself so the next file sharing
+// the worker does not inherit it.
+const strays: Array<() => void> = [];
+afterEach(() => {
+  for (const remove of strays.splice(0)) remove();
+});
+
 const leaky: LoadedWidget<never> = {
   renderTemplate: () => html`<p>x</p>`,
   mount: async () => {
-    window.addEventListener("resize", () => {});
+    const stray = () => {};
+    window.addEventListener("resize", stray);
+    strays.push(() => window.removeEventListener("resize", stray));
     return onceDestroy(() => {});
   },
 };

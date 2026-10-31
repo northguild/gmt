@@ -25,9 +25,10 @@ import { isValidUtc } from "./isValidUtc";
  * - Not one canonical spelling: `12:00:00Z` and `12:00:00.000Z` are one instant and both are
  *   true. A reader may still refuse or round a string that is true here: PostgreSQL has no year
  *   `0000` and keeps microseconds. See `toPgMicroseconds` and `precision/`.
- * - False for a non-string.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value candidate UTC timestamp string
+ * @param value any value; a string is checked as a UTC timestamp
  * @returns true when `value` is a real UTC instant in this shape, or false on invalid input
  *
  * @example isValidUtcTimestamp("2026-10-06T12:00:00Z") // true
@@ -42,8 +43,14 @@ import { isValidUtc } from "./isValidUtc";
  * @example isValidUtcTimestamp("2026-02-30T00:00:00Z") // false (February has no 30th; the rfc3339DateTime pattern matches it)
  * @example isValidUtcTimestamp("2016-12-31T23:59:60Z") // false (leap second)
  * @example isValidUtcTimestamp("not a date") // false
+ * @example isValidUtcTimestamp(null) // false
  */
-export function isValidUtcTimestamp(value: string): boolean {
-  // `isValidUtc` goes first: it stops a non-string before the pattern would read it as text.
+export function isValidUtcTimestamp(value: string): boolean;
+export function isValidUtcTimestamp(
+  value: {} | null | undefined | void,
+): boolean;
+export function isValidUtcTimestamp(value: unknown): value is string;
+export function isValidUtcTimestamp(value: unknown): boolean {
+  // `isValidUtc` goes first: it stops a non-string, and narrows `value` to a string for the pattern.
   return isValidUtc(value) && rfc3339DateTime.test(value);
 }

@@ -10,8 +10,10 @@ import { isDateString } from "../../internal/inputChecks";
  *   `isValidCalendarDate`'s input.
  * - Rejects leap seconds (e.g., "2024-12-31T23:59:60").
  * - Rejects invalid dates (e.g., "2024-02-30").
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value ISO PlainDate string
+ * @param value any value; a string is checked as an ISO PlainDate
  * @returns boolean indicating validity
  *
  * @example isValidDate("2024-03-10") // true
@@ -22,7 +24,11 @@ import { isDateString } from "../../internal/inputChecks";
  * @example isValidDate("2024-03-10[u-ca=hebrew]") // false (use isValidCalendarDate)
  * @example isValidDate("invalid") // false
  * @example isValidDate("2024-12-31T23:59:60") // false (leap second - not a valid date)
+ * @example isValidDate(null) // false
  */
-export function isValidDate(value: string): boolean {
-  return isDateString(value);
+export function isValidDate(value: string): boolean;
+export function isValidDate(value: {} | null | undefined | void): boolean;
+export function isValidDate(value: unknown): value is string;
+export function isValidDate(value: unknown): boolean {
+  return typeof value === "string" && isDateString(value);
 }

@@ -154,8 +154,7 @@ describe("zoneFrame", () => {
   it.each(CANDIDATES.map((zone) => ({ zone, label: zoneLiteral(zone) })))(
     "accepts $label exactly when isValidTimeZone or isValidUtcOffset does",
     ({ zone }) => {
-      const accepted =
-        isValidTimeZone(zone as string) || isValidUtcOffset(zone as string);
+      const accepted = isValidTimeZone(zone) || isValidUtcOffset(zone);
       expect(zoneFrame(zone) !== null).toBe(accepted);
     },
   );

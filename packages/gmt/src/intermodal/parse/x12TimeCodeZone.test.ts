@@ -1,6 +1,11 @@
 import { X12_TIME_CODES } from "../../internal";
 import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { X12_TIME_CODE_EXPECTATIONS } from "../../test/x12TimeCodeMatrix";
+import type {
+  X12NamedZone,
+  X12TimeCode,
+  X12ZoneTimeCode,
+} from "../../types/edi";
 import { x12TimeCodeZone } from "./x12TimeCodeZone";
 
 /**
@@ -67,7 +72,7 @@ describe("x12TimeCodeZone", () => {
       (row) => {
         const expected =
           "zone" in row ? { zone: row.zone, daylight: row.daylight } : null;
-        expect(x12TimeCodeZone(row.timeCode as never)).toEqual(expected);
+        expect(x12TimeCodeZone(row.timeCode)).toEqual(expected);
       },
     );
 
@@ -76,27 +81,25 @@ describe("x12TimeCodeZone", () => {
     it.each(rows.filter((row) => "offset" in row))(
       "$timeCode ($definition) names no zone: null",
       ({ timeCode }) => {
-        expect(x12TimeCodeZone(timeCode as never)).toBeNull();
+        expect(x12TimeCodeZone(timeCode)).toBeNull();
       },
     );
 
     it("both members are always present, and each call returns a new object", () => {
       for (const { timeCode } of rows.filter((row) => "zone" in row)) {
-        const first = x12TimeCodeZone(timeCode as never);
+        const first = x12TimeCodeZone(timeCode);
         expect(Object.keys(first ?? {}), timeCode).toEqual([
           "zone",
           "daylight",
         ]);
-        expect(x12TimeCodeZone(timeCode as never), timeCode).not.toBe(first);
+        expect(x12TimeCodeZone(timeCode), timeCode).not.toBe(first);
       }
     });
 
     it("a caller cannot change the table through a result", () => {
       const result = x12TimeCodeZone("ES");
-      if (result !== null) {
-        result.zone = "Changed";
-        result.daylight = true;
-      }
+      result.zone = "Changed";
+      result.daylight = true;
       expect(x12TimeCodeZone("ES")).toEqual({
         zone: "Eastern",
         daylight: false,
@@ -135,7 +138,43 @@ describe("x12TimeCodeZone", () => {
       ["a revoked Proxy", revokedProxy],
     ];
     for (const [kind, make] of nonStrings) {
-      expect(x12TimeCodeZone(make() as never), kind).toBeNull();
+      expect(x12TimeCodeZone(make()), kind).toBeNull();
     }
+  });
+
+  describe("types", () => {
+    // Parameters keep the declared type: a `const` would narrow to its literal.
+    const typeOfCall = (
+      zoneCode: X12ZoneTimeCode,
+      anyCode: X12TimeCode,
+      text: string,
+      anything: unknown,
+    ) => ({
+      zone: x12TimeCodeZone(zoneCode),
+      any: x12TimeCodeZone(anyCode),
+      text: x12TimeCodeZone(text),
+      anything: x12TimeCodeZone(anything),
+    });
+
+    it("returns X12NamedZone for an X12ZoneTimeCode", () => {
+      expectTypeOf(x12TimeCodeZone("ES")).toEqualTypeOf<X12NamedZone>();
+      expectTypeOf(typeOfCall)
+        .returns.toHaveProperty("zone")
+        .toEqualTypeOf<X12NamedZone>();
+    });
+
+    it("returns X12NamedZone | null for a value outside X12ZoneTimeCode", () => {
+      expectTypeOf(x12TimeCodeZone("UT")).toEqualTypeOf<X12NamedZone | null>();
+      expectTypeOf(x12TimeCodeZone("et")).toEqualTypeOf<X12NamedZone | null>();
+      expectTypeOf(typeOfCall)
+        .returns.toHaveProperty("text")
+        .toEqualTypeOf<X12NamedZone | null>();
+      expectTypeOf(typeOfCall)
+        .returns.toHaveProperty("anything")
+        .toEqualTypeOf<X12NamedZone | null>();
+      expectTypeOf(typeOfCall)
+        .returns.toHaveProperty("any")
+        .toEqualTypeOf<X12NamedZone | null>();
+    });
   });
 });

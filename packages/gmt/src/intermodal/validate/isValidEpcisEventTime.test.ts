@@ -1,5 +1,5 @@
 import { epcisEventTime } from "../../regex";
-import { NON_STRINGS } from "../../test/ediCodes";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { parseEpcisEvent } from "../parse/parseEpcisEvent";
 import { isValidEpcisEvent } from "./isValidEpcisEvent";
@@ -75,7 +75,7 @@ describe("isValidEpcisEventTime", () => {
 
   it("returns false for an argument that is not a string, as isValidEpcisEvent does for the field", () => {
     for (const [kind, make] of NON_STRINGS) {
-      expect(isValidEpcisEventTime(make() as never), kind).toBe(false);
+      expect(isValidEpcisEventTime(make()), kind).toBe(false);
       expect(
         isValidEpcisEvent({ eventTime: make(), eventTimeZoneOffset: "+00:00" }),
         kind,
@@ -86,5 +86,63 @@ describe("isValidEpcisEventTime", () => {
   it("returns false when Temporal.Instant.from throws", () => {
     mockTemporalInstantFromThrow();
     expect(isValidEpcisEventTime("2024-06-15T14:30:00Z")).toBe(false);
+  });
+});
+
+describe("isValidEpcisEventTime types", () => {
+  const sample = "2024-06-15T14:30:00Z";
+
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives(sample);
+    if (isValidEpcisEventTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidEpcisEventTime(input)).toBe(true);
+    expect(isValidEpcisEventTime(sample)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "nope";
+    if (!isValidEpcisEventTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidEpcisEventTime(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidEpcisEventTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check(sample)).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidEpcisEventTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check(sample)).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, sample, 1, "nope"].map(arrives);
+    const kept = values.filter(isValidEpcisEventTime);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual([sample]);
   });
 });

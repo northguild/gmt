@@ -23,9 +23,11 @@ import { hasSecond60 } from "../../plain/validate/hasSecond60";
  *   (`[foo=bar]`) are ignored and an unknown critical one (`[!foo=bar]`) is rejected.
  * - The calendar must be ISO: `[u-ca=iso8601]` is accepted, and a non-ISO calendar annotation is
  *   `isValidCalendarZonedDateTime`'s input.
- * - Returns false for non-strings or empty strings.
+ * - Returns false for an empty string.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value candidate zoned datetime string
+ * @param value any value; a string is checked as an ISO 8601 zoned datetime
  * @returns boolean indicating validity
  *
  * @example isValidZonedDateTime("2024-02-29T12:34:56.789+00:00[UTC]") // true
@@ -42,8 +44,14 @@ import { hasSecond60 } from "../../plain/validate/hasSecond60";
  * @example isValidZonedDateTime("1960-01-01T00:20:00-00:45:00[Africa/Monrovia]") // false (an offset with seconds must be exact)
  * @example isValidZonedDateTime("-271821-04-19T23:59:00-00:01[Europe/London]") // false (the local date is before Temporal's date range)
  * @example isValidZonedDateTime("invalid") // false
+ * @example isValidZonedDateTime(null) // false
  */
-export function isValidZonedDateTime(value: string): boolean {
+export function isValidZonedDateTime(value: string): boolean;
+export function isValidZonedDateTime(
+  value: {} | null | undefined | void,
+): boolean;
+export function isValidZonedDateTime(value: unknown): value is string;
+export function isValidZonedDateTime(value: unknown): boolean {
   if (typeof value !== "string" || value.length === 0) {
     return false;
   }

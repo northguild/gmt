@@ -98,11 +98,17 @@ describe("astro dev proxies /gmt/api to the Worker", () => {
       },
     );
     site = `http://localhost:${sitePort}`;
-    // Ready once the site answers at all (a missing page is still an answer).
+    // Ready once the proxied path answers at all. A page request such as `/gmt/` is the wrong
+    // probe: it makes Vite compile and render the whole home page, which took 37 s of a 43 s
+    // wait under load, and no test below needs a page. The port opens in about 5 s. A broken
+    // middleware order still answers (with Astro's own 404), so the wait ends and the
+    // assertions below fail on the answer, not on a hang. Each probe is bounded.
     const until = performance.now() + 90_000;
     for (;;) {
       try {
-        await fetch(`${site}/gmt/`);
+        await fetch(`${site}/gmt/api/brains`, {
+          signal: AbortSignal.timeout(5_000),
+        });
         break;
       } catch {
         if (performance.now() > until || child.exitCode !== null) {

@@ -17,8 +17,10 @@ import { isZoneId } from "../../internal/inputChecks";
  * - A stored offset with seconds (`-00:44:30`) is false here and true for `isValidUtcOffset`. To
  *   check what a function with a zoneless result accepts, use
  *   `isValidTimeZone(x) || isValidUtcOffset(x)`.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param timeZone timeZone identifier to validate
+ * @param timeZone any value; a string is checked as an IANA time zone identifier or a UTC offset
  * @returns boolean indicating validity
  *
  * @example isValidTimeZone("Asia/Kolkata") // true
@@ -30,7 +32,13 @@ import { isZoneId } from "../../internal/inputChecks";
  * @example isValidTimeZone("+05:00:00") // false (no seconds in an offset identifier)
  * @example isValidTimeZone("-00:44:30") // false (a stored offset with seconds; `isValidUtcOffset` accepts it)
  * @example "Japan".includes("/") // false (the earlier slash-only rule)
+ * @example isValidTimeZone(null) // false
  */
-export function isValidTimeZone(timeZone: string): boolean {
+export function isValidTimeZone(timeZone: string): boolean;
+export function isValidTimeZone(
+  timeZone: {} | null | undefined | void,
+): boolean;
+export function isValidTimeZone(timeZone: unknown): timeZone is string;
+export function isValidTimeZone(timeZone: unknown): boolean {
   return isZoneId(timeZone);
 }

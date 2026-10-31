@@ -667,10 +667,9 @@ function rendererOverride(): RendererChoice {
   return "auto";
 }
 
-/** The current epoch-ms. `getUnixNow` returns null only for a clock it cannot
- *  read, so the fallback never renders in practice. */
+/** The current epoch-ms. */
 function nowMs(): number {
-  return getUnixNow() ?? 0;
+  return getUnixNow();
 }
 
 function shortLabel(id: string): string {

@@ -22,7 +22,7 @@ import { httpDate } from "../../regex";
  *   accepted.
  * - **rfc850-date years read the clock.** Its two-digit year becomes the
  *   latest year ending in those digits whose timestamp is not more than 50
- *   years after now (`Temporal.Now.instant()`), per RFC 9110: "a timestamp
+ *   years after now (`nowInstant()`), per RFC 9110: "a timestamp
  *   that appears to be more than 50 years in the future" is "the most recent
  *   year in the past that had the same last two digits". The same string can
  *   therefore parse differently decades apart; if the clock cannot be read

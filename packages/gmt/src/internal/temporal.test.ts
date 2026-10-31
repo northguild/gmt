@@ -35,3 +35,23 @@ describe("the Temporal seam", () => {
     expect(sourceTree("src").get(SEAM)).toMatch(SPECIFIER);
   });
 });
+
+describe("the Temporal clock", () => {
+  // `Temporal.Now` reads one millisecond early after a clock before 1970 (D21); the readers in
+  // `internal/temporalCompat/clock.ts` guard it, so no other production file may call it.
+  it("is read only through temporalCompat, never as Temporal.Now in production source", () => {
+    const withoutComments = (text: string): string =>
+      text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    const offenders = [...sourceTree("src")]
+      .filter(
+        ([file, text]) =>
+          !file.startsWith("src/internal/temporalCompat/") &&
+          !file.startsWith("src/test/") &&
+          !/\.test\.tsx?$/.test(file) &&
+          /\bTemporal\.Now\b/.test(withoutComments(text)),
+      )
+      .map(([file]) => file);
+
+    expect(offenders).toEqual([]);
+  }, 30_000);
+});

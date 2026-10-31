@@ -1,10 +1,10 @@
-import { Temporal } from "../../internal/temporal";
 import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Return the current PlainDate as an ISO string in the system timeZone.
  *
- * - Uses Temporal.Now.zonedDateTimeISO to get current date in system timezone.
+ * - Uses nowZonedDateTimeISO() to get current date in system timezone.
  * - Returns "" when system timezone is unavailable.
  *
  * @returns ISO 8601 PlainDate string or "" on error
@@ -19,7 +19,7 @@ export function getToday(): string {
   }
 
   try {
-    return Temporal.Now.zonedDateTimeISO(timeZone).toPlainDate().toString();
+    return nowZonedDateTimeISO(timeZone).toPlainDate().toString();
   } catch {
     return "";
   }

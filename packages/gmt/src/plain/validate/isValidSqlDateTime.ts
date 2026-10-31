@@ -17,10 +17,11 @@ import { parseSqlDateTime } from "../parse/parseSqlDateTime";
  * - False for a second of 60: GMT rejects leap seconds.
  * - **Plain only.** A `T` separator, a `Z` and an offset are false: SQL's offset-carrying
  *   `TIMESTAMP WITH TIME ZONE` literal is out of scope.
- * - False for a non-string. Read the value with `parseSqlDateTime`; write one with
- *   `formatSqlDateTime`.
+ * - Read the value with `parseSqlDateTime`; write one with `formatSqlDateTime`.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value candidate SQL timestamp literal
+ * @param value any value; a string is checked as a SQL timestamp literal
  * @returns boolean indicating validity
  *
  * @example isValidSqlDateTime("2024-03-15 14:30:00") // true
@@ -31,7 +32,13 @@ import { parseSqlDateTime } from "../parse/parseSqlDateTime";
  * @example isValidSqlDateTime("2024-03-15 14:30") // false (seconds are required)
  * @example isValidSqlDateTime("2024-03-15T14:30:00") // false (T separator)
  * @example isValidSqlDateTime("not a date") // false
+ * @example isValidSqlDateTime(null) // false
  */
-export function isValidSqlDateTime(value: string): boolean {
-  return parseSqlDateTime(value) !== "";
+export function isValidSqlDateTime(value: string): boolean;
+export function isValidSqlDateTime(
+  value: {} | null | undefined | void,
+): boolean;
+export function isValidSqlDateTime(value: unknown): value is string;
+export function isValidSqlDateTime(value: unknown): boolean {
+  return typeof value === "string" && parseSqlDateTime(value) !== "";
 }

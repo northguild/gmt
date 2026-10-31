@@ -1,10 +1,10 @@
 import { Temporal } from "../../internal/temporal";
 import {
   CUT_X12_FORMATS,
-  NON_STRINGS,
   NOT_X12_FORMATS,
   X12_FORMAT_KINDS,
 } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import { mockTemporalPlainTimeFromThrow } from "../../test/mocks";
 import type { X12TimeElementForm } from "../../types/edi";
 import { parseX12Time } from "../parse/parseX12Time";

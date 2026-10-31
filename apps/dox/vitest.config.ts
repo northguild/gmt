@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { defineConfig, type Plugin } from "vitest/config";
+import { configDefaults, defineConfig, type Plugin } from "vitest/config";
+import { splitTestFiles, TEST_GLOBS } from "./src/test/isolation.ts";
 
 /**
  * Mirrors `wrangler.jsonc`'s `{ "type": "Text", "globs": ["**\/*.md"] }` rule.
@@ -27,6 +28,10 @@ function markdownAsText(): Plugin {
   };
 }
 
+// A file that replaces a module or a global runs in a worker module graph of its own. Every other
+// file shares one with its neighbours, so it skips re-importing the library, the polyfill and React.
+const { isolated } = splitTestFiles(import.meta.dirname);
+
 export default defineConfig({
   plugins: [markdownAsText()],
   resolve: {
@@ -39,16 +44,8 @@ export default defineConfig({
     },
   },
   test: {
-    name: "dox",
     globals: true,
     root: ".",
-    include: [
-      "lint/**/*.test.ts",
-      "scripts/**/*.test.ts",
-      "src/**/*.test.ts",
-      "src/**/*.test.tsx",
-      "worker/**/*.test.ts",
-    ],
     environment: "node",
     // A no-op in node; in jsdom files it adds the jest-dom matchers.
     setupFiles: ["./src/test/setup-dom.ts"],
@@ -72,6 +69,24 @@ export default defineConfig({
     execArgv: [
       `--import=${pathToFileURL(path.resolve(import.meta.dirname, "src/test/no-network.mjs")).href}`,
       "--no-experimental-webstorage",
+    ],
+    // `extends: true` carries the plugin, alias, setup file, timeouts and `execArgv` above into
+    // both projects; each adds its name, its file set and `isolate`. The file set is never set
+    // above: `include` arrays merge, so a shared one would put every file in both projects.
+    projects: [
+      {
+        extends: true,
+        test: { name: "isolated", include: isolated, isolate: true },
+      },
+      {
+        extends: true,
+        test: {
+          name: "shared",
+          include: TEST_GLOBS,
+          exclude: [...configDefaults.exclude, ...isolated],
+          isolate: false,
+        },
+      },
     ],
   },
 });

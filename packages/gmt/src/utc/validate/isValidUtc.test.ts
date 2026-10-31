@@ -1,3 +1,4 @@
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { isValidUtc } from "./isValidUtc";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 
@@ -102,5 +103,73 @@ describe("isValidUtc", () => {
     ${"2024-03-10T12:30+05:00[foo=bar]"}               | ${"an offset, not Z"}
   `("returns false for $value ($reason)", ({ value }: { value: string }) => {
     expect(isValidUtc(value)).toBe(false);
+  });
+});
+
+describe("isValidUtc accepts any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidUtc(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string through both overloads", () => {
+    expect(isValidUtc(arrives("2024-03-17T14:30:45Z"))).toBe(true);
+    expect(isValidUtc("2024-03-17T14:30:45Z")).toBe(true);
+  });
+});
+
+describe("isValidUtc types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("2024-03-17T14:30:45Z");
+    if (isValidUtc(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidUtc(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "not valid";
+    if (!isValidUtc(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidUtc(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidUtc(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("2024-03-17T14:30:45Z")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidUtc(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("2024-03-17T14:30:45Z")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "2024-03-17T14:30:45Z", 1, "nope"].map(arrives);
+    const kept = values.filter(isValidUtc);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["2024-03-17T14:30:45Z"]);
   });
 });

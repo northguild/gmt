@@ -2147,6 +2147,90 @@ describe("buildPlaygroundFields", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Overloaded public functions
+// ---------------------------------------------------------------------------
+
+describe("an overloaded public function", () => {
+  const source = `
+    /**
+     * Whether the value is a string.
+     * @param a - Any value.
+     * @returns True for a string.
+     * @example f("x") // true
+     * @example f(null) // false
+     */
+    export function f(a: string): boolean;
+    export function f(a: unknown): a is string;
+    export function f(a: unknown): boolean { return typeof a === "string"; }
+
+    export function g(a: string): string { return a; }
+  `;
+  function extractAll() {
+    const { checker, sourceFile, program } = compile(source);
+    const publicDecls = new Set<ts.Node>(sourceFile.statements);
+    const extracted = BR.extractFromFile(
+      checker,
+      gmtPath("plain/calculate/f.ts"),
+      sourceFile,
+      publicDecls,
+      contextFor(program, sourceFile),
+    );
+    return { extracted, sourceFile, program, publicDecls };
+  }
+
+  it("yields one doc, keyed once, whose dedupe does not throw", () => {
+    const { extracted } = extractAll();
+    expect(extracted.map((e) => e.doc.name)).toEqual(["f", "g"]);
+    expect(BR.dedupeDocs(extracted).map((d) => d.name)).toEqual(["f", "g"]);
+  });
+
+  it("lists every overload in the signature, one per line, and not the implementation", () => {
+    const f = extractAll().extracted[0].doc as FnDoc;
+    expect(f.signature).toBe(
+      "f(a: string): boolean\nf(a: unknown): a is string",
+    );
+  });
+
+  it("takes description, params and examples from the JSDoc on the first overload", () => {
+    const f = extractAll().extracted[0].doc as FnDoc;
+    expect(f.description).toBe("Whether the value is a string.");
+    expect(f.params.map((p) => p.name)).toEqual(["a"]);
+    expect(f.params[0].type).toBe("string");
+    expect(f.examples).toHaveLength(2);
+  });
+
+  it("points line at the first overload", () => {
+    const { extracted, sourceFile } = extractAll();
+    const first = sourceFile.statements.find(ts.isFunctionDeclaration)!;
+    const expected =
+      sourceFile.getLineAndCharacterOfPosition(first.getStart()).line + 1;
+    expect((extracted[0].doc as FnDoc).line).toBe(expected);
+  });
+
+  it("keeps the implementation out of the usage graph", () => {
+    const { program, sourceFile, publicDecls } = extractAll();
+    const entries = BR.publicEntries(program, ["subject.ts"], publicDecls);
+    expect(sourceFile.statements.length).toBeGreaterThan(0);
+    const decls = entries.functions.filter((fn) => fn.key.endsWith("/f"));
+    expect(decls).toHaveLength(2);
+    expect(decls.every((fn) => !(fn.node as ts.FunctionDeclaration).body)).toBe(
+      true,
+    );
+  });
+
+  it("does not load an example whose argument does not fit the string field", () => {
+    const f = extractAll().extracted[0].doc as FnDoc;
+    expect(f.livePlaygroundTemplate?.template).toBe('f("x")');
+    expect(JSON.stringify(f.playgroundSpec)).not.toContain("null");
+  });
+
+  it("leaves a function with one declaration unchanged", () => {
+    const g = extractAll().extracted[1].doc as FnDoc;
+    expect(g.signature).toBe("g(a: string): string");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // buildLivePlaygroundTemplate integration
 // ---------------------------------------------------------------------------
 
