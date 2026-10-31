@@ -108,6 +108,17 @@ Do not directly reassign or mutate runtime globals in tests. Use instead:
 - `vi.useFakeTimers()` + `vi.setSystemTime(...)` + `vi.useRealTimers()` for deterministic "now"
 - `vi.spyOn(...).mockReturnValue(...)` / `mockReturnValueOnce(...)` / `mockImplementation(...)` for controlled behavior
 
+## Shared Modules and Isolated Files
+
+Vitest runs the suite as two projects (`packages/gmt/vitest.config.ts`). Test files share modules unless they replace a module or a global, so most files skip a fresh import of the library.
+
+- A file that calls `vi.mock`, `vi.doMock`, `vi.stubGlobal` or `vi.stubEnv` joins the isolated project automatically (`src/test/isolationGroups.ts`). You choose nothing.
+- `src/test/setupTests.ts` restores spies and fake timers after each test, so `vi.spyOn` and `vi.useFakeTimers()` are safe in the shared project.
+- Any other module-level state a test changes (a cache, a registry) must be reset in the test, or in `setupTests.ts` when many files need it.
+- A direct global assignment such as `Intl.DateTimeFormat = ...` must be undone in a `finally` block. After each shared file, `src/test/setupTests.ts` compares `Intl`, `Temporal`, `Temporal.Now`, `Date`, the keys of `globalThis` and the names in `process.env` with what they were before, and fails the file that left a difference.
+- Watch mode reads the split once, at start. After you add a `vi.mock` (or the other three calls) to a file, restart `vitest --watch`.
+- Prefer `vi.spyOn` over `vi.mock` where it works: it keeps the file in the faster shared project.
+
 ## Pre-built Mocks for Error Path Testing
 
 Use the mocks in `packages/gmt/src/test/mocks` to test error-handling paths. Do not write custom mocks for these:

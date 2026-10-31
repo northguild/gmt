@@ -32,6 +32,7 @@ and [§ Git — Only on an Explicit Instruction](../AGENTS.md#git--only-on-an-ex
 - `battleTestTimeZones` / `MustTestDstTimeZones` / the `*BattleCases` from `packages/gmt/src/test/timeZoneMatrix.ts` — no literal zone tables
 - Pre-built mocks from `packages/gmt/src/test/mocks`
 - Day-period word variance for ko-KR/ja-JP/zh-CN/zh-TW — `expectDateTimeEqual`, never normalize production code for tests
+- Test files share modules unless they call `vi.mock`, `vi.doMock`, `vi.stubGlobal` or `vi.stubEnv`; undo any other global or module state you change ([shared modules](../context/testing-standards/references/index.md#shared-modules-and-isolated-files))
 - Edge-case taxonomy ([testing standards](../context/testing-standards/references/index.md#edge-case-taxonomy))
 - [Test cost](../context/testing-standards/references/index.md#test-cost): every row you add or keep runs under 0.3 s locally; a slower row gets a cheaper oracle before it gets a timeout
 
