@@ -185,8 +185,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     section under `## Types`. A type no function reaches stops the generator; the fix is in
     `packages/gmt/src`. The graph reads nodes, never printed signatures: the printer inlines
     union aliases, so a string match cannot see `Overflow`.
-    - Duplicate type names (also by case), an unannotated return, and a generic or
-      overloaded public function stop the generator too.
+    - Duplicate type names (also by case), an unannotated return, and a generic public
+      function stop the generator too. An overloaded public function gets one page that
+      lists every overload, and stops the generator only if its overloads name different
+      public types.
     - Anchors come from `github-slugger`, one slugger per page fed every heading in order,
       so they match what Starlight emits. The generator stops if a rendered page's headings
       differ from the list the anchors were computed from.

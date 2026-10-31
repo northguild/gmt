@@ -1,3 +1,4 @@
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import {
   ianaSingleComponentTimeZones,
   utcMs,
@@ -99,13 +100,12 @@ describe("isValidTimeZone", () => {
     timeZone       | label
     ${"Not/AZone"} | ${"'Not/AZone'"}
     ${""}          | ${"''"}
-    ${null}        | ${"null"}
-    ${undefined}   | ${"undefined"}
-    ${123}         | ${"123"}
-    ${true}        | ${"true"}
-  `("returns false for invalid timeZone $label", ({ timeZone }) => {
-    expect(isValidTimeZone(timeZone as never)).toBe(false);
-  });
+  `(
+    "returns false for invalid timeZone $label",
+    ({ timeZone }: { timeZone: string }) => {
+      expect(isValidTimeZone(timeZone)).toBe(false);
+    },
+  );
 
   describe("remembers ids that passed", () => {
     it("builds no ZonedDateTime for Europe/London the second time", () => {
@@ -167,5 +167,73 @@ describe("isValidTimeZone", () => {
       expect(isValidTimeZone("+18:19")).toBe(true);
       expect(spy).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe("isValidTimeZone accepts any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidTimeZone(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string through both overloads", () => {
+    expect(isValidTimeZone(arrives("Asia/Kolkata"))).toBe(true);
+    expect(isValidTimeZone("Asia/Kolkata")).toBe(true);
+  });
+});
+
+describe("isValidTimeZone types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("Asia/Kolkata");
+    if (isValidTimeZone(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidTimeZone(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "not valid";
+    if (!isValidTimeZone(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidTimeZone(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidTimeZone(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("Asia/Kolkata")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidTimeZone(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("Asia/Kolkata")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "Asia/Kolkata", 1, "nope"].map(arrives);
+    const kept = values.filter(isValidTimeZone);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["Asia/Kolkata"]);
   });
 });

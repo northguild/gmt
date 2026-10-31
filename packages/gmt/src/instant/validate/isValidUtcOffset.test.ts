@@ -1,5 +1,5 @@
 import { utcOffset } from "../../regex";
-import { NON_STRINGS } from "../../test/ediCodes";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
 import { fromOffsetInstant } from "../convert/fromOffsetInstant";
 import { isValidUtcOffset } from "./isValidUtcOffset";
@@ -85,9 +85,8 @@ describe("isValidUtcOffset", () => {
     },
   );
 
-  it("returns false for an argument that is not a string, as fromOffsetInstant returns ''", () => {
+  it("makes fromOffsetInstant return '' for an offset that is not a string", () => {
     for (const [kind, make] of NON_STRINGS) {
-      expect(isValidUtcOffset(make() as never), kind).toBe(false);
       expect(
         fromOffsetInstant({
           instant: "2024-07-15T16:00:00Z",
@@ -96,5 +95,71 @@ describe("isValidUtcOffset", () => {
         kind,
       ).toBe("");
     }
+  });
+
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidUtcOffset(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true through both overloads for a valid string", () => {
+    expect(isValidUtcOffset("-04:00")).toBe(true);
+    expect(isValidUtcOffset(arrives("-04:00"))).toBe(true);
+  });
+});
+
+describe("isValidUtcOffset types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("-04:00");
+    if (isValidUtcOffset(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidUtcOffset(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "-0400";
+    if (!isValidUtcOffset(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidUtcOffset(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidUtcOffset(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("-04:00")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidUtcOffset(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("-04:00")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "-04:00", 1, "-0400"].map(arrives);
+    const kept = values.filter(isValidUtcOffset);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["-04:00"]);
   });
 });

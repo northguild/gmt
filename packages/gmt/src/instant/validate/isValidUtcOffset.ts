@@ -19,8 +19,10 @@ import { utcOffset } from "../../regex";
  *   function that returns a zoned string, or formats with `Intl`, takes a time zone identifier
  *   only: check that with `isValidTimeZone`, which accepts `+0530` and `-08` and rejects an offset
  *   with seconds.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value candidate UTC offset string
+ * @param value any value; a string is checked as a UTC offset
  * @returns boolean indicating validity
  *
  * @example isValidUtcOffset("-04:00") // true
@@ -30,7 +32,11 @@ import { utcOffset } from "../../regex";
  * @example isValidUtcOffset("-0400") // false (basic format)
  * @example isValidUtcOffset("+24:00") // false (out of range)
  * @example isValidUtcOffset("Europe/London") // false (a zone, not an offset)
+ * @example isValidUtcOffset(null) // false
  */
-export function isValidUtcOffset(value: string): boolean {
+export function isValidUtcOffset(value: string): boolean;
+export function isValidUtcOffset(value: {} | null | undefined | void): boolean;
+export function isValidUtcOffset(value: unknown): value is string;
+export function isValidUtcOffset(value: unknown): boolean {
   return typeof value === "string" && utcOffset.test(value);
 }

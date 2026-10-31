@@ -10,6 +10,7 @@ import {
   type NoThrowCase,
   noThrowCases,
   noThrowFailures,
+  signatureOf,
 } from "./noThrow";
 
 describe("no-throw harness coverage", () => {
@@ -80,6 +81,31 @@ describe("no-throw harness coverage", () => {
     expect(noThrowFailures(testCase)).toEqual([
       "arg0=null: threw TypeError: boom",
     ]);
+  });
+});
+
+describe("signatureOf", () => {
+  const overloaded = [
+    "export function f(value: string): boolean;",
+    "export function f(value: unknown): value is string;",
+    "export function f(value: unknown): boolean {",
+    "  return typeof value === 'string';",
+    "}",
+  ].join("\n");
+
+  it("reads the first overload of an overloaded function, not the text that follows it", () => {
+    const signature = signatureOf(overloaded, "f");
+    expect(signature.declared).toEqual({ kinds: ["boolean"], nullable: false });
+    expect(signature.types).toEqual(["string"]);
+  });
+
+  it("reads an object return type whose members end in semicolons", () => {
+    const source =
+      "export function g(value: string): { a: string; b: number } {\n  return { a: value, b: 1 };\n}";
+    expect(signatureOf(source, "g").declared).toEqual({
+      kinds: ["object"],
+      nullable: false,
+    });
   });
 });
 

@@ -1,9 +1,6 @@
 import { Temporal } from "../../internal/temporal";
-import {
-  CUT_X12_FORMATS,
-  NON_STRINGS,
-  x12FormatsOutside,
-} from "../../test/ediCodes";
+import { CUT_X12_FORMATS, x12FormatsOutside } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import { mockTemporalPlainTimeFromThrow } from "../../test/mocks";
 import { parseX12Time } from "./parseX12Time";
 

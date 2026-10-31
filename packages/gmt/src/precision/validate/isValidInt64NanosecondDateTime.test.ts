@@ -1,3 +1,4 @@
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { isValidInt64NanosecondDateTime } from "./isValidInt64NanosecondDateTime";
 
 describe("isValidInt64NanosecondDateTime", () => {
@@ -22,10 +23,77 @@ describe("isValidInt64NanosecondDateTime", () => {
     ${"2024-01-01T23:59:60"}                       | ${false} | ${"'2024-01-01T23:59:60'"}
     ${"invalid"}                                   | ${false} | ${"'invalid'"}
     ${""}                                          | ${false} | ${"''"}
-    ${42}                                          | ${false} | ${"42"}
-    ${null}                                        | ${false} | ${"null"}
-    ${undefined}                                   | ${false} | ${"undefined"}
   `("returns $expected for $label", ({ value, expected }) => {
     expect(isValidInt64NanosecondDateTime(value)).toBe(expected);
+  });
+
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidInt64NanosecondDateTime(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true through both overloads for a valid string", () => {
+    expect(isValidInt64NanosecondDateTime("2024-01-01T00:00:00")).toBe(true);
+    expect(isValidInt64NanosecondDateTime(arrives("2024-01-01T00:00:00"))).toBe(
+      true,
+    );
+  });
+});
+
+describe("isValidInt64NanosecondDateTime types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("2024-01-01T00:00:00");
+    if (isValidInt64NanosecondDateTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidInt64NanosecondDateTime(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "2024-01-01T00:00:00Z";
+    if (!isValidInt64NanosecondDateTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidInt64NanosecondDateTime(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidInt64NanosecondDateTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("2024-01-01T00:00:00")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidInt64NanosecondDateTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("2024-01-01T00:00:00")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "2024-01-01T00:00:00", 1, "2024-01-01T00:00:00Z"].map(
+      arrives,
+    );
+    const kept = values.filter(isValidInt64NanosecondDateTime);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["2024-01-01T00:00:00"]);
   });
 });

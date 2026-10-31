@@ -1,4 +1,5 @@
-import { NON_STRINGS, x12FormatsOutside } from "../../test/ediCodes";
+import { x12FormatsOutside } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { intervalLengthDate } from "../../plain/interval/intervalLengthDate";
 import type { EdiDatePeriod } from "../../types/edi";

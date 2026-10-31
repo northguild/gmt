@@ -1,4 +1,5 @@
-import { NON_STRINGS, edifactFormatsOutside } from "../../test/ediCodes";
+import { edifactFormatsOutside } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { parseEdifactDatePeriod } from "../parse/parseEdifactDatePeriod";
 import { formatEdifactDatePeriod } from "./formatEdifactDatePeriod";

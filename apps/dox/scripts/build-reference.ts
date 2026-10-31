@@ -1864,10 +1864,19 @@ export function extractFromFile(
 
   // Only declarations importable from a published entry point get a page (see
   // publicDeclarations); a file-private helper or an unexported sibling is skipped.
+  const extractedFunctions = new Set<string>();
   for (const stmt of sourceFile.statements) {
     if (ts.isFunctionDeclaration(stmt) && stmt.name) {
       if (!publicDecls.has(stmt)) continue;
-      add(extractFunction(checker, stmt, ns, mod, file, ctx), stmt.name);
+      // An overload set is one page, made from its first declaration.
+      if (extractedFunctions.has(stmt.name.text)) continue;
+      extractedFunctions.add(stmt.name.text);
+      add(
+        stmt.body
+          ? extractFunction(checker, stmt, ns, mod, file, ctx)
+          : extractOverloadedFunction(checker, stmt, ns, mod, file, ctx),
+        stmt.name,
+      );
     } else if (ts.isTypeAliasDeclaration(stmt) && stmt.name) {
       if (!publicDecls.has(stmt)) continue;
       add(extractType(checker, stmt, ns, mod, file, ctx), stmt.name);
@@ -1946,9 +1955,13 @@ export function publicEntries(
     const sf = program.getSourceFile(file);
     if (!sf) continue;
     const { namespace: ns, module: mod } = namespaceModule(file);
+    const overloadedNames = new Set<string>();
     for (const stmt of sf.statements) {
       if (ts.isFunctionDeclaration(stmt) && stmt.name) {
         if (!publicDecls.has(stmt)) continue;
+        // The implementation of an overload set is invisible to callers: not in the graph.
+        if (!stmt.body) overloadedNames.add(stmt.name.text);
+        else if (overloadedNames.has(stmt.name.text)) continue;
         functions.push({ key: `${ns}/${mod}/${stmt.name.text}`, node: stmt });
       } else if (
         ts.isTypeAliasDeclaration(stmt) ||
@@ -1978,16 +1991,13 @@ export function publicEntries(
   return { functions, types };
 }
 
-export function extractFnBody(
+/** One signature as the page prints it: the name, then the checker's text, unions ordered. */
+function signatureText(
   checker: ts.TypeChecker,
   sig: ts.Signature | undefined,
   node: ts.Node,
   name: string,
-  ns: string,
-  mod: string,
-  file: string,
-  ctx: ExtractContext = {},
-): FnDoc {
+): string {
   // `NoTruncation`: a reference signature is the whole type, never `… N more …`.
   let sigStr = sig
     ? checker.signatureToString(sig, undefined, ts.TypeFormatFlags.NoTruncation)
@@ -2006,7 +2016,20 @@ export function extractFnBody(
   }
   // `full` above stays the raw print, so the replace finds it in `signatureToString`'s text;
   // the finished signature is ordered once.
-  const signature = BU.orderUnitUnions(`${name}${sigStr}`);
+  return BU.orderUnitUnions(`${name}${sigStr}`);
+}
+
+export function extractFnBody(
+  checker: ts.TypeChecker,
+  sig: ts.Signature | undefined,
+  node: ts.Node,
+  name: string,
+  ns: string,
+  mod: string,
+  file: string,
+  ctx: ExtractContext = {},
+): FnDoc {
+  const signature = signatureText(checker, sig, node, name);
 
   const jsDoc = parseJsDoc(checker, node);
   const description = jsDoc?.description ?? "";
@@ -2076,6 +2099,37 @@ export function extractFunction(
   const name = node.name!.text;
   const sig = checker.getSignatureFromDeclaration(node);
   return extractFnBody(checker, sig, node, name, ns, mod, file, ctx);
+}
+
+/**
+ * An overload set is one function and one page. The signature lists every overload, one per
+ * line; the parameters, playground and JSDoc come from the first overload. The implementation
+ * signature is not among `getCallSignatures()`, so it is never shown.
+ */
+export function extractOverloadedFunction(
+  checker: ts.TypeChecker,
+  node: ts.FunctionDeclaration,
+  ns: string,
+  mod: string,
+  file: string,
+  ctx: ExtractContext = {},
+): FnDoc | undefined {
+  const name = node.name!.text;
+  const overloads = checker.getTypeAtLocation(node.name!).getCallSignatures();
+  const doc = extractFnBody(
+    checker,
+    overloads[0],
+    node,
+    name,
+    ns,
+    mod,
+    file,
+    ctx,
+  );
+  doc.signature = overloads
+    .map((sig) => signatureText(checker, sig, node, name))
+    .join("\n");
+  return doc;
 }
 
 export function extractArrowFn(

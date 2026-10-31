@@ -2035,7 +2035,7 @@
     "namespace": "duration",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidDuration(value: string): boolean",
+    "signature": "isValidDuration(value: string): boolean\nisValidDuration(value: void | {} | null | undefined): boolean\nisValidDuration(value: unknown): value is string",
     "description": "Return true if `value` is a valid ISO 8601 duration string.",
     "sourcePath": "packages/gmt/src/duration/validate/isValidDuration.ts",
     "examples": [
@@ -2057,6 +2057,10 @@
       },
       {
         "call": "isValidDuration(\"\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidDuration(null)",
         "result": "false"
       }
     ]
@@ -2652,7 +2656,7 @@
     "namespace": "instant",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidUtcOffset(value: string): boolean",
+    "signature": "isValidUtcOffset(value: string): boolean\nisValidUtcOffset(value: void | {} | null | undefined): boolean\nisValidUtcOffset(value: unknown): value is string",
     "description": "Return true when `value` is a UTC offset in the form the offset-instant pair stores: ISO 8601 extended `±HH:MM`, optionally `±HH:MM:SS`.",
     "sourcePath": "packages/gmt/src/instant/validate/isValidUtcOffset.ts",
     "examples": [
@@ -2683,6 +2687,10 @@
       {
         "call": "isValidUtcOffset(\"Europe/London\")",
         "result": "false (a zone, not an offset)"
+      },
+      {
+        "call": "isValidUtcOffset(null)",
+        "result": "false"
       }
     ]
   },
@@ -5091,7 +5099,7 @@
     "namespace": "intermodal",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidEpcisEventTime(value: string): boolean",
+    "signature": "isValidEpcisEventTime(value: string): boolean\nisValidEpcisEventTime(value: void | {} | null | undefined): boolean\nisValidEpcisEventTime(value: unknown): value is string",
     "description": "Return true when `value` is a real GS1 EPCIS 2.0 `eventTime`: the moment a supply-chain event happened, written as a date and time with `Z` or a UTC offset.",
     "sourcePath": "packages/gmt/src/intermodal/validate/isValidEpcisEventTime.ts",
     "examples": [
@@ -5122,6 +5130,10 @@
       {
         "call": "isValidEpcisEventTime(\"2024-06-15T14:30:00\")",
         "result": "false (Z or an offset is required)"
+      },
+      {
+        "call": "isValidEpcisEventTime(null)",
+        "result": "false"
       }
     ]
   },
@@ -5132,7 +5144,7 @@
     "namespace": "intermodal",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidEpcisTimeZoneOffset(value: string): boolean",
+    "signature": "isValidEpcisTimeZoneOffset(value: string): boolean\nisValidEpcisTimeZoneOffset(value: void | {} | null | undefined): boolean\nisValidEpcisTimeZoneOffset(value: unknown): value is string",
     "description": "Return true when `value` is a GS1 EPCIS 2.0 `eventTimeZoneOffset`: the UTC offset the local clock ran at where a supply-chain event happened, written `±HH:MM`.",
     "sourcePath": "packages/gmt/src/intermodal/validate/isValidEpcisTimeZoneOffset.ts",
     "examples": [
@@ -5159,6 +5171,10 @@
       {
         "call": "isValidEpcisTimeZoneOffset(\"+05:30:00\")",
         "result": "false (seconds)"
+      },
+      {
+        "call": "isValidEpcisTimeZoneOffset(null)",
+        "result": "false"
       }
     ]
   },
@@ -13475,7 +13491,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidCalendarDate(value: string): boolean",
+    "signature": "isValidCalendarDate(value: string): boolean\nisValidCalendarDate(value: void | {} | null | undefined): boolean\nisValidCalendarDate(value: unknown): value is string",
     "description": "Return true if `value` is a valid GMT PlainDate string: a bare ISO date (\"2024-10-03\") or an RFC 9557 calendar-annotated date (\"2024-10-03[u-ca=hebrew]\"), as `Temporal.PlainDate#toString()` and `convertDateToCalendar` write it.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidCalendarDate.ts",
     "examples": [
@@ -13534,6 +13550,10 @@
       {
         "call": "isValidCalendarDate(\"invalid\")",
         "result": "false"
+      },
+      {
+        "call": "isValidCalendarDate(null)",
+        "result": "false"
       }
     ]
   },
@@ -13544,7 +13564,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidDate(value: string): boolean",
+    "signature": "isValidDate(value: string): boolean\nisValidDate(value: void | {} | null | undefined): boolean\nisValidDate(value: unknown): value is string",
     "description": "Return true if `value` is a valid ISO PlainDate string.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDate.ts",
     "examples": [
@@ -13579,6 +13599,10 @@
       {
         "call": "isValidDate(\"2024-12-31T23:59:60\")",
         "result": "false (leap second - not a valid date)"
+      },
+      {
+        "call": "isValidDate(null)",
+        "result": "false"
       }
     ]
   },
@@ -13630,7 +13654,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidDateDurationUnit(unit: string): unit is \"years\" | \"months\" | \"weeks\" | \"days\"",
+    "signature": "isValidDateDurationUnit(unit: unknown): unit is \"years\" | \"months\" | \"weeks\" | \"days\"",
     "description": "Return true when `unit` is a valid DateDurationUnit.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateDurationUnit.ts",
     "examples": [
@@ -13648,6 +13672,10 @@
       },
       {
         "call": "isValidDateDurationUnit(\"invalid\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidDateDurationUnit(null)",
         "result": "false"
       }
     ]
@@ -13719,7 +13747,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidDateTime(value: string): boolean",
+    "signature": "isValidDateTime(value: string): boolean\nisValidDateTime(value: void | {} | null | undefined): boolean\nisValidDateTime(value: unknown): value is string",
     "description": "Return true when `value` is a valid PlainDateTime string.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateTime.ts",
     "examples": [
@@ -13750,6 +13778,10 @@
       {
         "call": "isValidDateTime(\"2024-02-29T23:59:60\")",
         "result": "false (leap second)"
+      },
+      {
+        "call": "isValidDateTime(null)",
+        "result": "false"
       }
     ]
   },
@@ -13797,7 +13829,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidDateTimeDurationUnit(unit: string): unit is keyof DurationLike",
+    "signature": "isValidDateTimeDurationUnit(unit: unknown): unit is keyof DurationLike",
     "description": "Return true when `unit` is a valid DateTimeDurationUnit.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateTimeDurationUnit.ts",
     "examples": [
@@ -13815,6 +13847,10 @@
       },
       {
         "call": "isValidDateTimeDurationUnit(\"invalid\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidDateTimeDurationUnit(null)",
         "result": "false"
       }
     ]
@@ -13933,7 +13969,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidIsoDateLike(value: string): boolean",
+    "signature": "isValidIsoDateLike(value: string): boolean\nisValidIsoDateLike(value: void | {} | null | undefined): boolean\nisValidIsoDateLike(value: unknown): value is string",
     "description": "Return true when the input is a valid PlainDate or PlainDateTime ISO string.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidIsoDateLike.ts",
     "examples": [
@@ -13964,6 +14000,10 @@
       {
         "call": "isValidIsoDateLike(\"2024-02-29[u-ca=hebrew]\")",
         "result": "false (non-ISO calendar)"
+      },
+      {
+        "call": "isValidIsoDateLike(null)",
+        "result": "false"
       }
     ]
   },
@@ -13974,7 +14014,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidMonthDay(value: string): boolean",
+    "signature": "isValidMonthDay(value: string): boolean\nisValidMonthDay(value: void | {} | null | undefined): boolean\nisValidMonthDay(value: unknown): value is string",
     "description": "Return true if `value` is a valid ISO month-day string: `--MM-DD` or `MM-DD`.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidMonthDay.ts",
     "examples": [
@@ -14013,6 +14053,10 @@
       {
         "call": "isValidMonthDay(\"\")",
         "result": "false"
+      },
+      {
+        "call": "isValidMonthDay(null)",
+        "result": "false"
       }
     ]
   },
@@ -14023,7 +14067,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidSqlDateTime(value: string): boolean",
+    "signature": "isValidSqlDateTime(value: string): boolean\nisValidSqlDateTime(value: void | {} | null | undefined): boolean\nisValidSqlDateTime(value: unknown): value is string",
     "description": "Return true when `value` is a real SQL timestamp literal without a time zone: the `YYYY-MM-DD HH:MM:SS[.fff]` value of a standard SQL `TIMESTAMP` or a MySQL/SQLite `DATETIME` column. It checks one date-and-time value, not a SQL statement.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidSqlDateTime.ts",
     "examples": [
@@ -14058,6 +14102,10 @@
       {
         "call": "isValidSqlDateTime(\"not a date\")",
         "result": "false"
+      },
+      {
+        "call": "isValidSqlDateTime(null)",
+        "result": "false"
       }
     ]
   },
@@ -14068,7 +14116,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidTime(value: string): boolean",
+    "signature": "isValidTime(value: string): boolean\nisValidTime(value: void | {} | null | undefined): boolean\nisValidTime(value: unknown): value is string",
     "description": "Return true when `value` is a valid ISO PlainTime string.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidTime.ts",
     "examples": [
@@ -14095,6 +14143,10 @@
       {
         "call": "isValidTime(\"23:59:60\")",
         "result": "false (leap second)"
+      },
+      {
+        "call": "isValidTime(null)",
+        "result": "false"
       }
     ]
   },
@@ -14142,7 +14194,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidTimeDurationUnit(unit: string): unit is \"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\"",
+    "signature": "isValidTimeDurationUnit(unit: unknown): unit is \"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\"",
     "description": "Return true when `unit` is a valid TimeDurationUnit.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidTimeDurationUnit.ts",
     "examples": [
@@ -14160,6 +14212,10 @@
       },
       {
         "call": "isValidTimeDurationUnit(\"invalid\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidTimeDurationUnit(null)",
         "result": "false"
       }
     ]
@@ -14233,7 +14289,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidYearMonth(value: string): boolean",
+    "signature": "isValidYearMonth(value: string): boolean\nisValidYearMonth(value: void | {} | null | undefined): boolean\nisValidYearMonth(value: unknown): value is string",
     "description": "Return true if `value` is a valid ISO year-month string: `YYYY-MM` or `±YYYYYY-MM`.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidYearMonth.ts",
     "examples": [
@@ -14271,6 +14327,10 @@
       },
       {
         "call": "isValidYearMonth(\"\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidYearMonth(null)",
         "result": "false"
       }
     ]
@@ -15904,7 +15964,7 @@
     "namespace": "precision",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidInstant(value: string): boolean",
+    "signature": "isValidInstant(value: string): boolean\nisValidInstant(value: void | {} | null | undefined): boolean\nisValidInstant(value: unknown): value is string",
     "description": "Validate whether a string is an ISO 8601 instant string the `precision/` namespace accepts.",
     "sourcePath": "packages/gmt/src/precision/validate/isValidInstant.ts",
     "examples": [
@@ -15943,6 +16003,10 @@
       {
         "call": "isValidInstant(\"invalid\")",
         "result": "false"
+      },
+      {
+        "call": "isValidInstant(null)",
+        "result": "false"
       }
     ]
   },
@@ -15953,7 +16017,7 @@
     "namespace": "precision",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidInt64NanosecondDateTime(dateTime: string): boolean",
+    "signature": "isValidInt64NanosecondDateTime(dateTime: string): boolean\nisValidInt64NanosecondDateTime(dateTime: void | {} | null | undefined): boolean\nisValidInt64NanosecondDateTime(dateTime: unknown): dateTime is string",
     "description": "Validate whether a string is a plain date-time whose epoch-nanosecond count, read as if it were UTC (Arrow's rule for a zoneless timestamp), fits an `int64`: the check to run before `toArrowLocalTimestamp(dateTime, \"nanosecond\")`.",
     "sourcePath": "packages/gmt/src/precision/validate/isValidInt64NanosecondDateTime.ts",
     "examples": [
@@ -15980,6 +16044,10 @@
       {
         "call": "isValidInt64NanosecondDateTime(\"2024-01-01T00:00:00Z\")",
         "result": "false — an instant"
+      },
+      {
+        "call": "isValidInt64NanosecondDateTime(null)",
+        "result": "false"
       }
     ]
   },
@@ -15990,7 +16058,7 @@
     "namespace": "precision",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidInt64NanosecondInstant(isoString: string): boolean",
+    "signature": "isValidInt64NanosecondInstant(isoString: string): boolean\nisValidInt64NanosecondInstant(isoString: void | {} | null | undefined): boolean\nisValidInt64NanosecondInstant(isoString: unknown): isoString is string",
     "description": "Validate whether a string is an instant whose epoch-nanosecond count fits an `int64`: the check to run before `toArrowTimestamp(isoString, \"nanosecond\")`.",
     "sourcePath": "packages/gmt/src/precision/validate/isValidInt64NanosecondInstant.ts",
     "examples": [
@@ -16017,6 +16085,10 @@
       {
         "call": "isValidInt64NanosecondInstant(\"2024-01-01T00:00:00\")",
         "result": "false — no offset"
+      },
+      {
+        "call": "isValidInt64NanosecondInstant(null)",
+        "result": "false"
       }
     ]
   },
@@ -16027,7 +16099,7 @@
     "namespace": "precision",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidNanoPattern(value: string): boolean",
+    "signature": "isValidNanoPattern(value: string): boolean\nisValidNanoPattern(value: void | {} | null | undefined): boolean\nisValidNanoPattern(value: unknown): value is string",
     "description": "Validate whether a string is a nanosecond timestamp `parseNanoseconds` will parse.",
     "sourcePath": "packages/gmt/src/precision/validate/isValidNanoPattern.ts",
     "examples": [
@@ -16057,6 +16129,10 @@
       },
       {
         "call": "isValidNanoPattern(\"garbage\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidNanoPattern(null)",
         "result": "false"
       }
     ]
@@ -26371,7 +26447,7 @@
     "namespace": "utc",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidHttpDate(value: string): boolean",
+    "signature": "isValidHttpDate(value: string): boolean\nisValidHttpDate(value: void | {} | null | undefined): boolean\nisValidHttpDate(value: unknown): value is string",
     "description": "Return true when `value` is a real HTTP header date: the RFC 9110 §5.6.7 HTTP-date that headers like `Last-Modified`, `Date` and `Expires` carry, such as `Fri, 15 Mar 2024 14:30:00 GMT`.",
     "sourcePath": "packages/gmt/src/utc/validate/isValidHttpDate.ts",
     "examples": [
@@ -26402,6 +26478,10 @@
       {
         "call": "isValidHttpDate(\"not a date\")",
         "result": "false"
+      },
+      {
+        "call": "isValidHttpDate(null)",
+        "result": "false"
       }
     ]
   },
@@ -26412,7 +26492,7 @@
     "namespace": "utc",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidUtc(value: string): boolean",
+    "signature": "isValidUtc(value: string): boolean\nisValidUtc(value: void | {} | null | undefined): boolean\nisValidUtc(value: unknown): value is string",
     "description": "Return true when the provided string is a valid ISO 8601 UTC datetime.",
     "sourcePath": "packages/gmt/src/utc/validate/isValidUtc.ts",
     "examples": [
@@ -26442,6 +26522,10 @@
       },
       {
         "call": "isValidUtc(\"invalid\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidUtc(null)",
         "result": "false"
       }
     ]
@@ -26478,7 +26562,7 @@
     "namespace": "utc",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidUtcTimestamp(value: string): boolean",
+    "signature": "isValidUtcTimestamp(value: string): boolean\nisValidUtcTimestamp(value: void | {} | null | undefined): boolean\nisValidUtcTimestamp(value: unknown): value is string",
     "description": "Return true when `value` is a real UTC instant written as `YYYY-MM-DDTHH:MM:SS[.f]Z` and nothing else: a narrower check than `isValidUtc`.",
     "sourcePath": "packages/gmt/src/utc/validate/isValidUtcTimestamp.ts",
     "examples": [
@@ -26528,6 +26612,10 @@
       },
       {
         "call": "isValidUtcTimestamp(\"not a date\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidUtcTimestamp(null)",
         "result": "false"
       }
     ]
@@ -30627,7 +30715,7 @@
     "namespace": "zoned",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidCalendarZonedDateTime(value: string): boolean",
+    "signature": "isValidCalendarZonedDateTime(value: string): boolean\nisValidCalendarZonedDateTime(value: void | {} | null | undefined): boolean\nisValidCalendarZonedDateTime(value: unknown): value is string",
     "description": "Return true if `value` is a valid GMT ZonedDateTime string: a bare ISO zoned datetime (\"2024-10-03T14:30:45+02:00[Africa/Johannesburg]\") or an RFC 9557 calendar-annotated one (\"2024-10-03T14:30:45+02:00[Africa/Johannesburg][u-ca=hebrew]\"), as `Temporal.ZonedDateTime#toString()` and `convertZonedToCalendar` write it.",
     "sourcePath": "packages/gmt/src/zoned/validate/isValidCalendarZonedDateTime.ts",
     "examples": [
@@ -30666,6 +30754,10 @@
       {
         "call": "isValidCalendarZonedDateTime(\"invalid\")",
         "result": "false"
+      },
+      {
+        "call": "isValidCalendarZonedDateTime(null)",
+        "result": "false"
       }
     ]
   },
@@ -30676,7 +30768,7 @@
     "namespace": "zoned",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidRfc2822DateTime(value: string): boolean",
+    "signature": "isValidRfc2822DateTime(value: string): boolean\nisValidRfc2822DateTime(value: void | {} | null | undefined): boolean\nisValidRfc2822DateTime(value: unknown): value is string",
     "description": "Return true when `value` is a real RFC 5322 (RFC 2822) date-time: the date an email `Date:` header carries, such as `Fri, 15 Mar 2024 14:30:00 -0400`.",
     "sourcePath": "packages/gmt/src/zoned/validate/isValidRfc2822DateTime.ts",
     "examples": [
@@ -30711,6 +30803,10 @@
       {
         "call": "isValidRfc2822DateTime(\"not a date\")",
         "result": "false"
+      },
+      {
+        "call": "isValidRfc2822DateTime(null)",
+        "result": "false"
       }
     ]
   },
@@ -30721,7 +30817,7 @@
     "namespace": "zoned",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidRfc3339DateTime(value: string): boolean",
+    "signature": "isValidRfc3339DateTime(value: string): boolean\nisValidRfc3339DateTime(value: void | {} | null | undefined): boolean\nisValidRfc3339DateTime(value: unknown): value is string",
     "description": "Return true when `value` is a real RFC 3339 date-time: an ISO 8601 date and time that always states its UTC offset, as `Z` or `±HH:MM` (RFC 3339 §5.6).",
     "sourcePath": "packages/gmt/src/zoned/validate/isValidRfc3339DateTime.ts",
     "examples": [
@@ -30760,6 +30856,10 @@
       {
         "call": "isValidRfc3339DateTime(\"not a date\")",
         "result": "false"
+      },
+      {
+        "call": "isValidRfc3339DateTime(null)",
+        "result": "false"
       }
     ]
   },
@@ -30770,7 +30870,7 @@
     "namespace": "zoned",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidTimeZone(timeZone: string): boolean",
+    "signature": "isValidTimeZone(timeZone: string): boolean\nisValidTimeZone(timeZone: void | {} | null | undefined): boolean\nisValidTimeZone(timeZone: unknown): timeZone is string",
     "description": "Validate whether a string is a valid time zone identifier: an IANA name or a UTC offset.",
     "sourcePath": "packages/gmt/src/zoned/validate/isValidTimeZone.ts",
     "examples": [
@@ -30809,6 +30909,10 @@
       {
         "call": "\"Japan\".includes(\"/\")",
         "result": "false (the earlier slash-only rule)"
+      },
+      {
+        "call": "isValidTimeZone(null)",
+        "result": "false"
       }
     ]
   },
@@ -30819,7 +30923,7 @@
     "namespace": "zoned",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidZonedDateTime(value: string): boolean",
+    "signature": "isValidZonedDateTime(value: string): boolean\nisValidZonedDateTime(value: void | {} | null | undefined): boolean\nisValidZonedDateTime(value: unknown): value is string",
     "description": "Validate whether a string is a valid ISO 8601 zoned datetime string.",
     "sourcePath": "packages/gmt/src/zoned/validate/isValidZonedDateTime.ts",
     "examples": [
@@ -30877,6 +30981,10 @@
       },
       {
         "call": "isValidZonedDateTime(\"invalid\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidZonedDateTime(null)",
         "result": "false"
       }
     ]

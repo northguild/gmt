@@ -2,7 +2,7 @@
 name: gmt-arithmetic
 description: >
   Date arithmetic — add/subtract duration objects, diff values, clamp/closest,
-  ISO 8601 duration strings, human duration strings such as "2h 30m"
+  ISO 8601 duration strings, human duration strings
   (parseHumanDuration, formatHumanDuration), elapsed-versus-wall-clock spans,
   business-day arithmetic and interval range math. Covers the half-open [start, end) interval
   algebra over instants (intervalsOverlap, intervalContains, intersectIntervals,
@@ -15,7 +15,7 @@ description: >
   ObservancePolicy, holidayDates, nthWeekdayOfMonth, easterSunday,
   observedDate, buildBusinessCalendar), overflow "constrain" month-end
   clamping, splitIntervalByUnit* anchor stepping, maxPieces limits,
-  RFC 9557 calendar strings, correct-at-the-edges guarantees.
+  RFC 9557 calendar strings.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/plain-arithmetic.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/durations.mdx'

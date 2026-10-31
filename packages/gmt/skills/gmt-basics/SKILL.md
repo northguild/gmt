@@ -103,6 +103,9 @@ input before you act on it.
   `isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime`
 - **UTC timestamp validation**: `isValidUtcTimestamp` (a UTC instant written
   `YYYY-MM-DDTHH:MM:SS[.f]Z` and nothing else; it has no parser)
+- The core string validators take a value of any type and return `false` for a
+  non-string. A value typed `unknown` narrows to `string` when the result is
+  `true`. A typed union such as `string | null` gets a plain `boolean`.
 
 ## Common pitfalls
 

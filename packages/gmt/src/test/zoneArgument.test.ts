@@ -492,9 +492,7 @@ describe("the accepted set is what isValidTimeZone or isValidUtcOffset accepts",
     ({ name, zone }) => {
       pinClock(BASELINE_AT);
       const call = zoneArgumentCalls(gmt, BASELINE_AT)[name];
-      const accepted =
-        gmt.isValidTimeZone(zone as string) ||
-        gmt.isValidUtcOffset(zone as string);
+      const accepted = gmt.isValidTimeZone(zone) || gmt.isValidUtcOffset(zone);
 
       expect(isSentinel(call, call.run(zone))).toBe(!accepted);
     },

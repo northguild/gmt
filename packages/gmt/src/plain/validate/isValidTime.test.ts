@@ -1,4 +1,5 @@
 import { isValidTime } from "./isValidTime";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 
 describe("isValidTime", () => {
   it.each`
@@ -75,5 +76,71 @@ describe("isValidTime", () => {
     ${"12:30Z[foo=bar]"}                   | ${"UTC designator"}
   `("returns false for $value ($reason)", ({ value }: { value: string }) => {
     expect(isValidTime(value)).toBe(false);
+  });
+});
+
+describe("isValidTime with any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidTime(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string typed unknown, as for a string", () => {
+    expect(isValidTime(arrives("12:34:56"))).toBe(true);
+    expect(isValidTime("12:34:56")).toBe(true);
+  });
+});
+
+describe("isValidTime types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("12:34:56");
+    if (isValidTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidTime(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "invalid";
+    if (!isValidTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidTime(input)).toBe(false);
+  });
+
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("12:34:56")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("12:34:56")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "12:34:56", 1, "invalid"].map(arrives);
+    const kept = values.filter(isValidTime);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["12:34:56"]);
   });
 });

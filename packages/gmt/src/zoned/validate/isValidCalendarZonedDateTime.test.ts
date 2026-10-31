@@ -1,3 +1,4 @@
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones, MustTestCalendars } from "../../test";
 import type { CalendarSystem } from "../../types";
@@ -72,20 +73,6 @@ describe("isValidCalendarZonedDateTime", () => {
     ${"2024-02-24[America/New_York][u-ca=hebrew]"}                           | ${"date without a time (strict extended shape)"}
   `("returns false for '$value' ($reason)", ({ value }) => {
     expect(isValidCalendarZonedDateTime(value)).toBe(false);
-  });
-
-  it.each`
-    value
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-    ${[]}
-    ${{}}
-  `("returns false when $value is non-string input", ({ value }) => {
-    expect(isValidCalendarZonedDateTime(value as unknown as string)).toBe(
-      false,
-    );
   });
 
   // DoD-5: the full battle-test zone matrix, built by mapping the shared zone list rather than
@@ -184,5 +171,86 @@ describe("out-of-scope zoned functions still reject the E7 calendar grammar", ()
   it("keeps the business-day pair on the old validator per D9", () => {
     expect(addZonedBusinessDays(ANNOTATED, 1)).toBe("");
     expect(subtractZonedBusinessDays(ANNOTATED, 1)).toBe("");
+  });
+});
+
+describe("isValidCalendarZonedDateTime accepts any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidCalendarZonedDateTime(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string through both overloads", () => {
+    expect(
+      isValidCalendarZonedDateTime(
+        arrives("2024-10-03T14:30:45+02:00[Africa/Johannesburg]"),
+      ),
+    ).toBe(true);
+    expect(
+      isValidCalendarZonedDateTime(
+        "2024-10-03T14:30:45+02:00[Africa/Johannesburg]",
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("isValidCalendarZonedDateTime types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("2024-10-03T14:30:45+02:00[Africa/Johannesburg]");
+    if (isValidCalendarZonedDateTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidCalendarZonedDateTime(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "not valid";
+    if (!isValidCalendarZonedDateTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidCalendarZonedDateTime(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidCalendarZonedDateTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("2024-10-03T14:30:45+02:00[Africa/Johannesburg]")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidCalendarZonedDateTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("2024-10-03T14:30:45+02:00[Africa/Johannesburg]")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [
+      null,
+      "2024-10-03T14:30:45+02:00[Africa/Johannesburg]",
+      1,
+      "nope",
+    ].map(arrives);
+    const kept = values.filter(isValidCalendarZonedDateTime);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["2024-10-03T14:30:45+02:00[Africa/Johannesburg]"]);
   });
 });

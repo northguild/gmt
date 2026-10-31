@@ -1,5 +1,6 @@
 import { mockTemporalPlainYearMonthFromThrow } from "../../test/mocks";
 import { isValidYearMonth } from "./isValidYearMonth";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 
 // Temporal grammar DateSpecYearMonth (DateYear DateSeparator DateMonth), ISOYearMonthWithinLimits
 // for the range, ParseISODateTime for the annotations. The basic form is a GMT rule.
@@ -58,21 +59,74 @@ describe("isValidYearMonth", () => {
     expect(isValidYearMonth(value)).toBe(false);
   });
 
-  it.each`
-    label          | value
-    ${"null"}      | ${null}
-    ${"undefined"} | ${undefined}
-    ${"{}"}        | ${{}}
-    ${"202610"}    | ${202610}
-  `(
-    "returns false for the non-string $label",
-    ({ value }: { value: unknown }) => {
-      expect(isValidYearMonth(value as string)).toBe(false);
-    },
-  );
-
   it("returns false when Temporal throws", () => {
     mockTemporalPlainYearMonthFromThrow();
     expect(isValidYearMonth("2026-10")).toBe(false);
+  });
+});
+
+describe("isValidYearMonth with any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidYearMonth(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string typed unknown, as for a string", () => {
+    expect(isValidYearMonth(arrives("2026-10"))).toBe(true);
+    expect(isValidYearMonth("2026-10")).toBe(true);
+  });
+});
+
+describe("isValidYearMonth types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("2026-10");
+    if (isValidYearMonth(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidYearMonth(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "invalid";
+    if (!isValidYearMonth(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidYearMonth(input)).toBe(false);
+  });
+
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidYearMonth(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("2026-10")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidYearMonth(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("2026-10")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "2026-10", 1, "invalid"].map(arrives);
+    const kept = values.filter(isValidYearMonth);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["2026-10"]);
   });
 });

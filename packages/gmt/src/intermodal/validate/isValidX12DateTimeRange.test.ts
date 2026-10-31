@@ -1,4 +1,5 @@
-import { NON_STRINGS, x12FormatsOutside } from "../../test/ediCodes";
+import { x12FormatsOutside } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import { parseX12DateTimeRange } from "../parse/parseX12DateTimeRange";
 import { isValidX12DateTimeRange } from "./isValidX12DateTimeRange";
 

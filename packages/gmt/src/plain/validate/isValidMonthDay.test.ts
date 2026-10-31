@@ -1,5 +1,6 @@
 import { mockTemporalPlainMonthDayFromThrow } from "../../test/mocks";
 import { isValidMonthDay } from "./isValidMonthDay";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 
 // Temporal grammar DateSpecMonthDay (`--`? DateMonth DateSeparator DateDay) with the early error
 // IsValidMonthDay; ParseISODateTime for the annotations. The basic form is a GMT rule.
@@ -64,21 +65,74 @@ describe("isValidMonthDay", () => {
     expect(isValidMonthDay(value)).toBe(false);
   });
 
-  it.each`
-    label          | value
-    ${"null"}      | ${null}
-    ${"undefined"} | ${undefined}
-    ${"{}"}        | ${{}}
-    ${"1225"}      | ${1225}
-  `(
-    "returns false for the non-string $label",
-    ({ value }: { value: unknown }) => {
-      expect(isValidMonthDay(value as string)).toBe(false);
-    },
-  );
-
   it("returns false when Temporal throws", () => {
     mockTemporalPlainMonthDayFromThrow();
     expect(isValidMonthDay("--12-25")).toBe(false);
+  });
+});
+
+describe("isValidMonthDay with any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidMonthDay(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string typed unknown, as for a string", () => {
+    expect(isValidMonthDay(arrives("--12-25"))).toBe(true);
+    expect(isValidMonthDay("--12-25")).toBe(true);
+  });
+});
+
+describe("isValidMonthDay types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("--12-25");
+    if (isValidMonthDay(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidMonthDay(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "invalid";
+    if (!isValidMonthDay(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidMonthDay(input)).toBe(false);
+  });
+
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidMonthDay(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("--12-25")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidMonthDay(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("--12-25")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "--12-25", 1, "invalid"].map(arrives);
+    const kept = values.filter(isValidMonthDay);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["--12-25"]);
   });
 });

@@ -197,7 +197,7 @@ function classify(returnType: string): DeclaredReturn {
   return { kinds: [...new Set(kinds)], nullable: members.includes("null") };
 }
 
-type Signature = {
+export type Signature = {
   declared: DeclaredReturn;
   arity: number;
   required: boolean[];
@@ -215,34 +215,37 @@ function startsBody(rest: string, end: number): boolean {
   );
 }
 
-/** Length of the return-type annotation at the start of `rest` (the text after `: `). */
+/**
+ * Length of the return-type annotation at the start of `rest` (the text after `: `). The
+ * annotation ends at the start of a body (`{` or `=>`) or, for an overload signature, at its
+ * closing `;`. A return type never holds a top-level `;`: an object type's `;` sits inside braces.
+ */
 function returnTypeLength(rest: string): number {
   let depth = 0;
   for (let end = 0; end < rest.length; end++) {
     const ch = rest[end];
-    if (depth === 0 && startsBody(rest, end)) return end;
+    if (depth === 0 && (ch === ";" || startsBody(rest, end))) return end;
     if ("([{<".includes(ch)) depth++;
     else if (")]}>".includes(ch) && rest[end - 1] !== "=") depth--;
   }
   return rest.length;
 }
 
-function readSignature(entry: CorpusEntry): Signature {
-  const source = sourceTree("src").get(
-    entry.sourcePath.replace(/^packages\/gmt\//, ""),
-  );
-  if (source === undefined) {
-    throw new Error(`noThrow: no source file for ${entry.name}`);
-  }
+/**
+ * The signature of `name` as declared in `source`. For an overloaded function this is the first
+ * overload, the one written first in the file: `readSignature` probes that one, and the rest
+ * are widenings of it.
+ */
+export function signatureOf(source: string, name: string): Signature {
   const header = new RegExp(
-    `export (?:function ${entry.name}\\s*|const ${entry.name}\\s*=\\s*)(<[^(]*>)?\\(`,
+    `export (?:function ${name}\\s*|const ${name}\\s*=\\s*)(<[^(]*>)?\\(`,
   ).exec(source);
-  if (!header) throw new Error(`noThrow: no signature for ${entry.name}`);
+  if (!header) throw new Error(`noThrow: no signature for ${name}`);
   const open = header.index + header[0].length - 1;
   const close = closeBracket(source, open);
   const params = splitTopLevel(source.slice(open + 1, close - 1), ",");
   const colon = /^\s*:\s*/.exec(source.slice(close));
-  if (!colon) throw new Error(`noThrow: no return type for ${entry.name}`);
+  if (!colon) throw new Error(`noThrow: no return type for ${name}`);
   const rest = source.slice(close + colon[0].length);
   return {
     declared: classify(rest.slice(0, returnTypeLength(rest))),
@@ -258,6 +261,16 @@ function readSignature(entry: CorpusEntry): Signature {
       return colonAt < 0 ? "" : annotation.slice(colonAt + 1).trim();
     }),
   };
+}
+
+function readSignature(entry: CorpusEntry): Signature {
+  const source = sourceTree("src").get(
+    entry.sourcePath.replace(/^packages\/gmt\//, ""),
+  );
+  if (source === undefined) {
+    throw new Error(`noThrow: no source file for ${entry.name}`);
+  }
+  return signatureOf(source, entry.name);
 }
 
 /**

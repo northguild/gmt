@@ -1,6 +1,7 @@
 import { sameInstantBattleCases } from "../../test";
 import { isValidUtc } from "../../utc/validate";
 import { toNanoseconds } from "../convert/toNanoseconds";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { isValidInstant } from "./isValidInstant";
 
 describe("isValidInstant", () => {
@@ -60,19 +61,6 @@ describe("isValidInstant", () => {
     expect(isValidInstant(value)).toBe(false);
   });
 
-  it.each`
-    value
-    ${null}
-    ${undefined}
-    ${123}
-    ${1710072000123456789n}
-    ${true}
-    ${[]}
-    ${{}}
-  `("returns false when $value is non-string input", ({ value }) => {
-    expect(isValidInstant(value as unknown as string)).toBe(false);
-  });
-
   it.each(sameInstantBattleCases)(
     "returns true for 2024-02-29T00:00:00Z expressed in $timeZone",
     ({ value }) => {
@@ -116,4 +104,72 @@ describe("isValidInstant", () => {
       expect(isValidInstant(value)).toBe(expected);
     },
   );
+
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidInstant(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true through both overloads for a valid string", () => {
+    expect(isValidInstant("2024-03-10T12:00:00Z")).toBe(true);
+    expect(isValidInstant(arrives("2024-03-10T12:00:00Z"))).toBe(true);
+  });
+});
+
+describe("isValidInstant types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("2024-03-10T12:00:00Z");
+    if (isValidInstant(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidInstant(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "20240310T120000Z";
+    if (!isValidInstant(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidInstant(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidInstant(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("2024-03-10T12:00:00Z")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidInstant(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("2024-03-10T12:00:00Z")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "2024-03-10T12:00:00Z", 1, "20240310T120000Z"].map(
+      arrives,
+    );
+    const kept = values.filter(isValidInstant);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["2024-03-10T12:00:00Z"]);
+  });
 });

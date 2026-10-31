@@ -1,5 +1,5 @@
 import { sqlDateTime } from "../../regex";
-import { NON_STRINGS } from "../../test/ediCodes";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { parseSqlDateTime } from "../parse/parseSqlDateTime";
 import { isValidSqlDateTime } from "./isValidSqlDateTime";
 
@@ -71,8 +71,74 @@ describe("isValidSqlDateTime", () => {
 
   it("returns false for an argument that is not a string, as parseSqlDateTime returns ''", () => {
     for (const [kind, make] of NON_STRINGS) {
-      expect(isValidSqlDateTime(make() as never), kind).toBe(false);
+      expect(isValidSqlDateTime(make()), kind).toBe(false);
       expect(parseSqlDateTime(make() as never), kind).toBe("");
     }
+  });
+});
+
+describe("isValidSqlDateTime with any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidSqlDateTime(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string typed unknown, as for a string", () => {
+    expect(isValidSqlDateTime(arrives("2024-03-15 14:30:00"))).toBe(true);
+    expect(isValidSqlDateTime("2024-03-15 14:30:00")).toBe(true);
+  });
+});
+
+describe("isValidSqlDateTime types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("2024-03-15 14:30:00");
+    if (isValidSqlDateTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidSqlDateTime(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "invalid";
+    if (!isValidSqlDateTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidSqlDateTime(input)).toBe(false);
+  });
+
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidSqlDateTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("2024-03-15 14:30:00")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidSqlDateTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("2024-03-15 14:30:00")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "2024-03-15 14:30:00", 1, "invalid"].map(arrives);
+    const kept = values.filter(isValidSqlDateTime);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["2024-03-15 14:30:00"]);
   });
 });
