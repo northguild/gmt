@@ -31,3 +31,9 @@ overrides:
   # own once miniflare moves. Delete it once `pnpm why undici` shows nothing asking for a 7.x
   # below 7.30.1.
   'undici@>=7.0.0 <7.30.1': 7.30.1
+  # GHSA-g3hv-75wg-m249 (denial of service through globparts amplification) is fixed in
+  # minimatch 11.0.1. `@typescript-eslint/typescript-estree`, `@eslint/eslintrc` and others still ask
+  # for 3.x or 10.x. The selector matches only versions below the fix, so the override goes dormant
+  # on its own once upstream moves. Delete it once `pnpm why minimatch` shows nothing asking for a
+  # version below 11.0.1.
+  'minimatch@<11.0.1': 11.0.1
