@@ -629,4 +629,11 @@ describe("the room the band label holds", () => {
     );
     expect(widestBandLabel(max, "PT5000H59M")).toContain("±5000 h 59 min");
   });
+
+  it("holds no room for typed text that is not a duration", () => {
+    const max = sliderMax({ drift: "PT100H" });
+    const reach = widestBandLabel(max, "");
+    expect(widestBandLabel(max, "x".repeat(200))).toBe(reach);
+    expect(widestBandLabel(max, "-PT5000H")).toBe(reach);
+  });
 });

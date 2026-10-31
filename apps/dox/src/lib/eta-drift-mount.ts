@@ -173,6 +173,9 @@ export function widestTolerance(
   const reach = toleranceText(
     minutesToIso(Math.floor(sliderMaxMinutes / 60) * 60 + 59),
   );
+  // Typed text that is not a duration shows no label, so it holds no room.
+  const minutes = isoToMinutes(typed.trim());
+  if (minutes === null || minutes < 0) return reach;
   const written = toleranceText(typed);
   return written.length > reach.length ? written : reach;
 }
