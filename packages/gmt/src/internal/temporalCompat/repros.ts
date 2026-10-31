@@ -8,7 +8,7 @@ import {
 /*
  * Every upstream repro for each `@js-temporal/polyfill` defect GMT works around, with the
  * spec-correct answer: the probe groups from `probeRepros.ts` plus the canary-only groups below
- * (zoned.A, zoned.B, zoned.D, zoned.E and D9). No shipped module imports this file: a repro the
+ * (zoned.A, zoned.B, zoned.D, zoned.E, D9 and D21). No shipped module imports this file: a repro the
  * shipped probes do not read lives here, so it never reaches a bundle. It imports ONLY the
  * polyfill (through `../temporal`) and `probeRepros.ts`, so a canary script can load its compiled copy straight from
  * `dist` and report which workarounds are still needed.
@@ -31,12 +31,13 @@ export type { DefectId } from "./probeRepros";
 export type ZonedDefectId = "zoned.A" | "zoned.B" | "zoned.D" | "zoned.E";
 
 /**
- * D9: non-ISO months added and counted one month at a time (`largeMonthSpan.ts`). Canary-only: no
- * capability probe gates it, because a probe large enough to show the cost would be the abort
- * itself, and timing is not deterministic. The workaround runs only for amounts of at least
- * `LARGE_MONTH_SPAN` months and computes the spec's answer, so it changes no output either way.
+ * Canary-only groups no capability probe gates. D9 (`largeMonthSpan.ts`): a probe large enough to
+ * show the cost would be the abort itself, and timing is not deterministic; the workaround runs
+ * only for amounts of at least `LARGE_MONTH_SPAN` months and computes the spec's answer. D21
+ * (`clock.ts`): the guard compares each `Temporal.Now` reading with `Date.now()` and never fires
+ * on a fixed runtime. Neither changes any output when the polyfill is fixed.
  */
-export type BoundedWorkDefectId = "D9";
+export type BoundedWorkDefectId = "D9" | "D21";
 
 export interface Repro extends Omit<ProbeRepro, "defect"> {
   defect: DefectId | ZonedDefectId | BoundedWorkDefectId;
@@ -353,7 +354,38 @@ const d9Repros: readonly Repro[] = (
   ];
 });
 
+/**
+ * D21: with `Date.now()` at 1960-01-01T00:00:00Z, the second `Temporal.Now.instant()` reading
+ * is in 1960. The Temporal proposal defines `Date.now()` as SystemUTCEpochMilliseconds, the floor of
+ * SystemUTCEpochNanoseconds over 1e6 (spec/temporal.html, spec/mainadditions.html), and
+ * test262 `built-ins/Temporal/Now/instant/return-value-value.js` asserts a reading is not earlier
+ * than a `Date.now()` taken before it. Polyfill 0.5.1 carries the previous reading's `ms % 1e6`,
+ * which is negative before 1970, and reads in 1959. Replaces `Date.now` and restores it.
+ */
+const d21Repros: readonly Repro[] = [
+  {
+    defect: "D21",
+    calendar: "iso8601",
+    name: "secondReadingAt1960",
+    expected: "1960",
+    run: () => {
+      const original = Date.now; // date-ban: the canary sets the clock before 1970 and restores it
+      Date.now = () => -315_619_200_000; // date-ban: 1960-01-01T00:00:00Z, the clock the canary needs
+      try {
+        Temporal.Now.instant();
+        return String(Temporal.Now.instant().toZonedDateTimeISO("UTC").year);
+      } finally {
+        Date.now = original; // date-ban: restores the real clock
+        // The polyfill still carries the 1960 tail: one real reading re-seeds it, so the next
+        // direct reading in this process is not a millisecond early.
+        Temporal.Now.instant();
+      }
+    },
+  },
+];
+
 export const repros: readonly Repro[] = [
+  ...d21Repros,
   ...d9Repros,
   ...zonedARepros,
   ...zonedBRepros,

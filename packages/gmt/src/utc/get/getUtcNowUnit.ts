@@ -1,4 +1,3 @@
-import { Temporal } from "../../internal/temporal";
 import {
   isoWeekOfYear,
   zonedNowUnitValue,
@@ -6,6 +5,7 @@ import {
 import { isValidDateTimeUnit } from "../../plain/validate";
 import type { UtcNowUnit } from "../../types";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
+import { nowInstant } from "../../internal/temporalCompat";
 
 export type { UtcNowUnit };
 
@@ -17,7 +17,7 @@ function isValidUtcNowUnit(unit: string): unit is UtcNowUnit {
  * Return the requested unit value from the current UTC instant.
  *
  * - Valid units: "year", "month", "week", "day", "dayOfWeek", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
- * - Uses Temporal.Now.instant() converted to UTC.
+ * - Uses nowInstant() converted to UTC.
  * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal
  *   does; `"dayOfWeek"` has no plural.
  * - Returns "" on invalid unit or failure.
@@ -41,7 +41,7 @@ export function getUtcNowUnit(unit: UtcNowUnit): string {
   if (!isValidUtcNowUnit(resolvedUnit)) return "";
 
   try {
-    const now = Temporal.Now.instant().toZonedDateTimeISO("UTC");
+    const now = nowInstant().toZonedDateTimeISO("UTC");
     return zonedNowUnitValue(now, resolvedUnit, isoWeekOfYear);
   } catch {
     return "";

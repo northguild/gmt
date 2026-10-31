@@ -1,4 +1,5 @@
-import { NON_STRINGS, edifactFormatsOutside } from "../../test/ediCodes";
+import { edifactFormatsOutside } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { parseEdifactOffsetDateTime } from "../parse/parseEdifactOffsetDateTime";
 import { formatEdifactOffsetDateTime } from "./formatEdifactOffsetDateTime";

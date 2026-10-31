@@ -1,4 +1,5 @@
-import { NON_STRINGS, x12FormatsOutside } from "../../test/ediCodes";
+import { x12FormatsOutside } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import { mockTemporalPlainTimeFromThrow } from "../../test/mocks";
 import { parseX12Time } from "../parse/parseX12Time";
 import { formatX12Time } from "./formatX12Time";

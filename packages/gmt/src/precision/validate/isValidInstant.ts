@@ -30,9 +30,11 @@ import { parseInstantNanoseconds } from "../../internal";
  * - Rejects leap seconds in every separator and format variant.
  * - Reads RFC 9557 annotations as `Temporal.Instant.from` does: a calendar or elective annotation
  *   is ignored, and an unknown critical one (`[!foo=bar]`) is rejected.
- * - Returns `false` for non-strings and empty strings.
+ * - An empty string returns `false`.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value candidate ISO 8601 instant string
+ * @param value any value; a string is checked as an ISO 8601 instant string
  * @returns boolean indicating whether `toNanoseconds` will parse it
  *
  * @example isValidInstant("2024-03-10T12:00:00Z") // true
@@ -44,7 +46,11 @@ import { parseInstantNanoseconds } from "../../internal";
  * @example isValidInstant("2024-03-10T12:00:00") // false — no offset designator
  * @example isValidInstant("2016-12-31T23:59:60Z") // false — leap second
  * @example isValidInstant("invalid") // false
+ * @example isValidInstant(null) // false
  */
-export function isValidInstant(value: string): boolean {
-  return parseInstantNanoseconds(value) !== null;
+export function isValidInstant(value: string): boolean;
+export function isValidInstant(value: {} | null | undefined | void): boolean;
+export function isValidInstant(value: unknown): value is string;
+export function isValidInstant(value: unknown): boolean {
+  return typeof value === "string" && parseInstantNanoseconds(value) !== null;
 }

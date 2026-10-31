@@ -656,7 +656,7 @@ function setupWidget(
 
   function render(): void {
     const state = readState();
-    const now = getUnixNow() ?? 0;
+    const now = getUnixNow();
     const read = readTimeline(lib, state);
     const counted = new Set(read.between.counted);
     const text = summaryText(state, read);

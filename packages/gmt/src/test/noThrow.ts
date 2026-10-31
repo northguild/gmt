@@ -197,7 +197,7 @@ function classify(returnType: string): DeclaredReturn {
   return { kinds: [...new Set(kinds)], nullable: members.includes("null") };
 }
 
-type Signature = {
+export type Signature = {
   declared: DeclaredReturn;
   arity: number;
   required: boolean[];
@@ -215,37 +215,65 @@ function startsBody(rest: string, end: number): boolean {
   );
 }
 
-/** Length of the return-type annotation at the start of `rest` (the text after `: `). */
+/**
+ * Length of the return-type annotation at the start of `rest` (the text after `: `). The
+ * annotation ends at the start of a body (`{` or `=>`) or, for an overload signature, at its
+ * closing `;`. A return type never holds a top-level `;`: an object type's `;` sits inside braces.
+ */
 function returnTypeLength(rest: string): number {
   let depth = 0;
   for (let end = 0; end < rest.length; end++) {
     const ch = rest[end];
-    if (depth === 0 && startsBody(rest, end)) return end;
+    if (depth === 0 && (ch === ";" || startsBody(rest, end))) return end;
     if ("([{<".includes(ch)) depth++;
     else if (")]}>".includes(ch) && rest[end - 1] !== "=") depth--;
   }
   return rest.length;
 }
 
-function readSignature(entry: CorpusEntry): Signature {
-  const source = sourceTree("src").get(
-    entry.sourcePath.replace(/^packages\/gmt\//, ""),
+/** One declared header of a function: its parameter list and return annotation. */
+type Header = { params: string[]; returnType: string; isOverload: boolean };
+
+/** Every `export function <name>(` or `export const <name> =` header in `source`, in file order. */
+function headersOf(source: string, name: string): Header[] {
+  const pattern = new RegExp(
+    `export (?:function ${name}\\s*|const ${name}\\s*=\\s*)(<[^(]*>)?\\(`,
+    "g",
   );
-  if (source === undefined) {
-    throw new Error(`noThrow: no source file for ${entry.name}`);
-  }
-  const header = new RegExp(
-    `export (?:function ${entry.name}\\s*|const ${entry.name}\\s*=\\s*)(<[^(]*>)?\\(`,
-  ).exec(source);
-  if (!header) throw new Error(`noThrow: no signature for ${entry.name}`);
-  const open = header.index + header[0].length - 1;
-  const close = closeBracket(source, open);
-  const params = splitTopLevel(source.slice(open + 1, close - 1), ",");
-  const colon = /^\s*:\s*/.exec(source.slice(close));
-  if (!colon) throw new Error(`noThrow: no return type for ${entry.name}`);
-  const rest = source.slice(close + colon[0].length);
+  return [...source.matchAll(pattern)].map((header) => {
+    const open = header.index + header[0].length - 1;
+    const close = closeBracket(source, open);
+    const colon = /^\s*:\s*/.exec(source.slice(close));
+    if (!colon) throw new Error(`noThrow: no return type for ${name}`);
+    const rest = source.slice(close + colon[0].length);
+    const length = returnTypeLength(rest);
+    return {
+      params: splitTopLevel(source.slice(open + 1, close - 1), ","),
+      returnType: rest.slice(0, length),
+      isOverload: rest[length] === ";",
+    };
+  });
+}
+
+/**
+ * The signature of `name` as declared in `source`. The parameters come from the first overload,
+ * which `readSignature` probes (the rest are widenings of it). The return type is the union over
+ * every overload, so a nullable `unknown` overload makes the function nullable. The
+ * implementation signature is never read: a caller cannot call it.
+ */
+export function signatureOf(source: string, name: string): Signature {
+  const headers = headersOf(source, name);
+  if (headers.length === 0)
+    throw new Error(`noThrow: no signature for ${name}`);
+  const overloads = headers.filter((header) => header.isOverload);
+  const declaredHeaders = overloads.length > 0 ? overloads : headers;
+  const returns = declaredHeaders.map((header) => classify(header.returnType));
+  const params = declaredHeaders[0].params;
   return {
-    declared: classify(rest.slice(0, returnTypeLength(rest))),
+    declared: {
+      kinds: [...new Set(returns.flatMap((declared) => declared.kinds))],
+      nullable: returns.some((declared) => declared.nullable),
+    },
     arity: params.length,
     required: params.map(
       (param) =>
@@ -258,6 +286,16 @@ function readSignature(entry: CorpusEntry): Signature {
       return colonAt < 0 ? "" : annotation.slice(colonAt + 1).trim();
     }),
   };
+}
+
+function readSignature(entry: CorpusEntry): Signature {
+  const source = sourceTree("src").get(
+    entry.sourcePath.replace(/^packages\/gmt\//, ""),
+  );
+  if (source === undefined) {
+    throw new Error(`noThrow: no source file for ${entry.name}`);
+  }
+  return signatureOf(source, entry.name);
 }
 
 /**

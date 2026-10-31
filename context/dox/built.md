@@ -185,8 +185,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     section under `## Types`. A type no function reaches stops the generator; the fix is in
     `packages/gmt/src`. The graph reads nodes, never printed signatures: the printer inlines
     union aliases, so a string match cannot see `Overflow`.
-    - Duplicate type names (also by case), an unannotated return, and a generic or
-      overloaded public function stop the generator too.
+    - Duplicate type names (also by case), an unannotated return, and a generic public
+      function stop the generator too. An overloaded public function gets one page that
+      lists every overload, and stops the generator only if a later overload names a public
+      type the first overload does not.
     - Anchors come from `github-slugger`, one slugger per page fed every heading in order,
       so they match what Starlight emits. The generator stops if a rendered page's headings
       differ from the list the anchors were computed from.
@@ -627,6 +629,34 @@ or text and asserts what a person sees.
   migrated file leaves the list and never returns.
 - **Measured in Chromium.** `color-contrast` and `target-size` are off in `expectNoAxeViolations`,
   because jsdom has no layout. The `a11y-axe` and `contrast-measure` gates measure them.
+
+#### Test isolation
+
+Most files run with `isolate: false`, sharing one worker module graph and one jsdom; the config
+splits them into two projects.
+- **What makes a file isolated.** `src/test/isolation.ts` reads each test file's source. A file that
+  calls `vi.mock`, `vi.doMock`, `vi.stubGlobal` or `vi.stubEnv` itself runs in the `isolated`
+  project; every other file runs in `shared`. A helper that stubs a global for you
+  (`resize-observer-spy.ts`) does not isolate the file: the setup undoes the stub. The scan reads
+  the split once, at start, so in watch mode restart Vitest after adding a `vi.mock`.
+  `src/test/isolation.test.ts` asks Vitest for the real project of every file and checks it
+  against the scan.
+- **What the shared setup resets.** `src/test/setup-dom.ts` runs after every test, in node and
+  jsdom files alike: it restores spies (`vi.restoreAllMocks`), fake timers, `vi.stubGlobal` and
+  `vi.stubEnv`. In a jsdom file it also destroys the widgets `renderWidget` mounted and calls
+  `resetDom` (`reset-dom.ts`): the body's children and attributes, the root element's
+  attributes, the title, the location, both storages, cookies and a `navigator.clipboard` a test
+  defined. `document.head` is left alone. It also runs Testing Library's React `cleanup` in
+  every file that loaded the package (`react-cleanup.ts`): the package registers it only for the
+  first file each worker loads, so later files would keep their components mounted. The setup
+  never imports the package itself: its async wrapper waits on a `setTimeout(0)` that fake
+  timers never fire, which hangs a `user-event` file that renders no React.
+- **What a test must undo.** Anything else it creates: a `<style>` or `<meta>` in `head`, a
+  `window` or `document` listener, a custom element, a module-level singleton. A direct
+  assignment to a global (`globalThis.x = …`, `Intl.X = …`, `process.env.X = …`) is undone in a
+  `finally` block, or use `vi.stubGlobal`. `src/test/leak-guard.ts` fails a file that ends with a
+  changed global, `Intl` member, environment variable or `window`/`document` listener; the message
+  names each one. When the state is a leak in a module, fix the module.
 
 **Widget roots and element identity.** Every widget root carries `data-widget="<mount name>"`,
 `role="region"` and an `aria-label` that is the tool page's title (the playground's is

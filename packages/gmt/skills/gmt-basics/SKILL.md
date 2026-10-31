@@ -60,9 +60,11 @@ input before you act on it.
 1. **ISO 8601 strings in.** Public APIs consume ISO strings, IANA timezone ids,
    or numeric Unix epochs — never `new Date()`.
 2. **Sentinel returns, never throws.** `""` for strings, `null` for numbers,
-   `false` for booleans, `[]` for arrays. Always check before using. This holds
-   for a `null` or wrong-typed argument too (`addDate(x, null)` is `""`), so a
-   `try`/`catch` around a GMT call is dead code.
+   `false` for booleans, `[]` for arrays. Always check before using. This
+   holds for a `null` or wrong-typed argument too (`addDate(x, null)` is `""`),
+   so a `try`/`catch` around a GMT call is dead code. Two calls cannot fail and
+   have no `null` to check: `getUnixNow()` with no options or with `epochUnit`
+   set to a `UnixUnit`, and `x12TimeCodeZone` with an `X12ZoneTimeCode`.
 3. **Read the docs site.** This skill is a routing pointer. For full API
    signatures, locale matrices, and code examples, read these:
    - `https://northguild.dev/gmt/llms.txt` is the map of every docs page.
@@ -103,6 +105,9 @@ input before you act on it.
   `isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime`
 - **UTC timestamp validation**: `isValidUtcTimestamp` (a UTC instant written
   `YYYY-MM-DDTHH:MM:SS[.f]Z` and nothing else; it has no parser)
+- The core string validators take a value of any type and return `false` for a
+  non-string. A value typed `unknown` narrows to `string` when the result is
+  `true`. A typed union such as `string | null` gets a plain `boolean`.
 
 ## Common pitfalls
 

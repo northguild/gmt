@@ -163,7 +163,7 @@ const captureScreenshot = async (): Promise<File | null> => {
       .replace("Z", "");
 
     return new File([blob], `screenshot-${timestamp}.png`, {
-      lastModified: getUnixNow() ?? 0,
+      lastModified: getUnixNow(),
       type: "image/png",
     });
   } finally {

@@ -1,3 +1,4 @@
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import {
   localNoonBattleCases,
   sameInstantBattleCases,
@@ -117,18 +118,6 @@ describe("isValidZonedDateTime", () => {
     },
   );
 
-  it.each`
-    value
-    ${null}
-    ${undefined}
-    ${123}
-    ${true}
-    ${[]}
-    ${{}}
-  `("returns false for non-string input: $value", ({ value }) => {
-    expect(isValidZonedDateTime(value as never)).toBe(false);
-  });
-
   // zoned/ is ISO-only: a non-ISO calendar annotation is `isValidCalendarZonedDateTime`'s input.
   // Temporal.ZonedDateTime.from reads the first `u-ca` annotation (proposal-temporal
   // `ParseISODateTime`), so `[u-ca=iso8601]` names the ISO calendar and is accepted.
@@ -210,5 +199,79 @@ describe("isValidZonedDateTime requires GMT's strict extended shape", () => {
     ${"+002024-10-03T14:30:00-04:00[America/New_York]"} | ${true}  | ${"six-digit year"}
   `("returns $expected for $value ($reason)", ({ value, expected }) => {
     expect(isValidZonedDateTime(value)).toBe(expected);
+  });
+});
+
+describe("isValidZonedDateTime accepts any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidZonedDateTime(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string through both overloads", () => {
+    expect(
+      isValidZonedDateTime(arrives("2024-02-29T12:34:56.789+00:00[UTC]")),
+    ).toBe(true);
+    expect(isValidZonedDateTime("2024-02-29T12:34:56.789+00:00[UTC]")).toBe(
+      true,
+    );
+  });
+});
+
+describe("isValidZonedDateTime types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("2024-02-29T12:34:56.789+00:00[UTC]");
+    if (isValidZonedDateTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidZonedDateTime(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "not valid";
+    if (!isValidZonedDateTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidZonedDateTime(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidZonedDateTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("2024-02-29T12:34:56.789+00:00[UTC]")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidZonedDateTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("2024-02-29T12:34:56.789+00:00[UTC]")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "2024-02-29T12:34:56.789+00:00[UTC]", 1, "nope"].map(
+      arrives,
+    );
+    const kept = values.filter(isValidZonedDateTime);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["2024-02-29T12:34:56.789+00:00[UTC]"]);
   });
 });

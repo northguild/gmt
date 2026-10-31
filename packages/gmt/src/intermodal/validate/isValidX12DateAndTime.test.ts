@@ -1,4 +1,4 @@
-import { NON_STRINGS } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import { parseX12DateAndTime } from "../parse/parseX12DateAndTime";
 import { isValidX12DateAndTime } from "./isValidX12DateAndTime";
 

@@ -1,5 +1,5 @@
 import { rfc2822DateTime } from "../../regex";
-import { NON_STRINGS } from "../../test/ediCodes";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { parseRfc2822 } from "../parse/parseRfc2822";
 import { isValidRfc2822DateTime } from "./isValidRfc2822DateTime";
 
@@ -114,8 +114,82 @@ describe("isValidRfc2822DateTime", () => {
 
   it("returns false for an argument that is not a string, as parseRfc2822 returns ''", () => {
     for (const [kind, make] of NON_STRINGS) {
-      expect(isValidRfc2822DateTime(make() as never), kind).toBe(false);
+      expect(isValidRfc2822DateTime(make()), kind).toBe(false);
       expect(parseRfc2822(make() as never), kind).toBe("");
     }
+  });
+});
+
+describe("isValidRfc2822DateTime accepts any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidRfc2822DateTime(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string through both overloads", () => {
+    expect(
+      isValidRfc2822DateTime(arrives("Fri, 15 Mar 2024 14:30:00 -0400")),
+    ).toBe(true);
+    expect(isValidRfc2822DateTime("Fri, 15 Mar 2024 14:30:00 -0400")).toBe(
+      true,
+    );
+  });
+});
+
+describe("isValidRfc2822DateTime types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("Fri, 15 Mar 2024 14:30:00 -0400");
+    if (isValidRfc2822DateTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidRfc2822DateTime(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "not valid";
+    if (!isValidRfc2822DateTime(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidRfc2822DateTime(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidRfc2822DateTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("Fri, 15 Mar 2024 14:30:00 -0400")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidRfc2822DateTime(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("Fri, 15 Mar 2024 14:30:00 -0400")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "Fri, 15 Mar 2024 14:30:00 -0400", 1, "nope"].map(
+      arrives,
+    );
+    const kept = values.filter(isValidRfc2822DateTime);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["Fri, 15 Mar 2024 14:30:00 -0400"]);
   });
 });

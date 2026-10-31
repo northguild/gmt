@@ -9,7 +9,7 @@ import {
   stripBase,
 } from "../src/lib/site";
 import { brainsPayload } from "./brains-payload";
-import { getUnixNowMs } from "./clock";
+import { getUnixNow } from "@northguild/gmt/unix/get";
 import { handleCanadaClockChange } from "./canada-clock-change";
 import { handleMoroccoClockChange } from "./morocco-clock-change";
 import { createChatHandler } from "./chat-handler";
@@ -114,7 +114,7 @@ async function handleDevKey(url: URL, env: Env): Promise<Response> {
   // What this endpoint must never do is *leak* — hence the redirect that
   // strips the key and the HttpOnly cookie that keeps it out of the page.
   if (env.DOX_DEV_KEY && (await timingSafeEqual(candidate, env.DOX_DEV_KEY))) {
-    const token = await signDevToken(env.DOX_DEV_KEY, getUnixNowMs());
+    const token = await signDevToken(env.DOX_DEV_KEY, getUnixNow());
     headers.append(
       "set-cookie",
       devCookieHeader(token, url.protocol === "https:"),
@@ -126,7 +126,7 @@ async function handleDevKey(url: URL, env: Env): Promise<Response> {
 
 /** `GET /api/brains` — what the badge and the selector need before any chat. */
 async function handleBrains(request: Request, env: Env): Promise<Response> {
-  const nowMs = getUnixNowMs();
+  const nowMs = getUnixNow();
   const dev = await isDevRequest(request, env.DOX_DEV_KEY, nowMs);
   const visitorHash = await hashVisitor(clientIdFromRequest(request));
   const brains = configuredBrains(env);
@@ -230,7 +230,7 @@ async function routeApi(
     },
     brains,
     usage: env.DOX_USAGE,
-    isDev: (req) => isDevRequest(req, env.DOX_DEV_KEY, getUnixNowMs()),
+    isDev: (req) => isDevRequest(req, env.DOX_DEV_KEY, getUnixNow()),
     vocabulary: VOCABULARY_SKILLS,
     coreRules: CORE_RULES_CONTENT,
     fetchImpl: corpusFetcher(env),

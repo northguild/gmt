@@ -3,7 +3,7 @@ import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
 /**
  * Return the current month for the specified IANA timeZone.
  *
- * - Uses Temporal.Now.zonedDateTimeISO to get the current time.
+ * - Uses nowZonedDateTimeISO() to get the current time.
  * - Validation is performed on the timezone.
  *
  * @param ianaTimezone IANA name or UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or

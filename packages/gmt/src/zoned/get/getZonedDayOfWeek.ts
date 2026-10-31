@@ -3,7 +3,7 @@ import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
 /**
  * Return the current day of week for the specified IANA timeZone.
  *
- * - Uses Temporal.Now.zonedDateTimeISO to get the current time.
+ * - Uses nowZonedDateTimeISO() to get the current time.
  * - Returns 1-7 (Monday=1 through Sunday=7).
  * - Validation is performed on the timezone.
  *

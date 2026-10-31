@@ -7,6 +7,7 @@ import type { CalendarOptions } from "../../types";
 import { isValidDateTime } from "../validate";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 import { isObject } from "../../internal/isObject";
+import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Options for `formatCalendar`: the date-time the value is compared with, and the style of the
@@ -85,7 +86,7 @@ export function formatCalendar(
       const target = Temporal.PlainDateTime.from(value);
       const reference = referenceOption
         ? Temporal.PlainDateTime.from(referenceOption)
-        : Temporal.Now.plainDateTimeISO();
+        : nowPlainDateTimeISO();
 
       const diffDays = target.toPlainDate().since(reference.toPlainDate()).days;
       // "long"/"full" are outside the type but reachable from JS; their zone

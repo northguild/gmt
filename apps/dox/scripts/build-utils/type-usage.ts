@@ -139,8 +139,14 @@ function listed(names: readonly string[]): string {
  *
  * Throws, with one aggregated message each, on: two public types sharing a name, also when
  * the names differ only by case (they would share one page or one anchor); a public function
- * with no return annotation (an inferred return names no type to walk); and an overloaded or
- * generic public function (one page cannot say which signature a type belongs to).
+ * with no return annotation (an inferred return names no type to walk); a generic public
+ * function; and an overload set where a later overload reaches a public type its first overload
+ * does not.
+ *
+ * The page and the graph come from the first overload. A later overload may reach a subset of
+ * its types (a widening to `unknown` reaches none), so every type on the page is true for the
+ * whole set. A later overload naming a type the first does not would leave that type off the
+ * page. The implementation signature is never walked: callers cannot see it.
  */
 export function buildTypeUsage(
   checker: ts.TypeChecker,
@@ -176,33 +182,62 @@ export function buildTypeUsage(
     );
   }
 
-  const seenKeys = new Set<string>();
-  const overloaded = new Set<string>();
+  const index = publicTypeIndex(types);
+  const groups = new Map<string, PublicFunctionDecl[]>();
+  for (const fn of functions) {
+    const group = groups.get(fn.key);
+    if (group) group.push(fn);
+    else groups.set(fn.key, [fn]);
+  }
+  const generic: string[] = [];
+  const mismatched: string[] = [];
   const unannotated: string[] = [];
   const shapes = new Map<string, FunctionShape>();
-  for (const fn of functions) {
-    const shape = functionShape(fn.node);
-    const bodiless = ts.isFunctionDeclaration(fn.node) && !fn.node.body;
-    if (seenKeys.has(fn.key) || bodiless || shape.generic) {
-      overloaded.add(fn.key);
+  /** Every public type a signature names, parameters then return. */
+  const reachOf = (shape: FunctionShape): Set<string> =>
+    new Set([
+      ...shape.params.flatMap((p) => typeReferences(checker, p, index)),
+      ...typeReferences(checker, shape.returns, index),
+    ]);
+  for (const [key, group] of groups) {
+    // The implementation signature is invisible to callers: never documented, never walked.
+    const visible =
+      group.length > 1
+        ? group.filter(
+            (fn) => !(ts.isFunctionDeclaration(fn.node) && fn.node.body),
+          )
+        : group;
+    const all = visible.map((fn) => functionShape(fn.node));
+    if (all.some((shape) => shape.generic)) {
+      generic.push(key);
       continue;
     }
-    seenKeys.add(fn.key);
-    if (!shape.returns) unannotated.push(fn.key);
-    shapes.set(fn.key, shape);
+    if (all.some((shape) => !shape.returns)) unannotated.push(key);
+    const first = reachOf(all[0]);
+    if (
+      all
+        .slice(1)
+        .some((shape) => [...reachOf(shape)].some((t) => !first.has(t)))
+    ) {
+      mismatched.push(key);
+    }
+    shapes.set(key, all[0]);
   }
   if (unannotated.length > 0) {
     throw new Error(
       `[reference] public functions must annotate their return type: ${listed(unannotated)}.`,
     );
   }
-  if (overloaded.size > 0) {
+  if (generic.length > 0) {
     throw new Error(
-      `[reference] public functions must not be overloaded or generic: ${listed([...overloaded])}.`,
+      `[reference] public functions must not be generic: ${listed(generic)}.`,
     );
   }
-
-  const index = publicTypeIndex(types);
+  if (mismatched.length > 0) {
+    throw new Error(
+      `[reference] a later overload of a public function must reach only public types its first overload reaches, so one page can list them: ${listed(mismatched)}.`,
+    );
+  }
 
   // Type-to-type edges, from each type's own declaration.
   const edges = new Map<string, string[]>();

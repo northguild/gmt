@@ -4,14 +4,14 @@ Record of the defects GMT needs fixed in `js-temporal/temporal-polyfill` (and, w
 `tc39/proposal-temporal`), the evidence for each, and what has been filed. The owner files every item, or
 tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) were posted that way.
 
-> **Status of this document:** updated 2026-10-28. **Filed:** 13 items by us, plus a comment on the
-> maintainer's own PR #361. The newest are tc39 #3331 (J) and #3332 (K), both 2026-10-21. **All six js-temporal PRs
+> **Status of this document:** updated 2026-10-31. **Filed:** 14 items by us, plus a comment on the
+> maintainer's own PR #361. The newest is tc39 #3335 (AB, D21), 2026-10-31; before it, tc39 #3331 (J) and #3332 (K), both 2026-10-21. **All six js-temporal PRs
 > (#367–#372) are closed unmerged and none was rejected** — each was routed to `tc39/proposal-temporal` first, so the polyfill's rebase stays
 > manageable. #373 (release) is open and answered: one release once the rebase has caught up. #361
 > merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply; #3331 (J) is
 > closed as answered (the check is intended, see § J).
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
-> 23 workarounds, 19 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest are § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags; § I (D12), fixed on `main` with nothing
+> 24 workarounds, 20 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest is § AB (D21), filed as tc39 #3335; before it come § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags; § I (D12), fixed on `main` with nothing
 > to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
 > and § O (D15), not filed yet and not fixed on either `main`. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
@@ -34,6 +34,7 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D18`: Islamic dates before the Hijra read as positive years in WebKit (§ R) | None. Not filed yet | A js-temporal release that reads the Islamic eras (`main` declares them; whether its parser accepts WebKit's `Before Hijra` spelling is untested), or a WebKit that prints the year as V8 does, so every `D18` repro passes in the weekly `temporal-oracle` run's compat check in WebKit (`temporal-compat-webkit`); WebKit is the only engine in D18's scope |
 | `D19`: `ZonedDateTime#equals` answers false for two identifiers of one zone where `resolvedOptions` keeps the identifier (§ U) | None. Not filed yet | A js-temporal release that finds a non-primary identifier's primary without `Intl.DateTimeFormat#resolvedOptions`, so the `D19` probe passes in the weekly `temporal-oracle` run's compat check in WebKit (`temporal-compat-webkit`); WebKit is the only engine in D19's scope |
 | `D20`: `PlainMonthDay.from` rejects an upper-case `iso8601` calendar annotation (§ V) | tc39 `385b479bf8` | A js-temporal rebase and a release |
+| `D21`: `Temporal.Now` reads a millisecond early after a pre-1970 clock reading (§ AB) | None. Filed as tc39 #3335 | A tc39 fix, the js-temporal rebase and a release, so the `D21` canary repro passes |
 | `D5`: Indian calendar before ISO year 1 | js-temporal `8de299a` (PR #361; `b6c9844` on its branch) | Nothing |
 | `D6`: non-ISO `until` re-constrains the day | js-temporal `10aeb98` | `D7`. With `10aeb98` and `1c64f14` alone one Hebrew `until` by years is still wrong (Corrections, item 3) |
 | `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b), which is not on `main`. The `D7.leapMonthEnd` probe fails until it is |
@@ -182,8 +183,8 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 
 ## Filed
 
-13 filed under the owner's account (`craig-o-curtis`): 11 by the owner, and tc39 #3331 and #3332 by an
-agent on the owner's instruction. There is also a fourteenth entry on the `/upstream/` tracker that is
+14 filed under the owner's account (`craig-o-curtis`): 11 by the owner, and tc39 #3331, #3332 and #3335 by an
+agent on the owner's instruction. There is also a fifteenth entry on the `/upstream/` tracker that is
 **not** a filing of ours: our comment on ptomato's js-temporal PR #361 (§ H), tracked because its
 state is what retires GMT's `D11`. "Filed" is `createdAt`, UTC. "js" is js-temporal/temporal-polyfill,
 "tc39" is tc39/proposal-temporal.
@@ -222,6 +223,7 @@ on #3014.
 | tc39       | 3330 | issue | Polyfill: time zone transitions before 1847 are not found (Asia/Manila and four Pacific zones on 1844-12-31)  | E                                                                             | js #372                                                            | —          | nothing                                                                                 | 2026-09-19 |
 | tc39       | 3331 | issue | ZonedDateTime.from rejects ZonedDateTime.prototype.toString's output when the local date is -271821-04-19     | J (spec question)                                                             | none: not a polyfill defect                                        | —          | nothing                                                                                 | 2026-10-21 |
 | tc39       | 3332 | issue | Polyfill: getTimeZoneTransition throws a bisection assertion for Africa/El_Aaiun in 1976                      | K (the remaining stall; new)                                                  | none: js-temporal gets it with the in-order catch-up               | —          | nothing                                                                                 | 2026-10-21 |
+| tc39       | 3335 | issue | Polyfill: Temporal.Now reads a millisecond before Date.now() after a pre-1970 clock reading | AB (new) | none: js-temporal gets it with the in-order catch-up | — | nothing | 2026-10-31 |
 
 Notes on the filings:
 
@@ -303,6 +305,10 @@ only filings worth making now are in tc39.
     `PlainYearMonth#toLocaleString` and `PlainMonthDay#toLocaleString` accept a `timeStyle` and drop
     it, where the specification and both native engines throw a `TypeError`. GMT calls Intl itself, so
     AA has no D-number. See § AA.
+18. **AB (D21): filed as tc39 #3335 (2026-10-31).** `Temporal.Now` keeps the remainder's sign when
+    it carries the sub-millisecond part, so after a clock reading before 1970 the next reading lands a
+    millisecond before `Date.now()`. js-temporal `main` has the same code and gets the fix with the
+    rebase; nothing to file there. GMT works around it as `D21`. See § AB.
 
 ## Upstream issues these fixes close
 
@@ -2522,3 +2528,76 @@ toLocaleString: throw a TypeError for a `timeStyle` on a PlainYearMonth or Plain
 ### Effect on GMT
 
 None. `formatYearMonth` and `formatMonthDay` format epoch milliseconds through Intl and return `""` for a `timeStyle` themselves (`plainYearMonthFormatOptions` and `plainMonthDayFormatOptions` return `null`). AA stays here as a record for the owner to file.
+
+## AB. `Temporal.Now` reads a millisecond early after a clock reading before 1970 (polyfill and tc39 reference polyfill)
+
+### Title
+
+SystemUTCEpochNanoSeconds: keep the carried sub-millisecond part non-negative
+
+### Status
+
+**Filed as [tc39/proposal-temporal#3335](https://github.com/tc39/proposal-temporal/issues/3335) (2026-10-31)**, from the draft below. Found 2026-10-31 while reviewing CORE-103's test isolation, where a test that fakes a pre-1970 clock made the next file's `getUtcYear` return the year before. Confirmed on polyfill 0.5.1 (Node 24 and 26). js-temporal `main` at `c55b211` (`lib/ecmascript.ts:4966`) and tc39 `main` at `e8cc03fc97` (`polyfill/lib/ecmascript.mjs:4357`) have the same code, so it went to tc39 only; the polyfill gets it with the rebase. GMT works around it as `D21`. No duplicate: js-temporal #161 is a test262 flake in the same function with a different cause.
+
+### What goes wrong
+
+`SystemUTCEpochNanoSeconds` (0.5.1 `lib/ecmascript.ts:4809`) adds a made-up sub-millisecond part to `Date.now()`: the previous reading's milliseconds modulo 10⁶, read as nanoseconds. The remainder takes the sign of the dividend (`%` in tc39, `JSBI.remainder` in js-temporal), so after a reading before 1970 the carried part is negative, down to −999,999 ns. The next reading is then `ms × 10⁶ − t`, which falls in the millisecond before `Date.now()`. Every reading on a clock that stays before 1970 is early. So is the first reading after the clock moves past 1970.
+
+The specification ties the two clocks together. `mainadditions.html` redefines `Date.now()` as SystemUTCEpochMilliseconds, which is floor(SystemUTCEpochNanoseconds / 10⁶), so `Temporal.Now.instant().epochMilliseconds` can never be less than a `Date.now()` read just before it. test262 `built-ins/Temporal/Now/instant/return-value-value.js` asserts exactly that. The polyfill's own comment says the carried part keeps the nanoseconds "always going to be increasing", and a negative part breaks that too.
+
+### Repro (polyfill 0.5.1, Node 24 and 26; `Date.now` replaced to stand in for a host clock)
+
+| Clock (`Date.now()`) | Call | Polyfill 0.5.1 | Expected (spec) |
+| -------------------- | ---- | -------------- | --------------- |
+| `1960-01-01T00:00:00.000Z`, read twice | `Temporal.Now.instant().toString()` | `1959-12-31T23:59:59.9998Z` | in `1960-01-01T00:00:00.000Z` |
+| the same | `.toZonedDateTimeISO("UTC").year` | `1959` | `1960` |
+| then `2027-01-01T00:00:00.000Z` | `Temporal.Now.instant().toString()` | `2026-12-31T23:59:59.9998Z` | in `2027-01-01T00:00:00.000Z` |
+| the same | `.toZonedDateTimeISO("UTC").year` | `2026` | `2027` |
+| then `2027-01-01T00:00:00.000Z` again | `Temporal.Now.instant().toString()` | `2027-01-01T00:00:00.0006Z` | in `2027-01-01T00:00:00.000Z` |
+
+A real host clock rarely reads before 1970. A faked one often does: Vitest, Jest and Sinon `setSystemTime` with a pre-1970 date replace `Date.now`, which the polyfill reads. One such test is enough to make the next `Temporal.Now` reading in the same process land a millisecond early.
+
+### Patch
+
+Take the floor modulo, so the carried part is always in [0, 10⁶):
+
+```js
+// tc39 polyfill/lib/ecmascript.mjs, both assignments of `ns`
+ns = ((ms % 1e6) + 1e6) % 1e6;
+```
+
+```ts
+// js-temporal lib/ecmascript.ts: the initial value and the update
+ns = JSBI.remainder(JSBI.add(JSBI.remainder(ms, MILLION), MILLION), MILLION);
+```
+
+With the patch the repro reads `1960-01-01T00:00:00.0008Z`, `2027-01-01T00:00:00.0008Z` and `2027-01-01T00:00:00.0006Z`: each one in the millisecond `Date.now()` reports.
+
+### Filed text (tc39/proposal-temporal#3335)
+
+> **Title:** Polyfill: `Temporal.Now` reads a millisecond before `Date.now()` after a pre-1970 clock reading
+>
+> `SystemUTCEpochNanoSeconds` in `polyfill/lib/ecmascript.mjs` carries the previous reading's
+> `ms % 1e6` as the next reading's sub-millisecond part. When `ms` is negative, `%` gives a negative
+> remainder, so the next reading is `ms * 1e6` minus up to 999,999 ns, which is in the millisecond
+> before `Date.now()`. The Temporal proposal defines SystemUTCEpochMilliseconds as floor(SystemUTCEpochNanoseconds / 10⁶) (`spec/temporal.html`) and wires it into `Date.now()` (`spec/mainadditions.html`), and
+> test262 `Temporal/Now/instant/return-value-value.js` checks that the instant is not before
+> `Date.now()`.
+>
+> Repro, with `Date.now` replaced to stand in for a clock (as fake timers do):
+>
+> ```js
+> Date.now = () => Date.parse("1960-01-01T00:00:00Z");
+> Temporal.Now.instant();
+> Temporal.Now.instant().toString(); // "1959-12-31T23:59:59.9998Z"
+> Date.now = () => Date.parse("2027-01-01T00:00:00Z");
+> Temporal.Now.instant().toString(); // "2026-12-31T23:59:59.9998Z"
+> ```
+>
+> Fix: `ns = ((ms % 1e6) + 1e6) % 1e6;` in both places. With it the readings are
+> `1960-01-01T00:00:00.0008Z` and `2027-01-01T00:00:00.0008Z`. js-temporal/temporal-polyfill has the
+> same code (`JSBI.remainder`), and it would come across with the rebase.
+
+### Effect on GMT
+
+Every GMT function that reads the clock (`getUnixNow`, `getUtcNow`, `getZonedNow`, the `get*` field readers, the relative formatters' default reference, and the internal readers) returned the instant a millisecond early, and so the previous year, day or second at a boundary, after a pre-1970 reading in the same process. `D21` (`temporalCompat`) reads `Date.now()` before each clock read, and when the polyfill's instant falls before it, adds the 10⁶ ns the floor modulo would have carried. On a fixed runtime the check never fires. The canary repro (`D21` in `scripts/temporal-compat.mjs`) replaces `Date.now` as above, and the group retires when it passes. GMT's own test adapter for native Temporal (`src/test/nativeTemporal.ts`) copied the same remainder and now takes the floor modulo.

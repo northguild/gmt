@@ -2,11 +2,12 @@ import { Temporal } from "../../internal/temporal";
 import { isValidTimeZone } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
+import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Return the current zoned datetime for the specified IANA timeZone.
  *
- * - Uses Temporal.Now.zonedDateTimeISO to get the current time.
+ * - Uses nowZonedDateTimeISO() to get the current time.
  * - Validation is performed on the timezone.
  * - `smallestUnit` is the only option read. Any other key on `optionsArg` is ignored, so the
  *   string always carries the offset and the bracketed time zone, and smaller units are always
@@ -55,7 +56,7 @@ export function getZonedNow(
     }
 
     try {
-      const now = Temporal.Now.zonedDateTimeISO(ianaTimezone);
+      const now = nowZonedDateTimeISO(ianaTimezone);
       return now.toString(options);
     } catch {
       return "";

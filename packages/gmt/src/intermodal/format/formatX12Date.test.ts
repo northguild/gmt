@@ -1,4 +1,5 @@
-import { NON_STRINGS, x12FormatsOutside } from "../../test/ediCodes";
+import { x12FormatsOutside } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { parseX12Date } from "../parse/parseX12Date";
 import { formatX12Date } from "./formatX12Date";

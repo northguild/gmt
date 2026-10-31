@@ -1,10 +1,10 @@
-import { Temporal } from "../../internal/temporal";
 import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Return the current ISO day of the week as a number in the system timeZone.
  *
- * - Uses Temporal.Now.zonedDateTimeISO to get current day in system timezone.
+ * - Uses nowZonedDateTimeISO() to get current day in system timezone.
  * - Returns ISO day of week: 1 (Monday) to 7 (Sunday).
  * - Returns null when system timezone is unavailable.
  *
@@ -18,7 +18,7 @@ export function getDayOfWeek(): number | null {
   if (!timeZone) return null;
 
   try {
-    const now = Temporal.Now.zonedDateTimeISO(timeZone);
+    const now = nowZonedDateTimeISO(timeZone);
     return now.dayOfWeek;
   } catch {
     return null;

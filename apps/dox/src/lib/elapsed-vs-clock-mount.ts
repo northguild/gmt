@@ -548,7 +548,7 @@ function setupWidget(
 
   function render(): void {
     const state = readState();
-    const now = getUnixNow() ?? 0;
+    const now = getUnixNow();
     const read = readElapsed(lib, state);
     const text = summaryText(state, read);
 

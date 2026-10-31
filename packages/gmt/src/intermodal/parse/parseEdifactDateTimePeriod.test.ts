@@ -1,4 +1,5 @@
-import { NON_STRINGS, edifactFormatsOutside } from "../../test/ediCodes";
+import { edifactFormatsOutside } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import { mockTemporalPlainDateTimeFromThrow } from "../../test/mocks";
 import { intervalLengthDateTime } from "../../plain/interval/intervalLengthDateTime";
 import type { EdiDateTimePeriod } from "../../types/edi";

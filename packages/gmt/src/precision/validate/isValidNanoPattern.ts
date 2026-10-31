@@ -17,9 +17,10 @@ import { nanosecondDecimal } from "../../regex/nanoseconds";
  *   rather than converted.
  * - Takes the string *value*, not JSON text — `JSON.parse(payload).observedAt`, not the
  *   payload. A quoted `"\"123\""` is not a decimal integer.
- * - Returns `false` for non-strings.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value candidate decimal string form of a nanosecond timestamp
+ * @param value any value; a string is checked as the decimal string form of a nanosecond timestamp
  * @returns boolean indicating whether `parseNanoseconds` will parse it
  *
  * @example isValidNanoPattern("1710072000123456789") // true
@@ -29,8 +30,14 @@ import { nanosecondDecimal } from "../../regex/nanoseconds";
  * @example isValidNanoPattern("01") // false — leading zero
  * @example isValidNanoPattern("1e18") // false
  * @example isValidNanoPattern("garbage") // false
+ * @example isValidNanoPattern(null) // false
  */
-export function isValidNanoPattern(value: string): boolean {
+export function isValidNanoPattern(value: string): boolean;
+export function isValidNanoPattern(
+  value: {} | null | undefined | void,
+): boolean;
+export function isValidNanoPattern(value: unknown): value is string;
+export function isValidNanoPattern(value: unknown): boolean {
   if (typeof value !== "string" || !nanosecondDecimal.test(value)) {
     return false;
   }

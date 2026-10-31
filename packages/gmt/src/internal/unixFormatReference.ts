@@ -1,6 +1,7 @@
 import { Temporal } from "./temporal";
 import { isValidUtc } from "../utc/validate/isValidUtc";
 import { type UnixEpochUnit, unixEpochToInstant } from "./unixEpochValue";
+import { nowInstant } from "./temporalCompat";
 
 /**
  * Resolve the `reference` option of the unix formatters to an instant.
@@ -23,7 +24,7 @@ export function resolveUnixFormatReference(
 ): Temporal.Instant | null {
   if (reference === undefined) {
     try {
-      return Temporal.Now.instant();
+      return nowInstant();
     } catch {
       return null;
     }

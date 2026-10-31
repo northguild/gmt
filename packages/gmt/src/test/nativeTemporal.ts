@@ -4,7 +4,7 @@
  *
  * Native `Temporal.Now` reads the host clock, which `vi.useFakeTimers()` and `vi.setSystemTime()`
  * cannot move. The exported namespace therefore replaces `Now` with one derived from `Date.now()`
- * by the polyfill's rule: the current millisecond plus the previous call's `ms % 1e6` as the
+ * by the polyfill's rule, with a floored modulo: the current millisecond plus the previous call's `ms mod 1e6` as the
  * sub-millisecond nanoseconds (see `setFakeSystemTime.ts`). Everything else is the engine's.
  */
 type Seam = typeof import("../internal/temporal");
@@ -24,7 +24,13 @@ if (
 const native = host.Temporal;
 
 // oxlint-disable-next-line @northguild/gmt-oxlint/no-date-now -- test clock fixture
-let carried = BigInt(Date.now() % 1e6); // date-ban: test clock fixture — native Temporal.Now ignores fake timers
+let carried = floorTail(Date.now()); // date-ban: test clock fixture — native Temporal.Now ignores fake timers
+
+// The sub-millisecond tail is the floored modulo, always in [0, 1e6), as the specification defines
+// Date.now(); the polyfill's `%` keeps the sign and so reads a millisecond early before 1970.
+function floorTail(milliseconds: number): bigint {
+  return BigInt(((milliseconds % 1e6) + 1e6) % 1e6);
+}
 
 // The Instant range in nanoseconds: the Temporal spec's nsMaxInstant, 8.64e15 ms either side of
 // the epoch.
@@ -34,7 +40,7 @@ function epochNs(): bigint {
   // oxlint-disable-next-line @northguild/gmt-oxlint/no-date-now -- test clock fixture
   const now = Date.now(); // date-ban: test clock fixture — native Temporal.Now ignores fake timers
   const ns = BigInt(now) * 1_000_000n + carried;
-  carried = BigInt(now % 1e6);
+  carried = floorTail(now);
   // The polyfill clamps to the Instant range after advancing the tail, and so does this.
   return ns > NS_MAX ? NS_MAX : ns < -NS_MAX ? -NS_MAX : ns;
 }

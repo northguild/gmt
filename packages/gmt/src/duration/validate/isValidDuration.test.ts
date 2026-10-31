@@ -1,3 +1,4 @@
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { isValidDuration } from "./isValidDuration";
 
 describe("isValidDuration", () => {
@@ -124,17 +125,69 @@ describe("isValidDuration", () => {
     },
   );
 
-  it.each`
-    value
-    ${null}
-    ${undefined}
-    ${5}
-    ${true}
-    ${false}
-    ${["P1D"]}
-    ${{}}
-    ${{ days: 1 }}
-  `("returns false for non-string input $value", ({ value }) => {
-    expect(isValidDuration(value as never)).toBe(false);
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidDuration(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true through both overloads for a valid string", () => {
+    expect(isValidDuration("P1DT2H30M")).toBe(true);
+    expect(isValidDuration(arrives("P1DT2H30M"))).toBe(true);
+  });
+});
+
+describe("isValidDuration types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("P1DT2H30M");
+    if (isValidDuration(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidDuration(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "P1X";
+    if (!isValidDuration(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidDuration(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidDuration(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("P1DT2H30M")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidDuration(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("P1DT2H30M")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "P1DT2H30M", 1, "P1X"].map(arrives);
+    const kept = values.filter(isValidDuration);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["P1DT2H30M"]);
   });
 });

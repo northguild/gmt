@@ -1,4 +1,5 @@
-import { NON_STRINGS, edifactFormatsOutside } from "../../test/ediCodes";
+import { edifactFormatsOutside } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import { parseEdifactOffsetDateTime } from "../parse/parseEdifactOffsetDateTime";
 import { isValidEdifactOffsetDateTime } from "./isValidEdifactOffsetDateTime";
 

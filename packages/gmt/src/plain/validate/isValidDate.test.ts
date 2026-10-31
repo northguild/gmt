@@ -1,4 +1,5 @@
 import { isValidDate } from "./isValidDate";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 
 describe("isValidDate", () => {
   it.each`
@@ -76,5 +77,71 @@ describe("isValidDate", () => {
     ${"2026-10"}                                | ${"a year-month, not a date: isValidYearMonth reads it"}
   `("returns false for $value ($reason)", ({ value }: { value: string }) => {
     expect(isValidDate(value)).toBe(false);
+  });
+});
+
+describe("isValidDate with any value", () => {
+  it("returns false for a value that is not a string", () => {
+    for (const [kind, make] of NON_STRINGS) {
+      expect(isValidDate(make()), kind).toBe(false);
+    }
+  });
+
+  it("returns true for a valid string typed unknown, as for a string", () => {
+    expect(isValidDate(arrives("2024-03-10"))).toBe(true);
+    expect(isValidDate("2024-03-10")).toBe(true);
+  });
+});
+
+describe("isValidDate types", () => {
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives("2024-03-10");
+    if (isValidDate(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidDate(input)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "invalid";
+    if (!isValidDate(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidDate(input)).toBe(false);
+  });
+
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidDate(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check("2024-03-10")).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidDate(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check("2024-03-10")).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, "2024-03-10", 1, "invalid"].map(arrives);
+    const kept = values.filter(isValidDate);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual(["2024-03-10"]);
   });
 });

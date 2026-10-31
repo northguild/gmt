@@ -249,6 +249,18 @@ export const WORKAROUNDS = [
     ],
   },
   {
+    defects: ["D21"],
+    title:
+      "D21 — Temporal.Now reads one millisecond early after a clock before 1970 (temporalCompat/clock.ts)",
+    trigger:
+      "a js-temporal release whose SystemUTCEpochNanoSeconds adds a floored modulo (or no tail) so the D21 repro (the second Temporal.Now.instant() with the system clock at 1960-01-01T00:00:00Z reads 1960) passes on Node; filed as tc39/proposal-temporal#3335. The expected value is the specification's and test262's built-ins/Temporal/Now/instant/return-value-value.js",
+    steps: [
+      "Delete temporalCompat/clock.ts and clock.test.ts, their exports in index.ts, and the D21 repro in repros.ts; every nowInstant, nowZonedDateTimeISO, nowPlainDateTimeISO, nowPlainDateISO and nowPlainTimeISO call becomes the matching Temporal.Now member again, and the guard test in internal/temporal.test.ts goes.",
+      "Keep the 1960 and 2027 clock rows (move them to the getUtcYear and getUnixNow tests): the values are the specification's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 21.`,
+    ],
+  },
+  {
     defects: ["D9"],
     title:
       "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",

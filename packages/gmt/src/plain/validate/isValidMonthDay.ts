@@ -12,9 +12,10 @@ import { plainMonthDayOf } from "../../internal/inputChecks";
  * - The calendar must be `iso8601`, in any case (`[u-ca=ISO8601]` is accepted); any other
  *   calendar is refused, because a month-day without a year is read only in the ISO calendar.
  * - Rejects a year, a time, a `Z` and an offset.
- * - Returns false for anything that is not a string.
+ * - A value that is not a string, a `String` object included, returns `false`. A `true` result
+ *   narrows an `unknown` value to `string`.
  *
- * @param value ISO month-day string
+ * @param value any value; a string is checked as an ISO month-day
  * @returns boolean indicating validity
  *
  * @example isValidMonthDay("--12-25") // true
@@ -26,7 +27,11 @@ import { plainMonthDayOf } from "../../internal/inputChecks";
  * @example isValidMonthDay("--12-25[u-ca=gregory]") // false (only iso8601)
  * @example isValidMonthDay("2024-12-25") // false (a date, not a month-day)
  * @example isValidMonthDay("") // false
+ * @example isValidMonthDay(null) // false
  */
-export function isValidMonthDay(value: string): boolean {
+export function isValidMonthDay(value: string): boolean;
+export function isValidMonthDay(value: {} | null | undefined | void): boolean;
+export function isValidMonthDay(value: unknown): value is string;
+export function isValidMonthDay(value: unknown): boolean {
   return plainMonthDayOf(value) !== null;
 }

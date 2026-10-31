@@ -3,7 +3,7 @@ import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
 /**
  * Return today's date in the given IANA timeZone as an ISO date string.
  *
- * - Uses Temporal.Now.zonedDateTimeISO to get current date in timezone.
+ * - Uses nowZonedDateTimeISO() to get current date in timezone.
  * - Returns "" for invalid timezone.
  *
  * @param ianaTimezone IANA name or UTC offset: a time zone identifier (`+05:30`, `+0530`, `-08`) or

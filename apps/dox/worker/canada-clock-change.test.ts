@@ -11,7 +11,7 @@ import {
   TRANSITION_ZONES,
   type CanadaCheck,
 } from "../src/lib/canada-clock-change";
-import { getUnixNowMs } from "./clock";
+import { getUnixNow } from "@northguild/gmt/unix/get";
 import { classifyStoredZoned } from "@northguild/gmt/zoned/classify";
 import {
   STORED_MAX_BYTES,
@@ -221,12 +221,12 @@ describe("GET /gmt/api/canada-clock-change", () => {
     for (let i = 0; i < 20; i++) await get("7.7.7.7");
     expect((await get("7.7.7.7")).status).toBe(429);
     // The chat key for the same client is untouched.
-    expect(checkRateLimit("chat:7.7.7.7", getUnixNowMs(), policy).allowed).toBe(
+    expect(checkRateLimit("chat:7.7.7.7", getUnixNow(), policy).allowed).toBe(
       true,
     );
 
     resetRateLimitState();
-    const t = getUnixNowMs();
+    const t = getUnixNow();
     for (let i = 0; i < 20; i++) checkRateLimit("chat:8.8.8.8", t, policy);
     expect(checkRateLimit("chat:8.8.8.8", t, policy).allowed).toBe(false);
     expect((await get("8.8.8.8")).status).toBe(200);

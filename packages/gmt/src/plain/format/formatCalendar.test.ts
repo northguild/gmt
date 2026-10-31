@@ -247,8 +247,8 @@ describe("formatCalendar", () => {
   // ---------------------------------------------------------------------------
   describe("reference option", () => {
     it("defaults to 'now' when reference is omitted", () => {
-      vi.spyOn(Temporal.Now, "plainDateTimeISO").mockReturnValue(
-        Temporal.PlainDateTime.from(REF),
+      vi.spyOn(Temporal.Now, "zonedDateTimeISO").mockReturnValue(
+        Temporal.PlainDateTime.from(REF).toZonedDateTime("UTC"),
       );
       expect(formatCalendar("2024-03-16T14:30:00", MustTestLocales.enUS)).toBe(
         "tomorrow at 2:30 PM",
@@ -296,7 +296,7 @@ describe("formatCalendar", () => {
   // Temporal failures — internal errors must not throw, must return ""
   // ---------------------------------------------------------------------------
   describe("Temporal failures", () => {
-    it("returns '' when Temporal.Now.plainDateTimeISO throws (no reference provided)", () => {
+    it("returns '' when Temporal.Now.zonedDateTimeISO throws (no reference provided)", () => {
       mockTemporalNowPlainDateTimeISOThrow();
       expect(formatCalendar("2024-03-16T14:30:00", MustTestLocales.enUS)).toBe(
         "",

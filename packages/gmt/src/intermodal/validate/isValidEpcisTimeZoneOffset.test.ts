@@ -1,5 +1,5 @@
 import { epcisTimeZoneOffset } from "../../regex";
-import { NON_STRINGS } from "../../test/ediCodes";
+import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import { parseEpcisEvent } from "../parse/parseEpcisEvent";
 import { isValidEpcisEvent } from "./isValidEpcisEvent";
 import { isValidEpcisTimeZoneOffset } from "./isValidEpcisTimeZoneOffset";
@@ -60,7 +60,7 @@ describe("isValidEpcisTimeZoneOffset", () => {
 
   it("returns false for an argument that is not a string, as isValidEpcisEvent does for the field", () => {
     for (const [kind, make] of NON_STRINGS) {
-      expect(isValidEpcisTimeZoneOffset(make() as never), kind).toBe(false);
+      expect(isValidEpcisTimeZoneOffset(make()), kind).toBe(false);
       expect(
         isValidEpcisEvent({
           eventTime: "2024-06-15T14:30:00Z",
@@ -69,5 +69,63 @@ describe("isValidEpcisTimeZoneOffset", () => {
         kind,
       ).toBe(false);
     }
+  });
+});
+
+describe("isValidEpcisTimeZoneOffset types", () => {
+  const sample = "-05:00";
+
+  it("narrows a value typed unknown to string when it is valid", () => {
+    const input = arrives(sample);
+    if (isValidEpcisTimeZoneOffset(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    } else {
+      expectTypeOf(input).toEqualTypeOf<unknown>();
+    }
+    expect(isValidEpcisTimeZoneOffset(input)).toBe(true);
+    expect(isValidEpcisTimeZoneOffset(sample)).toBe(true);
+  });
+
+  it("keeps a string a string when it is not valid", () => {
+    const input: string = "nope";
+    if (!isValidEpcisTimeZoneOffset(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
+    }
+    expect(isValidEpcisTimeZoneOffset(input)).toBe(false);
+  });
+
+  // A predicate on `string | null` would type an invalid string as `null` on a false result, so
+  // a typed union gets a plain boolean and narrows on neither branch.
+  it("leaves string | null as it is on both branches", () => {
+    const check = (input: string | null): boolean => {
+      if (isValidEpcisTimeZoneOffset(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | null>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | null>();
+      return false;
+    };
+    expect(check(sample)).toBe(true);
+    expect(check(null)).toBe(false);
+  });
+
+  it("leaves string | void as it is on both branches", () => {
+    const check = (input: string | void): boolean => {
+      if (isValidEpcisTimeZoneOffset(input)) {
+        expectTypeOf(input).toEqualTypeOf<string | void>();
+        return true;
+      }
+      expectTypeOf(input).toEqualTypeOf<string | void>();
+      return false;
+    };
+    expect(check(sample)).toBe(true);
+    expect(check(undefined)).toBe(false);
+  });
+
+  it("filters an unknown[] to string[]", () => {
+    const values = [null, sample, 1, "nope"].map(arrives);
+    const kept = values.filter(isValidEpcisTimeZoneOffset);
+    expectTypeOf(kept).toEqualTypeOf<string[]>();
+    expect(kept).toEqual([sample]);
   });
 });

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cssPathOf, identityOf, identityScript } from "./element-identity.mjs";
 
 const html = `
@@ -23,6 +23,16 @@ const q = (selector: string) => document.querySelector(selector) as HTMLElement;
 
 beforeEach(() => {
   document.body.innerHTML = html;
+});
+
+// `identityOf` keeps its caches and a MutationObserver on the window, for the page it is
+// injected into. In a worker that other files share, that state outlives this file.
+afterEach(() => {
+  const state = (
+    window as { __gmtIdentityState?: { observer?: MutationObserver } }
+  ).__gmtIdentityState;
+  state?.observer?.disconnect();
+  delete (window as { __gmtIdentityState?: unknown }).__gmtIdentityState;
 });
 
 describe("identityOf", () => {

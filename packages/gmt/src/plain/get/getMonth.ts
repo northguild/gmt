@@ -1,10 +1,10 @@
-import { Temporal } from "../../internal/temporal";
 import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Return the current month using the system timeZone.
  *
- * - Uses Temporal.Now.zonedDateTimeISO to get current month in system timezone.
+ * - Uses nowZonedDateTimeISO() to get current month in system timezone.
  * - Returns zero-padded string (e.g., "02").
  * - Returns "" when system timezone is unavailable.
  *
@@ -18,9 +18,7 @@ export function getMonth(): string {
   if (!timeZone) return "";
 
   try {
-    return Temporal.Now.zonedDateTimeISO(timeZone)
-      .month.toString()
-      .padStart(2, "0");
+    return nowZonedDateTimeISO(timeZone).month.toString().padStart(2, "0");
   } catch {
     return "";
   }

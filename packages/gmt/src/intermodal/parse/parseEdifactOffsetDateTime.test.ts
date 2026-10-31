@@ -1,7 +1,8 @@
 import { Temporal } from "../../internal/temporal";
 import { fromOffsetInstant } from "../../instant/convert/fromOffsetInstant";
 import { toOffsetInstant } from "../../instant/convert/toOffsetInstant";
-import { NON_STRINGS, edifactFormatsOutside } from "../../test/ediCodes";
+import { edifactFormatsOutside } from "../../test/ediCodes";
+import { NON_STRINGS } from "../../test/nonStrings";
 import {
   mockTemporalInstantFromThrow,
   mockTemporalPlainDateTimeFromThrow,
