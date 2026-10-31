@@ -31,3 +31,11 @@ overrides:
   # own once miniflare moves. Delete it once `pnpm why undici` shows nothing asking for a 7.x
   # below 7.30.1.
   'undici@>=7.0.0 <7.30.1': 7.30.1
+
+audit:
+  ignore:
+    # GHSA-g3hv-75wg-m249: a slow-pattern denial of service in minimatch below 11.0.1. Only lint
+    # tooling pulls minimatch in (ESLint 9 asks for ^3, typescript-eslint for ^10), and 11 removes
+    # functions those packages call, so an override would break linting; the published packages do
+    # not depend on it. Delete this entry once `pnpm why minimatch` shows nothing below 11.0.1.
+    - GHSA-g3hv-75wg-m249
