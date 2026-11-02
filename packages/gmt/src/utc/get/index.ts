@@ -1,5 +1,7 @@
+export * from "./getUtcAgo";
 export * from "./getUtcDay";
 export * from "./getUtcHour";
+export * from "./getUtcIn";
 export * from "./getUtcMicrosecond";
 export * from "./getUtcMillisecond";
 export * from "./getUtcMinute";

@@ -866,6 +866,12 @@ export const CHAT_STARTERS: readonly {
     area: "core",
     args: { value: "--02-29", year: 2023 },
   },
+  {
+    text: "How many seconds is a 1-year cookie?",
+    widget: "showExpiryCalculator",
+    area: "core",
+    args: { amount: 1, unit: "years", start: "2027-06-15T12:00:00Z" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

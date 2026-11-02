@@ -54,3 +54,18 @@ export function englishDateTimeStem(zdt: Temporal.ZonedDateTime): string {
   const second = String(zdt.second).padStart(2, "0");
   return `${weekday}, ${day} ${month} ${year} ${hour}:${minute}:${second}`;
 }
+
+/**
+ * The RFC 9110 §5.6.7 IMF-fixdate for a UTC value, such as `Fri, 15 Mar 2024 14:30:00 GMT`.
+ *
+ * The caller passes a value already on the UTC clock; sub-second digits are not written.
+ *
+ * @param utc a zoned date-time in UTC
+ * @returns the HTTP-date, or `""` for a year outside 0000–9999 (`year = 4DIGIT`)
+ * @example imfFixdate(Temporal.ZonedDateTime.from("2024-03-15T14:30:00+00:00[UTC]")) // "Fri, 15 Mar 2024 14:30:00 GMT"
+ * @example imfFixdate(Temporal.ZonedDateTime.from("-000001-06-15T12:00:00+00:00[UTC]")) // ""
+ */
+export function imfFixdate(utc: Temporal.ZonedDateTime): string {
+  if (utc.year < 0 || utc.year > 9999) return "";
+  return `${englishDateTimeStem(utc)} GMT`;
+}

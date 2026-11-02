@@ -1,0 +1,46 @@
+---
+/**
+ * Expiry Calculator widget (CORE-104).
+ *
+ * A length of time (an amount and one unit) from a start, as the four forms a receiver wants:
+ * a cookie Max-Age, an Expires header, a JWT exp and a signed-URL time. A table sets twelve
+ * monthly starts beside a hand-written number, and Now counts from the reader's own clock.
+ *
+ * **The markup and the wiring both live in `lib/expiry-calculator-mount.ts`**, so the chat rail
+ * mounts the same widget this page server-renders. The template never reads the clock.
+ */
+import { renderExpiryCalculatorTemplate } from "../lib/expiry-calculator-mount";
+
+/** `fullbleed` lets the page use the whole main pane (see ObservanceComparator). */
+interface Props {
+  fullbleed?: boolean;
+}
+
+const { fullbleed = false } = Astro.props;
+const html = renderExpiryCalculatorTemplate("expiry-calculator", {}).value;
+---
+
+{
+  fullbleed ? (
+    <div data-tools-fullbleed set:html={html} />
+  ) : (
+    <Fragment set:html={html} />
+  )
+}
+
+<script>
+  import { mountExpiryCalculator } from "../lib/expiry-calculator-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("expiry");
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="expiry-calculator"]')
+      .forEach((el) => {
+        mountExpiryCalculator(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+  }
+</script>

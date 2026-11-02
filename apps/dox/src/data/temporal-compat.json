@@ -161,6 +161,14 @@
       "state": "still-needed"
     },
     {
+      "defects": ["D22"],
+      "title": "D22 — a zoned relativeTo or start in a repeated hour is measured from the wrong instant, so total, round and until in a date unit answer wrongly from the later pass, and wrongly or not at all from the earlier pass when the end falls in the later pass at a lower wall clock; where a TC39 Assert fails no value exists (tc39/proposal-temporal#3336), including after a skipped hour, and GMT returns its sentinel where the polyfill extrapolates",
+      "trigger": "a js-temporal release contains 3c403686d39 (\"fix for issues #3141, #3148 and #3149\", on main) and tc39/proposal-temporal#3319, so every D22 repro passes, P7D with largestUnit \"week\" giving P1W among them, and the release gives no value in totalsWithNoValue, noDayCorrection and emptyDaySpan, where TC39 Asserts (tc39/proposal-temporal#3336) and the source on main strips three of them from production builds (read, not run); if #3336 gives these lengths a value instead, the rows, the throws and the repros change together",
+      "probes": 8,
+      "failing": 6,
+      "state": "still-needed"
+    },
+    {
       "defects": ["D9"],
       "title": "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
       "trigger": "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",

@@ -74,7 +74,8 @@ export type WidgetKind =
   | "colbridge"
   | "moroccoclock"
   | "cronzone"
-  | "leapday";
+  | "leapday"
+  | "expiry";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -135,6 +136,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   moroccoclock: withBase("/check/morocco-2026-clock-change/"),
   cronzone: "/tools/cron-in-a-zone/",
   leapday: "/tools/leap-day-birthday/",
+  expiry: "/tools/expiry-calculator/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */
@@ -231,6 +233,8 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   iddecode: new Set(["id"]),
   // A reader may clear the field, and an empty value is the NO SIGNAL state.
   leapday: new Set(["value"]),
+  // A cleared amount or start is the `no result` state, not a missing value.
+  expiry: new Set(["amount", "start"]),
 };
 
 /**

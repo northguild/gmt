@@ -140,13 +140,20 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * `get/` reader, a new prose aside) — never to silence a regression without reading `show`'s list
  * first to confirm every new skip is one of those two things.
  *
- * `examples` counts 146: the 164 verified above plus `getZonedNow`'s `{ smallestUnit: "second" }`
+ * `examples` counts 184, of which 38 are CORE-104's `totalUnitsFromNow` (three clock examples), `formatHttpDateFromNow` (one clock example), `ttlFromNow` (two clock examples), `secondsUntilUnix`, `secondsUntilHttpDate` and `secondsUntilRetryAfter` (two clock examples each) and its `getUnixIn`, `getUnixAgo`, `getUtcIn`,
+ * `getUtcAgo`, `getDateIn`, `getDateAgo`, `getDateTimeIn`, `getDateTimeAgo`, `getTimeIn`, `getTimeAgo`, `getZonedIn` and `getZonedAgo` (two or three clock examples each, skipped as `clock`). The remaining 146: the 164 verified above plus `getZonedNow`'s `{ smallestUnit: "second" }`
  * example, which reads the clock like every other `get/` reader example in the `clock` bucket,
  * minus 19 `// "" (on failure)` examples. The 19 zero-argument UTC and Unix clock readers cannot
  * fail, so they document no failure example
  * (context/coding-standards.md § Scoped exception: the UTC clock readers).
+ *
+ * `docResults` counts 55, of which 17 are CORE-104's clock results on three guides and a mistakes page:
+ * 12 in `core-date-operations/durations.mdx` (the `relativeTo` pair, the from-now forms, the timer
+ * delay, the seconds until, "expires in 3 days" and the `Max-Age` for a year), 3 in
+ * `core-date-operations/get-current.mdx` (`getDateIn`, `getUtcAgo`, `getZonedIn`) and 2 in
+ * `mistakes/durations.mdx` (the `getZonedNow("UTC")` start and `totalUnitsFromNow({ years: 1 })`).
  */
-const SKIP_BUDGET = { examples: 146, docResults: 38 };
+const SKIP_BUDGET = { examples: 184, docResults: 55 };
 
 // A Temporal/Intl result formatted by the runtime depends on the zone; examples document UTC.
 if (process.env.TZ !== "UTC") {

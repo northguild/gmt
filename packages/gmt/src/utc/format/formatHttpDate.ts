@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { englishDateTimeStem } from "../../internal/englishCalendarNames";
+import { imfFixdate } from "../../internal/englishCalendarNames";
 import { isValidUtc } from "../validate";
 
 /**
@@ -34,10 +34,7 @@ export function formatHttpDate(value: string): string {
 
   try {
     const zdt = Temporal.Instant.from(value).toZonedDateTimeISO("UTC");
-    // IMF-fixdate year = 4DIGIT (RFC 9110 §5.6.7).
-    if (zdt.year < 0 || zdt.year > 9999) return "";
-
-    return `${englishDateTimeStem(zdt)} GMT`;
+    return imfFixdate(zdt);
   } catch {
     return "";
   }

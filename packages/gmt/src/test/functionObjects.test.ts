@@ -1,4 +1,5 @@
 import { deepEqual } from "./deepEqual";
+import { setFakeSystemTime } from "./setFakeSystemTime";
 import {
   addDate,
   addDateTime,
@@ -11,6 +12,19 @@ import {
   cutoffSchedule,
   durationFromUnits,
   formatEpcisEvent,
+  formatHttpDateFromNow,
+  getDateAgo,
+  getDateIn,
+  getDateTimeAgo,
+  getDateTimeIn,
+  getTimeAgo,
+  getTimeIn,
+  getUnixAgo,
+  getUnixIn,
+  getUtcAgo,
+  getUtcIn,
+  getZonedAgo,
+  getZonedIn,
   fromOffsetInstant,
   intervalXorAllDate,
   intervalXorAllDateTime,
@@ -42,6 +56,8 @@ import {
   subtractZoned,
   totalDuration,
   totalUnits,
+  totalUnitsFromNow,
+  ttlFromNow,
 } from "../index";
 
 /**
@@ -94,6 +110,16 @@ const leg = {
   timeZone: "Asia/Tokyo",
 };
 
+// The two calls of a `get*In` / `get*Ago` row must read the same clock.
+beforeEach(() => {
+  vi.useFakeTimers();
+  setFakeSystemTime("2027-06-15T12:00:00Z");
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("an Object argument that is a function is read as the object it is", () => {
   it.each`
     name                                                      | call
@@ -105,11 +131,26 @@ describe("an Object argument that is a function is read as the object it is", ()
     ${"subtractTime units"}                                   | ${(w: Wrap) => subtractTime("14:30:00", w({ hours: 1 }))}
     ${"addUnix units"}                                        | ${(w: Wrap) => addUnix(1706659200000, w({ days: 1 }))}
     ${"subtractUnix units"}                                   | ${(w: Wrap) => subtractUnix(1706659200000, w({ days: 1 }))}
+    ${"getDateIn units"}                                      | ${(w: Wrap) => getDateIn(w({ days: 1 }))}
+    ${"getDateAgo units"}                                     | ${(w: Wrap) => getDateAgo(w({ days: 1 }))}
+    ${"getDateTimeIn units"}                                  | ${(w: Wrap) => getDateTimeIn(w({ days: 1 }))}
+    ${"getDateTimeAgo units"}                                 | ${(w: Wrap) => getDateTimeAgo(w({ days: 1 }))}
+    ${"getTimeIn units"}                                      | ${(w: Wrap) => getTimeIn(w({ hours: 1 }))}
+    ${"getTimeAgo units"}                                     | ${(w: Wrap) => getTimeAgo(w({ hours: 1 }))}
+    ${"getUnixIn units"}                                      | ${(w: Wrap) => getUnixIn(w({ days: 1 }))}
+    ${"getUnixAgo units"}                                     | ${(w: Wrap) => getUnixAgo(w({ days: 1 }))}
+    ${"getUtcIn units"}                                       | ${(w: Wrap) => getUtcIn(w({ days: 1 }))}
+    ${"getUtcAgo units"}                                      | ${(w: Wrap) => getUtcAgo(w({ days: 1 }))}
+    ${"formatHttpDateFromNow units"}                          | ${(w: Wrap) => formatHttpDateFromNow(w({ days: 1 }))}
+    ${"getZonedIn units"}                                     | ${(w: Wrap) => getZonedIn("UTC", w({ days: 1 }))}
+    ${"getZonedAgo units"}                                    | ${(w: Wrap) => getZonedAgo("UTC", w({ days: 1 }))}
     ${"addUtc units"}                                         | ${(w: Wrap) => addUtc("2024-06-15T10:00:00Z", w({ hours: 1 }))}
     ${"subtractUtc units"}                                    | ${(w: Wrap) => subtractUtc("2024-06-15T10:00:00Z", w({ hours: 1 }))}
     ${"addZoned units"}                                       | ${(w: Wrap) => addZoned("2024-06-15T10:00:00+00:00[UTC]", w({ hours: 1 }))}
     ${"subtractZoned units"}                                  | ${(w: Wrap) => subtractZoned("2024-06-15T10:00:00+00:00[UTC]", w({ hours: 1 }))}
     ${"totalUnits units"}                                     | ${(w: Wrap) => totalUnits(w({ minutes: 15 }), "seconds")}
+    ${"totalUnitsFromNow units"}                              | ${(w: Wrap) => totalUnitsFromNow(w({ minutes: 15 }), "seconds")}
+    ${"ttlFromNow units"}                                     | ${(w: Wrap) => ttlFromNow(w({ days: 1 }))}
     ${"durationFromUnits units"}                              | ${(w: Wrap) => durationFromUnits(w({ minutes: 15 }))}
     ${"mergeIntervalsDate"}                                   | ${(w: Wrap) => mergeIntervalsDate([w(date), w(dateLater)])}
     ${"mergeIntervalsTime"}                                   | ${(w: Wrap) => mergeIntervalsTime([w(time), w(timeLater)])}

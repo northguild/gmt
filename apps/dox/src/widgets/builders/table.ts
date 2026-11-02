@@ -34,6 +34,13 @@ export interface TableOptions<K extends string> extends GateOption {
   layout?: "auto" | "fixed";
   /** With a fixed layout, one width for each column (`"34%"`); the others share what is left. */
   widths?: readonly (string | null)[];
+  /** The zero-based row that is the current one: it gets `aria-current="true"`. */
+  currentRow?: number;
+  /**
+   * Write each cell's column header on the cell as `data-col`, so a sheet can turn the rows
+   * into labelled blocks on a narrow box (`content: attr(data-col)`).
+   */
+  labelCells?: boolean;
 }
 
 export function table<K extends string>(o: TableOptions<K>): SafeHtml {
@@ -55,6 +62,8 @@ export function table<K extends string>(o: TableOptions<K>): SafeHtml {
         })}</colgroup
       >`
     : html``;
+  const col = (c: Column<K>): SafeHtml =>
+    o.labelCells === true ? html` data-col="${c.header}"` : html``;
   return html`<div class="${styles.wrap}" role="region" ${gateAttr(o.gate)} aria-label="${o.caption}" tabindex="0"
     ><table class="${fixed ? `${styles.table} ${styles.fixed}` : styles.table}"
       ><caption class="${styles.caption}">${o.caption}</caption
@@ -66,12 +75,12 @@ export function table<K extends string>(o: TableOptions<K>): SafeHtml {
       ></thead
       ><tbody
         >${o.rows.map(
-          (row) =>
-            html`<tr
+          (row, i) =>
+            html`<tr${i === o.currentRow ? html` aria-current="true"` : ""}
               >${o.columns.map((c) =>
                 c.key === o.rowHeader
-                  ? html`<th class="${styles.cell} ${cls(c)}" scope="row">${row[c.key]}</th>`
-                  : html`<td class="${styles.cell} ${cls(c)}">${row[c.key]}</td>`,
+                  ? html`<th class="${styles.cell} ${cls(c)}" scope="row"${col(c)}>${row[c.key]}</th>`
+                  : html`<td class="${styles.cell} ${cls(c)}"${col(c)}>${row[c.key]}</td>`,
               )}</tr
             >`,
         )}</tbody

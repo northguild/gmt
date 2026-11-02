@@ -152,6 +152,10 @@ import {
   renderLeapDayBirthdayTemplate,
 } from "./leap-day-birthday-mount";
 import {
+  mountExpiryCalculator,
+  renderExpiryCalculatorTemplate,
+} from "./expiry-calculator-mount";
+import {
   mountColumnTimestampBridge,
   renderColumnTimestampBridgeTemplate,
 } from "./column-timestamp-bridge-mount";
@@ -348,6 +352,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "leap-day birthday",
     () => renderLeapDayBirthdayTemplate("test"),
     mountLeapDayBirthday as MountFn<never>,
+  ],
+  [
+    "expiry calculator",
+    () => renderExpiryCalculatorTemplate("test"),
+    mountExpiryCalculator as MountFn<never>,
   ],
 ];
 

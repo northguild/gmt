@@ -1,5 +1,5 @@
 {
-  "checked": "2026-10-31T10:33:02.782769979Z",
+  "checked": "2026-11-02T10:11:47.79528858Z",
   "filings": [
     {
       "repo": "js-temporal/temporal-polyfill",
@@ -355,6 +355,29 @@
       "maintainerComments": 0,
       "createdAt": "2026-10-31",
       "updatedAt": "2026-10-31",
+      "closedAt": null,
+      "mergedAt": null
+    },
+    {
+      "repo": "tc39/proposal-temporal",
+      "number": 3336,
+      "kind": "issue",
+      "work": "report",
+      "title": "Failed Assert in NudgeToCalendarUnit when a duration ends in the later pass of a repeated hour",
+      "url": "https://github.com/tc39/proposal-temporal/issues/3336",
+      "summary": "Measuring a length in days or weeks across a repeated or skipped hour can fail an internal check in the spec, when the length ends just past the edge of a day or week. The spec places that edge with the \"compatible\" rule, which can put it on the wrong side of the end, and its second try cannot move a day or week edge. Chromium throws and the polyfill returns a number the spec does not give, so GMT returns its sentinel for these lengths. The issue asks which answer is meant.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D22",
+      "gmtNote": null,
+      "state": "open",
+      "draft": false,
+      "reviewDecision": null,
+      "comments": 1,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-01",
+      "updatedAt": "2026-11-02",
       "closedAt": null,
       "mergedAt": null
     }

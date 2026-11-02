@@ -1676,6 +1676,107 @@
     ]
   },
   {
+    "url": "/reference/duration/calculate/totalUnitsFromNow",
+    "page": "/reference/duration/calculate/totalUnitsFromNow",
+    "name": "totalUnitsFromNow",
+    "namespace": "duration",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "totalUnitsFromNow(units: Partial<Record<keyof DurationLike, number>>, unit: keyof DurationLike | DateTimeUnit, options?: { timeZone?: string; }): number | null",
+    "description": "Express a length of time from now as one fractional total in one unit.",
+    "sourcePath": "packages/gmt/src/duration/calculate/totalUnitsFromNow.ts",
+    "examples": [
+      {
+        "call": "totalUnitsFromNow({ days: 90 }, \"seconds\")",
+        "result": "7776000 (a cookie Max-Age or HSTS max-age for 90 days)"
+      },
+      {
+        "call": "totalUnitsFromNow({ days: 1 }, \"seconds\")",
+        "result": "86400 (UTC has no clock change)"
+      },
+      {
+        "call": "totalUnitsFromNow({ milliseconds: 1500 }, \"seconds\")",
+        "result": "1.5 (fractional, unrounded)"
+      },
+      {
+        "call": "totalUnitsFromNow({ days: -1 }, \"seconds\")",
+        "result": "null (lengths are unsigned)"
+      },
+      {
+        "call": "totalUnitsFromNow({ fortnights: 1 } as never, \"seconds\")",
+        "result": "null (not a unit)"
+      },
+      {
+        "call": "totalUnitsFromNow({ days: 1 }, \"fortnights\" as never)",
+        "result": "null (not a unit)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/duration/calculate/ttlFromNow#ttl",
+    "page": "/reference/duration/calculate/ttlFromNow",
+    "name": "Ttl",
+    "namespace": "duration",
+    "module": "calculate",
+    "kind": "type",
+    "signature": "",
+    "description": "One length from now, in each form a receiver wants. All five come from one clock read, so `epochSeconds`, `httpDate` and `iso` name the same second. `seconds` and `milliseconds` round up, so they can exceed the floored forms: for `{ milliseconds: 1500 }`, `seconds` is 2. From a clock on a whole second `epochSeconds` is now plus 1; from a clock at .800 it is the floored now plus 2.",
+    "sourcePath": "packages/gmt/src/duration/calculate/ttlFromNow.ts",
+    "examples": [],
+    "inlineOn": "ttlFromNow",
+    "members": [
+      {
+        "name": "seconds",
+        "description": "Whole seconds, rounded up: a cookie `Max-Age` or a cache `max-age`."
+      },
+      {
+        "name": "milliseconds",
+        "description": "Whole milliseconds, rounded up: a timer delay."
+      },
+      {
+        "name": "epochSeconds",
+        "description": "The end as whole Unix seconds, floored: a JWT `exp`."
+      },
+      {
+        "name": "httpDate",
+        "description": "The end as an IMF-fixdate (RFC 9110 section 5.6.7): a cookie `Expires`."
+      },
+      {
+        "name": "iso",
+        "description": "The end as UTC text in whole seconds, floored."
+      }
+    ]
+  },
+  {
+    "url": "/reference/duration/calculate/ttlFromNow",
+    "page": "/reference/duration/calculate/ttlFromNow",
+    "name": "ttlFromNow",
+    "namespace": "duration",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "ttlFromNow(units: Partial<Record<keyof DurationLike, number>>): Ttl | null",
+    "description": "Express one length of time from now in every form a receiver wants: seconds, milliseconds, a Unix epoch, an HTTP date and a UTC string.",
+    "sourcePath": "packages/gmt/src/duration/calculate/ttlFromNow.ts",
+    "examples": [
+      {
+        "call": "ttlFromNow({ days: 1 })?.seconds",
+        "result": "86400 (a cookie Max-Age for one day)"
+      },
+      {
+        "call": "ttlFromNow({ days: 1 })?.httpDate",
+        "result": "\"Wed, 16 Jun 2027 12:00:00 GMT\" (the matching Expires)"
+      },
+      {
+        "call": "ttlFromNow({ days: -1 })",
+        "result": "null (lengths are unsigned)"
+      },
+      {
+        "call": "ttlFromNow({ years: 8000 })",
+        "result": "null (year 10027 has no four-digit form)"
+      }
+    ]
+  },
+  {
     "url": "/reference/duration/compare/compareDurations",
     "page": "/reference/duration/compare/compareDurations",
     "name": "compareDurations",
@@ -9861,6 +9962,122 @@
     ]
   },
   {
+    "url": "/reference/plain/get/getDateAgo",
+    "page": "/reference/plain/get/getDateAgo",
+    "name": "getDateAgo",
+    "namespace": "plain",
+    "module": "get",
+    "kind": "function",
+    "signature": "getDateAgo(units: Partial<Record<\"years\" | \"months\" | \"weeks\" | \"days\", number>>): string",
+    "description": "Return the PlainDate before today, as an ISO string, counted from the current time.",
+    "sourcePath": "packages/gmt/src/plain/get/getDateAgo.ts",
+    "examples": [
+      {
+        "call": "getDateAgo({ days: 90 })",
+        "result": "\"2027-03-17\""
+      },
+      {
+        "call": "getDateAgo({ months: 1 })",
+        "result": "\"2027-05-15\""
+      },
+      {
+        "call": "getDateAgo({ days: -1 })",
+        "result": "\"\" (lengths are unsigned)"
+      },
+      {
+        "call": "getDateAgo({ hours: 36 } as never)",
+        "result": "\"\" (a time unit)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/get/getDateIn",
+    "page": "/reference/plain/get/getDateIn",
+    "name": "getDateIn",
+    "namespace": "plain",
+    "module": "get",
+    "kind": "function",
+    "signature": "getDateIn(units: Partial<Record<\"years\" | \"months\" | \"weeks\" | \"days\", number>>): string",
+    "description": "Return the PlainDate after today, as an ISO string, counted from the current time.",
+    "sourcePath": "packages/gmt/src/plain/get/getDateIn.ts",
+    "examples": [
+      {
+        "call": "getDateIn({ days: 90 })",
+        "result": "\"2027-09-13\""
+      },
+      {
+        "call": "getDateIn({ months: 1 })",
+        "result": "\"2027-07-15\""
+      },
+      {
+        "call": "getDateIn({ days: -1 })",
+        "result": "\"\" (lengths are unsigned)"
+      },
+      {
+        "call": "getDateIn({ hours: 36 } as never)",
+        "result": "\"\" (a time unit)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/get/getDateTimeAgo",
+    "page": "/reference/plain/get/getDateTimeAgo",
+    "name": "getDateTimeAgo",
+    "namespace": "plain",
+    "module": "get",
+    "kind": "function",
+    "signature": "getDateTimeAgo(units: Partial<Record<keyof DurationLike, number>>): string",
+    "description": "Return the PlainDateTime before now, as an ISO string, counted from the current time.",
+    "sourcePath": "packages/gmt/src/plain/get/getDateTimeAgo.ts",
+    "examples": [
+      {
+        "call": "getDateTimeAgo({ days: 90 })",
+        "result": "\"2027-03-17T12:00:00\""
+      },
+      {
+        "call": "getDateTimeAgo({ months: 1 })",
+        "result": "\"2027-05-15T12:00:00\""
+      },
+      {
+        "call": "getDateTimeAgo({ hours: 36 })",
+        "result": "\"2027-06-14T00:00:00\""
+      },
+      {
+        "call": "getDateTimeAgo({ days: -1 })",
+        "result": "\"\" (lengths are unsigned)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/get/getDateTimeIn",
+    "page": "/reference/plain/get/getDateTimeIn",
+    "name": "getDateTimeIn",
+    "namespace": "plain",
+    "module": "get",
+    "kind": "function",
+    "signature": "getDateTimeIn(units: Partial<Record<keyof DurationLike, number>>): string",
+    "description": "Return the PlainDateTime after now, as an ISO string, counted from the current time.",
+    "sourcePath": "packages/gmt/src/plain/get/getDateTimeIn.ts",
+    "examples": [
+      {
+        "call": "getDateTimeIn({ days: 90 })",
+        "result": "\"2027-09-13T12:00:00\""
+      },
+      {
+        "call": "getDateTimeIn({ months: 1 })",
+        "result": "\"2027-07-15T12:00:00\""
+      },
+      {
+        "call": "getDateTimeIn({ hours: 36 })",
+        "result": "\"2027-06-17T00:00:00\""
+      },
+      {
+        "call": "getDateTimeIn({ days: -1 })",
+        "result": "\"\" (lengths are unsigned)"
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/get/getDay",
     "page": "/reference/plain/get/getDay",
     "name": "getDay",
@@ -10128,6 +10345,64 @@
       {
         "call": "getSecond()",
         "result": "\"\" (when system timeZone unavailable)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/get/getTimeAgo",
+    "page": "/reference/plain/get/getTimeAgo",
+    "name": "getTimeAgo",
+    "namespace": "plain",
+    "module": "get",
+    "kind": "function",
+    "signature": "getTimeAgo(units: Partial<Record<\"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\", number>>): string",
+    "description": "Return the PlainTime before now, as an ISO string, counted from the current time.",
+    "sourcePath": "packages/gmt/src/plain/get/getTimeAgo.ts",
+    "examples": [
+      {
+        "call": "getTimeAgo({ minutes: 15 })",
+        "result": "\"11:45:00\""
+      },
+      {
+        "call": "getTimeAgo({ hours: 36 })",
+        "result": "\"00:00:00\""
+      },
+      {
+        "call": "getTimeAgo({ days: 1 } as never)",
+        "result": "\"\" (a date unit)"
+      },
+      {
+        "call": "getTimeAgo({ hours: -1 })",
+        "result": "\"\" (lengths are unsigned)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/plain/get/getTimeIn",
+    "page": "/reference/plain/get/getTimeIn",
+    "name": "getTimeIn",
+    "namespace": "plain",
+    "module": "get",
+    "kind": "function",
+    "signature": "getTimeIn(units: Partial<Record<\"hours\" | \"minutes\" | \"seconds\" | \"milliseconds\" | \"microseconds\" | \"nanoseconds\", number>>): string",
+    "description": "Return the PlainTime after now, as an ISO string, counted from the current time.",
+    "sourcePath": "packages/gmt/src/plain/get/getTimeIn.ts",
+    "examples": [
+      {
+        "call": "getTimeIn({ minutes: 15 })",
+        "result": "\"12:15:00\""
+      },
+      {
+        "call": "getTimeIn({ hours: 36 })",
+        "result": "\"00:00:00\""
+      },
+      {
+        "call": "getTimeIn({ days: 1 } as never)",
+        "result": "\"\" (a date unit)"
+      },
+      {
+        "call": "getTimeIn({ hours: -1 })",
+        "result": "\"\" (lengths are unsigned)"
       }
     ]
   },
@@ -17458,6 +17733,43 @@
     ]
   },
   {
+    "url": "/reference/span/calculate/spanSeconds",
+    "page": "/reference/span/calculate/spanSeconds",
+    "name": "spanSeconds",
+    "namespace": "span",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "spanSeconds(start: string, end: string): number | null",
+    "description": "Return the exact elapsed seconds between two ISO 8601 instant strings.",
+    "sourcePath": "packages/gmt/src/span/calculate/spanSeconds.ts",
+    "examples": [
+      {
+        "call": "spanSeconds(\"2027-06-15T12:00:00Z\", \"2027-06-15T12:01:30Z\")",
+        "result": "90"
+      },
+      {
+        "call": "spanSeconds(\"2027-06-15T12:01:30Z\", \"2027-06-15T12:00:00Z\")",
+        "result": "-90"
+      },
+      {
+        "call": "spanSeconds(\"2027-06-15T12:00:00Z\", \"2027-06-15T12:00:00.500Z\")",
+        "result": "0.5"
+      },
+      {
+        "call": "spanSeconds(\"2027-06-15T12:00:00Z\", \"2027-06-15T12:00:00Z\")",
+        "result": "0"
+      },
+      {
+        "call": "spanSeconds(\"2026-03-28T12:00:00+01:00[Europe/Paris]\", \"2026-03-29T12:00:00+02:00[Europe/Paris]\")",
+        "result": "82800 — 23 hours, not 24"
+      },
+      {
+        "call": "spanSeconds(\"2027-06-15T12:00:00Z\", \"soon\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
     "url": "/reference/span/calculate/spanWallClock#wallclockspanunit",
     "page": "/reference/span/calculate/spanWallClock",
     "name": "WallClockSpanUnit",
@@ -21961,6 +22273,39 @@
     ]
   },
   {
+    "url": "/reference/unix/calculate/secondsUntilUnix",
+    "page": "/reference/unix/calculate/secondsUntilUnix",
+    "name": "secondsUntilUnix",
+    "namespace": "unix",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "secondsUntilUnix(value: string | number, options?: { epochUnit?: UnixUnit; }): number | null",
+    "description": "Return the whole seconds from now until a stored Unix epoch, such as a JWT `exp`.",
+    "sourcePath": "packages/gmt/src/unix/calculate/secondsUntilUnix.ts",
+    "examples": [
+      {
+        "call": "secondsUntilUnix(1813060920, { epochUnit: \"seconds\" })",
+        "result": "120 (two minutes after a clock at 1813060800)"
+      },
+      {
+        "call": "secondsUntilUnix(\"1813060920\", { epochUnit: \"seconds\" })",
+        "result": "120 (digit string)"
+      },
+      {
+        "call": "secondsUntilUnix(1813060800.5, { epochUnit: \"seconds\" })",
+        "result": "null (not an integer epoch: use Math.floor)"
+      },
+      {
+        "call": "secondsUntilUnix(\"soon\")",
+        "result": "null"
+      },
+      {
+        "call": "secondsUntilUnix(1813060920, { epochUnit: \"minutes\" } as never)",
+        "result": "null (not a UnixUnit)"
+      }
+    ]
+  },
+  {
     "url": "/reference/unix/calculate/setUnix",
     "page": "/reference/unix/calculate/setUnix",
     "name": "setUnix",
@@ -22747,6 +23092,39 @@
     ]
   },
   {
+    "url": "/reference/unix/get/getUnixAgo",
+    "page": "/reference/unix/get/getUnixAgo",
+    "name": "getUnixAgo",
+    "namespace": "unix",
+    "module": "get",
+    "kind": "function",
+    "signature": "getUnixAgo(units: Partial<Record<keyof DurationLike, number>>, options?: { epochUnit?: UnixUnit; }): number | null",
+    "description": "Return the Unix epoch before now, counted from the current time in UTC.",
+    "sourcePath": "packages/gmt/src/unix/get/getUnixAgo.ts",
+    "examples": [
+      {
+        "call": "getUnixAgo({ days: 90 }, { epochUnit: \"seconds\" })",
+        "result": "1805284800 (90 days back, from a clock at 2027-06-15T12:00:00Z)"
+      },
+      {
+        "call": "getUnixAgo({ days: 90 })",
+        "result": "1805284800000 (milliseconds, the default)"
+      },
+      {
+        "call": "getUnixAgo({ days: -1 })",
+        "result": "null (lengths are unsigned)"
+      },
+      {
+        "call": "getUnixAgo({ fortnights: 1 } as never)",
+        "result": "null (not a unit)"
+      },
+      {
+        "call": "getUnixAgo({ days: 1 }, { epochUnit: \"minutes\" } as never)",
+        "result": "null (not a UnixUnit)"
+      }
+    ]
+  },
+  {
     "url": "/reference/unix/get/getUnixDay",
     "page": "/reference/unix/get/getUnixDay",
     "name": "getUnixDay",
@@ -22777,6 +23155,39 @@
       {
         "call": "getUnixHour()",
         "result": "\"00\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/unix/get/getUnixIn",
+    "page": "/reference/unix/get/getUnixIn",
+    "name": "getUnixIn",
+    "namespace": "unix",
+    "module": "get",
+    "kind": "function",
+    "signature": "getUnixIn(units: Partial<Record<keyof DurationLike, number>>, options?: { epochUnit?: UnixUnit; }): number | null",
+    "description": "Return the Unix epoch after now, counted from the current time in UTC.",
+    "sourcePath": "packages/gmt/src/unix/get/getUnixIn.ts",
+    "examples": [
+      {
+        "call": "getUnixIn({ days: 90 }, { epochUnit: \"seconds\" })",
+        "result": "1820836800 (an expiry 90 days out, from a clock at 2027-06-15T12:00:00Z)"
+      },
+      {
+        "call": "getUnixIn({ days: 90 })",
+        "result": "1820836800000 (milliseconds, the default)"
+      },
+      {
+        "call": "getUnixIn({ days: -1 })",
+        "result": "null (lengths are unsigned)"
+      },
+      {
+        "call": "getUnixIn({ fortnights: 1 } as never)",
+        "result": "null (not a unit)"
+      },
+      {
+        "call": "getUnixIn({ days: 1 }, { epochUnit: \"minutes\" } as never)",
+        "result": "null (not a UnixUnit)"
       }
     ]
   },
@@ -24508,6 +24919,72 @@
     ]
   },
   {
+    "url": "/reference/utc/calculate/secondsUntilHttpDate",
+    "page": "/reference/utc/calculate/secondsUntilHttpDate",
+    "name": "secondsUntilHttpDate",
+    "namespace": "utc",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "secondsUntilHttpDate(value: string): number | null",
+    "description": "Return the whole seconds from now until an HTTP header date, such as `Expires`.",
+    "sourcePath": "packages/gmt/src/utc/calculate/secondsUntilHttpDate.ts",
+    "examples": [
+      {
+        "call": "secondsUntilHttpDate(\"Fri, 18 Jun 2027 12:00:00 GMT\")",
+        "result": "259200 (3 days, from a clock at Tue, 15 Jun 2027 12:00:00 GMT)"
+      },
+      {
+        "call": "secondsUntilHttpDate(\"Friday, 18-Jun-27 12:00:00 GMT\")",
+        "result": "259200 (rfc850)"
+      },
+      {
+        "call": "secondsUntilHttpDate(\"\")",
+        "result": "null"
+      },
+      {
+        "call": "secondsUntilHttpDate(\"tomorrow\")",
+        "result": "null"
+      },
+      {
+        "call": "secondsUntilHttpDate(\"120\")",
+        "result": "null (delay-seconds is not an HTTP-date)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/utc/calculate/secondsUntilRetryAfter",
+    "page": "/reference/utc/calculate/secondsUntilRetryAfter",
+    "name": "secondsUntilRetryAfter",
+    "namespace": "utc",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "secondsUntilRetryAfter(value: string): number | null",
+    "description": "Return the whole seconds to wait from a `Retry-After` header value.",
+    "sourcePath": "packages/gmt/src/utc/calculate/secondsUntilRetryAfter.ts",
+    "examples": [
+      {
+        "call": "secondsUntilRetryAfter(\"120\")",
+        "result": "120 (delay-seconds)"
+      },
+      {
+        "call": "secondsUntilRetryAfter(\"Fri, 18 Jun 2027 12:00:00 GMT\")",
+        "result": "259200 (3 days, from a clock at Tue, 15 Jun 2027 12:00:00 GMT)"
+      },
+      {
+        "call": "secondsUntilRetryAfter(\"\")",
+        "result": "null"
+      },
+      {
+        "call": "secondsUntilRetryAfter(\"-5\")",
+        "result": "null (no sign in delay-seconds)"
+      },
+      {
+        "call": "secondsUntilRetryAfter(\"soon\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
     "url": "/reference/utc/calculate/setUtc",
     "page": "/reference/utc/calculate/setUtc",
     "name": "setUtc",
@@ -25036,6 +25513,35 @@
     ]
   },
   {
+    "url": "/reference/utc/format/formatHttpDateFromNow",
+    "page": "/reference/utc/format/formatHttpDateFromNow",
+    "name": "formatHttpDateFromNow",
+    "namespace": "utc",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatHttpDateFromNow(units: Partial<Record<keyof DurationLike, number>>): string",
+    "description": "Return the RFC 9110 HTTP date (IMF-fixdate) after now, counted from the current time. It is the value for an `Expires` attribute or header.",
+    "sourcePath": "packages/gmt/src/utc/format/formatHttpDateFromNow.ts",
+    "examples": [
+      {
+        "call": "formatHttpDateFromNow({ days: 90 })",
+        "result": "\"Mon, 13 Sep 2027 12:00:00 GMT\" (an expiry 90 days out)"
+      },
+      {
+        "call": "formatHttpDateFromNow({ years: 8000 })",
+        "result": "\"\" (year 10027 has no four-digit form)"
+      },
+      {
+        "call": "formatHttpDateFromNow({ days: -1 })",
+        "result": "\"\" (lengths are unsigned)"
+      },
+      {
+        "call": "formatHttpDateFromNow({ fortnights: 1 } as never)",
+        "result": "\"\" (not a unit)"
+      }
+    ]
+  },
+  {
     "url": "/reference/utc/format/formatRelativeUtc#formatrelativeutcoptions",
     "page": "/reference/utc/format/formatRelativeUtc",
     "name": "FormatRelativeUtcOptions",
@@ -25200,6 +25706,35 @@
     ]
   },
   {
+    "url": "/reference/utc/get/getUtcAgo",
+    "page": "/reference/utc/get/getUtcAgo",
+    "name": "getUtcAgo",
+    "namespace": "utc",
+    "module": "get",
+    "kind": "function",
+    "signature": "getUtcAgo(units: Partial<Record<keyof DurationLike, number>>): string",
+    "description": "Return the UTC instant before now, as an ISO Instant string, counted from the current time.",
+    "sourcePath": "packages/gmt/src/utc/get/getUtcAgo.ts",
+    "examples": [
+      {
+        "call": "getUtcAgo({ days: 90 })",
+        "result": "\"2027-03-17T12:00:00Z\" (90 days back)"
+      },
+      {
+        "call": "getUtcAgo({ days: 1 })",
+        "result": "\"2027-06-14T12:00:00Z\" (feed it to formatHttpDate to delete a cookie)"
+      },
+      {
+        "call": "getUtcAgo({ days: -1 })",
+        "result": "\"\" (lengths are unsigned)"
+      },
+      {
+        "call": "getUtcAgo({ fortnights: 1 } as never)",
+        "result": "\"\" (not a unit)"
+      }
+    ]
+  },
+  {
     "url": "/reference/utc/get/getUtcDay",
     "page": "/reference/utc/get/getUtcDay",
     "name": "getUtcDay",
@@ -25230,6 +25765,35 @@
       {
         "call": "getUtcHour()",
         "result": "\"00\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/utc/get/getUtcIn",
+    "page": "/reference/utc/get/getUtcIn",
+    "name": "getUtcIn",
+    "namespace": "utc",
+    "module": "get",
+    "kind": "function",
+    "signature": "getUtcIn(units: Partial<Record<keyof DurationLike, number>>): string",
+    "description": "Return the UTC instant after now, as an ISO Instant string, counted from the current time.",
+    "sourcePath": "packages/gmt/src/utc/get/getUtcIn.ts",
+    "examples": [
+      {
+        "call": "getUtcIn({ days: 90 })",
+        "result": "\"2027-09-13T12:00:00Z\" (an expiry 90 days out)"
+      },
+      {
+        "call": "getUtcIn({ months: 1 })",
+        "result": "\"2027-07-15T12:00:00Z\""
+      },
+      {
+        "call": "getUtcIn({ days: -1 })",
+        "result": "\"\" (lengths are unsigned)"
+      },
+      {
+        "call": "getUtcIn({ fortnights: 1 } as never)",
+        "result": "\"\" (not a unit)"
       }
     ]
   },
@@ -29046,6 +29610,35 @@
     ]
   },
   {
+    "url": "/reference/zoned/get/getZonedAgo",
+    "page": "/reference/zoned/get/getZonedAgo",
+    "name": "getZonedAgo",
+    "namespace": "zoned",
+    "module": "get",
+    "kind": "function",
+    "signature": "getZonedAgo(timeZone: string, units: Partial<Record<keyof DurationLike, number>>): string",
+    "description": "Return the zoned datetime before now in `timeZone`, counted from the current time.",
+    "sourcePath": "packages/gmt/src/zoned/get/getZonedAgo.ts",
+    "examples": [
+      {
+        "call": "getZonedAgo(\"Asia/Tokyo\", { days: 90 })",
+        "result": "\"2027-03-17T21:00:00+09:00[Asia/Tokyo]\" (90 days back, 21:00 in Tokyo)"
+      },
+      {
+        "call": "getZonedAgo(\"UTC\", { days: 0 })",
+        "result": "\"2027-06-15T12:00:00+00:00[UTC]\" (now)"
+      },
+      {
+        "call": "getZonedAgo(\"Mars/Olympus\", { days: 1 })",
+        "result": "\"\" (not a zone)"
+      },
+      {
+        "call": "getZonedAgo(\"Asia/Tokyo\", { days: -1 })",
+        "result": "\"\" (lengths are unsigned)"
+      }
+    ]
+  },
+  {
     "url": "/reference/zoned/get/getZonedDay",
     "page": "/reference/zoned/get/getZonedDay",
     "name": "getZonedDay",
@@ -29105,6 +29698,35 @@
       {
         "call": "getZonedHour(\"invalid\")",
         "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/zoned/get/getZonedIn",
+    "page": "/reference/zoned/get/getZonedIn",
+    "name": "getZonedIn",
+    "namespace": "zoned",
+    "module": "get",
+    "kind": "function",
+    "signature": "getZonedIn(timeZone: string, units: Partial<Record<keyof DurationLike, number>>): string",
+    "description": "Return the zoned datetime after now in `timeZone`, counted from the current time.",
+    "sourcePath": "packages/gmt/src/zoned/get/getZonedIn.ts",
+    "examples": [
+      {
+        "call": "getZonedIn(\"Asia/Tokyo\", { days: 90 })",
+        "result": "\"2027-09-13T21:00:00+09:00[Asia/Tokyo]\" (90 days out, 21:00 in Tokyo)"
+      },
+      {
+        "call": "getZonedIn(\"UTC\", { days: 0 })",
+        "result": "\"2027-06-15T12:00:00+00:00[UTC]\" (now)"
+      },
+      {
+        "call": "getZonedIn(\"Mars/Olympus\", { days: 1 })",
+        "result": "\"\" (not a zone)"
+      },
+      {
+        "call": "getZonedIn(\"Asia/Tokyo\", { days: -1 })",
+        "result": "\"\" (lengths are unsigned)"
       }
     ]
   },

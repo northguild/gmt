@@ -328,6 +328,18 @@ export function zoneArgumentCalls(
       lib.parseYearFromUnix(ms, tz(zone)),
     ),
 
+    // duration/calculate
+    totalUnitsFromNow: nullable(
+      MONTH,
+      (zone) =>
+        lib.totalUnitsFromNow(
+          { months: 1, days: 1, hours: 5 },
+          "seconds",
+          tz(zone),
+        ),
+      (zone) => [lib.totalUnitsFromNow({ days: 1 }, "seconds", tz(zone))],
+    ),
+
     // unix/calculate
     addUnix: nullable(
       MONTH,
@@ -578,6 +590,14 @@ export function zoneIdentifierCalls(
     getZonedNow: {
       sentinel: "",
       run: (zone) => lib.getZonedNow(z(zone), { smallestUnit: "second" }),
+    },
+    getZonedIn: {
+      sentinel: "",
+      run: (zone) => lib.getZonedIn(z(zone), { days: 1 }),
+    },
+    getZonedAgo: {
+      sentinel: "",
+      run: (zone) => lib.getZonedAgo(z(zone), { days: 1 }),
     },
     fromNanoseconds: {
       sentinel: "",

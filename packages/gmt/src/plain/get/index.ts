@@ -1,3 +1,7 @@
+export * from "./getDateAgo";
+export * from "./getDateIn";
+export * from "./getDateTimeAgo";
+export * from "./getDateTimeIn";
 export * from "./getDay";
 export * from "./getDayOfWeek";
 export * from "./getHour";
@@ -9,6 +13,8 @@ export * from "./getNanosecond";
 export * from "./getNow";
 export * from "./getNowUnit";
 export * from "./getSecond";
+export * from "./getTimeAgo";
+export * from "./getTimeIn";
 export * from "./getToday";
 export * from "./getWeekOfYear";
 export * from "./getYear";

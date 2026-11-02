@@ -7,6 +7,8 @@ export * from "./isBetweenUtc";
 export * from "./maxUtc";
 export * from "./minUtc";
 export * from "./roundUtc";
+export * from "./secondsUntilHttpDate";
+export * from "./secondsUntilRetryAfter";
 export * from "./setUtc";
 export * from "./sortUtc";
 export * from "./startOfQuarterForUtc";

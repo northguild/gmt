@@ -53,6 +53,24 @@ describe("table", () => {
     expect(within(t).getByRole("cell", { name: "yes" })).toBeInTheDocument();
   });
 
+  it("marks only the named row as the current one", () => {
+    renderHtml(
+      table({
+        caption: "Starts",
+        currentRow: 1,
+        columns: [
+          { key: "zone", header: "Zone", align: "start", numeric: false },
+        ],
+        rows: [{ zone: "Berlin" }, { zone: "Oslo" }],
+      }),
+    );
+    const current = screen.getAllByRole("row", { current: true });
+    expect(current).toHaveLength(1);
+    expect(
+      within(current[0]!).getByRole("cell", { name: "Oslo" }),
+    ).toBeInTheDocument();
+  });
+
   it("escapes cell text", () => {
     renderHtml(markup());
     expect(
@@ -84,6 +102,39 @@ describe("table", () => {
     expect(rule(".table")).not.toMatch(/overflow/);
     expect(rule(".wrap")).toMatch(/overflow-x:\s*auto;/);
     expect(rule(".fixed")).toMatch(/table-layout:\s*fixed;/);
+  });
+
+  // A table that asks for neither option must print what it printed before they existed: no
+  // stray space before a `>`, no empty `<tr >`, no `data-col`, no `aria-current`.
+  it("prints an ordinary table with no trace of the optional attributes", () => {
+    const out = markup().toString();
+    expect(out).not.toMatch(/"[ ]>/);
+    expect(out).not.toContain("<tr >");
+    expect(out).not.toContain("data-col");
+    expect(out).not.toContain("aria-current");
+    expect(out).toMatch(/<th class="[^"]*" scope="row">Berlin<\/th>/);
+    expect(out).toMatch(/<td class="[^"]*">\+01:00<\/td>/);
+  });
+
+  // The label a narrow sheet draws is `content: attr(data-col)`, which jsdom does not paint, so
+  // the markup is read as text: every body cell carries its own column's header, the header row
+  // carries none.
+  it("labels each cell with its column header when asked", () => {
+    const out = table({
+      caption: "Starts",
+      labelCells: true,
+      rowHeader: "start",
+      columns: [
+        { key: "start", header: "Start", align: "start", numeric: false },
+        { key: "len", header: "Length", align: "end", numeric: true },
+      ],
+      rows: [{ start: "2027-01-01", len: "86400 s" }],
+    }).toString();
+    expect(out).toMatch(
+      /<th [^>]*scope="row" data-col="Start">2027-01-01<\/th>/,
+    );
+    expect(out).toMatch(/<td [^>]*data-col="Length">86400 s<\/td>/);
+    expect(out.match(/data-col=/g)).toHaveLength(2);
   });
 
   it("has no axe violations", async () => {

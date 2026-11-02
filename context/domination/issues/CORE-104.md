@@ -103,6 +103,57 @@ number of seconds is wrong. It ships with its Dox chat button.
   cannot fail. A unit object can overflow Temporal's limits (`{ years: 300000 }`), so the sentinel
   probably stays; the architect confirms.
 
+## Decisions
+
+- **D1.** Nineteen public functions over one internal core, `internal/lengthFromNow.ts`: the
+  `get*In` / `get*Ago` pairs for unix, UTC, date, date-time, time and zoned; `ttlFromNow`,
+  `totalUnitsFromNow`, `formatHttpDateFromNow`, `spanSeconds`; and `secondsUntilUnix`,
+  `secondsUntilHttpDate`, `secondsUntilRetryAfter`. Nothing loops, so every function is O(1) and
+  no bench row exists. Nothing is locale-aware.
+- **D2.** Input is a unit object only. A duration string, an empty object or an unknown unit
+  returns the sentinel.
+- **D3.** Lengths are unsigned. A negative amount returns the sentinel; direction is the
+  function's name (`getUtcAgo`, not a negative `getUtcIn`). `-0` and `{ days: 0 }` are valid and
+  give now. `null` means invalid input only.
+- **D4.** `Ago` subtracts through the same primitive as its `subtract*` sibling. No function has a
+  clamp or date rule of its own. A missing day clamps to the end of the month, as Temporal does.
+- **D5.** No `overflow`, `start` or clock option. A `"reject"` would make `null` depend on today.
+  The pure routes are `addUnix`, `addUtc`, `addZoned` and `addDate`.
+- **D6.** Unix, UTC, HTTP-date and `ttlFromNow` count in UTC, so one call does not change with the
+  server's zone. Only `totalUnitsFromNow` takes `timeZone`, and the option is always `timeZone`.
+  `getZonedIn` / `getZonedAgo` count on the zone's wall clock. Plain functions start from the
+  system zone, so `getDateIn({ days: 0 }) === getToday()`.
+- **D7.** String forms write whole seconds, floored. Unix keeps `epochUnit` precision. Sub-second
+  callers use `addUtc(getUtcNow(), ...)`.
+- **D8.** Return types keep the sentinel, because `{ years: 300000 }` overflows.
+- **D9.** Units are checked first, then the clock is read, and each function names its clock
+  reader in its own source file, which `scripts/api-surface.mjs` tests.
+- **D10.** `ttlFromNow` reads the clock once and returns whole `null` if any of its five forms is
+  missing (a year past 9999 has no HTTP date), so a non-null result is usable in full.
+- **D11.** "Seconds until" rounds up to a whole second, so a wait never falls short and
+  `result <= 0` is RFC 7519 section 4.1.4's "not before" test. A past target returns a negative
+  number. A fractional epoch returns `null`; the JSDoc names `Math.floor(exp)`.
+- **D12.** `spanSeconds` is signed, fractional and unrounded, the same contract as `spanMs`.
+- **D13.** No cap on a length. The 400-day browser limit is only in a draft revision of RFC 6265,
+  so a cap is the caller's.
+- **D14.** Out of scope: a leeway policy or `clockTolerance`, a token library, `secondsUntilUtc`
+  (`diffUtc` measures two UTC strings), and changes to `isPast`, `isFuture`, `isZonedPast`,
+  `isZonedFuture` and `floorToZone`. Rejected names: `getUnixNowIn`, `addUnixNow`,
+  `getFromUnixNow`, `getUnixNowFrom`, `getUnixNowOffset`; `addToNowUnix`, `addToNowUtc` and
+  `totalFromNow` were dropped.
+- **D15.** Workaround D22 in `internal/zonedWallClockDifference.ts` (tc39/proposal-temporal#3336,
+  #3311 and #3310) makes the zoned-difference functions return the sentinel where Temporal has no
+  value. It is a
+  behaviour change, stated in the changeset. It roughly doubles zoned date-unit operations (about
+  72 to 150 microseconds), which is no Loop-cost breach.
+- **D16.** The root bundle budget is 567940 and `chargeableDays`, `operatingTimeBetween` and
+  `dutyViolations` are 202600, 210400 and 234800, raised for the 19 functions and the D22 probes.
+- **Authority.** RFC 6265 sections 4.1.2, 5.2.1 and 5.2.2; RFC 7519 sections 2 and 4.1.4 to 4.1.6;
+  RFC 9110 sections 5.6.7 and 10.2.3; RFC 9111, RFC 6797 and RFC 6749 for delta-seconds; Temporal
+  `AddDurationTo*`, `CalendarDateAdd`, `GetEpochNanosecondsFor` and `GetTemporalRelativeToOption`.
+  The unsigned length, the UTC default, the system-zone default for plain functions, floored
+  seconds and round-up "seconds until" are GMT rules, not standards.
+
 ## What gmt provides (do not re-implement)
 
 - `totalDuration` (`duration/calculate/`) — seconds across calendar units with a `relativeTo`

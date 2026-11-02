@@ -25,6 +25,23 @@ spanNs("2024-03-10T12:00:00.123456789Z", "2024-03-10T12:00:00.123456790Z");
 // 1n
 ```
 
+## Seconds for a wait
+
+[`spanSeconds`](/reference/span/calculate/spanSeconds) is `spanMs` in seconds: signed, fractional
+and unrounded. For a wait that must not fall short, round up with `Math.ceil`:
+
+```typescript
+import { spanSeconds } from "@northguild/gmt";
+
+spanSeconds("2024-03-10T12:00:00Z", "2024-03-10T12:01:30Z"); // 90
+spanSeconds("2024-03-10T12:01:30Z", "2024-03-10T12:00:00Z"); // -90 — end before start
+spanSeconds("2024-03-10T12:00:00Z", "2024-03-10T12:00:00.500Z"); // 0.5
+Math.ceil(0.5); // 1
+```
+
+For the seconds left until a stored moment, use `secondsUntilUnix` or `secondsUntilHttpDate`: see
+[Durations](../durations/#seconds-until-a-stored-moment).
+
 ## Exact time is not calendar distance
 
 Both `spanMs` and `spanNs` are signed. `spanMs(b, a)` is exactly `-spanMs(a, b)`. Both

@@ -1,11 +1,20 @@
-/* The timezone map's clock panel: two rows of zone buttons that grow into columns. */
+/* The timezone map's clock panel: as many columns of zone buttons as fit, each wide enough for
+ * its local time. */
 
 .panel {
+  /* A local time to the second, `2026-11-02T09:40:27`, is 19 characters. The panel sets the
+   * time's own font so `ch` below measures that font: a column is never narrower than the time
+   * plus the button's padding and border, at any width the panel can hold one at. */
+  --zone-time-width: calc(19ch + 2 * var(--gmt-space-3) + 2px);
+
   display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  grid-auto-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, var(--zone-time-width)), 1fr)
+  );
   gap: var(--gmt-space-2);
+  font-family: var(--gmt-font-mono);
+  font-size: 0.8rem;
 }
 
 .entry {
@@ -51,11 +60,14 @@
   }
 }
 
+/* The offset drops under the name when both do not fit on one line, so a long name such as
+ * `Australia/Lord_Howe` is shown whole rather than cut short. */
 .row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
-  gap: var(--gmt-space-2);
+  gap: 0 var(--gmt-space-2);
   inline-size: 100%;
 }
 
@@ -76,12 +88,13 @@
   white-space: nowrap;
 }
 
+/* The font comes from `.panel`, which sizes the columns by it. The time wraps only on a panel
+ * narrower than one column, where the alternative is spilling out of the button. */
 .time {
+  max-inline-size: 100%;
   color: var(--gmt-cyan-ink);
-  font-family: var(--gmt-font-mono);
-  font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 @media (forced-colors: active) {

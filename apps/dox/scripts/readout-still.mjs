@@ -76,6 +76,11 @@
  *                 reader steps with the arrow keys, not a handle. The script
  *                 presses ArrowUp that many times, then ArrowDown back, and
  *                 compares after each press. There is no pointer pass;
+ *   entries       per tool, fields the reader types into or picks from, not
+ *                 handles: `{ role, name, values }`, where `values` is a list of
+ *                 strings to type (a text box) or `"options"` to choose every
+ *                 option in turn (a select). Each value is set, and every box
+ *                 must stay where it was; the first value is put back after;
  *   value         per control, the role and name of the field the handle edits.
  *                 A ledger handle's `aria-valuenow` is its place on a canvas that
  *                 is refitted after each key, so the same number can mean
@@ -493,6 +498,39 @@ const TOOLS = [
       { role: "slider", name: "Year slider" },
       { role: "spinbutton", name: "Year", step: 3 },
     ],
+    track: null,
+    scope: "widget",
+    drawn: ["hold"],
+    riders: true,
+    textBoxes: ["codeframe"],
+  },
+  {
+    slug: "expiry-calculator",
+    root: '[data-widget="expiry-calculator"]',
+    presets: [
+      "year-across-leap",
+      "year-common",
+      "year-from-leap-day",
+      "month-february",
+      "month-end",
+      "signed-url-90",
+      "delete-cookie",
+    ],
+    // The start slider moves the start by whole days; the plates, the verdict, the calls and the
+    // twelve rows are laid out in every state, so no start changes a box. The Now switch and its
+    // clock ticks are measured separately below.
+    controls: [{ role: "slider", name: "Move the start" }],
+    // Amount is a text box, not a stepper: it is typed into, from a single digit to a length
+    // past every cap, with text that is not a number. Unit is a select: every unit in turn.
+    entries: [
+      {
+        role: "textbox",
+        name: "Amount",
+        values: ["1", "7", "30", "365", "86400", "99999999999", "0", "abc", ""],
+      },
+      { role: "combobox", name: "Unit", values: "options" },
+    ],
+    clock: true,
     track: null,
     scope: "widget",
     drawn: ["hold"],
@@ -1096,6 +1134,108 @@ async function run() {
             if (!ALL && result.problems.length > 6) {
               console.log(`       ... and ${result.problems.length - 6} more`);
             }
+          }
+          // The first and last preset only: a typed value does not depend on the preset's own start.
+          const edge =
+            preset === tool.presets[0] ||
+            preset === tool.presets[tool.presets.length - 1];
+          for (const entry of edge ? (tool.entries ?? []) : []) {
+            // A text box typed into, or a select taken through every option: each value must
+            // leave every box where it was, including a value the library refuses.
+            const id = `${where} ${preset} ${controlLabel(entry)}`;
+            const result = { keyboard: 0, pointer: 0, problems: [] };
+            const ctl = control(page, tool.root, entry);
+            const visible =
+              (await ctl.count()) > 0 && (await ctl.first().isVisible());
+            if (!visible) {
+              fail(id, "the field is not on the page");
+              continue;
+            }
+            const isSelect = await ctl.evaluate(
+              (el) => el.tagName === "SELECT",
+            );
+            const values =
+              entry.values === "options"
+                ? await ctl.evaluate((el) =>
+                    [...el.options].map((o) => o.value),
+                  )
+                : entry.values;
+            const first = await ctl.inputValue();
+            const base = await snapshot(page, ctl, tool);
+            for (const value of values) {
+              if (isSelect) await ctl.selectOption(value);
+              else await ctl.fill(value);
+              await page.waitForTimeout(60);
+              await settled(page, tool.root);
+              for (const p of diffSnapshots(
+                base,
+                await snapshot(page, ctl, tool),
+                false,
+              )) {
+                result.problems.push(`${JSON.stringify(value)}: ${p}`);
+              }
+              result.keyboard++;
+            }
+            if (isSelect) await ctl.selectOption(first);
+            else await ctl.fill(first);
+            await settled(page, tool.root);
+            const ok = result.problems.length === 0;
+            if (!ok) failures++;
+            summary.push({ id, ...result, ok });
+            recordDragFindings(result, controlLabel(entry));
+            console.log(
+              `${ok ? "ok  " : "FAIL"} ${id}: ${result.keyboard} values` +
+                (ok ? "" : `, ${result.problems.length} problem(s)`),
+            );
+            for (const p of result.problems.slice(0, 6))
+              console.log(`       ${p}`);
+          }
+          if (tool.clock) {
+            // The Now switch: flip it, then let the clock tick three times. The flip and each
+            // tick must leave every box where it was, including the library's null refusal.
+            const id = `${where} ${preset} Now`;
+            const result = { keyboard: 0, pointer: 0, problems: [] };
+            const ctl = control(page, tool.root, PRESET);
+            const base = await snapshot(page, ctl, tool);
+            const chip = page
+              .locator(tool.root)
+              .getByRole("radio", { name: "Now", exact: true });
+            await chip.evaluate((el) => el.click());
+            await settled(page, tool.root);
+            for (const p of diffSnapshots(
+              base,
+              await snapshot(page, ctl, tool),
+              false,
+            )) {
+              result.problems.push(`flip to Now: ${p}`);
+            }
+            const flipped = await snapshot(page, ctl, tool);
+            for (let tick = 1; tick <= 3; tick++) {
+              await page.waitForTimeout(1050);
+              for (const p of diffSnapshots(
+                flipped,
+                await snapshot(page, ctl, tool),
+                false,
+              )) {
+                result.problems.push(`tick ${tick}: ${p}`);
+              }
+              result.keyboard++;
+            }
+            await page
+              .locator(tool.root)
+              .getByRole("radio", { name: "A date", exact: true })
+              .evaluate((el) => el.click());
+            await settled(page, tool.root);
+            const ok = result.problems.length === 0;
+            if (!ok) failures++;
+            summary.push({ id, ...result, ok });
+            recordDragFindings(result, "Now");
+            console.log(
+              `${ok ? "ok  " : "FAIL"} ${id}: flip and ${result.keyboard} ticks` +
+                (ok ? "" : `, ${result.problems.length} problem(s)`),
+            );
+            for (const p of result.problems.slice(0, 6))
+              console.log(`       ${p}`);
           }
         }
       }

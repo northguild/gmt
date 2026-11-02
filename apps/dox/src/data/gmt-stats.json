@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 69631,
-  "files": 914,
-  "executions": 2088930,
+  "tests": 71036,
+  "files": 937,
+  "executions": 2131080,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,24 +37,24 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 714,
+  "functions": 733,
   "patterns": 29,
   "byNamespace": [
     {
       "namespace": "plain",
-      "count": 247
+      "count": 253
     },
     {
       "namespace": "zoned",
-      "count": 122
+      "count": 124
     },
     {
       "namespace": "utc",
-      "count": 76
+      "count": 81
     },
     {
       "namespace": "unix",
-      "count": 73
+      "count": 76
     },
     {
       "namespace": "intermodal",
@@ -70,7 +70,7 @@
     },
     {
       "namespace": "duration",
-      "count": 16
+      "count": 18
     },
     {
       "namespace": "transport",
@@ -97,11 +97,11 @@
       "count": 5
     },
     {
-      "namespace": "recurrence",
-      "count": 4
+      "namespace": "span",
+      "count": 5
     },
     {
-      "namespace": "span",
+      "namespace": "recurrence",
       "count": 4
     }
   ],

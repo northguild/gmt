@@ -27,6 +27,7 @@ import { recurringWindows } from "../calendar/hours/recurringWindows";
 import { chargeableDays } from "../intermodal/calculate/chargeableDays";
 import { freeTimeExpiry } from "../intermodal/calculate/freeTimeExpiry";
 import { bolTimestamp } from "../intermodal/format/bolTimestamp";
+import { totalUnitsFromNow } from "../duration/calculate/totalUnitsFromNow";
 import { resolveLocal } from "../instant/convert/resolveLocal";
 import type { OperatingSchedule } from "../types";
 import { addUnix } from "../unix/calculate/addUnix";
@@ -451,6 +452,27 @@ describe("zoned/get at a stored offset", () => {
     expect(zonedGet.getZonedHour(OFFSET)).toBe("");
     expect(zonedGet.getZonedDayOfWeek(OFFSET)).toBeNull();
     expect(zonedGet.getZonedNowUnit(OFFSET, "hour")).toBe("");
+  });
+});
+
+describe("duration/calculate at a stored offset", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // 00:30:00Z on 31 January 2027 is 23:45:30 local on 30 January at -00:44:30.
+    vi.setSystemTime(
+      Temporal.Instant.from("2027-01-31T00:30:00Z").epochMilliseconds,
+    );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Local 30 January plus a month has no 30 February: it clamps to 28 February, 29 days on
+  // (TC39 Temporal constrain). On the UTC date, 31 January, it is 28 days on.
+  it("totalUnitsFromNow counts a month on the local date, not the UTC one", () => {
+    expect(totalUnitsFromNow({ months: 1 }, "seconds", zone)).toBe(29 * 86_400);
+    expect(totalUnitsFromNow({ months: 1 }, "seconds")).toBe(28 * 86_400);
   });
 });
 

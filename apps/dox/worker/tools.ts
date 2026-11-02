@@ -69,6 +69,7 @@ import {
   showColumnTimestampBridgeInput,
   showCronInAZoneInput,
   showLeapDayBirthdayInput,
+  showExpiryCalculatorInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
   showObservanceComparatorInput,
@@ -595,6 +596,13 @@ export function buildWorkerTools(
       description: docFor("showLeapDayBirthday"),
       inputSchema: showLeapDayBirthdayInput,
       execute: () => accept("leap-day-birthday"),
+    }),
+    // The schema is the whole check: an amount, a unit or a start the library
+    // refuses is the widget's `no result` to show, not a failed call.
+    showExpiryCalculator: tool({
+      description: docFor("showExpiryCalculator"),
+      inputSchema: showExpiryCalculatorInput,
+      execute: () => accept("expiry-calculator"),
     }),
   };
 

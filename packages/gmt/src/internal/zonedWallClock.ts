@@ -263,7 +263,7 @@ function checkISODaysRange(date: Temporal.PlainDate): void {
  *
  * @throws RangeError when a matching exact time lies outside the representable range
  */
-function possibleEpochNanoseconds(
+export function possibleEpochNanoseconds(
   timeZone: string,
   wall: Temporal.PlainDateTime,
 ): bigint[] {

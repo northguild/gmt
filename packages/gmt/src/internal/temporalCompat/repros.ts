@@ -404,6 +404,7 @@ export const repros: readonly Repro[] = [
   ...probeReproGroups.d18,
   ...probeReproGroups.d19,
   ...probeReproGroups.d20,
+  ...probeReproGroups.d22,
   ...probeReproGroups.d6,
   ...probeReproGroups.d7,
   ...probeReproGroups.reads,

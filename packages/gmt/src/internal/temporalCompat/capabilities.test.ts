@@ -5,6 +5,7 @@ import {
   isIsoCalendarCaseCompatNeeded,
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,
+  isNudgeOriginCompatNeeded,
   isTimeZoneEqualsCompatNeeded,
   reproPasses,
   runRepro,
@@ -15,7 +16,7 @@ import {
   polyfillMisreadsIslamicEra,
 } from "./calendarFields";
 import { Temporal } from "../temporal";
-import { probeRepros } from "./probeRepros";
+import { probeRepros, readOrNone } from "./probeRepros";
 import { type DefectId, findRepro, repros } from "./repros";
 
 // Probe tests never assert the probe's outcome against the installed polyfill: that would fail CI
@@ -379,7 +380,7 @@ describe("isCalendarArithmeticCompatNeeded", () => {
 });
 
 describe("repro split", () => {
-  // DefectId (D1-D8, D10-D20) is the type the shipped probes can ask about; the canary-only
+  // DefectId (D1-D8, D10-D20, D22) is the type the shipped probes can ask about; the canary-only
   // groups are ZonedDefectId (zoned.*) and BoundedWorkDefectId (D9, D21).
   const probeDefects = new Set([
     "D1",
@@ -401,6 +402,7 @@ describe("repro split", () => {
     "D18",
     "D19",
     "D20",
+    "D22",
   ]);
 
   it("holds every probe-defect repro of the full table in probeRepros", () => {
@@ -599,6 +601,131 @@ describe("D19 time zone equals probe", () => {
 
   it("answers the same on a second call", () => {
     expect(isTimeZoneEqualsCompatNeeded()).toBe(isTimeZoneEqualsCompatNeeded());
+  });
+});
+
+// D22: TC39 ComputeNudgeWindow takes the window's start from the origin's own exact time when no unit
+// has been added (tc39/proposal-temporal #3148, #3149; tc39/ecma262#3759 commit 1f4e6717ef23 for the
+// condition), and DifferenceZonedDateTime subtracts the exact times when both fall on one local date
+// (#3141). New York repeats 01:00-02:00 on 2024-11-03, so from 01:30-05:00 the next day is 24 hours
+// away and from 01:30-04:00 it is 25. Expected values: Chromium 153 native Temporal.
+describe("D22 repeated-hour origin probe", () => {
+  it.each`
+    name                           | expected
+    ${"totalDaysFromLaterPass"}    | ${String(1 / 24)}
+    ${"roundToDayFromLaterPass"}   | ${"PT0S"}
+    ${"untilSameDayFromLaterPass"} | ${"PT1H"}
+    ${"totalDaysFromEarlierPass"}  | ${String(1 / 50)}
+    ${"roundWeekWithoutStartDays"} | ${"P1W"}
+  `("expects $name to answer '$expected'", ({ name, expected }) => {
+    expect(findRepro("D22", "iso8601", name)?.expected).toBe(expected);
+  });
+
+  it.each`
+    name                           | output
+    ${"totalDaysFromLaterPass"}    | ${"0.08"}
+    ${"roundToDayFromLaterPass"}   | ${"P1D"}
+    ${"untilSameDayFromLaterPass"} | ${"PT2H"}
+    ${"totalDaysFromEarlierPass"}  | ${"0.020833333333333332"}
+  `(
+    "reads the recorded polyfill 0.5.1 output of $name as the defect",
+    ({ name, output }) => {
+      expect(reproPasses(findRepro("D22", "iso8601", name)!, output)).toBe(
+        false,
+      );
+    },
+  );
+
+  // js-temporal main (3c403686d39) tests r1 = 0 in its source, which turns P7D into P1W1D. This row keeps
+  // the probe failing on a release like it, one without tc39/proposal-temporal#3319. The D22 repros have
+  // not been run against main as a set.
+  it("reads P1W1D in roundWeekWithoutStartDays as the defect", () => {
+    expect(
+      reproPasses(
+        findRepro("D22", "iso8601", "roundWeekWithoutStartDays")!,
+        "P1W1D",
+      ),
+    ).toBe(false);
+  });
+
+  // TC39 Asserts on both totals, so no value exists: tc39/proposal-temporal#3336 for the days, #3311
+  // for the months. Polyfill 0.5.1 extrapolates, which is the first row.
+  it.each`
+    label                   | output
+    ${"both extrapolate"}   | ${"1.0208333333333333,0.00034722222222222224"}
+    ${"only days throws"}   | ${"none,0.00034722222222222224"}
+    ${"only months throws"} | ${"1.0208333333333333,none"}
+  `("reads totalsWithNoValue as the defect when $label", ({ output }) => {
+    const repro = findRepro("D22", "iso8601", "totalsWithNoValue")!;
+    expect(reproPasses(repro, output)).toBe(false);
+  });
+
+  it("reads totalsWithNoValue as fixed only when both totals throw", () => {
+    const repro = findRepro("D22", "iso8601", "totalsWithNoValue")!;
+    expect(reproPasses(repro, "none,none")).toBe(true);
+  });
+
+  // Two more Asserts, in DifferenceZonedDateTime and NudgeToZonedTime. Chromium 153 passes every other
+  // D22 repro and answers both, so a release behaving like it must not retire the gate.
+  it.each`
+    name                 | runtime           | output
+    ${"noDayCorrection"} | ${"Chromium 153"} | ${"PT45M,PT45M"}
+    ${"noDayCorrection"} | ${"only round"}   | ${"PT45M,none"}
+    ${"noDayCorrection"} | ${"only until"}   | ${"none,PT45M"}
+    ${"emptyDaySpan"}    | ${"Chromium 153"} | ${"-P1DT12H"}
+  `("reads $name as the defect from $runtime", ({ name, output }) => {
+    expect(reproPasses(findRepro("D22", "iso8601", name)!, output)).toBe(false);
+  });
+
+  it.each`
+    name                 | expected
+    ${"noDayCorrection"} | ${"none,none"}
+    ${"emptyDaySpan"}    | ${"none"}
+  `("expects $name to report '$expected'", ({ name, expected }) => {
+    expect(findRepro("D22", "iso8601", name)?.expected).toBe(expected);
+  });
+
+  describe("readOrNone", () => {
+    const ORIGIN = "2024-06-15T12:00:00-04:00[America/New_York]";
+    const fails = (error: Error) => () => {
+      throw error;
+    };
+
+    it("returns what the read returns", () => {
+      expect(readOrNone(ORIGIN, "PT1H", (length) => length.toString())).toBe(
+        "PT1H",
+      );
+    });
+
+    it.each`
+      label           | error
+      ${"RangeError"} | ${new RangeError("outside the window")}
+      ${"Error"}      | ${new Error("assertion failure")}
+    `("reads a thrown $label as no value", ({ error }) => {
+      expect(readOrNone(ORIGIN, "PT1H", fails(error))).toBe("none");
+    });
+
+    it("does not read a TypeError as no value", () => {
+      expect(() =>
+        readOrNone(ORIGIN, "PT1H", fails(new TypeError("broken repro"))),
+      ).toThrow(TypeError);
+    });
+
+    // An engine that lacks the zone, or disagrees with the origin's offset, has not reported anything.
+    it.each`
+      label                | origin                                           | duration
+      ${"an unknown zone"} | ${"2024-06-15T12:00:00+00:00[Not/A_Zone]"}       | ${"PT1H"}
+      ${"a wrong offset"}  | ${"2024-06-15T12:00:00+01:00[America/New_York]"} | ${"PT1H"}
+      ${"a bad duration"}  | ${ORIGIN}                                        | ${"one hour"}
+    `("does not read $label as no value", ({ origin, duration }) => {
+      expect(() => readOrNone(origin, duration, () => "unreached")).toThrow(
+        RangeError,
+      );
+    });
+  });
+
+  it("answers the same on a second call", () => {
+    expect(isNudgeOriginCompatNeeded()).toBe(isNudgeOriginCompatNeeded());
   });
 });
 
