@@ -864,13 +864,13 @@ const d20Repros: readonly ProbeRepro[] = [
  * tc39/ecma262#3759 commit `1f4e6717ef23` tests for an empty start duration, which fails it. It keeps
  * the probe failing until a release carries both fixes.
  *
- * The last three read lengths with no spec value: TC39 Asserts (tc39/proposal-temporal#3336), and GMT
- * returns its sentinel. They keep the probe failing until a release reports no value for all of them,
- * because removing the workaround before then would turn a sentinel back into a number.
- * - `totalsWithNoValue`, `NudgeToCalendarUnit` and `CombineDateAndTimeDuration`: Chromium 153 throws and
- *   0.5.1 extrapolates.
- * - `noDayCorrection`, `DifferenceZonedDateTime`: Chromium 153 and 0.5.1 both answer `PT45M`.
- * - `emptyDaySpan`, `NudgeToZonedTime`: 0.5.1 throws and Chromium 153 answers `-P1DT12H`.
+ * The last three read lengths with no spec value, where a TC39 Assert fails, and GMT returns its
+ * sentinel. They keep the probe failing until a release reports no value for all of them, because
+ * removing the workaround before then would turn a sentinel back into a number.
+ * - `totalsWithNoValue`, `NudgeToCalendarUnit` (tc39/proposal-temporal#3336) and
+ *   `CombineDateAndTimeDuration` (#3311): Chromium 153 throws and 0.5.1 extrapolates.
+ * - `noDayCorrection`, `DifferenceZonedDateTime` (#3311): Chromium 153 and 0.5.1 both answer `PT45M`.
+ * - `emptyDaySpan`, `NudgeToZonedTime` (#3310): 0.5.1 throws and Chromium 153 answers `-P1DT12H`.
  */
 const LATER_PASS = "2024-11-03T01:30:00-05:00[America/New_York]";
 const EARLIER_PASS = "2024-11-03T01:30:00-04:00[America/New_York]";

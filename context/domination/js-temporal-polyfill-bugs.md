@@ -11,7 +11,7 @@ tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) 
 > merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply; #3331 (J) is
 > closed as answered (the check is intended, see § J).
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
-> 25 workarounds, 21 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest is § AC (D22), fixed on `main`, with its no-value lengths filed as tc39/proposal-temporal#3336; before it come § AB (D21), filed as tc39 #3335, § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags; § I (D12), fixed on `main` with nothing
+> 25 workarounds, 21 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest is § AC (D22), fixed on `main`, with its no-value lengths filed as tc39/proposal-temporal#3336, #3311 and #3310; before it come § AB (D21), filed as tc39 #3335, § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags; § I (D12), fixed on `main` with nothing
 > to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
 > and § O (D15), not filed yet and not fixed on either `main`. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
@@ -35,7 +35,7 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D19`: `ZonedDateTime#equals` answers false for two identifiers of one zone where `resolvedOptions` keeps the identifier (§ U) | None. Not filed yet | A js-temporal release that finds a non-primary identifier's primary without `Intl.DateTimeFormat#resolvedOptions`, so the `D19` probe passes in the weekly `temporal-oracle` run's compat check in WebKit (`temporal-compat-webkit`); WebKit is the only engine in D19's scope |
 | `D20`: `PlainMonthDay.from` rejects an upper-case `iso8601` calendar annotation (§ V) | tc39 `385b479bf8` | A js-temporal rebase and a release |
 | `D21`: `Temporal.Now` reads a millisecond early after a pre-1970 clock reading (§ AB) | None. Filed as tc39 #3335 | A tc39 fix, the js-temporal rebase and a release, so the `D21` canary repro passes |
-| `D22`: a length in days or larger is measured from the wrong pass of a repeated hour (§ AC) | js-temporal `3c403686d39` | tc39 #3319 in the same release, or `P7D` with `largestUnit: "week"` regresses to `P1W1D`. A release that still strips the Asserts of tc39/proposal-temporal#3336 keeps GMT's gate |
+| `D22`: a length in days or larger is measured from the wrong pass of a repeated hour (§ AC) | js-temporal `3c403686d39` | tc39 #3319 in the same release, or `P7D` with `largestUnit: "week"` regresses to `P1W1D`. A release that still strips the Asserts of tc39/proposal-temporal#3336, #3311 and #3310 keeps GMT's gate |
 | `D5`: Indian calendar before ISO year 1 | js-temporal `8de299a` (PR #361; `b6c9844` on its branch) | Nothing |
 | `D6`: non-ISO `until` re-constrains the day | js-temporal `10aeb98` | `D7`. With `10aeb98` and `1c64f14` alone one Hebrew `until` by years is still wrong (Corrections, item 3) |
 | `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b), which is not on `main`. The `D7.leapMonthEnd` probe fails until it is |
@@ -313,8 +313,10 @@ only filings worth making now are in tc39.
 19. **AC (D22): nothing more to file while the rebase is on its way.** A length in days or larger from
     either pass of a repeated hour can be measured from the wrong instant, or refused. js-temporal
     `main` has the fix as `3c403686d39`. Before a release, check that tc39 #3319 came with it; if not,
-    tell the maintainer about `P7D` and `largestUnit: "week"`. Some lengths have no spec value, filed as
-    tc39/proposal-temporal#3336: GMT returns its sentinel. GMT works around it as `D22`. See § AC.
+    tell the maintainer about `P7D` and `largestUnit: "week"`. Some lengths have no spec value: GMT
+    returns its sentinel. They are filed in three tc39/proposal-temporal issues: #3336, #3311 and
+    #3310. The comments on #3336 and #3311 were added 2026-11-02. #3310 already had the Enderbury
+    shape. GMT works around it as `D22`. See § AC.
 
 ## Upstream issues these fixes close
 
@@ -2611,7 +2613,7 @@ Every GMT function that reads the clock (`getUnixNow`, `getUtcNow`, `getZonedNow
 
 ### Status
 
-**Fixed upstream, in no release; the lengths with no spec value are filed as tc39/proposal-temporal#3336.** Found 2026-11-01 in the CORE-104 review, through `totalFromNow`. tc39 fixed it in `87af06d0aa7f` (tc39/proposal-temporal [#3141](https://github.com/tc39/proposal-temporal/issues/3141), [#3148](https://github.com/tc39/proposal-temporal/issues/3148) and #3149). js-temporal `main` has the port as `3c403686d39`, "fix for issues #3141, #3148 and #3149". 0.5.1 is the latest release and has neither change. GMT works around it as `D22`.
+**Fixed upstream, in no release; the lengths with no spec value are filed as tc39/proposal-temporal#3336, #3311 and #3310 (§ No spec value).** Found 2026-11-01 in the CORE-104 review, through `totalFromNow`. tc39 fixed it in `87af06d0aa7f` (tc39/proposal-temporal [#3141](https://github.com/tc39/proposal-temporal/issues/3141), [#3148](https://github.com/tc39/proposal-temporal/issues/3148) and #3149). js-temporal `main` has the port as `3c403686d39`, "fix for issues #3141, #3148 and #3149". 0.5.1 is the latest release and has neither change. GMT works around it as `D22`.
 
 ### What goes wrong
 
@@ -2663,16 +2665,22 @@ Wrong before the fix: `totalDuration`, `normalizeDuration`, `diffZoned`, `diffZo
 
 ### No spec value: the sentinel
 
-Some of these lengths have no value in the specification, because a TC39 Assert fails. Filed as tc39/proposal-temporal#3336. **GMT's decision: it returns its sentinel, `null` for a number and `""` for a string, and never extrapolates.** It decides from the window arithmetic. Chromium 153 throwing is the check, not the rule.
+Some of these lengths have no value in the specification, because a TC39 Assert fails. **GMT's decision: it returns its sentinel, `null` for a number and `""` for a string, and never extrapolates.** It decides from the window arithmetic. Chromium 153 throwing is the check, not the rule.
 
-| Shape | Assert | Example | Polyfill 0.5.1 | Chromium 153 | GMT |
-| ----- | ------ | ------- | -------------- | ------------ | --- |
-| Forward, end bound short of a target in a later pass | `NudgeToCalendarUnit` window | `PT24H30M` from `2024-11-02T01:30:00-04:00[America/New_York]`, `total("day")` | 1.0208333333333333 | throws | `null` |
-| The same, in weeks at a week boundary | same | `PT168H30M` from `2024-10-27T01:30:00-04:00`, `total("week")` | 1.0029761904761905 | throws | `null` |
-| Backward, end bound in a gap, moved past the target | same | `-PT23H20M` from `2024-03-11T02:30:00-04:00`, `total("day")` | -1.0144927536231885 | throws | `null` |
-| A repeated hour across midnight, date and time signs disagree | `CombineDateAndTimeDuration` | `PT15M` from `1944-10-01T00:00:59-06:00[America/Phoenix]`, `total` in any date unit | 0.0104 in days | throws | `null` |
-| Backward from the later pass, day corrections run out | `DifferenceZonedDateTime` | `-PT15M` from `1944-10-01T00:00:59-07:00[America/Phoenix]`, `until` with `largestUnit: "day"` | `PT45M` | `PT45M`, the wrong sign | `null` / `""` |
-| A skipped day, so the day span is empty | `NudgeToZonedTime` | `-PT43199S` from `1995-01-01T12:00:00+13:00[Pacific/Enderbury]`, `round` with `largestUnit: "day"` and `smallestUnit: "minute"` | throws | `-P1DT12H`, for a length of 12 hours | `""` |
+Each shape is filed upstream, as the last column shows:
+
+- The three `NudgeToCalendarUnit` shapes are tc39/proposal-temporal#3336. The issue has the forward one. The comment of 2026-11-02 adds the week boundary and the gap.
+- The two Phoenix shapes are in #3311. The issue reports the `CombineDateAndTimeDuration` Assert with Adak and Casey inputs. The comment of 2026-11-02 adds the Phoenix input and the `DifferenceZonedDateTime` shape. It also says that PR #3317, by a reading that was not run, does not catch that shape.
+- The Enderbury shape is a comment on #3310.
+
+| Shape | Assert | Example | Polyfill 0.5.1 | Chromium 153 | GMT | Upstream |
+| ----- | ------ | ------- | -------------- | ------------ | --- | -------- |
+| Forward, end bound short of a target in a later pass | `NudgeToCalendarUnit` window | `PT24H30M` from `2024-11-02T01:30:00-04:00[America/New_York]`, `total("day")` | 1.0208333333333333 | throws | `null` | [#3336](https://github.com/tc39/proposal-temporal/issues/3336) |
+| The same, in weeks at a week boundary | same | `PT168H30M` from `2024-10-27T01:30:00-04:00`, `total("week")` | 1.0029761904761905 | throws | `null` | [#3336, comment](https://github.com/tc39/proposal-temporal/issues/3336#issuecomment-6574330533) |
+| Backward, end bound in a gap, moved past the target | same | `-PT23H20M` from `2024-03-11T02:30:00-04:00`, `total("day")` | -1.0144927536231885 | throws | `null` | [#3336, comment](https://github.com/tc39/proposal-temporal/issues/3336#issuecomment-6574330533) |
+| A repeated hour across midnight, date and time signs disagree | `CombineDateAndTimeDuration` | `PT15M` from `1944-10-01T00:00:59-06:00[America/Phoenix]`, `total` in any date unit | 0.0104 in days | throws | `null` | [#3311](https://github.com/tc39/proposal-temporal/issues/3311) |
+| Backward from the later pass, day corrections run out | `DifferenceZonedDateTime` | `-PT15M` from `1944-10-01T00:00:59-07:00[America/Phoenix]`, `until` with `largestUnit: "day"` | `PT45M` | `PT45M`, the wrong sign | `null` / `""` | [#3311, comment](https://github.com/tc39/proposal-temporal/issues/3311#issuecomment-6574331240) |
+| A skipped day, so the day span is empty | `NudgeToZonedTime` | `-PT43199S` from `1995-01-01T12:00:00+13:00[Pacific/Enderbury]`, `round` with `largestUnit: "day"` and `smallestUnit: "minute"` | throws | `-P1DT12H`, for a length of 12 hours | `""` | [#3310, comment](https://github.com/tc39/proposal-temporal/issues/3310#issuecomment-4461887932) |
 
 Only the failing window is a sentinel. On the first row weeks and months stay inside their windows and keep 0.14497041420118342 and 0.03398058252427184, and `round({ largestUnit: "day" })` builds no window and stays `PT24H30M`. Direction matters: `until` and `since` both measure from their receiver, and GMT passes the first argument as the receiver. `diffZoned(origin, end, "days", { smallestUnit: "day" })` is `null`, and `diffZoned(end, origin, ...)` is 0, because the window back from `end` holds the target. Without a `smallestUnit` no window is built and the bare difference stands. A forced `day` in `formatRelative*` totals 24-hour days with no `relativeTo`, so it builds no window and keeps its value; a forced `week`, `month` or `year` reads the anchor and can reach the sentinel. So can a call with no forced unit, when the unit it picks is one of those: `PT168H30M` from `2024-10-27T01:30:00-04:00[America/New_York]` picks weeks and returns `""` where the polyfill read "next week".
 
@@ -2690,4 +2698,4 @@ Three repros expect no value and sample the shapes above: `totalsWithNoValue`, `
 
 Chromium passes the other five D22 repros, so before `noDayCorrection` and `emptyDaySpan` were added it passed the set and would have turned the gate off. A repro tries one length, so these make an early retirement less likely and do not rule it out: a release could pass all of them and still answer a value on a length they do not try. Before removing D22, run `test/noSpecValue.test.ts` on that release. `totalOrNone` became `readOrNone`, which counts a throw as no value only from the read itself: the zone, offset and duration are parsed first, so a zone an engine lacks fails the repro, and a `TypeError` escapes. A `RangeError` from the read cannot be told from an unrelated one, because engines word them differently.
 
-If tc39/proposal-temporal#3336 gives these lengths a value instead, the rows, the throws and the repros change together.
+If tc39 gives these lengths a value instead, in #3336, #3311 or #3310, the rows, the throws and the repros change together.

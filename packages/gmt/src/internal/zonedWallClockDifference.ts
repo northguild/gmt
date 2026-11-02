@@ -108,23 +108,25 @@ import { isObject } from "./isObject";
  *      to `-P2D` in days where they give `PT0S`, and `until` the same end throws where they give
  *      `PT30M`.
  *    - Some lengths have no spec value at all, and the polyfill extrapolates one, because its release
- *      builds strip `assert`. tc39/proposal-temporal#3336 asks what should happen. **GMT's decision:
- *      where the Assert fails, this file throws, so the public function returns its sentinel: `null`
- *      for a number, `""` for a string. It never extrapolates.** Four Asserts are reached:
- *      - `NudgeToCalendarUnit`, when the target is outside the window after the second
+ *      builds strip `assert`. Each Assert below names the tc39/proposal-temporal issue that asks what
+ *      should happen. **GMT's decision: where the Assert fails, this file throws, so the public
+ *      function returns its sentinel: `null` for a number, `""` for a string. It never
+ *      extrapolates.** Four Asserts are reached:
+ *      - `NudgeToCalendarUnit` (#3336), when the target is outside the window after the second
  *        `ComputeNudgeWindow`. The shift only moves a month or a year, so a day or a week cannot be
  *        rescued. `PT24H30M` from `2024-11-02T01:30:00-04:00[America/New_York]` in days: the end
  *        bound resolves to the earlier pass, 30 minutes short of the target. Polyfill 1.0208; weeks
  *        and months stay inside their windows and keep their values. The mirror is a gap: `-PT23H20M`
  *        from `2024-03-11T02:30:00-04:00` in days, where the end bound moves forward past the target.
- *      - `CombineDateAndTimeDuration`, when the signs disagree. `PT15M` from
+ *      - `CombineDateAndTimeDuration` (#3311), when the signs disagree. `PT15M` from
  *        `1944-10-01T00:00:59-06:00[America/Phoenix]` ends on the date before, in every date unit.
- *      - `DifferenceZonedDateTime`, when the day corrections run out. `-PT15M` from
+ *      - `DifferenceZonedDateTime` (#3311), when the day corrections run out. `-PT15M` from
  *        `1944-10-01T00:00:59-07:00[America/Phoenix]`. Chromium 153 reads `PT45M` here without a
  *        smallestUnit, the wrong sign; GMT returns its sentinel.
- *      - `NudgeToZonedTime`, when the day span is empty. A skipped day ends the span where it starts:
- *        `-PT43199S` from `1995-01-01T12:00:00+13:00[Pacific/Enderbury]` with `largestUnit: "day"` and
- *        `smallestUnit: "minute"`. The polyfill throws too. Chromium 153 reads `-P1DT12H` for 12 hours.
+ *      - `NudgeToZonedTime` (#3310), when the day span is empty. A skipped day ends the span where
+ *        it starts: `-PT43199S` from `1995-01-01T12:00:00+13:00[Pacific/Enderbury]` with
+ *        `largestUnit: "day"` and `smallestUnit: "minute"`. The polyfill throws too. Chromium 153
+ *        reads `-P1DT12H` for 12 hours.
  *      Only a `smallestUnit` or a total builds a window, so `until` without one keeps the bare
  *      difference: `PT24H30M` above. `until` and `since` both measure from their receiver, and every
  *      GMT difference passes its first argument as the receiver, so swapping the arguments can move a
@@ -621,7 +623,7 @@ function differenceZonedDateTime(
     }
   }
 
-  // TC39 Asserts here too: tc39/proposal-temporal#3336, the same decision as below.
+  // TC39 Asserts here too: tc39/proposal-temporal#3311, the same decision as below.
   throw new RangeError("More than the maximum day correction was needed");
 }
 
@@ -629,7 +631,7 @@ function differenceZonedDateTime(
  * TC39 `CombineDateAndTimeDuration`. Its Assert fails when the two signs disagree, which a repeated
  * hour spanning midnight causes: 15 minutes after `1944-10-01T00:00:59-06:00` in America/Phoenix
  * reads `1944-09-30T23:15:59-07:00`. The specification has no value there, so this throws and the
- * public function returns its sentinel (defect 5, tc39/proposal-temporal#3336).
+ * public function returns its sentinel (defect 5, tc39/proposal-temporal#3311).
  */
 function combineDateAndTimeDuration(
   date: DateDuration,
@@ -884,7 +886,7 @@ function nudgeToZonedTime(
   const daySpan = endEpochNs - startEpochNs;
   if (bigintSign(daySpan) !== sign) {
     // A skipped day ends the span where it starts, and TC39 Asserts here: defect 5,
-    // tc39/proposal-temporal#3336. The public function returns its sentinel.
+    // tc39/proposal-temporal#3310. The public function returns its sentinel.
     throw new RangeError("The time zone returned inconsistent instants");
   }
 

@@ -648,8 +648,8 @@ describe("D22 repeated-hour origin probe", () => {
     ).toBe(false);
   });
 
-  // TC39 Asserts on both totals, so no value exists (tc39/proposal-temporal#3336). Polyfill 0.5.1
-  // extrapolates, which is the first row.
+  // TC39 Asserts on both totals, so no value exists: tc39/proposal-temporal#3336 for the days, #3311
+  // for the months. Polyfill 0.5.1 extrapolates, which is the first row.
   it.each`
     label                   | output
     ${"both extrapolate"}   | ${"1.0208333333333333,0.00034722222222222224"}

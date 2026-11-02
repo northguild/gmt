@@ -141,8 +141,9 @@ number of seconds is wrong. It ships with its Dox chat button.
   `isZonedFuture` and `floorToZone`. Rejected names: `getUnixNowIn`, `addUnixNow`,
   `getFromUnixNow`, `getUnixNowFrom`, `getUnixNowOffset`; `addToNowUnix`, `addToNowUtc` and
   `totalFromNow` were dropped.
-- **D15.** Workaround D22 in `internal/zonedWallClockDifference.ts` (tc39/proposal-temporal#3336)
-  makes the zoned-difference functions return the sentinel where Temporal has no value. It is a
+- **D15.** Workaround D22 in `internal/zonedWallClockDifference.ts` (tc39/proposal-temporal#3336,
+  #3311 and #3310) makes the zoned-difference functions return the sentinel where Temporal has no
+  value. It is a
   behaviour change, stated in the changeset. It roughly doubles zoned date-unit operations (about
   72 to 150 microseconds), which is no Loop-cost breach.
 - **D16.** The root bundle budget is 567940 and `chargeableDays`, `operatingTimeBetween` and

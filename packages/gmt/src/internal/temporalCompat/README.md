@@ -307,8 +307,8 @@ In every case the fix must be in the release that becomes GMT's `@js-temporal/po
    `internal/lengthFromNow.test.ts`. Their values are the specification's, but a release can
    pass every repro and still answer a value on a length the repros do not try. Run these files on
    the release first, with the probe passing and so the gate off. If a row fails, D22 stays. If
-   tc39/proposal-temporal#3336 gives these lengths a value instead, the rows, the throws and the
-   repros change together.
+   tc39/proposal-temporal#3336, #3311 or #3310 gives these lengths a value instead, the rows, the
+   throws and the repros change together.
 23. **After every step:** run the calendar test files (`plain/convert`, `zoned/convert`,
    `plain/validate/isValidCalendarDate`, `plain/calculate/{addDate,subtractDate,diffDate,diffDateAsDuration}`,
    `plain/interval/{intervalLengthDate,intervalCountDate,intervalFromDurationDate,splitIntervalByUnitDate}`,

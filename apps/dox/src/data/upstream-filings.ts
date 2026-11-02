@@ -72,8 +72,8 @@ export interface UpstreamFiling {
   draft: boolean;
   reviewDecision: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
   comments: number;
-  /** Comments not by the filing's own author, so a cross-link the owner posts
-   * to their own filing never counts as a maintainer response. */
+  /** Comments by anyone outside GMT (`AUTHORS` in `scripts/upstream.mjs`), so a
+   * cross-link one of us posts never counts as a maintainer response. */
   maintainerComments: number;
   createdAt: string;
   updatedAt: string;

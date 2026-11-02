@@ -45,9 +45,9 @@
  *   the live file when `refresh` managed to write one, and falls back to the committed file
  *   otherwise — so a reader always sees *a* tracker, live or not.
  *
- * Discovery (`gh search issues --repo <repo> --author craig-o-curtis --include-prs`) is what
- * makes a new filing show up with no code change: the owner files it, and either command's next
- * run finds it. An existing filing the search happens to miss (a query quirk, a temporary API
+ * Discovery (`gh search issues --repo <repo> --author <login> --include-prs`, once for each login
+ * in `AUTHORS`) is what makes a new filing show up with no code change: one of us files it, and
+ * either command's next run finds it. An existing filing the search happens to miss (a query quirk, a temporary API
  * hiccup) keeps its stored values rather than being dropped.
  */
 
@@ -73,7 +73,9 @@ const REPROS = [
   "packages/gmt/src/internal/temporalCompat/probeRepros.ts",
   "packages/gmt/src/internal/temporalCompat/repros.ts",
 ];
-const AUTHOR = "craig-o-curtis";
+/** Everyone who files upstream for GMT. Discovery searches each login, and a comment by any of them
+ * is ours, never a maintainer response. tc39/proposal-temporal#3336 is a `baldurpan` filing. */
+const AUTHORS = ["craig-o-curtis", "baldurpan"];
 const REPOS = ["js-temporal/temporal-polyfill", "tc39/proposal-temporal"];
 
 /** `refresh`'s total time budget — past this, it gives up rather than run long in a dev loop. */
@@ -122,15 +124,15 @@ const ISSUE_VIEW_FIELDS =
 
 const isPr = (kind) => kind === "pr";
 
-/** `gh` arguments for discovery: every open-or-closed issue/PR by `AUTHOR` in `repo`. */
-function discoverArgs(repo) {
+/** `gh` arguments for discovery: every open-or-closed issue/PR by `author` in `repo`. */
+function discoverArgs(repo, author) {
   return [
     "search",
     "issues",
     "--repo",
     repo,
     "--author",
-    AUTHOR,
+    author,
     "--include-prs",
     "--limit",
     "100",
@@ -182,7 +184,7 @@ function prOnlyFields(data, kind) {
   };
 }
 
-const isMaintainerComment = (c) => c.author?.login !== AUTHOR;
+const isMaintainerComment = (c) => !AUTHORS.includes(c.author?.login);
 
 /** The full synced-field set for one filing, from `gh … view`'s raw JSON output. */
 function parseSynced(raw, repo, number, kind) {
@@ -266,9 +268,11 @@ function gh(args, timeout) {
   });
 }
 
-/** Every open-or-closed issue/PR by `AUTHOR` in `repo` — discovery only, no field detail. */
+/** Every open-or-closed issue/PR in `repo` by any of `AUTHORS` — discovery only, no field detail. */
 function discover(repo, timeout) {
-  return parseDiscovered(repo, gh(discoverArgs(repo), timeout));
+  return AUTHORS.flatMap((author) =>
+    parseDiscovered(repo, gh(discoverArgs(repo, author), timeout)),
+  );
 }
 
 /** The full synced-field set for one filing, read live from GitHub. */
@@ -295,7 +299,12 @@ async function ghAsync(args, timeout) {
 }
 
 async function discoverAsync(repo, timeout) {
-  return parseDiscovered(repo, await ghAsync(discoverArgs(repo), timeout));
+  const found = await Promise.all(
+    AUTHORS.map(async (author) =>
+      parseDiscovered(repo, await ghAsync(discoverArgs(repo, author), timeout)),
+    ),
+  );
+  return found.flat();
 }
 
 async function fetchSyncedAsync(repo, number, kind, timeout) {
@@ -467,7 +476,7 @@ function startRefreshBudget() {
 
 /** Every filing the committed file knows plus everything discovery just found, newest state. */
 async function fetchAllFilings(committedByKey, { timeLeft, withBudget }) {
-  // One round trip per repo, concurrently — `gh`'s own network latency is what a sequential
+  // One round trip per repo and author, concurrently — `gh`'s own network latency is what a sequential
   // loop was paying for 13 times over, not CPU work this process does itself.
   const discovered = (
     await withBudget(

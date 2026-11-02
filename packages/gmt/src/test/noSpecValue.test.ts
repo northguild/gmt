@@ -21,8 +21,10 @@ import {
  * TC39 `NudgeToCalendarUnit` builds a window from the start of the current unit to the start of the
  * next. When the target is outside it, it tries once more with a shifted window, then Asserts. The
  * shift only applies to a month or a year, so a day or a week that misses the first window misses the
- * second too, and no value exists. tc39/proposal-temporal#3336 asks what should happen. The owner's
- * decision: GMT returns `null` for a number and `""` for a string, and never extrapolates.
+ * second too, and no value exists. tc39/proposal-temporal#3336 asks what should happen. The Phoenix
+ * rows reach two other Asserts, filed in #3311, and the Enderbury rows a third, filed in #3310. The
+ * owner's decision for all of them: GMT returns `null` for a number and `""` for a string, and never
+ * extrapolates.
  *
  * The window arithmetic for the first shape, in New York, which repeats 01:00-02:00 on 2024-11-03:
  * from `2024-11-02T01:30-04:00`, 24:30 later is `2024-11-03T01:00-05:00`, an exact time of 06:00Z. One
