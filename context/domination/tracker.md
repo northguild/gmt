@@ -127,6 +127,7 @@ ending with the core validators that take any value, ahead of the remaining real
 | 52  | CORE-90  | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law                                 | —          | #341  | —       | Waiting     |
 | 53  | CORE-91  | Core       | Past tense only on the Canada checker<br>after 1 November 2026                                           | —          | #353  | —       | Waiting     |
 | 54  | CORE-92  | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                                        | —          | #386  | —       | Not started |
+| 55  | CORE-105 | Core       | One file per workaround in<br>`zonedWallClockDifference.ts`                                              | —          | #437  | —       | Done        |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm
