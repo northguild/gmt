@@ -120,7 +120,7 @@ describe("the text", () => {
     expect(
       classWords(CANADA_MAP, "America/Winnipeg", ZONES[0], canadaTense),
     ).toBe(
-      "Stops changing clocks on 1 November 2026 at 02:00 local time (07:00 UTC)",
+      "Stopped changing clocks on 1 November 2026 at 02:00 local time (07:00 UTC)",
     );
     expect(
       classWords(CANADA_MAP, "America/Toronto", ZONES[1], canadaTense),

@@ -130,7 +130,7 @@ export function renderMoroccoClockChangeTemplate({
     label: "Morocco 2026 clock-change checker",
     idPrefix,
     keyPoints: withKeyPoints
-      ? keyPoints(idPrefix, moroccoKeyPoints(regionWhen(tense)), tense)
+      ? keyPoints(idPrefix, moroccoKeyPoints(regionWhen(tense)))
       : undefined,
     probe: probeCard(
       moroccoProbe(idPrefix),
@@ -236,7 +236,7 @@ export async function mountMoroccoClockChange(
   let stored: StoredHandle | undefined;
 
   // --- the words: the change is past, so its date and time are written once, with no tense to follow ---
-  const tense = tenseView(lib, MOROCCO_MOMENTS, now());
+  const tense = tenseView(lib, MOROCCO_MOMENTS);
 
   bindClockGlow(w.el, signal);
 
@@ -316,7 +316,7 @@ export async function mountMoroccoClockChange(
           check.zones,
           signal,
           {
-            tense: () => tense,
+            tense,
             responseNow: check.now,
             now,
             wall: (at, offset) =>

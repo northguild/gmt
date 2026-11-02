@@ -1274,10 +1274,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
       legend are hidden, the boundary file is not fetched, and the panel stays below the list, outside its
       scroll box, and scrolls into view when a reader pins.
       Zone ids carry a `<wbr>` after each `/` and keep each segment on one line (so
-      `Blanc-Sablon` never splits at its hyphen), and no `overflow-wrap: anywhere` on an id. A
-      two-form legend phrase carries its count inside each form (`legendCount` in
-      `families/clockcheck/zone-map.ts`), so the count flows after the last word; `lib/zone-map.ts`
-      sets every copy. The file is fetched once, when the map nears the viewport.
+      `Blanc-Sablon` never splits at its hyphen), and no `overflow-wrap: anywhere` on an id. The
+      count follows the class words in one text run (`legendCount` in
+      `families/clockcheck/zone-map.ts`; `lib/zone-map.ts` sets it). The file is fetched once, when the map nears the viewport.
     - **In the chat** (`mountCanadaClockChangeWidget`). The rail mounts the same markup with
       the same markup with ids namespaced by `idPrefix`; the map's data-credits button takes
       `<idPrefix>-data-credits` (below). The rail is narrow, so the zone list is the map and there
@@ -1388,7 +1387,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     modules in `src/widgets/families/clockcheck/`, each with its own `.module.css`:
     `checker-page` (the page frame and `classLegend`), `probe-card`, `info-card` (`serversCard`,
     `minimumsCard`), `help-card`, `key-points`, `clocks-card`, `clocks`, `change-list`,
-    `stored-section`, `stored-table`, `tense-slot`, `zone-map`, `marks`, `stack` and
+    `stored-section`, `stored-table`, `zone-map`, `marks`, `stack` and
     `wrong-list`. The map tokens are `--zonemap-*`. A checker keeps only its own words, rows and
     layout.
     - **Years live once.** Each region states a `stopYear` (`CANADA_STOP_YEAR`,
@@ -1439,25 +1438,17 @@ Shared hooks come first, then the globe, then the clock-change pages.
     - `lib/clock-change-stored-lines.ts`: the pure line rules the Worker and the page share
       (`capStoredInput`, `completeStoredLine`, the badge and fix text). `STORED_MAX_LINES = 25;`
       stays its own statement, because `deploy-smoke.mjs` reads it with a regex.
-    - **The tense of a dated checker's words** (`lib/clock-change-tense.ts`). A region states each
+    - **The dates of a checker's words** (`lib/clock-change-tense.ts`). A region states each
       change as a `Moment {at, from}` (UTC instant, offset in force just before) and never types a
-      date, a time or a verb tense by hand: `momentWords` writes them with `formatZonedDateTime` and
-      `formatUtc`; `changeTense(lib, nowMs, atMs)` asks `isBeforeUnix` and takes the library as a
-      parameter (the module stays pure for the Worker). The wording is
+      date or a time: `momentWords` writes them with `formatZonedDateTime` and `formatUtc`. The module
+      takes the library as a parameter and stays pure for the Worker. The wording is
       "Stopped changing clocks on 20 September 2026 at 02:00 local time (01:00 UTC)".
-      - **Morocco is past tense only.** Its change has happened, so `moroccoClassText` and
-        `moroccoKeyPoints(when)` give one past form (`classPhrase(..., past = true)`); there is no
-        `changeTense` call, two-form cell or timer in the Morocco mount. It reads the words once from
-        `tenseView(lib, MOROCCO_MOMENTS, now)`.
-      - **Canada is conditional until 1 November 2026.** `CANADA_MOMENTS` holds one moment per zone and
-        `REGION_KEY` (the latest, Vancouver's). Each tensed phrase is written in both forms in one
-        grid cell (`tenseSlot` in `families/clockcheck/tense-slot.ts`, the inactive form `aria-hidden` and `visibility:hidden`,
-        so the box never moves); `bindTense` sets the forms and one timer for the nearest moment still
-        ahead, and `onChange` calls `map.retense()`. Key-point paragraphs with a tensed part are
-        written whole in both forms (`KeyPart {tense, before, after, dated}`; `dated` is the wording
-        for text that runs no code). A new region with a future change reuses all of this.
-      - The page and the chat read the words with `loadTenseView`, so the
-        server render and the chat's `renderTemplate` state what is true now.
+      - Every checker states its change in the past tense only, in one form (`classPhrase` returns a
+        string). It reads its words once with `tenseView(lib, MOMENTS)`; the page and the chat read
+        them with `loadTenseView`, so the server render already says it. A checker is published after
+        its change, so its words never flip.
+      - `CANADA_MOMENTS` holds one moment per zone and `REGION_KEY` (the latest, Vancouver's);
+        `MOROCCO_MOMENTS` holds Morocco's.
     - `lib/clock-change-stored.ts`: `StoredConfig {idPrefix, endpoint, zones, preset, example}`,
       `wireStoredTimes`; the markup is `storedSection` in `families/clockcheck/stored-section.ts`. The endpoint goes through `withBase`.
     - `data/clock-change-text.ts` (`KeyCard`, `HelpCard`) and `lib/clock-change-help.ts`
@@ -1465,7 +1456,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
       `helpCard` in `families/clockcheck/`.
     - `lib/zone-map.ts`: `ZoneMapConfig {idPrefix, height, boundariesUrl, projection, stopped,
       classText, releaseOf, releaseRange, mapLabel, markerMinPx?, markers?}` and
-      `wireZoneMap(root, zones, signal, deps, config)`, which returns `retense()` for the words that follow a clock (`deps.tense`). It finds its parts by `data-role`, never
+      `wireZoneMap(root, zones, signal, deps, config)`, where `deps.tense` holds the dates in words. It finds its parts by `data-role`, never
       by class, so a checker may restyle them. A map taller or shorter than 640 sets
       `--zonemap-map-height` on the map section in the markup, so the box and the row's
       height are reserved before the drawing arrives. `markerMinPx` and `markers` draw a ring on a zone whose largest

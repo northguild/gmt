@@ -21,7 +21,7 @@ import type {
   VerdictText,
 } from "./clock-change-probe";
 import { REGION_KEY, classPhrase } from "./clock-change-tense";
-import type { Moment, Tensed, TenseView } from "./clock-change-tense";
+import type { Moment, TenseView } from "./clock-change-tense";
 import type { MapZone } from "./zone-map";
 import { withBase } from "./site";
 
@@ -68,8 +68,8 @@ export function moroccoClassText(
   kind: MapZone["kind"],
   id: string | null,
   view: TenseView,
-): Tensed {
-  return classPhrase(kind, id, view, true, true);
+): string {
+  return classPhrase(kind, id, view, true);
 }
 
 /**

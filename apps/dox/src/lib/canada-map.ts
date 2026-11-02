@@ -68,7 +68,7 @@ const CANADA_ANCHORS: Readonly<Record<string, readonly [number, number]>> = {
   "America/Toronto": [-78, 51.5],
 };
 
-/** The tzdb release that recorded the change, for a zone that stops changing in 2026. */
+/** The tzdb release that recorded the change, for a zone that stopped changing in 2026. */
 export function releaseOf(id: string): string | null {
   return PROBE_ZONES.find((fact) => fact.zone === id)?.release ?? null;
 }

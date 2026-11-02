@@ -12,11 +12,10 @@ import type { ZoneMapConfig } from "~/lib/zone-map";
 import { html, type SafeHtml } from "../../builders/html";
 import { widget } from "../../builders/layout";
 import { clocksCard } from "./clocks-card";
-import { tenseSlot } from "./tense-slot";
 import { legendCount, zoneLegend, zoneMap, ZONE_CLASSES } from "./zone-map";
 import { row, stack } from "./stack";
 
-/** The map's legend: a swatch, the class in the true tense, and the count the map fills in. */
+/** The map's legend: a swatch, the class, and the count the map fills in. */
 export function classLegend(
   idPrefix: string,
   classText: ZoneMapConfig["classText"],
@@ -24,22 +23,10 @@ export function classLegend(
 ): SafeHtml {
   return zoneLegend(
     idPrefix,
-    ZONE_CLASSES.map((kind) => {
-      const phrase = classText(kind, null, view);
-      const count = html`(${legendCount(kind)})`;
-      // The count sits inside each form of a two-form phrase, so it flows after the last word (a
-      // slot is one atomic box, which would drop a count outside it onto its own line).
-      const text =
-        phrase.key === null || phrase.before === phrase.after
-          ? html`${phrase.before} ${count}`
-          : tenseSlot(
-              phrase.key,
-              html`${phrase.before} ${count}`,
-              html`${phrase.after} ${count}`,
-              view.tenseOf(phrase.key),
-            );
-      return { kind, text };
-    }),
+    ZONE_CLASSES.map((kind) => ({
+      kind,
+      text: html`${classText(kind, null, view)} (${legendCount(kind)})`,
+    })),
   );
 }
 
