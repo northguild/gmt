@@ -41,9 +41,11 @@
  *   warning, no write, exit 0 — the moment anything about `gh` doesn't work: missing binary, no
  *   auth, rate limit, or a slow/offline network. Outside CI it also skips the network entirely
  *   while the live file is younger than `REFRESH_TTL_MS`, so a dev-server restart costs nothing
- *   (`UPSTREAM_REFRESH=force` overrides). `apps/dox/src/data/upstream-filings.ts` prefers
- *   the live file when `refresh` managed to write one, and falls back to the committed file
- *   otherwise — so a reader always sees *a* tracker, live or not.
+ *   (`UPSTREAM_REFRESH=force` overrides). `apps/dox/src/data/upstream-filings.ts` lays a live
+ *   file newer than the committed one over it: the committed file decides which filings exist
+ *   and their hand-written fields, and the live file brings newer GitHub fields and filings
+ *   discovery found that the committed file lacks. A live file left over from an older commit
+ *   therefore cannot hide a filing that commit added.
  *
  * Discovery (`gh search issues --repo <repo> --author <login> --include-prs`, once for each login
  * in `AUTHORS`) is what makes a new filing show up with no code change: one of us files it, and

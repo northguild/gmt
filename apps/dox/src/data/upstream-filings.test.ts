@@ -12,8 +12,11 @@ import {
   filingsWithMaintainerResponse,
   guardsAddressed,
   handledInGmt,
+  HAND_WRITTEN_FIELDS,
+  overlayLive,
   totalFilings,
   unaffectingGmt,
+  type UpstreamFiling,
 } from "./upstream-filings";
 import { getUtcNow, isAfterUtc, isValidUtc } from "@northguild/gmt";
 
@@ -199,5 +202,134 @@ describe("upstream filings", () => {
         if (keys.has(dep)) expect(keys.has(dep)).toBe(true);
       }
     }
+  });
+});
+
+// A live file is a cache of the committed one, and `refresh` reuses it for six hours without a
+// network call. Written before a pull that adds a filing or edits a summary, it must not hide
+// either: review of #436 found tc39/proposal-temporal#3336 missing from a local /upstream for
+// exactly that reason.
+describe("overlayLive", () => {
+  const filing = (
+    number: number,
+    fields: Partial<UpstreamFiling> = {},
+  ): UpstreamFiling => ({
+    repo: "tc39/proposal-temporal",
+    number,
+    kind: "issue",
+    work: "report",
+    title: `Issue ${number}`,
+    url: `https://github.com/tc39/proposal-temporal/issues/${number}`,
+    summary: `Summary of ${number}`,
+    pairsWith: [],
+    closes: [],
+    dependsOn: [],
+    gmtGuard: "D22",
+    gmtNote: null,
+    state: "open",
+    draft: false,
+    reviewDecision: null,
+    comments: 0,
+    maintainerComments: 0,
+    createdAt: "2026-11-01",
+    updatedAt: "2026-11-01",
+    closedAt: null,
+    mergedAt: null,
+    ...fields,
+  });
+  const committedAt = "2026-11-02T10:11:47.79528858Z";
+  const liveAt = "2026-11-02T10:30:00Z";
+
+  it("keeps a committed filing the live file does not have", () => {
+    const result = overlayLive(
+      { checked: committedAt, filings: [filing(3335), filing(3336)] },
+      { checked: liveAt, filings: [filing(3335)] },
+    );
+    expect(result.filings.map((f) => f.number)).toEqual([3335, 3336]);
+  });
+
+  it("takes the hand-written fields from the committed file", () => {
+    const result = overlayLive(
+      {
+        checked: committedAt,
+        filings: [filing(3335, { summary: "Edited", gmtGuard: "D21" })],
+      },
+      {
+        checked: liveAt,
+        filings: [
+          filing(3335, {
+            summary: "Old",
+            role: "contributor",
+            contributionUrl: "https://example.test/c",
+          }),
+        ],
+      },
+    );
+    expect(result.filings[0].summary).toBe("Edited");
+    expect(result.filings[0].gmtGuard).toBe("D21");
+    expect(result.filings[0]).not.toHaveProperty("role");
+    expect(result.filings[0]).not.toHaveProperty("contributionUrl");
+  });
+
+  it("takes the GitHub fields from a newer live file", () => {
+    const result = overlayLive(
+      { checked: committedAt, filings: [filing(3335)] },
+      {
+        checked: liveAt,
+        filings: [
+          filing(3335, { state: "closed", comments: 2, maintainerComments: 1 }),
+        ],
+      },
+    );
+    expect(result.checked).toBe(liveAt);
+    expect(result.filings[0]).toMatchObject({
+      state: "closed",
+      comments: 2,
+      maintainerComments: 1,
+    });
+  });
+
+  it("adds a filing only the live file found, in repo-then-number order", () => {
+    const polyfill = filing(400, {
+      repo: "js-temporal/temporal-polyfill",
+      url: "https://github.com/js-temporal/temporal-polyfill/issues/400",
+      new: true,
+    });
+    const result = overlayLive(
+      { checked: committedAt, filings: [filing(3336)] },
+      {
+        checked: liveAt,
+        filings: [filing(3336), filing(3340, { new: true }), polyfill],
+      },
+    );
+    expect(result.filings.map((f) => `${f.repo}#${f.number}`)).toEqual([
+      "js-temporal/temporal-polyfill#400",
+      "tc39/proposal-temporal#3336",
+      "tc39/proposal-temporal#3340",
+    ]);
+  });
+
+  it("ignores a live file checked before the committed one", () => {
+    const committed = {
+      checked: committedAt,
+      filings: [filing(3335, { comments: 3 }), filing(3336)],
+    };
+    const result = overlayLive(committed, {
+      checked: "2026-11-02T09:00:00Z",
+      filings: [filing(3335, { comments: 1 }), filing(3340, { new: true })],
+    });
+    expect(result).toEqual(committed);
+  });
+
+  it("lists the same hand-written fields as scripts/upstream.mjs", () => {
+    const script = readFileSync(
+      resolve(import.meta.dirname, "../../../../scripts/upstream.mjs"),
+      "utf8",
+    );
+    const list =
+      /const HAND_WRITTEN_FIELDS = \[([^\]]+)\]/.exec(script)?.[1] ?? "";
+    const fromScript = [...list.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(fromScript.length).toBeGreaterThan(0);
+    expect([...HAND_WRITTEN_FIELDS]).toEqual(fromScript);
   });
 });

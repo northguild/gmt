@@ -11,15 +11,18 @@
  * script also runs `node scripts/upstream.mjs refresh` on every `dox:dev` and
  * `dox:build`, which best-effort writes a *live* copy to the gitignored
  * `../generated/upstream-filings.live.json` and never touches the committed
- * one. This module prefers the live file when `refresh` managed to produce
- * one, so the tracker looks current during ordinary work, and falls back to
- * the committed snapshot otherwise — `dataSource` says which one won, and the
- * page's "last checked" line reads `checked` off whichever file that is.
+ * one. When the live file is newer, this module lays it over the committed
+ * one (`overlayLive`), so the tracker's states and comments look current
+ * during ordinary work. The committed file still decides which filings exist
+ * and what their hand-written fields say, so a live file left over from an
+ * older commit can never hide a filing. `dataSource` says whether the live
+ * file was used, and the page's "last checked" line reads that file's `checked`.
  *
  * The live file is read with `import.meta.glob` rather than a static import
  * specifically because it may not exist: a missing static import is a build
  * error, but a glob that matches nothing is just an empty object.
  */
+import { isAfterUtc } from "@northguild/gmt";
 import committedData from "./upstream-filings.json";
 
 /** `port` mirrors an already-merged upstream commit; `fix` and `report` are a
@@ -84,10 +87,65 @@ export interface UpstreamFiling {
   new?: boolean;
 }
 
-interface UpstreamFilings {
+export interface UpstreamFilings {
   /** When this file's data was last read from GitHub, ISO 8601. */
   checked: string;
   filings: readonly UpstreamFiling[];
+}
+
+/** The fields a person writes in the committed file. `sync` and `refresh` copy them and never read
+ * them from GitHub. The same list as `HAND_WRITTEN_FIELDS` in `scripts/upstream.mjs`, which a test
+ * holds equal. */
+export const HAND_WRITTEN_FIELDS = [
+  "summary",
+  "work",
+  "pairsWith",
+  "closes",
+  "dependsOn",
+  "gmtGuard",
+  "gmtNote",
+  "role",
+  "contributionUrl",
+  "outcome",
+] as const;
+
+const keyOf = (f: UpstreamFiling): string => `${f.repo}#${f.number}`;
+
+const byRepoThenNumber = (a: UpstreamFiling, b: UpstreamFiling): number =>
+  a.repo.localeCompare(b.repo) || a.number - b.number;
+
+/**
+ * The live file laid over the committed one.
+ *
+ * The live file is a cache, and `refresh` reuses it for six hours without a network call. One
+ * written before a pull still holds the filings and summaries of that older commit. So the
+ * committed file decides which filings exist and what their hand-written fields say. The live file
+ * adds two things: newer GitHub fields (state, comments, dates) for those filings, and any filing
+ * discovery found that the committed file does not have yet. A live file checked before the
+ * committed one has nothing newer, so the committed file stands alone.
+ */
+export function overlayLive(
+  committed: UpstreamFilings,
+  live: UpstreamFilings,
+): UpstreamFilings {
+  if (!isAfterUtc(live.checked, committed.checked)) return committed;
+  const liveByKey = new Map(live.filings.map((f) => [keyOf(f), f]));
+  const fromCommitted = committed.filings.map((own) => {
+    const fresh = liveByKey.get(keyOf(own));
+    if (fresh === undefined) return own;
+    const merged: Record<string, unknown> = { ...fresh };
+    for (const field of HAND_WRITTEN_FIELDS) {
+      if (field in own) merged[field] = own[field];
+      else delete merged[field];
+    }
+    return merged as unknown as UpstreamFiling;
+  });
+  const committedKeys = new Set(committed.filings.map(keyOf));
+  const onlyLive = live.filings.filter((f) => !committedKeys.has(keyOf(f)));
+  return {
+    checked: live.checked,
+    filings: [...fromCommitted, ...onlyLive].sort(byRepoThenNumber),
+  };
 }
 
 function isUpstreamFilings(value: unknown): value is UpstreamFilings {
@@ -118,14 +176,20 @@ const liveModules = (
 ) as Record<string, unknown>;
 const liveData = Object.values(liveModules)[0];
 
-/** Which file backed `upstreamFilings` this run: the live refresh, or the committed fallback. */
-export const dataSource: "live" | "committed" = isUpstreamFilings(liveData)
-  ? "live"
-  : "committed";
+const committedFilings = committedData as UpstreamFilings;
 
-const upstreamFilings: UpstreamFilings = (
-  dataSource === "live" ? liveData : committedData
-) as UpstreamFilings;
+/** Which file the page's GitHub fields came from this run: a live refresh newer than the committed
+ * file, or the committed file alone. */
+export const dataSource: "live" | "committed" =
+  isUpstreamFilings(liveData) &&
+  isAfterUtc(liveData.checked, committedFilings.checked)
+    ? "live"
+    : "committed";
+
+const upstreamFilings: UpstreamFilings =
+  dataSource === "live" && isUpstreamFilings(liveData)
+    ? overlayLive(committedFilings, liveData)
+    : committedFilings;
 export const filings: readonly UpstreamFiling[] = upstreamFilings.filings;
 export const checked: string = upstreamFilings.checked;
 
