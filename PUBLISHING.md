@@ -80,6 +80,12 @@ Commit the result, open a PR, and read it: **the diff is the release.** Those
 version numbers and that CHANGELOG text are exactly what goes to npm. It is an
 ordinary PR, so the ordinary required checks run on it.
 
+In Claude Code, `/release` does this step for you. It branches
+`release/<YYYY-MM-DD>` from `origin/main` in a worktree of its own, runs the
+command above there, and opens the PR. It never merges. To see the versions
+first without changing anything, run `pnpm exec changeset status --verbose` on
+an up-to-date `main`.
+
 **Merging it publishes.** CI packs the tarballs, publishes to npm with
 provenance, pushes the tags, cuts the GitHub Releases, and posts to #gmt. The
 docs site deploys after that run finishes, so the new tag exists and the

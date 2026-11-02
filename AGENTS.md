@@ -32,7 +32,8 @@ because the work looks finished.
 "Commit this", "push the branch", "open the PR" are instructions: carry them out
 and report what you did. An instruction covers the operation it names for the
 work in hand. It is not a standing licence — a later, separate write needs its
-own instruction.
+own instruction. Typing a skill whose job is one of these operations is the
+instruction for that run: `/release` commits, pushes and opens its release PR.
 
 **Never infer the permission.** It has to come from the user, about this
 operation, in their own words:
