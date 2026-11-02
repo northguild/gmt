@@ -23,7 +23,7 @@
   - Unit names are accepted singular or plural (`"day"` and `"days"`), as Temporal §13.17 does.
 - **One documented exception:** the `min*`/`max*` aggregators (`minDate`, `maxZoned`, …) return `string | null`, with `null` meaning "no valid item". Do not copy that shape into new string functions.
 
-- **`get/` namespaces hold current-moment accessors only** — no argument, or timezone only, reporting a value for _now_ (e.g. `getDay()`, `getZonedDay(timeZone)`). Any function taking a date value belongs in `calculate/` (or `parse/`, `compare/`, `format/` as its verb dictates) — see J0b, which relocated `getLocaleDayOfWeek`/`getLocaleZonedDayOfWeek` out of `get/` for violating this.
+- **`get/` namespaces hold current-moment accessors only.** Each reads the clock and takes no date value: no argument, a time zone, output options, or a length counted from now (`getDay()`, `getZonedDay(timeZone)`, `getZonedIn(timeZone, units)`). Any function taking a date value belongs in `calculate/` (or `parse/`, `compare/`, `format/` as its verb dictates) — see J0b, which relocated `getLocaleDayOfWeek`/`getLocaleZonedDayOfWeek` out of `get/` for violating this.
 
 ## Allowed vs. Forbidden Patterns
 

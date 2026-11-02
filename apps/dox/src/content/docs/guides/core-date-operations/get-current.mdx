@@ -67,6 +67,30 @@ getTimeZones(); // ["Africa/Abidjan", "Africa/Accra", ...] — 418 entries on No
 `getTimeZones()` returns every IANA zone the runtime's ICU data knows about. The
 count varies by runtime.
 
+## Count a length of time from now
+
+`getDateIn`, `getDateTimeIn`, `getTimeIn`, `getUtcIn`, `getUnixIn` and `getZonedIn` count a length
+forward from the clock. Their `Ago` pairs count back. Each takes a unit object, such as
+`{ days: 90 }`:
+
+```typescript
+import { getDateIn, getUtcAgo, getZonedIn } from "@northguild/gmt";
+
+// With a clock at 2027-06-15T12:07:30Z:
+getDateIn({ days: 3 }); // "2027-06-18"
+getUtcAgo({ days: 90 }); // "2027-03-17T12:07:30Z"
+getZonedIn("Europe/Paris", { days: 1 }); // "2027-06-16T14:07:30+02:00[Europe/Paris]"
+```
+
+- The plain pairs (`getDateIn`, `getDateTimeIn`, `getTimeIn`) start from the **system timezone**,
+  as `getToday` does, so `getDateIn({ days: 0 })` equals `getToday()`. The UTC, Unix and from-now
+  functions count in UTC, so their result does not change with the server's zone.
+- `getTimeIn` wraps at midnight and carries no date: `getTimeIn({ hours: 13 })` from 12:07:30 is
+  `"01:07:30"`.
+- A negative amount returns the sentinel (`""` or `null`), because the name gives the direction.
+- The string forms write whole seconds, floored. For a length as a number of seconds, an HTTP date
+  or a cookie lifetime, see [Durations](../durations/#a-length-of-time-counted-from-now).
+
 ## Using Temporal directly
 
 When you need the current value as a Temporal object for further manipulation
@@ -91,3 +115,5 @@ polyfill directly.
 - [`getNow` reference](/reference/plain/get/getNow)
 - [`getZonedNow` reference](/reference/zoned/get/getZonedNow)
 - [`getUnixNow` reference](/reference/unix/get/getUnixNow)
+- [`getUtcIn` reference](/reference/utc/get/getUtcIn)
+- [`getZonedIn` reference](/reference/zoned/get/getZonedIn)

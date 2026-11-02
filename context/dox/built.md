@@ -1792,6 +1792,34 @@ Shared hooks come first, then the globe, then the clock-change pages.
     `year` and `locale` (a year as a string, because a number outside 1900 to 2100 is dropped).
     `value` is in `EMPTY_KEYS_BY_KIND` so a cleared field round-trips. The chat schema takes a
     year of -271821 to 275760 and a BCP 47 `locale`; the default locale is `en`.
+- **Expiry Calculator** (CORE-104, `/tools/expiry-calculator/`, `expiry`): a Core tool that gives
+  one length of time, counted from a start, in the four forms a developer pastes: cookie
+  `Max-Age`, `Expires`, JWT `exp` and a signed-URL time. The reader types an amount, picks a unit
+  and a start (`A date` or `Now`), and moves the start with a slider of whole days.
+  - **Two routes, one answer.** A date goes through the pure functions (`durationFromUnits`,
+    `totalDuration` with `relativeTo: convertUtcToZoned(start, "UTC")`, `addUtc`, `formatHttpDate`,
+    `convertUtcToUnix`). `Now` calls `ttlFromNow` once a second and draws its five fields; the
+    site reads no clock of its own. A bare mount never calls `ttlFromNow` or `getUtcIn`.
+  - **The verdict** compares the library's seconds with the hand-written amount times a fixed
+    length (365 d a year, 30 d a month): short or long by N seconds, or the same. A week, day,
+    hour or minute never differs. The 12-row table counts the next 12 monthly starts.
+  - **`ttlFromNow` refuses what the date route computes** (a negative or fractional length, a
+    result past year 9999), so under `Now` the plates and the strip read `no result` and the hint
+    says the library returned `null`; `delete-cookie` shows it.
+  - **Permalink.** `{ preset }` alone while the state matches, else `amount`, `unit` and `start`
+    as strings; `Now` has no `start`, and a present, empty `start` is a cleared date field.
+    `showExpiryCalculator({ amount, unit, start? })`; the kind is `expiry`.
+  - **Kit.** `table` gained `currentRow` and `labelCells`. The table caption differs from its
+    section heading, or axe reports two landmarks with one name.
+  - **Decisions.** The page opens pinned on a preset and never reads the clock before mount. UTC
+    only, with no zone control; the page says a day is 86,400 seconds in UTC and that
+    `totalUnitsFromNow` takes a `timeZone`. The 400-day cap is a static note and never limits a
+    result. The hand-written number is not editable. A negative amount stays allowed under a date,
+    where the library accepts it, and shows `no result` under `Now`, so the widget does not
+    overrule the library. `Now` uses one `ttlFromNow` call because one clock read names one
+    instant for all four plates. A parity test asserts both routes agree on every preset of zero
+    or more. The Time Left Reader and Fixed-Seconds Audit were not chosen, so the `secondsUntil*`
+    functions and `spanSeconds` are on no tool.
 - **A new tool is registered in lists no single test covers.** The pieces are in
   [docs-site.md § Purpose-built widgets](../domination/docs-site.md#purpose-built-widgets). The
   chat side is guarded: a missing schema or `ENABLED_TOOL_NAMES` entry in `src/lib/dox-tools.ts`,
@@ -1802,7 +1830,6 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - `MOUNTS` in `src/lib/widget-load-error.test.tsx`;
   - the `heavy` list in `src/components/ask/widget-graph.test.ts` (the tool's pure module, and
     any shared helper or loader it adds);
-  - the sheet in `customCss` in `astro.config.mjs`;
   - `PAGES` in `scripts/html-diff.mjs`, `scripts/visual-snapshot.mjs` and
     `scripts/grow-measure.mjs`;
   - `TOOLS` in `scripts/readout-still.mjs`, for a tool with a drag handle;
@@ -2917,6 +2944,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
     and a locale only when the reader names one; never infer a birth date or a locale from a name or
     a place. The Worker's `execute` is `accept("leap-day-birthday")`; the registry's `validate`
     refuses a locale tag the runtime cannot read. The widget kind is `leapday`.
+  - `showExpiryCalculator({ amount, unit, start? })` (CORE-104): a whole-number amount, one of
+    minutes, hours, days, weeks, months, years, and a UTC start only when the reader gives
+    one (omitted means Now). The Worker's `execute` is `accept("expiry-calculator")`. The widget
+    kind is `expiry`.
 - **Count:** `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers, one starter card per tool;
   re-derive them from there, and never write a literal in a test or a page. The Leap Second
   Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada and Morocco clock-change

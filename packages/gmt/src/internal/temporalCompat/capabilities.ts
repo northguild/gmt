@@ -77,6 +77,22 @@ export function isNudgeWindowCompatNeeded(): boolean {
 }
 
 /**
+ * True when this runtime mismeasures from either pass of a repeated hour (defect D22).
+ *
+ * TC39 `ComputeNudgeWindow` takes the window's start from the origin's own exact time when no unit
+ * has been added, and `DifferenceZonedDateTime` subtracts the exact times when both fall on one local
+ * date. A runtime that turns the wall clock back into an exact time with `"compatible"` moves a
+ * later-pass origin an hour early, and one with no same-date branch backs up a day from an earlier-pass
+ * origin when the end falls in the later pass at a lower wall clock. So `Duration#total` in a date unit,
+ * and `Duration#round` and `until` with a date `largestUnit`, answer from an instant the caller never
+ * named. tc39/ecma262#3759 commit `1f4e6717ef23` decides when the window starts at the origin: an
+ * empty start duration, not `r1 = 0`.
+ */
+export function isNudgeOriginCompatNeeded(): boolean {
+  return isDefectPresent("D22", "iso8601");
+}
+
+/**
  * True when this runtime matches a zoned string's offset by minutes even when the offset is
  * written with seconds (defect D12).
  *

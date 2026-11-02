@@ -176,6 +176,7 @@ const PAGES = [
   },
   { slug: "tool-cron-in-a-zone", path: "/tools/cron-in-a-zone/" },
   { slug: "tool-leap-day-birthday", path: "/tools/leap-day-birthday/" },
+  { slug: "tool-expiry-calculator", path: "/tools/expiry-calculator/" },
   /* The industry pages the new tools are linked from, and the reference index. */
   { slug: "industries", path: "/industries/" },
   { slug: "industries-maritime", path: "/industries/maritime/" },

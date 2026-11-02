@@ -296,7 +296,10 @@ converting between time zones, or doing arithmetic that must respect DST.
 
 ## Key functions
 
-- **Current**: `getZonedNow`, `getZonedToday`
+- **Current**: `getZonedNow`, `getZonedToday`; `getZonedIn` / `getZonedAgo`
+  (zone first, then a unit object such as `{ days: 1 }`) give the time a length
+  from now, counted on the zone's wall clock, so a day across a clock change is
+  23 or 25 hours
 - **Formatting**: `formatZonedDateTime`, `formatZonedRange`,
   `formatRelativeZoned`, `formatTimeZoneName`
 - **Validation**: `isValidTimeZone`, `isValidZonedDateTime`,

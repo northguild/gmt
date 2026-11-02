@@ -47,6 +47,16 @@ skills:
       - getTimeZones
       - getUtcNow
       - getUnixNow
+      - getUnixIn
+      - getUnixAgo
+      - getUtcIn
+      - getUtcAgo
+      - getDateIn
+      - getDateAgo
+      - getDateTimeIn
+      - getDateTimeAgo
+      - getTimeIn
+      - getTimeAgo
       - parseYearFromDate
       - parseMonthFromDate
       - parseDayFromDate
@@ -232,6 +242,13 @@ skills:
       - splitIntervalAt
       - sumIntervals
       - spanMs
+      - spanSeconds
+      - ttlFromNow
+      - totalUnitsFromNow
+      - formatHttpDateFromNow
+      - secondsUntilUnix
+      - secondsUntilHttpDate
+      - secondsUntilRetryAfter
       - spanNs
       - spanWallClock
       - isValidSpan
@@ -271,6 +288,8 @@ skills:
       - '@northguild/gmt'
     covers:
       - getZonedNow
+      - getZonedIn
+      - getZonedAgo
       - getZonedToday
       - formatZonedDateTime
       - formatZonedRange

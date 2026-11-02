@@ -38,7 +38,7 @@ A widget follows the Tier 2 shape in [../dox/built.md](../dox/built.md), under
 | Template, mount and their test | `lib/<widget>-mount.ts`, `lib/<widget>-mount.test.tsx` |
 | Astro shell | `components/<Widget>.astro` |
 | Tool page | `content/docs/tools/<slug>.mdx` |
-| Styles | `styles/gmt-<widget>.css`, registered in `astro.config.mjs` |
+| Styles | `widgets/tools/<widget>.module.css`, a CSS Module imported by the mount |
 
 It is also a Dox chat tool, because the chat can only offer a widget it can mount:
 

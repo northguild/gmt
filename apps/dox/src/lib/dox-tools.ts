@@ -1077,6 +1077,32 @@ export const showLeapDayBirthdayInput = z.object({
     ),
 });
 
+/**
+ * Expiry Calculator: one length of time, from a date or from now, in the four forms a
+ * receiver wants. Every key is the permalink key. The widget judges the amount, the unit and
+ * the start itself, so the schema checks shape only: a length or a start the library refuses
+ * is the widget's `no result` to show, not a failed tool call.
+ */
+export const showExpiryCalculatorInput = z.object({
+  amount: z
+    .number()
+    .int()
+    .describe(
+      "The length, a whole number in the unit. A negative amount is allowed with a start and has no result from now.",
+    ),
+  unit: z
+    .enum(["years", "months", "weeks", "days", "hours", "minutes"])
+    .describe("The unit of the length."),
+  start: z
+    .string()
+    .min(1)
+    .max(64)
+    .optional()
+    .describe(
+      "A UTC instant such as 2027-06-15T12:00:00Z, exactly as the reader gave it. Send it only when the reader named a start; none means now, and a negative amount needs one.",
+    ),
+});
+
 export type DoxToolName =
   | "showGlobe"
   | "showDstInspector"
@@ -1117,7 +1143,8 @@ export type DoxToolName =
   | "showColumnTimestampBridge"
   | "showMoroccoClockChange"
   | "showCronInAZone"
-  | "showLeapDayBirthday";
+  | "showLeapDayBirthday"
+  | "showExpiryCalculator";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1406,6 +1433,13 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader asks what happens to a 29 February birthday or anniversary in a year with no 29 February, how to store a birthday or another date that repeats every year, or how a month-day differs from a date. Pass only the date the reader gave; never infer a birth date or a locale from a name or a place.",
     args: "value: required, the date exactly as the reader gave it (--MM-DD, MM-DD, a date or a date-time); year: optional whole year, the first of eight, only when the reader named one; locale: optional BCP 47 tag, only when the reader named a language.",
   },
+  {
+    name: "showExpiryCalculator",
+    purpose:
+      "Show one length of time, such as one year, as the four forms a receiver wants: a cookie Max-Age in seconds, an Expires date, a JWT exp and a signed-URL time, from a date or from now, with a table of the next twelve monthly starts that shows when a hard-coded number of seconds is wrong.",
+    when: "Call when the reader asks how many seconds a Max-Age or token lifetime is, what exp or Expires to set for a length of time, or why a hard-coded 31536000 is wrong. Pass only the length and the start the reader gave; none means now.",
+    args: "amount: required, a whole number; unit: required, one of years, months, weeks, days, hours, minutes; start: optional UTC instant, only when the reader named one (none means now, and a negative amount needs a start).",
+  },
 ];
 
 /**
@@ -1574,6 +1608,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[39].purpose,
     inputSchema: showLeapDayBirthdayInput,
   }),
+  showExpiryCalculator: tool({
+    description: DOX_TOOL_DOCS[40].purpose,
+    inputSchema: showExpiryCalculatorInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1637,6 +1675,7 @@ export const ENABLED_TOOL_NAMES = [
   "showMoroccoClockChange",
   "showCronInAZone",
   "showLeapDayBirthday",
+  "showExpiryCalculator",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

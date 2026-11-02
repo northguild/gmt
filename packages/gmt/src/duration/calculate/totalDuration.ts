@@ -16,6 +16,9 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   object into the duration string this function takes. To total a calendar amount written as a
  *   unit object, such as `{ months: 1 }`, pass the result of `durationFromUnits` here with
  *   `relativeTo`.
+ * - For a length counted from now, use `totalUnitsFromNow`. The other forms are `getUnixIn` (an
+ *   epoch), `getUtcIn` (UTC text), `formatHttpDateFromNow` (an HTTP date) and `ttlFromNow` (all of
+ *   them from one clock read).
  * - The result is fractional, not rounded: totalDuration("P1DT2H30M", "days") is
  *   1.1041666666666667. Round it yourself, or reach for `normalizeDuration` instead. It is a
  *   JavaScript number, so a total past 2^53 is the nearest double.

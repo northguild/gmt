@@ -75,6 +75,26 @@ const totalHours = totalDuration(d, "hours"); // 26.05 — full duration convert
 
 <Mistake
   severity="medium"
+  title="Using getUtcNow() as a relativeTo"
+  description="A Z string is an instant with no time zone, and Temporal refuses it as relativeTo (GetTemporalRelativeToOption), so the call returns null. To start from now, pass getZonedNow('UTC'). For a length counted from now, totalUnitsFromNow does it without a relativeTo."
+  wrongCode={`totalDuration("P1Y", "seconds", { relativeTo: getUtcNow() }); // null — a Z string is refused`}
+  rightCode={`import { getZonedNow, totalDuration } from "@northguild/gmt";
+
+totalDuration("P1Y", "seconds", { relativeTo: getZonedNow("UTC") }); // 31622400 — from a clock at 2027-06-15T12:07:30Z`}
+/>
+
+<Mistake
+  severity="medium"
+  title="Writing a year as 31_536_000 seconds"
+  description="A year is 365 or 366 days depending on where the count starts. A hand-written 31_536_000 is 365 days, so it falls a day short when the next 12 months take in a 29 February. Let totalUnitsFromNow count from the clock."
+  wrongCode={`const maxAge = 31_536_000; // 365 days, always`}
+  rightCode={`import { totalUnitsFromNow } from "@northguild/gmt";
+
+totalUnitsFromNow({ years: 1 }, "seconds"); // 31622400 — from a clock at 2027-06-15T12:07:30Z, 366 days`}
+/>
+
+<Mistake
+  severity="medium"
   title="Expecting normalizeDuration to resolve calendar units against today"
   description="normalizeDuration has no implicit relativeTo. Whenever a calendar unit (years, months, weeks) is involved, in the duration or as largestUnit, it needs an explicit relativeTo; without one it returns the empty-string sentinel, never a conversion against today's date."
   wrongCode={`normalizeDuration("P1M", { largestUnit: "day" }); // "" — no relativeTo, so no answer`}

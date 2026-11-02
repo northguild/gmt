@@ -1,5 +1,7 @@
+export * from "./getUnixAgo";
 export * from "./getUnixDay";
 export * from "./getUnixHour";
+export * from "./getUnixIn";
 export * from "./getUnixMicrosecond";
 export * from "./getUnixMillisecond";
 export * from "./getUnixMinute";

@@ -260,6 +260,11 @@ const PAGES = [
     drag: { role: "slider", name: "Year slider" },
   },
   {
+    slug: "expiry-calculator",
+    preset: PRESET,
+    drag: { role: "slider", name: "Move the start" },
+  },
+  {
     // A checker under /check/, not /tools/: the answer fills the tables in place.
     slug: "canada-clock-change",
     path: "/check/canada-2026-clock-change/",

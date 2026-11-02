@@ -11,6 +11,7 @@
  */
 import { Temporal } from "../internal/temporal";
 import { mockSystemTimeZone } from "../test";
+import { setFakeSystemTime } from "../test/setFakeSystemTime";
 import {
   addUnix,
   diffUnix,
@@ -21,6 +22,7 @@ import {
   maxUnix,
   minUnix,
   roundUnix,
+  secondsUntilUnix,
   setUnix,
   sortUnix,
   startOfQuarterForUnix,
@@ -116,6 +118,13 @@ const epochFunctions: Array<{
     call: (v, o) => roundUnix(v as number, { smallestUnit: "day", ...o }),
     sentinel: null,
     zone: true,
+    unit: true,
+  },
+  {
+    name: "secondsUntilUnix",
+    call: (v, o) => secondsUntilUnix(v as number, o),
+    sentinel: null,
+    zone: false,
     unit: true,
   },
   {
@@ -474,11 +483,27 @@ const notEpochs: Array<[string, unknown]> = [
   ["an object", {}],
 ];
 
+// secondsUntilUnix reads the clock, so the two describes that call every row pin it: two calls a
+// second boundary apart would differ. The timeZone describe mocks the system zone and keeps real
+// timers.
+function pinClock(): void {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    setFakeSystemTime("2027-06-15T12:00:00Z");
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+}
+
 const grammarRows = epochFunctions.flatMap((row) =>
   notEpochs.map(([description, value]) => ({ ...row, description, value })),
 );
 
 describe("unix/ epoch grammar", () => {
+  pinClock();
+
   it.each(epochFunctions)(
     "$name reads a digit string as the same epoch as the number",
     ({ call, sentinel }) => {
@@ -498,6 +523,8 @@ describe("unix/ epoch grammar", () => {
 });
 
 describe("unix/ epochUnit option", () => {
+  pinClock();
+
   const unitRows = epochFunctions.filter((row) => row.unit);
 
   it.each(unitRows)(

@@ -77,6 +77,14 @@ input before you act on it.
 
 - **Current values**: `getNow`, `getToday`, `getUtcNow`, `getUnixNow`,
   `getSystemTimeZone`, `getTimeZones`
+- **A length of time from now** (`{ days: 90 }`, never negative; the name gives
+  the direction): `getUnixIn` / `getUnixAgo`, `getUtcIn` / `getUtcAgo`,
+  `getDateIn` / `getDateAgo`, `getDateTimeIn` / `getDateTimeAgo`,
+  `getTimeIn` / `getTimeAgo`, `getZonedIn` / `getZonedAgo` (zone first).
+  Unix, UTC and zoned forms write whole seconds; a cookie `Expires` or a JWT
+  `exp` is one call. A negative amount returns the sentinel, so a past date is
+  `getUtcAgo`, not a negative `getUtcIn`. For seconds, an HTTP date or the
+  seconds left until a stored time, see the `gmt-arithmetic` skill.
 - **Parsing**: `parseYearFromDate`, `parseMonthFromDate`,
   `parseDateTimeWithPattern`, `parseRfc3339`, `parseRfc2822`,
   `parseHttpDate`, `parseSqlDateTime`

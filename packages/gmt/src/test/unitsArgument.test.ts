@@ -17,6 +17,8 @@
  * The reader is `internal/readDurationUnits.ts`.
  */
 import { Temporal } from "../internal/temporal";
+import { getSystemTimeZone } from "../zoned/get/getSystemTimeZone";
+import { setFakeSystemTime } from "./setFakeSystemTime";
 import {
   addDate,
   addDateTime,
@@ -25,6 +27,19 @@ import {
   addUtc,
   addZoned,
   durationFromUnits,
+  getDateAgo,
+  getDateIn,
+  getDateTimeAgo,
+  getDateTimeIn,
+  getTimeAgo,
+  getTimeIn,
+  getUnixAgo,
+  getUnixIn,
+  getUtcAgo,
+  getUtcIn,
+  getZonedAgo,
+  getZonedIn,
+  formatHttpDateFromNow,
   subtractDate,
   subtractDateTime,
   subtractTime,
@@ -32,6 +47,8 @@ import {
   subtractUtc,
   subtractZoned,
   totalUnits,
+  totalUnitsFromNow,
+  ttlFromNow,
 } from "../index";
 
 type Call = (units: never) => unknown;
@@ -73,27 +90,42 @@ const ZONED = "2024-06-15T10:00:00+00:00[UTC]";
 /** 2024-01-31T00:00:00Z in epoch milliseconds. */
 const UNIX = 1706659200000;
 
-/** Each of the 14 functions that take `units`. `plain` is one `key` added, taken away or totalled. */
+/** Each of the 29 functions that take `units`. `plain` is one `key` added, taken away or totalled. */
 const everyFunction = (title: string, body: (testCase: UnitsCase) => void) =>
   it.each`
-    name                   | call                                                        | key        | other        | plain                               | sentinel | duration  | sentinelLabel
-    ${"addDate"}           | ${(u: never) => addDate("2024-01-31", u)}                   | ${"days"}  | ${"months"}  | ${"2024-02-01"}                     | ${""}    | ${"P1D"}  | ${"''"}
-    ${"subtractDate"}      | ${(u: never) => subtractDate("2024-01-31", u)}              | ${"days"}  | ${"months"}  | ${"2024-01-30"}                     | ${""}    | ${"P1D"}  | ${"''"}
-    ${"addTime"}           | ${(u: never) => addTime("14:30:00", u)}                     | ${"hours"} | ${"minutes"} | ${"15:30:00"}                       | ${""}    | ${"PT1H"} | ${"''"}
-    ${"subtractTime"}      | ${(u: never) => subtractTime("14:30:00", u)}                | ${"hours"} | ${"minutes"} | ${"13:30:00"}                       | ${""}    | ${"PT1H"} | ${"''"}
-    ${"addDateTime"}       | ${(u: never) => addDateTime("2024-01-31T10:00:00", u)}      | ${"days"}  | ${"hours"}   | ${"2024-02-01T10:00:00"}            | ${""}    | ${"P1D"}  | ${"''"}
-    ${"subtractDateTime"}  | ${(u: never) => subtractDateTime("2024-01-31T10:00:00", u)} | ${"days"}  | ${"hours"}   | ${"2024-01-30T10:00:00"}            | ${""}    | ${"P1D"}  | ${"''"}
-    ${"addUtc"}            | ${(u: never) => addUtc(UTC, u)}                             | ${"days"}  | ${"hours"}   | ${"2024-03-11T12:00:00Z"}           | ${""}    | ${"P1D"}  | ${"''"}
-    ${"subtractUtc"}       | ${(u: never) => subtractUtc(UTC, u)}                        | ${"days"}  | ${"hours"}   | ${"2024-03-09T12:00:00Z"}           | ${""}    | ${"P1D"}  | ${"''"}
-    ${"addUnix"}           | ${(u: never) => addUnix(UNIX, u)}                           | ${"days"}  | ${"hours"}   | ${1706745600000}                    | ${null}  | ${"P1D"}  | ${"null"}
-    ${"subtractUnix"}      | ${(u: never) => subtractUnix(UNIX, u)}                      | ${"days"}  | ${"hours"}   | ${1706572800000}                    | ${null}  | ${"P1D"}  | ${"null"}
-    ${"addZoned"}          | ${(u: never) => addZoned(ZONED, u)}                         | ${"days"}  | ${"hours"}   | ${"2024-06-16T10:00:00+00:00[UTC]"} | ${""}    | ${"P1D"}  | ${"''"}
-    ${"subtractZoned"}     | ${(u: never) => subtractZoned(ZONED, u)}                    | ${"days"}  | ${"hours"}   | ${"2024-06-14T10:00:00+00:00[UTC]"} | ${""}    | ${"P1D"}  | ${"''"}
-    ${"totalUnits"}        | ${(u: never) => totalUnits(u, "hours")}                     | ${"days"}  | ${"hours"}   | ${24}                               | ${null}  | ${"P1D"}  | ${"null"}
-    ${"durationFromUnits"} | ${(u: never) => durationFromUnits(u)}                       | ${"days"}  | ${"hours"}   | ${"P1D"}                            | ${""}    | ${"P1D"}  | ${"''"}
+    name                       | call                                                        | key        | other        | plain                                                                                                                                           | sentinel | duration  | sentinelLabel
+    ${"addDate"}               | ${(u: never) => addDate("2024-01-31", u)}                   | ${"days"}  | ${"months"}  | ${"2024-02-01"}                                                                                                                                 | ${""}    | ${"P1D"}  | ${"''"}
+    ${"subtractDate"}          | ${(u: never) => subtractDate("2024-01-31", u)}              | ${"days"}  | ${"months"}  | ${"2024-01-30"}                                                                                                                                 | ${""}    | ${"P1D"}  | ${"''"}
+    ${"addTime"}               | ${(u: never) => addTime("14:30:00", u)}                     | ${"hours"} | ${"minutes"} | ${"15:30:00"}                                                                                                                                   | ${""}    | ${"PT1H"} | ${"''"}
+    ${"subtractTime"}          | ${(u: never) => subtractTime("14:30:00", u)}                | ${"hours"} | ${"minutes"} | ${"13:30:00"}                                                                                                                                   | ${""}    | ${"PT1H"} | ${"''"}
+    ${"addDateTime"}           | ${(u: never) => addDateTime("2024-01-31T10:00:00", u)}      | ${"days"}  | ${"hours"}   | ${"2024-02-01T10:00:00"}                                                                                                                        | ${""}    | ${"P1D"}  | ${"''"}
+    ${"subtractDateTime"}      | ${(u: never) => subtractDateTime("2024-01-31T10:00:00", u)} | ${"days"}  | ${"hours"}   | ${"2024-01-30T10:00:00"}                                                                                                                        | ${""}    | ${"P1D"}  | ${"''"}
+    ${"addUtc"}                | ${(u: never) => addUtc(UTC, u)}                             | ${"days"}  | ${"hours"}   | ${"2024-03-11T12:00:00Z"}                                                                                                                       | ${""}    | ${"P1D"}  | ${"''"}
+    ${"subtractUtc"}           | ${(u: never) => subtractUtc(UTC, u)}                        | ${"days"}  | ${"hours"}   | ${"2024-03-09T12:00:00Z"}                                                                                                                       | ${""}    | ${"P1D"}  | ${"''"}
+    ${"addUnix"}               | ${(u: never) => addUnix(UNIX, u)}                           | ${"days"}  | ${"hours"}   | ${1706745600000}                                                                                                                                | ${null}  | ${"P1D"}  | ${"null"}
+    ${"subtractUnix"}          | ${(u: never) => subtractUnix(UNIX, u)}                      | ${"days"}  | ${"hours"}   | ${1706572800000}                                                                                                                                | ${null}  | ${"P1D"}  | ${"null"}
+    ${"getDateIn"}             | ${(u: never) => getDateIn(u)}                               | ${"days"}  | ${"months"}  | ${"2027-06-16"}                                                                                                                                 | ${""}    | ${"P1D"}  | ${"''"}
+    ${"getDateAgo"}            | ${(u: never) => getDateAgo(u)}                              | ${"days"}  | ${"months"}  | ${"2027-06-14"}                                                                                                                                 | ${""}    | ${"P1D"}  | ${"''"}
+    ${"getDateTimeIn"}         | ${(u: never) => getDateTimeIn(u)}                           | ${"days"}  | ${"hours"}   | ${"2027-06-16T12:00:00"}                                                                                                                        | ${""}    | ${"P1D"}  | ${"''"}
+    ${"getDateTimeAgo"}        | ${(u: never) => getDateTimeAgo(u)}                          | ${"days"}  | ${"hours"}   | ${"2027-06-14T12:00:00"}                                                                                                                        | ${""}    | ${"P1D"}  | ${"''"}
+    ${"getTimeIn"}             | ${(u: never) => getTimeIn(u)}                               | ${"hours"} | ${"minutes"} | ${"13:00:00"}                                                                                                                                   | ${""}    | ${"PT1H"} | ${"''"}
+    ${"getTimeAgo"}            | ${(u: never) => getTimeAgo(u)}                              | ${"hours"} | ${"minutes"} | ${"11:00:00"}                                                                                                                                   | ${""}    | ${"PT1H"} | ${"''"}
+    ${"getUnixIn"}             | ${(u: never) => getUnixIn(u)}                               | ${"days"}  | ${"hours"}   | ${1813147200000}                                                                                                                                | ${null}  | ${"P1D"}  | ${"null"}
+    ${"getUnixAgo"}            | ${(u: never) => getUnixAgo(u)}                              | ${"days"}  | ${"hours"}   | ${1812974400000}                                                                                                                                | ${null}  | ${"P1D"}  | ${"null"}
+    ${"getUtcIn"}              | ${(u: never) => getUtcIn(u)}                                | ${"days"}  | ${"hours"}   | ${"2027-06-16T12:00:00Z"}                                                                                                                       | ${""}    | ${"P1D"}  | ${"''"}
+    ${"getUtcAgo"}             | ${(u: never) => getUtcAgo(u)}                               | ${"days"}  | ${"hours"}   | ${"2027-06-14T12:00:00Z"}                                                                                                                       | ${""}    | ${"P1D"}  | ${"''"}
+    ${"getZonedIn"}            | ${(u: never) => getZonedIn("UTC", u)}                       | ${"days"}  | ${"hours"}   | ${"2027-06-16T12:00:00+00:00[UTC]"}                                                                                                             | ${""}    | ${"P1D"}  | ${"''"}
+    ${"getZonedAgo"}           | ${(u: never) => getZonedAgo("UTC", u)}                      | ${"days"}  | ${"hours"}   | ${"2027-06-14T12:00:00+00:00[UTC]"}                                                                                                             | ${""}    | ${"P1D"}  | ${"''"}
+    ${"addZoned"}              | ${(u: never) => addZoned(ZONED, u)}                         | ${"days"}  | ${"hours"}   | ${"2024-06-16T10:00:00+00:00[UTC]"}                                                                                                             | ${""}    | ${"P1D"}  | ${"''"}
+    ${"subtractZoned"}         | ${(u: never) => subtractZoned(ZONED, u)}                    | ${"days"}  | ${"hours"}   | ${"2024-06-14T10:00:00+00:00[UTC]"}                                                                                                             | ${""}    | ${"P1D"}  | ${"''"}
+    ${"totalUnits"}            | ${(u: never) => totalUnits(u, "hours")}                     | ${"days"}  | ${"hours"}   | ${24}                                                                                                                                           | ${null}  | ${"P1D"}  | ${"null"}
+    ${"totalUnitsFromNow"}     | ${(u: never) => totalUnitsFromNow(u, "seconds")}            | ${"days"}  | ${"hours"}   | ${86400}                                                                                                                                        | ${null}  | ${"P1D"}  | ${"null"}
+    ${"formatHttpDateFromNow"} | ${(u: never) => formatHttpDateFromNow(u)}                   | ${"days"}  | ${"hours"}   | ${"Wed, 16 Jun 2027 12:00:00 GMT"}                                                                                                              | ${""}    | ${"P1D"}  | ${"''"}
+    ${"ttlFromNow"}            | ${(u: never) => ttlFromNow(u)}                              | ${"days"}  | ${"hours"}   | ${{ seconds: 86400, milliseconds: 86400000, epochSeconds: 1813147200, httpDate: "Wed, 16 Jun 2027 12:00:00 GMT", iso: "2027-06-16T12:00:00Z" }} | ${null}  | ${"P1D"}  | ${"null"}
+    ${"durationFromUnits"}     | ${(u: never) => durationFromUnits(u)}                       | ${"days"}  | ${"hours"}   | ${"P1D"}                                                                                                                                        | ${""}    | ${"P1D"}  | ${"''"}
   `(title, body as (testCase: unknown) => void);
 
-/** The five functions whose unit set is narrower than the ten duration units. */
+/** The nine functions whose unit set is narrower than the ten duration units. */
 const everyRestrictedFunction = (
   title: string,
   body: (testCase: RestrictedCase) => void,
@@ -104,8 +136,27 @@ const everyRestrictedFunction = (
     ${"subtractDate"} | ${(u: never) => subtractDate("2024-01-31", u)} | ${"days"}  | ${"2024-01-30"} | ${""}    | ${"hours"} | ${"P1DT36H"}    | ${"''"}
     ${"addTime"}      | ${(u: never) => addTime("14:30:00", u)}        | ${"hours"} | ${"15:30:00"}   | ${""}    | ${"days"}  | ${"P1DT1H"}     | ${"''"}
     ${"subtractTime"} | ${(u: never) => subtractTime("14:30:00", u)}   | ${"hours"} | ${"13:30:00"}   | ${""}    | ${"days"}  | ${"P1DT1H"}     | ${"''"}
+    ${"getDateIn"}    | ${(u: never) => getDateIn(u)}                  | ${"days"}  | ${"2027-06-16"} | ${""}    | ${"hours"} | ${"P1DT36H"}    | ${"''"}
+    ${"getDateAgo"}   | ${(u: never) => getDateAgo(u)}                 | ${"days"}  | ${"2027-06-14"} | ${""}    | ${"hours"} | ${"P1DT36H"}    | ${"''"}
+    ${"getTimeIn"}    | ${(u: never) => getTimeIn(u)}                  | ${"hours"} | ${"13:00:00"}   | ${""}    | ${"days"}  | ${"P1DT1H"}     | ${"''"}
+    ${"getTimeAgo"}   | ${(u: never) => getTimeAgo(u)}                 | ${"hours"} | ${"11:00:00"}   | ${""}    | ${"days"}  | ${"P1DT1H"}     | ${"''"}
     ${"totalUnits"}   | ${(u: never) => totalUnits(u, "hours")}        | ${"days"}  | ${24}           | ${null}  | ${"weeks"} | ${"P1W1D"}      | ${"null"}
   `(title, body as (testCase: unknown) => void);
+
+// getDateIn and getDateAgo start from the system zone: pin it so the expected dates do not move
+// with the host's zone.
+vi.mock("../zoned/get/getSystemTimeZone", { spy: true });
+
+beforeEach(() => {
+  vi.useFakeTimers();
+  setFakeSystemTime("2027-06-15T12:00:00Z");
+  vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
+});
+
+afterEach(() => {
+  vi.mocked(getSystemTimeZone).mockReset();
+  vi.useRealTimers();
+});
 
 describe("units: the baseline of each function", () => {
   everyFunction(

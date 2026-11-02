@@ -136,6 +136,17 @@ first reads a stored component, the second totals the whole duration. `totalDura
 `getDurationSign` and `getDurationUnit` only read the sign or a field, so they never need
 an anchor.
 
+A `relativeTo` that is a zoned string starts the count from that moment. A `Z` string, such as
+`getUtcNow()` returns, is refused and the call returns `null`, as Temporal refuses it. To start
+from now, pass `getZonedNow("UTC")`:
+
+```typescript
+import { getUtcNow, getZonedNow, totalDuration } from "@northguild/gmt";
+
+totalDuration("P1Y", "seconds", { relativeTo: getUtcNow() }); // null — a Z string is refused
+totalDuration("P1Y", "seconds", { relativeTo: getZonedNow("UTC") }); // 31622400 — from a clock at 2027-06-15T12:07:30Z
+```
+
 ## Unit objects
 
 Settings and function arguments often hold an amount as an object, such as `{ minutes: 15 }`.
@@ -214,6 +225,137 @@ key into a lifetime of zero seconds.
 - **A duration string, to total in one unit:** `totalDuration`.
 - **A unit object with years, months or weeks, to total in one unit:** `durationFromUnits`, then
   `totalDuration` with `relativeTo`.
+- **A length counted from now:** `getUnixIn` for an epoch, `getUtcIn` for UTC text,
+  `formatHttpDateFromNow` for an HTTP date, `totalUnitsFromNow` for seconds (or any one unit) and
+  `ttlFromNow` for all of them from one clock read. The
+  [Expiry Calculator](/tools/expiry-calculator/) shows all four forms for one length.
+- **Seconds until a stored moment:** `secondsUntilUnix`, `secondsUntilHttpDate` or
+  `secondsUntilRetryAfter`.
+
+## A length of time counted from now
+
+A cookie lifetime, a token expiry or a timer delay is a length counted from the current time.
+Each function below reads the clock, takes a unit object and counts in UTC, so the result does not
+change with the server's zone. A negative amount returns the sentinel, because the name gives the
+direction: `getUnixIn` counts forward and `getUnixAgo` counts back.
+
+```typescript
+import {
+  formatHttpDateFromNow,
+  getUnixIn,
+  getUtcIn,
+  totalUnitsFromNow,
+  ttlFromNow,
+} from "@northguild/gmt";
+
+// With a clock at 2027-06-15T12:07:30Z:
+getUnixIn({ days: 90 }, { epochUnit: "seconds" }); // 1820837250 — an epoch
+getUtcIn({ days: 90 }); // "2027-09-13T12:07:30Z" — UTC text
+formatHttpDateFromNow({ days: 90 }); // "Mon, 13 Sep 2027 12:07:30 GMT" — an HTTP date
+totalUnitsFromNow({ days: 90 }, "seconds"); // 7776000 — seconds, for a Max-Age
+ttlFromNow({ days: 1 });
+// { seconds: 86400, milliseconds: 86400000, epochSeconds: 1813147650,
+//   httpDate: "Wed, 16 Jun 2027 12:07:30 GMT", iso: "2027-06-16T12:07:30Z" }
+```
+
+`ttlFromNow` gives every form from one clock read, so a cookie's `Max-Age` and `Expires` name the
+same second. The functions take a unit object only. For a length written as a string in a config
+file, total it against a zoned start:
+
+```typescript
+import { getZonedNow, parseHumanDuration, totalDuration } from "@northguild/gmt";
+
+totalDuration(parseHumanDuration("1y"), "seconds", { relativeTo: getZonedNow("UTC") });
+// 31622400 — from a clock at 2027-06-15T12:07:30Z
+```
+
+A year is not a fixed number of seconds. From this clock the next 12 months take in 29 February
+2028, so they are 366 days and `31_536_000` (365 days) would be a day short.
+
+**Deleting a cookie.** A past `Expires` deletes a cookie (RFC 6265 section 4.1.2). A negative
+length is refused, so count back:
+
+```typescript
+import { formatHttpDate, getUtcAgo } from "@northguild/gmt";
+
+formatHttpDate(getUtcAgo({ days: 1 })); // "Mon, 14 Jun 2027 12:07:30 GMT" — from a clock at 2027-06-15T12:07:30Z
+```
+
+**A timer delay.** `totalUnitsFromNow(units, "milliseconds")` reads the clock once. Do not write
+`getUnixIn(units) - getUnixNow()`: it reads the clock twice, and a `null` from `getUnixIn` becomes
+`0` in the subtraction, so a bad length looks like a delay of zero.
+
+```typescript
+import { totalUnitsFromNow } from "@northguild/gmt";
+
+const delay = totalUnitsFromNow({ minutes: 5 }, "milliseconds"); // 300000
+if (delay !== null) setTimeout(refresh, delay);
+```
+
+### Seconds until a stored moment
+
+`secondsUntilUnix` (a JWT `exp`), `secondsUntilHttpDate` and `secondsUntilRetryAfter` give the
+whole seconds from now until a stored moment, rounded up so a wait of that length never falls
+short. A past moment gives a negative number, and `null` means invalid input only. Check `null`
+before `Math.max(0, n)`, because `Math.max(0, null)` is `0`:
+
+```typescript
+import { secondsUntilUnix } from "@northguild/gmt";
+
+// With a clock at 2027-06-15T12:07:30Z:
+secondsUntilUnix(1813061370, { epochUnit: "seconds" }); // 120
+secondsUntilUnix(1813061130, { epochUnit: "seconds" }); // -120 — already past
+secondsUntilUnix("soon", { epochUnit: "seconds" }); // null — invalid input
+
+const left = secondsUntilUnix(exp, { epochUnit: "seconds" });
+const wait = left === null ? null : Math.max(0, left);
+```
+
+**"Expires in 3 days".** Total the seconds into days with `normalizeDuration`. Without it the text
+is `"259200s"`:
+
+```typescript
+import {
+  durationFromUnits,
+  formatHumanDuration,
+  normalizeDuration,
+} from "@northguild/gmt";
+
+const left = 259200; // from secondsUntilUnix(exp, { epochUnit: "seconds" }), once not null and above 0
+formatHumanDuration(
+  normalizeDuration(durationFromUnits({ seconds: left }), { largestUnit: "day" }),
+); // "3d"
+formatHumanDuration(durationFromUnits({ seconds: left })); // "259200s"
+```
+
+**Token leeway.** RFC 7519 section 4.1.4 lets a verifier allow "some small leeway". GMT takes no
+option, because the amount is the verifier's policy:
+
+```typescript
+const left = secondsUntilUnix(exp, { epochUnit: "seconds" });
+const expired = left === null || left + leeway <= 0;
+```
+
+**Clock-skew window on a token's `iat`.** All three calls need `epochUnit`, and either end can be
+`null`:
+
+```typescript
+const lo = getUnixAgo({ seconds: 300 }, { epochUnit: "seconds" });
+const hi = getUnixIn({ seconds: 300 }, { epochUnit: "seconds" });
+const fresh = lo !== null && hi !== null && isBetweenUnix(iat, lo, hi, { epochUnit: "seconds" });
+```
+
+**A fixed window.** `floorToZone` floors to a calendar unit, so a fifteen-minute rate-limit
+bucket uses `roundUnix`:
+
+```typescript
+import { roundUnix, roundUtc } from "@northguild/gmt";
+
+roundUnix(1813061765123, { smallestUnit: "minute", roundingIncrement: 15, roundingMode: "floor" });
+// 1813061700000
+roundUtc("2027-06-15T12:07:30.5Z", { smallestUnit: "minute", roundingIncrement: 15, roundingMode: "floor" });
+// "2027-06-15T12:00:00Z"
+```
 
 ## Sign operations
 

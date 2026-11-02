@@ -77,6 +77,7 @@ import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import type { IdTimestampDecoderArgs } from "~/lib/id-timestamp-decoder-mount";
 import type { ColumnTimestampBridgeArgs } from "~/lib/column-timestamp-bridge-mount";
 import type { CronInAZoneArgs } from "~/lib/cron-in-a-zone-mount";
+import type { ExpiryArgs } from "~/lib/expiry-calculator-mount";
 import type { LeapDayArgs } from "~/lib/leap-day-birthday-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
@@ -116,6 +117,7 @@ import {
   showColumnTimestampBridgeInput,
   showCronInAZoneInput,
   showLeapDayBirthdayInput,
+  showExpiryCalculatorInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -1133,6 +1135,28 @@ const leapDayEntry = defineWidget<LeapDayArgs>({
   },
 });
 
+const expiryEntry = defineWidget<ExpiryArgs>({
+  title: "Expiry calculator",
+  kind: "expiry",
+  parse: (input) => {
+    const result = showExpiryCalculatorInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Every argument is a control value, and a length or a start the library refuses is this
+     widget's own `no result`. */
+  load: () =>
+    import("~/lib/expiry-calculator-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderExpiryCalculatorTemplate(idPrefix, args),
+      mount: m.mountExpiryCalculator,
+    })),
+});
+
 const plannerEntry = defineWidget<ZonePlannerArgs>({
   title: "Zone planner",
   kind: "planner",
@@ -1220,6 +1244,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showMoroccoClockChange: moroccoClockEntry,
   showCronInAZone: cronZoneEntry,
   showLeapDayBirthday: leapDayEntry,
+  showExpiryCalculator: expiryEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

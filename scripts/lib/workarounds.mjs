@@ -127,7 +127,7 @@ export const WORKAROUNDS = [
     trigger:
       "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168) and retries the nudge window; merged to main in PR #361 as 5af905f, so no new filing is needed",
     steps: [
-      "Delete the D11 repros in probeRepros.ts, isNudgeWindowCompatNeeded in capabilities.ts and its export in index.ts, and the defect-4 terms in zonedWallClockDifference.ts (monthTotalBySpec, monthRoundBySpec, the zonedUntil gate, plainUntilWithRounding) and plainDateUntil.ts.",
+      "Delete the D11 repros in probeRepros.ts, isNudgeWindowCompatNeeded in capabilities.ts and its export in index.ts, and the defect-4 terms in zonedWallClockDifference.ts (monthTotalBySpec, monthRoundBySpec, the defect-4 term in untilTakesSpecPath, plainUntilWithRounding) and plainDateUntil.ts.",
       "Keep test/nudgeWindowRetry.test.ts and test/intervalLengthOracle.test.ts, and the progress === 0n branch in nudgeToCalendarUnit (GMT's own fix, not the polyfill's).",
       `Full wording: ${COMPAT_README} § Removal steps 11.`,
     ],
@@ -258,6 +258,18 @@ export const WORKAROUNDS = [
       "Delete temporalCompat/clock.ts and clock.test.ts, their exports in index.ts, and the D21 repro in repros.ts; every nowInstant, nowZonedDateTimeISO, nowPlainDateTimeISO, nowPlainDateISO and nowPlainTimeISO call becomes the matching Temporal.Now member again, and the guard test in internal/temporal.test.ts goes.",
       "Keep the 1960 and 2027 clock rows (move them to the getUtcYear and getUnixNow tests): the values are the specification's and hold either way.",
       `Full wording: ${COMPAT_README} § Removal steps 21.`,
+    ],
+  },
+  {
+    defects: ["D22"],
+    title:
+      "D22 — a zoned relativeTo or start in a repeated hour is measured from the wrong instant, so total, round and until in a date unit answer wrongly from the later pass, and wrongly or not at all from the earlier pass when the end falls in the later pass at a lower wall clock; where a TC39 Assert fails no value exists (tc39/proposal-temporal#3336), including after a skipped hour, and GMT returns its sentinel where the polyfill extrapolates",
+    trigger:
+      'a js-temporal release contains 3c403686d39 ("fix for issues #3141, #3148 and #3149", on main) and tc39/proposal-temporal#3319, so every D22 repro passes, P7D with largestUnit "week" giving P1W among them, and the release gives no value in totalsWithNoValue, noDayCorrection and emptyDaySpan, where TC39 Asserts (tc39/proposal-temporal#3336) and the source on main strips three of them from production builds (read, not run); if #3336 gives these lengths a value instead, the rows, the throws and the repros change together',
+    steps: [
+      "Delete the D22 repros and readOrNone in probeRepros.ts with readOrNone's tests in capabilities.test.ts, isNudgeOriginCompatNeeded in capabilities.ts and its export in index.ts, and the defect-5 terms in zonedWallClockDifference.ts (originNeedsSpecPath, originTotalBySpec, originRoundBySpec, the defect-5 term in untilTakesSpecPath), the export of possibleEpochNanoseconds from zonedWallClock.ts, WHAT_BREAKS.D22 in apps/dox/src/data/temporal-compat.ts, and this entry.",
+      "Keep the throws in nudgeToCalendarUnit, differenceZonedDateTime, combineDateAndTimeDuration and nudgeToZonedTime, test/laterPassOrigin.test.ts, test/noSpecValue.test.ts and the later-pass rows in internal/lengthFromNow.test.ts: the values are the specification's, but the repros are samples, so run these on the release first and keep D22 if a row fails.",
+      `Full wording: ${COMPAT_README} § Removal steps 22.`,
     ],
   },
   {

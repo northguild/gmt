@@ -200,6 +200,10 @@ const PAGES = [
     path: "tools/leap-day-birthday",
     widget: "leap-day-birthday",
   },
+  {
+    path: "tools/expiry-calculator",
+    widget: "expiry-calculator",
+  },
   /* Content pages with a table: no widget, so the whole page is compared. They police the
      `data-col` the table plugin writes on every cell (src/lib/rehype-table-scroll.ts). */
   { path: "reference/zoned/get/getTimeZoneOffset" },

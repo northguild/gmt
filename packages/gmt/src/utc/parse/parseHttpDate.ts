@@ -35,6 +35,8 @@ import { httpDate } from "../../regex";
  *   `Monday, 06-Nov-94 08:49:37 GMT` are: 6 November 1994 was a Sunday. A parser that
  *   accepted the mismatch would have to pick which of the two fields to believe, and
  *   there is no rule in RFC 9110 that says which.
+ * - A `:60` leap second returns `""`, though RFC 9110 §5.6.7 allows it (its `time-of-day`
+ *   comment reads "00:00:00 - 23:59:60 (leap second)"): GMT refuses every second above 59.
  * - An impossible calendar date (`31 Feb`, `29 Feb 2023`) returns `""`: a parser never
  *   invents a date, so fields are validated with `overflow: "reject"`, not clamped.
  * - For the IMF-fixdate shape alone, test the exported `httpDate` pattern.

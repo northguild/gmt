@@ -7,3 +7,5 @@ export * from "./negateDuration";
 export * from "./subtractDuration";
 export * from "./totalDuration";
 export * from "./totalUnits";
+export * from "./totalUnitsFromNow";
+export * from "./ttlFromNow";

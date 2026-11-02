@@ -1,0 +1,52 @@
+---
+title: Expiry Calculator
+description: Give a length of time and a start, or Now, and see the cookie Max-Age, the Expires header, the JWT exp and the signed-URL time it makes, then check a hard-coded 31536000 against twelve starts.
+industries: [core]
+---
+
+import ExpiryCalculator from "../../../components/ExpiryCalculator.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="Lengths of time from now">
+
+<Fragment slot="keypoint">
+
+A year is not a fixed number of seconds. `31536000` is a day short across 29 February.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A cookie, a token and a signed URL each want the same length of time in a different form. Type an amount and a unit, then pick a start: a date you type or drag, or Now. The four plates show the cookie `Max-Age`, the `Expires` header, the JWT `exp` and the signed-URL time. The table sets twelve monthly starts beside the number most code hard-codes. Every date and length on the page is a library result except that hand-written number.
+
+</Fragment>
+
+<ExpiryCalculator fullbleed />
+
+<Fragment slot="after">
+
+**Now.** [`ttlFromNow`](/reference/duration/calculate/ttlFromNow/) reads the clock once and gives the length in every form, so the four plates name one instant. Past year 9999 it returns `null` for the whole result, because an HTTP date has no four-digit form. The pure date route is the same length from a start you choose, and the same start always gives the same answer.
+
+**Cookie Max-Age.** [`totalDuration`](/reference/duration/calculate/totalDuration/) with `relativeTo` counts a year or a month from the start it is given. From Now, [`totalUnitsFromNow`](/reference/duration/calculate/totalUnitsFromNow/) does the same for seconds or any one unit, and takes a `timeZone`. A day counted in UTC is always 86,400 seconds.
+
+**Expires.** [`formatHttpDate`](/reference/utc/format/formatHttpDate/) writes the header, and [`formatHttpDateFromNow`](/reference/utc/format/formatHttpDateFromNow/) writes it for a length from Now.
+
+**JWT exp.** [`addUnix`](/reference/unix/calculate/addUnix/) adds the length to a Unix epoch. [`getUnixIn`](/reference/unix/get/getUnixIn/) gives the epoch for a length from Now.
+
+**Signed-URL time.** [`addUtc`](/reference/utc/calculate/addUtc/) adds the length to a UTC time, and [`getUtcIn`](/reference/utc/get/getUtcIn/) gives it from Now.
+
+A past `Expires` and a `Max-Age` of zero or less delete a cookie (RFC 6265). That is why Now refuses a negative length and the pure route does not.
+
+See [a length of time counted from now](/guides/core-date-operations/durations/#a-length-of-time-counted-from-now).
+
+**Worth trying:**
+
+- [One year, a year earlier](/tools/expiry-calculator/?w=expiry&wa=%7B%22preset%22%3A%22year-common%22%7D) — the same call from 2026 gives `31536000`.
+- [One year from 29 February](/tools/expiry-calculator/?w=expiry&wa=%7B%22preset%22%3A%22year-from-leap-day%22%7D) — ends on 28 February 2029.
+- [One month from 31 January](/tools/expiry-calculator/?w=expiry&wa=%7B%22preset%22%3A%22month-end%22%7D) — the end clamps to 28 February.
+- [A 90-day signed URL](/tools/expiry-calculator/?w=expiry&wa=%7B%22preset%22%3A%22signed-url-90%22%7D) — a length in days is the same from any start.
+- [A cookie that is already gone](/tools/expiry-calculator/?w=expiry&wa=%7B%22preset%22%3A%22delete-cookie%22%7D) — a negative length, and Now refuses it.
+
+</Fragment>
+
+</ToolLayout>

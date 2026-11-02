@@ -1,0 +1,173 @@
+/*
+ * Expiry Calculator: what only this tool needs. The sections, fields, preset, chips, range,
+ * plates, verdict, table, code frame, aside and held lines are the kit's; this sheet lays the
+ * controls and plates out, holds the verdict still, and turns the table into labelled blocks
+ * on a narrow box.
+ *
+ * Amber is the sentinel's alone, so nothing here uses it. A start that differs from the
+ * hand-written number is a word, a hatch and a bottom edge, never a colour alone and never a
+ * left edge.
+ */
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A group that needs the whole row: the preset, the start and the slider. */
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.plates,
+.slot {
+  min-inline-size: 0;
+}
+
+/* Two plates a row, one under a narrow box. The kit's row fits as many as it can; this one
+   states the count so the four plates read as two pairs. */
+.plates dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  @container (inline-size < 40rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The verdict and every verdict it can say share one cell, so the slot is as tall as the
+   tallest and nothing below it moves. */
+.hold {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.liveVerdict,
+.ghost {
+  grid-area: 1 / 1;
+  min-inline-size: 0;
+}
+
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* The cell's text: a date or a figure in tabular figures, held by its widest sample. */
+.cell {
+  display: block;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.strip {
+  min-inline-size: 0;
+}
+
+/* Every verdict cell has the same padding and a bottom edge, clear unless the start differs, so
+   a differing one only paints: its box and its word never shift. */
+.verdictCell {
+  display: block;
+  padding-inline: var(--gmt-space-1);
+  border-block-end: 2px solid transparent;
+}
+
+/* The widest word ("Short by 8640000000000 s", 24 characters) is a sample of the word cell's
+   reserved text, and the kit holds a sample on one line. Held on one line it fixes the column
+   wider than the table at desktop width and the table scrolls. Here the live word and every
+   sample break at their spaces, so the table takes the width it has and the widest sample
+   still fixes the height: a row is two lines when the widest word cannot fit on one. */
+.verdictCell span {
+  white-space: normal;
+}
+
+.differs {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--gmt-series-2) 30%, transparent) 0,
+    color-mix(in srgb, var(--gmt-series-2) 30%, transparent) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+  border-block-end-color: var(--gmt-series-2);
+}
+
+/* Under 40rem the twelve rows become labelled blocks: each cell names its column from the
+   `data-col` the table wrote, and the header row is read by the labels instead. */
+.strip {
+  @container (inline-size < 40rem) {
+    & table,
+    & caption,
+    & tbody,
+    & tr,
+    & th,
+    & td {
+      display: block;
+      inline-size: 100%;
+    }
+
+    & thead {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    & tr {
+      padding-block: var(--gmt-space-2);
+      border-block-end: 1px solid var(--gmt-hairline);
+    }
+
+    & th,
+    & td {
+      display: grid;
+      grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
+      gap: var(--gmt-space-2);
+      border-block-end: 0;
+      text-align: start;
+    }
+
+    & th::before,
+    & td::before {
+      content: attr(data-col);
+      color: var(--gmt-ice-dim);
+      font-weight: 600;
+    }
+
+    /* A held value keeps one line in the wide table, and its widest sample (23 characters)
+       is wider than the value column of a phone. Here the live text and every sample wrap
+       alike, so the widest still fixes the height and nothing is cut off the right edge. */
+    & .cell span {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .differs {
+    background-image: none;
+    border-block-end-color: CanvasText;
+    border-block-end-style: double;
+  }
+
+  .strip td::before,
+  .strip th::before {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .differs {
+    border-block-end-width: 3px;
+  }
+
+  .strip td::before,
+  .strip th::before {
+    color: var(--gmt-ice);
+  }
+}

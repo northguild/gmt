@@ -335,7 +335,15 @@ operations.
   `ObservanceShift`
 - **Diffs**: `diffDate`, `diffDateTime`, `diffTime` (+ `diffZoned`,
   `diffUnix`, `diffUtc` in their namespaces)
-- **Spans (raw numbers)**: `spanMs`, `spanNs`, `spanWallClock`, `isValidSpan`
+- **Spans (raw numbers)**: `spanMs`, `spanNs`, `spanSeconds`, `spanWallClock`,
+  `isValidSpan`
+- **Lengths of time from now** (a unit object, never negative, counted in UTC):
+  `ttlFromNow` (one clock read gives `seconds`, `milliseconds`, `epochSeconds`,
+  `httpDate` and `iso` together, or `null`), `totalUnitsFromNow` (one unit,
+  `timeZone` optional), `formatHttpDateFromNow`. The seconds in "one year"
+  depend on today, so a fixed `31_536_000` is a day short across 29 February.
+  Seconds left until a stored time (rounded up, negative once past):
+  `secondsUntilUnix`, `secondsUntilHttpDate`, `secondsUntilRetryAfter`.
 - **Bounds**: `clampDate`, `closestDateTo`, `startOfDate`, `endOfDate`,
   `startOfQuarterForDate`, `getLocaleStartOfWeek` (zoned boundaries: see the
   `gmt-timezone` skill)

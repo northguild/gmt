@@ -7,6 +7,9 @@ import type { Temporal } from "../internal/temporal";
  * Years, months and weeks have no fixed length, so any operation touching them needs a starting
  * point; an operation on days and time units alone does not. A string is an ISO 8601 date or
  * date-time, or a zoned date-time with its time zone annotation.
+ *
+ * A `Z` string, such as `getUtcNow()` returns, is refused and the call returns `null`. To start from
+ * now, pass `getZonedNow("UTC")`.
  */
 export type DurationRelativeTo =
   | Temporal.PlainDateTime
