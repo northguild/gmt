@@ -31,6 +31,7 @@ are fixed upstream, not edited here.
 | `/commit-message` | Drafts a ready-to-copy commit message from the current diff (read-only) |
 | `/pr-desc` | Drafts a PR title and description from the branch diff (read-only) |
 | `/changelog` | Rewrites the pending `.changeset/*.md` description to match CHANGELOG style |
+| `/release` | Typed only. Opens the release PR: a `release/<date>` worktree from `origin/main`, PUBLISHING.md step 3, commit, push, PR. Never merges |
 | `/plain-english` | ISO 24495-1 plain-language rules for prose a person reads, not runs |
 | `/update-readme` | Syncs the landing-page READMEs' figures, sample, namespaces and prompt |
 | `/tanstack-intent` | Keeps `packages/gmt/skills/` in sync with source changes |
