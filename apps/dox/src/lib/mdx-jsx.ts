@@ -28,6 +28,7 @@ import {
   filedPrs,
   filings,
   handledInGmt,
+  listings,
   unaffectingGmt,
 } from "../data/upstream-filings";
 import {
@@ -36,7 +37,8 @@ import {
   tableMarkdown,
   type CompareTableId,
 } from "./library-compare-tables";
-import { contributionClause, coverageClause } from "./upstream-summary";
+import { LISTING_COLUMNS, listingStatus } from "./upstream-status";
+import { asDate, contributionClause, coverageClause } from "./upstream-summary";
 import { diffViews, libraryProp, mapView, matrixView } from "./migrate-view";
 
 /** A parsed JSX element: the props it was given, and the span it occupied. */
@@ -398,6 +400,23 @@ function renderUpstreamTracker(): string {
 }
 
 /**
+ * `<UpstreamListings />` as a Markdown table: the pull requests GMT opened outside Temporal, with
+ * the same columns as the page. The heading and the sentence above it are in the MDX.
+ */
+function renderUpstreamListings(): string {
+  const rows = listings.map((l) => {
+    const name = `[${l.repo}#${l.number}](${l.url}) ${escapeMarkdownInline(l.title)}`;
+    return `| ${name} | ${escapeMarkdownInline(l.summary)} | ${listingStatus(l)} | ${l.comments} | ${asDate(l.updatedAt)} |`;
+  });
+  return [
+    `\n| ${LISTING_COLUMNS.join(" | ")} |`,
+    `| ${LISTING_COLUMNS.map(() => "---").join(" | ")} |`,
+    ...rows,
+    "",
+  ].join("\n");
+}
+
+/**
  * Render the components that carry prose, and unwrap the ones that don't.
  *
  * `ChartContainer` and `TimezoneMap` draw an SVG from data that is already stated in the
@@ -448,6 +467,7 @@ export function renderMdxComponents(body: string): string {
   out = replaceElements(out, "LibraryCompare", renderLibraryCompare);
   out = replaceElements(out, "UpstreamDefects", renderUpstreamDefects);
   out = replaceElements(out, "UpstreamTracker", renderUpstreamTracker);
+  out = replaceElements(out, "UpstreamListings", renderUpstreamListings);
   out = replaceElements(out, "BundleSize", renderBundleSize);
   out = replaceElements(out, "MigrationMap", renderMigrationMap);
   out = replaceElements(out, "BehaviourDiffs", renderBehaviourDiffs);

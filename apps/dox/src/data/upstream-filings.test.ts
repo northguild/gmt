@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
   checked,
@@ -13,10 +15,13 @@ import {
   guardsAddressed,
   handledInGmt,
   HAND_WRITTEN_FIELDS,
+  LISTING_HAND_WRITTEN_FIELDS,
+  listings,
   overlayLive,
   totalFilings,
   unaffectingGmt,
   type UpstreamFiling,
+  type UpstreamListing,
 } from "./upstream-filings";
 import { getUtcNow, isAfterUtc, isValidUtc } from "@northguild/gmt";
 
@@ -331,5 +336,208 @@ describe("overlayLive", () => {
     const fromScript = [...list.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
     expect(fromScript.length).toBeGreaterThan(0);
     expect([...HAND_WRITTEN_FIELDS]).toEqual(fromScript);
+  });
+});
+
+const TEMPORAL_REPOS = [
+  "js-temporal/temporal-polyfill",
+  "tc39/proposal-temporal",
+];
+const FILING_ONLY_FIELDS = ["gmtGuard", "gmtNote", "work", "outcome", "role"];
+
+const listing = (
+  number: number,
+  fields: Partial<UpstreamListing> = {},
+): UpstreamListing => ({
+  repo: "example/comparison-list",
+  number,
+  kind: "pr",
+  summary: `Summary of ${number}`,
+  title: `Pull request ${number}`,
+  url: `https://github.com/example/comparison-list/pull/${number}`,
+  state: "open",
+  draft: false,
+  reviewDecision: null,
+  comments: 0,
+  maintainerComments: 0,
+  createdAt: "2026-11-01",
+  updatedAt: "2026-11-01",
+  closedAt: null,
+  mergedAt: null,
+  ...fields,
+});
+
+describe("upstream listings", () => {
+  it("gives every listing a summary and a URL matching its repo, kind and number", () => {
+    expect(listings.length).toBeGreaterThan(0);
+    for (const l of listings) {
+      const label = `${l.repo}#${l.number}`;
+      expect(l.summary, label).not.toBe("");
+      expect(l.url, label).toBe(
+        `https://github.com/${l.repo}/${l.kind === "pr" ? "pull" : "issues"}/${l.number}`,
+      );
+    }
+  });
+
+  it("carries nothing that belongs to a filing", () => {
+    for (const l of listings) {
+      for (const field of FILING_ONLY_FIELDS) {
+        expect(l, `${l.repo}#${l.number}`).not.toHaveProperty(field);
+      }
+    }
+  });
+
+  it("is on a project outside Temporal, and shares no key with a filing", () => {
+    const filingKeys = new Set(filings.map((f) => `${f.repo}#${f.number}`));
+    for (const l of listings) {
+      expect(TEMPORAL_REPOS, `${l.repo}#${l.number}`).not.toContain(l.repo);
+      expect(filingKeys.has(`${l.repo}#${l.number}`)).toBe(false);
+    }
+  });
+
+  it("leaves every filing count as it is when a listing is added to a copy of the data", () => {
+    // The tallies are computed from `filings` alone, so a copy of the data with one more listing
+    // has the same filings; no count is typed here.
+    const copy = JSON.parse(
+      readFileSync(
+        resolve(import.meta.dirname, "upstream-filings.json"),
+        "utf8",
+      ),
+    ) as { filings: unknown[]; listings: unknown[] };
+    const before = copy.filings.length;
+    copy.listings.push(listing(9999));
+    expect(copy.filings).toHaveLength(before);
+    expect(filedByUs + contributions).toBe(totalFilings);
+    expect(filings.length).toBe(totalFilings);
+    expect(filedByUs).toBe(
+      filings.filter((f) => f.role !== "contributor").length,
+    );
+  });
+
+  it("lists the same hand-written listing fields as scripts/upstream.mjs", () => {
+    const script = readFileSync(
+      resolve(import.meta.dirname, "../../../../scripts/upstream.mjs"),
+      "utf8",
+    );
+    const list =
+      /const LISTING_HAND_WRITTEN_FIELDS = \[([^\]]+)\]/.exec(script)?.[1] ??
+      "";
+    const fromScript = [...list.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(fromScript.length).toBeGreaterThan(0);
+    expect([...LISTING_HAND_WRITTEN_FIELDS]).toEqual(fromScript);
+  });
+});
+
+describe("overlayLive for listings", () => {
+  const committedAt = "2026-11-02T10:11:47.79528858Z";
+  const liveAt = "2026-11-02T10:30:00Z";
+
+  it("takes the GitHub fields from the live file and keeps the committed summary", () => {
+    const result = overlayLive(
+      {
+        checked: committedAt,
+        filings: [],
+        listings: [listing(1, { summary: "Edited" })],
+      },
+      {
+        checked: liveAt,
+        filings: [],
+        listings: [
+          listing(1, { summary: "Old", comments: 4, state: "closed" }),
+        ],
+      },
+    );
+    expect(result.listings?.[0]).toMatchObject({
+      summary: "Edited",
+      comments: 4,
+      state: "closed",
+    });
+  });
+
+  it("keeps the committed listings when the live file has no listings", () => {
+    const result = overlayLive(
+      { checked: committedAt, filings: [], listings: [listing(1)] },
+      { checked: liveAt, filings: [] },
+    );
+    expect(result.listings).toEqual([listing(1)]);
+  });
+
+  it("drops a listing only the live file has", () => {
+    const result = overlayLive(
+      { checked: committedAt, filings: [], listings: [listing(1)] },
+      { checked: liveAt, filings: [], listings: [listing(1), listing(2)] },
+    );
+    expect(result.listings?.map((l) => l.number)).toEqual([1]);
+  });
+});
+
+// `upstream check` runs offline against `UPSTREAM_FILE`, so a bad fixture proves it fails
+// without any test calling GitHub.
+describe("scripts/upstream.mjs check", () => {
+  const script = resolve(
+    import.meta.dirname,
+    "../../../../scripts/upstream.mjs",
+  );
+  const committed = JSON.parse(
+    readFileSync(resolve(import.meta.dirname, "upstream-filings.json"), "utf8"),
+  ) as {
+    checked: string;
+    filings: unknown[];
+    listings: Record<string, unknown>[];
+  };
+
+  const run = (data: unknown): { ok: boolean; output: string } => {
+    const dir = mkdtempSync(resolve(tmpdir(), "upstream-check-"));
+    try {
+      const file = resolve(dir, "filings.json");
+      writeFileSync(file, JSON.stringify(data));
+      try {
+        const output = execFileSync("node", [script, "check"], {
+          env: { ...process.env, UPSTREAM_FILE: file },
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+        return { ok: true, output };
+      } catch (error) {
+        const e = error as { stderr?: string; stdout?: string };
+        return { ok: false, output: `${e.stderr ?? ""}${e.stdout ?? ""}` };
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const withListings = (listings: Record<string, unknown>[]) => ({
+    ...committed,
+    listings,
+  });
+
+  it("passes on the committed file", () => {
+    expect(run(committed).ok).toBe(true);
+  });
+
+  it("fails on a listing that carries gmtGuard", () => {
+    const bad = { ...committed.listings[0], gmtGuard: "D1" };
+    const result = run(withListings([bad]));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("gmtGuard");
+  });
+
+  it("fails on a listing in a Temporal repository", () => {
+    const bad = {
+      ...committed.listings[0],
+      repo: "tc39/proposal-temporal",
+      url: "https://github.com/tc39/proposal-temporal/pull/159",
+    };
+    const result = run(withListings([bad]));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("belongs in");
+  });
+
+  it("fails on a duplicate key", () => {
+    const result = run(
+      withListings([committed.listings[0], committed.listings[0]]),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("duplicate");
   });
 });

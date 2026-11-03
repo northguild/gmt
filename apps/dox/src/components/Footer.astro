@@ -18,7 +18,7 @@ const inChatShell = /\/dox\/?$/.test(Astro.url.pathname);
 <Default />
 {!inChatShell && (
 	<p class="gmt-licence-note">
-		{LICENCE_LEAD}
+		{LICENCE_LEAD}{" "}
 		<a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
 	</p>
 )}

@@ -8,6 +8,7 @@ slug: upstream
 ---
 
 import UpstreamDefects from "../../components/UpstreamDefects.astro";
+import UpstreamListings from "../../components/UpstreamListings.astro";
 import UpstreamTracker from "../../components/UpstreamTracker.astro";
 import { gmtVersion } from "../../generated/versions";
 
@@ -88,6 +89,12 @@ helps then is evidence: a way to reproduce the bug, and measurements of what the
 changes. Those are listed here too, marked as someone else's work.
 
 <UpstreamTracker />
+
+## Beyond Temporal
+
+GMT also opens pull requests on other projects, when a list or comparison should include it.
+
+<UpstreamListings />
 
 ## What this means for you
 

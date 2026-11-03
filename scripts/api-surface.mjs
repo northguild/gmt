@@ -122,6 +122,9 @@ const DIST = join(ROOT, "packages/gmt/dist/index.js");
 const SRC = join(ROOT, "packages/gmt/src");
 /** Generated reference pages: built from the corpus, so they cannot drift from it. */
 const DOX_REFERENCE = "apps/dox/src/content/docs/reference";
+// Release notes record past APIs (`@northguild/gmt/duty`, `isLeapSecond` from `timescale`, results
+// that later changed), so today's surface must not check them.
+const DOX_CHANGELOG = "apps/dox/src/content/docs/changelog";
 /** Directories under `src/` that are never public. */
 const PRIVATE_DIRS = new Set(["internal", "test"]);
 
@@ -414,7 +417,9 @@ function documentationFiles() {
       ? readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((e) => {
           const path = `${dir}/${e.name}`;
           if (e.isDirectory())
-            return path === DOX_REFERENCE ? [] : walk(path, keep);
+            return path === DOX_REFERENCE || path === DOX_CHANGELOG
+              ? []
+              : walk(path, keep);
           return keep(e.name) ? [path] : [];
         })
       : [];

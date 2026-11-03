@@ -101,6 +101,11 @@ export const GET: APIRoute = () => {
       links: directoryLinks(base, "check", { indexFirst: true }),
     },
     { heading: "Start here", links: startHere.map(({ link }) => link) },
+    // The release record: linked here so an agent can fetch it, left out of llms-full.txt.
+    {
+      heading: "Changelog",
+      links: directoryLinks(base, "changelog", { indexFirst: true }),
+    },
     { heading: "Migrate", links: migrateLinks },
     // The guides index is a list of the guides below it.
     {

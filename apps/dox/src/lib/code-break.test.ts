@@ -110,3 +110,45 @@ describe("codeBreakHast", () => {
     );
   });
 });
+
+describe("codeBreakPieces with calls", () => {
+  it("breaks a call after its opening parenthesis and between arguments", () => {
+    expect(
+      codeBreakPieces('isLeapSecond("2024-06-15T12:34:60Z")', { calls: true }),
+    ).toEqual(["isLeapSecond(", '"2024-06-15T', '12:34:60Z")']);
+    expect(codeBreakPieces('setDate("2024-01-31",5)', { calls: true })).toEqual(
+      ["setDate(", '"2024-01-31",', "5)"],
+    );
+  });
+
+  it("breaks after the T of an ISO instant and before a zone annotation", () => {
+    expect(
+      codeBreakPieces('f("2024-06-15T08:00+10:00[Australia/Sydney]")', {
+        calls: true,
+      }),
+    ).toEqual([
+      "f(",
+      '"2024-06-15T',
+      "08:00+10:00",
+      "[Australia/",
+      'Sydney]")',
+    ]);
+  });
+
+  it("leaves an empty call, a number and a plain token whole", () => {
+    expect(codeBreakPieces("fn()", { calls: true })).toEqual(["fn()"]);
+    expect(codeBreakPieces("a(1,000)", { calls: true })).toEqual([
+      "a(",
+      "1,000)",
+    ]);
+    expect(codeBreakPieces("isLeapSecond", { calls: true })).toEqual([
+      "isLeapSecond",
+    ]);
+  });
+
+  it("keeps a call whole without the option", () => {
+    expect(codeBreakPieces('isLeapSecond("2024-06-15T12:34:60Z")')).toEqual([
+      'isLeapSecond("2024-06-15T12:34:60Z")',
+    ]);
+  });
+});

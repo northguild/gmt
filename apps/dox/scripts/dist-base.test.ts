@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, relative, resolve } from "node:path";
+import { basename, relative, resolve, sep } from "node:path";
 import {
   badJsLiterals,
   baseHelperNames,
@@ -120,7 +120,10 @@ describe("the built site keeps the /gmt base", () => {
     if (b === null) return;
     const { pages } = b;
     const text = [
-      ...walk(pages, (n) => n.endsWith(".md")),
+      // The changelog is the release record, verbatim: one entry names the retired host.
+      ...walk(pages, (n) => n.endsWith(".md")).filter(
+        (file) => !file.includes(`${sep}changelog${sep}`),
+      ),
       resolve(pages, "llms.txt"),
       resolve(pages, "llms-full.txt"),
     ];

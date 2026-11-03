@@ -87,10 +87,36 @@ export interface UpstreamFiling {
   new?: boolean;
 }
 
+/**
+ * A pull request GMT opened on a project outside Temporal, such as a comparison list that should
+ * include GMT. It fixes no Temporal defect, so it is not a filing: it has no `work`, `gmtGuard` or
+ * `gmtNote`, and it is counted nowhere. Only `summary` is hand-written; the rest is synced.
+ */
+export interface UpstreamListing {
+  repo: string;
+  number: number;
+  kind: "pr";
+  /** One hand-written sentence: what the pull request asks for. */
+  summary: string;
+  title: string;
+  url: string;
+  state: "open" | "closed";
+  draft: boolean;
+  reviewDecision: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  comments: number;
+  maintainerComments: number;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+  mergedAt: string | null;
+}
+
 export interface UpstreamFilings {
   /** When this file's data was last read from GitHub, ISO 8601. */
   checked: string;
   filings: readonly UpstreamFiling[];
+  /** Absent in a live file written before listings existed. */
+  listings?: readonly UpstreamListing[];
 }
 
 /** The fields a person writes in the committed file. `sync` and `refresh` copy them and never read
@@ -109,10 +135,17 @@ export const HAND_WRITTEN_FIELDS = [
   "outcome",
 ] as const;
 
-const keyOf = (f: UpstreamFiling): string => `${f.repo}#${f.number}`;
+/** The fields a person writes on a listing; the same list as `LISTING_HAND_WRITTEN_FIELDS` in
+ * `scripts/upstream.mjs`, which a test holds equal. */
+export const LISTING_HAND_WRITTEN_FIELDS = ["summary"] as const;
 
-const byRepoThenNumber = (a: UpstreamFiling, b: UpstreamFiling): number =>
-  a.repo.localeCompare(b.repo) || a.number - b.number;
+const keyOf = (f: { repo: string; number: number }): string =>
+  `${f.repo}#${f.number}`;
+
+const byRepoThenNumber = (
+  a: { repo: string; number: number },
+  b: { repo: string; number: number },
+): number => a.repo.localeCompare(b.repo) || a.number - b.number;
 
 /**
  * The live file laid over the committed one.
@@ -121,7 +154,9 @@ const byRepoThenNumber = (a: UpstreamFiling, b: UpstreamFiling): number =>
  * written before a pull still holds the filings and summaries of that older commit. So the
  * committed file decides which filings exist and what their hand-written fields say. The live file
  * adds two things: newer GitHub fields (state, comments, dates) for those filings, and any filing
- * discovery found that the committed file does not have yet. A live file checked before the
+ * discovery found that the committed file does not have yet. Listings follow the same rule with one
+ * difference: nothing discovers them, so a listing only the live file has is dropped, and a live
+ * file without `listings` leaves the committed ones as they are. A live file checked before the
  * committed one has nothing newer, so the committed file stands alone.
  */
 export function overlayLive(
@@ -145,7 +180,26 @@ export function overlayLive(
   return {
     checked: live.checked,
     filings: [...fromCommitted, ...onlyLive].sort(byRepoThenNumber),
+    listings: overlayListings(committed.listings ?? [], live.listings),
   };
+}
+
+function overlayListings(
+  committed: readonly UpstreamListing[],
+  live: readonly UpstreamListing[] | undefined,
+): readonly UpstreamListing[] {
+  if (live === undefined) return committed;
+  const liveByKey = new Map(live.map((l) => [keyOf(l), l]));
+  return committed
+    .map((own) => {
+      const fresh = liveByKey.get(keyOf(own));
+      if (fresh === undefined) return own;
+      const merged: Record<string, unknown> = { ...fresh };
+      for (const field of LISTING_HAND_WRITTEN_FIELDS)
+        merged[field] = own[field];
+      return merged as unknown as UpstreamListing;
+    })
+    .sort(byRepoThenNumber);
 }
 
 function isUpstreamFilings(value: unknown): value is UpstreamFilings {
@@ -192,6 +246,9 @@ const upstreamFilings: UpstreamFilings =
     : committedFilings;
 export const filings: readonly UpstreamFiling[] = upstreamFilings.filings;
 export const checked: string = upstreamFilings.checked;
+/** Pull requests GMT opened outside Temporal. Not filings: no tally below counts them. */
+export const listings: readonly UpstreamListing[] =
+  upstreamFilings.listings ?? [];
 
 /** Every distinct repository a filing names, in first-seen (JSON) order. */
 export const filingRepos: readonly string[] = [

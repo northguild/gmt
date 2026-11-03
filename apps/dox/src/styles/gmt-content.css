@@ -25,6 +25,22 @@
   font-size: 1.05rem;
 }
 
+/* The changelog page runs scope h2, version h3, change-type h4, and h5 inside an entry. The site's
+   h3 above is 1.05rem while Starlight leaves h4 at 1.25rem and h5 at 1.125rem, so "1.21.0" came out
+   smaller than the "Minor Changes" under it. This page steps the scale down one rung per level;
+   every other page keeps its headings. */
+.sl-markdown-content .gmt-changelog h3 {
+  font-size: 1.2rem;
+}
+
+.sl-markdown-content .gmt-changelog h4 {
+  font-size: 1.05rem;
+}
+
+.sl-markdown-content .gmt-changelog h5 {
+  font-size: 1rem;
+}
+
 /* A heading with no spaces to break at — several function names joined by
    `/`, e.g. — has nowhere for normal wrapping to give, and pushed the whole
    page into horizontal scroll rather than wrapping (found on

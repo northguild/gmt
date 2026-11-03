@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, sep } from "node:path";
 
 const outGen = resolve(
   import.meta.dirname,
@@ -553,6 +553,7 @@ Body text here.`;
         "Tools",
         "Checks",
         "Start here",
+        "Changelog",
         "Migrate",
         "Guides",
         "Reference",
@@ -567,6 +568,44 @@ Body text here.`;
       )) {
         expect(at(heading)).toBeGreaterThan(at("Reference"));
         expect(at(heading)).toBeLessThan(at("Industries"));
+      }
+    });
+
+    it("llms.txt links the changelog, and neither llms-full.txt nor the retrieval chunks carry it", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const llms = readFileSync(resolve(distDir, "llms.txt"), "utf8");
+      expect(llms).toMatch(/^## Changelog$/m);
+      const pages = readdirSync(
+        resolve(
+          import.meta.dirname,
+          "..",
+          "src",
+          "content",
+          "docs",
+          "changelog",
+        ),
+      ).filter((file) => file.endsWith(".md"));
+      expect(pages.length).toBeGreaterThanOrEqual(4);
+      for (const page of pages) {
+        const route =
+          page === "index.md"
+            ? "changelog/index"
+            : `changelog/${page.slice(0, -3)}`;
+        expect(llms, `llms.txt links ${route}`).toMatch(
+          new RegExp(`^- \\[[^\\]]*\\]\\(https://[^)]*/${route}\\.md\\)`, "m"),
+        );
+      }
+      const full = readFileSync(resolve(distDir, "llms-full.txt"), "utf8");
+      expect(full).not.toContain("## @burglekitt/");
+      const chunksPath = resolve(distDir, "retrieval-chunks.json");
+      if (existsSync(chunksPath)) {
+        const chunks = JSON.parse(readFileSync(chunksPath, "utf8")) as Array<{
+          url: string;
+        }>;
+        expect(
+          chunks.filter((chunk) => chunk.url.startsWith("/changelog/")),
+        ).toEqual([]);
       }
     });
 
@@ -664,6 +703,9 @@ Body text here.`;
       const strayImportRe = /^\}[ \t]*from[ \t]*["']/m;
 
       for (const file of allDistMdFiles(distDir)) {
+        // The changelog is the release record, verbatim: its entries indent code fences inside
+        // list items, which `proseOnly` does not strip.
+        if (file.includes(`${sep}changelog${sep}`)) continue;
         const text = proseOnly(readFileSync(file, "utf8"));
         expect(text, `${file} has a leftover import line`).not.toMatch(
           strayImportRe,
@@ -755,6 +797,8 @@ Body text here.`;
       if (distDir === null) return;
 
       for (const name of builtMarkdown(distDir)) {
+        // The changelog is the release record, verbatim: its code samples hold braces.
+        if (name.startsWith("changelog/")) continue;
         expect({
           file: name,
           left: unresolvedExpressions(

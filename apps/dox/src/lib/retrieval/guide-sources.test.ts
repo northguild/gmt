@@ -9,6 +9,13 @@ describe("loadGuideSources", () => {
     }
   });
 
+  it("leaves the changelog out: old signatures would ground answers in removed APIs", () => {
+    const routes = loadGuideSources().map((s) => s.route);
+    expect(routes.filter((route) => route.startsWith("/changelog/"))).toEqual(
+      [],
+    );
+  });
+
   it("derives a route without the index segment for an index.mdx", () => {
     const sources = loadGuideSources();
     const guidesIndex = sources.find((s) => s.route === "/guides/");
