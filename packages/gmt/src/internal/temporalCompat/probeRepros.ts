@@ -851,7 +851,7 @@ const d20Repros: readonly ProbeRepro[] = [
 ];
 
 /**
- * D22 (`internal/zonedWallClockDifference.ts`): a zoned `relativeTo` or start in either pass of a
+ * D22 (`internal/zonedDifference/nudgeOrigin.ts`): a zoned `relativeTo` or start in either pass of a
  * repeated hour is mismeasured. TC39 `ComputeNudgeWindow` takes the window's start from the origin's
  * own exact time when no unit has been added (tc39/proposal-temporal#3148 for `total`, #3149 for
  * `round`), and `DifferenceZonedDateTime` subtracts the exact times when both fall on one local date
