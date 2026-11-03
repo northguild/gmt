@@ -6,6 +6,8 @@ sidebar:
 industries: [core]
 ---
 
+import { Aside } from "@astrojs/starlight/components";
+
 A database driver hands your code a date or time in one of three shapes: text, a number counted
 from an epoch, or a driver object made of parts. Each shape has one gmt call, or a short
 composition of calls. The table below lists every form for twelve databases, and the sections
@@ -16,6 +18,12 @@ after it show the runnable snippet for each one that takes more than a single ca
 PostgreSQL `timestamptz`, SQL Server `datetimeoffset` and Oracle `TIMESTAMP WITH TIME ZONE` print a
 timestamp with a UTC offset, and none of them print the `T` that ISO 8601 uses. The ISO readers
 each handle part of that text, and none handle all of it.
+
+<Aside type="caution" title="An offset is not a zone">
+An offset such as `+00:00` names an instant, not a place: it is Reykjavik all year, and London only
+in winter. Never read it as an IANA zone. [An offset is not a zone](#an-offset-is-not-a-zone) below
+says what to store and which calls to use.
+</Aside>
 
 [`toOffsetInstant`](/reference/instant/convert/toOffsetInstant/) needs a `T`, so it returns `null` on
 every space-separated form:
