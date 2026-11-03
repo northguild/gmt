@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { parse as parseYaml } from "yaml";
 import {
   affected,
   afterMerge,
@@ -369,6 +370,35 @@ describe("affected: the rules and checks are well formed", () => {
         )
       )
         expect(check.needs ?? [], check.id).toContain("build:gmt");
+    }
+  });
+
+  it("a CI step gated on one check runs every script that check runs", () => {
+    // ci.yml repeats some checks' commands by hand. A script added to a check's `run` and not to
+    // its CI step runs in `validate` but never in CI, and whatever reads its output breaks there.
+    const workflow = parseYaml(
+      readFileSync(
+        new URL("../../../.github/workflows/ci.yml", import.meta.url),
+        "utf8",
+      ),
+    ) as { jobs: Record<string, { steps?: { if?: string; run?: string }[] }> };
+    const ciRuns = new Map<string, string>();
+    for (const job of Object.values(workflow.jobs)) {
+      for (const step of job.steps ?? []) {
+        const gate = /^contains\(fromJSON\(env\.CHECKS\), '([\w:-]+)'\)$/.exec(
+          step.if?.trim() ?? "",
+        );
+        if (gate && step.run)
+          ciRuns.set(gate[1], `${ciRuns.get(gate[1]) ?? ""}\n${step.run}`);
+      }
+    }
+    expect(ciRuns.has("dox-pages")).toBe(true);
+    for (const check of CHECKS) {
+      const ci = ciRuns.get(check.id);
+      if (ci === undefined) continue;
+      for (const [script] of check.run.matchAll(/[\w-]+\.(?:mjs|ts)\b/g)) {
+        expect(ci, `CI's ${check.id} step runs ${script}`).toContain(script);
+      }
     }
   });
 

@@ -242,16 +242,20 @@ jobs:
         if: contains(fromJSON(env.CHECKS), 'upstream')
         run: node scripts/upstream.mjs check
 
-      # Three content pages are generated, not committed: `guides/concepts/dst-disambiguation.md`
-      # (copied from the canonical `docs/dst-disambiguation.md`), `scenarios/index.mdx` and
-      # `tools/index.mdx`. Other pages and both READMEs link to them, so without this step
+      # Some content pages are generated, not committed: `guides/concepts/dst-disambiguation.md`
+      # (copied from the canonical `docs/dst-disambiguation.md`), the `changelog/` pages (built
+      # from each package's CHANGELOG.md), `scenarios/index.mdx`, `tools/index.mdx` and the
+      # industry pages. Other pages and both READMEs link to them, so without this step
       # `api-surface` reports those links as broken and this job fails on a checkout that is
-      # perfectly fine. All three generators read tracked sources, so CI produces byte-identical
-      # pages to a local run.
+      # perfectly fine. The generators read tracked sources, and the changelog's dates come from
+      # the release tags (fetch-depth: 0 above), so CI produces byte-identical pages to a local
+      # run. This list repeats the `dox-pages` check in scripts/lib/affected.mjs, and
+      # apps/dox/scripts/affected.test.ts fails when the two drift apart.
       - name: Generate the dox content pages that are not committed
         if: contains(fromJSON(env.CHECKS), 'dox-pages')
         run: |
           node apps/dox/scripts/build-guides.mjs
+          node apps/dox/scripts/build-changelog.mjs
           node apps/dox/scripts/build-scenario-index.mjs
           pnpm --filter dox exec tsx scripts/build-tool-index.ts
           pnpm --filter dox exec tsx scripts/build-industry-pages.ts
