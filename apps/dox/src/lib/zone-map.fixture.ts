@@ -3,13 +3,13 @@
  * page's mount wires it, with fixture rows and a boundary file read from `public/`. Not a `.test`
  * file, like `clock-change-tense.fixture.ts`.
  */
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { geoPath } from "d3-geo";
-import { screen, within } from "@testing-library/dom";
-import userEvent from "@testing-library/user-event";
 import { isBeforeUtc } from "@northguild/gmt/utc/compare";
 import { convertUtcToPlainDateTime } from "@northguild/gmt/utc/convert";
+import { screen, within } from "@testing-library/dom";
+import userEvent from "@testing-library/user-event";
+import { geoPath } from "d3-geo";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { html } from "~/widgets/builders/html";
 import { section, widget } from "~/widgets/builders/layout";
 import {
@@ -19,8 +19,8 @@ import {
 } from "~/widgets/families/clockcheck/zone-map";
 import { findWidget } from "~/widgets/root";
 import { renderHtml } from "~/widgets/test-fixture";
-import type { TenseView } from "./clock-change-tense";
 import { msToNextSecond } from "./clock-change-common";
+import type { TenseView } from "./clock-change-tense";
 import {
   MAP_WIDTH,
   isZoneFeature,
@@ -113,13 +113,7 @@ export function drawZoneMap({ config, ids, rows, deps, signal }: DrawOptions) {
     ),
   );
   const found = findWidget(fixture.host, config.idPrefix);
-  const handle = wireZoneMap(
-    found,
-    rows,
-    mapSignal,
-    deps,
-    config,
-  );
+  const handle = wireZoneMap(found, rows, mapSignal, deps, config);
   return { fixture, found, handle, user: userEvent.setup() };
 }
 
