@@ -1,6 +1,6 @@
 ---
 // Override of Starlight's Header. It adds two things to Starlight's own layout:
-// the NorthGuild link (the shield, then a divider) before the site title, which
+// the NorthGuild link (the mark and wordmark, then a divider) before the site title, which
 // leads back to northguild.dev in the same tab (#424); and a "Chat with Dox"
 // link in the right-hand group, next to the social icons, so the /dox chat is
 // reachable from every page. Both are plain links with no JavaScript: no page
@@ -28,13 +28,15 @@ const shouldRenderSearch =
   config.components.Search !== "@astrojs/starlight/components/Search.astro";
 ---
 
-<div class="header">
+<div class="header gmt-theme-dark">
   <div class="title-wrapper sl-flex">
     {/* Same site, one level up, so a plain same-tab link, not `ButtonLink`
         (which opens an absolute URL in a new tab and draws a chip). */}
-    <a href={LANDING_URL} class="gmt-ng-link gmt-sonar-focus" title="NorthGuild home">
-      <span class="sr-only">NorthGuild home</span>
+    {/* The name starts with the visible text (WCAG 2.2 SC 2.5.3) and still names the link
+        when the wordmark is hidden on a narrow screen. */}
+    <a href={LANDING_URL} class="gmt-ng-link gmt-sonar-focus" aria-label="NorthGuild home">
       <NorthGuildMark />
+      <span class="gmt-ng-wordmark">NorthGuild</span>
     </a>
     <span class="gmt-ng-divider" aria-hidden="true"></span>
     <SiteTitle />

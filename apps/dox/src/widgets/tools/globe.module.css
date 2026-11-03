@@ -362,7 +362,7 @@
     max-inline-size: min(
       44rem,
       70vh,
-      calc(100dvh - var(--sl-nav-height, 4rem) - 21rem)
+      calc(100dvh - var(--sl-nav-height, 3.5rem) - 21rem)
     );
   }
 }

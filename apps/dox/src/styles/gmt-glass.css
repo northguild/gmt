@@ -9,11 +9,20 @@
  * the --gmt-fill-* / --gmt-border tokens, so every surface stays in-palette.
  */
 
-/* Header — stained glass wash, content visible behind */
+/* Header — the same glass as the northguild.dev bar: a teal wash over a void backing, 4 px of
+   blur and one hairline below. It is dark in both themes (the island in `Header.astro`), so it
+   reads the fixed `--gmt-header-*` values, not the themed fills. */
 header {
-  background: var(--gmt-fill-strong);
-  border-block-end: 1px solid var(--gmt-border);
-  backdrop-filter: var(--gmt-glass-blur);
+  background:
+    linear-gradient(var(--gmt-header-wash), var(--gmt-header-wash)),
+    var(--gmt-header-backing);
+  border-block-end: 1px solid var(--gmt-header-edge);
+  backdrop-filter: var(--gmt-header-blur);
+}
+
+header::before,
+header::after {
+  display: none;
 }
 
 /* Sidebar — subtle blue-tinted glass, content shows through */

@@ -1,0 +1,196 @@
+/* PROTOTYPE, throwaway. DOX-G2 round 3 over the live Dox dev server.
+   One rule: every element has exactly one entrance, and all start from one t0 (html.p-go). */
+:root {
+  --p-ice: #e6f6ff;
+  --p-cyan: #22d3ee;
+  --p-frost: color-mix(in oklab, var(--p-ice) 70%, var(--p-cyan));
+  --p-k: 1;
+  --p-void: 2 6 11;
+  --p-ease-sweep: cubic-bezier(.25, .6, .2, 1);
+  --p-ease-snap: cubic-bezier(.5, 0, .1, 1);
+}
+html.p-slow { --p-k: 2; }
+html { background: #000 !important; overflow-x: clip; }
+html, body, .page, .main-frame, .content-panel { background: transparent !important; }
+[data-theme='light'] body { background: transparent !important; }
+[data-theme='light'] .content-panel:not(:has(.gmt-herostage)) { background: var(--sl-color-bg) !important; }
+.page { position: relative; z-index: 1; }
+
+/* No frame: no brackets, no band. */
+.gmt-herostage.gmt-brackets::before,
+.gmt-herostage.gmt-brackets::after { display: none !important; }
+[data-theme='light'] .gmt-herostage { background: transparent !important; border-image: none !important; }
+
+/* Header: the northguild.dev site-header, as measured on the live site. */
+header.header {
+  --sl-nav-height: 3.5rem;
+  block-size: 3.5rem !important; padding: .75rem 1rem !important; box-sizing: border-box;
+  background: linear-gradient(rgb(14 116 144 / .1), rgb(14 116 144 / .1)), rgb(var(--p-void) / .55) !important;
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  border: 0 !important; border-block-end: 1px solid rgb(34 211 238 / .18) !important;
+  view-transition-name: ng-header !important;
+}
+header.header::before, header.header::after { display: none !important; }
+header.header .gmt-ng-link { display: inline-flex; align-items: center; gap: 1.5rem; text-decoration: none;
+  inline-size: auto !important; block-size: auto !important; background: none !important; }
+header.header .gmt-ng-link::before, header.header .gmt-ng-link::after { display: none !important; }
+.p-ng-mark { block-size: 1.75rem; inline-size: auto; overflow: visible; flex: none; view-transition-name: ng-mark; }
+.p-ng-mark .pt, .p-ng-mark .pb, .p-ng-mark .st, .p-ng-mark .sb { stop-color: #cfeaf2; }
+.p-ng-mark .pt { stop-opacity: .07; } .p-ng-mark .pb { stop-opacity: 0; }
+.p-ng-mark .st { stop-opacity: .05; } .p-ng-mark .sb { stop-opacity: 0; }
+.p-ng-mark .pane { fill: url(#p-ng-pane); } .p-ng-mark .sheen { fill: url(#p-ng-sheen); }
+.p-ng-mark :is(.edge, .ridge, .glyph) { fill: none; stroke: #cfeaf2; stroke-linecap: round; stroke-linejoin: round; }
+.p-ng-mark :is(.edge, .ridge) { stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.p-ng-mark .edge { stroke-opacity: .5; } .p-ng-mark .ridge { stroke-opacity: .35; }
+.p-ng-mark .glyph { stroke-width: 36; stroke-opacity: .75; }
+.p-ng-wordmark { font: 400 1rem/1.6 Michroma, ui-monospace, monospace; letter-spacing: .04em; color: #cfeaf2; view-transition-name: ng-wordmark; }
+@media (width < 30rem) { .p-ng-wordmark { display: none; } }
+
+/* Slice 5: from northguild.dev, the mark and wordmark hold still; the bar and page cross-fade. */
+@view-transition { navigation: auto; }
+::view-transition-group(ng-mark), ::view-transition-group(ng-wordmark),
+::view-transition-new(ng-mark), ::view-transition-new(ng-wordmark) { animation: none; }
+::view-transition-old(ng-mark), ::view-transition-old(ng-wordmark) { display: none; }
+::view-transition-old(ng-header), ::view-transition-new(ng-header) { animation-duration: 240ms; animation-timing-function: ease-out; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 600ms; animation-timing-function: cubic-bezier(.25, .6, .2, 1); }
+@media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
+
+/* ---- Sky from black: three layers, opacity only ---- */
+#p-space { position: absolute; inset-block-start: 0; inset-inline-start: 0; inline-size: 100%;
+  z-index: 0; pointer-events: none; overflow: hidden; background: #000; }
+#p-space > * { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; opacity: 0; }
+#p-wash { background:
+  radial-gradient(60% 55% at 0% 100%, rgb(34 211 238 / .055), transparent 70%),
+  radial-gradient(50% 45% at 100% 0%, rgb(45 212 191 / .05), transparent 70%),
+  radial-gradient(40% 40% at 100% 100%, rgb(103 232 249 / .03), transparent 70%),
+  #02060b; }
+.p-go #p-stars { animation: p-in calc(1.4s * var(--p-k)) ease-out forwards; }
+.p-go :is(#p-mw, #p-wash) { animation: p-in calc(1.8s * var(--p-k)) calc(.3s * var(--p-k)) ease-out forwards; }
+@keyframes p-in { to { opacity: 1; } }
+
+.p-meteor { position: absolute; block-size: 1px; inline-size: 140px; border-radius: 1px; opacity: 0;
+  background: linear-gradient(90deg, transparent, rgb(230 246 255 / .55)); transform-origin: 100% 50%;
+  animation: p-meteor 900ms cubic-bezier(.3, .1, .5, 1) forwards; }
+@keyframes p-meteor { 0% { opacity: 0; translate: 0 0; } 15% { opacity: 1; } 100% { opacity: 0; translate: var(--dx) var(--dy); } }
+
+/* ---- Wide screens: the Earth fills the whole hero, centred on the right side ---- */
+@media (width >= 80rem) {
+  .gmt-herostage { position: relative; }
+  /* JS sets left, width, height: the stage reaches the window's left edge and is twice the
+     distance to the right column's centre, so the disc centre sits there and never moves. */
+  .gmt-herostage .gmt-globe__stage {
+    position: absolute !important; inset-block-start: 0; z-index: 1;
+    border: 0 !important; clip-path: none !important; background: none !important; box-shadow: none !important;
+    max-inline-size: none !important; aspect-ratio: auto !important;
+    mask-image: linear-gradient(to bottom, #000 82%, transparent);
+  }
+  #p-scrim { position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: radial-gradient(ellipse 48% 70% at 22% 50%, rgb(var(--p-void) / .85), rgb(var(--p-void) / .5) 55%, transparent 78%); }
+  .gmt-herostage-copy { position: relative; z-index: 3; }
+
+  /* "Find a zone": a drawer off the right edge until the globe is used. */
+  .gmt-herostage .gmt-globe__side {
+    position: absolute !important; z-index: 4; inset-block: 1.5rem; inset-inline-end: 0;
+    inline-size: min(26rem, 34vw) !important; max-inline-size: none !important; inset-inline-start: auto !important; overflow: auto; padding: 1rem;
+    background: rgb(var(--p-void) / .72); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgb(207 234 242 / .18); border-radius: 4px;
+    visibility: hidden; opacity: 0; translate: 2rem 0;
+    transition: opacity .2s, translate .2s, visibility 0s .2s;
+  }
+  .gmt-herostage .gmt-globe__side.p-open { visibility: visible; opacity: 1; translate: 0 0; transition: none;
+    --m: linear-gradient(260deg, #000 40%, rgb(0 0 0 / .55) 50%, transparent 62%); --msz: 300% 100%; --p0: 0% 0; --p2: 100% 0;
+    animation: p-drawer calc(.9s * var(--p-k)) var(--p-ease-sweep) backwards; }
+  @keyframes p-drawer {
+    0% { translate: 2.5rem 0; mask-image: var(--m); mask-size: var(--msz); mask-repeat: no-repeat; mask-position: var(--p0);
+         border-color: rgb(from var(--p-frost) r g b / .2); }
+    75% { translate: 0 0; mask-image: var(--m); mask-size: var(--msz); mask-repeat: no-repeat; mask-position: var(--p2);
+          border-color: rgb(from var(--p-ice) r g b / .9); box-shadow: 0 0 18px rgb(from var(--p-frost) r g b / .3); }
+  }
+  /* In the drawer the search box sits at the top, so its suggestions always open downward,
+     over the zone list, whatever the old stacked-hero placement says. */
+  #p-drawer .gmt-combobox__root .gmt-combobox__popup { inset-block: 100% auto; margin-block: var(--gmt-space-1) 0; }
+  /* Close: the shared edge control, straddling the drawer's left edge at mid-height. It sits
+     beside the drawer, not in it, so it stays put while the zone list scrolls. Faint while the
+     drawer is open, bright on hover, like the carousel chevrons. */
+  #p-close { position: absolute; z-index: 5; inset-block-start: 50%; inset-inline-end: calc(min(26rem, 34vw) - .75rem);
+    visibility: hidden; opacity: 0; translate: 1rem -50%;
+    transition: opacity .25s, translate .25s, visibility 0s .25s, color .25s, border-color .25s, background .25s; }
+  .gmt-herostage:has(.gmt-globe__side.p-open) #p-close { visibility: visible; opacity: .55; translate: 0 -50%;
+    transition: opacity .35s .25s, translate .35s .25s var(--p-ease-sweep), color .25s, border-color .25s, background .25s; }
+  .gmt-herostage:has(.gmt-globe__side.p-open) #p-close:is(:hover, :focus-visible) { opacity: .95; }
+}
+
+/* ---- The globe's one entrance: the dawn ----
+   The site's shared arrival (fade and scale from 92%) is switched off on the hero canvas.
+   A black disc over the Earth fades out: a stand-in for the engine's exposure uniform. */
+.gmt-herostage .gmt-globe__stage > canvas { opacity: 1 !important; animation: none !important; transform: none !important; }
+#p-night { position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background: radial-gradient(circle at 50% 50%, #000 0 calc(var(--r) * 1.01), transparent calc(var(--r) * 1.1)); }
+.p-go #p-night { animation: p-out calc(2.05s * var(--p-k)) calc(.35s * var(--p-k)) cubic-bezier(.3, 0, .2, 1) forwards; }
+@keyframes p-out { to { opacity: 0; } }
+
+/* ---- Copy: the ice freeze, its one entrance. No blur, so the dawn keeps its frames. ---- */
+.gmt-herostage-copy :is(h1, .tagline, .actions > *) { opacity: 0; }
+.gmt-herostage-copy h1 { --d: .15; }
+.gmt-herostage-copy .tagline { --d: .45; }
+.gmt-herostage-copy .actions > :nth-child(1) { --d: .75; }
+.gmt-herostage-copy .actions > :nth-child(2) { --d: .85; }
+.gmt-herostage-copy .actions > :nth-child(3) { --d: .95; }
+.p-go .gmt-herostage-copy :is(h1, .tagline, .actions > *) {
+  opacity: 1;
+  --m: linear-gradient(100deg, #000 40%, rgb(0 0 0 / .55) 50%, transparent 62%);
+  animation: p-fz calc(1.6s * var(--p-k)) calc(var(--d) * var(--p-k) * 1s) backwards;
+}
+@keyframes p-fz {
+  0% { opacity: 0; mask-image: var(--m); mask-size: 300% 100%; mask-repeat: no-repeat; mask-position: 100% 0;
+       color: var(--p-frost); text-shadow: 0 0 16px rgb(from var(--p-frost) r g b / .7);
+       animation-timing-function: var(--p-ease-sweep); }
+  15% { opacity: 1; }
+  80% { mask-image: var(--m); mask-size: 300% 100%; mask-repeat: no-repeat; mask-position: 0% 0;
+        color: var(--p-frost); text-shadow: 0 0 6px rgb(from var(--p-frost) r g b / .45);
+        animation-timing-function: var(--p-ease-snap); }
+  88% { text-shadow: 0 0 2px rgb(255 255 255 / .9); }
+  100% { text-shadow: none; }
+}
+
+/* ---- The location card lands last: once the Earth is lit and the last button has frozen in,
+   it scales up out of its own pin. The globe places it with `transform`, so this animates
+   the separate `scale` property, from origin 0 0 (the pin point), and never touches the placement. ---- */
+.gmt-herostage #globe-tooltip { transform-origin: 0 0; }
+html:not(.p-go) .gmt-herostage #globe-tooltip { visibility: hidden; }
+.p-go .gmt-herostage #globe-tooltip {
+  animation: p-tip calc(.65s * var(--p-k)) calc(2s * var(--p-k)) cubic-bezier(.16, 1.22, .3, 1) backwards; }
+@keyframes p-tip { from { opacity: 0; scale: .3; } 55% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .p-go :is(#p-stars, #p-mw, #p-wash, #p-night, .gmt-herostage-copy h1, .gmt-herostage-copy .tagline, .gmt-herostage-copy .actions > *) {
+    animation: p-in .6s forwards !important; }
+  .p-go #p-night { animation-name: p-out !important; }
+  .gmt-herostage .gmt-globe__side.p-open { animation: p-in .3s backwards !important; }
+  #p-close { transition: opacity .2s !important; translate: 0 -50% !important; }
+  .p-meteor { display: none; }
+  .p-go .gmt-herostage #globe-tooltip { animation: p-fade .4s calc(2s * var(--p-k)) backwards !important; }
+}
+@keyframes p-fade { from { opacity: 0; } }
+
+#p-badge { position: fixed; inset-block-end: 12px; inset-inline-end: 12px; z-index: 1000;
+  font: 12px/1.4 ui-monospace, monospace; color: #cfeaf2; background: rgb(var(--p-void) / .8);
+  border: 1px solid rgb(207 234 242 / .25); border-radius: 999px; padding: 6px 14px; display: flex; gap: 12px; align-items: center; }
+#p-badge button { all: unset; cursor: pointer; text-decoration: underline; }
+
+/* Slice 1: the "Give Me Temporal" title matches the NorthGuild wordmark's type size and tracking. */
+header .site-title { font-size: 1rem; letter-spacing: .04em; line-height: 1.6; }
+
+/* ---- Edge control: one look for every chevron button (carousel steps, drawer close) ----
+   A slim beveled pane of ice: hairline border, near-clear fill, thin chevron. */
+.p-edge { all: unset; box-sizing: border-box; display: grid; place-items: center; cursor: pointer;
+  inline-size: 1.5rem; block-size: 5rem; color: var(--p-ice);
+  background: linear-gradient(180deg, rgb(from var(--p-ice) r g b / .07), rgb(from var(--p-ice) r g b / .02));
+  border: 1px solid rgb(from var(--p-ice) r g b / .16); border-radius: 5px; corner-shape: bevel;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .08); --nudge: 2px; }
+.p-edge[data-step="-1"] { --nudge: -2px; }
+.p-edge svg { inline-size: .8rem; block-size: 2rem; overflow: visible; transition: translate .25s; }
+.p-edge:is(:hover, :focus-visible) { color: #67e8f9; border-color: rgb(from var(--p-frost) r g b / .45);
+  background: linear-gradient(180deg, rgb(from var(--p-ice) r g b / .1), rgb(from var(--p-cyan) r g b / .05)); }
+.p-edge:is(:hover, :focus-visible) svg { translate: var(--nudge) 0; }
+.p-edge:focus-visible { outline: 1px solid rgb(34 211 238 / .7); outline-offset: 2px; }

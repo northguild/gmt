@@ -281,7 +281,7 @@ html:not([data-has-sidebar]) .sl-container {
   font-size: var(--sl-text-sm);
   color: var(--sl-color-gray-2);
   margin-block-start: var(--gmt-space-2, 0.5rem);
-  scroll-margin-block-start: calc(var(--sl-nav-height, 4rem) + 1rem);
+  scroll-margin-block-start: calc(var(--sl-nav-height, 3.5rem) + 1rem);
 }
 
 /* Named container so content nested inside a GridSection (Starlight's own

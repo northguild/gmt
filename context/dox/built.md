@@ -151,8 +151,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   with no rewrite.
   - **The NorthGuild mark** (#424) is the header's way back to the landing page: a same-tab
     `<a>` to `LANDING_URL` (`https://northguild.dev/`, in `site.ts`) before the site title,
-    named "NorthGuild home", on every page. The shield is inlined from
-    `src/assets/northguild-logo.svg`, so the page theme reaches its paths. The dist guard
+    named "NorthGuild home", on every page. The mark is inlined from
+    `src/assets/northguild-mark.svg` (see Tier 3, "The header"). The dist guard
     allows exactly that URL in an `<a href>` (`LANDING` in `dist-base.ts`) and nowhere else;
     `judgeUrl` is unchanged.
 - **Web Analytics.** Every HTML page loads Cloudflare's beacon
@@ -2214,6 +2214,16 @@ Shared hooks come first, then the globe, then the clock-change pages.
 - **Glass:** `blur(24px) saturate(1.4) brightness(var(--gmt-brightness))` — `0.72` dark,
   `0.97` light, measured 11–16:1 for body text. A tinted fill, a hairline gradient border
   and a 1px inset highlight. There is no grain.
+- **The header** matches the northguild.dev bar (design-system.md § `/dox` and the header).
+  - It is 3.5rem at every width, with 4 px of blur, and a dark island (`gmt-theme-dark`) on
+    every page, so the glass reads the fixed `--gmt-header-*` values and not the themed fills.
+    The outer `<header>` is Starlight's, so `gmt-glass.css` paints it; the island class is on
+    the inner `.header` that `Header.astro` renders.
+  - `NorthGuildMark.astro` inlines `northguild-mark.svg` through `lib/ng-mark.ts`, which
+    suffixes both gradient ids per page. The six paths are the northguild.dev mark's, so the
+    two sites draw the same shape. Never edit them on one side only.
+  - `.gmt-ng-wordmark` and `.site-title` read `--gmt-wordmark-size`, `-tracking` and
+    `-leading`. The bar's `--sl-nav-height` and `--sl-nav-pad-x` are set in `gmt-theme.css`.
 - **Corner brackets:** two L-shaped corners, top left and bottom right, on a few frames only
   (when one is right: [visual-design.md § Panels](reference/visual-design.md#panels)).
   `.gmt-brackets` (`gmt-primitives.css`, cyan) is on the home page's hero stage and on each

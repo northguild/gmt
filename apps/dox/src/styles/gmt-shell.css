@@ -227,14 +227,17 @@ footer {
 }
 
 header {
-  /* background handled by gmt-glass.css (translucent + backdrop-filter) */
-  border-block-end: 1px solid var(--gmt-hairline);
+  /* background and the one bottom border: gmt-glass.css */
+  border: 0;
+  border-block-end: 1px solid var(--gmt-header-edge);
 }
 
+/* The title is set in the wordmark's type, so "NorthGuild | Give Me Temporal" reads as one line. */
 .site-title {
   font-family: var(--gmt-font-display);
-  letter-spacing: var(--gmt-tracking-tight);
-  font-size: 1.25rem;
+  font-size: var(--gmt-wordmark-size);
+  letter-spacing: var(--gmt-wordmark-tracking);
+  line-height: var(--gmt-wordmark-leading);
 }
 
 /* The header says "Give Me Temporal" where it fits and "GMT" below that

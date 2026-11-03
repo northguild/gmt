@@ -61,6 +61,13 @@
   --sl-font-mono: var(--gmt-font-mono);
 }
 
+/* The bar is 3.5rem at every width, with 1rem at its sides, as on northguild.dev. Everything
+   that reads these (the hero, the sidebar, the scroll padding) follows. */
+:root {
+  --sl-nav-height: 3.5rem;
+  --sl-nav-pad-x: 1rem;
+}
+
 /*
  * --sl-color-white / --sl-color-black are semantic ("highest-contrast text" /
  * "background extreme"), not literal. --gmt-ice and --gmt-void flip with the

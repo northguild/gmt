@@ -415,25 +415,35 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   edge (WCAG 2.2 SC 1.4.1), never a left one. The bar is an `::after` drawn over the box on
   `/dox` only, so the button matches its neighbours' size and forced colours show it on that
   page alone.
-- `Header.astro` also adds the NorthGuild mark link (#424) before the site title: a plain
-  `<a>`, not `ButtonLink`, in the same tab, named by an sr-only span, with
-  `NorthGuildMark.astro` `aria-hidden`. Its fills are in `gmt-primitives.css`, because a
-  scoped style does not reach an imported SVG's paths. A hairline divider separates it from
-  the title.
-  - The shield's five path strings and its `viewBox` are the owner's drawing, unchanged; only
-    the fills became `gmt-ng-*` classes. The file lives at `src/assets/northguild-logo.svg`
-    and is inlined, never served by URL, because an SVG loaded through `<img>` or
-    `background-image` cannot follow the reader's `data-theme` choice.
-  - The link's name "NorthGuild home" comes from the sr-only span plus a matching `title`; the
-    SVG is `aria-hidden` and not focusable, so the name is not read twice (WCAG 2.2 SC 4.1.2).
+- `Header.astro` also adds the NorthGuild link before the site title: a plain `<a>`, not
+  `ButtonLink`, in the same tab, holding the mark and the "NorthGuild" wordmark. A hairline
+  divider separates it from the title. The bar matches the northguild.dev header, so a click
+  from there keeps the left of the bar where it was.
+  - **The bar** is 3.5rem at every width (`--sl-nav-height`), with 1rem at its sides. Its glass
+    is teal at 10 % over a void backing at 92 %, with 4 px of blur and one bottom hairline of
+    cyan at 18 % (`--gmt-header-*`). It is a dark island (`gmt-theme-dark`) on every page, in
+    both themes, so page text scrolling under it never lowers its contrast. The search dialog
+    renders inside the bar and so takes the dark tokens too. `ThemeSelect` still switches the
+    page.
+  - **The mark** is `src/assets/northguild-mark.svg`, inlined by `NorthGuildMark.astro` and
+    never served by URL. Its six paths and `viewBox` are the northguild.dev mark's, verbatim.
+    The paint (ice at 7 % and 5 %, a 1 px edge and ridge, a 36-unit glyph) is in
+    `gmt-primitives.css`; the two gradient fills are attributes, and their ids take a
+    per-page suffix (`ng-mark-pane-1`), so two marks never share one. In forced colours the
+    strokes are `CanvasText` and the fills `none`.
+  - **The wordmark** is "NorthGuild" in Michroma at `--gmt-wordmark-size`, `-tracking` and
+    `-leading` (1rem, .04em, 1.6). Below 30rem it is hidden, and the link keeps its name.
+  - The link's name is `aria-label="NorthGuild home"`: it starts with the visible text
+    (WCAG 2.2 SC 2.5.3) and holds when the wordmark hides. The SVG is `aria-hidden` and not
+    focusable, so the name is not read twice (SC 4.1.2).
   - The link box is at least 24x24 CSS px (SC 2.5.8) and takes `.gmt-sonar-focus`. In forced
-    colours it gets a real `Highlight` outline, the body paths use `LinkText`, and the field
-    and glyph paths use `Canvas` with `forced-color-adjust: none` on the SVG.
+    colours it gets a real `Highlight` outline.
   - The URL is absolute and in the same tab: it is the same site one level up, and a
     root-relative `/` would fail the `/gmt` dist guard.
 - The `/dox` strip under the header keeps only the clock and the Live/Local badge, at its end.
   It is a `<div>`, not a `<header>`, so the page has one banner landmark.
-- The title is a `SiteTitle.astro` override: "Give Me Temporal" from `50rem` up, "GMT" below.
+- The title is a `SiteTitle.astro` override: "Give Me Temporal" from `50rem` up, "GMT" below,
+  set in the wordmark's type (the same three tokens).
   Only one form is displayed, so the link's name is the visible text (WCAG 2.2 SC 2.5.3).
   Starlight's `title` stays `@northguild/gmt` for tabs, search results and social cards.
 - `Header.astro` composes Starlight's parts via `virtual:starlight/components/*`, not

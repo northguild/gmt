@@ -1,0 +1,273 @@
+// PROTOTYPE, throwaway. DOX-G2 no-scroll desktop: the hero copy is slide 1, and four compact
+// slides (one per home section) follow in the same column (APG tabbed carousel). Each slide fits
+// without scrolling: a heading, one line of lede, six short cards or rows, one link onward.
+// Icons, tones and live numbers are read from the page's own sections. Wide screens only.
+const hero = document.querySelector('.gmt-herostage');
+const copy = hero?.querySelector('.gmt-herostage-copy');
+const grid = document.querySelector('.gmt-home-grid');
+const wide = matchMedia('(width >= 80rem) and (height >= 40rem)');
+
+if (hero && copy && grid && wide.matches) {
+  const css = document.createElement('style');
+  css.textContent = `
+  html.p-deck, html.p-deck body { overflow: hidden; }
+  html.p-deck .sl-markdown-content > :not(.gmt-herostage),
+  html.p-deck .content-panel ~ .content-panel, html.p-deck footer { display: none !important; }
+
+  /* Ice chunks: the house bevel (border-radius + corner-shape: bevel) on every box. */
+  .p-oct { corner-shape: bevel; }
+  @supports not (corner-shape: bevel) { .p-oct { border-radius: 0 !important;
+    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
+      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c)); } }
+
+  #p-deck { position: absolute; z-index: 3; pointer-events: none; inset-block: 1.5rem; inset-inline-start: 0; }
+  .p-slide { --c: 14px; position: absolute; inset: 0 0 auto 0; max-block-size: 100%; box-sizing: border-box; pointer-events: auto; overflow: hidden;
+    display: flex; flex-direction: column; gap: .9rem; padding: 1.4rem 1.5rem 1.25rem;
+    background: rgb(2 6 11 / .74); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgb(207 234 242 / .16); border-radius: var(--c);
+    font: 400 13px/1.45 var(--sl-font, system-ui), system-ui; color: rgb(207 234 242 / .78); }
+  .p-slide[hidden] { display: flex !important; visibility: hidden; }
+  .p-slide h2 { all: unset; display: block; font: 400 1.05rem/1.3 Michroma, ui-monospace, monospace;
+    letter-spacing: .04em; color: #67e8f9; }
+  .p-slide h2 code, .p-slide code { font: 500 .92em/1 var(--gmt-font-mono, ui-monospace), monospace; color: #e6f6ff;
+    background: rgb(207 234 242 / .07); border: 1px solid rgb(207 234 242 / .14); border-radius: 3px; corner-shape: bevel; padding: .08em .3em; }
+  .p-slide h2 code { font-size: .85em; }
+  .p-lede { margin: -.35rem 0 0; color: rgb(207 234 242 / .66); max-inline-size: 52ch; }
+  .p-slide li { margin: 0 !important; } .p-slide li::before { content: none !important; display: none !important; } .p-slide li::marker { content: none; }
+  .p-slide > * { margin: 0; }
+  .p-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+  .p-tile { --c: 10px; display: grid; grid-template-columns: auto 1fr; gap: .2rem .8rem; align-items: start;
+    padding: .75rem .85rem; border: 1px solid rgb(207 234 242 / .12); border-radius: var(--c);
+    background: rgb(207 234 242 / .025); }
+  .p-tile b { display: block; font-weight: 600; font-size: 13.5px; color: #e6f6ff; line-height: 1.3; }
+  .p-tile span { display: block; font-size: 12.5px; color: rgb(207 234 242 / .66); margin-block-start: .15rem; }
+  /* Diamond icon: a bevelled tile turned 45°, the glyph turned back upright. */
+  .p-dia { --t: #22d3ee; inline-size: 1.65rem; block-size: 1.65rem; margin: .2rem .2rem 0; display: grid; place-items: center;
+    rotate: 45deg; border: 1px solid color-mix(in oklab, var(--t) 70%, transparent);
+    background: color-mix(in oklab, var(--t) 14%, transparent); border-radius: 3px; }
+  .p-dia > svg { rotate: -45deg; inline-size: 1rem; block-size: 1rem; color: #e6f6ff; }
+  .p-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: .45rem; }
+  .p-row { --c: 6px; display: grid; grid-template-columns: minmax(0, 1.15fr) auto minmax(0, 1fr); gap: .7rem; align-items: center;
+    padding: .55rem .8rem; border: 1px solid rgb(207 234 242 / .1); border-radius: var(--c); background: rgb(207 234 242 / .02); }
+  .p-row > code:first-child { justify-self: start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-inline-size: 100%; }
+  .p-row i { font-style: normal; color: rgb(207 234 242 / .4); }
+  .p-row > :last-child { color: #fca5a5; font-size: 12.5px; }
+  .p-row.standard > :last-child { color: #5eead4; } .p-row.gmt > :last-child { color: #67e8f9; }
+  .p-row:is(.wraps, .nonstandard) > :last-child { color: #fdba74; }
+  .p-row.standard, .p-row.gmt { border-color: rgb(94 234 212 / .28); }
+  .p-row.date { border-color: rgb(252 165 165 / .3); }
+  .p-more { margin-block-start: .1rem; align-self: flex-start; color: #67e8f9; font-size: 12.5px; text-decoration: none;
+    border-block-end: 1px solid rgb(103 232 249 / .35); }
+  .p-more:hover { color: #e6f6ff; }
+  .p-more:focus-visible { outline: 2px solid #22d3ee; outline-offset: 3px; }
+
+  .p-slide.p-in { --m: linear-gradient(100deg, #000 40%, rgb(0 0 0 / .55) 50%, transparent 62%);
+    animation: p-slide-in calc(.7s * var(--p-k, 1)) cubic-bezier(.25, .6, .2, 1) backwards; }
+  @keyframes p-slide-in {
+    0% { opacity: 0; translate: -1.25rem 0; mask-image: var(--m); mask-size: 300% 100%; mask-repeat: no-repeat; mask-position: 100% 0; }
+    20% { opacity: 1; }
+    100% { translate: 0 0; mask-image: var(--m); mask-size: 300% 100%; mask-repeat: no-repeat; mask-position: 0% 0; }
+  }
+  html.p-deck .gmt-herostage-copy.p-away { visibility: hidden; }
+  html.p-deck .gmt-herostage-copy.p-in { animation: p-slide-in calc(.7s * var(--p-k, 1)) cubic-bezier(.25, .6, .2, 1) backwards; }
+
+  /* Faint chevrons on the content's own edges: barely there until the reader is in the column. */
+  .p-chev { position: absolute; z-index: 5; opacity: 0; translate: 0 -50%;
+    transition: opacity .25s, color .25s, border-color .25s, background .25s, top .45s cubic-bezier(.25, .6, .2, 1); }
+  .gmt-herostage:has(.gmt-herostage-copy:hover, #p-deck:hover, .p-chev:hover) .p-chev { opacity: .42; }
+  .gmt-herostage .p-chev:is(:hover, :focus-visible) { opacity: .95; }
+  .p-chev[data-off] { visibility: hidden; }
+  /* Touch screens have no hover, so the chevrons stay faintly visible there. */
+  @media (hover: none) { .p-chev { opacity: .3; } }
+  .p-chev-label { position: absolute; inset-block-start: calc(100% - .4rem); white-space: nowrap;
+    font: 500 12px/1 var(--gmt-font-mono, ui-monospace), monospace; letter-spacing: .06em; text-transform: uppercase;
+    opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .p-chev:hover .p-chev-label, .p-chev:focus-visible .p-chev-label { opacity: .8; }
+  .p-slide.p-long { overflow-y: auto; overscroll-behavior: contain; gap: 0; padding-block-end: 0;
+    scrollbar-width: thin; scrollbar-color: rgb(103 232 249 / .28) transparent; }
+  .p-slide.p-long:focus-visible { outline: 1px solid rgb(34 211 238 / .6); outline-offset: 2px; }
+  .p-part { display: flex; flex-direction: column; gap: .9rem; padding-block: 0 1.6rem; }
+  .p-part > * { margin: 0; }
+  .p-part + .p-part { border-block-start: 1px solid rgb(207 234 242 / .1); padding-block-start: 1.4rem; }
+  .p-part:last-child { padding-block-end: 1.5rem; }
+  .p-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  @media (prefers-reduced-motion: reduce) { .p-slide.p-in, html.p-deck .gmt-herostage-copy.p-in { animation: p-in .3s backwards !important; } }`;
+  document.head.append(css);
+  document.documentElement.classList.add('p-deck');
+
+  // Read icons, tones and live numbers from the page's own sections.
+  const sections = [...grid.querySelectorAll(':scope > .gmt-grid-section')];
+  const cardsOf = (s) => [...s.querySelectorAll('article[data-tone]')];
+  const iconOf = (c) => {
+    const svg = c?.querySelector('svg');
+    if (!svg) return '<span class="p-dia"></span>';
+    const t = c.dataset.tone;
+    const tone = t === 'ice' ? 'var(--gmt-ice, #cfeaf2)' : `var(--sl-color-${t})`;
+    return `<span class="p-dia p-oct" style="--t:${tone}">${svg.outerHTML}</span>`;
+  };
+  const std = cardsOf(sections[0]), tst = cardsOf(sections[1]);
+  const ratioTitle = tst[1]?.querySelector('p')?.textContent.trim() ?? '';
+  const ratio = ratioTitle.match(/~[\d.,]+×/)?.[0] ?? '';
+  const execs = tst[1]?.textContent.match(/([\d.,]+\s*[MKk]?)\s*executions/)?.[1]?.trim() ?? '';
+  const tests = tst[5]?.textContent.match(/of the ([\d.,]+\s*[MKk]?) tests/)?.[1]?.trim() ?? '';
+  const card = (src, b, t) => `<li class="p-tile p-oct">${iconOf(src)}<div><b>${b}</b><span>${t}</span></div></li>`;
+  const faults = [...sections[2].querySelectorAll('.why-date-fault')];
+  const layers = [...sections[3].querySelectorAll('.why-date-layer')];
+  const pick = [0, 1, 2, 4, 6].map((i) => faults[i]).filter(Boolean);
+
+  const slidesHTML = [
+    { short: 'Standards', title: 'Built on the standards',
+      html: `<p class="p-lede">The published standards decide every answer, not a library's own idea of time.</p>
+      <ul class="p-tiles">
+        ${card(std[0], 'TC39 Temporal', 'The standard JavaScript date API. No <code>Date</code>, enforced by lint.')}
+        ${card(std[1], 'ISO 8601 · RFC 9557', 'Standard strings in and out, zones annotated.')}
+        ${card(std[2], 'IANA zones · CLDR', 'Real zone ids and the locale data your runtime ships.')}
+        ${card(std[3], 'Explicit DST', 'Gaps and overlaps resolve the way you choose.')}
+        ${card(std[4], 'World calendars', 'Hebrew, Islamic, Japanese, Persian and more.')}
+        ${card(std[5], 'Freight formats', 'EDIFACT, X12 and EPCIS. Never an invented offset.')}
+      </ul><a class="p-more" href="/gmt/guides/concepts/standards/">Every standard, in one place →</a>` },
+    { short: 'Tested', title: 'Tested and precise',
+      html: `<p class="p-lede">Checked against the specs themselves, exact to the nanosecond.</p>
+      <ul class="p-tiles">
+        ${card(tst[0], 'No borrowed oracle', 'Answers come from the specs and test262, never the polyfill.')}
+        ${card(tst[1], `${ratio} more CI runs`, `${execs} executions, against six libraries combined.`)}
+        ${card(tst[2], 'Correct at the edges', 'Midnight, DST and the range limits are named tests.')}
+        ${card(tst[3], 'Safeguards', 'Invalid input is validated, not thrown at your app.')}
+        ${card(tst[4], 'Nanoseconds', 'Exact <code>bigint</code> time. The others stop at milliseconds.')}
+        ${card(tst[5], 'Zero known bugs', `None of ${tests} tests skipped or expected to fail.`)}
+      </ul><a class="p-more" href="/gmt/guides/concepts/correct-at-the-edges/">See the evidence →</a>` },
+    { short: 'The Date bug', title: 'The bug is the <code>Date</code> object',
+      html: `<p class="p-lede"><code>Date</code> mixes an instant with a wall-clock reading, and mutates in place.</p>
+      <ul class="p-rows">${pick.map((f) => `<li class="p-row p-oct"><code>${f.querySelector('.why-date-in').textContent}</code><i>→</i><span>${f.querySelector('.why-date-out').textContent}</span></li>`).join('')}</ul>
+      <a class="p-more" href="/gmt/why-gmt/">Why GMT →</a>` },
+    { short: 'Alternatives', title: 'The alternatives inherit it',
+      html: `<p class="p-lede">The popular libraries decorate <code>Date</code>, so its faults come along. GMT is Temporal with the ergonomics added.</p>
+      <ul class="p-rows">${layers.map((l) => {
+        const k = [...l.classList].find((c) => c.startsWith('why-date-layer--'))?.slice(16) ?? '';
+        return `<li class="p-row p-oct ${k}"><code>${l.querySelector('.why-date-layer-name').textContent}</code><i></i><span>${l.querySelector('.why-date-layer-foundation').textContent}</span></li>`;
+      }).join('')}</ul>
+      <a class="p-more" href="/gmt/compare/">Compare the libraries →</a>` },
+  ];
+
+  const two = !/[?&]deck=5/.test(location.search);
+  const panels = two
+    ? [{ short: 'More', title: 'About gmt', long: true,
+        html: slidesHTML.map((s) => `<section class="p-part"><h2>${s.title}</h2>${s.html}</section>`).join('') }]
+    : slidesHTML;
+  const deck = document.createElement('div');
+  deck.id = 'p-deck';
+  const short = ['Intro', ...panels.map((s) => s.short)];
+  const slides = [copy];
+  panels.forEach((s, i) => {
+    const panel = document.createElement('section');
+    panel.className = `p-slide p-oct${s.long ? ' p-long' : ''}`;
+    if (s.long) panel.tabIndex = 0;
+    panel.id = `p-slide-${i + 2}`;
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-roledescription', 'slide');
+    panel.setAttribute('aria-label', s.long ? s.title : `${i + 2} of ${panels.length + 1}`);
+    panel.hidden = true;
+    panel.innerHTML = s.long ? s.html : `<h2>${s.title}</h2>${s.html}`;
+    deck.append(panel);
+    slides.push(panel);
+  });
+  copy.id ||= 'p-slide-1';
+  hero.append(deck);
+
+  const chev = (dir) => `<button type="button" class="p-chev p-edge" data-step="${dir}">
+    <svg viewBox="0 0 16 40" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="${dir > 0 ? '3,2 13,20 3,38' : '13,2 3,20 13,38'}"/></svg><span class="p-chev-label"></span></button>`;
+  hero.insertAdjacentHTML('beforeend', chev(-1) + chev(1) + '<p class="p-sr" aria-live="polite"></p>');
+  const [prevB, nextB] = hero.querySelectorAll('.p-chev');
+  const live = hero.querySelector('.p-sr');
+  const titles = [copy.querySelector('h1')?.textContent.trim() ?? 'Intro', ...panels.map((s) => s.title.replace(/<[^>]+>/g, ''))];
+
+  let cur = 0;
+  const label = () => {
+    for (const [b, n] of [[prevB, cur - 1], [nextB, cur + 1]]) {
+      const off = n < 0 || n >= slides.length;
+      b.toggleAttribute('data-off', off);
+      b.tabIndex = off ? -1 : 0;
+      if (off) continue;
+      b.setAttribute('aria-label', `${b === nextB ? 'Next' : 'Previous'}: ${short[n]}`);
+      b.querySelector('.p-chev-label').textContent = short[n];
+    }
+  };
+  const place = () => {
+    const h = hero.getBoundingClientRect(), c = copy.getBoundingClientRect();
+    const w = Math.min(Math.max(c.width, 560), 680);
+    deck.style.inlineSize = `${w}px`;
+    deck.style.insetInlineStart = `${c.left - h.left}px`;
+    const s = slides[cur].getBoundingClientRect();
+    prevB.style.top = nextB.style.top = `${s.top - h.top + s.height / 2}px`;
+    prevB.style.left = `${Math.max(0, c.left - h.left - 24)}px`;
+    nextB.style.left = `${c.left - h.left + Math.max(w, c.width)}px`;
+  };
+
+  function go(n) {
+    n = Math.max(0, Math.min(slides.length - 1, n));
+    if (n === cur) return;
+    const prev = slides[cur], next = slides[n];
+    if (cur === 0) copy.classList.add('p-away'); else prev.hidden = true;
+    prev.classList.remove('p-in');
+    if (n === 0) copy.classList.remove('p-away'); else { next.hidden = false; next.scrollTop = 0; }
+    void next.offsetWidth; next.classList.add('p-in');
+    next.addEventListener('animationend', () => next.classList.remove('p-in'), { once: true });
+    const had = document.activeElement;
+    cur = n;
+    label(); place();
+    live.textContent = `Slide ${n + 1} of ${slides.length}: ${titles[n]}`;
+    // A chevron that just switched off hands focus to the one still showing.
+    if (had?.classList?.contains('p-chev') && had.hasAttribute('data-off')) (had === nextB ? prevB : nextB).focus();
+  }
+  for (const b of [prevB, nextB]) b.addEventListener('click', () => go(cur + Number(b.dataset.step)));
+  // Arrow keys work while focus is in the column or on a chevron, so the globe keeps its own keys.
+  hero.addEventListener('keydown', (e) => {
+    if (!e.target.closest('.p-chev, #p-deck, .gmt-herostage-copy')) return;
+    if (e.target.closest('input, textarea, [contenteditable]')) return;
+    const k = { ArrowRight: cur + 1, ArrowLeft: cur - 1, Home: 0, End: slides.length - 1 }[e.key];
+    if (k === undefined) return;
+    e.preventDefault(); go(k);
+  });
+  // The wheel over the column steps the slides, as the wheel over the globe zooms it.
+  // One gesture moves one slide: after a step, input stays locked until the wheel has
+  // been quiet for 220ms (trackpad momentum) and at least 650ms have passed.
+  let acc = 0, locked = false, quiet = 0, since = 0, lastNative = 0;
+  const unlock = () => { const w = 650 - (performance.now() - since); if (w <= 0) locked = false; else setTimeout(() => (locked = false), w); };
+  hero.addEventListener('wheel', (e) => {
+    if (!e.target.closest('.p-chev, #p-deck, .gmt-herostage-copy')) return;
+    const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    const n = cur + Math.sign(d);
+    const now = performance.now();
+    const long = slides[cur].classList.contains('p-long');
+    if (long && locked) { e.preventDefault(); clearTimeout(quiet); quiet = setTimeout(unlock, 220); return; }
+    if (long && (d > 0 || slides[cur].scrollTop > 0 || now - lastNative < 220)) { lastNative = now; acc = 0; return; }
+    if (n < 0 || n >= slides.length) { acc = 0; return; }
+    e.preventDefault();
+    clearTimeout(quiet);
+    quiet = setTimeout(unlock, 220);
+    if (locked) return;
+    acc += d * (e.deltaMode === 1 ? 16 : 1);
+    if (Math.abs(acc) < 40) return;
+    acc = 0; locked = true; since = performance.now();
+    go(n);
+    lastNative = since;
+  }, { passive: false });
+  // Light dismiss: a press anywhere outside the open slide (globe, space, zoom controls) sends
+  // the column back to the intro. The press still reaches its target, so a globe drag works.
+  addEventListener('pointerdown', (e) => {
+    if (cur === 0 || e.button !== 0) return;
+    if (e.target.closest('#p-deck, .p-chev, header, #p-drawer, #p-badge, .gmt-herostage-copy')) return;
+    go(0);
+  }, { capture: true });
+  // Esc closes the drawer first when it is open, then the slide.
+  addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || cur === 0) return;
+    if (document.querySelector('#p-drawer.p-open')) return;
+    const inside = e.target.closest?.('#p-deck, .p-chev');
+    go(0);
+    if (inside) nextB.focus();
+  }, { capture: true });
+  label(); place(); addEventListener('resize', place);
+  window.__pDeck = { go };
+}
