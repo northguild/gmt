@@ -6,7 +6,8 @@
  */
 import { within } from "@testing-library/dom";
 import { geoContains } from "d3-geo";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { isBeforeUtc } from "@northguild/gmt/utc/compare";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { CANADA_MAP } from "./canada-map";
 import { canadaTense, moroccoTense } from "./clock-change-tense.fixture";
@@ -21,11 +22,13 @@ import { cityOf } from "./zone-map-labels";
 import {
   NOW,
   drawZoneMap,
+  destroyDrawnZoneMaps,
   loadBoundaries,
   mapQueries,
   zoneDeps,
 } from "./zone-map.fixture";
-import { isBeforeUtc } from "@northguild/gmt/utc/compare";
+
+afterEach(destroyDrawnZoneMaps);
 
 const CASES = [
   {

@@ -77,8 +77,19 @@ export interface DrawOptions {
   signal?: AbortSignal;
 }
 
+const controllers = new Set<AbortController>();
+
+/** Abort every live map between tests so its one-second clock cannot outlive its DOM. */
+export function destroyDrawnZoneMaps(): void {
+  for (const controller of controllers) controller.abort();
+  controllers.clear();
+}
+
 /** Renders the section and wires it. Await `handle.ready` for the drawing. */
 export function drawZoneMap({ config, ids, rows, deps, signal }: DrawOptions) {
+  const controller = signal ? undefined : new AbortController();
+  const mapSignal = signal ?? controller!.signal;
+  if (controller) controllers.add(controller);
   const fixture = renderHtml(
     widget(
       { name: config.idPrefix, label: "Zone map test", scope: config.idPrefix },
@@ -106,7 +117,7 @@ export function drawZoneMap({ config, ids, rows, deps, signal }: DrawOptions) {
   const handle = wireZoneMap(
     found,
     rows,
-    signal ?? new AbortController().signal,
+    mapSignal,
     deps,
     config,
   );

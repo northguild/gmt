@@ -63,6 +63,11 @@ work is scoped against what is already built.
   or resizes its card or its neighbours: pin paired cards to opposite edges
   (`justify-content: space-between`), give values a reserved width with tabular figures and no
   wrap, and put a bounding-box test in the definition of done.
+- **Tests own every asynchronous lifetime.** When a mount starts timers, listeners, observers or
+  pending work, the spec names how each test tears it down (usually aborting its signal or
+  destroying its handle). Shared-worker tests must not leave work that can fire during a later
+  file. Prefer controlled clocks and awaited state changes over real-time sleeps; if real time is
+  necessary, explain why and ensure teardown runs even when an assertion fails.
 
 ## Shortlist mode — Dox tools for a realm story
 
