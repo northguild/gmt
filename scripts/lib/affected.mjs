@@ -435,6 +435,23 @@ export function affected(changes) {
   return withNeeds(reasons);
 }
 
+/**
+ * The checks a push to main still has to run after it merged a pull request whose CI passed on
+ * the same tree: every check `affected(changes)` left out on that pull request, plus the builds
+ * those checks need, even ones the pull request already ran. A pull request that ran every check
+ * leaves nothing; one that ran none leaves every check.
+ */
+export function afterMerge(changes) {
+  const ran = new Set(affected(changes).checks);
+  const reasons = new Map(
+    ALL.filter((id) => !ran.has(id)).map((id) => [
+      id,
+      ["skipped on the pull request"],
+    ]),
+  );
+  return withNeeds(reasons);
+}
+
 /** The first rule that matches `path`, or undefined. */
 export function ruleFor(path) {
   return RULES.find((r) => r.test.test(path));

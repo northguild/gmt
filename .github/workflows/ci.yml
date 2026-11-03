@@ -35,11 +35,25 @@ jobs:
   #
   # The matrix jobs are required status checks. A matrix job skipped by a job-level `if`
   # reports one check under its unexpanded name ("Tests (Node ${{ matrix.node-version }})"),
-  # so the required "Tests (Node 22)" would never report. They always run instead, and skip
-  # every step when there is nothing to do: a passing check in seconds, with no checkout.
+  # so the required "Tests (Node 22)" would never report. On a pull request they always run
+  # instead, and skip every step when there is nothing to do: a passing check in seconds, with
+  # no checkout. A push to main has no required checks, so there a job with nothing to do is
+  # skipped whole and takes no runner. The org's plan runs 20 jobs at once, and those slots are
+  # what Release, Deploy Dox and other pull requests' CI wait for after a merge.
+  #
+  # A push to main runs every check, unless it is the squash merge of a pull request whose CI
+  # passed on this exact tree. Then the checks that pull request ran have passed on these files
+  # already, and only the ones it skipped run, so a check a rule wrongly skipped still fails on
+  # the merge that skipped it. The proof is three facts read from the API: a merged pull request
+  # names this commit as its merge commit, its head has this commit's tree, and the latest CI run
+  # on that head passed. If any of them cannot be read or does not hold, every check runs.
   determine-affected:
     name: Determine affected packages
     runs-on: ubuntu-latest
+    permissions:
+      actions: read # the pull request's CI runs
+      contents: read
+      pull-requests: read # the pull request this push merged
     outputs:
       checks: ${{ steps.detect.outputs.checks }}
       build_lint: ${{ steps.detect.outputs.build_lint }}
@@ -53,6 +67,10 @@ jobs:
           fetch-depth: 0
 
       - id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
           # The runner's own Node, before any install: the script uses built-in modules only.
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -74,10 +92,38 @@ jobs:
               echo "release_pr=false" >> "$GITHUB_OUTPUT"
             fi
           else
-            # A push to main runs every check, so a file a rule misses is caught on the merge
-            # that changed it rather than on some later pull request.
-            node scripts/affected.mjs github --full
+            # A push to main. See the comment above this job for why it may run fewer checks.
+            # A failed lookup leaves its value empty, not holding the error body `gh api` prints,
+            # and every check runs.
             echo "release_pr=false" >> "$GITHUB_OUTPUT"
+            WHY=""
+            PR=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq \
+              "[.[] | select(.merged_at != null and .merge_commit_sha == \"$SHA\")] | first | select(. != null) | \"\(.number) \(.head.sha)\"" \
+              2> /dev/null) || PR=""
+            if [ -z "$PR" ]; then
+              WHY="no merged pull request was found with $SHA as its merge commit"
+            else
+              read -r PR_NUMBER PR_HEAD <<< "$PR"
+              MAIN_TREE=$(git rev-parse "$SHA^{tree}")
+              PR_TREE=$(gh api "repos/$REPO/commits/$PR_HEAD" --jq .commit.tree.sha 2> /dev/null) || PR_TREE=""
+              # The latest run decides: a re-run's conclusion is its latest attempt's.
+              RUN=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?event=pull_request&head_sha=$PR_HEAD&per_page=100" --jq \
+                '.workflow_runs | sort_by(.created_at) | last | select(. != null) | "\(.id) \(.status) \(.conclusion)"' \
+                2> /dev/null) || RUN=""
+              read -r RUN_ID RUN_STATUS RUN_CONCLUSION <<< "$RUN"
+              if [ "$PR_TREE" != "$MAIN_TREE" ]; then
+                WHY="#$PR_NUMBER's head ${PR_HEAD:0:10} has tree ${PR_TREE:-<unread>}, not this commit's $MAIN_TREE"
+              elif [ "$RUN_STATUS $RUN_CONCLUSION" != "completed success" ]; then
+                WHY="the latest CI run on #$PR_NUMBER's head ${PR_HEAD:0:10} is ${RUN:-<none found>}"
+              fi
+            fi
+            if [ -z "$WHY" ]; then
+              node scripts/affected.mjs github --after-merge --base "$(git rev-parse "$SHA^")" --head "$SHA"
+              echo "Merged #$PR_NUMBER, whose CI run $RUN_ID passed on this tree: running only the checks it skipped." >> "$GITHUB_STEP_SUMMARY"
+            else
+              node scripts/affected.mjs github --full
+              echo "Every check runs: $WHY." >> "$GITHUB_STEP_SUMMARY"
+            fi
           fi
 
   # John Conner termination of false attribution
@@ -408,6 +454,8 @@ jobs:
     name: Build & Lint (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     needs: determine-affected
+    # Always on a pull request, where it is a required check; see `determine-affected`.
+    if: github.event_name == 'pull_request' || needs.determine-affected.outputs.build_lint == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -476,6 +524,10 @@ jobs:
     name: Tests (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     needs: [determine-affected, build-lint]
+    # Always on a pull request, where it is a required check; see `determine-affected`. The
+    # status functions let it run when a push skips build-lint whole, and still skip it when
+    # build-lint fails, as the implicit `success()` did.
+    if: ${{ !cancelled() && !failure() && (github.event_name == 'pull_request' || needs.determine-affected.outputs.tests == 'true') }}
     strategy:
       fail-fast: false
       matrix:
@@ -564,6 +616,8 @@ jobs:
     name: GMT TZ Tests — Node ${{ matrix.node-version }} / ${{ matrix.timezone }}
     runs-on: ubuntu-latest
     needs: determine-affected
+    # Always on a pull request, where it is a required check; see `determine-affected`.
+    if: github.event_name == 'pull_request' || needs.determine-affected.outputs.gmt_tests == 'true'
     strategy:
       fail-fast: false
       matrix:

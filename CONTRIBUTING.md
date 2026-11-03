@@ -421,11 +421,14 @@ CI strategy:
 
 - On a pull request, the `Determine affected packages` job applies the same rules as
   `validate` to the pull request's changes and hands the list of checks to the other jobs.
-- A push to `main` runs every check, so a check a rule wrongly skipped fails on the merge that
-  skipped it.
-- Every job runs on every change, because the build, test and timezone jobs are required
+- A push to `main` runs every check that has not already passed on its exact files, so a check
+  a rule wrongly skipped fails on the merge that skipped it. When the push is the squash merge
+  of a pull request whose latest CI run passed and whose head has the same tree, only the
+  checks that pull request skipped run. Otherwise every check runs. The job summary says which.
+- On a pull request every job runs, because the build, test and timezone jobs are required
   checks. A job with nothing to check skips its steps and passes in seconds, so a change to
-  notes alone finishes CI in about a minute.
+  notes alone finishes CI in about a minute. On a push to `main`, which has no required checks,
+  a job with nothing to check does not start, so it leaves its runner to Release and Deploy Dox.
 - The commit trailer check, the dependency audit and the changeset check run on every change.
 
 ## Agent prompt
