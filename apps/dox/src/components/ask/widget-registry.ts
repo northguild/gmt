@@ -963,7 +963,7 @@ const canadaClockEntry = defineWidget<CanadaClockChangeArgs>({
      everywhere. The credits button is in the frame's corner: the map draws third-party shapes. */
   load: async () => {
     const m = await import("~/lib/canada-clock-change-mount");
-    // The legend and the zone list state the change in the true tense, so the library loads first.
+    // The legend and the zone list state the change's date and time, so the library loads first.
     const tense = await m.loadCanadaTense();
     return {
       renderTemplate: (idPrefix) =>

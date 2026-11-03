@@ -66,7 +66,6 @@ import {
 } from "~/widgets/families/clockcheck/probe-card";
 import { PROBE_PARTS } from "~/widgets/families/clockcheck/probe-ids";
 import { storedSection } from "~/widgets/families/clockcheck/stored-section";
-import { tenseSlot } from "~/widgets/families/clockcheck/tense-slot";
 import { wireStoredTimes } from "./clock-change-stored";
 import type { StoredHandle } from "./clock-change-stored";
 import {
@@ -79,12 +78,11 @@ import {
 } from "./clock-change-mount";
 import type { ClockChangeChatArgs, ClockLib } from "./clock-change-mount";
 import { withBase } from "./site";
-import { REGION_KEY, bindTense, regionWhen } from "./clock-change-tense";
+import { regionWhen, tenseView } from "./clock-change-tense";
 import type { TenseView } from "./clock-change-tense";
 import { bindClockGlow } from "./crystal-clock";
 import { showUnavailable } from "./widget-mount";
 import { staleZoneIds, wireZoneMap } from "./zone-map";
-import type { ZoneMapHandle } from "./zone-map";
 
 const NAME = "canada-clock-change";
 const YEARS = yearsOf(CANADA_STOP_YEAR);
@@ -101,29 +99,17 @@ export interface CanadaTemplateOptions {
   idPrefix?: string;
   /** Draws the Key points above the checker. The page does; the chat rail does not. */
   keyPoints?: boolean;
-  /** Which tense is true now, and the dates in words: the page's server render and the chat read it from the library. */
+  /** The dates in words: the page's server render and the chat read them from the library. */
   tense: TenseView;
 }
 
-/** Reads the tense of the Canada page's moments at the library's clock. */
+/** Reads the words of the Canada page's moments from the library. */
 export const loadCanadaTense = (): Promise<TenseView> =>
   loadTenseView(CANADA_MOMENTS);
 
-/**
- * The hint under "Clock changes", written whole in both tenses. A tensed clause mid-sentence would
- * be one box that cannot break across lines, so the sentence is one block slot, like a Key point.
- */
-function changesHint(view: TenseView): SafeHtml {
-  const hint = (zones: string): string =>
-    `tzdb also records an abbreviation change on 2026-11-01 for ${zones}, with no change of UTC offset, so it is not listed. Times are the clock as it read just before the change.`;
-  return tenseSlot(
-    REGION_KEY,
-    hint("the four zones that will stop changing their clocks"),
-    hint("the four zones that stopped changing their clocks"),
-    view.tenseOf(REGION_KEY),
-    true,
-  );
-}
+/** The hint under "Clock changes". */
+const CHANGES_HINT =
+  "tzdb also records an abbreviation change on 2026-11-01 for the four zones that stopped changing their clocks, with no change of UTC offset, so it is not listed. Times are the clock as it read just before the change.";
 
 export function renderCanadaClockChangeTemplate({
   idPrefix = "canada",
@@ -136,7 +122,7 @@ export function renderCanadaClockChangeTemplate({
     label: "Canada 2026 clock-change checker",
     idPrefix,
     keyPoints: withKeyPoints
-      ? keyPoints(idPrefix, canadaKeyPoints(regionWhen(tense)), tense)
+      ? keyPoints(idPrefix, canadaKeyPoints(regionWhen(tense)))
       : undefined,
     probe: probeCard(
       canadaProbe(idPrefix),
@@ -163,7 +149,7 @@ export function renderCanadaClockChangeTemplate({
         id: id("changes"),
         heading: "Clock changes in 2026 and 2027",
         gate: "changes",
-        note: changesHint(tense),
+        note: CHANGES_HINT,
       },
       changeGroups(idPrefix, TRANSITION_ZONES, YEARS),
     ),
@@ -221,16 +207,9 @@ export async function mountCanadaClockChange(
   let busy = false;
   let mapMounted = false;
   let stored: StoredHandle | undefined;
-  let map: ZoneMapHandle | undefined;
 
-  // --- the tense: the forms of every dated phrase follow the page's clock, and flip on their own ---
-  const tense = bindTense(w.el, {
-    lib,
-    moments: CANADA_MOMENTS,
-    now,
-    signal,
-    onChange: () => map?.retense(),
-  });
+  // --- the words: the change is past, so its date and time are written once, with no tense to follow ---
+  const tense = tenseView(lib, CANADA_MOMENTS);
 
   bindClockGlow(w.el, signal);
 
@@ -290,12 +269,12 @@ export async function mountCanadaClockChange(
       w.el.dataset["state"] = "ready";
       if (!mapMounted) {
         mapMounted = true;
-        map = wireZoneMap(
+        const map = wireZoneMap(
           w,
           check.zones,
           signal,
           {
-            tense: () => tense.view(),
+            tense,
             responseNow: check.now,
             now,
             wall: (at, offset) =>

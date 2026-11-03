@@ -12,7 +12,6 @@ import {
   renderCanadaClockChangeTemplate,
 } from "../lib/canada-clock-change-mount";
 
-// Both tenses of every dated phrase are in the markup; the page flips to the true one at once.
 const tense = await loadCanadaTense();
 const html = renderCanadaClockChangeTemplate({ keyPoints: true, tense }).value;
 ---
