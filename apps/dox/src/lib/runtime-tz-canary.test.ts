@@ -1,5 +1,4 @@
 import { getTimeZoneOffset } from "@northguild/gmt/zoned/get";
-import { describe, expect, it } from "vitest";
 import { PROBE_INSTANT, PROBE_ZONES } from "./canada-clock-change";
 import { MOROCCO_FACTS, MOROCCO_PROBE } from "./morocco-clock-change";
 

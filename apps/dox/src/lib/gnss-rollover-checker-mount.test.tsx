@@ -7,7 +7,6 @@
  * the library or the widget fails here.
  */
 import { screen, within } from "@testing-library/dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   WIDGET_REGISTRY,
   type AnyWidgetEntry,

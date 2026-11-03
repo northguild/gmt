@@ -20,6 +20,9 @@ correctness lives in build output, rendered pages, keyboard paths and live behav
 - **You report gaps; you do not fix them.** Do not edit anything under `apps/dox`, except test
   files a definition of done explicitly requires.
 - **You never touch `packages/gmt`.**
+- **Do not import Vitest globals into test files.** `describe`, `it`, `test`, `expect`, and
+  lifecycle hooks are available as globals; use them directly. Keep imports from `vitest` only
+  for non-global APIs such as `vi` or type-only types when a test needs them.
 - **Never report a gate as passing that you did not run.** If you could not run it — no
   browser, no Cloudflare access, a build that never finished — say "not verified" and why.
 

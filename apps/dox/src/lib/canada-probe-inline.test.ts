@@ -7,7 +7,6 @@
  * and must leave it reading the same.
  */
 import { screen } from "@testing-library/dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { cellsInColumn } from "~/test/render-widget";
 import { widget } from "~/widgets/builders/layout";
 import { fillProbe, probeCard } from "~/widgets/families/clockcheck/probe-card";

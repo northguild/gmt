@@ -7,7 +7,6 @@
  */
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
 import { renderHtml } from "~/widgets/test-fixture";
 import { installJsdomShims } from "../test/jsdom-shims";
 import { renderGlobeTemplate } from "./globe-mount";

@@ -8,7 +8,6 @@ import { resolve } from "node:path";
 import { geoPath } from "d3-geo";
 import { screen, within } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
 import { isBeforeUtc } from "@northguild/gmt/utc/compare";
 import { convertUtcToPlainDateTime } from "@northguild/gmt/utc/convert";
 import { html } from "~/widgets/builders/html";

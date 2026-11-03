@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/dom";
-import { describe, expect, it } from "vitest";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import type { KeyCard } from "~/data/clock-change-text";
 import { renderHtml } from "../../test-fixture";

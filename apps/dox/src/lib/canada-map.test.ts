@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/dom";
-import { afterEach, describe, expect, it } from "vitest";
 import { isBeforeUtc } from "@northguild/gmt/utc/compare";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import {

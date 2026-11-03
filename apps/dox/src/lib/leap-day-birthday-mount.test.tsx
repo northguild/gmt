@@ -5,7 +5,6 @@
  * the page. The loader hands the widget the real library wrapped in a recorder, so the
  * printed calls can be checked against the calls that ran.
  */
-import { vi } from "vitest";
 import { screen, within } from "@testing-library/dom";
 import {
   WIDGET_REGISTRY,

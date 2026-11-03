@@ -6,7 +6,6 @@
  */
 import { within } from "@testing-library/dom";
 import { geoContains } from "d3-geo";
-import { afterEach, describe, expect, it } from "vitest";
 import { isBeforeUtc } from "@northguild/gmt/utc/compare";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { CANADA_MAP } from "./canada-map";

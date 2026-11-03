@@ -1,4 +1,3 @@
-import { describe, expect, it, vi } from "vitest";
 import type { IdentifierLib } from "./identifier-lib";
 import {
   BAD_LAYOUT_TEXT,

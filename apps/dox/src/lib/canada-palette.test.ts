@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { PROBE_ZONES, serversMarkdown } from "./canada-clock-change";
 import { CANADA_MINIMUMS } from "../data/canada-runtime-minimums";
 import { minimumsMarkdown } from "../data/clock-change-minimums";
