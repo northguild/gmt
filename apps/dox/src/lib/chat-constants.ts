@@ -872,6 +872,12 @@ export const CHAT_STARTERS: readonly {
     area: "core",
     args: { amount: 1, unit: "years", start: "2027-06-15T12:00:00Z" },
   },
+  {
+    text: "PostgreSQL gave me `2024-03-15 14:30:00+00`. Which gmt call reads it?",
+    widget: "showDatabaseTimestampReader",
+    area: "core",
+    args: { form: "postgresql-timestamptz", value: "2024-03-15 14:30:00+00" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

@@ -140,6 +140,10 @@ import {
   renderDurationParserBenchTemplate,
 } from "./duration-parser-bench-mount";
 import {
+  mountDatabaseTimestampReader,
+  renderDatabaseTimestampReaderTemplate,
+} from "./database-timestamp-reader-mount";
+import {
   mountIdTimestampDecoder,
   renderIdTimestampDecoderTemplate,
 } from "./id-timestamp-decoder-mount";
@@ -357,6 +361,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "expiry calculator",
     () => renderExpiryCalculatorTemplate("test"),
     mountExpiryCalculator as MountFn<never>,
+  ],
+  [
+    "database timestamp reader",
+    () => renderDatabaseTimestampReaderTemplate("test"),
+    mountDatabaseTimestampReader as MountFn<never>,
   ],
 ];
 

@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { sqlDateTime } from "../../regex";
+import { readSqlDateTime } from "../../internal/sqlDateTime";
 
 /**
  * Parse a SQL timestamp literal without a time zone — the `YYYY-MM-DD HH:MM:SS[.fff]` form of
@@ -10,8 +9,8 @@ import { sqlDateTime } from "../../regex";
  *   matches: a space separator, a four-digit year `0001`–`9999` (no sign, no expanded year),
  *   two-digit month, day, hour, minute and second (seconds are required), and an optional `.`
  *   followed by up to 9 fraction digits.
- * - **Plain only.** SQL's offset-carrying `TIMESTAMP WITH TIME ZONE` literal is out of scope; see
- *   `formatSqlDateTime`'s JSDoc.
+ * - **Plain only.** SQL's offset-carrying `TIMESTAMP WITH TIME ZONE` literal has its own reader,
+ *   `parseSqlOffsetDateTime`.
  * - The fraction is written as `Temporal.PlainDateTime#toString` writes it: trailing zeros are
  *   dropped (`.500` → `.5`, `.000` → none), and a `.` with no digits is dropped. `Temporal.PlainDateTime.from`
  *   proves the value is a real calendar date and time.
@@ -27,14 +26,5 @@ import { sqlDateTime } from "../../regex";
  * @example parseSqlDateTime("not a date") // ""
  */
 export function parseSqlDateTime(value: string): string {
-  if (typeof value !== "string") return "";
-  if (!sqlDateTime.test(value)) return "";
-
-  try {
-    return Temporal.PlainDateTime.from(
-      value.replace(" ", "T").replace(/\.$/, ""),
-    ).toString();
-  } catch {
-    return "";
-  }
+  return readSqlDateTime(value);
 }

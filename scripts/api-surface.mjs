@@ -147,13 +147,17 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * fail, so they document no failure example
  * (context/coding-standards.md § Scoped exception: the UTC clock readers).
  *
- * `docResults` counts 55, of which 17 are CORE-104's clock results on three guides and a mistakes page:
+ * `docResults` counted 55, of which 17 are CORE-104's clock results on three guides and a mistakes page:
  * 12 in `core-date-operations/durations.mdx` (the `relativeTo` pair, the from-now forms, the timer
  * delay, the seconds until, "expires in 3 days" and the `Max-Age` for a year), 3 in
  * `core-date-operations/get-current.mdx` (`getDateIn`, `getUtcAgo`, `getZonedIn`) and 2 in
  * `mistakes/durations.mdx` (the `getZonedNow("UTC")` start and `totalUnitsFromNow({ years: 1 })`).
+ * `docResults` counts 60: the 55 above plus 5 of CORE-106's in `conversion/databases.mdx`
+ * (postgresql-extract-epoch, sqlite-julianday, redis-time, redis-stream-id, cql-time), whose
+ * arguments are expressions over a driver value, so they cannot be bound to an input here.
+ * `apps/dox/src/lib/databases-guide.test.ts` runs every snippet on that page instead.
  */
-const SKIP_BUDGET = { examples: 184, docResults: 55 };
+const SKIP_BUDGET = { examples: 184, docResults: 60 };
 
 // A Temporal/Intl result formatted by the runtime depends on the zone; examples document UTC.
 if (process.env.TZ !== "UTC") {

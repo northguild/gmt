@@ -70,6 +70,7 @@ import {
   showCronInAZoneInput,
   showLeapDayBirthdayInput,
   showExpiryCalculatorInput,
+  showDatabaseTimestampReaderInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
   showObservanceComparatorInput,
@@ -87,6 +88,7 @@ import {
   showTimetableReaderInput,
   showZonePlannerInput,
   columnBridgeProblems,
+  databaseFormProblems,
   cronZoneProblems,
   idDecoderProblems,
 } from "../src/lib/dox-tools";
@@ -603,6 +605,27 @@ export function buildWorkerTools(
       description: docFor("showExpiryCalculator"),
       inputSchema: showExpiryCalculatorInput,
       execute: () => accept("expiry-calculator"),
+    }),
+    // A contradiction is refused before a zone is looked up. The values themselves are never
+    // checked: one the library refuses is the widget's NO SIGNAL to show.
+    showDatabaseTimestampReader: tool({
+      description: docFor("showDatabaseTimestampReader"),
+      inputSchema: showDatabaseTimestampReaderInput,
+      execute: (input) => {
+        const problems = databaseFormProblems(input as Record<string, unknown>);
+        if (problems.length > 0) {
+          return reject("database-timestamp-reader", problems.join(" "));
+        }
+        // A blank zone is no zone: the reader then shows the wall-time call alone.
+        const zone = input.zone ?? "";
+        const unknown = zone.trim() !== "" ? unknownZones([zone]) : [];
+        return unknown.length > 0
+          ? reject(
+              "database-timestamp-reader",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("database-timestamp-reader");
+      },
     }),
   };
 

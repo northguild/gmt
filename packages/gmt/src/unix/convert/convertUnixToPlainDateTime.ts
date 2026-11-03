@@ -11,12 +11,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  * Convert a Unix timestamp to a plain datetime string in the format "YYYY-MM-DDTHH:mm:ss".
  *
  * - Converts to PlainDateTime in `timeZone`.
- * - `unix` is a safe integer or a string of optionally negative ASCII digits; anything else returns
+ * - `value` is a safe integer or a string of optionally negative ASCII digits; anything else returns
  *   "".
  * - Returns "" for invalid input.
  *
- * @param unix Unix epoch: a safe integer or a digit string
- * @param options optional: how `unix` is read and the zone its wall clock is read in
+ * @param value Unix epoch: a safe integer or a digit string
+ * @param options optional: how `value` is read and the zone its wall clock is read in
  * @returns plain datetime string in "YYYY-MM-DDTHH:mm:ss" format or "" on invalid input
  *
  * @example convertUnixToPlainDateTime(1709164800000, { timeZone: "UTC" }) // "2024-02-29T00:00:00"
@@ -28,7 +28,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 
 export function convertUnixToPlainDateTime(
-  unix: number | string,
+  value: number | string,
   options?: {
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
@@ -58,7 +58,7 @@ export function convertUnixToPlainDateTime(
 
     if (epochUnit === null || frame === null) return "";
 
-    const instant = unixEpochToInstant(unix, epochUnit);
+    const instant = unixEpochToInstant(value, epochUnit);
 
     if (instant === null) return "";
 

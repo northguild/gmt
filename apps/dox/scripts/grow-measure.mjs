@@ -28,6 +28,9 @@
  *     `--reduce`, whose heights snap by design);
  *   - every `data-gate="grow"` section is at rest at the end;
  *   - the final height equals the `prefers-reduced-motion: reduce` run's, within 1 px;
+ *   - a page whose row names `holdStill` keeps the width and height of each named part (the hero,
+ *     the offset plate, the badge, the call frame, the ISO block) within 1 px across every preset
+ *     and on every character typed into one field, from empty;
  *   - Zoned Earth does not grow;
  *   - under `--reduce`, `[data-growing]` never appears.
  *
@@ -293,6 +296,20 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "database-timestamp-reader",
+    preset: PRESET,
+    drag: null,
+    // Every part that must keep its box while a reading changes, by its `data-gate`.
+    holdStill: {
+      parts: ["hero", "offset", "kind", "codeframe", "iso"],
+      typing: {
+        field: { role: "textbox", name: "Column text" },
+        text: "2025-02-18T12:34:56.789+01:00[Europe/Stockholm]",
+        parts: ["hero", "codeframe"],
+      },
+    },
+  },
+  {
     slug: "column-timestamp-bridge",
     preset: PRESET,
     drag: null,
@@ -345,6 +362,7 @@ function ruleOf(message) {
   if (/not at rest/.test(text)) return "not-at-rest";
   if (/data-growing/.test(text)) return "growing-under-reduced-motion";
   if (/did not happen/.test(text)) return "interaction-skipped";
+  if (/box moved/.test(text)) return "box-moved";
   if (text.startsWith("the run crashed")) return "run-crashed";
   return "page-error";
 }
@@ -761,6 +779,108 @@ async function drag(page, root, spec) {
   return moved.length ? moved[0] : null;
 }
 
+/* The width and height of the first element of each part (by `data-gate`) inside the root, or
+   null for a part the page does not have. */
+function partBoxes(page, root, parts) {
+  return page.evaluate(
+    ([rootSel, names]) => {
+      const rootEl = document.querySelector(rootSel);
+      return names.map((name) => {
+        const el = rootEl?.querySelector(`[data-gate~="${name}"]`);
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { w: r.width, h: r.height };
+      });
+    },
+    [root, parts],
+  );
+}
+
+/* Two animation frames, so a mount that redraws on an event has painted. */
+const settled = (page) =>
+  page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+
+const boxLabel = (b) => `${b.w.toFixed(1)} x ${b.h.toFixed(1)}`;
+
+/* `def.holdStill`: nothing on the page moves while a reading changes. Steps through every option
+   of the preset select, then types `typing.text` into one field a character at a time from empty.
+   After every step each named part keeps the width and height it had at the first step, within
+   `HEIGHT_MATCH_PX`. The page-height limit above would let a 6 px jump through; this does not. */
+async function holdStillProblems(page, def) {
+  const spec = def.holdStill;
+  const problems = [];
+  const compare = (what, parts, first, now) => {
+    parts.forEach((part, i) => {
+      if (!first[i] || !now[i]) {
+        problems.push(`${part} box moved: it is not on the page (${what})`);
+        return;
+      }
+      if (
+        Math.abs(first[i].w - now[i].w) > HEIGHT_MATCH_PX ||
+        Math.abs(first[i].h - now[i].h) > HEIGHT_MATCH_PX
+      ) {
+        problems.push(
+          `${part} box moved: ${boxLabel(first[i])} became ${boxLabel(now[i])} at ${what}`,
+        );
+      }
+    });
+  };
+
+  const sel = control(page, def.root, def.preset).first();
+  if (!(await sel.isVisible().catch(() => false))) {
+    return ["hold-still: the preset select did not happen (not visible)"];
+  }
+  const count = await sel.evaluate((s) => s.options.length);
+  await sel.selectOption({ index: 1 });
+  await settled(page);
+  const baseline = await partBoxes(page, def.root, spec.parts);
+  for (let i = 2; i < count; i++) {
+    await sel.selectOption({ index: i });
+    await settled(page);
+    const label = await sel.evaluate((s) => s.options[s.selectedIndex].text);
+    compare(
+      `the preset "${label}"`,
+      spec.parts,
+      baseline,
+      await partBoxes(page, def.root, spec.parts),
+    );
+  }
+
+  if (spec.typing) {
+    await sel.selectOption({ index: 1 });
+    await settled(page);
+    const box = control(page, def.root, spec.typing.field).first();
+    if (!(await box.isVisible().catch(() => false))) {
+      problems.push(
+        "hold-still: the typing field did not happen (not visible)",
+      );
+      return problems;
+    }
+    await box.fill("");
+    await settled(page);
+    const first = await partBoxes(page, def.root, spec.typing.parts);
+    await box.focus();
+    let typed = "";
+    for (const ch of spec.typing.text) {
+      await page.keyboard.type(ch);
+      typed += ch;
+      await settled(page);
+      compare(
+        `the text "${typed}"`,
+        spec.typing.parts,
+        first,
+        await partBoxes(page, def.root, spec.typing.parts),
+      );
+    }
+  }
+  return problems;
+}
+
 async function changeInput(page, def) {
   if (def.click) {
     const el = control(page, def.root, def.click).first();
@@ -881,6 +1001,9 @@ async function runOneUnguarded(
           await sleep(INTERACT_MS);
         } else notes.push("no drag handle");
         frames = await page.evaluate(() => window.__grow.stop());
+      }
+      if (!reduce && def.holdStill) {
+        problems.push(...(await holdStillProblems(page, def)));
       }
     }
     stat = stats(frames);

@@ -14,6 +14,7 @@
 import { tool } from "ai";
 import type { IsoWeekday } from "@northguild/gmt";
 import { z } from "zod";
+import { DB_FORMS, formOf } from "./database-timestamp-forms";
 import {
   GNSS_DECODER_MODES,
   GNSS_WEEK_COUNTERS,
@@ -1103,6 +1104,77 @@ export const showExpiryCalculatorInput = z.object({
     ),
 });
 
+/**
+ * What is wrong with a Database Timestamp Reader call, as sentences; empty when it is sound.
+ * The schema and the Worker both ask, so a direct call is held to the same rules. A value the
+ * form has no field for, a missing value, or a zone on a form that reads none is refused, never
+ * dropped. The reader judges every value itself.
+ */
+export function databaseFormProblems(v: Record<string, unknown>): string[] {
+  const form = typeof v["form"] === "string" ? formOf(v["form"]) : undefined;
+  if (form === undefined) return [];
+  const given = ["value", "value2", "value3"].filter(
+    (k) => v[k] !== undefined,
+  ).length;
+  const out: string[] = [];
+  if (given !== form.fields.length) {
+    out.push(
+      `${form.id} takes ${form.fields.length} value${form.fields.length === 1 ? "" : "s"} (${form.fields.map((f) => f.label).join(", ")}) and the call gave ${given}.`,
+    );
+  }
+  if (v["zone"] !== undefined && !form.zone) {
+    out.push(
+      `${form.id} has no session time zone field; send zone only for a form that reads one.`,
+    );
+  }
+  return out;
+}
+
+/**
+ * Database Timestamp Reader: one value a database driver returned, in the form the reader's
+ * database and type select. Every key is the permalink key. The reader judges every value
+ * itself, so the schema checks length and shape only.
+ */
+export const showDatabaseTimestampReaderInput = z
+  .object({
+    form: z
+      .enum(DB_FORMS.map((f) => f.id) as [string, ...string[]])
+      .describe(
+        "The form the reader's database and type select, by id. Never guess a form the reader did not name or show.",
+      ),
+    value: z
+      .string()
+      .max(96)
+      .describe(
+        "The first value, exactly as the reader gave it, never trimmed or corrected.",
+      ),
+    value2: z
+      .string()
+      .max(96)
+      .optional()
+      .describe(
+        "The second value, only for a form with two fields, exactly as given.",
+      ),
+    value3: z
+      .string()
+      .max(96)
+      .optional()
+      .describe(
+        "The third value, only for a form with three fields, exactly as given.",
+      ),
+    zone: z
+      .string()
+      .optional()
+      .describe(
+        "The session time zone, only for MySQL TIMESTAMP and only when the reader named it. Never infer it from a place, a server or a vendor default.",
+      ),
+  })
+  .superRefine((v, ctx) => {
+    for (const message of databaseFormProblems(v)) {
+      ctx.addIssue({ code: "custom", message });
+    }
+  });
+
 export type DoxToolName =
   | "showGlobe"
   | "showDstInspector"
@@ -1144,7 +1216,8 @@ export type DoxToolName =
   | "showMoroccoClockChange"
   | "showCronInAZone"
   | "showLeapDayBirthday"
-  | "showExpiryCalculator";
+  | "showExpiryCalculator"
+  | "showDatabaseTimestampReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1440,6 +1513,13 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader asks how many seconds a Max-Age or token lifetime is, what exp or Expires to set for a length of time, or why a hard-coded 31536000 is wrong. Pass only the length and the start the reader gave; none means now.",
     args: "amount: required, a whole number; unit: required, one of years, months, weeks, days, hours, minutes; start: optional UTC instant, only when the reader named one (none means now, and a negative amount needs a start).",
   },
+  {
+    name: "showDatabaseTimestampReader",
+    purpose:
+      "Read a date or time value a database driver returned, and name the gmt call for it.",
+    when: "Call when the reader pastes a value from PostgreSQL, MySQL, SQL Server, Oracle, SQLite, MongoDB, DynamoDB, Redis, Couchbase, Cassandra, ScyllaDB or Neo4j and asks what it means or which gmt function reads it. Pass only a form the reader's database and type select; never infer the session time zone from a place, a server or a vendor default. For an id (UUID, ObjectId, timeuuid), use showIdTimestampDecoder instead.",
+    args: "form: required, the id of the form the reader's database and type select; value, and value2 or value3 when the form has more fields: exactly as the reader gave them, never trimmed or corrected; zone: only for MySQL TIMESTAMP, and only when the reader named the session time zone.",
+  },
 ];
 
 /**
@@ -1612,6 +1692,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[40].purpose,
     inputSchema: showExpiryCalculatorInput,
   }),
+  showDatabaseTimestampReader: tool({
+    description: DOX_TOOL_DOCS[41].purpose,
+    inputSchema: showDatabaseTimestampReaderInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1676,6 +1760,7 @@ export const ENABLED_TOOL_NAMES = [
   "showCronInAZone",
   "showLeapDayBirthday",
   "showExpiryCalculator",
+  "showDatabaseTimestampReader",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

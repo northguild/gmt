@@ -167,6 +167,10 @@ const PAGES = [
   { slug: "tool-duration-parser-bench", path: "/tools/duration-parser-bench/" },
   { slug: "tool-id-timestamp-decoder", path: "/tools/id-timestamp-decoder/" },
   {
+    slug: "tool-database-timestamp-reader",
+    path: "/tools/database-timestamp-reader/",
+  },
+  {
     slug: "tool-column-timestamp-bridge",
     path: "/tools/column-timestamp-bridge/",
   },

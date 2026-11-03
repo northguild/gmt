@@ -11,8 +11,9 @@ import { isValidDateTime } from "../validate";
  * - A year outside SQL-92's `0001`–`9999` (Table 10) returns `""`: the literal has no sign and
  *   no expanded year to write it with.
  * - **Plain only.** SQL's offset-carrying `TIMESTAMP WITH TIME ZONE` literal
- *   (`YYYY-MM-DD HH:MM:SS±HH:MM`, e.g. PostgreSQL) is out of scope — this targets the far more
- *   common tz-less column shape. There is no zoned counterpart.
+ *   (`YYYY-MM-DD HH:MM:SS±HH:MM`, e.g. PostgreSQL) is read by `parseSqlOffsetDateTime`
+ *   (`@northguild/gmt/instant/parse`). To write one, use `fromOffsetInstant` or `formatRfc3339`:
+ *   every major database reads that ISO 8601 form.
  * - Fractional seconds are written as Temporal writes them: only the digits needed, with
  *   trailing zeros dropped (`.500` → `.5`).
  *

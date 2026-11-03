@@ -185,6 +185,10 @@ const PAGES = [
     widget: "duration-parser-bench",
   },
   {
+    path: "tools/database-timestamp-reader",
+    widget: "database-timestamp-reader",
+  },
+  {
     path: "tools/id-timestamp-decoder",
     widget: "id-timestamp-decoder",
   },

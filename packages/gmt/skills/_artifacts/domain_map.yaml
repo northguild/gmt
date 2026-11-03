@@ -81,6 +81,7 @@ skills:
       - parseRfc2822
       - parseHttpDate
       - parseSqlDateTime
+      - parseSqlOffsetDateTime
       - parseRfc3339
       - isAfterDate
       - isBeforeDate
@@ -99,6 +100,7 @@ skills:
       - isValidRfc2822DateTime
       - isValidHttpDate
       - isValidSqlDateTime
+      - isValidSqlOffsetDateTime
       - isValidUtcTimestamp
       - hasDaylightSaving
       - getDstTransitions

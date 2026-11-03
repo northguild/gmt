@@ -3,6 +3,9 @@
 .root {
   container-type: inline-size;
   display: grid;
+
+  /* One column the preset's width: a long option label never widens the select past it. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.375rem;
   font-size: clamp(0.8125rem, 0.78rem + 0.15vw, 0.9375rem);
 }
@@ -17,6 +20,10 @@
   box-sizing: border-box;
   inline-size: 100%;
   min-block-size: var(--gmt-target-min);
+
+  /* The select clips its own text: WebKit can count a selected label longer than the box
+     toward the page's width and scroll it sideways. The focus ring is an outline, outside the clip. */
+  overflow: hidden;
   padding-block: 0.375rem;
   padding-inline: 0.625rem 2rem;
   border: 1px solid var(--gmt-hairline);

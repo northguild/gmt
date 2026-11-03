@@ -12,6 +12,7 @@ export * from "./nanoseconds";
 export * from "./rfc-2822";
 export * from "./rfc-3339";
 export * from "./sql-date-time";
+export * from "./sql-offset-date-time";
 export * from "./time";
 export * from "./time-zone-like";
 export * from "./unix";

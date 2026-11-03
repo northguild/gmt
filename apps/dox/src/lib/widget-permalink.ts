@@ -75,7 +75,8 @@ export type WidgetKind =
   | "moroccoclock"
   | "cronzone"
   | "leapday"
-  | "expiry";
+  | "expiry"
+  | "dbstamp";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -137,6 +138,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   cronzone: "/tools/cron-in-a-zone/",
   leapday: "/tools/leap-day-birthday/",
   expiry: "/tools/expiry-calculator/",
+  dbstamp: "/tools/database-timestamp-reader/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */
@@ -221,6 +223,7 @@ const EMPTY_LIST_KEYS: ReadonlySet<string> = new Set(["weekend", "offsets"]);
 const KIND_STRING_CAPS: Readonly<Partial<Record<WidgetKind, number>>> = {
   iddecode: 96,
   colbridge: 96,
+  dbstamp: 96,
 };
 
 /**
@@ -235,6 +238,8 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   leapday: new Set(["value"]),
   // A cleared amount or start is the `no result` state, not a missing value.
   expiry: new Set(["amount", "start"]),
+  // A cleared field or zone is a state of its own: the form reads it, not the default.
+  dbstamp: new Set(["value", "value2", "value3", "zone"]),
 };
 
 /**

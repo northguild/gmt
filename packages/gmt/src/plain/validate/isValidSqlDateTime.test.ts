@@ -41,7 +41,7 @@ describe("isValidSqlDateTime", () => {
     ${"2024-03-15 14:30:00.1234567890"} | ${false} | ${false} | ${"ten fraction digits"}
     ${"2024-03-15 14:30:00,5"}          | ${false} | ${false} | ${"comma decimal sign"}
     ${"2024-03-15 14:30:00Z"}           | ${false} | ${false} | ${"a UTC designator"}
-    ${"2024-03-15 14:30:00+00:00"}      | ${false} | ${false} | ${"an offset: TIMESTAMP WITH TIME ZONE is out of scope"}
+    ${"2024-03-15 14:30:00+00:00"}      | ${false} | ${false} | ${"an offset: isValidSqlOffsetDateTime checks TIMESTAMP WITH TIME ZONE"}
     ${"2024-03-15"}                     | ${false} | ${false} | ${"a date without a time"}
     ${" 2024-03-15 14:30:00"}           | ${false} | ${false} | ${"leading space"}
     ${"2024-03-15 14:30:00 "}           | ${false} | ${false} | ${"trailing space"}

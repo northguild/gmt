@@ -42,6 +42,8 @@ skills:
       - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
       - 'northguild/gmt:packages/gmt/src/zoned/parse/index.ts'
       - 'northguild/gmt:packages/gmt/src/utc/parse/index.ts'
+      - 'northguild/gmt:packages/gmt/src/instant/parse/index.ts'
+      - 'northguild/gmt:packages/gmt/src/instant/validate/index.ts'
       - 'northguild/gmt:packages/gmt/src/utc/validate/index.ts'
       - 'northguild/gmt:packages/gmt/src/unix/get/index.ts'
       - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'

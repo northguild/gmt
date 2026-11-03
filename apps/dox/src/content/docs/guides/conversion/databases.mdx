@@ -1,0 +1,669 @@
+---
+title: Database Timestamps
+description: Read the date and time values a database driver hands back (PostgreSQL, MySQL, SQL Server, Oracle, SQLite, MongoDB, DynamoDB, Redis, Couchbase, Cassandra, ScyllaDB and Neo4j) with the right gmt call, and write them back.
+sidebar:
+  order: 4
+industries: [core]
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+A database driver hands your code a date or time in one of three shapes: text, a number counted
+from an epoch, or a driver object made of parts. Each shape has one gmt call, or a short
+composition of calls. The table below lists every form for twelve databases, and the sections
+after it show the runnable snippet for each one that takes more than a single call.
+
+## The one gap: SQL offset timestamp text
+
+PostgreSQL `timestamptz`, SQL Server `datetimeoffset` and Oracle `TIMESTAMP WITH TIME ZONE` print a
+timestamp with a UTC offset, and none of them print the `T` that ISO 8601 uses. The ISO readers
+each handle part of that text, and none handle all of it.
+
+<Aside type="caution" title="An offset is not a zone">
+An offset such as `+00:00` names an instant, not a place: it is Reykjavik all year, and London only
+in winter. Never read it as an IANA zone. [An offset is not a zone](#an-offset-is-not-a-zone) below
+says what to store and which calls to use.
+</Aside>
+
+[`toOffsetInstant`](/reference/instant/convert/toOffsetInstant/) needs a `T`, so it returns `null` on
+every space-separated form:
+
+{/* db-row: gap-to-offset-instant */}
+
+```ts
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
+
+const v = "2024-03-15 14:30:00+05:30";
+toOffsetInstant(v)
+// null
+```
+
+[`parseRfc3339`](/reference/zoned/parse/parseRfc3339/) reads a space followed by a full `±HH:MM`,
+which RFC 3339 §5.6 (NOTE) allows:
+
+{/* db-row: gap-rfc3339-space */}
+
+```ts
+import { parseRfc3339 } from "@northguild/gmt/zoned/parse";
+
+const v = "2024-03-15 14:30:00+05:30";
+parseRfc3339(v)
+// "2024-03-15T14:30:00+05:30[+05:30]"
+```
+
+It returns `""` on three forms the databases print. PostgreSQL prints an hour-only offset (`+00`)
+whenever the offset is a whole number of hours:
+
+{/* db-row: gap-rfc3339-hour-only */}
+
+```ts
+import { parseRfc3339 } from "@northguild/gmt/zoned/parse";
+
+const v = "2024-03-15 14:30:00+00";
+parseRfc3339(v)
+// ""
+```
+
+SQL Server puts a space before the offset, and keeps seven fraction digits:
+
+{/* db-row: gap-rfc3339-space-before */}
+
+```ts
+import { parseRfc3339 } from "@northguild/gmt/zoned/parse";
+
+const v = "2007-05-08 12:35:29.1234567 +12:15";
+parseRfc3339(v)
+// ""
+```
+
+PostgreSQL prints the offset of a historic zone with seconds:
+
+{/* db-row: gap-rfc3339-offset-seconds */}
+
+```ts
+import { parseRfc3339 } from "@northguild/gmt/zoned/parse";
+
+const v = "1900-01-01 00:00:00+00:19:32";
+parseRfc3339(v)
+// ""
+```
+
+[`parseSqlOffsetDateTime`](/reference/instant/parse/parseSqlOffsetDateTime/) reads all of them and
+returns an ISO 8601 string with a `T` and the offset kept.
+[`isValidSqlOffsetDateTime`](/reference/instant/validate/isValidSqlOffsetDateTime/) guards the same
+text. On the form that `parseRfc3339` also reads, the two give the same instant and offset. The
+four rewrites it makes are these. An hour-only offset gains `:00`:
+
+{/* db-row: gap-parse-hour-only */}
+
+```ts
+import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+
+const v = "2024-03-15 14:30:00+00";
+parseSqlOffsetDateTime(v)
+// "2024-03-15T14:30:00+00:00"
+```
+
+A negative zero offset, `-00`, becomes `+00:00`:
+
+{/* db-row: gap-parse-negative-zero */}
+
+```ts
+import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+
+const v = "2024-03-15 14:30:00-00";
+parseSqlOffsetDateTime(v)
+// "2024-03-15T14:30:00+00:00"
+```
+
+Offset seconds are kept:
+
+{/* db-row: gap-parse-offset-seconds */}
+
+```ts
+import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+
+const v = "1900-01-01 00:00:00+00:19:32";
+parseSqlOffsetDateTime(v)
+// "1900-01-01T00:00:00+00:19:32"
+```
+
+Trailing zeros of the fraction are dropped, because a fixed-precision column prints them and
+every database reads the shorter form:
+
+{/* db-row: gap-parse-fraction */}
+
+```ts
+import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+
+const v = "2024-03-15 14:30:00.500000+00";
+parseSqlOffsetDateTime(v)
+// "2024-03-15T14:30:00.5+00:00"
+```
+
+Text with a `T` is not SQL offset text, and neither is text with a `Z`, so both return `""`:
+
+{/* db-row: gap-reject-t */}
+
+```ts
+import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+
+const v = "2024-03-15T14:30:00+00:00";
+parseSqlOffsetDateTime(v)
+// ""
+```
+
+{/* db-row: gap-reject-z */}
+
+```ts
+import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+
+const v = "2024-03-15 14:30:00Z";
+parseSqlOffsetDateTime(v)
+// ""
+```
+
+For text with a `T`, which is what MongoDB, Couchbase and Neo4j print, use `toOffsetInstant`:
+
+{/* db-row: gap-t-to-offset-instant */}
+
+```ts
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
+
+const v = "2024-03-15T14:30:00+05:30";
+toOffsetInstant(v)
+// {"instant":"2024-03-15T09:00:00Z","offset":"+05:30"}
+```
+
+The guard returns a boolean:
+
+{/* db-row: gap-validate */}
+
+```ts
+import { isValidSqlOffsetDateTime } from "@northguild/gmt/instant/validate";
+
+const v = "2007-05-08 12:35:29.1234567 +12:15";
+isValidSqlOffsetDateTime(v)
+// true
+```
+
+## An offset is not a zone
+
+The offset in this text pins down one exact instant, and nothing more. `2024-07-15 14:30:00+00` is
+half past two on the clock in Reykjavik, which keeps UTC all year, and half past three in London,
+which is on summer time. The text cannot say which city wrote it, or what that city's clock will do
+next. [An offset is not a zone](/guides/zoned-date-operations/offset-instants-and-local-resolution/#an-offset-is-not-a-zone)
+gives the general rule: store the zone for anything still to be scheduled, and the offset for
+anything that already happened.
+
+None of these columns gives the zone back in its text:
+
+- PostgreSQL stores `timestamptz` as UTC, and "the originally stated or assumed time zone is not
+  retained" (§8.5.1.3). The offset it prints belongs to the session `TimeZone`, not to the value.
+- SQL Server keeps the offset each `datetimeoffset` was written with. Microsoft lists the type as
+  keeping its offset and as not aware of daylight saving time.
+- Oracle `TIMESTAMP WITH TIME ZONE` can hold a region name, but the `TZH:TZM` format in the Oracle
+  section prints the offset alone.
+
+`parseSqlOffsetDateTime` keeps the offset it is given and never adds a zone, so the instant it reads
+is exact. To show that instant on a local clock, store it in UTC, and store the IANA zone name (such
+as `Europe/London`) in a column of its own. Set the PostgreSQL session to UTC, so every
+`timestamptz` prints as UTC with `+00`:
+
+```sql
+SET TIME ZONE 'UTC';
+SELECT timestamptz '2024-07-15 15:30:00+01';
+-- 2024-07-15 14:30:00+00
+```
+
+The MySQL section does the same for `TIMESTAMP`. SQL Server and Oracle print the offset or region
+each value was written with, whatever the session says, so write UTC values there at `+00:00`.
+
+Then read the UTC instant, and put it on the stored zone's clock with
+[`convertUtcToZoned`](/reference/utc/convert/convertUtcToZoned/). The same text gives a different
+wall time in each zone:
+
+{/* db-row: gap-utc-to-zone */}
+
+```ts
+import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
+import { convertUtcToZoned } from "@northguild/gmt/utc/convert";
+
+const v = "2024-07-15 14:30:00+00";
+const utc = toOffsetInstant(parseSqlOffsetDateTime(v))?.instant ?? "";
+[convertUtcToZoned(utc, "Atlantic/Reykjavik"), convertUtcToZoned(utc, "Europe/London")]
+// ["2024-07-15T14:30:00+00:00[Atlantic/Reykjavik]","2024-07-15T15:30:00+01:00[Europe/London]"]
+```
+
+## The matrix
+
+`✓` is a single existing call. `≈` is a short composition of existing calls, run in the snippets
+below. `new` is the reader added for SQL offset text. A Read cell turns the driver's value into a
+gmt string, and a Write cell makes a value the database reads back.
+
+{/* table: entries */}
+| Database | Type or form on the wire | Read | Write | Kind |
+| --- | --- | --- | --- | --- |
+| PostgreSQL | `date`, `time`, `timestamp` text | `parseSqlDateTime(v)` | `formatSqlDateTime(v)` | ✓ |
+| PostgreSQL | `timestamptz` text, `2024-03-15 14:30:00+05:30` or `…-08` | `parseSqlOffsetDateTime(v)` | `formatRfc3339(v)` | new |
+| PostgreSQL | binary `timestamp` and `timestamptz`: int64 µs since 2000-01-01 | `fromPgMicroseconds(v)` | `toPgMicroseconds(v)` | ✓ |
+| PostgreSQL | `interval` with `intervalstyle = iso_8601` | `parseDuration(v)` | — | ✓ |
+| PostgreSQL | `EXTRACT(EPOCH FROM …)`: numeric seconds with a fraction | `convertUnixToUtc(Math.round(s * 1000))` | `convertUtcToUnix(v)` | ≈ |
+| PostgreSQL | `uuidv7()` | `fromUuidTimestamp(v)` | — | ✓ |
+| MySQL | `DATE`, `DATETIME(fsp)` text | `parseSqlDateTime(v)` | `formatSqlDateTime(v)` | ✓ |
+| MySQL | `TIMESTAMP`: stored UTC, shown in the session `time_zone`, no offset | `resolveLocal(parseSqlDateTime(v), "UTC")` | `formatSqlDateTime(v)` | ≈ |
+| MySQL | offset literal on input, `2020-01-01 10:10:10+05:30` | `input only` | `fromOffsetInstant({ instant, offset })` | ≈ |
+| MySQL | `TIME`: −838:59:59 to 838:59:59, an elapsed time | `durationFromUnits({ hours, minutes, seconds })` | — | ≈ |
+| SQL Server | `date`, `time(7)`, `datetime2(7)`, `datetime`, `smalldatetime` text | `parseSqlDateTime(v)` | `formatSqlDateTime(v)` | ✓ |
+| SQL Server | `datetimeoffset` text, `2007-05-08 12:35:29.1234567 +12:15` | `parseSqlOffsetDateTime(v)` | `formatRfc3339(v)` | new |
+| SQL Server | .NET ticks from CLR interop | `fromDotNetTicks(v)` | `toDotNetTicks(v)` | ✓ |
+| SQL Server | `FILETIME` from CLR interop | `fromFileTime(v)` | `toFileTime(v)` | ✓ |
+| Oracle | `TIMESTAMP` under `NLS_TIMESTAMP_FORMAT` | `parseSqlDateTime(v)` | `formatSqlDateTime(v)` | ✓ |
+| Oracle | `TIMESTAMP WITH TIME ZONE` under a `TZH:TZM` format | `parseSqlOffsetDateTime(v)` | `formatRfc3339(v)` | new |
+| Oracle | `INTERVAL YEAR TO MONTH` and `DAY TO SECOND`, as driver objects | `durationFromUnits({ years, months, days, hours, minutes, seconds })` | — | ≈ |
+| SQLite | `datetime()` text, UTC | `resolveLocal(parseSqlDateTime(v), "UTC")` | `formatSqlDateTime(v)` | ≈ |
+| SQLite | `unixepoch()`: integer seconds | `convertUnixToUtc(v, { epochUnit: "seconds" })` | `convertUtcToUnix(v, { epochUnit: "seconds" })` | ✓ |
+| SQLite | `julianday()`: real | `convertUnixToUtc(Math.round((jd - 2440587.5) * 86400000))` | — | ≈ |
+| MongoDB | BSON Date: int64 ms since 1970 | `convertUnixToUtc(v)` | `convertUtcToUnix(v)` | ✓ |
+| MongoDB | Extended JSON v2 relaxed, `{"$date": "2019-08-11T17:54:14.692Z"}` | `isValidUtc(v)` | — | ✓ |
+| MongoDB | `Timestamp { t, i }`, where `t` is seconds | `convertUnixToUtc(t, { epochUnit: "seconds" })` | — | ✓ |
+| MongoDB | `ObjectId` | `fromObjectId(v)` | — | ✓ |
+| DynamoDB | TTL attribute: a Number of epoch seconds | `convertUnixToUtc(v, { epochUnit: "seconds" })` | `getUnixIn(…)` | ✓ |
+| DynamoDB | ISO 8601 string sort keys | `write only` | `roundUtc(v, { smallestUnit: "millisecond", roundingMode: "floor", fractionalSecondDigits: 3 })` | ≈ |
+| Redis | `TIME`: `[seconds, microseconds]` | `fromArrowTimestamp(BigInt(s) * 1_000_000n + BigInt(us), "microsecond")` | — | ≈ |
+| Redis | `EXPIREAT`, `EXPIRETIME`: epoch seconds | `convertUnixToUtc(v, { epochUnit: "seconds" })` | `getUnixIn(…, { epochUnit: "seconds" })` | ✓ |
+| Redis | `PEXPIREAT`, `PEXPIRETIME`: epoch milliseconds | `convertUnixToUtc(v)` | `getUnixIn(…)` | ✓ |
+| Redis | `EXPIRE`: seconds from now | `write only` | `ttlFromNow(…)?.seconds` | ✓ |
+| Redis | stream ID, `<ms>-<seq>` | `convertUnixToUtc(Number(id.split("-")[0]))` | — | ≈ |
+| Couchbase | epoch ms (`STR_TO_MILLIS`, `MILLIS_TO_STR`) | `convertUnixToUtc(v)` | `convertUtcToUnix(v)` | ✓ |
+| Couchbase | ISO 8601 strings | `toOffsetInstant(v)` | `formatRfc3339(v)` | ✓ |
+| Cassandra, ScyllaDB | `timestamp`: int64 ms since 1970 | `convertUnixToUtc(v)` | `convertUtcToUnix(v)` | ✓ |
+| Cassandra, ScyllaDB | `date`: uint32 days, epoch at 2^31 | `addDate("1970-01-01", { days: raw - 2 ** 31 })` | — | ≈ |
+| Cassandra, ScyllaDB | `time`: int64 ns since midnight | `convertUtcToPlainTime(fromNanoseconds(BigInt(ns)))` | — | ≈ |
+| Cassandra, ScyllaDB | `duration`: months, days, ns | `durationFromUnits({ months, days, nanoseconds })` | — | ≈ |
+| Cassandra, ScyllaDB | `timeuuid` (UUID v1) | `fromUuidTimestamp(v)` | — | ✓ |
+| Neo4j | `DATE`, `LOCAL TIME`, `LOCAL DATETIME` | `isValidDateTime(v)` | — | ✓ |
+| Neo4j | `ZONED DATETIME`, `2025-02-18T12:34:56.789+01:00[Europe/Stockholm]` | `toOffsetInstant(v)` | — | ✓ |
+| Neo4j | `DURATION`, `P14DT16H12M` | `parseDuration(v)` | — | ✓ |
+
+To try any row with a value of your own, open the [Database Timestamp Reader](/tools/database-timestamp-reader/). It runs the Read call for the form you pick and prints the call it made.
+
+## PostgreSQL
+
+`date`, `time` and `timestamp` print SQL's zone-less text, which
+[`parseSqlDateTime`](/reference/plain/parse/parseSqlDateTime/) reads and
+[`formatSqlDateTime`](/reference/plain/format/formatSqlDateTime/) writes.
+[`isValidDate`](/reference/plain/validate/isValidDate/) and
+[`isValidTime`](/reference/plain/validate/isValidTime/) guard the date and the time alone.
+
+`timestamptz` text is the one gap above. With the default ISO `DateStyle` it prints a space and an
+hour-only offset, such as `+00` or `-08`, whenever the offset is a whole number of hours, and a
+historic zone prints seconds in the offset. `parseSqlOffsetDateTime` reads every one of them:
+
+{/* db-row: postgresql-timestamptz */}
+
+```ts
+import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+
+const v = "2024-03-15 14:30:00-08";
+parseSqlOffsetDateTime(v)
+// "2024-03-15T14:30:00-08:00"
+```
+
+A backend that reads the binary protocol gets an int64 count of microseconds since 2000-01-01.
+[`fromPgMicroseconds`](/reference/precision/convert/fromPgMicroseconds/) reads it, and the
+[Foreign Epoch Bridges](../foreign-epoch-bridges/) guide shows it. A `uuidv7()` value holds its
+creation time, which [Time-Ordered Identifiers](../time-ordered-identifiers/) reads.
+
+An `interval` prints in the default `postgres` style (`1 year 2 mons`), which is not ISO 8601.
+Switch the session to the ISO style first, then
+[`parseDuration`](/reference/duration/parse/parseDuration/) reads it:
+
+```sql
+SET intervalstyle = 'iso_8601';
+SELECT interval '1 year 2 months 3 days 04:05:06';
+-- P1Y2M3DT4H5M6S
+```
+
+{/* db-row: postgresql-interval */}
+
+```ts
+import { parseDuration } from "@northguild/gmt/duration/parse";
+
+const v = "P1Y2M3DT4H5M6S";
+parseDuration(v)
+// "P1Y2M3DT4H5M6S"
+```
+
+`EXTRACT(EPOCH FROM …)` returns numeric seconds with a fraction. Multiply to milliseconds and
+round, which keeps millisecond precision:
+
+{/* db-row: postgresql-extract-epoch */}
+
+```ts
+import { convertUnixToUtc } from "@northguild/gmt/unix/convert";
+
+const s = 1710513000.123;
+convertUnixToUtc(Math.round(s * 1000))
+// "2024-03-15T14:30:00.123Z"
+```
+
+## MySQL
+
+`DATE` and `DATETIME(fsp)` print the same zone-less text as PostgreSQL, so
+`parseSqlDateTime` and `formatSqlDateTime` apply.
+
+`TIMESTAMP` is stored in UTC and shown in the session `time_zone`, with no offset in the text. Set
+the session to UTC so the text is the UTC wall time, then
+[`resolveLocal`](/reference/instant/convert/resolveLocal/) makes it an instant:
+
+```sql
+SET time_zone = '+00:00';
+SELECT NOW();
+-- 2024-03-15 14:30:00
+```
+
+{/* db-row: mysql-timestamp */}
+
+```ts
+import { parseSqlDateTime } from "@northguild/gmt/plain/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+const v = "2024-03-15 14:30:00";
+resolveLocal(parseSqlDateTime(v), "UTC")
+// "2024-03-15T14:30:00Z"
+```
+
+MySQL 8.4 accepts an offset in a literal on input (`2020-01-01 10:10:10+05:30`, §11.1.3) and
+never prints one, so this row has no read. The `T` is allowed in a literal, and MySQL keeps
+microseconds, so round to µs with [`roundUtc`](/reference/utc/calculate/roundUtc/) first, then
+[`fromOffsetInstant`](/reference/instant/convert/fromOffsetInstant/) writes the literal:
+
+{/* db-row: mysql-offset-literal */}
+
+```ts
+import { roundUtc } from "@northguild/gmt/utc/calculate";
+import { fromOffsetInstant } from "@northguild/gmt/instant/convert";
+
+const instant = roundUtc("2020-01-01T04:40:10.1234567Z", { smallestUnit: "microsecond" });
+const offset = "+05:30";
+fromOffsetInstant({ instant, offset })
+// "2020-01-01T10:10:10.123457+05:30"
+```
+
+`TIME` runs from −838:59:59 to 838:59:59, so it is an elapsed time and not a time of day. Split
+the text into its parts, and
+[`durationFromUnits`](/reference/duration/calculate/durationFromUnits/) builds the duration:
+
+{/* db-row: mysql-time */}
+
+```ts
+import { durationFromUnits } from "@northguild/gmt/duration/calculate";
+
+const hours = 838;
+const minutes = 59;
+const seconds = 59;
+durationFromUnits({ hours, minutes, seconds })
+// "PT838H59M59S"
+```
+
+## SQL Server
+
+`date`, `time(7)`, `datetime2(7)`, `datetime` and `smalldatetime` print zone-less text with up
+to seven fraction digits, which `parseSqlDateTime` reads (it takes up to nine).
+
+`datetimeoffset` puts a space before the offset. This is Microsoft's own example:
+
+{/* db-row: sqlserver-datetimeoffset */}
+
+```ts
+import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+
+const v = "2007-05-08 12:35:29.1234567 +12:15";
+parseSqlOffsetDateTime(v)
+// "2007-05-08T12:35:29.1234567+12:15"
+```
+
+.NET ticks and `FILETIME` from CLR interop are in [Foreign Epoch Bridges](../foreign-epoch-bridges/).
+
+## Oracle
+
+`TIMESTAMP` prints under `NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'` as zone-less text, and
+`parseSqlDateTime` reads it. `TIMESTAMP WITH TIME ZONE` under an ISO format that ends in `TZH:TZM`
+prints the SQL Server shape:
+
+{/* db-row: oracle-timestamptz */}
+
+```ts
+import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+
+const v = "2024-03-15 14:30:00.123456 +05:30";
+parseSqlOffsetDateTime(v)
+// "2024-03-15T14:30:00.123456+05:30"
+```
+
+An `INTERVAL YEAR TO MONTH` or `INTERVAL DAY TO SECOND` arrives as a driver object of up to six
+fields. Pass them to `durationFromUnits`. Fractional seconds go in `milliseconds`,
+`microseconds` or `nanoseconds`:
+
+{/* db-row: oracle-interval */}
+
+```ts
+import { durationFromUnits } from "@northguild/gmt/duration/calculate";
+
+const years = 1;
+const months = 2;
+const days = 3;
+const hours = 4;
+const minutes = 5;
+const seconds = 6;
+durationFromUnits({ years, months, days, hours, minutes, seconds })
+// "P1Y2M3DT4H5M6S"
+```
+
+## SQLite
+
+`datetime()` returns UTC text, `YYYY-MM-DD HH:MM:SS[.SSS]`, with no marker saying so. Read it as a
+UTC wall time:
+
+{/* db-row: sqlite-datetime */}
+
+```ts
+import { parseSqlDateTime } from "@northguild/gmt/plain/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+const v = "2024-03-15 14:30:00";
+resolveLocal(parseSqlDateTime(v), "UTC")
+// "2024-03-15T14:30:00Z"
+```
+
+`unixepoch()` is an integer count of seconds, which
+[`convertUnixToUtc`](/reference/unix/convert/convertUnixToUtc/) reads with `epochUnit: "seconds"`.
+
+`julianday()` is a real number of days from noon on 24 November 4714 BC. The Unix epoch is Julian
+day 2440587.5, so subtract it and scale to milliseconds:
+
+{/* db-row: sqlite-julianday */}
+
+```ts
+import { convertUnixToUtc } from "@northguild/gmt/unix/convert";
+
+const jd = 2460385.1041666665;
+convertUnixToUtc(Math.round((jd - 2440587.5) * 86400000))
+// "2024-03-15T14:30:00Z"
+```
+
+## MongoDB
+
+A BSON Date is an int64 count of milliseconds since 1970, which is `convertUnixToUtc`'s default
+unit, and `convertUtcToUnix` writes it back. The relaxed Extended JSON form
+`{"$date": "2019-08-11T17:54:14.692Z"}` holds ISO 8601 text, which
+[`isValidUtc`](/reference/utc/validate/isValidUtc/) checks. The canonical form holds a
+`$numberLong` of milliseconds, which goes to `convertUnixToUtc`.
+
+A BSON `Timestamp { t, i }` is an internal replication type, and `t` is whole seconds, so
+`convertUnixToUtc(t, { epochUnit: "seconds" })` reads it. An `ObjectId` holds a creation time that
+[`fromObjectId`](/reference/precision/identifiers/fromObjectId/) reads; see
+[Time-Ordered Identifiers](../time-ordered-identifiers/).
+
+## DynamoDB
+
+A TTL attribute is a Number of epoch seconds. Read it with `convertUnixToUtc(v, { epochUnit:
+"seconds" })`. Write it with [`getUnixIn`](/reference/unix/get/getUnixIn/), which counts forward
+from now, or with `convertUtcToUnix(v, { epochUnit: "seconds" })` for a fixed instant. A
+milliseconds value in a seconds attribute puts the TTL tens of thousands of years out.
+
+DynamoDB has no date type, so most tables keep an ISO 8601 string as a sort key. Strings sort as
+text, so the digits must be fixed width. Without a fraction, `2024-03-15T14:30:00Z` sorts after
+`2024-03-15T14:30:00.5Z`, because `Z` follows `.` in text, though it is the earlier instant. Write it
+with fixed digits:
+
+{/* db-row: dynamodb-sort-key */}
+
+```ts
+import { roundUtc } from "@northguild/gmt/utc/calculate";
+
+const v = "2024-03-15T14:30:00Z";
+roundUtc(v, { smallestUnit: "millisecond", roundingMode: "floor", fractionalSecondDigits: 3 })
+// "2024-03-15T14:30:00.000Z"
+```
+
+## Redis
+
+`TIME` returns `[seconds, microseconds]` as two strings. Combine them into a count of microseconds
+as a `bigint`, which a `number` cannot hold exactly at this size, and
+[`fromArrowTimestamp`](/reference/precision/convert/fromArrowTimestamp/) reads it:
+
+{/* db-row: redis-time */}
+
+```ts
+import { fromArrowTimestamp } from "@northguild/gmt/precision/convert";
+
+const s = "1710513000";
+const us = "123456";
+fromArrowTimestamp(BigInt(s) * 1_000_000n + BigInt(us), "microsecond")
+// "2024-03-15T14:30:00.123456Z"
+```
+
+`EXPIREAT` takes an epoch in seconds and `PEXPIREAT` an epoch in milliseconds. Redis 7.0 and later
+read an expiry back as an absolute epoch with `EXPIRETIME` (seconds) and `PEXPIRETIME`
+(milliseconds). Both return `-1` for a key with no expiry and `-2` for a missing key, which are not
+epochs, so check for them first. `convertUnixToUtc` reads the epoch, with `epochUnit: "seconds"` for
+`EXPIREAT` and `EXPIRETIME`; milliseconds is its default. To write one, `getUnixIn` gives the epoch
+for a time from now, in the same unit.
+
+`EXPIRE` takes a length of time in seconds, not an instant, so no epoch reader applies to it.
+[`ttlFromNow`](/reference/duration/calculate/ttlFromNow/) returns that length as `.seconds`.
+
+A stream entry ID is `<ms>-<seq>`. The part before the dash is a millisecond epoch:
+
+{/* db-row: redis-stream-id */}
+
+```ts
+import { convertUnixToUtc } from "@northguild/gmt/unix/convert";
+
+const id = "1710513000123-0";
+convertUnixToUtc(Number(id.split("-")[0]))
+// "2024-03-15T14:30:00.123Z"
+```
+
+## Couchbase
+
+`STR_TO_MILLIS` and `MILLIS_TO_STR` work with an epoch in milliseconds, so `convertUnixToUtc` and
+`convertUtcToUnix` apply. A document that stores ISO 8601 text is read with `isValidUtc` for a
+`Z` form, and with [`toOffsetInstant`](/reference/instant/convert/toOffsetInstant/) for a form with
+an offset, which returns the instant and the offset together.
+
+## Cassandra and ScyllaDB
+
+`timestamp` is an int64 count of milliseconds since 1970, so `convertUnixToUtc` and
+`convertUtcToUnix` apply.
+
+`date` is a uint32 count of days with the epoch at 2^31, so day 2^31 is 1970-01-01:
+
+{/* db-row: cql-date */}
+
+```ts
+import { addDate } from "@northguild/gmt/plain/calculate";
+
+const raw = 2 ** 31 + 19797;
+addDate("1970-01-01", { days: raw - 2 ** 31 })
+// "2024-03-15"
+```
+
+`time` is an int64 count of nanoseconds since midnight. It needs a `bigint`:
+
+{/* db-row: cql-time */}
+
+```ts
+import { fromNanoseconds } from "@northguild/gmt/precision/convert";
+import { convertUtcToPlainTime } from "@northguild/gmt/utc/convert";
+
+const ns = 52_200_000_000_000;
+convertUtcToPlainTime(fromNanoseconds(BigInt(ns)))
+// "14:30:00"
+```
+
+`duration` holds months, days and nanoseconds, and the months are kept as months:
+
+{/* db-row: cql-duration */}
+
+```ts
+import { durationFromUnits } from "@northguild/gmt/duration/calculate";
+
+const months = 14;
+const days = 3;
+const nanoseconds = 4_000_000_000;
+durationFromUnits({ months, days, nanoseconds })
+// "P14M3DT4S"
+```
+
+`timeuuid` is a UUID v1, which `fromUuidTimestamp` reads; see
+[Time-Ordered Identifiers](../time-ordered-identifiers/).
+
+## Neo4j
+
+`DATE`, `LOCAL TIME` and `LOCAL DATETIME` print ISO 8601 text, which
+[`isValidDate`](/reference/plain/validate/isValidDate/), `isValidTime` and
+[`isValidDateTime`](/reference/plain/validate/isValidDateTime/) check. `ZONED DATETIME` prints an
+offset and a region in brackets, which `toOffsetInstant` reads and
+[`isValidZonedDateTime`](/reference/zoned/validate/isValidZonedDateTime/) checks. A `DURATION` such as
+`P14DT16H12M` is ISO 8601, and `parseDuration` reads it.
+
+## Writing back
+
+PostgreSQL, MySQL 8.0.19 and later, SQL Server and SQLite all read ISO 8601 with a `T` and a
+`±HH:MM` offset. `fromOffsetInstant` and
+[`formatRfc3339`](/reference/zoned/format/formatRfc3339/) write that, so no further call is needed.
+MySQL keeps microseconds, so round with `roundUtc` before writing to it. For a DynamoDB sort key,
+write the fixed-digit `roundUtc` output above, so the keys sort as text.
+
+## Left out on purpose
+
+- **`timetz` and Neo4j `ZONED TIME`.** Temporal has no time-with-offset type, and PostgreSQL itself
+  advises against `timetz` (§8.5.3).
+- **Oracle region text and Couchbase custom formats.** A zone name printed after the time, and a custom
+  format string are session- or format-dependent text, not a standard form.
+- **`infinity`, BC years and years past 9999.** They fall outside SQL-92's year range, or outside
+  Temporal's. Neo4j allows years from -999,999,999 to 999,999,999, far past either.
+- **Mixed-sign intervals.** A PostgreSQL interval such as `P-1Y-2M3DT…` cannot be a Temporal
+  duration. The same holds for a Cassandra `duration` whose months, days and nanoseconds differ in
+  sign. That rule comes from Temporal (`IsValidDuration`), not from the databases, and neither
+  database's documentation states one.
+
+## Sources
+
+ISO 8601 and SQL-92 (ISO/IEC 9075:1992 §5.3, `<timestamp string>` and `<time zone interval>`)
+come first, then each vendor's manual as a peer:
+[PostgreSQL §8.5](https://www.postgresql.org/docs/current/datatype-datetime.html),
+[MySQL 8.4 §11.1.3](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-literals.html),
+[SQL Server `datetimeoffset`](https://learn.microsoft.com/en-us/sql/t-sql/data-types/datetimeoffset-transact-sql),
+[Oracle 23 datetime types](https://docs.oracle.com/en/database/oracle/oracle-database/23/nlspg/datetime-data-types-and-time-zone-support.html),
+[SQLite date functions](https://sqlite.org/lang_datefunc.html),
+[MongoDB Extended JSON v2](https://www.mongodb.com/docs/manual/reference/mongodb-extended-json/),
+[DynamoDB TTL](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/time-to-live-ttl-before-you-start.html),
+[Redis `TIME`](https://redis.io/docs/latest/commands/time/),
+[Couchbase SQL++ date functions](https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/datefun.html),
+[Cassandra CQL types](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/types.html) and
+[Neo4j temporal values](https://neo4j.com/docs/cypher-manual/current/values-and-types/temporal/).

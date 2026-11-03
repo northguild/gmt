@@ -1,0 +1,52 @@
+---
+title: Database Timestamp Reader
+description: Pick a database and the form it hands back, type the value, and see what the gmt call that reads it returns, with the call printed.
+industries: [core]
+---
+
+import DatabaseTimestampReader from "../../../components/DatabaseTimestampReader.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="database timestamps">
+
+<Fragment slot="keypoint">
+
+PostgreSQL prints `2024-03-15 14:30:00+00`. `toOffsetInstant` returns `null` on it, and `parseRfc3339` returns `""`.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A database hands back a time in the form its driver defines. It may be text with an offset, a number counted from an epoch, or a driver object made of parts. Each form has one gmt call, or a short composition of calls.
+
+Pick a database and a form, or pick a preset, and type the value as the database gives it. The tool makes the call that the [Database Timestamps guide](/guides/conversion/databases/) lists for that form, and prints it with what it returned.
+
+The SQL offset forms also get a second look. Neither `toOffsetInstant` nor `parseRfc3339` reads all of the text a database prints, so the tool asks both about the same text. A row that one of them answers with `null` or `""` is not a mistake in the tool.
+
+</Fragment>
+
+<DatabaseTimestampReader fullbleed />
+
+<Fragment slot="after">
+
+**What `NO SIGNAL` means here.** It appears when the form's own call returns its sentinel (`""` or `null`) for the text you typed. A field that is not a number, or a time zone the browser does not know, is named in a sentence instead, because the tool did not make the call. A validator that returns `false` is an answer, and the tool shows it as one.
+
+**The three kinds.** The badge beside the reading says which kind of form it is, in words.
+
+- **export** is a form a database prints or counts, and one existing call reads it.
+- **composition** is a form that takes a short run of existing calls. The tool prints every call in the run.
+- **new in this release** is a form that a call added in this release reads. The ISO readers, `toOffsetInstant` and `parseRfc3339`, are asked about the same text in a card of their own, so you can see which of them reads it.
+
+**MySQL `TIMESTAMP` has no offset.** It is stored in UTC and shown in the session `time_zone`. Give the session zone to get an instant. Leave it blank and the tool reads the wall time alone.
+
+**Forms that are read elsewhere.** An identifier that holds its creation time is read by the [ID Timestamp Decoder](/tools/id-timestamp-decoder/), a foreign epoch by [Foreign Epoch Bridges](/guides/conversion/foreign-epoch-bridges/), and a column of values by the [Column Timestamp Bridge](/tools/column-timestamp-bridge/). The list under the form select names each form and links to where it is read:
+
+- PostgreSQL `uuidv7()`, MongoDB `ObjectId` and Cassandra or ScyllaDB `timeuuid`: the [ID Timestamp Decoder](/tools/id-timestamp-decoder/).
+- SQL Server .NET ticks and FILETIME from CLR interop: [Foreign Epoch Bridges](/guides/conversion/foreign-epoch-bridges/).
+- Oracle `INTERVAL` as a driver object: the [Oracle section of the guide](/guides/conversion/databases/#oracle).
+
+The [Database Timestamps guide](/guides/conversion/databases/) has the full matrix of reads, how to write a value back, and a runnable snippet for each form that takes more than a single call.
+
+</Fragment>
+
+</ToolLayout>

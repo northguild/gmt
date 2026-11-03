@@ -7,8 +7,8 @@
  * - `<date value> <space> <time value>`: a single space separator, never `T`.
  * - Syntax Rule 21: the year is four digits and every other field two digits, zero-padded. No
  *   sign and no expanded year.
- * - Table 10: YEAR `0001`–`9999`, MONTH `01`–`12`, DAY `01`–`31`, HOUR `00`–`23`, MINUTE
- *   `00`–`59`.
+ * - §6.1 Table 10 (General Rule 4 of `<data type>`): YEAR `0001`–`9999`, MONTH `01`–`12`, DAY
+ *   `01`–`31`, HOUR `00`–`23`, MINUTE `00`–`59`.
  * - Seconds are required (`<time value>` is `<hours value>:<minutes value>:<seconds value>`).
  * - `<seconds value> ::= <seconds integer value> [ <period> [ <seconds fraction> ] ]`: an optional
  *   `.` then up to 9 fraction digits. SQL-92 leaves the precision to the implementation; 9 is
@@ -18,6 +18,7 @@
  * - Shape-only validation; the calendar date is checked by `Temporal.PlainDateTime.from` in
  *   `parseSqlDateTime`. To check that a string is a real SQL timestamp literal, use
  *   `isValidSqlDateTime`: this pattern also matches a day that does not exist, such as 30 February.
+ * - The offset-carrying form is `sqlOffsetDateTime`.
  *
  * Capture groups: 1 month, 2 day, 3 hour. The year, minute, second and fraction are not
  * captured.
