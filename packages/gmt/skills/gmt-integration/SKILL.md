@@ -5,23 +5,27 @@ description: >
   table-sort keys, nanosecond timestamps across JSON and storage boundaries,
   foreign epoch bridges (NTP, FILETIME, .NET ticks, Excel, PostgreSQL), the
   timestamps inside UUID, ULID, ObjectId, Snowflake and KSUID identifiers,
-  Parquet INT96, Arrow and protobuf timestamps, TAI and
-  the closed IERS leap-second table (taiMinusUtc, leapSecondsBetween,
-  nextLeapSecond, isLeapSecond, toTAI, fromTAI), and lint package selection
-  (ESLint, Biome, Oxlint). GNSS time is in gmt-gnss. Reads the docs site
-  (llms.txt and each page's .md twin) and the installed package's JSDoc for API
-  details, and the lint-package READMEs for lint setup; this skill is a routing
-  pointer, not an API dump.
+  Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS
+  leap-second table (taiMinusUtc, leapSecondsBetween, nextLeapSecond,
+  isLeapSecond, toTAI, fromTAI), and lint package selection (ESLint, Biome,
+  Oxlint). GNSS time is in gmt-gnss. Reads the docs site (llms.txt and each
+  page's .md twin) and the installed package's JSDoc for API details, and the
+  lint-package READMEs for lint setup; this skill is a routing pointer, not an
+  API dump.
 sources:
   - "northguild/gmt:apps/dox/src/content/docs/install.mdx"
-  - "northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integration.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integratio\
+    n.mdx"
   - "northguild/gmt:apps/dox/src/content/docs/guides/integration/linting.mdx"
-  - "northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/nanosecond-precision.mdx"
-  - "northguild/gmt:apps/dox/src/content/docs/guides/conversion/foreign-epoch-bridges.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/nanos\
+    econd-precision.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/conversion/foreign-epoch-b\
+    ridges.mdx"
   - "northguild/gmt:packages/gmt/src/zoned/validate/index.ts"
   - "northguild/gmt:packages/gmt/src/precision/convert/index.ts"
   - "northguild/gmt:packages/gmt/src/precision/identifiers/index.ts"
-  - "northguild/gmt:apps/dox/src/content/docs/guides/conversion/time-ordered-identifiers.mdx"
+  - "northguild/gmt:apps/dox/src/content/docs/guides/conversion/time-ordered-id\
+    entifiers.mdx"
   - "northguild/gmt:packages/gmt/src/precision/format/index.ts"
   - "northguild/gmt:packages/gmt/src/precision/calculate/index.ts"
   - "northguild/gmt:packages/gmt/src/precision/validate/index.ts"
@@ -29,7 +33,7 @@ sources:
 metadata:
   type: composition
   library: "@northguild/gmt"
-  library_version: "1.20.0"
+  library_version: "1.21.0"
 ---
 
 # GMT Integration

@@ -2,20 +2,20 @@
 name: gmt-arithmetic
 description: >
   Date arithmetic — add/subtract duration objects, diff values, clamp/closest,
-  ISO 8601 duration strings, human duration strings
-  (parseHumanDuration, formatHumanDuration), elapsed-versus-wall-clock spans,
-  business-day arithmetic and interval range math. Covers the half-open [start, end) interval
-  algebra over instants (intervalsOverlap, intervalContains, intersectIntervals,
+  ISO 8601 duration strings, human duration strings (parseHumanDuration,
+  formatHumanDuration), elapsed-versus-wall-clock spans, business-day arithmetic
+  and interval range math. Covers the half-open [start, end) interval algebra
+  over instants (intervalsOverlap, intervalContains, intersectIntervals,
   clampInterval, mergeIntervals, subtractIntervals, splitIntervalAt,
   sumIntervals, isValidInterval, Interval) and the positional interval*Date /
   *Utc / *Zoned / *Unix functions on the same rule, business calendars
   (BusinessCalendar, RollConvention, isBusinessDay, addBusinessDays,
   subtractBusinessDays, businessDaysBetween, nextBusinessDay,
   previousBusinessDay, rollDate, mergeCalendars), holiday rules (HolidayRule,
-  ObservancePolicy, holidayDates, nthWeekdayOfMonth, easterSunday,
-  observedDate, buildBusinessCalendar), overflow "constrain" month-end
-  clamping, splitIntervalByUnit* anchor stepping, maxPieces limits,
-  RFC 9557 calendar strings.
+  ObservancePolicy, holidayDates, nthWeekdayOfMonth, easterSunday, observedDate,
+  buildBusinessCalendar), overflow "constrain" month-end clamping,
+  splitIntervalByUnit* anchor stepping, maxPieces limits, RFC 9557 calendar
+  strings.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/plain-arithmetic.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/core-date-operations/durations.mdx'
@@ -42,7 +42,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.20.0'
+  library_version: '1.21.0'
 ---
 
 # GMT Arithmetic

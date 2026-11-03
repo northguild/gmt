@@ -1,6 +1,6 @@
 {
   "name": "@northguild/gmt",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "description": "Date and time library for JavaScript and TypeScript, built on TC39 Temporal: time zones, DST, business days, ISO 8601 strings in and out. Never throws.",
   "keywords": [
     "business-days",
