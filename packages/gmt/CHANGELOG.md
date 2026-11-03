@@ -1,5 +1,283 @@
 # @northguild/gmt
 
+## 1.21.0
+
+### Minor Changes
+
+- 03aa25f: The core string validators now accept a value of any type. A value typed `unknown`, such as a function argument or the output of a schema check, needed a cast before you could ask whether it is valid. The functions already returned `false` for a value that is not a string, so for 26 of the 27 only the types change. Two rare type-level uses stop compiling, and **Breaking changes** covers both.
+
+  One result changes: `isValidTimeZone` returned `true` for a `Temporal.ZonedDateTime` whose `toString` gives a zone id. It now returns `false` for every value that is not a string.
+
+  - A value typed `unknown` needs no cast, and a `true` result narrows it to `string`. The three duration-unit predicates narrow it to their unit union.
+  - A `string` argument stays `string` when the result is `false`.
+  - A typed union such as `string | null` or `string | undefined` gets a plain `boolean` and is not narrowed. A `false` result does not show which part of the union the value is.
+  - `values.filter(isValidDate)` on an `unknown[]` gives `string[]`.
+
+  ```typescript
+  import { isValidDate } from "@northguild/gmt";
+
+  declare const input: unknown;
+  if (isValidDate(input)) {
+    input; // string
+  }
+  ```
+
+  Two functions whose typed calls cannot fail now return a plain value. `getUnixNow()` returns `number`, so `addUnix(getUnixNow(), { years: 1 })` compiles with no null check, and `x12TimeCodeZone` returns `X12NamedZone` for an `X12ZoneTimeCode`. A value outside the parameter type, such as a `string` variable, a value typed `unknown` or a misspelt unit, still compiles and returns `number | null` or `X12NamedZone | null`. These overloads change only the types.
+
+  The validator change covers 27 functions: `isValidDate`, `isValidDateTime`, `isValidTime`, `isValidYearMonth`, `isValidMonthDay`, `isValidCalendarDate`, `isValidIsoDateLike`, `isValidSqlDateTime`, `isValidDateDurationUnit`, `isValidDateTimeDurationUnit`, `isValidTimeDurationUnit`, `isValidZonedDateTime`, `isValidTimeZone`, `isValidCalendarZonedDateTime`, `isValidRfc2822DateTime`, `isValidRfc3339DateTime`, `isValidInstant`, `isValidInt64NanosecondDateTime`, `isValidInt64NanosecondInstant`, `isValidNanoPattern`, `isValidUtc`, `isValidHttpDate`, `isValidUtcTimestamp`, `isValidDuration`, `isValidUtcOffset`, `isValidEpcisEventTime` and `isValidEpcisTimeZoneOffset`.
+
+  The clock functions no longer return a moment one millisecond early. After a test faked a clock set before 1970, the polyfill's next reading of the real clock could land one millisecond before `Date.now()`, so a test that then faked a 2027 clock could see the last millisecond of 2026. Every function that reads the clock now checks its reading against `Date.now()` and corrects a one-millisecond shortfall. A native `Temporal` and a fixed polyfill are not affected. The defect is filed as [tc39/proposal-temporal#3335](https://github.com/tc39/proposal-temporal/issues/3335).
+
+  ### Breaking changes
+
+  **1. `Parameters<typeof fn>` reads `unknown`.** TypeScript takes `Parameters<>` from the last overload, which now takes `unknown`. This applies to the 27 validators above, `getUnixNow` and `x12TimeCodeZone`. Name the parameter type yourself:
+
+  ```typescript
+  // 1.20: v is string
+  const f = (v: Parameters<typeof isValidDate>[0]) => v.length;
+
+  // 1.21: v is unknown, so v.length fails with TS18046. Name the type:
+  const f = (v: string) => v.length;
+
+  // The same for the other two:
+  type UnixNowOptions = { epochUnit?: UnixUnit }; // was Parameters<typeof getUnixNow>[0]
+  type ZoneCode = X12ZoneTimeCode; // was Parameters<typeof x12TimeCodeZone>[0]
+  ```
+
+  **2. A value typed `any` narrows to `string`.** A `true` result from one of the 24 string validators now narrows an `any` argument to `string`, as it narrows `unknown`. Code that then assigns it to a branded string type fails with TS2322. The three duration-unit predicates already narrowed `any`, so they do not change. Only a variable or parameter typed `any` narrows. A property of an `any` value, such as `JSON.parse(text).date` or `body.date`, does not, so most untyped data is unaffected.
+
+  ```typescript
+  type IsoDate = string & { readonly __brand: "IsoDate" };
+
+  // 1.20: a stays any after the check, so this compiled
+  function read(a: any): IsoDate | null {
+    return isValidDate(a) ? a : null;
+  }
+
+  // 1.21: a is string after the check, so state the brand
+  function read(a: any): IsoDate | null {
+    return isValidDate(a) ? (a as IsoDate) : null;
+  }
+  ```
+- e271bb0: Add a holiday rule engine in the new `@northguild/gmt/calendar/rules` subpath (Story CORE-54). The root and `@northguild/gmt/calendar` export it too. Most holidays are rules, not lists, so you describe a holiday once and get its date for any year. GMT ships no holiday list: you supply the rules.
+
+  Six functions and three types:
+
+  - `nthWeekdayOfMonth(year, month, weekday, n)` finds the third Monday or the last Sunday of a month. `n` is `1` to `5`, `-1` to `-5` or `"last"`.
+  - `easterSunday(year, options?)` gives Easter Sunday. The `computus` option is `"gregorian"` (default) or `"julian"`, and a Julian date comes back as an ISO date.
+  - `observedDate(isoDate, policy, calendar?)` moves a date that falls on a day off. `ObservancePolicy` is keyed by ISO weekday, and each shift is `"nextWorkingDay"`, `{ next: weekday }` or `{ previous: weekday }`. There is no default policy.
+  - `holidayDates(rule, year, options?)` returns the dates of one `HolidayRule`. A rule is `fixed`, `calendarFixed` (such as 1 Shawwal in an Islamic calendar), `nthWeekday`, `easterRelative` or `dates`.
+  - `buildBusinessCalendar(spec)` expands rules over a year range into the `BusinessCalendar` that `isBusinessDay` and `addBusinessDays` already take.
+  - `isValidHolidayRule(rule)` is a type guard. It tells a rule that is wrong from a year in which the rule has no date. A `calendarFixed` day must be one its month has in some year, so Hebrew `M01` day 31 is not a rule. GMT reads each month's longest length from the calendar and keeps no table.
+
+  ```typescript
+  import { buildBusinessCalendar, easterSunday, nthWeekdayOfMonth, observedDate } from "@northguild/gmt/calendar/rules";
+
+  nthWeekdayOfMonth(2026, 3, 7, "last"); // "2026-03-29"
+  easterSunday(2024, { computus: "julian" }); // "2024-05-05"
+  observedDate("2027-12-25", { 6: { previous: 5 }, 7: { next: 1 } }); // "2027-12-24"
+
+  buildBusinessCalendar({
+    timeZone: "UTC",
+    weekend: [6, 7],
+    rules: [
+      { name: "Christmas", kind: "fixed", month: 12, day: 25, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } },
+      { name: "Second day", kind: "fixed", month: 12, day: 26, observed: { 6: "nextWorkingDay", 7: "nextWorkingDay" } },
+    ],
+    years: { from: 2021, to: 2021 },
+  }); // { weekend: [6, 7], holidays: ["2021-12-27", "2021-12-28"], timeZone: "UTC" }
+  ```
+
+  A `"nextWorkingDay"` shift walks past the weekend, every holiday that does not walk and the walks of the rules above it. The days that close do not depend on the rule order; the order decides only which holiday takes which day. A moved holiday closes only the date it moved to; list the rule twice, once without `observed`, to close both. A date a year lacks, such as 29 February, is skipped and never clamped. Bad input gives `""` (the date functions), `[]` (`holidayDates`) or `null` (`buildBusinessCalendar`).
+
+  The docs add the Holiday Rule Builder, Observance Comparator and Moving Feasts tools, and a section in the business calendars guide.
+- 584594f: Add `parseHumanDuration` and `formatHumanDuration`, which read and write the duration strings people type, such as `2h 30m` and `3 days` (Story CORE-85). `parseHumanDuration` is in `@northguild/gmt/duration/parse` and `formatHumanDuration` is in `@northguild/gmt/duration/format`. The root and `@northguild/gmt/duration` export both.
+
+  Config files and command-line flags hold `30s`, `2h 30m` or `7d`, not `PT30S` or `P7D`, and `parseDuration` reads ISO 8601 only. Each caller wrote a parser, and each one decided alone what `1m` means. These two functions use one grammar that is written out in full on the function page.
+
+  ```typescript
+  import { parseHumanDuration } from "@northguild/gmt/duration/parse";
+  import { formatHumanDuration } from "@northguild/gmt/duration/format";
+
+  parseHumanDuration("2h 30m"); // "PT2H30M"
+  parseHumanDuration("3 days"); // "P3D"
+  parseHumanDuration("1.5h"); // "PT1H30M"
+  parseHumanDuration("1s 500ms"); // "PT1.5S"
+  parseHumanDuration("1m"); // "PT1M" (a minute)
+  parseHumanDuration("1mo"); // "P1M" (a month)
+  parseHumanDuration("1.5h 30m"); // "" (a fraction only on the last unit)
+  parseHumanDuration("P1M"); // "" (ISO 8601, so use parseDuration)
+
+  formatHumanDuration("PT2H30M"); // "2h 30m"
+  formatHumanDuration("PT90M"); // "90m"
+  formatHumanDuration("PT1.5S"); // "1.5s"
+  formatHumanDuration("-PT2H30M"); // "-2h 30m"
+  ```
+
+  - `m` is always a minute and `mo` always a month. Unit names are not case-sensitive, so `1M` is also a minute.
+  - Units are kept as you wrote them: `3 days` is `P3D`, not `PT72H`. A day is not always 24 hours, so the function does not guess.
+  - Write a unit at most once, largest first. A typo such as `2h 3h` or `30m 2h` returns `""`, so it is never summed.
+  - A fraction is allowed only on hours, minutes or seconds, and only on the last unit. Temporal spreads it into smaller units. `ms` joins the seconds and takes no fraction.
+  - Separate units with spaces, a comma, `and`, or nothing at all: `2h30m`. Only the plain space counts. A leading or trailing space, a tab or a no-break space returns `""`, so trim the input first.
+  - `parseHumanDuration` returns `""` for anything outside the grammar. `formatHumanDuration` returns `""` for anything that is not an ISO 8601 duration. For a duration in the words of a locale, use `formatDuration`.
+  - `parseHumanDuration(formatHumanDuration(d))` gives the same duration as `parseDuration(d)`, for every valid ISO 8601 duration `d`.
+
+  No string is valid in both grammars, so to accept either form write `parseDuration(text) || parseHumanDuration(text)`.
+
+  The docs add the Duration Parser Bench tool at `/tools/duration-parser-bench/` and a section in the durations guide.
+- e05f791: Add 19 functions for a length of time counted from now (Story CORE-104): one year, one month or 90 days, given back as seconds, an epoch, an HTTP date or a UTC timestamp, and the seconds left until a stored time. The seconds in "one year" depend on today's date: 31536000 from 2026-06-15, 31622400 from 2027-06-15, because the second year holds 29 February 2028. A hand-written `31_536_000` is a day short in that case.
+
+  ```typescript
+  import { ttlFromNow, getUtcIn, formatHttpDateFromNow, secondsUntilRetryAfter } from "@northguild/gmt";
+
+  ttlFromNow({ days: 90 });
+  // { seconds: 7776000, milliseconds: 7776000000, epochSeconds: 1820836800,
+  //   httpDate: "Mon, 13 Sep 2027 12:00:00 GMT", iso: "2027-09-13T12:00:00Z" }  (from 2027-06-15T12:00:00Z)
+  getUtcIn({ months: 1 }); // "2027-07-15T12:00:00Z"
+  formatHttpDateFromNow({ years: 1 }); // "Thu, 15 Jun 2028 12:00:00 GMT"
+  secondsUntilRetryAfter("120"); // 120
+  ```
+
+  - **A length from now, one form per function:** `getUnixIn`, `getUnixAgo`, `getUtcIn`, `getUtcAgo`, `getDateIn`, `getDateAgo`, `getDateTimeIn`, `getDateTimeAgo`, `getTimeIn`, `getTimeAgo`, `getZonedIn` (zone first), `getZonedAgo`, `formatHttpDateFromNow`, `totalUnitsFromNow` and `ttlFromNow`. They take a unit object such as `{ days: 90 }`. A duration string, an empty object or a negative amount returns the sentinel, so `null` still means bad input only. The name gives the direction: a past `Expires` is `formatHttpDate(getUtcAgo({ days: 1 }))`.
+  - **Counted in UTC.** Unix, UTC, HTTP-date and `ttlFromNow` results do not change with the server's time zone. `totalUnitsFromNow` takes a `timeZone` option for a wall-clock count, and `getZonedIn` and `getZonedAgo` count on the zone's wall clock. The plain functions start from the system zone, so `getDateIn({ days: 0 })` equals `getToday()`.
+  - **`ttlFromNow` reads the clock once**, so `seconds`, `milliseconds`, `epochSeconds`, `httpDate` and `iso` name the same instant. If any form cannot be written (a result past year 9999, for example) the whole result is `null`.
+  - **The reverse job:** `secondsUntilUnix`, `secondsUntilHttpDate` and `secondsUntilRetryAfter` return the whole seconds left, rounded up, and a negative number once the time has passed. `secondsUntilRetryAfter` takes either form of a `Retry-After` header. `spanSeconds` returns the signed, fractional seconds between two instants, like `spanMs` in another unit.
+  - **No cap on a length.** A draft revision of RFC 6265 has browsers limit `Max-Age` and `Expires` to 400 days; applying that limit is the caller's choice.
+
+  **Behaviour change:** near a clock change, in either direction, some results were wrong and are now right: `totalDuration`, `normalizeDuration`, `diffZoned`, `diffZonedAsDuration`, `intervalLengthZoned`, and, with a `timeZone`, `diffUnix`, `diffUnixAsDuration` and `intervalLengthUnix`. `formatRelativeZoned`, `formatRelativeUnix` and `formatRelativeUtc` change too. Where the Temporal specification has no value for the case (tc39/proposal-temporal [#3336](https://github.com/tc39/proposal-temporal/issues/3336), [#3311](https://github.com/tc39/proposal-temporal/issues/3311) and [#3310](https://github.com/tc39/proposal-temporal/issues/3310)), these functions now return the sentinel (`null` or `""`) instead of a number. For example, `totalDuration("-PT23H20M", "days", { relativeTo: "2024-03-11T02:30:00-04:00[America/New_York]" })` returned about `-1.0145` and now returns `null`. A caller that read that number now gets `null`, so check for it.
+- c7a63b2: Add month-day values (`--12-25`, a month and a day with no year) and year-month values (`2026-10`, a year and a month with no day): 23 functions and two regexes (Story CORE-102). A birthday, an anniversary or a fixed holiday has no year, and a card expiry or a billing month has no day. Until now the only way to store them was to invent the missing part, which turns 29 February into 1 March and puts a made-up `-01` on every month.
+
+  All 23 functions are in `plain/` and in the root. They return `""`, `false` or `null` for bad input and never throw.
+
+  ```typescript
+  import {
+    parseMonthDay,
+    parseMonthDayWithPattern,
+    monthDayToDate,
+    formatMonthDay,
+  } from "@northguild/gmt";
+  import { isValidYearMonth, addYearMonth, endOfYearMonth } from "@northguild/gmt";
+
+  parseMonthDay("12-25"); // "--12-25"
+  parseMonthDayWithPattern("25 décembre", "d MMMM", "fr"); // "--12-25"
+  formatMonthDay("--12-25", "en-US", { month: "long", day: "numeric" }); // "December 25"
+  monthDayToDate("--02-29", 2023); // "2023-02-28" (a common year clamps, as Temporal does)
+  monthDayToDate("--02-29", 2024); // "2024-02-29"
+
+  isValidYearMonth("2026-10"); // true
+  addYearMonth("2026-12", { months: 1 }); // "2027-01"
+  endOfYearMonth("2024-02"); // "2024-02-29"
+  ```
+
+  - **Month-day:** `isValidMonthDay`, `parseMonthDay`, `parseMonthDayFromDate`, `parseMonthDayFromDateTime`, `parseMonthDayWithPattern`, `formatMonthDay`, `compareMonthDays`, `areMonthDaysEqual`, `monthDayToDate`. `parseMonthDay` accepts `--MM-DD` and `MM-DD` and always writes `--MM-DD`. `--02-29` is valid; `--02-30` is not.
+  - **Year-month:** `isValidYearMonth`, `parseYearMonth`, `parseYearMonthFromDate`, `parseYearMonthFromDateTime`, `parseYearMonthWithPattern`, `formatYearMonth`, `compareYearMonths`, `areYearMonthsEqual`, `addYearMonth`, `subtractYearMonth`, `diffYearMonth`, `startOfYearMonth`, `endOfYearMonth`, `getDaysInYearMonth`. They accept `YYYY-MM` and `±YYYYYY-MM`. `addYearMonth` and `subtractYearMonth` take `years` and `months` only.
+  - **Regexes:** `plainMonthDay` and `plainYearMonth` in `@northguild/gmt/regex`.
+  - `isValidDate("2026-10")` and `parseDateWithPattern("10/2026", "MM/yyyy")` still return `false` and `""`. Use the year-month functions for those strings.
+  - `formatMonthDay` and `formatYearMonth` drop a field the value does not have, as `formatDate` does with a time field, and return `""` for a `timeStyle` or a calendar other than `gregory` or `iso8601`. A `dateStyle` takes its widths from the locale's own date pattern, as ECMA-402 says, so the output is what native `toLocaleString` prints in Chromium and Safari, on the polyfill too: `formatMonthDay("--12-25", "de-DE", { dateStyle: "medium" })` is `"25.12."`.
+  - `[u-ca=ISO8601]` in upper case now parses in both new readers on the polyfill, as it does on native Temporal.
+
+  Fixed: `parseDateWithPattern` and `parseDateTimeWithPattern` now read a month name written in a sentence, so `parseDateWithPattern("15 марта 2024", "d MMMM yyyy", "ru")` returns `"2024-03-15"` instead of `""`. A pattern may use `L`–`LLLL` for the stand-alone name, and `M`–`MMMM` match either form when the name is unambiguous.
+- 6ed1a08: Add recurrence rules and cron lines in a zone, in the new `@northguild/gmt/recurrence` subpath. The root exports it too. A schedule such as "every weekday at 02:30" is written in local time, so a daylight-saving change can leave an occurrence with a time that does not exist or that happens twice. GMT expands the schedule into instants and marks every occurrence a change touched.
+
+  Four functions and the types they use (`RecurrenceRule`, `CronExpression`, `OccurrenceWindow`, `RecurrenceOccurrence`, `CronRun`):
+
+  - `parseRecurrenceRule(value)` reads an RFC 5545 `RRULE` value, all 14 parts, with the rule's validity checks. It returns `null` for anything else, including `EXRULE`, `RSCALE` and `SKIP`.
+  - `expandRecurrence(rule, start, timeZone, window, options?)` gives the occurrences as instants, with `RDATE` and `EXDATE` lists. `disambiguation` is `"compatible"` (default, the RFC's reading), `"earlier"`, `"later"` or `"reject"`. Each row carries its `classification` plus the `earlier` and `later` instants.
+  - `parseCronExpression(value)` reads five crontab fields, with ranges, lists, `/step`, month and weekday names, `7` as Sunday and the nicknames `@hourly` to `@annually`. It returns `null` for a seconds field, `@reboot` and the `L`, `W`, `#` and `?` tokens.
+  - `cronRuns(expression, timeZone, window, policy)` gives the runs. There is no default policy, because real cron daemons disagree. `"crontabMatch"` never runs a time that does not exist and runs a repeated time twice. `"daemonCatchUp"` runs a fixed-time job from a skipped interval once, at the change, when the gap is under 3 hours, and a job in a repeated interval only once when the overlap is 3 hours or less, as cronie's daemon does.
+
+  The window is `{ start, end }` (half-open) or `{ after, count }` with a count of 1 to 10,000. Bad input gives `null` from the parsers and `[]` from the other two. A start, `RDATE` or `EXDATE` with a bracketed annotation such as `[Europe/Paris]` is bad input, because a call has one zone. `[]` also comes back for a cron line that never matches, a window of more than 10,000 rows, and `"reject"` when the start, a wall-time `RDATE` or `EXDATE`, or a returned row is not unique.
+
+  ```typescript
+  import { cronRuns, expandRecurrence, parseCronExpression, parseRecurrenceRule } from "@northguild/gmt/recurrence";
+
+  expandRecurrence(parseRecurrenceRule("FREQ=DAILY;COUNT=3"), "2024-03-09T02:30:00", "America/New_York", {
+    after: "2024-03-08T00:00:00Z",
+    count: 3,
+  }).map((row) => [row.instant, row.classification]);
+  // [["2024-03-09T07:30:00Z", "unique"], ["2024-03-10T07:30:00Z", "nonexistent"], ["2024-03-11T06:30:00Z", "unique"]]
+
+  cronRuns(
+    parseCronExpression("30 2 * * *"),
+    "America/New_York",
+    { start: "2024-03-09T00:00:00Z", end: "2024-03-12T00:00:00Z" },
+    "daemonCatchUp",
+  ).map((run) => run.instant);
+  // ["2024-03-09T07:30:00Z", "2024-03-10T07:00:00Z", "2024-03-11T06:30:00Z"]
+  ```
+
+  `DTSTART` is always the first occurrence. A `{ after, count }` window for a rule with fewer than `count` occurrences returns the ones it has. A rule that never matches again, such as February 30, gives DTSTART alone. A rare rule, such as a leap day or a Friday the 13th, still fills a count of 10,000. `UNTIL` must be a UTC date-time with a capital `T` and `Z`. When a cron line restricts both the day of month and the day of week, a day that matches either one runs. The root bundle grows by about 27 KB.
+
+  The docs add the Cron in a Zone tool and a recurrence and cron guide.
+- 9cf156d: Add `parseSqlOffsetDateTime` and `isValidSqlOffsetDateTime`, which read the timestamp-with-time-zone text a database prints, and the `sqlOffsetDateTime` regex they match. PostgreSQL `timestamptz` prints `2024-03-15 14:30:00+00`, and SQL Server `datetimeoffset` prints `2007-05-08 12:35:29.1234567 +12:15`. Neither is the RFC 3339 form the library's other readers take: PostgreSQL may print an hour-only offset (`+00`), and SQL Server puts a space before the offset. Until now no function in the library read them.
+
+  `parseSqlOffsetDateTime` returns an ISO 8601 date-time that keeps the offset, or `""` when the text is not a SQL offset timestamp. `isValidSqlOffsetDateTime` returns `true` for the same text. It accepts a value of any type, and a `true` result narrows it to `string`. A date that does not exist, such as 30 February, is rejected by both.
+
+  ```typescript
+  import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+  import { isValidSqlOffsetDateTime } from "@northguild/gmt/instant/validate";
+
+  parseSqlOffsetDateTime("2024-03-15 14:30:00-08"); // "2024-03-15T14:30:00-08:00"
+  parseSqlOffsetDateTime("2007-05-08 12:35:29.1234567 +12:15"); // "2007-05-08T12:35:29.1234567+12:15"
+  parseSqlOffsetDateTime("2024-03-15 14:30:00"); // "" (no offset: use parseSqlDateTime)
+
+  isValidSqlOffsetDateTime("2024-03-15 14:30:00+00"); // true
+  isValidSqlOffsetDateTime("2024-02-30 00:00:00+00"); // false
+  ```
+
+  The result keeps the offset the database printed, so pass it to `toOffsetInstant` to get the instant. To write a value for a database, use `fromOffsetInstant` or `formatRfc3339`: every major database reads that ISO 8601 form.
+
+  - The new subpath `@northguild/gmt/instant/parse` holds `parseSqlOffsetDateTime`. The root export has it too.
+  - `convertUnixToPlainDate`, `convertUnixToPlainDateTime` and `convertUnixToPlainTime` now name their first parameter `value`, as `convertUnixToUtc` and `convertUnixToZoned` do. It was `unix`. No call changes, but your editor's hover text and the API reference show the new name.
+- 5dac948: Read the time out of a UUID, ULID, MongoDB ObjectId, Snowflake or KSUID, and bridge Parquet `INT96`, Arrow and protobuf timestamps (Story CORE-56). Seven functions are in the new `@northguild/gmt/precision/identifiers` subpath, ten converters join the foreign-epoch bridges in `@northguild/gmt/precision/convert`, and two guards join `@northguild/gmt/precision/validate`. The root and `@northguild/gmt/precision` export them too.
+
+  Many identifiers are timestamps. Each has its own epoch and width, so code that decodes them by hand often reads the wrong date. GMT decodes IDs and generates none.
+
+  ```typescript
+  import {
+    fromUuidTimestamp,
+    fromSnowflake,
+    uuidV7TimestampPrefix,
+  } from "@northguild/gmt/precision/identifiers";
+
+  fromUuidTimestamp("017F22E2-79B0-7CC3-98C4-DC0C0C07398F"); // "2022-02-22T19:22:22Z"
+  fromUuidTimestamp("f81d4fae-7dec-41d0-a765-00a0c91e6bf6"); // "" (version 4 carries no time)
+  fromSnowflake("175928847299117063", { epochMs: 1420070400000, shift: 22 });
+  // "2016-04-30T11:18:25.796Z"
+  uuidV7TimestampPrefix("2024-01-01T00:00:00Z"); // "018cc251-f400"
+  ```
+
+  - `fromUuidTimestamp` reads versions 1, 6 and 7 and returns `""` for any other. Versions 1 and 6 keep their 100 ns ticks, and version 7 gives milliseconds. `uuidV7TimestampPrefix` and `ulidTimestampPrefix` give the start of an ID for a range scan.
+  - `fromUlid`, `fromObjectId` and `fromKsuid` return `""` for text that is not an ID. They accept only the exact form, so a ULID with an `I`, `L`, `O` or `U` is rejected and a KSUID is case-sensitive.
+  - `fromSnowflake` takes the layout as a required argument (`SnowflakeLayout`), because one ID read with another system's epoch gives a plausible wrong date. It takes a `bigint` or a string and never a `number`.
+  - `toParquetInt96` / `fromParquetInt96`, `toArrowTimestamp` / `fromArrowTimestamp`, `toArrowLocalTimestamp` / `fromArrowLocalTimestamp`, `toProtoTimestamp` / `fromProtoTimestamp` and `toProtoDuration` / `fromProtoDuration` convert both ways. An Arrow column without a timezone holds wall-clock time, so `fromArrowLocalTimestamp` returns a plain date-time and not an instant.
+  - An `int64` of nanoseconds holds only 1677 to 2262, so `toArrowTimestamp` gives `0n` past either end. `isValidInt64NanosecondInstant` and `isValidInt64NanosecondDateTime` tell that `0n` apart from the epoch. A protobuf `Timestamp` counts `nanos` forward from `seconds`, so `-0.5 s` before the epoch is `{ seconds: -1n, nanos: 500000000 }`.
+
+  The docs add the ID Timestamp Decoder at `/tools/id-timestamp-decoder/`, the Column Timestamp Bridge at `/tools/column-timestamp-bridge/`, a time-ordered identifiers guide and three scenarios.
+
+### Patch Changes
+
+- 7ef1197: Fix `formatZonedRange` losing the zone name you asked for on Chrome, Node and Safari. With `timeZoneName: "long"` or `"longGeneric"` the range printed a short name (`EST`, `ET`), and with `"shortOffset"` or `"longOffset"` it printed no zone at all. A range now keeps the requested style, as Firefox does: `10:00 AM - 12:00 PM Eastern Standard Time`, `... GMT-5`, `... GMT-05:00`. The cause is an ICU bug (ICU-20548) that cuts the zone width from ranges; GMT checks for it once per style and only repairs on an engine that has it. Output with no `timeZoneName`, or with `short` or `shortGeneric`, is unchanged.
+
+  Also fix `formatZonedRange` on Firefox when `dayPeriod` and `timeZoneName` are both set and `hourCycle` and `hour12` are not: the range printed `10 AM GMT-5 - 12 PM GMT-5` instead of the flexible day periods `10 in the morning GMT-5 - 12 noon GMT-5` that a single `formatZoned` call gives. GMT checks for it once and only repairs on an engine that has it.
+- 36b0a31: Islamic calendar dates before the Hijra (622 CE) read and compute correctly in WebKit (Safari). WebKit prints such a date as a positive year in a second era and the polyfill takes the year as printed, so `calendarDate` fields were wrong and `diffDateAsDuration`, `addDate` and the other date arithmetic across that epoch in `islamic-civil`, `islamic-tbla` or `islamic-umalqura` never returned. GMT now reads the era, corrects the year and runs the specification's arithmetic itself for those years. Output is unchanged on every other engine (temporalCompat workaround D18).
+- b1cf491: Each package's npm description and keywords now say what it does. `@northguild/gmt` names time zones, DST, business days and ISO 8601. Each lint package says it bans the `Date` object and points to the `@northguild/gmt` replacement.
+
+  The `getTimezoneOffset()` lint message in all three lint packages now names `getTimeZoneOffset(timeZone, instant)` from `@northguild/gmt`, instead of "zoned methods".
+
+  The `no-date-library-imports` message in all three lint packages now names the banned library and links its migration guide on northguild.dev, which maps that library's calls to their `@northguild/gmt` replacements. Moment.js, Day.js, Luxon and date-fns each get their own guide; `spacetime` links the list of guides.
+
+  All three lint packages now also ban `@date-fns/tz`, the time zone package for date-fns v4. The Biome plugin now bans the same packages as the other two, and no longer flags names outside that list such as `moment-tz` or `luxon-timezone`.
+- fa0fd00: Fix `diffZoned`, `diffZonedAsDuration` and `intervalLengthZoned` returning `null` for a calendar unit between two names of one time zone, such as `UTC` and `Etc/UTC` or `Asia/Kolkata` and `Asia/Calcutta`, when GMT runs on the polyfill in WebKit. The polyfill finds a zone name's primary form through `Intl.DateTimeFormat`, which JavaScriptCore returns as written, so it took the two names for two zones. GMT checks for this once. Where the check fails:
+
+  - `Etc/UTC`, `Etc/GMT` and `GMT` count as `UTC`, as ECMA-402 requires. This works in every WebKit, Safari 27 included.
+  - For any other pair, GMT asks the browser's own `Temporal`. This works in WebKit builds that ship `Temporal`, such as Playwright WebKit 26.6. Safari 27 has no `Temporal`, and no other browser API there names a zone's primary form, so in Safari 27 a pair such as `Asia/Kolkata` and `Asia/Calcutta` still counts as two zones.
+
+  On Chrome, Firefox and Node nothing changes.
+- b1cf491: `areZonedEqual` now compares the instant, the time zone and the calendar, as Temporal's `ZonedDateTime.prototype.equals` does, instead of the wall-clock fields and the zone name. Two readings of a repeated wall clock, such as `02:30+02:00` and `02:30+01:00` in Europe/Berlin on 2024-10-27, are an hour apart and no longer compare equal. Two names for one time zone, such as `UTC` and `Etc/UTC`, now compare equal on every host, and so do IANA link names such as `Europe/Kiev` and `Europe/Kyiv` wherever the host resolves them (Safari 27 without `Temporal` keeps two such names as written). `areZonedEqualBy`, `mapZonedDatesInRange` and `formatZonedRange` treat two names for one time zone as the same zone too, so a range or comparison that used to return the empty result or compare by clock label now works.
+
+  `diffZoned` and `diffZonedAsDuration` do the same: between two names of one time zone they accept a calendar unit and round by months as they do within one name, so `2024-01-31T00:00:00+00:00[UTC]` to `2024-02-29T12:00:00+00:00[Etc/UTC]` rounds up to `P2M` and truncates to `P1M`. The same holds for `intervalLengthZoned`.
+
 ## 1.20.0
 
 ### Minor Changes

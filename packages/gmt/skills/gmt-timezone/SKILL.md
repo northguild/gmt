@@ -10,8 +10,8 @@ description: >
   nextOpenAt, nextCloseAt, operatingTimeBetween, addOperatingTime), recurrence
   rules and cron lines in a zone (parseRecurrenceRule, expandRecurrence,
   parseCronExpression, cronRuns), and daylight time (isInDaylightSaving,
-  hasDaylightSaving). Transport legs, intermodal free
-  time and EDI timestamps are in gmt-transport and gmt-intermodal.
+  hasDaylightSaving). Transport legs, intermodal free time and EDI timestamps
+  are in gmt-transport and gmt-intermodal.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/zoned-date-operations/*.mdx'
   - 'northguild/gmt:apps/dox/src/content/docs/guides/concepts/dst-disambiguation.md'
@@ -44,7 +44,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.20.0'
+  library_version: '1.21.0'
 ---
 
 # GMT Timezone
