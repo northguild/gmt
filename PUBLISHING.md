@@ -78,7 +78,10 @@ It only edits files. Nothing is committed, tagged or published.
 
 Commit the result, open a PR, and read it: **the diff is the release.** Those
 version numbers and that CHANGELOG text are exactly what goes to npm. It is an
-ordinary PR, so the ordinary required checks run on it.
+ordinary PR, so the ordinary required checks run on it. CI also runs `Release
+pack dry run` on it, which packs the tarballs the merge would publish the way
+the Release workflow does. Don't merge while it is red: the same pack would
+fail after the merge, with nothing published.
 
 In Claude Code, `/release` does this step for you. It branches
 `release/<YYYY-MM-DD>` from `origin/main` in a worktree of its own, runs the
