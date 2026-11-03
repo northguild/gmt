@@ -221,8 +221,10 @@ jobs:
       - run: pnpm install --frozen-lockfile --no-runtime
 
       # Last gate before the tarballs become irreversible. ci.yml already ran
-      # the full Node x timezone matrix on this commit; this re-runs the
-      # publishable packages' own suites against the exact tree being packed.
+      # the full Node x timezone matrix on this tree, on the release PR (a push
+      # to main skips the checks that PR's CI passed on the same tree); this
+      # re-runs the publishable packages' own suites against the exact tree
+      # being packed.
       - name: Build
         run: pnpm --filter "./packages/*" --if-present run build
 

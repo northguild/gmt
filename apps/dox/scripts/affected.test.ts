@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import {
   affected,
+  afterMerge,
   ALL_CHECKS,
   assertRulesValid,
   CHECKS,
@@ -258,6 +259,45 @@ describe("affected: which checks a change runs", () => {
     expect(result.reasons.get("stats")).toEqual([
       "apps/dox/src/content/docs/guides/old.mdx (deleted)",
     ]);
+  });
+});
+
+describe("afterMerge: what a push to main still runs", () => {
+  it("a pull request that ran every check leaves nothing", () => {
+    const result = afterMerge([{ path: "pnpm-lock.yaml", status: "M" }]);
+    expect(result.checks).toEqual([]);
+    expect(result.full).toBe(false);
+  });
+
+  it("a pull request that ran no check leaves every check", () => {
+    const result = afterMerge(["context/skills.md"]);
+    expect(result.checks).toEqual(ALL_CHECKS);
+    expect(result.full).toBe(true);
+    expect(result.reasons.get("test:gmt")).toEqual([
+      "skipped on the pull request",
+    ]);
+  });
+
+  it("library source leaves the checks it skipped and the build the Dox lint needs", () => {
+    const changes = [{ path: "packages/gmt/src/zone/zone.ts", status: "M" }];
+    expect(afterMerge(changes).checks).toEqual([
+      "deps",
+      "build:gmt-oxlint",
+      "lint:dox",
+      "typecheck:gmt-oxlint",
+      "test:gmt-oxlint",
+    ]);
+  });
+
+  it("brings back a build the pull request ran when a skipped check needs it", () => {
+    // An edited README runs build:gmt and stats, but not compat, which also needs build:gmt.
+    const changes = [{ path: "README.md", status: "M" }];
+    expect(affected(changes).checks).toContain("build:gmt");
+    const result = afterMerge(changes);
+    expect(result.checks).toContain("compat");
+    expect(result.checks).toContain("build:gmt");
+    expect(result.reasons.get("build:gmt")).toContain("needed by compat");
+    expect(result.checks).not.toContain("stats");
   });
 });
 
