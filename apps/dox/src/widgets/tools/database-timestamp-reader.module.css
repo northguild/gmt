@@ -1,0 +1,166 @@
+/*
+ * Database Timestamp Reader: what only this tool needs. The sections, preset, selects, fields,
+ * badge, plates, code frame and links are the kit's; the hero and the output are the family's.
+ * This sheet holds the layout.
+ *
+ * Every part is laid out for every form: a value slot, the zone slot, the offset plate and the
+ * ISO readers' card the form does not use are marked off by the builder and drawn invisible, so
+ * picking another preset never moves what is below it. Cards sit two across from 40rem of the
+ * widget's width and in one column below it. Amber is the sentinel's alone, and nothing here
+ * has a single-sided accent edge.
+ */
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.parts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* The value slots: the first takes the row, so the longest value fits; the second and third
+   share the row below, and the zone slot sits in the second's place (no form has both). */
+.fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3) var(--gmt-space-4);
+  min-inline-size: 0;
+}
+
+.slot {
+  min-inline-size: 0;
+}
+
+.slot[data-slot="value"] {
+  grid-area: 1 / 1;
+}
+
+.slot[data-slot="value2"],
+.slot[data-slot="zone"] {
+  grid-area: 2 / 1;
+}
+
+.slot[data-slot="value3"] {
+  grid-area: 3 / 1;
+}
+
+/* An unused slot keeps its box and leaves the tab order and the accessibility tree. */
+.slot[data-off] {
+  visibility: hidden;
+}
+
+.elsewhere {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.elsewhereTitle {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: var(--gmt-tracking-wide);
+  text-transform: uppercase;
+}
+
+.elsewhereList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-1) var(--gmt-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--gmt-text-sm);
+}
+
+.elsewhereList li {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The results: the hero beside the kind and the offset. */
+.results,
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+}
+
+.side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  align-content: start;
+  min-inline-size: 0;
+}
+
+/* The badge slot is as wide as the widest kind word ("new in this release", 19 characters in
+   the badge's own face, plus its padding and border), and the badge fills it. */
+.kind {
+  display: grid;
+  grid-template-columns: minmax(0, calc(19ch + 1rem + 2px));
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+}
+
+.offset,
+.iso {
+  min-inline-size: 0;
+}
+
+.iso {
+  block-size: 100%;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-base);
+  line-height: 1.25;
+}
+
+/* A part the reading does not use keeps its box and leaves the tab order and the accessibility tree. */
+.offset[data-off],
+.iso[data-off] {
+  visibility: hidden;
+}
+
+@container (inline-size >= 40rem) {
+  .controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .parts {
+    grid-column: 1 / -1;
+  }
+
+  .fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .slot[data-slot="value"] {
+    grid-area: 1 / 1 / 2 / -1;
+  }
+
+  .slot[data-slot="value3"] {
+    grid-area: 2 / 2;
+  }
+
+  .elsewhereList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .results,
+  .pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

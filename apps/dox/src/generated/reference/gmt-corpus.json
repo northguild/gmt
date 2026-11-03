@@ -2751,6 +2751,88 @@
     ]
   },
   {
+    "url": "/reference/instant/parse/parseSqlOffsetDateTime",
+    "page": "/reference/instant/parse/parseSqlOffsetDateTime",
+    "name": "parseSqlOffsetDateTime",
+    "namespace": "instant",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseSqlOffsetDateTime(value: string): string",
+    "description": "Parse SQL `TIMESTAMP WITH TIME ZONE` text into an ISO 8601 date-time string that keeps the offset: SQL-92's `YYYY-MM-DD HH:MM:SS±HH:MM`, and the variants PostgreSQL `timestamptz`, SQL Server `datetimeoffset` and Oracle under an ISO `NLS_TIMESTAMP_TZ_FORMAT` print.",
+    "sourcePath": "packages/gmt/src/instant/parse/parseSqlOffsetDateTime.ts",
+    "examples": [
+      {
+        "call": "parseSqlOffsetDateTime(\"2024-03-15 14:30:00+00\")",
+        "result": "\"2024-03-15T14:30:00+00:00\""
+      },
+      {
+        "call": "parseSqlOffsetDateTime(\"2024-03-15 14:30:00.123456+05:30\")",
+        "result": "\"2024-03-15T14:30:00.123456+05:30\""
+      },
+      {
+        "call": "parseSqlOffsetDateTime(\"2007-05-08 12:35:29.1234567 +12:15\")",
+        "result": "\"2007-05-08T12:35:29.1234567+12:15\" (SQL Server `datetimeoffset`)"
+      },
+      {
+        "call": "parseSqlOffsetDateTime(\"1900-01-01 00:00:00+00:19:32\")",
+        "result": "\"1900-01-01T00:00:00+00:19:32\""
+      },
+      {
+        "call": "parseSqlOffsetDateTime(\"2024-02-30 00:00:00+00\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseSqlOffsetDateTime(\"2024-03-15T14:30:00+00:00\")",
+        "result": "\"\" (ISO 8601: use `toOffsetInstant`)"
+      },
+      {
+        "call": "parseSqlOffsetDateTime(\"2024-03-15 14:30:00\")",
+        "result": "\"\" (no offset: use `parseSqlDateTime`)"
+      },
+      {
+        "call": "parseSqlOffsetDateTime(\"infinity\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/instant/validate/isValidSqlOffsetDateTime",
+    "page": "/reference/instant/validate/isValidSqlOffsetDateTime",
+    "name": "isValidSqlOffsetDateTime",
+    "namespace": "instant",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidSqlOffsetDateTime(value: string): boolean\nisValidSqlOffsetDateTime(value: void | {} | null | undefined): boolean\nisValidSqlOffsetDateTime(value: unknown): value is string",
+    "description": "Return true when `value` is SQL `TIMESTAMP WITH TIME ZONE` text: SQL-92's `YYYY-MM-DD HH:MM:SS±HH:MM`, or a variant PostgreSQL `timestamptz`, SQL Server `datetimeoffset` or Oracle under an ISO `NLS_TIMESTAMP_TZ_FORMAT` print.",
+    "sourcePath": "packages/gmt/src/instant/validate/isValidSqlOffsetDateTime.ts",
+    "examples": [
+      {
+        "call": "isValidSqlOffsetDateTime(\"2024-03-15 14:30:00+00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidSqlOffsetDateTime(\"2007-05-08 12:35:29.1234567 +12:15\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidSqlOffsetDateTime(\"2024-02-30 00:00:00+00\")",
+        "result": "false (February has no 30th; the sqlOffsetDateTime pattern matches it)"
+      },
+      {
+        "call": "isValidSqlOffsetDateTime(\"2024-03-15 14:30:00\")",
+        "result": "false (no offset: isValidSqlDateTime)"
+      },
+      {
+        "call": "isValidSqlOffsetDateTime(\"2024-03-15T14:30:00+00:00\")",
+        "result": "false (T separator)"
+      },
+      {
+        "call": "isValidSqlOffsetDateTime(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/instant/validate/isValidUtcOffset",
     "page": "/reference/instant/validate/isValidUtcOffset",
     "name": "isValidUtcOffset",
@@ -17219,6 +17301,63 @@
     ]
   },
   {
+    "url": "/reference/regex/sql-offset-date-time/sqlOffsetDateTime",
+    "page": "/reference/regex/sql-offset-date-time/sqlOffsetDateTime",
+    "name": "sqlOffsetDateTime",
+    "namespace": "regex",
+    "module": "sql-offset-date-time",
+    "kind": "regex",
+    "signature": "",
+    "description": "RegExp matching a SQL timestamp literal with a time zone offset: `YYYY-MM-DD HH:MM:SS[.fffffffff][ ]±HH[:MM[:SS]]`.",
+    "sourcePath": "packages/gmt/src/regex/sql-offset-date-time.ts",
+    "examples": [
+      {
+        "call": "sqlOffsetDateTime.test(\"2024-03-15 14:30:00+00\")",
+        "result": "true (PostgreSQL hour-only offset)"
+      },
+      {
+        "call": "sqlOffsetDateTime.test(\"2024-03-15 14:30:00+05:30\")",
+        "result": "true (SQL-92 form)"
+      },
+      {
+        "call": "sqlOffsetDateTime.test(\"2007-05-08 12:35:29.1234567 +12:15\")",
+        "result": "true (SQL Server, space before the offset)"
+      },
+      {
+        "call": "sqlOffsetDateTime.test(\"1900-01-01 00:00:00+00:19:32\")",
+        "result": "true (PostgreSQL offset with seconds)"
+      },
+      {
+        "call": "sqlOffsetDateTime.test(\"2024-02-30 00:00:00+00\")",
+        "result": "true (shape only; the date is not real)"
+      },
+      {
+        "call": "sqlOffsetDateTime.test(\"2024-03-15T14:30:00+00:00\")",
+        "result": "false (T separator)"
+      },
+      {
+        "call": "sqlOffsetDateTime.test(\"2024-03-15 14:30:00Z\")",
+        "result": "false (Z)"
+      },
+      {
+        "call": "sqlOffsetDateTime.test(\"2024-03-15 14:30:00\")",
+        "result": "false (no offset; use sqlDateTime)"
+      },
+      {
+        "call": "sqlOffsetDateTime.test(\"2024-03-15 14:30:00+0530\")",
+        "result": "false (basic offset)"
+      },
+      {
+        "call": "sqlOffsetDateTime.test(\"2024-03-15 14:30:00+24:00\")",
+        "result": "false (offset hour 24)"
+      },
+      {
+        "call": "sqlOffsetDateTime.test(\"2024-03-15 14:30:60+00\")",
+        "result": "false (leap second; GMT rejects it)"
+      }
+    ]
+  },
+  {
     "url": "/reference/regex/time-zone-like/timeZoneLike",
     "page": "/reference/regex/time-zone-like/timeZoneLike",
     "name": "timeZoneLike",
@@ -22649,7 +22788,7 @@
     "namespace": "unix",
     "module": "convert",
     "kind": "function",
-    "signature": "convertUnixToPlainDate(unix: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
+    "signature": "convertUnixToPlainDate(value: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
     "description": "Convert a Unix timestamp to a plain date string in the format \"YYYY-MM-DD\".",
     "sourcePath": "packages/gmt/src/unix/convert/convertUnixToPlainDate.ts",
     "examples": [
@@ -22694,7 +22833,7 @@
     "namespace": "unix",
     "module": "convert",
     "kind": "function",
-    "signature": "convertUnixToPlainDateTime(unix: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
+    "signature": "convertUnixToPlainDateTime(value: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
     "description": "Convert a Unix timestamp to a plain datetime string in the format \"YYYY-MM-DDTHH:mm:ss\".",
     "sourcePath": "packages/gmt/src/unix/convert/convertUnixToPlainDateTime.ts",
     "examples": [
@@ -22731,7 +22870,7 @@
     "namespace": "unix",
     "module": "convert",
     "kind": "function",
-    "signature": "convertUnixToPlainTime(unix: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
+    "signature": "convertUnixToPlainTime(value: string | number, options?: { epochUnit?: UnixUnit; timeZone?: string; }): string",
     "description": "Convert a Unix timestamp to a plain time string in the format \"HH:mm:ss\".",
     "sourcePath": "packages/gmt/src/unix/convert/convertUnixToPlainTime.ts",
     "examples": [

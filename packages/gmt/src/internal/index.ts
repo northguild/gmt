@@ -128,6 +128,8 @@ export { isoStringBody, TIME_ZONE_ANNOTATION } from "./isoStringBody";
 export { formatHourDuration } from "./hourDurationString";
 export { canonicalInstantIntervals } from "./instantIntervalText";
 export { instantFrom, parseInstantNanoseconds } from "./instantNanoseconds";
+export { readSqlDateTime } from "./sqlDateTime";
+export { readSqlOffsetDateTime } from "./sqlOffsetDateTime";
 export {
   coalesceIntervalNanoseconds,
   parseIntervalNanoseconds,

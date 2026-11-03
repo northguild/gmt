@@ -11,12 +11,12 @@ import { isOptionsArgument } from "../../internal/isObject";
  * Convert a Unix timestamp to a plain time string in the format "HH:mm:ss".
  *
  * - Converts to PlainTime in `timeZone`.
- * - `unix` is a safe integer or a string of optionally negative ASCII digits; anything else returns
+ * - `value` is a safe integer or a string of optionally negative ASCII digits; anything else returns
  *   "".
  * - Returns "" for invalid input.
  *
- * @param unix Unix epoch: a safe integer or a digit string
- * @param options optional: how `unix` is read and the zone its wall clock is read in
+ * @param value Unix epoch: a safe integer or a digit string
+ * @param options optional: how `value` is read and the zone its wall clock is read in
  * @returns plain time string in "HH:mm:ss" format or "" on invalid input
  *
  * @example convertUnixToPlainTime(1706659200000, { timeZone: "UTC" }) // "00:00:00"
@@ -27,7 +27,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * @example convertUnixToPlainTime(45870000, { timeZone: "-00:44:30" }) // "12:00:00" (a stored offset with seconds)
  */
 export function convertUnixToPlainTime(
-  unix: number | string,
+  value: number | string,
   options?: {
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
@@ -57,7 +57,7 @@ export function convertUnixToPlainTime(
 
     if (epochUnit === null || frame === null) return "";
 
-    const instant = unixEpochToInstant(unix, epochUnit);
+    const instant = unixEpochToInstant(value, epochUnit);
 
     if (instant === null) return "";
 

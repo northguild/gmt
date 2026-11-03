@@ -27,6 +27,8 @@ sources:
   - 'northguild/gmt:packages/gmt/src/zoned/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/zoned/parse/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/parse/index.ts'
+  - 'northguild/gmt:packages/gmt/src/instant/parse/index.ts'
+  - 'northguild/gmt:packages/gmt/src/instant/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/validate/index.ts'
   - 'northguild/gmt:packages/gmt/src/unix/get/index.ts'
   - 'northguild/gmt:packages/gmt/src/utc/get/index.ts'
@@ -87,7 +89,9 @@ input before you act on it.
   seconds left until a stored time, see the `gmt-arithmetic` skill.
 - **Parsing**: `parseYearFromDate`, `parseMonthFromDate`,
   `parseDateTimeWithPattern`, `parseRfc3339`, `parseRfc2822`,
-  `parseHttpDate`, `parseSqlDateTime`
+  `parseHttpDate`, `parseSqlDateTime`, `parseSqlOffsetDateTime`
+  (`@northguild/gmt/instant/parse`: the `timestamptz` / `datetimeoffset` text a
+  database prints, `2024-03-15 14:30:00+00`, read to `2024-03-15T14:30:00+00:00`)
 - **Calendar identifiers**: `getIsoWeekDate`, `getOrdinalDate`, `getQuarter`,
   `getFiscalPeriod`
 - **Formatting**: `formatDate`, `formatTime`, `formatDateTime`,
@@ -110,7 +114,8 @@ input before you act on it.
   `isValidFiscalCalendar`, `isValidFiscalExtraWeek`, `isValidFiscalYearLabel`,
   `hasSecond60`
 - **Interchange-format validation**: `isValidRfc3339DateTime`,
-  `isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime`
+  `isValidRfc2822DateTime`, `isValidHttpDate`, `isValidSqlDateTime`,
+  `isValidSqlOffsetDateTime`
 - **UTC timestamp validation**: `isValidUtcTimestamp` (a UTC instant written
   `YYYY-MM-DDTHH:MM:SS[.f]Z` and nothing else; it has no parser)
 - The core string validators take a value of any type and return `false` for a
@@ -151,8 +156,9 @@ input before you act on it.
   a day name; omit it. The `rfc2822DateTime` and `httpDate` regexes stay strict
   and match only what GMT writes, so do not use them to pre-filter parser input.
 - To check an interchange string, call its validator, not its regex.
-  `isValidRfc3339DateTime`, `isValidRfc2822DateTime`, `isValidHttpDate` and
-  `isValidSqlDateTime` are each true exactly when the parser returns a value.
+  `isValidRfc3339DateTime`, `isValidRfc2822DateTime`, `isValidHttpDate`,
+  `isValidSqlDateTime` and `isValidSqlOffsetDateTime` are each true exactly
+  when the parser returns a value.
   A regex proves shape only: `rfc3339DateTime.test("2023-02-29T10:00:00Z")`
   is `true` and `isValidRfc3339DateTime` returns `false` for it.
 - `isValidUtcTimestamp` matches no parser: it is a narrower `isValidUtc`. It is true

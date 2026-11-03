@@ -454,7 +454,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `leap-seconds-and-tai`.
   - `zoned-date-operations/`: `zoned-operations`, `calendar-boundaries`,
     `offset-instants-and-local-resolution`, `recurrence-and-cron`.
-  - `conversion/`: `converting-types`, `foreign-epoch-bridges`.
+  - `conversion/`: `converting-types`, `databases`, `foreign-epoch-bridges`.
   - `intervals/`: `interval-basics`, `containment-and-overlap`, `set-operations`,
     `splitting-and-counting`.
   - `integration/`: `app-integration`, `linting`, `skills` (its industry-skill table has one row
@@ -1230,6 +1230,51 @@ Shared hooks come first, then the globe, then the clock-change pages.
       and hidden with `[data-off]`; the hold grids are `minmax(0, 1fr)`; cards are two by two
       above `40rem` of container and one column below. `renderValue` prints a bigint as `5n`
       and a `Uint8Array` as `new Uint8Array([...])`.
+  - **Database Timestamp Reader** (`/tools/database-timestamp-reader/`, `dbstamp`, core): the
+    reader picks a database, one of its forms (32 in `DB_FORMS`, one per row of the databases
+    guide's matrix that has a Read cell) and types its one to three fields. The widget makes the
+    one call the form's template names and prints it with what it returned; for a SQL offset form
+    it also prints `toOffsetInstant` and `parseRfc3339` on the same text, each with its real
+    return, in a card of its own titled "The ISO readers on the same text". Six rows that are not
+    forms here are links in `DB_ELSEWHERE`, listed under the form select. The hero is the
+    `instantHero` family (the call's own return in the value slot, and a reason line, with no
+    chip). Beside it sit the kind `badge` (the words "export", "composition" or "new in this
+    release", never a colour) and an "Offset" `plates` plate for the offset and pair shapes. Cards
+    sit two across from 40rem of the widget's width and in one column below it.
+    - **Arithmetic stays in the printed templates.** A database's own arithmetic (an epoch offset,
+      a Julian-day origin, a Cassandra day bias) is written in the form's printed call, as the
+      guide shows it, and the library runs it. The widget computes no result and holds no epoch;
+      the only conversion it makes is a field's text into the literal the call takes, and a test
+      holds each printed call to the call made. A new form is a row in `database-timestamp-forms.ts`
+      and a reader in `database-timestamp-reader.ts`, never code in the mount.
+    - **`NO SIGNAL` is the form's own call returning its sentinel** (`""` or `null`), and only that.
+      A field that is not a number and a zone the browser does not know are named in a sentence
+      and make no call; a validator's `false` is an answer in words; the comparison lines print
+      their real returns in ink.
+    - **Permalink `dbstamp`** at `/tools/database-timestamp-reader/`: `preset` alone when the
+      state is exactly a preset, else `form`, `value`, `value2` and `value3` (one per field the form
+      has, even blank) and `zone` for MySQL `TIMESTAMP`. `KIND_STRING_CAPS` is 96.
+      `EMPTY_KEYS_BY_KIND` keeps an empty `value`, `value2`, `value3` and `zone`, so a cleared field
+      comes back cleared.
+    - **Changing the database or the form applies that form's first preset**, so no field opens
+      blank by accident. "Your values" in the preset select keeps what is typed.
+    - **A seed that names a value owns the zone.** Once a link or a chat call gives a value, a MySQL
+      `TIMESTAMP` zone is the caller's alone and blank when omitted; the first preset's `UTC` is
+      never lent to it. A blank zone prints the wall-time call alone, with a note, and the Worker
+      treats `zone: ""` as no zone. A seed with no values at all opens on the first preset.
+    - **Nothing moves as the reader types.** All three value slots, the zone slot, the Offset
+      plate and the ISO card are laid out for every form; an unused one is `[data-off]`,
+      `aria-hidden`, `inert` and `visibility: hidden`, so it leaves the tab order and the
+      accessibility tree and keeps its box (the zone slot shares the second value's cell, since no
+      form has both). The hero's parts are `hold`s sized by the widest value, caption and reason;
+      the badge slot is as wide as "new in this release"; the main frame reserves four lines and
+      its output two, the ISO frame four and its output two (`RESERVED_LINES`, held to every
+      preset by a test). There is no drag handle, so `grow-measure` (not `readout-still`) holds it:
+      its row's `holdStill` steps every preset and types the longest value one character at a
+      time, and the hero, offset plate, badge, call frame and ISO card keep their width and height
+      within 1 px (`box-moved`). The page-height limit alone let a 6 px jump through.
+    - **The loader is `database-lib.ts`** (13 modules by `GMT_MODULES`), after `identifier-lib.ts`.
+      The tool links to the guide and the guide links back.
   - **Elapsed vs. Clock Difference** (`/tools/elapsed-vs-clock-difference/`): a sum of three
     plates (clock difference + leap seconds = seconds that passed) over two vernier rulers, one
     cell per second at equal widths. An inserted second is a stretched `:60` cell the clock tape
@@ -2091,7 +2136,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   pointer sweep takes 48 steps of 30 minutes, so it always enters the shaded hour. The pass/fail decisions live in
   `scripts/gate-checks.mjs`, unit-tested in `gate-checks.test.ts`. A tool with no drag handle,
   such as the DTM Decoder, the X12 Time Reader, the Demurrage Clock, the EPCIS Event Reader, the
-  Journey Split, Billing Deadlines, the Stored Time Audit, the ID Timestamp Decoder and the Column Timestamp Bridge, is not in `readout-still`. Its definition of done measures
+  Journey Split, Billing Deadlines, the Stored Time Audit, the ID Timestamp Decoder, the Column Timestamp Bridge and the Database Timestamp Reader, is not in `readout-still`. Its definition of done measures
   the same boxes across every preset instead: each plate keeps its size, and a held region keeps
   its height. A result region may grow from one preset to the next through `.gmt-grow`, which
   `grow:measure` gates: the reason aside under a sentinel, a second lane for a second zone, or a
@@ -2948,11 +2993,20 @@ Shared hooks come first, then the globe, then the clock-change pages.
     minutes, hours, days, weeks, months, years, and a UTC start only when the reader gives
     one (omitted means Now). The Worker's `execute` is `accept("expiry-calculator")`. The widget
     kind is `expiry`.
+  - `showDatabaseTimestampReader({ form, value, value2?, value3?, zone? })` (CORE-106): `form` is one
+    of the reader's form ids; the values go in exactly as the reader gave them, never trimmed or
+    corrected, and a count that does not match the form's fields is refused, not dropped
+    (`databaseFormProblems`, shared by the schema and the Worker). A `zone` is given only on MySQL
+    `TIMESTAMP` and is never inferred from a place, a server or a vendor default. The widget kind is
+    `dbstamp`, and the Worker's `execute` is `accept("database-timestamp-reader")` after the problems
+    check and the zone check. The registry's `validate` refuses an unknown form id and a zone the
+    runtime cannot read.
 - **Count:** `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers, one starter card per tool;
   re-derive them from there, and never write a literal in a test or a page. The Leap Second
   Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada and Morocco clock-change
-  checkers, the Duration Parser Bench, the three holiday tools, the ID Timestamp Decoder, the
-  Column Timestamp Bridge and the Leap-Day Birthday are core.
+  checkers, Cron in a Zone, the Duration Parser Bench, the three holiday tools, the ID Timestamp
+  Decoder, the Column Timestamp Bridge, the Leap-Day Birthday, the Expiry Calculator and the
+  Database Timestamp Reader are core.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.

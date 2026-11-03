@@ -111,6 +111,9 @@
       "instant/convert": [
         "./dist/instant/convert/index.d.ts"
       ],
+      "instant/parse": [
+        "./dist/instant/parse/index.d.ts"
+      ],
       "instant/validate": [
         "./dist/instant/validate/index.d.ts"
       ],
@@ -422,6 +425,10 @@
     "./instant/convert": {
       "types": "./dist/instant/convert/index.d.ts",
       "default": "./dist/instant/convert/index.js"
+    },
+    "./instant/parse": {
+      "types": "./dist/instant/parse/index.d.ts",
+      "default": "./dist/instant/parse/index.js"
     },
     "./instant/validate": {
       "types": "./dist/instant/validate/index.d.ts",

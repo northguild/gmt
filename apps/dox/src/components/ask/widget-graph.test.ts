@@ -207,6 +207,8 @@ describe("the chat island's static import graph", () => {
       "lib/leap-day-birthday.ts",
       "lib/expiry-calculator.ts",
       "lib/expiry-lib.ts",
+      "lib/database-timestamp-reader.ts",
+      "lib/database-lib.ts",
     ];
     expect(relative.filter((file) => heavy.includes(file))).toEqual([]);
   });

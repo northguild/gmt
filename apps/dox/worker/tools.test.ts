@@ -319,6 +319,60 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showDatabaseTimestampReader refusals", () => {
+    it("refuses a contradiction between the form and the values", async () => {
+      for (const input of [
+        { form: "redis-time", value: "1" },
+        { form: "postgresql-timestamptz", value: "x", zone: "Europe/London" },
+      ]) {
+        expect(await run("showDatabaseTimestampReader", input)).toMatchObject({
+          ok: false,
+          widget: "database-timestamp-reader",
+        });
+      }
+    });
+
+    it("refuses a zone this runtime does not know, with the shared sentence", async () => {
+      const r = await run("showDatabaseTimestampReader", {
+        form: "mysql-timestamp",
+        value: "2024-03-15 14:30:00",
+        zone: "Mars/Olympus",
+      });
+      expect(r.ok).toBe(false);
+      expect(r.note).toBe(
+        "not IANA time zones this runtime knows: Mars/Olympus.",
+      );
+    });
+
+    it("accepts a valid call, with or without a zone", async () => {
+      expect(
+        await run("showDatabaseTimestampReader", {
+          form: "postgresql-timestamptz",
+          value: "2024-03-15 14:30:00+00",
+        }),
+      ).toMatchObject({ ok: true, widget: "database-timestamp-reader" });
+      expect(
+        (
+          await run("showDatabaseTimestampReader", {
+            form: "mysql-timestamp",
+            value: "2024-03-15 14:30:00",
+            zone: "Asia/Kolkata",
+          })
+        ).ok,
+      ).toBe(true);
+    });
+
+    it("takes a blank zone as no zone", async () => {
+      expect(
+        await run("showDatabaseTimestampReader", {
+          form: "mysql-timestamp",
+          value: "2024-03-15 14:30:00",
+          zone: "",
+        }),
+      ).toMatchObject({ ok: true, widget: "database-timestamp-reader" });
+    });
+  });
+
   describe("showIdTimestampDecoder refusals", () => {
     it("accepts a real id", async () => {
       expect(

@@ -45,6 +45,7 @@
    path to a mount module is each entry's `load()`. `widget-graph.test.ts`
    fails if a value import creeps back in. */
 import type { ConverterArgs } from "~/lib/converter-bench-mount";
+import { formOf } from "~/lib/database-timestamp-forms";
 import type { GlobeArgs } from "~/lib/globe-mount";
 import type { SafeHtml } from "~/widgets/builders";
 import type { BillingDeadlinesArgs } from "~/lib/billing-deadlines-mount";
@@ -77,6 +78,7 @@ import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import type { IdTimestampDecoderArgs } from "~/lib/id-timestamp-decoder-mount";
 import type { ColumnTimestampBridgeArgs } from "~/lib/column-timestamp-bridge-mount";
 import type { CronInAZoneArgs } from "~/lib/cron-in-a-zone-mount";
+import type { DatabaseTimestampReaderArgs } from "~/lib/database-timestamp-reader-mount";
 import type { ExpiryArgs } from "~/lib/expiry-calculator-mount";
 import type { LeapDayArgs } from "~/lib/leap-day-birthday-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
@@ -118,6 +120,7 @@ import {
   showCronInAZoneInput,
   showLeapDayBirthdayInput,
   showExpiryCalculatorInput,
+  showDatabaseTimestampReaderInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -1157,6 +1160,35 @@ const expiryEntry = defineWidget<ExpiryArgs>({
     })),
 });
 
+const databaseReaderEntry = defineWidget<DatabaseTimestampReaderArgs>({
+  title: "Database timestamp reader",
+  kind: "dbstamp",
+  parse: (input) => {
+    const result = showDatabaseTimestampReaderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Every value is a control value, and one the library refuses is this widget's own NO SIGNAL.
+     The hook refuses only a form id the reader does not have, which would open on nothing, and a
+     session zone this runtime cannot read. */
+  load: () =>
+    import("~/lib/database-timestamp-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderDatabaseTimestampReaderTemplate(idPrefix, args),
+      mount: m.mountDatabaseTimestampReader,
+    })),
+  validate: async ({ form, zone }) => {
+    if (form !== undefined && formOf(form) === undefined) {
+      return `${form} isn't a form the database timestamp reader has.`;
+    }
+    return zone ? checkZones([zone]) : null;
+  },
+});
+
 const plannerEntry = defineWidget<ZonePlannerArgs>({
   title: "Zone planner",
   kind: "planner",
@@ -1245,6 +1277,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showCronInAZone: cronZoneEntry,
   showLeapDayBirthday: leapDayEntry,
   showExpiryCalculator: expiryEntry,
+  showDatabaseTimestampReader: databaseReaderEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

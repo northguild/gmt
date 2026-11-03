@@ -1,4 +1,4 @@
-import { parseSqlDateTime } from "../parse/parseSqlDateTime";
+import { readSqlDateTime } from "../../internal/sqlDateTime";
 
 /**
  * Return true when `value` is a real SQL timestamp literal without a time zone: the
@@ -6,7 +6,7 @@ import { parseSqlDateTime } from "../parse/parseSqlDateTime";
  * column. It checks one date-and-time value, not a SQL statement.
  *
  * - True exactly when `parseSqlDateTime` returns a plain string for the same value: the validator
- *   calls the parser, so the two cannot disagree.
+ *   and the parser read through one internal core, so the two cannot disagree.
  * - **Grammar:** SQL-92 §5.3 `<timestamp string>` and the ODBC `ts` escape, as `sqlDateTime`
  *   matches: a single space separator, a four-digit year `0001`–`9999`, two-digit month, day,
  *   hour, minute and second (seconds are required), and an optional `.` followed by up to 9
@@ -16,7 +16,7 @@ import { parseSqlDateTime } from "../parse/parseSqlDateTime";
  *   are false here.
  * - False for a second of 60: GMT rejects leap seconds.
  * - **Plain only.** A `T` separator, a `Z` and an offset are false: SQL's offset-carrying
- *   `TIMESTAMP WITH TIME ZONE` literal is out of scope.
+ *   `TIMESTAMP WITH TIME ZONE` literal is checked by `isValidSqlOffsetDateTime`.
  * - Read the value with `parseSqlDateTime`; write one with `formatSqlDateTime`.
  * - A value that is not a string, a `String` object included, returns `false`. A `true` result
  *   narrows an `unknown` value to `string`.
@@ -40,5 +40,5 @@ export function isValidSqlDateTime(
 ): boolean;
 export function isValidSqlDateTime(value: unknown): value is string;
 export function isValidSqlDateTime(value: unknown): boolean {
-  return typeof value === "string" && parseSqlDateTime(value) !== "";
+  return readSqlDateTime(value) !== "";
 }

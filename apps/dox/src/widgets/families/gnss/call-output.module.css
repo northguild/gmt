@@ -3,11 +3,6 @@
 .output {
   display: block;
   box-sizing: border-box;
-
-  /* The lines, the padding either side and the 1px border either side. */
-  min-block-size: calc(
-    var(--min-lines, 0) * 1lh + 2 * var(--gmt-space-3) + 2px
-  );
   min-inline-size: 0;
   max-inline-size: 100%;
 
@@ -24,6 +19,15 @@
   font-size: var(--gmt-text-sm);
   font-variant-numeric: tabular-nums;
   white-space: pre;
+
+  /* The lines it reserves, held inside the content by a strut with no width. A minimum on the
+     box would count the scroll track as a line's room, so under a classic scrollbar an output
+     with fewer lines would be one track shorter than a full one. */
+  &::before {
+    content: "";
+    float: inline-start;
+    block-size: calc(var(--min-lines, 0) * 1lh);
+  }
 
   &:focus-visible {
     outline: 2px solid var(--gmt-cyan);
