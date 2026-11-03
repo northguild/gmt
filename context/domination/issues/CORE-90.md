@@ -12,6 +12,9 @@ A federal bill to keep the United States on daylight time all year has passed on
 - **The checker** at `/gmt/check/us-<year>-clock-change`, built from the shared parts in `CORE-89`.
 - **A test file** like `packages/gmt/src/test/oh-canada.test.ts` for the US zones.
 - **Any date.** The page and its tests handle a change on any date and at any local time.
+- **Words before the date.** A checker published before its change needs each dated phrase in
+  both tenses, flipping when the moment passes. Dox has none today; commit 4ce90269 has the
+  two-form parts (`tense-slot`, `bindTense`) to rebuild from.
 
 ## What gmt provides (do not re-implement)
 

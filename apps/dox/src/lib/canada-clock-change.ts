@@ -22,7 +22,7 @@ import type {
   VerdictText,
 } from "./clock-change-probe";
 import { REGION_KEY, classPhrase } from "./clock-change-tense";
-import type { Moment, Tensed, TenseView } from "./clock-change-tense";
+import type { Moment, TenseView } from "./clock-change-tense";
 import type { MapZone } from "./zone-map";
 import { withBase } from "./site";
 
@@ -36,7 +36,7 @@ export const PROBE_INSTANT = "2026-11-02T12:00:00Z";
  */
 export const PROBE_EPOCH_MS = 1793620800000;
 
-/** The year the Canadian zones stop changing their clocks in. The year after is read too. */
+/** The year the Canadian zones stopped changing their clocks in. The year after is read too. */
 export const CANADA_STOP_YEAR = 2026;
 
 /** The one instant the probe rows are read at. */
@@ -66,7 +66,7 @@ export const TABLE_ZONES: readonly ProbeFact[] = PROBE_ZONES.filter(
 );
 
 /**
- * The zones that stop changing their clocks in 2026, from the tzdb 2026e facts above. The map's
+ * The zones that stopped changing their clocks in 2026, from the tzdb 2026e facts above. The map's
  * first class is read from here, never from a runtime's own data, so it looks the same wherever
  * it is served.
  */
@@ -186,11 +186,10 @@ export function canadaVerdict(where: VerdictPlace): VerdictText {
 }
 
 /**
- * The moment each stopped zone does not turn its clocks back: 1 November 2026 at 02:00 local time,
+ * The moment each stopped zone did not turn its clocks back: 1 November 2026 at 02:00 local time,
  * as a UTC instant and the offset in force just before. The words of the date and time are the
  * library's (`momentWords`); only the instants are stated here, and a test pins each to the
- * library. The region's moment is the latest of the four, so the region's sentences flip when
- * the last zone has passed.
+ * library. The region's moment is the latest of the four.
  */
 export const CANADA_MOMENTS: Readonly<Record<string, Moment>> = {
   "America/Vancouver": { at: "2026-11-01T09:00:00Z", from: "-07:00" },
@@ -201,14 +200,15 @@ export const CANADA_MOMENTS: Readonly<Record<string, Moment>> = {
 };
 
 /**
- * The class words of a zone's `kind` in both forms. A dated phrase, so it stays true after 2027;
- * the four zones change at four instants, so the legend carries local time only.
+ * The class words of a zone's `kind`. The change is past, so the phrase has the one past form; it
+ * is dated, so it stays true after 2027; the four zones change at four instants, so the legend
+ * carries local time only.
  */
 export function canadaClassText(
   kind: MapZone["kind"],
   id: string | null,
   view: TenseView,
-): Tensed {
+): string {
   return classPhrase(kind, id, view, false);
 }
 

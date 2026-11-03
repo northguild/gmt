@@ -202,7 +202,7 @@ const zonedBRepros: Repro[] = [
 ];
 
 /**
- * zoned.D (`internal/zonedWallClockDifference.ts` defect 2): the `"UTC"` fast path of
+ * zoned.D (`internal/zonedDifference/utcValidity.ts`): the `"UTC"` fast path of
  * `GetPossibleEpochNanoseconds` skips `IsValidEpochNanoseconds`, so a UTC rounding or total window
  * ending past the maximum returns a value where TC39 throws. Not fixed on the polyfill's main
  * branch. Expected: RangeError, as Chromium 153 throws (and the polyfill does for `+00:00`).

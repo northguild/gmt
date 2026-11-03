@@ -31,8 +31,7 @@ import {
 } from "./data-credits";
 import { spokenOffset } from "./crossing-clock";
 import { enter } from "./enter";
-import { plainText, tensedPlain } from "./clock-change-tense";
-import type { Tensed, TenseView } from "./clock-change-tense";
+import type { TenseView } from "./clock-change-tense";
 import {
   LABEL_HEIGHT_PX,
   cityOf,
@@ -41,7 +40,6 @@ import {
 } from "./zone-map-labels";
 import { html, setHtml, type FoundWidget } from "~/widgets/builders";
 import { noSignal, zoneId } from "~/widgets/families/clockcheck/marks";
-import { tensedSlot } from "~/widgets/families/clockcheck/tense-slot";
 import {
   EMPTY,
   PIN_PLACEHOLDER,
@@ -118,14 +116,14 @@ export interface ZoneMapConfig {
   /** The zones the page states as the first class, from its own facts and never from a runtime's data. */
   stopped: ReadonlySet<string>;
   /**
-   * The words of each class in both tenses. `id` is the zone the words are for, or `null` for the
-   * legend. The tense view says which form is true now and writes the dates.
+   * The words of each class. `id` is the zone the words are for, or `null` for the legend. The
+   * view writes the dates.
    */
   classText: (
     kind: MapZone["kind"],
     id: string | null,
     view: TenseView,
-  ) => Tensed;
+  ) => string;
   /** The release that recorded the change of a stopped zone, for the "Recorded in" line. */
   releaseOf: (id: string) => string | null;
   /** The releases the "no change recorded" line names: `2026b to 2026e`. */
@@ -187,27 +185,17 @@ export function displayKind(
   return zone?.kind ?? "no-data";
 }
 
-/** The class words of a zone in both tenses, or "no data" when the server sent no row. */
-function classPhraseOf(
-  config: ZoneMapConfig,
-  id: string,
-  zone: MapZone | undefined,
-  view: TenseView,
-): Tensed {
-  const kind = displayKind(config, id, zone);
-  return kind === "no-data"
-    ? plainText("no data")
-    : config.classText(kind as MapZone["kind"], id, view);
-}
-
-/** The class words of a zone in the form that is true now. */
+/** The class words of a zone, or "no data" when the server sent no row. */
 export function classWords(
   config: ZoneMapConfig,
   id: string,
   zone: MapZone | undefined,
   view: TenseView,
 ): string {
-  return tensedPlain(classPhraseOf(config, id, zone, view), view);
+  const kind = displayKind(config, id, zone);
+  return kind === "no-data"
+    ? "no data"
+    : config.classText(kind as MapZone["kind"], id, view);
 }
 
 /**
@@ -282,8 +270,8 @@ export function offsetWords(offset: string): string {
 // ---------------------------------------------------------------------------
 
 export interface ZoneMapDeps {
-  /** Which tense is true now, and the dates in words. Read again at each redraw. */
-  tense: () => TenseView;
+  /** The dates in words. */
+  tense: TenseView;
   /** The response's `now`: the year of the empty-change sentences. */
   responseNow: string;
   /** The client's now as a UTC instant. */
@@ -303,8 +291,6 @@ export interface ZoneMapDeps {
 }
 
 export interface ZoneMapHandle {
-  /** Redraws the words that hold a tense in text (labels, the announcement) after a moment passed. */
-  retense(): void;
   /** Pins `id`; false when it is not in the list. */
   pin(id: string): boolean;
   /** The pinned zone id, or null. */
@@ -444,10 +430,7 @@ function runZoneMap(
     const kind = displayKind(config, id, zone);
     const fields = parts.fields(button, index);
     if (fields.kind) {
-      setHtml(
-        fields.kind,
-        tensedSlot(classPhraseOf(config, id, zone, deps.tense()), deps.tense()),
-      );
+      setHtml(fields.kind, html`${classWords(config, id, zone, deps.tense)}`);
     }
     if (fields.offset) {
       if (zone && zone.offset !== "") fields.offset.textContent = zone.offset;
@@ -548,7 +531,7 @@ function runZoneMap(
       "announce",
       pinnedId === null
         ? ""
-        : `Pinned ${pinnedId}. ${classWords(config, pinnedId, rows.get(pinnedId), deps.tense())}.`,
+        : `Pinned ${pinnedId}. ${classWords(config, pinnedId, rows.get(pinnedId), deps.tense)}.`,
     );
     if (pinnedId === null) {
       setText("zone", PIN_PLACEHOLDER);
@@ -560,10 +543,7 @@ function runZoneMap(
     setMarkup("zone", zoneId(pinnedId));
     setMarkup(
       "class",
-      html`${classSwatch(displayKind(config, pinnedId, zone))}${tensedSlot(
-        classPhraseOf(config, pinnedId, zone, deps.tense()),
-        deps.tense(),
-      )}`,
+      html`${classSwatch(displayKind(config, pinnedId, zone))}${classWords(config, pinnedId, zone, deps.tense)}`,
     );
     if (!zone) {
       for (const part of rest) setText(part, EMPTY);
@@ -759,7 +739,7 @@ function runZoneMap(
         cy: point[1],
         r: minPx / 2,
         kind: displayKind(config, id, zone),
-        label: `${id}, ${classWords(config, id, zone, deps.tense())}`,
+        label: `${id}, ${classWords(config, id, zone, deps.tense)}`,
       });
     }
     return made;
@@ -793,7 +773,7 @@ function runZoneMap(
         id,
         d,
         kind: displayKind(config, id, zone),
-        label: `${id}, ${classWords(config, id, zone, deps.tense())}`,
+        label: `${id}, ${classWords(config, id, zone, deps.tense)}`,
       };
       (config.stopped.has(id) ? stopped : plain).push(shape);
     }
@@ -969,26 +949,7 @@ function runZoneMap(
   }
   arm();
 
-  /** Rewrites the words that hold a tense as text: the shapes' and rings' labels, the announcement. */
-  function retense(): void {
-    const view = deps.tense();
-    for (const group of [shapes, rings]) {
-      for (const [id, el] of group) {
-        el.setAttribute(
-          "aria-label",
-          `${id}, ${classWords(config, id, rows.get(id), view)}`,
-        );
-      }
-    }
-    if (pinnedId !== null) {
-      setText(
-        "announce",
-        `Pinned ${pinnedId}. ${classWords(config, pinnedId, rows.get(pinnedId), view)}.`,
-      );
-    }
-  }
-
-  return { pin: (id) => pin(id), pinned: () => pinnedId, ready, retense };
+  return { pin: (id) => pin(id), pinned: () => pinnedId, ready };
 }
 
 /**

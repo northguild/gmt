@@ -3,19 +3,18 @@
  * them. The shapes and the functions that render them are in `clock-change-text.ts`.
  *
  * Dates and offsets are the page's tzdb 2026e facts (`PROBE_ZONES` in `canada-clock-change.ts`):
- * British Columbia, Alberta, the Northwest Territories and Manitoba do not turn back on 2026-11-01.
+ * British Columbia, Alberta, the Northwest Territories and Manitoba did not turn back on 2026-11-01.
  */
 
-import { REGION_KEY } from "../lib/clock-change-tense";
 import type { HelpCard, KeyCard } from "./clock-change-text";
 
 /** The date and time of the change on every stopped zone's own clock, as the text on the page words it. */
 const CHANGE_DATED = "1 November 2026";
 
 /**
- * The Key points in both tenses. `when` is the change's date and time in words, written by the
- * library at run time (`momentWords`). The card the page shows picks `before` or `after` by the
- * clock; `KEY_POINTS` below has the dated wording only, true on any day.
+ * The Key points, in the past tense: the change has happened. `when` is its date and time in
+ * words, written by the library (`momentWords`); `KEY_POINTS` below has it typed, for text that
+ * runs no code.
  */
 export function canadaKeyPoints(when: string): KeyCard[] {
   return [
@@ -32,24 +31,13 @@ export function canadaKeyPoints(when: string): KeyCard[] {
             { code: "Northwest Territories" },
             " and ",
             { code: "Manitoba" },
-            {
-              tense: REGION_KEY,
-              before: ` will stop changing their clocks. On ${when} local time they will not turn them back. They will stay on summer time for good.`,
-              after: ` stopped changing their clocks. On ${when} local time they did not turn them back. They stay on summer time for good.`,
-              dated: ` stop changing their clocks. From ${CHANGE_DATED}, they stay on summer time for good.`,
-            },
+            ` stopped changing their clocks. On ${when} local time they did not turn them back. They stay on summer time for good.`,
           ],
         },
         {
           kind: "p",
           parts: [
-            "Phones, computers and apps learn about changes like this from time zone updates. One that has not updated ",
-            {
-              tense: REGION_KEY,
-              before: `will turn the clock back on ${CHANGE_DATED} anyway, and will show those places an hour wrong from then on.`,
-              after: `turned the clock back on ${CHANGE_DATED} anyway, and has shown those places an hour wrong since then.`,
-              dated: `turns the clock back on ${CHANGE_DATED} anyway, and shows those places an hour wrong from then on.`,
-            },
+            `Phones, computers and apps learn about changes like this from time zone updates. One that has not updated turned the clock back on ${CHANGE_DATED} anyway, and shows those places an hour wrong each winter.`,
           ],
         },
         {
@@ -94,8 +82,10 @@ export function canadaKeyPoints(when: string): KeyCard[] {
   ];
 }
 
-/** The Key points as text that runs no code states them: the dated wording, true on any day. */
-export const KEY_POINTS: KeyCard[] = canadaKeyPoints(CHANGE_DATED);
+/** The Key points as text that runs no code states them: the words the library writes, typed. */
+export const KEY_POINTS: KeyCard[] = canadaKeyPoints(
+  `${CHANGE_DATED} at 02:00`,
+);
 
 /**
  * The "How gmt helps" card: a lede, a verified line with a link to the tests, one case card per

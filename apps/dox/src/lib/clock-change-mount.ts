@@ -34,21 +34,17 @@ function pick<T>(module: Record<string, unknown>, name: string): T {
 
 export async function loadClockLib(): Promise<ClockLib> {
   try {
-    const [convert, get, compare, unixCompare, zonedFormat, utcFormat] =
-      await Promise.all([
-        GMT_MODULES["utc/convert"]!(),
-        GMT_MODULES["utc/get"]!(),
-        GMT_MODULES["utc/compare"]!(),
-        GMT_MODULES["unix/compare"]!(),
-        GMT_MODULES["zoned/format"]!(),
-        GMT_MODULES["utc/format"]!(),
-      ]);
+    const [convert, get, compare, zonedFormat, utcFormat] = await Promise.all([
+      GMT_MODULES["utc/convert"]!(),
+      GMT_MODULES["utc/get"]!(),
+      GMT_MODULES["utc/compare"]!(),
+      GMT_MODULES["zoned/format"]!(),
+      GMT_MODULES["utc/format"]!(),
+    ]);
     return {
       convertUtcToPlainDateTime: pick(convert, "convertUtcToPlainDateTime"),
-      convertUtcToUnix: pick(convert, "convertUtcToUnix"),
       getUtcNow: pick(get, "getUtcNow"),
       isBeforeUtc: pick(compare, "isBeforeUtc"),
-      isBeforeUnix: pick(unixCompare, "isBeforeUnix"),
       formatZonedDateTime: pick(zonedFormat, "formatZonedDateTime"),
       formatUtc: pick(utcFormat, "formatUtc"),
     };
@@ -58,16 +54,12 @@ export async function loadClockLib(): Promise<ClockLib> {
 }
 
 /**
- * Loads the library and reads the tense of a region's moments at `now`, the library's clock when
- * omitted. The page's
- * server render and the chat's load both call it, so the markup they build says what is true now.
+ * Loads the library and writes the words of a region's moments, for the server render and the chat.
  */
 export async function loadTenseView(
   moments: Readonly<Record<string, Moment>>,
-  now?: string,
 ): Promise<TenseView> {
-  const lib = await loadClockLib();
-  return tenseView(lib, moments, now ?? lib.getUtcNow());
+  return tenseView(await loadClockLib(), moments);
 }
 
 type Answer<T> =

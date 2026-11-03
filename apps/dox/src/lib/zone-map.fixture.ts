@@ -52,7 +52,7 @@ export function zoneDeps(
   over: Partial<ZoneMapDeps> = {},
 ): ZoneMapDeps {
   return {
-    tense: () => tense,
+    tense,
     responseNow: NOW,
     now: () => NOW,
     wall: (at, offset) => convertUtcToPlainDateTime(at, { timeZone: offset }),

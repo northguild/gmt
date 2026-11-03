@@ -20,6 +20,9 @@ const GMT_DIR = join(ROOT, "packages/gmt");
 export const COMPAT_README =
   "packages/gmt/src/internal/temporalCompat/README.md";
 
+/** The step the last of D1–D7 to go adds: defect 3 shares its spec path with defects 4 and 5. */
+const LAST_OF_D1_D7 = `The last of D1–D7 to go also follows ${COMPAT_README} § Removal steps 6. If D11 and D22 (defects 4 and 5) are gone too, the last of defects 3–5 to go also deletes untilTakesSpecPath, the // defects 3–5 block in zonedUntil that calls untilAtLimit, and the bySpec blocks in durationTotal and durationRound. Then drop the imports and locals tsc reports unused, and the internal/zonedDifference/operations.ts exports fallow reports unused.`;
+
 /**
  * The JavaScript engine each native-suite leg runs on, as a group's `engines` names it. Node and
  * Chromium are both V8: a defect in V8 or in the ICU it bundles reads the same on both.
@@ -42,6 +45,7 @@ export const WORKAROUNDS = [
     steps: [
       "Delete the D1 entries in probeRepros.ts, the D1 term of needsFieldSearch in calendarDateFromFields.ts, and the D1 fallbacks in calendarDateArithmetic.ts (the catch branch of calendarDateAdd, the D1 term of untilWorkaroundNeeded).",
       "Delete fieldSearch.ts + test once no range guard (D2–D5) is left.",
+      LAST_OF_D1_D7,
       `Full wording: ${COMPAT_README} § Removal steps 1.`,
     ],
   },
@@ -51,6 +55,7 @@ export const WORKAROUNDS = [
     trigger: "a js-temporal release contains 2bb6ba1 (already on main)",
     steps: [
       "Delete buddhistFields' arithmetic branch, the buddhist case of hasReadCorrection, usesIsoArithmetic in calendarDateArithmetic.ts, and the D2 repros.",
+      LAST_OF_D1_D7,
       `Full wording: ${COMPAT_README} § Removal steps 2.`,
     ],
   },
@@ -62,6 +67,7 @@ export const WORKAROUNDS = [
       "BOTH a js-temporal release ports proposal-temporal 0df570c AND GMT's engines.node floor bundles an ICU containing 5267bb5778 (ICU-23007)",
     steps: [
       "Delete hebrewArithmetic.ts + test, hebrewFields' arithmetic branch, the hebrew case of hasReadCorrection and ownedModels, and the D3/D4 repros.",
+      LAST_OF_D1_D7,
       `Full wording: ${COMPAT_README} § Removal steps 3.`,
     ],
   },
@@ -71,6 +77,7 @@ export const WORKAROUNDS = [
     trigger: "a js-temporal release ports proposal-temporal 314b112",
     steps: [
       "Delete indianArithmetic.ts + test, indianFields' arithmetic branch, the indian case of hasReadCorrection and ownedModels, and the D5 repros; fixedDay.ts once unused.",
+      LAST_OF_D1_D7,
       `Full wording: ${COMPAT_README} § Removal steps 4.`,
     ],
   },
@@ -80,6 +87,7 @@ export const WORKAROUNDS = [
     trigger: "a js-temporal release contains 10aeb98 (already on main)",
     steps: [
       "Delete the D6 repros and the D6 terms in calendarDateArithmetic.ts.",
+      LAST_OF_D1_D7,
       `Full wording: ${COMPAT_README} § Removal steps 5.`,
     ],
   },
@@ -90,6 +98,7 @@ export const WORKAROUNDS = [
     trigger: "a js-temporal release ports proposal-temporal 0e32ee0",
     steps: [
       "Delete the D7 repro and the D7 terms in calendarDateArithmetic.ts.",
+      LAST_OF_D1_D7,
       `Full wording: ${COMPAT_README} § Removal steps 5.`,
     ],
   },
@@ -127,8 +136,8 @@ export const WORKAROUNDS = [
     trigger:
       "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168) and retries the nudge window; merged to main in PR #361 as 5af905f, so no new filing is needed",
     steps: [
-      "Delete the D11 repros in probeRepros.ts, isNudgeWindowCompatNeeded in capabilities.ts and its export in index.ts, and the defect-4 terms in zonedWallClockDifference.ts (monthTotalBySpec, monthRoundBySpec, the defect-4 term in untilTakesSpecPath, plainUntilWithRounding) and plainDateUntil.ts.",
-      "Keep test/nudgeWindowRetry.test.ts and test/intervalLengthOracle.test.ts, and the progress === 0n branch in nudgeToCalendarUnit (GMT's own fix, not the polyfill's).",
+      "Delete the D11 repros in probeRepros.ts, isNudgeWindowCompatNeeded in capabilities.ts and its export in index.ts, and internal/zonedDifference/nudgeWindow.ts with its calls in zonedWallClockDifference.ts (the monthTotalBySpec and monthRoundBySpec operands in durationTotal and durationRound, the defect-4 term in untilTakesSpecPath, and the plainUntilWithRounding re-export), the plainUntilWithRounding export in internal/index.ts, and its call in plain/calculate/diffDateTime.ts, which calls dt1.until(dt2, { largestUnit, smallestUnit, roundingIncrement, roundingMode }) again, the same object it passes to plainUntilWithRounding now. The last of defects 3–5 to go also deletes untilTakesSpecPath, the // defects 3–5 block in zonedUntil that calls untilAtLimit, and the bySpec blocks in durationTotal and durationRound. Then drop the imports and locals tsc reports unused, and the internal/zonedDifference/operations.ts exports fallow reports unused.",
+      "Keep test/nudgeWindowRetry.test.ts and test/intervalLengthOracle.test.ts, and the progress === 0n branch in nudgeToCalendarUnit (internal/zonedDifference/operations.ts; GMT's own fix, not the polyfill's).",
       `Full wording: ${COMPAT_README} § Removal steps 11.`,
     ],
   },
@@ -267,7 +276,7 @@ export const WORKAROUNDS = [
     trigger:
       'a js-temporal release contains 3c403686d39 ("fix for issues #3141, #3148 and #3149", on main) and tc39/proposal-temporal#3319, so every D22 repro passes, P7D with largestUnit "week" giving P1W among them, and the release gives no value in totalsWithNoValue, noDayCorrection and emptyDaySpan, where TC39 Asserts (tc39/proposal-temporal#3336) and the source on main strips three of them from production builds (read, not run); if #3336 gives these lengths a value instead, the rows, the throws and the repros change together',
     steps: [
-      "Delete the D22 repros and readOrNone in probeRepros.ts with readOrNone's tests in capabilities.test.ts, isNudgeOriginCompatNeeded in capabilities.ts and its export in index.ts, and the defect-5 terms in zonedWallClockDifference.ts (originNeedsSpecPath, originTotalBySpec, originRoundBySpec, the defect-5 term in untilTakesSpecPath), the export of possibleEpochNanoseconds from zonedWallClock.ts, WHAT_BREAKS.D22 in apps/dox/src/data/temporal-compat.ts, and this entry.",
+      "Delete the D22 repros and readOrNone in probeRepros.ts with readOrNone's tests in capabilities.test.ts, isNudgeOriginCompatNeeded in capabilities.ts and its export in index.ts, and internal/zonedDifference/nudgeOrigin.ts with its three calls in zonedWallClockDifference.ts (the originTotalBySpec and originRoundBySpec operands in durationTotal and durationRound, and the defect-5 term in untilTakesSpecPath), the export of possibleEpochNanoseconds from zonedWallClock.ts, WHAT_BREAKS.D22 in apps/dox/src/data/temporal-compat.ts, and this entry. The last of defects 3–5 to go also deletes untilTakesSpecPath, the // defects 3–5 block in zonedUntil that calls untilAtLimit, and the bySpec blocks in durationTotal and durationRound. Then drop the imports and locals tsc reports unused, and the internal/zonedDifference/operations.ts exports fallow reports unused.",
       "Keep the throws in nudgeToCalendarUnit, differenceZonedDateTime, combineDateAndTimeDuration and nudgeToZonedTime, test/laterPassOrigin.test.ts, test/noSpecValue.test.ts and the later-pass rows in internal/lengthFromNow.test.ts: the values are the specification's, but the repros are samples, so run these on the release first and keep D22 if a row fails.",
       `Full wording: ${COMPAT_README} § Removal steps 22.`,
     ],
@@ -291,7 +300,7 @@ export const WORKAROUNDS = [
     trigger:
       "a js-temporal release contains 05ce7a3 (the max.* probes) and 95237e0 (the min.* probes); both are on main",
     steps: [
-      "Delete the defect-1 fallbacks described in the header notes of internal/zonedWallClock.ts and internal/zonedWallClockOperations.ts, and the *AtLimit fallbacks with their mirrored abstract operations in internal/zonedWallClockDifference.ts; each wrapper returns its plain polyfill call.",
+      "Delete the defect-1 fallbacks described in the header notes of internal/zonedWallClock.ts and internal/zonedWallClockOperations.ts, and, in internal/zonedDifference/rangeLimit.ts, the try/catch in runAtRangeLimit: it becomes compute(timeZone) with no fallback argument, and the four () => …AtLimit(…) arguments in internal/zonedWallClockDifference.ts go. untilAtLimit is also called by the // defects 3–5 block in zonedUntil, and totalAtLimit, roundAtLimit and compareAtLimit by calendarArithmetic.ts, nudgeWindow.ts and nudgeOrigin.ts in internal/zonedDifference/. Delete the four *AtLimit functions in internal/zonedDifference/operations.ts only once none of those calls them. Once zoned.D is retired too, delete rangeLimit.ts and each wrapper returns its plain polyfill call. Then drop the imports and locals tsc reports unused, and the internal/zonedDifference/operations.ts exports fallow reports unused.",
       "Delete the zoned.A repros. Run internal/zonedWallClock*.test.ts: no expected value changes.",
     ],
   },
@@ -325,7 +334,7 @@ export const WORKAROUNDS = [
     trigger:
       "a js-temporal release validates the UTC fast path of GetPossibleEpochNanoseconds (upstream-issue draft D; not fixed on main)",
     steps: [
-      "Delete checkUtcValidity and its call in runAtRangeLimit (internal/zonedWallClockDifference.ts), and the zoned.D repros.",
+      "Delete internal/zonedDifference/utcValidity.ts and the guarded call in runAtRangeLimit (internal/zonedDifference/rangeLimit.ts), and the zoned.D repros. If zoned.A is gone too, delete rangeLimit.ts, the reach code and atRangeLimit, and make each wrapper return its plain polyfill call. Then drop the imports and locals tsc reports unused, and the internal/zonedDifference/operations.ts exports fallow reports unused.",
       "Run internal/zonedWallClockDifference.test.ts: no expected value changes.",
     ],
   },

@@ -17,7 +17,6 @@ import { probeCard } from "~/widgets/families/clockcheck/probe-card";
 import { storedSection } from "~/widgets/families/clockcheck/stored-section";
 import { zoneMap } from "~/widgets/families/clockcheck/zone-map";
 import { renderHtml } from "~/widgets/test-fixture";
-import { plainText } from "./clock-change-tense";
 import { moroccoTense } from "./clock-change-tense.fixture";
 import { helpMarkdown } from "./clock-change-help";
 import {
@@ -177,9 +176,7 @@ const MAP: ZoneMapConfig = {
   },
   stopped: new Set(["Africa/Casablanca"]),
   classText: (kind) =>
-    plainText(
-      { stopped: "Stops", "changes-after": "Changes", none: "Never" }[kind],
-    ),
+    ({ stopped: "Stops", "changes-after": "Changes", none: "Never" })[kind],
   releaseOf: (id) => (id === "Africa/Casablanca" ? "9z" : null),
   releaseRange: "9a to 9z",
   mapLabel: "Map of x.",
