@@ -3,7 +3,6 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { afterAll, describe, expect, it } from "vitest";
 
 const root = resolve(import.meta.dirname, "../../..");
 const tracer = pathToFileURL(join(root, "scripts/lib/read-tracer.mjs")).href;

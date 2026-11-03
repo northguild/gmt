@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { Temporal } from "../../internal/temporal";
 import { parseRecurrenceRule } from "../parse/parseRecurrenceRule";
 import { expandRecurrence } from "./expandRecurrence";

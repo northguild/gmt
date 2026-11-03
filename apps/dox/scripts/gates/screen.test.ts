@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { findingLine, formatDuration, formatGatesScreen } from "./screen.mjs";
 
 describe("formatDuration", () => {

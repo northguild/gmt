@@ -133,6 +133,13 @@ These bind every change.
     (`justify-content: space-between`), reserve the width of the longest value with tabular
     figures and `white-space: nowrap`, and never let a readout's text wrap mid-drag.
 
+15. **Tests leave no asynchronous work behind.** Dox files share a worker and often a jsdom, so a
+    timer or callback from one test can fail later under an unrelated test name. Every test that
+    starts a mount owns its `AbortController` or returned handle and tears it down in `afterEach`
+    (or a `try/finally` when appropriate), including fixture helpers. Prefer fake/controlled
+    timers and awaited assertions to wall-clock sleeps. Never rely on file ordering or a later
+    setup reset to clean up work owned by a test.
+
 ## Process
 
 1. Read the execution spec and the `context/dox/built.md` sections it names.

@@ -1,4 +1,3 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { lib } from "~/test/gnss-lib";
 import { GNSS_WEEK_COUNTERS } from "./gnss-names";
 import {

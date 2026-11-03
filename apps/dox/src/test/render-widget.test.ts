@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/dom";
-import { afterEach, describe, expect, it } from "vitest";
 import type { LoadedWidget } from "~/components/ask/widget-registry";
 import { onceDestroy } from "~/lib/widget-mount";
 import { html } from "~/widgets/builders";

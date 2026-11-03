@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { CANADA_MINIMUMS } from "./canada-runtime-minimums";
 import { minimumsMarkdown, type MinimumsText } from "./clock-change-minimums";
 import { MOROCCO_MINIMUMS } from "./morocco-runtime-minimums";

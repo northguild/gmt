@@ -5,7 +5,6 @@
  * widget the real library wrapped in a recorder, so the printed calls can be checked against
  * the calls that ran, and so a test can see that a bare mount never asks the clock.
  */
-import { vi } from "vitest";
 import { screen, within } from "@testing-library/dom";
 import {
   WIDGET_REGISTRY,

@@ -3,7 +3,6 @@
  * string and hour is a value the built library returns; the expected literals
  * below were read from a run of `packages/gmt/dist`.
  */
-import { describe, expect, it } from "vitest";
 import { loadDurationBenchLib } from "./duration-bench-lib";
 import type { DurationBenchLib } from "./duration-bench-lib";
 import {

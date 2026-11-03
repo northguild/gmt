@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
 import plugin from "./dox-src-rules.mjs";
 import { LEGACY_SRC_FILES } from "./legacy-src-files.mjs";
 

@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { maxFrameJump } from "../gate-checks.mjs";
 import { settledMainHeights } from "./grow-frames.mjs";
 

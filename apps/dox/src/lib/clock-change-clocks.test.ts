@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
-import { expectNoAxeViolations } from "~/test/render-widget";
 import { installJsdomShims } from "~/test/jsdom-shims";
+import { expectNoAxeViolations } from "~/test/render-widget";
 import { html } from "~/widgets/builders/html";
 import { widget } from "~/widgets/builders/layout";
 import { clocks } from "~/widgets/families/clockcheck/clocks";

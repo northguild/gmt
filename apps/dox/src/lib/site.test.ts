@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { referenceRoutes } from "~/generated/reference/route-manifest";
 import { SITE_URL, isUnderBase, stripBase, withBase } from "./site";
 

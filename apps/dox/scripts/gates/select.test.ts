@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { importsOf, sitePathOf } from "./graph.mjs";
 import {
   CAP,

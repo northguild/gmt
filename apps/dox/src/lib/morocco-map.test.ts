@@ -3,7 +3,6 @@ import { statSync } from "node:fs";
 import { resolve } from "node:path";
 import { within } from "@testing-library/dom";
 import { geoPath } from "d3-geo";
-import { describe, expect, it, vi } from "vitest";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { moroccoTense } from "./clock-change-tense.fixture";
 import {
@@ -25,11 +24,14 @@ import {
 } from "./zone-map";
 import {
   drawZoneMap,
+  destroyDrawnZoneMaps,
   loadBoundaries,
   mapQueries,
   ringsOf,
   zoneDeps,
 } from "./zone-map.fixture";
+
+afterEach(destroyDrawnZoneMaps);
 
 const FILE = resolve(
   __dirname,
