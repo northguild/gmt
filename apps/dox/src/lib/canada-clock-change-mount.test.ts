@@ -11,6 +11,9 @@
 import { within } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { canadaTense } from "./clock-change-tense.fixture";
+import { regionWhen } from "./clock-change-tense";
+import { canadaKeyPoints, KEY_POINTS } from "~/data/canada-key-points";
+import { keyPointsMarkdown, partsText } from "~/data/clock-change-text";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { getUtcNow } from "@northguild/gmt/utc/get";
 import { installJsdomShims } from "~/test/jsdom-shims";
@@ -402,6 +405,16 @@ describe("the mount", () => {
       }
       expect(within(group).queryByText("NO SIGNAL")).not.toBeInTheDocument();
     }
+    // The map is read on 22 October 2026, before the change: the past form still shows.
+    for (const fact of TABLE_ZONES)
+      expect(
+        within(root).getAllByRole("button", {
+          name: new RegExp(`^${fact.zone}\\s*Stopped changing clocks`),
+        }).length,
+      ).toBeGreaterThan(0);
+    expect(
+      within(root).queryByRole("button", { name: /Stops changing/ }),
+    ).not.toBeInTheDocument();
     await expectNoAxeViolations(root);
     controller.abort();
   });
@@ -530,5 +543,67 @@ describe("the mount", () => {
     await vi.waitFor(() => expect(status).toHaveTextContent(/^$/));
     expect(gets).toBe(2);
     controller.abort();
+  });
+});
+
+const FIRST_POINT =
+  "stopped changing their clocks. On 1 November 2026 at 02:00 local time they did not turn them back. They stay on summer time for good.";
+const SECOND_POINT =
+  "turned the clock back on 1 November 2026 anyway, and shows those places an hour wrong each winter.";
+const FUTURE_WORDS = [
+  /stops? changing/i,
+  /will stop/i,
+  /will not turn/i,
+  /will show/i,
+];
+
+describe("the Key points, in the past tense", () => {
+  it("states them in the past tense only on the page", () => {
+    const root = host();
+    const region = within(root).getByRole("region", { name: "Key points" });
+    const text = flat(region);
+    expect(text).toContain(FIRST_POINT);
+    expect(text).toContain(SECOND_POINT);
+    for (const pattern of FUTURE_WORDS) expect(text).not.toMatch(pattern);
+  });
+
+  it("says the same in the text that runs no code", () => {
+    const markdown = keyPointsMarkdown(KEY_POINTS);
+    expect(markdown).toContain(FIRST_POINT);
+    expect(markdown).toContain(SECOND_POINT);
+    for (const pattern of FUTURE_WORDS) expect(markdown).not.toMatch(pattern);
+  });
+
+  it("types the date and time the library writes", () => {
+    const written = canadaKeyPoints(regionWhen(canadaTense));
+    const blocks = (cards: typeof written) =>
+      cards.flatMap((card) =>
+        card.blocks.flatMap((block) =>
+          block.kind === "p"
+            ? [partsText(block.parts)]
+            : block.items.map(partsText),
+        ),
+      );
+    expect(blocks(KEY_POINTS)).toEqual(blocks(written));
+  });
+});
+
+describe("the whole page, in the past tense", () => {
+  it("states the change in the past tense on a day before it", () => {
+    const root = host(
+      renderCanadaClockChangeTemplate({ tense: canadaTense, keyPoints: true }),
+    );
+    const legend = within(root).getByText(
+      /^Stopped changing clocks on 1 November 2026 at 02:00 local time/,
+    );
+    expect(legend).toBeInTheDocument();
+    const hint = within(root).getByRole("region", {
+      name: /Clock changes/,
+    });
+    expect(flat(hint)).toContain(
+      "the four zones that stopped changing their clocks",
+    );
+    for (const pattern of [/stops? changing/i, /will stop/i, /will not turn/i])
+      expect(root).not.toHaveTextContent(pattern);
   });
 });

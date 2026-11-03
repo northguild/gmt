@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/dom";
 import { describe, expect, it } from "vitest";
-import { canadaTense } from "~/lib/clock-change-tense.fixture";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import type { KeyCard } from "~/data/clock-change-text";
 import { renderHtml } from "../../test-fixture";
@@ -27,7 +26,7 @@ const CARDS: KeyCard[] = [
 
 describe("keyPoints", () => {
   it("is a region named Key points, with a heading for each card", () => {
-    const fixture = renderHtml(keyPoints("x", CARDS, canadaTense));
+    const fixture = renderHtml(keyPoints("x", CARDS));
     const region = screen.getByRole("region", { name: "Key points" });
     expect(
       within(region)
@@ -38,7 +37,7 @@ describe("keyPoints", () => {
   });
 
   it("writes paragraphs and a numbered list", () => {
-    renderHtml(keyPoints("x", CARDS, canadaTense));
+    renderHtml(keyPoints("x", CARDS));
     expect(screen.getByText(/Plain/)).toHaveTextContent("Plain code and bold");
     const items = within(screen.getByRole("list")).getAllByRole("listitem");
     expect(items.map((i) => i.textContent)).toEqual([
@@ -48,7 +47,7 @@ describe("keyPoints", () => {
   });
 
   it("has no accessibility violations", async () => {
-    const fixture = renderHtml(keyPoints("x", CARDS, canadaTense));
+    const fixture = renderHtml(keyPoints("x", CARDS));
     await expectNoAxeViolations(fixture.host);
   });
 });

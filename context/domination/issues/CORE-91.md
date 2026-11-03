@@ -36,3 +36,16 @@ Paths are under `apps/dox/src`. Search each name again before deleting; a later 
 
 - No "Stops changing" or "stop changing" text is left in the Canada checker.
 - `pnpm run validate` stays green.
+
+## Decisions
+
+- Every Canada sentence is past tense only: the page, the chat widget, the `.md` twin and the llms files. The library still writes each date and time (`momentWords`).
+- Canada has Morocco's shape. It reads its words once with `tenseView(lib, CANADA_MOMENTS)`, with no timer, no two-form cell and no tense check.
+- The two-form machinery is deleted, because no checker uses it. [CORE-90](./CORE-90.md) rebuilds it from commit 4ce90269 if it needs words before a date.
+- `CANADA_MOMENTS` stays, because the library writes each zone's words from it (Winnipeg's UTC time differs from Vancouver's). `loadCanadaTense` stays, because the server render and the chat need the words before mounting.
+- `TenseView`, `loadTenseView` and `clock-change-tense.ts` keep their names. `TenseView` holds only `words`.
+- The page's opening sentence reads: "Since 1 November 2026 at 02:00 local time in each zone, `British Columbia`, `Alberta`, the `Northwest Territories` and `Manitoba` stay on summer time all year, and anything with old time zone data shows them an hour off each winter."
+- The second Key point ends "…anyway, and shows those places an hour wrong each winter." Not "since then", which turns false in March 2027 when old data springs forward and agrees again.
+- The server markup's zone list holds zone ids and placeholders; the mount writes the class words, on the base map as well. The legend, the Key points and the changes hint say "stopped" before script runs.
+- The mount tests assert the wording, not the absence of `data-moment` or `data-form`: those attributes no longer exist, and a grep forbids `data-moment` anywhere in `apps/dox/src`.
+- Tests compute Unix time with `convertUtcToUnix` from `@northguild/gmt/utc/convert`, because `lib/date-ban.test.ts` rejects `Date.parse`.

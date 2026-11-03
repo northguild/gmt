@@ -61,7 +61,7 @@ Since 2026-09-20, Morocco and Western Sahara stay on UTC+00 all year and no long
 
 **Tense**
 
-- Dates and times in the words come from the library (`formatZonedDateTime`, `formatUtc`); the verb tense comes from `changeTense` in `lib/clock-change-tense.ts`. Morocco's change has happened, so its wording is past tense only, with no two-form cell and no timer. Canada keeps a before form and an after form until [CORE-91](./CORE-91.md) removes the before form.
+- Dates and times in the words come from the library (`formatZonedDateTime`, `formatUtc`); the checkers' words are past tense only, with no two-form cell and no timer. Canada first kept a before form and an after form until [CORE-91](./CORE-91.md#decisions) removed the before form.
 
 **Release**
 
