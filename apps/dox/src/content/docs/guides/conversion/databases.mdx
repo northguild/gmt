@@ -179,6 +179,55 @@ isValidSqlOffsetDateTime(v)
 // true
 ```
 
+## An offset is not a zone
+
+The offset in this text pins down one exact instant, and nothing more. `2024-07-15 14:30:00+00` is
+half past two on the clock in Reykjavik, which keeps UTC all year, and half past three in London,
+which is on summer time. The text cannot say which city wrote it, or what that city's clock will do
+next. [An offset is not a zone](/guides/zoned-date-operations/offset-instants-and-local-resolution/#an-offset-is-not-a-zone)
+gives the general rule: store the zone for anything still to be scheduled, and the offset for
+anything that already happened.
+
+None of these columns gives the zone back in its text:
+
+- PostgreSQL stores `timestamptz` as UTC, and "the originally stated or assumed time zone is not
+  retained" (§8.5.1.3). The offset it prints belongs to the session `TimeZone`, not to the value.
+- SQL Server keeps the offset each `datetimeoffset` was written with. Microsoft lists the type as
+  keeping its offset and as not aware of daylight saving time.
+- Oracle `TIMESTAMP WITH TIME ZONE` can hold a region name, but the `TZH:TZM` format in the Oracle
+  section prints the offset alone.
+
+`parseSqlOffsetDateTime` keeps the offset it is given and never adds a zone, so the instant it reads
+is exact. To show that instant on a local clock, store it in UTC, and store the IANA zone name (such
+as `Europe/London`) in a column of its own. Set the PostgreSQL session to UTC, so every
+`timestamptz` prints as UTC with `+00`:
+
+```sql
+SET TIME ZONE 'UTC';
+SELECT timestamptz '2024-07-15 15:30:00+01';
+-- 2024-07-15 14:30:00+00
+```
+
+The MySQL section does the same for `TIMESTAMP`. SQL Server and Oracle print the offset or region
+each value was written with, whatever the session says, so write UTC values there at `+00:00`.
+
+Then read the UTC instant, and put it on the stored zone's clock with
+[`convertUtcToZoned`](/reference/utc/convert/convertUtcToZoned/). The same text gives a different
+wall time in each zone:
+
+{/* db-row: gap-utc-to-zone */}
+
+```ts
+import { parseSqlOffsetDateTime } from "@northguild/gmt/instant/parse";
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
+import { convertUtcToZoned } from "@northguild/gmt/utc/convert";
+
+const v = "2024-07-15 14:30:00+00";
+const utc = toOffsetInstant(parseSqlOffsetDateTime(v))?.instant ?? "";
+[convertUtcToZoned(utc, "Atlantic/Reykjavik"), convertUtcToZoned(utc, "Europe/London")]
+// ["2024-07-15T14:30:00+00:00[Atlantic/Reykjavik]","2024-07-15T15:30:00+01:00[Europe/London]"]
+```
+
 ## The matrix
 
 `✓` is a single existing call. `≈` is a short composition of existing calls, run in the snippets
