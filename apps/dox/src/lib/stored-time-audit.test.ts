@@ -5,7 +5,6 @@
  */
 import { classifyStoredZoned } from "@northguild/gmt/zoned/classify";
 import { getDstTransitions } from "@northguild/gmt/zoned/get";
-import { describe, expect, it } from "vitest";
 import {
   AUDIT_MAX_CHARS,
   AUDIT_MAX_LINES,

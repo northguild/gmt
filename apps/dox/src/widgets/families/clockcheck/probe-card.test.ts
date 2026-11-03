@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProbeConfig, VerdictText } from "~/lib/clock-change-probe";
 import { cellsInColumn, expectNoAxeViolations } from "~/test/render-widget";
 import { widget } from "../../builders/layout";

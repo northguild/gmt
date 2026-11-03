@@ -5,7 +5,6 @@
  * with the id prefix `x` must produce a page with no trace of Canada.
  */
 import { screen, within } from "@testing-library/dom";
-import { describe, expect, it } from "vitest";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { html } from "~/widgets/builders/html";

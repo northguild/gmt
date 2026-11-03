@@ -3,7 +3,6 @@
  * tzdb release changes: a 2024 New York value with the wrong offset, so the card cannot drift from
  * what the functions do.
  */
-import { describe, expect, it } from "vitest";
 import { addZoned } from "@northguild/gmt/zoned/calculate";
 import { classifyStoredZoned } from "@northguild/gmt/zoned/classify";
 import {

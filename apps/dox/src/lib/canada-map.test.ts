@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/dom";
-import { describe, expect, it } from "vitest";
 import { isBeforeUtc } from "@northguild/gmt/utc/compare";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import {
@@ -28,10 +27,13 @@ import { STOPPED_ZONES } from "./canada-clock-change";
 import {
   NOW,
   drawZoneMap,
+  destroyDrawnZoneMaps,
   loadBoundaries,
   mapQueries,
   zoneDeps,
 } from "./zone-map.fixture";
+
+afterEach(destroyDrawnZoneMaps);
 
 const boundaries = loadBoundaries("canada");
 const IDS = boundaries.features

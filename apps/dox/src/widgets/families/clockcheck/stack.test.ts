@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/dom";
-import { describe, expect, it } from "vitest";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { html } from "../../builders/html";
 import { renderHtml } from "../../test-fixture";

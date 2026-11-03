@@ -1,12 +1,11 @@
+import { geoContains, geoPath } from "d3-geo";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { geoContains, geoPath } from "d3-geo";
-import { describe, expect, it } from "vitest";
-import { NE_TAG, TBB_TAG } from "../src/lib/data-credits";
 import { CANADA_MAP } from "../src/lib/canada-map";
+import { NE_TAG, TBB_TAG } from "../src/lib/data-credits";
 import { MOROCCO_MAP } from "../src/lib/morocco-map";
-import { MAP_WIDTH } from "../src/lib/zone-map";
 import type { BoundaryCollection } from "../src/lib/zone-map";
+import { MAP_WIDTH } from "../src/lib/zone-map";
 
 /**
  * The three public boundary files are derived databases offered to the public, so each carries the

@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 // jsdom has no layout and no ResizeObserver: each box's size is set by hand, and a stand-in
 // observer lets a test report a resize.

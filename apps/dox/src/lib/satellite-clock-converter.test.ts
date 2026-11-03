@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { lib } from "~/test/gnss-lib";
 import {
   BEFORE_1972_NOTE,

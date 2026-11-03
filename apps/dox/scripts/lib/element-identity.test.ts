@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cssPathOf, identityOf, identityScript } from "./element-identity.mjs";
 
 const html = `

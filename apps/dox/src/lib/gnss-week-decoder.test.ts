@@ -1,4 +1,3 @@
-import { describe, expect, it, vi } from "vitest";
 import { lib } from "~/test/gnss-lib";
 import {
   CUSTOM_PRESET_ID,

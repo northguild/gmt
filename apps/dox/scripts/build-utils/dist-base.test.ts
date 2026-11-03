@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { LANDING_URL } from "../../src/lib/site";
 import {
   badJsLiterals,
   badLinksInMarkdown,
@@ -11,7 +11,6 @@ import {
   baseHelperNames,
   LANDING,
 } from "./dist-base";
-import { LANDING_URL } from "../../src/lib/site";
 
 const values = (found: Array<{ value: string }>) => found.map((f) => f.value);
 

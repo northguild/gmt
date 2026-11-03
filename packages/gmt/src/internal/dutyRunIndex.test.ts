@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import type { DutyLogEntry } from "./dutyLog";
 import {
   countEvents,
@@ -9,8 +8,8 @@ import {
   interruptionResetAt,
   lastAtLeastUntil,
   lastEntryBefore,
-  latestPairFrom,
   latestAtLeast,
+  latestPairFrom,
   logStartBefore,
   runEndingAt,
   runIndex,

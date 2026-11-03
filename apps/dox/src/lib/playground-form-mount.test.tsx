@@ -7,7 +7,6 @@
  */
 import { screen, waitFor, within } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "~/widgets/test-fixture";

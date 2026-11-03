@@ -1,4 +1,3 @@
-import { afterEach, vi } from "vitest";
 import { expiryLib as lib } from "~/test/expiry-lib";
 import { showExpiryCalculatorInput } from "./dox-tools";
 import {
