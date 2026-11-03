@@ -197,9 +197,16 @@ jobs:
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
+      # Node 26, not 24 like the mode job, because this job runs npm. Packing runs
+      # each package's `prepack`, and gmt-oxlint's is `npm run build`. `npm run`
+      # enforces the root package.json's devEngines.runtime (^26.12.1) and exits
+      # with EBADDEVENGINES on any other Node. pnpm does not, which is why only
+      # this job broke. 1.21.0's pack failed on Node 24 this way. The
+      # `release-pack` job in ci.yml packs every release PR the way this job
+      # does, so change its Node and its install, build and pack steps with these.
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26
           check-latest: true
           registry-url: "https://registry.npmjs.org"
           # Deliberately no `cache: pnpm` here, unlike every other job. npm's
@@ -208,7 +215,7 @@ jobs:
           # This job runs a handful of times a month; a cold install is cheap.
 
       # Trusted publishing needs npm 11.5.1 or later, and the npm bundled with
-      # Node 24 is newer than that. Use it as is: installing `npm@latest` here
+      # Node 26 is newer than that. Use it as is: installing `npm@latest` here
       # would run whatever npm is tagged latest on release day with publish rights.
 
       - run: pnpm install --frozen-lockfile --no-runtime

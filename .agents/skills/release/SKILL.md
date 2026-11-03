@@ -108,6 +108,21 @@ Read `git status` and `git diff` in the tree. Stop without committing if either 
 GitHub Release will show, and changing it is the reviewer's decision on the pull request. Never
 hand-edit a version.
 
+**Then pack what the merge would publish**, the way the Release workflow does, with `<dir>` outside
+the tree:
+
+```bash
+pnpm --filter "./packages/*" --if-present run build
+pnpm exec changeset publish-plan --output <dir>/publish-plan.json
+pnpm exec changeset pack --from-publish-plan <dir>/publish-plan.json --out-dir <dir>/pack
+```
+
+Stop without committing if any command fails, or if `<dir>/pack` does not hold one `.tgz` for each
+package step 3 found. Report the error. Do not fix it on the release branch: a fix to a package needs
+its own changeset, and the Release workflow does not publish while a changeset is pending. CI's
+`Release pack dry run` job packs the tarballs again on the pull request, on the Release workflow's
+Node, so it catches a failure that only happens in CI (#453).
+
 ## 6. Commit, push and open the pull request
 
 - **One commit holding everything step 4 produced.** Subject: `release: v<version>` with the
@@ -135,7 +150,8 @@ Write the body in plain English (the [`plain-english` skill](../plain-english/SK
   in Herdr.
 - Every version that moved, from → to.
 - The pull request's URL, and that **nothing is published until a person merges it**.
-- Anything step 5 flagged.
+- Anything step 5 flagged, and the tarballs the pack in step 5 made.
+- That CI's `Release pack dry run` job has to pass before anyone merges.
 - What PUBLISHING.md says to do after the merge.
 - That the release tree is still there. Remove it after the merge, with `worktree remove
   release/<name>` or `git worktree remove <path>`.
