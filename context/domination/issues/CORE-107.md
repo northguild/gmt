@@ -32,8 +32,8 @@ GMT opened [you-dont-need/You-Dont-Need-Momentjs#159](https://github.com/you-don
 - **You-Dont-Need-Momentjs #159** as a synced `listings` entry on `/upstream`. The Temporal
   filings, their tally and their tests do not change.
 
-Out of scope: editing any `CHANGELOG.md`, a logo or memorial styling, release data from npm, a
-Dox chat tool.
+Out of scope: editing any `CHANGELOG.md` beyond the one wrong name in the 1.14.1 entries
+(Decision 5), a logo or memorial styling, release data from npm, a Dox chat tool.
 
 ## What gmt provides (do not re-implement)
 
@@ -52,8 +52,10 @@ Dox chat tool.
 2. No logo, plate or "In memoriam". One plain paragraph sits under the `@burglekitt/<pkg>` heading.
 3. The plugin changelogs are in: `/changelog/gmt-eslint/`, `/gmt-oxlint/`, `/gmt-biome/`.
 4. YDNM #159 is a separate synced `listings` list in a "Beyond Temporal" section on `/upstream`.
-5. `CHANGELOG.md` is left alone, the wrong 1.14.1 line ("`@northguild/gmt` will receive no further
-   updates") included. The page shows it verbatim.
+5. The 1.14.1 entry in all four changelogs said "`@northguild/<pkg>` will receive no further
+   updates". It meant `@burglekitt/<pkg>`. Planning left it alone, but on the page it sits under
+   "install `@northguild/<pkg>`" and contradicts that line, so the review of #457 had the name
+   fixed in all four files, with an empty changeset. The pages still show every entry verbatim.
 6. Sidebar: a top-level "Changelog" group, four links.
 7. Release dates come from the tags at build time, printed as the site prints dates (`YYYY-MM-DD`,
    via gmt). Only a package's newest version may lack a tag; it shows "Not yet released". Any older
