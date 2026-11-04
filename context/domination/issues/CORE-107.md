@@ -52,15 +52,13 @@ Out of scope: editing any `CHANGELOG.md` beyond the one wrong name in the 1.14.1
 1. Scope comes from each version's tag, per package: `@burglekitt/gmt` is 1.0.0 to 1.14.1,
    `@northguild/gmt` 1.14.2 on; the plugins split by their own tags. No hand-kept boundary file.
 2. Each `@burglekitt/<pkg>` group opens with an "In memoriam" plate: the old logo and one
-   sentence built from the groups, never typed. Planning dropped it while the logo was missing;
-   the owner supplied the logo in review of #457. The releases under it look like every other
+   sentence built from the groups, never typed. The releases under it look like every other
    release. The page never shows a stand-in logo.
 3. The plugin changelogs are in: `/changelog/gmt-eslint/`, `/gmt-oxlint/`, `/gmt-biome/`.
 4. YDNM #159 is a separate synced `listings` list in a "Beyond Temporal" section on `/upstream`.
-5. The 1.14.1 entry in all four changelogs said "`@northguild/<pkg>` will receive no further
-   updates". It meant `@burglekitt/<pkg>`. Planning left it alone, but on the page it sits under
-   "install `@northguild/<pkg>`" and contradicts that line, so the review of #457 had the name
-   fixed in all four files, with an empty changeset. The pages still show every entry verbatim.
+5. The 1.14.1 entry in all four changelogs names `@burglekitt/<pkg>` as the package that gets no
+   further updates, so it agrees with the plate above it. An empty changeset covers that edit.
+   The pages show every entry verbatim.
 6. Sidebar: a top-level "Changelog" group, four links.
 7. Release dates come from the tags at build time, printed as the site prints dates (`YYYY-MM-DD`,
    via gmt). Only a package's newest version may lack a tag; it shows "Not yet released". Any older
