@@ -47,6 +47,13 @@
  *   discovery found that the committed file lacks. A live file left over from an older commit
  *   therefore cannot hide a filing that commit added.
  *
+ * Listings are the one other kind of record: a pull request GMT opened on a project outside
+ * Temporal (a comparison list that should include GMT). A listing fixes no Temporal defect, so it
+ * is not a filing and is counted nowhere. Its only hand-written field is `summary`; `sync` and
+ * `refresh` read the rest from GitHub for every committed listing. Nothing discovers listings:
+ * a new one is added to the committed file by hand with `repo`, `number`, `kind` and `summary`,
+ * and `pnpm upstream:sync` fills in the rest.
+ *
  * Discovery (`gh search issues --repo <repo> --author <login> --include-prs`, once for each login
  * in `AUTHORS`) is what makes a new filing show up with no code change: one of us files it, and
  * either command's next run finds it. An existing filing the search happens to miss (a query quirk, a temporary API
@@ -61,7 +68,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -69,7 +76,9 @@ import { formatJson } from "./lib/format-json.mjs";
 import { loadGmt, tryLoadGmt } from "./lib/gmt.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const FILE = "apps/dox/src/data/upstream-filings.json";
+// `UPSTREAM_FILE` points `check` at a fixture, so a test can prove it fails on a bad file.
+const FILE =
+  process.env.UPSTREAM_FILE ?? "apps/dox/src/data/upstream-filings.json";
 const LIVE_FILE = "apps/dox/src/generated/upstream-filings.live.json";
 const REPROS = [
   "packages/gmt/src/internal/temporalCompat/probeRepros.ts",
@@ -104,6 +113,10 @@ const HAND_WRITTEN_FIELDS = [
   "contributionUrl",
   "outcome",
 ];
+/** Fields the owner sets by hand on a listing. */
+const LISTING_HAND_WRITTEN_FIELDS = ["summary"];
+/** Fields a listing must never carry: they belong to a filing about a Temporal defect. */
+const FILING_ONLY_FIELDS = ["gmtGuard", "gmtNote", "work", "outcome", "role"];
 const EMPTY_HAND_WRITTEN = {
   summary: "",
   work: null,
@@ -252,6 +265,33 @@ function buildFiling({ repo, number, kind }, hw, synced) {
   };
 }
 
+/** One listing record: its identity, its hand-written `summary`, then what GitHub reports. */
+function buildListing({ repo, number, kind }, summary, synced) {
+  return {
+    repo,
+    number,
+    kind,
+    summary,
+    title: synced.title,
+    url: synced.url,
+    state: synced.state,
+    draft: synced.draft,
+    reviewDecision: synced.reviewDecision,
+    comments: synced.comments,
+    maintainerComments: synced.maintainerComments,
+    createdAt: synced.createdAt,
+    updatedAt: synced.updatedAt,
+    closedAt: synced.closedAt,
+    mergedAt: synced.mergedAt,
+  };
+}
+
+/** The hand-written fields of a committed listing (`summary` only). */
+const listingHandWritten = (listing) =>
+  Object.fromEntries(
+    LISTING_HAND_WRITTEN_FIELDS.map((k) => [k, listing?.[k] ?? ""]),
+  );
+
 const byRepoThenNumber = (a, b) =>
   a.repo.localeCompare(b.repo) || a.number - b.number;
 
@@ -337,8 +377,8 @@ function knownGuards() {
 // ---------------------------------------------------------------- files
 
 function readJsonFile(relPath) {
-  const path = `${ROOT}${relPath}`;
-  if (!existsSync(path)) return { checked: null, filings: [] };
+  const path = resolve(ROOT, relPath);
+  if (!existsSync(path)) return { checked: null, filings: [], listings: [] };
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
@@ -383,10 +423,23 @@ async function sync() {
     )
     .sort(byRepoThenNumber);
 
-  const output = { checked: gmt.getUtcNow(), filings };
-  writeFileSync(`${ROOT}${FILE}`, formatJson(output));
+  // Listings are never discovered: the committed file decides which exist.
+  const listings = (existing.listings ?? [])
+    .map((l) =>
+      buildListing(
+        l,
+        listingHandWritten(l).summary,
+        fetchSynced(l.repo, l.number, l.kind),
+      ),
+    )
+    .sort(byRepoThenNumber);
 
-  console.log(`upstream: wrote ${filings.length} filing(s) to ${FILE}`);
+  const output = { checked: gmt.getUtcNow(), filings, listings };
+  writeFileSync(resolve(ROOT, FILE), formatJson(output));
+
+  console.log(
+    `upstream: wrote ${filings.length} filing(s) and ${listings.length} listing(s) to ${FILE}`,
+  );
   if (newlyFound.length > 0) {
     console.log(
       `upstream: NEW — fill in the hand-written fields for:\n` +
@@ -497,6 +550,31 @@ async function fetchAllFilings(committedByKey, { timeLeft, withBudget }) {
   return filings.sort(byRepoThenNumber);
 }
 
+/**
+ * Every committed listing, freshly synced. One that cannot be read in time keeps its committed
+ * fields, so a slow listing never costs the run its filings.
+ */
+async function fetchAllListings(committedListings, { timeLeft, withBudget }) {
+  const listings = await withBudget(
+    Promise.all(
+      committedListings.map(async (l) => {
+        try {
+          const synced = await fetchSyncedAsync(
+            l.repo,
+            l.number,
+            l.kind,
+            timeLeft(),
+          );
+          return buildListing(l, listingHandWritten(l).summary, synced);
+        } catch {
+          return l;
+        }
+      }),
+    ),
+  );
+  return listings.sort(byRepoThenNumber);
+}
+
 async function refresh() {
   // `refresh` must never break dev or CI, so an unbuilt GMT is one warning and no write — the same
   // contract it already honours for a missing or unauthenticated `gh`.
@@ -515,14 +593,19 @@ async function refresh() {
     return;
   }
   const budget = startRefreshBudget();
-  const committedByKey = new Map(readFile().filings.map((f) => [keyOf(f), f]));
+  const committed = readFile();
+  const committedByKey = new Map(committed.filings.map((f) => [keyOf(f), f]));
 
   try {
     const filings = await fetchAllFilings(committedByKey, budget);
+    const listings = await fetchAllListings(committed.listings ?? [], budget);
     mkdirSync(dirname(livePath), { recursive: true });
-    writeFileSync(livePath, formatJson({ checked: gmt.getUtcNow(), filings }));
+    writeFileSync(
+      livePath,
+      formatJson({ checked: gmt.getUtcNow(), filings, listings }),
+    );
     console.log(
-      `upstream: refreshed ${filings.length} filing(s) into ${LIVE_FILE}`,
+      `upstream: refreshed ${filings.length} filing(s) and ${listings.length} listing(s) into ${LIVE_FILE}`,
     );
   } catch (error) {
     console.warn(
@@ -767,6 +850,50 @@ function checkFiling(f, { guards, seen, report, gmt }) {
   if (f.summary === "") report.warnings.push(`${label} — empty summary`);
 }
 
+/** A listing needs these and nothing that belongs to a filing. */
+const LISTING_REQUIRED_FIELDS = REQUIRED_FIELDS.filter(
+  (field) =>
+    ![
+      "work",
+      "pairsWith",
+      "closes",
+      "dependsOn",
+      "gmtGuard",
+      "gmtNote",
+    ].includes(field),
+);
+
+function checkListing(l, { seen, report, gmt }) {
+  const label = `${FILE}: listing ${l.repo ?? "?"}#${l.number ?? "?"}`;
+  for (const field of LISTING_REQUIRED_FIELDS) {
+    if (!Object.hasOwn(l, field))
+      report.problems.push(`${label} — missing field "${field}"`);
+  }
+  for (const field of FILING_ONLY_FIELDS) {
+    if (Object.hasOwn(l, field))
+      report.problems.push(
+        `${label} — "${field}" belongs to a filing, not a listing`,
+      );
+  }
+  if (REPOS.includes(l.repo)) {
+    report.problems.push(
+      `${label} — ${l.repo} is a Temporal repository, so this belongs in "filings"`,
+    );
+  }
+  checkDuplicate(l, label, seen, report);
+  checkKindAndUrl(l, label, report);
+  if (!STATE_VALUES.includes(l.state)) {
+    report.problems.push(`${label} — state "${l.state}" is not open/closed`);
+  }
+  if (!isNullOrOneOf(l.reviewDecision, REVIEW_DECISIONS)) {
+    report.problems.push(
+      `${label} — reviewDecision "${l.reviewDecision}" is not a known GitHub value or null`,
+    );
+  }
+  checkDates(l, label, report, gmt);
+  if (l.summary === "") report.warnings.push(`${label} — empty summary`);
+}
+
 function reportCheck({ problems, warnings }, data) {
   for (const w of warnings) console.warn(`upstream: warning: ${w}`);
 
@@ -776,7 +903,9 @@ function reportCheck({ problems, warnings }, data) {
     );
     process.exit(1);
   }
-  console.log(`upstream: ${data.filings.length} filing(s) OK`);
+  console.log(
+    `upstream: ${data.filings.length} filing(s) and ${(data.listings ?? []).length} listing(s) OK`,
+  );
 }
 
 async function check() {
@@ -787,6 +916,7 @@ async function check() {
   checkStamp(data.checked, report, gmt);
   const context = { guards: knownGuards(), seen: new Set(), report, gmt };
   for (const f of data.filings ?? []) checkFiling(f, context);
+  for (const l of data.listings ?? []) checkListing(l, context);
   reportCheck(report, data);
 }
 

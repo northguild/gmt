@@ -1,0 +1,40 @@
+---
+/**
+ * The /upstream/ "Beyond Temporal" table: pull requests GMT opened on projects outside Temporal.
+ * They are not filings, so they have their own table and are in no tally. Built from `listings`
+ * in `upstream-filings.ts` (live refresh when GitHub is reachable, the committed snapshot
+ * otherwise); nothing is fetched in the browser. It reuses the tracker's entries layout, so a
+ * phone gets one stacked entry per pull request. Table styles are `upstream-table.css`, shared with
+ * the tracker.
+ */
+import "./upstream-table.css";
+import { listings } from "../data/upstream-filings";
+import { LISTING_COLUMNS as COLUMNS, listingStatus } from "../lib/upstream-status";
+import { asDate } from "../lib/upstream-summary";
+---
+
+{
+  listings.length > 0 && (
+    <div class="gmt-ref-table" data-kind="content" data-layout="entries" data-label="Pull requests to other projects">
+      <table class="gmt-upstream-table">
+        <thead>
+          <tr>{COLUMNS.map((column) => <th>{column}</th>)}</tr>
+        </thead>
+        <tbody>
+          {listings.map((l) => (
+            <tr>
+              <td data-col={COLUMNS[0]}>
+                <a href={l.url}>{l.repo}#{l.number}</a>
+                <p>{l.title}</p>
+              </td>
+              <td data-col={COLUMNS[1]}>{l.summary}</td>
+              <td data-col={COLUMNS[2]}>{listingStatus(l)}</td>
+              <td data-col={COLUMNS[3]}>{l.comments}</td>
+              <td data-col={COLUMNS[4]}>{asDate(l.updatedAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}

@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
+import { parse as parseYaml } from "yaml";
 import {
   affected,
+  afterMerge,
   ALL_CHECKS,
   assertRulesValid,
   CHECKS,
@@ -179,6 +181,34 @@ describe("affected: which checks a change runs", () => {
       ],
     },
     {
+      name: "a package changelog runs the checks of the Dox page it becomes",
+      changes: [{ path: "packages/gmt/CHANGELOG.md", status: "M" }],
+      checks: [
+        "build:gmt",
+        "dox-pages",
+        "build:dox",
+        "api-surface",
+        "dox-dist",
+        "dox-tables",
+        "typecheck:dox",
+        "test:dox",
+      ],
+    },
+    {
+      name: "a plugin's changelog runs the checks of the Dox page it becomes",
+      changes: [{ path: "packages/gmt-biome/CHANGELOG.md", status: "M" }],
+      checks: [
+        "build:gmt",
+        "dox-pages",
+        "build:dox",
+        "api-surface",
+        "dox-dist",
+        "dox-tables",
+        "typecheck:dox",
+        "test:dox",
+      ],
+    },
+    {
       name: "a deleted script skips the format check",
       changes: [{ path: "scripts/deps.mjs", status: "D" }],
       checks: ["deps", "build:gmt", "test:dox"],
@@ -261,6 +291,45 @@ describe("affected: which checks a change runs", () => {
   });
 });
 
+describe("afterMerge: what a push to main still runs", () => {
+  it("a pull request that ran every check leaves nothing", () => {
+    const result = afterMerge([{ path: "pnpm-lock.yaml", status: "M" }]);
+    expect(result.checks).toEqual([]);
+    expect(result.full).toBe(false);
+  });
+
+  it("a pull request that ran no check leaves every check", () => {
+    const result = afterMerge(["context/skills.md"]);
+    expect(result.checks).toEqual(ALL_CHECKS);
+    expect(result.full).toBe(true);
+    expect(result.reasons.get("test:gmt")).toEqual([
+      "skipped on the pull request",
+    ]);
+  });
+
+  it("library source leaves the checks it skipped and the build the Dox lint needs", () => {
+    const changes = [{ path: "packages/gmt/src/zone/zone.ts", status: "M" }];
+    expect(afterMerge(changes).checks).toEqual([
+      "deps",
+      "build:gmt-oxlint",
+      "lint:dox",
+      "typecheck:gmt-oxlint",
+      "test:gmt-oxlint",
+    ]);
+  });
+
+  it("brings back a build the pull request ran when a skipped check needs it", () => {
+    // An edited README runs build:gmt and stats, but not compat, which also needs build:gmt.
+    const changes = [{ path: "README.md", status: "M" }];
+    expect(affected(changes).checks).toContain("build:gmt");
+    const result = afterMerge(changes);
+    expect(result.checks).toContain("compat");
+    expect(result.checks).toContain("build:gmt");
+    expect(result.reasons.get("build:gmt")).toContain("needed by compat");
+    expect(result.checks).not.toContain("stats");
+  });
+});
+
 describe("affected: the rules and checks are well formed", () => {
   it("every rule and every need names a check that exists", () => {
     expect(() => assertRulesValid()).not.toThrow();
@@ -301,6 +370,35 @@ describe("affected: the rules and checks are well formed", () => {
         )
       )
         expect(check.needs ?? [], check.id).toContain("build:gmt");
+    }
+  });
+
+  it("a CI step gated on one check runs every script that check runs", () => {
+    // ci.yml repeats some checks' commands by hand. A script added to a check's `run` and not to
+    // its CI step runs in `validate` but never in CI, and whatever reads its output breaks there.
+    const workflow = parseYaml(
+      readFileSync(
+        new URL("../../../.github/workflows/ci.yml", import.meta.url),
+        "utf8",
+      ),
+    ) as { jobs: Record<string, { steps?: { if?: string; run?: string }[] }> };
+    const ciRuns = new Map<string, string>();
+    for (const job of Object.values(workflow.jobs)) {
+      for (const step of job.steps ?? []) {
+        const gate = /^contains\(fromJSON\(env\.CHECKS\), '([\w:-]+)'\)$/.exec(
+          step.if?.trim() ?? "",
+        );
+        if (gate && step.run)
+          ciRuns.set(gate[1], `${ciRuns.get(gate[1]) ?? ""}\n${step.run}`);
+      }
+    }
+    expect(ciRuns.has("dox-pages")).toBe(true);
+    for (const check of CHECKS) {
+      const ci = ciRuns.get(check.id);
+      if (ci === undefined) continue;
+      for (const [script] of check.run.matchAll(/[\w-]+\.(?:mjs|ts)\b/g)) {
+        expect(ci, `CI's ${check.id} step runs ${script}`).toContain(script);
+      }
     }
   });
 

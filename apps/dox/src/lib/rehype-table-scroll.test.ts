@@ -1,5 +1,8 @@
 import { CODE_BREAK_CLASS } from "./code-break";
-import rehypeTableScroll, { BOX_CLASS } from "./rehype-table-scroll";
+import rehypeTableScroll, {
+  BOX_CLASS,
+  CHANGELOG_CLASS,
+} from "./rehype-table-scroll";
 
 type Node = {
   type: string;
@@ -116,6 +119,45 @@ describe("rehypeTableScroll code break points", () => {
     run({ type: "root", children: [t] });
     expect(firstCode(t).properties).toEqual({});
     expect(firstCode(t).children).toEqual([text("2024-03-10")]);
+  });
+
+  it("breaks a call's code after its parenthesis only inside the changelog wrapper", () => {
+    const call = 'isLeapSecond("2024-06-15T12:34:60Z")';
+    const plain = cellTable(call);
+    const wrapped = cellTable(call);
+    run({
+      type: "root",
+      children: [plain, el("div", [wrapped], { className: [CHANGELOG_CLASS] })],
+    });
+    expect(firstCode(plain).properties).toEqual({});
+    expect(firstCode(wrapped).properties).toEqual({
+      className: [CODE_BREAK_CLASS],
+    });
+    expect(
+      firstCode(wrapped).children?.filter((c) => c.tagName === "span"),
+    ).toHaveLength(3);
+  });
+
+  it("breaks a call's code between the raw wrapper nodes Markdown produces", () => {
+    const call = 'isLeapSecond("2024-06-15T12:34:60Z")';
+    const before = cellTable(call);
+    const inside = cellTable(call);
+    const after = cellTable(call);
+    run({
+      type: "root",
+      children: [
+        before,
+        { type: "raw", value: `<div class="${CHANGELOG_CLASS}">` },
+        inside,
+        { type: "raw", value: "</div>" },
+        after,
+      ],
+    });
+    expect(firstCode(before).properties).toEqual({});
+    expect(firstCode(inside).properties).toEqual({
+      className: [CODE_BREAK_CLASS],
+    });
+    expect(firstCode(after).properties).toEqual({});
   });
 
   it("leaves code outside a table alone", () => {

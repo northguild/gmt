@@ -63,6 +63,9 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The changelog pages read the release tags.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
 

@@ -11,7 +11,12 @@
  *   node scripts/affected.mjs show [path...]   print the plan for the given paths, or for the change
  *   node scripts/affected.mjs github --base <sha> --head <sha>
  *                                              CI: write the plan to $GITHUB_OUTPUT
- *   node scripts/affected.mjs github --full    CI: every check, for a push to main
+ *   node scripts/affected.mjs github --full    CI: every check, for a push to main that
+ *                                              cannot be matched to a passing pull request
+ *   node scripts/affected.mjs github --after-merge --base <sha> --head <sha>
+ *                                              CI: a push to main that merged a pull request
+ *                                              whose CI passed on the same tree: only the checks
+ *                                              that pull request skipped, with their builds
  *   node scripts/affected.mjs audit [--only <ids>] [--logs <dir>]
  *                                              run every check with each file it reads recorded,
  *                                              and list the reads the rules miss; exit 1 on any.
@@ -37,6 +42,7 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   affected,
+  afterMerge,
   ALL_CHECKS,
   assertRulesValid,
   CHECKS,
@@ -87,7 +93,8 @@ function parseArgs(argv) {
   const opts = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--full" || arg === "--dry-run") opts[arg.slice(2)] = true;
+    if (["--full", "--dry-run", "--after-merge"].includes(arg))
+      opts[arg.slice(2)] = true;
     else if (["--base", "--head", "--checks", "--only", "--logs"].includes(arg))
       opts[arg.slice(2)] = argv[++i];
     else if (arg === "--")
@@ -233,14 +240,21 @@ function github(opts) {
     const changes = parseStatus(
       git("diff", "--name-status", "--no-renames", opts.base, opts.head),
     );
-    p = {
-      ...affected(changes),
-      header: `${changes.length} changed files, ${opts.base.slice(0, 10)}..${opts.head.slice(0, 10)}`,
-    };
+    const range = `${changes.length} changed files, ${opts.base.slice(0, 10)}..${opts.head.slice(0, 10)}`;
+    // The workflow has already checked that the pull request's CI passed on this tree. Its
+    // checks were planned from the same diff, because the ruleset only merges a pull request
+    // that is up to date with main, so `--base` is the commit it was planned against.
+    p = opts["after-merge"]
+      ? { ...afterMerge(changes), header: `${range}, after the merge` }
+      : { ...affected(changes), header: range };
     console.log(
       `${p.checks.length} of ${ALL_CHECKS.length} checks, for ${p.header}.`,
     );
-    for (const line of describe(p, { local: false })) console.log(line);
+    if (opts["after-merge"] && p.checks.length === 0)
+      console.log("  The pull request ran every check on this tree.");
+    else if (opts["after-merge"] && p.full)
+      console.log("  The pull request ran no check, so every check runs.");
+    else for (const line of describe(p, { local: false })) console.log(line);
   }
   const has = (...prefixes) =>
     p.checks.some((id) =>
