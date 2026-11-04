@@ -88,8 +88,10 @@
  *                 `valueOf` reads that.
  *
  * Rects are measured from the widget root's corner, so the page scrolling to
- * keep a focused handle in view is not a move. Every rect is rounded to the
- * whole pixel and compared with the first recording (the control at its minimum). The script exits non-zero if any
+ * keep a focused handle in view is not a move. Every rect is compared
+ * raw (a change is more than half a pixel) with the first recording (the control at its minimum).
+ * The pointer drag compares with a fresh recording taken after the control is scrolled into view,
+ * and a page that moves on that scroll fails as `scroll moved`. The script exits non-zero if any
  * differs, and prints the element, the step and the two rects.
  *
  * A pass must also have checked something. The script fails when:
@@ -134,7 +136,12 @@
  * `GATE_REPORT` set, every failure is also a finding and the run ends with its measured count.
  */
 
-import { chromium, firefox, webkit } from "@playwright/test";
+import { launchBrowser } from "./lib/browser-launch.mjs";
+import {
+  diffSnapshots,
+  groupDragProblems,
+  scrollProblems,
+} from "./lib/readout-diff.mjs";
 import {
   blockOffSite,
   controlPresence,
@@ -148,7 +155,7 @@ import { identityScript } from "./lib/element-identity.mjs";
 import { control, controlLabel, gate, resolveMisses } from "./lib/locate.mjs";
 
 const GATE = "readout-still";
-const ENGINES = { chromium, webkit, firefox };
+const ENGINES = { chromium: true, webkit: true, firefox: true };
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
@@ -561,48 +568,26 @@ function finding(rule, message, selector = null, target = currentWidget) {
   recordFinding({ gate: GATE, rule, target, selector, message, ...current });
 }
 
-/**
- * One drag problem as `{ key, message }`. A moved element reads
- * `<step> (value <v>): <element>: {before} -> {after}`; the key is the element, so a drag that
- * moves it on every step is one finding, and the message names the first step that moved it.
- */
-function dragProblem(problem) {
-  const body = problem.split(": {")[0];
-  const at = body.lastIndexOf("): ");
-  if (at === -1) return { key: body, message: problem };
-  const element = body.slice(at + 3);
-  return {
-    key: element,
-    message: `${element} moved at ${body.slice(0, at + 1)}`,
-  };
-}
-
 /** Findings already written, so a repeat drag of the same handle adds nothing. */
 const reported = new Set();
 
 /**
  * A drag's problems as findings: one per page, browser, width, handle and element, however many
- * steps or drags moved it.
+ * steps or drags moved it (see `groupDragProblems`).
  */
 function recordDragFindings(result, selector) {
-  for (const p of result.problems) {
-    const { key, message } = dragProblem(p);
+  for (const g of groupDragProblems(result.problems)) {
     const id = [
       current.page,
       current.browser,
       current.width,
       selector,
-      key,
+      g.key,
+      g.rule,
     ].join("|");
     if (reported.has(id)) continue;
     reported.add(id);
-    const stuck = /never moved|exposes no value/.test(p);
-    finding(
-      stuck ? "value-not-moved" : "readout-moved",
-      message,
-      selector,
-      stuck ? currentWidget : key.replace(/^[a-z]+:/, ""),
-    );
+    finding(g.rule, g.message, selector, g.target ?? currentWidget);
   }
 }
 
@@ -619,13 +604,6 @@ async function settled(page, root) {
     await page.waitForTimeout(150);
   }
 }
-
-const rounded = (r) => ({
-  left: Math.round(r.left),
-  top: Math.round(r.top),
-  width: Math.round(r.width),
-  height: Math.round(r.height),
-});
 
 /** Runs in the page: the named rects, in document order. */
 function snapshotInPage(
@@ -693,7 +671,7 @@ function snapshotInPage(
   }
   // Every table cell of the widget, whatever its scope or whether it is a drawn chart's: a
   // column that is narrower on one frame than the next shifts the readouts beside it, and the
-  // cell width is where that shows first. Compared by width on its own (see `diffCells`).
+  // cell width is where that shows first. Compared by width on its own (see `diffCells` in `lib/readout-diff.mjs`).
   const tables = [...widget.querySelectorAll("table")];
   for (const el of widget.querySelectorAll("th, td")) {
     if (el.getClientRects().length === 0) continue;
@@ -711,21 +689,6 @@ function snapshotInPage(
     });
   }
   return out;
-}
-
-/** Cell widths that differ from the baseline by more than half a pixel. */
-function diffCells(base, now) {
-  const problems = [];
-  const later = new Map(now.map((c) => [c.key, c]));
-  for (const a of base) {
-    const b = later.get(a.key);
-    if (b && Math.abs(a.width - b.width) > 0.5) {
-      problems.push(
-        `${a.name}: {"width":${a.width.toFixed(1)}} -> {"width":${b.width.toFixed(1)}}`,
-      );
-    }
-  }
-  return problems;
 }
 
 async function snapshot(page, ctl, tool) {
@@ -765,42 +728,6 @@ async function namedPartsAbsent(page, tool) {
     else if (!(await root.locator(selector).count())) absent.push(name);
   }
   return absent;
-}
-
-/** The differences between the baseline and a later snapshot, as strings. */
-function diffSnapshots(allBase, allNow, isHandle, pressed = false) {
-  const problems = diffCells(
-    allBase.filter((e) => e.kind === "cell"),
-    allNow.filter((e) => e.kind === "cell"),
-  );
-  const base = allBase.filter((e) => e.kind !== "cell");
-  const now = allNow.filter((e) => e.kind !== "cell");
-  if (base.length !== now.length) {
-    problems.push(`element count ${base.length} -> ${now.length}`);
-    return problems;
-  }
-  base.forEach((a, i) => {
-    const b = now[i];
-    if (a.key !== b.key) {
-      problems.push(`element ${i}: ${a.name} -> ${b.name}`);
-      return;
-    }
-    // A pressed handle grows 8% (its `:active` scale): its own box is skipped
-    // while the pointer is down. Everything else is still compared.
-    if (a.kind === "control" && isHandle && pressed) return;
-    const ra = rounded(a);
-    const rb = rounded(b);
-    const keys =
-      (a.kind === "control" && isHandle) || a.kind === "rider"
-        ? ["top", "width", "height"]
-        : ["left", "top", "width", "height"];
-    if (keys.some((k) => ra[k] !== rb[k])) {
-      problems.push(
-        `${a.name}: ${JSON.stringify(ra)} -> ${JSON.stringify(rb)}`,
-      );
-    }
-  });
-  return problems;
 }
 
 async function valueOf(page, root, ctl, field) {
@@ -893,7 +820,7 @@ async function run() {
     process.exit(missed ? 1 : 0);
   }
   for (const name of BROWSERS) {
-    const browser = await ENGINES[name].launch();
+    const browser = await launchBrowser(name);
     const variants = [
       ...WIDTHS.map((w) => ({ viewport: w, root: null })),
       ...EXTRA_WIDTHS.map((w) => ({ viewport: w, root: null, extra: true })),
@@ -1082,6 +1009,12 @@ async function run() {
                 },
                 tool.track ? gate(tool.track) : null,
               );
+              // The drag is measured from where the page rests once the control is in view, so
+              // the scroll is compared with the keyboard baseline on its own.
+              const pointerBase = await snapshot(page, ctl, tool);
+              for (const p of scrollProblems(base, pointerBase, isHandle)) {
+                result.problems.push(p);
+              }
               const startX = isHandle ? box.x : box.left + 8;
               const pointerStart = await valueOf(page, tool.root, ctl, field);
               await page.mouse.move(startX, box.y);
@@ -1094,7 +1027,7 @@ async function run() {
                   startX + ((far - startX) * i) / steps,
                   box.y,
                 );
-                await check(`drag out ${i}/${steps}`, base, true);
+                await check(`drag out ${i}/${steps}`, pointerBase, true);
                 result.pointer++;
               }
               for (const p of pointerMoveProblems({
@@ -1105,7 +1038,7 @@ async function run() {
               }
               for (let i = 1; i <= steps; i++) {
                 await page.mouse.move(far + ((near - far) * i) / steps, box.y);
-                await check(`drag back ${i}/${steps}`, base, true);
+                await check(`drag back ${i}/${steps}`, pointerBase, true);
                 result.pointer++;
               }
               await page.mouse.up();

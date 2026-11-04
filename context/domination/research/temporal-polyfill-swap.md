@@ -3,20 +3,25 @@
 **Purpose:** Record whether GMT should replace `@js-temporal/polyfill` with `temporal-polyfill`
 (fullcalendar/temporal-polyfill), what the swap costs, and what tells us to make it.
 
-**Checked against:** `@js-temporal/polyfill` 0.5.1, `temporal-polyfill` 1.0.6 through its
-`/full/implementation` entry, Node 26.12.1 (ICU 78.3), with Node's built-in `Temporal` as the
-tie-breaker. The WebKit-only groups D18 and D19 were also probed in Playwright WebKit 26.6.
+**Checked against:** `@js-temporal/polyfill` 0.5.1 and `temporal-polyfill` 1.0.7 through its
+`/full/implementation` entry, on Node 26.12.1 (ICU 78.3, tzdata 2026e), with Node's built-in
+`Temporal` as the tie-breaker. Every probe also ran in Playwright Chromium and in Playwright
+WebKit 26.6. `temporal-polyfill` 1.0.6 was checked on Node the same way; its results stay in § 4.1–§ 4.3, because the
+offset sweep of § 4.3 is the check's proof that it finds a real defect.
 
 ---
 
 ## 1. The choice
 
-GMT stays on `@js-temporal/polyfill`. `temporal-polyfill` 1.0.6 fixes most of the defects GMT works
-around today, but it has three defects of its own. The GMT suite catches all three, and an offset
-sweep shows the third reaches 11 zones (§ 4.3). Under the zero-known-bugs rule
-([AGENTS.md Core Rule 12](../../../AGENTS.md#core-rules-quick-reference)) each would need a new
-workaround before a swap could ship. GMT swaps when a `temporal-polyfill` release passes the whole
-GMT suite and the offset sweep (§ 6).
+GMT stays on `@js-temporal/polyfill`. `temporal-polyfill` 1.0.7 fixes most of the defects GMT works
+around today, and the three defects found in 1.0.6 (§ 4.1–§ 4.3). The offset sweep finds no zone
+where it differs from `Intl.DateTimeFormat`. It still has a defect of its own: its backward
+transition search stops about three years after the current date, and 12 GMT tests fail on it
+(§ 4.4). Under the zero-known-bugs rule
+([AGENTS.md Core Rule 12](../../../AGENTS.md#core-rules-quick-reference)) that would need a new
+workaround before a swap could ship. It also misses transitions before 1847 (§ 4.5), which GMT's
+zoned.E code already handles. GMT swaps when a `temporal-polyfill` release passes the whole GMT
+suite and the offset sweep (§ 6).
 
 ## 2. How it was tested
 
@@ -28,43 +33,69 @@ implementation) imported from `temporal-polyfill/full/implementation`. Then:
 - the full `packages/gmt` Vitest suite;
 - every repro in `internal/temporalCompat/repros.ts`, run through `runRepro` and `reproPasses`;
 - one sample from each failure group, run on all three implementations;
-- the D18 and D19 probes in Playwright WebKit 26.6, on both polyfills.
+- the D18 and D19 probes in Playwright WebKit 26.6, on both polyfills (1.0.6);
+- every probe in Playwright Chromium and WebKit 26.6 (1.0.7).
+
+Editing the seam fails one test of its own: `internal/temporal.test.ts` › "names the polyfill
+itself" asserts the seam names `@js-temporal/polyfill`. The CORE-92 check therefore swaps the
+implementation with a Vitest alias and leaves the seam alone.
 
 ## 3. What `temporal-polyfill` fixes
 
-Workaround probes passing, out of each group's total:
+Workaround probes passing on 1.0.7, out of each group's total (118 probes):
 
 | Group | Passing | Group | Passing |
 |---|---|---|---|
-| D1 | 27 / 27 | D11 | 6 / 6 |
-| D2 | 2 / 2 | D12 | 2 / 2 |
-| D3 + D4 | 3 / 3 | D13 | **6 / 8** |
-| D5 | 1 / 1 | D14 | 1 / 1 |
-| D6 | 11 / 11 | D15 | 1 / 1 |
-| D7 | 2 / 2 | D16 | **2 / 6** |
-| D8 | 3 / 3 | D17 | 1 / 1 |
-| D9 | 4 / 4 | D18 (WebKit) | 6 / 6 |
-| D10 | 2 / 2 | D19 (WebKit) | **0 / 1** |
-| | | zoned.A | **9 / 10** |
+| D1 | 27 / 27 | D13 | 8 / 8 |
+| D2 | 2 / 2 | D14 | 1 / 1 |
+| D3 + D4 | 3 / 3 | D15 | 1 / 1 |
+| D5 | 1 / 1 | D16 | **2 / 6** |
+| D6 | 11 / 11 | D17 | 1 / 1 |
+| D7 | 2 / 2 | D18 (WebKit) | 6 / 6 |
+| D8 | 3 / 3 | D19 (WebKit) | **0 / 1** |
+| D9 | 4 / 4 | D20 | 2 / 2 |
+| D10 | 2 / 2 | D21 | 1 / 1 |
+| D11 | 6 / 6 | D22 | **6 / 8** |
+| D12 | 2 / 2 | zoned.A | 10 / 10 |
 | | | zoned.B | 3 / 3 |
 | | | zoned.D | 2 / 2 |
 | | | zoned.E | **0 / 5** |
 
-Every probe passes in 17 of the 22 groups. Two of those say nothing about the swap: D10 is a guard
-whose probes pass on 0.5.1 too, and D17 is a Firefox defect that a Node run cannot judge. That leaves
-15 groups the swap would retire. D18 counts among them: in WebKit, 0.5.1 reads ISO `0621-01-01` as
-`islamic-civil` year 2 and 1.0.6 reads year -1, as V8 does. D19 does not: 1.0.6 also answers false
-for `Etc/UTC` equals `UTC` in WebKit, because it too takes a non-primary identifier's primary from
-`resolvedOptions().timeZone`. D16 is an ICU defect in the engine, so no polyfill fixes it. A
-passing probe proves only the case it probes: D13's probes pass for `America/Boa_Vista` and
-`Europe/Riga`, yet § 4.3 shows the same class of defect in 11 other zones.
+Every probe passes in 22 of the 26 groups. Two of those say nothing about the swap: D10 is a guard
+whose probes pass on 0.5.1 too, and D17 is a Firefox defect that neither a Node nor this browser run
+judges. 1.0.6 failed two more groups: D13 (6 / 8) and zoned.A (9 / 10).
+
+The four groups that fail:
+
+- **D16** is an ICU defect in the engine, so no polyfill fixes it.
+- **D19**: in WebKit, 1.0.7 answers false for `Etc/UTC` equals `UTC`, as 1.0.6 did. 1.0.6 takes a
+  non-primary identifier's primary from `resolvedOptions().timeZone`, which JavaScriptCore no
+  longer canonicalizes. It passes on Node. The maintainers closed the report of it,
+  fullcalendar #118 (not ours), as a known limitation.
+- **D22**: the two failing probes ask for lengths that have no value in the standard today
+  (tc39/proposal-temporal#3336, an open question), and 1.0.7 returns values for them.
+- **zoned.E**: § 4.5.
+
+D18 counts among the fixes: in WebKit, 0.5.1 reads ISO `0621-01-01` as `islamic-civil` year 2 and
+1.0.7 reads year -1, as V8 does. A passing probe proves only the case it probes: on 1.0.6, D13's
+probes passed for `America/Boa_Vista` and `Europe/Riga`, yet § 4.3 found the same class of
+defect in 11 other zones.
 
 ## 4. What `temporal-polyfill` breaks
 
-102 of 66,793 tests fail. In every sample below, Node's built-in `Temporal` and
-`@js-temporal/polyfill` agree, and `temporal-polyfill` differs.
+On 1.0.7, 14 of 71,333 tests fail. Twelve come from § 4.4. One is `internal/temporal.test.ts` ›
+"names the polyfill itself", which fails only because the run edited the seam (§ 2). One is a GMT
+test bug: `plain/get/getNow.test.ts` asserts a strictly later reading of a frozen clock, and 1.0.7's
+clock adds no sub-millisecond part, which the standard does not require (Temporal § 2.3.1
+HostSystemUTCEpochNanoseconds). CORE-92 fixes that test.
 
-### 4.1 Malformed RFC 9557 annotations accepted (about 50 tests)
+On 1.0.6, 102 of 66,793 tests failed (the suite has grown since), from the three defects in
+§ 4.1–§ 4.3. 1.0.7 fixes all three.
+
+In every sample below, Node's built-in `Temporal` and `@js-temporal/polyfill` agree, and
+`temporal-polyfill` differs.
+
+### 4.1 Malformed RFC 9557 annotations accepted (1.0.6, about 50 tests; fixed in 1.0.7)
 
 | Input to `PlainDate.from` | Built-in and 0.5.1 | 1.0.6 |
 |---|---|---|
@@ -76,7 +107,7 @@ RFC 9557 puts the time zone annotation before every other annotation, and an ann
 empty. Tests: `test/annotationGrammar.test.ts`, the `isValid*` validators,
 `internal/calendarValueOfZoned.test.ts`, `internal/calendarDateString.test.ts`.
 
-### 4.2 Exact instants at the range limits rejected (about 15 tests)
+### 4.2 Exact instants at the range limits rejected (1.0.6, about 15 tests; fixed in 1.0.7)
 
 | Input to `ZonedDateTime.from` | Built-in and 0.5.1 | 1.0.6 |
 |---|---|---|
@@ -87,7 +118,7 @@ Both instants are the limits of the `Instant` range, which TC39 Temporal accepts
 `zoned/classify/classifyStoredZoned.test.ts`, `zoned/calculate/addZoned.test.ts`,
 `internal/zonedWallClock.test.ts`.
 
-### 4.3 Wrong offset between two close offset changes (about 20 tests)
+### 4.3 Wrong offset between two close offset changes (1.0.6, about 20 tests; fixed in 1.0.7)
 
 When two offset changes come close together, 1.0.6 skips the period between them and reads the
 wrong UTC offset all through it. A wall-clock time in that period converts to an instant an hour
@@ -102,8 +133,9 @@ off, and the transition search steps over both changes.
 
 It is not limited to daylight-time pauses. A sweep compared each polyfill's offset with
 `Intl.DateTimeFormat`'s (`timeZoneName: "longOffset"`) at 12:00 UTC on every day from 1970 to 2030,
-in all 418 zones Node 26.12.1 lists (tzdata 2026e). 0.5.1 matched on every day. 1.0.6 was wrong in
-11 zones:
+in all 418 zones Node 26.12.1 lists (tzdata 2026e). 0.5.1 matched on every day. So did 1.0.7, swept
+the same way to the end of 2036.
+1.0.6 was wrong in 11 zones:
 
 | Zone | Days wrong | When |
 |---|---|---|
@@ -134,10 +166,49 @@ fixed for that issue's own repros (`America/Noronha` and `America/Boa_Vista` in 
 Tests: `zoned/get/getDstTransitions.test.ts`, `zoned/calculate/getHoursInZonedDay.test.ts`,
 `internal/zonedTransitionSearch.test.ts`, the Casablanca rows of `classifyStoredZoned.test.ts`.
 
-### 4.4 Upstream
+### 4.4 Backward transition search stops about three years ahead (1.0.7, 12 tests)
 
-None of the three defects is reported to `fullcalendar/temporal-polyfill` yet. The owner files them
-from drafts, § 4.3 as a follow-up to #73. § 6 waits on a release that fixes them.
+From any instant more than 94,867,200 s (1,098 days) after the current time,
+`getTimeZoneTransition("previous")` returns the last transition before that horizon, not the last
+one before the instant. `IntlTimeZone.getTransition` clamps a backward search to start at
+`getCurrentEpochSec() + 94867200`.
+
+| From, `America/New_York` | Built-in and 0.5.1 | 1.0.7 (run 2026-11-04) |
+|---|---|---|
+| `2030-06-15T00:00Z` | `2030-03-10T07:00:00Z` | `2029-11-04T06:00:00Z` |
+| `3000-06-01T00:00Z` | `3000-03-09T07:00:00Z` | `2029-11-04T06:00:00Z` |
+
+Temporal § 11.1.4 GetNamedTimeZonePreviousTransition returns "the last time zone UTC offset
+transition strictly before" the instant in the IANA data, with no horizon. `getTimeZoneTransition("next")`,
+`offset`, `hoursInDay` and `startOfDay` are right on the same dates. The answer depends on the
+day the code runs; every failing test asks about year 3000 or the end of the `Instant` range, so
+all 12 fail whatever the run date.
+
+Tests: `internal/zonedTransitionSearch.test.ts` (2), `zoned/calculate/startOfZoned.test.ts` (2),
+`zoned/compare/isInDaylightSaving.test.ts` (2), `unix/calculate/startOfUnix.test.ts`,
+`unix/interval/intervalCountUnix.test.ts`, `calendar/calculate/floorToZone.test.ts`,
+`zoned/calculate/getLocaleZonedStartOfWeek.test.ts`, `zoned/calculate/startOfQuarterForZoned.test.ts`,
+`zoned/interval/intervalCountZoned.test.ts`.
+
+### 4.5 Transitions before 1847 not found (1.0.7, no test fails)
+
+1.0.7 finds no transition before 1847-01-01, so `Asia/Manila`, `Pacific/Guam`, `Pacific/Kosrae`,
+`Pacific/Palau` and `Pacific/Saipan` miss their change on 31 December 1844. Its search starts at
+`minPossibleTransitionSec` (1847-01-01T00:00:00Z). `@js-temporal/polyfill`
+has the same defect (js #372, tc39 #3330), and GMT's zoned.E code corrects it on both, so no GMT
+test fails; only zoned.E's probes do.
+
+### 4.6 Upstream
+
+| Defect | Issue | State |
+|---|---|---|
+| § 4.1 Malformed annotations accepted | [#119](https://github.com/fullcalendar/temporal-polyfill/issues/119) | Fixed in 1.0.7 |
+| § 4.2 Range-limit instants rejected | [#120](https://github.com/fullcalendar/temporal-polyfill/issues/120) | Fixed in 1.0.7 |
+| § 4.3 Wrong offset between two close offset changes (follow-up to #73) | [#121](https://github.com/fullcalendar/temporal-polyfill/issues/121) | Fixed in 1.0.7 |
+| § 4.4 Backward search stops about three years ahead | [#125](https://github.com/fullcalendar/temporal-polyfill/issues/125) | Open |
+| § 4.5 Transitions before 1847 not found | [#126](https://github.com/fullcalendar/temporal-polyfill/issues/126) | Open |
+
+§ 6 waits on a release that fixes § 4.4. The `/upstream/` tracker lists all five.
 
 ## 5. What a swap costs
 
@@ -147,7 +218,7 @@ from drafts, § 4.3 as a follow-up to #73. § 6 waits on a release that fixes th
 | Types | About 238 type errors, nearly all from 12 helper type names the package does not export (`DateTimeUnit`, `SmallestUnit`, `RoundingMode`, `ToStringPrecisionOptions`, `PluralUnit`, `DifferenceOptions`, `DurationRoundTo`, `LargestUnit`, `TotalUnit`, `ToInstantOptions`, `ArithmeticOptions`, `ZonedDateTimeAssignmentOptions`). A short alias file in GMT covers them. Also 7 `@ts-expect-error` lines that no longer fire, and `ZonedDateTimeLike` without `timeZone` and `offset` |
 | Dox | 68 files under `apps/dox/src` import `@js-temporal/polyfill` directly and move with it |
 | Compat tooling | `scripts/lib/workarounds.mjs`, `scripts/temporal-compat.mjs`, the native suite and the upstream tracker name `@js-temporal/polyfill` in triggers and version checks |
-| Workarounds | Delete the groups whose probes all pass; keep zoned.A, zoned.E, D13, D16 and D19; add one for each defect in § 4 unless a release has fixed it. The § 4.3 workaround must correct the offset lookup, not only the transition search |
+| Workarounds | Delete the groups whose probes all pass; keep zoned.E, D16, D19 and D22; add one for each defect in § 4 that the release still has (§ 4.4 in 1.0.7) |
 | Seam test | `internal/temporal.test.ts` asserts the package name |
 
 What a swap gains: most of `internal/temporalCompat/` deleted, a smaller polyfill (19.5 kB, or
@@ -159,8 +230,8 @@ maintained release line.
 The swap is due when a `temporal-polyfill` release, imported through `/full/implementation`, passes
 the whole `packages/gmt` suite on Node and in the three browsers the native suite runs, and the
 offset sweep of § 4.3 finds no zone where it differs from `Intl.DateTimeFormat`. A Node run alone is
-not enough: D17, D18 and D19 show only in a browser, and D19 shows in 1.0.6. The suite alone is not
-enough either: it names only three of the 11 zones in § 4.3. Then nothing in
+not enough: D17, D18 and D19 show only in a browser, and D19 shows in 1.0.6 and 1.0.7. The suite
+alone is not enough either: it named only three of the 11 zones 1.0.6 got wrong (§ 4.3). Then nothing in
 § 4 needs a workaround, and § 5 is cleanup. CORE-92
 adds this check to the weekly Temporal oracle run, which opens an issue when it holds.
 

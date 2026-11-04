@@ -9,6 +9,9 @@
  *                                       touches the committed file, never fails the caller
  *   node scripts/upstream.mjs check    verify the committed file offline; exit 1 on a problem
  *
+ * The tracker also covers `fullcalendar/temporal-polyfill`, where GMT reports defects found by
+ * the swap check (CORE-92).
+ *
  * GMT reports the `@js-temporal/polyfill` and `tc39/proposal-temporal` defects it works around
  * upstream (`context/domination/js-temporal-polyfill-bugs.md`), and the docs site's `/upstream/`
  * page tracks every filing's status live. This is `stats.mjs` applied to that tracker: a
@@ -87,7 +90,11 @@ const REPROS = [
 /** Everyone who files upstream for GMT. Discovery searches each login, and a comment by any of them
  * is ours, never a maintainer response. tc39/proposal-temporal#3336 is a `baldurpan` filing. */
 const AUTHORS = ["craig-o-curtis", "baldurpan"];
-const REPOS = ["js-temporal/temporal-polyfill", "tc39/proposal-temporal"];
+const REPOS = [
+  "js-temporal/temporal-polyfill",
+  "tc39/proposal-temporal",
+  "fullcalendar/temporal-polyfill",
+];
 
 /** `refresh`'s total time budget — past this, it gives up rather than run long in a dev loop. */
 const REFRESH_BUDGET_MS = 10_000;
@@ -292,8 +299,12 @@ const listingHandWritten = (listing) =>
     LISTING_HAND_WRITTEN_FIELDS.map((k) => [k, listing?.[k] ?? ""]),
   );
 
+const repoRank = (repo) =>
+  REPOS.includes(repo) ? REPOS.indexOf(repo) : REPOS.length;
 const byRepoThenNumber = (a, b) =>
-  a.repo.localeCompare(b.repo) || a.number - b.number;
+  repoRank(a.repo) - repoRank(b.repo) ||
+  a.repo.localeCompare(b.repo) ||
+  a.number - b.number;
 
 // ---------------------------------------------------------------- gh helpers
 

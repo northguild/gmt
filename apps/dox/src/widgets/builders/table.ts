@@ -41,6 +41,14 @@ export interface TableOptions<K extends string> extends GateOption {
    * into labelled blocks on a narrow box (`content: attr(data-col)`).
    */
   labelCells?: boolean;
+  /**
+   * Write an explicit ARIA role on the table and each part (`table`, `rowgroup`, `row`,
+   * `columnheader`, `rowheader`, `cell`). Use it when a consumer changes a table part's `display`
+   * (a stacked narrow layout), which drops the native semantics. See the APG Table pattern,
+   * https://www.w3.org/WAI/ARIA/apg/patterns/table/; `families/stored/audit-table.ts` is the
+   * hand-written precedent.
+   */
+  roles?: boolean;
 }
 
 export function table<K extends string>(o: TableOptions<K>): SafeHtml {
@@ -62,25 +70,27 @@ export function table<K extends string>(o: TableOptions<K>): SafeHtml {
         })}</colgroup
       >`
     : html``;
+  const role = (name: string): SafeHtml =>
+    o.roles === true ? html` role="${name}"` : html``;
   const col = (c: Column<K>): SafeHtml =>
     o.labelCells === true ? html` data-col="${c.header}"` : html``;
   return html`<div class="${styles.wrap}" role="region" ${gateAttr(o.gate)} aria-label="${o.caption}" tabindex="0"
-    ><table class="${fixed ? `${styles.table} ${styles.fixed}` : styles.table}"
+    ><table class="${fixed ? `${styles.table} ${styles.fixed}` : styles.table}"${role("table")}
       ><caption class="${styles.caption}">${o.caption}</caption
-      >${cols}<thead
-        ><tr>${o.columns.map(
+      >${cols}<thead${role("rowgroup")}
+        ><tr${role("row")}>${o.columns.map(
           (c) =>
-            html`<th class="${styles.head} ${cls(c)}" scope="col">${c.header}</th>`,
+            html`<th class="${styles.head} ${cls(c)}" scope="col"${role("columnheader")}>${c.header}</th>`,
         )}</tr
       ></thead
-      ><tbody
+      ><tbody${role("rowgroup")}
         >${o.rows.map(
           (row, i) =>
-            html`<tr${i === o.currentRow ? html` aria-current="true"` : ""}
+            html`<tr${role("row")}${i === o.currentRow ? html` aria-current="true"` : ""}
               >${o.columns.map((c) =>
                 c.key === o.rowHeader
-                  ? html`<th class="${styles.cell} ${cls(c)}" scope="row"${col(c)}>${row[c.key]}</th>`
-                  : html`<td class="${styles.cell} ${cls(c)}"${col(c)}>${row[c.key]}</td>`,
+                  ? html`<th class="${styles.cell} ${cls(c)}" scope="row"${role("rowheader")}${col(c)}>${row[c.key]}</th>`
+                  : html`<td class="${styles.cell} ${cls(c)}"${role("cell")}${col(c)}>${row[c.key]}</td>`,
               )}</tr
             >`,
         )}</tbody

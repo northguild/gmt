@@ -8,7 +8,7 @@ import {
 import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import { chopUtc } from "../../utc/chop";
 import { chopMilliseconds, chopTime } from "../chop";
-import { isAfterDateTime } from "../compare";
+import { areDateTimesEqual, isAfterDateTime } from "../compare";
 import { isValidDateTime } from "../validate";
 import { getNow } from "./getNow";
 import { getToday } from "./getToday";
@@ -58,7 +58,10 @@ describe("getNow", () => {
   it("returns an exact plain datetime for the mocked system timeZone", () => {
     const now = getNow();
     // ensure that now is greater or equal to system time
-    expect(isAfterDateTime(now, chopUtc(systemTime))).toBe(true);
+    const floor = chopUtc(systemTime);
+    expect(isAfterDateTime(now, floor) || areDateTimesEqual(now, floor)).toBe(
+      true,
+    );
   });
 
   it("returns a valid ISO plain datetime string", () => {

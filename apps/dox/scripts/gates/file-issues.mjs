@@ -5,7 +5,7 @@
  * sweep leg wrote, asks the planner what to do against the open `dox-gate` issues and runs that
  * through the GitHub CLI.
  *
- *   node apps/dox/scripts/gates/file-issues.mjs [--print] [--dry-run-finding]
+ *   node apps/dox/scripts/gates/file-issues.mjs [--print] [--offline] [--dry-run-finding]
  *        [--legs <leg,...>] <summary.json ...>
  *
  * A summary's leg is the name of the folder it sits in (`artifacts/chromium-1/summary.json` is
@@ -16,7 +16,9 @@
  * such a leg is filed as could-not-run, saying the cause is unknown. `--print` plans
  * against the live open-issue list and prints the actions instead of running them (one line per
  * action, then a count); with `$GITHUB_STEP_SUMMARY` set it also appends the plan there.
- * `--dry-run-finding` adds one synthetic `[dry run]` finding under the `dox-gate-dry-run` label.
+ * `--offline` plans with no `gh` call at all: no open issue is assumed and no job list is read, so
+ * it runs anywhere and implies `--print`. Every action line shows its body's length; no body or
+ * comment may pass `BODY_LIMIT`, checked before the first write. `--dry-run-finding` adds one synthetic `[dry run]` finding under the `dox-gate-dry-run` label.
  *
  * Exit 0 when the actions were carried out (findings do not change it; the sweep legs already
  * fail), 1 when a `gh` call failed, 2 for usage (including a summary path with no leg or no
@@ -28,6 +30,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { realGh } from "../../../../scripts/canary-report.mjs";
 import {
+  BODY_LIMIT,
   DRY_RUN_LABEL,
   GATE_LABEL,
   flakyRows,
@@ -35,7 +38,7 @@ import {
 } from "./issue-plan.mjs";
 
 const USAGE =
-  "Usage: node apps/dox/scripts/gates/file-issues.mjs [--print] [--dry-run-finding] [--legs <leg,...>] <summary.json ...>";
+  "Usage: node apps/dox/scripts/gates/file-issues.mjs [--print] [--offline] [--dry-run-finding] [--legs <leg,...>] <summary.json ...>";
 
 /** What `gh label create` gets for each label; an existing label is never edited. */
 export const LABEL_SPECS = {
@@ -59,12 +62,14 @@ export function parseArgs(argv) {
   const files = [];
   let print = false;
   let dryRun = false;
+  let offline = false;
   /** @type {string[] | null} */
   let legs = null;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--") continue;
     if (a === "--print") print = true;
+    else if (a === "--offline") offline = true;
     else if (a === "--dry-run-finding") dryRun = true;
     else if (a === "--legs") {
       const v = argv[++i];
@@ -85,7 +90,7 @@ export function parseArgs(argv) {
       error: `file-issues: no summary files given\n${USAGE}`,
     };
   }
-  return { ok: true, files, print, dryRun, legs };
+  return { ok: true, files, print: print || offline, offline, dryRun, legs };
 }
 
 /**
@@ -255,8 +260,17 @@ export function readLegs(files, legs) {
 
 const actionLine = (a) =>
   a.kind === "open"
-    ? `open  ${a.key}  ${a.title}`
-    : `comment #${a.issue}  ${a.key}`;
+    ? `open  ${a.key}  ${a.title}${a.groups === undefined ? "" : `  ${a.groups} groups`}  body ${a.body.length} chars`
+    : `comment #${a.issue}  ${a.key}  body ${a.body.length} chars`;
+
+/** The actions whose body is longer than GitHub accepts, as error lines. */
+const oversize = (actions) =>
+  actions
+    .filter((a) => a.body.length > BODY_LIMIT)
+    .map(
+      (a) =>
+        `file-issues: the ${a.kind === "open" ? "issue" : "comment"} for ${a.key} is ${a.body.length} characters, over GitHub's ${BODY_LIMIT}`,
+    );
 
 /**
  * @param {string[]} argv
@@ -270,7 +284,7 @@ export function main(argv, { env, gh, stdout, stderr }) {
     stderr(`${parsed.error}\n`);
     return 2;
   }
-  const { files, print, dryRun, legs } = parsed;
+  const { files, print, offline, dryRun, legs } = parsed;
   if (!print && env.GITHUB_ACTIONS !== "true") {
     stderr(
       "file-issues: run with --print locally; issues are filed by the weekly workflow\n",
@@ -287,6 +301,7 @@ export function main(argv, { env, gh, stdout, stderr }) {
     env;
   let jobsText = "";
   if (
+    !offline &&
     GITHUB_REPOSITORY &&
     GITHUB_RUN_ID &&
     legSummaries.some((l) => !l.summary)
@@ -306,7 +321,12 @@ export function main(argv, { env, gh, stdout, stderr }) {
     GITHUB_SERVER_URL && GITHUB_REPOSITORY && GITHUB_RUN_ID
       ? `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`
       : "(local run)";
-  const context = { runUrl, sha: GITHUB_SHA ?? "(local)", dryRun };
+  const context = {
+    runUrl,
+    sha: GITHUB_SHA ?? "(local)",
+    runId: GITHUB_RUN_ID,
+    dryRun,
+  };
 
   const flaky = flakyRows(legSummaries);
   const flakyText =
@@ -325,11 +345,26 @@ export function main(argv, { env, gh, stdout, stderr }) {
   let code = 0;
   let lines = [];
   try {
+    // Every body is checked before the first gh call, planned as if nothing were open: that is
+    // the case with the longest bodies.
+    const tooLong = oversize(planIssueActions(legSummaries, [], context));
+    if (tooLong.length > 0) {
+      stderr(`${tooLong.join("\n")}\n`);
+      summarise(
+        `### Dox gate issues\n\nNothing filed:\n\n${tooLong.join("\n")}${jobsText}${flakyText}`,
+      );
+      return 1;
+    }
     const actions = planIssueActions(
       legSummaries,
-      listOpenGateIssues(gh),
+      offline ? [] : listOpenGateIssues(gh),
       context,
     );
+    const tooLongNow = oversize(actions);
+    if (tooLongNow.length > 0) {
+      stderr(`${tooLongNow.join("\n")}\n`);
+      return 1;
+    }
     if (print) {
       lines = actions.map(actionLine);
     } else if (actions.length > 0) {

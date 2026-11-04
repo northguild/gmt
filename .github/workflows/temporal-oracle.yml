@@ -18,6 +18,13 @@ name: Temporal oracle
 # Each browser leg first runs the workaround probes of temporal-compat.mjs in that browser and
 # writes a temporal-compat-<leg> verdict, so a workaround is called removable only when every
 # engine in its scope agrees.
+#
+# The polyfill-swap job (CORE-92) runs the same suite on the newest `temporal-polyfill` release,
+# through `temporal-polyfill/full/implementation`, beside a control pass on
+# `@js-temporal/polyfill` in the same runtime. The Node leg also compares every zone's offset with
+# `Intl.DateTimeFormat`, once a day from 1970 to ten years ahead. When every leg passes and no zone
+# differs, the report job opens one issue saying the swap is due. A failing swap leg never fails
+# the workflow.
 
 on:
   workflow_dispatch:
@@ -37,6 +44,16 @@ on:
         type: boolean
         required: false
         default: false
+      swap_version:
+        description: "Run the swap check on this exact temporal-polyfill version (e.g. 1.0.7) instead of the latest"
+        type: string
+        required: false
+        default: ""
+      force_swap_ready:
+        description: "Dry run: file a [dry run] issue as if the temporal-polyfill swap were ready"
+        type: boolean
+        required: false
+        default: false
   schedule:
     # Mondays 06:17 UTC
     - cron: "17 6 * * 1"
@@ -50,7 +67,8 @@ permissions:
 
 # The jobs name their Node with actions/setup-node, and that is the Node they must run.
 # package.json pins a Node through devEngines.runtime for local work. In CI, every
-# `pnpm install` passes --no-runtime so pnpm does not download that pin, and
+# `pnpm install` passes --no-runtime so pnpm does not download that pin (`pnpm add` has no such
+# flag, so the swap job edits its manifest and installs instead), and
 # verifyDepsBeforeRun is off so a later `pnpm run` or `pnpm exec` does not quietly run an
 # install without the flag and put the pinned Node ahead of the job's Node.
 env:
@@ -178,6 +196,117 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  # Picks the temporal-polyfill version once, so the four swap legs test the same release.
+  swap-version:
+    name: Temporal polyfill version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+    steps:
+      - name: Pick version
+        id: pick
+        env:
+          REQUESTED: ${{ inputs.swap_version }}
+        run: |
+          version="$REQUESTED"
+          if [ -z "$version" ]; then
+            version="$(npm view temporal-polyfill version)"
+          fi
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "not a x.y.z version: ${version}" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+  # A failing leg never fails the workflow (continue-on-error): the verdict artifact and the
+  # report job's issues are the signals. temporal-polyfill is added inside this job's checkout
+  # only; nothing commits the changed package.json or lockfile.
+  polyfill-swap:
+    name: Temporal polyfill swap (${{ matrix.leg }})
+    needs: swap-version
+    # A failed swap-version (continue-on-error) still counts as success, with an empty output.
+    if: ${{ needs.swap-version.outputs.version != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: [node, chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          check-latest: true
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      - name: Install temporal-polyfill
+        env:
+          VERSION: ${{ needs.swap-version.outputs.version }}
+        run: |
+          # `pnpm add` has no --no-runtime and downloads the devEngines Node, so the manifest
+          # is edited and `pnpm install --no-runtime` links the package.
+          npm pkg set --prefix packages/gmt "devDependencies.temporal-polyfill=${VERSION}"
+          pnpm install --no-runtime --no-frozen-lockfile
+
+      - name: Install Playwright ${{ matrix.leg }}
+        if: matrix.leg != 'node'
+        env:
+          LEG: ${{ matrix.leg }}
+        run: pnpm --filter @gmt/dox exec playwright install --with-deps "$LEG"
+
+      # A browser leg logs the runner's free scratch space and memory every 15 s while the passes
+      # run. A browser that outgrows the runner leaves no report, so this is the trace it leaves.
+      - name: Polyfill swap
+        env:
+          LEG: ${{ matrix.leg }}
+          VERSION: ${{ needs.swap-version.outputs.version }}
+        run: |
+          if [ "$LEG" != node ]; then
+            (
+              while true; do
+                printf 'resources %s: %s MiB free under %s, %s MiB memory available\n' \
+                  "$(date -u +%H:%M:%S)" \
+                  "$(($(df --output=avail -k "${TMPDIR:-/tmp}" | tail -1) / 1024))" \
+                  "${TMPDIR:-/tmp}" \
+                  "$(free -m | awk '/^Mem:/ { print $7 }')"
+                sleep 15
+              done
+            ) &
+            trap 'kill %1 2>/dev/null || true' EXIT
+          fi
+          node scripts/polyfill-swap.mjs "$LEG" --version="$VERSION"
+
+      - name: Job summary
+        if: always()
+        env:
+          LEG: ${{ matrix.leg }}
+        run: node scripts/polyfill-swap.mjs summary "$LEG" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: temporal-polyfill-swap-${{ matrix.leg }}-${{ github.run_id }}
+          path: artifacts/temporal-polyfill-swap-*.json
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: temporal-polyfill-swap-${{ matrix.leg }}-reports
+          path: artifacts/native-suite-*.vitest.json
+          retention-days: 14
+          if-no-files-found: ignore
+
   # Its own job so that the oracle job, which installs the whole workspace with build scripts
   # approved and runs Chromium, never holds a write token. This one runs only first-party Node and
   # `gh`. `actions: read` lets `gh` list and download the run's artifacts. `!cancelled()` runs it
@@ -185,7 +314,7 @@ jobs:
   # (GitHub Docs, "Contexts", status check functions).
   report:
     name: Report to issues
-    needs: [oracle, native-suite]
+    needs: [oracle, native-suite, polyfill-swap]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -219,7 +348,7 @@ jobs:
         run: |
           mkdir -p artifacts
           # Job start times, keyed by the verdict artifact each job uploads. The job names are
-          # the `name:` fields of the oracle and native-suite jobs above.
+          # the `name:` fields of the oracle, native-suite and polyfill-swap jobs above.
           attempt="repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}"
           gh api --paginate "${attempt}/jobs?per_page=100" \
             --jq '.jobs[] | "\(.name)\t\(.started_at)"' \
@@ -227,6 +356,10 @@ jobs:
               /^Native Temporal suite \(/ {
                 leg = $1; sub(/^Native Temporal suite \(/, "", leg); sub(/\)$/, "", leg)
                 print "native-suite-" leg "-" run, $2
+              }
+              /^Temporal polyfill swap \(/ {
+                leg = $1; sub(/^Temporal polyfill swap \(/, "", leg); sub(/\)$/, "", leg)
+                print "temporal-polyfill-swap-" leg "-" run, $2
               }
               $1 == "Native Temporal oracle" { print "temporal-oracle-" run, $2 }' \
           > job-starts.txt
@@ -260,9 +393,11 @@ jobs:
           FORCE_REMOVABLE: ${{ inputs.force_removable }}
           FORCE_MISMATCH: ${{ inputs.force_mismatch }}
           FORCE_NATIVE_FAILURE: ${{ inputs.force_native_failure }}
+          FORCE_SWAP_READY: ${{ inputs.force_swap_ready }}
         run: |
           args=(temporal-oracle)
           if [ -n "$FORCE_REMOVABLE" ]; then args+=("--force-removable=$FORCE_REMOVABLE"); fi
           if [ "$FORCE_MISMATCH" = "true" ]; then args+=(--force-mismatch); fi
           if [ "$FORCE_NATIVE_FAILURE" = "true" ]; then args+=(--force-native-failure); fi
+          if [ "$FORCE_SWAP_READY" = "true" ]; then args+=(--force-swap-ready); fi
           node scripts/canary-report.mjs "${args[@]}"

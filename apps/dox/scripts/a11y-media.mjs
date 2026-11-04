@@ -4,7 +4,10 @@
  * honours it (gmt-a11y.css and the motion reset in gmt-controls.css).
  *
  * Each check first asserts that `matchMedia` reports the emulated value; a mismatch is the finding
- * `emulation-unsupported`, never a silent pass.
+ * `emulation-unsupported`, never a silent pass. The contrast check proves the emulation by a probe
+ * rule it injects, not by `matchMedia`: if the probe does not apply on the loaded page it loads the
+ * page again in a context created with `contrast: "more"`, and if that fails too the cell is
+ * `emulation-not-applied`.
  *
  *   reduced motion       `motion-running`: a `document.getAnimations()` entry still running 2s after
  *                        load with infinite iterations or more than 1s left
@@ -32,7 +35,7 @@
  */
 import {
   contrastApplied,
-  emulationNotAppliedProblem,
+  contrastProblems,
   motionProblem,
   transparencyProblems,
   waitForFrames,
@@ -161,100 +164,90 @@ async function checkTransparency(page, cdp) {
   }
 }
 
-async function checkContrast(page) {
+/** A rule only the emulated preference can switch on: proof the emulation reached the cascade. */
+const PROBE_CSS =
+  "@media (prefers-contrast: more) { :root { --gate-probe: 1 } }";
+
+/** One reading after the next animation frame, of the probe, the tokens and the text-shadows. */
+const sampleContrast = (page) => () =>
+  page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => {
+          const root = getComputedStyle(document.documentElement);
+          const shadows = [];
+          const walker = document.createTreeWalker(
+            document.body,
+            NodeFilter.SHOW_TEXT,
+          );
+          const seen = new Set();
+          for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+            const el = node.parentElement;
+            if (!el || seen.has(el) || !node.textContent.trim()) continue;
+            seen.add(el);
+            if (!el.checkVisibility({ checkVisibilityCSS: true })) continue;
+            const c = getComputedStyle(el);
+            if (c.textShadow !== "none")
+              shadows.push({
+                target: window.__gmtIdentity(el),
+                selector: window.__gmtCssPath(el),
+                textShadow: c.textShadow,
+              });
+          }
+          resolve({
+            probe: root.getPropertyValue("--gate-probe").trim(),
+            border: root.getPropertyValue("--gmt-border").trim(),
+            strong: root.getPropertyValue("--gmt-border-strong").trim(),
+            shadows,
+          });
+        }),
+      ),
+  );
+
+/**
+ * Waits for the probe, then for the tokens and text to follow it, and returns the last reading.
+ * The emulation reaches the style a frame or more after `emulateMedia` resolves, so a reading
+ * taken at once can be of the page before it.
+ */
+async function readContrast(page) {
+  const sample = sampleContrast(page);
+  const now = () => performance.now();
+  const proof = await waitForFrames(sample, (r) => r.probe === "1", {
+    maxMs: EMULATION_WAIT_MS,
+    now,
+  });
+  if (!proof.ok) return { ...proof.last, frames: proof.frames };
+  const settled = await waitForFrames(
+    sample,
+    (r) => contrastApplied({ ...r, shadowCount: r.shadows.length }),
+    { maxMs: EMULATION_WAIT_MS, now },
+  );
+  return { ...settled.last, frames: proof.frames + settled.frames };
+}
+
+/**
+ * Switches the preference on the loaded page. When the probe rule does not apply (Firefox can
+ * report a match while its style is not re-evaluated), the same page loads in a fresh context
+ * whose `contrast` option is set from the start. If neither applies the cell is
+ * `emulation-not-applied`, which is not a product finding.
+ */
+async function checkContrast(page, fresh) {
+  await page.addStyleTag({ content: PROBE_CSS });
   await page.emulateMedia({ contrast: "more" });
   try {
-    const bad = await emulationMissing(
-      page,
-      "(prefers-contrast: more)",
-      "more contrast",
-    );
-    if (bad.length) return bad;
     await settleTransitions(page);
-    /* One reading after the next animation frame. The emulation reaches the tokens and the text
-       a frame or more after `emulateMedia` resolves, so a reading taken at once can be of the
-       page before it. */
-    const sample = () =>
-      page.evaluate(
-        () =>
-          new Promise((resolve) =>
-            requestAnimationFrame(() => {
-              const root = getComputedStyle(document.documentElement);
-              const shadows = [];
-              const walker = document.createTreeWalker(
-                document.body,
-                NodeFilter.SHOW_TEXT,
-              );
-              const seen = new Set();
-              for (
-                let node = walker.nextNode();
-                node;
-                node = walker.nextNode()
-              ) {
-                const el = node.parentElement;
-                if (!el || seen.has(el) || !node.textContent.trim()) continue;
-                seen.add(el);
-                if (!el.checkVisibility({ checkVisibilityCSS: true })) continue;
-                const c = getComputedStyle(el);
-                if (c.textShadow !== "none")
-                  shadows.push({
-                    target: window.__gmtIdentity(el),
-                    selector: window.__gmtCssPath(el),
-                    textShadow: c.textShadow,
-                  });
-              }
-              resolve({
-                matches: matchMedia("(prefers-contrast: more)").matches,
-                border: root.getPropertyValue("--gmt-border").trim(),
-                strong: root.getPropertyValue("--gmt-border-strong").trim(),
-                shadows,
-              });
-            }),
-          ),
-      );
-    const waited = await waitForFrames(
-      sample,
-      (r) =>
-        contrastApplied({
-          border: r.border,
-          strong: r.strong,
-          shadowCount: r.shadows.length,
-        }),
-      { maxMs: EMULATION_WAIT_MS, now: () => performance.now() },
-    );
-    const read = waited.last;
-    if (!waited.ok && !read.matches) {
-      /* The emulation never reached the page, so neither product rule is recorded: both read
-         state that is not there. With the media query matching and the state still wrong after
-         the wait, the page is wrong and the rules below say how. */
-      return [
-        emulationNotAppliedProblem({
-          frames: waited.frames,
-          matches: read.matches,
-          border: read.border,
-          strong: read.strong,
-          shadowCount: read.shadows.length,
-        }),
-      ];
+    let read = await readContrast(page);
+    if (read.probe !== "1") {
+      const other = await fresh({ contrast: "more" });
+      try {
+        await other.page.addStyleTag({ content: PROBE_CSS });
+        await settleTransitions(other.page);
+        read = await readContrast(other.page);
+      } finally {
+        await other.close();
+      }
     }
-    const found = [];
-    if (read.border !== read.strong) {
-      found.push({
-        rule: "contrast-border-token",
-        target: "root",
-        selector: ":root",
-        message: `--gmt-border is ${read.border}, not --gmt-border-strong (${read.strong}), under prefers-contrast: more`,
-      });
-    }
-    for (const s of read.shadows) {
-      found.push({
-        rule: "contrast-text-shadow",
-        target: s.target,
-        selector: s.selector,
-        message: `visible text keeps text-shadow ${s.textShadow} under prefers-contrast: more`,
-      });
-    }
-    return found;
+    return contrastProblems(read);
   } finally {
     await page.emulateMedia({ contrast: "no-preference" });
   }
@@ -318,13 +311,13 @@ await sweep({
   contextOptions: { reducedMotion: "reduce" },
   browserNote: (browserName) =>
     fullSet(browserName) ? "" : "  (reduced motion and more contrast only)",
-  check: async ({ page, context, browserName }) => {
+  check: async ({ page, context, browserName, fresh }) => {
     const found = [...(await checkMotion(page))];
     if (fullSet(browserName)) {
       const cdp = await context.newCDPSession(page);
       found.push(...(await checkTransparency(page, cdp)));
     }
-    found.push(...(await checkContrast(page)));
+    found.push(...(await checkContrast(page, fresh)));
     if (fullSet(browserName)) found.push(...(await checkForcedColors(page)));
     return found;
   },

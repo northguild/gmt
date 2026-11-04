@@ -143,6 +143,7 @@ export function probeCard(config: ProbeConfig, text: VerdictText): SafeHtml {
         },
       ],
       rowHeader: "place",
+      roles: true,
       rows,
     })}</div>${blind.length > 0 && text.blindNote ? html`<p class="${styles.blindNote}">${text.blindNote}</p>` : null}<div class="${styles.actions}">${button(
       {

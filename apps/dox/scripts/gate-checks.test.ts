@@ -18,6 +18,7 @@ import {
   jumpProblems,
   keyboardMoveProblems,
   maxFrameJump,
+  maxFrameJumpAt,
   motionProblem,
   pageProblems,
   pointerMoveProblems,
@@ -29,6 +30,7 @@ import {
   obscuredMessage,
   SEGMENT_CAP,
   contrastApplied,
+  contrastProblems,
   emulationNotAppliedProblem,
   frameDiagnostic,
   px1,
@@ -90,6 +92,33 @@ describe("jumpProblems", () => {
       jumpProblems({ ...base, reduce: true, maxJump: 900, mainMaxJump: 900 }),
     ).toEqual([]);
   });
+
+  it("reports one problem when the page and <main> pass the limit in the same frame", () => {
+    const problems = jumpProblems({
+      limit: 48,
+      reduce: false,
+      maxJump: 80,
+      maxFrame: 12,
+      mainMaxJump: 83,
+      mainMaxFrame: 12,
+    });
+    expect(problems).toEqual(["max jump 83 px > 48 (page and <main>)"]);
+  });
+
+  it("reports two problems when they pass it in different frames", () => {
+    const problems = jumpProblems({
+      limit: 48,
+      reduce: false,
+      maxJump: 80,
+      maxFrame: 12,
+      mainMaxJump: 83,
+      mainMaxFrame: 30,
+    });
+    expect(problems).toEqual([
+      "max jump 80 px > 48",
+      "<main> max jump 83 px > 48",
+    ]);
+  });
 });
 
 describe("zero checks", () => {
@@ -148,6 +177,13 @@ describe("move checks", () => {
   it("fails a pointer drag that ends where it began", () => {
     expect(pointerMoveProblems({ start: "0", far: "0" })).toHaveLength(1);
     expect(pointerMoveProblems({ start: "0", far: "90" })).toEqual([]);
+  });
+});
+
+describe("maxFrameJumpAt", () => {
+  it("names the frame the largest step lands on, 0 when there is none", () => {
+    expect(maxFrameJumpAt([100, 140, 300, 310])).toEqual({ max: 160, at: 2 });
+    expect(maxFrameJumpAt([300])).toEqual({ max: 0, at: 0 });
   });
 });
 
@@ -290,9 +326,13 @@ describe("every browser gate", () => {
     }))
     // A gate loads pages of the built site. A script that draws its own markup
     // in a browser (the favicon build) loads none.
+    // The Firefox route's own check opens the home page once to prove the tunnel; it measures nothing.
+    .filter(({ file }) => file !== "firefox-server.mjs")
     .filter(
       ({ source }) =>
-        source.includes('from "@playwright/test"') && source.includes(".goto("),
+        (source.includes('from "@playwright/test"') ||
+          source.includes("lib/browser-launch.mjs")) &&
+        source.includes(".goto("),
     );
 
   it("finds the gates that load a page of the site", () => {
@@ -699,22 +739,18 @@ describe("waitForFrames", () => {
 });
 
 describe("emulation not applied", () => {
-  it("is applied only when the border matches and no shadow is left", () => {
-    expect(
-      contrastApplied({ border: "#fff", strong: "#fff", shadowCount: 0 }),
-    ).toBe(true);
-    expect(
-      contrastApplied({ border: "#000", strong: "#fff", shadowCount: 0 }),
-    ).toBe(false);
-    expect(
-      contrastApplied({ border: "#fff", strong: "#fff", shadowCount: 2 }),
-    ).toBe(false);
+  it("is applied only when the probe reads 1, the border matches and no shadow is left", () => {
+    const on = { probe: "1", border: "#fff", strong: "#fff", shadowCount: 0 };
+    expect(contrastApplied(on)).toBe(true);
+    expect(contrastApplied({ ...on, border: "#000" })).toBe(false);
+    expect(contrastApplied({ ...on, shadowCount: 2 })).toBe(false);
+    expect(contrastApplied({ ...on, probe: "" })).toBe(false);
   });
 
-  it("names the frames, the media query and both token values", () => {
+  it("names the frames, the probe and both token values", () => {
     const p = emulationNotAppliedProblem({
       frames: 120,
-      matches: false,
+      probe: "",
       border: "#111",
       strong: "#fff",
       shadowCount: 1,
@@ -722,9 +758,43 @@ describe("emulation not applied", () => {
     expect(p.rule).toBe("emulation-not-applied");
     expect(p.target).toBe("root");
     expect(p.message).toContain("120 animation frames");
-    expect(p.message).toContain("is false");
+    expect(p.message).toContain("probe rule");
     expect(p.message).toContain("#111");
     expect(p.message).toContain("#fff");
+  });
+});
+
+describe("contrastProblems", () => {
+  const read = {
+    frames: 4,
+    probe: "1",
+    border: "18%",
+    strong: "35%",
+    shadows: [],
+  };
+
+  it("is a product finding when the probe applied and the token stayed at 18 %", () => {
+    const found = contrastProblems(read);
+    expect(found.map((f) => f.rule)).toEqual(["contrast-border-token"]);
+    expect(found[0].message).toContain("18%");
+  });
+
+  it("is emulation-not-applied, and no product finding, when the probe did not apply", () => {
+    const found = contrastProblems({ ...read, probe: "" });
+    expect(found.map((f) => f.rule)).toEqual(["emulation-not-applied"]);
+  });
+
+  it("reports a text-shadow that survived with the probe on", () => {
+    const found = contrastProblems({
+      ...read,
+      border: "35%",
+      shadows: [{ target: "h1", selector: "h1", textShadow: "red 1px 1px" }],
+    });
+    expect(found.map((f) => f.rule)).toEqual(["contrast-text-shadow"]);
+  });
+
+  it("is clean when the probe applied and the tokens match", () => {
+    expect(contrastProblems({ ...read, border: "35%" })).toEqual([]);
   });
 });
 
@@ -822,5 +892,30 @@ describe("locatorCountProblem", () => {
     expect(locatorCountProblem("c", 2, { min: 0, max: 1 })).toBe(
       "c matched 2 element(s), expected 0 to 1",
     );
+  });
+});
+
+describe("the Firefox launch route", () => {
+  it("imports firefox from @playwright/test only in lib/browser-launch.mjs", () => {
+    const root = path.dirname(fileURLToPath(import.meta.url));
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+        entry.isDirectory()
+          ? entry.name === "node_modules"
+            ? []
+            : walk(path.join(dir, entry.name))
+          : /\.(mjs|ts|mts)$/.test(entry.name)
+            ? [path.join(dir, entry.name)]
+            : [],
+      );
+    const importsFirefox = walk(root)
+      .filter((file) => !file.endsWith(".test.ts"))
+      .filter((file) =>
+        /import\s*\{[^}]*\bfirefox\b[^}]*\}\s*from\s*["']@playwright\/test["']/.test(
+          readFileSync(file, "utf8"),
+        ),
+      )
+      .map((file) => path.relative(root, file));
+    expect(importsFirefox).toEqual(["lib/browser-launch.mjs"]);
   });
 });

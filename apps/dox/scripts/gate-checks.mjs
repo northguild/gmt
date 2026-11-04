@@ -79,6 +79,20 @@ export function maxFrameJump(heights) {
   return max;
 }
 
+/** The largest step of `maxFrameJump` and the index of the frame it lands on (0 when there is none). */
+export function maxFrameJumpAt(heights) {
+  let max = 0;
+  let at = 0;
+  for (let i = 1; i < heights.length; i++) {
+    const step = Math.abs(heights[i] - heights[i - 1]);
+    if (step > max) {
+      max = step;
+      at = i;
+    }
+  }
+  return { max, at };
+}
+
 /** A browser run that threw (a closed page, a crashed browser) is a failed run. */
 export function crashProblem(error) {
   return [
@@ -86,15 +100,31 @@ export function crashProblem(error) {
   ];
 }
 
-/** The largest-jump assertion, applied to the page root and to `<main>`. */
-export function jumpProblems({ maxJump, mainMaxJump, limit, reduce }) {
+/**
+ * The largest-jump assertion, applied to the page root and to `<main>`. `maxFrame` and
+ * `mainMaxFrame` are the frames the two maxima land on: when both pass the limit in the same
+ * frame it is one jump, reported once, at the larger size.
+ */
+export function jumpProblems({
+  maxJump,
+  mainMaxJump,
+  limit,
+  reduce,
+  maxFrame,
+  mainMaxFrame,
+}) {
   // Reduced motion is the reference: its heights snap by design.
   if (reduce) return [];
-  const problems = [];
-  if (maxJump > limit) {
-    problems.push(`max jump ${Math.round(maxJump)} px > ${limit}`);
+  const page = maxJump > limit;
+  const main = mainMaxJump > limit;
+  if (page && main && maxFrame !== undefined && maxFrame === mainMaxFrame) {
+    return [
+      `max jump ${Math.round(Math.max(maxJump, mainMaxJump))} px > ${limit} (page and <main>)`,
+    ];
   }
-  if (mainMaxJump > limit) {
+  const problems = [];
+  if (page) problems.push(`max jump ${Math.round(maxJump)} px > ${limit}`);
+  if (main) {
     problems.push(`<main> max jump ${Math.round(mainMaxJump)} px > ${limit}`);
   }
   return problems;
@@ -475,9 +505,14 @@ export async function waitForFrames(sample, done, { maxMs, now }) {
   }
 }
 
-/** True when `prefers-contrast: more` has reached the page's tokens and text. */
-export const contrastApplied = ({ border, strong, shadowCount }) =>
-  border === strong && shadowCount === 0;
+/**
+ * True when `prefers-contrast: more` has reached the page's style: the gate's own probe rule
+ * (`@media (prefers-contrast: more) { :root { --gate-probe: 1 } }`) reads 1, the border token is
+ * the strong one and no text keeps a shadow. `matchMedia` is not proof, because Firefox can report
+ * a match while the cascade is not yet (or never) evaluated with it.
+ */
+export const contrastApplied = ({ probe, border, strong, shadowCount }) =>
+  probe === "1" && border === strong && shadowCount === 0;
 
 /**
  * Contrast check: the finding for a page that never reached the emulated state. The cell fails
@@ -485,7 +520,7 @@ export const contrastApplied = ({ border, strong, shadowCount }) =>
  */
 export function emulationNotAppliedProblem({
   frames,
-  matches,
+  probe,
   border,
   strong,
   shadowCount,
@@ -495,10 +530,47 @@ export function emulationNotAppliedProblem({
     target: "root",
     selector: ":root",
     message:
-      `prefers-contrast: more did not reach the page within ${frames} animation frames: ` +
-      `matchMedia(prefers-contrast: more) is ${matches}, --gmt-border is ${border}, ` +
+      `prefers-contrast: more did not reach the page's style within ${frames} animation frames: ` +
+      `the probe rule's --gate-probe is "${probe}", --gmt-border is ${border}, ` +
       `--gmt-border-strong is ${strong}, ${shadowCount} visible text element(s) still have a text-shadow`,
   };
+}
+
+/**
+ * Contrast check: the findings for one reading. A probe that never applied is
+ * `emulation-not-applied` alone. A probe that applied proves the emulation reached the cascade,
+ * so a token or a text-shadow that is still wrong is the page's.
+ */
+export function contrastProblems({ frames, probe, border, strong, shadows }) {
+  if (probe !== "1") {
+    return [
+      emulationNotAppliedProblem({
+        frames,
+        probe,
+        border,
+        strong,
+        shadowCount: shadows.length,
+      }),
+    ];
+  }
+  const found = [];
+  if (border !== strong) {
+    found.push({
+      rule: "contrast-border-token",
+      target: "root",
+      selector: ":root",
+      message: `--gmt-border is ${border}, not --gmt-border-strong (${strong}), under prefers-contrast: more`,
+    });
+  }
+  for (const s of shadows) {
+    found.push({
+      rule: "contrast-text-shadow",
+      target: s.target,
+      selector: s.selector,
+      message: `visible text keeps text-shadow ${s.textShadow} under prefers-contrast: more`,
+    });
+  }
+  return found;
 }
 
 /**

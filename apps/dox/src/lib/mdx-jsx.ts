@@ -21,6 +21,7 @@ import {
   compatGroups,
   groupLabel,
   groupWhatBreaks,
+  shortRef,
   stateLine,
 } from "../data/temporal-compat";
 import {
@@ -280,9 +281,6 @@ export const escapeMarkdownInline = (text: string): string =>
  * GMT work around" (CORE-8 review, #253). Same three columns as the HTML, same source data.
  */
 function renderUpstreamDefects(): string {
-  const shortRef = (repo: string, number: number): string =>
-    `${repo === "tc39/proposal-temporal" ? "tc39" : "polyfill"} #${number}`;
-
   const rows = compatGroups.map((group) => {
     const sent = filings
       .filter((f) => f.gmtGuard && group.defects.includes(f.gmtGuard))

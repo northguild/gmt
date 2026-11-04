@@ -62,7 +62,8 @@
  * `GATE_REPORT` set, every failure is also a finding and the run ends with its measured count.
  */
 
-import { chromium, firefox, webkit } from "@playwright/test";
+import { chromium } from "@playwright/test";
+import { launchBrowser } from "./lib/browser-launch.mjs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -74,6 +75,7 @@ import {
   jumpProblems,
   locatorCountProblem,
   maxFrameJump,
+  maxFrameJumpAt,
   pageProblems,
   skippedProblem,
 } from "./gate-checks.mjs";
@@ -84,7 +86,7 @@ import { settledMainHeights } from "./lib/grow-frames.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 
 const GATE = "grow-measure";
-const ENGINES = { chromium, webkit, firefox };
+const ENGINES = { chromium: true, webkit: true, firefox: true };
 
 const JUMP_LIMIT_PX = 48;
 const HEIGHT_MATCH_PX = 1;
@@ -612,6 +614,12 @@ function samplerInit({ rootSelector, auto }) {
   if (auto) S.start();
 }
 
+/** The index, among all frames, of the frame `<main>`'s largest settled step lands on. */
+function settledMainFrameAt(frames) {
+  const settled = frames.map((f, i) => ({ f, i })).filter(({ f }) => f.l !== 1);
+  return settled[maxFrameJumpAt(settled.map(({ f }) => f.m)).at]?.i ?? 0;
+}
+
 function stats(frames) {
   const hs = frames.map((f) => f.h);
   const jumps = hs.slice(1).map((h, i) => Math.abs(h - hs[i]));
@@ -625,6 +633,8 @@ function stats(frames) {
     finalH: hs[hs.length - 1] ?? 0,
     growth: (hs[hs.length - 1] ?? 0) - (hs[0] ?? 0),
     maxJump: maxFrameJump(hs),
+    // The frame the largest root step lands on, so a root and `<main>` jump in one frame is one jump.
+    maxFrame: maxFrameJumpAt(hs).at,
     // Speed, not step: the largest jump scaled to a 60 Hz frame, so a stalled
     // frame (a long mount task) is not mistaken for a fast ease.
     maxPer60: Math.max(
@@ -640,6 +650,7 @@ function stats(frames) {
     /* Frames drawn mid-parse are left out: `<main>` grows as the footer streams
        in below the widget, which is not a shift (see lib/grow-frames.mjs). */
     mainMaxJump: maxFrameJump(settledMainHeights(frames)),
+    mainMaxFrame: settledMainFrameAt(frames),
     medianDt: dts.length ? dts[Math.floor(dts.length / 2)] : 0,
     growingSeen: frames.some((f) => f.g === 1),
     jumpDiagnostic: largestJumpDiagnostic(frames),
@@ -1164,7 +1175,7 @@ async function main() {
 
   const results = [];
   for (const name of o.browsers) {
-    const browser = await ENGINES[name].launch();
+    const browser = await launchBrowser(name);
     try {
       for (const width of o.widths) {
         for (const def of pages) {
@@ -1226,6 +1237,8 @@ async function main() {
               ...jumpProblems({
                 maxJump: r.maxJump,
                 mainMaxJump: r.mainMaxJump,
+                maxFrame: r.maxFrame,
+                mainMaxFrame: r.mainMaxFrame,
                 limit: JUMP_LIMIT_PX,
                 reduce: o.reduce,
               }).map(withDiag),

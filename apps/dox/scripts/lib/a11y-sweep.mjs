@@ -12,7 +12,7 @@
  *
  * A cell is measured after `load`, `document.fonts.ready` and two animation frames.
  */
-import { chromium, firefox, webkit } from "@playwright/test";
+import { launchBrowser } from "./browser-launch.mjs";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,7 +23,7 @@ import { identityScript } from "./element-identity.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DIST_SITE = path.join(HERE, "../../dist/gmt");
-const LAUNCHERS = { chromium, firefox, webkit };
+const LAUNCHERS = { chromium: true, firefox: true, webkit: true };
 
 /** Every `index.html` folder under `dist/gmt`, as site paths; exits 2 when `dist` is missing. */
 export function distPages(gate) {
@@ -198,7 +198,7 @@ export async function sweep({
   const started = performance.now();
 
   for (const browserName of browsers) {
-    const browser = await LAUNCHERS[browserName].launch();
+    const browser = await launchBrowser(browserName);
     const cells = pages.flatMap((p) =>
       widths.map((width) => ({ path: p, width })),
     );
@@ -209,12 +209,16 @@ export async function sweep({
         const cell = cells[next++];
         const found = [];
         let ok = false;
-        const context = await browser.newContext({
-          viewport: { width: cell.width, height: 900 },
-          colorScheme: theme,
-          ...contextOptions,
-        });
-        try {
+        const opened = [];
+        /** A context set up like the cell's own, with `extra` options, loaded on the same page. */
+        const open = async (extra = {}) => {
+          const context = await browser.newContext({
+            viewport: { width: cell.width, height: 900 },
+            colorScheme: theme,
+            ...contextOptions,
+            ...extra,
+          });
+          opened.push(context);
           await context.addInitScript((t) => {
             try {
               localStorage.setItem("starlight-theme", t);
@@ -224,6 +228,10 @@ export async function sweep({
           await blockOffSite(context, base);
           const page = await context.newPage();
           const res = await page.goto(base + cell.path, { waitUntil: "load" });
+          return { context, page, res };
+        };
+        try {
+          const { context, page, res } = await open();
           if (!res || res.status() !== 200) {
             found.push({
               rule: "http-status",
@@ -239,6 +247,15 @@ export async function sweep({
                 path: cell.path,
                 width: cell.width,
                 browserName,
+                /** Another context on this page; `close()` it when done. */
+                fresh: async (extra) => {
+                  const other = await open(extra);
+                  await settle(other.page);
+                  return {
+                    page: other.page,
+                    close: () => other.context.close().catch(() => {}),
+                  };
+                },
               })),
             );
             ok = true;
@@ -250,7 +267,7 @@ export async function sweep({
             message: `the check crashed: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
           });
         } finally {
-          await context.close().catch(() => {});
+          await Promise.all(opened.map((c) => c.close().catch(() => {})));
         }
         if (ok) measured++;
         if (found.length > 0) failedCells++;

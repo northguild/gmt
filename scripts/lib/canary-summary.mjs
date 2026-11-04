@@ -7,7 +7,7 @@
  * the verdict holds them, with no locale grouping, so the summary matches the log digit for digit.
  */
 
-import { COMPAT_SOURCES, compatStates } from "./canary-issues.mjs";
+import { COMPAT_SOURCES, compatStates, swapReady } from "./canary-issues.mjs";
 
 const CHECK = "temporal-compat-check";
 const ORACLE = "temporal-oracle";
@@ -269,6 +269,75 @@ function nativeBlocks(verdicts) {
   ];
 }
 
+/** How many differing zones the swap block names. */
+const SWAP_ZONES_LISTED = 10;
+
+/**
+ * The `temporal-polyfill` swap (CORE-92): the verdict line, one table row per leg and the offset
+ * sweep. A leg that did not run keeps its row.
+ * @param {Record<string, Verdict | null | undefined>} verdicts
+ * @returns {string[]}
+ */
+function swapBlocks(verdicts) {
+  const legs = NATIVE_LEGS.map((leg) => ({
+    leg,
+    found: sourceOf(verdicts, `temporal-polyfill-swap-${leg}`),
+  }));
+  const first = legs.find(({ found }) => "ran" in found);
+  const version =
+    first && "ran" in first.found
+      ? `temporal-polyfill ${first.found.ran.version}`
+      : "temporal-polyfill";
+  const result = swapReady(/** @type {any} */ (verdicts));
+  const state = result.ready
+    ? "Ready to swap"
+    : `Not ready: ${oneLine(result.reason)}`;
+  const header = ["Runtime", "Tests", "Fail on swap only", "Fail on both"];
+  const rows = legs.map(({ leg, found }) => {
+    if (!("ran" in found)) {
+      const why =
+        found.message === NO_VERDICT
+          ? "no verdict"
+          : `could not run: ${oneLine(found.message).replace(/\|/g, "\\|")}`;
+      return [leg, why, "", ""];
+    }
+    const c = found.ran.counts;
+    return [leg, String(c.tests), String(c.failed), String(c.both)];
+  });
+  const node = legs[0]?.found;
+  const sweep = node && "ran" in node ? node.ran.sweep : null;
+  /** @type {string[]} */
+  const sweepBlocks = [];
+  if (sweep?.status === "ran") {
+    sweepBlocks.push(
+      `Offset sweep: ${sweep.differingZones} zones differ (${sweep.zones} zones, ${sweep.from} to ${sweep.through}, tz ${sweep.tz}).`,
+    );
+    if (sweep.differingZones > 0) {
+      const named = sweep.differing
+        .slice(0, SWAP_ZONES_LISTED)
+        .map(
+          (/** @type {{ zone: string, days: number }} */ d) =>
+            `${d.zone} (${d.days} ${d.days === 1 ? "day" : "days"})`,
+        );
+      sweepBlocks.push(`Zones: ${named.join(", ")}`);
+    }
+  } else if (sweep?.status === "could-not-run") {
+    sweepBlocks.push(`Offset sweep: could not run: ${oneLine(sweep.message)}`);
+  } else {
+    sweepBlocks.push("Offset sweep: did not run.");
+  }
+  return [
+    "### Temporal polyfill swap",
+    `${version} — ${state}`,
+    [
+      `| ${header.join(" | ")} |`,
+      `| ${header.map(() => "---").join(" | ")} |`,
+      ...rows.map((r) => `| ${r.join(" | ")} |`),
+    ].join("\n"),
+    ...sweepBlocks,
+  ];
+}
+
 /**
  * @param {Record<string, Verdict | null | undefined>} verdicts
  * @returns {string | null}
@@ -307,6 +376,7 @@ function dryRunLines(workflow, force, skipped) {
     }
     if (force.mismatch) flags.push("--force-mismatch");
     if (force.nativeFailure) flags.push("--force-native-failure");
+    if (force.swapReady) flags.push("--force-swap-ready");
   } else if (force.leapDifference) {
     flags.push("--force-leap-difference");
   }
@@ -375,7 +445,11 @@ export function summaryMarkdown(
       ...compatEngineBlocks(verdicts),
       ...blocksFor(verdicts, ORACLE, "Oracle", oracleBlocks),
     );
-    blocks.push(...checkNotes(verdicts), ...nativeBlocks(verdicts));
+    blocks.push(
+      ...checkNotes(verdicts),
+      ...nativeBlocks(verdicts),
+      ...swapBlocks(verdicts),
+    );
   } else {
     blocks.push("## Leap-second canary");
     const found = sourceOf(verdicts, LEAP);

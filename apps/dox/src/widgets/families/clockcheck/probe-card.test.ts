@@ -89,6 +89,18 @@ describe("probeCard", () => {
     expect(places[1]).toHaveTextContent("El Aaiun");
   });
 
+  it("keeps its table semantics in explicit roles, the place cell a row header", () => {
+    draw();
+    const table = screen.getByRole("table");
+    expect(table).toHaveAttribute("role", "table");
+    for (const place of cellsInColumn(table, "Place"))
+      expect(place).toHaveAttribute("role", "rowheader");
+    for (const cell of yours()) expect(cell).toHaveAttribute("role", "cell");
+    for (const head of within(table).getAllByRole("columnheader"))
+      expect(head).toHaveAttribute("role", "columnheader");
+    expect(within(table).getAllByRole("rowgroup")).toHaveLength(2);
+  });
+
   it("shows the correct offset beside each place and NO SIGNAL where the browser has not answered", () => {
     draw();
     const table = screen.getByRole("table");

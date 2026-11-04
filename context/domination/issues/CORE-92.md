@@ -8,20 +8,20 @@ output. The findings behind it are in
 
 ## Gap
 
-GMT stays on `@js-temporal/polyfill` because `temporal-polyfill` 1.0.6 fails 102 GMT tests in three
-defect classes (research § 4), and has D19 in WebKit (research § 3). The third class reads the wrong
-UTC offset for weeks at a time in 11 zones, eight of which the suite never names (research § 4.3).
-None of the three is reported upstream yet: the owner files them from drafts (research § 4.4).
-Nothing tells us when a release fixes them, and checking by hand on every release is the kind of
-watch nobody keeps.
+GMT stays on `@js-temporal/polyfill`. `temporal-polyfill` 1.0.7 fixes the three defects GMT reported
+against 1.0.6 (`fullcalendar/temporal-polyfill` #119, #120 and #121), and its UTC offsets now match
+`Intl.DateTimeFormat` in every zone. It still fails 12 GMT tests, all from one defect in its backward
+transition search (#125, research § 4.4), and has D19 in WebKit (research § 3). It also misses
+transitions before 1847 (#126, research § 4.5), which GMT already works around. Nothing tells us when
+a release fixes these, and checking by hand on every release is the kind of watch nobody keeps.
 
 ## Scope
 
 1. **Swap job.** A new job in `.github/workflows/temporal-oracle.yml` installs the latest
-   `temporal-polyfill`, points `src/internal/temporal.ts` at `temporal-polyfill/full/implementation`
-   in the job's checkout only, and runs the `packages/gmt` suite on Node and in Playwright
-   Chromium, Firefox and WebKit, the way the native suite's control pass runs it. It writes a
-   `temporal-polyfill-swap` verdict to `artifacts/` as JSON: the version tested, and for each
+   `temporal-polyfill` in the job's checkout only, aliases the `@js-temporal/polyfill` specifier to
+   `temporal-polyfill/full/implementation` (the seam `src/internal/temporal.ts` stays as it is),
+   and runs the `packages/gmt` suite on Node and in Playwright Chromium, Firefox and WebKit, the
+   way the native suite's control pass runs it. It writes a `temporal-polyfill-swap` verdict to `artifacts/` as JSON: the version tested, and for each
    runtime the pass and fail counts and the failing test names.
 2. **Offset sweep.** The same job compares the release's UTC offset with `Intl.DateTimeFormat`'s
    (`timeZoneName: "longOffset"`) at 12:00 UTC on every day from 1970 through ten years past the run
@@ -36,12 +36,19 @@ watch nobody keeps.
    issues do. A failing run files nothing.
 5. **Job summary.** Every run writes the version tested, each runtime's fail count and the sweep's
    zone count to `$GITHUB_STEP_SUMMARY`.
-6. **Dox.** The "Why this polyfill" section of `/upstream/` says the check runs every week and links
-   the workflow.
+6. **Dox.** The "Why this polyfill" section of `/upstream/` gives the 1.0.7 results, says the check
+   runs every week and links the workflow.
+7. **`getNow` test.** `plain/get/getNow.test.ts` checks for a strictly later time where its comment
+   says later or equal. It fails on every run against a polyfill whose clock has no sub-millisecond
+   part, so the swap could never pass. The assertion accepts an equal time.
+8. **Upstream tracker.** `scripts/upstream.mjs` and the `/upstream/` page follow
+   `fullcalendar/temporal-polyfill` after the other two repositories, and list GMT's reports there
+   (#119, #120, #121, #125 and #126) in `upstream-filings.json` and `js-temporal-polyfill-bugs.md`.
+   A closed report stays listed and says why it closed.
 
 ## Design notes
 
-- **Browsers count.** D17, D18 and D19 show only in a browser, and 1.0.6 passes on Node yet fails
+- **Browsers count.** D17, D18 and D19 show only in a browser, and 1.0.6 and 1.0.7 pass on Node yet fail
   the D19 probe in WebKit. A Node-only pass would open a wrong issue.
 - **The sweep counts too.** Eight of the 11 zones where 1.0.6 reads the wrong offset have no suite
   rows, so a suite pass alone would open a wrong issue.

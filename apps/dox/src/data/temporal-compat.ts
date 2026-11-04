@@ -160,6 +160,7 @@ export const stateLine = (g: CompatGroup): { badge: string; count: string } => {
 const KNOWN_REPOS: Readonly<Record<string, string>> = {
   "tc39/proposal-temporal": "tc39",
   "js-temporal/temporal-polyfill": "polyfill",
+  "fullcalendar/temporal-polyfill": "fullcalendar",
 };
 
 /**

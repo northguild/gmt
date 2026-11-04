@@ -87,3 +87,4 @@ export {
   type TimelineSeries,
 } from "./timeline";
 export { verdict, type VerdictOptions, type VerdictTone } from "./verdict";
+export { zonedValue } from "./zoned-value";

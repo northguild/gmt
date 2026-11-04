@@ -64,22 +64,29 @@ Until that release, GMT's own code covers every bug in the table above.
 There are two Temporal polyfills: [`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill),
 which GMT uses, and [`temporal-polyfill`](https://github.com/fullcalendar/temporal-polyfill) from
 FullCalendar, which is smaller and publishes releases more often. We ran GMT's whole test suite on
-`temporal-polyfill` 1.0.6 to see whether GMT should switch.
+`temporal-polyfill` to see whether GMT should switch.
 
-It fixes most of the bugs in the table above. But it gets three things wrong that
-`@js-temporal/polyfill` and the Temporal built into Node both get right:
+Release 1.0.7 fixes most of the bugs in the table above, and the three bugs we reported in 1.0.6.
+Its UTC offsets match `Intl.DateTimeFormat` in every time zone, on every day from 1970 to ten
+years ahead. Three bugs are left: we reported two, and the maintainers closed the report of the third
+as a known limitation.
 
-- **Bad annotations.** It accepts strings the standard rejects, such as `2024-10-03[]` or a
-  calendar written before the time zone.
-- **The very first and last instant.** It rejects the two instants at the ends of Temporal's
-  range, such as `-271821-04-20T00:00:00Z[Asia/Tokyo]`, which the standard accepts.
-- **Clocks an hour off.** When a zone's clocks change twice within a few weeks, it skips the
-  time between the two changes and reads the clock an hour off for weeks at a time, such as in
-  `Africa/Casablanca` during Ramadan in 2018. We found this in 11 zones.
+- **Looking back from far ahead.** Asked for the last clock change before a date more than about
+  three years from today, it returns an older one. Asked on 4 November 2026 about June 2030 in
+  `America/New_York`, it returns the change in November 2029, not the one in March 2030. Twelve of
+  GMT's tests fail on this.
+- **Before 1847.** It does not find clock changes before 1847, such as `Asia/Manila` on
+  31 December 1844. GMT already works around the same bug in `@js-temporal/polyfill`.
+- **Zone names that are links.** It treats a link name such as `Asia/Calcutta` as a different
+  zone from `Asia/Kolkata`. FullCalendar's report of this, #118 (not ours), was closed as a known
+  limitation. GMT's own probe sees it in WebKit as `Etc/UTC` not equal to `UTC`.
 
-The reports to FullCalendar are pending. So GMT stays on `@js-temporal/polyfill` for now. When a
-`temporal-polyfill` release passes GMT's whole test suite and gets every zone's offsets right, we
-will switch. The full comparison is in GMT's repository:
+So GMT stays on `@js-temporal/polyfill`. Every week, GMT runs its whole test suite on the newest
+`temporal-polyfill` release in Node and three browsers, and checks every zone's offsets against
+`Intl.DateTimeFormat`. A release that passes both opens an issue in GMT's repository, and that
+issue starts the switch. See the
+[weekly runs](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml). The full
+comparison is in GMT's repository:
 [`temporal-polyfill-swap.md`](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md).
 
 ## What we sent, and what happened to it

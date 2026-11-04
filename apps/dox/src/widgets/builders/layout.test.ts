@@ -50,6 +50,28 @@ describe("layout builders", () => {
     ).toHaveAccessibleDescription("Local wall time");
   });
 
+  it("hint takes markup and does not escape it", () => {
+    renderHtml(
+      field({
+        id: "t",
+        label: "Time",
+        hint: hint("t-hint", html`Paste <code>a</code>b<wbr />c`),
+        control: ({ id, describedBy }) =>
+          html`<input id="${id}" type="text" aria-describedby="${describedBy}" />`,
+      }),
+    );
+    expect(
+      screen.getByRole("textbox", { name: "Time" }),
+    ).toHaveAccessibleDescription("Paste abc");
+    expect(hint("h", html`a<wbr />b`).html.toString()).toContain("a<wbr />b");
+  });
+
+  it("hint still escapes a plain string", () => {
+    expect(hint("h", "<b>x</b>").html.toString()).toContain(
+      "&lt;b&gt;x&lt;/b&gt;",
+    );
+  });
+
   it("field without a hint passes no describedBy", () => {
     renderHtml(
       field({

@@ -87,6 +87,14 @@ const env: Record<string, string> = {
 };
 
 describe("parseArgs", () => {
+  it("--offline turns --print on", () => {
+    expect(parseArgs(["--offline", "x/summary.json"])).toMatchObject({
+      ok: true,
+      print: true,
+      offline: true,
+    });
+  });
+
   it("takes files, --print, --dry-run-finding and --legs", () => {
     expect(
       parseArgs([
@@ -100,6 +108,7 @@ describe("parseArgs", () => {
       ok: true,
       files: ["x/summary.json"],
       print: true,
+      offline: false,
       dryRun: true,
       legs: ["a", "b"],
     });
@@ -282,6 +291,76 @@ describe("main", () => {
     expect(out.join("")).toContain("open  a11y-axe:color-contrast:/x/:page");
     expect(out.join("")).toContain("open  dry-run:synthetic:/:body  [dry run]");
     expect(out.join("")).toContain("2 actions planned (not run)");
+  });
+
+  it("--offline makes no gh call, treats no issue as open and implies --print", () => {
+    const { gh, calls } = fakeGh(() => {
+      throw new Error("gh must not run");
+    });
+    const { out, io: i } = io(gh);
+    const file = summaryFile("chromium-1", failing);
+    const missing = summaryFile("firefox-1", "not json");
+    expect(
+      main(["--offline", "--legs", "chromium-1,firefox-1", file, missing], i),
+    ).toBe(0);
+    expect(calls).toHaveLength(0);
+    expect(out.join("")).toContain("open  a11y-axe:color-contrast:/x/:page");
+    expect(out.join("")).toContain("planned (not run)");
+  });
+
+  it("--offline runs outside GitHub Actions too", () => {
+    const { gh, calls } = fakeGh(() => "[]");
+    const local = {
+      env: { ...env, GITHUB_ACTIONS: "" },
+      gh,
+      stdout: () => {},
+      stderr: () => {},
+    };
+    expect(main(["--offline", summaryFile("chromium-1", failing)], local)).toBe(
+      0,
+    );
+    expect(calls).toHaveLength(0);
+  });
+
+  it("--print shows each body's length and a flood's group count", () => {
+    const rows = Array.from({ length: 12 }, (_, i) => ({
+      ...failing.rows[0].findings![0],
+      page: `/p${i}/`,
+    }));
+    const flooding = {
+      status: "FAIL",
+      rows: [{ ...failing.rows[0], findings: rows }],
+    };
+    const { gh } = fakeGh(() => "[]");
+    const { out, io: i } = io(gh);
+    expect(main(["--print", summaryFile("chromium-1", flooding)], i)).toBe(0);
+    expect(out.join("")).toMatch(
+      /open  dox-gate:flood .* 12 groups {2}body \d+ chars/,
+    );
+  });
+
+  it("exits 1 before any gh call when a body is over the limit", () => {
+    const { gh, calls } = fakeGh(() => "[]");
+    const { err, io: i } = io(gh);
+    const huge = {
+      status: "FAIL",
+      rows: [
+        {
+          ...failing.rows[0],
+          findings: [
+            {
+              ...failing.rows[0].findings![0],
+              page: `/${"p".repeat(70_000)}/`,
+            },
+          ],
+        },
+      ],
+    };
+    expect(main([summaryFile("chromium-1", huge)], i)).toBe(1);
+    expect(calls).toHaveLength(0);
+    expect(err.join("")).toMatch(
+      /a11y-axe:color-contrast:\/p+.* is \d+ characters/,
+    );
   });
 
   it("files the findings: labels, then the issue, exit 0", () => {

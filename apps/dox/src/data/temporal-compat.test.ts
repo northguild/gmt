@@ -18,6 +18,7 @@ import {
   toCompatGroup,
   type CompatGroup,
 } from "./temporal-compat";
+import { TRACKED_REPOS } from "./upstream-filings";
 
 /**
  * The canary snapshot the `/upstream/` page reads.
@@ -213,13 +214,21 @@ describe("temporal compat snapshot", () => {
 
   describe("shortRef", () => {
     it.each`
-      repo                               | number  | label
-      ${"tc39/proposal-temporal"}        | ${3292} | ${"tc39 #3292"}
-      ${"js-temporal/temporal-polyfill"} | ${369}  | ${"polyfill #369"}
-      ${"whatwg/html"}                   | ${12}   | ${"whatwg/html #12"}
+      repo                                | number  | label
+      ${"tc39/proposal-temporal"}         | ${3292} | ${"tc39 #3292"}
+      ${"js-temporal/temporal-polyfill"}  | ${369}  | ${"polyfill #369"}
+      ${"fullcalendar/temporal-polyfill"} | ${126}  | ${"fullcalendar #126"}
+      ${"whatwg/html"}                    | ${12}   | ${"whatwg/html #12"}
     `("labels $repo#$number as '$label'", ({ repo, number, label }) => {
       expect(shortRef(repo, number)).toBe(label);
     });
+
+    it.each(TRACKED_REPOS)(
+      "gives tracked repository %s a short label",
+      (repo) => {
+        expect(shortRef(repo, 1)).not.toBe(`${repo} #1`);
+      },
+    );
   });
 
   describe("reasonParts", () => {

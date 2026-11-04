@@ -28,25 +28,30 @@ describe("formatYearMonth", () => {
   // the month as a name there and as a number in every dateStyle.
   // de-DE and tr-TR, no options: "10/2026" on ICU 78.3 (Node 24.22.1, Chromium 153), "10.2026" on
   // WebKit 26.6. ko-KR short: "26. 10." on ICU 78.3, "2026. 10." on WebKit 26.6.
+  // WebKit 26.6 on Linux (Playwright noble) prints de-DE short "10.26" and medium "10.2026" for
+  // PlainYearMonth dateStyle; Chromium 153 and WebKit 26.6 on macOS print "10/26" and "10/2026".
+  // On Linux the same engine's plain Intl.DateTimeFormat prints "10/26" and "10/2026" for the
+  // matching year and month fields, so the difference sits in how the engine adjusts dateStyle
+  // for a year-month, not in this library.
   it.each`
-    locale                  | none                              | short                               | medium            | long                 | yearMonthLong
-    ${MustTestLocales.enUS} | ${"10/2026"}                      | ${"10/26"}                          | ${"Oct 2026"}     | ${"October 2026"}    | ${"October 2026"}
-    ${MustTestLocales.enGB} | ${"10/2026"}                      | ${"10/2026"}                        | ${"Oct 2026"}     | ${"October 2026"}    | ${"October 2026"}
-    ${MustTestLocales.deDE} | ${oneOfIcu("10/2026", "10.2026")} | ${"10/26"}                          | ${"10/2026"}      | ${"Oktober 2026"}    | ${"Oktober 2026"}
-    ${MustTestLocales.frFR} | ${"10/2026"}                      | ${"10/2026"}                        | ${"oct. 2026"}    | ${"octobre 2026"}    | ${"octobre 2026"}
-    ${MustTestLocales.esES} | ${"10/2026"}                      | ${"10/26"}                          | ${"oct 2026"}     | ${"octubre de 2026"} | ${"octubre de 2026"}
-    ${MustTestLocales.itIT} | ${"10/2026"}                      | ${"10/26"}                          | ${"ott 2026"}     | ${"ottobre 2026"}    | ${"ottobre 2026"}
-    ${MustTestLocales.ptPT} | ${"10/2026"}                      | ${"10/26"}                          | ${"10/2026"}      | ${"outubro de 2026"} | ${"outubro de 2026"}
-    ${MustTestLocales.svSE} | ${"2026-10"}                      | ${"2026-10"}                        | ${"okt. 2026"}    | ${"oktober 2026"}    | ${"oktober 2026"}
-    ${MustTestLocales.isIS} | ${"10. 2026"}                     | ${"10. 2026"}                       | ${"okt. 2026"}    | ${"október 2026"}    | ${"október 2026"}
-    ${MustTestLocales.zhCN} | ${"2026/10"}                      | ${"2026/10"}                        | ${"2026/10"}      | ${"2026/10"}         | ${"2026年10月"}
-    ${MustTestLocales.zhTW} | ${"2026/10"}                      | ${"2026/10"}                        | ${"2026/10"}      | ${"2026/10"}         | ${"2026年10月"}
-    ${MustTestLocales.jaJP} | ${"2026/10"}                      | ${"2026/10"}                        | ${"2026/10"}      | ${"2026/10"}         | ${"2026年10月"}
-    ${MustTestLocales.koKR} | ${"2026. 10."}                    | ${oneOfIcu("26. 10.", "2026. 10.")} | ${"2026. 10."}    | ${"2026년 10월"}     | ${"2026년 10월"}
-    ${MustTestLocales.arSA} | ${"١٠/٢٠٢٦"}                      | ${"١٠/٢٠٢٦"}                        | ${"١٠/٢٠٢٦"}      | ${"أكتوبر ٢٠٢٦"}     | ${"أكتوبر ٢٠٢٦"}
-    ${MustTestLocales.heIL} | ${"10.2026"}                      | ${"10.2026"}                        | ${"אוק׳ 2026"}    | ${"אוקטובר 2026"}    | ${"אוקטובר 2026"}
-    ${MustTestLocales.ruRU} | ${"10.2026"}                      | ${"10.2026"}                        | ${"окт. 2026 г."} | ${"октябрь 2026 г."} | ${"октябрь 2026 г."}
-    ${MustTestLocales.trTR} | ${oneOfIcu("10/2026", "10.2026")} | ${"10.2026"}                        | ${"Eki 2026"}     | ${"Ekim 2026"}       | ${"Ekim 2026"}
+    locale                  | none                              | short                               | medium                            | long                 | yearMonthLong
+    ${MustTestLocales.enUS} | ${"10/2026"}                      | ${"10/26"}                          | ${"Oct 2026"}                     | ${"October 2026"}    | ${"October 2026"}
+    ${MustTestLocales.enGB} | ${"10/2026"}                      | ${"10/2026"}                        | ${"Oct 2026"}                     | ${"October 2026"}    | ${"October 2026"}
+    ${MustTestLocales.deDE} | ${oneOfIcu("10/2026", "10.2026")} | ${oneOfIcu("10/26", "10.26")}       | ${oneOfIcu("10/2026", "10.2026")} | ${"Oktober 2026"}    | ${"Oktober 2026"}
+    ${MustTestLocales.frFR} | ${"10/2026"}                      | ${"10/2026"}                        | ${"oct. 2026"}                    | ${"octobre 2026"}    | ${"octobre 2026"}
+    ${MustTestLocales.esES} | ${"10/2026"}                      | ${"10/26"}                          | ${"oct 2026"}                     | ${"octubre de 2026"} | ${"octubre de 2026"}
+    ${MustTestLocales.itIT} | ${"10/2026"}                      | ${"10/26"}                          | ${"ott 2026"}                     | ${"ottobre 2026"}    | ${"ottobre 2026"}
+    ${MustTestLocales.ptPT} | ${"10/2026"}                      | ${"10/26"}                          | ${"10/2026"}                      | ${"outubro de 2026"} | ${"outubro de 2026"}
+    ${MustTestLocales.svSE} | ${"2026-10"}                      | ${"2026-10"}                        | ${"okt. 2026"}                    | ${"oktober 2026"}    | ${"oktober 2026"}
+    ${MustTestLocales.isIS} | ${"10. 2026"}                     | ${"10. 2026"}                       | ${"okt. 2026"}                    | ${"október 2026"}    | ${"október 2026"}
+    ${MustTestLocales.zhCN} | ${"2026/10"}                      | ${"2026/10"}                        | ${"2026/10"}                      | ${"2026/10"}         | ${"2026年10月"}
+    ${MustTestLocales.zhTW} | ${"2026/10"}                      | ${"2026/10"}                        | ${"2026/10"}                      | ${"2026/10"}         | ${"2026年10月"}
+    ${MustTestLocales.jaJP} | ${"2026/10"}                      | ${"2026/10"}                        | ${"2026/10"}                      | ${"2026/10"}         | ${"2026年10月"}
+    ${MustTestLocales.koKR} | ${"2026. 10."}                    | ${oneOfIcu("26. 10.", "2026. 10.")} | ${"2026. 10."}                    | ${"2026년 10월"}     | ${"2026년 10월"}
+    ${MustTestLocales.arSA} | ${"١٠/٢٠٢٦"}                      | ${"١٠/٢٠٢٦"}                        | ${"١٠/٢٠٢٦"}                      | ${"أكتوبر ٢٠٢٦"}     | ${"أكتوبر ٢٠٢٦"}
+    ${MustTestLocales.heIL} | ${"10.2026"}                      | ${"10.2026"}                        | ${"אוק׳ 2026"}                    | ${"אוקטובר 2026"}    | ${"אוקטובר 2026"}
+    ${MustTestLocales.ruRU} | ${"10.2026"}                      | ${"10.2026"}                        | ${"окт. 2026 г."}                 | ${"октябрь 2026 г."} | ${"октябрь 2026 г."}
+    ${MustTestLocales.trTR} | ${oneOfIcu("10/2026", "10.2026")} | ${"10.2026"}                        | ${"Eki 2026"}                     | ${"Ekim 2026"}       | ${"Ekim 2026"}
   `(
     "formats 2026-10 for $locale as $none with no options, $short for short, $medium for medium, $long for full and long and $yearMonthLong for month long",
     ({ locale, none, short, medium, long, yearMonthLong }) => {
@@ -74,6 +79,15 @@ describe("formatYearMonth", () => {
     },
   );
 
+  // era only: defaults, era inherited. The year-month-era pattern is "10/2026 AD" on Chromium 153,
+  // Node and macOS WebKit 26.6 and "10 2026 AD" on WebKit 26.6 on Linux.
+  it("formats '2026-10' with options { era: 'short' } for en-US to one of the engines' patterns", () => {
+    expectOneOfIcu(
+      formatYearMonth("2026-10", MustTestLocales.enUS, { era: "short" }),
+      oneOfIcu("10/2026 AD", "10 2026 AD"),
+    );
+  });
+
   // Rules, en-US.
   it.each`
     value                      | options                                                                       | expected              | rule
@@ -89,7 +103,6 @@ describe("formatYearMonth", () => {
     ${"2026-10"}               | ${{ minute: "numeric" }}                                                      | ${""}                 | ${"minute only"}
     ${"2026-10"}               | ${{ second: "numeric" }}                                                      | ${""}                 | ${"second only"}
     ${"2026-10"}               | ${{ fractionalSecondDigits: 3 }}                                              | ${""}                 | ${"fractionalSecondDigits only"}
-    ${"2026-10"}               | ${{ era: "short" }}                                                           | ${"10/2026 AD"}       | ${"era only: defaults, era inherited"}
     ${"2026-10"}               | ${{ era: "short", year: "numeric", month: "long" }}                           | ${"October 2026 AD"}  | ${"era kept"}
     ${"2026-10"}               | ${{ timeZoneName: "short" }}                                                  | ${"10/2026"}          | ${"timeZoneName only is not inherited"}
     ${"2026-10"}               | ${{ timeStyle: "short" }}                                                     | ${""}                 | ${"timeStyle"}
@@ -119,7 +132,8 @@ describe("formatYearMonth", () => {
   `(
     "formats '$value' with options $options for en-US to '$expected' ($rule)",
     ({ value, options, expected }) => {
-      expect(formatYearMonth(value, MustTestLocales.enUS, options)).toEqual(
+      expectText(
+        formatYearMonth(value, MustTestLocales.enUS, options),
         expected,
       );
     },

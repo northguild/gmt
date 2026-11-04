@@ -1,0 +1,6 @@
+/* zonedValue: each stretch is one unbreakable piece, so a hyphen or colon inside it never offers a
+   break (Chromium breaks after a hyphen). The `<wbr>` between pieces is outside the no-wrap
+   element, so WebKit and Firefox honour it. */
+.piece {
+  white-space: nowrap;
+}

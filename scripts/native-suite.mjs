@@ -86,7 +86,7 @@ const SHIM_PATH = "packages/gmt/src/test/nativeTemporal.ts";
 
 /**
  * @typedef {"node" | "chromium" | "firefox" | "webkit"} Leg
- * @typedef {"control" | "native"} Pass
+ * @typedef {"control" | "native" | "swap"} Pass
  * @typedef {{ index: number, count: number }} Shard  one of a pass's Vitest runs, 1-based
  * @typedef {{ engine: string, playwright: string | null }} Engine
  * @typedef {ReturnType<typeof import("./lib/canary-verdict.mjs").browserCompatVerdict>} CompatVerdict
@@ -488,6 +488,34 @@ function preflight(leg, root) {
 }
 
 /**
+ * The Vitest config a pass runs and the environment it adds. Node runs a config per pass; a browser
+ * runs one config and picks the implementation with `GMT_TEMPORAL`.
+ * @param {Leg} leg
+ * @param {Pass} pass
+ * @returns {{ config: string, env: Record<string, string> }}
+ */
+export function passSetup(leg, pass) {
+  if (leg !== "node") {
+    return {
+      config: "packages/gmt/vitest.browser.config.ts",
+      env:
+        pass === "control"
+          ? { GMT_TEMPORAL: "polyfill" }
+          : pass === "swap"
+            ? { GMT_TEMPORAL: "temporal-polyfill" }
+            : {},
+    };
+  }
+  const config =
+    pass === "native"
+      ? "packages/gmt/vitest.native.config.ts"
+      : pass === "swap"
+        ? "packages/gmt/vitest.swap.config.ts"
+        : "packages/gmt/vitest.config.ts";
+  return { config, env: {} };
+}
+
+/**
  * Runs Vitest once, leaves its JSON report under `artifacts/` and returns Vitest's exit status.
  * Vitest exits non-zero when tests fail, so the status alone is no verdict; `main` reads it beside
  * the report. Throws when the process cannot start, is killed, or runs past `timeoutMs`.
@@ -513,11 +541,7 @@ export function runPass(
     JSON.parse(readFileSync(pkgPath, "utf8")).bin.vitest,
   );
   const browser = leg !== "node";
-  const config = browser
-    ? "packages/gmt/vitest.browser.config.ts"
-    : pass === "native"
-      ? "packages/gmt/vitest.native.config.ts"
-      : "packages/gmt/vitest.config.ts";
+  const { config, env } = passSetup(leg, pass);
   const out = reportPath(leg, pass, shard);
   rmSync(join(root, out), { force: true });
   rmSync(join(root, errorsPath(leg, pass, shard)), { force: true });
@@ -544,7 +568,7 @@ export function runPass(
         ...process.env,
         NATIVE_SUITE_ERRORS: join(root, errorsPath(leg, pass, shard)),
         NATIVE_SUITE_MESSAGES: join(root, messagesPath(leg, pass, shard)),
-        ...(browser && pass === "control" ? { GMT_TEMPORAL: "polyfill" } : {}),
+        ...env,
       },
       stdio: ["ignore", "ignore", "inherit"],
       maxBuffer: 256 * 1024 * 1024,
@@ -665,9 +689,16 @@ export function mergeReports(reports) {
  * @param {any} native
  * @param {number} controlExit
  * @param {number} controlErrors  how many unhandled errors the control pass reported
+ * @param {string} [candidate]  what the control is compared with: `native`, or `swap` (CORE-92)
  * @returns {string | null}
  */
-function incompleteRun(control, native, controlExit, controlErrors) {
+export function incompleteRun(
+  control,
+  native,
+  controlExit,
+  controlErrors,
+  candidate = "native",
+) {
   /** @param {any} report */
   const tests = (report) =>
     report.testResults.reduce(
@@ -675,12 +706,12 @@ function incompleteRun(control, native, controlExit, controlErrors) {
         n + (f.assertionResults?.length ?? 0),
       0,
     );
-  if (tests(native) === 0) return "the native pass ran no tests";
+  if (tests(native) === 0) return `the ${candidate} pass ran no tests`;
   if (tests(control) === 0) return "the control pass ran no tests";
   const nativeFiles = native.testResults.length;
   const controlFiles = control.testResults.length;
   if (nativeFiles < controlFiles) {
-    return `the native pass ran ${nativeFiles} files, the control pass ${controlFiles}`;
+    return `the ${candidate} pass ran ${nativeFiles} files, the control pass ${controlFiles}`;
   }
   const controlFailed = control.testResults.some(
     (/** @type {any} */ f) =>
@@ -924,7 +955,7 @@ function stoppedEarly(pass, run) {
  * @param {(text: string) => void} stderr
  * @returns {PassRun}
  */
-function runPassAgainIfStopped(leg, pass, root, d, stderr) {
+export function runPassAgainIfStopped(leg, pass, root, d, stderr) {
   const first = runOnce(leg, pass, root, d, stderr);
   if (first.unfinished.length === 0) return first;
   stderr(`native-suite: ${stoppedEarly(pass, first)}; running it again\n`);

@@ -641,7 +641,9 @@ for (const entry of todo) {
       detail:
         entry.reason === "browser"
           ? `none of ${opts.browsers.join(",")} runs it`
-          : `not selected (no ${gate.id} page changed)`,
+          : opts.all
+            ? "not selected (no pages in this shard)"
+            : `not selected (no ${gate.id} page changed)`,
     });
     continue;
   }

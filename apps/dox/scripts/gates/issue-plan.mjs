@@ -41,8 +41,17 @@ export const DOWNLOAD_STEP = "Download the findings";
 /** The key of the one issue for every leg whose summary was written but never reached the report. */
 export const NOT_UPLOADED_KEY = "dox-gate:not-uploaded:all:";
 
+/** GitHub rejects an issue body or comment longer than this many characters. */
+export const BODY_LIMIT = 65_536;
+/** What `fit` allows the text after the marker line, leaving room for the marker and the cut note. */
+export const BODY_BUDGET = 60_000;
 /** Rows a body or comment tables, so a sweep-wide failure cannot push a body past GitHub's limit. */
-const TABLE_ROWS = 40;
+export const TABLE_ROWS = 40;
+/** Example targets a flood row names. */
+const EXAMPLES = 3;
+const EXAMPLE_CHARS = 100;
+/** Days the workflow keeps a leg's uploaded findings. */
+const ARTIFACT_DAYS = 14;
 const MESSAGE_CHARS = 600;
 const LOG_LINES = 10;
 
@@ -61,10 +70,11 @@ const LOG_LINES = 10;
  *   `summary` null: no readable `summary.json` reached the report. `job` is the leg's sweep job
  *   from the run's job list; absent or null when that list could not be read or lacks the leg.
  * @typedef {{ number: number, body: string, labels: { name: string }[] }} OpenIssue
- * @typedef {{ runUrl: string, sha: string, dryRun?: boolean }} Context
+ * @typedef {{ runUrl: string, sha: string, runId?: string, dryRun?: boolean }} Context
  * @typedef {{ kind: "open", key: string, title: string, labels: string[], body: string }
  *   | { kind: "comment", key: string, issue: number, body: string }} Action
- * @typedef {{ key: string, title: string, labels: string[], body: string, comment: string }} Planned
+ * @typedef {{ key: string, title: string, labels: string[], body: string, comment: string,
+ *   entry?: ReturnType<typeof collect>[number], groups?: number }} Planned
  */
 
 /** Collapses every run of whitespace to one space and trims. */
@@ -121,6 +131,22 @@ function table(header, rows) {
     lines.push("", `(${rows.length - shown.length} more places not listed)`);
   }
   return lines.join("\n");
+}
+
+/**
+ * `text` within `BODY_BUDGET` characters. Longer text is cut after the last whole line that fits,
+ * or mid-line when it has no line break, and a note says how many lines went.
+ * @param {string} text
+ */
+export function fit(text) {
+  if (text.length <= BODY_BUDGET) return text;
+  let kept = text.slice(0, BODY_BUDGET - 100);
+  const cut = kept.lastIndexOf("\n");
+  if (cut > 0) kept = kept.slice(0, cut);
+  let rest = text.slice(kept.length);
+  if (rest.startsWith("\n")) rest = rest.slice(1);
+  const lines = rest.split("\n").length;
+  return `${kept}\n… ${lines} more lines; full list in the run's artifacts.`;
 }
 
 const browserOfLeg = (leg) => leg.split("-")[0];
@@ -301,6 +327,7 @@ function planned(entry, context) {
     : `\n\nReproduce:\n\n\`\`\`bash\n${reproduce(entry)}\n\`\`\``;
   return {
     key: entry.key,
+    entry,
     title,
     labels: [GATE_LABEL],
     body: `${entry.message}${selector}${tail}\n\n${placesTable(entry)}\n\n${run}${repro}`,
@@ -344,6 +371,68 @@ export function matches(issue, key) {
 }
 
 /**
+ * The failures a flood holds back, one group per gate, rule and page, largest first.
+ * @param {NonNullable<Planned["entry"]>[]} entries
+ */
+function floodGroups(entries) {
+  /** @type {Map<string, { key: string, count: number, browsers: Set<string>, widths: Set<string>, targets: string[] }>} */
+  const byGroup = new Map();
+  for (const e of entries) {
+    const key = `${e.gate}:${e.rule}:${e.page}`;
+    const g = byGroup.get(key) ?? {
+      key,
+      count: 0,
+      browsers: new Set(),
+      widths: new Set(),
+      targets: [],
+    };
+    g.count++;
+    for (const p of e.places) {
+      if (p.browser) g.browsers.add(p.browser);
+      if (p.width) g.widths.add(p.width);
+    }
+    const target = e.target ?? e.selector;
+    if (target && g.targets.length < EXAMPLES) g.targets.push(target);
+    byGroup.set(key, g);
+  }
+  return [...byGroup.values()].sort(
+    (a, b) => b.count - a.count || a.key.localeCompare(b.key),
+  );
+}
+
+const sorted = (set) =>
+  [...set].sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+
+/** The flood's table: `TABLE_ROWS` groups, then a count of the rest. */
+function floodTable(groups) {
+  const rows = groups
+    .slice(0, TABLE_ROWS)
+    .map(
+      (g) =>
+        `| ${codeCell(g.key)} | ${g.count} | ${cell(sorted(g.browsers).join(", ") || "-")} | ${cell(sorted(g.widths).join(", ") || "-")} | ${g.targets.map((t) => codeCell(t.slice(0, EXAMPLE_CHARS))).join(" ")} |`,
+    );
+  const lines = [
+    "| Group | Count | Browsers | Widths | Examples |",
+    "| --- | --- | --- | --- | --- |",
+    ...rows,
+  ];
+  if (groups.length > TABLE_ROWS) {
+    lines.push("", `(${groups.length - TABLE_ROWS} more groups not listed)`);
+  }
+  return lines.join("\n");
+}
+
+/** Where the full list lives: each leg's uploaded findings, kept for `ARTIFACT_DAYS` days. */
+function artifactLine(legs, context) {
+  const names = legs
+    .map(
+      (l) => `\`dox-gate-${l.leg}${context.runId ? `-${context.runId}` : ""}\``,
+    )
+    .join(", ");
+  return `Full findings: the run's artifacts ${names} (kept ${ARTIFACT_DAYS} days).`;
+}
+
+/**
  * @param {LegSummary[]} legs
  * @param {OpenIssue[]} openIssues
  * @param {Context} context
@@ -362,24 +451,27 @@ export function planIssueActions(legs, openIssues, context) {
   const fresh = findings.filter((f) => !lowest(f.key));
   const flood = fresh.length > FLOOD_LIMIT;
   if (flood) {
-    const list = fresh.map((f) => `- \`${f.key}\`: ${f.title}`).join("\n");
+    const groups = floodGroups(fresh.map((f) => f.entry));
+    const list = floodTable(groups);
     const lines = [
-      `This run found ${fresh.length} new gate failures, more than ${FLOOD_LIMIT}. Many at once is usually one systemic cause (a shared stylesheet, a broken build, a runner problem), so none was filed on its own. Triage the cause first; the next run files whichever still fail.`,
+      `This run found ${fresh.length} new gate failures in ${groups.length} groups, more than ${FLOOD_LIMIT} failures. Many at once is usually one systemic cause (a shared stylesheet, a broken build, a runner problem), so none was filed on its own. Triage the cause first. Each run comments here until ten or fewer remain; then each is filed on its own.`,
       "",
-      "Held back:",
+      "Held back, by gate, rule and page:",
       "",
       list,
       "",
       `Commit: ${context.sha}`,
       `Run: ${context.runUrl}`,
+      artifactLine(legs, context),
     ];
     findings = findings.filter((f) => !fresh.includes(f));
     findings.push({
       key: FLOOD_KEY,
       title: `Dox gate: ${fresh.length} new failures in one run`,
       labels: [GATE_LABEL],
+      groups: groups.length,
       body: lines.join("\n"),
-      comment: `Still flooding at ${context.sha}: ${context.runUrl}\n\n${fresh.length} new failures:\n\n${list}`,
+      comment: `Still flooding at ${context.sha}: ${context.runUrl}\n\n${fresh.length} new failures in ${groups.length} groups:\n\n${list}\n\n${artifactLine(legs, context)}`,
     });
   }
   if (context.dryRun) findings.push(dryRunFinding(context));
@@ -392,14 +484,15 @@ export function planIssueActions(legs, openIssues, context) {
             kind: "comment",
             key: finding.key,
             issue: found.number,
-            body: finding.comment,
+            body: fit(finding.comment),
           }
         : {
             kind: "open",
             key: finding.key,
             title: finding.title,
             labels: finding.labels,
-            body: `${marker(finding.key)}\n${finding.body}`,
+            body: `${marker(finding.key)}\n${fit(finding.body)}`,
+            ...(finding.groups === undefined ? {} : { groups: finding.groups }),
           },
     );
   }

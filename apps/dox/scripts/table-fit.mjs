@@ -26,7 +26,7 @@
  * Last line `table-fit: <pages> pages, <tables> tables, <n> scroll`. Exit 0 pass, 1 any finding
  * or no table measured at all, 2 usage or a missing build.
  */
-import { chromium, firefox, webkit } from "@playwright/test";
+import { launchBrowser } from "./lib/browser-launch.mjs";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,7 +39,7 @@ import { listTablePages } from "./lib/table-pages.mjs";
 const GATE = "table-fit";
 const HEIGHT = 900;
 const AT_A_TIME = 8;
-const LAUNCHERS = { chromium, firefox, webkit };
+const LAUNCHERS = { chromium: true, firefox: true, webkit: true };
 const DIST = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -201,7 +201,7 @@ let scrolling = 0;
 let measuredPages = 0;
 
 for (const browserName of browsers) {
-  const browser = await LAUNCHERS[browserName].launch();
+  const browser = await launchBrowser(browserName);
   let next = 0;
   const work = async () => {
     while (next < pages.length) {
