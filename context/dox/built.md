@@ -478,9 +478,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   gets a page and the sidebar test in `changelog.test.ts` then fails until the sidebar links it).
   It writes the gitignored `src/content/docs/changelog/index.md` (`@northguild/gmt`) and
   `changelog/gmt-eslint.md`, `gmt-oxlint.md`, `gmt-biome.md` (titled `Changelog: gmt-eslint`, …)
-  after `build-guides.mjs`, in `generate` and in the `dox-pages` check. The files are the release
-  record and are never edited, wrong lines included. `renderPage` takes the title, description,
-  source URL and install link as parameters; the retired-scope line links `/install/` for `gmt`
+  after `build-guides.mjs`, in `generate` and in the `dox-pages` check. The generator never writes the
+  `CHANGELOG.md` files, which are the release record. `renderPage` takes the title, description,
+  source URL and install link as parameters; the retired-scope plate links `/install/` for `gmt`
   and `/guides/integration/linting/` for a plugin.
   - **Scope and date come from the release tags**, read in one `git for-each-ref` call with
     `TZ=UTC`: a version's scope is its tag's scope (the current scope is the `name` scope in
@@ -488,7 +488,25 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `Released YYYY-MM-DD` through gmt's `parseDateFromUtc` (the generator needs a built
     `packages/gmt`; no `Date`). No hand-kept boundary file. Each scope's versions form one unbroken run, current scope
     first; a version under a retired scope above a current one fails the build, naming both.
-    The `@burglekitt` group has one plain line under its heading.
+    The `@burglekitt` group opens with a memorial plate.
+  - **The memorial plate** sits under each retired group's `##` heading, before its first `###`:
+    `<div class="gmt-changelog-memorial">` holding the scope's logo and one sentence, "In memoriam:
+    @burglekitt. These releases were published under the retired `@burglekitt` npm scope. The
+    package continues as `<pkg>` from `<version>`; install …". `memorialPlate` in `lib/changelog.mjs`
+    builds it from the groups: the scope is the retired group's, the version is the current
+    group's oldest release (gmt 1.14.2, gmt-eslint 1.0.4), the link is the page's `installLink`.
+    Nothing is typed. A retired group with no current group fails the build, since the
+    "continues as" clause cannot be built. The blank lines inside the `<div>` are required
+    (CommonMark §4.6 ends a type 6 HTML block at a blank line); the text twin drops the `<div>`
+    lines and keeps the image line and the sentence. `rehype-base-links` puts `/gmt` on the
+    `<img src>` and the install link.
+  - **The logo** is `public/burglekitt-logo.png`: the owner's 400 px file downscaled to 192 px
+    (2x its 96 px box) with the EXIF chunk stripped, not cropped, recoloured or redrawn. The plate
+    never shows a stand-in: no drawn, generated or text substitute. `changelog.test.ts` fails if
+    the file named by `MEMORIAL_LOGO` is missing from `public/`; the fix is the file. `.gmt-changelog-memorial`
+    (`gmt-content.css`) is a full bevelled border on `--gmt-surface-widget`, the logo clipped to
+    a circle at a fixed size (no reflow while it loads) beside the text from 480 px, stacked
+    below. No `filter`; the releases under it look like any other.
   - **Only a package's newest version may lack a tag**, and shows "Not yet released": a release PR
     adds its `## <version>` before Release tags it, and CI builds Dox on that PR. Any older
     untagged version fails the build (`run git fetch --tags`). Every workflow that builds Dox
@@ -522,7 +540,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **The content rules do not apply to their body.** *GMT tracks no law* and *International
     authority first* govern pages we write; the changelog is verbatim history (it says
     "regulation" and "compliant", and holds `America/New_York` and `en-US`). The generated intro
-    and the retired line follow every rule.
+    and the memorial plate follow every rule.
   - **`api-surface.mjs` skips `content/docs/changelog/`**: release notes record past APIs
     (`@northguild/gmt/duty`, `isLeapSecond` from `timescale`) that today's surface must not check.
     A `packages/*/CHANGELOG.md` change runs the Dox content checks (`affected.mjs`).

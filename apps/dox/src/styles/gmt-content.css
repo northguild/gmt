@@ -41,6 +41,43 @@
   font-size: 1rem;
 }
 
+/* The plate under a retired group's heading (lib/changelog.mjs `memorialPlate`): the scope's logo
+   beside one sentence. Markdown puts the image in a <p>, so the grid lays out that <p> and the text.
+   A full bevelled border on an opaque surface, never a left-only accent. The logo box has a fixed
+   size so the plate does not reflow while the image loads; the circle clip lets the file's
+   off-white matte read as the badge's own white rim. The mark is never filtered or recoloured. */
+.sl-markdown-content .gmt-changelog-memorial {
+  display: grid;
+  gap: var(--gmt-space-4);
+  place-items: center start;
+  margin-block: var(--gmt-space-4);
+  padding: var(--gmt-space-4);
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-cyan);
+  border-radius: var(--gmt-radius-lg);
+  corner-shape: bevel;
+  color: var(--gmt-ice);
+}
+
+.sl-markdown-content .gmt-changelog-memorial > * {
+  margin: 0;
+}
+
+.sl-markdown-content .gmt-changelog-memorial img {
+  display: block;
+  inline-size: 96px;
+  block-size: 96px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid var(--gmt-cyan);
+}
+
+@media (width >= 480px) {
+  .sl-markdown-content .gmt-changelog-memorial {
+    grid-template-columns: auto 1fr;
+  }
+}
+
 /* A heading with no spaces to break at — several function names joined by
    `/`, e.g. — has nowhere for normal wrapping to give, and pushed the whole
    page into horizontal scroll rather than wrapping (found on

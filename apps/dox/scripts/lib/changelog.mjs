@@ -239,6 +239,34 @@ export function describePage(pkgName, groups) {
   }.`;
 }
 
+/** Where the plate's logo is served from, a root-absolute path the site's base is put in front of. */
+export const MEMORIAL_LOGO = "/burglekitt-logo.png";
+
+/**
+ * The plate under a retired group's heading: the scope's logo and one sentence saying where the
+ * package went. Every figure comes from the groups: the scope from the group, the version from
+ * the current group's oldest release. The blank lines inside the `<div>` are required: without
+ * them the HTML block (CommonMark §4.6, type 6) swallows the image and the text as raw text.
+ * Throws when the page has no current group, because the "continues as" clause could not be built.
+ * @param {{ scope: string, pkgName: string, groups: ReturnType<typeof groupReleases>, installLink: string }} input
+ */
+export function memorialPlate({ scope, pkgName, groups, installLink }) {
+  const current = groups.find((group) => !group.retired);
+  const first = current?.releases.at(-1);
+  if (!first) {
+    throw new Error(
+      `changelog: ${pkgName} has releases under the retired ${scope} scope but no current group, so the plate cannot say where the package continues`,
+    );
+  }
+  return `<div class="gmt-changelog-memorial">
+
+![The ${scope} organization logo](${MEMORIAL_LOGO})
+
+**In memoriam: ${scope}.** These releases were published under the retired \`${scope}\` npm scope. The package continues as \`${pkgName}\` from ${first.version}; [install ${pkgName}](${installLink}).
+
+</div>`;
+}
+
 /**
  * The page's Markdown, frontmatter included.
  * @param {{
@@ -252,7 +280,7 @@ export function describePage(pkgName, groups) {
  *   installLink: string,
  *   lastUpdated?: string,
  * }} input `pkgName` is the full name, `@northguild/gmt`; `installLink` is where the retired
- * scope's line sends the reader to install it
+ * scope's plate sends the reader to install it
  */
 export function renderPage({
   pkgName,
@@ -272,7 +300,7 @@ export function renderPage({
     const heading = `${group.scope}/${pkg}`;
     headings.push({ text: heading });
     const intro = group.retired
-      ? `Published under the retired ${group.scope} npm scope; [install ${pkgName}](${installLink}).\n\n`
+      ? `${memorialPlate({ scope: group.scope, pkgName, groups, installLink })}\n\n`
       : "";
     const releases = group.releases.map((release) => {
       headings.push({ text: release.version });

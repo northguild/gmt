@@ -7,8 +7,8 @@
  * the directory, so a new package with a changelog gets a page with no change here (the sidebar
  * test then names the missing link). A version's scope (current or
  * the retired `@burglekitt`) and its release date come from its git tag, read in one call; the
- * transform is in lib/changelog.mjs. The CHANGELOG.md files are the release record and are never
- * edited. The emitted page is gitignored.
+ * transform is in lib/changelog.mjs. This script never writes the CHANGELOG.md files; they are
+ * the release record. The emitted page is gitignored.
  *
  * `installLinkFor` picks the page's install link: `@northguild/gmt` links to /install/ and every
  * other package to the linting guide, because today every other package is a lint plugin. A
@@ -52,7 +52,7 @@ const PACKAGES = readdirSync(resolve(repoRoot, "packages"))
   .sort((a, b) => (a === "gmt" ? -1 : b === "gmt" ? 1 : a.localeCompare(b)))
   .map((dir) => ({ dir, out: dir === "gmt" ? "index.md" : `${dir}.md` }));
 
-/** Where a retired-scope line sends the reader to install: the library, or a plugin's guide. */
+/** Where a retired-scope plate sends the reader to install: the library, or a plugin's guide. */
 const installLinkFor = (dir) =>
   dir === "gmt" ? "/install/" : "/guides/integration/linting/";
 

@@ -3,7 +3,7 @@
 **Scope:** Dox gains changelog pages built from each package's `CHANGELOG.md`: `/changelog/`
 (`@northguild/gmt`), `/changelog/gmt-eslint/`, `/changelog/gmt-oxlint/` and `/changelog/gmt-biome/`.
 The releases published under the retired `@burglekitt` npm scope sit in their own group, set apart
-from the `@northguild` releases by one plain line. The `/upstream` page lists GMT's pull request to
+from the `@northguild` releases by an "In memoriam" plate with the old logo. The `/upstream` page lists GMT's pull request to
 You-Dont-Need-Momentjs in a separate "Beyond Temporal" section. Adds no library function. Tracked
 as #451.
 
@@ -31,9 +31,11 @@ GMT opened [you-dont-need/You-Dont-Need-Momentjs#159](https://github.com/you-don
 - **A top-level "Changelog" sidebar group** with the four pages.
 - **You-Dont-Need-Momentjs #159** as a synced `listings` entry on `/upstream`. The Temporal
   filings, their tally and their tests do not change.
+- **An "In memoriam" plate** on each page's retired `@burglekitt` group: the old logo and one
+  sentence built from the groups.
 
 Out of scope: editing any `CHANGELOG.md` beyond the one wrong name in the 1.14.1 entries
-(Decision 5), a logo or memorial styling, release data from npm, a Dox chat tool.
+(Decision 5), release data from npm, a Dox chat tool.
 
 ## What gmt provides (do not re-implement)
 
@@ -49,7 +51,10 @@ Out of scope: editing any `CHANGELOG.md` beyond the one wrong name in the 1.14.1
 
 1. Scope comes from each version's tag, per package: `@burglekitt/gmt` is 1.0.0 to 1.14.1,
    `@northguild/gmt` 1.14.2 on; the plugins split by their own tags. No hand-kept boundary file.
-2. No logo, plate or "In memoriam". One plain paragraph sits under the `@burglekitt/<pkg>` heading.
+2. Each `@burglekitt/<pkg>` group opens with an "In memoriam" plate: the old logo and one
+   sentence built from the groups, never typed. Planning dropped it while the logo was missing;
+   the owner supplied the logo in review of #457. The releases under it look like every other
+   release. The page never shows a stand-in logo.
 3. The plugin changelogs are in: `/changelog/gmt-eslint/`, `/gmt-oxlint/`, `/gmt-biome/`.
 4. YDNM #159 is a separate synced `listings` list in a "Beyond Temporal" section on `/upstream`.
 5. The 1.14.1 entry in all four changelogs said "`@northguild/<pkg>` will receive no further

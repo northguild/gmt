@@ -10,6 +10,7 @@ import {
   checkSlugs,
   demoteHeadings,
   groupReleases,
+  MEMORIAL_LOGO,
   parseChangelog,
   parseTags,
   renderPage,
@@ -301,7 +302,13 @@ Released 2026-11-03
 
 ## @burglekitt/gmt
 
-Published under the retired @burglekitt npm scope; [install @northguild/gmt](/install/).
+<div class="gmt-changelog-memorial">
+
+![The @burglekitt organization logo](/burglekitt-logo.png)
+
+**In memoriam: @burglekitt.** These releases were published under the retired \`@burglekitt\` npm scope. The package continues as \`@northguild/gmt\` from 1.1.0; [install @northguild/gmt](/install/).
+
+</div>
 
 ### 1.0.0
 
@@ -364,9 +371,72 @@ describe("a plugin page", () => {
     });
     expect(page).toContain('title: "Changelog: gmt-eslint"');
     expect(page).toContain(
-      "Published under the retired @burglekitt npm scope; [install @northguild/gmt-eslint](/guides/integration/linting/).",
+      "The package continues as `@northguild/gmt-eslint` from 1.1.0; [install @northguild/gmt-eslint](/guides/integration/linting/).",
     );
     expect(page).toContain("## @burglekitt/gmt-eslint\n");
+  });
+});
+
+describe("the memorial plate", () => {
+  const current = {
+    scope: "@northguild",
+    retired: false,
+    releases: [
+      { version: "1.3.0", stamp: null, body: "- a: x" },
+      { version: "1.2.0", stamp: "2026-05-01T00:00:00Z", body: "- a: x" },
+    ],
+  };
+  const retired = {
+    scope: "@burglekitt",
+    retired: true,
+    releases: [
+      { version: "1.1.0", stamp: "2026-04-10T17:17:54Z", body: "- b: y" },
+      { version: "1.0.0", stamp: "2026-04-01T00:00:00Z", body: "- b: z" },
+    ],
+  };
+  const render = (groups: (typeof current)[]) =>
+    renderPage({
+      pkgName: "@northguild/gmt",
+      title: "t",
+      description: "d",
+      installLink: "/install/",
+      groups,
+      formatDate,
+      sourceUrl: "u",
+      sourcePath: "p",
+    });
+
+  it("sits right under the retired heading, before its first release, and names the oldest current version and the install link", () => {
+    const page = render([current, retired]);
+    expect(page.match(/gmt-changelog-memorial/g)).toHaveLength(1);
+    const oldest = current.releases.at(-1)!.version;
+    const at = page.indexOf(
+      '## @burglekitt/gmt\n\n<div class="gmt-changelog-memorial">\n\n',
+    );
+    expect(at).toBeGreaterThan(0);
+    expect(page.indexOf("gmt-changelog-memorial")).toBeLessThan(
+      page.indexOf(`### ${retired.releases[0].version}`),
+    );
+    expect(page).toContain(
+      `\n\n![The @burglekitt organization logo](/burglekitt-logo.png)\n\n**In memoriam: @burglekitt.** `,
+    );
+    expect(page).toContain(
+      `The package continues as \`@northguild/gmt\` from ${oldest}; [install @northguild/gmt](/install/).\n\n</div>\n\n### `,
+    );
+  });
+
+  it("is absent when every group is current", () => {
+    expect(render([current])).not.toContain("gmt-changelog-memorial");
+  });
+
+  it("fails loudly when a retired group has no current group to continue it", () => {
+    expect(() => render([retired])).toThrow(/@burglekitt.*no current/s);
+  });
+
+  it("points at a logo file that ships in public/", () => {
+    expect(
+      existsSync(resolve(repoRoot, "apps/dox/public", `.${MEMORIAL_LOGO}`)),
+    ).toBe(true);
   });
 });
 
@@ -463,7 +533,7 @@ describe.each(changelogPackages)("the real changelog of packages/%s", (dir) => {
     }
   });
 
-  it("puts every @burglekitt-tagged version under the retired heading and a line naming the package", () => {
+  it("puts every @burglekitt-tagged version under the retired heading and one memorial plate", () => {
     if (!hasTags) return; // a shallow clone has no tags
     const retired = versions.filter(
       (v) => tags.get(v.version)?.scope === "@burglekitt",
@@ -473,8 +543,14 @@ describe.each(changelogPackages)("the real changelog of packages/%s", (dir) => {
     const start = text.indexOf(`## @burglekitt/${dir}\n`);
     expect(start).toBeGreaterThan(0);
     const section = text.slice(start);
+    const groups = groupReleases(versions, tags, scope, dir);
+    const oldest = groups.find((g) => !g.retired)!.releases.at(-1)!.version;
+    expect(text.match(/class="gmt-changelog-memorial"/g)).toHaveLength(1);
+    expect(section.indexOf("gmt-changelog-memorial")).toBeLessThan(
+      section.indexOf("### "),
+    );
     expect(section).toContain(
-      `Published under the retired @burglekitt npm scope; [install ${pkgName}](`,
+      `The package continues as \`${pkgName}\` from ${oldest}; [install ${pkgName}](`,
     );
     for (const { version } of retired) {
       expect(section).toContain(`### ${version}\n`);

@@ -609,6 +609,22 @@ Body text here.`;
       }
     });
 
+    it("the changelog's .md twin keeps the memorial plate's logo and sentence without its wrapper", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const twin = readFileSync(
+        resolve(distDir, "changelog", "index.md"),
+        "utf8",
+      );
+      expect(twin).toContain(
+        "![The @burglekitt organization logo](/gmt/burglekitt-logo.png)",
+      );
+      expect(twin).toMatch(
+        /\*\*In memoriam: @burglekitt\.\*\* .*\[install @northguild\/gmt\]\(\/gmt\/install\/\)/,
+      );
+      expect(twin).not.toContain("<div");
+    });
+
     it("no llms.txt line ends in a bare `>` or `: >`", () => {
       const distDir = distDirOrSkip();
       if (distDir === null) return;
