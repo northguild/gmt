@@ -45,10 +45,13 @@ export const CHECKS = [
     id: "dox-pages",
     run: [
       "node apps/dox/scripts/build-guides.mjs",
+      "node apps/dox/scripts/build-changelog.mjs",
       "node apps/dox/scripts/build-scenario-index.mjs",
       "pnpm --filter @gmt/dox exec tsx scripts/build-tool-index.ts",
       "pnpm --filter @gmt/dox exec tsx scripts/build-industry-pages.ts",
     ].join(" && "),
+    // build-changelog.mjs formats its dates with the built library.
+    needs: ["build:gmt"],
   },
   {
     id: "build:dox",
@@ -232,10 +235,17 @@ export const RULES = [
   // build-guides.mjs copies docs/ into the Dox content, so it runs what a content page runs.
   { test: /^docs\//, checks: DOX_CONTENT },
 
-  // A README, changelog or licence at a package root is read by no check, but the builds and
+  // A package's CHANGELOG.md is the source of its Dox changelog page.
+  {
+    test: /^packages\/[^/]+\/CHANGELOG\.md$/,
+    checks: DOX_CONTENT,
+    listed: ALL,
+  },
+
+  // A README or licence at a package root is read by no check, but the builds and
   // pnpm list the folder it sits in.
   {
-    test: /^(?:packages\/[^/]+|apps\/dox)\/(?:README\.md|CHANGELOG\.md|LICENSE|\.gitignore|\.npmignore)$/,
+    test: /^(?:packages\/[^/]+|apps\/dox)\/(?:README\.md|LICENSE|\.gitignore|\.npmignore)$/,
     checks: [],
     listed: ALL,
   },

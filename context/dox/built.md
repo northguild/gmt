@@ -472,6 +472,78 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 
   The domain `SKILL.md` Core Patterns teach the same patterns to agents. Maintainer and
   contributor skills are excluded.
+- **The changelog pages are generated from each package's `CHANGELOG.md`** by
+  `scripts/build-changelog.mjs` (pure transform in `scripts/lib/changelog.mjs`). It loops over
+  `packages/*/CHANGELOG.md` (sorted, `gmt` first; nothing typed, so a new package with a changelog
+  gets a page and the sidebar test in `changelog.test.ts` then fails until the sidebar links it).
+  It writes the gitignored `src/content/docs/changelog/index.md` (`@northguild/gmt`) and
+  `changelog/gmt-eslint.md`, `gmt-oxlint.md`, `gmt-biome.md` (titled `Changelog: gmt-eslint`, …)
+  after `build-guides.mjs`, in `generate` and in the `dox-pages` check. The generator never writes the
+  `CHANGELOG.md` files, which are the release record. `renderPage` takes the title, description,
+  source URL and install link as parameters; the retired-scope plate links `/install/` for `gmt`
+  and `/guides/integration/linting/` for a plugin.
+  - **Scope and date come from the release tags**, read in one `git for-each-ref` call with
+    `TZ=UTC`: a version's scope is its tag's scope (the current scope is the `name` scope in
+    `package.json`, every other scope is retired), and its date is the tag's, printed as
+    `Released YYYY-MM-DD` through gmt's `parseDateFromUtc` (the generator needs a built
+    `packages/gmt`; no `Date`). No hand-kept boundary file. Each scope's versions form one unbroken run, current scope
+    first; a version under a retired scope above a current one fails the build, naming both.
+    The `@burglekitt` group opens with a memorial plate.
+  - **The memorial plate** sits under each retired group's `##` heading, before its first `###`:
+    `<div class="gmt-changelog-memorial">` holding the scope's logo and one sentence, "In memoriam:
+    @burglekitt. These releases were published under the retired `@burglekitt` npm scope. The
+    package continues as `<pkg>` from `<version>`; install …". `memorialPlate` in `lib/changelog.mjs`
+    builds it from the groups: the scope is the retired group's, the version is the current
+    group's oldest release (gmt 1.14.2, gmt-eslint 1.0.4), the link is the page's `installLink`.
+    Nothing is typed. A retired group with no current group fails the build, since the
+    "continues as" clause cannot be built. The blank lines inside the `<div>` are required
+    (CommonMark §4.6 ends a type 6 HTML block at a blank line); the text twin drops the `<div>`
+    lines and keeps the image line and the sentence. `rehype-base-links` puts `/gmt` on the
+    `<img src>` and the install link.
+  - **The logo** is `public/burglekitt-logo.png`: the owner's 400 px file downscaled to 192 px
+    (2x its 96 px box) with the EXIF chunk stripped, not cropped, recoloured or redrawn. The plate
+    never shows a stand-in: no drawn, generated or text substitute. `changelog.test.ts` fails if
+    the file named by `MEMORIAL_LOGO` is missing from `public/`; the fix is the file. `.gmt-changelog-memorial`
+    (`gmt-content.css`) is a full bevelled border on `--gmt-surface-widget`, the logo clipped to
+    a circle at a fixed size (no reflow while it loads) beside the text from 480 px, stacked
+    below. No `filter`; the releases under it look like any other.
+  - **Only a package's newest version may lack a tag**, and shows "Not yet released": a release PR
+    adds its `## <version>` before Release tags it, and CI builds Dox on that PR. Any older
+    untagged version fails the build (`run git fetch --tags`). Every workflow that builds Dox
+    therefore fetches the tags: every `ci.yml` job and `deploy-dox.yml`, and `fetch-depth: 0` on
+    `sweep` in `dox-gates-weekly.yml` and `oracle` in `temporal-oracle.yml`.
+  - **Headings are demoted** (column-0 `###` to `####`, any indented heading to `#####`), so only
+    the version `h3` and scope `h2` reach the table of contents; version anchors are the only
+    stable ones, so the date is never in a heading. The generator fails on two h2/h3 headings that
+    slug alike (`1.2.10` and `1.21.0`), on a stray column-0 `## `, and on raw HTML outside code.
+    Each plugin's 1.0.0 entry holds four indented `## @northguild/gmt…` headings; they become h5.
+  - **Heading sizes.** The site's `h3` is 1.05rem (`gmt-content.css`) while Starlight leaves `h4` at
+    1.25rem and `h5` at 1.125rem, which put "1.21.0" below "Minor Changes". Inside `.gmt-changelog`
+    the scale steps down one rung per level (h3 1.2rem, h4 1.05rem, h5 1rem); other pages keep theirs.
+  - **Tables.** The release notes hold wide call tables (rows up to 325 characters), so the body
+    sits in `<div class="gmt-changelog">` (`stripMdx` drops the lone `<div>` lines from the twin).
+    Code in its cells keeps the site rule (never broken mid-word) and gets more break points:
+    `rehype-table-scroll.ts` passes `{ calls: true }` to `code-break.ts` between the wrapper's
+    raw `<div>` nodes, so a call also breaks after its `(`, after a `,` between arguments, after
+    the `T` of an ISO instant and before a `[` zone annotation (`isLeapSecond(` / `"2024-06-15T` /
+    `12:34:60Z")`). No `overflow-wrap: anywhere` here: it drops a column to one character and
+    printed `tru` / `e`. `table-fit` passes on all four pages at 1440 px; at 375 px the box scrolls
+    as every table does. Astro caches rendered Markdown in `node_modules/.astro/data-store.json`
+    keyed by the file, so delete it after changing a rehype plugin.
+  - **Sidebar.** A top-level "Changelog" group with four links: `@northguild/gmt`, `gmt-eslint`,
+    `gmt-oxlint`, `gmt-biome`. `guides/integration/linting.mdx` links the three plugin pages.
+  - **Text surfaces.** The HTML pages and Pagefind carry them; each page's `.md` twin exists as for
+    every page; `llms.txt` has a "Changelog" section with four links; `llms-full.txt` and the
+    retrieval chunks leave them out (`topLevelPages` takes only slugs without `/`, and
+    `guide-sources.ts` globs `guides/` and the top level), asserted in `llms.test.ts` and
+    `guide-sources.test.ts`. Old signatures would ground answers in removed APIs.
+  - **The content rules do not apply to their body.** *GMT tracks no law* and *International
+    authority first* govern pages we write; the changelog is verbatim history (it says
+    "regulation" and "compliant", and holds `America/New_York` and `en-US`). The generated intro
+    and the memorial plate follow every rule.
+  - **`api-surface.mjs` skips `content/docs/changelog/`**: release notes record past APIs
+    (`@northguild/gmt/duty`, `isLeapSecond` from `timescale`) that today's surface must not check.
+    A `packages/*/CHANGELOG.md` change runs the Dox content checks (`affected.mjs`).
 - **`/compare/` is a top-level page**, in "Start here" after `why-gmt` (`astro.config.mjs`
   for the sidebar, `START_ORDER` in `src/lib/top-level-pages.ts` for `llms.txt` and
   `llms-full.txt`). `<LibraryCompare table="…">` renders each of its tables and the notes list
@@ -489,6 +561,40 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **`agent-prompt.test.ts` keeps `AGENT_PROMPT` (`src/lib/agent-prompt.ts`) equal to the
   fenced prompt** in `README.md`, `packages/gmt/README.md` and `CONTRIBUTING.md`. The constant
   is the source; a change to it goes into all three files in the same edit.
+- **`/upstream/` has a "Beyond Temporal" section of listings, which are not filings.** A listing is
+  a pull request GMT opened on a project outside Temporal (You-Dont-Need-Momentjs #159 asks a
+  comparison list to include `@northguild/gmt`). A filing must carry exactly one of `gmtGuard` or
+  `gmtNote`, takes a `work`, and is counted in the tally "So far we have sent N reports and fixes";
+  a listing fixes no Temporal defect, so it would need a fake value or inflate the tally. They live
+  in the top-level `listings` array of `src/data/upstream-filings.json`, beside `filings`
+  (`UpstreamListing`, exported `listings`). The only hand-written field is `summary`
+  (`LISTING_HAND_WRITTEN_FIELDS`, held equal to the script's by a test); a summary says what the PR
+  asks for and says nothing about another library. Nothing in the tally, `filedByUs` or the
+  by-repo/kind/state sums reads `listings`.
+  - **Sync.** Nothing discovers listings (`REPOS` and `AUTHORS` are unchanged). A new one is added
+    by hand with `repo`, `number`, `kind` and `summary`; `pnpm upstream:sync` then fills the rest
+    from `gh` and keeps `listings` sorted by repo then number. `refresh` reads them inside its
+    10 s budget and 6 h freshness rule, and a listing that times out keeps its committed fields.
+    `overlayLive` lays live listings over committed ones by `repo#number`, keeps the committed
+    `summary`, leaves the committed listings alone when the live file has none (a cache from before
+    listings), and drops a listing only the live file has.
+  - **Check.** `upstream check` requires each listing's fields, kind/URL agreement, the `state` and
+    `reviewDecision` enums and valid dates; rejects a duplicate key across both arrays, any of
+    `gmtGuard`, `gmtNote`, `work`, `outcome`, `role`, and a listing whose repo is one of `REPOS`
+    (that belongs in `filings`). `UPSTREAM_FILE` points `check` at a fixture; the tests that prove
+    it fails use it and never call GitHub.
+  - **Page.** `listingStatus` (`upstream-status.ts`) gives Draft, Open awaiting review, Changes
+    requested, Approved, Merged or Closed without merging. It does not reuse `filingStatus`, whose
+    "Merged, not yet in a published release" is about the polyfill's releases. `UpstreamListings.astro`
+    is one entries-layout table (`LISTING_COLUMNS`: Pull request, What it asks, Status, Replies, Last
+    activity) after the tracker; it and `UpstreamTracker.astro` each import
+    `src/components/upstream-table.css` (the table and badge rules, as `migrate-table.css` is shared
+    by two components), so neither depends on the other being on the page; the heading and one sentence stay in `upstream.mdx` so they are in
+    the table of contents. `renderUpstreamListings` in `mdx-jsx.ts` is its Markdown twin.
+  - **Summary wording.** A summary names exactly what the PR changes (which table, which column or
+    row, what is added to each how-to section) and carries no number of sections.
+  - **Trap.** The retrieval tests treat off-domain words ("recipe", "best") as a refusal probe, so a
+    listing summary that says "recipe" put the pizza question over the bound. Keep such words out.
 - **The `/upstream/` defect table reads each group's `state` from `temporal-compat.json`.**
   `stateLine` in `src/data/temporal-compat.ts` turns the state into the badge and count line for
   both the Astro row and the Markdown twin (`renderUpstreamDefects` in `src/lib/mdx-jsx.ts`). A
@@ -559,6 +665,16 @@ scope. The elements sit in `src/widgets/primitives/<name>/`: `gmt-range`, `gmt-h
 label does not compile. Family pieces, shared by the tools of one family, live in
 `src/widgets/families/<family>/`. A tool's own layout is a CSS Module in `src/widgets/tools/`.
 
+**Line breaks in `.astro` text.** Astro 7 defaults to `compressHTML: "jsx"`: whitespace that holds a
+line break is deleted where it meets an element or an `{expression}`, so `marked⏎<strong>Theirs</strong>`
+builds as `marked<strong>Theirs</strong>` (and `{LICENCE_LEAD}⏎<a>` lost the space on every page's
+footer). A space on the same line survives. Keep the space on the element's line (break the line
+elsewhere), or write `{" "}`; a break before `.` or `,` is fine. `scripts/lib/inline-whitespace.mjs`
+reads the compiler's parse tree and finds the rest; `scripts/inline-whitespace.test.ts` fails on any
+`.astro` file under `src/`. Run `node scripts/lib/inline-whitespace.mjs` to list them. Markdown,
+MDX and TypeScript-built HTML are not compressed this way. Flipping `compressHTML` is a site-wide
+change and not the fix.
+
 **Global sheets.** Only what styles the site is global, each in its `gmt.*` layer: `gmt-tokens.css`,
 `gmt-theme.css`, `gmt-light.css`, `gmt-primitives.css`, `gmt-glass.css`, `gmt-shell.css`,
 `gmt-content.css` with `gmt-content-tables.css`, `gmt-controls.css`, `gmt-reveal.css`,
@@ -567,7 +683,9 @@ label does not compile. Family pieces, shared by the tools of one family, live i
 (the `not-content` restore, the syntax-token colours and the load-failure notice). The
 `gmt.thirdparty` layer holds the sheets for DOM we do not render: `gmt-charts.css`, the map
 tooltip shell, and the Pagefind and Starlight overrides. Every element we render is styled by a CSS
-Module or a component `<style>` block. Content tables carry `data-col` (written by
+Module, a component `<style>` block, or a plain sheet in `src/components/` that the components
+sharing it import (`migrate-table.css`, `upstream-table.css`), never `gmt.css` or `customCss`.
+Content tables carry `data-col` (written by
 `src/lib/rehype-table-scroll.ts`), so a stacked label reads `attr(data-col)` and no column name is
 typed in CSS. The reveal stagger is `--gmt-reveal-i`, set by `scroll-reveal.ts`.
 - **Finding a part.** `widget()` writes `data-widget` and `data-scope` on the root.

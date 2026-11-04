@@ -1,0 +1,26 @@
+/* The /upstream/ tables and their badges. Imported by UpstreamTracker and UpstreamListings. */
+
+/* ---- The filings tracker: what we sent ---- */
+
+.sl-markdown-content .gmt-upstream-table {
+  inline-size: 100%;
+  font-size: var(--sl-text-sm);
+}
+
+.sl-markdown-content .gmt-upstream-table td {
+  vertical-align: top;
+}
+
+.sl-markdown-content .gmt-upstream-table td p {
+  margin-block-start: 0.25rem;
+}
+
+.gmt-upstream-badge {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* `--gmt-cyan-ink` for the same reason as `.gmt-defects-badge--ok`. */
+.gmt-upstream-badge--ok {
+  color: var(--gmt-cyan-ink);
+}

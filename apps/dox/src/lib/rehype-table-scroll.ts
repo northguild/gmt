@@ -18,7 +18,12 @@
  * removes the comment. Every cell of every table names its column in `data-col`. A paragraph between the
  * comment and the table cancels it.
  */
-import { CODE_BREAK_CLASS, codeBreakHast, codeBreakPieces } from "./code-break";
+import {
+  CODE_BREAK_CLASS,
+  codeBreakHast,
+  codeBreakPieces,
+  type CodeBreakOptions,
+} from "./code-break";
 
 interface HastNode {
   type: string;
@@ -143,7 +148,11 @@ function boxTables(node: HastNode): void {
 }
 
 /** Gives a cell's code its break points when it is plain text with more than one piece. */
-function breakCode(node: HastNode, inCell: boolean): void {
+function breakCode(
+  node: HastNode,
+  inCell: boolean,
+  options: CodeBreakOptions,
+): void {
   for (const child of node.children ?? []) {
     if (child.type !== "element") continue;
     if (inCell && child.tagName === "code") {
@@ -151,26 +160,52 @@ function breakCode(node: HastNode, inCell: boolean): void {
       if (kids.length === 0 || !kids.every((kid) => kid.type === "text"))
         continue;
       const text = kids.map((kid) => kid.value ?? "").join("");
-      if (codeBreakPieces(text).length < 2) continue;
+      if (codeBreakPieces(text, options).length < 2) continue;
       const existing = child.properties?.className;
       const classes = Array.isArray(existing) ? existing.map(String) : [];
       child.properties = {
         ...child.properties,
         className: [...classes, CODE_BREAK_CLASS],
       };
-      child.children = codeBreakHast(text) as HastNode[];
+      child.children = codeBreakHast(text, options) as HastNode[];
     } else {
-      breakCode(child, inCell || isElement(child, "th", "td"));
+      breakCode(child, inCell || isElement(child, "th", "td"), options);
     }
   }
 }
 
-function breakTables(node: HastNode): void {
+/** The generated changelog pages wrap their body in this, see scripts/lib/changelog.mjs. */
+export const CHANGELOG_CLASS = "gmt-changelog";
+
+const hasClass = (node: HastNode, name: string): boolean => {
+  const classes = node.properties?.className;
+  return Array.isArray(classes) && classes.includes(name);
+};
+
+/**
+ * True for the raw-HTML node that opens the wrapper (`<div class="gmt-changelog">`): Markdown's
+ * raw HTML reaches this plugin as flat sibling nodes, with no element around the tables.
+ */
+const opensChangelog = (node: HastNode): boolean =>
+  (node.type === "raw" || node.type === "html") &&
+  (node.value ?? "").includes(CHANGELOG_CLASS);
+
+const closesChangelog = (node: HastNode): boolean =>
+  (node.type === "raw" || node.type === "html") &&
+  (node.value ?? "").trim() === "</div>";
+
+function breakTables(node: HastNode, options: CodeBreakOptions = {}): void {
+  // Release notes hold calls too wide for any column; their code may also break at a call.
+  let current = hasClass(node, CHANGELOG_CLASS)
+    ? { ...options, calls: true }
+    : options;
   for (const child of node.children ?? []) {
-    if (isElement(child, "table")) {
+    if (opensChangelog(child)) current = { ...current, calls: true };
+    else if (closesChangelog(child)) current = options;
+    else if (isElement(child, "table")) {
       labelCells(child);
-      breakCode(child, false);
-    } else breakTables(child);
+      breakCode(child, false, current);
+    } else breakTables(child, current);
   }
 }
 
