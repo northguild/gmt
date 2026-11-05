@@ -49,4 +49,12 @@ describe("measureCells", () => {
       ),
     ).toEqual([]);
   });
+
+  it("skips a header cell hidden on its own, as a stacked table keeps it", async () => {
+    expect(
+      await cellsOf(
+        `<table style="display:block"><thead style="display:block"><tr style="display:block"><th style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap">Place</th></tr></thead><tbody><tr><td>x</td></tr></tbody></table>`,
+      ),
+    ).toEqual([]);
+  });
 });

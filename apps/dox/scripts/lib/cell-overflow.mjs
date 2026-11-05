@@ -6,8 +6,8 @@
  * page. It opens every `<details>` and tab panel, then for each cell of each `main table` that is
  * drawn it reports the cell when its own scroll box is larger than its client box (more than 1 px),
  * or when any element or text inside it reaches more than 1.5 px past the cell's edges. A cell
- * inside a visually hidden header (a box of 2 px or less, which a stacked layout keeps for
- * assistive technology) is not drawn and is skipped.
+ * that is visually hidden, or sits in a visually hidden row or header (a box of 2 px or less, which
+ * a stacked layout keeps for assistive technology), is not drawn and is skipped.
  *
  * It is a plain function with no closure, so Playwright can serialise it: `page.evaluate(measureCells)`.
  */
@@ -21,11 +21,15 @@ export function measureCells() {
     for (const cell of table.querySelectorAll("th, td")) {
       const box = cell.getBoundingClientRect();
       if (box.width === 0) continue;
-      const head = cell.closest("thead");
-      if (head) {
-        const h = head.getBoundingClientRect();
-        if (h.width <= 2 || h.height <= 2) continue;
+      let hidden = false;
+      for (let el = cell; el && el !== table; el = el.parentElement) {
+        const r = el.getBoundingClientRect();
+        if (r.width <= 2 || r.height <= 2) {
+          hidden = true;
+          break;
+        }
       }
+      if (hidden) continue;
       const reasons = [];
       if (cell.scrollWidth - cell.clientWidth > 1) {
         reasons.push(
