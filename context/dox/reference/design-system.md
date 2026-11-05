@@ -29,8 +29,9 @@ sheet; `dox.css` and `gmt-a11y.css` load after 8. The config has the full
 list.
 
 **The heading font is inlined.** `gmt-tokens.css` names the Michroma file with Vite's `?inline`, so
-the `@font-face` carries it as a `data:font/woff2` URI, and the face is `font-display: optional` with
-no preload. Any external font file, even a preloaded one, arrives after first layout in Firefox and
+the `@font-face` carries it as a `data:font/woff2` URI, and the face is `font-display: block` with
+no preload (Chromium decodes a data-URI face after first layout, so `optional` would keep the
+fallback for good). Any external font file, even a preloaded one, arrives after first layout in Firefox and
 moves the page. The Display Fallback face keeps `size-adjust: 130%` with `local("Liberation Mono")`
 among its sources, so the fallback draws at the same advance. See the load-jump entry in `built.md`.
 

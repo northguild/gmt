@@ -155,7 +155,6 @@ async function open(
     query = "",
     reduce = false,
     context: extra = {},
-    lateFont = 0,
     fixed = 0,
     init = null,
   } = {},
@@ -167,12 +166,6 @@ async function open(
   });
   await blockOffSite(context, base);
   if (fixed > 0) await context.clock.setFixedTime(fixed);
-  if (lateFont > 0) {
-    await context.route("**/*.woff2", async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, lateFont));
-      await route.continue();
-    });
-  }
   const page = await context.newPage();
   const problems = [];
   page.on("console", (m) => {
@@ -3939,60 +3932,78 @@ function restingBoxes(page) {
  */
 async function checkShift(browser) {
   const t = "hero › layout shift";
-  /* The second pass holds the font back for 900 ms: a late file must not move anything. */
-  for (const lateFont of [0, 900])
-    for (const size of [WIDE, { width: 1920, height: 1080 }, NARROW]) {
-      const started = performance.now();
-      const { page, context, problems } = await open(browser, size, {
-        lateFont,
-      });
-      for (const problem of problems) fail("page-error", "page", problem, size);
-      const first = await restingBoxes(page);
-      await page.waitForTimeout(
-        Math.max(0, 5200 - (performance.now() - started)),
-      );
-      const shift = await page.evaluate(() => window.__shift);
-      const how = lateFont
-        ? `with the font ${lateFont} ms late`
-        : "on a cold cache";
-      check(
-        shift === 0,
-        "load-shift",
-        t,
-        `the layout shifted ${shift} over the first 5 s ${how}, not 0`,
-        size,
-      );
-      const frames = await page.evaluate(() => window.__frames);
-      const sizes = [...new Set(frames.map((f) => f[0]))];
-      check(
-        frames.length > 0 && sizes.length === 1,
-        "title-size-flash",
-        t,
-        `the title was ${sizes.join(" then ")} across ${frames.length} frames ${how}, not one size`,
-        size,
-      );
-      const boxes = new Set(frames.map((f) => `${f[1]}/${f[2]}`));
-      check(
-        frames.length > 0 && boxes.size === 1,
-        "copy-box-flash",
-        t,
-        `the copy column took ${boxes.size} different boxes across ${frames.length} frames ${how}, not one`,
-        size,
-      );
-      const later = await restingBoxes(page);
-      const moved = first.findIndex((box, i) =>
-        box.some((v, k) => Math.abs(v - later[i][k]) > 0.5),
-      );
-      check(
-        moved === -1,
-        "post-load-move",
-        t,
-        `box ${moved} (of the copy, then the stack, then the Earth) moved after load ${how}`,
-        size,
-      );
-      await context.close();
-      measured++;
-    }
+  for (const size of [WIDE, { width: 1920, height: 1080 }, NARROW]) {
+    const started = performance.now();
+    const { page, context, problems } = await open(browser, size);
+    for (const problem of problems) fail("page-error", "page", problem, size);
+    const first = await restingBoxes(page);
+    await page.waitForTimeout(
+      Math.max(0, 5200 - (performance.now() - started)),
+    );
+    const shift = await page.evaluate(() => window.__shift);
+    const how = "on a cold cache";
+    check(
+      shift === 0,
+      "load-shift",
+      t,
+      `the layout shifted ${shift} over the first 5 s ${how}, not 0`,
+      size,
+    );
+    const frames = await page.evaluate(() => window.__frames);
+    const sizes = [...new Set(frames.map((f) => f[0]))];
+    check(
+      frames.length > 0 && sizes.length === 1,
+      "title-size-flash",
+      t,
+      `the title was ${sizes.join(" then ")} across ${frames.length} frames ${how}, not one size`,
+      size,
+    );
+    const boxes = new Set(frames.map((f) => `${f[1]}/${f[2]}`));
+    check(
+      frames.length > 0 && boxes.size === 1,
+      "copy-box-flash",
+      t,
+      `the copy column took ${boxes.size} different boxes across ${frames.length} frames ${how}, not one`,
+      size,
+    );
+    const later = await restingBoxes(page);
+    const moved = first.findIndex((box, i) =>
+      box.some((v, k) => Math.abs(v - later[i][k]) > 0.5),
+    );
+    check(
+      moved === -1,
+      "post-load-move",
+      t,
+      `box ${moved} (of the copy, then the stack, then the Earth) moved after load ${how}`,
+      size,
+    );
+    /* The title and the wordmark are drawn in Michroma, not the fallback: a copy of each set in
+         the fallback face alone must come out at another width. */
+    const inFallback = await page.evaluate(() =>
+      [
+        ["the title", document.querySelector("h1")],
+        ["the wordmark", document.querySelector(".gmt-ng-wordmark")],
+      ].flatMap(([name, el]) => {
+        if (!el) return [`${name} is missing`];
+        const probe = el.cloneNode(true);
+        probe.style.cssText =
+          "position:absolute;visibility:hidden;inline-size:max-content;font-family:'Display Fallback'";
+        el.after(probe);
+        const width = (node) => {
+          const r = document.createRange();
+          r.selectNodeContents(node);
+          return r.getBoundingClientRect().width;
+        };
+        const same = Math.abs(width(el) - width(probe)) < 0.5;
+        probe.remove();
+        return same ? [`${name} is drawn in the fallback face`] : [];
+      }),
+    );
+    for (const problem of inFallback)
+      fail("display-font", t, `${problem} ${how}`, size);
+    await context.close();
+    measured++;
+  }
 }
 
 /**

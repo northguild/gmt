@@ -614,8 +614,10 @@
  * The face names that file by a relative path and the build inlines it as a data URI
  * (the `?inline` query on its url), so the font is in the stylesheet the
  * page waits for and is ready at first layout. A separate file would arrive after the first
- * layout and move the headings when it landed. The face is `font-display: optional`, so a
- * page never redraws a shown heading in another face.
+ * layout and move the headings when it landed. The face is `font-display: block`: its bytes are
+ * already in the sheet, so the block period ends as soon as they are decoded and no heading is
+ * drawn in the fallback first. `optional` cannot be used: Chromium decodes a data-URI face after
+ * the first layout, so with `optional` it keeps the fallback for the page's life.
  */
 
 /* Fallback face for the pages where Michroma is not ready for the first paint. Measured in Chromium at 100px against the vendored Michroma
@@ -634,7 +636,7 @@
   font-family: Michroma;
   font-style: normal;
   font-weight: 400;
-  font-display: optional;
+  font-display: block;
 
   /* Relative to this sheet, and `?inline` makes Vite write the file here as a data URI. */
   src: url("../../public/fonts/michroma-latin-400-normal.woff2?inline")

@@ -926,7 +926,8 @@ number it did not measure.
     vendored `public/fonts/michroma-latin-400-normal.woff2?inline` and Vite writes its bytes into
     the face, so the font is there at first layout and no heading swaps faces. Any external font
     file, even a preloaded one, arrives after first layout in Firefox and moves the page. The face is
-    `font-display: optional`, and no page preloads the file (a preload of a file nothing uses
+    `font-display: block`: Chromium decodes a data-URI face after first layout, so with `optional`
+    it would keep the fallback for the page's life. No page preloads the file (a preload of a file nothing uses
     logs a warning). `public/fonts/` is the one copy of the bytes; `deploy-smoke.mjs` and the
     Worker test still request it by URL. `display-fallback.test.ts` pins the face and
     `scripts/display-font-built.test.ts` pins the built bytes against the vendored file and the
@@ -2695,11 +2696,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
     (`gmt-home-carousel.css`, same layer, later) still wins there. The copy's page area keeps
     the tallest page's height on every page, so the row and the Earth never move as the pages
     change; the intro has empty sky above it.
-  - **No layout shift.** Michroma is `font-display: optional` and preloaded on every page: it
-    is used if ready for the first paint, otherwise the fallback stays for that page, so a late
-    file never reflows the copy (no monospace fallback is as wide as Michroma for every string).
-    `hero-space` asserts a layout-shift total of exactly 0 over the first 5 s on a cold cache at
-    1440, 1920 and 390, with the font on time and 900 ms late; that the title keeps one font size
+  - **No layout shift.** Michroma is inlined in the site stylesheet with `font-display: block`, so
+    the copy is drawn in it from the first paint and never reflows (no monospace fallback is as
+    wide as Michroma for every string). `hero-space` asserts a layout-shift total of exactly 0 over the first 5 s on a cold cache at
+    1440, 1920 and 390; that the title and the wordmark are drawn in Michroma, not the fallback; that the title keeps one font size
     and the copy column one box in every frame from the first paint; and that the copy, the stack
     and the Earth's box stand still after load. The copy's CSS lives in `HeroCopy.astro`'s own
     unlayered `<style>` (it ships in the page head, so Astro's dev server has it before the first

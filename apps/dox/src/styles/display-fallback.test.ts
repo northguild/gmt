@@ -35,9 +35,11 @@ describe("the display font's face", () => {
     tokens,
   )?.[0];
 
-  it("is used only if it is ready for the first paint, so no heading ever swaps", () => {
+  // `optional` would keep the fallback in Chromium, which decodes a data-URI face after the first
+  // layout; `block` waits the few milliseconds the decode takes, so no heading ever swaps.
+  it("blocks until it is decoded, so the heading is drawn in it from the start", () => {
     expect(face).toBeDefined();
-    expect(face).toMatch(/font-display:\s*optional\s*;/);
+    expect(face).toMatch(/font-display:\s*block\s*;/);
   });
 
   // The build inlines the file named here as a data URI (the `?inline` query), so the font is in the stylesheet at first layout. The name is a relative
