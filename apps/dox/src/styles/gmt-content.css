@@ -316,24 +316,25 @@ site-search .pagefind-ui__result-tags {
 /* Starlight puts `overflow-x: auto` on `.tablist-wrapper` (and it cascades to a
    clipped overflow-y). We wrap the tab row instead of scrolling it, so both the
    wrapper and the list can be `visible` — which is what lets the focus ping
-   (below) radiate past the tab row instead of being clipped. */
+   (below) radiate past the tab row instead of being clipped. Only Starlight's own tab lists:
+   the landing's page dots are a tab list too, styled by their own sheet. */
 .sl-markdown-content .tablist-wrapper,
-.sl-markdown-content [role="tablist"] {
+.sl-markdown-content .tablist-wrapper > [role="tablist"] {
   overflow: visible;
 }
 
-.sl-markdown-content [role="tablist"] {
+.sl-markdown-content .tablist-wrapper > [role="tablist"] {
   border-block-end: none;
   flex-wrap: wrap;
   padding-block-start: 2px;
 }
 
-.sl-markdown-content [role="tablist"] li {
+.sl-markdown-content .tablist-wrapper > [role="tablist"] li {
   padding-inline-start: 0;
   margin-block-end: 0;
 }
 
-.sl-markdown-content [role="tablist"] li::before {
+.sl-markdown-content .tablist-wrapper > [role="tablist"] li::before {
   display: none;
 }
 

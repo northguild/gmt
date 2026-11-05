@@ -283,7 +283,9 @@
 .gmt-ng-link {
   display: inline-flex;
   align-items: center;
-  gap: 1.5rem;
+
+  /* Keeps the name close to the shield, so the two read as one mark. */
+  gap: var(--gmt-space-3);
   flex: 0 0 auto;
   border-radius: var(--gmt-radius-sm);
   text-decoration: none;
@@ -296,20 +298,6 @@
   letter-spacing: var(--gmt-wordmark-tracking);
   color: var(--gmt-ice);
   white-space: nowrap;
-}
-
-/* The wordmark gives way on a narrow bar; the link keeps its `aria-label`. */
-@media (width < 30rem) {
-  .gmt-ng-wordmark {
-    display: none;
-  }
-}
-
-/* A full-height hairline between two items, the same token as `.social-icons::after`. */
-.gmt-ng-divider {
-  flex: 0 0 auto;
-  block-size: 1.5rem;
-  border-inline-end: 1px solid var(--sl-color-gray-5);
 }
 
 /* ---- The Dox mark ----
@@ -462,6 +450,12 @@
     0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 25%);
   animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
     1;
+}
+
+/* Focus moved by script, not by the reader (a carousel arrow that went away hands its focus to
+   the other): the ring shows, the ping does not. */
+.gmt-sonar-focus[data-quiet-focus]:focus {
+  animation: none;
 }
 
 .gmt-popover {

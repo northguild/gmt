@@ -4,6 +4,7 @@ description: How GMT's test suite, CI and capabilities compare with six other da
 ---
 
 import LibraryCompare from "../../components/LibraryCompare.astro";
+import WhyDateAlternatives from "../../components/WhyDateAlternatives.astro";
 import {
   combinedCompetitorExecutions,
   competitorComparisons,
@@ -79,6 +80,8 @@ last column names only those four (and `temporal-kit`, a package for business-da
 arithmetic). Where it says "None of the others", it means none of those four.
 
 <LibraryCompare table="covers" />
+
+<WhyDateAlternatives variant="full" />
 
 ## Where GMT differs
 

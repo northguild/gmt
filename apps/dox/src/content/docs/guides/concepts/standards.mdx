@@ -29,9 +29,14 @@ replace `Date`. It has separate types for plain and zoned values, explicit time 
 calendars, and instants counted in nanoseconds.
 
 **GMT** is built on Temporal (through `@js-temporal/polyfill`) and follows its specification for
-every type and every piece of arithmetic. Where the polyfill disagrees with the specification, GMT
+every type and every piece of arithmetic. No `Date` object appears anywhere, and three dedicated
+lint packages enforce that. Where the polyfill disagrees with the specification, GMT
 returns the specified answer and reports the difference upstream; see
 [Helping fix Temporal](/upstream/).
+
+A wall-clock time in a daylight-saving gap or overlap resolves with Temporal's own
+`disambiguation` options: `compatible`, `earlier`, `later` or `reject`. They apply on construction
+and on arithmetic, and none of the other libraries GMT is compared with exposes that control.
 
 ### Intl proposals
 
@@ -39,7 +44,8 @@ Two TC39 proposals extend `Intl` in ways GMT relies on:
 
 - The [**Intl Era and Month Code proposal**](https://github.com/tc39/proposal-intl-era-monthcode)
   defines era codes, month codes and proleptic dates for non-Gregorian calendars. **GMT** follows
-  it for Japanese eras, the Buddhist year and dates far in the past.
+  it for the Hebrew, Islamic, Japanese, Buddhist, Persian and Ethiopic calendars, and more, with
+  era codes and proleptic dates across Temporal's whole date range.
 - The [**Intl Locale Info proposal**](https://github.com/tc39/proposal-intl-locale-info) exposes a
   locale's week data. **GMT** reads it to find the first day of the week and the weekend.
 
@@ -117,6 +123,10 @@ Two TC39 proposals extend `Intl` in ways GMT relies on:
   and they give the grammar of `eventTime` and `eventTimeZoneOffset`. **GMT** reads and writes
   them with `parseEpcisEvent` and `formatEpcisEvent`, and checks them with `isValidEpcisEvent`. It
   checks one field with `isValidEpcisEventTime` or `isValidEpcisTimeZoneOffset`.
+
+Freight mostly does not send ISO 8601, so GMT reads and writes each of these against the
+standard's own code list. A code either carries an offset or it does not, and GMT never invents
+one: an offsetless value stays a local time until you name the zone.
 
 [Intermodal: EDI Timestamps](/guides/industries/intermodal-edi-timestamps/) shows each of these
 with real values.

@@ -1,0 +1,211 @@
+---
+/**
+ * The hero's call-to-action buttons, from the page's `hero.actions` front matter. HeroCopy renders
+ * them under the copy on a splash page; the landing (HeroGlobe.astro) renders them on their own,
+ * in the row that holds its page arrows. One mapping, so both show the same buttons: the Dox CTA
+ * carries the Dox mark, and the copy-prompt button copies the agent prompt.
+ */
+import DoxMark from './DoxMark.astro';
+import LinkButton from './LinkButton.astro';
+import { withBase } from '~/lib/site';
+
+export interface Action {
+	attrs?: { class?: string; [key: string]: unknown };
+	icon?: { name?: string; html?: string };
+	link: string;
+	text: string;
+	variant?: 'primary' | 'secondary' | 'minimal';
+}
+
+interface Props {
+	actions: Action[];
+}
+
+const { actions } = Astro.props;
+
+function isExternal(href: string) {
+	return href.startsWith('http://') || href.startsWith('https://');
+}
+
+// Hero links are written base-less in the front matter; only a root-absolute
+// path gets the base (a `#` hash or an absolute URL stays as written).
+function withSiteBase(href: string) {
+	return href.startsWith('/') && !href.startsWith('//') ? withBase(href) : href;
+}
+---
+
+<div class="sl-flex actions gmt-hero-actions">
+	{actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link, text, variant }, index) => {
+		const href = withSiteBase(link);
+		// The entrance staggers the buttons by this number (gmt-entrance-freeze.css).
+		const order = `--ng-i: ${index}`;
+		const external = isExternal(href);
+		// The Dox CTA carries the crystal itself rather than a Starlight
+		// icon name — same mark as the header button and the chat, so the
+		// three entry points to Dox are recognisably one thing.
+		if (attrs['data-dox-cta']) {
+			const { 'data-dox-cta': _doxCta, ...rest } = attrs;
+			return (
+				<LinkButton
+					{href}
+					variant="ghost"
+					style={order}
+					class:list={['gmt-dox-cta', className]}
+					{...rest}
+				>
+					{text}
+					<DoxMark id="cta" />
+				</LinkButton>
+			);
+		}
+		if (attrs['data-copy-prompt']) {
+			// The accessible name, when the front matter gives one: the visible
+			// text may be shorter ("Prompt"), and the name must contain it.
+			const name = attrs['aria-label'];
+			return (
+				<LinkButton
+					as="button"
+					type="button"
+					variant="ghost"
+					icon="copy"
+					style={order}
+					class:list={[className]}
+					{...attrs}
+					data-copy-name={name}
+				>
+					<span data-copy-label data-copy-idle={text}>
+						{text}
+					</span>
+				</LinkButton>
+			);
+		}
+		return (
+			<LinkButton
+				{href}
+				{variant}
+				icon={icon?.name}
+				style={order}
+				class:list={[className]}
+				{...attrs}
+				target={external ? '_blank' : undefined}
+				rel={external ? 'noopener noreferrer' : undefined}
+			>
+				{text}
+				{icon?.html && <Fragment set:html={icon.html} />}
+			</LinkButton>
+		);
+	})}
+</div>
+
+<script>
+	import { AGENT_PROMPT } from '~/lib/agent-prompt';
+
+	const RESET_MS = 2000;
+
+	function wire() {
+		const buttons = document.querySelectorAll<HTMLElement>('[data-copy-prompt]');
+		for (const btn of buttons) {
+			if (btn.dataset.copyBound === 'true') continue;
+			btn.dataset.copyBound = 'true';
+			btn.addEventListener('click', async () => {
+				const label = btn.querySelector<HTMLElement>('[data-copy-label]');
+				// A button whose visible text is shorter than its name ("Prompt" for "Copy
+				// prompt") keeps the name in `aria-label`; the name follows the visible
+				// outcome while it shows, so the label is always inside the name.
+				const idleName = btn.dataset.copyName;
+				const show = (text: string) => {
+					if (label) label.textContent = text;
+					if (idleName) btn.setAttribute('aria-label', text);
+				};
+				try {
+					await navigator.clipboard.writeText(AGENT_PROMPT);
+					show('Copied!');
+					btn.classList.add('is-copied');
+				} catch {
+					show('Copy failed');
+				}
+				window.setTimeout(() => {
+					if (label) label.textContent = label.dataset.copyIdle ?? 'Copy prompt';
+					if (idleName) btn.setAttribute('aria-label', idleName);
+					btn.classList.remove('is-copied');
+				}, RESET_MS);
+			});
+		}
+	}
+
+	wire();
+	document.addEventListener('astro:page-load', wire);
+</script>
+
+<style>
+	@layer starlight.core {
+		.actions {
+			gap: 1rem 2rem;
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+
+		@media (width >= 50rem) {
+			.actions {
+				justify-content: flex-start;
+			}
+		}
+	}
+</style>
+
+<style is:global>
+	/* The landing's buttons: one row, one size, a full border. The first is the primary (cyan
+	   border and wash), the rest share the quiet style (ice border, void wash). The icon or mark
+	   follows the text. `margin: 0` undoes the markdown-content spacing a button gets inside the
+	   page body. Global and unlayered, so it beats Starlight's layered button rules at any width. The row takes no pointer;
+	   the buttons do, so the Earth behind the gaps stays draggable. */
+	.gmt-hero-actions {
+		gap: 0.8rem;
+		justify-content: flex-start;
+		font-family: var(--gmt-font-display);
+		pointer-events: none;
+	}
+
+	.gmt-hero-actions .sl-link-button {
+		gap: 0.5rem;
+		margin: 0;
+		padding: 0.7rem 1.2rem;
+		border: 1px solid color(from var(--gmt-ice) srgb r g b / 25%);
+		border-radius: 6px;
+		corner-shape: bevel;
+		background: color(from var(--gmt-void) srgb r g b / 35%);
+		box-shadow: none;
+		font-size: 0.95rem;
+		font-weight: 500;
+		line-height: 1;
+		color: var(--gmt-ice);
+		text-decoration: none;
+		text-shadow: var(--gmt-shadow-halo);
+		backdrop-filter: none;
+		pointer-events: auto;
+	}
+
+	.gmt-hero-actions .sl-link-button.primary {
+		border-color: color(from var(--gmt-cyan) srgb r g b / 60%);
+		background: color(from var(--gmt-cyan) srgb r g b / 12%);
+	}
+
+	.gmt-hero-actions .sl-link-button:is(:hover, :focus-visible) {
+		border-color: color(from var(--gmt-ice) srgb r g b / 50%);
+		background: color(from var(--gmt-ice) srgb r g b / 10%);
+		box-shadow: none;
+		color: var(--gmt-ice);
+		backdrop-filter: none;
+	}
+
+	.gmt-hero-actions .sl-link-button.primary:is(:hover, :focus-visible) {
+		border-color: var(--gmt-cyan);
+		background: color(from var(--gmt-cyan) srgb r g b / 20%);
+	}
+
+	/* The icons and the Dox mark come from other components. */
+	.gmt-hero-actions .sl-link-button svg {
+		inline-size: 1.25rem;
+		block-size: 1.25rem;
+	}
+</style>

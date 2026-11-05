@@ -1,6 +1,7 @@
 import type { APIRoute, GetStaticPaths } from "astro";
 import { gmtVersion } from "~/generated/versions";
 import {
+  HOME_HEADING,
   pageToMarkdown,
   stripFrontmatter,
   stripMdx,
@@ -28,10 +29,7 @@ const pages = Object.entries(RAW).flatMap(([path, raw]) => {
       slug,
       markdown: pageToMarkdown({
         // The home page's `title` is the page's `<title>`; its heading is the package name.
-        title:
-          (rel === "index" ? data["hero.title"] : undefined) ??
-          data.title ??
-          slug,
+        title: rel === "index" ? HOME_HEADING : (data.title ?? slug),
         body: md,
         industries: data.industries,
       }),

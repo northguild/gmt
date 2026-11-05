@@ -40,7 +40,11 @@ function onActivate(event: Event): void {
   const el = start?.closest<HTMLElement>(SONAR_SELECTOR);
   // Only replay for a control that is already focused — otherwise the incoming
   // `:focus` transition will ping on its own.
-  if (el && el === document.activeElement) restartPing(el);
+  if (el && el === document.activeElement) {
+    // A button that took focus quietly (the carousel hands it over) pings from its first press.
+    el.removeAttribute("data-quiet-focus");
+    restartPing(el);
+  }
 }
 
 document.addEventListener("click", onActivate);

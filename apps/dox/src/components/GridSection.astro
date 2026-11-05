@@ -1,9 +1,15 @@
 ---
 /** Trivial grid-cell wrapper for /why-gmt's responsive 3/2/1 section grid
  * (see .gmt-why-grid in dox.css). Also carries the HUD bracket-corner
- * treatment so each panel reads as a targeting reticle. */
+ * treatment so each panel reads as a targeting reticle. On the landing each
+ * section is one page of the hero's carousel: `page` is that page's name. */
+interface Props {
+	page?: string;
+}
+
+const { page } = Astro.props;
 ---
 
-<div class="gmt-grid-section gmt-brackets">
+<div class="gmt-grid-section gmt-brackets" data-page={page}>
 	<slot />
 </div>

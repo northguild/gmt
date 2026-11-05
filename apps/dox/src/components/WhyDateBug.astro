@@ -13,10 +13,31 @@ import SectionHeading from "./SectionHeading.astro";
  * needed beyond what the tokens already carry.
  */
 
+interface Props {
+  /** `home`: the short list the landing page shows. `full`: every fault with its reason. */
+  variant: "home" | "full";
+}
+
+const { variant } = Astro.props;
+const shown = variant === "home" ? dateFaults.filter((f) => f.home) : dateFaults;
 ---
 
-<section class="why-date-block" aria-labelledby="why-date-faults-h">
-  <SectionHeading>The bug is the <code>Date</code> object</SectionHeading>
+{
+  variant === "home" ? (
+    <ul class="why-date-rows">
+      {shown.map((f) => (
+        <li class="why-date-row">
+          <code class="why-date-in">{f.input}</code>
+          <span class="why-date-arrow" aria-hidden="true">
+            →
+          </span>
+          <span class="why-date-out">{f.output}</span>
+        </li>
+      ))}
+    </ul>
+  ) : (
+<section class="why-date-block">
+  <SectionHeading id="the-bug-is-the-date-object">The bug is the <code>Date</code> object</SectionHeading>
   <p class="why-date-lede">
     Almost every date/time bug in a JavaScript codebase traces back to one
     type. <code>Date</code> conflates an instant with a wall-clock reading,
@@ -25,7 +46,7 @@ import SectionHeading from "./SectionHeading.astro";
 
   <ul class="why-date-grid" data-reveal-group>
     {
-      dateFaults.map((f) => (
+      shown.map((f) => (
         <li class="why-date-fault">
           <span class="why-date-tag">Fault</span>
           <div class="why-date-io">
@@ -41,6 +62,8 @@ import SectionHeading from "./SectionHeading.astro";
     }
   </ul>
 </section>
+  )
+}
 
 <style>
   .why-date-block {
@@ -58,7 +81,8 @@ import SectionHeading from "./SectionHeading.astro";
     line-height: 1.6;
   }
 
-  .why-date-block code {
+  .why-date-block code,
+  .why-date-rows code {
     font-family: var(--gmt-font-mono);
     font-size: max(0.85em, var(--gmt-text-xs));
     background: var(--gmt-code-bg);
@@ -139,6 +163,45 @@ import SectionHeading from "./SectionHeading.astro";
   .why-date-out {
     color: var(--gmt-signal-ink);
     font-weight: 600;
+  }
+
+  /* The landing page's short list: one line per fault, input then output. */
+  .why-date-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .why-date-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) auto minmax(0, 1fr);
+    gap: 0.7rem;
+    align-items: center;
+    margin: 0;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--gmt-signal-border);
+    border-radius: var(--gmt-bevel-sm);
+    corner-shape: bevel;
+    background: var(--gmt-fill-subtle);
+    font-size: 0.7813rem;
+  }
+
+  .why-date-rows li::before {
+    display: none;
+  }
+
+  .why-date-row > .why-date-in {
+    justify-self: start;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .why-date-row > .why-date-out {
+    font-weight: 400;
   }
 
   .why-date-why {

@@ -1,0 +1,387 @@
+/*
+ * The landing's carousel. The hero's copy column holds the pages (the intro, then the pages the
+ * landing passes in), and under them the hero's buttons, then the pager: the previous arrow, a dot
+ * per page and the next arrow. One page shows at a time, and only the text above the buttons
+ * changes; the buttons and the pager never move.
+ *
+ * Every rule here sits under `:root[data-home-carousel]`, which `lib/arrival.ts` sets before the
+ * first paint on the landing (`wait`) and `lib/home-carousel.ts` confirms (`on`). Without it, or
+ * without JavaScript, the pager is not shown and every page reads in order.
+ *
+ * On a landscape screen 64rem wide and up the page never scrolls: the sky and the Earth fill the
+ * viewport, and a page taller than its place scrolls inside it. A narrower or portrait screen (a
+ * phone, a tablet held upright) stacks the copy over the Earth.
+ *
+ * The pages and the controls are wired by `widgets/builders/carousel.ts`; the motion is in
+ * gmt-entrance-freeze.css.
+ */
+
+/* ---- The column: the page area over the row. Every page sits in one cell, so the area is as
+   tall as the tallest page, capped by the space there is; a page taller than that scrolls. A wide
+   screen places the row its own way (below). ---- */
+:root[data-home-carousel] .gmt-herostage-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, auto) auto;
+  align-content: center;
+  justify-items: start;
+  row-gap: var(--gmt-space-6);
+}
+
+:root[data-home-carousel] .gmt-herostage-copy > [data-page] {
+  grid-area: 1 / 1;
+  place-self: end stretch;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-block-size: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color(from var(--gmt-cyan) srgb r g b / 28%) transparent;
+}
+
+:root:where([data-home-carousel])
+  .gmt-herostage-copy
+  > [data-page]:focus-visible {
+  outline: 1px solid color(from var(--gmt-cyan) srgb r g b / 60%);
+  outline-offset: 2px;
+}
+
+/* A hidden page keeps its box, so the area keeps the tallest page's height and the row stays
+   put. Before the script runs, only the first page shows. */
+:root:where([data-home-carousel="on"])
+  .gmt-herostage-copy
+  > [data-page]:not([data-shown]),
+:root:where([data-home-carousel="wait"])
+  .gmt-herostage-copy
+  > [data-page]:not(:first-child) {
+  visibility: hidden;
+}
+
+/* ---- The pages after the intro: one bevelled pane each ---- */
+:root:where([data-home-carousel])
+  .gmt-herostage-copy
+  > [data-page]:not(:first-child) {
+  --bevel: var(--gmt-bevel-lg);
+
+  margin: 0;
+  padding: 1rem 1.4rem;
+  border: 1px solid color(from var(--gmt-ice) srgb r g b / 16%);
+  border-radius: var(--bevel);
+  corner-shape: bevel;
+  background-color: color(from var(--gmt-void) srgb r g b / 74%);
+  backdrop-filter: blur(4px);
+  color: var(--gmt-ice-dim);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  pointer-events: auto;
+}
+
+/* The blur is recomputed every frame behind a moving mask, which drops frames; it comes back
+   when the page settles. The pane's own 74 % wash carries the look in the meantime. */
+:root:where([data-home-carousel])
+  .gmt-herostage-copy
+  > [data-page][data-motion] {
+  backdrop-filter: none;
+}
+
+:root[data-home-carousel] .gmt-grid-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+:root[data-home-carousel] .gmt-grid-section::before,
+:root[data-home-carousel] .gmt-grid-section::after {
+  display: none;
+}
+
+:root[data-home-carousel] .gmt-grid-section > * {
+  margin: 0;
+}
+
+:root[data-home-carousel] .gmt-grid-section .gmt-section-heading {
+  padding: 0;
+  border: 0;
+  color: var(--gmt-cyan);
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+/* The one-line lede, then the more link. The pane is the measure, so the lede takes its width. */
+:root[data-home-carousel] .gmt-grid-section > .gmt-section-heading + p {
+  margin-block-start: -0.35rem;
+}
+
+/* The markdown spacing under a list item's last block is for prose; the tiles and rows in a pane
+   are spaced by their own grid. */
+:root:where([data-home-carousel])
+  .gmt-herostage-copy
+  > [data-page]
+  :is(ul, ol)
+  > li
+  > * {
+  margin-block-end: 0;
+}
+
+:root[data-home-carousel] .gmt-grid-section > p:last-child {
+  align-self: flex-start;
+  font-size: 0.7813rem;
+}
+
+:root[data-home-carousel] .gmt-grid-section > :last-child a {
+  color: var(--gmt-cyan-bright);
+  text-decoration: none;
+  border-block-end: 1px solid
+    color(from var(--gmt-cyan-bright) srgb r g b / 35%);
+}
+
+:root:where([data-home-carousel])
+  .gmt-grid-section
+  > :last-child
+  a:is(:hover, :focus-visible) {
+  color: var(--gmt-ice);
+}
+
+:root:where([data-home-carousel])
+  .gmt-grid-section
+  > :last-child
+  a:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 3px;
+}
+
+/* ---- The buttons, then the pager under them. Neither row takes the pointer; the buttons, the
+   arrows and the dots do, so the Earth behind the gaps stays draggable. ---- */
+.gmt-hero-nav {
+  display: grid;
+  justify-items: center;
+  row-gap: 0.75rem;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  pointer-events: none;
+}
+
+.gmt-hero-pager {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* No margin or padding: the page's markdown and tab-list spacing would set the dots below the
+   arrows' line. */
+.gmt-hero-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-block-size: 1.5rem;
+  margin: 0;
+  padding: 0;
+  pointer-events: auto;
+}
+
+/* The arrows: a bare chevron in the dots' colour, on the dots' 24px target. An arrow with no page
+   that way (`data-off`, written by widgets/builders/carousel.ts) fades out and keeps its place,
+   so the dots never move; before the script runs the first page shows, so the previous arrow
+   counts as off. */
+.gmt-hero-step {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+  background: none;
+  color: color(from var(--gmt-ice) srgb r g b / 75%);
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    color var(--gmt-motion-fast) var(--gmt-easing),
+    opacity var(--gmt-motion-fast) var(--gmt-easing),
+    visibility 0s;
+}
+
+.gmt-hero-step:is(:hover, :focus-visible) {
+  color: var(--gmt-cyan);
+}
+
+.gmt-hero-step svg {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+}
+
+:root:where([data-home-carousel]) .gmt-hero-step[data-off],
+:root:where([data-home-carousel="wait"]) [data-hero-step="-1"] {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--gmt-motion-fast) var(--gmt-easing),
+    visibility 0s var(--gmt-motion-fast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-hero-step,
+  :root:where([data-home-carousel]) .gmt-hero-step[data-off] {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .gmt-hero-step {
+    color: ButtonText;
+  }
+}
+
+.gmt-hero-live {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* No carousel: every page reads in order, and the pager is not shown. */
+:root:not([data-home-carousel]) .gmt-hero-pager {
+  display: none;
+}
+
+/* ---- Narrow and portrait screens: the copy stacks over the Earth and the page scrolls. The page area is
+   capped, so a long page scrolls inside it and the row stays under it. ---- */
+@media (width < 64rem) or (orientation: portrait) {
+  :root[data-home-carousel] .gmt-herostage-copy {
+    grid-template-rows: fit-content(min(34rem, 70svh)) auto;
+  }
+
+  .gmt-hero-nav .gmt-hero-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* ---- Wide landscape screens: the page never scrolls ---- */
+@media (width >= 64rem) and (orientation: landscape) {
+  :root[data-home-carousel] {
+    --gmt-copy-col: clamp(28rem, 36vw, 42.5rem);
+    --gmt-copy-pad-start: clamp(1rem, 5vw, 5rem);
+
+    overflow: hidden;
+  }
+
+  /* The stage fills the viewport; the header's glass is over its top. */
+  :root[data-home-carousel] .gmt-herostage {
+    position: fixed;
+    inset: 0;
+    block-size: auto;
+    margin: 0;
+  }
+
+  /* The column is as wide as the row of buttons, and never narrower than its set width. The
+     pages take no part in that width (they fill the column), so it is the same on every page
+     and the Earth does not move as the pages change. */
+  :root[data-home-carousel] .gmt-herostage-copy {
+    box-sizing: content-box;
+    min-inline-size: var(--gmt-copy-col);
+    padding-block: var(--gmt-space-6);
+    padding-inline-start: var(--gmt-copy-pad-start);
+
+    /* The padding is inside the stage's height, so the middle of the column is the stage's. */
+    block-size: calc(100% - 2 * var(--gmt-space-6));
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  :root[data-home-carousel] .gmt-herostage-copy > [data-page] {
+    contain: inline-size;
+  }
+
+  /* The row has one place on every page: the intro and the row, together, sit in the middle of
+     the column, with equal space above and below. A longer page grows upward from the row into
+     the space above the intro, and scrolls inside itself when that is not enough, so the row
+     never moves as the pages change. */
+  :root[data-home-carousel] .gmt-herostage-copy {
+    grid-template-rows: minmax(0, 1fr) minmax(0, auto) auto minmax(0, 1fr);
+    align-content: stretch;
+  }
+
+  :root[data-home-carousel] .gmt-herostage-copy > [data-page] {
+    grid-row: 1 / 3;
+  }
+
+  :root:where([data-home-carousel])
+    .gmt-herostage-copy
+    > [data-page]:first-child {
+    grid-row: 2;
+  }
+
+  :root[data-home-carousel] .gmt-herostage-copy > .gmt-hero-nav {
+    grid-row: 3;
+  }
+
+  .gmt-hero-nav .gmt-hero-actions {
+    flex-wrap: nowrap;
+  }
+
+  /* The footer: no meta row, no pagination; the licence line sits in the corner. */
+  :root[data-home-carousel] footer {
+    display: none;
+  }
+
+  :root[data-home-carousel] .gmt-licence-note {
+    position: fixed;
+    inset-block-end: var(--gmt-space-2);
+    inset-inline-end: calc(var(--gmt-space-4) + 3rem);
+    z-index: var(--gmt-z-float);
+    max-inline-size: min(46rem, 44vw);
+    margin: 0;
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--gmt-bevel-sm);
+    corner-shape: bevel;
+    background-color: color(from var(--gmt-void) srgb r g b / 70%);
+    text-align: end;
+  }
+}
+
+/* ---- No bevel property: the same shapes cut as octagons. ---- */
+@supports not (corner-shape: bevel) {
+  :root:where([data-home-carousel])
+    .gmt-herostage-copy
+    > [data-page]:not(:first-child) {
+    border-radius: 0;
+    clip-path: polygon(
+      var(--bevel) 0,
+      calc(100% - var(--bevel)) 0,
+      100% var(--bevel),
+      100% calc(100% - var(--bevel)),
+      calc(100% - var(--bevel)) 100%,
+      var(--bevel) 100%,
+      0 calc(100% - var(--bevel)),
+      0 var(--bevel)
+    );
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root:where([data-home-carousel])
+    .gmt-herostage-copy
+    > [data-page]:not(:first-child) {
+    border-color: var(--gmt-ice);
+    background-color: var(--gmt-void);
+  }
+}
+
+@media (forced-colors: active) {
+  :root:where([data-home-carousel])
+    .gmt-herostage-copy
+    > [data-page]:not(:first-child) {
+    border-color: CanvasText;
+    background-color: Canvas;
+  }
+}
