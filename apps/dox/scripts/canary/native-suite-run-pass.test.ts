@@ -58,6 +58,22 @@ describe("runPass", () => {
     },
   );
 
+  // Vitest's module cache is keyed by file path, not contents. A pass that reused it after
+  // `temporal-polyfill` changed version under the same path would test the old version.
+  it.each`
+    leg           | pass
+    ${"node"}     | ${"control"}
+    ${"node"}     | ${"swap"}
+    ${"chromium"} | ${"swap"}
+    ${"webkit"}   | ${"native"}
+  `(
+    "starts the $leg $pass pass's Vitest with the module cache off",
+    ({ leg, pass }) => {
+      runPass(leg, pass, rootDir());
+      expect(spawned[0]?.args).toContain("--fsModuleCache=false");
+    },
+  );
+
   it("starts the native browser pass without GMT_TEMPORAL, keeping the parent's other variables", () => {
     vi.stubEnv("GMT_TEMPORAL", undefined as never);
     vi.stubEnv("RUN_PASS_PROBE", "kept");

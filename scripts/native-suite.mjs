@@ -558,6 +558,9 @@ export function runPass(
       config,
       ...(browser ? ["--project", leg] : []),
       ...(shard.count > 1 ? [`--shard=${shard.index}/${shard.count}`] : []),
+      // The module cache is keyed by path, so a `temporal-polyfill` upgraded in place would run
+      // from the old version's cached transform.
+      "--fsModuleCache=false",
       "--reporter=json",
       `--reporter=${fileURLToPath(new URL("./lib/native-suite-reporter.mjs", import.meta.url))}`,
       `--outputFile.json=${out}`,
