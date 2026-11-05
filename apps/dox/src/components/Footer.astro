@@ -7,6 +7,7 @@
 // pieces as it streams in — header first, then sidebar, then content — which
 // reads as the sidebar and content flashing on every route change.
 import Default from '@astrojs/starlight/components/Footer.astro';
+import { displayFaceInlineSource } from '~/lib/display-face';
 import {
 	LICENCE_LEAD,
 	LICENCE_LINK_TEXT,
@@ -32,6 +33,8 @@ const onLanding = Astro.locals.starlightRoute.id === '';
 		</p>
 	</details>
 )}
+{/* Loads the display font from the stylesheet's bytes before the held first paint. See src/lib/display-face.ts. */}
+<script is:inline set:html={displayFaceInlineSource()} />
 <div id="gmt-page-end" hidden></div>
 
 <style>
