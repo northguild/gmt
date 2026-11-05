@@ -851,6 +851,11 @@ splits them into two projects.
   the split once, at start, so in watch mode restart Vitest after adding a `vi.mock`.
   `src/test/isolation.test.ts` asks Vitest for the real project of every file and checks it
   against the scan.
+- **Browser tests.** A test that launches a real browser is named `*.browser.test.ts` and stays out
+  of both projects (`BROWSER_TEST_GLOB` in `isolation.ts`): the Tests job installs no browser.
+  `vitest.browser.config.ts` runs them, in the `dox-tables` check, after Chromium is installed.
+  `scripts/lib/cell-overflow.browser.test.ts` is one: the cell check needs real layout, which jsdom
+  has none of.
 - **What the shared setup resets.** `src/test/setup-dom.ts` runs after every test, in node and
   jsdom files alike: it restores spies (`vi.restoreAllMocks`), fake timers, `vi.stubGlobal` and
   `vi.stubEnv`. In a jsdom file it also destroys the widgets `renderWidget` mounted and calls
@@ -2388,7 +2393,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     edges, scrolling table or not (a header kept visually hidden by a stacked layout is skipped). Rule
     `cell-overflows`; the last line counts `<n> scroll, <n> spill`. The same check runs
     in the `consistency` job as `dox-tables` (`scripts/lib/affected.mjs`, after `dox-dist`), in
-    Chromium, whenever a Dox file or page changes.
+    Chromium, whenever a Dox file or page changes; the browser tests (Test isolation) run there first.
   - **The PR job.** `dox-gates` in `.github/workflows/ci.yml` ("Dox gates (changed pages, Chromium)")
     runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22: `gates --tier pr
     --browsers chromium --themes dark,light --against origin/<base>`, so the `pr` tier only, on the

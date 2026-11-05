@@ -1,7 +1,12 @@
 import { globSync, readFileSync } from "node:fs";
 import { createVitest } from "vitest/node";
 import path from "node:path";
-import { needsIsolation, splitTestFiles, TEST_GLOBS } from "./isolation";
+import {
+  BROWSER_TEST_GLOB,
+  needsIsolation,
+  splitTestFiles,
+  TEST_GLOBS,
+} from "./isolation";
 
 const appDir = path.resolve(import.meta.dirname, "../..");
 
@@ -30,9 +35,20 @@ describe("splitTestFiles", () => {
   it("puts every test file of the app in exactly one group", () => {
     const { isolated, shared } = splitTestFiles(appDir);
     // The config's own patterns are the oracle: Vitest expands them, the module walks directories.
-    const all = TEST_GLOBS.flatMap((glob) => globSync(glob, { cwd: appDir }));
+    const all = TEST_GLOBS.flatMap((glob) =>
+      globSync(glob, { cwd: appDir, exclude: [BROWSER_TEST_GLOB] }),
+    );
     expect([...isolated, ...shared].sort()).toEqual([...new Set(all)].sort());
     expect(isolated.filter((file) => shared.includes(file))).toEqual([]);
+  });
+
+  it("leaves the browser tests out of both groups", () => {
+    const { isolated, shared } = splitTestFiles(appDir);
+    const browser = globSync(BROWSER_TEST_GLOB, { cwd: appDir });
+    expect(browser).toContain("scripts/lib/cell-overflow.browser.test.ts");
+    expect(browser.filter((f) => [...isolated, ...shared].includes(f))).toEqual(
+      [],
+    );
   });
 
   it("selects a file that stubs a global and leaves a plain one shared", () => {

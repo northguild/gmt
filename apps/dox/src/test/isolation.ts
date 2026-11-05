@@ -28,10 +28,17 @@ export const TEST_GLOBS = [
   "worker/**/*.test.ts",
 ];
 
+/**
+ * A test that launches a real browser. The Tests job has none, so these files stay out of the
+ * default run; `vitest.browser.config.ts` runs them in the `dox-tables` check, after Chromium is
+ * installed.
+ */
+export const BROWSER_TEST_GLOB = "**/*.browser.test.ts";
+
 /** The directories `TEST_GLOBS` search. */
 const TEST_DIRS = ["lint", "scripts", "src", "worker"];
 
-/** Every `*.test.ts` and `*.test.tsx` under the test directories, relative to `appDir`, in path order. */
+/** Every `*.test.ts` and `*.test.tsx` under the test directories but the browser tests, relative to `appDir`, in path order. */
 export function listTestFiles(appDir: string): string[] {
   return TEST_DIRS.filter((dir) => existsSync(path.join(appDir, dir)))
     .flatMap((dir) =>
@@ -40,7 +47,10 @@ export function listTestFiles(appDir: string): string[] {
       ),
     )
     .filter(
-      (file) => /\.test\.tsx?$/.test(file) && !file.includes("node_modules"),
+      (file) =>
+        /\.test\.tsx?$/.test(file) &&
+        !file.endsWith(".browser.test.ts") &&
+        !file.includes("node_modules"),
     )
     .sort();
 }

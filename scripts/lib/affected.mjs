@@ -81,9 +81,10 @@ export const CHECKS = [
     needs: ["build:dox"],
   },
   {
-    // No table on a built page scrolls sideways at 1440 px (apps/dox/scripts/table-fit.mjs).
+    // No table on a built page scrolls sideways at 1440 px (apps/dox/scripts/table-fit.mjs). The
+    // browser tests run first: they test the cell check table-fit uses, and need its Chromium.
     id: "dox-tables",
-    run: "pnpm --filter @gmt/dox exec node scripts/table-fit.mjs",
+    run: "pnpm --filter @gmt/dox exec vitest run --config vitest.browser.config.ts && pnpm --filter @gmt/dox exec node scripts/table-fit.mjs",
     needs: ["build:dox"],
   },
   {

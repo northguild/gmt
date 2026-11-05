@@ -309,6 +309,12 @@ jobs:
         if: contains(fromJSON(env.CHECKS), 'dox-tables')
         run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium
 
+      # The tests that launch a browser (`*.browser.test.ts`, left out of the Tests job, which
+      # installs none). They test the cell check table-fit uses.
+      - name: Browser tests, in Chromium
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        run: pnpm --filter dox exec vitest run --config vitest.browser.config.ts
+
       - name: Built site, tables fit at 1440 px
         if: contains(fromJSON(env.CHECKS), 'dox-tables')
         run: pnpm --filter dox exec node scripts/table-fit.mjs
