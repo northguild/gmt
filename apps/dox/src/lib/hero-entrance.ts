@@ -4,11 +4,13 @@
  *
  * `t0` is the moment the sky's first draw is done and the globe is ready to dawn, but no later
  * than `deadline` ms after navigation start. At `t0` it sets `data-entrance="run"` on `<html>`,
- * which every CSS entrance animation (`gmt-entrance-freeze.css`) is keyed on, so the sky, the copy
- * and the header start in the same style recalculation. If the failsafe has shown the page already
- * (`static`), the attribute stays and only the dawn starts. It also marks `gmt-entrance-t0`, starts
- * the globe's dawn and, once the last animation has ended, sets `done`. A sky or globe that failed to load counts as ready: the entrance never waits
- * on something that will not come.
+ * which the CSS entrance animations (`gmt-entrance-freeze.css`) of the sky, the buttons, the pager,
+ * the header and the location card are keyed on, so they start in the same style recalculation.
+ * The copy does not wait for `t0`: its freeze starts at the first paint, so the page's largest text
+ * is on screen at once. If the failsafe has shown the page already (`static`), the attribute stays
+ * and only the dawn starts. It also marks `gmt-entrance-t0`, starts the globe's dawn and, once the
+ * last animation has ended, sets `done`. A sky or globe that failed to load counts as ready: the
+ * entrance never waits on something that will not come.
  */
 
 export interface HeroEntranceOptions {

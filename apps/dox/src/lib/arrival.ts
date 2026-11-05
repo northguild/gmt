@@ -3,10 +3,11 @@
  *
  * It runs while the head is parsed, before first paint, so the page never flashes:
  *
- * - On the landing it sets `data-entrance="wait"` on `<html>`. The freeze targets and the sky hold
- *   at opacity 0 until the sequencer (`hero-entrance.ts`) writes `run`. If nothing has by
- *   `ARRIVAL_FAILSAFE_MS` the script writes `static`, which shows everything, so a module that
- *   never loads cannot hide the copy.
+ * - On the landing it sets `data-entrance="wait"` on `<html>`. The copy (the eyebrow, the title
+ *   and the tagline) starts its freeze at once and is on screen from the first paint; the sky,
+ *   the buttons and the pager hold at opacity 0 until the sequencer (`hero-entrance.ts`) writes
+ *   `run`. If nothing has by `ARRIVAL_FAILSAFE_MS` the script writes `static`, which shows
+ *   everything, so a module that never loads cannot hide the buttons.
  * - On the landing it also sets `data-home-carousel="wait"`, so the paged layout is the first
  *   layout. `home-carousel.ts` writes `on` once it has wired the pages; the failsafe removes a
  *   `wait` nothing has replaced.
