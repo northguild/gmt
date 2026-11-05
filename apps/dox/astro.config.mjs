@@ -172,21 +172,7 @@ export default defineConfig({
       // painted with an empty gap below the first heading for a frame. An
       // inline <style> applies as it is parsed. Costs ~4 KB gzipped per page.
       expressiveCode: { emitExternalStylesheet: false },
-      // Preload the self-hosted display font (vendored to `public/fonts/`, see
-      // gmt-tokens.css). Without this the browser only discovers the @font-face
-      // after the CSS bundle parses, so the site title and every heading
-      // reflow out of the mono fallback on each navigation — the "header flash".
       head: [
-        {
-          tag: "link",
-          attrs: {
-            rel: "preload",
-            href: withBase("/fonts/michroma-latin-400-normal.woff2"),
-            as: "font",
-            type: "font/woff2",
-            crossorigin: "anonymous",
-          },
-        },
         // Hold the first paint until the end-of-page marker (src/components/
         // Footer.astro) is parsed. On a route change the browser keeps showing
         // the old page until the new one first paints; without this that
