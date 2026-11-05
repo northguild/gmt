@@ -1,0 +1,23 @@
+{
+  "name": "Night sky for the Dox landing hero",
+  "source": {
+    "catalogue": "HYG v4.4 (Hipparcos, Yale Bright Star and Gliese catalogues combined)",
+    "author": "astronexus",
+    "repository": "https://codeberg.org/astronexus/hyg",
+    "commit": "53e3df311869e813ace5f1ad2ec4ce909f13256c",
+    "file": "data/hyg/CURRENT/hyg_v44.csv.gz",
+    "bytes": 13636362,
+    "sha256": "00b349893b9a53106dd488d8371e8d2fa586043e500bb3cdb8bff3931682197d"
+  },
+  "license": "CC-BY-SA-4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "notice": "hero-sky.bin is an adaptation of the HYG v4.4 star catalogue and is offered under CC BY-SA 4.0. The repository's MIT licence does not cover it.",
+  "generator": "apps/dox/scripts/prepare-hero-sky.mjs",
+  "starCount": 2865,
+  "magnitudeLimit": 5.5,
+  "list": {
+    "file": "hero-sky.bin",
+    "bytes": 17190,
+    "sha256": "22f13f5ff05007e0cbee910f42c1409bc0d814e93652a4e2ea0741f11b6b0e25"
+  }
+}

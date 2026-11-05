@@ -146,6 +146,11 @@ fn imageryWeight() -> f32 {
   return g.imagery.x * imageryZoomFade(g.view.z);
 }
 
+/* How far the entrance has lit the Earth: 0 is a dark disc, 1 is the globe as drawn. */
+fn exposure() -> f32 {
+  return g.entrance.x;
+}
+
 /** Straight-alpha source-over, the operation a 2D canvas performs. */
 fn over(dst: vec4<f32>, src: vec4<f32>) -> vec4<f32> {
   let a = src.a + dst.a * (1.0 - src.a);
@@ -484,7 +489,8 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
 
   if (d0 > reach) { return vec4<f32>(0.0); }
 
-  let ring = atmosphere(u0, v0, d0, reach);
+  var ring = atmosphere(u0, v0, d0, reach);
+  ring.a = ring.a * exposure();
 
   /* Past the limb, shade as if on it — exactly as paintShading does — so the
      boundary pixel has a sensible sphere colour to mix towards and no dark
@@ -540,19 +546,28 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     colour = over(colour, vec4<f32>(shadeRgb, shadeA));
   }
 
+  /* The entrance: before the dawn the lit colours are the night colour, so the
+     Earth is a dark disc that hides the stars. Skipped at full exposure, so
+     every other host draws exactly what it did. */
+  if (exposure() < 1.0) {
+    colour = mixStraight(vec4<f32>(g.night.rgb, 1.0), colour, exposure());
+  }
+
   // --- limb outline ---
   let limbDistPx = abs(d0 - 1.0) * radius;
   colour = over(
     colour,
-    vec4<f32>(g.limb.rgb, g.limb.a * lineCoverage(limbDistPx, g.lines.z)),
+    vec4<f32>(g.limb.rgb, g.limb.a * lineCoverage(limbDistPx, g.lines.z) * (0.25 + 0.75 * exposure())),
   );
 
-  // --- graticule ---
+  /* --- graticule ---
+     A map device: it fades out under the photograph of the Earth and comes
+     back as the zoom fades the photo to the flat globe. */
   let quietFactor = select(1.0, ${f32(0.56)}, g.view.w > 0.5);
   let gridCoverage = graticule(geo, g.lines.y);
   colour = over(
     colour,
-    vec4<f32>(g.grid.rgb, g.grid.a * gridCoverage * quietFactor),
+    vec4<f32>(g.grid.rgb, g.grid.a * gridCoverage * quietFactor * (1.0 - imageryW) * exposure()),
   );
 
   /* --- land and region, from the coverage target ---
@@ -562,18 +577,18 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let texel = textureLoad(coverage, vec2<i32>(floor(position.xy)), 0);
   colour = over(
     colour,
-    vec4<f32>(g.land.rgb, g.land.a * texel.r * vectorW),
+    vec4<f32>(g.land.rgb, g.land.a * texel.r * vectorW * exposure()),
   );
   colour = over(
     colour,
-    vec4<f32>(g.landStroke.rgb, g.landStroke.a * texel.g * vectorW),
+    vec4<f32>(g.landStroke.rgb, g.landStroke.a * texel.g * vectorW * exposure()),
   );
-  colour = over(colour, vec4<f32>(g.regionFill.rgb, g.regionFill.a * texel.b));
+  colour = over(colour, vec4<f32>(g.regionFill.rgb, g.regionFill.a * texel.b * exposure()));
   if (g.regionStroke.a > 0.0) {
     let casing = regionCasing(position.xy, g.imagery.y);
-    colour = over(colour, vec4<f32>(g.casing.rgb, g.casing.a * casing));
+    colour = over(colour, vec4<f32>(g.casing.rgb, g.casing.a * casing * exposure()));
   }
-  colour = over(colour, vec4<f32>(g.regionStroke.rgb, g.regionStroke.a * texel.a));
+  colour = over(colour, vec4<f32>(g.regionStroke.rgb, g.regionStroke.a * texel.a * exposure()));
 
   /* The sphere and the glow do not overlap: the canvas-2D renderer fills the
      ring with an even-odd rule that cuts the inner disc out, and this is the
@@ -650,12 +665,12 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
 
   let texel = textureLoad(coverage, vec2<i32>(floor(position.xy)), 0);
   var colour = vec4<f32>(0.0);
-  colour = over(colour, vec4<f32>(g.regionFill.rgb, g.regionFill.a * texel.b));
+  colour = over(colour, vec4<f32>(g.regionFill.rgb, g.regionFill.a * texel.b * exposure()));
   if (g.regionStroke.a > 0.0) {
     let casing = regionCasing(position.xy, g.imagery.y);
-    colour = over(colour, vec4<f32>(g.casing.rgb, g.casing.a * casing));
+    colour = over(colour, vec4<f32>(g.casing.rgb, g.casing.a * casing * exposure()));
   }
-  colour = over(colour, vec4<f32>(g.regionStroke.rgb, g.regionStroke.a * texel.a));
+  colour = over(colour, vec4<f32>(g.regionStroke.rgb, g.regionStroke.a * texel.a * exposure()));
   return vec4<f32>(colour.rgb * colour.a, colour.a);
 }
 `;
@@ -854,7 +869,7 @@ fn fs(in: Out) -> @location(0) vec4<f32> {
     // A ring: subtract the hole, so the stroke is the difference of two discs.
     coverage = coverage * clamp(distance - in.radii.y + 0.5, 0.0, 1.0);
   }
-  var colour = vec4<f32>(in.colour.rgb, in.colour.a * coverage);
+  var colour = vec4<f32>(in.colour.rgb, in.colour.a * coverage * exposure());
 
   /* A casing in the theme's \`casing\` colour, on every globe: the same disc
      or ring grown by \`g.imagery.y\` device pixels each way, drawn under it. A
@@ -865,7 +880,7 @@ fn fs(in: Out) -> @location(0) vec4<f32> {
   if (in.radii.y > 0.0) {
     casing = casing * clamp(distance - (in.radii.y - reach) + 0.5, 0.0, 1.0);
   }
-  colour = over(vec4<f32>(g.casing.rgb, g.casing.a * casing), colour);
+  colour = over(vec4<f32>(g.casing.rgb, g.casing.a * casing * exposure()), colour);
 
   if (colour.a <= 0.0) { discard; }
   return premultiply(colour);
@@ -929,8 +944,8 @@ fn vs(
 fn fs(in: Out) -> @location(0) vec4<f32> {
   let sampled = textureSample(atlas, atlasSampler, in.uv);
   // The glyphs over their halo, on every globe.
-  var colour = vec4<f32>(g.label.rgb, g.label.a * sampled.r);
-  colour = over(vec4<f32>(g.casing.rgb, g.casing.a * sampled.g), colour);
+  var colour = vec4<f32>(g.label.rgb, g.label.a * sampled.r * exposure());
+  colour = over(vec4<f32>(g.casing.rgb, g.casing.a * sampled.g * exposure()), colour);
   if (colour.a <= 0.0) { discard; }
   return premultiply(colour);
 }

@@ -5,7 +5,8 @@
  * reader can use or read.
  *
  * Placements, per page:
- *   - `/` and `/tools/zoned-earth/`: the fourth button of the globe's control stack;
+ *   - `/` and `/tools/zoned-earth/`: the last button of the globe's control stack (the fifth on `/`,
+ *     where the zone finder's magnifier comes before it; the fourth on the tool page);
  *   - `/why-gmt/`: a glass square in the time-zone map's corner;
  *   - `/check/canada-2026-clock-change/`: a glass square in the Canada map's corner, added by the client
  *     when the map is drawn (the Worker is stubbed). Below 520 px of section width the map is not
@@ -20,7 +21,7 @@
  *   - the button's rect intersects no other focusable element's rect (the globe's canvas, which the
  *     button is drawn on, aside) and no text node's client rect;
  * and per page and width:
- *   - Tab reaches the button (a stack's from its first sibling in three presses, inside the group
+ *   - Tab reaches the button (a stack's from its first sibling, one press per button before it, inside the group
  *     named "Globe controls"), Enter opens the popover, the accessibility tree shows it expanded
  *     (read from the AX tree over CDP, or `ariaSnapshot()`; a native popover button has no
  *     `aria-expanded` attribute), Escape closes it and focus is back on the button;
@@ -42,13 +43,23 @@ import { gate, resolveMisses } from "./lib/locate.mjs";
 
 const GATE = "data-credits-check";
 
+const ZOOM_STACK = ["Zoom in", "Zoom out", "Reset zoom"];
 const GLOBE = {
   stack: true,
   frame: gate("globe-stage"),
   id: "globe-data-credits",
+  order: [...ZOOM_STACK, "Data credits"],
 };
 const TARGETS = [
-  { path: "/", slug: "home-globe", ...GLOBE },
+  {
+    path: "/",
+    slug: "home-globe",
+    ...GLOBE,
+    order: [...ZOOM_STACK, "Find a zone", "Data credits"],
+    // The landing alone carries the night sky, so alone it credits the star catalogue, and alone
+    // it holds the licence note instead of the page footer.
+    labels: ["Time zone boundaries", "Earth imagery", "Stars", "Licence"],
+  },
   { path: "/tools/zoned-earth/", slug: "zoned-earth", ...GLOBE },
   {
     path: "/why-gmt/",
@@ -443,16 +454,17 @@ for (const name of browsers) {
       // Keyboard path.
       await button.scrollIntoViewIfNeeded();
       if (target.stack) {
-        // Inside the control stack: Tab from the first sibling reaches the button on the third press.
+        // Inside the control stack: Tab from the first sibling reaches the button after one press per button before it.
         await page.locator('[data-globe-zoom="in"]').first().focus();
-        for (let i = 0; i < 3; i += 1) await page.keyboard.press(TAB(name));
+        for (let i = 0; i < target.order.length - 1; i += 1)
+          await page.keyboard.press(TAB(name));
         const reached = await page.evaluate(
           (id) => document.activeElement?.getAttribute("popovertarget") === id,
           target.id,
         );
         if (!reached)
           fail(
-            `${label}: Tab from Zoom in does not reach the button in three presses`,
+            `${label}: Tab from Zoom in does not reach the button in ${target.order.length - 1} presses`,
           );
       } else {
         // Tab reachability: tab forward until the button is focused (bounded).
@@ -509,7 +521,7 @@ for (const name of browsers) {
           fail(
             `${label}: the control stack is not a group named "Globe controls" (${g.groupRole}, ${g.groupLabel})`,
           );
-        if (g.order.join("|") !== "Zoom in|Zoom out|Reset zoom|Data credits")
+        if (g.order.join("|") !== target.order.join("|"))
           fail(`${label}: the stack's order is ${g.order.join(", ")}`);
         if (g.panel.right > g.button.left + 0.5)
           fail(
@@ -575,7 +587,9 @@ for (const name of browsers) {
       if (closed.shown) fail(`${label}: Escape did not close the panel`);
       if (closed.back !== target.id)
         fail(`${label}: focus did not return to the button`);
-      await frame.hover();
+      // Forced: on `/` the globe's hit area lies over the stage and takes the pointer, which is
+      // where a reader's pointer is when the drawing is in use.
+      await frame.hover({ force: true });
       await page.waitForTimeout(400);
       await shoot("closed");
       measured += 1;

@@ -47,6 +47,25 @@ describe("the globe's control stack", () => {
     expect(screen.getByText("Earth imagery")).toBeInTheDocument();
   });
 
+  it("holds no licence row on a page's globe, where the footer line carries the note", () => {
+    stack("rail-5");
+    expect(screen.queryByText("Licence")).not.toBeInTheDocument();
+  });
+
+  it("ends the landing globe's credits with the Licence row", () => {
+    draw({ space: true, idPrefix: "rail-6" });
+    const terms = screen
+      .getAllByRole("term", { hidden: true })
+      .map((t) => t.textContent);
+    expect(terms.at(-1)).toBe("Licence");
+    expect(
+      screen.getByRole("link", {
+        name: "© 2026 NorthGuild, all rights reserved",
+        hidden: true,
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("starts with its credits closed", () => {
     expect(
       within(stack("rail-4")).getByRole("button", { name: "Data credits" }),
@@ -78,8 +97,8 @@ describe("the globe's template", () => {
     await expectNoAxeViolations(r.host);
   });
 
-  it("drops the heading and the caption when embedded, and says so in its name", async () => {
-    const r = draw({ embedded: true });
+  it("drops the heading and the caption in space mode, and says so in its name", async () => {
+    const r = draw({ space: true });
     expect(
       screen.getByRole("region", { name: "Zoned Earth overview" }),
     ).toBeInTheDocument();

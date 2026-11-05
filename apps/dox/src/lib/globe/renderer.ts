@@ -58,6 +58,11 @@ export interface FrameState {
    * should not.
    */
   moving: boolean;
+  /**
+   * How far the entrance has lit the Earth, 0..1: 0 is a dark disc, 1 is the globe as drawn.
+   * Always 1 outside a dawn entrance and once the dawn is over.
+   */
+  exposure: number;
 }
 
 export interface RendererInit {
@@ -75,6 +80,11 @@ export interface RendererInit {
    * frame already pending, so calling it from inside `render` is safe.
    */
   invalidate(): void;
+  /**
+   * `"dawn"`: the host reveals the Earth through `FrameState.exposure`, so the imagery shows at
+   * full weight as soon as it is loaded instead of fading in on its own.
+   */
+  entrance?: "fade" | "dawn";
   /** Whether to skip eased transitions. Read when needed, not cached. */
   reducedMotion(): boolean;
 }
@@ -83,6 +93,12 @@ export interface GlobeRenderer {
   readonly kind: RendererKind;
   /** The element the shell binds pointer, wheel and key handlers to. */
   readonly canvas: HTMLCanvasElement;
+  /**
+   * Resolves once everything the first lit frame needs is on the GPU (the imagery texture and
+   * the label atlas), so nothing decodes or uploads while the dawn ramps. Absent when a backend
+   * has nothing to wait for.
+   */
+  readonly ready?: Promise<void>;
   /** CSS pixel box plus the device pixel ratio to raster at. */
   resize(cssWidth: number, cssHeight: number, dpr: number): void;
   setTheme(theme: GlobeTheme): void;

@@ -57,6 +57,8 @@ export const UNIFORM_SLOTS = [
      passes within one frame rather than once per frame like the rest. */
   "regionFill",
   "regionStroke",
+  /** `(exposure, 0, 0, 0)`: how far the Earth has woken, 0 (a dark disc) to 1 (as drawn). */
+  "entrance",
 ] as const;
 
 export type UniformSlot = (typeof UNIFORM_SLOTS)[number];
@@ -108,6 +110,8 @@ interface UniformInput {
   /** Colours for the region group in this pass; omitted means draw no region. */
   regionFill?: Rgba;
   regionStroke?: Rgba;
+  /** How far the entrance has lit the Earth, 0..1. Default 1: the globe as it is drawn. */
+  exposure?: number;
 }
 
 /** Write the block into `target`, which must hold `UNIFORM_BYTES`. */
@@ -177,6 +181,7 @@ export function writeUniforms(
   colour("casing", theme.casing);
   colour("regionFill", input.regionFill ?? TRANSPARENT);
   colour("regionStroke", input.regionStroke ?? TRANSPARENT);
+  put("entrance", input.exposure ?? 1, 0, 0, 0);
 }
 
 const TRANSPARENT: Rgba = [0, 0, 0, 0];
