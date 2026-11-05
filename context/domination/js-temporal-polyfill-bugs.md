@@ -208,7 +208,7 @@ on #3014.
   D5, D7 and the ICU 78 calendar fixes. Nothing is released yet, so no GMT workaround retires.
 - **Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply** (checked 2026-10-24); the
   only comments are our own cross-links.
-- **fc #119, #120 and #121 are closed as fixed in temporal-polyfill 1.0.7** (2026-11-04); **#125 and #126 are open with no reply yet** (checked 2026-11-04). They stay listed as credit.
+- **fc #119, #120 and #121 are closed as fixed in temporal-polyfill 1.0.7**, and **#125 and #126 in 1.0.8** (all closed 2026-11-04). They stay listed as credit.
 - **tc39 #3331 is closed as answered** (2026-10-24): the champions had already said on #3014 that
   the check is intended until tc39/ecma262#3464 lands (§ J).
 

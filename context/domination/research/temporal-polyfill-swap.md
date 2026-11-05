@@ -3,25 +3,24 @@
 **Purpose:** Record whether GMT should replace `@js-temporal/polyfill` with `temporal-polyfill`
 (fullcalendar/temporal-polyfill), what the swap costs, and what tells us to make it.
 
-**Checked against:** `@js-temporal/polyfill` 0.5.1 and `temporal-polyfill` 1.0.7 through its
+**Checked against:** `@js-temporal/polyfill` 0.5.1 and `temporal-polyfill` 1.0.8 through its
 `/full/implementation` entry, on Node 26.12.1 (ICU 78.3, tzdata 2026e), with Node's built-in
-`Temporal` as the tie-breaker. Every probe also ran in Playwright Chromium and in Playwright
-WebKit 26.6. `temporal-polyfill` 1.0.6 was checked on Node the same way; its results stay in § 4.1–§ 4.3, because the
-offset sweep of § 4.3 is the check's proof that it finds a real defect.
+`Temporal` as the tie-breaker. The probe results in § 3 and the defects in § 4.4 and § 4.5 were
+measured on 1.0.7, in Node, Playwright Chromium and Playwright WebKit 26.6; 1.0.8 fixes § 4.4 and
+§ 4.5 (§ 4.6). `temporal-polyfill` 1.0.6 was checked on Node the same way; its results stay in
+§ 4.1–§ 4.3, because the offset sweep of § 4.3 is the check's proof that it finds a real defect.
 
 ---
 
 ## 1. The choice
 
-GMT stays on `@js-temporal/polyfill`. `temporal-polyfill` 1.0.7 fixes most of the defects GMT works
-around today, and the three defects found in 1.0.6 (§ 4.1–§ 4.3). The offset sweep finds no zone
-where it differs from `Intl.DateTimeFormat`. It still has a defect of its own: its backward
-transition search stops about three years after the current date, and 12 GMT tests fail on it
-(§ 4.4). Under the zero-known-bugs rule
-([AGENTS.md Core Rule 12](../../../AGENTS.md#core-rules-quick-reference)) that would need a new
-workaround before a swap could ship. It also misses transitions before 1847 (§ 4.5), which GMT's
-zoned.E code already handles. GMT swaps when a `temporal-polyfill` release passes the whole GMT
-suite and the offset sweep (§ 6).
+`temporal-polyfill` 1.0.8 fixes most of the defects GMT works around today, the three defects found
+in 1.0.6 (§ 4.1–§ 4.3), and the two found in 1.0.7: a backward transition search that stopped about
+three years after the current date, which failed 12 GMT tests (§ 4.4), and transitions before 1847
+that it did not find (§ 4.5). On Node, the swap check finds no test that fails on 1.0.8 and passes
+on `@js-temporal/polyfill` (0 of 71,340 tests), and the offset sweep finds no zone where it differs
+from `Intl.DateTimeFormat` (0 zones). The move itself is CORE-108 (#460). GMT swaps when a
+`temporal-polyfill` release passes the whole GMT suite and the offset sweep (§ 6).
 
 ## 2. How it was tested
 
@@ -83,11 +82,12 @@ defect in 11 other zones.
 
 ## 4. What `temporal-polyfill` breaks
 
-On 1.0.7, 14 of 71,333 tests fail. Twelve come from § 4.4. One is `internal/temporal.test.ts` ›
+On 1.0.7, 14 of 71,333 tests failed. On 1.0.8, none fails that passes on `@js-temporal/polyfill`
+(0 of 71,340 tests, Node), and the sweep lists no zone. Twelve come from § 4.4. One is `internal/temporal.test.ts` ›
 "names the polyfill itself", which fails only because the run edited the seam (§ 2). One is a GMT
 test bug: `plain/get/getNow.test.ts` asserts a strictly later reading of a frozen clock, and 1.0.7's
 clock adds no sub-millisecond part, which the standard does not require (Temporal § 2.3.1
-HostSystemUTCEpochNanoseconds). CORE-92 fixes that test.
+HostSystemUTCEpochNanoseconds). CORE-92 fixed that test.
 
 On 1.0.6, 102 of 66,793 tests failed (the suite has grown since), from the three defects in
 § 4.1–§ 4.3. 1.0.7 fixes all three.
@@ -166,7 +166,7 @@ fixed for that issue's own repros (`America/Noronha` and `America/Boa_Vista` in 
 Tests: `zoned/get/getDstTransitions.test.ts`, `zoned/calculate/getHoursInZonedDay.test.ts`,
 `internal/zonedTransitionSearch.test.ts`, the Casablanca rows of `classifyStoredZoned.test.ts`.
 
-### 4.4 Backward transition search stops about three years ahead (1.0.7, 12 tests)
+### 4.4 Backward transition search stops about three years ahead (1.0.7, 12 tests; fixed in 1.0.8)
 
 From any instant more than 94,867,200 s (1,098 days) after the current time,
 `getTimeZoneTransition("previous")` returns the last transition before that horizon, not the last
@@ -190,7 +190,7 @@ Tests: `internal/zonedTransitionSearch.test.ts` (2), `zoned/calculate/startOfZon
 `zoned/calculate/getLocaleZonedStartOfWeek.test.ts`, `zoned/calculate/startOfQuarterForZoned.test.ts`,
 `zoned/interval/intervalCountZoned.test.ts`.
 
-### 4.5 Transitions before 1847 not found (1.0.7, no test fails)
+### 4.5 Transitions before 1847 not found (1.0.7, no test fails; fixed in 1.0.8)
 
 1.0.7 finds no transition before 1847-01-01, so `Asia/Manila`, `Pacific/Guam`, `Pacific/Kosrae`,
 `Pacific/Palau` and `Pacific/Saipan` miss their change on 31 December 1844. Its search starts at
@@ -205,10 +205,10 @@ test fails; only zoned.E's probes do.
 | § 4.1 Malformed annotations accepted | [#119](https://github.com/fullcalendar/temporal-polyfill/issues/119) | Fixed in 1.0.7 |
 | § 4.2 Range-limit instants rejected | [#120](https://github.com/fullcalendar/temporal-polyfill/issues/120) | Fixed in 1.0.7 |
 | § 4.3 Wrong offset between two close offset changes (follow-up to #73) | [#121](https://github.com/fullcalendar/temporal-polyfill/issues/121) | Fixed in 1.0.7 |
-| § 4.4 Backward search stops about three years ahead | [#125](https://github.com/fullcalendar/temporal-polyfill/issues/125) | Open |
-| § 4.5 Transitions before 1847 not found | [#126](https://github.com/fullcalendar/temporal-polyfill/issues/126) | Open |
+| § 4.4 Backward search stops about three years ahead | [#125](https://github.com/fullcalendar/temporal-polyfill/issues/125) | Fixed in 1.0.8 |
+| § 4.5 Transitions before 1847 not found | [#126](https://github.com/fullcalendar/temporal-polyfill/issues/126) | Fixed in 1.0.8 |
 
-§ 6 waits on a release that fixes § 4.4. The `/upstream/` tracker lists all five.
+The `/upstream/` tracker lists all five, closed ones included, as credit.
 
 ## 5. What a swap costs
 
@@ -218,11 +218,12 @@ test fails; only zoned.E's probes do.
 | Types | About 238 type errors, nearly all from 12 helper type names the package does not export (`DateTimeUnit`, `SmallestUnit`, `RoundingMode`, `ToStringPrecisionOptions`, `PluralUnit`, `DifferenceOptions`, `DurationRoundTo`, `LargestUnit`, `TotalUnit`, `ToInstantOptions`, `ArithmeticOptions`, `ZonedDateTimeAssignmentOptions`). A short alias file in GMT covers them. Also 7 `@ts-expect-error` lines that no longer fire, and `ZonedDateTimeLike` without `timeZone` and `offset` |
 | Dox | 68 files under `apps/dox/src` import `@js-temporal/polyfill` directly and move with it |
 | Compat tooling | `scripts/lib/workarounds.mjs`, `scripts/temporal-compat.mjs`, the native suite and the upstream tracker name `@js-temporal/polyfill` in triggers and version checks |
-| Workarounds | Delete the groups whose probes all pass; keep zoned.E, D16, D19 and D22; add one for each defect in § 4 that the release still has (§ 4.4 in 1.0.7) |
+| Workarounds | Delete the groups whose probes all pass; keep zoned.E, D16, D19 and D22; add one for each defect in § 4 that the release still has (none in 1.0.8 on Node) |
 | Seam test | `internal/temporal.test.ts` asserts the package name |
 
-What a swap gains: most of `internal/temporalCompat/` deleted, a smaller polyfill (19.5 kB, or
-23.3 kB for `/full`, against 52.1 kB min+gzip, by the package's own size comparison), and a
+What a swap gains: most of `internal/temporalCompat/` deleted, a smaller polyfill (23.3 kB min+gzip for
+`temporal-polyfill/full/implementation`, against 44.2 kB for `@js-temporal/polyfill`, both bundled
+and gzipped with the settings of `scripts/bundle-size.mjs`), and a
 maintained release line.
 
 ## 6. When to swap
@@ -244,3 +245,9 @@ adds this check to the weekly Temporal oracle run, which opens an issue when it 
   and `gregory`. GMT needs every calendar `/full` lists.
 - **One implementation everywhere.** `packages/gmt` and `apps/dox` move in the same change, so Dox
   never mixes objects from two polyfills.
+- **Trap: Vitest 5's file-system module cache is keyed by path, not contents.** It lives in
+  `node_modules/.vitest-cache`. A package upgraded in place under the same path (a swap run that
+  installs a newer `temporal-polyfill` over an older one) runs from the old cached transform and
+  reports the old release's results. `scripts/native-suite.mjs` passes `--fsModuleCache=false` to
+  every pass, control and swap, so each pass reads the files on disk. Any new script that runs the
+  suite against an installed candidate does the same.

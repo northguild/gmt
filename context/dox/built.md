@@ -656,11 +656,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 `mount`. The kit is nine custom elements and a set of builders. The builders sit in
 `src/widgets/builders`, re-exported from `builders/index.ts`: the layout set (`widget`, `card`,
 `section`, `fieldGrid`, `field`, `hint`), `aside`, `badge`, `button`, `buttonRow`, `chartKey`,
-`codeFrame`, `dataCredits`, `disclosure`, `hero`, `instant`, `loading`, `plates`, `select`,
-`srOnly`, `switchField`, `swatch`, `table`, `textInput`, `toolLinks`, `verdict`, `zonedValue` and
+`codeFrame`, `dataCredits`, `disclosure`, `hero`, `hold`, `instant`, `loading`, `plates`, `select`,
+`selectOptions`, `srOnly`, `switchField`, `swatch`, `table`, `textInput`, `toolLinks`, `verdict`, `zonedValue` and
 the timeline pieces (`axis`, `lane`, `mark`, `tick`). `table` takes `roles` to write an explicit
 ARIA role on every part, for a sheet that changes a part's `display`. `hint` takes a string or
-`SafeHtml`. `zonedValue` writes a stored zoned time as no-wrap pieces joined by `<wbr>`, breaking
+`SafeHtml`. `hold(live, ghosts)` is a grid cell that holds a live element and one hidden ghost per text it can show, so its box is the widest of them and a value that comes and goes moves nothing around it. `selectOptions(options, value?)` writes the `<option>` markup of a `select`, for a mount that replaces the options of a live select and keeps its box, class and state. `zonedValue` writes a stored zoned time as no-wrap pieces joined by `<wbr>`, breaking
 after the `T`, before the offset and before the `[`. `.field` has a `minmax(0, 1fr)` track, so an
 unbreakable child cannot widen a field past its card. The `html`, `raw` and `idScope` helpers
 escape and scope. The elements sit in `src/widgets/primitives/<name>/`: `gmt-range`, `gmt-handle`,
@@ -818,6 +818,25 @@ number it did not measure.
   `scroll-padding-block`, so focus lands clear of the sticky bars.
 - A load jump names the frame, the deepest resized element and the font state. Each widget
   reserves its size, or sits in `<gmt-grow>`, and the fallback font is metric-matched.
+  - The Display Fallback face lists `local()` mono faces found on macOS, Windows and Linux
+    (Menlo, Consolas, DejaVu Sans Mono, Liberation Mono, Courier New) with `size-adjust: 130%`, so a
+    headless Linux browser draws the fallback at the same advance. `src/styles/display-fallback.test.ts` pins the list.
+  - The Michroma face is in the site stylesheet as a data URI: `gmt-tokens.css` names the
+    vendored `public/fonts/michroma-latin-400-normal.woff2?inline` and Vite writes its bytes into
+    the face, so the font is there at first layout and no heading swaps faces. Any external font
+    file, even a preloaded one, arrives after first layout in Firefox and moves the page. The face is
+    `font-display: optional`, and no page preloads the file (a preload of a file nothing uses
+    logs a warning). `public/fonts/` is the one copy of the bytes; `deploy-smoke.mjs` and the
+    Worker test still request it by URL. `display-fallback.test.ts` pins the face and
+    `scripts/display-font-built.test.ts` pins the built bytes against the vendored file and the
+    absent preload.
+  - A region the mount rewrites sits in `<gmt-grow>` or in a `hold`. A one-line summary
+    (Connection Checker) and the Duration Parser Bench's result and facts are in `<gmt-grow>`.
+    An EDI zone-strip cell keeps a no-break space when empty, a figure with no parts draws no
+    empty row, and the result pane's stand-in keeps the scroll track the pane has.
+  - A chip, plate or cell in a table (`timetable-reader`, `migrate-table.css`) wraps at its
+    spaces only; the migrate tables pad their cells and give the last column a 14rem floor, so a
+    table fits 770 px at 390 px wide without a break inside a word.
 - Every card and section sits on one opaque `--gmt-surface-widget`, so stacked tints cannot drop
   contrast below 7:1. The footer has its own opaque surface.
 - Local checks run Chromium on macOS. Firefox and WebKit run weekly in CI; the footer contrast
@@ -1255,7 +1274,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     and an empty month keeps its reserved line. The Comparator's cells are two lines and the table
     stacks under 34rem. The rule and holiday lists carry `data-grow="slot"`. The Builder's call
     frame reserves its worst case through `ruleCallSizerText` and `pairBound`, and Moving Feasts
-    holds its nth-note and call frame with sizers, so no readout resizes.
+    holds its nth-note and call frame with sizers, so no readout resizes. The Comparator's matrix, before the library answers, is a skeleton: the default span's year cards (and the padding rows up to `MAX_YEARS`) with one blank block per holiday per column, an `aria-busy` table and a visible Loading status laid over it. Moving Feasts' signal plates are a wrapping flex row, each plate sized by hidden twins of the widest ISO date, so a date never narrows its neighbour. A day outside the shown month is drawn bare (a dashed hairline, no fill, no mark) and is left out of the week strip's marked list.
   - **Links and notes.** The Builder's compare link appears only for a valid `fixed` rule
     (`compareHandoffHref` asks the library). The Comparator's `holiday-note` says which seeded
     holidays are not dates. The Comparator's permalink adds a `year` key and repeatable custom
@@ -1286,7 +1305,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     counter from 1980 to 2170 grouped by counter width, a tick per wrap (the next taller), the
     firmware's window as a lit bracket, a spark where it goes wrong, and the check date and today
     as pins. Each group heading sits on the surface above the year lines and the check-date pin,
-    so no line crosses it. The server draws a skeleton with the library's group sizes.
+    so no line crosses it. The server draws a skeleton with the library's group sizes. Each fuse chip is a `hold` over every label with the widest instant, and a chip wraps only at its spaces, so no chip resizes at 300 px.
   - **Leap Second Timeline** (`/tools/leap-second-timeline/`): a staircase of TAI - UTC, a riser
     per inserted second, a hatched run from `CONTINUOUS_UTC_FROM`, the date as a cursor, the
     counted span as a band, and a checked `23:59:60` as a lit riser or a struck-through ghost.
@@ -2064,7 +2083,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     Starlight's prose spacing never reaches widget internals.
   - **A disabled input or select has one shared style**
     (the `textInput` and `select` CSS Modules): dimmer text, a dashed border, no fill and a not-allowed
-    cursor, with no opacity. Forced colours restate it as `GrayText` (`gmt-a11y.css`). A
+    cursor, with no opacity (both modules set `opacity: 1`, so a browser's own dimming of a disabled control never lowers the text or border contrast). Forced colours restate it as `GrayText` (`gmt-a11y.css`). A
     widget sets `disabled` and styles nothing itself, so the state looks the same in every
     tool. The tools that disable such a control are:
     - the Punctuality Board: the early and second late tolerance inputs while each one is
@@ -2131,7 +2150,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   a list inside a `.gmt-widget` (`ul:not(:where(.gmt-widget *))`). A widget's legend, verdict
   row or key draws no dash and needs no reset. `content-list-rule.test.ts` guards it.
 - **Trap: the live wrapper in a hold cell must stretch.** A cell that holds its size stacks
-  a hidden sizer and a live wrapper in one grid cell (`families/ids/hold.ts`, `families/edi/edi-hold.ts`, `families/holiday/held-text.ts`). The wrapper
+  a hidden sizer and a live wrapper in one grid cell (`builders/hold.ts`, `families/edi/edi-hold.ts`, `families/holiday/held-text.ts`). The wrapper
   keeps the grid's default stretch, so its box is always the sizer's size. If it is aligned
   to the start instead, its height goes from 0 to the content's each time a note or a value
   appears, and `readout:still`, which measures the wrapper, reports it as a resize.
@@ -2265,7 +2284,12 @@ Shared hooks come first, then the globe, then the clock-change pages.
   resized and how many grew around it or moved below. A late writer outside `grow()` (a script
   that sets a height after the region settled) is a jump: `grow-measure` reports it once as
   `max jump N px > limit (page and <main>)` when the page and `<main>` pass the limit in the same
-  frame, and twice when they pass it in different frames. `a11y-media` proves `prefers-contrast`
+  frame, and twice when they pass it in different frames. The sampler reads in a task after a
+  frame, so a late task can span two animation frames: `attributeFrames` (`gate-checks.mjs`)
+  splits such a sample into one step per frame, spreading the eased motion over the frames it took
+  and leaving anything the easing does not account for whole in the frame it was seen in, and
+  `withJumpDiagnostic` names the `<main>` frame in a `<main>`-only jump's diagnostic, not the
+  root's. `a11y-media` proves `prefers-contrast`
   applied before it reads the border: a probe custom property set under `@media (prefers-contrast:
   more)` must read `1`, mid-page and then in a fresh context created with `contrast: "more"`; a
   probe that stays unset is `emulation-not-applied` (the engine, not the page), and a probe that
@@ -2339,6 +2363,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
     screen's context line says so under `--plan`); `--all` lifts the cap. With no changed file under
     `apps/dox/` (other than `*.test.ts`), `packages/gmt/src/` or `pnpm-lock.yaml`, the runner prints
     `gates: PASS  nothing to check` and does not build.
+  - **An empty run is not a pass.** When the diff selects pages but no requested browser can run a
+    gate that applies (`emptyRunOutcome` in `gates/select.mjs`), `gates` exits 2 with
+    `gates: nothing was run: none of <browsers> runs <gates> (it runs in <browsers>)`.
+    `contrast-measure` is Chromium only, so `--browsers firefox` alone runs nothing for it.
   - **The MAR-16 tools measure the whole widget** (`scope: "widget"`, frame `.gmt-gnss-frame`).
     Only their drawings (`GNSS_DRAWN`: lanes, bars, strip, plot, rulers and a hold's live
     wrapper) may move; the range chip is a `riders` element (its left moves, nothing else), and
