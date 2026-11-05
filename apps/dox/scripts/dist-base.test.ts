@@ -90,7 +90,7 @@ describe("the built site keeps the /gmt base", () => {
   it("no stylesheet carries a URL without the base, and the Michroma font is inline", () => {
     const b = built();
     if (b === null) return;
-    const { root, pages } = b;
+    const { pages } = b;
     const astro = resolve(pages, "_astro");
     const css = readdirSync(astro)
       .filter((n) => n.endsWith(".css"))

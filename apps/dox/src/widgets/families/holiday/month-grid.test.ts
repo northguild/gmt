@@ -77,6 +77,6 @@ describe("monthGrid", () => {
     expect(block).not.toMatch(/--gmt-ice-dim/);
     expect(block).toMatch(/background:\s*none;/);
     expect(block).toMatch(/color:\s*var\(--gmt-ice\);/);
-    expect(block).toMatch(/outline:\s*none;/);
+    expect(block).toMatch(/outline-width:\s*0;/);
   });
 });

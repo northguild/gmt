@@ -7,7 +7,10 @@ import { writeSync } from "node:fs";
  * usually dies on the first call that needs one, and the marker is already out by then.
  */
 // The test file holds its own copy of the marker: importing this file would print it there.
-writeSync(1, `${JSON.stringify({ value: "swap-entry-fixture-loaded", ms: 0 })}\n`);
+writeSync(
+  1,
+  `${JSON.stringify({ value: "swap-entry-fixture-loaded", ms: 0 })}\n`,
+);
 
 export const Temporal = {};
 export const Intl = globalThis.Intl;

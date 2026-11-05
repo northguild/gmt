@@ -106,7 +106,11 @@ export function entryLoaded(report) {
  * @param {SweepDate} today  the run date, a `Temporal.PlainDate`
  * @param {string[]} [zones]  the zones to compare (default: every primary zone)
  */
-export function sweep(entry, today, zones = Intl.supportedValuesOf("timeZone")) {
+export function sweep(
+  entry,
+  today,
+  zones = Intl.supportedValuesOf("timeZone"),
+) {
   const formats = new Map(
     zones.map((zone) => [
       zone,

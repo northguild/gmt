@@ -214,7 +214,7 @@
   border-style: dashed;
   border-color: var(--gmt-hairline);
   background: none;
-  outline: none;
+  outline-width: 0;
   color: var(--gmt-ice);
 }
 

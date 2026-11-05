@@ -234,12 +234,12 @@
     border: 1px solid var(--gmt-hairline);
     border-radius: var(--gmt-radius-sm);
     corner-shape: bevel;
+  }
 
-    /* Padding rows vanish in a card layout; a skeleton row is laid out and unseen, so the
-       cards the loaded table draws have their room already. */
-    &[data-placeholder]:not([data-skeleton]) {
-      display: none;
-    }
+  /* Padding rows vanish in a card layout; a skeleton row is laid out and unseen, so the
+     cards the loaded table draws have their room already. Only rows carry the attribute. */
+  .table [data-placeholder]:not([data-skeleton]) {
+    display: none;
   }
 
   .table .year,
