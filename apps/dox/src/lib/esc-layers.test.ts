@@ -130,18 +130,6 @@ describe("the Escape order", () => {
     expect(closedLog).toEqual(["card", "under"]);
   });
 
-  it("closes a base layer only when nothing else is open", async () => {
-    const user = userEvent.setup();
-    const base = layer("base", document.body, { base: true });
-    const top = layer("top");
-    await top.open();
-    await base.open();
-    await user.keyboard("{Escape}");
-    expect(closedLog).toEqual(["top"]);
-    await user.keyboard("{Escape}");
-    expect(closedLog).toEqual(["top", "base"]);
-  });
-
   it("counts a focus-only layer only while focus is inside it", async () => {
     const user = userEvent.setup();
     const reading = layer("reading", document.body, { focusOnly: true });
@@ -205,6 +193,15 @@ describe("the Escape order", () => {
     ctl.abort();
     await user.keyboard("{Escape}");
     expect(a.isOpen()).toBe(true);
+  });
+
+  it("adds no listener for a signal that has already aborted", () => {
+    const listen = vi.spyOn(window, "addEventListener");
+    const gone = new AbortController();
+    gone.abort();
+    registerEscLayer({ isOpen: () => true, close: () => {} }, gone.signal);
+    expect(listen).not.toHaveBeenCalled();
+    listen.mockRestore();
   });
 
   it("ranks by opening order for state the document does not show", async () => {

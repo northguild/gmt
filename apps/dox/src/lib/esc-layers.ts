@@ -2,7 +2,7 @@
  * One Escape order for the whole site.
  *
  * Every layer a reader can open (a dialog, a menu, a popover, a drawer, a disclosure, a list, a
- * pinned card, the landing's second panel) registers here instead of listening for Escape itself.
+ * pinned card) registers here instead of listening for Escape itself.
  * One listener per document then closes exactly one layer per press and does nothing else:
  *
  * 1. The layers that hold focus go first, then the rest. A layer that has not been opened since
@@ -10,8 +10,7 @@
  * 2. Among those, the one opened last wins. A layer that contains another open layer gives way
  *    to it, so a panel inside a drawer closes before the drawer.
  *    A layer that names another as `over` also goes before it, whichever opened first.
- * 3. A `base` layer (the landing's second panel) closes only when nothing else is open.
- * 4. A `focusOnly` layer (a `<details>` the reader is reading) counts only while focus is in it.
+ * 3. A `focusOnly` layer (a `<details>` the reader is reading) counts only while focus is in it.
  *
  * After the layer shuts, focus goes to the control that opened it (WAI-ARIA APG: dialog,
  * disclosure, combobox, menu button), so it never falls to `<body>`. The press is heard once it
@@ -43,8 +42,6 @@ export interface EscLayer {
    * first, whichever opened last: a card drawn over the Earth goes before the drawer beside it.
    */
   over?: Element | null;
-  /** Closes only when no other layer is open. */
-  base?: boolean;
   /** The layer puts focus back itself (a React effect, a Radix trigger), so the helper does not. */
   returnsFocus?: boolean;
 }
@@ -132,10 +129,8 @@ export function pickLayer(
       ),
   );
   const pool = clear.length > 0 ? clear : inner.length > 0 ? inner : open;
-  const upper = pool.filter((e) => !e.layer.base);
-  const tier = upper.length > 0 ? upper : pool;
-  const holders = tier.filter((e) => holds(e.layer, focused));
-  const ranked = holders.length > 0 ? holders : tier;
+  const holders = pool.filter((e) => holds(e.layer, focused));
+  const ranked = holders.length > 0 ? holders : pool;
   let top = ranked[0]!;
   for (const e of ranked) if (e.seq > top.seq) top = e;
   return top.layer;
@@ -220,8 +215,9 @@ export function registerEscLayer(
   signal?: AbortSignal,
   doc: Document = layer.el?.ownerDocument ?? document,
 ): EscRegistration {
+  if (signal?.aborted) return { changed: () => {}, remove: () => {} };
   const state = states.get(doc) ?? install(doc);
-  if (!state || signal?.aborted) return { changed: () => {}, remove: () => {} };
+  if (!state) return { changed: () => {}, remove: () => {} };
   const rec: Entry = { layer, open: false, seq: 0 };
   state.records.add(rec);
   sync(state);

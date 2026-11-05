@@ -8,19 +8,23 @@
  *   - focus is on the control that opened that layer (never `<body>`);
  *   - the press after the last layer changes nothing.
  *
- *   `/` opens the landing's second panel (1440 only: below 80rem there is no carousel), the
- *   data-credits popover, the zone drawer by its magnifier, the Settings disclosure and the
+ *   `/` first turns the landing's carousel to its second page with the next arrow, then opens
+ *   the data-credits popover, the zone drawer by its magnifier, the Settings disclosure and the
  *   Find a zone list, and walks the keyboard path magnifier -> Settings -> Enter to prove the
- *   gear opens once the drawer is open. The pinned zone card is open from load.
- *   `/tools/zoned-earth/`: the same globe layers. A tool page with disclosures, `/dox/` and a
- *   docs page: their disclosures, the menu and the search dialog.
+ *   gear opens once the drawer is open. The zone card is the drawer's selection, not a layer.
+ *   The carousel is not a layer either (the WAI-ARIA carousel pattern gives Escape no part): the
+ *   cascade closes every layer and leaves the page the reader turned to.
+ *   `/tools/zoned-earth/`: a framed globe with no drawer. The start zone's card is not a layer;
+ *   once a click on the Earth chooses a zone, its card is one. A tool page with disclosures,
+ *   `/dox/` and a docs page: their disclosures, the menu and the search dialog.
  *
  * On the two globe pages it also checks the drawer:
  *   - a press outside the Earth closes it and does not move focus; a press inside it, on its
  *     Settings or on its open list does not;
- *   - a click on a region of the Earth selects (card, list mark) and does not centre; a click on a
- *     list button selects the same way and does centre;
- *   - Escape closes the card, then the drawer.
+ *   - a click on a list button and a click on a region of the Earth both select (card, list mark)
+ *     and centre the globe on the zone;
+ *   - Escape closes the drawer and leaves the zone card, which is the drawer's selection and not a
+ *     layer of its own; the next press changes nothing.
  *
  * Serve a build statically first (never `astro preview`, never the owner's dev server), for example:
  *   pnpm exec astro build --outDir /tmp/dist-x/gmt
@@ -88,14 +92,19 @@ const fail = (rule, browser, width, path, message) => {
 function probe() {
   const keys = [];
   const doc = document;
-  const root = doc.documentElement;
-  const about = doc.querySelector('[data-panel="about"]');
-  if (about && !about.hidden && root.dataset.homeCarousel === "on")
-    keys.push("about");
   if (doc.querySelector('[data-drawer][data-open="true"]')) keys.push("drawer");
-  if (doc.querySelector('[data-gate="globe-tooltip"]:not([hidden])'))
+  /* Where a drawer exists the zone card is its selection, not a layer of its own. Without one
+     it is a layer only once the reader has chosen a zone (the gate marks when it has): the zone
+     the globe starts on is shown, not opened. */
+  if (
+    window.__escChoseZone === true &&
+    !doc.querySelector("[data-drawer]") &&
+    doc.querySelector('[data-gate="globe-tooltip"]:not([hidden])')
+  )
     keys.push("card");
-  for (const el of doc.querySelectorAll("[popover]"))
+  /* A manual popover is not something Escape closes (esc-native.ts skips it): the zone card stays
+     open in the top layer only to draw above the header, and is counted above when it is a layer. */
+  for (const el of doc.querySelectorAll('[popover]:not([popover="manual"])'))
     if (el.matches(":popover-open")) keys.push(`pop:${el.id}`);
   [...doc.querySelectorAll("dialog[open]")].forEach((_, i) =>
     keys.push(`dialog:${i}`),
@@ -116,6 +125,16 @@ function probe() {
     (_, i) => keys.push(`list:${i}`),
   );
   return keys;
+}
+
+/** Runs in the page: the name of the carousel's selected dot, or null without a carousel. */
+function carouselPage() {
+  if (document.documentElement.dataset.homeCarousel !== "on") return null;
+  return (
+    document
+      .querySelector('[data-hero-dots] [role="tab"][aria-selected="true"]')
+      ?.getAttribute("aria-label") ?? null
+  );
 }
 
 /** Runs in the page: is focus on the control that opened `key`? Returns null when it has none. */
@@ -142,12 +161,6 @@ function focusOn(key) {
     opener = open[i]?.querySelector(":scope > summary") ?? null;
   } else if (key.startsWith("list:"))
     opener = doc.querySelector('[role="combobox"]');
-  else if (key === "about")
-    return (
-      !!active &&
-      active !== doc.body &&
-      !!active.closest('[data-panel="intro"], #home-carousel, [data-step]')
-    );
   /* An inert opener (the zoom stack while the drawer is open) cannot take focus back; the press
      only has to leave focus somewhere in the page. */
   if (!opener || opener.closest("[inert]")) return null;
@@ -175,7 +188,7 @@ async function pressEscape(page) {
       open[Number(key.slice(8))]?.querySelector(":scope > summary")?.focus();
     }, before.at(-1));
   await page.keyboard.press("Escape");
-  // Layers animate out (the second panel, the drawer): wait for the set to settle.
+  // Layers animate out (the drawer): wait for the set to settle.
   let after = before;
   for (let i = 0; i < 14; i++) {
     await page.waitForTimeout(60);
@@ -461,12 +474,18 @@ const cardText = (page) =>
         .match(/^[^\d]+/)?.[0] ?? ""
     );
   });
-const cardCentre = (page) =>
+/**
+ * The height of the point the card hangs from, in the pixels it is placed in (the page's, in the
+ * top layer): the zone's place on the Earth, only ever compared with itself on one page. Its
+ * left edge is clamped to fit the stage, so only the height tells where the zone is drawn.
+ */
+const cardAnchor = (page) =>
   page.evaluate(() => {
     const card = document.querySelector('[data-gate="globe-tooltip"]');
     if (!card || card.hidden) return null;
-    const b = card.getBoundingClientRect();
-    return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+    const top = Number.parseFloat(card.style.top);
+    if (!Number.isFinite(top)) return null;
+    return top - (card.hasAttribute("data-below") ? 12 : 0);
   });
 const marked = (page) =>
   page.evaluate(
@@ -496,12 +515,17 @@ async function selectionChecks(page, ctx) {
   }
   await options.nth(2).click();
   await page.waitForTimeout(2200);
-  /* Pressing a row of a bottom sheet scrolls the page; measure the Earth from the top again. */
-  await page.evaluate(() => window.scrollTo(0, 0));
+  /* Pressing a row of a bottom sheet scrolls the page, and on a narrow screen the Earth sits
+     under the copy: bring the Earth into view before measuring it. */
+  await page.evaluate(() =>
+    document
+      .querySelector('[data-gate="globe-hit"]')
+      ?.scrollIntoView({ block: "center" }),
+  );
   await page.waitForTimeout(400);
   const viaList = {
     text: await cardText(page),
-    at: await cardCentre(page),
+    at: await cardAnchor(page),
     mark: await marked(page),
   };
   if (!viaList.text)
@@ -521,9 +545,9 @@ async function selectionChecks(page, ctx) {
       "a list click marked no zone in the list",
     );
   const disc = await page.evaluate(discOf);
-  if (!disc || !viaList.at) return;
+  if (!disc || viaList.at === null) return;
 
-  // A region of the Earth: selects the same way and leaves the globe where it was.
+  // A region of the Earth: selects and centres the same way.
   const spots = [
     [0.55, 0.1],
     [-0.55, 0.15],
@@ -536,7 +560,7 @@ async function selectionChecks(page, ctx) {
     [0.1, 0.65],
   ];
   let moved = false;
-  let stayed = false;
+  let offCentre = 0;
   for (const [dx, dy] of spots) {
     const x = disc.x + dx * disc.r;
     const y = disc.y + dy * disc.r;
@@ -554,7 +578,7 @@ async function selectionChecks(page, ctx) {
     await page.waitForTimeout(1200);
     const text = await cardText(page);
     if (!text || text === was) continue;
-    const at = await cardCentre(page);
+    const at = await cardAnchor(page);
     const mark = await marked(page);
     if (!mark)
       fail(
@@ -564,21 +588,17 @@ async function selectionChecks(page, ctx) {
         path,
         "a click on a region marked no zone in the list",
       );
-    /* A card can sit at the same clamped place for a neighbouring zone, so one click that
-       lands the card elsewhere is enough to show the globe did not turn. */
-    const sameAsList =
-      at !== null &&
-      Math.hypot(at.x - viaList.at.x, at.y - viaList.at.y) < disc.r * 0.04;
-    if (!sameAsList) stayed = true;
+    /* Centred, the zone is drawn where the list's zone was: the card hangs from the same height. */
+    if (at === null || Math.abs(at - viaList.at) > disc.r * 0.04) offCentre++;
     moved = true;
   }
-  if (moved && !stayed)
+  if (offCentre > 0)
     fail(
-      "globe-click-centred",
+      "globe-click-not-centred",
       browser,
       width,
       path,
-      "every click on a region of the Earth put its card where the centred zone's card sits",
+      `${offCentre} click(s) on a region of the Earth left the zone off the centre a list click brings it to`,
     );
   if (!moved)
     fail(
@@ -589,7 +609,7 @@ async function selectionChecks(page, ctx) {
       "no click on a region of the Earth showed a different card",
     );
 
-  // The card goes first, then the drawer.
+  // Escape closes the drawer; the card is its selection and stays.
   await openDrawer(page);
   /* A click on open sea clears the card; a list row brings one back. */
   if (!(await cardText(page))) {
@@ -603,22 +623,36 @@ async function selectionChecks(page, ctx) {
     const { before, after } = await pressEscape(page);
     order.push(before.filter((k) => !after.includes(k)).join(","));
   }
-  if (order[0] !== "card" || order[1] !== "drawer")
+  const kept = await cardText(page);
+  if (order[0] !== "drawer" || order[1] !== "" || !kept)
     fail(
-      "card-before-drawer",
+      "drawer-keeps-card",
       browser,
       width,
       path,
-      `Escape closed [${order.join("] then [")}], not the card and then the drawer`,
+      `Escape closed [${order.join("] then [")}] and ${kept ? "kept" : "dropped"} the card; it should close the drawer, then nothing, and keep the card`,
     );
 }
 
 async function runGlobe(page, ctx) {
   const { browser, width, path } = ctx;
   const opened = [];
-  const wide = width >= 1280;
-  if (path === "/" && wide) {
-    if (await openByKeyboard(page, '[data-step="1"]')) opened.push("about");
+  // The landing's carousel, on at every width: the next arrow turns it to the second page.
+  let turnedTo = null;
+  if (path === "/") {
+    const before = await page.evaluate(carouselPage);
+    await openByKeyboard(page, '[data-hero-step="1"]');
+    turnedTo = await page.evaluate(carouselPage);
+    if (before === null || turnedTo === null || turnedTo === before) {
+      fail(
+        "carousel-not-turned",
+        browser,
+        width,
+        path,
+        `Enter on the next arrow left the carousel on ${turnedTo ?? "no page"}`,
+      );
+      turnedTo = null;
+    }
   }
   const credits = page
     .locator('[popovertarget$="data-credits"], [popovertarget*="credits"]')
@@ -671,7 +705,7 @@ async function runGlobe(page, ctx) {
   const order = await cascade(
     page,
     ctx,
-    opened.filter((k) => live.includes(k) || k === "about"),
+    opened.filter((k) => live.includes(k)),
   );
   if (expectFirst && order[0] !== expectFirst)
     fail(
@@ -681,18 +715,68 @@ async function runGlobe(page, ctx) {
       path,
       `the first Escape closed ${order[0]}; the open list holds focus and goes first`,
     );
-  if (opened.includes("about") && order.at(-1) !== "about")
+  if (turnedTo !== null) {
+    const after = await page.evaluate(carouselPage);
+    if (after !== turnedTo)
+      fail(
+        "carousel-closed-by-escape",
+        browser,
+        width,
+        path,
+        `the cascade moved the carousel from ${turnedTo} to ${after ?? "no page"}; Escape is not the carousel's`,
+      );
+  }
+}
+
+/**
+ * A framed globe (no drawer): a click on the Earth chooses a zone, which makes its card a layer.
+ * The start zone's card is shown from load and must not count, so it is checked first.
+ */
+async function chooseZone(page, ctx) {
+  const { browser, width, path } = ctx;
+  const seeded = await page.evaluate(probe);
+  if (seeded.includes("card"))
     fail(
-      "about-not-last",
+      "start-card-a-layer",
       browser,
       width,
       path,
-      `the second panel closed ${order.indexOf("about") + 1} of ${order.length}, not last`,
+      "the card counted as a layer before any zone was chosen",
     );
+  const disc = await page.evaluate(discOf);
+  if (!disc) return;
+  await page.locator('[data-gate="globe-hit"]').scrollIntoViewIfNeeded();
+  const was = await cardText(page);
+  for (const [dx, dy] of [
+    [0.3, -0.2],
+    [-0.3, 0.2],
+    [0.2, 0.4],
+    [-0.4, -0.3],
+  ]) {
+    const box = await page.evaluate(discOf);
+    if (!box) return;
+    await page.mouse.click(box.x + dx * box.r, box.y + dy * box.r);
+    await page.waitForTimeout(800);
+    const text = await cardText(page);
+    if (text && text !== was) {
+      await page.evaluate(() => {
+        window.__escChoseZone = true;
+      });
+      return;
+    }
+  }
+  fail(
+    "framed-click-no-card",
+    browser,
+    width,
+    path,
+    "no click on the framed Earth chose a zone",
+  );
 }
 
 async function runGeneric(page, ctx) {
   const opened = [];
+  if (GLOBE_PAGES.has(ctx.path)) await chooseZone(page, ctx);
   // Page disclosures first, the modal search last (it makes the page inert).
   const toggles = page.locator(
     'main button[aria-expanded="false"][aria-controls], main summary',
@@ -773,7 +857,7 @@ for (const name of browsers) {
           GLOBE_PAGES.has(path) &&
           !(await page.locator("[data-globe-search]").count())
         ) {
-          /* A framed globe has no drawer: its card and list are plain layers. */
+          /* A framed globe has no drawer: a zone the reader chose is a plain layer. */
           await runGeneric(page, ctx);
         } else if (GLOBE_PAGES.has(path)) {
           {
