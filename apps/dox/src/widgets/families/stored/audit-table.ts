@@ -13,6 +13,7 @@
  */
 import { html, type SafeHtml } from "../../builders/html";
 import { srOnly } from "../../builders/sr-only";
+import { zonedValue } from "../../builders/zoned-value";
 import styles from "./audit-table.module.css";
 
 /** What the Kind cell shows for a line that is not a stored time. */
@@ -56,25 +57,6 @@ interface AuditTableOptions {
   /** What the single row says when there is no line. */
   emptyText: string;
   rows: readonly AuditRow[];
-}
-
-/** The stored string, breaking only at the `T`, before the offset and before the `[`. */
-function storedHtml(value: string): SafeHtml {
-  const cuts: number[] = [];
-  const t = value.indexOf("T");
-  if (t >= 0) cuts.push(t + 1);
-  const off = /(?<=\d)(?=[+-]\d{2}:\d{2})/.exec(value);
-  if (off) cuts.push(off.index);
-  const br = value.indexOf("[");
-  if (br >= 0) cuts.push(br);
-  cuts.sort((x, y) => x - y);
-  const parts: string[] = [];
-  let from = 0;
-  for (const at of [...cuts, value.length]) {
-    if (at > from) parts.push(value.slice(from, at));
-    from = at;
-  }
-  return html`${parts.map((part, i) => html`${i === 0 ? "" : html`<wbr />`}${part}`)}`;
 }
 
 /**
@@ -142,7 +124,7 @@ function rowHtml(row: AuditRow, group: string): SafeHtml {
           ${row.selected ? html`checked` : ""}
         /><span class="${styles.face}">${String(row.n)}</span></label
       ></td
-    ><td role="cell" data-label="Stored"><code class="${styles.stored}">${storedHtml(row.stored)}</code></td
+    ><td role="cell" data-label="Stored"><code class="${styles.stored}">${zonedValue(row.stored)}</code></td
     ><td role="cell" data-label="Kind">${kindCell(row)}</td
     ><td role="cell" data-label="Readings">${readings(row)}</td
   ></tr

@@ -5,6 +5,7 @@
  * Its own component because the three lists are the same shape and differ only in their label:
  * building them here turns what were three nested `.map()`s inside a conditional into one loop.
  */
+import { shortRef } from "../data/temporal-compat";
 import type { UpstreamFiling } from "../data/upstream-filings";
 
 interface Props {
@@ -17,9 +18,8 @@ const { filing } = Astro.props as Props;
 /** `"owner/repo#number"` as the short label and URL the table shows. */
 function ref(r: string): { label: string; href: string } {
   const [repo, number] = r.split("#");
-  const short = repo === "tc39/proposal-temporal" ? "tc39" : "polyfill";
   return {
-    label: `${short} #${number}`,
+    label: shortRef(repo, Number(number)),
     href: `https://github.com/${repo}/issues/${number}`,
   };
 }

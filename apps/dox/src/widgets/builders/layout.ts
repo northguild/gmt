@@ -81,7 +81,7 @@ export interface Hint {
   html: SafeHtml;
 }
 
-export function hint(id: string, text: string): Hint {
+export function hint(id: string, text: string | SafeHtml): Hint {
   return { id, html: html`<p class="${styles.hint}" id="${id}">${text}</p>` };
 }
 

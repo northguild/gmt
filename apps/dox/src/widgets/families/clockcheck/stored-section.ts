@@ -25,6 +25,7 @@ import { html, type SafeHtml } from "../../builders/html";
 import { idScope } from "../../builders/ids";
 import { field, hint, section } from "../../builders/layout";
 import { select } from "../../builders/select";
+import { zonedValue } from "../../builders/zoned-value";
 import { grow } from "../../primitives/grow/grow";
 import { markBad } from "./marks";
 import styles from "./stored-section.module.css";
@@ -79,7 +80,7 @@ export function storedSection(config: StoredConfig): SafeHtml {
   const example = config.example;
   const linesHint = hint(
     id("stored-lines-hint"),
-    `Paste values like ${example.saved}. Up to ${STORED_MAX_LINES} lines.`,
+    html`Paste values like ${zonedValue(example.saved)}. Up to ${STORED_MAX_LINES} lines.`,
   );
   const form = html`<div class="${styles.form}" ${gateAttr("stored-form")}
     >${field({

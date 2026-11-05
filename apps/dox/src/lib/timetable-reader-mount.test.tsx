@@ -5,6 +5,8 @@
  * the real `@northguild/gmt`, through roles and accessible names. Every preset's row 1 call
  * and result are section 9 rows.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { screen, waitFor, within } from "@testing-library/dom";
 import {
   WIDGET_REGISTRY,
@@ -15,6 +17,7 @@ import {
   expectNoAxeViolations,
   renderWidget,
   type RenderedWidget,
+  sharesStyling,
 } from "~/test/render-widget";
 import { SKIPPED_OFFSET_TEXT, TIMETABLE_PRESETS } from "./timetable-reader";
 import { seedFromLocation } from "./widget-permalink";
@@ -242,6 +245,29 @@ describe("the offset field", () => {
     expect(callBox()).toHaveTextContent("01:30:00+00:00[Europe/London]");
     expect(presetBox()).toHaveValue("custom");
     await expectNoAxeViolations(w.root);
+  });
+
+  it("is the kit's select, the same control as the zone pickers", async () => {
+    await openPreset("fall-back");
+    expect(
+      sharesStyling(
+        offset(2),
+        screen.getByRole("combobox", { name: "Printed in" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("lists the same options after an update that changes nothing", async () => {
+    const w = await openPreset("fall-back");
+    const labels = (): string[] =>
+      within(offset(2))
+        .getAllByRole("option")
+        .map((o) => o.textContent ?? "");
+    const before = labels();
+    expect(before).toHaveLength(3);
+    await enter(w, departure(2), "2024-10-27T01:30:00");
+    expect(labels()).toEqual(before);
+    expect(offset(2)).toBeEnabled();
   });
 
   it("keeps the offset when the time stays in the repeated hour", async () => {
@@ -504,5 +530,18 @@ describe("lifecycle", () => {
     const w = await open();
     w.destroy();
     expect(() => w.destroy()).not.toThrow();
+  });
+});
+
+describe("the chip in a table cell", () => {
+  it("wraps at its spaces and never inside a word, so a note does not widen its table", () => {
+    // jsdom applies no CSS module, so the sheet is read as source.
+    const css = readFileSync(
+      join(import.meta.dirname, "../widgets/tools/timetable-reader.module.css"),
+      "utf8",
+    );
+    expect(css).toMatch(
+      /:is\(td, th\) &\s*\{\s*white-space: normal;\s*overflow-wrap: normal;/,
+    );
   });
 });

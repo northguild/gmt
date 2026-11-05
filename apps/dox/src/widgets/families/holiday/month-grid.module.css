@@ -207,13 +207,15 @@
   white-space: nowrap;
 }
 
-/* A day outside the range a week strip was asked for: an open dashed outline and the muted ink.
-   It is not faded with `opacity`, which would take the day number under the 7:1 text floor. */
+/* A day outside the range a week strip was asked for: an empty fill inside a dashed hairline
+   border. The cue is a pattern, not a tone, so the day number keeps the full ink and the 7:1
+   text floor. Neither opacity nor the muted ink is used, and no pick ring or fill shows. */
 .cell[data-outside] {
   border-style: dashed;
   border-color: var(--gmt-hairline);
-  background-color: transparent;
-  color: var(--gmt-ice-dim);
+  background: none;
+  outline-width: 0;
+  color: var(--gmt-ice);
 }
 
 .chips {

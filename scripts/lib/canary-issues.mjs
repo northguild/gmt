@@ -20,6 +20,14 @@ export const DRY_RUN_LABEL = "canary-dry-run";
 export const COMPAT_LABEL = "temporal-compat";
 /** GitHub issue type every canary issue is created with. */
 export const ISSUE_TYPE = "Task";
+/** The four `temporal-polyfill` swap legs' verdict sources (CORE-92), in leg order. */
+export const SWAP_SOURCES = [
+  "temporal-polyfill-swap-node",
+  "temporal-polyfill-swap-chromium",
+  "temporal-polyfill-swap-firefox",
+  "temporal-polyfill-swap-webkit",
+];
+
 /** The verdict sources each workflow reads, in the order its could-not-run message lists them. */
 export const WORKFLOW_SOURCES = {
   "temporal-oracle": [
@@ -32,6 +40,7 @@ export const WORKFLOW_SOURCES = {
     "native-suite-chromium",
     "native-suite-firefox",
     "native-suite-webkit",
+    ...SWAP_SOURCES,
   ],
   "leap-seconds": ["leap-seconds"],
 };
@@ -73,6 +82,16 @@ const LEAP_IERS_URL = "https://hpiers.obspm.fr/iers/bul/bulc/Leap_Second.dat";
 const NATIVE_LEGS = ["node", "chromium", "firefox", "webkit"];
 /** @param {string} leg */
 const NATIVE = (leg) => `native-suite-${leg}`;
+const SWAP = (leg) => `temporal-polyfill-swap-${leg}`;
+const SWAP_NODE = SWAP("node");
+const SWAP_RESEARCH_URL =
+  "https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md";
+const SWAP_LEG_NAMES = {
+  node: "Node",
+  chromium: "Chromium",
+  firefox: "Firefox",
+  webkit: "WebKit",
+};
 
 const TRIAGE_PARAGRAPH =
   "Each row failed on the native engine and passed on @js-temporal/polyfill in the same runtime. Decide which it is: a GMT defect (fix it), a polyfill defect or an engine or specification defect (record it in context/domination/js-temporal-polyfill-bugs.md and tag the test in scripts/lib/native-suite-tags.mjs). Never skip the test.";
@@ -141,7 +160,9 @@ const FORCED_ROW = {
  *   rows: { gmt: number, iers: number }, differences: string[],
  *   forced?: { difference: true },
  * }} LeapSecondsVerdict
- * @typedef {{ source: string, status: "could-not-run", message: string }} CouldNotRunVerdict
+ * @typedef {{ source: string, status: "could-not-run", message: string,
+ *   sweep?: SwapVerdict["sweep"] }} CouldNotRunVerdict  `sweep`: the offset sweep of a swap Node leg
+ *   that stopped after it ran
  * @typedef {{ file: string, test: string, message: string }} NativeFailure
  * @typedef {{
  *   source: string, status: "ran", leg: "node" | "chromium" | "firefox" | "webkit", engine: string,
@@ -159,8 +180,20 @@ const FORCED_ROW = {
  * }} NativeSuiteVerdict
  * @typedef {CompatCheckVerdict | BrowserCompatVerdict | OracleVerdict | LeapSecondsVerdict
  *   | NativeSuiteVerdict | CouldNotRunVerdict} Verdict
+ * @typedef {{
+ *   source: string, status: "ran", leg: "node" | "chromium" | "firefox" | "webkit",
+ *   version: string, entry: string, entryLoaded: boolean,
+ *   runtime: { node: string, vitest: string, playwright: string | null, browser: string | null },
+ *   counts: { files: number, tests: number, passed: number, skipped: number, failed: number,
+ *             both: number, fixed: number },
+ *   failing: NativeFailure[], failingTruncated: boolean,
+ *   sweep: null | { status: "ran", tz: string, from: string, through: string, zones: number,
+ *                   differingZones: number, [field: string]: unknown }
+ *        | { status: "could-not-run", message: string },
+ *   forced?: { swapReady: true },
+ * }} SwapVerdict
  * @typedef {{ removable?: string, mismatch?: boolean, nativeFailure?: boolean,
- *   leapDifference?: boolean }} Force
+ *   leapDifference?: boolean, swapReady?: boolean }} Force
  * @typedef {{ workflow: "temporal-oracle" | "leap-seconds", runUrl: string }} Context
  * @typedef {{ key: string, title: string, labels: string[], body: string, comment: string }} Finding
  * @typedef {{ kind: "open", key: string, title: string, labels: string[], body: string }
@@ -231,6 +264,7 @@ export function applyForce(verdicts, force) {
     const verdict = ran("--force-leap-difference", LEAP);
     if (verdict) verdict.forced = { difference: true };
   }
+  if (force.swapReady) forceSwapReady(copy, skipped);
   return { verdicts: copy, skipped };
 }
 
@@ -268,6 +302,24 @@ function forceNativeFailure(copy, skipped) {
   skipped.push({
     flag: "--force-native-failure",
     reason: "no native-suite verdict ran, so there is nothing to force against",
+  });
+}
+
+/**
+ * Marks the first swap leg that ran as forced, or records the skip.
+ * @param {Record<string, any>} copy
+ * @param {{ flag: string, reason: string }[]} skipped
+ */
+function forceSwapReady(copy, skipped) {
+  const first = NATIVE_LEGS.find((leg) => copy[SWAP(leg)]?.status === "ran");
+  if (first) {
+    copy[SWAP(first)].forced = { swapReady: true };
+    return;
+  }
+  skipped.push({
+    flag: "--force-swap-ready",
+    reason:
+      "no temporal-polyfill-swap verdict ran, so there is nothing to force against",
   });
 }
 
@@ -1014,6 +1066,218 @@ function leapSecondsFindings(verdicts, runUrl) {
 }
 
 /**
+ * CORE-92: whether the `temporal-polyfill` swap passed on every runtime. Ready only when all four
+ * legs ran, name one version, have no test that fails on the swap and passes on the control, and
+ * the Node leg's offset sweep ran and found no differing zone. Fail closed: each leg must say its
+ * swap pass loaded `temporal-polyfill` (`entryLoaded: true`), and `counts.failed` and
+ * `differingZones` must be the number 0, so a missing or malformed field blocks. Otherwise the
+ * reason names the first condition that failed, in that order.
+ * @param {Record<string, Verdict | null | undefined>} verdicts
+ * @returns {{ ready: true, version: string } | { ready: false, reason: string }}
+ */
+export function swapReady(verdicts) {
+  const legs = SWAP_SOURCES.map((source) => ({
+    source,
+    verdict: /** @type {SwapVerdict | CouldNotRunVerdict | null} */ (
+      verdictOf(verdicts, source)
+    ),
+  }));
+  /** @type {SwapVerdict[]} */
+  const ran = [];
+  for (const { source, verdict } of legs) {
+    if (verdict?.status !== "ran") {
+      return { ready: false, reason: `${source}: did not run` };
+    }
+    ran.push(/** @type {SwapVerdict} */ (verdict));
+  }
+  const versions = [...new Set(ran.map((v) => v.version))];
+  if (versions.length > 1) {
+    return {
+      ready: false,
+      reason: `legs ran different versions: ${versions.join(", ")}`,
+    };
+  }
+  for (const v of ran) {
+    if (v.entryLoaded !== true) {
+      return {
+        ready: false,
+        reason: `${v.source}: the swap pass did not load temporal-polyfill`,
+      };
+    }
+  }
+  // Fail closed: anything but a counted zero blocks, so a verdict that lost a field never passes.
+  for (const v of ran) {
+    const n = v.counts?.failed;
+    if (n !== 0) {
+      return {
+        ready: false,
+        reason:
+          Number.isInteger(n) && /** @type {number} */ (n) > 0
+            ? `${v.source}: ${n} ${n === 1 ? "test fails" : "tests fail"} on the swap`
+            : `${v.source}: the failed count is missing`,
+      };
+    }
+  }
+  const sweep = ran[0]?.sweep;
+  if (sweep?.status !== "ran") {
+    return { ready: false, reason: "offset sweep: did not run" };
+  }
+  const n = sweep.differingZones;
+  if (n !== 0) {
+    return {
+      ready: false,
+      reason:
+        Number.isInteger(n) && n > 0
+          ? `offset sweep: ${n} ${n === 1 ? "zone differs" : "zones differ"}`
+          : "offset sweep: the differing zone count is missing",
+    };
+  }
+  return { ready: true, version: /** @type {string} */ (versions[0]) };
+}
+
+/**
+ * "Chromium 153.0.8010.12" for a browser leg (Playwright's `chromium 153…` capitalised), "Node
+ * 26.12.1" for the Node leg.
+ * @param {"node" | "chromium" | "firefox" | "webkit"} leg
+ * @param {SwapVerdict} v
+ */
+function swapRuntimeName(leg, v) {
+  if (leg === "node") return `Node ${v.runtime.node}`;
+  const version = (v.runtime.browser ?? "").replace(/^\S+\s*/, "");
+  return `${SWAP_LEG_NAMES[leg]} ${version}`.trim();
+}
+
+/**
+ * The swap issue's paragraphs, built from whichever legs ran.
+ * @param {Record<string, Verdict | null | undefined>} verdicts
+ * @param {string} version
+ * @param {string} runUrl
+ * @returns {string[]}
+ */
+function swapParagraphs(verdicts, version, runUrl) {
+  const rows = NATIVE_LEGS.map((leg) => {
+    const v = verdictOf(verdicts, SWAP(leg));
+    if (v?.status !== "ran") {
+      return [SWAP_LEG_NAMES[leg], "did not run", "", "", ""];
+    }
+    const swap = /** @type {SwapVerdict} */ (v);
+    const c = swap.counts;
+    return [
+      cell(swapRuntimeName(leg, swap)),
+      String(c.tests),
+      String(c.failed),
+      String(c.both),
+      String(c.fixed),
+    ];
+  });
+  const node = verdictOf(verdicts, SWAP_NODE);
+  const sweep =
+    node?.status === "ran" ? /** @type {SwapVerdict} */ (node).sweep : null;
+  let sweepLine = "Offset sweep: did not run.";
+  if (sweep?.status === "ran") {
+    const span = `from ${sweep.from} to ${sweep.through} (tz ${sweep.tz})`;
+    sweepLine =
+      sweep.differingZones === 0
+        ? `Offset sweep: every one of ${sweep.zones} zones matches \`Intl.DateTimeFormat\` at 12:00 UTC each day ${span}.`
+        : `Offset sweep: ${sweep.differingZones} of ${sweep.zones} zones differ from \`Intl.DateTimeFormat\` at 12:00 UTC on some day ${span}.`;
+  }
+  return [
+    `temporal-polyfill ${version}, imported from \`temporal-polyfill/full/implementation\`, passed every check on this run: ${runUrl}`,
+    table(
+      [
+        "Runtime",
+        "Tests",
+        "Fail on swap only",
+        "Fail on both",
+        "Fail only on @js-temporal/polyfill",
+      ],
+      rows,
+    ),
+    sweepLine,
+    `What the swap involves is in [temporal-polyfill-swap.md § 5 and § 7](${SWAP_RESEARCH_URL}). Type errors are not checked here; § 5 lists them.`,
+    "A person makes the swap. CI opens issues, never pull requests.",
+  ];
+}
+
+/**
+ * The swap issue, or its dry-run twin when a leg was forced. Nothing for a run that ran but is not
+ * swap-ready.
+ * @param {Record<string, Verdict | null>} verdicts
+ * @param {string} runUrl
+ * @returns {Finding[]}
+ */
+function swapFindings(verdicts, runUrl) {
+  const result = swapReady(verdicts);
+  const forcedBy = NATIVE_LEGS.some(
+    (leg) => /** @type {any} */ (verdictOf(verdicts, SWAP(leg)))?.forced,
+  );
+  if (!result.ready && !forcedBy) return [];
+  const firstRan = /** @type {SwapVerdict | undefined} */ (
+    NATIVE_LEGS.map((leg) => verdictOf(verdicts, SWAP(leg))).find(
+      (v) => v?.status === "ran",
+    )
+  );
+  const version = result.ready ? result.version : (firstRan?.version ?? "");
+  const paragraphs = swapParagraphs(verdicts, version, runUrl);
+  const comment = `temporal-polyfill ${version} also passes (run ${runUrl}).\n\n${paragraphs.join("\n\n")}`;
+  /** @type {Finding} */
+  const real = {
+    key: "temporal-polyfill-swap/ready",
+    title: `Swap to temporal-polyfill ${version}: it passes the GMT suite and the offset sweep`,
+    labels: [CANARY_LABEL],
+    body: paragraphs.join("\n\n"),
+    comment,
+  };
+  /** @type {Finding[]} */
+  const out = result.ready ? [real] : [];
+  if (forcedBy) {
+    const outcome = result.ready ? "every check passed" : result.reason;
+    out.push(
+      dryRun(
+        real,
+        "--force-swap-ready",
+        [
+          `Forced for a dry run. Real result on this run: ${outcome}.`,
+          ...paragraphs,
+        ],
+        runUrl,
+      ),
+    );
+  }
+  return out;
+}
+
+/**
+ * A swap leg that ran but whose swap pass did not load `temporal-polyfill` (`entryLoaded` is not
+ * `true`) tested the wrong Temporal, so it counts as a leg that could not run. The Node leg's
+ * offset sweep that could not run is listed too: it is part of that leg's check.
+ * @param {Record<string, Verdict | null>} verdicts
+ * @returns {{ source: string, message: string }[]}
+ */
+function swapSweepFailures(verdicts) {
+  /** @type {{ source: string, message: string }[]} */
+  const out = [];
+  for (const source of SWAP_SOURCES) {
+    const leg = /** @type {SwapVerdict | null} */ (
+      /** @type {unknown} */ (verdictOf(verdicts, source))
+    );
+    if (leg?.status === "ran" && leg.entryLoaded !== true) {
+      out.push({ source, message: "swap entry not loaded" });
+    }
+  }
+  const node = /** @type {SwapVerdict | null} */ (
+    /** @type {unknown} */ (verdictOf(verdicts, SWAP_NODE))
+  );
+  if (node?.status === "ran" && node.sweep?.status === "could-not-run") {
+    out.push({
+      source: SWAP_NODE,
+      message: `offset sweep: ${/** @type {{ message: string }} */ (node.sweep).message}`,
+    });
+  }
+  return out;
+}
+
+/**
  * The sources with no verdict or a could-not-run one, with the reason for each.
  * @param {Record<string, Verdict | null>} verdicts
  * @param {string[]} sources
@@ -1052,11 +1316,13 @@ export function findings(verdicts, context) {
     [ORACLE, oracleFindings],
     [NATIVE("node"), nativeSuiteFindings],
     [LEAP, leapSecondsFindings],
+    [SWAP_NODE, swapFindings],
   ];
   const out = perSource.flatMap(([source, make]) =>
     sources.includes(source) ? make(verdicts, runUrl) : [],
   );
   const failed = failedSources(verdicts, sources);
+  if (sources.includes(SWAP_NODE)) failed.push(...swapSweepFailures(verdicts));
   if (failed.length > 0) {
     out.push(couldNotRunFinding(workflow, failed, runUrl));
   }

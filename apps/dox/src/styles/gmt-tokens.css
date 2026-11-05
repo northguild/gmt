@@ -541,22 +541,24 @@
 
 /*
  * The file is vendored into `public/fonts/`, taken from the `@fontsource/michroma`
- * package (v5.3.0, `files/michroma-latin-400-normal.woff2`), so it has a stable,
- * un-hashed URL that the Starlight `head` config can `<link rel="preload">`.
- * Preloading it stops the site title and every heading from reflowing out of the
- * mono fallback on each navigation. The package itself is not a dependency: one
- * committed file needs no install step, and re-vendoring is a deliberate act.
+ * package (v5.3.0, `files/michroma-latin-400-normal.woff2`). The package itself is not a
+ * dependency: one committed file needs no install step, and re-vendoring is a deliberate act.
+ * The face names that file by a relative path and the build inlines it as a data URI
+ * (the `?inline` query on its url), so the font is in the stylesheet the
+ * page waits for and is ready at first layout. A separate file would arrive after the first
+ * layout and move the headings when it landed. The face is `font-display: optional`, so a
+ * page never redraws a shown heading in another face.
  */
 
-/* Fallback face for the swap above. Measured in Chromium at 100px against the vendored Michroma
-   file (Menlo and Courier New advance 0.6em): Michroma is 1.59x as wide on digits, 1.29x on
+/* Fallback face for the pages where Michroma is not ready for the first paint. Measured in Chromium at 100px against the vendored Michroma
+   file (Menlo, Liberation Mono and Courier New advance 0.6em): Michroma is 1.59x as wide on digits, 1.29x on
    "12:34:56", 1.42x on capitals ("GMT UTC TAI NORTHGUILD") and 1.19x on mixed-case words.
    130% sits between the capitals and the words, where headings live. No ascent-override. */
 @font-face {
   font-family: "Display Fallback";
   src:
     local("Menlo"), local("Consolas"), local("DejaVu Sans Mono"),
-    local("Courier New");
+    local("Liberation Mono"), local("Courier New");
   size-adjust: 130%;
 }
 
@@ -564,11 +566,11 @@
   font-family: Michroma;
   font-style: normal;
   font-weight: 400;
-  font-display: swap;
+  font-display: optional;
 
-  /* The site's base (`SITE_BASE`, "/gmt") is written out: the dev server does not add it to a
-     CSS url(), so a bare "/fonts/..." is a 404 there. The build leaves this path as written. */
-  src: url("/gmt/fonts/michroma-latin-400-normal.woff2") format("woff2");
+  /* Relative to this sheet, and `?inline` makes Vite write the file here as a data URI. */
+  src: url("../../public/fonts/michroma-latin-400-normal.woff2?inline")
+    format("woff2");
 }
 
 /* ---- Light mode overrides ---- */

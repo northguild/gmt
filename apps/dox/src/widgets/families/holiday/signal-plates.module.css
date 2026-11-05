@@ -1,20 +1,21 @@
 /* signalPlates: captioned results. A series is the bar along the bottom edge, never the
    text colour. The sentinel plate is amber, in words and brackets. */
 
+/* The plates share a wrapping row and each asks for its max-content width, which already
+   holds its widest ghost. Three sit on one row only when every ghost fits, so no breakpoint is
+   measured and no plate widens while the reader drags. */
 .row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--gmt-space-2);
   margin: 0;
   padding: 0;
-
-  @container (max-width: 30rem) {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .plate {
   --series: var(--gmt-series-1);
+
+  flex: 1 1 max-content;
 
   /* The live value's size; the sentinel's smaller one holds the same height. */
   --value-live: clamp(1.25rem, 1.05rem + 1vw, 2rem);

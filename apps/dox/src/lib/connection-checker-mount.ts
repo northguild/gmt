@@ -13,7 +13,7 @@
  * Built on the component kit: the template is builders only, with ids from
  * `idScope(idPrefix)`; the mount finds its parts by those ids, reads and writes
  * element `value` properties and listens once on the widget with its `signal`.
- * The regions that change height (the verdicts, the reason) sit in `grow()`.
+ * The regions that change height (the verdicts, the summary line, the reason) sit in `grow()`.
  */
 import { defineElements } from "~/widgets/define";
 import {
@@ -291,8 +291,9 @@ export function renderConnectionCheckerTemplate(
     html`${grow(html`<div id="${id("verdicts")}">${verdictsOf(null, "", false)}</div>`)}<div
         id="${id("strip")}"
         >${blankStrip()}</div
-      ><p class="${styles.summary}" id="${id("summary")}">${NBSP}</p
-      >${grow(html`<div id="${id("reason")}"></div>`)}`,
+      >${grow(
+        html`<p class="${styles.summary}" id="${id("summary")}">${NBSP}</p>`,
+      )}${grow(html`<div id="${id("reason")}"></div>`)}`,
   );
 
   const calls = section(

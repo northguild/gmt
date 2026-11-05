@@ -33,8 +33,10 @@
   }
 
   /* Dimmed by ink and a dashed muted border, never by `opacity`: opacity would fade the
-     border below the 3:1 non-text bar on either theme. */
+     border below the 3:1 non-text bar on either theme. A user agent dims a disabled control
+     with opacity, so it is set back to 1. */
   &:disabled {
+    opacity: 1;
     border-style: dashed;
     border-color: var(--gmt-ice-dim);
     color: var(--gmt-ice-dim);

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/dom";
-import { html } from "../../builders/html";
+import { html } from "./html";
 import { expectNoAxeViolations } from "~/test/render-widget";
-import { renderHtml } from "../../test-fixture";
+import { renderHtml } from "../test-fixture";
 import { hold } from "./hold";
 
 describe("hold", () => {

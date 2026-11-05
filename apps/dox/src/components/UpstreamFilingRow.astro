@@ -7,6 +7,7 @@
  * decides.
  */
 import type { UpstreamFiling } from "../data/upstream-filings";
+import { inlineCodeHtml } from "../lib/inline-code-html";
 import { UPSTREAM_COLUMNS as COLUMNS, filingInGmt, filingStatus } from "../lib/upstream-status";
 import UpstreamFilingKind from "./UpstreamFilingKind.astro";
 import UpstreamFilingRefs from "./UpstreamFilingRefs.astro";
@@ -42,9 +43,9 @@ const note = filing.gmtGuard ? null : filing.gmtNote;
     </span>
   </td>
   <td data-col={COLUMNS[2]}>
-    <strong>{title}</strong>
-    {filing.summary && <p>{filing.summary}</p>}
-    {note && <p class="gmt-upstream-links">{note}</p>}
+    <strong set:html={inlineCodeHtml(title)} />
+    {filing.summary && <p set:html={inlineCodeHtml(filing.summary)} />}
+    {note && <p class="gmt-upstream-links" set:html={inlineCodeHtml(note)} />}
     <UpstreamFilingRefs filing={filing} />
   </td>
   <UpstreamFilingKind filing={filing} column={COLUMNS[3]} />

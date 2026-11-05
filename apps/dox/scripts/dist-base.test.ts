@@ -87,10 +87,10 @@ describe("the built site keeps the /gmt base", () => {
     expect(scan(pages, html, badUrlsInHtml)).toEqual([]);
   });
 
-  it("no stylesheet carries a URL without the base, and the Michroma font resolves under it", () => {
+  it("no stylesheet carries a URL without the base, and the Michroma font is inline", () => {
     const b = built();
     if (b === null) return;
-    const { root, pages } = b;
+    const { pages } = b;
     const astro = resolve(pages, "_astro");
     const css = readdirSync(astro)
       .filter((n) => n.endsWith(".css"))
@@ -106,13 +106,9 @@ describe("the built site keeps the /gmt base", () => {
       face,
       "the Michroma @font-face is in a built stylesheet",
     ).not.toBeNull();
+    // The font is inline, so there is no URL to resolve under the base.
     const src = face?.[0].match(/url\(\s*["']?([^)"']+)/i)?.[1];
-    expect(src, "the Michroma @font-face has a url()").toBeDefined();
-    expect(src?.startsWith("/gmt/")).toBe(true);
-    // And the file it names is really there.
-    expect(existsSync(resolve(root, (src as string).replace(/^\//, "")))).toBe(
-      true,
-    );
+    expect(src?.startsWith("data:font/woff2;base64,")).toBe(true);
   });
 
   it("no .md twin, llms.txt or llms-full.txt carries a link without the base", () => {

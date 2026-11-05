@@ -53,6 +53,7 @@
 
 .field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.375rem;
   align-content: start;
   min-inline-size: 0;

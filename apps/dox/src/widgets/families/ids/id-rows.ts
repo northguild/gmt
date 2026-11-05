@@ -9,7 +9,7 @@
  */
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, type HtmlValue, type SafeHtml } from "../../builders/html";
-import { hold, type Ghost } from "./hold";
+import { hold, type Ghost } from "../../builders/hold";
 import styles from "./id-rows.module.css";
 
 type IdRowState = "pending" | "read" | "sentinel" | "not-called";

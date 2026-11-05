@@ -54,18 +54,24 @@
     font-size: 0.8125rem;
   }
 
-  & table th:not(:first-child) {
-    inline-size: 1%;
-  }
-
   & table thead th {
     white-space: normal;
     vertical-align: bottom;
     color: var(--gmt-ice);
   }
 
-  & table code {
-    white-space: nowrap;
+  /* The zone id breaks only at the `<wbr>` after each "/". This rule has to beat the content
+     sheet's `table code { white-space: nowrap }` and the kit's `.cell code`: WebKit and Firefox
+     do not break at a `<wbr>` inside `nowrap` (Chromium does), so a nowrap id would stay one line
+     in them and widen the table past the card. No word of a cell or head breaks mid-word at any
+     width, so a city name never splits ("Vancouve|r"). */
+  & table .zoneid {
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+
+  & table :is(th, td) {
+    overflow-wrap: normal;
   }
 
   & table caption {
@@ -79,9 +85,59 @@
   }
 }
 
+/* The two offset columns take only what their figures need, so Place takes the rest. */
+@container (inline-size >= 21rem) {
+  .probe table th:not(:first-child) {
+    inline-size: 1%;
+  }
+}
+
+/* Under 21rem the table stacks: each row is a two-column grid with the place and its zone id
+   across the full width and the two offsets side by side under it, and the header row is the same
+   two columns. Three columns need about 263 px in WebKit, so they do not fit a 300 px card. A
+   `display` on table parts drops their native semantics; `probeCard` writes explicit roles. */
 @container (inline-size < 21rem) {
   .probe table :is(th, td) {
     padding-inline: var(--gmt-space-1);
+  }
+
+  .probe table,
+  .probe thead,
+  .probe tbody {
+    display: block;
+  }
+
+  .probe tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-block-end: 1px solid var(--gmt-hairline);
+  }
+
+  .probe thead tr {
+    border-block-end-color: var(--gmt-border-strong);
+  }
+
+  .probe table :is(th, td) {
+    display: block;
+    inline-size: auto;
+    min-inline-size: 0;
+    border-block-end: 0;
+  }
+
+  .probe tbody th {
+    grid-column: 1 / -1;
+    padding-block-end: 0;
+  }
+
+  /* Each place names itself, so the Place head is for assistive technology only. */
+  .probe thead th:first-child {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
@@ -106,7 +162,6 @@
 
 .zoneid {
   display: block;
-  overflow-wrap: anywhere;
   padding: 0;
   border: 0;
   background: none;

@@ -16,7 +16,10 @@
   box-sizing: border-box;
   padding: var(--gmt-space-3);
   border: 1px solid var(--gmt-border);
-  overflow-x: auto;
+
+  /* The pane always has a scroll track, so its stand-in does too: a classic scrollbar adds its
+     thickness only to the box that has one. */
+  overflow-x: scroll;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-sm);
   font-variant-numeric: tabular-nums;

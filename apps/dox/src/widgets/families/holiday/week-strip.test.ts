@@ -41,4 +41,16 @@ describe("weekStrip", () => {
     const { host } = renderHtml(weekStrip(options));
     await expectNoAxeViolations(host);
   });
+
+  it("draws no mark on a day outside the range and does not list it", () => {
+    renderHtml(
+      weekStrip({
+        ...options,
+        marks: { ...options.marks, "2021-12-22": { closed: true, rules: [2] } },
+      }),
+    );
+    const list = screen.getByRole("list", { name: "Marked dates" });
+    expect(list).not.toHaveTextContent("22 December");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+  });
 });

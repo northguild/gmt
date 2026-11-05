@@ -165,3 +165,28 @@ export function selectPages({
     relevant: relevant.length > 0,
   };
 }
+
+/**
+ * What a run does when no gate has a page to check. No page changed is a pass; but a gate that the
+ * browsers asked for do not run (`--browsers firefox` on a Chromium-only gate) checked nothing
+ * because of the request, and a pass would say otherwise.
+ * @param {{ gate: { id: string, browsers: string[] }, reason?: string }[]} entries
+ * @param {string[]} browsers The browsers asked for.
+ * @returns {{ code: number, line: string }}
+ */
+export function emptyRunOutcome(entries, browsers) {
+  const dropped = entries.filter((e) => e.reason === "browser");
+  if (dropped.length === 0) {
+    return {
+      code: 0,
+      line: "gates: PASS  nothing to check (no Dox page changed)",
+    };
+  }
+  const runsIn = [...new Set(dropped.flatMap((e) => e.gate.browsers))];
+  return {
+    code: 2,
+    line: `gates: nothing was run: none of ${browsers.join(",")} runs ${dropped
+      .map((e) => e.gate.id)
+      .join(",")} (it runs in ${runsIn.join(",")})`,
+  };
+}

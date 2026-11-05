@@ -15,9 +15,10 @@ import { checkedOn, sourceClause } from "../lib/upstream-summary";
   bug is in code GMT doesn't use. <strong>Fix filed upstream</strong>: we have
   written the fix and the polyfill's maintainers have it; it reaches you with the
   next polyfill release. <strong>Reported upstream</strong>: we sent the
-  maintainers the bug and a way to reproduce it. A row marked <strong>Theirs</strong> is
-  a report someone else opened, where our part was the evidence rather than the fix. Each closed
-  row says why it closed: so far every one was closed because the fix was going somewhere better, not because it was
+  maintainers the bug and a way to reproduce it.
+  A row marked <strong>Theirs</strong> is a report someone else opened, where our
+  part was the evidence rather than the fix. Each closed row says why it closed, because
+  GitHub's "Closed" alone doesn't say whether a report was fixed, answered or
   turned down. We read each report's state from GitHub every time this site is
   built (last checked {checkedOn} UTC{sourceClause}). <strong>Replies</strong> counts
   comments from the project's maintainers and other users.

@@ -325,3 +325,40 @@ export function linkTarget(link: HTMLElement): HTMLElement | null {
   }
   return link.ownerDocument.getElementById(decodeURIComponent(href.slice(1)));
 }
+
+/**
+ * The texts a `hold` ghost carries, in document order. A text ghost is a `data-sample`
+ * attribute that a pseudo-element draws, so no node has the text and no role or query finds it.
+ */
+export function heldSamples(root: Element): string[] {
+  return [...root.querySelectorAll("[data-sample]")].map(
+    (g) => g.getAttribute("data-sample") ?? "",
+  );
+}
+
+/**
+ * The rows a loading skeleton lays out. They are `aria-hidden`, so a role query without
+ * `hidden` skips them, and nothing but this mark tells them from a padding row.
+ */
+export function skeletonRows(root: Element): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>("tr[data-skeleton]")];
+}
+
+/** How many blank blocks a skeleton cell holds: empty `aria-hidden` spans that hold its height. */
+export function blankBlockCount(cell: Element): number {
+  return cell.querySelectorAll("[data-state='blank']").length;
+}
+
+/**
+ * The `grow()` region that holds `element`, or `null` when it is outside one. Content that
+ * changes size outside a region makes a one-frame jump of the whole page, and a region is an
+ * unnamed wrapper, so it cannot be found by role.
+ */
+export function growRegionOf(element: Element): HTMLElement | null {
+  return element.closest<HTMLElement>("gmt-grow");
+}
+
+/** Whether two controls wear the same styling, which is how a test tells they are the same kit part. */
+export function sharesStyling(a: Element, b: Element): boolean {
+  return a.className === b.className;
+}

@@ -11,6 +11,7 @@ import {
   couldNotRunVerdict,
   nativeSuiteVerdict,
   oracleVerdict,
+  polyfillSwapVerdict,
   saveVerdict,
   writeVerdict,
 } from "../../../../scripts/lib/canary-verdict.mjs";
@@ -525,7 +526,91 @@ describe("VERDICT_FILES", () => {
       "native-suite-chromium": "artifacts/native-suite-chromium.json",
       "native-suite-firefox": "artifacts/native-suite-firefox.json",
       "native-suite-webkit": "artifacts/native-suite-webkit.json",
+      "temporal-polyfill-swap-node":
+        "artifacts/temporal-polyfill-swap-node.json",
+      "temporal-polyfill-swap-chromium":
+        "artifacts/temporal-polyfill-swap-chromium.json",
+      "temporal-polyfill-swap-firefox":
+        "artifacts/temporal-polyfill-swap-firefox.json",
+      "temporal-polyfill-swap-webkit":
+        "artifacts/temporal-polyfill-swap-webkit.json",
     });
+  });
+});
+
+describe("polyfillSwapVerdict", () => {
+  const input = {
+    leg: "node" as const,
+    version: "1.0.7",
+    entry: "temporal-polyfill/full/implementation",
+    entryLoaded: true,
+    runtime: {
+      node: "26.12.1",
+      vitest: "4.1.4",
+      playwright: null,
+      browser: null,
+    },
+    counts: {
+      files: 2,
+      tests: 9,
+      passed: 8,
+      skipped: 0,
+      failed: 1,
+      both: 0,
+      fixed: 0,
+    },
+    failing: [{ file: "a.test.ts", test: "t", message: "boom" }],
+    sweep: null,
+  };
+
+  it("has the shape and key order the reporter reads", () => {
+    expect(Object.keys(polyfillSwapVerdict(input))).toEqual([
+      "source",
+      "status",
+      "leg",
+      "version",
+      "entry",
+      "entryLoaded",
+      "runtime",
+      "counts",
+      "failing",
+      "failingTruncated",
+      "sweep",
+    ]);
+    expect(polyfillSwapVerdict(input)).toMatchObject({
+      source: "temporal-polyfill-swap-node",
+      status: "ran",
+      failingTruncated: false,
+    });
+  });
+
+  it.each`
+    entryLoaded
+    ${true}
+    ${false}
+  `("carries entryLoaded $entryLoaded unchanged", ({ entryLoaded }) => {
+    expect(polyfillSwapVerdict({ ...input, entryLoaded }).entryLoaded).toBe(
+      entryLoaded,
+    );
+  });
+
+  it("keeps 50 rows with messages cut to 300 characters and says it cut", () => {
+    const failing = Array.from({ length: 60 }, (_, i) => ({
+      file: "a.test.ts",
+      test: `t${i}`,
+      message: "x".repeat(400),
+    }));
+    const v = polyfillSwapVerdict({ ...input, failing });
+    expect(v.failing).toHaveLength(UNTAGGED_ROWS_IN_VERDICT);
+    expect(v.failing[0].message).toHaveLength(300);
+    expect(v.failingTruncated).toBe(true);
+  });
+
+  it("is deterministic and carries a could-not-run sweep unchanged", () => {
+    const sweep = { status: "could-not-run" as const, message: "no zones" };
+    const a = formatJson(polyfillSwapVerdict({ ...input, sweep }));
+    expect(formatJson(polyfillSwapVerdict({ ...input, sweep }))).toBe(a);
+    expect(polyfillSwapVerdict({ ...input, sweep }).sweep).toEqual(sweep);
   });
 });
 

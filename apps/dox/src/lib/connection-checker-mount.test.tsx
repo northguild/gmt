@@ -17,6 +17,7 @@ import {
   renderWidget,
   setRange,
   type RenderedWidget,
+  growRegionOf,
 } from "~/test/render-widget";
 import { CONNECTION_PRESETS } from "./connection-checker";
 import { SITE_BASE } from "./site";
@@ -202,6 +203,14 @@ describe("made or missed", () => {
     expect(
       within(strip).getByRole("img", { name: /^Onward departure / }),
     ).toBeVisible();
+  });
+
+  it("lets the one-line summary grow into its sentence instead of pushing the page", async () => {
+    await open();
+    const summary = screen.getByText(/^Arrival, then handling to ready /);
+    // The summary starts as one blank line and becomes a sentence of several lines at load; a
+    // region outside `grow()` makes that a one-frame jump.
+    expect(growRegionOf(summary)).not.toBeNull();
   });
 
   it("says a missed departure is missed in the departure's own name", async () => {

@@ -12,11 +12,18 @@
 }
 
 /* An import path wraps only after a `/` (src/lib/code-break.ts), so each piece stays whole.
-   The note keeps a floor so it never runs a word to a line; past that the table scrolls
-   sideways. The behaviour matrix's last column is a short list of issue links, so it takes no
-   floor, and a table laid out as entries has no columns to give one. */
+   The cells take a tighter side padding than the site's tables, so the widest pieces of the
+   three columns (the longest call, the longest name and a method name in the note, each of which
+   never breaks) fit the content column at the desktop width. The note keeps a floor so it never
+   runs a word to a line; past that the table scrolls sideways. The behaviour matrix's last
+   column is a short list of issue links, so it takes no floor, and a table laid out as entries
+   has no columns to give one. */
+.gmt-ref-table:not([data-layout="entries"]) .gmt-migrate-table :is(th, td) {
+  padding-inline: var(--gmt-space-2);
+}
+
 .gmt-ref-table:not([data-layout="entries"])
   .gmt-migrate-table:not(.gmt-matrix-table)
   :where(th:last-child, td:last-child) {
-  min-inline-size: 16rem;
+  min-inline-size: 14rem;
 }

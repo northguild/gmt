@@ -2,13 +2,16 @@
  * What the dated clock-change checkers' browser gates share (CORE-89): the region of a page path,
  * the Worker stub that answers by method, and the wait for the page's own ready signal.
  *
- * It imports nothing, so `clock-check-harness.test.ts` runs it without a browser.
+ * It needs no browser, so `clock-check-harness.test.ts` runs it as it is. The one import is
+ * `tsx`, to read each page's expected offsets from the page's own config (`expectedOffsets`).
  *
  * The ready signal is `data-state` on the page's root (`canada-clock-change` or `morocco-clock-change`): the mount
  * sets `ready` right after the first clock tick that has the Worker's answer and `error` where it
  * shows its error state. A gate waits for it instead of guessing from readout text, so a slow
  * module chunk, library import or routed fetch on a busy machine cannot make it measure too soon.
  */
+
+import { tsImport } from "tsx/esm/api";
 
 /** Real time a page may take to reach `ready`, on a busy machine. */
 export const READY_MS = 60_000;
@@ -25,6 +28,8 @@ export const REGIONS = {
     zonesFile: "canada-zones.json",
     clockCount: 5,
     storedZone: "America/Vancouver",
+    probeModule: "../../src/lib/canada-clock-change.ts",
+    probeExport: "TABLE_ZONES",
   },
   "/check/morocco-2026-clock-change/": {
     name: "morocco",
@@ -32,6 +37,8 @@ export const REGIONS = {
     zonesFile: "morocco-region-zones.json",
     clockCount: 2,
     storedZone: "Africa/Casablanca",
+    probeModule: "../../src/lib/morocco-clock-change.ts",
+    probeExport: "MOROCCO_FACTS",
   },
 };
 
@@ -43,6 +50,19 @@ export function regionOf(path) {
     );
   }
   return region;
+}
+
+/**
+ * The offset each probe zone of a region's page should read, from the page's own config
+ * (`TABLE_ZONES`, `MOROCCO_FACTS`), never typed here: `{ [zone]: "-07:00" }`.
+ */
+export async function expectedOffsets(region) {
+  if (!region.probeModule)
+    throw new Error(`region "${region.name}" names no probe module`);
+  const module = await tsImport(region.probeModule, import.meta.url);
+  return Object.fromEntries(
+    module[region.probeExport].map((fact) => [fact.zone, fact.offset]),
+  );
 }
 
 const CANADA_OFFSETS = {

@@ -104,6 +104,14 @@
   &[hidden] {
     display: none;
   }
+
+  /* In a table cell the chip is a note, and it wraps at its spaces, never inside a word, so the
+     column is as wide as its longest word and the table fits its box. */
+  :is(td, th) & {
+    white-space: normal;
+    overflow-wrap: normal;
+    text-align: start;
+  }
 }
 
 .chipDim {
@@ -316,10 +324,6 @@
   padding-inline: var(--gmt-space-1);
   color: var(--gmt-ice);
   font-weight: 600;
-}
-
-.offset {
-  min-inline-size: 0;
 }
 
 /* The reason an Offset select is, or is not, available. Its slot is held at the height of
@@ -778,7 +782,8 @@
 }
 
 /* Leaves and Local arrival: the readable HH:MM at normal size, the full zoned value
-   beneath it in smaller, muted text. Neither breaks inside itself. */
+   beneath it in smaller, muted text. The HH:MM never breaks; the long value wraps
+   when the table is narrower than it. */
 .time {
   display: block;
   white-space: nowrap;
@@ -790,7 +795,8 @@
 .timeFull {
   display: block;
   margin-block-start: 2px;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   font-variant-numeric: tabular-nums;

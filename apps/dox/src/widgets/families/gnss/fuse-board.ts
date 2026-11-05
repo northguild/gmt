@@ -14,13 +14,15 @@
  * Positions are shares of the scale, 0 to 100, written as `--at`, `--from` and `--to` for
  * the module to read. A part outside the scale is not drawn.
  */
+import { hold } from "../../builders/hold";
 import { html, type SafeHtml } from "../../builders/html";
-import type {
-  Fuse,
-  FuseTrack,
-  FuseYear,
-  Mark,
-  Strip,
+import {
+  MARK_LABELS,
+  type Fuse,
+  type FuseTrack,
+  type FuseYear,
+  type Mark,
+  type Strip,
 } from "~/lib/gnss-rollover-checker";
 import styles from "./fuse-board.module.css";
 
@@ -158,14 +160,28 @@ export function fuseKey(o: FuseKeyOptions): SafeHtml {
   >`;
 }
 
+/** The widest instant a chip writes: second precision with `Z`, every digit as wide as another. */
+const WIDEST_AT = "2038-12-30T23:59:59Z";
+
+/** Every chip a slot can show, at its widest: a label, the widest instant and the flag. */
+const CHIP_GHOSTS: readonly string[] = [
+  MARK_LABELS.buildDate,
+  MARK_LABELS.eraStarts("9"),
+  MARK_LABELS.wraps,
+  MARK_LABELS.wrongFrom,
+  MARK_LABELS.wrapsWrongFrom,
+  MARK_LABELS.today,
+  MARK_LABELS.checkDate,
+].map((label) => `${label} ${WIDEST_AT} (outside)`);
+
 /** The five chip slots: each mark in words, with unused slots keeping their box. */
 export function fuseChips(marks: readonly Mark[]): SafeHtml {
   return html`<ul class="${styles.chips}" aria-label="Marks on the timeline"
     >${Array.from({ length: FUSE_CHIP_SLOTS }, (_, i) => {
       const m = marks[i];
       return m === undefined
-        ? html`<li class="${styles.chip}" data-blank="true" aria-hidden="true">${NBSP}</li>`
-        : html`<li class="${styles.chip}" data-blank="false">${m.label} ${m.at}${m.pos === null ? " (outside)" : ""}</li>`;
+        ? html`<li class="${styles.chip}" data-blank="true" aria-hidden="true">${hold(NBSP, CHIP_GHOSTS)}</li>`
+        : html`<li class="${styles.chip}" data-blank="false">${hold(`${m.label} ${m.at}${m.pos === null ? " (outside)" : ""}`, CHIP_GHOSTS)}</li>`;
     })}</ul
   >`;
 }

@@ -24,15 +24,26 @@ export interface SelectOptions extends GateOption {
   describedBy?: string | undefined;
 }
 
+/**
+ * The `<option>` elements of a select, the one equal to `value` selected. `select()` writes
+ * them; call it to replace the options of a live `select()` with `setHtml`.
+ */
+export function selectOptions(
+  options: readonly SelectOption[],
+  value?: string,
+): SafeHtml {
+  return html`${options.map(
+    (opt) =>
+      html`<option value="${opt.value}" ${opt.value === value ? html`selected` : ""}>${opt.label}</option>`,
+  )}`;
+}
+
 export function select(o: SelectOptions): SafeHtml {
   return html`<select
     class="${styles.root}"
     id="${o.id}"
     ${o.describedBy === undefined ? "" : html`aria-describedby="${o.describedBy}"`}
     ${gateAttr(o.gate)}
-    >${o.options.map(
-      (opt) =>
-        html`<option value="${opt.value}" ${opt.value === o.value ? html`selected` : ""}>${opt.label}</option>`,
-    )}</select
+    >${selectOptions(o.options, o.value)}</select
   >`;
 }

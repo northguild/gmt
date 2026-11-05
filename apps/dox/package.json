@@ -27,6 +27,7 @@
     "favicons": "node scripts/build-favicons.mjs",
     "social-preview": "tsx scripts/build-social-preview.ts",
     "gates": "node scripts/gates.mjs",
+    "firefox-server": "node scripts/firefox-server.mjs",
     "globe:smoke": "node scripts/globe-smoke.mjs",
     "grow:measure": "node scripts/grow-measure.mjs",
     "canada:still": "node scripts/canada-clock-still.mjs",

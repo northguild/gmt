@@ -1131,7 +1131,11 @@ function setup() {
     deps: {
       preflight: async () => ({ engine: ENGINE, playwright: null }),
       compatCheck: async (leg: string) => compatVerdict(leg),
-      runPass: (leg: string, pass: "control" | "native", r: string) => {
+      runPass: (
+        leg: string,
+        pass: "control" | "native" | "swap",
+        r: string,
+      ) => {
         if (spec === null) return 0;
         const body = pass === "native" ? spec.native : spec.control;
         const exit =
@@ -1692,7 +1696,12 @@ describe("native-suite command", () => {
       >,
     ) => {
       const calls = { control: 0, native: 0 };
-      const runPass = (leg: string, pass: "control" | "native", r: string) => {
+      const runPass = (
+        leg: string,
+        rawPass: "control" | "native" | "swap",
+        r: string,
+      ) => {
+        const pass = rawPass as "control" | "native";
         const steps = plan[pass];
         const step = steps[Math.min(calls[pass], steps.length - 1)];
         calls[pass] += 1;

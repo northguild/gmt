@@ -50,6 +50,7 @@
     "native-suite": "node scripts/native-suite.mjs",
     "test:gmt:browser": "vitest run --config packages/gmt/vitest.browser.config.ts",
     "test:gmt:native": "vitest run --config packages/gmt/vitest.native.config.ts",
+    "test:gmt:swap": "vitest run --config packages/gmt/vitest.swap.config.ts",
     "test:gmt:watch": "vitest --config packages/gmt/vitest.config.ts",
     "test:gmt-oxlint": "vitest run --config packages/gmt-oxlint/vitest.config.ts",
     "changeset": "changeset",
