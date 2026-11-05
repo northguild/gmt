@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { DISPLAY_FAMILY, displayFaceInlineSource } from "./display-face";
 
-/** A face added to the stand-in font set. */
+/** A face the script adds to the stand-in font set. */
 interface Made {
   family: string;
   bytes: number[];
@@ -30,18 +30,22 @@ function dataUri(bytes: number[]): string {
 
 /** Runs the script over `sheets`; a sheet given as `null` throws on read, as a cross-origin one does. */
 function run(sheets: Array<Rule[] | null>, withFontFace = true): Made[] {
-  const made: Made[] = [];
+  const added: Made[] = [];
   class StandInFontFace {
     constructor(
       family: string,
       source: ArrayBuffer,
       descriptors: Record<string, string>,
     ) {
-      made.push({ family, bytes: [...new Uint8Array(source)], descriptors });
+      Object.assign(this, {
+        family,
+        bytes: [...new Uint8Array(source)],
+        descriptors,
+      });
     }
   }
   const document = {
-    fonts: { add: () => {} },
+    fonts: { add: (face: Made) => added.push(face) },
     styleSheets: sheets.map((rules) => ({
       get cssRules() {
         if (rules === null)
@@ -55,14 +59,16 @@ function run(sheets: Array<Rule[] | null>, withFontFace = true): Made[] {
     withFontFace ? StandInFontFace : undefined,
     (text: string) => Buffer.from(text, "base64").toString("latin1"),
   );
-  return made;
+  // What reaches the font set is what counts: a face built and dropped never draws.
+  expect(added.every((face) => face instanceof StandInFontFace)).toBe(true);
+  return added;
 }
 
 const BYTES = [0x77, 0x4f, 0x46, 0x32, 0x00, 0xff, 0x80, 0x10];
 
 describe("the display face script", () => {
   it("builds the face from the stylesheet's bytes, with its descriptors", () => {
-    const made = run([
+    const added = run([
       [
         fontFaceRule({
           "font-family": "Display Fallback",
@@ -76,7 +82,7 @@ describe("the display face script", () => {
         }),
       ],
     ]);
-    expect(made).toEqual([
+    expect(added).toEqual([
       {
         family: DISPLAY_FAMILY,
         bytes: BYTES,
@@ -86,7 +92,7 @@ describe("the display face script", () => {
   });
 
   it("finds a face inside a cascade layer, past a sheet it may not read", () => {
-    const made = run([
+    const added = run([
       null,
       [
         { type: 1, cssRules: [] },
@@ -101,7 +107,7 @@ describe("the display face script", () => {
         },
       ],
     ]);
-    expect(made.map((m) => m.bytes)).toEqual([BYTES]);
+    expect(added.map((face) => face.bytes)).toEqual([BYTES]);
   });
 
   it("leaves the page to the stylesheet when the face is a file, missing, or unsupported", () => {

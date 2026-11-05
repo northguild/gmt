@@ -612,12 +612,15 @@
  * package (v5.3.0, `files/michroma-latin-400-normal.woff2`). The package itself is not a
  * dependency: one committed file needs no install step, and re-vendoring is a deliberate act.
  * The face names that file by a relative path and the build inlines it as a data URI
- * (the `?inline` query on its url), so the font is in the stylesheet the
- * page waits for and is ready at first layout. A separate file would arrive after the first
- * layout and move the headings when it landed. The face is `font-display: block`: its bytes are
- * already in the sheet, so the block period ends as soon as they are decoded and no heading is
- * drawn in the fallback first. `optional` cannot be used: Chromium decodes a data-URI face after
- * the first layout, so with `optional` it keeps the fallback for the page's life.
+ * (the `?inline` query on its url), so the bytes are in the stylesheet the page waits for. A
+ * separate file would arrive after the first layout in Firefox and move the headings when it
+ * landed. Chromium and WebKit still load a data-URI face only once layout asks for it, so the
+ * inline script in `Footer.astro` (`src/lib/display-face.ts`) finds this face in the loaded sheet
+ * and adds a `FontFace` built from its bytes before the held first paint. That script looks for
+ * the family `Michroma` with a `data:font/woff2;base64` source: keep the name, the woff2 file and
+ * `?inline`, or it finds nothing (`display-fallback.test.ts` fails first). The face is
+ * `font-display: block`, so a page without scripts waits for the face rather than drawing the
+ * fallback; `optional` would keep the fallback for the page's life in Chromium.
  */
 
 /* Fallback face for the pages where Michroma is not ready for the first paint. Measured in Chromium at 100px against the vendored Michroma
