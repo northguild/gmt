@@ -9,7 +9,7 @@ import {
   TABLE_ROWS,
   UPLOAD_STEP,
   collect,
-  fit,
+  fitBody,
   flakyRows,
   keyOf,
   marker,
@@ -493,14 +493,14 @@ describe("planIssueActions", () => {
   });
 });
 
-describe("fit", () => {
+describe("fitBody", () => {
   it("returns text within the budget as it is", () => {
-    expect(fit("a\nb")).toBe("a\nb");
+    expect(fitBody("a\nb")).toBe("a\nb");
   });
 
   it("cuts a long message on a line boundary and says how many lines went", () => {
     const text = Array.from({ length: 5000 }, () => "y".repeat(99)).join("\n");
-    const out = fit(text);
+    const out = fitBody(text);
     expect(out.length).toBeLessThanOrEqual(BODY_BUDGET);
     const kept = out.split("\n");
     expect(kept.at(-1)).toMatch(
@@ -510,7 +510,7 @@ describe("fit", () => {
   });
 
   it("cuts a single 100,000-character message", () => {
-    const out = fit("z".repeat(100_000));
+    const out = fitBody("z".repeat(100_000));
     expect(out.length).toBeLessThanOrEqual(BODY_BUDGET);
     expect(out).toContain("more lines; full list in the run's artifacts.");
   });

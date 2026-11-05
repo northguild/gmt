@@ -1,8 +1,19 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 import { distDirOrSkip } from "./dist-dir";
 
-const dist = distDirOrSkip();
+/**
+ * The heading font ships inside the built stylesheet, so it never arrives after first layout.
+ * Needs a build; returns early without one and throws under `DOX_DIST_REQUIRED`. Each test reads
+ * the build itself: a `describe` body runs at collection, even when its tests are skipped.
+ */
+
+/** The built pages folder, or `null` with no build. */
+function site(): string | null {
+  const dist = distDirOrSkip();
+  return dist === null ? null : join(dist, "gmt");
+}
 
 /** Every page of the built site. */
 function pages(dir: string): string[] {
@@ -13,24 +24,24 @@ function pages(dir: string): string[] {
   });
 }
 
-describe.skipIf(dist === null)("the display font in the built site", () => {
-  const site = join(dist ?? "", "gmt");
-  const astro = join(site, "_astro");
-  const vendored = readFileSync(
-    join(
-      import.meta.dirname,
-      "../public/fonts/michroma-latin-400-normal.woff2",
-    ),
-  );
-  const sheets = readdirSync(astro)
-    .filter((f) => f.endsWith(".css"))
-    .map((f) => readFileSync(join(astro, f), "utf8"));
-  const faces = sheets.flatMap(
-    (css) =>
-      css.match(/@font-face\s*{[^}]*font-family:\s*Michroma[^}]*}/g) ?? [],
-  );
-
+describe("the display font in the built site", () => {
   it("is declared once, in a stylesheet, as the vendored file's own bytes", () => {
+    const root = site();
+    if (root === null) return;
+    const astro = join(root, "_astro");
+    const faces = readdirSync(astro)
+      .filter((f) => f.endsWith(".css"))
+      .map((f) => readFileSync(join(astro, f), "utf8"))
+      .flatMap(
+        (css) =>
+          css.match(/@font-face\s*{[^}]*font-family:\s*Michroma[^}]*}/g) ?? [],
+      );
+    const vendored = readFileSync(
+      join(
+        import.meta.dirname,
+        "../public/fonts/michroma-latin-400-normal.woff2",
+      ),
+    );
     expect(faces).toHaveLength(1);
     const uri = /url\(\s*["']?(data:font\/woff2;base64,[A-Za-z0-9+/=]+)/.exec(
       faces[0],
@@ -42,7 +53,9 @@ describe.skipIf(dist === null)("the display font in the built site", () => {
   });
 
   it("is preloaded by no page: the file is in the stylesheet", () => {
-    const all = pages(site);
+    const root = site();
+    if (root === null) return;
+    const all = pages(root);
     expect(all.length).toBeGreaterThan(100);
     const preloading = all.filter((page) => {
       const head = readFileSync(page, "utf8").split("</head>")[0];

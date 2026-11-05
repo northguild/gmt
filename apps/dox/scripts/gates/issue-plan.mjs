@@ -43,7 +43,7 @@ export const NOT_UPLOADED_KEY = "dox-gate:not-uploaded:all:";
 
 /** GitHub rejects an issue body or comment longer than this many characters. */
 export const BODY_LIMIT = 65_536;
-/** What `fit` allows the text after the marker line, leaving room for the marker and the cut note. */
+/** What `fitBody` allows the text after the marker line, leaving room for the marker and the cut note. */
 export const BODY_BUDGET = 60_000;
 /** Rows a body or comment tables, so a sweep-wide failure cannot push a body past GitHub's limit. */
 export const TABLE_ROWS = 40;
@@ -138,7 +138,7 @@ function table(header, rows) {
  * or mid-line when it has no line break, and a note says how many lines went.
  * @param {string} text
  */
-export function fit(text) {
+export function fitBody(text) {
   if (text.length <= BODY_BUDGET) return text;
   let kept = text.slice(0, BODY_BUDGET - 100);
   const cut = kept.lastIndexOf("\n");
@@ -484,14 +484,14 @@ export function planIssueActions(legs, openIssues, context) {
             kind: "comment",
             key: finding.key,
             issue: found.number,
-            body: fit(finding.comment),
+            body: fitBody(finding.comment),
           }
         : {
             kind: "open",
             key: finding.key,
             title: finding.title,
             labels: finding.labels,
-            body: `${marker(finding.key)}\n${fit(finding.body)}`,
+            body: `${marker(finding.key)}\n${fitBody(finding.body)}`,
             ...(finding.groups === undefined ? {} : { groups: finding.groups }),
           },
     );

@@ -3592,7 +3592,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     groups the held-back findings by `gate:rule:page`: count, browsers, widths and up to three example
     targets, largest group first, `TABLE_ROWS` (40) rows and a count of the rest, then the run URL and
     the leg artifacts (`dox-gate-<leg>-<runId>`, kept 14 days). It says each run comments there until
-    ten or fewer remain, and then each is filed on its own. Every other body and comment is cut by `fit`
+    ten or fewer remain, and then each is filed on its own. Every other body and comment is cut by `fitBody`
     to 60,000 characters on a line boundary, and `file-issues` exits 1 before any write when one still
     passes GitHub's 65,536; a sweep of 1,545 findings is a 6,585-character body. Comments on
     already-open findings still go out. Nothing is closed
