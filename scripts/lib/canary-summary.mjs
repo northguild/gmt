@@ -304,8 +304,11 @@ function swapBlocks(verdicts) {
     const c = found.ran.counts;
     return [leg, String(c.tests), String(c.failed), String(c.both)];
   });
-  const node = legs[0]?.found;
-  const sweep = node && "ran" in node ? node.ran.sweep : null;
+  // A Node leg that could not run after its sweep still carries the sweep.
+  const sweep =
+    /** @type {import("./canary-issues.mjs").SwapVerdict | import("./canary-issues.mjs").CouldNotRunVerdict | null | undefined} */ (
+      /** @type {unknown} */ (verdicts["temporal-polyfill-swap-node"])
+    )?.sweep ?? null;
   /** @type {string[]} */
   const sweepBlocks = [];
   if (sweep?.status === "ran") {

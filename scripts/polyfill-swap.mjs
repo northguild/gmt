@@ -225,13 +225,14 @@ function summary(root, leg, stdout) {
       `temporal-polyfill ${v.version}: ${c.failed} tests fail on the swap and pass on @js-temporal/polyfill (of ${c.tests}).`,
       `${c.both} fail on both; ${c.fixed} fail only on @js-temporal/polyfill.`,
     );
-    if (v.sweep?.status === "ran") {
-      lines.push(
-        `Offset sweep: ${v.sweep.differingZones} zones differ from Intl, ${v.sweep.from} to ${v.sweep.through}, ${v.sweep.zones} zones, tz ${v.sweep.tz}.`,
-      );
-    } else if (v.sweep) {
-      lines.push(`Offset sweep could not run: ${v.sweep.message}`);
-    }
+  }
+  // A Node leg that could not run after its sweep still carries the sweep.
+  if (v?.sweep?.status === "ran") {
+    lines.push(
+      `Offset sweep: ${v.sweep.differingZones} zones differ from Intl, ${v.sweep.from} to ${v.sweep.through}, ${v.sweep.zones} zones, tz ${v.sweep.tz}.`,
+    );
+  } else if (v?.sweep) {
+    lines.push(`Offset sweep could not run: ${v.sweep.message}`);
   }
   stdout(`${lines.join("\n")}\n`);
 }
@@ -265,7 +266,13 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
   /** @param {unknown} error */
   const couldNotRun = (error) => {
     const message = messageOf(error);
-    saveVerdict(root, couldNotRunVerdict(source, message), "polyfill-swap");
+    // A sweep that ran before a pass failed or timed out stays in the verdict.
+    const verdict = couldNotRunVerdict(source, message);
+    saveVerdict(
+      root,
+      sweepResult === null ? verdict : { ...verdict, sweep: sweepResult },
+      "polyfill-swap",
+    );
     stderr(`polyfill-swap: ${leg} could not run: ${message}\n`);
     return 2;
   };
@@ -286,8 +293,8 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
           "temporal-polyfill/full/implementation returned the runtime's built-in Temporal",
         );
       }
-      // Before the passes, so a suite timeout cannot lose it. A sweep that cannot run does not
-      // stop the leg.
+      // Before the passes, so a suite timeout cannot lose it: `couldNotRun` keeps it in the
+      // verdict. A sweep that cannot run does not stop the leg.
       try {
         sweepResult = d.sweep(entry, d.today());
       } catch (error) {

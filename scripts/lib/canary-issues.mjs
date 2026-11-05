@@ -160,7 +160,9 @@ const FORCED_ROW = {
  *   rows: { gmt: number, iers: number }, differences: string[],
  *   forced?: { difference: true },
  * }} LeapSecondsVerdict
- * @typedef {{ source: string, status: "could-not-run", message: string }} CouldNotRunVerdict
+ * @typedef {{ source: string, status: "could-not-run", message: string,
+ *   sweep?: SwapVerdict["sweep"] }} CouldNotRunVerdict  `sweep`: the offset sweep of a swap Node leg
+ *   that stopped after it ran
  * @typedef {{ file: string, test: string, message: string }} NativeFailure
  * @typedef {{
  *   source: string, status: "ran", leg: "node" | "chromium" | "firefox" | "webkit", engine: string,

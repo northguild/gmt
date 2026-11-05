@@ -536,6 +536,96 @@ describe("polyfill-swap sweep and legs", () => {
     expect(s.out()).not.toContain("sweep:");
   });
 
+  it("a pass times out on node: exit 2, could-not-run, the sweep kept and printed by summary", async () => {
+    const s = setup();
+    const limit = "the control pass ran past its 18-minute limit";
+    const code = await main(
+      ["node", "--version=1.0.7"],
+      s.io(null, {
+        runPass: () => {
+          throw new Error(limit);
+        },
+      }),
+    );
+    expect(code).toBe(2);
+    expect(s.verdict("node")).toEqual({
+      source: "temporal-polyfill-swap-node",
+      status: "could-not-run",
+      message: limit,
+      sweep: expect.objectContaining({
+        status: "ran",
+        zones: 418,
+        differingZones: 0,
+      }),
+    });
+    let out = "";
+    await main(["summary", "node"], {
+      root: s.root,
+      stdout: (t) => (out += t),
+      stderr: () => {},
+    });
+    expect(out).toBe(
+      [
+        "### Temporal polyfill swap (node)",
+        "",
+        `could not run: ${limit}`,
+        "Offset sweep: 0 zones differ from Intl, 1970-01-01 to 2036-11-04, 418 zones, tz 2026e.",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("a node leg that stops before the sweep: could-not-run with no sweep", async () => {
+    const s = setup();
+    const code = await main(
+      ["node", "--version=1.0.7"],
+      s.io(null, {
+        loadEntry: async () => {
+          throw new Error("cannot import temporal-polyfill");
+        },
+      }),
+    );
+    expect(code).toBe(2);
+    expect(s.swept()).toBe(0);
+    expect(s.verdict("node")).toEqual({
+      source: "temporal-polyfill-swap-node",
+      status: "could-not-run",
+      message: "cannot import temporal-polyfill",
+    });
+  });
+
+  it("a browser pass times out: could-not-run with no sweep", async () => {
+    const s = setup();
+    await main(
+      ["chromium", "--version=1.0.7"],
+      s.io(null, {
+        runPass: () => {
+          throw new Error("the swap pass ran past its 18-minute limit");
+        },
+      }),
+    );
+    expect(s.swept()).toBe(0);
+    expect(s.verdict("chromium")).not.toHaveProperty("sweep");
+  });
+
+  it("summary of a node leg that ran prints the counts and the sweep line", async () => {
+    const s = setup();
+    await main(
+      ["node", "--version=1.0.7"],
+      s.io({ control: one("passed"), swap: one("passed") }),
+    );
+    let out = "";
+    await main(["summary", "node"], {
+      root: s.root,
+      stdout: (t) => (out += t),
+      stderr: () => {},
+    });
+    expect(out).toContain(
+      "\nOffset sweep: 0 zones differ from Intl, 1970-01-01 to 2036-11-04, 418 zones, tz 2026e.\n",
+    );
+    expect(out).toContain("temporal-polyfill 1.0.7: 0 tests fail on the swap");
+  });
+
   it("the sweep finds 11 zones on node: the line and the verdict carry the number", async () => {
     const s = setup();
     await main(

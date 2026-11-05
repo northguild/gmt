@@ -306,6 +306,8 @@ export function leapSecondsVerdict({
 /**
  * What a command that exited 2 leaves behind: a canary that cannot run is a finding, not a silence.
  *
+ * The swap check adds `sweep` to a Node leg that stopped after its offset sweep ran.
+ *
  * @returns {{ source: string, status: "could-not-run", message: string }}
  */
 export function couldNotRunVerdict(source, message) {

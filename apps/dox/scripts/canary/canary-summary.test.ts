@@ -831,6 +831,25 @@ describe("summaryMarkdown: temporal polyfill swap", () => {
     expect(text).toContain("— Not ready: offset sweep: 12 zones differ");
   });
 
+  it("a node leg that could not run still prints the sweep it carries", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": {
+        source: "temporal-polyfill-swap-node",
+        status: "could-not-run",
+        message: "the control pass ran past its 18-minute limit",
+        sweep: swapSweep(2),
+      },
+    });
+    expect(text.split("\n")).toContain(
+      "| node | could not run: the control pass ran past its 18-minute limit |  |  |",
+    );
+    expect(text).toContain(
+      "Offset sweep: 2 zones differ (418 zones, 1970-01-01 to 2036-11-04, tz 2026e).",
+    );
+    expect(text).toContain("Zones: Area/Zone1 (1 day), Area/Zone2 (2 days)");
+    expect(text).not.toContain("Offset sweep: did not run.");
+  });
+
   it("a sweep that could not run says so", () => {
     const text = swapOnly({
       "temporal-polyfill-swap-node": swap("node", {
