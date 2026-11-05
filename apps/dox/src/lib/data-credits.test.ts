@@ -2,6 +2,7 @@
 import { screen } from "@testing-library/dom";
 import { raw } from "~/widgets/builders";
 import { renderHtml } from "~/widgets/test-fixture";
+import sky from "../assets/hero-sky.json";
 import {
   COASTLINES,
   EARTH_IMAGERY,
@@ -61,7 +62,11 @@ describe("the night sky credit", () => {
   it("is labelled Stars and links the pinned catalogue commit and the licence", () => {
     show([NIGHT_SKY], { id: "c", placement: "stack" });
     expect(text("Stars")).toHaveTextContent(
-      "HYG v4.4, from Hipparcos, Yale Bright Star and Gliese (CC BY-SA 4.0).",
+      "HYG v4.4 by astronexus, from Hipparcos, Yale Bright Star and Gliese, adapted to the stars of magnitude 5.5 and brighter (CC BY-SA 4.0).",
+    );
+    // The cut it names is the one the star list was made with.
+    expect(text("Stars")).toHaveTextContent(
+      `magnitude ${sky.magnitudeLimit} and brighter`,
     );
     expect(
       screen.getByRole("link", { name: "HYG v4.4", hidden: true }),

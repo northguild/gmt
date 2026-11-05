@@ -68,7 +68,10 @@ export const EARTH_IMAGERY: DataCredit = {
   parts: ["NASA Earth Observatory (Blue Marble Next Generation)."],
 };
 
-/** The star catalogue behind the landing's night sky; offered under CC BY-SA 4.0. */
+/**
+ * The star catalogue behind the landing's night sky. CC BY-SA 4.0 asks for the creator and a note
+ * that the material was changed (§3(a)(1)); the cut is `hero-sky.json`'s `magnitudeLimit`.
+ */
 export const NIGHT_SKY: DataCredit = {
   label: "Stars",
   parts: [
@@ -76,7 +79,7 @@ export const NIGHT_SKY: DataCredit = {
       text: "HYG v4.4",
       href: `https://codeberg.org/astronexus/hyg/src/commit/${HYG_COMMIT}`,
     },
-    ", from Hipparcos, Yale Bright Star and Gliese (",
+    " by astronexus, from Hipparcos, Yale Bright Star and Gliese, adapted to the stars of magnitude 5.5 and brighter (",
     {
       text: "CC BY-SA 4.0",
       href: "https://creativecommons.org/licenses/by-sa/4.0/",
