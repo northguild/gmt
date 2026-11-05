@@ -27,7 +27,8 @@
  *   gesture that starts at the page's end steps to the next page and one that starts at its top to
  *   the previous. One gesture moves one page: after a step the wheel is held until it has been
  *   quiet for 220 ms and 650 ms have passed, and a held gesture is cancelled so momentum never
- *   scrolls the new page. Stepping back by the wheel opens the page at its end.
+ *   scrolls the new page. Stepping back by the wheel opens the page at its end. A wheel with Ctrl
+ *   held (a trackpad pinch is one) zooms the page, so it is left alone.
  *
  * Time comes from `now` (default `performance.now`) and nothing here sets a timer, so the wheel
  * is exact under a stubbed clock and a destroyed carousel leaves nothing behind.
@@ -302,7 +303,9 @@ export function wireCarousel(
     o.wheelArea.addEventListener(
       "wheel",
       (event) => {
-        if (!active()) return;
+        // A pinch on a trackpad and Ctrl with the wheel both arrive as a wheel with `ctrlKey`:
+        // they zoom the page, so they are the browser's.
+        if (!active() || event.ctrlKey) return;
         const t = now();
         const raw =
           Math.abs(event.deltaY) >= Math.abs(event.deltaX)
@@ -362,6 +365,8 @@ export function wireCarousel(
   signal.addEventListener(
     "abort",
     () => {
+      // A close still fading must not hide its page after the reset below.
+      closing.forEach((_, i) => closing[i]++);
       root.removeAttribute("role");
       root.removeAttribute("aria-roledescription");
       root.removeAttribute("aria-label");
@@ -373,6 +378,7 @@ export function wireCarousel(
         b.removeAttribute("data-off");
         b.removeAttribute("tabindex");
         b.removeAttribute("aria-controls");
+        b.removeAttribute("data-quiet-focus");
         const name = keptNames[i];
         if (typeof name === "string") b.setAttribute("aria-label", name);
         else b.removeAttribute("aria-label");

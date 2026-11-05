@@ -7,7 +7,6 @@ import {
   cellsInColumn,
   expectNoAxeViolations,
   flushWidget,
-  foundInPage,
   renderWidget,
   scrolled,
   setRange,
@@ -165,10 +164,10 @@ describe("cellsInColumn", () => {
   });
 });
 
-describe("wheelOn, scrolled and foundInPage", () => {
+describe("wheelOn and scrolled", () => {
   const probe: LoadedWidget<never> = {
     renderTemplate: () =>
-      html`<div role="region" aria-label="Pane" id="pane"><p hidden="until-found">Found me</p></div>`,
+      html`<div role="region" aria-label="Pane" id="pane"></div>`,
     mount: async () => onceDestroy(() => {}),
   };
 
@@ -183,23 +182,22 @@ describe("wheelOn, scrolled and foundInPage", () => {
     w.destroy();
   });
 
-  it("delivers the wheel's delta and mode, and a scroll and a find match", async () => {
+  it("delivers the wheel's delta, mode and Ctrl key, and a scroll", async () => {
     const w = await renderWidget(probe);
     const pane = screen.getByRole("region", { name: "Pane" });
     const seen: string[] = [];
     const note = (e: Event) => {
       if (e instanceof WheelEvent)
-        seen.push(`${e.type}:${e.deltaY}:${e.deltaMode}`);
+        seen.push(`${e.type}:${e.deltaY}:${e.deltaMode}:${e.ctrlKey}`);
       else seen.push(e.type);
     };
-    for (const type of ["wheel", "scroll", "beforematch"])
-      pane.addEventListener(type, note);
+    for (const type of ["wheel", "scroll"]) pane.addEventListener(type, note);
     wheelOn(pane, { deltaY: 3, deltaMode: 1 });
+    wheelOn(pane, { deltaY: -2, ctrlKey: true });
     scrolled(pane);
-    foundInPage(pane);
-    for (const type of ["wheel", "scroll", "beforematch"])
+    for (const type of ["wheel", "scroll"])
       pane.removeEventListener(type, note);
-    expect(seen).toEqual(["wheel:3:1", "scroll", "beforematch"]);
+    expect(seen).toEqual(["wheel:3:1:false", "wheel:-2:0:true", "scroll"]);
     w.destroy();
   });
 });

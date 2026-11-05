@@ -248,7 +248,12 @@ export function setRange(slider: HTMLElement, value: number | string): void {
  */
 export function wheelOn(
   target: Element,
-  delta: { deltaY?: number; deltaX?: number; deltaMode?: 0 | 1 | 2 },
+  delta: {
+    deltaY?: number;
+    deltaX?: number;
+    deltaMode?: 0 | 1 | 2;
+    ctrlKey?: boolean;
+  },
 ): boolean {
   const event = new WheelEvent("wheel", {
     bubbles: true,
@@ -256,6 +261,7 @@ export function wheelOn(
     deltaY: delta.deltaY ?? 0,
     deltaX: delta.deltaX ?? 0,
     deltaMode: delta.deltaMode ?? 0,
+    ctrlKey: delta.ctrlKey ?? false,
   });
   target.dispatchEvent(event);
   return event.defaultPrevented;
@@ -264,11 +270,6 @@ export function wheelOn(
 /** A native scroll event on an element, which a script cannot cause by setting `scrollTop`. */
 export function scrolled(target: Element): void {
   target.dispatchEvent(new Event("scroll"));
-}
-
-/** The event a browser sends to a `hidden="until-found"` element its find-in-page has matched. */
-export function foundInPage(target: Element): void {
-  target.dispatchEvent(new Event("beforematch", { bubbles: true }));
 }
 
 /**

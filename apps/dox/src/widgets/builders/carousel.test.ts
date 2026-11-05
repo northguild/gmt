@@ -37,7 +37,9 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return e;
 }
 
-function setup(o: { leave?: boolean } = {}): Setup {
+function setup(
+  o: { leave?: boolean | ((el: HTMLElement, hide: () => void) => void) } = {},
+): Setup {
   const fx = renderHtml(html`<div></div>`);
   const root = fx.first();
   const intro = el(
@@ -75,7 +77,9 @@ function setup(o: { leave?: boolean } = {}): Setup {
     idPrefix: "c",
     now: () => clock.t,
     onSelect: (i, from, by) => steps.push([i, from, by]),
-    ...(o.leave ? { leave: () => {} } : {}),
+    ...(o.leave
+      ? { leave: typeof o.leave === "function" ? o.leave : () => {} }
+      : {}),
   });
   return {
     host: fx.host,
@@ -219,6 +223,21 @@ describe("carousel", () => {
       expect(s.handle.index).toBe(0);
     });
 
+    it("leaves a pinch and Ctrl with the wheel to the browser's zoom", () => {
+      const s = setup();
+      for (let i = 0; i < 5; i++) {
+        s.clock.t += 20;
+        expect(wheelOn(s.intro, { deltaY: 60, ctrlKey: true })).toBe(false);
+      }
+      expect(s.handle.index).toBe(0);
+      // Nor does a pinch during a held gesture cancel it.
+      s.clock.t += 1000;
+      wheelOn(s.intro, { deltaY: 60 });
+      expect(s.handle.index).toBe(1);
+      s.clock.t += 20;
+      expect(wheelOn(s.about, { deltaY: 60, ctrlKey: true })).toBe(false);
+    });
+
     it("does nothing on the last page going down", () => {
       const s = setup();
       s.handle.select(1);
@@ -257,6 +276,25 @@ describe("carousel", () => {
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
     wheelOn(s.intro, { deltaY: 200 });
     expect(s.steps).toHaveLength(1);
+  });
+
+  it("lets no fade still running at teardown hide its page afterwards", () => {
+    const held: (() => void)[] = [];
+    const s = setup({ leave: (_el, hide) => held.push(hide) });
+    s.handle.select(1);
+    s.signal.abort();
+    for (const hide of held) hide();
+    expect(s.intro.inert).toBe(false);
+  });
+
+  it("drops the quiet focus mark when destroyed", async () => {
+    const s = setup();
+    s.next.focus();
+    await s.user.keyboard("{Enter}");
+    expect(s.prev).toHaveFocus();
+    s.signal.abort();
+    // oxlint-disable-next-line dox-test/no-implementation-assert
+    expect(s.prev).not.toHaveAttribute("data-quiet-focus");
   });
 
   it("refuses fewer than two pages", () => {
