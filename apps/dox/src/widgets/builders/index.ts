@@ -43,6 +43,7 @@ export {
 export { edgeControl, type EdgeControlOptions } from "./edge-control";
 export { gateAttr, type GateOption } from "./gate";
 export { hero, type HeroOptions } from "./hero";
+export { hold, type Ghost } from "./hold";
 export {
   escapeAttr,
   escapeHtml,
@@ -73,6 +74,7 @@ export { findWidget, type FoundWidget } from "../root";
 export { loading, type LoadingOptions } from "./loading";
 export { plates, NO_RESULT, type Plate } from "./plates";
 export { select, type SelectOption, type SelectOptions } from "./select";
+export { selectOptions } from "./select";
 export { srOnly } from "./sr-only";
 export {
   setSwitchDetail,
@@ -103,3 +105,4 @@ export {
   type TimelineSeries,
 } from "./timeline";
 export { verdict, type VerdictOptions, type VerdictTone } from "./verdict";
+export { zonedValue } from "./zoned-value";

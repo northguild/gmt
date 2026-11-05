@@ -47,15 +47,12 @@ export function weekStrip(o: WeekStripOptions): SafeHtml {
     const cells: SafeHtml[] = [];
     for (let col = 0; col < 7; col++) {
       const day = monday.add({ days: col });
-      dates.push(day.toString());
-      cells.push(
-        cell(day, grid, {
-          withMonth: true,
-          outside:
-            Temporal.PlainDate.compare(day, start) < 0 ||
-            Temporal.PlainDate.compare(day, end) > 0,
-        }),
-      );
+      const outside =
+        Temporal.PlainDate.compare(day, start) < 0 ||
+        Temporal.PlainDate.compare(day, end) > 0;
+      // The list names the marks the drawing shows, so a day outside the range is not in it.
+      if (!outside) dates.push(day.toString());
+      cells.push(cell(day, grid, { withMonth: true, outside }));
     }
     weeks.push(html`<div class="${styles.week}">${cells}</div>`);
   }

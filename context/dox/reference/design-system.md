@@ -28,6 +28,12 @@ No shared widget sheet remains in the global cascade: the `not-content` restore,
 sheet; `dox.css` and `gmt-a11y.css` load after 8. The config has the full
 list.
 
+**The heading font is inlined.** `gmt-tokens.css` names the Michroma file with Vite's `?inline`, so
+the `@font-face` carries it as a `data:font/woff2` URI, and the face is `font-display: optional` with
+no preload. Any external font file, even a preloaded one, arrives after first layout in Firefox and
+moves the page. The Display Fallback face keeps `size-adjust: 130%` with `local("Liberation Mono")`
+among its sources, so the fallback draws at the same advance. See the load-jump entry in `built.md`.
+
 **The chat's sheets are not in `customCss`.** `gmt-ask-tailwind.css`, `gmt-ask.css` and
 `gmt-hive.css` are imported from `src/components/ask/DoxChat.tsx`, so Vite code-splits them into
 the `/dox` island and no other page loads them.
@@ -387,7 +393,7 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   For the Timetable Reader and the tools with `scope: "widget"` it measures every element in
   the widget; only the drawing itself may change.
 - **A cell whose content comes and goes holds its size with a hidden sizer** stacked in the
-  same grid cell (the Timetable Reader's `hold` in `tools/timetable-reader.module.css`, and `families/ids/hold.ts`, `families/edi/edi-hold.ts`, `families/holiday/held-text.ts`).
+  same grid cell (the Timetable Reader's `hold` in `tools/timetable-reader.module.css`, and `builders/hold.ts`, `families/edi/edi-hold.ts`, `families/holiday/held-text.ts`).
   - The hold is a one-cell grid. Its two children are the sizer and the live wrapper
     (the live wrapper of the kit's hold, `data-gate="live"`; for the result, the `<output>` itself), both in
     `grid-area: 1 / 1`.

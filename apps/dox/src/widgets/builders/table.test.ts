@@ -137,6 +137,34 @@ describe("table", () => {
     expect(out.match(/data-col=/g)).toHaveLength(2);
   });
 
+  // A role a native element already gives is invisible to a role query, so this reads the markup:
+  // the explicit attribute is what keeps the semantics once a sheet changes a part's `display`.
+  it("writes an explicit role on every part with roles, and none without", () => {
+    const out = table({
+      caption: "Offsets",
+      rowHeader: "zone",
+      roles: true,
+      columns: [
+        { key: "zone", header: "Zone", align: "start", numeric: false },
+        { key: "off", header: "Offset", align: "end", numeric: true },
+      ],
+      rows: [{ zone: "Berlin", off: "+01:00" }],
+    }).toString();
+    expect(out).toMatch(/<table [^>]*role="table"/);
+    expect(out.match(/<(thead|tbody)[^>]* role="rowgroup"/g)).toHaveLength(2);
+    expect(out.match(/<tr[^>]* role="row"/g)).toHaveLength(2);
+    expect(out.match(/<th [^>]*scope="col" role="columnheader"/g)).toHaveLength(
+      2,
+    );
+    expect(out).toMatch(/<th [^>]*scope="row" role="rowheader"/);
+    expect(out).toMatch(/<td [^>]* role="cell"/);
+    expect(
+      markup()
+        .toString()
+        .match(/ role="/g),
+    ).toHaveLength(1);
+  });
+
   it("has no axe violations", async () => {
     const fx = renderHtml(markup());
     await expectNoAxeViolations(fx.host);

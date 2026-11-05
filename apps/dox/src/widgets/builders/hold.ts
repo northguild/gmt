@@ -10,7 +10,7 @@
  *
  * `ghostClass` is the live content's own class, so a ghost sets in the same type.
  */
-import { html, type HtmlValue, type SafeHtml } from "../../builders/html";
+import { html, type HtmlValue, type SafeHtml } from "./html";
 import styles from "./hold.module.css";
 
 export type Ghost = string | SafeHtml;

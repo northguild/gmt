@@ -1,6 +1,7 @@
 import {
   CANARY_LABEL,
   DRY_RUN_LABEL,
+  SWAP_SOURCES,
   WORKFLOW_SOURCES,
   applyForce,
   compatStates,
@@ -8,6 +9,7 @@ import {
   marker,
   planIssueActions,
   removableEverywhere,
+  swapReady,
 } from "../../../../scripts/lib/canary-issues.mjs";
 
 /**
@@ -247,6 +249,86 @@ const cleanNative = () =>
     NATIVE_LEGS.map((leg) => [`native-suite-${leg}`, native(leg)]),
   );
 
+const SWAP_LEGS = ["node", "chromium", "firefox", "webkit"] as const;
+type SwapLeg = (typeof SWAP_LEGS)[number];
+const SWAP_BROWSERS: Record<SwapLeg, string | null> = {
+  node: null,
+  chromium: "chromium 153.0.8010.12",
+  firefox: "firefox 155.0",
+  webkit: "webkit 26.6",
+};
+
+const swapSweep = (differingZones = 0) => ({
+  status: "ran" as const,
+  tz: "2026e",
+  from: "1970-01-01",
+  through: "2036-11-04",
+  zones: 418,
+  days: 24415,
+  comparisons: 10205470,
+  differingZones,
+  differing: Array.from({ length: Math.min(differingZones, 50) }, (_, i) => ({
+    zone: `Area/Zone${i + 1}`,
+    days: i + 1,
+    runs: [],
+    runsTruncated: false,
+  })),
+  differingTruncated: differingZones > 50,
+});
+
+interface SwapOptions {
+  version?: string;
+  failed?: number;
+  both?: number;
+  fixed?: number;
+  sweep?: unknown;
+  entryLoaded?: unknown;
+}
+
+/** A swap-leg verdict that ran. Only the Node leg carries a sweep. */
+const swapLeg = (leg: SwapLeg, options: SwapOptions = {}) => {
+  const { version = "1.0.7", failed = 0, both = 0, fixed = 0 } = options;
+  const sweep = "sweep" in options ? options.sweep : swapSweep();
+  return {
+    source: `temporal-polyfill-swap-${leg}`,
+    status: "ran" as const,
+    leg,
+    version,
+    entry: "temporal-polyfill/full/implementation",
+    entryLoaded: options.entryLoaded ?? true,
+    runtime: {
+      node: "26.12.1",
+      vitest: "5.0.5",
+      playwright: leg === "node" ? null : "1.63.0",
+      browser: SWAP_BROWSERS[leg],
+    },
+    counts: {
+      files: 943,
+      tests: 71337,
+      passed: 71337 - failed - both,
+      skipped: 0,
+      failed,
+      both,
+      fixed,
+    },
+    failing: [],
+    failingTruncated: false,
+    sweep: leg === "node" ? sweep : null,
+  };
+};
+
+/** The four swap legs, all passing, with per-leg changes. */
+const cleanSwap = (over: Partial<Record<SwapLeg, SwapOptions>> = {}) =>
+  Object.fromEntries(
+    SWAP_LEGS.map((leg) => [
+      `temporal-polyfill-swap-${leg}`,
+      swapLeg(leg, over[leg]),
+    ]),
+  );
+
+/** Four legs that ran and are not swap-ready (one zone differs): they file nothing. */
+const quietSwap = () => cleanSwap({ node: { sweep: swapSweep(1) } });
+
 /**
  * `verdicts` with four clean native legs added when it names no native leg at all, and with the
  * three browser compat verdicts mirroring the Node check's rows when it names no browser compat
@@ -272,7 +354,12 @@ const withNative = (verdicts: unknown) => {
             browserCompat(leg, checkVerdict.workarounds),
           ]),
         );
-  return { ...browsers, ...given, ...legs } as never;
+  const swap = Object.keys(given).some((k) =>
+    k.startsWith("temporal-polyfill-swap-"),
+  )
+    ? {}
+    : quietSwap();
+  return { ...browsers, ...swap, ...given, ...legs } as never;
 };
 
 const issue = (number: number, body: string, labels = [CANARY_LABEL]) => ({
@@ -327,9 +414,21 @@ describe("constants and marker", () => {
         "native-suite-chromium",
         "native-suite-firefox",
         "native-suite-webkit",
+        "temporal-polyfill-swap-node",
+        "temporal-polyfill-swap-chromium",
+        "temporal-polyfill-swap-firefox",
+        "temporal-polyfill-swap-webkit",
       ],
       "leap-seconds": ["leap-seconds"],
     });
+  });
+  it("names the four swap sources", () => {
+    expect(SWAP_SOURCES).toEqual([
+      "temporal-polyfill-swap-node",
+      "temporal-polyfill-swap-chromium",
+      "temporal-polyfill-swap-firefox",
+      "temporal-polyfill-swap-webkit",
+    ]);
   });
   it("writes the hidden marker line", () => {
     expect(marker("a/b")).toBe('<!-- gmt-canary key="a/b" -->');
@@ -1461,6 +1560,7 @@ const withLegs = (legs: Partial<Record<string, unknown>>) =>
     ...everywhere(cleanCheck().workarounds),
     "temporal-oracle": oracle(),
     ...cleanNative(),
+    ...quietSwap(),
     ...Object.fromEntries(
       Object.entries(legs).map(([leg, v]) => [`native-suite-${leg}`, v]),
     ),
@@ -1932,5 +2032,423 @@ describe("native suite findings", () => {
     });
     const [staleFinding] = only(withLegs({ node: stale }), STALE_KEY);
     expect(staleFinding.body).toContain("`src/a.test.ts` | `see @example #35`");
+  });
+});
+
+describe("swapReady", () => {
+  it("is ready, with the version, when all four legs and the sweep pass", () => {
+    expect(swapReady(cleanSwap() as never)).toEqual({
+      ready: true,
+      version: "1.0.7",
+    });
+  });
+
+  it("a failure that also fails on the control does not block (failed counts swap-only failures)", () => {
+    expect(swapReady(cleanSwap({ chromium: { both: 9 } }) as never)).toEqual({
+      ready: true,
+      version: "1.0.7",
+    });
+  });
+
+  /** The clean four legs, with one leg's verdict changed by `change`. */
+  const changed = (
+    leg: SwapLeg,
+    change: (verdict: Record<string, any>) => void,
+  ) => {
+    const verdicts = cleanSwap() as Record<string, any>;
+    change(verdicts[`temporal-polyfill-swap-${leg}`]);
+    return verdicts;
+  };
+
+  it.each`
+    label                                      | verdicts                                                        | reason
+    ${"chromium entryLoaded is false"}         | ${cleanSwap({ chromium: { entryLoaded: false } })}              | ${"temporal-polyfill-swap-chromium: the swap pass did not load temporal-polyfill"}
+    ${"firefox entryLoaded is missing"}        | ${changed("firefox", (v) => delete v.entryLoaded)}              | ${"temporal-polyfill-swap-firefox: the swap pass did not load temporal-polyfill"}
+    ${"node entryLoaded is the string true"}   | ${cleanSwap({ node: { entryLoaded: "true" } })}                 | ${"temporal-polyfill-swap-node: the swap pass did not load temporal-polyfill"}
+    ${"entry not loaded beats failing tests"}  | ${cleanSwap({ webkit: { entryLoaded: false, failed: 5 } })}     | ${"temporal-polyfill-swap-webkit: the swap pass did not load temporal-polyfill"}
+    ${"webkit failed count is missing"}        | ${changed("webkit", (v) => delete v.counts.failed)}             | ${"temporal-polyfill-swap-webkit: the failed count is missing"}
+    ${"node counts are missing"}               | ${changed("node", (v) => delete v.counts)}                      | ${"temporal-polyfill-swap-node: the failed count is missing"}
+    ${"chromium failed count is the string 0"} | ${changed("chromium", (v) => (v.counts.failed = "0"))}          | ${"temporal-polyfill-swap-chromium: the failed count is missing"}
+    ${"firefox failed count is null"}          | ${changed("firefox", (v) => (v.counts.failed = null))}          | ${"temporal-polyfill-swap-firefox: the failed count is missing"}
+    ${"sweep differingZones is missing"}       | ${changed("node", (v) => delete v.sweep.differingZones)}        | ${"offset sweep: the differing zone count is missing"}
+    ${"sweep differingZones is undefined"}     | ${changed("node", (v) => (v.sweep.differingZones = undefined))} | ${"offset sweep: the differing zone count is missing"}
+    ${"sweep differingZones is the string 0"}  | ${changed("node", (v) => (v.sweep.differingZones = "0"))}       | ${"offset sweep: the differing zone count is missing"}
+  `("is not ready when $label", ({ verdicts, reason }) => {
+    expect(swapReady(verdicts)).toEqual({ ready: false, reason });
+  });
+
+  it.each`
+    label                                  | verdicts                                                                                                               | reason
+    ${"node verdict missing"}              | ${{ ...cleanSwap(), "temporal-polyfill-swap-node": null }}                                                             | ${"temporal-polyfill-swap-node: did not run"}
+    ${"chromium could not run"}            | ${{ ...cleanSwap(), "temporal-polyfill-swap-chromium": couldNotRun("temporal-polyfill-swap-chromium", "no browser") }} | ${"temporal-polyfill-swap-chromium: did not run"}
+    ${"webkit key absent"}                 | ${Object.fromEntries(Object.entries(cleanSwap()).filter(([k]) => !k.endsWith("webkit")))}                              | ${"temporal-polyfill-swap-webkit: did not run"}
+    ${"versions differ"}                   | ${cleanSwap({ firefox: { version: "1.0.8" } })}                                                                        | ${"legs ran different versions: 1.0.7, 1.0.8"}
+    ${"three tests fail on webkit"}        | ${cleanSwap({ webkit: { failed: 3 } })}                                                                                | ${"temporal-polyfill-swap-webkit: 3 tests fail on the swap"}
+    ${"one test fails on node"}            | ${cleanSwap({ node: { failed: 1 } })}                                                                                  | ${"temporal-polyfill-swap-node: 1 test fails on the swap"}
+    ${"sweep could not run"}               | ${cleanSwap({ node: { sweep: { status: "could-not-run", message: "no Intl" } } })}                                     | ${"offset sweep: did not run"}
+    ${"sweep is null on node"}             | ${cleanSwap({ node: { sweep: null } })}                                                                                | ${"offset sweep: did not run"}
+    ${"two zones differ"}                  | ${cleanSwap({ node: { sweep: swapSweep(2) } })}                                                                        | ${"offset sweep: 2 zones differ"}
+    ${"one zone differs"}                  | ${cleanSwap({ node: { sweep: swapSweep(1) } })}                                                                        | ${"offset sweep: 1 zone differs"}
+    ${"a missing leg beats a failing one"} | ${{ ...cleanSwap({ node: { failed: 4 } }), "temporal-polyfill-swap-webkit": null }}                                    | ${"temporal-polyfill-swap-webkit: did not run"}
+    ${"versions beat failures"}            | ${cleanSwap({ node: { failed: 4 }, webkit: { version: "1.0.9" } })}                                                    | ${"legs ran different versions: 1.0.7, 1.0.9"}
+    ${"failures beat the sweep"}           | ${cleanSwap({ chromium: { failed: 2 }, node: { sweep: swapSweep(5) } })}                                               | ${"temporal-polyfill-swap-chromium: 2 tests fail on the swap"}
+  `("is not ready when $label", ({ verdicts, reason }) => {
+    expect(swapReady(verdicts)).toEqual({ ready: false, reason });
+  });
+});
+
+describe("swap findings", () => {
+  const READY_TITLE =
+    "Swap to temporal-polyfill 1.0.7: it passes the GMT suite and the offset sweep";
+  const READY_MARKER = '<!-- gmt-canary key="temporal-polyfill-swap/ready" -->';
+  const swapPlan = (swap: unknown, open: ReturnType<typeof issue>[] = []) =>
+    plan(
+      {
+        "temporal-compat-check": cleanCheck(),
+        "temporal-oracle": oracle(),
+        ...(swap as object),
+      },
+      open,
+    );
+
+  it("a ready run opens one issue with the key, title and label", () => {
+    const actions = swapPlan(cleanSwap());
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.key).toBe("temporal-polyfill-swap/ready");
+    expect(action.title).toBe(READY_TITLE);
+    expect(action.labels).toEqual(["canary"]);
+    expect(action.body.split("\n")[0]).toBe(READY_MARKER);
+  });
+
+  it("a run that ran but is not swap-ready files nothing", () => {
+    expect(swapPlan(cleanSwap({ webkit: { failed: 2 } }))).toEqual([]);
+  });
+
+  it("a differing sweep files nothing", () => {
+    expect(swapPlan(cleanSwap({ node: { sweep: swapSweep(3) } }))).toEqual([]);
+  });
+
+  it("comments on the open issue, naming the new version, and does not open another", () => {
+    const actions = swapPlan(
+      cleanSwap({
+        node: { version: "1.0.8" },
+        chromium: { version: "1.0.8" },
+        firefox: { version: "1.0.8" },
+        webkit: { version: "1.0.8" },
+      }),
+      [issue(77, `${READY_MARKER}\nold body`)],
+    );
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    if (action.kind !== "comment") throw new Error("expected comment");
+    expect(action.issue).toBe(77);
+    expect(action.key).toBe("temporal-polyfill-swap/ready");
+    expect(
+      action.body.startsWith(
+        `temporal-polyfill 1.0.8 also passes (run ${RUN}).\n\ntemporal-polyfill 1.0.8, imported from`,
+      ),
+    ).toBe(true);
+    expect(action.body).not.toContain("gmt-canary");
+  });
+
+  it("opens a new issue when the open canary issue has another marker", () => {
+    const actions = swapPlan(cleanSwap(), [
+      issue(
+        5,
+        '<!-- gmt-canary key="temporal-oracle/untagged-mismatch" -->\nx',
+      ),
+    ]);
+    expect(actions.map((a) => a.kind)).toEqual(["open"]);
+  });
+
+  it("writes the whole body", () => {
+    const [action] = swapPlan(
+      cleanSwap({ chromium: { both: 9 }, webkit: { fixed: 2, both: 1 } }),
+    );
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body).toBe(
+      [
+        READY_MARKER,
+        `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, passed every check on this run: ${RUN}`,
+        "",
+        "| Runtime | Tests | Fail on swap only | Fail on both | Fail only on @js-temporal/polyfill |",
+        "| --- | --- | --- | --- | --- |",
+        "| Node 26.12.1 | 71337 | 0 | 0 | 0 |",
+        "| Chromium 153.0.8010.12 | 71337 | 0 | 9 | 0 |",
+        "| Firefox 155.0 | 71337 | 0 | 0 | 0 |",
+        "| WebKit 26.6 | 71337 | 0 | 1 | 2 |",
+        "",
+        "Offset sweep: every one of 418 zones matches `Intl.DateTimeFormat` at 12:00 UTC each day from 1970-01-01 to 2036-11-04 (tz 2026e).",
+        "",
+        "What the swap involves is in [temporal-polyfill-swap.md § 5 and § 7](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md). Type errors are not checked here; § 5 lists them.",
+        "",
+        "A person makes the swap. CI opens issues, never pull requests.",
+      ].join("\n"),
+    );
+    expect(action.body.length).toBeLessThan(65_536);
+  });
+});
+
+describe("swap could not run", () => {
+  const MISSING = "no verdict file: an earlier step or job failed";
+  const base = () => ({
+    "temporal-compat-check": cleanCheck(),
+    "temporal-oracle": oracle(),
+  });
+
+  it("a swap leg that could not run is one could-not-run finding and no swap finding", () => {
+    const actions = plan({
+      ...base(),
+      ...cleanSwap(),
+      "temporal-polyfill-swap-firefox": couldNotRun(
+        "temporal-polyfill-swap-firefox",
+        "Firefox is not installed",
+      ),
+    });
+    expect(actions.map((a) => a.key)).toEqual([
+      "temporal-oracle/could-not-run",
+    ]);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body).toContain(
+      "- **temporal-polyfill-swap-firefox**: Firefox is not installed\n",
+    );
+  });
+
+  it("four missing swap verdicts list all four", () => {
+    const actions = plan({
+      ...base(),
+      ...Object.fromEntries(
+        SWAP_LEGS.map((leg) => [`temporal-polyfill-swap-${leg}`, null]),
+      ),
+    });
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body).toContain(
+      `- **temporal-polyfill-swap-node**: ${MISSING}\n` +
+        `- **temporal-polyfill-swap-chromium**: ${MISSING}\n` +
+        `- **temporal-polyfill-swap-firefox**: ${MISSING}\n` +
+        `- **temporal-polyfill-swap-webkit**: ${MISSING}\n`,
+    );
+  });
+
+  it("a swap leg and the oracle both failing give one finding listing both", () => {
+    const actions = plan({
+      "temporal-compat-check": cleanCheck(),
+      "temporal-oracle": couldNotRun("temporal-oracle", "no Temporal"),
+      ...cleanSwap(),
+      "temporal-polyfill-swap-webkit": null,
+    });
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body).toContain(
+      `- **temporal-oracle**: no Temporal\n` +
+        `- **temporal-polyfill-swap-webkit**: ${MISSING}\n`,
+    );
+  });
+
+  it("a Node leg that ran but whose sweep could not run lists the sweep, with no swap finding", () => {
+    const actions = plan({
+      ...base(),
+      ...cleanSwap({
+        node: { sweep: { status: "could-not-run", message: "no longOffset" } },
+      }),
+    });
+    expect(actions.map((a) => a.key)).toEqual([
+      "temporal-oracle/could-not-run",
+    ]);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body).toContain(
+      "- **temporal-polyfill-swap-node**: offset sweep: no longOffset\n",
+    );
+  });
+
+  it.each`
+    label                               | leg           | change
+    ${"entryLoaded is false"}           | ${"chromium"} | ${(v: Record<string, any>) => (v.entryLoaded = false)}
+    ${"entryLoaded is missing"}         | ${"firefox"}  | ${(v: Record<string, any>) => delete v.entryLoaded}
+    ${"entryLoaded is the string true"} | ${"webkit"}   | ${(v: Record<string, any>) => (v.entryLoaded = "true")}
+    ${"the Node leg did not load it"}   | ${"node"}     | ${(v: Record<string, any>) => (v.entryLoaded = false)}
+  `(
+    "a $leg leg that ran on the wrong entry is one could-not-run line, never a pass ($label)",
+    ({ leg, change }) => {
+      const actions = plan({
+        ...base(),
+        ...(() => {
+          const verdicts = cleanSwap() as Record<string, any>;
+          change(verdicts[`temporal-polyfill-swap-${leg}`]);
+          return verdicts;
+        })(),
+      });
+      expect(actions.map((a) => a.key)).toEqual([
+        "temporal-oracle/could-not-run",
+      ]);
+      const [action] = actions;
+      if (action.kind !== "open") throw new Error("expected open");
+      expect(action.body).toContain(
+        `- **temporal-polyfill-swap-${leg}**: swap entry not loaded\n`,
+      );
+    },
+  );
+
+  it("a leg whose verdict says could-not-run for the entry takes the same route", () => {
+    const actions = plan({
+      ...base(),
+      ...cleanSwap(),
+      "temporal-polyfill-swap-webkit": couldNotRun(
+        "temporal-polyfill-swap-webkit",
+        "swap entry not loaded",
+      ),
+    });
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.key).toBe("temporal-oracle/could-not-run");
+    expect(action.body).toContain(
+      "- **temporal-polyfill-swap-webkit**: swap entry not loaded\n",
+    );
+  });
+
+  it("comments on the open could-not-run issue", () => {
+    const key = "temporal-oracle/could-not-run";
+    const [action] = plan(
+      {
+        ...base(),
+        ...cleanSwap(),
+        "temporal-polyfill-swap-webkit": null,
+      },
+      [issue(31, `<!-- gmt-canary key="${key}" -->\nold`)],
+    );
+    expect(action).toEqual({
+      kind: "comment",
+      key,
+      issue: 31,
+      body: `- **temporal-polyfill-swap-webkit**: ${MISSING}\n\nRun: ${RUN}`,
+    });
+  });
+
+  it("the leap-seconds workflow does not read swap sources", () => {
+    expect(
+      planIssueActions({ "leap-seconds": leap() } as never, [], LEAP_CONTEXT),
+    ).toEqual([]);
+  });
+});
+
+describe("swap force", () => {
+  const DRY_KEY = "dry-run/temporal-polyfill-swap/ready";
+  const base = () => ({
+    "temporal-compat-check": cleanCheck(),
+    "temporal-oracle": oracle(),
+  });
+  const forcedPlan = (swap: unknown) => {
+    const { verdicts } = applyForce(
+      withNative({ ...base(), ...(swap as object) }),
+      { swapReady: true },
+    );
+    return planIssueActions(verdicts as never, [], ORACLE_CONTEXT);
+  };
+
+  it("marks the first swap leg that ran", () => {
+    const { verdicts, skipped } = applyForce(
+      withNative({
+        ...base(),
+        ...cleanSwap(),
+        "temporal-polyfill-swap-node": null,
+      }),
+      { swapReady: true },
+    );
+    expect(skipped).toEqual([]);
+    expect(
+      (verdicts["temporal-polyfill-swap-chromium"] as { forced?: unknown })
+        .forced,
+    ).toEqual({ swapReady: true });
+    expect(
+      (verdicts["temporal-polyfill-swap-firefox"] as { forced?: unknown })
+        .forced,
+    ).toBeUndefined();
+  });
+
+  it("is skipped, with a reason, when no swap leg ran", () => {
+    const { skipped } = applyForce(
+      withNative({
+        ...base(),
+        ...Object.fromEntries(
+          SWAP_LEGS.map((leg) => [`temporal-polyfill-swap-${leg}`, null]),
+        ),
+      }),
+      { swapReady: true },
+    );
+    expect(skipped).toEqual([
+      {
+        flag: "--force-swap-ready",
+        reason:
+          "no temporal-polyfill-swap verdict ran, so there is nothing to force against",
+      },
+    ]);
+  });
+
+  it("forced on a passing run files the real issue and a dry-run twin", () => {
+    const actions = forcedPlan(cleanSwap());
+    expect(actions.map((a) => a.key)).toEqual([
+      "temporal-polyfill-swap/ready",
+      DRY_KEY,
+    ]);
+    const dry = actions[1];
+    if (dry.kind !== "open") throw new Error("expected open");
+    expect(dry.title).toBe(
+      "[dry run] Swap to temporal-polyfill 1.0.7: it passes the GMT suite and the offset sweep",
+    );
+    expect(dry.labels).toEqual(["canary", "canary-dry-run"]);
+    expect(dry.body).toContain(
+      "Forced for a dry run. Real result on this run: every check passed.",
+    );
+  });
+
+  it("forced with webkit failing files only the dry run and states the real reason", () => {
+    const actions = forcedPlan(cleanSwap({ webkit: { failed: 2 } }));
+    expect(actions.map((a) => a.key)).toEqual([DRY_KEY]);
+    const [dry] = actions;
+    if (dry.kind !== "open") throw new Error("expected open");
+    expect(dry.body).toContain(
+      "Forced for a dry run. Real result on this run: temporal-polyfill-swap-webkit: 2 tests fail on the swap.",
+    );
+    expect(dry.body).toContain("| WebKit 26.6 | 71337 | 2 | 0 | 0 |");
+  });
+
+  it("a forced run with differing zones does not claim the sweep matched", () => {
+    const actions = forcedPlan(cleanSwap({ node: { sweep: swapSweep(2) } }));
+    const dry = actions.find((a) => a.key === DRY_KEY);
+    if (!dry || dry.kind !== "open") throw new Error("expected open");
+    expect(dry.body).toContain(
+      "Offset sweep: 2 of 418 zones differ from `Intl.DateTimeFormat` at 12:00 UTC on some day from 1970-01-01 to 2036-11-04 (tz 2026e).",
+    );
+    expect(dry.body).not.toContain("every one of 418 zones matches");
+  });
+
+  it("shows a leg that did not run as 'did not run' in the dry-run table", () => {
+    const actions = forcedPlan({
+      ...cleanSwap(),
+      "temporal-polyfill-swap-firefox": null,
+    });
+    const dry = actions.find((a) => a.key === DRY_KEY);
+    if (!dry || dry.kind !== "open") throw new Error("expected open");
+    expect(dry.body).toContain("| Firefox | did not run |  |  |  |");
+  });
+
+  it("never comments on the real issue", () => {
+    const { verdicts } = applyForce(
+      withNative({ ...base(), ...cleanSwap({ webkit: { failed: 1 } }) }),
+      { swapReady: true },
+    );
+    const actions = planIssueActions(
+      verdicts as never,
+      [issue(9, '<!-- gmt-canary key="temporal-polyfill-swap/ready" -->\nx')],
+      ORACLE_CONTEXT,
+    );
+    expect(actions.map((a) => [a.kind, a.key])).toEqual([["open", DRY_KEY]]);
   });
 });

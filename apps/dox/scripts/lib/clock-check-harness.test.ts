@@ -1,4 +1,7 @@
+import { canadaProbe } from "../../src/lib/canada-clock-change";
+import { moroccoProbe } from "../../src/lib/morocco-clock-change";
 import {
+  expectedOffsets,
   REGIONS,
   regionOf,
   routeWorker,
@@ -92,5 +95,32 @@ describe("routeWorker", () => {
     release();
     await pending;
     expect(done).toBe(true);
+  });
+});
+
+describe("expectedOffsets", () => {
+  it("reads each region's offsets from the page's own config", async () => {
+    const config = {
+      "/check/canada-2026-clock-change/": canadaProbe("x"),
+      "/check/morocco-2026-clock-change/": moroccoProbe("x"),
+    };
+    for (const [path, probe] of Object.entries(config)) {
+      expect(await expectedOffsets(regionOf(path))).toEqual(
+        Object.fromEntries(
+          probe.zones.map((fact) => [fact.zone, fact.expected.verdict]),
+        ),
+      );
+    }
+  });
+
+  it("covers every zone the page lists, and fails on a region that names no module", async () => {
+    expect(
+      Object.keys(
+        await expectedOffsets(regionOf("/check/canada-2026-clock-change/")),
+      ),
+    ).toHaveLength(4);
+    await expect(expectedOffsets({ name: "x" } as never)).rejects.toThrow(
+      /probe module/,
+    );
   });
 });

@@ -1,6 +1,6 @@
 /**
- * The upstream filings GMT has reported against `@js-temporal/polyfill` and
- * `tc39/proposal-temporal`. `/upstream/` and its `UpstreamTracker.astro`
+ * The upstream filings GMT has reported against `@js-temporal/polyfill`,
+ * `tc39/proposal-temporal` and `fullcalendar/temporal-polyfill`. `/upstream/` and its `UpstreamTracker.astro`
  * import every figure from here, the same way `gmt-stats.ts` is the one place
  * a GMT number is typed.
  *
@@ -142,10 +142,28 @@ export const LISTING_HAND_WRITTEN_FIELDS = ["summary"] as const;
 const keyOf = (f: { repo: string; number: number }): string =>
   `${f.repo}#${f.number}`;
 
+/**
+ * The repositories the tracker follows, in page order. Mirrors `REPOS` in `scripts/upstream.mjs`,
+ * which a test holds equal.
+ */
+export const TRACKED_REPOS = [
+  "js-temporal/temporal-polyfill",
+  "tc39/proposal-temporal",
+  "fullcalendar/temporal-polyfill",
+] as const;
+
+const repoRank = (repo: string): number => {
+  const i = (TRACKED_REPOS as readonly string[]).indexOf(repo);
+  return i === -1 ? TRACKED_REPOS.length : i;
+};
+
 const byRepoThenNumber = (
   a: { repo: string; number: number },
   b: { repo: string; number: number },
-): number => a.repo.localeCompare(b.repo) || a.number - b.number;
+): number =>
+  repoRank(a.repo) - repoRank(b.repo) ||
+  a.repo.localeCompare(b.repo) ||
+  a.number - b.number;
 
 /**
  * The live file laid over the committed one.

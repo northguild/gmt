@@ -5,11 +5,16 @@ import { onceDestroy } from "~/lib/widget-mount";
 import { html } from "~/widgets/builders";
 import {
   cellsInColumn,
+  blankBlockCount,
   expectNoAxeViolations,
   flushWidget,
+  growRegionOf,
+  heldSamples,
   renderWidget,
   scrolled,
   setRange,
+  sharesStyling,
+  skeletonRows,
   wheelOn,
 } from "./render-widget";
 
@@ -198,6 +203,57 @@ describe("wheelOn and scrolled", () => {
     for (const type of ["wheel", "scroll"])
       pane.removeEventListener(type, note);
     expect(seen).toEqual(["wheel:3:1:false", "wheel:-2:0:true", "scroll"]);
+    w.destroy();
+  });
+});
+
+describe("the layout-filler helpers", () => {
+  const filler: LoadedWidget<never> = {
+    renderTemplate: () =>
+      // oxlint-disable-next-line dox-test/no-house-class -- growRegionOf looks for this custom element, so the fixture has to write it
+      html`<gmt-grow><p>live</p></gmt-grow><p>outside</p>
+         <span data-sample="widest one"></span><span data-sample="second"></span>
+         <table aria-label="Cards"><tbody>
+           <tr data-skeleton aria-hidden="true"><td><span data-state="blank"></span><span data-state="blank"></span></td></tr>
+           <tr aria-hidden="true"><td></td></tr>
+         </tbody></table>
+         <select aria-label="A" class="x y"></select><select aria-label="B" class="x y"></select>
+         <select aria-label="C" class="z"></select>`,
+    mount: async () => onceDestroy(() => {}),
+  };
+
+  it("lists the held samples in order", async () => {
+    const w = await renderWidget(filler);
+    expect(heldSamples(w.root)).toEqual(["widest one", "second"]);
+    w.destroy();
+  });
+
+  it("finds the skeleton rows and counts a cell's blank blocks", async () => {
+    const w = await renderWidget(filler);
+    const rows = skeletonRows(w.root);
+    expect(rows).toHaveLength(1);
+    expect(
+      blankBlockCount(within(rows[0]!).getByRole("cell", { hidden: true })),
+    ).toBe(2);
+    w.destroy();
+  });
+
+  it("finds the grow region around content, and none outside one", async () => {
+    const w = await renderWidget(filler);
+    const live = screen.getByText("live");
+    const outside = screen.getByText("outside");
+    expect(growRegionOf(live)).not.toBeNull();
+    expect(growRegionOf(outside)).toBeNull();
+    w.destroy();
+  });
+
+  it("tells controls that wear the same styling from ones that do not", async () => {
+    const w = await renderWidget(filler);
+    const [a, b, c] = ["A", "B", "C"].map((n) =>
+      screen.getByRole("combobox", { name: n }),
+    );
+    expect(sharesStyling(a!, b!)).toBe(true);
+    expect(sharesStyling(a!, c!)).toBe(false);
     w.destroy();
   });
 });

@@ -405,6 +405,17 @@ export interface WrapRow {
   none: boolean;
 }
 
+/** Every label a mark can carry, so the chips can hold the box of the widest one. */
+export const MARK_LABELS = {
+  buildDate: "build date",
+  eraStarts: (era: number | string): string => `era ${era} starts`,
+  wraps: "the counter wraps",
+  wrongFrom: "wrong from",
+  wrapsWrongFrom: "the counter wraps, wrong from",
+  today: "today",
+  checkDate: "check date",
+} as const;
+
 /** A mark on the window strip: an instant, its place and its words. */
 export interface Mark {
   key: "start" | "wrap" | "wrong" | "check" | "today";
@@ -943,7 +954,9 @@ export function readRollover(
     marks.push({ key, label, at: instant, pos: inAxis(axisPos(instant)) });
   mark(
     "start",
-    state.model === "pivot" ? "build date" : `era ${era} starts`,
+    state.model === "pivot"
+      ? MARK_LABELS.buildDate
+      : MARK_LABELS.eraStarts(era),
     start,
   );
   if (state.model === "pivot") {
@@ -954,16 +967,22 @@ export function readRollover(
         toEpochMs(wrap) > toEpochMs(start) &&
         toEpochMs(wrap) < toEpochMs(end)
       ) {
-        mark("wrap", "the counter wraps", wrap);
+        mark("wrap", MARK_LABELS.wraps, wrap);
       }
     }
   }
   mark(
     "wrong",
-    state.model === "pivot" ? "wrong from" : "the counter wraps, wrong from",
+    state.model === "pivot"
+      ? MARK_LABELS.wrongFrom
+      : MARK_LABELS.wrapsWrongFrom,
     wrongFrom,
   );
-  mark("check", state.nowMode === "today" ? "today" : "check date", at);
+  mark(
+    "check",
+    state.nowMode === "today" ? MARK_LABELS.today : MARK_LABELS.checkDate,
+    at,
+  );
   const span = {
     from: axisPos(start) ?? 0,
     wrong: axisPos(wrongFrom) ?? 0,

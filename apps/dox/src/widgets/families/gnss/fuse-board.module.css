@@ -386,7 +386,8 @@
 /* ---- The chips ---- */
 
 /* Five slots in a grid, always drawn, so the board is the same height for every reading.
-   An unused slot keeps its box and shows nothing. */
+   Each slot holds the box of the widest chip (its words wrap at spaces only), and an unused
+   slot keeps that box and shows nothing. */
 .chips {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
@@ -408,16 +409,10 @@
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 
   &[data-blank="true"] {
     visibility: hidden;
-  }
-
-  /* A chip's words wrap to a second line in a narrow frame; two lines are held there so
-     the row never grows. */
-  @container (inline-size < 24rem) {
-    min-block-size: calc(2lh + 2 * var(--gmt-space-1) + 2px);
   }
 }
 

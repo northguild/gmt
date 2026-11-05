@@ -35,7 +35,8 @@
  * `--shots` saves a screenshot of each drawing with its panel open. Exits non-zero on any failure.
  */
 import { mkdirSync } from "node:fs";
-import { chromium, firefox, webkit } from "@playwright/test";
+import { chromium } from "@playwright/test";
+import { launchBrowser } from "./lib/browser-launch.mjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
@@ -119,7 +120,7 @@ const flag = (name, fallback) => {
   return i === -1 ? fallback : args[i + 1];
 };
 const base = flag("base", "http://127.0.0.1:4351/gmt").replace(/\/$/, "");
-const engines = { chromium, firefox, webkit };
+const engines = { chromium: true, firefox: true, webkit: true };
 const browsers = flag("browsers", "chromium").split(",");
 for (const name of browsers) {
   if (!engines[name]) {
@@ -367,7 +368,7 @@ if (args.includes("--resolve-only")) {
 }
 
 for (const name of browsers) {
-  const browser = await engines[name].launch();
+  const browser = await launchBrowser(name);
   for (const viewport of VIEWPORTS) {
     for (const target of SELECTED) {
       const label = `${name} ${viewport.width}px ${target.path}`;

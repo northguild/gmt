@@ -20,6 +20,13 @@ export const VERDICT_FILES = {
   "native-suite-chromium": "artifacts/native-suite-chromium.json",
   "native-suite-firefox": "artifacts/native-suite-firefox.json",
   "native-suite-webkit": "artifacts/native-suite-webkit.json",
+  "temporal-polyfill-swap-node": "artifacts/temporal-polyfill-swap-node.json",
+  "temporal-polyfill-swap-chromium":
+    "artifacts/temporal-polyfill-swap-chromium.json",
+  "temporal-polyfill-swap-firefox":
+    "artifacts/temporal-polyfill-swap-firefox.json",
+  "temporal-polyfill-swap-webkit":
+    "artifacts/temporal-polyfill-swap-webkit.json",
 };
 
 /**
@@ -223,6 +230,55 @@ export function nativeSuiteVerdict({
 }
 
 /**
+ * The verdict of one `temporal-polyfill` swap leg (CORE-92). `failing` is what fails on the swap and
+ * passes on the control in the same runtime; the verdict keeps the first 50, each message cut to 300
+ * characters, and says when it cut. `counts.failed` is the full number. `both` and `fixed` are
+ * counts only: their rows stay in the uploaded Vitest reports. `sweep` is `null` off Node.
+ * `entryLoaded` is whether the swap pass's own check passed: the seam's `Temporal` was the swap
+ * entry's object. Without it the counts say nothing about `temporal-polyfill`.
+ *
+ * @param {{ leg: "node" | "chromium" | "firefox" | "webkit", version: string, entry: string,
+ *           entryLoaded: boolean,
+ *           runtime: { node: string, vitest: string, playwright: string | null,
+ *                      browser: string | null },
+ *           counts: { files: number, tests: number, passed: number, skipped: number,
+ *                     failed: number, both: number, fixed: number },
+ *           failing: NativeFailure[],
+ *           sweep: null | { status: "ran", [field: string]: unknown }
+ *                | { status: "could-not-run", message: string } }} input
+ */
+export function polyfillSwapVerdict({
+  leg,
+  version,
+  entry,
+  entryLoaded,
+  runtime,
+  counts,
+  failing,
+  sweep,
+}) {
+  return {
+    source: `temporal-polyfill-swap-${leg}`,
+    status: "ran",
+    leg,
+    version,
+    entry,
+    entryLoaded,
+    runtime,
+    counts,
+    failing: failing
+      .slice(0, UNTAGGED_ROWS_IN_VERDICT)
+      .map(({ file, test, message }) => ({
+        file,
+        test,
+        message: message.slice(0, MESSAGE_CHARS_IN_VERDICT),
+      })),
+    failingTruncated: failing.length > UNTAGGED_ROWS_IN_VERDICT,
+    sweep,
+  };
+}
+
+/**
  * The `leap-seconds check` verdict. `differences` is the exact `problems` list the command prints:
  * source parse problems, IERS parse problems, then the row comparisons, each string unchanged.
  *
@@ -249,6 +305,8 @@ export function leapSecondsVerdict({
 
 /**
  * What a command that exited 2 leaves behind: a canary that cannot run is a finding, not a silence.
+ *
+ * The swap check adds `sweep` to a Node leg that stopped after its offset sweep ran.
  *
  * @returns {{ source: string, status: "could-not-run", message: string }}
  */

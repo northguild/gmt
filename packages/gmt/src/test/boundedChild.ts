@@ -41,11 +41,22 @@ function sourceModules(expressions: readonly string[]): Record<string, string> {
 
 /**
  * The child's resolve hook source. On the native leg (`GMT_NATIVE_TEMPORAL=1`) it also maps the
- * polyfill's specifier to the native shim, as the native Vitest config does for the parent.
+ * polyfill's specifier to the native shim, as the native Vitest config does for the parent. On the
+ * swap leg (`GMT_SWAP_ENTRY` set, CORE-92) it maps the specifier to that entry, as the swap config
+ * does for the parent; the child does not go through Vite, so no alias reaches it. Both at once
+ * is a configuration error.
+ *
+ * @internal
  */
-function resolveHook(): string {
+export function resolveHook(): string {
   // Joined, not quoted whole: the seam scan counts any file that spells the specifier.
   const polyfill = ["@js-temporal", "polyfill"].join("/");
+  const swapEntry = process.env.GMT_SWAP_ENTRY || null;
+  if (process.env.GMT_NATIVE_TEMPORAL === "1" && swapEntry !== null) {
+    throw new Error(
+      "GMT_NATIVE_TEMPORAL and GMT_SWAP_ENTRY are both set: pick one Temporal implementation",
+    );
+  }
   const shim =
     process.env.GMT_NATIVE_TEMPORAL === "1"
       ? pathToFileURL(path.join(SOURCE_ROOT, "test", "nativeTemporal.ts")).href
@@ -55,10 +66,12 @@ import { registerHooks } from "node:module";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 const NATIVE_SHIM = ${JSON.stringify(shim)};
+const SWAP_ENTRY = ${JSON.stringify(swapEntry)};
 const POLYFILL = ${JSON.stringify(polyfill)};
 registerHooks({
   resolve(specifier, context, next) {
     if (NATIVE_SHIM !== null && specifier === POLYFILL) return next(NATIVE_SHIM, context);
+    if (SWAP_ENTRY !== null && specifier === POLYFILL) return next(SWAP_ENTRY, context);
     if (/^\\.\\.?\\//.test(specifier) && !/\\.[cm]?[jt]s$/.test(specifier) && context.parentURL?.endsWith(".ts")) {
       for (const suffix of [".ts", "/index.ts"]) {
         const url = new URL(specifier + suffix, context.parentURL);

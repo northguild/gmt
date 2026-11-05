@@ -173,12 +173,81 @@ const cleanNative = () => ({
   "native-suite-webkit": native("webkit"),
 });
 
+const swapSweep = (differingZones = 0) => ({
+  status: "ran",
+  tz: "2026e",
+  from: "1970-01-01",
+  through: "2036-11-04",
+  zones: 418,
+  days: 24415,
+  comparisons: 10205470,
+  differingZones,
+  differing: Array.from({ length: Math.min(differingZones, 50) }, (_, i) => ({
+    zone: `Area/Zone${i + 1}`,
+    days: i + 1,
+    runs: [],
+    runsTruncated: false,
+  })),
+  differingTruncated: differingZones > 50,
+});
+
+const swap = (leg: string, over: Record<string, unknown> = {}) => ({
+  source: `temporal-polyfill-swap-${leg}`,
+  status: "ran",
+  leg,
+  version: "1.0.7",
+  entry: "temporal-polyfill/full/implementation",
+  entryLoaded: true,
+  runtime: {
+    node: "26.12.1",
+    vitest: "5.0.5",
+    playwright: leg === "node" ? null : "1.63.0",
+    browser: leg === "node" ? null : `${leg} 1.0`,
+  },
+  counts: {
+    files: 943,
+    tests: 71337,
+    passed: 71337,
+    skipped: 0,
+    failed: 0,
+    both: 0,
+    fixed: 0,
+  },
+  failing: [],
+  failingTruncated: false,
+  sweep: leg === "node" ? swapSweep() : null,
+  ...over,
+});
+
+const cleanSwap = () => ({
+  "temporal-polyfill-swap-node": swap("node"),
+  "temporal-polyfill-swap-chromium": swap("chromium"),
+  "temporal-polyfill-swap-firefox": swap("firefox"),
+  "temporal-polyfill-swap-webkit": swap("webkit"),
+});
+
 const clean = () => ({
   "temporal-compat-check": cleanCheck(),
   ...cleanCompat(),
   "temporal-oracle": oracle(),
   ...cleanNative(),
+  ...cleanSwap(),
 });
+
+const SWAP_BLOCK = [
+  "### Temporal polyfill swap",
+  "",
+  "temporal-polyfill 1.0.7 — Ready to swap",
+  "",
+  "| Runtime | Tests | Fail on swap only | Fail on both |",
+  "| --- | --- | --- | --- |",
+  "| node | 71337 | 0 | 0 |",
+  "| chromium | 71337 | 0 | 0 |",
+  "| firefox | 71337 | 0 | 0 |",
+  "| webkit | 71337 | 0 | 0 |",
+  "",
+  "Offset sweep: 0 zones differ (418 zones, 1970-01-01 to 2036-11-04, tz 2026e).",
+];
 
 const CLEAN_SUMMARY = [
   "## Temporal oracle",
@@ -215,6 +284,8 @@ const CLEAN_SUMMARY = [
   "| chromium | Chromium 153.0.8010.12 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
   "| firefox | Firefox 155.0 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
   "| webkit | WebKit 26.6 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
+  "",
+  ...SWAP_BLOCK,
   "",
   "**Issues:** No issues filed.",
   "",
@@ -674,6 +745,134 @@ describe("summaryMarkdown: temporal-oracle", () => {
     expect(oracleSummary(clean(), {}, null, message).split("\n")).toContain(
       `**Issues:** Not filed: ${message}`,
     );
+  });
+});
+
+describe("summaryMarkdown: temporal polyfill swap", () => {
+  const block = (text: string) => {
+    const start = text.indexOf("### Temporal polyfill swap");
+    const end = text.indexOf("\n\n**", start);
+    return text.slice(start, end === -1 ? undefined : end);
+  };
+  const swapOnly = (over: Record<string, unknown>) =>
+    block(oracleSummary({ ...clean(), ...over }));
+
+  it("a ready run says Ready to swap, with the version, a row per leg and the sweep line", () => {
+    expect(block(oracleSummary(clean()))).toBe(SWAP_BLOCK.join("\n"));
+  });
+
+  it("a failing leg is not ready, with the reason, and its counts print", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-webkit": swap("webkit", {
+        counts: {
+          files: 943,
+          tests: 71337,
+          passed: 71330,
+          skipped: 0,
+          failed: 5,
+          both: 2,
+          fixed: 0,
+        },
+      }),
+    });
+    expect(text).toContain(
+      "temporal-polyfill 1.0.7 — Not ready: temporal-polyfill-swap-webkit: 5 tests fail on the swap",
+    );
+    expect(text.split("\n")).toContain("| webkit | 71337 | 5 | 2 |");
+  });
+
+  it("a leg that could not run is a row with its message", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-chromium": {
+        source: "temporal-polyfill-swap-chromium",
+        status: "could-not-run",
+        message: "no browser |\n installed",
+      },
+    });
+    expect(text.split("\n")).toContain(
+      "| chromium | could not run: no browser \\| installed |  |  |",
+    );
+    expect(text).toContain(
+      "— Not ready: temporal-polyfill-swap-chromium: did not run",
+    );
+  });
+
+  it("a leg with no verdict is a no verdict row", () => {
+    const text = swapOnly({ "temporal-polyfill-swap-firefox": null });
+    expect(text.split("\n")).toContain("| firefox | no verdict |  |  |");
+  });
+
+  it("with no leg that ran, the version is left out", () => {
+    const text = swapOnly(
+      Object.fromEntries(
+        ["node", "chromium", "firefox", "webkit"].map((leg) => [
+          `temporal-polyfill-swap-${leg}`,
+          null,
+        ]),
+      ),
+    );
+    expect(text).toContain(
+      "temporal-polyfill — Not ready: temporal-polyfill-swap-node: did not run",
+    );
+    expect(text).toContain("Offset sweep: did not run.");
+  });
+
+  it("a differing sweep counts the zones and lists the first ten", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": swap("node", { sweep: swapSweep(12) }),
+    });
+    expect(text).toContain(
+      "Offset sweep: 12 zones differ (418 zones, 1970-01-01 to 2036-11-04, tz 2026e).",
+    );
+    expect(text).toContain(
+      "Zones: Area/Zone1 (1 day), Area/Zone2 (2 days), Area/Zone3 (3 days), Area/Zone4 (4 days), Area/Zone5 (5 days), Area/Zone6 (6 days), Area/Zone7 (7 days), Area/Zone8 (8 days), Area/Zone9 (9 days), Area/Zone10 (10 days)",
+    );
+    expect(text).not.toContain("Area/Zone11");
+    expect(text).toContain("— Not ready: offset sweep: 12 zones differ");
+  });
+
+  it("a node leg that could not run still prints the sweep it carries", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": {
+        source: "temporal-polyfill-swap-node",
+        status: "could-not-run",
+        message: "the control pass ran past its 18-minute limit",
+        sweep: swapSweep(2),
+      },
+    });
+    expect(text.split("\n")).toContain(
+      "| node | could not run: the control pass ran past its 18-minute limit |  |  |",
+    );
+    expect(text).toContain(
+      "Offset sweep: 2 zones differ (418 zones, 1970-01-01 to 2036-11-04, tz 2026e).",
+    );
+    expect(text).toContain("Zones: Area/Zone1 (1 day), Area/Zone2 (2 days)");
+    expect(text).not.toContain("Offset sweep: did not run.");
+  });
+
+  it("a sweep that could not run says so", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": swap("node", {
+        sweep: { status: "could-not-run", message: "no longOffset" },
+      }),
+    });
+    expect(text).toContain("Offset sweep: could not run: no longOffset");
+  });
+
+  it("the dry-run line lists --force-swap-ready", () => {
+    const text = oracleSummary(clean(), { swapReady: true });
+    expect(text.split("\n")).toContain("**Dry run:** --force-swap-ready");
+  });
+
+  it("the leap-seconds summary has no swap block", () => {
+    expect(
+      summaryMarkdown(
+        "leap-seconds",
+        { "leap-seconds": leap() } as never,
+        {},
+        [],
+      ),
+    ).not.toContain("Temporal polyfill swap");
   });
 });
 

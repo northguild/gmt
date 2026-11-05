@@ -133,7 +133,7 @@ const scaleOf = (v: FigureValue): "lg" | "md" =>
   v.halves.length === 1 ? "lg" : "md";
 
 function valueBody(v: FigureValue): SafeHtml {
-  return html`${v.parts === undefined ? "" : partsRow(v.parts)}${takenApart(v.halves, v.separator, v.closing)}`;
+  return html`${v.parts === undefined || v.parts.length === 0 ? "" : partsRow(v.parts)}${takenApart(v.halves, v.separator, v.closing)}`;
 }
 
 /** What the mount writes into the figure's live element. */

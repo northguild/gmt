@@ -6,7 +6,7 @@
  *
  *   node scripts/canary-report.mjs <temporal-oracle|leap-seconds>
  *        [--force-removable=<id>] [--force-mismatch] [--force-native-failure]
- *        [--force-leap-difference] [--print]
+ *        [--force-swap-ready] [--force-leap-difference] [--print]
  *
  * Exit 0 when it reported (or had nothing to report), 1 when a `gh` call failed, 2 on a usage
  * error (nothing is filed), on `--force-removable` naming an id the check did not list (nothing is
@@ -41,7 +41,7 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const USAGE =
   "Usage: node scripts/canary-report.mjs <temporal-oracle|leap-seconds> " +
   "[--force-removable=<id>] [--force-mismatch] [--force-native-failure] " +
-  "[--force-leap-difference] [--print]";
+  "[--force-swap-ready] [--force-leap-difference] [--print]";
 
 /** Flags each workflow accepts besides `--print`. */
 const FORCE_FLAGS = {
@@ -49,6 +49,7 @@ const FORCE_FLAGS = {
     "--force-removable=",
     "--force-mismatch",
     "--force-native-failure",
+    "--force-swap-ready",
   ],
   "leap-seconds": ["--force-leap-difference"],
 };
@@ -117,6 +118,8 @@ export function parseArgs(argv) {
       force.mismatch = true;
     } else if (flag === "--force-native-failure") {
       force.nativeFailure = true;
+    } else if (flag === "--force-swap-ready") {
+      force.swapReady = true;
     } else {
       force.leapDifference = true;
     }

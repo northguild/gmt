@@ -42,7 +42,7 @@ import {
   TIERS,
 } from "./gates/registry.mjs";
 import { formatGatesScreen } from "./gates/screen.mjs";
-import { isRelevant, selectPages } from "./gates/select.mjs";
+import { emptyRunOutcome, isRelevant, selectPages } from "./gates/select.mjs";
 import { appendStepSummary } from "./gates/step-summary.mjs";
 import { serveStatic } from "./lib/static-server.mjs";
 
@@ -528,14 +528,18 @@ if (opts.plan) {
 }
 
 if (todo.every((e) => e.groups.length === 0)) {
-  const nothing = "gates: PASS  nothing to check (no Dox page changed)";
-  console.log(
-    opts.json
-      ? JSON.stringify({ status: "PASS", nothingToCheck: true })
-      : nothing,
-  );
-  appendStepSummary(nothing);
-  bail(0);
+  const { code, line } = emptyRunOutcome(todo, opts.browsers);
+  if (code === 0) {
+    console.log(
+      opts.json
+        ? JSON.stringify({ status: "PASS", nothingToCheck: true })
+        : line,
+    );
+    appendStepSummary(line);
+    bail(0);
+  }
+  appendStepSummary(line);
+  bail(code, line);
 }
 
 server = await serveStatic(DIST, 0);
@@ -641,7 +645,9 @@ for (const entry of todo) {
       detail:
         entry.reason === "browser"
           ? `none of ${opts.browsers.join(",")} runs it`
-          : `not selected (no ${gate.id} page changed)`,
+          : opts.all
+            ? "not selected (no pages in this shard)"
+            : `not selected (no ${gate.id} page changed)`,
     });
     continue;
   }

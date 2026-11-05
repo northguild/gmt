@@ -76,7 +76,8 @@ export function cell(
   extras: CellExtras = {},
 ): SafeHtml {
   const key = date.toString();
-  const mark = o.marks[key];
+  // A day outside the range is drawn bare: its number and an open outline, no mark.
+  const mark = extras.outside === true ? undefined : o.marks[key];
   const isWeekend = o.weekend.includes(date.dayOfWeek);
   const kinds = cellKinds(mark, isWeekend);
   const chips = [

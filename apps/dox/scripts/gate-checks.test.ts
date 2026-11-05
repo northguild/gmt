@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   MIN_FRAMES,
   arrowMoveProblems,
+  attributeFrames,
   blockOffSite,
   colorAlpha,
   controlPresence,
@@ -16,8 +17,10 @@ import {
   isExcluded,
   isOffSite,
   jumpProblems,
+  withJumpDiagnostic,
   keyboardMoveProblems,
   maxFrameJump,
+  maxFrameJumpAt,
   motionProblem,
   pageProblems,
   pointerMoveProblems,
@@ -29,6 +32,7 @@ import {
   obscuredMessage,
   SEGMENT_CAP,
   contrastApplied,
+  contrastProblems,
   emulationNotAppliedProblem,
   frameDiagnostic,
   px1,
@@ -76,6 +80,37 @@ describe("skipped interactions and drags", () => {
   });
 });
 
+describe("withJumpDiagnostic", () => {
+  const diagnostics = {
+    root: "frame 8, root cause",
+    main: "frame 2, main cause",
+  };
+
+  it("explains a <main> jump with the frame <main> jumped in, not the root's largest", () => {
+    expect(withJumpDiagnostic("<main> max jump 59 px > 48", diagnostics)).toBe(
+      "<main> max jump 59 px > 48 (frame 2, main cause)",
+    );
+  });
+
+  it("explains a page jump, or a page-and-<main> jump, with the root's frame", () => {
+    expect(withJumpDiagnostic("max jump 60 px > 48", diagnostics)).toBe(
+      "max jump 60 px > 48 (frame 8, root cause)",
+    );
+    expect(
+      withJumpDiagnostic("max jump 60 px > 48 (page and <main>)", diagnostics),
+    ).toBe("max jump 60 px > 48 (page and <main>) (frame 8, root cause)");
+  });
+
+  it("leaves other problems, and a jump with no diagnostic, as they are", () => {
+    expect(
+      withJumpDiagnostic("a grow section is not at rest", diagnostics),
+    ).toBe("a grow section is not at rest");
+    expect(
+      withJumpDiagnostic("<main> max jump 59 px > 48", { root: "x", main: "" }),
+    ).toBe("<main> max jump 59 px > 48");
+  });
+});
+
 describe("jumpProblems", () => {
   it("asserts the page root and <main>, and nothing under reduced motion", () => {
     const base = { limit: 48, reduce: false };
@@ -89,6 +124,33 @@ describe("jumpProblems", () => {
     expect(
       jumpProblems({ ...base, reduce: true, maxJump: 900, mainMaxJump: 900 }),
     ).toEqual([]);
+  });
+
+  it("reports one problem when the page and <main> pass the limit in the same frame", () => {
+    const problems = jumpProblems({
+      limit: 48,
+      reduce: false,
+      maxJump: 80,
+      maxFrame: 12,
+      mainMaxJump: 83,
+      mainMaxFrame: 12,
+    });
+    expect(problems).toEqual(["max jump 83 px > 48 (page and <main>)"]);
+  });
+
+  it("reports two problems when they pass it in different frames", () => {
+    const problems = jumpProblems({
+      limit: 48,
+      reduce: false,
+      maxJump: 80,
+      maxFrame: 12,
+      mainMaxJump: 83,
+      mainMaxFrame: 30,
+    });
+    expect(problems).toEqual([
+      "max jump 80 px > 48",
+      "<main> max jump 83 px > 48",
+    ]);
   });
 });
 
@@ -148,6 +210,13 @@ describe("move checks", () => {
   it("fails a pointer drag that ends where it began", () => {
     expect(pointerMoveProblems({ start: "0", far: "0" })).toHaveLength(1);
     expect(pointerMoveProblems({ start: "0", far: "90" })).toEqual([]);
+  });
+});
+
+describe("maxFrameJumpAt", () => {
+  it("names the frame the largest step lands on, 0 when there is none", () => {
+    expect(maxFrameJumpAt([100, 140, 300, 310])).toEqual({ max: 160, at: 2 });
+    expect(maxFrameJumpAt([300])).toEqual({ max: 0, at: 0 });
   });
 });
 
@@ -290,9 +359,13 @@ describe("every browser gate", () => {
     }))
     // A gate loads pages of the built site. A script that draws its own markup
     // in a browser (the favicon build) loads none.
+    // The Firefox route's own check opens the home page once to prove the tunnel; it measures nothing.
+    .filter(({ file }) => file !== "firefox-server.mjs")
     .filter(
       ({ source }) =>
-        source.includes('from "@playwright/test"') && source.includes(".goto("),
+        (source.includes('from "@playwright/test"') ||
+          source.includes("lib/browser-launch.mjs")) &&
+        source.includes(".goto("),
     );
 
   it("finds the gates that load a page of the site", () => {
@@ -701,22 +774,18 @@ describe("waitForFrames", () => {
 });
 
 describe("emulation not applied", () => {
-  it("is applied only when the border matches and no shadow is left", () => {
-    expect(
-      contrastApplied({ border: "#fff", strong: "#fff", shadowCount: 0 }),
-    ).toBe(true);
-    expect(
-      contrastApplied({ border: "#000", strong: "#fff", shadowCount: 0 }),
-    ).toBe(false);
-    expect(
-      contrastApplied({ border: "#fff", strong: "#fff", shadowCount: 2 }),
-    ).toBe(false);
+  it("is applied only when the probe reads 1, the border matches and no shadow is left", () => {
+    const on = { probe: "1", border: "#fff", strong: "#fff", shadowCount: 0 };
+    expect(contrastApplied(on)).toBe(true);
+    expect(contrastApplied({ ...on, border: "#000" })).toBe(false);
+    expect(contrastApplied({ ...on, shadowCount: 2 })).toBe(false);
+    expect(contrastApplied({ ...on, probe: "" })).toBe(false);
   });
 
-  it("names the frames, the media query and both token values", () => {
+  it("names the frames, the probe and both token values", () => {
     const p = emulationNotAppliedProblem({
       frames: 120,
-      matches: false,
+      probe: "",
       border: "#111",
       strong: "#fff",
       shadowCount: 1,
@@ -724,9 +793,43 @@ describe("emulation not applied", () => {
     expect(p.rule).toBe("emulation-not-applied");
     expect(p.target).toBe("root");
     expect(p.message).toContain("120 animation frames");
-    expect(p.message).toContain("is false");
+    expect(p.message).toContain("probe rule");
     expect(p.message).toContain("#111");
     expect(p.message).toContain("#fff");
+  });
+});
+
+describe("contrastProblems", () => {
+  const read = {
+    frames: 4,
+    probe: "1",
+    border: "18%",
+    strong: "35%",
+    shadows: [],
+  };
+
+  it("is a product finding when the probe applied and the token stayed at 18 %", () => {
+    const found = contrastProblems(read);
+    expect(found.map((f) => f.rule)).toEqual(["contrast-border-token"]);
+    expect(found[0].message).toContain("18%");
+  });
+
+  it("is emulation-not-applied, and no product finding, when the probe did not apply", () => {
+    const found = contrastProblems({ ...read, probe: "" });
+    expect(found.map((f) => f.rule)).toEqual(["emulation-not-applied"]);
+  });
+
+  it("reports a text-shadow that survived with the probe on", () => {
+    const found = contrastProblems({
+      ...read,
+      border: "35%",
+      shadows: [{ target: "h1", selector: "h1", textShadow: "red 1px 1px" }],
+    });
+    expect(found.map((f) => f.rule)).toEqual(["contrast-text-shadow"]);
+  });
+
+  it("is clean when the probe applied and the tokens match", () => {
+    expect(contrastProblems({ ...read, border: "35%" })).toEqual([]);
   });
 });
 
@@ -824,5 +927,84 @@ describe("locatorCountProblem", () => {
     expect(locatorCountProblem("c", 2, { min: 0, max: 1 })).toBe(
       "c matched 2 element(s), expected 0 to 1",
     );
+  });
+});
+
+describe("the Firefox launch route", () => {
+  it("imports firefox from @playwright/test only in lib/browser-launch.mjs", () => {
+    const root = path.dirname(fileURLToPath(import.meta.url));
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+        entry.isDirectory()
+          ? entry.name === "node_modules"
+            ? []
+            : walk(path.join(dir, entry.name))
+          : /\.(mjs|ts|mts)$/.test(entry.name)
+            ? [path.join(dir, entry.name)]
+            : [],
+      );
+    const importsFirefox = walk(root)
+      .filter((file) => !file.endsWith(".test.ts"))
+      .filter((file) =>
+        /import\s*\{[^}]*\bfirefox\b[^}]*\}\s*from\s*["']@playwright\/test["']/.test(
+          readFileSync(file, "utf8"),
+        ),
+      )
+      .map((file) => path.relative(root, file));
+    expect(importsFirefox).toEqual(["lib/browser-launch.mjs"]);
+  });
+});
+
+describe("attributeFrames", () => {
+  /** A sampled frame: root and `<main>` heights, the animation frames since the last sample, and the eased step. */
+  const frame = (h: number, ticks?: number, eased?: number) => ({
+    h,
+    m: h + 500,
+    ticks,
+    eased,
+  });
+  const jumpsOf = (frames: ReturnType<typeof frame>[]) => {
+    const a = attributeFrames(frames);
+    return {
+      page: maxFrameJump(a.map((f) => f.h)),
+      main: maxFrameJump(a.map((f) => f.m)),
+    };
+  };
+
+  it("splits two eased 32 px frames that one sample spans into the two steps they were", () => {
+    // A late sampling task: two animation frames ran between the samples, each a 32 px step.
+    const frames = [frame(1000, 1, 0), frame(1032, 1, 32), frame(1096, 2, 64)];
+    expect(maxFrameJump(frames.map((f) => f.h))).toBe(64);
+    expect(jumpsOf(frames)).toEqual({ page: 32, main: 32 });
+  });
+
+  it("keeps a pop the easing does not account for, whatever the frame timing", () => {
+    expect(jumpsOf([frame(1000, 1, 0), frame(1064, 1, 0)]).page).toBe(64);
+    // A stalled sample (two frames) with a 64 px pop and no eased motion is still a 64 px pop.
+    expect(jumpsOf([frame(1000, 1, 0), frame(1064, 2, 0)]).page).toBe(64);
+  });
+
+  it("adds a pop that rides on an eased step to that step", () => {
+    // 32 eased plus 20 that nothing eased, in one frame: 52, over the 48 limit.
+    expect(jumpsOf([frame(1000, 1, 0), frame(1052, 1, 32)]).page).toBe(52);
+    // The same pop on a sample that spans two frames: 20 + the 32 each frame moved.
+    expect(jumpsOf([frame(1000, 1, 0), frame(1084, 2, 64)]).page).toBe(52);
+  });
+
+  it("is the series itself for frames that carry no frame count or eased step", () => {
+    const plain = [
+      { h: 1000, m: 1500 },
+      { h: 1064, m: 1564 },
+    ];
+    expect(attributeFrames(plain).map((f) => f.h)).toEqual([1000, 1064]);
+    expect(attributeFrames([])).toEqual([]);
+  });
+
+  it("keeps a shrinking eased box and every other field of the frame", () => {
+    const [, second] = attributeFrames([
+      { h: 1000, m: 1500, l: 0, g: 1 },
+      { h: 936, m: 1436, l: 0, g: 1, ticks: 2, eased: -64 },
+    ]);
+    expect(second).toMatchObject({ l: 0, g: 1, h: 968, m: 1468 });
   });
 });

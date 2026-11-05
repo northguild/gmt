@@ -2,10 +2,12 @@
 
 Record of the defects GMT needs fixed in `js-temporal/temporal-polyfill` (and, where noted,
 `tc39/proposal-temporal`), the evidence for each, and what has been filed. The owner files every item, or
-tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) were posted that way.
+tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) were posted that way. It also lists
+GMT's five reports to `fullcalendar/temporal-polyfill`, found by the swap check
+([research §4.6](../research/temporal-polyfill-swap.md#46-upstream)).
 
-> **Status of this document:** updated 2026-11-01. **Filed:** 14 items by us, plus a comment on the
-> maintainer's own PR #361. The newest is tc39 #3335 (AB, D21), 2026-10-31; before it, tc39 #3331 (J) and #3332 (K), both 2026-10-21. **All six js-temporal PRs
+> **Status of this document:** updated 2026-11-04. **Filed:** 14 items by us, plus a comment on the
+> maintainer's own PR #361, and five reports to `fullcalendar/temporal-polyfill` (fc #119, #120, #121, #125, #126; see "Filed"). The newest is tc39 #3335 (AB, D21), 2026-10-31; before it, tc39 #3331 (J) and #3332 (K), both 2026-10-21. **All six js-temporal PRs
 > (#367–#372) are closed unmerged and none was rejected** — each was routed to `tc39/proposal-temporal` first, so the polyfill's rebase stays
 > manageable. #373 (release) is open and answered: one release once the rebase has caught up. #361
 > merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply; #3331 (J) is
@@ -188,7 +190,7 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 agent on the owner's instruction. There is also a fifteenth entry on the `/upstream/` tracker that is
 **not** a filing of ours: our comment on ptomato's js-temporal PR #361 (§ H), tracked because its
 state is what retires GMT's `D11`. "Filed" is `createdAt`, UTC. "js" is js-temporal/temporal-polyfill,
-"tc39" is tc39/proposal-temporal.
+"tc39" is tc39/proposal-temporal, "fc" is fullcalendar/temporal-polyfill. The five fc reports (#119, #120, #121, #125, #126) are not counted in the 14 above.
 
 **Status as of 2026-10-24** (`gh pr view` / `gh issue view`, comments included). Nothing has moved
 since 2026-09-21 except tc39 #3331: all six js PRs closed, #373 open, #361 merged, and the four older
@@ -206,6 +208,7 @@ on #3014.
   D5, D7 and the ICU 78 calendar fixes. Nothing is released yet, so no GMT workaround retires.
 - **Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply** (checked 2026-10-24); the
   only comments are our own cross-links.
+- **fc #119, #120 and #121 are closed as fixed in temporal-polyfill 1.0.7**, and **#125 and #126 in 1.0.8** (all closed 2026-11-04). They stay listed as credit.
 - **tc39 #3331 is closed as answered** (2026-10-24): the champions had already said on #3014 that
   the check is intended until tc39/ecma262#3464 lands (§ J).
 
@@ -225,6 +228,11 @@ on #3014.
 | tc39       | 3331 | issue | ZonedDateTime.from rejects ZonedDateTime.prototype.toString's output when the local date is -271821-04-19     | J (spec question)                                                             | none: not a polyfill defect                                        | —          | nothing                                                                                 | 2026-10-21 |
 | tc39       | 3332 | issue | Polyfill: getTimeZoneTransition throws a bisection assertion for Africa/El_Aaiun in 1976                      | K (the remaining stall; new)                                                  | none: js-temporal gets it with the in-order catch-up               | —          | nothing                                                                                 | 2026-10-21 |
 | tc39       | 3335 | issue | Polyfill: Temporal.Now reads a millisecond before Date.now() after a pre-1970 clock reading | AB (new) | none: js-temporal gets it with the in-order catch-up | — | nothing | 2026-10-31 |
+| fc         | 119 | issue | `PlainDate.from` accepts malformed RFC 9557 annotations | swap §4.1 | none: other polyfill | — | nothing | 2026-10-25 |
+| fc         | 120 | issue | `ZonedDateTime.from` rejects the two instants at the ends of the `Instant` range | swap §4.2 | none: other polyfill | — | nothing | 2026-10-25 |
+| fc         | 121 | issue | Wrong UTC offset all through the period between two close offset changes (follow-up to #73) | swap §4.3 | none: other polyfill | — | nothing | 2026-10-25 |
+| fc         | 125 | issue | `getTimeZoneTransition("previous")` skips every transition more than three years after today | swap §4.4 | none: other polyfill | — | nothing | 2026-11-04 |
+| fc         | 126 | issue | Time zone transitions before 1847 are not found (`Asia/Manila` and four Pacific zones on 1844-12-31) | E, swap §4.5 | none: other polyfill | — | nothing | 2026-11-04 |
 
 Notes on the filings:
 

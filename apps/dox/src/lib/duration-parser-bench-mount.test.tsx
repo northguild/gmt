@@ -15,6 +15,7 @@ import {
   expectNoAxeViolations,
   renderWidget,
   type RenderedWidget,
+  growRegionOf,
 } from "~/test/render-widget";
 import { GMT_MODULES } from "./gmt-modules";
 import { showUnavailable, WidgetLoadError } from "./widget-mount";
@@ -106,6 +107,16 @@ describe("the template", () => {
     for (const name of names) {
       expect(screen.getAllByLabelText(name).length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("the regions a read changes", () => {
+  it("lets the parsed duration and its facts grow in place instead of pushing the page", async () => {
+    await open();
+    // Both are blank or short at load and become several lines at 390 px; outside `grow()` that is
+    // a one-frame jump of the whole page.
+    expect(growRegionOf(result())).not.toBeNull();
+    expect(growRegionOf(screen.getAllByRole("term")[0]!)).not.toBeNull();
   });
 });
 

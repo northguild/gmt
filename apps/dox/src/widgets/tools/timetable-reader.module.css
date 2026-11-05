@@ -104,6 +104,14 @@
   &[hidden] {
     display: none;
   }
+
+  /* In a table cell the chip is a note, and it wraps at its spaces, never inside a word, so the
+     column is as wide as its longest word and the table fits its box. */
+  :is(td, th) & {
+    white-space: normal;
+    overflow-wrap: normal;
+    text-align: start;
+  }
 }
 
 .chipDim {
@@ -850,7 +858,8 @@
 }
 
 /* Leaves and Local arrival: the readable HH:MM at normal size, the full zoned value
-   beneath it in smaller, muted text. Neither breaks inside itself. */
+   beneath it in smaller, muted text. The HH:MM never breaks; the long value wraps
+   when the table is narrower than it. */
 .time {
   display: block;
   white-space: nowrap;
@@ -862,6 +871,7 @@
 .timeFull {
   display: block;
   margin-block-start: 2px;
+  white-space: normal;
 
   /* The whole value breaks before its zone, and anywhere as a last resort, so a narrow table
      wraps the line in its cell and never reaches past its box. */

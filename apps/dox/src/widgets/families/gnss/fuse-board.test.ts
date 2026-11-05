@@ -2,7 +2,7 @@
 import { screen, within } from "@testing-library/dom";
 import type { Fuse, Mark } from "~/lib/gnss-rollover-checker";
 import { fuseYears } from "~/lib/gnss-rollover-checker";
-import { expectNoAxeViolations } from "~/test/render-widget";
+import { expectNoAxeViolations, heldSamples } from "~/test/render-widget";
 import { renderHtml } from "../../test-fixture";
 import { FUSE_CHIP_SLOTS, fuseBoard, fuseChips, fuseKey } from "./fuse-board";
 
@@ -109,5 +109,32 @@ describe("fuseChips", () => {
     const list = screen.getByRole("list", { name: "Marks on the timeline" });
     expect(FUSE_CHIP_SLOTS).toBe(5);
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("gives every slot, blank or full, the same ghosts so no chip changes size", () => {
+    renderHtml(fuseChips(marks));
+    // The blank slots are aria-hidden, so they are found with `hidden`.
+    const slots = screen.getAllByRole("listitem", { hidden: true });
+    expect(slots).toHaveLength(FUSE_CHIP_SLOTS);
+    const first = heldSamples(slots[0]!);
+    expect(first.length).toBeGreaterThan(0);
+    for (const li of slots) expect(heldSamples(li)).toEqual(first);
+  });
+
+  it("writes each ghost as a mark label, the widest instant and the outside flag", () => {
+    const { host } = renderHtml(fuseChips([]));
+    const ghosts = heldSamples(host).slice(0, 8);
+    expect(ghosts).toContain(
+      "the counter wraps, wrong from 2038-12-30T23:59:59Z (outside)",
+    );
+    for (const g of ghosts) expect(g.endsWith(" (outside)")).toBe(true);
+  });
+
+  it("keeps the live words and shows no ghost to a reader", () => {
+    renderHtml(fuseChips(marks));
+    expect(
+      screen.getByText("build date 2020-01-01T00:00:00Z"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/wrong from 2038/)).not.toBeInTheDocument();
   });
 });

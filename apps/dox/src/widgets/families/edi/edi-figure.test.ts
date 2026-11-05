@@ -21,6 +21,22 @@ describe("figureContent", () => {
     await expectNoAxeViolations(host);
   });
 
+  it("draws no empty row when a value has no parts", () => {
+    renderHtml(
+      figureContent({
+        kind: "value",
+        aria: "Date: year 2024, month 06, day 15.",
+        parts: [],
+        halves: [{ label: "", fields: date }],
+        separator: "",
+        closing: "",
+      }),
+    );
+    const image = screen.getByRole("img");
+    // oxlint-disable-next-line testing-library/no-node-access -- an empty parts row has no text, role or name; only its place as the first child shows whether it was drawn
+    expect(image.firstElementChild).toHaveTextContent("2024");
+  });
+
   it("describes a value as one named image and shows its parts", async () => {
     const { host } = renderHtml(
       figureContent({

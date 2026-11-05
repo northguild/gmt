@@ -28,7 +28,8 @@
  */
 
 import { readFileSync } from "node:fs";
-import { chromium, firefox, webkit } from "@playwright/test";
+import { chromium } from "@playwright/test";
+import { launchBrowser } from "./lib/browser-launch.mjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordLabelled, recordMeasured } from "./gates/findings.mjs";
@@ -54,7 +55,7 @@ const arg = (name, fallback) => {
 };
 const BASE = arg("base", "http://127.0.0.1:4351/gmt").replace(/\/$/, "");
 const BROWSERS = arg("browsers", "chromium").split(",");
-const LAUNCHERS = { chromium, firefox, webkit };
+const LAUNCHERS = { chromium: true, firefox: true, webkit: true };
 for (const name of BROWSERS) {
   if (!LAUNCHERS[name]) {
     console.error(`canada-stored-still: unknown browser "${name}"`);
@@ -286,8 +287,8 @@ if (args.includes("--resolve-only")) {
 }
 
 for (const name of BROWSERS) {
-  const launcher = LAUNCHERS[name];
-  const browser = await launcher.launch();
+  if (!LAUNCHERS[name]) throw new Error(`unknown browser ${name}`);
+  const browser = await launchBrowser(name);
   try {
     for (const width of WIDTHS) {
       const label = `${name} ${width}px`;

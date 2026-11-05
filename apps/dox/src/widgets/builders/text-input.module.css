@@ -33,8 +33,8 @@
   }
 
   /* Dimmed by ink and a dashed muted border, never by `opacity`: opacity would fade the
-     border below the 3:1 non-text bar on either theme. The browser's own disabled style sets
-     it (Chromium fades a disabled select to 0.7), so it is put back to 1. */
+     border below the 3:1 non-text bar on either theme. A user agent dims a disabled control
+     with opacity, so it is set back to 1. */
   &:disabled {
     opacity: 1;
     border-style: dashed;

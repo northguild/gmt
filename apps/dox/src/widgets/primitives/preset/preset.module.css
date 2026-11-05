@@ -60,8 +60,13 @@
     outline-offset: 2px;
   }
 
+  /* Dimmed by ink and a dashed muted border, never by `opacity`, as the kit's other controls
+     are. A user agent dims a disabled control with opacity, so it is set back to 1. */
   &:disabled {
-    opacity: 0.6;
+    opacity: 1;
+    border-style: dashed;
+    border-color: var(--gmt-ice-dim);
+    color: var(--gmt-ice-dim);
     cursor: not-allowed;
   }
 }

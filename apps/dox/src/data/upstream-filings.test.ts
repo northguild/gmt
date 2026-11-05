@@ -19,6 +19,7 @@ import {
   listings,
   overlayLive,
   totalFilings,
+  TRACKED_REPOS,
   unaffectingGmt,
   type UpstreamFiling,
   type UpstreamListing,
@@ -336,6 +337,68 @@ describe("overlayLive", () => {
     const fromScript = [...list.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
     expect(fromScript.length).toBeGreaterThan(0);
     expect([...HAND_WRITTEN_FIELDS]).toEqual(fromScript);
+  });
+
+  it("lists the same repositories as scripts/upstream.mjs", () => {
+    const script = readFileSync(
+      resolve(import.meta.dirname, "../../../../scripts/upstream.mjs"),
+      "utf8",
+    );
+    const list = /const REPOS = \[([^\]]+)\]/.exec(script)?.[1] ?? "";
+    const fromScript = [...list.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(fromScript.length).toBeGreaterThan(0);
+    expect([...TRACKED_REPOS]).toEqual(fromScript);
+  });
+
+  it("orders repositories as the tracker lists them, not alphabetically", () => {
+    const at = "2026-11-02T10:00:00Z";
+    const make = (repo: string, number: number): UpstreamFiling => ({
+      repo,
+      number,
+      kind: "issue",
+      work: "report",
+      title: `Issue ${number}`,
+      url: `https://github.com/${repo}/issues/${number}`,
+      summary: "s",
+      pairsWith: [],
+      closes: [],
+      dependsOn: [],
+      gmtGuard: null,
+      gmtNote: null,
+      state: "open",
+      draft: false,
+      reviewDecision: null,
+      comments: 0,
+      maintainerComments: 0,
+      createdAt: "2026-11-01",
+      updatedAt: "2026-11-01",
+      closedAt: null,
+      mergedAt: null,
+    });
+    const result = overlayLive(
+      { checked: at, filings: [make("tc39/proposal-temporal", 3336)] },
+      {
+        checked: "2026-11-02T11:00:00Z",
+        filings: [
+          make("whatwg/html", 1),
+          make("fullcalendar/temporal-polyfill", 130),
+          make("tc39/proposal-temporal", 3336),
+          make("js-temporal/temporal-polyfill", 400),
+        ],
+      },
+    );
+    expect(result.filings.map((f) => `${f.repo}#${f.number}`)).toEqual([
+      "js-temporal/temporal-polyfill#400",
+      "tc39/proposal-temporal#3336",
+      "fullcalendar/temporal-polyfill#130",
+      "whatwg/html#1",
+    ]);
+  });
+
+  it("names only tracked repositories in the committed data", () => {
+    for (const f of filings) {
+      expect(TRACKED_REPOS).toContain(f.repo);
+    }
   });
 });
 

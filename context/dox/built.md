@@ -723,10 +723,14 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 `mount`. The kit is nine custom elements and a set of builders. The builders sit in
 `src/widgets/builders`, re-exported from `builders/index.ts`: the layout set (`widget`, `card`,
 `section`, `fieldGrid`, `field`, `hint`), `aside`, `badge`, `button`, `buttonRow`, `chartKey`,
-`codeFrame`, `dataCredits`, `disclosure`, `drawer`, `edgeControl`, `hero`, `instant`, `loading`, `plates`, `select`,
-`srOnly`, `switchField`, `swatch`, `table`, `textInput`, `toolLinks`, `verdict` and the timeline
-pieces (`axis`, `lane`, `mark`, `tick`). The `html`, `raw` and `idScope` helpers escape and
-scope. The elements sit in `src/widgets/primitives/<name>/`: `gmt-range`, `gmt-handle`,
+`codeFrame`, `dataCredits`, `disclosure`, `drawer`, `edgeControl`, `hero`, `hold`, `instant`, `loading`, `plates`, `select`,
+`selectOptions`, `srOnly`, `switchField`, `swatch`, `table`, `textInput`, `toolLinks`, `verdict`, `zonedValue` and
+the timeline pieces (`axis`, `lane`, `mark`, `tick`). `table` takes `roles` to write an explicit
+ARIA role on every part, for a sheet that changes a part's `display`. `hint` takes a string or
+`SafeHtml`. `hold(live, ghosts)` is a grid cell that holds a live element and one hidden ghost per text it can show, so its box is the widest of them and a value that comes and goes moves nothing around it. `selectOptions(options, value?)` writes the `<option>` markup of a `select`, for a mount that replaces the options of a live select and keeps its box, class and state. `zonedValue` writes a stored zoned time as no-wrap pieces joined by `<wbr>`, breaking
+after the `T`, before the offset and before the `[`. `.field` has a `minmax(0, 1fr)` track, so an
+unbreakable child cannot widen a field past its card. The `html`, `raw` and `idScope` helpers
+escape and scope. The elements sit in `src/widgets/primitives/<name>/`: `gmt-range`, `gmt-handle`,
 `gmt-readout`, `gmt-preset`, `gmt-chips`, `gmt-copy`, `gmt-grow`, `gmt-listbox` and
 `gmt-combobox`. A builder takes its accessible name as a required argument, so a piece without a
 label does not compile. Family pieces, shared by the tools of one family, live in
@@ -915,6 +919,25 @@ number it did not measure.
   `scroll-padding-block`, so focus lands clear of the sticky bars.
 - A load jump names the frame, the deepest resized element and the font state. Each widget
   reserves its size, or sits in `<gmt-grow>`, and the fallback font is metric-matched.
+  - The Display Fallback face lists `local()` mono faces found on macOS, Windows and Linux
+    (Menlo, Consolas, DejaVu Sans Mono, Liberation Mono, Courier New) with `size-adjust: 130%`, so a
+    headless Linux browser draws the fallback at the same advance. `src/styles/display-fallback.test.ts` pins the list.
+  - The Michroma face is in the site stylesheet as a data URI: `gmt-tokens.css` names the
+    vendored `public/fonts/michroma-latin-400-normal.woff2?inline` and Vite writes its bytes into
+    the face, so the font is there at first layout and no heading swaps faces. Any external font
+    file, even a preloaded one, arrives after first layout in Firefox and moves the page. The face is
+    `font-display: optional`, and no page preloads the file (a preload of a file nothing uses
+    logs a warning). `public/fonts/` is the one copy of the bytes; `deploy-smoke.mjs` and the
+    Worker test still request it by URL. `display-fallback.test.ts` pins the face and
+    `scripts/display-font-built.test.ts` pins the built bytes against the vendored file and the
+    absent preload.
+  - A region the mount rewrites sits in `<gmt-grow>` or in a `hold`. A one-line summary
+    (Connection Checker) and the Duration Parser Bench's result and facts are in `<gmt-grow>`.
+    An EDI zone-strip cell keeps a no-break space when empty, a figure with no parts draws no
+    empty row, and the result pane's stand-in keeps the scroll track the pane has.
+  - A chip, plate or cell in a table (`timetable-reader`, `migrate-table.css`) wraps at its
+    spaces only; the migrate tables pad their cells and give the last column a 14rem floor, so a
+    table fits 770 px at 390 px wide without a break inside a word.
 - Every card and section sits on one opaque `--gmt-surface-widget`, so stacked tints cannot drop
   contrast below 7:1. The footer has its own opaque surface.
 - Local checks run Chromium on macOS. Firefox and WebKit run weekly in CI; the footer contrast
@@ -1361,7 +1384,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     and an empty month keeps its reserved line. The Comparator's cells are two lines and the table
     stacks under 34rem. The rule and holiday lists carry `data-grow="slot"`. The Builder's call
     frame reserves its worst case through `ruleCallSizerText` and `pairBound`, and Moving Feasts
-    holds its nth-note and call frame with sizers, so no readout resizes.
+    holds its nth-note and call frame with sizers, so no readout resizes. The Comparator's matrix, before the library answers, is a skeleton: the default span's year cards (and the padding rows up to `MAX_YEARS`) with one blank block per holiday per column, an `aria-busy` table and a visible Loading status laid over it. Moving Feasts' signal plates are a wrapping flex row, each plate sized by hidden twins of the widest ISO date, so a date never narrows its neighbour. A day outside the shown month is drawn bare (a dashed hairline, no fill, no mark) and is left out of the week strip's marked list.
   - **Links and notes.** The Builder's compare link appears only for a valid `fixed` rule
     (`compareHandoffHref` asks the library). The Comparator's `holiday-note` says which seeded
     holidays are not dates. The Comparator's permalink adds a `year` key and repeatable custom
@@ -1392,7 +1415,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     counter from 1980 to 2170 grouped by counter width, a tick per wrap (the next taller), the
     firmware's window as a lit bracket, a spark where it goes wrong, and the check date and today
     as pins. Each group heading sits on the surface above the year lines and the check-date pin,
-    so no line crosses it. The server draws a skeleton with the library's group sizes.
+    so no line crosses it. The server draws a skeleton with the library's group sizes. Each fuse chip is a `hold` over every label with the widest instant, and a chip wraps only at its spaces, so no chip resizes at 300 px.
   - **Leap Second Timeline** (`/tools/leap-second-timeline/`): a staircase of TAI - UTC, a riser
     per inserted second, a hatched run from `CONTINUOUS_UTC_FROM`, the date as a cursor, the
     counted span as a band, and a checked `23:59:60` as a lit riser or a struck-through ghost.
@@ -1680,16 +1703,18 @@ Shared hooks come first, then the globe, then the clock-change pages.
     - `worker/clock-change-shared.ts` `probeRows` and `transitionRows` build the two JSON lists
       both Workers return; `worker/clock-change-shared.test.ts` runs a demo endpoint through 405,
       HEAD, 413, 429, 400 and 200.
-    - **The table in a narrow card.** The zone id carries a `<wbr>` after each `/`. In a card under
-      21rem (a container query in `families/clockcheck/probe-card.module.css`; the natural table is 313 px at
-      its narrowest) the probe table **stacks**: each row is a two-column grid with the place and
-      zone id across the full width and the two offsets side by side under it, the header row is
-      the same two columns and the "Place" head is visually hidden. No word breaks and nothing
-      scrolls sideways at 300 px. `display` on table elements drops the native semantics, so
-      `clock-change-probe.ts` writes explicit `role`s (`table`, `rowgroup`, `row`,
-      `columnheader`, `rowheader`, `cell`) in the markup at every width; do not remove them.
-      `canada-layout-check.mjs` (`--engine webkit` too) fails a probe table wider than its card's
-      content box, or a cell that holds more than its own box.
+    - **The table in a narrow card.** The zone id carries a `<wbr>` after each `/` and breaks only
+      there: `probe-card.module.css` sets `.zoneid` to `white-space: normal` and `overflow-wrap:
+      normal` through `.probe table .zoneid`, and every probe `th` and `td` to `overflow-wrap:
+      normal`, so no city name or head splits mid-word. In a card under 21rem (a container query in
+      the same file; the natural table is about 263 px at its narrowest in WebKit) the probe table
+      **stacks**: each row is a two-column grid with the place and zone id across the full width and
+      the two offsets side by side under it, the header row is the same two columns and the "Place"
+      head is visually hidden. Nothing scrolls sideways at 300 px. `display` on table parts drops
+      the native semantics, so `probeCard` passes `roles: true` to the kit `table()`; do not remove
+      it. The 1% width of the offset columns applies only at 21rem and wider, so the stacked
+      cells size themselves. The Morocco page's stored-times hint writes its example through `zonedValue`.
+      `canada-layout-check.mjs` covers this on both pages (see the gate entry).
     - **The live clocks in a narrow card.** The clocks card is 260 px wide at a 1366 px viewport
       (checker 1018 px, map column 466 px). Below 16rem (a container query in
       `families/clockcheck/clocks.module.css`) the face, the time and the offset shrink so the offset stays beside the
@@ -2168,11 +2193,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
     Starlight's prose spacing never reaches widget internals.
   - **A disabled input or select has one shared style**
     (the `textInput` and `select` CSS Modules): dimmer text, a dashed border, no fill and a not-allowed
-    cursor, with `opacity: 1` set outright because the browser fades a disabled select
-    to 0.7 and that takes the text under the 7:1 floor. Forced colours restate it as
-    `GrayText` in each module. A widget sets `disabled` and styles nothing itself, and a
-    select is always the `select` builder's, never a bare `<select>`, so the state looks the
-    same in every tool. The tools that disable such a control are:
+    cursor, with no opacity (both modules set `opacity: 1`, so a browser's own dimming of a disabled control never lowers the text or border contrast). Forced colours restate it as `GrayText` (`gmt-a11y.css`). A
+    widget sets `disabled` and styles nothing itself, and a select is always the `select`
+    builder's, never a bare `<select>`, so the state looks the same in every tool. The tools that disable such a control are:
     - the Punctuality Board: the early and second late tolerance inputs while each one is
       switched off;
     - the DTM Decoder: the format code while a pasted segment supplies it, the strip's zone
@@ -2237,7 +2260,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   a list inside a `.gmt-widget` (`ul:not(:where(.gmt-widget *))`). A widget's legend, verdict
   row or key draws no dash and needs no reset. `content-list-rule.test.ts` guards it.
 - **Trap: the live wrapper in a hold cell must stretch.** A cell that holds its size stacks
-  a hidden sizer and a live wrapper in one grid cell (`families/ids/hold.ts`, `families/edi/edi-hold.ts`, `families/holiday/held-text.ts`). The wrapper
+  a hidden sizer and a live wrapper in one grid cell (`builders/hold.ts`, `families/edi/edi-hold.ts`, `families/holiday/held-text.ts`). The wrapper
   keeps the grid's default stretch, so its box is always the sizer's size. If it is aligned
   to the start instead, its height goes from 0 to the content's each time a note or a value
   appears, and `readout:still`, which measures the wrapper, reports it as a resize.
@@ -2362,6 +2385,25 @@ Shared hooks come first, then the globe, then the clock-change pages.
   its height. A result region may grow from one preset to the next through `.gmt-grow`, which
   `grow:measure` gates: the reason aside under a sentinel, a second lane for a second zone, or a
   chart that moves down because section 1 shows more fields.
+  **Traps in these gates.** Firefox lays out in fractions, so `readout-still` compares raw box
+  values with a 0.5 px epsilon and never rounds a value before the compare (a rounded 1815.5 against
+  1816.4 reads as a 1 px move that was 0.9 px). It takes a second snapshot after the scroll into
+  view and before the pointer goes down: a box that moved with the scroll is `scroll moved <element>`
+  and the drag is compared with that snapshot, not the one taken before the scroll. A step's
+  findings group into one per element (`drag out 1–20, back 1–20`), naming the innermost element that
+  resized and how many grew around it or moved below. A late writer outside `grow()` (a script
+  that sets a height after the region settled) is a jump: `grow-measure` reports it once as
+  `max jump N px > limit (page and <main>)` when the page and `<main>` pass the limit in the same
+  frame, and twice when they pass it in different frames. The sampler reads in a task after a
+  frame, so a late task can span two animation frames: `attributeFrames` (`gate-checks.mjs`)
+  splits such a sample into one step per frame, spreading the eased motion over the frames it took
+  and leaving anything the easing does not account for whole in the frame it was seen in, and
+  `withJumpDiagnostic` names the `<main>` frame in a `<main>`-only jump's diagnostic, not the
+  root's. `a11y-media` proves `prefers-contrast`
+  applied before it reads the border: a probe custom property set under `@media (prefers-contrast:
+  more)` must read `1`, mid-page and then in a fresh context created with `contrast: "more"`; a
+  probe that stays unset is `emulation-not-applied` (the engine, not the page), and a probe that
+  applies while the border token is not the strong one is `contrast-border-token`.
   `scripts/html-diff.mjs` compares built widget markup (✗ the widget changed,
   ~ only the page around it did, + a new widget page with no baseline); `visual:diff` is the
   pixel gate.
@@ -2413,7 +2455,15 @@ Shared hooks come first, then the globe, then the clock-change pages.
     without that line, or with `n = 0`, is `FAIL measured nothing`; one that exits 0 with findings is
     a FAIL. `contrast-measure --only` takes a comma list. `grow-measure`, `readout-still`,
     `data-credits-check` and the three Canada scripts accept `firefox` in `--browsers`;
-    `canada-layout-check` takes `--browsers` as well as `--engine`. `contrast-measure` is
+    `canada-layout-check` takes `--browsers` as well as `--engine`. It checks both clock-change
+    pages (`--pages`), in dark and light, at 1440, 1024, 420, 375 and 300 px (420 is just above
+    the WebKit stack threshold), and measures the probe table as loaded and with the verdict forced
+    to ok, bad and unreadable at 300 and 420 px. An init script wraps `Intl.DateTimeFormat` for the
+    probe zones with `timeZoneName: "longOffset"` only; the ok offsets come from the page's own
+    config through `expectedOffsets` in `scripts/lib/clock-check-harness.mjs`. It fails a probe
+    table that overflows its card, a visible cell holding more than its box, a word of a visible
+    cell or head on two line boxes, and a visible element that passes its card's left or right
+    edge by more than 1 px. `contrast-measure` is
     Chromium only.
   - **Selection.** A changed file selects the pages whose import closure holds it (`.mdx`, `.astro`,
     `.ts`, `.tsx`, `.mjs`, `.css`; relative paths and the `~/` alias); a change under
@@ -2429,6 +2479,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
     screen's context line says so under `--plan`); `--all` lifts the cap. With no changed file under
     `apps/dox/` (other than `*.test.ts`), `packages/gmt/src/` or `pnpm-lock.yaml`, the runner prints
     `gates: PASS  nothing to check` and does not build.
+  - **An empty run is not a pass.** When the diff selects pages but no requested browser can run a
+    gate that applies (`emptyRunOutcome` in `gates/select.mjs`), `gates` exits 2 with
+    `gates: nothing was run: none of <browsers> runs <gates> (it runs in <browsers>)`.
+    `contrast-measure` is Chromium only, so `--browsers firefox` alone runs nothing for it.
   - **The MAR-16 tools measure the whole widget** (`scope: "widget"`, frame `.gmt-gnss-frame`).
     Only their drawings (`GNSS_DRAWN`: lanes, bars, strip, plot, rulers and a hold's live
     wrapper) may move; the range chip is a `riders` element (its left moves, nothing else), and
@@ -3811,6 +3865,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
 
 ### Traps
 
+- Chromium breaks at a `<wbr>` inside `white-space: nowrap`; WebKit and Firefox do not. So a
+  nowrap rule over `<wbr>` text passes PR CI (Chromium only) and fails the weekly sweep. Run the
+  layout gates with `--browsers webkit` too.
 - `/gmt/api/brains` must stay `private, no-store`: it carries one visitor's counts and dev
   status.
 - `DoxChat.ssr.test.tsx` is what catches `window` during SSR; `astro check` and jsdom tests
@@ -3914,8 +3971,25 @@ Shared hooks come first, then the globe, then the clock-change pages.
     `/tools/cron-in-a-zone/` and `/dox/`, since fixed; every other gate passed. A child process that runs 90
     minutes is stopped and shows `timed out after 90m`. A diff-driven run takes minutes: one page with
     `--only` is about 4 minutes, 36s of it the build; `--plan` shows what a run would do.
-  - **Firefox does not launch on the author's machine.** The five scripts accept `firefox`, but
-    those legs have not run here (see "Owed verification").
+  - **Firefox on the author's machine** runs through the Docker route (the next entry).
+- **Firefox on macOS 27 (Docker route).** Playwright 1.63's Firefox does not launch on macOS 27
+  ("Could not find profile folder"), inside or outside the sandbox. Every launch goes through
+  `scripts/lib/browser-launch.mjs`; when `GMT_PW_FIREFOX_WS` names a Playwright run-server,
+  Firefox connects to it and reaches the static server through `exposeNetwork: "<loopback>"`.
+  With the variable unset (CI) it launches as usual, and a gate log shows the route with one
+  `firefox: connected to … (<version>)` line on stderr.
+  - **Run it.** `pnpm --filter dox firefox-server start`, then
+    `export GMT_PW_FIREFOX_WS=ws://127.0.0.1:3555/`, then any gate with `--browsers firefox`
+    (`firefox-server check` proves the container reaches a built `dist`), then
+    `pnpm --filter dox firefox-server stop`. The container image and the `run-server` version both
+    come from the installed `@playwright/test`, and `connect` refuses a server of another version.
+  - **What it measures.** Linux Firefox, the same engine family the weekly legs run. It is not
+    macOS Firefox.
+  - **Retire it.** After each Playwright bump, run
+    `node -e 'import("@playwright/test").then(async({firefox})=>{const b=await firefox.launch();console.log(b.version());await b.close()})'`
+    from `apps/dox`. If it prints a version, delete `firefoxEndpoint` and the connect branch,
+    `firefox-server.mjs`, its test, the package script and this entry. Keep `launchBrowser` and
+    the test that allows only `lib/browser-launch.mjs` to import `firefox` as the single launch seam.
 - **A gate baseline is a clean worktree of the commit the branch is based on.**
   `html-diff.mjs capture` and `visual:before` run in a detached worktree at
   `git merge-base HEAD origin/main`, with its own install, library build and site build;
@@ -3994,12 +4068,20 @@ Shared hooks come first, then the globe, then the clock-change pages.
     type; first body line `<!-- dox-gate key="…" -->` (`"`, `>` and `--` in a key are written as
     entities). An open `dox-gate` issue whose first line equals the marker gets a comment on the
     lowest-numbered match; otherwise a new issue opens. **Flood guard:** more than 10 new issues in one
-    run opens none and files one `dox-gate:flood` issue listing every held-back key (a comment if it
-    is already open); comments on already-open findings still go out. Nothing is closed
+    run opens none and files one `dox-gate:flood` issue (a comment if it is already open). Its body
+    groups the held-back findings by `gate:rule:page`: count, browsers, widths and up to three example
+    targets, largest group first, `TABLE_ROWS` (40) rows and a count of the rest, then the run URL and
+    the leg artifacts (`dox-gate-<leg>-<runId>`, kept 14 days). It says each run comments there until
+    ten or fewer remain, and then each is filed on its own. Every other body and comment is cut by `fitBody`
+    to 60,000 characters on a line boundary, and `file-issues` exits 1 before any write when one still
+    passes GitHub's 65,536; a sweep of 1,545 findings is a 6,585-character body. Comments on
+    already-open findings still go out. Nothing is closed
     automatically: whoever fixes a finding closes its issue.
   - **Dry run.** `node apps/dox/scripts/gates/file-issues.mjs --print --dry-run-finding <summary.json>`
     plans against the live open-issue list, prints one line per action (`open  <key>  <title>` or
-    `comment #123  <key>`) and a count, and files nothing; it needs `gh` signed in. Outside GitHub
+    `comment #123  <key>`, each with `body <n> chars` and a flood with its `<g> groups`) and a count,
+    and files nothing; it needs `gh` signed in. `--offline` makes no `gh` call at all (no open issue
+    assumed, no job list) and implies `--print`, so saved summaries plan on any machine. Outside GitHub
     Actions (`GITHUB_ACTIONS` not `true`) it only plans: without `--print` it exits 2 with "run with
     --print locally; issues are filed by the weekly workflow". A summary path that is unreadable (without
     `--legs`) or has no leg folder is also exit 2, before any `gh` call; with `--legs`, the legs with no

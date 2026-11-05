@@ -5,6 +5,7 @@ import { CANADA_STORED } from "~/lib/canada-saved-example";
 import { html } from "../../builders/html";
 import { widget } from "../../builders/layout";
 import { renderHtml } from "../../test-fixture";
+import { STORED_MAX_LINES } from "~/lib/clock-change-stored-lines";
 import { storedSection } from "./stored-section";
 
 const config = { ...CANADA_STORED, idPrefix: "test" };
@@ -54,5 +55,19 @@ describe("storedSection", () => {
       screen.getByText("No line is left with this filter."),
     ).not.toBeVisible();
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+
+  it("lets the example in the hint break at the T, the offset and the bracket, with its text unchanged", () => {
+    render();
+    const box = screen.getByRole("textbox", {
+      name: "Saved events, one per line",
+    });
+    expect(box).toHaveAccessibleDescription(
+      `Paste values like ${config.example.saved}. Up to ${STORED_MAX_LINES} lines.`,
+    );
+    const hint = /id="test-stored-lines-hint">([\s\S]*?)<\/p>/.exec(
+      storedSection(config).toString(),
+    );
+    expect(hint?.[1]?.match(/<wbr/g)).toHaveLength(3);
   });
 });

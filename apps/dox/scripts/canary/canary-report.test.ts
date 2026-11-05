@@ -290,6 +290,32 @@ describe("parseArgs", () => {
     });
   });
 
+  it("reads the swap flag for the oracle workflow", () => {
+    expect(
+      parseArgs(["temporal-oracle", "--force-swap-ready", "--print"]),
+    ).toEqual({
+      ok: true,
+      workflow: "temporal-oracle",
+      force: { swapReady: true },
+      print: true,
+    });
+  });
+
+  it("rejects the swap flag for the leap-seconds workflow", () => {
+    const parsed = parseArgs(["leap-seconds", "--force-swap-ready"]);
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) throw new Error("expected a usage error");
+    expect(parsed.error).toContain(
+      "unknown flag for leap-seconds: --force-swap-ready",
+    );
+  });
+
+  it("names the swap flag in the usage text", () => {
+    const parsed = parseArgs([]);
+    if (parsed.ok) throw new Error("expected a usage error");
+    expect(parsed.error).toContain("[--force-swap-ready]");
+  });
+
   it("reads the leap flag", () => {
     expect(parseArgs(["leap-seconds", "--force-leap-difference"])).toEqual({
       ok: true,
@@ -432,6 +458,72 @@ describe("main", () => {
     staleTags: [],
     ...over,
   });
+  const swapVerdict = (leg: string, over: Record<string, unknown> = {}) => ({
+    source: `temporal-polyfill-swap-${leg}`,
+    status: "ran",
+    leg,
+    version: "1.0.7",
+    entry: "temporal-polyfill/full/implementation",
+    entryLoaded: true,
+    runtime: {
+      node: "26.12.1",
+      vitest: "5.0.5",
+      playwright: leg === "node" ? null : "1.63.0",
+      browser: leg === "node" ? null : `${leg} 1.0`,
+    },
+    counts: {
+      files: 943,
+      tests: 100,
+      passed: 100,
+      skipped: 0,
+      failed: 0,
+      both: 0,
+      fixed: 0,
+    },
+    failing: [],
+    failingTruncated: false,
+    sweep:
+      leg === "node"
+        ? {
+            status: "ran",
+            tz: "2026e",
+            from: "1970-01-01",
+            through: "2036-11-04",
+            zones: 418,
+            days: 24415,
+            comparisons: 10205470,
+            differingZones: 1,
+            differing: [],
+            differingTruncated: false,
+          }
+        : null,
+    ...over,
+  });
+  /** The four swap files: every leg ran, one zone differs, so nothing is swap-ready. */
+  const writeSwapFiles = () => {
+    for (const leg of ["node", "chromium", "firefox", "webkit"]) {
+      write(`temporal-polyfill-swap-${leg}.json`, swapVerdict(leg));
+    }
+  };
+  /** The four swap files, all passing. */
+  const writeReadySwapFiles = () => {
+    for (const leg of ["node", "chromium", "firefox", "webkit"]) {
+      write(
+        `temporal-polyfill-swap-${leg}.json`,
+        swapVerdict(
+          leg,
+          leg === "node"
+            ? {
+                sweep: {
+                  ...swapVerdict("node").sweep,
+                  differingZones: 0,
+                },
+              }
+            : {},
+        ),
+      );
+    }
+  };
   const writeNativeFiles = () => {
     for (const leg of ["node", "chromium", "firefox", "webkit"]) {
       write(`native-suite-${leg}.json`, nativeVerdict(leg));
@@ -451,6 +543,7 @@ describe("main", () => {
     writeCompatFiles(workarounds);
     write("temporal-oracle-verdict.json", oracleVerdict());
     writeNativeFiles();
+    writeSwapFiles();
   };
 
   /** Runs `main` with captured streams and a summary file; returns what it produced. */
@@ -536,6 +629,72 @@ describe("main", () => {
     expect(actions[0].key).toBe("temporal-oracle/could-not-run");
     expect(actions[0].body).toContain(
       "- **native-suite-chromium**: unreadable verdict:",
+    );
+  });
+
+  it("reads the four swap verdict files: a passing set plans the swap issue", () => {
+    writeOracleFiles();
+    writeReadySwapFiles();
+    const { code, out } = run(["temporal-oracle", "--print"]);
+    expect(code).toBe(0);
+    const actions = JSON.parse(out.slice(out.indexOf("[\n")));
+    expect(actions.map((a: { key: string }) => a.key)).toEqual([
+      "temporal-polyfill-swap/ready",
+    ]);
+  });
+
+  it("an unreadable swap verdict reads as could-not-run and is listed in the could-not-run issue", () => {
+    writeOracleFiles();
+    writeReadySwapFiles();
+    write("temporal-polyfill-swap-firefox.json", "{ not json");
+    const { code, out } = run(["temporal-oracle", "--print"]);
+    expect(code).toBe(0);
+    const actions = JSON.parse(out.slice(out.indexOf("[\n")));
+    expect(actions).toHaveLength(1);
+    expect(actions[0].key).toBe("temporal-oracle/could-not-run");
+    expect(actions[0].body).toContain(
+      "- **temporal-polyfill-swap-firefox**: unreadable verdict:",
+    );
+  });
+
+  it("a missing swap verdict file is listed as no verdict", () => {
+    writeOracleFiles();
+    rmSync(join(root, "artifacts", "temporal-polyfill-swap-webkit.json"));
+    const { out } = run(["temporal-oracle", "--print"]);
+    const actions = JSON.parse(out.slice(out.indexOf("[\n")));
+    expect(actions[0].body).toContain(
+      "- **temporal-polyfill-swap-webkit**: no verdict file: an earlier step or job failed",
+    );
+  });
+
+  it("--force-swap-ready --print on a run that is not swap-ready prints one dry-run action", () => {
+    writeOracleFiles();
+    const { code, out } = run([
+      "temporal-oracle",
+      "--force-swap-ready",
+      "--print",
+    ]);
+    expect(code).toBe(0);
+    const actions = JSON.parse(out.slice(out.indexOf("[\n")));
+    expect(actions.map((a: { key: string }) => a.key)).toEqual([
+      "dry-run/temporal-polyfill-swap/ready",
+    ]);
+    expect(out).toContain("**Dry run:** --force-swap-ready");
+  });
+
+  it("--force-swap-ready with no swap verdict that ran exits 2 and says so", () => {
+    writeOracleFiles();
+    for (const leg of ["node", "chromium", "firefox", "webkit"]) {
+      rmSync(join(root, "artifacts", `temporal-polyfill-swap-${leg}.json`));
+    }
+    const { code, err } = run([
+      "temporal-oracle",
+      "--force-swap-ready",
+      "--print",
+    ]);
+    expect(code).toBe(2);
+    expect(err).toContain(
+      "canary-report: --force-swap-ready not applied: no temporal-polyfill-swap verdict ran, so there is nothing to force against",
     );
   });
 

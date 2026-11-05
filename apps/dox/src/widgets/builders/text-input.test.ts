@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { expectNoAxeViolations } from "~/test/render-widget";
@@ -87,5 +89,17 @@ describe("textInput", () => {
   it("has no axe violations", async () => {
     const fx = renderHtml(markup({ value: "1" }));
     await expectNoAxeViolations(fx.host);
+  });
+
+  // jsdom applies no CSS modules, so the sheet is read as text. A user agent dims a disabled
+  // control with opacity, which fades its border and its text below the contrast floors; the
+  // kit dims by a dashed border and `--gmt-ice-dim` ink.
+  it("keeps a disabled select at full opacity", () => {
+    const css = readFileSync(
+      join(import.meta.dirname, "text-input.module.css"),
+      "utf8",
+    );
+    const block = css.match(/&:disabled \{([^}]*)\}/)?.[1] ?? "";
+    expect(block).toMatch(/opacity:\s*1;/);
   });
 });
