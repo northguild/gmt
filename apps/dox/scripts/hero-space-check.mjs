@@ -32,15 +32,17 @@
  *   motion there is no transition;
  * - interaction: drag, wheel, the zoom buttons and the arrow keys work, a click selects a zone, and
  *   a wheel over the copy scrolls the page and never zooms.
- *
- * - the landing carousel: at 80rem by 40rem and up the page never scrolls, and the intro and About
- *   share the column; the wheel, the chevrons, Escape, a press on the Earth and a link into About
- *   move between them and the Earth does not; below that, or without scripts, About is in the
- *   page's flow; the closed panel draws nothing and the browser's find can open it;
- * - the carousel's motion: five quick switches in both themes keep one running animation per element,
- *   a median frame of 17.5 ms and none over 34 ms, and under reduced motion only `opacity` animates;
- *   the chevron's opacity per state; a blocked module leaves the page scrolling; axe finds nothing in
- *   either panel, in either theme.
+ * - the landing carousel: on a landscape screen 64rem wide and up the page never scrolls, the pages
+ *   share the column and each fits it; the wheel turns one page per gesture, the arrows, the dots
+ *   and the arrow keys move between them, Escape and a press on the Earth do not, and the Earth,
+ *   the buttons and the pager never move; the arrows are 24 px targets named after the page they
+ *   open, and the one with nowhere to go is hidden and out of the tab order; a link into a later
+ *   page opens it and leaving it clears the address; a hash that is not valid percent-encoding
+ *   still starts the landing; narrower or portrait, the carousel pages and the wheel scrolls the
+ *   page; without scripts, or with the module blocked, every page reads in order;
+ * - the carousel's motion: five quick turns in both themes keep one running animation per page,
+ *   a median frame of 17.5 ms and none over 34 ms, and under reduced motion only `opacity`
+ *   animates; axe finds nothing on any page, in either theme.
  *
  * Usage, from `apps/dox`, against a served build (`scripts/lib/static-server.mjs`):
  *
@@ -240,8 +242,8 @@ function copyRect(page) {
     let right = -Infinity;
     let bottom = -Infinity;
     for (const el of root.querySelectorAll("*")) {
-      // The carousel's chevrons float beside the words, and a closed panel draws nothing.
-      if (el.closest("[data-carousel-controls], [hidden]")) continue;
+      // A page the carousel is not showing keeps its box but draws nothing.
+      if (el.closest("[hidden], [data-page]:not([data-shown])")) continue;
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
       left = Math.min(left, r.left);
@@ -1190,10 +1192,25 @@ async function checkFrames(browser) {
         return raf(cb);
       };
     });
-    await page.evaluate(() =>
-      window.scrollTo(0, document.documentElement.scrollHeight),
-    );
+    /* The landing is shorter than two screens, so its foot still shows the Earth. A spacer gives
+       the page room to scroll the hero out of sight, which is what this measures. */
+    await page.evaluate(() => {
+      const spacer = document.createElement("div");
+      spacer.style.blockSize = `${2 * window.innerHeight}px`;
+      document.body.append(spacer);
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
     await page.waitForTimeout(800);
+    check(
+      await page.evaluate(
+        (sel) => document.querySelector(sel).getBoundingClientRect().bottom < 0,
+        HERO,
+      ),
+      "draws-off-screen",
+      "hero › globe",
+      "the hero is still on screen at the foot of the page, so nothing was measured",
+      NARROW,
+    );
     await page.evaluate(() => {
       window.__frames = 0;
     });
@@ -1329,8 +1346,8 @@ async function checkInteraction(browser) {
   await page.waitForTimeout(400);
   const still = await shot();
   const y0 = await page.evaluate(() => window.scrollY);
-  // In carousel mode the landing never scrolls: a wheel over the copy steps to the next panel
-  // instead, which is checked on its own, and the way back is the chevron.
+  // In carousel mode the landing never scrolls: a wheel over the copy steps to the next page
+  // instead, which is checked on its own, and the way back is the previous arrow.
   const carousel = await page.evaluate(
     () => document.documentElement.dataset.homeCarousel === "on",
   );
@@ -1355,7 +1372,10 @@ async function checkInteraction(browser) {
     WIDE,
   );
   if (carousel) {
-    await page.getByRole("button", { name: "Back to Intro" }).click();
+    await page.getByRole("button", { name: "Previous: Intro" }).click();
+    // On the first page the previous arrow turns off and hands focus to the next arrow; its ring
+    // is not the Earth, so it leaves the picture.
+    await page.evaluate(() => document.activeElement?.blur());
     await page.mouse.move(
       (copy.left + copy.right) / 2,
       (copy.top + copy.bottom) / 2,
@@ -2473,7 +2493,8 @@ async function checkSkyReveal(browser) {
 /**
  * Records the entrance from the first script on the page: when each `data-entrance` value lands,
  * every frame's length from `t0`, the running animations each frame grouped by target and
- * pseudo-element, and the location card every 100 ms.
+ * pseudo-element, the copy's lowest opacity, the largest paint, and the location card every
+ * 100 ms.
  */
 function watchEntrance() {
   const log = {
@@ -2490,8 +2511,18 @@ function watchEntrance() {
     frames: [],
     slow: [],
     card: [],
+    copy: null,
+    lcp: null,
   };
   window.__entrance = log;
+  new PerformanceObserver((list) => {
+    const entry = list.getEntries().at(-1);
+    if (entry)
+      log.lcp = {
+        at: Math.round(entry.startTime),
+        element: entry.element?.className?.toString?.() ?? "",
+      };
+  }).observe({ type: "largest-contentful-paint", buffered: true });
   const stamp = () => Math.round(performance.now());
   const note = () => {
     const value = document.documentElement?.dataset.entrance ?? "";
@@ -2539,7 +2570,13 @@ function watchEntrance() {
         continue;
       if (target.matches?.("[data-renderer]")) log.canvasAnimated = true;
       const pseudo = a.effect.pseudoElement ?? "";
-      const label = `${target.dataset?.gate ?? target.className?.toString?.() ?? target.tagName}${pseudo}`;
+      const host =
+        target.dataset?.gate ??
+        target.className?.toString?.() ??
+        target.tagName;
+      const label = `${host}${pseudo}`;
+      // An animation still in its delay, with no backwards fill, sets nothing yet.
+      const inEffect = a.effect.getComputedTiming().progress !== null;
       const names = new Set();
       for (const frame of a.effect.getKeyframes())
         for (const name of Object.keys(frame)) names.add(name);
@@ -2548,13 +2585,16 @@ function watchEntrance() {
       /* One animation per element, per property: two on an element are fine while they move
          different properties. */
       for (const name of names) {
-        if (["offset", "easing", "composite", "computedOffset"].includes(name))
+        if (
+          !inEffect ||
+          ["offset", "easing", "composite", "computedOffset"].includes(name)
+        )
           continue;
         const each = counts.get(target) ?? new Map();
         const key = `${pseudo}\u0000${name}`;
         each.set(key, (each.get(key) ?? 0) + 1);
         counts.set(target, each);
-        labels.set(target, label);
+        labels.set(target, host);
       }
       if (!log.starts.has(a)) {
         const timing = a.effect.getComputedTiming();
@@ -2568,12 +2608,22 @@ function watchEntrance() {
     }
     for (const [target, each] of counts)
       for (const [key, count] of each) {
-        const property = key.split("\u0000")[1];
-        const name = `${labels.get(target)} ${property}`;
+        const [pseudo, property] = key.split("\u0000");
+        const name = `${labels.get(target)}${pseudo} ${property}`;
         log.groups.set(name, Math.max(log.groups.get(name) ?? 0, count));
       }
     const h1 = document.querySelector("h1[data-page-title]");
     if (h1) log.filters.add(getComputedStyle(h1).filter);
+    // The copy is the page's largest text: it is on screen from the first frame, never faded in.
+    const tagline = document.querySelector(".gmt-hero-tagline");
+    if (h1 && tagline) {
+      const lowest = Math.min(
+        Number(getComputedStyle(h1).opacity),
+        Number(getComputedStyle(tagline).opacity),
+      );
+      log.copy ??= { first: lowest, lowest, at: stamp() };
+      log.copy.lowest = Math.min(log.copy.lowest, lowest);
+    }
     const since = log.t0 === null ? null : now - log.t0;
     if (since !== null && since >= 0 && since <= 2900 && last !== null) {
       log.frames.push(Math.round((now - last) * 10) / 10);
@@ -2635,6 +2685,8 @@ async function checkEntrance(browser) {
       frames: l.frames,
       slow: l.slow,
       card: l.card,
+      copy: l.copy,
+      lcp: l.lcp,
     };
   });
   const order = log.entrance.map(([name]) => name).join(" > ");
@@ -2660,6 +2712,20 @@ async function checkEntrance(browser) {
     "entrance-order",
     t,
     `the zoom stack armed at ${log.armed} ms and the dawn ended at ${log.dawn} ms, they must land together`,
+    WIDE,
+  );
+  check(
+    log.copy !== null && log.copy.lowest === 1,
+    "entrance-copy-first",
+    t,
+    `the title and the tagline were at opacity ${log.copy?.first ?? "none"} on the first frame (${log.copy?.at ?? "?"} ms) and ${log.copy?.lowest ?? "none"} at the lowest, they must be at 1 throughout: the freeze plays over text that is already there`,
+    WIDE,
+  );
+  check(
+    log.lcp !== null && log.lcp.at < runAt,
+    "entrance-copy-first",
+    t,
+    `the largest paint (${log.lcp?.element ?? "none"}) came at ${log.lcp?.at ?? "never"} ms, after the entrance ran at ${runAt} ms: the copy must not wait for the sky`,
     WIDE,
   );
   const crowded = log.groups.filter(([, count]) => count > 1);
@@ -2723,8 +2789,11 @@ async function checkEntrance(browser) {
   const rest = log.runs.filter(
     (run) => (run.name ?? "").startsWith("ng-") && run.name !== "ng-pop",
   );
-  // The glint rides on its button's freeze, so the card starts after every freeze and ends after all.
-  const freezes = rest.filter((run) => run.name !== "ng-glint");
+  // The glint and a header chip's shine ride on a freeze, so the card starts after every freeze and
+  // ends after all.
+  const freezes = rest.filter(
+    (run) => run.name !== "ng-glint" && run.name !== "ng-shine",
+  );
   check(
     card.length > 0 &&
       rest.length > 0 &&
@@ -3276,11 +3345,12 @@ async function checkSkyCopy(browser) {
     );
   /* The copy fades its colour; without this the bare frame would catch a letter half way back. */
   await page.addStyleTag({
-    content: ".gmt-hero-lead * { transition: none !important; }",
+    content:
+      ":is(.gmt-hero-lead, .gmt-hero-actions) * { transition: none !important; }",
   });
   const hide = await page.addStyleTag({
     content:
-      ".gmt-hero-lead * { -webkit-text-fill-color: transparent !important; }",
+      ":is(.gmt-hero-lead, .gmt-hero-actions) * { -webkit-text-fill-color: transparent !important; }",
   });
   await hide.evaluate((el) => (el.disabled = true));
   const worst = parts.map(() => ({ ratio: Infinity, glyphs: 0 }));
@@ -3796,14 +3866,15 @@ async function checkStack(browser) {
       const out = [];
       for (const el of root.querySelectorAll("h1, p, a, button, span")) {
         const r = el.getBoundingClientRect();
-        if (r.width === 0 || r.height === 0) continue;
-        // A closed panel keeps its box but paints nothing, and the carousel's
-        // chevrons are checked on their own.
-        if (el.closest("[hidden], [data-carousel-controls]")) continue;
-        const top = document.elementFromPoint(
-          r.left + r.width / 2,
-          r.top + r.height / 2,
-        );
+        // A 1px box is read aloud, not seen: the carousel's live region.
+        if (r.width <= 1 || r.height <= 1) continue;
+        // A page the carousel is not showing keeps its box but paints nothing, and a point
+        // outside the viewport cannot be tested.
+        if (el.closest("[hidden], [data-page]:not([data-shown])")) continue;
+        const x = r.left + r.width / 2;
+        const y = r.top + r.height / 2;
+        if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+        const top = document.elementFromPoint(x, y);
         if (!top || !(el.contains(top) || top.contains(el)))
           out.push(
             `${el.tagName} "${(el.textContent ?? "").trim().slice(0, 24)}"`,
@@ -3944,12 +4015,12 @@ async function checkPassThrough(browser) {
         const cell = document.querySelector(copy);
         // The whole hero, so a box that grew past its text (the old column) is caught too.
         const area = document.querySelector(hero).getBoundingClientRect();
-        /* The carousel's chevrons are buttons too: a reader presses them. Each ink's box and
+        /* The pager is pressed too: its arrows and its row of dots count as ink. Each ink's box and
            its text's own line boxes: with a line height shorter than the font's glyph height, the letters reach a few px past
            the element's box, and a point there is on the text, not a wrapper. */
         const inks = [
           ...cell.querySelectorAll(
-            ".gmt-hero-eyebrow, h1, .gmt-hero-tagline, .gmt-hero-actions .sl-link-button, [data-carousel-controls] button",
+            ".gmt-hero-eyebrow, h1, .gmt-hero-tagline, .gmt-hero-actions .sl-link-button, [data-hero-step], [data-hero-step] svg, [data-hero-dots]",
           ),
         ].flatMap((el) => {
           const text = document.createRange();
@@ -4025,18 +4096,40 @@ async function checkPassThrough(browser) {
 
 // --- the landing carousel ---------------------------------------------------
 
-const ABOUT = '.gmt-home-grid[data-panel="about"]';
-const INTRO = '[data-panel="intro"]';
+const PAGES = `${COPY} > [data-page]`;
+const NEXT = '[data-hero-step="1"]';
+const PREV = '[data-hero-step="-1"]';
+const NAV = "[data-hero-nav]";
+const SELECTED_DOT = '[data-hero-dots] [role="tab"][aria-selected="true"]';
 
-/** What the page shows at one moment in carousel mode. */
+/** Locked: the landing never scrolls, and the wheel turns the pages. */
+const LOCKED_SIZES = [
+  { width: 1440, height: 900 },
+  { width: 1920, height: 1080 },
+  { width: 1280, height: 720 },
+  { width: 1024, height: 768 },
+];
+/** Not locked (narrower than 64rem, or portrait): the stage stacks and the page scrolls. */
+const STACKED_SIZES = [
+  { width: 1000, height: 700 },
+  { width: 900, height: 1200 },
+  { width: 390, height: 844 },
+];
+
+/** What the landing shows at one moment. */
 function carouselState(page) {
   return page.evaluate(
-    ({ about, intro, hit }) => {
+    ({ pages, nav, hit, dot, copy }) => {
       const root = document.documentElement;
-      const a = document.querySelector(about);
-      const i = document.querySelector(intro);
-      const shown = (el) => !!el && !el.hasAttribute("hidden");
-      const earth = document.querySelector(hit)?.getBoundingClientRect();
+      const all = [...document.querySelectorAll(pages)];
+      const box = (el) => {
+        const r = el?.getBoundingClientRect();
+        return r ? [r.x, r.y, r.width, r.height].map(Math.round) : null;
+      };
+      const visible = (el) => getComputedStyle(el).visibility !== "hidden";
+      const shown = all.filter(
+        (el) => el.hasAttribute("data-shown") && !el.inert,
+      );
       return {
         mark: root.dataset.homeCarousel ?? null,
         scrollY: window.scrollY,
@@ -4044,35 +4137,78 @@ function carouselState(page) {
         docW: root.scrollWidth,
         innerH: window.innerHeight,
         innerW: window.innerWidth,
-        about: shown(a),
-        intro: shown(i),
-        aboutHeight: a ? Math.round(a.getBoundingClientRect().height) : 0,
-        earth: earth
-          ? [earth.x, earth.y, earth.width, earth.height].map(Math.round)
-          : null,
+        names: all.map((el) => el.dataset.page),
+        shown: shown.map((el) => el.dataset.page),
+        visible: all.filter(visible).map((el) => el.dataset.page),
+        dot: document.querySelector(dot)?.getAttribute("aria-label") ?? null,
+        shownHeight: shown[0]
+          ? Math.round(shown[0].getBoundingClientRect().height)
+          : 0,
+        shownScrolls: shown[0]
+          ? shown[0].scrollHeight > shown[0].clientHeight + 1
+          : false,
+        columnHeight: Math.round(
+          document.querySelector(copy)?.getBoundingClientRect().height ?? 0,
+        ),
+        earth: box(document.querySelector(hit)),
+        nav: box(document.querySelector(nav)),
         shift: window.__shift ?? 0,
-        motion: [a?.dataset.motion ?? null, i?.dataset.motion ?? null],
+        motion: all.map((el) => el.dataset.motion ?? null),
       };
     },
-    { about: ABOUT, intro: INTRO, hit: HIT },
+    { pages: PAGES, nav: NAV, hit: HIT, dot: SELECTED_DOT, copy: COPY },
+  );
+}
+
+/** Waits until no page is fading and returns the state. */
+async function settledState(page) {
+  await page.waitForFunction(
+    (pages) =>
+      [...document.querySelectorAll(pages)].every((el) => !el.dataset.motion),
+    PAGES,
+    { timeout: 5000 },
+  );
+  return carouselState(page);
+}
+
+/** The next and previous arrows as a reader meets them. */
+async function arrowState(page) {
+  return page.evaluate(
+    ({ next, prev }) =>
+      [next, prev].map((sel) => {
+        const b = document.querySelector(sel);
+        const c = getComputedStyle(b);
+        const r = b.getBoundingClientRect();
+        return {
+          name: b.getAttribute("aria-label"),
+          visible: c.visibility !== "hidden" && Number(c.opacity) > 0,
+          tabIndex: b.tabIndex,
+          w: Math.round(r.width),
+          h: Math.round(r.height),
+        };
+      }),
+    { next: NEXT, prev: PREV },
   );
 }
 
 async function checkCarousel(browser) {
-  // On a desktop the page never scrolls and the intro and About share the column.
-  for (const size of [
-    { width: 1440, height: 900 },
-    { width: 1920, height: 1080 },
-    { width: 1280, height: 720 },
-  ]) {
+  for (const size of LOCKED_SIZES) {
     const t = "carousel";
     const { page, context, problems } = await open(browser, size);
     const first = await carouselState(page);
+    const [name0, name1, name2] = first.names;
     check(
       first.mark === "on",
       "carousel-mode",
       t,
       `data-home-carousel is ${first.mark}, not on`,
+      size,
+    );
+    check(
+      first.names.length >= 3,
+      "carousel-pages",
+      t,
+      `the landing has ${first.names.length} pages`,
       size,
     );
     check(
@@ -4083,128 +4219,165 @@ async function checkCarousel(browser) {
       size,
     );
     check(
-      first.intro && !first.about,
+      first.shown.join() === name0 &&
+        first.visible.join() === name0 &&
+        first.dot === name0,
       "carousel-start",
       t,
-      "the intro is not the only panel shown on load",
+      `on load the shown pages are [${first.shown}], the visible [${first.visible}] and the dot ${first.dot}; only ${name0} should be`,
       size,
     );
-    const more = page.getByRole("button", {
-      name: "More about gmt",
-      includeHidden: false,
-    });
-    const box = await more.boundingBox();
+    // The arrows: 24 px targets named after the page they open; the one with nowhere to go is
+    // hidden and out of the tab order.
+    const [next0, prev0] = await arrowState(page);
     check(
-      !!box && box.width >= 24 && box.height >= 24,
+      next0.w >= 24 && next0.h >= 24,
       "carousel-target",
       t,
-      `the More chevron is ${box ? `${Math.round(box.width)}×${Math.round(box.height)}` : "missing"}, under 24×24`,
+      `the next arrow is ${next0.w}×${next0.h}, under 24×24`,
       size,
     );
-    // The wheel over the column opens About, once, and the page does not move.
-    // Over the words: the gaps between them belong to the Earth.
+    check(
+      next0.name === `Next: ${name1}` && next0.visible && next0.tabIndex === 0,
+      "carousel-next-named",
+      t,
+      `on the first page the next arrow reads "${next0.name}", shown ${next0.visible}, tabindex ${next0.tabIndex}`,
+      size,
+    );
+    check(
+      !prev0.visible && prev0.tabIndex === -1,
+      "carousel-prev-off",
+      t,
+      `on the first page the previous arrow is shown ${prev0.visible} with tabindex ${prev0.tabIndex}`,
+      size,
+    );
+
+    // The wheel over the words turns one page per gesture, and nothing else moves. Over the
+    // words: the gaps between them belong to the Earth.
     const title = await page.locator("h1[data-page-title]").boundingBox();
     await page.mouse.move(
       title.x + title.width / 2,
       title.y + title.height / 2,
     );
-    await page.mouse.wheel(0, 120);
-    await page.waitForTimeout(900);
-    const open1 = await carouselState(page);
+    for (let i = 0; i < 4; i++) {
+      await page.mouse.wheel(0, 120);
+      await page.waitForTimeout(40);
+    }
+    const wheeled = await settledState(page);
     check(
-      open1.about && !open1.intro,
+      wheeled.shown.join() === name1,
       "carousel-wheel",
       t,
-      "a downward wheel over the intro did not open About",
+      `one downward gesture over the intro left [${wheeled.shown}] shown, not ${name1}`,
       size,
     );
     check(
-      open1.scrollY === 0 && open1.docH <= open1.innerH,
+      wheeled.scrollY === 0 && wheeled.docH <= wheeled.innerH,
       "carousel-wheel-scroll",
       t,
-      `the page scrolled to ${open1.scrollY}`,
+      `the page scrolled to ${wheeled.scrollY}`,
       size,
     );
     check(
-      JSON.stringify(open1.earth) === JSON.stringify(first.earth),
+      JSON.stringify(wheeled.earth) === JSON.stringify(first.earth),
       "carousel-earth-still",
       t,
-      `the Earth moved from ${first.earth} to ${open1.earth} when About opened`,
+      `the Earth moved from ${first.earth} to ${wheeled.earth} when the page turned`,
       size,
     );
     check(
-      open1.aboutHeight <= size.height,
-      "carousel-about-fits",
+      wheeled.shownHeight <= wheeled.columnHeight,
+      "carousel-page-fits",
       t,
-      `About is ${open1.aboutHeight}px tall in a ${size.height}px window`,
+      `${name1} is ${wheeled.shownHeight}px tall in a ${wheeled.columnHeight}px column`,
       size,
     );
-    // A further downward wheel scrolls About itself and never leaves it.
-    await page.mouse.wheel(0, 300);
-    await page.waitForTimeout(700);
-    const scrolled = await page.evaluate(
-      (sel) => document.querySelector(sel).scrollTop,
-      ABOUT,
-    );
-    const open2 = await carouselState(page);
+
+    // The arrows step both ways; the buttons and the pager never move.
+    const navs = new Set([
+      JSON.stringify(first.nav),
+      JSON.stringify(wheeled.nav),
+    ]);
+    await page.locator(NEXT).click();
+    const stepped = await settledState(page);
+    navs.add(JSON.stringify(stepped.nav));
     check(
-      open2.about && open2.scrollY === 0,
-      "carousel-about-scroll",
+      stepped.shown.join() === name2 && stepped.dot === name2,
+      "carousel-next",
       t,
-      `About scrolled ${scrolled}px and the page ${open2.scrollY}px`,
+      `the next arrow left [${stepped.shown}] shown and the dot on ${stepped.dot}, not ${name2}`,
+      size,
+    );
+    await page.locator(PREV).click();
+    const back = await settledState(page);
+    check(
+      back.shown.join() === name1,
+      "carousel-prev",
+      t,
+      `the previous arrow left [${back.shown}] shown, not ${name1}`,
+      size,
+    );
+    // The arrow keys inside the column, as a keyboard reader would.
+    await page.locator(PAGES).nth(1).focus();
+    await page.keyboard.press("ArrowLeft");
+    const keyed = await settledState(page);
+    check(
+      keyed.shown.join() === name0,
+      "carousel-keys",
+      t,
+      `ArrowLeft on ${name1} left [${keyed.shown}] shown, not ${name0}`,
+      size,
+    );
+    // Every page through its dot, the last one last: then the next arrow is off.
+    for (const name of first.names) {
+      await page.getByRole("tab", { name, exact: true }).click();
+      const s = await settledState(page);
+      navs.add(JSON.stringify(s.nav));
+      check(
+        s.shown.join() === name && s.scrollY === 0,
+        "carousel-dot",
+        t,
+        `the dot for ${name} left [${s.shown}] shown and the page at ${s.scrollY}`,
+        size,
+      );
+      check(
+        s.shownHeight <= s.columnHeight,
+        "carousel-page-fits",
+        t,
+        `${name} is ${s.shownHeight}px tall in a ${s.columnHeight}px column`,
+        size,
+      );
+    }
+    const [nextEnd, prevEnd] = await arrowState(page);
+    check(
+      !nextEnd.visible && nextEnd.tabIndex === -1 && prevEnd.visible,
+      "carousel-next-off",
+      t,
+      `on the last page the next arrow is shown ${nextEnd.visible} (tabindex ${nextEnd.tabIndex}), the previous ${prevEnd.visible}`,
       size,
     );
     check(
-      scrolled > 0 || open1.aboutHeight < size.height,
-      "carousel-about-scrolls",
+      navs.size === 1,
+      "carousel-nav-still",
       t,
-      "About holds more than it shows but does not scroll",
+      `the buttons and the pager moved between pages: ${[...navs].join(" / ")}`,
       size,
     );
-    // Escape returns, and the wheel up at the top returns too.
+    // Escape and a press on the Earth are not the carousel's: the page stays.
+    const last = first.names.at(-1);
     await page.keyboard.press("Escape");
-    await page.waitForTimeout(700);
-    check(
-      (await carouselState(page)).intro,
-      "carousel-escape",
-      t,
-      "Escape did not return to the intro",
-      size,
-    );
-    await page.getByRole("button", { name: "More about gmt" }).click();
-    await page.waitForTimeout(700);
-    check(
-      (await carouselState(page)).about,
-      "carousel-chevron",
-      t,
-      "the More chevron did not open About",
-      size,
-    );
-    // A press on the Earth closes About, and a press inside it does not.
-    await page.locator(`${ABOUT} h2`).first().click();
-    await page.waitForTimeout(400);
-    check(
-      (await carouselState(page)).about,
-      "carousel-press-inside",
-      t,
-      "a press inside About closed it",
-      size,
-    );
-    // A press on the Earth also selects a place and moves its card, which is the globe's own
-    // work, so the layout is read before it.
     const shift = (await carouselState(page)).shift;
     const hit = await page.locator(HIT).boundingBox();
     await page.mouse.click(hit.x + hit.width * 0.75, hit.y + hit.height * 0.5);
     await page.waitForTimeout(700);
+    const kept = await settledState(page);
     check(
-      (await carouselState(page)).intro,
-      "carousel-dismiss",
+      kept.shown.join() === last,
+      "carousel-stays",
       t,
-      "a press on the Earth did not return to the intro",
+      `Escape and a press on the Earth left [${kept.shown}] shown, not ${last}`,
       size,
     );
-    await page.waitForFunction(() => document.getAnimations().length === 0);
-    const end = await carouselState(page);
     check(
       shift === 0,
       "carousel-cls",
@@ -4213,10 +4386,10 @@ async function checkCarousel(browser) {
       size,
     );
     check(
-      end.motion.every((m) => m === null),
+      kept.motion.every((m) => m === null),
       "carousel-motion-done",
       t,
-      `a motion attribute is left set: ${end.motion}`,
+      `a motion attribute is left set: ${kept.motion}`,
       size,
     );
     check(
@@ -4230,18 +4403,42 @@ async function checkCarousel(browser) {
     measured++;
   }
 
-  // Deep links open About on a desktop and scroll the section into view on a small screen.
+  // A link to a place on a later page opens that page on load; leaving it clears the address.
   {
     const size = { width: 1440, height: 900 };
     const { page, context } = await open(browser, size, {
       query: "#tested-and-precise",
     });
-    const s = await carouselState(page);
+    // The linked page freezes in with the entrance and then drops its motion mark.
+    const landed = await page
+      .waitForFunction(
+        (pages) =>
+          [...document.querySelectorAll(pages)].every(
+            (el) => !el.dataset.motion,
+          ),
+        PAGES,
+        { timeout: 5000 },
+      )
+      .then(() => true)
+      .catch(() => false);
     check(
-      s.about && !s.intro && s.scrollY === 0,
+      landed,
+      "carousel-motion-done",
+      "carousel",
+      "the page a link opened on load still has its motion mark 5 s later",
+      size,
+    );
+    const s = await carouselState(page);
+    const host = await page.evaluate(
+      () =>
+        document.getElementById("tested-and-precise")?.closest("[data-page]")
+          ?.dataset.page ?? null,
+    );
+    check(
+      host !== null && s.shown.join() === host && s.scrollY === 0,
       "carousel-deep-link",
       "carousel",
-      "a link to a place in About did not open it on load",
+      `a link to a place on ${host} left [${s.shown}] shown and the page at ${s.scrollY}`,
       size,
     );
     const inView = await page.evaluate(() => {
@@ -4257,51 +4454,85 @@ async function checkCarousel(browser) {
       "the linked section is out of view",
       size,
     );
-    await page.keyboard.press("Escape");
-    await page.waitForTimeout(700);
+    await page.locator(PREV).click();
+    await settledState(page);
     const hash = await page.evaluate(() => location.hash);
     check(
       hash === "",
       "carousel-hash-cleared",
       "carousel",
-      `the address still reads ${hash}`,
+      `after leaving the page it names the address still reads ${hash}`,
+      size,
+    );
+    // An address that is not valid percent-encoding is no address: the landing still starts.
+    const {
+      page: bad,
+      context: badContext,
+      problems,
+    } = await open(browser, size, {
+      query: "#100%",
+    });
+    const b = await settledState(bad);
+    check(
+      b.mark === "on" && b.shown.join() === b.names[0] && problems.length === 0,
+      "carousel-bad-hash",
+      "carousel",
+      `with #100% the mark is ${b.mark}, [${b.shown}] is shown and the console has ${problems.join("; ") || "nothing"}`,
+      size,
+    );
+    await badContext.close();
+    await context.close();
+    measured++;
+  }
+
+  // Narrower or portrait: the carousel still pages, the page scrolls and the wheel scrolls it.
+  for (const size of STACKED_SIZES) {
+    const t = "carousel, stacked";
+    const { page, context } = await open(browser, size);
+    const s = await carouselState(page);
+    check(
+      s.mark === "on",
+      "carousel-stacked-mark",
+      t,
+      `data-home-carousel is ${s.mark}`,
+      size,
+    );
+    check(
+      s.docH > s.innerH && s.docW <= s.innerW,
+      "carousel-stacked-scroll",
+      t,
+      `the page is ${s.docW}×${s.docH} in a ${s.innerW}×${s.innerH} window: it should scroll down and never sideways`,
+      size,
+    );
+    const title = await page.locator("h1[data-page-title]").boundingBox();
+    await page.mouse.move(
+      title.x + title.width / 2,
+      title.y + title.height / 2,
+    );
+    await page.mouse.wheel(0, 200);
+    await page.waitForTimeout(600);
+    const w = await carouselState(page);
+    check(
+      w.scrollY > 0 && w.shown.join() === s.names[0],
+      "carousel-stacked-wheel",
+      t,
+      `the wheel scrolled the page to ${w.scrollY} and left [${w.shown}] shown; it should scroll and not turn`,
+      size,
+    );
+    await page.locator(NEXT).click();
+    const n = await settledState(page);
+    check(
+      n.shown.join() === s.names[1],
+      "carousel-stacked-next",
+      t,
+      `the next arrow left [${n.shown}] shown, not ${s.names[1]}`,
       size,
     );
     await context.close();
     measured++;
   }
 
-  // Where the screen is too small, or without scripts, the page is the long one.
-  for (const size of [
-    { width: 1280, height: 600 },
-    { width: 1024, height: 768 },
-  ]) {
-    const { page, context } = await open(browser, size);
-    const s = await carouselState(page);
-    check(
-      s.mark === null,
-      "carousel-fallback-mark",
-      "carousel",
-      `data-home-carousel is ${s.mark}`,
-      size,
-    );
-    check(
-      s.about && s.docH > s.innerH,
-      "carousel-fallback",
-      "carousel",
-      "About is not in the page's flow below the hero",
-      size,
-    );
-    check(
-      s.docW <= s.innerW,
-      "carousel-fallback-width",
-      "carousel",
-      "the fallback scrolls sideways",
-      size,
-    );
-    await context.close();
-    measured++;
-  }
+  // Without scripts every page reads in order and the pager is not shown.
   {
     const size = { width: 1440, height: 900 };
     const context = await browser.newContext({
@@ -4314,55 +4545,48 @@ async function checkCarousel(browser) {
       waitUntil: "load",
       timeout: LOAD_TIMEOUT,
     });
-    const s = await carouselState(page).catch(() => null);
     const plain = await page.evaluate(
-      (about) => ({
-        mark: document.documentElement.dataset.homeCarousel ?? null,
-        shown:
-          getComputedStyle(document.querySelector(about)).visibility !==
-          "hidden",
-        scrolls: document.documentElement.scrollHeight > window.innerHeight,
-      }),
-      ABOUT,
+      ({ pages, next }) => {
+        const all = [...document.querySelectorAll(pages)];
+        const pager = document.querySelector(next)?.parentElement;
+        return {
+          mark: document.documentElement.dataset.homeCarousel ?? null,
+          hidden: all.filter(
+            (el) => getComputedStyle(el).visibility === "hidden",
+          ).length,
+          pager: pager ? getComputedStyle(pager).display : null,
+          scrolls: document.documentElement.scrollHeight > window.innerHeight,
+        };
+      },
+      { pages: PAGES, next: NEXT },
     );
     check(
-      plain.mark === null && plain.shown && plain.scrolls,
+      plain.mark === null &&
+        plain.hidden === 0 &&
+        plain.pager === "none" &&
+        plain.scrolls,
       "carousel-no-js",
       "carousel",
-      `without scripts the mark is ${plain.mark}, About shown ${plain.shown}, scrolls ${plain.scrolls}`,
+      `without scripts the mark is ${plain.mark}, ${plain.hidden} pages are hidden, the pager is ${plain.pager} and the page scrolls ${plain.scrolls}`,
       size,
     );
-    void s;
     await context.close();
     measured++;
   }
 
-  // The browser's find opens a closed About, and a panel that is closed draws nothing.
+  // A page that is not shown draws nothing and takes no input.
   {
     const size = { width: 1440, height: 900 };
     const { page, context } = await open(browser, size);
-    const closed = await page.evaluate((about) => {
-      const el = document.querySelector(about);
-      const r = el.getBoundingClientRect();
-      const c = getComputedStyle(el);
-      return {
-        value: el.getAttribute("hidden"),
-        drawn: r.height > 0 && c.backgroundColor !== "rgba(0, 0, 0, 0)",
-        border: c.borderTopWidth,
-      };
-    }, ABOUT);
+    const closed = await page.evaluate((pages) => {
+      const el = document.querySelectorAll(pages)[1];
+      return { visibility: getComputedStyle(el).visibility, inert: el.inert };
+    }, PAGES);
     check(
-      closed.value === "until-found",
-      "carousel-find",
-      "carousel",
-      `the closed panel is hidden="${closed.value}", so find cannot open it`,
-      size,
-    );
-    check(
-      !closed.drawn && closed.border === "0px",
+      closed.visibility === "hidden" && closed.inert,
       "carousel-closed-draws",
       "carousel",
-      "the closed About panel still draws a box",
+      `a page not shown is ${closed.visibility}, inert ${closed.inert}`,
       size,
     );
     await context.close();
@@ -4370,11 +4594,7 @@ async function checkCarousel(browser) {
   }
 }
 
-/** The panel and chevron selectors the motion and state checks drive. */
-const NEXT = '#home-carousel [data-step="1"]';
-const PREV = '#home-carousel [data-step="-1"]';
-
-/** Five quick switches, with a frame log and the number of animations each element runs at once. */
+/** Five quick turns, with a frame log and the number of animations each page runs at once. */
 async function switchFrames(page) {
   await page.evaluate(() => {
     window.__frameLog = { deltas: [], most: 0, props: [] };
@@ -4386,8 +4606,8 @@ async function switchFrames(page) {
       for (const a of document.getAnimations()) {
         const target = a.effect?.target;
         if (!target || a.playState !== "running") continue;
-        /* The chevron glides on two transitions (opacity and translate) by design; a panel runs one. */
-        if (!target.matches("[data-panel]")) continue;
+        // The arrows fade on transitions by design; a page runs one animation.
+        if (!target.matches("[data-page]")) continue;
         per.set(target, (per.get(target) ?? 0) + 1);
         if (a instanceof CSSAnimation) {
           for (const frame of a.effect.getKeyframes())
@@ -4452,13 +4672,20 @@ async function checkCarouselMotion(browser) {
       f.most <= 1,
       "carousel-one-animation",
       t,
-      `an element ran ${f.most} animations at once`,
+      `a page ran ${f.most} animations at once`,
+      size,
+    );
+    check(
+      f.props.length > 0,
+      "carousel-animates",
+      t,
+      "no page animated while turning",
       size,
     );
     await context.close();
     measured++;
   }
-  // Reduced motion: the panels only fade.
+  // Reduced motion: the pages only fade.
   {
     const t = "carousel motion, reduced";
     const { page, context } = await open(browser, size, { reduce: true });
@@ -4469,83 +4696,12 @@ async function checkCarouselMotion(browser) {
       other.length === 0,
       "carousel-reduced-opacity-only",
       t,
-      `under reduced motion the panels animate ${other.join(", ")}`,
+      `under reduced motion the pages animate ${other.join(", ")}`,
       size,
     );
     await context.close();
     measured++;
   }
-}
-
-async function checkCarouselChevrons(browser) {
-  const size = { width: 1440, height: 900 };
-  const t = "carousel chevrons";
-  const { page, context } = await open(browser, size);
-  const read = (sel) =>
-    page.locator(sel).evaluate((b) => ({
-      opacity: Number(getComputedStyle(b).opacity),
-      visibility: getComputedStyle(b).visibility,
-      tabIndex: b.tabIndex,
-    }));
-  const near = (a, b) => Math.abs(a - b) < 0.03;
-  // Over the Earth the chevrons are invisible, over the copy they rest at .42, and hovered or
-  // focused they are .95.
-  await page.mouse.move(1000, 300);
-  await page.waitForTimeout(700);
-  const rest = await read(NEXT);
-  check(
-    near(rest.opacity, 0),
-    "carousel-chevron-rest",
-    t,
-    `over the Earth the chevron is ${rest.opacity}, not 0`,
-    size,
-  );
-  const copy = await page.locator(INTRO).boundingBox();
-  await page.mouse.move(copy.x + 40, copy.y + 40);
-  await page.waitForTimeout(700);
-  const engaged = await read(NEXT);
-  check(
-    near(engaged.opacity, 0.42),
-    "carousel-chevron-engaged",
-    t,
-    `over the copy the chevron is ${engaged.opacity}, not .42`,
-    size,
-  );
-  const box = await page.locator(NEXT).boundingBox();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.waitForTimeout(700);
-  const hover = await read(NEXT);
-  check(
-    near(hover.opacity, 0.95),
-    "carousel-chevron-hover",
-    t,
-    `hovered the chevron is ${hover.opacity}, not .95`,
-    size,
-  );
-  await page.mouse.move(1000, 300);
-  // A key press first, so the focus that follows counts as the keyboard's.
-  await page.keyboard.press("Shift");
-  await page.locator(NEXT).focus();
-  await page.waitForTimeout(700);
-  const focused = await read(NEXT);
-  check(
-    near(focused.opacity, 0.95),
-    "carousel-chevron-focus",
-    t,
-    `focused the chevron is ${focused.opacity}, not .95`,
-    size,
-  );
-  // On the first panel there is nothing before it: that chevron is hidden and unfocusable.
-  const prev = await read(PREV);
-  check(
-    prev.visibility === "hidden" && prev.tabIndex === -1,
-    "carousel-chevron-none",
-    t,
-    `the chevron with no panel before it is ${prev.visibility} with tabindex ${prev.tabIndex}`,
-    size,
-  );
-  await context.close();
-  measured++;
 }
 
 async function checkCarouselModuleBlocked(browser) {
@@ -4564,25 +4720,23 @@ async function checkCarouselModuleBlocked(browser) {
   });
   // The page holds still for the failsafe (2.5 s), then lets go.
   await page.waitForTimeout(3500);
-  const s = await page.evaluate(
-    ({ about }) => {
-      const root = document.documentElement;
-      const el = document.querySelector(about);
-      scrollTo(0, 5000);
-      return {
-        mark: root.dataset.homeCarousel ?? null,
-        scrolls: root.scrollHeight > window.innerHeight,
-        y: window.scrollY,
-        shown: getComputedStyle(el).visibility !== "hidden" && !el.hidden,
-      };
-    },
-    { about: ABOUT },
-  );
+  const s = await page.evaluate((pages) => {
+    const root = document.documentElement;
+    const all = [...document.querySelectorAll(pages)];
+    scrollTo(0, 5000);
+    return {
+      mark: root.dataset.homeCarousel ?? null,
+      scrolls: root.scrollHeight > window.innerHeight,
+      y: window.scrollY,
+      hidden: all.filter((el) => getComputedStyle(el).visibility === "hidden")
+        .length,
+    };
+  }, PAGES);
   check(
-    s.mark !== "on" && s.scrolls && s.y > 0 && s.shown,
+    s.mark === null && s.scrolls && s.y > 0 && s.hidden === 0,
     "carousel-module-blocked",
     t,
-    `with the module blocked the mark is ${s.mark}, the page scrolls ${s.scrolls} (to ${s.y}), About shown ${s.shown}`,
+    `with the module blocked the mark is ${s.mark}, the page scrolls ${s.scrolls} (to ${s.y}), ${s.hidden} pages hidden`,
     size,
   );
   await context.close();
@@ -4593,17 +4747,16 @@ async function checkCarouselAxe(browser) {
   const size = { width: 1440, height: 900 };
   const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
   for (const theme of ["dark", "light"]) {
-    for (const panel of ["intro", "about"]) {
-      const t = `carousel axe, ${theme}, ${panel}`;
-      const { page, context } = await open(browser, size, {
-        context: { colorScheme: theme },
-        init: `try { localStorage.setItem("starlight-theme", "${theme}"); } catch {}`,
-      });
-      if (panel === "about") {
-        await page.locator(NEXT).evaluate((b) => b.click());
-        await page.waitForFunction(() => document.getAnimations().length === 0);
-      }
-      await page.waitForTimeout(400);
+    const { page, context } = await open(browser, size, {
+      context: { colorScheme: theme },
+      init: `try { localStorage.setItem("starlight-theme", "${theme}"); } catch {}`,
+    });
+    const { names } = await carouselState(page);
+    for (const [i, name] of names.entries()) {
+      const t = `carousel axe, ${theme}, ${name}`;
+      if (i > 0) await page.getByRole("tab", { name, exact: true }).click();
+      await settledState(page);
+      await page.waitForTimeout(200);
       const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       const found = results.violations.map(
         (v) => `${v.id} (${v.nodes.length}: ${v.nodes[0].target.join(" ")})`,
@@ -4615,9 +4768,9 @@ async function checkCarouselAxe(browser) {
         `axe found ${found.join("; ")}`,
         size,
       );
-      await context.close();
       measured++;
     }
+    await context.close();
   }
 }
 
@@ -4657,7 +4810,6 @@ async function main() {
       ["zone lists", () => checkZoneLists(browser)],
       ["landing carousel", () => checkCarousel(browser)],
       ["carousel motion", () => checkCarouselMotion(browser)],
-      ["carousel chevrons", () => checkCarouselChevrons(browser)],
       ["carousel, module blocked", () => checkCarouselModuleBlocked(browser)],
       ["carousel axe", () => checkCarouselAxe(browser)],
     ];
