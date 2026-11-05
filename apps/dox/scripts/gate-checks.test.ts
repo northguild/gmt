@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   MIN_FRAMES,
   arrowMoveProblems,
+  attributeFrames,
   blockOffSite,
   colorAlpha,
   controlPresence,
@@ -16,6 +17,7 @@ import {
   isExcluded,
   isOffSite,
   jumpProblems,
+  withJumpDiagnostic,
   keyboardMoveProblems,
   maxFrameJump,
   maxFrameJumpAt,
@@ -75,6 +77,37 @@ describe("skipped interactions and drags", () => {
     expect(dragProblem("3", "3")).toHaveLength(1);
     expect(dragProblem("3", "9")).toEqual([]);
     expect(dragProblem(null, null)).toEqual([]);
+  });
+});
+
+describe("withJumpDiagnostic", () => {
+  const diagnostics = {
+    root: "frame 8, root cause",
+    main: "frame 2, main cause",
+  };
+
+  it("explains a <main> jump with the frame <main> jumped in, not the root's largest", () => {
+    expect(withJumpDiagnostic("<main> max jump 59 px > 48", diagnostics)).toBe(
+      "<main> max jump 59 px > 48 (frame 2, main cause)",
+    );
+  });
+
+  it("explains a page jump, or a page-and-<main> jump, with the root's frame", () => {
+    expect(withJumpDiagnostic("max jump 60 px > 48", diagnostics)).toBe(
+      "max jump 60 px > 48 (frame 8, root cause)",
+    );
+    expect(
+      withJumpDiagnostic("max jump 60 px > 48 (page and <main>)", diagnostics),
+    ).toBe("max jump 60 px > 48 (page and <main>) (frame 8, root cause)");
+  });
+
+  it("leaves other problems, and a jump with no diagnostic, as they are", () => {
+    expect(
+      withJumpDiagnostic("a grow section is not at rest", diagnostics),
+    ).toBe("a grow section is not at rest");
+    expect(
+      withJumpDiagnostic("<main> max jump 59 px > 48", { root: "x", main: "" }),
+    ).toBe("<main> max jump 59 px > 48");
   });
 });
 
@@ -917,5 +950,59 @@ describe("the Firefox launch route", () => {
       )
       .map((file) => path.relative(root, file));
     expect(importsFirefox).toEqual(["lib/browser-launch.mjs"]);
+  });
+});
+
+describe("attributeFrames", () => {
+  /** A sampled frame: root and `<main>` heights, the animation frames since the last sample, and the eased step. */
+  const frame = (h: number, ticks?: number, eased?: number) => ({
+    h,
+    m: h + 500,
+    ticks,
+    eased,
+  });
+  const jumpsOf = (frames: ReturnType<typeof frame>[]) => {
+    const a = attributeFrames(frames);
+    return {
+      page: maxFrameJump(a.map((f) => f.h)),
+      main: maxFrameJump(a.map((f) => f.m)),
+    };
+  };
+
+  it("splits two eased 32 px frames that one sample spans into the two steps they were", () => {
+    // A late sampling task: two animation frames ran between the samples, each a 32 px step.
+    const frames = [frame(1000, 1, 0), frame(1032, 1, 32), frame(1096, 2, 64)];
+    expect(maxFrameJump(frames.map((f) => f.h))).toBe(64);
+    expect(jumpsOf(frames)).toEqual({ page: 32, main: 32 });
+  });
+
+  it("keeps a pop the easing does not account for, whatever the frame timing", () => {
+    expect(jumpsOf([frame(1000, 1, 0), frame(1064, 1, 0)]).page).toBe(64);
+    // A stalled sample (two frames) with a 64 px pop and no eased motion is still a 64 px pop.
+    expect(jumpsOf([frame(1000, 1, 0), frame(1064, 2, 0)]).page).toBe(64);
+  });
+
+  it("adds a pop that rides on an eased step to that step", () => {
+    // 32 eased plus 20 that nothing eased, in one frame: 52, over the 48 limit.
+    expect(jumpsOf([frame(1000, 1, 0), frame(1052, 1, 32)]).page).toBe(52);
+    // The same pop on a sample that spans two frames: 20 + the 32 each frame moved.
+    expect(jumpsOf([frame(1000, 1, 0), frame(1084, 2, 64)]).page).toBe(52);
+  });
+
+  it("is the series itself for frames that carry no frame count or eased step", () => {
+    const plain = [
+      { h: 1000, m: 1500 },
+      { h: 1064, m: 1564 },
+    ];
+    expect(attributeFrames(plain).map((f) => f.h)).toEqual([1000, 1064]);
+    expect(attributeFrames([])).toEqual([]);
+  });
+
+  it("keeps a shrinking eased box and every other field of the frame", () => {
+    const [, second] = attributeFrames([
+      { h: 1000, m: 1500, l: 0, g: 1 },
+      { h: 936, m: 1436, l: 0, g: 1, ticks: 2, eased: -64 },
+    ]);
+    expect(second).toMatchObject({ l: 0, g: 1, h: 968, m: 1468 });
   });
 });

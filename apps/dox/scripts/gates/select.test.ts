@@ -2,6 +2,7 @@ import { importsOf, sitePathOf } from "./graph.mjs";
 import {
   CAP,
   CAP_REST,
+  emptyRunOutcome,
   isRelevant,
   pickEvenly,
   selectPages,
@@ -249,5 +250,40 @@ describe("graph helpers", () => {
         "~/components/A.astro",
       ].sort(),
     );
+  });
+});
+
+describe("emptyRunOutcome", () => {
+  const entry = (id: string, reason?: string) => ({
+    gate: { id, browsers: ["chromium"] },
+    groups: [],
+    reason,
+  });
+
+  it("passes with nothing to check when no gate had a page to run", () => {
+    expect(emptyRunOutcome([entry("a"), entry("b")], ["chromium"])).toEqual({
+      code: 0,
+      line: "gates: PASS  nothing to check (no Dox page changed)",
+    });
+  });
+
+  it("fails and names the gate when the browsers asked for run none of the gates", () => {
+    const outcome = emptyRunOutcome(
+      [entry("contrast-measure", "browser")],
+      ["firefox"],
+    );
+    expect(outcome.code).toBe(2);
+    expect(outcome.line).toBe(
+      "gates: nothing was run: none of firefox runs contrast-measure (it runs in chromium)",
+    );
+  });
+
+  it("fails when a browser-dropped gate sits among gates with no page", () => {
+    expect(
+      emptyRunOutcome(
+        [entry("a"), entry("contrast-measure", "browser")],
+        ["webkit"],
+      ).code,
+    ).toBe(2);
   });
 });

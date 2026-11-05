@@ -67,11 +67,13 @@ import { launchBrowser } from "./lib/browser-launch.mjs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  attributeFrames,
   blockOffSite,
   crashProblem,
   dragProblem,
   emptyRunProblem,
   frameDiagnostic,
+  withJumpDiagnostic,
   jumpProblems,
   locatorCountProblem,
   maxFrameJump,
@@ -449,6 +451,7 @@ function samplerInit({ rootSelector, auto }) {
     t0: 0,
     running: false,
     n: 0,
+    ticks: 0,
     unpainted: 0,
   });
   /* The latest read of the frame in progress: set at the end of a
@@ -464,6 +467,12 @@ function samplerInit({ rootSelector, auto }) {
       m: main ? main.getBoundingClientRect().height : 0,
       g: document.querySelector("[data-growing]") ? 1 : 0,
       l: document.readyState === "loading" ? 1 : 0,
+      tk: S.ticks,
+      /* The pinned height of each outermost eased box, read with the heights above so the
+         eased motion is of the same instant as the frame it is attributed to. */
+      pins: [...document.querySelectorAll("[data-growing]")]
+        .filter((el) => !el.parentElement?.closest("[data-growing]"))
+        .map((el) => [el, parseFloat(el.style.height)]),
     };
   };
   const NativeResizeObserver = window.ResizeObserver;
@@ -558,6 +567,25 @@ function samplerInit({ rootSelector, auto }) {
     prevH = h;
     return found;
   };
+  /* What the page's eased boxes moved since the last sample, and how many animation frames
+     passed. A sampling task that runs late spans two frames, and the two frames' steps then
+     look like one step; `attributeFrames` (gate-checks.mjs) spreads the eased part back over the
+     frames it took. Only a box pinned at both samples counts: a box pinned or released between
+     them did not move the page by its own height. */
+  let ticksSeen = 0;
+  let pinnedBefore = new Map();
+  const easedStep = (pins) => {
+    const now = new Map();
+    let moved = 0;
+    for (const [el, height] of pins) {
+      if (!Number.isFinite(height)) continue;
+      now.set(el, height);
+      const was = pinnedBefore.get(el);
+      if (was !== undefined) moved += height - was;
+    }
+    pinnedBefore = now;
+    return moved;
+  };
   const record = () => {
     const raw = read();
     // Nothing to measure until the root is in the document. A root that never
@@ -579,7 +607,10 @@ function samplerInit({ rootSelector, auto }) {
       l: use.l || raw.l,
       raw: raw.h,
       rawMain: raw.m,
+      ticks: use.tk - ticksSeen,
+      eased: easedStep(use.pins),
     });
+    ticksSeen = use.tk;
   };
   /* Sampled in a task after the frame, not inside the rAF callback: a read
      there forces layout before ResizeObserver has run, so it would see the
@@ -589,6 +620,12 @@ function samplerInit({ rootSelector, auto }) {
     if (!S.running) return;
     record();
     requestAnimationFrame(loop);
+  };
+  /* Counts every animation frame, whether or not a sample was taken in it. */
+  const tick = () => {
+    if (!S.running) return;
+    S.ticks += 1;
+    requestAnimationFrame(tick);
   };
   const loop = () => {
     if (!S.running) return;
@@ -601,9 +638,13 @@ function samplerInit({ rootSelector, auto }) {
     S.frames = [];
     S.unpainted = 0;
     S.n = 0;
+    S.ticks = 0;
+    ticksSeen = 0;
+    pinnedBefore = new Map();
     painted = null;
     S.t0 = performance.now();
     S.running = true;
+    requestAnimationFrame(tick);
     requestAnimationFrame(loop);
   };
   S.stop = () => {
@@ -620,7 +661,11 @@ function settledMainFrameAt(frames) {
   return settled[maxFrameJumpAt(settled.map(({ f }) => f.m)).at]?.i ?? 0;
 }
 
-function stats(frames) {
+function stats(measured) {
+  /* Heights as they were sampled give growth and the final height; the jump figures use the
+     frames with a late sample's two animation frames told apart (`attributeFrames`). */
+  const frames = attributeFrames(measured);
+  const sampled = measured.map((f) => f.h);
   const hs = frames.map((f) => f.h);
   const jumps = hs.slice(1).map((h, i) => Math.abs(h - hs[i]));
   const dts = frames
@@ -630,9 +675,12 @@ function stats(frames) {
   return {
     frames: frames.length,
     firstH: hs[0] ?? 0,
-    finalH: hs[hs.length - 1] ?? 0,
-    growth: (hs[hs.length - 1] ?? 0) - (hs[0] ?? 0),
+    finalH: sampled[sampled.length - 1] ?? 0,
+    growth: (sampled[sampled.length - 1] ?? 0) - (sampled[0] ?? 0),
     maxJump: maxFrameJump(hs),
+    // The largest step between samples, before a late sample's frames are told apart: kept for
+    // comparison, never asserted.
+    sampledMaxJump: maxFrameJump(sampled),
     // The frame the largest root step lands on, so a root and `<main>` jump in one frame is one jump.
     maxFrame: maxFrameJumpAt(hs).at,
     // Speed, not step: the largest jump scaled to a 60 Hz frame, so a stalled
@@ -654,6 +702,7 @@ function stats(frames) {
     medianDt: dts.length ? dts[Math.floor(dts.length / 2)] : 0,
     growingSeen: frames.some((f) => f.g === 1),
     jumpDiagnostic: largestJumpDiagnostic(frames),
+    mainJumpDiagnostic: diagnosticAt(frames, settledMainFrameAt(frames)),
   };
 }
 
@@ -668,7 +717,12 @@ function largestJumpDiagnostic(frames) {
       at = i;
     }
   }
-  if (at < 0) return "";
+  return diagnosticAt(frames, at);
+}
+
+/** The diagnostic of the frame at `at`, or `""` when none was kept there. */
+function diagnosticAt(frames, at) {
+  if (at < 1 || !frames[at]?.diag) return "";
   const f = frames[at];
   return frameDiagnostic({
     index: f.n,
@@ -1228,9 +1282,12 @@ async function main() {
               r.notes.push("final height re-measured after a mismatch");
             }
             const withDiag = (text) =>
-              r.jumpDiagnostic && /max jump|^grew /.test(text)
+              text.startsWith("grew ") && r.jumpDiagnostic
                 ? `${text} (${r.jumpDiagnostic})`
-                : text;
+                : withJumpDiagnostic(text, {
+                    root: r.jumpDiagnostic,
+                    main: r.mainJumpDiagnostic,
+                  });
             const failures = [
               ...r.problems,
               ...refProblems.map((p) => `reduced-motion reference: ${p}`),

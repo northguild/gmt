@@ -2,16 +2,22 @@ import { firefoxEndpoint, launchBrowser } from "./browser-launch.mjs";
 
 const LOOPBACK = "<loopback>";
 
+type Engines = NonNullable<
+  NonNullable<Parameters<typeof launchBrowser>[2]>["engines"]
+>;
+
 function fakeEngines() {
   const make = (name: string) => ({
     launch: vi.fn(async () => ({ name, version: () => "1.0" })),
     connect: vi.fn(async () => ({ name, version: () => "155.0" })),
   });
-  return {
+  const engines = {
     chromium: make("chromium"),
     firefox: make("firefox"),
     webkit: make("webkit"),
   };
+  // The mocks stand in for Playwright's BrowserType; only launch and connect are used.
+  return engines as typeof engines & Engines;
 }
 
 describe("firefoxEndpoint", () => {
@@ -105,7 +111,7 @@ describe("launchBrowser", () => {
 
   it("throws on an unknown engine, naming the three", async () => {
     await expect(
-      launchBrowser("edge", {}, { engines: fakeEngines(), env: {} }),
+      launchBrowser("edge" as never, {}, { engines: fakeEngines(), env: {} }),
     ).rejects.toThrow(/chromium.*firefox.*webkit/);
   });
 });

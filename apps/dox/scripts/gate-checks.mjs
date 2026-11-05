@@ -79,6 +79,39 @@ export function maxFrameJump(heights) {
   return max;
 }
 
+/**
+ * The frames with `h` and `m` rebuilt so that each step is what one animation frame did.
+ *
+ * The sampler reads in a task after a frame, so a late task can span two animation frames,
+ * and the two frames' steps then show as one. Each sampled frame carries `ticks` (the
+ * animation frames since the previous sample) and `eased` (how far the page's eased boxes
+ * moved in that window, signed). The eased motion is spread over the frames it took, at
+ * `eased / ticks` each; whatever the easing does not account for stays whole in the frame it
+ * was seen in, so a real pop is not hidden by a stall. A frame without `ticks` or `eased` is
+ * one frame with no eased motion: its step is unchanged.
+ * @template {{ h: number, m: number, ticks?: number, eased?: number }} F
+ * @param {F[]} frames
+ * @returns {F[]}
+ */
+export function attributeFrames(frames) {
+  let h = 0;
+  let m = 0;
+  return frames.map((f, i) => {
+    if (i === 0) {
+      h = f.h;
+      m = f.m;
+      return { ...f };
+    }
+    const prev = frames[i - 1];
+    const ticks = Math.max(1, f.ticks ?? 1);
+    const eased = f.eased ?? 0;
+    const perFrame = eased / ticks;
+    h += f.h - prev.h - eased + perFrame;
+    m += f.m - prev.m - eased + perFrame;
+    return { ...f, h, m };
+  });
+}
+
 /** The largest step of `maxFrameJump` and the index of the frame it lands on (0 when there is none). */
 export function maxFrameJumpAt(heights) {
   let max = 0;
@@ -103,7 +136,10 @@ export function crashProblem(error) {
 /**
  * The largest-jump assertion, applied to the page root and to `<main>`. `maxFrame` and
  * `mainMaxFrame` are the frames the two maxima land on: when both pass the limit in the same
- * frame it is one jump, reported once, at the larger size.
+ * frame it is one jump, reported once, at the larger size; a caller that does not know the
+ * frames leaves them out and gets two problems.
+ * @param {{ maxJump: number, mainMaxJump: number, limit: number, reduce: boolean, maxFrame?: number, mainMaxFrame?: number }} run
+ * @returns {string[]}
  */
 export function jumpProblems({
   maxJump,
@@ -128,6 +164,19 @@ export function jumpProblems({
     problems.push(`<main> max jump ${Math.round(mainMaxJump)} px > ${limit}`);
   }
   return problems;
+}
+
+/**
+ * A jump problem with the diagnostic of the frame it happened in. A `<main>`-only jump is
+ * explained by the frame `<main>` jumped in; a page jump, alone or with `<main>`, by the root's.
+ * @param {string} text
+ * @param {{ root: string, main: string }} diagnostics
+ * @returns {string}
+ */
+export function withJumpDiagnostic(text, { root, main }) {
+  if (!/max jump/.test(text)) return text;
+  const diagnostic = text.startsWith("<main>") ? main : root;
+  return diagnostic ? `${text} (${diagnostic})` : text;
 }
 
 /** Zero runs is never a pass. */
