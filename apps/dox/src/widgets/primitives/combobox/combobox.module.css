@@ -97,7 +97,7 @@
 }
 
 .list {
-  max-block-size: 16rem;
+  max-block-size: var(--gmt-popup-max, 16rem);
   box-shadow: 0 4px 16px color-mix(in srgb, var(--gmt-void) 45%, transparent);
 }
 

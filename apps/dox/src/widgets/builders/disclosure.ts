@@ -6,11 +6,12 @@
  * `hidden` until opened. `label` is the button's name; with `iconOnly` it is kept for
  * assistive technology and the graphic stands for it.
  *
- * `wireDisclosure` is what makes it work: it toggles state on click, closes on Escape and
- * sends focus back to the button, and (with `light`) closes when a pointer lands outside or
+ * `wireDisclosure` is what makes it work: it toggles state on click, closes on Escape (in its
+ * turn among the page's layers, `lib/esc-layers.ts`) and sends focus back to the button, and (with `light`) closes when a pointer lands outside or
  * focus moves to a real element outside. A `focusout` with no destination (a click on
  * non-focusable space) is ignored, so a pointer press inside the panel never closes it.
  */
+import { registerEscLayer } from "~/lib/esc-layers";
 import { gateAttr, type GateOption } from "./gate";
 import { html, type SafeHtml } from "./html";
 import { srOnly } from "./sr-only";
@@ -88,15 +89,15 @@ export function wireDisclosure(
     () => set(button.getAttribute("aria-expanded") !== "true"),
     { signal },
   );
-  root.addEventListener(
-    "keydown",
-    (event) => {
-      if (event.key === "Escape" && !panel.hidden) {
-        event.stopPropagation();
-        set(false, true);
-      }
+  registerEscLayer(
+    {
+      el: root,
+      isOpen: () => button.getAttribute("aria-expanded") === "true",
+      close: () => set(false, true),
+      opener: () => button,
     },
-    { signal },
+    signal,
+    root.ownerDocument,
   );
   if (o.light === true) {
     root.ownerDocument.addEventListener(

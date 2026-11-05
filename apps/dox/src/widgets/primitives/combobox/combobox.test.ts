@@ -5,6 +5,7 @@ import { expectNoAxeViolations } from "~/test/render-widget";
 import { field } from "../../builders";
 import { renderHtml } from "../../test-fixture";
 import { combobox, type GmtCombobox } from "./combobox";
+import { listboxRootClass } from "../listbox/listbox";
 
 const zones = ["Africa/Cairo", "Asia/Tokyo", "Asia/Seoul", "Europe/Paris"];
 
@@ -25,6 +26,18 @@ function draw(browse = false, placement?: "above" | "below") {
     }),
   );
 }
+
+describe("the combobox popup", () => {
+  it("is the listbox with its own background, border and scrolling", () => {
+    draw();
+    expect(listboxRootClass).toBeTruthy();
+    // The shared root class is the contract with Zone Planner; the popup is a bare custom element with no role.
+    // oxlint-disable-next-line dox-test/no-class-query, dox-test/no-house-class, testing-library/no-node-access
+    const popup = document.querySelector("gmt-listbox");
+    // oxlint-disable-next-line dox-test/no-implementation-assert, dox-test/no-class-query
+    expect(popup).toHaveClass(listboxRootClass);
+  });
+});
 
 describe("the combobox element", () => {
   it("opens, narrows and chooses the same when it is set to open above the input", async () => {
@@ -127,6 +140,40 @@ describe("the combobox element", () => {
     expect(input).toHaveAttribute("aria-expanded", "true");
     await user.tab();
     expect(input).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("takes focus from code without opening, and opens on the first key typed", async () => {
+    draw();
+    const user = userEvent.setup();
+    const input = screen.getByRole("combobox", { name: "Find a zone" });
+    // The combobox's own method is the contract the zone drawer's magnifier relies on.
+    // oxlint-disable-next-line dox-test/no-class-query, dox-test/no-house-class, testing-library/no-node-access
+    (document.querySelector("gmt-combobox") as GmtCombobox).focusInput();
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute("aria-expanded", "false");
+    await user.keyboard("s");
+    expect(input).toHaveAttribute("aria-expanded", "true");
+    expect(input).toHaveValue("s");
+  });
+
+  it("reports a choice, and never the input's own change when typed text is left", async () => {
+    draw();
+    const user = userEvent.setup();
+    const seen: unknown[] = [];
+    // The element's `change` is the contract the globe search listens to.
+    // oxlint-disable-next-line dox-test/no-class-query, dox-test/no-house-class, testing-library/no-node-access
+    const element = document.querySelector("gmt-combobox");
+    element?.addEventListener("change", (event) => {
+      seen.push((event as CustomEvent<{ value: string }>).detail?.value);
+    });
+    await user.click(screen.getByRole("combobox", { name: "Find a zone" }));
+    await user.keyboard("zz");
+    await user.tab();
+    expect(seen).toEqual([]);
+    await user.click(screen.getByRole("combobox", { name: "Find a zone" }));
+    await user.clear(screen.getByRole("combobox", { name: "Find a zone" }));
+    await user.click(screen.getByRole("option", { name: "Asia/Tokyo" }));
+    expect(seen).toEqual(["Asia/Tokyo"]);
   });
 
   it("chooses the option a click lands on and keeps focus in the input", async () => {

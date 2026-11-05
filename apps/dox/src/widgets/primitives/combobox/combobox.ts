@@ -6,8 +6,9 @@
  * https://www.w3.org/WAI/ARIA/apg/patterns/combobox/. Focus stays in the input, which
  * is `role="combobox"` with `aria-expanded`, `aria-controls` and `aria-activedescendant`.
  * ArrowDown opens the list or moves down, ArrowUp moves up, Alt+ArrowDown opens it,
- * Enter chooses the active option (or an exact match that was typed), Escape closes,
- * Tab closes and moves on. The list shows every match and scrolls; it is never cut short.
+ * Enter chooses the active option (or an exact match that was typed), Escape closes
+ * the list and leaves focus in the box (the page's Escape order, `lib/esc-layers.ts`, then
+ * moves on to the next layer), Tab closes and moves on. The list shows every match and scrolls; it is never cut short.
  *
  * It is the control of a `field()`, which writes the `<label for>`. The list inside is a
  * `<gmt-listbox>` that the element drives; focus never enters it.
@@ -16,12 +17,14 @@
  * `change` with `detail.value` when a choice is made, and `openchange` with
  * `detail.open` when the list opens or shuts, by any route.
  */
+import { registerEscLayer } from "~/lib/esc-layers";
 import { html, setHtml, type SafeHtml } from "../../builders/html";
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { KitElement, type KitDetail } from "../base";
 import {
   listboxOption,
   listboxOptionId,
+  listboxRootClass,
   type GmtListbox,
 } from "../listbox/listbox";
 import styles from "./combobox.module.css";
@@ -81,7 +84,7 @@ export function combobox(o: ComboboxOptions): SafeHtml {
     ><div class="${styles.popup}" hidden
       ><gmt-listbox
         id="${list}"
-        class="${styles.list}"
+        class="${listboxRootClass} ${styles.list}"
         role="listbox"
         tabindex="-1"
         aria-label="${o.label} suggestions"
@@ -160,6 +163,18 @@ export class GmtCombobox extends KitElement {
       this.#openList();
       this.#input.focus();
     }
+  }
+
+  /**
+   * Put focus in the input without opening the list; typing or ArrowDown opens it. The current
+   * text is selected, so the first key replaces it rather than extending a zone's name.
+   */
+  focusInput(): void {
+    this.#clearBlur();
+    this.#focusOpens = false;
+    this.#input.focus();
+    this.#input.select();
+    this.#focusOpens = true;
   }
 
   #clearBlur(): void {
@@ -265,6 +280,11 @@ export class GmtCombobox extends KitElement {
       ].map((option) => option.dataset.value ?? "");
 
     input.addEventListener("input", () => this.#openList(), { signal });
+    // The input's own `change` (typed text, then focus leaves) bubbles; this element's `change`
+    // means a choice was made, with `detail.value`, so the native one stops here.
+    input.addEventListener("change", (event) => event.stopPropagation(), {
+      signal,
+    });
     input.addEventListener(
       "focus",
       () => {
@@ -307,12 +327,6 @@ export class GmtCombobox extends KitElement {
             }
             break;
           }
-          case "Escape":
-            if (this.#open) {
-              event.preventDefault();
-              this.#close();
-            }
-            break;
           case "Tab":
             this.#close();
             break;
@@ -335,6 +349,16 @@ export class GmtCombobox extends KitElement {
       { signal },
     );
     this.#browse?.addEventListener("click", () => this.toggle(), { signal });
+    registerEscLayer(
+      {
+        el: this,
+        isOpen: () => this.#open,
+        close: () => this.#close(),
+        opener: () => input,
+      },
+      signal,
+      this.ownerDocument,
+    );
     signal.addEventListener("abort", () => this.#clearBlur());
   }
 }
