@@ -20,8 +20,6 @@ export interface UseEscLayer {
   el?: () => Element | null;
   /** The component puts focus back itself. */
   returnsFocus?: boolean;
-  /** Closes only when nothing else is open. */
-  base?: boolean;
 }
 
 export function useEscLayer(layer: UseEscLayer): void {
@@ -36,9 +34,6 @@ export function useEscLayer(layer: UseEscLayer): void {
       },
       get returnsFocus() {
         return latest.current.returnsFocus === true;
-      },
-      get base() {
-        return latest.current.base === true;
       },
       isOpen: () => {
         const { open } = latest.current;
