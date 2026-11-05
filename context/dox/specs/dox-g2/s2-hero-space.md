@@ -28,7 +28,7 @@ library for JavaScript. Typed functions from time zones to transport." (`32rem`)
 started" (primary, right arrow) to the docs, "Ask Dox" (the Dox mark, `data-dox-cta`), "Prompt"
 (copy icon, `data-copy-prompt`, its `aria-label` naming the whole action). Every copy element is
 `--gmt-font-display` (Michroma, then its metric-matched fallback). **First paint is final:** one
-`h1` rule, and the copy's box from SSR CSS alone; the font is in the stylesheet, and the globe's mount moves nothing.
+`h1` rule, and the copy's box from SSR CSS alone; the font is in the stylesheet and loaded from its bytes before the first paint, and the globe's mount moves nothing.
 **No invisible box over the Earth:** each copy box hugs its content (`fit-content`, `inline-flex`
 or `inline-grid`, start-aligned); wrappers are `pointer-events: none`, the text and buttons `auto`.
 

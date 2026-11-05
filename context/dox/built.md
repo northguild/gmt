@@ -924,10 +924,15 @@ number it did not measure.
     headless Linux browser draws the fallback at the same advance. `src/styles/display-fallback.test.ts` pins the list.
   - The Michroma face is in the site stylesheet as a data URI: `gmt-tokens.css` names the
     vendored `public/fonts/michroma-latin-400-normal.woff2?inline` and Vite writes its bytes into
-    the face, so the font is there at first layout and no heading swaps faces. Any external font
-    file, even a preloaded one, arrives after first layout in Firefox and moves the page. The face is
-    `font-display: block`: Chromium decodes a data-URI face after first layout, so with `optional`
-    it would keep the fallback for the page's life. No page preloads the file (a preload of a file nothing uses
+    the face. Any external font
+    file, even a preloaded one, arrives after first layout in Firefox and moves the page. Chromium
+    and WebKit fetch even a data-URI face only once layout asks for it, so the first frame would be
+    laid out in the fallback (with `optional`, for the page's life). `Footer.astro` runs
+    `displayFaceInlineSource()` (`src/lib/display-face.ts`) just before `#gmt-page-end`, which
+    holds the first paint: it finds the face's data URI in the loaded sheets, builds a `FontFace`
+    from the bytes (loaded the moment it is made, in every engine) and adds it to `document.fonts`,
+    where it wins over the sheet's copy. No heading swaps faces. The face stays `font-display:
+    block`, so a page without scripts still draws Michroma once the sheet's face loads. No page preloads the file (a preload of a file nothing uses
     logs a warning). `public/fonts/` is the one copy of the bytes; `deploy-smoke.mjs` and the
     Worker test still request it by URL. `display-fallback.test.ts` pins the face and
     `scripts/display-font-built.test.ts` pins the built bytes against the vendored file and the
@@ -2696,8 +2701,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     (`gmt-home-carousel.css`, same layer, later) still wins there. The copy's page area keeps
     the tallest page's height on every page, so the row and the Earth never move as the pages
     change; the intro has empty sky above it.
-  - **No layout shift.** Michroma is inlined in the site stylesheet with `font-display: block`, so
-    the copy is drawn in it from the first paint and never reflows (no monospace fallback is as
+  - **No layout shift.** Michroma is inlined in the site stylesheet and loaded from its bytes before
+    the first paint (`src/lib/display-face.ts`), so the copy is drawn in it from the first paint and never reflows (no monospace fallback is as
     wide as Michroma for every string). `hero-space` asserts a layout-shift total of exactly 0 over the first 5 s on a cold cache at
     1440, 1920 and 390; that the title and the wordmark are drawn in Michroma, not the fallback; that the title keeps one font size
     and the copy column one box in every frame from the first paint; and that the copy, the stack
@@ -2734,7 +2739,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
     top layer above the header and its search box (which sit outside the page's stacking
     context), placed in page pixels from the frame it hangs over, so it scrolls with the page
     without being moved by script (no layout shift), and follows a resize or an inner scroll; a
-    popover or dialog opened later draws over it. A click on a region of the Earth selects and
+    popover or dialog opened later draws over it. Inside inert content (`[inert] .tooltip`) the card
+    hides, since the top layer would draw it over whatever made the page inert: Starlight 0.41's
+    mobile menu is a fixed pane, not a popover, and inerts `.main-frame` while it is open. A click on a region of the Earth selects and
     centres the globe on the zone, as a list row does. The close sits one layer above the region, since its joining edge laps the region by 1px.
     The tab order on `/` is copy, globe, `+`, `−`, `⊙`, the magnifier, the info button, then the
     close and the drawer's contents when it is open. The drawer's region sits 16 px in from the

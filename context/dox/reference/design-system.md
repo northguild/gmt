@@ -30,8 +30,10 @@ list.
 
 **The heading font is inlined.** `gmt-tokens.css` names the Michroma file with Vite's `?inline`, so
 the `@font-face` carries it as a `data:font/woff2` URI, and the face is `font-display: block` with
-no preload (Chromium decodes a data-URI face after first layout, so `optional` would keep the
-fallback for good). Any external font file, even a preloaded one, arrives after first layout in Firefox and
+no preload. Chromium and WebKit fetch a data-URI face only once layout asks for it, so an inline
+script before the end-of-page marker (`src/lib/display-face.ts`) builds the same face from the
+sheet's bytes and adds it to `document.fonts`, where it is loaded before the held first paint.
+Any external font file, even a preloaded one, arrives after first layout in Firefox and
 moves the page. The Display Fallback face keeps `size-adjust: 130%` with `local("Liberation Mono")`
 among its sources, so the fallback draws at the same advance. See the load-jump entry in `built.md`.
 
