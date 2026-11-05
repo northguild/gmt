@@ -129,6 +129,26 @@ describe("initHomeCarousel", () => {
     expect(shown(h.intro)).toBe(true);
   });
 
+  it("starts on the intro when the hash is not valid percent-encoding, and ignores one later", async () => {
+    window.history.replaceState(null, "", "/#100%");
+    const h = start();
+    expect(document.documentElement.dataset["homeCarousel"]).toBe("on");
+    expect(shown(h.intro)).toBe(true);
+    window.location.hash = "#tested-and-precise";
+    await waitFor(() => expect(shown(h.why)).toBe(true));
+    const errors: unknown[] = [];
+    const note = (e: ErrorEvent): void => {
+      errors.push(e.error);
+      e.preventDefault();
+    };
+    window.addEventListener("error", note);
+    window.location.hash = "#50%zz";
+    await new Promise((r) => setTimeout(r, 0));
+    window.removeEventListener("error", note);
+    expect(errors).toEqual([]);
+    expect(shown(h.why)).toBe(true);
+  });
+
   it("clears the address when it leaves the page it names, and keeps the query", async () => {
     const user = userEvent.setup();
     window.history.replaceState(null, "", "/?a=1#tested-and-precise");

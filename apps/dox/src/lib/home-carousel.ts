@@ -55,10 +55,18 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
   const locked = win.matchMedia?.(HOME_LOCKED_QUERY);
   const reduced = (): boolean => win.matchMedia?.(REDUCED).matches ?? false;
 
-  /** The page that holds the element the hash names, or -1. `_top` is the intro. */
+  /**
+   * The page that holds the element the hash names, or -1. `_top` is the intro. A hash that is
+   * not valid percent-encoding (`#100%`, which the browser keeps as typed) names nothing.
+   */
   const pageOfHash = (): { page: number; target: HTMLElement | null } => {
     if (!win.location.hash) return { page: -1, target: null };
-    const id = decodeURIComponent(win.location.hash.slice(1));
+    let id: string;
+    try {
+      id = decodeURIComponent(win.location.hash.slice(1));
+    } catch {
+      return { page: -1, target: null };
+    }
     if (id === "_top") return { page: 0, target: null };
     const target = id === "" ? null : doc.getElementById(id);
     const page = target ? pages.findIndex((p) => p.contains(target)) : -1;
@@ -134,11 +142,36 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
       target.getBoundingClientRect().top - page.getBoundingClientRect().top;
   };
 
+  /**
+   * Drops `load` once the page has frozen in. It waits while the entrance waits; once the entrance
+   * runs (or there is none), it goes when the page's animation ends or is cancelled.
+   */
+  const settleLoad = (el: HTMLElement): void => {
+    const settle = (): boolean => {
+      if (root.dataset["entrance"] === "wait") return false;
+      const running = el.getAnimations?.() ?? [];
+      void Promise.allSettled(running.map((a) => a.finished)).then(() =>
+        clearMotion(el, "load"),
+      );
+      return true;
+    };
+    if (settle()) return;
+    const watch = new MutationObserver(() => {
+      if (settle()) watch.disconnect();
+    });
+    watch.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-entrance"],
+    });
+    signal.addEventListener("abort", () => watch.disconnect(), { once: true });
+  };
+
   // A link to a place on a later page opens that page with the landing: it freezes in with the
   // entrance, after the first beat.
   if (first.page > 0) {
     pages[first.page].dataset["motion"] = "load";
     reveal(pages[first.page], first.target);
+    settleLoad(pages[first.page]);
   }
 
   /** Opens what a new hash names. Unknown ids are ignored. */

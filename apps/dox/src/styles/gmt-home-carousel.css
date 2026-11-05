@@ -35,7 +35,6 @@
   min-inline-size: 0;
   max-block-size: 100%;
   overflow-y: auto;
-  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: color(from var(--gmt-cyan) srgb r g b / 28%) transparent;
 }
@@ -298,8 +297,11 @@
     scrollbar-gutter: auto;
   }
 
+  /* Here the landing never scrolls, so a page's scroll stops at its own ends. On the stacked
+     layout a page hands the wheel on to the landing, which scrolls. */
   :root[data-home-carousel] .gmt-herostage-copy > [data-page] {
     contain: inline-size;
+    overscroll-behavior: contain;
   }
 
   /* The row has one place on every page: the intro and the row, together, sit in the middle of
