@@ -238,11 +238,28 @@ export async function initGlobe(
 
   const { tooltip, zoom: zoomControls } = parts;
   const tooltipLimit = parts.tooltipLimit ?? (() => null);
-  tooltip.hidden = true;
+  /* The card is drawn in the browser's top layer, so the site's header and its search box never
+     cover a card near the top of the page; the header sits outside the page's stacking context,
+     where no z-index inside the page can reach. It stays where it is in the document, so it keeps
+     the globe's theme, and it is shown once here and hidden with `hidden`: a popover opened later
+     (the data credits, the search dialog) still draws over it. It is a manual popover, so it takes
+     no light dismiss and stays out of the Escape order's native layers. */
+  const topLayer = typeof tooltip.showPopover === "function";
   /* The template owns the card, so a teardown empties and hides it rather than removing it. */
   function clearTooltip(): void {
     tooltip.hidden = true;
     tooltip.replaceChildren();
+    if (topLayer && tooltip.hasAttribute("popover")) {
+      if (tooltip.matches(":popover-open")) tooltip.hidePopover();
+      tooltip.removeAttribute("popover");
+      tooltip.style.removeProperty("left");
+      tooltip.style.removeProperty("top");
+    }
+  }
+  tooltip.hidden = true;
+  if (topLayer && tooltip.isConnected) {
+    tooltip.popover = "manual";
+    tooltip.showPopover();
   }
 
   /* The clock list is mounted before the renderer starts, deliberately. It is the
@@ -625,10 +642,38 @@ export async function initGlobe(
       limit: tooltipLimit(),
     });
     tooltip.toggleAttribute("data-occluded", occluded);
-    const flip = at.y - tooltip.offsetHeight - 16 < 0;
+    /* In the top layer the card is placed in page pixels, from the frame it is drawn over, so it
+       scrolls with the page by itself: a card moved by script on every scroll would count as a
+       layout shift. It flips only where it would leave the top of the page. */
+    const frame = topLayer ? tooltipFrame() : { left: 0, top: 0 };
+    const flip = frame.top + at.y - tooltip.offsetHeight - 16 < 0;
     tooltip.toggleAttribute("data-below", flip);
-    tooltip.style.left = `${x}px`;
-    tooltip.style.top = `${at.y + (flip ? 12 : 0)}px`;
+    tooltip.style.left = `${frame.left + x}px`;
+    tooltip.style.top = `${frame.top + at.y + (flip ? 12 : 0)}px`;
+  }
+
+  /* The card's frame, in page pixels: the element it would be placed in outside the top layer. */
+  function tooltipFrame(): { left: number; top: number } {
+    const parent = tooltip.parentElement;
+    if (!parent) return { left: 0, top: 0 };
+    const box = parent.getBoundingClientRect();
+    return {
+      left: box.left + parent.clientLeft + window.scrollX,
+      top: box.top + parent.clientTop + window.scrollY,
+    };
+  }
+
+  /* A resize, or a scroll inside the page (not of the page itself, which carries the card), moves
+     the frame but draws no globe frame, so the card follows it here. */
+  const followScroll = (event: Event): void => {
+    if (event.target !== document) positionTooltip();
+  };
+  if (topLayer) {
+    document.addEventListener("scroll", followScroll, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("resize", followScroll, { passive: true });
   }
 
   const frameListeners: (() => void)[] = [];
@@ -770,6 +815,8 @@ export async function initGlobe(
       frameListeners.length = 0;
       clearInterval(clockTimer);
       document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("scroll", followScroll, { capture: true });
+      window.removeEventListener("resize", followScroll);
       themeObserver.disconnect();
       for (const query of preferenceQueries) {
         query.removeEventListener("change", refreshTheme);

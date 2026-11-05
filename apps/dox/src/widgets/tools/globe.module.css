@@ -226,6 +226,17 @@
   &[data-below] {
     transform: translate(-50%, 0.6rem);
   }
+
+  /* In the top layer (globe.ts) the card is placed in page pixels, and the popover's own box
+     (centred, framed, scrolling, the system colours) gives way to the card's. It clips rather than
+     scrolls: nothing in it overflows, and the entrance's glint must stay inside its edges. */
+  &:popover-open {
+    position: absolute;
+    inset: auto;
+    margin: 0;
+    overflow: clip;
+    color: inherit;
+  }
 }
 
 /* Side column ----------------------------------------------------------- */
