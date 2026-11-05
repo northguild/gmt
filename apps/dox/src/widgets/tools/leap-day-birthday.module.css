@@ -38,6 +38,13 @@
 
 .rows {
   min-inline-size: 0;
+
+  /* The table lays its columns out once, as shares of its width. The year column is a tenth of it
+     and its cells need 3.9rem; the others need 6.9rem ("⟨ NO SIGNAL ⟩"). At 40rem both fit, and
+     below that the table scrolls in its region instead of cutting or spilling a cell. */
+  & table {
+    min-inline-size: 40rem;
+  }
 }
 
 /* A date reserves the length of "+275760-09-13", in tabular figures with no wrap. */

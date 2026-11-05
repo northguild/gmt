@@ -42,6 +42,7 @@ import {
   textInput,
   widget,
   type SafeHtml,
+  type SelectOption,
   type SwatchSeries,
 } from "~/widgets/builders";
 import {
@@ -144,12 +145,15 @@ const LEGEND = [
  *  row already holds. `current` is always an option, because a permalink may carry an offset
  *  for a row whose printed time has since changed, and a `<select>` drops a value it has no
  *  option for. */
-function offsetOptions(choices: OffsetChoice[], current: string): SafeHtml {
+function offsetList(choices: OffsetChoice[], current: string): SelectOption[] {
   const list = choices.length === 0 ? [{ value: "", label: "None" }] : choices;
-  const all = list.some((c) => c.value === current)
+  return list.some((c) => c.value === current)
     ? list
     : [...list, { value: current, label: current }];
-  return html`${all.map(
+}
+
+function offsetOptions(choices: OffsetChoice[], current: string): SafeHtml {
+  return html`${offsetList(choices, current).map(
     (c) =>
       html`<option value="${c.value}" ${c.value === current ? html`selected` : ""}>${c.label}</option>`,
   )}`;
@@ -160,9 +164,9 @@ function offsetOptions(choices: OffsetChoice[], current: string): SafeHtml {
 const sizer = (text: string, extra = ""): SafeHtml =>
   html`<span class="${styles.sizer} ${extra}" aria-hidden="true" data-t="${text}"></span>`;
 
-/** A cell that holds the size of the tallest thing it can contain. */
-const hold = (sizerPart: SafeHtml, live: SafeHtml): SafeHtml =>
-  html`<span class="${styles.hold}">${sizerPart}<span class="${styles.live}" data-gate="drawn">${live}</span></span>`;
+/** A table cell that holds the size of the tallest thing it can contain. */
+const hold = (sizerPart: SafeHtml, live: SafeHtml, extra = ""): SafeHtml =>
+  html`<span class="${styles.hold} ${styles.cellHold} ${extra}">${sizerPart}<span class="${styles.live}" data-gate="drawn">${live}</span></span>`;
 
 const lost = (): SafeHtml =>
   html`<span class="${styles.lost}">${NO_SIGNAL}</span>`;
@@ -171,12 +175,17 @@ const lost = (): SafeHtml =>
 function timeCell(iso: string): SafeHtml {
   const m = /T(\d{2}:\d{2})(?::\d{2})?([+-]\d{2}:\d{2}|Z)/.exec(iso);
   const short = m ? `${m[1]}${m[2] === "Z" ? " Z" : ` ${m[2]}`}` : iso;
-  return html`<span class="${styles.time}">${short}</span><span class="${styles.timeFull}">${iso}</span>`;
+  const zone = iso.indexOf("[");
+  const full =
+    zone < 0
+      ? html`${iso}`
+      : html`${iso.slice(0, zone)}<wbr />${iso.slice(zone)}`;
+  return html`<span class="${styles.time}">${short}</span><span class="${styles.timeFull}">${full}</span>`;
 }
 
 function timeSizer(zone: string): SafeHtml {
   const { short } = shapeOf.time(zone);
-  return html`<span class="${styles.sizerBox}" aria-hidden="true"><span class="${styles.time} ${styles.sizer}" data-t="${short}"></span><span class="${styles.timeFull} ${styles.sizer}" data-t="${`0000-00-00T00:00:00+00:00[${zone}]`}"></span></span>`;
+  return html`<span class="${styles.sizerBox}" aria-hidden="true"><span class="${styles.time} ${styles.sizer}" data-t="${short}"></span><span class="${styles.timeFull} ${styles.sizer}" data-t="${`0000-00-00T00:00:00+00:00\u200b[${zone}]`}"></span></span>`;
 }
 
 function startState(args: TimetableReaderArgs): TimetableState {
@@ -236,9 +245,12 @@ export function renderTimetableReaderTemplate(
             id: id(`offset-${n}`),
             label: "Offset (optional)",
             control: ({ id: cid }) =>
-              html`<select class="${styles.offset}" id="${cid}" aria-describedby="${id(`why-${n}`)}"
-                >${offsetOptions([], row.offset)}</select
-              >`,
+              select({
+                id: cid,
+                describedBy: id(`why-${n}`),
+                value: row.offset,
+                options: offsetList([], row.offset),
+              }),
           },
         )}`,
       )}
@@ -316,7 +328,7 @@ export function renderTimetableReaderTemplate(
           ></div>`)}
       </div>
       <div class="${styles.pane}">
-        ${grow(html`<div id="${id("rows-slot")}">${rowsTable([], s.timeZone, s.startTimeZone)}</div>`)}
+        ${grow(html`<div class="${styles.rowsSlot}" id="${id("rows-slot")}">${rowsTable([], s.timeZone, s.startTimeZone)}</div>`)}
         <p class="${styles.note}">For the general rule behind a repeated or skipped hour, see the <a href="${withBase("/tools/dst-inspector/")}">DST Inspector</a>.</p>
       </div>
     </div></div>`,
@@ -393,6 +405,7 @@ function rowsTable(
       },
     ],
     rowHeader: "printed",
+    labelCells: true,
     rows: rows.map((r) => ({
       printed: html`<span class="${styles.printed}" data-series="${r.n}">${swatch({ series: r.n as SwatchSeries })}<span class="${styles.rownum}">${r.n}</span><span class="${styles.printedText}">${r.departure + r.offset}</span></span>`,
       leaves: cell(r.leaves, startZone),
@@ -406,6 +419,7 @@ function rowsTable(
                 ? "purple"
                 : "neutral",
             }),
+        styles.noteCell,
       ),
       arrival: cell(r.local, zone),
     })),

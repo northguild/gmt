@@ -284,3 +284,174 @@ describe("rehypeTableScroll column labels", () => {
     expect(bodyCells(t)[1].properties?.dataCol).toBe("Own");
   });
 });
+
+const labelTable = (labels: string[]): Node =>
+  el("table", [
+    el("thead", [
+      el("tr", [el("th", [text("Engine")]), el("th", [text("Note")])]),
+    ]),
+    el(
+      "tbody",
+      labels.map((label) =>
+        el("tr", [el("td", [text(label)]), el("td", [text("x")])]),
+      ),
+    ),
+  ]);
+const groupsOf = (t: Node): unknown[] =>
+  t.children![1].children!.map((row) => row.properties?.dataGroup);
+
+describe("rehypeTableScroll row groups", () => {
+  it("marks a run of three equal first cells start, continue, continue", () => {
+    const t = labelTable(["PostgreSQL", "PostgreSQL", "PostgreSQL"]);
+    run({ type: "root", children: [t] });
+    expect(groupsOf(t)).toEqual(["start", "continue", "continue"]);
+  });
+
+  it("matches first cells that differ only in whitespace", () => {
+    const t = labelTable(["Post  gres", " Post\n gres ", "Post gres"]);
+    run({ type: "root", children: [t] });
+    expect(groupsOf(t)).toEqual(["start", "continue", "continue"]);
+  });
+
+  it("leaves a row on its own unmarked", () => {
+    const t = labelTable(["MySQL", "PostgreSQL", "SQLite"]);
+    run({ type: "root", children: [t] });
+    expect(groupsOf(t)).toEqual([undefined, undefined, undefined]);
+  });
+
+  it("gives two runs back to back each their own start", () => {
+    const t = labelTable(["A", "A", "B", "B", "B", "C"]);
+    run({ type: "root", children: [t] });
+    expect(groupsOf(t)).toEqual([
+      "start",
+      "continue",
+      "start",
+      "continue",
+      "continue",
+      undefined,
+    ]);
+  });
+
+  it("never marks a header row, even one equal to the first body row", () => {
+    const t = el("table", [
+      el("thead", [el("tr", [el("th", [text("A")])])]),
+      el("tbody", [
+        el("tr", [el("td", [text("A")])]),
+        el("tr", [el("td", [text("A")])]),
+      ]),
+    ]);
+    run({ type: "root", children: [t] });
+    expect(t.children![0].children![0].properties?.dataGroup).toBeUndefined();
+    expect(
+      groupsOf({ ...t, children: [t.children![0], t.children![1]] }),
+    ).toEqual(["start", "continue"]);
+  });
+
+  it("marks rows of a table already in the box", () => {
+    const t = labelTable(["A", "A"]);
+    run({
+      type: "root",
+      children: [el("div", [t], { className: [BOX_CLASS] })],
+    });
+    expect(groupsOf(t)).toEqual(["start", "continue"]);
+  });
+
+  it("does not group rows whose first cells are empty", () => {
+    const t = labelTable(["", ""]);
+    run({ type: "root", children: [t] });
+    expect(groupsOf(t)).toEqual([undefined, undefined]);
+  });
+});
+
+describe("rehypeTableScroll generator box", () => {
+  const opener = (kind: string): Node => ({
+    type: "raw",
+    value: `<div class="${BOX_CLASS}" data-kind="${kind}">`,
+  });
+  const closer = (): Node => ({ type: "raw", value: "</div>" });
+
+  it.each(["options", "members", "parameters", "notes"])(
+    "does not box a %s table the generator already boxed",
+    (kind) => {
+      const t = labelTable(["A", "A"]);
+      const tree = run({
+        type: "root",
+        children: [opener(kind), text("\n"), t, text("\n"), closer()],
+      });
+      expect(tree.children!.map((c) => c.type)).toEqual([
+        "raw",
+        "text",
+        "element",
+        "text",
+        "raw",
+      ]);
+      expect(tree.children![2]).toBe(t);
+      expect(groupsOf(t)).toEqual(["start", "continue"]);
+    },
+  );
+
+  const jsxBox = (kind: string, children: Node[]): Node =>
+    ({
+      type: "mdxJsxFlowElement",
+      name: "div",
+      attributes: [
+        { type: "mdxJsxAttribute", name: "class", value: BOX_CLASS },
+        { type: "mdxJsxAttribute", name: "data-kind", value: kind },
+      ],
+      children,
+    }) as Node;
+
+  it.each(["options", "members", "parameters", "notes"])(
+    "does not box a %s table inside the generator's MDX box",
+    (kind) => {
+      const t = labelTable(["A", "A"]);
+      const wrapper = jsxBox(kind, [text("\n"), t, text("\n")]);
+      const tree = run({ type: "root", children: [wrapper] });
+      expect(tree.children![0]!.children![1]).toBe(t);
+      expect(groupsOf(t)).toEqual(["start", "continue"]);
+    },
+  );
+
+  it("boxes a table inside an MDX div that is not a table box", () => {
+    const t = labelTable(["A"]);
+    const wrapper = {
+      type: "mdxJsxFlowElement",
+      name: "div",
+      attributes: [
+        { type: "mdxJsxAttribute", name: "class", value: "callout" },
+      ],
+      children: [t],
+    } as Node;
+    const tree = run({ type: "root", children: [wrapper] });
+    expect(tree.children![0]!.children![0]).toMatchObject({
+      tagName: "div",
+      properties: { dataKind: "content" },
+    });
+  });
+
+  it("still boxes a table after a raw node that is not a table box", () => {
+    const t = labelTable(["A"]);
+    const tree = run({
+      type: "root",
+      children: [{ type: "raw", value: '<div class="note">' }, t],
+    });
+    expect(tree.children![1]).toMatchObject({
+      tagName: "div",
+      properties: { dataKind: "content" },
+    });
+  });
+
+  it("boxes a table that follows a closed generator box", () => {
+    const first = labelTable(["A"]);
+    const second = labelTable(["B"]);
+    const tree = run({
+      type: "root",
+      children: [opener("options"), first, closer(), second],
+    });
+    expect(tree.children![1]).toBe(first);
+    expect(tree.children![3]).toMatchObject({
+      tagName: "div",
+      properties: { dataKind: "content" },
+    });
+  });
+});

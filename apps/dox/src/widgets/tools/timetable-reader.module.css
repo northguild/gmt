@@ -282,13 +282,15 @@
   gap: var(--gmt-space-2);
 }
 
-@container tt-pane (min-width: 26rem) {
+/* A row card holds the Offset select, whose selected text "None (earlier)" needs about 15.5rem
+   of card; the row count per line is chosen so no card is narrower than that. */
+@container tt-pane (min-width: 31rem) {
   .rowset {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@container tt-pane (min-width: 45.5rem) {
+@container tt-pane (min-width: 63.5rem) {
   .rowset {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -316,10 +318,6 @@
   padding-inline: var(--gmt-space-1);
   color: var(--gmt-ice);
   font-weight: 600;
-}
-
-.offset {
-  min-inline-size: 0;
 }
 
 /* The reason an Offset select is, or is not, available. Its slot is held at the height of
@@ -350,6 +348,26 @@
     grid-area: 1 / 1;
     min-inline-size: 0;
   }
+}
+
+/* In a table cell the hidden sizer alone gives the column its width, so what the live layer
+   shows, a long note or a short one, never moves a column edge while a handle is dragged. The
+   live layer takes no inline size of its own (`contain`), and a note's badge wraps at its spaces,
+   as the sizer's text does, so it never holds the column open. */
+.cellHold > .live {
+  contain: inline-size;
+}
+
+/* A time's sizer never shrinks below its own text, so the cell is always as wide as the widest
+   value it can show. A note's sizer wraps at its spaces and keeps the `0` minimum. */
+.cellHold:not(.noteCell) > :not(.live) {
+  min-inline-size: auto;
+}
+
+.noteCell > .live > * {
+  max-inline-size: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .sizer {
@@ -760,6 +778,60 @@
   color: var(--gmt-ice);
 }
 
+/* Under 38rem of pane the four columns cannot each hold their widest value, so each row becomes a
+   labelled block: a cell names its column from the `data-col` the table wrote, and the header row
+   is read by the labels instead. A held value keeps its width from the sizer and wraps at the
+   block's width, so a dragged handle moves nothing. */
+.rowsSlot {
+  @container tt-pane (max-width: 37.99rem) {
+    & table,
+    & caption,
+    & tbody,
+    & tr,
+    & th,
+    & td {
+      display: block;
+      inline-size: 100%;
+    }
+
+    & thead {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    & tr {
+      padding-block: var(--gmt-space-2);
+      border-block-end: 1px solid var(--gmt-hairline);
+    }
+
+    & th,
+    & td {
+      display: grid;
+      grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
+      gap: var(--gmt-space-2);
+      border-block-end: 0;
+      text-align: start;
+    }
+
+    & th::before,
+    & td::before {
+      content: attr(data-col);
+      color: var(--gmt-ice-dim);
+      font-weight: 600;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .rowsSlot td::before,
+  .rowsSlot th::before {
+    color: CanvasText;
+  }
+}
+
 .printed {
   display: flex;
   align-items: baseline;
@@ -790,7 +862,10 @@
 .timeFull {
   display: block;
   margin-block-start: 2px;
-  white-space: nowrap;
+
+  /* The whole value breaks before its zone, and anywhere as a last resort, so a narrow table
+     wraps the line in its cell and never reaches past its box. */
+  overflow-wrap: anywhere;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   font-variant-numeric: tabular-nums;

@@ -81,8 +81,9 @@ const filingsFor = (defects: readonly string[]) =>
   font-size: var(--sl-text-xs);
 }
 
+/* The state column is a share of a fixed table, and "✓ Yes, on Firefox" is wider than its
+   content box at the table's 34rem minimum, so the badge wraps between words in its cell. */
 .gmt-defects-badge {
-  white-space: nowrap;
   font-weight: 600;
 }
 

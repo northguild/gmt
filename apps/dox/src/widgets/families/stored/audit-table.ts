@@ -74,7 +74,7 @@ function storedHtml(value: string): SafeHtml {
     if (at > from) parts.push(value.slice(from, at));
     from = at;
   }
-  return html`${parts.map((part, i) => html`${i === 0 ? "" : html`<wbr />`}${part}`)}`;
+  return html`${parts.map((part, i) => html`${i === 0 ? "" : html`<wbr />`}<span class="${styles.seg}">${part}</span>`)}`;
 }
 
 /**
