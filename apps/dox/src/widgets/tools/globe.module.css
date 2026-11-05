@@ -629,8 +629,11 @@
   }
 }
 
-/* A pin behind the drawer has nothing to point at. */
-.tooltip[data-occluded] {
+/* A pin behind the drawer has nothing to point at. Inside inert content the card is out of reach,
+   but the top layer would still draw it over whatever made the page inert (the mobile menu is not
+   in the top layer), so it hides too. */
+.tooltip[data-occluded],
+[inert] .tooltip {
   visibility: hidden;
 }
 
