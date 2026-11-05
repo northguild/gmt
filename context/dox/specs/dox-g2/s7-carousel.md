@@ -83,7 +83,7 @@ Rules: `gmt-home-carousel.css` (carousel mode) and module CSS (every width); col
 
 All rules sit under `:root[data-home-carousel]`.
 
-- `<html>`: `overflow: hidden`. `.gmt-herostage`: `position: fixed; inset: var(--sl-nav-height) 0 0`.
+- `<html>`: `overflow: hidden`. `.gmt-herostage`: `position: fixed; inset: 0`, under the glass header (its top padding).
   `--gmt-copy-col: clamp(35rem, 36vw, 42.5rem)`; slice 2's framing keeps the Earth clear of it.
 - The deck runs from `1.5rem` under the header to `1.5rem` above the foot; no controls row. Both
   panels share one grid cell (`align-self: start`); the closed one is `hidden="until-found"`.

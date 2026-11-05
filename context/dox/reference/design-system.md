@@ -21,6 +21,8 @@ sheets import in this order:
 | 7   | `gmt-controls.css`   | CTA buttons, pagination, `:focus-visible`, `::selection`, scrollbars                                                           |
 | 8   | `gmt-light.css`      | Light overrides that are neither a palette re-tint nor adjacent to a base rule                                                 |
 
+Guide and reference tables (`gmt-content-tables.css`) are drawn in the kit `table` builder's look: the `--gmt-surface-widget` panel with a full hairline border, tight cells, a quiet `--gmt-surface` header strip and tabular figures, with zebra rows and row groups on top. Entry cards take the same surface and border; the rules are in `built.md` (Tier 1, reference tables).
+
 No shared widget sheet remains in the global cascade: the `not-content` restore, the syntax-token colours and the load-failure notice sit in `gmt-widget-reset.css`. A tool's own style is a CSS Module in
 `src/widgets/tools/`, and a family's in `src/widgets/families/`, so there is no per-tool global
 sheet; `dox.css` and `gmt-a11y.css` load after 8. The config has the full
@@ -181,6 +183,11 @@ it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
   - Position with the individual `translate` / `scale` properties, never `transform`, so a
     widget's own `top` or `translate` composes with them. The DST Inspector's `top: 10px`
     does.
+- **Globe settings.** The globe's gear opens a settings panel (kit `disclosure`): the filter
+  switches, then a "Natural Earth" switch in its own fieldset that shows the Blue Marble photo in
+  its own colours. Blue is the default. The switch is offered only on a globe that draws the
+  photograph, and the panel is capped to its container's width so a drawer never clips it.
+  `built.md` has the mechanics.
 - **`.gmt-chip-toggle`** paints a real checkbox or radio as a bevelled chip, generalised from
   the globe's filter switch. The globe keeps its own rules, for its per-filter accents and
   icons.
@@ -302,6 +309,32 @@ teaching widget; nothing else does, and it never replays on a value change.
 - **Tokens** (`gmt-tokens.css`): `--gmt-enter-duration`, `--gmt-enter-easing`,
   `--gmt-enter-scale`.
 
+### The landing entrance
+
+The landing page has its own, longer entrance (`lib/arrival.ts`, `lib/hero-entrance.ts`,
+`gmt-entrance-freeze.css`); the arrival gesture above does not apply to the hero's canvas, the
+globe has a dawn instead. The rules in `visual-design.md` § Motion say what moves and when.
+
+- **One owner of the clock.** An inline script in `Head.astro` sets `data-entrance="wait"` on
+  `<html>` on the landing before the first paint, and `static` after 2.5 s if nothing has taken it
+  further, so a script that never loads cannot hide the copy. `runHeroEntrance` sets `run` at `t0`,
+  marks `gmt-entrance-t0`, starts the globe's dawn, and sets `done` once the last animation has ended.
+  Every animation is keyed on `run`, so they all start in one style recalculation, and none matches
+  after `done`, so a card shown later does not pop again.
+- **The same script** listens for `pagereveal` and sets `data-arrival` to `transition` for an
+  arrival through a view transition, which keeps the header from freezing again, and to `load` for
+  any other. A value set earlier stands. An arrival from a same-origin page outside the site also adds
+  the `from-landing` type to the transition (see built.md Tier 3). Where the browser reports the reveal, `runHeroEntrance`
+  waits for it before it writes `run`, so the header's state is known when the animations start.
+- **Held, not hidden for good.** Pieces sit at opacity 0 only under `wait`; a page with no script has
+  no `data-entrance`, so nothing is held.
+- **Each piece animates one way.** The freeze keyframes move opacity, a mask sweep, colour and
+  (buttons) border colour; the animation uses fill `backwards`, so hover and focus styles apply when
+  it ends. A button's stagger comes from the `--ng-i` custom property in its markup, not from
+  `nth-*`. The card animates the individual `scale` property; the globe canvas has no CSS animation.
+- **Gate:** `hero-space` › entrance checks the order, one animation per element, the properties
+  animated, that the card is last, the resting state and the header on a transition arrival.
+
 ## Drawn charts
 
 The recipes in `widgets/families/cutoff/` are the pattern for every drawn transport chart: the
@@ -416,25 +449,28 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   `/dox` only, so the button matches its neighbours' size and forced colours show it on that
   page alone.
 - `Header.astro` also adds the NorthGuild link before the site title: a plain `<a>`, not
-  `ButtonLink`, in the same tab, holding the mark and the "NorthGuild" wordmark. A hairline
-  divider separates it from the title. The bar matches the northguild.dev header, so a click
+  `ButtonLink`, in the same tab, holding the mark and the "NorthGuild" wordmark. The title follows
+  `--gmt-space-3` (12 px) after it, with no divider. The bar matches the northguild.dev header, so a click
   from there keeps the left of the bar where it was.
   - **The bar** is 3.5rem at every width (`--sl-nav-height`), with 1rem at its sides. Its glass
     is teal at 10 % over a void backing at 92 %, with 4 px of blur and one bottom hairline of
     cyan at 18 % (`--gmt-header-*`). It is a dark island (`gmt-theme-dark`) on every page, in
     both themes, so page text scrolling under it never lowers its contrast. The search dialog
     renders inside the bar and so takes the dark tokens too. `ThemeSelect` still switches the
-    page.
+    page. Over the landing's sky the bar's text and icons carry `--gmt-shadow-halo`, which uses the
+    fixed ink (`--gmt-ink-fixed`), so it is dark in the light theme too (7:1 over the Sun).
   - **The mark** is `src/assets/northguild-mark.svg`, inlined by `NorthGuildMark.astro` and
     never served by URL. Its six paths and `viewBox` are the northguild.dev mark's, verbatim.
     The paint (ice at 7 % and 5 %, a 1 px edge and ridge, a 36-unit glyph) is in
     `gmt-primitives.css`; the two gradient fills are attributes, and their ids take a
     per-page suffix (`ng-mark-pane-1`), so two marks never share one. In forced colours the
-    strokes are `CanvasText` and the fills `none`.
+    strokes are `CanvasText` at full opacity and the fills `none`.
   - **The wordmark** is "NorthGuild" in Michroma at `--gmt-wordmark-size`, `-tracking` and
-    `-leading` (1rem, .04em, 1.6). Below 30rem it is hidden, and the link keeps its name.
+    `-leading` (.04em, 1.6), `--gmt-space-3` (12 px) after the mark. The size is 1rem from
+    500 px and eases to 0.8rem on a phone (`clamp(0.8rem, 0.5rem + 1.6vw, 1rem)`), so
+    "NorthGuild / gmt" stays whole at every width, as in every NorthGuild app.
   - The link's name is `aria-label="NorthGuild home"`: it starts with the visible text
-    (WCAG 2.2 SC 2.5.3) and holds when the wordmark hides. The SVG is `aria-hidden` and not
+    (WCAG 2.2 SC 2.5.3). The SVG is `aria-hidden` and not
     focusable, so the name is not read twice (SC 4.1.2).
   - The link box is at least 24x24 CSS px (SC 2.5.8) and takes `.gmt-sonar-focus`. In forced
     colours it gets a real `Highlight` outline.
@@ -442,10 +478,21 @@ and leap-second tools list their roots in the same sheets. All of them read as o
     root-relative `/` would fail the `/gmt` dist guard.
 - The `/dox` strip under the header keeps only the clock and the Live/Local badge, at its end.
   It is a `<div>`, not a `<header>`, so the page has one banner landmark.
-- The title is a `SiteTitle.astro` override: "Give Me Temporal" from `50rem` up, "GMT" below,
-  set in the wordmark's type (the same three tokens).
-  Only one form is displayed, so the link's name is the visible text (WCAG 2.2 SC 2.5.3).
-  Starlight's `title` stays `@northguild/gmt` for tabs, search results and social cards.
+- The title is a `SiteTitle.astro` override that reads "/ gmt v1.21.0", the pattern every
+  NorthGuild app shares ("NorthGuild / ‹app› v‹version›"):
+  - "/ gmt" is the link to the docs home, set in the wordmark's type (the same three tokens)
+    and gmt's theme colour, `--gmt-cyan`. The slash is `aria-hidden`, so the link's name is the
+    visible word (WCAG 2.2 SC 2.5.3).
+  - The spacing is the one every NorthGuild app's header uses, in `ch` of the type it sits in:
+    "NorthGuild", the slash and "gmt" are `0.5ch` of the wordmark apart (7.6 px at 1rem;
+    `.title-wrapper` sets the wordmark's font only so `ch` reads in it), and the version starts
+    `1ch` of its own type after the name.
+  - The version is plain text: `--gmt-font-mono` at 0.7 of `--gmt-wordmark-size` and never under the 12px
+    floor (`max(0.75rem, …)`, so 12px at every width), letter-spacing 0, in `--gmt-ice-dim`, on the name's baseline. It comes from `gmtVersion` in `src/generated/versions.ts`, so it follows
+    each release.
+  - Below 30rem the version hides, so "NorthGuild / gmt" stays on one line beside the search
+    and menu buttons.
+  - Starlight's `title` stays `@northguild/gmt` for tabs, search results and social cards.
 - `Header.astro` composes Starlight's parts via `virtual:starlight/components/*`, not
   `@astrojs/starlight/components/*.astro`. The direct path resolves Starlight's defaults and
   silently bypasses this repo's `SocialIcons` and `ThemeSelect` overrides. Types for the virtual
@@ -500,8 +547,9 @@ and leap-second tools list their roots in the same sheets. All of them read as o
 - **Forced colours:** cards are `ButtonFace`/`ButtonText` with a solid border, chips a dashed
   `ButtonText` border, the bar a 2px `ButtonText` border, area headings `CanvasText`, and focus
   a real `outline` in `Highlight`, because forced colours drop the `box-shadow` sonar ring.
-- No colour literals, no amber, no light-theme colour block, and bevels from `corner-shape`,
-  never `clip-path`.
+- No colour literals, no amber, no light-theme colour block, and bevels from `corner-shape`;
+  only the carousel's panel, tiles, rows and diamonds may use a `clip-path` octagon, and an outline
+  sits on a plain radius.
 
 ## Tailwind in the chat island
 

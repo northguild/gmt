@@ -34,7 +34,7 @@ In `gmt-content-tables.css`, for `.sl-markdown-content table` and `.gmt-ref-tabl
   `white-space` rules.
 - **Groups.** Runs of rows whose first cell has the same text form a group (below). The first row
   of a group gets a 1 px `--gmt-border-strong` top border instead of the hairline. Later rows of
-  the group show their first cell at `opacity: .45` with `font-weight: 400`. The text stays in
+  the group show their first cell dimmed, `font-weight: 400`; entry cards never group or zebra. The text stays in
   the DOM and in the accessibility tree, so a screen reader still hears it on every row.
 - **Light theme.** The same tokens resolve to their light values; no extra rules.
 - **Forced colours.** Borders `CanvasText`, no zebra, no dimming (dimmed text must read at full
@@ -74,8 +74,8 @@ like card instead of a hairline-separated strip:
 - `font-floor.test.ts`: the smallest new size is .6875rem; check it against the floor and raise
   the size if it fails. Do not lower the floor.
 - `table-cell-label.test.ts` stays green; extend it for `data-group`.
-- Text contrast: dimmed group labels are decoration of repeated text, but they still must meet
-  the contrast gate's floor for incidental text. If `.45` fails `contrast-measure`, raise it.
+- Text contrast: a dimmed group label, code chip included, holds 7:1 in both themes on plain and
+  zebra rows, measured as drawn; dim by a colour tier, not opacity, if opacity cannot reach it.
 
 ## Tests
 
@@ -87,7 +87,7 @@ like card instead of a hairline-separated strip:
 ## Definition of done
 
 - [ ] Index gates pass. `table-fit` on every guide and reference page, both themes.
-- [ ] `html-diff`: only `data-group` attributes are added; no other markup changes.
+- [ ] `html-diff`: only `data-group` is added, and the generator's tables lose the duplicate inner box; nothing else.
 - [ ] `visual-diff`: content and reference tables change; no widget table changes.
 - [ ] `a11y:axe` and `contrast:measure` on `/guides/conversion/databases/`,
       `/guides/industries/intermodal-edi-timestamps/`,

@@ -20,7 +20,7 @@ hover/focus fade armed by `data-ready`. Nothing may layer on top:
 - **The hero canvas has no CSS animation.** With `entrance: "dawn"`, `revealCanvas` does not run;
   the canvas is visible from `t0` at exposure 0, and the dawn is its only entrance.
   `/tools/zoned-earth/` and the `/dox` rail keep `enter()` unchanged.
-- **The zoom stack** keeps its hover/focus fade, no entrance; `data-ready` comes with `data-dawn="done"`.
+- **The zoom stack** has no entrance; `data-ready` comes with `data-dawn="done"` (slice 2 hides it while the drawer is open).
 - **HeroCopy elements** get the freeze only; the clock rows keep `holdEntrance` in the closed drawer.
 
 ## The sequencer: `src/lib/hero-entrance.ts`
@@ -29,7 +29,7 @@ The only thing that starts the entrance; nothing else runs on its own timer.
 
 ```ts
 export interface HeroEntranceOptions {
-  sky: readonly HTMLImageElement[];        // slice 3's two layers
+  sky: { layers: readonly HTMLElement[]; ready: Promise<void> }; // slice 3's band and stars layers
   globe: { ready: Promise<void>; startDawn(): void };
   signal: AbortSignal;                     // aborting clears its timer and listeners
   deadline?: number;                       // ms after navigation start; default 800
@@ -38,7 +38,7 @@ export interface HeroEntranceOptions {
 export function runHeroEntrance(options: HeroEntranceOptions): void;
 ```
 
-- **`t0`** is the moment both sky images have decoded (`img.decode()`) and `globe.ready` has
+- **`t0`** is the moment the sky's first draw is done (`sky.ready`) and `globe.ready` has
   resolved, but no later than `deadline` ms after navigation start (at once if already past).
 - At `t0` it sets `data-entrance="run"` on `<html>`, marks `performance.mark("gmt-entrance-t0")`
   and calls `globe.startDawn()`. Every CSS
@@ -58,7 +58,7 @@ export function runHeroEntrance(options: HeroEntranceOptions): void;
 | Element | Direction | Delay from `t0` |
 | --- | --- | --- |
 | Header link and site title (direct load only, below) | left | 0 s |
-| `h1` | left | .15 s |
+| Eyebrow and `h1` (one freeze each) | left | .15 s |
 | Tagline | left | .45 s |
 | Actions (each button +.08 s) | left | .75 s |
 | Location card (`.gmt-globe__tooltip`), below | scales out of its pin | 2.0 s |
@@ -75,9 +75,8 @@ transition (in-site or from northguild.dev) keeps it still. The inline head scri
 `<html>`; the CSS guards the header freeze with `:root:not([data-arrival="transition"])`.
 `pagereveal` fires before the first render, so the header never flashes. Slice 5 extends it.
 
-**Drawer.** Every open is slice 2's .9 s sweep (`--mask-r` plus `translate: 2.5rem 0 → 0`, or
-`--mask-b` as a sheet; `--ease-sweep`; border flash at 75%), interactive at once; its close
-fades in .25 s later. It reads this section's `--ice`, `--frost` and masks.
+**Drawer.** Every open is slice 2's slide and sheen, which the entrance leaves alone; the border
+never changes (no flash, no glow). Interactive at once; its close fades in .25 s later.
 
 **Location card, last.** The globe's `#globe-tooltip` enters after the Earth is lit (exposure
 passes .95 at ≈ 1.83 s) and the last button has landed. Until `data-entrance` is `run` or
@@ -89,14 +88,14 @@ animation, `ng-card-pop`: .65 s, `cubic-bezier(.16, 1.22, .3, 1)` (≈ 1 % overs
 that, so the card grows out of its pin on either side.
 
 **Reduced motion:** each freeze is `ng-fade` (opacity, .6 s, same delays); the location card a
-.4 s fade at 2.0 s, no scale; each drawer open a .3 s fade. **Forced colours:** mask sweep only.
+.4 s fade at 2.0 s, no scale; each drawer open a .3 s fade, no sheen. **Forced colours:** mask sweep only; no drawer sheen.
 
 ## Sky from black
 
-Stars image: from 0 s, 1.4 s, `cubic-bezier(.3, 0, .2, 1)`. Milky Way and corner wash: from .3 s,
-1.8 s, same easing. Each layer animates `opacity` only. Both images are decoded before `t0`, so nothing decodes or
-rasterises during the fade. The meteor scheduler starts after the sky is in. Reduced motion: one
-.6 s fade for the whole sky.
+Stars from 0 s, 1.4 s, `cubic-bezier(.3, 0, .2, 1)`; band (Milky Way, wash) from .3 s, 1.8 s; `opacity`
+only. Keyed on `[data-entrance="run"]` **and** `[data-sky="ready"]`: if the deadline or `"static"` comes
+first, the hero stays plain void and the sky fades in once truly drawn. The meteor starts after the
+sky is in. Reduced motion: one .6 s fade for the whole sky.
 
 ## Globe dawn
 
@@ -127,7 +126,7 @@ In the shader, a new `exposure` uniform (default 1, so other hosts are unchanged
 
 ## Tests
 
-- `hero-entrance.test.ts` (fake timers, injected `now`, stubs): `t0` waits for both decodes and
+- `hero-entrance.test.ts` (fake timers, injected `now`, stubs): `t0` waits for `sky.ready` and
   `globe.ready`, or the deadline; `startDawn` and the mark happen once, at `t0`; aborting before
   `t0` sets nothing. `afterEach` aborts.
 - `engine.test.ts`, fake clock, `"dawn"`: no frame before `startDawn()`; exposure 0 at `t0 + .35`,

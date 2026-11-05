@@ -18,12 +18,13 @@ and [`header.js.txt`](./prototype/header.js.txt) (port the values; never its `in
 - `header.site-header`: `block-size: 3.5rem` (56 px), padding `.75rem 1rem`, background teal at
   10 % alpha, `backdrop-filter: blur(4px)`, one bottom border of 1 px cyan at 18 % alpha, its
   `::before` and `::after` hidden.
-- Left: one inline-flex link, gap 1.5rem: the mark at 1.75rem tall, then "NorthGuild" in Michroma
+- Left: one inline-flex link, gap `--gmt-space-3` (12 px): the mark at 1.75rem tall, then "NorthGuild" in Michroma
   1rem, `line-height: 1.6`, `letter-spacing: .04em`, `#cfeaf2` (`--gmt-ice`), hidden below 30rem.
   On northguild.dev the wordmark is a bare text node; slice 5's companion wraps it.
 - Right: GitHub and Discord icon buttons. The site is dark only.
-- In the preview, on both `/` and `/gmt/`: mark at 16, 14, 21 × 28 and wordmark at 61, 15,
-  118 × 26 (x, y, width × height in CSS px, at 1440×900).
+- Mark at 16, 13, 21.25 × 28 and wordmark at 49.25, 15.2, 117.73 × 26 (x, y, width × height in
+  CSS px, at 1440×900). In forced colours the fills drop and every line is `CanvasText` at full
+  opacity.
 
 ## Mark
 
@@ -58,18 +59,19 @@ Paint, all from `--gmt-ice`:
 `Header.astro` left group, in order:
 
 1. One link, `href={LANDING_URL}`, class `gmt-ng-link gmt-sonar-focus`, `display: inline-flex`,
-   `align-items: center`, gap 1.5rem, accessible name "NorthGuild home". It contains the mark
+   `align-items: center`, gap `--gmt-space-3`, accessible name "NorthGuild home". It contains the mark
    (block-size 1.75rem) and a `span.gmt-ng-wordmark` "NorthGuild" (`var(--gmt-font-display)`
    1rem, `line-height: 1.6`, `letter-spacing: .04em`, `--gmt-ice`). Name the link
    with `aria-label="NorthGuild home"`: it starts with the visible text (WCAG 2.5.3 label in name)
    and still names the link when the wordmark hides on narrow screens. Drop the sr-only span and
    the `title`.
-2. `span.gmt-ng-divider` (unchanged).
-3. `<SiteTitle/>`, unchanged text, set in the wordmark's type. Add three tokens to
+2. `<SiteTitle/>` reads "/ gmt v‹version›", the NorthGuild app pattern; no divider. "/ gmt" is
+   the docs-home link in `--gmt-cyan` with an `aria-hidden` slash 8 px before the name; the
+   version is `gmtVersion` in `--gmt-font-mono`, `--gmt-text-sm`, `--gmt-ice-dim`. The name is
+   set in the wordmark's type. Add three tokens to
    `gmt-tokens.css`: `--gmt-wordmark-size: 1rem`, `--gmt-wordmark-tracking: .04em`,
    `--gmt-wordmark-leading: 1.6`. `.gmt-ng-wordmark` and `.site-title` (`gmt-shell.css`) both
-   read them; `.site-title` drops `1.25rem` and `var(--gmt-tracking-tight)`. Both forms ("Give Me
-   Temporal" and "GMT" below 50rem) inherit them.
+   read them; `.site-title` drops `1.25rem` and `var(--gmt-tracking-tight)`.
 
 Centre and right groups are unchanged.
 
@@ -84,14 +86,22 @@ Centre and right groups are unchanged.
   the bar are `display: none`.
 - Below 30rem, hide the wordmark text (`display: none` on `.gmt-ng-wordmark`); the link keeps its
   name through its `aria-label`. Then verify at 320, 375 and 390 px that the bar has no overflow
-  (`scrollWidth === clientWidth` on `.header`) and that Search, the Dox button, the theme select
-  and the language select are all reachable.
+  (`scrollWidth === clientWidth` on `.header`) and that Search, the Dox button and the theme toggle are all reachable (below `md` the Dox
+  link and the theme toggle sit in the mobile menu; the site has one language, so no language select).
+- **Phone menu.** `MobileMenuFooter.astro` overrides Starlight's footer to add the Dox link.
+  `MobileMenuToggle.astro` + `src/lib/menu-button.ts` override the toggle so `aria-expanded` sits
+  on the inner `<button>` (Starlight 0.41 sets it on the custom element, where no assistive
+  technology reads it); `MobileMenuToggle.test.ts` fails once Starlight reaches 0.42, which ships a
+  native button. Starlight shows the pane from `[aria-expanded="true"] ~ .sidebar-pane`, so the
+  override shows it from the body's `data-mobile-menu-expanded` flag instead. Open, the menu makes
+  `.main-frame` and the skip link `inert`; Escape and the 50em breakpoint close it.
 
 ## Light theme
 
 The header carries `gmt-theme-dark` on every page (index § Theme). Its glass sits on an
 opaque `--gmt-void` backing at 0.92 alpha, so light page content scrolling under it never lowers
-text contrast.
+text contrast. On the landing the hero runs under the bar (its top padding is the bar's height), so
+there the backing is 0.55 and the bar's text and icons carry `--gmt-shadow-halo` (`gmt-glass.css`).
 
 - Starlight's search button and dialog: the button sits inside the island and follows it. The
   dialog (`site-search` modal) renders inside the header in the DOM, so it inherits dark tokens.
@@ -116,17 +126,20 @@ text contrast.
 - A header render test: the link's accessible name is "NorthGuild home" and starts with the
   visible text; the link is the first focusable after the skip link.
 - `font-floor.test.ts` stays green with the 16 px wordmark.
+- Phone menu, each failing on Starlight's toggle alone: at 390×844 a press on the toggle shows
+  `#starlight__sidebar` (visible, non-zero box) with `aria-expanded="true"` on the `<button>`;
+  Escape hides it and returns focus to the toggle. `visual-snapshot` waits for the visible sidebar.
 
 ## Definition of done
 
 - [ ] Index gates pass. `contrast-measure` covers the header in both themes, including the open
       search dialog.
 - [ ] At 1440×900 the bar is 56 px tall, measured with `getBoundingClientRect` on `.header`.
-- [ ] At 1440×900 the mark measures 16, 14, 21 × 28 and the wordmark 61, 15, 118 × 26 on `/gmt/`,
-      matching the preview's `/`; every edge within 0.5 px (slice 5's cross-site check keeps it).
-- [ ] Computed `font-size`, `letter-spacing` and `line-height` of `.gmt-title-long` (and of
-      `.gmt-title-short` at 390 px) equal the wordmark's: 16px, 0.64px, 25.6px, with the same
-      vertical centre (±0.5 px).
+- [ ] At 1440×900 the mark measures 16, 13, 21.25 × 28 and the wordmark 49.25, 15.2, 117.73 × 26 on `/gmt/`,
+      matching northguild.dev's header; every edge within 0.5 px (slice 5's cross-site check keeps it).
+- [ ] At 1440×900 the title reads "/ gmt v‹version›": slash at x 178.98, "gmt" at 195.63, version
+      at 251.61, with the wordmark's 16px, 0.64px, 25.6px and the same vertical centre (±0.5 px);
+      "/ gmt" is `rgb(34, 211, 238)`, the version 12px mono in `--gmt-ice-dim` (`max(0.75rem, calc(0.7 * var(--gmt-wordmark-size)))`, so 0.75rem is its floor).
 - [ ] No horizontal overflow at 320, 375 and 390 px, on `/`, a guide and `/dox/`.
 - [ ] `visual-diff`: only the header region changes on guide pages.
 - [ ] Every use of `northguild-logo.svg` is gone and the file is deleted.
