@@ -22,6 +22,11 @@
  *
  *   HTML_DIFF_RENAME="gmt-clockcheck-:gmt-canada-" node scripts/html-diff.mjs compare <dir>
  *
+ * The page around a widget is compared as markup: inlined CSS text is dropped, content-hashed asset
+ * names and the git-derived dates are masked, and the header is compared without the parts the
+ * header redesign changed on purpose (scripts/lib/html-diff-page.mjs). A difference there is a
+ * page change to review, never a widget change.
+ *
  * Two verdicts, deliberately distinct:
  *
  *   ✗  the WIDGET's own markup changed — the failure this gate exists for.
@@ -43,6 +48,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { applyPageContract } from "./gates/contract.mjs";
+import { pageMarkup, tablesOf } from "./lib/html-diff-page.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 
 const GATE = "html-diff";
@@ -208,7 +214,7 @@ const PAGES = [
     path: "tools/expiry-calculator",
     widget: "expiry-calculator",
   },
-  /* Content pages with a table: no widget, so the whole page is compared. They police the
+  /* Content pages with a table: no widget, so their tables are compared. They police the
      `data-col` the table plugin writes on every cell (src/lib/rehype-table-scroll.ts). */
   { path: "reference/zoned/get/getTimeZoneOffset" },
   { path: "guides/core-date-operations/comparisons" },
@@ -362,17 +368,32 @@ for (const p of SELECTED) {
   );
 
   if (p.widget === undefined) {
-    const bp = normalise(beforeRaw);
-    const ap = normalise(afterRaw);
-    if (bp !== ap) {
+    /* No widget: the tables are what is compared, as the widget is elsewhere. */
+    const bt = pageMarkup(normalise(tablesOf(beforeRaw)));
+    const at = pageMarkup(normalise(tablesOf(afterRaw)));
+    if (bt === "" || at === "") {
       widgetChanged += 1;
-      console.log(`✗ ${p.path} — page markup changed`);
-      console.log(firstDivergence(bp, ap));
+      console.log(`✗ ${p.path} — no table found`);
+      widgetFinding(p, "widget-not-found", "no table found in the page");
+      continue;
+    }
+    if (bt !== at) {
+      widgetChanged += 1;
+      console.log(`✗ ${p.path} — table markup changed`);
+      console.log(firstDivergence(bt, at));
       widgetFinding(
         p,
         "page-markup-changed",
-        firstDivergence(bp, ap).replace(/\s+/g, " ").trim(),
+        firstDivergence(bt, at).replace(/\s+/g, " ").trim(),
       );
+      continue;
+    }
+    const bp = pageMarkup(normalise(beforeRaw));
+    const ap = pageMarkup(normalise(afterRaw));
+    if (bp !== ap) {
+      pageChanged += 1;
+      console.log(`~ ${p.path} — tables identical; surrounding page changed`);
+      console.log(firstDivergence(bp, ap));
     } else console.log(`✓ ${p.path}`);
     continue;
   }
@@ -407,8 +428,8 @@ for (const p of SELECTED) {
     continue;
   }
 
-  const bp = normalise(beforeRaw);
-  const ap = normalise(afterRaw);
+  const bp = pageMarkup(normalise(beforeRaw));
+  const ap = pageMarkup(normalise(afterRaw));
   if (bp !== ap) {
     pageChanged += 1;
     console.log(`~ ${p.path} — widget identical; surrounding page changed`);

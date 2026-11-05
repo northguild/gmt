@@ -7,8 +7,11 @@ import {
   cellsInColumn,
   expectNoAxeViolations,
   flushWidget,
+  foundInPage,
   renderWidget,
+  scrolled,
   setRange,
+  wheelOn,
 } from "./render-widget";
 
 const fixture: LoadedWidget<never> = {
@@ -159,5 +162,44 @@ describe("cellsInColumn", () => {
     await renderWidget(grid);
     const table = screen.getByRole("table", { name: "Counters" });
     expect(() => cellsInColumn(table, "Era")).toThrow(/no column header "?Era/);
+  });
+});
+
+describe("wheelOn, scrolled and foundInPage", () => {
+  const probe: LoadedWidget<never> = {
+    renderTemplate: () =>
+      html`<div role="region" aria-label="Pane" id="pane"><p hidden="until-found">Found me</p></div>`,
+    mount: async () => onceDestroy(() => {}),
+  };
+
+  it("reports whether the page cancelled the wheel", async () => {
+    const w = await renderWidget(probe);
+    const pane = screen.getByRole("region", { name: "Pane" });
+    expect(wheelOn(pane, { deltaY: 10 })).toBe(false);
+    const stop = (e: Event) => e.preventDefault();
+    pane.addEventListener("wheel", stop);
+    expect(wheelOn(pane, { deltaY: 10 })).toBe(true);
+    pane.removeEventListener("wheel", stop);
+    w.destroy();
+  });
+
+  it("delivers the wheel's delta and mode, and a scroll and a find match", async () => {
+    const w = await renderWidget(probe);
+    const pane = screen.getByRole("region", { name: "Pane" });
+    const seen: string[] = [];
+    const note = (e: Event) => {
+      if (e instanceof WheelEvent)
+        seen.push(`${e.type}:${e.deltaY}:${e.deltaMode}`);
+      else seen.push(e.type);
+    };
+    for (const type of ["wheel", "scroll", "beforematch"])
+      pane.addEventListener(type, note);
+    wheelOn(pane, { deltaY: 3, deltaMode: 1 });
+    scrolled(pane);
+    foundInPage(pane);
+    for (const type of ["wheel", "scroll", "beforematch"])
+      pane.removeEventListener(type, note);
+    expect(seen).toEqual(["wheel:3:1", "scroll", "beforematch"]);
+    w.destroy();
   });
 });

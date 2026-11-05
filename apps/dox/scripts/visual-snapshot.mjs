@@ -79,8 +79,8 @@ const BASE_URL = (EXTERNAL_BASE ?? `http://localhost:${PORT}/gmt`).replace(
   /\/$/,
   "",
 );
-// Sentinel string only this repo's built pages contain (the header title on every
-// page) — used to confirm the preview server we're talking to is actually serving
+// Sentinel string only this repo's built landing page contains (its hero title)
+// — used to confirm the preview server we're talking to is actually serving
 // THIS worktree's dist/, not a stray process left running on the same port by
 // another worktree or a previous run.
 const SENTINEL = "Give Me Temporal";
@@ -314,6 +314,11 @@ const LIVE_CLOCK_SELECTORS = [
    Hidden in the capture as well as masked; `visibility` keeps its box. */
 const LIVE_CLOCK_HIDE_CSS = `${gate("live-face")} { visibility: hidden; }`;
 
+/* The landing page's globe layer and sky canvas fill the viewport and move with the clock, so a
+   mask over them would blank the whole frame, the search modal included. They are hidden instead:
+   what lies over them is still shot, on the page's own backdrop. */
+const BACKDROP_HIDE_CSS = `${gate("globe-layer")} > canvas, [data-sky-canvas] { visibility: hidden; }`;
+
 // Confirms both that something is listening on PORT and that it's actually serving
 // THIS worktree's build, not a stray daemon left running by another worktree or an
 // earlier run on the same port (see the PORT comment above).
@@ -541,7 +546,7 @@ async function shoot(page, outDir, fileName, clockMasks, options = {}) {
   await page.screenshot({
     path: path.join(outDir, fileName),
     mask: clockMasks,
-    style: LIVE_CLOCK_HIDE_CSS,
+    style: `${LIVE_CLOCK_HIDE_CSS} ${BACKDROP_HIDE_CSS}`,
     ...options,
   });
   console.log(`  captured ${fileName}`);
@@ -585,16 +590,19 @@ async function captureSearchModal(page, outDir, clockMasks, theme, viewport) {
  * The mobile menu — mobile only, since the sidebar is already open on desktop.
  *
  * `/install/` because it has a sidebar to toggle; `home` uses the splash template and never
- * renders the menu button. The wait is on `attached`, not `visible`: `aria-expanded` toggles on
- * the wrapping `<starlight-menu-button>` (see Starlight's `MobileMenuToggle.astro`), which has no
- * box of its own because its only child is `position: fixed`, so it never becomes "visible".
+ * renders the menu button. `aria-expanded` toggles on the button itself (`MobileMenuToggle.astro`
+ * and `src/lib/menu-button.ts`), so the first wait is on that button. The button flipping proves
+ * nothing about the menu: Starlight shows the pane from a rule keyed on the custom element, so the
+ * second wait is on the pane itself, and a menu that opens onto nothing fails here instead of
+ * being shot.
  */
 async function captureMobileMenu(page, outDir, clockMasks, theme, viewport) {
   await page.goto(`${BASE_URL}/install/`, { waitUntil: "networkidle" });
   await page.click('button[aria-label="Menu"]');
-  await page.waitForSelector('starlight-menu-button[aria-expanded="true"]', {
-    state: "attached",
-  });
+  await page.waitForSelector(
+    'starlight-menu-button button[aria-expanded="true"]',
+  );
+  await page.waitForSelector("#starlight__sidebar", { state: "visible" });
   await page.waitForTimeout(150);
   await shoot(page, outDir, `menu-${theme}-${viewport.name}.png`, clockMasks);
 }
